@@ -235,3 +235,37 @@ test("runCli upgrade returns validation failure for invalid profile", async () =
   assert.equal(code, 1);
   assert.match(capture.errors[0], /upgrade failed profile validation/);
 });
+
+test("runCli drift-check passes for aligned managed assets", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "qt-wskit-drift-pass-"));
+  await createDoctorFixture(fixtureRoot);
+
+  const upgradeCapture = createCapture();
+  const upgradeCode = await runCli(["upgrade"], { cwd: fixtureRoot, ...upgradeCapture });
+  assert.equal(upgradeCode, 0);
+
+  const driftCapture = createCapture();
+  const driftCode = await runCli(["drift-check"], { cwd: fixtureRoot, ...driftCapture });
+  assert.equal(driftCode, 0);
+  assert.match(driftCapture.lines[0], /drift-check passed/);
+});
+
+test("runCli drift-check fails when managed asset content drifts", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "qt-wskit-drift-fail-"));
+  await createDoctorFixture(fixtureRoot);
+
+  const upgradeCapture = createCapture();
+  const upgradeCode = await runCli(["upgrade"], { cwd: fixtureRoot, ...upgradeCapture });
+  assert.equal(upgradeCode, 0);
+
+  await writeFile(
+    path.join(fixtureRoot, ".cursor", "rules", "workspace-kit-project-context.mdc"),
+    "# drifted-content\n",
+    "utf8"
+  );
+
+  const driftCapture = createCapture();
+  const driftCode = await runCli(["drift-check"], { cwd: fixtureRoot, ...driftCapture });
+  assert.equal(driftCode, 1);
+  assert.match(driftCapture.errors[0], /detected drift/);
+});
