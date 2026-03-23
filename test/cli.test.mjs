@@ -92,3 +92,38 @@ test("runCli doctor returns validation failure when required files are missing",
   assert.equal(code, 1);
   assert.match(capture.errors[0], /failed validation/);
 });
+
+test("runCli check validates profile baseline fields", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "qt-wskit-check-pass-"));
+  await createDoctorFixture(fixtureRoot);
+
+  const capture = createCapture();
+  const code = await runCli(["check"], { cwd: fixtureRoot, ...capture });
+
+  assert.equal(code, 0);
+  assert.match(capture.lines[0], /check passed/);
+});
+
+test("runCli check returns validation failure for invalid profile values", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "qt-wskit-check-fail-"));
+  await mkdir(path.join(fixtureRoot, "schemas"), { recursive: true });
+  await writeFile(
+    path.join(fixtureRoot, "workspace-kit.profile.json"),
+    JSON.stringify(
+      {
+        project: { name: "" },
+        packageManager: "invalid-pm",
+        commands: { test: "pnpm test", lint: "", typecheck: "" },
+        github: {}
+      },
+      null,
+      2
+    )
+  );
+
+  const capture = createCapture();
+  const code = await runCli(["check"], { cwd: fixtureRoot, ...capture });
+
+  assert.equal(code, 1);
+  assert.match(capture.errors[0], /failed profile validation/);
+});

@@ -27,9 +27,80 @@ type DoctorIssue = {
   reason: string;
 };
 
+const allowedPackageManagers = new Set(["pnpm", "npm", "yarn"]);
+
 export async function parseJsonFile(filePath: string): Promise<unknown> {
   const raw = await fs.readFile(filePath, "utf8");
   return JSON.parse(raw);
+}
+
+function readStringField(
+  objectValue: Record<string, unknown>,
+  key: string,
+  errors: string[],
+  fieldPath: string
+): string | undefined {
+  const value = objectValue[key];
+  if (typeof value !== "string" || value.trim().length === 0) {
+    errors.push(`${fieldPath} must be a non-empty string`);
+    return undefined;
+  }
+
+  return value;
+}
+
+async function validateProfile(cwd: string): Promise<string[]> {
+  const profilePath = path.join(cwd, defaultWorkspaceKitPaths.profile);
+  const errors: string[] = [];
+  let profile: unknown;
+
+  try {
+    profile = await parseJsonFile(profilePath);
+  } catch {
+    return [`${defaultWorkspaceKitPaths.profile} is missing or invalid JSON`];
+  }
+
+  if (!profile || typeof profile !== "object" || Array.isArray(profile)) {
+    return ["workspace-kit profile root must be an object"];
+  }
+
+  const profileObject = profile as Record<string, unknown>;
+  const project = profileObject.project;
+  const commands = profileObject.commands;
+  const github = profileObject.github;
+  const packageManager = profileObject.packageManager;
+
+  if (!project || typeof project !== "object" || Array.isArray(project)) {
+    errors.push("project must be an object");
+  } else {
+    readStringField(project as Record<string, unknown>, "name", errors, "project.name");
+  }
+
+  if (typeof packageManager !== "string" || !allowedPackageManagers.has(packageManager)) {
+    errors.push("packageManager must be one of: pnpm, npm, yarn");
+  }
+
+  if (!commands || typeof commands !== "object" || Array.isArray(commands)) {
+    errors.push("commands must be an object");
+  } else {
+    const commandsObject = commands as Record<string, unknown>;
+    readStringField(commandsObject, "test", errors, "commands.test");
+    readStringField(commandsObject, "lint", errors, "commands.lint");
+    readStringField(commandsObject, "typecheck", errors, "commands.typecheck");
+  }
+
+  if (!github || typeof github !== "object" || Array.isArray(github)) {
+    errors.push("github must be an object");
+  } else {
+    readStringField(
+      github as Record<string, unknown>,
+      "defaultBranch",
+      errors,
+      "github.defaultBranch"
+    );
+  }
+
+  return errors;
 }
 
 export async function runCli(
@@ -52,8 +123,23 @@ export async function runCli(
     return EXIT_SUCCESS;
   }
 
+  if (command === "check") {
+    const errors = await validateProfile(cwd);
+    if (errors.length > 0) {
+      writeError("workspace-kit check failed profile validation.");
+      for (const error of errors) {
+        writeError(`- ${error}`);
+      }
+      return EXIT_VALIDATION_FAILURE;
+    }
+
+    writeLine("workspace-kit check passed.");
+    writeLine("Profile validation succeeded for required baseline fields.");
+    return EXIT_SUCCESS;
+  }
+
   if (command !== "doctor") {
-    writeError(`Unknown command '${command}'. Supported commands: init, doctor.`);
+    writeError(`Unknown command '${command}'. Supported commands: init, doctor, check.`);
     return EXIT_USAGE_ERROR;
   }
 
