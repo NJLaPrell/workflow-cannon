@@ -1,0 +1,26 @@
+{
+  "name": "quicktask-workspace-kit",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NJLaPrell/QuickTask.git"
+  },
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "workspace-kit": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "clean": "rm -rf dist",
+    "test": "pnpm run build && node --test test/**/*.test.mjs",
+    "pack:dry-run": "pnpm run build && pnpm pack --pack-destination ../../artifacts/workspace-kit-pack"
+  },
+  "files": [
+    "dist",
+    "package.json"
+  ]
+}
