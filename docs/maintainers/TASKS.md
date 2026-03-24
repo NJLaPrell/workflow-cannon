@@ -15,8 +15,8 @@ Dependency fields:
 
 - Current phase in execution: _Phase 0 (foundation)._
 - Milestone target: _Establish split-repo baseline and complete initial release/consumer hardening scope._
-- Ready queue: `T178`
-- Next tasks: `T178`, `T179`, `T180`, `T181`, `T182`, `T183`
+- Ready queue: `T179`
+- Next tasks: `T179`, `T180`, `T181`, `T182`, `T183`
 
 ## Historical baseline (pre-Phase 0)
 
@@ -63,7 +63,7 @@ Dependency fields:
 
 Release target: **GitHub release `v0.2.0`**
 
-### [p] T178 [workspace-kit] Finalize Phase 0 scope, risks, and evidence standards
+### [x] T178 [workspace-kit] Finalize Phase 0 scope, risks, and evidence standards
 - Priority: P1
 - Approach: Align `docs/maintainers/ROADMAP.md`, `docs/maintainers/TASKS.md`, and `docs/maintainers/RELEASING.md` with explicit scope and evidence matrix.
 - Depends on: none
@@ -76,6 +76,58 @@ Release target: **GitHub release `v0.2.0`**
 - Acceptance criteria:
   - Scope and evidence matrix are documented and conflict-free.
   - All Phase 0 docs reference the same task boundaries.
+
+### [x] T206 [workspace-kit] Reorganize canonical documentation surfaces for AI and maintainers
+- Priority: P1
+- Approach: Move canonical AI docs to `/.ai`, move human maintainership docs to `docs/maintainers`, and rewire references/rules/templates.
+- Depends on: `T178`
+- Unblocks: `T179`, `T180`, `T181`, `T182`, `T183`
+- Technical scope:
+  - Move root canonical docs into explicit AI and human ownership paths.
+  - Update Cursor rules, commands, workflow docs, and issue templates to new canonical paths.
+  - Validate root markdown hygiene (`README.md` as the only root markdown doc).
+- Acceptance criteria:
+  - All source-of-truth references resolve to `/.ai` or `docs/maintainers`.
+  - Documentation control surfaces are conflict-free and consistent.
+
+### [x] T207 [workspace-kit] Bootstrap module contract, registry, and baseline module graph
+- Priority: P1
+- Approach: Establish typed module contract + registry validation + test coverage for dependency integrity and startup ordering.
+- Depends on: `T178`
+- Unblocks: `T184`, `T193`
+- Technical scope:
+  - Implement `WorkflowModule` contract and shared exports.
+  - Implement registry checks for duplicate/missing/self/cycle dependency failures.
+  - Add deterministic startup order and unit tests for graph validation.
+- Acceptance criteria:
+  - Module registry validates module graph integrity with explicit error codes.
+  - Contract + registry behavior is test-covered and green.
+
+### [x] T208 [workspace-kit] Add module config/state/instruction contracts with runtime enforcement
+- Priority: P1
+- Approach: Extend registration to include module config/state/instruction contracts, enable module toggles, and enforce instruction validity at runtime.
+- Depends on: `T207`
+- Unblocks: `T184`, `T186`, `T193`
+- Technical scope:
+  - Add `enabledByDefault`, `config`, `state`, and `instructions` to module registration.
+  - Add runtime enable/disable selection with dependency-integrity validation for enabled sets.
+  - Validate instruction naming, file mapping, and backing file existence in registry startup.
+- Acceptance criteria:
+  - Invalid instruction contracts fail startup deterministically.
+  - Enable/disable behavior is validated by tests and documented in module build guidance.
+
+### [x] T209 [workspace-kit] Define canonical module build guidance for AI and maintainers
+- Priority: P1
+- Approach: Publish a canonical AI spec plus human companion guide and keep both aligned with the module contract/registry implementation.
+- Depends on: `T206`, `T208`
+- Unblocks: `T184`, `T186`, `T193`
+- Technical scope:
+  - Create and maintain `.ai/module-build.md` as canonical module development policy.
+  - Create and maintain `docs/maintainers/module-build-guide.md` as the human-readable companion.
+  - Update guidance to cover config/state contracts, instruction contracts, and enable/disable dependency integrity.
+- Acceptance criteria:
+  - AI and human module-build docs are present, aligned, and referenced by source-of-truth docs.
+  - Guidance reflects implemented module runtime checks and test expectations.
 
 ### [p] T179 [workspace-kit] Harden package release metadata and automation guardrails
 - Priority: P1

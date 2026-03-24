@@ -2,7 +2,7 @@ meta|v=1|doc=rules|truth=canonical|st=active
 
 project|name=workflow-cannon|type=module_development_contract|scope=repo
 ref|name=principles|path=.ai/PRINCIPLES.md
-ref|name=human_principles|path=docs/maintainers/PRINCIPLES_HUMAN.md
+ref|name=human_principles|path=docs/maintainers/PRINCIPLES.md
 ref|name=module_contract|path=src/contracts/module-contract.ts
 ref|name=module_registry|path=src/core/module-registry.ts
 ref|name=module_layout|path=src/modules/README.md
@@ -12,6 +12,8 @@ truth|order=canonical_ai_docs>code_and_config_reality>generated_human_docs>narra
 rule|R100|must|new_module|implement_workflowmodule_with_registration_contractversion_capabilities_dependencies_enabledbydefault_config_state_and_instructions|risk=high|ap=none|ov=stop|st=active|refs=src/contracts/module-contract.ts
 rule|R101|must|module_registration|use_unique_stable_module_id_with_semver_version_explicit_dependson_and_instruction_entries_with_existing_files|risk=high|ap=none|ov=stop|st=active|refs=src/core/module-registry.ts
 rule|R112|must|module_toggle_behavior|support_runtime_enable_disable_and_reject_enabled_modules_with_disabled_required_dependencies|risk=high|ap=none|ov=stop|st=active|refs=src/core/module-registry.ts
+rule|R113|must|instruction_driven_modules|define_explicit_function_contract_types_for_options_results_and_evidence_when_instructions_represent_callable_operations|risk=medium|ap=none|ov=warn|st=active|refs=src/modules/documentation/types.ts
+rule|R114|must|module_command_dispatch|use_a_command_router_that_indexes_enabled_module_instruction_entries_and_dispatches_via_oncommand|risk=medium|ap=none|ov=warn|st=active|refs=src/core/module-command-router.ts
 rule|R102|must|module_boundaries|depend_only_on_core_and_contracts_and_avoid_direct_imports_from_sibling_modules|risk=medium|ap=none|ov=warn|st=active|refs=src/README.md,src/modules/README.md
 rule|R103|must|module_behavior|implement_only_required_lifecycle_hooks_and_keep_handlers_deterministic_for_supported_inputs|risk=high|ap=none|ov=stop|st=active
 rule|R104|must|module_docs|generate_and_maintain_human_docs_under_docs_and_ai_docs_under_ai_for_each_module_change|risk=medium|ap=none|ov=warn|st=active|refs=docs/maintainers/module-build-guide.md
@@ -25,6 +27,7 @@ rule|R111|must|build_scope|prefer_incremental_reversible_module_slices_over_broa
 
 path|src/contracts/module-contract.ts|role=module_contract|has=WorkflowModule,ModuleRegistration,ModuleLifecycleContext,ModuleCommand,ModuleEvent|deps=src/core,module_files|check=contract_fields_present|st=active|refs=src/contracts/module-contract.ts
 path|src/core/module-registry.ts|role=module_graph_validation|has=validateModuleSet,ModuleRegistry,topological_sort|deps=src/contracts/module-contract.ts|check=duplicate_missing_cycle_checks|st=active|refs=src/core/module-registry.ts
+path|src/core/module-command-router.ts|role=module_command_dispatch|has=list_commands,alias_resolution,safe_dispatch,typed_router_errors|deps=src/core/module-registry.ts,src/contracts/module-contract.ts|check=enabled_module_dispatch_only|st=active|refs=src/core/module-command-router.ts
 path|src/modules|role=module_implementations|has=registration,lifecycle_hooks,command_event_handlers|deps=src/core,src/contracts|xdeps=src/modules/*|check=explicit_dependson|st=active|refs=src/modules/README.md
 path|src/modules/*/instructions|role=module_instruction_surface|has=function_like_instruction_markdown_files|deps=module_registration|check=instruction_entries_match_files|st=active|refs=src/contracts/module-contract.ts
 path|test|role=module_validation_tests|has=module_registry_tests,module_behavior_tests|deps=dist|check=tests_pass|st=active|refs=test/module-registry.test.mjs
@@ -34,7 +37,7 @@ path|docs|role=human_docs|has=maintainer_guides,module_docs|deps=repo_state|chec
 wf|W100|name=create_module_slice|when=new_module_required|do=define_module_scope_and_capabilities>create_module_file_under_src_modules_with_registration>declare_dependson_and_implement_minimum_hooks>export_module_from_index_files|done=module_compiles+registry_validation_passes|forbid=direct_sibling_module_imports,implicit_dependencies|ask_if=multiple_capability_boundaries_fit|halt_if=contract_version_missing_or_dependency_graph_invalid|ap=none|risk=medium|st=active|refs=src/modules/README.md,src/contracts/module-contract.ts
 wf|W104|name=define_module_contract_docs|when=new_module_or_contract_change|do=add_config_md_and_state_md>add_instruction_files_under_instructions_directory>wire_instruction_entries_in_registration|done=config_state_and_instruction_contracts_present+registration_paths_valid|forbid=instruction_entries_without_backing_files|ask_if=instruction_name_or_scope_is_ambiguous|halt_if=missing_contract_docs_or_bad_paths|ap=none|risk=medium|st=active|refs=src/contracts/module-contract.ts
 wf|W101|name=validate_module_behavior|when=module_added_or_changed|do=add_or_update_unit_tests_for_registration_and_behavior>run_test_command>resolve_failures_until_green|done=tests_pass+behavior_paths_covered|forbid=untested_registration_changes|ask_if=acceptance_criteria_ambiguous|halt_if=determinism_break_or_missing_coverage_for_primary_path|ap=none|risk=high|st=active|refs=docs/maintainers/TASKS.md,test/module-registry.test.mjs
-wf|W102|name=publish_module_docs|when=module_contract_or_behavior_changes|do=update_ai_doc_records_for_module_behavior>update_human_module_guide_with_same_decisions>link_generated_outputs_and_evidence_paths|done=ai_doc_and_human_doc_aligned+outputs_defined_for_ai_and_docs|forbid=doc_only_claims_without_code_or_test_evidence|ask_if=source_of_truth_conflict_detected|halt_if=principle_conflict_unresolved|ap=prompt|risk=medium|st=active|refs=.ai/PRINCIPLES.md,docs/maintainers/PRINCIPLES_HUMAN.md
+wf|W102|name=publish_module_docs|when=module_contract_or_behavior_changes|do=update_ai_doc_records_for_module_behavior>update_human_module_guide_with_same_decisions>link_generated_outputs_and_evidence_paths|done=ai_doc_and_human_doc_aligned+outputs_defined_for_ai_and_docs|forbid=doc_only_claims_without_code_or_test_evidence|ask_if=source_of_truth_conflict_detected|halt_if=principle_conflict_unresolved|ap=prompt|risk=medium|st=active|refs=.ai/PRINCIPLES.md,docs/maintainers/PRINCIPLES.md
 wf|W103|name=module_change_gate_review|when=before_merge_or_release_for_module_work|do=check_approval_requirements_for_release_migration_policy_changes>verify_migration_notes_if_compatibility_impact_exists>record_evidence_and_follow_up_tasks|done=required_approvals_recorded+gates_passed|forbid=release_or_migration_execution_without_required_approval|ask_if=approval_record_missing|halt_if=critical_risk_without_approval|ap=required|risk=critical|st=active|refs=.ai/PRINCIPLES.md,docs/maintainers/RELEASING.md,docs/maintainers/CHANGELOG.md
 
 cmd|C100|name=test|use=pnpm run test|scope=repo|expect=all_tests_pass|risk=low|st=active
@@ -45,6 +48,8 @@ check|K108|scope=instruction_contract|assert=instruction_entry_name_maps_to_mark
 check|K106|scope=module_contract_docs|assert=config_state_and_instruction_files_exist_and_match_registration|when=before_merge|on_fail=stop|st=active|refs=src/contracts/module-contract.ts
 check|K107|scope=module_toggle_integrity|assert=enabled_module_set_has_all_required_dependencies_enabled|when=before_startup|on_fail=stop|st=active|refs=src/core/module-registry.ts
 check|K109|scope=instruction_runtime_validation|assert=module_registry_rejects_missing_or_invalid_instruction_files|when=before_startup|on_fail=stop|st=active|refs=src/core/module-registry.ts
+check|K110|scope=instruction_function_contract|assert=instruction_driven_modules_publish_typed_options_and_result_contracts_for_generation_operations|when=before_merge|on_fail=warn|st=active|refs=src/modules/documentation/types.ts
+check|K111|scope=module_command_router|assert=router_lists_commands_resolves_aliases_and_rejects_unknown_or_duplicate_command_routes|when=before_merge|on_fail=stop|st=active|refs=test/module-command-router.test.mjs
 check|K101|scope=module_graph|assert=module_registry_accepts_set_with_no_duplicate_missing_self_or_cycle_dependencies|when=before_merge|on_fail=stop|st=active|refs=src/core/module-registry.ts
 check|K102|scope=module_testing|assert=tests_cover_primary_command_or_event_paths_and_pass|when=before_merge|on_fail=stop|st=active|refs=test/module-registry.test.mjs
 check|K103|scope=documentation_outputs|assert=ai_documentation_updated_in_ai_and_human_documentation_updated_in_docs_for_module_changes|when=before_merge|on_fail=warn|st=active|refs=.ai/module-build.md,docs/maintainers/module-build-guide.md

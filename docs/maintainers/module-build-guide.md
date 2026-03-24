@@ -28,6 +28,7 @@ Every module change must satisfy these baseline rules:
 - If modules are toggled at runtime, ensure every enabled module keeps its required dependencies enabled.
 - Keep instruction entries aligned with real markdown instruction files.
 - `ModuleRegistry` enforces instruction contract validity (name/file mapping and file existence).
+- Use `src/core/module-command-router.ts` to list, resolve, and dispatch module commands for enabled modules.
 - Use function-like instruction names and filename mapping:
   - `name`: command-style identifier (example: `document-project`)
   - `file`: markdown file in `instructions/` (example: `document-project.md`)
@@ -149,7 +150,7 @@ export const exampleModule: WorkflowModule = {
 ## Related References
 
 - `.ai/PRINCIPLES.md`
-- `docs/maintainers/PRINCIPLES_HUMAN.md`
+- `docs/maintainers/PRINCIPLES.md`
 - `src/README.md`
 - `src/modules/README.md`
 - `src/contracts/module-contract.ts`
