@@ -1,0 +1,13 @@
+{
+  "generatedFrom": "workspace-kit.profile.json",
+  "projectName": "workflow-cannon",
+  "packageManager": "pnpm",
+  "commands": {
+    "test": "pnpm run test",
+    "lint": "pnpm run check",
+    "typecheck": "pnpm run check"
+  },
+  "github": {
+    "defaultBranch": "main"
+  }
+}

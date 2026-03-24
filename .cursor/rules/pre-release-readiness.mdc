@@ -1,0 +1,16 @@
+---
+description: Release readiness gate enforcement
+alwaysApply: false
+---
+
+# Pre-Release Readiness
+
+Release work must satisfy `RELEASING.md` gates before publish:
+
+- scope and changelog complete
+- validation checks pass
+- migration/security impacts reviewed
+- required evidence captured
+
+If any gate is open, do not publish.
+

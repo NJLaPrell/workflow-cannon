@@ -1,0 +1,14 @@
+---
+description: Release strategy consistency rule
+alwaysApply: false
+---
+
+# Release Strategy
+
+Follow package-first release behavior:
+
+1. Validate packaged-artifact behavior.
+2. Publish through standard automation.
+3. Verify downstream consumer install/update path.
+4. Feed release friction back into `TASKS.md`/`ROADMAP.md`.
+

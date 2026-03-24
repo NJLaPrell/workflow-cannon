@@ -1,0 +1,15 @@
+---
+description: PR review and merge strategy guardrails
+alwaysApply: false
+---
+
+# PR Review / Merge Strategy
+
+PRs should:
+
+- explain why and risk, not only what changed
+- include validation/evidence appropriate to impact
+- note migration or compatibility implications
+
+Avoid merging changes that skip known release or safety gates.
+

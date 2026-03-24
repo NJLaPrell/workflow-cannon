@@ -1,0 +1,18 @@
+---
+description: Enforce workflow-contract consistency across docs and tasks
+alwaysApply: true
+---
+
+# Workflow Contract Rule
+
+Use consistent terms from `TERMS.md` for directives, rules, guardrails, policy, workflow, and evidence.
+
+Required alignment:
+
+- `README.md` = intent and boundaries only.
+- `ROADMAP.md` = strategic decisions and phase framing.
+- `TASKS.md` = execution queue and completion tracking.
+- `RELEASING.md` = operational release workflow and evidence gates.
+
+Do not duplicate deep operational detail in `README.md`.
+

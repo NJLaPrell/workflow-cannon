@@ -1,0 +1,11 @@
+---
+description: Branching and tagging strategy baseline
+alwaysApply: false
+---
+
+# Branching / Tagging Strategy
+
+- Keep branches scoped to one coherent objective.
+- Use predictable release tags tied to published versions.
+- Ensure tags map to validated release artifacts and evidence.
+

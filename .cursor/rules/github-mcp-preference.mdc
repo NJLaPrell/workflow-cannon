@@ -1,0 +1,13 @@
+---
+description: Prefer GitHub MCP/CLI for GitHub operations
+alwaysApply: false
+---
+
+# GitHub MCP Preference
+
+For GitHub issues/PRs/checks/releases:
+
+- Prefer `gh`/GitHub MCP-backed operations.
+- Keep issue and PR templates consistent with repository docs.
+- Include links/evidence when creating or updating release-related items.
+

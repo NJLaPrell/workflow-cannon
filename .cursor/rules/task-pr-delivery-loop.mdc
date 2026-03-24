@@ -1,0 +1,15 @@
+---
+description: Delivery loop from task to PR-ready change
+alwaysApply: false
+---
+
+# Task -> PR Delivery Loop
+
+1. Select highest-priority ready task.
+2. Implement smallest coherent slice.
+3. Validate with project checks.
+4. Update task status and evidence.
+5. Prepare concise PR description focused on why and risk.
+
+If blocked, document blocker and next action in `TASKS.md`.
+

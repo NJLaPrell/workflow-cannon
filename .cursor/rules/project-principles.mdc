@@ -1,0 +1,27 @@
+---
+description: Apply project goals and principles to decisions
+alwaysApply: true
+---
+
+# Project Principles Rule
+
+Use `PRINCIPLES.md` as the canonical decision guide for planning and implementation.
+
+## Required behavior
+
+1. Before substantial architecture/process/release decisions, consult `PRINCIPLES.md`.
+2. Apply trade-off priority in this order:
+   - safety and trustworthiness
+   - correctness and determinism
+   - compatibility and upgrade safety
+   - operability and evidence quality
+   - delivery speed and convenience
+3. Operate with high autonomy by default when intent is clear.
+4. Use fast-by-default execution for normal development.
+5. Require explicit user confirmation before release actions, migration/upgrade-path changes, and policy/approval-model changes.
+6. If a requested path conflicts with project principles, use soft-gate behavior: state the conflict and ask for confirmation before proceeding.
+7. Prefer incremental, reversible changes over broad high-risk changes.
+
+## Scope
+
+This rule applies to all sessions and all files in this repository.

@@ -1,21 +1,21 @@
 schema_version: 1
-current_kit_phase: 6
+current_kit_phase: 0
 last_updated: "2026-03-23"
-active_focus: "Post-extraction maintenance iteration 1 kickoff — map and execute T178-T180"
+active_focus: "Phase 0 foundation kickoff — establish split-repo baseline and execute T178-T180"
 blockers: []
 next_agent_actions:
-  - "Execute T178 to finalize iteration 1 maintenance task mapping and evidence expectations"
+  - "Execute T178 to finalize Phase 0 scope, risk framing, and evidence expectations"
   - "Implement T179 hardening changes in Workflow Cannon release metadata/workflows"
   - "Implement T180 consumer update cadence and parity validation guidance for downstream consumers"
 last_session_summary:
-  - "Closed extraction follow-through with successful first npm publish (`@workflow-cannon/workspace-kit@0.1.0`)."
-  - "Re-opened active backlog for post-extraction maintenance iteration 1 with tasks T178-T180."
-  - "Shifted handoff focus from extraction closeout to maintenance hardening and consumer update cadence."
+  - "Reset project execution tracking to Phase 0 for the split repository baseline."
+  - "Carried forward T178-T180 as initial Phase 0 tasks."
+  - "Preserved extraction and first-publish outcomes as historical provenance."
 pending_decisions: []
 metrics:
   updated_at: "2026-03-23"
   source: "manual"
-  notes: "Extraction complete and first publish shipped; now entering maintenance iteration 1 for release hardening + consumer cadence."
+  notes: "Tracking reset to Phase 0 for split-repo baseline; initial scope remains T178-T180."
   time_to_doctor_minutes: 0.03
   cold_start_success_rate_pct: 100
   upgrade_success_rate_pct: null

@@ -1,0 +1,15 @@
+---
+description: Completion workflow for task closure quality
+alwaysApply: false
+---
+
+# Task Completion Workflow
+
+Before marking a task complete:
+
+1. Confirm scope and acceptance signals are met.
+2. Confirm behavior was validated with relevant checks.
+3. Update docs affected by behavior or process changes.
+4. Record evidence references for risky/release-impacting changes.
+5. Capture follow-up work instead of hiding residual risk.
+

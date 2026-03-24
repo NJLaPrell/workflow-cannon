@@ -1,0 +1,12 @@
+---
+description: Commit strategy expectations
+alwaysApply: false
+---
+
+# Commit Strategy
+
+- Use focused commits with clear intent.
+- Keep commit messages concise and reason-oriented.
+- Do not batch unrelated changes in one commit.
+- Preserve reviewability and rollback clarity.
+
