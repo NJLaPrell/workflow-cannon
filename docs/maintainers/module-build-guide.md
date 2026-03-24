@@ -41,6 +41,7 @@ Every module change must satisfy these baseline rules:
 
 - `src/contracts/module-contract.ts`: canonical module contract types and interface.
 - `src/core/module-registry.ts`: dependency validation and startup ordering.
+- `src/core/module-command-router.ts`: enabled-module command discovery and dispatch.
 - `src/modules/`: module implementations and registration metadata.
 - `src/modules/<module>/config.md`: module configuration contract.
 - `src/modules/<module>/state.md`: module state contract.
@@ -79,7 +80,7 @@ Every module change must satisfy these baseline rules:
 - Update this guide (and related maintainer docs) with the same decisions.
 - Ensure docs describe where outputs live:
   - AI-optimized docs in `/.ai`
-  - human-readable docs in `/docs`
+  - human-readable docs in configured `sources.humanRoot` (default: `docs/maintainers`)
 
 ### 4) Run gate review
 

@@ -129,6 +129,32 @@ Release target: **GitHub release `v0.2.0`**
   - AI and human module-build docs are present, aligned, and referenced by source-of-truth docs.
   - Guidance reflects implemented module runtime checks and test expectations.
 
+### [x] T210 [workspace-kit] Implement module command router for discovery and dispatch
+- Priority: P1
+- Approach: Add a core command router that indexes enabled-module instruction entries, supports alias resolution, and dispatches commands through module `onCommand`.
+- Depends on: `T207`, `T208`
+- Unblocks: `T184`, `T186`, `T193`
+- Technical scope:
+  - Implement `src/core/module-command-router.ts` with typed descriptors, alias support, and deterministic error handling.
+  - Enforce duplicate command detection and enabled-module-only dispatch semantics.
+  - Add command-router tests for listing, alias resolution, unknown command handling, and duplicate routes.
+- Acceptance criteria:
+  - Agents can list and resolve callable module commands from enabled modules.
+  - Router behavior is test-covered and fails safely on invalid routing states.
+
+### [x] T211 [workspace-kit] Wire documentation module generate-document runtime through command dispatch
+- Priority: P1
+- Approach: Implement `document-project`/`generate-document` runtime flow with config-driven paths, template/schema validation, conflict checks, and evidence output.
+- Depends on: `T209`, `T210`
+- Unblocks: `T179`, `T180`, `T181`
+- Technical scope:
+  - Implement documentation runtime command execution with strict write-boundary enforcement to configured roots.
+  - Support template-missing prompt/continue behavior, section coverage validation, and validate/retry flow.
+  - Emit typed generation evidence and surface it through module command results.
+- Acceptance criteria:
+  - Documentation module command runs through router and returns structured evidence.
+  - Validation/conflict behavior matches module rules and is covered by passing tests.
+
 ### [p] T179 [workspace-kit] Harden package release metadata and automation guardrails
 - Priority: P1
 - Approach: Harden metadata, enforce guardrails, and codify release gate checks.

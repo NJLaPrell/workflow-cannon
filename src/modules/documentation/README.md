@@ -4,7 +4,7 @@ Translates between canonical AI-optimized documentation and human-readable maint
 
 Primary responsibilities:
 
-- maintain parity between `/.ai` and `/docs` documentation surfaces
+- maintain parity between `/.ai` and configured human docs roots (default: `docs/maintainers`)
 - execute instruction-file driven documentation generation
 - record deterministic documentation generation state and evidence
 
