@@ -1,6 +1,6 @@
 # Task Dependency Map
 
-Canonical dependency view for `T178` through `T195`, derived from `TASKS.md`.
+Canonical dependency view for `T178` through `T195`, derived from `docs/maintainers/TASKS.md`.
 
 ## Purpose
 
@@ -80,4 +80,4 @@ Longest dependency chain ending at `T195`:
 
 ## Maintenance rule
 
-When any `Depends on` or `Unblocks` field changes in `TASKS.md`, update this file in the same PR.
+When any `Depends on` or `Unblocks` field changes in `docs/maintainers/TASKS.md`, update this file in the same PR.

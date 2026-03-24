@@ -65,7 +65,7 @@ Release target: **GitHub release `v0.2.0`**
 
 ### [p] T178 [workspace-kit] Finalize Phase 0 scope, risks, and evidence standards
 - Priority: P1
-- Approach: Align `ROADMAP.md`, `TASKS.md`, and `RELEASING.md` with explicit scope and evidence matrix.
+- Approach: Align `docs/maintainers/ROADMAP.md`, `docs/maintainers/TASKS.md`, and `docs/maintainers/RELEASING.md` with explicit scope and evidence matrix.
 - Depends on: none
 - Unblocks: `T179`, `T180`, `T181`, `T184`, `T196`
 - Supporting tasks: `T196`

@@ -5,13 +5,13 @@ alwaysApply: true
 
 # Workspace Kit Agent Protocol
 
-Apply when editing `ROADMAP.md`, `TASKS.md`, `docs/maintainers/workspace-kit-status.yaml`, or release-critical docs.
+Apply when editing `docs/maintainers/ROADMAP.md`, `docs/maintainers/TASKS.md`, `docs/maintainers/workspace-kit-status.yaml`, or release-critical docs.
 
 ## Start-of-session checks
 
 1. Read `docs/maintainers/workspace-kit-status.yaml`.
-2. Read `ROADMAP.md` current state and decisions.
-3. Read `TASKS.md` current execution state and ready queue.
+2. Read `docs/maintainers/ROADMAP.md` current state and decisions.
+3. Read `docs/maintainers/TASKS.md` current execution state and ready queue.
 
 ## End-of-session updates
 

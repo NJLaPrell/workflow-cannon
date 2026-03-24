@@ -24,4 +24,4 @@ List alternatives and why they are less preferred.
 
 ## Notes
 
-Link related entries in `ROADMAP.md`, `TASKS.md`, or `DECISIONS.md` if relevant.
+Link related entries in `docs/maintainers/ROADMAP.md`, `docs/maintainers/TASKS.md`, or `docs/maintainers/DECISIONS.md` if relevant.

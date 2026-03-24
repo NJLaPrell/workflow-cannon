@@ -4,7 +4,7 @@
 
 - For usage questions, open a GitHub issue with clear reproduction details.
 - For feature ideas, open a GitHub issue and include context plus proposed task direction.
-- For security issues, use the private path described in `SECURITY.md`.
+- For security issues, use the private path described in `docs/maintainers/SECURITY.md`.
 
 ## What to include
 

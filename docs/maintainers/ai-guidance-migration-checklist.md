@@ -72,5 +72,5 @@ These were added to support profile-driven context for this split repository:
 
 ## Notes
 
-- `AGENTS.md` and `.cursorrules` were not present in the source baseline and are not required for parity.
-- Core AI behavior surfaces are now present in-repo and can be referenced by `TERMS.md`, `README.md`, and release/task workflows.
+- `docs/maintainers/AGENTS.md` and `.cursorrules` were not present in the source baseline and are not required for parity.
+- Core AI behavior surfaces are now present in-repo and can be referenced by `docs/maintainers/TERMS.md`, `README.md`, and release/task workflows.

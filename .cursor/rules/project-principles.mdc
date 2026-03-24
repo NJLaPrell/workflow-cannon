@@ -5,11 +5,11 @@ alwaysApply: true
 
 # Project Principles Rule
 
-Use `PRINCIPLES.md` as the canonical decision guide for planning and implementation.
+Use `.ai/PRINCIPLES.md` as the canonical decision guide for planning and implementation.
 
 ## Required behavior
 
-1. Before substantial architecture/process/release decisions, consult `PRINCIPLES.md`.
+1. Before substantial architecture/process/release decisions, consult `.ai/PRINCIPLES.md`.
 2. Apply trade-off priority in this order:
    - safety and trustworthiness
    - correctness and determinism

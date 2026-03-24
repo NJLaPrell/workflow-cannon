@@ -5,14 +5,14 @@ alwaysApply: true
 
 # Workflow Contract Rule
 
-Use consistent terms from `TERMS.md` for directives, rules, guardrails, policy, workflow, and evidence.
+Use consistent terms from `docs/maintainers/TERMS.md` for directives, rules, guardrails, policy, workflow, and evidence.
 
 Required alignment:
 
 - `README.md` = intent and boundaries only.
-- `ROADMAP.md` = strategic decisions and phase framing.
-- `TASKS.md` = execution queue and completion tracking.
-- `RELEASING.md` = operational release workflow and evidence gates.
+- `docs/maintainers/ROADMAP.md` = strategic decisions and phase framing.
+- `docs/maintainers/TASKS.md` = execution queue and completion tracking.
+- `docs/maintainers/RELEASING.md` = operational release workflow and evidence gates.
 
 Do not duplicate deep operational detail in `README.md`.
 

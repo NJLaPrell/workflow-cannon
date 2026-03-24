@@ -32,5 +32,5 @@ Workflow Cannon aims to provide a modular workflow platform where user-defined c
 
 ## Related docs
 
-- `ROADMAP.md` for strategic direction.
-- `TASKS.md` for execution tracking.
+- `docs/maintainers/ROADMAP.md` for strategic direction.
+- `docs/maintainers/TASKS.md` for execution tracking.

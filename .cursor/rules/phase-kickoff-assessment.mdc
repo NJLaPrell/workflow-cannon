@@ -7,7 +7,7 @@ alwaysApply: false
 
 At phase start:
 
-1. Align phase definition in `ROADMAP.md`, `TASKS.md`, and status YAML.
+1. Align phase definition in `docs/maintainers/ROADMAP.md`, `docs/maintainers/TASKS.md`, and status YAML.
 2. Confirm ready queue supports phase goals.
 3. Define evidence expectations for phase-exit confidence.
 4. Identify human-only decisions early.

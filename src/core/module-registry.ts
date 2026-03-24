@@ -1,3 +1,5 @@
+import { existsSync, statSync } from "node:fs";
+import { resolve, sep } from "node:path";
 import type { WorkflowModule } from "../contracts/module-contract.js";
 
 export class ModuleRegistryError extends Error {
@@ -77,22 +79,174 @@ function topologicalSort(moduleMap: Map<string, WorkflowModule>): WorkflowModule
   return sorted;
 }
 
+function resolveEnabledModuleIds(
+  modules: WorkflowModule[],
+  options?: ModuleRegistryOptions
+): Set<string> {
+  const explicitEnabled = options?.enabledModules;
+  const explicitDisabled = new Set(options?.disabledModules ?? []);
+
+  const enabledIds = new Set<string>();
+  for (const module of modules) {
+    if (module.registration.enabledByDefault) {
+      enabledIds.add(module.registration.id);
+    }
+  }
+
+  if (explicitEnabled && explicitEnabled.length > 0) {
+    enabledIds.clear();
+    for (const moduleId of explicitEnabled) {
+      enabledIds.add(moduleId);
+    }
+  }
+
+  for (const moduleId of explicitDisabled) {
+    enabledIds.delete(moduleId);
+  }
+
+  return enabledIds;
+}
+
+function buildEnabledModuleMap(
+  moduleMap: Map<string, WorkflowModule>,
+  enabledModuleIds: Set<string>
+): Map<string, WorkflowModule> {
+  const enabledModuleMap = new Map<string, WorkflowModule>();
+  for (const moduleId of enabledModuleIds) {
+    const module = moduleMap.get(moduleId);
+    if (!module) {
+      throw new ModuleRegistryError("unknown-enabled-module", `Enabled module '${moduleId}' not found`);
+    }
+    enabledModuleMap.set(moduleId, module);
+  }
+  return enabledModuleMap;
+}
+
+function validateEnabledDependencies(enabledModuleMap: Map<string, WorkflowModule>): void {
+  for (const module of enabledModuleMap.values()) {
+    for (const dependencyId of module.registration.dependsOn) {
+      if (!enabledModuleMap.has(dependencyId)) {
+        throw new ModuleRegistryError(
+          "disabled-required-dependency",
+          `Enabled module '${module.registration.id}' requires disabled module '${dependencyId}'`
+        );
+      }
+    }
+  }
+}
+
+function isInstructionNameValid(name: string): boolean {
+  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name);
+}
+
+function validateInstructionContracts(
+  moduleMap: Map<string, WorkflowModule>,
+  workspacePath: string
+): void {
+  for (const module of moduleMap.values()) {
+    const { id, instructions } = module.registration;
+    const instructionDirectory = resolve(workspacePath, instructions.directory);
+    const seenNames = new Set<string>();
+    const seenFiles = new Set<string>();
+
+    for (const entry of instructions.entries) {
+      if (!isInstructionNameValid(entry.name)) {
+        throw new ModuleRegistryError(
+          "invalid-instruction-name",
+          `Module '${id}' has invalid instruction name '${entry.name}'`
+        );
+      }
+
+      if (seenNames.has(entry.name)) {
+        throw new ModuleRegistryError(
+          "duplicate-instruction-name",
+          `Module '${id}' has duplicate instruction name '${entry.name}'`
+        );
+      }
+      seenNames.add(entry.name);
+
+      if (!entry.file.endsWith(".md")) {
+        throw new ModuleRegistryError(
+          "invalid-instruction-file",
+          `Module '${id}' instruction file '${entry.file}' must end with .md`
+        );
+      }
+
+      const expectedFileName = `${entry.name}.md`;
+      if (entry.file !== expectedFileName) {
+        throw new ModuleRegistryError(
+          "instruction-name-file-mismatch",
+          `Module '${id}' instruction '${entry.name}' must map to '${expectedFileName}'`
+        );
+      }
+
+      if (seenFiles.has(entry.file)) {
+        throw new ModuleRegistryError(
+          "duplicate-instruction-file",
+          `Module '${id}' has duplicate instruction file '${entry.file}'`
+        );
+      }
+      seenFiles.add(entry.file);
+
+      const instructionFilePath = resolve(instructionDirectory, entry.file);
+      if (
+        instructionFilePath !== instructionDirectory &&
+        !instructionFilePath.startsWith(`${instructionDirectory}${sep}`)
+      ) {
+        throw new ModuleRegistryError(
+          "instruction-path-escape",
+          `Module '${id}' instruction '${entry.name}' resolves outside instruction directory`
+        );
+      }
+
+      if (!existsSync(instructionFilePath)) {
+        throw new ModuleRegistryError(
+          "missing-instruction-file",
+          `Module '${id}' instruction file '${instructionFilePath}' does not exist`
+        );
+      }
+
+      if (!statSync(instructionFilePath).isFile()) {
+        throw new ModuleRegistryError(
+          "invalid-instruction-file",
+          `Module '${id}' instruction path '${instructionFilePath}' is not a file`
+        );
+      }
+    }
+  }
+}
+
 export function validateModuleSet(modules: WorkflowModule[]): void {
   const moduleMap = buildModuleMap(modules);
   validateDependencies(moduleMap);
+  validateInstructionContracts(moduleMap, process.cwd());
   topologicalSort(moduleMap);
 }
 
+export type ModuleRegistryOptions = {
+  enabledModules?: string[];
+  disabledModules?: string[];
+  workspacePath?: string;
+};
+
 export class ModuleRegistry {
   private readonly modules: WorkflowModule[];
+  private readonly enabledModules: WorkflowModule[];
   private readonly sortedModules: WorkflowModule[];
   private readonly moduleMap: Map<string, WorkflowModule>;
+  private readonly enabledModuleMap: Map<string, WorkflowModule>;
 
-  constructor(modules: WorkflowModule[]) {
+  constructor(modules: WorkflowModule[], options?: ModuleRegistryOptions) {
     this.moduleMap = buildModuleMap(modules);
     validateDependencies(this.moduleMap);
-    this.sortedModules = topologicalSort(this.moduleMap);
+    validateInstructionContracts(this.moduleMap, options?.workspacePath ?? process.cwd());
     this.modules = [...modules];
+
+    const enabledModuleIds = resolveEnabledModuleIds(this.modules, options);
+    this.enabledModuleMap = buildEnabledModuleMap(this.moduleMap, enabledModuleIds);
+    validateEnabledDependencies(this.enabledModuleMap);
+    this.sortedModules = topologicalSort(this.enabledModuleMap);
+    this.enabledModules = [...this.sortedModules];
   }
 
   getAllModules(): WorkflowModule[] {
@@ -101,6 +255,14 @@ export class ModuleRegistry {
 
   getModuleById(id: string): WorkflowModule | undefined {
     return this.moduleMap.get(id);
+  }
+
+  isModuleEnabled(id: string): boolean {
+    return this.enabledModuleMap.has(id);
+  }
+
+  getEnabledModules(): WorkflowModule[] {
+    return [...this.enabledModules];
   }
 
   getStartupOrder(): WorkflowModule[] {

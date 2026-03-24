@@ -1,10 +1,37 @@
 export type ModuleCapability =
+  | "documentation"
   | "task-engine"
   | "planning"
   | "improvement"
   | "approvals"
   | "diagnostics"
   | "migration";
+
+export type ModuleDocumentContract = {
+  path: string;
+  format: "md";
+  description?: string;
+};
+
+export type ModuleInstructionEntry = {
+  /**
+   * Function-like instruction name, e.g. "document-project".
+   */
+  name: string;
+  /**
+   * Markdown instruction file path under the module instruction directory.
+   */
+  file: string;
+  description?: string;
+};
+
+export type ModuleInstructionContract = {
+  /**
+   * Directory containing markdown instruction files for this module.
+   */
+  directory: string;
+  entries: ModuleInstructionEntry[];
+};
 
 export type ModuleEvent = {
   type: string;
@@ -34,6 +61,10 @@ export type ModuleRegistration = {
   contractVersion: "1";
   capabilities: ModuleCapability[];
   dependsOn: string[];
+  enabledByDefault: boolean;
+  config: ModuleDocumentContract;
+  state: ModuleDocumentContract;
+  instructions: ModuleInstructionContract;
 };
 
 export interface WorkflowModule {

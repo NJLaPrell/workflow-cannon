@@ -1,4 +1,4 @@
-AI agents: `./ai/` is the authoritative source of truth; read all files there before any analysis, planning, or code changes, and follow `./ai/` over `README.md`, `./docs/`, and conflicting existing code patterns.
+AI agents: `./.ai/` is the authoritative source of truth; read all files there before any analysis, planning, or code changes, and follow `./.ai/` over `README.md`, `./docs/`, and conflicting existing code patterns.
 
 # Workflow Cannon
 
@@ -84,26 +84,30 @@ npm install @workflow-cannon/workspace-kit
 ## Repository Map
 
 - `README.md` - project entry point
-- `PRINCIPLES.md` - project goals and decision principles
-- `ROADMAP.md` - roadmap and decision log
-- `TASKS.md` - execution tracking
-- `ARCHITECTURE.md` - architecture direction
-- `DECISIONS.md` - focused design/decision notes
-- `RELEASING.md` - release checklist and validation expectations
+- `.ai/PRINCIPLES.md` - project goals and decision principles (canonical AI)
+- `docs/maintainers/ROADMAP.md` - roadmap and decision log
+- `docs/maintainers/TASKS.md` - execution tracking
+- `docs/maintainers/ARCHITECTURE.md` - architecture direction
+- `docs/maintainers/DECISIONS.md` - focused design/decision notes
+- `docs/maintainers/RELEASING.md` - release checklist and validation expectations
+- `.ai/module-build.md` - canonical AI module build guidance
 - `docs/maintainers/` - maintainer process and boundary docs
+- `docs/maintainers/module-build-guide.md` - human-readable module build guidance
 - `docs/adr/` - ADR templates and records
 
 ## Documentation Index
 
-- Project goals and decision principles: `PRINCIPLES.md`
-- Strategy and long-range direction: `ROADMAP.md`
-- Active execution tasks: `TASKS.md`
-- Glossary and agent-guidance terms: `TERMS.md`
-- Architecture direction: `ARCHITECTURE.md`
-- Project decisions: `DECISIONS.md`
-- Contribution guidelines: `CONTRIBUTING.md`
-- Release process and gates: `RELEASING.md`
-- Security, support, and governance: `SECURITY.md`, `SUPPORT.md`, `GOVERNANCE.md`
+- Project goals and decision principles: `.ai/PRINCIPLES.md`
+- Strategy and long-range direction: `docs/maintainers/ROADMAP.md`
+- Active execution tasks: `docs/maintainers/TASKS.md`
+- Glossary and agent-guidance terms: `docs/maintainers/TERMS.md`
+- Architecture direction: `docs/maintainers/ARCHITECTURE.md`
+- Project decisions: `docs/maintainers/DECISIONS.md`
+- Contribution guidelines: `docs/maintainers/CONTRIBUTING.md`
+- Release process and gates: `docs/maintainers/RELEASING.md`
+- Canonical AI module build guidance: `.ai/module-build.md`
+- Human module build guide: `docs/maintainers/module-build-guide.md`
+- Security, support, and governance: `docs/maintainers/SECURITY.md`, `docs/maintainers/SUPPORT.md`, `docs/maintainers/GOVERNANCE.md`
 - AI behavior rules and command wrappers: `.cursor/rules/`, `.cursor/commands/`
 
 ## License

@@ -1,7 +1,7 @@
 # Workflow Cannon Principles (Human-Readable)
 
-This document is the human-readable companion to `PRINCIPLES.md` (canonical rules format).  
-If there is any conflict, `PRINCIPLES.md` is authoritative.
+This document is the human-readable companion to `.ai/PRINCIPLES.md` (canonical rules format).  
+If there is any conflict, `.ai/PRINCIPLES.md` is authoritative.
 
 ## Purpose
 
@@ -50,15 +50,15 @@ Work must stop when there is unapproved risk of irreversible data loss or critic
 ## Conflict and Override Handling
 
 - If a requested change conflicts with these principles, use soft-gate behavior: state the conflict and ask for confirmation before proceeding.
-- If principles are explicitly overridden, record rationale in `TASKS.md` or `DECISIONS.md`.
+- If principles are explicitly overridden, record rationale in `docs/maintainers/TASKS.md` or `docs/maintainers/DECISIONS.md`.
 
 ## Documentation Boundaries
 
 To avoid ownership drift:
 
-- Strategy belongs in `ROADMAP.md`
-- Execution belongs in `TASKS.md`
-- Release operations belong in `RELEASING.md`
+- Strategy belongs in `docs/maintainers/ROADMAP.md`
+- Execution belongs in `docs/maintainers/TASKS.md`
+- Release operations belong in `docs/maintainers/RELEASING.md`
 
 ## Validation Gates
 
@@ -70,9 +70,9 @@ Before merge/release/execution, confirm:
 
 ## Related References
 
-- `PRINCIPLES.md` (canonical)
-- `ROADMAP.md`
-- `TASKS.md`
-- `DECISIONS.md`
-- `RELEASING.md`
-- `CHANGELOG.md`
+- `.ai/PRINCIPLES.md` (canonical)
+- `docs/maintainers/ROADMAP.md`
+- `docs/maintainers/TASKS.md`
+- `docs/maintainers/DECISIONS.md`
+- `docs/maintainers/RELEASING.md`
+- `docs/maintainers/CHANGELOG.md`

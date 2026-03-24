@@ -4,8 +4,8 @@ goal|produce=canonical_project_docs|opt=max_obedience_per_token|minimize=ambigui
 io|in=repo_files,code_config,existing_docs,core_schema|out=manifest,rules,map,workflows,commands,decisions,glossary,observed,planned,checks
 authority|order=canonical_ai_docs>code_and_config_reality>generated_human_docs>narrative_docs
 
-use|schema=ai/schema/core.v1.txt
-create|files=ai/00-manifest.md,ai/01-rules.md,ai/02-map.md,ai/03-workflows.md,ai/04-commands.md,ai/05-decisions.md,ai/06-glossary.md,ai/07-observed.md,ai/08-planned.md,ai/09-checks.md
+use|schema=.ai/documentation-schema.md
+create|files=.ai/00-manifest.md,.ai/01-rules.md,.ai/02-map.md,.ai/03-workflows.md,.ai/04-commands.md,.ai/05-decisions.md,.ai/06-glossary.md,.ai/07-observed.md,.ai/08-planned.md,.ai/09-checks.md
 min_set|files=manifest,rules,map,workflows
 
 author|one_record_per_line=true|meta_first_once=true|stable_order=true|omit_empty_optional=true|one_fact_per_record=true|exceptions_inline=true

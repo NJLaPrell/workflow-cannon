@@ -4,8 +4,8 @@ Thanks for contributing to Workflow Cannon.
 
 ## Before you start
 
-- Read `README.md`, `PRINCIPLES.md`, and `ROADMAP.md`.
-- Check `TASKS.md` for active or queued execution items.
+- Read `README.md`, `.ai/PRINCIPLES.md`, and `docs/maintainers/ROADMAP.md`.
+- Check `docs/maintainers/TASKS.md` for active or queued execution items.
 - Align proposed work with existing task and roadmap direction.
 
 ## Contribution flow

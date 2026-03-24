@@ -25,14 +25,14 @@ Every release must:
 
 All gates should pass before publish:
 
-1. Scope is clear and tracked in `TASKS.md` with linked roadmap/decision context where needed.
-2. Behavior changes are documented in `CHANGELOG.md`.
+1. Scope is clear and tracked in `docs/maintainers/TASKS.md` with linked roadmap/decision context where needed.
+2. Behavior changes are documented in `docs/maintainers/CHANGELOG.md`.
 3. Build, typecheck, and tests pass for the release candidate.
 4. Consumer-impacting flows are validated against packaged artifacts.
 5. Migration risk is reviewed for config/template/schema/state changes.
 6. Security-sensitive changes (policy/approval/secrets/workspace mutation) are explicitly reviewed.
 
-If a gate fails, do not publish. Capture the blocker and route follow-up through `TASKS.md`.
+If a gate fails, do not publish. Capture the blocker and route follow-up through `docs/maintainers/TASKS.md`.
 
 ## Release procedure
 
@@ -40,7 +40,7 @@ If a gate fails, do not publish. Capture the blocker and route follow-up through
    - Confirm included tasks and intended release outcome.
    - Classify risk (low/medium/high) and note rollout caveats.
 2. **Prepare release artifacts**
-   - Update `CHANGELOG.md` with user-visible impact.
+   - Update `docs/maintainers/CHANGELOG.md` with user-visible impact.
    - Ensure version and tag strategy align with project policy.
 3. **Run validation**
    - Execute repository validation commands used by this project (`build`, `check`, `test`, dry-run pack, and parity checks as applicable).
@@ -73,7 +73,7 @@ After publish:
 2. Triage issues and severity quickly; patch if needed.
 3. Capture recurring friction themes from release execution.
 4. Convert recurring friction into:
-   - task and roadmap updates (`TASKS.md`, `ROADMAP.md`)
+   - task and roadmap updates (`docs/maintainers/TASKS.md`, `docs/maintainers/ROADMAP.md`)
    - workflow/rule hardening proposals
    - enhancement recommendations for approval review
 
@@ -82,7 +82,7 @@ This closes the loop with the Improvement/Enhancement direction: release outcome
 ## Related documents
 
 - `README.md` for project intent and phase context
-- `PRINCIPLES.md` for decision priorities and governance posture
-- `ROADMAP.md` for strategic direction and major decisions
-- `TASKS.md` for active execution and follow-up tracking
-- `SECURITY.md` for vulnerability handling expectations
+- `.ai/PRINCIPLES.md` for decision priorities and governance posture
+- `docs/maintainers/ROADMAP.md` for strategic direction and major decisions
+- `docs/maintainers/TASKS.md` for active execution and follow-up tracking
+- `docs/maintainers/SECURITY.md` for vulnerability handling expectations

@@ -5,6 +5,7 @@ import {
   ModuleRegistry,
   ModuleRegistryError,
   approvalsModule,
+  documentationModule,
   improvementModule,
   planningModule,
   taskEngineModule,
@@ -13,12 +14,19 @@ import {
 
 test("validateModuleSet accepts valid module dependency graph", () => {
   assert.doesNotThrow(() =>
-    validateModuleSet([taskEngineModule, planningModule, approvalsModule, improvementModule])
+    validateModuleSet([
+      documentationModule,
+      taskEngineModule,
+      planningModule,
+      approvalsModule,
+      improvementModule
+    ])
   );
 });
 
 test("ModuleRegistry returns startup order in dependency sequence", () => {
   const registry = new ModuleRegistry([
+    documentationModule,
     improvementModule,
     approvalsModule,
     planningModule,
@@ -26,7 +34,75 @@ test("ModuleRegistry returns startup order in dependency sequence", () => {
   ]);
 
   const startupIds = registry.getStartupOrder().map((module) => module.registration.id);
-  assert.deepEqual(startupIds, ["task-engine", "planning", "improvement", "approvals"]);
+  assert.deepEqual(startupIds, ["documentation", "task-engine", "planning", "improvement", "approvals"]);
+});
+
+test("ModuleRegistry supports disabled modules and enabled dependency checks", () => {
+  const registry = new ModuleRegistry(
+    [documentationModule, taskEngineModule, planningModule, approvalsModule, improvementModule],
+    { disabledModules: ["documentation"] }
+  );
+
+  assert.equal(registry.isModuleEnabled("documentation"), false);
+  const startupIds = registry.getStartupOrder().map((module) => module.registration.id);
+  assert.deepEqual(startupIds, ["task-engine", "planning", "approvals", "improvement"]);
+});
+
+test("ModuleRegistry rejects enabling module with disabled required dependency", () => {
+  assert.throws(
+    () =>
+      new ModuleRegistry([taskEngineModule, planningModule], {
+        enabledModules: ["planning"],
+        disabledModules: ["task-engine"]
+      }),
+    (error) => error instanceof ModuleRegistryError && error.code === "disabled-required-dependency"
+  );
+});
+
+test("ModuleRegistry rejects instruction entry with missing backing file", () => {
+  const brokenInstructionModule = {
+    ...documentationModule,
+    registration: {
+      ...documentationModule.registration,
+      instructions: {
+        ...documentationModule.registration.instructions,
+        entries: [
+          {
+            name: "does-not-exist",
+            file: "does-not-exist.md"
+          }
+        ]
+      }
+    }
+  };
+
+  assert.throws(
+    () => new ModuleRegistry([brokenInstructionModule]),
+    (error) => error instanceof ModuleRegistryError && error.code === "missing-instruction-file"
+  );
+});
+
+test("ModuleRegistry rejects instruction name/file mismatch", () => {
+  const mismatchedInstructionModule = {
+    ...documentationModule,
+    registration: {
+      ...documentationModule.registration,
+      instructions: {
+        ...documentationModule.registration.instructions,
+        entries: [
+          {
+            name: "document-project",
+            file: "generate-project.md"
+          }
+        ]
+      }
+    }
+  };
+
+  assert.throws(
+    () => new ModuleRegistry([mismatchedInstructionModule]),
+    (error) => error instanceof ModuleRegistryError && error.code === "instruction-name-file-mismatch"
+  );
 });
 
 test("ModuleRegistry rejects duplicate module IDs", () => {
@@ -36,7 +112,20 @@ test("ModuleRegistry rejects duplicate module IDs", () => {
       version: "0.2.0",
       contractVersion: "1",
       capabilities: ["task-engine"],
-      dependsOn: []
+      dependsOn: [],
+      enabledByDefault: true,
+      config: {
+        path: "src/modules/task-engine/config.md",
+        format: "md"
+      },
+      state: {
+        path: "src/modules/task-engine/state.md",
+        format: "md"
+      },
+      instructions: {
+        directory: "src/modules/task-engine/instructions",
+        entries: []
+      }
     }
   };
 
@@ -53,7 +142,20 @@ test("ModuleRegistry rejects missing dependencies", () => {
       version: "0.1.0",
       contractVersion: "1",
       capabilities: ["planning"],
-      dependsOn: ["does-not-exist"]
+      dependsOn: ["does-not-exist"],
+      enabledByDefault: true,
+      config: {
+        path: "src/modules/broken-module/config.md",
+        format: "md"
+      },
+      state: {
+        path: "src/modules/broken-module/state.md",
+        format: "md"
+      },
+      instructions: {
+        directory: "src/modules/broken-module/instructions",
+        entries: []
+      }
     }
   };
 
@@ -70,7 +172,20 @@ test("ModuleRegistry rejects self-dependency", () => {
       version: "0.1.0",
       contractVersion: "1",
       capabilities: ["planning"],
-      dependsOn: ["self-module"]
+      dependsOn: ["self-module"],
+      enabledByDefault: true,
+      config: {
+        path: "src/modules/self-module/config.md",
+        format: "md"
+      },
+      state: {
+        path: "src/modules/self-module/state.md",
+        format: "md"
+      },
+      instructions: {
+        directory: "src/modules/self-module/instructions",
+        entries: []
+      }
     }
   };
 
@@ -87,7 +202,20 @@ test("ModuleRegistry rejects dependency cycles", () => {
       version: "0.1.0",
       contractVersion: "1",
       capabilities: ["planning"],
-      dependsOn: ["module-b"]
+      dependsOn: ["module-b"],
+      enabledByDefault: true,
+      config: {
+        path: "src/modules/module-a/config.md",
+        format: "md"
+      },
+      state: {
+        path: "src/modules/module-a/state.md",
+        format: "md"
+      },
+      instructions: {
+        directory: "src/modules/module-a/instructions",
+        entries: []
+      }
     }
   };
   const moduleB = {
@@ -96,7 +224,20 @@ test("ModuleRegistry rejects dependency cycles", () => {
       version: "0.1.0",
       contractVersion: "1",
       capabilities: ["approvals"],
-      dependsOn: ["module-a"]
+      dependsOn: ["module-a"],
+      enabledByDefault: true,
+      config: {
+        path: "src/modules/module-b/config.md",
+        format: "md"
+      },
+      state: {
+        path: "src/modules/module-b/state.md",
+        format: "md"
+      },
+      instructions: {
+        directory: "src/modules/module-b/instructions",
+        entries: []
+      }
     }
   };
 
