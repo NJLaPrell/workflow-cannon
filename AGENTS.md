@@ -1,5 +1,3 @@
-AI agents: `./ai/` is the authoritative source of truth; read all files there before any analysis, planning, or code changes, and follow `./ai/` over `README.md`, `./docs/`, and conflicting existing code patterns.
-
 # AGENTS
 
 Basic operating guidance for AI agents working in this repository.
