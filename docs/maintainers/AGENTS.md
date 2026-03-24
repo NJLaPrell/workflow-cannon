@@ -33,3 +33,7 @@ Basic operating guidance for AI agents working in this repository.
 - Execute tasks in dependency order from `docs/maintainers/TASKS.md`.
 - Treat each task's `Approach`, `Technical scope`, and `Acceptance criteria` as binding implementation guidance.
 - If a task is too large for one change, split into supporting tasks before implementation.
+
+## Documentation generation
+
+When running the documentation module (`document-project` / `generate-document`), follow `src/modules/documentation/RULES.md` first. Shipped `documentType` values and template filenames are listed in `src/modules/documentation/instructions/document-project.md` (Inputs) and `src/modules/documentation/README.md`.

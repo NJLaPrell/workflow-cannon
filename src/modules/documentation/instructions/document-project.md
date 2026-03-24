@@ -4,7 +4,15 @@ Generate project documentation for both canonical AI and human-readable surfaces
 
 ## Inputs
 
-- `documentType` (example: `AGENTS.md`)
+- `documentType`: basename of the doc to generate; must match a file under `sources.templatesRoot` (default `src/modules/documentation/templates`). Known templates:
+  - `AGENTS.md`
+  - `ARCHITECTURE.md`
+  - `PRINCIPLES.md`
+  - `RELEASING.md`
+  - `ROADMAP.md`
+  - `SECURITY.md`
+  - `SUPPORT.md`
+  - `TERMS.md`
 - Requested scope and optional generation options (`dryRun`, `overwrite`, `strict`)
 - Project context from `.ai/PRINCIPLES.md`, `docs/maintainers/TASKS.md`, and `README.md`
 

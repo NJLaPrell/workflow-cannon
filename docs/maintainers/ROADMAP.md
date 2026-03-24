@@ -11,7 +11,7 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 
 - Project tracking has been reset for the split repository baseline.
 - Current execution phase is **Phase 0 (foundation)**.
-- Completed foundational slices in this phase: `T178`, `T206`, `T207`, `T208`, `T209`, `T210`, `T211`.
+- Completed foundational slices in this phase: `T178`, `T206`, `T207`, `T208`, `T209`, `T210`, `T211`, `T212`.
 - Active Phase 0 queue now proceeds with release and parity hardening tasks `T179`-`T183`.
 - Historical extraction and first-publish milestones remain recorded below as provenance.
 
@@ -21,7 +21,7 @@ Each phase ends with a GitHub release. Phases are sequential unless explicitly r
 
 ### Phase 0 - Foundation hardening -> GitHub release `v0.2.0`
 
-- Primary scope: `T178` to `T183`, plus completed foundation slices `T206` to `T211`.
+- Primary scope: `T178` to `T183`, plus completed foundation slices `T206` to `T212` and hardening follow-up `T213`.
 - Outcome: reliable release gates, consumer parity confidence, and machine-readable parity evidence.
 - Exit signals:
   - Release/readiness gates and parity checks are reproducible.

@@ -29,8 +29,9 @@ When guidance conflicts, apply this order:
 `generate-document(documentType, options)`
 
 - `documentType`:
-  - required string filename (example: `AGENTS.md`)
+  - required string basename that resolves to `<templatesRoot>/<documentType>` (default templates root: `src/modules/documentation/templates`)
   - maps AI target to `<aiRoot>/<documentType>` and human target to `<humanRoot>/<documentType>`
+  - shipped template basenames are listed in `src/modules/documentation/instructions/document-project.md` (section **Inputs**); keep that list updated when adding or removing templates
 - `options`:
   - `dryRun?: boolean` (default `false`) - compute outputs/validations without writing files
   - `overwrite?: boolean` (default `true`) - allow replacing existing files

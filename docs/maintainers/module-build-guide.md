@@ -46,6 +46,7 @@ Every module change must satisfy these baseline rules:
 - `src/modules/<module>/config.md`: module configuration contract.
 - `src/modules/<module>/state.md`: module state contract.
 - `src/modules/<module>/instructions/*.md`: function-like instruction files for module entrypoints.
+- `src/modules/documentation/templates/*.md` (documentation module): document-type templates; the shipped set and `documentType` values are listed in `src/modules/documentation/instructions/document-project.md` (section **Inputs**) and mirrored in `src/modules/documentation/README.md`.
 - `test/`: unit tests for module registration and behavior.
 - `.ai/`: canonical AI docs for module build behavior.
 - `docs/`: human-facing maintainer and workflow docs.

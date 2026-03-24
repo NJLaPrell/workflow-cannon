@@ -153,7 +153,33 @@ Release target: **GitHub release `v0.2.0`**
   - Emit typed generation evidence and surface it through module command results.
 - Acceptance criteria:
   - Documentation module command runs through router and returns structured evidence.
-  - Validation/conflict behavior matches module rules and is covered by passing tests.
+  - Validation/conflict behavior matches module rules for currently implemented command paths and passing router/runtime integration tests.
+
+### [x] T212 [workspace-kit] Build documentation module template library for core maintainer docs
+- Priority: P1
+- Approach: Add template-driven generation instructions for core maintainer documents and align section-generation behavior to current document structures.
+- Depends on: `T209`, `T211`
+- Unblocks: `T179`, `T180`, `T181`
+- Technical scope:
+  - Add templates for `ARCHITECTURE.md`, `PRINCIPLES.md`, `RELEASING.md`, `ROADMAP.md`, `SECURITY.md`, `SUPPORT.md`, and `TERMS.md`.
+  - Use `{{{ ... }}}` instruction blocks for section-level generation directives.
+  - Align template structure with current maintainer document boundaries while improving clarity where needed.
+- Acceptance criteria:
+  - Core maintainer docs have corresponding documentation-module templates.
+  - Template sections map to current doc structures and can drive deterministic generation.
+
+### [ ] T213 [workspace-kit] Harden documentation runtime config and validation matrix
+- Priority: P1
+- Approach: Strengthen runtime configuration ingestion and add explicit edge-case validation coverage for generate-document flows.
+- Depends on: `T211`
+- Unblocks: `T179`, `T180`, `T181`
+- Technical scope:
+  - Formalize runtime config parsing/validation for documentation module roots and generation options.
+  - Add runtime tests for missing-template behavior, strict write-boundary enforcement, section coverage failures, and validate/retry outcomes.
+  - Ensure evidence output includes attempt counts, validation failures, and resolution outcomes for failing paths.
+- Acceptance criteria:
+  - Documentation runtime behavior is test-covered for both happy and failure paths.
+  - Config and validation behavior is deterministic and documented.
 
 ### [p] T179 [workspace-kit] Harden package release metadata and automation guardrails
 - Priority: P1

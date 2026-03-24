@@ -68,3 +68,17 @@ Validation:
 - Instructions must align with the current task schema and status markers.
 - Do not include project-specific task IDs in this section.
 }}}
+
+## Documentation generation
+
+{{{
+Describe how agents should use the documentation module when generating or syncing maintainer docs.
+Method:
+1) Read `src/modules/documentation/RULES.md` for precedence and validation behavior.
+2) Read `src/modules/documentation/instructions/document-project.md` (Inputs) and `src/modules/documentation/README.md` for callable commands and shipped `documentType` / template filenames.
+3) State that `document-project` and `generate-document` are the command entrypoints when wired in the module router.
+Output format:
+- 2-3 short bullets or one tight paragraph.
+Validation:
+- Paths must exist in the repository; do not invent extra commands.
+}}}
