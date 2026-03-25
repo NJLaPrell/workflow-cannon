@@ -82,6 +82,7 @@ export const documentationModule: WorkflowModule = {
             aiOutputPath: r.aiOutputPath,
             humanOutputPath: r.humanOutputPath,
             filesWritten: r.evidence.filesWritten,
+            filesSkipped: r.evidence.filesSkipped,
           }))
         }
       };

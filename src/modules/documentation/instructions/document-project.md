@@ -32,3 +32,7 @@ All `.md` files under `sources.templatesRoot` (default `src/modules/documentatio
 4. Continue through all templates on individual failure; do not stop the batch.
 5. Collect per-document results and emit a batch summary with total/succeeded/failed/skipped counts.
 6. Return `ok: true` only when zero documents failed.
+
+## Skipped AI doc handling
+
+When AI docs are skipped because they already exist (`filesSkipped` is non-empty in a document result), the calling agent **must** prompt the user before overwriting. Present the list of skipped AI doc paths and ask for explicit confirmation. If confirmed, re-run with `overwriteAi: true` for those documents.

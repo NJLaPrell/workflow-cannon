@@ -24,6 +24,7 @@ export type DocumentationGenerationEvidence = {
   documentType: string;
   filesRead: string[];
   filesWritten: string[];
+  filesSkipped: string[];
   validationIssues: DocumentationValidationIssue[];
   conflicts: DocumentationConflict[];
   attemptsUsed: number;

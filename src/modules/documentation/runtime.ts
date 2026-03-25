@@ -142,6 +142,7 @@ export async function generateDocument(
         documentType: "unknown",
         filesRead: [],
         filesWritten: [],
+        filesSkipped: [],
         validationIssues: [
           {
             check: "template-resolution",
@@ -160,6 +161,7 @@ export async function generateDocument(
   const config = await loadRuntimeConfig(ctx.workspacePath);
   const filesRead: string[] = [];
   const filesWritten: string[] = [];
+  const filesSkipped: string[] = [];
   const validationIssues: DocumentationValidationIssue[] = [];
   const conflicts: DocumentationConflict[] = [];
 
@@ -176,6 +178,7 @@ export async function generateDocument(
         documentType,
         filesRead,
         filesWritten,
+        filesSkipped,
         validationIssues: [
           {
             check: "write-boundary",
@@ -208,6 +211,7 @@ export async function generateDocument(
           documentType,
           filesRead,
           filesWritten,
+          filesSkipped,
           validationIssues,
           conflicts,
           attemptsUsed: 0,
@@ -246,6 +250,7 @@ export async function generateDocument(
         documentType,
         filesRead,
         filesWritten,
+        filesSkipped,
         validationIssues,
         conflicts,
         attemptsUsed,
@@ -276,6 +281,7 @@ export async function generateDocument(
         documentType,
         filesRead,
         filesWritten,
+        filesSkipped,
         validationIssues,
         conflicts,
         attemptsUsed,
@@ -292,6 +298,7 @@ export async function generateDocument(
         documentType,
         filesRead,
         filesWritten,
+        filesSkipped,
         validationIssues,
         conflicts,
         attemptsUsed,
@@ -313,6 +320,7 @@ export async function generateDocument(
           documentType,
           filesRead,
           filesWritten,
+          filesSkipped: [aiOutputPath, humanOutputPath],
           validationIssues: [
             ...validationIssues,
             {
@@ -334,10 +342,14 @@ export async function generateDocument(
     if (canOverwriteAi || !aiExists) {
       await writeFile(aiOutputPath, `${aiOutput}\n`, "utf8");
       filesWritten.push(aiOutputPath);
+    } else {
+      filesSkipped.push(aiOutputPath);
     }
     if (canOverwriteHuman || !humanExists) {
       await writeFile(humanOutputPath, `${humanOutput}\n`, "utf8");
       filesWritten.push(humanOutputPath);
+    } else {
+      filesSkipped.push(humanOutputPath);
     }
   }
 
@@ -349,6 +361,7 @@ export async function generateDocument(
       documentType,
       filesRead,
       filesWritten,
+      filesSkipped,
       validationIssues,
       conflicts,
       attemptsUsed,

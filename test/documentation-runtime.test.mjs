@@ -182,6 +182,7 @@ test("evidence output includes all required fields for successful generation", a
   assert.ok(Array.isArray(ev.filesRead));
   assert.ok(Array.isArray(ev.filesWritten));
   assert.ok(ev.filesWritten.length >= 2, "Should write AI + human output files");
+  assert.ok(Array.isArray(ev.filesSkipped));
   assert.ok(Array.isArray(ev.validationIssues));
   assert.ok(Array.isArray(ev.conflicts));
   assert.equal(typeof ev.attemptsUsed, "number");
@@ -293,6 +294,10 @@ test("document-project preserves AI docs but overwrites human docs by default", 
   assert.ok(
     !keepResult.filesWritten.some((f) => f.includes(".ai")),
     "Should NOT have overwritten AI doc"
+  );
+  assert.ok(
+    keepResult.filesSkipped.some((f) => f.includes(".ai")),
+    "Should report AI doc as skipped"
   );
 });
 
