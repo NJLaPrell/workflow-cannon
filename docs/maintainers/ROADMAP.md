@@ -81,5 +81,5 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 - Source-repo freeze commit: `65797d888629d017f3538bd793c5e7cd781edf7d`
 - Split commit: `5a1f7038255a2c83e0e51ace07ea0d95a327574c`
 - First publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23463225397`
-- Phase 1 / `v0.3.0` release: tag `v0.3.0` on `main`; publish via `Publish NPM` workflow (`publish-npm.yml`); npm dist-tag `latest` at `0.3.0` after successful run.
+- Phase 1 / `v0.3.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23559535382`
 - npm package: `https://www.npmjs.com/package/@workflow-cannon/workspace-kit`

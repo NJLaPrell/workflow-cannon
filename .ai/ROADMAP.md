@@ -31,4 +31,5 @@ decision|D005|upgrade_merge=safe_overwrite_kit_owned_paths_with_backup_and_diff_
 evidence|freeze_commit=65797d888629d017f3538bd793c5e7cd781edf7d
 evidence|split_commit=5a1f7038255a2c83e0e51ace07ea0d95a327574c
 evidence|first_publish_run=https://github.com/NJLaPrell/workflow-cannon/actions/runs/23463225397
+evidence|phase_1_v0_3_0_publish_run=https://github.com/NJLaPrell/workflow-cannon/actions/runs/23559535382
 evidence|npm_package=https://www.npmjs.com/package/@workflow-cannon/workspace-kit

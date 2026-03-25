@@ -9,6 +9,7 @@ next_agent_actions:
 last_session_summary:
   - "Phase 1 released as v0.3.0: Task Engine (T199, T184, T185, T186, T217) with CLI commands, persistence, TASKS.md import/generate, next-action suggestions."
   - "Maintainer docs and status YAML advanced to Phase 2 execution focus."
+  - "npm publish: workflow_dispatch Publish NPM succeeded (run 23559535382); GitHub release https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.3.0"
 pending_decisions: []
 metrics:
   updated_at: "2026-03-25"
