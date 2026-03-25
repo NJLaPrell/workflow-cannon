@@ -1,6 +1,7 @@
 import type { WorkflowModule } from "../../contracts/module-contract.js";
-import { generateDocument } from "./runtime.js";
+import { generateDocument, generateAllDocuments } from "./runtime.js";
 export type {
+  DocumentationBatchResult,
   DocumentationConflict,
   DocumentationGenerateOptions,
   DocumentationGenerateResult,
@@ -9,10 +10,24 @@ export type {
 } from "./types.js";
 import type { DocumentationGenerateOptions } from "./types.js";
 
+function parseOptions(raw: Record<string, unknown>): DocumentationGenerateOptions {
+  return {
+    dryRun: typeof raw.dryRun === "boolean" ? raw.dryRun : undefined,
+    overwrite: typeof raw.overwrite === "boolean" ? raw.overwrite : undefined,
+    overwriteAi: typeof raw.overwriteAi === "boolean" ? raw.overwriteAi : undefined,
+    overwriteHuman: typeof raw.overwriteHuman === "boolean" ? raw.overwriteHuman : undefined,
+    strict: typeof raw.strict === "boolean" ? raw.strict : undefined,
+    maxValidationAttempts:
+      typeof raw.maxValidationAttempts === "number" ? raw.maxValidationAttempts : undefined,
+    allowWithoutTemplate:
+      typeof raw.allowWithoutTemplate === "boolean" ? raw.allowWithoutTemplate : undefined,
+  };
+}
+
 export const documentationModule: WorkflowModule = {
   registration: {
     id: "documentation",
-    version: "0.1.0",
+    version: "0.2.0",
     contractVersion: "1",
     capabilities: ["documentation"],
     dependsOn: [],
@@ -33,59 +48,72 @@ export const documentationModule: WorkflowModule = {
         {
           name: "document-project",
           file: "document-project.md",
-          description: "Generate aligned project docs for .ai and docs surfaces."
+          description: "Generate all project docs from templates to .ai and docs/maintainers surfaces."
+        },
+        {
+          name: "generate-document",
+          file: "generate-document.md",
+          description: "Generate a single document by type for .ai and docs/maintainers surfaces."
         }
       ]
     }
   },
   async onCommand(command, ctx) {
-    if (command.name !== "document-project" && command.name !== "generate-document") {
+    const args = command.args ?? {};
+    const rawOptions: Record<string, unknown> =
+      typeof args.options === "object" && args.options !== null
+        ? (args.options as Record<string, unknown>)
+        : {};
+    const options = parseOptions(rawOptions);
+
+    if (command.name === "document-project") {
+      const batchResult = await generateAllDocuments({ options }, ctx);
       return {
-        ok: false,
-        code: "unsupported-command",
-        message: `Documentation module does not support command '${command.name}'`
+        ok: batchResult.ok,
+        code: batchResult.ok ? "documented-project" : "documentation-batch-failed",
+        message: batchResult.ok
+          ? `Generated ${batchResult.summary.succeeded} documents (${batchResult.summary.skipped} skipped)`
+          : `Batch failed: ${batchResult.summary.failed} of ${batchResult.summary.total} documents failed`,
+        data: {
+          summary: batchResult.summary,
+          results: batchResult.results.map((r) => ({
+            documentType: r.evidence.documentType,
+            ok: r.ok,
+            aiOutputPath: r.aiOutputPath,
+            humanOutputPath: r.humanOutputPath,
+            filesWritten: r.evidence.filesWritten,
+          }))
+        }
       };
     }
 
-    const args = command.args ?? {};
-    const rawOptions: Record<string, unknown> | undefined =
-      typeof args.options === "object" && args.options !== null
-        ? (args.options as Record<string, unknown>)
-        : undefined;
-    const options: DocumentationGenerateOptions | undefined = rawOptions
-      ? {
-          dryRun: typeof rawOptions.dryRun === "boolean" ? rawOptions.dryRun : undefined,
-          overwrite: typeof rawOptions.overwrite === "boolean" ? rawOptions.overwrite : undefined,
-          strict: typeof rawOptions.strict === "boolean" ? rawOptions.strict : undefined,
-          maxValidationAttempts:
-            typeof rawOptions.maxValidationAttempts === "number"
-              ? rawOptions.maxValidationAttempts
-              : undefined,
-          allowWithoutTemplate:
-            typeof rawOptions.allowWithoutTemplate === "boolean"
-              ? rawOptions.allowWithoutTemplate
-              : undefined
+    if (command.name === "generate-document") {
+      const result = await generateDocument(
+        {
+          documentType: typeof args.documentType === "string" ? args.documentType : undefined,
+          options
+        },
+        ctx
+      );
+
+      return {
+        ok: result.ok,
+        code: result.ok ? "generated-document" : "generation-failed",
+        message: result.ok
+          ? `Generated document '${args.documentType ?? "unknown"}'`
+          : `Failed to generate document '${args.documentType ?? "unknown"}'`,
+        data: {
+          aiOutputPath: result.aiOutputPath,
+          humanOutputPath: result.humanOutputPath,
+          evidence: result.evidence
         }
-      : undefined;
-    const result = await generateDocument(
-      {
-        documentType: typeof args.documentType === "string" ? args.documentType : undefined,
-        options
-      },
-      ctx
-    );
+      };
+    }
 
     return {
-      ok: result.ok,
-      code: result.ok ? "generated-document" : "generation-failed",
-      message: result.ok
-        ? `Generated document '${args.documentType ?? "unknown"}'`
-        : `Failed to generate document '${args.documentType ?? "unknown"}'`,
-      data: {
-        aiOutputPath: result.aiOutputPath,
-        humanOutputPath: result.humanOutputPath,
-        evidence: result.evidence
-      }
+      ok: false,
+      code: "unsupported-command",
+      message: `Documentation module does not support command '${command.name}'`
     };
   }
 };

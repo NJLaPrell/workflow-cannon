@@ -50,7 +50,7 @@ test("generate-document fails with missing documentType", async () => {
   await createDocFixture(root);
   const ctx = { ...baseLifecycleContext(), workspacePath: root };
 
-  const result = await callOnCommand("document-project", {}, ctx);
+  const result = await callOnCommand("generate-document", {}, ctx);
 
   assert.equal(result.ok, false);
   assert.equal(result.code, "generation-failed");
@@ -66,7 +66,7 @@ test("generate-document fails when template is missing and allowWithoutTemplate 
   await createDocFixture(root);
   const ctx = { ...baseLifecycleContext(), workspacePath: root };
 
-  const result = await callOnCommand("document-project", {
+  const result = await callOnCommand("generate-document", {
     documentType: "NONEXISTENT.md",
     options: { dryRun: true, allowWithoutTemplate: false }
   }, ctx);
@@ -85,7 +85,7 @@ test("generate-document succeeds without template when allowWithoutTemplate is t
   await createDocFixture(root);
   const ctx = { ...baseLifecycleContext(), workspacePath: root };
 
-  const result = await callOnCommand("document-project", {
+  const result = await callOnCommand("generate-document", {
     documentType: "NONEXISTENT.md",
     options: { dryRun: true, allowWithoutTemplate: true, strict: false }
   }, ctx);
@@ -103,7 +103,7 @@ test("generate-document rejects path-traversal documentType", async () => {
   await createDocFixture(root);
   const ctx = { ...baseLifecycleContext(), workspacePath: root };
 
-  const result = await callOnCommand("document-project", {
+  const result = await callOnCommand("generate-document", {
     documentType: "../../etc/passwd",
     options: { dryRun: true }
   }, ctx);
@@ -134,7 +134,7 @@ test("generate-document reports section coverage issues for template with sectio
   ].join("\n");
   await writeFile(path.join(templatesRoot, "TEST.md"), templateContent);
 
-  const result = await callOnCommand("document-project", {
+  const result = await callOnCommand("generate-document", {
     documentType: "TEST.md",
     options: { dryRun: true, strict: false }
   }, ctx);
@@ -153,7 +153,7 @@ test("evidence includes attemptsUsed count after schema validation", async () =>
   await createDocFixture(root);
   const ctx = { ...baseLifecycleContext(), workspacePath: root };
 
-  const result = await callOnCommand("document-project", {
+  const result = await callOnCommand("generate-document", {
     documentType: "AGENTS.md",
     options: { dryRun: true, maxValidationAttempts: 1, allowWithoutTemplate: true, strict: false }
   }, ctx);
@@ -171,7 +171,7 @@ test("evidence output includes all required fields for successful generation", a
 
   await writeFile(path.join(templatesRoot, "SIMPLE.md"), "# Simple\n\n## Overview\n\nStatic content.\n");
 
-  const result = await callOnCommand("document-project", {
+  const result = await callOnCommand("generate-document", {
     documentType: "SIMPLE.md",
     options: { dryRun: false, overwrite: true, strict: false }
   }, ctx);
@@ -200,7 +200,7 @@ test("generate-document stops on CONFLICT: marker in output", async () => {
     "# Conflict Test\n\n## Section\n\nCONFLICT: This should trigger stop.\n"
   );
 
-  const result = await callOnCommand("document-project", {
+  const result = await callOnCommand("generate-document", {
     documentType: "CONFLICT-TEST.md",
     options: { dryRun: true }
   }, ctx);
@@ -221,7 +221,7 @@ test("generate-document fails with overwrite=false when output exists", async ()
   await writeFile(path.join(aiRoot, "EXISTS.md"), "existing-ai-content");
   await writeFile(path.join(humanRoot, "EXISTS.md"), "existing-human-content");
 
-  const result = await callOnCommand("document-project", {
+  const result = await callOnCommand("generate-document", {
     documentType: "EXISTS.md",
     options: { dryRun: false, overwrite: false, strict: false }
   }, ctx);
@@ -230,6 +230,70 @@ test("generate-document fails with overwrite=false when output exists", async ()
   assert.ok(result.data.evidence.validationIssues.some(
     (i) => i.check === "write-boundary" && i.message.includes("overwrite")
   ));
+});
+
+// --- Batch document-project ---
+
+test("document-project generates all templates in batch", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "wc-doc-rt-"));
+  const { templatesRoot } = await createDocFixture(root);
+  const ctx = { ...baseLifecycleContext(), workspacePath: root };
+
+  await writeFile(path.join(templatesRoot, "A.md"), "# A\n\n## Section\n\nContent.\n");
+  await writeFile(path.join(templatesRoot, "B.md"), "# B\n\n## Section\n\nContent.\n");
+
+  const result = await callOnCommand("document-project", {
+    options: { dryRun: true }
+  }, ctx);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "documented-project");
+  assert.ok(result.data.summary.total >= 2, "Should process at least 2 templates");
+  assert.equal(result.data.summary.failed, 0);
+});
+
+test("document-project continues on individual failure and reports batch outcome", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "wc-doc-rt-"));
+  const { templatesRoot } = await createDocFixture(root);
+  const ctx = { ...baseLifecycleContext(), workspacePath: root };
+
+  await writeFile(path.join(templatesRoot, "GOOD.md"), "# Good\n\n## Section\n\nContent.\n");
+  await writeFile(path.join(templatesRoot, "BAD.md"), "# Bad\n\n## Section\n\nCONFLICT: this breaks.\n");
+
+  const result = await callOnCommand("document-project", {
+    options: { dryRun: true }
+  }, ctx);
+
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "documentation-batch-failed");
+  assert.ok(result.data.summary.failed >= 1, "Should report at least one failure");
+  assert.ok(result.data.summary.total >= 2, "Should still process all templates");
+});
+
+test("document-project preserves AI docs but overwrites human docs by default", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "wc-doc-rt-"));
+  const { templatesRoot, aiRoot, humanRoot } = await createDocFixture(root);
+  const ctx = { ...baseLifecycleContext(), workspacePath: root };
+
+  await writeFile(path.join(templatesRoot, "KEEP.md"), "# Keep\n\n## Section\n\nContent.\n");
+  await writeFile(path.join(aiRoot, "KEEP.md"), "original-ai-content");
+  await writeFile(path.join(humanRoot, "KEEP.md"), "original-human-content");
+
+  const result = await callOnCommand("document-project", {
+    options: { dryRun: false }
+  }, ctx);
+
+  assert.equal(result.ok, true);
+  const keepResult = result.data.results.find((r) => r.documentType === "KEEP.md");
+  assert.ok(keepResult, "Should have result for KEEP.md");
+  assert.ok(
+    keepResult.filesWritten.some((f) => f.includes("docs") || f.includes("maintainers")),
+    "Should have written human doc"
+  );
+  assert.ok(
+    !keepResult.filesWritten.some((f) => f.includes(".ai")),
+    "Should NOT have overwritten AI doc"
+  );
 });
 
 // --- Unsupported command name ---

@@ -14,7 +14,8 @@ See `src/modules/documentation/RULES.md` for the canonical usage order and valid
 
 Registered on the documentation module and dispatched through `src/core/module-command-router.ts`:
 
-- `document-project` / `generate-document` — generate a paired AI-surface and human-surface document from a template and project context. Behavior and inputs: `instructions/document-project.md`.
+- `document-project` — batch: generate **all** project docs from the template library. Outputs AI docs to `.ai/` (preserving existing) and human docs to `docs/maintainers/` (overwriting). Continues through failures; reports batch summary. See `instructions/document-project.md`.
+- `generate-document` — single: generate **one** document by `documentType`. See `instructions/generate-document.md`.
 
 ## Shipped templates
 

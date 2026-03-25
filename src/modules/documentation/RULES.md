@@ -24,27 +24,36 @@ When guidance conflicts, apply this order:
 - For templates with `{{{ ... }}}` blocks, treat block content as generation instructions, not output text.
 - Generate AI-surface content first, then generate human-surface content from that result plus project context.
 
-## Function Contract
+## Command Contracts
 
-`generate-document(documentType, options)`
+### `document-project(options)` — batch
 
-- `documentType`:
-  - required string basename that resolves to `<templatesRoot>/<documentType>` (default templates root: `src/modules/documentation/templates`)
-  - maps AI target to `<aiRoot>/<documentType>` and human target to `<humanRoot>/<documentType>`
-  - shipped template basenames are listed in `src/modules/documentation/instructions/document-project.md` (section **Inputs**); keep that list updated when adding or removing templates
+Generates all project docs by iterating every `.md` template in `sources.templatesRoot`.
+
+- Default behavior: **preserve AI docs** (`overwriteAi: false`), **overwrite human docs** (`overwriteHuman: true`), continue on individual failure.
+- Returns batch summary with total/succeeded/failed/skipped counts plus per-document results.
+
+### `generate-document(documentType, options)` — single
+
+Generates one document pair (AI + human) for the given `documentType`.
+
+- `documentType`: required string basename resolving to `<templatesRoot>/<documentType>`.
 - `options`:
   - `dryRun?: boolean` (default `false`) - compute outputs/validations without writing files
-  - `overwrite?: boolean` (default `true`) - allow replacing existing files
+  - `overwrite?: boolean` (default `true`) - allow replacing existing files (both surfaces)
+  - `overwriteAi?: boolean` - override `overwrite` for AI surface only
+  - `overwriteHuman?: boolean` - override `overwrite` for human surface only
   - `strict?: boolean` (default `true`) - fail on unresolved warnings (validation/conflict/coverage)
   - `maxValidationAttempts?: number` (default from config) - override retry limit
   - `allowWithoutTemplate?: boolean` (default `false`) - continue without template only when explicitly confirmed
+- Shipped template basenames are listed in `instructions/generate-document.md` and `instructions/document-project.md`.
 
-Required semantics:
+### Shared semantics
 
-- The function must read paths from module config (`sources.aiRoot`, `sources.humanRoot`, `sources.templatesRoot`, `sources.instructionsRoot`, `sources.schemasRoot`).
-- The function must enforce write boundaries to configured output roots only.
-- The function must execute AI generation first, then human generation from AI output plus project context.
-- The function must return an evidence object containing files read/written, validations, retries, warnings/conflicts, and timestamp.
+- Both commands read paths from module config (`sources.aiRoot`, `sources.humanRoot`, `sources.templatesRoot`, `sources.instructionsRoot`, `sources.schemasRoot`).
+- Both enforce write boundaries to configured output roots only.
+- Both execute AI generation first, then human generation from AI output plus project context.
+- Both return evidence objects containing files read/written, validations, retries, warnings/conflicts, and timestamp.
 
 ## Required Validation
 

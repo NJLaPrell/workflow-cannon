@@ -1,6 +1,8 @@
 export type DocumentationGenerateOptions = {
   dryRun?: boolean;
   overwrite?: boolean;
+  overwriteAi?: boolean;
+  overwriteHuman?: boolean;
   strict?: boolean;
   maxValidationAttempts?: number;
   allowWithoutTemplate?: boolean;
@@ -33,4 +35,16 @@ export type DocumentationGenerateResult = {
   aiOutputPath?: string;
   humanOutputPath?: string;
   evidence: DocumentationGenerationEvidence;
+};
+
+export type DocumentationBatchResult = {
+  ok: boolean;
+  results: DocumentationGenerateResult[];
+  summary: {
+    total: number;
+    succeeded: number;
+    failed: number;
+    skipped: number;
+    timestamp: string;
+  };
 };

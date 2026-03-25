@@ -1,7 +1,9 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { resolve, sep } from "node:path";
+import { readdir } from "node:fs/promises";
 import type {
+  DocumentationBatchResult,
   DocumentationConflict,
   DocumentationGenerateOptions,
   DocumentationGenerateResult,
@@ -299,7 +301,12 @@ export async function generateDocument(
   }
 
   if (!options.dryRun) {
-    if (!options.overwrite && (existsSync(aiOutputPath) || existsSync(humanOutputPath))) {
+    const canOverwriteAi = options.overwriteAi ?? options.overwrite ?? true;
+    const canOverwriteHuman = options.overwriteHuman ?? options.overwrite ?? true;
+    const aiExists = existsSync(aiOutputPath);
+    const humanExists = existsSync(humanOutputPath);
+
+    if ((!canOverwriteAi && aiExists) && (!canOverwriteHuman && humanExists)) {
       return {
         ok: false,
         evidence: {
@@ -323,9 +330,15 @@ export async function generateDocument(
 
     await mkdir(aiRoot, { recursive: true });
     await mkdir(humanRoot, { recursive: true });
-    await writeFile(aiOutputPath, `${aiOutput}\n`, "utf8");
-    await writeFile(humanOutputPath, `${humanOutput}\n`, "utf8");
-    filesWritten.push(aiOutputPath, humanOutputPath);
+
+    if (canOverwriteAi || !aiExists) {
+      await writeFile(aiOutputPath, `${aiOutput}\n`, "utf8");
+      filesWritten.push(aiOutputPath);
+    }
+    if (canOverwriteHuman || !humanExists) {
+      await writeFile(humanOutputPath, `${humanOutput}\n`, "utf8");
+      filesWritten.push(humanOutputPath);
+    }
   }
 
   return {
@@ -339,6 +352,78 @@ export async function generateDocument(
       validationIssues,
       conflicts,
       attemptsUsed,
+      timestamp: new Date().toISOString()
+    }
+  };
+}
+
+type GenerateAllDocumentsArgs = {
+  options?: DocumentationGenerateOptions;
+};
+
+export async function generateAllDocuments(
+  args: GenerateAllDocumentsArgs,
+  ctx: ModuleLifecycleContext
+): Promise<DocumentationBatchResult> {
+  const config = await loadRuntimeConfig(ctx.workspacePath);
+  const templatesDir = resolve(ctx.workspacePath, config.templatesRoot);
+
+  let templateFiles: string[] = [];
+  try {
+    const entries = await readdir(templatesDir);
+    templateFiles = entries.filter((f) => f.endsWith(".md")).sort();
+  } catch {
+    return {
+      ok: false,
+      results: [],
+      summary: {
+        total: 0,
+        succeeded: 0,
+        failed: 1,
+        skipped: 0,
+        timestamp: new Date().toISOString()
+      }
+    };
+  }
+
+  const results: DocumentationGenerateResult[] = [];
+  let succeeded = 0;
+  let failed = 0;
+  let skipped = 0;
+
+  const batchOptions: DocumentationGenerateOptions = {
+    ...args.options,
+    overwriteAi: args.options?.overwriteAi ?? false,
+    overwriteHuman: args.options?.overwriteHuman ?? true,
+    strict: args.options?.strict ?? false,
+  };
+
+  for (const templateFile of templateFiles) {
+    const result = await generateDocument(
+      { documentType: templateFile, options: batchOptions },
+      ctx
+    );
+    results.push(result);
+
+    if (result.ok) {
+      if (result.evidence.filesWritten.length > 0) {
+        succeeded++;
+      } else {
+        skipped++;
+      }
+    } else {
+      failed++;
+    }
+  }
+
+  return {
+    ok: failed === 0,
+    results,
+    summary: {
+      total: templateFiles.length,
+      succeeded,
+      failed,
+      skipped,
       timestamp: new Date().toISOString()
     }
   };

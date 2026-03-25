@@ -19,16 +19,12 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
   const router = new ModuleCommandRouter(registry);
 
   const commandNames = router.listCommands().map((command) => command.name);
-  assert.deepEqual(commandNames, ["document-project", "run-transition"]);
+  assert.deepEqual(commandNames, ["document-project", "generate-document", "run-transition"]);
 });
 
-test("ModuleCommandRouter resolves aliases and executes documentation command", async () => {
+test("ModuleCommandRouter executes generate-document for single doc", async () => {
   const registry = new ModuleRegistry([documentationModule, taskEngineModule]);
-  const router = new ModuleCommandRouter(registry, {
-    aliases: {
-      "generate-document": "document-project"
-    }
-  });
+  const router = new ModuleCommandRouter(registry);
 
   const result = await router.execute(
     "generate-document",
@@ -43,6 +39,26 @@ test("ModuleCommandRouter resolves aliases and executes documentation command", 
 
   assert.equal(result.ok, true);
   assert.equal(result.code, "generated-document");
+});
+
+test("ModuleCommandRouter executes document-project for batch generation", async () => {
+  const registry = new ModuleRegistry([documentationModule]);
+  const router = new ModuleCommandRouter(registry);
+
+  const result = await router.execute(
+    "document-project",
+    {
+      options: {
+        dryRun: true
+      }
+    },
+    lifecycleContext
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "documented-project");
+  assert.ok(result.data.summary.total >= 8, "Should process at least 8 templates");
+  assert.equal(result.data.summary.failed, 0);
 });
 
 test("ModuleCommandRouter throws unknown-command for missing command", async () => {
@@ -88,6 +104,10 @@ test("ModuleCommandRouter detects duplicate command declarations", () => {
           {
             name: "document-project",
             file: "document-project.md"
+          },
+          {
+            name: "generate-document",
+            file: "generate-document.md"
           }
         ]
       }
