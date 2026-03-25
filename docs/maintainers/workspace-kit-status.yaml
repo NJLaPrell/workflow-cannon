@@ -4,16 +4,15 @@ last_updated: "2026-03-25"
 active_focus: "Phase 2 COMPLETE (v0.4.0): config merge, explain-config, policy gates + traces, cutover docs. Phase 3 queue head T190."
 blockers: []
 next_agent_actions:
-  - "Release v0.4.0 via Publish NPM workflow after merge (human approval)"
   - "Begin Phase 3: T190 recommendation intake and review queue"
 last_session_summary:
-  - "Implemented Phase 2: workspace-kit-config + policy core, workspace-config module (explain-config), CLI integration, task-engine store path from effective config."
-  - "Maintainer artifacts: config-policy-matrix, task-engine-cutover + checklist; TASKS Phase 2 tasks marked complete."
+  - "v0.4.0 published: Phase 2 (config, policy, cutover docs); npm latest 0.4.0; GitHub release v0.4.0; workflow run 23561237541."
+  - "Maintainer artifacts: config-policy-matrix, task-engine-cutover + checklist; TASKS Phase 2 complete."
 pending_decisions: []
 metrics:
   updated_at: "2026-03-25"
   source: "automated"
-  notes: "v0.4.0 Phase 2 implemented in repo; publish pending. 98 tests green. Phase 3 (T190) next."
+  notes: "v0.4.0 on npm (latest). Phase 3 (T190) next execution focus."
   time_to_doctor_minutes: 0.03
   cold_start_success_rate_pct: 100
   upgrade_success_rate_pct: null
