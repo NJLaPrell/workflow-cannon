@@ -1,11 +1,11 @@
 # Workflow Cannon Principles (Human-Readable)
 
-This document is the human-readable companion to `.ai/PRINCIPLES.md` (canonical rules format).  
+This document is the human-readable companion to `.ai/PRINCIPLES.md` (canonical rules format).
 If there is any conflict, `.ai/PRINCIPLES.md` is authoritative.
 
 ## Purpose
 
-These principles guide planning, implementation, and release decisions across this repository.
+These principles guide planning, implementation, and release decisions across this repository. This file is for humans and agents who want a prose summary; the canonical machine-oriented rules live in `.ai/PRINCIPLES.md`.
 
 ## Decision Priority Order
 
@@ -21,9 +21,9 @@ When trade-offs conflict, resolve them in this order:
 
 When sources disagree, use this precedence:
 
-1. Canonical AI docs
+1. Canonical AI docs (`.ai/`)
 2. Code and configuration reality
-3. Generated human docs
+3. Generated human docs (`docs/maintainers/`)
 4. Narrative docs
 
 ## Core Principles
@@ -31,11 +31,13 @@ When sources disagree, use this precedence:
 - Prioritize safety and trustworthiness first in all trade-offs.
 - Maintain correct, deterministic behavior for supported workflows.
 - Preserve compatibility when behavior changes, or provide a documented migration path.
-- Require release evidence for readiness and parity before release.
-- Move fast on low-risk, clear, routine work.
-- Use high agent autonomy when user intent is clear.
+- Produce release evidence for readiness and parity checks before any release.
+- Optimize for fast iteration in low-risk, clear, routine work.
+- Apply high agent autonomy when user intent is clear.
+- Keep documentation boundaries clean: strategy in ROADMAP, execution in TASKS, release operations in RELEASING.
 - Prefer incremental, reversible changes over broad, high-risk changes.
-- Do not bypass release, migration, or policy gates for speed.
+- Do not bypass release, migration, or policy gates to increase delivery speed.
+- Record explicit override rationale in TASKS or DECISIONS when principles are overridden.
 
 ## Required Human Approval
 
@@ -62,11 +64,11 @@ To avoid ownership drift:
 
 ## Validation Gates
 
-Before merge/release/execution, confirm:
+Before merge, release, or execution, confirm:
 
-- **Release gate:** readiness and parity evidence exists before release.
-- **Compatibility gate:** migration guidance exists for compatibility-impacting changes before merge or release.
-- **Policy-sensitive gate:** required human approval is recorded before execution.
+- **Release gate:** readiness and parity evidence exists before release. Satisfied by CI parity job + release-readiness job green.
+- **Compatibility gate:** migration guidance exists for compatibility-impacting changes before merge or release. Satisfied by `docs/maintainers/CHANGELOG.md` migration notes.
+- **Policy-sensitive gate:** required human approval is recorded before execution. Satisfied by explicit maintainer confirmation.
 
 ## Related References
 

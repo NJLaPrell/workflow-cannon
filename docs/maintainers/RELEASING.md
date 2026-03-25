@@ -2,16 +2,17 @@
 
 Canonical release process for `@workflow-cannon/workspace-kit`.
 
-This document defines how releases are planned, validated, published, and reviewed in Phase 0.
+This document defines how releases are planned, validated, published, and reviewed.
 
 ## Release intent
 
 Every release must:
 
-- ship predictable behavior from packaged artifacts
-- preserve downstream consumer compatibility (or clearly communicate breakage)
-- produce auditable evidence for what changed, why, and how it was validated
-- feed observed friction back into improvement and rule/workflow hardening
+- Ship predictable behavior from packaged artifacts.
+- Preserve downstream consumer compatibility (or clearly communicate breakage).
+- Produce auditable evidence for what changed, why, and how it was validated.
+- Feed observed friction back into improvement and rule/workflow hardening.
+- Validate against packaged artifacts, not unpublished local state.
 
 ## Release principles
 
@@ -23,12 +24,12 @@ Every release must:
 
 ## Release readiness gates
 
-All gates should pass before publish (see `docs/maintainers/release-gate-matrix.md` for the full gate inventory, owners, and CI mapping):
+All gates must pass before publish (see `docs/maintainers/release-gate-matrix.md` for the full gate inventory, owners, and CI mapping):
 
 1. Scope is clear and tracked in `docs/maintainers/TASKS.md` with linked roadmap/decision context where needed.
 2. Behavior changes are documented in `docs/maintainers/CHANGELOG.md`.
-3. Build, typecheck, and tests pass for the release candidate.
-4. Consumer-impacting flows are validated against packaged artifacts.
+3. Build, typecheck, and tests pass for the release candidate (`pnpm run build && pnpm run check && pnpm run test`).
+4. Consumer-impacting flows are validated against packaged artifacts (`pnpm run parity`).
 5. Migration risk is reviewed for config/template/schema/state changes.
 6. Security-sensitive changes (policy/approval/secrets/workspace mutation) are explicitly reviewed.
 
@@ -41,14 +42,20 @@ If a gate fails, do not publish. Capture the blocker and route follow-up through
    - Classify risk (low/medium/high) and note rollout caveats.
 2. **Prepare release artifacts**
    - Update `docs/maintainers/CHANGELOG.md` with user-visible impact.
+   - Bump version in `package.json` to match release target.
    - Ensure version and tag strategy align with project policy.
 3. **Run validation**
-   - Execute repository validation commands used by this project (`build`, `check`, `test`, dry-run pack, and parity checks as applicable).
+   - Execute `pnpm run build`, `pnpm run check`, `pnpm run test`.
+   - Execute `pnpm run parity` for packaged-artifact parity validation.
+   - Execute `pnpm run check-release-metadata` for package.json field validation.
    - Confirm release automation workflows are green.
-4. **Publish**
-   - Run publish automation for npm release.
-   - Record release tag, workflow run, and npm reference.
-5. **Verify consumer installability**
+4. **Present for approval**
+   - Summarize scope, risk, evidence, and migration notes.
+   - Obtain explicit human approval before proceeding.
+5. **Publish**
+   - Run publish automation (triggers `publish-npm.yml` workflow).
+   - Record release tag, workflow run URL, and npm reference.
+6. **Verify consumer installability**
    - Confirm package availability on npm.
    - Smoke-check install/update flow in a downstream consumer context.
 
@@ -56,12 +63,12 @@ If a gate fails, do not publish. Capture the blocker and route follow-up through
 
 Capture and retain:
 
-- release version and tag
-- links to CI/publish workflow runs
-- validation command results (or artifact references)
+- Release version and tag
+- Links to CI/publish workflow runs
+- Validation command results (or artifact references, including `artifacts/parity-evidence.json`)
 - npm package reference
-- migration notes (if any)
-- known risks, caveats, and follow-up tasks
+- Migration notes (if any)
+- Known risks, caveats, and follow-up tasks
 
 Evidence should be sufficient for another maintainer to reconstruct release confidence without re-running the entire release process.
 
@@ -77,12 +84,14 @@ After publish:
    - workflow/rule hardening proposals
    - enhancement recommendations for approval review
 
-This closes the loop with the Improvement/Enhancement direction: release outcomes should continuously improve future release quality.
+This closes the loop with the Enhancement Engine direction: release outcomes should continuously improve future release quality.
 
 ## Related documents
 
-- `README.md` for project intent and phase context
-- `.ai/PRINCIPLES.md` for decision priorities and governance posture
-- `docs/maintainers/ROADMAP.md` for strategic direction and major decisions
-- `docs/maintainers/TASKS.md` for active execution and follow-up tracking
-- `docs/maintainers/SECURITY.md` for vulnerability handling expectations
+- `README.md` — project intent and phase context
+- `.ai/PRINCIPLES.md` — decision priorities and governance posture
+- `docs/maintainers/ROADMAP.md` — strategic direction and major decisions
+- `docs/maintainers/TASKS.md` — active execution and follow-up tracking
+- `docs/maintainers/SECURITY.md` — vulnerability handling expectations
+- `docs/maintainers/release-gate-matrix.md` — full gate inventory and CI mapping
+- `docs/maintainers/parity-validation-flow.md` — parity command chain and evidence contract

@@ -8,15 +8,16 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
 - If a new term appears repeatedly, add it here before broad adoption.
 - Keep definitions operational and specific to Workflow Cannon.
 - For each term, keep one primary definition source and one optional enforcement surface.
+- When in doubt, check `.ai/PRINCIPLES.md` for the canonical decision language.
 
 ## Definition surfaces
 
-- **Canonical glossary**: `docs/maintainers/TERMS.md` (this file)
-- **Canonical goals and principles**: `.ai/PRINCIPLES.md`
+- **Canonical glossary**: `docs/maintainers/TERMS.md` (this file) — primary definitions
+- **Canonical goals and principles**: `.ai/PRINCIPLES.md` — decision rules and trade-off order
 - **Project intent and boundaries**: `README.md`, `docs/maintainers/ROADMAP.md`, `docs/maintainers/ARCHITECTURE.md`
-- **Execution and planning**: `docs/maintainers/TASKS.md`
+- **Execution and planning**: `docs/maintainers/TASKS.md` — task queue and dependencies
 - **Operational runbooks/playbooks**: `docs/maintainers/RELEASING.md` and files under `docs/maintainers/`
-- **Agent enforcement layer**: `.cursor/rules/*.mdc`
+- **Agent enforcement layer**: `.cursor/rules/*.mdc` — editor/agent behavior rules
 - **Reusable agent task templates**: `tasks/*.md`
 
 ## Terms and definitions
@@ -73,7 +74,7 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
 
 - **Approval Gate**
   - **Definition**: Checkpoint where explicit human confirmation is required before proceeding.
-- **Defined in**: `docs/maintainers/RELEASING.md` and policy docs.
+  - **Defined in**: `docs/maintainers/RELEASING.md` and policy docs.
   - **Enforced in**: release process and approval workflows.
 
 - **Evidence Requirement**
@@ -88,13 +89,13 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
 
 - **Capability Pack**
   - **Definition**: Modular bundle of rules, directives, and templates that defines a behavior profile.
-- **Defined in**: future capability-pack docs and roadmap/task references.
+  - **Defined in**: future capability-pack docs and roadmap/task references.
   - **Enforced in**: activation/sync workflows and rule/template loading behavior.
 
 ## Related docs
 
-- `README.md` for project intent and direction
-- `.ai/PRINCIPLES.md` for project goals and decision principles
-- `docs/maintainers/ROADMAP.md` for strategic decisions and phase context
-- `docs/maintainers/TASKS.md` for active execution state
-- `docs/maintainers/RELEASING.md` for release gates and evidence expectations
+- `README.md` — project intent and direction
+- `.ai/PRINCIPLES.md` — project goals and decision principles
+- `docs/maintainers/ROADMAP.md` — strategic decisions and phase context
+- `docs/maintainers/TASKS.md` — active execution state
+- `docs/maintainers/RELEASING.md` — release gates and evidence expectations

@@ -473,6 +473,41 @@ Release target: **GitHub release `v0.6.0`**
 - Acceptance criteria:
   - Evidence schema is versioned and validated in pipeline.
 
+### [x] T214 [workspace-kit] Split document-project and generate-document into batch vs single commands
+- Priority: P1
+- Approach: Separate batch orchestration from single-document generation; add per-surface overwrite control and filesSkipped evidence.
+- Depends on: `T211`, `T212`
+- Unblocks: `T215`
+- Technical scope:
+  - Split `document-project` (batch: all templates) from `generate-document` (single doc) as separate registered commands.
+  - Add `overwriteAi` and `overwriteHuman` options for per-surface overwrite control.
+  - Batch defaults: preserve AI docs (`overwriteAi: false`), overwrite human docs (`overwriteHuman: true`).
+  - Continue through all templates on individual failure; report batch summary.
+  - Add `filesSkipped` to `DocumentationGenerationEvidence` for skipped-file signaling.
+  - Update instruction files, RULES, README, and tests.
+- Acceptance criteria:
+  - `document-project` processes all templates and returns batch summary with per-doc results.
+  - `generate-document` handles single-doc generation independently.
+  - `filesSkipped` is populated when files are preserved due to overwrite settings.
+  - Instruction for `document-project` directs agents to prompt user on skipped AI docs.
+  - 40/40 tests pass.
+
+### [x] T215 [workspace-kit] Generate full project documentation via document-project
+- Priority: P1
+- Approach: Use the documentation module as an AI agent to generate all 8 templates, producing AI-optimized docs in `.ai/` and human-readable docs in `docs/maintainers/`.
+- Depends on: `T214`
+- Unblocks: none
+- Technical scope:
+  - Read all 8 templates and follow `{{{ }}}` instruction blocks against real project context.
+  - Generate AI-optimized docs in canonical `meta|v=1` pipe-delimited format for `.ai/`.
+  - Generate human-readable prose Markdown for `docs/maintainers/`.
+  - Skip `.ai/PRINCIPLES.md` (already exists; overwriteAi: false).
+  - Overwrite all human docs with fresh content aligned to current project state.
+- Acceptance criteria:
+  - 7 new AI docs created in `.ai/` (AGENTS, ARCHITECTURE, RELEASING, ROADMAP, SECURITY, SUPPORT, TERMS).
+  - 8 human docs overwritten in `docs/maintainers/`.
+  - Content follows template instructions and reflects actual project state.
+
 ### [ ] T199 [workspace-kit] Draft Task Engine schema workbook
 - Priority: P2
 - Approach: Build a developer workbook for schema, transitions, and errors.

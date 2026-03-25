@@ -4,33 +4,41 @@ This document provides a high-level architecture map for Workflow Cannon.
 
 ## System intent
 
-Workflow Cannon aims to provide a modular workflow platform where user-defined capabilities, templates, and policies can be safely applied to a workspace.
+Workflow Cannon is a modular developer workflow platform for VS Code users who want safe, reproducible, package-first workflow automation. It models planning, tasks, policy, and execution as versioned contracts, runs repeatable workflows with deterministic outcomes and evidence capture, and is designed to continuously improve itself through a human-governed enhancement loop fed by observed friction and outcome data.
 
 ## Core architectural directions
 
-- Modular capability packs with explicit contracts.
-- Structured task and planning engines with traceable state.
-- Improvement pipeline that generates recommendations from evidence.
-- Human-governed approval flows before sensitive automation.
-- Deterministic config, policy, and migration behavior.
+- Modular capability system with explicit contracts, dependency graphs, and command dispatch.
+- Structured task engine with typed schemas, lifecycle transitions, and pluggable task-type adapters.
+- Deterministic configuration and policy evaluation with explainable precedence.
+- Human-governed enhancement loop that generates evidence-backed recommendations.
+- Package-first delivery with parity validation and release-blocking evidence gates.
+- Safe-by-default automation with dry-run, diff, and rollback support.
+- Observability and supportability as first-class design constraints.
 
 ## Key building blocks
 
-- Capability pack and activation/sync layer.
-- Task Engine and Planning module.
-- Improvement Engine and recommendation queue.
-- Configuration and template registry.
-- Storage and state management layer.
-- Observability, policy, and security guardrails.
+- Module Registry — validates dependency graph, enforces registration contracts, determines startup order.
+- Module Command Router — discovers, lists, and dispatches commands across enabled modules with alias resolution.
+- Documentation Module — template-driven generation for paired AI (`.ai/`) and human (`docs/maintainers/`) documentation surfaces.
+- Task Engine (Phase 1) — core schema, lifecycle transitions, and pluggable task-type adapters.
+- Configuration Registry (Phase 2) — typed config with deterministic precedence and explain output.
+- Policy Engine (Phase 2) — approval gates, decision traces, and migration orchestration.
+- Enhancement Engine (Phase 3) — recommendation intake, evidence-backed generation, and artifact lineage tracking.
 
 ## Foundational design principles
 
-- Safe-by-default automation (dry-run, diff, rollback).
-- Explainable decisions and provenance of changes.
-- Backward-compatible evolution with explicit migrations.
-- Clear boundaries between human-readable docs and structured runtime state.
+- Safety and trustworthiness take priority over speed and convenience.
+- Deterministic behavior for supported workflows; no silent degradation.
+- Backward-compatible evolution with explicit, documented migration paths.
+- Clear boundaries between canonical AI docs, generated human docs, and runtime state.
+- Evidence-backed decisions and auditable provenance for all changes.
+- Incremental, reversible changes preferred over broad rewrites.
 
 ## Related docs
 
-- `docs/maintainers/ROADMAP.md` for strategic direction.
-- `docs/maintainers/TASKS.md` for execution tracking.
+- `docs/maintainers/ROADMAP.md` — strategic direction and phase plan
+- `docs/maintainers/TASKS.md` — execution queue and task dependencies
+- `docs/maintainers/RELEASING.md` — release process and evidence requirements
+- `.ai/PRINCIPLES.md` — canonical decision priorities
+- `.ai/module-build.md` — module development contract
