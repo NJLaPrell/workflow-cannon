@@ -1,7 +1,7 @@
 schema_version: 1
-current_kit_phase: 3
+current_kit_phase: "3"
 last_updated: "2026-03-25"
-active_focus: "Phase 2 COMPLETE (v0.4.0): config merge, explain-config, policy gates + traces, cutover docs. Phase 3 queue head T190."
+active_focus: "Phase 2b COMPLETE (v0.4.1): config CLI, user layer, resolve-config, policy trace schemaVersion, extra sensitive ops, metadata docs, mutation evidence. Phase 3 head T190."
 blockers: []
 next_agent_actions:
   - "Begin Phase 3: T190 recommendation intake and review queue"
@@ -12,7 +12,7 @@ pending_decisions: []
 metrics:
   updated_at: "2026-03-25"
   source: "automated"
-  notes: "v0.4.0 on npm (latest). Phase 3 (T190) next execution focus."
+  notes: "v0.4.1 in-repo; publish when ready. Phase 3 (T190) next. Phase 2b tasks complete."
   time_to_doctor_minutes: 0.03
   cold_start_success_rate_pct: 100
   upgrade_success_rate_pct: null

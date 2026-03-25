@@ -16,7 +16,8 @@ Status legend:
 | Phase 0 - Foundation (`T178`-`T183`, plus `T206`-`T213`) | `v0.2.0` | Completed |
 | Phase 1 - Task Engine core (`T184`-`T186`, `T199`, `T217`) | `v0.3.0` | Completed |
 | Phase 2 - Config, policy, local cutover (`T218`, `T187`, `T200`, `T188`, `T201`, `T189`) | `v0.4.0` | Completed |
-| Phase 3 - Enhancement loop MVP (`T190`-`T192`) | `v0.5.0` | Planned |
+| Phase 2b - Policy hardening + config UX (`T219`-`T220`, `T228`-`T237`) | `v0.4.1` | Completed |
+| Phase 3 - Enhancement loop MVP (`T190`-`T192`) | `v0.5.0` | In progress / ready |
 | Phase 4 - Scale and ecosystem hardening (`T193`-`T195`) | `v0.6.0` | Planned |
 
 ## Feature Matrix by Phase
@@ -66,11 +67,30 @@ Status legend:
 | Policy and approval enforcement | Sensitive mutating operations gated; agent-mediated approval in context; machine-readable traces | Completed | `T188` |
 | Maintainer task cutover | Checklist + runbook for **local** optional migration to task-engine state; no packaged migration runtime | Completed | `T189`, `T201` |
 
+### Phase 2b Config Policy Hardening + UX (`v0.4.1`)
+
+| Product feature | What users/maintainers get | Status | Task coverage |
+| --- | --- | --- | --- |
+| Strict config validation | Fail-fast errors on bad `.workspace-kit/config.json` and merged effective config | Completed | `T219` |
+| Full effective-config resolution | JSON dump of merged config for agents/automation (beyond field explain) | Completed | `T219` |
+| Versioned policy traces | Trace records with explicit schema version and maintainer upgrade notes | Completed | `T220` |
+| Config-extensible sensitive ops | Documented, tested extension of sensitive-operation IDs from effective config | Completed | `T220` |
+| CLI config command group | Canonical `workspace-kit config` surface (list, get, set, unset, explain, validate, resolve, generate-docs, `edit`) with JSON + safe failures | Completed | `T228` |
+| Persisted project/user config layers | Deterministic JSON stores, bootstrap, atomic/rollback-safe writes | Completed | `T229` |
+| Config metadata contract | Single source for types, defaults, scope, sensitivity, approval hints | Completed | `T230` |
+| Precedence diagnostics | Explain output for winning value, layers, and constraints | Completed | `T231` |
+| Config mutation guardrails | Schema/policy/safe-write enforcement before persistence | Completed | `T232` |
+| Generated config reference docs | `.ai/CONFIG.md` and `docs/maintainers/CONFIG.md` from metadata | Completed | `T233` |
+| Config CLI integration tests | Fixture-backed end-to-end coverage for happy and failure paths | Completed | `T234` |
+| Optional interactive config edit | Guided `config edit` reusing the same validation/persistence path | Completed | `T235` |
+| Exposure and scope model | User vs maintainer vs internal keys; list/docs/edit defaults | Completed | `T236` |
+| Config mutation evidence | Structured audit-friendly records for success and rejection | Completed | `T237` |
+
 ### Phase 3 Enhancement Loop MVP (`v0.5.0`)
 
 | Product feature | What users/maintainers get | Status | Task coverage |
 | --- | --- | --- | --- |
-| Recommendation review queue | Human-governed decision pipeline for proposed improvements | Planned | `T190` |
+| Recommendation review queue | Human-governed decision pipeline for proposed improvements | In progress / ready | `T190` |
 | Evidence-backed recommendations | Higher-signal suggestions with confidence scoring and dedupe behavior | Planned | `T191`, `T202` |
 | End-to-end lineage model | Traceability from recommendation to decision to applied change | Planned | `T192`, `T203` |
 

@@ -1,11 +1,14 @@
 import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import type { ConfigRegistryView } from "../contracts/module-contract.js";
+import { validatePersistedConfigDocument } from "./config-metadata.js";
 
 export type ConfigLayerId =
   | "kit-default"
   | `module:${string}`
+  | "user"
   | "project"
   | "env"
   | "invocation";
@@ -18,7 +21,11 @@ export type ConfigLayer = {
 /** Effective workspace config: domain keys + optional modules map (project file). */
 export type EffectiveWorkspaceConfig = Record<string, unknown>;
 
-const PROJECT_CONFIG_REL = ".workspace-kit/config.json";
+export const PROJECT_CONFIG_REL = ".workspace-kit/config.json";
+
+export function getProjectConfigPath(workspacePath: string): string {
+  return path.join(workspacePath, PROJECT_CONFIG_REL);
+}
 
 /** Built-in defaults (lowest layer). */
 export const KIT_CONFIG_DEFAULTS: Record<string, unknown> = {
@@ -107,6 +114,27 @@ export function deepEqual(a: unknown, b: unknown): boolean {
   return true;
 }
 
+/** Resolved home for user-level config (`~/.workspace-kit/config.json`). Override with `WORKSPACE_KIT_HOME` (tests). */
+export function getUserConfigFilePath(): string {
+  const home = process.env.WORKSPACE_KIT_HOME?.trim() || os.homedir();
+  return path.join(home, ".workspace-kit", "config.json");
+}
+
+async function readUserConfigFile(): Promise<Record<string, unknown>> {
+  const fp = getUserConfigFilePath();
+  if (!existsSync(fp)) {
+    return {};
+  }
+  const raw = await fs.readFile(fp, "utf8");
+  const parsed = JSON.parse(raw) as unknown;
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error(`config-invalid(user): ${fp} must be a JSON object`);
+  }
+  const obj = parsed as Record<string, unknown>;
+  validatePersistedConfigDocument(obj, "user config");
+  return obj;
+}
+
 async function readProjectConfigFile(workspacePath: string): Promise<Record<string, unknown>> {
   const fp = path.join(workspacePath, PROJECT_CONFIG_REL);
   if (!existsSync(fp)) {
@@ -118,10 +146,13 @@ async function readProjectConfigFile(workspacePath: string): Promise<Record<stri
     throw new Error("config-invalid: .workspace-kit/config.json must be a JSON object");
   }
   const obj = parsed as Record<string, unknown>;
-  if (obj.schemaVersion !== undefined && typeof obj.schemaVersion !== "number") {
-    throw new Error("config-invalid: schemaVersion must be a number when present");
-  }
+  validatePersistedConfigDocument(obj, ".workspace-kit/config.json");
   return obj;
+}
+
+export async function loadUserLayer(): Promise<ConfigLayer> {
+  const data = await readUserConfigFile();
+  return { id: "user", data };
 }
 
 /**
@@ -220,12 +251,37 @@ export async function resolveWorkspaceConfigWithLayers(
 ): Promise<{ effective: EffectiveWorkspaceConfig; layers: ConfigLayer[] }> {
   const { workspacePath, registry, env = process.env, invocationConfig } = options;
   const layers: ConfigLayer[] = [...buildBaseConfigLayers(registry)];
+  layers.push(await loadUserLayer());
   layers.push(await loadProjectLayer(workspacePath));
   layers.push({ id: "env", data: envToConfigOverlay(env) });
   if (invocationConfig && Object.keys(invocationConfig).length > 0) {
     layers.push({ id: "invocation", data: cloneDeep(invocationConfig) });
   }
   return { effective: mergeConfigLayers(layers) as EffectiveWorkspaceConfig, layers };
+}
+
+export function normalizeConfigForExport(value: unknown): unknown {
+  return sortKeysDeep(value);
+}
+
+function sortKeysDeep(value: unknown): unknown {
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value.map(sortKeysDeep);
+  }
+  const o = value as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const k of Object.keys(o).sort()) {
+    out[k] = sortKeysDeep(o[k]);
+  }
+  return out;
+}
+
+/** Deterministic JSON for agents and tests (sorted keys, trailing newline). */
+export function stableStringifyConfig(value: unknown): string {
+  return `${JSON.stringify(sortKeysDeep(value), null, 2)}\n`;
 }
 
 export type ExplainConfigResult = {

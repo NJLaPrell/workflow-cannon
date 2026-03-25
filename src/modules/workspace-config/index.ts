@@ -1,6 +1,7 @@
 import type { ConfigRegistryView, WorkflowModule } from "../../contracts/module-contract.js";
 import {
   explainConfigPath,
+  normalizeConfigForExport,
   resolveWorkspaceConfigWithLayers
 } from "../../core/workspace-kit-config.js";
 
@@ -41,6 +42,36 @@ async function handleExplainConfig(
   };
 }
 
+async function handleResolveConfig(
+  args: Record<string, unknown>,
+  ctx: { workspacePath: string; registry: ConfigRegistryView }
+): Promise<{
+  ok: boolean;
+  code: string;
+  message?: string;
+  data?: Record<string, unknown>;
+}> {
+  const invocationConfig =
+    typeof args.config === "object" && args.config !== null && !Array.isArray(args.config)
+      ? (args.config as Record<string, unknown>)
+      : {};
+
+  const { effective, layers } = await resolveWorkspaceConfigWithLayers({
+    workspacePath: ctx.workspacePath,
+    registry: ctx.registry,
+    invocationConfig
+  });
+
+  return {
+    ok: true,
+    code: "config-resolved",
+    data: {
+      effective: normalizeConfigForExport(effective) as Record<string, unknown>,
+      layers: layers.map((l) => ({ id: l.id }))
+    }
+  };
+}
+
 export const workspaceConfigModule: WorkflowModule = {
   registration: {
     id: "workspace-config",
@@ -66,26 +97,38 @@ export const workspaceConfigModule: WorkflowModule = {
           name: "explain-config",
           file: "explain-config.md",
           description: "Agent-first JSON: effective config value and winning layer for a dotted path."
+        },
+        {
+          name: "resolve-config",
+          file: "resolve-config.md",
+          description: "Agent-first JSON: full effective config (sorted) and merge layer ids."
         }
       ]
     }
   },
 
   async onCommand(command, ctx) {
-    if (command.name !== "explain-config") {
-      return { ok: false, code: "unknown-command", message: "workspace-config only implements explain-config" };
-    }
     const reg = ctx.moduleRegistry;
     if (!reg) {
       return {
         ok: false,
         code: "internal-error",
-        message: "explain-config requires moduleRegistry on context (CLI wiring)"
+        message: "workspace-config requires moduleRegistry on context (CLI wiring)"
       };
     }
-    return handleExplainConfig(command.args ?? {}, {
-      workspacePath: ctx.workspacePath,
-      registry: reg
-    });
+    const baseCtx = { workspacePath: ctx.workspacePath, registry: reg };
+
+    if (command.name === "explain-config") {
+      return handleExplainConfig(command.args ?? {}, baseCtx);
+    }
+    if (command.name === "resolve-config") {
+      return handleResolveConfig(command.args ?? {}, baseCtx);
+    }
+
+    return {
+      ok: false,
+      code: "unknown-command",
+      message: `workspace-config: unknown command '${command.name}'`
+    };
   }
 };

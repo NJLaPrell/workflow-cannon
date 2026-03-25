@@ -13,10 +13,11 @@ Dependency fields:
 
 ## Current execution state
 
-- Current phase in execution: _Phase 2 COMPLETE. Phase 3 (Enhancement loop MVP) is next._
+- Current phase in execution: _Phase 2b COMPLETE (`v0.4.1`). Phase 3 (Enhancement loop MVP) is next._
 - Milestone target: _Human-governed recommendation queue with evidence and lineage (`v0.5.0`)._
 - Completed execution order (Phase 1): `T199` → `T184` → `T185` → `T186` → `T217`
 - Completed execution order (Phase 2): `T218` → `T187` → `T200` → `T188` → `T201` → `T189`
+- Completed execution order (Phase 2b): policy `T219` → `T220`; config UX `T228` → `T229` → `T230` → `T231` → `T232` → `T234` → `T233` → `T236` → `T237` → `T235` (see Phase 2b notes for parallel slots).
 - Ready queue: `T190`
 - Design decisions resolved: Phase 1 — Phase 1 decisions table. Phase 2 — Phase 2 decisions table (below).
 
@@ -325,7 +326,7 @@ The following decisions were resolved before T199 execution and are binding for 
 - Priority: P1
 - Approach: Transition service with auto-unblock, evidence emission, and file-backed JSON persistence.
 - Depends on: `T184`
-- Unblocks: `T186`, `T190`, `T194`
+- Unblocks: `T186`, `T194`
 - Technical scope:
   - Implement `TaskStore` — file-backed JSON store at `.workspace-kit/tasks/state.json`. Schema-versioned. Load on init, save after each transition batch.
   - Implement `TransitionService` — accepts a task ID + target state, loads task from store, validates via `TransitionValidator`, applies state mutation, runs post-transition hooks, saves.
@@ -436,7 +437,7 @@ Release target: **GitHub release `v0.4.0`** (single release for all Phase 2 deli
 - Priority: P1
 - Approach: Policy evaluator integrated with command dispatch; agent-mediated approval; decision traces per workbook.
 - Depends on: `T184`, `T187`, `T200`
-- Unblocks: `T189`, `T190`, `T193`, `T201`
+- Unblocks: `T189`, `T219`, `T193`, `T201`
 - Supporting tasks: `T200`
 - Technical scope:
   - Implement policy evaluation for **sensitive operation IDs** from workbook + `T200` matrix (extendable via config).
@@ -465,6 +466,229 @@ Release target: **GitHub release `v0.4.0`** (single release for all Phase 2 deli
   - Runbook states that cutover is **voluntary** and **local**; package does not auto-migrate consumer repos.
   - No new public migration API surface is required for acceptance (docs-only slice is sufficient if workbook non-goals hold).
 
+## Phase 2b config and policy hardening
+
+Release target: **GitHub release `v0.4.1`**
+
+### [x] T219 [workspace-kit] Harden config validation and agent resolve-config surface
+- Priority: P1
+- Approach: Fail-fast validation with stable errors; deterministic JSON for full effective config (agent-first).
+- Depends on: `T188`
+- Unblocks: `T220`
+- Technical scope:
+  - Tighten schema validation for `.workspace-kit/config.json` and merged effective config (paths, field-level messages aligned with `explain-config` semantics).
+  - Add a `workspace-kit run` / workspace-config command that emits the **full** effective configuration object (or per-domain slices per workbook) for automation, not only field explain.
+  - Extend maintainer matrix or workbook notes so validation and resolve outputs are traceable to test cases.
+- Acceptance criteria:
+  - Invalid configs fail with typed, path-qualified errors; valid merges remain bitwise deterministic for the same inputs.
+  - Resolve output is JSON-only, stable field ordering or documented sort, and covered by tests.
+
+### [x] T220 [workspace-kit] Version policy traces and config-driven sensitive-operation extensions
+- Priority: P1
+- Approach: Trace schema versioning + documented extension points for sensitive op lists from effective config.
+- Depends on: `T219`
+- Unblocks: `T190`
+- Technical scope:
+  - Add an explicit **schema version** (or equivalent) to policy trace records and document upgrade expectations for consumers reading `.workspace-kit/policy/` logs.
+  - Wire **config-driven** extension of sensitive operation identifiers (within safe bounds: documented merge with built-in baseline, deny-by-default behavior for unknown router paths unchanged unless workbook extends).
+  - Integration tests: traces include version field; extended op list flows through policy evaluation.
+- Acceptance criteria:
+  - Traces remain machine-readable and backward-documented; version bump procedure is recorded in maintainer docs.
+  - Extending sensitive ops via config is tested and does not weaken default deny posture for undeclared write paths.
+
+### Phase 2b — config UX and exposure layer
+
+**Release target:** Same train as Phase 2 maintainer scope (`v0.4.0` umbrella) **or** Phase 2b patch (`v0.4.1`) — confirm at ship time. Default planning assumption: ship with **`v0.4.1`** alongside `T219`/`T220` unless explicitly re-scoped.
+
+**Task ID note:** A draft of this track used `T218`–`T227`. **`T218` is reserved** for the completed Phase 2 workbook (`docs/maintainers/phase2-config-policy-workbook.md`). The tasks below use **`T228`–`T237`** in the same dependency shape and **recommended execution order**:
+
+`T228` → `T229` → `T230` → `T231` → `T232` → `T234` → `T233` → `T236` → `T237` → `T235`
+
+(`T229` and `T230` may proceed in parallel after `T228`; `T236` after `T230`.)
+
+### [x] T228 [workspace-kit] Implement end-user config command surface
+- Priority: P1
+- Approach: Add a canonical CLI `config` command group that routes through typed config resolution and validation instead of exposing raw file editing as the primary interface.
+- Depends on: `T187`
+- Unblocks: `T229`, `T230`, `T231`, `T232`, `T234`, `T235`
+- Technical scope:
+  - Add `workspace-kit config` command group to the CLI surface.
+  - Implement `config list`.
+  - Implement `config get <key>`.
+  - Implement `config set <key> <jsonValue>`.
+  - Implement `config unset <key>`.
+  - Implement `config explain <key>`.
+  - Implement `config validate`.
+  - Return structured JSON output suitable for agent consumption.
+  - Provide concise human-readable summaries where appropriate.
+  - Fail safely on invalid keys, malformed JSON values, and type violations.
+- Acceptance criteria:
+  - Users can inspect and mutate config without direct raw-file editing.
+  - CLI config commands route through canonical config logic rather than ad hoc file writes.
+  - Invalid writes are rejected before persistence.
+  - Command behavior is deterministic and test-covered.
+
+### [x] T229 [workspace-kit] Add canonical persisted config store for project and user layers
+- Priority: P1
+- Approach: Back the config command surface with deterministic JSON config layers that are runtime-editable and distinct from descriptive markdown docs.
+- Depends on: `T187`, `T228`
+- Unblocks: `T231`, `T232`, `T234`, `T235`
+- Technical scope:
+  - Define canonical persisted config file locations for project-level and user-level config.
+  - Implement JSON read/write helpers with schema-validation integration.
+  - Support missing-file bootstrap behavior.
+  - Normalize serialization for deterministic diffs and stable read-after-write behavior.
+  - Ensure write behavior is atomic or rollback-safe where practical.
+  - Keep persisted config separate from generated human docs and module contract markdown.
+- Acceptance criteria:
+  - Project and user config persist independently and resolve predictably.
+  - Persisted config format is deterministic and machine-parseable.
+  - Invalid or unreadable persisted config is surfaced with actionable errors.
+  - Runtime can load and resolve persisted layers reliably.
+
+### [x] T230 [workspace-kit] Implement config metadata contract for user-facing settings
+- Priority: P1
+- Approach: Define a metadata model for config keys so runtime, explain, docs, and future UI surfaces all depend on the same source.
+- Depends on: `T187`, `T228`
+- Unblocks: `T231`, `T233`, `T235`, `T236`
+- Technical scope:
+  - Define metadata fields for user-exposed config keys.
+  - Include key name, type, description, default, allowed values, scope, owning module, sensitivity, restart requirement, and approval requirement where relevant.
+  - Expose config metadata through the registry/runtime APIs.
+  - Ensure command handlers and documentation generation can consume the same metadata source.
+  - Treat absent metadata for exposed keys as a validation failure or explicit warning state.
+- Acceptance criteria:
+  - Every user-exposed config key has retrievable metadata.
+  - Metadata is programmatically available to runtime and docs layers.
+  - Explain and docs features can use the same canonical metadata source.
+  - Missing or inconsistent metadata is detectable and test-covered.
+
+### [x] T231 [workspace-kit] Implement effective-value explanation and precedence diagnostics
+- Priority: P1
+- Approach: Add deterministic explain output that tells users why a config value resolved the way it did.
+- Depends on: `T228`, `T229`, `T230`
+- Unblocks: `T234`, `T233`
+- Technical scope:
+  - Implement explain output for a single config key.
+  - Show effective value and winning source layer.
+  - Show overridden lower-priority values when present.
+  - Show default value when relevant.
+  - Show validation constraints, config scope, and owning module.
+  - Indicate restart, rerun, or approval implications where metadata supports it.
+  - Keep explain output stable enough for tests and agent consumption.
+- Acceptance criteria:
+  - `config explain <key>` clearly identifies the winning value and why it won.
+  - Users can distinguish defaults, project values, user values, and runtime overrides.
+  - Output is deterministic and understandable.
+  - Tests cover common precedence and conflict scenarios.
+
+### [x] T232 [workspace-kit] Add config mutation guardrails and safe-write behavior
+- Priority: P1
+- Approach: Apply schema, policy, and safe-write constraints so config editing remains safe-by-default.
+- Depends on: `T228`, `T229`, `T230`, `T188`
+- Unblocks: `T234`, `T237`, `T235`
+- Technical scope:
+  - Block writes to unknown keys.
+  - Block writes that violate schema or type rules.
+  - Validate mutations before persistence.
+  - Respect policy and approval hooks for sensitive keys where applicable.
+  - Prevent partial-write corruption.
+  - Emit explicit error codes and actionable failure messages.
+  - Record enough mutation context to support debugging and future evidence flows.
+- Acceptance criteria:
+  - Unsafe config changes are rejected before write.
+  - Sensitive settings can be approval-gated or blocked by policy.
+  - Failure states are explicit, deterministic, and test-covered.
+  - Successful writes preserve config integrity.
+
+### [x] T233 [workspace-kit] Generate canonical AI and human config reference documentation
+- Priority: P2
+- Approach: Generate config reference docs from config metadata instead of maintaining a second manual truth source.
+- Depends on: `T228`, `T230`, `T231`, `T236`
+- Unblocks: none
+- Technical scope:
+  - Generate `.ai/CONFIG.md`.
+  - Generate `docs/maintainers/CONFIG.md`.
+  - Include key names, types, defaults, scopes, allowed values, owning modules, and operational notes.
+  - Clearly distinguish persisted editable config from descriptive/generated documentation.
+  - Keep generation deterministic from metadata and resolved config contract data.
+- Acceptance criteria:
+  - AI and human config docs are generated from one canonical metadata source.
+  - Generated docs stay aligned with implementation changes.
+  - Docs describe usage and boundaries without becoming live config state.
+  - Output is stable and reviewable.
+
+### [x] T234 [workspace-kit] Add config command integration tests and fixture coverage
+- Priority: P1
+- Approach: Cover the full config UX end-to-end with deterministic fixtures and failure-state verification.
+- Depends on: `T228`, `T229`, `T231`, `T232`
+- Unblocks: `T233`, `T235`, `T237`
+- Technical scope:
+  - Add integration tests for list, get, set, unset, validate, and explain.
+  - Test project vs user precedence behavior.
+  - Test invalid key handling.
+  - Test malformed JSON and invalid-type handling.
+  - Test missing-file bootstrap behavior.
+  - Test explain output correctness and stable serialization.
+  - Verify read-after-write behavior and deterministic output shapes.
+- Acceptance criteria:
+  - Full user-facing config CLI flow is integration-tested.
+  - Common failure modes have explicit coverage.
+  - Precedence and explain behavior are verified by fixtures.
+  - Test results are deterministic and release-usable.
+
+### [x] T235 [workspace-kit] Implement optional interactive config edit workflow
+- Priority: P2
+- Approach: Add a guided editing flow as a thin layer over canonical config commands rather than a separate mutation path.
+- Depends on: `T228`, `T230`, `T232`, `T234`
+- Unblocks: none
+- Technical scope:
+  - Add `workspace-kit config edit`.
+  - Support browsing or selecting available keys.
+  - Display current value, default, description, and allowed values using config metadata.
+  - Prompt for replacement values using metadata-driven guidance.
+  - Reuse the same validation and persistence path as direct set/unset.
+  - Keep interactive mode optional and non-authoritative.
+- Acceptance criteria:
+  - Users can edit config through a guided flow.
+  - Interactive edits use the same validation and persistence path as direct commands.
+  - No duplicate mutation path is introduced.
+  - Guided-mode errors are surfaced clearly.
+
+### [x] T236 [workspace-kit] Define config scope model and exposure policy for end-user editable keys
+- Priority: P2
+- Approach: Separate user-editable, maintainer-only, and internal settings so the config UX does not expose unstable internals casually.
+- Depends on: `T187`, `T188`, `T230`
+- Unblocks: `T233`
+- Technical scope:
+  - Classify config keys by exposure level.
+  - Classify config keys by scope such as project, user, runtime, and internal.
+  - Define which keys appear in list, docs, and guided edit flows by default.
+  - Define how hidden or internal keys behave in debug and explain contexts.
+  - Align exposure rules with policy and approval constraints where relevant.
+- Acceptance criteria:
+  - User-facing config surfaces expose only intended keys by default.
+  - Internal or unsafe settings are not casually editable.
+  - Exposure rules are documented, testable, and reusable by future UI surfaces.
+  - Scope and exposure behavior stay consistent across CLI and docs.
+
+### [x] T237 [workspace-kit] Emit config change evidence and audit-friendly mutation records
+- Priority: P2
+- Approach: Record structured config mutation evidence compatible with the project’s evidence-first and future lineage-oriented design.
+- Depends on: `T232`, `T234`
+- Unblocks: none
+- Technical scope:
+  - Record config mutation events with timestamp, actor, key, scope, result, and old/new value summaries.
+  - Distinguish successful vs rejected mutations.
+  - Avoid leaking sensitive raw values where inappropriate.
+  - Store mutation evidence in a deterministic, machine-readable format.
+  - Make mutation evidence retrievable for debugging and future approval/recommendation integration.
+- Acceptance criteria:
+  - Config mutations emit structured evidence records.
+  - Rejected changes are diagnosable from evidence output.
+  - Evidence format is stable and safe.
+  - Design is compatible with future enhancement, approval, and lineage work.
+
 ## Phase 3 enhancement loop MVP
 
 Release target: **GitHub release `v0.5.0`**
@@ -472,7 +696,7 @@ Release target: **GitHub release `v0.5.0`**
 ### [ ] T190 [workspace-kit] Implement recommendation intake and review queue
 - Priority: P1
 - Approach: Queue with explicit decision states and audit references.
-- Depends on: `T185`, `T188`
+- Depends on: `T185`, `T188`, `T220`
 - Unblocks: `T191`, `T192`, `T202`
 - Supporting tasks: `T202`
 - Technical scope:

@@ -24,7 +24,8 @@ Workflow Cannon is a modular developer workflow platform for VS Code users who w
 - Task Engine (Phase 1) — core schema, lifecycle transitions, and pluggable task-type adapters.
 - Configuration Registry (Phase 2) — typed config with deterministic precedence and explain output.
 - Policy Engine (Phase 2) — layered config with explain paths, approval gates, decision traces; maintainer-local task cutover docs (no packaged migration runtime in `v0.4.0`).
-- Enhancement Engine (Phase 3) — recommendation intake, evidence-backed generation, and artifact lineage tracking.
+- Config/policy hardening + UX (Phase 2b) — stricter validation, full effective-config resolution, versioned traces and config-driven sensitive ops; CLI `config` group, persisted layers, metadata-driven explain/docs, guardrails, and mutation evidence (`v0.4.1`).
+- Enhancement Engine (Phase 3) — recommendation intake, evidence-backed generation, and artifact lineage tracking (`v0.5.0`).
 
 ## Foundational design principles
 

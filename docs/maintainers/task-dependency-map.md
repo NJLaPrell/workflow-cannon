@@ -1,6 +1,6 @@
 # Task Dependency Map
 
-Canonical dependency view for `T178` through `T195`, derived from `docs/maintainers/TASKS.md`.
+Canonical dependency view for `T178` through `T195` plus Phase 2b (`T219`–`T220`, `T228`–`T237`), derived from `docs/maintainers/TASKS.md`.
 
 ## Purpose
 
@@ -15,6 +15,7 @@ Canonical dependency view for `T178` through `T195`, derived from `docs/maintain
 | Phase 0 | `v0.2.0` | `T178`, `T179`, `T180`, `T181`, `T182`, `T183` |
 | Phase 1 | `v0.3.0` | `T199`, `T184`, `T185`, `T186`, `T217` |
 | Phase 2 | `v0.4.0` | `T218`, `T187`, `T200`, `T188`, `T201`, `T189` |
+| Phase 2b | `v0.4.1` | `T219`, `T220`, `T228`–`T237` |
 | Phase 3 | `v0.5.0` | `T190`, `T191`, `T192` |
 | Phase 4 | `v0.6.0` | `T193`, `T194`, `T195` |
 
@@ -44,8 +45,11 @@ graph TD
   T188 --> T201
   T188 --> T189
   T201 --> T189
+  T188 --> T219
+  T219 --> T220
   T185 --> T190
   T188 --> T190
+  T220 --> T190
   T183 --> T191
   T190 --> T191
   T190 --> T192
@@ -59,6 +63,33 @@ graph TD
   T189 --> T195
   T193 --> T195
   T194 --> T195
+  T187 --> T228
+  T228 --> T229
+  T228 --> T230
+  T229 --> T231
+  T230 --> T231
+  T228 --> T232
+  T229 --> T232
+  T230 --> T232
+  T188 --> T232
+  T231 --> T234
+  T232 --> T234
+  T229 --> T234
+  T228 --> T234
+  T230 --> T236
+  T188 --> T236
+  T187 --> T236
+  T236 --> T233
+  T228 --> T233
+  T230 --> T233
+  T231 --> T233
+  T234 --> T233
+  T232 --> T237
+  T234 --> T237
+  T228 --> T235
+  T230 --> T235
+  T232 --> T235
+  T234 --> T235
 ```
 
 ## Topological execution order (one valid order)
@@ -75,19 +106,29 @@ graph TD
 10. `T187`
 11. `T200`
 12. `T188`
-13. `T190`, `T201`
+13. `T201`
 14. `T189`
-15. `T191`
-16. `T192`
-17. `T193`
-18. `T194`
-19. `T195`
+15. `T219`, `T228` (Phase 2b policy track vs config UX track; parallel)
+16. `T220`, `T229`, `T230` (`T220` after `T219`; `T229`/`T230` after `T228`)
+17. `T236` (after `T230`)
+18. `T231`
+19. `T232`
+20. `T234`
+21. `T233`
+22. `T237`
+23. `T235`
+24. `T190` (after `T220`; may overlap the config UX chain in calendar time)
+25. `T191`
+26. `T192`
+27. `T193`
+28. `T194`
+29. `T195`
 
 ## Critical path to final phase-release gate
 
 Longest dependency chain ending at `T195`:
 
-`T178` -> `T184` -> `T217` -> `T218` -> `T187` -> `T200` -> `T188` -> `T190` -> `T191` -> `T192` -> `T193` -> `T194` -> `T195`
+`T178` -> `T184` -> `T217` -> `T218` -> `T187` -> `T200` -> `T188` -> `T219` -> `T220` -> `T190` -> `T191` -> `T192` -> `T193` -> `T194` -> `T195`
 
 ## Maintenance rule
 

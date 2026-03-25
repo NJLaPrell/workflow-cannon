@@ -74,6 +74,16 @@ Validation:
 - Align task IDs with `TASKS.md`.
 }}}
 
+### Phase 2b - Config policy hardening + UX / exposure -> GitHub release `v0.4.1`
+
+{{{
+Document Phase 2b scope, outcome, and exit signals (policy hardening `T219`–`T220` and config UX `T228`–`T237`; see `TASKS.md` for the draft-ID mapping note).
+Output format:
+- Bullets for primary scope, outcome, exit signals.
+Validation:
+- Align task IDs with `TASKS.md`.
+}}}
+
 ### Phase 3 - Enhancement loop MVP -> GitHub release `v0.5.0`
 
 {{{

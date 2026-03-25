@@ -2,6 +2,29 @@
 
 All notable changes to `@workflow-cannon/workspace-kit` are documented in this file.
 
+## [0.4.1] - 2026-03-25
+
+Phase 2b — config validation/policy trace versioning, config UX (CLI + metadata + docs), and user config layer.
+
+### Added
+
+- **User config layer** — `~/.workspace-kit/config.json` (override `WORKSPACE_KIT_HOME` in tests) merged after module defaults and before project `.workspace-kit/config.json`.
+- **`workspace-kit config`** — `list`, `get`, `set`, `unset`, `explain`, `validate`, `resolve`, `generate-docs`, `edit` (TTY). JSON via `--json`; mutating sensitive keys require `WORKSPACE_KIT_POLICY_APPROVAL` in the environment.
+- **Config metadata registry** — `src/core/config-metadata.ts` drives validation, CLI allowlists, and generated `.ai/CONFIG.md` + `docs/maintainers/CONFIG.md`.
+- **`resolve-config` module command** — Full effective config (key-sorted) and layer ids via `workspace-kit run resolve-config`.
+- **Policy** — Trace records include `schemaVersion` (default `1`). Effective `policy.extraSensitiveModuleCommands` extends sensitive `run` commands; traces use operation id `policy.dynamic-sensitive` for those entries.
+
+- **Config mutation evidence** — Append-only JSONL under `.workspace-kit/config/mutations.jsonl`.
+
+### Changed
+
+- **Strict persisted config** — Unknown top-level or nested keys in project/user JSON are rejected on read/write/validate.
+
+### Migration notes
+
+- Add `.workspace-kit/config/` to `.gitignore` if mutation logs should not be committed.
+- Scripts that set `policy.extraSensitiveModuleCommands` or mutate those keys via `config set` need policy approval as for other sensitive mutators.
+
 ## [0.4.0] - 2026-03-25
 
 Phase 2 (config, policy, local cutover) release. Layered workspace configuration, policy gates with traces, and maintainer docs for optional task-engine cutover.

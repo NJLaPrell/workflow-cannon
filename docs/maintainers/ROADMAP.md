@@ -14,7 +14,7 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - Completed Phase 0 slices: `T178`, `T179`, `T180`, `T181`, `T182`, `T183`, `T196`, `T197`, `T198`, `T206`, `T207`, `T208`, `T209`, `T210`, `T211`, `T212`, `T213`.
 - **Phase 1 (Task Engine core) is COMPLETE** and ships as **`v0.3.0`**. Completed slices: `T199`, `T184`, `T185`, `T186`, `T217`.
 - **Phase 2 (configuration and policy base) is COMPLETE** and ships as **`v0.4.0`**. Completed slices: `T218`, `T187`, `T200`, `T188`, `T201`, `T189`.
-- **Next execution phase is Phase 3 (Enhancement loop MVP)** starting at `T190`.
+- **Phase 2b is COMPLETE** and ships as **`v0.4.1`** (`T219`–`T220`, `T228`–`T237`). **Next execution phase is Phase 3** (Enhancement loop MVP) at **`v0.5.0`** starting at `T190`.
 - Historical extraction and first-publish milestones remain recorded below as provenance.
 
 ## Phase plan and release cadence
@@ -48,6 +48,16 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
   - Layered config precedence is explicit, tested, and explainable via `workspace-kit run`.
   - Policy and approval gates enforce on the baseline sensitive operations; traces are machine-readable.
   - Maintainer cutover checklist and runbook exist; optional local rehearsal evidence documented.
+
+### Phase 2b - Config policy hardening + UX / exposure -> GitHub release `v0.4.1` (COMPLETE)
+
+- Primary scope: **`T219`–`T220`** (validation, `resolve-config`, versioned traces, config-driven sensitive ops) and **`T228`–`T237`** (CLI `config` command group, persisted project/user layers, metadata contract, explain/guardrails, generated CONFIG docs, integration tests, optional interactive edit, exposure model, mutation evidence).
+- Outcome: stricter config validation and agent-first full effective-config resolution; versioned policy traces and tested sensitive-op extensions; end-user config surfaces that route through the typed registry with safe writes, metadata-driven explain/docs, and audit-friendly mutation records—without weakening default fail-closed posture for undeclared writes.
+- Exit signals:
+  - Invalid workspace config fails fast with stable, path-qualified errors; resolve output for agents is deterministic and tested.
+  - Policy traces carry an explicit schema/version marker and documented reader upgrade notes.
+  - Sensitive-operation extensions from effective config are covered by integration tests.
+  - `workspace-kit config` list/get/set/unset/explain/validate (and optional `edit`) use canonical resolution and reject invalid mutations before persistence; integration tests and generated `.ai/CONFIG.md` + `docs/maintainers/CONFIG.md` stay aligned with metadata.
 
 ### Phase 3 - Enhancement loop MVP -> GitHub release `v0.5.0`
 

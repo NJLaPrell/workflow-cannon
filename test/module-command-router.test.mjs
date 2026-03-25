@@ -30,6 +30,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "get-task",
     "import-tasks",
     "list-tasks",
+    "resolve-config",
     "run-transition"
   ]);
 });
@@ -47,6 +48,22 @@ test("ModuleCommandRouter executes explain-config", async () => {
   assert.equal(result.ok, true);
   assert.equal(result.code, "config-explained");
   assert.equal(result.data?.effectiveValue, ".workspace-kit/tasks/state.json");
+});
+
+test("ModuleCommandRouter executes resolve-config", async () => {
+  const registry = new ModuleRegistry([workspaceConfigModule, documentationModule, taskEngineModule]);
+  const router = new ModuleCommandRouter(registry);
+
+  const result = await router.execute(
+    "resolve-config",
+    {},
+    { ...lifecycleContext, moduleRegistry: registry }
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "config-resolved");
+  assert.ok(result.data?.effective && typeof result.data.effective === "object");
+  assert.ok(Array.isArray(result.data?.layers));
 });
 
 test("ModuleCommandRouter executes generate-document for single doc", async () => {

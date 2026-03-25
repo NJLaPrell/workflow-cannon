@@ -7,13 +7,14 @@ import { ModuleRegistry } from "./core/module-registry.js";
 import { ModuleCommandRouter } from "./core/module-command-router.js";
 import {
   appendPolicyTrace,
-  getOperationIdForCommand,
-  isSensitiveModuleCommand,
+  isSensitiveModuleCommandForEffective,
   parsePolicyApproval,
   parsePolicyApprovalFromEnv,
   resolveActor,
+  resolvePolicyOperationIdForCommand,
   type PolicyOperationId
 } from "./core/policy.js";
+import { runWorkspaceConfigCli } from "./core/config-cli.js";
 import { resolveWorkspaceConfigWithLayers } from "./core/workspace-kit-config.js";
 import { documentationModule } from "./modules/documentation/index.js";
 import { taskEngineModule } from "./modules/task-engine/index.js";
@@ -467,8 +468,14 @@ export async function runCli(
   const [command] = args;
 
   if (!command) {
-    writeError("Usage: workspace-kit <init|doctor|check|upgrade|drift-check|run>");
+    writeError(
+      "Usage: workspace-kit <init|doctor|check|upgrade|drift-check|run|config>"
+    );
     return EXIT_USAGE_ERROR;
+  }
+
+  if (command === "config") {
+    return runWorkspaceConfigCli(cwd, args.slice(1), { writeLine, writeError });
   }
 
   if (command === "init") {
@@ -811,12 +818,12 @@ export async function runCli(
     }
 
     const actor = resolveActor(cwd, commandArgs, process.env);
-    const sensitive = isSensitiveModuleCommand(subcommand, commandArgs);
+    const sensitive = isSensitiveModuleCommandForEffective(subcommand, commandArgs, effective);
 
     if (sensitive) {
       const approval = parsePolicyApproval(commandArgs);
       if (!approval) {
-        const op = getOperationIdForCommand(subcommand);
+        const op = resolvePolicyOperationIdForCommand(subcommand, effective);
         if (op) {
           await appendPolicyTrace(cwd, {
             timestamp: new Date().toISOString(),
@@ -855,7 +862,7 @@ export async function runCli(
       const result = await router.execute(subcommand, commandArgs, ctx);
       if (sensitive) {
         const approval = parsePolicyApproval(commandArgs);
-        const op = getOperationIdForCommand(subcommand);
+        const op = resolvePolicyOperationIdForCommand(subcommand, effective);
         if (approval && op) {
           await appendPolicyTrace(cwd, {
             timestamp: new Date().toISOString(),
@@ -880,7 +887,7 @@ export async function runCli(
 
   if (command !== "doctor") {
     writeError(
-      `Unknown command '${command}'. Supported commands: init, doctor, check, upgrade, drift-check, run.`
+      `Unknown command '${command}'. Supported commands: init, doctor, check, upgrade, drift-check, run, config.`
     );
     return EXIT_USAGE_ERROR;
   }

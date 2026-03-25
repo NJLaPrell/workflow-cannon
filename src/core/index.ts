@@ -16,10 +16,16 @@ export {
   envToConfigOverlay,
   explainConfigPath,
   getAtPath,
+  getProjectConfigPath,
+  getUserConfigFilePath,
   KIT_CONFIG_DEFAULTS,
+  loadUserLayer,
   mergeConfigLayers,
   MODULE_CONFIG_CONTRIBUTIONS,
+  normalizeConfigForExport,
+  PROJECT_CONFIG_REL,
   resolveWorkspaceConfigWithLayers,
+  stableStringifyConfig,
   type ConfigLayer,
   type ConfigLayerId,
   type EffectiveWorkspaceConfig,
@@ -28,13 +34,36 @@ export {
 } from "./workspace-kit-config.js";
 export {
   appendPolicyTrace,
+  getExtraSensitiveModuleCommandsFromEffective,
   getOperationIdForCommand,
   isSensitiveModuleCommand,
+  isSensitiveModuleCommandForEffective,
   parsePolicyApproval,
   parsePolicyApprovalFromEnv,
+  POLICY_TRACE_SCHEMA_VERSION,
   resolveActor,
+  resolvePolicyOperationIdForCommand,
   type PolicyOperationId,
-  type PolicyTraceRecord
+  type PolicyTraceRecord,
+  type PolicyTraceRecordInput
 } from "./policy.js";
+export {
+  assertWritableKey,
+  getConfigKeyMetadata,
+  getConfigRegistryExport,
+  listConfigMetadata,
+  validatePersistedConfigDocument,
+  validateValueForMetadata,
+  type ConfigKeyExposure,
+  type ConfigKeyMetadata,
+  type ConfigValueType
+} from "./config-metadata.js";
+export {
+  appendConfigMutation,
+  CONFIG_MUTATIONS_SCHEMA_VERSION,
+  summarizeForEvidence,
+  type ConfigMutationRecord
+} from "./config-mutations.js";
+export { generateConfigReferenceDocs, runWorkspaceConfigCli, type ConfigCliIo } from "./config-cli.js";
 
 export type CoreRuntimeVersion = "0.1";

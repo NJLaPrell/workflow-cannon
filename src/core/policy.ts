@@ -2,9 +2,13 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { execSync } from "node:child_process";
 
+export const POLICY_TRACE_SCHEMA_VERSION = 1 as const;
+
 export type PolicyOperationId =
   | "cli.upgrade"
   | "cli.init"
+  | "cli.config-mutate"
+  | "policy.dynamic-sensitive"
   | "doc.document-project"
   | "doc.generate-document"
   | "tasks.import-tasks"
@@ -21,6 +25,33 @@ const COMMAND_TO_OPERATION: Record<string, PolicyOperationId | undefined> = {
 
 export function getOperationIdForCommand(commandName: string): PolicyOperationId | undefined {
   return COMMAND_TO_OPERATION[commandName];
+}
+
+export function getExtraSensitiveModuleCommandsFromEffective(
+  effective: Record<string, unknown>
+): string[] {
+  const policy = effective.policy;
+  if (!policy || typeof policy !== "object" || Array.isArray(policy)) {
+    return [];
+  }
+  const raw = (policy as Record<string, unknown>).extraSensitiveModuleCommands;
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  return raw.filter((x): x is string => typeof x === "string" && x.trim().length > 0);
+}
+
+/** Resolve operation id for tracing, including config-declared sensitive module commands. */
+export function resolvePolicyOperationIdForCommand(
+  commandName: string,
+  effective: Record<string, unknown>
+): PolicyOperationId | undefined {
+  const builtin = getOperationIdForCommand(commandName);
+  if (builtin) return builtin;
+  if (getExtraSensitiveModuleCommandsFromEffective(effective).includes(commandName)) {
+    return "policy.dynamic-sensitive";
+  }
+  return undefined;
 }
 
 /**
@@ -114,6 +145,7 @@ export function resolveActor(
 }
 
 export type PolicyTraceRecord = {
+  schemaVersion: number;
   timestamp: string;
   operationId: PolicyOperationId;
   command: string;
@@ -124,16 +156,36 @@ export type PolicyTraceRecord = {
   message?: string;
 };
 
+/** Policy sensitivity from built-in map plus `policy.extraSensitiveModuleCommands` on effective config. */
+export function isSensitiveModuleCommandForEffective(
+  commandName: string,
+  args: Record<string, unknown>,
+  effective: Record<string, unknown>
+): boolean {
+  if (isSensitiveModuleCommand(commandName, args)) {
+    return true;
+  }
+  return getExtraSensitiveModuleCommandsFromEffective(effective).includes(commandName);
+}
+
 const POLICY_DIR = ".workspace-kit/policy";
 const TRACE_FILE = "traces.jsonl";
 
+export type PolicyTraceRecordInput = Omit<PolicyTraceRecord, "schemaVersion"> & {
+  schemaVersion?: number;
+};
+
 export async function appendPolicyTrace(
   workspacePath: string,
-  record: PolicyTraceRecord
+  record: PolicyTraceRecordInput
 ): Promise<void> {
   const dir = path.join(workspacePath, POLICY_DIR);
   const fp = path.join(workspacePath, POLICY_DIR, TRACE_FILE);
-  const line = `${JSON.stringify(record)}\n`;
+  const full: PolicyTraceRecord = {
+    ...record,
+    schemaVersion: record.schemaVersion ?? POLICY_TRACE_SCHEMA_VERSION
+  };
+  const line = `${JSON.stringify(full)}\n`;
   await fs.mkdir(dir, { recursive: true });
   await fs.appendFile(fp, line, "utf8");
 }
