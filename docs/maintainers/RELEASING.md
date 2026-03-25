@@ -23,7 +23,7 @@ Every release must:
 
 ## Release readiness gates
 
-All gates should pass before publish:
+All gates should pass before publish (see `docs/maintainers/release-gate-matrix.md` for the full gate inventory, owners, and CI mapping):
 
 1. Scope is clear and tracked in `docs/maintainers/TASKS.md` with linked roadmap/decision context where needed.
 2. Behavior changes are documented in `docs/maintainers/CHANGELOG.md`.
