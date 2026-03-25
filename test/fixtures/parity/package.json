@@ -1,0 +1,10 @@
+{
+  "name": "parity-fixture",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Consumer parity fixture for @workflow-cannon/workspace-kit",
+  "scripts": {
+    "smoke": "node smoke.mjs"
+  }
+}
