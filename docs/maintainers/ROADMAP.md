@@ -12,7 +12,8 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - Project tracking has been reset for the split repository baseline.
 - **Phase 0 (foundation) is COMPLETE.** All primary and supporting tasks are done.
 - Completed Phase 0 slices: `T178`, `T179`, `T180`, `T181`, `T182`, `T183`, `T196`, `T197`, `T198`, `T206`, `T207`, `T208`, `T209`, `T210`, `T211`, `T212`, `T213`.
-- Next execution phase is **Phase 1 (Task Engine core)** starting at `T184`.
+- **Phase 1 (Task Engine core) is COMPLETE** and ships as GitHub/npm release **`v0.3.0`**. Completed slices: `T199`, `T184`, `T185`, `T186`, `T217`.
+- **Next execution phase is Phase 2 (configuration and policy base)** starting at `T187`.
 - Historical extraction and first-publish milestones remain recorded below as provenance.
 
 ## Phase plan and release cadence
@@ -80,4 +81,5 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 - Source-repo freeze commit: `65797d888629d017f3538bd793c5e7cd781edf7d`
 - Split commit: `5a1f7038255a2c83e0e51ace07ea0d95a327574c`
 - First publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23463225397`
+- Phase 1 / `v0.3.0` release: tag `v0.3.0` on `main`; publish via `Publish NPM` workflow (`publish-npm.yml`); npm dist-tag `latest` at `0.3.0` after successful run.
 - npm package: `https://www.npmjs.com/package/@workflow-cannon/workspace-kit`

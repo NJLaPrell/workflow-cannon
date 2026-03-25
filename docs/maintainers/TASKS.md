@@ -13,10 +13,10 @@ Dependency fields:
 
 ## Current execution state
 
-- Current phase in execution: _Phase 1 (Task Engine core)._
+- Current phase in execution: _Phase 1 COMPLETE. Phase 2 (Config, Policy, Migration) is next._
 - Milestone target: _Canonical task runtime contract with lifecycle, transitions, pluggable adapters, and next-action suggestions._
-- Ready queue: `T199`
-- Execution order: `T199` → `T184` → `T185` → `T186` → `T217`
+- Completed execution order: `T199` → `T184` → `T185` → `T186` → `T217` (all done)
+- Ready queue: `T187`
 - Design decisions resolved: see Phase 1 decisions table.
 
 ## Historical baseline (pre-Phase 0)
@@ -277,7 +277,7 @@ The following decisions were resolved before T199 execution and are binding for 
 | Evidence | Every transition produces a timestamped evidence record | Consistent with the evidence-first pattern established in Phase 0 |
 | Migration | One-time parser imports current TASKS.md into new state format | TASKS.md then becomes a generated view |
 
-### [ ] T199 [workspace-kit] Design Task Engine schema workbook
+### [x] T199 [workspace-kit] Design Task Engine schema workbook
 - Priority: P1
 - Approach: Produce a design workbook that documents the resolved decisions above and specifies implementation-ready details for schema, transitions, guards, persistence, and errors.
 - Depends on: none
@@ -298,7 +298,7 @@ The following decisions were resolved before T199 execution and are binding for 
   - Entity schema, guard contract, evidence schema, and error taxonomy are specified to a level sufficient for T184 implementation.
   - Migration strategy for importing existing TASKS.md is documented.
 
-### [ ] T184 [workspace-kit] Define Task Engine core schema and lifecycle
+### [x] T184 [workspace-kit] Define Task Engine core schema and lifecycle
 - Priority: P1
 - Approach: Implement typed schema, lifecycle states, transition validation, and guard hooks based on the T199 workbook.
 - Depends on: `T199`
@@ -320,7 +320,7 @@ The following decisions were resolved before T199 execution and are binding for 
   - Built-in `dependency-check` guard prevents starting tasks with incomplete deps.
   - Module registration passes registry validation with updated instruction entries.
 
-### [ ] T185 [workspace-kit] Implement Task Engine transition runtime and persistence
+### [x] T185 [workspace-kit] Implement Task Engine transition runtime and persistence
 - Priority: P1
 - Approach: Transition service with auto-unblock, evidence emission, and file-backed JSON persistence.
 - Depends on: `T184`
@@ -341,7 +341,7 @@ The following decisions were resolved before T199 execution and are binding for 
   - `workspace-kit run list-tasks` and `workspace-kit run get-ready-queue` return structured JSON.
   - Typed errors map to specific caller-facing failure states.
 
-### [ ] T186 [workspace-kit] Add task-type adapter contract and TASKS.md generation
+### [x] T186 [workspace-kit] Add task-type adapter contract and TASKS.md generation
 - Priority: P1
 - Approach: Adapter interface for task sources + generated TASKS.md as the human-readable view + one-time import from current TASKS.md format.
 - Depends on: `T184`, `T185`
@@ -361,7 +361,7 @@ The following decisions were resolved before T199 execution and are binding for 
   - Invalid adapters fail registration with clear error codes.
   - Adapters cannot mutate task state outside the transition service.
 
-### [ ] T217 [workspace-kit] Implement next-action suggestion engine
+### [x] T217 [workspace-kit] Implement next-action suggestion engine
 - Priority: P1
 - Approach: Ready-queue analysis with priority sorting and blocking chain reporting.
 - Depends on: `T185`, `T186`

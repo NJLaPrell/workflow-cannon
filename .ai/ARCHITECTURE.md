@@ -21,7 +21,7 @@ direction|D007|observability_and_supportability_as_first_class_design_constraint
 block|B001|name=module_registry|role=dependency_graph_validation_and_startup_ordering|path=src/core/module-registry.ts|st=active
 block|B002|name=module_command_router|role=command_discovery_alias_resolution_and_dispatch|path=src/core/module-command-router.ts|st=active
 block|B003|name=documentation_module|role=template_driven_paired_ai_and_human_doc_generation|path=src/modules/documentation|st=active
-block|B004|name=task_engine|role=core_schema_lifecycle_transitions_and_task_type_adapters|path=src/modules/task-engine|st=planned|phase=1
+block|B004|name=task_engine|role=core_schema_lifecycle_transitions_and_task_type_adapters|path=src/modules/task-engine|st=active|phase=1
 block|B005|name=configuration_registry|role=typed_config_with_deterministic_precedence|st=planned|phase=2
 block|B006|name=policy_engine|role=approval_gates_decision_traces_and_migration_orchestration|st=planned|phase=2
 block|B007|name=enhancement_engine|role=recommendation_intake_evidence_generation_and_artifact_lineage|st=planned|phase=3

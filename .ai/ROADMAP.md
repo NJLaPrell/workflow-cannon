@@ -10,13 +10,14 @@ truth|order=canonical_ai_docs>code_and_config_reality>generated_human_docs>narra
 scope|S001|canonical_home_for_workflow_cannon_package_and_operational_docs|st=active
 scope|S002|legacy_source_repo_treated_as_external_consumer_not_implementation_source|st=active
 
-state|current_phase=phase_0_complete|next_phase=phase_1|next_tasks=T184,T185,T186|st=active
+state|current_phase=phase_2|next_tasks=T187,T188,T189|release_phase_1=v0.3.0|st=active
 state|completed_phase_0_slices=T178,T179,T180,T181,T182,T183,T196,T197,T198,T206,T207,T208,T209,T210,T211,T212,T213
+state|completed_phase_1_slices=T199,T184,T185,T186,T217
 
 cadence|each_phase_ends_with_github_release|phases_are_sequential_unless_replanned
 
 phase|P0|name=foundation_hardening|release=v0.2.0|scope=T178-T183,T196-T198,T206-T213|status=complete|outcome=reliable_release_gates_consumer_parity_machine_readable_evidence
-phase|P1|name=task_engine_core|release=v0.3.0|scope=T184-T186|status=planned|outcome=canonical_task_runtime_contract
+phase|P1|name=task_engine_core|release=v0.3.0|scope=T199,T184-T186,T217|status=complete|outcome=canonical_task_runtime_contract
 phase|P2|name=configuration_and_policy_base|release=v0.4.0|scope=T187-T189|status=planned|outcome=deterministic_config_policy_governed_automation_safe_migration
 phase|P3|name=enhancement_loop_mvp|release=v0.5.0|scope=T190-T192|status=planned|outcome=human_governed_recommendation_loop_with_traceable_provenance
 phase|P4|name=runtime_scale_and_ecosystem|release=v0.6.0|scope=T193-T195|status=planned|outcome=extension_ready_operationally_robust_platform

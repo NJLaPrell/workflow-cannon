@@ -1,4 +1,6 @@
 # Task Engine Config
 
-- `transitions.strict`: enforce strict lifecycle transitions
-- `transitions.retryLimit`: retry budget for transient transition failures
+- `storePath`: Path to the task store JSON file. Default: `.workspace-kit/tasks/state.json`
+- `transitions.strict`: Enforce strict lifecycle transitions (default: `true`)
+- `defaultTaskType`: Default task type label for new tasks (default: `workspace-kit`)
+- `autoUnblock`: Automatically unblock dependents when a task completes (default: `true`)

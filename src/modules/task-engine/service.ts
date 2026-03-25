@@ -1,0 +1,154 @@
+import crypto from "node:crypto";
+import type {
+  TaskEntity,
+  TaskStatus,
+  TransitionEvidence,
+  TransitionGuard
+} from "./types.js";
+import { TaskEngineError, TransitionValidator, getTransitionAction, resolveTargetState } from "./transitions.js";
+import { TaskStore } from "./store.js";
+
+export type TransitionRequest = {
+  taskId: string;
+  action: string;
+  actor?: string;
+};
+
+export type TransitionResult = {
+  evidence: TransitionEvidence;
+  autoUnblocked: TransitionEvidence[];
+};
+
+export class TransitionService {
+  private readonly store: TaskStore;
+  private readonly validator: TransitionValidator;
+
+  constructor(store: TaskStore, customGuards: TransitionGuard[] = []) {
+    this.store = store;
+    this.validator = new TransitionValidator(customGuards);
+  }
+
+  async runTransition(request: TransitionRequest): Promise<TransitionResult> {
+    const task = this.store.getTask(request.taskId);
+    if (!task) {
+      throw new TaskEngineError("task-not-found", `Task '${request.taskId}' not found`);
+    }
+
+    const targetState = resolveTargetState(task.status, request.action);
+    if (!targetState) {
+      throw new TaskEngineError(
+        "invalid-transition",
+        `Action '${request.action}' is not valid from state '${task.status}'`
+      );
+    }
+
+    const timestamp = new Date().toISOString();
+    const context = {
+      allTasks: this.store.getAllTasks(),
+      timestamp,
+      actor: request.actor
+    };
+
+    const validation = this.validator.validate(task, targetState, context);
+    if (!validation.allowed) {
+      const rejection = validation.guardResults.find((r) => !r.allowed);
+      if (rejection?.code === "dependency-unsatisfied") {
+        throw new TaskEngineError("dependency-unsatisfied", rejection.message ?? "Dependencies not satisfied");
+      }
+      if (rejection?.code === "invalid-transition") {
+        throw new TaskEngineError("invalid-transition", rejection.message ?? "Invalid transition");
+      }
+      throw new TaskEngineError(
+        "guard-rejected",
+        rejection?.message ?? "Transition rejected by guard"
+      );
+    }
+
+    const fromState = task.status;
+    const updatedTask: TaskEntity = {
+      ...task,
+      status: targetState,
+      updatedAt: timestamp
+    };
+    this.store.updateTask(updatedTask);
+
+    const action = getTransitionAction(fromState, targetState) ?? request.action;
+    const autoUnblockResults = targetState === "completed"
+      ? this.autoUnblock(request.taskId, timestamp, request.actor)
+      : [];
+
+    const evidence: TransitionEvidence = {
+      transitionId: `${request.taskId}-${timestamp}-${crypto.randomUUID().slice(0, 8)}`,
+      taskId: request.taskId,
+      fromState,
+      toState: targetState,
+      action,
+      guardResults: validation.guardResults,
+      dependentsUnblocked: autoUnblockResults.map((r) => r.taskId),
+      timestamp,
+      actor: request.actor
+    };
+    this.store.addEvidence(evidence);
+
+    for (const unblockEvidence of autoUnblockResults) {
+      this.store.addEvidence(unblockEvidence);
+    }
+
+    await this.store.save();
+
+    return { evidence, autoUnblocked: autoUnblockResults };
+  }
+
+  private autoUnblock(
+    completedTaskId: string,
+    timestamp: string,
+    actor?: string
+  ): TransitionEvidence[] {
+    const results: TransitionEvidence[] = [];
+    const allTasks = this.store.getAllTasks();
+
+    const dependents = allTasks.filter(
+      (t) => t.status === "blocked" && t.dependsOn?.includes(completedTaskId)
+    );
+
+    for (const dependent of dependents) {
+      const deps = dependent.dependsOn ?? [];
+      const allDepsComplete = deps.every((depId) => {
+        if (depId === completedTaskId) return true;
+        const depTask = this.store.getTask(depId);
+        return depTask?.status === "completed";
+      });
+
+      if (!allDepsComplete) continue;
+
+      const updatedDependent: TaskEntity = {
+        ...dependent,
+        status: "ready" as TaskStatus,
+        updatedAt: timestamp
+      };
+      this.store.updateTask(updatedDependent);
+
+      results.push({
+        transitionId: `${dependent.id}-${timestamp}-${crypto.randomUUID().slice(0, 8)}`,
+        taskId: dependent.id,
+        fromState: "blocked",
+        toState: "ready",
+        action: "unblock",
+        guardResults: [{ allowed: true, guardName: "auto-unblock" }],
+        dependentsUnblocked: [],
+        timestamp,
+        actor
+      });
+    }
+
+    return results;
+  }
+
+  getStore(): TaskStore {
+    return this.store;
+  }
+
+  getValidator(): TransitionValidator {
+    return this.validator;
+  }
+}

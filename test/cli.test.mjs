@@ -304,11 +304,13 @@ test("runCli run dispatches document-project batch with dryRun", async () => {
   assert.ok(output.data.summary.total >= 8);
 });
 
-test("runCli run returns error for unimplemented module command", async () => {
+test("runCli run returns validation failure for run-transition with missing args", async () => {
   const capture = createCapture();
   const code = await runCli(["run", "run-transition"], { cwd: process.cwd(), ...capture });
-  assert.equal(code, 3);
-  assert.ok(capture.errors.some((e) => e.includes("does not implement")));
+  assert.equal(code, 1);
+  const output = JSON.parse(capture.lines.join(""));
+  assert.equal(output.ok, false);
+  assert.equal(output.code, "invalid-task-schema");
 });
 
 test("runCli run returns error for invalid JSON args", async () => {

@@ -1,28 +1,19 @@
 schema_version: 1
-current_kit_phase: 1
+current_kit_phase: 2
 last_updated: "2026-03-25"
-active_focus: "Phase 0 COMPLETE — all primary and supporting tasks done. Phase 1 (Task Engine core) is next."
+active_focus: "Phase 2 in flight — configuration and policy base (T187–T189), release target v0.4.0. Phase 1 closed with v0.3.0."
 blockers: []
 next_agent_actions:
-  - "Begin T184: Define Task Engine core schema and lifecycle"
-  - "Begin T185: Implement Task Engine transition runtime"
-  - "Begin T186: Add pluggable task-type adapter contract"
+  - "Execute T187: typed config registry with deterministic precedence and explain output"
+  - "Then T188/T189 per dependency order in docs/maintainers/TASKS.md"
 last_session_summary:
-  - "Completed T213: Documentation runtime hardening with 10 new edge-case tests (36/36 green)."
-  - "Completed T196: Release gate matrix and ownership map documented."
-  - "Completed T179: Release metadata validation script (scripts/check-release-metadata.mjs) + CI release-readiness job."
-  - "Completed T180: Consumer update cadence states and transition validation contract."
-  - "Completed T197: Parity fixture pack (test/fixtures/parity/) and runner (scripts/run-parity.mjs)."
-  - "Completed T181: Parity validation flow doc with canonical command chain and output contract."
-  - "Completed T198: Parity evidence JSON schema (schemas/parity-evidence.schema.json)."
-  - "Completed T182: Parity regressions are release-blocking in CI (parity job in ci.yml, gates in publish-npm.yml)."
-  - "Completed T183: Machine-readable parity evidence emitted and schema-validated. Full parity run passes."
-  - "Updated TASKS.md, ROADMAP.md, and FEATURE-MATRIX.md to reflect Phase 0 completion."
+  - "Phase 1 released as v0.3.0: Task Engine (T199, T184, T185, T186, T217) with CLI commands, persistence, TASKS.md import/generate, next-action suggestions."
+  - "Maintainer docs and status YAML advanced to Phase 2 execution focus."
 pending_decisions: []
 metrics:
   updated_at: "2026-03-25"
   source: "automated"
-  notes: "Phase 0 complete. 36/36 tests green. Full parity run passes with evidence artifact."
+  notes: "v0.3.0 shipped Phase 1 Task Engine. Phase 2 execution started (T187 queue head)."
   time_to_doctor_minutes: 0.03
   cold_start_success_rate_pct: 100
   upgrade_success_rate_pct: null

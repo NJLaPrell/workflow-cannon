@@ -2,6 +2,30 @@
 
 All notable changes to `@workflow-cannon/workspace-kit` are documented in this file.
 
+## [0.3.0] - 2026-03-25
+
+Phase 1 (Task Engine core) release. Adds a canonical task lifecycle, transition runtime with evidence, file-backed persistence, and maintainer-facing CLI commands.
+
+### Added
+
+- **Task Engine module** — `TaskEntity` model with lifecycle states (`proposed`, `ready`, `in_progress`, `blocked`, `completed`, `cancelled`), typed transition map, `TransitionValidator` with ordered `TransitionGuard` hooks, and built-in dependency and state-validity guards.
+- **Transition runtime** — `TransitionService` with deterministic transitions, auto-unblock of dependents when dependencies complete, and structured transition evidence (timestamp, actor, guard results, unblocked dependents).
+- **Task store** — Schema-versioned JSON persistence (default under `.workspace-kit/tasks/`, configurable via module config).
+- **Module commands** — `run-transition`, `get-task`, `list-tasks`, `get-ready-queue`, `get-next-actions`, `import-tasks`, `generate-tasks-md` exposed through the module command router and `workspace-kit run`.
+- **TASKS.md bridge** — One-time `import-tasks` from legacy markdown; `generate-tasks-md` produces a read-only human view aligned with maintainer task format.
+- **Next-action suggestions** — Priority-sorted ready queue with blocking-chain context for agent workflows.
+- **Design workbook** — `docs/maintainers/task-engine-workbook.md` capturing schema, transition graph, guards, persistence, and error taxonomy.
+
+### Changed
+
+- Task-engine module registration now provides full `onCommand` implementation and expanded instruction entries.
+
+### Migration notes
+
+- Existing workflows that only used documentation and core CLI commands are unaffected.
+- To adopt the engine, run `import-tasks` once if migrating from hand-maintained `docs/maintainers/TASKS.md`, then use transitions and regenerate the markdown view as needed.
+- New default state directory `.workspace-kit/tasks/`; add to `.gitignore` if task state should stay local.
+
 ## [0.2.0] - 2026-03-25
 
 Phase 0 (foundation) release. Establishes the module platform, documentation generation, release automation, and parity validation infrastructure.
