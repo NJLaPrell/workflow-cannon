@@ -13,10 +13,10 @@ Dependency fields:
 
 ## Current execution state
 
-- Current phase in execution: _Phase 0 (foundation) — COMPLETE._
-- Milestone target: _Establish split-repo baseline and complete initial release/consumer hardening scope._
-- Ready queue: (empty — Phase 0 tasks complete; Phase 1 begins at `T184`)
-- Next tasks: `T184`, `T185`, `T186`
+- Current phase in execution: _Phase 1 (Task Engine core)._
+- Milestone target: _Canonical task runtime contract with lifecycle, transitions, and pluggable adapters._
+- Ready queue: `T199`
+- Execution order: `T199` → `T184` → `T185` → `T186`
 
 ## Historical baseline (pre-Phase 0)
 
@@ -255,47 +255,76 @@ Release target: **GitHub release `v0.2.0`**
 
 Release target: **GitHub release `v0.3.0`**
 
+Execution order: `T199` → `T184` → `T185` → `T186`
+
+### [ ] T199 [workspace-kit] Design Task Engine schema workbook
+- Priority: P1
+- Approach: Produce a design workbook that resolves schema, state model, persistence, and error questions before implementation begins.
+- Depends on: none
+- Unblocks: `T184`
+- Technical scope:
+  - **State model decision**: Define core lifecycle states. Candidate mapping from current TASKS.md markers: `[p]` proposed, `[ ]` ready, `[~]` in_progress, `[!]` blocked, `[x]` completed, plus `cancelled`. Decide whether states are fixed or extensible by adapters.
+  - **Transition graph**: Define allowed transitions with guard conditions (e.g., `proposed → ready` requires acceptance, `in_progress → completed` requires acceptance criteria met). Identify which transitions are reversible.
+  - **Entity schema**: Define task entity fields (ID format, status, metadata, ownership, timestamps, dependency references). Decide on required vs optional fields.
+  - **Persistence model**: Decide where task state lives at runtime. Options: in-memory objects hydrated from adapters, or adapter-owned storage with engine as validator. Recommend in-memory with adapter-driven serialization for Phase 1.
+  - **Error taxonomy**: Define typed error categories for invalid transitions, missing guards, dependency violations, and adapter failures. Map each to caller-facing failure states.
+  - **Markdown integration question**: Decide whether the markdown task format in TASKS.md is the first adapter target or a separate concern. Recommend: first adapter reads/writes markdown format, engine operates on typed task objects.
+- Acceptance criteria:
+  - Workbook resolves all open design questions with explicit choices and rationale.
+  - State model, transition graph, entity schema, and error taxonomy are documented.
+  - Persistence model decision is recorded with trade-offs.
+  - Workbook is sufficient for T184 implementation without further design ambiguity.
+
 ### [ ] T184 [workspace-kit] Define Task Engine core schema and lifecycle
 - Priority: P1
-- Approach: Schema + lifecycle table + validation rules with lightweight prototype.
-- Depends on: `T178`, `T182`
-- Unblocks: `T185`, `T187`, `T188`, `T199`
-- Supporting tasks: `T199`
+- Approach: Implement typed schema, lifecycle states, and transition validation rules based on the T199 design workbook.
+- Depends on: `T199`
+- Unblocks: `T185`, `T187`, `T188`
 - Technical scope:
-  - Define task entity schema (IDs, status, metadata, ownership, timestamps).
-  - Define allowed transition graph with guard conditions.
-  - Define validation constraints and error taxonomy for invalid transitions.
+  - Implement task entity type with fields from workbook (ID, status, metadata, ownership, timestamps, dependency references).
+  - Implement lifecycle state enum and allowed-transition map with guard condition hooks.
+  - Implement transition validator that rejects invalid state changes with typed errors from the error taxonomy.
+  - Register task-engine module with `WorkflowModule` contract (ID, version, capabilities, dependencies, config/state/instruction contracts).
+  - Add unit tests for: valid transitions, invalid transitions, guard enforcement, and error codes.
 - Acceptance criteria:
-  - Schema and transition table are versioned and documented.
-  - Prototype validates transition constraints end-to-end.
+  - Task entity type and lifecycle states are exported and test-covered.
+  - Transition validator rejects all disallowed state changes with specific error codes.
+  - Module registration passes registry validation.
+  - Schema aligns with T199 workbook decisions.
 
 ### [ ] T185 [workspace-kit] Implement Task Engine transition runtime
 - Priority: P1
-- Approach: Explicit internal transition layer with typed errors and test matrix.
+- Approach: Transition service that applies state changes, enforces guards, and emits evidence.
 - Depends on: `T184`
-- Unblocks: `T186`, `T190`, `T194`, `T199`
-- Supporting tasks: `T199`
+- Unblocks: `T186`, `T190`, `T194`
 - Technical scope:
-  - Implement transition service independent from transport/CLI.
-  - Enforce transition guards and side-effect ordering.
-  - Add exhaustive tests for valid/invalid transitions and retries.
+  - Implement transition service that accepts a task + target state, validates the transition, applies guards, and returns the updated task or a typed error.
+  - Enforce guard ordering: dependency check → pre-transition guard → state mutation → post-transition hook.
+  - Support batch transitions (e.g., unblocking downstream tasks when a dependency completes).
+  - Emit structured transition evidence (task ID, from-state, to-state, guard results, timestamp).
+  - Add exhaustive test matrix: every valid transition, every invalid transition, guard failures, batch unblock, idempotent re-transitions.
 - Acceptance criteria:
-  - Runtime transitions are deterministic under repeated runs.
-  - Typed errors map cleanly to caller-facing failure states.
+  - Transition service is deterministic under repeated runs with identical inputs.
+  - Typed errors map to specific caller-facing failure states (not generic throws).
+  - Batch dependency-unblock works correctly.
+  - Evidence output is structured and complete.
 
 ### [ ] T186 [workspace-kit] Add pluggable task-type adapter contract
 - Priority: P1
-- Approach: Adapter interface + compatibility checks + fixture validation.
+- Approach: Adapter interface + capability validation + markdown-task fixture adapter as the first concrete implementation.
 - Depends on: `T184`, `T185`
 - Unblocks: `T193`
 - Supporting tasks: `T204`
 - Technical scope:
-  - Define adapter interface boundaries and lifecycle hook contract.
-  - Enforce adapter capability validation on registration.
-  - Add fixture tests ensuring adapters cannot bypass core invariants.
+  - Define `TaskAdapter` interface: `load()` to hydrate tasks from a source, `save()` to persist task state back, `supports()` to declare capabilities (read, write, watch).
+  - Enforce adapter capability validation on registration (reject adapters missing required capabilities).
+  - Implement a **markdown-task adapter** as the first fixture adapter: reads task blocks from a markdown file matching the TASKS.md format, hydrates them into typed task entities, and writes state changes back.
+  - Add fixture tests: adapter registration validation, round-trip load/save for markdown format, invalid adapter rejection, adapter cannot bypass core transition invariants (must go through transition service).
 - Acceptance criteria:
-  - Adapter contract is stable and versioned.
-  - Invalid adapters fail registration with clear errors.
+  - Adapter interface is stable, versioned, and exported.
+  - Markdown-task adapter can round-trip tasks from TASKS.md format.
+  - Invalid adapters fail registration with clear error codes.
+  - Adapters cannot mutate task state outside the transition service.
 
 ## Phase 2 config, policy, and migration base
 
@@ -492,6 +521,22 @@ Release target: **GitHub release `v0.6.0`**
   - Instruction for `document-project` directs agents to prompt user on skipped AI docs.
   - 40/40 tests pass.
 
+### [x] T216 [workspace-kit] Add CLI run command for module command dispatch
+- Priority: P1
+- Approach: Bridge runCli to the module command router so agents and scripts can invoke module commands from the terminal.
+- Depends on: `T210`, `T214`
+- Unblocks: none
+- Technical scope:
+  - Add `workspace-kit run` CLI command that lists available module commands when called with no subcommand.
+  - Add `workspace-kit run <command> [json-args]` dispatch that routes through `ModuleCommandRouter` and outputs structured JSON results.
+  - Handle error cases: invalid JSON args, unknown commands, unimplemented `onCommand`.
+  - Add 5 CLI tests covering listing, dispatch, batch, unimplemented command, and invalid args.
+- Acceptance criteria:
+  - `workspace-kit run` lists all registered module commands with descriptions.
+  - `workspace-kit run generate-document '{"documentType":"AGENTS.md","options":{"dryRun":true}}'` returns structured JSON.
+  - `workspace-kit run document-project '{"options":{"dryRun":true}}'` runs batch and returns summary.
+  - 45/45 tests pass.
+
 ### [x] T215 [workspace-kit] Generate full project documentation via document-project
 - Priority: P1
 - Approach: Use the documentation module as an AI agent to generate all 8 templates, producing AI-optimized docs in `.ai/` and human-readable docs in `docs/maintainers/`.
@@ -507,18 +552,6 @@ Release target: **GitHub release `v0.6.0`**
   - 7 new AI docs created in `.ai/` (AGENTS, ARCHITECTURE, RELEASING, ROADMAP, SECURITY, SUPPORT, TERMS).
   - 8 human docs overwritten in `docs/maintainers/`.
   - Content follows template instructions and reflects actual project state.
-
-### [ ] T199 [workspace-kit] Draft Task Engine schema workbook
-- Priority: P2
-- Approach: Build a developer workbook for schema, transitions, and errors.
-- Depends on: `T184`
-- Unblocks: `T185`
-- Technical scope:
-  - Document entity schema, lifecycle graph, and guard rules.
-  - Define typed error catalog and caller handling expectations.
-  - Provide implementation pseudo-flows for runtime transition handling.
-- Acceptance criteria:
-  - Workbook is sufficient for implementation without ambiguity.
 
 ### [ ] T200 [workspace-kit] Build config-policy decision matrix
 - Priority: P2

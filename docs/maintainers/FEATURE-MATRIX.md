@@ -51,9 +51,10 @@ Status legend:
 
 | Product feature | What users/maintainers get | Status | Task coverage |
 | --- | --- | --- | --- |
-| Task lifecycle contract | Canonical task state model and transition rules for consistent execution | Planned | `T184`, `T199` |
-| Task transition runtime | Deterministic transition behavior with clear failure states | Planned | `T185` |
-| Pluggable task-type adapters | Extension path for new task behaviors without bypassing core invariants | Planned | `T186` |
+| Task Engine design workbook | Resolved schema, state model, persistence, and error taxonomy before implementation | Planned | `T199` |
+| Task lifecycle contract | Canonical task state model and transition rules for consistent execution | Planned | `T184` |
+| Task transition runtime | Deterministic transition behavior with structured evidence and batch support | Planned | `T185` |
+| Pluggable task-type adapters | Extension path for new task behaviors, with markdown-task adapter as first implementation | Planned | `T186` |
 
 ### Phase 2 Config, Policy, and Migration (`v0.4.0`)
 

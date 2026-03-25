@@ -269,3 +269,51 @@ test("runCli drift-check fails when managed asset content drifts", async () => {
   assert.equal(driftCode, 1);
   assert.match(driftCapture.errors[0], /detected drift/);
 });
+
+test("runCli run lists available module commands with no subcommand", async () => {
+  const capture = createCapture();
+  const code = await runCli(["run"], { cwd: process.cwd(), ...capture });
+  assert.equal(code, 0);
+  assert.ok(capture.lines.some((l) => l.includes("document-project")));
+  assert.ok(capture.lines.some((l) => l.includes("generate-document")));
+  assert.ok(capture.lines.some((l) => l.includes("run-transition")));
+});
+
+test("runCli run dispatches generate-document with dryRun", async () => {
+  const capture = createCapture();
+  const code = await runCli(
+    ["run", "generate-document", '{"documentType":"AGENTS.md","options":{"dryRun":true}}'],
+    { cwd: process.cwd(), ...capture }
+  );
+  assert.equal(code, 0);
+  const output = JSON.parse(capture.lines.join(""));
+  assert.equal(output.ok, true);
+  assert.equal(output.code, "generated-document");
+});
+
+test("runCli run dispatches document-project batch with dryRun", async () => {
+  const capture = createCapture();
+  const code = await runCli(
+    ["run", "document-project", '{"options":{"dryRun":true}}'],
+    { cwd: process.cwd(), ...capture }
+  );
+  assert.equal(code, 0);
+  const output = JSON.parse(capture.lines.join(""));
+  assert.equal(output.ok, true);
+  assert.equal(output.code, "documented-project");
+  assert.ok(output.data.summary.total >= 8);
+});
+
+test("runCli run returns error for unimplemented module command", async () => {
+  const capture = createCapture();
+  const code = await runCli(["run", "run-transition"], { cwd: process.cwd(), ...capture });
+  assert.equal(code, 3);
+  assert.ok(capture.errors.some((e) => e.includes("does not implement")));
+});
+
+test("runCli run returns error for invalid JSON args", async () => {
+  const capture = createCapture();
+  const code = await runCli(["run", "generate-document", "not-json"], { cwd: process.cwd(), ...capture });
+  assert.equal(code, 2);
+  assert.ok(capture.errors.some((e) => e.includes("Invalid JSON")));
+});

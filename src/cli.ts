@@ -3,6 +3,13 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { ModuleRegistry } from "./core/module-registry.js";
+import { ModuleCommandRouter } from "./core/module-command-router.js";
+import { documentationModule } from "./modules/documentation/index.js";
+import { taskEngineModule } from "./modules/task-engine/index.js";
+import { approvalsModule } from "./modules/approvals/index.js";
+import { planningModule } from "./modules/planning/index.js";
+import { improvementModule } from "./modules/improvement/index.js";
 
 const EXIT_SUCCESS = 0;
 const EXIT_VALIDATION_FAILURE = 1;
@@ -407,7 +414,7 @@ export async function runCli(
   const [command] = args;
 
   if (!command) {
-    writeError("Usage: workspace-kit <init|doctor|check|upgrade>");
+    writeError("Usage: workspace-kit <init|doctor|check|upgrade|drift-check|run>");
     return EXIT_USAGE_ERROR;
   }
 
@@ -674,9 +681,61 @@ export async function runCli(
     return EXIT_SUCCESS;
   }
 
+  if (command === "run") {
+    const allModules = [
+      documentationModule,
+      taskEngineModule,
+      approvalsModule,
+      planningModule,
+      improvementModule
+    ];
+    const registry = new ModuleRegistry(allModules);
+    const router = new ModuleCommandRouter(registry);
+
+    const subcommand = args[1];
+    if (!subcommand) {
+      const commands = router.listCommands();
+      writeLine("Available module commands:");
+      for (const cmd of commands) {
+        const desc = cmd.description ? ` — ${cmd.description}` : "";
+        writeLine(`  ${cmd.name} (${cmd.moduleId})${desc}`);
+      }
+      writeLine("");
+      writeLine("Usage: workspace-kit run <command> [json-args]");
+      return EXIT_SUCCESS;
+    }
+
+    let commandArgs: Record<string, unknown> = {};
+    if (args[2]) {
+      try {
+        const parsed = JSON.parse(args[2]);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          commandArgs = parsed as Record<string, unknown>;
+        } else {
+          writeError("Command args must be a JSON object.");
+          return EXIT_USAGE_ERROR;
+        }
+      } catch {
+        writeError(`Invalid JSON args: ${args[2]}`);
+        return EXIT_USAGE_ERROR;
+      }
+    }
+
+    const ctx = { runtimeVersion: "0.1" as const, workspacePath: cwd };
+    try {
+      const result = await router.execute(subcommand, commandArgs, ctx);
+      writeLine(JSON.stringify(result, null, 2));
+      return result.ok ? EXIT_SUCCESS : EXIT_VALIDATION_FAILURE;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      writeError(`Module command failed: ${message}`);
+      return EXIT_INTERNAL_ERROR;
+    }
+  }
+
   if (command !== "doctor") {
     writeError(
-      `Unknown command '${command}'. Supported commands: init, doctor, check, upgrade, drift-check.`
+      `Unknown command '${command}'. Supported commands: init, doctor, check, upgrade, drift-check, run.`
     );
     return EXIT_USAGE_ERROR;
   }
