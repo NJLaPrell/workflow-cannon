@@ -14,7 +14,7 @@ Status legend:
 | --- | --- | --- |
 | Historical baseline (`T175`-`T177`) | Baseline established pre-Phase 0 | Completed |
 | Phase 0 - Foundation (`T178`-`T183`, plus `T206`-`T213`) | `v0.2.0` | Completed |
-| Phase 1 - Task Engine core (`T184`-`T186`) | `v0.3.0` | Planned |
+| Phase 1 - Task Engine core (`T184`-`T186`, `T199`, `T217`) | `v0.3.0` | Planned |
 | Phase 2 - Config, policy, migration (`T187`-`T189`) | `v0.4.0` | Planned |
 | Phase 3 - Enhancement loop MVP (`T190`-`T192`) | `v0.5.0` | Planned |
 | Phase 4 - Scale and ecosystem hardening (`T193`-`T195`) | `v0.6.0` | Planned |
@@ -51,10 +51,11 @@ Status legend:
 
 | Product feature | What users/maintainers get | Status | Task coverage |
 | --- | --- | --- | --- |
-| Task Engine design workbook | Resolved schema, state model, persistence, and error taxonomy before implementation | Planned | `T199` |
-| Task lifecycle contract | Canonical task state model and transition rules for consistent execution | Planned | `T184` |
-| Task transition runtime | Deterministic transition behavior with structured evidence and batch support | Planned | `T185` |
-| Pluggable task-type adapters | Extension path for new task behaviors, with markdown-task adapter as first implementation | Planned | `T186` |
+| Task Engine design workbook | Resolved schema, state model, persistence, and error taxonomy with binding design decisions | Planned | `T199` |
+| Task lifecycle contract and guard system | Canonical task state model, transition rules, and pluggable guard hooks for enforcement | Planned | `T184` |
+| Task transition runtime with persistence | Deterministic transitions, auto-unblock cascades, evidence emission, and file-backed JSON store | Planned | `T185` |
+| Task adapter contract and TASKS.md generation | Pluggable adapter interface, generated human-readable TASKS.md, and one-time import from current format | Planned | `T186` |
+| Next-action suggestion engine | Priority-sorted ready queue with blocking chain analysis for agent-driven task selection | Planned | `T217` |
 
 ### Phase 2 Config, Policy, and Migration (`v0.4.0`)
 
@@ -87,7 +88,7 @@ Status legend:
 | Release gate ownership map | Clear gate owners, artifacts, and escalation path for release readiness | Completed | `T196` |
 | Consumer parity fixture pack | Reusable fixture + runner for parity checks in CI and local flows | Completed | `T197` |
 | Parity evidence schema contract | Versioned schema and retention contract for parity artifacts | Completed | `T198` |
-| Task schema workbook | Implementation-ready workbook for task entity and transition behavior | Planned | `T199` |
+| Task schema workbook | Implementation-ready workbook with binding design decisions for all Phase 1 engine components | Planned | `T199` |
 | Config-policy decision matrix | Shared decision map for precedence and policy interactions | Planned | `T200` |
 | Migration preflight checklist | Repeatable preflight/rollback checklist for migration operations | Planned | `T201` |
 | Recommendation confidence rubric | Deterministic scoring thresholds for recommendation queue admission | Planned | `T202` |

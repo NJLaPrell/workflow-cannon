@@ -14,9 +14,10 @@ Dependency fields:
 ## Current execution state
 
 - Current phase in execution: _Phase 1 (Task Engine core)._
-- Milestone target: _Canonical task runtime contract with lifecycle, transitions, and pluggable adapters._
+- Milestone target: _Canonical task runtime contract with lifecycle, transitions, pluggable adapters, and next-action suggestions._
 - Ready queue: `T199`
-- Execution order: `T199` → `T184` → `T185` → `T186`
+- Execution order: `T199` → `T184` → `T185` → `T186` → `T217`
+- Design decisions resolved: see Phase 1 decisions table.
 
 ## Historical baseline (pre-Phase 0)
 
@@ -255,76 +256,125 @@ Release target: **GitHub release `v0.2.0`**
 
 Release target: **GitHub release `v0.3.0`**
 
-Execution order: `T199` → `T184` → `T185` → `T186`
+Execution order: `T199` → `T184` → `T185` → `T186` → `T217`
+
+### Design decisions (resolved)
+
+The following decisions were resolved before T199 execution and are binding for Phase 1:
+
+| Decision | Choice | Rationale |
+| --- | --- | --- |
+| Scope | Dogfood on own tasks + design API for external consumers | Proves the engine on real work while keeping the contract general |
+| TASKS.md role | **Replaced** by the engine; becomes a generated read-only view | Engine owns state; generated markdown preserves the human surface |
+| Persistence | File-backed JSON in `.workspace-kit/tasks/` (configurable via module config) | Durable between runs, easy to inspect, consistent with existing kit state |
+| Agent integration | Full: CLI dispatch + instruction files + engine reads context and suggests next actions | Agents need discoverability, not just raw dispatch |
+| Dependency behavior | Auto-unblock: dependents move `blocked → ready` when all deps complete | Reduces manual bookkeeping, matches how we actually work |
+| Guard complexity | Full guards: state validation + dependency checks + custom guard hooks | Hooks let modules register pre-transition validators from day one |
+| Task types | Type field present, all types share the same lifecycle in Phase 1 | Avoids premature complexity; adapter-per-type comes in Phase 4 |
+| State file format | JSON | Consistent with parity evidence, schema validation, and tooling |
+| Human surface | Generated `docs/maintainers/TASKS.md` as read-only view (same pattern as doc module) | Keeps the existing doc surface alive without it being source of truth |
+| Next-action intelligence | Ready queue sorted by priority with blocking chain analysis | Context-aware recommendations deferred to Phase 3 Enhancement Engine |
+| Evidence | Every transition produces a timestamped evidence record | Consistent with the evidence-first pattern established in Phase 0 |
+| Migration | One-time parser imports current TASKS.md into new state format | TASKS.md then becomes a generated view |
 
 ### [ ] T199 [workspace-kit] Design Task Engine schema workbook
 - Priority: P1
-- Approach: Produce a design workbook that resolves schema, state model, persistence, and error questions before implementation begins.
+- Approach: Produce a design workbook that documents the resolved decisions above and specifies implementation-ready details for schema, transitions, guards, persistence, and errors.
 - Depends on: none
 - Unblocks: `T184`
 - Technical scope:
-  - **State model decision**: Define core lifecycle states. Candidate mapping from current TASKS.md markers: `[p]` proposed, `[ ]` ready, `[~]` in_progress, `[!]` blocked, `[x]` completed, plus `cancelled`. Decide whether states are fixed or extensible by adapters.
-  - **Transition graph**: Define allowed transitions with guard conditions (e.g., `proposed → ready` requires acceptance, `in_progress → completed` requires acceptance criteria met). Identify which transitions are reversible.
-  - **Entity schema**: Define task entity fields (ID format, status, metadata, ownership, timestamps, dependency references). Decide on required vs optional fields.
-  - **Persistence model**: Decide where task state lives at runtime. Options: in-memory objects hydrated from adapters, or adapter-owned storage with engine as validator. Recommend in-memory with adapter-driven serialization for Phase 1.
-  - **Error taxonomy**: Define typed error categories for invalid transitions, missing guards, dependency violations, and adapter failures. Map each to caller-facing failure states.
-  - **Markdown integration question**: Decide whether the markdown task format in TASKS.md is the first adapter target or a separate concern. Recommend: first adapter reads/writes markdown format, engine operates on typed task objects.
+  - **State model**: Document the core lifecycle states: `proposed`, `ready`, `in_progress`, `blocked`, `completed`, `cancelled`. States are fixed in Phase 1; extensibility deferred.
+  - **Transition graph**: Document every allowed transition with guard conditions. Include reversibility markers. Mandatory transitions: `proposed → ready` (accept), `proposed → cancelled` (reject), `ready → in_progress` (start), `ready → blocked` (block), `ready → cancelled` (cancel), `in_progress → completed` (complete), `in_progress → blocked` (block), `in_progress → ready` (pause), `blocked → ready` (unblock, all deps met), `blocked → cancelled` (cancel).
+  - **Entity schema**: Document task entity fields — required: `id` (string, format `T{number}`), `status` (enum), `type` (string, uniform lifecycle in P1), `title` (string), `createdAt` (ISO timestamp), `updatedAt` (ISO timestamp). Optional: `priority` (P1/P2/P3), `dependsOn` (string[]), `unblocks` (string[]), `metadata` (Record), `ownership` (string), `approach`, `technicalScope`, `acceptanceCriteria`.
+  - **Guard hook contract**: Document the `TransitionGuard` interface — `canTransition(task, targetState, context): GuardResult`. Guards run in registration order; first rejection stops the transition. Built-in guards: `dependency-check` (blocks start if deps incomplete), `state-validity` (rejects impossible transitions).
+  - **Persistence contract**: Document the file-backed JSON store at `.workspace-kit/tasks/state.json`. Schema-versioned. Loaded on engine init, saved after each transition batch. Configurable path via `src/modules/task-engine/config.md`.
+  - **Evidence schema**: Document transition evidence fields: `transitionId`, `taskId`, `fromState`, `toState`, `guardResults[]`, `dependentsUnblocked[]`, `timestamp`, `actor`.
+  - **Error taxonomy**: Document typed error codes: `invalid-transition` (disallowed from→to), `guard-rejected` (guard returned rejection), `dependency-unsatisfied` (deps not complete), `task-not-found`, `duplicate-task-id`, `invalid-task-schema`, `storage-read-error`, `storage-write-error`.
+  - **CLI commands**: Document the commands the engine will expose via the module command router: `run-transition`, `get-task`, `list-tasks`, `get-ready-queue`, `import-tasks`.
+  - **Generated TASKS.md**: Document how the engine produces a read-only `docs/maintainers/TASKS.md` from state, matching the current section structure.
 - Acceptance criteria:
-  - Workbook resolves all open design questions with explicit choices and rationale.
-  - State model, transition graph, entity schema, and error taxonomy are documented.
-  - Persistence model decision is recorded with trade-offs.
-  - Workbook is sufficient for T184 implementation without further design ambiguity.
+  - All design decisions from the table above are documented with implementation-ready detail.
+  - Transition graph covers every state pair (allowed and disallowed).
+  - Entity schema, guard contract, evidence schema, and error taxonomy are specified to a level sufficient for T184 implementation.
+  - Migration strategy for importing existing TASKS.md is documented.
 
 ### [ ] T184 [workspace-kit] Define Task Engine core schema and lifecycle
 - Priority: P1
-- Approach: Implement typed schema, lifecycle states, and transition validation rules based on the T199 design workbook.
+- Approach: Implement typed schema, lifecycle states, transition validation, and guard hooks based on the T199 workbook.
 - Depends on: `T199`
 - Unblocks: `T185`, `T187`, `T188`
 - Technical scope:
-  - Implement task entity type with fields from workbook (ID, status, metadata, ownership, timestamps, dependency references).
-  - Implement lifecycle state enum and allowed-transition map with guard condition hooks.
-  - Implement transition validator that rejects invalid state changes with typed errors from the error taxonomy.
-  - Register task-engine module with `WorkflowModule` contract (ID, version, capabilities, dependencies, config/state/instruction contracts).
-  - Add unit tests for: valid transitions, invalid transitions, guard enforcement, and error codes.
+  - Implement `TaskEntity` type with all required and optional fields from the workbook.
+  - Implement `TaskStatus` enum: `proposed`, `ready`, `in_progress`, `blocked`, `completed`, `cancelled`.
+  - Implement `TaskType` field (string, uniform lifecycle in Phase 1).
+  - Implement the allowed-transition map as a typed constant.
+  - Implement `TransitionGuard` interface and `GuardResult` type.
+  - Implement `TransitionValidator` that checks state validity, runs registered guards in order, and returns typed errors on rejection.
+  - Implement built-in guards: `dependency-check` and `state-validity`.
+  - Register task-engine module with `WorkflowModule` contract (update existing stub with real capabilities, config, state, instruction entries).
+  - Add unit tests: every valid transition, every invalid transition, guard registration and execution order, built-in guard behavior, error codes.
 - Acceptance criteria:
-  - Task entity type and lifecycle states are exported and test-covered.
-  - Transition validator rejects all disallowed state changes with specific error codes.
-  - Module registration passes registry validation.
-  - Schema aligns with T199 workbook decisions.
+  - `TaskEntity`, `TaskStatus`, `TransitionGuard`, and related types are exported.
+  - Transition validator rejects all disallowed state changes with specific error codes from the taxonomy.
+  - Guard hooks run in registration order; first rejection stops the chain.
+  - Built-in `dependency-check` guard prevents starting tasks with incomplete deps.
+  - Module registration passes registry validation with updated instruction entries.
 
-### [ ] T185 [workspace-kit] Implement Task Engine transition runtime
+### [ ] T185 [workspace-kit] Implement Task Engine transition runtime and persistence
 - Priority: P1
-- Approach: Transition service that applies state changes, enforces guards, and emits evidence.
+- Approach: Transition service with auto-unblock, evidence emission, and file-backed JSON persistence.
 - Depends on: `T184`
 - Unblocks: `T186`, `T190`, `T194`
 - Technical scope:
-  - Implement transition service that accepts a task + target state, validates the transition, applies guards, and returns the updated task or a typed error.
-  - Enforce guard ordering: dependency check → pre-transition guard → state mutation → post-transition hook.
-  - Support batch transitions (e.g., unblocking downstream tasks when a dependency completes).
-  - Emit structured transition evidence (task ID, from-state, to-state, guard results, timestamp).
-  - Add exhaustive test matrix: every valid transition, every invalid transition, guard failures, batch unblock, idempotent re-transitions.
+  - Implement `TaskStore` — file-backed JSON store at `.workspace-kit/tasks/state.json`. Schema-versioned. Load on init, save after each transition batch.
+  - Implement `TransitionService` — accepts a task ID + target state, loads task from store, validates via `TransitionValidator`, applies state mutation, runs post-transition hooks, saves.
+  - Implement **auto-unblock**: when a task transitions to `completed`, scan dependents; any task whose `dependsOn` list is now fully satisfied moves from `blocked → ready` automatically. Include unblocked task IDs in evidence.
+  - Implement structured transition evidence: `transitionId`, `taskId`, `fromState`, `toState`, `guardResults`, `dependentsUnblocked`, `timestamp`, `actor`.
+  - Implement `onCommand` handler for the task-engine module: `run-transition`, `get-task`, `list-tasks`, `get-ready-queue`.
+  - Wire commands through the CLI `run` command (already built).
+  - Add exhaustive test matrix: every valid transition, every invalid transition, guard failures, auto-unblock cascades, evidence completeness, persistence round-trip, concurrent-safe save behavior.
 - Acceptance criteria:
   - Transition service is deterministic under repeated runs with identical inputs.
-  - Typed errors map to specific caller-facing failure states (not generic throws).
-  - Batch dependency-unblock works correctly.
-  - Evidence output is structured and complete.
+  - Auto-unblock correctly cascades through dependency chains.
+  - Evidence records are emitted for every transition including auto-unblocks.
+  - File-backed store persists and reloads correctly.
+  - `workspace-kit run list-tasks` and `workspace-kit run get-ready-queue` return structured JSON.
+  - Typed errors map to specific caller-facing failure states.
 
-### [ ] T186 [workspace-kit] Add pluggable task-type adapter contract
+### [ ] T186 [workspace-kit] Add task-type adapter contract and TASKS.md generation
 - Priority: P1
-- Approach: Adapter interface + capability validation + markdown-task fixture adapter as the first concrete implementation.
+- Approach: Adapter interface for task sources + generated TASKS.md as the human-readable view + one-time import from current TASKS.md format.
 - Depends on: `T184`, `T185`
-- Unblocks: `T193`
+- Unblocks: `T193`, `T217`
 - Supporting tasks: `T204`
 - Technical scope:
-  - Define `TaskAdapter` interface: `load()` to hydrate tasks from a source, `save()` to persist task state back, `supports()` to declare capabilities (read, write, watch).
-  - Enforce adapter capability validation on registration (reject adapters missing required capabilities).
-  - Implement a **markdown-task adapter** as the first fixture adapter: reads task blocks from a markdown file matching the TASKS.md format, hydrates them into typed task entities, and writes state changes back.
-  - Add fixture tests: adapter registration validation, round-trip load/save for markdown format, invalid adapter rejection, adapter cannot bypass core transition invariants (must go through transition service).
+  - Define `TaskAdapter` interface: `load()` to hydrate tasks from external source, `save()` to persist back, `supports()` to declare capabilities (read, write, watch). Adapters are optional — the file-backed store is the canonical source.
+  - Enforce adapter capability validation on registration.
+  - Implement **TASKS.md generator**: reads task state from the store and produces a formatted `docs/maintainers/TASKS.md` matching the current section structure (status markers, dependency fields, phase groupings). This is a write-only output, not a round-trip.
+  - Implement **import-tasks command**: one-time parser that reads the current TASKS.md markdown format and imports tasks into the engine's JSON state. Handles status markers (`[p]`, `[ ]`, `[~]`, `[!]`, `[x]`), dependency fields, priority, and phase groupings.
+  - Add `generate-tasks-md` and `import-tasks` as instruction entries on the task-engine module.
+  - Add tests: adapter registration, TASKS.md generation matches expected format, import round-trip (import then generate produces equivalent output), invalid adapter rejection.
 - Acceptance criteria:
   - Adapter interface is stable, versioned, and exported.
-  - Markdown-task adapter can round-trip tasks from TASKS.md format.
+  - `workspace-kit run generate-tasks-md` produces a well-formatted `docs/maintainers/TASKS.md` from engine state.
+  - `workspace-kit run import-tasks` successfully imports the current TASKS.md into `.workspace-kit/tasks/state.json`.
   - Invalid adapters fail registration with clear error codes.
   - Adapters cannot mutate task state outside the transition service.
+
+### [ ] T217 [workspace-kit] Implement next-action suggestion engine
+- Priority: P1
+- Approach: Ready-queue analysis with priority sorting and blocking chain reporting.
+- Depends on: `T185`, `T186`
+- Unblocks: none (Phase 3 Enhancement Engine will extend this)
+- Technical scope:
+  - Implement `get-next-actions` command that returns the ready queue sorted by priority (P1 first), with blocking chain analysis showing which completed tasks unblocked each ready task.
+  - Include summary: how many tasks are in each state, what's blocking the most work, suggested next task to start.
+  - Wire as instruction entry on the task-engine module with instruction file documenting agent usage.
+  - Add tests: priority ordering, blocking chain accuracy, empty-queue behavior, all-complete behavior.
+- Acceptance criteria:
+  - `workspace-kit run get-next-actions` returns prioritized ready queue with blocking chain context.
+  - Agents can use the output to decide what to work on next without manual TASKS.md inspection.
+  - Output includes state summary and suggested next task.
 
 ## Phase 2 config, policy, and migration base
 
