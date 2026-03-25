@@ -5,11 +5,22 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { ModuleRegistry } from "./core/module-registry.js";
 import { ModuleCommandRouter } from "./core/module-command-router.js";
+import {
+  appendPolicyTrace,
+  getOperationIdForCommand,
+  isSensitiveModuleCommand,
+  parsePolicyApproval,
+  parsePolicyApprovalFromEnv,
+  resolveActor,
+  type PolicyOperationId
+} from "./core/policy.js";
+import { resolveWorkspaceConfigWithLayers } from "./core/workspace-kit-config.js";
 import { documentationModule } from "./modules/documentation/index.js";
 import { taskEngineModule } from "./modules/task-engine/index.js";
 import { approvalsModule } from "./modules/approvals/index.js";
 import { planningModule } from "./modules/planning/index.js";
 import { improvementModule } from "./modules/improvement/index.js";
+import { workspaceConfigModule } from "./modules/workspace-config/index.js";
 
 const EXIT_SUCCESS = 0;
 const EXIT_VALIDATION_FAILURE = 1;
@@ -131,6 +142,48 @@ type WorkspaceKitProfile = {
 export async function parseJsonFile(filePath: string): Promise<unknown> {
   const raw = await fs.readFile(filePath, "utf8");
   return JSON.parse(raw);
+}
+
+async function requireCliPolicyApproval(
+  cwd: string,
+  operationId: PolicyOperationId,
+  commandLabel: string,
+  writeError: (message: string) => void
+): Promise<{ rationale: string } | null> {
+  const approval = parsePolicyApprovalFromEnv(process.env);
+  if (!approval) {
+    writeError(
+      `workspace-kit ${commandLabel} requires WORKSPACE_KIT_POLICY_APPROVAL with JSON {"confirmed":true,"rationale":"..."} (agent-mediated).`
+    );
+    await appendPolicyTrace(cwd, {
+      timestamp: new Date().toISOString(),
+      operationId,
+      command: commandLabel,
+      actor: resolveActor(cwd, {}, process.env),
+      allowed: false,
+      message: "missing WORKSPACE_KIT_POLICY_APPROVAL"
+    });
+    return null;
+  }
+  return { rationale: approval.rationale };
+}
+
+async function recordCliPolicySuccess(
+  cwd: string,
+  operationId: PolicyOperationId,
+  commandLabel: string,
+  rationale: string,
+  commandOk: boolean
+): Promise<void> {
+  await appendPolicyTrace(cwd, {
+    timestamp: new Date().toISOString(),
+    operationId,
+    command: commandLabel,
+    actor: resolveActor(cwd, {}, process.env),
+    allowed: true,
+    rationale,
+    commandOk
+  });
 }
 
 function readStringField(
@@ -419,8 +472,14 @@ export async function runCli(
   }
 
   if (command === "init") {
+    const approval = await requireCliPolicyApproval(cwd, "cli.init", "init", writeError);
+    if (!approval) {
+      return EXIT_VALIDATION_FAILURE;
+    }
+
     const { errors, profile } = await validateProfile(cwd);
     if (errors.length > 0 || !profile) {
+      await recordCliPolicySuccess(cwd, "cli.init", "init", approval.rationale, false);
       writeError("workspace-kit init failed profile validation.");
       for (const error of errors) {
         writeError(`- ${error}`);
@@ -432,6 +491,7 @@ export async function runCli(
     writeLine("workspace-kit init generated profile-driven project context artifacts.");
     writeLine(`- ${path.relative(cwd, artifacts.generatedJsonPath)}`);
     writeLine(`- ${path.relative(cwd, artifacts.generatedRulePath)}`);
+    await recordCliPolicySuccess(cwd, "cli.init", "init", approval.rationale, true);
     return EXIT_SUCCESS;
   }
 
@@ -451,8 +511,14 @@ export async function runCli(
   }
 
   if (command === "upgrade") {
+    const approval = await requireCliPolicyApproval(cwd, "cli.upgrade", "upgrade", writeError);
+    if (!approval) {
+      return EXIT_VALIDATION_FAILURE;
+    }
+
     const { errors, profile } = await validateProfile(cwd);
     if (errors.length > 0 || !profile) {
+      await recordCliPolicySuccess(cwd, "cli.upgrade", "upgrade", approval.rationale, false);
       writeError("workspace-kit upgrade failed profile validation.");
       for (const error of errors) {
         writeError(`- ${error}`);
@@ -575,6 +641,7 @@ export async function runCli(
       }
     }
     writeLine(`Backups written under: ${path.relative(cwd, backupRoot)}`);
+    await recordCliPolicySuccess(cwd, "cli.upgrade", "upgrade", approval.rationale, true);
     return EXIT_SUCCESS;
   }
 
@@ -683,6 +750,7 @@ export async function runCli(
 
   if (command === "run") {
     const allModules = [
+      workspaceConfigModule,
       documentationModule,
       taskEngineModule,
       approvalsModule,
@@ -721,9 +789,86 @@ export async function runCli(
       }
     }
 
-    const ctx = { runtimeVersion: "0.1" as const, workspacePath: cwd };
+    const invocationConfig =
+      typeof commandArgs.config === "object" &&
+      commandArgs.config !== null &&
+      !Array.isArray(commandArgs.config)
+        ? (commandArgs.config as Record<string, unknown>)
+        : {};
+
+    let effective: Record<string, unknown>;
+    try {
+      const resolved = await resolveWorkspaceConfigWithLayers({
+        workspacePath: cwd,
+        registry,
+        invocationConfig
+      });
+      effective = resolved.effective;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      writeError(`Config resolution failed: ${message}`);
+      return EXIT_VALIDATION_FAILURE;
+    }
+
+    const actor = resolveActor(cwd, commandArgs, process.env);
+    const sensitive = isSensitiveModuleCommand(subcommand, commandArgs);
+
+    if (sensitive) {
+      const approval = parsePolicyApproval(commandArgs);
+      if (!approval) {
+        const op = getOperationIdForCommand(subcommand);
+        if (op) {
+          await appendPolicyTrace(cwd, {
+            timestamp: new Date().toISOString(),
+            operationId: op,
+            command: `run ${subcommand}`,
+            actor,
+            allowed: false,
+            message: "missing policyApproval in JSON args"
+          });
+        }
+        writeLine(
+          JSON.stringify(
+            {
+              ok: false,
+              code: "policy-denied",
+              message:
+                'Sensitive command requires policyApproval in JSON args: {"policyApproval":{"confirmed":true,"rationale":"user approved in chat"}}'
+            },
+            null,
+            2
+          )
+        );
+        return EXIT_VALIDATION_FAILURE;
+      }
+    }
+
+    const ctx = {
+      runtimeVersion: "0.1" as const,
+      workspacePath: cwd,
+      effectiveConfig: effective,
+      resolvedActor: actor,
+      moduleRegistry: registry
+    };
+
     try {
       const result = await router.execute(subcommand, commandArgs, ctx);
+      if (sensitive) {
+        const approval = parsePolicyApproval(commandArgs);
+        const op = getOperationIdForCommand(subcommand);
+        if (approval && op) {
+          await appendPolicyTrace(cwd, {
+            timestamp: new Date().toISOString(),
+            operationId: op,
+            command: `run ${subcommand}`,
+            actor,
+            allowed: true,
+            rationale: approval.rationale,
+            commandOk: result.ok,
+            message: result.message
+          });
+        }
+      }
       writeLine(JSON.stringify(result, null, 2));
       return result.ok ? EXIT_SUCCESS : EXIT_VALIDATION_FAILURE;
     } catch (error) {

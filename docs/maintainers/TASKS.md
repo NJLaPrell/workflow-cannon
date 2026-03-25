@@ -13,11 +13,12 @@ Dependency fields:
 
 ## Current execution state
 
-- Current phase in execution: _Phase 1 COMPLETE. Phase 2 (Config, Policy, Migration) is next._
-- Milestone target: _Canonical task runtime contract with lifecycle, transitions, pluggable adapters, and next-action suggestions._
-- Completed execution order: `T199` → `T184` → `T185` → `T186` → `T217` (all done)
-- Ready queue: `T187`
-- Design decisions resolved: see Phase 1 decisions table.
+- Current phase in execution: _Phase 2 COMPLETE. Phase 3 (Enhancement loop MVP) is next._
+- Milestone target: _Human-governed recommendation queue with evidence and lineage (`v0.5.0`)._
+- Completed execution order (Phase 1): `T199` → `T184` → `T185` → `T186` → `T217`
+- Completed execution order (Phase 2): `T218` → `T187` → `T200` → `T188` → `T201` → `T189`
+- Ready queue: `T190`
+- Design decisions resolved: Phase 1 — Phase 1 decisions table. Phase 2 — Phase 2 decisions table (below).
 
 ## Historical baseline (pre-Phase 0)
 
@@ -365,7 +366,7 @@ The following decisions were resolved before T199 execution and are binding for 
 - Priority: P1
 - Approach: Ready-queue analysis with priority sorting and blocking chain reporting.
 - Depends on: `T185`, `T186`
-- Unblocks: none (Phase 3 Enhancement Engine will extend this)
+- Unblocks: `T218` (Phase 2 workbook); Phase 3 Enhancement Engine will extend next-action surface
 - Technical scope:
   - Implement `get-next-actions` command that returns the ready queue sorted by priority (P1 first), with blocking chain analysis showing which completed tasks unblocked each ready task.
   - Include summary: how many tasks are in each state, what's blocking the most work, suggested next task to start.
@@ -376,51 +377,93 @@ The following decisions were resolved before T199 execution and are binding for 
   - Agents can use the output to decide what to work on next without manual TASKS.md inspection.
   - Output includes state summary and suggested next task.
 
-## Phase 2 config, policy, and migration base
+## Phase 2 config, policy, and local task cutover
 
-Release target: **GitHub release `v0.4.0`**
+Release target: **GitHub release `v0.4.0`** (single release for all Phase 2 deliverables).
 
-### [ ] T187 [workspace-kit] Implement typed config registry with deterministic precedence
+### Design decisions (resolved)
+
+| Decision | Choice |
+| --- | --- |
+| Up-front workbook | Yes — `T218` completes `docs/maintainers/phase2-config-policy-workbook.md` before registry implementation (`T187`). |
+| Config scope | Full layered stack for `v0.4.0` (no “out of scope” deferrals); exact precedence and merge rules are binding in the workbook. |
+| Project vs module config | **Both required:** **project (global)** `.workspace-kit/config.json` for workspace-wide and optional `modules.<id>` overrides; **module-level** defaults per module from `config.md` / registration. Module layer merged first; **project overrides** that merge; then env; then `run` JSON. |
+| Explain / diagnostics | **Agent-first:** structured JSON via `workspace-kit run` (command name and payload shape defined in workbook). |
+| Sensitive operations | Baseline list in **T188** (mutating CLI + write-capable module commands); extendable via policy config. |
+| Approvals (`v0.4.0`) | **Agent-mediated:** coding agent obtains explicit user confirmation in chat before invoking a sensitive operation; approval represented in command context (e.g. token + short rationale) and recorded in policy trace. No separate approval file format required for baseline. |
+| Actor identity | **Default resolution chain** (documented in workbook, implemented in T188): JSON `actor` arg → `WORKSPACE_KIT_ACTOR` → `git config user.email` (fallback `user.name`) → `"unknown"`. |
+| “Migration” for Phase 2 | **Maintainer-local task cutover only** for this repo when ready — runbook + checklist; **no** generic migration orchestration API or migration runtime shipped in the package for `v0.4.0`. |
+| Release cadence | One **`v0.4.0`** release covering workbook + config + policy + cutover docs. |
+
+**Execution order:** `T218` → `T187` → `T200` → `T188` → `T201` → `T189`. Tasks `T200` and `T201` stay on the critical path (matrix before policy enforcement; cutover checklist before runbook sign-off).
+
+### [x] T218 [workspace-kit] Author Phase 2 config, policy, and cutover workbook
 - Priority: P1
-- Approach: Typed schema + explicit precedence resolver + explain output.
-- Depends on: `T184`
-- Unblocks: `T188`, `T189`, `T200`
+- Approach: Same rigor as `T199`: binding workbook before implementation; incorporates the resolved decisions above and fills in field-level detail.
+- Depends on: `T217`
+- Unblocks: `T187`
+- Technical scope:
+  - **Project vs module:** **Project (global)** config is maintainers’ `.workspace-kit/config.json` (domain keys and/or `modules.<moduleId>` overrides). **Module-level** config is each module’s `config.md` / registration defaults, merged in **registry dependency order** **before** the project layer applies.
+  - **Config precedence (binding, low → high):** kit built-in defaults → **merged module-level** contributions (topological order; collision rules per workbook) → **project (global)** `.workspace-kit/config.json` **overrides** that merge → `WORKSPACE_KIT_*` env (nested keys via `__`) → per-invocation JSON on `workspace-kit run` (highest).
+  - **Merge semantics:** document per-field behavior (scalar replace vs deep object merge) and validation failure modes.
+  - **Typed registry:** domain keys (e.g. core, task-engine, documentation), schema validation, stable error taxonomy.
+  - **Explain command:** JSON report: logical path → effective value → winning layer + discarded alternates.
+  - **Policy:** enumerate sensitive **operation IDs** aligned with router/CLI (minimum: `upgrade`; `init` when it performs writes; `document-project` / `generate-document` when not `dryRun` or when configured overwrites would touch outputs; task-engine `import-tasks`, `generate-tasks-md`, `run-transition`). Read-only paths (`doctor`, `check`, `drift-check`, `list-tasks`, `get-task`, `get-ready-queue`, `get-next-actions`, dry-run generation, etc.) **excluded** unless workbook adds an explicit exception.
+  - **Approvals + traces:** contract for agent-supplied approval fields; trace record shape (operation, actor, allowed/denied, rationale, timestamp, config snapshot hash optional).
+  - **Actor:** document the default resolution chain (see decisions table).
+  - **Local task cutover:** numbered steps for maintainers (backup, `import-tasks`, validate, `generate-tasks-md`, git/PR hygiene); explicit **non-goal:** no packaged migration runner or staged migration engine in `v0.4.0`.
+- Acceptance criteria:
+  - Workbook exists at `docs/maintainers/phase2-config-policy-workbook.md` and is complete enough that implementers do not need ad hoc product decisions during `T187`–`T189`.
+  - Non-goals for `v0.4.0` explicitly exclude generic migration orchestration in the npm package.
+
+### [x] T187 [workspace-kit] Implement typed config registry with deterministic precedence
+- Priority: P1
+- Approach: Implement per `T218` workbook; typed schema + precedence resolver + agent-first explain command.
+- Depends on: `T184`, `T218`
+- Unblocks: `T200`
 - Supporting tasks: `T200`
 - Technical scope:
-  - Implement typed config registry with schema validation.
-  - Implement deterministic precedence resolution across config layers.
-  - Implement `why-this-value` diagnostics for resolved fields.
+  - Implement typed config registry with schema validation and deterministic merge: **module-level** sources per module + **project (global)** overlay from `.workspace-kit/config.json`, then env, then invocation overrides per workbook.
+  - Wire registry into startup or command context so module commands and CLI resolve **effective** config per domain and per module id where applicable.
+  - Implement **agent-first** explain: `workspace-kit run` command as specified in workbook (JSON-only output).
+  - Unit tests for precedence, merge edge cases, and explain correctness.
 - Acceptance criteria:
-  - Same layered inputs always resolve to same output.
-  - Explain output identifies winning source per field.
+  - Same layered inputs always yield the same effective config.
+  - Explain output identifies winning source per field and matches workbook contract.
+  - Failing validation yields stable, typed errors.
 
-### [ ] T188 [workspace-kit] Implement policy and approval enforcement baseline
+### [x] T188 [workspace-kit] Implement policy and approval enforcement baseline
 - Priority: P1
-- Approach: Policy evaluator + approval gates + decision traces.
-- Depends on: `T184`, `T187`
-- Unblocks: `T189`, `T190`, `T193`, `T200`
+- Approach: Policy evaluator integrated with command dispatch; agent-mediated approval; decision traces per workbook.
+- Depends on: `T184`, `T187`, `T200`
+- Unblocks: `T189`, `T190`, `T193`, `T201`
 - Supporting tasks: `T200`
 - Technical scope:
-  - Implement policy evaluation engine with scoped decision inputs.
-  - Enforce approval gates for sensitive actions.
-  - Emit policy decision traces for audit and debugging.
+  - Implement policy evaluation for **sensitive operation IDs** from workbook + `T200` matrix (extendable via config).
+  - Enforce gate: sensitive `workspace-kit` / module command paths **fail closed** unless valid approval payload present in context (agent obtained user confirmation).
+  - Integrate at **module command router** boundary (or single pre-dispatch wrapper) so new write commands inherit policy unless explicitly exempted in code.
+  - Emit **policy decision traces** (structured JSON, persist per workbook: e.g. under `.workspace-kit/policy/` or append-only log as defined in workbook).
+  - Resolve **actor** using the default chain from workbook.
+  - Tests: each sensitive op blocked without approval; allowed with valid approval; traces include operation, actor, outcome, rationale.
 - Acceptance criteria:
-  - Sensitive operations are blocked without required approvals.
-  - Decision traces include policy inputs, outcome, and rationale.
+  - Sensitive operations from the baseline list cannot succeed without approval recorded in context.
+  - Decision traces satisfy workbook schema and are machine-readable.
+  - Read-only / dry-run paths from baseline remain ungated unless workbook specifies otherwise.
 
-### [ ] T189 [workspace-kit] Deliver migration orchestration baseline
+### [x] T189 [workspace-kit] Maintainer-local task engine cutover runbook
 - Priority: P1
-- Approach: Preflight + staged apply + rollback checkpoints with evidence.
-- Depends on: `T187`, `T188`
-- Unblocks: `T195`, `T201`
+- Approach: Documentation and evidence template only — **no** migration orchestration runtime in the package for `v0.4.0`.
+- Depends on: `T187`, `T188`, `T201`
+- Unblocks: `T195`
 - Supporting tasks: `T201`
 - Technical scope:
-  - Implement migration preflight compatibility checks.
-  - Implement staged execution checkpoints with failure handling.
-  - Implement rollback path with evidence artifact capture.
+  - Publish maintainer runbook (path per workbook; e.g. `docs/maintainers/task-engine-cutover.md`) describing **local-only** execution: when the team chooses to cut over, how to back up `docs/maintainers/TASKS.md`, run `import-tasks`, validate JSON state, run `generate-tasks-md`, and open PR with evidence.
+  - Optional: define a simple **local evidence JSON template** (path under `artifacts/` or `.workspace-kit/`) for one rehearsal — not a product API.
+  - Explicitly defer **generic** migration framework (preflight/stage engine in package) to a later phase if still needed.
 - Acceptance criteria:
-  - Failing migration stage can rollback safely.
-  - Migration report includes preflight, stage outcomes, and rollback status.
+  - Another maintainer can follow the runbook on a clean clone without undocumented steps.
+  - Runbook states that cutover is **voluntary** and **local**; package does not auto-migrate consumer repos.
+  - No new public migration API surface is required for acceptance (docs-only slice is sufficient if workbook non-goals hold).
 
 ## Phase 3 enhancement loop MVP
 
@@ -603,29 +646,31 @@ Release target: **GitHub release `v0.6.0`**
   - 8 human docs overwritten in `docs/maintainers/`.
   - Content follows template instructions and reflects actual project state.
 
-### [ ] T200 [workspace-kit] Build config-policy decision matrix
-- Priority: P2
-- Approach: Build a matrix mapping config resolution to policy evaluation points.
+### [x] T200 [workspace-kit] Build config-policy decision matrix
+- Priority: P1
+- Approach: Map config resolution to policy evaluation points; documentation + matrix-driven tests for `T188`.
 - Depends on: `T187`
 - Unblocks: `T188`
 - Technical scope:
-  - Map precedence layers to effective value outputs.
-  - Define where policy can override, block, or require approval.
-  - Define matrix-driven test cases for edge conditions.
+  - Tabulate each config field (or domain) that affects security, write roots, or dry-run defaults against **which sensitive operations** consult it.
+  - Define expected behavior when policy denies vs allows; include agent-approval-required rows for every sensitive op ID from workbook.
+  - Produce executable test checklist (or unit test list) used to sign off `T188`.
 - Acceptance criteria:
-  - Matrix covers all supported precedence and policy interactions.
+  - Matrix covers all layers from workbook and all baseline sensitive operations.
+  - `T188` acceptance can trace each policy behavior to a matrix row or test case.
 
-### [ ] T201 [workspace-kit] Build migration preflight and rollback checklist
-- Priority: P2
-- Approach: Standardize migration checklist and rollback checkpoint protocol.
+### [x] T201 [workspace-kit] Build local task cutover checklist
+- Priority: P1
+- Approach: Preflight / rollback checklist for **maintainer-local** task engine cutover (supports `T189` runbook).
 - Depends on: `T188`
 - Unblocks: `T189`
 - Technical scope:
-  - Define mandatory preflight checks per migration class.
-  - Define checkpoint boundaries and rollback triggers.
-  - Define evidence artifacts for migration completion/failure.
+  - Checklist: backups (TASKS.md, `.workspace-kit/tasks/`), branch hygiene, `import-tasks` dry rehearsal, diff review, `generate-tasks-md` output review, policy/approval awareness when running mutating commands.
+  - Rollback posture: how to revert to markdown-first workflow if cutover branch is abandoned (restore files, remove state file).
+  - Optional evidence file naming for one dry rehearsal (local only).
 - Acceptance criteria:
-  - Migration checklist is actionable and referenced by migration runtime.
+  - Checklist is actionable and **referenced from `T189` runbook**.
+  - No dependency on a packaged migration engine; steps use existing CLI/module commands only.
 
 ### [ ] T202 [workspace-kit] Define recommendation confidence rubric
 - Priority: P2

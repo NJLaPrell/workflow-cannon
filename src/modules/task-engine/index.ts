@@ -42,10 +42,19 @@ export { generateTasksMd } from "./generator.js";
 export { importTasksFromMarkdown } from "./importer.js";
 export { getNextActions } from "./suggestions.js";
 
+function taskStorePath(ctx: { workspacePath: string; effectiveConfig?: Record<string, unknown> }): string | undefined {
+  const tasks = ctx.effectiveConfig?.tasks;
+  if (!tasks || typeof tasks !== "object" || Array.isArray(tasks)) {
+    return undefined;
+  }
+  const p = (tasks as Record<string, unknown>).storeRelativePath;
+  return typeof p === "string" && p.trim().length > 0 ? p.trim() : undefined;
+}
+
 export const taskEngineModule: WorkflowModule = {
   registration: {
     id: "task-engine",
-    version: "0.3.0",
+    version: "0.4.0",
     contractVersion: "1",
     capabilities: ["task-engine"],
     dependsOn: [],
@@ -104,7 +113,7 @@ export const taskEngineModule: WorkflowModule = {
 
   async onCommand(command, ctx) {
     const args = command.args ?? {};
-    const store = new TaskStore(ctx.workspacePath);
+    const store = new TaskStore(ctx.workspacePath, taskStorePath(ctx));
 
     try {
       await store.load();
@@ -122,7 +131,12 @@ export const taskEngineModule: WorkflowModule = {
     if (command.name === "run-transition") {
       const taskId = typeof args.taskId === "string" ? args.taskId : undefined;
       const action = typeof args.action === "string" ? args.action : undefined;
-      const actor = typeof args.actor === "string" ? args.actor : undefined;
+      const actor =
+        typeof args.actor === "string"
+          ? args.actor
+          : ctx.resolvedActor !== undefined
+            ? ctx.resolvedActor
+            : undefined;
 
       if (!taskId || !action) {
         return {

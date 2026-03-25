@@ -12,8 +12,9 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - Project tracking has been reset for the split repository baseline.
 - **Phase 0 (foundation) is COMPLETE.** All primary and supporting tasks are done.
 - Completed Phase 0 slices: `T178`, `T179`, `T180`, `T181`, `T182`, `T183`, `T196`, `T197`, `T198`, `T206`, `T207`, `T208`, `T209`, `T210`, `T211`, `T212`, `T213`.
-- **Phase 1 (Task Engine core) is COMPLETE** and ships as GitHub/npm release **`v0.3.0`**. Completed slices: `T199`, `T184`, `T185`, `T186`, `T217`.
-- **Next execution phase is Phase 2 (configuration and policy base)** starting at `T187`.
+- **Phase 1 (Task Engine core) is COMPLETE** and ships as **`v0.3.0`**. Completed slices: `T199`, `T184`, `T185`, `T186`, `T217`.
+- **Phase 2 (configuration and policy base) is COMPLETE** and ships as **`v0.4.0`**. Completed slices: `T218`, `T187`, `T200`, `T188`, `T201`, `T189`.
+- **Next execution phase is Phase 3 (Enhancement loop MVP)** starting at `T190`.
 - Historical extraction and first-publish milestones remain recorded below as provenance.
 
 ## Phase plan and release cadence
@@ -41,12 +42,12 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 
 ### Phase 2 - Configuration and policy base -> GitHub release `v0.4.0`
 
-- Primary scope: `T187`, `T188`, and `T189`.
-- Outcome: deterministic config behavior + policy-governed automation + safe migration path.
+- Primary scope: `T218` (workbook), `T187` (config registry), `T200` (config–policy matrix), `T188` (policy baseline), `T201` (local cutover checklist), `T189` (maintainer runbook).
+- Outcome: deterministic layered config with agent-first explain paths, policy-governed sensitive operations with traces, documented **local** task-engine cutover (no packaged migration runtime in `v0.4.0`).
 - Exit signals:
-  - Layered config precedence is explicit and explainable.
-  - Policy and approval gates are enforceable on sensitive actions.
-  - Migration plan/checkpoint mechanics are operational.
+  - Layered config precedence is explicit, tested, and explainable via `workspace-kit run`.
+  - Policy and approval gates enforce on the baseline sensitive operations; traces are machine-readable.
+  - Maintainer cutover checklist and runbook exist; optional local rehearsal evidence documented.
 
 ### Phase 3 - Enhancement loop MVP -> GitHub release `v0.5.0`
 
@@ -82,4 +83,5 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 - Split commit: `5a1f7038255a2c83e0e51ace07ea0d95a327574c`
 - First publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23463225397`
 - Phase 1 / `v0.3.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23559535382`
+- Phase 2 / `v0.4.0` release: tag `v0.4.0` on `main`; publish via **Publish NPM** workflow after merge; record run URL below when available.
 - npm package: `https://www.npmjs.com/package/@workflow-cannon/workspace-kit`

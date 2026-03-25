@@ -6,6 +6,25 @@ import assert from "node:assert/strict";
 
 import { runCli } from "../dist/cli.js";
 
+const TEST_CLI_POLICY_APPROVAL = JSON.stringify({
+  confirmed: true,
+  rationale: "automated test fixture"
+});
+
+async function runCliWithPolicyApproval(args, options) {
+  const prev = process.env.WORKSPACE_KIT_POLICY_APPROVAL;
+  process.env.WORKSPACE_KIT_POLICY_APPROVAL = TEST_CLI_POLICY_APPROVAL;
+  try {
+    return await runCli(args, options);
+  } finally {
+    if (prev === undefined) {
+      delete process.env.WORKSPACE_KIT_POLICY_APPROVAL;
+    } else {
+      process.env.WORKSPACE_KIT_POLICY_APPROVAL = prev;
+    }
+  }
+}
+
 function createCapture() {
   const lines = [];
   const errors = [];
@@ -70,7 +89,7 @@ test("runCli init generates profile-driven project context artifacts", async () 
   await createDoctorFixture(fixtureRoot);
 
   const capture = createCapture();
-  const code = await runCli(["init"], { cwd: fixtureRoot, ...capture });
+  const code = await runCliWithPolicyApproval(["init"], { cwd: fixtureRoot, ...capture });
 
   assert.equal(code, 0);
   assert.match(capture.lines[0], /generated profile-driven project context artifacts/);
@@ -145,7 +164,7 @@ test("runCli init updates generated project context after profile name changes",
   await createDoctorFixture(fixtureRoot);
 
   const firstRunCapture = createCapture();
-  const firstCode = await runCli(["init"], { cwd: fixtureRoot, ...firstRunCapture });
+  const firstCode = await runCliWithPolicyApproval(["init"], { cwd: fixtureRoot, ...firstRunCapture });
   assert.equal(firstCode, 0);
 
   await writeFile(
@@ -163,7 +182,7 @@ test("runCli init updates generated project context after profile name changes",
   );
 
   const secondRunCapture = createCapture();
-  const secondCode = await runCli(["init"], { cwd: fixtureRoot, ...secondRunCapture });
+  const secondCode = await runCliWithPolicyApproval(["init"], { cwd: fixtureRoot, ...secondRunCapture });
   assert.equal(secondCode, 0);
 
   const generatedRule = await readFile(
@@ -195,7 +214,7 @@ test("runCli upgrade overwrites kit-owned assets and preserves profile", async (
   await writeFile(path.join(fixtureRoot, "schemas", "workspace-kit-profile.schema.json"), "{}");
 
   const capture = createCapture();
-  const code = await runCli(["upgrade"], { cwd: fixtureRoot, ...capture });
+  const code = await runCliWithPolicyApproval(["upgrade"], { cwd: fixtureRoot, ...capture });
 
   assert.equal(code, 0);
   assert.match(capture.lines[0], /upgrade completed/);
@@ -230,7 +249,7 @@ test("runCli upgrade returns validation failure for invalid profile", async () =
   );
 
   const capture = createCapture();
-  const code = await runCli(["upgrade"], { cwd: fixtureRoot, ...capture });
+  const code = await runCliWithPolicyApproval(["upgrade"], { cwd: fixtureRoot, ...capture });
 
   assert.equal(code, 1);
   assert.match(capture.errors[0], /upgrade failed profile validation/);
@@ -241,7 +260,7 @@ test("runCli drift-check passes for aligned managed assets", async () => {
   await createDoctorFixture(fixtureRoot);
 
   const upgradeCapture = createCapture();
-  const upgradeCode = await runCli(["upgrade"], { cwd: fixtureRoot, ...upgradeCapture });
+  const upgradeCode = await runCliWithPolicyApproval(["upgrade"], { cwd: fixtureRoot, ...upgradeCapture });
   assert.equal(upgradeCode, 0);
 
   const driftCapture = createCapture();
@@ -255,7 +274,7 @@ test("runCli drift-check fails when managed asset content drifts", async () => {
   await createDoctorFixture(fixtureRoot);
 
   const upgradeCapture = createCapture();
-  const upgradeCode = await runCli(["upgrade"], { cwd: fixtureRoot, ...upgradeCapture });
+  const upgradeCode = await runCliWithPolicyApproval(["upgrade"], { cwd: fixtureRoot, ...upgradeCapture });
   assert.equal(upgradeCode, 0);
 
   await writeFile(
@@ -306,7 +325,16 @@ test("runCli run dispatches document-project batch with dryRun", async () => {
 
 test("runCli run returns validation failure for run-transition with missing args", async () => {
   const capture = createCapture();
-  const code = await runCli(["run", "run-transition"], { cwd: process.cwd(), ...capture });
+  const code = await runCli(
+    [
+      "run",
+      "run-transition",
+      JSON.stringify({
+        policyApproval: { confirmed: true, rationale: "test" }
+      })
+    ],
+    { cwd: process.cwd(), ...capture }
+  );
   assert.equal(code, 1);
   const output = JSON.parse(capture.lines.join(""));
   assert.equal(output.ok, false);

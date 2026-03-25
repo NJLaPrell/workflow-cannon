@@ -1,4 +1,5 @@
 export type {
+  ConfigRegistryView,
   ModuleCommand,
   ModuleCommandResult,
   ModuleCapability,

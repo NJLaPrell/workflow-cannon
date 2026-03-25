@@ -8,6 +8,7 @@ export type {
   DocumentationValidationIssue
 } from "./documentation/types.js";
 export { improvementModule } from "./improvement/index.js";
+export { workspaceConfigModule } from "./workspace-config/index.js";
 export { planningModule } from "./planning/index.js";
 export {
   taskEngineModule,

@@ -1,20 +1,19 @@
 schema_version: 1
-current_kit_phase: 2
+current_kit_phase: 3
 last_updated: "2026-03-25"
-active_focus: "Phase 2 in flight — configuration and policy base (T187–T189), release target v0.4.0. Phase 1 closed with v0.3.0."
+active_focus: "Phase 2 COMPLETE (v0.4.0): config merge, explain-config, policy gates + traces, cutover docs. Phase 3 queue head T190."
 blockers: []
 next_agent_actions:
-  - "Execute T187: typed config registry with deterministic precedence and explain output"
-  - "Then T188/T189 per dependency order in docs/maintainers/TASKS.md"
+  - "Release v0.4.0 via Publish NPM workflow after merge (human approval)"
+  - "Begin Phase 3: T190 recommendation intake and review queue"
 last_session_summary:
-  - "Phase 1 released as v0.3.0: Task Engine (T199, T184, T185, T186, T217) with CLI commands, persistence, TASKS.md import/generate, next-action suggestions."
-  - "Maintainer docs and status YAML advanced to Phase 2 execution focus."
-  - "npm publish: workflow_dispatch Publish NPM succeeded (run 23559535382); GitHub release https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.3.0"
+  - "Implemented Phase 2: workspace-kit-config + policy core, workspace-config module (explain-config), CLI integration, task-engine store path from effective config."
+  - "Maintainer artifacts: config-policy-matrix, task-engine-cutover + checklist; TASKS Phase 2 tasks marked complete."
 pending_decisions: []
 metrics:
   updated_at: "2026-03-25"
   source: "automated"
-  notes: "v0.3.0 shipped Phase 1 Task Engine. Phase 2 execution started (T187 queue head)."
+  notes: "v0.4.0 Phase 2 implemented in repo; publish pending. 98 tests green. Phase 3 (T190) next."
   time_to_doctor_minutes: 0.03
   cold_start_success_rate_pct: 100
   upgrade_success_rate_pct: null

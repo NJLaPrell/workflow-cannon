@@ -6,7 +6,8 @@ import {
   ModuleCommandRouterError,
   ModuleRegistry,
   documentationModule,
-  taskEngineModule
+  taskEngineModule,
+  workspaceConfigModule
 } from "../dist/index.js";
 
 const lifecycleContext = {
@@ -15,12 +16,13 @@ const lifecycleContext = {
 };
 
 test("ModuleCommandRouter lists commands from enabled modules", () => {
-  const registry = new ModuleRegistry([documentationModule, taskEngineModule]);
+  const registry = new ModuleRegistry([workspaceConfigModule, documentationModule, taskEngineModule]);
   const router = new ModuleCommandRouter(registry);
 
   const commandNames = router.listCommands().map((command) => command.name);
   assert.deepEqual(commandNames, [
     "document-project",
+    "explain-config",
     "generate-document",
     "generate-tasks-md",
     "get-next-actions",
@@ -30,6 +32,21 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "list-tasks",
     "run-transition"
   ]);
+});
+
+test("ModuleCommandRouter executes explain-config", async () => {
+  const registry = new ModuleRegistry([workspaceConfigModule, documentationModule, taskEngineModule]);
+  const router = new ModuleCommandRouter(registry);
+
+  const result = await router.execute(
+    "explain-config",
+    { path: "tasks.storeRelativePath" },
+    { ...lifecycleContext, moduleRegistry: registry }
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "config-explained");
+  assert.equal(result.data?.effectiveValue, ".workspace-kit/tasks/state.json");
 });
 
 test("ModuleCommandRouter executes generate-document for single doc", async () => {

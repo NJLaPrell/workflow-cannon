@@ -1,3 +1,5 @@
 node_modules/
 dist/
 artifacts/
+# Optional: omit policy traces from VCS (remove if you want traces committed)
+.workspace-kit/policy/

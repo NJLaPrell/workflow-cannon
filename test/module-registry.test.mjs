@@ -9,12 +9,14 @@ import {
   improvementModule,
   planningModule,
   taskEngineModule,
-  validateModuleSet
+  validateModuleSet,
+  workspaceConfigModule
 } from "../dist/index.js";
 
 test("validateModuleSet accepts valid module dependency graph", () => {
   assert.doesNotThrow(() =>
     validateModuleSet([
+      workspaceConfigModule,
       documentationModule,
       taskEngineModule,
       planningModule,

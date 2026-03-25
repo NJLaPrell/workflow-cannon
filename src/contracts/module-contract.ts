@@ -50,9 +50,20 @@ export type ModuleCommandResult = {
   data?: Record<string, unknown>;
 };
 
+/** Subset of module registry used for config layer ordering (avoids core↔contracts cycles). */
+export type ConfigRegistryView = {
+  getStartupOrder(): ReadonlyArray<{ registration: { id: string } }>;
+};
+
 export type ModuleLifecycleContext = {
   runtimeVersion: string;
   workspacePath: string;
+  /** Merged workspace config (kit → modules → project → env → invocation). */
+  effectiveConfig?: Record<string, unknown>;
+  /** Resolved actor for policy traces (see phase2 workbook). */
+  resolvedActor?: string;
+  /** CLI supplies registry for explain-config and config resolution. */
+  moduleRegistry?: ConfigRegistryView;
 };
 
 export type ModuleRegistration = {

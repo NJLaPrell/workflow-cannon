@@ -61,9 +61,9 @@ This keeps automation adaptive without sacrificing safety, governance, or develo
 
 ## Current Status
 
-- Project tracking has been reset for split-repo execution.
-- Current execution phase is **Phase 0 (foundation)**.
-- Phase 0 opens with `T178` to `T180` for release hardening and consumer cadence definition.
+- **Phase 0** and **Phase 1** (task engine, `v0.3.0`) are complete.
+- **Phase 2** (layered config, policy gates, cutover docs, `v0.4.0`) is complete in-repo; see `docs/maintainers/TASKS.md` and `docs/maintainers/ROADMAP.md`.
+- **Phase 3** (enhancement loop MVP, `v0.5.0`) is next (`T190` onward).
 
 ## Goals
 

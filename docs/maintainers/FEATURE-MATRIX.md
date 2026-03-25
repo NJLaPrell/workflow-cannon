@@ -15,7 +15,7 @@ Status legend:
 | Historical baseline (`T175`-`T177`) | Baseline established pre-Phase 0 | Completed |
 | Phase 0 - Foundation (`T178`-`T183`, plus `T206`-`T213`) | `v0.2.0` | Completed |
 | Phase 1 - Task Engine core (`T184`-`T186`, `T199`, `T217`) | `v0.3.0` | Completed |
-| Phase 2 - Config, policy, migration (`T187`-`T189`) | `v0.4.0` | Planned |
+| Phase 2 - Config, policy, local cutover (`T218`, `T187`, `T200`, `T188`, `T201`, `T189`) | `v0.4.0` | Completed |
 | Phase 3 - Enhancement loop MVP (`T190`-`T192`) | `v0.5.0` | Planned |
 | Phase 4 - Scale and ecosystem hardening (`T193`-`T195`) | `v0.6.0` | Planned |
 
@@ -57,13 +57,14 @@ Status legend:
 | Task adapter contract and TASKS.md generation | Pluggable adapter interface, generated human-readable TASKS.md, and one-time import from current format | Completed | `T186` |
 | Next-action suggestion engine | Priority-sorted ready queue with blocking chain analysis for agent-driven task selection | Completed | `T217` |
 
-### Phase 2 Config, Policy, and Migration (`v0.4.0`)
+### Phase 2 Config, Policy, and Local Cutover (`v0.4.0`)
 
 | Product feature | What users/maintainers get | Status | Task coverage |
 | --- | --- | --- | --- |
-| Deterministic config registry | Explainable config resolution with predictable outcomes | Planned | `T187`, `T200` |
-| Policy and approval enforcement | Sensitive actions gated by policy decisions and approval controls | Planned | `T188` |
-| Migration orchestration and rollback | Safer upgrade execution with checkpoints, preflight, and rollback evidence | Planned | `T189`, `T201` |
+| Phase 2 design workbook | Binding precedence, policy IDs, approval/actor rules, and cutover non-goals before implementation | Completed | `T218` |
+| Deterministic config registry | Layered config with agent-first explain (`explain-config`) and predictable merge semantics | Completed | `T187`, `T200` |
+| Policy and approval enforcement | Sensitive mutating operations gated; agent-mediated approval in context; machine-readable traces | Completed | `T188` |
+| Maintainer task cutover | Checklist + runbook for **local** optional migration to task-engine state; no packaged migration runtime | Completed | `T189`, `T201` |
 
 ### Phase 3 Enhancement Loop MVP (`v0.5.0`)
 
@@ -89,8 +90,8 @@ Status legend:
 | Consumer parity fixture pack | Reusable fixture + runner for parity checks in CI and local flows | Completed | `T197` |
 | Parity evidence schema contract | Versioned schema and retention contract for parity artifacts | Completed | `T198` |
 | Task schema workbook | Implementation-ready workbook with binding design decisions for all Phase 1 engine components | Completed | `T199` |
-| Config-policy decision matrix | Shared decision map for precedence and policy interactions | Planned | `T200` |
-| Migration preflight checklist | Repeatable preflight/rollback checklist for migration operations | Planned | `T201` |
+| Config-policy decision matrix | Shared decision map for precedence and policy interactions | Completed | `T200` |
+| Task engine cutover checklist | Maintainer-local preflight/rollback checklist for optional task-engine adoption | Completed | `T201` |
 | Recommendation confidence rubric | Deterministic scoring thresholds for recommendation queue admission | Planned | `T202` |
 | Lineage event contract | Stable, immutable event format for provenance reconstruction | Planned | `T203` |
 | Compatibility matrix template | Reusable compatibility reporting format for extensions and channels | Planned | `T204` |
