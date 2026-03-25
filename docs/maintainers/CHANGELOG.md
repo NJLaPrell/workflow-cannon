@@ -2,6 +2,31 @@
 
 All notable changes to `@workflow-cannon/workspace-kit` are documented in this file.
 
+## [0.3.0] - 2026-03-25
+
+Phase 1 (Task Engine core) release. Adds a canonical task lifecycle, file-backed persistence, module commands, and generated TASKS.md.
+
+### Added
+
+- **Task Engine module** — Six-state lifecycle (`proposed`, `ready`, `in_progress`, `blocked`, `completed`, `cancelled`), allowed-transition map, `TransitionValidator` with built-in `state-validity` and `dependency-check` guards, and optional custom guards.
+- **Persistence** — `TaskStore` at `.workspace-kit/tasks/state.json` (schema version 1), atomic save, transition log.
+- **Transition runtime** — `TransitionService` with `run-transition`, dependency enforcement, auto-unblock of dependents when dependencies complete, and structured `TransitionEvidence` per transition.
+- **Module commands** — `get-task`, `list-tasks`, `get-ready-queue`, `import-tasks`, `generate-tasks-md`, `get-next-actions` (plus `run-transition`), wired through `workspace-kit run`.
+- **TASKS.md import and generation** — One-time markdown import; generated read-only TASKS.md from engine state.
+- **Next-action suggestions** — Priority-sorted ready queue, suggested next task, state summary, blocking analysis.
+- **Design workbook** — `docs/maintainers/task-engine-workbook.md` (binding Phase 1 contract).
+- **Exports** — Task engine types, store, service, guards, and helpers from package `modules` entry.
+
+### Changed
+
+- **Task engine registration** — Module version `0.3.0`; seven instruction entries with backing markdown files.
+- **Tests** — New `test/task-engine.test.mjs`; router/CLI expectations updated for implemented task-engine commands.
+
+### Migration notes
+
+- **New runtime state** — First use creates `.workspace-kit/tasks/` when importing or transitioning. Existing hand-edited `docs/maintainers/TASKS.md` can be imported once via `import-tasks`; thereafter prefer `generate-tasks-md` for the human view.
+- **CLI** — `workspace-kit run run-transition` without JSON args now returns structured `invalid-task-schema` (exit code 1) instead of `command-not-implemented` (exit 3).
+
 ## [0.2.0] - 2026-03-25
 
 Phase 0 (foundation) release. Establishes the module platform, documentation generation, release automation, and parity validation infrastructure.

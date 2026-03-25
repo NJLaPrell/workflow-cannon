@@ -1,7 +1,9 @@
 # run-transition
 
-Apply a task transition using Task Engine lifecycle rules.
+Execute a validated task status transition.
 
-1. Validate current task state and requested target state.
-2. Enforce guard conditions and policy checks.
-3. Apply transition and append evidence to transition log.
+```
+workspace-kit run run-transition '{"taskId":"T184","action":"start"}'
+```
+
+Arguments: `taskId` (required), `action` (required: accept, reject, start, block, cancel, complete, pause, unblock), `actor` (optional).

@@ -1,4 +1,5 @@
 # Task Engine Config
 
+- `storePath`: task store JSON (default `.workspace-kit/tasks/state.json`)
 - `transitions.strict`: enforce strict lifecycle transitions
-- `transitions.retryLimit`: retry budget for transient transition failures
+- `autoUnblock`: auto-unblock dependents when a task completes (default true)

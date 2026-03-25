@@ -19,7 +19,17 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
   const router = new ModuleCommandRouter(registry);
 
   const commandNames = router.listCommands().map((command) => command.name);
-  assert.deepEqual(commandNames, ["document-project", "generate-document", "run-transition"]);
+  assert.deepEqual(commandNames, [
+    "document-project",
+    "generate-document",
+    "generate-tasks-md",
+    "get-next-actions",
+    "get-ready-queue",
+    "get-task",
+    "import-tasks",
+    "list-tasks",
+    "run-transition"
+  ]);
 });
 
 test("ModuleCommandRouter executes generate-document for single doc", async () => {
@@ -71,14 +81,13 @@ test("ModuleCommandRouter throws unknown-command for missing command", async () 
   );
 });
 
-test("ModuleCommandRouter throws command-not-implemented when module has no onCommand", async () => {
+test("ModuleCommandRouter executes task-engine run-transition returning validation error for missing args", async () => {
   const registry = new ModuleRegistry([taskEngineModule]);
   const router = new ModuleCommandRouter(registry);
 
-  await assert.rejects(
-    () => router.execute("run-transition", undefined, lifecycleContext),
-    (error) => error instanceof ModuleCommandRouterError && error.code === "command-not-implemented"
-  );
+  const result = await router.execute("run-transition", undefined, lifecycleContext);
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "invalid-task-schema");
 });
 
 test("ModuleCommandRouter detects duplicate command declarations", () => {
