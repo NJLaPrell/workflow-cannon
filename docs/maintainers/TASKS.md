@@ -13,10 +13,10 @@ Dependency fields:
 
 ## Current execution state
 
-- Current phase in execution: _Phase 0 (foundation)._
+- Current phase in execution: _Phase 0 (foundation) — COMPLETE._
 - Milestone target: _Establish split-repo baseline and complete initial release/consumer hardening scope._
-- Ready queue: `T179`
-- Next tasks: `T179`, `T180`, `T181`, `T182`, `T183`
+- Ready queue: (empty — Phase 0 tasks complete; Phase 1 begins at `T184`)
+- Next tasks: `T184`, `T185`, `T186`
 
 ## Historical baseline (pre-Phase 0)
 
@@ -168,7 +168,7 @@ Release target: **GitHub release `v0.2.0`**
   - Core maintainer docs have corresponding documentation-module templates.
   - Template sections map to current doc structures and can drive deterministic generation.
 
-### [ ] T213 [workspace-kit] Harden documentation runtime config and validation matrix
+### [x] T213 [workspace-kit] Harden documentation runtime config and validation matrix
 - Priority: P1
 - Approach: Strengthen runtime configuration ingestion and add explicit edge-case validation coverage for generate-document flows.
 - Depends on: `T211`
@@ -181,7 +181,7 @@ Release target: **GitHub release `v0.2.0`**
   - Documentation runtime behavior is test-covered for both happy and failure paths.
   - Config and validation behavior is deterministic and documented.
 
-### [p] T179 [workspace-kit] Harden package release metadata and automation guardrails
+### [x] T179 [workspace-kit] Harden package release metadata and automation guardrails
 - Priority: P1
 - Approach: Harden metadata, enforce guardrails, and codify release gate checks.
 - Depends on: `T178`
@@ -195,7 +195,7 @@ Release target: **GitHub release `v0.2.0`**
   - Metadata checks block invalid releases.
   - Guardrail failures are actionable and documented.
 
-### [p] T180 [workspace-kit] Define and validate consumer update cadence
+### [x] T180 [workspace-kit] Define and validate consumer update cadence
 - Priority: P1
 - Approach: Cadence + reproducible fixture-backed validation path.
 - Depends on: `T178`
@@ -209,7 +209,7 @@ Release target: **GitHub release `v0.2.0`**
   - Cadence transitions are documented with required commands.
   - Fixture-backed flow is reproducible by maintainers.
 
-### [p] T181 [workspace-kit] Standardize packaged-artifact parity validation flow
+### [x] T181 [workspace-kit] Standardize packaged-artifact parity validation flow
 - Priority: P1
 - Approach: Pin command order + fixture execution + consistent output contract.
 - Depends on: `T178`, `T180`
@@ -223,7 +223,7 @@ Release target: **GitHub release `v0.2.0`**
   - Parity command chain is deterministic and documented.
   - Output contract supports machine parsing.
 
-### [p] T182 [workspace-kit] Make parity regressions release-blocking in CI
+### [x] T182 [workspace-kit] Make parity regressions release-blocking in CI
 - Priority: P1
 - Approach: Block release-readiness path with clear failure diagnostics.
 - Depends on: `T179`, `T181`
@@ -237,7 +237,7 @@ Release target: **GitHub release `v0.2.0`**
   - Release workflow cannot pass with parity regressions.
   - Failure output identifies precise parity failure node.
 
-### [p] T183 [workspace-kit] Emit machine-readable parity evidence
+### [x] T183 [workspace-kit] Emit machine-readable parity evidence
 - Priority: P1
 - Approach: Schema-backed evidence artifact with stable keys and references.
 - Depends on: `T181`
@@ -437,7 +437,7 @@ Release target: **GitHub release `v0.6.0`**
 
 ## Supporting tasks (manageability slices)
 
-### [ ] T196 [workspace-kit] Build release gate matrix and ownership map
+### [x] T196 [workspace-kit] Build release gate matrix and ownership map
 - Priority: P2
 - Approach: Build a normalized gate matrix in docs and CI mapping.
 - Depends on: `T178`
@@ -449,7 +449,7 @@ Release target: **GitHub release `v0.6.0`**
 - Acceptance criteria:
   - Release gate matrix is complete and referenced by release docs.
 
-### [ ] T197 [workspace-kit] Build consumer parity fixture pack
+### [x] T197 [workspace-kit] Build consumer parity fixture pack
 - Priority: P2
 - Approach: Create reusable fixture package and shared parity runner scripts.
 - Depends on: `T180`
@@ -461,7 +461,7 @@ Release target: **GitHub release `v0.6.0`**
 - Acceptance criteria:
   - Fixture pack can execute parity flow in CI and locally.
 
-### [ ] T198 [workspace-kit] Define parity evidence schema
+### [x] T198 [workspace-kit] Define parity evidence schema
 - Priority: P2
 - Approach: Publish JSON schema and artifact placement contract for parity evidence.
 - Depends on: `T181`
