@@ -6,11 +6,11 @@ Workflow Cannon is the canonical home for the `@workflow-cannon/workspace-kit` p
 
 ## Where should I start?
 
-Read `README.md`, then `.ai/PRINCIPLES.md`, `docs/maintainers/ROADMAP.md`, and task-engine state (`.workspace-kit/tasks/state.json`). Use `.workspace-kit/tasks/state.json` as the execution surface.
+Read `README.md`, then `.ai/PRINCIPLES.md`, `docs/maintainers/ROADMAP.md`, and task-engine state (`.workspace-kit/tasks/state.json`). Use the task-engine command surface as the execution workflow (`workspace-kit run list-tasks`, `get-next-actions`, and transition commands).
 
 ## Where do feature ideas go?
 
-Open a feature request issue and link it to `docs/maintainers/ROADMAP.md` plus task-engine context (`.workspace-kit/tasks/state.json` and `.workspace-kit/tasks/state.json`).
+Open a feature request issue and link it to `docs/maintainers/ROADMAP.md` plus task-engine context (`.workspace-kit/tasks/state.json`).
 
 ## How do releases work?
 

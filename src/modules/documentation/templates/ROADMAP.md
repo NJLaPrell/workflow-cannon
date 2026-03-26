@@ -51,7 +51,7 @@ Method:
 Output format:
 - Bullets for primary scope, outcome, exit signals.
 Validation:
-- Release version string must match `ROADMAP.md` / `.workspace-kit/tasks/state.json` for Phase 0.
+- Release version string must match `ROADMAP.md` for Phase 0.
 }}}
 
 ### Phase 1 - Task Engine core -> GitHub release `v0.3.0`

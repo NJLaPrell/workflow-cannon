@@ -4,7 +4,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const ROOT = process.cwd();
-const MATRIX_PATH = resolve(ROOT, "docs/maintainers/compatibility-matrix.json");
+const MATRIX_PATH = resolve(ROOT, "docs/maintainers/data/compatibility-matrix.json");
 const SCHEMA_PATH = resolve(ROOT, "schemas/compatibility-matrix.schema.json");
 const REPORT_PATH = resolve(ROOT, "artifacts/compatibility-report.json");
 

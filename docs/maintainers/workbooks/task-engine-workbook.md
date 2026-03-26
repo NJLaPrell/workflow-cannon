@@ -2,22 +2,24 @@
 
 Design workbook for Phase 1 Task Engine core. All decisions in this document are binding for T184–T217 implementation.
 
+AI-canonical companion: `.ai/workbooks/task-engine-workbook.md`.
+
 ## Design Decisions (resolved)
 
 | Decision | Choice | Rationale |
 | --- | --- | --- |
 | Scope | Dogfood on own tasks + design API for external consumers | Proves the engine on real work while keeping the contract general |
-| .workspace-kit/tasks/state.json role | **Replaced** by the engine; becomes a generated read-only view | Engine owns state; generated markdown preserves the human surface |
+| Task-state role | Engine-owned canonical JSON state under `.workspace-kit/tasks/state.json` | Engine owns execution state directly |
 | Persistence | File-backed JSON in `.workspace-kit/tasks/state.json` (configurable via module config) | Durable between runs, easy to inspect, consistent with existing kit state |
 | Agent integration | Full: CLI dispatch + instruction files + engine reads context and suggests next actions | Agents need discoverability, not just raw dispatch |
 | Dependency behavior | Auto-unblock: dependents move `blocked → ready` when all deps complete | Reduces manual bookkeeping, matches how we actually work |
 | Guard complexity | Full guards: state validation + dependency checks + custom guard hooks | Hooks let modules register pre-transition validators from day one |
 | Task types | Type field present, all types share the same lifecycle in Phase 1 | Avoids premature complexity; adapter-per-type comes in Phase 4 |
 | State file format | JSON | Consistent with parity evidence, schema validation, and tooling |
-| Human surface | Generated `.workspace-kit/tasks/state.json` as read-only view (same pattern as doc module) | Keeps the existing doc surface alive without it being source of truth |
+| Human surface | Task-engine commands (`list-tasks`, `get-next-actions`) over canonical state | Operator workflow uses command/query surfaces instead of markdown mirrors |
 | Next-action intelligence | Ready queue sorted by priority with blocking chain analysis | Context-aware recommendations deferred to Phase 3 Enhancement Engine |
 | Evidence | Every transition produces a timestamped evidence record | Consistent with the evidence-first pattern established in Phase 0 |
-| Migration | One-time parser imports current .workspace-kit/tasks/state.json into new state format | .workspace-kit/tasks/state.json then becomes a generated view |
+| Migration | One-time migration from markdown tracking into engine-owned JSON state | Ongoing execution stays in `.workspace-kit/tasks/state.json` via task commands |
 
 ---
 

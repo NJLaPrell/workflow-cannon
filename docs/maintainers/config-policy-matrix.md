@@ -1,7 +1,7 @@
 # Config–policy decision matrix
 
 Maps layered config fields to policy evaluation for `@workflow-cannon/workspace-kit` `v0.4.0`.  
-Canonical precedence: see `docs/maintainers/phase2-config-policy-workbook.md`.
+Canonical precedence: see `docs/maintainers/workbooks/phase2-config-policy-workbook.md`.
 
 ## Config layers vs policy
 

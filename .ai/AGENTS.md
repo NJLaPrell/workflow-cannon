@@ -18,13 +18,13 @@ rule|A004|must|agent|prefer_small_reversible_evidence_backed_changes|risk=medium
 rule|A005|must|agent|stop_on_irreversible_data_loss_or_secret_risk_without_approval|risk=critical|ap=required|ov=stop|st=active|refs=.ai/PRINCIPLES.md
 rule|A006|must|agent|emit_structured_evidence_for_validation_and_generation_operations|risk=medium|ap=none|ov=warn|st=active|refs=.ai/PRINCIPLES.md
 
-rule|A010|must|agent|keep_strategy_in_roadmap_execution_in_task_engine_state_and_release_ops_in_releasing|risk=medium|ap=none|ov=warn|st=active|refs=docs/maintainers/ROADMAP.md,.workspace-kit/tasks/state.json,.workspace-kit/tasks/state.json,docs/maintainers/RELEASING.md
+rule|A010|must|agent|keep_strategy_in_roadmap_execution_in_task_engine_state_and_release_ops_in_releasing|risk=medium|ap=none|ov=warn|st=active|refs=docs/maintainers/ROADMAP.md,.workspace-kit/tasks/state.json,docs/maintainers/RELEASING.md
 rule|A011|must|agent|update_related_docs_in_same_changeset_when_scope_changes|risk=medium|ap=none|ov=warn|st=active
 rule|A012|must|agent|preserve_deterministic_behavior_and_document_migration_impact|risk=high|ap=none|ov=stop|st=active|refs=.ai/PRINCIPLES.md
 
-rule|A020|must|agent|execute_tasks_in_dependency_order_from_task_engine_queue|risk=medium|ap=none|ov=warn|st=active|refs=.workspace-kit/tasks/state.json,.workspace-kit/tasks/state.json
-rule|A021|must|agent|treat_task_metadata_scope_acceptance_as_binding_implementation_guidance|risk=medium|ap=none|ov=warn|st=active|refs=.workspace-kit/tasks/state.json,.workspace-kit/tasks/state.json
-rule|A022|must|agent|split_oversized_tasks_before_implementation|risk=low|ap=none|ov=warn|st=active|refs=.workspace-kit/tasks/state.json,.workspace-kit/tasks/state.json
+rule|A020|must|agent|execute_tasks_in_dependency_order_from_task_engine_queue|risk=medium|ap=none|ov=warn|st=active|refs=.workspace-kit/tasks/state.json
+rule|A021|must|agent|treat_task_metadata_scope_acceptance_as_binding_implementation_guidance|risk=medium|ap=none|ov=warn|st=active|refs=.workspace-kit/tasks/state.json
+rule|A022|must|agent|split_oversized_tasks_before_implementation|risk=low|ap=none|ov=warn|st=active|refs=.workspace-kit/tasks/state.json
 
 rule|A030|must|agent|use_document_project_for_batch_and_generate_document_for_single|risk=low|ap=none|ov=auto|st=active|refs=src/modules/documentation/RULES.md
 rule|A031|must|agent|follow_documentation_module_rules_md_before_generation|risk=medium|ap=none|ov=warn|st=active|refs=src/modules/documentation/RULES.md

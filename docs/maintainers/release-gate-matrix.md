@@ -2,13 +2,13 @@
 
 Normalized gate inventory for `@workflow-cannon/workspace-kit` releases.
 
-Referenced by `docs/maintainers/RELEASING.md`. All gates must pass before publish; if any gate fails, block and route follow-up through task-engine state (`.workspace-kit/tasks/state.json`) with re`.workspace-kit/tasks/state.json` for human review.
+Referenced by `docs/maintainers/RELEASING.md`. All gates must pass before publish; if any gate fails, block and route follow-up through task-engine state (`.workspace-kit/tasks/state.json`) with task-state updates for human review.
 
 ## Gate Matrix
 
 | # | Gate | Owner | Input artifacts | Fail action | CI step/job |
 | --- | --- | --- | --- | --- | --- |
-| G1 | Scope confirmation | Maintainer | canonical task-engine state (`.workspace-kit/tasks/state.json`), `.workspace-kit/tasks/state.json` markers, `ROADMAP.md` phase alignment | Block publish; capture missing scope as new task | Manual pre-release review |
+| G1 | Scope confirmation | Maintainer | canonical task-engine state (`.workspace-kit/tasks/state.json`) and `ROADMAP.md` phase alignment | Block publish; capture missing scope as new task | Manual pre-release review |
 | G2 | Changelog completeness | Maintainer | `docs/maintainers/CHANGELOG.md` diff since last release | Block publish; require changelog entry before continue | Manual pre-release review |
 | G3 | Build success | CI | `pnpm run build` exit 0 | Block publish; fix build errors | `ci.yml` → test job (build step) |
 | G4 | Typecheck pass | CI | `pnpm run check` exit 0 | Block publish; fix type errors | `ci.yml` → test job (Typecheck step) |
@@ -25,12 +25,12 @@ Referenced by `docs/maintainers/RELEASING.md`. All gates must pass before publis
 | Role | Gates owned | Escalation path |
 | --- | --- | --- |
 | CI automation | G3, G4, G5, G6, G7, G8, G11 | Failing CI gates produce actionable error output; maintainer investigates |
-| Maintainer (release lead) | G1, G2, G9, G10 | Unresolved manual gates block release; capture blocker in canonical task-engine state and refresh `.workspace-kit/tasks/state.json` |
+| Maintainer (release lead) | G1, G2, G9, G10 | Unresolved manual gates block release; capture blocker in canonical task-engine state  |
 
 ## Escalation Path
 
 1. CI gate failure → read diagnostic output → fix in code or config → re-run CI.
-2. Manual gate failure → record blocker in task-engine state (`.workspace-kit/tasks/state.json`) and regenerate `.workspace-kit/tasks/state.json` → resolve before reattempting release.
+2. Manual gate failure → record blocker in task-engine state (`.workspace-kit/tasks/state.json`) and update task-engine state/context → resolve before reattempting release.
 3. Ambiguous gate status → escalate to maintainer for explicit pass/fail decision and document rationale in `docs/maintainers/DECISIONS.md`.
 
 ## Mapping to CI Workflow Jobs
@@ -51,5 +51,5 @@ Publish workflow: `.github/workflows/publish-npm.yml`
 ## Related documents
 
 - `docs/maintainers/RELEASING.md` — release procedure and evidence requirements
-- `.workspace-kit/tasks/state.json` / `.workspace-kit/tasks/state.json` — blocker tracking
+- `.workspace-kit/tasks/state.json` — blocker tracking
 - `docs/maintainers/DECISIONS.md` — ambiguous gate decisions

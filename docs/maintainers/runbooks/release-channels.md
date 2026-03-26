@@ -2,7 +2,9 @@
 
 Operational mapping for `canary`, `stable`, and `lts` channels.
 
-This file is the human companion to `docs/maintainers/compatibility-matrix.json`, which is the machine-readable source of truth.
+AI-canonical companion: `.ai/runbooks/release-channels.md`.
+
+This file is the human companion to `docs/maintainers/data/compatibility-matrix.json`, which is the machine-readable source of truth.
 
 | Channel | npm dist-tag | Git tag pattern | GitHub release label | Compatibility posture |
 | --- | --- | --- | --- | --- |

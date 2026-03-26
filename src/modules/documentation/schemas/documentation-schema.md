@@ -1,4 +1,4 @@
-meta|v=1|doc=<manifest|rules|map|workflows|commands|decisions|glossary|observed|planned|checks>|truth=<canonical|observed|planned>|st=<active|deprecated|draft>
+meta|v=1|doc=<manifest|rules|runbook|workbook|map|workflows|commands|decisions|glossary|observed|planned|checks>|truth=<canonical|observed|planned>|st=<active|deprecated|draft>
 
 syntax|rec=one_per_line|sep=||kv==|list=,|seq=>|all=+|bool=true,false
 ids|rule=R[0-9]{3,}|wf=W[0-9]{3,}|cmd=C[0-9]{3,}|decision=D[0-9]{3,}|observed=O[0-9]{3,}|planned=P[0-9]{3,}|check=K[0-9]{3,}
@@ -14,6 +14,20 @@ ref|name=<name>|path=<path>
 rule|<RID>|<lvl>|<scope>|<directive>|unless=<cond>|also=<list>|risk=<risk>|ap=<ap>|ov=<act>|st=<st>|refs=<list>
 path|<path>|role=<role>|has=<list>|xhas=<list>|deps=<list>|xdeps=<list>|check=<list>|st=<st>|refs=<list>
 module|<name>|role=<role>|owns=<list>|deps=<list>|xdeps=<list>|entry=<list>|tests=<list>|st=<st>|refs=<list>
+
+runbook|<name>|<scope>|<owner>
+workbook|<name>|<phase>|<status>
+intent|<fact_or_guidance>
+chain|<step>|<command>|expect_exit=<code>
+artifact|path=<path>|schema=<schema_path>
+state|name=<name>|dist_tag=<tag>|intent=<intent>
+transition|from=<from>|to=<to>|requires=<list>
+promotion|from=<from>|to=<to>|requires=<list>
+rollback|strategy=<strategy>|note=<note>
+command|name=<name>|purpose=<purpose>|sensitivity=<non_sensitive|policy_sensitive>
+config|key=<key>|default=<value>
+cadence|rule=<rule>
+guardrail|<GID>|<lvl>|<directive>|st=<st>
 
 wf|<WID>|name=<name>|when=<trigger>|do=<s1>><s2>><s3>|done=<d1>+<d2>|forbid=<list>|ask_if=<cond>|halt_if=<cond>|ap=<ap>|risk=<risk>|st=<st>|refs=<list>
 cmd|<CID>|name=<name>|use=<command>|scope=<scope>|expect=<result>|risk=<risk>|st=<st>

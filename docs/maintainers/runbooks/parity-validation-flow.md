@@ -2,6 +2,8 @@
 
 Canonical ordered command chain for validating packaged-artifact parity in `@workflow-cannon/workspace-kit`.
 
+AI-canonical companion: `.ai/runbooks/parity-validation-flow.md`.
+
 ## Purpose
 
 Parity validation confirms that the **packaged artifact** (what consumers install) behaves identically to the source-repo state. Every release candidate must pass this flow before promotion to `stable`.
@@ -85,7 +87,7 @@ The CI workflow (`.github/workflows/ci.yml`) runs parity as a dedicated job. See
 
 ## Related documents
 
-- `docs/maintainers/consumer-cadence.md` — cadence states and transition validation
+- `docs/maintainers/runbooks/consumer-cadence.md` — cadence states and transition validation
 - `docs/maintainers/release-gate-matrix.md` — gate inventory
 - `docs/maintainers/RELEASING.md` — release procedure
 - `schemas/parity-evidence.schema.json` — evidence schema

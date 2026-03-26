@@ -1,0 +1,14 @@
+meta|v=1|doc=workbook|truth=canonical|st=active
+
+workbook|name=task_engine_schema_workbook|phase=1|release=v0.3.0
+ref|name=maintainer_view|path=docs/maintainers/workbooks/task-engine-workbook.md
+ref|name=task_state|path=.workspace-kit/tasks/state.json
+
+state_model|statuses=proposed,ready,in_progress,blocked,completed,cancelled
+transition_rule|must|enforce_allowed_transition_map_and_dependency_guards
+persistence|store=.workspace-kit/tasks/state.json|schema_version=1
+evidence|must_emit_transition_records=true
+queue|next_actions=priority_sorted_ready_queue_with_blocking_analysis
+
+rule|R001|must|keep_transition_behavior_deterministic_and_test_covered|st=active
+rule|R002|must|treat_task_engine_state_as_single_execution_source_of_truth|st=active

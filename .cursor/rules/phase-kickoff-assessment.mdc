@@ -7,7 +7,7 @@ alwaysApply: false
 
 At phase start:
 
-1. Align phase definition in `docs/maintainers/ROADMAP.md`, task-engine state (`.workspace-kit/tasks/state.json`), `.workspace-kit/tasks/state.json` view, and status YAML.
+1. Align phase definition in `docs/maintainers/ROADMAP.md`, task-engine state (`.workspace-kit/tasks/state.json`), and status YAML.
 2. Confirm task-engine ready queue (`workspace-kit run get-ready-queue`) supports phase goals.
 3. Define evidence expectations for phase-exit confidence.
 4. Identify human-only decisions early.

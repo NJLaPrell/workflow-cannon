@@ -8,7 +8,7 @@ ref|name=tasks_view|path=.workspace-kit/tasks/state.json
 ref|name=changelog|path=docs/maintainers/CHANGELOG.md
 ref|name=security|path=docs/maintainers/SECURITY.md
 ref|name=gate_matrix|path=docs/maintainers/release-gate-matrix.md
-ref|name=parity_flow|path=docs/maintainers/parity-validation-flow.md
+ref|name=parity_flow|path=docs/maintainers/runbooks/parity-validation-flow.md
 ref|name=parity_schema|path=schemas/parity-evidence.schema.json
 truth|order=canonical_ai_docs>code_and_config_reality>generated_human_docs>narrative_docs
 
@@ -23,7 +23,7 @@ principle|RP003|evidence_over_assumption_record_proof_for_each_gate|st=active
 principle|RP004|human_governed_changes_explicit_review_for_risky_migrations_or_policy|st=active|refs=.ai/PRINCIPLES.md
 principle|RP005|continuous_improvement_convert_release_pain_into_follow_up_work|st=active
 
-gate|G001|scope_tracked_in_task_engine_with_roadmap_context|when=before_publish|on_fail=stop|refs=.workspace-kit/tasks/state.json,.workspace-kit/tasks/state.json
+gate|G001|scope_tracked_in_task_engine_with_roadmap_context|when=before_publish|on_fail=stop|refs=.workspace-kit/tasks/state.json
 gate|G002|behavior_changes_documented_in_changelog|when=before_publish|on_fail=stop|refs=docs/maintainers/CHANGELOG.md
 gate|G003|build_typecheck_and_tests_pass|when=before_publish|on_fail=stop|cmd=pnpm run build && pnpm run check && pnpm run test
 gate|G004|consumer_impacting_flows_validated_against_packaged_artifacts|when=before_publish|on_fail=stop|cmd=pnpm run parity

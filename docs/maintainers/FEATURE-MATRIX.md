@@ -1,6 +1,6 @@
 # Workflow Cannon Feature Matrix
 
-Product-oriented feature inventory derived from task-engine state (`.workspace-kit/tasks/state.json`) and mirrored in `.workspace-kit/tasks/state.json`.
+Product-oriented feature inventory derived from task-engine state (`.workspace-kit/tasks/state.json`).
 
 Status legend:
 
@@ -8,7 +8,7 @@ Status legend:
 - `In progress / ready` = next active release-track work
 - `Planned` = scoped for future phases
 
-## Milestone Alignment (from TASKS)
+## Milestone Alignment (from task-engine state)
 
 | Milestone/phase | Release target | Current state |
 | --- | --- | --- |
@@ -131,7 +131,7 @@ Status legend:
 | Parity evidence schema contract | Versioned schema and retention contract for parity artifacts | Completed | `T198` |
 | Task schema workbook | Implementation-ready workbook with binding design decisions for all Phase 1 engine components | Completed | `T199` |
 | Config-policy decision matrix | Shared decision map for precedence and policy interactions | Completed | `T200` |
-| Task engine cutover checklist | Maintainer-local preflight/rollback checklist for optional task-engine adoption | Completed | `T201` |
+| Task-engine local adoption guidance (historical) | Historical maintainer-local preflight/rollback guidance for initial task-engine adoption | Completed | `T201` |
 | Recommendation confidence rubric | Deterministic scoring thresholds for recommendation queue admission | Completed | `T202` |
 | Lineage event contract | Stable, immutable event format for provenance reconstruction | Completed | `T203` |
 | Compatibility matrix template | Reusable compatibility reporting format for extensions and channels | Completed | `T204` |
@@ -141,10 +141,9 @@ Status legend:
 | Evidence lifecycle controls | Retention, compaction, and redaction policy for append-only `.workspace-kit` runtime artifacts | Completed | `T240` |
 | Release channel operational mapping | Executable channel mapping across git tags, GitHub release labels, and npm dist-tags | Completed | `T241` |
 | Planning-doc consistency guard | CI drift check that enforces status consistency across roadmap, tasks, and feature matrix docs | Completed | `T242` |
-| TASKS markdown structure preservation | Task-engine import/generate round-trip keeps maintainer prose sections intact while syncing task headings | Completed | `T243` |
 
 ## Notes
 
 - Feature groupings are intentionally product-facing and map back to task milestones.
-- Task IDs remain included for traceability back to canonical execution planning in `.workspace-kit/tasks/state.json` and `.workspace-kit/tasks/state.json`.
+- Task IDs remain included for traceability back to canonical execution planning in task-engine state.
 

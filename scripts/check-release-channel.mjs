@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const ROOT = process.cwd();
-const MATRIX_PATH = resolve(ROOT, "docs/maintainers/compatibility-matrix.json");
+const MATRIX_PATH = resolve(ROOT, "docs/maintainers/data/compatibility-matrix.json");
 const PKG_PATH = resolve(ROOT, "package.json");
 
 function hasPrerelease(version) {

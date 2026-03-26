@@ -253,6 +253,202 @@ test("document-project generates all templates in batch", async () => {
   assert.equal(result.data.summary.failed, 0);
 });
 
+test("document-project discovers nested templates and preserves relative output paths", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "wc-doc-rt-"));
+  const { templatesRoot, aiRoot, humanRoot } = await createDocFixture(root);
+  const ctx = { ...baseLifecycleContext(), workspacePath: root };
+
+  await mkdir(path.join(templatesRoot, "runbooks"), { recursive: true });
+  await writeFile(
+    path.join(templatesRoot, "runbooks", "NESTED.md"),
+    "# Nested\n\n## Section\n\nContent.\n"
+  );
+
+  const result = await callOnCommand("document-project", {
+    options: { dryRun: false, strict: false }
+  }, ctx);
+
+  assert.equal(result.ok, true);
+  assert.ok(
+    result.data.results.some((r) => r.documentType === "runbooks/NESTED.md"),
+    "Should include nested template in batch results"
+  );
+  assert.ok(
+    result.data.results.some((r) =>
+      r.filesWritten.some((f) => f === path.join(aiRoot, "runbooks", "NESTED.md"))
+    ),
+    "Should write nested AI output path"
+  );
+  assert.ok(
+    result.data.results.some((r) =>
+      r.filesWritten.some((f) => f === path.join(humanRoot, "runbooks", "NESTED.md"))
+    ),
+    "Should write nested human output path"
+  );
+});
+
+test("schema validator accepts active runbook AI docs in strict mode", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "wc-doc-rt-schema-"));
+  const { templatesRoot, aiRoot, humanRoot, schemasRoot } = await createDocFixture(root);
+  const ctx = { ...baseLifecycleContext(), workspacePath: root };
+
+  // Ensure referenced docs exist for `ref` validation.
+  const releasingPath = path.join(humanRoot, "RELEASING.md");
+  await writeFile(releasingPath, "# Releasing\n", "utf8");
+
+  // Provide a minimal template with at least one required heading.
+  await mkdir(path.join(templatesRoot, "runbooks"), { recursive: true });
+  await writeFile(
+    path.join(templatesRoot, "runbooks", "GOOD.md"),
+    "# Good\n\n## Overview\n\nStatic.\n",
+    "utf8"
+  );
+
+  // Craft an active runbook AI doc.
+  await mkdir(path.join(aiRoot, "runbooks"), { recursive: true });
+  await writeFile(
+    path.join(aiRoot, "runbooks", "GOOD.md"),
+    [
+      "meta|v=1|doc=runbook|truth=canonical|st=active",
+      "runbook|name=parity_validation_flow|scope=release_readiness|owner=maintainers",
+      "ref|name=releasing|path=docs/maintainers/RELEASING.md",
+      "rule|R001|must|parity_flow|run_parity_commands_in_fixed_order_and_stop_on_first_non_zero_exit|st=active",
+      "chain|step=1|command=pnpm run build|expect_exit=0",
+    ].join("\n"),
+    "utf8"
+  );
+
+  // Provide a minimal schema file to satisfy existence expectations if added later.
+  await mkdir(schemasRoot, { recursive: true });
+
+  const result = await callOnCommand(
+    "generate-document",
+    {
+      documentType: "runbooks/GOOD.md",
+      options: { dryRun: true, overwriteAi: false, strict: true, allowWithoutTemplate: false }
+    },
+    ctx
+  );
+
+  assert.equal(result.ok, true);
+});
+
+test("schema validator rejects active runbook AI docs missing required rule/chain in strict mode", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "wc-doc-rt-schema-"));
+  const { templatesRoot, aiRoot, humanRoot } = await createDocFixture(root);
+  const ctx = { ...baseLifecycleContext(), workspacePath: root };
+
+  await mkdir(path.join(templatesRoot, "runbooks"), { recursive: true });
+  await writeFile(
+    path.join(templatesRoot, "runbooks", "MISSING_REQUIRED.md"),
+    "# Missing\n\n## Overview\n\nStatic.\n",
+    "utf8"
+  );
+
+  await mkdir(path.join(aiRoot, "runbooks"), { recursive: true });
+  await writeFile(
+    path.join(aiRoot, "runbooks", "MISSING_REQUIRED.md"),
+    [
+      "meta|v=1|doc=runbook|truth=canonical|st=active",
+      "runbook|name=bad|scope=release_readiness|owner=maintainers",
+      "ref|name=releasing|path=docs/maintainers/RELEASING.md"
+    ].join("\n"),
+    "utf8"
+  );
+
+  // referenced doc exists
+  await writeFile(path.join(humanRoot, "RELEASING.md"), "# Releasing\n", "utf8");
+
+  const result = await callOnCommand(
+    "generate-document",
+    {
+      documentType: "runbooks/MISSING_REQUIRED.md",
+      options: { dryRun: true, overwriteAi: false, strict: true }
+    },
+    ctx
+  );
+
+  assert.equal(result.ok, false);
+  assert.ok(
+    result.data.evidence.validationIssues.some((i) => i.check === "schema"),
+    "Expected schema validation failure"
+  );
+});
+
+test("schema validator enforces ref.path existence by strictness tier", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "wc-doc-rt-schema-"));
+  const { templatesRoot, aiRoot } = await createDocFixture(root);
+  const ctx = { ...baseLifecycleContext(), workspacePath: root };
+
+  await mkdir(path.join(templatesRoot, "runbooks"), { recursive: true });
+  await writeFile(
+    path.join(templatesRoot, "runbooks", "BAD_REF.md"),
+    "# Bad Ref\n\n## Overview\n\nStatic.\n",
+    "utf8"
+  );
+
+  await mkdir(path.join(aiRoot, "runbooks"), { recursive: true });
+  await writeFile(
+    path.join(aiRoot, "runbooks", "BAD_REF.md"),
+    [
+      "meta|v=1|doc=runbook|truth=canonical|st=active",
+      "runbook|name=bad|scope=release_readiness|owner=maintainers",
+      "ref|name=releasing|path=docs/maintainers/DOES_NOT_EXIST.md",
+      "rule|R001|must|parity_flow|run_parity_commands_in_fixed_order_and_stop_on_first_non_zero_exit|st=active"
+    ].join("\n"),
+    "utf8"
+  );
+
+  const strictResult = await callOnCommand(
+    "generate-document",
+    {
+      documentType: "runbooks/BAD_REF.md",
+      options: { dryRun: true, overwriteAi: false, strict: true }
+    },
+    ctx
+  );
+  assert.equal(strictResult.ok, false);
+
+  const advisoryResult = await callOnCommand(
+    "generate-document",
+    {
+      documentType: "runbooks/BAD_REF.md",
+      options: { dryRun: true, overwriteAi: false, strict: false }
+    },
+    ctx
+  );
+  assert.equal(advisoryResult.ok, true);
+});
+
+test("path-aware meta.doc defaults classify nested templates", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "wc-doc-rt-meta-"));
+  const { templatesRoot, aiRoot } = await createDocFixture(root);
+  const ctx = { ...baseLifecycleContext(), workspacePath: root };
+
+  await mkdir(path.join(templatesRoot, "workbooks"), { recursive: true });
+  await writeFile(
+    path.join(templatesRoot, "workbooks", "META.md"),
+    "# Meta\n\n## Overview\n\nStatic.\n",
+    "utf8"
+  );
+
+  const result = await callOnCommand(
+    "generate-document",
+    {
+      documentType: "workbooks/META.md",
+      options: { dryRun: false, overwriteAi: true, strict: true }
+    },
+    ctx
+  );
+  assert.equal(result.ok, true);
+
+  const generatedAi = await (await import("node:fs/promises")).readFile(
+    path.join(aiRoot, "workbooks", "META.md"),
+    "utf8"
+  );
+  assert.match(generatedAi, /^meta\|v=1\|doc=workbook\|truth=canonical\|st=draft/m);
+});
+
 test("document-project continues on individual failure and reports batch outcome", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "wc-doc-rt-"));
   const { templatesRoot } = await createDocFixture(root);

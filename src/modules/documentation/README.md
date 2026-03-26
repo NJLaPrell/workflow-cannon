@@ -29,5 +29,11 @@ Files under `templates/`; `documentType` is the filename (basename). Keep this l
 - `SECURITY.md`
 - `SUPPORT.md`
 - `TERMS.md`
+- `runbooks/parity-validation-flow.md`
+- `runbooks/consumer-cadence.md`
+- `runbooks/release-channels.md`
+- `workbooks/transcript-automation-baseline.md`
+- `workbooks/phase2-config-policy-workbook.md`
+- `workbooks/task-engine-workbook.md`
 
 Adding a new template: add `templates/<Name>.md`, extend the **Inputs** list in `instructions/document-project.md`, and add the same line here.

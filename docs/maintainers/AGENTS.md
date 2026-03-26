@@ -7,7 +7,7 @@ Basic operating guidance for AI agents working in this repository.
 1. `.ai/PRINCIPLES.md` — goals, trade-off order, approval gates
 2. `.ai/module-build.md` — module development contracts and enforcement
 3. `docs/maintainers/ROADMAP.md` — phase strategy and release cadence
-4. canonical task-engine state (`.workspace-kit/tasks/state.json`) — execution queue and dependency ordering (with `.workspace-kit/tasks/state.json` execution surface)
+4. canonical task-engine state (`.workspace-kit/tasks/state.json`) — execution queue and dependency ordering 
 5. `docs/maintainers/RELEASING.md` — release gates and evidence requirements
 6. `docs/maintainers/TERMS.md` — canonical terminology
 7. `docs/maintainers/module-build-guide.md` — human-readable module development companion

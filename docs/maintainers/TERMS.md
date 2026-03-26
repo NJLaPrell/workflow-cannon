@@ -15,7 +15,7 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
 - **Canonical glossary**: `docs/maintainers/TERMS.md` (this file) — primary definitions
 - **Canonical goals and principles**: `.ai/PRINCIPLES.md` — decision rules and trade-off order
 - **Project intent and boundaries**: `README.md`, `docs/maintainers/ROADMAP.md`, `docs/maintainers/ARCHITECTURE.md`
-- **Execution and planning**: task-engine state (`.workspace-kit/tasks/state.json`) with `.workspace-kit/tasks/state.json` — queue, dependencies, and human-readable tracking
+- **Execution and planning**: task-engine state (`.workspace-kit/tasks/state.json`) — queue, dependencies, and execution tracking
 - **Operational runbooks/playbooks**: `docs/maintainers/RELEASING.md` and files under `docs/maintainers/`
 - **Agent enforcement layer**: `.cursor/rules/*.mdc` — editor/agent behavior rules
 - **Reusable agent task templates**: `tasks/*.md`
@@ -30,7 +30,7 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
 - **Goal**
   - **Definition**: A desired project outcome used to evaluate progress and direction.
   - **Defined in**: `.ai/PRINCIPLES.md` and `README.md`.
-  - **Enforced in**: planning and prioritization across `docs/maintainers/ROADMAP.md`, task-engine state, and `.workspace-kit/tasks/state.json`.
+  - **Enforced in**: planning and prioritization across `docs/maintainers/ROADMAP.md`, task-engine state,.
 
 - **Principle**
   - **Definition**: A cross-cutting decision rule that guides trade-offs across features and implementation choices.

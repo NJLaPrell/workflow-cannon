@@ -23,6 +23,12 @@ All `.md` files under `sources.templatesRoot` (default `src/modules/documentatio
 - `SECURITY.md`
 - `SUPPORT.md`
 - `TERMS.md`
+- `runbooks/parity-validation-flow.md`
+- `runbooks/consumer-cadence.md`
+- `runbooks/release-channels.md`
+- `workbooks/transcript-automation-baseline.md`
+- `workbooks/phase2-config-policy-workbook.md`
+- `workbooks/task-engine-workbook.md`
 
 ## Required behavior
 

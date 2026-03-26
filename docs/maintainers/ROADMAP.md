@@ -85,7 +85,7 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 
 - Primary scope: `T244`, `T245`, `T246`, `T247`, `T248`, `T259`.
 - Outcome: manual-first transcript sync and recommendation ingestion UX with explicit cadence/config contracts, rollout-safe design baseline, and maintainers-first operational guidance.
-- Baseline artifact: `docs/maintainers/transcript-automation-baseline.md`.
+- Baseline artifact: `docs/maintainers/workbooks/transcript-automation-baseline.md`.
 - Exit signals:
   - Transcript sync and one-shot ingest command surfaces are implementation-ready from a locked design baseline.
   - Phase 5 rules/docs define event-driven frequent recommendation generation with bounded overhead and no cron requirement for baseline users.

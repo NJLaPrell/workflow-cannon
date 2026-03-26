@@ -18,7 +18,7 @@ Phase 5 — transcript intelligence automation (initial slice): manual-first tra
 - **One-shot ingest command** — `workspace-kit run ingest-transcripts` orchestrates sync + recommendation generation and returns consolidated sync/cadence/generation JSON in a single call.
 - **Phase 5 config contract** — new keys `improvement.transcripts.sourcePath`, `improvement.transcripts.archivePath`, `improvement.cadence.minIntervalMinutes`, and `improvement.cadence.skipIfNoNewTranscripts` with strict validation and metadata exposure.
 - **Cadence/backoff policy outputs** — ingest responses now include explicit cadence decision reasons for observability and troubleshooting.
-- **Design baseline** — `docs/maintainers/transcript-automation-baseline.md` defines command model, safety boundaries, config ownership, and rollout guardrails for follow-on Phase 5 work.
+- **Design baseline** — `docs/maintainers/workbooks/transcript-automation-baseline.md` defines command model, safety boundaries, config ownership, and rollout guardrails for follow-on Phase 5 work.
 
 ### Changed
 
@@ -37,7 +37,7 @@ Phase 4 — runtime scale and ecosystem hardening: compatibility contract enforc
 
 ### Added
 
-- **Compatibility matrix + schema** — canonical `docs/maintainers/compatibility-matrix.json` and `schemas/compatibility-matrix.schema.json` for runtime/module/config/policy compatibility mapping.
+- **Compatibility matrix + schema** — canonical `docs/maintainers/data/compatibility-matrix.json` and `schemas/compatibility-matrix.schema.json` for runtime/module/config/policy compatibility mapping.
 - **Compatibility gate** — `scripts/check-compatibility.mjs` with machine-readable report output at `artifacts/compatibility-report.json`.
 - **Release channel enforcement** — `scripts/check-release-channel.mjs` validates channel (`canary`/`stable`/`lts`) behavior against matrix mapping.
 - **Planning consistency guard** — `scripts/check-planning-doc-consistency.mjs` enforces consistent Phase status across `ROADMAP.md`, `.workspace-kit/tasks/state.json`, and `FEATURE-MATRIX.md`.
@@ -109,7 +109,7 @@ Phase 2 (config, policy, local cutover) release. Layered workspace configuration
 - **Policy baseline** — Sensitive `run` commands require `policyApproval: { confirmed, rationale }` in JSON args. `init` and `upgrade` require `WORKSPACE_KIT_POLICY_APPROVAL` JSON in the environment. Documentation writes gated unless `options.dryRun === true`.
 - **Policy traces** — Append-only JSONL at `.workspace-kit/policy/traces.jsonl` (with operation id, actor, allowed/denied, rationale, `commandOk` when applicable).
 - **Actor resolution** — `actor` arg → `WORKSPACE_KIT_ACTOR` → `git config user.email` / `user.name` → `"unknown"`.
-- **Maintainer docs** — `docs/maintainers/config-policy-matrix.md`, `task-engine-cutover-checklist.md`, `task-engine-cutover.md` (aligned with `phase2-config-policy-workbook.md`).
+- **Maintainer docs** — `docs/maintainers/config-policy-matrix.md` and historical local-adoption guidance for Phase 2 (aligned with `docs/maintainers/workbooks/phase2-config-policy-workbook.md`).
 
 ### Changed
 
@@ -134,7 +134,7 @@ Phase 1 (Task Engine core) release. Adds a canonical task lifecycle, transition 
 - **Module commands** — `run-transition`, `get-task`, `list-tasks`, `get-ready-queue`, `get-next-actions` exposed through the module command router and `workspace-kit run`.
 - **Task state contract** — canonical execution state in `.workspace-kit/tasks/state.json`.
 - **Next-action suggestions** — Priority-sorted ready queue with blocking-chain context for agent workflows.
-- **Design workbook** — `docs/maintainers/task-engine-workbook.md` capturing schema, transition graph, guards, persistence, and error taxonomy.
+- **Design workbook** — `docs/maintainers/workbooks/task-engine-workbook.md` capturing schema, transition graph, guards, persistence, and error taxonomy.
 
 ### Changed
 

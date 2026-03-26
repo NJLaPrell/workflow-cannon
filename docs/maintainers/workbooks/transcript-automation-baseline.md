@@ -2,6 +2,8 @@
 
 Canonical design baseline for Phase 5 transcript intelligence automation.
 
+AI-canonical companion: `.ai/workbooks/transcript-automation-baseline.md`.
+
 ## Scope
 
 - Primary implementation scope: `T244`, `T245`, `T246`, `T247`, `T248`, `T259`.

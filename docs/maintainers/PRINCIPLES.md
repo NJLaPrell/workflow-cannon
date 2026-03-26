@@ -34,7 +34,7 @@ When sources disagree, use this precedence:
 - Produce release evidence for readiness and parity checks before any release.
 - Optimize for fast iteration in low-risk, clear, routine work.
 - Apply high agent autonomy when user intent is clear.
-- Keep documentation boundaries clean: strategy in ROADMAP, execution in canonical task-engine state (`.workspace-kit/tasks/state.json`) with `.workspace-kit/tasks/state.json` view, release operations in RELEASING.
+- Keep documentation boundaries clean: strategy in ROADMAP, execution in canonical task-engine state (`.workspace-kit/tasks/state.json`), release operations in RELEASING.
 - Prefer incremental, reversible changes over broad, high-risk changes.
 - Do not bypass release, migration, or policy gates to increase delivery speed.
 - Record explicit override rationale in task-engine state or DECISIONS when principles are overridden.
@@ -52,14 +52,14 @@ Work must stop when there is unapproved risk of irreversible data loss or critic
 ## Conflict and Override Handling
 
 - If a requested change conflicts with these principles, use soft-gate behavior: state the conflict and ask for confirmation before proceeding.
-- If principles are explicitly overridden, record rationale in `.workspace-kit/tasks/state.json` (and regenerate `.workspace-kit/tasks/state.json`) or `docs/maintainers/DECISIONS.md`.
+- If principles are explicitly overridden, record rationale in `.workspace-kit/tasks/state.json` (and update task-engine state/context) or `docs/maintainers/DECISIONS.md`.
 
 ## Documentation Boundaries
 
 To avoid ownership drift:
 
 - Strategy belongs in `docs/maintainers/ROADMAP.md`
-- Execution belongs in `.workspace-kit/tasks/state.json` (with `.workspace-kit/tasks/state.json` as view)
+- Execution belongs in `.workspace-kit/tasks/state.json` 
 - Release operations belong in `docs/maintainers/RELEASING.md`
 
 ## Validation Gates
@@ -75,7 +75,6 @@ Before merge, release, or execution, confirm:
 - `.ai/PRINCIPLES.md` (canonical)
 - `docs/maintainers/ROADMAP.md`
 - `.workspace-kit/tasks/state.json`
-- `.workspace-kit/tasks/state.json` (view)
 - `docs/maintainers/DECISIONS.md`
 - `docs/maintainers/RELEASING.md`
 - `docs/maintainers/CHANGELOG.md`

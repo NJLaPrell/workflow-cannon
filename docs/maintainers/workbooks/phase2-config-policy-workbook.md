@@ -1,7 +1,8 @@
 # Phase 2 workbook — config, policy, local task cutover
 
 Binding design for `v0.4.0` (tasks `T218` → `T187` → `T200` → `T188` → `T201` → `T189`).  
-Implementation must match this document unless a deliberate decision update is recorded in task-engine state (`.workspace-kit/tasks/state.json`, with re`.workspace-kit/tasks/state.json`) and here.
+AI-canonical companion: `.ai/workbooks/phase2-config-policy-workbook.md`.  
+Implementation must match this document unless a deliberate decision update is recorded in task-engine state (`.workspace-kit/tasks/state.json`) and here.
 
 ## 1. Non-goals for v0.4.0
 
@@ -75,16 +76,16 @@ Order (first hit wins):
 - Append or write structured JSON records (implementation chooses single file vs directory under `.workspace-kit/policy/` — must be documented in `T188` completion notes).
 - Each record minimally: `timestamp`, `operationId`, `actor`, `allowed`, `rationale`, `command`, optional `configHash`.
 
-## 9. Maintainer-local task cutover (outline for T189 / T201)
+## 9. Maintainer-local task cutover (historical, T189 / T201)
 
-High-level steps (details in `T201` checklist and `T189` runbook):
+High-level historical steps from initial adoption:
 
-1. Branch from `main`; backup `.workspace-kit/tasks/` and `.workspace-kit/tasks/state.json`.
+1. Branch from `main`; backup `.workspace-kit/tasks/`.
 2. Use task-engine commands with approvals per policy; inspect `.workspace-kit/tasks/state.json`.
 3. Review task-state diff directly in `.workspace-kit/tasks/state.json` as the canonical task surface.
 4. Open PR; attach optional local evidence JSON from rehearsal if used.
 
-Rollback: restore backed-up files; delete or revert task state file; return to markdown-as-source workflow.
+Rollback: restore backed-up files and revert unintended task-state changes.
 
 ## 10. Revision history
 
