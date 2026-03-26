@@ -61,12 +61,12 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 
 ### Phase 3 - Enhancement loop MVP -> GitHub release `v0.5.0`
 
-- Primary scope: `T190` to `T192`.
-- Outcome: human-governed recommendation loop with traceable provenance.
+- Primary scope: `T190` to `T192`, with supporting design slices `T202` (heuristic confidence + admission rules) and `T203` (lineage event contract).
+- Outcome: evidence-driven **improvement** work is logged as **Task Engine** tasks (`type="improvement"`) and reviewed through a human-governed loop: ingest signals from agent transcripts, git diffs between release tags, policy traces, config mutation evidence, and task-transition evidence; on-demand `generate-recommendations` with an incremental cursor; decisions recorded via the **`approvals`** module; deterministic **evidence-key** dedupe; heuristic confidence; end-to-end **lineage** (recommendation → decision → applied change) with correlation to policy/config traces where available.
 - Exit signals:
-  - Recommendations are generated with evidence and confidence.
-  - Human decisions are recorded and replayable.
-  - Provenance is traceable recommendation -> decision -> applied change.
+  - Recommendations appear as actionable task-engine tasks with evidence references, heuristic confidence, and stable `evidenceKey` dedupe across runs.
+  - Human decisions are recorded via `approvals`, idempotent where required, and replayable from persisted artifacts.
+  - Provenance is traceable recommendation → decision → applied change, with optional linkage into policy traces and config mutation records.
 
 ### Phase 4 - Runtime scale and ecosystem -> GitHub release `v0.6.0`
 

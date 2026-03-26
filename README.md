@@ -63,7 +63,7 @@ This keeps automation adaptive without sacrificing safety, governance, or develo
 
 - **Phase 0** and **Phase 1** (task engine, `v0.3.0`) are complete.
 - **Phase 2** (layered config, policy gates, cutover docs, `v0.4.0`) is complete in-repo; see `docs/maintainers/TASKS.md` and `docs/maintainers/ROADMAP.md`.
-- **Phase 2b** (policy + config UX, `v0.4.1`) is complete in-repo. **Phase 3** (enhancement loop MVP, `v0.5.0`) is next (`T190` onward).
+- **Phase 2b** (policy + config UX, `v0.4.1`) is complete in-repo. **Phase 3** (enhancement loop MVP, `v0.5.0`) is next: evidence-driven **improvement** tasks in the Task Engine, **`approvals`**-mediated decisions, and lineage (`T190`–`T192`, `T202`–`T203`).
 
 ## Goals
 

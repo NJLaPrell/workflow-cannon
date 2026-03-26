@@ -695,42 +695,83 @@ Release target: **GitHub release `v0.5.0`**
 
 ### [ ] T190 [workspace-kit] Implement recommendation intake and review queue
 - Priority: P1
-- Approach: Queue with explicit decision states and audit references.
+- Approach: Treat the Task Engine as the canonical “recommendation queue” by representing each recommendation as a Task Engine task and by implementing a deterministic decision lifecycle wired to the `approvals` module.
 - Depends on: `T185`, `T188`, `T220`
 - Unblocks: `T191`, `T192`, `T202`
 - Supporting tasks: `T202`
 - Technical scope:
-  - Implement queue entity with recommendation lifecycle states.
-  - Implement decision actions (`accept`, `decline`, `accept edited`).
-  - Persist audit references tying decisions to evidence and actor.
+  - Implement the recommendation queue as **Task Engine tasks** (task `type` = `improvement`) using the Task Engine lifecycle states:
+    - recommendation enqueued → `ready`
+    - being worked/approved → `in_progress`
+    - accepted/applied → `completed`
+    - declined → `cancelled`
+  - Implement decision actions (`accept`, `decline`, `accept edited`) as validated operations that:
+    - ensure the target task exists and is the correct type/state for the requested decision
+    - are idempotent (replaying the same decision does not create duplicate decision records)
+    - record an immutable decision history that ties decisions back to evidence (`evidenceKey`) and actor.
+  - Wire the human approval path through the `approvals` module:
+    - implement the `approvals` module runtime instruction used for recording `review-item` decisions
+    - ensure the approvals decision updates the linked recommendation task state and writes decision evidence.
+  - Record audit-friendly references suitable for lineage reconstruction (see `T192`), including:
+    - recommendation task id
+    - `evidenceKey`
+    - actor
+    - decision verb (`accept|decline|accept edited`)
+    - relevant policy/config trace references available in command context.
 - Acceptance criteria:
-  - Queue supports full decision lifecycle with immutable history.
-  - Decision actions are idempotent and validated.
+  - Recommendation queue supports the full decision lifecycle with immutable decision history.
+  - Decision actions are idempotent and validated against task existence/type/state.
+  - Decisions are recorded in a machine-readable format that can be linked to lineage and evidence.
 
 ### [ ] T191 [workspace-kit] Implement evidence-backed recommendation generation
 - Priority: P1
-- Approach: Evidence-backed generation + confidence scoring + dedupe pipeline.
-- Depends on: `T190`, `T183`
-- Unblocks: `T192`, `T202`
+- Approach: Evidence-backed generation + heuristic confidence + deterministic dedupe by `evidenceKey`, producing Task Engine tasks (task `type` = `improvement`) ready for review.
+- Depends on: `T190`, `T183`, `T202`
+- Unblocks: `T192`
 - Supporting tasks: `T202`
 - Technical scope:
-  - Build ingestion pipeline for transcripts, diffs, and docs.
-  - Implement confidence scoring and threshold rules.
-  - Implement dedupe to prevent redundant queue entries.
+  - Implement an **on-demand** `generate-recommendations` pipeline (invoked explicitly, not scheduled):
+    - reads new evidence since last run using an incremental cursor stored in improvement module state
+    - creates/updates recommendation tasks in the Task Engine store as `ready` tasks.
+  - Evidence ingestion (as configured by your Phase 3 choices):
+    - agent transcripts: parse local `agent-transcripts/` JSONL and extract user friction + improvement targets
+    - git diffs: compute diffs between **stable evidence tags/releases** (diff-between-tags strategy) and extract change-derived improvement opportunities
+    - policy traces: parse `.workspace-kit/policy/traces.jsonl` and infer UX/policy gaps from denied sensitive operations (include operation id + timestamp)
+    - config mutations: parse `.workspace-kit/config/mutations*.jsonl` and infer improvement opportunities from failed/safe-write rejections
+    - task transitions evidence: use task-engine transition log evidence to identify recurring friction patterns
+  - Compute a deterministic `evidenceKey` for each candidate recommendation (dedupe by evidence key):
+    - include evidence type + relevant file paths/identifiers + owning command/op context
+  - Implement heuristic confidence scoring (see `T202`) and admission thresholds:
+    - only enqueue recommendations that meet the deterministic threshold rule for the current evidence.
+  - Implement dedupe behavior:
+    - if a recommendation task with the same `evidenceKey` already exists, skip task creation (or update only non-decision metadata deterministically).
+  - Populate Task Engine task fields for each enqueued recommendation:
+    - `type="improvement"`
+    - `title` = concise recommendation summary
+    - `priority` set by heuristic confidence tier (deterministic)
+    - `metadata` includes `evidenceKey`, confidence, and provenance links/refs needed by `T192`.
 - Acceptance criteria:
-  - Generated recommendations include evidence links and confidence.
-  - Dedupe prevents equivalent duplicate recommendations.
+  - Generated recommendations are represented as Task Engine `improvement` tasks in `ready` state.
+  - Each recommendation includes deterministic provenance refs (including `evidenceKey`) and heuristic confidence.
+  - Dedupe prevents equivalent recommendations by `evidenceKey` across repeated on-demand runs.
+  - Incremental cursor prevents missing new evidence while keeping results deterministic.
 
 ### [ ] T192 [workspace-kit] Implement canonical artifact lineage model
 - Priority: P1
 - Approach: Canonical lineage contract with immutable correlation IDs.
 - Depends on: `T190`, `T191`
-- Unblocks: `T193`, `T203`
+- Unblocks: `T193`
 - Supporting tasks: `T203`
 - Technical scope:
-  - Define lineage event model and correlation ID strategy.
-  - Persist lineage links across recommendation, decision, and change artifacts.
-  - Expose lineage query path for debugging and audit.
+  - Define the lineage event model and correlation id strategy that satisfies:
+    - chain: recommendation -> decision -> applied change
+    - plus policy/config trace correlation where available in the decision/command context.
+  - Correlation id requirements:
+    - include the recommendation Task Engine task id and `evidenceKey`
+    - include decision correlation with actor and decision verb from `approvals`
+    - reference policy trace entries (operation id + timestamp) and config mutation record identity when applicable.
+  - Persist lineage events immutably (append-only) in a deterministic format.
+  - Expose a lineage query path for debugging and audit (at minimum: given a recommendation task id, reconstruct the full rec/dec/app chain).
 - Acceptance criteria:
   - End-to-end lineage can be reconstructed deterministically.
   - Lineage records are immutable after commit.
@@ -898,15 +939,21 @@ Release target: **GitHub release `v0.6.0`**
 
 ### [ ] T202 [workspace-kit] Define recommendation confidence rubric
 - Priority: P2
-- Approach: Define quantitative rubric for recommendation scoring and gating.
+- Approach: Implement a deterministic heuristic confidence model (heuristic_1) with a simple admission threshold for queueing.
 - Depends on: `T190`
 - Unblocks: `T191`
 - Technical scope:
-  - Define scoring dimensions and confidence thresholds.
-  - Define queue insertion threshold behavior and rejection reasons.
-  - Define dedupe equivalence rules.
+  - Define the deterministic confidence signals for each evidence type:
+    - transcripts severity/recurrence signals
+    - diff-derived change impact signals
+    - policy-trace denial signals (operation id + rationale presence)
+    - config-mutation failure signals (safe-write rejection patterns)
+    - task-transition friction signals
+  - Define how confidence is computed from those signals (simple heuristic rules; no learned model).
+  - Define queue admission thresholds and deterministic rejection reasons.
+  - Define the required interface/contract so `T191` can call the confidence function without coupling to ingestion internals.
 - Acceptance criteria:
-  - Rubric supports deterministic queue-admission behavior.
+  - Heuristic confidence scoring and thresholding are deterministic and test-covered.
 
 ### [ ] T203 [workspace-kit] Define lineage event contract
 - Priority: P2
@@ -914,11 +961,16 @@ Release target: **GitHub release `v0.6.0`**
 - Depends on: `T191`
 - Unblocks: `T192`
 - Technical scope:
-  - Define lineage event types and required fields.
-  - Define correlation ID lifecycle and propagation rules.
-  - Define append-only storage constraints.
+  - Define lineage event types and required fields for:
+    - recommendation enqueued (rec)
+    - approval decision recorded (dec)
+    - applied change marker (app)
+    - optional evidence/correlation enrichment events
+  - Define correlation id lifecycle and propagation rules (how `evidenceKey` and task/decision identifiers are carried forward).
+  - Define how lineage references policy traces (`schemaVersion`, operation id, timestamp) and config mutation evidence identities.
+  - Define append-only storage constraints and immutability guarantees.
 - Acceptance criteria:
-  - Event contract is stable and supports end-to-end lineage reconstruction.
+  - Event contract is stable, versioned if needed, and supports end-to-end lineage reconstruction with trace correlation.
 
 ### [ ] T204 [workspace-kit] Build compatibility matrix template
 - Priority: P2
