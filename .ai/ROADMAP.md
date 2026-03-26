@@ -25,7 +25,7 @@ phase|P3|name=enhancement_loop_mvp|release=v0.5.0|scope=T190-T192,T202,T203|stat
 phase|P4|name=runtime_scale_and_ecosystem|release=v0.6.0|scope=T193-T195,T204-T205,T238-T242|status=complete|outcome=extension_ready_operationally_robust_platform_with_fail_closed_compatibility_and_release_channel_controls
 phase|P5|name=transcript_intelligence_automation|release=v0.7.0|scope=T244-T248,T259|status=complete_initial_slice|outcome=manual_first_transcript_sync_and_one_shot_ingest_with_coherent_policy_config_and_operability_contracts
 phase|P6|name=automation_hardening_and_response_templates|release=v0.8.0|scope=T249-T258,T260-T266,T271-T274,imp-2cf5d881b81f9a|status=complete_in_repo|outcome=high_cadence_resilient_transcript_automation_and_advisory_response_template_contracts
-phase|P7|name=architectural_hardening|release=v0.9.0|scope=T275-T282|status=complete_in_repo|outcome=canonical_surface_alignment_runtime_maintainability_and_drift_reduction
+phase|P7|name=architectural_hardening|release=v0.9.0|scope=T275-T282|status=complete|outcome=canonical_surface_alignment_runtime_maintainability_and_drift_reduction
 decision|D006|phase_6_release_strategy=single_release_v0.8.0|st=active
 decision|D007|approval_ux=configurable_first_use_prompt_with_deny_allow_allow_for_session_and_command_scoped_session_reuse|st=active
 decision|D008|response_template_enforcement=configurable_with_advisory_default|st=active
@@ -43,4 +43,6 @@ evidence|phase_1_v0_3_0_publish_run=https://github.com/NJLaPrell/workflow-cannon
 evidence|phase_2_v0_4_0_publish_run=https://github.com/NJLaPrell/workflow-cannon/actions/runs/23561237541
 evidence|phase_4_v0_6_0_publish_run=https://github.com/NJLaPrell/workflow-cannon/actions/runs/23604173215
 evidence|phase_5_v0_7_0_publish_run=https://github.com/NJLaPrell/workflow-cannon/actions/runs/23610374625
+evidence|phase_6_v0_8_0_publish_run=https://github.com/NJLaPrell/workflow-cannon/actions/runs/23617262478
+evidence|phase_7_v0_9_0_publish_run=https://github.com/NJLaPrell/workflow-cannon/actions/runs/23622990943
 evidence|npm_package=https://www.npmjs.com/package/@workflow-cannon/workspace-kit

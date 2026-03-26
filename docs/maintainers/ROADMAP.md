@@ -19,7 +19,7 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - **Phase 4 (Runtime scale and ecosystem) is COMPLETE** in-repo and ships as **`v0.6.0`** (`T193`–`T195`, `T204`–`T205`, `T238`–`T242`).
 - **Phase 5 (Transcript intelligence automation) is COMPLETE** in-repo and ships as **`v0.7.0`** for the initial automation slice (`T244`, `T245`, `T246`, `T247`, `T248`, `T259`).
 - **Phase 6 (Automation hardening and response templates)** for **`v0.8.0`**: tracks **6a**–**6c** are **COMPLETE in-repo** (`T249`-`T258`, `T260`-`T266`, `T271`-`T274`); improvement recommendation item `imp-2cf5d881b81f9a` remains proposed.
-- **Phase 7 (Architectural hardening)** for **`v0.9.0`** is **COMPLETE in-repo** across **`T275`-`T282`** (documentation/canon fixes, package identity alignment, CLI decomposition, config/runtime hardening, governance-surface cleanup).
+- **Phase 7 (Architectural hardening)** for **`v0.9.0`** is **COMPLETE and released** across **`T275`-`T282`** (documentation/canon fixes, package identity alignment, CLI decomposition, config/runtime hardening, governance-surface cleanup).
 - Historical extraction and first-publish milestones remain recorded below as provenance.
 
 ## Phase plan and release cadence
@@ -108,7 +108,7 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
   - Privacy/redaction and retry behavior are deterministic and test-covered.
   - Response-template registry, advisory integration, and maintainership workflow are documented, test-covered, and compatible with existing command result semantics.
 
-### Phase 7 - Architectural hardening -> GitHub release `v0.9.0` (COMPLETE in-repo)
+### Phase 7 - Architectural hardening -> GitHub release `v0.9.0` (COMPLETE)
 
 - Primary scope: `T275` to `T282`.
 - Outcome: reduced architectural and documentation drift, clearer canonical surfaces, and a more maintainable runtime orchestration path for future phases.
@@ -142,4 +142,5 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 - Phase 4 / `v0.6.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23604173215`
 - Phase 5 / `v0.7.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23610374625`
 - Phase 6 / `v0.8.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23617262478`
+- Phase 7 / `v0.9.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23622990943`
 - npm package: `https://www.npmjs.com/package/@workflow-cannon/workspace-kit`
