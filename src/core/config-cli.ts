@@ -3,7 +3,11 @@ import { createInterface } from "node:readline/promises";
 import { stdin as processStdin, stdout as processStdout } from "node:process";
 import path from "node:path";
 import { ModuleRegistry } from "./module-registry.js";
-import { appendPolicyTrace, parsePolicyApprovalFromEnv, resolveActor } from "./policy.js";
+import {
+  appendPolicyTrace,
+  parsePolicyApprovalFromEnv,
+  resolveActorWithFallback
+} from "./policy.js";
 import {
   appendConfigMutation,
   summarizeForEvidence
@@ -154,7 +158,7 @@ async function requireConfigApproval(
       timestamp: new Date().toISOString(),
       operationId: "cli.config-mutate",
       command: commandLabel,
-      actor: resolveActor(cwd, {}, process.env),
+      actor: await resolveActorWithFallback(cwd, {}, process.env),
       allowed: false,
       message: "missing WORKSPACE_KIT_POLICY_APPROVAL"
     });
@@ -358,7 +362,7 @@ export async function runWorkspaceConfigCli(
       const next = setDeep(before, key, parsed);
       validatePersistedConfigDocument(next, scope === "project" ? ".workspace-kit/config.json" : "user config");
 
-      const actor = resolveActor(cwd, {}, process.env);
+      const actor = await resolveActorWithFallback(cwd, {}, process.env);
       try {
         await writeConfigFileAtomic(fp, next);
         await appendConfigMutation(cwd, {
@@ -433,7 +437,7 @@ export async function runWorkspaceConfigCli(
       const prevVal = getAtPath(before, key);
       const next = unsetDeep(before, key);
       validatePersistedConfigDocument(next, scope === "project" ? ".workspace-kit/config.json" : "user config");
-      const actor = resolveActor(cwd, {}, process.env);
+      const actor = await resolveActorWithFallback(cwd, {}, process.env);
 
       try {
         if (Object.keys(next).length === 0) {

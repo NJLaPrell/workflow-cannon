@@ -28,4 +28,9 @@ Keep local transcript archives out of version control if they may contain sensit
 
 ## Post-completion hook (T274)
 
-`improvement.hooks.afterTaskCompleted`: `off` (default), `sync`, or `ingest` (ingest requires `WORKSPACE_KIT_POLICY_APPROVAL` in the environment of the process running `workspace-kit`, or the hook falls back to sync). Spawns a **detached** child so `run-transition` returns immediately. Uses a lock file under `.workspace-kit/improvement/transcript-hook.lock` to reduce overlap.
+`improvement.hooks.afterTaskCompleted`: `off` (default), `sync`, or `ingest` (ingest requires `WORKSPACE_KIT_POLICY_APPROVAL` in the environment of the process running `workspace-kit`, or the hook falls back to sync). Spawns a **detached** child so `run-transition` returns immediately.
+
+Hook observability and overlap controls:
+
+- Lock file: `.workspace-kit/improvement/transcript-hook.lock` prevents unsafe overlap (`skip-if-busy` behavior).
+- Status evidence log: `.workspace-kit/improvement/transcript-hook-events.jsonl` records `started`, `completed`, `failed`, and `skipped` events with reasons (for example `lock-busy` or `cli-not-found`).

@@ -8,6 +8,7 @@ ref|name=tasks_engine_state|path=.workspace-kit/tasks/state.json
 ref|name=tasks_view|path=.workspace-kit/tasks/state.json
 ref|name=decisions|path=docs/maintainers/DECISIONS.md
 ref|name=releasing|path=docs/maintainers/RELEASING.md
+ref|name=agent_rules|path=.cursor/rules
 
 rule|R101|must|governance_scope|apply_governance_to_roadmap_direction_feature_acceptance_architecture_and_release_policy|risk=high|ap=none|ov=warn|st=active|refs=docs/maintainers/ROADMAP.md,.ai/PRINCIPLES.md,docs/maintainers/RELEASING.md
 rule|R102|must|day_to_day_decisions|document_decision_rationale_when_maintainer_discretion_is_used|risk=medium|ap=none|ov=warn|st=active|refs=.workspace-kit/tasks/state.json,docs/maintainers/DECISIONS.md
@@ -19,6 +20,8 @@ rule|R107|must|change_control|record_major_technical_choices_in_decisions_or_adr
 rule|R108|must|conflict_resolution|prefer_evidence_from_tests_incidents_and_user_impact_when_maintainers_disagree|risk=high|ap=none|ov=warn|st=active
 rule|R109|must|conflict_resolution|prefer_the_safer_reversible_option_when_evidence_is_inconclusive|risk=high|ap=none|ov=warn|st=active
 rule|R110|should|conflict_resolution|use_time_boxed_experiments_with_exit_criteria_for_unresolved_tradeoffs|risk=medium|ap=prompt|ov=prompt|st=active
+rule|R111|must|canonical_surface_contract|treat_docs_maintainers_as_canonical_governance_surfaces_and_cursor_rules_as_enforcement_mirrors_when_overlap_exists|risk=medium|ap=none|ov=warn|st=active|refs=docs/maintainers/GOVERNANCE.md,.cursor/rules
+rule|R112|must|changelog_ownership|use_docs_maintainers_changelog_as_canonical_and_keep_root_changelog_pointer_only|risk=medium|ap=none|ov=warn|st=active|refs=docs/maintainers/CHANGELOG.md,CHANGELOG.md
 
 check|K101|scope=significant_changes|assert=decision_record_exists_and_review_completed|when=before_merge|on_fail=stop|st=active|refs=docs/maintainers/DECISIONS.md
 check|K102|scope=breaking_changes|assert=migration_and_compatibility_notes_present|when=before_acceptance|on_fail=stop|st=active|refs=docs/maintainers/CHANGELOG.md,docs/maintainers/RELEASING.md

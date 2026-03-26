@@ -2,12 +2,25 @@
 
 All notable changes to `@workflow-cannon/workspace-kit` are documented in this file.
 
+`CHANGELOG.md` at the repository root is pointer-only and must not diverge from this canonical history.
+
 ## [Unreleased]
 
 ### Changed
 
+_No entries yet._
+
+## [0.9.0] - 2026-03-26
+
+Phase 7 — architectural hardening and canon alignment: documentation/index cleanup, package/changelog canon normalization, CLI decomposition, runtime/path hardening, and governance surface clarification.
+
 - **`generate-recommendations`** — always runs **`sync-transcripts`** first (honors the same `sourcePath` / `archivePath` / discovery resolution as standalone sync). Response `data` includes a **`sync`** object with the sync result alongside recommendation fields.
 - **`sync-transcripts` / transcript discovery** — default `improvement.transcripts.sourcePath` is now **empty** so sync **discovers** sources: repo-relative paths (`.cursor/agent-transcripts`, `.vscode/agent-transcripts`, then optional `discoveryPaths`), then **Cursor global** `~/.cursor/projects/<workspace-path-slug>/agent-transcripts` when present (`buildCursorProjectsAgentTranscriptsPath`). Set `sourcePath` explicitly to pin a single relative source and skip discovery.
+- **CLI orchestration** — `workspace-kit run` command orchestration moved into a dedicated run-handler path (`src/cli/run-command.ts`) with shared bootstrap/policy behavior preserved.
+- **Package identity and drift checks** — canonical kit identity is now `@workflow-cannon/workspace-kit` in manifest upgrade output and drift comparison logic (legacy `quicktask-workspace-kit` remains accepted for compatibility checks).
+- **Documentation runtime pathing** — documentation generation now resolves module config/templates/schemas from either the active workspace root or the installed package source root, removing hard dependency on consumer repo layout.
+- **Policy actor resolution** — actor precedence remains `args.actor` -> `WORKSPACE_KIT_ACTOR` -> git identity -> `unknown`, but git lookups are now bounded async fallbacks (`WORKSPACE_KIT_ACTOR_GIT_LOOKUP=off` disables git fallback).
+- **Transcript completion hooks** — background hook runs now append status evidence to `.workspace-kit/improvement/transcript-hook-events.jsonl` and explicitly log skip/failure reasons while retaining lock-based overlap prevention.
 
 ## [0.8.0] - 2026-03-26
 

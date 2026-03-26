@@ -3,37 +3,20 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { ModuleRegistry } from "./core/module-registry.js";
-import { ModuleCommandRouter } from "./core/module-command-router.js";
 import {
   appendPolicyTrace,
-  isSensitiveModuleCommandForEffective,
-  parsePolicyApproval,
   parsePolicyApprovalFromEnv,
-  resolveActor,
-  resolvePolicyOperationIdForCommand,
-  type PolicyApprovalPayload,
+  resolveActorWithFallback,
   type PolicyOperationId
 } from "./core/policy.js";
-import {
-  getSessionGrant,
-  recordSessionGrant,
-  resolveSessionId
-} from "./core/session-policy.js";
-import { applyResponseTemplateApplication } from "./core/response-template-shaping.js";
 import { runWorkspaceConfigCli } from "./core/config-cli.js";
-import { resolveWorkspaceConfigWithLayers } from "./core/workspace-kit-config.js";
-import { documentationModule } from "./modules/documentation/index.js";
-import { taskEngineModule } from "./modules/task-engine/index.js";
-import { approvalsModule } from "./modules/approvals/index.js";
-import { planningModule } from "./modules/planning/index.js";
-import { improvementModule } from "./modules/improvement/index.js";
-import { workspaceConfigModule } from "./modules/workspace-config/index.js";
+import { handleRunCommand } from "./cli/run-command.js";
 
 const EXIT_SUCCESS = 0;
 const EXIT_VALIDATION_FAILURE = 1;
 const EXIT_USAGE_ERROR = 2;
 const EXIT_INTERNAL_ERROR = 3;
+const CANONICAL_KIT_NAME = "@workflow-cannon/workspace-kit";
 
 export const defaultWorkspaceKitPaths = {
   profile: "workspace-kit.profile.json",
@@ -167,7 +150,7 @@ async function requireCliPolicyApproval(
       timestamp: new Date().toISOString(),
       operationId,
       command: commandLabel,
-      actor: resolveActor(cwd, {}, process.env),
+      actor: await resolveActorWithFallback(cwd, {}, process.env),
       allowed: false,
       message: "missing WORKSPACE_KIT_POLICY_APPROVAL"
     });
@@ -187,7 +170,7 @@ async function recordCliPolicySuccess(
     timestamp: new Date().toISOString(),
     operationId,
     command: commandLabel,
-    actor: resolveActor(cwd, {}, process.env),
+    actor: await resolveActorWithFallback(cwd, {}, process.env),
     allowed: true,
     rationale,
     commandOk
@@ -386,6 +369,7 @@ async function resolvePackageVersion(cwd: string): Promise<string | undefined> {
         const name = (parsed as Record<string, unknown>).name;
         if (typeof version === "string" && version.length > 0 && typeof name === "string") {
           if (
+            name === CANONICAL_KIT_NAME ||
             name === "quicktask-workspace-kit" ||
             candidatePath.endsWith("packages/workspace-kit/package.json")
           ) {
@@ -567,12 +551,7 @@ export async function runCli(
     const mergedManifest = {
       schemaVersion: 1,
       kit: {
-        name:
-          typeof existingManifest.kit === "object" &&
-          existingManifest.kit &&
-          typeof (existingManifest.kit as Record<string, unknown>).name === "string"
-            ? (existingManifest.kit as Record<string, unknown>).name
-            : "quicktask-workspace-kit",
+        name: CANONICAL_KIT_NAME,
         version:
           typeof existingManifest.kit === "object" &&
           existingManifest.kit &&
@@ -730,13 +709,19 @@ export async function runCli(
         driftFindings.push(
           `${defaultWorkspaceKitPaths.manifest}: kit.name and kit.version are required`
         );
-      } else if (manifestKitName === "quicktask-workspace-kit" && packageVersion) {
+      } else if (
+        (manifestKitName === CANONICAL_KIT_NAME || manifestKitName === "quicktask-workspace-kit") &&
+        packageVersion
+      ) {
         if (manifestKitVersion !== packageVersion) {
           driftFindings.push(
             `${defaultWorkspaceKitPaths.manifest}: kit.version (${manifestKitVersion}) does not match package version (${packageVersion})`
           );
         }
-      } else if (manifestKitName !== "quicktask-workspace-kit") {
+      } else if (
+        manifestKitName !== CANONICAL_KIT_NAME &&
+        manifestKitName !== "quicktask-workspace-kit"
+      ) {
         warnings.push(
           `${defaultWorkspaceKitPaths.manifest}: kit.name is '${manifestKitName}', skipping package-version drift comparison`
         );
@@ -763,141 +748,17 @@ export async function runCli(
   }
 
   if (command === "run") {
-    const allModules = [
-      workspaceConfigModule,
-      documentationModule,
-      taskEngineModule,
-      approvalsModule,
-      planningModule,
-      improvementModule
-    ];
-    const registry = new ModuleRegistry(allModules);
-    const router = new ModuleCommandRouter(registry);
-
-    const subcommand = args[1];
-    if (!subcommand) {
-      const commands = router.listCommands();
-      writeLine("Available module commands:");
-      for (const cmd of commands) {
-        const desc = cmd.description ? ` — ${cmd.description}` : "";
-        writeLine(`  ${cmd.name} (${cmd.moduleId})${desc}`);
+    return handleRunCommand(
+      cwd,
+      args,
+      { writeLine, writeError },
+      {
+        success: EXIT_SUCCESS,
+        validationFailure: EXIT_VALIDATION_FAILURE,
+        usageError: EXIT_USAGE_ERROR,
+        internalError: EXIT_INTERNAL_ERROR
       }
-      writeLine("");
-      writeLine("Usage: workspace-kit run <command> [json-args]");
-      return EXIT_SUCCESS;
-    }
-
-    let commandArgs: Record<string, unknown> = {};
-    if (args[2]) {
-      try {
-        const parsed = JSON.parse(args[2]);
-        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-          commandArgs = parsed as Record<string, unknown>;
-        } else {
-          writeError("Command args must be a JSON object.");
-          return EXIT_USAGE_ERROR;
-        }
-      } catch {
-        writeError(`Invalid JSON args: ${args[2]}`);
-        return EXIT_USAGE_ERROR;
-      }
-    }
-
-    const invocationConfig =
-      typeof commandArgs.config === "object" &&
-      commandArgs.config !== null &&
-      !Array.isArray(commandArgs.config)
-        ? (commandArgs.config as Record<string, unknown>)
-        : {};
-
-    let effective: Record<string, unknown>;
-    try {
-      const resolved = await resolveWorkspaceConfigWithLayers({
-        workspacePath: cwd,
-        registry,
-        invocationConfig
-      });
-      effective = resolved.effective;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      writeError(`Config resolution failed: ${message}`);
-      return EXIT_VALIDATION_FAILURE;
-    }
-
-    const actor = resolveActor(cwd, commandArgs, process.env);
-    const sensitive = isSensitiveModuleCommandForEffective(subcommand, commandArgs, effective);
-    const sessionId = resolveSessionId(process.env);
-    const policyOp = resolvePolicyOperationIdForCommand(subcommand, effective);
-    const explicitPolicyApproval = parsePolicyApproval(commandArgs);
-    let resolvedSensitiveApproval: PolicyApprovalPayload | undefined = explicitPolicyApproval;
-
-    if (sensitive) {
-      if (!resolvedSensitiveApproval && policyOp) {
-        const grant = await getSessionGrant(cwd, policyOp, sessionId);
-        if (grant) {
-          resolvedSensitiveApproval = { confirmed: true, rationale: grant.rationale };
-        }
-      }
-      if (!resolvedSensitiveApproval) {
-        if (policyOp) {
-          await appendPolicyTrace(cwd, {
-            timestamp: new Date().toISOString(),
-            operationId: policyOp,
-            command: `run ${subcommand}`,
-            actor,
-            allowed: false,
-            message: "missing policyApproval in JSON args"
-          });
-        }
-        writeLine(
-          JSON.stringify(
-            {
-              ok: false,
-              code: "policy-denied",
-              message:
-                'Sensitive command requires policyApproval in JSON args (or an existing session grant for this operation): {"policyApproval":{"confirmed":true,"rationale":"why","scope":"session"}}'
-            },
-            null,
-            2
-          )
-        );
-        return EXIT_VALIDATION_FAILURE;
-      }
-    }
-
-    const ctx = {
-      runtimeVersion: "0.1" as const,
-      workspacePath: cwd,
-      effectiveConfig: effective,
-      resolvedActor: actor,
-      moduleRegistry: registry
-    };
-
-    try {
-      const rawResult = await router.execute(subcommand, commandArgs, ctx);
-      if (sensitive && resolvedSensitiveApproval && policyOp) {
-        await appendPolicyTrace(cwd, {
-          timestamp: new Date().toISOString(),
-          operationId: policyOp,
-          command: `run ${subcommand}`,
-          actor,
-          allowed: true,
-          rationale: resolvedSensitiveApproval.rationale,
-          commandOk: rawResult.ok,
-          message: rawResult.message
-        });
-        if (explicitPolicyApproval?.scope === "session" && rawResult.ok) {
-          await recordSessionGrant(cwd, policyOp, sessionId, explicitPolicyApproval.rationale);
-        }
-      }
-      const result = applyResponseTemplateApplication(subcommand, commandArgs, rawResult, effective);
-      writeLine(JSON.stringify(result, null, 2));
-      return result.ok ? EXIT_SUCCESS : EXIT_VALIDATION_FAILURE;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      writeError(`Module command failed: ${message}`);
-      return EXIT_INTERNAL_ERROR;
-    }
+    );
   }
 
   if (command !== "doctor") {

@@ -1,14 +1,14 @@
 schema_version: 1
-current_kit_phase: "6"
+current_kit_phase: "7"
 last_updated: "2026-03-26"
-active_focus: "Phase 6 shipped as `v0.8.0`; post-release architecture hardening backlog (`T275`-`T282`) queued alongside improvement follow-ups."
+active_focus: "Phase 7 architectural hardening implementation is complete (`T275`-`T282`); release packaging for `v0.9.0` is in progress."
 blockers: []
 next_agent_actions:
-  - "Start post-release architecture hardening queue at `T275` then `T276`, and decompose `T277` before dependent runtime hardening slices."
-  - "Triage and route ready improvement items (`imp-*`) after canonical doc/package identity cleanup lands."
+  - "Finalize and execute `v0.9.0` release workflow (validation evidence, publish workflow, npm verification)."
+  - "Triage and route ready improvement items (`imp-*`) after Phase 7 release evidence is recorded."
   - "Proposed improvement: triage `imp-2cf5d881b81f9a` (policy friction for `generate-recommendations`)."
 last_session_summary:
-  - "Added post-`v0.8.0` architecture hardening backlog tasks `T275`-`T282` from formal architectural findings."
+  - "Completed Phase 7 tasks `T275`-`T282`: docs/index drift cleanup, package/changelog canon alignment, CLI run-handler decomposition, config default canon cleanup, docs runtime path hardening, actor-resolution hardening, transcript hook observability/overlap controls, governance/ADR hygiene updates."
   - "Completed Phase 6c (`T271`-`T274`): transcript package scripts, `.vscode` folder-open task, Cursor runbook, optional post-completion transcript hook + tests."
   - "Completed Phase 6b (`T260`-`T266`): response template contract, registry, `run` JSON shaping, plain-English directives, config keys, tests, runbook."
   - "Completed Phase 6a (`T249`-`T258`): bounded sync/generate, discovery, dedupe metrics, `transcript-automation-status`, session policy grants, retry queue, tests, runbook, redaction, pre-release hook script."

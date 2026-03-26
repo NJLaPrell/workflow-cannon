@@ -1,5 +1,5 @@
 import type { WorkflowModule } from "../../contracts/module-contract.js";
-import { resolveActor } from "../../core/policy.js";
+import { resolveActorWithFallback } from "../../core/policy.js";
 import { runReviewItem } from "./review-runtime.js";
 
 export const approvalsModule: WorkflowModule = {
@@ -45,7 +45,7 @@ export const approvalsModule: WorkflowModule = {
     const actor =
       typeof args.actor === "string" && args.actor.trim().length > 0
         ? args.actor.trim()
-        : ctx.resolvedActor ?? resolveActor(ctx.workspacePath, args, process.env);
+        : ctx.resolvedActor ?? (await resolveActorWithFallback(ctx.workspacePath, args, process.env));
     const taskId = typeof args.taskId === "string" ? args.taskId : "";
     const decision = args.decision as "accept" | "decline" | "accept_edited" | undefined;
     if (decision !== "accept" && decision !== "decline" && decision !== "accept_edited") {

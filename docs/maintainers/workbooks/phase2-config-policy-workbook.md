@@ -68,7 +68,7 @@ Order (first hit wins):
 
 1. JSON arg `actor` on the `run` invocation (if present).
 2. Environment variable `WORKSPACE_KIT_ACTOR`.
-3. `git config user.email`; if missing, `git config user.name`.
+3. Bounded git lookup (`git config user.email`; if missing, `git config user.name`), disabled when `WORKSPACE_KIT_ACTOR_GIT_LOOKUP=off`.
 4. Literal `"unknown"`.
 
 ## 8. Policy decision traces

@@ -61,37 +61,12 @@ export const KIT_CONFIG_DEFAULTS: Record<string, unknown> = {
 
 /**
  * Static module-level defaults keyed by module id (merged in registry startup order).
- * Each value is deep-merged into the aggregate before project/env/invocation.
+ * Keep true defaults in KIT_CONFIG_DEFAULTS as the canonical source; use this map
+ * only when a module contributes additional non-default config structure.
  */
 export const MODULE_CONFIG_CONTRIBUTIONS: Record<string, Record<string, unknown>> = {
-  "task-engine": {
-    tasks: {
-      storeRelativePath: ".workspace-kit/tasks/state.json"
-    }
-  },
-  documentation: {
-    documentation: {}
-  },
   approvals: {},
-  planning: {},
-  improvement: {
-    transcripts: {
-      sourcePath: "",
-      archivePath: "agent-transcripts",
-      maxFilesPerSync: 5000,
-      maxBytesPerFile: 50_000_000,
-      maxTotalScanBytes: 500_000_000,
-      discoveryPaths: [] as string[]
-    },
-    cadence: {
-      minIntervalMinutes: 15,
-      skipIfNoNewTranscripts: true,
-      maxRecommendationCandidatesPerRun: 500
-    },
-    hooks: {
-      afterTaskCompleted: "off"
-    }
-  }
+  planning: {}
 };
 
 export function deepMerge(

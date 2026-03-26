@@ -26,6 +26,7 @@ Basic operating guidance for AI agents working in this repository.
 ## Working rules
 
 - Keep strategy in `docs/maintainers/ROADMAP.md`, execution detail in task-engine state (`workspace-kit run` task commands), and release process in `docs/maintainers/RELEASING.md`; treat `.workspace-kit/tasks/state.json` as view.
+- Treat `docs/maintainers/` governance/process docs as canonical; overlapping `.cursor/rules/` files are enforcement mirrors and should not introduce conflicting policy.
 - When scope changes, update all related docs in the same change set.
 - Preserve deterministic behavior and compatibility; document migration impact when changes affect consumers.
 

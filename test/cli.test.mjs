@@ -202,7 +202,7 @@ test("runCli upgrade overwrites kit-owned assets and preserves profile", async (
     JSON.stringify(
       {
         schemaVersion: 1,
-        kit: { name: "quicktask-workspace-kit", version: "0.0.0-phase1-template" },
+        kit: { name: "@workflow-cannon/workspace-kit", version: "0.0.0-phase1-template" },
         installedAt: null,
         lastUpgrade: null,
         ownershipPolicyPath: ".workspace-kit/owned-paths.json"

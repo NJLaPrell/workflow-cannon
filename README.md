@@ -104,8 +104,9 @@ npm install @workflow-cannon/workspace-kit
 - Glossary and agent-guidance terms: `docs/maintainers/TERMS.md`
 - Architecture direction: `docs/maintainers/ARCHITECTURE.md`
 - Project decisions: `docs/maintainers/DECISIONS.md`
-- Contribution guidelines: `docs/maintainers/CONTRIBUTING.md`
+- Governance policy surface: `docs/maintainers/GOVERNANCE.md`
 - Release process and gates: `docs/maintainers/RELEASING.md`
+- Canonical changelog: `docs/maintainers/CHANGELOG.md` (`CHANGELOG.md` at repo root is pointer-only)
 - Canonical AI module build guidance: `.ai/module-build.md`
 - Human module build guide: `docs/maintainers/module-build-guide.md`
 - Security, support, and governance: `docs/maintainers/SECURITY.md`, `docs/maintainers/SUPPORT.md`, `docs/maintainers/GOVERNANCE.md`

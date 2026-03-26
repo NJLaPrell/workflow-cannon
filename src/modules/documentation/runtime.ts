@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { dirname, resolve, sep } from "node:path";
 import { readdir } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 import type {
   DocumentationBatchResult,
   DocumentationConflict,
@@ -18,6 +19,7 @@ type DocumentationRuntimeConfig = {
   instructionsRoot: string;
   schemasRoot: string;
   maxValidationAttempts: number;
+  sourceRoot: string;
 };
 
 function isPathWithinRoot(path: string, root: string): boolean {
@@ -32,8 +34,31 @@ function parseDefaultValue(fileContent: string, key: string, fallback: string): 
 }
 
 async function loadRuntimeConfig(workspacePath: string): Promise<DocumentationRuntimeConfig> {
-  const configPath = resolve(workspacePath, "src/modules/documentation/config.md");
-  const configContent = await readFile(configPath, "utf8");
+  const runtimeSourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+  const sourceRoots = [workspacePath, runtimeSourceRoot];
+  let sourceRoot = workspacePath;
+  let configContent: string | undefined;
+  for (const candidateRoot of sourceRoots) {
+    const candidate = resolve(candidateRoot, "src/modules/documentation/config.md");
+    if (!existsSync(candidate)) {
+      continue;
+    }
+    configContent = await readFile(candidate, "utf8");
+    sourceRoot = candidateRoot;
+    break;
+  }
+
+  if (!configContent) {
+    return {
+      aiRoot: "/.ai",
+      humanRoot: "docs/maintainers",
+      templatesRoot: "src/modules/documentation/templates",
+      instructionsRoot: "src/modules/documentation/instructions",
+      schemasRoot: "src/modules/documentation/schemas",
+      maxValidationAttempts: 3,
+      sourceRoot
+    };
+  }
 
   const aiRoot = parseDefaultValue(configContent, "sources.aiRoot", "/.ai");
   const humanRoot = parseDefaultValue(configContent, "sources.humanRoot", "docs/maintainers");
@@ -61,7 +86,8 @@ async function loadRuntimeConfig(workspacePath: string): Promise<DocumentationRu
     templatesRoot,
     instructionsRoot,
     schemasRoot,
-    maxValidationAttempts: Number.isFinite(maxValidationAttempts) ? maxValidationAttempts : 3
+    maxValidationAttempts: Number.isFinite(maxValidationAttempts) ? maxValidationAttempts : 3,
+    sourceRoot
   };
 }
 
@@ -520,7 +546,7 @@ export async function generateDocument(
 
   const aiRoot = resolve(ctx.workspacePath, config.aiRoot.replace(/^\//, ""));
   const humanRoot = resolve(ctx.workspacePath, config.humanRoot.replace(/^\//, ""));
-  const templatePath = resolve(ctx.workspacePath, config.templatesRoot, documentType);
+  const templatePath = resolve(config.sourceRoot, config.templatesRoot, documentType);
   const aiOutputPath = resolve(aiRoot, documentType);
   const humanOutputPath = resolve(humanRoot, documentType);
 
@@ -574,7 +600,7 @@ export async function generateDocument(
     }
   }
 
-  const schemaPath = resolve(ctx.workspacePath, config.schemasRoot, "documentation-schema.md");
+  const schemaPath = resolve(config.sourceRoot, config.schemasRoot, "documentation-schema.md");
   if (existsSync(schemaPath)) {
     filesRead.push(schemaPath);
     await readFile(schemaPath, "utf8");
@@ -763,7 +789,7 @@ export async function generateAllDocuments(
   ctx: ModuleLifecycleContext
 ): Promise<DocumentationBatchResult> {
   const config = await loadRuntimeConfig(ctx.workspacePath);
-  const templatesDir = resolve(ctx.workspacePath, config.templatesRoot);
+  const templatesDir = resolve(config.sourceRoot, config.templatesRoot);
 
   async function listTemplateFiles(dir: string, baseDir: string): Promise<string[]> {
     const entries = await readdir(dir, { withFileTypes: true });

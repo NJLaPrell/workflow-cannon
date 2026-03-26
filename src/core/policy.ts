@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { execSync } from "node:child_process";
+import { execFile } from "node:child_process";
 
 export const POLICY_TRACE_SCHEMA_VERSION = 1 as const;
 
@@ -120,7 +120,7 @@ export function parsePolicyApproval(args: Record<string, unknown>): PolicyApprov
 }
 
 export function resolveActor(
-  workspacePath: string,
+  _workspacePath: string,
   args: Record<string, unknown>,
   env: NodeJS.ProcessEnv
 ): string {
@@ -129,27 +129,60 @@ export function resolveActor(
   }
   const fromEnv = env.WORKSPACE_KIT_ACTOR?.trim();
   if (fromEnv) return fromEnv;
+  return "unknown";
+}
 
-  try {
-    const email = execSync("git config user.email", {
-      cwd: workspacePath,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"]
-    }).trim();
-    if (email) return email;
-  } catch {
-    /* ignore */
+function runGitConfigValue(
+  workspacePath: string,
+  key: "user.email" | "user.name",
+  timeoutMs: number
+): Promise<string | undefined> {
+  return new Promise((resolve) => {
+    execFile(
+      "git",
+      ["config", key],
+      {
+        cwd: workspacePath,
+        encoding: "utf8",
+        timeout: timeoutMs,
+        windowsHide: true
+      },
+      (error, stdout) => {
+        if (error) {
+          resolve(undefined);
+          return;
+        }
+        const trimmed = stdout.trim();
+        resolve(trimmed.length > 0 ? trimmed : undefined);
+      }
+    );
+  });
+}
+
+/**
+ * Actor precedence:
+ * 1) command args.actor
+ * 2) WORKSPACE_KIT_ACTOR
+ * 3) bounded git user.email/user.name lookup (unless WORKSPACE_KIT_ACTOR_GIT_LOOKUP=off)
+ * 4) "unknown"
+ */
+export async function resolveActorWithFallback(
+  workspacePath: string,
+  args: Record<string, unknown>,
+  env: NodeJS.ProcessEnv
+): Promise<string> {
+  const explicit = resolveActor(workspacePath, args, env);
+  if (explicit !== "unknown") {
+    return explicit;
   }
-  try {
-    const name = execSync("git config user.name", {
-      cwd: workspacePath,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"]
-    }).trim();
-    if (name) return name;
-  } catch {
-    /* ignore */
+  if (env.WORKSPACE_KIT_ACTOR_GIT_LOOKUP?.trim().toLowerCase() === "off") {
+    return "unknown";
   }
+  const timeoutMs = 300;
+  const email = await runGitConfigValue(workspacePath, "user.email", timeoutMs);
+  if (email) return email;
+  const name = await runGitConfigValue(workspacePath, "user.name", timeoutMs);
+  if (name) return name;
   return "unknown";
 }
 

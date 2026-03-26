@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "kit": {
-    "name": "quicktask-workspace-kit",
-    "version": "0.1.0"
+    "name": "@workflow-cannon/workspace-kit",
+    "version": "0.9.0"
   },
   "installedAt": "2026-03-23T00:00:00.000Z",
   "lastUpgrade": "2026-03-23T00:00:00.000Z",

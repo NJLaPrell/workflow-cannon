@@ -41,7 +41,7 @@ If a gate fails, do not publish. Capture the blocker in task-engine state and up
    - Confirm included tasks and intended release outcome.
    - Classify risk (low/medium/high) and note rollout caveats.
 2. **Prepare release artifacts**
-   - Update `docs/maintainers/CHANGELOG.md` with user-visible impact.
+   - Update canonical changelog `docs/maintainers/CHANGELOG.md` with user-visible impact (`CHANGELOG.md` at repo root is pointer-only).
    - Bump version in `package.json` to match release target.
    - Ensure version and tag strategy align with project policy.
 3. **Run validation**

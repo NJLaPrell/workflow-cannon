@@ -11,7 +11,7 @@ truth|order=canonical_ai_docs>code_and_config_reality>generated_human_docs>narra
 scope|S001|canonical_home_for_workflow_cannon_package_and_operational_docs|st=active
 scope|S002|legacy_source_repo_treated_as_external_consumer_not_implementation_source|st=active
 
-state|current_phase=phase_6_active|next_tasks=T249,T250,T251,T254,T257,T260,T261,T262,T263,imp-2cf5d881b81f9a,T252,T253,T255,T256,T258,T264,T265,T266|release_phase_1=v0.3.0|release_phase_2=v0.4.0|release_phase_2b=v0.4.1|release_phase_3=v0.5.0|release_phase_4=v0.6.0|release_phase_5=v0.7.0|release_phase_6=planned_v0.8.0|st=active
+state|current_phase=phase_7_complete|next_tasks=imp-2cf5d881b81f9a,imp-3dc9374451b3c0,imp-b9d8408715de51,imp-201911c9c4461a,imp-ab362ef4e1f99e,imp-c14c4955833730,imp-fb31f5fc2694d3,imp-43397766ef243b,imp-7f9e65fad74b0b|release_phase_1=v0.3.0|release_phase_2=v0.4.0|release_phase_2b=v0.4.1|release_phase_3=v0.5.0|release_phase_4=v0.6.0|release_phase_5=v0.7.0|release_phase_6=v0.8.0|release_phase_7=v0.9.0|st=active
 state|completed_phase_0_slices=T178,T179,T180,T181,T182,T183,T196,T197,T198,T206,T207,T208,T209,T210,T211,T212,T213
 state|completed_phase_1_slices=T199,T184,T185,T186,T217
 
@@ -24,7 +24,8 @@ phase|P2b|name=config_policy_hardening_and_ux|release=v0.4.1|scope=T219-T220,T22
 phase|P3|name=enhancement_loop_mvp|release=v0.5.0|scope=T190-T192,T202,T203|status=complete|outcome=evidence_to_task_engine_improvements_approvals_lineage_trace_correlation
 phase|P4|name=runtime_scale_and_ecosystem|release=v0.6.0|scope=T193-T195,T204-T205,T238-T242|status=complete|outcome=extension_ready_operationally_robust_platform_with_fail_closed_compatibility_and_release_channel_controls
 phase|P5|name=transcript_intelligence_automation|release=v0.7.0|scope=T244-T248,T259|status=complete_initial_slice|outcome=manual_first_transcript_sync_and_one_shot_ingest_with_coherent_policy_config_and_operability_contracts
-phase|P6|name=automation_hardening_and_response_templates|release=v0.8.0|scope=T249-T258,T260-T266,imp-2cf5d881b81f9a|status=active|outcome=high_cadence_resilient_transcript_automation_and_advisory_response_template_contracts
+phase|P6|name=automation_hardening_and_response_templates|release=v0.8.0|scope=T249-T258,T260-T266,T271-T274,imp-2cf5d881b81f9a|status=complete_in_repo|outcome=high_cadence_resilient_transcript_automation_and_advisory_response_template_contracts
+phase|P7|name=architectural_hardening|release=v0.9.0|scope=T275-T282|status=complete_in_repo|outcome=canonical_surface_alignment_runtime_maintainability_and_drift_reduction
 decision|D006|phase_6_release_strategy=single_release_v0.8.0|st=active
 decision|D007|approval_ux=configurable_first_use_prompt_with_deny_allow_allow_for_session_and_command_scoped_session_reuse|st=active
 decision|D008|response_template_enforcement=configurable_with_advisory_default|st=active
