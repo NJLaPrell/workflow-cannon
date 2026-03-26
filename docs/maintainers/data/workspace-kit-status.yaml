@@ -5,20 +5,19 @@ active_focus: "Phase 6 shipped as `v0.8.0`; follow-up improvement item `imp-2cf5
 blockers: []
 next_agent_actions:
   - "Proposed improvement: triage `imp-2cf5d881b81f9a` (policy friction for `generate-recommendations`)."
-  - "Confirm npm `v0.8.0` publish and capture workflow run URL in `ROADMAP.md` evidence snapshot."
 last_session_summary:
   - "Completed Phase 6c (`T271`-`T274`): transcript package scripts, `.vscode` folder-open task, Cursor runbook, optional post-completion transcript hook + tests."
   - "Completed Phase 6b (`T260`-`T266`): response template contract, registry, `run` JSON shaping, plain-English directives, config keys, tests, runbook."
   - "Completed Phase 6a (`T249`-`T258`): bounded sync/generate, discovery, dedupe metrics, `transcript-automation-status`, session policy grants, retry queue, tests, runbook, redaction, pre-release hook script."
   - "Queued tasks `T271`-`T274` for Cursor/VS Code folder-open transcript sync, maintainer runbook, and optional task-engine post-completion hook."
-  - "Phase 5 remains complete at `v0.7.0`; Phase 6b/6c execution continues toward `v0.8.0`."
+  - "Released `v0.8.0` to npm (`latest`); `ROADMAP.md` evidence snapshot includes Phase 6 publish run URL."
 pending_decisions:
   - "Implement and validate command-scoped first-use approval UX via Cursor question UI where available (`Deny`/`Allow`/`Allow for this session`)."
   - "Implement configurable response-template enforcement with advisory-only default and explicit strict-mode opt-in."
 metrics:
   updated_at: "2026-03-26"
   source: "automated"
-  notes: "Phase 6 released as `v0.8.0` (verify npm + CI publish run)."
+  notes: "Phase 6 released as `v0.8.0`; npm `latest` = 0.8.0; publish workflow succeeded."
   time_to_doctor_minutes: 0.03
   cold_start_success_rate_pct: 100
   upgrade_success_rate_pct: null
