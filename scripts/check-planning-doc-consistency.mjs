@@ -7,7 +7,7 @@ const ROOT = process.cwd();
 
 const PATHS = {
   roadmap: resolve(ROOT, "docs/maintainers/ROADMAP.md"),
-  tasks: resolve(ROOT, "docs/maintainers/TASKS.md"),
+  taskState: resolve(ROOT, ".workspace-kit/tasks/state.json"),
   featureMatrix: resolve(ROOT, "docs/maintainers/FEATURE-MATRIX.md")
 };
 
@@ -17,11 +17,19 @@ function inferRoadmapPhase4Status(text) {
   return "Planned";
 }
 
-function inferTasksPhase4Status(text) {
-  const phaseBlock = text.split("## Phase 4 scale and ecosystem hardening")[1] || "";
-  const rows = [...phaseBlock.matchAll(/^### \[(.)\] T(193|194|195)/gm)].map((m) => m[1]);
-  if (rows.length === 3 && rows.every((x) => x.toLowerCase() === "x")) return "Completed";
-  if (rows.some((x) => x.toLowerCase() === "~") || rows.some((x) => x === " ")) return "In progress / ready";
+function inferTaskStatePhase4Status(taskStateText) {
+  let parsed;
+  try {
+    parsed = JSON.parse(taskStateText);
+  } catch {
+    return "Unknown";
+  }
+  const tasks = Array.isArray(parsed?.tasks) ? parsed.tasks : [];
+  const phase4 = tasks.filter((t) => ["T193", "T194", "T195"].includes(t?.id));
+  if (phase4.length < 3) return "Unknown";
+  const statuses = phase4.map((t) => t?.status);
+  if (statuses.every((s) => s === "completed")) return "Completed";
+  if (statuses.some((s) => s === "in_progress" || s === "ready")) return "In progress / ready";
   return "Planned";
 }
 
@@ -39,15 +47,15 @@ function inferFeatureMatrixPhase4Status(text) {
 }
 
 async function main() {
-  const [roadmap, tasks, featureMatrix] = await Promise.all([
+  const [roadmap, taskState, featureMatrix] = await Promise.all([
     readFile(PATHS.roadmap, "utf8"),
-    readFile(PATHS.tasks, "utf8"),
+    readFile(PATHS.taskState, "utf8"),
     readFile(PATHS.featureMatrix, "utf8")
   ]);
 
   const statuses = {
     roadmap: inferRoadmapPhase4Status(roadmap),
-    tasks: inferTasksPhase4Status(tasks),
+    taskState: inferTaskStatePhase4Status(taskState),
     featureMatrix: inferFeatureMatrixPhase4Status(featureMatrix)
   };
 

@@ -76,7 +76,7 @@ Validation:
 Describe soft-gate behavior and where to record overrides.
 Method:
 1) Use principles and `docs/maintainers/DECISIONS.md` purpose.
-2) Reference `docs/maintainers/TASKS.md` for execution tracking of overrides.
+2) Reference `.workspace-kit/tasks/state.json` for execution tracking of overrides.
 Output format:
 - 2-4 bullets.
 Validation:
@@ -93,7 +93,7 @@ Method:
 Output format:
 - One short paragraph plus 3 bullets mapping strategy / execution / release to files.
 Validation:
-- Paths must be `docs/maintainers/ROADMAP.md`, `docs/maintainers/TASKS.md`, `docs/maintainers/RELEASING.md`.
+- Paths must be `docs/maintainers/ROADMAP.md`, `.workspace-kit/tasks/state.json`, `docs/maintainers/RELEASING.md`.
 }}}
 
 ## Validation Gates
@@ -114,7 +114,7 @@ Validation:
 List related docs with paths.
 Method:
 1) Verify existence of each file in the workspace.
-2) Include `.ai/PRINCIPLES.md`, `docs/maintainers/ROADMAP.md`, `docs/maintainers/TASKS.md`, `docs/maintainers/DECISIONS.md`, `docs/maintainers/RELEASING.md`, `docs/maintainers/CHANGELOG.md` when present.
+2) Include `.ai/PRINCIPLES.md`, `docs/maintainers/ROADMAP.md`, `.workspace-kit/tasks/state.json`, `docs/maintainers/DECISIONS.md`, `docs/maintainers/RELEASING.md`, `docs/maintainers/CHANGELOG.md` when present.
 Output format:
 - Bulleted list of paths.
 Validation:

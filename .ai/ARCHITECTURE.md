@@ -5,14 +5,14 @@ ref|name=principles|path=.ai/PRINCIPLES.md
 ref|name=module_build|path=.ai/module-build.md
 ref|name=roadmap|path=docs/maintainers/ROADMAP.md
 ref|name=tasks_engine_state|path=.workspace-kit/tasks/state.json
-ref|name=tasks_view|path=docs/maintainers/TASKS.md
+ref|name=tasks_view|path=.workspace-kit/tasks/state.json
 ref|name=releasing|path=docs/maintainers/RELEASING.md
 truth|order=canonical_ai_docs>code_and_config_reality>generated_human_docs>narrative_docs
 
 intent|Workflow Cannon is a modular developer workflow platform for safe, reproducible, package-first automation with deterministic outcomes, evidence capture, and human-governed improvement loops.
 
 direction|D001|modular_capability_system_with_explicit_contracts_dependency_graphs_and_command_dispatch|st=active|refs=src/contracts/module-contract.ts,src/core/module-registry.ts,src/core/module-command-router.ts
-direction|D002|structured_task_engine_with_typed_schemas_lifecycle_transitions_and_pluggable_adapters|st=active|refs=.workspace-kit/tasks/state.json,docs/maintainers/TASKS.md
+direction|D002|structured_task_engine_with_typed_schemas_lifecycle_transitions_and_pluggable_adapters|st=active|refs=.workspace-kit/tasks/state.json,.workspace-kit/tasks/state.json
 direction|D003|deterministic_configuration_and_policy_evaluation_with_explainable_precedence|st=planned|refs=docs/maintainers/ROADMAP.md
 direction|D004|human_governed_enhancement_loop_with_evidence_backed_recommendations|st=planned|refs=docs/maintainers/ROADMAP.md
 direction|D005|package_first_delivery_with_parity_validation_and_release_blocking_evidence|st=active|refs=scripts/run-parity.mjs,schemas/parity-evidence.schema.json

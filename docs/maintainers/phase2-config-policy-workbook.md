@@ -1,7 +1,7 @@
 # Phase 2 workbook — config, policy, local task cutover
 
 Binding design for `v0.4.0` (tasks `T218` → `T187` → `T200` → `T188` → `T201` → `T189`).  
-Implementation must match this document unless a deliberate decision update is recorded in task-engine state (`.workspace-kit/tasks/state.json`, with regenerated `docs/maintainers/TASKS.md`) and here.
+Implementation must match this document unless a deliberate decision update is recorded in task-engine state (`.workspace-kit/tasks/state.json`, with re`.workspace-kit/tasks/state.json`) and here.
 
 ## 1. Non-goals for v0.4.0
 
@@ -14,7 +14,7 @@ Implementation must match this document unless a deliberate decision update is r
 - **Project configuration (global / workspace-wide)** — values that apply to the **entire workspace** and are owned by the repo maintainer. Primary source: **`.workspace-kit/config.json`** (include `schemaVersion`). May use **top-level domain keys** (`core`, `tasks`, `documentation`, …) and/or a **`modules`** object for overrides targeted at a specific module id (e.g. `modules["task-engine"].storePath`) so global file can tune one module without scattering files.
 - **Module-level configuration** — defaults and schema owned by **each module**, loaded from that module’s registration contract / **`config.md`** (and compiled defaults in code if any). One **logical config document per module**; merged only into that module’s domain (or declared export surface), not copied into other modules’ namespaces.
 
-**Where it lives (persistence):** Durable config is **files and env**, not a database. **Project** settings: `.workspace-kit/config.json`. **Module** defaults: shipped **`config.md`** / code (and optionally future generated snapshots — still files). **Task state** today is the same family of persistence: **JSON under `.workspace-kit/tasks/`**, not a shared DB. There is **no** “config table” alongside tasks; effective config is always **computed** from these layers at runtime.
+**Where it lives (persistence):** Durable config is **files and env**, not a database. **Project** settings: `.workspace-kit/config.json`. **Module** defaults: shipped **`config.md`** / code (and optionally future snapshots — still files). **Task state** today is the same family of persistence: **JSON under `.workspace-kit/tasks/`**, not a shared DB. There is **no** “config table” alongside tasks; effective config is always **computed** from these layers at runtime.
 
 Effective values for a given key path are always the result of the precedence stack below; **explain-config** must report whether the winning layer was **project**, **module**, **kit default**, **env**, or **invocation**.
 
@@ -48,8 +48,7 @@ Operations that **mutate** or **overwrite** user content or task state **require
 | `cli.init` | `workspace-kit init` when it writes artifacts |
 | `doc.document-project` | `document-project` when batch would write (not dry-run or overwrites enabled) |
 | `doc.generate-document` | `generate-document` when would write (not dry-run or overwrites enabled) |
-| `tasks.import-tasks` | task-engine `import-tasks` |
-| `tasks.generate-tasks-md` | task-engine `generate-tasks-md` |
+| `tasks.run-transition` | task-engine `run-transition` |
 | `tasks.run-transition` | task-engine `run-transition` |
 
 **Explicitly not gated (baseline):** `doctor`, `check`, `drift-check`, `run` listing, read/query task commands (`list-tasks`, `get-task`, `get-ready-queue`, `get-next-actions`), documentation commands with `dryRun: true` and no writes.
@@ -80,9 +79,9 @@ Order (first hit wins):
 
 High-level steps (details in `T201` checklist and `T189` runbook):
 
-1. Branch from `main`; backup `.workspace-kit/tasks/` and generated `docs/maintainers/TASKS.md`.
-2. Run `import-tasks` with approvals per policy; inspect `.workspace-kit/tasks/state.json`.
-3. Run `generate-tasks-md`; review diff (read-only markdown should match team expectations).
+1. Branch from `main`; backup `.workspace-kit/tasks/` and `.workspace-kit/tasks/state.json`.
+2. Use task-engine commands with approvals per policy; inspect `.workspace-kit/tasks/state.json`.
+3. Review task-state diff directly in `.workspace-kit/tasks/state.json` as the canonical task surface.
 4. Open PR; attach optional local evidence JSON from rehearsal if used.
 
 Rollback: restore backed-up files; delete or revert task state file; return to markdown-as-source workflow.

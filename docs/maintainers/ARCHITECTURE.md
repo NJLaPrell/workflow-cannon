@@ -40,7 +40,7 @@ Workflow Cannon is a modular developer workflow platform for VS Code users who w
 
 - `docs/maintainers/ROADMAP.md` — strategic direction and phase plan
 - `.workspace-kit/tasks/state.json` — canonical execution queue and task dependencies
-- `docs/maintainers/TASKS.md` — generated human-readable execution view
+- `.workspace-kit/tasks/state.json` — generated human-readable execution view
 - `docs/maintainers/RELEASING.md` — release process and evidence requirements
 - `.ai/PRINCIPLES.md` — canonical decision priorities
 - `.ai/module-build.md` — module development contract

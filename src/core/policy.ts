@@ -11,8 +11,6 @@ export type PolicyOperationId =
   | "policy.dynamic-sensitive"
   | "doc.document-project"
   | "doc.generate-document"
-  | "tasks.import-tasks"
-  | "tasks.generate-tasks-md"
   | "tasks.run-transition"
   | "approvals.review-item"
   | "improvement.generate-recommendations"
@@ -21,8 +19,6 @@ export type PolicyOperationId =
 const COMMAND_TO_OPERATION: Record<string, PolicyOperationId | undefined> = {
   "document-project": "doc.document-project",
   "generate-document": "doc.generate-document",
-  "import-tasks": "tasks.import-tasks",
-  "generate-tasks-md": "tasks.generate-tasks-md",
   "run-transition": "tasks.run-transition",
   "review-item": "approvals.review-item",
   "generate-recommendations": "improvement.generate-recommendations",

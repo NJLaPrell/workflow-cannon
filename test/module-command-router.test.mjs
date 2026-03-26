@@ -24,11 +24,9 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "document-project",
     "explain-config",
     "generate-document",
-    "generate-tasks-md",
     "get-next-actions",
     "get-ready-queue",
     "get-task",
-    "import-tasks",
     "list-tasks",
     "resolve-config",
     "run-transition"

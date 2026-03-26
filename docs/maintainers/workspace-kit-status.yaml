@@ -1,19 +1,21 @@
 schema_version: 1
-current_kit_phase: "5"
+current_kit_phase: "6"
 last_updated: "2026-03-26"
-active_focus: "Phase 5 initial slice complete (`v0.7.0`): transcript sync/ingest UX and cadence/config baseline shipped; follow-on hardening queue staged."
+active_focus: "Phase 6 active: transcript automation hardening + response-template advisory contract (`v0.8.0` target)."
 blockers: []
 next_agent_actions:
-  - "Prepare follow-on Phase 5 hardening train from ready queue: T249/T250/T251 -> T254/T257 -> T252/T253/T255/T256/T258."
-  - "Keep transcript archives local-only and maintain policy-safe recommendation generation UX while expanding automation depth."
+  - "Execute Phase 6 ready queue in dependency order: T249/T250/T251/T257 -> T254/T255/T252/T253/T256/T258."
+  - "Run response-template track in parallel after T260: T261 -> T262/T263 -> T264/T265/T266."
 last_session_summary:
-  - "Phase 5 initial scope (`T244`, `T245`, `T246`, `T247`, `T248`, `T259`) is complete with transcript sync, one-shot ingest, cadence/config contract, and design baseline."
-  - "Release-readiness checks for `v0.7.0` are staged; follow-on transcript and response-template tasks remain queued."
-pending_decisions: []
+  - "Phase 6 created and populated from the ready queue (`T249`-`T258`, `T260`-`T266`, `imp-2cf5d881b81f9a`)."
+  - "Phase 5 remains complete at `v0.7.0`; execution focus moved to hardening/resilience and response-template advisory delivery."
+pending_decisions:
+  - "Implement and validate command-scoped first-use approval UX via Cursor question UI where available (`Deny`/`Allow`/`Allow for this session`)."
+  - "Implement configurable response-template enforcement with advisory-only default and explicit strict-mode opt-in."
 metrics:
   updated_at: "2026-03-26"
   source: "automated"
-  notes: "Phase 5 initial release slice complete; queue now focused on scale/privacy/response-template follow-on hardening."
+  notes: "Phase 6 kickoff complete with dependency-shaped execution queue and `v0.8.0` release target."
   time_to_doctor_minutes: 0.03
   cold_start_success_rate_pct: 100
   upgrade_success_rate_pct: null

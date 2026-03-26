@@ -18,7 +18,7 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - **Phase 3 (Enhancement loop MVP) is COMPLETE** in-repo and ships as **`v0.5.0`** (`T190`–`T192`, `T202`–`T203`).
 - **Phase 4 (Runtime scale and ecosystem) is COMPLETE** in-repo and ships as **`v0.6.0`** (`T193`–`T195`, `T204`–`T205`, `T238`–`T242`).
 - **Phase 5 (Transcript intelligence automation) is COMPLETE** in-repo and ships as **`v0.7.0`** for the initial automation slice (`T244`, `T245`, `T246`, `T247`, `T248`, `T259`).
-- Phase 5 follow-on hardening backlog (`T249`-`T258`, `T260`-`T266`, plus active improvement review item `imp-2cf5d881b81f9a`) remains queued for the next execution train.
+- **Phase 6 (Automation hardening and response templates) is ACTIVE** with ready queue `T249`-`T258`, `T260`-`T266`, plus active improvement review item `imp-2cf5d881b81f9a`.
 - Historical extraction and first-publish milestones remain recorded below as provenance.
 
 ## Phase plan and release cadence
@@ -90,6 +90,19 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
   - Transcript sync and one-shot ingest command surfaces are implementation-ready from a locked design baseline.
   - Phase 5 rules/docs define event-driven frequent recommendation generation with bounded overhead and no cron requirement for baseline users.
   - Configuration and observability contracts are consistent across module config, workspace config, and runtime command surfaces.
+
+### Phase 6 - Automation hardening and response templates -> GitHub release `v0.8.0` (ACTIVE)
+
+- Primary scope: `T249` to `T258`, `T260` to `T266`, plus active improvement recommendation item `imp-2cf5d881b81f9a`.
+- Outcome: hardened transcript automation behavior at higher run frequency/scale with stronger resilience/privacy controls, plus advisory response-template contracts for more consistent command output ergonomics.
+- Phase decisions locked:
+  - Release strategy: single release train (`v0.8.0`).
+  - Approval UX: configurable, default first-use prompt per sensitive command with `Deny` / `Allow` / `Allow for this session`, and command-scoped session reuse when selected.
+  - Response template enforcement: configurable with advisory-only default.
+- Exit signals:
+  - Frequent transcript sync/ingest operations are bounded, resilient, and diagnosable with stable status surfaces.
+  - Privacy/redaction and retry behavior are deterministic and test-covered.
+  - Response-template registry, advisory integration, and maintainership workflow are documented, test-covered, and compatible with existing command result semantics.
 
 ## Recorded decisions
 

@@ -1,8 +1,8 @@
 # Maintainer-local task engine cutover
 
-This repository may **optionally** move execution tracking from hand-edited `docs/maintainers/TASKS.md` to the **task engine** (JSON under `.workspace-kit/tasks/`) while keeping `TASKS.md` as a **generated** read-only view.
+Historical runbook for early task-engine adoption.
 
-There is **no** packaged migration runner in `@workflow-cannon/workspace-kit` for `v0.4.0`. This runbook is for **maintainers of this repo only**.
+Execution tracking is now canonical in `.workspace-kit/tasks/state.json`; markdown-based task tracking is removed.
 
 ## When to cut over
 
@@ -12,9 +12,9 @@ There is **no** packaged migration runner in `@workflow-cannon/workspace-kit` fo
 ## Steps
 
 1. Follow **`docs/maintainers/task-engine-cutover-checklist.md`** line by line.
-2. Use `workspace-kit run import-tasks` with a `policyApproval` block in JSON args (see task-engine instruction).
-3. Validate `.workspace-kit/tasks/state.json`.
-4. Run `workspace-kit run generate-tasks-md` with `policyApproval`; review the markdown diff.
+2. Validate `.workspace-kit/tasks/state.json` directly as the canonical task state.
+3. Use task-engine runtime commands (`list-tasks`, `get-task`, `run-transition`, `get-next-actions`) with policy approvals where required.
+4. Open a PR and include state diffs/evidence from `.workspace-kit/tasks/state.json`.
 5. Open a PR; link this runbook or checklist in the description.
 
 ## CLI approval for `init` / `upgrade`

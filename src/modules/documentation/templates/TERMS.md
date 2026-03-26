@@ -40,7 +40,7 @@ Method:
    - **Definition**: …
    - **Defined in**: path(s)
    - **Enforced in**: path(s) or mechanism
-3) Add new terms when they appear repeatedly in `TASKS.md`, `ROADMAP.md`, or `.cursor/rules` without definitions.
+3) Add new terms when they appear repeatedly in `.workspace-kit/tasks/state.json`, `ROADMAP.md`, or `.cursor/rules` without definitions.
 4) Fix indentation so **Definition** / **Defined in** / **Enforced in** are nested under the term bullet, not orphaned.
 Output format:
 - One top-level bullet per term with nested three-line pattern above.
@@ -57,5 +57,5 @@ Method:
 Output format:
 - Bulleted list.
 Validation:
-- Include at least `README.md`, `.ai/PRINCIPLES.md`, `docs/maintainers/ROADMAP.md`, `docs/maintainers/TASKS.md`, `docs/maintainers/RELEASING.md` when present.
+- Include at least `README.md`, `.ai/PRINCIPLES.md`, `docs/maintainers/ROADMAP.md`, `.workspace-kit/tasks/state.json`, `docs/maintainers/RELEASING.md` when present.
 }}}

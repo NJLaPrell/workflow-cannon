@@ -22,12 +22,12 @@ Validation:
 {{{
 Summarize current execution phase, completed task slices, and active queue.
 Method:
-1) Read `docs/maintainers/TASKS.md` for execution state, current phase, ready queue, and completed markers.
+1) Read `.workspace-kit/tasks/state.json` for execution state, current phase, ready queue, and completed markers.
 2) Read `docs/maintainers/ROADMAP.md` for milestone wording.
 Output format:
 - Short bullets: phase name, completed work summary, active queue references (task IDs allowed here).
 Validation:
-- Task IDs must match `TASKS.md` at generation time.
+- Task IDs must match `.workspace-kit/tasks/state.json` at generation time.
 }}}
 
 ## Phase plan and release cadence
@@ -47,11 +47,11 @@ Validation:
 {{{
 Document Phase 0 scope, outcome, and exit signals.
 Method:
-1) Read `docs/maintainers/TASKS.md` and `docs/maintainers/ROADMAP.md` for Phase 0 task ranges and release target.
+1) Read `.workspace-kit/tasks/state.json` and `docs/maintainers/ROADMAP.md` for Phase 0 task ranges and release target.
 Output format:
 - Bullets for primary scope, outcome, exit signals.
 Validation:
-- Release version string must match `ROADMAP.md` / `TASKS.md` for Phase 0.
+- Release version string must match `ROADMAP.md` / `.workspace-kit/tasks/state.json` for Phase 0.
 }}}
 
 ### Phase 1 - Task Engine core -> GitHub release `v0.3.0`
@@ -61,7 +61,7 @@ Document Phase 1 scope, outcome, and exit signals from maintainer roadmap.
 Output format:
 - Bullets for primary scope, outcome, exit signals.
 Validation:
-- Align task IDs with `TASKS.md`.
+- Align task IDs with `.workspace-kit/tasks/state.json`.
 }}}
 
 ### Phase 2 - Configuration and policy base -> GitHub release `v0.4.0`
@@ -71,17 +71,17 @@ Document Phase 2 scope, outcome, and exit signals.
 Output format:
 - Bullets for primary scope, outcome, exit signals.
 Validation:
-- Align task IDs with `TASKS.md`.
+- Align task IDs with `.workspace-kit/tasks/state.json`.
 }}}
 
 ### Phase 2b - Config policy hardening + UX / exposure -> GitHub release `v0.4.1`
 
 {{{
-Document Phase 2b scope, outcome, and exit signals (policy hardening `T219`–`T220` and config UX `T228`–`T237`; see `TASKS.md` for the draft-ID mapping note).
+Document Phase 2b scope, outcome, and exit signals (policy hardening `T219`–`T220` and config UX `T228`–`T237`; see `.workspace-kit/tasks/state.json` for the draft-ID mapping note).
 Output format:
 - Bullets for primary scope, outcome, exit signals.
 Validation:
-- Align task IDs with `TASKS.md`.
+- Align task IDs with `.workspace-kit/tasks/state.json`.
 }}}
 
 ### Phase 3 - Enhancement loop MVP -> GitHub release `v0.5.0`
@@ -91,7 +91,7 @@ Document Phase 3 scope, outcome, and exit signals.
 Output format:
 - Bullets for primary scope, outcome, exit signals.
 Validation:
-- Align task IDs with `TASKS.md`.
+- Align task IDs with `.workspace-kit/tasks/state.json`.
 }}}
 
 ### Phase 4 - Runtime scale and ecosystem -> GitHub release `v0.6.0`
@@ -101,7 +101,7 @@ Document Phase 4 scope, outcome, and exit signals.
 Output format:
 - Bullets for primary scope, outcome, exit signals.
 Validation:
-- Align task IDs with `TASKS.md`.
+- Align task IDs with `.workspace-kit/tasks/state.json`.
 }}}
 
 ## Recorded decisions
@@ -110,7 +110,7 @@ Validation:
 Maintain a decision log table for major irreversible choices.
 Method:
 1) Preserve existing rows from `docs/maintainers/ROADMAP.md` when updating.
-2) Add new rows only when `docs/maintainers/DECISIONS.md` or `TASKS.md` records a new decision worth surfacing here.
+2) Add new rows only when `docs/maintainers/DECISIONS.md` or `.workspace-kit/tasks/state.json` records a new decision worth surfacing here.
 Output format:
 - Markdown table with columns: Decision | Choice
 Validation:

@@ -1,6 +1,6 @@
 /**
  * T203: Immutable lineage event contract (append-only store, correlation fields).
- * @see docs/maintainers/TASKS.md T192, T203
+ * @see .workspace-kit/tasks/state.json T192, T203
  */
 
 export const LINEAGE_SCHEMA_VERSION = 1 as const;

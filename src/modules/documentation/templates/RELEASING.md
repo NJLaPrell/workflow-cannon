@@ -37,7 +37,7 @@ Validation:
 {{{
 Enumerate gates that must pass before publish.
 Method:
-1) Merge checklist items from `docs/maintainers/RELEASING.md`, `docs/maintainers/TASKS.md` release-related tasks, and CI/workflow names under `.github/workflows/` if discoverable.
+1) Merge checklist items from `docs/maintainers/RELEASING.md`, `.workspace-kit/tasks/state.json` release-related tasks, and CI/workflow names under `.github/workflows/` if discoverable.
 2) Include changelog, tests, consumer parity, migration review, and security review when applicable to the phase.
 Output format:
 - Numbered list; each item is one gate; sub-bullets only for clarifying checks.
@@ -63,7 +63,7 @@ Validation:
 {{{
 List artifacts and references that must be captured for auditability.
 Method:
-1) Use RELEASING docs and task evidence language from `docs/maintainers/TASKS.md`.
+1) Use RELEASING docs and task evidence language from `.workspace-kit/tasks/state.json`.
 2) Include version, tag, workflow run links, npm reference, migration notes, risks.
 Output format:
 - Bullet list; group related items if needed.

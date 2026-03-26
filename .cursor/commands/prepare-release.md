@@ -7,5 +7,5 @@ When asked to prepare a release:
 1. Use `docs/maintainers/RELEASING.md` as the canonical workflow.
 2. Validate release readiness gates before any publish action.
 3. Capture required release evidence.
-4. Write follow-up tasks for unresolved release friction in `docs/maintainers/TASKS.md`.
+4. Write follow-up tasks for unresolved release friction in `.workspace-kit/tasks/state.json`.
 

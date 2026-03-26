@@ -6,7 +6,7 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ### Changed
 
-- Task engine markdown round-trip hardening: `import-tasks` now ignores non-task `###` headings (for example design-decision subheaders) and `generate-tasks-md` preserves existing maintainer TASKS document structure by syncing task headings in-place.
+- Task engine tracking now relies solely on canonical `.workspace-kit/tasks/state.json` state; markdown task view/import paths are removed.
 
 ## [0.7.0] - 2026-03-26
 
@@ -40,7 +40,7 @@ Phase 4 — runtime scale and ecosystem hardening: compatibility contract enforc
 - **Compatibility matrix + schema** — canonical `docs/maintainers/compatibility-matrix.json` and `schemas/compatibility-matrix.schema.json` for runtime/module/config/policy compatibility mapping.
 - **Compatibility gate** — `scripts/check-compatibility.mjs` with machine-readable report output at `artifacts/compatibility-report.json`.
 - **Release channel enforcement** — `scripts/check-release-channel.mjs` validates channel (`canary`/`stable`/`lts`) behavior against matrix mapping.
-- **Planning consistency guard** — `scripts/check-planning-doc-consistency.mjs` enforces consistent Phase status across `ROADMAP.md`, `TASKS.md`, and `FEATURE-MATRIX.md`.
+- **Planning consistency guard** — `scripts/check-planning-doc-consistency.mjs` enforces consistent Phase status across `ROADMAP.md`, `.workspace-kit/tasks/state.json`, and `FEATURE-MATRIX.md`.
 - **Operational diagnostics pack** — `scripts/generate-runtime-diagnostics.mjs` emits runtime evidence inventory and SLO objective status to `artifacts/runtime-diagnostics.json`.
 - **Evidence lifecycle control** — `scripts/prune-evidence.mjs` supports retention-based pruning for stale `.workspace-kit` evidence artifacts.
 
@@ -131,8 +131,8 @@ Phase 1 (Task Engine core) release. Adds a canonical task lifecycle, transition 
 - **Task Engine module** — `TaskEntity` model with lifecycle states (`proposed`, `ready`, `in_progress`, `blocked`, `completed`, `cancelled`), typed transition map, `TransitionValidator` with ordered `TransitionGuard` hooks, and built-in dependency and state-validity guards.
 - **Transition runtime** — `TransitionService` with deterministic transitions, auto-unblock of dependents when dependencies complete, and structured transition evidence (timestamp, actor, guard results, unblocked dependents).
 - **Task store** — Schema-versioned JSON persistence (default under `.workspace-kit/tasks/`, configurable via module config).
-- **Module commands** — `run-transition`, `get-task`, `list-tasks`, `get-ready-queue`, `get-next-actions`, `import-tasks`, `generate-tasks-md` exposed through the module command router and `workspace-kit run`.
-- **TASKS.md bridge** — One-time `import-tasks` from legacy markdown; `generate-tasks-md` produces a read-only human view aligned with maintainer task format.
+- **Module commands** — `run-transition`, `get-task`, `list-tasks`, `get-ready-queue`, `get-next-actions` exposed through the module command router and `workspace-kit run`.
+- **Task state contract** — canonical execution state in `.workspace-kit/tasks/state.json`.
 - **Next-action suggestions** — Priority-sorted ready queue with blocking-chain context for agent workflows.
 - **Design workbook** — `docs/maintainers/task-engine-workbook.md` capturing schema, transition graph, guards, persistence, and error taxonomy.
 
@@ -143,7 +143,7 @@ Phase 1 (Task Engine core) release. Adds a canonical task lifecycle, transition 
 ### Migration notes
 
 - Existing workflows that only used documentation and core CLI commands are unaffected.
-- To adopt the engine, run `import-tasks` once if migrating from hand-maintained `docs/maintainers/TASKS.md`, then use transitions and regenerate the markdown view as needed.
+- Use `.workspace-kit/tasks/state.json` as the only task execution source.
 - New default state directory `.workspace-kit/tasks/`; add to `.gitignore` if task state should stay local.
 
 ## [0.2.0] - 2026-03-25

@@ -158,5 +158,5 @@ export const exampleModule: WorkflowModule = {
 - `src/contracts/module-contract.ts`
 - `src/core/module-registry.ts`
 - `.workspace-kit/tasks/state.json`
-- `docs/maintainers/TASKS.md` (generated view)
+- `.workspace-kit/tasks/state.json` (generated view)
 - `docs/maintainers/RELEASING.md`

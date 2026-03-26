@@ -10,5 +10,5 @@ When discovering new work:
 1. Start from `docs/maintainers/ROADMAP.md` direction and current task-engine state (`workspace-kit run list-tasks` / `get-next-actions`).
 2. Validate scope, risk, and evidence expectations.
 3. Convert accepted scope into concrete task-engine tasks (source of truth in `.workspace-kit/tasks/state.json`).
-4. Keep strategic rationale in roadmap/docs and execution detail in task-engine state; `docs/maintainers/TASKS.md` is a generated view.
+4. Keep strategic rationale in roadmap/docs and execution detail in task-engine state; `.workspace-kit/tasks/state.json` is a generated view.
 

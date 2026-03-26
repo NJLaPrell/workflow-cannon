@@ -23,4 +23,4 @@ A `NextActionSuggestion` object containing:
 
 ## Agent Usage
 
-Use this command to decide what to work on next without manually inspecting TASKS.md. The `suggestedNext` field gives you the single best task to start.
+Use this command to decide what to work on next without manually inspecting .workspace-kit/tasks/state.json. The `suggestedNext` field gives you the single best task to start.

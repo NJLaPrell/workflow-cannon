@@ -62,7 +62,7 @@ This keeps automation adaptive without sacrificing safety, governance, or develo
 ## Current Status
 
 - **Phase 0** and **Phase 1** (task engine, `v0.3.0`) are complete.
-- **Phase 2** (layered config, policy gates, cutover docs, `v0.4.0`) is complete in-repo; see `docs/maintainers/TASKS.md` and `docs/maintainers/ROADMAP.md`.
+- **Phase 2** (layered config, policy gates, cutover docs, `v0.4.0`) is complete in-repo; see `.workspace-kit/tasks/state.json` and `docs/maintainers/ROADMAP.md`.
 - **Phase 2b** (policy + config UX, `v0.4.1`) and **Phase 3** (enhancement loop MVP, `v0.5.0`) are complete in-repo: evidence-driven **improvement** tasks, **`approvals`** (`review-item`), heuristic confidence, and append-only lineage.
 - **Phase 4** (`v0.6.0`) is complete in-repo: compatibility matrix/gates, diagnostics/SLO baseline evidence, release-channel mapping, and planning-doc consistency checks.
 
@@ -87,7 +87,7 @@ npm install @workflow-cannon/workspace-kit
 - `README.md` - project entry point
 - `.ai/PRINCIPLES.md` - project goals and decision principles (canonical AI)
 - `docs/maintainers/ROADMAP.md` - roadmap and decision log
-- `docs/maintainers/TASKS.md` - execution tracking
+- `.workspace-kit/tasks/state.json` - execution tracking
 - `docs/maintainers/ARCHITECTURE.md` - architecture direction
 - `docs/maintainers/DECISIONS.md` - focused design/decision notes
 - `docs/maintainers/RELEASING.md` - release checklist and validation expectations
@@ -100,7 +100,7 @@ npm install @workflow-cannon/workspace-kit
 
 - Project goals and decision principles: `.ai/PRINCIPLES.md`
 - Strategy and long-range direction: `docs/maintainers/ROADMAP.md`
-- Active execution tasks: `docs/maintainers/TASKS.md`
+- Active execution tasks: `.workspace-kit/tasks/state.json`
 - Glossary and agent-guidance terms: `docs/maintainers/TERMS.md`
 - Architecture direction: `docs/maintainers/ARCHITECTURE.md`
 - Project decisions: `docs/maintainers/DECISIONS.md`

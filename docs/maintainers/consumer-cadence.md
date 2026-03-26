@@ -40,7 +40,7 @@ stable ─────── regression ────────► patch candid
 
 ### stable → patch
 
-1. Regression is confirmed and tracked in task-engine state (`.workspace-kit/tasks/state.json`) and reflected in generated `docs/maintainers/TASKS.md`.
+1. Regression is confirmed and tracked in task-engine state (`.workspace-kit/tasks/state.json`) and reflected in `.workspace-kit/tasks/state.json`.
 2. Fix is implemented and passes all CI gates.
 3. Parity validation passes (same as candidate → stable steps 2-3).
 4. Patch is published with `--tag latest`.
@@ -57,7 +57,7 @@ Repeatable cadence validation uses these commands in order:
 | 3 | `pnpm run test` | 0 | All tests pass |
 | 4 | `pnpm run pack:dry-run` | 0 | Tarball in `artifacts/workspace-kit-pack/` |
 | 5 | `node scripts/check-release-metadata.mjs` | 0 | Metadata validated |
-| 6 | `node scripts/run-parity.mjs` | 0 | `artifacts/parity-evidence.json` generated |
+| 6 | `node scripts/run-parity.mjs` | 0 | `artifacts/parity-evidence.json` |
 
 Any non-zero exit blocks the transition and must be resolved before re-attempting.
 
@@ -65,4 +65,4 @@ Any non-zero exit blocks the transition and must be resolved before re-attemptin
 
 - `docs/maintainers/RELEASING.md` — release procedure and evidence
 - `docs/maintainers/release-gate-matrix.md` — gate inventory and ownership
-- `.workspace-kit/tasks/state.json` / generated `docs/maintainers/TASKS.md` — regression and blocker tracking
+- `.workspace-kit/tasks/state.json` / `.workspace-kit/tasks/state.json` — regression and blocker tracking

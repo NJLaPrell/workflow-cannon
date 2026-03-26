@@ -7,7 +7,7 @@ Basic operating guidance for AI agents working in this repository.
 1. `.ai/PRINCIPLES.md` — goals, trade-off order, approval gates
 2. `.ai/module-build.md` — module development contracts and enforcement
 3. `docs/maintainers/ROADMAP.md` — phase strategy and release cadence
-4. canonical task-engine state (`.workspace-kit/tasks/state.json`) — execution queue and dependency ordering (with generated `docs/maintainers/TASKS.md` human view)
+4. canonical task-engine state (`.workspace-kit/tasks/state.json`) — execution queue and dependency ordering (with `.workspace-kit/tasks/state.json` execution surface)
 5. `docs/maintainers/RELEASING.md` — release gates and evidence requirements
 6. `docs/maintainers/TERMS.md` — canonical terminology
 7. `docs/maintainers/module-build-guide.md` — human-readable module development companion
@@ -25,7 +25,7 @@ Basic operating guidance for AI agents working in this repository.
 
 ## Working rules
 
-- Keep strategy in `docs/maintainers/ROADMAP.md`, execution detail in task-engine state (`workspace-kit run` task commands), and release process in `docs/maintainers/RELEASING.md`; treat `docs/maintainers/TASKS.md` as generated view.
+- Keep strategy in `docs/maintainers/ROADMAP.md`, execution detail in task-engine state (`workspace-kit run` task commands), and release process in `docs/maintainers/RELEASING.md`; treat `.workspace-kit/tasks/state.json` as view.
 - When scope changes, update all related docs in the same change set.
 - Preserve deterministic behavior and compatibility; document migration impact when changes affect consumers.
 

@@ -5,13 +5,13 @@ alwaysApply: true
 
 # Workspace Kit Agent Protocol
 
-Apply when editing `docs/maintainers/ROADMAP.md`, task-engine task state, generated `docs/maintainers/TASKS.md` view, `docs/maintainers/workspace-kit-status.yaml`, or release-critical docs.
+Apply when editing `docs/maintainers/ROADMAP.md`, task-engine task state, `.workspace-kit/tasks/state.json` view, `docs/maintainers/workspace-kit-status.yaml`, or release-critical docs.
 
 ## Start-of-session checks
 
 1. Read `docs/maintainers/workspace-kit-status.yaml`.
 2. Read `docs/maintainers/ROADMAP.md` current state and decisions.
-3. Read task-engine current execution state (`workspace-kit run list-tasks` / `workspace-kit run get-next-actions`) and verify generated `docs/maintainers/TASKS.md` is aligned when changed.
+3. Read task-engine current execution state (`workspace-kit run list-tasks` / `workspace-kit run get-next-actions`) and verify `.workspace-kit/tasks/state.json` is aligned when changed.
 
 ## End-of-session updates
 

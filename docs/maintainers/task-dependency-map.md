@@ -1,6 +1,6 @@
 # Task Dependency Map
 
-Canonical dependency view for `T178` through `T195`, Phase 2b (`T219`–`T220`, `T228`–`T237`), and Phase 4 support/enforcement slices (`T204`–`T205`, `T238`–`T242`), derived from task-engine state and reflected in generated `docs/maintainers/TASKS.md`.
+Canonical dependency view for `T178` through `T195`, Phase 2b (`T219`–`T220`, `T228`–`T237`), and Phase 4 support/enforcement slices (`T204`–`T205`, `T238`–`T242`), derived from task-engine state and reflected in `.workspace-kit/tasks/state.json`.
 
 ## Purpose
 
@@ -151,4 +151,4 @@ Longest dependency chain ending at `T195`:
 
 ## Maintenance rule
 
-When any `dependsOn`/`unblocks` relationships change in `.workspace-kit/tasks/state.json` (and regenerate `docs/maintainers/TASKS.md`), update this file in the same PR.
+When any `dependsOn`/`unblocks` relationships change in `.workspace-kit/tasks/state.json` (and regenerate `.workspace-kit/tasks/state.json`), update this file in the same PR.

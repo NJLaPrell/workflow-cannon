@@ -21,8 +21,7 @@ Canonical precedence: see `docs/maintainers/phase2-config-policy-workbook.md`.
 | `cli.upgrade` | N/A (CLI) | `WORKSPACE_KIT_POLICY_APPROVAL` env JSON |
 | `doc.document-project` | `documentation` | `policyApproval` in JSON args unless `options.dryRun === true` |
 | `doc.generate-document` | `documentation` | Same |
-| `tasks.import-tasks` | `tasks` (e.g. `storeRelativePath`) | `policyApproval` in JSON args |
-| `tasks.generate-tasks-md` | `tasks` | `policyApproval` in JSON args |
+| `tasks.run-transition` | `tasks` (e.g. `storeRelativePath`) | `policyApproval` in JSON args |
 | `tasks.run-transition` | `tasks` | `policyApproval` in JSON args |
 
 ## Test-derived cases (T188)

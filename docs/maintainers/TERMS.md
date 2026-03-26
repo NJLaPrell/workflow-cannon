@@ -15,7 +15,7 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
 - **Canonical glossary**: `docs/maintainers/TERMS.md` (this file) — primary definitions
 - **Canonical goals and principles**: `.ai/PRINCIPLES.md` — decision rules and trade-off order
 - **Project intent and boundaries**: `README.md`, `docs/maintainers/ROADMAP.md`, `docs/maintainers/ARCHITECTURE.md`
-- **Execution and planning**: task-engine state (`.workspace-kit/tasks/state.json`) with generated `docs/maintainers/TASKS.md` — queue, dependencies, and human-readable tracking
+- **Execution and planning**: task-engine state (`.workspace-kit/tasks/state.json`) with `.workspace-kit/tasks/state.json` — queue, dependencies, and human-readable tracking
 - **Operational runbooks/playbooks**: `docs/maintainers/RELEASING.md` and files under `docs/maintainers/`
 - **Agent enforcement layer**: `.cursor/rules/*.mdc` — editor/agent behavior rules
 - **Reusable agent task templates**: `tasks/*.md`
@@ -30,7 +30,7 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
 - **Goal**
   - **Definition**: A desired project outcome used to evaluate progress and direction.
   - **Defined in**: `.ai/PRINCIPLES.md` and `README.md`.
-  - **Enforced in**: planning and prioritization across `docs/maintainers/ROADMAP.md`, task-engine state, and generated `docs/maintainers/TASKS.md`.
+  - **Enforced in**: planning and prioritization across `docs/maintainers/ROADMAP.md`, task-engine state, and `.workspace-kit/tasks/state.json`.
 
 - **Principle**
   - **Definition**: A cross-cutting decision rule that guides trade-offs across features and implementation choices.
@@ -65,10 +65,10 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
 - **Playbook**
   - **Definition**: Reusable strategy for a class of work, broader than a single workflow.
   - **Defined in**: `docs/maintainers/` and thematic project docs.
-  - **Enforced in**: planning and execution norms in task-engine state / team process, surfaced in generated `docs/maintainers/TASKS.md`.
+  - **Enforced in**: planning and execution norms in task-engine state / team process, surfaced in `.workspace-kit/tasks/state.json`.
 
 - **Template Contract**
-  - **Definition**: Required structure, fields, and formatting guarantees for generated outputs.
+  - **Definition**: Required structure, fields, and formatting guarantees for outputs.
   - **Defined in**: `docs/maintainers/TERMS.md`, `tasks/*.md`, and feature/architecture docs when applicable.
   - **Enforced in**: template checks, tests, and review gates.
 
@@ -79,7 +79,7 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
 
 - **Evidence Requirement**
   - **Definition**: Minimum proof artifacts needed to treat work as valid and releasable.
-  - **Defined in**: `docs/maintainers/RELEASING.md`, task-engine state contracts, generated `docs/maintainers/TASKS.md`, and this glossary.
+  - **Defined in**: `docs/maintainers/RELEASING.md`, task-engine state contracts, `.workspace-kit/tasks/state.json`, and this glossary.
   - **Enforced in**: release checklist and PR/review expectations.
 
 - **Escalation Trigger**
@@ -98,5 +98,5 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
 - `.ai/PRINCIPLES.md` — project goals and decision principles
 - `docs/maintainers/ROADMAP.md` — strategic decisions and phase context
 - `.workspace-kit/tasks/state.json` — canonical active execution state
-- `docs/maintainers/TASKS.md` — generated execution view
+- `.workspace-kit/tasks/state.json` — execution view
 - `docs/maintainers/RELEASING.md` — release gates and evidence expectations

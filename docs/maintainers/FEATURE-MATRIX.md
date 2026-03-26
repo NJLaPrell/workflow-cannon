@@ -1,6 +1,6 @@
 # Workflow Cannon Feature Matrix
 
-Product-oriented feature inventory derived from task-engine state (`.workspace-kit/tasks/state.json`) and mirrored in generated `docs/maintainers/TASKS.md`.
+Product-oriented feature inventory derived from task-engine state (`.workspace-kit/tasks/state.json`) and mirrored in `.workspace-kit/tasks/state.json`.
 
 Status legend:
 
@@ -20,6 +20,7 @@ Status legend:
 | Phase 3 - Enhancement loop MVP (`T190`-`T192`, `T202`-`T203`) | `v0.5.0` | Completed |
 | Phase 4 - Scale and ecosystem hardening (`T193`-`T195`, `T204`-`T205`, `T238`-`T242`) | `v0.6.0` | Completed |
 | Phase 5 - Transcript intelligence automation (`T244`-`T248`, `T259`) | `v0.7.0` | Completed |
+| Phase 6 - Automation hardening + response templates (`T249`-`T258`, `T260`-`T266`, plus active improvement review item) | `v0.8.0` | In progress / ready |
 
 ## Feature Matrix by Phase
 
@@ -56,7 +57,7 @@ Status legend:
 | Task Engine design workbook | Resolved schema, state model, persistence, and error taxonomy with binding design decisions | Completed | `T199` |
 | Task lifecycle contract and guard system | Canonical task state model, transition rules, and pluggable guard hooks for enforcement | Completed | `T184` |
 | Task transition runtime with persistence | Deterministic transitions, auto-unblock cascades, evidence emission, and file-backed JSON store | Completed | `T185` |
-| Task adapter contract and TASKS.md generation | Pluggable adapter interface, generated human-readable TASKS.md, and one-time import from current format | Completed | `T186` |
+| Task adapter contract and task-state persistence | Pluggable adapter interface and canonical task-state persistence contract | Completed | `T186` |
 | Next-action suggestion engine | Priority-sorted ready queue with blocking chain analysis for agent-driven task selection | Completed | `T217` |
 
 ### Phase 2 Config, Policy, and Local Cutover (`v0.4.0`)
@@ -112,6 +113,15 @@ Status legend:
 | Transcript config and trigger governance | Canonical config + workflow rules for event-driven frequent runs | Completed | `T246`, `T247`, `T248` |
 | Transcript automation design baseline | Coherent rollout plan and implementation contracts for downstream slices | Completed | `T259` |
 
+### Phase 6 Automation Hardening + Response Templates (`v0.8.0`)
+
+| Product feature | What users/maintainers get | Status | Task coverage |
+| --- | --- | --- | --- |
+| Frequent-run automation hardening | Bounded, repeatable high-cadence transcript sync/ingest with stronger safety rails, idempotency diagnostics, and failure retry posture | In progress / ready | `T249`, `T251`, `T254`, `T255` |
+| Transcript ops resilience and privacy | Source autodiscovery, operator status surfaces, privacy/redaction controls, and optional advisory pre-release ingest integration | In progress / ready | `T250`, `T252`, `T257`, `T258` |
+| Policy + docs operational follow-through | Reduced repeat-run policy friction and maintainers-first onboarding/operations runbook for transcript workflows | In progress / ready | `T253`, `T256`, `imp-2cf5d881b81f9a` |
+| Response template advisory system | Response template contract, registry, runtime advisory integration, configuration, observability, and maintainer lifecycle guidance | In progress / ready | `T260`, `T261`, `T262`, `T263`, `T264`, `T265`, `T266` |
+
 ## Supporting Milestone Features (cross-phase)
 
 | Product feature | What users/maintainers get | Status | Task coverage |
@@ -136,5 +146,5 @@ Status legend:
 ## Notes
 
 - Feature groupings are intentionally product-facing and map back to task milestones.
-- Task IDs remain included for traceability back to canonical execution planning in `.workspace-kit/tasks/state.json` and generated `docs/maintainers/TASKS.md`.
+- Task IDs remain included for traceability back to canonical execution planning in `.workspace-kit/tasks/state.json` and `.workspace-kit/tasks/state.json`.
 

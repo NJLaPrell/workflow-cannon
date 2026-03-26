@@ -1,12 +1,8 @@
-import path from "node:path";
-import fs from "node:fs/promises";
 import type { WorkflowModule } from "../../contracts/module-contract.js";
 import type { TaskStatus } from "./types.js";
 import { TaskStore } from "./store.js";
 import { TransitionService } from "./service.js";
 import { TaskEngineError } from "./transitions.js";
-import { generateTasksMd, syncTaskHeadingsInMarkdown } from "./generator.js";
-import { importTasksFromMarkdown } from "./importer.js";
 import { getNextActions } from "./suggestions.js";
 
 export type {
@@ -38,8 +34,6 @@ export {
   stateValidityGuard,
   dependencyCheckGuard
 } from "./transitions.js";
-export { generateTasksMd, syncTaskHeadingsInMarkdown } from "./generator.js";
-export { importTasksFromMarkdown } from "./importer.js";
 export { getNextActions } from "./suggestions.js";
 
 function taskStorePath(ctx: { workspacePath: string; effectiveConfig?: Record<string, unknown> }): string | undefined {
@@ -91,16 +85,6 @@ export const taskEngineModule: WorkflowModule = {
           name: "get-ready-queue",
           file: "get-ready-queue.md",
           description: "Get ready tasks sorted by priority."
-        },
-        {
-          name: "import-tasks",
-          file: "import-tasks.md",
-          description: "One-time import from TASKS.md into engine state."
-        },
-        {
-          name: "generate-tasks-md",
-          file: "generate-tasks-md.md",
-          description: "Generate read-only TASKS.md from engine state."
         },
         {
           name: "get-next-actions",
@@ -231,73 +215,6 @@ export const taskEngineModule: WorkflowModule = {
         code: "ready-queue-retrieved",
         message: `${ready.length} tasks in ready queue`,
         data: { tasks: ready, count: ready.length } as Record<string, unknown>
-      };
-    }
-
-    if (command.name === "import-tasks") {
-      const sourcePath = typeof args.sourcePath === "string"
-        ? path.resolve(ctx.workspacePath, args.sourcePath)
-        : path.resolve(ctx.workspacePath, "docs/maintainers/TASKS.md");
-
-      try {
-        const result = await importTasksFromMarkdown(sourcePath);
-        store.replaceAllTasks(result.tasks);
-        await store.save();
-
-        return {
-          ok: true,
-          code: "tasks-imported",
-          message: `Imported ${result.imported} tasks (${result.skipped} skipped)`,
-          data: {
-            imported: result.imported,
-            skipped: result.skipped,
-            errors: result.errors
-          } as Record<string, unknown>
-        };
-      } catch (err) {
-        if (err instanceof TaskEngineError) {
-          return { ok: false, code: err.code, message: err.message };
-        }
-        return {
-          ok: false,
-          code: "import-parse-error",
-          message: (err as Error).message
-        };
-      }
-    }
-
-    if (command.name === "generate-tasks-md") {
-      const outputPath = typeof args.outputPath === "string"
-        ? path.resolve(ctx.workspacePath, args.outputPath)
-        : path.resolve(ctx.workspacePath, "docs/maintainers/TASKS.md");
-
-      const tasks = store.getAllTasks();
-      const fallbackMarkdown = generateTasksMd(tasks);
-      let markdown = fallbackMarkdown;
-      const preserveStructure = args.preserveStructure !== false;
-
-      try {
-        if (preserveStructure) {
-          const existing = await fs.readFile(outputPath, "utf8").catch(() => undefined);
-          if (typeof existing === "string" && existing.length > 0) {
-            markdown = syncTaskHeadingsInMarkdown(existing, tasks);
-          }
-        }
-        await fs.mkdir(path.dirname(outputPath), { recursive: true });
-        await fs.writeFile(outputPath, markdown, "utf8");
-      } catch (err) {
-        return {
-          ok: false,
-          code: "storage-write-error",
-          message: `Failed to write TASKS.md: ${(err as Error).message}`
-        };
-      }
-
-      return {
-        ok: true,
-        code: "tasks-md-generated",
-        message: `Generated TASKS.md with ${tasks.length} tasks`,
-        data: { outputPath, taskCount: tasks.length } as Record<string, unknown>
       };
     }
 
