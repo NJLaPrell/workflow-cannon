@@ -71,14 +71,27 @@ export const improvementModule: WorkflowModule = {
         typeof args.transcriptsRoot === "string" ? args.transcriptsRoot : undefined;
       const fromTag = typeof args.fromTag === "string" ? args.fromTag : undefined;
       const toTag = typeof args.toTag === "string" ? args.toTag : undefined;
+      const syncArgs: TranscriptSyncArgs = {
+        sourcePath: typeof args.sourcePath === "string" ? args.sourcePath : undefined,
+        archivePath: transcriptsRoot
+      };
 
       try {
-        const result = await runGenerateRecommendations(ctx, { transcriptsRoot, fromTag, toTag });
+        const state = await loadImprovementState(ctx.workspacePath);
+        const sync = await runSyncTranscripts(ctx, syncArgs, state);
+        state.lastSyncRunAt = new Date().toISOString();
+        await saveImprovementState(ctx.workspacePath, state);
+
+        const result = await runGenerateRecommendations(ctx, {
+          transcriptsRoot: sync.archivePath,
+          fromTag,
+          toTag
+        });
         return {
           ok: true,
           code: "recommendations-generated",
-          message: `Created ${result.created.length} improvement task(s); skipped ${result.skipped} duplicate(s)`,
-          data: result as unknown as Record<string, unknown>
+          message: `After sync (${sync.copied} copied): created ${result.created.length} improvement task(s); skipped ${result.skipped} duplicate(s)`,
+          data: { sync, ...(result as unknown as Record<string, unknown>) } as Record<string, unknown>
         };
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);

@@ -4,9 +4,10 @@ Manual-first workflow for syncing agent transcripts, generating improvement reco
 
 ## Quickstart
 
-1. Ensure transcripts exist under the configured source (default: `.cursor/agent-transcripts`) or an entry in `improvement.transcripts.discoveryPaths`.
-2. Copy transcripts into the local archive: `workspace-kit run sync-transcripts '{}'`
-3. Generate recommendations: `workspace-kit run generate-recommendations '{}'`
+1. Ensure transcripts exist: **repo-relative** `.cursor/agent-transcripts` or `.vscode/agent-transcripts`, optional `improvement.transcripts.discoveryPaths`, or **Cursor’s default** `~/.cursor/projects/<path-slug>/agent-transcripts` (slug from your workspace root, e.g. `Users-you-Workspace-repo/agent-transcripts`).
+2. Generate recommendations (runs **`sync-transcripts` first**, then analyzes the archive): `workspace-kit run generate-recommendations '{"policyApproval":{"confirmed":true,"rationale":"why"}}'`  
+   - Response JSON includes `data.sync` with the sync run and `data.runId` / `data.created` for the recommendation pass.
+3. Optional: copy only (no generate): `workspace-kit run sync-transcripts '{}'`
 4. Or combine sync + cadence-gated generation: `workspace-kit run ingest-transcripts '{"policyApproval":{"confirmed":true,"rationale":"why"}}'`
 
 `ingest-transcripts` is policy-sensitive: include `policyApproval`, use a session grant (see below), or set `WORKSPACE_KIT_POLICY_APPROVAL` for automation.
@@ -21,7 +22,7 @@ Manual-first workflow for syncing agent transcripts, generating improvement reco
 
 - **Status (stable JSON):** `workspace-kit run transcript-automation-status '{}'`
 - Sync results include `runId`, per-file `skipReasons`, scan budgets, and retry queue counters.
-- Generate results include `runId` and `dedupe` counts (duplicate evidence key, existing task id, cap remainder).
+- Generate results include `sync` (nested transcript sync result), `runId`, and `dedupe` counts (duplicate evidence key, existing task id, cap remainder).
 
 ## Cadence and safety caps
 

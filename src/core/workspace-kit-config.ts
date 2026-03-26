@@ -41,7 +41,7 @@ export const KIT_CONFIG_DEFAULTS: Record<string, unknown> = {
   },
   improvement: {
     transcripts: {
-      sourcePath: ".cursor/agent-transcripts",
+      sourcePath: "",
       archivePath: "agent-transcripts",
       maxFilesPerSync: 5000,
       maxBytesPerFile: 50_000_000,
@@ -76,7 +76,7 @@ export const MODULE_CONFIG_CONTRIBUTIONS: Record<string, Record<string, unknown>
   planning: {},
   improvement: {
     transcripts: {
-      sourcePath: ".cursor/agent-transcripts",
+      sourcePath: "",
       archivePath: "agent-transcripts",
       maxFilesPerSync: 5000,
       maxBytesPerFile: 50_000_000,

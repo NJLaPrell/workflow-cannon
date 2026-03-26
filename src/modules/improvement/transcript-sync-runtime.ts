@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
@@ -135,6 +136,17 @@ async function pathExists(abs: string): Promise<boolean> {
   }
 }
 
+/**
+ * Cursor stores agent transcripts under `~/.cursor/projects/<slug>/agent-transcripts`, where `slug`
+ * is the workspace root with path separators replaced by hyphens (drive letter included on Windows).
+ */
+export function buildCursorProjectsAgentTranscriptsPath(workspacePath: string): string {
+  const home = os.homedir();
+  const resolved = path.resolve(workspacePath);
+  const slug = resolved.split(path.sep).filter((s) => s.length > 0).join("-");
+  return path.join(home, ".cursor", "projects", slug, "agent-transcripts");
+}
+
 export async function resolveTranscriptSourceRoot(
   workspacePath: string,
   cfg: ImprovementTranscriptConfig,
@@ -156,6 +168,12 @@ export async function resolveTranscriptSourceRoot(
     if (await pathExists(abs)) {
       return { root: abs, discoveredFrom: rel, tried };
     }
+  }
+  const cursorGlobal = buildCursorProjectsAgentTranscriptsPath(workspacePath);
+  const cursorLabel = path.join("~", ".cursor", "projects", path.basename(path.dirname(cursorGlobal)), "agent-transcripts");
+  tried.push(cursorLabel);
+  if (await pathExists(cursorGlobal)) {
+    return { root: cursorGlobal, discoveredFrom: "cursor-global-project-agent-transcripts", tried };
   }
   const fallback = path.resolve(workspacePath, ".cursor/agent-transcripts");
   return { root: fallback, discoveredFrom: ".cursor/agent-transcripts (fallback)", tried };

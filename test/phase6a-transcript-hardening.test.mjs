@@ -15,6 +15,7 @@ import {
   taskEngineModule,
   workspaceConfigModule
 } from "../dist/index.js";
+import { buildCursorProjectsAgentTranscriptsPath } from "../dist/modules/improvement/transcript-sync-runtime.js";
 import { runCli } from "../dist/cli.js";
 
 async function tmpWs() {
@@ -171,6 +172,67 @@ test("Phase6a: generate-recommendations returns dedupe metrics and runId", async
   assert.ok(g2.data.dedupe);
   // No new transcript lines after ingest cursor; duplicate skip path is covered when candidates exist.
   assert.equal(g2.data.candidates, 0);
+});
+
+test("Phase6a: sync discovers Cursor global ~/.cursor/projects/<slug>/agent-transcripts", async () => {
+  const prevHome = process.env.HOME;
+  const prevWkHome = process.env.WORKSPACE_KIT_HOME;
+  const fakeHome = await mkdtemp(path.join(os.tmpdir(), "wk-fake-home-"));
+  process.env.HOME = fakeHome;
+  process.env.WORKSPACE_KIT_HOME = fakeHome;
+  try {
+    const workspacePath = await tmpWs();
+    const cursorDir = buildCursorProjectsAgentTranscriptsPath(workspacePath);
+    assert.ok(cursorDir.startsWith(fakeHome));
+    await mkdir(cursorDir, { recursive: true });
+    await writeFile(path.join(cursorDir, "global.jsonl"), '{"role":"user","text":"from cursor global"}\n', "utf8");
+
+    await mkdir(path.join(workspacePath, ".workspace-kit"), { recursive: true });
+    await writeFile(
+      path.join(workspacePath, ".workspace-kit", "config.json"),
+      JSON.stringify({
+        improvement: {
+          transcripts: {
+            discoveryPaths: [".___wk_test_no_local_transcript_dir___"]
+          }
+        }
+      }),
+      "utf8"
+    );
+    await mkdir(path.join(workspacePath, ".workspace-kit", "tasks"), { recursive: true });
+    await writeFile(
+      path.join(workspacePath, ".workspace-kit", "tasks", "state.json"),
+      JSON.stringify({ schemaVersion: 1, tasks: [], transitionLog: [], lastUpdated: new Date().toISOString() }),
+      "utf8"
+    );
+
+    const registry = new ModuleRegistry([
+      workspaceConfigModule,
+      taskEngineModule,
+      planningModule,
+      improvementModule,
+      approvalsModule
+    ]);
+    const router = new ModuleCommandRouter(registry);
+    const safeEnv = { ...process.env };
+    for (const k of Object.keys(safeEnv)) {
+      if (k.startsWith("WORKSPACE_KIT_")) delete safeEnv[k];
+    }
+    safeEnv.HOME = fakeHome;
+    safeEnv.WORKSPACE_KIT_HOME = fakeHome;
+    const resolved = await resolveWorkspaceConfigWithLayers({ workspacePath, registry, env: safeEnv });
+    const ctx = buildContext(workspacePath, registry, resolved.effective);
+
+    const sync = await router.execute("sync-transcripts", {}, ctx);
+    assert.equal(sync.ok, true);
+    assert.equal(sync.data.discoveredFrom, "cursor-global-project-agent-transcripts");
+    assert.ok(sync.data.copied >= 1);
+  } finally {
+    if (prevHome === undefined) delete process.env.HOME;
+    else process.env.HOME = prevHome;
+    if (prevWkHome === undefined) delete process.env.WORKSPACE_KIT_HOME;
+    else process.env.WORKSPACE_KIT_HOME = prevWkHome;
+  }
 });
 
 test("Phase6a: malformed policy trace lines are skipped", async () => {

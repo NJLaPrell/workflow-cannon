@@ -4,6 +4,11 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+### Changed
+
+- **`generate-recommendations`** — always runs **`sync-transcripts`** first (honors the same `sourcePath` / `archivePath` / discovery resolution as standalone sync). Response `data` includes a **`sync`** object with the sync result alongside recommendation fields.
+- **`sync-transcripts` / transcript discovery** — default `improvement.transcripts.sourcePath` is now **empty** so sync **discovers** sources: repo-relative paths (`.cursor/agent-transcripts`, `.vscode/agent-transcripts`, then optional `discoveryPaths`), then **Cursor global** `~/.cursor/projects/<workspace-path-slug>/agent-transcripts` when present (`buildCursorProjectsAgentTranscriptsPath`). Set `sourcePath` explicitly to pin a single relative source and skip discovery.
+
 ## [0.8.0] - 2026-03-26
 
 Phase 6 — automation hardening, response-template advisory, and Cursor-native transcript automation: bounded transcript operations, policy session grants, response templates on `workspace-kit run` JSON, and optional editor/CLI automation.

@@ -55,8 +55,9 @@ const REGISTRY: Record<string, ConfigKeyMetadata> = {
   "improvement.transcripts.sourcePath": {
     key: "improvement.transcripts.sourcePath",
     type: "string",
-    description: "Relative path to transcript JSONL source files for sync operations.",
-    default: ".cursor/agent-transcripts",
+    description:
+      "Optional relative path to transcript JSONL source. When empty, sync uses discoveryPaths (repo-relative, then Cursor global ~/.cursor/projects/<slug>/agent-transcripts).",
+    default: "",
     domainScope: "project",
     owningModule: "improvement",
     sensitive: false,
@@ -161,7 +162,7 @@ const REGISTRY: Record<string, ConfigKeyMetadata> = {
     key: "improvement.transcripts.discoveryPaths",
     type: "array",
     description:
-      "Ordered relative paths tried when improvement.transcripts.sourcePath is unset (first existing wins).",
+      "Ordered relative paths tried when improvement.transcripts.sourcePath is unset (first existing wins). After these, sync tries Cursor global ~/.cursor/projects/<slug>/agent-transcripts.",
     default: [],
     domainScope: "project",
     owningModule: "improvement",
