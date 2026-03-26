@@ -21,7 +21,16 @@ const REQUIRED_FIELDS = [
   { path: "files", validate: (v) => Array.isArray(v) && v.length > 0 },
 ];
 
-const REQUIRED_SCRIPTS = ["build", "check", "test", "pack:dry-run"];
+const REQUIRED_SCRIPTS = [
+  "build",
+  "check",
+  "test",
+  "pack:dry-run",
+  "check-compatibility",
+  "check-planning-consistency",
+  "check-release-channel",
+  "phase4-gates"
+];
 
 function getNestedValue(obj, dotPath) {
   return dotPath.split(".").reduce((acc, key) => acc?.[key], obj);

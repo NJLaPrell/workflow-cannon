@@ -15,7 +15,8 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - **Phase 1 (Task Engine core) is COMPLETE** and ships as **`v0.3.0`**. Completed slices: `T199`, `T184`, `T185`, `T186`, `T217`.
 - **Phase 2 (configuration and policy base) is COMPLETE** and ships as **`v0.4.0`**. Completed slices: `T218`, `T187`, `T200`, `T188`, `T201`, `T189`.
 - **Phase 2b is COMPLETE** and ships as **`v0.4.1`** (`T219`–`T220`, `T228`–`T237`).
-- **Phase 3 (Enhancement loop MVP) is COMPLETE** in-repo and ships as **`v0.5.0`** (`T190`–`T192`, `T202`–`T203`). **Next execution phase is Phase 4** at **`v0.6.0`** (`T193` onward).
+- **Phase 3 (Enhancement loop MVP) is COMPLETE** in-repo and ships as **`v0.5.0`** (`T190`–`T192`, `T202`–`T203`).
+- **Phase 4 (Runtime scale and ecosystem) is COMPLETE** in-repo and ships as **`v0.6.0`** (`T193`–`T195`, `T204`–`T205`, `T238`–`T242`).
 - Historical extraction and first-publish milestones remain recorded below as provenance.
 
 ## Phase plan and release cadence
@@ -69,14 +70,14 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
   - Human decisions are recorded via `approvals`, idempotent where required, and replayable from persisted artifacts.
   - Provenance is traceable recommendation → decision → applied change, with optional linkage into policy traces and config mutation records.
 
-### Phase 4 - Runtime scale and ecosystem -> GitHub release `v0.6.0`
+### Phase 4 - Runtime scale and ecosystem -> GitHub release `v0.6.0` (COMPLETE)
 
-- Primary scope: `T193` to `T195`, then subsequent post-`v0.6.0` expansion tasks.
-- Outcome: extension-ready and operationally robust platform.
+- Primary scope: `T193` to `T195`, with support slices `T204`/`T205` and enforcement/operability expansions `T238` to `T242` (compatibility gates + matrix schema, evidence lifecycle controls, release-channel operational mapping, planning-doc consistency guard).
+- Outcome: extension-ready and operationally robust platform with fail-closed compatibility and release-channel enforcement.
 - Exit signals:
-  - Extension/module compatibility controls are enforced.
-  - Operational SLO/supportability controls are active.
-  - Upgrade compatibility guarantees are documented and tested.
+  - Extension/module compatibility controls are enforced in runtime and CI.
+  - Operational SLO/supportability controls are active with diagnostics evidence output.
+  - Upgrade compatibility guarantees are documented and tested across channels.
 
 ## Recorded decisions
 

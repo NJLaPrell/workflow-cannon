@@ -13,13 +13,14 @@ Dependency fields:
 
 ## Current execution state
 
-- Current phase in execution: _Phase 3 COMPLETE (`v0.5.0`). Phase 4 (Scale and ecosystem) is next._
-- Milestone target: _Extension-ready platform and operational hardening (`v0.6.0`)._
+- Current phase in execution: _Phase 4 COMPLETE (`v0.6.0`)._
+- Milestone target: _Phase 4 delivered: extension-ready platform and operational hardening (`v0.6.0`)._
 - Completed execution order (Phase 1): `T199` → `T184` → `T185` → `T186` → `T217`
 - Completed execution order (Phase 2): `T218` → `T187` → `T200` → `T188` → `T201` → `T189`
 - Completed execution order (Phase 2b): policy `T219` → `T220`; config UX `T228` → `T229` → `T230` → `T231` → `T232` → `T234` → `T233` → `T236` → `T237` → `T235` (see Phase 2b notes for parallel slots).
 - Completed execution order (Phase 3): `T202` / `T203` (contracts) with `T190` → `T191` → `T192` (runtime and lineage).
-- Ready queue: `T193`
+- Completed execution order (Phase 4): `T193` → `T204` / `T239` → `T238` → `T194` → `T205` → `T240` → `T195` → `T241` → `T242`.
+- Ready queue: none
 - Design decisions resolved: Phase 1 — Phase 1 decisions table. Phase 2 — Phase 2 decisions table (below).
 
 ## Historical baseline (pre-Phase 0)
@@ -781,12 +782,12 @@ Release target: **GitHub release `v0.5.0`**
 
 Release target: **GitHub release `v0.6.0`**
 
-### [ ] T193 [workspace-kit] Define module/plugin compatibility contract
+### [x] T193 [workspace-kit] Define module/plugin compatibility contract
 - Priority: P2
 - Approach: Contract + conformance checks + compatibility matrix.
 - Depends on: `T186`, `T188`, `T192`
 - Unblocks: `T194`, `T195`, `T204`
-- Supporting tasks: `T204`
+- Supporting tasks: `T204`, `T238`, `T239`
 - Technical scope:
   - Define compatibility contract and version policy for extensions.
   - Implement conformance checks for required contract behaviors.
@@ -795,12 +796,12 @@ Release target: **GitHub release `v0.6.0`**
   - Extensions can be validated against contract rules.
   - Incompatible extensions fail with explicit incompatibility reasons.
 
-### [ ] T194 [workspace-kit] Add supportability and runtime objective controls
+### [x] T194 [workspace-kit] Add supportability and runtime objective controls
 - Priority: P2
 - Approach: Diagnostics + health checks + baseline SLO objectives.
 - Depends on: `T185`, `T193`
 - Unblocks: `T195`, `T205`
-- Supporting tasks: `T205`
+- Supporting tasks: `T205`, `T240`
 - Technical scope:
   - Define baseline diagnostics bundle and health checks.
   - Define minimum runtime objective set (latency/error/throughput).
@@ -809,12 +810,12 @@ Release target: **GitHub release `v0.6.0`**
   - Diagnostics can be generated in one command path.
   - Runtime objectives are measurable and documented.
 
-### [ ] T195 [workspace-kit] Define release-channel and compatibility guarantees
+### [x] T195 [workspace-kit] Define release-channel and compatibility guarantees
 - Priority: P2
 - Approach: Define channels tied to explicit compatibility and migration guarantees.
 - Depends on: `T179`, `T189`, `T193`, `T194`
 - Unblocks: none
-- Supporting tasks: `T204`, `T205`
+- Supporting tasks: `T204`, `T205`, `T241`, `T242`
 - Technical scope:
   - Define channel policy (`canary`, `stable`, `lts`) and promotion criteria.
   - Define compatibility guarantees and required migration notes per channel.
@@ -973,7 +974,7 @@ Release target: **GitHub release `v0.6.0`**
 - Acceptance criteria:
   - Event contract is stable, versioned if needed, and supports end-to-end lineage reconstruction with trace correlation.
 
-### [ ] T204 [workspace-kit] Build compatibility matrix template
+### [x] T204 [workspace-kit] Build compatibility matrix template
 - Priority: P2
 - Approach: Build reusable compatibility matrix and conformance report template.
 - Depends on: `T193`
@@ -985,14 +986,82 @@ Release target: **GitHub release `v0.6.0`**
 - Acceptance criteria:
   - Matrix template can be used across module and channel policy tasks.
 
-### [ ] T205 [workspace-kit] Define diagnostics and SLO baseline pack
+### [x] T205 [workspace-kit] Define diagnostics and SLO baseline pack
 - Priority: P2
 - Approach: Define minimum diagnostics payload and baseline objective pack.
 - Depends on: `T194`
-- Unblocks: `T195`
+- Unblocks: `T195`, `T240`
 - Technical scope:
   - Define diagnostics bundle fields and collection triggers.
   - Define baseline runtime objective set and calculation method.
   - Define objective reporting cadence and threshold handling.
 - Acceptance criteria:
   - Baseline diagnostics/SLO pack is ready for runtime instrumentation.
+
+### [x] T238 [workspace-kit] Enforce compatibility contract via runtime and CI gates
+- Priority: P2
+- Approach: Convert compatibility policy into executable fail-closed checks in CLI/runtime and CI.
+- Depends on: `T193`, `T204`
+- Unblocks: `T195`
+- Technical scope:
+  - Implement compatibility validation command/path that evaluates modules/extensions against the compatibility contract and matrix.
+  - Wire compatibility checks into CI/release-readiness so incompatibilities fail with explicit diagnostics.
+  - Ensure conformance outputs are machine-readable and stable for automation.
+  - Add negative-path tests proving unsupported combinations fail closed.
+- Acceptance criteria:
+  - At least one runtime/CLI and one CI gate enforce compatibility rules.
+  - Incompatible module/plugin combinations fail with deterministic, actionable reasons.
+
+### [x] T239 [workspace-kit] Define canonical compatibility matrix schema and source-of-truth mapping
+- Priority: P2
+- Approach: Establish one authoritative matrix schema spanning runtime, module contract, config schema, and policy/trace schema versions.
+- Depends on: `T193`
+- Unblocks: `T204`, `T238`
+- Technical scope:
+  - Define matrix schema fields, required keys, and versioning policy.
+  - Define supported/unsupported combination semantics and severity levels.
+  - Define ownership and update workflow so matrix changes are auditable and release-reviewed.
+  - Define mapping from matrix entries to validation checks and release evidence artifacts.
+- Acceptance criteria:
+  - Compatibility matrix schema is versioned and validated in automated checks.
+  - Source-of-truth location and update workflow are explicit and documented.
+
+### [x] T240 [workspace-kit] Add evidence retention, compaction, and redaction policy for runtime artifacts
+- Priority: P2
+- Approach: Add lifecycle controls for append-only evidence stores to preserve operability and safety at scale.
+- Depends on: `T194`, `T205`
+- Unblocks: `T195`
+- Technical scope:
+  - Define retention/rotation policy for `.workspace-kit` evidence files (policy traces, config mutations, approvals decisions, lineage, improvement state).
+  - Define optional compaction/summarization strategy and recovery guarantees.
+  - Define redaction/classification rules for sensitive payloads in evidence and recommendation metadata.
+  - Add diagnostics surfacing for evidence volume growth and retention status.
+- Acceptance criteria:
+  - Evidence lifecycle policy is documented and test-covered for at least one prune/rotate path.
+  - Sensitive fields are consistently handled per redaction policy across evidence writers.
+
+### [x] T241 [workspace-kit] Operationalize release channels with tag/dist-tag/release-label mapping
+- Priority: P2
+- Approach: Make channel policy executable by mapping channels to concrete git, GitHub, and npm operations.
+- Depends on: `T195`
+- Unblocks: none
+- Technical scope:
+  - Define mapping between channel (`canary`/`stable`/`lts`) and git tag conventions, GitHub release labeling, and npm dist-tags.
+  - Define promotion and rollback command workflows with required evidence gates and approvals.
+  - Define automation entrypoints and validation checks for channel transitions.
+- Acceptance criteria:
+  - Channel promotions and rollbacks are reproducible via documented command workflows.
+  - Channel mapping is validated in release readiness checks.
+
+### [x] T242 [workspace-kit] Add roadmap/tasks/feature-matrix consistency guard
+- Priority: P2
+- Approach: Prevent status drift by validating shared phase/task state across maintainer planning documents.
+- Depends on: `T195`
+- Unblocks: none
+- Technical scope:
+  - Define canonical shared fields for phase/task state across `ROADMAP.md`, `TASKS.md`, and `FEATURE-MATRIX.md`.
+  - Implement a drift check command/CI gate that fails on inconsistent state claims.
+  - Define maintainer remediation workflow for drift failures.
+- Acceptance criteria:
+  - CI fails when phase/task completion status is inconsistent across the three documents.
+  - Drift reports identify exact mismatches and expected corrections.

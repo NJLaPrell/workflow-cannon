@@ -63,6 +63,9 @@ jobs:
       - name: Dry-run pack
         run: pnpm run pack:dry-run
 
+      - name: Phase 4 gates
+        run: pnpm run phase4-gates
+
   parity:
     needs: [test, release-readiness]
     runs-on: ubuntu-latest
@@ -89,10 +92,22 @@ jobs:
       - name: Run parity validation
         run: pnpm run parity
 
+      - name: Generate runtime diagnostics
+        if: always()
+        run: pnpm run generate-runtime-diagnostics
+
       - name: Upload parity evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: parity-evidence
           path: artifacts/parity-evidence.json
+          retention-days: 30
+
+      - name: Upload runtime diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-diagnostics
+          path: artifacts/runtime-diagnostics.json
           retention-days: 30

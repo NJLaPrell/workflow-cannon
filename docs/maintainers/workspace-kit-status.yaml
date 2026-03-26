@@ -1,18 +1,18 @@
 schema_version: 1
 current_kit_phase: "4"
-last_updated: "2026-03-25"
-active_focus: "Phase 3 COMPLETE (v0.5.0): improvement + approvals + lineage shipped in-repo. Phase 4 (v0.6.0) head T193."
+last_updated: "2026-03-26"
+active_focus: "Phase 4 COMPLETE (v0.6.0): compatibility gates, diagnostics/SLO pack, release channels, and planning consistency guard shipped."
 blockers: []
 next_agent_actions:
-  - "Begin Phase 4: T193 module/plugin compatibility contract"
+  - "Monitor v0.6.0 release evidence and open follow-up tasks for observed friction."
 last_session_summary:
   - "v0.4.0 published: Phase 2 (config, policy, cutover docs); npm latest 0.4.0; GitHub release v0.4.0; workflow run 23561237541."
   - "Maintainer artifacts: config-policy-matrix, task-engine-cutover + checklist; TASKS Phase 2 complete."
 pending_decisions: []
 metrics:
-  updated_at: "2026-03-25"
+  updated_at: "2026-03-26"
   source: "automated"
-  notes: "v0.5.0 in-repo; publish when ready. Phase 3 tasks complete; Phase 4 (T193+) next."
+  notes: "v0.6.0 prepared in-repo with Phase 4 tasks complete and release gates wired."
   time_to_doctor_minutes: 0.03
   cold_start_success_rate_pct: 100
   upgrade_success_rate_pct: null

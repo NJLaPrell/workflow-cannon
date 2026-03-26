@@ -2,6 +2,29 @@
 
 All notable changes to `@workflow-cannon/workspace-kit` are documented in this file.
 
+## [0.6.0] - 2026-03-26
+
+Phase 4 — runtime scale and ecosystem hardening: compatibility contract enforcement, diagnostics/SLO baseline, release-channel guarantees, and planning-doc consistency guardrails.
+
+### Added
+
+- **Compatibility matrix + schema** — canonical `docs/maintainers/compatibility-matrix.json` and `schemas/compatibility-matrix.schema.json` for runtime/module/config/policy compatibility mapping.
+- **Compatibility gate** — `scripts/check-compatibility.mjs` with machine-readable report output at `artifacts/compatibility-report.json`.
+- **Release channel enforcement** — `scripts/check-release-channel.mjs` validates channel (`canary`/`stable`/`lts`) behavior against matrix mapping.
+- **Planning consistency guard** — `scripts/check-planning-doc-consistency.mjs` enforces consistent Phase status across `ROADMAP.md`, `TASKS.md`, and `FEATURE-MATRIX.md`.
+- **Operational diagnostics pack** — `scripts/generate-runtime-diagnostics.mjs` emits runtime evidence inventory and SLO objective status to `artifacts/runtime-diagnostics.json`.
+- **Evidence lifecycle control** — `scripts/prune-evidence.mjs` supports retention-based pruning for stale `.workspace-kit` evidence artifacts.
+
+### Changed
+
+- **CI and publish gates** now run `phase4-gates` (`check-compatibility`, planning consistency, release-channel validation) before release execution.
+- **Release metadata validation** now requires Phase 4 gate scripts in `package.json` scripts.
+
+### Migration notes
+
+- Release automation should set channel context with `WORKSPACE_KIT_RELEASE_CHANNEL` (defaults to `stable`) and may set `WORKSPACE_KIT_RELEASE_DIST_TAG` / `WORKSPACE_KIT_RELEASE_TAG` for strict channel validation.
+- If local evidence stores grow, run `pnpm run prune-evidence` in dry-run mode first, then with `WORKSPACE_KIT_EVIDENCE_PRUNE_APPLY=true` for cleanup.
+
 ## [0.5.0] - 2026-03-25
 
 Phase 3 — enhancement loop MVP: evidence-driven `improvement` tasks, approvals decisions, heuristic confidence, and append-only lineage.

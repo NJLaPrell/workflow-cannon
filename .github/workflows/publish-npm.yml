@@ -45,6 +45,9 @@ jobs:
       - name: Release metadata check
         run: node scripts/check-release-metadata.mjs
 
+      - name: Phase 4 gates
+        run: pnpm run phase4-gates
+
       - name: Parity validation
         run: pnpm run parity
 

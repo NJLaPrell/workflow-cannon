@@ -48,6 +48,7 @@ If a gate fails, do not publish. Capture the blocker and route follow-up through
    - Execute `pnpm run build`, `pnpm run check`, `pnpm run test`.
    - Execute `pnpm run parity` for packaged-artifact parity validation.
    - Execute `pnpm run check-release-metadata` for package.json field validation.
+   - Execute `pnpm run phase4-gates` (`check-compatibility`, planning consistency guard, release-channel guard).
    - Confirm release automation workflows are green.
 4. **Present for approval**
    - Summarize scope, risk, evidence, and migration notes.
@@ -95,3 +96,5 @@ This closes the loop with the Enhancement Engine direction: release outcomes sho
 - `docs/maintainers/SECURITY.md` — vulnerability handling expectations
 - `docs/maintainers/release-gate-matrix.md` — full gate inventory and CI mapping
 - `docs/maintainers/parity-validation-flow.md` — parity command chain and evidence contract
+- `docs/maintainers/compatibility-matrix.json` — canonical compatibility + release-channel mapping source
+- `schemas/compatibility-matrix.schema.json` — compatibility matrix schema contract

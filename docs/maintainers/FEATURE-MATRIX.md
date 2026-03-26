@@ -18,7 +18,7 @@ Status legend:
 | Phase 2 - Config, policy, local cutover (`T218`, `T187`, `T200`, `T188`, `T201`, `T189`) | `v0.4.0` | Completed |
 | Phase 2b - Policy hardening + config UX (`T219`-`T220`, `T228`-`T237`) | `v0.4.1` | Completed |
 | Phase 3 - Enhancement loop MVP (`T190`-`T192`, `T202`-`T203`) | `v0.5.0` | Completed |
-| Phase 4 - Scale and ecosystem hardening (`T193`-`T195`) | `v0.6.0` | In progress / ready |
+| Phase 4 - Scale and ecosystem hardening (`T193`-`T195`, `T204`-`T205`, `T238`-`T242`) | `v0.6.0` | Completed |
 
 ## Feature Matrix by Phase
 
@@ -98,9 +98,9 @@ Status legend:
 
 | Product feature | What users/maintainers get | Status | Task coverage |
 | --- | --- | --- | --- |
-| Extension compatibility contract | Clear compatibility expectations and conformance checks for modules/plugins | Planned | `T193`, `T204` |
-| Supportability and runtime objectives | Operational diagnostics and measurable runtime objectives | Planned | `T194`, `T205` |
-| Release channels and compatibility guarantees | Channel-based release posture (`canary`/`stable`/`lts`) with explicit guarantees | Planned | `T195` |
+| Extension compatibility contract | Clear compatibility expectations and conformance checks for modules/plugins | Completed | `T193`, `T204`, `T238`, `T239` |
+| Supportability and runtime objectives | Operational diagnostics and measurable runtime objectives | Completed | `T194`, `T205`, `T240` |
+| Release channels and compatibility guarantees | Channel-based release posture (`canary`/`stable`/`lts`) with explicit guarantees | Completed | `T195`, `T241` |
 
 ## Supporting Milestone Features (cross-phase)
 
@@ -112,10 +112,15 @@ Status legend:
 | Task schema workbook | Implementation-ready workbook with binding design decisions for all Phase 1 engine components | Completed | `T199` |
 | Config-policy decision matrix | Shared decision map for precedence and policy interactions | Completed | `T200` |
 | Task engine cutover checklist | Maintainer-local preflight/rollback checklist for optional task-engine adoption | Completed | `T201` |
-| Recommendation confidence rubric | Deterministic scoring thresholds for recommendation queue admission | Planned | `T202` |
-| Lineage event contract | Stable, immutable event format for provenance reconstruction | Planned | `T203` |
-| Compatibility matrix template | Reusable compatibility reporting format for extensions and channels | Planned | `T204` |
-| Diagnostics and SLO baseline pack | Standard diagnostics payload and objective baseline for runtime reviews | Planned | `T205` |
+| Recommendation confidence rubric | Deterministic scoring thresholds for recommendation queue admission | Completed | `T202` |
+| Lineage event contract | Stable, immutable event format for provenance reconstruction | Completed | `T203` |
+| Compatibility matrix template | Reusable compatibility reporting format for extensions and channels | Completed | `T204` |
+| Diagnostics and SLO baseline pack | Standard diagnostics payload and objective baseline for runtime reviews | Completed | `T205` |
+| Compatibility enforcement gates | Runtime + CI fail-closed compatibility checks with machine-readable conformance output | Completed | `T238` |
+| Canonical compatibility matrix schema | Versioned source-of-truth schema mapping runtime/module/config/policy compatibility combinations | Completed | `T239` |
+| Evidence lifecycle controls | Retention, compaction, and redaction policy for append-only `.workspace-kit` runtime artifacts | Completed | `T240` |
+| Release channel operational mapping | Executable channel mapping across git tags, GitHub release labels, and npm dist-tags | Completed | `T241` |
+| Planning-doc consistency guard | CI drift check that enforces status consistency across roadmap, tasks, and feature matrix docs | Completed | `T242` |
 
 ## Notes
 

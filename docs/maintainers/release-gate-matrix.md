@@ -16,6 +16,7 @@ Referenced by `docs/maintainers/RELEASING.md`. All gates must pass before publis
 | G6 | Dry-run pack success | CI | `pnpm run pack:dry-run` exit 0, artifact in `artifacts/` | Block publish; fix pack errors | `ci.yml` → release-readiness job |
 | G7 | Release metadata validation | CI | `scripts/check-release-metadata.mjs` exit 0 | Block publish; fix metadata fields | `ci.yml` → release-readiness job |
 | G8 | Parity validation pass | CI | Parity runner exit 0, evidence artifact generated | Block publish; fix parity regressions | `ci.yml` → parity job |
+| G11 | Compatibility and channel gates pass | CI | `pnpm run phase4-gates` and `artifacts/compatibility-report.json` | Block publish; fix compatibility/channel/consistency failures | `ci.yml` → release-readiness job |
 | G9 | Migration risk review | Maintainer | Config/template/schema/state diffs since last release | Block publish if breaking change lacks migration notes | Manual pre-release review |
 | G10 | Security-sensitive review | Maintainer | Policy/approval/secrets/workspace-mutation diffs | Block publish; require explicit sign-off | Manual pre-release review |
 
@@ -23,7 +24,7 @@ Referenced by `docs/maintainers/RELEASING.md`. All gates must pass before publis
 
 | Role | Gates owned | Escalation path |
 | --- | --- | --- |
-| CI automation | G3, G4, G5, G6, G7, G8 | Failing CI gates produce actionable error output; maintainer investigates |
+| CI automation | G3, G4, G5, G6, G7, G8, G11 | Failing CI gates produce actionable error output; maintainer investigates |
 | Maintainer (release lead) | G1, G2, G9, G10 | Unresolved manual gates block release; capture blocker as task in `TASKS.md` |
 
 ## Escalation Path

@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/compatibility-matrix.schema.json",
+  "title": "Workflow Cannon Compatibility Matrix",
+  "type": "object",
+  "required": ["schemaVersion", "generatedAt", "runtime", "modules", "channels"],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "runtime": {
+      "type": "object",
+      "required": ["runtimeVersion", "moduleContractVersion", "configSchema", "policyTraceSchema"],
+      "properties": {
+        "runtimeVersion": { "type": "string", "minLength": 1 },
+        "moduleContractVersion": { "type": "string", "enum": ["1"] },
+        "configSchema": { "type": "integer", "minimum": 1 },
+        "policyTraceSchema": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "modules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "version", "contractVersion", "compatibilityLevel", "supportedRuntime", "severity"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+          "contractVersion": { "type": "string", "enum": ["1"] },
+          "compatibilityLevel": { "type": "string", "enum": ["strict", "compatible", "warn-only"] },
+          "supportedRuntime": { "type": "string", "minLength": 1 },
+          "severity": { "type": "string", "enum": ["error", "warn"] },
+          "notes": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "channels": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "required": ["name", "npmDistTag", "releaseLabel", "tagPrefix", "allowPrerelease"],
+        "properties": {
+          "name": { "type": "string", "enum": ["canary", "stable", "lts"] },
+          "npmDistTag": { "type": "string", "minLength": 1 },
+          "releaseLabel": { "type": "string", "minLength": 1 },
+          "tagPrefix": { "type": "string", "minLength": 1 },
+          "allowPrerelease": { "type": "boolean" },
+          "rollback": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-03-26T00:00:00.000Z",
+  "runtime": {
+    "runtimeVersion": "0.1",
+    "moduleContractVersion": "1",
+    "configSchema": 1,
+    "policyTraceSchema": 1
+  },
+  "modules": [
+    {
+      "id": "workspace-config",
+      "version": "0.4.0",
+      "contractVersion": "1",
+      "compatibilityLevel": "strict",
+      "supportedRuntime": "0.1",
+      "severity": "error"
+    },
+    {
+      "id": "documentation",
+      "version": "0.2.0",
+      "contractVersion": "1",
+      "compatibilityLevel": "strict",
+      "supportedRuntime": "0.1",
+      "severity": "error"
+    },
+    {
+      "id": "task-engine",
+      "version": "0.5.0",
+      "contractVersion": "1",
+      "compatibilityLevel": "strict",
+      "supportedRuntime": "0.1",
+      "severity": "error"
+    },
+    {
+      "id": "approvals",
+      "version": "0.5.0",
+      "contractVersion": "1",
+      "compatibilityLevel": "compatible",
+      "supportedRuntime": "0.1",
+      "severity": "error"
+    },
+    {
+      "id": "planning",
+      "version": "0.1.0",
+      "contractVersion": "1",
+      "compatibilityLevel": "compatible",
+      "supportedRuntime": "0.1",
+      "severity": "warn"
+    },
+    {
+      "id": "improvement",
+      "version": "0.5.0",
+      "contractVersion": "1",
+      "compatibilityLevel": "compatible",
+      "supportedRuntime": "0.1",
+      "severity": "error"
+    }
+  ],
+  "channels": [
+    {
+      "name": "canary",
+      "npmDistTag": "canary",
+      "releaseLabel": "pre-release",
+      "tagPrefix": "v",
+      "allowPrerelease": true,
+      "rollback": "publish latest stable on canary tag and create follow-up canary tag after fix"
+    },
+    {
+      "name": "stable",
+      "npmDistTag": "latest",
+      "releaseLabel": "release",
+      "tagPrefix": "v",
+      "allowPrerelease": false,
+      "rollback": "publish patch and keep prior tag immutable"
+    },
+    {
+      "name": "lts",
+      "npmDistTag": "lts",
+      "releaseLabel": "release-lts",
+      "tagPrefix": "v",
+      "allowPrerelease": false,
+      "rollback": "publish lts patch on maintained branch"
+    }
+  ]
+}
