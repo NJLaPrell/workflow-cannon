@@ -19,6 +19,7 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - **Phase 4 (Runtime scale and ecosystem) is COMPLETE** in-repo and ships as **`v0.6.0`** (`T193`–`T195`, `T204`–`T205`, `T238`–`T242`).
 - **Phase 5 (Transcript intelligence automation) is COMPLETE** in-repo and ships as **`v0.7.0`** for the initial automation slice (`T244`, `T245`, `T246`, `T247`, `T248`, `T259`).
 - **Phase 6 (Automation hardening and response templates)** for **`v0.8.0`**: tracks **6a**–**6c** are **COMPLETE in-repo** (`T249`-`T258`, `T260`-`T266`, `T271`-`T274`); improvement recommendation item `imp-2cf5d881b81f9a` remains proposed.
+- Post-release architecture hardening backlog is queued as **`T275`-`T282`** (documentation/canon fixes, package identity alignment, CLI decomposition, config/runtime hardening, governance-surface cleanup).
 - Historical extraction and first-publish milestones remain recorded below as provenance.
 
 ## Phase plan and release cadence
