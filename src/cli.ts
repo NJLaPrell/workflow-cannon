@@ -20,6 +20,7 @@ import {
   recordSessionGrant,
   resolveSessionId
 } from "./core/session-policy.js";
+import { applyResponseTemplateApplication } from "./core/response-template-shaping.js";
 import { runWorkspaceConfigCli } from "./core/config-cli.js";
 import { resolveWorkspaceConfigWithLayers } from "./core/workspace-kit-config.js";
 import { documentationModule } from "./modules/documentation/index.js";
@@ -873,7 +874,7 @@ export async function runCli(
     };
 
     try {
-      const result = await router.execute(subcommand, commandArgs, ctx);
+      const rawResult = await router.execute(subcommand, commandArgs, ctx);
       if (sensitive && resolvedSensitiveApproval && policyOp) {
         await appendPolicyTrace(cwd, {
           timestamp: new Date().toISOString(),
@@ -882,13 +883,14 @@ export async function runCli(
           actor,
           allowed: true,
           rationale: resolvedSensitiveApproval.rationale,
-          commandOk: result.ok,
-          message: result.message
+          commandOk: rawResult.ok,
+          message: rawResult.message
         });
-        if (explicitPolicyApproval?.scope === "session" && result.ok) {
+        if (explicitPolicyApproval?.scope === "session" && rawResult.ok) {
           await recordSessionGrant(cwd, policyOp, sessionId, explicitPolicyApproval.rationale);
         }
       }
+      const result = applyResponseTemplateApplication(subcommand, commandArgs, rawResult, effective);
       writeLine(JSON.stringify(result, null, 2));
       return result.ok ? EXIT_SUCCESS : EXIT_VALIDATION_FAILURE;
     } catch (error) {

@@ -57,6 +57,22 @@ export {
   type SessionPolicyGrant
 } from "./session-policy.js";
 export {
+  parseTemplateDirectiveFromText
+} from "./instruction-template-mapper.js";
+export {
+  RESPONSE_TEMPLATE_CONTRACT_VERSION,
+  MAX_TEMPLATE_WARNING_LENGTH,
+  truncateTemplateWarning,
+  type ResponseTemplateDefinition,
+  type ResponseTemplateEnforcementMode
+} from "./response-template-contract.js";
+export {
+  allBuiltinDefinitions,
+  getResponseTemplateDefinition,
+  listBuiltinResponseTemplateIds
+} from "./response-template-registry.js";
+export { applyResponseTemplateApplication } from "./response-template-shaping.js";
+export {
   assertWritableKey,
   getConfigKeyMetadata,
   getConfigRegistryExport,

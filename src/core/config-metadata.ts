@@ -170,6 +170,47 @@ const REGISTRY: Record<string, ConfigKeyMetadata> = {
     requiresApproval: false,
     exposure: "maintainer",
     writableLayers: ["project", "user"]
+  },
+  "responseTemplates.enforcementMode": {
+    key: "responseTemplates.enforcementMode",
+    type: "string",
+    description:
+      "Whether unknown/mismatched response templates fail commands (`strict`) or only emit warnings (`advisory`).",
+    default: "advisory",
+    allowedValues: ["advisory", "strict"],
+    domainScope: "project",
+    owningModule: "workspace-kit",
+    sensitive: false,
+    requiresRestart: false,
+    requiresApproval: false,
+    exposure: "maintainer",
+    writableLayers: ["project", "user"]
+  },
+  "responseTemplates.defaultTemplateId": {
+    key: "responseTemplates.defaultTemplateId",
+    type: "string",
+    description: "Builtin response template id applied when a run does not specify one.",
+    default: "default",
+    domainScope: "project",
+    owningModule: "workspace-kit",
+    sensitive: false,
+    requiresRestart: false,
+    requiresApproval: false,
+    exposure: "maintainer",
+    writableLayers: ["project", "user"]
+  },
+  "responseTemplates.commandOverrides": {
+    key: "responseTemplates.commandOverrides",
+    type: "object",
+    description: "Map of module command name to builtin response template id.",
+    default: {},
+    domainScope: "project",
+    owningModule: "workspace-kit",
+    sensitive: false,
+    requiresRestart: false,
+    requiresApproval: false,
+    exposure: "maintainer",
+    writableLayers: ["project", "user"]
   }
 };
 
@@ -238,6 +279,16 @@ export function validateValueForMetadata(meta: ConfigKeyMetadata, value: unknown
     if (value === null || typeof value !== "object" || Array.isArray(value)) {
       throw typeError(meta.key, "object", value);
     }
+    if (meta.key === "responseTemplates.commandOverrides") {
+      for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+        if (typeof k !== "string" || !k.trim()) {
+          throw new Error(`config-type-error(${meta.key}): keys must be non-empty strings`);
+        }
+        if (typeof v !== "string" || !v.trim()) {
+          throw new Error(`config-type-error(${meta.key}): values must be non-empty strings`);
+        }
+      }
+    }
   }
   if (meta.allowedValues && meta.allowedValues.length > 0) {
     if (!meta.allowedValues.some((v) => deepEqualLoose(v, value))) {
@@ -273,6 +324,7 @@ export function validatePersistedConfigDocument(
     "documentation",
     "policy",
     "improvement",
+    "responseTemplates",
     "modules"
   ]);
   for (const k of Object.keys(data)) {
@@ -407,6 +459,31 @@ export function validatePersistedConfigDocument(
           cd.maxRecommendationCandidatesPerRun
         );
       }
+    }
+  }
+  const responseTemplates = data.responseTemplates;
+  if (responseTemplates !== undefined) {
+    if (
+      typeof responseTemplates !== "object" ||
+      responseTemplates === null ||
+      Array.isArray(responseTemplates)
+    ) {
+      throw new Error(`config-invalid(${label}): responseTemplates must be an object`);
+    }
+    const rt = responseTemplates as Record<string, unknown>;
+    for (const k of Object.keys(rt)) {
+      if (k !== "enforcementMode" && k !== "defaultTemplateId" && k !== "commandOverrides") {
+        throw new Error(`config-invalid(${label}): unknown responseTemplates.${k}`);
+      }
+    }
+    if (rt.enforcementMode !== undefined) {
+      validateValueForMetadata(REGISTRY["responseTemplates.enforcementMode"]!, rt.enforcementMode);
+    }
+    if (rt.defaultTemplateId !== undefined) {
+      validateValueForMetadata(REGISTRY["responseTemplates.defaultTemplateId"]!, rt.defaultTemplateId);
+    }
+    if (rt.commandOverrides !== undefined) {
+      validateValueForMetadata(REGISTRY["responseTemplates.commandOverrides"]!, rt.commandOverrides);
     }
   }
 }

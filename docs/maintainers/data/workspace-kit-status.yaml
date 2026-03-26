@@ -1,13 +1,13 @@
 schema_version: 1
 current_kit_phase: "6"
 last_updated: "2026-03-26"
-active_focus: "Phase 6 active (`v0.8.0`): `6a` transcript hardening complete in-repo (`T249`-`T258`); next tracks `6b` response-template advisory (`T260`-`T266`), `6c` Cursor-native automation (`T271`-`T274`); improvement item `imp-2cf5d881b81f9a` proposed."
+active_focus: "Phase 6 active (`v0.8.0`): `6a`/`6b` complete in-repo; next track `6c` Cursor-native automation (`T271`-`T274`); improvement item `imp-2cf5d881b81f9a` proposed."
 blockers: []
 next_agent_actions:
-  - "Phase 6b (after T260): T261 -> T262/T263 -> T264/T265/T266 (response-template advisory)."
-  - "Phase 6c: T271 -> T272 -> T273; optional T274 after T271 (Cursor-native + post-completion hook)."
+  - "Phase 6c: T271 -> T272 -> T273; optional T274 (Cursor-native + post-completion hook)."
   - "Proposed improvement: triage `imp-2cf5d881b81f9a` (policy friction for `generate-recommendations`)."
 last_session_summary:
+  - "Completed Phase 6b (`T260`-`T266`): response template contract, registry, `run` JSON shaping, plain-English directives, config keys, tests, runbook."
   - "Completed Phase 6a (`T249`-`T258`): bounded sync/generate, discovery, dedupe metrics, `transcript-automation-status`, session policy grants, retry queue, tests, runbook, redaction, pre-release hook script."
   - "Queued tasks `T271`-`T274` for Cursor/VS Code folder-open transcript sync, maintainer runbook, and optional task-engine post-completion hook."
   - "Phase 5 remains complete at `v0.7.0`; Phase 6b/6c execution continues toward `v0.8.0`."
@@ -17,7 +17,7 @@ pending_decisions:
 metrics:
   updated_at: "2026-03-26"
   source: "automated"
-  notes: "Phase 6a transcript hardening delivered; `v0.8.0` release train pending 6b/6c scope."
+  notes: "Phase 6a/6b delivered; `v0.8.0` release train pending 6c scope."
   time_to_doctor_minutes: 0.03
   cold_start_success_rate_pct: 100
   upgrade_success_rate_pct: null

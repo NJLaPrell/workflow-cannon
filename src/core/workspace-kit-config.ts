@@ -34,6 +34,11 @@ export const KIT_CONFIG_DEFAULTS: Record<string, unknown> = {
     storeRelativePath: ".workspace-kit/tasks/state.json"
   },
   documentation: {},
+  responseTemplates: {
+    enforcementMode: "advisory",
+    defaultTemplateId: "default",
+    commandOverrides: {} as Record<string, string>
+  },
   improvement: {
     transcripts: {
       sourcePath: ".cursor/agent-transcripts",

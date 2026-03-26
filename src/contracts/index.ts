@@ -1,5 +1,6 @@
 export type {
   ConfigRegistryView,
+  ResponseTemplateApplicationMeta,
   ModuleCommand,
   ModuleCommandResult,
   ModuleCapability,

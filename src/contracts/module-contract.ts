@@ -43,11 +43,25 @@ export type ModuleCommand = {
   args?: Record<string, unknown>;
 };
 
+/** Structured response-template application record (Phase 6b); mirrored in core for shaping. */
+export type ResponseTemplateApplicationMeta = {
+  requestedTemplateId: string | null;
+  appliedTemplateId: string | null;
+  enforcementMode: "advisory" | "strict";
+  warnings: string[];
+  telemetry?: {
+    resolveNs: number;
+    warningCount: number;
+  };
+};
+
 export type ModuleCommandResult = {
   ok: boolean;
   code: string;
   message?: string;
   data?: Record<string, unknown>;
+  /** Advisory response-template shaping metadata; always present for `workspace-kit run` JSON output when enabled. */
+  responseTemplate?: ResponseTemplateApplicationMeta;
 };
 
 /** Subset of module registry used for config layer ordering (avoids core↔contracts cycles). */
