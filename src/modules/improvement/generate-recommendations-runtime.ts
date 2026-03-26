@@ -31,6 +31,26 @@ function hasEvidenceKey(tasks: TaskEntity[], key: string): boolean {
   });
 }
 
+function resolveTranscriptArchivePath(
+  ctx: ModuleLifecycleContext,
+  args: GenerateRecommendationsArgs
+): string {
+  if (typeof args.transcriptsRoot === "string" && args.transcriptsRoot.trim().length > 0) {
+    return args.transcriptsRoot.trim();
+  }
+  const improvement =
+    ctx.effectiveConfig?.improvement && typeof ctx.effectiveConfig.improvement === "object"
+      ? (ctx.effectiveConfig.improvement as Record<string, unknown>)
+      : {};
+  const transcripts =
+    improvement.transcripts && typeof improvement.transcripts === "object"
+      ? (improvement.transcripts as Record<string, unknown>)
+      : {};
+  const archivePath =
+    typeof transcripts.archivePath === "string" ? transcripts.archivePath.trim() : "";
+  return archivePath || "agent-transcripts";
+}
+
 export type GenerateRecommendationsArgs = {
   /** Directory relative to workspace containing agent `*.jsonl` transcripts (default: agent-transcripts). */
   transcriptsRoot?: string;
@@ -51,10 +71,7 @@ export async function runGenerateRecommendations(
   await store.load();
 
   const state = await loadImprovementState(ctx.workspacePath);
-  const transcriptsRoot =
-    typeof args.transcriptsRoot === "string" && args.transcriptsRoot.trim()
-      ? args.transcriptsRoot.trim()
-      : "agent-transcripts";
+  const transcriptsRoot = resolveTranscriptArchivePath(ctx, args);
   const fromTag = typeof args.fromTag === "string" ? args.fromTag.trim() : undefined;
   const toTag = typeof args.toTag === "string" ? args.toTag.trim() : undefined;
 

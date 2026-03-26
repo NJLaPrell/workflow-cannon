@@ -1,18 +1,19 @@
 schema_version: 1
-current_kit_phase: "4"
+current_kit_phase: "5"
 last_updated: "2026-03-26"
-active_focus: "Baseline stabilization post-v0.6.0: T243 TASKS.md round-trip preservation patch complete."
+active_focus: "Phase 5 initial slice complete (`v0.7.0`): transcript sync/ingest UX and cadence/config baseline shipped; follow-on hardening queue staged."
 blockers: []
 next_agent_actions:
-  - "Monitor post-v0.6.0 friction and open follow-up tasks when recurring themes are confirmed."
+  - "Prepare follow-on Phase 5 hardening train from ready queue: T249/T250/T251 -> T254/T257 -> T252/T253/T255/T256/T258."
+  - "Keep transcript archives local-only and maintain policy-safe recommendation generation UX while expanding automation depth."
 last_session_summary:
-  - "v0.6.0 published: Phase 4 (runtime scale + ecosystem hardening) with compatibility gates, channel mapping, diagnostics, and planning consistency checks."
-  - "Post-release patch T243 complete: task-engine TASKS round-trip now preserves rich maintainer document structure."
+  - "Phase 5 initial scope (`T244`, `T245`, `T246`, `T247`, `T248`, `T259`) is complete with transcript sync, one-shot ingest, cadence/config contract, and design baseline."
+  - "Release-readiness checks for `v0.7.0` are staged; follow-on transcript and response-template tasks remain queued."
 pending_decisions: []
 metrics:
   updated_at: "2026-03-26"
   source: "automated"
-  notes: "v0.6.0 published and documented; T243 patch completed to keep TASKS markdown structure stable under task-engine import/generate flows."
+  notes: "Phase 5 initial release slice complete; queue now focused on scale/privacy/response-template follow-on hardening."
   time_to_doctor_minutes: 0.03
   cold_start_success_rate_pct: 100
   upgrade_success_rate_pct: null

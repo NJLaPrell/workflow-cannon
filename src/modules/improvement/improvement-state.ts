@@ -9,6 +9,8 @@ export type ImprovementStateDocument = {
   mutationLineCursor: number;
   transitionLogLengthCursor: number;
   transcriptLineCursors: Record<string, number>;
+  lastSyncRunAt: string | null;
+  lastIngestRunAt: string | null;
 };
 
 const DEFAULT_REL = ".workspace-kit/improvement/state.json";
@@ -23,7 +25,9 @@ export function emptyImprovementState(): ImprovementStateDocument {
     policyTraceLineCursor: 0,
     mutationLineCursor: 0,
     transitionLogLengthCursor: 0,
-    transcriptLineCursors: {}
+    transcriptLineCursors: {},
+    lastSyncRunAt: null,
+    lastIngestRunAt: null
   };
 }
 

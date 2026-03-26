@@ -33,7 +33,17 @@ export const KIT_CONFIG_DEFAULTS: Record<string, unknown> = {
   tasks: {
     storeRelativePath: ".workspace-kit/tasks/state.json"
   },
-  documentation: {}
+  documentation: {},
+  improvement: {
+    transcripts: {
+      sourcePath: ".cursor/agent-transcripts",
+      archivePath: "agent-transcripts"
+    },
+    cadence: {
+      minIntervalMinutes: 15,
+      skipIfNoNewTranscripts: true
+    }
+  }
 };
 
 /**
@@ -51,7 +61,16 @@ export const MODULE_CONFIG_CONTRIBUTIONS: Record<string, Record<string, unknown>
   },
   approvals: {},
   planning: {},
-  improvement: {}
+  improvement: {
+    transcripts: {
+      sourcePath: ".cursor/agent-transcripts",
+      archivePath: "agent-transcripts"
+    },
+    cadence: {
+      minIntervalMinutes: 15,
+      skipIfNoNewTranscripts: true
+    }
+  }
 };
 
 export function deepMerge(

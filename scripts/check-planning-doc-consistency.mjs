@@ -26,9 +26,13 @@ function inferTasksPhase4Status(text) {
 }
 
 function inferFeatureMatrixPhase4Status(text) {
-  const row = text.match(/Phase 4 - Scale and ecosystem hardening.*\|\s*([^\|]+)\s*$/m);
-  if (!row) return "Unknown";
-  const status = row[1].trim();
+  const milestoneTableRows = text
+    .split("\n")
+    .filter((line) => line.trim().startsWith("| Phase 4 - Scale and ecosystem hardening"));
+  if (milestoneTableRows.length === 0) return "Unknown";
+  const columns = milestoneTableRows[0].split("|").map((col) => col.trim());
+  const status = columns[3] ?? "";
+  if (!status) return "Unknown";
   if (/completed/i.test(status)) return "Completed";
   if (/in progress|ready/i.test(status)) return "In progress / ready";
   return "Planned";

@@ -15,7 +15,8 @@ export type PolicyOperationId =
   | "tasks.generate-tasks-md"
   | "tasks.run-transition"
   | "approvals.review-item"
-  | "improvement.generate-recommendations";
+  | "improvement.generate-recommendations"
+  | "improvement.ingest-transcripts";
 
 const COMMAND_TO_OPERATION: Record<string, PolicyOperationId | undefined> = {
   "document-project": "doc.document-project",
@@ -24,7 +25,8 @@ const COMMAND_TO_OPERATION: Record<string, PolicyOperationId | undefined> = {
   "generate-tasks-md": "tasks.generate-tasks-md",
   "run-transition": "tasks.run-transition",
   "review-item": "approvals.review-item",
-  "generate-recommendations": "improvement.generate-recommendations"
+  "generate-recommendations": "improvement.generate-recommendations",
+  "ingest-transcripts": "improvement.ingest-transcripts"
 };
 
 export function getOperationIdForCommand(commandName: string): PolicyOperationId | undefined {

@@ -8,6 +8,29 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 - Task engine markdown round-trip hardening: `import-tasks` now ignores non-task `###` headings (for example design-decision subheaders) and `generate-tasks-md` preserves existing maintainer TASKS document structure by syncing task headings in-place.
 
+## [0.7.0] - 2026-03-26
+
+Phase 5 — transcript intelligence automation (initial slice): manual-first transcript sync and one-shot ingest flow, with cadence/config contracts and a locked rollout baseline.
+
+### Added
+
+- **Transcript sync command** — `workspace-kit run sync-transcripts` copies transcript `*.jsonl` files from configured source into local archive with deterministic summaries (`scanned`, `copied`, `skippedExisting`, `skippedConflict`, `errors`, `copiedFiles`).
+- **One-shot ingest command** — `workspace-kit run ingest-transcripts` orchestrates sync + recommendation generation and returns consolidated sync/cadence/generation JSON in a single call.
+- **Phase 5 config contract** — new keys `improvement.transcripts.sourcePath`, `improvement.transcripts.archivePath`, `improvement.cadence.minIntervalMinutes`, and `improvement.cadence.skipIfNoNewTranscripts` with strict validation and metadata exposure.
+- **Cadence/backoff policy outputs** — ingest responses now include explicit cadence decision reasons for observability and troubleshooting.
+- **Design baseline** — `docs/maintainers/transcript-automation-baseline.md` defines command model, safety boundaries, config ownership, and rollout guardrails for follow-on Phase 5 work.
+
+### Changed
+
+- **Policy map** — `ingest-transcripts` is classified as a sensitive operation (`improvement.ingest-transcripts`) because it can mutate task-engine state through recommendation generation.
+- **Improvement module registration** — module command surface now includes `sync-transcripts` and `ingest-transcripts`.
+
+### Migration notes
+
+- Add/update transcript automation keys through canonical config surfaces (for example `workspace-kit config set improvement.transcripts.sourcePath ...`).
+- Continue keeping transcript archives local-only (`agent-transcripts/` remains ignored by git).
+- Automation invoking `workspace-kit run ingest-transcripts` must supply `policyApproval` in JSON args, same as other sensitive `run` commands.
+
 ## [0.6.0] - 2026-03-26
 
 Phase 4 — runtime scale and ecosystem hardening: compatibility contract enforcement, diagnostics/SLO baseline, release-channel guarantees, and planning-doc consistency guardrails.

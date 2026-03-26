@@ -1,11 +1,17 @@
 import type { WorkflowModule } from "../../contracts/module-contract.js";
 import { queryLineageChain } from "../../core/lineage-store.js";
 import { runGenerateRecommendations } from "./generate-recommendations-runtime.js";
+import {
+  resolveCadenceDecision,
+  runSyncTranscripts,
+  type TranscriptSyncArgs
+} from "./transcript-sync-runtime.js";
+import { loadImprovementState, saveImprovementState } from "./improvement-state.js";
 
 export const improvementModule: WorkflowModule = {
   registration: {
     id: "improvement",
-    version: "0.5.0",
+    version: "0.7.0",
     contractVersion: "1",
     capabilities: ["improvement"],
     dependsOn: ["task-engine", "planning"],
@@ -32,6 +38,16 @@ export const improvementModule: WorkflowModule = {
           name: "query-lineage",
           file: "query-lineage.md",
           description: "Reconstruct lineage chain for a recommendation task id."
+        },
+        {
+          name: "sync-transcripts",
+          file: "sync-transcripts.md",
+          description: "Sync local transcript JSONL files into the archive."
+        },
+        {
+          name: "ingest-transcripts",
+          file: "ingest-transcripts.md",
+          description: "Run transcript sync and recommendation generation in one flow."
         }
       ]
     }
@@ -57,6 +73,92 @@ export const improvementModule: WorkflowModule = {
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         return { ok: false, code: "generate-failed", message: msg };
+      }
+    }
+
+    if (command.name === "sync-transcripts") {
+      const syncArgs: TranscriptSyncArgs = {
+        sourcePath: typeof args.sourcePath === "string" ? args.sourcePath : undefined,
+        archivePath: typeof args.archivePath === "string" ? args.archivePath : undefined
+      };
+      try {
+        const sync = await runSyncTranscripts(ctx, syncArgs);
+        const state = await loadImprovementState(ctx.workspacePath);
+        state.lastSyncRunAt = new Date().toISOString();
+        await saveImprovementState(ctx.workspacePath, state);
+        return {
+          ok: true,
+          code: "transcripts-synced",
+          message: `Copied ${sync.copied} transcript file(s); skipped ${sync.skippedExisting} existing`,
+          data: sync as unknown as Record<string, unknown>
+        };
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        return { ok: false, code: "sync-failed", message: msg };
+      }
+    }
+
+    if (command.name === "ingest-transcripts") {
+      const syncArgs: TranscriptSyncArgs = {
+        sourcePath: typeof args.sourcePath === "string" ? args.sourcePath : undefined,
+        archivePath: typeof args.archivePath === "string" ? args.archivePath : undefined
+      };
+      const now = new Date();
+      try {
+        const sync = await runSyncTranscripts(ctx, syncArgs);
+        const state = await loadImprovementState(ctx.workspacePath);
+        const improvement =
+          ctx.effectiveConfig?.improvement && typeof ctx.effectiveConfig.improvement === "object"
+            ? (ctx.effectiveConfig.improvement as Record<string, unknown>)
+            : {};
+        const cadence =
+          improvement.cadence && typeof improvement.cadence === "object"
+            ? (improvement.cadence as Record<string, unknown>)
+            : {};
+        const minIntervalMinutes =
+          typeof cadence.minIntervalMinutes === "number" && Number.isFinite(cadence.minIntervalMinutes)
+            ? Math.max(1, Math.floor(cadence.minIntervalMinutes))
+            : 15;
+        const skipIfNoNewTranscripts =
+          typeof cadence.skipIfNoNewTranscripts === "boolean"
+            ? cadence.skipIfNoNewTranscripts
+            : true;
+        const cadenceDecision = resolveCadenceDecision(
+          now,
+          state.lastIngestRunAt,
+          minIntervalMinutes,
+          sync.copied,
+          skipIfNoNewTranscripts
+        );
+        state.lastSyncRunAt = now.toISOString();
+        const generate =
+          cadenceDecision.shouldRunGenerate || args.forceGenerate === true || args.runGenerate === true;
+        let recommendations: { created: string[]; skipped: number; candidates: number } | null = null;
+        if (generate) {
+          recommendations = await runGenerateRecommendations(ctx, {
+            transcriptsRoot: sync.archivePath
+          });
+          state.lastIngestRunAt = now.toISOString();
+        }
+        await saveImprovementState(ctx.workspacePath, state);
+        const status = generate ? "generated" : "skipped";
+        return {
+          ok: true,
+          code: "transcripts-ingested",
+          message: `Ingest ${status}; sync copied ${sync.copied} file(s)`,
+          data: {
+            sync,
+            cadence: {
+              minIntervalMinutes,
+              skipIfNoNewTranscripts,
+              decision: cadenceDecision.reason
+            },
+            generatedRecommendations: recommendations
+          } as Record<string, unknown>
+        };
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        return { ok: false, code: "ingest-failed", message: msg };
       }
     }
 

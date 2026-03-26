@@ -8,3 +8,4 @@ artifacts/
 .workspace-kit/lineage/
 .workspace-kit/approvals/
 .workspace-kit/tasks/
+agent-transcripts/

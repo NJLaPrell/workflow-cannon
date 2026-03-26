@@ -48,7 +48,7 @@ If a gate fails, do not publish. Capture the blocker in task-engine state and re
    - Execute `pnpm run build`, `pnpm run check`, `pnpm run test`.
    - Execute `pnpm run parity` for packaged-artifact parity validation.
    - Execute `pnpm run check-release-metadata` for package.json field validation.
-   - Execute `pnpm run phase4-gates` (`check-compatibility`, planning consistency guard, release-channel guard).
+  - Execute `pnpm run phase4-gates` (or phase-scoped successor, currently `pnpm run phase5-gates`) for compatibility/planning/release-channel enforcement.
    - Confirm release automation workflows are green.
 4. **Present for approval**
    - Summarize scope, risk, evidence, and migration notes.

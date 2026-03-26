@@ -1,4 +1,6 @@
 # Improvement Module State
 
-- `pendingRecommendations`: recommendations awaiting approval
-- `appliedRecommendations`: accepted and applied recommendations
+- `policyTraceLineCursor`, `mutationLineCursor`, `transitionLogLengthCursor`: incremental evidence cursors.
+- `transcriptLineCursors`: per-file transcript ingestion cursor map.
+- `lastSyncRunAt`: most recent transcript sync execution timestamp.
+- `lastIngestRunAt`: most recent one-shot ingest execution timestamp.

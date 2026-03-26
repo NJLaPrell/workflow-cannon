@@ -19,6 +19,7 @@ Status legend:
 | Phase 2b - Policy hardening + config UX (`T219`-`T220`, `T228`-`T237`) | `v0.4.1` | Completed |
 | Phase 3 - Enhancement loop MVP (`T190`-`T192`, `T202`-`T203`) | `v0.5.0` | Completed |
 | Phase 4 - Scale and ecosystem hardening (`T193`-`T195`, `T204`-`T205`, `T238`-`T242`) | `v0.6.0` | Completed |
+| Phase 5 - Transcript intelligence automation (`T244`-`T248`, `T259`) | `v0.7.0` | Completed |
 
 ## Feature Matrix by Phase
 
@@ -101,6 +102,15 @@ Status legend:
 | Extension compatibility contract | Clear compatibility expectations and conformance checks for modules/plugins | Completed | `T193`, `T204`, `T238`, `T239` |
 | Supportability and runtime objectives | Operational diagnostics and measurable runtime objectives | Completed | `T194`, `T205`, `T240` |
 | Release channels and compatibility guarantees | Channel-based release posture (`canary`/`stable`/`lts`) with explicit guarantees | Completed | `T195`, `T241` |
+
+### Phase 5 Transcript Intelligence Automation (`v0.7.0`)
+
+| Product feature | What users/maintainers get | Status | Task coverage |
+| --- | --- | --- | --- |
+| Manual-first transcript sync command | Deterministic local transcript archive sync without scheduler setup | Completed | `T244` |
+| One-shot transcript ingest flow | Single command to sync transcripts and generate recommendations with clear policy handling | Completed | `T245` |
+| Transcript config and trigger governance | Canonical config + workflow rules for event-driven frequent runs | Completed | `T246`, `T247`, `T248` |
+| Transcript automation design baseline | Coherent rollout plan and implementation contracts for downstream slices | Completed | `T259` |
 
 ## Supporting Milestone Features (cross-phase)
 

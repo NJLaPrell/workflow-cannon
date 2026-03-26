@@ -51,6 +51,58 @@ const REGISTRY: Record<string, ConfigKeyMetadata> = {
     requiresApproval: true,
     exposure: "maintainer",
     writableLayers: ["project"]
+  },
+  "improvement.transcripts.sourcePath": {
+    key: "improvement.transcripts.sourcePath",
+    type: "string",
+    description: "Relative path to transcript JSONL source files for sync operations.",
+    default: ".cursor/agent-transcripts",
+    domainScope: "project",
+    owningModule: "improvement",
+    sensitive: false,
+    requiresRestart: false,
+    requiresApproval: false,
+    exposure: "public",
+    writableLayers: ["project", "user"]
+  },
+  "improvement.transcripts.archivePath": {
+    key: "improvement.transcripts.archivePath",
+    type: "string",
+    description: "Relative local archive path where synced transcript JSONL files are copied.",
+    default: "agent-transcripts",
+    domainScope: "project",
+    owningModule: "improvement",
+    sensitive: false,
+    requiresRestart: false,
+    requiresApproval: false,
+    exposure: "public",
+    writableLayers: ["project", "user"]
+  },
+  "improvement.cadence.minIntervalMinutes": {
+    key: "improvement.cadence.minIntervalMinutes",
+    type: "number",
+    description: "Minimum minutes between one-shot ingest recommendation generation runs.",
+    default: 15,
+    domainScope: "project",
+    owningModule: "improvement",
+    sensitive: false,
+    requiresRestart: false,
+    requiresApproval: false,
+    exposure: "maintainer",
+    writableLayers: ["project", "user"]
+  },
+  "improvement.cadence.skipIfNoNewTranscripts": {
+    key: "improvement.cadence.skipIfNoNewTranscripts",
+    type: "boolean",
+    description: "Skip recommendation generation when transcript sync copies no new files.",
+    default: true,
+    domainScope: "project",
+    owningModule: "improvement",
+    sensitive: false,
+    requiresRestart: false,
+    requiresApproval: false,
+    exposure: "maintainer",
+    writableLayers: ["project", "user"]
   }
 };
 
@@ -140,7 +192,15 @@ export function validatePersistedConfigDocument(
   data: Record<string, unknown>,
   label: string
 ): void {
-  const allowed = new Set(["schemaVersion", "core", "tasks", "documentation", "policy", "modules"]);
+  const allowed = new Set([
+    "schemaVersion",
+    "core",
+    "tasks",
+    "documentation",
+    "policy",
+    "improvement",
+    "modules"
+  ]);
   for (const k of Object.keys(data)) {
     if (!allowed.has(k)) {
       throw new Error(`config-invalid(${label}): unknown top-level key '${k}'`);
@@ -192,6 +252,62 @@ export function validatePersistedConfigDocument(
   if (mods !== undefined) {
     if (typeof mods !== "object" || mods === null || Array.isArray(mods) || Object.keys(mods).length > 0) {
       throw new Error(`config-invalid(${label}): modules must be absent or an empty object`);
+    }
+  }
+  const improvement = data.improvement;
+  if (improvement !== undefined) {
+    if (typeof improvement !== "object" || improvement === null || Array.isArray(improvement)) {
+      throw new Error(`config-invalid(${label}): improvement must be an object`);
+    }
+    const imp = improvement as Record<string, unknown>;
+    for (const k of Object.keys(imp)) {
+      if (k !== "transcripts" && k !== "cadence") {
+        throw new Error(`config-invalid(${label}): unknown improvement.${k}`);
+      }
+    }
+    if (imp.transcripts !== undefined) {
+      if (
+        typeof imp.transcripts !== "object" ||
+        imp.transcripts === null ||
+        Array.isArray(imp.transcripts)
+      ) {
+        throw new Error(`config-invalid(${label}): improvement.transcripts must be an object`);
+      }
+      const tr = imp.transcripts as Record<string, unknown>;
+      for (const k of Object.keys(tr)) {
+        if (k !== "sourcePath" && k !== "archivePath") {
+          throw new Error(`config-invalid(${label}): unknown improvement.transcripts.${k}`);
+        }
+      }
+      if (tr.sourcePath !== undefined) {
+        validateValueForMetadata(REGISTRY["improvement.transcripts.sourcePath"]!, tr.sourcePath);
+      }
+      if (tr.archivePath !== undefined) {
+        validateValueForMetadata(REGISTRY["improvement.transcripts.archivePath"]!, tr.archivePath);
+      }
+    }
+    if (imp.cadence !== undefined) {
+      if (typeof imp.cadence !== "object" || imp.cadence === null || Array.isArray(imp.cadence)) {
+        throw new Error(`config-invalid(${label}): improvement.cadence must be an object`);
+      }
+      const cd = imp.cadence as Record<string, unknown>;
+      for (const k of Object.keys(cd)) {
+        if (k !== "minIntervalMinutes" && k !== "skipIfNoNewTranscripts") {
+          throw new Error(`config-invalid(${label}): unknown improvement.cadence.${k}`);
+        }
+      }
+      if (cd.minIntervalMinutes !== undefined) {
+        validateValueForMetadata(
+          REGISTRY["improvement.cadence.minIntervalMinutes"]!,
+          cd.minIntervalMinutes
+        );
+      }
+      if (cd.skipIfNoNewTranscripts !== undefined) {
+        validateValueForMetadata(
+          REGISTRY["improvement.cadence.skipIfNoNewTranscripts"]!,
+          cd.skipIfNoNewTranscripts
+        );
+      }
     }
   }
 }

@@ -17,6 +17,8 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - **Phase 2b is COMPLETE** and ships as **`v0.4.1`** (`T219`–`T220`, `T228`–`T237`).
 - **Phase 3 (Enhancement loop MVP) is COMPLETE** in-repo and ships as **`v0.5.0`** (`T190`–`T192`, `T202`–`T203`).
 - **Phase 4 (Runtime scale and ecosystem) is COMPLETE** in-repo and ships as **`v0.6.0`** (`T193`–`T195`, `T204`–`T205`, `T238`–`T242`).
+- **Phase 5 (Transcript intelligence automation) is COMPLETE** in-repo and ships as **`v0.7.0`** for the initial automation slice (`T244`, `T245`, `T246`, `T247`, `T248`, `T259`).
+- Phase 5 follow-on hardening backlog (`T249`-`T258`, `T260`-`T266`, plus active improvement review item `imp-2cf5d881b81f9a`) remains queued for the next execution train.
 - Historical extraction and first-publish milestones remain recorded below as provenance.
 
 ## Phase plan and release cadence
@@ -79,6 +81,16 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
   - Operational SLO/supportability controls are active with diagnostics evidence output.
   - Upgrade compatibility guarantees are documented and tested across channels.
 
+### Phase 5 - Transcript intelligence automation -> GitHub release `v0.7.0` (COMPLETE initial slice)
+
+- Primary scope: `T244`, `T245`, `T246`, `T247`, `T248`, `T259`.
+- Outcome: manual-first transcript sync and recommendation ingestion UX with explicit cadence/config contracts, rollout-safe design baseline, and maintainers-first operational guidance.
+- Baseline artifact: `docs/maintainers/transcript-automation-baseline.md`.
+- Exit signals:
+  - Transcript sync and one-shot ingest command surfaces are implementation-ready from a locked design baseline.
+  - Phase 5 rules/docs define event-driven frequent recommendation generation with bounded overhead and no cron requirement for baseline users.
+  - Configuration and observability contracts are consistent across module config, workspace config, and runtime command surfaces.
+
 ## Recorded decisions
 
 | Decision | Choice |
@@ -97,4 +109,5 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 - Phase 1 / `v0.3.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23559535382`
 - Phase 2 / `v0.4.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23561237541`
 - Phase 4 / `v0.6.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23604173215`
+- Phase 5 / `v0.7.0` publish workflow run: `TBD`
 - npm package: `https://www.npmjs.com/package/@workflow-cannon/workspace-kit`
