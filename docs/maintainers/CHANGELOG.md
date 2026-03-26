@@ -24,6 +24,10 @@ Phase 6 — automation hardening, response-template advisory, and Cursor-native 
 - New config keys are opt-in except defaults merged from kit layer (`responseTemplates`, `improvement.hooks`). Review `docs/maintainers/runbooks/transcript-ingestion-operations.md`, `response-templates.md`, and `cursor-transcript-automation.md`.
 - Regenerate config reference docs after upgrading: `workspace-kit config generate-docs` (maintainer workflow).
 
+### Fixed
+
+- **`check-planning-doc-consistency`** — when `.workspace-kit/tasks/state.json` is absent (CI / fresh clone), Phase 4 alignment uses the roadmap so publish workflows pass without a local task store.
+
 ## [0.7.0] - 2026-03-26
 
 Phase 5 — transcript intelligence automation (initial slice): manual-first transcript sync and one-shot ingest flow, with cadence/config contracts and a locked rollout baseline.

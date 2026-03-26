@@ -11,6 +11,18 @@ const PATHS = {
   featureMatrix: resolve(ROOT, "docs/maintainers/FEATURE-MATRIX.md")
 };
 
+/** CI and fresh clones omit gitignored `.workspace-kit/tasks/state.json`; align with roadmap when absent. */
+async function readTaskStateText() {
+  try {
+    return await readFile(PATHS.taskState, "utf8");
+  } catch (err) {
+    if (err && typeof err === "object" && err.code === "ENOENT") {
+      return null;
+    }
+    throw err;
+  }
+}
+
 function inferRoadmapPhase4Status(text) {
   if (/Phase 4 .*COMPLETE/i.test(text)) return "Completed";
   if (/Phase 4 .*next/i.test(text) || /Phase 4 .*v0\.6\.0/i.test(text)) return "In progress / ready";
@@ -18,6 +30,9 @@ function inferRoadmapPhase4Status(text) {
 }
 
 function inferTaskStatePhase4Status(taskStateText) {
+  if (taskStateText === null) {
+    return null;
+  }
   let parsed;
   try {
     parsed = JSON.parse(taskStateText);
@@ -47,15 +62,17 @@ function inferFeatureMatrixPhase4Status(text) {
 }
 
 async function main() {
-  const [roadmap, taskState, featureMatrix] = await Promise.all([
+  const [roadmap, taskStateRaw, featureMatrix] = await Promise.all([
     readFile(PATHS.roadmap, "utf8"),
-    readFile(PATHS.taskState, "utf8"),
+    readTaskStateText(),
     readFile(PATHS.featureMatrix, "utf8")
   ]);
 
+  const roadmapStatus = inferRoadmapPhase4Status(roadmap);
+  const fromFile = inferTaskStatePhase4Status(taskStateRaw);
   const statuses = {
-    roadmap: inferRoadmapPhase4Status(roadmap),
-    taskState: inferTaskStatePhase4Status(taskState),
+    roadmap: roadmapStatus,
+    taskState: fromFile ?? roadmapStatus,
     featureMatrix: inferFeatureMatrixPhase4Status(featureMatrix)
   };
 
