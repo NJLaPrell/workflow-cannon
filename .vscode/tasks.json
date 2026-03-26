@@ -1,0 +1,31 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "transcript:sync (folder open)",
+      "type": "shell",
+      "command": "pnpm run transcript:sync",
+      "problemMatcher": [],
+      "isBackground": true,
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared",
+        "showReuseMessage": false
+      },
+      "runOptions": {
+        "runOn": "folderOpen"
+      }
+    },
+    {
+      "label": "transcript:ingest (manual)",
+      "type": "shell",
+      "command": "pnpm run transcript:ingest",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "detail": "Requires WORKSPACE_KIT_POLICY_APPROVAL for non-interactive ingest. Prefer transcript:sync on folder open."
+    }
+  ]
+}

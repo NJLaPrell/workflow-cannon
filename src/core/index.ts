@@ -73,6 +73,11 @@ export {
 } from "./response-template-registry.js";
 export { applyResponseTemplateApplication } from "./response-template-shaping.js";
 export {
+  maybeSpawnTranscriptHookAfterCompletion,
+  readAfterTaskCompletedHook,
+  resolveWorkspaceKitCli
+} from "./transcript-completion-hook.js";
+export {
   assertWritableKey,
   getConfigKeyMetadata,
   getConfigRegistryExport,

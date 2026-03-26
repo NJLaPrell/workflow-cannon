@@ -171,6 +171,21 @@ const REGISTRY: Record<string, ConfigKeyMetadata> = {
     exposure: "maintainer",
     writableLayers: ["project", "user"]
   },
+  "improvement.hooks.afterTaskCompleted": {
+    key: "improvement.hooks.afterTaskCompleted",
+    type: "string",
+    description:
+      "Optional background transcript sync after task-engine transition to completed: off (default), sync, or ingest (ingest requires WORKSPACE_KIT_POLICY_APPROVAL in env).",
+    default: "off",
+    allowedValues: ["off", "sync", "ingest"],
+    domainScope: "project",
+    owningModule: "improvement",
+    sensitive: false,
+    requiresRestart: false,
+    requiresApproval: false,
+    exposure: "maintainer",
+    writableLayers: ["project", "user"]
+  },
   "responseTemplates.enforcementMode": {
     key: "responseTemplates.enforcementMode",
     type: "string",
@@ -387,7 +402,7 @@ export function validatePersistedConfigDocument(
     }
     const imp = improvement as Record<string, unknown>;
     for (const k of Object.keys(imp)) {
-      if (k !== "transcripts" && k !== "cadence") {
+      if (k !== "transcripts" && k !== "cadence" && k !== "hooks") {
         throw new Error(`config-invalid(${label}): unknown improvement.${k}`);
       }
     }
@@ -457,6 +472,23 @@ export function validatePersistedConfigDocument(
         validateValueForMetadata(
           REGISTRY["improvement.cadence.maxRecommendationCandidatesPerRun"]!,
           cd.maxRecommendationCandidatesPerRun
+        );
+      }
+    }
+    if (imp.hooks !== undefined) {
+      if (typeof imp.hooks !== "object" || imp.hooks === null || Array.isArray(imp.hooks)) {
+        throw new Error(`config-invalid(${label}): improvement.hooks must be an object`);
+      }
+      const hk = imp.hooks as Record<string, unknown>;
+      for (const k of Object.keys(hk)) {
+        if (k !== "afterTaskCompleted") {
+          throw new Error(`config-invalid(${label}): unknown improvement.hooks.${k}`);
+        }
+      }
+      if (hk.afterTaskCompleted !== undefined) {
+        validateValueForMetadata(
+          REGISTRY["improvement.hooks.afterTaskCompleted"]!,
+          hk.afterTaskCompleted
         );
       }
     }

@@ -52,6 +52,9 @@ export const KIT_CONFIG_DEFAULTS: Record<string, unknown> = {
       minIntervalMinutes: 15,
       skipIfNoNewTranscripts: true,
       maxRecommendationCandidatesPerRun: 500
+    },
+    hooks: {
+      afterTaskCompleted: "off"
     }
   }
 };
@@ -84,6 +87,9 @@ export const MODULE_CONFIG_CONTRIBUTIONS: Record<string, Record<string, unknown>
       minIntervalMinutes: 15,
       skipIfNoNewTranscripts: true,
       maxRecommendationCandidatesPerRun: 500
+    },
+    hooks: {
+      afterTaskCompleted: "off"
     }
   }
 };

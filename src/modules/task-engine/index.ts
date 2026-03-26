@@ -1,5 +1,6 @@
 import type { WorkflowModule } from "../../contracts/module-contract.js";
 import type { TaskStatus } from "./types.js";
+import { maybeSpawnTranscriptHookAfterCompletion } from "../../core/transcript-completion-hook.js";
 import { TaskStore } from "./store.js";
 import { TransitionService } from "./service.js";
 import { TaskEngineError } from "./transitions.js";
@@ -133,6 +134,12 @@ export const taskEngineModule: WorkflowModule = {
       try {
         const service = new TransitionService(store);
         const result = await service.runTransition({ taskId, action, actor });
+        if (result.evidence.toState === "completed") {
+          maybeSpawnTranscriptHookAfterCompletion(
+            ctx.workspacePath,
+            (ctx.effectiveConfig ?? {}) as Record<string, unknown>
+          );
+        }
         return {
           ok: true,
           code: "transition-applied",
