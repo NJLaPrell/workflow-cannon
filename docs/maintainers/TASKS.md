@@ -1065,3 +1065,18 @@ Release target: **GitHub release `v0.6.0`**
 - Acceptance criteria:
   - CI fails when phase/task completion status is inconsistent across the three documents.
   - Drift reports identify exact mismatches and expected corrections.
+
+### [x] T243 [workspace-kit] Preserve rich maintainer TASKS.md structure in task-engine round-trip
+- Priority: P2
+- Approach: Patch task-engine import/generation so maintainers can use engine state without losing prose-only planning sections in `docs/maintainers/TASKS.md`.
+- Depends on: none
+- Unblocks: none
+- Technical scope:
+  - Update markdown importer to ignore non-task `###` headings (for example, design-decision headings) instead of treating them as parse errors.
+  - Update `generate-tasks-md` to preserve existing document structure by syncing task heading status/title in-place when a target TASKS markdown file already exists.
+  - Keep fallback full-generation behavior for new files or explicit structure bypass.
+  - Add tests for importer handling of non-task headings and for structure-preserving heading sync behavior.
+- Acceptance criteria:
+  - Running `import-tasks` against current maintainer TASKS docs reports no skipped entries for non-task section headings.
+  - Running `generate-tasks-md` on existing maintainer TASKS docs does not strip prose/section content unrelated to task headings.
+  - Task heading status/title still reflect engine state after generation.

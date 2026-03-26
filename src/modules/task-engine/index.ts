@@ -5,7 +5,7 @@ import type { TaskStatus } from "./types.js";
 import { TaskStore } from "./store.js";
 import { TransitionService } from "./service.js";
 import { TaskEngineError } from "./transitions.js";
-import { generateTasksMd } from "./generator.js";
+import { generateTasksMd, syncTaskHeadingsInMarkdown } from "./generator.js";
 import { importTasksFromMarkdown } from "./importer.js";
 import { getNextActions } from "./suggestions.js";
 
@@ -38,7 +38,7 @@ export {
   stateValidityGuard,
   dependencyCheckGuard
 } from "./transitions.js";
-export { generateTasksMd } from "./generator.js";
+export { generateTasksMd, syncTaskHeadingsInMarkdown } from "./generator.js";
 export { importTasksFromMarkdown } from "./importer.js";
 export { getNextActions } from "./suggestions.js";
 
@@ -272,9 +272,17 @@ export const taskEngineModule: WorkflowModule = {
         : path.resolve(ctx.workspacePath, "docs/maintainers/TASKS.md");
 
       const tasks = store.getAllTasks();
-      const markdown = generateTasksMd(tasks);
+      const fallbackMarkdown = generateTasksMd(tasks);
+      let markdown = fallbackMarkdown;
+      const preserveStructure = args.preserveStructure !== false;
 
       try {
+        if (preserveStructure) {
+          const existing = await fs.readFile(outputPath, "utf8").catch(() => undefined);
+          if (typeof existing === "string" && existing.length > 0) {
+            markdown = syncTaskHeadingsInMarkdown(existing, tasks);
+          }
+        }
         await fs.mkdir(path.dirname(outputPath), { recursive: true });
         await fs.writeFile(outputPath, markdown, "utf8");
       } catch (err) {

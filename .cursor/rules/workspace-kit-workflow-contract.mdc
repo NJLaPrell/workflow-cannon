@@ -11,7 +11,7 @@ Required alignment:
 
 - `README.md` = intent and boundaries only.
 - `docs/maintainers/ROADMAP.md` = strategic decisions and phase framing.
-- `docs/maintainers/TASKS.md` = execution queue and completion tracking.
+- Task-engine state (`.workspace-kit/tasks/state.json`) = execution queue and completion tracking; `docs/maintainers/TASKS.md` = generated human-readable view.
 - `docs/maintainers/RELEASING.md` = operational release workflow and evidence gates.
 
 Do not duplicate deep operational detail in `README.md`.

@@ -11,5 +11,5 @@ alwaysApply: false
 4. Update task status and evidence.
 5. Prepare concise PR description focused on why and risk.
 
-If blocked, document blocker and next action in `docs/maintainers/TASKS.md`.
+If blocked, record blocker and next action in task-engine state first; regenerate `docs/maintainers/TASKS.md` only as the human-readable view.
 

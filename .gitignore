@@ -7,3 +7,4 @@ artifacts/
 .workspace-kit/improvement/
 .workspace-kit/lineage/
 .workspace-kit/approvals/
+.workspace-kit/tasks/

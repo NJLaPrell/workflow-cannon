@@ -1,6 +1,6 @@
 # Task Dependency Map
 
-Canonical dependency view for `T178` through `T195` plus Phase 2b (`T219`–`T220`, `T228`–`T237`), derived from `docs/maintainers/TASKS.md`.
+Canonical dependency view for `T178` through `T195`, Phase 2b (`T219`–`T220`, `T228`–`T237`), and Phase 4 support/enforcement slices (`T204`–`T205`, `T238`–`T242`), derived from task-engine state and reflected in generated `docs/maintainers/TASKS.md`.
 
 ## Purpose
 
@@ -17,7 +17,7 @@ Canonical dependency view for `T178` through `T195` plus Phase 2b (`T219`–`T22
 | Phase 2 | `v0.4.0` | `T218`, `T187`, `T200`, `T188`, `T201`, `T189` |
 | Phase 2b | `v0.4.1` | `T219`, `T220`, `T228`–`T237` |
 | Phase 3 | `v0.5.0` | `T190`, `T191`, `T192` |
-| Phase 4 | `v0.6.0` | `T193`, `T194`, `T195` |
+| Phase 4 | `v0.6.0` | `T193`, `T194`, `T195`, `T204`, `T205`, `T238`, `T239`, `T240`, `T241`, `T242` |
 
 ## DAG (Mermaid)
 
@@ -59,10 +59,23 @@ graph TD
   T192 --> T193
   T185 --> T194
   T193 --> T194
+  T193 --> T204
+  T193 --> T239
+  T204 --> T238
+  T239 --> T204
+  T239 --> T238
+  T238 --> T195
   T179 --> T195
   T189 --> T195
   T193 --> T195
   T194 --> T195
+  T194 --> T205
+  T205 --> T240
+  T194 --> T240
+  T205 --> T195
+  T240 --> T195
+  T195 --> T241
+  T195 --> T242
   T187 --> T228
   T228 --> T229
   T228 --> T230
@@ -121,15 +134,21 @@ graph TD
 25. `T191`
 26. `T192`
 27. `T193`
-28. `T194`
-29. `T195`
+28. `T239`
+29. `T204`
+30. `T238`
+31. `T194`
+32. `T205`
+33. `T240`
+34. `T195`
+35. `T241`, `T242`
 
 ## Critical path to final phase-release gate
 
 Longest dependency chain ending at `T195`:
 
-`T178` -> `T184` -> `T217` -> `T218` -> `T187` -> `T200` -> `T188` -> `T219` -> `T220` -> `T190` -> `T191` -> `T192` -> `T193` -> `T194` -> `T195`
+`T178` -> `T184` -> `T217` -> `T218` -> `T187` -> `T200` -> `T188` -> `T219` -> `T220` -> `T190` -> `T191` -> `T192` -> `T193` -> `T194` -> `T205` -> `T240` -> `T195`
 
 ## Maintenance rule
 
-When any `Depends on` or `Unblocks` field changes in `docs/maintainers/TASKS.md`, update this file in the same PR.
+When any `dependsOn`/`unblocks` relationships change in `.workspace-kit/tasks/state.json` (and regenerate `docs/maintainers/TASKS.md`), update this file in the same PR.

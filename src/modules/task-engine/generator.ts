@@ -118,3 +118,23 @@ export function generateTasksMd(tasks: TaskEntity[]): string {
 
   return lines.join("\n");
 }
+
+export function syncTaskHeadingsInMarkdown(markdown: string, tasks: TaskEntity[]): string {
+  const byId = new Map(tasks.map((task) => [task.id, task]));
+  const lines = markdown.split("\n");
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const match = line.match(/^###\s+\[[^\]]*\]\s+(T\d+)\s+(.+)$/);
+    if (!match) continue;
+
+    const id = match[1];
+    const task = byId.get(id);
+    if (!task) continue;
+
+    const marker = STATUS_MARKERS[task.status] ?? "[ ]";
+    lines[i] = `### ${marker} ${task.id} ${task.title}`;
+  }
+
+  return lines.join("\n");
+}

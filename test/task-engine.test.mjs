@@ -16,6 +16,7 @@ import {
   stateValidityGuard,
   dependencyCheckGuard,
   generateTasksMd,
+  syncTaskHeadingsInMarkdown,
   importTasksFromMarkdown,
   getNextActions,
   taskEngineModule,
@@ -551,6 +552,27 @@ test("importTasksFromMarkdown handles all status markers", async () => {
   assert.equal(result.tasks.find((t) => t.id === "T005").status, "completed");
 });
 
+test("importTasksFromMarkdown ignores non-task h3 headings", async () => {
+  const workspace = await tmpDir();
+  const tasksPath = path.join(workspace, "TASKS.md");
+  await writeFile(tasksPath, [
+    "# Tasks",
+    "",
+    "## Phase",
+    "",
+    "### Design decisions (resolved)",
+    "",
+    "### [x] T001 Completed task",
+    "- Depends on: none",
+    ""
+  ].join("\n"));
+
+  const result = await importTasksFromMarkdown(tasksPath);
+  assert.equal(result.imported, 1);
+  assert.equal(result.skipped, 0);
+  assert.equal(result.errors.length, 0);
+});
+
 test("importTasksFromMarkdown throws for missing file", async () => {
   await assert.rejects(
     () => importTasksFromMarkdown("/nonexistent/TASKS.md"),
@@ -586,6 +608,29 @@ test("import then generate produces parseable output", async () => {
   assert.match(generatedMd, /\[x\] T175/);
   assert.match(generatedMd, /\[ \] T176/);
   assert.match(generatedMd, /Phase 0/);
+});
+
+test("syncTaskHeadingsInMarkdown preserves non-task sections", () => {
+  const tasks = [
+    makeTask({ id: "T001", status: "completed", title: "Updated title", phase: "Phase 0" })
+  ];
+  const source = [
+    "# Workflow Cannon Tasks",
+    "",
+    "## Current execution state",
+    "- Milestone target: custom prose we want to keep.",
+    "",
+    "### Design decisions (resolved)",
+    "",
+    "## Phase 0",
+    "### [ ] T001 Old title",
+    "- Priority: P1"
+  ].join("\n");
+
+  const out = syncTaskHeadingsInMarkdown(source, tasks);
+  assert.match(out, /Milestone target: custom prose we want to keep\./);
+  assert.match(out, /### \[x\] T001 Updated title/);
+  assert.match(out, /### Design decisions \(resolved\)/);
 });
 
 // ---------------------------------------------------------------------------

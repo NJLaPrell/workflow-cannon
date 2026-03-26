@@ -1,6 +1,6 @@
 # Workflow Cannon Feature Matrix
 
-Product-oriented feature inventory derived from `docs/maintainers/TASKS.md`.
+Product-oriented feature inventory derived from task-engine state (`.workspace-kit/tasks/state.json`) and mirrored in generated `docs/maintainers/TASKS.md`.
 
 Status legend:
 
@@ -121,9 +121,10 @@ Status legend:
 | Evidence lifecycle controls | Retention, compaction, and redaction policy for append-only `.workspace-kit` runtime artifacts | Completed | `T240` |
 | Release channel operational mapping | Executable channel mapping across git tags, GitHub release labels, and npm dist-tags | Completed | `T241` |
 | Planning-doc consistency guard | CI drift check that enforces status consistency across roadmap, tasks, and feature matrix docs | Completed | `T242` |
+| TASKS markdown structure preservation | Task-engine import/generate round-trip keeps maintainer prose sections intact while syncing task headings | Completed | `T243` |
 
 ## Notes
 
 - Feature groupings are intentionally product-facing and map back to task milestones.
-- Task IDs remain included for traceability back to execution planning in `docs/maintainers/TASKS.md`.
+- Task IDs remain included for traceability back to canonical execution planning in `.workspace-kit/tasks/state.json` and generated `docs/maintainers/TASKS.md`.
 

@@ -40,7 +40,7 @@ stable ─────── regression ────────► patch candid
 
 ### stable → patch
 
-1. Regression is confirmed and tracked in `docs/maintainers/TASKS.md`.
+1. Regression is confirmed and tracked in task-engine state (`.workspace-kit/tasks/state.json`) and reflected in generated `docs/maintainers/TASKS.md`.
 2. Fix is implemented and passes all CI gates.
 3. Parity validation passes (same as candidate → stable steps 2-3).
 4. Patch is published with `--tag latest`.
@@ -65,4 +65,4 @@ Any non-zero exit blocks the transition and must be resolved before re-attemptin
 
 - `docs/maintainers/RELEASING.md` — release procedure and evidence
 - `docs/maintainers/release-gate-matrix.md` — gate inventory and ownership
-- `docs/maintainers/TASKS.md` — regression and blocker tracking
+- `.workspace-kit/tasks/state.json` / generated `docs/maintainers/TASKS.md` — regression and blocker tracking

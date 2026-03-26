@@ -169,8 +169,13 @@ export async function importTasksFromMarkdown(
 
     if (line.startsWith("### ")) {
       flushTask();
-      taskStartIdx = i;
-      taskLines = [line];
+      if (parseTaskId(line)) {
+        taskStartIdx = i;
+        taskLines = [line];
+      } else {
+        taskStartIdx = -1;
+        taskLines = [];
+      }
       continue;
     }
 

@@ -2,6 +2,12 @@
 
 All notable changes to `@workflow-cannon/workspace-kit` are documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- Task engine markdown round-trip hardening: `import-tasks` now ignores non-task `###` headings (for example design-decision subheaders) and `generate-tasks-md` preserves existing maintainer TASKS document structure by syncing task headings in-place.
+
 ## [0.6.0] - 2026-03-26
 
 Phase 4 — runtime scale and ecosystem hardening: compatibility contract enforcement, diagnostics/SLO baseline, release-channel guarantees, and planning-doc consistency guardrails.

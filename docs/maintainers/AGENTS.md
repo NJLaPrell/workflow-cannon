@@ -7,7 +7,7 @@ Basic operating guidance for AI agents working in this repository.
 1. `.ai/PRINCIPLES.md` — goals, trade-off order, approval gates
 2. `.ai/module-build.md` — module development contracts and enforcement
 3. `docs/maintainers/ROADMAP.md` — phase strategy and release cadence
-4. `docs/maintainers/TASKS.md` — execution queue and dependency ordering
+4. canonical task-engine state (`.workspace-kit/tasks/state.json`) — execution queue and dependency ordering (with generated `docs/maintainers/TASKS.md` human view)
 5. `docs/maintainers/RELEASING.md` — release gates and evidence requirements
 6. `docs/maintainers/TERMS.md` — canonical terminology
 7. `docs/maintainers/module-build-guide.md` — human-readable module development companion
@@ -25,13 +25,13 @@ Basic operating guidance for AI agents working in this repository.
 
 ## Working rules
 
-- Keep strategy in `docs/maintainers/ROADMAP.md`, execution detail in `docs/maintainers/TASKS.md`, and release process in `docs/maintainers/RELEASING.md`.
+- Keep strategy in `docs/maintainers/ROADMAP.md`, execution detail in task-engine state (`workspace-kit run` task commands), and release process in `docs/maintainers/RELEASING.md`; treat `docs/maintainers/TASKS.md` as generated view.
 - When scope changes, update all related docs in the same change set.
 - Preserve deterministic behavior and compatibility; document migration impact when changes affect consumers.
 
 ## Task execution
 
-- Execute tasks in dependency order from `docs/maintainers/TASKS.md`.
+- Execute tasks in dependency order from task-engine state (`workspace-kit run list-tasks` / `get-next-actions`).
 - Treat each task's `Approach`, `Technical scope`, and `Acceptance criteria` as binding implementation guidance.
 - If a task is too large for one change, split into supporting tasks before starting implementation.
 

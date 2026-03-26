@@ -31,6 +31,7 @@ export {
   stateValidityGuard,
   dependencyCheckGuard,
   generateTasksMd,
+  syncTaskHeadingsInMarkdown,
   importTasksFromMarkdown,
   getNextActions
 } from "./task-engine/index.js";

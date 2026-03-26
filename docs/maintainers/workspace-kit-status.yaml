@@ -1,18 +1,18 @@
 schema_version: 1
 current_kit_phase: "4"
 last_updated: "2026-03-26"
-active_focus: "Phase 4 COMPLETE (v0.6.0): compatibility gates, diagnostics/SLO pack, release channels, and planning consistency guard shipped."
+active_focus: "Baseline stabilization post-v0.6.0: T243 TASKS.md round-trip preservation patch complete."
 blockers: []
 next_agent_actions:
-  - "Monitor v0.6.0 release evidence and open follow-up tasks for observed friction."
+  - "Monitor post-v0.6.0 friction and open follow-up tasks when recurring themes are confirmed."
 last_session_summary:
-  - "v0.4.0 published: Phase 2 (config, policy, cutover docs); npm latest 0.4.0; GitHub release v0.4.0; workflow run 23561237541."
-  - "Maintainer artifacts: config-policy-matrix, task-engine-cutover + checklist; TASKS Phase 2 complete."
+  - "v0.6.0 published: Phase 4 (runtime scale + ecosystem hardening) with compatibility gates, channel mapping, diagnostics, and planning consistency checks."
+  - "Post-release patch T243 complete: task-engine TASKS round-trip now preserves rich maintainer document structure."
 pending_decisions: []
 metrics:
   updated_at: "2026-03-26"
   source: "automated"
-  notes: "v0.6.0 prepared in-repo with Phase 4 tasks complete and release gates wired."
+  notes: "v0.6.0 published and documented; T243 patch completed to keep TASKS markdown structure stable under task-engine import/generate flows."
   time_to_doctor_minutes: 0.03
   cold_start_success_rate_pct: 100
   upgrade_success_rate_pct: null

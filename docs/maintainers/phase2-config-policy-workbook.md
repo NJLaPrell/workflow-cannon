@@ -1,7 +1,7 @@
 # Phase 2 workbook — config, policy, local task cutover
 
 Binding design for `v0.4.0` (tasks `T218` → `T187` → `T200` → `T188` → `T201` → `T189`).  
-Implementation must match this document unless a deliberate decision update is recorded in `docs/maintainers/TASKS.md` and here.
+Implementation must match this document unless a deliberate decision update is recorded in task-engine state (`.workspace-kit/tasks/state.json`, with regenerated `docs/maintainers/TASKS.md`) and here.
 
 ## 1. Non-goals for v0.4.0
 
@@ -80,7 +80,7 @@ Order (first hit wins):
 
 High-level steps (details in `T201` checklist and `T189` runbook):
 
-1. Branch from `main`; backup `docs/maintainers/TASKS.md` and any existing `.workspace-kit/tasks/`.
+1. Branch from `main`; backup `.workspace-kit/tasks/` and generated `docs/maintainers/TASKS.md`.
 2. Run `import-tasks` with approvals per policy; inspect `.workspace-kit/tasks/state.json`.
 3. Run `generate-tasks-md`; review diff (read-only markdown should match team expectations).
 4. Open PR; attach optional local evidence JSON from rehearsal if used.

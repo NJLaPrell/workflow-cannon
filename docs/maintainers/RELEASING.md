@@ -26,14 +26,14 @@ Every release must:
 
 All gates must pass before publish (see `docs/maintainers/release-gate-matrix.md` for the full gate inventory, owners, and CI mapping):
 
-1. Scope is clear and tracked in `docs/maintainers/TASKS.md` with linked roadmap/decision context where needed.
+1. Scope is clear and tracked in canonical task-engine state (`.workspace-kit/tasks/state.json`) with linked roadmap/decision context where needed (`docs/maintainers/TASKS.md` remains the generated human view).
 2. Behavior changes are documented in `docs/maintainers/CHANGELOG.md`.
 3. Build, typecheck, and tests pass for the release candidate (`pnpm run build && pnpm run check && pnpm run test`).
 4. Consumer-impacting flows are validated against packaged artifacts (`pnpm run parity`).
 5. Migration risk is reviewed for config/template/schema/state changes.
 6. Security-sensitive changes (policy/approval/secrets/workspace mutation) are explicitly reviewed.
 
-If a gate fails, do not publish. Capture the blocker and route follow-up through `docs/maintainers/TASKS.md`.
+If a gate fails, do not publish. Capture the blocker in task-engine state and regenerate `docs/maintainers/TASKS.md` as needed for human review.
 
 ## Release procedure
 
@@ -81,7 +81,7 @@ After publish:
 2. Triage issues and severity quickly; patch if needed.
 3. Capture recurring friction themes from release execution.
 4. Convert recurring friction into:
-   - task and roadmap updates (`docs/maintainers/TASKS.md`, `docs/maintainers/ROADMAP.md`)
+   - task-engine and roadmap updates (`.workspace-kit/tasks/state.json`, generated `docs/maintainers/TASKS.md`, `docs/maintainers/ROADMAP.md`)
    - workflow/rule hardening proposals
    - enhancement recommendations for approval review
 
@@ -92,7 +92,7 @@ This closes the loop with the Enhancement Engine direction: release outcomes sho
 - `README.md` — project intent and phase context
 - `.ai/PRINCIPLES.md` — decision priorities and governance posture
 - `docs/maintainers/ROADMAP.md` — strategic direction and major decisions
-- `docs/maintainers/TASKS.md` — active execution and follow-up tracking
+- `.workspace-kit/tasks/state.json` — canonical execution and follow-up tracking (`docs/maintainers/TASKS.md` is generated view)
 - `docs/maintainers/SECURITY.md` — vulnerability handling expectations
 - `docs/maintainers/release-gate-matrix.md` — full gate inventory and CI mapping
 - `docs/maintainers/parity-validation-flow.md` — parity command chain and evidence contract
