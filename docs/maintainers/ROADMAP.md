@@ -109,5 +109,5 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 - Phase 1 / `v0.3.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23559535382`
 - Phase 2 / `v0.4.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23561237541`
 - Phase 4 / `v0.6.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23604173215`
-- Phase 5 / `v0.7.0` publish workflow run: `TBD`
+- Phase 5 / `v0.7.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23610374625`
 - npm package: `https://www.npmjs.com/package/@workflow-cannon/workspace-kit`
