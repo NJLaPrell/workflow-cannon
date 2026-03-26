@@ -12,8 +12,14 @@ import {
   parsePolicyApprovalFromEnv,
   resolveActor,
   resolvePolicyOperationIdForCommand,
+  type PolicyApprovalPayload,
   type PolicyOperationId
 } from "./core/policy.js";
+import {
+  getSessionGrant,
+  recordSessionGrant,
+  resolveSessionId
+} from "./core/session-policy.js";
 import { runWorkspaceConfigCli } from "./core/config-cli.js";
 import { resolveWorkspaceConfigWithLayers } from "./core/workspace-kit-config.js";
 import { documentationModule } from "./modules/documentation/index.js";
@@ -819,15 +825,23 @@ export async function runCli(
 
     const actor = resolveActor(cwd, commandArgs, process.env);
     const sensitive = isSensitiveModuleCommandForEffective(subcommand, commandArgs, effective);
+    const sessionId = resolveSessionId(process.env);
+    const policyOp = resolvePolicyOperationIdForCommand(subcommand, effective);
+    const explicitPolicyApproval = parsePolicyApproval(commandArgs);
+    let resolvedSensitiveApproval: PolicyApprovalPayload | undefined = explicitPolicyApproval;
 
     if (sensitive) {
-      const approval = parsePolicyApproval(commandArgs);
-      if (!approval) {
-        const op = resolvePolicyOperationIdForCommand(subcommand, effective);
-        if (op) {
+      if (!resolvedSensitiveApproval && policyOp) {
+        const grant = await getSessionGrant(cwd, policyOp, sessionId);
+        if (grant) {
+          resolvedSensitiveApproval = { confirmed: true, rationale: grant.rationale };
+        }
+      }
+      if (!resolvedSensitiveApproval) {
+        if (policyOp) {
           await appendPolicyTrace(cwd, {
             timestamp: new Date().toISOString(),
-            operationId: op,
+            operationId: policyOp,
             command: `run ${subcommand}`,
             actor,
             allowed: false,
@@ -840,7 +854,7 @@ export async function runCli(
               ok: false,
               code: "policy-denied",
               message:
-                'Sensitive command requires policyApproval in JSON args: {"policyApproval":{"confirmed":true,"rationale":"user approved in chat"}}'
+                'Sensitive command requires policyApproval in JSON args (or an existing session grant for this operation): {"policyApproval":{"confirmed":true,"rationale":"why","scope":"session"}}'
             },
             null,
             2
@@ -860,20 +874,19 @@ export async function runCli(
 
     try {
       const result = await router.execute(subcommand, commandArgs, ctx);
-      if (sensitive) {
-        const approval = parsePolicyApproval(commandArgs);
-        const op = resolvePolicyOperationIdForCommand(subcommand, effective);
-        if (approval && op) {
-          await appendPolicyTrace(cwd, {
-            timestamp: new Date().toISOString(),
-            operationId: op,
-            command: `run ${subcommand}`,
-            actor,
-            allowed: true,
-            rationale: approval.rationale,
-            commandOk: result.ok,
-            message: result.message
-          });
+      if (sensitive && resolvedSensitiveApproval && policyOp) {
+        await appendPolicyTrace(cwd, {
+          timestamp: new Date().toISOString(),
+          operationId: policyOp,
+          command: `run ${subcommand}`,
+          actor,
+          allowed: true,
+          rationale: resolvedSensitiveApproval.rationale,
+          commandOk: result.ok,
+          message: result.message
+        });
+        if (explicitPolicyApproval?.scope === "session" && result.ok) {
+          await recordSessionGrant(cwd, policyOp, sessionId, explicitPolicyApproval.rationale);
         }
       }
       writeLine(JSON.stringify(result, null, 2));

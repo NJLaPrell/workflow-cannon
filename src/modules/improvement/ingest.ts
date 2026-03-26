@@ -7,6 +7,7 @@ import type { TransitionEvidence } from "../task-engine/types.js";
 import type { EvidenceKind, ConfidenceSignals } from "./confidence.js";
 import { computeHeuristicConfidence, priorityForTier, shouldAdmitRecommendation } from "./confidence.js";
 import type { ImprovementStateDocument } from "./improvement-state.js";
+import { redactTranscriptSnippet } from "./transcript-redaction.js";
 
 export type IngestCandidate = {
   evidenceKind: EvidenceKind;
@@ -99,7 +100,7 @@ export async function ingestAgentTranscripts(
       evidenceKind: "transcript",
       evidenceKey,
       title: `Reduce friction hinted in transcript (${path.basename(rel)})`,
-      provenanceRefs: { transcriptPath: rel, sampleLine },
+      provenanceRefs: { transcriptPath: rel, sampleLine: redactTranscriptSnippet(sampleLine) },
       signals,
       confidence
     });

@@ -31,7 +31,8 @@
     "generate-runtime-diagnostics": "node scripts/generate-runtime-diagnostics.mjs",
     "prune-evidence": "node scripts/prune-evidence.mjs",
     "phase4-gates": "pnpm run check-compatibility && pnpm run check-planning-consistency && pnpm run check-release-channel",
-    "phase5-gates": "pnpm run phase4-gates && pnpm run test"
+    "phase5-gates": "pnpm run phase4-gates && pnpm run test",
+    "pre-release-transcript-hook": "pnpm run build && node scripts/pre-release-transcript-hook.mjs"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",

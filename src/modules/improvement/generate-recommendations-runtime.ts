@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
 import type { TaskEntity } from "../task-engine/types.js";
 import { TaskStore } from "../task-engine/store.js";
@@ -51,6 +52,22 @@ function resolveTranscriptArchivePath(
   return archivePath || "agent-transcripts";
 }
 
+export function getMaxRecommendationCandidatesPerRun(ctx: ModuleLifecycleContext): number {
+  const improvement =
+    ctx.effectiveConfig?.improvement && typeof ctx.effectiveConfig.improvement === "object"
+      ? (ctx.effectiveConfig.improvement as Record<string, unknown>)
+      : {};
+  const cadence =
+    improvement.cadence && typeof improvement.cadence === "object"
+      ? (improvement.cadence as Record<string, unknown>)
+      : {};
+  const raw = cadence.maxRecommendationCandidatesPerRun;
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    return Math.max(1, Math.floor(raw));
+  }
+  return 500;
+}
+
 export type GenerateRecommendationsArgs = {
   /** Directory relative to workspace containing agent `*.jsonl` transcripts (default: agent-transcripts). */
   transcriptsRoot?: string;
@@ -63,10 +80,17 @@ export async function runGenerateRecommendations(
   ctx: ModuleLifecycleContext,
   args: GenerateRecommendationsArgs
 ): Promise<{
+  runId: string;
   created: string[];
   skipped: number;
   candidates: number;
+  dedupe: {
+    skippedDuplicateEvidenceKey: number;
+    skippedExistingTaskId: number;
+    cappedRemaining: number;
+  };
 }> {
+  const runId = randomUUID();
   const store = new TaskStore(ctx.workspacePath, taskStoreRelativePath(ctx));
   await store.load();
 
@@ -89,19 +113,27 @@ export async function runGenerateRecommendations(
 
   const allTasks = store.getAllTasks();
   const created: string[] = [];
-  let skipped = 0;
+  let skippedDuplicateEvidenceKey = 0;
+  let skippedExistingTaskId = 0;
+  let cappedRemaining = 0;
 
   const now = new Date().toISOString();
+  const maxCreates = getMaxRecommendationCandidatesPerRun(ctx);
 
   for (const c of candidates) {
     if (hasEvidenceKey(allTasks, c.evidenceKey)) {
-      skipped += 1;
+      skippedDuplicateEvidenceKey += 1;
       continue;
     }
 
     const id = taskIdForEvidenceKey(c.evidenceKey);
     if (store.getTask(id)) {
-      skipped += 1;
+      skippedExistingTaskId += 1;
+      continue;
+    }
+
+    if (created.length >= maxCreates) {
+      cappedRemaining += 1;
       continue;
     }
 
@@ -145,5 +177,16 @@ export async function runGenerateRecommendations(
   await store.save();
   await saveImprovementState(ctx.workspacePath, state);
 
-  return { created, skipped, candidates: candidates.length };
+  const skipped = skippedDuplicateEvidenceKey + skippedExistingTaskId;
+  return {
+    runId,
+    created,
+    skipped,
+    candidates: candidates.length,
+    dedupe: {
+      skippedDuplicateEvidenceKey,
+      skippedExistingTaskId,
+      cappedRemaining
+    }
+  };
 }

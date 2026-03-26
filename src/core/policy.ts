@@ -79,9 +79,13 @@ export function isSensitiveModuleCommand(
   return true;
 }
 
+export type PolicyApprovalScope = "once" | "session";
+
 export type PolicyApprovalPayload = {
   confirmed: boolean;
   rationale: string;
+  /** When `session`, persist approval for this operation until session id changes or grants file is cleared. */
+  scope?: PolicyApprovalScope;
 };
 
 export function parsePolicyApprovalFromEnv(env: NodeJS.ProcessEnv): PolicyApprovalPayload | undefined {
@@ -109,7 +113,10 @@ export function parsePolicyApproval(args: Record<string, unknown>): PolicyApprov
   if (!confirmed || rationale.length === 0) {
     return undefined;
   }
-  return { confirmed, rationale };
+  const scopeRaw = o.scope;
+  const scope: PolicyApprovalScope | undefined =
+    scopeRaw === "session" || scopeRaw === "once" ? scopeRaw : undefined;
+  return { confirmed, rationale, ...(scope ? { scope } : {}) };
 }
 
 export function resolveActor(

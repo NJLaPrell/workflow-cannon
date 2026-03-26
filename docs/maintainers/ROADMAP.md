@@ -18,7 +18,7 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - **Phase 3 (Enhancement loop MVP) is COMPLETE** in-repo and ships as **`v0.5.0`** (`T190`–`T192`, `T202`–`T203`).
 - **Phase 4 (Runtime scale and ecosystem) is COMPLETE** in-repo and ships as **`v0.6.0`** (`T193`–`T195`, `T204`–`T205`, `T238`–`T242`).
 - **Phase 5 (Transcript intelligence automation) is COMPLETE** in-repo and ships as **`v0.7.0`** for the initial automation slice (`T244`, `T245`, `T246`, `T247`, `T248`, `T259`).
-- **Phase 6 (Automation hardening and response templates) is ACTIVE** with ready queue `T249`-`T258`, `T260`-`T266`, plus active improvement review item `imp-2cf5d881b81f9a`.
+- **Phase 6 (Automation hardening and response templates) is ACTIVE** for **`v0.8.0`**, with execution tracks **6a** (`T249`-`T258`), **6b** (`T260`-`T266`), **6c** (`T271`-`T274`), plus improvement recommendation item `imp-2cf5d881b81f9a` (proposed).
 - Historical extraction and first-publish milestones remain recorded below as provenance.
 
 ## Phase plan and release cadence
@@ -93,8 +93,11 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 
 ### Phase 6 - Automation hardening and response templates -> GitHub release `v0.8.0` (ACTIVE)
 
-- Primary scope: `T249` to `T258`, `T260` to `T266`, plus active improvement recommendation item `imp-2cf5d881b81f9a`.
-- Outcome: hardened transcript automation behavior at higher run frequency/scale with stronger resilience/privacy controls, plus advisory response-template contracts for more consistent command output ergonomics.
+- **Phase 6a — Transcript automation hardening** — primary scope: `T249` to `T258` (**COMPLETE in-repo**). Outcome: bounded frequent runs, autodiscovery, idempotency/dedupe diagnostics, operator status, policy UX for recurring generation, scale/resilience tests, retry queue, ops runbook, privacy/redaction, optional pre-release ingest hook. Runbook: `docs/maintainers/runbooks/transcript-ingestion-operations.md`.
+- **Phase 6b — Response template advisory** — primary scope: `T260` to `T266`. Outcome: advisory response-template contracts, registry, CLI shaping, instruction mapping, config surfaces, observability, tests + maintainer runbook.
+- **Phase 6c — Cursor-native transcript automation** — primary scope: `T271` to `T274`. Outcome: `package.json` scripts, `.vscode` folder-open sync tasks, maintainer runbook, optional non-blocking post-`completed` transcript sync hook.
+- Cross-cutting: active improvement recommendation item `imp-2cf5d881b81f9a` (proposed; policy friction for `generate-recommendations`).
+- Combined outcome: hardened transcript automation at higher run frequency/scale with stronger resilience/privacy controls, advisory response-template ergonomics, and editor-native automation that copy-first syncs transcripts before analysis where applicable.
 - Phase decisions locked:
   - Release strategy: single release train (`v0.8.0`).
   - Approval UX: configurable, default first-use prompt per sensitive command with `Deny` / `Allow` / `Allow for this session`, and command-scoped session reuse when selected.

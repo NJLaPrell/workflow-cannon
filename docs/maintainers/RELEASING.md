@@ -48,6 +48,7 @@ If a gate fails, do not publish. Capture the blocker in task-engine state and up
    - Execute `pnpm run build`, `pnpm run check`, `pnpm run test`.
    - Execute `pnpm run parity` for packaged-artifact parity validation.
    - Execute `pnpm run check-release-metadata` for package.json field validation.
+  - Optional: `pnpm run pre-release-transcript-hook` for a non-blocking transcript sync/ingest summary artifact (requires build; set `WORKSPACE_KIT_POLICY_APPROVAL` for full ingest).
   - Execute `pnpm run phase4-gates` (or phase-scoped successor, currently `pnpm run phase5-gates`) for compatibility/planning/release-channel enforcement.
    - Confirm release automation workflows are green.
 4. **Present for approval**

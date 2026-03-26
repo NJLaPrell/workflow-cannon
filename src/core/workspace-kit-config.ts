@@ -37,11 +37,16 @@ export const KIT_CONFIG_DEFAULTS: Record<string, unknown> = {
   improvement: {
     transcripts: {
       sourcePath: ".cursor/agent-transcripts",
-      archivePath: "agent-transcripts"
+      archivePath: "agent-transcripts",
+      maxFilesPerSync: 5000,
+      maxBytesPerFile: 50_000_000,
+      maxTotalScanBytes: 500_000_000,
+      discoveryPaths: [] as string[]
     },
     cadence: {
       minIntervalMinutes: 15,
-      skipIfNoNewTranscripts: true
+      skipIfNoNewTranscripts: true,
+      maxRecommendationCandidatesPerRun: 500
     }
   }
 };
@@ -64,11 +69,16 @@ export const MODULE_CONFIG_CONTRIBUTIONS: Record<string, Record<string, unknown>
   improvement: {
     transcripts: {
       sourcePath: ".cursor/agent-transcripts",
-      archivePath: "agent-transcripts"
+      archivePath: "agent-transcripts",
+      maxFilesPerSync: 5000,
+      maxBytesPerFile: 50_000_000,
+      maxTotalScanBytes: 500_000_000,
+      discoveryPaths: [] as string[]
     },
     cadence: {
       minIntervalMinutes: 15,
-      skipIfNoNewTranscripts: true
+      skipIfNoNewTranscripts: true,
+      maxRecommendationCandidatesPerRun: 500
     }
   }
 };

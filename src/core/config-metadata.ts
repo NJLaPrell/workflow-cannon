@@ -103,6 +103,73 @@ const REGISTRY: Record<string, ConfigKeyMetadata> = {
     requiresApproval: false,
     exposure: "maintainer",
     writableLayers: ["project", "user"]
+  },
+  "improvement.cadence.maxRecommendationCandidatesPerRun": {
+    key: "improvement.cadence.maxRecommendationCandidatesPerRun",
+    type: "number",
+    description:
+      "Upper bound on new improvement tasks created per generate-recommendations run (safety cap; direct runs still respect dedupe).",
+    default: 500,
+    domainScope: "project",
+    owningModule: "improvement",
+    sensitive: false,
+    requiresRestart: false,
+    requiresApproval: false,
+    exposure: "maintainer",
+    writableLayers: ["project", "user"]
+  },
+  "improvement.transcripts.maxFilesPerSync": {
+    key: "improvement.transcripts.maxFilesPerSync",
+    type: "number",
+    description: "Maximum JSONL transcript files processed per sync (deterministic order).",
+    default: 5000,
+    domainScope: "project",
+    owningModule: "improvement",
+    sensitive: false,
+    requiresRestart: false,
+    requiresApproval: false,
+    exposure: "maintainer",
+    writableLayers: ["project", "user"]
+  },
+  "improvement.transcripts.maxBytesPerFile": {
+    key: "improvement.transcripts.maxBytesPerFile",
+    type: "number",
+    description: "Skip transcript files larger than this many bytes during sync.",
+    default: 50_000_000,
+    domainScope: "project",
+    owningModule: "improvement",
+    sensitive: false,
+    requiresRestart: false,
+    requiresApproval: false,
+    exposure: "maintainer",
+    writableLayers: ["project", "user"]
+  },
+  "improvement.transcripts.maxTotalScanBytes": {
+    key: "improvement.transcripts.maxTotalScanBytes",
+    type: "number",
+    description: "Approximate cap on total bytes read for hashing during one sync.",
+    default: 500_000_000,
+    domainScope: "project",
+    owningModule: "improvement",
+    sensitive: false,
+    requiresRestart: false,
+    requiresApproval: false,
+    exposure: "maintainer",
+    writableLayers: ["project", "user"]
+  },
+  "improvement.transcripts.discoveryPaths": {
+    key: "improvement.transcripts.discoveryPaths",
+    type: "array",
+    description:
+      "Ordered relative paths tried when improvement.transcripts.sourcePath is unset (first existing wins).",
+    default: [],
+    domainScope: "project",
+    owningModule: "improvement",
+    sensitive: false,
+    requiresRestart: false,
+    requiresApproval: false,
+    exposure: "maintainer",
+    writableLayers: ["project", "user"]
   }
 };
 
@@ -143,6 +210,13 @@ export function validateValueForMetadata(meta: ConfigKeyMetadata, value: unknown
       throw typeError(meta.key, "array", value);
     }
     if (meta.key === "policy.extraSensitiveModuleCommands") {
+      for (const item of value) {
+        if (typeof item !== "string" || item.trim().length === 0) {
+          throw new Error(`config-type-error(${meta.key}): array entries must be non-empty strings`);
+        }
+      }
+    }
+    if (meta.key === "improvement.transcripts.discoveryPaths") {
       for (const item of value) {
         if (typeof item !== "string" || item.trim().length === 0) {
           throw new Error(`config-type-error(${meta.key}): array entries must be non-empty strings`);
@@ -275,7 +349,14 @@ export function validatePersistedConfigDocument(
       }
       const tr = imp.transcripts as Record<string, unknown>;
       for (const k of Object.keys(tr)) {
-        if (k !== "sourcePath" && k !== "archivePath") {
+        if (
+          k !== "sourcePath" &&
+          k !== "archivePath" &&
+          k !== "maxFilesPerSync" &&
+          k !== "maxBytesPerFile" &&
+          k !== "maxTotalScanBytes" &&
+          k !== "discoveryPaths"
+        ) {
           throw new Error(`config-invalid(${label}): unknown improvement.transcripts.${k}`);
         }
       }
@@ -285,6 +366,18 @@ export function validatePersistedConfigDocument(
       if (tr.archivePath !== undefined) {
         validateValueForMetadata(REGISTRY["improvement.transcripts.archivePath"]!, tr.archivePath);
       }
+      if (tr.maxFilesPerSync !== undefined) {
+        validateValueForMetadata(REGISTRY["improvement.transcripts.maxFilesPerSync"]!, tr.maxFilesPerSync);
+      }
+      if (tr.maxBytesPerFile !== undefined) {
+        validateValueForMetadata(REGISTRY["improvement.transcripts.maxBytesPerFile"]!, tr.maxBytesPerFile);
+      }
+      if (tr.maxTotalScanBytes !== undefined) {
+        validateValueForMetadata(REGISTRY["improvement.transcripts.maxTotalScanBytes"]!, tr.maxTotalScanBytes);
+      }
+      if (tr.discoveryPaths !== undefined) {
+        validateValueForMetadata(REGISTRY["improvement.transcripts.discoveryPaths"]!, tr.discoveryPaths);
+      }
     }
     if (imp.cadence !== undefined) {
       if (typeof imp.cadence !== "object" || imp.cadence === null || Array.isArray(imp.cadence)) {
@@ -292,7 +385,7 @@ export function validatePersistedConfigDocument(
       }
       const cd = imp.cadence as Record<string, unknown>;
       for (const k of Object.keys(cd)) {
-        if (k !== "minIntervalMinutes" && k !== "skipIfNoNewTranscripts") {
+        if (k !== "minIntervalMinutes" && k !== "skipIfNoNewTranscripts" && k !== "maxRecommendationCandidatesPerRun") {
           throw new Error(`config-invalid(${label}): unknown improvement.cadence.${k}`);
         }
       }
@@ -306,6 +399,12 @@ export function validatePersistedConfigDocument(
         validateValueForMetadata(
           REGISTRY["improvement.cadence.skipIfNoNewTranscripts"]!,
           cd.skipIfNoNewTranscripts
+        );
+      }
+      if (cd.maxRecommendationCandidatesPerRun !== undefined) {
+        validateValueForMetadata(
+          REGISTRY["improvement.cadence.maxRecommendationCandidatesPerRun"]!,
+          cd.maxRecommendationCandidatesPerRun
         );
       }
     }

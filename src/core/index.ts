@@ -48,6 +48,15 @@ export {
   type PolicyTraceRecordInput
 } from "./policy.js";
 export {
+  getSessionGrant,
+  loadSessionPolicyDocument,
+  recordSessionGrant,
+  resolveSessionId,
+  SESSION_POLICY_SCHEMA_VERSION,
+  type SessionPolicyDocument,
+  type SessionPolicyGrant
+} from "./session-policy.js";
+export {
   assertWritableKey,
   getConfigKeyMetadata,
   getConfigRegistryExport,

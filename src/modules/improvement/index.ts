@@ -1,8 +1,13 @@
 import type { WorkflowModule } from "../../contracts/module-contract.js";
 import { queryLineageChain } from "../../core/lineage-store.js";
-import { runGenerateRecommendations } from "./generate-recommendations-runtime.js";
+import { resolveSessionId } from "../../core/session-policy.js";
+import {
+  getMaxRecommendationCandidatesPerRun,
+  runGenerateRecommendations
+} from "./generate-recommendations-runtime.js";
 import {
   resolveCadenceDecision,
+  resolveImprovementTranscriptConfig,
   runSyncTranscripts,
   type TranscriptSyncArgs
 } from "./transcript-sync-runtime.js";
@@ -11,7 +16,7 @@ import { loadImprovementState, saveImprovementState } from "./improvement-state.
 export const improvementModule: WorkflowModule = {
   registration: {
     id: "improvement",
-    version: "0.7.0",
+    version: "0.8.0",
     contractVersion: "1",
     capabilities: ["improvement"],
     dependsOn: ["task-engine", "planning"],
@@ -48,6 +53,11 @@ export const improvementModule: WorkflowModule = {
           name: "ingest-transcripts",
           file: "ingest-transcripts.md",
           description: "Run transcript sync and recommendation generation in one flow."
+        },
+        {
+          name: "transcript-automation-status",
+          file: "transcript-automation-status.md",
+          description: "Emit stable JSON status for transcript sync, ingest, and retry queue."
         }
       ]
     }
@@ -82,8 +92,8 @@ export const improvementModule: WorkflowModule = {
         archivePath: typeof args.archivePath === "string" ? args.archivePath : undefined
       };
       try {
-        const sync = await runSyncTranscripts(ctx, syncArgs);
         const state = await loadImprovementState(ctx.workspacePath);
+        const sync = await runSyncTranscripts(ctx, syncArgs, state);
         state.lastSyncRunAt = new Date().toISOString();
         await saveImprovementState(ctx.workspacePath, state);
         return {
@@ -105,35 +115,20 @@ export const improvementModule: WorkflowModule = {
       };
       const now = new Date();
       try {
-        const sync = await runSyncTranscripts(ctx, syncArgs);
         const state = await loadImprovementState(ctx.workspacePath);
-        const improvement =
-          ctx.effectiveConfig?.improvement && typeof ctx.effectiveConfig.improvement === "object"
-            ? (ctx.effectiveConfig.improvement as Record<string, unknown>)
-            : {};
-        const cadence =
-          improvement.cadence && typeof improvement.cadence === "object"
-            ? (improvement.cadence as Record<string, unknown>)
-            : {};
-        const minIntervalMinutes =
-          typeof cadence.minIntervalMinutes === "number" && Number.isFinite(cadence.minIntervalMinutes)
-            ? Math.max(1, Math.floor(cadence.minIntervalMinutes))
-            : 15;
-        const skipIfNoNewTranscripts =
-          typeof cadence.skipIfNoNewTranscripts === "boolean"
-            ? cadence.skipIfNoNewTranscripts
-            : true;
+        const sync = await runSyncTranscripts(ctx, syncArgs, state);
+        const cfg = resolveImprovementTranscriptConfig(ctx, syncArgs);
         const cadenceDecision = resolveCadenceDecision(
           now,
           state.lastIngestRunAt,
-          minIntervalMinutes,
+          cfg.minIntervalMinutes,
           sync.copied,
-          skipIfNoNewTranscripts
+          cfg.skipIfNoNewTranscripts
         );
         state.lastSyncRunAt = now.toISOString();
         const generate =
           cadenceDecision.shouldRunGenerate || args.forceGenerate === true || args.runGenerate === true;
-        let recommendations: { created: string[]; skipped: number; candidates: number } | null = null;
+        let recommendations: Awaited<ReturnType<typeof runGenerateRecommendations>> | null = null;
         if (generate) {
           recommendations = await runGenerateRecommendations(ctx, {
             transcriptsRoot: sync.archivePath
@@ -149,8 +144,8 @@ export const improvementModule: WorkflowModule = {
           data: {
             sync,
             cadence: {
-              minIntervalMinutes,
-              skipIfNoNewTranscripts,
+              minIntervalMinutes: cfg.minIntervalMinutes,
+              skipIfNoNewTranscripts: cfg.skipIfNoNewTranscripts,
               decision: cadenceDecision.reason
             },
             generatedRecommendations: recommendations
@@ -160,6 +155,47 @@ export const improvementModule: WorkflowModule = {
         const msg = e instanceof Error ? e.message : String(e);
         return { ok: false, code: "ingest-failed", message: msg };
       }
+    }
+
+    if (command.name === "transcript-automation-status") {
+      const syncArgs: TranscriptSyncArgs = {
+        sourcePath: typeof args.sourcePath === "string" ? args.sourcePath : undefined,
+        archivePath: typeof args.archivePath === "string" ? args.archivePath : undefined
+      };
+      const state = await loadImprovementState(ctx.workspacePath);
+      const cfg = resolveImprovementTranscriptConfig(ctx, syncArgs);
+      return {
+        ok: true,
+        code: "transcript-automation-status",
+        message: "Transcript automation status",
+        data: {
+          schemaVersion: 1,
+          lastSyncRunAt: state.lastSyncRunAt,
+          lastIngestRunAt: state.lastIngestRunAt,
+          cadence: {
+            minIntervalMinutes: cfg.minIntervalMinutes,
+            skipIfNoNewTranscripts: cfg.skipIfNoNewTranscripts,
+            maxRecommendationCandidatesPerRun: getMaxRecommendationCandidatesPerRun(ctx)
+          },
+          transcripts: {
+            sourcePath: cfg.sourcePath || null,
+            archivePath: cfg.archivePath,
+            discoveryPaths: cfg.discoveryPaths,
+            budgets: {
+              maxFilesPerSync: cfg.maxFilesPerSync,
+              maxBytesPerFile: cfg.maxBytesPerFile,
+              maxTotalScanBytes: cfg.maxTotalScanBytes
+            }
+          },
+          retryQueue: {
+            pending: state.transcriptRetryQueue?.length ?? 0,
+            entries: state.transcriptRetryQueue ?? []
+          },
+          policySession: {
+            sessionId: resolveSessionId(process.env)
+          }
+        }
+      };
     }
 
     if (command.name === "query-lineage") {
