@@ -4,9 +4,25 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-03-26
+
+Phase 6 — automation hardening, response-template advisory, and Cursor-native transcript automation: bounded transcript operations, policy session grants, response templates on `workspace-kit run` JSON, and optional editor/CLI automation.
+
+### Added
+
+- **Transcript hardening (6a)** — scan budgets (`maxFilesPerSync`, `maxBytesPerFile`, `maxTotalScanBytes`), source discovery paths, sync `runId` + `skipReasons`, retry queue with backoff in `.workspace-kit/improvement/state.json` (schema v2), `transcript-automation-status` command, transcript snippet redaction for ingest provenance, session-scoped policy grants (`.workspace-kit/policy/session-grants.json` + `policyApproval.scope`), optional `pre-release-transcript-hook` script and `pnpm run pre-release-transcript-hook`.
+- **Response templates (6b)** — builtin template registry, `responseTemplates.*` config (`enforcementMode`, `defaultTemplateId`, `commandOverrides`), advisory shaping on every `workspace-kit run` result (`responseTemplate` metadata + optional `data.presentation`), plain-English directives via `responseTemplateDirective` / `instruction` fields.
+- **Cursor / CLI automation (6c)** — `pnpm run transcript:sync` and `transcript:ingest` via `scripts/run-transcript-cli.mjs` (fails fast if `dist/` missing), `.vscode/tasks.json` folder-open sync + manual ingest task, `improvement.hooks.afterTaskCompleted` (`off` / `sync` / `ingest`) spawning detached transcript CLI after task `completed` transitions.
+
 ### Changed
 
-- Task engine tracking now relies solely on canonical `.workspace-kit/tasks/state.json` state; markdown task view/import paths are removed.
+- **`workspace-kit run` JSON** — results may include `responseTemplate` (telemetry + warnings); strict mode can fail with `response-template-invalid` when an explicit template id is unknown.
+- **Task engine** — completion transitions may trigger optional background transcript sync per `improvement.hooks.afterTaskCompleted`.
+
+### Migration notes
+
+- New config keys are opt-in except defaults merged from kit layer (`responseTemplates`, `improvement.hooks`). Review `docs/maintainers/runbooks/transcript-ingestion-operations.md`, `response-templates.md`, and `cursor-transcript-automation.md`.
+- Regenerate config reference docs after upgrading: `workspace-kit config generate-docs` (maintainer workflow).
 
 ## [0.7.0] - 2026-03-26
 

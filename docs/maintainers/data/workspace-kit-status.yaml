@@ -1,11 +1,11 @@
 schema_version: 1
 current_kit_phase: "6"
 last_updated: "2026-03-26"
-active_focus: "Phase 6 (`v0.8.0`) implementation tracks complete in-repo (`6a`-`6c`); release packaging and improvement item `imp-2cf5d881b81f9a` remain as needed."
+active_focus: "Phase 6 shipped as `v0.8.0`; follow-up improvement item `imp-2cf5d881b81f9a` proposed."
 blockers: []
 next_agent_actions:
   - "Proposed improvement: triage `imp-2cf5d881b81f9a` (policy friction for `generate-recommendations`)."
-  - "Prepare `v0.8.0` release evidence per `docs/maintainers/RELEASING.md` when ready."
+  - "Confirm npm `v0.8.0` publish and capture workflow run URL in `ROADMAP.md` evidence snapshot."
 last_session_summary:
   - "Completed Phase 6c (`T271`-`T274`): transcript package scripts, `.vscode` folder-open task, Cursor runbook, optional post-completion transcript hook + tests."
   - "Completed Phase 6b (`T260`-`T266`): response template contract, registry, `run` JSON shaping, plain-English directives, config keys, tests, runbook."
@@ -18,7 +18,7 @@ pending_decisions:
 metrics:
   updated_at: "2026-03-26"
   source: "automated"
-  notes: "Phase 6a-6c implementation delivered; `v0.8.0` release train pending maintainer release steps."
+  notes: "Phase 6 released as `v0.8.0` (verify npm + CI publish run)."
   time_to_doctor_minutes: 0.03
   cold_start_success_rate_pct: 100
   upgrade_success_rate_pct: null

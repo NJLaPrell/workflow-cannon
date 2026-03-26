@@ -20,7 +20,7 @@ Status legend:
 | Phase 3 - Enhancement loop MVP (`T190`-`T192`, `T202`-`T203`) | `v0.5.0` | Completed |
 | Phase 4 - Scale and ecosystem hardening (`T193`-`T195`, `T204`-`T205`, `T238`-`T242`) | `v0.6.0` | Completed |
 | Phase 5 - Transcript intelligence automation (`T244`-`T248`, `T259`) | `v0.7.0` | Completed |
-| Phase 6 - Automation hardening + response templates (`T249`-`T258`, `T260`-`T266`, plus active improvement review item) | `v0.8.0` | In progress / ready |
+| Phase 6 - Automation hardening + response templates (`T249`-`T258`, `T260`-`T266`, `T271`-`T274`, plus active improvement review item) | `v0.8.0` | Completed |
 
 ## Feature Matrix by Phase
 
@@ -117,10 +117,11 @@ Status legend:
 
 | Product feature | What users/maintainers get | Status | Task coverage |
 | --- | --- | --- | --- |
-| Frequent-run automation hardening | Bounded, repeatable high-cadence transcript sync/ingest with stronger safety rails, idempotency diagnostics, and failure retry posture | In progress / ready | `T249`, `T251`, `T254`, `T255` |
-| Transcript ops resilience and privacy | Source autodiscovery, operator status surfaces, privacy/redaction controls, and optional advisory pre-release ingest integration | In progress / ready | `T250`, `T252`, `T257`, `T258` |
-| Policy + docs operational follow-through | Reduced repeat-run policy friction and maintainers-first onboarding/operations runbook for transcript workflows | In progress / ready | `T253`, `T256`, `imp-2cf5d881b81f9a` |
-| Response template advisory system | Response template contract, registry, runtime advisory integration, configuration, observability, and maintainer lifecycle guidance | In progress / ready | `T260`, `T261`, `T262`, `T263`, `T264`, `T265`, `T266` |
+| Frequent-run automation hardening | Bounded, repeatable high-cadence transcript sync/ingest with stronger safety rails, idempotency diagnostics, and failure retry posture | Completed | `T249`, `T251`, `T254`, `T255` |
+| Transcript ops resilience and privacy | Source autodiscovery, operator status surfaces, privacy/redaction controls, and optional advisory pre-release ingest integration | Completed | `T250`, `T252`, `T257`, `T258` |
+| Policy + docs operational follow-through | Reduced repeat-run policy friction and maintainers-first onboarding/operations runbook for transcript workflows | Completed | `T253`, `T256`, `imp-2cf5d881b81f9a` |
+| Response template advisory system | Response template contract, registry, runtime advisory integration, configuration, observability, and maintainer lifecycle guidance | Completed | `T260`, `T261`, `T262`, `T263`, `T264`, `T265`, `T266` |
+| Cursor-native transcript automation | Package scripts, folder-open VS Code tasks, maintainer runbook, optional post-completion transcript hook | Completed | `T271`, `T272`, `T273`, `T274` |
 
 ## Supporting Milestone Features (cross-phase)
 
