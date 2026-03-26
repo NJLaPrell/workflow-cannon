@@ -1,10 +1,10 @@
 schema_version: 1
-current_kit_phase: "3"
+current_kit_phase: "4"
 last_updated: "2026-03-25"
-active_focus: "Phase 2b COMPLETE (v0.4.1). Phase 3 (v0.5.0): improvement tasks in Task Engine, approvals decisions, evidence ingest (transcripts, tag diffs, traces, mutations), T190–T192 + T202–T203."
+active_focus: "Phase 3 COMPLETE (v0.5.0): improvement + approvals + lineage shipped in-repo. Phase 4 (v0.6.0) head T193."
 blockers: []
 next_agent_actions:
-  - "Implement Phase 3: T190 queue + approvals wiring; T191 on-demand generate-recommendations + cursor + evidenceKey; T192/T203 lineage; T202 heuristic confidence"
+  - "Begin Phase 4: T193 module/plugin compatibility contract"
 last_session_summary:
   - "v0.4.0 published: Phase 2 (config, policy, cutover docs); npm latest 0.4.0; GitHub release v0.4.0; workflow run 23561237541."
   - "Maintainer artifacts: config-policy-matrix, task-engine-cutover + checklist; TASKS Phase 2 complete."
@@ -12,7 +12,7 @@ pending_decisions: []
 metrics:
   updated_at: "2026-03-25"
   source: "automated"
-  notes: "v0.4.1 in-repo; publish when ready. Phase 3 execution T190–T192, T202–T203. Phase 2b tasks complete."
+  notes: "v0.5.0 in-repo; publish when ready. Phase 3 tasks complete; Phase 4 (T193+) next."
   time_to_doctor_minutes: 0.03
   cold_start_success_rate_pct: 100
   upgrade_success_rate_pct: null

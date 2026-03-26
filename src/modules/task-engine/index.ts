@@ -54,7 +54,7 @@ function taskStorePath(ctx: { workspacePath: string; effectiveConfig?: Record<st
 export const taskEngineModule: WorkflowModule = {
   registration: {
     id: "task-engine",
-    version: "0.4.0",
+    version: "0.5.0",
     contractVersion: "1",
     capabilities: ["task-engine"],
     dependsOn: [],

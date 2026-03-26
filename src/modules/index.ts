@@ -8,6 +8,14 @@ export type {
   DocumentationValidationIssue
 } from "./documentation/types.js";
 export { improvementModule } from "./improvement/index.js";
+export {
+  computeHeuristicConfidence,
+  HEURISTIC_1_ADMISSION_THRESHOLD,
+  shouldAdmitRecommendation,
+  type ConfidenceResult,
+  type ConfidenceSignals,
+  type EvidenceKind
+} from "./improvement/confidence.js";
 export { workspaceConfigModule } from "./workspace-config/index.js";
 export { planningModule } from "./planning/index.js";
 export {

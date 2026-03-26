@@ -66,6 +66,7 @@ test("isTransitionAllowed accepts all valid transitions", () => {
     ["ready", "blocked"],
     ["ready", "cancelled"],
     ["in_progress", "completed"],
+    ["in_progress", "cancelled"],
     ["in_progress", "blocked"],
     ["in_progress", "ready"],
     ["blocked", "ready"],
@@ -99,6 +100,7 @@ test("getTransitionAction returns correct action verbs", () => {
   assert.equal(getTransitionAction("proposed", "cancelled"), "reject");
   assert.equal(getTransitionAction("ready", "in_progress"), "start");
   assert.equal(getTransitionAction("in_progress", "completed"), "complete");
+  assert.equal(getTransitionAction("in_progress", "cancelled"), "decline");
   assert.equal(getTransitionAction("in_progress", "ready"), "pause");
   assert.equal(getTransitionAction("blocked", "ready"), "unblock");
 });
@@ -107,6 +109,7 @@ test("resolveTargetState maps action to target state", () => {
   assert.equal(resolveTargetState("proposed", "accept"), "ready");
   assert.equal(resolveTargetState("ready", "start"), "in_progress");
   assert.equal(resolveTargetState("in_progress", "complete"), "completed");
+  assert.equal(resolveTargetState("in_progress", "decline"), "cancelled");
   assert.equal(resolveTargetState("in_progress", "pause"), "ready");
   assert.equal(resolveTargetState("blocked", "unblock"), "ready");
   assert.equal(resolveTargetState("completed", "start"), undefined);

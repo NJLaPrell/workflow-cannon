@@ -2,6 +2,27 @@
 
 All notable changes to `@workflow-cannon/workspace-kit` are documented in this file.
 
+## [0.5.0] - 2026-03-25
+
+Phase 3 — enhancement loop MVP: evidence-driven `improvement` tasks, approvals decisions, heuristic confidence, and append-only lineage.
+
+### Added
+
+- **`improvement` module** — `generate-recommendations` (on-demand ingest from agent transcripts, policy denials, config mutation failures, task transition churn, optional `fromTag`/`toTag` git diff); `query-lineage` (read-only chain for a recommendation task id). Dedupe by `evidenceKey`; incremental cursors in `.workspace-kit/improvement/state.json`; `rec` lineage events in `.workspace-kit/lineage/events.jsonl`.
+- **`approvals` module** — `review-item` with `accept`, `decline`, `accept_edited` (requires `editedSummary`). Idempotent decisions via fingerprint; append-only `.workspace-kit/approvals/decisions.jsonl`; updates Task Engine `improvement` tasks (`decline` transition from `in_progress` → `cancelled`).
+- **Heuristic confidence (T202)** — `computeHeuristicConfidence`, `shouldAdmitRecommendation`, `HEURISTIC_1_ADMISSION_THRESHOLD` exported for deterministic admission.
+- **Lineage contract (T192/T203)** — Versioned events (`rec`, `dec`, `app`, `corr`) with correlation root `taskId::evidenceKey`; `appendLineageEvent`, `queryLineageChain`, `readLineageEvents` in core exports.
+- **Policy** — Sensitive `run` operations `review-item` (`approvals.review-item`) and `generate-recommendations` (`improvement.generate-recommendations`).
+
+### Changed
+
+- **Task Engine transitions** — `in_progress` → `cancelled` via action `decline` (declined recommendations after `start`).
+
+### Migration notes
+
+- Scripts that call `workspace-kit run generate-recommendations` or `workspace-kit run review-item` must supply `policyApproval` in JSON args (or env where applicable), same as other sensitive module commands.
+- Add `.workspace-kit/improvement/`, `.workspace-kit/lineage/`, and `.workspace-kit/approvals/` to `.gitignore` if those artifacts should stay local.
+
 ## [0.4.1] - 2026-03-25
 
 Phase 2b — config validation/policy trace versioning, config UX (CLI + metadata + docs), and user config layer.

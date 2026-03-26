@@ -28,6 +28,7 @@ const ALLOWED_TRANSITIONS: Record<string, TransitionEntry> = {
   "ready->blocked": { action: "block" },
   "ready->cancelled": { action: "cancel" },
   "in_progress->completed": { action: "complete" },
+  "in_progress->cancelled": { action: "decline" },
   "in_progress->blocked": { action: "block" },
   "in_progress->ready": { action: "pause" },
   "blocked->ready": { action: "unblock" },

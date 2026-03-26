@@ -14,7 +14,8 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - Completed Phase 0 slices: `T178`, `T179`, `T180`, `T181`, `T182`, `T183`, `T196`, `T197`, `T198`, `T206`, `T207`, `T208`, `T209`, `T210`, `T211`, `T212`, `T213`.
 - **Phase 1 (Task Engine core) is COMPLETE** and ships as **`v0.3.0`**. Completed slices: `T199`, `T184`, `T185`, `T186`, `T217`.
 - **Phase 2 (configuration and policy base) is COMPLETE** and ships as **`v0.4.0`**. Completed slices: `T218`, `T187`, `T200`, `T188`, `T201`, `T189`.
-- **Phase 2b is COMPLETE** and ships as **`v0.4.1`** (`T219`–`T220`, `T228`–`T237`). **Next execution phase is Phase 3** (Enhancement loop MVP) at **`v0.5.0`** starting at `T190`.
+- **Phase 2b is COMPLETE** and ships as **`v0.4.1`** (`T219`–`T220`, `T228`–`T237`).
+- **Phase 3 (Enhancement loop MVP) is COMPLETE** in-repo and ships as **`v0.5.0`** (`T190`–`T192`, `T202`–`T203`). **Next execution phase is Phase 4** at **`v0.6.0`** (`T193` onward).
 - Historical extraction and first-publish milestones remain recorded below as provenance.
 
 ## Phase plan and release cadence
@@ -59,7 +60,7 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
   - Sensitive-operation extensions from effective config are covered by integration tests.
   - `workspace-kit config` list/get/set/unset/explain/validate (and optional `edit`) use canonical resolution and reject invalid mutations before persistence; integration tests and generated `.ai/CONFIG.md` + `docs/maintainers/CONFIG.md` stay aligned with metadata.
 
-### Phase 3 - Enhancement loop MVP -> GitHub release `v0.5.0`
+### Phase 3 - Enhancement loop MVP -> GitHub release `v0.5.0` (COMPLETE in-repo)
 
 - Primary scope: `T190` to `T192`, with supporting design slices `T202` (heuristic confidence + admission rules) and `T203` (lineage event contract).
 - Outcome: evidence-driven **improvement** work is logged as **Task Engine** tasks (`type="improvement"`) and reviewed through a human-governed loop: ingest signals from agent transcripts, git diffs between release tags, policy traces, config mutation evidence, and task-transition evidence; on-demand `generate-recommendations` with an incremental cursor; decisions recorded via the **`approvals`** module; deterministic **evidence-key** dedupe; heuristic confidence; end-to-end **lineage** (recommendation → decision → applied change) with correlation to policy/config traces where available.

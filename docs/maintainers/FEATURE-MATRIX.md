@@ -17,8 +17,8 @@ Status legend:
 | Phase 1 - Task Engine core (`T184`-`T186`, `T199`, `T217`) | `v0.3.0` | Completed |
 | Phase 2 - Config, policy, local cutover (`T218`, `T187`, `T200`, `T188`, `T201`, `T189`) | `v0.4.0` | Completed |
 | Phase 2b - Policy hardening + config UX (`T219`-`T220`, `T228`-`T237`) | `v0.4.1` | Completed |
-| Phase 3 - Enhancement loop MVP (`T190`-`T192`, `T202`-`T203`) | `v0.5.0` | In progress / ready |
-| Phase 4 - Scale and ecosystem hardening (`T193`-`T195`) | `v0.6.0` | Planned |
+| Phase 3 - Enhancement loop MVP (`T190`-`T192`, `T202`-`T203`) | `v0.5.0` | Completed |
+| Phase 4 - Scale and ecosystem hardening (`T193`-`T195`) | `v0.6.0` | In progress / ready |
 
 ## Feature Matrix by Phase
 
@@ -90,9 +90,9 @@ Status legend:
 
 | Product feature | What users/maintainers get | Status | Task coverage |
 | --- | --- | --- | --- |
-| Improvement tasks as review queue | Proposed improvements logged as Task Engine tasks (`type="improvement"`); lifecycle + decisions wired to **`approvals`** | In progress / ready | `T190` |
-| Evidence-backed on-demand generation | `generate-recommendations` ingests transcripts, tag-to-tag diffs, policy traces, config mutations, task evidence; incremental cursor; heuristic confidence; `evidenceKey` dedupe | In progress / ready | `T191`, `T202` |
-| End-to-end lineage + trace correlation | Immutable lineage rec → dec → applied; correlates policy/config traces where available | In progress / ready | `T192`, `T203` |
+| Improvement tasks as review queue | Proposed improvements logged as Task Engine tasks (`type="improvement"`); lifecycle + decisions wired to **`approvals`** | Completed | `T190` |
+| Evidence-backed on-demand generation | `generate-recommendations` ingests transcripts, tag-to-tag diffs, policy traces, config mutations, task evidence; incremental cursor; heuristic confidence; `evidenceKey` dedupe | Completed | `T191`, `T202` |
+| End-to-end lineage + trace correlation | Immutable lineage rec → dec → applied; correlates policy/config traces where available | Completed | `T192`, `T203` |
 
 ### Phase 4 Scale and Ecosystem (`v0.6.0`)
 

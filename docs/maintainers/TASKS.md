@@ -13,12 +13,13 @@ Dependency fields:
 
 ## Current execution state
 
-- Current phase in execution: _Phase 2b COMPLETE (`v0.4.1`). Phase 3 (Enhancement loop MVP) is next._
-- Milestone target: _Human-governed recommendation queue with evidence and lineage (`v0.5.0`)._
+- Current phase in execution: _Phase 3 COMPLETE (`v0.5.0`). Phase 4 (Scale and ecosystem) is next._
+- Milestone target: _Extension-ready platform and operational hardening (`v0.6.0`)._
 - Completed execution order (Phase 1): `T199` → `T184` → `T185` → `T186` → `T217`
 - Completed execution order (Phase 2): `T218` → `T187` → `T200` → `T188` → `T201` → `T189`
 - Completed execution order (Phase 2b): policy `T219` → `T220`; config UX `T228` → `T229` → `T230` → `T231` → `T232` → `T234` → `T233` → `T236` → `T237` → `T235` (see Phase 2b notes for parallel slots).
-- Ready queue: `T190`
+- Completed execution order (Phase 3): `T202` / `T203` (contracts) with `T190` → `T191` → `T192` (runtime and lineage).
+- Ready queue: `T193`
 - Design decisions resolved: Phase 1 — Phase 1 decisions table. Phase 2 — Phase 2 decisions table (below).
 
 ## Historical baseline (pre-Phase 0)
@@ -693,7 +694,7 @@ Release target: **GitHub release `v0.4.1`**
 
 Release target: **GitHub release `v0.5.0`**
 
-### [ ] T190 [workspace-kit] Implement recommendation intake and review queue
+### [x] T190 [workspace-kit] Implement recommendation intake and review queue
 - Priority: P1
 - Approach: Treat the Task Engine as the canonical “recommendation queue” by representing each recommendation as a Task Engine task and by implementing a deterministic decision lifecycle wired to the `approvals` module.
 - Depends on: `T185`, `T188`, `T220`
@@ -723,7 +724,7 @@ Release target: **GitHub release `v0.5.0`**
   - Decision actions are idempotent and validated against task existence/type/state.
   - Decisions are recorded in a machine-readable format that can be linked to lineage and evidence.
 
-### [ ] T191 [workspace-kit] Implement evidence-backed recommendation generation
+### [x] T191 [workspace-kit] Implement evidence-backed recommendation generation
 - Priority: P1
 - Approach: Evidence-backed generation + heuristic confidence + deterministic dedupe by `evidenceKey`, producing Task Engine tasks (task `type` = `improvement`) ready for review.
 - Depends on: `T190`, `T183`, `T202`
@@ -756,7 +757,7 @@ Release target: **GitHub release `v0.5.0`**
   - Dedupe prevents equivalent recommendations by `evidenceKey` across repeated on-demand runs.
   - Incremental cursor prevents missing new evidence while keeping results deterministic.
 
-### [ ] T192 [workspace-kit] Implement canonical artifact lineage model
+### [x] T192 [workspace-kit] Implement canonical artifact lineage model
 - Priority: P1
 - Approach: Canonical lineage contract with immutable correlation IDs.
 - Depends on: `T190`, `T191`
@@ -937,7 +938,7 @@ Release target: **GitHub release `v0.6.0`**
   - Checklist is actionable and **referenced from `T189` runbook**.
   - No dependency on a packaged migration engine; steps use existing CLI/module commands only.
 
-### [ ] T202 [workspace-kit] Define recommendation confidence rubric
+### [x] T202 [workspace-kit] Define recommendation confidence rubric
 - Priority: P2
 - Approach: Implement a deterministic heuristic confidence model (heuristic_1) with a simple admission threshold for queueing.
 - Depends on: `T190`
@@ -955,7 +956,7 @@ Release target: **GitHub release `v0.6.0`**
 - Acceptance criteria:
   - Heuristic confidence scoring and thresholding are deterministic and test-covered.
 
-### [ ] T203 [workspace-kit] Define lineage event contract
+### [x] T203 [workspace-kit] Define lineage event contract
 - Priority: P2
 - Approach: Define immutable event contract and correlation strategy for provenance.
 - Depends on: `T191`

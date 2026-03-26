@@ -65,5 +65,21 @@ export {
   type ConfigMutationRecord
 } from "./config-mutations.js";
 export { generateConfigReferenceDocs, runWorkspaceConfigCli, type ConfigCliIo } from "./config-cli.js";
+export {
+  LINEAGE_SCHEMA_VERSION,
+  lineageCorrelationRoot,
+  type LineageAppPayload,
+  type LineageCorrPayload,
+  type LineageDecPayload,
+  type LineageEvent,
+  type LineageEventType,
+  type LineageRecPayload
+} from "./lineage-contract.js";
+export {
+  appendLineageEvent,
+  newLineageEventId,
+  queryLineageChain,
+  readLineageEvents
+} from "./lineage-store.js";
 
 export type CoreRuntimeVersion = "0.1";

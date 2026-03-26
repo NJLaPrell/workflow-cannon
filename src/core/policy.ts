@@ -13,14 +13,18 @@ export type PolicyOperationId =
   | "doc.generate-document"
   | "tasks.import-tasks"
   | "tasks.generate-tasks-md"
-  | "tasks.run-transition";
+  | "tasks.run-transition"
+  | "approvals.review-item"
+  | "improvement.generate-recommendations";
 
 const COMMAND_TO_OPERATION: Record<string, PolicyOperationId | undefined> = {
   "document-project": "doc.document-project",
   "generate-document": "doc.generate-document",
   "import-tasks": "tasks.import-tasks",
   "generate-tasks-md": "tasks.generate-tasks-md",
-  "run-transition": "tasks.run-transition"
+  "run-transition": "tasks.run-transition",
+  "review-item": "approvals.review-item",
+  "generate-recommendations": "improvement.generate-recommendations"
 };
 
 export function getOperationIdForCommand(commandName: string): PolicyOperationId | undefined {
