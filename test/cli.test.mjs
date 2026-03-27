@@ -408,6 +408,9 @@ test("runCli run lists available module commands with no subcommand", async () =
   assert.ok(capture.lines.some((l) => l.includes("document-project")));
   assert.ok(capture.lines.some((l) => l.includes("generate-document")));
   assert.ok(capture.lines.some((l) => l.includes("run-transition")));
+  assert.ok(capture.lines.some((l) => l.includes("list-planning-types")));
+  assert.ok(capture.lines.some((l) => l.includes("build-plan")));
+  assert.ok(capture.lines.some((l) => l.includes("explain-planning-rules")));
   assert.ok(capture.lines.some((l) => l.includes("AGENT-CLI-MAP.md")));
   assert.ok(capture.lines.some((l) => l.includes("instructions")));
 });
