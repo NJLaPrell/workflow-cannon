@@ -47,3 +47,11 @@ export type {
   NextActionSuggestion,
   BlockingAnalysisEntry
 } from "./task-engine/index.js";
+export type { WishlistItem, WishlistStatus, WishlistStoreDocument } from "./task-engine/index.js";
+export {
+  WishlistStore,
+  validateWishlistIntakePayload,
+  validateWishlistUpdatePayload,
+  buildWishlistItemFromIntake,
+  WISHLIST_ID_RE
+} from "./task-engine/index.js";

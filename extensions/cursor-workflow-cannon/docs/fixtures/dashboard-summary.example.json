@@ -4,26 +4,38 @@
   "message": "Dashboard summary built from task store and maintainer status snapshot",
   "data": {
     "schemaVersion": 1,
+    "taskStoreLastUpdated": "2026-03-27T12:00:00.000Z",
     "workspaceStatus": {
-      "currentKitPhase": "12",
-      "activeFocus": "Phase 12 — Cursor native UI (thin client): execute T296–T310 after Phase 11 follow-up completion."
+      "currentKitPhase": "14",
+      "activeFocus": "Example snapshot after Wishlist support."
     },
     "stateSummary": {
       "proposed": 0,
-      "ready": 23,
+      "ready": 2,
       "in_progress": 0,
       "blocked": 0,
-      "completed": 123,
+      "completed": 146,
       "cancelled": 0,
-      "total": 146
+      "total": 148
     },
-    "readyQueueCount": 23,
+    "executionPlanningScope": "tasks-only",
+    "wishlist": {
+      "schemaVersion": 1,
+      "openCount": 1,
+      "totalCount": 3
+    },
+    "readyQueueTop": [],
+    "readyQueueCount": 2,
+    "blockedSummary": {
+      "count": 0,
+      "top": []
+    },
     "suggestedNext": {
-      "id": "T296",
-      "title": "[Cursor extension / kit] Stable JSON dashboard and project-health summary for thin UI clients",
+      "id": "T319",
+      "title": "[task-engine] Define Wishlist item schema and validation contract",
       "status": "ready",
       "priority": "P1",
-      "phase": "Phase 12 — Cursor native UI (thin client)"
+      "phase": "Phase 14 - Wishlist intake and conversion"
     },
     "blockingAnalysis": []
   }

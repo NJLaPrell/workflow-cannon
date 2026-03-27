@@ -23,8 +23,10 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
   assert.deepEqual(commandNames, [
     "add-dependency",
     "archive-task",
+    "convert-wishlist",
     "create-task",
     "create-task-from-plan",
+    "create-wishlist",
     "dashboard-summary",
     "document-project",
     "explain-config",
@@ -37,11 +39,14 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "get-task",
     "get-task-history",
     "get-task-summary",
+    "get-wishlist",
     "list-tasks",
+    "list-wishlist",
     "remove-dependency",
     "resolve-config",
     "run-transition",
-    "update-task"
+    "update-task",
+    "update-wishlist"
   ]);
 });
 

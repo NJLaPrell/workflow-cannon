@@ -11,6 +11,7 @@ Phase 1 core module for structured task lifecycle management.
 - **Persistence**: File-backed JSON store at `.workspace-kit/tasks/state.json` with atomic writes
 - **Evidence**: Every transition produces a timestamped `TransitionEvidence` record
 - **Next-action suggestions**: Priority-sorted ready queue with blocking chain analysis
+- **Wishlist (ideation)**: Separate namespace `W###` persisted at `.workspace-kit/wishlist/state.json`, with strict intake and `convert-wishlist` into phased `T###` tasks (see `docs/maintainers/runbooks/wishlist-workflow.md`)
 
 ## Commands
 
@@ -21,6 +22,8 @@ Phase 1 core module for structured task lifecycle management.
 | `list-tasks` | List tasks with optional status/phase filters |
 | `get-ready-queue` | Get ready tasks sorted by priority |
 | `get-next-actions` | Get prioritized next-action suggestions |
+| `create-wishlist` / `list-wishlist` / `get-wishlist` / `update-wishlist` | Wishlist ideation (no task phase) |
+| `convert-wishlist` | Promote a wishlist item into one or more tasks; closes wishlist as `converted` |
 
 ## Architecture
 
@@ -29,6 +32,7 @@ index.ts          Module registration + onCommand dispatch
 types.ts          Core type definitions
 transitions.ts    Allowed transition map, guards, TransitionValidator
 store.ts          File-backed JSON TaskStore
+wishlist-store.ts File-backed JSON WishlistStore
 service.ts        TransitionService (orchestrates transitions + auto-unblock)
 suggestions.ts    Next-action suggestion engine
 instructions/     Markdown instruction files for each command

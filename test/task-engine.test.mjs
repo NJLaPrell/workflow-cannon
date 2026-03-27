@@ -585,6 +585,11 @@ test("taskEngineModule registration includes all instruction entries", () => {
   assert.ok(names.includes("get-ready-queue"));
   assert.ok(names.includes("get-next-actions"));
   assert.ok(names.includes("dashboard-summary"));
+  assert.ok(names.includes("create-wishlist"));
+  assert.ok(names.includes("list-wishlist"));
+  assert.ok(names.includes("get-wishlist"));
+  assert.ok(names.includes("update-wishlist"));
+  assert.ok(names.includes("convert-wishlist"));
 });
 
 test("taskEngineModule passes ModuleRegistry validation", () => {
@@ -598,6 +603,7 @@ test("taskEngineModule onCommand list-tasks returns empty on fresh store", async
   assert.equal(result.ok, true);
   assert.equal(result.code, "tasks-listed");
   assert.equal(result.data.count, 0);
+  assert.equal(result.data.scope, "tasks-only");
 });
 
 test("taskEngineModule onCommand get-task returns task-not-found for missing task", async () => {
@@ -655,6 +661,10 @@ test("taskEngineModule onCommand dashboard-summary returns stable shape", async 
   assert.equal(d.suggestedNext.id, "T001");
   assert.ok(Array.isArray(d.blockingAnalysis));
   assert.ok("blockedSummary" in d);
+  assert.equal(d.executionPlanningScope, "tasks-only");
+  assert.equal(d.wishlist.schemaVersion, 1);
+  assert.equal(d.wishlist.openCount, 0);
+  assert.equal(d.wishlist.totalCount, 0);
 });
 
 test("taskEngineModule onCommand run-transition validates required args", async () => {
@@ -784,3 +794,79 @@ test("taskEngineModule dependency and history commands return deterministic outp
   assert.equal(history.ok, true);
   assert.ok(history.data.count >= 1);
 });
+
+const wishlistIntake = {
+  id: "W900",
+  title: "Test wish",
+  problemStatement: "Need tests",
+  expectedOutcome: "Green CI",
+  impact: "Quality",
+  constraints: "None",
+  successSignals: "Tests pass",
+  requestor: "maintainer",
+  evidenceRef: "docs/x"
+};
+
+test("taskEngineModule wishlist: create, list, convert closes wishlist and creates tasks", async () => {
+  const workspace = await tmpDir();
+  const ctx = { runtimeVersion: "0.1", workspacePath: workspace };
+
+  let r = await taskEngineModule.onCommand({ name: "create-wishlist", args: wishlistIntake }, ctx);
+  assert.equal(r.ok, true);
+  assert.equal(r.code, "wishlist-created");
+
+  r = await taskEngineModule.onCommand({ name: "list-wishlist", args: { status: "open" } }, ctx);
+  assert.equal(r.ok, true);
+  assert.equal(r.data.count, 1);
+  assert.equal(r.data.scope, "wishlist-only");
+
+  r = await taskEngineModule.onCommand(
+    {
+      name: "convert-wishlist",
+      args: {
+        wishlistId: "W900",
+        decomposition: {
+          rationale: "One task for slice",
+          boundaries: "Engine only",
+          dependencyIntent: "none"
+        },
+        tasks: [
+          {
+            id: "T9001",
+            title: "Do the thing",
+            phase: "Phase test",
+            approach: "Implement",
+            technicalScope: ["Add code"],
+            acceptanceCriteria: ["It works"]
+          }
+        ]
+      }
+    },
+    ctx
+  );
+  assert.equal(r.ok, true);
+  assert.equal(r.code, "wishlist-converted");
+  assert.equal(r.data.wishlist.status, "converted");
+  assert.deepEqual(r.data.wishlist.convertedToTaskIds, ["T9001"]);
+
+  r = await taskEngineModule.onCommand({ name: "get-task", args: { taskId: "T9001" } }, ctx);
+  assert.equal(r.ok, true);
+  assert.equal(r.data.task.phase, "Phase test");
+
+  r = await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, ctx);
+  assert.equal(r.ok, true);
+  assert.ok(r.data.tasks.some((t) => t.id === "T9001"));
+});
+
+test("taskEngineModule get-next-actions never includes wishlist ids", async () => {
+  const workspace = await tmpDir();
+  const ctx = { runtimeVersion: "0.1", workspacePath: workspace };
+  await taskEngineModule.onCommand({ name: "create-wishlist", args: wishlistIntake }, ctx);
+
+  const r = await taskEngineModule.onCommand({ name: "get-next-actions", args: {} }, ctx);
+  assert.equal(r.ok, true);
+  assert.equal(r.data.scope, "tasks-only");
+  const ready = r.data.readyQueue ?? [];
+  assert.ok(!ready.some((t) => String(t.id).startsWith("W")));
+});
+

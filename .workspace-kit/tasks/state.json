@@ -4430,9 +4430,9 @@
       "id": "T319",
       "title": "[task-engine] Define Wishlist item schema and validation contract",
       "type": "workspace-kit",
-      "status": "ready",
+      "status": "completed",
       "createdAt": "2026-03-27T15:16:30.032Z",
-      "updatedAt": "2026-03-27T15:59:55.936Z",
+      "updatedAt": "2026-03-27T16:24:41.161Z",
       "priority": "P1",
       "dependsOn": [],
       "unblocks": [
@@ -4456,9 +4456,9 @@
       "id": "T320",
       "title": "[task-engine] Add Wishlist command surface for strict intake and query",
       "type": "workspace-kit",
-      "status": "ready",
+      "status": "completed",
       "createdAt": "2026-03-27T15:16:30.089Z",
-      "updatedAt": "2026-03-27T15:59:55.995Z",
+      "updatedAt": "2026-03-27T16:24:41.279Z",
       "priority": "P1",
       "dependsOn": [
         "T319"
@@ -4484,9 +4484,9 @@
       "id": "T321",
       "title": "[task-engine] Add Wishlist conversion command to produce workable tasks",
       "type": "workspace-kit",
-      "status": "ready",
+      "status": "completed",
       "createdAt": "2026-03-27T15:16:30.146Z",
-      "updatedAt": "2026-03-27T15:59:56.054Z",
+      "updatedAt": "2026-03-27T16:24:41.396Z",
       "priority": "P1",
       "dependsOn": [
         "T319",
@@ -4512,9 +4512,9 @@
       "id": "T322",
       "title": "[task-engine] Enforce planning boundary: Wishlist ideas stay out of plan queues",
       "type": "workspace-kit",
-      "status": "ready",
+      "status": "completed",
       "createdAt": "2026-03-27T15:16:30.205Z",
-      "updatedAt": "2026-03-27T15:59:56.113Z",
+      "updatedAt": "2026-03-27T16:24:41.514Z",
       "priority": "P2",
       "dependsOn": [
         "T320"
@@ -4539,9 +4539,9 @@
       "id": "T323",
       "title": "[task-engine] Document Wishlist workflow and add end-to-end tests",
       "type": "workspace-kit",
-      "status": "ready",
+      "status": "completed",
       "createdAt": "2026-03-27T15:16:30.263Z",
-      "updatedAt": "2026-03-27T15:59:56.171Z",
+      "updatedAt": "2026-03-27T16:24:41.632Z",
       "priority": "P2",
       "dependsOn": [
         "T321",
@@ -6342,9 +6342,209 @@
       "dependentsUnblocked": [],
       "timestamp": "2026-03-27T15:59:56.171Z",
       "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T319-2026-03-27T16:24:41.103Z-76240e7a",
+      "taskId": "T319",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T16:24:41.103Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T319-2026-03-27T16:24:41.161Z-cab803d5",
+      "taskId": "T319",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T16:24:41.161Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T320-2026-03-27T16:24:41.220Z-3fb23edc",
+      "taskId": "T320",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T16:24:41.220Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T320-2026-03-27T16:24:41.279Z-9ca63c5a",
+      "taskId": "T320",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T16:24:41.279Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T321-2026-03-27T16:24:41.338Z-6bf59deb",
+      "taskId": "T321",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T16:24:41.338Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T321-2026-03-27T16:24:41.396Z-54dc96d7",
+      "taskId": "T321",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T16:24:41.396Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T322-2026-03-27T16:24:41.455Z-734b5de3",
+      "taskId": "T322",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T16:24:41.455Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T322-2026-03-27T16:24:41.514Z-a9aa652d",
+      "taskId": "T322",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T16:24:41.514Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T323-2026-03-27T16:24:41.573Z-1872668f",
+      "taskId": "T323",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T16:24:41.573Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T323-2026-03-27T16:24:41.632Z-2c5c83d5",
+      "taskId": "T323",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T16:24:41.632Z",
+      "actor": "NJLaPrell@gmail.com"
     }
   ],
-  "lastUpdated": "2026-03-27T15:59:56.171Z",
+  "lastUpdated": "2026-03-27T16:24:41.632Z",
   "mutationLog": [
     {
       "mutationId": "create-task-T319-2026-03-27T15:16:30.032Z-20b24ad2",

@@ -7,6 +7,14 @@ import { TransitionService } from "./service.js";
 import { TaskEngineError, getAllowedTransitionsFrom } from "./transitions.js";
 import { getNextActions } from "./suggestions.js";
 import { readWorkspaceStatusSnapshot } from "./dashboard-status.js";
+import { WishlistStore } from "./wishlist-store.js";
+import type { WishlistConversionDecomposition, WishlistItem } from "./wishlist-types.js";
+import {
+  buildWishlistItemFromIntake,
+  validateWishlistIntakePayload,
+  validateWishlistUpdatePayload,
+  WISHLIST_ID_RE
+} from "./wishlist-validation.js";
 
 export type {
   TaskEntity,
@@ -41,6 +49,14 @@ export {
 } from "./transitions.js";
 export { getNextActions } from "./suggestions.js";
 export { readWorkspaceStatusSnapshot } from "./dashboard-status.js";
+export { WishlistStore } from "./wishlist-store.js";
+export type { WishlistItem, WishlistStatus, WishlistStoreDocument } from "./wishlist-types.js";
+export {
+  validateWishlistIntakePayload,
+  validateWishlistUpdatePayload,
+  buildWishlistItemFromIntake,
+  WISHLIST_ID_RE
+} from "./wishlist-validation.js";
 
 function taskStorePath(ctx: { workspacePath: string; effectiveConfig?: Record<string, unknown> }): string | undefined {
   const tasks = ctx.effectiveConfig?.tasks;
@@ -48,6 +64,15 @@ function taskStorePath(ctx: { workspacePath: string; effectiveConfig?: Record<st
     return undefined;
   }
   const p = (tasks as Record<string, unknown>).storeRelativePath;
+  return typeof p === "string" && p.trim().length > 0 ? p.trim() : undefined;
+}
+
+function wishlistStorePath(ctx: { workspacePath: string; effectiveConfig?: Record<string, unknown> }): string | undefined {
+  const tasks = ctx.effectiveConfig?.tasks;
+  if (!tasks || typeof tasks !== "object" || Array.isArray(tasks)) {
+    return undefined;
+  }
+  const p = (tasks as Record<string, unknown>).wishlistStoreRelativePath;
   return typeof p === "string" && p.trim().length > 0 ? p.trim() : undefined;
 }
 
@@ -68,6 +93,80 @@ const MUTABLE_TASK_FIELDS = new Set([
 
 function nowIso(): string {
   return new Date().toISOString();
+}
+
+function parseConversionDecomposition(
+  raw: unknown
+): { ok: true; value: WishlistConversionDecomposition } | { ok: false; message: string } {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return { ok: false, message: "convert-wishlist requires 'decomposition' object" };
+  }
+  const o = raw as Record<string, unknown>;
+  const rationale = typeof o.rationale === "string" ? o.rationale.trim() : "";
+  const boundaries = typeof o.boundaries === "string" ? o.boundaries.trim() : "";
+  const dependencyIntent = typeof o.dependencyIntent === "string" ? o.dependencyIntent.trim() : "";
+  if (!rationale || !boundaries || !dependencyIntent) {
+    return {
+      ok: false,
+      message: "decomposition requires non-empty rationale, boundaries, and dependencyIntent"
+    };
+  }
+  return { ok: true, value: { rationale, boundaries, dependencyIntent } };
+}
+
+function buildTaskFromConversionPayload(
+  row: Record<string, unknown>,
+  timestamp: string
+): { ok: true; task: TaskEntity } | { ok: false; message: string } {
+  const id = typeof row.id === "string" ? row.id.trim() : "";
+  if (!TASK_ID_RE.test(id)) {
+    return { ok: false, message: "Each converted task requires 'id' matching T<number>" };
+  }
+  const title = typeof row.title === "string" ? row.title.trim() : "";
+  if (!title) {
+    return { ok: false, message: `Task '${id}' requires non-empty title` };
+  }
+  const phase = typeof row.phase === "string" ? row.phase.trim() : "";
+  if (!phase) {
+    return { ok: false, message: `Task '${id}' requires 'phase' for workable tasks` };
+  }
+  const type = typeof row.type === "string" && row.type.trim() ? row.type.trim() : "workspace-kit";
+  const priority =
+    typeof row.priority === "string" && ["P1", "P2", "P3"].includes(row.priority)
+      ? (row.priority as TaskPriority)
+      : undefined;
+  const approach = typeof row.approach === "string" ? row.approach.trim() : "";
+  if (!approach) {
+    return { ok: false, message: `Task '${id}' requires 'approach'` };
+  }
+  const technicalScope = Array.isArray(row.technicalScope)
+    ? row.technicalScope.filter((x) => typeof x === "string")
+    : [];
+  const acceptanceCriteria = Array.isArray(row.acceptanceCriteria)
+    ? row.acceptanceCriteria.filter((x) => typeof x === "string")
+    : [];
+  if (technicalScope.length === 0) {
+    return { ok: false, message: `Task '${id}' requires non-empty technicalScope array` };
+  }
+  if (acceptanceCriteria.length === 0) {
+    return { ok: false, message: `Task '${id}' requires non-empty acceptanceCriteria array` };
+  }
+  const task: TaskEntity = {
+    id,
+    title,
+    type,
+    status: "proposed",
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    priority,
+    dependsOn: Array.isArray(row.dependsOn) ? row.dependsOn.filter((x) => typeof x === "string") : undefined,
+    unblocks: Array.isArray(row.unblocks) ? row.unblocks.filter((x) => typeof x === "string") : undefined,
+    phase,
+    approach,
+    technicalScope,
+    acceptanceCriteria
+  };
+  return { ok: true, task };
 }
 
 function mutationEvidence(
@@ -123,6 +222,11 @@ export const taskEngineModule: WorkflowModule = {
           description: "Update mutable task fields without lifecycle bypass."
         },
         {
+          name: "update-wishlist",
+          file: "update-wishlist.md",
+          description: "Update mutable fields on an open Wishlist item."
+        },
+        {
           name: "archive-task",
           file: "archive-task.md",
           description: "Archive a task without destructive deletion."
@@ -168,6 +272,21 @@ export const taskEngineModule: WorkflowModule = {
           description: "Promote planning output into a canonical task."
         },
         {
+          name: "convert-wishlist",
+          file: "convert-wishlist.md",
+          description: "Convert a Wishlist item into one or more phased tasks and close the wishlist item."
+        },
+        {
+          name: "create-wishlist",
+          file: "create-wishlist.md",
+          description: "Create a Wishlist ideation item with strict required fields (separate namespace from tasks)."
+        },
+        {
+          name: "get-wishlist",
+          file: "get-wishlist.md",
+          description: "Retrieve a single Wishlist item by ID."
+        },
+        {
           name: "get-task",
           file: "get-task.md",
           description: "Retrieve a single task by ID."
@@ -176,6 +295,11 @@ export const taskEngineModule: WorkflowModule = {
           name: "list-tasks",
           file: "list-tasks.md",
           description: "List tasks with optional status/phase filters."
+        },
+        {
+          name: "list-wishlist",
+          file: "list-wishlist.md",
+          description: "List Wishlist items (ideation-only; not part of task execution queues)."
         },
         {
           name: "get-ready-queue",
@@ -532,6 +656,15 @@ export const taskEngineModule: WorkflowModule = {
       }));
       const blockedTop = suggestion.blockingAnalysis.slice(0, 15);
 
+      const wishlistStore = new WishlistStore(ctx.workspacePath, wishlistStorePath(ctx));
+      try {
+        await wishlistStore.load();
+      } catch {
+        /* wishlist store optional */
+      }
+      const wishlistItems = wishlistStore.getAllItems();
+      const wishlistOpenCount = wishlistItems.filter((i) => i.status === "open").length;
+
       const data = {
         schemaVersion: 1 as const,
         taskStoreLastUpdated: store.getLastUpdated(),
@@ -539,6 +672,12 @@ export const taskEngineModule: WorkflowModule = {
         stateSummary: suggestion.stateSummary,
         readyQueueTop: readyTop,
         readyQueueCount: suggestion.readyQueue.length,
+        executionPlanningScope: "tasks-only" as const,
+        wishlist: {
+          schemaVersion: 1 as const,
+          openCount: wishlistOpenCount,
+          totalCount: wishlistItems.length
+        },
         blockedSummary: {
           count: suggestion.blockingAnalysis.length,
           top: blockedTop
@@ -580,7 +719,7 @@ export const taskEngineModule: WorkflowModule = {
         ok: true,
         code: "tasks-listed",
         message: `Found ${tasks.length} tasks`,
-        data: { tasks, count: tasks.length } as Record<string, unknown>
+        data: { tasks, count: tasks.length, scope: "tasks-only" } as Record<string, unknown>
       };
     }
 
@@ -598,7 +737,7 @@ export const taskEngineModule: WorkflowModule = {
         ok: true,
         code: "ready-queue-retrieved",
         message: `${ready.length} tasks in ready queue`,
-        data: { tasks: ready, count: ready.length } as Record<string, unknown>
+        data: { tasks: ready, count: ready.length, scope: "tasks-only" } as Record<string, unknown>
       };
     }
 
@@ -612,7 +751,7 @@ export const taskEngineModule: WorkflowModule = {
         message: suggestion.suggestedNext
           ? `Suggested next: ${suggestion.suggestedNext.id} — ${suggestion.suggestedNext.title}`
           : "No tasks in ready queue",
-        data: suggestion as unknown as Record<string, unknown>
+        data: { ...suggestion, scope: "tasks-only" } as unknown as Record<string, unknown>
       };
     }
 
@@ -623,6 +762,7 @@ export const taskEngineModule: WorkflowModule = {
         ok: true,
         code: "task-summary",
         data: {
+          scope: "tasks-only",
           stateSummary: suggestion.stateSummary,
           readyQueueCount: suggestion.readyQueue.length,
           suggestedNext: suggestion.suggestedNext
@@ -644,8 +784,209 @@ export const taskEngineModule: WorkflowModule = {
         code: "blocked-summary",
         data: {
           blockedCount: suggestion.blockingAnalysis.length,
-          blockedItems: suggestion.blockingAnalysis
+          blockedItems: suggestion.blockingAnalysis,
+          scope: "tasks-only"
         } as Record<string, unknown>
+      };
+    }
+
+    if (command.name === "create-wishlist") {
+      const wishlistStore = new WishlistStore(ctx.workspacePath, wishlistStorePath(ctx));
+      await wishlistStore.load();
+      const raw = args as Record<string, unknown>;
+      const v = validateWishlistIntakePayload(raw);
+      if (!v.ok) {
+        return { ok: false, code: "invalid-task-schema", message: v.errors.join(" ") };
+      }
+      const ts = nowIso();
+      const item: WishlistItem = buildWishlistItemFromIntake(raw, ts);
+      try {
+        wishlistStore.addItem(item);
+      } catch (err) {
+        if (err instanceof TaskEngineError) {
+          return { ok: false, code: err.code, message: err.message };
+        }
+        throw err;
+      }
+      await wishlistStore.save();
+      return {
+        ok: true,
+        code: "wishlist-created",
+        message: `Created wishlist '${item.id}'`,
+        data: { item } as Record<string, unknown>
+      };
+    }
+
+    if (command.name === "list-wishlist") {
+      const wishlistStore = new WishlistStore(ctx.workspacePath, wishlistStorePath(ctx));
+      await wishlistStore.load();
+      const statusFilter = typeof args.status === "string" ? args.status : undefined;
+      let items = wishlistStore.getAllItems();
+      if (statusFilter && ["open", "converted", "cancelled"].includes(statusFilter)) {
+        items = items.filter((i) => i.status === statusFilter);
+      }
+      return {
+        ok: true,
+        code: "wishlist-listed",
+        message: `Found ${items.length} wishlist items`,
+        data: { items, count: items.length, scope: "wishlist-only" } as Record<string, unknown>
+      };
+    }
+
+    if (command.name === "get-wishlist") {
+      const wishlistId =
+        typeof args.wishlistId === "string" && args.wishlistId.trim().length > 0
+          ? args.wishlistId.trim()
+          : typeof args.id === "string" && args.id.trim().length > 0
+            ? args.id.trim()
+            : "";
+      if (!wishlistId) {
+        return { ok: false, code: "invalid-task-schema", message: "get-wishlist requires 'wishlistId' or 'id'" };
+      }
+      const wishlistStore = new WishlistStore(ctx.workspacePath, wishlistStorePath(ctx));
+      await wishlistStore.load();
+      const item = wishlistStore.getItem(wishlistId);
+      if (!item) {
+        return { ok: false, code: "task-not-found", message: `Wishlist item '${wishlistId}' not found` };
+      }
+      return {
+        ok: true,
+        code: "wishlist-retrieved",
+        data: { item } as Record<string, unknown>
+      };
+    }
+
+    if (command.name === "update-wishlist") {
+      const wishlistId = typeof args.wishlistId === "string" ? args.wishlistId.trim() : "";
+      const updates = typeof args.updates === "object" && args.updates !== null ? (args.updates as Record<string, unknown>) : undefined;
+      if (!wishlistId || !updates) {
+        return { ok: false, code: "invalid-task-schema", message: "update-wishlist requires wishlistId and updates" };
+      }
+      const wishlistStore = new WishlistStore(ctx.workspacePath, wishlistStorePath(ctx));
+      await wishlistStore.load();
+      const existing = wishlistStore.getItem(wishlistId);
+      if (!existing) {
+        return { ok: false, code: "task-not-found", message: `Wishlist item '${wishlistId}' not found` };
+      }
+      if (existing.status !== "open") {
+        return { ok: false, code: "invalid-transition", message: "Only open wishlist items can be updated" };
+      }
+      const uv = validateWishlistUpdatePayload(updates);
+      if (!uv.ok) {
+        return { ok: false, code: "invalid-task-schema", message: uv.errors.join(" ") };
+      }
+      const merged: WishlistItem = { ...existing, updatedAt: nowIso() };
+      const mutable: (keyof WishlistItem)[] = [
+        "title",
+        "problemStatement",
+        "expectedOutcome",
+        "impact",
+        "constraints",
+        "successSignals",
+        "requestor",
+        "evidenceRef"
+      ];
+      for (const key of mutable) {
+        if (key in updates && typeof updates[key as string] === "string") {
+          (merged as Record<string, unknown>)[key] = (updates[key as string] as string).trim();
+        }
+      }
+      wishlistStore.updateItem(merged);
+      await wishlistStore.save();
+      return {
+        ok: true,
+        code: "wishlist-updated",
+        message: `Updated wishlist '${wishlistId}'`,
+        data: { item: merged } as Record<string, unknown>
+      };
+    }
+
+    if (command.name === "convert-wishlist") {
+      const wishlistId = typeof args.wishlistId === "string" ? args.wishlistId.trim() : "";
+      if (!wishlistId || !WISHLIST_ID_RE.test(wishlistId)) {
+        return {
+          ok: false,
+          code: "invalid-task-schema",
+          message: "convert-wishlist requires wishlistId matching W<number>"
+        };
+      }
+      const dec = parseConversionDecomposition(args.decomposition);
+      if (!dec.ok) {
+        return { ok: false, code: "invalid-task-schema", message: dec.message };
+      }
+      const tasksRaw = args.tasks;
+      if (!Array.isArray(tasksRaw) || tasksRaw.length === 0) {
+        return {
+          ok: false,
+          code: "invalid-task-schema",
+          message: "convert-wishlist requires non-empty tasks array"
+        };
+      }
+      const wishlistStore = new WishlistStore(ctx.workspacePath, wishlistStorePath(ctx));
+      await wishlistStore.load();
+      const wlItem = wishlistStore.getItem(wishlistId);
+      if (!wlItem) {
+        return { ok: false, code: "task-not-found", message: `Wishlist item '${wishlistId}' not found` };
+      }
+      if (wlItem.status !== "open") {
+        return {
+          ok: false,
+          code: "invalid-transition",
+          message: "Only open wishlist items can be converted"
+        };
+      }
+      const actor =
+        typeof args.actor === "string"
+          ? args.actor
+          : ctx.resolvedActor !== undefined
+            ? ctx.resolvedActor
+            : undefined;
+      const timestamp = nowIso();
+      const built: TaskEntity[] = [];
+      for (const row of tasksRaw) {
+        if (!row || typeof row !== "object" || Array.isArray(row)) {
+          return { ok: false, code: "invalid-task-schema", message: "Each task must be an object" };
+        }
+        const bt = buildTaskFromConversionPayload(row as Record<string, unknown>, timestamp);
+        if (!bt.ok) {
+          return { ok: false, code: "invalid-task-schema", message: bt.message };
+        }
+        if (store.getTask(bt.task.id)) {
+          return {
+            ok: false,
+            code: "duplicate-task-id",
+            message: `Task '${bt.task.id}' already exists`
+          };
+        }
+        built.push(bt.task);
+      }
+      for (const t of built) {
+        store.addTask(t);
+        store.addMutationEvidence(
+          mutationEvidence("create-task", t.id, actor, {
+            initialStatus: t.status,
+            source: "convert-wishlist",
+            wishlistId
+          })
+        );
+      }
+      const convertedIds = built.map((t) => t.id);
+      const updatedWishlist: WishlistItem = {
+        ...wlItem,
+        status: "converted",
+        updatedAt: timestamp,
+        convertedAt: timestamp,
+        convertedToTaskIds: convertedIds,
+        conversionDecomposition: dec.value
+      };
+      wishlistStore.updateItem(updatedWishlist);
+      await store.save();
+      await wishlistStore.save();
+      return {
+        ok: true,
+        code: "wishlist-converted",
+        message: `Converted wishlist '${wishlistId}' to tasks: ${convertedIds.join(", ")}`,
+        data: { wishlist: updatedWishlist, createdTasks: built } as Record<string, unknown>
       };
     }
 
