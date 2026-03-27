@@ -26,6 +26,7 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - **Phase 11 (Architectural review follow-up)** is **COMPLETE and released** as **`v0.12.0`**: **`T292`–`T295`** — policy/session denial edge tests, task-store + policy-trace contention semantics tests, release doc consistency checklist linkage, and runtime path audit notes.
 - **Phase 12 (Cursor native UI thin client)** is **COMPLETE and released** as **`v0.13.0`**: **`T296`–`T310`** — extension thin-client dashboard/tasks/config surfaces, security pass, and extension test/e2e coverage.
 - **Phase 13 (Task Engine lifecycle tightening)** is **COMPLETE and released** as **`v0.14.0`**: **`T311`–`T318`** — task CRUD/query/dependency/history/summary command expansion, archival behavior, and planning-to-task bridge.
+- **Phase 14 (Wishlist intake and conversion)** is **PLANNED**: **`T319`–`T323`** — strict Wishlist namespace and required intake fields, command surfaces for intake/query/conversion, execution-plan boundary enforcement, and end-to-end workflow documentation/tests.
 - Historical extraction and first-publish milestones remain recorded below as provenance.
 
 ## Phase plan and release cadence
@@ -177,6 +178,16 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
   - Dashboard/query surfaces consume dedicated summary/history contracts.
   - Archived task exclusion defaults are enforced for active queue/summary operations.
   - Task Engine lifecycle-tightening behavior is test-covered.
+
+### Phase 14 - Wishlist intake and conversion -> GitHub release `v0.15.0` (PLANNED)
+
+- Primary scope: **`T319`–`T323`**.
+- Outcome: high-level ideas are captured as strict **Wishlist** entities in a separate namespace, excluded from execution planning surfaces, and converted into actionable tasks only through an explicit decomposition command that auto-closes the source Wishlist item.
+- Exit signals:
+  - Wishlist intake enforces required fields (`title`, `problemStatement`, `expectedOutcome`, `impact`, `constraints`, `successSignals`, `requestor`, `evidenceRef`).
+  - Wishlist entities cannot be assigned phase values and do not appear in `get-next-actions` / ready-queue planning outputs.
+  - Conversion command requires decomposition directions, creates canonical tasks with provenance links, and auto-closes the source Wishlist item as converted.
+  - Workflow and command contracts are documented with integration/e2e test coverage.
 
 ## Recorded decisions
 

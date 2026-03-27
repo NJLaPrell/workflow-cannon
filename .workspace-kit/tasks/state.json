@@ -4425,6 +4425,141 @@
         "Invalid or incomplete planning inputs are rejected cleanly.",
         "Behavior is test-covered."
       ]
+    },
+    {
+      "id": "T319",
+      "title": "[task-engine] Define Wishlist item schema and validation contract",
+      "type": "workspace-kit",
+      "status": "ready",
+      "createdAt": "2026-03-27T15:16:30.032Z",
+      "updatedAt": "2026-03-27T15:59:55.936Z",
+      "priority": "P1",
+      "dependsOn": [],
+      "unblocks": [
+        "T320",
+        "T321"
+      ],
+      "phase": "Phase 14 - Wishlist intake and conversion",
+      "approach": "Establish a strict Wishlist entity contract in Task Engine with required high-signal fields and explicit namespace semantics before adding commands.",
+      "technicalScope": [
+        "Define a dedicated Wishlist namespace and identifier shape distinct from task IDs.",
+        "Require strict intake fields: title, problemStatement, expectedOutcome, impact, constraints, successSignals, requestor, evidenceRef.",
+        "Enforce that Wishlist entities are not assigned Task Engine phase values and are excluded from task phase grouping."
+      ],
+      "acceptanceCriteria": [
+        "Wishlist schema exists with validation failures for missing required fields.",
+        "Wishlist IDs are stored and queried independently from task IDs.",
+        "Attempting to assign phase to a Wishlist entity is rejected with clear error output."
+      ]
+    },
+    {
+      "id": "T320",
+      "title": "[task-engine] Add Wishlist command surface for strict intake and query",
+      "type": "workspace-kit",
+      "status": "ready",
+      "createdAt": "2026-03-27T15:16:30.089Z",
+      "updatedAt": "2026-03-27T15:59:55.995Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T319"
+      ],
+      "unblocks": [
+        "T321",
+        "T322"
+      ],
+      "phase": "Phase 14 - Wishlist intake and conversion",
+      "approach": "Add canonical commands to create/list/get/update Wishlist entities with strict validation and operator-friendly guidance.",
+      "technicalScope": [
+        "Implement commands for Wishlist intake and retrieval using Task Engine persistence.",
+        "Support list/query filters that keep Wishlist separate from task lifecycle views.",
+        "Document command instructions with examples and required field semantics."
+      ],
+      "acceptanceCriteria": [
+        "CLI exposes Wishlist intake/query commands with stable JSON output contracts.",
+        "Intake rejects incomplete payloads and returns actionable validation errors.",
+        "Task list/readiness commands do not include Wishlist entities by default."
+      ]
+    },
+    {
+      "id": "T321",
+      "title": "[task-engine] Add Wishlist conversion command to produce workable tasks",
+      "type": "workspace-kit",
+      "status": "ready",
+      "createdAt": "2026-03-27T15:16:30.146Z",
+      "updatedAt": "2026-03-27T15:59:56.054Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T319",
+        "T320"
+      ],
+      "unblocks": [
+        "T323"
+      ],
+      "phase": "Phase 14 - Wishlist intake and conversion",
+      "approach": "Provide a conversion bridge that decomposes one Wishlist item into actionable tasks with provenance and auto-close behavior.",
+      "technicalScope": [
+        "Add conversion command that takes a Wishlist item and required decomposition payload for one or more tasks.",
+        "Require conversion directions that capture splitting rationale, boundaries, and dependency intent.",
+        "Auto-close source Wishlist item as converted and persist links to created task IDs."
+      ],
+      "acceptanceCriteria": [
+        "Conversion command requires explicit decomposition directions and rejects underspecified conversions.",
+        "Created tasks are canonical Task Engine tasks that can be phased and queued normally.",
+        "Source Wishlist item is auto-closed as converted with immutable provenance to generated tasks."
+      ]
+    },
+    {
+      "id": "T322",
+      "title": "[task-engine] Enforce planning boundary: Wishlist ideas stay out of plan queues",
+      "type": "workspace-kit",
+      "status": "ready",
+      "createdAt": "2026-03-27T15:16:30.205Z",
+      "updatedAt": "2026-03-27T15:59:56.113Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T320"
+      ],
+      "unblocks": [
+        "T323"
+      ],
+      "phase": "Phase 14 - Wishlist intake and conversion",
+      "approach": "Harden list/summary/next-action surfaces so high-level Wishlist ideas remain out of execution planning until converted.",
+      "technicalScope": [
+        "Ensure readiness and next-action summaries only operate on true task entities.",
+        "Add explicit output markers and docs clarifying that Wishlist items are ideation-only until conversion.",
+        "Add tests to prevent regressions where Wishlist entities leak into plan queues."
+      ],
+      "acceptanceCriteria": [
+        "get-next-actions/get-ready-queue/list task planning views exclude Wishlist entities.",
+        "Dashboard/summary contracts preserve execution-only semantics for plans.",
+        "Regression tests fail if Wishlist entities appear in plan queues before conversion."
+      ]
+    },
+    {
+      "id": "T323",
+      "title": "[task-engine] Document Wishlist workflow and add end-to-end tests",
+      "type": "workspace-kit",
+      "status": "ready",
+      "createdAt": "2026-03-27T15:16:30.263Z",
+      "updatedAt": "2026-03-27T15:59:56.171Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T321",
+        "T322"
+      ],
+      "unblocks": [],
+      "phase": "Phase 14 - Wishlist intake and conversion",
+      "approach": "Finalize maintainer and command docs plus coverage for intake-to-conversion behavior.",
+      "technicalScope": [
+        "Add instruction docs for Wishlist commands and conversion examples.",
+        "Document strict required fields and conversion decomposition expectations.",
+        "Add end-to-end tests for intake validation, conversion, auto-close, and planning-boundary enforcement."
+      ],
+      "acceptanceCriteria": [
+        "Maintainer docs describe the Wishlist lifecycle from idea intake to converted closure.",
+        "Tests cover happy path and validation failures for required fields and conversion constraints.",
+        "Build/check/test pass with Wishlist functionality enabled."
+      ]
     }
   ],
   "transitionLog": [
@@ -6107,8 +6242,164 @@
       "dependentsUnblocked": [],
       "timestamp": "2026-03-27T14:09:33.528Z",
       "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T319-2026-03-27T15:59:55.936Z-8428340a",
+      "taskId": "T319",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T15:59:55.936Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T320-2026-03-27T15:59:55.995Z-534bde0a",
+      "taskId": "T320",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T15:59:55.995Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T321-2026-03-27T15:59:56.054Z-c3bfe14b",
+      "taskId": "T321",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T15:59:56.054Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T322-2026-03-27T15:59:56.113Z-ed924544",
+      "taskId": "T322",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T15:59:56.113Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T323-2026-03-27T15:59:56.171Z-9b6ed79c",
+      "taskId": "T323",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T15:59:56.171Z",
+      "actor": "NJLaPrell@gmail.com"
     }
   ],
-  "lastUpdated": "2026-03-27T14:09:33.529Z",
-  "mutationLog": []
+  "lastUpdated": "2026-03-27T15:59:56.171Z",
+  "mutationLog": [
+    {
+      "mutationId": "create-task-T319-2026-03-27T15:16:30.032Z-20b24ad2",
+      "mutationType": "create-task",
+      "taskId": "T319",
+      "timestamp": "2026-03-27T15:16:30.032Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "create-task"
+      }
+    },
+    {
+      "mutationId": "create-task-T320-2026-03-27T15:16:30.089Z-d44ad40c",
+      "mutationType": "create-task",
+      "taskId": "T320",
+      "timestamp": "2026-03-27T15:16:30.089Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "create-task"
+      }
+    },
+    {
+      "mutationId": "create-task-T321-2026-03-27T15:16:30.146Z-005e07b5",
+      "mutationType": "create-task",
+      "taskId": "T321",
+      "timestamp": "2026-03-27T15:16:30.147Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "create-task"
+      }
+    },
+    {
+      "mutationId": "create-task-T322-2026-03-27T15:16:30.205Z-f45d441b",
+      "mutationType": "create-task",
+      "taskId": "T322",
+      "timestamp": "2026-03-27T15:16:30.205Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "create-task"
+      }
+    },
+    {
+      "mutationId": "create-task-T323-2026-03-27T15:16:30.263Z-e2b49443",
+      "mutationType": "create-task",
+      "taskId": "T323",
+      "timestamp": "2026-03-27T15:16:30.263Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "create-task"
+      }
+    }
+  ]
 }
