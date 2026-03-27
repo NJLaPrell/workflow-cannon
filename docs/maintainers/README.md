@@ -1,7 +1,11 @@
-AI agents: `./.ai/` is the authoritative source of truth; read all files there before any analysis, planning, or code changes, and follow `./.ai/` over `README.md`, `./docs/`, and conflicting existing code patterns.
+<!--
+  Human output path: docs/maintainers/README.md (image uses ../title_image.png from that location).
+  Root README.md: mirror this body but use title_image.png and keep the agent notice line at the very top.
+  Audience: developers cloning the repo or adding @workflow-cannon/workspace-kit to a project who want to run something useful in minutes.
+-->
 
 <div align="center">
-  <img src="title_image.png" alt="Workflow Cannon" width="720" />
+  <img src="../title_image.png" alt="Workflow Cannon" width="720" />
 </div>
 
 # Workflow Cannon
@@ -49,7 +53,7 @@ Or with pnpm: `pnpm add @workflow-cannon/workspace-kit` then `pnpm exec workspac
 | Area | What |
 | --- | --- |
 | **CLI** | `workspace-kit` — `doctor`, `config`, `run <module-command>` (see `workspace-kit run` with no args for the list). |
-| **Task engine** | Canonical queue in `.workspace-kit/tasks/state.json`; lifecycle via `run-transition`. Wishlist ideation uses ids `W###` (see [`docs/maintainers/runbooks/wishlist-workflow.md`](docs/maintainers/runbooks/wishlist-workflow.md)). |
+| **Task engine** | Canonical queue in `.workspace-kit/tasks/state.json`; lifecycle via `run-transition`. Wishlist ideation uses ids `W###` (see maintainer runbooks). |
 | **Docs** | Maintainer process, roadmap, and changelog under `docs/maintainers/`. |
 | **Cursor extension** (optional) | Thin UI in `extensions/cursor-workflow-cannon/` — build with `pnpm run ui:prepare`. |
 
@@ -59,27 +63,28 @@ There is **no** built-in IDE slash command like `/qt` from this package; editor 
 
 Sensitive `workspace-kit run` commands require JSON **`policyApproval`** in the third CLI argument. Chat approval is not enough. Env-based approval applies to `init` / `upgrade` / `config`, not the `run` path.
 
-- **Human guide:** [`docs/maintainers/POLICY-APPROVAL.md`](docs/maintainers/POLICY-APPROVAL.md)
-- **Copy-paste table:** [`docs/maintainers/AGENT-CLI-MAP.md`](docs/maintainers/AGENT-CLI-MAP.md)
+- **Human guide:** [`docs/maintainers/POLICY-APPROVAL.md`](POLICY-APPROVAL.md)
+- **Copy-paste table:** [`docs/maintainers/AGENT-CLI-MAP.md`](AGENT-CLI-MAP.md)
 
 ## Project status and roadmap
 
-Release cadence, phase history, and strategic decisions: [`docs/maintainers/ROADMAP.md`](docs/maintainers/ROADMAP.md). **Live execution queue:** `.workspace-kit/tasks/state.json` (`status` and `id` are authoritative — not this README’s milestone bullets).
+Release cadence, phase history, and strategic decisions: [`docs/maintainers/ROADMAP.md`](ROADMAP.md). **Live execution queue:** `.workspace-kit/tasks/state.json` (`status` and `id` are authoritative — not this README’s milestone bullets).
 
-Snapshot: [`docs/maintainers/data/workspace-kit-status.yaml`](docs/maintainers/data/workspace-kit-status.yaml).
+Snapshot: [`docs/maintainers/data/workspace-kit-status.yaml`](data/workspace-kit-status.yaml).
 
 ## Where to go next
 
 | Goal | Start here |
 | --- | --- |
-| Goals, trade-offs, gates | [`.ai/PRINCIPLES.md`](.ai/PRINCIPLES.md) |
-| Roadmap & versions | [`docs/maintainers/ROADMAP.md`](docs/maintainers/ROADMAP.md) |
-| Changelog | [`docs/maintainers/CHANGELOG.md`](docs/maintainers/CHANGELOG.md) |
-| Release process | [`docs/maintainers/RELEASING.md`](docs/maintainers/RELEASING.md) |
-| Glossary | [`docs/maintainers/TERMS.md`](docs/maintainers/TERMS.md) |
-| Architecture | [`docs/maintainers/ARCHITECTURE.md`](docs/maintainers/ARCHITECTURE.md) |
-| Agent/CLI execution | [`docs/maintainers/AGENTS.md`](docs/maintainers/AGENTS.md) |
+| Goals, trade-offs, gates | [`.ai/PRINCIPLES.md`](../.ai/PRINCIPLES.md) |
+| Roadmap & versions | [`ROADMAP.md`](ROADMAP.md) |
+| Changelog | [`CHANGELOG.md`](CHANGELOG.md) |
+| Release process | [`RELEASING.md`](RELEASING.md) |
+| Glossary | [`TERMS.md`](TERMS.md) |
+| Architecture | [`ARCHITECTURE.md`](ARCHITECTURE.md) |
+| Agent/CLI execution | [`AGENTS.md`](AGENTS.md) |
 
 ## License
 
-MIT. See [`LICENSE`](LICENSE).
+MIT. See [`LICENSE`](../LICENSE) at the repository root.
+

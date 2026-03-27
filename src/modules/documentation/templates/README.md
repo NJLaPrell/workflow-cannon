@@ -1,36 +1,89 @@
-{{{AI Documentation Directive}}}
+<!--
+  Human output path: docs/maintainers/README.md (image uses ../title_image.png from that location).
+  Root README.md: mirror this body but use title_image.png and keep the agent notice line at the very top.
+  Audience: developers cloning the repo or adding @workflow-cannon/workspace-kit to a project who want to run something useful in minutes.
+-->
 
 <div align="center">
-  <img src="../../title_image.png" alt="Workflow Cannon" width="720" />
+  <img src="../title_image.png" alt="Workflow Cannon" width="720" />
 </div>
 
 # Workflow Cannon
 
-> Maintainer view: the canonical entry document is the repository root [`README.md`](../../README.md). Keep the centered **title image** block above aligned with that file; image path is relative to this file under `docs/maintainers/`.
+**[`@workflow-cannon/workspace-kit`](https://www.npmjs.com/package/@workflow-cannon/workspace-kit)** — CLI, task engine, and workflow contracts for repos that want deterministic, policy-governed automation with clear evidence.
 
-## Summary
+## Quick start (clone this repo)
 
-{{{
-Produce a short maintainer-facing summary of the repository purpose by reading the root `README.md`.
-Method:
-1) Read `README.md` sections "What This Repository Is" and the opening paragraph under the main title.
-2) Condense to 3-5 bullets or two short paragraphs; do not duplicate the full root README.
-3) Link to `README.md` for the complete narrative.
-Output format:
-- Short intro paragraph optional; then bullets for scope (package, maintainer docs, validation).
-Validation:
-- Paths must be valid from `docs/maintainers/` (use `../..` for repo root where needed).
-}}}
+**Needs:** Node.js **22+** (see CI), **pnpm 10** (see `packageManager` in `package.json`).
+
+```bash
+git clone https://github.com/NJLaPrell/workflow-cannon.git
+cd workflow-cannon
+pnpm install
+pnpm run build
+```
+
+Verify the kit sees your workspace:
+
+```bash
+node dist/cli.js doctor
+node dist/cli.js --help
+```
+
+Try **read-only** task-engine queries:
+
+```bash
+node dist/cli.js run list-tasks '{}'
+node dist/cli.js run get-next-actions '{}'
+```
+
+**Developing:** after edits, `pnpm run build` then `pnpm test` (or `pnpm run phase5-gates` before larger changes). If `workspace-kit` is not on your `PATH`, use `node dist/cli.js …` from the repo root (same as above).
+
+## Quick start (use the package in another project)
+
+```bash
+npm install @workflow-cannon/workspace-kit
+npx workspace-kit --help
+```
+
+Or with pnpm: `pnpm add @workflow-cannon/workspace-kit` then `pnpm exec workspace-kit --help`.
+
+## What this repo contains
+
+| Area | What |
+| --- | --- |
+| **CLI** | `workspace-kit` — `doctor`, `config`, `run <module-command>` (see `workspace-kit run` with no args for the list). |
+| **Task engine** | Canonical queue in `.workspace-kit/tasks/state.json`; lifecycle via `run-transition`. Wishlist ideation uses ids `W###` (see maintainer runbooks). |
+| **Docs** | Maintainer process, roadmap, and changelog under `docs/maintainers/`. |
+| **Cursor extension** (optional) | Thin UI in `extensions/cursor-workflow-cannon/` — build with `pnpm run ui:prepare`. |
+
+There is **no** built-in IDE slash command like `/qt` from this package; editor integrations are **your** config (e.g. `.cursor/commands/`), while **`workspace-kit`** is the supported CLI.
+
+## Policy and approvals (read this before mutating state)
+
+Sensitive `workspace-kit run` commands require JSON **`policyApproval`** in the third CLI argument. Chat approval is not enough. Env-based approval applies to `init` / `upgrade` / `config`, not the `run` path.
+
+- **Human guide:** [`docs/maintainers/POLICY-APPROVAL.md`](POLICY-APPROVAL.md)
+- **Copy-paste table:** [`docs/maintainers/AGENT-CLI-MAP.md`](AGENT-CLI-MAP.md)
+
+## Project status and roadmap
+
+Release cadence, phase history, and strategic decisions: [`docs/maintainers/ROADMAP.md`](ROADMAP.md). **Live execution queue:** `.workspace-kit/tasks/state.json` (`status` and `id` are authoritative — not this README’s milestone bullets).
+
+Snapshot: [`docs/maintainers/data/workspace-kit-status.yaml`](data/workspace-kit-status.yaml).
 
 ## Where to go next
 
-{{{
-List primary navigation targets for maintainers.
-Method:
-1) Read root `README.md` "Documentation Index" and "Repository Map".
-2) Emit 5-8 links with one line each.
-Output format:
-- Bullet list of markdown links.
-Validation:
-- Prefer relative paths consistent with other maintainer docs.
-}}}
+| Goal | Start here |
+| --- | --- |
+| Goals, trade-offs, gates | [`.ai/PRINCIPLES.md`](../.ai/PRINCIPLES.md) |
+| Roadmap & versions | [`ROADMAP.md`](ROADMAP.md) |
+| Changelog | [`CHANGELOG.md`](CHANGELOG.md) |
+| Release process | [`RELEASING.md`](RELEASING.md) |
+| Glossary | [`TERMS.md`](TERMS.md) |
+| Architecture | [`ARCHITECTURE.md`](ARCHITECTURE.md) |
+| Agent/CLI execution | [`AGENTS.md`](AGENTS.md) |
+
+## License
+
+MIT. See [`LICENSE`](../LICENSE) at the repository root.
