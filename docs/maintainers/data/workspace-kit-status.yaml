@@ -1,18 +1,16 @@
 schema_version: 1
-current_kit_phase: "8"
-last_updated: "2026-03-26"
-active_focus: "Phase 8 complete: v0.10.0 shipped — policy/runbook/onboarding docs and richer policy-denied JSON for workspace-kit run."
+current_kit_phase: "9"
+last_updated: "2026-03-27"
+active_focus: "Phase 9 queued: T283 interactive command-scoped policy approval UX; T284 response-template strict vs advisory enforcement."
 blockers: []
 next_agent_actions:
-  - "Record Phase 8 npm publish workflow run URL in docs/maintainers/ROADMAP.md execution evidence snapshot after publish."
-  - "Triage workspace-kit-status pending_decisions (approval UX, template strict mode) into future tasks if still open."
+  - "Execute T283 then T284 (or parallelize if independent) from `.workspace-kit/tasks/state.json`; transition via task engine with policy as required."
+  - "When Phase 9 completes, bump version, update CHANGELOG, roadmap evidence, and publish per RELEASING.md."
 last_session_summary:
   - "Phase 8 (`imp-*`): POLICY-APPROVAL.md, transcript trigger + first-run + agent report runbooks, TASK-ENGINE-STATE.md, optional JSON Schema, README/AGENTS/FEATURE-MATRIX/architectural review updates, policy-denied JSON enrichment, tests."
   - "Released v0.10.0 — confirm npm dist-tag and GitHub Actions publish run."
   - "Prior: Phase 7 v0.9.0 architectural hardening complete."
-pending_decisions:
-  - "Implement and validate command-scoped first-use approval UX via Cursor question UI where available (`Deny`/`Allow`/`Allow for this session`)."
-  - "Implement configurable response-template enforcement with advisory-only default and explicit strict-mode opt-in."
+pending_decisions: []
 metrics:
   updated_at: "2026-03-26"
   source: "automated"

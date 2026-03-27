@@ -23,6 +23,7 @@ Status legend:
 | Phase 6 - Automation hardening + response templates (`T249`-`T258`, `T260`-`T266`, `T271`-`T274`) | `v0.8.0` | Completed |
 | Phase 7 - Architectural hardening (`T275`-`T282`) | `v0.9.0` | Completed |
 | Phase 8 - Improvement backlog triage (`imp-2cf5d881b81f9a` … `imp-7f9e65fad74b0b`) | `v0.10.0` | Completed |
+| Phase 9 - Interactive policy UX + template enforcement (`T283`, `T284`) | planned | In progress / ready |
 
 ## Feature Matrix by Phase
 
