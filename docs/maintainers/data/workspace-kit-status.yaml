@@ -14,7 +14,7 @@ pending_decisions: []
 metrics:
   updated_at: "2026-03-27"
   source: "maintainer"
-  notes: "v0.14.0 released (Phase 13) with Task Engine lifecycle-tightening command surfaces; focus moved to Phase 14 planning."
+  notes: "v0.14.0 released (Phase 13) via publish workflow run 23650389235; focus moved to Phase 14 planning."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null
