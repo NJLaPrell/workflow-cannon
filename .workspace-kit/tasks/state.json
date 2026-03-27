@@ -4779,9 +4779,9 @@
       "id": "T336",
       "title": "Stricter create-task validation for known task types",
       "type": "improvement",
-      "status": "ready",
+      "status": "completed",
       "createdAt": "2026-03-27T17:35:01.158Z",
-      "updatedAt": "2026-03-27T17:35:01.158Z",
+      "updatedAt": "2026-03-27T20:50:50.765Z",
       "priority": "P2",
       "dependsOn": [
         "T335"
@@ -7607,9 +7607,49 @@
       "dependentsUnblocked": [],
       "timestamp": "2026-03-27T20:48:33.186Z",
       "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T336-2026-03-27T20:50:50.692Z-7fe3d1ee",
+      "taskId": "T336",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T20:50:50.692Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T336-2026-03-27T20:50:50.765Z-9dc3f3ed",
+      "taskId": "T336",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T20:50:50.765Z",
+      "actor": "NJLaPrell@gmail.com"
     }
   ],
-  "lastUpdated": "2026-03-27T20:48:33.186Z",
+  "lastUpdated": "2026-03-27T20:50:50.765Z",
   "mutationLog": [
     {
       "mutationId": "create-task-T319-2026-03-27T15:16:30.032Z-20b24ad2",
