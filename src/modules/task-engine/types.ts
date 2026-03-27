@@ -99,6 +99,7 @@ export type TaskEngineErrorCode =
   | "task-not-found"
   | "duplicate-task-id"
   | "invalid-task-schema"
+  | "invalid-task-type-requirements"
   | "invalid-task-update"
   | "invalid-task-id-format"
   | "task-archived"

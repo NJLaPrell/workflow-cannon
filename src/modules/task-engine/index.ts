@@ -9,6 +9,7 @@ import { getNextActions } from "./suggestions.js";
 import { readWorkspaceStatusSnapshot } from "./dashboard-status.js";
 import { openPlanningStores } from "./planning-open.js";
 import { runMigrateTaskPersistence } from "./migrate-task-persistence-runtime.js";
+import { validateKnownTaskTypeRequirements } from "./task-type-validation.js";
 import type { WishlistConversionDecomposition, WishlistItem } from "./wishlist-types.js";
 import {
   buildWishlistItemFromIntake,
@@ -429,6 +430,14 @@ export const taskEngineModule: WorkflowModule = {
         technicalScope: Array.isArray(args.technicalScope) ? args.technicalScope.filter((x) => typeof x === "string") : undefined,
         acceptanceCriteria: Array.isArray(args.acceptanceCriteria) ? args.acceptanceCriteria.filter((x) => typeof x === "string") : undefined
       };
+      const knownTypeValidationError = validateKnownTaskTypeRequirements(task);
+      if (knownTypeValidationError) {
+        return {
+          ok: false,
+          code: knownTypeValidationError.code,
+          message: knownTypeValidationError.message
+        };
+      }
       store.addTask(task);
       if (command.name === "create-task-from-plan") {
         const planRef = typeof args.planRef === "string" && args.planRef.trim().length > 0 ? args.planRef.trim() : undefined;
@@ -481,6 +490,14 @@ export const taskEngineModule: WorkflowModule = {
         };
       }
       const updatedTask = { ...task, ...updates, updatedAt: nowIso() };
+      const knownTypeValidationError = validateKnownTaskTypeRequirements(updatedTask);
+      if (knownTypeValidationError) {
+        return {
+          ok: false,
+          code: knownTypeValidationError.code,
+          message: knownTypeValidationError.message
+        };
+      }
       store.updateTask(updatedTask);
       store.addMutationEvidence(mutationEvidence("update-task", taskId, actor, { updatedFields: Object.keys(updates) }));
       await store.save();

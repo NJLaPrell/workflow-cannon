@@ -748,6 +748,49 @@ test("taskEngineModule create-task and update-task commands persist mutations", 
   assert.equal(fetched.data.task.title, "Updated task title");
 });
 
+test("taskEngineModule create-task validates known requirements for improvement type", async () => {
+  const workspace = await tmpDir();
+  const ctx = { runtimeVersion: "0.1", workspacePath: workspace };
+
+  const created = await taskEngineModule.onCommand(
+    {
+      name: "create-task",
+      args: { id: "T402", title: "Bad improvement", type: "improvement", status: "ready" }
+    },
+    ctx
+  );
+  assert.equal(created.ok, false);
+  assert.equal(created.code, "invalid-task-type-requirements");
+});
+
+test("taskEngineModule update-task validates known requirements for improvement type", async () => {
+  const workspace = await tmpDir();
+  const ctx = { runtimeVersion: "0.1", workspacePath: workspace };
+
+  const created = await taskEngineModule.onCommand(
+    {
+      name: "create-task",
+      args: {
+        id: "T403",
+        title: "Good improvement",
+        type: "improvement",
+        status: "ready",
+        acceptanceCriteria: ["ship"],
+        technicalScope: ["task-engine"]
+      }
+    },
+    ctx
+  );
+  assert.equal(created.ok, true);
+
+  const updated = await taskEngineModule.onCommand(
+    { name: "update-task", args: { taskId: "T403", updates: { technicalScope: [] } } },
+    ctx
+  );
+  assert.equal(updated.ok, false);
+  assert.equal(updated.code, "invalid-task-type-requirements");
+});
+
 test("taskEngineModule archive-task excludes task from default active queries", async () => {
   const workspace = await tmpDir();
   const ctx = { runtimeVersion: "0.1", workspacePath: workspace };

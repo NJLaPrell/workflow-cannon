@@ -14,3 +14,8 @@ workspace-kit run create-task '{"id":"T400","title":"My task","status":"proposed
 - `title` (string, required): task title.
 - `status` (string, optional): `proposed` or `ready` (default `proposed`).
 - Optional task fields: `type`, `priority`, `dependsOn`, `unblocks`, `phase`, `metadata`, `ownership`, `approach`, `technicalScope`, `acceptanceCriteria`, `actor`.
+
+Known type guardrails:
+
+- For `type: "improvement"`, Task Engine validates non-empty `acceptanceCriteria` and `technicalScope`.
+- Violations return stable error code `invalid-task-type-requirements`.
