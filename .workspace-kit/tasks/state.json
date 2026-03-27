@@ -4930,9 +4930,9 @@
       "id": "T345",
       "title": "Scaffold planning module command surface and workflow types",
       "type": "improvement",
-      "status": "proposed",
+      "status": "completed",
       "createdAt": "2026-03-27T22:42:46.785Z",
-      "updatedAt": "2026-03-27T22:42:46.785Z",
+      "updatedAt": "2026-03-27T22:54:52.065Z",
       "priority": "P1",
       "phase": "Phase 17 - Planning module guided workflows",
       "approach": "Add a CLI-native planning module entry point with explicit planning type workflows and shared runtime contracts that mirror existing module architecture patterns.",
@@ -8114,9 +8114,69 @@
       "dependentsUnblocked": [],
       "timestamp": "2026-03-27T21:05:41.613Z",
       "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T345-2026-03-27T22:53:33.492Z-0aa901a1",
+      "taskId": "T345",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T22:53:33.492Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T345-2026-03-27T22:53:33.567Z-7ff5977a",
+      "taskId": "T345",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T22:53:33.567Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T345-2026-03-27T22:54:52.065Z-09b8d9ce",
+      "taskId": "T345",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T22:54:52.065Z",
+      "actor": "NJLaPrell@gmail.com"
     }
   ],
-  "lastUpdated": "2026-03-27T22:42:46.785Z",
+  "lastUpdated": "2026-03-27T22:54:52.066Z",
   "mutationLog": [
     {
       "mutationId": "create-task-T319-2026-03-27T15:16:30.032Z-20b24ad2",
