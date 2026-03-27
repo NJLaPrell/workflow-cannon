@@ -10,6 +10,13 @@ export type PlanningQuestion = {
   critical: boolean;
 };
 
+export type PlanningQuestionDepth = "minimal" | "guided" | "adaptive";
+
+export type PlanningRulePack = {
+  baseQuestions: PlanningQuestion[];
+  adaptiveQuestions: PlanningQuestion[];
+};
+
 const BASE_QUESTIONS: Record<PlanningWorkflowType, PlanningQuestion[]> = {
   "task-breakdown": [
     {
@@ -135,17 +142,152 @@ const BASE_QUESTIONS: Record<PlanningWorkflowType, PlanningQuestion[]> = {
   ]
 };
 
+const BASE_ADAPTIVE_QUESTIONS: Record<PlanningWorkflowType, PlanningQuestion[]> = {
+  "task-breakdown": [
+    {
+      id: "handoffRisk",
+      prompt: "Where is handoff risk highest in this breakdown?",
+      examples: ["Schema-to-runtime boundary", "CLI-to-extension behavior"],
+      whyItMatters: "Highlights where extra tests or review checks are needed.",
+      critical: false
+    }
+  ],
+  "sprint-phase": [
+    {
+      id: "phaseExitSignal",
+      prompt: "What is the explicit exit signal for this phase?",
+      examples: ["All tasks completed and release gates pass", "PR merged with parity evidence"],
+      whyItMatters: "Prevents ambiguous “done” states.",
+      critical: false
+    }
+  ],
+  "task-ordering": [
+    {
+      id: "parallelization",
+      prompt: "Which work items can run in parallel safely?",
+      examples: ["Docs in parallel with runtime hardening", "UI after API contracts are stable"],
+      whyItMatters: "Improves throughput without violating dependencies.",
+      critical: false
+    }
+  ],
+  "new-feature": [
+    {
+      id: "decisionRationale",
+      prompt: "What major technical decision is most likely and why?",
+      examples: ["CLI-first before UI for safer rollout", "Reuse existing module config patterns"],
+      whyItMatters: "Captures rationale for later review and refinement.",
+      critical: false
+    }
+  ],
+  "change": [
+    {
+      id: "migrationNotes",
+      prompt: "What migration or rollout notes should operators receive?",
+      examples: ["No migration required", "Enable setting X before command Y"],
+      whyItMatters: "Protects compatibility and operator trust.",
+      critical: false
+    }
+  ]
+};
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function parseQuestionList(value: unknown): PlanningQuestion[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const parsed: PlanningQuestion[] = [];
+  for (const entry of value) {
+    const row = asRecord(entry);
+    if (!row) continue;
+    const id = typeof row.id === "string" ? row.id.trim() : "";
+    const prompt = typeof row.prompt === "string" ? row.prompt.trim() : "";
+    const whyItMatters = typeof row.whyItMatters === "string" ? row.whyItMatters.trim() : "";
+    if (!id || !prompt || !whyItMatters) continue;
+    parsed.push({
+      id,
+      prompt,
+      whyItMatters,
+      examples: Array.isArray(row.examples)
+        ? row.examples.filter((x): x is string => typeof x === "string")
+        : [],
+      critical: row.critical === true
+    });
+  }
+  return parsed;
+}
+
+function parseDepth(value: unknown): PlanningQuestionDepth {
+  if (value === "minimal" || value === "guided" || value === "adaptive") {
+    return value;
+  }
+  return "adaptive";
+}
+
+export function resolvePlanningConfig(config: Record<string, unknown> | undefined): {
+  depth: PlanningQuestionDepth;
+  hardBlockCriticalUnknowns: boolean;
+  rulePacks: Partial<Record<PlanningWorkflowType, PlanningRulePack>>;
+} {
+  const planning = asRecord(config?.planning);
+  const depth = parseDepth(planning?.defaultQuestionDepth);
+  const hardBlockCriticalUnknowns = planning?.hardBlockCriticalUnknowns !== false;
+  const rulesRoot = asRecord(planning?.rulePacks);
+  const rulePacks: Partial<Record<PlanningWorkflowType, PlanningRulePack>> = {};
+  if (rulesRoot) {
+    for (const workflowType of Object.keys(BASE_QUESTIONS) as PlanningWorkflowType[]) {
+      const pack = asRecord(rulesRoot[workflowType]);
+      if (!pack) continue;
+      const baseQuestions = parseQuestionList(pack.baseQuestions);
+      const adaptiveQuestions = parseQuestionList(pack.adaptiveQuestions);
+      if (baseQuestions.length === 0 && adaptiveQuestions.length === 0) continue;
+      rulePacks[workflowType] = {
+        baseQuestions: baseQuestions.length > 0 ? baseQuestions : BASE_QUESTIONS[workflowType],
+        adaptiveQuestions
+      };
+    }
+  }
+  return { depth, hardBlockCriticalUnknowns, rulePacks };
+}
+
+export function resolvePlanningRulePack(
+  planningType: PlanningWorkflowType,
+  config: Record<string, unknown> | undefined
+): PlanningRulePack {
+  const resolved = resolvePlanningConfig(config);
+  const override = resolved.rulePacks[planningType];
+  return {
+    baseQuestions: override?.baseQuestions ?? BASE_QUESTIONS[planningType],
+    adaptiveQuestions: override?.adaptiveQuestions ?? BASE_ADAPTIVE_QUESTIONS[planningType]
+  };
+}
+
 export function nextPlanningQuestions(
   planningType: PlanningWorkflowType,
-  answers: Record<string, unknown>
+  answers: Record<string, unknown>,
+  config?: Record<string, unknown>
 ): { missingCritical: PlanningQuestion[]; adaptiveFollowups: PlanningQuestion[] } {
-  const base = BASE_QUESTIONS[planningType];
+  const { depth } = resolvePlanningConfig(config);
+  const rules = resolvePlanningRulePack(planningType, config);
+  const base = rules.baseQuestions;
   const missingCritical = base.filter((q) => {
     const value = answers[q.id];
     return !(typeof value === "string" && value.trim().length > 0);
   });
 
-  const adaptiveFollowups: PlanningQuestion[] = [];
+  if (depth === "minimal") {
+    return { missingCritical, adaptiveFollowups: [] };
+  }
+
+  const adaptiveFollowups: PlanningQuestion[] = [...rules.adaptiveQuestions];
+  if (depth === "guided") {
+    return { missingCritical, adaptiveFollowups };
+  }
+
   const complexity = typeof answers.complexity === "string" ? answers.complexity.toLowerCase() : "";
   if (complexity === "high") {
     adaptiveFollowups.push({
@@ -157,13 +299,15 @@ export function nextPlanningQuestions(
     });
   }
   if (planningType === "new-feature" && !answers["decisionRationale"]) {
-    adaptiveFollowups.push({
-      id: "decisionRationale",
-      prompt: "What major technical decision is most likely and why?",
-      examples: ["CLI-first before UI for safer rollout", "Reuse existing module config patterns"],
-      whyItMatters: "Captures rationale for later review and refinement.",
-      critical: false
-    });
+    if (!adaptiveFollowups.some((q) => q.id === "decisionRationale")) {
+      adaptiveFollowups.push({
+        id: "decisionRationale",
+        prompt: "What major technical decision is most likely and why?",
+        examples: ["CLI-first before UI for safer rollout", "Reuse existing module config patterns"],
+        whyItMatters: "Captures rationale for later review and refinement.",
+        critical: false
+      });
+    }
   }
 
   return { missingCritical, adaptiveFollowups };

@@ -4,7 +4,11 @@ import {
   PLANNING_WORKFLOW_TYPES,
   type PlanningWorkflowType
 } from "./types.js";
-import { nextPlanningQuestions } from "./question-engine.js";
+import {
+  nextPlanningQuestions,
+  resolvePlanningConfig,
+  resolvePlanningRulePack
+} from "./question-engine.js";
 
 export const planningModule: WorkflowModule = {
   registration: {
@@ -36,11 +40,16 @@ export const planningModule: WorkflowModule = {
           name: "list-planning-types",
           file: "list-planning-types.md",
           description: "List supported planning workflow types and their intent."
+        },
+        {
+          name: "explain-planning-rules",
+          file: "explain-planning-rules.md",
+          description: "Explain effective planning defaults and rule packs for a workflow type."
         }
       ]
     }
   },
-  async onCommand(command) {
+  async onCommand(command, ctx) {
     if (command.name === "list-planning-types") {
       return {
         ok: true,
@@ -71,9 +80,25 @@ export const planningModule: WorkflowModule = {
       const finalize = args.finalize === true;
       const { missingCritical, adaptiveFollowups } = nextPlanningQuestions(
         planningType as PlanningWorkflowType,
-        answers
+        answers,
+        ctx.effectiveConfig as Record<string, unknown> | undefined
       );
+      const config = resolvePlanningConfig(ctx.effectiveConfig as Record<string, unknown> | undefined);
       if (finalize && missingCritical.length > 0) {
+        if (!config.hardBlockCriticalUnknowns) {
+          return {
+            ok: true,
+            code: "planning-ready-with-warnings",
+            message: `Finalize allowed with unresolved critical questions because planning.hardBlockCriticalUnknowns=false`,
+            data: {
+              planningType,
+              status: "ready-with-warnings",
+              unresolvedCritical: missingCritical,
+              nextQuestions: [...missingCritical, ...adaptiveFollowups],
+              capturedAnswers: answers
+            }
+          };
+        }
         return {
           ok: false,
           code: "planning-critical-unknowns",
@@ -110,6 +135,36 @@ export const planningModule: WorkflowModule = {
           unresolvedCritical: [],
           adaptiveFollowups,
           capturedAnswers: answers
+        }
+      };
+    }
+
+    if (command.name === "explain-planning-rules") {
+      const args = command.args ?? {};
+      const planningType = typeof args.planningType === "string" ? args.planningType.trim() : "";
+      if (!PLANNING_WORKFLOW_TYPES.includes(planningType as PlanningWorkflowType)) {
+        return {
+          ok: false,
+          code: "invalid-planning-type",
+          message:
+            "explain-planning-rules requires planningType of: task-breakdown, sprint-phase, task-ordering, new-feature, change"
+        };
+      }
+      const config = resolvePlanningConfig(ctx.effectiveConfig as Record<string, unknown> | undefined);
+      const rulePack = resolvePlanningRulePack(
+        planningType as PlanningWorkflowType,
+        ctx.effectiveConfig as Record<string, unknown> | undefined
+      );
+      return {
+        ok: true,
+        code: "planning-rules-explained",
+        message: `Effective planning rules for ${planningType}`,
+        data: {
+          planningType,
+          defaultQuestionDepth: config.depth,
+          hardBlockCriticalUnknowns: config.hardBlockCriticalUnknowns,
+          baseQuestions: rulePack.baseQuestions,
+          adaptiveQuestions: rulePack.adaptiveQuestions
         }
       };
     }
