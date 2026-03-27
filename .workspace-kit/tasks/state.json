@@ -3304,6 +3304,1127 @@
         "Maintainer runbook explains when to use strict (CI gates) vs advisory (local iteration).",
         "`pnpm run build`, `check`, `test`, and `parity` pass."
       ]
+    },
+    {
+      "id": "T285",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[Agent/CLI Parity] Define CLI-mandatory scope and publish the Agent CLI map",
+      "createdAt": "2026-03-27T00:00:00.000Z",
+      "updatedAt": "2026-03-27T00:00:00.000Z",
+      "priority": "P1",
+      "dependsOn": [],
+      "unblocks": [
+        "T286",
+        "T289",
+        "T290"
+      ],
+      "phase": "Phase 10 — Agent/CLI parity",
+      "metadata": {
+        "category": "Agent/CLI Parity"
+      },
+      "approach": "Treat `workspace-kit` as the execution source for kit-owned mutations; document what may still be edited directly (application code only). Produce one canonical table: intent → command → approval surface → evidence artifact.",
+      "technicalScope": [
+        "Inventory policy-sensitive `run` commands, task-engine transitions, config/init/upgrade mutations, and documentation module entrypoints.",
+        "Classify Tier A (task state transitions), Tier B (other `run` module commands), Tier C (non-kit file edits).",
+        "Add Maintainer doc section or small `docs/maintainers/` page linked from `AGENTS.md` and `POLICY-APPROVAL.md` (single source for the map).",
+        "Cross-check against `docs/maintainers/POLICY-APPROVAL.md` and module `instructions/*.md` so examples stay copy-paste accurate."
+      ],
+      "acceptanceCriteria": [
+        "Published map lists every Tier A/B operation with exact `workspace-kit` invocation pattern and approval shape.",
+        "Explicit statement that hand-editing `.workspace-kit/tasks/state.json` for lifecycle changes is out of contract except documented recovery.",
+        "No contradiction with existing policy and runbook docs; links resolve."
+      ]
+    },
+    {
+      "id": "T286",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[Agent/CLI Parity] Encode CLI-first execution in `.ai/AGENTS.md` and maintainer `AGENTS.md`",
+      "createdAt": "2026-03-27T00:00:00.000Z",
+      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T285"
+      ],
+      "unblocks": [
+        "T287",
+        "T288"
+      ],
+      "phase": "Phase 10 — Agent/CLI parity",
+      "metadata": {
+        "category": "Agent/CLI Parity"
+      },
+      "approach": "Update canonical agent guidance so execution parity is a MUST-level rule where the kit provides a command; keep autonomy for normal code work. Deliver explicit copy-paste examples for: task transitions, policy-gated `run`, and config mutation env approval.",
+      "technicalScope": [
+        "Extend `.ai/AGENTS.md` with CLI-first rules, link to Agent CLI map from T285.",
+        "Mirror or summarize in `docs/maintainers/AGENTS.md` per documentation contract.",
+        "Call out `policyApproval` vs `WORKSPACE_KIT_POLICY_APPROVAL` vs interactive TTY path; forbid relying on chat-only approval for gated ops.",
+        "Add a short subsection: 'When the agent must run terminal commands' with 2–3 concrete examples (task transition, `run` with policy JSON, `config` with env approval).",
+        "Cross-link to `docs/maintainers/POLICY-APPROVAL.md` and `docs/maintainers/TERMS.md` for terminology alignment."
+      ],
+      "acceptanceCriteria": [
+        "Both AGENTS files state: before changing kit-owned state, run the matching `workspace-kit` command.",
+        "Source-of-truth ordering still matches project contract; no new conflicting policy vs `.cursor/rules/`.",
+        "If `.ai/` and `docs/maintainers/` are intentionally paired, they stay aligned after the change.",
+        "At least three copy-paste CLI examples exist across the two files (task + policy + config)."
+      ]
+    },
+    {
+      "id": "T287",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[Agent/CLI Parity] Add always-applied Cursor rule for `workspace-kit` execution path",
+      "createdAt": "2026-03-27T00:00:00.000Z",
+      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T286"
+      ],
+      "unblocks": [
+        "T291"
+      ],
+      "phase": "Phase 10 — Agent/CLI parity",
+      "metadata": {
+        "category": "Agent/CLI Parity"
+      },
+      "approach": "Short, enforceable `.cursor/rules/` file that mirrors maintainer docs and forces agents to default to CLI + structured approval in Cursor sessions.",
+      "technicalScope": [
+        "New rule: prefer `workspace-kit run <cmd>` with JSON args from module instructions; include session-grant pattern.",
+        "Require stating or running the CLI when reporting task state changes (no chat-only status claims without engine evidence).",
+        "Set `alwaysApply: true` or project-default applicability per Cursor capabilities; avoid duplicating long prose—link to Agent CLI map.",
+        "Name the new rule file (e.g. `.cursor/rules/workspace-kit-cli-execution.mdc`) and add one-line pointer from `docs/maintainers/AGENTS.md`."
+      ],
+      "acceptanceCriteria": [
+        "Rule is active for routine sessions and does not conflict with workspace-kit-agent or project-principles rules.",
+        "Rule text is under ~80 lines or splits into scoped rule + link to avoid drift.",
+        "Maintainer doc notes rule as enforcement mirror of `docs/maintainers/AGENTS.md` CLI section.",
+        "Rule explicitly forbids hand-editing `.workspace-kit/tasks/state.json` for lifecycle transitions except documented recovery."
+      ]
+    },
+    {
+      "id": "T288",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[Agent/CLI Parity] Align `/qt` templates with canonical CLI persistence boundaries",
+      "createdAt": "2026-03-27T00:00:00.000Z",
+      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T286"
+      ],
+      "unblocks": [
+        "T291"
+      ],
+      "phase": "Phase 10 — Agent/CLI parity",
+      "metadata": {
+        "category": "Agent/CLI Parity"
+      },
+      "approach": "`/qt` stays prompt scaffolding; each template step that persists kit state must name the `workspace-kit run` line (or state that the step is planning-only).",
+      "technicalScope": [
+        "Update `.cursor/commands/qt.md` if command behaviors change.",
+        "Audit `tasks/*.md` used by `/qt`; add a trailing or inline “Persist via CLI” block where applicable.",
+        "Document relationship between `/qt` and `workspace-kit` in Agent CLI map (T285) if not already obvious.",
+        "List every `tasks/*.md` file touched and ensure each has either a CLI persistence line or an explicit 'planning only' label."
+      ],
+      "acceptanceCriteria": [
+        "No template implies task-engine or policy-gated work completes without `workspace-kit` unless explicitly marked planning-only.",
+        "Spot-check: at least three representative templates include accurate command examples.",
+        "Stable `/qt` behavior preserved for downstream consumers (per command frontmatter requirements).",
+        "Inventory of audited templates recorded in PR description or task evidence."
+      ]
+    },
+    {
+      "id": "T289",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[Agent/CLI Parity] Improve agent discoverability of commands (`doctor`, list, instruction links)",
+      "createdAt": "2026-03-27T00:00:00.000Z",
+      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T285"
+      ],
+      "unblocks": [
+        "T291"
+      ],
+      "phase": "Phase 10 — Agent/CLI parity",
+      "metadata": {
+        "category": "Agent/CLI Parity"
+      },
+      "approach": "Make “what do I run?” answerable from the kit without reading all of `src/`—reduce friction so agents prefer CLI over guessing.",
+      "technicalScope": [
+        "Evaluate `workspace-kit doctor`, command list output, and module instruction registration for agent-relevant hints.",
+        "Add or tune messages (stdout/help text) to point at `POLICY-APPROVAL.md` and Agent CLI map.",
+        "Optional: wrapper script or package.json script alias documented in map for consistent `pnpm exec` / `npx` invocation.",
+        "If `workspace-kit run` with no subcommand lists commands, ensure descriptions mention task-engine vs other modules.",
+        "Document minimum discovery path: `run` list → instruction file path in repo."
+      ],
+      "acceptanceCriteria": [
+        "Agents can discover primary `run` commands and policy entry from documented UX in one or two steps.",
+        "Changes are backward compatible for human CLI users; JSON consumers unaffected or versioned if needed.",
+        "Tests or snapshot updates cover any new output strings that are contract-bearing.",
+        "At least one maintainer-facing paragraph in `docs/maintainers/` points to discovery flow."
+      ]
+    },
+    {
+      "id": "T290",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[Agent/CLI Parity] Document multi-turn agent sessions (session id, grants, non-TTY)",
+      "createdAt": "2026-03-27T00:00:00.000Z",
+      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T285"
+      ],
+      "unblocks": [
+        "T291"
+      ],
+      "phase": "Phase 10 — Agent/CLI parity",
+      "metadata": {
+        "category": "Agent/CLI Parity"
+      },
+      "approach": "Agents run in non-interactive subprocesses; document JSON `policyApproval` + `scope: session` + `WORKSPACE_KIT_SESSION_ID` as the low-friction parity path.",
+      "technicalScope": [
+        "Extend `docs/maintainers/POLICY-APPROVAL.md` and relevant runbooks with an “Agents / IDE” subsection.",
+        "Cover: no TTY → no interactive prompt; session grant file location; security notes (same machine, same cwd).",
+        "Cross-link from Agent CLI map and new Cursor rule.",
+        "Include copy-paste for `WORKSPACE_KIT_SESSION_ID` + `policyApproval` with `scope: session` for multi-step agent runs.",
+        "Document that Cursor chat approval does not satisfy `run` policy."
+      ],
+      "acceptanceCriteria": [
+        "Copy-paste recipe exists for a multi-command agent session without repeated rationale spam.",
+        "Explicit limitations (CI, shared workspaces) documented; no claim that chat approval replaces JSON for `run`.",
+        "Consistent with shipped interactive approval behavior (`WORKSPACE_KIT_INTERACTIVE_APPROVAL`) where applicable."
+      ]
+    },
+    {
+      "id": "T291",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[Agent/CLI Parity] Optional guardrail: detect risky direct edits to task engine state",
+      "createdAt": "2026-03-27T00:00:00.000Z",
+      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "priority": "P3",
+      "dependsOn": [
+        "T287",
+        "T288",
+        "T289",
+        "T290"
+      ],
+      "unblocks": [],
+      "phase": "Phase 10 — Agent/CLI parity",
+      "metadata": {
+        "category": "Agent/CLI Parity"
+      },
+      "approach": "After soft-force docs/rules land, add optional automation (CI advisory or pre-commit hook) that flags suspicious `state.json`-only diffs. Start warn-only unless team accepts block.",
+      "technicalScope": [
+        "Define heuristic: e.g. `status`/`transitionLog` changes without matching convention, or bulk task field edits.",
+        "Implement in `scripts/` or `test/` as maintainer-only check; document false-positive handling.",
+        "Wire into CI as non-blocking advisory first; gate only if noise is low.",
+        "Document escape hatch: `--no-verify` or `SKIP_` env only if adopted; default warn-only.",
+        "Optional: only flag diffs that touch `.workspace-kit/tasks/state.json` without `transitionLog` correlation (heuristic doc)."
+      ],
+      "acceptanceCriteria": [
+        "Check runs locally and in CI with documented exit behavior (warn vs fail).",
+        "Legitimate maintainer recovery paths documented to bypass or justify exceptions.",
+        "No consumer-breaking change to packaged `workspace-kit` API unless explicitly scoped and released.",
+        "False positive rate noted in docs after one trial run on main-branch history."
+      ]
+    },
+    {
+      "id": "T292",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[Architectural review follow-up] Expand policy and session-grant tests for sensitive `run` paths",
+      "createdAt": "2026-03-27T12:00:00.000Z",
+      "updatedAt": "2026-03-27T12:00:00.000Z",
+      "priority": "P1",
+      "dependsOn": [],
+      "unblocks": [],
+      "phase": "Phase 11 — Architectural review follow-up",
+      "metadata": {
+        "category": "Architectural review follow-up",
+        "sourceDoc": "docs/maintainers/ARCHITECTURAL-REVIEW-FINDINGS.md#testing-and-validation-review"
+      },
+      "approach": "Close branch-coverage gaps called out in the architectural review: policy denial shapes, session reuse, dynamic sensitive command classification, and non-TTY vs TTY paths—without changing default fail-closed semantics.",
+      "technicalScope": [
+        "Inventory sensitive operation IDs and session-grant recording paths in `src/core/policy.ts` (and related) against `docs/maintainers/POLICY-APPROVAL.md`.",
+        "Add tests: missing approval, malformed `policyApproval`, expired or wrong-session grant, config-driven extra-sensitive commands if present.",
+        "Assert stable `code`, `operationId`, and `remediationDoc` on denials; no secret leakage in messages.",
+        "Cover `WORKSPACE_KIT_INTERACTIVE_APPROVAL` only where tests can simulate TTY/programmatic stdin per existing harness."
+      ],
+      "acceptanceCriteria": [
+        "New tests run in default `pnpm test` (or documented suite) and pass with existing parity gates.",
+        "At least one test exercises session-scoped approval reuse and one tests denial for a non-interactive context.",
+        "No new policy bypass; failures remain explicit and machine-readable."
+      ]
+    },
+    {
+      "id": "T293",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[Architectural review follow-up] Document and test task-store / policy-trace persistence concurrency semantics",
+      "createdAt": "2026-03-27T12:00:00.000Z",
+      "updatedAt": "2026-03-27T12:00:00.000Z",
+      "priority": "P2",
+      "dependsOn": [],
+      "unblocks": [],
+      "phase": "Phase 11 — Architectural review follow-up",
+      "metadata": {
+        "category": "Architectural review follow-up",
+        "sourceDoc": "docs/maintainers/ARCHITECTURAL-REVIEW-FINDINGS.md#testing-and-validation-review"
+      },
+      "approach": "The review flags single-writer optimism as adoption grows. Establish explicit documented semantics plus a minimal stress test so concurrent writers fail predictably or serialize as designed.",
+      "technicalScope": [
+        "Read `TaskStore` and policy append paths; document expected concurrency (single process, exclusive use) in `src/modules/task-engine/README.md` or maintainer runbook if missing.",
+        "Add targeted tests: parallel `save`/`append` simulations where feasible (temp dirs, jest/node test) to detect lost updates or corrupt JSON.",
+        "If implementation already uses atomic write helpers, tests should lock expected behavior (success or deterministic error code)."
+      ],
+      "acceptanceCriteria": [
+        "Documented statement of supported concurrency model for `.workspace-kit/tasks/state.json` and `policy/traces.jsonl`.",
+        "Tests prove no silent truncation/corruption under the simulated contention scenario the test implements.",
+        "If full multi-process locking is out of scope, docs state that explicitly and tests cover in-process races only."
+      ]
+    },
+    {
+      "id": "T294",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[Architectural review follow-up] Maintainer doc consistency sweep checklist and release linkage",
+      "createdAt": "2026-03-27T12:00:00.000Z",
+      "updatedAt": "2026-03-27T12:00:00.000Z",
+      "priority": "P2",
+      "dependsOn": [],
+      "unblocks": [],
+      "phase": "Phase 11 — Architectural review follow-up",
+      "metadata": {
+        "category": "Architectural review follow-up",
+        "sourceDoc": "docs/maintainers/ARCHITECTURAL-REVIEW-FINDINGS.md#documentation-and-governance-review"
+      },
+      "approach": "Implement the review’s ‘periodic doc consistency sweep’ as a concrete checklist; tie broken-link and canonical-vs-derived checks to `RELEASING.md` expectations without inventing heavyweight process.",
+      "technicalScope": [
+        "Add checklist section (e.g. in `docs/maintainers/RELEASING.md` or `docs/maintainers/runbooks/`): index sanity, canonical headers, policy surface pointers, changelog path.",
+        "Wire or reference existing automation (`scripts/check-planning-doc-consistency.mjs` or link checks) with when-to-run guidance.",
+        "Optional: classify stale indexes as release-blocking doc defects per review recommendation—wording only unless gates already exist."
+      ],
+      "acceptanceCriteria": [
+        "New maintainer can run the sweep before a release candidate using the checklist alone.",
+        "No contradiction with `workspace-kit-workflow-contract` (strategy vs execution doc boundaries).",
+        "If `scripts/check-planning-doc-consistency.mjs` is invoked, document exact command in the checklist."
+      ]
+    },
+    {
+      "id": "T295",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[Architectural review follow-up] Audit non-documentation runtime paths for workspace-layout assumptions",
+      "createdAt": "2026-03-27T12:00:00.000Z",
+      "updatedAt": "2026-03-27T12:00:00.000Z",
+      "priority": "P1",
+      "dependsOn": [],
+      "unblocks": [],
+      "phase": "Phase 11 — Architectural review follow-up",
+      "metadata": {
+        "category": "Architectural review follow-up",
+        "sourceDoc": "docs/maintainers/ARCHITECTURAL-REVIEW-FINDINGS.md#technical-approach-review"
+      },
+      "approach": "T279 hardened documentation runtime for consumers; this task audits remaining `src/core`, `src/cli`, and non-doc modules for implicit repo-layout coupling and aligns resolution with package-relative or config-driven roots.",
+      "technicalScope": [
+        "Search for cwd-sensitive hacks, hardcoded `.workspace-kit` neighbors, or assumptions that `process.cwd()` is the repo root without manifest resolution.",
+        "For each finding: fix with shared helper or document limitation; prefer compatibility-preserving behavior.",
+        "Add regression tests where fixes are non-trivial."
+      ],
+      "acceptanceCriteria": [
+        "Short audit note in `docs/maintainers/` or `.ai/` records findings and resolutions (even if ‘no further issues’).",
+        "`pnpm run build`, `check`, `test`, and `parity` pass.",
+        "No intentional weakening of consumer vs maintainer safety; migration notes if behavior tightens."
+      ]
+    },
+    {
+      "id": "T296",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[Cursor extension / kit] Stable JSON dashboard and project-health summary for thin UI clients",
+      "createdAt": "2026-03-27T14:00:00.000Z",
+      "updatedAt": "2026-03-27T16:30:00.000Z",
+      "priority": "P1",
+      "dependsOn": [],
+      "unblocks": [
+        "T303"
+      ],
+      "phase": "Phase 12 — Cursor native UI (thin client)",
+      "metadata": {
+        "category": "Cursor extension (thin client)",
+        "planSection": "10 Backend contract — Dashboard",
+        "implementationNote": "Shipped: `workspace-kit run dashboard-summary`. Close this task when maintainer docs / FEATURE-MATRIX reference it and the Cursor extension uses it as the sole aggregate source (no duplicate counting in UI)."
+      },
+      "approach": "Add one or more `workspace-kit run` commands (or a single composed command) that return versioned JSON for extension/dashboard use: phase/milestone hints, task counts by status, ready and blocked summaries, suggested next action, and config/doctor validation signals—without duplicating business logic in the extension.",
+      "technicalScope": [
+        "Prefer composing existing task-engine outputs (`list-tasks`, `get-next-actions`, `get-ready-queue`) plus config validation/explain entrypoints where they already exist.",
+        "Define stable response shape(s) and `code` values documented for UI consumers; include roadmap/status YAML or task-store phase fields as agreed with maintainers.",
+        "If gaps exist (e.g. blocked-chain rollup), implement in kit modules with tests—not in the extension.",
+        "Reconcile with shipped `dashboard-summary`: update instruction docs + tests if the contract changes."
+      ],
+      "acceptanceCriteria": [
+        "Extension can build the dashboard solely from documented CLI/JSON outputs (no raw JSON file scraping for aggregates).",
+        "`pnpm test` / parity cover new command behavior; JSON schema or exemplar fixtures checked in.",
+        "No second precedence engine; all numbers match what CLI would show for the same workspace."
+      ]
+    },
+    {
+      "id": "T297",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[Cursor extension / kit] Structured task detail including transition history for UI",
+      "createdAt": "2026-03-27T14:00:00.000Z",
+      "updatedAt": "2026-03-27T16:30:00.000Z",
+      "priority": "P1",
+      "dependsOn": [],
+      "unblocks": [
+        "T304"
+      ],
+      "phase": "Phase 12 — Cursor native UI (thin client)",
+      "metadata": {
+        "category": "Cursor extension (thin client)",
+        "planSection": "10 Backend contract — Tasks / §4 detail panel",
+        "implementationNote": "Shipped: `get-task` includes `recentTransitions` and `allowedActions`. Close when Phase 13 names (`get-task-history`) are reconciled in the workbook and extension uses the stable contract."
+      },
+      "approach": "Expose transition log entries relevant to a task in machine-readable form. Prefer extending `get-task` JSON (args use `taskId`, not `id`) or add `get-task-transitions`—single contract for the Tasks detail webview/panel.",
+      "technicalScope": [
+        "Read task store transition log; filter/sort by `taskId`; cap payload size for large repos.",
+        "Align with existing privacy/evidence rules (actor fields, no secret leakage).",
+        "Document response alongside other task-engine instruction files.",
+        "If Phase 13 adds `get-task-history`, document relationship vs `get-task` payload to avoid three sources of truth."
+      ],
+      "acceptanceCriteria": [
+        "UI can render “recent transition history” without parsing `state.json` ad hoc.",
+        "Tests cover empty log, multiple transitions, unknown task.",
+        "Matches task-engine transition evidence model already persisted."
+      ]
+    },
+    {
+      "id": "T298",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[Cursor extension] VS Code/Cursor extension scaffold and packaging under extensions/cursor-workflow-cannon",
+      "createdAt": "2026-03-27T14:00:00.000Z",
+      "updatedAt": "2026-03-27T16:30:00.000Z",
+      "priority": "P1",
+      "dependsOn": [],
+      "unblocks": [
+        "T299",
+        "T300",
+        "T301"
+      ],
+      "phase": "Phase 12 — Cursor native UI (thin client)",
+      "metadata": {
+        "category": "Cursor extension (thin client)",
+        "planSection": "5 Extension structure",
+        "implementationNote": "Scaffold exists under `extensions/cursor-workflow-cannon/` with `pnpm run ext:compile` at repo root. Close when optional CI job and publisher fields are decided."
+      },
+      "approach": "Create the extension package layout from the plan (entrypoint, build to dist, publisher metadata TBD). No business logic beyond activation wiring stubs; must not write `.workspace-kit` directly.",
+      "technicalScope": [
+        "Paths: `extensions/cursor-workflow-cannon/` with `src/extension.ts`, contribution points in package.json.",
+        "TypeScript build, eslint if needed, `.vscodeignore`, README for local dev install.",
+        "Document how maintainer loads extension in Cursor (symlink vs vsix)."
+      ],
+      "acceptanceCriteria": [
+        "Extension activates in dev host without errors when folder opened.",
+        "Repo root `pnpm`/CI story defined (lint/build extension job optional but documented).",
+        "No dependency that forces a second copy of workspace-kit business logic inside the extension bundle beyond spawning CLI."
+      ]
+    },
+    {
+      "id": "T299",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[Cursor extension] Workflow Cannon workspace detection and non-intrusive activation",
+      "createdAt": "2026-03-27T14:00:00.000Z",
+      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T298"
+      ],
+      "unblocks": [
+        "T302"
+      ],
+      "phase": "Phase 12 — Cursor native UI (thin client)",
+      "metadata": {
+        "category": "Cursor extension (thin client)",
+        "planSection": "6 Automatic availability"
+      },
+      "approach": "Implement `workspace-detect.ts`: signals (manifest, profile, package identity, `workspace-kit` on PATH or local node_modules). Auto-activate compatible roots; do not auto-focus panels; optional one-time welcome state via `globalState`.",
+      "technicalScope": [
+        "Lightweight health check after activate (e.g. `doctor` or version probe via command client).",
+        "Graceful degrade when kit missing: visible empty state with remediation links.",
+        "Multi-root workspace behavior defined (primary folder vs all).",
+        "Document activationEvents in extension README vs runtime detection in code.",
+        "Optional: `globalState` key for one-time welcome without auto-opening webviews."
+      ],
+      "acceptanceCriteria": [
+        "Opening this repo in Cursor loads extension container without stealing focus.",
+        "Non-kit workspaces do not spam errors; extension idle or hidden per contribution guidelines.",
+        "Detection documented for consumers who vendor the kit."
+      ]
+    },
+    {
+      "id": "T300",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[Cursor extension] CLI command client (JSON in/out, cwd, error normalization)",
+      "createdAt": "2026-03-27T14:00:00.000Z",
+      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T298"
+      ],
+      "unblocks": [
+        "T302"
+      ],
+      "phase": "Phase 12 — Cursor native UI (thin client)",
+      "metadata": {
+        "category": "Cursor extension (thin client)",
+        "planSection": "3 Runtime interaction / §11 Security"
+      },
+      "approach": "`command-client.ts` wraps `workspace-kit` child process (MVP path per plan): workspace root cwd, `--json` or documented machine-readable flags, parse/normalize errors including `policy-denied`, never mutate files itself.",
+      "technicalScope": [
+        "Resolve CLI: `node <repo>/dist/cli.js` first, then packaged path under `node_modules/@workflow-cannon/workspace-kit`.",
+        "Parse JSON from stdout even when process exits non-zero (policy denial still returns JSON).",
+        "Timeout/cancellation hooks for long commands.",
+        "Structured error type for UI: exit code, stderr snippet, parsed policy operationId when present.",
+        "Unit tests: malformed stdout, policy-denied JSON, non-zero exit with valid JSON."
+      ],
+      "acceptanceCriteria": [
+        "All mutations to tasks/config flow only through this client invoking kit.",
+        "Unit tests for parser edge cases (partial JSON, non-zero exit).",
+        "Document env requirements (`WORKSPACE_KIT_POLICY_APPROVAL`, `policyApproval` limitations for `run` vs config)."
+      ]
+    },
+    {
+      "id": "T301",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[Cursor extension] State watcher and debounced refresh/event bus",
+      "createdAt": "2026-03-27T14:00:00.000Z",
+      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T298"
+      ],
+      "unblocks": [
+        "T302"
+      ],
+      "phase": "Phase 12 — Cursor native UI (thin client)",
+      "metadata": {
+        "category": "Cursor extension (thin client)",
+        "planSection": "7 Data synchronization"
+      },
+      "approach": "`state-watcher.ts` subscribes to `.workspace-kit/` (and agreed generated docs), debounces bursts, emits refresh signals—triggers re-fetch via command client, no direct parsing for authoritative state unless read-only display of raw files is explicitly scoped.",
+      "technicalScope": [
+        "Use `vscode.workspace.createFileSystemWatcher` with `RelativePattern` for `.workspace-kit/tasks/state.json` and config paths.",
+        "Manual refresh + post-mutation refresh + window focus optional hook.",
+        "Document that refresh refetches through kit commands for aggregates.",
+        "Debounce 300–500ms; coalesce multiple events into one refresh."
+      ],
+      "acceptanceCriteria": [
+        "Task transition via UI triggers tree refresh without full reload.",
+        "Rapid saves do not DDOS the CLI (debounce verified in test or logging).",
+        "Watcher disabled or throttled when workspace not kit-compatible."
+      ]
+    },
+    {
+      "id": "T302",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[Cursor extension] Activity Bar, sidebar views, and webview hosts (Dashboard / Tasks / Config)",
+      "createdAt": "2026-03-27T14:00:00.000Z",
+      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T299",
+        "T300",
+        "T301"
+      ],
+      "unblocks": [
+        "T303",
+        "T304",
+        "T305",
+        "T306"
+      ],
+      "phase": "Phase 12 — Cursor native UI (thin client)",
+      "metadata": {
+        "category": "Cursor extension (thin client)",
+        "planSection": "1 Product shape / §2 Core architectural rule"
+      },
+      "approach": "Register Workflow Cannon activity bar container; host Dashboard and Config as webviews; Tasks as TreeView + detail; wire lifecycle dispose; enforce thin-client rule in code reviews (no fs writes to owned state from views).",
+      "technicalScope": [
+        "Contribution points: views containers, icon, titles matching maintainer branding docs.",
+        "Shared theme-aware CSS baseline for webviews.",
+        "Dispose listeners on deactivate.",
+        "Verify contribution IDs match `registerWebviewViewProvider` / `createTreeView` ids."
+      ],
+      "acceptanceCriteria": [
+        "All three areas visible and navigable when kit workspace detected.",
+        "No direct edits to `.workspace-kit/tasks/state.json` or config JSON from view code.",
+        "Passes VS Code extension host smoke run."
+      ]
+    },
+    {
+      "id": "T303",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[Cursor extension] Dashboard webview (cockpit data, quick actions, validation feedback)",
+      "createdAt": "2026-03-27T14:00:00.000Z",
+      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T296",
+        "T302"
+      ],
+      "unblocks": [
+        "T307"
+      ],
+      "phase": "Phase 12 — Cursor native UI (thin client)",
+      "metadata": {
+        "category": "Cursor extension (thin client)",
+        "planSection": "4 Dashboard view / §10 Backend"
+      },
+      "approach": "Bind webview to outputs from T296 plus existing commands; quick actions call command client (refresh, validate config, open tasks/config surfaces); show clear loading/error states.",
+      "technicalScope": [
+        "Bind webview to `dashboard-summary` + refresh command; quick actions: refresh, validate config (delegate to `workspace-kit config validate` or `run` as applicable).",
+        "Postmessage protocol typed in `src/types/` (or inline validated shapes).",
+        "Loading/error/empty states for missing kit or policy denial."
+      ],
+      "acceptanceCriteria": [
+        "Every displayed aggregate traceable to a CLI JSON field or documented derivation.",
+        "Quick actions never bypass policy; surface `policy-denied` guidance in UI.",
+        "Matches UX rules: explicit actions, clear success/failure feedback."
+      ]
+    },
+    {
+      "id": "T304",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[Cursor extension] Tasks tree, detail panel, and lifecycle actions via run-transition",
+      "createdAt": "2026-03-27T14:00:00.000Z",
+      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T297",
+        "T302"
+      ],
+      "unblocks": [
+        "T307",
+        "T308"
+      ],
+      "phase": "Phase 12 — Cursor native UI (thin client)",
+      "metadata": {
+        "category": "Cursor extension (thin client)",
+        "planSection": "4 Tasks view / §3 Examples"
+      },
+      "approach": "Tree grouped by status (or phase then status as option); list-tasks + get-task + T297 history; actions map only to engine actions: accept, reject, start, complete, block, cancel, decline, pause, unblock—via `run-transition` with `policyApproval` when required.",
+      "technicalScope": [
+        "`tasks-tree-provider.ts`; use `get-task` for detail (recentTransitions, allowedActions).",
+        "Context menu or command palette for transition with `policyApproval` + rationale prompt.",
+        "Optional: secondary webview for long description fields."
+      ],
+      "acceptanceCriteria": [
+        "Cannot transition to illegal states; server errors shown verbatim to user.",
+        "Refresh after successful transition; respects task-engine guards.",
+        "Argument names match CLI (`taskId`, not `id`)."
+      ]
+    },
+    {
+      "id": "T305",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[Cursor extension] Config webview: list, search, explain, validate, set/unset via kit only",
+      "createdAt": "2026-03-27T14:00:00.000Z",
+      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T302"
+      ],
+      "unblocks": [
+        "T307",
+        "T309"
+      ],
+      "phase": "Phase 12 — Cursor native UI (thin client)",
+      "metadata": {
+        "category": "Cursor extension (thin client)",
+        "planSection": "4 Config view / §10 Backend — Config"
+      },
+      "approach": "Drive all fields from config metadata/explain/list commands; advanced mode for hidden keys per exposure policy; mutations use `workspace-kit config` with `WORKSPACE_KIT_POLICY_APPROVAL` when kit requires; never patch `.workspace-kit/config.json` from webview.",
+      "technicalScope": [
+        "Use `workspace-kit run explain-config` and `workspace-kit config` subcommands only—no raw file writes.",
+        "Advanced toggle for hidden keys follows `docs/maintainers/CONFIG.md` exposure rules.",
+        "Surface `WORKSPACE_KIT_POLICY_APPROVAL` instructions when `config set` is attempted."
+      ],
+      "acceptanceCriteria": [
+        "Invalid values show kit validation errors, not client-side guesswork only.",
+        "Hidden keys gated behind explicit advanced toggle.",
+        "Document parity with `docs/maintainers/CONFIG.md`."
+      ]
+    },
+    {
+      "id": "T306",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[Cursor extension] Command palette commands and optional status bar summary",
+      "createdAt": "2026-03-27T14:00:00.000Z",
+      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T302"
+      ],
+      "unblocks": [
+        "T307"
+      ],
+      "phase": "Phase 12 — Cursor native UI (thin client)",
+      "metadata": {
+        "category": "Cursor extension (thin client)",
+        "planSection": "8 Commands to expose"
+      },
+      "approach": "Register palette commands per plan: Open/Refresh Dashboard, Show Ready Queue, Start/Complete/Block/Pause Task (wizard or pick current task), Validate/Explain/Set Config—each delegates to command client + existing views.",
+      "technicalScope": [
+        "Ensure every command in extension `package.json` contributes is implemented and registered in `extension.ts`.",
+        "Status bar optional: show ready-queue count from `list-tasks` filtered or `dashboard-summary`.",
+        "Document keybindings in extension README."
+      ],
+      "acceptanceCriteria": [
+        "Every palette command works headless without opening webview where meaningful.",
+        "Keybindings documented as optional in extension README.",
+        "Align task verbs with engine actions (pause/block/unblock)."
+      ]
+    },
+    {
+      "id": "T307",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[Cursor extension] Security and trust pass: sanitization, policy UX, no silent mutation",
+      "createdAt": "2026-03-27T14:00:00.000Z",
+      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T303",
+        "T304",
+        "T305",
+        "T306"
+      ],
+      "unblocks": [],
+      "phase": "Phase 12 — Cursor native UI (thin client)",
+      "metadata": {
+        "category": "Cursor extension (thin client)",
+        "planSection": "9 UX rules / §11 Security"
+      },
+      "approach": "Read-only default surfaces; confirm dialogs for mutating/config operations; strict postMessage validation; sanitize rendered strings; no sensitive config in logs; align with `.ai/PRINCIPLES.md` tradeoffs.",
+      "technicalScope": [
+        "Audit all webview entrypoints for XSS and prototype pollution.",
+        "Approval-gated flows: clear copy when `policy-denied` or missing env approval.",
+        "Telemetry off by default; if added later, separate task.",
+        "Add `SECURITY.md` or section in extension README: threat model + data flow diagram (CLI only)."
+      ],
+      "acceptanceCriteria": [
+        "Threat-model checklist documented in extension folder.",
+        "Manual pass: cannot trigger hidden transition without confirmation when policy requires it.",
+        "Code review sign-off that UI never imports kit internals to bypass policy in v1."
+      ]
+    },
+    {
+      "id": "T308",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[Cursor extension] Unit tests: command client, workspace detection, tree mapping",
+      "createdAt": "2026-03-27T14:00:00.000Z",
+      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T304"
+      ],
+      "unblocks": [
+        "T310"
+      ],
+      "phase": "Phase 12 — Cursor native UI (thin client)",
+      "metadata": {
+        "category": "Cursor extension (thin client)",
+        "planSection": "13 Testing — Unit"
+      },
+      "approach": "Unit-test the extension without the VS Code UI: extract pure helpers (JSON parse, tree grouping, path resolution) and mock `child_process` where needed.",
+      "technicalScope": [
+        "Test CommandClient: successful JSON, non-zero exit with valid JSON, malformed stdout, ENOENT on missing cli.js.",
+        "Test workspace root resolution and manifest detection logic (pure functions with temp dirs).",
+        "Test Tasks tree grouping / ordering helpers with fixture task arrays.",
+        "Runner: Node built-in `node:test` in extension package or `vitest`—pick one and add `npm test` script.",
+        "Wire `npm test` into root CI as optional job (document in CONTRIBUTING or extension README)."
+      ],
+      "acceptanceCriteria": [
+        "`npm test` in `extensions/cursor-workflow-cannon` passes in clean checkout.",
+        "Tests do not require Cursor binary; Node-only.",
+        "Minimum coverage: command-client happy + error paths; at least one tree-mapping case."
+      ]
+    },
+    {
+      "id": "T309",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[Cursor extension] Integration tests: extension against fixture workspace and real workspace-kit",
+      "createdAt": "2026-03-27T14:00:00.000Z",
+      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T304",
+        "T305",
+        "T300"
+      ],
+      "unblocks": [
+        "T310"
+      ],
+      "phase": "Phase 12 — Cursor native UI (thin client)",
+      "metadata": {
+        "category": "Cursor extension (thin client)",
+        "planSection": "13 Testing — Integration"
+      },
+      "approach": "Integration tests run against a disposable temp workspace containing `.workspace-kit/manifest.json`, minimal config, and a small `tasks/state.json`; invoke real `dist/cli.js` from repo build.",
+      "technicalScope": [
+        "Fixture layout under `extensions/cursor-workflow-cannon/fixtures/minimal-workspace/` (or generate at test runtime).",
+        "Assert CommandClient.run returns expected shape for `list-tasks`, `get-task`, `dashboard-summary`.",
+        "For `run-transition`, use policy JSON or document skip if too flaky in CI.",
+        "Do not mutate the real repo workspace; copy fixture to `os.tmpdir()` per test."
+      ],
+      "acceptanceCriteria": [
+        "At least one integration test runs in CI headless for the extension package.",
+        "Deterministic fixtures matching repo parity philosophy.",
+        "Tests pass with `pnpm run build` at repo root before `npm test` in extension (document order)."
+      ]
+    },
+    {
+      "id": "T310",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[Cursor extension] Manual E2E checklist and fixture documentation for operators",
+      "createdAt": "2026-03-27T14:00:00.000Z",
+      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "priority": "P3",
+      "dependsOn": [
+        "T308",
+        "T309"
+      ],
+      "unblocks": [],
+      "phase": "Phase 12 — Cursor native UI (thin client)",
+      "metadata": {
+        "category": "Cursor extension (thin client)",
+        "planSection": "13 Testing — E2E/manual"
+      },
+      "approach": "Maintainer runbook steps: install VSIX/dev extension, open workflow-cannon, dashboard loads, task transition, config mutation, watcher refresh—checkbox list stored in `extensions/.../docs/e2e.md` or maintainer runbook link.",
+      "technicalScope": [
+        "Create `extensions/cursor-workflow-cannon/docs/e2e.md` with numbered steps: load extension host, open dashboard, refresh tasks, run one transition, validate config.",
+        "Link from extension README and optionally `docs/maintainers/runbooks/`.",
+        "List prerequisite: repo `pnpm run build`, extension `npm run compile`.",
+        "Optional screenshots folder `docs/e2e/screenshots/` (gitignored) mentioned in doc."
+      ],
+      "acceptanceCriteria": [
+        "Another maintainer can execute checklist without author knowledge transfer.",
+        "Checklist references exact palette command names shipped in T306.",
+        "E2E doc includes expected success signals (JSON in Output panel or UI copy)."
+      ]
+    },
+    {
+      "id": "T311",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Design Task Engine CRUD and query extension workbook",
+      "createdAt": "2026-03-27T15:00:00.000Z",
+      "updatedAt": "2026-03-27T15:00:00.000Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T217"
+      ],
+      "unblocks": [
+        "T312",
+        "T313",
+        "T314",
+        "T315",
+        "T316",
+        "T317",
+        "T318"
+      ],
+      "phase": "Phase 13 — Task Engine lifecycle tightening",
+      "metadata": {
+        "category": "Task engine tightening",
+        "requestedTaskId": "T228"
+      },
+      "approach": "Extend the existing Task Engine design workbook so record lifecycle, dependency mutation, history retrieval, and summary/query behavior are specified before implementation.",
+      "technicalScope": [
+        "Define canonical command contracts for create-task, update-task, and archive-task.",
+        "Define which task fields are mutable after creation and which are immutable.",
+        "Define validation rules for create vs update operations.",
+        "Define dependency mutation contracts for add-dependency, remove-dependency, and get-dependency-graph.",
+        "Define retrieval contracts for get-task-history, get-task-summary, and get-blocked-summary.",
+        "Define the bridge contract for create-task-from-plan.",
+        "Define evidence requirements for non-transition mutations.",
+        "Define error taxonomy additions for CRUD and dependency operations."
+      ],
+      "acceptanceCriteria": [
+        "CRUD, dependency, history, and summary functions are specified at implementation-ready detail.",
+        "Mutable vs immutable task fields are explicitly documented.",
+        "Evidence and validation expectations are defined for each new command.",
+        "The workbook resolves command semantics cleanly enough for direct implementation."
+      ]
+    },
+    {
+      "id": "T312",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Implement task creation command and persistence path",
+      "createdAt": "2026-03-27T15:00:00.000Z",
+      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T311"
+      ],
+      "unblocks": [
+        "T313",
+        "T314",
+        "T317"
+      ],
+      "phase": "Phase 13 — Task Engine lifecycle tightening",
+      "metadata": {
+        "category": "Task engine tightening",
+        "requestedTaskId": "T229"
+      },
+      "approach": "Add canonical task creation through the engine so task records are born through validated runtime operations instead of external file edits.",
+      "technicalScope": [
+        "Implement create-task command.",
+        "Validate required fields and generate or validate task IDs consistently (align ID scheme with existing `T###` patterns in workbook).",
+        "Persist newly created tasks through the canonical task store.",
+        "Reject duplicate IDs and invalid schemas.",
+        "Emit structured creation evidence (append to transition log or new mutation log per T311).",
+        "Add instruction entry and instruction file for create-task.",
+        "Add tests for happy path, duplicate ID rejection, and invalid schema rejection.",
+        "Register policy sensitivity if command can write without approval—default: require policy per T311."
+      ],
+      "acceptanceCriteria": [
+        "Tasks can be created through the CLI/module command surface.",
+        "Invalid creations are rejected deterministically.",
+        "Creation writes go through the canonical engine persistence path.",
+        "Creation emits structured evidence and is test-covered."
+      ]
+    },
+    {
+      "id": "T313",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Implement task update command for mutable task fields",
+      "createdAt": "2026-03-27T15:00:00.000Z",
+      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T311",
+        "T312"
+      ],
+      "unblocks": [
+        "T314",
+        "T315",
+        "T317"
+      ],
+      "phase": "Phase 13 — Task Engine lifecycle tightening",
+      "metadata": {
+        "category": "Task engine tightening",
+        "requestedTaskId": "T230"
+      },
+      "approach": "Add controlled metadata updates for existing tasks without bypassing lifecycle rules or store validation.",
+      "technicalScope": [
+        "Implement update-task command.",
+        "Support updates for allowed mutable fields per T311 workbook.",
+        "Reject mutation of immutable fields (id, createdAt, status except via run-transition).",
+        "Emit structured update evidence.",
+        "Add instruction entry and instruction file for update-task.",
+        "Add tests for valid updates, immutable-field rejection, and schema validation."
+      ],
+      "acceptanceCriteria": [
+        "Existing tasks can be updated safely through the engine.",
+        "Immutable-field mutations are rejected explicitly.",
+        "Updates are persisted deterministically and emit evidence.",
+        "Behavior is fully test-covered for supported fields."
+      ]
+    },
+    {
+      "id": "T314",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Implement task archival command and retention behavior",
+      "createdAt": "2026-03-27T15:00:00.000Z",
+      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T311",
+        "T312",
+        "T313"
+      ],
+      "unblocks": [
+        "T317",
+        "T318"
+      ],
+      "phase": "Phase 13 — Task Engine lifecycle tightening",
+      "metadata": {
+        "category": "Task engine tightening",
+        "requestedTaskId": "T231"
+      },
+      "approach": "Add archival instead of hard delete so the engine preserves traceability and avoids destructive queue mutations.",
+      "technicalScope": [
+        "Implement archive-task command.",
+        "Schema: add `archived` / `archivedAt` or dedicated `status` value—decided in T311; migrate store version if needed.",
+        "Ensure archived tasks excluded from `list-tasks` default and from `get-next-actions` / ready queue.",
+        "Preserve history and allow `list-tasks` with `{ includeArchived: true }` if specified in contract.",
+        "Add instruction file + tests for queue exclusion and retrieval."
+      ],
+      "acceptanceCriteria": [
+        "Tasks can be archived without destructive deletion.",
+        "Archived tasks remain retrievable for history/debugging.",
+        "Active queue commands exclude archived tasks by default.",
+        "Archive behavior is deterministic and test-covered."
+      ]
+    },
+    {
+      "id": "T315",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Implement dependency mutation commands and graph retrieval",
+      "createdAt": "2026-03-27T15:00:00.000Z",
+      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T311",
+        "T313"
+      ],
+      "unblocks": [
+        "T316",
+        "T317"
+      ],
+      "phase": "Phase 13 — Task Engine lifecycle tightening",
+      "metadata": {
+        "category": "Task engine tightening",
+        "requestedTaskId": "T232"
+      },
+      "approach": "Make task dependency management a first-class engine operation rather than an indirect data edit.",
+      "technicalScope": [
+        "Implement add-dependency, remove-dependency, get-dependency-graph per T311.",
+        "Cycle detection policy: document whether cycles are forbidden or only warned.",
+        "Re-run dependency guards / unblock logic after mutation.",
+        "Tests: self-edge, missing task id, duplicate edge, cycle."
+      ],
+      "acceptanceCriteria": [
+        "Dependencies can be mutated through explicit engine commands.",
+        "Invalid dependency mutations fail deterministically.",
+        "Readiness and blocked-state implications are handled correctly.",
+        "Dependency graph retrieval is machine-usable and test-covered."
+      ]
+    },
+    {
+      "id": "T316",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Implement task history retrieval and recent activity queries",
+      "createdAt": "2026-03-27T15:00:00.000Z",
+      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T311",
+        "T315"
+      ],
+      "unblocks": [
+        "T317",
+        "T318"
+      ],
+      "phase": "Phase 13 — Task Engine lifecycle tightening",
+      "metadata": {
+        "category": "Task engine tightening",
+        "requestedTaskId": "T233"
+      },
+      "approach": "Expose task-level evidence/history so maintainers and UI surfaces can inspect what happened, not just current state.",
+      "technicalScope": [
+        "Implement get-task-history and get-recent-task-activity; unify with transition + CRUD/dependency evidence streams defined in T311.",
+        "Normalize sort order (newest first) and caps for large repos.",
+        "Consider deprecating redundant fields on `get-task` if dedicated commands supersede—document migration for extension."
+      ],
+      "acceptanceCriteria": [
+        "Task history can be retrieved through a stable command surface.",
+        "Recent activity output is deterministic and useful for dashboards/debugging.",
+        "CRUD and transition evidence are both visible through history queries.",
+        "Behavior is test-covered."
+      ]
+    },
+    {
+      "id": "T317",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Implement task summary and blocked-summary query commands",
+      "createdAt": "2026-03-27T15:00:00.000Z",
+      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T311",
+        "T312",
+        "T313",
+        "T314",
+        "T315",
+        "T316"
+      ],
+      "unblocks": [
+        "T318"
+      ],
+      "phase": "Phase 13 — Task Engine lifecycle tightening",
+      "metadata": {
+        "category": "Task engine tightening",
+        "requestedTaskId": "T234"
+      },
+      "approach": "Add explicit dashboard-grade summary commands instead of overloading get-next-actions for all aggregate task insight.",
+      "technicalScope": [
+        "Implement get-task-summary and get-blocked-summary; align with `dashboard-summary` to avoid duplicate math—factor shared pure functions in task-engine module.",
+        "Explicit archived exclusion per T314.",
+        "Stable JSON schema documented in instruction files."
+      ],
+      "acceptanceCriteria": [
+        "Task summary and blocked-summary are available as dedicated commands.",
+        "Output is stable and dashboard-friendly.",
+        "Summaries reflect archived-task exclusion rules correctly.",
+        "Behavior is test-covered."
+      ]
+    },
+    {
+      "id": "T318",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Implement planning-to-task bridge via create-task-from-plan",
+      "createdAt": "2026-03-27T15:00:00.000Z",
+      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T311",
+        "T312",
+        "T313",
+        "T317"
+      ],
+      "unblocks": [],
+      "phase": "Phase 13 — Task Engine lifecycle tightening",
+      "metadata": {
+        "category": "Task engine tightening",
+        "requestedTaskId": "T235"
+      },
+      "approach": "Add a controlled bridge from the planning surface into execution so vetted ideas/plans can become canonical tasks without manual file editing.",
+      "technicalScope": [
+        "Implement create-task-from-plan; input shape from planning module or markdown frontmatter—locked in T311.",
+        "Preserve provenance: `metadata.planRef` or equivalent.",
+        "Tests: valid plan, invalid plan, id collision."
+      ],
+      "acceptanceCriteria": [
+        "Planning outputs can be promoted into canonical task records through the engine.",
+        "Source-to-task provenance is preserved.",
+        "Invalid or incomplete planning inputs are rejected cleanly.",
+        "Behavior is test-covered."
+      ]
     }
   ],
   "transitionLog": [

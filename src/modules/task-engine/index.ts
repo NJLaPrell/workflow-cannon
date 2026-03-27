@@ -3,8 +3,9 @@ import type { TaskStatus } from "./types.js";
 import { maybeSpawnTranscriptHookAfterCompletion } from "../../core/transcript-completion-hook.js";
 import { TaskStore } from "./store.js";
 import { TransitionService } from "./service.js";
-import { TaskEngineError } from "./transitions.js";
+import { TaskEngineError, getAllowedTransitionsFrom } from "./transitions.js";
 import { getNextActions } from "./suggestions.js";
+import { readWorkspaceStatusSnapshot } from "./dashboard-status.js";
 
 export type {
   TaskEntity,
@@ -36,6 +37,7 @@ export {
   dependencyCheckGuard
 } from "./transitions.js";
 export { getNextActions } from "./suggestions.js";
+export { readWorkspaceStatusSnapshot } from "./dashboard-status.js";
 
 function taskStorePath(ctx: { workspacePath: string; effectiveConfig?: Record<string, unknown> }): string | undefined {
   const tasks = ctx.effectiveConfig?.tasks;
@@ -91,6 +93,11 @@ export const taskEngineModule: WorkflowModule = {
           name: "get-next-actions",
           file: "get-next-actions.md",
           description: "Get prioritized next-action suggestions with blocking analysis."
+        },
+        {
+          name: "dashboard-summary",
+          file: "dashboard-summary.md",
+          description: "Stable JSON cockpit summary for UI clients (tasks + maintainer status snapshot)."
         }
       ]
     }
@@ -180,10 +187,69 @@ export const taskEngineModule: WorkflowModule = {
         };
       }
 
+      const historyLimitRaw = args.historyLimit;
+      const historyLimit =
+        typeof historyLimitRaw === "number" && Number.isFinite(historyLimitRaw) && historyLimitRaw > 0
+          ? Math.min(Math.floor(historyLimitRaw), 200)
+          : 50;
+      const log = store.getTransitionLog();
+      const recentTransitions = log
+        .filter((e) => e.taskId === taskId)
+        .sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1))
+        .slice(0, historyLimit);
+
+      const allowedActions = getAllowedTransitionsFrom(task.status as TaskStatus).map(({ to, action }) => ({
+        action,
+        targetStatus: to
+      }));
+
       return {
         ok: true,
         code: "task-retrieved",
-        data: { task } as Record<string, unknown>
+        data: { task, recentTransitions, allowedActions } as Record<string, unknown>
+      };
+    }
+
+    if (command.name === "dashboard-summary") {
+      const tasks = store.getAllTasks();
+      const suggestion = getNextActions(tasks);
+      const workspaceStatus = await readWorkspaceStatusSnapshot(ctx.workspacePath);
+      const readyTop = suggestion.readyQueue.slice(0, 15).map((t) => ({
+        id: t.id,
+        title: t.title,
+        priority: t.priority ?? null,
+        phase: t.phase ?? null
+      }));
+      const blockedTop = suggestion.blockingAnalysis.slice(0, 15);
+
+      const data = {
+        schemaVersion: 1 as const,
+        taskStoreLastUpdated: store.getLastUpdated(),
+        workspaceStatus,
+        stateSummary: suggestion.stateSummary,
+        readyQueueTop: readyTop,
+        readyQueueCount: suggestion.readyQueue.length,
+        blockedSummary: {
+          count: suggestion.blockingAnalysis.length,
+          top: blockedTop
+        },
+        suggestedNext: suggestion.suggestedNext
+          ? {
+              id: suggestion.suggestedNext.id,
+              title: suggestion.suggestedNext.title,
+              status: suggestion.suggestedNext.status,
+              priority: suggestion.suggestedNext.priority ?? null,
+              phase: suggestion.suggestedNext.phase ?? null
+            }
+          : null,
+        blockingAnalysis: suggestion.blockingAnalysis
+      } satisfies Record<string, unknown>;
+
+      return {
+        ok: true,
+        code: "dashboard-summary",
+        message: "Dashboard summary built from task store and maintainer status snapshot",
+        data
       };
     }
 

@@ -104,4 +104,8 @@ export class TaskStore {
   getFilePath(): string {
     return this.filePath;
   }
+
+  getLastUpdated(): string {
+    return this.document.lastUpdated;
+  }
 }

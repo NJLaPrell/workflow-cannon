@@ -523,6 +523,7 @@ test("taskEngineModule registration includes all instruction entries", () => {
   assert.ok(names.includes("list-tasks"));
   assert.ok(names.includes("get-ready-queue"));
   assert.ok(names.includes("get-next-actions"));
+  assert.ok(names.includes("dashboard-summary"));
 });
 
 test("taskEngineModule passes ModuleRegistry validation", () => {
@@ -547,6 +548,52 @@ test("taskEngineModule onCommand get-task returns task-not-found for missing tas
   );
   assert.equal(result.ok, false);
   assert.equal(result.code, "task-not-found");
+});
+
+test("taskEngineModule onCommand get-task includes recentTransitions after transitions", async () => {
+  const workspace = await tmpDir();
+  const store = new TaskStore(workspace);
+  store.addTask(makeTask({ id: "T001", status: "ready" }));
+  await store.save();
+
+  const ctx = { runtimeVersion: "0.1", workspacePath: workspace };
+  let r = await taskEngineModule.onCommand(
+    { name: "run-transition", args: { taskId: "T001", action: "start" } },
+    ctx
+  );
+  assert.equal(r.ok, true);
+
+  r = await taskEngineModule.onCommand({ name: "get-task", args: { taskId: "T001", historyLimit: 10 } }, ctx);
+  assert.equal(r.ok, true);
+  assert.equal(r.data.task.status, "in_progress");
+  assert.ok(Array.isArray(r.data.recentTransitions));
+  assert.ok(r.data.recentTransitions.length >= 1);
+  assert.equal(r.data.recentTransitions[0].taskId, "T001");
+  assert.equal(r.data.recentTransitions[0].action, "start");
+  assert.ok(Array.isArray(r.data.allowedActions));
+  const actions = r.data.allowedActions.map((x) => x.action).sort();
+  assert.ok(actions.includes("complete"));
+  assert.ok(actions.includes("block"));
+});
+
+test("taskEngineModule onCommand dashboard-summary returns stable shape", async () => {
+  const workspace = await tmpDir();
+  const store = new TaskStore(workspace);
+  store.addTask(makeTask({ id: "T001", status: "ready", priority: "P1" }));
+  await store.save();
+
+  const ctx = { runtimeVersion: "0.1", workspacePath: workspace };
+  const result = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "dashboard-summary");
+  const d = result.data;
+  assert.equal(d.schemaVersion, 1);
+  assert.ok(typeof d.taskStoreLastUpdated === "string");
+  assert.equal(d.stateSummary.ready, 1);
+  assert.equal(d.readyQueueCount, 1);
+  assert.equal(d.suggestedNext.id, "T001");
+  assert.ok(Array.isArray(d.blockingAnalysis));
+  assert.ok("blockedSummary" in d);
 });
 
 test("taskEngineModule onCommand run-transition validates required args", async () => {

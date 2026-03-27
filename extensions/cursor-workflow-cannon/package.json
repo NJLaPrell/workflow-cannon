@@ -1,0 +1,85 @@
+{
+  "name": "cursor-workflow-cannon",
+  "displayName": "Workflow Cannon",
+  "description": "Thin client UI for Workflow Cannon — dashboard, tasks, and config via workspace-kit CLI.",
+  "version": "0.1.0",
+  "publisher": "workflow-cannon",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "workspaceContains:.workspace-kit/manifest.json"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "workflow-cannon",
+          "title": "Workflow Cannon",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "workflow-cannon": [
+        {
+          "type": "webview",
+          "id": "workflowCannon.dashboard",
+          "name": "Dashboard"
+        },
+        {
+          "id": "workflowCannon.tasks",
+          "name": "Tasks"
+        },
+        {
+          "type": "webview",
+          "id": "workflowCannon.config",
+          "name": "Config"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "workflowCannon.openDashboard",
+        "title": "Workflow Cannon: Open Dashboard"
+      },
+      {
+        "command": "workflowCannon.refreshDashboard",
+        "title": "Workflow Cannon: Refresh Dashboard"
+      },
+      {
+        "command": "workflowCannon.showReadyQueue",
+        "title": "Workflow Cannon: Show Ready Queue"
+      },
+      {
+        "command": "workflowCannon.refreshTasks",
+        "title": "Workflow Cannon: Refresh Tasks"
+      },
+      {
+        "command": "workflowCannon.validateConfig",
+        "title": "Workflow Cannon: Validate Config"
+      },
+      {
+        "command": "workflowCannon.task.pickAction",
+        "title": "Workflow Cannon: Task Action"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "check": "tsc -p ./ --noEmit",
+    "package": "npm run compile"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.9.3"
+  }
+}

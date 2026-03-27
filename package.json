@@ -34,7 +34,8 @@
     "phase5-gates": "pnpm run phase4-gates && pnpm run test",
     "pre-release-transcript-hook": "pnpm run build && node scripts/pre-release-transcript-hook.mjs",
     "transcript:sync": "node scripts/run-transcript-cli.mjs sync-transcripts",
-    "transcript:ingest": "node scripts/run-transcript-cli.mjs ingest-transcripts"
+    "transcript:ingest": "node scripts/run-transcript-cli.mjs ingest-transcripts",
+    "ext:compile": "cd extensions/cursor-workflow-cannon && npm run compile"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",

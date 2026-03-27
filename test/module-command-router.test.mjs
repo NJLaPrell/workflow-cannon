@@ -21,6 +21,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
 
   const commandNames = router.listCommands().map((command) => command.name);
   assert.deepEqual(commandNames, [
+    "dashboard-summary",
     "document-project",
     "explain-config",
     "generate-document",
