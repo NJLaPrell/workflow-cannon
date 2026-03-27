@@ -16,7 +16,7 @@ pending_decisions: []
 metrics:
   updated_at: "2026-03-27"
   source: "maintainer"
-  notes: "v0.16.0 Phase 15 published via workflow run 23658822630; v0.15.0 Phase 14 (23656475480); v0.14.0 Phase 13 (23650389235)."
+  notes: "v0.16.1 patch published via workflow run 23659070618; v0.16.0 Phase 15 (23658822630); v0.15.0 Phase 14 (23656475480)."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null

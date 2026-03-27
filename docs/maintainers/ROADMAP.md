@@ -226,4 +226,5 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 - Phase 13 / `v0.14.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23650389235`
 - Phase 14 / `v0.15.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23656475480`
 - Phase 15 / `v0.16.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23658822630`
+- Patch **`v0.16.1`** (doctor SQLite validation + persisted `tasks.*` SQLite keys): publish workflow `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23659070618`
 - npm package: `https://www.npmjs.com/package/@workflow-cannon/workspace-kit`
