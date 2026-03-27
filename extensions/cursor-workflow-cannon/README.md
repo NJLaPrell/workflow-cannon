@@ -36,3 +36,40 @@ Open the **Workflow Cannon** activity bar to use Dashboard (webview), Tasks (tre
 ## CLI bridge
 
 The extension runs `node <repo>/dist/cli.js` (or the published package path under `node_modules`). If dashboard/tasks fail with “CLI not found”, run `pnpm run build` at the repo root.
+
+## Testing
+
+- Unit + integration tests (Node-only, no Cursor binary):
+
+```bash
+cd extensions/cursor-workflow-cannon
+npm test
+```
+
+- Root build is required first because integration tests invoke real `dist/cli.js` from the repository:
+
+```bash
+pnpm run build
+cd extensions/cursor-workflow-cannon
+npm test
+```
+
+## Commands and operations
+
+- `Workflow Cannon: Open Dashboard`
+- `Workflow Cannon: Refresh Dashboard`
+- `Workflow Cannon: Show Ready Queue`
+- `Workflow Cannon: Refresh Tasks`
+- `Workflow Cannon: Validate Config`
+- `Workflow Cannon: Task Action`
+- `Workflow Cannon: Show Task Detail`
+- `Workflow Cannon: Start Task`
+- `Workflow Cannon: Complete Task`
+- `Workflow Cannon: Block Task`
+- `Workflow Cannon: Pause Task`
+- `Workflow Cannon: Unblock Task`
+
+Manual operator checklist: `docs/e2e.md`  
+Security notes: `SECURITY.md`
+
+Dashboard contract example: `docs/fixtures/dashboard-summary.example.json`

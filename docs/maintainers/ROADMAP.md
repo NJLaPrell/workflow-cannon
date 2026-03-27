@@ -24,7 +24,8 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - **Phase 9 (Interactive policy UX + response-template enforcement)** is **COMPLETE** and ships as **`v0.11.0`** with Phase 10: **`T283`** interactive approval for sensitive `workspace-kit run`; **`T284`** strict response-template validation including default/override ids and explicit-vs-directive conflicts.
 - **Phase 10 (Agent/CLI parity)** is **COMPLETE** and ships as **`v0.11.0`**: **`T285`–`T291`** — Agent CLI map, CLI-first **`AGENTS.md`** / **`.ai/AGENTS.md`**, Cursor rule, `/qt` template persistence labels, `doctor` / `run` discovery hints, multi-turn session docs, optional advisory hand-edit check for task state.
 - **Phase 11 (Architectural review follow-up)** is **COMPLETE and released** as **`v0.12.0`**: **`T292`–`T295`** — policy/session denial edge tests, task-store + policy-trace contention semantics tests, release doc consistency checklist linkage, and runtime path audit notes.
-- **Phase 12 (Cursor native UI thin client)** is **READY / in progress**: **`T296`–`T310`** — extension thin-client dashboard/tasks/config surfaces, security pass, and extension test/e2e coverage.
+- **Phase 12 (Cursor native UI thin client)** is **COMPLETE and released** as **`v0.13.0`**: **`T296`–`T310`** — extension thin-client dashboard/tasks/config surfaces, security pass, and extension test/e2e coverage.
+- **Phase 13 (Task Engine lifecycle tightening)** is **READY / in progress**: **`T311`+** — task CRUD/query/dependency/history contract expansion and execution bridging.
 - Historical extraction and first-publish milestones remain recorded below as provenance.
 
 ## Phase plan and release cadence
@@ -158,7 +159,7 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
   - `pnpm run build`, `check`, `test`, and `parity` pass.
   - Maintainer docs include explicit concurrency semantics and pre-release doc consistency sweep guidance.
 
-### Phase 12 - Cursor native UI (thin client) -> GitHub release `v0.13.0` (planned)
+### Phase 12 - Cursor native UI (thin client) -> GitHub release `v0.13.0` (COMPLETE)
 
 - Primary scope: **`T296`–`T310`**.
 - Outcome: extension-backed thin UI for workspace health/tasks/config powered by stable `workspace-kit run` JSON contracts, with security and test coverage.
@@ -191,4 +192,5 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 - Phase 8 / `v0.10.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23624912236`
 - Phase 9-10 / `v0.11.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23628501468`
 - Phase 11 / `v0.12.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23635032123`
+- Phase 12 / `v0.13.0` publish workflow run: _pending_
 - npm package: `https://www.npmjs.com/package/@workflow-cannon/workspace-kit`

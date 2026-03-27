@@ -6,6 +6,23 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-03-27
+
+Phase 12 — Cursor native UI thin-client delivery and extension trust/test hardening.
+
+### Added
+
+- Cursor extension Node-only test suite under `extensions/cursor-workflow-cannon/test/` covering command-client parsing, workspace detection, task grouping, and integration invocation against real repo `dist/cli.js`.
+- Extension operator/security docs: `extensions/cursor-workflow-cannon/docs/e2e.md`, `extensions/cursor-workflow-cannon/SECURITY.md`, and dashboard contract fixture `extensions/cursor-workflow-cannon/docs/fixtures/dashboard-summary.example.json`.
+- Additional task-focused palette commands (`Start`, `Complete`, `Block`, `Pause`, `Unblock`) and `Show Task Detail`.
+
+### Changed
+
+- Dashboard view now includes quick actions (refresh, validate config, open tasks/config) and explicit `policy-denied` guidance.
+- Config view now supports list/explain/validate and set/unset via `workspace-kit config` command surfaces (no direct file writes).
+- Task interactions now include detail rendering from `get-task` contract and guarded transition confirmation prompts.
+- Extension status bar now surfaces ready-queue count from `dashboard-summary`.
+
 ## [0.12.0] - 2026-03-27
 
 Phase 11 — architectural review follow-up hardening and release-process alignment.

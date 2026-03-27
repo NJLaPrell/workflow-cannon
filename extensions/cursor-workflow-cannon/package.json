@@ -68,6 +68,30 @@
       {
         "command": "workflowCannon.task.pickAction",
         "title": "Workflow Cannon: Task Action"
+      },
+      {
+        "command": "workflowCannon.task.showDetail",
+        "title": "Workflow Cannon: Show Task Detail"
+      },
+      {
+        "command": "workflowCannon.task.start",
+        "title": "Workflow Cannon: Start Task"
+      },
+      {
+        "command": "workflowCannon.task.complete",
+        "title": "Workflow Cannon: Complete Task"
+      },
+      {
+        "command": "workflowCannon.task.block",
+        "title": "Workflow Cannon: Block Task"
+      },
+      {
+        "command": "workflowCannon.task.pause",
+        "title": "Workflow Cannon: Pause Task"
+      },
+      {
+        "command": "workflowCannon.task.unblock",
+        "title": "Workflow Cannon: Unblock Task"
       }
     ]
   },
@@ -75,7 +99,8 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "check": "tsc -p ./ --noEmit",
-    "package": "npm run compile"
+    "package": "npm run compile",
+    "test": "npm run compile && node --test test/**/*.test.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

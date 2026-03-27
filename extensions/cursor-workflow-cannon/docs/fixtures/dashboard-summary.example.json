@@ -1,0 +1,30 @@
+{
+  "ok": true,
+  "code": "dashboard-summary",
+  "message": "Dashboard summary built from task store and maintainer status snapshot",
+  "data": {
+    "schemaVersion": 1,
+    "workspaceStatus": {
+      "currentKitPhase": "12",
+      "activeFocus": "Phase 12 — Cursor native UI (thin client): execute T296–T310 after Phase 11 follow-up completion."
+    },
+    "stateSummary": {
+      "proposed": 0,
+      "ready": 23,
+      "in_progress": 0,
+      "blocked": 0,
+      "completed": 123,
+      "cancelled": 0,
+      "total": 146
+    },
+    "readyQueueCount": 23,
+    "suggestedNext": {
+      "id": "T296",
+      "title": "[Cursor extension / kit] Stable JSON dashboard and project-health summary for thin UI clients",
+      "status": "ready",
+      "priority": "P1",
+      "phase": "Phase 12 — Cursor native UI (thin client)"
+    },
+    "blockingAnalysis": []
+  }
+}

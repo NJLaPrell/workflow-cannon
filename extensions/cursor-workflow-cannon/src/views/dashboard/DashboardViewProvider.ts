@@ -27,9 +27,20 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       localResourceRoots: [this.extensionUri]
     };
     webviewView.webview.html = this.html();
-    webviewView.webview.onDidReceiveMessage((msg) => {
+    webviewView.webview.onDidReceiveMessage(async (msg) => {
       if (msg?.type === "refresh") {
-        void this.pushUpdate();
+        await this.pushUpdate();
+      }
+      if (msg?.type === "validateConfig") {
+        await vscode.commands.executeCommand("workflowCannon.validateConfig");
+      }
+      if (msg?.type === "openTasks") {
+        await vscode.commands.executeCommand("workbench.view.extension.workflow-cannon");
+        await vscode.commands.executeCommand("workflowCannon.refreshTasks");
+      }
+      if (msg?.type === "openConfig") {
+        await vscode.commands.executeCommand("workbench.view.extension.workflow-cannon");
+        await vscode.commands.executeCommand("workflowCannon.validateConfig");
       }
     });
     void this.pushUpdate();
@@ -48,11 +59,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   }
 
   private html(): string {
-    const csp = [
-      "default-src 'none'",
-      "style-src 'unsafe-inline'",
-      "script-src 'unsafe-inline'"
-    ].join("; ");
+    const csp = ["default-src 'none'", "style-src 'unsafe-inline'", "script-src 'unsafe-inline'"].join("; ");
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -74,19 +81,33 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   <h1>Dashboard</h1>
   <p class="muted">Data from <code>workspace-kit run dashboard-summary</code> — no direct file reads.</p>
   <div id="root">Loading…</div>
-  <button id="btn">Refresh</button>
+  <div>
+    <button id="btn">Refresh</button>
+    <button id="validate">Validate Config</button>
+    <button id="tasks">Open Tasks</button>
+    <button id="config">Open Config</button>
+  </div>
   <script>
     const vscode = acquireVsCodeApi();
     const root = document.getElementById('root');
     const btn = document.getElementById('btn');
+    const validate = document.getElementById('validate');
+    const tasks = document.getElementById('tasks');
+    const config = document.getElementById('config');
     btn.addEventListener('click', () => vscode.postMessage({ type: 'refresh' }));
+    validate.addEventListener('click', () => vscode.postMessage({ type: 'validateConfig' }));
+    tasks.addEventListener('click', () => vscode.postMessage({ type: 'openTasks' }));
+    config.addEventListener('click', () => vscode.postMessage({ type: 'openConfig' }));
     window.addEventListener('message', (ev) => {
       const msg = ev.data;
       if (msg?.type !== 'dashboard') return;
       const p = msg.payload;
       if (!p) { root.textContent = 'No payload'; return; }
       if (!p.ok) {
-        root.innerHTML = '<pre class="bad">' + JSON.stringify(p, null, 2) + '</pre>';
+        const guidance = p.code === 'policy-denied'
+          ? '\\n\\nPolicy denied: provide policyApproval rationale/session scope where required.'
+          : '';
+        root.innerHTML = '<pre class="bad">' + JSON.stringify(p, null, 2) + guidance + '</pre>';
         return;
       }
       const d = p.data || {};

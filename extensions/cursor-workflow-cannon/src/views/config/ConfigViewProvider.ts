@@ -24,6 +24,13 @@ export class ConfigViewProvider implements vscode.WebviewViewProvider {
     };
     webviewView.webview.html = this.html();
     webviewView.webview.onDidReceiveMessage(async (msg) => {
+      if (msg?.type === "list") {
+        const r = await this.client.config(["list", "--json"]);
+        await webviewView.webview.postMessage({
+          type: "listResult",
+          payload: this.parseConfigJson(r)
+        });
+      }
       if (msg?.type === "explain" && typeof msg.key === "string") {
         const r = await this.client.run("explain-config", { path: msg.key.trim() });
         await webviewView.webview.postMessage({ type: "explainResult", payload: r });
@@ -35,7 +42,29 @@ export class ConfigViewProvider implements vscode.WebviewViewProvider {
           payload: { code: r.code, text: r.stdout + (r.stderr ? "\n" + r.stderr : "") }
         });
       }
+      if (msg?.type === "set" && typeof msg.key === "string" && typeof msg.value === "string") {
+        const r = await this.client.config(["set", msg.key.trim(), msg.value]);
+        await webviewView.webview.postMessage({
+          type: "setResult",
+          payload: { code: r.code, text: r.stdout + (r.stderr ? "\n" + r.stderr : "") }
+        });
+      }
+      if (msg?.type === "unset" && typeof msg.key === "string") {
+        const r = await this.client.config(["unset", msg.key.trim()]);
+        await webviewView.webview.postMessage({
+          type: "unsetResult",
+          payload: { code: r.code, text: r.stdout + (r.stderr ? "\n" + r.stderr : "") }
+        });
+      }
     });
+  }
+
+  private parseConfigJson(r: { code: number; stdout: string; stderr: string }): unknown {
+    try {
+      return JSON.parse(r.stdout);
+    } catch {
+      return { ok: false, code: "config-json-parse", message: r.stderr || r.stdout || `exit ${r.code}` };
+    }
   }
 
   private async notifyRefresh(): Promise<void> {
@@ -61,21 +90,36 @@ export class ConfigViewProvider implements vscode.WebviewViewProvider {
 <body>
   <label>Config key path</label>
   <input id="key" placeholder="tasks.storeRelativePath" />
+  <label>JSON value (for set)</label>
+  <input id="value" placeholder="\\".workspace-kit/tasks/state.json\\"" />
   <div>
+    <button id="list">List Keys</button>
     <button id="explain">Explain (run explain-config)</button>
     <button id="validate">Validate (config validate)</button>
+    <button id="set">Set (config set)</button>
+    <button id="unset">Unset (config unset)</button>
   </div>
   <pre id="out"></pre>
   <p style="opacity:0.75">Mutating <code>config set</code> requires terminal approval env — use CLI or add explicit flow later.</p>
   <script>
     const vscode = acquireVsCodeApi();
     const keyEl = document.getElementById('key');
+    const valueEl = document.getElementById('value');
     const out = document.getElementById('out');
+    document.getElementById('list').onclick = () => {
+      vscode.postMessage({ type: 'list' });
+    };
     document.getElementById('explain').onclick = () => {
       vscode.postMessage({ type: 'explain', key: keyEl.value });
     };
     document.getElementById('validate').onclick = () => {
       vscode.postMessage({ type: 'validate' });
+    };
+    document.getElementById('set').onclick = () => {
+      vscode.postMessage({ type: 'set', key: keyEl.value, value: valueEl.value });
+    };
+    document.getElementById('unset').onclick = () => {
+      vscode.postMessage({ type: 'unset', key: keyEl.value });
     };
     window.addEventListener('message', (ev) => {
       const m = ev.data;
@@ -83,6 +127,12 @@ export class ConfigViewProvider implements vscode.WebviewViewProvider {
         out.textContent = JSON.stringify(m.payload, null, 2);
       }
       if (m?.type === 'validateResult') {
+        out.textContent = 'exit ' + m.payload.code + '\\n' + m.payload.text;
+      }
+      if (m?.type === 'listResult') {
+        out.textContent = JSON.stringify(m.payload, null, 2);
+      }
+      if (m?.type === 'setResult' || m?.type === 'unsetResult') {
         out.textContent = 'exit ' + m.payload.code + '\\n' + m.payload.text;
       }
     });

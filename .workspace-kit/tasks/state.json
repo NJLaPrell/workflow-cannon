@@ -3644,11 +3644,11 @@
     },
     {
       "id": "T296",
-      "status": "ready",
+      "status": "completed",
       "type": "workspace-kit",
       "title": "[Cursor extension / kit] Stable JSON dashboard and project-health summary for thin UI clients",
       "createdAt": "2026-03-27T14:00:00.000Z",
-      "updatedAt": "2026-03-27T16:30:00.000Z",
+      "updatedAt": "2026-03-27T07:11:00.903Z",
       "priority": "P1",
       "dependsOn": [],
       "unblocks": [
@@ -3675,11 +3675,11 @@
     },
     {
       "id": "T297",
-      "status": "ready",
+      "status": "completed",
       "type": "workspace-kit",
       "title": "[Cursor extension / kit] Structured task detail including transition history for UI",
       "createdAt": "2026-03-27T14:00:00.000Z",
-      "updatedAt": "2026-03-27T16:30:00.000Z",
+      "updatedAt": "2026-03-27T07:11:01.020Z",
       "priority": "P1",
       "dependsOn": [],
       "unblocks": [
@@ -3706,11 +3706,11 @@
     },
     {
       "id": "T298",
-      "status": "ready",
+      "status": "completed",
       "type": "workspace-kit",
       "title": "[Cursor extension] VS Code/Cursor extension scaffold and packaging under extensions/cursor-workflow-cannon",
       "createdAt": "2026-03-27T14:00:00.000Z",
-      "updatedAt": "2026-03-27T16:30:00.000Z",
+      "updatedAt": "2026-03-27T07:11:01.137Z",
       "priority": "P1",
       "dependsOn": [],
       "unblocks": [
@@ -3738,11 +3738,11 @@
     },
     {
       "id": "T299",
-      "status": "ready",
+      "status": "completed",
       "type": "workspace-kit",
       "title": "[Cursor extension] Workflow Cannon workspace detection and non-intrusive activation",
       "createdAt": "2026-03-27T14:00:00.000Z",
-      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "updatedAt": "2026-03-27T07:11:01.254Z",
       "priority": "P1",
       "dependsOn": [
         "T298"
@@ -3771,11 +3771,11 @@
     },
     {
       "id": "T300",
-      "status": "ready",
+      "status": "completed",
       "type": "workspace-kit",
       "title": "[Cursor extension] CLI command client (JSON in/out, cwd, error normalization)",
       "createdAt": "2026-03-27T14:00:00.000Z",
-      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "updatedAt": "2026-03-27T07:11:01.370Z",
       "priority": "P1",
       "dependsOn": [
         "T298"
@@ -3804,11 +3804,11 @@
     },
     {
       "id": "T301",
-      "status": "ready",
+      "status": "completed",
       "type": "workspace-kit",
       "title": "[Cursor extension] State watcher and debounced refresh/event bus",
       "createdAt": "2026-03-27T14:00:00.000Z",
-      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "updatedAt": "2026-03-27T07:11:01.487Z",
       "priority": "P2",
       "dependsOn": [
         "T298"
@@ -3836,11 +3836,11 @@
     },
     {
       "id": "T302",
-      "status": "ready",
+      "status": "completed",
       "type": "workspace-kit",
       "title": "[Cursor extension] Activity Bar, sidebar views, and webview hosts (Dashboard / Tasks / Config)",
       "createdAt": "2026-03-27T14:00:00.000Z",
-      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "updatedAt": "2026-03-27T07:11:01.604Z",
       "priority": "P1",
       "dependsOn": [
         "T299",
@@ -3873,11 +3873,11 @@
     },
     {
       "id": "T303",
-      "status": "ready",
+      "status": "completed",
       "type": "workspace-kit",
       "title": "[Cursor extension] Dashboard webview (cockpit data, quick actions, validation feedback)",
       "createdAt": "2026-03-27T14:00:00.000Z",
-      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "updatedAt": "2026-03-27T07:11:01.721Z",
       "priority": "P1",
       "dependsOn": [
         "T296",
@@ -3905,11 +3905,11 @@
     },
     {
       "id": "T304",
-      "status": "ready",
+      "status": "completed",
       "type": "workspace-kit",
       "title": "[Cursor extension] Tasks tree, detail panel, and lifecycle actions via run-transition",
       "createdAt": "2026-03-27T14:00:00.000Z",
-      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "updatedAt": "2026-03-27T07:11:01.846Z",
       "priority": "P1",
       "dependsOn": [
         "T297",
@@ -3938,11 +3938,11 @@
     },
     {
       "id": "T305",
-      "status": "ready",
+      "status": "completed",
       "type": "workspace-kit",
       "title": "[Cursor extension] Config webview: list, search, explain, validate, set/unset via kit only",
       "createdAt": "2026-03-27T14:00:00.000Z",
-      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "updatedAt": "2026-03-27T07:11:02.073Z",
       "priority": "P1",
       "dependsOn": [
         "T302"
@@ -3970,11 +3970,11 @@
     },
     {
       "id": "T306",
-      "status": "ready",
+      "status": "completed",
       "type": "workspace-kit",
       "title": "[Cursor extension] Command palette commands and optional status bar summary",
       "createdAt": "2026-03-27T14:00:00.000Z",
-      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "updatedAt": "2026-03-27T07:11:02.191Z",
       "priority": "P2",
       "dependsOn": [
         "T302"
@@ -4001,11 +4001,11 @@
     },
     {
       "id": "T307",
-      "status": "ready",
+      "status": "completed",
       "type": "workspace-kit",
       "title": "[Cursor extension] Security and trust pass: sanitization, policy UX, no silent mutation",
       "createdAt": "2026-03-27T14:00:00.000Z",
-      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "updatedAt": "2026-03-27T07:11:02.307Z",
       "priority": "P1",
       "dependsOn": [
         "T303",
@@ -4034,11 +4034,11 @@
     },
     {
       "id": "T308",
-      "status": "ready",
+      "status": "completed",
       "type": "workspace-kit",
       "title": "[Cursor extension] Unit tests: command client, workspace detection, tree mapping",
       "createdAt": "2026-03-27T14:00:00.000Z",
-      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "updatedAt": "2026-03-27T07:11:02.424Z",
       "priority": "P2",
       "dependsOn": [
         "T304"
@@ -4067,11 +4067,11 @@
     },
     {
       "id": "T309",
-      "status": "ready",
+      "status": "completed",
       "type": "workspace-kit",
       "title": "[Cursor extension] Integration tests: extension against fixture workspace and real workspace-kit",
       "createdAt": "2026-03-27T14:00:00.000Z",
-      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "updatedAt": "2026-03-27T07:11:02.540Z",
       "priority": "P2",
       "dependsOn": [
         "T304",
@@ -4101,11 +4101,11 @@
     },
     {
       "id": "T310",
-      "status": "ready",
+      "status": "completed",
       "type": "workspace-kit",
       "title": "[Cursor extension] Manual E2E checklist and fixture documentation for operators",
       "createdAt": "2026-03-27T14:00:00.000Z",
-      "updatedAt": "2026-03-27T02:25:24.449Z",
+      "updatedAt": "2026-03-27T07:11:02.656Z",
       "priority": "P3",
       "dependsOn": [
         "T308",
@@ -5187,7 +5187,607 @@
       "dependentsUnblocked": [],
       "timestamp": "2026-03-27T06:51:59.266Z",
       "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T296-2026-03-27T07:11:00.845Z-6285ec51",
+      "taskId": "T296",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T07:11:00.845Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T296-2026-03-27T07:11:00.903Z-e30042a0",
+      "taskId": "T296",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T07:11:00.903Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T297-2026-03-27T07:11:00.960Z-b0db78ee",
+      "taskId": "T297",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T07:11:00.960Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T297-2026-03-27T07:11:01.020Z-133b83d6",
+      "taskId": "T297",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T07:11:01.020Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T298-2026-03-27T07:11:01.078Z-d4bb38e8",
+      "taskId": "T298",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T07:11:01.078Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T298-2026-03-27T07:11:01.137Z-ea874cb4",
+      "taskId": "T298",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T07:11:01.137Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T299-2026-03-27T07:11:01.196Z-951088f5",
+      "taskId": "T299",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T07:11:01.196Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T299-2026-03-27T07:11:01.254Z-78818ac6",
+      "taskId": "T299",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T07:11:01.254Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T300-2026-03-27T07:11:01.312Z-37def360",
+      "taskId": "T300",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T07:11:01.312Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T300-2026-03-27T07:11:01.370Z-8b6597c1",
+      "taskId": "T300",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T07:11:01.370Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T301-2026-03-27T07:11:01.429Z-d7ecdfd1",
+      "taskId": "T301",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T07:11:01.429Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T301-2026-03-27T07:11:01.487Z-9f23dd30",
+      "taskId": "T301",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T07:11:01.487Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T302-2026-03-27T07:11:01.545Z-d1799987",
+      "taskId": "T302",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T07:11:01.545Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T302-2026-03-27T07:11:01.604Z-aa0e227b",
+      "taskId": "T302",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T07:11:01.604Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T303-2026-03-27T07:11:01.663Z-dfe1844b",
+      "taskId": "T303",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T07:11:01.663Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T303-2026-03-27T07:11:01.721Z-9633a4f8",
+      "taskId": "T303",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T07:11:01.721Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T304-2026-03-27T07:11:01.780Z-e0c5e523",
+      "taskId": "T304",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T07:11:01.780Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T304-2026-03-27T07:11:01.846Z-511ae4f0",
+      "taskId": "T304",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T07:11:01.846Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T305-2026-03-27T07:11:02.012Z-10e9accf",
+      "taskId": "T305",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T07:11:02.012Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T305-2026-03-27T07:11:02.073Z-a81ff412",
+      "taskId": "T305",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T07:11:02.073Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T306-2026-03-27T07:11:02.132Z-4cdff2d2",
+      "taskId": "T306",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T07:11:02.132Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T306-2026-03-27T07:11:02.191Z-0c606450",
+      "taskId": "T306",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T07:11:02.191Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T307-2026-03-27T07:11:02.248Z-02253aae",
+      "taskId": "T307",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T07:11:02.248Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T307-2026-03-27T07:11:02.307Z-e39e09a5",
+      "taskId": "T307",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T07:11:02.307Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T308-2026-03-27T07:11:02.365Z-dc4a8f43",
+      "taskId": "T308",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T07:11:02.365Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T308-2026-03-27T07:11:02.424Z-b1e43282",
+      "taskId": "T308",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T07:11:02.424Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T309-2026-03-27T07:11:02.481Z-832f7418",
+      "taskId": "T309",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T07:11:02.481Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T309-2026-03-27T07:11:02.540Z-81d80d03",
+      "taskId": "T309",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T07:11:02.540Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T310-2026-03-27T07:11:02.598Z-ab636b48",
+      "taskId": "T310",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T07:11:02.598Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T310-2026-03-27T07:11:02.656Z-9fcb4221",
+      "taskId": "T310",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T07:11:02.656Z",
+      "actor": "NJLaPrell@gmail.com"
     }
   ],
-  "lastUpdated": "2026-03-27T06:51:59.266Z"
+  "lastUpdated": "2026-03-27T07:11:02.656Z"
 }

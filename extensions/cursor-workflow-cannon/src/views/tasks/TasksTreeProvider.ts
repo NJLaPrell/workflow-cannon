@@ -1,19 +1,11 @@
 import * as vscode from "vscode";
 import type { CommandClient } from "../../runtime/command-client.js";
+import { groupTasksByStatus } from "./grouping.js";
 
-type TaskEntity = {
-  id: string;
-  title: string;
-  status: string;
-  priority?: string;
-  phase?: string;
-};
-
+type TaskEntity = { id: string; title: string; status: string; priority?: string; phase?: string };
 type WkGroup = { kind: "group"; label: string; status: string; tasks: TaskEntity[] };
 type WkTask = { kind: "task"; task: TaskEntity };
 type WkNode = WkGroup | WkTask;
-
-const STATUS_ORDER = ["ready", "in_progress", "blocked", "proposed", "completed", "cancelled"];
 
 export class TasksTreeProvider implements vscode.TreeDataProvider<WkNode> {
   private _onDidChange = new vscode.EventEmitter<WkNode | undefined | void>();
@@ -43,8 +35,8 @@ export class TasksTreeProvider implements vscode.TreeDataProvider<WkNode> {
     ti.tooltip = `${t.status}${t.priority ? ` · ${t.priority}` : ""}\n${t.title}`;
     ti.contextValue = "wkcTask";
     ti.command = {
-      command: "workflowCannon.task.pickAction",
-      title: "Task actions",
+      command: "workflowCannon.task.showDetail",
+      title: "Task detail",
       arguments: [t.id]
     };
     return ti;
@@ -66,28 +58,11 @@ export class TasksTreeProvider implements vscode.TreeDataProvider<WkNode> {
       return [];
     }
     const tasks = (r.data as { tasks: TaskEntity[] }).tasks;
-    const byStatus = new Map<string, TaskEntity[]>();
-    for (const s of STATUS_ORDER) {
-      byStatus.set(s, []);
-    }
-    for (const t of tasks) {
-      const bucket = byStatus.get(t.status) ?? [];
-      bucket.push(t);
-      byStatus.set(t.status, bucket);
-    }
-    const out: WkGroup[] = [];
-    for (const status of STATUS_ORDER) {
-      const list = byStatus.get(status) ?? [];
-      if (list.length === 0) {
-        continue;
-      }
-      out.push({
-        kind: "group",
-        status,
-        label: `${status} (${list.length})`,
-        tasks: list
-      });
-    }
-    return out;
+    return groupTasksByStatus(tasks).map((g) => ({
+      kind: "group" as const,
+      status: g.status,
+      label: g.label,
+      tasks: g.tasks
+    }));
   }
 }

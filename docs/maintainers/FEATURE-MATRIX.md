@@ -26,7 +26,7 @@ Status legend:
 | Phase 9 - Interactive policy UX + template enforcement (`T283`, `T284`) | `v0.11.0` | Completed |
 | Phase 10 - Agent/CLI parity (`T285`–`T291`) | `v0.11.0` | Completed |
 | Phase 11 - Architectural review follow-up (`T292`–`T295`) | `v0.12.0` | Completed |
-| Phase 12 - Cursor native UI thin client (`T296`–`T310`) | `v0.13.0` | In progress / ready |
+| Phase 12 - Cursor native UI thin client (`T296`–`T310`) | `v0.13.0` | Completed |
 
 ## Feature Matrix by Phase
 
@@ -183,13 +183,13 @@ Status legend:
 | Release-time doc consistency sweep | Pre-release checklist step linking planning consistency checks and canonical doc surfaces | Completed | `T294` |
 | Runtime path assumption audit | Recorded non-doc runtime audit with compatibility-safe findings and regression coverage | Completed | `T295` |
 
-### Phase 12 Cursor native UI thin client (`v0.13.0`, planned/in progress)
+### Phase 12 Cursor native UI thin client (`v0.13.0`)
 
 | Product feature | What users/maintainers get | Status | Task coverage |
 | --- | --- | --- | --- |
-| Kit dashboard/task/config backend contracts for UI | Stable JSON command outputs and extension integration points for thin clients | In progress / ready | `T296`, `T297` |
-| Cursor extension shell and UI surfaces | Extension scaffold, activity-bar views, dashboard/tasks/config UI, palette commands | In progress / ready | `T298`–`T306` |
-| Security and verification for extension workflows | Security/trust pass plus unit/integration/manual-E2E coverage | In progress / ready | `T307`–`T310` |
+| Kit dashboard/task/config backend contracts for UI | Stable JSON command outputs and extension integration points for thin clients | Completed | `T296`, `T297` |
+| Cursor extension shell and UI surfaces | Extension scaffold, activity-bar views, dashboard/tasks/config UI, palette commands | Completed | `T298`–`T306` |
+| Security and verification for extension workflows | Security/trust pass plus unit/integration/manual-E2E coverage | Completed | `T307`–`T310` |
 
 ## Supporting Milestone Features (cross-phase)
 

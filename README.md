@@ -67,7 +67,8 @@ This keeps automation adaptive without sacrificing safety, governance, or develo
 - **Phase 8** ships maintainer/onboarding hardening (`v0.10.0`): policy denial clarity, runbooks, and doc alignment for CLI vs `run` approval.
 - **Phase 9–10** ship agent/onboarding parity (`v0.11.0`): interactive policy opt-in, strict response-template mode, Agent CLI map (`docs/maintainers/AGENT-CLI-MAP.md`), and CLI-first Cursor guidance.
 - **Phase 11** ships architectural review follow-up hardening (`v0.12.0`): policy/session denial edge tests, persistence concurrency semantics, release doc-sweep checklist, and runtime path audit note.
-- **Phase 12** is the active queue: Cursor-native thin-client extension delivery (`T296`–`T310`).
+- **Phase 12** ships Cursor-native thin-client extension delivery (`v0.13.0`): dashboard/tasks/config UI flows, extension test suite, and operator/security docs.
+- **Phase 13** is the active queue: Task Engine lifecycle tightening (`T311+`).
 
 Historical note: this file’s milestone list is not the live queue—always check task state for **`ready`** work.
 
