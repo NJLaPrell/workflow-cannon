@@ -4758,6 +4758,173 @@
         "Version bump and gates per repo policy"
       ],
       "phase": "Phase 15 - Task and wishlist SQLite persistence"
+    },
+    {
+      "id": "T335",
+      "title": "Versioned JSON Schemas for Task Engine run API",
+      "type": "improvement",
+      "status": "completed",
+      "createdAt": "2026-03-27T17:34:54.785Z",
+      "updatedAt": "2026-03-27T20:48:33.186Z",
+      "priority": "P2",
+      "dependsOn": [],
+      "phase": "Phase 16 - Maintenance and stability",
+      "acceptanceCriteria": [
+        "Publish JSON Schemas (or equivalent) for each `run` subcommand args and response `data` shapes.",
+        "Schemas are versioned with the package and referenced from maintainer docs or module metadata.",
+        "CI or build step validates schema artifacts stay in sync with TypeScript types (or documents explicit drift)."
+      ]
+    },
+    {
+      "id": "T336",
+      "title": "Stricter create-task validation for known task types",
+      "type": "improvement",
+      "status": "ready",
+      "createdAt": "2026-03-27T17:35:01.158Z",
+      "updatedAt": "2026-03-27T17:35:01.158Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T335"
+      ],
+      "phase": "Phase 16 - Maintenance and stability",
+      "acceptanceCriteria": [
+        "When `type` is a known enum value (e.g. improvement), optional fields required by that type are validated at create/update.",
+        "Invalid payloads return stable, documented error codes (not generic failures).",
+        "Behavior is covered by unit tests; AGENT-CLI-MAP or instructions mention validation rules."
+      ]
+    },
+    {
+      "id": "T337",
+      "title": "Task query ergonomics: filters and documented metadata paths",
+      "type": "improvement",
+      "status": "ready",
+      "createdAt": "2026-03-27T17:35:01.225Z",
+      "updatedAt": "2026-03-27T17:35:01.225Z",
+      "priority": "P2",
+      "dependsOn": [],
+      "phase": "Phase 16 - Maintenance and stability",
+      "acceptanceCriteria": [
+        "Extend `list-tasks` (or unified list) with filters: `type`, category/tags, `phase`, and safe `metadata` dot paths where applicable.",
+        "Filters are documented in `docs/maintainers/AGENT-CLI-MAP.md` with copy-paste examples.",
+        "Tests cover filter combinations and empty results."
+      ]
+    },
+    {
+      "id": "T338",
+      "title": "Idempotent create/update via clientMutationId",
+      "type": "improvement",
+      "status": "ready",
+      "createdAt": "2026-03-27T17:35:01.292Z",
+      "updatedAt": "2026-03-27T17:35:01.292Z",
+      "priority": "P2",
+      "dependsOn": [],
+      "phase": "Phase 16 - Maintenance and stability",
+      "acceptanceCriteria": [
+        "Generalize evidence-key-style dedupe to a `clientMutationId` (or equivalent) on create/update for safe retries.",
+        "Same id + same mutation payload is idempotent; conflicts are explicit.",
+        "Documented for automation in maintainer CLI map or runbook."
+      ]
+    },
+    {
+      "id": "T339",
+      "title": "explain-task-engine-model command",
+      "type": "improvement",
+      "status": "ready",
+      "createdAt": "2026-03-27T17:35:03.876Z",
+      "updatedAt": "2026-03-27T17:35:03.876Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T335"
+      ],
+      "phase": "Phase 16 - Maintenance and stability",
+      "acceptanceCriteria": [
+        "Single `run` subcommand (e.g. `explain-task-engine-model`) outputs machine- or human-readable model documentation.",
+        "Covers variants, which records appear in planning/next-actions, allowed transitions, and required fields per variant.",
+        "Instruction file and AGENT-CLI-MAP entry with example JSON output."
+      ]
+    },
+    {
+      "id": "T340",
+      "title": "Optional runtime strict validation before persistence",
+      "type": "improvement",
+      "status": "ready",
+      "createdAt": "2026-03-27T17:35:03.942Z",
+      "updatedAt": "2026-03-27T17:35:03.942Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T335"
+      ],
+      "phase": "Phase 16 - Maintenance and stability",
+      "acceptanceCriteria": [
+        "Config or env enables strict mode: new/updated tasks validated against schema before save.",
+        "Clear errors when validation fails; default remains non-breaking for existing consumers.",
+        "Tests for on/off behavior."
+      ]
+    },
+    {
+      "id": "T341",
+      "title": "TERMS glossary: task engine vocabulary",
+      "type": "improvement",
+      "status": "ready",
+      "createdAt": "2026-03-27T17:35:04.010Z",
+      "updatedAt": "2026-03-27T17:35:04.010Z",
+      "priority": "P2",
+      "dependsOn": [],
+      "phase": "Phase 16 - Maintenance and stability",
+      "acceptanceCriteria": [
+        "Add definitions to `docs/maintainers/TERMS.md` for Wishlist, execution task, improvement task, and unified work record (if applicable).",
+        "Cross-link from rules or README only where already appropriate; terms align with `types.ts` naming."
+      ]
+    },
+    {
+      "id": "T342",
+      "title": "Extension: watch SQLite planning DB for live refresh",
+      "type": "improvement",
+      "status": "ready",
+      "createdAt": "2026-03-27T19:32:41.097Z",
+      "updatedAt": "2026-03-27T19:32:41.097Z",
+      "priority": "P2",
+      "dependsOn": [],
+      "phase": "Phase 16 - Maintenance and stability",
+      "acceptanceCriteria": [
+        "When `tasks.persistenceBackend` is `sqlite`, `StateWatcher` also watches the resolved SQLite file (default or `tasks.sqliteDatabaseRelativePath`).",
+        "JSON backend continues to refresh on `state.json` changes; watchers are disposed cleanly on deactivate.",
+        "Document behavior in extension README or maintainer plan; manual or automated test notes for both backends."
+      ]
+    },
+    {
+      "id": "T343",
+      "title": "Extension: dashboard surfaces full dashboard-summary payload",
+      "type": "improvement",
+      "status": "ready",
+      "createdAt": "2026-03-27T19:32:41.163Z",
+      "updatedAt": "2026-03-27T19:32:41.163Z",
+      "priority": "P2",
+      "dependsOn": [],
+      "phase": "Phase 16 - Maintenance and stability",
+      "acceptanceCriteria": [
+        "Dashboard webview renders wishlist summary (`openCount` / `totalCount`), blocked summary (count + top entries), and ready-queue preview from existing `dashboard-summary` data without new engine fields.",
+        "Layout remains readable in narrow sidebar; empty states are clear.",
+        "Extension build/tests pass."
+      ]
+    },
+    {
+      "id": "T344",
+      "title": "Extension: list-tasks filters when engine supports them",
+      "type": "improvement",
+      "status": "ready",
+      "createdAt": "2026-03-27T19:32:41.231Z",
+      "updatedAt": "2026-03-27T19:32:41.231Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T337"
+      ],
+      "phase": "Phase 16 - Maintenance and stability",
+      "acceptanceCriteria": [
+        "After `list-tasks` supports additional filters (see T337), extension commands and/or tree view pass supported args (e.g. `phase`, `type`) where useful.",
+        "Copy-paste examples aligned with `docs/maintainers/AGENT-CLI-MAP.md` once T337 lands.",
+        "Covered by unit tests or documented manual verification."
+      ]
     }
   ],
   "transitionLog": [
@@ -7400,9 +7567,49 @@
       "dependentsUnblocked": [],
       "timestamp": "2026-03-27T17:20:52.395Z",
       "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T335-2026-03-27T20:48:33.123Z-8b689186",
+      "taskId": "T335",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T20:48:33.123Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T335-2026-03-27T20:48:33.186Z-aa4cc402",
+      "taskId": "T335",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T20:48:33.186Z",
+      "actor": "NJLaPrell@gmail.com"
     }
   ],
-  "lastUpdated": "2026-03-27T17:20:52.395Z",
+  "lastUpdated": "2026-03-27T20:48:33.186Z",
   "mutationLog": [
     {
       "mutationId": "create-task-T319-2026-03-27T15:16:30.032Z-20b24ad2",
@@ -7710,6 +7917,116 @@
         "updatedFields": [
           "phase"
         ]
+      }
+    },
+    {
+      "mutationId": "create-task-T335-2026-03-27T17:34:54.785Z-1ee85ad2",
+      "mutationType": "create-task",
+      "taskId": "T335",
+      "timestamp": "2026-03-27T17:34:54.786Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "ready",
+        "source": "create-task"
+      }
+    },
+    {
+      "mutationId": "create-task-T336-2026-03-27T17:35:01.158Z-416c5005",
+      "mutationType": "create-task",
+      "taskId": "T336",
+      "timestamp": "2026-03-27T17:35:01.158Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "ready",
+        "source": "create-task"
+      }
+    },
+    {
+      "mutationId": "create-task-T337-2026-03-27T17:35:01.226Z-063b23cf",
+      "mutationType": "create-task",
+      "taskId": "T337",
+      "timestamp": "2026-03-27T17:35:01.226Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "ready",
+        "source": "create-task"
+      }
+    },
+    {
+      "mutationId": "create-task-T338-2026-03-27T17:35:01.292Z-544e50cb",
+      "mutationType": "create-task",
+      "taskId": "T338",
+      "timestamp": "2026-03-27T17:35:01.293Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "ready",
+        "source": "create-task"
+      }
+    },
+    {
+      "mutationId": "create-task-T339-2026-03-27T17:35:03.876Z-9ce1b491",
+      "mutationType": "create-task",
+      "taskId": "T339",
+      "timestamp": "2026-03-27T17:35:03.877Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "ready",
+        "source": "create-task"
+      }
+    },
+    {
+      "mutationId": "create-task-T340-2026-03-27T17:35:03.942Z-81c7a61e",
+      "mutationType": "create-task",
+      "taskId": "T340",
+      "timestamp": "2026-03-27T17:35:03.942Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "ready",
+        "source": "create-task"
+      }
+    },
+    {
+      "mutationId": "create-task-T341-2026-03-27T17:35:04.010Z-b346c772",
+      "mutationType": "create-task",
+      "taskId": "T341",
+      "timestamp": "2026-03-27T17:35:04.010Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "ready",
+        "source": "create-task"
+      }
+    },
+    {
+      "mutationId": "create-task-T342-2026-03-27T19:32:41.097Z-209d6502",
+      "mutationType": "create-task",
+      "taskId": "T342",
+      "timestamp": "2026-03-27T19:32:41.097Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "ready",
+        "source": "create-task"
+      }
+    },
+    {
+      "mutationId": "create-task-T343-2026-03-27T19:32:41.163Z-420ae923",
+      "mutationType": "create-task",
+      "taskId": "T343",
+      "timestamp": "2026-03-27T19:32:41.163Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "ready",
+        "source": "create-task"
+      }
+    },
+    {
+      "mutationId": "create-task-T344-2026-03-27T19:32:41.231Z-6d4f69ce",
+      "mutationType": "create-task",
+      "taskId": "T344",
+      "timestamp": "2026-03-27T19:32:41.231Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "ready",
+        "source": "create-task"
       }
     }
   ]

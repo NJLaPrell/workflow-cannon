@@ -28,6 +28,7 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - **Phase 13 (Task Engine lifecycle tightening)** is **COMPLETE and released** as **`v0.14.0`**: **`T311`–`T318`** — task CRUD/query/dependency/history/summary command expansion, archival behavior, and planning-to-task bridge.
 - **Phase 14 (Wishlist intake and conversion)** is **COMPLETE and released** as **`v0.15.0`**: **`T319`–`T323`** — strict Wishlist namespace (`W###`), required intake fields, `create-wishlist` / `list-wishlist` / `get-wishlist` / `update-wishlist` / `convert-wishlist`, execution-plan boundary markers on task-only queries, and maintainer runbook plus tests.
 - **Phase 15 (Task and wishlist SQLite persistence)** is **COMPLETE and released** as **`v0.16.0`**: **`T324`–`T334`** — ADR, pluggable `TaskStore`/`WishlistStore`, optional `better-sqlite3` dual-document database, `migrate-task-persistence`, atomic `convert-wishlist` on SQLite, config keys, tests/parity, and release packaging (`pnpm.onlyBuiltDependencies`).
+- **Phase 16 (Maintenance and stability)** is **IN PROGRESS**: **`T335`–`T344`** — versioned Task Engine API schemas, stricter typed create paths, query filters and CLI map docs, idempotent mutations, model explainer command, optional runtime strict validation, TERMS glossary alignment, plus **extension** parity (SQLite file watching, richer dashboard, `list-tasks` filters after `T337`). Plan: `docs/maintainers/plans/extension-dashboard-parity-plan.md`.
 - Historical extraction and first-publish milestones remain recorded below as provenance.
 
 ## Phase plan and release cadence
@@ -197,6 +198,15 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 - Exit signals:
   - `T324`–`T334` are **`completed`** in task-engine state; `pnpm run build`, `check`, `test`, `parity`, and planning/release gates pass on the release tag.
   - `migrate-task-persistence` and `tasks.persistenceBackend` / `tasks.sqliteDatabaseRelativePath` are documented in task-engine config and maintainer changelog.
+
+### Phase 16 - Maintenance and stability -> GitHub release TBD (IN PROGRESS)
+
+- Primary scope: **`T335`–`T344`** (engine + extension). Extension follow-up plan: **`docs/maintainers/plans/extension-dashboard-parity-plan.md`**.
+- Outcome: a more trustworthy, documented, and automatable Task Engine surface—typed and versioned contracts, predictable validation and errors, better listing for agents, idempotent writes for retries, a single explainer for the execution model, optional strict persistence checks, shared vocabulary in TERMS, and a Cursor UI that stays fresh under SQLite and surfaces full `dashboard-summary` data, with **`list-tasks` filter wiring** after **`T337`**.
+- Exit signals:
+  - **`T335`–`T344`** are **`completed`** in task-engine state; `pnpm run build`, `check`, `test`, `parity`, and planning/release gates pass on the release tag.
+  - Maintainer-facing docs (`AGENT-CLI-MAP`, `TERMS`, instructions) reflect new commands, filters, and validation behavior without contradicting the workflow contract.
+  - Extension: SQLite-backed workspaces get auto-refresh when the planning DB changes; dashboard shows wishlist/blocked/ready-queue summary fields from `dashboard-summary`.
 
 ## Recorded decisions
 

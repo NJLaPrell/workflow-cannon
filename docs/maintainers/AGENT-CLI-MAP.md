@@ -119,6 +119,7 @@ Instruction paths: run `workspace-kit run` with no subcommand to list commands; 
 2. `workspace-kit run` (no arguments) — all module commands with descriptions.
 3. This file + `src/modules/<module>/instructions/<command>.md` — copy-paste JSON shape.
 4. `docs/maintainers/POLICY-APPROVAL.md` — JSON vs env vs interactive approval.
+5. Task Engine run schemas: `schemas/task-engine-run-contracts.schema.json` (versioned with package; command coverage verified by `pnpm run check`).
 
 ## Optional guardrail: hand-edit detection
 
