@@ -9,6 +9,26 @@ import {
   resolvePlanningConfig,
   resolvePlanningRulePack
 } from "./question-engine.js";
+import { composePlanningWishlistArtifact } from "./artifact.js";
+import { openPlanningStores } from "../task-engine/planning-open.js";
+import {
+  buildWishlistItemFromIntake,
+  validateWishlistIntakePayload
+} from "../task-engine/wishlist-validation.js";
+import type { WishlistItem } from "../task-engine/wishlist-types.js";
+
+function nextWishlistId(items: WishlistItem[]): string {
+  let max = 0;
+  for (const item of items) {
+    const match = /^W(\d+)$/.exec(item.id);
+    if (!match) continue;
+    const parsed = Number(match[1]);
+    if (Number.isFinite(parsed)) {
+      max = Math.max(max, parsed);
+    }
+  }
+  return `W${max + 1}`;
+}
 
 export const planningModule: WorkflowModule = {
   registration: {
@@ -77,6 +97,7 @@ export const planningModule: WorkflowModule = {
         typeof args.answers === "object" && args.answers !== null && !Array.isArray(args.answers)
           ? (args.answers as Record<string, unknown>)
           : {};
+      const createWishlist = args.createWishlist !== false;
       const finalize = args.finalize === true;
       const { missingCritical, adaptiveFollowups } = nextPlanningQuestions(
         planningType as PlanningWorkflowType,
@@ -123,15 +144,98 @@ export const planningModule: WorkflowModule = {
           }
         };
       }
+      const unresolvedIds = missingCritical.map((q) => q.id);
+      const artifact = composePlanningWishlistArtifact({
+        planningType: planningType as PlanningWorkflowType,
+        answers,
+        unresolvedCriticalQuestionIds: unresolvedIds
+      });
+      if (!finalize || !createWishlist) {
+        return {
+          ok: true,
+          code: "planning-ready",
+          message: `Planning interview complete for ${planningType}; artifact ready`,
+          data: {
+            planningType,
+            descriptor,
+            scaffoldVersion: 3,
+            status: "ready-for-artifact",
+            unresolvedCritical: [],
+            adaptiveFollowups,
+            capturedAnswers: answers,
+            artifact
+          }
+        };
+      }
+
+      const stores = await openPlanningStores(ctx);
+      const wishlist = await stores.openWishlist();
+      const wishlistId = nextWishlistId(wishlist.getAllItems());
+      const now = new Date().toISOString();
+      const intake = {
+        id: wishlistId,
+        title:
+          typeof args.title === "string" && args.title.trim().length > 0
+            ? args.title.trim()
+            : `${descriptor?.title ?? planningType} plan artifact`,
+        problemStatement:
+          typeof answers.problemStatement === "string"
+            ? answers.problemStatement
+            : typeof answers.featureGoal === "string"
+              ? answers.featureGoal
+              : "Planning artifact generated from guided workflow.",
+        expectedOutcome:
+          typeof answers.expectedOutcome === "string"
+            ? answers.expectedOutcome
+            : "Clear, reviewable planning artifact for execution decomposition.",
+        impact:
+          typeof answers.impact === "string" ? answers.impact : "Improved planning quality and delivery confidence.",
+        constraints:
+          typeof answers.constraints === "string"
+            ? answers.constraints
+            : artifact.risksAndConstraints.join("; ") || "None explicitly provided.",
+        successSignals:
+          typeof answers.successSignals === "string"
+            ? answers.successSignals
+            : "Critical questions answered and artifact accepted by operators.",
+        requestor:
+          typeof args.requestor === "string" && args.requestor.trim().length > 0
+            ? args.requestor.trim()
+            : ctx.resolvedActor ?? "planning-module",
+        evidenceRef:
+          typeof args.evidenceRef === "string" && args.evidenceRef.trim().length > 0
+            ? args.evidenceRef.trim()
+            : `planning:${planningType}:${now}`
+      };
+      const valid = validateWishlistIntakePayload(intake);
+      if (!valid.ok) {
+        return {
+          ok: false,
+          code: "invalid-planning-artifact",
+          message: valid.errors.join("; ")
+        };
+      }
+
+      const item = buildWishlistItemFromIntake(intake, now);
+      item.updatedAt = now;
+      (item as WishlistItem & { metadata?: Record<string, unknown> }).metadata = {
+        planningType,
+        artifactSchemaVersion: artifact.schemaVersion,
+        artifact
+      };
+      wishlist.addItem(item);
+      await wishlist.save();
       return {
         ok: true,
-        code: "planning-ready",
-        message: `Planning interview complete for ${planningType}; ready for artifact generation`,
+        code: "planning-artifact-created",
+        message: `Planning artifact created as wishlist item ${wishlistId}`,
         data: {
           planningType,
           descriptor,
-          scaffoldVersion: 2,
-          status: "ready-for-artifact",
+          scaffoldVersion: 3,
+          status: "artifact-created",
+          wishlistId,
+          artifact,
           unresolvedCritical: [],
           adaptiveFollowups,
           capturedAnswers: answers

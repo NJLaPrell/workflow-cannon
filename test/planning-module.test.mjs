@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 
 import { planningModule } from "../dist/modules/planning/index.js";
+import { WishlistStore } from "../dist/modules/task-engine/wishlist-store.js";
 
 async function tmpDir(prefix = "planning-") {
   return mkdtemp(path.join(os.tmpdir(), prefix));
@@ -65,7 +66,8 @@ test("planningModule build-plan returns ready when critical answers are present"
           technology: "TypeScript",
           targetAudience: "AI Agent Operators"
         },
-        finalize: true
+        finalize: true,
+        createWishlist: false
       }
     },
     { runtimeVersion: "0.1", workspacePath: workspace }
@@ -113,4 +115,38 @@ test("planningModule explain-planning-rules returns effective defaults and quest
   assert.equal(result.code, "planning-rules-explained");
   assert.equal(result.data.defaultQuestionDepth, "guided");
   assert.ok(Array.isArray(result.data.baseQuestions));
+});
+
+test("planningModule build-plan finalize can persist wishlist artifact", async () => {
+  const workspace = await tmpDir();
+  const result = await planningModule.onCommand(
+    {
+      name: "build-plan",
+      args: {
+        planningType: "new-feature",
+        finalize: true,
+        answers: {
+          featureGoal: "Guide operators through planning interviews",
+          placement: "CLI",
+          technology: "TypeScript",
+          targetAudience: "AI Agent Operators",
+          constraints: "Single-release scope",
+          successSignals: "Wishlist artifact generated",
+          problemStatement: "Planning quality is inconsistent",
+          expectedOutcome: "Consistent high-quality planning artifact",
+          impact: "Higher confidence delivery"
+        }
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: workspace }
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "planning-artifact-created");
+  assert.equal(result.data.wishlistId, "W1");
+
+  const wishlistStore = WishlistStore.forJsonFile(workspace);
+  await wishlistStore.load();
+  const created = wishlistStore.getItem("W1");
+  assert.ok(created);
+  assert.equal(created?.title.includes("plan artifact"), true);
 });
