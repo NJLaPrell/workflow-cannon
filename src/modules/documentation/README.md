@@ -24,6 +24,7 @@ Files under `templates/`; `documentType` is the filename (basename). Keep this l
 - `AGENTS.md`
 - `ARCHITECTURE.md`
 - `PRINCIPLES.md`
+- `README.md`
 - `RELEASING.md`
 - `ROADMAP.md`
 - `SECURITY.md`

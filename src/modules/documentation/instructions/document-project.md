@@ -18,6 +18,7 @@ All `.md` files under `sources.templatesRoot` (default `src/modules/documentatio
 - `AGENTS.md`
 - `ARCHITECTURE.md`
 - `PRINCIPLES.md`
+- `README.md`
 - `RELEASING.md`
 - `ROADMAP.md`
 - `SECURITY.md`

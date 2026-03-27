@@ -1,5 +1,9 @@
 AI agents: `./.ai/` is the authoritative source of truth; read all files there before any analysis, planning, or code changes, and follow `./.ai/` over `README.md`, `./docs/`, and conflicting existing code patterns.
 
+<div align="center">
+  <img src="title_image.png" alt="Workflow Cannon" width="720" />
+</div>
+
 # Workflow Cannon
 
 Workflow Cannon is the canonical home of `@workflow-cannon/workspace-kit` and the operational docs that drive its evolution.
@@ -103,6 +107,7 @@ Mutating commands require policy approval: **`docs/maintainers/POLICY-APPROVAL.m
 ## Repository Map
 
 - `README.md` - project entry point
+- `title_image.png` - repository header image (shown at top of this file)
 - `.ai/PRINCIPLES.md` - project goals and decision principles (canonical AI)
 - `docs/maintainers/ROADMAP.md` - roadmap and decision log
 - `.workspace-kit/tasks/state.json` - execution tracking

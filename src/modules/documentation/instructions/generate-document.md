@@ -8,6 +8,7 @@ Generate a single document for both canonical AI and human-readable surfaces usi
   - `AGENTS.md`
   - `ARCHITECTURE.md`
   - `PRINCIPLES.md`
+  - `README.md`
   - `RELEASING.md`
   - `ROADMAP.md`
   - `SECURITY.md`
