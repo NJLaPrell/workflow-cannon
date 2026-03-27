@@ -1,22 +1,13 @@
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
 import { appendLineageEvent } from "../../core/lineage-store.js";
 import type { TaskEntity } from "../task-engine/types.js";
-import { TaskStore } from "../task-engine/store.js";
+import { openPlanningStores } from "../task-engine/planning-open.js";
 import { TransitionService } from "../task-engine/service.js";
 import {
   appendDecisionRecord,
   computeDecisionFingerprint,
   readDecisionFingerprints
 } from "./decisions-store.js";
-
-function taskStoreRelativePath(ctx: ModuleLifecycleContext): string | undefined {
-  const tasks = ctx.effectiveConfig?.tasks;
-  if (!tasks || typeof tasks !== "object" || Array.isArray(tasks)) {
-    return undefined;
-  }
-  const p = (tasks as Record<string, unknown>).storeRelativePath;
-  return typeof p === "string" && p.trim().length > 0 ? p.trim() : undefined;
-}
 
 function getEvidenceKey(task: Pick<TaskEntity, "id" | "metadata">): string {
   const m = task.metadata;
@@ -46,8 +37,8 @@ export async function runReviewItem(
     return { ok: false, code: "invalid-args", message: "accept_edited requires non-empty editedSummary" };
   }
 
-  const store = new TaskStore(ctx.workspacePath, taskStoreRelativePath(ctx));
-  await store.load();
+  const planning = await openPlanningStores(ctx);
+  const store = planning.taskStore;
   const task = store.getTask(taskId);
   if (!task) {
     return { ok: false, code: "task-not-found", message: `Task '${taskId}' not found` };

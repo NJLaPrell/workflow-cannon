@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
 import type { TaskEntity } from "../task-engine/types.js";
-import { TaskStore } from "../task-engine/store.js";
+import { openPlanningStores } from "../task-engine/planning-open.js";
 import { appendLineageEvent } from "../../core/lineage-store.js";
 import { loadImprovementState, saveImprovementState } from "./improvement-state.js";
 import {
@@ -14,15 +14,6 @@ import {
   type IngestCandidate
 } from "./ingest.js";
 import { priorityForTier } from "./confidence.js";
-
-function taskStoreRelativePath(ctx: ModuleLifecycleContext): string | undefined {
-  const tasks = ctx.effectiveConfig?.tasks;
-  if (!tasks || typeof tasks !== "object" || Array.isArray(tasks)) {
-    return undefined;
-  }
-  const p = (tasks as Record<string, unknown>).storeRelativePath;
-  return typeof p === "string" && p.trim().length > 0 ? p.trim() : undefined;
-}
 
 function hasEvidenceKey(tasks: TaskEntity[], key: string): boolean {
   return tasks.some((t) => {
@@ -91,8 +82,8 @@ export async function runGenerateRecommendations(
   };
 }> {
   const runId = randomUUID();
-  const store = new TaskStore(ctx.workspacePath, taskStoreRelativePath(ctx));
-  await store.load();
+  const planning = await openPlanningStores(ctx);
+  const store = planning.taskStore;
 
   const state = await loadImprovementState(ctx.workspacePath);
   const transcriptsRoot = resolveTranscriptArchivePath(ctx, args);

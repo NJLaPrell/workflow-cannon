@@ -42,6 +42,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "get-wishlist",
     "list-tasks",
     "list-wishlist",
+    "migrate-task-persistence",
     "remove-dependency",
     "resolve-config",
     "run-transition",

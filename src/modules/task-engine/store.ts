@@ -3,8 +3,9 @@ import path from "node:path";
 import crypto from "node:crypto";
 import type { TaskEntity, TaskMutationEvidence, TaskStoreDocument, TransitionEvidence } from "./types.js";
 import { TaskEngineError } from "./transitions.js";
+import type { SqliteDualPlanningStore } from "./sqlite-dual-planning.js";
 
-const DEFAULT_STORE_PATH = ".workspace-kit/tasks/state.json";
+export const DEFAULT_TASK_STORE_PATH = ".workspace-kit/tasks/state.json";
 
 function emptyStore(): TaskStoreDocument {
   return {
@@ -16,58 +17,92 @@ function emptyStore(): TaskStoreDocument {
   };
 }
 
+export type TaskStorePersistence = {
+  loadDocument: () => Promise<TaskStoreDocument>;
+  saveDocument: (doc: TaskStoreDocument) => Promise<void>;
+  pathLabel: string;
+};
+
 export class TaskStore {
   private document: TaskStoreDocument;
-  private readonly filePath: string;
+  private readonly persistence: TaskStorePersistence;
 
-  constructor(workspacePath: string, storePath?: string) {
-    this.filePath = path.resolve(workspacePath, storePath ?? DEFAULT_STORE_PATH);
+  constructor(persistence: TaskStorePersistence) {
+    this.persistence = persistence;
     this.document = emptyStore();
   }
 
+  static forJsonFile(workspacePath: string, storeRelativePath?: string): TaskStore {
+    const filePath = path.resolve(workspacePath, storeRelativePath ?? DEFAULT_TASK_STORE_PATH);
+    return new TaskStore({
+      pathLabel: filePath,
+      loadDocument: async () => {
+        try {
+          const raw = await fs.readFile(filePath, "utf8");
+          const parsed = JSON.parse(raw) as TaskStoreDocument;
+          if (parsed.schemaVersion !== 1) {
+            throw new TaskEngineError(
+              "storage-read-error",
+              `Unsupported schema version: ${parsed.schemaVersion}`
+            );
+          }
+          if (!Array.isArray(parsed.mutationLog)) {
+            parsed.mutationLog = [];
+          }
+          return parsed;
+        } catch (err) {
+          if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+            return emptyStore();
+          }
+          if (err instanceof TaskEngineError) {
+            throw err;
+          }
+          throw new TaskEngineError(
+            "storage-read-error",
+            `Failed to read task store: ${(err as Error).message}`
+          );
+        }
+      },
+      saveDocument: async (doc) => {
+        const dir = path.dirname(filePath);
+        const tmpPath = `${filePath}.${crypto.randomUUID().slice(0, 8)}.tmp`;
+        try {
+          await fs.mkdir(dir, { recursive: true });
+          await fs.writeFile(tmpPath, JSON.stringify(doc, null, 2) + "\n", "utf8");
+          await fs.rename(tmpPath, filePath);
+        } catch (err) {
+          try {
+            await fs.unlink(tmpPath);
+          } catch {
+            /* cleanup best-effort */
+          }
+          throw new TaskEngineError(
+            "storage-write-error",
+            `Failed to write task store: ${(err as Error).message}`
+          );
+        }
+      }
+    });
+  }
+
+  static forSqliteDual(dual: SqliteDualPlanningStore): TaskStore {
+    return new TaskStore({
+      pathLabel: `${dual.getDisplayPath()}#task_engine`,
+      loadDocument: async () => dual.taskDocument,
+      saveDocument: async (doc) => {
+        dual.seedFromDocuments(doc, dual.wishlistDocument);
+        dual.persistSync();
+      }
+    });
+  }
+
   async load(): Promise<void> {
-    try {
-      const raw = await fs.readFile(this.filePath, "utf8");
-      const parsed = JSON.parse(raw) as TaskStoreDocument;
-      if (parsed.schemaVersion !== 1) {
-        throw new TaskEngineError(
-          "storage-read-error",
-          `Unsupported schema version: ${parsed.schemaVersion}`
-        );
-      }
-      this.document = parsed;
-      if (!Array.isArray(this.document.mutationLog)) {
-        this.document.mutationLog = [];
-      }
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-        this.document = emptyStore();
-        return;
-      }
-      if (err instanceof TaskEngineError) throw err;
-      throw new TaskEngineError(
-        "storage-read-error",
-        `Failed to read task store: ${(err as Error).message}`
-      );
-    }
+    this.document = await this.persistence.loadDocument();
   }
 
   async save(): Promise<void> {
     this.document.lastUpdated = new Date().toISOString();
-    const dir = path.dirname(this.filePath);
-    const tmpPath = `${this.filePath}.${crypto.randomUUID().slice(0, 8)}.tmp`;
-
-    try {
-      await fs.mkdir(dir, { recursive: true });
-      await fs.writeFile(tmpPath, JSON.stringify(this.document, null, 2) + "\n", "utf8");
-      await fs.rename(tmpPath, this.filePath);
-    } catch (err) {
-      try { await fs.unlink(tmpPath); } catch { /* cleanup best-effort */ }
-      throw new TaskEngineError(
-        "storage-write-error",
-        `Failed to write task store: ${(err as Error).message}`
-      );
-    }
+    await this.persistence.saveDocument(this.document);
   }
 
   getAllTasks(): TaskEntity[] {
@@ -121,7 +156,7 @@ export class TaskStore {
   }
 
   getFilePath(): string {
-    return this.filePath;
+    return this.persistence.pathLabel;
   }
 
   getLastUpdated(): string {

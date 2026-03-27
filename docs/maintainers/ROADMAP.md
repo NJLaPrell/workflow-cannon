@@ -27,6 +27,7 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - **Phase 12 (Cursor native UI thin client)** is **COMPLETE and released** as **`v0.13.0`**: **`T296`–`T310`** — extension thin-client dashboard/tasks/config surfaces, security pass, and extension test/e2e coverage.
 - **Phase 13 (Task Engine lifecycle tightening)** is **COMPLETE and released** as **`v0.14.0`**: **`T311`–`T318`** — task CRUD/query/dependency/history/summary command expansion, archival behavior, and planning-to-task bridge.
 - **Phase 14 (Wishlist intake and conversion)** is **COMPLETE and released** as **`v0.15.0`**: **`T319`–`T323`** — strict Wishlist namespace (`W###`), required intake fields, `create-wishlist` / `list-wishlist` / `get-wishlist` / `update-wishlist` / `convert-wishlist`, execution-plan boundary markers on task-only queries, and maintainer runbook plus tests.
+- **Phase 15 (Task and wishlist SQLite persistence)** is **COMPLETE and released** as **`v0.16.0`**: **`T324`–`T334`** — ADR, pluggable `TaskStore`/`WishlistStore`, optional `better-sqlite3` dual-document database, `migrate-task-persistence`, atomic `convert-wishlist` on SQLite, config keys, tests/parity, and release packaging (`pnpm.onlyBuiltDependencies`).
 - Historical extraction and first-publish milestones remain recorded below as provenance.
 
 ## Phase plan and release cadence
@@ -189,6 +190,14 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
   - Conversion command requires decomposition directions, creates canonical tasks with provenance links, and auto-closes the source Wishlist item as converted.
   - Workflow and command contracts are documented with integration/e2e test coverage.
 
+### Phase 15 - Task and wishlist SQLite persistence -> GitHub release `v0.16.0` (COMPLETE)
+
+- Primary scope: **`T324`–`T334`**.
+- Outcome: optional SQLite-backed persistence for Task Engine and wishlist (single DB file storing both JSON documents), offline migration, atomic wishlist conversion on SQLite, and documented ADR (`docs/maintainers/ADR-task-sqlite-persistence.md`). Default remains JSON.
+- Exit signals:
+  - `T324`–`T334` are **`completed`** in task-engine state; `pnpm run build`, `check`, `test`, `parity`, and planning/release gates pass on the release tag.
+  - `migrate-task-persistence` and `tasks.persistenceBackend` / `tasks.sqliteDatabaseRelativePath` are documented in task-engine config and maintainer changelog.
+
 ## Recorded decisions
 
 | Decision | Choice |
@@ -216,4 +225,5 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 - Phase 12 / `v0.13.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23635471927`
 - Phase 13 / `v0.14.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23650389235`
 - Phase 14 / `v0.15.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23656475480`
+- Phase 15 / `v0.16.0` publish: run **Publish NPM** workflow after merge with package version `0.16.0` (see `docs/maintainers/RELEASING.md`).
 - npm package: `https://www.npmjs.com/package/@workflow-cannon/workspace-kit`

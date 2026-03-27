@@ -45,7 +45,7 @@ async function tmpDir(prefix = "te-") {
 
 async function storeWithTasks(tasks, dir) {
   const workspace = dir ?? await tmpDir();
-  const store = new TaskStore(workspace);
+  const store = TaskStore.forJsonFile(workspace);
   for (const task of tasks) {
     store.addTask(task);
   }
@@ -223,12 +223,12 @@ test("TransitionValidator passes when all guards allow", () => {
 
 test("TaskStore persists and reloads tasks", async () => {
   const workspace = await tmpDir();
-  const store = new TaskStore(workspace);
+  const store = TaskStore.forJsonFile(workspace);
   store.addTask(makeTask({ id: "T100", status: "ready" }));
   store.addTask(makeTask({ id: "T101", status: "proposed" }));
   await store.save();
 
-  const reloaded = new TaskStore(workspace);
+  const reloaded = TaskStore.forJsonFile(workspace);
   await reloaded.load();
   assert.equal(reloaded.getAllTasks().length, 2);
   assert.equal(reloaded.getTask("T100").status, "ready");
@@ -237,13 +237,13 @@ test("TaskStore persists and reloads tasks", async () => {
 
 test("TaskStore initializes empty when file does not exist", async () => {
   const workspace = await tmpDir();
-  const store = new TaskStore(workspace);
+  const store = TaskStore.forJsonFile(workspace);
   await store.load();
   assert.equal(store.getAllTasks().length, 0);
 });
 
 test("TaskStore rejects duplicate task IDs", () => {
-  const store = new TaskStore("/tmp/test");
+  const store = TaskStore.forJsonFile("/tmp/test");
   store.addTask(makeTask({ id: "T001" }));
   assert.throws(
     () => store.addTask(makeTask({ id: "T001" })),
@@ -252,7 +252,7 @@ test("TaskStore rejects duplicate task IDs", () => {
 });
 
 test("TaskStore updateTask throws for missing task", () => {
-  const store = new TaskStore("/tmp/test");
+  const store = TaskStore.forJsonFile("/tmp/test");
   assert.throws(
     () => store.updateTask(makeTask({ id: "T999" })),
     (err) => err instanceof TaskEngineError && err.code === "task-not-found"
@@ -261,7 +261,7 @@ test("TaskStore updateTask throws for missing task", () => {
 
 test("TaskStore persists transition evidence", async () => {
   const workspace = await tmpDir();
-  const store = new TaskStore(workspace);
+  const store = TaskStore.forJsonFile(workspace);
   store.addEvidence({
     transitionId: "test-1",
     taskId: "T001",
@@ -274,7 +274,7 @@ test("TaskStore persists transition evidence", async () => {
   });
   await store.save();
 
-  const reloaded = new TaskStore(workspace);
+  const reloaded = TaskStore.forJsonFile(workspace);
   await reloaded.load();
   assert.equal(reloaded.getTransitionLog().length, 1);
   assert.equal(reloaded.getTransitionLog()[0].transitionId, "test-1");
@@ -282,8 +282,8 @@ test("TaskStore persists transition evidence", async () => {
 
 test("TaskStore concurrent saves do not produce malformed JSON", async () => {
   const workspace = await tmpDir();
-  const a = new TaskStore(workspace);
-  const b = new TaskStore(workspace);
+  const a = TaskStore.forJsonFile(workspace);
+  const b = TaskStore.forJsonFile(workspace);
   a.addTask(makeTask({ id: "T201", status: "ready" }));
   b.addTask(makeTask({ id: "T202", status: "ready" }));
 
@@ -619,7 +619,7 @@ test("taskEngineModule onCommand get-task returns task-not-found for missing tas
 
 test("taskEngineModule onCommand get-task includes recentTransitions after transitions", async () => {
   const workspace = await tmpDir();
-  const store = new TaskStore(workspace);
+  const store = TaskStore.forJsonFile(workspace);
   store.addTask(makeTask({ id: "T001", status: "ready" }));
   await store.save();
 
@@ -645,7 +645,7 @@ test("taskEngineModule onCommand get-task includes recentTransitions after trans
 
 test("taskEngineModule onCommand dashboard-summary returns stable shape", async () => {
   const workspace = await tmpDir();
-  const store = new TaskStore(workspace);
+  const store = TaskStore.forJsonFile(workspace);
   store.addTask(makeTask({ id: "T001", status: "ready", priority: "P1" }));
   await store.save();
 
@@ -680,7 +680,7 @@ test("taskEngineModule onCommand run-transition validates required args", async 
 
 test("taskEngineModule onCommand get-next-actions works on populated store", async () => {
   const workspace = await tmpDir();
-  const store = new TaskStore(workspace);
+  const store = TaskStore.forJsonFile(workspace);
   store.addTask(makeTask({ id: "T001", status: "ready", priority: "P2", title: "Second" }));
   store.addTask(makeTask({ id: "T002", status: "ready", priority: "P1", title: "First" }));
   store.addTask(makeTask({ id: "T003", status: "completed", title: "Done" }));
@@ -698,7 +698,7 @@ test("taskEngineModule onCommand get-next-actions works on populated store", asy
 
 test("taskEngineModule onCommand get-ready-queue returns priority-sorted tasks", async () => {
   const workspace = await tmpDir();
-  const store = new TaskStore(workspace);
+  const store = TaskStore.forJsonFile(workspace);
   store.addTask(makeTask({ id: "T001", status: "ready", priority: "P3" }));
   store.addTask(makeTask({ id: "T002", status: "ready", priority: "P1" }));
   store.addTask(makeTask({ id: "T003", status: "blocked" }));
@@ -751,7 +751,7 @@ test("taskEngineModule create-task and update-task commands persist mutations", 
 test("taskEngineModule archive-task excludes task from default active queries", async () => {
   const workspace = await tmpDir();
   const ctx = { runtimeVersion: "0.1", workspacePath: workspace };
-  const store = new TaskStore(workspace);
+  const store = TaskStore.forJsonFile(workspace);
   store.addTask(makeTask({ id: "T401", status: "ready" }));
   await store.save();
 
@@ -774,7 +774,7 @@ test("taskEngineModule archive-task excludes task from default active queries", 
 test("taskEngineModule dependency and history commands return deterministic output", async () => {
   const workspace = await tmpDir();
   const ctx = { runtimeVersion: "0.1", workspacePath: workspace };
-  const store = new TaskStore(workspace);
+  const store = TaskStore.forJsonFile(workspace);
   store.addTask(makeTask({ id: "T500", status: "ready" }));
   store.addTask(makeTask({ id: "T501", status: "ready" }));
   await store.save();
@@ -868,5 +868,61 @@ test("taskEngineModule get-next-actions never includes wishlist ids", async () =
   assert.equal(r.data.scope, "tasks-only");
   const ready = r.data.readyQueue ?? [];
   assert.ok(!ready.some((t) => String(t.id).startsWith("W")));
+});
+
+test("migrate-task-persistence json-to-sqlite then create-task uses SQLite store", async () => {
+  const workspace = await tmpDir();
+  const taskPath = path.join(workspace, ".workspace-kit", "tasks", "state.json");
+  await mkdir(path.dirname(taskPath), { recursive: true });
+  const emptyTaskDoc = {
+    schemaVersion: 1,
+    tasks: [],
+    transitionLog: [],
+    mutationLog: [],
+    lastUpdated: new Date().toISOString()
+  };
+  await writeFile(taskPath, JSON.stringify(emptyTaskDoc, null, 2) + "\n", "utf8");
+  const wishPath = path.join(workspace, ".workspace-kit", "wishlist", "state.json");
+  await mkdir(path.dirname(wishPath), { recursive: true });
+  await writeFile(
+    wishPath,
+    JSON.stringify(
+      { schemaVersion: 1, items: [], lastUpdated: new Date().toISOString() },
+      null,
+      2
+    ) + "\n",
+    "utf8"
+  );
+
+  const ctx = { runtimeVersion: "0.1", workspacePath: workspace };
+  let r = await taskEngineModule.onCommand(
+    { name: "migrate-task-persistence", args: { direction: "json-to-sqlite" } },
+    ctx
+  );
+  assert.equal(r.ok, true);
+  assert.equal(r.code, "migrated-json-to-sqlite");
+
+  const ctxSqlite = {
+    runtimeVersion: "0.1",
+    workspacePath: workspace,
+    effectiveConfig: {
+      tasks: {
+        persistenceBackend: "sqlite",
+        sqliteDatabaseRelativePath: ".workspace-kit/tasks/workspace-kit.db"
+      }
+    }
+  };
+  r = await taskEngineModule.onCommand(
+    {
+      name: "create-task",
+      args: { id: "T7777", title: "sqlite persistence smoke", status: "proposed" }
+    },
+    ctxSqlite
+  );
+  assert.equal(r.ok, true);
+
+  r = await taskEngineModule.onCommand({ name: "get-task", args: { taskId: "T7777" } }, ctxSqlite);
+  assert.equal(r.ok, true);
+  assert.equal(r.data.task.title, "sqlite persistence smoke");
 });
 

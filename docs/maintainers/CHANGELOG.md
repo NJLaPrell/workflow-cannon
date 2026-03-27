@@ -6,6 +6,27 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-03-27
+
+Phase 15 — Optional SQLite persistence for Task Engine + Wishlist (single database file, JSON document columns), offline migration command, and atomic `convert-wishlist` when using SQLite.
+
+### Added
+
+- **`better-sqlite3`** dependency with `pnpm.onlyBuiltDependencies` so installs run the native prebuild.
+- **`tasks.persistenceBackend`**: `json` (default) or `sqlite`; **`tasks.sqliteDatabaseRelativePath`** (default `.workspace-kit/tasks/workspace-kit.db`).
+- **`SqliteDualPlanningStore`**: one row stores full task and wishlist JSON documents; WAL journal.
+- **`migrate-task-persistence`** command: `json-to-sqlite` / `sqlite-to-json` with `dryRun` and `force`.
+- **ADR:** `docs/maintainers/ADR-task-sqlite-persistence.md`.
+
+### Changed
+
+- **`TaskStore`** / **`WishlistStore`**: pluggable persistence (`TaskStore.forJsonFile`, `WishlistStore.forJsonFile`, `forSqliteDual`); improvement and approvals open stores via **`openPlanningStores`**.
+- **Task engine** / **dashboard** / wishlist commands use shared planning opener; SQLite path uses one DB for both surfaces.
+
+### Tests
+
+- SQLite migration smoke test in `test/task-engine.test.mjs`; command list updated in `test/module-command-router.test.mjs`.
+
 ## [0.15.0] - 2026-03-27
 
 Phase 14 — Wishlist intake and conversion: separate `W###` namespace, strict intake fields, and explicit conversion into phased `T###` tasks.

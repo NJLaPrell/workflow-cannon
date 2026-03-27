@@ -109,7 +109,7 @@ workspace-kit run resolve-config '{}'
 workspace-kit doctor
 ```
 
-**Wishlist mutations** (`create-wishlist`, `update-wishlist`, `convert-wishlist`) are Tier C by default (same as `create-task`): they persist workspace state under `.workspace-kit/wishlist/` and `.workspace-kit/tasks/` but do not use `policyApproval` unless listed in `policy.extraSensitiveModuleCommands`.
+**Wishlist mutations** (`create-wishlist`, `update-wishlist`, `convert-wishlist`) and **`migrate-task-persistence`** are Tier C by default (same as `create-task`): they persist workspace state (JSON files and/or the configured SQLite planning DB under `tasks.sqliteDatabaseRelativePath`) but do not use `policyApproval` unless listed in `policy.extraSensitiveModuleCommands`.
 
 Instruction paths: run `workspace-kit run` with no subcommand to list commands; each line lists `(moduleId)` and points to the module’s instruction file pattern above.
 

@@ -7,7 +7,8 @@ import { TransitionService } from "./service.js";
 import { TaskEngineError, getAllowedTransitionsFrom } from "./transitions.js";
 import { getNextActions } from "./suggestions.js";
 import { readWorkspaceStatusSnapshot } from "./dashboard-status.js";
-import { WishlistStore } from "./wishlist-store.js";
+import { openPlanningStores } from "./planning-open.js";
+import { runMigrateTaskPersistence } from "./migrate-task-persistence-runtime.js";
 import type { WishlistConversionDecomposition, WishlistItem } from "./wishlist-types.js";
 import {
   buildWishlistItemFromIntake,
@@ -57,24 +58,13 @@ export {
   buildWishlistItemFromIntake,
   WISHLIST_ID_RE
 } from "./wishlist-validation.js";
-
-function taskStorePath(ctx: { workspacePath: string; effectiveConfig?: Record<string, unknown> }): string | undefined {
-  const tasks = ctx.effectiveConfig?.tasks;
-  if (!tasks || typeof tasks !== "object" || Array.isArray(tasks)) {
-    return undefined;
-  }
-  const p = (tasks as Record<string, unknown>).storeRelativePath;
-  return typeof p === "string" && p.trim().length > 0 ? p.trim() : undefined;
-}
-
-function wishlistStorePath(ctx: { workspacePath: string; effectiveConfig?: Record<string, unknown> }): string | undefined {
-  const tasks = ctx.effectiveConfig?.tasks;
-  if (!tasks || typeof tasks !== "object" || Array.isArray(tasks)) {
-    return undefined;
-  }
-  const p = (tasks as Record<string, unknown>).wishlistStoreRelativePath;
-  return typeof p === "string" && p.trim().length > 0 ? p.trim() : undefined;
-}
+export { openPlanningStores } from "./planning-open.js";
+export {
+  getTaskPersistenceBackend,
+  planningSqliteDatabaseRelativePath,
+  planningTaskStoreRelativePath,
+  planningWishlistStoreRelativePath
+} from "./planning-config.js";
 
 const TASK_ID_RE = /^T\d+$/;
 const MUTABLE_TASK_FIELDS = new Set([
@@ -188,7 +178,7 @@ function mutationEvidence(
 export const taskEngineModule: WorkflowModule = {
   registration: {
     id: "task-engine",
-    version: "0.5.0",
+    version: "0.6.0",
     contractVersion: "1",
     capabilities: ["task-engine"],
     dependsOn: [],
@@ -312,6 +302,11 @@ export const taskEngineModule: WorkflowModule = {
           description: "Get prioritized next-action suggestions with blocking analysis."
         },
         {
+          name: "migrate-task-persistence",
+          file: "migrate-task-persistence.md",
+          description: "Copy task + wishlist state between JSON files and a single SQLite database (offline migration)."
+        },
+        {
           name: "dashboard-summary",
           file: "dashboard-summary.md",
           description: "Stable JSON cockpit summary for UI clients (tasks + maintainer status snapshot)."
@@ -322,10 +317,13 @@ export const taskEngineModule: WorkflowModule = {
 
   async onCommand(command, ctx) {
     const args = command.args ?? {};
-    const store = new TaskStore(ctx.workspacePath, taskStorePath(ctx));
+    if (command.name === "migrate-task-persistence") {
+      return runMigrateTaskPersistence(ctx, args as Record<string, unknown>);
+    }
 
+    let planning;
     try {
-      await store.load();
+      planning = await openPlanningStores(ctx);
     } catch (err) {
       if (err instanceof TaskEngineError) {
         return { ok: false, code: err.code, message: err.message };
@@ -333,9 +331,10 @@ export const taskEngineModule: WorkflowModule = {
       return {
         ok: false,
         code: "storage-read-error",
-        message: `Failed to load task store: ${(err as Error).message}`
+        message: `Failed to open task planning stores: ${(err as Error).message}`
       };
     }
+    const store = planning.taskStore;
 
     if (command.name === "run-transition") {
       const taskId = typeof args.taskId === "string" ? args.taskId : undefined;
@@ -656,13 +655,13 @@ export const taskEngineModule: WorkflowModule = {
       }));
       const blockedTop = suggestion.blockingAnalysis.slice(0, 15);
 
-      const wishlistStore = new WishlistStore(ctx.workspacePath, wishlistStorePath(ctx));
+      let wishlistItems: WishlistItem[] = [];
       try {
-        await wishlistStore.load();
+        const wishlistStore = await planning.openWishlist();
+        wishlistItems = wishlistStore.getAllItems();
       } catch {
         /* wishlist store optional */
       }
-      const wishlistItems = wishlistStore.getAllItems();
       const wishlistOpenCount = wishlistItems.filter((i) => i.status === "open").length;
 
       const data = {
@@ -791,8 +790,7 @@ export const taskEngineModule: WorkflowModule = {
     }
 
     if (command.name === "create-wishlist") {
-      const wishlistStore = new WishlistStore(ctx.workspacePath, wishlistStorePath(ctx));
-      await wishlistStore.load();
+      const wishlistStore = await planning.openWishlist();
       const raw = args as Record<string, unknown>;
       const v = validateWishlistIntakePayload(raw);
       if (!v.ok) {
@@ -818,8 +816,7 @@ export const taskEngineModule: WorkflowModule = {
     }
 
     if (command.name === "list-wishlist") {
-      const wishlistStore = new WishlistStore(ctx.workspacePath, wishlistStorePath(ctx));
-      await wishlistStore.load();
+      const wishlistStore = await planning.openWishlist();
       const statusFilter = typeof args.status === "string" ? args.status : undefined;
       let items = wishlistStore.getAllItems();
       if (statusFilter && ["open", "converted", "cancelled"].includes(statusFilter)) {
@@ -843,8 +840,7 @@ export const taskEngineModule: WorkflowModule = {
       if (!wishlistId) {
         return { ok: false, code: "invalid-task-schema", message: "get-wishlist requires 'wishlistId' or 'id'" };
       }
-      const wishlistStore = new WishlistStore(ctx.workspacePath, wishlistStorePath(ctx));
-      await wishlistStore.load();
+      const wishlistStore = await planning.openWishlist();
       const item = wishlistStore.getItem(wishlistId);
       if (!item) {
         return { ok: false, code: "task-not-found", message: `Wishlist item '${wishlistId}' not found` };
@@ -862,8 +858,7 @@ export const taskEngineModule: WorkflowModule = {
       if (!wishlistId || !updates) {
         return { ok: false, code: "invalid-task-schema", message: "update-wishlist requires wishlistId and updates" };
       }
-      const wishlistStore = new WishlistStore(ctx.workspacePath, wishlistStorePath(ctx));
-      await wishlistStore.load();
+      const wishlistStore = await planning.openWishlist();
       const existing = wishlistStore.getItem(wishlistId);
       if (!existing) {
         return { ok: false, code: "task-not-found", message: `Wishlist item '${wishlistId}' not found` };
@@ -922,8 +917,7 @@ export const taskEngineModule: WorkflowModule = {
           message: "convert-wishlist requires non-empty tasks array"
         };
       }
-      const wishlistStore = new WishlistStore(ctx.workspacePath, wishlistStorePath(ctx));
-      await wishlistStore.load();
+      const wishlistStore = await planning.openWishlist();
       const wlItem = wishlistStore.getItem(wishlistId);
       if (!wlItem) {
         return { ok: false, code: "task-not-found", message: `Wishlist item '${wishlistId}' not found` };
@@ -960,16 +954,6 @@ export const taskEngineModule: WorkflowModule = {
         }
         built.push(bt.task);
       }
-      for (const t of built) {
-        store.addTask(t);
-        store.addMutationEvidence(
-          mutationEvidence("create-task", t.id, actor, {
-            initialStatus: t.status,
-            source: "convert-wishlist",
-            wishlistId
-          })
-        );
-      }
       const convertedIds = built.map((t) => t.id);
       const updatedWishlist: WishlistItem = {
         ...wlItem,
@@ -979,9 +963,26 @@ export const taskEngineModule: WorkflowModule = {
         convertedToTaskIds: convertedIds,
         conversionDecomposition: dec.value
       };
-      wishlistStore.updateItem(updatedWishlist);
-      await store.save();
-      await wishlistStore.save();
+      const applyConvertMutations = (): void => {
+        for (const t of built) {
+          store.addTask(t);
+          store.addMutationEvidence(
+            mutationEvidence("create-task", t.id, actor, {
+              initialStatus: t.status,
+              source: "convert-wishlist",
+              wishlistId
+            })
+          );
+        }
+        wishlistStore.updateItem(updatedWishlist);
+      };
+      if (planning.kind === "sqlite") {
+        planning.sqliteDual.withTransaction(applyConvertMutations);
+      } else {
+        applyConvertMutations();
+        await store.save();
+        await wishlistStore.save();
+      }
       return {
         ok: true,
         code: "wishlist-converted",

@@ -1,21 +1,22 @@
 schema_version: 1
-current_kit_phase: "14"
+current_kit_phase: "15"
 last_updated: "2026-03-27"
-active_focus: "Post-release follow-up after Phase 14 (`v0.15.0`) Wishlist intake and conversion."
+active_focus: "Post-release: Phase 15 (`v0.16.0`) SQLite persistence shipped; monitor installs and `better-sqlite3` prebuild friction."
 blockers: []
 next_agent_actions:
-  - "Capture any follow-up issues or consumer feedback from v0.15.0 before the next phase planning slice."
+  - "After npm publish: record workflow run URL in roadmap evidence and confirm package install."
   - "Monitor extension/dashboard consumers for `dashboard-summary` schema additions (`wishlist`, `executionPlanningScope`)."
 last_session_summary:
   - "Phase 13 tasks T311–T318 completed through canonical Task Engine transitions."
   - "Task Engine now exposes CRUD/dependency/history/summary and planning bridge command contracts with archival-aware query defaults."
   - "Release readiness gates passed: build/check/test/parity/check-release-metadata/phase5-gates/check-planning-consistency."
   - "Phase 14 tasks `T319`-`T323` completed: Wishlist store, commands, conversion, planning-boundary markers, runbook and tests; released as v0.15.0."
+  - "Phase 15 tasks `T324`-`T334` completed: SQLite dual-document store, migrate-task-persistence, config keys, tests; release `v0.16.0` (publish via GitHub workflow)."
 pending_decisions: []
 metrics:
   updated_at: "2026-03-27"
   source: "maintainer"
-  notes: "v0.15.0 published (Phase 14) via workflow run 23656475480; v0.14.0 was Phase 13 (run 23650389235)."
+  notes: "v0.16.0 Phase 15 targets SQLite persistence; v0.15.0 was Phase 14 (run 23656475480); v0.14.0 was Phase 13 (run 23650389235)."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null

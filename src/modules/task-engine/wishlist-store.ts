@@ -3,8 +3,9 @@ import path from "node:path";
 import crypto from "node:crypto";
 import type { WishlistItem, WishlistStoreDocument } from "./wishlist-types.js";
 import { TaskEngineError } from "./transitions.js";
+import type { SqliteDualPlanningStore } from "./sqlite-dual-planning.js";
 
-const DEFAULT_WISHLIST_PATH = ".workspace-kit/wishlist/state.json";
+export const DEFAULT_WISHLIST_PATH = ".workspace-kit/wishlist/state.json";
 
 function emptyWishlistDoc(): WishlistStoreDocument {
   return {
@@ -14,61 +15,92 @@ function emptyWishlistDoc(): WishlistStoreDocument {
   };
 }
 
+export type WishlistStorePersistence = {
+  loadDocument: () => Promise<WishlistStoreDocument>;
+  saveDocument: (doc: WishlistStoreDocument) => Promise<void>;
+  pathLabel: string;
+};
+
 export class WishlistStore {
   private document: WishlistStoreDocument;
-  private readonly filePath: string;
+  private readonly persistence: WishlistStorePersistence;
 
-  constructor(workspacePath: string, storeRelativePath?: string) {
-    this.filePath = path.resolve(workspacePath, storeRelativePath ?? DEFAULT_WISHLIST_PATH);
+  constructor(persistence: WishlistStorePersistence) {
+    this.persistence = persistence;
     this.document = emptyWishlistDoc();
   }
 
+  static forJsonFile(workspacePath: string, storeRelativePath?: string): WishlistStore {
+    const filePath = path.resolve(workspacePath, storeRelativePath ?? DEFAULT_WISHLIST_PATH);
+    return new WishlistStore({
+      pathLabel: filePath,
+      loadDocument: async () => {
+        try {
+          const raw = await fs.readFile(filePath, "utf8");
+          const parsed = JSON.parse(raw) as WishlistStoreDocument;
+          if (parsed.schemaVersion !== 1) {
+            throw new TaskEngineError(
+              "storage-read-error",
+              `Unsupported wishlist schema version: ${parsed.schemaVersion}`
+            );
+          }
+          if (!Array.isArray(parsed.items)) {
+            throw new TaskEngineError("storage-read-error", "Wishlist store 'items' must be an array");
+          }
+          return parsed;
+        } catch (err) {
+          if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+            return emptyWishlistDoc();
+          }
+          if (err instanceof TaskEngineError) {
+            throw err;
+          }
+          throw new TaskEngineError(
+            "storage-read-error",
+            `Failed to read wishlist store: ${(err as Error).message}`
+          );
+        }
+      },
+      saveDocument: async (doc) => {
+        const dir = path.dirname(filePath);
+        const tmpPath = `${filePath}.${crypto.randomUUID().slice(0, 8)}.tmp`;
+        try {
+          await fs.mkdir(dir, { recursive: true });
+          await fs.writeFile(tmpPath, JSON.stringify(doc, null, 2) + "\n", "utf8");
+          await fs.rename(tmpPath, filePath);
+        } catch (err) {
+          try {
+            await fs.unlink(tmpPath);
+          } catch {
+            /* cleanup best-effort */
+          }
+          throw new TaskEngineError(
+            "storage-write-error",
+            `Failed to write wishlist store: ${(err as Error).message}`
+          );
+        }
+      }
+    });
+  }
+
+  static forSqliteDual(dual: SqliteDualPlanningStore): WishlistStore {
+    return new WishlistStore({
+      pathLabel: `${dual.getDisplayPath()}#wishlist`,
+      loadDocument: async () => dual.wishlistDocument,
+      saveDocument: async (doc) => {
+        dual.seedFromDocuments(dual.taskDocument, doc);
+        dual.persistSync();
+      }
+    });
+  }
+
   async load(): Promise<void> {
-    try {
-      const raw = await fs.readFile(this.filePath, "utf8");
-      const parsed = JSON.parse(raw) as WishlistStoreDocument;
-      if (parsed.schemaVersion !== 1) {
-        throw new TaskEngineError(
-          "storage-read-error",
-          `Unsupported wishlist schema version: ${parsed.schemaVersion}`
-        );
-      }
-      if (!Array.isArray(parsed.items)) {
-        throw new TaskEngineError("storage-read-error", "Wishlist store 'items' must be an array");
-      }
-      this.document = parsed;
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-        this.document = emptyWishlistDoc();
-        return;
-      }
-      if (err instanceof TaskEngineError) throw err;
-      throw new TaskEngineError(
-        "storage-read-error",
-        `Failed to read wishlist store: ${(err as Error).message}`
-      );
-    }
+    this.document = await this.persistence.loadDocument();
   }
 
   async save(): Promise<void> {
     this.document.lastUpdated = new Date().toISOString();
-    const dir = path.dirname(this.filePath);
-    const tmpPath = `${this.filePath}.${crypto.randomUUID().slice(0, 8)}.tmp`;
-    try {
-      await fs.mkdir(dir, { recursive: true });
-      await fs.writeFile(tmpPath, JSON.stringify(this.document, null, 2) + "\n", "utf8");
-      await fs.rename(tmpPath, this.filePath);
-    } catch (err) {
-      try {
-        await fs.unlink(tmpPath);
-      } catch {
-        /* cleanup best-effort */
-      }
-      throw new TaskEngineError(
-        "storage-write-error",
-        `Failed to write wishlist store: ${(err as Error).message}`
-      );
-    }
+    await this.persistence.saveDocument(this.document);
   }
 
   getAllItems(): WishlistItem[] {
@@ -95,7 +127,7 @@ export class WishlistStore {
   }
 
   getFilePath(): string {
-    return this.filePath;
+    return this.persistence.pathLabel;
   }
 
   getLastUpdated(): string {
