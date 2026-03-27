@@ -25,6 +25,8 @@ Status legend:
 | Phase 8 - Improvement backlog triage (`imp-2cf5d881b81f9a` … `imp-7f9e65fad74b0b`) | `v0.10.0` | Completed |
 | Phase 9 - Interactive policy UX + template enforcement (`T283`, `T284`) | `v0.11.0` | Completed |
 | Phase 10 - Agent/CLI parity (`T285`–`T291`) | `v0.11.0` | Completed |
+| Phase 11 - Architectural review follow-up (`T292`–`T295`) | `v0.12.0` | Completed |
+| Phase 12 - Cursor native UI thin client (`T296`–`T310`) | `v0.13.0` | In progress / ready |
 
 ## Feature Matrix by Phase
 
@@ -171,6 +173,23 @@ Status legend:
 | Command discovery UX | `workspace-kit doctor` + bare `run` output point to instructions + Agent CLI map | Completed | `T289` |
 | Multi-turn agent sessions | `POLICY-APPROVAL.md` documents non-TTY, `WORKSPACE_KIT_SESSION_ID`, and “chat is not approval” | Completed | `T290` |
 | Task state hand-edit advisory | `pnpm run advisory:task-state-hand-edit` (warn-only; CI non-blocking) | Completed | `T291` |
+
+### Phase 11 Architectural review follow-up (`v0.12.0`)
+
+| Product feature | What users/maintainers get | Status | Task coverage |
+| --- | --- | --- | --- |
+| Sensitive run-path policy/session hardening | Explicit denial-path and session-reuse test coverage for sensitive `workspace-kit run` operations | Completed | `T292` |
+| Persistence contention semantics | Documented concurrency model for task store and policy trace writes, with contention tests | Completed | `T293` |
+| Release-time doc consistency sweep | Pre-release checklist step linking planning consistency checks and canonical doc surfaces | Completed | `T294` |
+| Runtime path assumption audit | Recorded non-doc runtime audit with compatibility-safe findings and regression coverage | Completed | `T295` |
+
+### Phase 12 Cursor native UI thin client (`v0.13.0`, planned/in progress)
+
+| Product feature | What users/maintainers get | Status | Task coverage |
+| --- | --- | --- | --- |
+| Kit dashboard/task/config backend contracts for UI | Stable JSON command outputs and extension integration points for thin clients | In progress / ready | `T296`, `T297` |
+| Cursor extension shell and UI surfaces | Extension scaffold, activity-bar views, dashboard/tasks/config UI, palette commands | In progress / ready | `T298`–`T306` |
+| Security and verification for extension workflows | Security/trust pass plus unit/integration/manual-E2E coverage | In progress / ready | `T307`–`T310` |
 
 ## Supporting Milestone Features (cross-phase)
 

@@ -1,19 +1,19 @@
 schema_version: 1
-current_kit_phase: "11"
-last_updated: "2026-03-26"
-active_focus: "Phase 11 — Architectural review follow-up (T292+): expand policy/session tests and task-store concurrency semantics per ARCHITECTURAL-REVIEW-FINDINGS.md."
+current_kit_phase: "12"
+last_updated: "2026-03-27"
+active_focus: "Phase 12 — Cursor native UI (thin client): execute T296–T310 after Phase 11 follow-up completion."
 blockers: []
 next_agent_actions:
-  - "When ready: pick next ready task from .workspace-kit/tasks/state.json (Phase 11 T292+)."
-  - "Capture any post-release issues as follow-up tasks and start T292 (policy/session test expansion)."
+  - "Prepare Phase 11 release evidence (scope/risk, gate outputs, parity artifact, changelog entry, release metadata)."
+  - "Start Phase 12 from the next ready dependency root (T296/T297/T298) and keep extension thin-client contract aligned to kit JSON outputs."
 last_session_summary:
-  - "Phase 10 complete in-repo: Agent CLI map, AGENTS + Cursor rule, /qt labels, doctor/run discovery, POLICY-APPROVAL agents section, advisory state.json script + CI advisory step."
-  - "Version bumped to 0.11.0 in package.json and manifest; CHANGELOG + ROADMAP + FEATURE-MATRIX aligned."
+  - "Phase 11 tasks T292–T295 completed: policy/session denial edge tests, task-store + policy-trace contention tests, releasing doc consistency checklist, and runtime path audit note."
+  - "Validation gates passed after changes: build/check/test/parity."
 pending_decisions: []
 metrics:
-  updated_at: "2026-03-26"
+  updated_at: "2026-03-27"
   source: "maintainer"
-  notes: "v0.11.0 released (Phase 9–10) via publish workflow run 23628501468; focus moved to Phase 11 follow-up tasks."
+  notes: "Phase 11 implementation complete in-repo; pending release packaging/approval and Phase 12 execution."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null

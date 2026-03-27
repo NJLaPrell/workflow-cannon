@@ -3535,11 +3535,11 @@
     },
     {
       "id": "T292",
-      "status": "ready",
+      "status": "completed",
       "type": "workspace-kit",
       "title": "[Architectural review follow-up] Expand policy and session-grant tests for sensitive `run` paths",
       "createdAt": "2026-03-27T12:00:00.000Z",
-      "updatedAt": "2026-03-27T12:00:00.000Z",
+      "updatedAt": "2026-03-27T06:51:58.917Z",
       "priority": "P1",
       "dependsOn": [],
       "unblocks": [],
@@ -3563,11 +3563,11 @@
     },
     {
       "id": "T293",
-      "status": "ready",
+      "status": "completed",
       "type": "workspace-kit",
       "title": "[Architectural review follow-up] Document and test task-store / policy-trace persistence concurrency semantics",
       "createdAt": "2026-03-27T12:00:00.000Z",
-      "updatedAt": "2026-03-27T12:00:00.000Z",
+      "updatedAt": "2026-03-27T06:51:59.034Z",
       "priority": "P2",
       "dependsOn": [],
       "unblocks": [],
@@ -3590,11 +3590,11 @@
     },
     {
       "id": "T294",
-      "status": "ready",
+      "status": "completed",
       "type": "workspace-kit",
       "title": "[Architectural review follow-up] Maintainer doc consistency sweep checklist and release linkage",
       "createdAt": "2026-03-27T12:00:00.000Z",
-      "updatedAt": "2026-03-27T12:00:00.000Z",
+      "updatedAt": "2026-03-27T06:51:59.151Z",
       "priority": "P2",
       "dependsOn": [],
       "unblocks": [],
@@ -3617,11 +3617,11 @@
     },
     {
       "id": "T295",
-      "status": "ready",
+      "status": "completed",
       "type": "workspace-kit",
       "title": "[Architectural review follow-up] Audit non-documentation runtime paths for workspace-layout assumptions",
       "createdAt": "2026-03-27T12:00:00.000Z",
-      "updatedAt": "2026-03-27T12:00:00.000Z",
+      "updatedAt": "2026-03-27T06:51:59.266Z",
       "priority": "P1",
       "dependsOn": [],
       "unblocks": [],
@@ -5027,7 +5027,167 @@
       "dependentsUnblocked": [],
       "timestamp": "2026-03-27T02:38:08.546Z",
       "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T292-2026-03-27T06:49:13.194Z-ba0633f3",
+      "taskId": "T292",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T06:49:13.194Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T292-2026-03-27T06:51:58.917Z-fbf934ad",
+      "taskId": "T292",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T06:51:58.917Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T293-2026-03-27T06:51:58.976Z-9125f499",
+      "taskId": "T293",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T06:51:58.976Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T293-2026-03-27T06:51:59.034Z-96841b0c",
+      "taskId": "T293",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T06:51:59.034Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T294-2026-03-27T06:51:59.092Z-263eb44d",
+      "taskId": "T294",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T06:51:59.092Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T294-2026-03-27T06:51:59.151Z-0e38edb0",
+      "taskId": "T294",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T06:51:59.151Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T295-2026-03-27T06:51:59.209Z-b3b87d5e",
+      "taskId": "T295",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T06:51:59.209Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T295-2026-03-27T06:51:59.266Z-c8cdc20c",
+      "taskId": "T295",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T06:51:59.266Z",
+      "actor": "NJLaPrell@gmail.com"
     }
   ],
-  "lastUpdated": "2026-03-27T02:38:08.546Z"
+  "lastUpdated": "2026-03-27T06:51:59.266Z"
 }

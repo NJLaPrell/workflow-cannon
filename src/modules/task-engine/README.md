@@ -33,3 +33,10 @@ service.ts        TransitionService (orchestrates transitions + auto-unblock)
 suggestions.ts    Next-action suggestion engine
 instructions/     Markdown instruction files for each command
 ```
+
+## Concurrency semantics
+
+- `TaskStore` is designed for single-workspace use with atomic file replace on save (`write tmp` -> `rename`).
+- Multi-writer behavior is best-effort: concurrent writers do not produce partial JSON, but last-writer-wins can overwrite another writer's in-memory view.
+- `transitionLog` and `tasks` updates are therefore deterministic for one active writer process; cross-process orchestration should serialize writes through one `workspace-kit` command path.
+- Policy traces (`.workspace-kit/policy/traces.jsonl`) append one JSON line per event; concurrent appends must remain line-delimited JSON, but ordering between processes is not guaranteed.

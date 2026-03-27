@@ -113,6 +113,7 @@ export async function handleRunCommand(
   const sessionId = resolveSessionId(process.env);
   const policyOp = resolvePolicyOperationIdForCommand(subcommand, effective);
   const explicitPolicyApproval = parsePolicyApproval(commandArgs);
+  const hasPolicyApprovalField = Object.hasOwn(commandArgs, "policyApproval");
   let resolvedSensitiveApproval: PolicyApprovalPayload | undefined = explicitPolicyApproval;
   let interactiveSessionFollowup = false;
 
@@ -174,7 +175,9 @@ export async function handleRunCommand(
           command: `run ${subcommand}`,
           actor,
           allowed: false,
-          message: "missing policyApproval in JSON args"
+          message: hasPolicyApprovalField
+            ? "invalid policyApproval in JSON args"
+            : "missing policyApproval in JSON args"
         });
       }
       writeLine(
@@ -184,8 +187,9 @@ export async function handleRunCommand(
             code: "policy-denied",
             operationId: policyOp ?? null,
             remediationDoc: POLICY_APPROVAL_HUMAN_DOC,
-            message:
-              'Sensitive command requires policyApproval in JSON args (or an existing session grant for this operation). Example: {"policyApproval":{"confirmed":true,"rationale":"why","scope":"session"}}. See remediationDoc for env vs JSON approval surfaces.',
+            message: hasPolicyApprovalField
+              ? 'Sensitive command received an invalid policyApproval object. Use {"policyApproval":{"confirmed":true,"rationale":"why","scope":"session"}} (scope optional) or use an existing session grant for this operation.'
+              : 'Sensitive command requires policyApproval in JSON args (or an existing session grant for this operation). Example: {"policyApproval":{"confirmed":true,"rationale":"why","scope":"session"}}. See remediationDoc for env vs JSON approval surfaces.',
             hint:
               policyOp != null
                 ? `Operation ${policyOp} requires explicit approval; WORKSPACE_KIT_POLICY_APPROVAL is not read for workspace-kit run. Optional: set WORKSPACE_KIT_INTERACTIVE_APPROVAL=on in a TTY for a prompt (see ${POLICY_APPROVAL_HUMAN_DOC}).`

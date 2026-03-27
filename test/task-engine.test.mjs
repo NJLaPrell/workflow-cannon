@@ -18,7 +18,8 @@ import {
   getNextActions,
   taskEngineModule,
   ModuleRegistry,
-  ModuleCommandRouter
+  ModuleCommandRouter,
+  appendPolicyTrace
 } from "../dist/index.js";
 
 // ---------------------------------------------------------------------------
@@ -277,6 +278,55 @@ test("TaskStore persists transition evidence", async () => {
   await reloaded.load();
   assert.equal(reloaded.getTransitionLog().length, 1);
   assert.equal(reloaded.getTransitionLog()[0].transitionId, "test-1");
+});
+
+test("TaskStore concurrent saves do not produce malformed JSON", async () => {
+  const workspace = await tmpDir();
+  const a = new TaskStore(workspace);
+  const b = new TaskStore(workspace);
+  a.addTask(makeTask({ id: "T201", status: "ready" }));
+  b.addTask(makeTask({ id: "T202", status: "ready" }));
+
+  await Promise.all([a.save(), b.save()]);
+
+  const raw = await readFile(path.join(workspace, ".workspace-kit", "tasks", "state.json"), "utf8");
+  const parsed = JSON.parse(raw);
+  assert.equal(parsed.schemaVersion, 1);
+  assert.ok(Array.isArray(parsed.tasks));
+  assert.ok(typeof parsed.lastUpdated === "string");
+});
+
+test("appendPolicyTrace concurrent writes preserve line-delimited JSON", async () => {
+  const workspace = await tmpDir();
+  const now = new Date().toISOString();
+  await Promise.all([
+    appendPolicyTrace(workspace, {
+      timestamp: now,
+      operationId: "improvement.ingest-transcripts",
+      command: "run ingest-transcripts",
+      actor: "a@example.com",
+      allowed: true,
+      rationale: "concurrency-a"
+    }),
+    appendPolicyTrace(workspace, {
+      timestamp: now,
+      operationId: "improvement.generate-recommendations",
+      command: "run generate-recommendations",
+      actor: "b@example.com",
+      allowed: false,
+      message: "denied"
+    })
+  ]);
+
+  const raw = await readFile(path.join(workspace, ".workspace-kit", "policy", "traces.jsonl"), "utf8");
+  const lines = raw.trim().split("\n");
+  assert.ok(lines.length >= 2);
+  for (const line of lines) {
+    const parsed = JSON.parse(line);
+    assert.equal(parsed.schemaVersion, 1);
+    assert.ok(typeof parsed.operationId === "string");
+    assert.ok(typeof parsed.allowed === "boolean");
+  }
 });
 
 // ---------------------------------------------------------------------------

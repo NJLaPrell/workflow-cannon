@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { mkdtemp } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 
 import {
   ModuleRegistry,
@@ -24,6 +27,19 @@ test("validateModuleSet accepts valid module dependency graph", () => {
       improvementModule
     ])
   );
+});
+
+test("ModuleRegistry resolves instruction contracts from explicit workspacePath", async () => {
+  const originalCwd = process.cwd();
+  const otherDir = await mkdtemp(path.join(os.tmpdir(), "wk-modreg-"));
+  process.chdir(otherDir);
+  try {
+    assert.doesNotThrow(
+      () => new ModuleRegistry([documentationModule, taskEngineModule], { workspacePath: originalCwd })
+    );
+  } finally {
+    process.chdir(originalCwd);
+  }
 });
 
 test("ModuleRegistry returns startup order in dependency sequence", () => {

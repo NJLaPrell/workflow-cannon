@@ -23,6 +23,8 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - **Phase 8 (Improvement backlog triage)** is **COMPLETE and released** as **`v0.10.0`** for **`imp-2cf5d881b81f9a`, `imp-3dc9374451b3c0`, `imp-b9d8408715de51`, `imp-201911c9c4461a`, `imp-ab362ef4e1f99e`, `imp-c14c4955833730`, `imp-fb31f5fc2694d3`, `imp-43397766ef243b`, `imp-7f9e65fad74b0b`** (policy/onboarding/runbooks/task-state docs + richer `policy-denied` JSON).
 - **Phase 9 (Interactive policy UX + response-template enforcement)** is **COMPLETE** and ships as **`v0.11.0`** with Phase 10: **`T283`** interactive approval for sensitive `workspace-kit run`; **`T284`** strict response-template validation including default/override ids and explicit-vs-directive conflicts.
 - **Phase 10 (Agent/CLI parity)** is **COMPLETE** and ships as **`v0.11.0`**: **`T285`–`T291`** — Agent CLI map, CLI-first **`AGENTS.md`** / **`.ai/AGENTS.md`**, Cursor rule, `/qt` template persistence labels, `doctor` / `run` discovery hints, multi-turn session docs, optional advisory hand-edit check for task state.
+- **Phase 11 (Architectural review follow-up)** is **COMPLETE and released** as **`v0.12.0`**: **`T292`–`T295`** — policy/session denial edge tests, task-store + policy-trace contention semantics tests, release doc consistency checklist linkage, and runtime path audit notes.
+- **Phase 12 (Cursor native UI thin client)** is **READY / in progress**: **`T296`–`T310`** — extension thin-client dashboard/tasks/config surfaces, security pass, and extension test/e2e coverage.
 - Historical extraction and first-publish milestones remain recorded below as provenance.
 
 ## Phase plan and release cadence
@@ -147,6 +149,24 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 - Exit signals:
   - Phase 10 tasks are **`completed`** in task-engine state; gates green on the release tag; **`docs/maintainers/AGENT-CLI-MAP.md`** linked from policy and AGENTS entrypoints.
 
+### Phase 11 - Architectural review follow-up -> GitHub release `v0.12.0` (COMPLETE)
+
+- Primary scope: **`T292`–`T295`**.
+- Outcome: closes architectural review follow-ups by hardening policy/session test coverage, documenting and testing persistence concurrency semantics, adding release-time doc-consistency checklist steps, and auditing runtime-path assumptions.
+- Exit signals:
+  - `T292`–`T295` are **`completed`** in task-engine state.
+  - `pnpm run build`, `check`, `test`, and `parity` pass.
+  - Maintainer docs include explicit concurrency semantics and pre-release doc consistency sweep guidance.
+
+### Phase 12 - Cursor native UI (thin client) -> GitHub release `v0.13.0` (planned)
+
+- Primary scope: **`T296`–`T310`**.
+- Outcome: extension-backed thin UI for workspace health/tasks/config powered by stable `workspace-kit run` JSON contracts, with security and test coverage.
+- Exit signals:
+  - Extension dashboard/tasks/config flows consume kit contracts without raw task-state scraping for aggregates.
+  - Security/trust and policy UX requirements are documented and tested.
+  - Extension unit/integration/manual-E2E evidence is captured for release readiness.
+
 ## Recorded decisions
 
 | Decision | Choice |
@@ -170,4 +190,5 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 - Phase 7 / `v0.9.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23622990943`
 - Phase 8 / `v0.10.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23624912236`
 - Phase 9-10 / `v0.11.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23628501468`
+- Phase 11 / `v0.12.0` publish workflow run: _pending_
 - npm package: `https://www.npmjs.com/package/@workflow-cannon/workspace-kit`

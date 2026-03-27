@@ -216,10 +216,10 @@ function validateInstructionContracts(
   }
 }
 
-export function validateModuleSet(modules: WorkflowModule[]): void {
+export function validateModuleSet(modules: WorkflowModule[], workspacePath?: string): void {
   const moduleMap = buildModuleMap(modules);
   validateDependencies(moduleMap);
-  validateInstructionContracts(moduleMap, process.cwd());
+  validateInstructionContracts(moduleMap, workspacePath ?? process.cwd());
   topologicalSort(moduleMap);
 }
 

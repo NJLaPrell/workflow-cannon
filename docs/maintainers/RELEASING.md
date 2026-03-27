@@ -51,6 +51,11 @@ If a gate fails, do not publish. Capture the blocker in task-engine state and up
   - Optional: `pnpm run pre-release-transcript-hook` for a non-blocking transcript sync/ingest summary artifact (requires build; set `WORKSPACE_KIT_POLICY_APPROVAL` for full ingest).
   - Execute `pnpm run phase4-gates` (or phase-scoped successor, currently `pnpm run phase5-gates`) for compatibility/planning/release-channel enforcement.
    - Confirm release automation workflows are green.
+  - Run a doc consistency sweep before approval:
+    - Verify canonical-source links in `README.md`, `docs/maintainers/ROADMAP.md`, and `docs/maintainers/AGENTS.md` resolve.
+    - Run `pnpm run check-planning-consistency` and treat failures as release-blocking doc defects.
+    - Confirm policy/approval references point to `docs/maintainers/POLICY-APPROVAL.md` and `docs/maintainers/AGENT-CLI-MAP.md`.
+    - Confirm changelog updates are in `docs/maintainers/CHANGELOG.md` (root `CHANGELOG.md` is pointer-only).
 4. **Present for approval**
    - Summarize scope, risk, evidence, and migration notes.
    - Obtain explicit human approval before proceeding.

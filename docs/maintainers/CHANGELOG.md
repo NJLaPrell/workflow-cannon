@@ -6,6 +6,22 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-03-27
+
+Phase 11 — architectural review follow-up hardening and release-process alignment.
+
+### Added
+
+- **Phase 11 policy/session edge tests** in `test/phase11-architectural-followup.test.mjs` covering malformed `policyApproval`, session-id mismatch for grants, and non-interactive denial behavior with stable denial fields.
+- **Concurrency contention tests** in `test/task-engine.test.mjs` for concurrent task-store saves and concurrent policy-trace appends (line-delimited JSON assertions).
+- **Runtime path audit note**: `docs/maintainers/RUNTIME-PATH-AUDIT-PHASE11.md`.
+
+### Changed
+
+- **Sensitive `workspace-kit run` denial messaging** now distinguishes missing vs invalid `policyApproval` payloads while keeping `policy-denied`, `operationId`, and `remediationDoc` stable.
+- **Task engine README** now includes explicit concurrency semantics for `.workspace-kit/tasks/state.json` and `.workspace-kit/policy/traces.jsonl`.
+- **Release workflow docs** now include a pre-approval doc consistency sweep checklist with explicit `pnpm run check-planning-consistency`.
+
 ## [0.11.0] - 2026-03-26
 
 Phase 9–10 — interactive policy UX, strict response-template opt-in, and **Agent/CLI parity** documentation plus discoverability.
