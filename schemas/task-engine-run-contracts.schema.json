@@ -6,13 +6,13 @@
   "type": "object",
   "required": ["schemaVersion", "packageVersion", "moduleId", "commands"],
   "additionalProperties": false,
-  "packageVersion": "0.16.1",
+  "packageVersion": "0.17.0",
   "properties": {
     "schemaVersion": {
       "const": 1
     },
     "packageVersion": {
-      "const": "0.16.1",
+      "const": "0.17.0",
       "description": "Must match package.json version."
     },
     "moduleId": {

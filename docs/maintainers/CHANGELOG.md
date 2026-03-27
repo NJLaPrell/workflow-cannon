@@ -6,6 +6,32 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-03-27
+
+Phase 16 — maintenance and stability across Task Engine contracts/validation and Cursor extension parity (`T335`–`T344`).
+
+### Added
+
+- **Versioned Task Engine run contracts** — `schemas/task-engine-run-contracts.schema.json` covering command argument/response-data surfaces, shipped in package files.
+- **Contract sync check** — `scripts/check-task-engine-run-contracts.mjs`, wired into `pnpm run check`, validates package version and command coverage drift.
+- **Known type validation** — `type: "improvement"` now enforces non-empty `acceptanceCriteria` + `technicalScope` with stable `invalid-task-type-requirements`.
+- **Task mutation idempotency** — `clientMutationId` replay/conflict semantics for `create-task` and `update-task` with payload digests in mutation evidence.
+- **Model explainer command** — `workspace-kit run explain-task-engine-model '{}'` returns task/wishlist variants, planning boundaries, and lifecycle actions.
+- **Strict runtime validation toggle** — `tasks.strictValidation` validates task records before persistence (`strict-task-validation-failed` on violation).
+
+### Changed
+
+- **`list-tasks` ergonomics** — new filters: `type`, `category` (`metadata.category`), `tags` (`metadata.tags`), and safe `metadataFilters` dotted paths.
+- **Extension watcher refresh model** — dynamically tracks `.workspace-kit/config.json`, default/configured JSON task path, and default/configured SQLite DB path.
+- **Extension dashboard UI** — renders wishlist counts, blocked summary (with top blockers), and ready-queue preview from existing `dashboard-summary` payload fields.
+- **Extension ready queue command** — prefers filtered ready improvements (`status + type`) and falls back to full ready queue when needed.
+- **TERMS glossary** — adds Task Engine vocabulary: Wishlist, execution task, improvement task, unified work record.
+
+### Tests
+
+- Added/updated coverage for known-type validation, list-task filter combinations, idempotent replay/conflict paths, strict validation on/off behavior, and model explainer command output.
+- Extension compile checks validated watcher/dashboard/filter updates.
+
 ## [0.16.1] - 2026-03-27
 
 Patch: **`workspace-kit doctor`** and persisted config for SQLite task settings.
