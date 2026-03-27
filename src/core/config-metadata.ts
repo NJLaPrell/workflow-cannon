@@ -38,6 +38,48 @@ const REGISTRY: Record<string, ConfigKeyMetadata> = {
     exposure: "public",
     writableLayers: ["project", "user"]
   },
+  "tasks.wishlistStoreRelativePath": {
+    key: "tasks.wishlistStoreRelativePath",
+    type: "string",
+    description:
+      "Relative path (from workspace root) to the Wishlist JSON store when persistenceBackend is json.",
+    default: ".workspace-kit/wishlist/state.json",
+    domainScope: "project",
+    owningModule: "task-engine",
+    sensitive: false,
+    requiresRestart: false,
+    requiresApproval: false,
+    exposure: "public",
+    writableLayers: ["project", "user"]
+  },
+  "tasks.persistenceBackend": {
+    key: "tasks.persistenceBackend",
+    type: "string",
+    description: "Task + wishlist persistence: json (default) or sqlite.",
+    default: "json",
+    allowedValues: ["json", "sqlite"],
+    domainScope: "project",
+    owningModule: "task-engine",
+    sensitive: false,
+    requiresRestart: false,
+    requiresApproval: false,
+    exposure: "public",
+    writableLayers: ["project", "user"]
+  },
+  "tasks.sqliteDatabaseRelativePath": {
+    key: "tasks.sqliteDatabaseRelativePath",
+    type: "string",
+    description:
+      "Relative path (from workspace root) to the SQLite file when persistenceBackend is sqlite.",
+    default: ".workspace-kit/tasks/workspace-kit.db",
+    domainScope: "project",
+    owningModule: "task-engine",
+    sensitive: false,
+    requiresRestart: false,
+    requiresApproval: false,
+    exposure: "public",
+    writableLayers: ["project", "user"]
+  },
   "policy.extraSensitiveModuleCommands": {
     key: "policy.extraSensitiveModuleCommands",
     type: "array",
@@ -358,9 +400,26 @@ export function validatePersistedConfigDocument(
     }
     const t = tasks as Record<string, unknown>;
     for (const k of Object.keys(t)) {
-      if (k !== "storeRelativePath") {
+      if (
+        k !== "storeRelativePath" &&
+        k !== "wishlistStoreRelativePath" &&
+        k !== "persistenceBackend" &&
+        k !== "sqliteDatabaseRelativePath"
+      ) {
         throw new Error(`config-invalid(${label}): unknown tasks.${k}`);
       }
+    }
+    if (t.storeRelativePath !== undefined) {
+      validateValueForMetadata(REGISTRY["tasks.storeRelativePath"]!, t.storeRelativePath);
+    }
+    if (t.wishlistStoreRelativePath !== undefined) {
+      validateValueForMetadata(REGISTRY["tasks.wishlistStoreRelativePath"]!, t.wishlistStoreRelativePath);
+    }
+    if (t.persistenceBackend !== undefined) {
+      validateValueForMetadata(REGISTRY["tasks.persistenceBackend"]!, t.persistenceBackend);
+    }
+    if (t.sqliteDatabaseRelativePath !== undefined) {
+      validateValueForMetadata(REGISTRY["tasks.sqliteDatabaseRelativePath"]!, t.sqliteDatabaseRelativePath);
     }
   }
   const policy = data.policy;

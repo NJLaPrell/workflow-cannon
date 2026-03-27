@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import assert from "node:assert/strict";
+import Database from "better-sqlite3";
 
 import { runCli } from "../dist/cli.js";
 
@@ -123,6 +124,116 @@ test("runCli doctor returns validation failure when required files are missing",
 
   assert.equal(code, 1);
   assert.match(capture.errors[0], /failed validation/);
+});
+
+test("runCli doctor fails when sqlite persistence configured but DB missing", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "qt-wskit-dr-sqlite-miss-"));
+  await createDoctorFixture(fixtureRoot);
+  await writeFile(
+    path.join(fixtureRoot, ".workspace-kit", "config.json"),
+    JSON.stringify(
+      {
+        schemaVersion: 1,
+        tasks: {
+          persistenceBackend: "sqlite",
+          sqliteDatabaseRelativePath: ".workspace-kit/tasks/planning.db"
+        }
+      },
+      null,
+      2
+    )
+  );
+
+  const capture = createCapture();
+  const code = await runCli(["doctor"], { cwd: fixtureRoot, ...capture });
+
+  assert.equal(code, 1);
+  assert.ok(capture.errors.some((e) => e.includes("sqlite-planning-db-missing")));
+});
+
+test("runCli doctor passes when sqlite DB exists but planning row not yet written", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "qt-wskit-dr-sqlite-empty-"));
+  await createDoctorFixture(fixtureRoot);
+  await mkdir(path.join(fixtureRoot, ".workspace-kit", "tasks"), { recursive: true });
+  await writeFile(
+    path.join(fixtureRoot, ".workspace-kit", "config.json"),
+    JSON.stringify(
+      {
+        schemaVersion: 1,
+        tasks: {
+          persistenceBackend: "sqlite",
+          sqliteDatabaseRelativePath: ".workspace-kit/tasks/planning.db"
+        }
+      },
+      null,
+      2
+    )
+  );
+
+  const dbPath = path.join(fixtureRoot, ".workspace-kit", "tasks", "planning.db");
+  const db = new Database(dbPath);
+  db.exec(`CREATE TABLE IF NOT EXISTS workspace_planning_state (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  task_store_json TEXT NOT NULL,
+  wishlist_store_json TEXT NOT NULL
+);`);
+  db.close();
+
+  const capture = createCapture();
+  const code = await runCli(["doctor"], { cwd: fixtureRoot, ...capture });
+
+  assert.equal(code, 0);
+  assert.match(capture.lines[0], /doctor passed/);
+});
+
+test("runCli doctor passes when sqlite DB exists with valid planning row", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "qt-wskit-dr-sqlite-ok-"));
+  await createDoctorFixture(fixtureRoot);
+  await mkdir(path.join(fixtureRoot, ".workspace-kit", "tasks"), { recursive: true });
+  await writeFile(
+    path.join(fixtureRoot, ".workspace-kit", "config.json"),
+    JSON.stringify(
+      {
+        schemaVersion: 1,
+        tasks: {
+          persistenceBackend: "sqlite",
+          sqliteDatabaseRelativePath: ".workspace-kit/tasks/planning.db"
+        }
+      },
+      null,
+      2
+    )
+  );
+
+  const dbPath = path.join(fixtureRoot, ".workspace-kit", "tasks", "planning.db");
+  const db = new Database(dbPath);
+  db.exec(`CREATE TABLE IF NOT EXISTS workspace_planning_state (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  task_store_json TEXT NOT NULL,
+  wishlist_store_json TEXT NOT NULL
+);`);
+  const taskDoc = JSON.stringify({
+    schemaVersion: 1,
+    tasks: [],
+    transitionLog: [],
+    mutationLog: [],
+    lastUpdated: new Date().toISOString()
+  });
+  const wishDoc = JSON.stringify({
+    schemaVersion: 1,
+    items: [],
+    lastUpdated: new Date().toISOString()
+  });
+  db.prepare(
+    "INSERT INTO workspace_planning_state (id, task_store_json, wishlist_store_json) VALUES (1, ?, ?)"
+  ).run(taskDoc, wishDoc);
+  db.close();
+
+  const capture = createCapture();
+  const code = await runCli(["doctor"], { cwd: fixtureRoot, ...capture });
+
+  assert.equal(code, 0);
+  assert.match(capture.lines[0], /doctor passed/);
 });
 
 test("runCli check validates profile baseline fields", async () => {

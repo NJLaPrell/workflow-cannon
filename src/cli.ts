@@ -12,6 +12,7 @@ import {
 } from "./core/policy.js";
 import { runWorkspaceConfigCli } from "./core/config-cli.js";
 import { handleRunCommand } from "./cli/run-command.js";
+import { collectDoctorPlanningPersistenceIssues } from "./cli/doctor-planning-issues.js";
 
 const EXIT_SUCCESS = 0;
 const EXIT_VALIDATION_FAILURE = 1;
@@ -798,6 +799,8 @@ export async function runCli(
     }
   }
 
+  issues.push(...(await collectDoctorPlanningPersistenceIssues(cwd)));
+
   if (issues.length > 0) {
     writeError("workspace-kit doctor failed validation.");
     for (const issue of issues) {
@@ -808,6 +811,9 @@ export async function runCli(
 
   writeLine("workspace-kit doctor passed.");
   writeLine("All canonical workspace-kit contract files are present and parseable JSON.");
+  writeLine(
+    "Effective workspace config resolved; task planning persistence checks passed (including SQLite when configured)."
+  );
   writeLine(`Next: workspace-kit run — list module commands; see ${AGENT_CLI_MAP_HUMAN_DOC} for tier/policy copy-paste.`);
   return EXIT_SUCCESS;
 }
