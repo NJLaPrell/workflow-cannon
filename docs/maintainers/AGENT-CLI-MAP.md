@@ -108,6 +108,10 @@ workspace-kit run list-tasks '{"category":"reliability","tags":["ui"],"metadataF
 workspace-kit run create-task '{"id":"T900","title":"retry-safe mutation","status":"ready","clientMutationId":"agent-run-20260327-1"}'
 workspace-kit run update-task '{"taskId":"T900","updates":{"title":"retry-safe mutation v2"},"clientMutationId":"agent-run-20260327-2"}'
 workspace-kit run explain-task-engine-model '{}'
+workspace-kit run list-planning-types '{}'
+workspace-kit run explain-planning-rules '{"planningType":"new-feature"}'
+workspace-kit run build-plan '{"planningType":"new-feature","answers":{"featureGoal":"...","placement":"CLI","technology":"TypeScript"}}'
+workspace-kit run build-plan '{"planningType":"new-feature","answers":{"featureGoal":"...","placement":"CLI","technology":"TypeScript","targetAudience":"AI Agent Operators","problemStatement":"...","expectedOutcome":"...","impact":"...","constraints":"...","successSignals":"..."},"finalize":true,"createWishlist":true}'
 workspace-kit run list-wishlist '{}'
 workspace-kit run get-wishlist '{"wishlistId":"W1"}'
 workspace-kit run resolve-config '{}'
@@ -125,6 +129,7 @@ Instruction paths: run `workspace-kit run` with no subcommand to list commands; 
 3. This file + `src/modules/<module>/instructions/<command>.md` — copy-paste JSON shape.
 4. `docs/maintainers/POLICY-APPROVAL.md` — JSON vs env vs interactive approval.
 5. Task Engine run schemas: `schemas/task-engine-run-contracts.schema.json` (versioned with package; command coverage verified by `pnpm run check`).
+6. Planning module runbook: `docs/maintainers/runbooks/planning-workflow.md`.
 
 ## Optional guardrail: hand-edit detection
 
