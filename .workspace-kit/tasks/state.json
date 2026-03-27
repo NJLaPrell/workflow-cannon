@@ -4896,9 +4896,9 @@
       "id": "T343",
       "title": "Extension: dashboard surfaces full dashboard-summary payload",
       "type": "improvement",
-      "status": "ready",
+      "status": "completed",
       "createdAt": "2026-03-27T19:32:41.163Z",
-      "updatedAt": "2026-03-27T19:32:41.163Z",
+      "updatedAt": "2026-03-27T21:04:28.949Z",
       "priority": "P2",
       "dependsOn": [],
       "phase": "Phase 16 - Maintenance and stability",
@@ -7887,9 +7887,49 @@
       "dependentsUnblocked": [],
       "timestamp": "2026-03-27T21:03:29.569Z",
       "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T343-2026-03-27T21:04:28.877Z-2282d112",
+      "taskId": "T343",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T21:04:28.877Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T343-2026-03-27T21:04:28.949Z-e0b7d5e1",
+      "taskId": "T343",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T21:04:28.949Z",
+      "actor": "NJLaPrell@gmail.com"
     }
   ],
-  "lastUpdated": "2026-03-27T21:03:29.569Z",
+  "lastUpdated": "2026-03-27T21:04:28.950Z",
   "mutationLog": [
     {
       "mutationId": "create-task-T319-2026-03-27T15:16:30.032Z-20b24ad2",

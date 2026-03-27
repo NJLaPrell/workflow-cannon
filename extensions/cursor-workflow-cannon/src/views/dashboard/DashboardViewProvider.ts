@@ -114,6 +114,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       const ss = d.stateSummary || {};
       const sn = d.suggestedNext;
       const ws = d.workspaceStatus;
+      const wishlist = d.wishlist || {};
+      const blockedSummary = d.blockedSummary || {};
+      const blockedTop = Array.isArray(blockedSummary.top) ? blockedSummary.top.slice(0, 3) : [];
+      const readyTop = Array.isArray(d.readyQueueTop) ? d.readyQueueTop.slice(0, 3) : [];
       root.innerHTML =
         '<p><b>Phase</b> ' + (ws?.currentKitPhase ?? '—') + '</p>' +
         '<p class="muted">' + escapeHtml(ws?.activeFocus || '') + '</p>' +
@@ -121,9 +125,27 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         ' · ready ' + (ss.ready ?? 0) + ' · in progress ' + (ss.in_progress ?? 0) +
         ' · blocked ' + (ss.blocked ?? 0) +
         ' · done ' + (ss.completed ?? 0) + '</p>' +
+        '<p><b>Wishlist</b> open ' + (wishlist.openCount ?? 0) + ' / total ' + (wishlist.totalCount ?? 0) + '</p>' +
+        '<p><b>Blocked</b> ' + (blockedSummary.count ?? 0) + '</p>' +
+        renderBlockedList(blockedTop) +
+        '<p><b>Ready preview</b> ' + (d.readyQueueCount ?? 0) + '</p>' +
+        renderReadyList(readyTop) +
         '<p><b>Suggested next</b> ' + (sn ? escapeHtml(sn.id + ' — ' + sn.title) : '—') + '</p>' +
         '<p class="muted">Store updated ' + escapeHtml(d.taskStoreLastUpdated || '') + '</p>';
     });
+    function renderReadyList(items) {
+      if (!items || items.length === 0) return '<p class="muted">No ready tasks.</p>';
+      return '<pre>' + items.map((x) => {
+        const pri = x?.priority ? ' [' + escapeHtml(String(x.priority)) + ']' : '';
+        return '- ' + escapeHtml(String(x?.id ?? '')) + ' ' + escapeHtml(String(x?.title ?? '')) + pri;
+      }).join('\\n') + '</pre>';
+    }
+    function renderBlockedList(items) {
+      if (!items || items.length === 0) return '<p class="muted">No blocked tasks.</p>';
+      return '<pre>' + items.map((x) =>
+        '- ' + escapeHtml(String(x?.taskId ?? '')) + ' blocked by ' + escapeHtml(String((x?.blockedBy || []).join(', ')))
+      ).join('\\n') + '</pre>';
+    }
     function escapeHtml(s) {
       return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
