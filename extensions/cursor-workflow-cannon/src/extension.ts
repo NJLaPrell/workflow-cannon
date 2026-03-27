@@ -157,14 +157,24 @@ export function activate(context: vscode.ExtensionContext): void {
       if (!runtime) {
         return;
       }
-      const r = await runtime.run("list-tasks", { status: "ready" });
+      let r = await runtime.run("list-tasks", { status: "ready", type: "improvement" });
       if (!r.ok) {
         await vscode.window.showErrorMessage(String(r.message ?? r.code));
         return;
       }
-      const list = (r.data?.tasks as { id: string; title: string }[]) ?? [];
+      let list = (r.data?.tasks as { id: string; title: string }[]) ?? [];
+      let title = "Ready improvement tasks";
+      if (list.length === 0) {
+        r = await runtime.run("list-tasks", { status: "ready" });
+        if (!r.ok) {
+          await vscode.window.showErrorMessage(String(r.message ?? r.code));
+          return;
+        }
+        list = (r.data?.tasks as { id: string; title: string }[]) ?? [];
+        title = "Ready tasks";
+      }
       const pick = list.map((t) => `${t.id} — ${t.title}`);
-      await vscode.window.showQuickPick(pick, { title: "Ready tasks" });
+      await vscode.window.showQuickPick(pick, { title });
     }),
     vscode.commands.registerCommand("workflowCannon.validateConfig", async () => {
       const runtime = requireClient();

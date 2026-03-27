@@ -4912,9 +4912,9 @@
       "id": "T344",
       "title": "Extension: list-tasks filters when engine supports them",
       "type": "improvement",
-      "status": "ready",
+      "status": "completed",
       "createdAt": "2026-03-27T19:32:41.231Z",
-      "updatedAt": "2026-03-27T19:32:41.231Z",
+      "updatedAt": "2026-03-27T21:05:41.613Z",
       "priority": "P2",
       "dependsOn": [
         "T337"
@@ -7927,9 +7927,49 @@
       "dependentsUnblocked": [],
       "timestamp": "2026-03-27T21:04:28.949Z",
       "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T344-2026-03-27T21:05:41.547Z-64bb7dac",
+      "taskId": "T344",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T21:05:41.547Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T344-2026-03-27T21:05:41.613Z-7cb40824",
+      "taskId": "T344",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T21:05:41.613Z",
+      "actor": "NJLaPrell@gmail.com"
     }
   ],
-  "lastUpdated": "2026-03-27T21:04:28.950Z",
+  "lastUpdated": "2026-03-27T21:05:41.614Z",
   "mutationLog": [
     {
       "mutationId": "create-task-T319-2026-03-27T15:16:30.032Z-20b24ad2",
