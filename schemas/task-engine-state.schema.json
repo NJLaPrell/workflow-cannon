@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.local/schemas/task-engine-state.schema.json",
+  "title": "Workspace kit task engine state (subset)",
+  "description": "Editor-assist schema only; runtime does not validate state.json against this file.",
+  "type": "object",
+  "required": ["schemaVersion", "tasks"],
+  "properties": {
+    "schemaVersion": { "type": "integer" },
+    "lastUpdated": { "type": "string", "format": "date-time" },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "status", "type", "title", "createdAt", "updatedAt", "priority"],
+        "properties": {
+          "id": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["proposed", "ready", "in_progress", "blocked", "completed", "cancelled"]
+          },
+          "type": { "type": "string" },
+          "title": { "type": "string" },
+          "phase": { "type": "string" },
+          "priority": { "type": "string" },
+          "dependsOn": { "type": "array", "items": { "type": "string" } },
+          "unblocks": { "type": "array", "items": { "type": "string" } },
+          "approach": { "type": "string" },
+          "technicalScope": { "type": "array", "items": { "type": "string" } },
+          "acceptanceCriteria": { "type": "array", "items": { "type": "string" } },
+          "metadata": { "type": "object" },
+          "createdAt": { "type": "string" },
+          "updatedAt": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "transitionLog": { "type": "array" }
+  },
+  "additionalProperties": true
+}

@@ -10,7 +10,9 @@ Manual-first workflow for syncing agent transcripts, generating improvement reco
 3. Optional: copy only (no generate): `workspace-kit run sync-transcripts '{}'`
 4. Or combine sync + cadence-gated generation: `workspace-kit run ingest-transcripts '{"policyApproval":{"confirmed":true,"rationale":"why"}}'`
 
-`ingest-transcripts` is policy-sensitive: include `policyApproval`, use a session grant (see below), or set `WORKSPACE_KIT_POLICY_APPROVAL` for automation.
+`ingest-transcripts` and `generate-recommendations` are policy-sensitive under **`workspace-kit run`**: pass **`policyApproval` in the JSON args** (third CLI argument), or use a **session grant** (below). The **`run` command does not read `WORKSPACE_KIT_POLICY_APPROVAL`** — that env var is for **`init` / `upgrade` / `config`** mutating subcommands. See **`docs/maintainers/POLICY-APPROVAL.md`**.
+
+For **`pnpm run transcript:ingest`** (wrapper script), set `WORKSPACE_KIT_POLICY_APPROVAL` only because the script wires non-interactive ingest per maintainer workflow — not because `run` substitutes env for JSON approval.
 
 ## Policy approval and sessions
 
@@ -44,6 +46,6 @@ Transcript-derived provenance uses redacted snippets only (see improvement inges
 
 ## Troubleshooting
 
-- **policy-denied:** supply `policyApproval`, set a session grant, or use env approval for non-interactive runs.
+- **policy-denied:** JSON output includes **`operationId`** and **`remediationDoc`**. For `run`, supply **`policyApproval`** in JSON or a session grant; see **`docs/maintainers/POLICY-APPROVAL.md`**. Do not rely on `WORKSPACE_KIT_POLICY_APPROVAL` for bare `workspace-kit run`.
 - **skipped-min-interval / skipped-no-new-transcripts:** expected for `ingest-transcripts`; run `generate-recommendations` directly or pass ingest args to force generation if your workflow allows it.
 - **retry-exhausted:** inspect the file path and archive conflicts; resolve manually and clear queue entries if needed.

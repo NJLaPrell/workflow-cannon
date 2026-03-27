@@ -40,6 +40,7 @@ export {
   isSensitiveModuleCommandForEffective,
   parsePolicyApproval,
   parsePolicyApprovalFromEnv,
+  POLICY_APPROVAL_HUMAN_DOC,
   POLICY_TRACE_SCHEMA_VERSION,
   resolveActor,
   resolvePolicyOperationIdForCommand,

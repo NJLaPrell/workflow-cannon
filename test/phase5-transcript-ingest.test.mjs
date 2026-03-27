@@ -86,7 +86,17 @@ test("Phase5: ingest-transcripts returns cadence skip without policy approval fr
   const cap = { lines: [], errors: [], writeLine: (m) => cap.lines.push(m), writeError: (m) => cap.errors.push(m) };
   const denied = await runCli(["run", "ingest-transcripts", "{}"], { cwd: workspacePath, ...cap });
   assert.equal(denied, 1);
-  assert.equal(JSON.parse(cap.lines.join("")).code, "policy-denied");
+  const deniedPayload = JSON.parse(cap.lines.join(""));
+  assert.equal(deniedPayload.code, "policy-denied");
+  assert.equal(
+    deniedPayload.operationId,
+    "improvement.ingest-transcripts",
+    "denial JSON should name the gated operation for actionable remediation"
+  );
+  assert.ok(
+    typeof deniedPayload.remediationDoc === "string" && deniedPayload.remediationDoc.includes("POLICY-APPROVAL"),
+    "denial should point maintainers at POLICY-APPROVAL.md"
+  );
 
   const approvedArgs = JSON.stringify({
     policyApproval: { confirmed: true, rationale: "phase5 test" }

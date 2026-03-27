@@ -61,10 +61,12 @@ This keeps automation adaptive without sacrificing safety, governance, or develo
 
 ## Current Status
 
-- **Phase 0** and **Phase 1** (task engine, `v0.3.0`) are complete.
-- **Phase 2** (layered config, policy gates, cutover docs, `v0.4.0`) is complete in-repo; see `.workspace-kit/tasks/state.json` and `docs/maintainers/ROADMAP.md`.
-- **Phase 2b** (policy + config UX, `v0.4.1`) and **Phase 3** (enhancement loop MVP, `v0.5.0`) are complete in-repo: evidence-driven **improvement** tasks, **`approvals`** (`review-item`), heuristic confidence, and append-only lineage.
-- **Phase 4** (`v0.6.0`) is complete in-repo: compatibility matrix/gates, diagnostics/SLO baseline evidence, release-channel mapping, and planning-doc consistency checks.
+**Release and phase truth:** see `docs/maintainers/ROADMAP.md` and `docs/maintainers/data/workspace-kit-status.yaml`. **Task queue:** `.workspace-kit/tasks/state.json` (ids and `status` are authoritative for execution).
+
+- **Phases 0–7** are complete through **`v0.9.0`** (see roadmap for slice ids).
+- **Phase 8** ships maintainer/onboarding hardening (`v0.10.0`): policy denial clarity, runbooks, and doc alignment for CLI vs `run` approval.
+
+Historical note: this file’s milestone list is not the live queue—always check task state for **`ready`** work.
 
 ## Goals
 
@@ -81,6 +83,18 @@ Install:
 ```bash
 npm install @workflow-cannon/workspace-kit
 ```
+
+### How to run the CLI (this repo and consumers)
+
+There is **no** IDE slash command like `/qt` defined by this package unless your own editor config adds one. Supported entrypoints:
+
+| Context | Command |
+| --- | --- |
+| **Installed package** | `npx @workflow-cannon/workspace-kit --help` or `pnpm exec workspace-kit --help` when the package is a dependency |
+| **Developing this repo** | `pnpm run build` then `node dist/cli.js --help` or `pnpm exec workspace-kit --help` if linked |
+| **Transcript helpers** | `pnpm run transcript:sync` / `pnpm run transcript:ingest` (see maintainer runbooks) |
+
+Mutating commands require policy approval: **`docs/maintainers/POLICY-APPROVAL.md`** (JSON **`policyApproval`** for `workspace-kit run`, env for `config`/`init`/`upgrade`).
 
 ## Repository Map
 
@@ -106,6 +120,7 @@ npm install @workflow-cannon/workspace-kit
 - Project decisions: `docs/maintainers/DECISIONS.md`
 - Governance policy surface: `docs/maintainers/GOVERNANCE.md`
 - Release process and gates: `docs/maintainers/RELEASING.md`
+- Policy / approval surfaces: `docs/maintainers/POLICY-APPROVAL.md`
 - Canonical changelog: `docs/maintainers/CHANGELOG.md` (`CHANGELOG.md` at repo root is pointer-only)
 - Canonical AI module build guidance: `.ai/module-build.md`
 - Human module build guide: `docs/maintainers/module-build-guide.md`

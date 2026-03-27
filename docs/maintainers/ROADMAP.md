@@ -18,8 +18,9 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - **Phase 3 (Enhancement loop MVP) is COMPLETE** in-repo and ships as **`v0.5.0`** (`T190`–`T192`, `T202`–`T203`).
 - **Phase 4 (Runtime scale and ecosystem) is COMPLETE** in-repo and ships as **`v0.6.0`** (`T193`–`T195`, `T204`–`T205`, `T238`–`T242`).
 - **Phase 5 (Transcript intelligence automation) is COMPLETE** in-repo and ships as **`v0.7.0`** for the initial automation slice (`T244`, `T245`, `T246`, `T247`, `T248`, `T259`).
-- **Phase 6 (Automation hardening and response templates)** for **`v0.8.0`**: tracks **6a**–**6c** are **COMPLETE in-repo** (`T249`-`T258`, `T260`-`T266`, `T271`-`T274`); improvement recommendation item `imp-2cf5d881b81f9a` remains proposed.
+- **Phase 6 (Automation hardening and response templates)** for **`v0.8.0`**: tracks **6a**–**6c** are **COMPLETE in-repo** (`T249`-`T258`, `T260`-`T266`, `T271`-`T274`).
 - **Phase 7 (Architectural hardening)** for **`v0.9.0`** is **COMPLETE and released** across **`T275`-`T282`** (documentation/canon fixes, package identity alignment, CLI decomposition, config/runtime hardening, governance-surface cleanup).
+- **Phase 8 (Improvement backlog triage)** is **COMPLETE and released** as **`v0.10.0`** for **`imp-2cf5d881b81f9a`, `imp-3dc9374451b3c0`, `imp-b9d8408715de51`, `imp-201911c9c4461a`, `imp-ab362ef4e1f99e`, `imp-c14c4955833730`, `imp-fb31f5fc2694d3`, `imp-43397766ef243b`, `imp-7f9e65fad74b0b`** (policy/onboarding/runbooks/task-state docs + richer `policy-denied` JSON).
 - Historical extraction and first-publish milestones remain recorded below as provenance.
 
 ## Phase plan and release cadence
@@ -122,6 +123,14 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
   - Canonical-vs-derived governance/documentation surfaces are explicit and stable.
   - Core runtime hardening changes preserve deterministic behavior and release gate compatibility.
 
+### Phase 8 - Improvement backlog triage -> GitHub release `v0.10.0`
+
+- Primary scope: improvement tasks `imp-2cf5d881b81f9a`, `imp-3dc9374451b3c0`, `imp-b9d8408715de51`, `imp-201911c9c4461a`, `imp-ab362ef4e1f99e`, `imp-c14c4955833730`, `imp-fb31f5fc2694d3`, `imp-43397766ef243b`, `imp-7f9e65fad74b0b` (see `.workspace-kit/tasks/state.json` for full acceptance criteria).
+- Outcome: operator-actionable policy denials for `workspace-kit run`, maintainer runbooks (approval surfaces, transcript triggers, first-run validation, agent report template), README/AGENTS entrypoints, FEATURE-MATRIX + architectural review alignment, optional task-state JSON Schema for editors.
+- Exit signals:
+  - All listed `imp-*` items are **`completed`** in task-engine state with release evidence recorded below.
+  - `pnpm run build`, `check`, `test`, `parity`, and `phase5-gates` pass on the release tag.
+
 ## Recorded decisions
 
 | Decision | Choice |
@@ -143,4 +152,5 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 - Phase 5 / `v0.7.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23610374625`
 - Phase 6 / `v0.8.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23617262478`
 - Phase 7 / `v0.9.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23622990943`
+- Phase 8 / `v0.10.0` publish workflow run: _record npm publish workflow URL after release_
 - npm package: `https://www.npmjs.com/package/@workflow-cannon/workspace-kit`

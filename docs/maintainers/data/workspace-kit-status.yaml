@@ -1,28 +1,23 @@
 schema_version: 1
-current_kit_phase: "7"
+current_kit_phase: "8"
 last_updated: "2026-03-26"
-active_focus: "Phase 7 architectural hardening is complete and released as `v0.9.0` (`T275`-`T282`); focus shifts to queued improvement triage."
+active_focus: "Phase 8 complete: v0.10.0 shipped — policy/runbook/onboarding docs and richer policy-denied JSON for workspace-kit run."
 blockers: []
 next_agent_actions:
-  - "Triage and route ready improvement items (`imp-*`) now that Phase 7 release evidence is recorded."
-  - "Review and prioritize `imp-*` by confidence tier and maintainer impact before Phase 8 planning."
-  - "Proposed improvement: triage `imp-2cf5d881b81f9a` (policy friction for `generate-recommendations`)."
+  - "Record Phase 8 npm publish workflow run URL in docs/maintainers/ROADMAP.md execution evidence snapshot after publish."
+  - "Triage workspace-kit-status pending_decisions (approval UX, template strict mode) into future tasks if still open."
 last_session_summary:
-  - "Completed Phase 7 tasks `T275`-`T282`: docs/index drift cleanup, package/changelog canon alignment, CLI run-handler decomposition, config default canon cleanup, docs runtime path hardening, actor-resolution hardening, transcript hook observability/overlap controls, governance/ADR hygiene updates."
-  - "Released `v0.9.0` via publish workflow run `23622990943`; npm `latest` now resolves to `0.9.0`."
-  - "Completed Phase 6c (`T271`-`T274`): transcript package scripts, `.vscode` folder-open task, Cursor runbook, optional post-completion transcript hook + tests."
-  - "Completed Phase 6b (`T260`-`T266`): response template contract, registry, `run` JSON shaping, plain-English directives, config keys, tests, runbook."
-  - "Completed Phase 6a (`T249`-`T258`): bounded sync/generate, discovery, dedupe metrics, `transcript-automation-status`, session policy grants, retry queue, tests, runbook, redaction, pre-release hook script."
-  - "Queued tasks `T271`-`T274` for Cursor/VS Code folder-open transcript sync, maintainer runbook, and optional task-engine post-completion hook."
-  - "Released `v0.8.0` to npm (`latest`); `ROADMAP.md` evidence snapshot includes Phase 6 publish run URL."
+  - "Phase 8 (`imp-*`): POLICY-APPROVAL.md, transcript trigger + first-run + agent report runbooks, TASK-ENGINE-STATE.md, optional JSON Schema, README/AGENTS/FEATURE-MATRIX/architectural review updates, policy-denied JSON enrichment, tests."
+  - "Released v0.10.0 — confirm npm dist-tag and GitHub Actions publish run."
+  - "Prior: Phase 7 v0.9.0 architectural hardening complete."
 pending_decisions:
   - "Implement and validate command-scoped first-use approval UX via Cursor question UI where available (`Deny`/`Allow`/`Allow for this session`)."
   - "Implement configurable response-template enforcement with advisory-only default and explicit strict-mode opt-in."
 metrics:
   updated_at: "2026-03-26"
   source: "automated"
-  notes: "Phase 7 released as `v0.9.0`; npm `latest` = 0.9.0; publish workflow run 23622990943 succeeded."
+  notes: "Phase 8 targeting v0.10.0; validation pipeline green locally."
   time_to_doctor_minutes: 0.03
   cold_start_success_rate_pct: 100
   upgrade_success_rate_pct: null
-  recurring_friction_themes_count: 1
+  recurring_friction_themes_count: 0

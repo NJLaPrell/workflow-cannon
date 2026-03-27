@@ -10,6 +10,28 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 _No entries yet._
 
+## [0.10.0] - 2026-03-26
+
+Phase 8 — improvement backlog triage: maintainer onboarding, policy clarity, and doc/runbook alignment.
+
+### Added
+
+- **`docs/maintainers/POLICY-APPROVAL.md`** — canonical guide for JSON **`policyApproval`** on `workspace-kit run` vs **`WORKSPACE_KIT_POLICY_APPROVAL`** for `init` / `upgrade` / `config` mutations.
+- **Runbooks** — `recommendation-and-transcript-triggers.md`, `agent-structured-workspace-report.md`, `first-run-validation.md`.
+- **`docs/maintainers/TASK-ENGINE-STATE.md`** and optional editor schema **`schemas/task-engine-state.schema.json`** (not loaded by runtime).
+
+### Changed
+
+- **`workspace-kit run`** — `policy-denied` JSON now includes **`operationId`**, **`remediationDoc`**, and **`hint`** distinguishing env approval from `run` JSON approval.
+- **CLI messages** — `init` / `upgrade` / `config` mutating paths cite **`docs/maintainers/POLICY-APPROVAL.md`** and operation ids where applicable.
+- **README / AGENTS** — explicit CLI invocation table, task-state as execution truth, link to policy doc.
+- **Transcript ingestion runbook** — corrected guidance: `run` does not read `WORKSPACE_KIT_POLICY_APPROVAL`; wrapper scripts may still use env for detached ingest.
+- **FEATURE-MATRIX / ARCHITECTURAL-REVIEW-FINDINGS** — Phase 7–8 rows and remediation snapshot; removed incorrect “Phase 6 includes imp-2cf5” feature claim.
+
+### Fixed
+
+- Misleading implication that env-based approval applies to bare `workspace-kit run` sensitive commands.
+
 ## [0.9.0] - 2026-03-26
 
 Phase 7 — architectural hardening and canon alignment: documentation/index cleanup, package/changelog canon normalization, CLI decomposition, runtime/path hardening, and governance surface clarification.

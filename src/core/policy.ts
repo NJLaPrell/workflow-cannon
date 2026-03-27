@@ -4,6 +4,9 @@ import { execFile } from "node:child_process";
 
 export const POLICY_TRACE_SCHEMA_VERSION = 1 as const;
 
+/** Maintainer doc (repo-relative) linked from policy denial output for `workspace-kit run`. */
+export const POLICY_APPROVAL_HUMAN_DOC = "docs/maintainers/POLICY-APPROVAL.md";
+
 export type PolicyOperationId =
   | "cli.upgrade"
   | "cli.init"

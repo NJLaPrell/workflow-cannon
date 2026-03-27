@@ -182,9 +182,18 @@ test("extraSensitiveModuleCommands gates explain-config", async () => {
     ["run", "explain-config", JSON.stringify({ path: "tasks.storeRelativePath" })],
     { cwd: root, ...capDenied }
   );
-  assert.equal(denied, 1);
+  assert.equal(denied, 1, "extra-sensitive explain-config run should exit validation failure when policyApproval missing");
   const msg = JSON.parse(capDenied.lines.join(""));
   assert.equal(msg.code, "policy-denied");
+  assert.equal(
+    msg.operationId,
+    "policy.dynamic-sensitive",
+    "config-declared sensitive commands should trace as policy.dynamic-sensitive"
+  );
+  assert.ok(
+    msg.remediationDoc?.includes("POLICY-APPROVAL"),
+    "denial payload should link remediation doc for operators"
+  );
 
   const capOk = captureIo();
   const ok = await runCli(

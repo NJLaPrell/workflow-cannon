@@ -144,7 +144,7 @@ async function requireCliPolicyApproval(
   const approval = parsePolicyApprovalFromEnv(process.env);
   if (!approval) {
     writeError(
-      `workspace-kit ${commandLabel} requires WORKSPACE_KIT_POLICY_APPROVAL with JSON {"confirmed":true,"rationale":"..."} (agent-mediated).`
+      `workspace-kit ${commandLabel} (${operationId}) requires WORKSPACE_KIT_POLICY_APPROVAL with JSON {"confirmed":true,"rationale":"..."} (agent-mediated). For workspace-kit run sensitive commands, use policyApproval in JSON args instead — see docs/maintainers/POLICY-APPROVAL.md.`
     );
     await appendPolicyTrace(cwd, {
       timestamp: new Date().toISOString(),

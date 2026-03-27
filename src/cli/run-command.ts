@@ -4,6 +4,7 @@ import {
   appendPolicyTrace,
   isSensitiveModuleCommandForEffective,
   parsePolicyApproval,
+  POLICY_APPROVAL_HUMAN_DOC,
   resolveActorWithFallback,
   resolvePolicyOperationIdForCommand,
   type PolicyApprovalPayload
@@ -129,8 +130,14 @@ export async function handleRunCommand(
           {
             ok: false,
             code: "policy-denied",
+            operationId: policyOp ?? null,
+            remediationDoc: POLICY_APPROVAL_HUMAN_DOC,
             message:
-              'Sensitive command requires policyApproval in JSON args (or an existing session grant for this operation): {"policyApproval":{"confirmed":true,"rationale":"why","scope":"session"}}'
+              'Sensitive command requires policyApproval in JSON args (or an existing session grant for this operation). Example: {"policyApproval":{"confirmed":true,"rationale":"why","scope":"session"}}. See remediationDoc for env vs JSON approval surfaces.',
+            hint:
+              policyOp != null
+                ? `Operation ${policyOp} requires explicit approval; WORKSPACE_KIT_POLICY_APPROVAL is not read for workspace-kit run.`
+                : "Operation could not be mapped to policyOperationId; check policy.extraSensitiveModuleCommands and pass policyApproval in JSON args."
           },
           null,
           2

@@ -152,7 +152,7 @@ async function requireConfigApproval(
   const approval = parsePolicyApprovalFromEnv(process.env);
   if (!approval) {
     writeError(
-      `${commandLabel} requires WORKSPACE_KIT_POLICY_APPROVAL with JSON {"confirmed":true,"rationale":"..."}.`
+      `${commandLabel} (cli.config-mutate) requires WORKSPACE_KIT_POLICY_APPROVAL with JSON {"confirmed":true,"rationale":"..."}. See docs/maintainers/POLICY-APPROVAL.md.`
     );
     await appendPolicyTrace(cwd, {
       timestamp: new Date().toISOString(),

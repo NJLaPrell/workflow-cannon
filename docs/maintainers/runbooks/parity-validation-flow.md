@@ -8,6 +8,8 @@ AI-canonical companion: `.ai/runbooks/parity-validation-flow.md`.
 
 Parity validation confirms that the **packaged artifact** (what consumers install) behaves identically to the source-repo state. Every release candidate must pass this flow before promotion to `stable`.
 
+For contributor **first clone** ordering (build → test → parity), see **`docs/maintainers/runbooks/first-run-validation.md`**.
+
 ## Canonical Command Chain
 
 Commands are executed in this exact order. Any non-zero exit halts the chain.

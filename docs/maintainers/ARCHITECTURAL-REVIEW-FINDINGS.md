@@ -6,6 +6,10 @@ Workflow Cannon is a contract-driven developer workflow platform with strong des
 
 The highest-leverage architectural risks are not foundational flaws; they are consistency and maintainability issues: duplicate policy/document surfaces, stale or conflicting references, naming drift between historical and current package identity, and a monolithic CLI orchestration surface that will become harder to evolve. The system is fundamentally well-structured for incremental hardening, and most findings can be remediated in reversible slices without changing core contracts.
 
+### Phase 7–8 remediation snapshot (trust the feature matrix, not this narrative alone)
+
+Several items above were addressed in shipped slices: **CLI decomposition** (`src/cli/run-command.ts` + focused handlers), **package identity** normalization toward `@workflow-cannon/workspace-kit`, **documentation runtime** paths for packaged consumers, and clearer **policy / approval** surfaces (`docs/maintainers/POLICY-APPROVAL.md`, enriched `policy-denied` JSON on `run`). **Placeholder** tree paths (`src/ops`, `src/adapters`) may still exist as architectural stubs—treat FEATURE-MATRIX + task state as the product truth for what is released.
+
 ## Systems Architect Persona and Behavior Profile
 
 When operating as systems architect for this codebase, the expected personality and behavior profile is:

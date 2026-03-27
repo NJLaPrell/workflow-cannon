@@ -20,7 +20,9 @@ Status legend:
 | Phase 3 - Enhancement loop MVP (`T190`-`T192`, `T202`-`T203`) | `v0.5.0` | Completed |
 | Phase 4 - Scale and ecosystem hardening (`T193`-`T195`, `T204`-`T205`, `T238`-`T242`) | `v0.6.0` | Completed |
 | Phase 5 - Transcript intelligence automation (`T244`-`T248`, `T259`) | `v0.7.0` | Completed |
-| Phase 6 - Automation hardening + response templates (`T249`-`T258`, `T260`-`T266`, `T271`-`T274`, plus active improvement review item) | `v0.8.0` | Completed |
+| Phase 6 - Automation hardening + response templates (`T249`-`T258`, `T260`-`T266`, `T271`-`T274`) | `v0.8.0` | Completed |
+| Phase 7 - Architectural hardening (`T275`-`T282`) | `v0.9.0` | Completed |
+| Phase 8 - Improvement backlog triage (`imp-2cf5d881b81f9a` … `imp-7f9e65fad74b0b`) | `v0.10.0` | Completed |
 
 ## Feature Matrix by Phase
 
@@ -119,9 +121,35 @@ Status legend:
 | --- | --- | --- | --- |
 | Frequent-run automation hardening | Bounded, repeatable high-cadence transcript sync/ingest with stronger safety rails, idempotency diagnostics, and failure retry posture | Completed | `T249`, `T251`, `T254`, `T255` |
 | Transcript ops resilience and privacy | Source autodiscovery, operator status surfaces, privacy/redaction controls, and optional advisory pre-release ingest integration | Completed | `T250`, `T252`, `T257`, `T258` |
-| Policy + docs operational follow-through | Reduced repeat-run policy friction and maintainers-first onboarding/operations runbook for transcript workflows | Completed | `T253`, `T256`, `imp-2cf5d881b81f9a` |
+| Policy + docs operational follow-through | Session grants, transcript ops runbooks, and operator-facing policy traces | Completed | `T253`, `T256` |
 | Response template advisory system | Response template contract, registry, runtime advisory integration, configuration, observability, and maintainer lifecycle guidance | Completed | `T260`, `T261`, `T262`, `T263`, `T264`, `T265`, `T266` |
 | Cursor-native transcript automation | Package scripts, folder-open VS Code tasks, maintainer runbook, optional post-completion transcript hook | Completed | `T271`, `T272`, `T273`, `T274` |
+
+### Phase 7 Architectural hardening (`v0.9.0`)
+
+| Product feature | What users/maintainers get | Status | Task coverage |
+| --- | --- | --- | --- |
+| Maintainer doc navigation + canon | Fewer broken indexes; package/changelog identity aligned to `@workflow-cannon/workspace-kit` | Completed | `T275`, `T276` |
+| CLI decomposition | Command handlers and shared run bootstrap (`run-command` path) for safer iteration | Completed | `T277` |
+| Config default singularity | One authoritative default map consumed by explain/docs | Completed | `T278` |
+| Documentation runtime in consumers | Package-relative doc paths for installed package layouts | Completed | `T279` |
+| Policy actor robustness | Bounded async actor resolution for traces | Completed | `T280` |
+| Transcript hook observability | Hook event log + overlap control for background automation | Completed | `T281` |
+| Governance / ADR hygiene | Canonical vs derivative surfaces documented | Completed | `T282` |
+
+### Phase 8 Improvement backlog triage (`v0.10.0`)
+
+| Product feature | What users/maintainers get | Status | Task coverage |
+| --- | --- | --- | --- |
+| Actionable policy denials for `run` | `policy-denied` JSON includes `operationId`, `remediationDoc`, and clarifies env vs JSON approval | Completed | `imp-2cf5d881b81f9a` |
+| Architectural doc alignment | FEATURE-MATRIX / review / roadmap consistency passes planning checks | Completed | `imp-3dc9374451b3c0` |
+| CLI entrypoint clarity | README/AGENTS explain real CLI vs phantom QuickTask slash commands | Completed | `imp-b9d8408715de51` |
+| Automation vs on-demand docs | Trigger matrix for recommendations, sync, ingest, hooks | Completed | `imp-201911c9c4461a` |
+| Test failure ergonomics | Clearer assertion messages in selected contract tests | Completed | `imp-ab362ef4e1f99e` |
+| Agent report guidance | Runbook for structured handoff summaries | Completed | `imp-c14c4955833730` |
+| First-run validation runbook | Contributor order-of-operations for build/test/parity | Completed | `imp-fb31f5fc2694d3` |
+| Agent phase truth | AGENTS + README point to task state and status YAML | Completed | `imp-43397766ef243b` |
+| Task state schema story | Human doc + optional JSON Schema for editors | Completed | `imp-7f9e65fad74b0b` |
 
 ## Supporting Milestone Features (cross-phase)
 
