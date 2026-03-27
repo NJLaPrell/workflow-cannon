@@ -863,6 +863,99 @@ test("taskEngineModule update-task validates known requirements for improvement 
   assert.equal(updated.code, "invalid-task-type-requirements");
 });
 
+test("taskEngineModule create-task supports idempotent replay with clientMutationId", async () => {
+  const workspace = await tmpDir();
+  const ctx = { runtimeVersion: "0.1", workspacePath: workspace };
+  const args = {
+    id: "T404",
+    title: "Idempotent create",
+    status: "ready",
+    clientMutationId: "cmid-create-1"
+  };
+
+  const first = await taskEngineModule.onCommand({ name: "create-task", args }, ctx);
+  assert.equal(first.ok, true);
+  assert.equal(first.code, "task-created");
+
+  const second = await taskEngineModule.onCommand({ name: "create-task", args }, ctx);
+  assert.equal(second.ok, true);
+  assert.equal(second.code, "task-create-idempotent-replay");
+  assert.equal(second.data.replayed, true);
+});
+
+test("taskEngineModule create-task rejects idempotency key payload conflicts", async () => {
+  const workspace = await tmpDir();
+  const ctx = { runtimeVersion: "0.1", workspacePath: workspace };
+
+  const first = await taskEngineModule.onCommand(
+    {
+      name: "create-task",
+      args: { id: "T405", title: "Idempotent conflict A", status: "ready", clientMutationId: "cmid-create-2" }
+    },
+    ctx
+  );
+  assert.equal(first.ok, true);
+
+  const second = await taskEngineModule.onCommand(
+    {
+      name: "create-task",
+      args: { id: "T405", title: "Idempotent conflict B", status: "ready", clientMutationId: "cmid-create-2" }
+    },
+    ctx
+  );
+  assert.equal(second.ok, false);
+  assert.equal(second.code, "idempotency-key-conflict");
+});
+
+test("taskEngineModule update-task supports idempotent replay with clientMutationId", async () => {
+  const workspace = await tmpDir();
+  const ctx = { runtimeVersion: "0.1", workspacePath: workspace };
+
+  const created = await taskEngineModule.onCommand(
+    { name: "create-task", args: { id: "T406", title: "Before", status: "ready" } },
+    ctx
+  );
+  assert.equal(created.ok, true);
+
+  const updateArgs = {
+    taskId: "T406",
+    updates: { title: "After" },
+    clientMutationId: "cmid-update-1"
+  };
+  const first = await taskEngineModule.onCommand({ name: "update-task", args: updateArgs }, ctx);
+  assert.equal(first.ok, true);
+  assert.equal(first.code, "task-updated");
+
+  const second = await taskEngineModule.onCommand({ name: "update-task", args: updateArgs }, ctx);
+  assert.equal(second.ok, true);
+  assert.equal(second.code, "task-update-idempotent-replay");
+  assert.equal(second.data.replayed, true);
+});
+
+test("taskEngineModule update-task rejects idempotency key payload conflicts", async () => {
+  const workspace = await tmpDir();
+  const ctx = { runtimeVersion: "0.1", workspacePath: workspace };
+
+  const created = await taskEngineModule.onCommand(
+    { name: "create-task", args: { id: "T407", title: "Before", status: "ready" } },
+    ctx
+  );
+  assert.equal(created.ok, true);
+
+  const first = await taskEngineModule.onCommand(
+    { name: "update-task", args: { taskId: "T407", updates: { title: "After A" }, clientMutationId: "cmid-update-2" } },
+    ctx
+  );
+  assert.equal(first.ok, true);
+
+  const second = await taskEngineModule.onCommand(
+    { name: "update-task", args: { taskId: "T407", updates: { title: "After B" }, clientMutationId: "cmid-update-2" } },
+    ctx
+  );
+  assert.equal(second.ok, false);
+  assert.equal(second.code, "idempotency-key-conflict");
+});
+
 test("taskEngineModule archive-task excludes task from default active queries", async () => {
   const workspace = await tmpDir();
   const ctx = { runtimeVersion: "0.1", workspacePath: workspace };

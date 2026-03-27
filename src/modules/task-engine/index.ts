@@ -108,6 +108,56 @@ function readMetadataPath(
   return current;
 }
 
+function stableStringify(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map((entry) => stableStringify(entry)).join(",")}]`;
+  }
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const keys = Object.keys(record).sort();
+    return `{${keys.map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function digestPayload(value: unknown): string {
+  return crypto.createHash("sha256").update(stableStringify(value)).digest("hex");
+}
+
+function readIdempotencyValue(
+  args: Record<string, unknown>
+): string | undefined {
+  const raw = args.clientMutationId;
+  if (typeof raw !== "string") {
+    return undefined;
+  }
+  const trimmed = raw.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function findIdempotentMutation(
+  store: TaskStore,
+  mutationType: TaskMutationType,
+  taskId: string,
+  clientMutationId: string
+): { payloadDigest?: string } | null {
+  const log = store.getMutationLog();
+  for (let idx = log.length - 1; idx >= 0; idx -= 1) {
+    const entry = log[idx];
+    if (entry.mutationType !== mutationType || entry.taskId !== taskId) {
+      continue;
+    }
+    if (!entry.details || entry.details.clientMutationId !== clientMutationId) {
+      continue;
+    }
+    return {
+      payloadDigest:
+        typeof entry.details.payloadDigest === "string" ? entry.details.payloadDigest : undefined
+    };
+  }
+  return null;
+}
+
 function nowIso(): string {
   return new Date().toISOString();
 }
@@ -426,6 +476,7 @@ export const taskEngineModule: WorkflowModule = {
         typeof args.priority === "string" && ["P1", "P2", "P3"].includes(args.priority)
           ? args.priority as TaskPriority
           : undefined;
+      const clientMutationId = readIdempotencyValue(args);
       if (!id || !title || !TASK_ID_RE.test(id) || !["proposed", "ready"].includes(status)) {
         return {
           ok: false,
@@ -434,10 +485,7 @@ export const taskEngineModule: WorkflowModule = {
             "create-task requires id/title, id format T<number>, and status of proposed or ready"
         };
       }
-      if (store.getTask(id)) {
-        return { ok: false, code: "duplicate-task-id", message: `Task '${id}' already exists` };
-      }
-
+      const evidenceType = command.name === "create-task-from-plan" ? "create-task-from-plan" : "create-task";
       const timestamp = nowIso();
       const task: TaskEntity = {
         id,
@@ -456,15 +504,6 @@ export const taskEngineModule: WorkflowModule = {
         technicalScope: Array.isArray(args.technicalScope) ? args.technicalScope.filter((x) => typeof x === "string") : undefined,
         acceptanceCriteria: Array.isArray(args.acceptanceCriteria) ? args.acceptanceCriteria.filter((x) => typeof x === "string") : undefined
       };
-      const knownTypeValidationError = validateKnownTaskTypeRequirements(task);
-      if (knownTypeValidationError) {
-        return {
-          ok: false,
-          code: knownTypeValidationError.code,
-          message: knownTypeValidationError.message
-        };
-      }
-      store.addTask(task);
       if (command.name === "create-task-from-plan") {
         const planRef = typeof args.planRef === "string" && args.planRef.trim().length > 0 ? args.planRef.trim() : undefined;
         if (!planRef) {
@@ -475,12 +514,43 @@ export const taskEngineModule: WorkflowModule = {
           };
         }
         task.metadata = { ...(task.metadata ?? {}), planRef };
-        store.updateTask(task);
       }
-      const evidenceType = command.name === "create-task-from-plan" ? "create-task-from-plan" : "create-task";
+      const payloadDigest = digestPayload(task);
+      if (clientMutationId) {
+        const prior = findIdempotentMutation(store, evidenceType, id, clientMutationId);
+        if (prior) {
+          if (prior.payloadDigest !== payloadDigest) {
+            return {
+              ok: false,
+              code: "idempotency-key-conflict",
+              message: `clientMutationId '${clientMutationId}' was already used for a different ${evidenceType} payload on ${id}`
+            };
+          }
+          return {
+            ok: true,
+            code: "task-create-idempotent-replay",
+            message: `Idempotent create replay for task '${id}'`,
+            data: { task: store.getTask(id), replayed: true } as Record<string, unknown>
+          };
+        }
+      }
+      if (store.getTask(id)) {
+        return { ok: false, code: "duplicate-task-id", message: `Task '${id}' already exists` };
+      }
+      const knownTypeValidationError = validateKnownTaskTypeRequirements(task);
+      if (knownTypeValidationError) {
+        return {
+          ok: false,
+          code: knownTypeValidationError.code,
+          message: knownTypeValidationError.message
+        };
+      }
+      store.addTask(task);
       store.addMutationEvidence(mutationEvidence(evidenceType, id, actor, {
         initialStatus: task.status,
-        source: command.name
+        source: command.name,
+        clientMutationId,
+        payloadDigest
       }));
       await store.save();
       return {
@@ -503,6 +573,7 @@ export const taskEngineModule: WorkflowModule = {
       if (!taskId || !updates) {
         return { ok: false, code: "invalid-task-schema", message: "update-task requires taskId and updates object" };
       }
+      const clientMutationId = readIdempotencyValue(args);
       const task = store.getTask(taskId);
       if (!task) {
         return { ok: false, code: "task-not-found", message: `Task '${taskId}' not found` };
@@ -516,6 +587,25 @@ export const taskEngineModule: WorkflowModule = {
         };
       }
       const updatedTask = { ...task, ...updates, updatedAt: nowIso() };
+      const payloadDigest = digestPayload(updatedTask);
+      if (clientMutationId) {
+        const prior = findIdempotentMutation(store, "update-task", taskId, clientMutationId);
+        if (prior) {
+          if (prior.payloadDigest !== payloadDigest) {
+            return {
+              ok: false,
+              code: "idempotency-key-conflict",
+              message: `clientMutationId '${clientMutationId}' was already used for a different update-task payload on ${taskId}`
+            };
+          }
+          return {
+            ok: true,
+            code: "task-update-idempotent-replay",
+            message: `Idempotent update replay for task '${taskId}'`,
+            data: { task, replayed: true } as Record<string, unknown>
+          };
+        }
+      }
       const knownTypeValidationError = validateKnownTaskTypeRequirements(updatedTask);
       if (knownTypeValidationError) {
         return {
@@ -525,7 +615,13 @@ export const taskEngineModule: WorkflowModule = {
         };
       }
       store.updateTask(updatedTask);
-      store.addMutationEvidence(mutationEvidence("update-task", taskId, actor, { updatedFields: Object.keys(updates) }));
+      store.addMutationEvidence(
+        mutationEvidence("update-task", taskId, actor, {
+          updatedFields: Object.keys(updates),
+          clientMutationId,
+          payloadDigest
+        })
+      );
       await store.save();
       return { ok: true, code: "task-updated", message: `Updated task '${taskId}'`, data: { task: updatedTask } as Record<string, unknown> };
     }

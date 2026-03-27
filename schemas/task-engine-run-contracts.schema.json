@@ -123,7 +123,8 @@
               "properties": {
                 "id": { "type": "string", "pattern": "^T[0-9]+$" },
                 "title": { "type": "string" },
-                "status": { "type": "string", "enum": ["proposed", "ready"] }
+                "status": { "type": "string", "enum": ["proposed", "ready"] },
+                "clientMutationId": { "type": "string", "minLength": 1 }
               }
             },
             "responseData": {
@@ -154,11 +155,12 @@
           "properties": {
             "args": {
               "type": "object",
-              "required": ["taskId", "patch"],
+              "required": ["taskId", "updates"],
               "additionalProperties": true,
               "properties": {
                 "taskId": { "type": "string", "pattern": "^T[0-9]+$" },
-                "patch": { "type": "object" }
+                "updates": { "type": "object" },
+                "clientMutationId": { "type": "string", "minLength": 1 }
               }
             },
             "responseData": {
