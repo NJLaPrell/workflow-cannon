@@ -6,6 +6,23 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-03-27
+
+Phase 14 — Wishlist intake and conversion: separate `W###` namespace, strict intake fields, and explicit conversion into phased `T###` tasks.
+
+### Added
+
+- **Wishlist persistence** at `.workspace-kit/wishlist/state.json` (`WishlistStore`) with atomic writes.
+- **Task-engine commands:** `create-wishlist`, `list-wishlist`, `get-wishlist`, `update-wishlist`, `convert-wishlist`, with instruction docs under `src/modules/task-engine/instructions/`.
+- **Strict intake validation** for required fields: `title`, `problemStatement`, `expectedOutcome`, `impact`, `constraints`, `successSignals`, `requestor`, `evidenceRef`; wishlist items cannot carry a Task Engine `phase`.
+- **`convert-wishlist`** requires `decomposition` (`rationale`, `boundaries`, `dependencyIntent`) plus one or more workable task payloads (`id`, `title`, `phase`, `approach`, `technicalScope`, `acceptanceCriteria`); source wishlist item is marked **converted** with provenance to created task ids.
+- **Planning-scope markers** on task-only surfaces: `scope: "tasks-only"` / `executionPlanningScope` on `list-tasks`, `get-next-actions`, `get-ready-queue`, `get-task-summary`, `get-blocked-summary`; `dashboard-summary` includes `wishlist.openCount` / `wishlist.totalCount` (wishlist never appears in ready-queue JSON).
+
+### Tests
+
+- `test/wishlist-schema.test.mjs` — intake/update validation.
+- `test/task-engine.test.mjs` — wishlist create/list/convert integration and queue boundary checks.
+
 ## [0.14.0] - 2026-03-27
 
 Phase 13 — Task Engine lifecycle tightening with canonical CRUD/dependency/history/summary command surfaces.

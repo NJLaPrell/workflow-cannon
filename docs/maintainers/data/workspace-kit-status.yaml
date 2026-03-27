@@ -1,22 +1,21 @@
 schema_version: 1
 current_kit_phase: "14"
 last_updated: "2026-03-27"
-active_focus: "Phase 14 planned backlog established for Task Engine Wishlist intake and conversion (`T319`-`T323`)."
+active_focus: "Post-release follow-up after Phase 14 (`v0.15.0`) Wishlist intake and conversion."
 blockers: []
 next_agent_actions:
-  - "Prioritize and transition `T319` to `in_progress` once implementation sequencing is approved."
-  - "Define command contracts for Wishlist intake/query/conversion before persistence and router changes."
-  - "Draft Phase 14 workbook baseline covering Wishlist-required fields, conversion decomposition rules, and planning-boundary guarantees."
+  - "Capture any follow-up issues or consumer feedback from v0.15.0 before the next phase planning slice."
+  - "Monitor extension/dashboard consumers for `dashboard-summary` schema additions (`wishlist`, `executionPlanningScope`)."
 last_session_summary:
   - "Phase 13 tasks T311–T318 completed through canonical Task Engine transitions."
   - "Task Engine now exposes CRUD/dependency/history/summary and planning bridge command contracts with archival-aware query defaults."
   - "Release readiness gates passed: build/check/test/parity/check-release-metadata/phase5-gates/check-planning-consistency."
-  - "Phase 14 planning tasks `T319`-`T323` created for Wishlist namespace, strict intake, conversion command, and planning-boundary enforcement."
+  - "Phase 14 tasks `T319`-`T323` completed: Wishlist store, commands, conversion, planning-boundary markers, runbook and tests; released as v0.15.0."
 pending_decisions: []
 metrics:
   updated_at: "2026-03-27"
   source: "maintainer"
-  notes: "v0.14.0 released (Phase 13) via publish workflow run 23650389235; focus moved to Phase 14 planning."
+  notes: "v0.15.0 released (Phase 14) — Wishlist intake/conversion; v0.14.0 was Phase 13 (run 23650389235)."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null

@@ -103,9 +103,13 @@ Non-sensitive commands (no `policyApproval` unless you added `extraSensitiveModu
 workspace-kit run list-tasks '{}'
 workspace-kit run get-next-actions '{}'
 workspace-kit run get-task '{"taskId":"T285"}'
+workspace-kit run list-wishlist '{}'
+workspace-kit run get-wishlist '{"wishlistId":"W1"}'
 workspace-kit run resolve-config '{}'
 workspace-kit doctor
 ```
+
+**Wishlist mutations** (`create-wishlist`, `update-wishlist`, `convert-wishlist`) are Tier C by default (same as `create-task`): they persist workspace state under `.workspace-kit/wishlist/` and `.workspace-kit/tasks/` but do not use `policyApproval` unless listed in `policy.extraSensitiveModuleCommands`.
 
 Instruction paths: run `workspace-kit run` with no subcommand to list commands; each line lists `(moduleId)` and points to the module’s instruction file pattern above.
 
