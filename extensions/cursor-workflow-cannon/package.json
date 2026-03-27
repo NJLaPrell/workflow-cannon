@@ -13,7 +13,20 @@
     "Other"
   ],
   "activationEvents": [
-    "workspaceContains:.workspace-kit/manifest.json"
+    "workspaceContains:.workspace-kit/manifest.json",
+    "onStartupFinished",
+    "onCommand:workflowCannon.openDashboard",
+    "onCommand:workflowCannon.refreshDashboard",
+    "onCommand:workflowCannon.showReadyQueue",
+    "onCommand:workflowCannon.refreshTasks",
+    "onCommand:workflowCannon.validateConfig",
+    "onCommand:workflowCannon.task.pickAction",
+    "onCommand:workflowCannon.task.showDetail",
+    "onCommand:workflowCannon.task.start",
+    "onCommand:workflowCannon.task.complete",
+    "onCommand:workflowCannon.task.block",
+    "onCommand:workflowCannon.task.pause",
+    "onCommand:workflowCannon.task.unblock"
   ],
   "main": "./dist/extension.js",
   "contributes": {

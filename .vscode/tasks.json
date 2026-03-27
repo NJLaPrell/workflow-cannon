@@ -26,6 +26,17 @@
         "panel": "shared"
       },
       "detail": "Requires WORKSPACE_KIT_POLICY_APPROVAL for non-interactive ingest. Prefer transcript:sync on folder open."
+    },
+    {
+      "label": "workflow-cannon: prepare-ui",
+      "type": "shell",
+      "command": "pnpm run ui:prepare",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "detail": "Build workspace-kit and compile the Cursor extension before launching Extension Development Host."
     }
   ]
 }

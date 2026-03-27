@@ -7,11 +7,14 @@ Thin UI over `workspace-kit`: **no direct edits** to `.workspace-kit/tasks/state
 From repository root:
 
 ```bash
-pnpm run build
-cd extensions/cursor-workflow-cannon
-npm install
-npm run compile
+pnpm install
+pnpm run ui:prepare
 ```
+
+One-key launch in Cursor/VS Code:
+
+- Press `F5` on the `Extension: Workflow Cannon` launch config.
+- The pre-launch task `workflow-cannon: prepare-ui` now runs automatically.
 
 In Cursor/VS Code: **Run → Open Folder** on the `workflow-cannon` repo, then **Run Extension Development Host** (open `extensions/cursor-workflow-cannon` as a folder and launch, or attach debugger using a launch config that points at this package).
 

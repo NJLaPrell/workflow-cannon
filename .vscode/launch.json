@@ -5,8 +5,10 @@
       "name": "Extension: Workflow Cannon",
       "type": "extensionHost",
       "request": "launch",
+      "preLaunchTask": "workflow-cannon: prepare-ui",
       "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}/extensions/cursor-workflow-cannon"
+        "--extensionDevelopmentPath=${workspaceFolder}/extensions/cursor-workflow-cannon",
+        "--folder-uri=file://${workspaceFolder}"
       ]
     }
   ]

@@ -8,34 +8,46 @@ import { ConfigViewProvider } from "./views/config/ConfigViewProvider.js";
 
 export function activate(context: vscode.ExtensionContext): void {
   const root = findWorkflowCannonRoot();
-  if (!root) {
-    return;
-  }
-
-  const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(root));
-  if (!folder) {
-    return;
-  }
-
-  const client = new CommandClient(root);
+  const folder = root ? vscode.workspace.getWorkspaceFolder(vscode.Uri.file(root)) : undefined;
+  const client = root ? new CommandClient(root) : undefined;
   const kitStateEmitter = new vscode.EventEmitter<void>();
   const onKitStateChanged = kitStateEmitter.event;
 
-  const watcher = new StateWatcher(folder, () => kitStateEmitter.fire());
-  watcher.start();
-  context.subscriptions.push(watcher);
+  let dashboard: DashboardViewProvider | undefined;
+  let configView: ConfigViewProvider | undefined;
+  let tasks: TasksTreeProvider | undefined;
 
-  const dashboard = new DashboardViewProvider(context.extensionUri, client, onKitStateChanged);
-  const configView = new ConfigViewProvider(context.extensionUri, client, onKitStateChanged);
-  const tasks = new TasksTreeProvider(client, onKitStateChanged);
+  if (client && folder) {
+    const watcher = new StateWatcher(folder, () => kitStateEmitter.fire());
+    watcher.start();
+    context.subscriptions.push(watcher);
 
-  context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider(DashboardViewProvider.viewId, dashboard),
-    vscode.window.registerWebviewViewProvider(ConfigViewProvider.viewId, configView),
-    vscode.window.createTreeView("workflowCannon.tasks", { treeDataProvider: tasks, showCollapseAll: true })
-  );
+    dashboard = new DashboardViewProvider(context.extensionUri, client, onKitStateChanged);
+    configView = new ConfigViewProvider(context.extensionUri, client, onKitStateChanged);
+    tasks = new TasksTreeProvider(client, onKitStateChanged);
+
+    context.subscriptions.push(
+      vscode.window.registerWebviewViewProvider(DashboardViewProvider.viewId, dashboard),
+      vscode.window.registerWebviewViewProvider(ConfigViewProvider.viewId, configView),
+      vscode.window.createTreeView("workflowCannon.tasks", { treeDataProvider: tasks, showCollapseAll: true })
+    );
+  }
+
+  const requireClient = (): CommandClient | undefined => {
+    if (client) {
+      return client;
+    }
+    void vscode.window.showErrorMessage(
+      "Workflow Cannon workspace not detected. Open the repository root containing .workspace-kit/manifest.json."
+    );
+    return undefined;
+  };
 
   const runTransition = async (taskId: string, action: string) => {
+    const runtime = requireClient();
+    if (!runtime) {
+      return;
+    }
     const ok = await vscode.window.showWarningMessage(
       `Apply transition '${action}' to ${taskId}?`,
       { modal: true },
@@ -49,7 +61,7 @@ export function activate(context: vscode.ExtensionContext): void {
         prompt: `Policy rationale for run-transition: ${action} on ${taskId}`,
         placeHolder: "Shown in policy trace / approval"
       })) ?? "vscode-extension";
-    const r = await client.run("run-transition", {
+    const r = await runtime.run("run-transition", {
       taskId,
       action,
       policyApproval: { confirmed: true, rationale }
@@ -63,7 +75,11 @@ export function activate(context: vscode.ExtensionContext): void {
   };
 
   const showTaskDetail = async (taskId: string) => {
-    const r = await client.run("get-task", { taskId, historyLimit: 10 });
+    const runtime = requireClient();
+    if (!runtime) {
+      return;
+    }
+    const r = await runtime.run("get-task", { taskId, historyLimit: 10 });
     if (!r.ok) {
       await vscode.window.showErrorMessage(r.message ?? "Failed to get task detail");
       return;
@@ -94,36 +110,54 @@ export function activate(context: vscode.ExtensionContext): void {
     await vscode.window.showTextDocument(doc, { preview: true });
   };
 
-  const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 10);
-  statusBar.name = "Workflow Cannon";
-  statusBar.command = "workflowCannon.openDashboard";
-  const updateStatusBar = async () => {
-    const r = await client.run("dashboard-summary", {});
-    if (!r.ok) {
-      statusBar.text = "$(warning) WC: unavailable";
-      statusBar.tooltip = String(r.message ?? r.code ?? "dashboard-summary failed");
+  if (client) {
+    const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 10);
+    statusBar.name = "Workflow Cannon";
+    statusBar.command = "workflowCannon.openDashboard";
+    const updateStatusBar = async () => {
+      const r = await client.run("dashboard-summary", {});
+      if (!r.ok) {
+        statusBar.text = "$(warning) WC: unavailable";
+        statusBar.tooltip = String(r.message ?? r.code ?? "dashboard-summary failed");
+        statusBar.show();
+        return;
+      }
+      const ready = Number((r.data as Record<string, unknown>)?.readyQueueCount ?? 0);
+      statusBar.text = `$(checklist) WC ready: ${ready}`;
+      statusBar.tooltip = "Workflow Cannon ready queue count";
       statusBar.show();
-      return;
-    }
-    const ready = Number((r.data as Record<string, unknown>)?.readyQueueCount ?? 0);
-    statusBar.text = `$(checklist) WC ready: ${ready}`;
-    statusBar.tooltip = "Workflow Cannon ready queue count";
-    statusBar.show();
-  };
-  void updateStatusBar();
-  onKitStateChanged(() => {
+    };
     void updateStatusBar();
-  });
-  context.subscriptions.push(statusBar);
+    onKitStateChanged(() => {
+      void updateStatusBar();
+    });
+    context.subscriptions.push(statusBar);
+  }
 
   context.subscriptions.push(
     vscode.commands.registerCommand("workflowCannon.openDashboard", async () => {
       await vscode.commands.executeCommand("workflowCannon.dashboard.focus");
     }),
-    vscode.commands.registerCommand("workflowCannon.refreshDashboard", () => dashboard.refresh()),
-    vscode.commands.registerCommand("workflowCannon.refreshTasks", () => tasks.refresh()),
+    vscode.commands.registerCommand("workflowCannon.refreshDashboard", () => {
+      if (!dashboard) {
+        void requireClient();
+        return;
+      }
+      dashboard.refresh();
+    }),
+    vscode.commands.registerCommand("workflowCannon.refreshTasks", () => {
+      if (!tasks) {
+        void requireClient();
+        return;
+      }
+      tasks.refresh();
+    }),
     vscode.commands.registerCommand("workflowCannon.showReadyQueue", async () => {
-      const r = await client.run("list-tasks", { status: "ready" });
+      const runtime = requireClient();
+      if (!runtime) {
+        return;
+      }
+      const r = await runtime.run("list-tasks", { status: "ready" });
       if (!r.ok) {
         await vscode.window.showErrorMessage(String(r.message ?? r.code));
         return;
@@ -133,7 +167,11 @@ export function activate(context: vscode.ExtensionContext): void {
       await vscode.window.showQuickPick(pick, { title: "Ready tasks" });
     }),
     vscode.commands.registerCommand("workflowCannon.validateConfig", async () => {
-      const r = await client.config(["validate"]);
+      const runtime = requireClient();
+      if (!runtime) {
+        return;
+      }
+      const r = await runtime.config(["validate"]);
       await vscode.window.showInformationMessage(
         r.stdout.trim().slice(0, 800) || `config validate exit ${r.code}`
       );
@@ -145,7 +183,11 @@ export function activate(context: vscode.ExtensionContext): void {
       if (!id) {
         return;
       }
-      const gr = await client.run("get-task", { taskId: id, historyLimit: 5 });
+      const runtime = requireClient();
+      if (!runtime) {
+        return;
+      }
+      const gr = await runtime.run("get-task", { taskId: id, historyLimit: 5 });
       if (!gr.ok) {
         await vscode.window.showErrorMessage(gr.message ?? "get-task failed");
         return;
