@@ -6,6 +6,22 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.16.1] - 2026-03-27
+
+Patch: **`workspace-kit doctor`** and persisted config for SQLite task settings.
+
+### Added
+
+- **Doctor:** After canonical contract files pass, resolve effective workspace config; when **`tasks.persistenceBackend`** is **`sqlite`**, require the SQLite file to exist, open it read-only, validate `workspace_planning_state` access, and verify embedded JSON **`schemaVersion`** when row `id=1` is present (empty table allowed).
+
+### Changed
+
+- **Project config validation** (`.workspace-kit/config.json`): allow **`tasks.wishlistStoreRelativePath`**, **`tasks.persistenceBackend`**, **`tasks.sqliteDatabaseRelativePath`** with metadata in `src/core/config-metadata.ts`.
+
+### Tests
+
+- `test/cli.test.mjs` — doctor failures and passes for SQLite planning DB.
+
 ## [0.16.0] - 2026-03-27
 
 Phase 15 — Optional SQLite persistence for Task Engine + Wishlist (single database file, JSON document columns), offline migration command, and atomic `convert-wishlist` when using SQLite.
