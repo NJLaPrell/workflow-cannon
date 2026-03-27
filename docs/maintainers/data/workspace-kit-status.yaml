@@ -4,8 +4,8 @@ last_updated: "2026-03-27"
 active_focus: "Phase 13 — Task Engine lifecycle tightening (T311+): extend CRUD/query/dependency/history command contracts."
 blockers: []
 next_agent_actions:
-  - "Prepare Phase 12 release evidence and publish v0.13.0."
-  - "Start T311 workbook execution for Phase 13 after release evidence is recorded."
+  - "Start T311 workbook execution for Phase 13 (CRUD/query/dependency/history contract extension)."
+  - "Capture any post-release issues from v0.13.0 as follow-up tasks before implementation slices."
 last_session_summary:
   - "Phase 12 tasks T296–T310 completed: extension command client hardening, dashboard/tasks/config UX completion, security notes, and extension unit/integration/E2E docs."
   - "Validation gates passed after changes: root build/test/parity plus extension npm test."
@@ -13,7 +13,7 @@ pending_decisions: []
 metrics:
   updated_at: "2026-03-27"
   source: "maintainer"
-  notes: "Phase 12 implementation complete in-repo; pending v0.13.0 release evidence and publish workflow."
+  notes: "v0.13.0 released (Phase 12) via publish workflow run 23635471927; focus moved to Phase 13 lifecycle-tightening tasks."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null

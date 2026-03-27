@@ -192,5 +192,5 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 - Phase 8 / `v0.10.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23624912236`
 - Phase 9-10 / `v0.11.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23628501468`
 - Phase 11 / `v0.12.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23635032123`
-- Phase 12 / `v0.13.0` publish workflow run: _pending_
+- Phase 12 / `v0.13.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23635471927`
 - npm package: `https://www.npmjs.com/package/@workflow-cannon/workspace-kit`
