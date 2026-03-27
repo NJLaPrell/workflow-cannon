@@ -16,7 +16,7 @@ pending_decisions:
 metrics:
   updated_at: "2026-03-26"
   source: "automated"
-  notes: "Phase 8 targeting v0.10.0; validation pipeline green locally."
+  notes: "Phase 8 released as v0.10.0; npm publish workflow run 23624912236 succeeded."
   time_to_doctor_minutes: 0.03
   cold_start_success_rate_pct: 100
   upgrade_success_rate_pct: null
