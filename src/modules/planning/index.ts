@@ -30,6 +30,28 @@ function nextWishlistId(items: WishlistItem[]): string {
   return `W${max + 1}`;
 }
 
+function toCliGuidance(args: {
+  planningType: string;
+  answers: Record<string, unknown>;
+  unresolvedCriticalCount: number;
+  totalCriticalCount: number;
+  finalize?: boolean;
+}): Record<string, unknown> {
+  const { planningType, answers, unresolvedCriticalCount, totalCriticalCount, finalize } = args;
+  const answeredCritical = Math.max(0, totalCriticalCount - unresolvedCriticalCount);
+  const completionPct = totalCriticalCount > 0 ? Math.round((answeredCritical / totalCriticalCount) * 100) : 100;
+  return {
+    answeredCritical,
+    totalCritical: totalCriticalCount,
+    completionPct,
+    suggestedNextCommand: `workspace-kit run build-plan '${JSON.stringify({
+      planningType,
+      answers,
+      finalize: finalize === true
+    })}'`
+  };
+}
+
 export const planningModule: WorkflowModule = {
   registration: {
     id: "planning",
@@ -93,6 +115,11 @@ export const planningModule: WorkflowModule = {
         };
       }
       const descriptor = PLANNING_WORKFLOW_DESCRIPTORS.find((x) => x.type === planningType);
+      const resolvedRulePack = resolvePlanningRulePack(
+        planningType as PlanningWorkflowType,
+        ctx.effectiveConfig as Record<string, unknown> | undefined
+      );
+      const totalCriticalCount = resolvedRulePack.baseQuestions.length;
       const answers =
         typeof args.answers === "object" && args.answers !== null && !Array.isArray(args.answers)
           ? (args.answers as Record<string, unknown>)
@@ -116,7 +143,13 @@ export const planningModule: WorkflowModule = {
               status: "ready-with-warnings",
               unresolvedCritical: missingCritical,
               nextQuestions: [...missingCritical, ...adaptiveFollowups],
-              capturedAnswers: answers
+              capturedAnswers: answers,
+              cliGuidance: toCliGuidance({
+                planningType,
+                answers,
+                unresolvedCriticalCount: missingCritical.length,
+                totalCriticalCount
+              })
             }
           };
         }
@@ -127,7 +160,14 @@ export const planningModule: WorkflowModule = {
           data: {
             planningType,
             unresolvedCritical: missingCritical,
-            nextQuestions: [...missingCritical, ...adaptiveFollowups]
+            nextQuestions: [...missingCritical, ...adaptiveFollowups],
+            cliGuidance: toCliGuidance({
+              planningType,
+              answers,
+              unresolvedCriticalCount: missingCritical.length,
+              totalCriticalCount,
+              finalize: true
+            })
           }
         };
       }
@@ -140,7 +180,13 @@ export const planningModule: WorkflowModule = {
             planningType,
             status: "needs-input",
             unresolvedCritical: missingCritical,
-            nextQuestions: [...missingCritical, ...adaptiveFollowups]
+            nextQuestions: [...missingCritical, ...adaptiveFollowups],
+            cliGuidance: toCliGuidance({
+              planningType,
+              answers,
+              unresolvedCriticalCount: missingCritical.length,
+              totalCriticalCount
+            })
           }
         };
       }
@@ -163,7 +209,14 @@ export const planningModule: WorkflowModule = {
             unresolvedCritical: [],
             adaptiveFollowups,
             capturedAnswers: answers,
-            artifact
+            artifact,
+            cliGuidance: toCliGuidance({
+              planningType,
+              answers,
+              unresolvedCriticalCount: 0,
+              totalCriticalCount,
+              finalize: createWishlist
+            })
           }
         };
       }
@@ -238,7 +291,14 @@ export const planningModule: WorkflowModule = {
           artifact,
           unresolvedCritical: [],
           adaptiveFollowups,
-          capturedAnswers: answers
+          capturedAnswers: answers,
+          cliGuidance: toCliGuidance({
+            planningType,
+            answers,
+            unresolvedCriticalCount: 0,
+            totalCriticalCount,
+            finalize: true
+          })
         }
       };
     }
