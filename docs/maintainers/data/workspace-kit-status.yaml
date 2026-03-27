@@ -5,7 +5,7 @@ active_focus: "Phase 11 — Architectural review follow-up (T292+): expand polic
 blockers: []
 next_agent_actions:
   - "When ready: pick next ready task from .workspace-kit/tasks/state.json (Phase 11 T292+)."
-  - "Release v0.11.0: run RELEASING.md gates, obtain maintainer approval, trigger publish workflow, record run URL in ROADMAP evidence."
+  - "Capture any post-release issues as follow-up tasks and start T292 (policy/session test expansion)."
 last_session_summary:
   - "Phase 10 complete in-repo: Agent CLI map, AGENTS + Cursor rule, /qt labels, doctor/run discovery, POLICY-APPROVAL agents section, advisory state.json script + CI advisory step."
   - "Version bumped to 0.11.0 in package.json and manifest; CHANGELOG + ROADMAP + FEATURE-MATRIX aligned."
@@ -13,7 +13,7 @@ pending_decisions: []
 metrics:
   updated_at: "2026-03-26"
   source: "maintainer"
-  notes: "v0.11.0 candidate: Phase 9–10; npm publish pending human approval per RELEASING.md."
+  notes: "v0.11.0 released (Phase 9–10) via publish workflow run 23628501468; focus moved to Phase 11 follow-up tasks."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null
