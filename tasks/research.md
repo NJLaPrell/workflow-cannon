@@ -8,6 +8,8 @@ taskName: research
 - Use the provided user input.
 - Return a concise result.
 
+**Persist via CLI:** Planning only — no task-engine or policy-gated `workspace-kit` persistence for this template.
+
 ---
 Run (example): `/qt/research your input here`
 

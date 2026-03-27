@@ -7,6 +7,9 @@ export const POLICY_TRACE_SCHEMA_VERSION = 1 as const;
 /** Maintainer doc (repo-relative) linked from policy denial output for `workspace-kit run`. */
 export const POLICY_APPROVAL_HUMAN_DOC = "docs/maintainers/POLICY-APPROVAL.md";
 
+/** Maintainer doc: tier table + copy-paste patterns for agents (Tier A/B `run` vs CLI env approval). */
+export const AGENT_CLI_MAP_HUMAN_DOC = "docs/maintainers/AGENT-CLI-MAP.md";
+
 export type PolicyOperationId =
   | "cli.upgrade"
   | "cli.init"

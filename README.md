@@ -65,6 +65,7 @@ This keeps automation adaptive without sacrificing safety, governance, or develo
 
 - **Phases 0–7** are complete through **`v0.9.0`** (see roadmap for slice ids).
 - **Phase 8** ships maintainer/onboarding hardening (`v0.10.0`): policy denial clarity, runbooks, and doc alignment for CLI vs `run` approval.
+- **Phase 9–10** ship agent/onboarding parity (`v0.11.0`): interactive policy opt-in, strict response-template mode, Agent CLI map (`docs/maintainers/AGENT-CLI-MAP.md`), and CLI-first Cursor guidance.
 
 Historical note: this file’s milestone list is not the live queue—always check task state for **`ready`** work.
 

@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import {
+  AGENT_CLI_MAP_HUMAN_DOC,
   appendPolicyTrace,
   parsePolicyApprovalFromEnv,
   resolveActorWithFallback,
@@ -807,6 +808,7 @@ export async function runCli(
 
   writeLine("workspace-kit doctor passed.");
   writeLine("All canonical workspace-kit contract files are present and parseable JSON.");
+  writeLine(`Next: workspace-kit run — list module commands; see ${AGENT_CLI_MAP_HUMAN_DOC} for tier/policy copy-paste.`);
   return EXIT_SUCCESS;
 }
 

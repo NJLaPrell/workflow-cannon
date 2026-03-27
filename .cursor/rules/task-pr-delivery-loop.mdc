@@ -1,9 +1,11 @@
 ---
-description: Delivery loop from task to PR-ready change
+description: Delivery loop from task to PR-ready change (see maintainer-delivery-loop.mdc for always-on merged rule)
 alwaysApply: false
 ---
 
 # Task -> PR Delivery Loop
+
+> **Always-on merged rule:** `.cursor/rules/maintainer-delivery-loop.mdc` — use that for enforcement in chat; this file remains a focused reference.
 
 1. Select highest-priority ready task.
 2. Implement smallest coherent slice.

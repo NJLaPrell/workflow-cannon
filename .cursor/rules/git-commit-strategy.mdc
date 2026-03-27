@@ -1,9 +1,11 @@
 ---
-description: Commit strategy expectations
+description: Commit strategy expectations (see maintainer-delivery-loop.mdc for always-on merged rule)
 alwaysApply: false
 ---
 
 # Commit Strategy
+
+> **Always-on merged rule:** `.cursor/rules/maintainer-delivery-loop.mdc` — use that for enforcement in chat; this file remains a focused reference.
 
 - Use focused commits with clear intent.
 - Keep commit messages concise and reason-oriented.

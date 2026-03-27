@@ -1,0 +1,24 @@
+---
+description: Prefer workspace-kit CLI for kit-owned mutations and task transitions
+alwaysApply: true
+---
+
+# Workspace Kit CLI execution
+
+Agents must use **`workspace-kit`** for kit-owned persistence. Chat-only approval does **not** satisfy policy for sensitive `workspace-kit run` commands.
+
+## Required behavior
+
+1. **Task lifecycle** — use `workspace-kit run run-transition` with JSON args (including `policyApproval` when required). **Do not** hand-edit `.workspace-kit/tasks/state.json` for routine status changes except documented recovery.
+2. **Policy-sensitive `run`** — pass `policyApproval` in the **third CLI argument** JSON. `WORKSPACE_KIT_POLICY_APPROVAL` is for `init` / `upgrade` / `config` mutations only, **not** for the `run` path.
+3. **Evidence** — after transitions, treat task-engine output / `transitionLog` as authoritative; do not claim task status changed without CLI evidence.
+
+## Canonical references
+
+- **Tier table + copy-paste:** `docs/maintainers/AGENT-CLI-MAP.md`
+- **Approval semantics:** `docs/maintainers/POLICY-APPROVAL.md`
+- **Instruction paths:** `src/modules/<module>/instructions/<command>.md` (discover via `workspace-kit run` with no subcommand)
+
+## `/qt` note
+
+`/qt` only interprets `tasks/*.md` templates. Steps that persist kit state must include the matching **`workspace-kit` line** from the Agent CLI map.

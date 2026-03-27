@@ -1,20 +1,19 @@
 schema_version: 1
-current_kit_phase: "10"
-last_updated: "2026-03-27"
-active_focus: "Phase 10 — Agent/CLI parity: T285 in progress (publish Agent CLI map + tier table). Next: T286 AGENTS alignment; T289/T290 unblock after T285."
+current_kit_phase: "11"
+last_updated: "2026-03-26"
+active_focus: "Phase 11 — Architectural review follow-up (T292+): expand policy/session tests and task-store concurrency semantics per ARCHITECTURAL-REVIEW-FINDINGS.md."
 blockers: []
 next_agent_actions:
-  - "Finish T285: add maintainer doc (Agent CLI map), link from AGENTS.md + POLICY-APPROVAL.md; verify every Tier A/B command has copy-paste JSON."
-  - "Start T286 when T285 completes (or in parallel only for draft text gated on T285 map)."
-  - "T289/T290 (discoverability + multi-turn agent sessions) after T285 unblocks."
+  - "When ready: pick next ready task from .workspace-kit/tasks/state.json (Phase 11 T292+)."
+  - "Release v0.11.0: run RELEASING.md gates, obtain maintainer approval, trigger publish workflow, record run URL in ROADMAP evidence."
 last_session_summary:
-  - "Phase 10 kickoff: T285 started (in_progress) via task engine — CLI-mandatory scope + Agent CLI map."
-  - "Prior: Phase 9 complete in-repo (T283-T284); Phase 8 v0.10.0 on npm."
+  - "Phase 10 complete in-repo: Agent CLI map, AGENTS + Cursor rule, /qt labels, doctor/run discovery, POLICY-APPROVAL agents section, advisory state.json script + CI advisory step."
+  - "Version bumped to 0.11.0 in package.json and manifest; CHANGELOG + ROADMAP + FEATURE-MATRIX aligned."
 pending_decisions: []
 metrics:
-  updated_at: "2026-03-27"
+  updated_at: "2026-03-26"
   source: "maintainer"
-  notes: "Maintainer focus shifted to Phase 10 execution queue; package version unchanged until release bookkeeping."
+  notes: "v0.11.0 candidate: Phase 9–10; npm publish pending human approval per RELEASING.md."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null

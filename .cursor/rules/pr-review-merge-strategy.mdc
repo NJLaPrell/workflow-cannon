@@ -1,9 +1,11 @@
 ---
-description: PR review and merge strategy guardrails
+description: PR review and merge strategy guardrails (see maintainer-delivery-loop.mdc for always-on merged rule)
 alwaysApply: false
 ---
 
 # PR Review / Merge Strategy
+
+> **Always-on merged rule:** `.cursor/rules/maintainer-delivery-loop.mdc` — use that for enforcement in chat; this file remains a focused reference.
 
 PRs should:
 

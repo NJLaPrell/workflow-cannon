@@ -113,6 +113,7 @@ test("runCli doctor validates canonical files", async () => {
 
   assert.equal(code, 0);
   assert.match(capture.lines[0], /doctor passed/);
+  assert.ok(capture.lines.some((l) => l.includes("AGENT-CLI-MAP.md")));
 });
 
 test("runCli doctor returns validation failure when required files are missing", async () => {
@@ -296,6 +297,8 @@ test("runCli run lists available module commands with no subcommand", async () =
   assert.ok(capture.lines.some((l) => l.includes("document-project")));
   assert.ok(capture.lines.some((l) => l.includes("generate-document")));
   assert.ok(capture.lines.some((l) => l.includes("run-transition")));
+  assert.ok(capture.lines.some((l) => l.includes("AGENT-CLI-MAP.md")));
+  assert.ok(capture.lines.some((l) => l.includes("instructions")));
 });
 
 test("runCli run dispatches generate-document with dryRun", async () => {

@@ -11,8 +11,9 @@ Basic operating guidance for AI agents working in this repository.
 5. `docs/maintainers/data/workspace-kit-status.yaml` — `current_kit_phase` and maintainer focus snapshot
 6. `docs/maintainers/RELEASING.md` — release gates and evidence requirements
 7. `docs/maintainers/POLICY-APPROVAL.md` — when `workspace-kit run` needs JSON `policyApproval` vs env approval for `config`/`init`/`upgrade`
-8. `docs/maintainers/TERMS.md` — canonical terminology
-9. `docs/maintainers/module-build-guide.md` — human-readable module development companion
+8. `docs/maintainers/AGENT-CLI-MAP.md` — tier table (task transitions vs other sensitive `run` commands) and copy-paste JSON
+9. `docs/maintainers/TERMS.md` — canonical terminology
+10. `docs/maintainers/module-build-guide.md` — human-readable module development companion
 
 ## Core expectations
 
@@ -31,6 +32,34 @@ Basic operating guidance for AI agents working in this repository.
 - Treat `docs/maintainers/` governance/process docs as canonical; overlapping `.cursor/rules/` files are enforcement mirrors and should not introduce conflicting policy.
 - When scope changes, update all related docs in the same change set.
 - Preserve deterministic behavior and compatibility; document migration impact when changes affect consumers.
+
+## CLI-first execution (kit-owned state)
+
+Before changing **task-engine state**, **policy traces**, **approvals**, **transcript/improvement** stores, or **mutating doc generation**, run the matching **`workspace-kit`** command. Chat-only approval does **not** satisfy policy for `workspace-kit run` (`docs/maintainers/POLICY-APPROVAL.md`).
+
+- **Do not** hand-edit `.workspace-kit/tasks/state.json` for lifecycle transitions except documented recovery; use `workspace-kit run run-transition` (`docs/maintainers/AGENT-CLI-MAP.md`).
+- **Cursor rule:** `.cursor/rules/workspace-kit-cli-execution.mdc` mirrors this section and links the Agent CLI map.
+
+### When the agent must run terminal commands (examples)
+
+1. **Task transition**
+
+   ```bash
+   workspace-kit run run-transition '{"taskId":"T285","action":"start","policyApproval":{"confirmed":true,"rationale":"start work on task"}}'
+   ```
+
+2. **Sensitive `run` (policy JSON, not env approval)**
+
+   ```bash
+   workspace-kit run generate-recommendations '{"policyApproval":{"confirmed":true,"rationale":"improvement pass"}}'
+   ```
+
+3. **`config` / `init` / `upgrade` (env approval)**
+
+   ```bash
+   export WORKSPACE_KIT_POLICY_APPROVAL='{"confirmed":true,"rationale":"adjust cadence"}'
+   workspace-kit config set improvement.cadence.minIntervalMinutes 30 --json
+   ```
 
 ## Task execution
 

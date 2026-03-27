@@ -1,9 +1,11 @@
 ---
-description: Branching and tagging strategy baseline
+description: Branching and tagging strategy baseline (see maintainer-delivery-loop.mdc for always-on merged rule)
 alwaysApply: false
 ---
 
 # Branching / Tagging Strategy
+
+> **Always-on merged rule:** `.cursor/rules/maintainer-delivery-loop.mdc` — use that for enforcement in chat; this file remains a focused reference.
 
 - Keep branches scoped to one coherent objective.
 - Use predictable release tags tied to published versions.

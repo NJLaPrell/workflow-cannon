@@ -23,3 +23,7 @@ Behavior requirements:
 2. Preserve stable command/result behavior for downstream consumers.
 3. Route ambiguous requests to clear next-command guidance.
 
+## `/qt` vs `workspace-kit`
+
+`/qt` is **prompt scaffolding** only: it does not execute `workspace-kit` or write task-engine state. When a template would “save” task status, policy-gated work, or kit-owned mutations, the same step must name the **`workspace-kit run ...`** line (or label the step **planning-only**). See **`docs/maintainers/AGENT-CLI-MAP.md`**.
+

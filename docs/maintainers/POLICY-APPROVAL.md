@@ -4,6 +4,8 @@ The kit uses **fail-closed** policy: sensitive commands require explicit approva
 
 Use this page when you see **`policy-denied`**, **`missing WORKSPACE_KIT_POLICY_APPROVAL`**, or JSON output mentioning **`policyApproval`**.
 
+**Tiered copy-paste for agents:** `docs/maintainers/AGENT-CLI-MAP.md` lists every Tier A/B `workspace-kit run` command with example JSON and `operationId` values.
+
 ## Two approval surfaces (do not mix them up)
 
 | Surface | When it applies | How to approve |
@@ -39,6 +41,28 @@ workspace-kit run ingest-transcripts '{}'
 export WORKSPACE_KIT_POLICY_APPROVAL='{"confirmed":true,"rationale":"set cadence in CI"}'
 workspace-kit config set improvement.cadence.minIntervalMinutes 20 --json
 ```
+
+## Agents and IDE subprocesses (non-TTY)
+
+Agents (Cursor, CI, headless scripts) usually **do not** have a TTY, so **`WORKSPACE_KIT_INTERACTIVE_APPROVAL` does not prompt** unless you inject stdin via the test hook. Treat **`policyApproval` JSON on `workspace-kit run`** as the default path.
+
+**Chat is not approval.** Typing “approved” in Cursor chat **does not** satisfy policy. The CLI must receive **`policyApproval`** in the third argument JSON (or a valid **session grant** from an earlier approved command in the same **`WORKSPACE_KIT_SESSION_ID`**).
+
+**Multi-turn session (avoid repeating rationale):**
+
+```bash
+export WORKSPACE_KIT_SESSION_ID=my-agent-session
+workspace-kit run ingest-transcripts '{"policyApproval":{"confirmed":true,"rationale":"batch session","scope":"session"}}'
+workspace-kit run ingest-transcripts '{}'
+# same session id + existing grant for that operationId
+```
+
+**Security / ergonomics:**
+
+- Session grant files live under **`.workspace-kit/policy/session-grants.json`** (see “Evidence” below). They are meant for **one machine / one workspace checkout**—not shared copies of the repo across untrusted boundaries.
+- In shared CI, prefer **one-shot** `policyApproval` per job (or inject secrets via your CI’s approved mechanism), not long-lived session files committed to git.
+
+**Discovery:** `workspace-kit run` with no subcommand lists commands; **`docs/maintainers/AGENT-CLI-MAP.md`** summarizes task transitions vs other sensitive commands.
 
 ## Evidence and troubleshooting
 

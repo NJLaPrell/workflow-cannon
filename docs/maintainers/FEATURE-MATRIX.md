@@ -23,7 +23,8 @@ Status legend:
 | Phase 6 - Automation hardening + response templates (`T249`-`T258`, `T260`-`T266`, `T271`-`T274`) | `v0.8.0` | Completed |
 | Phase 7 - Architectural hardening (`T275`-`T282`) | `v0.9.0` | Completed |
 | Phase 8 - Improvement backlog triage (`imp-2cf5d881b81f9a` … `imp-7f9e65fad74b0b`) | `v0.10.0` | Completed |
-| Phase 9 - Interactive policy UX + template enforcement (`T283`, `T284`) | not released (in-repo complete) | Completed |
+| Phase 9 - Interactive policy UX + template enforcement (`T283`, `T284`) | `v0.11.0` | Completed |
+| Phase 10 - Agent/CLI parity (`T285`–`T291`) | `v0.11.0` | Completed |
 
 ## Feature Matrix by Phase
 
@@ -152,12 +153,24 @@ Status legend:
 | Agent phase truth | AGENTS + README point to task state and status YAML | Completed | `imp-43397766ef243b` |
 | Task state schema story | Human doc + optional JSON Schema for editors | Completed | `imp-7f9e65fad74b0b` |
 
-### Phase 9 Interactive policy UX + response-template enforcement (in-repo; no semver bump yet)
+### Phase 9 Interactive policy UX + response-template enforcement (`v0.11.0`)
 
 | Product feature | What users/maintainers get | Status | Task coverage |
 | --- | --- | --- | --- |
 | Interactive `run` policy prompt | Optional `WORKSPACE_KIT_INTERACTIVE_APPROVAL` + TTY (or test `readStdinLine`): Deny / Allow once / Allow for session; session persists like JSON `policyApproval` | Completed | `T283` |
 | Strict response-template enforcement | `enforcementMode: strict` fails on unknown resolved template id and explicit-vs-directive conflict (`response-template-invalid` / `response-template-conflict`) | Completed | `T284` |
+
+### Phase 10 Agent/CLI parity (`v0.11.0`)
+
+| Product feature | What users/maintainers get | Status | Task coverage |
+| --- | --- | --- | --- |
+| Agent CLI map | Single maintainer page: tiers, `/qt` vs CLI, copy-paste JSON per sensitive `operationId` | Completed | `T285` |
+| CLI-first AGENTS guidance | `.ai/AGENTS.md` + `docs/maintainers/AGENTS.md` encode MUST-level CLI execution with examples | Completed | `T286` |
+| Cursor CLI rule | Always-on `.cursor/rules/workspace-kit-cli-execution.mdc` mirrors maintainer contract | Completed | `T287` |
+| `/qt` persistence labels | `tasks/*.md` + `.cursor/commands/qt.md` mark planning-only vs real `workspace-kit` lines | Completed | `T288` |
+| Command discovery UX | `workspace-kit doctor` + bare `run` output point to instructions + Agent CLI map | Completed | `T289` |
+| Multi-turn agent sessions | `POLICY-APPROVAL.md` documents non-TTY, `WORKSPACE_KIT_SESSION_ID`, and “chat is not approval” | Completed | `T290` |
+| Task state hand-edit advisory | `pnpm run advisory:task-state-hand-edit` (warn-only; CI non-blocking) | Completed | `T291` |
 
 ## Supporting Milestone Features (cross-phase)
 

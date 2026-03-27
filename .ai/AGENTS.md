@@ -7,9 +7,11 @@ ref|name=roadmap|path=docs/maintainers/ROADMAP.md
 ref|name=tasks_engine_state|path=.workspace-kit/tasks/state.json
 ref|name=tasks_view|path=.workspace-kit/tasks/state.json
 ref|name=releasing|path=docs/maintainers/RELEASING.md
+ref|name=policy_approval|path=docs/maintainers/POLICY-APPROVAL.md
+ref|name=agent_cli_map|path=docs/maintainers/AGENT-CLI-MAP.md
 ref|name=terms|path=docs/maintainers/TERMS.md
 ref|name=module_guide|path=docs/maintainers/module-build-guide.md
-truth|order=ai_principles>ai_module_build>roadmap>tasks_engine_state>tasks_view>releasing>terms>module_guide
+truth|order=ai_principles>ai_module_build>roadmap>tasks_engine_state>tasks_view>agent_cli_map>policy_approval>releasing>terms>module_guide
 
 rule|A001|must|agent|use_high_autonomy_when_task_intent_is_clear|risk=low|ap=none|ov=auto|st=active|refs=.ai/PRINCIPLES.md
 rule|A002|must|agent|soft_gate_on_principle_conflicts_state_conflict_and_ask_confirmation|risk=high|ap=prompt|ov=prompt|st=active|refs=.ai/PRINCIPLES.md
@@ -25,6 +27,10 @@ rule|A012|must|agent|preserve_deterministic_behavior_and_document_migration_impa
 rule|A020|must|agent|execute_tasks_in_dependency_order_from_task_engine_queue|risk=medium|ap=none|ov=warn|st=active|refs=.workspace-kit/tasks/state.json
 rule|A021|must|agent|treat_task_metadata_scope_acceptance_as_binding_implementation_guidance|risk=medium|ap=none|ov=warn|st=active|refs=.workspace-kit/tasks/state.json
 rule|A022|must|agent|split_oversized_tasks_before_implementation|risk=low|ap=none|ov=warn|st=active|refs=.workspace-kit/tasks/state.json
+
+rule|A023|must|agent|before_mutating_kit_owned_state_run_matching_workspace_kit_command|risk=high|ap=none|ov=stop|st=active|refs=docs/maintainers/AGENT-CLI-MAP.md,docs/maintainers/POLICY-APPROVAL.md
+rule|A024|must_not|agent|rely_on_chat_only_approval_for_policy_gated_workspace_kit_run|risk=critical|ap=none|ov=stop|st=active|refs=docs/maintainers/POLICY-APPROVAL.md
+rule|A025|must_not|agent|hand_edit_task_engine_state_json_for_routine_lifecycle_transitions|risk=high|ap=none|ov=stop|st=active|refs=docs/maintainers/AGENT-CLI-MAP.md,.workspace-kit/tasks/state.json
 
 rule|A030|must|agent|use_document_project_for_batch_and_generate_document_for_single|risk=low|ap=none|ov=auto|st=active|refs=src/modules/documentation/RULES.md
 rule|A031|must|agent|follow_documentation_module_rules_md_before_generation|risk=medium|ap=none|ov=warn|st=active|refs=src/modules/documentation/RULES.md

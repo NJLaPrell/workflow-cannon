@@ -66,6 +66,10 @@ jobs:
       - name: Phase 4 gates
         run: pnpm run phase4-gates
 
+      - name: Advisory task-state hand-edit check
+        continue-on-error: true
+        run: pnpm run advisory:task-state-hand-edit
+
   parity:
     needs: [test, release-readiness]
     runs-on: ubuntu-latest

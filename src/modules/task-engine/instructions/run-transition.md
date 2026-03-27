@@ -5,7 +5,7 @@ Execute a validated task status transition through the Task Engine lifecycle.
 ## Usage
 
 ```
-workspace-kit run run-transition '{"taskId":"T184","action":"start"}'
+workspace-kit run run-transition '{"taskId":"T184","action":"start","policyApproval":{"confirmed":true,"rationale":"validate transition"}}'
 ```
 
 ## Arguments

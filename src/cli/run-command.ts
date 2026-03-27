@@ -4,6 +4,7 @@ import {
   appendPolicyTrace,
   isSensitiveModuleCommandForEffective,
   parsePolicyApproval,
+  AGENT_CLI_MAP_HUMAN_DOC,
   POLICY_APPROVAL_HUMAN_DOC,
   resolveActorWithFallback,
   resolvePolicyOperationIdForCommand,
@@ -62,7 +63,11 @@ export async function handleRunCommand(
       writeLine(`  ${cmd.name} (${cmd.moduleId})${desc}`);
     }
     writeLine("");
-    writeLine("Usage: workspace-kit run <command> [json-args]");
+    writeLine(`Usage: workspace-kit run <command> [json-args]`);
+    writeLine(
+      `Instruction files: src/modules/<module>/instructions/<command>.md — policy-sensitive runs need JSON policyApproval (${POLICY_APPROVAL_HUMAN_DOC}).`
+    );
+    writeLine(`Agent-oriented tier table + copy-paste patterns: ${AGENT_CLI_MAP_HUMAN_DOC}.`);
     return codes.success;
   }
 
