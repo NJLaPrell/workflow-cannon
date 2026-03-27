@@ -67,7 +67,11 @@ export const KIT_CONFIG_DEFAULTS: Record<string, unknown> = {
  */
 export const MODULE_CONFIG_CONTRIBUTIONS: Record<string, Record<string, unknown>> = {
   approvals: {},
-  planning: {}
+  planning: {
+    defaultQuestionDepth: "adaptive",
+    hardBlockCriticalUnknowns: true,
+    rulePacks: {}
+  }
 };
 
 export function deepMerge(

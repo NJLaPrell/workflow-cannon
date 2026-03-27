@@ -73,3 +73,44 @@ test("planningModule build-plan returns ready when critical answers are present"
   assert.equal(result.ok, true);
   assert.equal(result.code, "planning-ready");
 });
+
+test("planningModule build-plan can allow warnings when hard block disabled", async () => {
+  const workspace = await tmpDir();
+  const result = await planningModule.onCommand(
+    {
+      name: "build-plan",
+      args: { planningType: "new-feature", finalize: true, answers: {} }
+    },
+    {
+      runtimeVersion: "0.1",
+      workspacePath: workspace,
+      effectiveConfig: {
+        planning: {
+          hardBlockCriticalUnknowns: false
+        }
+      }
+    }
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "planning-ready-with-warnings");
+});
+
+test("planningModule explain-planning-rules returns effective defaults and questions", async () => {
+  const workspace = await tmpDir();
+  const result = await planningModule.onCommand(
+    { name: "explain-planning-rules", args: { planningType: "new-feature" } },
+    {
+      runtimeVersion: "0.1",
+      workspacePath: workspace,
+      effectiveConfig: {
+        planning: {
+          defaultQuestionDepth: "guided"
+        }
+      }
+    }
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "planning-rules-explained");
+  assert.equal(result.data.defaultQuestionDepth, "guided");
+  assert.ok(Array.isArray(result.data.baseQuestions));
+});

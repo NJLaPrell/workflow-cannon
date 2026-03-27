@@ -94,6 +94,49 @@ const REGISTRY: Record<string, ConfigKeyMetadata> = {
     exposure: "public",
     writableLayers: ["project", "user"]
   },
+  "planning.defaultQuestionDepth": {
+    key: "planning.defaultQuestionDepth",
+    type: "string",
+    description:
+      "Planning interview depth mode: minimal (critical only), guided (critical + static follow-ups), or adaptive (context-driven follow-ups).",
+    default: "adaptive",
+    allowedValues: ["minimal", "guided", "adaptive"],
+    domainScope: "project",
+    owningModule: "planning",
+    sensitive: false,
+    requiresRestart: false,
+    requiresApproval: false,
+    exposure: "maintainer",
+    writableLayers: ["project", "user"]
+  },
+  "planning.hardBlockCriticalUnknowns": {
+    key: "planning.hardBlockCriticalUnknowns",
+    type: "boolean",
+    description:
+      "When true, planning finalize requests fail until critical unknown questions are answered.",
+    default: true,
+    domainScope: "project",
+    owningModule: "planning",
+    sensitive: false,
+    requiresRestart: false,
+    requiresApproval: false,
+    exposure: "maintainer",
+    writableLayers: ["project", "user"]
+  },
+  "planning.rulePacks": {
+    key: "planning.rulePacks",
+    type: "object",
+    description:
+      "Optional object overrides for planning rule packs by workflow type (`baseQuestions` and `adaptiveQuestions`).",
+    default: {},
+    domainScope: "project",
+    owningModule: "planning",
+    sensitive: false,
+    requiresRestart: false,
+    requiresApproval: false,
+    exposure: "maintainer",
+    writableLayers: ["project", "user"]
+  },
   "policy.extraSensitiveModuleCommands": {
     key: "policy.extraSensitiveModuleCommands",
     type: "array",
