@@ -4797,9 +4797,9 @@
       "id": "T337",
       "title": "Task query ergonomics: filters and documented metadata paths",
       "type": "improvement",
-      "status": "ready",
+      "status": "completed",
       "createdAt": "2026-03-27T17:35:01.225Z",
-      "updatedAt": "2026-03-27T17:35:01.225Z",
+      "updatedAt": "2026-03-27T20:52:47.939Z",
       "priority": "P2",
       "dependsOn": [],
       "phase": "Phase 16 - Maintenance and stability",
@@ -7647,9 +7647,49 @@
       "dependentsUnblocked": [],
       "timestamp": "2026-03-27T20:50:50.765Z",
       "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T337-2026-03-27T20:52:47.872Z-023bb417",
+      "taskId": "T337",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T20:52:47.872Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T337-2026-03-27T20:52:47.939Z-bb772e21",
+      "taskId": "T337",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T20:52:47.939Z",
+      "actor": "NJLaPrell@gmail.com"
     }
   ],
-  "lastUpdated": "2026-03-27T20:50:50.765Z",
+  "lastUpdated": "2026-03-27T20:52:47.939Z",
   "mutationLog": [
     {
       "mutationId": "create-task-T319-2026-03-27T15:16:30.032Z-20b24ad2",

@@ -103,6 +103,8 @@ Non-sensitive commands (no `policyApproval` unless you added `extraSensitiveModu
 workspace-kit run list-tasks '{}'
 workspace-kit run get-next-actions '{}'
 workspace-kit run get-task '{"taskId":"T285"}'
+workspace-kit run list-tasks '{"type":"improvement","phase":"Phase 16 - Maintenance and stability"}'
+workspace-kit run list-tasks '{"category":"reliability","tags":["ui"],"metadataFilters":{"owner.team":"platform"}}'
 workspace-kit run list-wishlist '{}'
 workspace-kit run get-wishlist '{"wishlistId":"W1"}'
 workspace-kit run resolve-config '{}'
