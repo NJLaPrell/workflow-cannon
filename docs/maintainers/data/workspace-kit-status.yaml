@@ -15,7 +15,7 @@ pending_decisions: []
 metrics:
   updated_at: "2026-03-27"
   source: "maintainer"
-  notes: "v0.15.0 released (Phase 14) — Wishlist intake/conversion; v0.14.0 was Phase 13 (run 23650389235)."
+  notes: "v0.15.0 published (Phase 14) via workflow run 23656475480; v0.14.0 was Phase 13 (run 23650389235)."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null
