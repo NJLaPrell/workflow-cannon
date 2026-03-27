@@ -1,20 +1,21 @@
 schema_version: 1
-current_kit_phase: "9"
+current_kit_phase: "10"
 last_updated: "2026-03-27"
-active_focus: "Phase 9 complete in-repo (T283-T284): interactive run approval + strict response templates. No npm release for this slice unless scheduled separately."
+active_focus: "Phase 10 — Agent/CLI parity: T285 in progress (publish Agent CLI map + tier table). Next: T286 AGENTS alignment; T289/T290 unblock after T285."
 blockers: []
 next_agent_actions:
-  - "Optional: cut v0.11.0 (or next semver) when ready to publish Phase 9 + update CHANGELOG release section."
-  - "Pick next roadmap phase or improvement queue from task state."
+  - "Finish T285: add maintainer doc (Agent CLI map), link from AGENTS.md + POLICY-APPROVAL.md; verify every Tier A/B command has copy-paste JSON."
+  - "Start T286 when T285 completes (or in parallel only for draft text gated on T285 map)."
+  - "T289/T290 (discoverability + multi-turn agent sessions) after T285 unblocks."
 last_session_summary:
-  - "Phase 9 shipped in-repo: WORKSPACE_KIT_INTERACTIVE_APPROVAL prompt for sensitive run; strict template conflict + invalid id; tests phase9 + phase6b; task state.json tracked in git."
-  - "Prior: Phase 8 v0.10.0 released to npm."
+  - "Phase 10 kickoff: T285 started (in_progress) via task engine — CLI-mandatory scope + Agent CLI map."
+  - "Prior: Phase 9 complete in-repo (T283-T284); Phase 8 v0.10.0 on npm."
 pending_decisions: []
 metrics:
   updated_at: "2026-03-27"
-  source: "automated"
-  notes: "Phase 9 implementation merged; package version still 0.10.0 until explicit release."
-  time_to_doctor_minutes: 0.03
-  cold_start_success_rate_pct: 100
+  source: "maintainer"
+  notes: "Maintainer focus shifted to Phase 10 execution queue; package version unchanged until release bookkeeping."
+  time_to_doctor_minutes: null
+  cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null
   recurring_friction_themes_count: 0

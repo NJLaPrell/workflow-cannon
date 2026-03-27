@@ -3307,11 +3307,11 @@
     },
     {
       "id": "T285",
-      "status": "ready",
+      "status": "in_progress",
       "type": "workspace-kit",
       "title": "[Agent/CLI Parity] Define CLI-mandatory scope and publish the Agent CLI map",
       "createdAt": "2026-03-27T00:00:00.000Z",
-      "updatedAt": "2026-03-27T00:00:00.000Z",
+      "updatedAt": "2026-03-27T02:28:37.683Z",
       "priority": "P1",
       "dependsOn": [],
       "unblocks": [
@@ -4747,7 +4747,27 @@
       "dependentsUnblocked": [],
       "timestamp": "2026-03-26T23:21:24.507Z",
       "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T285-2026-03-27T02:28:37.683Z-d165f58c",
+      "taskId": "T285",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T02:28:37.683Z",
+      "actor": "NJLaPrell@gmail.com"
     }
   ],
-  "lastUpdated": "2026-03-27T14:30:00.000Z"
+  "lastUpdated": "2026-03-27T02:28:37.683Z"
 }
