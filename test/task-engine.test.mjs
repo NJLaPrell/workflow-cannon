@@ -973,6 +973,42 @@ test("taskEngineModule update-task rejects idempotency key payload conflicts", a
   assert.equal(second.code, "idempotency-key-conflict");
 });
 
+test("taskEngineModule strictValidation toggle enforces pre-save task validation", async () => {
+  const workspace = await tmpDir();
+  const store = TaskStore.forJsonFile(workspace);
+  const now = new Date().toISOString();
+  store.addTask({
+    id: "BAD-ID",
+    status: "ready",
+    type: "workspace-kit",
+    title: "Legacy invalid id",
+    createdAt: now,
+    updatedAt: now
+  });
+  store.addTask(makeTask({ id: "T408", title: "Target task", status: "ready" }));
+  await store.save();
+
+  const ctxOff = { runtimeVersion: "0.1", workspacePath: workspace };
+  const offResult = await taskEngineModule.onCommand(
+    { name: "update-task", args: { taskId: "T408", updates: { title: "Updated with strict off" } } },
+    ctxOff
+  );
+  assert.equal(offResult.ok, true);
+  assert.equal(offResult.code, "task-updated");
+
+  const ctxOn = {
+    runtimeVersion: "0.1",
+    workspacePath: workspace,
+    effectiveConfig: { tasks: { strictValidation: true } }
+  };
+  const onResult = await taskEngineModule.onCommand(
+    { name: "update-task", args: { taskId: "T408", updates: { title: "Updated with strict on" } } },
+    ctxOn
+  );
+  assert.equal(onResult.ok, false);
+  assert.equal(onResult.code, "strict-task-validation-failed");
+});
+
 test("taskEngineModule archive-task excludes task from default active queries", async () => {
   const workspace = await tmpDir();
   const ctx = { runtimeVersion: "0.1", workspacePath: workspace };

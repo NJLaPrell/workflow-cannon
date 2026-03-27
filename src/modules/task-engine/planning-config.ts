@@ -48,3 +48,13 @@ export function planningSqliteDatabaseRelativePath(ctx: ModuleLifecycleContext):
     ? p.trim()
     : ".workspace-kit/tasks/workspace-kit.db";
 }
+
+export function planningStrictValidationEnabled(ctx: {
+  effectiveConfig?: Record<string, unknown>;
+}): boolean {
+  const tasks = ctx.effectiveConfig?.tasks;
+  if (!tasks || typeof tasks !== "object" || Array.isArray(tasks)) {
+    return false;
+  }
+  return (tasks as Record<string, unknown>).strictValidation === true;
+}
