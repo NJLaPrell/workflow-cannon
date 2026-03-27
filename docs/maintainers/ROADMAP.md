@@ -21,7 +21,7 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - **Phase 6 (Automation hardening and response templates)** for **`v0.8.0`**: tracks **6a**–**6c** are **COMPLETE in-repo** (`T249`-`T258`, `T260`-`T266`, `T271`-`T274`).
 - **Phase 7 (Architectural hardening)** for **`v0.9.0`** is **COMPLETE and released** across **`T275`-`T282`** (documentation/canon fixes, package identity alignment, CLI decomposition, config/runtime hardening, governance-surface cleanup).
 - **Phase 8 (Improvement backlog triage)** is **COMPLETE and released** as **`v0.10.0`** for **`imp-2cf5d881b81f9a`, `imp-3dc9374451b3c0`, `imp-b9d8408715de51`, `imp-201911c9c4461a`, `imp-ab362ef4e1f99e`, `imp-c14c4955833730`, `imp-fb31f5fc2694d3`, `imp-43397766ef243b`, `imp-7f9e65fad74b0b`** (policy/onboarding/runbooks/task-state docs + richer `policy-denied` JSON).
-- **Phase 9 (Interactive policy UX + response-template enforcement)** is **QUEUED** (not yet released): **`T283`** command-scoped first-use approval / session mapping; **`T284`** strict vs advisory `responseTemplates.enforcementMode` with documented semantics and tests (target release TBD).
+- **Phase 9 (Interactive policy UX + response-template enforcement)** is **COMPLETE in-repo** (no GitHub/npm release for this slice): **`T283`** interactive approval for sensitive `workspace-kit run`; **`T284`** strict response-template validation including default/override ids and explicit-vs-directive conflicts. Ship as a future semver when bundled with release bookkeeping.
 - Historical extraction and first-publish milestones remain recorded below as provenance.
 
 ## Phase plan and release cadence
@@ -132,12 +132,12 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
   - All listed `imp-*` items are **`completed`** in task-engine state with release evidence recorded below.
   - `pnpm run build`, `check`, `test`, `parity`, and `phase5-gates` pass on the release tag.
 
-### Phase 9 - Interactive policy UX and response-template enforcement (QUEUED)
+### Phase 9 - Interactive policy UX and response-template enforcement (COMPLETE in-repo)
 
-- Primary scope: **`T283`** interactive command-scoped first-use approval (TTY/opt-in; maps to session grants / existing policy trace contract); **`T284`** strict vs advisory **`responseTemplates.enforcementMode`** with full contract, docs, and tests (default remains advisory).
-- Outcome: safer operator ergonomics without silent bypass; strict template enforcement available for CI and governance-heavy workspaces.
+- Primary scope: **`T283`** interactive command-scoped first-use approval (`WORKSPACE_KIT_INTERACTIVE_APPROVAL`, TTY or `readStdinLine` test hook; session grant on “Allow for session”); **`T284`** strict **`responseTemplates.enforcementMode`** (unknown resolved template id + explicit/directive conflict).
+- Outcome: safer operator ergonomics without silent bypass; strict template enforcement for CI-style governance.
 - Exit signals:
-  - `T283` and `T284` are **`completed`** in task-engine state; release version and changelog updated; validation pipeline green.
+  - `T283` and `T284` are **`completed`** in task-engine state; `pnpm run build`, `check`, `test`, `parity` pass; docs/runbooks updated. **No** `v0.11.0` tag or npm publish required for this milestone unless explicitly scheduled.
 
 ## Recorded decisions
 

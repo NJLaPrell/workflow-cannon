@@ -42,8 +42,9 @@ function readResponseTemplatesConfig(
 function resolveRequestedTemplateId(
   commandName: string,
   args: Record<string, unknown>
-): { templateId: string | null; parseWarnings: string[] } {
+): { templateId: string | null; parseWarnings: string[]; strictViolations: string[] } {
   const parseWarnings: string[] = [];
+  const strictViolations: string[] = [];
   const explicit =
     typeof args.responseTemplateId === "string" && args.responseTemplateId.trim()
       ? args.responseTemplateId.trim()
@@ -71,11 +72,16 @@ function resolveRequestedTemplateId(
         `responseTemplateId '${explicit}' disagrees with instruction directive '${fromText}'; using explicit id.`
       )
     );
+    strictViolations.push(
+      truncateTemplateWarning(
+        `In strict mode, responseTemplateId '${explicit}' conflicts with instruction directive '${fromText}'.`
+      )
+    );
   }
 
-  if (explicit) return { templateId: explicit, parseWarnings };
-  if (fromText) return { templateId: fromText, parseWarnings };
-  return { templateId: null, parseWarnings };
+  if (explicit) return { templateId: explicit, parseWarnings, strictViolations };
+  if (fromText) return { templateId: fromText, parseWarnings, strictViolations };
+  return { templateId: null, parseWarnings, strictViolations };
 }
 
 function attachPresentation(
@@ -110,7 +116,8 @@ function buildMeta(
 
 /**
  * Apply response template metadata and optional presentation hints (T262, T265).
- * Advisory mode never flips `ok`. Strict mode fails closed on unknown template ids when a template was explicitly requested or command override is set.
+ * Advisory mode never flips `ok` for template issues. Strict mode fails closed on unknown resolved template ids
+ * (explicit, override, or default) and on explicit-vs-directive conflicts (`response-template-conflict`).
  */
 export function applyResponseTemplateApplication(
   commandName: string,
@@ -120,7 +127,30 @@ export function applyResponseTemplateApplication(
 ): ModuleCommandResult {
   const startNs = process.hrtime.bigint();
   const cfg = readResponseTemplatesConfig(effective);
-  const { templateId: requestedRaw, parseWarnings } = resolveRequestedTemplateId(commandName, args);
+  const { templateId: requestedRaw, parseWarnings, strictViolations } = resolveRequestedTemplateId(
+    commandName,
+    args
+  );
+
+  if (cfg.enforcementMode === "strict" && strictViolations.length > 0) {
+    const warnings = [...parseWarnings, ...strictViolations];
+    return {
+      ...result,
+      ok: false,
+      code: "response-template-conflict",
+      message: strictViolations[0]!,
+      responseTemplate: buildMeta(
+        {
+          requestedTemplateId: requestedRaw,
+          appliedTemplateId: null,
+          enforcementMode: cfg.enforcementMode,
+          warnings
+        },
+        startNs
+      )
+    };
+  }
+
   const override = cfg.commandOverrides[commandName];
   const chosenId = requestedRaw ?? override ?? cfg.defaultTemplateId ?? "default";
 
@@ -129,8 +159,7 @@ export function applyResponseTemplateApplication(
 
   if (!def) {
     warnings.push(truncateTemplateWarning(`Unknown response template '${chosenId}'.`));
-    const explicitRequest = Boolean(requestedRaw || override);
-    if (cfg.enforcementMode === "strict" && explicitRequest) {
+    if (cfg.enforcementMode === "strict") {
       return {
         ...result,
         ok: false,
@@ -138,7 +167,7 @@ export function applyResponseTemplateApplication(
         message: truncateTemplateWarning(`Unknown response template '${chosenId}'.`),
         responseTemplate: buildMeta(
           {
-            requestedTemplateId: requestedRaw ?? override,
+            requestedTemplateId: requestedRaw ?? override ?? cfg.defaultTemplateId,
             appliedTemplateId: null,
             enforcementMode: cfg.enforcementMode,
             warnings

@@ -23,7 +23,7 @@ Status legend:
 | Phase 6 - Automation hardening + response templates (`T249`-`T258`, `T260`-`T266`, `T271`-`T274`) | `v0.8.0` | Completed |
 | Phase 7 - Architectural hardening (`T275`-`T282`) | `v0.9.0` | Completed |
 | Phase 8 - Improvement backlog triage (`imp-2cf5d881b81f9a` … `imp-7f9e65fad74b0b`) | `v0.10.0` | Completed |
-| Phase 9 - Interactive policy UX + template enforcement (`T283`, `T284`) | planned | In progress / ready |
+| Phase 9 - Interactive policy UX + template enforcement (`T283`, `T284`) | not released (in-repo complete) | Completed |
 
 ## Feature Matrix by Phase
 
@@ -151,6 +151,13 @@ Status legend:
 | First-run validation runbook | Contributor order-of-operations for build/test/parity | Completed | `imp-fb31f5fc2694d3` |
 | Agent phase truth | AGENTS + README point to task state and status YAML | Completed | `imp-43397766ef243b` |
 | Task state schema story | Human doc + optional JSON Schema for editors | Completed | `imp-7f9e65fad74b0b` |
+
+### Phase 9 Interactive policy UX + response-template enforcement (in-repo; no semver bump yet)
+
+| Product feature | What users/maintainers get | Status | Task coverage |
+| --- | --- | --- | --- |
+| Interactive `run` policy prompt | Optional `WORKSPACE_KIT_INTERACTIVE_APPROVAL` + TTY (or test `readStdinLine`): Deny / Allow once / Allow for session; session persists like JSON `policyApproval` | Completed | `T283` |
+| Strict response-template enforcement | `enforcementMode: strict` fails on unknown resolved template id and explicit-vs-directive conflict (`response-template-invalid` / `response-template-conflict`) | Completed | `T284` |
 
 ## Supporting Milestone Features (cross-phase)
 

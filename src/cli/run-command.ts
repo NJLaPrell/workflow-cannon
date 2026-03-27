@@ -18,10 +18,13 @@ import { approvalsModule } from "../modules/approvals/index.js";
 import { planningModule } from "../modules/planning/index.js";
 import { improvementModule } from "../modules/improvement/index.js";
 import { workspaceConfigModule } from "../modules/workspace-config/index.js";
+import { promptSensitiveRunApproval } from "./interactive-policy.js";
 
 export type RunCommandIo = {
   writeLine: (message: string) => void;
   writeError: (message: string) => void;
+  /** Test hook: return one line of simulated stdin for interactive policy approval */
+  readStdinLine?: () => Promise<string | null>;
 };
 
 export type RunCommandExitCodes = {
@@ -106,12 +109,56 @@ export async function handleRunCommand(
   const policyOp = resolvePolicyOperationIdForCommand(subcommand, effective);
   const explicitPolicyApproval = parsePolicyApproval(commandArgs);
   let resolvedSensitiveApproval: PolicyApprovalPayload | undefined = explicitPolicyApproval;
+  let interactiveSessionFollowup = false;
 
   if (sensitive) {
     if (!resolvedSensitiveApproval && policyOp) {
       const grant = await getSessionGrant(cwd, policyOp, sessionId);
       if (grant) {
         resolvedSensitiveApproval = { confirmed: true, rationale: grant.rationale };
+      }
+    }
+    if (!resolvedSensitiveApproval && policyOp) {
+      const interactive = await promptSensitiveRunApproval(
+        { writeError, readStdinLine: io.readStdinLine },
+        policyOp,
+        `run ${subcommand}`,
+        process.env
+      );
+      if (interactive?.kind === "deny") {
+        await appendPolicyTrace(cwd, {
+          timestamp: new Date().toISOString(),
+          operationId: policyOp,
+          command: `run ${subcommand}`,
+          actor,
+          allowed: false,
+          message: "interactive policy approval denied"
+        });
+        writeLine(
+          JSON.stringify(
+            {
+              ok: false,
+              code: "policy-denied",
+              operationId: policyOp,
+              remediationDoc: POLICY_APPROVAL_HUMAN_DOC,
+              message: "Sensitive command denied at interactive policy prompt.",
+              hint: `Set WORKSPACE_KIT_INTERACTIVE_APPROVAL=off or pass policyApproval in JSON. See ${POLICY_APPROVAL_HUMAN_DOC}.`
+            },
+            null,
+            2
+          )
+        );
+        return codes.validationFailure;
+      }
+      if (interactive?.kind === "approve") {
+        const rationale =
+          interactive.scope === "session" ? "interactive-approval-session" : "interactive-approval-once";
+        resolvedSensitiveApproval = {
+          confirmed: true,
+          rationale,
+          ...(interactive.scope === "session" ? { scope: "session" } : {})
+        };
+        interactiveSessionFollowup = interactive.scope === "session";
       }
     }
     if (!resolvedSensitiveApproval) {
@@ -136,7 +183,7 @@ export async function handleRunCommand(
               'Sensitive command requires policyApproval in JSON args (or an existing session grant for this operation). Example: {"policyApproval":{"confirmed":true,"rationale":"why","scope":"session"}}. See remediationDoc for env vs JSON approval surfaces.',
             hint:
               policyOp != null
-                ? `Operation ${policyOp} requires explicit approval; WORKSPACE_KIT_POLICY_APPROVAL is not read for workspace-kit run.`
+                ? `Operation ${policyOp} requires explicit approval; WORKSPACE_KIT_POLICY_APPROVAL is not read for workspace-kit run. Optional: set WORKSPACE_KIT_INTERACTIVE_APPROVAL=on in a TTY for a prompt (see ${POLICY_APPROVAL_HUMAN_DOC}).`
                 : "Operation could not be mapped to policyOperationId; check policy.extraSensitiveModuleCommands and pass policyApproval in JSON args."
           },
           null,
@@ -168,8 +215,16 @@ export async function handleRunCommand(
         commandOk: rawResult.ok,
         message: rawResult.message
       });
-      if (explicitPolicyApproval?.scope === "session" && rawResult.ok) {
-        await recordSessionGrant(cwd, policyOp, sessionId, explicitPolicyApproval.rationale);
+      const recordSession =
+        rawResult.ok &&
+        (explicitPolicyApproval?.scope === "session" || interactiveSessionFollowup);
+      if (recordSession) {
+        await recordSessionGrant(
+          cwd,
+          policyOp,
+          sessionId,
+          resolvedSensitiveApproval.rationale
+        );
       }
     }
     const result = applyResponseTemplateApplication(subcommand, commandArgs, rawResult, effective);

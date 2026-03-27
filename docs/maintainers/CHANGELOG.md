@@ -6,9 +6,15 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+### Added
+
+- **Phase 9 (in-repo; not yet released to npm):** `WORKSPACE_KIT_INTERACTIVE_APPROVAL` optional prompt for sensitive `workspace-kit run` (`src/cli/interactive-policy.ts`, `readStdinLine` test hook on `WorkspaceKitCliOptions`).
+- **Strict response templates:** `enforcementMode: strict` now fails on unknown default/override template ids and on `responseTemplateId` vs instruction directive mismatch (`response-template-conflict`).
+
 ### Changed
 
-_No entries yet._
+- **`docs/maintainers/CONFIG.md`** — `responseTemplates.enforcementMode` strict/advisory semantics documented in metadata and generated reference.
+- **Task engine** — `.workspace-kit/tasks/state.json` is tracked in git (`.gitignore` updated); Phase 9 tasks `T283` / `T284` completed in state.
 
 ## [0.10.0] - 2026-03-26
 

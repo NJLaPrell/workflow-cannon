@@ -53,6 +53,78 @@ test("Phase6b: run JSON includes responseTemplate for list-tasks", async () => {
   assert.ok(typeof out.responseTemplate.appliedTemplateId === "string");
 });
 
+test("Phase6b: strict mode fails on unknown defaultTemplateId", async () => {
+  const workspacePath = await tmpWs();
+  await mkdir(path.join(workspacePath, ".workspace-kit"), { recursive: true });
+  await writeFile(
+    path.join(workspacePath, ".workspace-kit", "config.json"),
+    JSON.stringify(
+      {
+        schemaVersion: 1,
+        responseTemplates: {
+          enforcementMode: "strict",
+          defaultTemplateId: "not-a-real-template-id",
+          commandOverrides: {}
+        }
+      },
+      null,
+      2
+    ),
+    "utf8"
+  );
+  await mkdir(path.join(workspacePath, ".workspace-kit", "tasks"), { recursive: true });
+  await writeFile(
+    path.join(workspacePath, ".workspace-kit", "tasks", "state.json"),
+    JSON.stringify({ schemaVersion: 1, tasks: [], transitionLog: [], lastUpdated: new Date().toISOString() }),
+    "utf8"
+  );
+
+  const cap = { lines: [], errors: [], writeLine: (m) => cap.lines.push(m), writeError: (m) => cap.errors.push(m) };
+  const code = await runCli(["run", "list-tasks", "{}"], { cwd: workspacePath, ...cap });
+  assert.equal(code, 1);
+  const out = JSON.parse(cap.lines.join(""));
+  assert.equal(out.ok, false);
+  assert.equal(out.code, "response-template-invalid");
+});
+
+test("Phase6b: strict mode fails on explicit template id vs instruction directive conflict", async () => {
+  const workspacePath = await tmpWs();
+  await mkdir(path.join(workspacePath, ".workspace-kit"), { recursive: true });
+  await writeFile(
+    path.join(workspacePath, ".workspace-kit", "config.json"),
+    JSON.stringify(
+      {
+        schemaVersion: 1,
+        responseTemplates: {
+          enforcementMode: "strict",
+          defaultTemplateId: "default",
+          commandOverrides: {}
+        }
+      },
+      null,
+      2
+    ),
+    "utf8"
+  );
+  await mkdir(path.join(workspacePath, ".workspace-kit", "tasks"), { recursive: true });
+  await writeFile(
+    path.join(workspacePath, ".workspace-kit", "tasks", "state.json"),
+    JSON.stringify({ schemaVersion: 1, tasks: [], transitionLog: [], lastUpdated: new Date().toISOString() }),
+    "utf8"
+  );
+
+  const args = JSON.stringify({
+    responseTemplateId: "compact",
+    instruction: "Use the COMPLETED_TASK template for output."
+  });
+  const cap = { lines: [], errors: [], writeLine: (m) => cap.lines.push(m), writeError: (m) => cap.errors.push(m) };
+  const code = await runCli(["run", "list-tasks", args], { cwd: workspacePath, ...cap });
+  assert.equal(code, 1);
+  const out = JSON.parse(cap.lines.join(""));
+  assert.equal(out.ok, false);
+  assert.equal(out.code, "response-template-conflict");
+});
+
 test("Phase6b: strict mode fails on unknown explicit template id", async () => {
   const workspacePath = await tmpWs();
   await mkdir(path.join(workspacePath, ".workspace-kit"), { recursive: true });

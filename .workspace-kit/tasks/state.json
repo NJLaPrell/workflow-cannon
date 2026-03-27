@@ -1,0 +1,3632 @@
+{
+  "schemaVersion": 1,
+  "tasks": [
+    {
+      "id": "T175",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Execute extraction kickoff and split evidence capture",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [],
+      "unblocks": [
+        "T176"
+      ],
+      "phase": "Historical baseline (pre-Phase 0)",
+      "approach": "Dry-run + checklist + captured command outputs.",
+      "technicalScope": [
+        "Capture source-repo freeze SHA and split SHA as immutable provenance.",
+        "Document exact split command path and branch naming used for extraction.",
+        "Preserve execution artifacts sufficient for post-hoc verification."
+      ],
+      "acceptanceCriteria": [
+        "Freeze and split SHAs are recorded in project docs.",
+        "Split command path is reproducible by another maintainer."
+      ]
+    },
+    {
+      "id": "T176",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Bootstrap Workflow Cannon repository from split history",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T175"
+      ],
+      "unblocks": [
+        "T177"
+      ],
+      "phase": "Historical baseline (pre-Phase 0)",
+      "approach": "Bootstrap CI + publish automation baseline.",
+      "technicalScope": [
+        "Establish repository from split history with canonical branch.",
+        "Configure CI and publish workflow scaffolding.",
+        "Validate automation entrypoints and baseline execution."
+      ],
+      "acceptanceCriteria": [
+        "Repository is live with automation workflows configured.",
+        "Baseline workflow runs complete successfully."
+      ]
+    },
+    {
+      "id": "T177",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Close extraction with first package publish",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T176"
+      ],
+      "unblocks": [
+        "T178"
+      ],
+      "phase": "Historical baseline (pre-Phase 0)",
+      "approach": "Publish with workflow evidence and npm verification.",
+      "technicalScope": [
+        "Execute release/publish workflow with explicit gate checks.",
+        "Verify package appears in npm registry with expected metadata.",
+        "Record publish run URL and package reference."
+      ],
+      "acceptanceCriteria": [
+        "Published package is installable from npm.",
+        "Publish evidence is linked in repository docs."
+      ]
+    },
+    {
+      "id": "T178",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Finalize Phase 0 scope, risks, and evidence standards",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [],
+      "unblocks": [
+        "T179",
+        "T180",
+        "T181",
+        "T184",
+        "T196"
+      ],
+      "phase": "Phase 0 foundation",
+      "approach": "Align `docs/maintainers/ROADMAP.md`, `docs/maintainers/TASKS.md`, and `docs/maintainers/RELEASING.md` with explicit scope and evidence matrix.",
+      "technicalScope": [
+        "Define canonical Phase 0 in-scope/out-of-scope boundaries.",
+        "Define required evidence artifacts per Phase 0 milestone.",
+        "Synchronize wording and IDs across roadmap, tasks, and release docs."
+      ],
+      "acceptanceCriteria": [
+        "Scope and evidence matrix are documented and conflict-free.",
+        "All Phase 0 docs reference the same task boundaries."
+      ]
+    },
+    {
+      "id": "T206",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Reorganize canonical documentation surfaces for AI and maintainers",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T178"
+      ],
+      "unblocks": [
+        "T179",
+        "T180",
+        "T181",
+        "T182",
+        "T183"
+      ],
+      "phase": "Phase 0 foundation",
+      "approach": "Move canonical AI docs to `/.ai`, move human maintainership docs to `docs/maintainers`, and rewire references/rules/templates.",
+      "technicalScope": [
+        "Move root canonical docs into explicit AI and human ownership paths.",
+        "Update Cursor rules, commands, workflow docs, and issue templates to new canonical paths.",
+        "Validate root markdown hygiene (`README.md` as the only root markdown doc)."
+      ],
+      "acceptanceCriteria": [
+        "All source-of-truth references resolve to `/.ai` or `docs/maintainers`.",
+        "Documentation control surfaces are conflict-free and consistent."
+      ]
+    },
+    {
+      "id": "T207",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Bootstrap module contract, registry, and baseline module graph",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T178"
+      ],
+      "unblocks": [
+        "T184",
+        "T193"
+      ],
+      "phase": "Phase 0 foundation",
+      "approach": "Establish typed module contract + registry validation + test coverage for dependency integrity and startup ordering.",
+      "technicalScope": [
+        "Implement `WorkflowModule` contract and shared exports.",
+        "Implement registry checks for duplicate/missing/self/cycle dependency failures.",
+        "Add deterministic startup order and unit tests for graph validation."
+      ],
+      "acceptanceCriteria": [
+        "Module registry validates module graph integrity with explicit error codes.",
+        "Contract + registry behavior is test-covered and green."
+      ]
+    },
+    {
+      "id": "T208",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Add module config/state/instruction contracts with runtime enforcement",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T207"
+      ],
+      "unblocks": [
+        "T184",
+        "T186",
+        "T193"
+      ],
+      "phase": "Phase 0 foundation",
+      "approach": "Extend registration to include module config/state/instruction contracts, enable module toggles, and enforce instruction validity at runtime.",
+      "technicalScope": [
+        "Add `enabledByDefault`, `config`, `state`, and `instructions` to module registration.",
+        "Add runtime enable/disable selection with dependency-integrity validation for enabled sets.",
+        "Validate instruction naming, file mapping, and backing file existence in registry startup."
+      ],
+      "acceptanceCriteria": [
+        "Invalid instruction contracts fail startup deterministically.",
+        "Enable/disable behavior is validated by tests and documented in module build guidance."
+      ]
+    },
+    {
+      "id": "T209",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Define canonical module build guidance for AI and maintainers",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T206",
+        "T208"
+      ],
+      "unblocks": [
+        "T184",
+        "T186",
+        "T193"
+      ],
+      "phase": "Phase 0 foundation",
+      "approach": "Publish a canonical AI spec plus human companion guide and keep both aligned with the module contract/registry implementation.",
+      "technicalScope": [
+        "Create and maintain `.ai/module-build.md` as canonical module development policy.",
+        "Create and maintain `docs/maintainers/module-build-guide.md` as the human-readable companion.",
+        "Update guidance to cover config/state contracts, instruction contracts, and enable/disable dependency integrity."
+      ],
+      "acceptanceCriteria": [
+        "AI and human module-build docs are present, aligned, and referenced by source-of-truth docs.",
+        "Guidance reflects implemented module runtime checks and test expectations."
+      ]
+    },
+    {
+      "id": "T210",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Implement module command router for discovery and dispatch",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T207",
+        "T208"
+      ],
+      "unblocks": [
+        "T184",
+        "T186",
+        "T193"
+      ],
+      "phase": "Phase 0 foundation",
+      "approach": "Add a core command router that indexes enabled-module instruction entries, supports alias resolution, and dispatches commands through module `onCommand`.",
+      "technicalScope": [
+        "Implement `src/core/module-command-router.ts` with typed descriptors, alias support, and deterministic error handling.",
+        "Enforce duplicate command detection and enabled-module-only dispatch semantics.",
+        "Add command-router tests for listing, alias resolution, unknown command handling, and duplicate routes."
+      ],
+      "acceptanceCriteria": [
+        "Agents can list and resolve callable module commands from enabled modules.",
+        "Router behavior is test-covered and fails safely on invalid routing states."
+      ]
+    },
+    {
+      "id": "T211",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Wire documentation module generate-document runtime through command dispatch",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T209",
+        "T210"
+      ],
+      "unblocks": [
+        "T179",
+        "T180",
+        "T181"
+      ],
+      "phase": "Phase 0 foundation",
+      "approach": "Implement `document-project`/`generate-document` runtime flow with config-driven paths, template/schema validation, conflict checks, and evidence output.",
+      "technicalScope": [
+        "Implement documentation runtime command execution with strict write-boundary enforcement to configured roots.",
+        "Support template-missing prompt/continue behavior, section coverage validation, and validate/retry flow.",
+        "Emit typed generation evidence and surface it through module command results."
+      ],
+      "acceptanceCriteria": [
+        "Documentation module command runs through router and returns structured evidence.",
+        "Validation/conflict behavior matches module rules for currently implemented command paths and passing router/runtime integration tests."
+      ]
+    },
+    {
+      "id": "T212",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Build documentation module template library for core maintainer docs",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T209",
+        "T211"
+      ],
+      "unblocks": [
+        "T179",
+        "T180",
+        "T181"
+      ],
+      "phase": "Phase 0 foundation",
+      "approach": "Add template-driven generation instructions for core maintainer documents and align section-generation behavior to current document structures.",
+      "technicalScope": [
+        "Add templates for `ARCHITECTURE.md`, `PRINCIPLES.md`, `RELEASING.md`, `ROADMAP.md`, `SECURITY.md`, `SUPPORT.md`, and `TERMS.md`.",
+        "Use `{{{ ... }}}` instruction blocks for section-level generation directives.",
+        "Align template structure with current maintainer document boundaries while improving clarity where needed."
+      ],
+      "acceptanceCriteria": [
+        "Core maintainer docs have corresponding documentation-module templates.",
+        "Template sections map to current doc structures and can drive deterministic generation."
+      ]
+    },
+    {
+      "id": "T213",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Harden documentation runtime config and validation matrix",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T211"
+      ],
+      "unblocks": [
+        "T179",
+        "T180",
+        "T181"
+      ],
+      "phase": "Phase 0 foundation",
+      "approach": "Strengthen runtime configuration ingestion and add explicit edge-case validation coverage for generate-document flows.",
+      "technicalScope": [
+        "Formalize runtime config parsing/validation for documentation module roots and generation options.",
+        "Add runtime tests for missing-template behavior, strict write-boundary enforcement, section coverage failures, and validate/retry outcomes.",
+        "Ensure evidence output includes attempt counts, validation failures, and resolution outcomes for failing paths."
+      ],
+      "acceptanceCriteria": [
+        "Documentation runtime behavior is test-covered for both happy and failure paths.",
+        "Config and validation behavior is deterministic and documented."
+      ]
+    },
+    {
+      "id": "T179",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Harden package release metadata and automation guardrails",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T178"
+      ],
+      "unblocks": [
+        "T182",
+        "T195",
+        "T196"
+      ],
+      "phase": "Phase 0 foundation",
+      "approach": "Harden metadata, enforce guardrails, and codify release gate checks.",
+      "technicalScope": [
+        "Validate package metadata fields required for publish correctness.",
+        "Enforce pre-publish checks in CI/workflow pipeline.",
+        "Add fail-closed behavior for missing/invalid release prerequisites."
+      ],
+      "acceptanceCriteria": [
+        "Metadata checks block invalid releases.",
+        "Guardrail failures are actionable and documented."
+      ]
+    },
+    {
+      "id": "T180",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Define and validate consumer update cadence",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T178"
+      ],
+      "unblocks": [
+        "T181",
+        "T197"
+      ],
+      "phase": "Phase 0 foundation",
+      "approach": "Cadence + reproducible fixture-backed validation path.",
+      "technicalScope": [
+        "Define update cadence states (candidate, stable, follow-up patch).",
+        "Define required consumer validation run for each cadence transition.",
+        "Specify fixture and command contract for repeatable cadence checks."
+      ],
+      "acceptanceCriteria": [
+        "Cadence transitions are documented with required commands.",
+        "Fixture-backed flow is reproducible by maintainers."
+      ]
+    },
+    {
+      "id": "T181",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Standardize packaged-artifact parity validation flow",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T178",
+        "T180"
+      ],
+      "unblocks": [
+        "T182",
+        "T183",
+        "T197"
+      ],
+      "phase": "Phase 0 foundation",
+      "approach": "Pin command order + fixture execution + consistent output contract.",
+      "technicalScope": [
+        "Define canonical ordered command chain for parity execution.",
+        "Define expected outputs and non-zero exit behavior.",
+        "Define fixture bootstrap and artifact capture requirements."
+      ],
+      "acceptanceCriteria": [
+        "Parity command chain is deterministic and documented.",
+        "Output contract supports machine parsing."
+      ]
+    },
+    {
+      "id": "T182",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Make parity regressions release-blocking in CI",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T179",
+        "T181"
+      ],
+      "unblocks": [
+        "T184"
+      ],
+      "phase": "Phase 0 foundation",
+      "approach": "Block release-readiness path with clear failure diagnostics.",
+      "technicalScope": [
+        "Integrate parity suite into release-readiness workflow dependency graph.",
+        "Mark parity regression states as hard failure for release path.",
+        "Emit concise diagnostics with failing step and artifact links."
+      ],
+      "acceptanceCriteria": [
+        "Release workflow cannot pass with parity regressions.",
+        "Failure output identifies precise parity failure node."
+      ]
+    },
+    {
+      "id": "T183",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Emit machine-readable parity evidence",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T181"
+      ],
+      "unblocks": [
+        "T191",
+        "T198"
+      ],
+      "phase": "Phase 0 foundation",
+      "approach": "Schema-backed evidence artifact with stable keys and references.",
+      "technicalScope": [
+        "Define evidence schema with run metadata, command outcomes, and references.",
+        "Emit artifacts to deterministic location in CI and local runs.",
+        "Validate schema conformance before artifact publish."
+      ],
+      "acceptanceCriteria": [
+        "Evidence artifacts are schema-valid and consistently generated.",
+        "Artifacts can be linked from release evidence docs."
+      ]
+    },
+    {
+      "id": "T199",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Design Task Engine schema workbook",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [],
+      "unblocks": [
+        "T184"
+      ],
+      "phase": "Phase 1 task engine core",
+      "approach": "Produce a design workbook that documents the resolved decisions above and specifies implementation-ready details for schema, transitions, guards, persistence, and errors.",
+      "technicalScope": [
+        "**State model**: Document the core lifecycle states: `proposed`, `ready`, `in_progress`, `blocked`, `completed`, `cancelled`. States are fixed in Phase 1; extensibility deferred.",
+        "**Transition graph**: Document every allowed transition with guard conditions. Include reversibility markers. Mandatory transitions: `proposed → ready` (accept), `proposed → cancelled` (reject), `ready → in_progress` (start), `ready → blocked` (block), `ready → cancelled` (cancel), `in_progress → completed` (complete), `in_progress → blocked` (block), `in_progress → ready` (pause), `blocked → ready` (unblock, all deps met), `blocked → cancelled` (cancel).",
+        "**Entity schema**: Document task entity fields — required: `id` (string, format `T{number}`), `status` (enum), `type` (string, uniform lifecycle in P1), `title` (string), `createdAt` (ISO timestamp), `updatedAt` (ISO timestamp). Optional: `priority` (P1/P2/P3), `dependsOn` (string[]), `unblocks` (string[]), `metadata` (Record), `ownership` (string), `approach`, `technicalScope`, `acceptanceCriteria`.",
+        "**Guard hook contract**: Document the `TransitionGuard` interface — `canTransition(task, targetState, context): GuardResult`. Guards run in registration order; first rejection stops the transition. Built-in guards: `dependency-check` (blocks start if deps incomplete), `state-validity` (rejects impossible transitions).",
+        "**Persistence contract**: Document the file-backed JSON store at `.workspace-kit/tasks/state.json`. Schema-versioned. Loaded on engine init, saved after each transition batch. Configurable path via `src/modules/task-engine/config.md`.",
+        "**Evidence schema**: Document transition evidence fields: `transitionId`, `taskId`, `fromState`, `toState`, `guardResults[]`, `dependentsUnblocked[]`, `timestamp`, `actor`.",
+        "**Error taxonomy**: Document typed error codes: `invalid-transition` (disallowed from→to), `guard-rejected` (guard returned rejection), `dependency-unsatisfied` (deps not complete), `task-not-found`, `duplicate-task-id`, `invalid-task-schema`, `storage-read-error`, `storage-write-error`.",
+        "**CLI commands**: Document the commands the engine will expose via the module command router: `run-transition`, `get-task`, `list-tasks`, `get-ready-queue`, `import-tasks`.",
+        "**Generated TASKS.md**: Document how the engine produces a read-only `docs/maintainers/TASKS.md` from state, matching the current section structure."
+      ],
+      "acceptanceCriteria": [
+        "All design decisions from the table above are documented with implementation-ready detail.",
+        "Transition graph covers every state pair (allowed and disallowed).",
+        "Entity schema, guard contract, evidence schema, and error taxonomy are specified to a level sufficient for T184 implementation.",
+        "Migration strategy for importing existing TASKS.md is documented."
+      ]
+    },
+    {
+      "id": "T184",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Define Task Engine core schema and lifecycle",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T199"
+      ],
+      "unblocks": [
+        "T185",
+        "T187",
+        "T188"
+      ],
+      "phase": "Phase 1 task engine core",
+      "approach": "Implement typed schema, lifecycle states, transition validation, and guard hooks based on the T199 workbook.",
+      "technicalScope": [
+        "Implement `TaskEntity` type with all required and optional fields from the workbook.",
+        "Implement `TaskStatus` enum: `proposed`, `ready`, `in_progress`, `blocked`, `completed`, `cancelled`.",
+        "Implement `TaskType` field (string, uniform lifecycle in Phase 1).",
+        "Implement the allowed-transition map as a typed constant.",
+        "Implement `TransitionGuard` interface and `GuardResult` type.",
+        "Implement `TransitionValidator` that checks state validity, runs registered guards in order, and returns typed errors on rejection.",
+        "Implement built-in guards: `dependency-check` and `state-validity`.",
+        "Register task-engine module with `WorkflowModule` contract (update existing stub with real capabilities, config, state, instruction entries).",
+        "Add unit tests: every valid transition, every invalid transition, guard registration and execution order, built-in guard behavior, error codes."
+      ],
+      "acceptanceCriteria": [
+        "`TaskEntity`, `TaskStatus`, `TransitionGuard`, and related types are exported.",
+        "Transition validator rejects all disallowed state changes with specific error codes from the taxonomy.",
+        "Guard hooks run in registration order; first rejection stops the chain.",
+        "Built-in `dependency-check` guard prevents starting tasks with incomplete deps.",
+        "Module registration passes registry validation with updated instruction entries."
+      ]
+    },
+    {
+      "id": "T185",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Implement Task Engine transition runtime and persistence",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T184"
+      ],
+      "unblocks": [
+        "T186",
+        "T194"
+      ],
+      "phase": "Phase 1 task engine core",
+      "approach": "Transition service with auto-unblock, evidence emission, and file-backed JSON persistence.",
+      "technicalScope": [
+        "Implement `TaskStore` — file-backed JSON store at `.workspace-kit/tasks/state.json`. Schema-versioned. Load on init, save after each transition batch.",
+        "Implement `TransitionService` — accepts a task ID + target state, loads task from store, validates via `TransitionValidator`, applies state mutation, runs post-transition hooks, saves.",
+        "Implement **auto-unblock**: when a task transitions to `completed`, scan dependents; any task whose `dependsOn` list is now fully satisfied moves from `blocked → ready` automatically. Include unblocked task IDs in evidence.",
+        "Implement structured transition evidence: `transitionId`, `taskId`, `fromState`, `toState`, `guardResults`, `dependentsUnblocked`, `timestamp`, `actor`.",
+        "Implement `onCommand` handler for the task-engine module: `run-transition`, `get-task`, `list-tasks`, `get-ready-queue`.",
+        "Wire commands through the CLI `run` command (already built).",
+        "Add exhaustive test matrix: every valid transition, every invalid transition, guard failures, auto-unblock cascades, evidence completeness, persistence round-trip, concurrent-safe save behavior."
+      ],
+      "acceptanceCriteria": [
+        "Transition service is deterministic under repeated runs with identical inputs.",
+        "Auto-unblock correctly cascades through dependency chains.",
+        "Evidence records are emitted for every transition including auto-unblocks.",
+        "File-backed store persists and reloads correctly.",
+        "`workspace-kit run list-tasks` and `workspace-kit run get-ready-queue` return structured JSON.",
+        "Typed errors map to specific caller-facing failure states."
+      ]
+    },
+    {
+      "id": "T186",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Add task-type adapter contract and TASKS.md generation",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T184",
+        "T185"
+      ],
+      "unblocks": [
+        "T193",
+        "T217"
+      ],
+      "phase": "Phase 1 task engine core",
+      "approach": "Adapter interface for task sources + generated TASKS.md as the human-readable view + one-time import from current TASKS.md format.",
+      "technicalScope": [
+        "Define `TaskAdapter` interface: `load()` to hydrate tasks from external source, `save()` to persist back, `supports()` to declare capabilities (read, write, watch). Adapters are optional — the file-backed store is the canonical source.",
+        "Enforce adapter capability validation on registration.",
+        "Implement **TASKS.md generator**: reads task state from the store and produces a formatted `docs/maintainers/TASKS.md` matching the current section structure (status markers, dependency fields, phase groupings). This is a write-only output, not a round-trip.",
+        "Implement **import-tasks command**: one-time parser that reads the current TASKS.md markdown format and imports tasks into the engine's JSON state. Handles status markers (`[p]`, `[ ]`, `[~]`, `[!]`, `[x]`), dependency fields, priority, and phase groupings.",
+        "Add `generate-tasks-md` and `import-tasks` as instruction entries on the task-engine module.",
+        "Add tests: adapter registration, TASKS.md generation matches expected format, import round-trip (import then generate produces equivalent output), invalid adapter rejection."
+      ],
+      "acceptanceCriteria": [
+        "Adapter interface is stable, versioned, and exported.",
+        "`workspace-kit run generate-tasks-md` produces a well-formatted `docs/maintainers/TASKS.md` from engine state.",
+        "`workspace-kit run import-tasks` successfully imports the current TASKS.md into `.workspace-kit/tasks/state.json`.",
+        "Invalid adapters fail registration with clear error codes.",
+        "Adapters cannot mutate task state outside the transition service."
+      ]
+    },
+    {
+      "id": "T217",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Implement next-action suggestion engine",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T185",
+        "T186"
+      ],
+      "unblocks": [
+        "T218"
+      ],
+      "phase": "Phase 1 task engine core",
+      "approach": "Ready-queue analysis with priority sorting and blocking chain reporting.",
+      "technicalScope": [
+        "Implement `get-next-actions` command that returns the ready queue sorted by priority (P1 first), with blocking chain analysis showing which completed tasks unblocked each ready task.",
+        "Include summary: how many tasks are in each state, what's blocking the most work, suggested next task to start.",
+        "Wire as instruction entry on the task-engine module with instruction file documenting agent usage.",
+        "Add tests: priority ordering, blocking chain accuracy, empty-queue behavior, all-complete behavior."
+      ],
+      "acceptanceCriteria": [
+        "`workspace-kit run get-next-actions` returns prioritized ready queue with blocking chain context.",
+        "Agents can use the output to decide what to work on next without manual TASKS.md inspection.",
+        "Output includes state summary and suggested next task."
+      ]
+    },
+    {
+      "id": "T218",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Author Phase 2 config, policy, and cutover workbook",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T217"
+      ],
+      "unblocks": [
+        "T187"
+      ],
+      "phase": "Phase 2 config, policy, and local task cutover",
+      "approach": "Same rigor as `T199`: binding workbook before implementation; incorporates the resolved decisions above and fills in field-level detail.",
+      "technicalScope": [
+        "**Project vs module:** **Project (global)** config is maintainers’ `.workspace-kit/config.json` (domain keys and/or `modules.<moduleId>` overrides). **Module-level** config is each module’s `config.md` / registration defaults, merged in **registry dependency order** **before** the project layer applies.",
+        "**Config precedence (binding, low → high):** kit built-in defaults → **merged module-level** contributions (topological order; collision rules per workbook) → **project (global)** `.workspace-kit/config.json` **overrides** that merge → `WORKSPACE_KIT_*` env (nested keys via `__`) → per-invocation JSON on `workspace-kit run` (highest).",
+        "**Merge semantics:** document per-field behavior (scalar replace vs deep object merge) and validation failure modes.",
+        "**Typed registry:** domain keys (e.g. core, task-engine, documentation), schema validation, stable error taxonomy.",
+        "**Explain command:** JSON report: logical path → effective value → winning layer + discarded alternates.",
+        "**Policy:** enumerate sensitive **operation IDs** aligned with router/CLI (minimum: `upgrade`; `init` when it performs writes; `document-project` / `generate-document` when not `dryRun` or when configured overwrites would touch outputs; task-engine `import-tasks`, `generate-tasks-md`, `run-transition`). Read-only paths (`doctor`, `check`, `drift-check`, `list-tasks`, `get-task`, `get-ready-queue`, `get-next-actions`, dry-run generation, etc.) **excluded** unless workbook adds an explicit exception.",
+        "**Approvals + traces:** contract for agent-supplied approval fields; trace record shape (operation, actor, allowed/denied, rationale, timestamp, config snapshot hash optional).",
+        "**Actor:** document the default resolution chain (see decisions table).",
+        "**Local task cutover:** numbered steps for maintainers (backup, `import-tasks`, validate, `generate-tasks-md`, git/PR hygiene); explicit **non-goal:** no packaged migration runner or staged migration engine in `v0.4.0`."
+      ],
+      "acceptanceCriteria": [
+        "Workbook exists at `docs/maintainers/phase2-config-policy-workbook.md` and is complete enough that implementers do not need ad hoc product decisions during `T187`–`T189`.",
+        "Non-goals for `v0.4.0` explicitly exclude generic migration orchestration in the npm package."
+      ]
+    },
+    {
+      "id": "T187",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Implement typed config registry with deterministic precedence",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T184",
+        "T218"
+      ],
+      "unblocks": [
+        "T200"
+      ],
+      "phase": "Phase 2 config, policy, and local task cutover",
+      "approach": "Implement per `T218` workbook; typed schema + precedence resolver + agent-first explain command.",
+      "technicalScope": [
+        "Implement typed config registry with schema validation and deterministic merge: **module-level** sources per module + **project (global)** overlay from `.workspace-kit/config.json`, then env, then invocation overrides per workbook.",
+        "Wire registry into startup or command context so module commands and CLI resolve **effective** config per domain and per module id where applicable.",
+        "Implement **agent-first** explain: `workspace-kit run` command as specified in workbook (JSON-only output).",
+        "Unit tests for precedence, merge edge cases, and explain correctness."
+      ],
+      "acceptanceCriteria": [
+        "Same layered inputs always yield the same effective config.",
+        "Explain output identifies winning source per field and matches workbook contract.",
+        "Failing validation yields stable, typed errors."
+      ]
+    },
+    {
+      "id": "T188",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Implement policy and approval enforcement baseline",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T184",
+        "T187",
+        "T200"
+      ],
+      "unblocks": [
+        "T189",
+        "T219",
+        "T193",
+        "T201"
+      ],
+      "phase": "Phase 2 config, policy, and local task cutover",
+      "approach": "Policy evaluator integrated with command dispatch; agent-mediated approval; decision traces per workbook.",
+      "technicalScope": [
+        "Implement policy evaluation for **sensitive operation IDs** from workbook + `T200` matrix (extendable via config).",
+        "Enforce gate: sensitive `workspace-kit` / module command paths **fail closed** unless valid approval payload present in context (agent obtained user confirmation).",
+        "Integrate at **module command router** boundary (or single pre-dispatch wrapper) so new write commands inherit policy unless explicitly exempted in code.",
+        "Emit **policy decision traces** (structured JSON, persist per workbook: e.g. under `.workspace-kit/policy/` or append-only log as defined in workbook).",
+        "Resolve **actor** using the default chain from workbook.",
+        "Tests: each sensitive op blocked without approval; allowed with valid approval; traces include operation, actor, outcome, rationale."
+      ],
+      "acceptanceCriteria": [
+        "Sensitive operations from the baseline list cannot succeed without approval recorded in context.",
+        "Decision traces satisfy workbook schema and are machine-readable.",
+        "Read-only / dry-run paths from baseline remain ungated unless workbook specifies otherwise."
+      ]
+    },
+    {
+      "id": "T189",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Maintainer-local task engine cutover runbook",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T187",
+        "T188",
+        "T201"
+      ],
+      "unblocks": [
+        "T195"
+      ],
+      "phase": "Phase 2 config, policy, and local task cutover",
+      "approach": "Documentation and evidence template only — **no** migration orchestration runtime in the package for `v0.4.0`.",
+      "technicalScope": [
+        "Publish maintainer runbook (path per workbook; e.g. `docs/maintainers/task-engine-cutover.md`) describing **local-only** execution: when the team chooses to cut over, how to back up `docs/maintainers/TASKS.md`, run `import-tasks`, validate JSON state, run `generate-tasks-md`, and open PR with evidence.",
+        "Optional: define a simple **local evidence JSON template** (path under `artifacts/` or `.workspace-kit/`) for one rehearsal — not a product API.",
+        "Explicitly defer **generic** migration framework (preflight/stage engine in package) to a later phase if still needed."
+      ],
+      "acceptanceCriteria": [
+        "Another maintainer can follow the runbook on a clean clone without undocumented steps.",
+        "Runbook states that cutover is **voluntary** and **local**; package does not auto-migrate consumer repos.",
+        "No new public migration API surface is required for acceptance (docs-only slice is sufficient if workbook non-goals hold)."
+      ]
+    },
+    {
+      "id": "T219",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Harden config validation and agent resolve-config surface",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T188"
+      ],
+      "unblocks": [
+        "T220"
+      ],
+      "phase": "Phase 2b config and policy hardening",
+      "approach": "Fail-fast validation with stable errors; deterministic JSON for full effective config (agent-first).",
+      "technicalScope": [
+        "Tighten schema validation for `.workspace-kit/config.json` and merged effective config (paths, field-level messages aligned with `explain-config` semantics).",
+        "Add a `workspace-kit run` / workspace-config command that emits the **full** effective configuration object (or per-domain slices per workbook) for automation, not only field explain.",
+        "Extend maintainer matrix or workbook notes so validation and resolve outputs are traceable to test cases."
+      ],
+      "acceptanceCriteria": [
+        "Invalid configs fail with typed, path-qualified errors; valid merges remain bitwise deterministic for the same inputs.",
+        "Resolve output is JSON-only, stable field ordering or documented sort, and covered by tests."
+      ]
+    },
+    {
+      "id": "T220",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Version policy traces and config-driven sensitive-operation extensions",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T219"
+      ],
+      "unblocks": [
+        "T190"
+      ],
+      "phase": "Phase 2b config and policy hardening",
+      "approach": "Trace schema versioning + documented extension points for sensitive op lists from effective config.",
+      "technicalScope": [
+        "Add an explicit **schema version** (or equivalent) to policy trace records and document upgrade expectations for consumers reading `.workspace-kit/policy/` logs.",
+        "Wire **config-driven** extension of sensitive operation identifiers (within safe bounds: documented merge with built-in baseline, deny-by-default behavior for unknown router paths unchanged unless workbook extends).",
+        "Integration tests: traces include version field; extended op list flows through policy evaluation."
+      ],
+      "acceptanceCriteria": [
+        "Traces remain machine-readable and backward-documented; version bump procedure is recorded in maintainer docs.",
+        "Extending sensitive ops via config is tested and does not weaken default deny posture for undeclared write paths."
+      ]
+    },
+    {
+      "id": "T228",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Implement end-user config command surface",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T187"
+      ],
+      "unblocks": [
+        "T229",
+        "T230",
+        "T231",
+        "T232",
+        "T234",
+        "T235"
+      ],
+      "phase": "Phase 2b config and policy hardening",
+      "approach": "Add a canonical CLI `config` command group that routes through typed config resolution and validation instead of exposing raw file editing as the primary interface.",
+      "technicalScope": [
+        "Add `workspace-kit config` command group to the CLI surface.",
+        "Implement `config list`.",
+        "Implement `config get <key>`.",
+        "Implement `config set <key> <jsonValue>`.",
+        "Implement `config unset <key>`.",
+        "Implement `config explain <key>`.",
+        "Implement `config validate`.",
+        "Return structured JSON output suitable for agent consumption.",
+        "Provide concise human-readable summaries where appropriate.",
+        "Fail safely on invalid keys, malformed JSON values, and type violations."
+      ],
+      "acceptanceCriteria": [
+        "Users can inspect and mutate config without direct raw-file editing.",
+        "CLI config commands route through canonical config logic rather than ad hoc file writes.",
+        "Invalid writes are rejected before persistence.",
+        "Command behavior is deterministic and test-covered."
+      ]
+    },
+    {
+      "id": "T229",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Add canonical persisted config store for project and user layers",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T187",
+        "T228"
+      ],
+      "unblocks": [
+        "T231",
+        "T232",
+        "T234",
+        "T235"
+      ],
+      "phase": "Phase 2b config and policy hardening",
+      "approach": "Back the config command surface with deterministic JSON config layers that are runtime-editable and distinct from descriptive markdown docs.",
+      "technicalScope": [
+        "Define canonical persisted config file locations for project-level and user-level config.",
+        "Implement JSON read/write helpers with schema-validation integration.",
+        "Support missing-file bootstrap behavior.",
+        "Normalize serialization for deterministic diffs and stable read-after-write behavior.",
+        "Ensure write behavior is atomic or rollback-safe where practical.",
+        "Keep persisted config separate from generated human docs and module contract markdown."
+      ],
+      "acceptanceCriteria": [
+        "Project and user config persist independently and resolve predictably.",
+        "Persisted config format is deterministic and machine-parseable.",
+        "Invalid or unreadable persisted config is surfaced with actionable errors.",
+        "Runtime can load and resolve persisted layers reliably."
+      ]
+    },
+    {
+      "id": "T230",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Implement config metadata contract for user-facing settings",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T187",
+        "T228"
+      ],
+      "unblocks": [
+        "T231",
+        "T233",
+        "T235",
+        "T236"
+      ],
+      "phase": "Phase 2b config and policy hardening",
+      "approach": "Define a metadata model for config keys so runtime, explain, docs, and future UI surfaces all depend on the same source.",
+      "technicalScope": [
+        "Define metadata fields for user-exposed config keys.",
+        "Include key name, type, description, default, allowed values, scope, owning module, sensitivity, restart requirement, and approval requirement where relevant.",
+        "Expose config metadata through the registry/runtime APIs.",
+        "Ensure command handlers and documentation generation can consume the same metadata source.",
+        "Treat absent metadata for exposed keys as a validation failure or explicit warning state."
+      ],
+      "acceptanceCriteria": [
+        "Every user-exposed config key has retrievable metadata.",
+        "Metadata is programmatically available to runtime and docs layers.",
+        "Explain and docs features can use the same canonical metadata source.",
+        "Missing or inconsistent metadata is detectable and test-covered."
+      ]
+    },
+    {
+      "id": "T231",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Implement effective-value explanation and precedence diagnostics",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T228",
+        "T229",
+        "T230"
+      ],
+      "unblocks": [
+        "T234",
+        "T233"
+      ],
+      "phase": "Phase 2b config and policy hardening",
+      "approach": "Add deterministic explain output that tells users why a config value resolved the way it did.",
+      "technicalScope": [
+        "Implement explain output for a single config key.",
+        "Show effective value and winning source layer.",
+        "Show overridden lower-priority values when present.",
+        "Show default value when relevant.",
+        "Show validation constraints, config scope, and owning module.",
+        "Indicate restart, rerun, or approval implications where metadata supports it.",
+        "Keep explain output stable enough for tests and agent consumption."
+      ],
+      "acceptanceCriteria": [
+        "`config explain <key>` clearly identifies the winning value and why it won.",
+        "Users can distinguish defaults, project values, user values, and runtime overrides.",
+        "Output is deterministic and understandable.",
+        "Tests cover common precedence and conflict scenarios."
+      ]
+    },
+    {
+      "id": "T232",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Add config mutation guardrails and safe-write behavior",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T228",
+        "T229",
+        "T230",
+        "T188"
+      ],
+      "unblocks": [
+        "T234",
+        "T237",
+        "T235"
+      ],
+      "phase": "Phase 2b config and policy hardening",
+      "approach": "Apply schema, policy, and safe-write constraints so config editing remains safe-by-default.",
+      "technicalScope": [
+        "Block writes to unknown keys.",
+        "Block writes that violate schema or type rules.",
+        "Validate mutations before persistence.",
+        "Respect policy and approval hooks for sensitive keys where applicable.",
+        "Prevent partial-write corruption.",
+        "Emit explicit error codes and actionable failure messages.",
+        "Record enough mutation context to support debugging and future evidence flows."
+      ],
+      "acceptanceCriteria": [
+        "Unsafe config changes are rejected before write.",
+        "Sensitive settings can be approval-gated or blocked by policy.",
+        "Failure states are explicit, deterministic, and test-covered.",
+        "Successful writes preserve config integrity."
+      ]
+    },
+    {
+      "id": "T233",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Generate canonical AI and human config reference documentation",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T228",
+        "T230",
+        "T231",
+        "T236"
+      ],
+      "unblocks": [],
+      "phase": "Phase 2b config and policy hardening",
+      "approach": "Generate config reference docs from config metadata instead of maintaining a second manual truth source.",
+      "technicalScope": [
+        "Generate `.ai/CONFIG.md`.",
+        "Generate `docs/maintainers/CONFIG.md`.",
+        "Include key names, types, defaults, scopes, allowed values, owning modules, and operational notes.",
+        "Clearly distinguish persisted editable config from descriptive/generated documentation.",
+        "Keep generation deterministic from metadata and resolved config contract data."
+      ],
+      "acceptanceCriteria": [
+        "AI and human config docs are generated from one canonical metadata source.",
+        "Generated docs stay aligned with implementation changes.",
+        "Docs describe usage and boundaries without becoming live config state.",
+        "Output is stable and reviewable."
+      ]
+    },
+    {
+      "id": "T234",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Add config command integration tests and fixture coverage",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T228",
+        "T229",
+        "T231",
+        "T232"
+      ],
+      "unblocks": [
+        "T233",
+        "T235",
+        "T237"
+      ],
+      "phase": "Phase 2b config and policy hardening",
+      "approach": "Cover the full config UX end-to-end with deterministic fixtures and failure-state verification.",
+      "technicalScope": [
+        "Add integration tests for list, get, set, unset, validate, and explain.",
+        "Test project vs user precedence behavior.",
+        "Test invalid key handling.",
+        "Test malformed JSON and invalid-type handling.",
+        "Test missing-file bootstrap behavior.",
+        "Test explain output correctness and stable serialization.",
+        "Verify read-after-write behavior and deterministic output shapes."
+      ],
+      "acceptanceCriteria": [
+        "Full user-facing config CLI flow is integration-tested.",
+        "Common failure modes have explicit coverage.",
+        "Precedence and explain behavior are verified by fixtures.",
+        "Test results are deterministic and release-usable."
+      ]
+    },
+    {
+      "id": "T235",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Implement optional interactive config edit workflow",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T228",
+        "T230",
+        "T232",
+        "T234"
+      ],
+      "unblocks": [],
+      "phase": "Phase 2b config and policy hardening",
+      "approach": "Add a guided editing flow as a thin layer over canonical config commands rather than a separate mutation path.",
+      "technicalScope": [
+        "Add `workspace-kit config edit`.",
+        "Support browsing or selecting available keys.",
+        "Display current value, default, description, and allowed values using config metadata.",
+        "Prompt for replacement values using metadata-driven guidance.",
+        "Reuse the same validation and persistence path as direct set/unset.",
+        "Keep interactive mode optional and non-authoritative."
+      ],
+      "acceptanceCriteria": [
+        "Users can edit config through a guided flow.",
+        "Interactive edits use the same validation and persistence path as direct commands.",
+        "No duplicate mutation path is introduced.",
+        "Guided-mode errors are surfaced clearly."
+      ]
+    },
+    {
+      "id": "T236",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Define config scope model and exposure policy for end-user editable keys",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T187",
+        "T188",
+        "T230"
+      ],
+      "unblocks": [
+        "T233"
+      ],
+      "phase": "Phase 2b config and policy hardening",
+      "approach": "Separate user-editable, maintainer-only, and internal settings so the config UX does not expose unstable internals casually.",
+      "technicalScope": [
+        "Classify config keys by exposure level.",
+        "Classify config keys by scope such as project, user, runtime, and internal.",
+        "Define which keys appear in list, docs, and guided edit flows by default.",
+        "Define how hidden or internal keys behave in debug and explain contexts.",
+        "Align exposure rules with policy and approval constraints where relevant."
+      ],
+      "acceptanceCriteria": [
+        "User-facing config surfaces expose only intended keys by default.",
+        "Internal or unsafe settings are not casually editable.",
+        "Exposure rules are documented, testable, and reusable by future UI surfaces.",
+        "Scope and exposure behavior stay consistent across CLI and docs."
+      ]
+    },
+    {
+      "id": "T237",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Emit config change evidence and audit-friendly mutation records",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T232",
+        "T234"
+      ],
+      "unblocks": [],
+      "phase": "Phase 2b config and policy hardening",
+      "approach": "Record structured config mutation evidence compatible with the project’s evidence-first and future lineage-oriented design.",
+      "technicalScope": [
+        "Record config mutation events with timestamp, actor, key, scope, result, and old/new value summaries.",
+        "Distinguish successful vs rejected mutations.",
+        "Avoid leaking sensitive raw values where inappropriate.",
+        "Store mutation evidence in a deterministic, machine-readable format.",
+        "Make mutation evidence retrievable for debugging and future approval/recommendation integration."
+      ],
+      "acceptanceCriteria": [
+        "Config mutations emit structured evidence records.",
+        "Rejected changes are diagnosable from evidence output.",
+        "Evidence format is stable and safe.",
+        "Design is compatible with future enhancement, approval, and lineage work."
+      ]
+    },
+    {
+      "id": "T190",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Implement recommendation intake and review queue",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T185",
+        "T188",
+        "T220"
+      ],
+      "unblocks": [
+        "T191",
+        "T192",
+        "T202"
+      ],
+      "phase": "Phase 3 enhancement loop MVP",
+      "approach": "Treat the Task Engine as the canonical “recommendation queue” by representing each recommendation as a Task Engine task and by implementing a deterministic decision lifecycle wired to the `approvals` module.",
+      "technicalScope": [
+        "Implement the recommendation queue as **Task Engine tasks** (task `type` = `improvement`) using the Task Engine lifecycle states:",
+        "recommendation enqueued → `ready`",
+        "being worked/approved → `in_progress`",
+        "accepted/applied → `completed`",
+        "declined → `cancelled`",
+        "Implement decision actions (`accept`, `decline`, `accept edited`) as validated operations that:",
+        "ensure the target task exists and is the correct type/state for the requested decision",
+        "are idempotent (replaying the same decision does not create duplicate decision records)",
+        "record an immutable decision history that ties decisions back to evidence (`evidenceKey`) and actor.",
+        "Wire the human approval path through the `approvals` module:",
+        "implement the `approvals` module runtime instruction used for recording `review-item` decisions",
+        "ensure the approvals decision updates the linked recommendation task state and writes decision evidence.",
+        "Record audit-friendly references suitable for lineage reconstruction (see `T192`), including:",
+        "recommendation task id",
+        "`evidenceKey`",
+        "actor",
+        "decision verb (`accept|decline|accept edited`)",
+        "relevant policy/config trace references available in command context."
+      ],
+      "acceptanceCriteria": [
+        "Recommendation queue supports the full decision lifecycle with immutable decision history.",
+        "Decision actions are idempotent and validated against task existence/type/state.",
+        "Decisions are recorded in a machine-readable format that can be linked to lineage and evidence."
+      ]
+    },
+    {
+      "id": "T191",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Implement evidence-backed recommendation generation",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T190",
+        "T183",
+        "T202"
+      ],
+      "unblocks": [
+        "T192"
+      ],
+      "phase": "Phase 3 enhancement loop MVP",
+      "approach": "Evidence-backed generation + heuristic confidence + deterministic dedupe by `evidenceKey`, producing Task Engine tasks (task `type` = `improvement`) ready for review.",
+      "technicalScope": [
+        "Implement an **on-demand** `generate-recommendations` pipeline (invoked explicitly, not scheduled):",
+        "reads new evidence since last run using an incremental cursor stored in improvement module state",
+        "creates/updates recommendation tasks in the Task Engine store as `ready` tasks.",
+        "Evidence ingestion (as configured by your Phase 3 choices):",
+        "agent transcripts: parse local `agent-transcripts/` JSONL and extract user friction + improvement targets",
+        "git diffs: compute diffs between **stable evidence tags/releases** (diff-between-tags strategy) and extract change-derived improvement opportunities",
+        "policy traces: parse `.workspace-kit/policy/traces.jsonl` and infer UX/policy gaps from denied sensitive operations (include operation id + timestamp)",
+        "config mutations: parse `.workspace-kit/config/mutations*.jsonl` and infer improvement opportunities from failed/safe-write rejections",
+        "task transitions evidence: use task-engine transition log evidence to identify recurring friction patterns",
+        "Compute a deterministic `evidenceKey` for each candidate recommendation (dedupe by evidence key):",
+        "include evidence type + relevant file paths/identifiers + owning command/op context",
+        "Implement heuristic confidence scoring (see `T202`) and admission thresholds:",
+        "only enqueue recommendations that meet the deterministic threshold rule for the current evidence.",
+        "Implement dedupe behavior:",
+        "if a recommendation task with the same `evidenceKey` already exists, skip task creation (or update only non-decision metadata deterministically).",
+        "Populate Task Engine task fields for each enqueued recommendation:",
+        "`type=\"improvement\"`",
+        "`title` = concise recommendation summary",
+        "`priority` set by heuristic confidence tier (deterministic)",
+        "`metadata` includes `evidenceKey`, confidence, and provenance links/refs needed by `T192`."
+      ],
+      "acceptanceCriteria": [
+        "Generated recommendations are represented as Task Engine `improvement` tasks in `ready` state.",
+        "Each recommendation includes deterministic provenance refs (including `evidenceKey`) and heuristic confidence.",
+        "Dedupe prevents equivalent recommendations by `evidenceKey` across repeated on-demand runs.",
+        "Incremental cursor prevents missing new evidence while keeping results deterministic."
+      ]
+    },
+    {
+      "id": "T192",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Implement canonical artifact lineage model",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T190",
+        "T191"
+      ],
+      "unblocks": [
+        "T193"
+      ],
+      "phase": "Phase 3 enhancement loop MVP",
+      "approach": "Canonical lineage contract with immutable correlation IDs.",
+      "technicalScope": [
+        "Define the lineage event model and correlation id strategy that satisfies:",
+        "chain: recommendation -> decision -> applied change",
+        "plus policy/config trace correlation where available in the decision/command context.",
+        "Correlation id requirements:",
+        "include the recommendation Task Engine task id and `evidenceKey`",
+        "include decision correlation with actor and decision verb from `approvals`",
+        "reference policy trace entries (operation id + timestamp) and config mutation record identity when applicable.",
+        "Persist lineage events immutably (append-only) in a deterministic format.",
+        "Expose a lineage query path for debugging and audit (at minimum: given a recommendation task id, reconstruct the full rec/dec/app chain)."
+      ],
+      "acceptanceCriteria": [
+        "End-to-end lineage can be reconstructed deterministically.",
+        "Lineage records are immutable after commit."
+      ]
+    },
+    {
+      "id": "T193",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Define module/plugin compatibility contract",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T186",
+        "T188",
+        "T192"
+      ],
+      "unblocks": [
+        "T194",
+        "T195",
+        "T204"
+      ],
+      "phase": "Phase 4 scale and ecosystem hardening",
+      "approach": "Contract + conformance checks + compatibility matrix.",
+      "technicalScope": [
+        "Define compatibility contract and version policy for extensions.",
+        "Implement conformance checks for required contract behaviors.",
+        "Publish compatibility matrix format and validation expectations."
+      ],
+      "acceptanceCriteria": [
+        "Extensions can be validated against contract rules.",
+        "Incompatible extensions fail with explicit incompatibility reasons."
+      ]
+    },
+    {
+      "id": "T194",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Add supportability and runtime objective controls",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T185",
+        "T193"
+      ],
+      "unblocks": [
+        "T195",
+        "T205"
+      ],
+      "phase": "Phase 4 scale and ecosystem hardening",
+      "approach": "Diagnostics + health checks + baseline SLO objectives.",
+      "technicalScope": [
+        "Define baseline diagnostics bundle and health checks.",
+        "Define minimum runtime objective set (latency/error/throughput).",
+        "Wire objective reporting for operational review."
+      ],
+      "acceptanceCriteria": [
+        "Diagnostics can be generated in one command path.",
+        "Runtime objectives are measurable and documented."
+      ]
+    },
+    {
+      "id": "T195",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Define release-channel and compatibility guarantees",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T179",
+        "T189",
+        "T193",
+        "T194"
+      ],
+      "unblocks": [],
+      "phase": "Phase 4 scale and ecosystem hardening",
+      "approach": "Define channels tied to explicit compatibility and migration guarantees.",
+      "technicalScope": [
+        "Define channel policy (`canary`, `stable`, `lts`) and promotion criteria.",
+        "Define compatibility guarantees and required migration notes per channel.",
+        "Define rollback posture per channel and release type."
+      ],
+      "acceptanceCriteria": [
+        "Channel policy is documented and enforceable in release flow.",
+        "Compatibility and migration guarantees are explicit per channel."
+      ]
+    },
+    {
+      "id": "T196",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Build release gate matrix and ownership map",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T178"
+      ],
+      "unblocks": [
+        "T179"
+      ],
+      "phase": "Supporting tasks (manageability slices)",
+      "approach": "Build a normalized gate matrix in docs and CI mapping.",
+      "technicalScope": [
+        "Enumerate release gates, owners, input artifacts, and fail actions.",
+        "Map gate execution points to workflow steps/jobs.",
+        "Define escalation path for gate failures."
+      ],
+      "acceptanceCriteria": [
+        "Release gate matrix is complete and referenced by release docs."
+      ]
+    },
+    {
+      "id": "T197",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Build consumer parity fixture pack",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T180"
+      ],
+      "unblocks": [
+        "T181",
+        "T182"
+      ],
+      "phase": "Supporting tasks (manageability slices)",
+      "approach": "Create reusable fixture package and shared parity runner scripts.",
+      "technicalScope": [
+        "Build fixture workspace with deterministic setup.",
+        "Implement parity runner script callable from local and CI.",
+        "Standardize fixture artifact output paths."
+      ],
+      "acceptanceCriteria": [
+        "Fixture pack can execute parity flow in CI and locally."
+      ]
+    },
+    {
+      "id": "T198",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Define parity evidence schema",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T181"
+      ],
+      "unblocks": [
+        "T183"
+      ],
+      "phase": "Supporting tasks (manageability slices)",
+      "approach": "Publish JSON schema and artifact placement contract for parity evidence.",
+      "technicalScope": [
+        "Define schema fields, required keys, and versioning policy.",
+        "Define artifact file naming and retention rules.",
+        "Add schema validation check in evidence generation path."
+      ],
+      "acceptanceCriteria": [
+        "Evidence schema is versioned and validated in pipeline."
+      ]
+    },
+    {
+      "id": "T214",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Split document-project and generate-document into batch vs single commands",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T211",
+        "T212"
+      ],
+      "unblocks": [
+        "T215"
+      ],
+      "phase": "Supporting tasks (manageability slices)",
+      "approach": "Separate batch orchestration from single-document generation; add per-surface overwrite control and filesSkipped evidence.",
+      "technicalScope": [
+        "Split `document-project` (batch: all templates) from `generate-document` (single doc) as separate registered commands.",
+        "Add `overwriteAi` and `overwriteHuman` options for per-surface overwrite control.",
+        "Batch defaults: preserve AI docs (`overwriteAi: false`), overwrite human docs (`overwriteHuman: true`).",
+        "Continue through all templates on individual failure; report batch summary.",
+        "Add `filesSkipped` to `DocumentationGenerationEvidence` for skipped-file signaling.",
+        "Update instruction files, RULES, README, and tests."
+      ],
+      "acceptanceCriteria": [
+        "`document-project` processes all templates and returns batch summary with per-doc results.",
+        "`generate-document` handles single-doc generation independently.",
+        "`filesSkipped` is populated when files are preserved due to overwrite settings.",
+        "Instruction for `document-project` directs agents to prompt user on skipped AI docs.",
+        "40/40 tests pass."
+      ]
+    },
+    {
+      "id": "T216",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Add CLI run command for module command dispatch",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T210",
+        "T214"
+      ],
+      "unblocks": [],
+      "phase": "Supporting tasks (manageability slices)",
+      "approach": "Bridge runCli to the module command router so agents and scripts can invoke module commands from the terminal.",
+      "technicalScope": [
+        "Add `workspace-kit run` CLI command that lists available module commands when called with no subcommand.",
+        "Add `workspace-kit run <command> [json-args]` dispatch that routes through `ModuleCommandRouter` and outputs structured JSON results.",
+        "Handle error cases: invalid JSON args, unknown commands, unimplemented `onCommand`.",
+        "Add 5 CLI tests covering listing, dispatch, batch, unimplemented command, and invalid args."
+      ],
+      "acceptanceCriteria": [
+        "`workspace-kit run` lists all registered module commands with descriptions.",
+        "`workspace-kit run generate-document '{\"documentType\":\"AGENTS.md\",\"options\":{\"dryRun\":true}}'` returns structured JSON.",
+        "`workspace-kit run document-project '{\"options\":{\"dryRun\":true}}'` runs batch and returns summary.",
+        "45/45 tests pass."
+      ]
+    },
+    {
+      "id": "T215",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Generate full project documentation via document-project",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T214"
+      ],
+      "unblocks": [],
+      "phase": "Supporting tasks (manageability slices)",
+      "approach": "Use the documentation module as an AI agent to generate all 8 templates, producing AI-optimized docs in `.ai/` and human-readable docs in `docs/maintainers/`.",
+      "technicalScope": [
+        "Read all 8 templates and follow `{{{ }}}` instruction blocks against real project context.",
+        "Generate AI-optimized docs in canonical `meta|v=1` pipe-delimited format for `.ai/`.",
+        "Generate human-readable prose Markdown for `docs/maintainers/`.",
+        "Skip `.ai/PRINCIPLES.md` (already exists; overwriteAi: false).",
+        "Overwrite all human docs with fresh content aligned to current project state."
+      ],
+      "acceptanceCriteria": [
+        "7 new AI docs created in `.ai/` (AGENTS, ARCHITECTURE, RELEASING, ROADMAP, SECURITY, SUPPORT, TERMS).",
+        "8 human docs overwritten in `docs/maintainers/`.",
+        "Content follows template instructions and reflects actual project state."
+      ]
+    },
+    {
+      "id": "T200",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Build config-policy decision matrix",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T187"
+      ],
+      "unblocks": [
+        "T188"
+      ],
+      "phase": "Supporting tasks (manageability slices)",
+      "approach": "Map config resolution to policy evaluation points; documentation + matrix-driven tests for `T188`.",
+      "technicalScope": [
+        "Tabulate each config field (or domain) that affects security, write roots, or dry-run defaults against **which sensitive operations** consult it.",
+        "Define expected behavior when policy denies vs allows; include agent-approval-required rows for every sensitive op ID from workbook.",
+        "Produce executable test checklist (or unit test list) used to sign off `T188`."
+      ],
+      "acceptanceCriteria": [
+        "Matrix covers all layers from workbook and all baseline sensitive operations.",
+        "`T188` acceptance can trace each policy behavior to a matrix row or test case."
+      ]
+    },
+    {
+      "id": "T201",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Build local task cutover checklist",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T188"
+      ],
+      "unblocks": [
+        "T189"
+      ],
+      "phase": "Supporting tasks (manageability slices)",
+      "approach": "Preflight / rollback checklist for **maintainer-local** task engine cutover (supports `T189` runbook).",
+      "technicalScope": [
+        "Checklist: backups (TASKS.md, `.workspace-kit/tasks/`), branch hygiene, `import-tasks` dry rehearsal, diff review, `generate-tasks-md` output review, policy/approval awareness when running mutating commands.",
+        "Rollback posture: how to revert to markdown-first workflow if cutover branch is abandoned (restore files, remove state file).",
+        "Optional evidence file naming for one dry rehearsal (local only)."
+      ],
+      "acceptanceCriteria": [
+        "Checklist is actionable and **referenced from `T189` runbook**.",
+        "No dependency on a packaged migration engine; steps use existing CLI/module commands only."
+      ]
+    },
+    {
+      "id": "T202",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Define recommendation confidence rubric",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T190"
+      ],
+      "unblocks": [
+        "T191"
+      ],
+      "phase": "Supporting tasks (manageability slices)",
+      "approach": "Implement a deterministic heuristic confidence model (heuristic_1) with a simple admission threshold for queueing.",
+      "technicalScope": [
+        "Define the deterministic confidence signals for each evidence type:",
+        "transcripts severity/recurrence signals",
+        "diff-derived change impact signals",
+        "policy-trace denial signals (operation id + rationale presence)",
+        "config-mutation failure signals (safe-write rejection patterns)",
+        "task-transition friction signals",
+        "Define how confidence is computed from those signals (simple heuristic rules; no learned model).",
+        "Define queue admission thresholds and deterministic rejection reasons.",
+        "Define the required interface/contract so `T191` can call the confidence function without coupling to ingestion internals."
+      ],
+      "acceptanceCriteria": [
+        "Heuristic confidence scoring and thresholding are deterministic and test-covered."
+      ]
+    },
+    {
+      "id": "T203",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Define lineage event contract",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T191"
+      ],
+      "unblocks": [
+        "T192"
+      ],
+      "phase": "Supporting tasks (manageability slices)",
+      "approach": "Define immutable event contract and correlation strategy for provenance.",
+      "technicalScope": [
+        "Define lineage event types and required fields for:",
+        "recommendation enqueued (rec)",
+        "approval decision recorded (dec)",
+        "applied change marker (app)",
+        "optional evidence/correlation enrichment events",
+        "Define correlation id lifecycle and propagation rules (how `evidenceKey` and task/decision identifiers are carried forward).",
+        "Define how lineage references policy traces (`schemaVersion`, operation id, timestamp) and config mutation evidence identities.",
+        "Define append-only storage constraints and immutability guarantees."
+      ],
+      "acceptanceCriteria": [
+        "Event contract is stable, versioned if needed, and supports end-to-end lineage reconstruction with trace correlation."
+      ]
+    },
+    {
+      "id": "T204",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Build compatibility matrix template",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T193"
+      ],
+      "unblocks": [
+        "T195"
+      ],
+      "phase": "Supporting tasks (manageability slices)",
+      "approach": "Build reusable compatibility matrix and conformance report template.",
+      "technicalScope": [
+        "Define matrix dimensions (runtime/version/contract level).",
+        "Define conformance output format and severity levels.",
+        "Define reporting integration point for release readiness."
+      ],
+      "acceptanceCriteria": [
+        "Matrix template can be used across module and channel policy tasks."
+      ]
+    },
+    {
+      "id": "T205",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Define diagnostics and SLO baseline pack",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T194"
+      ],
+      "unblocks": [
+        "T195",
+        "T240"
+      ],
+      "phase": "Supporting tasks (manageability slices)",
+      "approach": "Define minimum diagnostics payload and baseline objective pack.",
+      "technicalScope": [
+        "Define diagnostics bundle fields and collection triggers.",
+        "Define baseline runtime objective set and calculation method.",
+        "Define objective reporting cadence and threshold handling."
+      ],
+      "acceptanceCriteria": [
+        "Baseline diagnostics/SLO pack is ready for runtime instrumentation."
+      ]
+    },
+    {
+      "id": "T238",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Enforce compatibility contract via runtime and CI gates",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T193",
+        "T204"
+      ],
+      "unblocks": [
+        "T195"
+      ],
+      "phase": "Supporting tasks (manageability slices)",
+      "approach": "Convert compatibility policy into executable fail-closed checks in CLI/runtime and CI.",
+      "technicalScope": [
+        "Implement compatibility validation command/path that evaluates modules/extensions against the compatibility contract and matrix.",
+        "Wire compatibility checks into CI/release-readiness so incompatibilities fail with explicit diagnostics.",
+        "Ensure conformance outputs are machine-readable and stable for automation.",
+        "Add negative-path tests proving unsupported combinations fail closed."
+      ],
+      "acceptanceCriteria": [
+        "At least one runtime/CLI and one CI gate enforce compatibility rules.",
+        "Incompatible module/plugin combinations fail with deterministic, actionable reasons."
+      ]
+    },
+    {
+      "id": "T239",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Define canonical compatibility matrix schema and source-of-truth mapping",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T193"
+      ],
+      "unblocks": [
+        "T204",
+        "T238"
+      ],
+      "phase": "Supporting tasks (manageability slices)",
+      "approach": "Establish one authoritative matrix schema spanning runtime, module contract, config schema, and policy/trace schema versions.",
+      "technicalScope": [
+        "Define matrix schema fields, required keys, and versioning policy.",
+        "Define supported/unsupported combination semantics and severity levels.",
+        "Define ownership and update workflow so matrix changes are auditable and release-reviewed.",
+        "Define mapping from matrix entries to validation checks and release evidence artifacts."
+      ],
+      "acceptanceCriteria": [
+        "Compatibility matrix schema is versioned and validated in automated checks.",
+        "Source-of-truth location and update workflow are explicit and documented."
+      ]
+    },
+    {
+      "id": "T240",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Add evidence retention, compaction, and redaction policy for runtime artifacts",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T194",
+        "T205"
+      ],
+      "unblocks": [
+        "T195"
+      ],
+      "phase": "Supporting tasks (manageability slices)",
+      "approach": "Add lifecycle controls for append-only evidence stores to preserve operability and safety at scale.",
+      "technicalScope": [
+        "Define retention/rotation policy for `.workspace-kit` evidence files (policy traces, config mutations, approvals decisions, lineage, improvement state).",
+        "Define optional compaction/summarization strategy and recovery guarantees.",
+        "Define redaction/classification rules for sensitive payloads in evidence and recommendation metadata.",
+        "Add diagnostics surfacing for evidence volume growth and retention status."
+      ],
+      "acceptanceCriteria": [
+        "Evidence lifecycle policy is documented and test-covered for at least one prune/rotate path.",
+        "Sensitive fields are consistently handled per redaction policy across evidence writers."
+      ]
+    },
+    {
+      "id": "T241",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Operationalize release channels with tag/dist-tag/release-label mapping",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T195"
+      ],
+      "unblocks": [],
+      "phase": "Supporting tasks (manageability slices)",
+      "approach": "Make channel policy executable by mapping channels to concrete git, GitHub, and npm operations.",
+      "technicalScope": [
+        "Define mapping between channel (`canary`/`stable`/`lts`) and git tag conventions, GitHub release labeling, and npm dist-tags.",
+        "Define promotion and rollback command workflows with required evidence gates and approvals.",
+        "Define automation entrypoints and validation checks for channel transitions."
+      ],
+      "acceptanceCriteria": [
+        "Channel promotions and rollbacks are reproducible via documented command workflows.",
+        "Channel mapping is validated in release readiness checks."
+      ]
+    },
+    {
+      "id": "T242",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Add roadmap/tasks/feature-matrix consistency guard",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T195"
+      ],
+      "unblocks": [],
+      "phase": "Supporting tasks (manageability slices)",
+      "approach": "Prevent status drift by validating shared phase/task state across maintainer planning documents.",
+      "technicalScope": [
+        "Define canonical shared fields for phase/task state across `ROADMAP.md`, `TASKS.md`, and `FEATURE-MATRIX.md`.",
+        "Implement a drift check command/CI gate that fails on inconsistent state claims.",
+        "Define maintainer remediation workflow for drift failures."
+      ],
+      "acceptanceCriteria": [
+        "CI fails when phase/task completion status is inconsistent across the three documents.",
+        "Drift reports identify exact mismatches and expected corrections."
+      ]
+    },
+    {
+      "id": "T243",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Preserve rich maintainer TASKS.md structure in task-engine round-trip",
+      "createdAt": "2026-03-26T16:17:39.571Z",
+      "updatedAt": "2026-03-26T16:17:39.571Z",
+      "priority": "P2",
+      "dependsOn": [],
+      "unblocks": [],
+      "phase": "Supporting tasks (manageability slices)",
+      "approach": "Patch task-engine import/generation so maintainers can use engine state without losing prose-only planning sections in `docs/maintainers/TASKS.md`.",
+      "technicalScope": [
+        "Update markdown importer to ignore non-task `###` headings (for example, design-decision headings) instead of treating them as parse errors.",
+        "Update `generate-tasks-md` to preserve existing document structure by syncing task heading status/title in-place when a target TASKS markdown file already exists.",
+        "Keep fallback full-generation behavior for new files or explicit structure bypass.",
+        "Add tests for importer handling of non-task headings and for structure-preserving heading sync behavior."
+      ],
+      "acceptanceCriteria": [
+        "Running `import-tasks` against current maintainer TASKS docs reports no skipped entries for non-task section headings.",
+        "Running `generate-tasks-md` on existing maintainer TASKS docs does not strip prose/section content unrelated to task headings.",
+        "Task heading status/title still reflect engine state after generation."
+      ]
+    },
+    {
+      "id": "imp-2cf5d881b81f9a",
+      "status": "completed",
+      "type": "improvement",
+      "title": "[improvement] Make improvement.generate-recommendations policy denials actionable (docs + traces)",
+      "createdAt": "2026-03-26T16:38:15.785Z",
+      "updatedAt": "2026-03-27T00:28:46.470Z",
+      "priority": "P2",
+      "dependsOn": [],
+      "unblocks": [],
+      "phase": "Phase 8 — Improvement backlog triage",
+      "approach": "Purpose: Reduce maintainer friction when `run generate-recommendations` is denied by policy so operators know how to grant approval safely without weakening default fail-closed behavior. Implementation strategy: Keep policy enforcement as-is; improve discoverability via maintainer docs and deterministic policy/CLI output. Align with existing `src/core/policy.ts`, `run` command routing, and session-grant mechanisms already used elsewhere—document the exact env vars, approval flow, and non-interactive/CI expectations rather than adding new policy bypasses.",
+      "technicalScope": [
+        "Audit `improvement.generate-recommendations` operation id, policy classification, and denial messages emitted on `run generate-recommendations`.",
+        "Update `docs/maintainers/CONFIG.md` and the transcript/improvement runbook(s) with a short, copy-paste section: when approval is required, how to approve for session, and CI/non-interactive options consistent with repo practice.",
+        "Ensure policy deny output (stderr/JSON) includes concrete next steps: which operation id, which approval mechanism applies, and links/paths to docs—without logging secrets.",
+        "If CLI help or `run` subcommand help lists mutating operations, cross-link or one-line pointer to the approval doc.",
+        "Add or extend tests that snapshot denial text shape so future refactors do not regress actionability."
+      ],
+      "acceptanceCriteria": [
+        "A maintainer following only docs can get from policy denial to a successful `run generate-recommendations` (or explicit documented blocker) without reading source.",
+        "Denial output remains deterministic and does not weaken default policy; existing approval tests still pass.",
+        "`pnpm run check` / test suite passes after doc and message changes."
+      ],
+      "metadata": {
+        "evidenceKey": "policy_deny:70f357fe143d8140145b44e71b0b10e727021803",
+        "evidenceKind": "policy_deny",
+        "confidence": 0.55,
+        "confidenceTier": "medium",
+        "confidenceReasons": [
+          "policyDenial=0.550"
+        ],
+        "provenanceRefs": {
+          "operationId": "improvement.generate-recommendations",
+          "traceTimestamp": "2026-03-26T16:38:11.323Z",
+          "command": "run generate-recommendations"
+        }
+      }
+    },
+    {
+      "id": "T244",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Add transcript sync command for end-user improvement ingestion",
+      "createdAt": "2026-03-26T16:48:47.000Z",
+      "updatedAt": "2026-03-26T18:02:45.105Z",
+      "priority": "P1",
+      "dependsOn": [],
+      "unblocks": [
+        "T245",
+        "T246"
+      ],
+      "phase": "Phase 5 transcript intelligence automation",
+      "approach": "Provide a manual first-class transcript-sync command that users can run directly instead of requiring cron/scheduler setup.",
+      "technicalScope": [
+        "Add a command surface to sync new transcript JSONL files from a configured source path into local archive path (`agent-transcripts/` by default).",
+        "Keep sync deterministic and non-destructive (copy new files, avoid mutating source).",
+        "Return machine-readable sync summary (files discovered, copied, skipped, errors)."
+      ],
+      "acceptanceCriteria": [
+        "Users can run one command to sync transcript archives locally without external scheduler setup.",
+        "Sync command output is deterministic JSON suitable for agent workflows."
+      ]
+    },
+    {
+      "id": "T245",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Add one-shot ingest command (sync + generate-recommendations)",
+      "createdAt": "2026-03-26T16:48:47.000Z",
+      "updatedAt": "2026-03-26T18:02:45.105Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T244"
+      ],
+      "unblocks": [],
+      "phase": "Phase 5 transcript intelligence automation",
+      "approach": "Bundle transcript sync and recommendation generation into one explicit user command with clear policy/approval handling.",
+      "technicalScope": [
+        "Implement orchestration command that runs transcript sync then `generate-recommendations` in a single flow.",
+        "Surface policy approval requirement clearly for mutating recommendation generation.",
+        "Return consolidated JSON summary including sync counts and recommendation created/skipped/candidate counts."
+      ],
+      "acceptanceCriteria": [
+        "End users can run one command to ingest fresh transcripts and produce recommendations.",
+        "Failure and policy-denied states are actionable and clearly reported."
+      ]
+    },
+    {
+      "id": "T246",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Add transcript source/archive config + docs with local-only guardrails",
+      "createdAt": "2026-03-26T16:48:47.000Z",
+      "updatedAt": "2026-03-26T18:02:45.105Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T244"
+      ],
+      "unblocks": [],
+      "phase": "Phase 5 transcript intelligence automation",
+      "approach": "Document and configure transcript paths so users can onboard quickly while keeping transcript archives local and untracked.",
+      "technicalScope": [
+        "Add improvement config keys for transcript source/archive paths and defaults.",
+        "Document manual-first usage and optional automation as advanced path.",
+        "Ensure transcript archive paths are ignored in git to prevent accidental commits."
+      ],
+      "acceptanceCriteria": [
+        "Transcript ingestion defaults are documented and configurable without code edits.",
+        "Repository safeguards keep transcript archives local-only by default."
+      ]
+    },
+    {
+      "id": "T247",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Codify transcript sync trigger rules and maintainer workflow guidance",
+      "createdAt": "2026-03-26T16:56:24.000Z",
+      "updatedAt": "2026-03-26T18:02:45.105Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T244"
+      ],
+      "unblocks": [],
+      "phase": "Phase 5 transcript intelligence automation",
+      "approach": "Define event-driven transcript-sync rules (manual-first, no cron requirement) and wire them into agent/workflow docs.",
+      "technicalScope": [
+        "Update rule/workflow docs so transcript sync runs before recommendation generation and after selected high-signal events.",
+        "Document optional scheduler automation as advanced-only guidance, not default UX.",
+        "Add runbook language for failure handling, local-only archive expectations, and observability summary outputs."
+      ],
+      "acceptanceCriteria": [
+        "Rule surfaces consistently define transcript sync as event-driven and manual-first by default.",
+        "Maintainer docs include clear trigger points and fallback behavior when sync fails."
+      ]
+    },
+    {
+      "id": "T248",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Define auto-generation cadence/backoff policy and cross-surface config contract",
+      "createdAt": "2026-03-26T17:02:36.000Z",
+      "updatedAt": "2026-03-26T18:02:45.105Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T244",
+        "T246"
+      ],
+      "unblocks": [],
+      "phase": "Phase 5 transcript intelligence automation",
+      "approach": "Add explicit policy for frequent recommendation generation with bounded overhead, and define one config contract spanning module, workspace/main config, and command/runtime entrypoints.",
+      "technicalScope": [
+        "Define auto-run cadence defaults and backoff/skip heuristics (for example min interval, no-new-evidence skip, max scan/window caps).",
+        "Define canonical config keys and ownership across module config docs, workspace/main config surfaces, and any runtime command options.",
+        "Specify precedence and observability outputs so operators can verify why a run occurred or was skipped.",
+        "Document safe defaults and advanced overrides, including disable/opt-in behavior and local-only transcript archive expectations."
+      ],
+      "acceptanceCriteria": [
+        "Cadence/backoff policy is explicit, testable, and tuned for frequent low-overhead operation.",
+        "Configuration contract is consistent across module config, main/workspace config, and command/runtime surfaces.",
+        "Docs and rules describe how to operate and troubleshoot automatic recommendation generation."
+      ]
+    },
+    {
+      "id": "T259",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Author transcript automation design baseline and rollout plan",
+      "createdAt": "2026-03-26T17:07:45.000Z",
+      "updatedAt": "2026-03-26T18:02:45.105Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T248"
+      ],
+      "unblocks": [
+        "T249",
+        "T250",
+        "T251",
+        "T252",
+        "T253",
+        "T254",
+        "T255",
+        "T256",
+        "T257",
+        "T258"
+      ],
+      "phase": "Phase 5 transcript intelligence automation",
+      "approach": "Lock one implementation blueprint before broad execution so cadence, privacy, policy, and UX constraints stay coherent across commands, rules, and docs.",
+      "technicalScope": [
+        "Define command model (`sync-transcripts`, one-shot ingest, optional scheduler hooks) and shared result schema.",
+        "Define safety/privacy boundaries for transcript data, retention, and redaction before broad implementation.",
+        "Define rollout order, success metrics, and regression guardrails for incremental delivery."
+      ],
+      "acceptanceCriteria": [
+        "A single design baseline exists and is referenced by all transcript automation implementation tasks.",
+        "Downstream tasks use consistent contracts for config, observability, and policy behavior."
+      ]
+    },
+    {
+      "id": "T249",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Add frequent-run safety rails without suppressing repeated recommendation analysis",
+      "createdAt": "2026-03-26T17:07:45.000Z",
+      "updatedAt": "2026-03-26T20:44:39.906Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T248",
+        "T259"
+      ],
+      "unblocks": [],
+      "phase": "Phase 6a — Transcript automation hardening",
+      "approach": "Bound runtime overhead via scan/window/time caps and backoff policies while preserving ability to generate multiple recommendations from unchanged evidence sets.",
+      "technicalScope": [
+        "Define hard caps for transcript scan count, bytes/time budget, and per-run candidate processing.",
+        "Define scheduling/backoff policy that does not gate recommendation generation solely on evidence freshness.",
+        "Document and test behavior under repeated runs against the same dataset."
+      ],
+      "acceptanceCriteria": [
+        "Frequent runs remain operationally bounded and predictable.",
+        "System can produce additional recommendations from existing evidence when heuristics/rules permit."
+      ]
+    },
+    {
+      "id": "T250",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Implement transcript source autodiscovery and path validation",
+      "createdAt": "2026-03-26T17:07:45.000Z",
+      "updatedAt": "2026-03-26T20:44:39.906Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T244",
+        "T246",
+        "T259"
+      ],
+      "unblocks": [],
+      "phase": "Phase 6a — Transcript automation hardening",
+      "approach": "Reduce setup friction by discovering likely transcript sources and validating configured paths before sync.",
+      "technicalScope": [
+        "Add source path discovery order and explicit precedence with config overrides.",
+        "Validate readability/access and emit actionable diagnostics for missing/inaccessible paths.",
+        "Keep discovery deterministic and safe for local-only archives."
+      ],
+      "acceptanceCriteria": [
+        "Users can sync transcripts without manual path setup in common environments.",
+        "Path failures are explicit and recoverable."
+      ]
+    },
+    {
+      "id": "T251",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Harden sync/ingest idempotency and dedupe diagnostics",
+      "createdAt": "2026-03-26T17:07:45.000Z",
+      "updatedAt": "2026-03-26T20:44:39.906Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T244",
+        "T245",
+        "T259"
+      ],
+      "unblocks": [],
+      "phase": "Phase 6a — Transcript automation hardening",
+      "approach": "Guarantee deterministic reruns and expose exact skip reasons for files and recommendation candidates.",
+      "technicalScope": [
+        "Add deterministic run identifiers and structured skip-reason taxonomy.",
+        "Ensure repeated sync/ingest runs are idempotent across process restarts.",
+        "Expose machine-readable dedupe metrics for observability."
+      ],
+      "acceptanceCriteria": [
+        "Repeated runs do not create duplicate archives or recommendation tasks.",
+        "Operators can see why items were skipped."
+      ]
+    },
+    {
+      "id": "T252",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Add operator status surface for transcript sync and recommendation runs",
+      "createdAt": "2026-03-26T17:07:45.000Z",
+      "updatedAt": "2026-03-26T20:44:39.906Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T245",
+        "T248",
+        "T259"
+      ],
+      "unblocks": [],
+      "phase": "Phase 6a — Transcript automation hardening",
+      "approach": "Provide quick diagnostics for last run, cadence decisions, and current queue impact.",
+      "technicalScope": [
+        "Expose last sync/generation timestamps, cadence decisions, and run outcomes via command output.",
+        "Include counts for scanned files, copied files, candidates, created, skipped, and failures.",
+        "Document fields for maintainers and automation consumers."
+      ],
+      "acceptanceCriteria": [
+        "Maintainers can diagnose run behavior without reading raw evidence files.",
+        "Status output is stable JSON."
+      ]
+    },
+    {
+      "id": "T253",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Reduce policy approval friction for recurring recommendation generation",
+      "createdAt": "2026-03-26T17:07:45.000Z",
+      "updatedAt": "2026-03-26T20:44:39.906Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T245",
+        "T248",
+        "T259"
+      ],
+      "unblocks": [],
+      "phase": "Phase 6a — Transcript automation hardening",
+      "approach": "Configurable command-scoped approval UX with first-run prompt options and session memory for the active session.",
+      "technicalScope": [
+        "Use Cursor question UI when available to present first-use approval choices for a sensitive command: Deny, Allow, Allow for this session.",
+        "Make approval behavior configurable by command with defaults that prompt on first use and record selection for session-scoped reuse when chosen.",
+        "Honor stored session choice for that specific command for remaining session duration; preserve fail-closed behavior for missing/invalid approval context.",
+        "Add tests for deny/allow/session pathways, per-command isolation, expiry/reset behavior, and policy trace evidence."
+      ],
+      "acceptanceCriteria": [
+        "Default behavior prompts first use per sensitive command with Deny/Allow/Allow for this session.",
+        "Allow for this session reuses approval for the same command only for the rest of the session.",
+        "Behavior is configurable, deterministic, auditable, and remains fail-closed on invalid approval context."
+      ]
+    },
+    {
+      "id": "T254",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Add scale and resilience tests for transcript ingestion",
+      "createdAt": "2026-03-26T17:07:45.000Z",
+      "updatedAt": "2026-03-26T20:44:39.906Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T244",
+        "T249",
+        "T251",
+        "T259"
+      ],
+      "unblocks": [],
+      "phase": "Phase 6a — Transcript automation hardening",
+      "approach": "Validate performance and correctness under realistic transcript volume and malformed data conditions.",
+      "technicalScope": [
+        "Add integration tests for large transcript archives and repeated generation runs.",
+        "Add failure-path tests for malformed JSONL, partial writes, and unreadable files.",
+        "Assert deterministic outputs and bounded runtime behavior."
+      ],
+      "acceptanceCriteria": [
+        "Ingestion remains reliable at expected scale envelopes.",
+        "Malformed input paths fail safely with clear diagnostics."
+      ]
+    },
+    {
+      "id": "T255",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Add failed-file retry queue with bounded backoff for transcript sync",
+      "createdAt": "2026-03-26T17:07:45.000Z",
+      "updatedAt": "2026-03-26T20:44:39.906Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T244",
+        "T251",
+        "T259"
+      ],
+      "unblocks": [],
+      "phase": "Phase 6a — Transcript automation hardening",
+      "approach": "Improve robustness by tracking failed transcript files and retrying deterministically.",
+      "technicalScope": [
+        "Record failed sync attempts with reason and retry state.",
+        "Implement bounded retry strategy with explicit max attempts/backoff.",
+        "Surface retry queue state in status output."
+      ],
+      "acceptanceCriteria": [
+        "Transient sync failures are retried without manual intervention.",
+        "Permanent failures remain visible with actionable details."
+      ]
+    },
+    {
+      "id": "T256",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Publish transcript ingestion onboarding and operations runbook",
+      "createdAt": "2026-03-26T17:07:45.000Z",
+      "updatedAt": "2026-03-26T20:44:39.906Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T247",
+        "T248",
+        "T259"
+      ],
+      "unblocks": [],
+      "phase": "Phase 6a — Transcript automation hardening",
+      "approach": "Provide one canonical manual-first guide plus advanced automation appendix for maintainers.",
+      "technicalScope": [
+        "Document end-user quickstart for sync and one-shot ingest commands.",
+        "Document maintainer operations, troubleshooting, and policy approval workflows.",
+        "Document optional scheduler integration as advanced mode only."
+      ],
+      "acceptanceCriteria": [
+        "Users can onboard transcript ingestion without external scheduler setup.",
+        "Maintainers have complete operations guidance for frequent runs."
+      ]
+    },
+    {
+      "id": "T257",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Add transcript-derived metadata privacy and redaction guardrails",
+      "createdAt": "2026-03-26T17:07:45.000Z",
+      "updatedAt": "2026-03-26T20:44:39.906Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T245",
+        "T246",
+        "T259"
+      ],
+      "unblocks": [],
+      "phase": "Phase 6a — Transcript automation hardening",
+      "approach": "Ensure recommendation metadata and evidence do not leak sensitive transcript content.",
+      "technicalScope": [
+        "Define allowed transcript-derived metadata fields and redaction policy.",
+        "Apply redaction/sanitization in sync and recommendation generation outputs.",
+        "Add tests validating sensitive tokens/strings are not persisted in task metadata or evidence."
+      ],
+      "acceptanceCriteria": [
+        "Transcript-derived recommendation artifacts comply with redaction policy.",
+        "Privacy guardrails are documented and test-covered."
+      ]
+    },
+    {
+      "id": "T258",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Add optional pre-release transcript ingestion hook",
+      "createdAt": "2026-03-26T17:07:45.000Z",
+      "updatedAt": "2026-03-26T20:44:39.906Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T245",
+        "T247",
+        "T259"
+      ],
+      "unblocks": [],
+      "phase": "Phase 6a — Transcript automation hardening",
+      "approach": "Optionally surface fresh recommendation signals during release readiness without blocking publish by default.",
+      "technicalScope": [
+        "Define release workflow hook that can run transcript sync + generation in advisory mode.",
+        "Emit explicit summary artifact for release reviewers.",
+        "Document enable/disable controls and default non-blocking behavior."
+      ],
+      "acceptanceCriteria": [
+        "Release workflow can include transcript-based recommendation refresh when configured.",
+        "Hook behavior and impact are explicit and observable."
+      ]
+    },
+    {
+      "id": "T260",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Define response template contract and advisory warning policy",
+      "createdAt": "2026-03-26T17:51:48.000Z",
+      "updatedAt": "2026-03-26T20:44:39.906Z",
+      "priority": "P1",
+      "dependsOn": [],
+      "unblocks": [
+        "T261",
+        "T262",
+        "T263",
+        "T264",
+        "T265",
+        "T266"
+      ],
+      "phase": "Phase 6b — Response template advisory",
+      "approach": "Define configurable response-template contract and warning policy with advisory-only default and optional stricter modes.",
+      "technicalScope": [
+        "Define canonical responseTemplate model (id, scope, expected sections/shape, advisory flags, versioning).",
+        "Define warning policy for template mismatches and fallback paths with concise messages and advisory-only default behavior.",
+        "Add configuration hooks for enforcement mode so advisory remains default and stricter validation can be enabled intentionally.",
+        "Define compatibility posture so template contract evolves safely with runtime/module outputs."
+      ],
+      "acceptanceCriteria": [
+        "Response template contract is documented and versioned as a core runtime concept.",
+        "Default mode is advisory-only and configurable to stricter modes.",
+        "Warning copy rules require short, actionable messages."
+      ]
+    },
+    {
+      "id": "T261",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Add response template registry and runtime lookup APIs",
+      "createdAt": "2026-03-26T17:51:48.000Z",
+      "updatedAt": "2026-03-26T20:44:39.906Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T260"
+      ],
+      "unblocks": [
+        "T262",
+        "T263"
+      ],
+      "phase": "Phase 6b — Response template advisory",
+      "approach": "Implement central registration/loading for response templates to avoid ad hoc template parsing in individual modules.",
+      "technicalScope": [
+        "Add registry for response template definitions with validation and stable identifiers.",
+        "Expose runtime lookup helpers for command/workflow surfaces.",
+        "Add deterministic errors/warnings when requested template IDs are missing or invalid."
+      ],
+      "acceptanceCriteria": [
+        "Runtime can resolve registered response template definitions by id.",
+        "Missing/invalid template ids produce short advisory warnings."
+      ]
+    },
+    {
+      "id": "T262",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Integrate response templates into workspace-kit run output shaping (advisory mode)",
+      "createdAt": "2026-03-26T17:51:48.000Z",
+      "updatedAt": "2026-03-26T20:44:39.906Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T260",
+        "T261"
+      ],
+      "unblocks": [],
+      "phase": "Phase 6b — Response template advisory",
+      "approach": "Apply response templates at the command output boundary without failing command execution when templates are missing/mismatched.",
+      "technicalScope": [
+        "Hook template application into the `workspace-kit run` result path.",
+        "Attach concise advisory warnings when template application is partial/unavailable.",
+        "Preserve existing `ModuleCommandResult` compatibility for non-template flows."
+      ],
+      "acceptanceCriteria": [
+        "Template-aware output shaping works for selected command flows in advisory mode.",
+        "Command success/failure semantics are unchanged by template advisory warnings."
+      ]
+    },
+    {
+      "id": "T263",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Support plain-English instruction mapping to response templates",
+      "createdAt": "2026-03-26T17:51:48.000Z",
+      "updatedAt": "2026-03-26T20:44:39.906Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T260",
+        "T261"
+      ],
+      "unblocks": [],
+      "phase": "Phase 6b — Response template advisory",
+      "approach": "Allow instruction phrases like 'Use the COMPLETED_TASK template' to resolve to response template IDs deterministically.",
+      "technicalScope": [
+        "Define parser/mapping rules for plain-English template directives in workflow instructions.",
+        "Normalize template ID extraction and collision handling.",
+        "Emit short warnings when mapping is ambiguous or unknown."
+      ],
+      "acceptanceCriteria": [
+        "Instruction phrases can request response templates using plain English.",
+        "Ambiguous/unknown directives produce concise advisory warnings."
+      ]
+    },
+    {
+      "id": "T264",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Add response template configuration across module and workspace surfaces",
+      "createdAt": "2026-03-26T17:51:48.000Z",
+      "updatedAt": "2026-03-26T20:44:39.906Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T260",
+        "T262",
+        "T263"
+      ],
+      "unblocks": [],
+      "phase": "Phase 6b — Response template advisory",
+      "approach": "Configure template defaults and overrides through canonical precedence across module config, workspace config, and runtime arguments.",
+      "technicalScope": [
+        "Define config keys for default template selection, workflow-specific overrides, and enforcement mode selection.",
+        "Wire keys through existing config metadata/explain surfaces.",
+        "Document precedence and fallback behavior with advisory warning examples and strict-mode examples."
+      ],
+      "acceptanceCriteria": [
+        "Template behavior is configurable via canonical config surfaces.",
+        "Explain/resolve outputs include response template effective values and enforcement mode."
+      ]
+    },
+    {
+      "id": "T265",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Add response template observability and concise warning telemetry",
+      "createdAt": "2026-03-26T17:51:48.000Z",
+      "updatedAt": "2026-03-26T20:44:39.906Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T262"
+      ],
+      "unblocks": [],
+      "phase": "Phase 6b — Response template advisory",
+      "approach": "Make template usage and warning outcomes debuggable while keeping warning copy intentionally brief.",
+      "technicalScope": [
+        "Emit structured metadata for requested/applied template IDs and advisory warning outcomes.",
+        "Add status surfaces to inspect template application behavior over recent runs.",
+        "Standardize warning message length limits and wording patterns."
+      ],
+      "acceptanceCriteria": [
+        "Operators can diagnose template application behavior from structured output.",
+        "Warnings remain short and consistent across workflows."
+      ]
+    },
+    {
+      "id": "T266",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Add response template test matrix and maintainer runbook",
+      "createdAt": "2026-03-26T17:51:48.000Z",
+      "updatedAt": "2026-03-26T20:44:39.906Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T260",
+        "T262",
+        "T263"
+      ],
+      "unblocks": [],
+      "phase": "Phase 6b — Response template advisory",
+      "approach": "Prevent drift with targeted tests and clear maintainer guidance for authoring and operating response templates.",
+      "technicalScope": [
+        "Add tests for valid/invalid template IDs, advisory fallback behavior, and plain-English directive mapping.",
+        "Add tests ensuring warning messages remain short within defined limits.",
+        "Publish maintainer runbook for creating, versioning, and rolling out response templates."
+      ],
+      "acceptanceCriteria": [
+        "Response template behavior is comprehensively test-covered for advisory mode.",
+        "Maintainers have an operational guide for response template lifecycle management."
+      ]
+    },
+    {
+      "id": "T267",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Extend documentation schema for runbook/workbook coverage and doc-type contracts",
+      "createdAt": "2026-03-26T23:30:00.000Z",
+      "updatedAt": "2026-03-26T23:45:00.000Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T260"
+      ],
+      "unblocks": [
+        "T268",
+        "T269",
+        "T270"
+      ],
+      "phase": "Phase 6 automation hardening and response templates",
+      "approach": "Upgrade `documentation-schema.md` from rules-only assumptions to a typed schema contract that explicitly supports `.ai` top-level docs plus nested `runbooks/` and `workbooks/` surfaces.",
+      "technicalScope": [
+        "Add/normalize allowed `meta.doc` values to include `runbook` and `workbook` alongside existing `.ai` doc types.",
+        "Define minimal required records per doc class (for example: runbook/workbook/rules/manifest) and record-level field requirements.",
+        "Define or normalize record types used by current AI docs (such as `runbook|`, `workbook|`, `chain|`, `state|`, `transition|`) so schema and emitted docs are consistent.",
+        "Add explicit schema profile model with per-profile allowed record types, required record sets, and field-level constraints.",
+        "Add schema/version evolution contract (`meta.schemaVersion` or equivalent) with backward-compatibility and deprecation guidance.",
+        "Define path-policy constraints mapping output location to allowed `meta.doc` profile (top-level docs vs `runbooks/*` vs `workbooks/*`).",
+        "Define reference integrity policy (`must_exist` vs advisory) and behavior by validation strictness tier.",
+        "Define id namespace/uniqueness constraints and cross-field consistency guards (for example critical risk cannot auto-override approval).",
+        "Define strictness tiers (`advisory`, `strict`, `release-gate`) and required validator evidence fields (code, severity, location, suggested fix).",
+        "Document deterministic ordering and unknown-field handling policy (including extension namespace guidance)."
+      ],
+      "acceptanceCriteria": [
+        "Schema contract explicitly supports current `.ai` doc families, including nested runbook/workbook docs.",
+        "Per-doc required record expectations are documented and testable.",
+        "No active AI doc uses record types that are undefined or ambiguous in schema guidance.",
+        "Schema contract defines compatibility and deprecation posture so future record/profile changes are upgrade-safe.",
+        "Validation strictness tiers and reference-integrity policies are explicit enough to implement without interpretation gaps."
+      ]
+    },
+    {
+      "id": "T268",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Implement parser-backed documentation schema validator in runtime",
+      "createdAt": "2026-03-26T23:30:00.000Z",
+      "updatedAt": "2026-03-26T23:55:00.000Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T267"
+      ],
+      "unblocks": [
+        "T269",
+        "T270"
+      ],
+      "phase": "Phase 6 automation hardening and response templates",
+      "approach": "Replace the current meta-line-only check with a deterministic parser/validator that enforces schema structure, enums, ids, and doc-type-specific required records.",
+      "technicalScope": [
+        "Build parser for AI record lines (`type|k=v|...`) with stable error reporting for malformed lines.",
+        "Validate `meta` correctness, supported doc types, status/truth enums, and required-first-record behavior.",
+        "Validate schema profile selection and allowed/required record sets per `meta.doc` profile (including `rules`, `runbook`, and `workbook` families).",
+        "Add schema/version evolution handling: support `meta.schemaVersion` (or equivalent) and enforce backward-compatible parsing rules with explicit deprecation guidance.",
+        "Validate path-policy constraints (output location => expected `meta.doc` profile) and ensure nested templates generate compatible metadata.",
+        "Validate `id` namespaces/format + uniqueness (doc-family scoped where appropriate) and detect collisions; add cross-field consistency guards that prevent silent contradictions.",
+        "Validate enums and record-level required fields (`risk`, `ap`, `st`, etc.) including unknown-field policy (fail/warn on typos based on strictness tier).",
+        "Validate `ref.path` existence and reference integrity by strictness tier (`must_exist` vs advisory), and emit structured evidence including missing paths and suggested fixes.",
+        "Enforce deterministic ordering normalization policy for record groups (or report ordering issues when strict) to reduce doc churn.",
+        "Integrate validator output into existing generation evidence (`validationIssues`) with stable `check` codes, line/record location, severity, and a short suggested fix when possible."
+      ],
+      "acceptanceCriteria": [
+        "Runtime rejects structurally invalid AI docs that previously passed the meta-only check.",
+        "Validator enforces per-profile required record sets and disallows unsupported record types for each doc family.",
+        "Strict mode fail behavior and advisory mode warning behavior are deterministic and test-covered.",
+        "Validator emits structured evidence enabling maintainers to fix failures without re-running excessive generation cycles.",
+        "Reference integrity and unknown-field policy are implemented exactly as defined by schema strictness tiers."
+      ]
+    },
+    {
+      "id": "T269",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Add path-aware AI meta/doc defaults for nested documentation surfaces",
+      "createdAt": "2026-03-26T23:30:00.000Z",
+      "updatedAt": "2026-03-26T23:30:00.000Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T267",
+        "T268"
+      ],
+      "unblocks": [
+        "T270"
+      ],
+      "phase": "Phase 6 automation hardening and response templates",
+      "approach": "Make AI output metadata path-aware so generated docs under `.ai/runbooks/` and `.ai/workbooks/` emit correct `meta.doc` values instead of defaulting to rules semantics.",
+      "technicalScope": [
+        "Implement deterministic path-to-doc-type resolver for top-level docs, `runbooks/*`, and `workbooks/*` templates.",
+        "Apply resolver in AI output bootstrap path (`generateDocument`) and validate compatibility with schema validator.",
+        "Ensure nested template generation preserves relative documentType while emitting matching metadata contract.",
+        "Document mapping behavior in documentation module instructions and README."
+      ],
+      "acceptanceCriteria": [
+        "Generated AI docs under nested surfaces emit correct `meta.doc` classification.",
+        "No generated nested doc defaults to incorrect rules metadata.",
+        "Path-aware mapping is deterministic and validated in tests."
+      ]
+    },
+    {
+      "id": "T270",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Add documentation schema compliance test matrix across AI doc families",
+      "createdAt": "2026-03-26T23:30:00.000Z",
+      "updatedAt": "2026-03-26T23:55:00.000Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T268",
+        "T269"
+      ],
+      "unblocks": [],
+      "phase": "Phase 6 automation hardening and response templates",
+      "approach": "Prevent regression by adding positive/negative tests for schema enforcement across rules, runbooks, and workbooks plus strict/advisory behavior expectations.",
+      "technicalScope": [
+        "Add fixture-backed tests for valid AI docs by doc family (`rules`, `runbook`, `workbook`) including nested runbooks/workbooks outputs.",
+        "Add failure tests for malformed records, invalid enums/ids, duplicate-id collisions, missing required records, unsupported record types per profile, and unknown-field typos.",
+        "Add path-policy tests asserting that `.ai/runbooks/*` and `.ai/workbooks/*` emit correct/compatible `meta.doc` profiles and are rejected when mismatched.",
+        "Add schema/version evolution tests verifying backward-compatible parsing and explicit deprecation handling for older doc shapes.",
+        "Add reference integrity tests verifying `ref.path` existence behavior by strictness tier (advisory vs fail) with structured evidence assertions.",
+        "Add deterministic ordering normalization tests (either stable ordering or explicit reporting depending on tier).",
+        "Cover `document-project` batch behavior with nested templates and schema validation outcomes, ensuring batch continues/fails as designed by strictness."
+      ],
+      "acceptanceCriteria": [
+        "Test suite fails on schema regressions that could produce low-quality/invalid AI docs.",
+        "Strict and advisory validation paths are explicitly covered for: unknown fields, missing refs, missing required records, invalid enums/ids, and path-policy violations.",
+        "Version evolution/deprecation tests are included to prevent schema upgrade regressions.",
+        "Nested doc generation and schema validation behavior stay green in phase gate runs."
+      ]
+    },
+    {
+      "id": "T271",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Add package scripts for transcript sync and ingest CLI entrypoints",
+      "createdAt": "2026-03-26T18:30:00.000Z",
+      "updatedAt": "2026-03-26T20:44:39.906Z",
+      "priority": "P1",
+      "dependsOn": [],
+      "unblocks": [
+        "T272",
+        "T274"
+      ],
+      "phase": "Phase 6c — Cursor-native transcript automation",
+      "approach": "Provide stable, documented commands so editor automation and hooks do not embed fragile `node dist/cli.js` paths or ad-hoc args.",
+      "technicalScope": [
+        "Add `pnpm` scripts (e.g. `transcript:sync`, `transcript:ingest`) that invoke `workspace-kit run sync-transcripts` and `ingest-transcripts` with `{}` JSON args as required by the CLI.",
+        "Define behavior when `dist/` is missing (fail fast with clear message, or build-first — pick one and document).",
+        "For `ingest-transcripts`, document how callers pass `policyApproval` (env and/or script wrapper) for non-interactive runs.",
+        "Keep scripts repo-local only; no change to published package contract unless explicitly required."
+      ],
+      "acceptanceCriteria": [
+        "Maintainers can run transcript sync and ingest from `package.json` scripts without hand-rolling CLI paths.",
+        "Script behavior for missing build output is explicit and user-friendly.",
+        "Policy expectations for ingest are documented at the script boundary."
+      ]
+    },
+    {
+      "id": "T272",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Add Cursor/VS Code workspace tasks for folder-open transcript sync",
+      "createdAt": "2026-03-26T18:30:00.000Z",
+      "updatedAt": "2026-03-26T20:44:39.906Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T271"
+      ],
+      "unblocks": [
+        "T273"
+      ],
+      "phase": "Phase 6c — Cursor-native transcript automation",
+      "approach": "Use native `runOn: folderOpen` tasks so opening the repo triggers copy-first sync without blocking the agent; keep full ingest as an explicit or opt-in task.",
+      "technicalScope": [
+        "Add `.vscode/tasks.json` with at least one task that runs `transcript:sync` (or equivalent) with `runOptions.runOn: folderOpen`.",
+        "Mark long-running or noisy tasks appropriately (`isBackground`, empty `problemMatcher` where needed) so the UI does not treat transcript copy as a failing build.",
+        "Add a separate optional task for full `ingest-transcripts` (manual or opt-in) that documents required `WORKSPACE_KIT_POLICY_APPROVAL` / args for unattended use.",
+        "Do not enable full ingest on every folder open by default unless explicitly chosen — default path should be sync-only to avoid policy friction and load.",
+        "Verify behavior in Cursor (and VS Code compatibility note if differences exist)."
+      ],
+      "acceptanceCriteria": [
+        "Opening the workspace runs transcript file copy (sync) automatically per task configuration.",
+        "Full ingest is available but not silently policy-breaking on folder open.",
+        "Tasks are documented and reproducible for other maintainers."
+      ]
+    },
+    {
+      "id": "T273",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Document Cursor-native transcript automation runbook for maintainers",
+      "createdAt": "2026-03-26T18:30:00.000Z",
+      "updatedAt": "2026-03-26T20:44:39.906Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T272"
+      ],
+      "unblocks": [],
+      "phase": "Phase 6c — Cursor-native transcript automation",
+      "approach": "Make the editor automation discoverable and safe: what runs when, what requires approval, and how it relates to cadence and `ingest-transcripts`.",
+      "technicalScope": [
+        "Add or extend a maintainer runbook under `docs/maintainers/runbooks/` covering folder-open sync, manual ingest, and policy approval patterns.",
+        "Clarify limitation: folder open fires on workspace load, not wall-clock intervals; point to OS schedulers or future hooks for true periodic runs.",
+        "Cross-link transcript automation baseline workbook and CONFIG keys (`improvement.transcripts`, `improvement.cadence`).",
+        "Note gitignore/privacy expectations for `agent-transcripts/` vs source paths."
+      ],
+      "acceptanceCriteria": [
+        "A maintainer can follow the runbook to enable and troubleshoot Cursor tasks without reading source.",
+        "Sync vs ingest semantics and policy requirements are explicit."
+      ]
+    },
+    {
+      "id": "T274",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Optional background transcript sync after task-engine transition to completed",
+      "createdAt": "2026-03-26T18:30:00.000Z",
+      "updatedAt": "2026-03-26T20:44:39.906Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T271",
+        "T251"
+      ],
+      "unblocks": [],
+      "phase": "Phase 6c — Cursor-native transcript automation",
+      "approach": "Complement Cursor folder-open automation with a repo-native hook when a task reaches `completed`: spawn a non-blocking subprocess so the transition returns immediately while transcripts refresh for later analysis.",
+      "technicalScope": [
+        "Add config gate (e.g. `improvement.hooks.afterTaskCompleted`) defaulting off or sync-only.",
+        "On successful `run-transition` to `completed`, if enabled, `spawn` a detached child process running `transcript:sync` or `transcript:ingest` without awaiting completion; parent uses `unref()` or equivalent to avoid holding the process open.",
+        "Prevent overlapping runs via a simple lock file or skip-if-busy in the child script to align with T251 idempotency goals.",
+        "Document interaction with cadence: prefer sync-only in hook; full ingest optional and policy-aware.",
+        "Add tests for hook wiring with subprocess mocked or isolated temp workspace."
+      ],
+      "acceptanceCriteria": [
+        "Task transitions to `completed` are not materially delayed by transcript I/O.",
+        "Hook is opt-in, safe with concurrent transitions, and covered by tests.",
+        "Behavior is documented alongside Cursor-native tasks (T273)."
+      ]
+    },
+    {
+      "id": "imp-3dc9374451b3c0",
+      "status": "completed",
+      "type": "improvement",
+      "title": "[improvement] Close architectural narrative gaps across FEATURE-MATRIX, review findings, and roadmap",
+      "createdAt": "2026-03-26T20:52:11.331Z",
+      "updatedAt": "2026-03-27T00:28:46.470Z",
+      "priority": "P2",
+      "dependsOn": [],
+      "unblocks": [],
+      "phase": "Phase 8 — Improvement backlog triage",
+      "approach": "Purpose: Transcript discussion listed “biggest architectural gaps” (canonical surfaces, parity, extension points) that are not clearly reflected in maintainer-facing docs—causing agents and humans to invent missing features. Implementation strategy: Documentation-first alignment using existing canonical files (`docs/maintainers/FEATURE-MATRIX.md`, `docs/maintainers/ARCHITECTURAL-REVIEW-FINDINGS.md`, `docs/maintainers/ROADMAP.md`, `.ai/ROADMAP.md`). Either explicitly mark gaps as future work with task ids, or correct overstated claims. Avoid scope creep into large code refactors unless a gap is a factual bug in shipped behavior.",
+      "technicalScope": [
+        "Inventory the “gap” themes from evidence (canonical doc routing, consumer parity, extension/plugin story) against current shipped behavior and task-engine state.",
+        "Update FEATURE-MATRIX rows so status/notes match reality; add explicit “not shipped” or “planned” where appropriate.",
+        "Align ARCHITECTURAL-REVIEW-FINDINGS with resolved vs open items post–Phase 7; remove stale references.",
+        "Ensure ROADMAP “current state” and phase bullets do not contradict `.workspace-kit/tasks/state.json` or package version lines.",
+        "Cross-check `.ai/TERMS.md` / maintainer TERMS for vocabulary consistency when describing architecture."
+      ],
+      "acceptanceCriteria": [
+        "No maintainer doc claims a capability that the kit does not provide without an explicit “planned” or “out of scope” label.",
+        "FEATURE-MATRIX and architectural review doc agree on what is delivered vs backlog.",
+        "`pnpm run check-planning-consistency` (or project equivalent) passes after edits."
+      ],
+      "metadata": {
+        "evidenceKey": "transcript:aa294634e30d15034a98f02d9d07d0c1e5c821c7",
+        "evidenceKind": "transcript",
+        "confidence": 0.6,
+        "confidenceTier": "medium",
+        "confidenceReasons": [
+          "transcriptFriction=0.600"
+        ],
+        "provenanceRefs": {
+          "transcriptPath": "agent-transcripts/0feca126-bf4c-45a5-bad0-3daac9783e0f/0feca126-bf4c-45a5-bad0-3daac9783e0f.jsonl",
+          "sampleLine": "{\"role\":\"assistant\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"These are the biggest **architectural** gaps still missing from your feature set:\\n\\n- **Canoni…"
+        }
+      }
+    },
+    {
+      "id": "imp-b9d8408715de51",
+      "status": "completed",
+      "type": "improvement",
+      "title": "[improvement] Clarify QuickTask vs workspace-kit CLI entrypoints (no phantom /qt command)",
+      "createdAt": "2026-03-26T20:52:11.331Z",
+      "updatedAt": "2026-03-27T00:28:46.470Z",
+      "priority": "P2",
+      "dependsOn": [],
+      "unblocks": [],
+      "phase": "Phase 8 — Improvement backlog triage",
+      "approach": "Purpose: Users assume a bare QuickTask `/qt`-style command exists; this repo’s supported surfaces are `npx`/`pnpm` workspace-kit CLI and documented npm scripts—leading to wasted debugging. Implementation strategy: Doc-only clarification in README (intent boundary), `AGENTS.md` / contributor onboarding, and optionally `package.json` `scripts` comments. If any error path mentions QuickTask, align wording with `@workflow-cannon/workspace-kit`. Do not add fake commands; make the real invocation path impossible to miss.",
+      "technicalScope": [
+        "Add a short “How to run the kit” box: exact commands for dev (`pnpm exec`, `node dist/cli.js`) and consumer (`npx @workflow-cannon/workspace-kit`).",
+        "Document that IDE-specific slash commands are not defined by this package unless listed.",
+        "Search for QuickTask legacy naming in docs; replace with current product name or “legacy consumer” where historical context is needed.",
+        "If Cursor/VS Code tasks exist, ensure their labels match the documented CLI (no misleading `/qt`)."
+      ],
+      "acceptanceCriteria": [
+        "New contributor can find the correct CLI invocation from README + AGENTS without searching the codebase.",
+        "No doc implies a `/qt` or undocumented slash command as the primary interface.",
+        "Link or mention relationship to external QuickTask-only workflows only in provenance/consumer sections, clearly labeled."
+      ],
+      "metadata": {
+        "evidenceKey": "transcript:346942fd3ea40695bc1f372d2af75742a76efd43",
+        "evidenceKind": "transcript",
+        "confidence": 0.6,
+        "confidenceTier": "medium",
+        "confidenceReasons": [
+          "transcriptFriction=0.600"
+        ],
+        "provenanceRefs": {
+          "transcriptPath": "agent-transcripts/45befe2a-dae9-4d53-9a31-eee21662e37b/45befe2a-dae9-4d53-9a31-eee21662e37b.jsonl",
+          "sampleLine": "{\"role\":\"assistant\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"Most likely because QuickTask doesn’t expose a bare `/qt` command in this repo setup — it expos…"
+        }
+      }
+    },
+    {
+      "id": "imp-201911c9c4461a",
+      "status": "completed",
+      "type": "improvement",
+      "title": "[improvement] Document automation vs on-demand paths for recommendations and transcript ingest",
+      "createdAt": "2026-03-26T20:52:11.331Z",
+      "updatedAt": "2026-03-27T00:28:46.470Z",
+      "priority": "P2",
+      "dependsOn": [],
+      "unblocks": [],
+      "phase": "Phase 8 — Improvement backlog triage",
+      "approach": "Purpose: Confusion whether `generate-recommendations` runs automatically vs only on explicit `run` / hooks. Implementation strategy: Single contract in `docs/maintainers/CONFIG.md` and transcript automation runbooks describing: manual `run`, optional transcript hooks, cadence/backoff config, and what is intentionally NOT auto-run. Align wording with implemented code paths (`src/` commands, hooks, session policy) without inventing new schedulers.",
+      "technicalScope": [
+        "Produce a decision table: trigger (manual CLI, hook, CI) × operation (sync, generate-recommendations) × config keys involved.",
+        "Document default behavior for a fresh clone (nothing automatic until hook enabled / command run).",
+        "Cross-link to Phase 6/7 features: post-completion hook, transcript sync, backoff—each with “when to use”.",
+        "Add troubleshooting: “I expected auto-run” → check hook config, policy approval, and logs."
+      ],
+      "acceptanceCriteria": [
+        "Reader can predict whether a recommendation will be created without reading source (for documented supported setups).",
+        "Docs agree with `package.json` scripts and documented env vars.",
+        "No statement that something runs on a timer unless that timer is actually configured (e.g. user cron) and documented as external."
+      ],
+      "metadata": {
+        "evidenceKey": "transcript:2da290de22e6e91c12e44bf0d38cebcc98b56079",
+        "evidenceKind": "transcript",
+        "confidence": 0.6,
+        "confidenceTier": "medium",
+        "confidenceReasons": [
+          "transcriptFriction=0.600"
+        ],
+        "provenanceRefs": {
+          "transcriptPath": "agent-transcripts/5ccdf5a9-b521-4424-9ab8-1e8be990ccf5/5ccdf5a9-b521-4424-9ab8-1e8be990ccf5.jsonl",
+          "sampleLine": "{\"role\":\"assistant\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"Right now, it **doesn’t run automatically**.\\n\\nCurrent behavior is on-demand only:\\n- `generat…"
+        }
+      }
+    },
+    {
+      "id": "imp-ab362ef4e1f99e",
+      "status": "completed",
+      "type": "improvement",
+      "title": "[improvement] Improve workspace-kit test failure readability (assertions, file pointers, categories)",
+      "createdAt": "2026-03-26T20:52:11.331Z",
+      "updatedAt": "2026-03-27T00:28:46.470Z",
+      "priority": "P2",
+      "dependsOn": [],
+      "unblocks": [],
+      "phase": "Phase 8 — Improvement backlog triage",
+      "approach": "Purpose: Transcript showed a partial test run (92/97) with failures that required manual triage—maintainers need faster root-cause from output alone. Implementation strategy: Improve test harness and assertion messages in existing `test/` (e.g. `.mjs` tests) without changing production behavior unless a test exposes a real bug (separate task). Prefer clearer diffs, explicit expected vs actual, and grouping by area (CLI, policy, config). Follow user rule: if fixing reveals product bugs, stop and split—but default here is test-only ergonomics.",
+      "technicalScope": [
+        "Identify the failing tests referenced in evidence or rerun `pnpm test` to list current failures.",
+        "For each flaky or opaque failure, improve message text, add context lines (fixture path, env), or split cases for clarity.",
+        "Ensure CI-local parity: document required env in test output header if applicable.",
+        "Keep changes limited to `test/**` and test helpers unless a bug is confirmed and user approves product fix."
+      ],
+      "acceptanceCriteria": [
+        "`pnpm test` passes; any remaining failure prints enough context to fix in one iteration without reading unrelated files.",
+        "Diff is scoped: production `src/` changes only if explicitly justified and approved.",
+        "No reduction of coverage; snapshot updates only with reviewed intent."
+      ],
+      "metadata": {
+        "evidenceKey": "transcript:c3fe859ac9d0d555fa0ee7078cefb6a91ae67f2e",
+        "evidenceKind": "transcript",
+        "confidence": 0.6,
+        "confidenceTier": "medium",
+        "confidenceReasons": [
+          "transcriptFriction=0.600"
+        ],
+        "provenanceRefs": {
+          "transcriptPath": "agent-transcripts/63281eb2-84a8-4a90-be05-69c18d4492f2/63281eb2-84a8-4a90-be05-69c18d4492f2.jsonl",
+          "sampleLine": "{\"role\":\"assistant\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"92 out of 97 passing - not bad for a first run! Let me fix the 5 failures. The issues are:\\n\\n1…"
+        }
+      }
+    },
+    {
+      "id": "imp-c14c4955833730",
+      "status": "completed",
+      "type": "improvement",
+      "title": "[improvement] Add maintainer guidance for agent “structured workspace report” outputs",
+      "createdAt": "2026-03-26T20:52:11.331Z",
+      "updatedAt": "2026-03-27T00:28:46.470Z",
+      "priority": "P3",
+      "dependsOn": [],
+      "unblocks": [],
+      "phase": "Phase 8 — Improvement backlog triage",
+      "approach": "Purpose: Subagent transcripts produced long “structured reports” with absolute paths and file-consumption claims—useful for humans but noisy and sometimes misleading for automation. Implementation strategy: Document recommended report shape for agents (sections, relative paths, evidence pointers to `docs/maintainers/` and task state). Optionally add a short template under `docs/maintainers/runbooks/` or contributor docs. No requirement to build new CLI unless justified; prefer markdown patterns.",
+      "technicalScope": [
+        "Define a minimal report outline: scope, commands run, files touched, risks, open questions.",
+        "Require relative paths from repo root and redact machine-specific prefixes in examples.",
+        "Link to response-template / Phase 6 guidance if overlap exists; avoid duplicating FEATURE-MATRIX.",
+        "Add note for subagent workflows: cite task ids from `.workspace-kit/tasks/state.json` instead of inventing phase status."
+      ],
+      "acceptanceCriteria": [
+        "Maintainer doc exists with copy-paste template for agent final summaries.",
+        "Template is consistent with TERMS and does not contradict task-engine as source of truth for task status.",
+        "No new mandatory tooling; documentation-only unless a small script is explicitly scoped and tested."
+      ],
+      "metadata": {
+        "evidenceKey": "transcript:b02c175befc6f58740c93208ffd9278f3479549f",
+        "evidenceKind": "transcript",
+        "confidence": 0.45,
+        "confidenceTier": "low",
+        "confidenceReasons": [
+          "transcriptFriction=0.450"
+        ],
+        "provenanceRefs": {
+          "transcriptPath": "agent-transcripts/63281eb2-84a8-4a90-be05-69c18d4492f2/subagents/7cd88b79-aa99-4ea7-830d-1af904588fe3.jsonl",
+          "sampleLine": "{\"role\":\"assistant\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"Here is a structured report for `/Users/nicklaprell/Workspace/workflow-cannon`. **Full file con…"
+        }
+      }
+    },
+    {
+      "id": "imp-fb31f5fc2694d3",
+      "status": "completed",
+      "type": "improvement",
+      "title": "[improvement] Runbook: interpreting test + parity failures on first contributor run",
+      "createdAt": "2026-03-26T20:52:11.331Z",
+      "updatedAt": "2026-03-27T00:28:46.470Z",
+      "priority": "P3",
+      "dependsOn": [],
+      "unblocks": [],
+      "phase": "Phase 8 — Improvement backlog triage",
+      "approach": "Purpose: Same symptom class as `imp-ab362ef4e1f99e` (partial pass on first run) but focused on operational response: what to run, in what order, and when to compare consumer parity fixtures. Implementation strategy: Add or extend a maintainer runbook section (see `docs/maintainers/runbooks/`) linking `pnpm run build`, `pnpm test`, parity scripts, and planning consistency—without duplicating RELEASING gates. Complements test-message improvements in `imp-ab362ef4e1f99e`.",
+      "technicalScope": [
+        "Document the canonical “green path” command sequence for a fresh clone (install → build → check → test → parity if applicable).",
+        "List common first-failure modes: missing build, wrong Node version, stale `dist/`, env for CI parity.",
+        "Cross-link to `docs/maintainers/parity-validation-flow.md` and release gates.",
+        "Keep paths/commands copy-paste accurate with repo scripts."
+      ],
+      "acceptanceCriteria": [
+        "New contributor can follow the runbook page alone to get to a known-good baseline or a documented blocker.",
+        "Runbook does not contradict `package.json` scripts.",
+        "Clear distinction between “fix tests” (imp-ab362) and “operating procedure” (this task)—minimal overlap."
+      ],
+      "metadata": {
+        "evidenceKey": "transcript:268315af47637c991a100eba6a4b9200e75aba6c",
+        "evidenceKind": "transcript",
+        "confidence": 0.45,
+        "confidenceTier": "low",
+        "confidenceReasons": [
+          "transcriptFriction=0.450"
+        ],
+        "provenanceRefs": {
+          "transcriptPath": "agent-transcripts/75b51472-7ad6-4532-b2e3-d9b801bd1cf4/75b51472-7ad6-4532-b2e3-d9b801bd1cf4.jsonl",
+          "sampleLine": "{\"role\":\"assistant\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"92 out of 97 passing - not bad for a first run! Let me fix the 5 failures. The issues are:\\n\\n1…"
+        }
+      }
+    },
+    {
+      "id": "imp-43397766ef243b",
+      "status": "completed",
+      "type": "improvement",
+      "title": "[improvement] Align agent rules with task-engine truth for “current phase” (no stale Phase 1 narrative)",
+      "createdAt": "2026-03-26T20:52:11.331Z",
+      "updatedAt": "2026-03-27T00:28:46.470Z",
+      "priority": "P2",
+      "dependsOn": [],
+      "unblocks": [],
+      "phase": "Phase 8 — Improvement backlog triage",
+      "approach": "Purpose: Agents told users “Phase 1 is already done” while human docs pointed elsewhere—phase language drift confuses prioritization. Implementation strategy: Update `.cursor/rules/`, `AGENTS.md`, and any bootstrap prompts to state that **task phase and release truth** live in `.workspace-kit/tasks/state.json` and `docs/maintainers/ROADMAP.md` / `docs/maintainers/data/workspace-kit-status.yaml`. Replace static “Phase 1” examples with neutral wording (“check current_kit_phase” / “run list-tasks”). Align with workflow contract rule.",
+      "technicalScope": [
+        "Grep for hard-coded phase examples (Phase 0–2 boilerplate) in rules and agent entrypoints.",
+        "Add a single canonical paragraph: how to read `current_kit_phase` and where queued work lives.",
+        "Ensure `.ai/ROADMAP.md` pointer is described as machine-oriented; human summary in `docs/maintainers/ROADMAP.md`.",
+        "Avoid duplicating full task lists in rules—reference files instead."
+      ],
+      "acceptanceCriteria": [
+        "No agent rule claims a specific historical phase as “current” without pointing to the files to verify.",
+        "Cursor/agent onboarding tells users to read task state + maintainer roadmap for execution queue.",
+        "`pnpm run check-planning-consistency` passes if the check covers edited docs."
+      ],
+      "metadata": {
+        "evidenceKey": "transcript:2fdf52190663264014be999f3a18c9031fed0190",
+        "evidenceKind": "transcript",
+        "confidence": 0.6,
+        "confidenceTier": "medium",
+        "confidenceReasons": [
+          "transcriptFriction=0.600"
+        ],
+        "provenanceRefs": {
+          "transcriptPath": "agent-transcripts/9e9774ba-0c6b-4cf5-a760-2d379d69f8a9/9e9774ba-0c6b-4cf5-a760-2d379d69f8a9.jsonl",
+          "sampleLine": "{\"role\":\"assistant\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"## Heads-up: Phase 1 is already done\\n\\nIn this repo, **Phase 1 (Task Engine)** is **closed** a…"
+        }
+      }
+    },
+    {
+      "id": "imp-7f9e65fad74b0b",
+      "status": "completed",
+      "type": "improvement",
+      "title": "[improvement] Clarify task JSON schema vs validator story for editors and codegen",
+      "createdAt": "2026-03-26T20:52:11.331Z",
+      "updatedAt": "2026-03-27T00:28:46.470Z",
+      "priority": "P2",
+      "dependsOn": [],
+      "unblocks": [],
+      "phase": "Phase 8 — Improvement backlog triage",
+      "approach": "Purpose: Transcript said “not yet” on schema/validator readiness—contributors unsure what is validated where (task engine, JSON Schema file, IDE). Implementation strategy: Inventory actual validation (`state.json` parsing, any schema in repo), document supported task fields and evolution rules in maintainer docs, and improve error messages on invalid task JSON if code paths exist. If no public JSON Schema exists, either add a minimal schema artifact for editors or document why free-form validation is intentional.",
+      "technicalScope": [
+        "Locate task state load/validate logic and list enforced fields vs optional extensions.",
+        "If applicable, add `schemas/task-state.schema.json` (or similar) generated from TypeScript types or hand-maintained subset—match project conventions.",
+        "Document in `docs/maintainers/` how to add fields without breaking the engine.",
+        "Improve parse errors to include JSON path and field name when validation fails."
+      ],
+      "acceptanceCriteria": [
+        "Contributor knows where validation happens and what fields are required for a valid task record.",
+        "Invalid `state.json` edits produce actionable errors (line/path/field) in dev workflow.",
+        "Docs explicitly state relationship between task-engine code and any JSON Schema file—no false claim of validation that does not run."
+      ],
+      "metadata": {
+        "evidenceKey": "transcript:9881a9c7b0a4a6429e2ae49c62d7d8c5429c11ba",
+        "evidenceKind": "transcript",
+        "confidence": 0.6,
+        "confidenceTier": "medium",
+        "confidenceReasons": [
+          "transcriptFriction=0.600"
+        ],
+        "provenanceRefs": {
+          "transcriptPath": "agent-transcripts/a2d5e843-2f2b-4d90-ad99-810670c7c17d/a2d5e843-2f2b-4d90-ad99-810670c7c17d.jsonl",
+          "sampleLine": "{\"role\":\"assistant\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"Short answer: **no, not yet**. You’re close on structure, but the current schema/validator comb…"
+        }
+      }
+    },
+    {
+      "id": "T275",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Fix architecture-review doc drift and broken index references",
+      "createdAt": "2026-03-26T21:30:00.000Z",
+      "updatedAt": "2026-03-26T23:45:00.000Z",
+      "priority": "P1",
+      "dependsOn": [],
+      "unblocks": [
+        "T282"
+      ],
+      "phase": "Phase 7 — Architectural hardening",
+      "approach": "Purpose: Restore trust in maintainer navigation before deeper refactors—broken links and stale architectural review bullets waste time and invite wrong decisions. Implementation strategy (as shipped): Fix README and `docs/maintainers/*` index pointers to real files; align `ARCHITECTURAL-REVIEW-FINDINGS.md` with post-split reality; add explicit canonical-vs-derived notes where policy appears in multiple surfaces (`README` vs `.cursor/rules/` vs `docs/`). Doc-only scope; no behavior change to the kit runtime.",
+      "technicalScope": [
+        "Audit high-traffic entrypoints (`README.md`, `docs/maintainers/INDEX` or equivalent tables, `ARCHITECTURAL-REVIEW-FINDINGS.md`) for 404s and renamed paths.",
+        "Either restore missing targets (e.g. contributor doc) or retarget links to the correct canonical file.",
+        "Reconcile duplicate bullets between architectural review and ROADMAP so one defers to the other.",
+        "Record canonical source for planning vs narrative docs per `.ai/PRINCIPLES.md` truth order."
+      ],
+      "acceptanceCriteria": [
+        "No broken maintainer-doc navigation links from README or primary maintainer index to missing files.",
+        "Architecture review and roadmap agree on what is shipped vs historical extraction provenance.",
+        "Spot-check: `grep` or link check for stale `CONTRIBUTING` / legacy repo paths returns clean for listed entrypoints."
+      ]
+    },
+    {
+      "id": "T276",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Reconcile package identity and changelog canon",
+      "createdAt": "2026-03-26T21:30:00.000Z",
+      "updatedAt": "2026-03-26T23:45:00.000Z",
+      "priority": "P1",
+      "dependsOn": [],
+      "unblocks": [
+        "T282"
+      ],
+      "phase": "Phase 7 — Architectural hardening",
+      "approach": "Purpose: Consumers and CI must see one package name and one changelog contract after the repo split—mixed `quicktask-*` vs `@workflow-cannon/workspace-kit` strings cause install and support churn. Implementation strategy (as shipped): Normalize user-facing strings in CLI, `package.json`, `.workspace-kit/manifest.json`, and maintainer docs; keep historical names only in provenance sections. Single canonical changelog under `docs/maintainers/CHANGELOG.md` (with root pointer pattern if used); align `RELEASING.md` and npm publish notes.",
+      "technicalScope": [
+        "Replace or qualify legacy package id strings in runtime output and packaged metadata.",
+        "Ensure `CHANGELOG.md` at repo root, if present, is a stub pointing at maintainer changelog or is the single source—no conflicting histories.",
+        "Update release gate docs and version bump scripts to reference canonical paths.",
+        "Verify npm package `name` field and kit manifest identity match."
+      ],
+      "acceptanceCriteria": [
+        "`npm view` / package consumers see consistent `@workflow-cannon/workspace-kit` naming in documented install paths.",
+        "Maintainer can answer “where is the changelog?” in one sentence with one path.",
+        "Grep of active docs (excluding historical notes) does not advertise wrong package id for install."
+      ]
+    },
+    {
+      "id": "T277",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Decompose monolithic CLI orchestration into command handlers",
+      "createdAt": "2026-03-26T21:30:00.000Z",
+      "updatedAt": "2026-03-26T23:45:00.000Z",
+      "priority": "P1",
+      "dependsOn": [],
+      "unblocks": [
+        "T278",
+        "T279",
+        "T280",
+        "T281"
+      ],
+      "phase": "Phase 7 — Architectural hardening",
+      "approach": "Purpose: A single oversized `cli.ts` couples parsing, policy, config, and output—every change risks unrelated regressions and blocks parallel work. Implementation strategy (as shipped): Introduce `src/cli/run-command.ts` (and related modules) so each subcommand owns its path; shared bootstrap handles argv, workspace resolution, and JSON vs human output. Preserve argv compatibility and exit codes; expand tests per command.",
+      "technicalScope": [
+        "Extract handlers for `init`, `check`, `upgrade`, `drift-check`, `doctor`, `config`, `run`, and other shipped verbs from the former monolith.",
+        "Centralize shared concerns: logger, policy context creation, config load, error formatting.",
+        "Maintain deterministic JSON output contracts for automation.",
+        "Extend `test/cli.test.mjs` (or equivalent) to cover routing and regression cases per handler."
+      ],
+      "acceptanceCriteria": [
+        "All previously supported CLI flags and exit codes behave as before (consumer parity tests pass).",
+        "New contributors can locate a command’s logic in one module without scrolling a mega-file.",
+        "`pnpm test` includes CLI coverage sufficient to catch handler wiring mistakes."
+      ]
+    },
+    {
+      "id": "T278",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Consolidate layered config defaults to a single canonical source",
+      "createdAt": "2026-03-26T21:30:00.000Z",
+      "updatedAt": "2026-03-26T23:45:00.000Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T277"
+      ],
+      "unblocks": [],
+      "phase": "Phase 7 — Architectural hardening",
+      "approach": "Purpose: Duplicate default tables in `workspace-kit-config` and modules cause explain output and docs to disagree with runtime. Implementation strategy (as shipped): Single authoritative default map in `src/core/workspace-kit-config.ts` (or successor), with modules registering keys without re-stating defaults; `config explain` and tests read the same source.",
+      "technicalScope": [
+        "Remove redundant default literals from module contribution paths; wire them to the canonical table.",
+        "Preserve precedence order: workspace > project > defaults; document any exception.",
+        "Regenerate or hand-update maintainer config docs if key ownership strings change.",
+        "Run full config resolution tests and spot-check `workspace-kit config explain` output."
+      ],
+      "acceptanceCriteria": [
+        "One definition per default key in code; no conflicting literals in separate files.",
+        "Existing precedence and explain tests pass unchanged in behavior.",
+        "Generated or published config reference matches runtime defaults."
+      ]
+    },
+    {
+      "id": "T279",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Harden documentation runtime path resolution for package consumers",
+      "createdAt": "2026-03-26T21:30:00.000Z",
+      "updatedAt": "2026-03-26T23:45:00.000Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T277"
+      ],
+      "unblocks": [],
+      "phase": "Phase 7 — Architectural hardening",
+      "approach": "Purpose: Documentation module previously assumed a git checkout layout (`docs/` next to `src/`); consumers installing from npm only have `dist/` and packaged assets—commands failed opaquely. Implementation strategy (as shipped): Resolve paths from package root via `import.meta.url` / `__dirname` patterns, honor `package.json` `files` so sources ship; config overrides for custom layouts; actionable errors when files are missing.",
+      "technicalScope": [
+        "Audit `src/modules/documentation/runtime.ts` (and callers) for cwd-relative assumptions.",
+        "Implement fallback chain: explicit config → packaged module path → error with install hint.",
+        "Ensure packaged tarball contains required markdown or generated assets per `package.json` `files`.",
+        "Add tests simulating consumer `node_modules` layout where feasible."
+      ],
+      "acceptanceCriteria": [
+        "`run` documentation-related commands work when invoked from a consumer project using the published package.",
+        "Failures state which path was tried and whether the package appears incomplete.",
+        "In-repo maintainer workflow remains supported."
+      ]
+    },
+    {
+      "id": "T280",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Harden actor resolution and policy decision trace ergonomics",
+      "createdAt": "2026-03-26T21:30:00.000Z",
+      "updatedAt": "2026-03-26T23:45:00.000Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T277"
+      ],
+      "unblocks": [],
+      "phase": "Phase 7 — Architectural hardening",
+      "approach": "Purpose: Policy traces need a stable `actor` for audit; synchronous git subprocess calls can hang or fail in CI/sandboxes. Implementation strategy (as shipped): Async, bounded actor resolution in `src/core/policy.ts` with env override first (`WORKSPACE_KIT_*` or documented vars), then git with timeout/fallback to `unknown` or explicit service actor; traces remain structured for JSON consumers.",
+      "technicalScope": [
+        "Refactor actor lookup to non-blocking pattern compatible with Node worker/async model used by CLI.",
+        "Define precedence: explicit env → git config user → fallback token.",
+        "Document expectations for GitHub Actions / containers (no git identity).",
+        "Unit tests for timeout, missing git, and override success."
+      ],
+      "acceptanceCriteria": [
+        "Policy JSON traces include actor fields consistently in local and simulated CI fixtures.",
+        "No indefinite hang when git is missing or slow; bounded failure path.",
+        "Tests cover at least: override, success, unknown actor."
+      ]
+    },
+    {
+      "id": "T281",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Improve transcript hook observability and overlap control",
+      "createdAt": "2026-03-26T21:30:00.000Z",
+      "updatedAt": "2026-03-26T23:45:00.000Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T277"
+      ],
+      "unblocks": [],
+      "phase": "Phase 7 — Architectural hardening",
+      "approach": "Purpose: Post-completion transcript hooks run asynchronously; without logs or locking, operators see silent skips or double syncs. Implementation strategy (as shipped): `src/core/transcript-completion-hook.ts` writes structured events (or appends to event log), implements busy/lock guard, remains opt-in and non-blocking for task completion.",
+      "technicalScope": [
+        "Emit machine-readable status for hook start/skip/complete/fail paths.",
+        "Serialize overlapping invocations (mutex or pid file pattern) within process expectations.",
+        "Wire optional verbosity to env or config keys documented in Phase 6 runbooks.",
+        "Tests for concurrent transition calls and skip-when-busy."
+      ],
+      "acceptanceCriteria": [
+        "Hook outcome is diagnosable from stdout/stderr or log file without debugger.",
+        "Rapid sequential task completions do not spawn unsafe overlapping child work.",
+        "Default remains opt-in; no hook run when disabled."
+      ]
+    },
+    {
+      "id": "T282",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Canonicalize policy/workflow governance surfaces and ADR hygiene",
+      "createdAt": "2026-03-26T21:30:00.000Z",
+      "updatedAt": "2026-03-26T23:45:00.000Z",
+      "priority": "P3",
+      "dependsOn": [
+        "T275",
+        "T276"
+      ],
+      "unblocks": [],
+      "phase": "Phase 7 — Architectural hardening",
+      "approach": "Purpose: Duplicated guidance between `.cursor/rules/`, `docs/maintainers/`, and `.ai/` causes agents to follow stale rules. Implementation strategy (as shipped): Document canonical ownership (which file is edited first), when to mirror vs generate, and ADR minimums; update `DECISIONS.md`, `docs/adr/README` or equivalent, and cross-links in README/ROADMAP.",
+      "technicalScope": [
+        "Map each governance concern (release, PR, task completion) to a primary doc and mark derivatives.",
+        "Add short “do not duplicate long sections” rule for Cursor rules pointing to maintainer docs.",
+        "Align ADR folder expectations with actual usage (when to add ADR vs roadmap decision line).",
+        "Ensure `.ai/PRINCIPLES.md` and workflow contract references stay consistent."
+      ],
+      "acceptanceCriteria": [
+        "Onboarding answers “which doc do I edit?” for policies vs agent rules vs AI canonical docs.",
+        "No contradictory release/task instructions between top-level maintainer docs and rules without an explicit mirror note.",
+        "ADR guidance matches how the repo is maintained (no mandatory fiction)."
+      ]
+    },
+    {
+      "id": "T283",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Command-scoped first-use policy approval UX (Deny / Allow / Allow for session)",
+      "createdAt": "2026-03-27T12:00:00.000Z",
+      "updatedAt": "2026-03-27T14:30:00.000Z",
+      "priority": "P2",
+      "dependsOn": [],
+      "unblocks": [],
+      "phase": "Phase 9 — Interactive policy UX and template enforcement",
+      "approach": "Purpose: Today, sensitive `workspace-kit run` flows require `policyApproval` JSON or pre-recorded session grants; maintainers want an interactive, command-scoped first prompt (Deny / Allow once / Allow for session) where the host environment supports it—without weakening default fail-closed behavior in CI or non-interactive shells. Implementation strategy: Add an opt-in interactive path in the CLI run (and optionally init/upgrade/config) flow that maps user choices to existing constructs (`policyApproval` with `scope`, `recordSessionGrant`, env-based approval where already valid). Prefer stdin/TTY detection; integrate Cursor Question UI or equivalent only behind capability flags so headless and scripts stay deterministic. Align with `.ai/ROADMAP.md` decision D007.",
+      "technicalScope": [
+        "Define UX contract: which operations prompt, exact button/choice mapping to `once` vs `session`, and how `WORKSPACE_KIT_SESSION_ID` interacts with stored grants.",
+        "Implement TTY-gated interactive resolver in `src/cli/run-command.ts` (or shared policy helper) that runs only when stdout is TTY and env like `WORKSPACE_KIT_INTERACTIVE_APPROVAL=on` (name TBD) is set; default remains current deny-with-JSON behavior.",
+        "Ensure CI/non-interactive runs never hang waiting for input; add tests that simulate non-TTY and assert no prompt.",
+        "Where Cursor provides a structured question API, add an optional adapter or document extension pattern without hard-depending on Cursor in core package API surface.",
+        "Update `docs/maintainers/POLICY-APPROVAL.md`, runbooks, and `.cursor/rules` mirrors to describe interactive vs JSON vs env paths.",
+        "Append policy traces on allow/deny with deterministic messages; deny must not leak secrets.",
+        "Extend tests (`test/`): happy path session grant from mock stdin; regression that JSON `policyApproval` still overrides/skips prompt when provided."
+      ],
+      "acceptanceCriteria": [
+        "With interactive approval disabled or non-TTY, behavior is identical to pre-task baselines (no prompt, same JSON denial shapes).",
+        "With interactive approval enabled and TTY, an operator can approve a sensitive `run` once or for session without hand-authoring JSON, and subsequent same-session command obeys session grant rules.",
+        "Documentation lists env vars, limitations (CI, automation), and security rationale (no silent bypass).",
+        "`pnpm run build`, `check`, `test`, and `parity` pass; new tests cover interactive and non-interactive branches."
+      ]
+    },
+    {
+      "id": "T284",
+      "status": "completed",
+      "type": "workspace-kit",
+      "title": "[workspace-kit] Configurable response-template enforcement (advisory default + explicit strict opt-in)",
+      "createdAt": "2026-03-27T12:00:00.000Z",
+      "updatedAt": "2026-03-27T14:30:00.000Z",
+      "priority": "P2",
+      "dependsOn": [],
+      "unblocks": [],
+      "phase": "Phase 9 — Interactive policy UX and template enforcement",
+      "approach": "Purpose: `responseTemplates.enforcementMode` exists with `advisory` default; operators need a clear, tested strict mode that fails `workspace-kit run` when template selection is invalid or directives conflict—without breaking existing advisory consumers. Implementation strategy: Audit `src/core/response-template-shaping.ts` and config metadata; ensure strict mode semantics are total (which fields trigger failure codes), documented, and covered by tests; improve error messages for strict violations. Align with `.ai/ROADMAP.md` decision D008.",
+      "technicalScope": [
+        "Inventory all code paths that read `responseTemplates.*` and list behaviors in advisory vs strict per command.",
+        "Define strict contract: unknown template id, mismatched template, missing directive when required, warning→error promotion rules.",
+        "Implement or tighten strict checks so `enforcementMode` strict produces non-zero exit and stable `code` in JSON output when violations occur.",
+        "Ensure default remains `advisory`; upgrading consumers see no new failures until they set `strict`.",
+        "Update `docs/maintainers/runbooks/response-templates.md`, `CONFIG` reference (via `config generate-docs` if descriptions change), and FEATURE-MATRIX row when capability is finalized.",
+        "Add/extend tests in `test/phase6b-response-templates.test.mjs` (or equivalent) for strict failures and advisory control baseline."
+      ],
+      "acceptanceCriteria": [
+        "With default config, existing `workspace-kit run` outcomes match prior release behavior within intentional scope (advisory warnings only).",
+        "With `responseTemplates.enforcementMode` set to `strict`, invalid or inconsistent template usage fails the command with actionable JSON and documented `code` values.",
+        "Maintainer runbook explains when to use strict (CI gates) vs advisory (local iteration).",
+        "`pnpm run build`, `check`, `test`, and `parity` pass."
+      ]
+    }
+  ],
+  "transitionLog": [
+    {
+      "transitionId": "T275-2026-03-26T23:21:23.493Z-8fdb926d",
+      "taskId": "T275",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-26T23:21:23.493Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T275-2026-03-26T23:21:23.551Z-50ba1b6e",
+      "taskId": "T275",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-26T23:21:23.551Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T276-2026-03-26T23:21:23.609Z-6ec160a8",
+      "taskId": "T276",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-26T23:21:23.609Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T276-2026-03-26T23:21:23.669Z-20e95772",
+      "taskId": "T276",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-26T23:21:23.669Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T277-2026-03-26T23:21:23.727Z-dc838c5c",
+      "taskId": "T277",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-26T23:21:23.727Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T277-2026-03-26T23:21:23.789Z-d8b8918a",
+      "taskId": "T277",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-26T23:21:23.789Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T278-2026-03-26T23:21:23.845Z-befbb450",
+      "taskId": "T278",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-26T23:21:23.845Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T278-2026-03-26T23:21:23.918Z-f5e66407",
+      "taskId": "T278",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-26T23:21:23.918Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T279-2026-03-26T23:21:23.980Z-22c426cb",
+      "taskId": "T279",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-26T23:21:23.980Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T279-2026-03-26T23:21:24.039Z-28dba2af",
+      "taskId": "T279",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-26T23:21:24.039Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T280-2026-03-26T23:21:24.095Z-70502318",
+      "taskId": "T280",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-26T23:21:24.095Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T280-2026-03-26T23:21:24.164Z-44744868",
+      "taskId": "T280",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-26T23:21:24.164Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T281-2026-03-26T23:21:24.222Z-b3fb2329",
+      "taskId": "T281",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-26T23:21:24.222Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T281-2026-03-26T23:21:24.392Z-1d942328",
+      "taskId": "T281",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-26T23:21:24.392Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T282-2026-03-26T23:21:24.449Z-d4d69791",
+      "taskId": "T282",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-26T23:21:24.449Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T282-2026-03-26T23:21:24.507Z-28fbeb36",
+      "taskId": "T282",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-26T23:21:24.507Z",
+      "actor": "NJLaPrell@gmail.com"
+    }
+  ],
+  "lastUpdated": "2026-03-27T14:30:00.000Z"
+}

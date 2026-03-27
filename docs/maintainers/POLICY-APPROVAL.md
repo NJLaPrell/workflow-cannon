@@ -10,6 +10,7 @@ Use this page when you see **`policy-denied`**, **`missing WORKSPACE_KIT_POLICY_
 | --- | --- | --- |
 | **`policyApproval` in JSON** | `workspace-kit run <command> …` when the command is **policy-sensitive** (e.g. `generate-recommendations`, `ingest-transcripts`, `run-transition`, `review-item`, doc generation without `dryRun`) | Pass a JSON object as the third CLI argument with `"policyApproval":{"confirmed":true,"rationale":"…"}`. Optionally `"scope":"session"` to reuse approval for the same operation and `WORKSPACE_KIT_SESSION_ID` (see session grants). |
 | **`WORKSPACE_KIT_POLICY_APPROVAL` env** | **`workspace-kit init`**, **`workspace-kit upgrade`**, **`workspace-kit config`** mutating subcommands (`set`, `unset`, `edit`, …) | Export env var to JSON: `{"confirmed":true,"rationale":"…"}`. |
+| **`WORKSPACE_KIT_INTERACTIVE_APPROVAL` env** | **`workspace-kit run`** sensitive commands only, when stdin+stdout are TTY (or tests inject `readStdinLine`) | Set to `on`, `1`, `true`, or `yes`. Prompts **d / o / s** (Deny / Allow once / Allow for session). Does **not** apply in CI when stdio is not a TTY unless you use the programmatic test hook. |
 
 **`workspace-kit run` does not read `WORKSPACE_KIT_POLICY_APPROVAL`** for the run path itself. For package scripts that wrap `run` (e.g. `transcript:ingest`), the script must pass approval into the process environment only if the **inner** CLI entrypoint you invoke uses `init`/`config`/`upgrade`—not for pure `run` commands.
 

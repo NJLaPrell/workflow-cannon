@@ -1,20 +1,19 @@
 schema_version: 1
 current_kit_phase: "9"
 last_updated: "2026-03-27"
-active_focus: "Phase 9 queued: T283 interactive command-scoped policy approval UX; T284 response-template strict vs advisory enforcement."
+active_focus: "Phase 9 complete in-repo (T283-T284): interactive run approval + strict response templates. No npm release for this slice unless scheduled separately."
 blockers: []
 next_agent_actions:
-  - "Execute T283 then T284 (or parallelize if independent) from `.workspace-kit/tasks/state.json`; transition via task engine with policy as required."
-  - "When Phase 9 completes, bump version, update CHANGELOG, roadmap evidence, and publish per RELEASING.md."
+  - "Optional: cut v0.11.0 (or next semver) when ready to publish Phase 9 + update CHANGELOG release section."
+  - "Pick next roadmap phase or improvement queue from task state."
 last_session_summary:
-  - "Phase 8 (`imp-*`): POLICY-APPROVAL.md, transcript trigger + first-run + agent report runbooks, TASK-ENGINE-STATE.md, optional JSON Schema, README/AGENTS/FEATURE-MATRIX/architectural review updates, policy-denied JSON enrichment, tests."
-  - "Released v0.10.0 — confirm npm dist-tag and GitHub Actions publish run."
-  - "Prior: Phase 7 v0.9.0 architectural hardening complete."
+  - "Phase 9 shipped in-repo: WORKSPACE_KIT_INTERACTIVE_APPROVAL prompt for sensitive run; strict template conflict + invalid id; tests phase9 + phase6b; task state.json tracked in git."
+  - "Prior: Phase 8 v0.10.0 released to npm."
 pending_decisions: []
 metrics:
-  updated_at: "2026-03-26"
+  updated_at: "2026-03-27"
   source: "automated"
-  notes: "Phase 8 released as v0.10.0; npm publish workflow run 23624912236 succeeded."
+  notes: "Phase 9 implementation merged; package version still 0.10.0 until explicit release."
   time_to_doctor_minutes: 0.03
   cold_start_success_rate_pct: 100
   upgrade_success_rate_pct: null

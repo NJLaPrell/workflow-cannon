@@ -11,7 +11,7 @@ const PATHS = {
   featureMatrix: resolve(ROOT, "docs/maintainers/FEATURE-MATRIX.md")
 };
 
-/** CI and fresh clones omit gitignored `.workspace-kit/tasks/state.json`; align with roadmap when absent. */
+/** When `state.json` is missing (sparse checkouts), align with roadmap-only inference. */
 async function readTaskStateText() {
   try {
     return await readFile(PATHS.taskState, "utf8");

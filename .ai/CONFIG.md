@@ -58,7 +58,7 @@ Generated from `src/core/config-metadata.ts`. Do not edit by hand; run `workspac
 
 | responseTemplates.enforcementMode | string | "advisory" | project | workspace-kit | maintainer | false | false |
 
-**Description:** Whether unknown/mismatched response templates fail commands (`strict`) or only emit warnings (`advisory`).
+**Description:** `advisory`: unknown template ids, invalid default/override ids, and explicit-vs-directive template conflicts emit warnings only. `strict`: same conditions fail the command (`response-template-invalid` or `response-template-conflict`) after the module runs; use for CI governance.
 
 | tasks.storeRelativePath | string | ".workspace-kit/tasks/state.json" | project | task-engine | public | false | false |
 

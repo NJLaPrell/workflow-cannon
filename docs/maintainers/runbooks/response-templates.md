@@ -33,7 +33,14 @@ Example:
 
 ## Strict mode
 
-Use `enforcementMode: strict` only when you want unknown template ids (explicit or override) to fail the command with `response-template-invalid`.
+Use `enforcementMode: strict` when governance or CI should fail closed on template mistakes:
+
+| Condition | `advisory` | `strict` |
+| --- | --- | --- |
+| Resolved template id unknown (explicit, `commandOverrides`, or `defaultTemplateId`) | Warning in `responseTemplate.warnings`; command `ok` unchanged | Command ends with `ok: false`, `code: response-template-invalid` |
+| `responseTemplateId` disagrees with plain-English directive (`instruction` / `responseTemplateDirective` / …) | Warning; explicit id wins | Command ends with `ok: false`, `code: response-template-conflict` |
+
+Default remains **`advisory`** for local iteration; use **strict** on automation that should block merges when agents mix template id and prose.
 
 ## Versioning
 

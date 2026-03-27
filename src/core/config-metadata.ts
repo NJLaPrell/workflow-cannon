@@ -191,7 +191,7 @@ const REGISTRY: Record<string, ConfigKeyMetadata> = {
     key: "responseTemplates.enforcementMode",
     type: "string",
     description:
-      "Whether unknown/mismatched response templates fail commands (`strict`) or only emit warnings (`advisory`).",
+      "`advisory`: unknown template ids, invalid default/override ids, and explicit-vs-directive template conflicts emit warnings only. `strict`: same conditions fail the command (`response-template-invalid` or `response-template-conflict`) after the module runs; use for CI governance.",
     default: "advisory",
     allowedValues: ["advisory", "strict"],
     domainScope: "project",

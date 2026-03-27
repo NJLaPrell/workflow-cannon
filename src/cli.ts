@@ -29,6 +29,8 @@ export type WorkspaceKitCliOptions = {
   cwd?: string;
   writeLine?: (message: string) => void;
   writeError?: (message: string) => void;
+  /** Test hook: simulated stdin lines for interactive sensitive-command approval */
+  readStdinLine?: () => Promise<string | null>;
 };
 
 type DoctorIssue = {
@@ -456,6 +458,7 @@ export async function runCli(
   const cwd = options.cwd ?? process.cwd();
   const writeLine = options.writeLine ?? console.log;
   const writeError = options.writeError ?? console.error;
+  const readStdinLine = options.readStdinLine;
   const [command] = args;
 
   if (!command) {
@@ -751,7 +754,7 @@ export async function runCli(
     return handleRunCommand(
       cwd,
       args,
-      { writeLine, writeError },
+      { writeLine, writeError, readStdinLine },
       {
         success: EXIT_SUCCESS,
         validationFailure: EXIT_VALIDATION_FAILURE,
