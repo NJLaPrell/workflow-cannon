@@ -42,6 +42,7 @@
         "list-wishlist",
         "get-ready-queue",
         "get-next-actions",
+        "explain-task-engine-model",
         "migrate-task-persistence",
         "dashboard-summary"
       ],
@@ -68,6 +69,7 @@
         "list-wishlist": { "$ref": "#/$defs/contractListWishlist" },
         "get-ready-queue": { "$ref": "#/$defs/contractReadyQueue" },
         "get-next-actions": { "$ref": "#/$defs/contractNextActions" },
+        "explain-task-engine-model": { "$ref": "#/$defs/contractExplainTaskEngineModel" },
         "migrate-task-persistence": { "$ref": "#/$defs/contractMigrateTaskPersistence" },
         "dashboard-summary": { "$ref": "#/$defs/contractDashboardSummary" }
       }
@@ -482,6 +484,24 @@
             "responseData": {
               "type": "object",
               "required": ["readyQueue", "suggestedNext", "stateSummary", "blockingAnalysis", "scope"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractExplainTaskEngineModel": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": false
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["modelVersion", "variants", "planningBoundary", "executionTaskLifecycle"],
               "additionalProperties": true
             }
           }

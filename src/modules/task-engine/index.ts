@@ -387,6 +387,11 @@ export const taskEngineModule: WorkflowModule = {
           name: "dashboard-summary",
           file: "dashboard-summary.md",
           description: "Stable JSON cockpit summary for UI clients (tasks + maintainer status snapshot)."
+        },
+        {
+          name: "explain-task-engine-model",
+          file: "explain-task-engine-model.md",
+          description: "Explain model variants, planning boundaries, lifecycle transitions, and required fields."
         }
       ]
     }
@@ -515,7 +520,22 @@ export const taskEngineModule: WorkflowModule = {
         }
         task.metadata = { ...(task.metadata ?? {}), planRef };
       }
-      const payloadDigest = digestPayload(task);
+      const createPayloadForDigest = {
+        id: task.id,
+        title: task.title,
+        type: task.type,
+        status: task.status,
+        priority: task.priority,
+        dependsOn: task.dependsOn ?? [],
+        unblocks: task.unblocks ?? [],
+        phase: task.phase ?? null,
+        metadata: task.metadata ?? null,
+        ownership: task.ownership ?? null,
+        approach: task.approach ?? null,
+        technicalScope: task.technicalScope ?? [],
+        acceptanceCriteria: task.acceptanceCriteria ?? []
+      };
+      const payloadDigest = digestPayload(createPayloadForDigest);
       if (clientMutationId) {
         const prior = findIdempotentMutation(store, evidenceType, id, clientMutationId);
         if (prior) {
@@ -587,7 +607,7 @@ export const taskEngineModule: WorkflowModule = {
         };
       }
       const updatedTask = { ...task, ...updates, updatedAt: nowIso() };
-      const payloadDigest = digestPayload(updatedTask);
+      const payloadDigest = digestPayload({ taskId, updates });
       if (clientMutationId) {
         const prior = findIdempotentMutation(store, "update-task", taskId, clientMutationId);
         if (prior) {
@@ -924,6 +944,70 @@ export const taskEngineModule: WorkflowModule = {
           ? `Suggested next: ${suggestion.suggestedNext.id} — ${suggestion.suggestedNext.title}`
           : "No tasks in ready queue",
         data: { ...suggestion, scope: "tasks-only" } as unknown as Record<string, unknown>
+      };
+    }
+
+    if (command.name === "explain-task-engine-model") {
+      const allStatuses: TaskStatus[] = ["proposed", "ready", "in_progress", "blocked", "completed", "cancelled"];
+      const lifecycle = allStatuses.map((status) => ({
+        status,
+        allowedActions: getAllowedTransitionsFrom(status).map((entry) => ({
+          action: entry.action,
+          targetStatus: entry.to
+        }))
+      }));
+      return {
+        ok: true,
+        code: "task-engine-model-explained",
+        message: "Task Engine model variants, planning boundary, and lifecycle transitions.",
+        data: {
+          modelVersion: 1 as const,
+          variants: [
+            {
+              variant: "execution-task",
+              idPattern: "^T[0-9]+$",
+              appearsInExecutionPlanning: true,
+              requiredFields: ["id", "title", "type", "status", "createdAt", "updatedAt"],
+              optionalFields: [
+                "priority",
+                "dependsOn",
+                "unblocks",
+                "phase",
+                "metadata",
+                "ownership",
+                "approach",
+                "technicalScope",
+                "acceptanceCriteria"
+              ]
+            },
+            {
+              variant: "wishlist-item",
+              idPattern: "^W[0-9]+$",
+              appearsInExecutionPlanning: false,
+              requiredFields: [
+                "id",
+                "title",
+                "problemStatement",
+                "expectedOutcome",
+                "impact",
+                "constraints",
+                "successSignals",
+                "requestor",
+                "evidenceRef",
+                "status",
+                "createdAt",
+                "updatedAt"
+              ],
+              optionalFields: ["metadata", "convertedTaskIds", "closedAt", "closeReason"],
+              notes: "Wishlist is ideation-only and excluded from task ready queues."
+            }
+          ],
+          planningBoundary: {
+            executionQueues: "tasks-only",
+            wishlistScope: "separate-namespace"
+          },
+          executionTaskLifecycle: lifecycle
+        } as unknown as Record<string, unknown>
       };
     }
 
