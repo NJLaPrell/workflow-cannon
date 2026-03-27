@@ -400,6 +400,23 @@
               "properties": {
                 "status": { "type": "string" },
                 "phase": { "type": "string" },
+                "type": { "type": "string" },
+                "category": { "type": "string" },
+                "tags": {
+                  "oneOf": [
+                    { "type": "string" },
+                    { "type": "array", "items": { "type": "string" } }
+                  ]
+                },
+                "metadataFilters": {
+                  "type": "object",
+                  "patternProperties": {
+                    "^[a-zA-Z0-9_-]+(?:\\.[a-zA-Z0-9_-]+)*$": {
+                      "type": ["string", "number", "boolean", "null"]
+                    }
+                  },
+                  "additionalProperties": false
+                },
                 "includeArchived": { "type": "boolean" }
               }
             },

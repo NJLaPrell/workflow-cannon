@@ -68,6 +68,7 @@ export {
 } from "./planning-config.js";
 
 const TASK_ID_RE = /^T\d+$/;
+const SAFE_METADATA_PATH_RE = /^[a-zA-Z0-9_-]+(?:\.[a-zA-Z0-9_-]+)*$/;
 const MUTABLE_TASK_FIELDS = new Set([
   "title",
   "type",
@@ -81,6 +82,31 @@ const MUTABLE_TASK_FIELDS = new Set([
   "technicalScope",
   "acceptanceCriteria"
 ]);
+
+function isRecordLike(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readMetadataPath(
+  metadata: Record<string, unknown> | undefined,
+  path: string
+): unknown {
+  if (!metadata || !SAFE_METADATA_PATH_RE.test(path)) {
+    return undefined;
+  }
+  const parts = path.split(".");
+  let current: unknown = metadata;
+  for (const part of parts) {
+    if (!isRecordLike(current)) {
+      return undefined;
+    }
+    if (!Object.prototype.hasOwnProperty.call(current, part)) {
+      return undefined;
+    }
+    current = current[part];
+  }
+  return current;
+}
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -721,6 +747,19 @@ export const taskEngineModule: WorkflowModule = {
     if (command.name === "list-tasks") {
       const statusFilter = typeof args.status === "string" ? args.status as TaskStatus : undefined;
       const phaseFilter = typeof args.phase === "string" ? args.phase : undefined;
+      const typeFilter = typeof args.type === "string" && args.type.trim().length > 0 ? args.type.trim() : undefined;
+      const categoryFilter =
+        typeof args.category === "string" && args.category.trim().length > 0 ? args.category.trim() : undefined;
+      const tagsFilterRaw = args.tags;
+      const tagsFilter =
+        typeof tagsFilterRaw === "string"
+          ? [tagsFilterRaw]
+          : Array.isArray(tagsFilterRaw)
+            ? tagsFilterRaw.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)
+            : [];
+      const metadataFilters = isRecordLike(args.metadataFilters)
+        ? Object.entries(args.metadataFilters).filter(([path]) => SAFE_METADATA_PATH_RE.test(path))
+        : [];
       const includeArchived = args.includeArchived === true;
 
       let tasks = includeArchived ? store.getAllTasks() : store.getActiveTasks();
@@ -729,6 +768,27 @@ export const taskEngineModule: WorkflowModule = {
       }
       if (phaseFilter) {
         tasks = tasks.filter((t) => t.phase === phaseFilter);
+      }
+      if (typeFilter) {
+        tasks = tasks.filter((t) => t.type === typeFilter);
+      }
+      if (categoryFilter) {
+        tasks = tasks.filter((t) => readMetadataPath(t.metadata, "category") === categoryFilter);
+      }
+      if (tagsFilter.length > 0) {
+        tasks = tasks.filter((t) => {
+          const tags = readMetadataPath(t.metadata, "tags");
+          if (!Array.isArray(tags)) {
+            return false;
+          }
+          const normalized = tags.filter((entry): entry is string => typeof entry === "string");
+          return tagsFilter.every((tag) => normalized.includes(tag));
+        });
+      }
+      if (metadataFilters.length > 0) {
+        tasks = tasks.filter((t) =>
+          metadataFilters.every(([path, expected]) => readMetadataPath(t.metadata, path) === expected)
+        );
       }
 
       return {

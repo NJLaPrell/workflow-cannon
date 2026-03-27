@@ -606,6 +606,78 @@ test("taskEngineModule onCommand list-tasks returns empty on fresh store", async
   assert.equal(result.data.scope, "tasks-only");
 });
 
+test("taskEngineModule list-tasks supports type/category/tags/metadata filters", async () => {
+  const workspace = await tmpDir();
+  const ctx = { runtimeVersion: "0.1", workspacePath: workspace };
+  const store = TaskStore.forJsonFile(workspace);
+  store.addTask(
+    makeTask({
+      id: "T410",
+      type: "improvement",
+      phase: "Phase 16 - Maintenance and stability",
+      metadata: {
+        category: "reliability",
+        tags: ["ui", "sqlite"],
+        owner: { team: "platform" }
+      }
+    })
+  );
+  store.addTask(
+    makeTask({
+      id: "T411",
+      type: "workspace-kit",
+      phase: "Phase 16 - Maintenance and stability",
+      metadata: {
+        category: "ops",
+        tags: ["docs"],
+        owner: { team: "maintainers" }
+      }
+    })
+  );
+  await store.save();
+
+  const result = await taskEngineModule.onCommand(
+    {
+      name: "list-tasks",
+      args: {
+        type: "improvement",
+        category: "reliability",
+        tags: ["ui"],
+        metadataFilters: { "owner.team": "platform" }
+      }
+    },
+    ctx
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.data.count, 1);
+  assert.equal(result.data.tasks[0].id, "T410");
+});
+
+test("taskEngineModule list-tasks filter combinations return empty results when unmatched", async () => {
+  const workspace = await tmpDir();
+  const ctx = { runtimeVersion: "0.1", workspacePath: workspace };
+  const store = TaskStore.forJsonFile(workspace);
+  store.addTask(
+    makeTask({
+      id: "T412",
+      type: "improvement",
+      metadata: { category: "reliability", tags: ["ui"], risk: { level: "low" } }
+    })
+  );
+  await store.save();
+
+  const result = await taskEngineModule.onCommand(
+    {
+      name: "list-tasks",
+      args: { type: "improvement", category: "ops", tags: ["sqlite"], metadataFilters: { "risk.level": "high" } }
+    },
+    ctx
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.data.count, 0);
+  assert.deepEqual(result.data.tasks, []);
+});
+
 test("taskEngineModule onCommand get-task returns task-not-found for missing task", async () => {
   const workspace = await tmpDir();
   const ctx = { runtimeVersion: "0.1", workspacePath: workspace };
