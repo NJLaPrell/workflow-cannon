@@ -107,6 +107,7 @@ workspace-kit run list-tasks '{"type":"improvement","phase":"Phase 16 - Maintena
 workspace-kit run list-tasks '{"category":"reliability","tags":["ui"],"metadataFilters":{"owner.team":"platform"}}'
 workspace-kit run create-task '{"id":"T900","title":"retry-safe mutation","status":"ready","clientMutationId":"agent-run-20260327-1"}'
 workspace-kit run update-task '{"taskId":"T900","updates":{"title":"retry-safe mutation v2"},"clientMutationId":"agent-run-20260327-2"}'
+workspace-kit run explain-task-engine-model '{}'
 workspace-kit run list-wishlist '{}'
 workspace-kit run get-wishlist '{"wishlistId":"W1"}'
 workspace-kit run resolve-config '{}'

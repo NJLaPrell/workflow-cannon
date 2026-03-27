@@ -768,6 +768,23 @@ test("taskEngineModule onCommand get-next-actions works on populated store", asy
   assert.match(result.message, /T002/);
 });
 
+test("taskEngineModule explain-task-engine-model returns variants and lifecycle", async () => {
+  const workspace = await tmpDir();
+  const ctx = { runtimeVersion: "0.1", workspacePath: workspace };
+  const result = await taskEngineModule.onCommand(
+    { name: "explain-task-engine-model", args: {} },
+    ctx
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "task-engine-model-explained");
+  assert.equal(result.data.modelVersion, 1);
+  assert.ok(Array.isArray(result.data.variants));
+  assert.ok(result.data.variants.some((v) => v.variant === "execution-task"));
+  assert.ok(result.data.variants.some((v) => v.variant === "wishlist-item"));
+  assert.ok(Array.isArray(result.data.executionTaskLifecycle));
+  assert.ok(result.data.executionTaskLifecycle.some((x) => x.status === "ready"));
+});
+
 test("taskEngineModule onCommand get-ready-queue returns priority-sorted tasks", async () => {
   const workspace = await tmpDir();
   const store = TaskStore.forJsonFile(workspace);

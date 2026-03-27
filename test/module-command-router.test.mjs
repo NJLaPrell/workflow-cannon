@@ -30,6 +30,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "dashboard-summary",
     "document-project",
     "explain-config",
+    "explain-task-engine-model",
     "generate-document",
     "get-blocked-summary",
     "get-dependency-graph",
