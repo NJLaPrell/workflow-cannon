@@ -1,13 +1,14 @@
 schema_version: 1
-current_kit_phase: "16"
+current_kit_phase: "17"
 last_updated: "2026-03-27"
-active_focus: "Phase 16: engine tasks `T335`–`T341`; extension parity `T342`–`T344` (plan: docs/maintainers/plans/extension-dashboard-parity-plan.md)."
+active_focus: "Phase 17 released (`v0.18.0`): planning module guided workflows (`T345`–`T350`) are complete; monitor operator adoption and artifact quality."
 blockers: []
 next_agent_actions:
-  - "Post-release monitor for v0.17.0: extension refresh behavior (sqlite/json), strict validation toggle adoption, and task mutation idempotency usage."
-  - "Record publish workflow URL for v0.17.0 in roadmap execution evidence snapshot."
-  - "Draft Phase 17 scope after first post-release feedback window."
+  - "Monitor planning module usage: unresolved critical-question rates, finalize completion friction, and wishlist artifact quality."
+  - "Collect first post-release operator feedback on question depth defaults (`planning.defaultQuestionDepth`) and hard-block behavior."
+  - "Draft Phase 18 follow-ups from observed planning workflow friction."
 last_session_summary:
+  - "2026-03-27: Phase 17 tasks `T345`–`T350` completed and released as v0.18.0."
   - "2026-03-27: Phase 16 tasks `T335`–`T344` completed and released as v0.17.0."
   - "2026-03-27: Extension dashboard plan added; tasks T342–T344 created (SQLite watcher, richer dashboard, list-tasks filters after T337)."
   - "2026-03-27: Phase 16 opened; tasks T335–T341 created (maintenance/stability: schemas, validation, queries, idempotency, explainer, strict mode, TERMS)."
@@ -20,7 +21,7 @@ pending_decisions: []
 metrics:
   updated_at: "2026-03-27"
   source: "maintainer"
-  notes: "v0.17.0 released for Phase 16 (workflow 23667632451; tasks T335–T344). Prior: v0.16.1 patch (23659070618); v0.16.0 Phase 15 (23658822630)."
+  notes: "v0.18.0 released for Phase 17 (workflow 23668725220; tasks T345–T350). Prior: v0.17.0 (23667632451), v0.16.1 patch (23659070618)."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null

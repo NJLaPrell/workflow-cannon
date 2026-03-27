@@ -29,6 +29,7 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - **Phase 14 (Wishlist intake and conversion)** is **COMPLETE and released** as **`v0.15.0`**: **`T319`–`T323`** — strict Wishlist namespace (`W###`), required intake fields, `create-wishlist` / `list-wishlist` / `get-wishlist` / `update-wishlist` / `convert-wishlist`, execution-plan boundary markers on task-only queries, and maintainer runbook plus tests.
 - **Phase 15 (Task and wishlist SQLite persistence)** is **COMPLETE and released** as **`v0.16.0`**: **`T324`–`T334`** — ADR, pluggable `TaskStore`/`WishlistStore`, optional `better-sqlite3` dual-document database, `migrate-task-persistence`, atomic `convert-wishlist` on SQLite, config keys, tests/parity, and release packaging (`pnpm.onlyBuiltDependencies`).
 - **Phase 16 (Maintenance and stability)** is **COMPLETE and released** as **`v0.17.0`**: **`T335`–`T344`** — versioned Task Engine API schemas, stricter typed create paths, query filters and CLI map docs, idempotent mutations, model explainer command, optional runtime strict validation, TERMS glossary alignment, plus **extension** parity (SQLite file watching, richer dashboard, `list-tasks` filters after `T337`). Plan: `docs/maintainers/plans/extension-dashboard-parity-plan.md`.
+- **Phase 17 (Planning module guided workflows)** is **COMPLETE and released** as **`v0.18.0`**: **`T345`–`T350`** — planning module command surface, adaptive/hard-gated interview flow, rule-driven defaults, wishlist artifact composition/persistence, CLI guidance polish, and maintainer docs/test hardening.
 - Historical extraction and first-publish milestones remain recorded below as provenance.
 
 ## Phase plan and release cadence
@@ -208,6 +209,15 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
   - Maintainer-facing docs (`AGENT-CLI-MAP`, `TERMS`, instructions) reflect new commands, filters, and validation behavior without contradicting the workflow contract.
   - Extension: SQLite-backed workspaces get auto-refresh when the planning DB changes; dashboard shows wishlist/blocked/ready-queue summary fields from `dashboard-summary`.
 
+### Phase 17 - Planning module guided workflows -> GitHub release `v0.18.0` (COMPLETE)
+
+- Primary scope: **`T345`–`T350`**.
+- Outcome: a CLI-first planning workflow module that guides operators through context-adaptive interviews, enforces critical-unknown completion safety by default, and emits wishlist-only artifacts for downstream decomposition.
+- Exit signals:
+  - **`T345`–`T350`** are **`completed`** in task-engine state.
+  - `pnpm run build`, `check`, `test`, `parity`, `check-release-metadata`, `phase5-gates`, and `check-planning-consistency` pass on the release tag.
+  - Maintainer docs (`AGENT-CLI-MAP`, planning runbook, module instructions) align with command behavior and config defaults.
+
 ## Recorded decisions
 
 | Decision | Choice |
@@ -238,4 +248,5 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 - Phase 15 / `v0.16.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23658822630`
 - Patch **`v0.16.1`** (doctor SQLite validation + persisted `tasks.*` SQLite keys): publish workflow `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23659070618`
 - Phase 16 / `v0.17.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23667632451`
+- Phase 17 / `v0.18.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23668725220`
 - npm package: `https://www.npmjs.com/package/@workflow-cannon/workspace-kit`

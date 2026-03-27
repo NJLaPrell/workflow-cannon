@@ -6,6 +6,29 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-03-27
+
+Phase 17 — planning module guided workflows (`T345`–`T350`): CLI-native planning interviews, configurable rule-driven prompts, hard critical-unknown gating, and wishlist artifact output.
+
+### Added
+
+- **Planning workflow command surface** — `list-planning-types`, `build-plan`, and `explain-planning-rules` under the `planning` module with typed workflow descriptors for task breakdown, sprint/phase, ordering, new feature, and change planning.
+- **Adaptive planning question engine** — critical baseline questions + adaptive follow-up prompts with configurable depth (`minimal`/`guided`/`adaptive`) and rule-pack overrides.
+- **Planning artifact composer** — versioned wishlist-style artifact payload (`schemaVersion: 1`) capturing goals, approach, major technical decisions, candidate features/changes, assumptions, open questions, and risks/constraints.
+- **Wishlist persistence on finalize** — `build-plan` can create a new `W###` artifact record through the shared planning stores (JSON or SQLite backend aware).
+- **Planning operator runbook** — `docs/maintainers/runbooks/planning-workflow.md` with command flow, response semantics, and config knobs.
+
+### Changed
+
+- **Finalize gating semantics** — `build-plan` enforces hard critical-unknown blocking by default (`planning.hardBlockCriticalUnknowns=true`) with an explicit warning-mode escape hatch.
+- **Planning CLI UX payloads** — `build-plan` responses now include `cliGuidance` (critical completion progress + suggested next command) to streamline operator loops.
+- **Maintainer command map** — `docs/maintainers/AGENT-CLI-MAP.md` includes copy/paste planning module commands and links to the planning runbook.
+
+### Tests
+
+- Added/updated planning tests for workflow typing, adaptive branching, hard-gate behavior, rules explainability, CLI guidance output, and finalize-to-wishlist persistence.
+- Hardened CLI command discovery assertions to require planning commands in `workspace-kit run` output.
+
 ## [0.17.0] - 2026-03-27
 
 Phase 16 — maintenance and stability across Task Engine contracts/validation and Cursor extension parity (`T335`–`T344`).
