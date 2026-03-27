@@ -4813,9 +4813,9 @@
       "id": "T338",
       "title": "Idempotent create/update via clientMutationId",
       "type": "improvement",
-      "status": "ready",
+      "status": "completed",
       "createdAt": "2026-03-27T17:35:01.292Z",
-      "updatedAt": "2026-03-27T17:35:01.292Z",
+      "updatedAt": "2026-03-27T20:55:20.087Z",
       "priority": "P2",
       "dependsOn": [],
       "phase": "Phase 16 - Maintenance and stability",
@@ -7687,9 +7687,49 @@
       "dependentsUnblocked": [],
       "timestamp": "2026-03-27T20:52:47.939Z",
       "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T338-2026-03-27T20:55:20.013Z-cc64d3e2",
+      "taskId": "T338",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T20:55:20.013Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T338-2026-03-27T20:55:20.087Z-5172646b",
+      "taskId": "T338",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T20:55:20.087Z",
+      "actor": "NJLaPrell@gmail.com"
     }
   ],
-  "lastUpdated": "2026-03-27T20:52:47.939Z",
+  "lastUpdated": "2026-03-27T20:55:20.088Z",
   "mutationLog": [
     {
       "mutationId": "create-task-T319-2026-03-27T15:16:30.032Z-20b24ad2",
