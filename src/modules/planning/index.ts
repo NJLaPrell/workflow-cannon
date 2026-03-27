@@ -4,6 +4,7 @@ import {
   PLANNING_WORKFLOW_TYPES,
   type PlanningWorkflowType
 } from "./types.js";
+import { nextPlanningQuestions } from "./question-engine.js";
 
 export const planningModule: WorkflowModule = {
   registration: {
@@ -63,15 +64,52 @@ export const planningModule: WorkflowModule = {
         };
       }
       const descriptor = PLANNING_WORKFLOW_DESCRIPTORS.find((x) => x.type === planningType);
+      const answers =
+        typeof args.answers === "object" && args.answers !== null && !Array.isArray(args.answers)
+          ? (args.answers as Record<string, unknown>)
+          : {};
+      const finalize = args.finalize === true;
+      const { missingCritical, adaptiveFollowups } = nextPlanningQuestions(
+        planningType as PlanningWorkflowType,
+        answers
+      );
+      if (finalize && missingCritical.length > 0) {
+        return {
+          ok: false,
+          code: "planning-critical-unknowns",
+          message: `Cannot finalize ${planningType}: unresolved critical questions (${missingCritical.map((q) => q.id).join(", ")})`,
+          data: {
+            planningType,
+            unresolvedCritical: missingCritical,
+            nextQuestions: [...missingCritical, ...adaptiveFollowups]
+          }
+        };
+      }
+      if (missingCritical.length > 0) {
+        return {
+          ok: true,
+          code: "planning-questions",
+          message: `${missingCritical.length} critical planning questions require answers before finalize`,
+          data: {
+            planningType,
+            status: "needs-input",
+            unresolvedCritical: missingCritical,
+            nextQuestions: [...missingCritical, ...adaptiveFollowups]
+          }
+        };
+      }
       return {
         ok: true,
-        code: "planning-scaffold",
-        message: `Planning scaffold initialized for ${planningType}`,
+        code: "planning-ready",
+        message: `Planning interview complete for ${planningType}; ready for artifact generation`,
         data: {
           planningType,
           descriptor,
-          scaffoldVersion: 1,
-          note: "Phase 17 scaffold: adaptive interview/rule engine and wishlist artifact integration follow in subsequent tasks."
+          scaffoldVersion: 2,
+          status: "ready-for-artifact",
+          unresolvedCritical: [],
+          adaptiveFollowups,
+          capturedAnswers: answers
         }
       };
     }

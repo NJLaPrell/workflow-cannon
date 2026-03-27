@@ -4951,9 +4951,9 @@
       "id": "T346",
       "title": "Implement adaptive question engine with hard critical-unknown gating",
       "type": "improvement",
-      "status": "proposed",
+      "status": "completed",
       "createdAt": "2026-03-27T22:42:46.785Z",
-      "updatedAt": "2026-03-27T22:42:46.785Z",
+      "updatedAt": "2026-03-27T22:56:41.968Z",
       "priority": "P1",
       "dependsOn": [
         "T345"
@@ -8174,9 +8174,69 @@
       "dependentsUnblocked": [],
       "timestamp": "2026-03-27T22:54:52.065Z",
       "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T346-2026-03-27T22:55:23.555Z-c48a5b05",
+      "taskId": "T346",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T22:55:23.555Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T346-2026-03-27T22:55:23.621Z-ebfea3f2",
+      "taskId": "T346",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T22:55:23.621Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T346-2026-03-27T22:56:41.968Z-8c4fed62",
+      "taskId": "T346",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T22:56:41.968Z",
+      "actor": "NJLaPrell@gmail.com"
     }
   ],
-  "lastUpdated": "2026-03-27T22:54:52.066Z",
+  "lastUpdated": "2026-03-27T22:56:41.969Z",
   "mutationLog": [
     {
       "mutationId": "create-task-T319-2026-03-27T15:16:30.032Z-20b24ad2",
