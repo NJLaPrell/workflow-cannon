@@ -9,6 +9,8 @@ import { getNextActions } from "./suggestions.js";
 import { readWorkspaceStatusSnapshot } from "./dashboard-status.js";
 import { openPlanningStores } from "./planning-open.js";
 import { runMigrateTaskPersistence } from "./migrate-task-persistence-runtime.js";
+import { planningStrictValidationEnabled } from "./planning-config.js";
+import { validateTaskSetForStrictMode } from "./strict-task-validation.js";
 import { validateKnownTaskTypeRequirements } from "./task-type-validation.js";
 import type { WishlistConversionDecomposition, WishlistItem } from "./wishlist-types.js";
 import {
@@ -156,6 +158,16 @@ function findIdempotentMutation(
     };
   }
   return null;
+}
+
+function strictValidationError(
+  store: TaskStore,
+  effectiveConfig: Record<string, unknown> | undefined
+): string | null {
+  if (!planningStrictValidationEnabled({ effectiveConfig })) {
+    return null;
+  }
+  return validateTaskSetForStrictMode(store.getAllTasks());
 }
 
 function nowIso(): string {
@@ -572,6 +584,10 @@ export const taskEngineModule: WorkflowModule = {
         clientMutationId,
         payloadDigest
       }));
+      const strictIssue = strictValidationError(store, ctx.effectiveConfig as Record<string, unknown> | undefined);
+      if (strictIssue) {
+        return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
+      }
       await store.save();
       return {
         ok: true,
@@ -642,6 +658,10 @@ export const taskEngineModule: WorkflowModule = {
           payloadDigest
         })
       );
+      const strictIssue = strictValidationError(store, ctx.effectiveConfig as Record<string, unknown> | undefined);
+      if (strictIssue) {
+        return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
+      }
       await store.save();
       return { ok: true, code: "task-updated", message: `Updated task '${taskId}'`, data: { task: updatedTask } as Record<string, unknown> };
     }
@@ -665,6 +685,10 @@ export const taskEngineModule: WorkflowModule = {
       const updatedTask = { ...task, archived: true, archivedAt, updatedAt: archivedAt };
       store.updateTask(updatedTask);
       store.addMutationEvidence(mutationEvidence("archive-task", taskId, actor));
+      const strictIssue = strictValidationError(store, ctx.effectiveConfig as Record<string, unknown> | undefined);
+      if (strictIssue) {
+        return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
+      }
       await store.save();
       return { ok: true, code: "task-archived", message: `Archived task '${taskId}'`, data: { task: updatedTask } as Record<string, unknown> };
     }
@@ -748,6 +772,10 @@ export const taskEngineModule: WorkflowModule = {
       store.updateTask(updatedTask);
       const mutationType = command.name === "add-dependency" ? "add-dependency" : "remove-dependency";
       store.addMutationEvidence(mutationEvidence(mutationType, taskId, actor, { dependencyTaskId }));
+      const strictIssue = strictValidationError(store, ctx.effectiveConfig as Record<string, unknown> | undefined);
+      if (strictIssue) {
+        return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
+      }
       await store.save();
       return {
         ok: true,
@@ -1233,6 +1261,12 @@ export const taskEngineModule: WorkflowModule = {
         }
         wishlistStore.updateItem(updatedWishlist);
       };
+      if (planningStrictValidationEnabled({ effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined })) {
+        const strictIssue = validateTaskSetForStrictMode([...store.getAllTasks(), ...built]);
+        if (strictIssue) {
+          return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
+        }
+      }
       if (planning.kind === "sqlite") {
         planning.sqliteDual.withTransaction(applyConvertMutations);
       } else {

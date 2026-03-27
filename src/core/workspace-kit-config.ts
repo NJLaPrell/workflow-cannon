@@ -31,7 +31,8 @@ export function getProjectConfigPath(workspacePath: string): string {
 export const KIT_CONFIG_DEFAULTS: Record<string, unknown> = {
   core: {},
   tasks: {
-    storeRelativePath: ".workspace-kit/tasks/state.json"
+    storeRelativePath: ".workspace-kit/tasks/state.json",
+    strictValidation: false
   },
   documentation: {},
   responseTemplates: {

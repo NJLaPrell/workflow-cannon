@@ -80,6 +80,20 @@ const REGISTRY: Record<string, ConfigKeyMetadata> = {
     exposure: "public",
     writableLayers: ["project", "user"]
   },
+  "tasks.strictValidation": {
+    key: "tasks.strictValidation",
+    type: "boolean",
+    description:
+      "When true, task mutations validate the full active task set before persistence and fail on invalid task records.",
+    default: false,
+    domainScope: "project",
+    owningModule: "task-engine",
+    sensitive: false,
+    requiresRestart: false,
+    requiresApproval: false,
+    exposure: "public",
+    writableLayers: ["project", "user"]
+  },
   "policy.extraSensitiveModuleCommands": {
     key: "policy.extraSensitiveModuleCommands",
     type: "array",
