@@ -41,6 +41,8 @@ test("planningModule build-plan validates planningType and returns scaffold", as
   assert.equal(valid.data.planningType, "task-breakdown");
   assert.ok(Array.isArray(valid.data.unresolvedCritical));
   assert.ok(valid.data.unresolvedCritical.length > 0);
+  assert.equal(typeof valid.data.cliGuidance?.completionPct, "number");
+  assert.equal(typeof valid.data.cliGuidance?.suggestedNextCommand, "string");
 });
 
 test("planningModule build-plan hard-blocks finalize when critical unknowns remain", async () => {
@@ -74,6 +76,7 @@ test("planningModule build-plan returns ready when critical answers are present"
   );
   assert.equal(result.ok, true);
   assert.equal(result.code, "planning-ready");
+  assert.equal(result.data.cliGuidance.completionPct, 100);
 });
 
 test("planningModule build-plan can allow warnings when hard block disabled", async () => {

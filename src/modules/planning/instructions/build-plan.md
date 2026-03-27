@@ -24,3 +24,5 @@ workspace-kit run build-plan '{"planningType":"new-feature","answers":{"featureG
 - `planning-ready`: critical unknowns resolved; plan is ready for wishlist artifact generation.
 - `planning-artifact-created`: final artifact persisted to wishlist namespace (`W###`) and returned in response data.
 - `planning-critical-unknowns`: returned when `finalize:true` but critical answers are missing.
+
+All success/error payloads include `data.cliGuidance` with critical-question completion progress and a suggested next `workspace-kit run build-plan` command.
