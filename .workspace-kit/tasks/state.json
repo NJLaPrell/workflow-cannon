@@ -4865,9 +4865,9 @@
       "id": "T341",
       "title": "TERMS glossary: task engine vocabulary",
       "type": "improvement",
-      "status": "ready",
+      "status": "completed",
       "createdAt": "2026-03-27T17:35:04.010Z",
-      "updatedAt": "2026-03-27T17:35:04.010Z",
+      "updatedAt": "2026-03-27T21:02:12.786Z",
       "priority": "P2",
       "dependsOn": [],
       "phase": "Phase 16 - Maintenance and stability",
@@ -7807,9 +7807,49 @@
       "dependentsUnblocked": [],
       "timestamp": "2026-03-27T21:01:21.634Z",
       "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T341-2026-03-27T21:02:12.714Z-ec3b9219",
+      "taskId": "T341",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T21:02:12.714Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T341-2026-03-27T21:02:12.786Z-af2ced33",
+      "taskId": "T341",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-27T21:02:12.786Z",
+      "actor": "NJLaPrell@gmail.com"
     }
   ],
-  "lastUpdated": "2026-03-27T21:01:21.634Z",
+  "lastUpdated": "2026-03-27T21:02:12.786Z",
   "mutationLog": [
     {
       "mutationId": "create-task-T319-2026-03-27T15:16:30.032Z-20b24ad2",
