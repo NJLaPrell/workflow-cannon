@@ -92,6 +92,26 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
   - **Defined in**: future capability-pack docs and roadmap/task references.
   - **Enforced in**: activation/sync workflows and rule/template loading behavior.
 
+- **Wishlist**
+  - **Definition**: Ideation record in the `W###` namespace used to capture high-level opportunities before decomposition into execution tasks; excluded from execution planning queues by design.
+  - **Defined in**: task-engine wishlist contracts (`src/modules/task-engine/wishlist-types.ts`) and instructions under `src/modules/task-engine/instructions/`.
+  - **Enforced in**: Task Engine `create-wishlist` / `update-wishlist` / `convert-wishlist` commands and planning-boundary responses (`scope: tasks-only`).
+
+- **Execution Task**
+  - **Definition**: Canonical `T###` task entity that participates in lifecycle transitions (`proposed` → `ready` → `in_progress` → `completed` / `blocked` / `cancelled`) and execution planning queues.
+  - **Defined in**: `src/modules/task-engine/types.ts` (`TaskEntity`, `TaskStatus`) and task-engine instruction contracts.
+  - **Enforced in**: Task Engine runtime (`run-transition`, queue/summary commands, dependency guards).
+
+- **Improvement Task**
+  - **Definition**: Execution task variant (`type: "improvement"`) used for enhancement/backlog work and governed by known-type validation requirements.
+  - **Defined in**: Task Engine task type and validation contracts (`src/modules/task-engine/types.ts`, `src/modules/task-engine/task-type-validation.ts`).
+  - **Enforced in**: `create-task` / `update-task` validation (`invalid-task-type-requirements`) and improvement workflow docs/tasks.
+
+- **Unified Work Record**
+  - **Definition**: Combined conceptual model of execution tasks (`T###`) and wishlist items (`W###`) as one planning surface with variant-specific fields and planning inclusion rules.
+  - **Defined in**: `explain-task-engine-model` command output and roadmap/phase guidance where variant behavior is discussed.
+  - **Enforced in**: command surfaces that explicitly separate execution planning (`tasks-only`) from wishlist ideation.
+
 ## Related docs
 
 - `README.md` — project intent and direction
