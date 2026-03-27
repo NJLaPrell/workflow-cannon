@@ -4925,6 +4925,153 @@
         "Copy-paste examples aligned with `docs/maintainers/AGENT-CLI-MAP.md` once T337 lands.",
         "Covered by unit tests or documented manual verification."
       ]
+    },
+    {
+      "id": "T345",
+      "title": "Scaffold planning module command surface and workflow types",
+      "type": "improvement",
+      "status": "proposed",
+      "createdAt": "2026-03-27T22:42:46.785Z",
+      "updatedAt": "2026-03-27T22:42:46.785Z",
+      "priority": "P1",
+      "phase": "Phase 17 - Planning module guided workflows",
+      "approach": "Add a CLI-native planning module entry point with explicit planning type workflows and shared runtime contracts that mirror existing module architecture patterns.",
+      "technicalScope": [
+        "Create planning module registration and instruction contracts",
+        "Define planning workflow types (task breakdown, sprint/phase, ordering, feature, change)",
+        "Add base runtime interfaces for rule-driven question orchestration"
+      ],
+      "acceptanceCriteria": [
+        "`workspace-kit run` lists planning commands with instruction files",
+        "Workflow types are represented in typed runtime contracts",
+        "Scaffold compiles and integrates with ModuleRegistry/ModuleCommandRouter"
+      ]
+    },
+    {
+      "id": "T346",
+      "title": "Implement adaptive question engine with hard critical-unknown gating",
+      "type": "improvement",
+      "status": "proposed",
+      "createdAt": "2026-03-27T22:42:46.785Z",
+      "updatedAt": "2026-03-27T22:42:46.785Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T345"
+      ],
+      "phase": "Phase 17 - Planning module guided workflows",
+      "approach": "Implement context-adaptive questioning depth and enforce hard-block completion when critical unknowns remain unresolved.",
+      "technicalScope": [
+        "Adaptive question selection based on planning context and uncertainty",
+        "Critical unknown classification and completion gate",
+        "Prompt templates that include high-value example prompts by planning type"
+      ],
+      "acceptanceCriteria": [
+        "Question flow adapts depth by context (hybrid strategy)",
+        "Completion fails with clear reason when critical unknowns are unresolved",
+        "Tests cover gating behavior and adaptive branching"
+      ]
+    },
+    {
+      "id": "T347",
+      "title": "Add rule-driven planning flow defaults using existing module config patterns",
+      "type": "improvement",
+      "status": "proposed",
+      "createdAt": "2026-03-27T22:42:46.785Z",
+      "updatedAt": "2026-03-27T22:42:46.785Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T345"
+      ],
+      "phase": "Phase 17 - Planning module guided workflows",
+      "approach": "Follow existing module-level defaults/config patterns to drive planning flow behavior without introducing a new DSL in this release.",
+      "technicalScope": [
+        "Module-level default rule packs per planning workflow type",
+        "Config metadata/default wiring aligned with core config patterns",
+        "Explain/validation support for planning rule settings"
+      ],
+      "acceptanceCriteria": [
+        "Global module defaults drive planning question flow behavior",
+        "Configuration follows existing key metadata and validation style",
+        "No custom DSL required for release scope"
+      ]
+    },
+    {
+      "id": "T348",
+      "title": "Generate high-level wishlist artifact schema from planning sessions",
+      "type": "improvement",
+      "status": "proposed",
+      "createdAt": "2026-03-27T22:42:46.785Z",
+      "updatedAt": "2026-03-27T22:42:46.785Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T346",
+        "T347"
+      ],
+      "phase": "Phase 17 - Planning module guided workflows",
+      "approach": "Produce a single wishlist artifact containing required high-level planning outputs and major decisions from guided sessions.",
+      "technicalScope": [
+        "Wishlist artifact composer for goals/approach/major technical decisions/features/changes",
+        "Include assumptions/open questions/risks/constraints sections",
+        "Integrate artifact generation into planning completion flow"
+      ],
+      "acceptanceCriteria": [
+        "Artifact includes goals, approach, major technical decisions, candidate features/changes, assumptions, open questions, and risks/constraints",
+        "Output is wishlist-only in this release",
+        "Artifact content reflects answers collected during guided workflow"
+      ]
+    },
+    {
+      "id": "T349",
+      "title": "Finalize CLI interaction UX for planning interview workflows",
+      "type": "improvement",
+      "status": "proposed",
+      "createdAt": "2026-03-27T22:42:46.785Z",
+      "updatedAt": "2026-03-27T22:42:46.785Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T346",
+        "T348"
+      ],
+      "phase": "Phase 17 - Planning module guided workflows",
+      "approach": "Polish CLI prompts and progression to be efficient for operators while preserving decision quality and contextual guidance.",
+      "technicalScope": [
+        "Question sequencing and transitions for each planning type",
+        "Contextually appropriate defaults/examples promoting strong decisions",
+        "Clear progress/status and remediation messaging for blocked completion"
+      ],
+      "acceptanceCriteria": [
+        "CLI interaction is efficient and clear across planning workflow types",
+        "Prompts include useful examples and context-specific defaults",
+        "Users can understand why follow-up questions are asked and what remains unresolved"
+      ]
+    },
+    {
+      "id": "T350",
+      "title": "Document, test, and release-harden planning module single-release scope",
+      "type": "improvement",
+      "status": "proposed",
+      "createdAt": "2026-03-27T22:42:46.785Z",
+      "updatedAt": "2026-03-27T22:42:46.785Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T345",
+        "T346",
+        "T347",
+        "T348",
+        "T349"
+      ],
+      "phase": "Phase 17 - Planning module guided workflows",
+      "approach": "Complete test/documentation/release-hardening so the planning module ships safely in one release with clear operator guidance.",
+      "technicalScope": [
+        "Instruction docs and maintainer runbook for planning workflows",
+        "Unit/integration tests for workflows, gating, and artifact composition",
+        "Release readiness evidence updates for roadmap/changelog/status"
+      ],
+      "acceptanceCriteria": [
+        "Tests cover workflow types, adaptive questioning, hard-block gating, and wishlist artifact output",
+        "Maintainer docs explain configuration defaults and operator usage",
+        "Release gates pass with planning-module evidence captured"
+      ]
     }
   ],
   "transitionLog": [
@@ -7969,7 +8116,7 @@
       "actor": "NJLaPrell@gmail.com"
     }
   ],
-  "lastUpdated": "2026-03-27T21:05:41.614Z",
+  "lastUpdated": "2026-03-27T22:42:46.785Z",
   "mutationLog": [
     {
       "mutationId": "create-task-T319-2026-03-27T15:16:30.032Z-20b24ad2",
@@ -8387,6 +8534,78 @@
       "details": {
         "initialStatus": "ready",
         "source": "create-task"
+      }
+    },
+    {
+      "mutationId": "create-task-T345-2026-03-27T22:42:46.785Z-cb591487",
+      "mutationType": "create-task",
+      "taskId": "T345",
+      "timestamp": "2026-03-27T22:42:46.785Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W1"
+      }
+    },
+    {
+      "mutationId": "create-task-T346-2026-03-27T22:42:46.785Z-dfa13764",
+      "mutationType": "create-task",
+      "taskId": "T346",
+      "timestamp": "2026-03-27T22:42:46.785Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W1"
+      }
+    },
+    {
+      "mutationId": "create-task-T347-2026-03-27T22:42:46.785Z-8ca4d39b",
+      "mutationType": "create-task",
+      "taskId": "T347",
+      "timestamp": "2026-03-27T22:42:46.785Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W1"
+      }
+    },
+    {
+      "mutationId": "create-task-T348-2026-03-27T22:42:46.785Z-e85cd9ed",
+      "mutationType": "create-task",
+      "taskId": "T348",
+      "timestamp": "2026-03-27T22:42:46.785Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W1"
+      }
+    },
+    {
+      "mutationId": "create-task-T349-2026-03-27T22:42:46.785Z-e91f5fb7",
+      "mutationType": "create-task",
+      "taskId": "T349",
+      "timestamp": "2026-03-27T22:42:46.785Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W1"
+      }
+    },
+    {
+      "mutationId": "create-task-T350-2026-03-27T22:42:46.785Z-71b3ba89",
+      "mutationType": "create-task",
+      "taskId": "T350",
+      "timestamp": "2026-03-27T22:42:46.785Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W1"
       }
     }
   ]

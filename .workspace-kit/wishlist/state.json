@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "W1",
+      "status": "converted",
+      "title": "Planning module with guided question flows",
+      "problemStatement": "Operators and developers need a CLI-native planning workflow that reliably captures high-value context for task breakdowns, sprint/phase planning, task ordering, new features, and changes, instead of ad-hoc prompts that miss key decisions.",
+      "expectedOutcome": "A planning module can run context-aware guided interviews per planning type and produce a single high-level wishlist artifact that captures goals, approach, major technical decisions, and feature/change intent.",
+      "impact": "Improves planning quality and consistency for AI Agent Operators and Developers, reduces missed discovery questions, and creates stronger downstream task decomposition inputs.",
+      "constraints": "CLI-first surface in v1; rule-driven behavior should come from global module defaults; wishlist artifact only (no automatic task creation in v1); prompts must adapt efficiently by context.",
+      "successSignals": "Users can complete guided planning flows for all target planning types; generated wishlist entries include goals/approach/major technical decisions/features; interview prompts are contextually appropriate and improve decision quality.",
+      "requestor": "AI Agent Operators / Developers",
+      "evidenceRef": "chat:phase16-planning-module-intake",
+      "createdAt": "2026-03-27T22:34:40.880Z",
+      "updatedAt": "2026-03-27T22:42:46.785Z",
+      "convertedAt": "2026-03-27T22:42:46.785Z",
+      "convertedToTaskIds": [
+        "T345",
+        "T346",
+        "T347",
+        "T348",
+        "T349",
+        "T350"
+      ],
+      "conversionDecomposition": {
+        "rationale": "Deliver a single-release, quality-first planning module with adaptive guided workflows and hard critical-unknown blocking for AI Agent Operators and Developers.",
+        "boundaries": "CLI-first in v1; follow existing module defaults/config patterns; produce wishlist artifact only (no auto task creation from planning output in this release).",
+        "dependencyIntent": "Build runtime/workflow core first, then rule/question enforcement, then artifact schema/composition, then UX and docs/tests hardening."
+      }
+    }
+  ],
+  "lastUpdated": "2026-03-27T22:42:46.788Z"
+}
