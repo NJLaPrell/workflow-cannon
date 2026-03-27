@@ -15,6 +15,8 @@ export type TaskEntity = {
   title: string;
   createdAt: string;
   updatedAt: string;
+  archived?: boolean;
+  archivedAt?: string;
   priority?: TaskPriority;
   dependsOn?: string[];
   unblocks?: string[];
@@ -64,7 +66,25 @@ export type TaskStoreDocument = {
   schemaVersion: 1;
   tasks: TaskEntity[];
   transitionLog: TransitionEvidence[];
+  mutationLog?: TaskMutationEvidence[];
   lastUpdated: string;
+};
+
+export type TaskMutationType =
+  | "create-task"
+  | "update-task"
+  | "archive-task"
+  | "add-dependency"
+  | "remove-dependency"
+  | "create-task-from-plan";
+
+export type TaskMutationEvidence = {
+  mutationId: string;
+  mutationType: TaskMutationType;
+  taskId: string;
+  timestamp: string;
+  actor?: string;
+  details?: Record<string, unknown>;
 };
 
 export type TaskEngineError = {
@@ -79,6 +99,11 @@ export type TaskEngineErrorCode =
   | "task-not-found"
   | "duplicate-task-id"
   | "invalid-task-schema"
+  | "invalid-task-update"
+  | "invalid-task-id-format"
+  | "task-archived"
+  | "dependency-cycle"
+  | "duplicate-dependency"
   | "storage-read-error"
   | "storage-write-error"
   | "invalid-adapter"

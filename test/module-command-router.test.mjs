@@ -21,16 +21,27 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
 
   const commandNames = router.listCommands().map((command) => command.name);
   assert.deepEqual(commandNames, [
+    "add-dependency",
+    "archive-task",
+    "create-task",
+    "create-task-from-plan",
     "dashboard-summary",
     "document-project",
     "explain-config",
     "generate-document",
+    "get-blocked-summary",
+    "get-dependency-graph",
     "get-next-actions",
     "get-ready-queue",
+    "get-recent-task-activity",
     "get-task",
+    "get-task-history",
+    "get-task-summary",
     "list-tasks",
+    "remove-dependency",
     "resolve-config",
-    "run-transition"
+    "run-transition",
+    "update-task"
   ]);
 });
 

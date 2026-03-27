@@ -294,3 +294,46 @@ type NextActionSuggestion = {
 - `suggestedNext` is the first item in the sorted ready queue (or null if empty).
 - `stateSummary` counts tasks in each state.
 - `blockingAnalysis` identifies which blocked tasks are waiting on what, sorted by `blockingCount` descending (most-blocking first).
+
+---
+
+## 12. Phase 13 lifecycle-tightening contract (T311-T318)
+
+Phase 13 extends the core lifecycle design with explicit mutation/query commands so maintainers and UI clients no longer depend on direct task-state file edits.
+
+### Command set additions
+
+- `create-task`: validated task creation (`id`, `title`, optional metadata) with deterministic schema checks.
+- `update-task`: controlled updates for mutable fields only.
+- `archive-task`: soft-delete behavior (`archived`, `archivedAt`) with active queue exclusion by default.
+- `add-dependency` / `remove-dependency`: explicit dependency graph mutation.
+- `get-dependency-graph`: machine-usable graph output (`nodes`, `edges`) plus task-centric view when `taskId` is provided.
+- `get-task-history` / `get-recent-task-activity`: merged transition + mutation evidence stream, newest-first, deterministic cap.
+- `get-task-summary` / `get-blocked-summary`: dedicated dashboard-grade summary commands.
+- `create-task-from-plan`: creation bridge that preserves planning provenance via `metadata.planRef`.
+
+### Mutable vs immutable fields
+
+- Immutable through `update-task`: `id`, `createdAt`, `status`.
+- Mutable through `update-task`: `title`, `type`, `priority`, `dependsOn`, `unblocks`, `phase`, `metadata`, `ownership`, `approach`, `technicalScope`, `acceptanceCriteria`.
+- Status changes remain transition-only via `run-transition`.
+
+### Evidence model extension
+
+- Non-transition writes append to `mutationLog` with `TaskMutationEvidence`.
+- Evidence shape includes `mutationId`, `mutationType`, `taskId`, `timestamp`, optional `actor`, optional structured `details`.
+- History queries merge `transitionLog` + `mutationLog` into one chronological stream.
+
+### Archival semantics
+
+- Archival is non-destructive: task record stays in state file.
+- Active queue/suggestion/summary commands exclude archived tasks by default.
+- `list-tasks` supports `includeArchived: true` for diagnostics and audit retrieval.
+
+### Error taxonomy additions
+
+- `invalid-task-update`: immutable field mutation requested.
+- `invalid-task-id-format`: task ID does not follow `T<number>`.
+- `task-archived`: command references an archived task when active-only behavior is required.
+- `dependency-cycle`: invalid self-edge or cycle mutation.
+- `duplicate-dependency`: dependency edge already present.

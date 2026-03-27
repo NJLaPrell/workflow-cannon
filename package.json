@@ -1,6 +1,6 @@
 {
   "name": "@workflow-cannon/workspace-kit",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "private": false,
   "packageManager": "pnpm@10.0.0",
   "license": "MIT",
@@ -36,7 +36,9 @@
     "pre-release-transcript-hook": "pnpm run build && node scripts/pre-release-transcript-hook.mjs",
     "transcript:sync": "node scripts/run-transcript-cli.mjs sync-transcripts",
     "transcript:ingest": "node scripts/run-transcript-cli.mjs ingest-transcripts",
-    "ext:compile": "cd extensions/cursor-workflow-cannon && npm run compile"
+    "ext:compile": "cd extensions/cursor-workflow-cannon && npm run compile",
+    "ui:prepare": "pnpm run build && pnpm run ext:compile",
+    "ui:watch": "cd extensions/cursor-workflow-cannon && npm run watch"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",

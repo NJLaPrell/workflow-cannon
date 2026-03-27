@@ -25,7 +25,7 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - **Phase 10 (Agent/CLI parity)** is **COMPLETE** and ships as **`v0.11.0`**: **`T285`–`T291`** — Agent CLI map, CLI-first **`AGENTS.md`** / **`.ai/AGENTS.md`**, Cursor rule, `/qt` template persistence labels, `doctor` / `run` discovery hints, multi-turn session docs, optional advisory hand-edit check for task state.
 - **Phase 11 (Architectural review follow-up)** is **COMPLETE and released** as **`v0.12.0`**: **`T292`–`T295`** — policy/session denial edge tests, task-store + policy-trace contention semantics tests, release doc consistency checklist linkage, and runtime path audit notes.
 - **Phase 12 (Cursor native UI thin client)** is **COMPLETE and released** as **`v0.13.0`**: **`T296`–`T310`** — extension thin-client dashboard/tasks/config surfaces, security pass, and extension test/e2e coverage.
-- **Phase 13 (Task Engine lifecycle tightening)** is **READY / in progress**: **`T311`+** — task CRUD/query/dependency/history contract expansion and execution bridging.
+- **Phase 13 (Task Engine lifecycle tightening)** is **COMPLETE and released** as **`v0.14.0`**: **`T311`–`T318`** — task CRUD/query/dependency/history/summary command expansion, archival behavior, and planning-to-task bridge.
 - Historical extraction and first-publish milestones remain recorded below as provenance.
 
 ## Phase plan and release cadence
@@ -167,6 +167,16 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
   - Extension dashboard/tasks/config flows consume kit contracts without raw task-state scraping for aggregates.
   - Security/trust and policy UX requirements are documented and tested.
   - Extension unit/integration/manual-E2E evidence is captured for release readiness.
+
+### Phase 13 - Task Engine lifecycle tightening -> GitHub release `v0.14.0` (COMPLETE)
+
+- Primary scope: **`T311`–`T318`**.
+- Outcome: canonical task CRUD/dependency/history/summary command surfaces, non-destructive archival behavior, and a planning-to-task bridge with provenance.
+- Exit signals:
+  - New Task Engine lifecycle mutation commands are available and instruction-documented.
+  - Dashboard/query surfaces consume dedicated summary/history contracts.
+  - Archived task exclusion defaults are enforced for active queue/summary operations.
+  - Task Engine lifecycle-tightening behavior is test-covered.
 
 ## Recorded decisions
 

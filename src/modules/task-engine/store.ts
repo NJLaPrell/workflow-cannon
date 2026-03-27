@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
-import type { TaskEntity, TaskStoreDocument, TransitionEvidence } from "./types.js";
+import type { TaskEntity, TaskMutationEvidence, TaskStoreDocument, TransitionEvidence } from "./types.js";
 import { TaskEngineError } from "./transitions.js";
 
 const DEFAULT_STORE_PATH = ".workspace-kit/tasks/state.json";
@@ -11,6 +11,7 @@ function emptyStore(): TaskStoreDocument {
     schemaVersion: 1,
     tasks: [],
     transitionLog: [],
+    mutationLog: [],
     lastUpdated: new Date().toISOString()
   };
 }
@@ -35,6 +36,9 @@ export class TaskStore {
         );
       }
       this.document = parsed;
+      if (!Array.isArray(this.document.mutationLog)) {
+        this.document.mutationLog = [];
+      }
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === "ENOENT") {
         this.document = emptyStore();
@@ -70,6 +74,10 @@ export class TaskStore {
     return [...this.document.tasks];
   }
 
+  getActiveTasks(): TaskEntity[] {
+    return this.document.tasks.filter((task) => !task.archived).map((task) => ({ ...task }));
+  }
+
   getTask(id: string): TaskEntity | undefined {
     return this.document.tasks.find((t) => t.id === id);
   }
@@ -93,8 +101,19 @@ export class TaskStore {
     this.document.transitionLog.push(evidence);
   }
 
+  addMutationEvidence(evidence: TaskMutationEvidence): void {
+    if (!Array.isArray(this.document.mutationLog)) {
+      this.document.mutationLog = [];
+    }
+    this.document.mutationLog.push(evidence);
+  }
+
   getTransitionLog(): TransitionEvidence[] {
     return [...this.document.transitionLog];
+  }
+
+  getMutationLog(): TaskMutationEvidence[] {
+    return [...(this.document.mutationLog ?? [])];
   }
 
   replaceAllTasks(tasks: TaskEntity[]): void {

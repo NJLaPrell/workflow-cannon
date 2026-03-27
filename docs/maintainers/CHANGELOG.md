@@ -6,6 +6,23 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-03-27
+
+Phase 13 — Task Engine lifecycle tightening with canonical CRUD/dependency/history/summary command surfaces.
+
+### Added
+
+- Task-engine mutation commands: `create-task`, `update-task`, `archive-task`, `add-dependency`, `remove-dependency`, and planning bridge `create-task-from-plan`.
+- Task-engine query commands: `get-dependency-graph`, `get-task-history`, `get-recent-task-activity`, `get-task-summary`, and `get-blocked-summary`.
+- New task-engine instruction contracts for all Phase 13 command additions under `src/modules/task-engine/instructions/`.
+- Phase 13 test coverage for command registration, CRUD/update/archive paths, dependency mutation behavior, and history retrieval (`test/task-engine.test.mjs`, `test/module-command-router.test.mjs`).
+
+### Changed
+
+- Task store schema now supports mutation evidence via `mutationLog` in addition to transition evidence.
+- Task lifecycle queries and dashboard aggregates now exclude archived tasks by default, with `list-tasks` opt-in retrieval via `includeArchived: true`.
+- Task engine workbook now includes Phase 13 contracts for mutable/immutable fields, evidence expectations, archival semantics, and extended error taxonomy.
+
 ## [0.13.0] - 2026-03-27
 
 Phase 12 — Cursor native UI thin-client delivery and extension trust/test hardening.

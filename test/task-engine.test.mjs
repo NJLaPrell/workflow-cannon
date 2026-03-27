@@ -569,6 +569,17 @@ test("taskEngineModule registration includes all instruction entries", () => {
   const entries = taskEngineModule.registration.instructions.entries;
   const names = entries.map((e) => e.name);
   assert.ok(names.includes("run-transition"));
+  assert.ok(names.includes("create-task"));
+  assert.ok(names.includes("update-task"));
+  assert.ok(names.includes("archive-task"));
+  assert.ok(names.includes("add-dependency"));
+  assert.ok(names.includes("remove-dependency"));
+  assert.ok(names.includes("get-dependency-graph"));
+  assert.ok(names.includes("get-task-history"));
+  assert.ok(names.includes("get-recent-task-activity"));
+  assert.ok(names.includes("get-task-summary"));
+  assert.ok(names.includes("get-blocked-summary"));
+  assert.ok(names.includes("create-task-from-plan"));
   assert.ok(names.includes("get-task"));
   assert.ok(names.includes("list-tasks"));
   assert.ok(names.includes("get-ready-queue"));
@@ -702,4 +713,74 @@ test("taskEngineModule routes through ModuleCommandRouter", async () => {
   const result = await router.execute("list-tasks", {}, ctx);
   assert.equal(result.ok, true);
   assert.equal(result.code, "tasks-listed");
+});
+
+test("taskEngineModule create-task and update-task commands persist mutations", async () => {
+  const workspace = await tmpDir();
+  const ctx = { runtimeVersion: "0.1", workspacePath: workspace };
+
+  const created = await taskEngineModule.onCommand(
+    { name: "create-task", args: { id: "T400", title: "Created task", status: "ready" } },
+    ctx
+  );
+  assert.equal(created.ok, true);
+  assert.equal(created.code, "task-created");
+
+  const updated = await taskEngineModule.onCommand(
+    { name: "update-task", args: { taskId: "T400", updates: { title: "Updated task title" } } },
+    ctx
+  );
+  assert.equal(updated.ok, true);
+  assert.equal(updated.code, "task-updated");
+
+  const fetched = await taskEngineModule.onCommand({ name: "get-task", args: { taskId: "T400" } }, ctx);
+  assert.equal(fetched.ok, true);
+  assert.equal(fetched.data.task.title, "Updated task title");
+});
+
+test("taskEngineModule archive-task excludes task from default active queries", async () => {
+  const workspace = await tmpDir();
+  const ctx = { runtimeVersion: "0.1", workspacePath: workspace };
+  const store = new TaskStore(workspace);
+  store.addTask(makeTask({ id: "T401", status: "ready" }));
+  await store.save();
+
+  const archived = await taskEngineModule.onCommand({ name: "archive-task", args: { taskId: "T401" } }, ctx);
+  assert.equal(archived.ok, true);
+  assert.equal(archived.code, "task-archived");
+
+  const listed = await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, ctx);
+  assert.equal(listed.ok, true);
+  assert.equal(listed.data.count, 0);
+
+  const listedWithArchived = await taskEngineModule.onCommand(
+    { name: "list-tasks", args: { includeArchived: true } },
+    ctx
+  );
+  assert.equal(listedWithArchived.ok, true);
+  assert.equal(listedWithArchived.data.count, 1);
+});
+
+test("taskEngineModule dependency and history commands return deterministic output", async () => {
+  const workspace = await tmpDir();
+  const ctx = { runtimeVersion: "0.1", workspacePath: workspace };
+  const store = new TaskStore(workspace);
+  store.addTask(makeTask({ id: "T500", status: "ready" }));
+  store.addTask(makeTask({ id: "T501", status: "ready" }));
+  await store.save();
+
+  const depResult = await taskEngineModule.onCommand(
+    { name: "add-dependency", args: { taskId: "T501", dependencyTaskId: "T500" } },
+    ctx
+  );
+  assert.equal(depResult.ok, true);
+  assert.equal(depResult.code, "dependency-added");
+
+  const graph = await taskEngineModule.onCommand({ name: "get-dependency-graph", args: { taskId: "T501" } }, ctx);
+  assert.equal(graph.ok, true);
+  assert.deepEqual(graph.data.dependsOn, ["T500"]);
+
+  const history = await taskEngineModule.onCommand({ name: "get-task-history", args: { taskId: "T501" } }, ctx);
+  assert.equal(history.ok, true);
+  assert.ok(history.data.count >= 1);
 });
