@@ -1,0 +1,75 @@
+import fs from "node:fs";
+import path from "node:path";
+import process from "node:process";
+
+const ROOT = process.cwd();
+const INDEX_PATH = path.join(ROOT, "src/modules/task-engine/index.ts");
+const SCHEMA_PATH = path.join(ROOT, "schemas/task-engine-run-contracts.schema.json");
+const PKG_PATH = path.join(ROOT, "package.json");
+
+function fail(message) {
+  console.error(`[check-task-engine-run-contracts] ${message}`);
+  process.exit(1);
+}
+
+function loadJson(filePath) {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, "utf8"));
+  } catch (error) {
+    fail(`Unable to parse JSON at ${filePath}: ${error.message}`);
+  }
+}
+
+const indexSrc = fs.readFileSync(INDEX_PATH, "utf8");
+const pkg = loadJson(PKG_PATH);
+const schema = loadJson(SCHEMA_PATH);
+
+if (schema.packageVersion !== pkg.version) {
+  fail(
+    `schema packageVersion (${schema.packageVersion}) does not match package.json version (${pkg.version}).`
+  );
+}
+
+const commandNames = [...indexSrc.matchAll(/name:\s*"([a-z0-9-]+)"/g)].map((m) => m[1]);
+if (commandNames.length === 0) {
+  fail("Could not discover task-engine command names from index.ts.");
+}
+
+const commandSet = new Set(commandNames);
+const schemaCommands = schema?.properties?.commands?.properties
+  ? Object.keys(schema.properties.commands.properties)
+  : [];
+const schemaSet = new Set(schemaCommands);
+
+const missingInSchema = [...commandSet].filter((name) => !schemaSet.has(name));
+const missingInModule = [...schemaSet].filter((name) => !commandSet.has(name));
+const missingRequiredList = [...commandSet].filter(
+  (name) =>
+    !Array.isArray(schema?.properties?.commands?.required) ||
+    !schema.properties.commands.required.includes(name)
+);
+
+if (missingInSchema.length > 0) {
+  fail(`Missing command contract(s) in schema: ${missingInSchema.join(", ")}`);
+}
+if (missingInModule.length > 0) {
+  fail(`Schema includes unknown command(s): ${missingInModule.join(", ")}`);
+}
+if (missingRequiredList.length > 0) {
+  fail(`Schema commands.required missing: ${missingRequiredList.join(", ")}`);
+}
+
+for (const name of commandNames) {
+  const contract = schema.properties.commands.properties[name];
+  const hasTopLevelArgs = Boolean(contract?.properties?.args);
+  const hasTopLevelResponse = Boolean(contract?.properties?.responseData);
+  const hasAllOf = Array.isArray(contract?.allOf) && contract.allOf.length > 0;
+  const hasRef = typeof contract?.$ref === "string" && contract.$ref.length > 0;
+  if (!(hasTopLevelArgs || hasAllOf || hasRef) || !(hasTopLevelResponse || hasAllOf || hasRef)) {
+    fail(`Command '${name}' contract must define args and responseData.`);
+  }
+}
+
+console.log(
+  `[check-task-engine-run-contracts] OK: ${commandNames.length} commands matched; schema version ${schema.schemaVersion}; package ${pkg.version}.`
+);

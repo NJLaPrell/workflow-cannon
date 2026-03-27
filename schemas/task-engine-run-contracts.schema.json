@@ -1,0 +1,521 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/task-engine-run-contracts.schema.json",
+  "title": "Task Engine run command contracts",
+  "description": "Versioned schema surface for task-engine `workspace-kit run` argument and response-data payloads.",
+  "type": "object",
+  "required": ["schemaVersion", "packageVersion", "moduleId", "commands"],
+  "additionalProperties": false,
+  "packageVersion": "0.16.1",
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "packageVersion": {
+      "const": "0.16.1",
+      "description": "Must match package.json version."
+    },
+    "moduleId": {
+      "const": "task-engine"
+    },
+    "commands": {
+      "type": "object",
+      "required": [
+        "run-transition",
+        "create-task",
+        "update-task",
+        "update-wishlist",
+        "archive-task",
+        "add-dependency",
+        "remove-dependency",
+        "get-dependency-graph",
+        "get-task-history",
+        "get-recent-task-activity",
+        "get-task-summary",
+        "get-blocked-summary",
+        "create-task-from-plan",
+        "convert-wishlist",
+        "create-wishlist",
+        "get-wishlist",
+        "get-task",
+        "list-tasks",
+        "list-wishlist",
+        "get-ready-queue",
+        "get-next-actions",
+        "migrate-task-persistence",
+        "dashboard-summary"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "run-transition": { "$ref": "#/$defs/contractRunTransition" },
+        "create-task": { "$ref": "#/$defs/contractCreateTask" },
+        "update-task": { "$ref": "#/$defs/contractUpdateTask" },
+        "update-wishlist": { "$ref": "#/$defs/contractUpdateWishlist" },
+        "archive-task": { "$ref": "#/$defs/contractArchiveTask" },
+        "add-dependency": { "$ref": "#/$defs/contractDependencyMutation" },
+        "remove-dependency": { "$ref": "#/$defs/contractDependencyMutation" },
+        "get-dependency-graph": { "$ref": "#/$defs/contractDependencyGraph" },
+        "get-task-history": { "$ref": "#/$defs/contractTaskHistory" },
+        "get-recent-task-activity": { "$ref": "#/$defs/contractRecentTaskActivity" },
+        "get-task-summary": { "$ref": "#/$defs/contractTaskSummary" },
+        "get-blocked-summary": { "$ref": "#/$defs/contractBlockedSummary" },
+        "create-task-from-plan": { "$ref": "#/$defs/contractCreateTaskFromPlan" },
+        "convert-wishlist": { "$ref": "#/$defs/contractConvertWishlist" },
+        "create-wishlist": { "$ref": "#/$defs/contractCreateWishlist" },
+        "get-wishlist": { "$ref": "#/$defs/contractGetWishlist" },
+        "get-task": { "$ref": "#/$defs/contractGetTask" },
+        "list-tasks": { "$ref": "#/$defs/contractListTasks" },
+        "list-wishlist": { "$ref": "#/$defs/contractListWishlist" },
+        "get-ready-queue": { "$ref": "#/$defs/contractReadyQueue" },
+        "get-next-actions": { "$ref": "#/$defs/contractNextActions" },
+        "migrate-task-persistence": { "$ref": "#/$defs/contractMigrateTaskPersistence" },
+        "dashboard-summary": { "$ref": "#/$defs/contractDashboardSummary" }
+      }
+    }
+  },
+  "$defs": {
+    "contractBase": {
+      "type": "object",
+      "required": ["args", "responseData"],
+      "additionalProperties": false,
+      "properties": {
+        "args": {
+          "type": "object"
+        },
+        "responseData": {
+          "type": "object"
+        }
+      }
+    },
+    "contractRunTransition": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "required": ["taskId", "action"],
+              "additionalProperties": true,
+              "properties": {
+                "taskId": { "type": "string", "pattern": "^T[0-9]+$" },
+                "action": { "type": "string" },
+                "policyApproval": { "type": "object" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["task", "presentation"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractCreateTask": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "required": ["id", "title"],
+              "additionalProperties": true,
+              "properties": {
+                "id": { "type": "string", "pattern": "^T[0-9]+$" },
+                "title": { "type": "string" },
+                "status": { "type": "string", "enum": ["proposed", "ready"] }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["task", "presentation"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractCreateTaskFromPlan": {
+      "allOf": [
+        { "$ref": "#/$defs/contractCreateTask" },
+        {
+          "properties": {
+            "args": {
+              "required": ["planRef"]
+            }
+          }
+        }
+      ]
+    },
+    "contractUpdateTask": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "required": ["taskId", "patch"],
+              "additionalProperties": true,
+              "properties": {
+                "taskId": { "type": "string", "pattern": "^T[0-9]+$" },
+                "patch": { "type": "object" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["task", "presentation"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractArchiveTask": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "required": ["taskId"],
+              "additionalProperties": true,
+              "properties": {
+                "taskId": { "type": "string", "pattern": "^T[0-9]+$" },
+                "archiveReason": { "type": "string" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["task", "presentation"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractDependencyMutation": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "required": ["taskId", "dependsOnTaskId"],
+              "additionalProperties": false,
+              "properties": {
+                "taskId": { "type": "string", "pattern": "^T[0-9]+$" },
+                "dependsOnTaskId": { "type": "string", "pattern": "^T[0-9]+$" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["task", "presentation"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractDependencyGraph": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "taskId": { "type": "string", "pattern": "^T[0-9]+$" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["nodes", "edges"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractTaskHistory": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "taskId": { "type": "string", "pattern": "^T[0-9]+$" },
+                "limit": { "type": "number" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["taskId", "items", "count"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractRecentTaskActivity": {
+      "allOf": [
+        { "$ref": "#/$defs/contractTaskHistory" }
+      ]
+    },
+    "contractTaskSummary": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": false
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["stateSummary", "totalActive", "scope"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractBlockedSummary": {
+      "allOf": [
+        { "$ref": "#/$defs/contractTaskSummary" }
+      ]
+    },
+    "contractCreateWishlist": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "required": ["title", "problemStatement", "expectedOutcome", "impact", "constraints", "successSignals", "requestor", "evidenceRef"],
+              "additionalProperties": true
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["wishlist", "presentation"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractUpdateWishlist": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "required": ["wishlistId", "patch"],
+              "additionalProperties": true
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["wishlist", "presentation"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractGetWishlist": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "required": ["wishlistId"],
+              "additionalProperties": false,
+              "properties": {
+                "wishlistId": { "type": "string", "pattern": "^W[0-9]+$" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["wishlist"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractConvertWishlist": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "required": ["wishlistId", "decomposition"],
+              "additionalProperties": true
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["wishlist", "createdTasks", "presentation"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractGetTask": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "required": ["taskId"],
+              "additionalProperties": false,
+              "properties": {
+                "taskId": { "type": "string", "pattern": "^T[0-9]+$" },
+                "historyLimit": { "type": "number" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["task", "recentTransitions", "allowedActions", "presentation"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractListTasks": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "status": { "type": "string" },
+                "phase": { "type": "string" },
+                "includeArchived": { "type": "boolean" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["tasks", "count", "scope"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractListWishlist": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "status": { "type": "string" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["items", "count", "scope"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractReadyQueue": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": false
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["tasks", "count", "scope"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractNextActions": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": false
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["readyQueue", "suggestedNext", "stateSummary", "blockingAnalysis", "scope"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractMigrateTaskPersistence": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["migration"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractDashboardSummary": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": false
+            },
+            "responseData": {
+              "type": "object",
+              "required": [
+                "schemaVersion",
+                "taskStoreLastUpdated",
+                "workspaceStatus",
+                "stateSummary",
+                "readyQueueTop",
+                "readyQueueCount",
+                "executionPlanningScope",
+                "wishlist",
+                "blockedSummary",
+                "suggestedNext",
+                "blockingAnalysis"
+              ],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    }
+  }
+}

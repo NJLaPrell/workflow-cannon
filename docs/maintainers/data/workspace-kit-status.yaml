@@ -1,12 +1,15 @@
 schema_version: 1
-current_kit_phase: "15"
+current_kit_phase: "16"
 last_updated: "2026-03-27"
-active_focus: "Post-release: Phase 15 (`v0.16.0`) SQLite persistence shipped; monitor installs and `better-sqlite3` prebuild friction."
+active_focus: "Phase 16: engine tasks `T335`–`T341`; extension parity `T342`–`T344` (plan: docs/maintainers/plans/extension-dashboard-parity-plan.md)."
 blockers: []
 next_agent_actions:
-  - "After npm publish: record workflow run URL in roadmap evidence and confirm package install."
-  - "Monitor extension/dashboard consumers for `dashboard-summary` schema additions (`wishlist`, `executionPlanningScope`)."
+  - "Extension UX: `T342` (SQLite watcher), `T343` (dashboard payload); `T344` blocked on `T337`."
+  - "Engine: pick ready task — `T335`, `T337`, `T338`, `T341` have no blocking deps; `T336`/`T339`/`T340` depend on `T335`."
+  - "When Phase 16 scope is done: cut release per `docs/maintainers/RELEASING.md` and mark tasks completed via `workspace-kit run run-transition`."
 last_session_summary:
+  - "2026-03-27: Extension dashboard plan added; tasks T342–T344 created (SQLite watcher, richer dashboard, list-tasks filters after T337)."
+  - "2026-03-27: Phase 16 opened; tasks T335–T341 created (maintenance/stability: schemas, validation, queries, idempotency, explainer, strict mode, TERMS)."
   - "Phase 13 tasks T311–T318 completed through canonical Task Engine transitions."
   - "Task Engine now exposes CRUD/dependency/history/summary and planning bridge command contracts with archival-aware query defaults."
   - "Release readiness gates passed: build/check/test/parity/check-release-metadata/phase5-gates/check-planning-consistency."
@@ -16,7 +19,7 @@ pending_decisions: []
 metrics:
   updated_at: "2026-03-27"
   source: "maintainer"
-  notes: "v0.16.1 patch published via workflow run 23659070618; v0.16.0 Phase 15 (23658822630); v0.15.0 Phase 14 (23656475480)."
+  notes: "Phase 16 includes T335–T344 (engine + extension parity plan). v0.16.1 patch (23659070618); v0.16.0 Phase 15 (23658822630)."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null

@@ -12,6 +12,7 @@ Phase 1 core module for structured task lifecycle management.
 - **Evidence**: Every transition produces a timestamped `TransitionEvidence` record
 - **Next-action suggestions**: Priority-sorted ready queue with blocking chain analysis
 - **Wishlist (ideation)**: Separate namespace `W###` persisted at `.workspace-kit/wishlist/state.json`, with strict intake and `convert-wishlist` into phased `T###` tasks (see `docs/maintainers/runbooks/wishlist-workflow.md`)
+- **Run API schemas**: Versioned command argument/response contracts in `schemas/task-engine-run-contracts.schema.json` (kept in sync with command registration by `scripts/check-task-engine-run-contracts.mjs`)
 
 ## Commands
 
