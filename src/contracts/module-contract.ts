@@ -23,6 +23,11 @@ export type ModuleInstructionEntry = {
    */
   file: string;
   description?: string;
+  /**
+   * Other module ids that must be enabled for this command to be registered in the
+   * command router (in addition to the owning module). Empty/omitted = no extra peers.
+   */
+  requiresPeers?: string[];
 };
 
 export type ModuleInstructionContract = {

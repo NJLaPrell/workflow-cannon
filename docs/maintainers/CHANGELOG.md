@@ -8,6 +8,9 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ### Added
 
+- **`ModuleInstructionEntry.requiresPeers`** — optional peer module ids required for a command to register in `ModuleCommandRouter`; registry validates ids; router skips non-executable entries; `execute` returns `peer-module-disabled` if invoked without satisfied peers.
+- **`buildAgentInstructionSurface` / classification helpers** — full declared instruction catalog with `executable` + `degradation` and bundled `activationReport`.
+- **`workspace-kit doctor --agent-instruction-surface`** — after standard doctor checks, prints JSON `{ ok, code, data }` with `schemaVersion: 1` for tooling and agents.
 - **`registration.optionalPeers`** — soft module coupling: optional peers are validated but need not be enabled; `dependsOn` remains hard for enabled modules.
 - **`ModuleRegistry.getActivationReport()`** — per-module enablement, unsatisfied hard deps, and missing optional peers for tooling.
 - **Config-driven module toggles** — `modules.enabled` / `modules.disabled` in effective workspace config (defaults in kit layer); `workspace-kit run`, `config` CLI (non-list), and doctor planning checks resolve registry + config together via `resolveRegistryAndConfig`.

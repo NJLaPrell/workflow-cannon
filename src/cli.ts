@@ -10,9 +10,13 @@ import {
   resolveActorWithFallback,
   type PolicyOperationId
 } from "./core/policy.js";
+import { buildAgentInstructionSurface } from "./core/agent-instruction-surface.js";
 import { runWorkspaceConfigCli } from "./core/config-cli.js";
 import { handleRunCommand } from "./cli/run-command.js";
 import { collectDoctorPlanningPersistenceIssues } from "./cli/doctor-planning-issues.js";
+import { ModuleRegistryError } from "./core/module-registry.js";
+import { resolveRegistryAndConfig } from "./core/module-registry-resolve.js";
+import { defaultRegistryModules } from "./modules/index.js";
 
 const EXIT_SUCCESS = 0;
 const EXIT_VALIDATION_FAILURE = 1;
@@ -773,6 +777,11 @@ export async function runCli(
     return EXIT_USAGE_ERROR;
   }
 
+  const doctorRest = args.slice(1);
+  const wantAgentInstructionSurface =
+    doctorRest.includes("--agent-instruction-surface") ||
+    doctorRest.includes("agent-instruction-surface");
+
   const issues: DoctorIssue[] = [];
   const requiredPaths = Object.values(defaultWorkspaceKitPaths).map((relativePath) =>
     path.join(cwd, relativePath)
@@ -807,6 +816,28 @@ export async function runCli(
       writeError(`- ${issue.path}: ${issue.reason}`);
     }
     return EXIT_VALIDATION_FAILURE;
+  }
+
+  if (wantAgentInstructionSurface) {
+    try {
+      const { registry } = await resolveRegistryAndConfig(cwd, defaultRegistryModules);
+      const surface = buildAgentInstructionSurface(registry.getAllModules(), registry);
+      writeLine(
+        JSON.stringify(
+          { ok: true, code: "agent-instruction-surface", data: surface },
+          null,
+          2
+        )
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      writeError(`workspace-kit doctor: could not build agent instruction surface: ${message}`);
+      if (error instanceof ModuleRegistryError) {
+        return EXIT_VALIDATION_FAILURE;
+      }
+      return EXIT_INTERNAL_ERROR;
+    }
+    return EXIT_SUCCESS;
   }
 
   writeLine("workspace-kit doctor passed.");

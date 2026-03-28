@@ -112,6 +112,16 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
   - **Defined in**: `explain-task-engine-model` command output and roadmap/phase guidance where variant behavior is discussed.
   - **Enforced in**: command surfaces that explicitly separate execution planning (`tasks-only`) from wishlist ideation.
 
+- **Agent instruction surface**
+  - **Definition**: The union of all module instruction entries with per-row classification: executable via the command router for the current enabled module set vs documentation-only (owning module off or a `requiresPeers` peer missing).
+  - **Defined in**: `docs/maintainers/AGENT-CLI-MAP.md`, `src/core/agent-instruction-surface.ts`.
+  - **Enforced in**: `workspace-kit doctor --agent-instruction-surface` JSON output and router registration (`ModuleCommandRouter`).
+
+- **Documentation-only instruction (degraded)**
+  - **Definition**: A declared instruction whose markdown remains valid for manual/agent read-only workflows but is **not** registered as a `workspace-kit run` subcommand for the current config because required modules are disabled.
+  - **Defined in**: `docs/maintainers/AGENT-CLI-MAP.md` and `docs/maintainers/POLICY-APPROVAL.md` (policy semantics unchanged).
+  - **Enforced in**: router omission + `peer-module-disabled` if a command were invoked without satisfied peers; **does not** replace JSON `policyApproval` or env approval where those tiers apply.
+
 ## Related docs
 
 - `README.md` — project intent and direction

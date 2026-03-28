@@ -18,6 +18,14 @@ export {
   type ModuleCommandRouterOptions
 } from "./module-command-router.js";
 export {
+  buildAgentInstructionSurface,
+  classifyInstructionExecution,
+  isInstructionExecutableForRegistry,
+  type AgentInstructionDegradation,
+  type AgentInstructionSurfacePayload,
+  type AgentInstructionSurfaceRow
+} from "./agent-instruction-surface.js";
+export {
   buildBaseConfigLayers,
   deepMerge,
   envToConfigOverlay,

@@ -1,9 +1,14 @@
 import type {
   ModuleCommand,
   ModuleCommandResult,
+  ModuleInstructionEntry,
   ModuleLifecycleContext,
   WorkflowModule
 } from "../contracts/module-contract.js";
+import {
+  classifyInstructionExecution,
+  isInstructionExecutableForRegistry
+} from "./agent-instruction-surface.js";
 import { ModuleRegistry } from "./module-registry.js";
 
 export type ModuleCommandDescriptor = {
@@ -30,6 +35,7 @@ export class ModuleCommandRouterError extends Error {
 type IndexedCommand = {
   descriptor: ModuleCommandDescriptor;
   module: WorkflowModule;
+  entry: ModuleInstructionEntry;
 };
 
 export class ModuleCommandRouter {
@@ -86,6 +92,21 @@ export class ModuleCommandRouter {
       );
     }
 
+    if (!isInstructionExecutableForRegistry(indexed.module, indexed.entry, this.registry)) {
+      const deg = classifyInstructionExecution(indexed.module, indexed.entry, this.registry);
+      const detail =
+        deg.kind === "peer_disabled"
+          ? `missing peers: ${deg.missingPeers.join(", ")}`
+          : deg.kind === "module_disabled"
+            ? "owning module disabled"
+            : "not executable";
+      return {
+        ok: false,
+        code: "peer-module-disabled",
+        message: `Command '${commandName}' is not executable (${detail}). Enable required modules or follow the instruction markdown for manual guidance. Instruction: ${indexed.descriptor.instructionFile}`
+      };
+    }
+
     const command: ModuleCommand = {
       name: commandName,
       args
@@ -96,6 +117,9 @@ export class ModuleCommandRouter {
   private indexEnabledModuleCommands(): void {
     for (const module of this.registry.getEnabledModules()) {
       for (const entry of module.registration.instructions.entries) {
+        if (!isInstructionExecutableForRegistry(module, entry, this.registry)) {
+          continue;
+        }
         if (this.commands.has(entry.name)) {
           const existing = this.commands.get(entry.name);
           throw new ModuleCommandRouterError(
@@ -110,7 +134,8 @@ export class ModuleCommandRouter {
             instructionFile: `${module.registration.instructions.directory}/${entry.file}`,
             description: entry.description
           },
-          module
+          module,
+          entry
         });
       }
     }
