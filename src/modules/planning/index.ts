@@ -17,6 +17,28 @@ import {
 } from "../task-engine/wishlist-validation.js";
 import type { WishlistItem } from "../task-engine/wishlist-types.js";
 
+type PlanningOutputMode = "wishlist" | "tasks" | "response";
+
+function resolveOutputMode(args: Record<string, unknown>): {
+  ok: true;
+  mode: PlanningOutputMode;
+} | {
+  ok: false;
+  message: string;
+} {
+  const raw = typeof args.outputMode === "string" ? args.outputMode.trim() : "";
+  if (raw === "") {
+    return { ok: true, mode: "wishlist" };
+  }
+  if (raw === "wishlist" || raw === "tasks" || raw === "response") {
+    return { ok: true, mode: raw };
+  }
+  return {
+    ok: false,
+    message: "build-plan outputMode must be one of: wishlist, tasks, response"
+  };
+}
+
 function nextWishlistId(items: WishlistItem[]): string {
   let max = 0;
   for (const item of items) {
@@ -36,8 +58,9 @@ function toCliGuidance(args: {
   unresolvedCriticalCount: number;
   totalCriticalCount: number;
   finalize?: boolean;
+  outputMode?: PlanningOutputMode;
 }): Record<string, unknown> {
-  const { planningType, answers, unresolvedCriticalCount, totalCriticalCount, finalize } = args;
+  const { planningType, answers, unresolvedCriticalCount, totalCriticalCount, finalize, outputMode } = args;
   const answeredCritical = Math.max(0, totalCriticalCount - unresolvedCriticalCount);
   const completionPct = totalCriticalCount > 0 ? Math.round((answeredCritical / totalCriticalCount) * 100) : 100;
   return {
@@ -47,7 +70,8 @@ function toCliGuidance(args: {
     suggestedNextCommand: `workspace-kit run build-plan '${JSON.stringify({
       planningType,
       answers,
-      finalize: finalize === true
+      finalize: finalize === true,
+      outputMode: outputMode ?? "wishlist"
     })}'`
   };
 }
@@ -105,6 +129,15 @@ export const planningModule: WorkflowModule = {
 
     if (command.name === "build-plan") {
       const args = command.args ?? {};
+      const outputModeResolved = resolveOutputMode(args);
+      if (!outputModeResolved.ok) {
+        return {
+          ok: false,
+          code: "invalid-planning-output-mode",
+          message: outputModeResolved.message
+        };
+      }
+      const outputMode = outputModeResolved.mode;
       const planningType = typeof args.planningType === "string" ? args.planningType.trim() : "";
       if (!PLANNING_WORKFLOW_TYPES.includes(planningType as PlanningWorkflowType)) {
         return {
@@ -148,7 +181,8 @@ export const planningModule: WorkflowModule = {
                 planningType,
                 answers,
                 unresolvedCriticalCount: missingCritical.length,
-                totalCriticalCount
+                totalCriticalCount,
+                outputMode
               })
             }
           };
@@ -166,7 +200,8 @@ export const planningModule: WorkflowModule = {
               answers,
               unresolvedCriticalCount: missingCritical.length,
               totalCriticalCount,
-              finalize: true
+              finalize: true,
+              outputMode
             })
           }
         };
@@ -185,7 +220,8 @@ export const planningModule: WorkflowModule = {
               planningType,
               answers,
               unresolvedCriticalCount: missingCritical.length,
-              totalCriticalCount
+              totalCriticalCount,
+              outputMode
             })
           }
         };
@@ -196,16 +232,17 @@ export const planningModule: WorkflowModule = {
         answers,
         unresolvedCriticalQuestionIds: unresolvedIds
       });
-      if (!finalize || !createWishlist) {
+      if (outputMode === "response") {
         return {
           ok: true,
-          code: "planning-ready",
-          message: `Planning interview complete for ${planningType}; artifact ready`,
+          code: "planning-response-ready",
+          message: `Planning interview complete for ${planningType}; returning response-only artifact`,
           data: {
             planningType,
             descriptor,
+            outputMode,
             scaffoldVersion: 3,
-            status: "ready-for-artifact",
+            status: "ready-for-response",
             unresolvedCritical: [],
             adaptiveFollowups,
             capturedAnswers: answers,
@@ -215,7 +252,62 @@ export const planningModule: WorkflowModule = {
               answers,
               unresolvedCriticalCount: 0,
               totalCriticalCount,
-              finalize: createWishlist
+              finalize,
+              outputMode
+            })
+          }
+        };
+      }
+
+      if (outputMode === "tasks") {
+        return {
+          ok: true,
+          code: "planning-task-output-deferred",
+          message: "Task output mode contract is active, but task materialization is deferred to follow-up task delivery.",
+          data: {
+            planningType,
+            descriptor,
+            outputMode,
+            scaffoldVersion: 3,
+            status: "task-output-deferred",
+            unresolvedCritical: [],
+            adaptiveFollowups,
+            capturedAnswers: answers,
+            artifact,
+            cliGuidance: toCliGuidance({
+              planningType,
+              answers,
+              unresolvedCriticalCount: 0,
+              totalCriticalCount,
+              finalize: true,
+              outputMode
+            })
+          }
+        };
+      }
+
+      if (!finalize || !createWishlist) {
+        return {
+          ok: true,
+          code: "planning-wishlist-ready",
+          message: `Planning interview complete for ${planningType}; wishlist artifact ready`,
+          data: {
+            planningType,
+            descriptor,
+            outputMode,
+            scaffoldVersion: 3,
+            status: "ready-for-wishlist",
+            unresolvedCritical: [],
+            adaptiveFollowups,
+            capturedAnswers: answers,
+            artifact,
+            cliGuidance: toCliGuidance({
+              planningType,
+              answers,
+              unresolvedCriticalCount: 0,
+              totalCriticalCount,
+              finalize: createWishlist,
+              outputMode
             })
           }
         };
@@ -285,6 +377,7 @@ export const planningModule: WorkflowModule = {
         data: {
           planningType,
           descriptor,
+          outputMode,
           scaffoldVersion: 3,
           status: "artifact-created",
           wishlistId,
@@ -297,7 +390,8 @@ export const planningModule: WorkflowModule = {
             answers,
             unresolvedCriticalCount: 0,
             totalCriticalCount,
-            finalize: true
+            finalize: true,
+            outputMode
           })
         }
       };
