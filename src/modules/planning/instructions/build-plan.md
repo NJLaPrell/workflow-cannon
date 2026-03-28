@@ -37,3 +37,5 @@ workspace-kit run build-plan '{"planningType":"new-feature","outputMode":"tasks"
 All success/error payloads include `data.cliGuidance` with critical-question completion progress and a suggested next `workspace-kit run build-plan` command.
 
 When enough context exists, payloads also include `data.scoringHints` (`effort`, `risk`, `ordering`) as deterministic sequencing hints for agent chaining.
+
+All `build-plan` response payloads include `data.responseSchemaVersion` (`1`) and stable envelope keys (`planningType`, `outputMode`, and status-specific fields) for deterministic client parsing.

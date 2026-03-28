@@ -202,6 +202,7 @@ export const planningModule: WorkflowModule = {
         code: "planning-types-listed",
         message: `Found ${PLANNING_WORKFLOW_DESCRIPTORS.length} planning workflow types`,
         data: {
+          responseSchemaVersion: 1,
           planningTypes: PLANNING_WORKFLOW_DESCRIPTORS
         }
       };
@@ -259,7 +260,9 @@ export const planningModule: WorkflowModule = {
             code: "planning-ready-with-warnings",
             message: `Finalize allowed with unresolved critical questions because planning.hardBlockCriticalUnknowns=false`,
             data: {
+              responseSchemaVersion: 1,
               planningType,
+              outputMode,
               status: "ready-with-warnings",
               unresolvedCritical: missingCritical,
               nextQuestions: [...missingCritical, ...adaptiveFollowups],
@@ -280,7 +283,9 @@ export const planningModule: WorkflowModule = {
           code: "planning-critical-unknowns",
           message: `Cannot finalize ${planningType}: unresolved critical questions (${missingCritical.map((q) => q.id).join(", ")})`,
           data: {
+            responseSchemaVersion: 1,
             planningType,
+            outputMode,
             unresolvedCritical: missingCritical,
             nextQuestions: [...missingCritical, ...adaptiveFollowups],
             scoringHints,
@@ -303,7 +308,9 @@ export const planningModule: WorkflowModule = {
             .map((q) => q.id)
             .join(", ")})`,
           data: {
+            responseSchemaVersion: 1,
             planningType,
+            outputMode,
             unresolvedAdaptive,
             unresolvedCritical: [],
             nextQuestions: unresolvedAdaptive,
@@ -329,7 +336,9 @@ export const planningModule: WorkflowModule = {
           code: "planning-questions",
           message: `${missingCritical.length} critical planning questions require answers before finalize`,
           data: {
+            responseSchemaVersion: 1,
             planningType,
+            outputMode,
             status: "needs-input",
             unresolvedCritical: missingCritical,
             nextQuestions: [...missingCritical, ...adaptiveFollowups],
@@ -356,6 +365,7 @@ export const planningModule: WorkflowModule = {
           code: "planning-response-ready",
           message: `Planning interview complete for ${planningType}; returning response-only artifact`,
           data: {
+            responseSchemaVersion: 1,
             planningType,
             descriptor,
             outputMode,
@@ -454,6 +464,7 @@ export const planningModule: WorkflowModule = {
             ? `Planning task output persisted as '${task.id}'`
             : "Planning task output prepared (preview only; set persistTasks=true to write)",
           data: {
+            responseSchemaVersion: 1,
             planningType,
             descriptor,
             outputMode,
@@ -491,6 +502,7 @@ export const planningModule: WorkflowModule = {
           code: "planning-wishlist-ready",
           message: `Planning interview complete for ${planningType}; wishlist artifact ready`,
           data: {
+            responseSchemaVersion: 1,
             planningType,
             descriptor,
             outputMode,
@@ -576,6 +588,7 @@ export const planningModule: WorkflowModule = {
         code: "planning-artifact-created",
         message: `Planning artifact created as wishlist item ${wishlistId}`,
         data: {
+          responseSchemaVersion: 1,
           planningType,
           descriptor,
           outputMode,
@@ -621,6 +634,7 @@ export const planningModule: WorkflowModule = {
         code: "planning-rules-explained",
         message: `Effective planning rules for ${planningType}`,
         data: {
+          responseSchemaVersion: 1,
           planningType,
           defaultQuestionDepth: config.depth,
           hardBlockCriticalUnknowns: config.hardBlockCriticalUnknowns,
