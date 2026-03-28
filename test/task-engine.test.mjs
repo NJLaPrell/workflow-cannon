@@ -17,6 +17,7 @@ import {
   dependencyCheckGuard,
   getNextActions,
   taskEngineModule,
+  UnifiedStateDb,
   ModuleRegistry,
   ModuleCommandRouter,
   appendPolicyTrace
@@ -1185,5 +1186,52 @@ test("migrate-task-persistence json-to-sqlite then create-task uses SQLite store
   r = await taskEngineModule.onCommand({ name: "get-task", args: { taskId: "T7777" } }, ctxSqlite);
   assert.equal(r.ok, true);
   assert.equal(r.data.task.title, "sqlite persistence smoke");
+});
+
+test("migrate-task-persistence json-to-unified-sqlite writes task-engine module row", async () => {
+  const workspace = await tmpDir();
+  const taskPath = path.join(workspace, ".workspace-kit", "tasks", "state.json");
+  await mkdir(path.dirname(taskPath), { recursive: true });
+  await writeFile(
+    taskPath,
+    JSON.stringify(
+      {
+        schemaVersion: 1,
+        tasks: [{ id: "T8888", title: "seed", type: "workspace-kit", status: "proposed" }],
+        transitionLog: [],
+        mutationLog: [],
+        lastUpdated: new Date().toISOString()
+      },
+      null,
+      2
+    ) + "\n",
+    "utf8"
+  );
+  const wishPath = path.join(workspace, ".workspace-kit", "wishlist", "state.json");
+  await mkdir(path.dirname(wishPath), { recursive: true });
+  await writeFile(
+    wishPath,
+    JSON.stringify(
+      { schemaVersion: 1, items: [{ id: "W99", title: "idea", status: "new" }], lastUpdated: new Date().toISOString() },
+      null,
+      2
+    ) + "\n",
+    "utf8"
+  );
+
+  const ctx = { runtimeVersion: "0.1", workspacePath: workspace };
+  const r = await taskEngineModule.onCommand(
+    { name: "migrate-task-persistence", args: { direction: "json-to-unified-sqlite" } },
+    ctx
+  );
+  assert.equal(r.ok, true);
+  assert.equal(r.code, "migrated-json-to-unified-sqlite");
+
+  const unified = new UnifiedStateDb(workspace, ".workspace-kit/tasks/workspace-kit.db");
+  const row = unified.getModuleState("task-engine");
+  assert.ok(row);
+  assert.equal(row.stateSchemaVersion, 1);
+  assert.equal(Array.isArray(row.state.taskStore.tasks), true);
+  assert.equal(Array.isArray(row.state.wishlistStore.items), true);
 });
 

@@ -3,6 +3,7 @@ import fsSync from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../contracts/module-contract.js";
+import { UnifiedStateDb } from "../../core/state/unified-state-db.js";
 import type { TaskStoreDocument } from "./types.js";
 import type { WishlistStoreDocument } from "./wishlist-types.js";
 import { TaskEngineError } from "./transitions.js";
@@ -46,11 +47,16 @@ export async function runMigrateTaskPersistence(
   args: Record<string, unknown>
 ): Promise<ModuleCommandResult> {
   const direction = typeof args.direction === "string" ? args.direction.trim() : "";
-  if (direction !== "json-to-sqlite" && direction !== "sqlite-to-json") {
+  if (
+    direction !== "json-to-sqlite" &&
+    direction !== "sqlite-to-json" &&
+    direction !== "json-to-unified-sqlite"
+  ) {
     return {
       ok: false,
       code: "invalid-task-schema",
-      message: "migrate-task-persistence requires direction: 'json-to-sqlite' | 'sqlite-to-json'"
+      message:
+        "migrate-task-persistence requires direction: 'json-to-sqlite' | 'sqlite-to-json' | 'json-to-unified-sqlite'"
     };
   }
   const dryRun = args.dryRun === true;
@@ -63,7 +69,7 @@ export async function runMigrateTaskPersistence(
   const dbRel = planningSqliteDatabaseRelativePath(ctx);
   const dual = new SqliteDualPlanningStore(ctx.workspacePath, dbRel);
 
-  if (direction === "json-to-sqlite") {
+  if (direction === "json-to-sqlite" || direction === "json-to-unified-sqlite") {
     if (fsSync.existsSync(dual.dbPath) && !force) {
       return {
         ok: false,
@@ -126,7 +132,10 @@ export async function runMigrateTaskPersistence(
       return {
         ok: true,
         code: "migrate-dry-run",
-        message: "Dry run: would import JSON task/wishlist documents into SQLite",
+        message:
+          direction === "json-to-unified-sqlite"
+            ? "Dry run: would import JSON task/wishlist documents into unified SQLite module state"
+            : "Dry run: would import JSON task/wishlist documents into SQLite",
         data: {
           dbPath: dual.dbPath,
           taskPath,
@@ -134,6 +143,28 @@ export async function runMigrateTaskPersistence(
           taskCount: taskDoc.tasks.length,
           wishlistCount: wishDoc.items.length
         }
+      };
+    }
+
+    if (direction === "json-to-unified-sqlite") {
+      try {
+        const unified = new UnifiedStateDb(ctx.workspacePath, dbRel);
+        unified.setModuleState("task-engine", 1, {
+          taskStore: taskDoc,
+          wishlistStore: wishDoc
+        });
+      } catch (err) {
+        return {
+          ok: false,
+          code: "storage-write-error",
+          message: `Failed to write unified SQLite module state: ${(err as Error).message}`
+        };
+      }
+      return {
+        ok: true,
+        code: "migrated-json-to-unified-sqlite",
+        message: `Imported task and wishlist JSON into unified module state at ${dual.dbPath}`,
+        data: { dbPath: dual.dbPath, taskPath, wishPath, moduleId: "task-engine" }
       };
     }
 

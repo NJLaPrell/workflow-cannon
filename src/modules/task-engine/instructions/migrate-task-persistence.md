@@ -6,12 +6,13 @@ Offline migration between JSON task/wishlist files and a single SQLite database 
 
 ```
 workspace-kit run migrate-task-persistence '{"direction":"json-to-sqlite"}'
+workspace-kit run migrate-task-persistence '{"direction":"json-to-unified-sqlite"}'
 workspace-kit run migrate-task-persistence '{"direction":"sqlite-to-json","force":true}'
 ```
 
 ## Arguments
 
-- `direction` (required): `json-to-sqlite` or `sqlite-to-json`.
+- `direction` (required): `json-to-sqlite`, `json-to-unified-sqlite`, or `sqlite-to-json`.
 - `dryRun` (optional): `true` to report paths and counts without writing.
 - `force` (optional): `true` to overwrite an existing SQLite file or JSON export targets.
 
