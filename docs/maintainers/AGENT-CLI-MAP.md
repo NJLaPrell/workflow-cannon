@@ -12,6 +12,12 @@ If a session might touch `.workspace-kit/` state, lifecycle transitions, policy 
 2. `workspace-kit run` (no subcommand) — lists the current command surface and module ownership.
 3. Use this map + `src/modules/<module>/instructions/<command>.md` for JSON payload shape.
 
+## Quick boundary gate (use this before acting)
+
+- If work mutates task lifecycle, approvals, policy traces, transcript/improvement stores, or maintainer doc generation outputs, use the matching `workspace-kit` command from this map.
+- If work is application/source edits only, use normal code workflow; optional Tier C reads (`list-tasks`, `get-next-actions`) are safe discovery helpers.
+- For `workspace-kit run` sensitive operations, pass JSON `policyApproval`; for top-level `workspace-kit config|init|upgrade`, use env `WORKSPACE_KIT_POLICY_APPROVAL`.
+
 ## `/qt` vs `workspace-kit`
 
 The editor **`/qt`** command only loads prompt templates from `tasks/*.md`. It does **not** execute `workspace-kit`, write task-engine state, or satisfy policy. If a workflow step changes kit-owned files or policy-sensitive behavior, the agent must run the **`workspace-kit` line** from this map (or the linked instruction file)—not only describe it in chat.
