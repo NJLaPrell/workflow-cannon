@@ -1,6 +1,9 @@
 import { existsSync, statSync } from "node:fs";
-import { resolve, sep } from "node:path";
+import { dirname, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { WorkflowModule } from "../contracts/module-contract.js";
+
+const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 export class ModuleRegistryError extends Error {
   readonly code: string;
@@ -232,7 +235,7 @@ export function validateModuleSet(modules: WorkflowModule[], workspacePath?: str
   const moduleMap = buildModuleMap(modules);
   validateDependencies(moduleMap);
   validateRegistrationSchemas(moduleMap);
-  validateInstructionContracts(moduleMap, workspacePath ?? process.cwd());
+  validateInstructionContracts(moduleMap, workspacePath ?? PACKAGE_ROOT);
   topologicalSort(moduleMap);
 }
 
@@ -253,7 +256,7 @@ export class ModuleRegistry {
     this.moduleMap = buildModuleMap(modules);
     validateDependencies(this.moduleMap);
     validateRegistrationSchemas(this.moduleMap);
-    validateInstructionContracts(this.moduleMap, options?.workspacePath ?? process.cwd());
+    validateInstructionContracts(this.moduleMap, options?.workspacePath ?? PACKAGE_ROOT);
     this.modules = [...modules];
 
     const enabledModuleIds = resolveEnabledModuleIds(this.modules, options);
