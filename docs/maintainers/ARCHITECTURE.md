@@ -72,6 +72,7 @@ When instructions conflict, follow the ordered list in [`AGENTS.md`](./AGENTS.md
 
 ## Related docs
 
+- [`CLI-VISUAL-GUIDE.md`](./CLI-VISUAL-GUIDE.md) — ASCII + Mermaid map of top-level commands, `run` router, and approval lanes (companion to [`AGENT-CLI-MAP.md`](./AGENT-CLI-MAP.md))
 - [`ROADMAP.md`](./ROADMAP.md) — phases (including Phase 18 module platform + state consolidation and Phase 19 documentation v2)
 - [`.workspace-kit/tasks/state.json`](../../.workspace-kit/tasks/state.json) — canonical execution queue
 - [`RELEASING.md`](./RELEASING.md) — release gates and evidence

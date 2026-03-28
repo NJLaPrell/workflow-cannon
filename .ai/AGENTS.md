@@ -9,6 +9,7 @@ ref|id=tasks_view|target=.workspace-kit/tasks/state.json|type=file|status=active
 ref|id=releasing|target=docs/maintainers/RELEASING.md|type=file|status=active
 ref|id=policy_approval|target=docs/maintainers/POLICY-APPROVAL.md|type=file|status=active
 ref|id=agent_cli_map|target=docs/maintainers/AGENT-CLI-MAP.md|type=file|status=active
+ref|id=cli_visual_guide|target=docs/maintainers/CLI-VISUAL-GUIDE.md|type=file|status=active
 ref|id=agent_behavior_plan|target=docs/maintainers/plans/agent-behavior-module.md|type=file|status=active
 ref|id=terms|target=docs/maintainers/TERMS.md|type=file|status=active
 ref|id=module_guide|target=docs/maintainers/module-build-guide.md|type=file|status=active

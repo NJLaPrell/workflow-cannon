@@ -11,7 +11,7 @@ Basic operating guidance for AI agents working in this repository.
 5. `docs/maintainers/data/workspace-kit-status.yaml` — `current_kit_phase` and maintainer focus snapshot
 6. `docs/maintainers/RELEASING.md` — release gates and evidence requirements
 7. `docs/maintainers/POLICY-APPROVAL.md` — when `workspace-kit run` needs JSON `policyApproval` vs env approval for `config`/`init`/`upgrade`
-8. `docs/maintainers/AGENT-CLI-MAP.md` — tier table (task transitions vs other sensitive `run` commands) and copy-paste JSON
+8. `docs/maintainers/AGENT-CLI-MAP.md` — tier table (task transitions vs other sensitive `run` commands) and copy-paste JSON; visual companion [`CLI-VISUAL-GUIDE.md`](./CLI-VISUAL-GUIDE.md) (ASCII + Mermaid topology, decision flow, approval lanes, module router)
 9. `docs/maintainers/TERMS.md` — canonical terminology
 10. `docs/maintainers/module-build-guide.md` — human-readable module development companion
 
@@ -49,7 +49,7 @@ When a session is long, was compacted, or you are unsure stale chat context matc
 
 Before changing **task-engine state**, **policy traces**, **approvals**, **transcript/improvement** stores, or **mutating doc generation**, run the matching **`workspace-kit`** command. Chat-only approval does **not** satisfy policy for `workspace-kit run` (`docs/maintainers/POLICY-APPROVAL.md`).
 
-- Fast session bootstrap: run `workspace-kit doctor`, then `workspace-kit run` (no subcommand), then use `docs/maintainers/AGENT-CLI-MAP.md` for command/approval tiering.
+- Fast session bootstrap: run `workspace-kit doctor`, then `workspace-kit run` (no subcommand), then use `docs/maintainers/AGENT-CLI-MAP.md` for command/approval tiering. For diagrams (topology, when to use CLI, two approval lanes), open `docs/maintainers/CLI-VISUAL-GUIDE.md`.
 - **Do not** hand-edit `.workspace-kit/tasks/state.json` for lifecycle transitions except documented recovery; use `workspace-kit run run-transition` (`docs/maintainers/AGENT-CLI-MAP.md`).
 - **Cursor rule:** `.cursor/rules/workspace-kit-cli-execution.mdc` mirrors this section and links the Agent CLI map.
 

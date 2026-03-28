@@ -79,6 +79,7 @@ Snapshot: [`docs/maintainers/data/workspace-kit-status.yaml`](docs/maintainers/d
 | Glossary | [`docs/maintainers/TERMS.md`](docs/maintainers/TERMS.md) |
 | Architecture | [`docs/maintainers/ARCHITECTURE.md`](docs/maintainers/ARCHITECTURE.md) |
 | Agent/CLI execution | [`docs/maintainers/AGENTS.md`](docs/maintainers/AGENTS.md) |
+| CLI visual map (diagrams) | [`docs/maintainers/CLI-VISUAL-GUIDE.md`](docs/maintainers/CLI-VISUAL-GUIDE.md) |
 
 ## License
 

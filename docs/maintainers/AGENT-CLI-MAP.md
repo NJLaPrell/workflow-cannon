@@ -2,6 +2,8 @@
 
 Single maintainer reference for **what agents must run in a terminal** when working in this repository. Intent → command → approval surface → evidence.
 
+**Prefer diagrams first?** [`CLI-VISUAL-GUIDE.md`](./CLI-VISUAL-GUIDE.md) — ASCII topology, Mermaid decision flow, approval lanes, default module router.
+
 **Related:** `docs/maintainers/POLICY-APPROVAL.md` (approval semantics), `docs/maintainers/TERMS.md` (terminology), module instructions under `src/modules/*/instructions/*.md` (exact JSON fields per command).
 
 ## 30-second bootstrap (run this first)
