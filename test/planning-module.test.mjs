@@ -45,6 +45,16 @@ test("planningModule build-plan validates planningType and returns scaffold", as
   assert.equal(typeof valid.data.cliGuidance?.suggestedNextCommand, "string");
 });
 
+test("planningModule build-plan validates outputMode", async () => {
+  const workspace = await tmpDir();
+  const invalid = await planningModule.onCommand(
+    { name: "build-plan", args: { planningType: "new-feature", outputMode: "invalid" } },
+    { runtimeVersion: "0.1", workspacePath: workspace }
+  );
+  assert.equal(invalid.ok, false);
+  assert.equal(invalid.code, "invalid-planning-output-mode");
+});
+
 test("planningModule build-plan hard-blocks finalize when critical unknowns remain", async () => {
   const workspace = await tmpDir();
   const result = await planningModule.onCommand(
@@ -75,8 +85,56 @@ test("planningModule build-plan returns ready when critical answers are present"
     { runtimeVersion: "0.1", workspacePath: workspace }
   );
   assert.equal(result.ok, true);
-  assert.equal(result.code, "planning-ready");
+  assert.equal(result.code, "planning-wishlist-ready");
   assert.equal(result.data.cliGuidance.completionPct, 100);
+});
+
+test("planningModule build-plan supports response output mode with deterministic branch", async () => {
+  const workspace = await tmpDir();
+  const result = await planningModule.onCommand(
+    {
+      name: "build-plan",
+      args: {
+        planningType: "new-feature",
+        outputMode: "response",
+        answers: {
+          featureGoal: "Deliver a planning dashboard",
+          placement: "CLI command",
+          technology: "TypeScript",
+          targetAudience: "AI Agent Operators"
+        },
+        finalize: true
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: workspace }
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "planning-response-ready");
+  assert.equal(result.data.outputMode, "response");
+});
+
+test("planningModule build-plan supports tasks output mode branch", async () => {
+  const workspace = await tmpDir();
+  const result = await planningModule.onCommand(
+    {
+      name: "build-plan",
+      args: {
+        planningType: "new-feature",
+        outputMode: "tasks",
+        answers: {
+          featureGoal: "Deliver a planning dashboard",
+          placement: "CLI command",
+          technology: "TypeScript",
+          targetAudience: "AI Agent Operators"
+        },
+        finalize: true
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: workspace }
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "planning-task-output-deferred");
+  assert.equal(result.data.outputMode, "tasks");
 });
 
 test("planningModule build-plan can allow warnings when hard block disabled", async () => {
