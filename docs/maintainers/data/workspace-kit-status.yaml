@@ -1,27 +1,25 @@
 schema_version: 1
-current_kit_phase: "17"
-last_updated: "2026-03-27"
-active_focus: "Phase 17 released (`v0.18.0`): planning module guided workflows (`T345`–`T350`) are complete; monitor operator adoption and artifact quality."
+current_kit_phase: "18"
+last_updated: "2026-03-28"
+active_focus: "Phase 18 planned (`v0.19.0`): module platform and state consolidation — three tracks: (A) planning engine agent orchestration hardening `T351`–`T355`, (B) module pattern cleanup `T356`–`T359`, (C) unified SQLite state DB `T360`–`T365`."
 blockers: []
 next_agent_actions:
-  - "Monitor planning module usage: unresolved critical-question rates, finalize completion friction, and wishlist artifact quality."
-  - "Collect first post-release operator feedback on question depth defaults (`planning.defaultQuestionDepth`) and hard-block behavior."
-  - "Draft Phase 18 follow-ups from observed planning workflow friction."
+  - "Begin Track A (`T351`, `T352`) and Track B (`T356`, `T357`, `T359`) in parallel — all have no dependencies."
+  - "After T356+T357, execute T358 (extract shared planning domain from task-engine)."
+  - "After T358, begin Track C sequentially: T360 → T361 → T362 → T363/T364 → T365."
+  - "Validate each task with `pnpm run build && pnpm test` before marking complete."
 last_session_summary:
+  - "2026-03-28: Module build docs-vs-reality review completed; findings in `docs/maintainers/MODULE-CLEANUP-REVIEW.md`."
+  - "2026-03-28: State consolidation analysis: decided to migrate per-module state.md + ad-hoc JSON to unified SQLite DB with module schema registration and export-on-commit snapshots."
+  - "2026-03-28: Planning artifact W4 created and converted to tasks T356–T365 (module cleanup + state consolidation)."
+  - "2026-03-28: Combined Phase 18 agent orchestration (T351–T355), module cleanup (T356–T359), and state consolidation (T360–T365) into single release `v0.19.0`."
   - "2026-03-27: Phase 17 tasks `T345`–`T350` completed and released as v0.18.0."
   - "2026-03-27: Phase 16 tasks `T335`–`T344` completed and released as v0.17.0."
-  - "2026-03-27: Extension dashboard plan added; tasks T342–T344 created (SQLite watcher, richer dashboard, list-tasks filters after T337)."
-  - "2026-03-27: Phase 16 opened; tasks T335–T341 created (maintenance/stability: schemas, validation, queries, idempotency, explainer, strict mode, TERMS)."
-  - "Phase 13 tasks T311–T318 completed through canonical Task Engine transitions."
-  - "Task Engine now exposes CRUD/dependency/history/summary and planning bridge command contracts with archival-aware query defaults."
-  - "Release readiness gates passed: build/check/test/parity/check-release-metadata/phase5-gates/check-planning-consistency."
-  - "Phase 14 tasks `T319`-`T323` completed: Wishlist store, commands, conversion, planning-boundary markers, runbook and tests; released as v0.15.0."
-  - "Phase 15 tasks `T324`-`T334` completed: SQLite dual-document store, migrate-task-persistence, config keys, tests; release `v0.16.0` (publish via GitHub workflow)."
 pending_decisions: []
 metrics:
-  updated_at: "2026-03-27"
+  updated_at: "2026-03-28"
   source: "maintainer"
-  notes: "v0.18.0 released for Phase 17 (workflow 23671207437; tasks T345–T350). Prior: v0.17.0 (23667632451), v0.16.1 patch (23659070618)."
+  notes: "v0.18.0 released for Phase 17 (workflow 23671207437; tasks T345–T350). Phase 18 planned: 15 tasks across 3 tracks for v0.19.0."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null

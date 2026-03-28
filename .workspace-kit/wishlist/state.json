@@ -28,7 +28,241 @@
         "boundaries": "CLI-first in v1; follow existing module defaults/config patterns; produce wishlist artifact only (no auto task creation from planning output in this release).",
         "dependencyIntent": "Build runtime/workflow core first, then rule/question enforcement, then artifact schema/composition, then UX and docs/tests hardening."
       }
+    },
+    {
+      "id": "W2",
+      "status": "open",
+      "title": "Dashboard UI updates for planning visibility",
+      "problemStatement": "Current dashboard visibility is task-focused and does not surface planning workflow status, unresolved critical unknowns, or recent planning artifacts clearly.",
+      "expectedOutcome": "Operators can see planning progress, unresolved critical unknown counts, recent artifact creation, and recommended next planning actions without leaving the dashboard.",
+      "impact": "Faster operator decisions and fewer planning blind spots before execution-task decomposition.",
+      "constraints": "Preserve thin-client contract model; avoid breaking existing dashboard sections; maintain sidebar readability; no server-side contract drift without docs/tests.",
+      "successSignals": "Dashboard shows planning module summary cards and links; users can jump to planning commands; manual checks confirm clarity and no regressions.",
+      "requestor": "AI Agent Operators / Developers",
+      "evidenceRef": "planning/dashboard-ui-updates-2026-03-27",
+      "createdAt": "2026-03-27T23:09:37.036Z",
+      "updatedAt": "2026-03-27T23:09:37.036Z",
+      "metadata": {
+        "planningType": "new-feature",
+        "artifactSchemaVersion": 1,
+        "artifact": {
+          "schemaVersion": 1,
+          "planningType": "new-feature",
+          "generatedAt": "2026-03-27T23:09:37.032Z",
+          "goals": [
+            "Improve the Cursor extension dashboard so operators can quickly understand planning workflow health and next actions."
+          ],
+          "approach": "Add a planning summary panel driven by existing/new planning command outputs, include unresolved-critical and recent-artifact signals, and expose direct quick actions.",
+          "majorTechnicalDecisions": [
+            "Reuse workspace-kit run JSON contracts from extension runtime rather than direct file reads.",
+            "Favor additive dashboard sections to avoid regressions in existing task/status UI.",
+            "Keep planning artifact references in wishlist namespace and link through command-based details."
+          ],
+          "candidateFeaturesOrChanges": [
+            "Planning summary card (workflow type + completion guidance)",
+            "Unresolved critical unknown indicator",
+            "Recent planning artifacts list (W###)",
+            "Quick actions for list-planning-types/build-plan/explain-planning-rules"
+          ],
+          "assumptions": [
+            "Planning commands are available in the extension runtime context.",
+            "Operators prefer concise summary cards over verbose transcript-like views."
+          ],
+          "openQuestions": [
+            "Should planning widgets be collapsible by default?",
+            "Do we need per-workspace filtering for artifact recency?"
+          ],
+          "risksAndConstraints": [
+            "UI clutter if too many cards are added",
+            "Potential confusion if planning and task statuses are mixed without clear labels",
+            "Constraint: Preserve thin-client contract model; avoid breaking existing dashboard sections; maintain sidebar readability; no server-side contract drift without docs/tests."
+          ],
+          "sourceAnswers": {
+            "featureGoal": "Improve the Cursor extension dashboard so operators can quickly understand planning workflow health and next actions.",
+            "placement": "Cursor extension dashboard webview + command palette entry points.",
+            "technology": "TypeScript, VS Code extension APIs, existing workspace-kit run contracts.",
+            "targetAudience": "AI Agent Operators / Developers",
+            "problemStatement": "Current dashboard visibility is task-focused and does not surface planning workflow status, unresolved critical unknowns, or recent planning artifacts clearly.",
+            "expectedOutcome": "Operators can see planning progress, unresolved critical unknown counts, recent artifact creation, and recommended next planning actions without leaving the dashboard.",
+            "impact": "Faster operator decisions and fewer planning blind spots before execution-task decomposition.",
+            "constraints": "Preserve thin-client contract model; avoid breaking existing dashboard sections; maintain sidebar readability; no server-side contract drift without docs/tests.",
+            "successSignals": "Dashboard shows planning module summary cards and links; users can jump to planning commands; manual checks confirm clarity and no regressions.",
+            "approach": "Add a planning summary panel driven by existing/new planning command outputs, include unresolved-critical and recent-artifact signals, and expose direct quick actions."
+          }
+        }
+      }
+    },
+    {
+      "id": "W3",
+      "status": "converted",
+      "title": "Planning engine agent-orchestration improvements",
+      "problemStatement": "Current planning flow is useful but leaves key agent automation gaps: adaptive follow-ups are advisory, output mode is implicit, and planning-to-task handoff is not a first-class contract.",
+      "expectedOutcome": "Planning engine supports explicit output-mode contracts, optional strict adaptive gating, richer scoring/ordering hints, and clearer downstream automation contracts.",
+      "impact": "Higher agent reliability, fewer ambiguous planning outcomes, and faster conversion from planning context to execution-ready work.",
+      "constraints": "Agent-first CLI (not human-first), output artifacts limited to wishlist items/tasks/response, preserve existing task-engine policy/contracts unless explicitly versioned.",
+      "successSignals": "Agents can run one planning flow that deterministically yields selected output mode with stable schemas and stronger gating behavior.",
+      "requestor": "AI Agent Operators / Developers",
+      "evidenceRef": "planning/agent-orchestration-improvements-2026-03-27",
+      "createdAt": "2026-03-27T23:38:30.416Z",
+      "updatedAt": "2026-03-27T23:38:48.721Z",
+      "metadata": {
+        "planningType": "task-breakdown",
+        "artifactSchemaVersion": 1,
+        "artifact": {
+          "schemaVersion": 1,
+          "planningType": "task-breakdown",
+          "generatedAt": "2026-03-27T23:38:30.413Z",
+          "goals": [
+            "Improve the planning engine so agent workflows are stricter, more deterministic, and can emit wishlist items, tasks, or response-only outputs."
+          ],
+          "approach": "Harden command contracts and planning flow semantics first, then add output-mode support, decomposition path, and scoring/response schema improvements with tests and docs.",
+          "majorTechnicalDecisions": [
+            "Introduce explicit `outputMode` contract for build-plan.",
+            "Add configurable adaptive follow-up blocking mode beyond critical-only gating.",
+            "Keep planning as command-contract-first and versioned response schema."
+          ],
+          "candidateFeaturesOrChanges": [
+            "outputMode support: wishlist|tasks|response",
+            "strict adaptive gating mode",
+            "integrated plan-to-task decomposition path",
+            "effort/risk/ordering scoring fields",
+            "response schema normalization for agent chaining"
+          ],
+          "assumptions": [
+            "Consumers can tolerate additive contract fields in v0.x.",
+            "Task engine conversion and dependency commands remain canonical for persisted execution tasks."
+          ],
+          "openQuestions": [
+            "Should outputMode tasks create tasks directly or return task drafts by default?",
+            "Should strict adaptive gating be default or opt-in?"
+          ],
+          "risksAndConstraints": [
+            "Contract drift risk if output schemas are not versioned",
+            "Overfitting scoring heuristics may reduce portability",
+            "Constraint: Agent-first CLI (not human-first), output artifacts limited to wishlist items/tasks/response, preserve existing task-engine policy/contracts unless explicitly versioned."
+          ],
+          "sourceAnswers": {
+            "goal": "Improve the planning engine so agent workflows are stricter, more deterministic, and can emit wishlist items, tasks, or response-only outputs.",
+            "constraints": "Agent-first CLI (not human-first), output artifacts limited to wishlist items/tasks/response, preserve existing task-engine policy/contracts unless explicitly versioned.",
+            "successSignals": "Agents can run one planning flow that deterministically yields selected output mode with stable schemas and stronger gating behavior.",
+            "problemStatement": "Current planning flow is useful but leaves key agent automation gaps: adaptive follow-ups are advisory, output mode is implicit, and planning-to-task handoff is not a first-class contract.",
+            "expectedOutcome": "Planning engine supports explicit output-mode contracts, optional strict adaptive gating, richer scoring/ordering hints, and clearer downstream automation contracts.",
+            "impact": "Higher agent reliability, fewer ambiguous planning outcomes, and faster conversion from planning context to execution-ready work.",
+            "approach": "Harden command contracts and planning flow semantics first, then add output-mode support, decomposition path, and scoring/response schema improvements with tests and docs."
+          }
+        }
+      },
+      "convertedAt": "2026-03-27T23:38:48.721Z",
+      "convertedToTaskIds": [
+        "T351",
+        "T352",
+        "T353",
+        "T354",
+        "T355"
+      ],
+      "conversionDecomposition": {
+        "rationale": "Deliver agent-first planning engine improvements as deterministic command contracts with explicit output modes, stricter gating controls, and stronger downstream automation schemas.",
+        "boundaries": "No session/team/dashboard scope in this slice; keep CLI contract-first behavior and output artifacts constrained to wishlist items, tasks, or response-only.",
+        "dependencyIntent": "Contracts and gating land first, then outputMode/task emission, then scoring/schema normalization and docs/tests hardening."
+      }
+    },
+    {
+      "id": "W4",
+      "status": "converted",
+      "title": "Change / Refactor plan artifact",
+      "problemStatement": "Planning artifact generated from guided workflow.",
+      "expectedOutcome": "Clear, reviewable planning artifact for execution decomposition.",
+      "impact": "Improved planning quality and delivery confidence.",
+      "constraints": "None explicitly provided.",
+      "successSignals": "Critical questions answered and artifact accepted by operators.",
+      "requestor": "human:maintainer",
+      "evidenceRef": "planning:change:2026-03-28T00:04:10.062Z",
+      "createdAt": "2026-03-28T00:04:10.062Z",
+      "updatedAt": "2026-03-28T00:05:37.116Z",
+      "metadata": {
+        "planningType": "change",
+        "artifactSchemaVersion": 1,
+        "artifact": {
+          "schemaVersion": 1,
+          "planningType": "change",
+          "generatedAt": "2026-03-28T00:04:10.058Z",
+          "goals": [
+            "Consolidate per-module state persistence into a single SQLite database with module schema registration. Replace disconnected state.md documentation files and ad-hoc JSON persistence (task-engine state.json, improvement state.json) with a unified DB that modules register state schemas into. Add CLI-exposed state queries for AI discoverability. Add export-on-commit to JSON snapshot for git-tracked state diffs and resync-to-commit capability. Additionally clean up module patterns: extract shared planning domain from task-engine into core, centralize module enrollment arrays, replace onCommand if-chains with handler maps, remove unused lifecycle hooks from the contract, and standardize internal module structure."
+          ],
+          "approach": "Context-driven workflow guided by planning rules.",
+          "majorTechnicalDecisions": [],
+          "candidateFeaturesOrChanges": [],
+          "assumptions": [],
+          "openQuestions": [],
+          "risksAndConstraints": [],
+          "sourceAnswers": {
+            "changeGoal": "Consolidate per-module state persistence into a single SQLite database with module schema registration. Replace disconnected state.md documentation files and ad-hoc JSON persistence (task-engine state.json, improvement state.json) with a unified DB that modules register state schemas into. Add CLI-exposed state queries for AI discoverability. Add export-on-commit to JSON snapshot for git-tracked state diffs and resync-to-commit capability. Additionally clean up module patterns: extract shared planning domain from task-engine into core, centralize module enrollment arrays, replace onCommand if-chains with handler maps, remove unused lifecycle hooks from the contract, and standardize internal module structure.",
+            "compatibilityRisk": "High — multiple state schema migrations required. Task-engine already supports both JSON and SQLite backends, so the migration path exists but must preserve existing JSON state during transition. The improvement module has its own schema versioning (currently v2) that needs migration. CLI command contracts (inputs/outputs) should not change — only the backing storage. The export-on-commit snapshot format becomes a new contract surface. Cross-module imports from task-engine into planning/approvals/improvement will break during the shared-domain extraction. Module enrollment centralization and handler map refactors are internal and low-risk.",
+            "rollbackPlan": "Phased rollout with feature flags. Phase 1: Add SQLite state DB alongside existing JSON files (dual-write). Phase 2: Switch reads to DB (JSON becomes export-only). Phase 3: Remove JSON persistence code. Each phase is independently revertible by toggling the persistenceBackend config. The export-on-commit snapshot means any commit can restore full state. Shared-domain extraction can be done as a pure refactor with no behavior change — revert is a single git revert.",
+            "migrationNotes": "Operators using JSON persistence (default) will need to run a one-time migration command to seed the SQLite DB from existing JSON state files. The persistenceBackend config key already exists in task-engine and will be promoted to a global setting. After migration, state.json files become read-only snapshots. The state-snapshot.json export format will be documented as a supported contract for external tooling. Modules that currently have no persisted state (workspace-config, documentation) require no migration."
+          }
+        }
+      },
+      "convertedAt": "2026-03-28T00:05:37.116Z",
+      "convertedToTaskIds": [
+        "T356",
+        "T357",
+        "T358",
+        "T359",
+        "T360",
+        "T361",
+        "T362",
+        "T363",
+        "T364",
+        "T365"
+      ],
+      "conversionDecomposition": {
+        "rationale": "This change plan decomposes into three sequential phases: (1) internal module pattern cleanup (low-risk refactors that reduce complexity before the migration), (2) unified SQLite state DB with module schema registration, and (3) export-on-commit and migration tooling. Phase 1 has no compatibility risk and unblocks the state migration. Phase 2 is the core architectural change. Phase 3 adds the git-tracked snapshot layer.",
+        "boundaries": "CLI command contracts (inputs/outputs) must not change. Config resolution stays in config.json. Only runtime state persistence moves to SQLite. Modules with no persisted state (workspace-config, documentation) are unaffected by storage changes. Each task must pass pnpm run build && pnpm test.",
+        "dependencyIntent": "T356 (centralize enrollment) and T357 (handler maps) are independent and can run in parallel. T358 (extract shared domain) depends on both being merged. T359 (kill dead hooks) is independent. T360 (unified state DB) depends on T358. T361 (module state registration) depends on T360. T362 (migrate existing state) depends on T361. T363 (export-on-commit) depends on T362. T364 (CLI state commands) depends on T361. T365 (remove state.md files and update docs) depends on T364."
+      }
+    },
+    {
+      "id": "W5",
+      "status": "open",
+      "title": "Prompting module: CLI structured user choices (workspace-kit parity)",
+      "problemStatement": "Give agents a first-class workspace-kit command to record structured multiple-choice prompts (pending user selection) with instruction + AGENT-CLI-MAP parity, aligned with existing WorkflowModule patterns—without requiring MCP or ACP.",
+      "expectedOutcome": "A new WorkflowModule exposes workspace-kit run command(s) to record structured multiple-choice prompts with pending state, instruction markdown, and AGENT-CLI-MAP documentation; agents resolve choices via CLI + follow-up chat without MCP/ACP.",
+      "impact": "Agents get deterministic, policy-aware prompts aligned with existing module patterns; operators can review pending choices in kit state.",
+      "constraints": "CLI-first; TypeScript only; no new native deps; policy tiering must match mutation sensitivity.",
+      "successSignals": "Command creates/reads pending choice records; instructions + CLI map document JSON contract; tests cover happy path and policy denial.",
+      "requestor": "NJLaPrell@gmail.com",
+      "evidenceRef": "planning:new-feature:2026-03-28T00:29:03.310Z",
+      "createdAt": "2026-03-28T00:29:03.310Z",
+      "updatedAt": "2026-03-28T00:29:11.768Z",
+      "metadata": {
+        "planningType": "new-feature",
+        "artifactSchemaVersion": 1,
+        "artifact": {
+          "schemaVersion": 1,
+          "planningType": "new-feature",
+          "generatedAt": "2026-03-28T00:29:03.306Z",
+          "goals": [
+            "Give agents a first-class workspace-kit command to record structured multiple-choice prompts (pending user selection) with instruction + AGENT-CLI-MAP parity, aligned with existing WorkflowModule patterns—without requiring MCP or ACP."
+          ],
+          "approach": "Context-driven workflow guided by planning rules.",
+          "majorTechnicalDecisions": [
+            "CLI-first matches all other kit capabilities; a dedicated module keeps boundaries clear vs task-engine or approvals; pending-choice persistence enables resumable agent turns."
+          ],
+          "candidateFeaturesOrChanges": [],
+          "assumptions": [],
+          "openQuestions": [],
+          "risksAndConstraints": [],
+          "sourceAnswers": {
+            "featureGoal": "Give agents a first-class workspace-kit command to record structured multiple-choice prompts (pending user selection) with instruction + AGENT-CLI-MAP parity, aligned with existing WorkflowModule patterns—without requiring MCP or ACP.",
+            "placement": "workspace-kit run command on the CLI; new WorkflowModule with instructions/*.md; entry in docs/maintainers/AGENT-CLI-MAP.md; policy tier as appropriate for mutating kit state.",
+            "technology": "TypeScript; reuse ModuleCommandRouter, module contract, and existing policyApproval flows; no new native dependencies.",
+            "targetAudience": "AI Agent Operators and Developers using Cursor or terminal-driven agents.",
+            "decisionRationale": "CLI-first matches all other kit capabilities; a dedicated module keeps boundaries clear vs task-engine or approvals; pending-choice persistence enables resumable agent turns."
+          }
+        }
+      }
     }
   ],
-  "lastUpdated": "2026-03-27T22:42:46.788Z"
+  "lastUpdated": "2026-03-28T00:29:11.768Z"
 }

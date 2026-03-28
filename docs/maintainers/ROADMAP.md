@@ -30,6 +30,7 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - **Phase 15 (Task and wishlist SQLite persistence)** is **COMPLETE and released** as **`v0.16.0`**: **`T324`–`T334`** — ADR, pluggable `TaskStore`/`WishlistStore`, optional `better-sqlite3` dual-document database, `migrate-task-persistence`, atomic `convert-wishlist` on SQLite, config keys, tests/parity, and release packaging (`pnpm.onlyBuiltDependencies`).
 - **Phase 16 (Maintenance and stability)** is **COMPLETE and released** as **`v0.17.0`**: **`T335`–`T344`** — versioned Task Engine API schemas, stricter typed create paths, query filters and CLI map docs, idempotent mutations, model explainer command, optional runtime strict validation, TERMS glossary alignment, plus **extension** parity (SQLite file watching, richer dashboard, `list-tasks` filters after `T337`). Plan: `docs/maintainers/plans/extension-dashboard-parity-plan.md`.
 - **Phase 17 (Planning module guided workflows)** is **COMPLETE and released** as **`v0.18.0`**: **`T345`–`T350`** — planning module command surface, adaptive/hard-gated interview flow, rule-driven defaults, wishlist artifact composition/persistence, CLI guidance polish, and maintainer docs/test hardening.
+- **Phase 18 (Module platform and state consolidation)** is **in planning** for **`v0.19.0`**: **`T351`–`T365`** — three tracks: (A) planning engine agent orchestration hardening, (B) module pattern cleanup (centralized enrollment, handler maps, shared domain extraction, dead hook removal), (C) unified SQLite state DB with module schema registration, migration, export-on-commit snapshots, and CLI state queries.
 - Historical extraction and first-publish milestones remain recorded below as provenance.
 
 ## Phase plan and release cadence
@@ -217,6 +218,22 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
   - **`T345`–`T350`** are **`completed`** in task-engine state.
   - `pnpm run build`, `check`, `test`, `parity`, `check-release-metadata`, `phase5-gates`, and `check-planning-consistency` pass on the release tag.
   - Maintainer docs (`AGENT-CLI-MAP`, planning runbook, module instructions) align with command behavior and config defaults.
+
+### Phase 18 - Module platform and state consolidation -> GitHub release `v0.19.0`
+
+- Primary scope: **`T351`–`T365`** across three tracks.
+- **Track A — Planning engine agent orchestration hardening** (`T351`–`T355`): explicit planning output mode contracts (wishlist/tasks/response), strict adaptive follow-up gating, task-output mode from planning flow, effort/risk/ordering scoring hints, and normalized planning response schemas with hardened docs/tests.
+- **Track B — Module pattern cleanup** (`T356`–`T359`): centralize module enrollment into a single barrel, replace `onCommand` if-chains with handler map dispatch, extract shared planning domain from `task-engine` into `core/`, and remove unused lifecycle hooks from the `WorkflowModule` contract. See `docs/maintainers/MODULE-CLEANUP-REVIEW.md` for full analysis.
+- **Track C — Unified state consolidation** (`T360`–`T365`): implement a single SQLite state DB in core with module schema registration, migrate existing JSON state (task-engine and improvement) into the unified DB, add export-on-commit JSON snapshot for git-tracked state diffs and resync-to-commit, add CLI commands for module state queries (AI discoverability), and remove `state.md` files in favor of enforced schema registration.
+- Dependency structure: Tracks A and B start in parallel. Track C depends on Track B completion (`T358` specifically). Within each track, tasks are sequenced by declared `dependsOn`.
+- Outcome: planning module is agent-orchestration-ready with structured output contracts; module internals are consistent, boundary-enforced, and scalable; runtime state is consolidated into a queryable, transactional, git-snapshotted SQLite DB with enforced module schemas replacing disconnected documentation.
+- Exit signals:
+  - **`T351`–`T365`** are **`completed`** in task-engine state.
+  - `pnpm run build`, `check`, `test`, `parity`, `check-release-metadata`, `phase5-gates`, and `check-planning-consistency` pass on the release tag.
+  - No module imports directly from a sibling module (boundary enforcement).
+  - `workspace-kit run get-module-state` returns structured state for all registered modules.
+  - `state export` / `state import` round-trips produce identical output.
+  - Module-build documentation (`.ai/module-build.md`, `docs/maintainers/module-build-guide.md`) reflects the new state and handler patterns.
 
 ## Recorded decisions
 

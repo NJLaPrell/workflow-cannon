@@ -5072,6 +5072,377 @@
         "Maintainer docs explain configuration defaults and operator usage",
         "Release gates pass with planning-module evidence captured"
       ]
+    },
+    {
+      "id": "T351",
+      "title": "Add explicit planning output mode contract (wishlist|tasks|response)",
+      "type": "improvement",
+      "status": "proposed",
+      "createdAt": "2026-03-27T23:38:48.721Z",
+      "updatedAt": "2026-03-28T00:25:20.863Z",
+      "priority": "P1",
+      "phase": "Phase 18 - Module platform and state consolidation",
+      "approach": "Extend build-plan command args and response schema with explicit output mode semantics and deterministic result codes.",
+      "technicalScope": [
+        "Add `outputMode` argument validation and defaults",
+        "Define stable response codes/payload branches per mode",
+        "Update planning instruction docs and command examples"
+      ],
+      "acceptanceCriteria": [
+        "`build-plan` accepts `outputMode` with strict allowed values",
+        "Mode behavior is deterministic and test-covered",
+        "Docs describe when persistence occurs vs response-only behavior"
+      ]
+    },
+    {
+      "id": "T352",
+      "title": "Implement strict adaptive follow-up gating mode",
+      "type": "improvement",
+      "status": "proposed",
+      "createdAt": "2026-03-27T23:38:48.721Z",
+      "updatedAt": "2026-03-28T00:25:20.870Z",
+      "priority": "P1",
+      "phase": "Phase 18 - Module platform and state consolidation",
+      "approach": "Add configurable enforcement that can require selected adaptive follow-ups before finalize for higher-rigor agent workflows.",
+      "technicalScope": [
+        "Add config key(s) controlling adaptive gating policy",
+        "Extend question engine to classify required adaptive follow-ups",
+        "Enforce finalize blocking with explicit remediation payloads"
+      ],
+      "acceptanceCriteria": [
+        "Finalize blocks when required adaptive follow-ups are unresolved under strict mode",
+        "Warning and blocking modes are both supported and documented",
+        "Tests cover new gating branches and config behavior"
+      ]
+    },
+    {
+      "id": "T353",
+      "title": "Support task-output mode from planning flow",
+      "type": "improvement",
+      "status": "proposed",
+      "createdAt": "2026-03-27T23:38:48.721Z",
+      "updatedAt": "2026-03-28T00:25:20.874Z",
+      "priority": "P1",
+      "phase": "Phase 18 - Module platform and state consolidation",
+      "approach": "Enable planning flow to emit execution-task outputs directly when requested while preserving deterministic task-engine compatibility.",
+      "technicalScope": [
+        "Add task-draft/task-create behavior for `outputMode: tasks`",
+        "Integrate with task-engine validation and lifecycle expectations",
+        "Return task IDs and provenance links in response payload"
+      ],
+      "acceptanceCriteria": [
+        "Planning can return or persist task outputs through explicit mode selection",
+        "Created tasks satisfy known-type validation requirements",
+        "Response includes provenance linking planning input to task outputs"
+      ],
+      "dependsOn": [
+        "T351",
+        "T352"
+      ]
+    },
+    {
+      "id": "T354",
+      "title": "Add effort/risk/ordering scoring hints for agent chaining",
+      "type": "improvement",
+      "status": "proposed",
+      "createdAt": "2026-03-27T23:38:48.721Z",
+      "updatedAt": "2026-03-28T00:25:20.877Z",
+      "priority": "P2",
+      "phase": "Phase 18 - Module platform and state consolidation",
+      "approach": "Introduce lightweight deterministic scoring fields that help agents rank and sequence planned outputs.",
+      "technicalScope": [
+        "Define scoring schema fields in planning response",
+        "Compute deterministic effort/risk/order hints from available answers",
+        "Document scoring semantics and non-goals"
+      ],
+      "acceptanceCriteria": [
+        "Planning responses include structured scoring hints when enough context exists",
+        "Scoring output is deterministic for identical inputs",
+        "Tests verify schema stability and deterministic calculations"
+      ],
+      "dependsOn": [
+        "T351"
+      ]
+    },
+    {
+      "id": "T355",
+      "title": "Normalize planning response schemas and harden docs/tests",
+      "type": "improvement",
+      "status": "proposed",
+      "createdAt": "2026-03-27T23:38:48.721Z",
+      "updatedAt": "2026-03-28T00:25:20.881Z",
+      "priority": "P2",
+      "phase": "Phase 18 - Module platform and state consolidation",
+      "approach": "Finalize versioned planning response contracts and update maintainer docs/tests to support robust agent orchestration.",
+      "technicalScope": [
+        "Version and document planning response contract shapes",
+        "Add integration tests for output modes and task/wishlist/response flows",
+        "Update changelog/runbooks/CLI map references for planning contract usage"
+      ],
+      "acceptanceCriteria": [
+        "Planning command responses are versioned, documented, and test-covered across modes",
+        "Maintainer docs reflect contract guarantees and migration notes",
+        "Release gates pass with planning-contract evidence"
+      ],
+      "dependsOn": [
+        "T351",
+        "T352",
+        "T353",
+        "T354"
+      ]
+    },
+    {
+      "id": "T356",
+      "title": "Centralize module enrollment into single barrel",
+      "type": "workspace-kit",
+      "status": "proposed",
+      "createdAt": "2026-03-28T00:05:37.116Z",
+      "updatedAt": "2026-03-28T00:25:20.885Z",
+      "priority": "P2",
+      "phase": "Phase 18 - Module platform and state consolidation",
+      "approach": "Create src/modules/all-modules.ts that exports the canonical module array. Replace the three hardcoded arrays in run-command.ts, doctor-planning-issues.ts, and config-cli.ts with imports from the barrel.",
+      "technicalScope": [
+        "src/modules/all-modules.ts (new)",
+        "src/cli/run-command.ts",
+        "src/cli/doctor-planning-issues.ts",
+        "src/core/config-cli.ts"
+      ],
+      "acceptanceCriteria": [
+        "Single source of truth for module list",
+        "All three consumers import from all-modules.ts",
+        "pnpm run build && pnpm test pass",
+        "No behavior change in workspace-kit run, doctor, or config commands"
+      ]
+    },
+    {
+      "id": "T357",
+      "title": "Replace onCommand if-chains with handler map pattern",
+      "type": "workspace-kit",
+      "status": "proposed",
+      "createdAt": "2026-03-28T00:05:37.116Z",
+      "updatedAt": "2026-03-28T00:25:20.888Z",
+      "priority": "P2",
+      "phase": "Phase 18 - Module platform and state consolidation",
+      "approach": "For each module, extract command handlers into a Record<string, CommandHandler> dispatch table. The onCommand method becomes a thin lookup. Start with workspace-config (smallest), then approvals, documentation, planning, improvement, and finally task-engine (largest). Each module can be a separate commit.",
+      "technicalScope": [
+        "src/modules/*/index.ts (all six modules)",
+        "Handler extraction into per-command or grouped handler files",
+        "task-engine/index.ts god-method decomposition"
+      ],
+      "acceptanceCriteria": [
+        "No module has more than 5 lines in its onCommand method",
+        "Each handler is independently importable and testable",
+        "pnpm run build && pnpm test pass",
+        "No behavior change in any workspace-kit run command"
+      ]
+    },
+    {
+      "id": "T358",
+      "title": "Extract shared planning domain from task-engine into core",
+      "type": "workspace-kit",
+      "status": "proposed",
+      "createdAt": "2026-03-28T00:05:37.116Z",
+      "updatedAt": "2026-03-28T00:25:20.891Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T356",
+        "T357"
+      ],
+      "phase": "Phase 18 - Module platform and state consolidation",
+      "approach": "Move openPlanningStores, TaskStore, WishlistStore, TransitionService, shared validation helpers, and shared types into src/core/planning/ or src/contracts/. Update all imports in planning, approvals, and improvement modules to use the new paths. task-engine re-exports from core for backward compat temporarily.",
+      "technicalScope": [
+        "src/core/planning/ (new directory)",
+        "Move: planning-open.ts, store.ts, wishlist-store.ts, service.ts, transitions.ts, types.ts, wishlist-types.ts, wishlist-validation.ts",
+        "Update imports in: planning/index.ts, approvals/review-runtime.ts, improvement/generate-recommendations-runtime.ts, improvement/ingest.ts",
+        "task-engine/index.ts re-export shim"
+      ],
+      "acceptanceCriteria": [
+        "No module imports directly from ../task-engine/",
+        "All cross-module shared code lives in src/core/planning/",
+        "task-engine/index.ts public exports unchanged for external consumers",
+        "pnpm run build && pnpm test pass"
+      ]
+    },
+    {
+      "id": "T359",
+      "title": "Remove unused lifecycle hooks from WorkflowModule contract",
+      "type": "workspace-kit",
+      "status": "proposed",
+      "createdAt": "2026-03-28T00:05:37.116Z",
+      "updatedAt": "2026-03-28T00:25:20.894Z",
+      "priority": "P3",
+      "phase": "Phase 18 - Module platform and state consolidation",
+      "approach": "Remove onInstall, onConfigChange, onStart, onStop, and onEvent from the WorkflowModule interface in module-contract.ts. Remove any stub implementations in modules. Keep onCommand as the sole runtime hook. Document in contract that hooks can be re-added when use cases emerge.",
+      "technicalScope": [
+        "src/contracts/module-contract.ts",
+        "Any module index.ts files with stub lifecycle methods"
+      ],
+      "acceptanceCriteria": [
+        "WorkflowModule interface only has registration and onCommand",
+        "No module implements removed hooks",
+        "pnpm run build && pnpm test pass",
+        "module-build docs updated to reflect simplified contract"
+      ]
+    },
+    {
+      "id": "T360",
+      "title": "Implement unified state SQLite DB in core",
+      "type": "workspace-kit",
+      "status": "proposed",
+      "createdAt": "2026-03-28T00:05:37.116Z",
+      "updatedAt": "2026-03-28T00:25:20.898Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T358"
+      ],
+      "phase": "Phase 18 - Module platform and state consolidation",
+      "approach": "Create src/core/state-db.ts implementing a single SQLite database at .workspace-kit/workspace-kit.db. Provide a ModuleStateStore class that modules interact with: registerSchema(moduleId, version, fields), getState(moduleId), setState(moduleId, data), with automatic table creation and schema migration. Built on top of the existing better-sqlite3 dependency.",
+      "technicalScope": [
+        "src/core/state-db.ts (new)",
+        ".workspace-kit/workspace-kit.db (runtime artifact)",
+        "Schema: module_state_schemas table (moduleId, version, fields JSON), per-module state tables"
+      ],
+      "acceptanceCriteria": [
+        "ModuleStateStore can register schemas and read/write state",
+        "Schema versioning with migration callback support",
+        "Transactional writes across module state boundaries",
+        "Unit tests for register, get, set, migrate flows",
+        "pnpm run build && pnpm test pass"
+      ]
+    },
+    {
+      "id": "T361",
+      "title": "Add stateSchema to ModuleRegistration and wire registration",
+      "type": "workspace-kit",
+      "status": "proposed",
+      "createdAt": "2026-03-28T00:05:37.116Z",
+      "updatedAt": "2026-03-28T00:25:20.902Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T360"
+      ],
+      "phase": "Phase 18 - Module platform and state consolidation",
+      "approach": "Add optional stateSchema field to ModuleRegistration in module-contract.ts. ModuleRegistry calls ModuleStateStore.registerSchema for each module with a declared schema during construction. Update task-engine and improvement modules to declare their state schemas. Other modules leave stateSchema undefined (no-op).",
+      "technicalScope": [
+        "src/contracts/module-contract.ts (stateSchema field)",
+        "src/core/module-registry.ts (registration wiring)",
+        "src/modules/task-engine/index.ts (schema declaration)",
+        "src/modules/improvement/index.ts (schema declaration)"
+      ],
+      "acceptanceCriteria": [
+        "ModuleRegistration has optional stateSchema",
+        "ModuleRegistry auto-registers schemas into state DB",
+        "task-engine and improvement modules declare schemas",
+        "pnpm run build && pnpm test pass"
+      ]
+    },
+    {
+      "id": "T362",
+      "title": "Migrate existing JSON state into unified SQLite DB",
+      "type": "workspace-kit",
+      "status": "proposed",
+      "createdAt": "2026-03-28T00:05:37.116Z",
+      "updatedAt": "2026-03-28T00:25:20.905Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T361"
+      ],
+      "phase": "Phase 18 - Module platform and state consolidation",
+      "approach": "Add a migrate-state CLI command that reads existing .workspace-kit/tasks/state.json and .workspace-kit/improvement/state.json, seeds the unified SQLite DB tables, and marks migration complete. Support dual-write mode during transition: writes go to both JSON and DB, reads come from DB. persistenceBackend config promoted to global scope.",
+      "technicalScope": [
+        "src/modules/task-engine/instructions/migrate-state.md (new or extend migrate-task-persistence)",
+        "src/core/state-db.ts (migration helpers)",
+        "Dual-write adapter in task-engine and improvement stores",
+        "Global persistenceBackend config key"
+      ],
+      "acceptanceCriteria": [
+        "One-time migration command seeds DB from existing JSON",
+        "Dual-write mode preserves JSON files during transition",
+        "Reads come from DB when persistenceBackend=sqlite",
+        "Round-trip: JSON -> DB -> export matches original",
+        "pnpm run build && pnpm test pass"
+      ]
+    },
+    {
+      "id": "T363",
+      "title": "Implement export-on-commit state snapshot",
+      "type": "workspace-kit",
+      "status": "proposed",
+      "createdAt": "2026-03-28T00:05:37.116Z",
+      "updatedAt": "2026-03-28T00:25:20.909Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T362"
+      ],
+      "phase": "Phase 18 - Module platform and state consolidation",
+      "approach": "Add workspace-kit state export command that dumps the full SQLite state DB to .workspace-kit/state-snapshot.json as a deterministic JSON document (sorted keys, stable ordering). Add workspace-kit state import to resync from a snapshot. Document the snapshot format as a supported contract. Optionally wire as a git pre-commit hook.",
+      "technicalScope": [
+        "src/cli.ts (state export/import subcommands)",
+        "src/core/state-db.ts (export/import methods)",
+        ".workspace-kit/state-snapshot.json (git-tracked artifact)",
+        "Optional: git hook integration"
+      ],
+      "acceptanceCriteria": [
+        "state export produces deterministic JSON from DB",
+        "state import reseeds DB from snapshot",
+        "Round-trip: export -> wipe DB -> import -> export produces identical output",
+        "Snapshot format documented",
+        "pnpm run build && pnpm test pass"
+      ]
+    },
+    {
+      "id": "T364",
+      "title": "Add CLI commands for module state queries",
+      "type": "workspace-kit",
+      "status": "proposed",
+      "createdAt": "2026-03-28T00:05:37.116Z",
+      "updatedAt": "2026-03-28T00:25:20.912Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T361"
+      ],
+      "phase": "Phase 18 - Module platform and state consolidation",
+      "approach": "Add get-module-state command (workspace-config module or new top-level) that returns state for one or all modules from the unified DB. AI agents use this instead of reading state files. Supports --module filter and --format json/yaml.",
+      "technicalScope": [
+        "New instruction + handler in workspace-config module",
+        "src/modules/workspace-config/instructions/get-module-state.md",
+        "src/modules/workspace-config/index.ts handler"
+      ],
+      "acceptanceCriteria": [
+        "workspace-kit run get-module-state returns all module state",
+        "workspace-kit run get-module-state {\"module\":\"task-engine\"} returns single module",
+        "Output is structured ModuleCommandResult with data payload",
+        "pnpm run build && pnpm test pass"
+      ]
+    },
+    {
+      "id": "T365",
+      "title": "Remove state.md files and update module-build docs",
+      "type": "workspace-kit",
+      "status": "proposed",
+      "createdAt": "2026-03-28T00:05:37.116Z",
+      "updatedAt": "2026-03-28T00:25:20.917Z",
+      "priority": "P3",
+      "dependsOn": [
+        "T364"
+      ],
+      "phase": "Phase 18 - Module platform and state consolidation",
+      "approach": "Delete all src/modules/*/state.md files. Remove state: ModuleDocumentContract from ModuleRegistration (replace with stateSchema). Update .ai/module-build.md, docs/maintainers/module-build-guide.md, and src/modules/README.md to reflect the new state management pattern. Register or relocate documentation-maintainer.md orphan file.",
+      "technicalScope": [
+        "Delete: src/modules/*/state.md (6 files)",
+        "src/contracts/module-contract.ts (remove state field, stateSchema is now canonical)",
+        ".ai/module-build.md",
+        "docs/maintainers/module-build-guide.md",
+        "src/modules/README.md",
+        "src/modules/documentation/instructions/documentation-maintainer.md (register or move)"
+      ],
+      "acceptanceCriteria": [
+        "No state.md files remain in module directories",
+        "ModuleRegistration uses stateSchema instead of state document contract",
+        "All module-build documentation reflects SQLite state pattern",
+        "documentation-maintainer.md is either registered or relocated",
+        "pnpm run build && pnpm test pass"
+      ]
     }
   ],
   "transitionLog": [
@@ -8476,7 +8847,7 @@
       "actor": "NJLaPrell@gmail.com"
     }
   ],
-  "lastUpdated": "2026-03-27T23:03:04.479Z",
+  "lastUpdated": "2026-03-28T00:25:20.917Z",
   "mutationLog": [
     {
       "mutationId": "create-task-T319-2026-03-27T15:16:30.032Z-20b24ad2",
@@ -8966,6 +9337,451 @@
         "initialStatus": "proposed",
         "source": "convert-wishlist",
         "wishlistId": "W1"
+      }
+    },
+    {
+      "mutationId": "create-task-T351-2026-03-27T23:38:48.721Z-f0eaae85",
+      "mutationType": "create-task",
+      "taskId": "T351",
+      "timestamp": "2026-03-27T23:38:48.721Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W3"
+      }
+    },
+    {
+      "mutationId": "create-task-T352-2026-03-27T23:38:48.721Z-de7df9d9",
+      "mutationType": "create-task",
+      "taskId": "T352",
+      "timestamp": "2026-03-27T23:38:48.721Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W3"
+      }
+    },
+    {
+      "mutationId": "create-task-T353-2026-03-27T23:38:48.721Z-ebdaf899",
+      "mutationType": "create-task",
+      "taskId": "T353",
+      "timestamp": "2026-03-27T23:38:48.721Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W3"
+      }
+    },
+    {
+      "mutationId": "create-task-T354-2026-03-27T23:38:48.721Z-05695fa4",
+      "mutationType": "create-task",
+      "taskId": "T354",
+      "timestamp": "2026-03-27T23:38:48.721Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W3"
+      }
+    },
+    {
+      "mutationId": "create-task-T355-2026-03-27T23:38:48.721Z-d07447da",
+      "mutationType": "create-task",
+      "taskId": "T355",
+      "timestamp": "2026-03-27T23:38:48.721Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W3"
+      }
+    },
+    {
+      "mutationId": "add-dependency-T353-2026-03-27T23:38:57.165Z-009b511c",
+      "mutationType": "add-dependency",
+      "taskId": "T353",
+      "timestamp": "2026-03-27T23:38:57.165Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "dependencyTaskId": "T351"
+      }
+    },
+    {
+      "mutationId": "add-dependency-T353-2026-03-27T23:38:57.238Z-b1a52be6",
+      "mutationType": "add-dependency",
+      "taskId": "T353",
+      "timestamp": "2026-03-27T23:38:57.239Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "dependencyTaskId": "T352"
+      }
+    },
+    {
+      "mutationId": "add-dependency-T354-2026-03-27T23:38:57.313Z-6510d3de",
+      "mutationType": "add-dependency",
+      "taskId": "T354",
+      "timestamp": "2026-03-27T23:38:57.314Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "dependencyTaskId": "T351"
+      }
+    },
+    {
+      "mutationId": "add-dependency-T355-2026-03-27T23:38:57.386Z-918bc564",
+      "mutationType": "add-dependency",
+      "taskId": "T355",
+      "timestamp": "2026-03-27T23:38:57.386Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "dependencyTaskId": "T351"
+      }
+    },
+    {
+      "mutationId": "add-dependency-T355-2026-03-27T23:38:57.459Z-d462763f",
+      "mutationType": "add-dependency",
+      "taskId": "T355",
+      "timestamp": "2026-03-27T23:38:57.459Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "dependencyTaskId": "T352"
+      }
+    },
+    {
+      "mutationId": "add-dependency-T355-2026-03-27T23:38:57.529Z-1b58a0bc",
+      "mutationType": "add-dependency",
+      "taskId": "T355",
+      "timestamp": "2026-03-27T23:38:57.530Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "dependencyTaskId": "T353"
+      }
+    },
+    {
+      "mutationId": "add-dependency-T355-2026-03-27T23:38:57.603Z-36e71244",
+      "mutationType": "add-dependency",
+      "taskId": "T355",
+      "timestamp": "2026-03-27T23:38:57.604Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "dependencyTaskId": "T354"
+      }
+    },
+    {
+      "mutationId": "create-task-T356-2026-03-28T00:05:37.116Z-e6bd9949",
+      "mutationType": "create-task",
+      "taskId": "T356",
+      "timestamp": "2026-03-28T00:05:37.116Z",
+      "actor": "human:maintainer",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W4"
+      }
+    },
+    {
+      "mutationId": "create-task-T357-2026-03-28T00:05:37.116Z-d896bfd9",
+      "mutationType": "create-task",
+      "taskId": "T357",
+      "timestamp": "2026-03-28T00:05:37.116Z",
+      "actor": "human:maintainer",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W4"
+      }
+    },
+    {
+      "mutationId": "create-task-T358-2026-03-28T00:05:37.116Z-738df64b",
+      "mutationType": "create-task",
+      "taskId": "T358",
+      "timestamp": "2026-03-28T00:05:37.116Z",
+      "actor": "human:maintainer",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W4"
+      }
+    },
+    {
+      "mutationId": "create-task-T359-2026-03-28T00:05:37.116Z-e1d3371a",
+      "mutationType": "create-task",
+      "taskId": "T359",
+      "timestamp": "2026-03-28T00:05:37.116Z",
+      "actor": "human:maintainer",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W4"
+      }
+    },
+    {
+      "mutationId": "create-task-T360-2026-03-28T00:05:37.116Z-654d4f4c",
+      "mutationType": "create-task",
+      "taskId": "T360",
+      "timestamp": "2026-03-28T00:05:37.116Z",
+      "actor": "human:maintainer",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W4"
+      }
+    },
+    {
+      "mutationId": "create-task-T361-2026-03-28T00:05:37.116Z-1c23fef7",
+      "mutationType": "create-task",
+      "taskId": "T361",
+      "timestamp": "2026-03-28T00:05:37.116Z",
+      "actor": "human:maintainer",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W4"
+      }
+    },
+    {
+      "mutationId": "create-task-T362-2026-03-28T00:05:37.116Z-6ddf24f7",
+      "mutationType": "create-task",
+      "taskId": "T362",
+      "timestamp": "2026-03-28T00:05:37.116Z",
+      "actor": "human:maintainer",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W4"
+      }
+    },
+    {
+      "mutationId": "create-task-T363-2026-03-28T00:05:37.116Z-6592025e",
+      "mutationType": "create-task",
+      "taskId": "T363",
+      "timestamp": "2026-03-28T00:05:37.116Z",
+      "actor": "human:maintainer",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W4"
+      }
+    },
+    {
+      "mutationId": "create-task-T364-2026-03-28T00:05:37.116Z-60224f79",
+      "mutationType": "create-task",
+      "taskId": "T364",
+      "timestamp": "2026-03-28T00:05:37.116Z",
+      "actor": "human:maintainer",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W4"
+      }
+    },
+    {
+      "mutationId": "create-task-T365-2026-03-28T00:05:37.116Z-9353072c",
+      "mutationType": "create-task",
+      "taskId": "T365",
+      "timestamp": "2026-03-28T00:05:37.116Z",
+      "actor": "human:maintainer",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W4"
+      }
+    },
+    {
+      "mutationId": "update-task-T351-2026-03-28T00:25:20.864Z-74c46ab2",
+      "mutationType": "update-task",
+      "taskId": "T351",
+      "timestamp": "2026-03-28T00:25:20.864Z",
+      "actor": "human:maintainer",
+      "details": {
+        "updatedFields": [
+          "phase"
+        ],
+        "payloadDigest": "9cc71cae2b0226f239c74955615d7d43f33625578dc872ecb1f28717df50c1fe"
+      }
+    },
+    {
+      "mutationId": "update-task-T352-2026-03-28T00:25:20.870Z-d07e9676",
+      "mutationType": "update-task",
+      "taskId": "T352",
+      "timestamp": "2026-03-28T00:25:20.870Z",
+      "actor": "human:maintainer",
+      "details": {
+        "updatedFields": [
+          "phase"
+        ],
+        "payloadDigest": "1f5b705a6ac1e46bb49b44ad21a108f7af82ba71bbbcbd7cab2caf5eb4931e74"
+      }
+    },
+    {
+      "mutationId": "update-task-T353-2026-03-28T00:25:20.874Z-efbc84ff",
+      "mutationType": "update-task",
+      "taskId": "T353",
+      "timestamp": "2026-03-28T00:25:20.874Z",
+      "actor": "human:maintainer",
+      "details": {
+        "updatedFields": [
+          "phase"
+        ],
+        "payloadDigest": "bd7381e320d34f511336e41e5a6b2b2bd193b1f4d0a97f763f51806f5ab16bea"
+      }
+    },
+    {
+      "mutationId": "update-task-T354-2026-03-28T00:25:20.877Z-0747e65f",
+      "mutationType": "update-task",
+      "taskId": "T354",
+      "timestamp": "2026-03-28T00:25:20.877Z",
+      "actor": "human:maintainer",
+      "details": {
+        "updatedFields": [
+          "phase"
+        ],
+        "payloadDigest": "b41c93c1443ae9dd243318eb06ae74d521523d5d64acf4141a1d5ac87d02a5a3"
+      }
+    },
+    {
+      "mutationId": "update-task-T355-2026-03-28T00:25:20.881Z-9062f42e",
+      "mutationType": "update-task",
+      "taskId": "T355",
+      "timestamp": "2026-03-28T00:25:20.881Z",
+      "actor": "human:maintainer",
+      "details": {
+        "updatedFields": [
+          "phase"
+        ],
+        "payloadDigest": "d4efc01ec8961cdad86898d054186db7d013b5b3fe48504e1e3044768f0e2eb9"
+      }
+    },
+    {
+      "mutationId": "update-task-T356-2026-03-28T00:25:20.885Z-3658459b",
+      "mutationType": "update-task",
+      "taskId": "T356",
+      "timestamp": "2026-03-28T00:25:20.885Z",
+      "actor": "human:maintainer",
+      "details": {
+        "updatedFields": [
+          "phase"
+        ],
+        "payloadDigest": "7dc01733c041aa0d0be3caa474412403c3c31a16350529782678efd33e51a871"
+      }
+    },
+    {
+      "mutationId": "update-task-T357-2026-03-28T00:25:20.888Z-f591bac2",
+      "mutationType": "update-task",
+      "taskId": "T357",
+      "timestamp": "2026-03-28T00:25:20.888Z",
+      "actor": "human:maintainer",
+      "details": {
+        "updatedFields": [
+          "phase"
+        ],
+        "payloadDigest": "006baae33ab58e677bc0251691757f9384d4e74d88c13a7621a7be0d3bb4093b"
+      }
+    },
+    {
+      "mutationId": "update-task-T358-2026-03-28T00:25:20.891Z-69f049fc",
+      "mutationType": "update-task",
+      "taskId": "T358",
+      "timestamp": "2026-03-28T00:25:20.891Z",
+      "actor": "human:maintainer",
+      "details": {
+        "updatedFields": [
+          "phase"
+        ],
+        "payloadDigest": "7cf246cab2a640adebe6b6195b01c2011fa4aa17be66decbd6b8f90c6ba15fd6"
+      }
+    },
+    {
+      "mutationId": "update-task-T359-2026-03-28T00:25:20.894Z-82f1aa31",
+      "mutationType": "update-task",
+      "taskId": "T359",
+      "timestamp": "2026-03-28T00:25:20.894Z",
+      "actor": "human:maintainer",
+      "details": {
+        "updatedFields": [
+          "phase"
+        ],
+        "payloadDigest": "ccd44457124631fb04d85357917c1822cbd895e049f60722e18941c08cd94b22"
+      }
+    },
+    {
+      "mutationId": "update-task-T360-2026-03-28T00:25:20.899Z-a1d0e411",
+      "mutationType": "update-task",
+      "taskId": "T360",
+      "timestamp": "2026-03-28T00:25:20.899Z",
+      "actor": "human:maintainer",
+      "details": {
+        "updatedFields": [
+          "phase"
+        ],
+        "payloadDigest": "25cfb9378244c667bee9059a229a7d1fcb074fa26ea1976116bfa01b116f926d"
+      }
+    },
+    {
+      "mutationId": "update-task-T361-2026-03-28T00:25:20.902Z-1ca41c05",
+      "mutationType": "update-task",
+      "taskId": "T361",
+      "timestamp": "2026-03-28T00:25:20.902Z",
+      "actor": "human:maintainer",
+      "details": {
+        "updatedFields": [
+          "phase"
+        ],
+        "payloadDigest": "791b42dcbfb92fed2ed48b90ee56b39bdf808dbc2b27813e01776b84176ff00d"
+      }
+    },
+    {
+      "mutationId": "update-task-T362-2026-03-28T00:25:20.905Z-7057f4ab",
+      "mutationType": "update-task",
+      "taskId": "T362",
+      "timestamp": "2026-03-28T00:25:20.905Z",
+      "actor": "human:maintainer",
+      "details": {
+        "updatedFields": [
+          "phase"
+        ],
+        "payloadDigest": "c14a3fe28f4f72138e0a08512d831d03cab45b6a83357b27c15b432ffd717b37"
+      }
+    },
+    {
+      "mutationId": "update-task-T363-2026-03-28T00:25:20.909Z-d1a1e3d6",
+      "mutationType": "update-task",
+      "taskId": "T363",
+      "timestamp": "2026-03-28T00:25:20.909Z",
+      "actor": "human:maintainer",
+      "details": {
+        "updatedFields": [
+          "phase"
+        ],
+        "payloadDigest": "4723ff65dc38e9f840693b46ca49d18e78cdea6cf51d081f8a8f740925b67d6b"
+      }
+    },
+    {
+      "mutationId": "update-task-T364-2026-03-28T00:25:20.912Z-cedf34bb",
+      "mutationType": "update-task",
+      "taskId": "T364",
+      "timestamp": "2026-03-28T00:25:20.912Z",
+      "actor": "human:maintainer",
+      "details": {
+        "updatedFields": [
+          "phase"
+        ],
+        "payloadDigest": "8ba29a1778cb7177b7c956059dab25e49eb3be6a11141d00261d8a6365eb5579"
+      }
+    },
+    {
+      "mutationId": "update-task-T365-2026-03-28T00:25:20.917Z-d2171662",
+      "mutationType": "update-task",
+      "taskId": "T365",
+      "timestamp": "2026-03-28T00:25:20.917Z",
+      "actor": "human:maintainer",
+      "details": {
+        "updatedFields": [
+          "phase"
+        ],
+        "payloadDigest": "b9ff1d7cb1933cfab41d279950bc12a29df7089321c3441923c38128145ca041"
       }
     }
   ]
