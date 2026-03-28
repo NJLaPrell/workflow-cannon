@@ -19,7 +19,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "check": "tsc -p tsconfig.json --noEmit && node scripts/check-task-engine-run-contracts.mjs",
+    "check": "tsc -p tsconfig.json --noEmit && node scripts/check-task-engine-run-contracts.mjs && node scripts/check-agent-cli-map-coverage.mjs",
     "clean": "rm -rf dist",
     "test": "pnpm run build && node --test test/**/*.test.mjs",
     "pack:dry-run": "pnpm run build && pnpm pack --pack-destination ./artifacts/workspace-kit-pack",
