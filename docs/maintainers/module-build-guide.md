@@ -22,10 +22,12 @@ Every module change must satisfy these baseline rules:
 
 - Implement `WorkflowModule` from `src/contracts/module-contract.ts`.
 - Include `registration.id`, `registration.version`, `registration.contractVersion`, `registration.capabilities`, and `registration.dependsOn`.
+- Include `registration.optionalPeers` when declaring soft module coupling (may be `[]`). Optional peers are not required to be enabled; `dependsOn` remains the hard requirement for enabled modules.
 - Include `registration.enabledByDefault`.
 - Include `registration.config`, `registration.state`, and `registration.instructions`.
 - Keep dependencies explicit and valid for `ModuleRegistry` validation.
 - If modules are toggled at runtime, ensure every enabled module keeps its required dependencies enabled.
+- Workspace config (`modules.enabled` / `modules.disabled` in effective config) drives which modules are enabled for CLI `workspace-kit run` and related entrypoints; invalid module ids in config fail registry construction.
 - Keep instruction entries aligned with real markdown instruction files.
 - `ModuleRegistry` enforces instruction contract validity (name/file mapping and file existence).
 - Use `src/core/module-command-router.ts` to list, resolve, and dispatch module commands for enabled modules.

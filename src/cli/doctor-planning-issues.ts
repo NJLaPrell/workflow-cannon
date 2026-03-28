@@ -1,5 +1,4 @@
-import { ModuleRegistry } from "../core/module-registry.js";
-import { resolveWorkspaceConfigWithLayers } from "../core/workspace-kit-config.js";
+import { resolveRegistryAndConfig } from "../core/module-registry-resolve.js";
 import { validatePlanningPersistenceForDoctor } from "../modules/task-engine/doctor-planning-persistence.js";
 import { defaultRegistryModules } from "../modules/index.js";
 
@@ -10,12 +9,7 @@ export async function collectDoctorPlanningPersistenceIssues(
   cwd: string
 ): Promise<DoctorPlanningIssue[]> {
   try {
-    const registry = new ModuleRegistry(defaultRegistryModules);
-    const { effective } = await resolveWorkspaceConfigWithLayers({
-      workspacePath: cwd,
-      registry,
-      invocationConfig: {}
-    });
+    const { effective } = await resolveRegistryAndConfig(cwd, defaultRegistryModules, {});
     return validatePlanningPersistenceForDoctor(cwd, effective);
   } catch (err) {
     return [

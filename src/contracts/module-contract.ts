@@ -82,6 +82,11 @@ export type ModuleRegistration = {
   stateSchema: number;
   capabilities: ModuleCapability[];
   dependsOn: string[];
+  /**
+   * Other modules this module integrates with when present; unlike dependsOn,
+   * missing optional peers do not block registry construction or enablement.
+   */
+  optionalPeers?: string[];
   enabledByDefault: boolean;
   config: ModuleDocumentContract;
   instructions: ModuleInstructionContract;

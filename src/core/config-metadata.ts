@@ -94,6 +94,34 @@ const REGISTRY: Record<string, ConfigKeyMetadata> = {
     exposure: "public",
     writableLayers: ["project", "user"]
   },
+  "modules.enabled": {
+    key: "modules.enabled",
+    type: "array",
+    description:
+      "When non-empty, only these module ids are enabled (whitelist); then modules.disabled subtracts. When empty, all modules use registration.enabledByDefault.",
+    default: [],
+    domainScope: "project",
+    owningModule: "workspace-kit",
+    sensitive: false,
+    requiresRestart: false,
+    requiresApproval: false,
+    exposure: "maintainer",
+    writableLayers: ["project", "user"]
+  },
+  "modules.disabled": {
+    key: "modules.disabled",
+    type: "array",
+    description:
+      "Module ids to disable after computing the candidate enabled set (default-by-flag or modules.enabled whitelist).",
+    default: [],
+    domainScope: "project",
+    owningModule: "workspace-kit",
+    sensitive: false,
+    requiresRestart: false,
+    requiresApproval: false,
+    exposure: "maintainer",
+    writableLayers: ["project", "user"]
+  },
   "planning.defaultQuestionDepth": {
     key: "planning.defaultQuestionDepth",
     type: "string",
@@ -394,6 +422,13 @@ export function validateValueForMetadata(meta: ConfigKeyMetadata, value: unknown
         }
       }
     }
+    if (meta.key === "modules.enabled" || meta.key === "modules.disabled") {
+      for (const item of value) {
+        if (typeof item !== "string" || item.trim().length === 0) {
+          throw new Error(`config-type-error(${meta.key}): array entries must be non-empty strings`);
+        }
+      }
+    }
     return;
   }
   if (meta.type === "string" && typeof value !== "string") {
@@ -523,8 +558,20 @@ export function validatePersistedConfigDocument(
   }
   const mods = data.modules;
   if (mods !== undefined) {
-    if (typeof mods !== "object" || mods === null || Array.isArray(mods) || Object.keys(mods).length > 0) {
-      throw new Error(`config-invalid(${label}): modules must be absent or an empty object`);
+    if (typeof mods !== "object" || mods === null || Array.isArray(mods)) {
+      throw new Error(`config-invalid(${label}): modules must be an object`);
+    }
+    const m = mods as Record<string, unknown>;
+    for (const k of Object.keys(m)) {
+      if (k !== "enabled" && k !== "disabled") {
+        throw new Error(`config-invalid(${label}): unknown modules.${k}`);
+      }
+    }
+    if (m.enabled !== undefined) {
+      validateValueForMetadata(REGISTRY["modules.enabled"]!, m.enabled);
+    }
+    if (m.disabled !== undefined) {
+      validateValueForMetadata(REGISTRY["modules.disabled"]!, m.disabled);
     }
   }
   const improvement = data.improvement;

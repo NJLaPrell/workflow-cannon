@@ -44,7 +44,9 @@
         "get-next-actions",
         "explain-task-engine-model",
         "migrate-task-persistence",
-        "dashboard-summary"
+        "dashboard-summary",
+        "get-module-state",
+        "list-module-states"
       ],
       "additionalProperties": false,
       "properties": {
@@ -71,7 +73,9 @@
         "get-next-actions": { "$ref": "#/$defs/contractNextActions" },
         "explain-task-engine-model": { "$ref": "#/$defs/contractExplainTaskEngineModel" },
         "migrate-task-persistence": { "$ref": "#/$defs/contractMigrateTaskPersistence" },
-        "dashboard-summary": { "$ref": "#/$defs/contractDashboardSummary" }
+        "dashboard-summary": { "$ref": "#/$defs/contractDashboardSummary" },
+        "get-module-state": { "$ref": "#/$defs/contractGetModuleState" },
+        "list-module-states": { "$ref": "#/$defs/contractListModuleStates" }
       }
     }
   },
@@ -550,6 +554,40 @@
                 "suggestedNext",
                 "blockingAnalysis"
               ],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractGetModuleState": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "responseData": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractListModuleStates": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "responseData": {
+              "type": "object",
               "additionalProperties": true
             }
           }

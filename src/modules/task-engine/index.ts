@@ -273,6 +273,7 @@ export const taskEngineModule: WorkflowModule = {
     stateSchema: 1,
     capabilities: ["task-engine"],
     dependsOn: [],
+    optionalPeers: [],
     enabledByDefault: true,
     config: {
       path: "src/modules/task-engine/config.md",

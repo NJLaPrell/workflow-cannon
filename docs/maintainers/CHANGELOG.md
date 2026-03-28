@@ -6,6 +6,18 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+### Added
+
+- **`registration.optionalPeers`** — soft module coupling: optional peers are validated but need not be enabled; `dependsOn` remains hard for enabled modules.
+- **`ModuleRegistry.getActivationReport()`** — per-module enablement, unsatisfied hard deps, and missing optional peers for tooling.
+- **Config-driven module toggles** — `modules.enabled` / `modules.disabled` in effective workspace config (defaults in kit layer); `workspace-kit run`, `config` CLI (non-list), and doctor planning checks resolve registry + config together via `resolveRegistryAndConfig`.
+- **`moduleRegistryOptionsFromEffectiveConfig`** — maps effective config to registry options with unknown-id errors.
+
+### Fixed (housekeeping)
+
+- **Task engine run contract schema** — document `get-module-state` and `list-module-states` for `check-task-engine-run-contracts`.
+- **Agent CLI map exclusions** — same commands excluded from tier-table coverage check (operator/diagnostic surface).
+
 ## [0.18.0] - 2026-03-27
 
 Phase 17 — planning module guided workflows (`T345`–`T350`): CLI-native planning interviews, configurable rule-driven prompts, hard critical-unknown gating, and wishlist artifact output.

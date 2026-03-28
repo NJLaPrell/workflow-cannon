@@ -10,6 +10,7 @@ export const approvalsModule: WorkflowModule = {
     stateSchema: 1,
     capabilities: ["approvals"],
     dependsOn: ["task-engine"],
+    optionalPeers: [],
     enabledByDefault: true,
     config: {
       path: "src/modules/approvals/config.md",

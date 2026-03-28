@@ -2,8 +2,15 @@ export {
   ModuleRegistry,
   ModuleRegistryError,
   validateModuleSet,
+  type ModuleActivationEntry,
+  type ModuleActivationReport,
   type ModuleRegistryOptions
 } from "./module-registry.js";
+export {
+  moduleRegistryOptionsFromEffectiveConfig,
+  pickModuleContractWorkspacePath,
+  resolveRegistryAndConfig
+} from "./module-registry-resolve.js";
 export {
   ModuleCommandRouter,
   ModuleCommandRouterError,
