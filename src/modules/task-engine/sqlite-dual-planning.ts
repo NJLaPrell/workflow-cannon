@@ -147,6 +147,14 @@ export class SqliteDualPlanningStore {
     }
   }
 
+  /** Close the underlying database handle. Safe to call multiple times. */
+  close(): void {
+    if (this.db) {
+      this.db.close();
+      this.db = null;
+    }
+  }
+
   /** Run synchronous work inside one SQLite transaction and flush both blobs at the end. */
   withTransaction(work: () => void): void {
     const db = this.ensureDb();
