@@ -49,3 +49,218 @@ export type DocumentationBatchResult = {
     timestamp: string;
   };
 };
+
+export type NormalizedRecordStatus = "active" | "deprecated" | "draft" | "observed" | "planned";
+
+export type NormalizedBaseRecord = {
+  id?: string;
+  status?: NormalizedRecordStatus;
+  refs?: string[];
+};
+
+export type NormalizedMeta = NormalizedBaseRecord & {
+  schema: "base.v2";
+  doc: string;
+  truth: "canonical" | "observed" | "planned";
+  profile?: "core" | "runbook" | "workbook";
+  title?: string;
+  owner?: string;
+  tags?: string[];
+};
+
+export type NormalizedRef = NormalizedBaseRecord & {
+  id: string;
+  type: "adr" | "file" | "code" | "doc" | "issue" | "pr" | "test" | "external";
+  target: string;
+  anchor?: string;
+  label?: string;
+  note?: string;
+};
+
+export type NormalizedRule = NormalizedBaseRecord & {
+  id: string;
+  level: "must" | "must_not" | "should" | "may";
+  scope: string;
+  scope_kind?: string;
+  kind?: string;
+  directive: string;
+  why: string;
+  unless?: string;
+  also?: string[];
+  risk?: "low" | "medium" | "high" | "critical";
+  approval?: "none" | "prompt" | "required";
+  override?: "auto" | "warn" | "prompt" | "stop";
+};
+
+export type NormalizedCheck = NormalizedBaseRecord & {
+  id: string;
+  scope: string;
+  assertion: string;
+  when?: string;
+  onFail?: "auto" | "warn" | "prompt" | "stop";
+};
+
+export type NormalizedDecision = NormalizedBaseRecord & {
+  id: string;
+  topic: string;
+  choice: string;
+  why: string;
+  consequence?: string;
+};
+
+export type NormalizedExample = NormalizedBaseRecord & {
+  id: string;
+  for: string;
+  kind: "good" | "bad" | "edge";
+  text: string;
+};
+
+export type NormalizedTerm = NormalizedBaseRecord & {
+  name: string;
+  definition: string;
+};
+
+export type NormalizedCommand = NormalizedBaseRecord & {
+  id: string;
+  name: string;
+  use: string;
+  scope: string;
+  expectation: string;
+  risk?: "low" | "medium" | "high" | "critical";
+  sensitivity?: "non_sensitive" | "policy_sensitive";
+};
+
+export type NormalizedWorkflow = NormalizedBaseRecord & {
+  id: string;
+  name: string;
+  when: string;
+  steps: string[];
+  done: string[];
+  forbid?: string[];
+  askIf?: string;
+  haltIf?: string;
+  approval?: "none" | "prompt" | "required";
+  risk?: "low" | "medium" | "high" | "critical";
+};
+
+export type NormalizedRunbook = NormalizedBaseRecord & {
+  name: string;
+  scope: string;
+  owner: string;
+};
+
+export type NormalizedWorkbook = NormalizedBaseRecord & {
+  name: string;
+  phase: string;
+  state: string;
+};
+
+export type NormalizedChain = NormalizedBaseRecord & {
+  step: string;
+  command: string;
+  expectExit: number;
+};
+
+export type NormalizedState = NormalizedBaseRecord & {
+  name: string;
+  distTag: string;
+  intent: string;
+};
+
+export type NormalizedTransition = NormalizedBaseRecord & {
+  from: string;
+  to: string;
+  requires: string[];
+};
+
+export type NormalizedPromotion = NormalizedBaseRecord & {
+  from: string;
+  to: string;
+  requires: string[];
+};
+
+export type NormalizedRollback = NormalizedBaseRecord & {
+  strategy: string;
+  note: string;
+};
+
+export type NormalizedArtifact = NormalizedBaseRecord & {
+  path: string;
+  schema: string;
+};
+
+export type NormalizedConfig = NormalizedBaseRecord & {
+  key: string;
+  default: string;
+};
+
+export type NormalizedCadence = NormalizedBaseRecord & {
+  rule: string;
+};
+
+export type NormalizedGuardrail = NormalizedBaseRecord & {
+  id: string;
+  level: "must" | "must_not" | "should" | "may";
+  directive: string;
+  why: string;
+};
+
+export type NormalizedDocument = {
+  meta: NormalizedMeta | null;
+  refs: NormalizedRef[];
+  rules: NormalizedRule[];
+  checks: NormalizedCheck[];
+  decisions: NormalizedDecision[];
+  examples: NormalizedExample[];
+  terms: NormalizedTerm[];
+  commands: NormalizedCommand[];
+  workflows: NormalizedWorkflow[];
+  runbooks: NormalizedRunbook[];
+  workbooks: NormalizedWorkbook[];
+  chains: NormalizedChain[];
+  states: NormalizedState[];
+  transitions: NormalizedTransition[];
+  promotions: NormalizedPromotion[];
+  rollbacks: NormalizedRollback[];
+  artifacts: NormalizedArtifact[];
+  configs: NormalizedConfig[];
+  cadences: NormalizedCadence[];
+  guardrails: NormalizedGuardrail[];
+};
+
+export type ViewModelSection = {
+  id: string;
+  title?: string;
+  description?: string;
+  source:
+    | "meta"
+    | "refs"
+    | "rules"
+    | "checks"
+    | "decisions"
+    | "examples"
+    | "terms"
+    | "commands"
+    | "workflows"
+    | "runbooks"
+    | "workbooks"
+    | "chains"
+    | "states"
+    | "transitions"
+    | "promotions"
+    | "rollbacks"
+    | "artifacts"
+    | "configs"
+    | "cadences"
+    | "guardrails";
+  where?: Record<string, string | number | boolean>;
+  sortBy?: string[];
+  template?: string;
+};
+
+export type ViewModelDefinition = {
+  id: string;
+  version: number;
+  profile?: "core" | "runbook" | "workbook";
+  sections: ViewModelSection[];
+};
