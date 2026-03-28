@@ -5,9 +5,10 @@ active_focus: "Phase 21 (`v0.22.0`) shipped: build-plan session snapshot for das
 blockers: []
 next_agent_actions:
   - "Phases 18–21 complete and released through `v0.22.0` per ROADMAP and CHANGELOG."
-  - "Plan Phase 22 in ROADMAP + task-engine; note T404–T414 IDs are roadmap labels — create concrete tasks if missing from state.json."
-  - "Validate each task with `pnpm run build && pnpm test` (and `pnpm run ext:compile` for T412–T413) before marking complete."
+  - "Ready hygiene queue: **T394** (ROADMAP Phase 20 detail + evidence), **T395** (roadmap T404–T414 vs state), **T396** (finish T388 manifest), **T397** (transition Phase 20/21 rows with PR/tag evidence)."
+  - "Validate each task with `pnpm run build && pnpm test` (and `pnpm run ext:compile` when extension scope) before marking complete."
 last_session_summary:
+  - "2026-03-28: Created ready tasks T394–T397 via `workspace-kit run create-task` to close post-release gaps (ROADMAP drift, missing roadmap ids, T388 remainder, transition audit)."
   - "2026-03-28: Phase 21 shipped as v0.22.0 — build-plan session file, dashboard-summary planningSession, extension dashboard, long-session AGENTS + runbook + requestable Cursor rule."
   - "2026-03-28: ROADMAP Phase 20/21 defined; ready tasks assigned phase strings via update-task; current_kit_phase advanced to 20."
   - "2026-03-28: Duplicate proposed tasks T398, T401, T403 cancelled (superseded by T356/T357/T384 and completed T366–T376)."

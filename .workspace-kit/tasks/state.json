@@ -6206,6 +6206,88 @@
         "pnpm run check and pnpm test pass.",
         "CHANGELOG.md updated if any public export surface changes for npm consumers."
       ]
+    },
+    {
+      "id": "T394",
+      "title": "[docs] ROADMAP Phase 20 detail section and execution evidence alignment",
+      "type": "improvement",
+      "status": "ready",
+      "createdAt": "2026-03-28T15:28:34.865Z",
+      "updatedAt": "2026-03-28T15:28:34.865Z",
+      "priority": "P2",
+      "phase": "Maintainer hygiene — post Phase 20/21",
+      "approach": "The detailed Phase 20 subsection in docs/maintainers/ROADMAP.md still reads (in planning) while the summary lists v0.21.0 as released. Align subsection heading and narrative with shipped reality; add v0.22.0 to the execution evidence list if missing beside v0.21.0.",
+      "technicalScope": [
+        "docs/maintainers/ROADMAP.md — Phase 20/21 subsections and execution evidence snapshot"
+      ],
+      "acceptanceCriteria": [
+        "Phase 20 detailed subsection reflects COMPLETE/released (not in planning)",
+        "Execution evidence includes v0.22.0 GitHub release URL",
+        "Top-level Current state bullets match phase subsections for Phases 20–21"
+      ]
+    },
+    {
+      "id": "T395",
+      "title": "[maintainer] Reconcile roadmap Phase 21 labels (T404–T414) with task-engine state",
+      "type": "improvement",
+      "status": "ready",
+      "createdAt": "2026-03-28T15:28:41.693Z",
+      "updatedAt": "2026-03-28T15:28:41.693Z",
+      "priority": "P2",
+      "phase": "Maintainer hygiene — post Phase 20/21",
+      "approach": "ROADMAP references T404–T414 but those task rows were never created in .workspace-kit/tasks/state.json. Either backfill proposed tasks per roadmap slice with dependencies, or record an explicit maintainer decision that Phase 21 shipped without per-ID rows and how future work will be tracked.",
+      "technicalScope": [
+        ".workspace-kit/tasks/state.json via workspace-kit create-task and run-transition",
+        "docs/maintainers/data/workspace-kit-status.yaml",
+        "Optional docs/maintainers/DECISIONS.md"
+      ],
+      "acceptanceCriteria": [
+        "Chosen approach documented in status YAML or DECISIONS",
+        "If backfilling: concrete rows exist or merged umbrella tasks cover T404–T414 scope",
+        "next_agent_actions in workspace-kit-status.yaml reflects follow-up"
+      ]
+    },
+    {
+      "id": "T396",
+      "title": "[refactor] Complete T388 — full typed command manifest wiring",
+      "type": "improvement",
+      "status": "ready",
+      "createdAt": "2026-03-28T15:28:46.445Z",
+      "updatedAt": "2026-03-28T15:28:46.445Z",
+      "priority": "P3",
+      "phase": "Phase 22 — Maintainer platform",
+      "approach": "T388 partially shipped (types + per-module policy-sensitive lists). Complete single manifest-driven command metadata: registrations, policy mapping, response-template alignment, and drift checks per original T388 acceptance.",
+      "technicalScope": [
+        "src/contracts/command-manifest.ts",
+        "Module registrations and src/core/policy.ts",
+        "src/core/module-command-router.ts and response-template registry",
+        "scripts/check-* simplified or updated"
+      ],
+      "acceptanceCriteria": [
+        "Command surface documented as single source where design locks",
+        "No unexplained parallel maps without documented exception",
+        "pnpm run check and pnpm test pass; CHANGELOG for any npm-visible contract change"
+      ]
+    },
+    {
+      "id": "T397",
+      "title": "[maintainer] Close Phase 20/21 roadmap tasks in task-engine state with release evidence",
+      "type": "improvement",
+      "status": "ready",
+      "createdAt": "2026-03-28T15:28:52.202Z",
+      "updatedAt": "2026-03-28T15:28:52.202Z",
+      "priority": "P2",
+      "phase": "Maintainer hygiene — post Phase 20/21",
+      "approach": "Phase 20 and 21 work merged and tagged (v0.21.0, v0.22.0) but lifecycle rows for T388–T393 (and any other in-scope ids) were not transitioned via workspace-kit. Audit which tasks match shipped work, transition to completed with rationale referencing PRs/tags, or cancel/supersede with explicit notes.",
+      "technicalScope": [
+        ".workspace-kit/tasks/state.json via workspace-kit run run-transition",
+        "Cross-check docs/maintainers/ROADMAP.md and CHANGELOG"
+      ],
+      "acceptanceCriteria": [
+        "Every Phase 20 slice task in state is completed cancelled or blocked with documented reason",
+        "Transition evidence references PR or release tag where applicable",
+        "No silent mismatch between ROADMAP COMPLETE and task status for the same scope"
+      ]
     }
   ],
   "transitionLog": [
@@ -11730,7 +11812,7 @@
       "actor": "NJLaPrell@gmail.com"
     }
   ],
-  "lastUpdated": "2026-03-28T04:05:22.556Z",
+  "lastUpdated": "2026-03-28T15:28:52.202Z",
   "mutationLog": [
     {
       "mutationId": "create-task-T319-2026-03-27T15:16:30.032Z-20b24ad2",
@@ -13034,6 +13116,58 @@
         ],
         "clientMutationId": "agent-module-review-T384-unblocks-20260327",
         "payloadDigest": "a3a1950cdaaab4c248a7584510a993599a180dc3a05d894e17708eb5698782d4"
+      }
+    },
+    {
+      "mutationId": "create-task-T394-2026-03-28T15:28:34.865Z-8eb7ac05",
+      "mutationType": "create-task",
+      "taskId": "T394",
+      "timestamp": "2026-03-28T15:28:34.865Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "ready",
+        "source": "create-task",
+        "clientMutationId": "hygiene-create-t394-roadmap",
+        "payloadDigest": "d0e2168cad74daaf5b0832fbcfbb90680d6075db11a17f4d005eaa1f7c0c36eb"
+      }
+    },
+    {
+      "mutationId": "create-task-T395-2026-03-28T15:28:41.693Z-78b795d9",
+      "mutationType": "create-task",
+      "taskId": "T395",
+      "timestamp": "2026-03-28T15:28:41.693Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "ready",
+        "source": "create-task",
+        "clientMutationId": "hygiene-create-t395-phase21",
+        "payloadDigest": "b5a5d028f06e7042024b259f10726c705328f7910ba638b960609d10fc2e92a3"
+      }
+    },
+    {
+      "mutationId": "create-task-T396-2026-03-28T15:28:46.445Z-842347c9",
+      "mutationType": "create-task",
+      "taskId": "T396",
+      "timestamp": "2026-03-28T15:28:46.445Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "ready",
+        "source": "create-task",
+        "clientMutationId": "hygiene-create-t396-t388",
+        "payloadDigest": "08662fcaa33ab87453d197a6df747cb317e7f01b3bc99bc656385a255de0fe21"
+      }
+    },
+    {
+      "mutationId": "create-task-T397-2026-03-28T15:28:52.202Z-7338f911",
+      "mutationType": "create-task",
+      "taskId": "T397",
+      "timestamp": "2026-03-28T15:28:52.202Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "ready",
+        "source": "create-task",
+        "clientMutationId": "hygiene-create-t397-transitions",
+        "payloadDigest": "324b0f6db3a9daea492a52778d4dc677a9625e0a90e31b72f8cb0fd6e54f25aa"
       }
     }
   ]
