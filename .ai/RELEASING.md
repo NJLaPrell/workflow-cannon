@@ -1,42 +1,42 @@
-meta|v=1|doc=rules|truth=canonical|st=active
+meta|doc=rules|truth=canonical|schema=base.v2|status=active|profile=core
 
 project|name=workflow-cannon|type=release_process|scope=repo
-ref|name=principles|path=.ai/PRINCIPLES.md
-ref|name=roadmap|path=docs/maintainers/ROADMAP.md
-ref|name=tasks_engine_state|path=.workspace-kit/tasks/state.json
-ref|name=tasks_view|path=.workspace-kit/tasks/state.json
-ref|name=changelog|path=docs/maintainers/CHANGELOG.md
-ref|name=security|path=docs/maintainers/SECURITY.md
-ref|name=gate_matrix|path=docs/maintainers/release-gate-matrix.md
-ref|name=parity_flow|path=docs/maintainers/runbooks/parity-validation-flow.md
-ref|name=parity_schema|path=schemas/parity-evidence.schema.json
+ref|id=principles|target=.ai/PRINCIPLES.md|type=file|status=active
+ref|id=roadmap|target=docs/maintainers/ROADMAP.md|type=file|status=active
+ref|id=tasks_engine_state|target=.workspace-kit/tasks/state.json|type=file|status=active
+ref|id=tasks_view|target=.workspace-kit/tasks/state.json|type=file|status=active
+ref|id=changelog|target=docs/maintainers/CHANGELOG.md|type=file|status=active
+ref|id=security|target=docs/maintainers/SECURITY.md|type=file|status=active
+ref|id=gate_matrix|target=docs/maintainers/release-gate-matrix.md|type=file|status=active
+ref|id=parity_flow|target=docs/maintainers/runbooks/parity-validation-flow.md|type=file|status=active
+ref|id=parity_schema|target=schemas/parity-evidence.schema.json|type=file|status=active
 truth|order=canonical_ai_docs>code_and_config_reality>generated_human_docs>narrative_docs
 
-intent|I001|ship_predictable_behavior_from_packaged_artifacts|st=active
-intent|I002|preserve_downstream_consumer_compatibility_or_communicate_breakage|st=active
-intent|I003|produce_auditable_evidence_for_changes_validation_and_rationale|st=active
-intent|I004|feed_observed_friction_into_improvement_and_workflow_hardening|st=active
+intent|slot1=I001|slot2=ship_predictable_behavior_from_packaged_artifacts|status=active
+intent|slot1=I002|slot2=preserve_downstream_consumer_compatibility_or_communicate_breakage|status=active
+intent|slot1=I003|slot2=produce_auditable_evidence_for_changes_validation_and_rationale|status=active
+intent|slot1=I004|slot2=feed_observed_friction_into_improvement_and_workflow_hardening|status=active
 
-principle|RP001|package_first_truth_validate_packaged_artifacts_not_local_state|st=active
-principle|RP002|safety_before_speed_block_publish_on_unresolved_risk|st=active
-principle|RP003|evidence_over_assumption_record_proof_for_each_gate|st=active
-principle|RP004|human_governed_changes_explicit_review_for_risky_migrations_or_policy|st=active|refs=.ai/PRINCIPLES.md
-principle|RP005|continuous_improvement_convert_release_pain_into_follow_up_work|st=active
+principle|slot1=RP001|slot2=package_first_truth_validate_packaged_artifacts_not_local_state|status=active
+principle|slot1=RP002|slot2=safety_before_speed_block_publish_on_unresolved_risk|status=active
+principle|slot1=RP003|slot2=evidence_over_assumption_record_proof_for_each_gate|status=active
+principle|slot1=RP004|slot2=human_governed_changes_explicit_review_for_risky_migrations_or_policy|status=active|refs=.ai/PRINCIPLES.md
+principle|slot1=RP005|slot2=continuous_improvement_convert_release_pain_into_follow_up_work|status=active
 
-gate|G001|scope_tracked_in_task_engine_with_roadmap_context|when=before_publish|on_fail=stop|refs=.workspace-kit/tasks/state.json
-gate|G002|behavior_changes_documented_in_changelog|when=before_publish|on_fail=stop|refs=docs/maintainers/CHANGELOG.md
-gate|G003|build_typecheck_and_tests_pass|when=before_publish|on_fail=stop|cmd=pnpm run build && pnpm run check && pnpm run test
-gate|G004|consumer_impacting_flows_validated_against_packaged_artifacts|when=before_publish|on_fail=stop|cmd=pnpm run parity
-gate|G005|migration_risk_reviewed_for_config_template_schema_state_changes|when=before_publish|on_fail=stop
-gate|G006|security_sensitive_changes_explicitly_reviewed|when=before_publish|on_fail=stop|refs=docs/maintainers/SECURITY.md
+gate|slot1=G001|slot2=scope_tracked_in_task_engine_with_roadmap_context|when=before_publish|on_fail=stop|refs=.workspace-kit/tasks/state.json
+gate|slot1=G002|slot2=behavior_changes_documented_in_changelog|when=before_publish|on_fail=stop|refs=docs/maintainers/CHANGELOG.md
+gate|slot1=G003|slot2=build_typecheck_and_tests_pass|when=before_publish|on_fail=stop|cmd=pnpm run build && pnpm run check && pnpm run test
+gate|slot1=G004|slot2=consumer_impacting_flows_validated_against_packaged_artifacts|when=before_publish|on_fail=stop|cmd=pnpm run parity
+gate|slot1=G005|slot2=migration_risk_reviewed_for_config_template_schema_state_changes|when=before_publish|on_fail=stop
+gate|slot1=G006|slot2=security_sensitive_changes_explicitly_reviewed|when=before_publish|on_fail=stop|refs=docs/maintainers/SECURITY.md
 
-wf|W200|name=release_procedure|when=phase_release|do=define_scope_and_classify_risk>prepare_changelog_and_version>run_validation_build_check_test_pack_parity_phase4_gates>present_for_human_approval>publish_via_automation>verify_consumer_installability|done=package_published+evidence_recorded|forbid=publish_when_gate_fails|halt_if=human_approval_missing|ap=required|risk=critical|st=active
+workflow|id=W200|name=release_procedure|when=phase_release|do=define_scope_and_classify_risk>prepare_changelog_and_version>run_validation_build_check_test_pack_parity_phase4_gates>present_for_human_approval>publish_via_automation>verify_consumer_installability|done=package_published+evidence_recorded|forbid=publish_when_gate_fails|halt_if=human_approval_missing|approval=required|risk=critical|status=active
 
-evidence|E001|release_version_and_tag|required=true
-evidence|E002|ci_publish_workflow_run_links|required=true
-evidence|E003|validation_command_results_or_artifact_references|required=true
-evidence|E004|npm_package_reference|required=true
-evidence|E005|migration_notes_if_any|required=conditional
-evidence|E006|known_risks_caveats_and_follow_up_tasks|required=true
+evidence|slot1=E001|slot2=release_version_and_tag|required=true
+evidence|slot1=E002|slot2=ci_publish_workflow_run_links|required=true
+evidence|slot1=E003|slot2=validation_command_results_or_artifact_references|required=true
+evidence|slot1=E004|slot2=npm_package_reference|required=true
+evidence|slot1=E005|slot2=migration_notes_if_any|required=conditional
+evidence|slot1=E006|slot2=known_risks_caveats_and_follow_up_tasks|required=true
 
-wf|W201|name=post_release|when=after_publish|do=monitor_for_regressions>triage_and_patch_if_needed>capture_friction_themes>route_to_task_engine_roadmap_or_enhancement_queue|done=follow_up_tracked|ap=none|risk=low|st=active
+workflow|id=W201|name=post_release|when=after_publish|do=monitor_for_regressions>triage_and_patch_if_needed>capture_friction_themes>route_to_task_engine_roadmap_or_enhancement_queue|done=follow_up_tracked|approval=none|risk=low|status=active

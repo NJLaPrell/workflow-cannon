@@ -1,10 +1,10 @@
-meta|v=1|doc=workbook|truth=canonical|st=active
+meta|doc=workbook|truth=canonical|schema=base.v2|status=active|profile=workbook
 
 workbook|name=transcript_automation_baseline|phase=5|status=baseline_locked
-ref|name=maintainer_view|path=docs/maintainers/workbooks/transcript-automation-baseline.md
-ref|name=roadmap|path=docs/maintainers/ROADMAP.md
-ref|name=task_engine_state|path=.workspace-kit/tasks/state.json
-ref|name=improvement_config|path=src/modules/improvement/config.md
+ref|id=maintainer_view|target=docs/maintainers/workbooks/transcript-automation-baseline.md|type=file|status=active
+ref|id=roadmap|target=docs/maintainers/ROADMAP.md|type=file|status=active
+ref|id=task_engine_state|target=.workspace-kit/tasks/state.json|type=file|status=active
+ref|id=improvement_config|target=src/modules/improvement/config.md|type=file|status=active
 
 scope|primary_tasks=T244,T245,T246,T247,T248,T259
 scope|follow_on_tasks=T249-T258,T260-T266
@@ -22,6 +22,6 @@ cadence|rule=skip_when_no_new_transcripts_and_skipIfNoNewTranscripts_true
 cadence|rule=skip_when_elapsed_minutes_below_minIntervalMinutes
 cadence|rule=generate_when_first_run_or_interval_satisfied_or_forceGenerate_true
 
-guardrail|G001|must|keep_transcript_archives_local_only_by_default|st=active
-guardrail|G002|must|keep_source_transcripts_read_only_during_sync|st=active
-guardrail|G003|must|require_same_change_updates_for_command_config_or_cadence_semantic_changes|st=active
+guardrail|slot1=G001|slot2=must|slot3=keep_transcript_archives_local_only_by_default|status=active
+guardrail|slot1=G002|slot2=must|slot3=keep_source_transcripts_read_only_during_sync|status=active
+guardrail|slot1=G003|slot2=must|slot3=require_same_change_updates_for_command_config_or_cadence_semantic_changes|status=active
