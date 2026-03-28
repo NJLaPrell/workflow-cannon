@@ -5077,9 +5077,9 @@
       "id": "T351",
       "title": "Add explicit planning output mode contract (wishlist|tasks|response)",
       "type": "improvement",
-      "status": "proposed",
+      "status": "ready",
       "createdAt": "2026-03-27T23:38:48.721Z",
-      "updatedAt": "2026-03-28T00:25:20.863Z",
+      "updatedAt": "2026-03-28T01:51:30.105Z",
       "priority": "P1",
       "phase": "Phase 18 - Module platform and state consolidation",
       "approach": "Extend build-plan command args and response schema with explicit output mode semantics and deterministic result codes.",
@@ -5098,9 +5098,9 @@
       "id": "T352",
       "title": "Implement strict adaptive follow-up gating mode",
       "type": "improvement",
-      "status": "proposed",
+      "status": "ready",
       "createdAt": "2026-03-27T23:38:48.721Z",
-      "updatedAt": "2026-03-28T00:25:20.870Z",
+      "updatedAt": "2026-03-28T01:51:30.178Z",
       "priority": "P1",
       "phase": "Phase 18 - Module platform and state consolidation",
       "approach": "Add configurable enforcement that can require selected adaptive follow-ups before finalize for higher-rigor agent workflows.",
@@ -5119,9 +5119,9 @@
       "id": "T353",
       "title": "Support task-output mode from planning flow",
       "type": "improvement",
-      "status": "proposed",
+      "status": "ready",
       "createdAt": "2026-03-27T23:38:48.721Z",
-      "updatedAt": "2026-03-28T00:25:20.874Z",
+      "updatedAt": "2026-03-28T01:51:30.250Z",
       "priority": "P1",
       "phase": "Phase 18 - Module platform and state consolidation",
       "approach": "Enable planning flow to emit execution-task outputs directly when requested while preserving deterministic task-engine compatibility.",
@@ -5144,9 +5144,9 @@
       "id": "T354",
       "title": "Add effort/risk/ordering scoring hints for agent chaining",
       "type": "improvement",
-      "status": "proposed",
+      "status": "ready",
       "createdAt": "2026-03-27T23:38:48.721Z",
-      "updatedAt": "2026-03-28T00:25:20.877Z",
+      "updatedAt": "2026-03-28T01:51:30.320Z",
       "priority": "P2",
       "phase": "Phase 18 - Module platform and state consolidation",
       "approach": "Introduce lightweight deterministic scoring fields that help agents rank and sequence planned outputs.",
@@ -5168,9 +5168,9 @@
       "id": "T355",
       "title": "Normalize planning response schemas and harden docs/tests",
       "type": "improvement",
-      "status": "proposed",
+      "status": "ready",
       "createdAt": "2026-03-27T23:38:48.721Z",
-      "updatedAt": "2026-03-28T00:25:20.881Z",
+      "updatedAt": "2026-03-28T01:51:30.392Z",
       "priority": "P2",
       "phase": "Phase 18 - Module platform and state consolidation",
       "approach": "Finalize versioned planning response contracts and update maintainer docs/tests to support robust agent orchestration.",
@@ -5195,9 +5195,9 @@
       "id": "T356",
       "title": "Centralize module enrollment into single barrel",
       "type": "workspace-kit",
-      "status": "proposed",
+      "status": "ready",
       "createdAt": "2026-03-28T00:05:37.116Z",
-      "updatedAt": "2026-03-28T00:25:20.885Z",
+      "updatedAt": "2026-03-28T01:51:30.462Z",
       "priority": "P2",
       "phase": "Phase 18 - Module platform and state consolidation",
       "approach": "Create src/modules/all-modules.ts that exports the canonical module array. Replace the three hardcoded arrays in run-command.ts, doctor-planning-issues.ts, and config-cli.ts with imports from the barrel.",
@@ -5218,9 +5218,9 @@
       "id": "T357",
       "title": "Replace onCommand if-chains with handler map pattern",
       "type": "workspace-kit",
-      "status": "proposed",
+      "status": "ready",
       "createdAt": "2026-03-28T00:05:37.116Z",
-      "updatedAt": "2026-03-28T00:25:20.888Z",
+      "updatedAt": "2026-03-28T01:51:30.532Z",
       "priority": "P2",
       "phase": "Phase 18 - Module platform and state consolidation",
       "approach": "For each module, extract command handlers into a Record<string, CommandHandler> dispatch table. The onCommand method becomes a thin lookup. Start with workspace-config (smallest), then approvals, documentation, planning, improvement, and finally task-engine (largest). Each module can be a separate commit.",
@@ -5240,9 +5240,9 @@
       "id": "T358",
       "title": "Extract shared planning domain from task-engine into core",
       "type": "workspace-kit",
-      "status": "proposed",
+      "status": "ready",
       "createdAt": "2026-03-28T00:05:37.116Z",
-      "updatedAt": "2026-03-28T00:25:20.891Z",
+      "updatedAt": "2026-03-28T01:51:30.602Z",
       "priority": "P1",
       "dependsOn": [
         "T356",
@@ -5267,9 +5267,9 @@
       "id": "T359",
       "title": "Remove unused lifecycle hooks from WorkflowModule contract",
       "type": "workspace-kit",
-      "status": "proposed",
+      "status": "ready",
       "createdAt": "2026-03-28T00:05:37.116Z",
-      "updatedAt": "2026-03-28T00:25:20.894Z",
+      "updatedAt": "2026-03-28T01:51:30.672Z",
       "priority": "P3",
       "phase": "Phase 18 - Module platform and state consolidation",
       "approach": "Remove onInstall, onConfigChange, onStart, onStop, and onEvent from the WorkflowModule interface in module-contract.ts. Remove any stub implementations in modules. Keep onCommand as the sole runtime hook. Document in contract that hooks can be re-added when use cases emerge.",
@@ -5288,9 +5288,9 @@
       "id": "T360",
       "title": "Implement unified state SQLite DB in core",
       "type": "workspace-kit",
-      "status": "proposed",
+      "status": "ready",
       "createdAt": "2026-03-28T00:05:37.116Z",
-      "updatedAt": "2026-03-28T00:25:20.898Z",
+      "updatedAt": "2026-03-28T01:51:30.743Z",
       "priority": "P1",
       "dependsOn": [
         "T358"
@@ -5314,9 +5314,9 @@
       "id": "T361",
       "title": "Add stateSchema to ModuleRegistration and wire registration",
       "type": "workspace-kit",
-      "status": "proposed",
+      "status": "ready",
       "createdAt": "2026-03-28T00:05:37.116Z",
-      "updatedAt": "2026-03-28T00:25:20.902Z",
+      "updatedAt": "2026-03-28T01:51:30.813Z",
       "priority": "P1",
       "dependsOn": [
         "T360"
@@ -5340,9 +5340,9 @@
       "id": "T362",
       "title": "Migrate existing JSON state into unified SQLite DB",
       "type": "workspace-kit",
-      "status": "proposed",
+      "status": "ready",
       "createdAt": "2026-03-28T00:05:37.116Z",
-      "updatedAt": "2026-03-28T00:25:20.905Z",
+      "updatedAt": "2026-03-28T01:51:30.882Z",
       "priority": "P1",
       "dependsOn": [
         "T361"
@@ -5367,9 +5367,9 @@
       "id": "T363",
       "title": "Implement export-on-commit state snapshot",
       "type": "workspace-kit",
-      "status": "proposed",
+      "status": "ready",
       "createdAt": "2026-03-28T00:05:37.116Z",
-      "updatedAt": "2026-03-28T00:25:20.909Z",
+      "updatedAt": "2026-03-28T01:51:30.953Z",
       "priority": "P2",
       "dependsOn": [
         "T362"
@@ -5394,9 +5394,9 @@
       "id": "T364",
       "title": "Add CLI commands for module state queries",
       "type": "workspace-kit",
-      "status": "proposed",
+      "status": "ready",
       "createdAt": "2026-03-28T00:05:37.116Z",
-      "updatedAt": "2026-03-28T00:25:20.912Z",
+      "updatedAt": "2026-03-28T01:51:31.023Z",
       "priority": "P2",
       "dependsOn": [
         "T361"
@@ -5419,9 +5419,9 @@
       "id": "T365",
       "title": "Remove state.md files and update module-build docs",
       "type": "workspace-kit",
-      "status": "proposed",
+      "status": "ready",
       "createdAt": "2026-03-28T00:05:37.116Z",
-      "updatedAt": "2026-03-28T00:25:20.917Z",
+      "updatedAt": "2026-03-28T01:51:31.092Z",
       "priority": "P3",
       "dependsOn": [
         "T364"
@@ -5442,6 +5442,489 @@
         "All module-build documentation reflects SQLite state pattern",
         "documentation-maintainer.md is either registered or relocated",
         "pnpm run build && pnpm test pass"
+      ]
+    },
+    {
+      "id": "T366",
+      "title": "Rewrite documentation-schema.md for v2 fully-keyed format",
+      "type": "task",
+      "status": "ready",
+      "createdAt": "2026-03-28T01:38:46.646Z",
+      "updatedAt": "2026-03-28T01:51:31.163Z",
+      "dependsOn": [],
+      "unblocks": [
+        "T367",
+        "T374"
+      ],
+      "phase": "Phase 19 - Documentation module v2",
+      "approach": "Rewrite schemas/documentation-schema.md to define the v2 base schema with all-keyed fields, consolidated prefixes, new example record type, required why on rules, typed refs, and profile-specific required record sets.",
+      "technicalScope": [
+        "src/modules/documentation/schemas/documentation-schema.md — full rewrite",
+        "Define meta line with schema=base.v2 marker",
+        "Universal record types: meta, ref, rule, check, decision, example, term, command, workflow",
+        "Profile-specific types: runbook, workbook, chain, state, transition, promotion, rollback, artifact, config, cadence, guardrail",
+        "Consolidate cmd/command to command; normalize intent/direction/principle/block per profile",
+        "Document field enums and required-field sets per profile"
+      ],
+      "acceptanceCriteria": [
+        "Schema spec is self-consistent and documents every record type with all fields",
+        "No positional slot definitions remain",
+        "rule has required why field",
+        "ref has type enum (adr|file|code|doc|issue|pr|test|external)",
+        "New example record type defined with for, kind, text fields",
+        "Profile sections enumerate required record sets",
+        "meta line uses schema=base.v2"
+      ]
+    },
+    {
+      "id": "T367",
+      "title": "Add v2 normalized types and view model types to types.ts",
+      "type": "task",
+      "status": "ready",
+      "createdAt": "2026-03-28T01:38:46.646Z",
+      "updatedAt": "2026-03-28T01:51:31.232Z",
+      "dependsOn": [
+        "T366"
+      ],
+      "unblocks": [
+        "T368",
+        "T370",
+        "T371"
+      ],
+      "phase": "Phase 19 - Documentation module v2",
+      "approach": "Extend types.ts with TypeScript types for the v2 normalized document model (NormalizedDocument, NormalizedRule, NormalizedRef, NormalizedExample, etc.) and view model schema (ViewModelDefinition, ViewModelSection).",
+      "technicalScope": [
+        "src/modules/documentation/types.ts — add normalized record types",
+        "NormalizedDocument aggregate type with typed collections for each record kind",
+        "NormalizedRule with why, kind, scope_kind fields",
+        "NormalizedRef with type, anchor, label, status",
+        "NormalizedExample with for (parent link), kind (good|bad|edge), text",
+        "ViewModelDefinition and ViewModelSection types for YAML view model loading",
+        "Keep existing DocumentationGenerateOptions/Result/Evidence unchanged"
+      ],
+      "acceptanceCriteria": [
+        "All normalized types compile",
+        "NormalizedDocument covers every v2 record type from the schema",
+        "ViewModelDefinition and ViewModelSection types support loading a YAML view model",
+        "Existing types preserved without breaking changes"
+      ]
+    },
+    {
+      "id": "T368",
+      "title": "Extract and upgrade parser.ts for v2 keyed-only records",
+      "type": "task",
+      "status": "ready",
+      "createdAt": "2026-03-28T01:38:46.646Z",
+      "updatedAt": "2026-03-28T01:51:31.303Z",
+      "dependsOn": [
+        "T367"
+      ],
+      "unblocks": [
+        "T369",
+        "T373"
+      ],
+      "phase": "Phase 19 - Documentation module v2",
+      "approach": "Extract parseAiRecordLine from runtime.ts into new parser.ts. Simplify for v2 keyed-only format. Add parseAiDocument for full-file parsing.",
+      "technicalScope": [
+        "New file: src/modules/documentation/parser.ts",
+        "Extract and upgrade parseAiRecordLine — v2 has keyed fields only, no positional disambiguation",
+        "Add parseAiDocument(text: string): AiRecord[] for full-file parsing",
+        "Export AiRecord type (type + kv map, no positional array)",
+        "Remove parseAiRecordLine from runtime.ts, replace with import"
+      ],
+      "acceptanceCriteria": [
+        "parser.ts compiles and exports parseAiRecordLine and parseAiDocument",
+        "AiRecord type has no positional array (v2 keyed-only)",
+        "runtime.ts imports parser instead of defining inline",
+        "pnpm run build succeeds"
+      ]
+    },
+    {
+      "id": "T369",
+      "title": "Extract and upgrade validator.ts for v2 schema enforcement",
+      "type": "task",
+      "status": "ready",
+      "createdAt": "2026-03-28T01:38:46.646Z",
+      "updatedAt": "2026-03-28T01:51:31.373Z",
+      "dependsOn": [
+        "T368"
+      ],
+      "unblocks": [
+        "T370",
+        "T373",
+        "T374"
+      ],
+      "phase": "Phase 19 - Documentation module v2",
+      "approach": "Extract validateAiSchema from runtime.ts into new validator.ts. Rewrite for v2 keyed fields: enforce required why on rules, validate ref.type enum, validate example.for cross-refs, enforce profile-required record sets.",
+      "technicalScope": [
+        "New file: src/modules/documentation/validator.ts",
+        "Extract validateAiSchema, isAllowedMetaDoc, autoResolveAiSchema, AiValidationContext",
+        "Rewrite all record-level checks for v2 keyed fields",
+        "Add why enforcement for rule records",
+        "Add ref.type enum validation",
+        "Add example.for cross-reference validation",
+        "Import AiRecord from parser.ts, return DocumentationValidationIssue[]"
+      ],
+      "acceptanceCriteria": [
+        "validator.ts compiles and enforces meta schema=base.v2",
+        "Required why on rules validated",
+        "ref.type checked against allowed enum",
+        "example.for cross-reference validated against document records",
+        "Profile-required record sets enforced",
+        "runtime.ts imports validator instead of inline definitions",
+        "No positional-field validation logic remains"
+      ]
+    },
+    {
+      "id": "T370",
+      "title": "Build normalizer.ts for typed NormalizedDocument from v2 records",
+      "type": "task",
+      "status": "ready",
+      "createdAt": "2026-03-28T01:38:46.646Z",
+      "updatedAt": "2026-03-28T01:51:31.442Z",
+      "dependsOn": [
+        "T369"
+      ],
+      "unblocks": [
+        "T371",
+        "T372",
+        "T373"
+      ],
+      "phase": "Phase 19 - Documentation module v2",
+      "approach": "Create normalizer.ts: takes AiRecord[] and produces typed NormalizedDocument. Group records by type, map keyed fields to typed properties, index refs by id, link examples to parents via for field. Profile-specific records go into profileRecords Map.",
+      "technicalScope": [
+        "New file: src/modules/documentation/normalizer.ts",
+        "Import AiRecord from parser.ts, NormalizedDocument from types.ts",
+        "Export normalizeDocument(records: AiRecord[]): NormalizedDocument",
+        "Refs indexed by id in Map",
+        "Examples linked to parent records via for field",
+        "Profile-specific records grouped in profileRecords Map",
+        "Handle missing optional fields with safe defaults"
+      ],
+      "acceptanceCriteria": [
+        "normalizeDocument produces complete NormalizedDocument from parsed v2 records",
+        "Refs indexed by id in Map",
+        "Examples linked to parent records",
+        "Profile-specific records grouped correctly",
+        "Missing optional fields get safe defaults",
+        "Compiles and importable from runtime.ts"
+      ]
+    },
+    {
+      "id": "T371",
+      "title": "Create view model schema and ~15 YAML view definition files",
+      "type": "task",
+      "status": "ready",
+      "createdAt": "2026-03-28T01:38:46.646Z",
+      "updatedAt": "2026-03-28T01:51:31.512Z",
+      "dependsOn": [
+        "T370"
+      ],
+      "unblocks": [
+        "T372"
+      ],
+      "phase": "Phase 19 - Documentation module v2",
+      "approach": "Create src/modules/documentation/views/ directory with one YAML view model per existing template. Each defines doc_type, target, source_profile, ordered sections with renderer names, and render_policies. Add loadViewModel utility.",
+      "technicalScope": [
+        "New directory: src/modules/documentation/views/",
+        "~15 .view.yaml files (PRINCIPLES, AGENTS, ARCHITECTURE, README, RELEASING, ROADMAP, SECURITY, SUPPORT, TERMS, plus runbooks and workbooks)",
+        "Each view model: doc_type, target filename, source_profile, sections array, render_policies",
+        "Add YAML parsing utility for simple structured YAML",
+        "Export loadViewModel and listViewModels functions"
+      ],
+      "acceptanceCriteria": [
+        "Every template in templates/ has a corresponding .view.yaml in views/",
+        "Each view model parses into valid ViewModelDefinition",
+        "Section source arrays reference record types the normalizer produces",
+        "Renderer names match functions in renderer.ts",
+        "loadViewModel returns typed objects"
+      ]
+    },
+    {
+      "id": "T372",
+      "title": "Build renderer.ts with deterministic named rendering functions",
+      "type": "task",
+      "status": "ready",
+      "createdAt": "2026-03-28T01:38:46.646Z",
+      "updatedAt": "2026-03-28T01:51:31.582Z",
+      "dependsOn": [
+        "T370",
+        "T371"
+      ],
+      "unblocks": [
+        "T373"
+      ],
+      "phase": "Phase 19 - Documentation module v2",
+      "approach": "Create renderer.ts with deterministic markdown renderers: brief_summary, ordered_list, rule_table, check_table, command_reference, decision_section, term_list, workflow_steps, chain_steps, ref_table. Add renderDocument orchestrator that assembles sections from NormalizedDocument + ViewModelDefinition.",
+      "technicalScope": [
+        "New file: src/modules/documentation/renderer.ts",
+        "Import types from types.ts",
+        "Implement ~10 named renderer functions",
+        "renderDocument orchestrator: takes NormalizedDocument + ViewModelDefinition, dispatches to renderers per section",
+        "Each renderer produces markdown from typed inputs only — no content invention"
+      ],
+      "acceptanceCriteria": [
+        "All named renderers from view models implemented",
+        "renderDocument assembles complete human-readable markdown",
+        "Output is deterministic (same input = same output)",
+        "No content invention — only restate, group, header, deterministic connective text",
+        "Compiles and importable from runtime.ts"
+      ]
+    },
+    {
+      "id": "T373",
+      "title": "Slim runtime.ts to orchestration and wire new components",
+      "type": "task",
+      "status": "ready",
+      "createdAt": "2026-03-28T01:38:46.646Z",
+      "updatedAt": "2026-03-28T01:51:31.654Z",
+      "dependsOn": [
+        "T368",
+        "T369",
+        "T370",
+        "T372"
+      ],
+      "unblocks": [
+        "T375",
+        "T376"
+      ],
+      "phase": "Phase 19 - Documentation module v2",
+      "approach": "Refactor runtime.ts to orchestration-only: config loading, file I/O, wire parser+validator+normalizer+renderer. generateDocument reads .ai/ source, parses, validates, normalizes, loads view model, renders. generateAllDocuments iterates view models not templates.",
+      "technicalScope": [
+        "src/modules/documentation/runtime.ts — remove ~500 lines of inline parser/validator/template logic",
+        "Import from parser.ts, validator.ts, normalizer.ts, renderer.ts",
+        "Update generateDocument flow: read .ai/ source -> parse -> validate -> normalize -> load view model -> render -> write",
+        "Update generateAllDocuments to iterate view models instead of templates",
+        "Keep config loading, path resolution, write boundary checks, conflict detection, evidence collection"
+      ],
+      "acceptanceCriteria": [
+        "runtime.ts is under 300 lines",
+        "All parser/validator/normalizer/renderer logic in dedicated files",
+        "generateDocument reads .ai/ source and renders via view model",
+        "generateAllDocuments iterates view models not templates",
+        "pnpm run build succeeds",
+        "generate-document and document-project commands produce correct output"
+      ]
+    },
+    {
+      "id": "T374",
+      "title": "Hard-migrate all 17 .ai/ docs to v2 keyed format",
+      "type": "task",
+      "status": "ready",
+      "createdAt": "2026-03-28T01:38:46.646Z",
+      "updatedAt": "2026-03-28T01:51:31.723Z",
+      "dependsOn": [
+        "T366",
+        "T369"
+      ],
+      "unblocks": [
+        "T375"
+      ],
+      "phase": "Phase 19 - Documentation module v2",
+      "approach": "Rewrite all 17 .ai/ files to v2 format: meta schema=base.v2, all keyed fields, why on rules, typed refs, consolidated prefixes, add example records for high-risk rules.",
+      "technicalScope": [
+        ".ai/PRINCIPLES.md, AGENTS.md, module-build.md, README.md, ARCHITECTURE.md, ROADMAP.md, RELEASING.md, SECURITY.md, SUPPORT.md, TERMS.md, CONFIG.md",
+        ".ai/runbooks/consumer-cadence.md, release-channels.md, parity-validation-flow.md",
+        ".ai/workbooks/task-engine-workbook.md, phase2-config-policy-workbook.md, transcript-automation-baseline.md",
+        "Convert all positional records to fully keyed",
+        "Add why= to all rule records",
+        "Add type= and status= to all ref records",
+        "Consolidate cmd->command, normalize intent/direction/principle/block per profile",
+        "Add example records for high-risk rules and user-facing commands"
+      ],
+      "acceptanceCriteria": [
+        "All 17 .ai/ files use v2 keyed format exclusively",
+        "No positional fields remain in any file",
+        "All rule records have why= field",
+        "All ref records have type= and status=",
+        "Overlapping prefixes consolidated",
+        "At least 5 example records added for high-risk rules",
+        "All files pass v2 validator"
+      ]
+    },
+    {
+      "id": "T375",
+      "title": "Rewrite documentation tests for v2 components",
+      "type": "task",
+      "status": "ready",
+      "createdAt": "2026-03-28T01:38:46.646Z",
+      "updatedAt": "2026-03-28T01:51:31.794Z",
+      "dependsOn": [
+        "T373",
+        "T374"
+      ],
+      "unblocks": [
+        "T376"
+      ],
+      "phase": "Phase 19 - Documentation module v2",
+      "approach": "Rewrite test/documentation-runtime.test.mjs for v2: parser tests, validator tests, normalizer tests, renderer tests, view model tests, integration tests, and .ai/ migration verification.",
+      "technicalScope": [
+        "test/documentation-runtime.test.mjs — full rewrite for v2",
+        "Parser tests: keyed-only records, blank lines, comments, malformed records",
+        "Validator tests: required fields, why enforcement, ref.type enum, example.for cross-refs, profile sets",
+        "Normalizer tests: raw records to typed NormalizedDocument, ref indexing, example linking",
+        "Renderer tests: each named renderer produces expected markdown",
+        "View model tests: loading, section assembly",
+        "Integration tests: generate-document and document-project end-to-end",
+        "Migration verification: validate all 17 .ai/ files pass v2 schema"
+      ],
+      "acceptanceCriteria": [
+        "All parser, validator, normalizer, renderer, view model, and integration tests pass",
+        "Migration verification validates all 17 .ai/ files against v2 schema",
+        "pnpm test succeeds",
+        "No v1 format test fixtures remain"
+      ]
+    },
+    {
+      "id": "T376",
+      "title": "Update documentation module docs and bump version",
+      "type": "task",
+      "status": "ready",
+      "createdAt": "2026-03-28T01:38:46.646Z",
+      "updatedAt": "2026-03-28T01:51:31.864Z",
+      "dependsOn": [
+        "T373",
+        "T375"
+      ],
+      "unblocks": [],
+      "phase": "Phase 19 - Documentation module v2",
+      "approach": "Update RULES.md, README.md, instructions/*.md for v2 contracts. Bump module version in index.ts. Remove stale template-based rendering references.",
+      "technicalScope": [
+        "src/modules/documentation/RULES.md — update precedence (views replace templates)",
+        "src/modules/documentation/README.md — new architecture and file inventory",
+        "src/modules/documentation/instructions/*.md — update command contracts for view-model rendering",
+        "src/modules/documentation/index.ts — bump module version",
+        "Remove stale references to template-based rendering in module docs"
+      ],
+      "acceptanceCriteria": [
+        "RULES.md reflects v2 precedence and validation expectations",
+        "README.md accurately describes new file layout and rendering pipeline",
+        "Instruction docs match actual command behavior",
+        "Module version bumped",
+        "No stale references to template-based rendering in module docs"
+      ]
+    },
+    {
+      "id": "T377",
+      "title": "Agent CLI discovery bootstrap (doctor + bare run)",
+      "type": "workspace-kit",
+      "status": "completed",
+      "createdAt": "2026-03-28T01:45:30.207Z",
+      "updatedAt": "2026-03-28T02:01:36.864Z",
+      "priority": "P2",
+      "phase": "Phase 16 - Maintenance and stability",
+      "approach": "Add a prominent numbered bootstrap to docs/maintainers/AGENT-CLI-MAP.md and/or AGENTS.md: run `workspace-kit doctor` then `workspace-kit run` with no subcommand before mutating kit state; cross-link from maintainer README if useful.",
+      "technicalScope": [
+        "docs/maintainers/AGENT-CLI-MAP.md",
+        "docs/maintainers/AGENTS.md",
+        "Optional: docs/maintainers/README.md pointer"
+      ],
+      "acceptanceCriteria": [
+        "Discovery steps are visible without scrolling past long tier tables",
+        "Wording matches POLICY-APPROVAL and existing Cursor rules (no conflicting approval story)",
+        "Maintainer spot-check: fresh agent session can find the bootstrap in under one hop from AGENTS.md"
+      ]
+    },
+    {
+      "id": "T378",
+      "title": "Agent CLI boundary gate (mutate vs code)",
+      "type": "workspace-kit",
+      "status": "completed",
+      "createdAt": "2026-03-28T01:45:30.278Z",
+      "updatedAt": "2026-03-28T02:01:37.006Z",
+      "priority": "P2",
+      "phase": "Phase 16 - Maintenance and stability",
+      "approach": "Add a compact (~10 line) gate: kit mutation vs normal source edits; link to AGENT-CLI-MAP tier table and POLICY-APPROVAL; reference from AGENTS.md or a Cursor rule one-liner.",
+      "technicalScope": [
+        "docs/maintainers/AGENT-CLI-MAP.md and/or new short AGENT-CLI-QUICKSTART.md",
+        "docs/maintainers/AGENTS.md or .cursor/rules cross-link"
+      ],
+      "acceptanceCriteria": [
+        "Gate states when workspace-kit is mandatory (tasks, policy, approvals, doc gen) vs optional Tier C reads",
+        "No contradiction with TERMS.md / workflow contract",
+        "Linked from at least one always-on agent entry doc"
+      ]
+    },
+    {
+      "id": "T379",
+      "title": "Audit tasks/*.md for workspace-kit Persist lines",
+      "type": "workspace-kit",
+      "status": "completed",
+      "createdAt": "2026-03-28T01:45:30.350Z",
+      "updatedAt": "2026-03-28T02:01:37.148Z",
+      "priority": "P2",
+      "phase": "Phase 16 - Maintenance and stability",
+      "approach": "Grep tasks/*.md for persistence or lifecycle language; add or fix **Persist via CLI** blocks with JSON copied from AGENT-CLI-MAP (correct tier / policyApproval vs env).",
+      "technicalScope": [
+        "tasks/*.md",
+        "docs/maintainers/AGENT-CLI-MAP.md"
+      ],
+      "acceptanceCriteria": [
+        "Every template that implies kit persistence names an exact workspace-kit run invocation",
+        "Tier A/B examples include policyApproval or env approval as required by POLICY-APPROVAL.md",
+        "Spot-check three templates against a live CLI run"
+      ]
+    },
+    {
+      "id": "T380",
+      "title": "Improve Cursor / root discovery for agent CLI docs",
+      "type": "workspace-kit",
+      "status": "completed",
+      "createdAt": "2026-03-28T01:45:30.420Z",
+      "updatedAt": "2026-03-28T02:01:37.287Z",
+      "priority": "P2",
+      "phase": "Phase 16 - Maintenance and stability",
+      "approach": "Add thin repo-root AGENTS.md (or equivalent) that points to docs/maintainers/AGENTS.md and AGENT-CLI-MAP.md; optionally add one line to a Cursor rule to @-mention the map for policy work.",
+      "technicalScope": [
+        "AGENTS.md (repo root)",
+        "docs/maintainers/AGENTS.md",
+        "Optional: .cursor/rules"
+      ],
+      "acceptanceCriteria": [
+        "Root pointer file exists and does not fork long policy text",
+        "Canonical paths remain under docs/maintainers/",
+        "No drift between root stub and maintainer AGENTS.md intent"
+      ]
+    },
+    {
+      "id": "T381",
+      "title": "CI or codegen guardrail for CLI vs AGENT-CLI-MAP drift",
+      "type": "workspace-kit",
+      "status": "completed",
+      "createdAt": "2026-03-28T01:45:30.490Z",
+      "updatedAt": "2026-03-28T02:01:37.429Z",
+      "priority": "P2",
+      "phase": "Phase 16 - Maintenance and stability",
+      "approach": "Extend or add a script under scripts/ that compares `workspace-kit run` command listing (or internal registry) to documented commands in AGENT-CLI-MAP; wire into pnpm check or CI with clear failure text.",
+      "technicalScope": [
+        "scripts/",
+        ".github/workflows if needed",
+        "docs/maintainers/AGENT-CLI-MAP.md"
+      ],
+      "acceptanceCriteria": [
+        "Check fails when a shipped run subcommand is missing from the map (or documented exclusions list)",
+        "Check is fast enough for default pnpm check",
+        "Maintainers have a short note on how to update exclusions when intentional"
+      ]
+    },
+    {
+      "id": "T382",
+      "title": "Optional agent habit hook (get-next-actions opener)",
+      "type": "workspace-kit",
+      "status": "completed",
+      "createdAt": "2026-03-28T01:45:30.561Z",
+      "updatedAt": "2026-03-28T02:01:37.569Z",
+      "priority": "P2",
+      "phase": "Phase 16 - Maintenance and stability",
+      "approach": "Add a short Cursor skill or maintainer snippet: start maintainer work with `workspace-kit run get-next-actions '{}'` then optional get-task; link from AGENT-CLI-MAP discovery section.",
+      "technicalScope": [
+        ".cursor/skills or docs/maintainers snippet",
+        "docs/maintainers/AGENT-CLI-MAP.md"
+      ],
+      "acceptanceCriteria": [
+        "Copy-paste block is under ~30 lines and Tier C (no policyApproval)",
+        "Explains suggestedNext vs manual state.json reading",
+        "Linked from discovery path in AGENT-CLI-MAP or AGENTS.md"
       ]
     }
   ],
@@ -8845,9 +9328,889 @@
       "dependentsUnblocked": [],
       "timestamp": "2026-03-27T23:03:04.479Z",
       "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T351-2026-03-28T01:51:30.105Z-b50408c8",
+      "taskId": "T351",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T01:51:30.105Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T352-2026-03-28T01:51:30.178Z-7117cb7f",
+      "taskId": "T352",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T01:51:30.178Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T353-2026-03-28T01:51:30.250Z-48f4527f",
+      "taskId": "T353",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T01:51:30.250Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T354-2026-03-28T01:51:30.320Z-b760adf6",
+      "taskId": "T354",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T01:51:30.320Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T355-2026-03-28T01:51:30.392Z-8a2929db",
+      "taskId": "T355",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T01:51:30.392Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T356-2026-03-28T01:51:30.462Z-1cf4e66d",
+      "taskId": "T356",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T01:51:30.462Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T357-2026-03-28T01:51:30.532Z-5e52c4ff",
+      "taskId": "T357",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T01:51:30.532Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T358-2026-03-28T01:51:30.602Z-4dd0d32a",
+      "taskId": "T358",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T01:51:30.602Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T359-2026-03-28T01:51:30.672Z-9df697e5",
+      "taskId": "T359",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T01:51:30.672Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T360-2026-03-28T01:51:30.743Z-6ebcf067",
+      "taskId": "T360",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T01:51:30.743Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T361-2026-03-28T01:51:30.813Z-bdee88a9",
+      "taskId": "T361",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T01:51:30.813Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T362-2026-03-28T01:51:30.882Z-967bb146",
+      "taskId": "T362",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T01:51:30.882Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T363-2026-03-28T01:51:30.953Z-852f51cb",
+      "taskId": "T363",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T01:51:30.953Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T364-2026-03-28T01:51:31.023Z-a30c5807",
+      "taskId": "T364",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T01:51:31.023Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T365-2026-03-28T01:51:31.092Z-4c60103b",
+      "taskId": "T365",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T01:51:31.092Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T366-2026-03-28T01:51:31.163Z-eeeee594",
+      "taskId": "T366",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T01:51:31.163Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T367-2026-03-28T01:51:31.232Z-1da3c02b",
+      "taskId": "T367",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T01:51:31.232Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T368-2026-03-28T01:51:31.303Z-c7d687ad",
+      "taskId": "T368",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T01:51:31.303Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T369-2026-03-28T01:51:31.373Z-b1cb7707",
+      "taskId": "T369",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T01:51:31.373Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T370-2026-03-28T01:51:31.442Z-8b7399f8",
+      "taskId": "T370",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T01:51:31.442Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T371-2026-03-28T01:51:31.512Z-0ef06117",
+      "taskId": "T371",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T01:51:31.512Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T372-2026-03-28T01:51:31.582Z-d59c1936",
+      "taskId": "T372",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T01:51:31.582Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T373-2026-03-28T01:51:31.654Z-cf8479fe",
+      "taskId": "T373",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T01:51:31.654Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T374-2026-03-28T01:51:31.723Z-eec77e89",
+      "taskId": "T374",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T01:51:31.723Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T375-2026-03-28T01:51:31.794Z-dd0752b3",
+      "taskId": "T375",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T01:51:31.794Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T376-2026-03-28T01:51:31.864Z-9e4ede6e",
+      "taskId": "T376",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T01:51:31.864Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T377-2026-03-28T01:51:31.935Z-c363952f",
+      "taskId": "T377",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T01:51:31.935Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T378-2026-03-28T01:51:32.005Z-0b9e8eab",
+      "taskId": "T378",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T01:51:32.005Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T379-2026-03-28T01:51:32.075Z-a01503f5",
+      "taskId": "T379",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T01:51:32.075Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T380-2026-03-28T01:51:32.145Z-2f8db3a6",
+      "taskId": "T380",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T01:51:32.145Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T381-2026-03-28T01:51:32.215Z-c789ae23",
+      "taskId": "T381",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T01:51:32.215Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T382-2026-03-28T01:51:32.287Z-0def9965",
+      "taskId": "T382",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T01:51:32.287Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T377-2026-03-28T02:01:36.794Z-565ce24b",
+      "taskId": "T377",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T02:01:36.794Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T377-2026-03-28T02:01:36.864Z-9bc80c12",
+      "taskId": "T377",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T02:01:36.864Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T378-2026-03-28T02:01:36.935Z-eaf1cb61",
+      "taskId": "T378",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T02:01:36.935Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T378-2026-03-28T02:01:37.006Z-3bea5045",
+      "taskId": "T378",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T02:01:37.006Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T379-2026-03-28T02:01:37.077Z-f87a98b7",
+      "taskId": "T379",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T02:01:37.077Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T379-2026-03-28T02:01:37.148Z-db1e6c22",
+      "taskId": "T379",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T02:01:37.148Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T380-2026-03-28T02:01:37.217Z-c5925e2b",
+      "taskId": "T380",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T02:01:37.217Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T380-2026-03-28T02:01:37.287Z-80e2f5ed",
+      "taskId": "T380",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T02:01:37.287Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T381-2026-03-28T02:01:37.356Z-3dc22306",
+      "taskId": "T381",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T02:01:37.356Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T381-2026-03-28T02:01:37.429Z-210950a3",
+      "taskId": "T381",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T02:01:37.429Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T382-2026-03-28T02:01:37.500Z-6899ffd3",
+      "taskId": "T382",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T02:01:37.500Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T382-2026-03-28T02:01:37.569Z-afd9a881",
+      "taskId": "T382",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T02:01:37.569Z",
+      "actor": "NJLaPrell@gmail.com"
     }
   ],
-  "lastUpdated": "2026-03-28T00:25:20.917Z",
+  "lastUpdated": "2026-03-28T02:01:37.569Z",
   "mutationLog": [
     {
       "mutationId": "create-task-T319-2026-03-27T15:16:30.032Z-20b24ad2",
@@ -9782,6 +11145,210 @@
           "phase"
         ],
         "payloadDigest": "b9ff1d7cb1933cfab41d279950bc12a29df7089321c3441923c38128145ca041"
+      }
+    },
+    {
+      "mutationId": "create-task-T366-2026-03-28T01:38:46.647Z-92b7a556",
+      "mutationType": "create-task",
+      "taskId": "T366",
+      "timestamp": "2026-03-28T01:38:46.647Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W6"
+      }
+    },
+    {
+      "mutationId": "create-task-T367-2026-03-28T01:38:46.647Z-c20a5816",
+      "mutationType": "create-task",
+      "taskId": "T367",
+      "timestamp": "2026-03-28T01:38:46.647Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W6"
+      }
+    },
+    {
+      "mutationId": "create-task-T368-2026-03-28T01:38:46.647Z-48f1919d",
+      "mutationType": "create-task",
+      "taskId": "T368",
+      "timestamp": "2026-03-28T01:38:46.647Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W6"
+      }
+    },
+    {
+      "mutationId": "create-task-T369-2026-03-28T01:38:46.647Z-88612d72",
+      "mutationType": "create-task",
+      "taskId": "T369",
+      "timestamp": "2026-03-28T01:38:46.647Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W6"
+      }
+    },
+    {
+      "mutationId": "create-task-T370-2026-03-28T01:38:46.647Z-d891d548",
+      "mutationType": "create-task",
+      "taskId": "T370",
+      "timestamp": "2026-03-28T01:38:46.647Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W6"
+      }
+    },
+    {
+      "mutationId": "create-task-T371-2026-03-28T01:38:46.647Z-708af61f",
+      "mutationType": "create-task",
+      "taskId": "T371",
+      "timestamp": "2026-03-28T01:38:46.647Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W6"
+      }
+    },
+    {
+      "mutationId": "create-task-T372-2026-03-28T01:38:46.647Z-703db12a",
+      "mutationType": "create-task",
+      "taskId": "T372",
+      "timestamp": "2026-03-28T01:38:46.647Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W6"
+      }
+    },
+    {
+      "mutationId": "create-task-T373-2026-03-28T01:38:46.647Z-b5954d36",
+      "mutationType": "create-task",
+      "taskId": "T373",
+      "timestamp": "2026-03-28T01:38:46.647Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W6"
+      }
+    },
+    {
+      "mutationId": "create-task-T374-2026-03-28T01:38:46.647Z-8a84fd6d",
+      "mutationType": "create-task",
+      "taskId": "T374",
+      "timestamp": "2026-03-28T01:38:46.647Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W6"
+      }
+    },
+    {
+      "mutationId": "create-task-T375-2026-03-28T01:38:46.647Z-81c573a8",
+      "mutationType": "create-task",
+      "taskId": "T375",
+      "timestamp": "2026-03-28T01:38:46.647Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W6"
+      }
+    },
+    {
+      "mutationId": "create-task-T376-2026-03-28T01:38:46.647Z-8219b699",
+      "mutationType": "create-task",
+      "taskId": "T376",
+      "timestamp": "2026-03-28T01:38:46.647Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W6"
+      }
+    },
+    {
+      "mutationId": "create-task-T377-2026-03-28T01:45:30.207Z-7a8a1a86",
+      "mutationType": "create-task",
+      "taskId": "T377",
+      "timestamp": "2026-03-28T01:45:30.207Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W7"
+      }
+    },
+    {
+      "mutationId": "create-task-T378-2026-03-28T01:45:30.278Z-392bd134",
+      "mutationType": "create-task",
+      "taskId": "T378",
+      "timestamp": "2026-03-28T01:45:30.279Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W8"
+      }
+    },
+    {
+      "mutationId": "create-task-T379-2026-03-28T01:45:30.350Z-9909935b",
+      "mutationType": "create-task",
+      "taskId": "T379",
+      "timestamp": "2026-03-28T01:45:30.351Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W9"
+      }
+    },
+    {
+      "mutationId": "create-task-T380-2026-03-28T01:45:30.420Z-02cf55e1",
+      "mutationType": "create-task",
+      "taskId": "T380",
+      "timestamp": "2026-03-28T01:45:30.420Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W10"
+      }
+    },
+    {
+      "mutationId": "create-task-T381-2026-03-28T01:45:30.491Z-9c051bf9",
+      "mutationType": "create-task",
+      "taskId": "T381",
+      "timestamp": "2026-03-28T01:45:30.491Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W11"
+      }
+    },
+    {
+      "mutationId": "create-task-T382-2026-03-28T01:45:30.561Z-91050854",
+      "mutationType": "create-task",
+      "taskId": "T382",
+      "timestamp": "2026-03-28T01:45:30.561Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "proposed",
+        "source": "convert-wishlist",
+        "wishlistId": "W12"
       }
     }
   ]

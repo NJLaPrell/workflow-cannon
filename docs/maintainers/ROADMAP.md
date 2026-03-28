@@ -31,6 +31,7 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - **Phase 16 (Maintenance and stability)** is **COMPLETE and released** as **`v0.17.0`**: **`T335`–`T344`** — versioned Task Engine API schemas, stricter typed create paths, query filters and CLI map docs, idempotent mutations, model explainer command, optional runtime strict validation, TERMS glossary alignment, plus **extension** parity (SQLite file watching, richer dashboard, `list-tasks` filters after `T337`). Plan: `docs/maintainers/plans/extension-dashboard-parity-plan.md`.
 - **Phase 17 (Planning module guided workflows)** is **COMPLETE and released** as **`v0.18.0`**: **`T345`–`T350`** — planning module command surface, adaptive/hard-gated interview flow, rule-driven defaults, wishlist artifact composition/persistence, CLI guidance polish, and maintainer docs/test hardening.
 - **Phase 18 (Module platform and state consolidation)** is **in planning** for **`v0.19.0`**: **`T351`–`T365`** — three tracks: (A) planning engine agent orchestration hardening, (B) module pattern cleanup (centralized enrollment, handler maps, shared domain extraction, dead hook removal), (C) unified SQLite state DB with module schema registration, migration, export-on-commit snapshots, and CLI state queries.
+- **Phase 19 (Documentation module v2)** is **in planning** for **`v0.20.0`**: **`T366`–`T376`** — v2 fully-keyed agent doc schema, runtime decomposition (parser, validator, normalizer, renderer), view-model-driven deterministic rendering replacing prose templates, hard migration of all `.ai/` docs, and test/docs update. Planning artifact: `W6`.
 - Historical extraction and first-publish milestones remain recorded below as provenance.
 
 ## Phase plan and release cadence
@@ -234,6 +235,27 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
   - `workspace-kit run get-module-state` returns structured state for all registered modules.
   - `state export` / `state import` round-trips produce identical output.
   - Module-build documentation (`.ai/module-build.md`, `docs/maintainers/module-build-guide.md`) reflects the new state and handler patterns.
+
+### Phase 19 - Documentation module v2 -> GitHub release `v0.20.0`
+
+- Primary scope: **`T366`–`T376`** — documentation module schema upgrade and runtime decomposition. Planning artifact: **`W6`**.
+- **Schema v2** (`T366`): rewrite `documentation-schema.md` for fully-keyed fields, consolidated prefixes (`cmd`/`command` unify to `command`), new `example` record type, required `why` on `rule`, typed `ref` with `type`/`anchor`/`label`/`status`. `meta` line uses `schema=base.v2`.
+- **Types and parser** (`T367`–`T368`): `NormalizedDocument` typed graph, `ViewModelDefinition` types, extracted `parser.ts` with keyed-only `parseAiRecordLine`.
+- **Validator** (`T369`): extracted `validator.ts` enforcing v2 required fields, `why` on rules, `ref.type` enum, `example.for` cross-references, and profile-specific required record sets.
+- **Normalizer** (`T370`): `normalizer.ts` producing typed `NormalizedDocument` from parsed records — the boundary between raw text and typed objects.
+- **View models and renderer** (`T371`–`T372`): `views/` directory with ~15 `.view.yaml` files replacing prose templates; `renderer.ts` with deterministic named rendering functions (`rule_table`, `command_reference`, `brief_summary`, etc.) that produce markdown from typed inputs only.
+- **Runtime rewire** (`T373`): slim `runtime.ts` to orchestration — config loading, file I/O, wiring parser+validator+normalizer+renderer. `generateDocument` reads `.ai/` source, parses, validates, normalizes, renders via view model. `generateAllDocuments` iterates view models not templates.
+- **Hard migration** (`T374`): rewrite all 17 `.ai/` docs to v2 keyed format.
+- **Tests and docs** (`T375`–`T376`): rewrite `documentation-runtime.test.mjs` for v2 components; update module `RULES.md`, `README.md`, instructions, and version bump.
+- Dependency structure: `T366` is root → `T367` → `T368` → `T369` → `T370` → `T371`/`T372` → `T373`. `T374` depends on `T366`+`T369`. `T375` depends on `T373`+`T374`. `T376` depends on `T373`+`T375`.
+- Constraints: all code changes contained within `src/modules/documentation/` module boundary. Hard migration (no dual v1/v2 support). Templates kept for rollback but deprecated. No fact SPO triples or separate profile schema files. Renderers are functions, not a plugin framework.
+- Outcome: deterministic, view-model-driven documentation rendering from fully-keyed canonical records, with a decomposed runtime (parser, validator, normalizer, renderer) and consistent v2 format across all `.ai/` docs.
+- Exit signals:
+  - **`T366`–`T376`** are **`completed`** in task-engine state.
+  - `pnpm run build`, `check`, `test`, `parity`, `check-release-metadata`, `phase5-gates`, and `check-planning-consistency` pass on the release tag.
+  - All 17 `.ai/` files parse and validate under v2 schema.
+  - `generate-document` and `document-project` produce deterministic human docs from canonical records via view models.
+  - `runtime.ts` is under 300 lines with all logic in dedicated files.
 
 ## Recorded decisions
 

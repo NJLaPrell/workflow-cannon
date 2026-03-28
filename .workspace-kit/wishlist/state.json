@@ -262,7 +262,402 @@
           }
         }
       }
+    },
+    {
+      "id": "W6",
+      "status": "converted",
+      "title": "Documentation Module v2: Keyed Schema, Normalizer, and View Models",
+      "problemStatement": "Planning artifact generated from guided workflow.",
+      "expectedOutcome": "Clear, reviewable planning artifact for execution decomposition.",
+      "impact": "Improved planning quality and delivery confidence.",
+      "constraints": "All changes contained within src/modules/documentation/ module boundary. Hard migration (no dual v1/v2 support). Templates kept for rollback but deprecated. No fact SPO triples or separate profile schema files. Renderers are functions not a plugin framework.",
+      "successSignals": "All .ai/ docs parse and validate under v2 schema. generate-document and document-project produce deterministic human docs from canonical records via view models. Parser, validator, normalizer, renderer each have focused test coverage. runtime.ts reduced to orchestration only.",
+      "requestor": "NJLaPrell@gmail.com",
+      "evidenceRef": "planning:task-breakdown:2026-03-28T01:35:10.751Z",
+      "createdAt": "2026-03-28T01:35:10.751Z",
+      "updatedAt": "2026-03-28T01:38:46.646Z",
+      "metadata": {
+        "planningType": "task-breakdown",
+        "artifactSchemaVersion": 1,
+        "artifact": {
+          "schemaVersion": 1,
+          "planningType": "task-breakdown",
+          "generatedAt": "2026-03-28T01:35:10.746Z",
+          "goals": [
+            "Upgrade the documentation module from v1 hybrid positional schema to v2 fully-keyed-field schema. Decompose runtime.ts into parser, validator, normalizer, and renderer. Replace prose templates with view-model-driven deterministic rendering. Hard-migrate all 17 .ai/ docs to v2 format."
+          ],
+          "approach": "Context-driven workflow guided by planning rules.",
+          "majorTechnicalDecisions": [],
+          "candidateFeaturesOrChanges": [],
+          "assumptions": [],
+          "openQuestions": [],
+          "risksAndConstraints": [
+            "Constraint: All changes contained within src/modules/documentation/ module boundary. Hard migration (no dual v1/v2 support). Templates kept for rollback but deprecated. No fact SPO triples or separate profile schema files. Renderers are functions not a plugin framework."
+          ],
+          "sourceAnswers": {
+            "goal": "Upgrade the documentation module from v1 hybrid positional schema to v2 fully-keyed-field schema. Decompose runtime.ts into parser, validator, normalizer, and renderer. Replace prose templates with view-model-driven deterministic rendering. Hard-migrate all 17 .ai/ docs to v2 format.",
+            "constraints": "All changes contained within src/modules/documentation/ module boundary. Hard migration (no dual v1/v2 support). Templates kept for rollback but deprecated. No fact SPO triples or separate profile schema files. Renderers are functions not a plugin framework.",
+            "successSignals": "All .ai/ docs parse and validate under v2 schema. generate-document and document-project produce deterministic human docs from canonical records via view models. Parser, validator, normalizer, renderer each have focused test coverage. runtime.ts reduced to orchestration only.",
+            "handoffRisk": "Schema-to-validator boundary: v2 schema spec must exactly match validator enforcement. Normalizer-to-renderer boundary: renderer must only consume typed NormalizedDocument, never raw lines. View model section sources must reference valid record types from the normalizer output."
+          }
+        }
+      },
+      "convertedAt": "2026-03-28T01:38:46.646Z",
+      "convertedToTaskIds": [
+        "T366",
+        "T367",
+        "T368",
+        "T369",
+        "T370",
+        "T371",
+        "T372",
+        "T373",
+        "T374",
+        "T375",
+        "T376"
+      ],
+      "conversionDecomposition": {
+        "rationale": "Linear pipeline decomposition: schema spec drives parser, parser drives validator, validator drives normalizer, normalizer drives view models and renderer, renderer drives runtime rewire, and migration depends on schema+validator. Tests cut across each component.",
+        "boundaries": "IN: documentation module code, schema spec, types, view model files, .ai/ doc migration, test updates. OUT: no changes to other modules, no fact SPO triples, no separate profile schemas, no renderer plugin framework.",
+        "dependencyIntent": "T366 (schema) is root. T367 (types) depends on T366. T368 (parser) on T367. T369 (validator) on T368. T370 (normalizer) on T369. T371 (views) on T370. T372 (renderer) on T370+T371. T373 (runtime) on T368+T369+T370+T372. T374 (migration) on T366+T369. T375 (tests) on T373+T374. T376 (docs) on T373+T375."
+      }
+    },
+    {
+      "id": "W7",
+      "status": "converted",
+      "title": "Agent CLI discovery bootstrap (doctor + bare run)",
+      "problemStatement": "Models often invent or misremember CLI shapes instead of listing commands from the binary.",
+      "expectedOutcome": "A short, prominent discovery path in maintainer agent docs ties every session to the live command catalog.",
+      "impact": "Fewer invalid run-transition JSON payloads and policy mistakes.",
+      "constraints": "AGENT-CLI-MAP.md remains canonical; avoid duplicating long command lists; align with existing Cursor rules and POLICY-APPROVAL.md.",
+      "successSignals": "Docs explicitly require `workspace-kit doctor` and `workspace-kit run` (no subcommand) as the first discovery step when work may touch `.workspace-kit/` or task lifecycle; maintainer spot-check confirms.",
+      "requestor": "Maintainers / AI Agent Operators",
+      "evidenceRef": "planning/agent-cli-discovery-bootstrap-20260327",
+      "createdAt": "2026-03-28T01:45:03.219Z",
+      "updatedAt": "2026-03-28T01:45:30.207Z",
+      "metadata": {
+        "planningType": "task-breakdown",
+        "artifactSchemaVersion": 1,
+        "artifact": {
+          "schemaVersion": 1,
+          "planningType": "task-breakdown",
+          "generatedAt": "2026-03-28T01:45:03.216Z",
+          "goals": [
+            "Agents reliably discover workspace-kit commands from the shipped CLI before mutating kit-owned state."
+          ],
+          "approach": "Extend AGENT-CLI-MAP.md and/or docs/maintainers/AGENTS.md with a numbered bootstrap; cross-link from README or maintainer README if appropriate.",
+          "majorTechnicalDecisions": [],
+          "candidateFeaturesOrChanges": [
+            "Doc-only change set unless a tiny script/README hook is agreed."
+          ],
+          "assumptions": [],
+          "openQuestions": [],
+          "risksAndConstraints": [
+            "Constraint: AGENT-CLI-MAP.md remains canonical; avoid duplicating long command lists; align with existing Cursor rules and POLICY-APPROVAL.md."
+          ],
+          "sourceAnswers": {
+            "goal": "Agents reliably discover workspace-kit commands from the shipped CLI before mutating kit-owned state.",
+            "constraints": "AGENT-CLI-MAP.md remains canonical; avoid duplicating long command lists; align with existing Cursor rules and POLICY-APPROVAL.md.",
+            "successSignals": "Docs explicitly require `workspace-kit doctor` and `workspace-kit run` (no subcommand) as the first discovery step when work may touch `.workspace-kit/` or task lifecycle; maintainer spot-check confirms.",
+            "problemStatement": "Models often invent or misremember CLI shapes instead of listing commands from the binary.",
+            "expectedOutcome": "A short, prominent discovery path in maintainer agent docs ties every session to the live command catalog.",
+            "impact": "Fewer invalid run-transition JSON payloads and policy mistakes.",
+            "approach": "Extend AGENT-CLI-MAP.md and/or docs/maintainers/AGENTS.md with a numbered bootstrap; cross-link from README or maintainer README if appropriate.",
+            "scope": "Doc-only change set unless a tiny script/README hook is agreed.",
+            "handoffRisk": "Drift if CLI output format changes without doc review."
+          }
+        }
+      },
+      "convertedAt": "2026-03-28T01:45:30.207Z",
+      "convertedToTaskIds": [
+        "T377"
+      ],
+      "conversionDecomposition": {
+        "rationale": "Promote planning wishlist W7 to a single phased execution task for agent CLI reliability work.",
+        "boundaries": "Documentation and light cross-links only; no CLI behavior change required.",
+        "dependencyIntent": "Parallel with sibling T377–T382 unless a maintainer adds explicit dependsOn later."
+      }
+    },
+    {
+      "id": "W8",
+      "status": "converted",
+      "title": "Agent CLI boundary gate (mutate vs code)",
+      "problemStatement": "Unclear boundaries lead to hand-editing state.json or skipping policyApproval when persistence is required.",
+      "expectedOutcome": "One scannable block answers “do I run workspace-kit?” for task state, policy traces, approvals, and doc generation.",
+      "impact": "Reduces out-of-contract edits and chat-only “approval.”",
+      "constraints": "Must not contradict TERMS.md or workflow contract; keep under ~10 lines; link to AGENT-CLI-MAP tiers.",
+      "successSignals": "Gate exists at top of AGENT-CLI-MAP or in AGENT-CLI-QUICKSTART.md; AGENTS.md or a Cursor rule references it.",
+      "requestor": "Maintainers / AI Agent Operators",
+      "evidenceRef": "planning/agent-cli-boundary-gate-20260327",
+      "createdAt": "2026-03-28T01:45:03.293Z",
+      "updatedAt": "2026-03-28T01:45:30.278Z",
+      "metadata": {
+        "planningType": "task-breakdown",
+        "artifactSchemaVersion": 1,
+        "artifact": {
+          "schemaVersion": 1,
+          "planningType": "task-breakdown",
+          "generatedAt": "2026-03-28T01:45:03.290Z",
+          "goals": [
+            "Give agents a minimal decision list: when workspace-kit is mandatory vs normal code edits."
+          ],
+          "approach": "Add compact gate text + link to tier table; optional new small doc if the map is already crowded.",
+          "majorTechnicalDecisions": [],
+          "candidateFeaturesOrChanges": [
+            "Documentation and optional rule one-liner."
+          ],
+          "assumptions": [],
+          "openQuestions": [],
+          "risksAndConstraints": [
+            "Constraint: Must not contradict TERMS.md or workflow contract; keep under ~10 lines; link to AGENT-CLI-MAP tiers."
+          ],
+          "sourceAnswers": {
+            "goal": "Give agents a minimal decision list: when workspace-kit is mandatory vs normal code edits.",
+            "constraints": "Must not contradict TERMS.md or workflow contract; keep under ~10 lines; link to AGENT-CLI-MAP tiers.",
+            "successSignals": "Gate exists at top of AGENT-CLI-MAP or in AGENT-CLI-QUICKSTART.md; AGENTS.md or a Cursor rule references it.",
+            "problemStatement": "Unclear boundaries lead to hand-editing state.json or skipping policyApproval when persistence is required.",
+            "expectedOutcome": "One scannable block answers “do I run workspace-kit?” for task state, policy traces, approvals, and doc generation.",
+            "impact": "Reduces out-of-contract edits and chat-only “approval.”",
+            "approach": "Add compact gate text + link to tier table; optional new small doc if the map is already crowded.",
+            "scope": "Documentation and optional rule one-liner.",
+            "handoffRisk": "Rule vs doc duplication if not cross-linked."
+          }
+        }
+      },
+      "convertedAt": "2026-03-28T01:45:30.278Z",
+      "convertedToTaskIds": [
+        "T378"
+      ],
+      "conversionDecomposition": {
+        "rationale": "Promote planning wishlist W8 to a single phased execution task for agent CLI reliability work.",
+        "boundaries": "No new commands; doc/rule pointers only.",
+        "dependencyIntent": "Parallel with sibling T377–T382 unless a maintainer adds explicit dependsOn later."
+      }
+    },
+    {
+      "id": "W9",
+      "status": "converted",
+      "title": "Audit tasks/*.md for workspace-kit Persist lines",
+      "problemStatement": "Templates without explicit CLI lines train agents to describe transitions in chat instead of running run-transition.",
+      "expectedOutcome": "tasks/*.md consistently document Persist via CLI with JSON aligned to POLICY-APPROVAL.md.",
+      "impact": "Higher compliance with workspace-kit-cli-execution rule.",
+      "constraints": "/qt does not execute CLI; templates must carry copy-paste commands; respect Tier A/B policyApproval vs env approval split.",
+      "successSignals": "Audit checklist complete; gaps fixed or tracked; spot-check 3 templates against map.",
+      "requestor": "Maintainers / AI Agent Operators",
+      "evidenceRef": "planning/agent-cli-task-templates-20260327",
+      "createdAt": "2026-03-28T01:45:03.361Z",
+      "updatedAt": "2026-03-28T01:45:30.350Z",
+      "metadata": {
+        "planningType": "task-breakdown",
+        "artifactSchemaVersion": 1,
+        "artifact": {
+          "schemaVersion": 1,
+          "planningType": "task-breakdown",
+          "generatedAt": "2026-03-28T01:45:03.358Z",
+          "goals": [
+            "Every /qt task template that implies kit persistence includes the exact workspace-kit run line from AGENT-CLI-MAP."
+          ],
+          "approach": "Grep tasks/*.md for persistence language; add or fix **Persist via CLI** blocks per AGENT-CLI-MAP.",
+          "majorTechnicalDecisions": [],
+          "candidateFeaturesOrChanges": [
+            "tasks/*.md and any index that lists template expectations."
+          ],
+          "assumptions": [],
+          "openQuestions": [],
+          "risksAndConstraints": [
+            "Constraint: /qt does not execute CLI; templates must carry copy-paste commands; respect Tier A/B policyApproval vs env approval split."
+          ],
+          "sourceAnswers": {
+            "goal": "Every /qt task template that implies kit persistence includes the exact workspace-kit run line from AGENT-CLI-MAP.",
+            "constraints": "/qt does not execute CLI; templates must carry copy-paste commands; respect Tier A/B policyApproval vs env approval split.",
+            "successSignals": "Audit checklist complete; gaps fixed or tracked; spot-check 3 templates against map.",
+            "problemStatement": "Templates without explicit CLI lines train agents to describe transitions in chat instead of running run-transition.",
+            "expectedOutcome": "tasks/*.md consistently document Persist via CLI with JSON aligned to POLICY-APPROVAL.md.",
+            "impact": "Higher compliance with workspace-kit-cli-execution rule.",
+            "approach": "Grep tasks/*.md for persistence language; add or fix **Persist via CLI** blocks per AGENT-CLI-MAP.",
+            "scope": "tasks/*.md and any index that lists template expectations.",
+            "handoffRisk": "Stale JSON examples if map changes without template pass."
+          }
+        }
+      },
+      "convertedAt": "2026-03-28T01:45:30.350Z",
+      "convertedToTaskIds": [
+        "T379"
+      ],
+      "conversionDecomposition": {
+        "rationale": "Promote planning wishlist W9 to a single phased execution task for agent CLI reliability work.",
+        "boundaries": "Task templates and map alignment only; no task-engine schema change.",
+        "dependencyIntent": "Parallel with sibling T377–T382 unless a maintainer adds explicit dependsOn later."
+      }
+    },
+    {
+      "id": "W10",
+      "status": "converted",
+      "title": "Improve Cursor / root discovery for agent CLI docs",
+      "problemStatement": "Some sessions never load docs/maintainers/AGENTS.md or AGENT-CLI-MAP.md.",
+      "expectedOutcome": "Predictable entry path for Cursor and other agents without duplicating long policy text.",
+      "impact": "More sessions actually apply CLI-first and tier rules.",
+      "constraints": "Single source of truth stays under docs/maintainers/; root stub must be a pointer, not a fork of policy.",
+      "successSignals": "AGENTS.md at repo root (or equivalent) points to docs/maintainers/AGENTS.md and AGENT-CLI-MAP.md; optional .cursor rule line if needed.",
+      "requestor": "Maintainers / AI Agent Operators",
+      "evidenceRef": "planning/agent-cli-cursor-discovery-20260327",
+      "createdAt": "2026-03-28T01:45:03.432Z",
+      "updatedAt": "2026-03-28T01:45:30.420Z",
+      "metadata": {
+        "planningType": "task-breakdown",
+        "artifactSchemaVersion": 1,
+        "artifact": {
+          "schemaVersion": 1,
+          "planningType": "task-breakdown",
+          "generatedAt": "2026-03-28T01:45:03.428Z",
+          "goals": [
+            "Tools that only read repo root still route to canonical maintainer agent guidance and CLI map."
+          ],
+          "approach": "Add thin repo-root AGENTS.md; verify always_applied rules still align; document @-mention pattern for humans.",
+          "majorTechnicalDecisions": [],
+          "candidateFeaturesOrChanges": [
+            "Small markdown + possible .cursor/rules tweak."
+          ],
+          "assumptions": [],
+          "openQuestions": [],
+          "risksAndConstraints": [
+            "Constraint: Single source of truth stays under docs/maintainers/; root stub must be a pointer, not a fork of policy."
+          ],
+          "sourceAnswers": {
+            "goal": "Tools that only read repo root still route to canonical maintainer agent guidance and CLI map.",
+            "constraints": "Single source of truth stays under docs/maintainers/; root stub must be a pointer, not a fork of policy.",
+            "successSignals": "AGENTS.md at repo root (or equivalent) points to docs/maintainers/AGENTS.md and AGENT-CLI-MAP.md; optional .cursor rule line if needed.",
+            "problemStatement": "Some sessions never load docs/maintainers/AGENTS.md or AGENT-CLI-MAP.md.",
+            "expectedOutcome": "Predictable entry path for Cursor and other agents without duplicating long policy text.",
+            "impact": "More sessions actually apply CLI-first and tier rules.",
+            "approach": "Add thin repo-root AGENTS.md; verify always_applied rules still align; document @-mention pattern for humans.",
+            "scope": "Small markdown + possible .cursor/rules tweak.",
+            "handoffRisk": "Two AGENTS.md files diverging if pointers rot."
+          }
+        }
+      },
+      "convertedAt": "2026-03-28T01:45:30.420Z",
+      "convertedToTaskIds": [
+        "T380"
+      ],
+      "conversionDecomposition": {
+        "rationale": "Promote planning wishlist W10 to a single phased execution task for agent CLI reliability work.",
+        "boundaries": "Pointer/stub only; canonical content stays in docs/maintainers/.",
+        "dependencyIntent": "Parallel with sibling T377–T382 unless a maintainer adds explicit dependsOn later."
+      }
+    },
+    {
+      "id": "W11",
+      "status": "converted",
+      "title": "CI or codegen guardrail for CLI vs AGENT-CLI-MAP drift",
+      "problemStatement": "Manual docs fall behind new module commands or renamed operationIds.",
+      "expectedOutcome": "Deterministic drift detection between AGENT-CLI-MAP (or generated slice) and CLI registry.",
+      "impact": "Agents reading the map get accurate commands over time.",
+      "constraints": "Follow existing scripts/check-task-engine-run-contracts.mjs patterns; keep check fast; clear failure messages.",
+      "successSignals": "pnpm run check (or sibling) fails when map and CLI disagree; maintainer note in RELEASING or scripts README.",
+      "requestor": "Maintainers / AI Agent Operators",
+      "evidenceRef": "planning/agent-cli-doc-drift-ci-20260327",
+      "createdAt": "2026-03-28T01:45:03.505Z",
+      "updatedAt": "2026-03-28T01:45:30.490Z",
+      "metadata": {
+        "planningType": "task-breakdown",
+        "artifactSchemaVersion": 1,
+        "artifact": {
+          "schemaVersion": 1,
+          "planningType": "task-breakdown",
+          "generatedAt": "2026-03-28T01:45:03.502Z",
+          "goals": [
+            "Automated check that documented run commands match shipped workspace-kit run surface."
+          ],
+          "approach": "Parse `workspace-kit run` listing or internal registry; compare to extracted command names from map; or generate map snippet in CI.",
+          "majorTechnicalDecisions": [],
+          "candidateFeaturesOrChanges": [
+            "scripts/ + CI workflow + doc touch if needed."
+          ],
+          "assumptions": [],
+          "openQuestions": [],
+          "risksAndConstraints": [
+            "Constraint: Follow existing scripts/check-task-engine-run-contracts.mjs patterns; keep check fast; clear failure messages."
+          ],
+          "sourceAnswers": {
+            "goal": "Automated check that documented run commands match shipped workspace-kit run surface.",
+            "constraints": "Follow existing scripts/check-task-engine-run-contracts.mjs patterns; keep check fast; clear failure messages.",
+            "successSignals": "pnpm run check (or sibling) fails when map and CLI disagree; maintainer note in RELEASING or scripts README.",
+            "problemStatement": "Manual docs fall behind new module commands or renamed operationIds.",
+            "expectedOutcome": "Deterministic drift detection between AGENT-CLI-MAP (or generated slice) and CLI registry.",
+            "impact": "Agents reading the map get accurate commands over time.",
+            "approach": "Parse `workspace-kit run` listing or internal registry; compare to extracted command names from map; or generate map snippet in CI.",
+            "scope": "scripts/ + CI workflow + doc touch if needed.",
+            "handoffRisk": "False positives from intentional map omissions."
+          }
+        }
+      },
+      "convertedAt": "2026-03-28T01:45:30.490Z",
+      "convertedToTaskIds": [
+        "T381"
+      ],
+      "conversionDecomposition": {
+        "rationale": "Promote planning wishlist W11 to a single phased execution task for agent CLI reliability work.",
+        "boundaries": "Automation only; avoid brittle full prose parsing if possible.",
+        "dependencyIntent": "Parallel with sibling T377–T382 unless a maintainer adds explicit dependsOn later."
+      }
+    },
+    {
+      "id": "W12",
+      "status": "converted",
+      "title": "Optional agent habit hook (get-next-actions opener)",
+      "problemStatement": "Agents open state.json or chat-guess priority instead of asking the engine for suggestedNext.",
+      "expectedOutcome": "One copy-paste “start session” block reduces queue skew and stale mental models.",
+      "impact": "Better alignment with canonical queue ordering and dependencies.",
+      "constraints": "Optional artifact only; Tier C read-only default; no new policy gates; link from discovery path.",
+      "successSignals": "Cursor skill or saved snippet documents `workspace-kit run get-next-actions '{}'` then optional get-task; linked from AGENT-CLI-MAP or AGENTS.md.",
+      "requestor": "Maintainers / AI Agent Operators",
+      "evidenceRef": "planning/agent-cli-habit-hook-20260327",
+      "createdAt": "2026-03-28T01:45:03.575Z",
+      "updatedAt": "2026-03-28T01:45:30.561Z",
+      "metadata": {
+        "planningType": "task-breakdown",
+        "artifactSchemaVersion": 1,
+        "artifact": {
+          "schemaVersion": 1,
+          "planningType": "task-breakdown",
+          "generatedAt": "2026-03-28T01:45:03.572Z",
+          "goals": [
+            "Offer a reusable opener so maintainer sessions start with the task engine queue via CLI."
+          ],
+          "approach": "Add .cursor/skills or docs snippet + one-line pointer; keep under 30 lines.",
+          "majorTechnicalDecisions": [],
+          "candidateFeaturesOrChanges": [
+            "Optional skill/snippet + doc link only."
+          ],
+          "assumptions": [],
+          "openQuestions": [],
+          "risksAndConstraints": [
+            "Constraint: Optional artifact only; Tier C read-only default; no new policy gates; link from discovery path."
+          ],
+          "sourceAnswers": {
+            "goal": "Offer a reusable opener so maintainer sessions start with the task engine queue via CLI.",
+            "constraints": "Optional artifact only; Tier C read-only default; no new policy gates; link from discovery path.",
+            "successSignals": "Cursor skill or saved snippet documents `workspace-kit run get-next-actions '{}'` then optional get-task; linked from AGENT-CLI-MAP or AGENTS.md.",
+            "problemStatement": "Agents open state.json or chat-guess priority instead of asking the engine for suggestedNext.",
+            "expectedOutcome": "One copy-paste “start session” block reduces queue skew and stale mental models.",
+            "impact": "Better alignment with canonical queue ordering and dependencies.",
+            "approach": "Add .cursor/skills or docs snippet + one-line pointer; keep under 30 lines.",
+            "scope": "Optional skill/snippet + doc link only.",
+            "handoffRisk": "Operators assume get-next-actions replaces reading task detail when both are needed."
+          }
+        }
+      },
+      "convertedAt": "2026-03-28T01:45:30.561Z",
+      "convertedToTaskIds": [
+        "T382"
+      ],
+      "conversionDecomposition": {
+        "rationale": "Promote planning wishlist W12 to a single phased execution task for agent CLI reliability work.",
+        "boundaries": "Optional artifact; no CLI or policy changes.",
+        "dependencyIntent": "Parallel with sibling T377–T382 unless a maintainer adds explicit dependsOn later."
+      }
     }
   ],
-  "lastUpdated": "2026-03-28T00:29:11.768Z"
+  "lastUpdated": "2026-03-28T01:45:30.564Z"
 }
