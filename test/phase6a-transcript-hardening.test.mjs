@@ -9,6 +9,7 @@ import {
   ModuleCommandRouter,
   ModuleRegistry,
   approvalsModule,
+  documentationModule,
   improvementModule,
   planningModule,
   resolveWorkspaceConfigWithLayers,
@@ -77,10 +78,11 @@ test("Phase6a: transcript-automation-status returns stable JSON", async () => {
 
   const registry = new ModuleRegistry([
     workspaceConfigModule,
+    documentationModule,
     taskEngineModule,
+    approvalsModule,
     planningModule,
-    improvementModule,
-    approvalsModule
+    improvementModule
   ]);
   const router = new ModuleCommandRouter(registry);
   const resolved = await resolveWorkspaceConfigWithLayers({ workspacePath, registry });
@@ -115,10 +117,11 @@ test("Phase6a: sync returns runId and respects maxBytesPerFile budget", async ()
 
   const registry = new ModuleRegistry([
     workspaceConfigModule,
+    documentationModule,
     taskEngineModule,
+    approvalsModule,
     planningModule,
-    improvementModule,
-    approvalsModule
+    improvementModule
   ]);
   const router = new ModuleCommandRouter(registry);
   const resolved = await resolveWorkspaceConfigWithLayers({
@@ -155,10 +158,11 @@ test("Phase6a: generate-recommendations returns dedupe metrics and runId", async
 
   const registry = new ModuleRegistry([
     workspaceConfigModule,
+    documentationModule,
     taskEngineModule,
+    approvalsModule,
     planningModule,
-    improvementModule,
-    approvalsModule
+    improvementModule
   ]);
   const router = new ModuleCommandRouter(registry);
   const resolved = await resolveWorkspaceConfigWithLayers({ workspacePath, registry });
@@ -208,10 +212,11 @@ test("Phase6a: sync discovers Cursor global ~/.cursor/projects/<slug>/agent-tran
 
     const registry = new ModuleRegistry([
       workspaceConfigModule,
+      documentationModule,
       taskEngineModule,
+      approvalsModule,
       planningModule,
-      improvementModule,
-      approvalsModule
+      improvementModule
     ]);
     const router = new ModuleCommandRouter(registry);
     const safeEnv = { ...process.env };
@@ -253,10 +258,11 @@ test("Phase6a: malformed policy trace lines are skipped", async () => {
 
   const registry = new ModuleRegistry([
     workspaceConfigModule,
+    documentationModule,
     taskEngineModule,
+    approvalsModule,
     planningModule,
-    improvementModule,
-    approvalsModule
+    improvementModule
   ]);
   const router = new ModuleCommandRouter(registry);
   const resolved = await resolveWorkspaceConfigWithLayers({ workspacePath, registry });

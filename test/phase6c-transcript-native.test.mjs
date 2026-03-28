@@ -9,6 +9,7 @@ import {
   ModuleCommandRouter,
   ModuleRegistry,
   approvalsModule,
+  documentationModule,
   improvementModule,
   planningModule,
   readAfterTaskCompletedHook,
@@ -70,10 +71,11 @@ test("Phase6c: run-transition to completed does not throw with hook config", asy
 
   const registry = new ModuleRegistry([
     workspaceConfigModule,
+    documentationModule,
     taskEngineModule,
+    approvalsModule,
     planningModule,
-    improvementModule,
-    approvalsModule
+    improvementModule
   ]);
   const router = new ModuleCommandRouter(registry);
   const resolved = await resolveWorkspaceConfigWithLayers({ workspacePath, registry });

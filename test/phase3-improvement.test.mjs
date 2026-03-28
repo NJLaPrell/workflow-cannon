@@ -9,6 +9,7 @@ import {
   ModuleCommandRouter,
   ModuleRegistry,
   approvalsModule,
+  documentationModule,
   improvementModule,
   planningModule,
   resolveWorkspaceConfigWithLayers,
@@ -64,10 +65,11 @@ test("Phase3: generate-recommendations, review-item, query-lineage", async () =>
 
   const registry = new ModuleRegistry([
     workspaceConfigModule,
+    documentationModule,
     taskEngineModule,
+    approvalsModule,
     planningModule,
-    improvementModule,
-    approvalsModule
+    improvementModule
   ]);
   const router = new ModuleCommandRouter(registry);
   const resolved = await resolveWorkspaceConfigWithLayers({ workspacePath, registry });
@@ -139,10 +141,11 @@ test("Phase3: decline from in_progress uses decline transition", async () => {
 
   const registry = new ModuleRegistry([
     workspaceConfigModule,
+    documentationModule,
     taskEngineModule,
+    approvalsModule,
     planningModule,
-    improvementModule,
-    approvalsModule
+    improvementModule
   ]);
   const router = new ModuleCommandRouter(registry);
   const resolved = await resolveWorkspaceConfigWithLayers({ workspacePath, registry });

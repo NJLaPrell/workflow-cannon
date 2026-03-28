@@ -21,7 +21,7 @@ export const improvementModule: WorkflowModule = {
     stateSchema: 1,
     capabilities: ["improvement"],
     dependsOn: ["task-engine", "planning"],
-    optionalPeers: [],
+    optionalPeers: ["documentation"],
     enabledByDefault: true,
     config: {
       path: "src/modules/improvement/config.md",
