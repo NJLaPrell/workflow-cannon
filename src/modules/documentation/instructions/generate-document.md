@@ -1,10 +1,10 @@
 # generate-document
 
-Generate a single document for both canonical AI and human-readable surfaces using module config, schema, and templates.
+Generate a single document for both canonical AI and human-readable surfaces using module config, schema, view models, and deterministic renderers.
 
 ## Inputs
 
-- `documentType` (required): basename of the doc to generate; must match a file under `sources.templatesRoot` (default `src/modules/documentation/templates`). Known templates:
+- `documentType` (required): basename of the doc to generate; should match a `target` declared in `src/modules/documentation/views/*.view.yaml`. Known targets:
   - `AGENTS.md`
   - `ARCHITECTURE.md`
   - `PRINCIPLES.md`
@@ -34,11 +34,11 @@ Generate a single document for both canonical AI and human-readable surfaces usi
 1. Read `src/modules/documentation/RULES.md` and apply precedence order before generation.
 2. Load module config and resolve output roots from configured paths (`sources.aiRoot`, `sources.humanRoot`).
 3. Restrict writes strictly to configured output roots; reject writes outside those roots.
-4. Resolve template for `documentType` from `sources.templatesRoot`.
+4. Resolve template for `documentType` from `sources.templatesRoot` (for section/coverage checks) and resolve matching view model target from `views/`.
 5. If template is missing, warn user and ask whether to continue without a template; continue only on explicit confirmation.
 6. Generate AI output first at `<aiRoot>/<documentType>` using `documentation-maintainer.md` + `documentation-schema.md`.
 7. Validate AI output against schema; on validation failure, auto-resolve/retry up to `generation.maxValidationAttempts` before failing.
-8. Re-read generated AI output with project context, then generate human output at `<humanRoot>/<documentType>`.
+8. Parse AI output into keyed records, validate schema, normalize typed model, then render human output via named renderer functions from the matched view model.
 9. For templates containing `{{{ ... }}}`, execute block contents as generation instructions and ensure no unresolved blocks remain in output.
 10. Run section coverage validation (all required sections present, correct headings/order where required); retry/resolve on failure.
 11. Detect conflicts with higher-precedence docs and stop/prompt when policy-sensitive or unresolved.
