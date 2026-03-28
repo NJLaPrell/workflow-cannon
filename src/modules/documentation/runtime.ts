@@ -11,6 +11,7 @@ import type {
   DocumentationValidationIssue
 } from "./types.js";
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
+import { parseAiDocument, parseAiRecordLine, type AiRecord } from "./parser.js";
 
 type DocumentationRuntimeConfig = {
   aiRoot: string;
@@ -97,38 +98,6 @@ type AiValidationContext = {
   expectedDoc?: "rules" | "runbook" | "workbook";
 };
 
-type AiRecord = {
-  type: string;
-  positional: string[];
-  kv: Record<string, string>;
-  raw: string;
-};
-
-function parseAiRecordLine(line: string): AiRecord | null {
-  const trimmed = line.trim();
-  if (!trimmed || trimmed.startsWith("#")) return null;
-  const parts = trimmed.split("|");
-  // Record format is `type|token|token...`. Ignore non-record markdown lines.
-  if (parts.length < 2) return null;
-  const type = parts[0] ?? "";
-  if (!type) return null;
-  const positional: string[] = [];
-  const kv: Record<string, string> = {};
-  for (const token of parts.slice(1)) {
-    if (!token) continue;
-    const idx = token.indexOf("=");
-    if (idx >= 0) {
-      const k = token.slice(0, idx).trim();
-      const v = token.slice(idx + 1).trim();
-      if (!k) continue;
-      kv[k] = v;
-    } else {
-      positional.push(token);
-    }
-  }
-  return { type, positional, kv, raw: line };
-}
-
 function isAllowedMetaDoc(doc: string): boolean {
   return (
     doc === "rules" ||
@@ -149,8 +118,8 @@ function isAllowedMetaDoc(doc: string): boolean {
 
 function validateAiSchema(aiOutput: string, ctx: AiValidationContext): DocumentationValidationIssue[] {
   const issues: DocumentationValidationIssue[] = [];
-  const lines = aiOutput.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
-  if (lines.length === 0) {
+  const records = parseAiDocument(aiOutput);
+  if (records.length === 0) {
     return [
       {
         check: "schema",
@@ -160,8 +129,7 @@ function validateAiSchema(aiOutput: string, ctx: AiValidationContext): Documenta
     ];
   }
 
-  const metaLine = lines[0];
-  const meta = parseAiRecordLine(metaLine);
+  const meta = records[0];
   if (!meta || meta.type !== "meta") {
     return [
       {
@@ -262,9 +230,7 @@ function validateAiSchema(aiOutput: string, ctx: AiValidationContext): Documenta
   const presentByType: Record<string, boolean> = {};
   const missingRequired: string[] = [];
 
-  for (const line of lines.slice(1)) {
-    const rec = parseAiRecordLine(line);
-    if (!rec) continue;
+  for (const rec of records.slice(1)) {
     presentByType[rec.type] = true;
 
     if (!allowedTypes.has(rec.type)) {
@@ -301,16 +267,9 @@ function validateAiSchema(aiOutput: string, ctx: AiValidationContext): Documenta
     }
 
     if (rec.type === "rule") {
-      const rid = rec.positional[0];
-      const lvl = rec.positional[1] ?? rec.kv["lvl"];
-      const directive = (() => {
-        // rule lines can be either:
-        // rule|RID|lvl|scope|directive|...
-        // or the scope can be omitted:
-        // rule|RID|lvl|directive|...
-        const nonKey = rec.positional.slice(2);
-        return nonKey[nonKey.length - 1];
-      })();
+      const rid = rec.kv["id"] ?? rec.kv["slot1"];
+      const lvl = rec.kv["level"] ?? rec.kv["lvl"] ?? rec.kv["slot2"];
+      const directive = rec.kv["directive"] ?? rec.kv["slot4"] ?? rec.kv["slot3"];
 
       if (!rid || !/^R\d{3,}$/.test(rid)) {
         issues.push({
