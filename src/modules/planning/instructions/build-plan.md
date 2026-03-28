@@ -35,3 +35,5 @@ workspace-kit run build-plan '{"planningType":"new-feature","outputMode":"tasks"
 - `planning-critical-unknowns`: returned when `finalize:true` but critical answers are missing.
 
 All success/error payloads include `data.cliGuidance` with critical-question completion progress and a suggested next `workspace-kit run build-plan` command.
+
+When enough context exists, payloads also include `data.scoringHints` (`effort`, `risk`, `ordering`) as deterministic sequencing hints for agent chaining.

@@ -174,6 +174,33 @@ test("planningModule build-plan can persist tasks in tasks output mode", async (
   assert.equal(created?.metadata?.planRef !== undefined, true);
 });
 
+test("planningModule build-plan emits deterministic scoring hints when context is available", async () => {
+  const workspace = await tmpDir();
+  const args = {
+    planningType: "task-ordering",
+    outputMode: "response",
+    finalize: true,
+    answers: {
+      goal: "Optimize ordering",
+      dependencyIntent: "T1 before T2",
+      riskPriority: "high integration risk",
+      complexity: "high"
+    }
+  };
+  const first = await planningModule.onCommand(
+    { name: "build-plan", args },
+    { runtimeVersion: "0.1", workspacePath: workspace }
+  );
+  const second = await planningModule.onCommand(
+    { name: "build-plan", args },
+    { runtimeVersion: "0.1", workspacePath: workspace }
+  );
+  assert.equal(first.ok, true);
+  assert.equal(second.ok, true);
+  assert.deepEqual(first.data.scoringHints, second.data.scoringHints);
+  assert.ok(["balanced", "dependency-first", "risk-first"].includes(first.data.scoringHints.ordering.recommendedStrategy));
+});
+
 test("planningModule build-plan can allow warnings when hard block disabled", async () => {
   const workspace = await tmpDir();
   const result = await planningModule.onCommand(
