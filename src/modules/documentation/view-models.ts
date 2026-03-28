@@ -1,5 +1,8 @@
 import { readdir, readFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { resolve } from "node:path";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { ViewModelDefinition, ViewModelSection, ViewRenderPolicy } from "./types.js";
 
 function parseScalar(raw: string): string | number | boolean {
@@ -107,16 +110,23 @@ function parseViewModelYaml(text: string): ViewModelDefinition {
 }
 
 export async function loadViewModel(workspacePath: string, viewFile: string): Promise<ViewModelDefinition> {
-  const fullPath = resolve(workspacePath, "src/modules/documentation/views", viewFile);
+  const fullPath = resolve(resolveViewsRoot(workspacePath), viewFile);
   const content = await readFile(fullPath, "utf8");
   return parseViewModelYaml(content);
 }
 
 export async function listViewModels(workspacePath: string): Promise<string[]> {
-  const viewsPath = resolve(workspacePath, "src/modules/documentation/views");
+  const viewsPath = resolveViewsRoot(workspacePath);
   const entries = await readdir(viewsPath, { withFileTypes: true });
   return entries
     .filter((e) => e.isFile() && e.name.endsWith(".view.yaml"))
     .map((e) => e.name)
     .sort();
+}
+
+function resolveViewsRoot(workspacePath: string): string {
+  const local = resolve(workspacePath, "src/modules/documentation/views");
+  if (existsSync(local)) return local;
+  const runtimeSourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+  return resolve(runtimeSourceRoot, "src/modules/documentation/views");
 }

@@ -1,150 +1,19 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { dirname, resolve, sep } from "node:path";
-import { readdir } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
-import type {
-  DocumentationBatchResult,
-  DocumentationConflict,
-  DocumentationGenerateOptions,
-  DocumentationGenerateResult,
-  DocumentationValidationIssue
-} from "./types.js";
+import { dirname, resolve } from "node:path";
+import type { DocumentationBatchResult, DocumentationConflict, DocumentationGenerateOptions, DocumentationGenerateResult, DocumentationValidationIssue } from "./types.js";
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
 import { parseAiDocument } from "./parser.js";
 import { normalizeDocument } from "./normalizer.js";
 import { renderDocument } from "./renderer.js";
 import { autoResolveAiSchema, validateAiSchema } from "./validator.js";
+import { isPathWithinRoot, loadRuntimeConfig } from "./runtime-config.js";
+import { detectConflicts, renderTemplate, resolveExpectedDocFamily, validateSectionCoverage } from "./runtime-render-support.js";
+import { runGenerateAllDocuments } from "./runtime-batch.js";
 
-type DocumentationRuntimeConfig = {
-  aiRoot: string;
-  humanRoot: string;
-  templatesRoot: string;
-  instructionsRoot: string;
-  schemasRoot: string;
-  maxValidationAttempts: number;
-  sourceRoot: string;
-};
+type GenerateDocumentArgs = { documentType?: string; options?: DocumentationGenerateOptions };
 
-function isPathWithinRoot(path: string, root: string): boolean {
-  return path === root || path.startsWith(`${root}${sep}`);
-}
-
-function parseDefaultValue(fileContent: string, key: string, fallback: string): string {
-  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const regex = new RegExp(`\\\`${escaped}\\\`[^\\n]*default:\\s*\\\`([^\\\`]+)\\\``);
-  const match = fileContent.match(regex);
-  return match?.[1] ?? fallback;
-}
-
-async function loadRuntimeConfig(workspacePath: string): Promise<DocumentationRuntimeConfig> {
-  const runtimeSourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
-  const sourceRoots = [workspacePath, runtimeSourceRoot];
-  let sourceRoot = workspacePath;
-  let configContent: string | undefined;
-  for (const candidateRoot of sourceRoots) {
-    const candidate = resolve(candidateRoot, "src/modules/documentation/config.md");
-    if (!existsSync(candidate)) {
-      continue;
-    }
-    configContent = await readFile(candidate, "utf8");
-    sourceRoot = candidateRoot;
-    break;
-  }
-
-  if (!configContent) {
-    return {
-      aiRoot: "/.ai",
-      humanRoot: "docs/maintainers",
-      templatesRoot: "src/modules/documentation/templates",
-      instructionsRoot: "src/modules/documentation/instructions",
-      schemasRoot: "src/modules/documentation/schemas",
-      maxValidationAttempts: 3,
-      sourceRoot
-    };
-  }
-
-  const aiRoot = parseDefaultValue(configContent, "sources.aiRoot", "/.ai");
-  const humanRoot = parseDefaultValue(configContent, "sources.humanRoot", "docs/maintainers");
-  const templatesRoot = parseDefaultValue(
-    configContent,
-    "sources.templatesRoot",
-    "src/modules/documentation/templates"
-  );
-  const instructionsRoot = parseDefaultValue(
-    configContent,
-    "sources.instructionsRoot",
-    "src/modules/documentation/instructions"
-  );
-  const schemasRoot = parseDefaultValue(
-    configContent,
-    "sources.schemasRoot",
-    "src/modules/documentation/schemas"
-  );
-  const maxValidationAttemptsRaw = parseDefaultValue(configContent, "generation.maxValidationAttempts", "3");
-  const maxValidationAttempts = Number.parseInt(maxValidationAttemptsRaw, 10);
-
-  return {
-    aiRoot,
-    humanRoot,
-    templatesRoot,
-    instructionsRoot,
-    schemasRoot,
-    maxValidationAttempts: Number.isFinite(maxValidationAttempts) ? maxValidationAttempts : 3,
-    sourceRoot
-  };
-}
-
-
-function renderTemplate(templateContent: string): { output: string; unresolvedBlocks: boolean } {
-  const output = templateContent.replace(/\{\{\{([\s\S]*?)\}\}\}/g, (_match, instructionText: string) => {
-    const normalized = instructionText.trim().split("\n")[0] ?? "template instructions";
-    return `Generated content based on instruction: ${normalized}`;
-  });
-  return {
-    output,
-    unresolvedBlocks: output.includes("{{{")
-  };
-}
-
-function validateSectionCoverage(templateContent: string, output: string): DocumentationValidationIssue[] {
-  const issues: DocumentationValidationIssue[] = [];
-  const sectionRegex = /^##\s+(.+)$/gm;
-  const expectedSections = [...templateContent.matchAll(sectionRegex)].map((match) => match[1]);
-  for (const section of expectedSections) {
-    if (!output.includes(`## ${section}`)) {
-      issues.push({
-        check: "section-coverage",
-        message: `Missing required section: ${section}`,
-        resolved: false
-      });
-    }
-  }
-  return issues;
-}
-
-function detectConflicts(aiOutput: string, humanOutput: string): DocumentationConflict[] {
-  const conflicts: DocumentationConflict[] = [];
-  const combined = `${aiOutput}\n${humanOutput}`;
-  if (combined.includes("CONFLICT:")) {
-    conflicts.push({
-      source: "generated-output",
-      reason: "Generated output flagged a conflict marker",
-      severity: "stop"
-    });
-  }
-  return conflicts;
-}
-
-type GenerateDocumentArgs = {
-  documentType?: string;
-  options?: DocumentationGenerateOptions;
-};
-
-export async function generateDocument(
-  args: GenerateDocumentArgs,
-  ctx: ModuleLifecycleContext
-): Promise<DocumentationGenerateResult> {
+export async function generateDocument(args: GenerateDocumentArgs, ctx: ModuleLifecycleContext): Promise<DocumentationGenerateResult> {
   const documentType = args.documentType;
   if (!documentType) {
     return {
@@ -238,12 +107,6 @@ export async function generateDocument(
   if (existsSync(schemaPath)) {
     filesRead.push(schemaPath);
     await readFile(schemaPath, "utf8");
-  }
-
-  function resolveExpectedDocFamily(docType: string): "rules" | "runbook" | "workbook" {
-    if (docType.includes("runbooks/") || docType.startsWith("runbooks/")) return "runbook";
-    if (docType.includes("workbooks/") || docType.startsWith("workbooks/")) return "workbook";
-    return "rules";
   }
 
   const expectedDoc = resolveExpectedDocFamily(documentType);
@@ -428,91 +291,8 @@ export async function generateDocument(
   };
 }
 
-type GenerateAllDocumentsArgs = {
-  options?: DocumentationGenerateOptions;
-};
+type GenerateAllDocumentsArgs = { options?: DocumentationGenerateOptions };
 
-export async function generateAllDocuments(
-  args: GenerateAllDocumentsArgs,
-  ctx: ModuleLifecycleContext
-): Promise<DocumentationBatchResult> {
-  const config = await loadRuntimeConfig(ctx.workspacePath);
-  const templatesDir = resolve(config.sourceRoot, config.templatesRoot);
-
-  async function listTemplateFiles(dir: string, baseDir: string): Promise<string[]> {
-    const entries = await readdir(dir, { withFileTypes: true });
-    const files: string[] = [];
-    for (const entry of entries) {
-      const absPath = resolve(dir, entry.name);
-      if (entry.isDirectory()) {
-        files.push(...(await listTemplateFiles(absPath, baseDir)));
-        continue;
-      }
-      if (!entry.isFile() || !entry.name.endsWith(".md")) {
-        continue;
-      }
-      const relPath = absPath.slice(baseDir.length + 1).split("\\").join("/");
-      files.push(relPath);
-    }
-    return files;
-  }
-
-  let templateFiles: string[] = [];
-  try {
-    templateFiles = (await listTemplateFiles(templatesDir, templatesDir)).sort();
-  } catch {
-    return {
-      ok: false,
-      results: [],
-      summary: {
-        total: 0,
-        succeeded: 0,
-        failed: 1,
-        skipped: 0,
-        timestamp: new Date().toISOString()
-      }
-    };
-  }
-
-  const results: DocumentationGenerateResult[] = [];
-  let succeeded = 0;
-  let failed = 0;
-  let skipped = 0;
-
-  const batchOptions: DocumentationGenerateOptions = {
-    ...args.options,
-    overwriteAi: args.options?.overwriteAi ?? false,
-    overwriteHuman: args.options?.overwriteHuman ?? true,
-    strict: args.options?.strict ?? false,
-  };
-
-  for (const templateFile of templateFiles) {
-    const result = await generateDocument(
-      { documentType: templateFile, options: batchOptions },
-      ctx
-    );
-    results.push(result);
-
-    if (result.ok) {
-      if (result.evidence.filesWritten.length > 0) {
-        succeeded++;
-      } else {
-        skipped++;
-      }
-    } else {
-      failed++;
-    }
-  }
-
-  return {
-    ok: failed === 0,
-    results,
-    summary: {
-      total: templateFiles.length,
-      succeeded,
-      failed,
-      skipped,
-      timestamp: new Date().toISOString()
-    }
-  };
+export async function generateAllDocuments(args: GenerateAllDocumentsArgs, ctx: ModuleLifecycleContext): Promise<DocumentationBatchResult> {
+  return runGenerateAllDocuments(args, ctx, generateDocument);
 }
