@@ -5,7 +5,6 @@ export type {
   ModuleCommandResult,
   ModuleCapability,
   ModuleDocumentContract,
-  ModuleEvent,
   ModuleInstructionContract,
   ModuleInstructionEntry,
   ModuleLifecycleContext,

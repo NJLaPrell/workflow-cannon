@@ -33,11 +33,6 @@ export type ModuleInstructionContract = {
   entries: ModuleInstructionEntry[];
 };
 
-export type ModuleEvent = {
-  type: string;
-  payload?: Record<string, unknown>;
-};
-
 export type ModuleCommand = {
   name: string;
   args?: Record<string, unknown>;
@@ -94,10 +89,5 @@ export type ModuleRegistration = {
 
 export interface WorkflowModule {
   registration: ModuleRegistration;
-  onInstall?(ctx: ModuleLifecycleContext): Promise<void>;
-  onConfigChange?(ctx: ModuleLifecycleContext): Promise<void>;
-  onStart?(ctx: ModuleLifecycleContext): Promise<void>;
-  onStop?(ctx: ModuleLifecycleContext): Promise<void>;
-  onEvent?(event: ModuleEvent, ctx: ModuleLifecycleContext): Promise<void>;
   onCommand?(command: ModuleCommand, ctx: ModuleLifecycleContext): Promise<ModuleCommandResult>;
 }
