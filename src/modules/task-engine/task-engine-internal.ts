@@ -7,6 +7,7 @@ import { TransitionService } from "./service.js";
 import { TaskEngineError, getAllowedTransitionsFrom } from "./transitions.js";
 import { getNextActions } from "./suggestions.js";
 import { readWorkspaceStatusSnapshot } from "./dashboard-status.js";
+import { readBuildPlanSession, toDashboardPlanningSession } from "../../core/planning/build-plan-session-file.js";
 import { openPlanningStores } from "./planning-open.js";
 import { runMigrateTaskPersistence } from "./migrate-task-persistence-runtime.js";
 import { planningSqliteDatabaseRelativePath, planningStrictValidationEnabled } from "./planning-config.js";
@@ -838,10 +839,13 @@ export const taskEngineModule: WorkflowModule = {
       }
       const wishlistOpenCount = wishlistItems.filter((i) => i.status === "open").length;
 
+      const planningSession = toDashboardPlanningSession(await readBuildPlanSession(ctx.workspacePath));
+
       const data = {
         schemaVersion: 1 as const,
         taskStoreLastUpdated: store.getLastUpdated(),
         workspaceStatus,
+        planningSession,
         stateSummary: suggestion.stateSummary,
         readyQueueTop: readyTop,
         readyQueueCount: suggestion.readyQueue.length,

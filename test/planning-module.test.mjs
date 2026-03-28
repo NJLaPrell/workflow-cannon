@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { mkdtemp } from "node:fs/promises";
+import { constants } from "node:fs";
+import { access, mkdtemp, readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -23,6 +24,43 @@ test("planningModule list-planning-types returns typed workflow descriptors", as
   assert.equal(result.data.responseSchemaVersion, 1);
   assert.ok(Array.isArray(result.data.planningTypes));
   assert.ok(result.data.planningTypes.some((x) => x.type === "new-feature"));
+});
+
+test("planningModule build-plan persists then clears local session snapshot", async () => {
+  const workspace = await tmpDir();
+  const ctx = { runtimeVersion: "0.1", workspacePath: workspace };
+  const sessionFile = path.join(workspace, ".workspace-kit", "planning", "build-plan-session.json");
+
+  const q = await planningModule.onCommand(
+    { name: "build-plan", args: { planningType: "task-breakdown" } },
+    ctx
+  );
+  assert.equal(q.ok, true);
+  await access(sessionFile, constants.F_OK);
+  const snap = JSON.parse(await readFile(sessionFile, "utf8"));
+  assert.equal(snap.schemaVersion, 1);
+  assert.equal(snap.planningType, "task-breakdown");
+  assert.ok(String(snap.resumeCli).includes("build-plan"));
+
+  const done = await planningModule.onCommand(
+    {
+      name: "build-plan",
+      args: {
+        planningType: "new-feature",
+        answers: {
+          featureGoal: "x",
+          placement: "CLI",
+          technology: "TS",
+          targetAudience: "ops"
+        },
+        finalize: true,
+        createWishlist: false
+      }
+    },
+    ctx
+  );
+  assert.equal(done.ok, true);
+  await assert.rejects(() => readFile(sessionFile, "utf8"), { code: "ENOENT" });
 });
 
 test("planningModule build-plan validates planningType and returns scaffold", async () => {

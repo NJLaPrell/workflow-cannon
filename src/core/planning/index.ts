@@ -26,3 +26,11 @@ export type {
   GuardResult
 } from "../../modules/task-engine/types.js";
 export type { WishlistItem, WishlistStatus, WishlistConversionDecomposition } from "../../modules/task-engine/wishlist-types.js";
+export {
+  persistBuildPlanSession,
+  clearBuildPlanSession,
+  readBuildPlanSession,
+  toDashboardPlanningSession,
+  type BuildPlanSessionSnapshotV1,
+  type DashboardPlanningSessionV1
+} from "./build-plan-session-file.js";

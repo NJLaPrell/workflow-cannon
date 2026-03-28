@@ -15,6 +15,8 @@ import {
   validateKnownTaskTypeRequirements,
   buildWishlistItemFromIntake,
   validateWishlistIntakePayload,
+  clearBuildPlanSession,
+  persistBuildPlanSession,
   type WishlistItem,
   type TaskEntity,
   type TaskPriority
@@ -133,6 +135,34 @@ function buildScoringHints(args: {
   };
 }
 
+async function persistInterviewSnapshot(
+  workspacePath: string,
+  args: {
+    planningType: string;
+    outputMode: PlanningOutputMode;
+    status: string;
+    answers: Record<string, unknown>;
+    cliGuidance: Record<string, unknown>;
+  }
+): Promise<void> {
+  const cg = args.cliGuidance;
+  const completionPct = typeof cg.completionPct === "number" ? cg.completionPct : 0;
+  const answeredCritical = typeof cg.answeredCritical === "number" ? cg.answeredCritical : 0;
+  const totalCritical = typeof cg.totalCritical === "number" ? cg.totalCritical : 0;
+  const resumeCli =
+    typeof cg.suggestedNextCommand === "string" ? cg.suggestedNextCommand : "";
+  await persistBuildPlanSession(workspacePath, {
+    planningType: args.planningType,
+    outputMode: args.outputMode,
+    status: args.status,
+    completionPct,
+    answeredCritical,
+    totalCritical,
+    answers: args.answers,
+    resumeCli
+  });
+}
+
 function toCliGuidance(args: {
   planningType: string;
   answers: Record<string, unknown>;
@@ -160,7 +190,7 @@ function toCliGuidance(args: {
 export const planningModule: WorkflowModule = {
   registration: {
     id: "planning",
-    version: "0.1.0",
+    version: "0.2.0",
     contractVersion: "1",
     stateSchema: 1,
     capabilities: ["planning"],
@@ -253,6 +283,20 @@ export const planningModule: WorkflowModule = {
       });
       if (finalize && missingCritical.length > 0) {
         if (!config.hardBlockCriticalUnknowns) {
+          const cliGuidance = toCliGuidance({
+            planningType,
+            answers,
+            unresolvedCriticalCount: missingCritical.length,
+            totalCriticalCount,
+            outputMode
+          });
+          await persistInterviewSnapshot(ctx.workspacePath, {
+            planningType,
+            outputMode,
+            status: "ready-with-warnings",
+            answers,
+            cliGuidance
+          });
           return {
             ok: true,
             code: "planning-ready-with-warnings",
@@ -266,16 +310,25 @@ export const planningModule: WorkflowModule = {
               nextQuestions: [...missingCritical, ...adaptiveFollowups],
               scoringHints,
               capturedAnswers: answers,
-              cliGuidance: toCliGuidance({
-                planningType,
-                answers,
-                unresolvedCriticalCount: missingCritical.length,
-                totalCriticalCount,
-                outputMode
-              })
+              cliGuidance
             }
           };
         }
+        const cliGuidanceBlocked = toCliGuidance({
+          planningType,
+          answers,
+          unresolvedCriticalCount: missingCritical.length,
+          totalCriticalCount,
+          finalize: true,
+          outputMode
+        });
+        await persistInterviewSnapshot(ctx.workspacePath, {
+          planningType,
+          outputMode,
+          status: "blocked-critical-unknowns",
+          answers,
+          cliGuidance: cliGuidanceBlocked
+        });
         return {
           ok: false,
           code: "planning-critical-unknowns",
@@ -287,18 +340,26 @@ export const planningModule: WorkflowModule = {
             unresolvedCritical: missingCritical,
             nextQuestions: [...missingCritical, ...adaptiveFollowups],
             scoringHints,
-            cliGuidance: toCliGuidance({
-              planningType,
-              answers,
-              unresolvedCriticalCount: missingCritical.length,
-              totalCriticalCount,
-              finalize: true,
-              outputMode
-            })
+            cliGuidance: cliGuidanceBlocked
           }
         };
       }
       if (finalize && unresolvedAdaptive.length > 0 && config.adaptiveFinalizePolicy === "block") {
+        const cliGuidanceAdaptive = toCliGuidance({
+          planningType,
+          answers,
+          unresolvedCriticalCount: 0,
+          totalCriticalCount,
+          finalize: true,
+          outputMode
+        });
+        await persistInterviewSnapshot(ctx.workspacePath, {
+          planningType,
+          outputMode,
+          status: "blocked-adaptive-unknowns",
+          answers,
+          cliGuidance: cliGuidanceAdaptive
+        });
         return {
           ok: false,
           code: "planning-adaptive-unknowns",
@@ -313,14 +374,7 @@ export const planningModule: WorkflowModule = {
             unresolvedCritical: [],
             nextQuestions: unresolvedAdaptive,
             scoringHints,
-            cliGuidance: toCliGuidance({
-              planningType,
-              answers,
-              unresolvedCriticalCount: 0,
-              totalCriticalCount,
-              finalize: true,
-              outputMode
-            })
+            cliGuidance: cliGuidanceAdaptive
           }
         };
       }
@@ -329,6 +383,20 @@ export const planningModule: WorkflowModule = {
           ? unresolvedAdaptive
           : [];
       if (missingCritical.length > 0) {
+        const cliGuidanceQuestions = toCliGuidance({
+          planningType,
+          answers,
+          unresolvedCriticalCount: missingCritical.length,
+          totalCriticalCount,
+          outputMode
+        });
+        await persistInterviewSnapshot(ctx.workspacePath, {
+          planningType,
+          outputMode,
+          status: "needs-input",
+          answers,
+          cliGuidance: cliGuidanceQuestions
+        });
         return {
           ok: true,
           code: "planning-questions",
@@ -341,13 +409,7 @@ export const planningModule: WorkflowModule = {
             unresolvedCritical: missingCritical,
             nextQuestions: [...missingCritical, ...adaptiveFollowups],
             scoringHints,
-            cliGuidance: toCliGuidance({
-              planningType,
-              answers,
-              unresolvedCriticalCount: missingCritical.length,
-              totalCriticalCount,
-              outputMode
-            })
+            cliGuidance: cliGuidanceQuestions
           }
         };
       }
@@ -358,6 +420,7 @@ export const planningModule: WorkflowModule = {
         unresolvedCriticalQuestionIds: unresolvedIds
       });
       if (outputMode === "response") {
+        await clearBuildPlanSession(ctx.workspacePath);
         return {
           ok: true,
           code: "planning-response-ready",
@@ -455,6 +518,7 @@ export const planningModule: WorkflowModule = {
           store.addTask(task);
           await store.save();
         }
+        await clearBuildPlanSession(ctx.workspacePath);
         return {
           ok: true,
           code: persistTasks ? "planning-task-output-created" : "planning-task-output-preview",
@@ -495,6 +559,7 @@ export const planningModule: WorkflowModule = {
       }
 
       if (!finalize || !createWishlist) {
+        await clearBuildPlanSession(ctx.workspacePath);
         return {
           ok: true,
           code: "planning-wishlist-ready",
@@ -581,6 +646,7 @@ export const planningModule: WorkflowModule = {
       };
       wishlist.addItem(item);
       await wishlist.save();
+      await clearBuildPlanSession(ctx.workspacePath);
       return {
         ok: true,
         code: "planning-artifact-created",

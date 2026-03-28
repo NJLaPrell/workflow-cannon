@@ -115,6 +115,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       const sn = d.suggestedNext;
       const ws = d.workspaceStatus;
       const wishlist = d.wishlist || {};
+      const planningSession = d.planningSession;
       const blockedSummary = d.blockedSummary || {};
       const blockedTop = Array.isArray(blockedSummary.top) ? blockedSummary.top.slice(0, 3) : [];
       const readyTop = Array.isArray(d.readyQueueTop) ? d.readyQueueTop.slice(0, 3) : [];
@@ -131,6 +132,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         '<p><b>Ready preview</b> ' + (d.readyQueueCount ?? 0) + '</p>' +
         renderReadyList(readyTop) +
         '<p><b>Suggested next</b> ' + (sn ? escapeHtml(sn.id + ' — ' + sn.title) : '—') + '</p>' +
+        renderPlanningSession(planningSession) +
         '<p class="muted">Store updated ' + escapeHtml(d.taskStoreLastUpdated || '') + '</p>';
     });
     function renderReadyList(items) {
@@ -145,6 +147,15 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return '<pre>' + items.map((x) =>
         '- ' + escapeHtml(String(x?.taskId ?? '')) + ' blocked by ' + escapeHtml(String((x?.blockedBy || []).join(', ')))
       ).join('\\n') + '</pre>';
+    }
+    function renderPlanningSession(ps) {
+      if (!ps || typeof ps !== 'object') {
+        return '<p class="muted"><b>Planning session</b> —</p>';
+      }
+      const pct = typeof ps.completionPct === 'number' ? ps.completionPct : '—';
+      return '<p><b>Planning session</b> ' + escapeHtml(String(ps.planningType ?? '')) +
+        ' · ' + escapeHtml(String(ps.status ?? '')) + ' · ' + pct + '% critical</p>' +
+        '<pre class="muted">' + escapeHtml(String(ps.resumeCli ?? '')) + '</pre>';
     }
     function escapeHtml(s) {
       return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');

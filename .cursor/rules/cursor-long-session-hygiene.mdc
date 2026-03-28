@@ -1,0 +1,13 @@
+---
+description: Short reload checklist after long Cursor threads or context loss — attach with @ when needed
+alwaysApply: false
+---
+
+# Long session hygiene (requestable)
+
+When context may be stale:
+
+1. Open `docs/maintainers/AGENTS.md` → **Long threads and context reload**.
+2. Run `workspace-kit doctor` and `workspace-kit run get-next-actions '{}'` from repo root.
+3. Do not trust chat memory for task `status`; use task-engine CLI reads.
+4. Full detail: `docs/maintainers/runbooks/cursor-long-session.md`.
