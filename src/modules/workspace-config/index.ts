@@ -1,4 +1,5 @@
 import type { ConfigRegistryView, WorkflowModule } from "../../contracts/module-contract.js";
+import type { ConfigSuccessCode, ConfigErrorCode, SharedErrorCode } from "../../core/error-codes.js";
 import {
   explainConfigPath,
   normalizeConfigForExport,
@@ -10,7 +11,7 @@ async function handleExplainConfig(
   ctx: { workspacePath: string; registry: ConfigRegistryView }
 ): Promise<{
   ok: boolean;
-  code: string;
+  code: ConfigSuccessCode | ConfigErrorCode;
   message?: string;
   data?: Record<string, unknown>;
 }> {
@@ -47,7 +48,7 @@ async function handleResolveConfig(
   ctx: { workspacePath: string; registry: ConfigRegistryView }
 ): Promise<{
   ok: boolean;
-  code: string;
+  code: ConfigSuccessCode;
   message?: string;
   data?: Record<string, unknown>;
 }> {
@@ -113,7 +114,7 @@ export const workspaceConfigModule: WorkflowModule = {
       };
     }
     const baseCtx = { workspacePath: ctx.workspacePath, registry: reg };
-    const handlers: Record<string, () => Promise<{ ok: boolean; code: string; message?: string; data?: Record<string, unknown> }>> = {
+    const handlers: Record<string, () => Promise<{ ok: boolean; code: ConfigSuccessCode | ConfigErrorCode; message?: string; data?: Record<string, unknown> }>> = {
       "explain-config": () => handleExplainConfig(command.args ?? {}, baseCtx),
       "resolve-config": () => handleResolveConfig(command.args ?? {}, baseCtx)
     };

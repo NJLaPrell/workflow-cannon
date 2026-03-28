@@ -15,6 +15,9 @@ import { applyResponseTemplateApplication } from "../core/response-template-shap
 import { resolveWorkspaceConfigWithLayers } from "../core/workspace-kit-config.js";
 import { defaultRegistryModules } from "../modules/index.js";
 import { promptSensitiveRunApproval } from "./interactive-policy.js";
+import type { SharedErrorCode } from "../core/error-codes.js";
+
+const POLICY_DENIED: SharedErrorCode = "policy-denied";
 
 export type RunCommandIo = {
   writeLine: (message: string) => void;
@@ -131,7 +134,7 @@ export async function handleRunCommand(
           JSON.stringify(
             {
               ok: false,
-              code: "policy-denied",
+              code: POLICY_DENIED,
               operationId: policyOp,
               remediationDoc: POLICY_APPROVAL_HUMAN_DOC,
               message: "Sensitive command denied at interactive policy prompt.",
@@ -171,7 +174,7 @@ export async function handleRunCommand(
         JSON.stringify(
           {
             ok: false,
-            code: "policy-denied",
+            code: POLICY_DENIED,
             operationId: policyOp ?? null,
             remediationDoc: POLICY_APPROVAL_HUMAN_DOC,
             message: hasPolicyApprovalField

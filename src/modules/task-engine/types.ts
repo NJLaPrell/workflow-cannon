@@ -87,28 +87,14 @@ export type TaskMutationEvidence = {
   details?: Record<string, unknown>;
 };
 
+import type { TaskEngineErrorCode as _TaskEngineErrorCode } from "../../core/error-codes.js";
+
+export type TaskEngineErrorCode = _TaskEngineErrorCode;
+
 export type TaskEngineError = {
   code: TaskEngineErrorCode;
   message: string;
 };
-
-export type TaskEngineErrorCode =
-  | "invalid-transition"
-  | "guard-rejected"
-  | "dependency-unsatisfied"
-  | "task-not-found"
-  | "duplicate-task-id"
-  | "invalid-task-schema"
-  | "invalid-task-type-requirements"
-  | "invalid-task-update"
-  | "invalid-task-id-format"
-  | "task-archived"
-  | "dependency-cycle"
-  | "duplicate-dependency"
-  | "storage-read-error"
-  | "storage-write-error"
-  | "invalid-adapter"
-  | "import-parse-error";
 
 export type TaskAdapter = {
   name: string;
