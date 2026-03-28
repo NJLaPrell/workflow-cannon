@@ -1,0 +1,18 @@
+id: terms
+version: 1
+doc_type: terms
+target: TERMS.md
+source_profile: core
+sections:
+  - id: meta
+    source: meta
+    renderer: renderMetaSection
+  - id: rules
+    source: rules
+    renderer: renderRuleSection
+  - id: decisions
+    source: decisions
+    renderer: renderDecisionSection
+render_policies:
+  - id: default
+    mode: append

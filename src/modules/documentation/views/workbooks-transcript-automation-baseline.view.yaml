@@ -1,0 +1,18 @@
+id: workbooks-transcript-automation-baseline
+version: 1
+doc_type: workbooks-transcript-automation-baseline
+target: workbooks/transcript-automation-baseline.md
+source_profile: workbook
+sections:
+  - id: meta
+    source: meta
+    renderer: renderMetaSection
+  - id: rules
+    source: rules
+    renderer: renderRuleSection
+  - id: decisions
+    source: decisions
+    renderer: renderDecisionSection
+render_policies:
+  - id: default
+    mode: append

@@ -235,6 +235,7 @@ export type ViewModelSection = {
   id: string;
   title?: string;
   description?: string;
+  renderer: string;
   source:
     | "meta"
     | "refs"
@@ -261,9 +262,18 @@ export type ViewModelSection = {
   template?: string;
 };
 
+export type ViewRenderPolicy = {
+  id: string;
+  mode: "append" | "replace" | "fallback";
+  when?: string;
+};
+
 export type ViewModelDefinition = {
   id: string;
   version: number;
+  docType: string;
+  target: string;
   profile?: "core" | "runbook" | "workbook";
   sections: ViewModelSection[];
+  renderPolicies?: ViewRenderPolicy[];
 };
