@@ -16,11 +16,6 @@ export const approvalsModule: WorkflowModule = {
       format: "md",
       description: "Approvals module policy and queue configuration contract."
     },
-    state: {
-      path: "src/modules/approvals/state.md",
-      format: "md",
-      description: "Approvals module decision and queue state contract."
-    },
     instructions: {
       directory: "src/modules/approvals/instructions",
       entries: [

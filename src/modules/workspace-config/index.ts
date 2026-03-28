@@ -86,11 +86,6 @@ export const workspaceConfigModule: WorkflowModule = {
       format: "md",
       description: "Workspace config registry and explain surface."
     },
-    state: {
-      path: "src/modules/workspace-config/state.md",
-      format: "md",
-      description: "Workspace config module runtime state (none)."
-    },
     instructions: {
       directory: "src/modules/workspace-config/instructions",
       entries: [

@@ -27,11 +27,6 @@ export const improvementModule: WorkflowModule = {
       format: "md",
       description: "Improvement module configuration contract."
     },
-    state: {
-      path: "src/modules/improvement/state.md",
-      format: "md",
-      description: "Improvement module recommendation state contract."
-    },
     instructions: {
       directory: "src/modules/improvement/instructions",
       entries: [

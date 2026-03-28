@@ -279,11 +279,6 @@ export const taskEngineModule: WorkflowModule = {
       format: "md",
       description: "Task Engine configuration contract."
     },
-    state: {
-      path: "src/modules/task-engine/state.md",
-      format: "md",
-      description: "Task Engine runtime state contract."
-    },
     instructions: {
       directory: "src/modules/task-engine/instructions",
       entries: [

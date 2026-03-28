@@ -44,7 +44,7 @@ Every module change must satisfy these baseline rules:
 - `src/core/module-command-router.ts`: enabled-module command discovery and dispatch.
 - `src/modules/`: module implementations and registration metadata.
 - `src/modules/<module>/config.md`: module configuration contract.
-- `src/modules/<module>/state.md`: module state contract.
+- Unified module state is versioned by `registration.stateSchema` and persisted in SQLite.
 - `src/modules/<module>/instructions/*.md`: function-like instruction files for module entrypoints.
 - `src/modules/documentation/templates/*.md` (documentation module): document-type templates; the shipped set and `documentType` values are listed in `src/modules/documentation/instructions/document-project.md` (section **Inputs**) and mirrored in `src/modules/documentation/README.md`.
 - `test/`: unit tests for module registration and behavior.
@@ -58,7 +58,7 @@ Every module change must satisfy these baseline rules:
 - Define module scope and capability boundary.
 - Add module under `src/modules/<module-name>/`.
 - Implement `registration` and minimum required lifecycle hooks.
-- Add `config.md`, `state.md`, and instruction files.
+- Add `config.md` and instruction files.
 - Wire instruction entries in registration (e.g. `document-project` -> `document-project.md`).
 - Export module from index surfaces.
 
@@ -122,10 +122,6 @@ export const exampleModule: WorkflowModule = {
     enabledByDefault: true,
     config: {
       path: "src/modules/example/config.md",
-      format: "md"
-    },
-    state: {
-      path: "src/modules/example/state.md",
       format: "md"
     },
     instructions: {

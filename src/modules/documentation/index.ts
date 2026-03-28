@@ -38,11 +38,6 @@ export const documentationModule: WorkflowModule = {
       format: "md",
       description: "Documentation module configuration contract."
     },
-    state: {
-      path: "src/modules/documentation/state.md",
-      format: "md",
-      description: "Documentation module generation/runtime state contract."
-    },
     instructions: {
       directory: "src/modules/documentation/instructions",
       entries: [
