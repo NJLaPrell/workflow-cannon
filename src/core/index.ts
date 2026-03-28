@@ -112,5 +112,6 @@ export {
   queryLineageChain,
   readLineageEvents
 } from "./lineage-store.js";
+export { UnifiedStateDb, type ModuleStateRow } from "./state/unified-state-db.js";
 
 export type CoreRuntimeVersion = "0.1";
