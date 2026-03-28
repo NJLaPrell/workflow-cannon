@@ -117,6 +117,26 @@ test("runCli doctor validates canonical files", async () => {
   assert.ok(capture.lines.some((l) => l.includes("AGENT-CLI-MAP.md")));
 });
 
+test("runCli doctor --agent-instruction-surface emits JSON catalog", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "qt-wskit-surface-"));
+  await createDoctorFixture(fixtureRoot);
+
+  const capture = createCapture();
+  const code = await runCli(["doctor", "--agent-instruction-surface"], {
+    cwd: fixtureRoot,
+    ...capture
+  });
+
+  assert.equal(code, 0);
+  assert.equal(capture.lines.length >= 1, true);
+  const payload = JSON.parse(capture.lines[0]);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.code, "agent-instruction-surface");
+  assert.equal(payload.data.schemaVersion, 1);
+  assert.ok(Array.isArray(payload.data.commands));
+  assert.ok(payload.data.activationReport);
+});
+
 test("runCli doctor returns validation failure when required files are missing", async () => {
   const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "qt-wskit-missing-"));
   const capture = createCapture();

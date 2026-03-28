@@ -9,8 +9,18 @@ Single maintainer reference for **what agents must run in a terminal** when work
 If a session might touch `.workspace-kit/` state, lifecycle transitions, policy traces, approvals, or generated maintainer docs, run this first:
 
 1. `workspace-kit doctor` — confirms canonical task/policy contract files are present.
-2. `workspace-kit run` (no subcommand) — lists the current command surface and module ownership.
+2. `workspace-kit run` (no subcommand) — lists **router-registered** commands (executable for the current enabled module set).
 3. Use this map + `src/modules/<module>/instructions/<command>.md` for JSON payload shape.
+
+Optional machine-readable catalog (same validation as `doctor`, then JSON on stdout):
+
+```bash
+workspace-kit doctor --agent-instruction-surface
+```
+
+Payload shape: `{ ok, code: "agent-instruction-surface", data: { schemaVersion, commands[], activationReport } }`. Rows include `executable` and `degradation` when a declared instruction is documentation-only because the owning module or a `requiresPeers` module is disabled. **Documentation-only** does **not** waive `policyApproval` for mutating `workspace-kit run` operations — see `docs/maintainers/POLICY-APPROVAL.md`.
+
+When the workspace root is not a kit source checkout, instruction paths still resolve from the process working directory (same rule as `resolveRegistryAndConfig`); run from the repo root in CI and local dev so paths match this tree.
 
 ## Quick boundary gate (use this before acting)
 
@@ -140,7 +150,7 @@ Instruction paths: run `workspace-kit run` with no subcommand to list commands; 
 ## Agent discovery path (minimal)
 
 1. `workspace-kit doctor` — canonical JSON contract files present.
-2. `workspace-kit run` (no arguments) — all module commands with descriptions.
+2. `workspace-kit run` (no arguments) — router-registered commands with descriptions (see `doctor --agent-instruction-surface` for the full declared catalog including non-executable rows).
 3. This file + `src/modules/<module>/instructions/<command>.md` — copy-paste JSON shape.
 4. `docs/maintainers/POLICY-APPROVAL.md` — JSON vs env vs interactive approval.
 5. Task Engine run schemas: `schemas/task-engine-run-contracts.schema.json` (versioned with package; command coverage verified by `pnpm run check`).

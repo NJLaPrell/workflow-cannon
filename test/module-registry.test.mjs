@@ -337,6 +337,56 @@ test("ModuleRegistry allows enabled module when optional peer is disabled", () =
   assert.deepEqual(row.missingOptionalPeers, ["task-engine"]);
 });
 
+test("ModuleRegistry rejects unknown requiresPeers module id", () => {
+  const bad = {
+    ...documentationModule,
+    registration: {
+      ...documentationModule.registration,
+      id: "bad-unknown-req-peer",
+      dependsOn: [],
+      instructions: {
+        directory: "src/modules/documentation/instructions",
+        entries: [
+          {
+            name: "generate-document",
+            file: "generate-document.md",
+            requiresPeers: ["not-a-real-module-id"]
+          }
+        ]
+      }
+    }
+  };
+  assert.throws(
+    () => new ModuleRegistry([bad]),
+    (e) => e instanceof ModuleRegistryError && e.code === "unknown-requires-peer"
+  );
+});
+
+test("ModuleRegistry rejects instruction requiresPeers listing own module id", () => {
+  const bad = {
+    ...documentationModule,
+    registration: {
+      ...documentationModule.registration,
+      id: "bad-req-self",
+      dependsOn: [],
+      instructions: {
+        directory: "src/modules/documentation/instructions",
+        entries: [
+          {
+            name: "document-project",
+            file: "document-project.md",
+            requiresPeers: ["bad-req-self"]
+          }
+        ]
+      }
+    }
+  };
+  assert.throws(
+    () => new ModuleRegistry([bad]),
+    (e) => e instanceof ModuleRegistryError && e.code === "instruction-requires-self"
+  );
+});
+
 test("moduleRegistryOptionsFromEffectiveConfig rejects unknown module id", () => {
   const known = new Set(["a", "b"]);
   assert.throws(

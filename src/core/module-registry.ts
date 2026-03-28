@@ -252,6 +252,22 @@ function validateInstructionContracts(
           `Module '${id}' instruction path '${instructionFilePath}' is not a file`
         );
       }
+
+      const reqPeers = entry.requiresPeers ?? [];
+      for (const peerId of reqPeers) {
+        if (peerId === id) {
+          throw new ModuleRegistryError(
+            "instruction-requires-self",
+            `Module '${id}' instruction '${entry.name}' cannot list its own module id in requiresPeers`
+          );
+        }
+        if (!moduleMap.has(peerId)) {
+          throw new ModuleRegistryError(
+            "unknown-requires-peer",
+            `Module '${id}' instruction '${entry.name}' lists unknown requiresPeers module '${peerId}'`
+          );
+        }
+      }
     }
   }
 }
