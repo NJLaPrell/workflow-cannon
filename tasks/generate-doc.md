@@ -8,4 +8,14 @@ taskName: generate_doc
 - Use the provided user input.
 - Return a concise result.
 
-**Persist via CLI:** If generating canonical maintainer/AI docs with the kit, run `workspace-kit run generate-document` or `workspace-kit run document-project` with JSON (and `policyApproval` when not `dryRun`) — see `docs/maintainers/AGENT-CLI-MAP.md`. This `/qt` template alone does **not** invoke the CLI.
+**Persist via CLI:** If generating canonical maintainer/AI docs with the kit, run an explicit command (this `/qt` template alone does **not** invoke the CLI):
+
+```bash
+# Non-sensitive dry run
+workspace-kit run generate-document '{"documentType":"ROADMAP.md","options":{"dryRun":true}}'
+
+# Sensitive write (requires JSON policyApproval on run path)
+workspace-kit run document-project '{"options":{"overwriteHuman":true},"policyApproval":{"confirmed":true,"rationale":"regenerate docs after source update"}}'
+```
+
+See `docs/maintainers/AGENT-CLI-MAP.md` for tiering and additional command examples.
