@@ -52,6 +52,16 @@ function nextWishlistId(items: WishlistItem[]): string {
   return `W${max + 1}`;
 }
 
+function findMissingAnsweredQuestions(
+  questions: { id: string }[],
+  answers: Record<string, unknown>
+): { id: string }[] {
+  return questions.filter((q) => {
+    const value = answers[q.id];
+    return !(typeof value === "string" && value.trim().length > 0);
+  });
+}
+
 function toCliGuidance(args: {
   planningType: string;
   answers: Record<string, unknown>;
@@ -165,6 +175,7 @@ export const planningModule: WorkflowModule = {
         ctx.effectiveConfig as Record<string, unknown> | undefined
       );
       const config = resolvePlanningConfig(ctx.effectiveConfig as Record<string, unknown> | undefined);
+      const unresolvedAdaptive = findMissingAnsweredQuestions(adaptiveFollowups, answers);
       if (finalize && missingCritical.length > 0) {
         if (!config.hardBlockCriticalUnknowns) {
           return {
@@ -206,6 +217,33 @@ export const planningModule: WorkflowModule = {
           }
         };
       }
+      if (finalize && unresolvedAdaptive.length > 0 && config.adaptiveFinalizePolicy === "block") {
+        return {
+          ok: false,
+          code: "planning-adaptive-unknowns",
+          message: `Cannot finalize ${planningType}: unresolved adaptive follow-ups (${unresolvedAdaptive
+            .map((q) => q.id)
+            .join(", ")})`,
+          data: {
+            planningType,
+            unresolvedAdaptive,
+            unresolvedCritical: [],
+            nextQuestions: unresolvedAdaptive,
+            cliGuidance: toCliGuidance({
+              planningType,
+              answers,
+              unresolvedCriticalCount: 0,
+              totalCriticalCount,
+              finalize: true,
+              outputMode
+            })
+          }
+        };
+      }
+      const adaptiveWarnings =
+        finalize && unresolvedAdaptive.length > 0 && config.adaptiveFinalizePolicy === "warn"
+          ? unresolvedAdaptive
+          : [];
       if (missingCritical.length > 0) {
         return {
           ok: true,
@@ -244,6 +282,7 @@ export const planningModule: WorkflowModule = {
             scaffoldVersion: 3,
             status: "ready-for-response",
             unresolvedCritical: [],
+            adaptiveWarnings,
             adaptiveFollowups,
             capturedAnswers: answers,
             artifact,
@@ -271,6 +310,7 @@ export const planningModule: WorkflowModule = {
             scaffoldVersion: 3,
             status: "task-output-deferred",
             unresolvedCritical: [],
+            adaptiveWarnings,
             adaptiveFollowups,
             capturedAnswers: answers,
             artifact,
@@ -298,6 +338,7 @@ export const planningModule: WorkflowModule = {
             scaffoldVersion: 3,
             status: "ready-for-wishlist",
             unresolvedCritical: [],
+            adaptiveWarnings,
             adaptiveFollowups,
             capturedAnswers: answers,
             artifact,
@@ -381,6 +422,7 @@ export const planningModule: WorkflowModule = {
           scaffoldVersion: 3,
           status: "artifact-created",
           wishlistId,
+          adaptiveWarnings,
           artifact,
           unresolvedCritical: [],
           adaptiveFollowups,
@@ -421,6 +463,7 @@ export const planningModule: WorkflowModule = {
           planningType,
           defaultQuestionDepth: config.depth,
           hardBlockCriticalUnknowns: config.hardBlockCriticalUnknowns,
+          adaptiveFinalizePolicy: config.adaptiveFinalizePolicy,
           baseQuestions: rulePack.baseQuestions,
           adaptiveQuestions: rulePack.adaptiveQuestions
         }

@@ -27,6 +27,7 @@ workspace-kit run build-plan '{"planningType":"new-feature","outputMode":"respon
 - `planning-artifact-created`: final artifact persisted to wishlist namespace (`W###`) and returned in response data.
 - `planning-response-ready`: critical unknowns resolved; response-only artifact returned (no persistence).
 - `planning-task-output-deferred`: `outputMode:"tasks"` selected; contract branch active while task materialization is delivered separately.
+- `planning-adaptive-unknowns`: returned when `finalize:true` and unresolved adaptive follow-ups are blocked by config.
 - `planning-critical-unknowns`: returned when `finalize:true` but critical answers are missing.
 
 All success/error payloads include `data.cliGuidance` with critical-question completion progress and a suggested next `workspace-kit run build-plan` command.
