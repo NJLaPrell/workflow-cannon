@@ -14,7 +14,9 @@ workspace-kit run explain-planning-rules '{"planningType":"new-feature"}'
 
 ## Returns
 
+- `responseSchemaVersion`
 - `defaultQuestionDepth`
 - `hardBlockCriticalUnknowns`
+- `adaptiveFinalizePolicy`
 - resolved `baseQuestions`
 - resolved `adaptiveQuestions`

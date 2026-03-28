@@ -20,6 +20,7 @@ test("planningModule list-planning-types returns typed workflow descriptors", as
   );
   assert.equal(result.ok, true);
   assert.equal(result.code, "planning-types-listed");
+  assert.equal(result.data.responseSchemaVersion, 1);
   assert.ok(Array.isArray(result.data.planningTypes));
   assert.ok(result.data.planningTypes.some((x) => x.type === "new-feature"));
 });
@@ -39,6 +40,7 @@ test("planningModule build-plan validates planningType and returns scaffold", as
   );
   assert.equal(valid.ok, true);
   assert.equal(valid.code, "planning-questions");
+  assert.equal(valid.data.responseSchemaVersion, 1);
   assert.equal(valid.data.planningType, "task-breakdown");
   assert.ok(Array.isArray(valid.data.unresolvedCritical));
   assert.ok(valid.data.unresolvedCritical.length > 0);
@@ -303,6 +305,7 @@ test("planningModule explain-planning-rules returns effective defaults and quest
   );
   assert.equal(result.ok, true);
   assert.equal(result.code, "planning-rules-explained");
+  assert.equal(result.data.responseSchemaVersion, 1);
   assert.equal(result.data.defaultQuestionDepth, "guided");
   assert.equal(result.data.adaptiveFinalizePolicy, "off");
   assert.ok(Array.isArray(result.data.baseQuestions));
