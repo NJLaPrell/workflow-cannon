@@ -18,12 +18,20 @@ export type ModuleStateRow = {
   updatedAt: string;
 };
 
+type UnifiedStateDbOptions = {
+  exportSnapshotRelativePath?: string;
+};
+
 export class UnifiedStateDb {
   private db: Database.Database | null = null;
   readonly dbPath: string;
+  readonly exportSnapshotPath: string | null;
 
-  constructor(workspacePath: string, databaseRelativePath: string) {
+  constructor(workspacePath: string, databaseRelativePath: string, options?: UnifiedStateDbOptions) {
     this.dbPath = path.resolve(workspacePath, databaseRelativePath);
+    this.exportSnapshotPath = options?.exportSnapshotRelativePath
+      ? path.resolve(workspacePath, options.exportSnapshotRelativePath)
+      : null;
   }
 
   private ensureDb(): Database.Database {
@@ -64,6 +72,7 @@ export class UnifiedStateDb {
          state_json=excluded.state_json,
          updated_at=excluded.updated_at`
     ).run(moduleId, stateSchemaVersion, JSON.stringify(state), updatedAt);
+    this.maybeExportSnapshot();
   }
 
   listModuleStates(): ModuleStateRow[] {
@@ -84,5 +93,17 @@ export class UnifiedStateDb {
       state: JSON.parse(row.state_json) as Record<string, unknown>,
       updatedAt: row.updated_at
     }));
+  }
+
+  private maybeExportSnapshot(): void {
+    if (!this.exportSnapshotPath) return;
+    const snapshot = {
+      schemaVersion: 1,
+      exportedAt: new Date().toISOString(),
+      dbPath: this.dbPath,
+      modules: this.listModuleStates()
+    };
+    fs.mkdirSync(path.dirname(this.exportSnapshotPath), { recursive: true });
+    fs.writeFileSync(this.exportSnapshotPath, JSON.stringify(snapshot, null, 2) + "\n", "utf8");
   }
 }
