@@ -27,12 +27,7 @@ import {
   resolveWorkspaceConfigWithLayers,
   stableStringifyConfig
 } from "./workspace-kit-config.js";
-import { workspaceConfigModule } from "../modules/workspace-config/index.js";
-import { documentationModule } from "../modules/documentation/index.js";
-import { taskEngineModule } from "../modules/task-engine/index.js";
-import { approvalsModule } from "../modules/approvals/index.js";
-import { planningModule } from "../modules/planning/index.js";
-import { improvementModule } from "../modules/improvement/index.js";
+import { defaultRegistryModules } from "../modules/index.js";
 
 const EXIT_SUCCESS = 0;
 const EXIT_VALIDATION_FAILURE = 1;
@@ -122,15 +117,7 @@ async function writeConfigFileAtomic(fp: string, data: Record<string, unknown>):
 }
 
 function buildRegistry(): ModuleRegistry {
-  const allModules = [
-    workspaceConfigModule,
-    documentationModule,
-    taskEngineModule,
-    approvalsModule,
-    planningModule,
-    improvementModule
-  ];
-  return new ModuleRegistry(allModules);
+  return new ModuleRegistry(defaultRegistryModules);
 }
 
 export type ConfigCliIo = {

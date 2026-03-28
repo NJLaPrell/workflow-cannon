@@ -1,21 +1,7 @@
 import { ModuleRegistry } from "../core/module-registry.js";
 import { resolveWorkspaceConfigWithLayers } from "../core/workspace-kit-config.js";
 import { validatePlanningPersistenceForDoctor } from "../modules/task-engine/doctor-planning-persistence.js";
-import { documentationModule } from "../modules/documentation/index.js";
-import { taskEngineModule } from "../modules/task-engine/index.js";
-import { approvalsModule } from "../modules/approvals/index.js";
-import { planningModule } from "../modules/planning/index.js";
-import { improvementModule } from "../modules/improvement/index.js";
-import { workspaceConfigModule } from "../modules/workspace-config/index.js";
-
-const defaultRegistryModules = [
-  workspaceConfigModule,
-  documentationModule,
-  taskEngineModule,
-  approvalsModule,
-  planningModule,
-  improvementModule
-];
+import { defaultRegistryModules } from "../modules/index.js";
 
 export type DoctorPlanningIssue = { path: string; reason: string };
 

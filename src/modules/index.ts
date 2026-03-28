@@ -1,3 +1,20 @@
+import type { WorkflowModule } from "../contracts/module-contract.js";
+import { approvalsModule } from "./approvals/index.js";
+import { documentationModule } from "./documentation/index.js";
+import { improvementModule } from "./improvement/index.js";
+import { planningModule } from "./planning/index.js";
+import { taskEngineModule } from "./task-engine/index.js";
+import { workspaceConfigModule } from "./workspace-config/index.js";
+
+export const defaultRegistryModules: WorkflowModule[] = [
+  workspaceConfigModule,
+  documentationModule,
+  taskEngineModule,
+  approvalsModule,
+  planningModule,
+  improvementModule
+];
+
 export { approvalsModule } from "./approvals/index.js";
 export { documentationModule } from "./documentation/index.js";
 export type {

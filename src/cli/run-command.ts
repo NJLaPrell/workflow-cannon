@@ -13,12 +13,7 @@ import {
 import { getSessionGrant, recordSessionGrant, resolveSessionId } from "../core/session-policy.js";
 import { applyResponseTemplateApplication } from "../core/response-template-shaping.js";
 import { resolveWorkspaceConfigWithLayers } from "../core/workspace-kit-config.js";
-import { documentationModule } from "../modules/documentation/index.js";
-import { taskEngineModule } from "../modules/task-engine/index.js";
-import { approvalsModule } from "../modules/approvals/index.js";
-import { planningModule } from "../modules/planning/index.js";
-import { improvementModule } from "../modules/improvement/index.js";
-import { workspaceConfigModule } from "../modules/workspace-config/index.js";
+import { defaultRegistryModules } from "../modules/index.js";
 import { promptSensitiveRunApproval } from "./interactive-policy.js";
 
 export type RunCommandIo = {
@@ -43,15 +38,7 @@ export async function handleRunCommand(
 ): Promise<number> {
   const { writeLine, writeError } = io;
 
-  const allModules = [
-    workspaceConfigModule,
-    documentationModule,
-    taskEngineModule,
-    approvalsModule,
-    planningModule,
-    improvementModule
-  ];
-  const registry = new ModuleRegistry(allModules);
+  const registry = new ModuleRegistry(defaultRegistryModules);
   const router = new ModuleCommandRouter(registry);
 
   const subcommand = args[1];
