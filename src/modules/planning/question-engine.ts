@@ -11,6 +11,7 @@ export type PlanningQuestion = {
 };
 
 export type PlanningQuestionDepth = "minimal" | "guided" | "adaptive";
+export type AdaptiveFinalizePolicy = "off" | "warn" | "block";
 
 export type PlanningRulePack = {
   baseQuestions: PlanningQuestion[];
@@ -228,14 +229,23 @@ function parseDepth(value: unknown): PlanningQuestionDepth {
   return "adaptive";
 }
 
+function parseAdaptiveFinalizePolicy(value: unknown): AdaptiveFinalizePolicy {
+  if (value === "off" || value === "warn" || value === "block") {
+    return value;
+  }
+  return "off";
+}
+
 export function resolvePlanningConfig(config: Record<string, unknown> | undefined): {
   depth: PlanningQuestionDepth;
   hardBlockCriticalUnknowns: boolean;
+  adaptiveFinalizePolicy: AdaptiveFinalizePolicy;
   rulePacks: Partial<Record<PlanningWorkflowType, PlanningRulePack>>;
 } {
   const planning = asRecord(config?.planning);
   const depth = parseDepth(planning?.defaultQuestionDepth);
   const hardBlockCriticalUnknowns = planning?.hardBlockCriticalUnknowns !== false;
+  const adaptiveFinalizePolicy = parseAdaptiveFinalizePolicy(planning?.adaptiveFinalizePolicy);
   const rulesRoot = asRecord(planning?.rulePacks);
   const rulePacks: Partial<Record<PlanningWorkflowType, PlanningRulePack>> = {};
   if (rulesRoot) {
@@ -251,7 +261,7 @@ export function resolvePlanningConfig(config: Record<string, unknown> | undefine
       };
     }
   }
-  return { depth, hardBlockCriticalUnknowns, rulePacks };
+  return { depth, hardBlockCriticalUnknowns, adaptiveFinalizePolicy, rulePacks };
 }
 
 export function resolvePlanningRulePack(

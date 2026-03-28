@@ -123,6 +123,21 @@ const REGISTRY: Record<string, ConfigKeyMetadata> = {
     exposure: "maintainer",
     writableLayers: ["project", "user"]
   },
+  "planning.adaptiveFinalizePolicy": {
+    key: "planning.adaptiveFinalizePolicy",
+    type: "string",
+    description:
+      "Controls finalize handling for unresolved adaptive follow-up questions: off (ignore), warn (allow finalize with warnings), block (deny finalize).",
+    default: "off",
+    allowedValues: ["off", "warn", "block"],
+    domainScope: "project",
+    owningModule: "planning",
+    sensitive: false,
+    requiresRestart: false,
+    requiresApproval: false,
+    exposure: "maintainer",
+    writableLayers: ["project", "user"]
+  },
   "planning.rulePacks": {
     key: "planning.rulePacks",
     type: "object",

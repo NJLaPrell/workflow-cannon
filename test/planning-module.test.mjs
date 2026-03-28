@@ -158,6 +158,71 @@ test("planningModule build-plan can allow warnings when hard block disabled", as
   assert.equal(result.code, "planning-ready-with-warnings");
 });
 
+test("planningModule build-plan blocks finalize when adaptive policy is block", async () => {
+  const workspace = await tmpDir();
+  const result = await planningModule.onCommand(
+    {
+      name: "build-plan",
+      args: {
+        planningType: "new-feature",
+        outputMode: "response",
+        finalize: true,
+        answers: {
+          featureGoal: "Guide operators through planning interviews",
+          placement: "CLI",
+          technology: "TypeScript",
+          targetAudience: "AI Agent Operators"
+        }
+      }
+    },
+    {
+      runtimeVersion: "0.1",
+      workspacePath: workspace,
+      effectiveConfig: {
+        planning: {
+          adaptiveFinalizePolicy: "block"
+        }
+      }
+    }
+  );
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "planning-adaptive-unknowns");
+  assert.ok(Array.isArray(result.data.unresolvedAdaptive));
+});
+
+test("planningModule build-plan warns on unresolved adaptive follow-ups in warn mode", async () => {
+  const workspace = await tmpDir();
+  const result = await planningModule.onCommand(
+    {
+      name: "build-plan",
+      args: {
+        planningType: "new-feature",
+        outputMode: "response",
+        finalize: true,
+        answers: {
+          featureGoal: "Guide operators through planning interviews",
+          placement: "CLI",
+          technology: "TypeScript",
+          targetAudience: "AI Agent Operators"
+        }
+      }
+    },
+    {
+      runtimeVersion: "0.1",
+      workspacePath: workspace,
+      effectiveConfig: {
+        planning: {
+          adaptiveFinalizePolicy: "warn"
+        }
+      }
+    }
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "planning-response-ready");
+  assert.ok(Array.isArray(result.data.adaptiveWarnings));
+  assert.ok(result.data.adaptiveWarnings.length > 0);
+});
+
 test("planningModule explain-planning-rules returns effective defaults and questions", async () => {
   const workspace = await tmpDir();
   const result = await planningModule.onCommand(
@@ -175,6 +240,7 @@ test("planningModule explain-planning-rules returns effective defaults and quest
   assert.equal(result.ok, true);
   assert.equal(result.code, "planning-rules-explained");
   assert.equal(result.data.defaultQuestionDepth, "guided");
+  assert.equal(result.data.adaptiveFinalizePolicy, "off");
   assert.ok(Array.isArray(result.data.baseQuestions));
 });
 
