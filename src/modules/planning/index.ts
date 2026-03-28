@@ -171,11 +171,6 @@ export const planningModule: WorkflowModule = {
       format: "md",
       description: "Planning module configuration contract."
     },
-    state: {
-      path: "src/modules/planning/state.md",
-      format: "md",
-      description: "Planning module runtime state contract."
-    },
     instructions: {
       directory: "src/modules/planning/instructions",
       entries: [

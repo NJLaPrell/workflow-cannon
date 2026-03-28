@@ -84,7 +84,6 @@ export type ModuleRegistration = {
   dependsOn: string[];
   enabledByDefault: boolean;
   config: ModuleDocumentContract;
-  state: ModuleDocumentContract;
   instructions: ModuleInstructionContract;
 };
 
