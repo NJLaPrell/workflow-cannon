@@ -9,9 +9,10 @@ import { getNextActions } from "./suggestions.js";
 import { readWorkspaceStatusSnapshot } from "./dashboard-status.js";
 import { openPlanningStores } from "./planning-open.js";
 import { runMigrateTaskPersistence } from "./migrate-task-persistence-runtime.js";
-import { planningStrictValidationEnabled } from "./planning-config.js";
+import { planningSqliteDatabaseRelativePath, planningStrictValidationEnabled } from "./planning-config.js";
 import { validateTaskSetForStrictMode } from "./strict-task-validation.js";
 import { validateKnownTaskTypeRequirements } from "./task-type-validation.js";
+import { UnifiedStateDb } from "../../core/state/unified-state-db.js";
 import type { WishlistConversionDecomposition, WishlistItem } from "./wishlist-types.js";
 import {
   buildWishlistItemFromIntake,
@@ -397,6 +398,16 @@ export const taskEngineModule: WorkflowModule = {
           description: "Copy task + wishlist state between JSON files and a single SQLite database (offline migration)."
         },
         {
+          name: "list-module-states",
+          file: "list-module-states.md",
+          description: "List unified SQLite module-state rows for diagnostics and migration verification."
+        },
+        {
+          name: "get-module-state",
+          file: "get-module-state.md",
+          description: "Read one module-state row from unified SQLite storage."
+        },
+        {
           name: "dashboard-summary",
           file: "dashboard-summary.md",
           description: "Stable JSON cockpit summary for UI clients (tasks + maintainer status snapshot)."
@@ -414,6 +425,34 @@ export const taskEngineModule: WorkflowModule = {
     const args = command.args ?? {};
     if (command.name === "migrate-task-persistence") {
       return runMigrateTaskPersistence(ctx, args as Record<string, unknown>);
+    }
+    if (command.name === "list-module-states" || command.name === "get-module-state") {
+      const unified = new UnifiedStateDb(ctx.workspacePath, planningSqliteDatabaseRelativePath(ctx));
+      if (command.name === "list-module-states") {
+        return {
+          ok: true,
+          code: "module-states-listed",
+          message: "Listed module state rows",
+          data: { rows: unified.listModuleStates() }
+        };
+      }
+      const moduleId = typeof args.moduleId === "string" ? args.moduleId.trim() : "";
+      if (!moduleId) {
+        return { ok: false, code: "invalid-task-schema", message: "get-module-state requires moduleId" };
+      }
+      const row = unified.getModuleState(moduleId);
+      return row
+        ? {
+            ok: true,
+            code: "module-state-read",
+            message: `Read module state for ${moduleId}`,
+            data: { row }
+          }
+        : {
+            ok: false,
+            code: "task-not-found",
+            message: `No module state found for '${moduleId}'`
+          };
     }
 
     let planning;
