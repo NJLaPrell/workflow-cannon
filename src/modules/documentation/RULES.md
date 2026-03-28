@@ -12,7 +12,7 @@ When guidance conflicts, apply this order:
 4. `src/modules/documentation/instructions/document-project.md` (document generation workflow)
 5. `src/modules/documentation/instructions/documentation-maintainer.md` (AI-doc generation policy)
 6. `src/modules/documentation/schemas/documentation-schema.md` (record schema contract)
-7. `src/modules/documentation/templates/*.md` (document-type generation templates)
+7. `src/modules/documentation/views/*.view.yaml` (document-type rendering contracts)
 8. `docs/maintainers/module-build-guide.md` (human-readable companion guidance)
 
 ## Usage Model
@@ -20,15 +20,15 @@ When guidance conflicts, apply this order:
 - Choose an instruction entry from `instructions/` for the operation you want.
 - Discover available callable module operations through `src/core/module-command-router.ts` command listing.
 - Load module config first and restrict writes to configured document paths.
-- If a matching template exists, use it as the structure contract.
-- For templates with `{{{ ... }}}` blocks, treat block content as generation instructions, not output text.
-- Generate AI-surface content first, then generate human-surface content from that result plus project context.
+- Resolve view model definitions first and treat them as the section/renderer contract.
+- Generate AI-surface content first, then parse/validate/normalize records before human rendering.
+- Human rendering must use named deterministic renderers only.
 
 ## Command Contracts
 
 ### `document-project(options)` — batch
 
-Generates all project docs by iterating every `.md` template in `sources.templatesRoot`.
+Generates all project docs by iterating every `.view.yaml` in `src/modules/documentation/views` (falls back to template discovery in fixture workspaces without views).
 
 - Default behavior: **preserve AI docs** (`overwriteAi: false`), **overwrite human docs** (`overwriteHuman: true`), continue on individual failure.
 - Returns batch summary with total/succeeded/failed/skipped counts plus per-document results.
@@ -37,7 +37,7 @@ Generates all project docs by iterating every `.md` template in `sources.templat
 
 Generates one document pair (AI + human) for the given `documentType`.
 
-- `documentType`: required string basename resolving to `<templatesRoot>/<documentType>`.
+- `documentType`: required string basename resolving to both AI and human output targets.
 - `options`:
   - `dryRun?: boolean` (default `false`) - compute outputs/validations without writing files
   - `overwrite?: boolean` (default `true`) - allow replacing existing files (both surfaces)
@@ -46,19 +46,19 @@ Generates one document pair (AI + human) for the given `documentType`.
   - `strict?: boolean` (default `true`) - fail on unresolved warnings (validation/conflict/coverage)
   - `maxValidationAttempts?: number` (default from config) - override retry limit
   - `allowWithoutTemplate?: boolean` (default `false`) - continue without template only when explicitly confirmed
-- Shipped template basenames are listed in `instructions/generate-document.md` and `instructions/document-project.md`.
+- Shipped view model files are listed by `listViewModels()` in `view-models.ts`.
 
 ### Shared semantics
 
 - Both commands read paths from module config (`sources.aiRoot`, `sources.humanRoot`, `sources.templatesRoot`, `sources.instructionsRoot`, `sources.schemasRoot`).
 - Both enforce write boundaries to configured output roots only.
-- Both execute AI generation first, then human generation from AI output plus project context.
+- Both execute AI generation first, then human generation from parsed+normalized AI output plus view-model renderers.
 - Both return evidence objects containing files read/written, validations, retries, warnings/conflicts, and timestamp.
 
 ## Required Validation
 
 - Validate AI output against `schemas/documentation-schema.md`.
-- Verify section coverage for templated documents and ensure no unresolved `{{{` blocks remain.
+- Verify section coverage for template-backed content and ensure no unresolved `{{{` blocks remain.
 - Detect conflicts against higher-precedence sources and stop/prompt when required.
 - Emit run evidence (inputs, outputs, validation results, timestamp).
 

@@ -1,6 +1,6 @@
 # document-project
 
-Generate all project documentation by running `generate-document` for every template in the template library. Outputs AI-optimized docs to `.ai/` and human-readable docs to `docs/maintainers/`.
+Generate all project documentation by running `generate-document` for every view model in `src/modules/documentation/views`. Outputs AI-optimized docs to `.ai/` and human-readable docs to `docs/maintainers/`.
 
 ## Inputs
 
@@ -11,9 +11,9 @@ Generate all project documentation by running `generate-document` for every temp
   - `strict?: boolean` — fail on unresolved warnings (default `false` in batch mode)
   - `maxValidationAttempts?: number` — override retry limit per document
 
-## Shipped templates
+## Shipped targets
 
-All `.md` files under `sources.templatesRoot` (default `src/modules/documentation/templates`) are processed:
+View models in `src/modules/documentation/views` map to these output targets:
 
 - `AGENTS.md`
 - `ARCHITECTURE.md`
@@ -33,10 +33,10 @@ All `.md` files under `sources.templatesRoot` (default `src/modules/documentatio
 
 ## Required behavior
 
-1. Discover all `.md` templates in `sources.templatesRoot`.
-2. For each template, invoke `generate-document` with the template basename as `documentType`.
+1. Discover all `.view.yaml` view models (fallback: discover templates in fixture workspaces without `views/`).
+2. For each view model, invoke `generate-document` using the view model `target` as `documentType`.
 3. Default overwrite behavior: **preserve AI docs** (`overwriteAi: false`), **overwrite human docs** (`overwriteHuman: true`).
-4. Continue through all templates on individual failure; do not stop the batch.
+4. Continue through all targets on individual failure; do not stop the batch.
 5. Collect per-document results and emit a batch summary with total/succeeded/failed/skipped counts.
 6. Return `ok: true` only when zero documents failed.
 
