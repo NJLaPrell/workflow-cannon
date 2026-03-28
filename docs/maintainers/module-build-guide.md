@@ -116,6 +116,7 @@ export const exampleModule: WorkflowModule = {
     id: "example",
     version: "0.1.0",
     contractVersion: "1",
+    stateSchema: 1,
     capabilities: ["planning"],
     dependsOn: [],
     enabledByDefault: true,

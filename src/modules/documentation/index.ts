@@ -29,6 +29,7 @@ export const documentationModule: WorkflowModule = {
     id: "documentation",
     version: "0.2.0",
     contractVersion: "1",
+    stateSchema: 1,
     capabilities: ["documentation"],
     dependsOn: [],
     enabledByDefault: true,

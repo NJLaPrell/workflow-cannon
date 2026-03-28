@@ -77,6 +77,7 @@ export const workspaceConfigModule: WorkflowModule = {
     id: "workspace-config",
     version: "0.4.0",
     contractVersion: "1",
+    stateSchema: 1,
     capabilities: ["diagnostics"],
     dependsOn: [],
     enabledByDefault: true,

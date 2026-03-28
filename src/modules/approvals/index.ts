@@ -7,6 +7,7 @@ export const approvalsModule: WorkflowModule = {
     id: "approvals",
     version: "0.5.0",
     contractVersion: "1",
+    stateSchema: 1,
     capabilities: ["approvals"],
     dependsOn: ["task-engine"],
     enabledByDefault: true,
