@@ -3,7 +3,7 @@ import type { Dirent } from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import crypto from "node:crypto";
-import type { TransitionEvidence } from "../task-engine/types.js";
+import type { TransitionEvidence } from "../../core/planning/index.js";
 import type { EvidenceKind, ConfidenceSignals } from "./confidence.js";
 import { computeHeuristicConfidence, priorityForTier, shouldAdmitRecommendation } from "./confidence.js";
 import type { ImprovementStateDocument } from "./improvement-state.js";
