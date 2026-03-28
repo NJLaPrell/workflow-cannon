@@ -13,6 +13,7 @@ import type {
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
 import { parseAiDocument } from "./parser.js";
 import { normalizeDocument } from "./normalizer.js";
+import { renderDocument } from "./renderer.js";
 import { autoResolveAiSchema, validateAiSchema } from "./validator.js";
 
 type DocumentationRuntimeConfig = {
@@ -303,7 +304,18 @@ export async function generateDocument(
   }
 
   // Build normalized model now to keep parser/validator/normalizer wiring exercised.
-  normalizeDocument(parseAiDocument(aiOutput));
+  const normalized = normalizeDocument(parseAiDocument(aiOutput));
+  void renderDocument(normalized, {
+    id: "runtime-preview",
+    version: 1,
+    docType: expectedDoc,
+    target: documentType,
+    profile: expectedDoc === "runbook" ? "runbook" : expectedDoc === "workbook" ? "workbook" : "core",
+    sections: [
+      { id: "meta", source: "meta", renderer: "renderMetaSection" },
+      { id: "rules", source: "rules", renderer: "renderRuleSection" }
+    ]
+  });
 
   let humanOutput = `# ${documentType}\n\nGenerated without template.`;
   if (templateFound) {
