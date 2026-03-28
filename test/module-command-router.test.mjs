@@ -5,6 +5,7 @@ import {
   ModuleCommandRouter,
   ModuleCommandRouterError,
   ModuleRegistry,
+  agentBehaviorModule,
   documentationModule,
   taskEngineModule,
   workspaceConfigModule
@@ -16,7 +17,12 @@ const lifecycleContext = {
 };
 
 test("ModuleCommandRouter lists commands from enabled modules", () => {
-  const registry = new ModuleRegistry([workspaceConfigModule, documentationModule, taskEngineModule]);
+  const registry = new ModuleRegistry([
+    workspaceConfigModule,
+    documentationModule,
+    agentBehaviorModule,
+    taskEngineModule
+  ]);
   const router = new ModuleCommandRouter(registry);
 
   const commandNames = router.listCommands().map((command) => command.name);
@@ -24,14 +30,19 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "add-dependency",
     "archive-task",
     "convert-wishlist",
+    "create-behavior-profile",
     "create-task",
     "create-task-from-plan",
     "create-wishlist",
     "dashboard-summary",
+    "delete-behavior-profile",
+    "diff-behavior-profiles",
     "document-project",
+    "explain-behavior-profiles",
     "explain-config",
     "explain-task-engine-model",
     "generate-document",
+    "get-behavior-profile",
     "get-blocked-summary",
     "get-dependency-graph",
     "get-module-state",
@@ -42,20 +53,30 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "get-task-history",
     "get-task-summary",
     "get-wishlist",
+    "interview-behavior-profile",
+    "list-behavior-profiles",
     "list-module-states",
     "list-tasks",
     "list-wishlist",
     "migrate-task-persistence",
     "remove-dependency",
+    "resolve-behavior-profile",
     "resolve-config",
     "run-transition",
+    "set-active-behavior-profile",
+    "update-behavior-profile",
     "update-task",
     "update-wishlist"
   ]);
 });
 
 test("ModuleCommandRouter executes explain-config", async () => {
-  const registry = new ModuleRegistry([workspaceConfigModule, documentationModule, taskEngineModule]);
+  const registry = new ModuleRegistry([
+    workspaceConfigModule,
+    documentationModule,
+    agentBehaviorModule,
+    taskEngineModule
+  ]);
   const router = new ModuleCommandRouter(registry);
 
   const result = await router.execute(
@@ -70,7 +91,12 @@ test("ModuleCommandRouter executes explain-config", async () => {
 });
 
 test("ModuleCommandRouter executes resolve-config", async () => {
-  const registry = new ModuleRegistry([workspaceConfigModule, documentationModule, taskEngineModule]);
+  const registry = new ModuleRegistry([
+    workspaceConfigModule,
+    documentationModule,
+    agentBehaviorModule,
+    taskEngineModule
+  ]);
   const router = new ModuleCommandRouter(registry);
 
   const result = await router.execute(

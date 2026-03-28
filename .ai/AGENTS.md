@@ -9,6 +9,7 @@ ref|id=tasks_view|target=.workspace-kit/tasks/state.json|type=file|status=active
 ref|id=releasing|target=docs/maintainers/RELEASING.md|type=file|status=active
 ref|id=policy_approval|target=docs/maintainers/POLICY-APPROVAL.md|type=file|status=active
 ref|id=agent_cli_map|target=docs/maintainers/AGENT-CLI-MAP.md|type=file|status=active
+ref|id=agent_behavior_plan|target=docs/maintainers/plans/agent-behavior-module.md|type=file|status=active
 ref|id=terms|target=docs/maintainers/TERMS.md|type=file|status=active
 ref|id=module_guide|target=docs/maintainers/module-build-guide.md|type=file|status=active
 truth|order=ai_principles>ai_module_build>roadmap>tasks_engine_state>tasks_view>agent_cli_map>policy_approval>releasing>terms>module_guide
@@ -31,6 +32,8 @@ rule|id=A022|level=must|scope=agent|directive=split_oversized_tasks_before_imple
 rule|id=A023|level=must|scope=agent|directive=before_mutating_kit_owned_state_run_matching_workspace_kit_command|risk=high|approval=none|override=stop|status=active|refs=docs/maintainers/AGENT-CLI-MAP.md,docs/maintainers/POLICY-APPROVAL.md|why=rationale_for_A023
 rule|id=A024|level=must_not|scope=agent|directive=rely_on_chat_only_approval_for_policy_gated_workspace_kit_run|risk=critical|approval=none|override=stop|status=active|refs=docs/maintainers/POLICY-APPROVAL.md|why=rationale_for_A024
 rule|id=A025|level=must_not|scope=agent|directive=hand_edit_task_engine_state_json_for_routine_lifecycle_transitions|risk=high|approval=none|override=stop|status=active|refs=docs/maintainers/AGENT-CLI-MAP.md,.workspace-kit/tasks/state.json|why=rationale_for_A025
+
+rule|id=A026|level=should|scope=agent|directive=optional_resolve_behavior_profile_for_advisory_collaboration_style_subordinate_to_principles_and_policy|risk=low|approval=none|override=auto|status=active|refs=docs/maintainers/AGENT-CLI-MAP.md,docs/maintainers/plans/agent-behavior-module.md|why=rationale_for_A026
 
 rule|id=A030|level=must|scope=agent|directive=use_document_project_for_batch_and_generate_document_for_single|risk=low|approval=none|override=auto|status=active|refs=src/modules/documentation/RULES.md|why=rationale_for_A030
 rule|id=A031|level=must|scope=agent|directive=follow_documentation_module_rules_md_before_generation|risk=medium|approval=none|override=warn|status=active|refs=src/modules/documentation/RULES.md|why=rationale_for_A031

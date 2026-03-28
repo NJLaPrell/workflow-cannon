@@ -1,0 +1,14 @@
+---
+description: Optional advisory agent behavior profiles (agent-behavior module); request when tuning collaboration style.
+alwaysApply: false
+---
+
+# Agent behavior profiles
+
+When the user cares about **how** the agent collaborates (verbosity, check-ins, exploration style), use the **`agent-behavior`** module via `workspace-kit run` — see **`docs/maintainers/AGENT-CLI-MAP.md`** (Tier C).
+
+1. Optional session opener: `workspace-kit run resolve-behavior-profile '{}'` and treat `data.effective` as advisory tone guidance.
+2. User unsure: drive `interview-behavior-profile` (`action`: `start` → `answer` → … → `finalize`) or compare builtins with `explain-behavior-profiles`.
+3. **Hard layer still wins:** `.ai/PRINCIPLES.md`, policy `policyApproval`, and task acceptance criteria override any profile.
+
+Canonical plan: `docs/maintainers/plans/agent-behavior-module.md`.

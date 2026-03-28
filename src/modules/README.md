@@ -8,6 +8,7 @@ Shipped capability modules are registered in **`defaultRegistryModules`** in [`i
 | --- | --- | --- |
 | `workspace-config` | Config explain/resolve and workspace validation helpers | _(none)_ |
 | `documentation` | `.ai/` and `docs/maintainers/` doc generation | _(none)_ |
+| `agent-behavior` | Advisory interaction profiles (`resolve-behavior-profile`, interview, custom profiles) | _(none)_ |
 | `task-engine` | Tasks, wishlist, transitions, dashboard summaries, persistence | _(none)_ |
 | `approvals` | Human approval queue for sensitive workflow decisions | _(none)_ |
 | `planning` | Guided `build-plan` interviews and wishlist artifact output | _(none)_ |

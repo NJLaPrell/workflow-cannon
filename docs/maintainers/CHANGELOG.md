@@ -8,6 +8,22 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 (none)
 
+## [0.23.0] - 2026-03-28
+
+Phase 23 — **agent-behavior** module (`T420`–`T424`): advisory interaction profiles, workspace persistence (JSON or unified SQLite), guided interview, maintainer/agent docs + requestable Cursor rule.
+
+### Added
+
+- **`agent-behavior` module** — builtins (`builtin:cautious`, `builtin:balanced`, `builtin:calculated`, `builtin:experimental`), custom profiles, `resolve` + provenance, deterministic `explain` / `diff`.
+- **Commands** — `list-behavior-profiles`, `get-behavior-profile`, `resolve-behavior-profile`, `set-active-behavior-profile`, `create-behavior-profile`, `update-behavior-profile`, `delete-behavior-profile`, `diff-behavior-profiles`, `explain-behavior-profiles`, `interview-behavior-profile`.
+- **Schema** — `schemas/agent-behavior-profile.schema.json`; plan `docs/maintainers/plans/agent-behavior-module.md`.
+- **`ModuleCapability`** — `agent-behavior`.
+- **`.cursor/rules/agent-behavior.mdc`** (requestable) and **AGENTS** / **AGENT-CLI-MAP** guidance.
+
+### Changed
+
+- **Default registry** — `agent-behavior` registered after `documentation` (no new hard dependencies).
+
 ## [0.22.0] - 2026-03-28
 
 Phase 21 — agent reliability and planning dashboard signals (`T404`–`T414` scope): long-session maintainer guidance, persisted `build-plan` session snapshot for `dashboard-summary`, and extension dashboard visibility.
