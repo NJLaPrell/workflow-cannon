@@ -2,6 +2,7 @@ import type {
   ModuleCommandResult,
   ResponseTemplateApplicationMeta
 } from "../contracts/module-contract.js";
+import type { ResponseTemplateErrorCode } from "./error-codes.js";
 import {
   type ResponseTemplateEnforcementMode,
   truncateTemplateWarning
@@ -137,7 +138,7 @@ export function applyResponseTemplateApplication(
     return {
       ...result,
       ok: false,
-      code: "response-template-conflict",
+      code: "response-template-conflict" satisfies ResponseTemplateErrorCode,
       message: strictViolations[0]!,
       responseTemplate: buildMeta(
         {
@@ -163,7 +164,7 @@ export function applyResponseTemplateApplication(
       return {
         ...result,
         ok: false,
-        code: "response-template-invalid",
+        code: "response-template-invalid" satisfies ResponseTemplateErrorCode,
         message: truncateTemplateWarning(`Unknown response template '${chosenId}'.`),
         responseTemplate: buildMeta(
           {
