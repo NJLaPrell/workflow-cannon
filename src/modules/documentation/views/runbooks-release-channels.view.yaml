@@ -1,0 +1,18 @@
+id: runbooks-release-channels
+version: 1
+doc_type: runbooks-release-channels
+target: runbooks/release-channels.md
+source_profile: runbook
+sections:
+  - id: meta
+    source: meta
+    renderer: renderMetaSection
+  - id: rules
+    source: rules
+    renderer: renderRuleSection
+  - id: decisions
+    source: decisions
+    renderer: renderDecisionSection
+render_policies:
+  - id: default
+    mode: append

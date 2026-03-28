@@ -1,0 +1,18 @@
+id: workbooks-phase2-config-policy-workbook
+version: 1
+doc_type: workbooks-phase2-config-policy-workbook
+target: workbooks/phase2-config-policy-workbook.md
+source_profile: workbook
+sections:
+  - id: meta
+    source: meta
+    renderer: renderMetaSection
+  - id: rules
+    source: rules
+    renderer: renderRuleSection
+  - id: decisions
+    source: decisions
+    renderer: renderDecisionSection
+render_policies:
+  - id: default
+    mode: append
