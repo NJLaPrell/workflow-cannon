@@ -1,13 +1,13 @@
 schema_version: 1
 current_kit_phase: "23"
 last_updated: "2026-03-28"
-active_focus: "Phase 23 shipped as **v0.23.0** (`agent-behavior`). Open: extension cockpit **T398–T402** (proposed on some branches); optional **T415–T419**; hygiene **T394–T397**."
+active_focus: "Phase 23 shipped as **v0.23.0** (`agent-behavior`). Deferred extension cockpit, task-engine ID ergonomics, and Phase-20 hygiene queues (**T394–T397**, **T398–T402**, **T415–T419**) **cancelled** in task-engine state 2026-03-28."
 blockers: []
 next_agent_actions:
   - "Phases 18–23 complete through `v0.23.0` per ROADMAP and CHANGELOG."
-  - "Optional backlog: **T415–T419**; hygiene **T394–T397**; extension **T398–T402** when tracked in task-engine state."
-  - "Validate each task with `pnpm run build && pnpm test` (and `pnpm run ext:compile` when extension scope) before marking complete."
+  - "Pick next work from ROADMAP / new tasks; validate with `pnpm run build && pnpm test` (and `pnpm run ext:compile` when extension scope) before marking complete."
 last_session_summary:
+  - "2026-03-28: Cancelled **T394–T397**, **T398–T402**, **T415–T419** via `run-transition` (reject/cancel + policyApproval) — maintainer deprioritization."
   - "2026-03-28: Shipped **v0.23.0** — `agent-behavior` module; **T420–T424** completed via task-engine transitions."
   - "2026-03-28: Phase 21 shipped as v0.22.0 — build-plan session file, dashboard-summary planningSession, extension dashboard, long-session AGENTS + runbook + requestable Cursor rule."
   - "2026-03-28: ROADMAP Phase 20/21 defined; ready tasks assigned phase strings via update-task; current_kit_phase advanced to 20."
@@ -26,7 +26,7 @@ pending_decisions: []
 metrics:
   updated_at: "2026-03-28"
   source: "maintainer"
-  notes: "v0.18.0 released Phase 17. Phases 18–19 complete in-repo. Phases 20–21 queued as v0.21.0 / v0.22.0 with 24 ready tasks split 13 + 11."
+  notes: "Through v0.23.0: Phases 18–23 shipped per CHANGELOG; Phase-20 follow-up task IDs T394–T402 and optional T415–T419 cancelled 2026-03-28."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null

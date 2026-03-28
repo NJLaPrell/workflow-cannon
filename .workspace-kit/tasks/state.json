@@ -6211,9 +6211,9 @@
       "id": "T394",
       "title": "[docs] ROADMAP Phase 20 detail section and execution evidence alignment",
       "type": "improvement",
-      "status": "ready",
+      "status": "cancelled",
       "createdAt": "2026-03-28T15:28:34.865Z",
-      "updatedAt": "2026-03-28T15:28:34.865Z",
+      "updatedAt": "2026-03-28T21:55:09.831Z",
       "priority": "P2",
       "phase": "Maintainer hygiene — post Phase 20/21",
       "approach": "The detailed Phase 20 subsection in docs/maintainers/ROADMAP.md still reads (in planning) while the summary lists v0.21.0 as released. Align subsection heading and narrative with shipped reality; add v0.22.0 to the execution evidence list if missing beside v0.21.0.",
@@ -6230,9 +6230,9 @@
       "id": "T395",
       "title": "[maintainer] Reconcile roadmap Phase 21 labels (T404–T414) with task-engine state",
       "type": "improvement",
-      "status": "ready",
+      "status": "cancelled",
       "createdAt": "2026-03-28T15:28:41.693Z",
-      "updatedAt": "2026-03-28T15:28:41.693Z",
+      "updatedAt": "2026-03-28T21:55:09.906Z",
       "priority": "P2",
       "phase": "Maintainer hygiene — post Phase 20/21",
       "approach": "ROADMAP references T404–T414 but those task rows were never created in .workspace-kit/tasks/state.json. Either backfill proposed tasks per roadmap slice with dependencies, or record an explicit maintainer decision that Phase 21 shipped without per-ID rows and how future work will be tracked.",
@@ -6251,9 +6251,9 @@
       "id": "T396",
       "title": "[refactor] Complete T388 — full typed command manifest wiring",
       "type": "improvement",
-      "status": "ready",
+      "status": "cancelled",
       "createdAt": "2026-03-28T15:28:46.445Z",
-      "updatedAt": "2026-03-28T15:28:46.445Z",
+      "updatedAt": "2026-03-28T21:55:09.980Z",
       "priority": "P3",
       "phase": "Phase 22 — Maintainer platform",
       "approach": "T388 partially shipped (types + per-module policy-sensitive lists). Complete single manifest-driven command metadata: registrations, policy mapping, response-template alignment, and drift checks per original T388 acceptance.",
@@ -6273,9 +6273,9 @@
       "id": "T397",
       "title": "[maintainer] Close Phase 20/21 roadmap tasks in task-engine state with release evidence",
       "type": "improvement",
-      "status": "ready",
+      "status": "cancelled",
       "createdAt": "2026-03-28T15:28:52.202Z",
-      "updatedAt": "2026-03-28T15:28:52.202Z",
+      "updatedAt": "2026-03-28T21:55:10.054Z",
       "priority": "P2",
       "phase": "Maintainer hygiene — post Phase 20/21",
       "approach": "Phase 20 and 21 work merged and tagged (v0.21.0, v0.22.0) but lifecycle rows for T388–T393 (and any other in-scope ids) were not transitioned via workspace-kit. Audit which tasks match shipped work, transition to completed with rationale referencing PRs/tags, or cancel/supersede with explicit notes.",
@@ -6293,9 +6293,9 @@
       "id": "T398",
       "title": "[extension] Remove dashboard “data from…” copy and tighten header",
       "type": "workspace-kit",
-      "status": "proposed",
+      "status": "cancelled",
       "createdAt": "2026-03-28T15:32:29.772Z",
-      "updatedAt": "2026-03-28T15:32:29.772Z",
+      "updatedAt": "2026-03-28T21:55:09.069Z",
       "phase": "Extension cockpit",
       "approach": "Delete the explanatory line in DashboardViewProvider that cites dashboard-summary; keep refresh/actions. Optionally align muted helper text with maintainer docs if anything replaces it.",
       "technicalScope": [
@@ -6310,9 +6310,9 @@
       "id": "T399",
       "title": "[extension] Tasks view: all task types visible + wishlist namespace",
       "type": "workspace-kit",
-      "status": "proposed",
+      "status": "cancelled",
       "createdAt": "2026-03-28T15:32:29.840Z",
-      "updatedAt": "2026-03-28T15:32:29.840Z",
+      "updatedAt": "2026-03-28T21:55:09.145Z",
       "phase": "Extension cockpit",
       "approach": "Extend tree (or companion section) so maintainers see tasks across all `type` values and open wishlist items. Use existing `list-tasks` (no type filter) plus `list-wishlist` / `get-wishlist` for detail; group or label by type and by namespace (T### vs W###).",
       "technicalScope": [
@@ -6331,9 +6331,9 @@
       "id": "T400",
       "title": "[extension] Full task (and wishlist) detail on click",
       "type": "workspace-kit",
-      "status": "proposed",
+      "status": "cancelled",
       "createdAt": "2026-03-28T15:32:29.910Z",
-      "updatedAt": "2026-03-28T15:32:29.910Z",
+      "updatedAt": "2026-03-28T21:55:09.222Z",
       "phase": "Extension cockpit",
       "approach": "Replace the thin markdown preview from `showTaskDetail` with a webview panel or structured document that renders every persisted field from `get-task` (approach, technicalScope, acceptanceCriteria, dependsOn, unblocks, type, phase, priority, ownership, metadata, timestamps, archived flags). Mirror for wishlist detail using `get-wishlist` fields per instruction.",
       "technicalScope": [
@@ -6350,9 +6350,9 @@
       "id": "T401",
       "title": "[extension] Config view: layered effective config display, then safe edit path",
       "type": "workspace-kit",
-      "status": "proposed",
+      "status": "cancelled",
       "createdAt": "2026-03-28T15:32:29.987Z",
-      "updatedAt": "2026-03-28T15:32:29.987Z",
+      "updatedAt": "2026-03-28T21:55:09.298Z",
       "phase": "Extension cockpit",
       "approach": "Phase 1: On load, fetch and render effective config (`workspace-kit config resolve` via CommandClient) plus key metadata (`config list --json --all` or explain per key) grouped by owning module / scope. Fix any parse/exec issues so the webview is not empty by default. Phase 2: Add edit for writable keys using `config set`/`unset` with documented WORKSPACE_KIT_POLICY_APPROVAL env requirement and UX prompt (or defer set to terminal) — match POLICY-APPROVAL.md.",
       "technicalScope": [
@@ -6370,9 +6370,9 @@
       "id": "T402",
       "title": "[extension] Dashboard/tasks/config UX hardening (follow-ups)",
       "type": "workspace-kit",
-      "status": "proposed",
+      "status": "cancelled",
       "createdAt": "2026-03-28T15:32:30.056Z",
-      "updatedAt": "2026-03-28T15:32:30.056Z",
+      "updatedAt": "2026-03-28T21:55:09.376Z",
       "phase": "Extension cockpit",
       "approach": "After T398–T401, polish: loading/error states, policy-denied messaging, deep links from status bar to filtered views, copy-to-clipboard for JSON payloads, keyboard focus, and CONTRIBUTING or extension README note for contributors.",
       "technicalScope": [
@@ -6388,9 +6388,9 @@
       "id": "T415",
       "title": "[task-engine] Optional auto-assigned T### ids for create-task / create-task-from-plan",
       "type": "improvement",
-      "status": "proposed",
+      "status": "cancelled",
       "createdAt": "2026-03-28T16:03:11.991Z",
-      "updatedAt": "2026-03-28T16:03:11.991Z",
+      "updatedAt": "2026-03-28T21:55:09.758Z",
       "priority": "P2",
       "phase": "Phase 22 — Agent / task-engine ergonomics",
       "approach": "Stop requiring agents to invent T numbers. When id is omitted, allocate next T### from max numeric suffix across all tasks (including archived), matching planning nextTaskId semantics. Refactor nextTaskId from planning into a shared task-engine helper so build-plan and Task Engine stay aligned. Extend idempotency so clientMutationId replays the same allocated task when id was omitted. Keep explicit id for scripts and compatibility.",
@@ -6414,9 +6414,9 @@
       "id": "T416",
       "title": "[task-engine] Optional auto-assigned W### ids for create-wishlist",
       "type": "improvement",
-      "status": "proposed",
+      "status": "cancelled",
       "createdAt": "2026-03-28T16:03:12.064Z",
-      "updatedAt": "2026-03-28T16:03:12.064Z",
+      "updatedAt": "2026-03-28T21:55:09.683Z",
       "priority": "P2",
       "phase": "Phase 22 — Agent / task-engine ergonomics",
       "approach": "Align create-wishlist with build-plan: when id is omitted, assign next W### from existing wishlist items. Reuse or share nextWishlistId logic with planning module.",
@@ -6437,9 +6437,9 @@
       "id": "T417",
       "title": "[task-engine] Optional per-row task id in convert-wishlist batch",
       "type": "improvement",
-      "status": "proposed",
+      "status": "cancelled",
       "createdAt": "2026-03-28T16:03:12.138Z",
-      "updatedAt": "2026-03-28T16:03:33.813Z",
+      "updatedAt": "2026-03-28T21:55:09.608Z",
       "priority": "P2",
       "phase": "Phase 22 — Agent / task-engine ergonomics",
       "approach": "Allow each tasks[] row to omit id; allocate sequential T### in array order after computing base from current store. Rows with explicit id keep current behavior. Document that dependsOn between brand-new tasks may require add-dependency after convert unless T419 ships.",
@@ -6464,9 +6464,9 @@
       "id": "T418",
       "title": "[docs] Agent task-engine ergonomics: response-first IDs and get-next-actions",
       "type": "improvement",
-      "status": "proposed",
+      "status": "cancelled",
       "createdAt": "2026-03-28T16:03:12.211Z",
-      "updatedAt": "2026-03-28T16:03:12.211Z",
+      "updatedAt": "2026-03-28T21:55:09.533Z",
       "priority": "P3",
       "phase": "Phase 22 — Agent / task-engine ergonomics",
       "approach": "Reduce redundant CLI steps in maintainer agent docs. State that create/convert responses carry canonical ids; that get-next-actions.suggestedNext is already a full task entity so get-task is optional for queue head; tune AGENT-CLI-MAP and AGENTS.md (and .ai mirror if applicable).",
@@ -6486,9 +6486,9 @@
       "id": "T419",
       "title": "[task-engine] Optional relative dependsOn in convert-wishlist (cross-new-task deps)",
       "type": "improvement",
-      "status": "proposed",
+      "status": "cancelled",
       "createdAt": "2026-03-28T16:03:12.283Z",
-      "updatedAt": "2026-03-28T16:03:33.891Z",
+      "updatedAt": "2026-03-28T21:55:09.455Z",
       "priority": "P3",
       "phase": "Phase 22 — Agent / task-engine ergonomics",
       "approach": "Follow-up to T415–T417: allow dependsOn in convert payload to reference sibling rows by stable index or placeholder syntax resolved after id allocation, so agents do not need a second add-dependency pass for common decomposition patterns.",
@@ -12456,9 +12456,289 @@
       "dependentsUnblocked": [],
       "timestamp": "2026-03-28T17:26:41.330Z",
       "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T398-2026-03-28T21:55:09.069Z-20b363bb",
+      "taskId": "T398",
+      "fromState": "proposed",
+      "toState": "cancelled",
+      "action": "reject",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T21:55:09.069Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T399-2026-03-28T21:55:09.145Z-4360d0db",
+      "taskId": "T399",
+      "fromState": "proposed",
+      "toState": "cancelled",
+      "action": "reject",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T21:55:09.145Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T400-2026-03-28T21:55:09.222Z-7d66e512",
+      "taskId": "T400",
+      "fromState": "proposed",
+      "toState": "cancelled",
+      "action": "reject",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T21:55:09.222Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T401-2026-03-28T21:55:09.298Z-154ac353",
+      "taskId": "T401",
+      "fromState": "proposed",
+      "toState": "cancelled",
+      "action": "reject",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T21:55:09.298Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T402-2026-03-28T21:55:09.376Z-d340255d",
+      "taskId": "T402",
+      "fromState": "proposed",
+      "toState": "cancelled",
+      "action": "reject",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T21:55:09.376Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T419-2026-03-28T21:55:09.455Z-d570af97",
+      "taskId": "T419",
+      "fromState": "proposed",
+      "toState": "cancelled",
+      "action": "reject",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T21:55:09.455Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T418-2026-03-28T21:55:09.533Z-b61bf489",
+      "taskId": "T418",
+      "fromState": "proposed",
+      "toState": "cancelled",
+      "action": "reject",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T21:55:09.533Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T417-2026-03-28T21:55:09.608Z-90591def",
+      "taskId": "T417",
+      "fromState": "proposed",
+      "toState": "cancelled",
+      "action": "reject",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T21:55:09.608Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T416-2026-03-28T21:55:09.683Z-28c28bb9",
+      "taskId": "T416",
+      "fromState": "proposed",
+      "toState": "cancelled",
+      "action": "reject",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T21:55:09.683Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T415-2026-03-28T21:55:09.758Z-2ec683a1",
+      "taskId": "T415",
+      "fromState": "proposed",
+      "toState": "cancelled",
+      "action": "reject",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T21:55:09.758Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T394-2026-03-28T21:55:09.831Z-15065eae",
+      "taskId": "T394",
+      "fromState": "ready",
+      "toState": "cancelled",
+      "action": "cancel",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T21:55:09.831Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T395-2026-03-28T21:55:09.906Z-e26d5d3c",
+      "taskId": "T395",
+      "fromState": "ready",
+      "toState": "cancelled",
+      "action": "cancel",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T21:55:09.906Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T396-2026-03-28T21:55:09.980Z-3a20a49f",
+      "taskId": "T396",
+      "fromState": "ready",
+      "toState": "cancelled",
+      "action": "cancel",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T21:55:09.980Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T397-2026-03-28T21:55:10.054Z-f00ac24e",
+      "taskId": "T397",
+      "fromState": "ready",
+      "toState": "cancelled",
+      "action": "cancel",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-28T21:55:10.054Z",
+      "actor": "NJLaPrell@gmail.com"
     }
   ],
-  "lastUpdated": "2026-03-28T17:26:41.330Z",
+  "lastUpdated": "2026-03-28T21:55:10.055Z",
   "mutationLog": [
     {
       "mutationId": "create-task-T319-2026-03-27T15:16:30.032Z-20b24ad2",
