@@ -8,6 +8,22 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 (none)
 
+## [0.22.0] - 2026-03-28
+
+Phase 21 — agent reliability and planning dashboard signals (`T404`–`T414` scope): long-session maintainer guidance, persisted `build-plan` session snapshot for `dashboard-summary`, and extension dashboard visibility.
+
+### Added
+
+- **`.workspace-kit/planning/build-plan-session.json`** (gitignored) — written while a `build-plan` interview is in progress or blocked on finalize; stores answers + `resumeCli`; cleared on successful interview completion.
+- **`dashboard-summary` → `data.planningSession`** — redacted summary (`schemaVersion`, timestamps, type, status, critical completion %, `resumeCli`) for operator UIs; `null` when no snapshot.
+- **Requestable Cursor rule** — `.cursor/rules/cursor-long-session-hygiene.mdc` (`alwaysApply: false`) plus runbook **`docs/maintainers/runbooks/cursor-long-session.md`**.
+- **Extension dashboard** — renders **Planning session** + resume CLI from `dashboard-summary`.
+
+### Changed
+
+- **Planning module** version **0.2.0**; compatibility matrix **`planning`** row aligned to **0.2.0**.
+- **`docs/maintainers/AGENTS.md`** — **Long threads and context reload** section.
+
 ## [0.21.0] - 2026-03-28
 
 Phase 20 — maintainer platform and documentation alignment (`T388`–`T393`, `T394`–`T397`, `T399`, `T400`, `T402`): architecture canon, module boundaries, policy command map decomposition, task-engine package surface, and CI guards.

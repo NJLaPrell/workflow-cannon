@@ -8,7 +8,7 @@
 The Cursor extension (`extensions/cursor-workflow-cannon`) already loads task data through the Task Engine (`dashboard-summary`, `list-tasks`, `get-task`, `run-transition`) rather than reading `.workspace-kit/tasks/state.json` directly. Two gaps remain:
 
 1. **Auto-refresh** — `StateWatcher` only watches `state.json` and `config.json`. When `tasks.persistenceBackend` is `sqlite`, mutations update the SQLite file (default `.workspace-kit/tasks/workspace-kit.db`), so the UI may stay stale until manual refresh.
-2. **Dashboard richness** — `dashboard-summary` already returns wishlist counts, blocked analysis, and ready-queue previews; the webview only shows a minimal subset (phase, focus, status counts, suggested next, last updated).
+2. **Dashboard richness** — `dashboard-summary` already returns wishlist counts, blocked analysis, and ready-queue previews; the webview only shows a minimal subset (phase, focus, status counts, suggested next, last updated). Phase 21 adds **`planningSession`** (in-flight `build-plan` summary + resume CLI) when `.workspace-kit/planning/build-plan-session.json` exists; the webview should stay aligned with that payload field.
 
 A third item is **sequenced after engine work**: **`list-tasks` filters** (Phase 16 `T337`) enable the extension to pass `phase` / `type` / etc. Extension wiring is tracked as **`T344`** and **`dependsOn` `T337`**.
 

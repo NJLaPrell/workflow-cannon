@@ -1,13 +1,14 @@
 schema_version: 1
-current_kit_phase: "21"
+current_kit_phase: "22"
 last_updated: "2026-03-28"
-active_focus: "Phase 20 (`v0.21.0`) shipped: maintainer docs, task-engine split, policy-sensitive command modules, orphan-instruction CI, compatibility matrix doc 0.3.0. Phase 21 (`v0.22.0`): agent reliability + planning dashboard (T404–T414)."
+active_focus: "Phase 21 (`v0.22.0`) shipped: build-plan session snapshot for dashboard-summary + extension, long-session AGENTS/runbook/requestable rule. Next: define Phase 22 scope in ROADMAP and task-engine state."
 blockers: []
 next_agent_actions:
-  - "Phase 18–20 complete and released through `v0.21.0` per ROADMAP and CHANGELOG."
-  - "Execute Phase 21 ready queue (T404–T414); respect T410→T411→T412/T413→T414 dependency chain for planning dashboard."
+  - "Phases 18–21 complete and released through `v0.22.0` per ROADMAP and CHANGELOG."
+  - "Plan Phase 22 in ROADMAP + task-engine; note T404–T414 IDs are roadmap labels — create concrete tasks if missing from state.json."
   - "Validate each task with `pnpm run build && pnpm test` (and `pnpm run ext:compile` for T412–T413) before marking complete."
 last_session_summary:
+  - "2026-03-28: Phase 21 shipped as v0.22.0 — build-plan session file, dashboard-summary planningSession, extension dashboard, long-session AGENTS + runbook + requestable Cursor rule."
   - "2026-03-28: ROADMAP Phase 20/21 defined; ready tasks assigned phase strings via update-task; current_kit_phase advanced to 20."
   - "2026-03-28: Duplicate proposed tasks T398, T401, T403 cancelled (superseded by T356/T357/T384 and completed T366–T376)."
   - "2026-03-28: Proposed backlog accepted to ready except duplicates; wishlist W2 converted to T410–T414."

@@ -13,6 +13,10 @@ workspace-kit run build-plan '{"planningType":"new-feature","outputMode":"respon
 workspace-kit run build-plan '{"planningType":"new-feature","outputMode":"tasks","persistTasks":true,"taskPhase":"Phase 18 - Module platform and state consolidation","answers":{"featureGoal":"...","placement":"CLI","technology":"TypeScript","targetAudience":"AI Agent Operators"},"finalize":true}'
 ```
 
+## Session snapshot (local)
+
+While an interview is **in progress** or **blocked on finalize**, the module writes a gitignored snapshot under **`.workspace-kit/planning/build-plan-session.json`** so **`dashboard-summary`** (and the Cursor extension dashboard) can show **Planning session** + a **resume CLI** line. The file is removed when the interview completes successfully (wishlist artifact, task output branch, response-only completion, or non-persisted wishlist-ready handoff).
+
 ## Arguments
 
 - `planningType` (required): one of `task-breakdown`, `sprint-phase`, `task-ordering`, `new-feature`, `change`.

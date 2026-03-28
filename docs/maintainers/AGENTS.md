@@ -17,6 +17,16 @@ Basic operating guidance for AI agents working in this repository.
 
 **Documentation precedence (conflict resolution):** If two sources disagree, walk the numbered list above — higher entries win for **governance and process**. For a short narrative map (router vs doctor catalog, policy surfaces, layering exceptions), see **`docs/maintainers/ARCHITECTURE.md` → Documentation precedence**.
 
+## Long threads and context reload
+
+When a session is long, was compacted, or you are unsure stale chat context matches the repo:
+
+1. Re-walk the **Source-of-truth order** (above) if governance or policy steps feel ambiguous.
+2. Run **`workspace-kit doctor`**, then **`workspace-kit run get-next-actions '{}'`** (or use the Workflow Cannon extension dashboard, which calls **`dashboard-summary`**).
+3. Re-read **`docs/maintainers/data/workspace-kit-status.yaml`** and the authoritative task list in **`.workspace-kit/tasks/state.json`** via CLI commands — do not rely on chat memory for task `status` or phase alone.
+4. Optional: attach **`.cursor/rules/cursor-long-session-hygiene.mdc`** in Cursor for a short reload checklist; prefer **requestable** rules over bloating always-on rules. See **`docs/maintainers/runbooks/cursor-long-session.md`**.
+5. **`/qt`** templates: any step that persists kit state must include the matching **`workspace-kit`** invocation from **`docs/maintainers/AGENT-CLI-MAP.md`** before you treat the template as closed.
+
 ## Core expectations
 
 - Use high autonomy when task intent is clear.

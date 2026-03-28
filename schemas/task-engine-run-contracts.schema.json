@@ -6,13 +6,13 @@
   "type": "object",
   "required": ["schemaVersion", "packageVersion", "moduleId", "commands"],
   "additionalProperties": false,
-  "packageVersion": "0.21.0",
+  "packageVersion": "0.22.0",
   "properties": {
     "schemaVersion": {
       "const": 1
     },
     "packageVersion": {
-      "const": "0.21.0",
+      "const": "0.22.0",
       "description": "Must match package.json version."
     },
     "moduleId": {
@@ -545,6 +545,7 @@
                 "schemaVersion",
                 "taskStoreLastUpdated",
                 "workspaceStatus",
+                "planningSession",
                 "stateSummary",
                 "readyQueueTop",
                 "readyQueueCount",
@@ -554,7 +555,24 @@
                 "suggestedNext",
                 "blockingAnalysis"
               ],
-              "additionalProperties": true
+              "additionalProperties": true,
+              "properties": {
+                "planningSession": {
+                  "type": ["object", "null"],
+                  "required": [
+                    "schemaVersion",
+                    "updatedAt",
+                    "planningType",
+                    "outputMode",
+                    "status",
+                    "completionPct",
+                    "answeredCritical",
+                    "totalCritical",
+                    "resumeCli"
+                  ],
+                  "additionalProperties": true
+                }
+              }
             }
           }
         }

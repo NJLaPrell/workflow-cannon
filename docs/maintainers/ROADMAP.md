@@ -33,7 +33,7 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - **Phase 18 (Module platform and state consolidation)** is **COMPLETE in-repo** for **`v0.19.0`**: **`T351`–`T365`** — three tracks: (A) planning engine agent orchestration hardening, (B) module pattern cleanup (centralized enrollment, handler maps, shared domain extraction, dead hook removal), (C) unified SQLite state DB with module schema registration, migration, export-on-commit snapshots, and CLI state queries.
 - **Phase 19 (Documentation module v2)** is **COMPLETE in-repo** for **`v0.20.0`**: **`T366`–`T376`** — v2 fully-keyed agent doc schema, runtime decomposition (parser, validator, normalizer, renderer), view-model-driven deterministic rendering replacing prose templates, hard migration of all `.ai/` docs, and test/docs update. Planning artifact: `W6`.
 - **Phase 20 (Maintainer platform and documentation alignment)** is **COMPLETE and released** as **`v0.21.0`**: **`T388`–`T393`**, **`T394`–`T397`**, **`T399`**, **`T400`**, **`T402`** — policy command lists per module + aggregation, command-manifest types (full manifest wiring remains follow-up for **`T388`**), module README and boundary docs, `src/modules` barrel policy, ARCHITECTURE/TERMS/module-build canon, task-engine internal split + public `index.ts`, and CI guard for orphan instruction markdown (with allowlist for non-command templates).
-- **Phase 21 (Agent reliability and planning dashboard)** is **in planning** for **`v0.22.0`**: **`T404`–`T409`**, **`T410`–`T414`** — Cursor rules globs and long-session hygiene, task-state integrity guidance, plus extension dashboard planning visibility (persisted in-flight context, `dashboard-summary` aggregation, webview panel, quick actions, maintainer contract docs).
+- **Phase 21 (Agent reliability and planning dashboard)** is **COMPLETE and released** as **`v0.22.0`**: **`T404`–`T409`**, **`T410`–`T414`** — requestable long-session Cursor rule + runbook, `AGENTS.md` reload ritual, `build-plan` session snapshot persisted for **`dashboard-summary`** / extension dashboard, maintainer docs and extension parity plan updated; optional task-state advisory remains **`pnpm run advisory:task-state-hand-edit`**.
 - Historical extraction and first-publish milestones remain recorded below as provenance.
 
 ## Phase plan and release cadence
@@ -271,7 +271,7 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
   - `pnpm run build`, `check`, and `test` pass on the release tag.
   - No contradiction between TERMS, module-build canon, and implemented `WorkflowModule` contract.
 
-### Phase 21 - Agent reliability and planning dashboard -> GitHub release `v0.22.0` (in planning)
+### Phase 21 - Agent reliability and planning dashboard -> GitHub release `v0.22.0` (COMPLETE)
 
 - Primary scope: **`T404`–`T409`**, **`T410`–`T414`**.
 - **Agent context reliability** (`T404`–`T409`): requestable Cursor rule globs; long-session reload ritual in `AGENTS.md`; slim always-on rules to pointer-first prose; `/qt` template closure reminders; optional stronger task-state integrity checks; maintainer session hygiene for long threads.
@@ -313,4 +313,5 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 - Patch **`v0.16.1`** (doctor SQLite validation + persisted `tasks.*` SQLite keys): publish workflow `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23659070618`
 - Phase 16 / `v0.17.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23667632451`
 - Phase 17 / `v0.18.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23671207437`
+- Phase 20 / `v0.21.0` GitHub release: `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.21.0`
 - npm package: `https://www.npmjs.com/package/@workflow-cannon/workspace-kit`
