@@ -162,6 +162,7 @@ export const planningModule: WorkflowModule = {
     id: "planning",
     version: "0.1.0",
     contractVersion: "1",
+    stateSchema: 1,
     capabilities: ["planning"],
     dependsOn: ["task-engine"],
     enabledByDefault: true,

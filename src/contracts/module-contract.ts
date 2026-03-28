@@ -79,6 +79,7 @@ export type ModuleRegistration = {
   id: string;
   version: string;
   contractVersion: "1";
+  stateSchema: number;
   capabilities: ModuleCapability[];
   dependsOn: string[];
   enabledByDefault: boolean;

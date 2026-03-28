@@ -18,6 +18,7 @@ export const improvementModule: WorkflowModule = {
     id: "improvement",
     version: "0.8.0",
     contractVersion: "1",
+    stateSchema: 1,
     capabilities: ["improvement"],
     dependsOn: ["task-engine", "planning"],
     enabledByDefault: true,

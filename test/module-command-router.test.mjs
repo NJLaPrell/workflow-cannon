@@ -147,6 +147,7 @@ test("ModuleCommandRouter detects duplicate command declarations", () => {
       id: "documentation-dup",
       version: "0.1.0",
       contractVersion: "1",
+    stateSchema: 1,
       capabilities: ["documentation"],
       dependsOn: [],
       enabledByDefault: true,

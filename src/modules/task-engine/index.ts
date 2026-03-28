@@ -269,6 +269,7 @@ export const taskEngineModule: WorkflowModule = {
     id: "task-engine",
     version: "0.6.0",
     contractVersion: "1",
+    stateSchema: 1,
     capabilities: ["task-engine"],
     dependsOn: [],
     enabledByDefault: true,

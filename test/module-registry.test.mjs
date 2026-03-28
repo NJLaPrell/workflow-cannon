@@ -129,6 +129,7 @@ test("ModuleRegistry rejects duplicate module IDs", () => {
       id: "task-engine",
       version: "0.2.0",
       contractVersion: "1",
+    stateSchema: 1,
       capabilities: ["task-engine"],
       dependsOn: [],
       enabledByDefault: true,
@@ -159,6 +160,7 @@ test("ModuleRegistry rejects missing dependencies", () => {
       id: "broken-module",
       version: "0.1.0",
       contractVersion: "1",
+    stateSchema: 1,
       capabilities: ["planning"],
       dependsOn: ["does-not-exist"],
       enabledByDefault: true,
@@ -189,6 +191,7 @@ test("ModuleRegistry rejects self-dependency", () => {
       id: "self-module",
       version: "0.1.0",
       contractVersion: "1",
+    stateSchema: 1,
       capabilities: ["planning"],
       dependsOn: ["self-module"],
       enabledByDefault: true,
@@ -219,6 +222,7 @@ test("ModuleRegistry rejects dependency cycles", () => {
       id: "module-a",
       version: "0.1.0",
       contractVersion: "1",
+    stateSchema: 1,
       capabilities: ["planning"],
       dependsOn: ["module-b"],
       enabledByDefault: true,
@@ -241,6 +245,7 @@ test("ModuleRegistry rejects dependency cycles", () => {
       id: "module-b",
       version: "0.1.0",
       contractVersion: "1",
+    stateSchema: 1,
       capabilities: ["approvals"],
       dependsOn: ["module-a"],
       enabledByDefault: true,
@@ -262,5 +267,36 @@ test("ModuleRegistry rejects dependency cycles", () => {
   assert.throws(
     () => new ModuleRegistry([moduleA, moduleB]),
     (error) => error instanceof ModuleRegistryError && error.code === "dependency-cycle"
+  );
+});
+
+test("ModuleRegistry rejects invalid stateSchema values", () => {
+  const invalidStateSchemaModule = {
+    registration: {
+      id: "broken-state-schema",
+      version: "0.1.0",
+      contractVersion: "1",
+      stateSchema: 0,
+      capabilities: ["planning"],
+      dependsOn: [],
+      enabledByDefault: true,
+      config: {
+        path: "src/modules/self-module/config.md",
+        format: "md"
+      },
+      state: {
+        path: "src/modules/self-module/state.md",
+        format: "md"
+      },
+      instructions: {
+        directory: "src/modules/self-module/instructions",
+        entries: []
+      }
+    }
+  };
+
+  assert.throws(
+    () => new ModuleRegistry([invalidStateSchemaModule]),
+    (error) => error instanceof ModuleRegistryError && error.code === "invalid-state-schema"
   );
 });

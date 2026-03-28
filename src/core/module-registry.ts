@@ -44,6 +44,18 @@ function validateDependencies(moduleMap: Map<string, WorkflowModule>): void {
   }
 }
 
+function validateRegistrationSchemas(moduleMap: Map<string, WorkflowModule>): void {
+  for (const module of moduleMap.values()) {
+    const schema = module.registration.stateSchema;
+    if (!Number.isInteger(schema) || schema < 1) {
+      throw new ModuleRegistryError(
+        "invalid-state-schema",
+        `Module '${module.registration.id}' must declare integer stateSchema >= 1`
+      );
+    }
+  }
+}
+
 function topologicalSort(moduleMap: Map<string, WorkflowModule>): WorkflowModule[] {
   const visited = new Set<string>();
   const inStack = new Set<string>();
@@ -219,6 +231,7 @@ function validateInstructionContracts(
 export function validateModuleSet(modules: WorkflowModule[], workspacePath?: string): void {
   const moduleMap = buildModuleMap(modules);
   validateDependencies(moduleMap);
+  validateRegistrationSchemas(moduleMap);
   validateInstructionContracts(moduleMap, workspacePath ?? process.cwd());
   topologicalSort(moduleMap);
 }
@@ -239,6 +252,7 @@ export class ModuleRegistry {
   constructor(modules: WorkflowModule[], options?: ModuleRegistryOptions) {
     this.moduleMap = buildModuleMap(modules);
     validateDependencies(this.moduleMap);
+    validateRegistrationSchemas(this.moduleMap);
     validateInstructionContracts(this.moduleMap, options?.workspacePath ?? process.cwd());
     this.modules = [...modules];
 
