@@ -15,6 +15,8 @@ Basic operating guidance for AI agents working in this repository.
 9. `docs/maintainers/TERMS.md` — canonical terminology
 10. `docs/maintainers/module-build-guide.md` — human-readable module development companion
 
+**Documentation precedence (conflict resolution):** If two sources disagree, walk the numbered list above — higher entries win for **governance and process**. For a short narrative map (router vs doctor catalog, policy surfaces, layering exceptions), see **`docs/maintainers/ARCHITECTURE.md` → Documentation precedence**.
+
 ## Core expectations
 
 - Use high autonomy when task intent is clear.

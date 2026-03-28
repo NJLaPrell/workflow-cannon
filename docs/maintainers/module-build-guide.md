@@ -24,7 +24,7 @@ Every module change must satisfy these baseline rules:
 - Include `registration.id`, `registration.version`, `registration.contractVersion`, `registration.capabilities`, and `registration.dependsOn`.
 - Include `registration.optionalPeers` when declaring soft module coupling (may be `[]`). Optional peers are not required to be enabled; `dependsOn` remains the hard requirement for enabled modules.
 - Include `registration.enabledByDefault`.
-- Include `registration.config`, `registration.state`, and `registration.instructions`.
+- Include `registration.config`, `registration.instructions`, and monotonic **`registration.stateSchema`** (integer; versions persisted module state rows when using unified SQLite storage — see `WorkflowModule` / `ModuleRegistration` in `src/contracts/module-contract.ts`). There is **no** `registration.state` object on the TypeScript contract; do not document one.
 - Keep dependencies explicit and valid for `ModuleRegistry` validation.
 - If modules are toggled at runtime, ensure every enabled module keeps its required dependencies enabled.
 - Workspace config (`modules.enabled` / `modules.disabled` in effective config) drives which modules are enabled for CLI `workspace-kit run` and related entrypoints; invalid module ids in config fail registry construction.
@@ -45,6 +45,7 @@ Every module change must satisfy these baseline rules:
 - `src/core/module-registry.ts`: dependency validation and startup ordering.
 - `src/core/module-command-router.ts`: enabled-module command discovery and dispatch.
 - `src/modules/`: module implementations and registration metadata.
+- `src/modules/index.ts` (**barrel**): exports `defaultRegistryModules` for CLI/config bootstrap and **selective** re-exports for integrators/tests (see **Barrel export policy** below).
 - `src/modules/<module>/config.md`: module configuration contract.
 - Unified module state is versioned by `registration.stateSchema` and persisted in SQLite.
 - `src/modules/<module>/instructions/*.md`: function-like instruction files for module entrypoints.
@@ -59,7 +60,7 @@ Every module change must satisfy these baseline rules:
 
 - Define module scope and capability boundary.
 - Add module under `src/modules/<module-name>/`.
-- Implement `registration` and minimum required lifecycle hooks.
+- Implement `registration` and optional **`onCommand`** (the only runtime dispatch hook on `WorkflowModule` today). Older lifecycle-hook narratives are obsolete — do not document `onInstall` / `onEvent` style hooks unless reintroduced on the contract.
 - Add `config.md` and instruction files.
 - Wire instruction entries in registration (e.g. `document-project` -> `document-project.md`).
 - Export module from index surfaces.
@@ -95,6 +96,13 @@ Before merge or execution, confirm:
 - Policy/approval-model changes have explicit human approval.
 
 Stop work when there is unapproved critical risk (irreversible data loss or critical secret risk).
+
+## Barrel export policy (`src/modules/index.ts`)
+
+- **`defaultRegistryModules`**: canonical ordered array consumed by CLI (`run-command`, `doctor-planning-issues`, `config-cli`, etc.). Adding a module belongs here.
+- **Re-exports**: the barrel also exposes types and helpers for **package integrators, tests, and cross-package wiring** (for example `taskEngineModule`, `TaskStore`, documentation types). Not every module is re-exported symmetrically — that is intentional until a module has a stable external surface.
+- **Rule**: add a barrel re-export only when (a) tests or `src/` entrypoints need it without deep imports, or (b) the symbol is part of the supported npm API. Otherwise import from `src/modules/<module>/index.js` directly inside the repo.
+- **Changelog**: trimming or adding re-exports may impact npm consumers — note it in `docs/maintainers/CHANGELOG.md`.
 
 ## Definition Of Done
 

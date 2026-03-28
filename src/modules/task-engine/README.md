@@ -26,10 +26,17 @@ Phase 1 core module for structured task lifecycle management.
 | `create-wishlist` / `list-wishlist` / `get-wishlist` / `update-wishlist` | Wishlist ideation (no task phase) |
 | `convert-wishlist` | Promote a wishlist item into one or more tasks; closes wishlist as `converted` |
 
+## Public API boundary
+
+- **Stable for cross-module use:** import planning persistence and shared types from **`src/core/planning/index.js`** (facade) rather than deep `task-engine` internals when possible.
+- **Task-engine barrel (`src/modules/index.ts`):** re-exports selected symbols (`taskEngineModule`, `TaskStore`, wishlist helpers, …) for CLI wiring and integrators — see **`docs/maintainers/module-build-guide.md` → Barrel export policy**.
+- **Internals:** `task-engine-internal.ts` holds module registration and `onCommand` dispatch; `index.ts` is the package-facing export surface.
+
 ## Architecture
 
 ```
-index.ts          Module registration + onCommand dispatch
+index.ts          Re-exports module + shared types/helpers
+task-engine-internal.ts  Registration + onCommand dispatch
 types.ts          Core type definitions
 transitions.ts    Allowed transition map, guards, TransitionValidator
 store.ts          File-backed JSON TaskStore

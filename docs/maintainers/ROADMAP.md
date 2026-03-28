@@ -30,8 +30,10 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - **Phase 15 (Task and wishlist SQLite persistence)** is **COMPLETE and released** as **`v0.16.0`**: **`T324`–`T334`** — ADR, pluggable `TaskStore`/`WishlistStore`, optional `better-sqlite3` dual-document database, `migrate-task-persistence`, atomic `convert-wishlist` on SQLite, config keys, tests/parity, and release packaging (`pnpm.onlyBuiltDependencies`).
 - **Phase 16 (Maintenance and stability)** is **COMPLETE and released** as **`v0.17.0`**: **`T335`–`T344`** — versioned Task Engine API schemas, stricter typed create paths, query filters and CLI map docs, idempotent mutations, model explainer command, optional runtime strict validation, TERMS glossary alignment, plus **extension** parity (SQLite file watching, richer dashboard, `list-tasks` filters after `T337`). Plan: `docs/maintainers/plans/extension-dashboard-parity-plan.md`.
 - **Phase 17 (Planning module guided workflows)** is **COMPLETE and released** as **`v0.18.0`**: **`T345`–`T350`** — planning module command surface, adaptive/hard-gated interview flow, rule-driven defaults, wishlist artifact composition/persistence, CLI guidance polish, and maintainer docs/test hardening.
-- **Phase 18 (Module platform and state consolidation)** is **in planning** for **`v0.19.0`**: **`T351`–`T365`** — three tracks: (A) planning engine agent orchestration hardening, (B) module pattern cleanup (centralized enrollment, handler maps, shared domain extraction, dead hook removal), (C) unified SQLite state DB with module schema registration, migration, export-on-commit snapshots, and CLI state queries.
-- **Phase 19 (Documentation module v2)** is **in planning** for **`v0.20.0`**: **`T366`–`T376`** — v2 fully-keyed agent doc schema, runtime decomposition (parser, validator, normalizer, renderer), view-model-driven deterministic rendering replacing prose templates, hard migration of all `.ai/` docs, and test/docs update. Planning artifact: `W6`.
+- **Phase 18 (Module platform and state consolidation)** is **COMPLETE in-repo** for **`v0.19.0`**: **`T351`–`T365`** — three tracks: (A) planning engine agent orchestration hardening, (B) module pattern cleanup (centralized enrollment, handler maps, shared domain extraction, dead hook removal), (C) unified SQLite state DB with module schema registration, migration, export-on-commit snapshots, and CLI state queries.
+- **Phase 19 (Documentation module v2)** is **COMPLETE in-repo** for **`v0.20.0`**: **`T366`–`T376`** — v2 fully-keyed agent doc schema, runtime decomposition (parser, validator, normalizer, renderer), view-model-driven deterministic rendering replacing prose templates, hard migration of all `.ai/` docs, and test/docs update. Planning artifact: `W6`.
+- **Phase 20 (Maintainer platform and documentation alignment)** is **COMPLETE and released** as **`v0.21.0`**: **`T388`–`T393`**, **`T394`–`T397`**, **`T399`**, **`T400`**, **`T402`** — policy command lists per module + aggregation, command-manifest types (full manifest wiring remains follow-up for **`T388`**), module README and boundary docs, `src/modules` barrel policy, ARCHITECTURE/TERMS/module-build canon, task-engine internal split + public `index.ts`, and CI guard for orphan instruction markdown (with allowlist for non-command templates).
+- **Phase 21 (Agent reliability and planning dashboard)** is **in planning** for **`v0.22.0`**: **`T404`–`T409`**, **`T410`–`T414`** — Cursor rules globs and long-session hygiene, task-state integrity guidance, plus extension dashboard planning visibility (persisted in-flight context, `dashboard-summary` aggregation, webview panel, quick actions, maintainer contract docs).
 - Historical extraction and first-publish milestones remain recorded below as provenance.
 
 ## Phase plan and release cadence
@@ -220,7 +222,7 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
   - `pnpm run build`, `check`, `test`, `parity`, `check-release-metadata`, `phase5-gates`, and `check-planning-consistency` pass on the release tag.
   - Maintainer docs (`AGENT-CLI-MAP`, planning runbook, module instructions) align with command behavior and config defaults.
 
-### Phase 18 - Module platform and state consolidation -> GitHub release `v0.19.0`
+### Phase 18 - Module platform and state consolidation -> GitHub release `v0.19.0` (COMPLETE in-repo)
 
 - Primary scope: **`T351`–`T365`** across three tracks.
 - **Track A — Planning engine agent orchestration hardening** (`T351`–`T355`): explicit planning output mode contracts (wishlist/tasks/response), strict adaptive follow-up gating, task-output mode from planning flow, effort/risk/ordering scoring hints, and normalized planning response schemas with hardened docs/tests.
@@ -236,7 +238,7 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
   - `state export` / `state import` round-trips produce identical output.
   - Module-build documentation (`.ai/module-build.md`, `docs/maintainers/module-build-guide.md`) reflects the new state and handler patterns.
 
-### Phase 19 - Documentation module v2 -> GitHub release `v0.20.0`
+### Phase 19 - Documentation module v2 -> GitHub release `v0.20.0` (COMPLETE in-repo)
 
 - Primary scope: **`T366`–`T376`** — documentation module schema upgrade and runtime decomposition. Planning artifact: **`W6`**.
 - **Schema v2** (`T366`): rewrite `documentation-schema.md` for fully-keyed fields, consolidated prefixes (`cmd`/`command` unify to `command`), new `example` record type, required `why` on `rule`, typed `ref` with `type`/`anchor`/`label`/`status`. `meta` line uses `schema=base.v2`.
@@ -256,6 +258,29 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
   - All 17 `.ai/` files parse and validate under v2 schema.
   - `generate-document` and `document-project` produce deterministic human docs from canonical records via view models.
   - `runtime.ts` is under 300 lines with all logic in dedicated files.
+
+### Phase 20 - Maintainer platform and documentation alignment -> GitHub release `v0.21.0` (in planning)
+
+- Primary scope: **`T388`**, **`T389`–`T393`**, **`T394`–`T397`**, **`T399`**, **`T400`**, **`T402`**.
+- **Command metadata** (`T388`): single typed command manifest to replace scattered command metadata (improvement slice; aligns with handler extraction work).
+- **Module structure** (`T389`–`T393`): `src/modules/README` vs shipped registry; core↔modules layering notes in ARCHITECTURE/`src/README`; slim task-engine `index.ts` post-command extraction; planning module vs planning persistence disambiguation; `src/modules/index.ts` barrel export policy.
+- **Architecture and canon** (`T394`–`T397`, `T399`, `T400`, `T402`): rewrite ARCHITECTURE as current system map; documentation source-of-truth precedence; TERMS Related docs / glossary; reconcile module-build-guide with `.ai/module-build.md` and `module-contract.ts`; task-engine public boundary and re-exports; lifecycle hook narrative vs runtime truth; CI guardrail for orphan instruction markdown.
+- Outcome: contributor-facing docs and module boundaries match shipped code; fewer stale enrollment or instruction surfaces; clearer export and hook contracts.
+- Exit signals:
+  - Listed tasks are **`completed`** in task-engine state.
+  - `pnpm run build`, `check`, and `test` pass on the release tag.
+  - No contradiction between TERMS, module-build canon, and implemented `WorkflowModule` contract.
+
+### Phase 21 - Agent reliability and planning dashboard -> GitHub release `v0.22.0` (in planning)
+
+- Primary scope: **`T404`–`T409`**, **`T410`–`T414`**.
+- **Agent context reliability** (`T404`–`T409`): requestable Cursor rule globs; long-session reload ritual in `AGENTS.md`; slim always-on rules to pointer-first prose; `/qt` template closure reminders; optional stronger task-state integrity checks; maintainer session hygiene for long threads.
+- **Planning dashboard** (`T410`–`T414`): persist in-flight `build-plan` context for dashboard signals; aggregate planning visibility into `dashboard-summary`; extension dashboard panel + active-context refresh; planning quick actions from dashboard; maintainer docs and extension parity plan alignment.
+- Outcome: agents re-anchor on canon and CLI under long context; operators see planning health and shortcuts from the extension without breaking the thin-client model.
+- Exit signals:
+  - Listed tasks are **`completed`** in task-engine state.
+  - `pnpm run build`, `check`, `test`, and extension compile (`pnpm run ext:compile` or documented equivalent) pass where extension tasks apply.
+  - `dashboard-summary` contract and planning context paths are documented for extension consumers.
 
 ## Recorded decisions
 

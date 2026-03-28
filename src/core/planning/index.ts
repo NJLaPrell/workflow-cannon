@@ -1,8 +1,9 @@
 /**
  * Shared planning-domain exports for cross-module consumers.
  *
- * This keeps non-task-engine modules from importing deep task-engine paths directly.
- * task-engine continues to own implementations while this surface stabilizes import paths.
+ * **Planning persistence** (task + wishlist stores, SQLite/JSON) lives in `src/modules/task-engine/`.
+ * The **`planning` module** (`src/modules/planning/`) is the CLI interview surface (`build-plan`, …).
+ * This facade keeps non-task-engine modules from importing deep task-engine paths; implementations stay in task-engine.
  */
 export { openPlanningStores } from "../../modules/task-engine/planning-open.js";
 export { TaskStore } from "../../modules/task-engine/store.js";

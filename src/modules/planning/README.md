@@ -10,3 +10,7 @@ CLI-native planning workflows for task breakdowns, sprint/phase planning, orderi
   - `build-plan` (Phase 17 scaffold response)
 
 Later Phase 17 tasks add adaptive guided questioning, rule-driven flow defaults, hard critical-unknown gating, and wishlist artifact generation.
+
+## Relationship to task-engine / persistence
+
+This module emits planning output and may finalize artifacts into the **wishlist** via shared stores. **Persistence** (`TaskStore`, `WishlistStore`, `openPlanningStores`, SQLite) is owned by the **task-engine** module and re-exported through **`src/core/planning/`** for stable imports. See **`src/modules/task-engine/README.md`** and **Planning module vs planning persistence** in **`docs/maintainers/TERMS.md`**.

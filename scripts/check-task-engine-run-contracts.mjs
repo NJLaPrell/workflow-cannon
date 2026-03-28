@@ -3,7 +3,7 @@ import path from "node:path";
 import process from "node:process";
 
 const ROOT = process.cwd();
-const INDEX_PATH = path.join(ROOT, "src/modules/task-engine/index.ts");
+const INTERNAL_PATH = path.join(ROOT, "src/modules/task-engine/task-engine-internal.ts");
 const SCHEMA_PATH = path.join(ROOT, "schemas/task-engine-run-contracts.schema.json");
 const PKG_PATH = path.join(ROOT, "package.json");
 
@@ -20,7 +20,7 @@ function loadJson(filePath) {
   }
 }
 
-const indexSrc = fs.readFileSync(INDEX_PATH, "utf8");
+const indexSrc = fs.readFileSync(INTERNAL_PATH, "utf8");
 const pkg = loadJson(PKG_PATH);
 const schema = loadJson(SCHEMA_PATH);
 
@@ -32,7 +32,7 @@ if (schema.packageVersion !== pkg.version) {
 
 const commandNames = [...indexSrc.matchAll(/name:\s*"([a-z0-9-]+)"/g)].map((m) => m[1]);
 if (commandNames.length === 0) {
-  fail("Could not discover task-engine command names from index.ts.");
+  fail("Could not discover task-engine command names from task-engine-internal.ts.");
 }
 
 const commandSet = new Set(commandNames);
