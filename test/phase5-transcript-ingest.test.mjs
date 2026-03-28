@@ -9,6 +9,7 @@ import {
   ModuleCommandRouter,
   ModuleRegistry,
   approvalsModule,
+  documentationModule,
   improvementModule,
   planningModule,
   resolveWorkspaceConfigWithLayers,
@@ -48,10 +49,11 @@ test("Phase5: sync-transcripts copies new files and is idempotent", async () => 
 
   const registry = new ModuleRegistry([
     workspaceConfigModule,
+    documentationModule,
     taskEngineModule,
+    approvalsModule,
     planningModule,
-    improvementModule,
-    approvalsModule
+    improvementModule
   ]);
   const router = new ModuleCommandRouter(registry);
   const resolved = await resolveWorkspaceConfigWithLayers({ workspacePath, registry });

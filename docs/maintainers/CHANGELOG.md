@@ -8,6 +8,7 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ### Added
 
+- **`improvement.optionalPeers`** — lists `documentation` as an optional integration peer (must be present in the module map; appears in `getActivationReport` when the documentation module is disabled).
 - **`ModuleInstructionEntry.requiresPeers`** — optional peer module ids required for a command to register in `ModuleCommandRouter`; registry validates ids; router skips non-executable entries; `execute` returns `peer-module-disabled` if invoked without satisfied peers.
 - **`buildAgentInstructionSurface` / classification helpers** — full declared instruction catalog with `executable` + `degradation` and bundled `activationReport`.
 - **`workspace-kit doctor --agent-instruction-surface`** — after standard doctor checks, prints JSON `{ ok, code, data }` with `schemaVersion: 1` for tooling and agents.
