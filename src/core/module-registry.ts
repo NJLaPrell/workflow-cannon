@@ -44,6 +44,34 @@ function validateDependencies(moduleMap: Map<string, WorkflowModule>): void {
   }
 }
 
+function validateOptionalPeers(moduleMap: Map<string, WorkflowModule>): void {
+  for (const module of moduleMap.values()) {
+    const moduleId = module.registration.id;
+    const peers = module.registration.optionalPeers ?? [];
+    const hard = new Set(module.registration.dependsOn);
+    for (const peerId of peers) {
+      if (peerId === moduleId) {
+        throw new ModuleRegistryError(
+          "self-optional-peer",
+          `Module '${moduleId}' cannot list itself in optionalPeers`
+        );
+      }
+      if (!moduleMap.has(peerId)) {
+        throw new ModuleRegistryError(
+          "missing-optional-peer",
+          `Module '${moduleId}' lists unknown optional peer '${peerId}'`
+        );
+      }
+      if (hard.has(peerId)) {
+        throw new ModuleRegistryError(
+          "optional-peer-overlap-dependsOn",
+          `Module '${moduleId}' lists '${peerId}' in both dependsOn and optionalPeers`
+        );
+      }
+    }
+  }
+}
+
 function validateRegistrationSchemas(moduleMap: Map<string, WorkflowModule>): void {
   for (const module of moduleMap.values()) {
     const schema = module.registration.stateSchema;
@@ -228,9 +256,24 @@ function validateInstructionContracts(
   }
 }
 
+export type ModuleActivationEntry = {
+  moduleId: string;
+  enabled: boolean;
+  /** dependsOn entries not present in the enabled set (non-empty only if misconfigured). */
+  unsatisfiedHardDependencies: string[];
+  /** optionalPeers not currently enabled (informational). */
+  missingOptionalPeers: string[];
+};
+
+export type ModuleActivationReport = {
+  schemaVersion: 1;
+  modules: ModuleActivationEntry[];
+};
+
 export function validateModuleSet(modules: WorkflowModule[], workspacePath?: string): void {
   const moduleMap = buildModuleMap(modules);
   validateDependencies(moduleMap);
+  validateOptionalPeers(moduleMap);
   validateRegistrationSchemas(moduleMap);
   validateInstructionContracts(moduleMap, workspacePath ?? process.cwd());
   topologicalSort(moduleMap);
@@ -252,6 +295,7 @@ export class ModuleRegistry {
   constructor(modules: WorkflowModule[], options?: ModuleRegistryOptions) {
     this.moduleMap = buildModuleMap(modules);
     validateDependencies(this.moduleMap);
+    validateOptionalPeers(this.moduleMap);
     validateRegistrationSchemas(this.moduleMap);
     validateInstructionContracts(this.moduleMap, options?.workspacePath ?? process.cwd());
     this.modules = [...modules];
@@ -281,5 +325,24 @@ export class ModuleRegistry {
 
   getStartupOrder(): WorkflowModule[] {
     return [...this.sortedModules];
+  }
+
+  /** Snapshot for doctor / tooling: enablement and peer satisfaction. */
+  getActivationReport(): ModuleActivationReport {
+    const enabledIds = new Set(this.enabledModuleMap.keys());
+    const modules: ModuleActivationEntry[] = [];
+    for (const mod of this.modules) {
+      const id = mod.registration.id;
+      const optionalPeers = mod.registration.optionalPeers ?? [];
+      const missingOptionalPeers = optionalPeers.filter((p) => !enabledIds.has(p));
+      const unsatisfiedHardDependencies = mod.registration.dependsOn.filter((d) => !enabledIds.has(d));
+      modules.push({
+        moduleId: id,
+        enabled: enabledIds.has(id),
+        unsatisfiedHardDependencies,
+        missingOptionalPeers
+      });
+    }
+    return { schemaVersion: 1, modules };
   }
 }

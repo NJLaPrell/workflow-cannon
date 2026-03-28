@@ -30,6 +30,14 @@ export function getProjectConfigPath(workspacePath: string): string {
 /** Built-in defaults (lowest layer). */
 export const KIT_CONFIG_DEFAULTS: Record<string, unknown> = {
   core: {},
+  /**
+   * Module enablement: `enabled` whitelist (non-empty replaces default-by-flag set), then `disabled` subtracts.
+   * Empty arrays = no effect (all modules use registration.enabledByDefault).
+   */
+  modules: {
+    enabled: [] as string[],
+    disabled: [] as string[]
+  },
   tasks: {
     storeRelativePath: ".workspace-kit/tasks/state.json",
     strictValidation: false

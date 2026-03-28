@@ -80,6 +80,7 @@ export const workspaceConfigModule: WorkflowModule = {
     stateSchema: 1,
     capabilities: ["diagnostics"],
     dependsOn: [],
+    optionalPeers: [],
     enabledByDefault: true,
     config: {
       path: "src/modules/workspace-config/config.md",

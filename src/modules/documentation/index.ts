@@ -32,6 +32,7 @@ export const documentationModule: WorkflowModule = {
     stateSchema: 1,
     capabilities: ["documentation"],
     dependsOn: [],
+    optionalPeers: [],
     enabledByDefault: true,
     config: {
       path: "src/modules/documentation/config.md",

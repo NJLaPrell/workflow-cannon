@@ -4,6 +4,10 @@ import { stdin as processStdin, stdout as processStdout } from "node:process";
 import path from "node:path";
 import { ModuleRegistry } from "./module-registry.js";
 import {
+  pickModuleContractWorkspacePath,
+  resolveRegistryAndConfig
+} from "./module-registry-resolve.js";
+import {
   appendPolicyTrace,
   parsePolicyApprovalFromEnv,
   resolveActorWithFallback
@@ -116,8 +120,10 @@ async function writeConfigFileAtomic(fp: string, data: Record<string, unknown>):
   await fs.rename(tmp, fp);
 }
 
-function buildRegistry(): ModuleRegistry {
-  return new ModuleRegistry(defaultRegistryModules);
+function buildRegistry(workspacePath: string): ModuleRegistry {
+  return new ModuleRegistry(defaultRegistryModules, {
+    workspacePath: pickModuleContractWorkspacePath(workspacePath)
+  });
 }
 
 export type ConfigCliIo = {
@@ -201,7 +207,12 @@ export async function runWorkspaceConfigCli(
 
   let registry: ModuleRegistry;
   try {
-    registry = buildRegistry();
+    if (sub === "list") {
+      registry = buildRegistry(cwd);
+    } else {
+      const resolved = await resolveRegistryAndConfig(cwd, defaultRegistryModules);
+      registry = resolved.registry;
+    }
   } catch (e) {
     writeError(e instanceof Error ? e.message : String(e));
     return EXIT_INTERNAL_ERROR;

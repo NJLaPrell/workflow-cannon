@@ -7,6 +7,7 @@ import path from "node:path";
 import {
   ModuleRegistry,
   ModuleRegistryError,
+  moduleRegistryOptionsFromEffectiveConfig,
   approvalsModule,
   documentationModule,
   improvementModule,
@@ -298,5 +299,48 @@ test("ModuleRegistry rejects invalid stateSchema values", () => {
   assert.throws(
     () => new ModuleRegistry([invalidStateSchemaModule]),
     (error) => error instanceof ModuleRegistryError && error.code === "invalid-state-schema"
+  );
+});
+
+test("ModuleRegistry rejects optionalPeers overlapping dependsOn", () => {
+  const bad = {
+    ...documentationModule,
+    registration: {
+      ...documentationModule.registration,
+      id: "opt-overlap",
+      dependsOn: ["task-engine"],
+      optionalPeers: ["task-engine"]
+    }
+  };
+  assert.throws(
+    () => new ModuleRegistry([bad, taskEngineModule]),
+    (e) => e instanceof ModuleRegistryError && e.code === "optional-peer-overlap-dependsOn"
+  );
+});
+
+test("ModuleRegistry allows enabled module when optional peer is disabled", () => {
+  const harness = {
+    ...documentationModule,
+    registration: {
+      ...documentationModule.registration,
+      id: "opt-peer-harness",
+      dependsOn: [],
+      optionalPeers: ["task-engine"]
+    }
+  };
+  const registry = new ModuleRegistry([harness, taskEngineModule], {
+    enabledModules: ["opt-peer-harness"]
+  });
+  const row = registry.getActivationReport().modules.find((m) => m.moduleId === "opt-peer-harness");
+  assert.ok(row);
+  assert.equal(row.enabled, true);
+  assert.deepEqual(row.missingOptionalPeers, ["task-engine"]);
+});
+
+test("moduleRegistryOptionsFromEffectiveConfig rejects unknown module id", () => {
+  const known = new Set(["a", "b"]);
+  assert.throws(
+    () => moduleRegistryOptionsFromEffectiveConfig({ modules: { enabled: ["nope"] } }, known),
+    (e) => e instanceof ModuleRegistryError && e.code === "unknown-module-in-config"
   );
 });

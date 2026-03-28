@@ -657,7 +657,21 @@
         "boundaries": "Optional artifact; no CLI or policy changes.",
         "dependencyIntent": "Parallel with sibling T377–T382 unless a maintainer adds explicit dependsOn later."
       }
+    },
+    {
+      "id": "W13",
+      "status": "open",
+      "title": "Strict core layering: move planning persistence out of task-engine",
+      "problemStatement": "src/core/planning/index.ts re-exports implementations from src/modules/task-engine/, so the kernel depends on a capability module. This violates the mental model in src/README.md and complicates testing and packaging boundaries.",
+      "expectedOutcome": "Planning store and task store implementations live under core or adapters; task-engine imports them; core never imports modules. Alternatively, a formally versioned internal package boundary achieves the same dependency direction with explicit contracts.",
+      "impact": "Long-term maintainability, clearer layering for contributors, and safer extraction of the kit into smaller packages.",
+      "constraints": "Requires migration design, compatibility guarantees, and human approval per principles for upgrade-path changes; not a quick doc fix.",
+      "successSignals": "Dependency graph shows modules -> core only; core/planning facade removed or reduced to types-only; migration notes published; tests and check green.",
+      "requestor": "maintainer / module-structure review follow-up",
+      "evidenceRef": "chat:module-layout-review-20260327-item-6",
+      "createdAt": "2026-03-28T03:50:48.967Z",
+      "updatedAt": "2026-03-28T03:50:48.967Z"
     }
   ],
-  "lastUpdated": "2026-03-28T01:45:30.564Z"
+  "lastUpdated": "2026-03-28T03:50:48.967Z"
 }

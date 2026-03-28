@@ -1,5 +1,5 @@
-import { ModuleRegistry } from "../core/module-registry.js";
 import { ModuleCommandRouter } from "../core/module-command-router.js";
+import { resolveRegistryAndConfig } from "../core/module-registry-resolve.js";
 import {
   appendPolicyTrace,
   isSensitiveModuleCommandForEffective,
@@ -12,7 +12,6 @@ import {
 } from "../core/policy.js";
 import { getSessionGrant, recordSessionGrant, resolveSessionId } from "../core/session-policy.js";
 import { applyResponseTemplateApplication } from "../core/response-template-shaping.js";
-import { resolveWorkspaceConfigWithLayers } from "../core/workspace-kit-config.js";
 import { defaultRegistryModules } from "../modules/index.js";
 import { promptSensitiveRunApproval } from "./interactive-policy.js";
 
@@ -38,28 +37,10 @@ export async function handleRunCommand(
 ): Promise<number> {
   const { writeLine, writeError } = io;
 
-  const registry = new ModuleRegistry(defaultRegistryModules);
-  const router = new ModuleCommandRouter(registry);
-
   const subcommand = args[1];
-  if (!subcommand) {
-    const commands = router.listCommands();
-    writeLine("Available module commands:");
-    for (const cmd of commands) {
-      const desc = cmd.description ? ` — ${cmd.description}` : "";
-      writeLine(`  ${cmd.name} (${cmd.moduleId})${desc}`);
-    }
-    writeLine("");
-    writeLine(`Usage: workspace-kit run <command> [json-args]`);
-    writeLine(
-      `Instruction files: src/modules/<module>/instructions/<command>.md — policy-sensitive runs need JSON policyApproval (${POLICY_APPROVAL_HUMAN_DOC}).`
-    );
-    writeLine(`Agent-oriented tier table + copy-paste patterns: ${AGENT_CLI_MAP_HUMAN_DOC}.`);
-    return codes.success;
-  }
 
   let commandArgs: Record<string, unknown> = {};
-  if (args[2]) {
+  if (subcommand && args[2]) {
     try {
       const parsed = JSON.parse(args[2]);
       if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
@@ -81,18 +62,34 @@ export async function handleRunCommand(
       ? (commandArgs.config as Record<string, unknown>)
       : {};
 
+  let registry;
+  let router;
   let effective: Record<string, unknown>;
   try {
-    const resolved = await resolveWorkspaceConfigWithLayers({
-      workspacePath: cwd,
-      registry,
-      invocationConfig
-    });
-    effective = resolved.effective;
+    const resolved = await resolveRegistryAndConfig(cwd, defaultRegistryModules, invocationConfig);
+    registry = resolved.registry;
+    effective = resolved.effective as Record<string, unknown>;
+    router = new ModuleCommandRouter(registry);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    writeError(`Config resolution failed: ${message}`);
+    writeError(`Module registry / config resolution failed: ${message}`);
     return codes.validationFailure;
+  }
+
+  if (!subcommand) {
+    const commands = router.listCommands();
+    writeLine("Available module commands:");
+    for (const cmd of commands) {
+      const desc = cmd.description ? ` — ${cmd.description}` : "";
+      writeLine(`  ${cmd.name} (${cmd.moduleId})${desc}`);
+    }
+    writeLine("");
+    writeLine(`Usage: workspace-kit run <command> [json-args]`);
+    writeLine(
+      `Instruction files: src/modules/<module>/instructions/<command>.md — policy-sensitive runs need JSON policyApproval (${POLICY_APPROVAL_HUMAN_DOC}).`
+    );
+    writeLine(`Agent-oriented tier table + copy-paste patterns: ${AGENT_CLI_MAP_HUMAN_DOC}.`);
+    return codes.success;
   }
 
   const actor = await resolveActorWithFallback(cwd, commandArgs, process.env);

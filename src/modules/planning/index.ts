@@ -165,6 +165,7 @@ export const planningModule: WorkflowModule = {
     stateSchema: 1,
     capabilities: ["planning"],
     dependsOn: ["task-engine"],
+    optionalPeers: [],
     enabledByDefault: true,
     config: {
       path: "src/modules/planning/config.md",
