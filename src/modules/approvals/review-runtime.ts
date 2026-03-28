@@ -1,8 +1,6 @@
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
 import { appendLineageEvent } from "../../core/lineage-store.js";
-import type { TaskEntity } from "../task-engine/types.js";
-import { openPlanningStores } from "../task-engine/planning-open.js";
-import { TransitionService } from "../task-engine/service.js";
+import { openPlanningStores, TransitionService, type TaskEntity } from "../../core/planning/index.js";
 import {
   appendDecisionRecord,
   computeDecisionFingerprint,

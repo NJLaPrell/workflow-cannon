@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
-import type { TaskEntity } from "../task-engine/types.js";
-import { openPlanningStores } from "../task-engine/planning-open.js";
+import { openPlanningStores, type TaskEntity } from "../../core/planning/index.js";
 import { appendLineageEvent } from "../../core/lineage-store.js";
 import { loadImprovementState, saveImprovementState } from "./improvement-state.js";
 import {

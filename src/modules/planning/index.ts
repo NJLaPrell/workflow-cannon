@@ -10,14 +10,15 @@ import {
   resolvePlanningRulePack
 } from "./question-engine.js";
 import { composePlanningWishlistArtifact } from "./artifact.js";
-import { openPlanningStores } from "../task-engine/planning-open.js";
-import { validateKnownTaskTypeRequirements } from "../task-engine/task-type-validation.js";
 import {
+  openPlanningStores,
+  validateKnownTaskTypeRequirements,
   buildWishlistItemFromIntake,
-  validateWishlistIntakePayload
-} from "../task-engine/wishlist-validation.js";
-import type { WishlistItem } from "../task-engine/wishlist-types.js";
-import type { TaskEntity, TaskPriority } from "../task-engine/types.js";
+  validateWishlistIntakePayload,
+  type WishlistItem,
+  type TaskEntity,
+  type TaskPriority
+} from "../../core/planning/index.js";
 
 type PlanningOutputMode = "wishlist" | "tasks" | "response";
 
