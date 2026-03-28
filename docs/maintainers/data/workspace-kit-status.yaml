@@ -1,14 +1,16 @@
 schema_version: 1
-current_kit_phase: "18"
+current_kit_phase: "21"
 last_updated: "2026-03-28"
-active_focus: "Phase 18 planned (`v0.19.0`): module platform and state consolidation — three tracks: (A) planning engine agent orchestration hardening `T351`–`T355`, (B) module pattern cleanup `T356`–`T359`, (C) unified SQLite state DB `T360`–`T365`."
+active_focus: "Phase 20 (`v0.21.0`) shipped: maintainer docs, task-engine split, policy-sensitive command modules, orphan-instruction CI, compatibility matrix doc 0.3.0. Phase 21 (`v0.22.0`): agent reliability + planning dashboard (T404–T414)."
 blockers: []
 next_agent_actions:
-  - "Phase 18/19/16 backlog is `ready` (was `proposed`): begin Track A (`T351`, `T352`) and Track B (`T356`, `T357`, `T359`) in parallel — all have no dependencies; optional Phase 16 agent-doc tasks `T377`–`T382` in parallel."
-  - "After T356+T357, execute T358 (extract shared planning domain from task-engine)."
-  - "After T358, begin Track C sequentially: T360 → T361 → T362 → T363/T364 → T365."
-  - "Validate each task with `pnpm run build && pnpm test` before marking complete."
+  - "Phase 18–20 complete and released through `v0.21.0` per ROADMAP and CHANGELOG."
+  - "Execute Phase 21 ready queue (T404–T414); respect T410→T411→T412/T413→T414 dependency chain for planning dashboard."
+  - "Validate each task with `pnpm run build && pnpm test` (and `pnpm run ext:compile` for T412–T413) before marking complete."
 last_session_summary:
+  - "2026-03-28: ROADMAP Phase 20/21 defined; ready tasks assigned phase strings via update-task; current_kit_phase advanced to 20."
+  - "2026-03-28: Duplicate proposed tasks T398, T401, T403 cancelled (superseded by T356/T357/T384 and completed T366–T376)."
+  - "2026-03-28: Proposed backlog accepted to ready except duplicates; wishlist W2 converted to T410–T414."
   - "2026-03-28: After field review, all 32 proposed tasks (T351–T365, T366–T376, T377–T382) accepted to `ready` via `run-transition` action `accept`."
   - "2026-03-28: Agent CLI reliability: six `task-breakdown` planning runs created wishlist W7–W12, converted to proposed tasks T377–T382 (Phase 16 maintenance)."
   - "2026-03-28: Phase 19 planned (`v0.20.0`): documentation module v2 — v2 keyed schema, runtime decomposition, view-model rendering, hard .ai/ migration. Tasks T366–T376 created from planning artifact W6."
@@ -22,7 +24,7 @@ pending_decisions: []
 metrics:
   updated_at: "2026-03-28"
   source: "maintainer"
-  notes: "v0.18.0 released for Phase 17 (workflow 23671207437; tasks T345–T350). Phase 18 planned: 15 tasks across 3 tracks for v0.19.0. Phase 19 planned: 11 tasks (T366–T376) for v0.20.0 (documentation module v2)."
+  notes: "v0.18.0 released Phase 17. Phases 18–19 complete in-repo. Phases 20–21 queued as v0.21.0 / v0.22.0 with 24 ready tasks split 13 + 11."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null

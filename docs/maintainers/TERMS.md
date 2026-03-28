@@ -117,6 +117,26 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
   - **Defined in**: `docs/maintainers/AGENT-CLI-MAP.md`, `src/core/agent-instruction-surface.ts`.
   - **Enforced in**: `workspace-kit doctor --agent-instruction-surface` JSON output and router registration (`ModuleCommandRouter`).
 
+- **Planning module (CLI)**
+  - **Definition**: The `planning` capability module that runs guided **`build-plan`** interviews, rule packs, and wishlist artifact composition (`src/modules/planning/`).
+  - **Defined in**: `src/modules/planning/`, planning instructions, `docs/maintainers/runbooks/planning-workflow.md`.
+  - **Enforced in**: `workspace-kit run` planning commands and planning config keys.
+
+- **Planning persistence (task engine)**
+  - **Definition**: Task-engine–owned storage and services for **tasks** and **wishlist** JSON/SQLite documents (`openPlanningStores`, `TaskStore`, `WishlistStore`, migrations) exposed to other modules primarily via **`src/core/planning/`** facade exports.
+  - **Defined in**: `src/modules/task-engine/` (stores, `planning-open.ts`), `src/core/planning/index.ts`.
+  - **Enforced in**: Task engine commands, atomic `convert-wishlist`, optional SQLite dual store.
+
+- **Optional peer module (`optionalPeers`)**
+  - **Definition**: A module id listed on another module’s registration indicating integration when present; **missing optional peers do not block** registry construction (contrast with `dependsOn`).
+  - **Defined in**: `src/contracts/module-contract.ts` (`ModuleRegistration.optionalPeers`), module README / build guide.
+  - **Enforced in**: Registry validation and command availability (peer-aware features degrade gracefully).
+
+- **Requires peer (`requiresPeers` on an instruction entry)**
+  - **Definition**: Additional module ids that must be **enabled** for that **specific command** to register in the router (beyond the owning module).
+  - **Defined in**: `ModuleInstructionEntry.requiresPeers` in `src/contracts/module-contract.ts`, `docs/maintainers/AGENT-CLI-MAP.md`.
+  - **Enforced in**: `ModuleCommandRouter` registration and `peer-module-disabled` style outcomes when mis-invoked.
+
 - **Documentation-only instruction (degraded)**
   - **Definition**: A declared instruction whose markdown remains valid for manual/agent read-only workflows but is **not** registered as a `workspace-kit run` subcommand for the current config because required modules are disabled.
   - **Defined in**: `docs/maintainers/AGENT-CLI-MAP.md` and `docs/maintainers/POLICY-APPROVAL.md` (policy semantics unchanged).
@@ -127,6 +147,7 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
 - `README.md` — project intent and direction
 - `.ai/PRINCIPLES.md` — project goals and decision principles
 - `docs/maintainers/ROADMAP.md` — strategic decisions and phase context
-- `.workspace-kit/tasks/state.json` — canonical active execution state
-- `.workspace-kit/tasks/state.json` — execution view
+- `.workspace-kit/tasks/state.json` — canonical active execution state and queue
 - `docs/maintainers/RELEASING.md` — release gates and evidence expectations
+- `docs/maintainers/ARCHITECTURE.md` — system map (router, policy, persistence, layering)
+- `docs/maintainers/AGENT-CLI-MAP.md` — tier table and copy-paste `workspace-kit run` JSON

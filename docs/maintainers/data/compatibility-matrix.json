@@ -18,7 +18,7 @@
     },
     {
       "id": "documentation",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "contractVersion": "1",
       "compatibilityLevel": "strict",
       "supportedRuntime": "0.1",

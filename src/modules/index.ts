@@ -1,3 +1,6 @@
+/**
+ * Default module bundle + selective re-exports. Policy: see `docs/maintainers/module-build-guide.md` (Barrel export policy).
+ */
 import type { WorkflowModule } from "../contracts/module-contract.js";
 import { approvalsModule } from "./approvals/index.js";
 import { documentationModule } from "./documentation/index.js";

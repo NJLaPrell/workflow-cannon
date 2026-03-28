@@ -1,6 +1,10 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { execFile } from "node:child_process";
+import { APPROVALS_POLICY_COMMAND_NAMES } from "../modules/approvals/policy-sensitive-commands.js";
+import { DOCUMENTATION_POLICY_COMMAND_NAMES } from "../modules/documentation/policy-sensitive-commands.js";
+import { IMPROVEMENT_POLICY_COMMAND_NAMES } from "../modules/improvement/policy-sensitive-commands.js";
+import { TASK_ENGINE_POLICY_COMMAND_NAMES } from "../modules/task-engine/policy-sensitive-commands.js";
 
 export const POLICY_TRACE_SCHEMA_VERSION = 1 as const;
 
@@ -22,14 +26,21 @@ export type PolicyOperationId =
   | "improvement.generate-recommendations"
   | "improvement.ingest-transcripts";
 
-const COMMAND_TO_OPERATION: Record<string, PolicyOperationId | undefined> = {
-  "document-project": "doc.document-project",
-  "generate-document": "doc.generate-document",
-  "run-transition": "tasks.run-transition",
-  "review-item": "approvals.review-item",
-  "generate-recommendations": "improvement.generate-recommendations",
-  "ingest-transcripts": "improvement.ingest-transcripts"
-};
+function buildBuiltinCommandToOperation(): Record<string, PolicyOperationId | undefined> {
+  const pairs: ReadonlyArray<readonly [string, PolicyOperationId]> = [
+    ...DOCUMENTATION_POLICY_COMMAND_NAMES,
+    ...TASK_ENGINE_POLICY_COMMAND_NAMES,
+    ...APPROVALS_POLICY_COMMAND_NAMES,
+    ...IMPROVEMENT_POLICY_COMMAND_NAMES
+  ];
+  const out: Record<string, PolicyOperationId | undefined> = {};
+  for (const [name, op] of pairs) {
+    out[name] = op;
+  }
+  return out;
+}
+
+const COMMAND_TO_OPERATION: Record<string, PolicyOperationId | undefined> = buildBuiltinCommandToOperation();
 
 export function getOperationIdForCommand(commandName: string): PolicyOperationId | undefined {
   return COMMAND_TO_OPERATION[commandName];

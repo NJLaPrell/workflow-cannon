@@ -1,46 +1,80 @@
 # Architecture Overview
 
-This document provides a high-level architecture map for Workflow Cannon.
+This document is a **maintainer-facing system map** for Workflow Cannon (`@workflow-cannon/workspace-kit`). For phase history and release intent, see [`ROADMAP.md`](./ROADMAP.md).
 
 ## System intent
 
-Workflow Cannon is a modular developer workflow platform for VS Code users who want safe, reproducible, package-first workflow automation. It models planning, tasks, policy, and execution as versioned contracts, runs repeatable workflows with deterministic outcomes and evidence capture, and is designed to continuously improve itself through a human-governed enhancement loop fed by observed friction and outcome data.
+Workflow Cannon is a modular CLI-first workflow platform: structured **tasks** and **wishlist** ideation, **policy-governed** sensitive operations, optional **SQLite** persistence, and capability **modules** registered behind a single command router. A thin **Cursor extension** consumes JSON from `workspace-kit run` (no direct reads of `.workspace-kit/` state files in the webview).
 
-## Core architectural directions
+## Runtime shape
 
-- Modular capability system with explicit contracts, dependency graphs, and command dispatch.
-- Structured task engine with typed schemas, lifecycle transitions, and pluggable task-type adapters.
-- Deterministic configuration and policy evaluation with explainable precedence.
-- Human-governed enhancement loop that generates evidence-backed recommendations.
-- Package-first delivery with parity validation and release-blocking evidence gates.
-- Safe-by-default automation with dry-run, diff, and rollback support.
-- Observability and supportability as first-class design constraints.
+### CLI entry
 
-## Key building blocks
+- `workspace-kit` (`src/cli.ts`) resolves the workspace, builds **effective config** (layered: kit defaults → module defaults → project → env → invocation), constructs a **`ModuleRegistry`** from `defaultRegistryModules` (`src/modules/index.ts`), and dispatches `run` / `config` / `doctor` / `upgrade` / `init`.
 
-- Module Registry — validates dependency graph, enforces registration contracts, determines startup order.
-- Module Command Router — discovers, lists, and dispatches commands across enabled modules with alias resolution.
-- Documentation Module — template-driven generation for paired AI (`.ai/`) and human (`docs/maintainers/`) documentation surfaces.
-- Task Engine (Phase 1) — core schema, lifecycle transitions, and pluggable task-type adapters.
-- Configuration Registry (Phase 2) — typed config with deterministic precedence and explain output.
-- Policy Engine (Phase 2) — layered config with explain paths, approval gates, decision traces; maintainer-local task cutover docs (no packaged migration runtime in `v0.4.0`).
-- Config/policy hardening + UX (Phase 2b) — stricter validation, full effective-config resolution, versioned traces and config-driven sensitive ops; CLI `config` group, persisted layers, metadata-driven explain/docs, guardrails, and mutation evidence (`v0.4.1`).
-- Enhancement Engine (Phase 3) — recommendation intake, evidence-backed generation, and artifact lineage tracking (`v0.5.0`).
+### Module registry
 
-## Foundational design principles
+- **`defaultRegistryModules`** lists the shipped bundle: `workspace-config`, `documentation`, `task-engine`, `approvals`, `planning`, `improvement` (see [`src/modules/README.md`](../../src/modules/README.md)).
+- Registry validates **`dependsOn`**, honors **`optionalPeers`** / **`requiresPeers`** on instruction entries, and determines startup order.
+- Modules can be disabled via workspace config; disabled modules omit their commands from the router (see **Agent instruction surface** in [`TERMS.md`](./TERMS.md)).
 
-- Safety and trustworthiness take priority over speed and convenience.
-- Deterministic behavior for supported workflows; no silent degradation.
-- Backward-compatible evolution with explicit, documented migration paths.
-- Clear boundaries between canonical AI docs, generated human docs, and runtime state.
-- Evidence-backed decisions and auditable provenance for all changes.
-- Incremental, reversible changes preferred over broad rewrites.
+### Command router
+
+- **`ModuleCommandRouter`** (`src/core/module-command-router.ts`) aggregates **executable** commands for the enabled module set and resolves aliases.
+- **`workspace-kit run` with no subcommand** lists discovered commands (agent discovery path; see [`AGENT-CLI-MAP.md`](./AGENT-CLI-MAP.md)).
+- **`workspace-kit doctor --agent-instruction-surface`** returns the full **declared** instruction catalog (including documentation-only rows when peers are missing), distinct from router registration.
+
+### Policy and approvals
+
+- Sensitive `workspace-kit run` commands map to **`PolicyOperationId`** values for traces and **`policyApproval`** JSON (Tier A/B per [`POLICY-APPROVAL.md`](./POLICY-APPROVAL.md)).
+- Builtin command → operation bindings are assembled from per-module **`policy-sensitive-commands.ts`** files (avoid duplicating parallel maps in `policy.ts`).
+- `init` / `upgrade` / **`config` mutations** use env-based **`WORKSPACE_KIT_POLICY_APPROVAL`**, not the `run` JSON field.
+
+### Configuration
+
+- Typed keys and metadata live in the config registry; **`workspace-kit config`** and **`resolve-config`** / **`explain-config`** expose deterministic resolution for agents and humans.
+
+### Persistence
+
+- **Tasks** and **wishlist** default to JSON files; optional **`tasks.persistenceBackend: sqlite`** stores both documents in one SQLite file (see ADR under `docs/maintainers/`).
+- **Unified module state** (Phase 18 track) extends SQLite for additional module rows and CLI introspection (`get-module-state`, `list-module-states`) where enabled.
+
+## Layering and known exceptions
+
+- **Intended rule:** `modules/` may depend on `core/` and `contracts/`; avoid **sibling module** imports.
+- **Exceptions (stable facades):**
+  - **`src/core/planning/index.ts`** re-exports task-engine–owned planning stores and types so **planning**, **approvals**, and **improvement** import from `core/planning` instead of deep `task-engine` paths (implementations remain in task-engine).
+  - **`src/core/config-cli.ts`** imports **`defaultRegistryModules`** to bootstrap the registry for config resolution (documented exception to keep CLI wiring centralized).
+- **`src/README.md`** summarizes boundary intent; this section is the maintainer detail.
+
+### Planning module vs planning persistence
+
+- **Planning module** (`src/modules/planning/`): user-facing **`build-plan`** interviews, rules, and wishlist artifact output.
+- **Planning persistence** (task-engine / SQLite): **`openPlanningStores`**, `TaskStore`, `WishlistStore`, migrations — shared **execution** state for tasks and wishlist. The planning **module** consumes the facade under `core/planning`; it does not own the store implementations.
+
+## Key building blocks (concise)
+
+| Area | Role |
+| --- | --- |
+| **contracts** | `WorkflowModule`, instruction contracts, shared types |
+| **core** | Router, policy, config resolution, transcript hooks, unified DB helpers |
+| **modules** | Feature capabilities (task-engine, planning, documentation, …) |
+| **cli** | User-facing commands and `handleRunCommand` |
+| **extensions/cursor-workflow-cannon** | Thin client; calls packaged `workspace-kit run` |
+
+## Foundational principles
+
+- Safety and trustworthiness over speed; deterministic supported paths; evidence-backed changes (see [`.ai/PRINCIPLES.md`](../../.ai/PRINCIPLES.md)).
+
+## Documentation precedence
+
+When instructions conflict, follow the ordered list in [`AGENTS.md`](./AGENTS.md) (**Source-of-truth order**). In short: **`.ai/`** holds machine-oriented module contracts; **`docs/maintainers/`** holds human maintainer canon; **`.cursor/rules/`** mirror enforcement and must not contradict maintainer docs.
 
 ## Related docs
 
-- `docs/maintainers/ROADMAP.md` — strategic direction and phase plan
-- `.workspace-kit/tasks/state.json` — canonical execution queue and task dependencies
-- `.workspace-kit/tasks/state.json` — generated human-readable execution view
-- `docs/maintainers/RELEASING.md` — release process and evidence requirements
-- `.ai/PRINCIPLES.md` — canonical decision priorities
-- `.ai/module-build.md` — module development contract
+- [`ROADMAP.md`](./ROADMAP.md) — phases (including Phase 18 module platform + state consolidation and Phase 19 documentation v2)
+- [`.workspace-kit/tasks/state.json`](../../.workspace-kit/tasks/state.json) — canonical execution queue
+- [`RELEASING.md`](./RELEASING.md) — release gates and evidence
+- [`.ai/PRINCIPLES.md`](../../.ai/PRINCIPLES.md) — decision priorities
+- [`module-build-guide.md`](./module-build-guide.md) — module authoring
+- [`TERMS.md`](./TERMS.md) — glossary and workflow vocabulary

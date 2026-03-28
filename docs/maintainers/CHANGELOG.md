@@ -6,6 +6,12 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+(none)
+
+## [0.21.0] - 2026-03-28
+
+Phase 20 — maintainer platform and documentation alignment (`T388`–`T393`, `T394`–`T397`, `T399`, `T400`, `T402`): architecture canon, module boundaries, policy command map decomposition, task-engine package surface, and CI guards.
+
 ### Added
 
 - **`improvement.optionalPeers`** — lists `documentation` as an optional integration peer (must be present in the module map; appears in `getActivationReport` when the documentation module is disabled).
@@ -16,6 +22,16 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 - **`ModuleRegistry.getActivationReport()`** — per-module enablement, unsatisfied hard deps, and missing optional peers for tooling.
 - **Config-driven module toggles** — `modules.enabled` / `modules.disabled` in effective workspace config (defaults in kit layer); `workspace-kit run`, `config` CLI (non-list), and doctor planning checks resolve registry + config together via `resolveRegistryAndConfig`.
 - **`moduleRegistryOptionsFromEffectiveConfig`** — maps effective config to registry options with unknown-id errors.
+- **Per-module `policy-sensitive-commands.ts`** — documentation, task-engine, approvals, and improvement modules declare sensitive `run` operations; `policy.ts` aggregates via `buildBuiltinCommandToOperation()` (foundation for manifest-driven policy).
+- **`src/contracts/command-manifest.ts`** — shared types for future full command manifest wiring (`T388` follow-up).
+- **`scripts/check-orphan-instructions.mjs`** — fails `pnpm run check` when instruction markdown under a module is not referenced from that module’s root `.ts` sources (with a small allowlist for non-command templates).
+
+### Changed
+
+- **Task engine module layout** — implementation lives in `task-engine-internal.ts`; `index.ts` re-exports the public surface only (`T392`).
+- **Maintainer documentation** — `ARCHITECTURE.md`, `TERMS.md`, `module-build-guide.md`, `src/modules/README.md`, planning/task-engine module READMEs, and `.ai/module-build.md` aligned with shipped registry, SQLite state, and `onCommand`-only lifecycle.
+- **Compatibility matrix** — `documentation` module contract version set to **0.3.0** to match runtime registration.
+- **Release / CI scripts** — `check-task-engine-run-contracts` reads `task-engine-internal.ts`; `check-agent-cli-map-coverage` registers `task-engine` commands from `index.ts` + `task-engine-internal.ts` without false positives from transition guard names.
 
 ### Fixed (housekeeping)
 
