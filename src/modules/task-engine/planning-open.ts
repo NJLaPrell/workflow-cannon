@@ -15,12 +15,14 @@ export type OpenedPlanningStores =
       taskStore: TaskStore;
       sqliteDual: null;
       openWishlist: () => Promise<WishlistStore>;
+      close: () => void;
     }
   | {
       kind: "sqlite";
       taskStore: TaskStore;
       sqliteDual: SqliteDualPlanningStore;
       openWishlist: () => Promise<WishlistStore>;
+      close: () => void;
     };
 
 export async function openPlanningStores(ctx: ModuleLifecycleContext): Promise<OpenedPlanningStores> {
@@ -40,7 +42,8 @@ export async function openPlanningStores(ctx: ModuleLifecycleContext): Promise<O
         const w = WishlistStore.forSqliteDual(dual);
         await w.load();
         return w;
-      }
+      },
+      close: () => dual.close()
     };
   }
 
@@ -61,6 +64,7 @@ export async function openPlanningStores(ctx: ModuleLifecycleContext): Promise<O
       );
       await w.load();
       return w;
-    }
+    },
+    close: () => { /* JSON stores have no handles to release */ }
   };
 }

@@ -43,6 +43,14 @@ export class UnifiedStateDb {
     return this.db;
   }
 
+  /** Close the underlying database handle. Safe to call multiple times. */
+  close(): void {
+    if (this.db) {
+      this.db.close();
+      this.db = null;
+    }
+  }
+
   getModuleState(moduleId: string): ModuleStateRow | null {
     const db = this.ensureDb();
     const row = db

@@ -423,31 +423,35 @@ export const taskEngineModule: WorkflowModule = {
     }
     if (command.name === "list-module-states" || command.name === "get-module-state") {
       const unified = new UnifiedStateDb(ctx.workspacePath, planningSqliteDatabaseRelativePath(ctx));
-      if (command.name === "list-module-states") {
-        return {
-          ok: true,
-          code: "module-states-listed",
-          message: "Listed module state rows",
-          data: { rows: unified.listModuleStates() }
-        };
-      }
-      const moduleId = typeof args.moduleId === "string" ? args.moduleId.trim() : "";
-      if (!moduleId) {
-        return { ok: false, code: "invalid-task-schema", message: "get-module-state requires moduleId" };
-      }
-      const row = unified.getModuleState(moduleId);
-      return row
-        ? {
+      try {
+        if (command.name === "list-module-states") {
+          return {
             ok: true,
-            code: "module-state-read",
-            message: `Read module state for ${moduleId}`,
-            data: { row }
-          }
-        : {
-            ok: false,
-            code: "task-not-found",
-            message: `No module state found for '${moduleId}'`
+            code: "module-states-listed",
+            message: "Listed module state rows",
+            data: { rows: unified.listModuleStates() }
           };
+        }
+        const moduleId = typeof args.moduleId === "string" ? args.moduleId.trim() : "";
+        if (!moduleId) {
+          return { ok: false, code: "invalid-task-schema", message: "get-module-state requires moduleId" };
+        }
+        const row = unified.getModuleState(moduleId);
+        return row
+          ? {
+              ok: true,
+              code: "module-state-read",
+              message: `Read module state for ${moduleId}`,
+              data: { row }
+            }
+          : {
+              ok: false,
+              code: "task-not-found",
+              message: `No module state found for '${moduleId}'`
+            };
+      } finally {
+        unified.close();
+      }
     }
 
     let planning;
@@ -463,6 +467,8 @@ export const taskEngineModule: WorkflowModule = {
         message: `Failed to open task planning stores: ${(err as Error).message}`
       };
     }
+
+    try {
     const store = planning.taskStore;
 
     if (command.name === "run-transition") {
@@ -1322,5 +1328,9 @@ export const taskEngineModule: WorkflowModule = {
       code: "unsupported-command",
       message: `Task Engine does not support command '${command.name}'`
     };
+
+    } finally {
+      planning.close();
+    }
   }
 };
