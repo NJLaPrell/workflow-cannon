@@ -66,50 +66,58 @@ export const documentationModule: WorkflowModule = {
         : {};
     const options = parseOptions(rawOptions);
 
-    if (command.name === "document-project") {
-      const batchResult = await generateAllDocuments({ options }, ctx);
-      return {
-        ok: batchResult.ok,
-        code: batchResult.ok ? "documented-project" : "documentation-batch-failed",
-        message: batchResult.ok
-          ? `Generated ${batchResult.summary.succeeded} documents (${batchResult.summary.skipped} skipped)`
-          : `Batch failed: ${batchResult.summary.failed} of ${batchResult.summary.total} documents failed`,
-        data: {
-          summary: batchResult.summary,
-          results: batchResult.results.map((r) => ({
-            documentType: r.evidence.documentType,
-            ok: r.ok,
-            aiOutputPath: r.aiOutputPath,
-            humanOutputPath: r.humanOutputPath,
-            filesWritten: r.evidence.filesWritten,
-            filesSkipped: r.evidence.filesSkipped,
-          }))
-        }
-      };
-    }
+    const handlers: Record<string, () => Promise<{
+      ok: boolean;
+      code: string;
+      message?: string;
+      data?: Record<string, unknown>;
+    }>> = {
+      "document-project": async () => {
+        const batchResult = await generateAllDocuments({ options }, ctx);
+        return {
+          ok: batchResult.ok,
+          code: batchResult.ok ? "documented-project" : "documentation-batch-failed",
+          message: batchResult.ok
+            ? `Generated ${batchResult.summary.succeeded} documents (${batchResult.summary.skipped} skipped)`
+            : `Batch failed: ${batchResult.summary.failed} of ${batchResult.summary.total} documents failed`,
+          data: {
+            summary: batchResult.summary,
+            results: batchResult.results.map((r) => ({
+              documentType: r.evidence.documentType,
+              ok: r.ok,
+              aiOutputPath: r.aiOutputPath,
+              humanOutputPath: r.humanOutputPath,
+              filesWritten: r.evidence.filesWritten,
+              filesSkipped: r.evidence.filesSkipped
+            }))
+          }
+        };
+      },
+      "generate-document": async () => {
+        const result = await generateDocument(
+          {
+            documentType: typeof args.documentType === "string" ? args.documentType : undefined,
+            options
+          },
+          ctx
+        );
 
-    if (command.name === "generate-document") {
-      const result = await generateDocument(
-        {
-          documentType: typeof args.documentType === "string" ? args.documentType : undefined,
-          options
-        },
-        ctx
-      );
-
-      return {
-        ok: result.ok,
-        code: result.ok ? "generated-document" : "generation-failed",
-        message: result.ok
-          ? `Generated document '${args.documentType ?? "unknown"}'`
-          : `Failed to generate document '${args.documentType ?? "unknown"}'`,
-        data: {
-          aiOutputPath: result.aiOutputPath,
-          humanOutputPath: result.humanOutputPath,
-          evidence: result.evidence
-        }
-      };
-    }
+        return {
+          ok: result.ok,
+          code: result.ok ? "generated-document" : "generation-failed",
+          message: result.ok
+            ? `Generated document '${args.documentType ?? "unknown"}'`
+            : `Failed to generate document '${args.documentType ?? "unknown"}'`,
+          data: {
+            aiOutputPath: result.aiOutputPath,
+            humanOutputPath: result.humanOutputPath,
+            evidence: result.evidence
+          }
+        };
+      }
+    };
+    const handler = handlers[command.name];
+    if (handler) return handler();
 
     return {
       ok: false,

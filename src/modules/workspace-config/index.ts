@@ -117,13 +117,12 @@ export const workspaceConfigModule: WorkflowModule = {
       };
     }
     const baseCtx = { workspacePath: ctx.workspacePath, registry: reg };
-
-    if (command.name === "explain-config") {
-      return handleExplainConfig(command.args ?? {}, baseCtx);
-    }
-    if (command.name === "resolve-config") {
-      return handleResolveConfig(command.args ?? {}, baseCtx);
-    }
+    const handlers: Record<string, () => Promise<{ ok: boolean; code: string; message?: string; data?: Record<string, unknown> }>> = {
+      "explain-config": () => handleExplainConfig(command.args ?? {}, baseCtx),
+      "resolve-config": () => handleResolveConfig(command.args ?? {}, baseCtx)
+    };
+    const handler = handlers[command.name];
+    if (handler) return handler();
 
     return {
       ok: false,
