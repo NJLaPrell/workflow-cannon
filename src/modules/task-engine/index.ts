@@ -20,6 +20,17 @@ import {
   validateWishlistUpdatePayload,
   WISHLIST_ID_RE
 } from "./wishlist-validation.js";
+import {
+  readStringArg,
+  readTrimmedString,
+  readStringWithDefault,
+  resolveActor,
+  readPriority,
+  readStringArray,
+  readRecordArg,
+  readBoundedInt,
+  readIdempotencyValue
+} from "./command-args.js";
 
 export type {
   TaskEntity,
@@ -125,17 +136,6 @@ function stableStringify(value: unknown): string {
 
 function digestPayload(value: unknown): string {
   return crypto.createHash("sha256").update(stableStringify(value)).digest("hex");
-}
-
-function readIdempotencyValue(
-  args: Record<string, unknown>
-): string | undefined {
-  const raw = args.clientMutationId;
-  if (typeof raw !== "string") {
-    return undefined;
-  }
-  const trimmed = raw.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
 }
 
 function findIdempotentMutation(
@@ -466,14 +466,9 @@ export const taskEngineModule: WorkflowModule = {
     const store = planning.taskStore;
 
     if (command.name === "run-transition") {
-      const taskId = typeof args.taskId === "string" ? args.taskId : undefined;
-      const action = typeof args.action === "string" ? args.action : undefined;
-      const actor =
-        typeof args.actor === "string"
-          ? args.actor
-          : ctx.resolvedActor !== undefined
-            ? ctx.resolvedActor
-            : undefined;
+      const taskId = readStringArg(args, "taskId");
+      const action = readStringArg(args, "action");
+      const actor = resolveActor(args, ctx);
 
       if (!taskId || !action) {
         return {
@@ -514,20 +509,12 @@ export const taskEngineModule: WorkflowModule = {
     }
 
     if (command.name === "create-task" || command.name === "create-task-from-plan") {
-      const actor =
-        typeof args.actor === "string"
-          ? args.actor
-          : ctx.resolvedActor !== undefined
-            ? ctx.resolvedActor
-            : undefined;
-      const id = typeof args.id === "string" && args.id.trim().length > 0 ? args.id.trim() : undefined;
-      const title = typeof args.title === "string" && args.title.trim().length > 0 ? args.title.trim() : undefined;
-      const type = typeof args.type === "string" && args.type.trim().length > 0 ? args.type.trim() : "workspace-kit";
-      const status = typeof args.status === "string" ? args.status : "proposed";
-      const priority =
-        typeof args.priority === "string" && ["P1", "P2", "P3"].includes(args.priority)
-          ? args.priority as TaskPriority
-          : undefined;
+      const actor = resolveActor(args, ctx);
+      const id = readTrimmedString(args, "id");
+      const title = readTrimmedString(args, "title");
+      const type = readStringWithDefault(args, "type", "workspace-kit");
+      const status = readStringWithDefault(args, "status", "proposed");
+      const priority = readPriority(args);
       const clientMutationId = readIdempotencyValue(args);
       if (!id || !title || !TASK_ID_RE.test(id) || !["proposed", "ready"].includes(status)) {
         return {
@@ -633,14 +620,9 @@ export const taskEngineModule: WorkflowModule = {
     }
 
     if (command.name === "update-task") {
-      const taskId = typeof args.taskId === "string" ? args.taskId : undefined;
-      const updates = typeof args.updates === "object" && args.updates !== null ? args.updates as Record<string, unknown> : undefined;
-      const actor =
-        typeof args.actor === "string"
-          ? args.actor
-          : ctx.resolvedActor !== undefined
-            ? ctx.resolvedActor
-            : undefined;
+      const taskId = readStringArg(args, "taskId");
+      const updates = readRecordArg(args, "updates");
+      const actor = resolveActor(args, ctx);
       if (!taskId || !updates) {
         return { ok: false, code: "invalid-task-schema", message: "update-task requires taskId and updates object" };
       }
@@ -702,13 +684,8 @@ export const taskEngineModule: WorkflowModule = {
     }
 
     if (command.name === "archive-task") {
-      const taskId = typeof args.taskId === "string" ? args.taskId : undefined;
-      const actor =
-        typeof args.actor === "string"
-          ? args.actor
-          : ctx.resolvedActor !== undefined
-            ? ctx.resolvedActor
-            : undefined;
+      const taskId = readStringArg(args, "taskId");
+      const actor = resolveActor(args, ctx);
       if (!taskId) {
         return { ok: false, code: "invalid-task-schema", message: "archive-task requires taskId" };
       }
@@ -729,7 +706,7 @@ export const taskEngineModule: WorkflowModule = {
     }
 
     if (command.name === "get-task") {
-      const taskId = typeof args.taskId === "string" ? args.taskId : undefined;
+      const taskId = readStringArg(args, "taskId");
       if (!taskId) {
         return {
           ok: false,
@@ -747,11 +724,7 @@ export const taskEngineModule: WorkflowModule = {
         };
       }
 
-      const historyLimitRaw = args.historyLimit;
-      const historyLimit =
-        typeof historyLimitRaw === "number" && Number.isFinite(historyLimitRaw) && historyLimitRaw > 0
-          ? Math.min(Math.floor(historyLimitRaw), 200)
-          : 50;
+      const historyLimit = readBoundedInt(args, "historyLimit", 50, 200);
       const log = store.getTransitionLog();
       const recentTransitions = log
         .filter((e) => e.taskId === taskId)
@@ -771,14 +744,9 @@ export const taskEngineModule: WorkflowModule = {
     }
 
     if (command.name === "add-dependency" || command.name === "remove-dependency") {
-      const taskId = typeof args.taskId === "string" ? args.taskId : undefined;
-      const dependencyTaskId = typeof args.dependencyTaskId === "string" ? args.dependencyTaskId : undefined;
-      const actor =
-        typeof args.actor === "string"
-          ? args.actor
-          : ctx.resolvedActor !== undefined
-            ? ctx.resolvedActor
-            : undefined;
+      const taskId = readStringArg(args, "taskId");
+      const dependencyTaskId = readStringArg(args, "dependencyTaskId");
+      const actor = resolveActor(args, ctx);
       if (!taskId || !dependencyTaskId) {
         return {
           ok: false,
@@ -821,7 +789,7 @@ export const taskEngineModule: WorkflowModule = {
     }
 
     if (command.name === "get-dependency-graph") {
-      const taskId = typeof args.taskId === "string" ? args.taskId : undefined;
+      const taskId = readStringArg(args, "taskId");
       const tasks = store.getActiveTasks();
       const nodes = tasks.map((task) => ({ id: task.id, status: task.status }));
       const edges = tasks.flatMap((task) => (task.dependsOn ?? []).map((depId) => ({ from: task.id, to: depId })));
@@ -846,12 +814,8 @@ export const taskEngineModule: WorkflowModule = {
     }
 
     if (command.name === "get-task-history" || command.name === "get-recent-task-activity") {
-      const limitRaw = args.limit;
-      const limit =
-        typeof limitRaw === "number" && Number.isFinite(limitRaw) && limitRaw > 0
-          ? Math.min(Math.floor(limitRaw), 500)
-          : 50;
-      const taskId = typeof args.taskId === "string" ? args.taskId : undefined;
+      const limit = readBoundedInt(args, "limit", 50, 500);
+      const taskId = readStringArg(args, "taskId");
       const transitions = store.getTransitionLog().map((entry) => ({ kind: "transition", ...entry }));
       const mutations = store.getMutationLog().map((entry) => ({ kind: "mutation", ...entry }));
       const merged = [...transitions, ...mutations]
@@ -1249,12 +1213,7 @@ export const taskEngineModule: WorkflowModule = {
           message: "Only open wishlist items can be converted"
         };
       }
-      const actor =
-        typeof args.actor === "string"
-          ? args.actor
-          : ctx.resolvedActor !== undefined
-            ? ctx.resolvedActor
-            : undefined;
+      const actor = resolveActor(args, ctx);
       const timestamp = nowIso();
       const built: TaskEntity[] = [];
       for (const row of tasksRaw) {
