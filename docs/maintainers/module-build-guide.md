@@ -137,8 +137,11 @@ export const exampleModule: WorkflowModule = {
       ]
     }
   },
-  async onStart() {
-    // Keep startup deterministic and side effects explicit.
+  async onCommand(command, ctx) {
+    if (command.name === "example-run") {
+      return { ok: true, code: "example-ran", data: { workspacePath: ctx.workspacePath } };
+    }
+    return { ok: false, code: "unsupported-command", message: `unknown command '${command.name}'` };
   }
 };
 ```
