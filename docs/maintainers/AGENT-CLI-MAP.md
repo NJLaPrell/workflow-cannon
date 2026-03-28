@@ -4,6 +4,14 @@ Single maintainer reference for **what agents must run in a terminal** when work
 
 **Related:** `docs/maintainers/POLICY-APPROVAL.md` (approval semantics), `docs/maintainers/TERMS.md` (terminology), module instructions under `src/modules/*/instructions/*.md` (exact JSON fields per command).
 
+## 30-second bootstrap (run this first)
+
+If a session might touch `.workspace-kit/` state, lifecycle transitions, policy traces, approvals, or generated maintainer docs, run this first:
+
+1. `workspace-kit doctor` — confirms canonical task/policy contract files are present.
+2. `workspace-kit run` (no subcommand) — lists the current command surface and module ownership.
+3. Use this map + `src/modules/<module>/instructions/<command>.md` for JSON payload shape.
+
 ## `/qt` vs `workspace-kit`
 
 The editor **`/qt`** command only loads prompt templates from `tasks/*.md`. It does **not** execute `workspace-kit`, write task-engine state, or satisfy policy. If a workflow step changes kit-owned files or policy-sensitive behavior, the agent must run the **`workspace-kit` line** from this map (or the linked instruction file)—not only describe it in chat.
