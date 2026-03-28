@@ -11,11 +11,13 @@ import {
 } from "./question-engine.js";
 import { composePlanningWishlistArtifact } from "./artifact.js";
 import { openPlanningStores } from "../task-engine/planning-open.js";
+import { validateKnownTaskTypeRequirements } from "../task-engine/task-type-validation.js";
 import {
   buildWishlistItemFromIntake,
   validateWishlistIntakePayload
 } from "../task-engine/wishlist-validation.js";
 import type { WishlistItem } from "../task-engine/wishlist-types.js";
+import type { TaskEntity, TaskPriority } from "../task-engine/types.js";
 
 type PlanningOutputMode = "wishlist" | "tasks" | "response";
 
@@ -50,6 +52,19 @@ function nextWishlistId(items: WishlistItem[]): string {
     }
   }
   return `W${max + 1}`;
+}
+
+function nextTaskId(tasks: TaskEntity[]): string {
+  let max = 0;
+  for (const task of tasks) {
+    const match = /^T(\d+)$/.exec(task.id);
+    if (!match) continue;
+    const parsed = Number(match[1]);
+    if (Number.isFinite(parsed)) {
+      max = Math.max(max, parsed);
+    }
+  }
+  return `T${max + 1}`;
 }
 
 function findMissingAnsweredQuestions(
@@ -299,21 +314,98 @@ export const planningModule: WorkflowModule = {
       }
 
       if (outputMode === "tasks") {
+        const persistTasks = args.persistTasks === true;
+        const taskType = typeof args.taskType === "string" && args.taskType.trim().length > 0
+          ? args.taskType.trim()
+          : "task";
+        const taskPriority =
+          typeof args.taskPriority === "string" && ["P1", "P2", "P3"].includes(args.taskPriority)
+            ? args.taskPriority as TaskPriority
+            : undefined;
+        const stores = await openPlanningStores(ctx);
+        const store = stores.taskStore;
+        const plannedTaskId = nextTaskId(store.getAllTasks());
+        const planRef = `planning:${planningType}:${new Date().toISOString()}`;
+        const scopeFromArtifact = artifact.candidateFeaturesOrChanges.length > 0
+          ? artifact.candidateFeaturesOrChanges
+          : artifact.goals;
+        const criteriaFromSignals = typeof answers.successSignals === "string" && answers.successSignals.trim().length > 0
+          ? [answers.successSignals.trim()]
+          : [];
+        const task: TaskEntity = {
+          id: plannedTaskId,
+          title:
+            artifact.goals[0] && artifact.goals[0].trim().length > 0
+              ? artifact.goals[0].trim()
+              : `${descriptor?.title ?? planningType} task output`,
+          type: taskType,
+          status: "proposed",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          priority: taskPriority,
+          phase: typeof args.taskPhase === "string" ? args.taskPhase : undefined,
+          approach:
+            typeof answers.approach === "string" && answers.approach.trim().length > 0
+              ? answers.approach
+              : artifact.approach,
+          technicalScope: scopeFromArtifact.length > 0 ? scopeFromArtifact : undefined,
+          acceptanceCriteria:
+            criteriaFromSignals.length > 0
+              ? criteriaFromSignals
+              : ["Task output reviewed and refined from planning artifact."],
+          metadata: {
+            planRef,
+            planningProvenance: {
+              planningType,
+              outputMode,
+              capturedAnswerKeys: Object.keys(artifact.sourceAnswers).sort()
+            }
+          }
+        };
+        const knownTypeValidationError = validateKnownTaskTypeRequirements(task);
+        if (knownTypeValidationError) {
+          return {
+            ok: false,
+            code: knownTypeValidationError.code,
+            message: knownTypeValidationError.message
+          };
+        }
+        if (persistTasks) {
+          if (store.getTask(task.id)) {
+            return {
+              ok: false,
+              code: "duplicate-task-id",
+              message: `Task '${task.id}' already exists`
+            };
+          }
+          store.addTask(task);
+          await store.save();
+        }
         return {
           ok: true,
-          code: "planning-task-output-deferred",
-          message: "Task output mode contract is active, but task materialization is deferred to follow-up task delivery.",
+          code: persistTasks ? "planning-task-output-created" : "planning-task-output-preview",
+          message: persistTasks
+            ? `Planning task output persisted as '${task.id}'`
+            : "Planning task output prepared (preview only; set persistTasks=true to write)",
           data: {
             planningType,
             descriptor,
             outputMode,
+            persistTasks,
             scaffoldVersion: 3,
-            status: "task-output-deferred",
+            status: persistTasks ? "task-output-created" : "task-output-preview",
             unresolvedCritical: [],
             adaptiveWarnings,
             adaptiveFollowups,
             capturedAnswers: answers,
             artifact,
+            taskOutputs: [task],
+            provenance: {
+              planRef,
+              outputMode,
+              persistedTaskIds: persistTasks ? [task.id] : [],
+              suggestedTaskIds: [task.id]
+            },
             cliGuidance: toCliGuidance({
               planningType,
               answers,

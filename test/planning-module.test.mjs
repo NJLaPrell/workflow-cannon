@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 
 import { planningModule } from "../dist/modules/planning/index.js";
+import { TaskStore } from "../dist/modules/task-engine/store.js";
 import { WishlistStore } from "../dist/modules/task-engine/wishlist-store.js";
 
 async function tmpDir(prefix = "planning-") {
@@ -133,8 +134,44 @@ test("planningModule build-plan supports tasks output mode branch", async () => 
     { runtimeVersion: "0.1", workspacePath: workspace }
   );
   assert.equal(result.ok, true);
-  assert.equal(result.code, "planning-task-output-deferred");
+  assert.equal(result.code, "planning-task-output-preview");
   assert.equal(result.data.outputMode, "tasks");
+  assert.equal(result.data.persistTasks, false);
+  assert.ok(Array.isArray(result.data.taskOutputs));
+  assert.equal(result.data.taskOutputs.length, 1);
+  assert.equal(typeof result.data.provenance.planRef, "string");
+});
+
+test("planningModule build-plan can persist tasks in tasks output mode", async () => {
+  const workspace = await tmpDir();
+  const result = await planningModule.onCommand(
+    {
+      name: "build-plan",
+      args: {
+        planningType: "new-feature",
+        outputMode: "tasks",
+        persistTasks: true,
+        taskPhase: "Phase 18 - Module platform and state consolidation",
+        answers: {
+          featureGoal: "Deliver task output mode",
+          placement: "CLI command",
+          technology: "TypeScript",
+          targetAudience: "AI Agent Operators",
+          successSignals: "Task output persists"
+        },
+        finalize: true
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: workspace }
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "planning-task-output-created");
+  const outputTaskId = result.data.taskOutputs[0].id;
+  const taskStore = TaskStore.forJsonFile(workspace);
+  await taskStore.load();
+  const created = taskStore.getTask(outputTaskId);
+  assert.ok(created);
+  assert.equal(created?.metadata?.planRef !== undefined, true);
 });
 
 test("planningModule build-plan can allow warnings when hard block disabled", async () => {
