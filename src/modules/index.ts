@@ -2,6 +2,7 @@
  * Default module bundle + selective re-exports. Policy: see `docs/maintainers/module-build-guide.md` (Barrel export policy).
  */
 import type { WorkflowModule } from "../contracts/module-contract.js";
+import { agentBehaviorModule } from "./agent-behavior/index.js";
 import { approvalsModule } from "./approvals/index.js";
 import { documentationModule } from "./documentation/index.js";
 import { improvementModule } from "./improvement/index.js";
@@ -12,12 +13,20 @@ import { workspaceConfigModule } from "./workspace-config/index.js";
 export const defaultRegistryModules: WorkflowModule[] = [
   workspaceConfigModule,
   documentationModule,
+  agentBehaviorModule,
   taskEngineModule,
   approvalsModule,
   planningModule,
   improvementModule
 ];
 
+export {
+  agentBehaviorModule,
+  BUILTIN_PROFILES,
+  DEFAULT_BUILTIN_PROFILE_ID,
+  mergeDimensions,
+  validateBehaviorProfile
+} from "./agent-behavior/index.js";
 export { approvalsModule } from "./approvals/index.js";
 export { documentationModule } from "./documentation/index.js";
 export type {

@@ -8,6 +8,7 @@ import {
   ModuleRegistry,
   ModuleRegistryError,
   moduleRegistryOptionsFromEffectiveConfig,
+  agentBehaviorModule,
   approvalsModule,
   documentationModule,
   improvementModule,
@@ -22,6 +23,7 @@ test("validateModuleSet accepts valid module dependency graph", () => {
     validateModuleSet([
       workspaceConfigModule,
       documentationModule,
+      agentBehaviorModule,
       taskEngineModule,
       planningModule,
       approvalsModule,

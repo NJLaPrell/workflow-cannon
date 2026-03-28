@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/agent-behavior-profile.schema.json",
+  "title": "Agent behavior profile",
+  "description": "Advisory interaction posture for AI agents; subordinate to PRINCIPLES and policy.",
+  "type": "object",
+  "required": ["schemaVersion", "id", "label", "summary", "dimensions"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "id": {
+      "type": "string",
+      "pattern": "^(builtin|custom):[a-z0-9-]+$"
+    },
+    "extends": {
+      "type": "string",
+      "pattern": "^(builtin|custom):[a-z0-9-]+$"
+    },
+    "label": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "summary": { "type": "string", "minLength": 1, "maxLength": 500 },
+    "dimensions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "deliberationDepth",
+        "changeAppetite",
+        "checkInFrequency",
+        "explanationVerbosity",
+        "explorationStyle",
+        "ambiguityHandling"
+      ],
+      "properties": {
+        "deliberationDepth": { "type": "string", "enum": ["low", "medium", "high"] },
+        "changeAppetite": { "type": "string", "enum": ["conservative", "balanced", "bold"] },
+        "checkInFrequency": { "type": "string", "enum": ["rare", "normal", "often"] },
+        "explanationVerbosity": { "type": "string", "enum": ["terse", "normal", "verbose"] },
+        "explorationStyle": { "type": "string", "enum": ["linear", "parallel"] },
+        "ambiguityHandling": { "type": "string", "enum": ["decide", "ask"] }
+      }
+    },
+    "interactionNotes": { "type": "string", "maxLength": 2000 },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "source": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "createdAt": { "type": "string" }
+      }
+    }
+  }
+}

@@ -74,6 +74,14 @@ Before changing **task-engine state**, **policy traces**, **approvals**, **trans
    workspace-kit config set improvement.cadence.minIntervalMinutes 30 --json
    ```
 
+## Agent behavior profiles (advisory)
+
+Optional **interaction posture** (how to collaborate in chat) via the **`agent-behavior`** module. Profiles are **not** permission to skip policy, approvals, or PRINCIPLES.
+
+- Session start (optional): `workspace-kit run resolve-behavior-profile '{}'` and honor `data.effective` for tone, check-ins, and explanation depth.
+- User unsure which style: `workspace-kit run interview-behavior-profile` (see `docs/maintainers/AGENT-CLI-MAP.md`) or compare builtins with `explain-behavior-profiles`.
+- Requestable Cursor rule: `.cursor/rules/agent-behavior.mdc`.
+
 ## Task execution
 
 - Execute tasks in dependency order from task-engine state (`workspace-kit run list-tasks` / `get-next-actions`).

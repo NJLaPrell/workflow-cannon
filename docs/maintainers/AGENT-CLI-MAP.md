@@ -140,8 +140,22 @@ workspace-kit run list-wishlist '{}'
 workspace-kit run get-wishlist '{"wishlistId":"W1"}'
 workspace-kit run explain-config '{}'
 workspace-kit run resolve-config '{}'
+workspace-kit run resolve-behavior-profile '{}'
+workspace-kit run list-behavior-profiles '{}'
+workspace-kit run get-behavior-profile '{"profileId":"builtin:balanced"}'
+workspace-kit run set-active-behavior-profile '{"profileId":"builtin:cautious"}'
+workspace-kit run set-active-behavior-profile '{"clear":true}'
+workspace-kit run create-behavior-profile '{"id":"custom:my-team","baseProfileId":"builtin:balanced","label":"My team"}'
+workspace-kit run update-behavior-profile '{"profileId":"custom:my-team","updates":{"summary":"…"}}'
+workspace-kit run delete-behavior-profile '{"profileId":"custom:my-team"}'
+workspace-kit run diff-behavior-profiles '{"profileIdA":"builtin:cautious","profileIdB":"builtin:experimental"}'
+workspace-kit run explain-behavior-profiles '{"mode":"summarize","profileId":"builtin:calculated"}'
+workspace-kit run explain-behavior-profiles '{"mode":"compare","profileIds":["builtin:cautious","builtin:experimental"]}'
+workspace-kit run interview-behavior-profile '{"action":"start"}'
 workspace-kit doctor
 ```
+
+**Agent behavior** (`list-behavior-profiles`, `get-behavior-profile`, `resolve-behavior-profile`, `set-active-behavior-profile`, `create-behavior-profile`, `update-behavior-profile`, `delete-behavior-profile`, `diff-behavior-profiles`, `explain-behavior-profiles`, `interview-behavior-profile`) are **Tier C**: advisory interaction posture only; **subordinate** to PRINCIPLES and policy. They persist under `.workspace-kit/agent-behavior/` (JSON) or unified SQLite (`module_id` `agent-behavior`) when `tasks.persistenceBackend` is `sqlite`.
 
 **Wishlist mutations** (`create-wishlist`, `update-wishlist`, `convert-wishlist`) and **`migrate-task-persistence`** are Tier C by default (same as `create-task`): they persist workspace state (JSON files and/or the configured SQLite planning DB under `tasks.sqliteDatabaseRelativePath`) but do not use `policyApproval` unless listed in `policy.extraSensitiveModuleCommands`.
 
@@ -154,7 +168,8 @@ Instruction paths: run `workspace-kit run` with no subcommand to list commands; 
 3. This file + `src/modules/<module>/instructions/<command>.md` — copy-paste JSON shape.
 4. `docs/maintainers/POLICY-APPROVAL.md` — JSON vs env vs interactive approval.
 5. Task Engine run schemas: `schemas/task-engine-run-contracts.schema.json` (versioned with package; command coverage verified by `pnpm run check`).
-6. Planning module runbook: `docs/maintainers/runbooks/planning-workflow.md`.
+6. Agent behavior plan: `docs/maintainers/plans/agent-behavior-module.md` + profile schema `schemas/agent-behavior-profile.schema.json`.
+7. Planning module runbook: `docs/maintainers/runbooks/planning-workflow.md`.
 
 ## Optional session opener (habit hook)
 
