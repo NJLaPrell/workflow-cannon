@@ -37,6 +37,7 @@ Basic operating guidance for AI agents working in this repository.
 
 Before changing **task-engine state**, **policy traces**, **approvals**, **transcript/improvement** stores, or **mutating doc generation**, run the matching **`workspace-kit`** command. Chat-only approval does **not** satisfy policy for `workspace-kit run` (`docs/maintainers/POLICY-APPROVAL.md`).
 
+- Fast session bootstrap: run `workspace-kit doctor`, then `workspace-kit run` (no subcommand), then use `docs/maintainers/AGENT-CLI-MAP.md` for command/approval tiering.
 - **Do not** hand-edit `.workspace-kit/tasks/state.json` for lifecycle transitions except documented recovery; use `workspace-kit run run-transition` (`docs/maintainers/AGENT-CLI-MAP.md`).
 - **Cursor rule:** `.cursor/rules/workspace-kit-cli-execution.mdc` mirrors this section and links the Agent CLI map.
 
@@ -64,6 +65,7 @@ Before changing **task-engine state**, **policy traces**, **approvals**, **trans
 ## Task execution
 
 - Execute tasks in dependency order from task-engine state (`workspace-kit run list-tasks` / `get-next-actions`).
+- Optional session opener: run `workspace-kit run get-next-actions '{}'`, then fetch the chosen task with `workspace-kit run get-task '{"taskId":"Txxx"}'` before implementation.
 - Treat each task's `Approach`, `Technical scope`, and `Acceptance criteria` as binding implementation guidance.
 - If a task is too large for one change, split into supporting tasks before starting implementation.
 

@@ -4,6 +4,20 @@ Single maintainer reference for **what agents must run in a terminal** when work
 
 **Related:** `docs/maintainers/POLICY-APPROVAL.md` (approval semantics), `docs/maintainers/TERMS.md` (terminology), module instructions under `src/modules/*/instructions/*.md` (exact JSON fields per command).
 
+## 30-second bootstrap (run this first)
+
+If a session might touch `.workspace-kit/` state, lifecycle transitions, policy traces, approvals, or generated maintainer docs, run this first:
+
+1. `workspace-kit doctor` — confirms canonical task/policy contract files are present.
+2. `workspace-kit run` (no subcommand) — lists the current command surface and module ownership.
+3. Use this map + `src/modules/<module>/instructions/<command>.md` for JSON payload shape.
+
+## Quick boundary gate (use this before acting)
+
+- If work mutates task lifecycle, approvals, policy traces, transcript/improvement stores, or maintainer doc generation outputs, use the matching `workspace-kit` command from this map.
+- If work is application/source edits only, use normal code workflow; optional Tier C reads (`list-tasks`, `get-next-actions`) are safe discovery helpers.
+- For `workspace-kit run` sensitive operations, pass JSON `policyApproval`; for top-level `workspace-kit config|init|upgrade`, use env `WORKSPACE_KIT_POLICY_APPROVAL`.
+
 ## `/qt` vs `workspace-kit`
 
 The editor **`/qt`** command only loads prompt templates from `tasks/*.md`. It does **not** execute `workspace-kit`, write task-engine state, or satisfy policy. If a workflow step changes kit-owned files or policy-sensitive behavior, the agent must run the **`workspace-kit` line** from this map (or the linked instruction file)—not only describe it in chat.
@@ -114,6 +128,7 @@ workspace-kit run build-plan '{"planningType":"new-feature","answers":{"featureG
 workspace-kit run build-plan '{"planningType":"new-feature","answers":{"featureGoal":"...","placement":"CLI","technology":"TypeScript","targetAudience":"AI Agent Operators","problemStatement":"...","expectedOutcome":"...","impact":"...","constraints":"...","successSignals":"..."},"finalize":true,"createWishlist":true}'
 workspace-kit run list-wishlist '{}'
 workspace-kit run get-wishlist '{"wishlistId":"W1"}'
+workspace-kit run explain-config '{}'
 workspace-kit run resolve-config '{}'
 workspace-kit doctor
 ```
@@ -131,6 +146,18 @@ Instruction paths: run `workspace-kit run` with no subcommand to list commands; 
 5. Task Engine run schemas: `schemas/task-engine-run-contracts.schema.json` (versioned with package; command coverage verified by `pnpm run check`).
 6. Planning module runbook: `docs/maintainers/runbooks/planning-workflow.md`.
 
+## Optional session opener (habit hook)
+
+Use this Tier C starter block at session start to avoid stale queue assumptions:
+
+```bash
+workspace-kit run get-next-actions '{}'
+# then inspect a concrete task before implementation
+workspace-kit run get-task '{"taskId":"T351"}'
+```
+
+`get-next-actions` gives queue guidance (`suggestedNext`) but does not replace task detail review (`Approach`, `Technical scope`, `Acceptance criteria`).
+
 ## Optional guardrail: hand-edit detection
 
 Maintainers can run an **advisory** check that warns when `state.json` changes look like direct task edits without new `transitionLog` entries:
@@ -140,3 +167,12 @@ pnpm run advisory:task-state-hand-edit
 ```
 
 In CI this runs as a **non-blocking** step (see `.github/workflows/ci.yml`). It always exits 0; read stderr for warnings. Legitimate recovery edits should be rare and documented in the PR.
+
+## CLI map coverage guardrail
+
+`pnpm run check` includes a strict command-coverage check (`scripts/check-agent-cli-map-coverage.mjs`) that compares discovered `workspace-kit run` commands from module registrations against:
+
+- commands explicitly shown in this map (`workspace-kit run <command> ...`)
+- documented exclusions in `docs/maintainers/data/agent-cli-map-exclusions.json`
+
+If a new run command ships without map coverage (or exclusion entry), the check fails with the missing command names.
