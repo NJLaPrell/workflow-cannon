@@ -1,15 +1,15 @@
-meta|v=1|doc=runbook|truth=canonical|st=active
+meta|doc=runbook|truth=canonical|schema=base.v2|status=active|profile=runbook
 
 runbook|name=parity_validation_flow|scope=release_readiness|owner=maintainers
-ref|name=maintainer_view|path=docs/maintainers/runbooks/parity-validation-flow.md
-ref|name=release_gates|path=docs/maintainers/release-gate-matrix.md
-ref|name=releasing|path=docs/maintainers/RELEASING.md
-ref|name=parity_schema|path=schemas/parity-evidence.schema.json
+ref|id=maintainer_view|target=docs/maintainers/runbooks/parity-validation-flow.md|type=file|status=active
+ref|id=release_gates|target=docs/maintainers/release-gate-matrix.md|type=file|status=active
+ref|id=releasing|target=docs/maintainers/RELEASING.md|type=file|status=active
+ref|id=parity_schema|target=schemas/parity-evidence.schema.json|type=file|status=active
 
-intent|validate_packaged_artifact_behavior_matches_expected_runtime_contract_before_release
-rule|R001|must|run_parity_commands_in_fixed_order_and_stop_on_first_non_zero_exit|st=active
-rule|R002|must|write_parity_evidence_artifact_for_pass_and_fail_outcomes|st=active
-rule|R003|must|treat_parity_failures_as_release_blocking_until_resolved|st=active
+intent|slot1=validate_packaged_artifact_behavior_matches_expected_runtime_contract_before_release
+rule|id=R001|level=must|scope=run_parity_commands_in_fixed_order_and_stop_on_first_non_zero_exit|status=active|why=rationale_for_R001
+rule|id=R002|level=must|scope=write_parity_evidence_artifact_for_pass_and_fail_outcomes|status=active|why=rationale_for_R002
+rule|id=R003|level=must|scope=treat_parity_failures_as_release_blocking_until_resolved|status=active|why=rationale_for_R003
 
 chain|step=1|command=pnpm run build|expect_exit=0
 chain|step=2|command=pnpm run check|expect_exit=0
@@ -19,4 +19,4 @@ chain|step=5|command=node scripts/check-release-metadata.mjs|expect_exit=0
 chain|step=6|command=npm install <tarball> (test/fixtures/parity)|expect_exit=0
 chain|step=7|command=npm run smoke (test/fixtures/parity)|expect_exit=0
 
-artifact|path=artifacts/parity-evidence.json|schema=schemas/parity-evidence.schema.json
+artifact|target=artifacts/parity-evidence.json|schema=schemas/parity-evidence.schema.json
