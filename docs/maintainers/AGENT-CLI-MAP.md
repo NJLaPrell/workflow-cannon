@@ -146,6 +146,18 @@ Instruction paths: run `workspace-kit run` with no subcommand to list commands; 
 5. Task Engine run schemas: `schemas/task-engine-run-contracts.schema.json` (versioned with package; command coverage verified by `pnpm run check`).
 6. Planning module runbook: `docs/maintainers/runbooks/planning-workflow.md`.
 
+## Optional session opener (habit hook)
+
+Use this Tier C starter block at session start to avoid stale queue assumptions:
+
+```bash
+workspace-kit run get-next-actions '{}'
+# then inspect a concrete task before implementation
+workspace-kit run get-task '{"taskId":"T351"}'
+```
+
+`get-next-actions` gives queue guidance (`suggestedNext`) but does not replace task detail review (`Approach`, `Technical scope`, `Acceptance criteria`).
+
 ## Optional guardrail: hand-edit detection
 
 Maintainers can run an **advisory** check that warns when `state.json` changes look like direct task edits without new `transitionLog` entries:

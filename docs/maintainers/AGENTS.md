@@ -65,6 +65,7 @@ Before changing **task-engine state**, **policy traces**, **approvals**, **trans
 ## Task execution
 
 - Execute tasks in dependency order from task-engine state (`workspace-kit run list-tasks` / `get-next-actions`).
+- Optional session opener: run `workspace-kit run get-next-actions '{}'`, then fetch the chosen task with `workspace-kit run get-task '{"taskId":"Txxx"}'` before implementation.
 - Treat each task's `Approach`, `Technical scope`, and `Acceptance criteria` as binding implementation guidance.
 - If a task is too large for one change, split into supporting tasks before starting implementation.
 
