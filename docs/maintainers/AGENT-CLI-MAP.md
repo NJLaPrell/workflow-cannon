@@ -128,6 +128,7 @@ workspace-kit run build-plan '{"planningType":"new-feature","answers":{"featureG
 workspace-kit run build-plan '{"planningType":"new-feature","answers":{"featureGoal":"...","placement":"CLI","technology":"TypeScript","targetAudience":"AI Agent Operators","problemStatement":"...","expectedOutcome":"...","impact":"...","constraints":"...","successSignals":"..."},"finalize":true,"createWishlist":true}'
 workspace-kit run list-wishlist '{}'
 workspace-kit run get-wishlist '{"wishlistId":"W1"}'
+workspace-kit run explain-config '{}'
 workspace-kit run resolve-config '{}'
 workspace-kit doctor
 ```
@@ -154,3 +155,12 @@ pnpm run advisory:task-state-hand-edit
 ```
 
 In CI this runs as a **non-blocking** step (see `.github/workflows/ci.yml`). It always exits 0; read stderr for warnings. Legitimate recovery edits should be rare and documented in the PR.
+
+## CLI map coverage guardrail
+
+`pnpm run check` includes a strict command-coverage check (`scripts/check-agent-cli-map-coverage.mjs`) that compares discovered `workspace-kit run` commands from module registrations against:
+
+- commands explicitly shown in this map (`workspace-kit run <command> ...`)
+- documented exclusions in `docs/maintainers/data/agent-cli-map-exclusions.json`
+
+If a new run command ships without map coverage (or exclusion entry), the check fails with the missing command names.

@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "excludedRunCommands": [
+    "add-dependency",
+    "archive-task",
+    "convert-wishlist",
+    "create-task-from-plan",
+    "create-wishlist",
+    "dashboard-summary",
+    "get-blocked-summary",
+    "get-dependency-graph",
+    "get-ready-queue",
+    "get-recent-task-activity",
+    "get-task-history",
+    "get-task-summary",
+    "migrate-task-persistence",
+    "query-lineage",
+    "remove-dependency",
+    "sync-transcripts",
+    "transcript-automation-status",
+    "update-wishlist"
+  ]
+}
