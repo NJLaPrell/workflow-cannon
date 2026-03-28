@@ -1235,3 +1235,25 @@ test("migrate-task-persistence json-to-unified-sqlite writes task-engine module 
   assert.equal(Array.isArray(row.state.wishlistStore.items), true);
 });
 
+test("taskEngineModule list-module-states and get-module-state query unified state rows", async () => {
+  const workspace = await tmpDir();
+  const unified = new UnifiedStateDb(workspace, ".workspace-kit/tasks/workspace-kit.db");
+  unified.setModuleState("task-engine", 1, { sample: true });
+  unified.setModuleState("planning", 1, { prompts: 3 });
+
+  const ctx = { runtimeVersion: "0.1", workspacePath: workspace };
+  let r = await taskEngineModule.onCommand({ name: "list-module-states", args: {} }, ctx);
+  assert.equal(r.ok, true);
+  assert.equal(r.code, "module-states-listed");
+  assert.equal(Array.isArray(r.data.rows), true);
+  assert.equal(r.data.rows.length, 2);
+
+  r = await taskEngineModule.onCommand(
+    { name: "get-module-state", args: { moduleId: "task-engine" } },
+    ctx
+  );
+  assert.equal(r.ok, true);
+  assert.equal(r.code, "module-state-read");
+  assert.equal(r.data.row.moduleId, "task-engine");
+});
+
