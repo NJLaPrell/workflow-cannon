@@ -226,6 +226,9 @@ export type NormalizedDocument = {
   configs: NormalizedConfig[];
   cadences: NormalizedCadence[];
   guardrails: NormalizedGuardrail[];
+  refsById: Map<string, NormalizedRef>;
+  examplesByParent: Map<string, NormalizedExample[]>;
+  profileRecords: Map<"core" | "runbook" | "workbook", Array<NormalizedBaseRecord>>;
 };
 
 export type ViewModelSection = {

@@ -11,6 +11,8 @@ import type {
   DocumentationValidationIssue
 } from "./types.js";
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
+import { parseAiDocument } from "./parser.js";
+import { normalizeDocument } from "./normalizer.js";
 import { autoResolveAiSchema, validateAiSchema } from "./validator.js";
 
 type DocumentationRuntimeConfig = {
@@ -299,6 +301,9 @@ export async function generateDocument(
       }
     };
   }
+
+  // Build normalized model now to keep parser/validator/normalizer wiring exercised.
+  normalizeDocument(parseAiDocument(aiOutput));
 
   let humanOutput = `# ${documentType}\n\nGenerated without template.`;
   if (templateFound) {
