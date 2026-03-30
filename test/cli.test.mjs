@@ -83,6 +83,42 @@ test("runCli returns usage error for unknown commands", async () => {
 
   assert.equal(code, 2);
   assert.match(capture.errors[0], /Unknown command/);
+  assert.match(capture.errors[0], /--help/);
+});
+
+test("runCli --help prints orientation and exits 0", async () => {
+  const capture = createCapture();
+  const code = await runCli(["--help"], capture);
+
+  assert.equal(code, 0);
+  assert.ok(capture.lines.some((l) => l.includes("Workflow Cannon")));
+  assert.ok(capture.lines.some((l) => l.includes("workspace-kit run")));
+  assert.ok(capture.lines.some((l) => l.includes("get-next-actions")));
+});
+
+test("runCli help subcommand matches --help", async () => {
+  const capture = createCapture();
+  const code = await runCli(["help"], capture);
+
+  assert.equal(code, 0);
+  assert.ok(capture.lines.some((l) => l.includes("Start here")));
+});
+
+test("runCli with no args prints help on stdout and exits usage", async () => {
+  const capture = createCapture();
+  const code = await runCli([], capture);
+
+  assert.equal(code, 2);
+  assert.ok(capture.lines.some((l) => l.includes("Top-level commands")));
+  assert.match(capture.errors[0], /Missing command/);
+});
+
+test("runCli --version prints a semver line", async () => {
+  const capture = createCapture();
+  const code = await runCli(["--version"], capture);
+
+  assert.equal(code, 0);
+  assert.match(capture.lines[0], /^\d+\.\d+\.\d+/);
 });
 
 test("runCli init generates profile-driven project context artifacts", async () => {
@@ -144,6 +180,9 @@ test("runCli doctor returns validation failure when required files are missing",
 
   assert.equal(code, 1);
   assert.match(capture.errors[0], /failed validation/);
+  assert.ok(capture.errors.some((l) => l.includes("Next steps:")));
+  assert.ok(capture.errors.some((l) => l.includes("upgrade")));
+  assert.ok(capture.errors.some((l) => l.includes("--help")));
 });
 
 test("runCli doctor fails when sqlite persistence configured but DB missing", async () => {

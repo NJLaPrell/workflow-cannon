@@ -19,12 +19,24 @@ pnpm install
 pnpm run build
 ```
 
-Verify the kit sees your workspace:
+### Where to start after build
 
-```bash
-node dist/cli.js doctor
-node dist/cli.js --help
-```
+| Step | Command | What you get |
+| --- | --- | --- |
+| 1 | `node dist/cli.js --help` | Orientation: top-level commands, first-run path, doc pointers |
+| 2 | `node dist/cli.js doctor` | Confirms kit contract files and config resolve |
+| 3 | `node dist/cli.js run` | **Command menu** — every runnable `workspace-kit run <cmd>` |
+| 4 | `node dist/cli.js run get-next-actions '{}'` | Read-only suggestion for what to do next |
+
+**Developing:** after edits, `pnpm run build` then `pnpm test` (or `pnpm run phase5-gates` before larger changes). **`workspace-kit` is not on your PATH by default** — invoke it in one of these ways:
+
+| Situation | Example |
+| --- | --- |
+| This repo, after `pnpm run build` | `node dist/cli.js --help` (same subcommands as `workspace-kit`) |
+| This repo, dev dependency on PATH via pnpm | `pnpm exec workspace-kit --help` |
+| Another project with the package installed | `npx workspace-kit --help` or `pnpm exec workspace-kit --help` |
+
+**`workspace-kit run` with no subcommand is the full module command list** — that is the usual “what can I run?” answer.
 
 Try **read-only** task-engine queries:
 
@@ -33,16 +45,17 @@ node dist/cli.js run list-tasks '{}'
 node dist/cli.js run get-next-actions '{}'
 ```
 
-**Developing:** after edits, `pnpm run build` then `pnpm test` (or `pnpm run phase5-gates` before larger changes). If `workspace-kit` is not on your `PATH`, use `node dist/cli.js …` from the repo root (same as above).
-
 ## Quick start (use the package in another project)
 
 ```bash
 npm install @workflow-cannon/workspace-kit
 npx workspace-kit --help
+npx workspace-kit run
 ```
 
-Or with pnpm: `pnpm add @workflow-cannon/workspace-kit` then `pnpm exec workspace-kit --help`.
+`--help` prints the top-level guide; `run` with no subcommand lists every module command. In a repo that already contains maintainer docs, paths like `docs/maintainers/AGENT-CLI-MAP.md` match this repository; in a consumer project, use the copy shipped under `node_modules/@workflow-cannon/workspace-kit/` or your own docs link.
+
+Or with pnpm: `pnpm add @workflow-cannon/workspace-kit` then `pnpm exec workspace-kit --help` and `pnpm exec workspace-kit run`.
 
 ## What this repo contains
 

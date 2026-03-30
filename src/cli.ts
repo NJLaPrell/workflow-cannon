@@ -2,9 +2,10 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   AGENT_CLI_MAP_HUMAN_DOC,
+  POLICY_APPROVAL_HUMAN_DOC,
   appendPolicyTrace,
   parsePolicyApprovalFromEnv,
   resolveActorWithFallback,
@@ -393,6 +394,69 @@ async function resolvePackageVersion(cwd: string): Promise<string | undefined> {
   return undefined;
 }
 
+/** Version from the installed kit package (works from repo `dist/` or `node_modules`). */
+async function readCliBundledPackageVersion(): Promise<string | undefined> {
+  try {
+    const pkgPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "package.json");
+    const parsed = await parseJsonFile(pkgPath);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      const v = (parsed as Record<string, unknown>).version;
+      return typeof v === "string" && v.length > 0 ? v : undefined;
+    }
+  } catch {
+    /* ignore */
+  }
+  return undefined;
+}
+
+function writeDoctorFailureRemediation(
+  writeError: (message: string) => void,
+  issues: DoctorIssue[]
+): void {
+  writeError("");
+  writeError("Next steps:");
+  const hasMissing = issues.some((issue) => issue.reason === "missing");
+  if (hasMissing) {
+    writeError(
+      "  - Kit files missing: run workspace-kit upgrade from the repo root (set WORKSPACE_KIT_POLICY_APPROVAL — see docs/maintainers/POLICY-APPROVAL.md)."
+    );
+  }
+  writeError("  - workspace-kit --help — orientation and top-level commands");
+  writeError("  - workspace-kit run — list module commands (after doctor passes)");
+}
+
+async function printWorkspaceKitTopLevelHelp(writeLine: (message: string) => void): Promise<void> {
+  const version = await readCliBundledPackageVersion();
+  const versionSuffix = version ? ` v${version}` : "";
+  writeLine(`Workflow Cannon — workspace-kit${versionSuffix} (${CANONICAL_KIT_NAME})`);
+  writeLine("");
+  writeLine("CLI for deterministic, policy-governed task workflows. Module commands are listed separately.");
+  writeLine("");
+  writeLine("Start here (first time in a kit-enabled repo)");
+  writeLine("  1) workspace-kit doctor");
+  writeLine("  2) workspace-kit run              ← lists every module command (your command menu)");
+  writeLine("  3) workspace-kit run get-next-actions '{}'   ← safe read: suggested next work");
+  writeLine("");
+  writeLine("Top-level commands");
+  writeLine("  doctor          Validate kit contract files, config, and persistence checks");
+  writeLine("  doctor --agent-instruction-surface   JSON catalog of all declared instructions");
+  writeLine("  run <cmd> [json]  Run a module command; omit <cmd> to list runnable commands");
+  writeLine("  config          Show or change kit config (mutations need env approval — see below)");
+  writeLine("  check           Validate workspace-kit.profile.json");
+  writeLine("  init            Regenerate profile-driven artifacts (needs env approval)");
+  writeLine("  upgrade         Refresh kit-managed baseline files (needs env approval)");
+  writeLine("  drift-check     Fail if managed kit assets differ from expected content");
+  writeLine("");
+  writeLine("Policy & docs (paths are relative to a clone of this repo; npm consumers: open the package or docs site)");
+  writeLine(`  ${AGENT_CLI_MAP_HUMAN_DOC} — tier table, copy-paste JSON for agents`);
+  writeLine(`  ${POLICY_APPROVAL_HUMAN_DOC} — when policyApproval JSON vs env approval applies`);
+  writeLine("");
+  writeLine("Global options");
+  writeLine("  -h, --help      Show this message");
+  writeLine("  -V, --version   Print CLI version");
+  writeLine("  help            Same as --help");
+}
+
 async function readOwnedPathsDocument(cwd: string): Promise<OwnedPathsDocument> {
   const ownedPathsPath = path.join(cwd, defaultWorkspaceKitPaths.ownedPaths);
   let parsed: unknown;
@@ -467,10 +531,20 @@ export async function runCli(
   const readStdinLine = options.readStdinLine;
   const [command] = args;
 
+  if (command === "--version" || command === "-V") {
+    const v = await readCliBundledPackageVersion();
+    writeLine(v ?? "workspace-kit (version unknown)");
+    return EXIT_SUCCESS;
+  }
+
+  if (command === "--help" || command === "-h" || command === "help") {
+    await printWorkspaceKitTopLevelHelp(writeLine);
+    return EXIT_SUCCESS;
+  }
+
   if (!command) {
-    writeError(
-      "Usage: workspace-kit <init|doctor|check|upgrade|drift-check|run|config>"
-    );
+    await printWorkspaceKitTopLevelHelp(writeLine);
+    writeError("Missing command. Re-run with a top-level command, or pass --help for the same guide.");
     return EXIT_USAGE_ERROR;
   }
 
@@ -772,7 +846,7 @@ export async function runCli(
 
   if (command !== "doctor") {
     writeError(
-      `Unknown command '${command}'. Supported commands: init, doctor, check, upgrade, drift-check, run, config.`
+      `Unknown command '${command}'. Supported: init, doctor, check, upgrade, drift-check, run, config. Run workspace-kit --help for a guided overview.`
     );
     return EXIT_USAGE_ERROR;
   }
@@ -815,6 +889,7 @@ export async function runCli(
     for (const issue of issues) {
       writeError(`- ${issue.path}: ${issue.reason}`);
     }
+    writeDoctorFailureRemediation(writeError, issues);
     return EXIT_VALIDATION_FAILURE;
   }
 
@@ -832,6 +907,7 @@ export async function runCli(
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       writeError(`workspace-kit doctor: could not build agent instruction surface: ${message}`);
+      writeError("  Hint: workspace-kit --help; fix config/module issues, then retry.");
       if (error instanceof ModuleRegistryError) {
         return EXIT_VALIDATION_FAILURE;
       }
