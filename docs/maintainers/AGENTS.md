@@ -17,6 +17,16 @@ Basic operating guidance for AI agents working in this repository.
 
 **Documentation precedence (conflict resolution):** If two sources disagree, walk the numbered list above — higher entries win for **governance and process**. For a short narrative map (router vs doctor catalog, policy surfaces, layering exceptions), see **`docs/maintainers/ARCHITECTURE.md` → Documentation precedence**.
 
+## Maintainer playbooks (direction sets)
+
+**Playbooks** are ordered maintainer checklists under [`docs/maintainers/playbooks/`](./playbooks/) that **link** canonical docs instead of copying them. Authoring rules and stable ids: [`playbooks/README.md`](./playbooks/README.md). Terminology: [`TERMS.md`](./TERMS.md) → **Direction set (maintainer playbook)**.
+
+| Playbook id | Path | Use when |
+| --- | --- | --- |
+| `phase-closeout-and-release` | [`playbooks/phase-closeout-and-release.md`](./playbooks/phase-closeout-and-release.md) | Closing a phase and cutting a release (queue, delivery loop, human publish gate, RELEASING evidence) |
+
+How to attach playbooks in an editor session and limits of auto-loading: `docs/maintainers/runbooks/agent-playbooks.md` (invocation runbook).
+
 ## Long threads and context reload
 
 When a session is long, was compacted, or you are unsure stale chat context matches the repo:
