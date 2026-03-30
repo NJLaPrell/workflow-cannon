@@ -6,6 +6,16 @@ import type {
 } from "./types.js";
 import { isWishlistIntakeTask } from "./wishlist-intake.js";
 
+/** Matches transcript-backed ids from improvement ingest (`imp-` + hex). Keep in sync with `ingest.ts`. */
+const IMPROVEMENT_ID_RE = /^imp-[a-f0-9]+$/i;
+
+export function isImprovementLikeTask(t: TaskEntity): boolean {
+  if (t.type === "improvement") {
+    return true;
+  }
+  return typeof t.id === "string" && IMPROVEMENT_ID_RE.test(t.id);
+}
+
 const PRIORITY_ORDER: Record<string, number> = {
   P1: 0,
   P2: 1,

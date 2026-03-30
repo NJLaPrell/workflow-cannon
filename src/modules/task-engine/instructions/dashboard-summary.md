@@ -26,6 +26,7 @@ Optional JSON object; accepts standard invocation `config` overlay only (no extr
 | `stateSummary` | Task counts by status + `total` (same shape as `get-next-actions`) |
 | `readyQueueTop` | Up to 15 ready tasks (id, title, priority, phase) |
 | `readyQueueCount` | Full ready queue length |
+| `readyQueueBreakdown` | `{ schemaVersion: 1, improvement, other }` — split of the ready queue (`improvement` = `type: improvement` or `imp-*` id; `other` = remainder; wishlist intake never appears in the ready queue) |
 | `blockedSummary` | `{ count, top }` where `top` is up to 15 blocking analysis rows |
 | `suggestedNext` | Slim task summary or `null` |
 | `blockingAnalysis` | Full blocking analysis list |

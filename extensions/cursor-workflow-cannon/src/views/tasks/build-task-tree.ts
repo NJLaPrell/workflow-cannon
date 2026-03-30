@@ -24,6 +24,9 @@ export type WkImprovementGroup = { kind: "improvement-group"; tasks: TreeTaskEnt
 
 export type WkNode = WkGroup | WkTask | WkWishlistGroup | WkWishlistItem | WkImprovementGroup;
 
+/** Aligned with task-engine `isImprovementLikeTask` / improvement `ingest.ts` id shape. */
+const IMPROVEMENT_TASK_ID_RE = /^imp-[a-f0-9]+$/i;
+
 function isTerminalStatus(status: string): boolean {
   return status === "completed" || status === "cancelled";
 }
@@ -45,8 +48,16 @@ export function isWishlistIntakeOpenForTree(t: TreeTaskEntity): boolean {
   return effectiveTaskType(t) === "wishlist_intake" && !isTerminalStatus(t.status);
 }
 
+export function isImprovementLikeForTree(t: TreeTaskEntity): boolean {
+  if (effectiveTaskType(t) === "improvement") {
+    return true;
+  }
+  return typeof t.id === "string" && IMPROVEMENT_TASK_ID_RE.test(t.id);
+}
+
+/** Proposed improvements only — accepted (`ready`) and other active statuses use normal status groups. */
 export function isActiveImprovementForTree(t: TreeTaskEntity): boolean {
-  return effectiveTaskType(t) === "improvement" && !isTerminalStatus(t.status);
+  return isImprovementLikeForTree(t) && t.status === "proposed";
 }
 
 export function wishlistDisplayId(t: TreeTaskEntity): string {
@@ -63,7 +74,7 @@ function isValidTaskRow(t: unknown): t is TreeTaskEntity {
 }
 
 /**
- * Build sidebar root nodes: wishlist intake (non-terminal), active improvements, then remaining tasks by status.
+ * Build sidebar root nodes: wishlist intake (non-terminal), proposed improvements (triage), then tasks by status.
  */
 export function buildTaskTreeRootsFromTasks(tasks: unknown[]): WkNode[] {
   const list = tasks.filter(isValidTaskRow);

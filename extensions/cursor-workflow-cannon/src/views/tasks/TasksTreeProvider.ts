@@ -44,7 +44,7 @@ export class TasksTreeProvider implements vscode.TreeDataProvider<WkNode> {
       const ti = new vscode.TreeItem(`Improvements (${n})`, vscode.TreeItemCollapsibleState.Expanded);
       ti.id = "g:improvements-active";
       ti.iconPath = new vscode.ThemeIcon("wrench");
-      ti.description = "type: improvement · active (not done/cancelled)";
+      ti.description = "type: improvement · proposed (triage backlog)";
       return ti;
     }
     if (element.kind === "wishlist-item") {

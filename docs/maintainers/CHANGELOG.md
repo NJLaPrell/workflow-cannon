@@ -6,6 +6,10 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+### Added
+
+- **Task Engine** — **`demote`** transition on **`run-transition`**: **`ready` → `proposed`** (return work to triage without **`cancel`**).
+
 ## [0.26.0] - 2026-03-30
 
 ### Fixed (maintainer / CI)

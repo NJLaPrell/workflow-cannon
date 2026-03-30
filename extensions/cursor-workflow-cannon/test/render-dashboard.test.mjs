@@ -71,3 +71,22 @@ test("renderDashboardRootInnerHtml handles null suggestedNext", () => {
   assert.match(html, /Suggested next/);
   assert.match(html, /—/);
 });
+
+test("renderDashboardRootInnerHtml shows readyQueueBreakdown when present", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      stateSummary: { proposed: 0, ready: 4, in_progress: 0, blocked: 0, completed: 0 },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [] },
+      readyQueueTop: [],
+      readyQueueCount: 4,
+      readyQueueBreakdown: { schemaVersion: 1, improvement: 3, other: 1 },
+      suggestedNext: null,
+      planningSession: null,
+      taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
+      workspaceStatus: { currentKitPhase: "1", nextKitPhase: "2", activeFocus: "Test" }
+    }
+  });
+  assert.match(html, /Ready queue · 3 improvements · 1 other/);
+});

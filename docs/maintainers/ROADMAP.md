@@ -37,6 +37,7 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - **Phase 23 (Agent behavior module)** is **COMPLETE and released** as **`v0.23.0`**: **`T420`–`T424`** — advisory **interaction profiles** via **`agent-behavior`** module (builtins, JSON/SQLite persistence, CRUD/fork, `explain`/`diff`, **`interview-behavior-profile`**, maintainer + **`.ai/AGENTS.md`** + requestable **`.cursor/rules/agent-behavior.mdc`**).
 - **Phase 24 (Unified task intake and improvement operational state)** is **COMPLETE and released** as **`v0.24.0`**: **`T425`–`T432`** — wishlist ideation as **`wishlist_intake`** **`T###`** tasks with optional **`metadata.legacyWishlistId`**; **`migrate-wishlist-intake`** for legacy stores; improvement operational state in unified SQLite when **`tasks.persistenceBackend: sqlite`**. ADR: `docs/maintainers/ADR-unified-task-store-wishlist-and-improvement-state.md`.
 - **Phase 25 (Agent playbooks and direction sets)** is **COMPLETE and released** as **`v0.26.0`**: **`T433`–`T439`** — maintainer **playbooks** under `docs/maintainers/playbooks/` (canon-by-reference); pilot **phase closeout + release** checklist; **`AGENTS.md`** discovery index; **`tasks/phase-closeout.md`** `/qt` template; **`runbooks/agent-playbooks.md`**; requestable **`.cursor/rules/playbook-phase-closeout.mdc`**.
+- **Phase 26 (Module platform and improvement execution)** is **OPEN** in task-engine state: **`T388`**, **`T389`**, **`T391`**, **`T393`** are **`ready`**; **transcript-derived `imp-*` improvements** are **`proposed`** (same phase string) until promoted via **`accept`** after triage — module README boundaries, command manifest alignment, task-engine public surface slimming, `src/modules` barrel policy, and burning down the improvement queue with explicit acceptance after triage.
 - Historical extraction and first-publish milestones remain recorded below as provenance.
 
 ## Phase plan and release cadence
@@ -307,6 +308,16 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
   - **`T433`–`T439`** are **`completed`** in task-engine state; released **`v0.26.0`**.
   - `pnpm run build`, `check`, `test`, and `parity` pass on the release tag.
   - Pilot playbook and index are discoverable from **`docs/maintainers/AGENTS.md`** without contradicting the workflow contract (`TERMS.md`, maintainer-delivery-loop expectations).
+
+### Phase 26 - Module platform and improvement execution -> GitHub release `v0.27.0` (OPEN)
+
+- **Primary scope:** **`T388`**, **`T389`**, **`T391`**, **`T393`** (**`ready`**); **transcript-backed `imp-*` improvements** (**`proposed`** until triage; phase string aligned in task-engine state).
+- **Outcome:** Module README and boundary docs stay honest with the tree; **command manifest** wiring matches shipped commands where required; **task-engine** exposes a deliberate minimal public surface; **`src/modules` barrel** policy is enforced consistently; **improvement** items are executed or decomposed with clear acceptance instead of lingering as title-only rows.
+- **Dependency structure:** Maintainer picks highest-priority **`ready`** work per delivery loop; **`T388`–`T393`** may parallelize where dependencies allow; `imp-*` items use `improvement-triage-top-three` to promote from **`proposed`** to **`ready`** before deep implementation.
+- **Exit signals:**
+  - Phase **26** tasks reach **`completed`** (or are explicitly **`rejected`/`cancelled`** with rationale) and improvements in this phase are **`completed`** or superseded.
+  - `pnpm run build`, `check`, `test`, and `parity` pass on the release tag targeting **`v0.27.0`**.
+  - ROADMAP current-state bullet and **`docs/maintainers/data/workspace-kit-status.yaml`** reflect phase closeout when shipped.
 
 ## Recorded decisions
 

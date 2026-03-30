@@ -110,6 +110,21 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
   const blockedSummary = (d.blockedSummary as Record<string, unknown>) || {};
   const blockedTop = Array.isArray(blockedSummary.top) ? (blockedSummary.top as unknown[]).slice(0, 3) : [];
   const readyTop = Array.isArray(d.readyQueueTop) ? (d.readyQueueTop as unknown[]).slice(0, 3) : [];
+  const rqb = d.readyQueueBreakdown as
+    | { improvement?: unknown; other?: unknown; schemaVersion?: unknown }
+    | undefined;
+  const rqbImp = typeof rqb?.improvement === "number" ? rqb.improvement : null;
+  const rqbOther = typeof rqb?.other === "number" ? rqb.other : null;
+  const breakdownLine =
+    rqbImp !== null && rqbOther !== null && rqbImp + rqbOther > 0
+      ? "<p class=\"muted\">Ready queue · " +
+        String(rqbImp) +
+        " improvement" +
+        (rqbImp === 1 ? "" : "s") +
+        " · " +
+        String(rqbOther) +
+        " other</p>"
+      : "";
 
   return (
     "<p><b>Current phase</b> " +
@@ -145,6 +160,7 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
     "<p><b>Ready preview</b> " +
     String(d.readyQueueCount ?? 0) +
     "</p>" +
+    breakdownLine +
     renderReadyList(readyTop) +
     "<p><b>Suggested next</b> " +
     (sn && (sn.id != null || sn.title != null)

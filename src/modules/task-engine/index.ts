@@ -29,7 +29,7 @@ export {
   stateValidityGuard,
   dependencyCheckGuard
 } from "./transitions.js";
-export { getNextActions } from "./suggestions.js";
+export { getNextActions, isImprovementLikeTask } from "./suggestions.js";
 export { readWorkspaceStatusSnapshot } from "./dashboard-status.js";
 export { WishlistStore } from "./wishlist-store.js";
 export type { WishlistItem, WishlistStatus, WishlistStoreDocument } from "./wishlist-types.js";

@@ -5,6 +5,7 @@ import {
   buildTaskTreeRootsFromTasks,
   effectiveTaskType,
   isActiveImprovementForTree,
+  isImprovementLikeForTree,
   isWishlistIntakeOpenForTree
 } from "../dist/views/tasks/build-task-tree.js";
 
@@ -41,7 +42,36 @@ test("isWishlistIntakeOpenForTree is true for non-terminal intake", () => {
   );
 });
 
-test("isActiveImprovementForTree excludes completed/cancelled", () => {
+test("isImprovementLikeForTree treats imp-* as improvement even when type is missing", () => {
+  assert.equal(
+    isImprovementLikeForTree({
+      id: "imp-abc0123456789a",
+      title: "x",
+      status: "ready"
+    }),
+    true
+  );
+  assert.equal(
+    isImprovementLikeForTree({
+      id: "T500",
+      title: "x",
+      status: "ready",
+      type: "improvement"
+    }),
+    true
+  );
+  assert.equal(
+    isImprovementLikeForTree({
+      id: "T500",
+      title: "x",
+      status: "ready",
+      type: "workspace-kit"
+    }),
+    false
+  );
+});
+
+test("isActiveImprovementForTree is true only for proposed (triage); ready uses status groups", () => {
   assert.equal(
     isActiveImprovementForTree({
       id: "T388",
@@ -50,6 +80,24 @@ test("isActiveImprovementForTree excludes completed/cancelled", () => {
       type: "improvement"
     }),
     true
+  );
+  assert.equal(
+    isActiveImprovementForTree({
+      id: "imp-1",
+      title: "x",
+      status: "ready",
+      type: "improvement"
+    }),
+    false
+  );
+  assert.equal(
+    isActiveImprovementForTree({
+      id: "imp-2",
+      title: "x",
+      status: "in_progress",
+      type: "improvement"
+    }),
+    false
   );
   assert.equal(
     isActiveImprovementForTree({
@@ -82,4 +130,36 @@ test("buildTaskTreeRootsFromTasks adds improvement group and status groups witho
   assert.equal(roots[2].status, "proposed");
   assert.equal(roots[2].tasks.length, 1);
   assert.equal(roots[2].tasks[0].id, "T390");
+});
+
+test("buildTaskTreeRootsFromTasks puts ready improvements under ready group, not Improvements", () => {
+  const roots = buildTaskTreeRootsFromTasks([
+    { id: "imp-a", title: "Triage", status: "proposed", type: "improvement" },
+    { id: "imp-b", title: "Do me", status: "ready", type: "improvement" },
+    { id: "T390", title: "Kit", status: "ready", type: "workspace-kit" }
+  ]);
+  const impGroup = roots.find((r) => r.kind === "improvement-group");
+  assert.ok(impGroup);
+  assert.equal(impGroup.tasks.length, 1);
+  assert.equal(impGroup.tasks[0].id, "imp-a");
+  const readyGroup = roots.find((r) => r.kind === "group" && r.status === "ready");
+  assert.ok(readyGroup);
+  assert.equal(readyGroup.tasks.length, 2);
+  const readyIds = new Set(readyGroup.tasks.map((t) => t.id));
+  assert.ok(readyIds.has("imp-b"));
+  assert.ok(readyIds.has("T390"));
+});
+
+test("buildTaskTreeRootsFromTasks puts imp-* ready tasks in ready group when type is omitted", () => {
+  const roots = buildTaskTreeRootsFromTasks([
+    { id: "imp-deadbeefcafe42", title: "No type field", status: "ready" },
+    { id: "T390", title: "Kit", status: "ready", type: "workspace-kit" }
+  ]);
+  assert.equal(
+    roots.find((r) => r.kind === "improvement-group"),
+    undefined
+  );
+  const readyGroup = roots.find((r) => r.kind === "group" && r.status === "ready");
+  assert.ok(readyGroup);
+  assert.equal(readyGroup.tasks.length, 2);
 });

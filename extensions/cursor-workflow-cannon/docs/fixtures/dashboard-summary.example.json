@@ -28,6 +28,11 @@
     },
     "readyQueueTop": [],
     "readyQueueCount": 2,
+    "readyQueueBreakdown": {
+      "schemaVersion": 1,
+      "improvement": 0,
+      "other": 2
+    },
     "blockedSummary": {
       "count": 0,
       "top": []

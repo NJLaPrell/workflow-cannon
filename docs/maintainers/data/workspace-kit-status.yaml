@@ -2,11 +2,13 @@ schema_version: 1
 current_kit_phase: "26"
 next_kit_phase: "27"
 last_updated: "2026-03-30"
-active_focus: "**Phase 26** planning — Phase **25** shipped as **`v0.26.0`** (maintainer playbooks / direction sets, `T433`–`T439`). Next maintainer slice TBD; dogfood on `@workflow-cannon/workspace-kit@0.26.0` after publish."
+active_focus: "**Phase 26** execution — module platform **`T388`**, **`T389`**, **`T391`**, **`T393`** are **`ready`**; **26×** transcript **`imp-*`** improvements are **`proposed`** (promote via `accept` after triage). Phase **25** shipped as **`v0.26.0`**."
 blockers: []
 next_agent_actions:
-  - "Define Phase **26** scope and tasks; run `create-task` / roadmap updates when intent is clear."
+  - "Run maintainer delivery loop on Phase **26** `T388`–`T393` `ready` queue; use `improvement-triage-top-three` to promote up to three `imp-*` from `proposed` when burning down transcript improvements."
 last_session_summary:
+  - "2026-03-30: **26×** transcript **`imp-*`** tasks demoted **`ready` → `proposed`** via `run-transition` **`demote`** (triage queue); Task Engine adds **`demote`** transition for **`ready` → `proposed`**."
+  - "2026-03-30: Phase **26** in task-engine — **`T388`**, **`T389`**, **`T391`**, **`T393`**, and **26× `imp-*`** improvements use phase string **Phase 26 (Module platform and improvement execution)**; each `imp-*` carries `technicalScope` / `acceptanceCriteria` derived from `metadata.provenanceRefs` + `evidenceKey` (transcript path, hash, confidence, parsed excerpt where JSON parses)."
   - "2026-03-30: Published **`v0.26.0`** — GitHub release + **Publish NPM** workflow `23768654868`; parity fixture `npm install` timeout raised for CI native builds (**PR #77**)."
   - "2026-03-30: Phase **25** completed — **`T433`–`T439`** merged (playbooks, AGENTS index, `/qt` phase-closeout, invocation runbook, requestable Cursor rule); release prep **`v0.26.0** (changelog + version bump + matrix/roadmap closeout)."
   - "2026-03-30: **v0.25.0** in-repo — default `tasks.persistenceBackend: sqlite`, ADR `ADR-sqlite-default-persistence.md`, migrated maintainer task data to `.workspace-kit/tasks/workspace-kit.db`; removed committed JSON task/wishlist stores."
@@ -28,7 +30,7 @@ pending_decisions: []
 metrics:
   updated_at: "2026-03-30"
   source: "maintainer"
-  notes: "Phase 25 released as v0.26.0 (playbooks / direction sets). Prior: Phase 24 v0.24.0; Phase-20 follow-ups T394–T402 and T415–T419 cancelled 2026-03-28."
+  notes: "Phase 26 open (T388–T393 ready; transcript imp-* proposed until triage). Phase 25 released as v0.26.0 (playbooks / direction sets). Prior: Phase 24 v0.24.0; Phase-20 follow-ups T394–T402 and T415–T419 cancelled 2026-03-28."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null

@@ -24,6 +24,7 @@ type TransitionEntry = {
 const ALLOWED_TRANSITIONS: Record<string, TransitionEntry> = {
   "proposed->ready": { action: "accept" },
   "proposed->cancelled": { action: "reject" },
+  "ready->proposed": { action: "demote" },
   "ready->in_progress": { action: "start" },
   "ready->blocked": { action: "block" },
   "ready->cancelled": { action: "cancel" },

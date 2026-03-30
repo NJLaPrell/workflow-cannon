@@ -5,7 +5,7 @@ import { maybeSpawnTranscriptHookAfterCompletion } from "../../core/transcript-c
 import { TaskStore } from "./store.js";
 import { TransitionService } from "./service.js";
 import { TaskEngineError, getAllowedTransitionsFrom } from "./transitions.js";
-import { getNextActions } from "./suggestions.js";
+import { getNextActions, isImprovementLikeTask } from "./suggestions.js";
 import { readWorkspaceStatusSnapshot } from "./dashboard-status.js";
 import { readBuildPlanSession, toDashboardPlanningSession } from "../../core/planning/build-plan-session-file.js";
 import { openPlanningStores } from "./planning-open.js";
@@ -844,7 +844,9 @@ export const taskEngineModule: WorkflowModule = {
       const tasks = store.getActiveTasks();
       const suggestion = getNextActions(tasks);
       const workspaceStatus = await readWorkspaceStatusSnapshot(ctx.workspacePath);
-      const readyTop = suggestion.readyQueue.slice(0, 15).map((t) => ({
+      const readyQueue = suggestion.readyQueue;
+      const readyImprovementCount = readyQueue.filter(isImprovementLikeTask).length;
+      const readyTop = readyQueue.slice(0, 15).map((t) => ({
         id: t.id,
         title: t.title,
         priority: t.priority ?? null,
@@ -869,7 +871,12 @@ export const taskEngineModule: WorkflowModule = {
         planningSession,
         stateSummary: suggestion.stateSummary,
         readyQueueTop: readyTop,
-        readyQueueCount: suggestion.readyQueue.length,
+        readyQueueCount: readyQueue.length,
+        readyQueueBreakdown: {
+          schemaVersion: 1 as const,
+          improvement: readyImprovementCount,
+          other: readyQueue.length - readyImprovementCount
+        },
         executionPlanningScope: "tasks-only" as const,
         wishlist: {
           schemaVersion: 1 as const,

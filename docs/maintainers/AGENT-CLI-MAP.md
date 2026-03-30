@@ -78,6 +78,12 @@ Exception: **documented recovery** (e.g. repair after corruption) may require a 
 workspace-kit run run-transition '{"taskId":"T285","action":"start","policyApproval":{"confirmed":true,"rationale":"begin implementation"}}'
 ```
 
+**Copy-paste (demote / return to triage — `ready` → `proposed`):**
+
+```bash
+workspace-kit run run-transition '{"taskId":"imp-example","action":"demote","policyApproval":{"confirmed":true,"rationale":"return to proposed until triage"}}'
+```
+
 **Session reuse (same shell / same `WORKSPACE_KIT_SESSION_ID`):**
 
 ```bash

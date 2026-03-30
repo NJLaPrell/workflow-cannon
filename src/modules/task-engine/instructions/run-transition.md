@@ -13,7 +13,7 @@ workspace-kit run run-transition '{"taskId":"T184","action":"start","policyAppro
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `taskId` | string | yes | The task ID to transition (e.g., `T184`) |
-| `action` | string | yes | The transition action: `accept`, `reject`, `start`, `block`, `cancel`, `complete`, `pause`, `unblock` |
+| `action` | string | yes | The transition action: `accept`, `reject`, `demote`, `start`, `block`, `cancel`, `complete`, `pause`, `unblock` |
 | `actor` | string | no | Who or what triggered the transition |
 
 ## Allowed Actions by State
@@ -21,7 +21,7 @@ workspace-kit run run-transition '{"taskId":"T184","action":"start","policyAppro
 | Current State | Allowed Actions |
 | --- | --- |
 | `proposed` | `accept` → ready, `reject` → cancelled |
-| `ready` | `start` → in_progress, `block` → blocked, `cancel` → cancelled |
+| `ready` | `demote` → proposed, `start` → in_progress, `block` → blocked, `cancel` → cancelled |
 | `in_progress` | `complete` → completed, `block` → blocked, `pause` → ready |
 | `blocked` | `unblock` → ready, `cancel` → cancelled |
 

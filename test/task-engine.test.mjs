@@ -71,6 +71,7 @@ test("isTransitionAllowed accepts all valid transitions", () => {
   const valid = [
     ["proposed", "ready"],
     ["proposed", "cancelled"],
+    ["ready", "proposed"],
     ["ready", "in_progress"],
     ["ready", "blocked"],
     ["ready", "cancelled"],
@@ -96,7 +97,6 @@ test("isTransitionAllowed rejects disallowed transitions", () => {
     ["proposed", "blocked"],
     ["blocked", "in_progress"],
     ["blocked", "completed"],
-    ["ready", "proposed"],
     ["in_progress", "proposed"]
   ];
   for (const [from, to] of invalid) {
@@ -107,6 +107,7 @@ test("isTransitionAllowed rejects disallowed transitions", () => {
 test("getTransitionAction returns correct action verbs", () => {
   assert.equal(getTransitionAction("proposed", "ready"), "accept");
   assert.equal(getTransitionAction("proposed", "cancelled"), "reject");
+  assert.equal(getTransitionAction("ready", "proposed"), "demote");
   assert.equal(getTransitionAction("ready", "in_progress"), "start");
   assert.equal(getTransitionAction("in_progress", "completed"), "complete");
   assert.equal(getTransitionAction("in_progress", "cancelled"), "decline");
@@ -116,6 +117,7 @@ test("getTransitionAction returns correct action verbs", () => {
 
 test("resolveTargetState maps action to target state", () => {
   assert.equal(resolveTargetState("proposed", "accept"), "ready");
+  assert.equal(resolveTargetState("ready", "demote"), "proposed");
   assert.equal(resolveTargetState("ready", "start"), "in_progress");
   assert.equal(resolveTargetState("in_progress", "complete"), "completed");
   assert.equal(resolveTargetState("in_progress", "decline"), "cancelled");
@@ -127,7 +129,7 @@ test("resolveTargetState maps action to target state", () => {
 test("getAllowedTransitionsFrom returns all transitions from a state", () => {
   const fromReady = getAllowedTransitionsFrom("ready");
   const actions = fromReady.map((t) => t.action).sort();
-  assert.deepEqual(actions, ["block", "cancel", "start"]);
+  assert.deepEqual(actions, ["block", "cancel", "demote", "start"]);
 
   const fromCompleted = getAllowedTransitionsFrom("completed");
   assert.equal(fromCompleted.length, 0);
@@ -477,6 +479,17 @@ test("Pause and resume: in_progress → ready → in_progress", async () => {
   assert.equal(store.getTask("T001").status, "in_progress");
 });
 
+test("Demote: ready → proposed (return to triage without cancelling)", async () => {
+  const { store } = await storeWithTasks([makeTask({ id: "T001", status: "ready" })]);
+
+  const service = new TransitionService(store);
+  const result = await service.runTransition({ taskId: "T001", action: "demote" });
+  assert.equal(result.evidence.fromState, "ready");
+  assert.equal(result.evidence.toState, "proposed");
+  assert.equal(result.evidence.action, "demote");
+  assert.equal(store.getTask("T001").status, "proposed");
+});
+
 // ---------------------------------------------------------------------------
 // T217: Next-action suggestion engine
 // ---------------------------------------------------------------------------
@@ -740,6 +753,7 @@ test("taskEngineModule onCommand dashboard-summary returns stable shape", async 
   assert.ok(typeof d.taskStoreLastUpdated === "string");
   assert.equal(d.stateSummary.ready, 1);
   assert.equal(d.readyQueueCount, 1);
+  assert.deepEqual(d.readyQueueBreakdown, { schemaVersion: 1, improvement: 0, other: 1 });
   assert.equal(d.suggestedNext.id, "T001");
   assert.ok(Array.isArray(d.blockingAnalysis));
   assert.ok("blockedSummary" in d);
