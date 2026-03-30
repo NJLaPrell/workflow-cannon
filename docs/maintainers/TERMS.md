@@ -16,7 +16,8 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
 - **Canonical goals and principles**: `.ai/PRINCIPLES.md` — decision rules and trade-off order
 - **Project intent and boundaries**: `README.md`, `docs/maintainers/ROADMAP.md`, `docs/maintainers/ARCHITECTURE.md`
 - **Execution and planning**: task-engine state (default SQLite `.workspace-kit/tasks/workspace-kit.db`; JSON opt-out `.workspace-kit/tasks/state.json`) — queue, dependencies, and execution tracking
-- **Operational runbooks/playbooks**: `docs/maintainers/RELEASING.md` and files under `docs/maintainers/`
+- **Operational runbooks**: `docs/maintainers/RELEASING.md` and files under `docs/maintainers/runbooks/`
+- **Maintainer playbooks (direction sets)**: `docs/maintainers/playbooks/` — ordered checklists that **compose** canonical docs by link; see `docs/maintainers/playbooks/README.md`
 - **Agent enforcement layer**: `.cursor/rules/*.mdc` — editor/agent behavior rules
 - **Reusable agent task templates**: `tasks/*.md`
 
@@ -66,6 +67,11 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
   - **Definition**: Reusable strategy for a class of work, broader than a single workflow.
   - **Defined in**: `docs/maintainers/` and thematic project docs.
   - **Enforced in**: planning and execution norms in task-engine state / team process, surfaced in the configured task store (default SQLite).
+
+- **Direction set (maintainer playbook)**
+  - **Definition**: A **named** maintainer playbook: markdown under `docs/maintainers/playbooks/` with a **stable id** (filename stem) and an **ordered checklist** of steps. It **links** canonical procedures (`docs/maintainers/RELEASING.md`, `docs/maintainers/AGENT-CLI-MAP.md`, delivery-loop / branching rules, `docs/maintainers/POLICY-APPROVAL.md`) instead of copying their full text. Same notion as **Playbook** above, scoped to shipped maintainer attachables.
+  - **Defined in**: `docs/maintainers/playbooks/README.md`, this glossary.
+  - **Enforced in**: maintainer review; optional requestable Cursor rules and `tasks/*.md` templates that point at playbook paths.
 
 - **Template Contract**
   - **Definition**: Required structure, fields, and formatting guarantees for outputs.
