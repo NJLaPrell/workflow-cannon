@@ -22,8 +22,15 @@ Versioned **direction sets** for recurring maintainer and agent flows. Terminolo
 
 ## Playbook ids (stable)
 
-Use the **filename stem** as the stable id. Pilot playbook for phase closeout and release: **`phase-closeout-and-release`** (markdown file ships in the same phase as this README).
+Use the **filename stem** as the stable id.
+
+## Index
+
+| Playbook id | File | Use when |
+| --- | --- | --- |
+| `phase-closeout-and-release` | [`phase-closeout-and-release.md`](./phase-closeout-and-release.md) | Finishing a phase: queue hygiene, delivery loop, human release gate, RELEASING evidence |
 
 ## Discovery
 
-After the phase ships: [`docs/maintainers/AGENTS.md`](../AGENTS.md) lists playbooks with paths and “use when.” Invocation detail: `docs/maintainers/runbooks/agent-playbooks.md` (runbook added in the same phase).
+- Human/agent entry: [`docs/maintainers/AGENTS.md`](../AGENTS.md) (playbook index).
+- Invocation: `docs/maintainers/runbooks/agent-playbooks.md` (maintainer runbook; ships in the same phase).
