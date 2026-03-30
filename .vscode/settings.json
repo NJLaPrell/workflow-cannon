@@ -1,3 +1,12 @@
 {
-    "snyk.advanced.autoSelectOrganization": true
+  "snyk.advanced.autoSelectOrganization": true,
+  "terminal.integrated.env.osx": {
+    "WORKSPACE_KIT_POLICY_APPROVAL": "{\"confirmed\":true,\"rationale\":\"Local workspace: post-completion transcript ingest hook and kit config mutations\"}"
+  },
+  "terminal.integrated.env.linux": {
+    "WORKSPACE_KIT_POLICY_APPROVAL": "{\"confirmed\":true,\"rationale\":\"Local workspace: post-completion transcript ingest hook and kit config mutations\"}"
+  },
+  "terminal.integrated.env.windows": {
+    "WORKSPACE_KIT_POLICY_APPROVAL": "{\"confirmed\":true,\"rationale\":\"Local workspace: post-completion transcript ingest hook and kit config mutations\"}"
+  }
 }

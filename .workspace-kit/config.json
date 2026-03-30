@@ -1,0 +1,7 @@
+{
+  "improvement": {
+    "hooks": {
+      "afterTaskCompleted": "ingest"
+    }
+  }
+}
