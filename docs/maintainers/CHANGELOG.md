@@ -6,8 +6,11 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-03-30
+
 ### Documentation
 
+- **Agent playbooks / direction sets** (`T433`–`T439`) — TERMS + `docs/maintainers/playbooks/` (README, pilot `phase-closeout-and-release`), `AGENTS.md` discovery table + optional requestable `.cursor/rules/playbook-phase-closeout.mdc`, `tasks/phase-closeout.md` `/qt` template, `runbooks/agent-playbooks.md`; FEATURE-MATRIX + ROADMAP Phase 25 closeout.
 - **CLI visual guide** — `docs/maintainers/CLI-VISUAL-GUIDE.md` (ASCII topology + Mermaid: top-level commands, agent decision flow, approval lanes, default module router). Linked from README, `AGENTS.md`, `AGENT-CLI-MAP.md`, `ARCHITECTURE.md`; machine ref in `.ai/AGENTS.md`.
 
 ## [0.25.0] - 2026-03-30

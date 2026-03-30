@@ -1,14 +1,15 @@
 schema_version: 1
-current_kit_phase: "24"
-next_kit_phase: "25"
+current_kit_phase: "26"
+next_kit_phase: "27"
 last_updated: "2026-03-30"
-active_focus: "**v0.25.0** in-repo: SQLite default persistence; this repo migrated off committed `state.json`. Next: publish npm + align ROADMAP phase label if needed; legacy wishlist operators still run `migrate-wishlist-intake` where applicable."
+active_focus: "**Phase 26** planning — Phase **25** shipped as **`v0.26.0`** (maintainer playbooks / direction sets, `T433`–`T439`). Next maintainer slice TBD; dogfood on `@workflow-cannon/workspace-kit@0.26.0` after publish."
 blockers: []
 next_agent_actions:
-  - "Plan Phase **25** or next maintainer slice; align `current_kit_phase` when scope is set."
-  - "Downstream / dogfood: bump to `@workflow-cannon/workspace-kit@0.25.0` after publish; JSON-only workspaces run `migrate-task-persistence` or pin `tasks.persistenceBackend: json`."
+  - "Define Phase **26** scope and tasks; run `create-task` / roadmap updates when intent is clear."
+  - "After npm publish: add Phase 25 **Publish NPM** workflow URL to `docs/maintainers/ROADMAP.md` execution evidence snapshot."
 last_session_summary:
-  - "2026-03-30: **v0.25.0** work in-repo — default `tasks.persistenceBackend: sqlite`, ADR `ADR-sqlite-default-persistence.md`, migrated maintainer task data to `.workspace-kit/tasks/workspace-kit.db`; removed committed JSON task/wishlist stores."
+  - "2026-03-30: Phase **25** completed — **`T433`–`T439`** merged (playbooks, AGENTS index, `/qt` phase-closeout, invocation runbook, requestable Cursor rule); release prep **`v0.26.0** (changelog + version bump + matrix/roadmap closeout)."
+  - "2026-03-30: **v0.25.0** in-repo — default `tasks.persistenceBackend: sqlite`, ADR `ADR-sqlite-default-persistence.md`, migrated maintainer task data to `.workspace-kit/tasks/workspace-kit.db`; removed committed JSON task/wishlist stores."
   - "2026-03-30: Released **v0.24.0** — merged **PR #69**, GitHub release + **Publish NPM** workflow `23758351442`; ROADMAP evidence snapshot updated."
   - "2026-03-30: Phase **24** code + docs: **T425–T432** completed via `run-transition`; package **0.24.0**; parity/check/phase5-gates green."
   - "2026-03-28: Opened **Phase 24** (`v0.24.0`): ADR `ADR-unified-task-store-wishlist-and-improvement-state.md`, ROADMAP + status YAML, tasks **T425–T432** via `create-task`."
@@ -23,15 +24,11 @@ last_session_summary:
   - "2026-03-28: Phase 19 planned (`v0.20.0`): documentation module v2 — v2 keyed schema, runtime decomposition, view-model rendering, hard .ai/ migration. Tasks T366–T376 created from planning artifact W6."
   - "2026-03-28: Module build docs-vs-reality review completed; findings in `docs/maintainers/MODULE-CLEANUP-REVIEW.md`."
   - "2026-03-28: State consolidation analysis: decided to migrate per-module state.md + ad-hoc JSON to unified SQLite DB with module schema registration and export-on-commit snapshots."
-  - "2026-03-28: Planning artifact W4 created and converted to tasks T356–T365 (module cleanup + state consolidation)."
-  - "2026-03-28: Combined Phase 18 agent orchestration (T351–T355), module cleanup (T356–T359), and state consolidation (T360–T365) into single release `v0.19.0`."
-  - "2026-03-27: Phase 17 tasks `T345`–`T350` completed and released as v0.18.0."
-  - "2026-03-27: Phase 16 tasks `T335`–`T344` completed and released as v0.17.0."
 pending_decisions: []
 metrics:
-  updated_at: "2026-03-28"
+  updated_at: "2026-03-30"
   source: "maintainer"
-  notes: "Phase 24 opened 2026-03-28 (T425–T432). Through v0.23.0: Phases 18–23 shipped; Phase-20 follow-ups T394–T402 and T415–T419 cancelled 2026-03-28."
+  notes: "Phase 25 released as v0.26.0 (playbooks / direction sets). Prior: Phase 24 v0.24.0; Phase-20 follow-ups T394–T402 and T415–T419 cancelled 2026-03-28."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null

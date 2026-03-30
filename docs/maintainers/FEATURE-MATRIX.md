@@ -27,6 +27,7 @@ Status legend:
 | Phase 10 - Agent/CLI parity (`T285`–`T291`) | `v0.11.0` | Completed |
 | Phase 11 - Architectural review follow-up (`T292`–`T295`) | `v0.12.0` | Completed |
 | Phase 12 - Cursor native UI thin client (`T296`–`T310`) | `v0.13.0` | Completed |
+| Phase 25 - Agent playbooks and direction sets (`T433`–`T439`) | `v0.26.0` | Completed |
 
 ## Feature Matrix by Phase
 
@@ -190,6 +191,18 @@ Status legend:
 | Kit dashboard/task/config backend contracts for UI | Stable JSON command outputs and extension integration points for thin clients | Completed | `T296`, `T297` |
 | Cursor extension shell and UI surfaces | Extension scaffold, activity-bar views, dashboard/tasks/config UI, palette commands | Completed | `T298`–`T306` |
 | Security and verification for extension workflows | Security/trust pass plus unit/integration/manual-E2E coverage | Completed | `T307`–`T310` |
+
+### Phase 25 Agent playbooks and direction sets (`v0.26.0`)
+
+| Product feature | What users/maintainers get | Status | Task coverage |
+| --- | --- | --- | --- |
+| Playbook canon and authoring contract | Shared vocabulary (direction set ↔ playbook), compose-by-reference rules, no fork of RELEASING/delivery-loop prose | Completed | `T433` |
+| Pilot phase-closeout + release playbook | One attachable checklist orchestrating task queue, delivery loop, human release gate, and RELEASING evidence | Completed | `T434` |
+| Agent discovery index | `AGENTS.md` table mapping playbook ids to paths and “use when” | Completed | `T435` |
+| `/qt` phase-closeout template | `tasks/phase-closeout.md` entry that points agents at the pilot playbook and CLI map lines | Completed | `T436` |
+| Invocation runbook | How to attach playbooks, optional rules, and limits of auto-triggering | Completed | `T437` |
+| Requestable Cursor rule (optional) | Thin rule enabling phase-closeout mode without always-on bloat | Completed | `T438` |
+| Milestone matrix alignment | FEATURE-MATRIX + roadmap wording stay consistent with shipped artifacts | Completed | `T439` |
 
 ## Supporting Milestone Features (cross-phase)
 
