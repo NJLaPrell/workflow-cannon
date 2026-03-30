@@ -35,7 +35,7 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - **Phase 20 (Maintainer platform and documentation alignment)** is **COMPLETE and released** as **`v0.21.0`**: **`T388`–`T393`** — policy command lists per module + aggregation, command-manifest types (full manifest wiring remains optional follow-up), module README and boundary docs, `src/modules` barrel policy, ARCHITECTURE/TERMS/module-build canon, task-engine internal split + public `index.ts`, and CI guard for orphan instruction markdown (with allowlist for non-command templates). Tracked follow-ups **`T394`–`T397`**, **`T398`–`T402`**, and optional ergonomics **`T415`–`T419`** were **cancelled** in task-engine state on **2026-03-28** (maintainer deprioritization).
 - **Phase 21 (Agent reliability and planning dashboard)** is **COMPLETE and released** as **`v0.22.0`**: **`T404`–`T409`**, **`T410`–`T414`** — requestable long-session Cursor rule + runbook, `AGENTS.md` reload ritual, `build-plan` session snapshot persisted for **`dashboard-summary`** / extension dashboard, maintainer docs and extension parity plan updated; optional task-state advisory remains **`pnpm run advisory:task-state-hand-edit`**.
 - **Phase 23 (Agent behavior module)** is **COMPLETE and released** as **`v0.23.0`**: **`T420`–`T424`** — advisory **interaction profiles** via **`agent-behavior`** module (builtins, JSON/SQLite persistence, CRUD/fork, `explain`/`diff`, **`interview-behavior-profile`**, maintainer + **`.ai/AGENTS.md`** + requestable **`.cursor/rules/agent-behavior.mdc`**).
-- **Phase 24 (Unified task intake and improvement operational state)** is **COMPLETE in-repo** for **`v0.24.0`**: **`T425`–`T432`** — wishlist ideation as **`wishlist_intake`** **`T###`** tasks with optional **`metadata.legacyWishlistId`**; **`migrate-wishlist-intake`** for legacy stores; improvement operational state in unified SQLite when **`tasks.persistenceBackend: sqlite`**. ADR: `docs/maintainers/ADR-unified-task-store-wishlist-and-improvement-state.md`.
+- **Phase 24 (Unified task intake and improvement operational state)** is **COMPLETE and released** as **`v0.24.0`**: **`T425`–`T432`** — wishlist ideation as **`wishlist_intake`** **`T###`** tasks with optional **`metadata.legacyWishlistId`**; **`migrate-wishlist-intake`** for legacy stores; improvement operational state in unified SQLite when **`tasks.persistenceBackend: sqlite`**. ADR: `docs/maintainers/ADR-unified-task-store-wishlist-and-improvement-state.md`.
 - Historical extraction and first-publish milestones remain recorded below as provenance.
 
 ## Phase plan and release cadence
@@ -284,7 +284,7 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
   - `pnpm run build`, `check`, `test`, and extension compile (`pnpm run ext:compile` or documented equivalent) pass where extension tasks apply.
   - `dashboard-summary` contract and planning context paths are documented for extension consumers.
 
-### Phase 24 - Unified task intake and improvement operational state -> GitHub release `v0.24.0` (COMPLETE in-repo)
+### Phase 24 - Unified task intake and improvement operational state -> GitHub release `v0.24.0` (COMPLETE)
 
 - **Decision record:** `docs/maintainers/ADR-unified-task-store-wishlist-and-improvement-state.md`.
 - **Primary scope:** **`T425`–`T432`**.
@@ -293,7 +293,7 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 - **Improvement:** operational ingest state (cursors, retries, etc.) lives in a **dedicated logical document** in the unified store; **not** modeled as ordinary task rows. Human-facing improvement work remains `type: "improvement"` tasks where applicable.
 - **Dependency structure:** `T425` → `T426` → `T427` / `T428` in parallel; `T429` after `T425`+`T427`; `T430` after `T427`; `T431` after `T428`–`T430`; `T432` after `T431`.
 - **Exit signals:**
-  - **`T425`–`T432`** marked **`completed`** in task-engine state after merge/release validation.
+  - **`T425`–`T432`** are **`completed`** in task-engine state (merged **PR #69**, released **`v0.24.0`**).
   - `pnpm run build`, `check`, `test`, and `parity` pass on the release tag; extension compile where dashboard surfaces change.
   - Doctor and **`migrate-wishlist-intake`** align with tasks-backed wishlist intake; changelog documents breaking id/persistence changes.
 
@@ -331,4 +331,6 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 - Phase 16 / `v0.17.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23667632451`
 - Phase 17 / `v0.18.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23671207437`
 - Phase 20 / `v0.21.0` GitHub release: `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.21.0`
+- Phase 24 / `v0.24.0` GitHub release: `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.24.0`
+- Phase 24 / `v0.24.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23758351442`
 - npm package: `https://www.npmjs.com/package/@workflow-cannon/workspace-kit`

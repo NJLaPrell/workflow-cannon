@@ -1,12 +1,13 @@
 schema_version: 1
 current_kit_phase: "24"
 last_updated: "2026-03-30"
-active_focus: "Phase **24** implementation merged for **v0.24.0** — `wishlist_intake` tasks, `migrate-wishlist-intake`, SQLite task-only planning row (post-migration), improvement state in unified DB when SQLite persistence is on. Release tagging/npm per maintainer workflow."
+active_focus: "**v0.24.0** released (Phase 24). Next: define Phase 25 in ROADMAP or pick backlog; operators with legacy wishlist should run `migrate-wishlist-intake`."
 blockers: []
 next_agent_actions:
-  - "Publish **v0.24.0** per `docs/maintainers/RELEASING.md` (GitHub release + npm); record workflow run URLs."
-  - "Operators on legacy wishlist files: run `migrate-wishlist-intake` once (see maintainer CHANGELOG + ADR)."
+  - "Plan Phase **25** or next maintainer slice; align `current_kit_phase` when scope is set."
+  - "Downstream / dogfood: bump to `@workflow-cannon/workspace-kit@0.24.0`; run `migrate-wishlist-intake` where legacy wishlist or dual-column SQLite exists."
 last_session_summary:
+  - "2026-03-30: Released **v0.24.0** — merged **PR #69**, GitHub release + **Publish NPM** workflow `23758351442`; ROADMAP evidence snapshot updated."
   - "2026-03-30: Phase **24** code + docs: **T425–T432** completed via `run-transition`; package **0.24.0**; parity/check/phase5-gates green."
   - "2026-03-28: Opened **Phase 24** (`v0.24.0`): ADR `ADR-unified-task-store-wishlist-and-improvement-state.md`, ROADMAP + status YAML, tasks **T425–T432** via `create-task`."
   - "2026-03-28: Cancelled **T394–T397**, **T398–T402**, **T415–T419** via `run-transition` (reject/cancel + policyApproval) — maintainer deprioritization."
