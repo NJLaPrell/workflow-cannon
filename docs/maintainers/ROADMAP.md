@@ -36,6 +36,7 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - **Phase 21 (Agent reliability and planning dashboard)** is **COMPLETE and released** as **`v0.22.0`**: **`T404`–`T409`**, **`T410`–`T414`** — requestable long-session Cursor rule + runbook, `AGENTS.md` reload ritual, `build-plan` session snapshot persisted for **`dashboard-summary`** / extension dashboard, maintainer docs and extension parity plan updated; optional task-state advisory remains **`pnpm run advisory:task-state-hand-edit`**.
 - **Phase 23 (Agent behavior module)** is **COMPLETE and released** as **`v0.23.0`**: **`T420`–`T424`** — advisory **interaction profiles** via **`agent-behavior`** module (builtins, JSON/SQLite persistence, CRUD/fork, `explain`/`diff`, **`interview-behavior-profile`**, maintainer + **`.ai/AGENTS.md`** + requestable **`.cursor/rules/agent-behavior.mdc`**).
 - **Phase 24 (Unified task intake and improvement operational state)** is **COMPLETE and released** as **`v0.24.0`**: **`T425`–`T432`** — wishlist ideation as **`wishlist_intake`** **`T###`** tasks with optional **`metadata.legacyWishlistId`**; **`migrate-wishlist-intake`** for legacy stores; improvement operational state in unified SQLite when **`tasks.persistenceBackend: sqlite`**. ADR: `docs/maintainers/ADR-unified-task-store-wishlist-and-improvement-state.md`.
+- **Phase 25 (Agent playbooks and direction sets)** is **COMPLETE and released** as **`v0.26.0`**: **`T433`–`T439`** — maintainer **playbooks** under `docs/maintainers/playbooks/` (canon-by-reference); pilot **phase closeout + release** checklist; **`AGENTS.md`** discovery index; **`tasks/phase-closeout.md`** `/qt` template; **`runbooks/agent-playbooks.md`**; requestable **`.cursor/rules/playbook-phase-closeout.mdc`**.
 - Historical extraction and first-publish milestones remain recorded below as provenance.
 
 ## Phase plan and release cadence
@@ -297,6 +298,16 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
   - `pnpm run build`, `check`, `test`, and `parity` pass on the release tag; extension compile where dashboard surfaces change.
   - Doctor and **`migrate-wishlist-intake`** align with tasks-backed wishlist intake; changelog documents breaking id/persistence changes.
 
+### Phase 25 - Agent playbooks and direction sets -> GitHub release `v0.26.0` (COMPLETE)
+
+- **Primary scope:** **`T433`–`T439`**.
+- **Outcome:** Operators and agents can open **named playbooks** that **link and order** steps against existing canon (`RELEASING.md`, delivery loop / branching rules, `AGENT-CLI-MAP.md`, `POLICY-APPROVAL.md`) instead of copying long procedural text. Discovery via **`AGENTS.md`**, **`tasks/*.md`**, runbook, and optional requestable Cursor rule.
+- **Dependency structure:** `T433` → `T434` → `T435` / `T436` in parallel where unblocked; `T437` after `T435`; `T438` after `T434`+`T435`; **`T439`** after **`T434`–`T438`** (closeout + matrix/roadmap completion wording).
+- **Exit signals:**
+  - **`T433`–`T439`** are **`completed`** in task-engine state; released **`v0.26.0`**.
+  - `pnpm run build`, `check`, `test`, and `parity` pass on the release tag.
+  - Pilot playbook and index are discoverable from **`docs/maintainers/AGENTS.md`** without contradicting the workflow contract (`TERMS.md`, maintainer-delivery-loop expectations).
+
 ## Recorded decisions
 
 | Decision | Choice |
@@ -333,4 +344,5 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 - Phase 20 / `v0.21.0` GitHub release: `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.21.0`
 - Phase 24 / `v0.24.0` GitHub release: `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.24.0`
 - Phase 24 / `v0.24.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23758351442`
+- Phase 25 / `v0.26.0`: add GitHub release URL + **Publish NPM** workflow run URL here after publish
 - npm package: `https://www.npmjs.com/package/@workflow-cannon/workspace-kit`
