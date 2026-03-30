@@ -22,12 +22,17 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     _token: vscode.CancellationToken
   ): void {
     this.view = webviewView;
-    webviewView.webview.options = {
+    const { webview } = webviewView;
+    webview.options = {
       enableScripts: true,
       localResourceRoots: [this.extensionUri]
     };
-    webviewView.webview.html = this.html();
-    webviewView.webview.onDidReceiveMessage(async (msg) => {
+    webview.html = this.buildHtml(webview);
+    webview.onDidReceiveMessage(async (msg) => {
+      if (msg?.type === "dashboard-ready") {
+        await this.pushUpdate();
+        return;
+      }
       if (msg?.type === "refresh") {
         await this.pushUpdate();
       }
@@ -43,7 +48,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         await vscode.commands.executeCommand("workflowCannon.validateConfig");
       }
     });
-    void this.pushUpdate();
   }
 
   refresh(): void {
@@ -54,12 +58,33 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (!this.view) {
       return;
     }
-    const raw = await this.client.run("dashboard-summary", {});
-    await this.view.webview.postMessage({ type: "dashboard", payload: raw });
+    let raw: Record<string, unknown>;
+    try {
+      raw = (await this.client.run("dashboard-summary", {})) as Record<string, unknown>;
+    } catch (e) {
+      raw = {
+        ok: false,
+        code: "extension-push-error",
+        message: e instanceof Error ? e.message : String(e)
+      };
+    }
+    try {
+      await this.view.webview.postMessage({ type: "dashboard", payload: raw });
+    } catch {
+      /* webview disposed */
+    }
   }
 
-  private html(): string {
-    const csp = ["default-src 'none'", "style-src 'unsafe-inline'", "script-src 'unsafe-inline'"].join("; ");
+  private buildHtml(webview: vscode.Webview): string {
+    const scriptUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.extensionUri, "media", "dashboard-webview.js")
+    );
+    const csp = [
+      "default-src 'none'",
+      "style-src 'unsafe-inline'",
+      `script-src ${webview.cspSource}`
+    ].join("; ");
+
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -68,7 +93,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Workflow Cannon</title>
   <style>
-    body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); padding: 8px; font-size: 12px; }
+    body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); background: var(--vscode-sideBar-background); padding: 8px; font-size: 12px; }
     h1 { font-size: 1.1em; margin: 0 0 8px; }
     .muted { opacity: 0.75; }
     pre { white-space: pre-wrap; background: var(--vscode-textCodeBlock-background); padding: 8px; border-radius: 4px; }
@@ -86,89 +111,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     <button id="tasks">Open Tasks</button>
     <button id="config">Open Config</button>
   </div>
-  <script>
-    const vscode = acquireVsCodeApi();
-    const root = document.getElementById('root');
-    const btn = document.getElementById('btn');
-    const validate = document.getElementById('validate');
-    const tasks = document.getElementById('tasks');
-    const config = document.getElementById('config');
-    btn.addEventListener('click', () => vscode.postMessage({ type: 'refresh' }));
-    validate.addEventListener('click', () => vscode.postMessage({ type: 'validateConfig' }));
-    tasks.addEventListener('click', () => vscode.postMessage({ type: 'openTasks' }));
-    config.addEventListener('click', () => vscode.postMessage({ type: 'openConfig' }));
-    window.addEventListener('message', (ev) => {
-      const msg = ev.data;
-      if (msg?.type !== 'dashboard') return;
-      const p = msg.payload;
-      if (!p) { root.textContent = 'No payload'; return; }
-      if (!p.ok) {
-        const guidance = p.code === 'policy-denied'
-          ? '\\n\\nPolicy denied: provide policyApproval rationale/session scope where required.'
-          : '';
-        root.innerHTML = '<pre class="bad">' + JSON.stringify(p, null, 2) + guidance + '</pre>';
-        return;
-      }
-      const d = p.data || {};
-      const ss = d.stateSummary || {};
-      const sn = d.suggestedNext;
-      const ws = d.workspaceStatus;
-      const wishlist = d.wishlist || {};
-      const wishlistOpenTop = Array.isArray(wishlist.openTop) ? wishlist.openTop : [];
-      const planningSession = d.planningSession;
-      const blockedSummary = d.blockedSummary || {};
-      const blockedTop = Array.isArray(blockedSummary.top) ? blockedSummary.top.slice(0, 3) : [];
-      const readyTop = Array.isArray(d.readyQueueTop) ? d.readyQueueTop.slice(0, 3) : [];
-      root.innerHTML =
-        '<p><b>Phase</b> ' + (ws?.currentKitPhase ?? '—') + '</p>' +
-        '<p class="muted">' + escapeHtml(ws?.activeFocus || '') + '</p>' +
-        '<p class="ok">Tasks · proposed ' + (ss.proposed ?? 0) +
-        ' · ready ' + (ss.ready ?? 0) + ' · in progress ' + (ss.in_progress ?? 0) +
-        ' · blocked ' + (ss.blocked ?? 0) +
-        ' · done ' + (ss.completed ?? 0) + '</p>' +
-        '<p><b>Wishlist</b> (W### — ideation; not in ready queue until converted to tasks) · open ' +
-        (wishlist.openCount ?? 0) + ' / total ' + (wishlist.totalCount ?? 0) + '</p>' +
-        renderWishlistOpenList(wishlistOpenTop) +
-        '<p><b>Blocked</b> ' + (blockedSummary.count ?? 0) + '</p>' +
-        renderBlockedList(blockedTop) +
-        '<p><b>Ready preview</b> ' + (d.readyQueueCount ?? 0) + '</p>' +
-        renderReadyList(readyTop) +
-        '<p><b>Suggested next</b> ' + (sn ? escapeHtml(sn.id + ' — ' + sn.title) : '—') + '</p>' +
-        renderPlanningSession(planningSession) +
-        '<p class="muted">Store updated ' + escapeHtml(d.taskStoreLastUpdated || '') + '</p>';
-    });
-    function renderReadyList(items) {
-      if (!items || items.length === 0) return '<p class="muted">No ready tasks.</p>';
-      return '<pre>' + items.map((x) => {
-        const pri = x?.priority ? ' [' + escapeHtml(String(x.priority)) + ']' : '';
-        return '- ' + escapeHtml(String(x?.id ?? '')) + ' ' + escapeHtml(String(x?.title ?? '')) + pri;
-      }).join('\\n') + '</pre>';
-    }
-    function renderWishlistOpenList(items) {
-      if (!items || items.length === 0) return '<p class="muted">No open wishlist items.</p>';
-      return '<p class="muted"><b>Open wishlist preview</b></p><pre>' + items.map((x) =>
-        '- ' + escapeHtml(String(x?.id ?? '')) + ' ' + escapeHtml(String(x?.title ?? ''))
-      ).join('\\n') + '</pre>';
-    }
-    function renderBlockedList(items) {
-      if (!items || items.length === 0) return '<p class="muted">No blocked tasks.</p>';
-      return '<pre>' + items.map((x) =>
-        '- ' + escapeHtml(String(x?.taskId ?? '')) + ' blocked by ' + escapeHtml(String((x?.blockedBy || []).join(', ')))
-      ).join('\\n') + '</pre>';
-    }
-    function renderPlanningSession(ps) {
-      if (!ps || typeof ps !== 'object') {
-        return '<p class="muted"><b>Planning session</b> —</p>';
-      }
-      const pct = typeof ps.completionPct === 'number' ? ps.completionPct : '—';
-      return '<p><b>Planning session</b> ' + escapeHtml(String(ps.planningType ?? '')) +
-        ' · ' + escapeHtml(String(ps.status ?? '')) + ' · ' + pct + '% critical</p>' +
-        '<pre class="muted">' + escapeHtml(String(ps.resumeCli ?? '')) + '</pre>';
-    }
-    function escapeHtml(s) {
-      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    }
-  </script>
+  <script src="${scriptUri}"></script>
 </body>
 </html>`;
   }
