@@ -30,6 +30,18 @@ When the workspace root is not a kit source checkout, instruction paths still re
 - If work is application/source edits only, use normal code workflow; optional Tier C reads (`list-tasks`, `get-next-actions`) are safe discovery helpers.
 - For `workspace-kit run` sensitive operations, pass JSON `policyApproval`; for top-level `workspace-kit config|init|upgrade`, use env `WORKSPACE_KIT_POLICY_APPROVAL`.
 
+## Maintainer playbook: one task to `main`
+
+When delivering **one** **`T###`** via GitHub PR to **`main`**, use the ordered playbook **`docs/maintainers/playbooks/task-to-main.md`** (id `task-to-main`): branch from updated **`main`**, implement, open PR, review (and iterate with PR comments until checks pass), merge, then **`run-transition`** with **`complete`** and evidence. Pairs with **`.cursor/rules/maintainer-delivery-loop.mdc`**; optional requestable **`.cursor/rules/playbook-task-to-main.mdc`**. Human summary: **`docs/maintainers/AGENTS.md`** → **Task execution**.
+
+## Maintainer playbook: improvement discovery
+
+When **researching** friction to log as **`improvement`** tasks or via **`generate-recommendations`** / transcript ingest, use **`docs/maintainers/playbooks/improvement-task-discovery.md`** (id `improvement-task-discovery`). Optional requestable **`.cursor/rules/playbook-improvement-task-discovery.mdc`**. Human summary: **`docs/maintainers/AGENTS.md`** → **Improvement discovery**.
+
+## Maintainer playbook: improvement triage (top 3 → ready)
+
+When **promoting** up to three **`type: "improvement"`** tasks from **`proposed`** to **`ready`**, use **`docs/maintainers/playbooks/improvement-triage-top-three.md`** (id `improvement-triage-top-three`); Tier A **`run-transition`** with **`action":"accept"`** and **`policyApproval`**. Optional requestable **`.cursor/rules/playbook-improvement-triage-top-three.mdc`**. Human summary: **`docs/maintainers/AGENTS.md`** → **Improvement triage**.
+
 ## `/qt` vs `workspace-kit`
 
 The editor **`/qt`** command only loads prompt templates from `tasks/*.md`. It does **not** execute `workspace-kit`, write task-engine state, or satisfy policy. If a workflow step changes kit-owned files or policy-sensitive behavior, the agent must run the **`workspace-kit` line** from this map (or the linked instruction file)—not only describe it in chat.

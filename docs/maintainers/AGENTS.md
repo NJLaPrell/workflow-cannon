@@ -24,10 +24,18 @@ Basic operating guidance for AI agents working in this repository.
 | Playbook id | Path | Use when |
 | --- | --- | --- |
 | `phase-closeout-and-release` | [`playbooks/phase-closeout-and-release.md`](./playbooks/phase-closeout-and-release.md) | Closing a phase and cutting a release (queue, delivery loop, human publish gate, RELEASING evidence) |
+| `task-to-main` | [`playbooks/task-to-main.md`](./playbooks/task-to-main.md) | Single task: pull `main`, feature branch, PR, review/fix loop, merge, `run-transition` complete |
+| `improvement-task-discovery` | [`playbooks/improvement-task-discovery.md`](./playbooks/improvement-task-discovery.md) | Research and log improvements: transcripts, docs drift, architecture, policy/CLI UX, release friction |
+| `improvement-triage-top-three` | [`playbooks/improvement-triage-top-three.md`](./playbooks/improvement-triage-top-three.md) | Triage **`improvement`** tasks: rubric, pick ≤3, **`accept`** to **`ready`**, verify queue |
 
 How to attach playbooks in an editor session and limits of auto-loading: [`runbooks/agent-playbooks.md`](./runbooks/agent-playbooks.md).
 
-Optional requestable Cursor rule when driving phase closeout from the editor: `.cursor/rules/playbook-phase-closeout.mdc`.
+Optional requestable Cursor rules:
+
+- Phase closeout + release: `.cursor/rules/playbook-phase-closeout.mdc`
+- Single **`T###`** to **`main`** (branch, PR, review loop, merge, transitions): `.cursor/rules/playbook-task-to-main.mdc`
+- **Improvement** research and logging (transcripts, docs, architecture, ops): `.cursor/rules/playbook-improvement-task-discovery.mdc`
+- **Improvement** triage (≤3 **`proposed`** → **`ready`**): `.cursor/rules/playbook-improvement-triage-top-three.mdc`
 
 ## Long threads and context reload
 
@@ -96,10 +104,19 @@ Optional **interaction posture** (how to collaborate in chat) via the **`agent-b
 
 ## Task execution
 
+- **Single task → `main` (maintainer delivery):** When you are implementing **one** execution task (**`T###`**) through a feature branch, pull request, review, and merge to **`main`**, **follow the ordered playbook** [`playbooks/task-to-main.md`](./playbooks/task-to-main.md) — attach it (`@`) or enable **`.cursor/rules/playbook-task-to-main.mdc`**. It sequences pull/branch, commits, PR, review/fix iterations, merge, and Tier A **`run-transition`** (`start` / `complete`) with **`policyApproval`**. Same expectations as **`.cursor/rules/maintainer-delivery-loop.mdc`**, step-by-step for one task.
 - Execute tasks in dependency order from task-engine state (`workspace-kit run list-tasks` / `get-next-actions`).
 - Optional session opener: run `workspace-kit run get-next-actions '{}'`, then fetch the chosen task with `workspace-kit run get-task '{"taskId":"Txxx"}'` before implementation.
 - Treat each task's `Approach`, `Technical scope`, and `Acceptance criteria` as binding implementation guidance.
 - If a task is too large for one change, split into supporting tasks before starting implementation.
+
+## Improvement discovery (research → log)
+
+When **exploring** the repo for friction to capture as **`type: "improvement"`** work (or **`generate-recommendations`** / transcript-driven intake), **follow the ordered playbook** [`playbooks/improvement-task-discovery.md`](./playbooks/improvement-task-discovery.md) — attach it (`@`) or enable **`.cursor/rules/playbook-improvement-task-discovery.mdc`**. It directs where to look (sessions/transcripts, documentation, architecture, parity/CI, config/policy UX, release ops) and how to **persist** via Tier **B** commands from [`AGENT-CLI-MAP.md`](./AGENT-CLI-MAP.md), not chat-only notes.
+
+## Improvement triage (backlog → ready queue)
+
+When **selecting** which **`improvement`** tasks should enter (or compete in) the **`ready`** queue, **follow** [`playbooks/improvement-triage-top-three.md`](./playbooks/improvement-triage-top-three.md) — attach (`@`) or **`.cursor/rules/playbook-improvement-triage-top-three.mdc`**. It standardizes listing **`proposed`** items, a **rubric** (principles, evidence, impact, dedupe, roadmap), picking **at most three**, documenting rationale, and Tier A **`accept`** transitions.
 
 ## Documentation generation
 

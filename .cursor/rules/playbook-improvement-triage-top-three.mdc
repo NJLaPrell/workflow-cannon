@@ -1,0 +1,16 @@
+---
+description: Optional improvement triage — pick up to 3 proposed items to accept to ready
+alwaysApply: false
+---
+
+# Improvement triage — top 3 (requestable)
+
+When **triaging** **`type: "improvement"`** tasks to promote **at most three** from **`proposed`** (or re-ranking focus) onto the **`ready`** queue:
+
+1. Follow **`docs/maintainers/playbooks/improvement-triage-top-three.md`** (playbook id `improvement-triage-top-three`). Attach it (`@`) while working.
+2. Use **`workspace-kit run list-tasks`** / **`get-task`** for inventory; **`run-transition`** with **`action":"accept"`** and JSON **`policyApproval`** for each promotion — **`docs/maintainers/AGENT-CLI-MAP.md`**, **`docs/maintainers/POLICY-APPROVAL.md`**.
+3. Record a short **triage summary** (why these ids, why not others) before or with the transitions.
+
+Invocation: **`docs/maintainers/runbooks/agent-playbooks.md`**.
+
+Does **not** override **`workspace-kit-cli-execution.mdc`**.

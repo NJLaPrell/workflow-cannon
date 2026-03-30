@@ -1,0 +1,16 @@
+---
+description: Optional improvement research mode — transcripts, docs, architecture, logging via kit
+alwaysApply: false
+---
+
+# Improvement task discovery (requestable)
+
+When **researching** friction to **log** as improvement work (**`type: "improvement"`** tasks and/or **`generate-recommendations`** / transcript ingest):
+
+1. Follow **`docs/maintainers/playbooks/improvement-task-discovery.md`** (playbook id `improvement-task-discovery`). Attach it (`@`) so the checklist stays in view.
+2. Use **`docs/maintainers/AGENT-CLI-MAP.md`** for Tier **B** improvement commands; JSON **`policyApproval`** in the **third** CLI argument per **`docs/maintainers/POLICY-APPROVAL.md`**.
+3. Prefer **`workspace-kit`** for persistence over chat-only summaries.
+
+Invocation: **`docs/maintainers/runbooks/agent-playbooks.md`**.
+
+This rule does **not** override **`workspace-kit-cli-execution.mdc`** or **`maintainer-delivery-loop.mdc`**.

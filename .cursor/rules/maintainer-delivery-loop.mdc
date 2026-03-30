@@ -7,6 +7,10 @@ alwaysApply: true
 
 This file merges **task → PR**, **branching/tagging**, **commit**, and **PR review/merge** expectations. Follow it for maintainer work whether you use **chat**, the **terminal**, or **`workspace-kit`** for task state.
 
+## Playbook: single task → `main`
+
+When the goal is to land **exactly one** execution task (**`T###`**) via a feature branch and PR (pull `main`, branch, implement, PR, review/fix loop, merge, then **`run-transition` `complete`**), follow the ordered checklist **`docs/maintainers/playbooks/task-to-main.md`** (playbook id `task-to-main`). Prefer attaching it in the editor (`@`) or enable the requestable rule **`.cursor/rules/playbook-task-to-main.mdc`**. The playbook **sequences** the numbered loop below; it does not replace Git or **`workspace-kit`** ownership.
+
 ## Task → PR delivery loop
 
 1. Select the highest-priority **ready** task (or continue **in_progress** per dependency order).

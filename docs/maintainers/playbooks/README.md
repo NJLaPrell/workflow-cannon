@@ -29,6 +29,9 @@ Use the **filename stem** as the stable id.
 | Playbook id | File | Use when |
 | --- | --- | --- |
 | `phase-closeout-and-release` | [`phase-closeout-and-release.md`](./phase-closeout-and-release.md) | Finishing a phase: queue hygiene, delivery loop, human release gate, RELEASING evidence |
+| `task-to-main` | [`task-to-main.md`](./task-to-main.md) | One **`T###`**: branch from `main`, implement, PR, review loop, merge, then task-engine **`complete`** |
+| `improvement-task-discovery` | [`improvement-task-discovery.md`](./improvement-task-discovery.md) | Research friction → log **`improvement`** tasks / recommendations (transcripts, docs, architecture, release ops) |
+| `improvement-triage-top-three` | [`improvement-triage-top-three.md`](./improvement-triage-top-three.md) | Analyze **`improvement`** backlog; promote **≤3** best **`proposed`** → **`ready`** (Tier A **`accept`**) |
 
 ## Discovery
 
