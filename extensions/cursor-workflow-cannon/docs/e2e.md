@@ -1,5 +1,15 @@
 # Workflow Cannon extension E2E checklist
 
+## Automated checks (no IDE required)
+
+From `extensions/cursor-workflow-cannon`:
+
+```bash
+npm install && npm test
+```
+
+Includes **dashboard HTML rendering** tests (`render-dashboard.ts` + fixture) so regressions show up in CI-style runs before you F5.
+
 ## Prerequisites
 
 1. From repo root run:
