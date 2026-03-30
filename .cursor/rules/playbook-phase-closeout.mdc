@@ -1,0 +1,17 @@
+---
+description: Optional phase-closeout mode — attach when closing a phase and cutting a release
+alwaysApply: false
+---
+
+# Phase closeout playbook mode (requestable)
+
+When the operator is **closing a phase** and preparing a **release**:
+
+1. Open and follow **`docs/maintainers/playbooks/phase-closeout-and-release.md`** (playbook id `phase-closeout-and-release`). Prefer attaching that file (`@`) so steps stay in context.
+2. Use **`docs/maintainers/AGENTS.md`** for source-of-truth order and **`docs/maintainers/AGENT-CLI-MAP.md`** for every **`workspace-kit run`** line that mutates kit-owned state.
+3. **Policy:** sensitive `workspace-kit run` commands require JSON **`policyApproval`** in the third CLI argument; `config` / `init` / `upgrade` use env approval per **`docs/maintainers/POLICY-APPROVAL.md`**. Chat-only approval does not satisfy policy.
+4. **Human gate:** do not publish or run release automation until explicit human approval — see **`docs/maintainers/RELEASING.md`**.
+
+Invocation options and limits of auto-loading: **`docs/maintainers/runbooks/agent-playbooks.md`**.
+
+This rule does **not** override **`maintainer-delivery-loop.mdc`** or **`workspace-kit-cli-execution.mdc`**; it points at the same playbook and policy surfaces.
