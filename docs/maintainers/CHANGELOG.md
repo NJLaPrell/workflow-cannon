@@ -8,6 +8,10 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [0.26.0] - 2026-03-30
 
+### Fixed (maintainer / CI)
+
+- **Parity runner** — `scripts/run-parity.mjs` fixture `npm install` timeout raised (60s → 300s) so native `better-sqlite3` builds on cold GitHub Actions runners do not abort **Publish NPM** during the parity step.
+
 ### Documentation
 
 - **Agent playbooks / direction sets** (`T433`–`T439`) — TERMS + `docs/maintainers/playbooks/` (README, pilot `phase-closeout-and-release`), `AGENTS.md` discovery table + optional requestable `.cursor/rules/playbook-phase-closeout.mdc`, `tasks/phase-closeout.md` `/qt` template, `runbooks/agent-playbooks.md`; FEATURE-MATRIX + ROADMAP Phase 25 closeout.
