@@ -55,7 +55,12 @@ async function findTarball() {
 async function runFixtureSmoke(tarballPath) {
   const start = Date.now();
   try {
-    execSync(`npm install --no-save "${tarballPath}"`, { cwd: FIXTURE_DIR, stdio: "pipe", timeout: 60_000 });
+    // Native deps (e.g. better-sqlite3) can exceed 60s on cold CI runners; keep bounded but generous.
+    execSync(`npm install --no-save "${tarballPath}"`, {
+      cwd: FIXTURE_DIR,
+      stdio: "pipe",
+      timeout: 300_000,
+    });
     execSync("npm run smoke", { cwd: FIXTURE_DIR, stdio: "pipe", timeout: 30_000 });
     return { name: "fixture-smoke", status: "pass", durationMs: Date.now() - start };
   } catch (err) {
