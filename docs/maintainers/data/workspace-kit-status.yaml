@@ -6,8 +6,8 @@ active_focus: "**Phase 26** planning — Phase **25** shipped as **`v0.26.0`** (
 blockers: []
 next_agent_actions:
   - "Define Phase **26** scope and tasks; run `create-task` / roadmap updates when intent is clear."
-  - "After npm publish: add Phase 25 **Publish NPM** workflow URL to `docs/maintainers/ROADMAP.md` execution evidence snapshot."
 last_session_summary:
+  - "2026-03-30: Published **`v0.26.0`** — GitHub release + **Publish NPM** workflow `23768654868`; parity fixture `npm install` timeout raised for CI native builds (**PR #77**)."
   - "2026-03-30: Phase **25** completed — **`T433`–`T439`** merged (playbooks, AGENTS index, `/qt` phase-closeout, invocation runbook, requestable Cursor rule); release prep **`v0.26.0** (changelog + version bump + matrix/roadmap closeout)."
   - "2026-03-30: **v0.25.0** in-repo — default `tasks.persistenceBackend: sqlite`, ADR `ADR-sqlite-default-persistence.md`, migrated maintainer task data to `.workspace-kit/tasks/workspace-kit.db`; removed committed JSON task/wishlist stores."
   - "2026-03-30: Released **v0.24.0** — merged **PR #69**, GitHub release + **Publish NPM** workflow `23758351442`; ROADMAP evidence snapshot updated."
