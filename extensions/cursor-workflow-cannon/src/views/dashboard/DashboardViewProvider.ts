@@ -2,6 +2,15 @@ import * as vscode from "vscode";
 import type { CommandClient } from "../../runtime/command-client.js";
 import { escapeHtml, renderDashboardRootInnerHtml } from "./render-dashboard.js";
 
+let dashboardOutput: vscode.OutputChannel | undefined;
+
+function logDashboard(message: string): void {
+  if (!dashboardOutput) {
+    dashboardOutput = vscode.window.createOutputChannel("Workflow Cannon", { log: true });
+  }
+  dashboardOutput.appendLine(`[dashboard] ${message}`);
+}
+
 export class DashboardViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewId = "workflowCannon.dashboard";
 
@@ -28,15 +37,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       enableScripts: true,
       localResourceRoots: [this.extensionUri]
     };
-    webview.html = this.buildHtml(webview);
+    logDashboard("resolveWebviewView: wiring handlers");
     webview.onDidReceiveMessage(async (msg) => {
-      if (msg?.type === "dashboard-ready") {
-        await this.pushUpdate();
-        setTimeout(() => {
-          void this.pushUpdate();
-        }, 300);
-        return;
-      }
       if (msg?.type === "refresh") {
         await this.pushUpdate();
       }
@@ -52,16 +54,22 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         await vscode.commands.executeCommand("workflowCannon.validateConfig");
       }
     });
+    void this.pushUpdate();
   }
 
   refresh(): void {
     void this.pushUpdate();
   }
 
+  /**
+   * Embeds rendered HTML in `webview.html` so the panel works even when postMessage delivery is flaky.
+   * Buttons still use a tiny inline script + postMessage (host only receives clicks).
+   */
   private async pushUpdate(): Promise<void> {
     if (!this.view) {
       return;
     }
+    const { webview } = this.view;
     let raw: Record<string, unknown>;
     try {
       raw = (await this.client.run("dashboard-summary", {})) as Record<string, unknown>;
@@ -72,31 +80,33 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         message: e instanceof Error ? e.message : String(e)
       };
     }
-    let html: string;
+    let rootInner: string;
     try {
-      html = renderDashboardRootInnerHtml(raw);
+      rootInner = renderDashboardRootInnerHtml(raw);
     } catch (e) {
-      html = '<pre class="bad">Host render error: ' + escapeHtml(String(e)) + "</pre>";
+      rootInner = '<pre class="bad">Host render error: ' + escapeHtml(String(e)) + "</pre>";
     }
+    logDashboard(
+      `pushUpdate: ok=${String(raw.ok)} code=${String(raw.code ?? "")} htmlBytes≈${rootInner.length}`
+    );
     try {
-      await this.view.webview.postMessage({ type: "dashboard", html });
-    } catch {
-      /* webview disposed */
+      webview.html = this.buildHtml(webview, rootInner);
+    } catch (e) {
+      logDashboard(`buildHtml failed: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
   /**
-   * No external script URI — some Cursor builds fail to load media/*.js in sidebar webviews.
-   * Tiny inline bootstrap only; all markup comes from the host via postMessage { html }.
+   * Root content is embedded (no postMessage needed to paint). Script only forwards button clicks.
    */
-  private buildHtml(webview: vscode.Webview): string {
+  private buildHtml(webview: vscode.Webview, rootInnerHtml: string): string {
     const csp = [
       "default-src 'none'",
       "style-src 'unsafe-inline'",
       `script-src ${webview.cspSource} 'unsafe-inline'`
     ].join("; ");
 
-    const bootstrap = `(function(){var vscode=acquireVsCodeApi();var root=document.getElementById("root");var btn=document.getElementById("btn");var validate=document.getElementById("validate");var tasks=document.getElementById("tasks");var config=document.getElementById("config");if(!root||!btn||!validate||!tasks||!config){document.body.textContent="Workflow Cannon: dashboard DOM missing.";return;}btn.addEventListener("click",function(){vscode.postMessage({type:"refresh"});});validate.addEventListener("click",function(){vscode.postMessage({type:"validateConfig"});});tasks.addEventListener("click",function(){vscode.postMessage({type:"openTasks"});});config.addEventListener("click",function(){vscode.postMessage({type:"openConfig"});});window.addEventListener("message",function(ev){var msg=ev.data;if(!msg||msg.type!=="dashboard"||typeof msg.html!=="string")return;root.innerHTML=msg.html;});vscode.postMessage({type:"dashboard-ready"});})();`;
+    const bootstrap = `(function(){var vscode=acquireVsCodeApi();var btn=document.getElementById("btn");var validate=document.getElementById("validate");var tasks=document.getElementById("tasks");var config=document.getElementById("config");if(!btn||!validate||!tasks||!config)return;btn.addEventListener("click",function(){vscode.postMessage({type:"refresh"});});validate.addEventListener("click",function(){vscode.postMessage({type:"validateConfig"});});tasks.addEventListener("click",function(){vscode.postMessage({type:"openTasks"});});config.addEventListener("click",function(){vscode.postMessage({type:"openConfig"});});})();`;
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -117,7 +127,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
 </head>
 <body>
   <h1>Dashboard</h1>
-  <div id="root">Loading…</div>
+  <div id="root">${rootInnerHtml}</div>
   <div>
     <button id="btn">Refresh</button>
     <button id="validate">Validate Config</button>
