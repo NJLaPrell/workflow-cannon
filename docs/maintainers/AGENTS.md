@@ -27,6 +27,8 @@ Basic operating guidance for AI agents working in this repository.
 
 How to attach playbooks in an editor session and limits of auto-loading: [`runbooks/agent-playbooks.md`](./runbooks/agent-playbooks.md).
 
+Optional requestable Cursor rule when driving phase closeout from the editor: `.cursor/rules/playbook-phase-closeout.mdc`.
+
 ## Long threads and context reload
 
 When a session is long, was compacted, or you are unsure stale chat context matches the repo:
