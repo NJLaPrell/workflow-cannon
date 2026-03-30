@@ -110,6 +110,48 @@ export function activate(context: vscode.ExtensionContext): void {
     await vscode.window.showTextDocument(doc, { preview: true });
   };
 
+  const showWishlistDetail = async (wishlistId: string) => {
+    const runtime = requireClient();
+    if (!runtime) {
+      return;
+    }
+    const r = await runtime.run("get-wishlist", { wishlistId });
+    if (!r.ok) {
+      await vscode.window.showErrorMessage(r.message ?? "Failed to get wishlist item");
+      return;
+    }
+    const item = (r.data?.item as Record<string, unknown>) ?? {};
+    const lines = [
+      `# ${String(item.id ?? wishlistId)} — ${String(item.title ?? "")}`,
+      "",
+      `- Status: ${String(item.status ?? "")}`,
+      "",
+      "## Problem",
+      String(item.problemStatement ?? ""),
+      "",
+      "## Expected outcome",
+      String(item.expectedOutcome ?? ""),
+      "",
+      "## Impact",
+      String(item.impact ?? ""),
+      "",
+      "## Constraints",
+      String(item.constraints ?? ""),
+      "",
+      "## Success signals",
+      String(item.successSignals ?? ""),
+      "",
+      "## Requestor / evidence",
+      `- Requestor: ${String(item.requestor ?? "")}`,
+      `- Evidence: ${String(item.evidenceRef ?? "")}`
+    ];
+    const doc = await vscode.workspace.openTextDocument({
+      language: "markdown",
+      content: lines.join("\n")
+    });
+    await vscode.window.showTextDocument(doc, { preview: true });
+  };
+
   if (client) {
     const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 10);
     statusBar.name = "Workflow Cannon";
@@ -219,6 +261,10 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("workflowCannon.task.showDetail", async (taskId?: string) => {
       if (!taskId) return;
       await showTaskDetail(taskId);
+    }),
+    vscode.commands.registerCommand("workflowCannon.wishlist.showDetail", async (wishlistId?: string) => {
+      if (!wishlistId) return;
+      await showWishlistDetail(wishlistId);
     }),
     vscode.commands.registerCommand("workflowCannon.task.start", async (taskId?: string) => {
       if (!taskId) return;

@@ -837,7 +837,12 @@ export const taskEngineModule: WorkflowModule = {
       } catch {
         /* wishlist store optional */
       }
-      const wishlistOpenCount = wishlistItems.filter((i) => i.status === "open").length;
+      const wishlistOpenItems = wishlistItems.filter((i) => i.status === "open");
+      const wishlistOpenCount = wishlistOpenItems.length;
+      const wishlistOpenTop = wishlistOpenItems.slice(0, 15).map((i) => ({
+        id: i.id,
+        title: i.title
+      }));
 
       const planningSession = toDashboardPlanningSession(await readBuildPlanSession(ctx.workspacePath));
 
@@ -853,7 +858,8 @@ export const taskEngineModule: WorkflowModule = {
         wishlist: {
           schemaVersion: 1 as const,
           openCount: wishlistOpenCount,
-          totalCount: wishlistItems.length
+          totalCount: wishlistItems.length,
+          openTop: wishlistOpenTop
         },
         blockedSummary: {
           count: suggestion.blockingAnalysis.length,

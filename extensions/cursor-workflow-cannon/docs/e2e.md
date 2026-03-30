@@ -17,6 +17,8 @@
 - [ ] **Direct task commands work**: run `Workflow Cannon: Start Task`, `Complete Task`, `Block Task`, `Pause Task`, `Unblock Task` on applicable tasks.
 - [ ] **Config validation works**: run `Workflow Cannon: Validate Config` and confirm successful output.
 - [ ] **State watcher refreshes**: after a task transition, Tasks tree refreshes without reloading the window.
+- [ ] **Wishlist in Tasks tree**: when open wishlist items exist, **Tasks** shows **Wishlist — open (n)**; click an item and confirm **Show Wishlist Detail** markdown preview.
+- [ ] **Wishlist watcher**: after creating/updating a wishlist item (JSON store), Tasks tree refreshes (same debounce as tasks).
 - [ ] **Policy-denied UX**: trigger a sensitive command without required approval and confirm an explicit error is shown (no silent mutation).
 
 ## Expected success signals

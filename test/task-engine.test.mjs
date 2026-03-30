@@ -738,6 +738,8 @@ test("taskEngineModule onCommand dashboard-summary returns stable shape", async 
   assert.equal(d.wishlist.schemaVersion, 1);
   assert.equal(d.wishlist.openCount, 0);
   assert.equal(d.wishlist.totalCount, 0);
+  assert.ok(Array.isArray(d.wishlist.openTop));
+  assert.equal(d.wishlist.openTop.length, 0);
   assert.equal(d.planningSession, null);
 });
 

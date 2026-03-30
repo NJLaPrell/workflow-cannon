@@ -22,6 +22,7 @@
     "onCommand:workflowCannon.validateConfig",
     "onCommand:workflowCannon.task.pickAction",
     "onCommand:workflowCannon.task.showDetail",
+    "onCommand:workflowCannon.wishlist.showDetail",
     "onCommand:workflowCannon.task.start",
     "onCommand:workflowCannon.task.complete",
     "onCommand:workflowCannon.task.block",
@@ -85,6 +86,10 @@
       {
         "command": "workflowCannon.task.showDetail",
         "title": "Workflow Cannon: Show Task Detail"
+      },
+      {
+        "command": "workflowCannon.wishlist.showDetail",
+        "title": "Workflow Cannon: Show Wishlist Detail"
       },
       {
         "command": "workflowCannon.task.start",

@@ -29,3 +29,4 @@ Optional JSON object; accepts standard invocation `config` overlay only (no extr
 | `blockedSummary` | `{ count, top }` where `top` is up to 15 blocking analysis rows |
 | `suggestedNext` | Slim task summary or `null` |
 | `blockingAnalysis` | Full blocking analysis list |
+| `wishlist.openTop` | Up to 15 **open** wishlist items (`{ id, title }`); W### namespace, separate from tasks until `convert-wishlist` |
