@@ -4,6 +4,7 @@ import type {
   NextActionSuggestion,
   BlockingAnalysisEntry
 } from "./types.js";
+import { isWishlistIntakeTask } from "./wishlist-intake.js";
 
 const PRIORITY_ORDER: Record<string, number> = {
   P1: 0,
@@ -57,7 +58,7 @@ function buildBlockingAnalysis(tasks: TaskEntity[]): BlockingAnalysisEntry[] {
 
 export function getNextActions(tasks: TaskEntity[]): NextActionSuggestion {
   const readyQueue = tasks
-    .filter((t) => t.status === "ready")
+    .filter((t) => t.status === "ready" && !isWishlistIntakeTask(t))
     .sort((a, b) => priorityRank(a) - priorityRank(b));
 
   return {

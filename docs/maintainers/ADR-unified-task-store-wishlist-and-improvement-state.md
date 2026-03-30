@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted (Phase 24 planning).
+Accepted (Phase 24 shipped in **v0.24.0**).
 
 ## Context
 

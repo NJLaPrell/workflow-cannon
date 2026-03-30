@@ -10,6 +10,25 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 - **CLI visual guide** — `docs/maintainers/CLI-VISUAL-GUIDE.md` (ASCII topology + Mermaid: top-level commands, agent decision flow, approval lanes, default module router). Linked from README, `AGENTS.md`, `AGENT-CLI-MAP.md`, `ARCHITECTURE.md`; machine ref in `.ai/AGENTS.md`.
 
+## [0.24.0] - 2026-03-30
+
+Phase 24 — unified task intake (`T425`–`T432`): wishlist ideation is **`wishlist_intake`** tasks (`T###`); optional `metadata.legacyWishlistId` for migrated `W###` provenance; one-time **`migrate-wishlist-intake`**; SQLite planning can drop the legacy wishlist JSON column; improvement **operational** state reads/writes the unified SQLite module-state row when `tasks.persistenceBackend` is `sqlite`.
+
+### Added
+
+- **`wishlist_intake` task type** with metadata intake fields and `get-next-actions` / `get-ready-queue` exclusion from execution suggestions.
+- **`migrate-wishlist-intake`** command — migrates legacy wishlist rows into tasks and shrinks SQLite planning schema when applicable.
+- **Improvement state in unified DB** — `loadImprovementState` / `saveImprovementState` use `workspace_module_state` for module id `improvement` when SQLite task persistence is enabled (file fallback retained).
+
+### Changed
+
+- **Breaking**: `create-wishlist` without `id` allocates a **`T###`** task; `planning` `build-plan` wishlist finalize returns `taskId` / `wishlistId` as that **`T###`**. `convert-wishlist` accepts **`wishlistTaskId`** (`T###`) or legacy **`wishlistId`** (`W###` when provenance exists).
+- **SQLite planning**: new databases use **task-only** `workspace_planning_state`; legacy dual-column rows remain readable until migration.
+
+### Migration
+
+- After upgrade, run `workspace-kit run migrate-wishlist-intake '{}'` once per workspace (use `dryRun: true` first). See ADR `docs/maintainers/ADR-unified-task-store-wishlist-and-improvement-state.md`.
+
 ## [0.23.0] - 2026-03-28
 
 Phase 23 — **agent-behavior** module (`T420`–`T424`): advisory interaction profiles, workspace persistence (JSON or unified SQLite), guided interview, maintainer/agent docs + requestable Cursor rule.

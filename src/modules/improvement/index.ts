@@ -77,10 +77,10 @@ export const improvementModule: WorkflowModule = {
           archivePath: transcriptsRoot
         };
         try {
-          const state = await loadImprovementState(ctx.workspacePath);
+          const state = await loadImprovementState(ctx.workspacePath, ctx.effectiveConfig as Record<string, unknown> | undefined);
           const sync = await runSyncTranscripts(ctx, syncArgs, state);
           state.lastSyncRunAt = new Date().toISOString();
-          await saveImprovementState(ctx.workspacePath, state);
+          await saveImprovementState(ctx.workspacePath, state, ctx.effectiveConfig as Record<string, unknown> | undefined);
           const result = await runGenerateRecommendations(ctx, {
             transcriptsRoot: sync.archivePath,
             fromTag,
@@ -103,10 +103,10 @@ export const improvementModule: WorkflowModule = {
           archivePath: typeof args.archivePath === "string" ? args.archivePath : undefined
         };
         try {
-          const state = await loadImprovementState(ctx.workspacePath);
+          const state = await loadImprovementState(ctx.workspacePath, ctx.effectiveConfig as Record<string, unknown> | undefined);
           const sync = await runSyncTranscripts(ctx, syncArgs, state);
           state.lastSyncRunAt = new Date().toISOString();
-          await saveImprovementState(ctx.workspacePath, state);
+          await saveImprovementState(ctx.workspacePath, state, ctx.effectiveConfig as Record<string, unknown> | undefined);
           return {
             ok: true,
             code: "transcripts-synced",
@@ -125,7 +125,7 @@ export const improvementModule: WorkflowModule = {
         };
         const now = new Date();
         try {
-          const state = await loadImprovementState(ctx.workspacePath);
+          const state = await loadImprovementState(ctx.workspacePath, ctx.effectiveConfig as Record<string, unknown> | undefined);
           const sync = await runSyncTranscripts(ctx, syncArgs, state);
           const cfg = resolveImprovementTranscriptConfig(ctx, syncArgs);
           const cadenceDecision = resolveCadenceDecision(
@@ -145,7 +145,7 @@ export const improvementModule: WorkflowModule = {
             });
             state.lastIngestRunAt = now.toISOString();
           }
-          await saveImprovementState(ctx.workspacePath, state);
+          await saveImprovementState(ctx.workspacePath, state, ctx.effectiveConfig as Record<string, unknown> | undefined);
           const status = generate ? "generated" : "skipped";
           return {
             ok: true,
@@ -171,7 +171,7 @@ export const improvementModule: WorkflowModule = {
           sourcePath: typeof args.sourcePath === "string" ? args.sourcePath : undefined,
           archivePath: typeof args.archivePath === "string" ? args.archivePath : undefined
         };
-        const state = await loadImprovementState(ctx.workspacePath);
+        const state = await loadImprovementState(ctx.workspacePath, ctx.effectiveConfig as Record<string, unknown> | undefined);
         const cfg = resolveImprovementTranscriptConfig(ctx, syncArgs);
         return {
           ok: true,

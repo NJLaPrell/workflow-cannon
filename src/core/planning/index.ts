@@ -12,10 +12,15 @@ export { TransitionService } from "../../modules/task-engine/service.js";
 export { validateKnownTaskTypeRequirements } from "../../modules/task-engine/task-type-validation.js";
 export {
   buildWishlistItemFromIntake,
+  validateWishlistContentFields,
   validateWishlistIntakePayload,
   validateWishlistUpdatePayload,
   WISHLIST_ID_RE
 } from "../../modules/task-engine/wishlist-validation.js";
+export {
+  allocateNextTaskNumericId,
+  taskEntityFromNewIntake
+} from "../../modules/task-engine/wishlist-intake.js";
 export type {
   TaskEntity,
   TaskPriority,

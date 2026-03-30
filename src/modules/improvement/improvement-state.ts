@@ -1,5 +1,11 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
+import { UnifiedStateDb } from "../../core/state/unified-state-db.js";
+import {
+  getTaskPersistenceBackend,
+  planningSqliteDatabaseRelativePath
+} from "../task-engine/planning-config.js";
 
 export const IMPROVEMENT_STATE_SCHEMA_VERSION = 2 as const;
 
@@ -24,6 +30,8 @@ export type ImprovementStateDocument = {
 };
 
 const DEFAULT_REL = ".workspace-kit/improvement/state.json";
+
+const IMPROVEMENT_MODULE_STATE_ID = "improvement";
 
 function statePath(workspacePath: string): string {
   return path.join(workspacePath, DEFAULT_REL);
@@ -60,49 +68,86 @@ function migrateFromV1(raw: Record<string, unknown>): ImprovementStateDocument {
   };
 }
 
-export async function loadImprovementState(workspacePath: string): Promise<ImprovementStateDocument> {
+function normalizeLoadedDoc(raw: Record<string, unknown>): ImprovementStateDocument {
+  const ver = raw.schemaVersion;
+  if (ver === 1) {
+    return migrateFromV1(raw);
+  }
+  if (ver !== IMPROVEMENT_STATE_SCHEMA_VERSION) {
+    return emptyImprovementState();
+  }
+  const doc = raw as ImprovementStateDocument;
+  return {
+    ...emptyImprovementState(),
+    ...doc,
+    transcriptLineCursors: doc.transcriptLineCursors ?? {},
+    transcriptRetryQueue: Array.isArray(doc.transcriptRetryQueue)
+      ? doc.transcriptRetryQueue.filter(
+          (e): e is TranscriptRetryEntry =>
+            e !== null &&
+            typeof e === "object" &&
+            typeof (e as TranscriptRetryEntry).relativePath === "string"
+        )
+      : []
+  };
+}
+
+async function loadImprovementStateFromFile(workspacePath: string): Promise<ImprovementStateDocument | null> {
   const fp = statePath(workspacePath);
   try {
     const rawText = await fs.readFile(fp, "utf8");
     const raw = JSON.parse(rawText) as Record<string, unknown>;
-    const ver = raw.schemaVersion;
-    if (ver === 1) {
-      return migrateFromV1(raw);
-    }
-    if (ver !== IMPROVEMENT_STATE_SCHEMA_VERSION) {
-      return emptyImprovementState();
-    }
-    const doc = raw as ImprovementStateDocument;
-    return {
-      ...emptyImprovementState(),
-      ...doc,
-      transcriptLineCursors: doc.transcriptLineCursors ?? {},
-      transcriptRetryQueue: Array.isArray(doc.transcriptRetryQueue)
-        ? doc.transcriptRetryQueue.filter(
-            (e): e is TranscriptRetryEntry =>
-              e !== null &&
-              typeof e === "object" &&
-              typeof (e as TranscriptRetryEntry).relativePath === "string"
-          )
-        : []
-    };
+    return normalizeLoadedDoc(raw);
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === "ENOENT") {
-      return emptyImprovementState();
+      return null;
     }
     throw e;
   }
 }
 
+export async function loadImprovementState(
+  workspacePath: string,
+  effectiveConfig?: Record<string, unknown>
+): Promise<ImprovementStateDocument> {
+  if (getTaskPersistenceBackend(effectiveConfig) === "sqlite") {
+    const ctx = { workspacePath, effectiveConfig } as ModuleLifecycleContext;
+    const unified = new UnifiedStateDb(workspacePath, planningSqliteDatabaseRelativePath(ctx));
+    const row = unified.getModuleState(IMPROVEMENT_MODULE_STATE_ID);
+    if (row?.state) {
+      return normalizeLoadedDoc(row.state as Record<string, unknown>);
+    }
+    const fromFile = await loadImprovementStateFromFile(workspacePath);
+    if (fromFile) {
+      return fromFile;
+    }
+    return emptyImprovementState();
+  }
+
+  const fromFile = await loadImprovementStateFromFile(workspacePath);
+  return fromFile ?? emptyImprovementState();
+}
+
 export async function saveImprovementState(
   workspacePath: string,
-  doc: ImprovementStateDocument
+  doc: ImprovementStateDocument,
+  effectiveConfig?: Record<string, unknown>
 ): Promise<void> {
-  const fp = statePath(workspacePath);
-  await fs.mkdir(path.dirname(fp), { recursive: true });
   const out: ImprovementStateDocument = {
     ...doc,
     schemaVersion: IMPROVEMENT_STATE_SCHEMA_VERSION
   };
+  if (getTaskPersistenceBackend(effectiveConfig) === "sqlite") {
+    const ctx = { workspacePath, effectiveConfig } as ModuleLifecycleContext;
+    const unified = new UnifiedStateDb(workspacePath, planningSqliteDatabaseRelativePath(ctx));
+    unified.setModuleState(
+      IMPROVEMENT_MODULE_STATE_ID,
+      out.schemaVersion,
+      out as unknown as Record<string, unknown>
+    );
+    return;
+  }
+  const fp = statePath(workspacePath);
+  await fs.mkdir(path.dirname(fp), { recursive: true });
   await fs.writeFile(fp, `${JSON.stringify(out, null, 2)}\n`, "utf8");
 }

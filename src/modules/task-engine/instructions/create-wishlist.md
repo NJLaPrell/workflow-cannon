@@ -1,6 +1,6 @@
 # create-wishlist
 
-Create a **Wishlist** ideation item. Wishlist IDs use namespace `W<number>` (not `T<number>` tasks). Items are **not** assigned a phase; phase belongs only to canonical tasks after conversion.
+Create a **wishlist intake** task (`type: "wishlist_intake"`, id `T<number>`). Ideation fields live in **metadata**; these tasks stay out of **ready-queue** suggestions until converted.
 
 ## Usage
 
@@ -12,7 +12,6 @@ workspace-kit run create-wishlist '<json>'
 
 | Field | Description |
 | --- | --- |
-| `id` | Wishlist id, format `W` + digits (e.g. `W1`) |
 | `title` | Short label |
 | `problemStatement` | What problem or gap this addresses |
 | `expectedOutcome` | What “done” looks like |
@@ -22,14 +21,26 @@ workspace-kit run create-wishlist '<json>'
 | `requestor` | Who is asking / accountable for intake |
 | `evidenceRef` | Link or pointer to supporting context |
 
-`phase` is **not** allowed on wishlist items.
+## Optional fields
 
-## Example
+| Field | Description |
+| --- | --- |
+| `id` | Legacy **`W<number>`** only when you need stable provenance; stored as `metadata.legacyWishlistId`. Omit to allocate the next **`T<number>`** automatically. |
+
+`phase` is **not** allowed on wishlist intake tasks.
+
+## Example (auto `T###`)
 
 ```bash
-workspace-kit run create-wishlist '{"id":"W1","title":"Faster cold start","problemStatement":"Doctor is slow on first run","expectedOutcome":"Sub-2s doctor on fresh clone","impact":"Maintainer time","constraints":"No new native deps","successSignals":"CI timing budget green","requestor":"team@example","evidenceRef":"issue/123"}'
+workspace-kit run create-wishlist '{"title":"Faster cold start","problemStatement":"Doctor is slow on first run","expectedOutcome":"Sub-2s doctor on fresh clone","impact":"Maintainer time","constraints":"No new native deps","successSignals":"CI timing budget green","requestor":"team@example","evidenceRef":"issue/123"}'
+```
+
+## Example (explicit legacy `W###` provenance)
+
+```bash
+workspace-kit run create-wishlist '{"id":"W1","title":"Faster cold start","problemStatement":"…","expectedOutcome":"…","impact":"…","constraints":"…","successSignals":"…","requestor":"…","evidenceRef":"…"}'
 ```
 
 ## Breaking into workable tasks later
 
-Use `convert-wishlist` with a `decomposition` object (`rationale`, `boundaries`, `dependencyIntent`) and a `tasks` array of phased `T###` task payloads.
+Use `convert-wishlist` with `wishlistTaskId` (`T###`) or legacy `wishlistId` (`W###` when present), a `decomposition` object, and a `tasks` array of phased `T###` task payloads.

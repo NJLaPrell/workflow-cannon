@@ -7,7 +7,6 @@ import test from "node:test";
 
 import { planningModule } from "../dist/modules/planning/index.js";
 import { TaskStore } from "../dist/modules/task-engine/store.js";
-import { WishlistStore } from "../dist/modules/task-engine/wishlist-store.js";
 
 async function tmpDir(prefix = "planning-") {
   return mkdtemp(path.join(os.tmpdir(), prefix));
@@ -374,11 +373,13 @@ test("planningModule build-plan finalize can persist wishlist artifact", async (
   );
   assert.equal(result.ok, true);
   assert.equal(result.code, "planning-artifact-created");
-  assert.equal(result.data.wishlistId, "W1");
+  assert.equal(result.data.taskId, "T1");
+  assert.equal(result.data.wishlistId, "T1");
 
-  const wishlistStore = WishlistStore.forJsonFile(workspace);
-  await wishlistStore.load();
-  const created = wishlistStore.getItem("W1");
+  const taskStore = TaskStore.forJsonFile(workspace);
+  await taskStore.load();
+  const created = taskStore.getTask("T1");
   assert.ok(created);
-  assert.equal(created?.title.includes("plan artifact"), true);
+  assert.equal(created.type, "wishlist_intake");
+  assert.equal(created.title.includes("plan artifact"), true);
 });
