@@ -35,6 +35,7 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - **Phase 20 (Maintainer platform and documentation alignment)** is **COMPLETE and released** as **`v0.21.0`**: **`T388`–`T393`** — policy command lists per module + aggregation, command-manifest types (full manifest wiring remains optional follow-up), module README and boundary docs, `src/modules` barrel policy, ARCHITECTURE/TERMS/module-build canon, task-engine internal split + public `index.ts`, and CI guard for orphan instruction markdown (with allowlist for non-command templates). Tracked follow-ups **`T394`–`T397`**, **`T398`–`T402`**, and optional ergonomics **`T415`–`T419`** were **cancelled** in task-engine state on **2026-03-28** (maintainer deprioritization).
 - **Phase 21 (Agent reliability and planning dashboard)** is **COMPLETE and released** as **`v0.22.0`**: **`T404`–`T409`**, **`T410`–`T414`** — requestable long-session Cursor rule + runbook, `AGENTS.md` reload ritual, `build-plan` session snapshot persisted for **`dashboard-summary`** / extension dashboard, maintainer docs and extension parity plan updated; optional task-state advisory remains **`pnpm run advisory:task-state-hand-edit`**.
 - **Phase 23 (Agent behavior module)** is **COMPLETE and released** as **`v0.23.0`**: **`T420`–`T424`** — advisory **interaction profiles** via **`agent-behavior`** module (builtins, JSON/SQLite persistence, CRUD/fork, `explain`/`diff`, **`interview-behavior-profile`**, maintainer + **`.ai/AGENTS.md`** + requestable **`.cursor/rules/agent-behavior.mdc`**).
+- **Phase 24 (Unified task intake and improvement operational state)** is **OPEN** for **`v0.24.0`**: **`T425`–`T432`** — wishlist items migrate to **`T###`** tasks with **`metadata.legacyWishlistId`** (no retained `W###` ids); remove dedicated wishlist persistence after **one-time** migration; keep improvement **pipeline** state in a **separate module-state document**, not as normal `tasks[]` rows. ADR: `docs/maintainers/ADR-unified-task-store-wishlist-and-improvement-state.md`.
 - Historical extraction and first-publish milestones remain recorded below as provenance.
 
 ## Phase plan and release cadence
@@ -283,10 +284,25 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
   - `pnpm run build`, `check`, `test`, and extension compile (`pnpm run ext:compile` or documented equivalent) pass where extension tasks apply.
   - `dashboard-summary` contract and planning context paths are documented for extension consumers.
 
+### Phase 24 - Unified task intake and improvement operational state -> GitHub release `v0.24.0` (OPEN)
+
+- **Decision record:** `docs/maintainers/ADR-unified-task-store-wishlist-and-improvement-state.md`.
+- **Primary scope:** **`T425`–`T432`**.
+- **Wishlist → tasks (Option B):** drop `W###` after migration; new tasks only as `T###` with stable provenance metadata (e.g. `legacyWishlistId`).
+- **Persistence:** one-time migration removes the separate wishlist store / SQLite `wishlist_store_json` usage; **no** long-term dual-read of legacy wishlist artifacts.
+- **Improvement:** operational ingest state (cursors, retries, etc.) lives in a **dedicated logical document** in the unified store; **not** modeled as ordinary task rows. Human-facing improvement work remains `type: "improvement"` tasks where applicable.
+- **Dependency structure:** `T425` → `T426` → `T427` / `T428` in parallel; `T429` after `T425`+`T427`; `T430` after `T427`; `T431` after `T428`–`T430`; `T432` after `T431`.
+- **Exit signals:**
+  - **`T425`–`T432`** are **`completed`** in task-engine state.
+  - `pnpm run build`, `check`, `test`, and `parity` pass on the release tag; extension compile where dashboard surfaces change.
+  - Doctor and migration commands reflect tasks-only wishlist intake; release notes document the breaking id/persistence change.
+
 ## Recorded decisions
 
 | Decision | Choice |
 | --- | --- |
+| Wishlist ids and persistence (Phase 24) | Option B: migrate to `T###` + `metadata.legacyWishlistId`; remove dedicated wishlist store after one-time migration; see ADR `ADR-unified-task-store-wishlist-and-improvement-state.md` |
+| Improvement pipeline state | Separate module-state document in unified storage; not normal `tasks[]` rows |
 | Project and repository name | Workflow Cannon (`workflow-cannon`) |
 | Package name and scope | `@workflow-cannon/workspace-kit` |
 | Extraction history strategy | `git subtree split` from `packages/workspace-kit` during cutover |

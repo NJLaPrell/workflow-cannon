@@ -6634,6 +6634,215 @@
       "dependsOn": [
         "T423"
       ]
+    },
+    {
+      "id": "T425",
+      "title": "[task-engine] Wishlist-as-task schema, metadata, and validation",
+      "type": "workspace-kit",
+      "status": "ready",
+      "createdAt": "2026-03-30T16:25:31.899Z",
+      "updatedAt": "2026-03-30T16:25:31.899Z",
+      "priority": "P1",
+      "dependsOn": [],
+      "unblocks": [
+        "T426",
+        "T429"
+      ],
+      "phase": "Phase 24 (Unified task intake and improvement operational state)",
+      "approach": "Lock the task shape for former wishlist items: T### only, provenance in metadata (e.g. legacyWishlistId), explicit type/discriminator, queue filtering rules.",
+      "technicalScope": [
+        "Add or extend task type and metadata validation.",
+        "Document contract in TERMS / maintainer docs.",
+        "Ensure no new W### ids are accepted post-migration."
+      ],
+      "acceptanceCriteria": [
+        "Strict validation and types reflect the ADR contract.",
+        "Docs describe metadata key and filtering semantics.",
+        "Tests cover acceptance and rejection cases."
+      ]
+    },
+    {
+      "id": "T426",
+      "title": "[task-engine] One-time wishlist→tasks migration and remove wishlist persistence",
+      "type": "workspace-kit",
+      "status": "ready",
+      "createdAt": "2026-03-30T16:25:40.882Z",
+      "updatedAt": "2026-03-30T16:25:40.882Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T425"
+      ],
+      "unblocks": [
+        "T427",
+        "T428"
+      ],
+      "phase": "Phase 24 (Unified task intake and improvement operational state)",
+      "approach": "Implement migrate command/runtime: read legacy wishlist, allocate T### tasks with metadata, drop wishlist store/SQLite column in a transaction.",
+      "technicalScope": [
+        "SQLite schema or JSON file removal per ADR.",
+        "Idempotent or fail-closed detection of already-migrated workspaces.",
+        "Update migrate-task-persistence story."
+      ],
+      "acceptanceCriteria": [
+        "Migration runs once successfully on sample fixtures.",
+        "Legacy wishlist artifacts not required after migration.",
+        "Rollback/failure behavior matches ADR."
+      ]
+    },
+    {
+      "id": "T427",
+      "title": "[task-engine] Rewire wishlist CLI and internals to task store only",
+      "type": "workspace-kit",
+      "status": "ready",
+      "createdAt": "2026-03-30T16:25:40.958Z",
+      "updatedAt": "2026-03-30T16:25:40.958Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T426"
+      ],
+      "unblocks": [
+        "T429",
+        "T430"
+      ],
+      "phase": "Phase 24 (Unified task intake and improvement operational state)",
+      "approach": "Remove WishlistStore code paths from command handlers; list/create/get/update/convert operate on tasks; doctor reflects new layout.",
+      "technicalScope": [
+        "Deprecate or delete wishlist-store module usage.",
+        "Align convert-wishlist with tasks-only model.",
+        "Config keys and error messages updated."
+      ],
+      "acceptanceCriteria": [
+        "No runtime dependency on separate wishlist document post-migration.",
+        "Integration tests for CLI flows.",
+        "Doctor passes on migrated workspace."
+      ]
+    },
+    {
+      "id": "T428",
+      "title": "[improvement] Persist operational ingest state in unified module-state row",
+      "type": "workspace-kit",
+      "status": "ready",
+      "createdAt": "2026-03-30T16:25:41.031Z",
+      "updatedAt": "2026-03-30T16:25:41.031Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T426"
+      ],
+      "unblocks": [
+        "T431"
+      ],
+      "phase": "Phase 24 (Unified task intake and improvement operational state)",
+      "approach": "Relocate cursors/retry/ingest bookkeeping to registered improvement module state in unified SQLite; keep improvement work items as tasks.",
+      "technicalScope": [
+        "Schema registration if required; read/write path changes.",
+        "Optional export snapshot alignment with Phase 18 patterns."
+      ],
+      "acceptanceCriteria": [
+        "Pipeline state not stored as ordinary task rows.",
+        "generate-recommendations / ingest paths use new persistence.",
+        "Tests cover migration of improvement state."
+      ]
+    },
+    {
+      "id": "T429",
+      "title": "[planning] Align planning wishlist flows with tasks-only intake",
+      "type": "workspace-kit",
+      "status": "ready",
+      "createdAt": "2026-03-30T16:25:51.730Z",
+      "updatedAt": "2026-03-30T16:25:51.730Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T425",
+        "T427"
+      ],
+      "unblocks": [
+        "T431"
+      ],
+      "phase": "Phase 24 (Unified task intake and improvement operational state)",
+      "approach": "Update build-plan / openWishlist and related persistence to create or reference T### tasks with wishlist metadata instead of W###.",
+      "technicalScope": [
+        "Planning module handlers and artifact paths.",
+        "Consistency with task-engine command contracts."
+      ],
+      "acceptanceCriteria": [
+        "Planning workflows do not emit or require W### ids.",
+        "Tests or parity updated for planning + task bridge."
+      ]
+    },
+    {
+      "id": "T430",
+      "title": "[extension] Dashboard and thin-client parity for tasks-only wishlist",
+      "type": "workspace-kit",
+      "status": "ready",
+      "createdAt": "2026-03-30T16:25:51.803Z",
+      "updatedAt": "2026-03-30T16:25:51.803Z",
+      "priority": "P2",
+      "dependsOn": [
+        "T427"
+      ],
+      "unblocks": [
+        "T431"
+      ],
+      "phase": "Phase 24 (Unified task intake and improvement operational state)",
+      "approach": "Extension surfaces that listed wishlist items switch to filtered task queries or new CLI output shape.",
+      "technicalScope": [
+        "cursor-workflow-cannon views and refresh logic.",
+        "Feature matrix / parity plan if listed."
+      ],
+      "acceptanceCriteria": [
+        "ext:compile passes.",
+        "Manual or automated smoke for dashboard wishlist panel."
+      ]
+    },
+    {
+      "id": "T431",
+      "title": "[maintainer] Parity, CLI map, TERMS, and tests sweep for Phase 24",
+      "type": "workspace-kit",
+      "status": "ready",
+      "createdAt": "2026-03-30T16:25:51.876Z",
+      "updatedAt": "2026-03-30T16:25:51.876Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T428",
+        "T429",
+        "T430"
+      ],
+      "unblocks": [
+        "T432"
+      ],
+      "phase": "Phase 24 (Unified task intake and improvement operational state)",
+      "approach": "Update AGENT-CLI-MAP, parity fixtures, TERMS glossary, and integration tests to reflect breaking persistence and id changes.",
+      "technicalScope": [
+        "scripts/run-parity.mjs consumers.",
+        "Instruction markdown for affected commands."
+      ],
+      "acceptanceCriteria": [
+        "pnpm test && pnpm run parity pass.",
+        "No stale W### examples in canon docs except historical/ADR context."
+      ]
+    },
+    {
+      "id": "T432",
+      "title": "[release] v0.24.0 release notes and migration operator guidance",
+      "type": "workspace-kit",
+      "status": "ready",
+      "createdAt": "2026-03-30T16:25:51.948Z",
+      "updatedAt": "2026-03-30T16:25:51.948Z",
+      "priority": "P1",
+      "dependsOn": [
+        "T431"
+      ],
+      "unblocks": [],
+      "phase": "Phase 24 (Unified task intake and improvement operational state)",
+      "approach": "CHANGELOG, RELEASING checklist, breaking-change callout for one-time migration and id namespace removal.",
+      "technicalScope": [
+        "Version bump when releasing.",
+        "Optional workbook snippet for operators."
+      ],
+      "acceptanceCriteria": [
+        "Release metadata checks pass.",
+        "Migration steps link to ADR migration section."
+      ]
     }
   ],
   "transitionLog": [
@@ -12738,7 +12947,7 @@
       "actor": "NJLaPrell@gmail.com"
     }
   ],
-  "lastUpdated": "2026-03-28T21:55:10.055Z",
+  "lastUpdated": "2026-03-30T16:25:51.948Z",
   "mutationLog": [
     {
       "mutationId": "create-task-T319-2026-03-27T15:16:30.032Z-20b24ad2",
@@ -14339,6 +14548,102 @@
       "actor": "NJLaPrell@gmail.com",
       "details": {
         "dependencyTaskId": "T423"
+      }
+    },
+    {
+      "mutationId": "create-task-T425-2026-03-30T16:25:31.899Z-7bb0d625",
+      "mutationType": "create-task",
+      "taskId": "T425",
+      "timestamp": "2026-03-30T16:25:31.899Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "ready",
+        "source": "create-task",
+        "payloadDigest": "56af832d26994b1888da04bd3fa57b66c62d852e2f72b4bf93198a1001dcbea9"
+      }
+    },
+    {
+      "mutationId": "create-task-T426-2026-03-30T16:25:40.883Z-4dc64392",
+      "mutationType": "create-task",
+      "taskId": "T426",
+      "timestamp": "2026-03-30T16:25:40.883Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "ready",
+        "source": "create-task",
+        "payloadDigest": "d163653c7150149c69a1cdbe2fce1b971bbb81ea8abbe42d325167e67fc851ba"
+      }
+    },
+    {
+      "mutationId": "create-task-T427-2026-03-30T16:25:40.959Z-665f27ee",
+      "mutationType": "create-task",
+      "taskId": "T427",
+      "timestamp": "2026-03-30T16:25:40.959Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "ready",
+        "source": "create-task",
+        "payloadDigest": "1d91a760de36331d7701aaf3e348ac49c18912c1240c16de4e7a50877a4b198d"
+      }
+    },
+    {
+      "mutationId": "create-task-T428-2026-03-30T16:25:41.031Z-68d483a3",
+      "mutationType": "create-task",
+      "taskId": "T428",
+      "timestamp": "2026-03-30T16:25:41.032Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "ready",
+        "source": "create-task",
+        "payloadDigest": "fdbefc61f7521ba658fef45b730e402c2f71fc18f9d876c06331b1913396d86d"
+      }
+    },
+    {
+      "mutationId": "create-task-T429-2026-03-30T16:25:51.730Z-3e0e9d4d",
+      "mutationType": "create-task",
+      "taskId": "T429",
+      "timestamp": "2026-03-30T16:25:51.731Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "ready",
+        "source": "create-task",
+        "payloadDigest": "ac68f33b5e970e8635409ef2cb1d4cc12d154dc2792eba8dd756ae468adc5ea6"
+      }
+    },
+    {
+      "mutationId": "create-task-T430-2026-03-30T16:25:51.803Z-f10293a4",
+      "mutationType": "create-task",
+      "taskId": "T430",
+      "timestamp": "2026-03-30T16:25:51.803Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "ready",
+        "source": "create-task",
+        "payloadDigest": "aa40b5bb44ad420a77aab36da2c19269862a8b4a413549f60d5c76e1d0e8ed18"
+      }
+    },
+    {
+      "mutationId": "create-task-T431-2026-03-30T16:25:51.876Z-df692011",
+      "mutationType": "create-task",
+      "taskId": "T431",
+      "timestamp": "2026-03-30T16:25:51.876Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "ready",
+        "source": "create-task",
+        "payloadDigest": "3378b74cc75fb8506b9361de90cd08cf51c21320834110aac0a3fc91df517afc"
+      }
+    },
+    {
+      "mutationId": "create-task-T432-2026-03-30T16:25:51.948Z-cf8c5280",
+      "mutationType": "create-task",
+      "taskId": "T432",
+      "timestamp": "2026-03-30T16:25:51.948Z",
+      "actor": "NJLaPrell@gmail.com",
+      "details": {
+        "initialStatus": "ready",
+        "source": "create-task",
+        "payloadDigest": "5b51491d88043a8642e4e85e36c362e0e8d490ecca3793acc7dbd9398068fb75"
       }
     }
   ]
