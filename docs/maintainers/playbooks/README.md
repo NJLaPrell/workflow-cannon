@@ -33,4 +33,4 @@ Use the **filename stem** as the stable id.
 ## Discovery
 
 - Human/agent entry: [`docs/maintainers/AGENTS.md`](../AGENTS.md) (playbook index).
-- Invocation: `docs/maintainers/runbooks/agent-playbooks.md` (maintainer runbook; ships in the same phase).
+- Invocation: [`docs/maintainers/runbooks/agent-playbooks.md`](../runbooks/agent-playbooks.md).

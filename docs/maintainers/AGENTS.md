@@ -25,7 +25,7 @@ Basic operating guidance for AI agents working in this repository.
 | --- | --- | --- |
 | `phase-closeout-and-release` | [`playbooks/phase-closeout-and-release.md`](./playbooks/phase-closeout-and-release.md) | Closing a phase and cutting a release (queue, delivery loop, human publish gate, RELEASING evidence) |
 
-How to attach playbooks in an editor session and limits of auto-loading: `docs/maintainers/runbooks/agent-playbooks.md` (invocation runbook).
+How to attach playbooks in an editor session and limits of auto-loading: [`runbooks/agent-playbooks.md`](./runbooks/agent-playbooks.md).
 
 ## Long threads and context reload
 
