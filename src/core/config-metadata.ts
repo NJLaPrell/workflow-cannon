@@ -55,8 +55,9 @@ const REGISTRY: Record<string, ConfigKeyMetadata> = {
   "tasks.persistenceBackend": {
     key: "tasks.persistenceBackend",
     type: "string",
-    description: "Task + wishlist persistence: json (default) or sqlite.",
-    default: "json",
+    description:
+      "Task + wishlist persistence: sqlite (default) or json (opt-out for legacy workflows).",
+    default: "sqlite",
     allowedValues: ["json", "sqlite"],
     domainScope: "project",
     owningModule: "task-engine",

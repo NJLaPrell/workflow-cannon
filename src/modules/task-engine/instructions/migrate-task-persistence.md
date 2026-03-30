@@ -18,4 +18,4 @@ workspace-kit run migrate-task-persistence '{"direction":"sqlite-to-json","force
 
 Paths come from effective config: `tasks.storeRelativePath`, `tasks.wishlistStoreRelativePath`, and `tasks.sqliteDatabaseRelativePath` (default `.workspace-kit/tasks/workspace-kit.db`).
 
-After `json-to-sqlite`, set `tasks.persistenceBackend` to `sqlite` in workspace config so the engine uses the database.
+Kit default is `tasks.persistenceBackend: sqlite` (v0.25+). After `json-to-sqlite`, you do **not** need to set `sqlite` unless you previously pinned `json`. To stay on JSON files, set `tasks.persistenceBackend` to `json` in `.workspace-kit/config.json`.

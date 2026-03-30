@@ -75,6 +75,26 @@ async function createDoctorFixture(rootDir) {
     path.join(workspaceKitDir, "owned-paths.json"),
     JSON.stringify({ schemaVersion: 1, ownedPaths: [] }, null, 2)
   );
+
+  const tasksDir = path.join(workspaceKitDir, "tasks");
+  await mkdir(tasksDir, { recursive: true });
+  const dbPath = path.join(tasksDir, "workspace-kit.db");
+  const db = new Database(dbPath);
+  db.exec(`CREATE TABLE IF NOT EXISTS workspace_planning_state (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  task_store_json TEXT NOT NULL
+);`);
+  const emptyTaskDoc = JSON.stringify({
+    schemaVersion: 1,
+    tasks: [],
+    transitionLog: [],
+    mutationLog: [],
+    lastUpdated: new Date().toISOString()
+  });
+  db.prepare("INSERT OR REPLACE INTO workspace_planning_state (id, task_store_json) VALUES (1, ?)").run(
+    emptyTaskDoc
+  );
+  db.close();
 }
 
 test("runCli returns usage error for unknown commands", async () => {

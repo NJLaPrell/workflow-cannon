@@ -7,13 +7,13 @@ export function getTaskPersistenceBackend(
 ): TaskPersistenceBackend {
   const tasks = config?.tasks;
   if (!tasks || typeof tasks !== "object" || Array.isArray(tasks)) {
-    return "json";
-  }
-  const b = (tasks as Record<string, unknown>).persistenceBackend;
-  if (b === "sqlite") {
     return "sqlite";
   }
-  return "json";
+  const b = (tasks as Record<string, unknown>).persistenceBackend;
+  if (b === "json") {
+    return "json";
+  }
+  return "sqlite";
 }
 
 export function planningTaskStoreRelativePath(ctx: {

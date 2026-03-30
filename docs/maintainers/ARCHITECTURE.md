@@ -36,7 +36,7 @@ Workflow Cannon is a modular CLI-first workflow platform: structured **tasks** a
 
 ### Persistence
 
-- **Tasks** and **wishlist** default to JSON files; optional **`tasks.persistenceBackend: sqlite`** stores both documents in one SQLite file (see ADR under `docs/maintainers/`).
+- **Tasks** and **wishlist** default to **SQLite** (`tasks.persistenceBackend: sqlite`, one file under `tasks.sqliteDatabaseRelativePath`). Set **`tasks.persistenceBackend: json`** to use JSON files instead (see `docs/maintainers/ADR-sqlite-default-persistence.md` and `ADR-task-sqlite-persistence.md`).
 - **Unified module state** (Phase 18 track) extends SQLite for additional module rows and CLI introspection (`get-module-state`, `list-module-states`) where enabled.
 
 ## Layering and known exceptions
@@ -74,7 +74,7 @@ When instructions conflict, follow the ordered list in [`AGENTS.md`](./AGENTS.md
 
 - [`CLI-VISUAL-GUIDE.md`](./CLI-VISUAL-GUIDE.md) — ASCII + Mermaid map of top-level commands, `run` router, and approval lanes (companion to [`AGENT-CLI-MAP.md`](./AGENT-CLI-MAP.md))
 - [`ROADMAP.md`](./ROADMAP.md) — phases (including Phase 18 module platform + state consolidation and Phase 19 documentation v2)
-- [`.workspace-kit/tasks/state.json`](../../.workspace-kit/tasks/state.json) — canonical execution queue
+- Task execution queue — default SQLite `.workspace-kit/tasks/workspace-kit.db`; JSON opt-out `.workspace-kit/tasks/state.json`
 - [`RELEASING.md`](./RELEASING.md) — release gates and evidence
 - [`.ai/PRINCIPLES.md`](../../.ai/PRINCIPLES.md) — decision priorities
 - [`module-build-guide.md`](./module-build-guide.md) — module authoring

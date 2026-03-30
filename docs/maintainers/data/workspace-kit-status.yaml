@@ -1,12 +1,14 @@
 schema_version: 1
 current_kit_phase: "24"
+next_kit_phase: "25"
 last_updated: "2026-03-30"
-active_focus: "**v0.24.0** released (Phase 24). Next: define Phase 25 in ROADMAP or pick backlog; operators with legacy wishlist should run `migrate-wishlist-intake`."
+active_focus: "**v0.25.0** in-repo: SQLite default persistence; this repo migrated off committed `state.json`. Next: publish npm + align ROADMAP phase label if needed; legacy wishlist operators still run `migrate-wishlist-intake` where applicable."
 blockers: []
 next_agent_actions:
   - "Plan Phase **25** or next maintainer slice; align `current_kit_phase` when scope is set."
-  - "Downstream / dogfood: bump to `@workflow-cannon/workspace-kit@0.24.0`; run `migrate-wishlist-intake` where legacy wishlist or dual-column SQLite exists."
+  - "Downstream / dogfood: bump to `@workflow-cannon/workspace-kit@0.25.0` after publish; JSON-only workspaces run `migrate-task-persistence` or pin `tasks.persistenceBackend: json`."
 last_session_summary:
+  - "2026-03-30: **v0.25.0** work in-repo — default `tasks.persistenceBackend: sqlite`, ADR `ADR-sqlite-default-persistence.md`, migrated maintainer task data to `.workspace-kit/tasks/workspace-kit.db`; removed committed JSON task/wishlist stores."
   - "2026-03-30: Released **v0.24.0** — merged **PR #69**, GitHub release + **Publish NPM** workflow `23758351442`; ROADMAP evidence snapshot updated."
   - "2026-03-30: Phase **24** code + docs: **T425–T432** completed via `run-transition`; package **0.24.0**; parity/check/phase5-gates green."
   - "2026-03-28: Opened **Phase 24** (`v0.24.0`): ADR `ADR-unified-task-store-wishlist-and-improvement-state.md`, ROADMAP + status YAML, tasks **T425–T432** via `create-task`."

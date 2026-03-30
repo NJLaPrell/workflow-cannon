@@ -9,5 +9,5 @@
     ".workspace-kit/generated/project-context.json",
     ".cursor/rules/workspace-kit-project-context.mdc"
   ],
-  "notes": "Managed kit-owned paths used by workspace-kit upgrade with backup safety."
+  "notes": "Phase 3 baseline: managed kit-owned paths are updated by workspace-kit upgrade with backup safety."
 }

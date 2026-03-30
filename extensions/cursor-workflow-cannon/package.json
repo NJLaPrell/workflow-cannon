@@ -2,7 +2,7 @@
   "name": "cursor-workflow-cannon",
   "displayName": "Workflow Cannon",
   "description": "Thin client UI for Workflow Cannon — dashboard, tasks, and config via workspace-kit CLI.",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "publisher": "workflow-cannon",
   "license": "MIT",
   "type": "module",
@@ -57,6 +57,16 @@
           "name": "Config"
         }
       ]
+    },
+    "configuration": {
+      "title": "Workflow Cannon",
+      "properties": {
+        "workflowCannon.nodeExecutable": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Path to `node` for running workspace-kit (must match the Node used for `pnpm install`, or native modules like `better-sqlite3` will fail with MODULE_VERSION errors). Leave empty to use `WORKSPACE_KIT_NODE`, then common install paths, then `node` on `PATH` — **not** the editor's embedded Node."
+        }
+      }
     },
     "commands": [
       {

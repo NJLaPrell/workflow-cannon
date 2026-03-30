@@ -12,7 +12,7 @@ Task Engine and Wishlist state lived in separate JSON files with atomic-per-file
 
 1. **Driver**: Use `better-sqlite3` (native, synchronous API, prebuilt binaries for common platforms). CI enables `pnpm.onlyBuiltDependencies` so installs compile or fetch prebuilds.
 2. **Schema**: Store the existing `TaskStoreDocument` and `WishlistStoreDocument` as JSON text in one row (`workspace_planning_state`) rather than normalizing every task field—preserves forward compatibility with `TaskEntity` evolution without frequent SQL migrations.
-3. **Default**: `tasks.persistenceBackend` defaults to `json`; SQLite is opt-in after running `migrate-task-persistence` and setting config.
+3. **Default**: As of **v0.25.0**, `tasks.persistenceBackend` defaults to **`sqlite`** (see [`ADR-sqlite-default-persistence.md`](./ADR-sqlite-default-persistence.md)). Earlier releases defaulted to `json`; JSON remains an explicit opt-out.
 4. **Atomicity**: `convert-wishlist` uses a single SQLite transaction when the backend is `sqlite`; JSON mode keeps the prior two-file behavior.
 5. **Migration**: `migrate-task-persistence` copies JSON → SQLite or SQLite → JSON using configured relative paths; it does not delete source files automatically.
 

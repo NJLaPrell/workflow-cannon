@@ -11,4 +11,3 @@ Do not hand-edit project identity values here; update `workspace-kit.profile.jso
 - typecheck_command: pnpm run check
 
 When instructions need project-specific values, prefer this generated file or `.workspace-kit/generated/project-context.json`.
-

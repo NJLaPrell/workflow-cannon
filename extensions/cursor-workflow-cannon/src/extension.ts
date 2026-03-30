@@ -5,11 +5,18 @@ import { StateWatcher } from "./runtime/state-watcher.js";
 import { DashboardViewProvider } from "./views/dashboard/DashboardViewProvider.js";
 import { TasksTreeProvider } from "./views/tasks/TasksTreeProvider.js";
 import { ConfigViewProvider } from "./views/config/ConfigViewProvider.js";
+import { buildTaskDetailMarkdown } from "./task-detail-markdown.js";
+
+function readWorkflowCannonNodeSetting(): string | undefined {
+  return vscode.workspace.getConfiguration("workflowCannon").get<string>("nodeExecutable")?.trim() || undefined;
+}
 
 export function activate(context: vscode.ExtensionContext): void {
   const root = findWorkflowCannonRoot();
   const folder = root ? vscode.workspace.getWorkspaceFolder(vscode.Uri.file(root)) : undefined;
-  const client = root ? new CommandClient(root) : undefined;
+  const client = root
+    ? new CommandClient(root, { resolveNodeExecutable: readWorkflowCannonNodeSetting })
+    : undefined;
   const kitStateEmitter = new vscode.EventEmitter<void>();
   const onKitStateChanged = kitStateEmitter.event;
 
@@ -79,7 +86,7 @@ export function activate(context: vscode.ExtensionContext): void {
     if (!runtime) {
       return;
     }
-    const r = await runtime.run("get-task", { taskId, historyLimit: 10 });
+    const r = await runtime.run("get-task", { taskId, historyLimit: 25 });
     if (!r.ok) {
       await vscode.window.showErrorMessage(r.message ?? "Failed to get task detail");
       return;
@@ -87,25 +94,10 @@ export function activate(context: vscode.ExtensionContext): void {
     const task = (r.data?.task as Record<string, unknown>) ?? {};
     const recent = (r.data?.recentTransitions as Record<string, unknown>[]) ?? [];
     const allowed = (r.data?.allowedActions as Record<string, unknown>[]) ?? [];
-    const lines = [
-      `# ${String(task.id ?? taskId)} — ${String(task.title ?? "")}`,
-      "",
-      `- Status: ${String(task.status ?? "")}`,
-      `- Priority: ${String(task.priority ?? "")}`,
-      `- Phase: ${String(task.phase ?? "")}`,
-      "",
-      "## Allowed Actions",
-      ...allowed.map((a) => `- ${String(a.action)} -> ${String(a.targetStatus)}`),
-      "",
-      "## Recent Transitions",
-      ...recent.map(
-        (x) =>
-          `- ${String(x.timestamp ?? "")}: ${String(x.action ?? "")} (${String(x.fromState ?? "")} -> ${String(x.toState ?? "")})`
-      )
-    ];
+    const md = buildTaskDetailMarkdown({ task, allowedActions: allowed, recentTransitions: recent });
     const doc = await vscode.workspace.openTextDocument({
       language: "markdown",
-      content: lines.join("\n")
+      content: md
     });
     await vscode.window.showTextDocument(doc, { preview: true });
   };

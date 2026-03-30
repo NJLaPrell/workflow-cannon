@@ -1,4 +1,8 @@
 {
+  "tasks": {
+    "persistenceBackend": "sqlite",
+    "sqliteDatabaseRelativePath": ".workspace-kit/tasks/workspace-kit.db"
+  },
   "improvement": {
     "hooks": {
       "afterTaskCompleted": "ingest"

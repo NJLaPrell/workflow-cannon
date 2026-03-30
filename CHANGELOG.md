@@ -8,4 +8,4 @@ This root file is intentionally pointer-only to avoid split release history.
 
 - See `docs/maintainers/CHANGELOG.md` for all release notes, migration notes, and historical entries.
 
-Latest release: **v0.24.0** (Phase 24 — unified wishlist intake + improvement state in SQLite; see canonical changelog).
+Latest release: **v0.25.0** (SQLite default persistence + repo migration; see canonical changelog).

@@ -7,7 +7,7 @@ Basic operating guidance for AI agents working in this repository.
 1. `.ai/PRINCIPLES.md` — goals, trade-off order, approval gates
 2. `.ai/module-build.md` — module development contracts and enforcement
 3. `docs/maintainers/ROADMAP.md` — phase strategy and release cadence
-4. canonical task-engine state (`.workspace-kit/tasks/state.json`) — execution queue and dependency ordering (**`status` and `id` are authoritative**; do not infer “current phase” only from chat history or static README bullet lists)
+4. canonical task-engine state (default: SQLite `.workspace-kit/tasks/workspace-kit.db`; JSON opt-out: `.workspace-kit/tasks/state.json`) — execution queue and dependency ordering (**`status` and `id` are authoritative**; do not infer “current phase” only from chat history or static README bullet lists)
 5. `docs/maintainers/data/workspace-kit-status.yaml` — `current_kit_phase` and maintainer focus snapshot
 6. `docs/maintainers/RELEASING.md` — release gates and evidence requirements
 7. `docs/maintainers/POLICY-APPROVAL.md` — when `workspace-kit run` needs JSON `policyApproval` vs env approval for `config`/`init`/`upgrade`
@@ -23,7 +23,7 @@ When a session is long, was compacted, or you are unsure stale chat context matc
 
 1. Re-walk the **Source-of-truth order** (above) if governance or policy steps feel ambiguous.
 2. Run **`workspace-kit doctor`**, then **`workspace-kit run get-next-actions '{}'`** (or use the Workflow Cannon extension dashboard, which calls **`dashboard-summary`**).
-3. Re-read **`docs/maintainers/data/workspace-kit-status.yaml`** and the authoritative task list in **`.workspace-kit/tasks/state.json`** via CLI commands — do not rely on chat memory for task `status` or phase alone.
+3. Re-read **`docs/maintainers/data/workspace-kit-status.yaml`** and the authoritative task list via **`workspace-kit run list-tasks`** / **`get-next-actions`** (or the configured task store file if using JSON) — do not rely on chat memory for task `status` or phase alone.
 4. Optional: attach **`.cursor/rules/cursor-long-session-hygiene.mdc`** in Cursor for a short reload checklist; prefer **requestable** rules over bloating always-on rules. See **`docs/maintainers/runbooks/cursor-long-session.md`**.
 5. **`/qt`** templates: any step that persists kit state must include the matching **`workspace-kit`** invocation from **`docs/maintainers/AGENT-CLI-MAP.md`** before you treat the template as closed.
 
@@ -40,7 +40,7 @@ When a session is long, was compacted, or you are unsure stale chat context matc
 
 ## Working rules
 
-- Keep strategy in `docs/maintainers/ROADMAP.md`, execution detail in task-engine state (`workspace-kit run` task commands), and release process in `docs/maintainers/RELEASING.md`; treat `.workspace-kit/tasks/state.json` as view.
+- Keep strategy in `docs/maintainers/ROADMAP.md`, execution detail in task-engine state (`workspace-kit run` task commands), and release process in `docs/maintainers/RELEASING.md`; treat the configured task store (default SQLite) as the persistence view.
 - Treat `docs/maintainers/` governance/process docs as canonical; overlapping `.cursor/rules/` files are enforcement mirrors and should not introduce conflicting policy.
 - When scope changes, update all related docs in the same change set.
 - Preserve deterministic behavior and compatibility; document migration impact when changes affect consumers.

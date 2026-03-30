@@ -91,6 +91,26 @@ test("ModuleCommandRouter executes explain-config", async () => {
   assert.equal(result.data?.effectiveValue, ".workspace-kit/tasks/state.json");
 });
 
+test("ModuleCommandRouter explain-config shows sqlite as default tasks.persistenceBackend", async () => {
+  const registry = new ModuleRegistry([
+    workspaceConfigModule,
+    documentationModule,
+    agentBehaviorModule,
+    taskEngineModule
+  ]);
+  const router = new ModuleCommandRouter(registry);
+
+  const result = await router.execute(
+    "explain-config",
+    { path: "tasks.persistenceBackend" },
+    { ...lifecycleContext, moduleRegistry: registry }
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "config-explained");
+  assert.equal(result.data?.effectiveValue, "sqlite");
+});
+
 test("ModuleCommandRouter executes resolve-config", async () => {
   const registry = new ModuleRegistry([
     workspaceConfigModule,

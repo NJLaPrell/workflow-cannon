@@ -14,3 +14,15 @@ test("groupTasksByStatus orders groups by canonical status order", () => {
     ["ready", "blocked", "completed"]
   );
 });
+
+test("groupTasksByStatus appends non-canonical statuses after known order", () => {
+  const groups = groupTasksByStatus([
+    { id: "T1", title: "Odd", status: "weird_status" },
+    { id: "T2", title: "Ready", status: "ready" }
+  ]);
+  assert.deepEqual(
+    groups.map((g) => g.status),
+    ["ready", "weird_status"]
+  );
+  assert.equal(groups[1].tasks.length, 1);
+});

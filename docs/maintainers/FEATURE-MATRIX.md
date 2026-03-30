@@ -1,6 +1,6 @@
 # Workflow Cannon Feature Matrix
 
-Product-oriented feature inventory derived from task-engine state (`.workspace-kit/tasks/state.json`).
+Product-oriented feature inventory derived from task-engine state (default: SQLite `.workspace-kit/tasks/workspace-kit.db`; JSON opt-out: `.workspace-kit/tasks/state.json`).
 
 Status legend:
 

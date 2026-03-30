@@ -201,7 +201,11 @@ test("planningModule build-plan can persist tasks in tasks output mode", async (
         finalize: true
       }
     },
-    { runtimeVersion: "0.1", workspacePath: workspace }
+    {
+      runtimeVersion: "0.1",
+      workspacePath: workspace,
+      effectiveConfig: { tasks: { persistenceBackend: "json" } }
+    }
   );
   assert.equal(result.ok, true);
   assert.equal(result.code, "planning-task-output-created");
@@ -369,7 +373,11 @@ test("planningModule build-plan finalize can persist wishlist artifact", async (
         }
       }
     },
-    { runtimeVersion: "0.1", workspacePath: workspace }
+    {
+      runtimeVersion: "0.1",
+      workspacePath: workspace,
+      effectiveConfig: { tasks: { persistenceBackend: "json" } }
+    }
   );
   assert.equal(result.ok, true);
   assert.equal(result.code, "planning-artifact-created");

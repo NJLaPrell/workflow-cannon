@@ -17,6 +17,7 @@ import {
   workspaceConfigModule
 } from "../dist/index.js";
 import { runCli } from "../dist/cli.js";
+import { withJsonTaskPersistence } from "./config-test-helpers.mjs";
 
 async function tmpWs() {
   return mkdtemp(path.join(os.tmpdir(), "wk-phase5-"));
@@ -26,7 +27,7 @@ function buildContext(workspacePath, registry, effectiveConfig) {
   return {
     runtimeVersion: "0.1",
     workspacePath,
-    effectiveConfig,
+    effectiveConfig: withJsonTaskPersistence(effectiveConfig),
     resolvedActor: "tester@example.com",
     moduleRegistry: registry
   };

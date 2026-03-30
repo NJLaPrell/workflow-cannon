@@ -18,7 +18,7 @@ This file merges **task → PR**, **branching/tagging**, **commit**, and **PR re
 7. **Review / merge** via normal GitHub flow; avoid merging past known release or safety gates.
 8. **Update task-engine state** with `workspace-kit run run-transition` (and `policyApproval` when required)—after or in sync with merged work, not as a substitute for Git.
 
-If blocked: record the blocker and next action in task-engine state **first**; treat `.workspace-kit/tasks/state.json` as the canonical store (regenerated views are secondary).
+If blocked: record the blocker and next action in task-engine state **first**; treat the configured task store (default SQLite) as canonical (regenerated views are secondary).
 
 ## Branching / tagging
 
@@ -45,5 +45,5 @@ Avoid merging changes that skip known **release** or **safety** gates.
 
 ## CLI vs Git
 
-- **`workspace-kit`** owns task lifecycle, policy, and evidence in `.workspace-kit/tasks/state.json`.
+- **`workspace-kit`** owns task lifecycle, policy, and evidence in the configured task store (default SQLite under `.workspace-kit/tasks/`).
 - **Git + GitHub** own branch, PR, review, and merge. The kit does not replace that workflow.

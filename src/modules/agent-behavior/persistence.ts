@@ -2,6 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
 import { UnifiedStateDb } from "../../core/state/unified-state-db.js";
+import {
+  getTaskPersistenceBackend,
+  planningSqliteDatabaseRelativePath
+} from "../task-engine/planning-config.js";
 import type { BehaviorWorkspaceStateV1 } from "./types.js";
 
 const MODULE_ID = "agent-behavior";
@@ -11,25 +15,16 @@ const JSON_REL = path.join(".workspace-kit", "agent-behavior", "state.json");
 export function behaviorPersistenceMode(
   effectiveConfig: Record<string, unknown> | undefined
 ): "json" | "sqlite" {
-  const tasks = effectiveConfig?.tasks;
-  if (!tasks || typeof tasks !== "object" || Array.isArray(tasks)) {
-    return "json";
-  }
-  const b = (tasks as Record<string, unknown>).persistenceBackend;
-  return b === "sqlite" ? "sqlite" : "json";
+  return getTaskPersistenceBackend(effectiveConfig) === "sqlite" ? "sqlite" : "json";
 }
 
 export function behaviorSqliteRelativePath(
   effectiveConfig: Record<string, unknown> | undefined
 ): string {
-  const tasks = effectiveConfig?.tasks;
-  if (!tasks || typeof tasks !== "object" || Array.isArray(tasks)) {
-    return ".workspace-kit/tasks/workspace-kit.db";
-  }
-  const p = (tasks as Record<string, unknown>).sqliteDatabaseRelativePath;
-  return typeof p === "string" && p.trim().length > 0
-    ? p.trim()
-    : ".workspace-kit/tasks/workspace-kit.db";
+  return planningSqliteDatabaseRelativePath({
+    workspacePath: "",
+    effectiveConfig
+  } as ModuleLifecycleContext);
 }
 
 function jsonPath(workspacePath: string): string {
@@ -72,10 +67,16 @@ export async function loadBehaviorWorkspaceState(
     const rel = behaviorSqliteRelativePath(cfg);
     const db = new UnifiedStateDb(ctx.workspacePath, rel);
     const row = db.getModuleState(MODULE_ID);
-    if (!row?.state) {
+    if (row?.state) {
+      return parseState(row.state);
+    }
+    const fp = jsonPath(ctx.workspacePath);
+    try {
+      const raw = JSON.parse(await fs.promises.readFile(fp, "utf8")) as unknown;
+      return parseState(raw);
+    } catch {
       return emptyState();
     }
-    return parseState(row.state);
   }
   const fp = jsonPath(ctx.workspacePath);
   try {

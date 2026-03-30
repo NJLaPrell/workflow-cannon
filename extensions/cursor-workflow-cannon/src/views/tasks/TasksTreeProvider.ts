@@ -1,15 +1,10 @@
 import * as vscode from "vscode";
 import type { CommandClient } from "../../runtime/command-client.js";
-import { groupTasksByStatus } from "./grouping.js";
-
-type TaskEntity = { id: string; title: string; status: string; priority?: string; phase?: string };
-type WishlistRow = { id: string; title: string };
-
-type WkGroup = { kind: "group"; label: string; status: string; tasks: TaskEntity[] };
-type WkTask = { kind: "task"; task: TaskEntity };
-type WkWishlistGroup = { kind: "wishlist-group"; items: WishlistRow[] };
-type WkWishlistItem = { kind: "wishlist-item"; item: WishlistRow };
-type WkNode = WkGroup | WkTask | WkWishlistGroup | WkWishlistItem;
+import {
+  buildTaskTreeRootsFromTasks,
+  effectiveTaskType,
+  type WkNode
+} from "./build-task-tree.js";
 
 export class TasksTreeProvider implements vscode.TreeDataProvider<WkNode> {
   private _onDidChange = new vscode.EventEmitter<WkNode | undefined | void>();
@@ -41,7 +36,15 @@ export class TasksTreeProvider implements vscode.TreeDataProvider<WkNode> {
       );
       ti.id = "g:wishlist-open";
       ti.iconPath = new vscode.ThemeIcon("lightbulb");
-      ti.description = "wishlist_intake · ideation until convert-wishlist";
+      ti.description = "wishlist_intake · ideation / intake (non-terminal)";
+      return ti;
+    }
+    if (element.kind === "improvement-group") {
+      const n = element.tasks.length;
+      const ti = new vscode.TreeItem(`Improvements (${n})`, vscode.TreeItemCollapsibleState.Expanded);
+      ti.id = "g:improvements-active";
+      ti.iconPath = new vscode.ThemeIcon("wrench");
+      ti.description = "type: improvement · active (not done/cancelled)";
       return ti;
     }
     if (element.kind === "wishlist-item") {
@@ -60,8 +63,10 @@ export class TasksTreeProvider implements vscode.TreeDataProvider<WkNode> {
     }
     const t = element.task;
     const ti = new vscode.TreeItem(t.id, vscode.TreeItemCollapsibleState.None);
-    ti.description = t.title;
-    ti.tooltip = `${t.status}${t.priority ? ` · ${t.priority}` : ""}\n${t.title}`;
+    const eff = effectiveTaskType(t);
+    const typeSuffix = eff ? ` · ${eff}` : "";
+    ti.description = `${t.title}${typeSuffix}`;
+    ti.tooltip = `${t.status}${t.priority ? ` · ${t.priority}` : ""}${typeSuffix}\n${t.title}`;
     ti.contextValue = "wkcTask";
     ti.command = {
       command: "workflowCannon.task.showDetail",
@@ -81,38 +86,20 @@ export class TasksTreeProvider implements vscode.TreeDataProvider<WkNode> {
     if (element.kind === "wishlist-group") {
       return element.items.map((item) => ({ kind: "wishlist-item" as const, item }));
     }
+    if (element.kind === "improvement-group") {
+      return element.tasks.map((task) => ({ kind: "task" as const, task }));
+    }
     return [];
   }
 
   private async loadRoots(): Promise<WkNode[]> {
-    const [taskRes, wishRes] = await Promise.all([
-      this.client.run("list-tasks", {}),
-      this.client.run("list-wishlist", { status: "open" })
-    ]);
+    const taskRes = await this.client.run("list-tasks", {});
 
-    const roots: WkNode[] = [];
-
-    if (taskRes.ok && taskRes.data && Array.isArray((taskRes.data as { tasks?: unknown }).tasks)) {
-      const tasks = (taskRes.data as { tasks: TaskEntity[] }).tasks;
-      roots.push(
-        ...groupTasksByStatus(tasks).map((g) => ({
-          kind: "group" as const,
-          status: g.status,
-          label: g.label,
-          tasks: g.tasks
-        }))
-      );
+    if (!taskRes.ok || !taskRes.data || !Array.isArray((taskRes.data as { tasks?: unknown }).tasks)) {
+      return [];
     }
 
-    if (wishRes.ok && wishRes.data && Array.isArray((wishRes.data as { items?: unknown }).items)) {
-      const items = (wishRes.data as { items: WishlistRow[] }).items.filter(
-        (i) => typeof i?.id === "string" && typeof i?.title === "string"
-      );
-      if (items.length > 0) {
-        roots.push({ kind: "wishlist-group", items });
-      }
-    }
-
-    return roots;
+    const tasks = (taskRes.data as { tasks: unknown[] }).tasks;
+    return buildTaskTreeRootsFromTasks(tasks);
   }
 }

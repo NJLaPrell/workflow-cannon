@@ -6,6 +6,15 @@ export function escapeHtml(s: string): string {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+/** Escape first, then turn paired `**segments**` into `<b>…</b>` (safe for webview HTML). */
+export function renderMarkdownBoldAfterEscape(escapedPlain: string): string {
+  return escapedPlain.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
+}
+
+export function renderActiveFocusHtml(raw: string): string {
+  return renderMarkdownBoldAfterEscape(escapeHtml(raw));
+}
+
 function renderReadyList(items: unknown): string {
   if (!Array.isArray(items) || items.length === 0) {
     return '<p class="muted">No ready tasks.</p>';
@@ -103,11 +112,14 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
   const readyTop = Array.isArray(d.readyQueueTop) ? (d.readyQueueTop as unknown[]).slice(0, 3) : [];
 
   return (
-    "<p><b>Phase</b> " +
+    "<p><b>Current phase</b> " +
     escapeHtml(String(ws?.currentKitPhase ?? "—")) +
     "</p>" +
-    '<p class="muted">' +
-    escapeHtml(String(ws?.activeFocus ?? "")) +
+    "<p><b>Next phase</b> " +
+    escapeHtml(String(ws?.nextKitPhase ?? "—")) +
+    "</p>" +
+    '<p class="muted focus-md">' +
+    renderActiveFocusHtml(String(ws?.activeFocus ?? "")) +
     "</p>" +
     "<p class=\"ok\">Tasks · proposed " +
     String(ss.proposed ?? 0) +

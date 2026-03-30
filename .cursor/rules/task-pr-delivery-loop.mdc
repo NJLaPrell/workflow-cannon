@@ -13,5 +13,5 @@ alwaysApply: false
 4. Update task status and evidence.
 5. Prepare concise PR description focused on why and risk.
 
-If blocked, record blocker and next action in task-engine state first; regenerate `.workspace-kit/tasks/state.json` only as the human-readable view.
+If blocked, record blocker and next action in task-engine state first; treat exported or JSON snapshots only as human-readable views when applicable.
 

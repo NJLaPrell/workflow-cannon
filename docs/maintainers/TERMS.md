@@ -15,7 +15,7 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
 - **Canonical glossary**: `docs/maintainers/TERMS.md` (this file) — primary definitions
 - **Canonical goals and principles**: `.ai/PRINCIPLES.md` — decision rules and trade-off order
 - **Project intent and boundaries**: `README.md`, `docs/maintainers/ROADMAP.md`, `docs/maintainers/ARCHITECTURE.md`
-- **Execution and planning**: task-engine state (`.workspace-kit/tasks/state.json`) — queue, dependencies, and execution tracking
+- **Execution and planning**: task-engine state (default SQLite `.workspace-kit/tasks/workspace-kit.db`; JSON opt-out `.workspace-kit/tasks/state.json`) — queue, dependencies, and execution tracking
 - **Operational runbooks/playbooks**: `docs/maintainers/RELEASING.md` and files under `docs/maintainers/`
 - **Agent enforcement layer**: `.cursor/rules/*.mdc` — editor/agent behavior rules
 - **Reusable agent task templates**: `tasks/*.md`
@@ -65,7 +65,7 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
 - **Playbook**
   - **Definition**: Reusable strategy for a class of work, broader than a single workflow.
   - **Defined in**: `docs/maintainers/` and thematic project docs.
-  - **Enforced in**: planning and execution norms in task-engine state / team process, surfaced in `.workspace-kit/tasks/state.json`.
+  - **Enforced in**: planning and execution norms in task-engine state / team process, surfaced in the configured task store (default SQLite).
 
 - **Template Contract**
   - **Definition**: Required structure, fields, and formatting guarantees for outputs.
@@ -79,7 +79,7 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
 
 - **Evidence Requirement**
   - **Definition**: Minimum proof artifacts needed to treat work as valid and releasable.
-  - **Defined in**: `docs/maintainers/RELEASING.md`, task-engine state contracts, `.workspace-kit/tasks/state.json`, and this glossary.
+  - **Defined in**: `docs/maintainers/RELEASING.md`, task-engine state contracts, the configured task store (default SQLite), and this glossary.
   - **Enforced in**: release checklist and PR/review expectations.
 
 - **Escalation Trigger**
@@ -147,7 +147,7 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
 - `README.md` — project intent and direction
 - `.ai/PRINCIPLES.md` — project goals and decision principles
 - `docs/maintainers/ROADMAP.md` — strategic decisions and phase context
-- `.workspace-kit/tasks/state.json` — canonical active execution state and queue
+- Task-engine persistence — default SQLite `.workspace-kit/tasks/workspace-kit.db`; JSON opt-out `.workspace-kit/tasks/state.json`
 - `docs/maintainers/RELEASING.md` — release gates and evidence expectations
 - `docs/maintainers/ARCHITECTURE.md` — system map (router, policy, persistence, layering)
 - `docs/maintainers/AGENT-CLI-MAP.md` — tier table and copy-paste `workspace-kit run` JSON

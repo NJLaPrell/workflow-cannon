@@ -62,7 +62,7 @@ Or with pnpm: `pnpm add @workflow-cannon/workspace-kit` then `pnpm exec workspac
 | Area | What |
 | --- | --- |
 | **CLI** | `workspace-kit` — `doctor`, `config`, `run <module-command>` (see `workspace-kit run` with no args for the list). |
-| **Task engine** | Canonical queue in `.workspace-kit/tasks/state.json`; lifecycle via `run-transition`. Wishlist ideation uses ids `W###` (see [`docs/maintainers/runbooks/wishlist-workflow.md`](docs/maintainers/runbooks/wishlist-workflow.md)). |
+| **Task engine** | Canonical queue in SQLite by default (`.workspace-kit/tasks/workspace-kit.db`); set `tasks.persistenceBackend: json` to use `.workspace-kit/tasks/state.json` instead. Lifecycle via `run-transition`. Wishlist ideation uses ids `W###` until migrated (see [`docs/maintainers/runbooks/wishlist-workflow.md`](docs/maintainers/runbooks/wishlist-workflow.md)). |
 | **Docs** | Maintainer process, roadmap, and changelog under `docs/maintainers/`. |
 | **Cursor extension** (optional) | Thin UI in `extensions/cursor-workflow-cannon/` — build with `pnpm run ui:prepare`. |
 
@@ -77,7 +77,7 @@ Sensitive `workspace-kit run` commands require JSON **`policyApproval`** in the 
 
 ## Project status and roadmap
 
-Release cadence, phase history, and strategic decisions: [`docs/maintainers/ROADMAP.md`](docs/maintainers/ROADMAP.md). **Live execution queue:** `.workspace-kit/tasks/state.json` (`status` and `id` are authoritative — not this README’s milestone bullets).
+Release cadence, phase history, and strategic decisions: [`docs/maintainers/ROADMAP.md`](docs/maintainers/ROADMAP.md). **Live execution queue:** the configured task store (default SQLite at `.workspace-kit/tasks/workspace-kit.db`; JSON at `.workspace-kit/tasks/state.json` when opted in). **`status` and `id` are authoritative** — not this README’s milestone bullets.
 
 Snapshot: [`docs/maintainers/data/workspace-kit-status.yaml`](docs/maintainers/data/workspace-kit-status.yaml).
 

@@ -115,10 +115,10 @@ export function taskEntityFromNewIntake(
 
 /** Map a `wishlist_intake` task to the wire shape consumers expect from list/get-wishlist. */
 export function wishlistIntakeTaskToItem(task: TaskEntity): WishlistItem | null {
-  if (!isWishlistIntakeTask(task) || !task.metadata) {
+  if (!isWishlistIntakeTask(task)) {
     return null;
   }
-  const m = task.metadata;
+  const m = task.metadata ?? {};
   const legacy = m[LEGACY_WISHLIST_ID_METADATA_KEY];
   const id =
     typeof legacy === "string" && WISHLIST_ID_RE.test(legacy)

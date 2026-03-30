@@ -37,6 +37,7 @@ test("Phase6c: run-transition to completed does not throw with hook config", asy
     JSON.stringify(
       {
         schemaVersion: 1,
+        tasks: { persistenceBackend: "json" },
         improvement: {
           hooks: { afterTaskCompleted: "sync" }
         }

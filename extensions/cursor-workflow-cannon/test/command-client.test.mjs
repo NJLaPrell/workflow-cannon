@@ -2,7 +2,17 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import path from "node:path";
 
-import { CommandClient, parseRunCommandOutput } from "../dist/runtime/command-client.js";
+import { CommandClient, parseRunCommandOutput, pickNodeExecutable } from "../dist/runtime/command-client.js";
+
+test("pickNodeExecutable uses resolver path when it exists", () => {
+  const picked = pickNodeExecutable(() => process.execPath);
+  assert.equal(picked, process.execPath);
+});
+
+test("pickNodeExecutable falls through when resolver path is bogus", () => {
+  const picked = pickNodeExecutable(() => "/__no_such__/node");
+  assert.notEqual(picked, "/__no_such__/node");
+});
 
 test("parseRunCommandOutput parses valid JSON", () => {
   const out = parseRunCommandOutput('{"ok":true,"code":"tasks-listed"}', 0);

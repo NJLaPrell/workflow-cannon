@@ -17,7 +17,43 @@ type CommandClientOptions = {
   cliPathOverride?: string;
   execFn?: CommandClientExecFn;
   timeoutMs?: number;
+  /**
+   * Return a path to `node` (or `node` / `nodejs` to use PATH). Used so the CLI runs with the same
+   * Node as `pnpm install` / native addons — not the editor's `process.execPath` (Electron), which
+   * breaks better-sqlite3 ABI.
+   */
+  resolveNodeExecutable?: () => string | undefined;
 };
+
+/** Pick Node binary for spawning workspace-kit; never uses extension-host `process.execPath` by default. */
+export function pickNodeExecutable(resolve?: () => string | undefined): string {
+  const fromResolver = resolve?.()?.trim();
+  if (fromResolver) {
+    if (fromResolver === "node" || fromResolver === "nodejs") return fromResolver;
+    if (fs.existsSync(fromResolver)) return fromResolver;
+  }
+  const fromEnv = process.env.WORKSPACE_KIT_NODE?.trim();
+  if (fromEnv) {
+    if (fromEnv === "node" || fromEnv === "nodejs") return fromEnv;
+    if (fs.existsSync(fromEnv)) return fromEnv;
+  }
+  if (process.platform === "win32") {
+    const programFiles = process.env.ProgramFiles;
+    const programFilesX86 = process.env["ProgramFiles(x86)"];
+    const winCandidates = [
+      programFiles ? path.join(programFiles, "nodejs", "node.exe") : "",
+      programFilesX86 ? path.join(programFilesX86, "nodejs", "node.exe") : ""
+    ];
+    for (const p of winCandidates) {
+      if (p && fs.existsSync(p)) return p;
+    }
+  } else {
+    for (const p of ["/opt/homebrew/bin/node", "/usr/local/bin/node"]) {
+      if (fs.existsSync(p)) return p;
+    }
+  }
+  return "node";
+}
 
 function resolveCliJs(workspaceRoot: string, cliPathOverride?: string): string {
   if (cliPathOverride && fs.existsSync(cliPathOverride)) {
@@ -42,12 +78,14 @@ function execKit(
   cliArgs: string[],
   maxBuffer = 20 * 1024 * 1024,
   timeoutMs = 30_000,
-  cliPathOverride?: string
+  cliPathOverride?: string,
+  resolveNodeExecutable?: () => string | undefined
 ): Promise<CommandClientExecResult> {
   const cliJs = resolveCliJs(workspaceRoot, cliPathOverride);
+  const nodeBin = pickNodeExecutable(resolveNodeExecutable);
   return new Promise((resolve, reject) => {
     execFile(
-      process.execPath,
+      nodeBin,
       [cliJs, ...cliArgs],
       { cwd: workspaceRoot, maxBuffer, windowsHide: true, timeout: timeoutMs },
       (err, stdout, stderr) => {
@@ -84,14 +122,24 @@ export function parseRunCommandOutput(stdout: string, exitCode: number): KitRunR
 export class CommandClient {
   private readonly timeoutMs: number;
   private readonly cliPathOverride?: string;
+  private readonly resolveNodeExecutable?: () => string | undefined;
   private readonly execFn: CommandClientExecFn;
 
   constructor(private readonly workspaceRoot: string, options?: CommandClientOptions) {
     this.timeoutMs = options?.timeoutMs ?? 30_000;
     this.cliPathOverride = options?.cliPathOverride;
+    this.resolveNodeExecutable = options?.resolveNodeExecutable;
     this.execFn =
       options?.execFn ??
-      ((root, cliArgs) => execKit(root, cliArgs, 20 * 1024 * 1024, this.timeoutMs, this.cliPathOverride));
+      ((root, cliArgs) =>
+        execKit(
+          root,
+          cliArgs,
+          20 * 1024 * 1024,
+          this.timeoutMs,
+          this.cliPathOverride,
+          this.resolveNodeExecutable
+        ));
   }
 
   /** `workspace-kit run <name> <json>` — parses single JSON object from stdout. */

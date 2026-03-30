@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/workspace-kit-profile.schema.json",
+  "title": "Workspace Kit Profile",
+  "type": "object",
+  "required": ["project", "packageManager", "commands", "github"],
+  "properties": {
+    "project": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "packageManager": {
+      "type": "string",
+      "enum": ["pnpm", "npm", "yarn"]
+    },
+    "commands": {
+      "type": "object",
+      "required": ["test", "lint", "typecheck"],
+      "properties": {
+        "test": {
+          "type": "string",
+          "minLength": 1
+        },
+        "lint": {
+          "type": "string",
+          "minLength": 1
+        },
+        "typecheck": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "github": {
+      "type": "object",
+      "required": ["defaultBranch"],
+      "properties": {
+        "defaultBranch": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

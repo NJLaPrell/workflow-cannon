@@ -9,7 +9,7 @@ Agents must use **`workspace-kit`** for kit-owned persistence. Chat-only approva
 
 ## Required behavior
 
-1. **Task lifecycle** — use `workspace-kit run run-transition` with JSON args (including `policyApproval` when required). **Do not** hand-edit `.workspace-kit/tasks/state.json` for routine status changes except documented recovery.
+1. **Task lifecycle** — use `workspace-kit run run-transition` with JSON args (including `policyApproval` when required). **Do not** hand-edit the task store for routine status changes except documented recovery (when using JSON persistence, that file is `.workspace-kit/tasks/state.json`).
 2. **Policy-sensitive `run`** — pass `policyApproval` in the **third CLI argument** JSON. `WORKSPACE_KIT_POLICY_APPROVAL` is for `init` / `upgrade` / `config` mutations only, **not** for the `run` path.
 3. **Evidence** — after transitions, treat task-engine output / `transitionLog` as authoritative; do not claim task status changed without CLI evidence.
 

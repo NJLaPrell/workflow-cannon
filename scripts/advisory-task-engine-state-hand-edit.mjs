@@ -62,6 +62,12 @@ function analyze(oldDoc, newDoc) {
 
 function main() {
   if (!existsSync(STATE_PATH)) {
+    if (existsSync(".workspace-kit/tasks/workspace-kit.db")) {
+      console.warn(
+        "[advisory-task-state] skip: SQLite task store (.workspace-kit/tasks/workspace-kit.db); this advisory only applies when tasks.persistenceBackend is json"
+      );
+      return;
+    }
     console.warn(`[advisory-task-state] skip: ${STATE_PATH} missing`);
     return;
   }

@@ -116,9 +116,13 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Workflow Cannon</title>
   <style>
-    body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); background: var(--vscode-sideBar-background); padding: 8px; font-size: 12px; }
-    h1 { font-size: 1.1em; margin: 0 0 8px; }
+    html, body { margin: 0; }
+    body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); background: var(--vscode-sideBar-background); padding: 2px 8px 8px; font-size: 12px; }
+    #root > *:first-child { margin-top: 0; }
+    #root p { margin: 0 0 6px 0; }
+    #root p:last-child { margin-bottom: 0; }
     .muted { opacity: 0.75; }
+    .focus-md b { font-weight: 600; }
     pre { white-space: pre-wrap; background: var(--vscode-textCodeBlock-background); padding: 8px; border-radius: 4px; }
     button { margin-top: 8px; padding: 4px 8px; cursor: pointer; }
     .ok { color: var(--vscode-testing-iconPassed); }
@@ -126,7 +130,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   </style>
 </head>
 <body>
-  <h1>Dashboard</h1>
   <div id="root">${rootInnerHtml}</div>
   <div>
     <button id="btn">Refresh</button>

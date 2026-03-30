@@ -631,16 +631,13 @@ export async function runCli(
         : {};
 
     const nowIso = new Date().toISOString();
+    const resolvedKitVersion =
+      (await resolvePackageVersion(cwd)) ?? (await readCliBundledPackageVersion()) ?? "0.0.0";
     const mergedManifest = {
       schemaVersion: 1,
       kit: {
         name: CANONICAL_KIT_NAME,
-        version:
-          typeof existingManifest.kit === "object" &&
-          existingManifest.kit &&
-          typeof (existingManifest.kit as Record<string, unknown>).version === "string"
-            ? (existingManifest.kit as Record<string, unknown>).version
-            : "0.0.0"
+        version: resolvedKitVersion
       },
       installedAt:
         typeof existingManifest.installedAt === "string" && existingManifest.installedAt.length > 0

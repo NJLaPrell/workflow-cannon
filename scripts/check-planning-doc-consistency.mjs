@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import Database from "better-sqlite3";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
@@ -7,19 +8,27 @@ const ROOT = process.cwd();
 
 const PATHS = {
   roadmap: resolve(ROOT, "docs/maintainers/ROADMAP.md"),
-  taskState: resolve(ROOT, ".workspace-kit/tasks/state.json"),
+  taskStateJson: resolve(ROOT, ".workspace-kit/tasks/state.json"),
+  taskStateSqlite: resolve(ROOT, ".workspace-kit/tasks/workspace-kit.db"),
   featureMatrix: resolve(ROOT, "docs/maintainers/FEATURE-MATRIX.md")
 };
 
-/** When `state.json` is missing (sparse checkouts), align with roadmap-only inference. */
+/** JSON file when `tasks.persistenceBackend: json`; else SQLite `task_store_json` row. */
 async function readTaskStateText() {
   try {
-    return await readFile(PATHS.taskState, "utf8");
+    return await readFile(PATHS.taskStateJson, "utf8");
   } catch (err) {
-    if (err && typeof err === "object" && err.code === "ENOENT") {
-      return null;
+    if (err && typeof err === "object" && err.code !== "ENOENT") {
+      throw err;
     }
-    throw err;
+  }
+  try {
+    const db = new Database(PATHS.taskStateSqlite, { readonly: true });
+    const row = db.prepare("SELECT task_store_json FROM workspace_planning_state WHERE id = 1").get();
+    db.close();
+    return row && typeof row.task_store_json === "string" ? row.task_store_json : null;
+  } catch {
+    return null;
   }
 }
 

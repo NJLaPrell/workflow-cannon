@@ -18,40 +18,41 @@ export class ConfigViewProvider implements vscode.WebviewViewProvider {
 
   resolveWebviewView(webviewView: vscode.WebviewView): void {
     this.view = webviewView;
-    webviewView.webview.options = {
+    const { webview } = webviewView;
+    webview.options = {
       enableScripts: true,
       localResourceRoots: [this.extensionUri]
     };
-    webviewView.webview.html = this.html();
-    webviewView.webview.onDidReceiveMessage(async (msg) => {
+    webview.html = this.buildHtml(webview);
+    webview.onDidReceiveMessage(async (msg) => {
       if (msg?.type === "list") {
         const r = await this.client.config(["list", "--json"]);
-        await webviewView.webview.postMessage({
+        await webview.postMessage({
           type: "listResult",
           payload: this.parseConfigJson(r)
         });
       }
       if (msg?.type === "explain" && typeof msg.key === "string") {
         const r = await this.client.run("explain-config", { path: msg.key.trim() });
-        await webviewView.webview.postMessage({ type: "explainResult", payload: r });
+        await webview.postMessage({ type: "explainResult", payload: r });
       }
       if (msg?.type === "validate") {
         const r = await this.client.config(["validate"]);
-        await webviewView.webview.postMessage({
+        await webview.postMessage({
           type: "validateResult",
           payload: { code: r.code, text: r.stdout + (r.stderr ? "\n" + r.stderr : "") }
         });
       }
       if (msg?.type === "set" && typeof msg.key === "string" && typeof msg.value === "string") {
         const r = await this.client.config(["set", msg.key.trim(), msg.value]);
-        await webviewView.webview.postMessage({
+        await webview.postMessage({
           type: "setResult",
           payload: { code: r.code, text: r.stdout + (r.stderr ? "\n" + r.stderr : "") }
         });
       }
       if (msg?.type === "unset" && typeof msg.key === "string") {
         const r = await this.client.config(["unset", msg.key.trim()]);
-        await webviewView.webview.postMessage({
+        await webview.postMessage({
           type: "unsetResult",
           payload: { code: r.code, text: r.stdout + (r.stderr ? "\n" + r.stderr : "") }
         });
@@ -73,8 +74,12 @@ export class ConfigViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  private html(): string {
-    const csp = ["default-src 'none'", "style-src 'unsafe-inline'", "script-src 'unsafe-inline'"].join("; ");
+  private buildHtml(webview: vscode.Webview): string {
+    const csp = [
+      "default-src 'none'",
+      "style-src 'unsafe-inline'",
+      `script-src ${webview.cspSource} 'unsafe-inline'`
+    ].join("; ");
     return `<!DOCTYPE html>
 <html lang="en">
 <head>

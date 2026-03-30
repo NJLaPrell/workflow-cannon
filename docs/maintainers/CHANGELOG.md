@@ -10,6 +10,17 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 - **CLI visual guide** — `docs/maintainers/CLI-VISUAL-GUIDE.md` (ASCII topology + Mermaid: top-level commands, agent decision flow, approval lanes, default module router). Linked from README, `AGENTS.md`, `AGENT-CLI-MAP.md`, `ARCHITECTURE.md`; machine ref in `.ai/AGENTS.md`.
 
+## [0.25.0] - 2026-03-30
+
+### Changed
+
+- **Breaking:** `tasks.persistenceBackend` now defaults to **`sqlite`** (was `json`). New kit defaults include `tasks.sqliteDatabaseRelativePath`, `tasks.wishlistStoreRelativePath`, and `persistenceBackend` in `KIT_CONFIG_DEFAULTS`. Operators upgrading from JSON-only stores must run **`workspace-kit run migrate-task-persistence`** with `direction: "json-to-sqlite"` or set **`tasks.persistenceBackend: "json"`** to remain on files. **`workspace-kit doctor`** continues to fail when SQLite is selected and the database file is missing.
+- **Agent-behavior:** When using SQLite, if the `agent-behavior` module row is absent, load falls back to `.workspace-kit/agent-behavior/state.json` once (parity with improvement operational state file fallback).
+
+### Documentation
+
+- ADR: `docs/maintainers/ADR-sqlite-default-persistence.md`. Updates to `README.md`, `AGENTS.md`, `ARCHITECTURE.md`, `ADR-task-sqlite-persistence.md`, task-engine `config.md` / `migrate-task-persistence` instruction.
+
 ## [0.24.0] - 2026-03-30
 
 Phase 24 — unified task intake (`T425`–`T432`): wishlist ideation is **`wishlist_intake`** tasks (`T###`); optional `metadata.legacyWishlistId` for migrated `W###` provenance; one-time **`migrate-wishlist-intake`**; SQLite planning can drop the legacy wishlist JSON column; improvement **operational** state reads/writes the unified SQLite module-state row when `tasks.persistenceBackend` is `sqlite`.
