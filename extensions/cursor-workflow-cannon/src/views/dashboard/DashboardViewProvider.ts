@@ -79,7 +79,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
 </head>
 <body>
   <h1>Dashboard</h1>
-  <p class="muted">Data from <code>workspace-kit run dashboard-summary</code> — no direct file reads.</p>
   <div id="root">Loading…</div>
   <div>
     <button id="btn">Refresh</button>
@@ -115,6 +114,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       const sn = d.suggestedNext;
       const ws = d.workspaceStatus;
       const wishlist = d.wishlist || {};
+      const wishlistOpenTop = Array.isArray(wishlist.openTop) ? wishlist.openTop : [];
       const planningSession = d.planningSession;
       const blockedSummary = d.blockedSummary || {};
       const blockedTop = Array.isArray(blockedSummary.top) ? blockedSummary.top.slice(0, 3) : [];
@@ -126,7 +126,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         ' · ready ' + (ss.ready ?? 0) + ' · in progress ' + (ss.in_progress ?? 0) +
         ' · blocked ' + (ss.blocked ?? 0) +
         ' · done ' + (ss.completed ?? 0) + '</p>' +
-        '<p><b>Wishlist</b> open ' + (wishlist.openCount ?? 0) + ' / total ' + (wishlist.totalCount ?? 0) + '</p>' +
+        '<p><b>Wishlist</b> (W### — ideation; not in ready queue until converted to tasks) · open ' +
+        (wishlist.openCount ?? 0) + ' / total ' + (wishlist.totalCount ?? 0) + '</p>' +
+        renderWishlistOpenList(wishlistOpenTop) +
         '<p><b>Blocked</b> ' + (blockedSummary.count ?? 0) + '</p>' +
         renderBlockedList(blockedTop) +
         '<p><b>Ready preview</b> ' + (d.readyQueueCount ?? 0) + '</p>' +
@@ -141,6 +143,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         const pri = x?.priority ? ' [' + escapeHtml(String(x.priority)) + ']' : '';
         return '- ' + escapeHtml(String(x?.id ?? '')) + ' ' + escapeHtml(String(x?.title ?? '')) + pri;
       }).join('\\n') + '</pre>';
+    }
+    function renderWishlistOpenList(items) {
+      if (!items || items.length === 0) return '<p class="muted">No open wishlist items.</p>';
+      return '<p class="muted"><b>Open wishlist preview</b></p><pre>' + items.map((x) =>
+        '- ' + escapeHtml(String(x?.id ?? '')) + ' ' + escapeHtml(String(x?.title ?? ''))
+      ).join('\\n') + '</pre>';
     }
     function renderBlockedList(items) {
       if (!items || items.length === 0) return '<p class="muted">No blocked tasks.</p>';

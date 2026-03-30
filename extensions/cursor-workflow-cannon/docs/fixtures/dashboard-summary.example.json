@@ -22,7 +22,8 @@
     "wishlist": {
       "schemaVersion": 1,
       "openCount": 1,
-      "totalCount": 3
+      "totalCount": 3,
+      "openTop": [{ "id": "W1", "title": "Example open wishlist item" }]
     },
     "readyQueueTop": [],
     "readyQueueCount": 2,
