@@ -84,7 +84,7 @@ export async function runGenerateRecommendations(
   const planning = await openPlanningStores(ctx);
   const store = planning.taskStore;
 
-  const state = await loadImprovementState(ctx.workspacePath);
+  const state = await loadImprovementState(ctx.workspacePath, ctx.effectiveConfig as Record<string, unknown> | undefined);
   const transcriptsRoot = resolveTranscriptArchivePath(ctx, args);
   const fromTag = typeof args.fromTag === "string" ? args.fromTag.trim() : undefined;
   const toTag = typeof args.toTag === "string" ? args.toTag.trim() : undefined;
@@ -165,7 +165,7 @@ export async function runGenerateRecommendations(
   }
 
   await store.save();
-  await saveImprovementState(ctx.workspacePath, state);
+  await saveImprovementState(ctx.workspacePath, state, ctx.effectiveConfig as Record<string, unknown> | undefined);
 
   const skipped = skippedDuplicateEvidenceKey + skippedExistingTaskId;
   return {

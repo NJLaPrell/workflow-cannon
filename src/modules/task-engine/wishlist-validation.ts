@@ -39,6 +39,26 @@ function nonEmptyString(v: unknown, label: string): string | null {
  * Validates intake fields for creating or replacing content on an open wishlist item.
  * Wishlist items never carry a Task Engine `phase`; reject if present.
  */
+/**
+ * Validates required wishlist intake strings without requiring a `W###` id (Phase 24 task-backed intake).
+ */
+export function validateWishlistContentFields(args: Record<string, unknown>): WishlistValidationResult {
+  const errors: string[] = [];
+  if ("phase" in args && args.phase !== undefined) {
+    errors.push("Wishlist intake must not include 'phase'; only canonical phased tasks use phase.");
+  }
+  for (const key of REQUIRED_STRING_FIELDS) {
+    const s = nonEmptyString(args[key], key);
+    if (s === null) {
+      errors.push(`Wishlist '${key}' is required and must be a non-empty string.`);
+    }
+  }
+  if (errors.length > 0) {
+    return { ok: false, errors };
+  }
+  return { ok: true };
+}
+
 export function validateWishlistIntakePayload(args: Record<string, unknown>): WishlistValidationResult {
   const errors: string[] = [];
 

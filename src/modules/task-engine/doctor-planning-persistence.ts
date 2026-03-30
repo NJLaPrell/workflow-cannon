@@ -48,11 +48,17 @@ export function validatePlanningPersistenceForDoctor(
   }
 
   try {
-    const row = db
-      .prepare(
-        "SELECT task_store_json, wishlist_store_json FROM workspace_planning_state WHERE id = 1"
-      )
-      .get() as { task_store_json: string; wishlist_store_json: string } | undefined;
+    const cols = db.prepare("PRAGMA table_info(workspace_planning_state)").all() as { name: string }[];
+    const hasWishlist = cols.some((c) => c.name === "wishlist_store_json");
+    const row = hasWishlist
+      ? (db
+          .prepare(
+            "SELECT task_store_json, wishlist_store_json FROM workspace_planning_state WHERE id = 1"
+          )
+          .get() as { task_store_json: string; wishlist_store_json: string } | undefined)
+      : (db
+          .prepare("SELECT task_store_json FROM workspace_planning_state WHERE id = 1")
+          .get() as { task_store_json: string } | undefined);
 
     if (row) {
       try {
@@ -66,16 +72,18 @@ export function validatePlanningPersistenceForDoctor(
       } catch {
         issues.push({ path: relDisplay, reason: "sqlite-task_store_json: invalid JSON" });
       }
-      try {
-        const wishDoc = JSON.parse(row.wishlist_store_json) as { schemaVersion?: number };
-        if (wishDoc.schemaVersion !== 1) {
-          issues.push({
-            path: relDisplay,
-            reason: `sqlite-wishlist_store_json: unsupported schemaVersion (expected 1, got ${wishDoc.schemaVersion})`
-          });
+      if (hasWishlist && "wishlist_store_json" in row && typeof row.wishlist_store_json === "string") {
+        try {
+          const wishDoc = JSON.parse(row.wishlist_store_json) as { schemaVersion?: number };
+          if (wishDoc.schemaVersion !== 1) {
+            issues.push({
+              path: relDisplay,
+              reason: `sqlite-wishlist_store_json: unsupported schemaVersion (expected 1, got ${wishDoc.schemaVersion})`
+            });
+          }
+        } catch {
+          issues.push({ path: relDisplay, reason: "sqlite-wishlist_store_json: invalid JSON" });
         }
-      } catch {
-        issues.push({ path: relDisplay, reason: "sqlite-wishlist_store_json: invalid JSON" });
       }
     }
   } catch (err) {

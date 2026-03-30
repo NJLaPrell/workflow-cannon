@@ -1,12 +1,13 @@
 schema_version: 1
 current_kit_phase: "24"
 last_updated: "2026-03-30"
-active_focus: "Phase **24** open for **v0.24.0** — unified task intake (wishlist → **T###** + metadata), one-time migration, improvement operational state separate from `tasks[]`. Tasks **T425–T432**; ADR `docs/maintainers/ADR-unified-task-store-wishlist-and-improvement-state.md`."
+active_focus: "Phase **24** implementation merged for **v0.24.0** — `wishlist_intake` tasks, `migrate-wishlist-intake`, SQLite task-only planning row (post-migration), improvement state in unified DB when SQLite persistence is on. Release tagging/npm per maintainer workflow."
 blockers: []
 next_agent_actions:
-  - "Phase 24: execute **T425–T432** in dependency order (wishlist-as-tasks schema → migrate/remove wishlist persistence → CLI/runtime → improvement state row → planning → extension → tests/docs → release)."
-  - "Validate with `pnpm run build && pnpm test` (and `pnpm run ext:compile` when extension scope) before marking tasks complete."
+  - "Publish **v0.24.0** per `docs/maintainers/RELEASING.md` (GitHub release + npm); record workflow run URLs."
+  - "Operators on legacy wishlist files: run `migrate-wishlist-intake` once (see maintainer CHANGELOG + ADR)."
 last_session_summary:
+  - "2026-03-30: Phase **24** code + docs: **T425–T432** completed via `run-transition`; package **0.24.0**; parity/check/phase5-gates green."
   - "2026-03-28: Opened **Phase 24** (`v0.24.0`): ADR `ADR-unified-task-store-wishlist-and-improvement-state.md`, ROADMAP + status YAML, tasks **T425–T432** via `create-task`."
   - "2026-03-28: Cancelled **T394–T397**, **T398–T402**, **T415–T419** via `run-transition` (reject/cancel + policyApproval) — maintainer deprioritization."
   - "2026-03-28: Shipped **v0.23.0** — `agent-behavior` module; **T420–T424** completed via task-engine transitions."

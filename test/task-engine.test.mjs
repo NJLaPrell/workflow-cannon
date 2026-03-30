@@ -784,7 +784,7 @@ test("taskEngineModule explain-task-engine-model returns variants and lifecycle"
   assert.equal(result.data.modelVersion, 1);
   assert.ok(Array.isArray(result.data.variants));
   assert.ok(result.data.variants.some((v) => v.variant === "execution-task"));
-  assert.ok(result.data.variants.some((v) => v.variant === "wishlist-item"));
+  assert.ok(result.data.variants.some((v) => v.variant === "wishlist-intake-task"));
   assert.ok(Array.isArray(result.data.executionTaskLifecycle));
   assert.ok(result.data.executionTaskLifecycle.some((x) => x.status === "ready"));
 });
@@ -1133,6 +1133,7 @@ test("taskEngineModule get-next-actions never includes wishlist ids", async () =
   assert.equal(r.data.scope, "tasks-only");
   const ready = r.data.readyQueue ?? [];
   assert.ok(!ready.some((t) => String(t.id).startsWith("W")));
+  assert.ok(!ready.some((t) => t.type === "wishlist_intake"));
 });
 
 test("migrate-task-persistence json-to-sqlite then create-task uses SQLite store", async () => {

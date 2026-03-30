@@ -8,4 +8,4 @@ This root file is intentionally pointer-only to avoid split release history.
 
 - See `docs/maintainers/CHANGELOG.md` for all release notes, migration notes, and historical entries.
 
-Latest release: **v0.23.0** (Phase 23 — agent-behavior module; see canonical changelog).
+Latest release: **v0.24.0** (Phase 24 — unified wishlist intake + improvement state in SQLite; see canonical changelog).

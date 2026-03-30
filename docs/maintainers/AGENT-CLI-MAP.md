@@ -139,7 +139,8 @@ workspace-kit run explain-planning-rules '{"planningType":"new-feature"}'
 workspace-kit run build-plan '{"planningType":"new-feature","answers":{"featureGoal":"...","placement":"CLI","technology":"TypeScript"}}'
 workspace-kit run build-plan '{"planningType":"new-feature","answers":{"featureGoal":"...","placement":"CLI","technology":"TypeScript","targetAudience":"AI Agent Operators","problemStatement":"...","expectedOutcome":"...","impact":"...","constraints":"...","successSignals":"..."},"finalize":true,"createWishlist":true}'
 workspace-kit run list-wishlist '{}'
-workspace-kit run get-wishlist '{"wishlistId":"W1"}'
+workspace-kit run get-wishlist '{"wishlistId":"T42"}'
+workspace-kit run migrate-wishlist-intake '{"dryRun":true}'
 workspace-kit run explain-config '{}'
 workspace-kit run resolve-config '{}'
 workspace-kit run resolve-behavior-profile '{}'
@@ -159,7 +160,7 @@ workspace-kit doctor
 
 **Agent behavior** (`list-behavior-profiles`, `get-behavior-profile`, `resolve-behavior-profile`, `set-active-behavior-profile`, `create-behavior-profile`, `update-behavior-profile`, `delete-behavior-profile`, `diff-behavior-profiles`, `explain-behavior-profiles`, `interview-behavior-profile`) are **Tier C**: advisory interaction posture only; **subordinate** to PRINCIPLES and policy. They persist under `.workspace-kit/agent-behavior/` (JSON) or unified SQLite (`module_id` `agent-behavior`) when `tasks.persistenceBackend` is `sqlite`.
 
-**Wishlist mutations** (`create-wishlist`, `update-wishlist`, `convert-wishlist`) and **`migrate-task-persistence`** are Tier C by default (same as `create-task`): they persist workspace state (JSON files and/or the configured SQLite planning DB under `tasks.sqliteDatabaseRelativePath`) but do not use `policyApproval` unless listed in `policy.extraSensitiveModuleCommands`.
+**Wishlist mutations** (`create-wishlist`, `update-wishlist`, `convert-wishlist`), **`migrate-task-persistence`**, and **`migrate-wishlist-intake`** are Tier C by default (same as `create-task`): they persist workspace state (JSON files and/or the configured SQLite planning DB under `tasks.sqliteDatabaseRelativePath`) but do not use `policyApproval` unless listed in `policy.extraSensitiveModuleCommands`.
 
 Instruction paths: run `workspace-kit run` with no subcommand to list commands; each line lists `(moduleId)` and points to the module’s instruction file pattern above.
 

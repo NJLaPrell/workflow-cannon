@@ -93,9 +93,9 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
   - **Enforced in**: activation/sync workflows and rule/template loading behavior.
 
 - **Wishlist**
-  - **Definition**: Ideation record in the `W###` namespace used to capture high-level opportunities before decomposition into execution tasks; excluded from execution planning queues by design.
-  - **Defined in**: task-engine wishlist contracts (`src/modules/task-engine/wishlist-types.ts`) and instructions under `src/modules/task-engine/instructions/`.
-  - **Enforced in**: Task Engine `create-wishlist` / `update-wishlist` / `convert-wishlist` commands and planning-boundary responses (`scope: tasks-only`).
+  - **Definition**: Ideation backlog represented as Task Engine tasks with `type: "wishlist_intake"` and stable `T###` ids. Legacy `W###` ids may appear only as provenance in `metadata.legacyWishlistId` after a one-time migration; new intake does not mint `W###` ids.
+  - **Defined in**: `src/modules/task-engine/wishlist-intake.ts`, `wishlist-types.ts` (legacy wire shapes), instructions under `src/modules/task-engine/instructions/`, ADR `docs/maintainers/ADR-unified-task-store-wishlist-and-improvement-state.md`.
+  - **Enforced in**: Task Engine `create-wishlist` / `list-wishlist` / `get-wishlist` / `update-wishlist` / `convert-wishlist`, strict known-type rules for `wishlist_intake`, and planning-boundary responses (`scope: tasks-only` for execution queues).
 
 - **Execution Task**
   - **Definition**: Canonical `T###` task entity that participates in lifecycle transitions (`proposed` → `ready` → `in_progress` → `completed` / `blocked` / `cancelled`) and execution planning queues.
@@ -108,7 +108,7 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
   - **Enforced in**: `create-task` / `update-task` validation (`invalid-task-type-requirements`) and improvement workflow docs/tasks.
 
 - **Unified Work Record**
-  - **Definition**: Combined conceptual model of execution tasks (`T###`) and wishlist items (`W###`) as one planning surface with variant-specific fields and planning inclusion rules.
+  - **Definition**: Combined conceptual model of execution tasks (`T###`) and wishlist intake tasks (`type: "wishlist_intake"`) as one planning surface; execution queues remain `tasks-only` while ideation uses task rows with distinct type/metadata.
   - **Defined in**: `explain-task-engine-model` command output and roadmap/phase guidance where variant behavior is discussed.
   - **Enforced in**: command surfaces that explicitly separate execution planning (`tasks-only`) from wishlist ideation.
 
@@ -123,9 +123,9 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
   - **Enforced in**: `workspace-kit run` planning commands and planning config keys.
 
 - **Planning persistence (task engine)**
-  - **Definition**: Task-engine–owned storage and services for **tasks** and **wishlist** JSON/SQLite documents (`openPlanningStores`, `TaskStore`, `WishlistStore`, migrations) exposed to other modules primarily via **`src/core/planning/`** facade exports.
-  - **Defined in**: `src/modules/task-engine/` (stores, `planning-open.ts`), `src/core/planning/index.ts`.
-  - **Enforced in**: Task engine commands, atomic `convert-wishlist`, optional SQLite dual store.
+  - **Definition**: Task-engine–owned storage for the **task** document (JSON file or SQLite `task_store_json`). Wishlist ideation is persisted **inside** the task document as `wishlist_intake` tasks; `WishlistStore` remains for **migration** off legacy artifacts only.
+  - **Defined in**: `src/modules/task-engine/` (stores, `planning-open.ts`, `sqlite-dual-planning.ts`), `src/core/planning/index.ts`.
+  - **Enforced in**: Task engine commands, atomic `convert-wishlist`, optional SQLite planning DB (legacy rows may include a second wishlist column until `migrate-wishlist-intake` runs).
 
 - **Optional peer module (`optionalPeers`)**
   - **Definition**: A module id listed on another module’s registration indicating integration when present; **missing optional peers do not block** registry construction (contrast with `dependsOn`).

@@ -9,6 +9,7 @@ import { getNextActions } from "./suggestions.js";
 import { readWorkspaceStatusSnapshot } from "./dashboard-status.js";
 import { readBuildPlanSession, toDashboardPlanningSession } from "../../core/planning/build-plan-session-file.js";
 import { openPlanningStores } from "./planning-open.js";
+import { runMigrateWishlistIntake } from "./migrate-wishlist-intake-runtime.js";
 import { runMigrateTaskPersistence } from "./migrate-task-persistence-runtime.js";
 import { planningSqliteDatabaseRelativePath, planningStrictValidationEnabled } from "./planning-config.js";
 import { validateTaskSetForStrictMode } from "./strict-task-validation.js";
@@ -17,10 +18,22 @@ import { UnifiedStateDb } from "../../core/state/unified-state-db.js";
 import type { WishlistConversionDecomposition, WishlistItem } from "./wishlist-types.js";
 import {
   buildWishlistItemFromIntake,
+  validateWishlistContentFields,
   validateWishlistIntakePayload,
   validateWishlistUpdatePayload,
   WISHLIST_ID_RE
 } from "./wishlist-validation.js";
+import {
+  allocateNextTaskNumericId,
+  findWishlistIntakeTaskByLegacyOrTaskId,
+  isWishlistIntakeTask,
+  LEGACY_WISHLIST_ID_METADATA_KEY,
+  listWishlistIntakeTasksAsItems,
+  taskEntityFromNewIntake,
+  taskEntityFromWishlistItem,
+  wishlistIntakeTaskToItem,
+  WISHLIST_INTAKE_TASK_TYPE
+} from "./wishlist-intake.js";
 
 const TASK_ID_RE = /^T\d+$/;
 const SAFE_METADATA_PATH_RE = /^[a-zA-Z0-9_-]+(?:\.[a-zA-Z0-9_-]+)*$/;
@@ -346,6 +359,12 @@ export const taskEngineModule: WorkflowModule = {
           description: "Copy task + wishlist state between JSON files and a single SQLite database (offline migration)."
         },
         {
+          name: "migrate-wishlist-intake",
+          file: "migrate-wishlist-intake.md",
+          description:
+            "One-time migration: legacy wishlist rows become wishlist_intake tasks; SQLite planning drops the wishlist JSON column."
+        },
+        {
           name: "list-module-states",
           file: "list-module-states.md",
           description: "List unified SQLite module-state rows for diagnostics and migration verification."
@@ -373,6 +392,9 @@ export const taskEngineModule: WorkflowModule = {
     const args = command.args ?? {};
     if (command.name === "migrate-task-persistence") {
       return runMigrateTaskPersistence(ctx, args as Record<string, unknown>);
+    }
+    if (command.name === "migrate-wishlist-intake") {
+      return runMigrateWishlistIntake(ctx, args as Record<string, unknown>);
     }
     if (command.name === "list-module-states" || command.name === "get-module-state") {
       const unified = new UnifiedStateDb(ctx.workspacePath, planningSqliteDatabaseRelativePath(ctx));
@@ -830,13 +852,7 @@ export const taskEngineModule: WorkflowModule = {
       }));
       const blockedTop = suggestion.blockingAnalysis.slice(0, 15);
 
-      let wishlistItems: WishlistItem[] = [];
-      try {
-        const wishlistStore = await planning.openWishlist();
-        wishlistItems = wishlistStore.getAllItems();
-      } catch {
-        /* wishlist store optional */
-      }
+      const wishlistItems = listWishlistIntakeTasksAsItems(store.getAllTasks());
       const wishlistOpenItems = wishlistItems.filter((i) => i.status === "open");
       const wishlistOpenCount = wishlistOpenItems.length;
       const wishlistOpenTop = wishlistOpenItems.slice(0, 15).map((i) => ({
@@ -943,7 +959,7 @@ export const taskEngineModule: WorkflowModule = {
     if (command.name === "get-ready-queue") {
       const tasks = store.getActiveTasks();
       const ready = tasks
-        .filter((t) => t.status === "ready")
+        .filter((t) => t.status === "ready" && !isWishlistIntakeTask(t))
         .sort((a, b) => {
           const pa = a.priority ?? "P9";
           const pb = b.priority ?? "P9";
@@ -1006,30 +1022,39 @@ export const taskEngineModule: WorkflowModule = {
               ]
             },
             {
-              variant: "wishlist-item",
-              idPattern: "^W[0-9]+$",
+              variant: "wishlist-intake-task",
+              idPattern: "^T[0-9]+$",
+              taskType: WISHLIST_INTAKE_TASK_TYPE,
               appearsInExecutionPlanning: false,
               requiredFields: [
                 "id",
                 "title",
-                "problemStatement",
-                "expectedOutcome",
-                "impact",
-                "constraints",
-                "successSignals",
-                "requestor",
-                "evidenceRef",
+                "type",
                 "status",
                 "createdAt",
-                "updatedAt"
+                "updatedAt",
+                "metadata.problemStatement",
+                "metadata.expectedOutcome",
+                "metadata.impact",
+                "metadata.constraints",
+                "metadata.successSignals",
+                "metadata.requestor",
+                "metadata.evidenceRef"
               ],
-              optionalFields: ["metadata", "convertedTaskIds", "closedAt", "closeReason"],
-              notes: "Wishlist is ideation-only and excluded from task ready queues."
+              optionalFields: [
+                "metadata.legacyWishlistId",
+                "metadata",
+                "priority",
+                "dependsOn",
+                "unblocks"
+              ],
+              notes:
+                "Ideation backlog uses type wishlist_intake (T ids); optional metadata.legacyWishlistId preserves W### provenance after migration. Excluded from ready-queue suggestions."
             }
           ],
           planningBoundary: {
             executionQueues: "tasks-only",
-            wishlistScope: "separate-namespace"
+            wishlistScope: "task-backed-wishlist-intake"
           },
           executionTaskLifecycle: lifecycle
         } as unknown as Record<string, unknown>
@@ -1072,35 +1097,82 @@ export const taskEngineModule: WorkflowModule = {
     }
 
     if (command.name === "create-wishlist") {
-      const wishlistStore = await planning.openWishlist();
       const raw = args as Record<string, unknown>;
-      const v = validateWishlistIntakePayload(raw);
-      if (!v.ok) {
-        return { ok: false, code: "invalid-task-schema", message: v.errors.join(" ") };
-      }
       const ts = nowIso();
-      const item: WishlistItem = buildWishlistItemFromIntake(raw, ts);
+      const hasLegacyId = typeof raw.id === "string" && raw.id.trim().length > 0;
+      let task: TaskEntity;
+      if (hasLegacyId) {
+        const v = validateWishlistIntakePayload(raw);
+        if (!v.ok) {
+          return { ok: false, code: "invalid-task-schema", message: v.errors.join(" ") };
+        }
+        const wid = (raw.id as string).trim();
+        const dup = store
+          .getAllTasks()
+          .some(
+            (t) =>
+              isWishlistIntakeTask(t) && t.metadata?.[LEGACY_WISHLIST_ID_METADATA_KEY] === wid
+          );
+        if (dup) {
+          return {
+            ok: false,
+            code: "duplicate-task-id",
+            message: `Wishlist legacy id '${wid}' is already represented as a task`
+          };
+        }
+        const item: WishlistItem = buildWishlistItemFromIntake(raw, ts);
+        const newTid = allocateNextTaskNumericId(store.getAllTasks());
+        task = taskEntityFromWishlistItem(item, newTid, ts);
+      } else {
+        const v = validateWishlistContentFields(raw);
+        if (!v.ok) {
+          return { ok: false, code: "invalid-task-schema", message: v.errors.join(" ") };
+        }
+        const newTid = allocateNextTaskNumericId(store.getAllTasks());
+        task = taskEntityFromNewIntake(raw, newTid, ts);
+      }
+      const typeErr = validateKnownTaskTypeRequirements(task);
+      if (typeErr) {
+        return { ok: false, code: typeErr.code, message: typeErr.message };
+      }
+      if (planningStrictValidationEnabled({ effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined })) {
+        const strictIssue = validateTaskSetForStrictMode([...store.getAllTasks(), task]);
+        if (strictIssue) {
+          return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
+        }
+      }
       try {
-        wishlistStore.addItem(item);
+        if (planning.kind === "sqlite") {
+          planning.sqliteDual!.withTransaction(() => {
+            store.addTask(task);
+          });
+        } else {
+          store.addTask(task);
+          await store.save();
+        }
       } catch (err) {
         if (err instanceof TaskEngineError) {
           return { ok: false, code: err.code, message: err.message };
         }
         throw err;
       }
-      await wishlistStore.save();
+      const itemOut = wishlistIntakeTaskToItem(task);
       return {
         ok: true,
         code: "wishlist-created",
-        message: `Created wishlist '${item.id}'`,
-        data: { item } as Record<string, unknown>
+        message: `Created wishlist intake task '${task.id}'`,
+        data: {
+          wishlist: itemOut,
+          item: itemOut,
+          taskId: task.id,
+          task
+        } as Record<string, unknown>
       };
     }
 
     if (command.name === "list-wishlist") {
-      const wishlistStore = await planning.openWishlist();
       const statusFilter = typeof args.status === "string" ? args.status : undefined;
-      let items = wishlistStore.getAllItems();
+      let items = listWishlistIntakeTasksAsItems(store.getAllTasks());
       if (statusFilter && ["open", "converted", "cancelled"].includes(statusFilter)) {
         items = items.filter((i) => i.status === statusFilter);
       }
@@ -1122,15 +1194,15 @@ export const taskEngineModule: WorkflowModule = {
       if (!wishlistId) {
         return { ok: false, code: "invalid-task-schema", message: "get-wishlist requires 'wishlistId' or 'id'" };
       }
-      const wishlistStore = await planning.openWishlist();
-      const item = wishlistStore.getItem(wishlistId);
-      if (!item) {
+      const t = findWishlistIntakeTaskByLegacyOrTaskId(store.getAllTasks(), wishlistId);
+      if (!t) {
         return { ok: false, code: "task-not-found", message: `Wishlist item '${wishlistId}' not found` };
       }
+      const item = wishlistIntakeTaskToItem(t);
       return {
         ok: true,
         code: "wishlist-retrieved",
-        data: { item } as Record<string, unknown>
+        data: { item, taskId: t.id } as Record<string, unknown>
       };
     }
 
@@ -1140,20 +1212,19 @@ export const taskEngineModule: WorkflowModule = {
       if (!wishlistId || !updates) {
         return { ok: false, code: "invalid-task-schema", message: "update-wishlist requires wishlistId and updates" };
       }
-      const wishlistStore = await planning.openWishlist();
-      const existing = wishlistStore.getItem(wishlistId);
-      if (!existing) {
+      const existingTask = findWishlistIntakeTaskByLegacyOrTaskId(store.getAllTasks(), wishlistId);
+      if (!existingTask) {
         return { ok: false, code: "task-not-found", message: `Wishlist item '${wishlistId}' not found` };
       }
-      if (existing.status !== "open") {
+      if (existingTask.status !== "proposed") {
         return { ok: false, code: "invalid-transition", message: "Only open wishlist items can be updated" };
       }
       const uv = validateWishlistUpdatePayload(updates);
       if (!uv.ok) {
         return { ok: false, code: "invalid-task-schema", message: uv.errors.join(" ") };
       }
-      const merged: WishlistItem = { ...existing, updatedAt: nowIso() };
-      const mutable: (keyof WishlistItem)[] = [
+      const meta = { ...(existingTask.metadata ?? {}) };
+      const mutable = [
         "title",
         "problemStatement",
         "expectedOutcome",
@@ -1162,29 +1233,77 @@ export const taskEngineModule: WorkflowModule = {
         "successSignals",
         "requestor",
         "evidenceRef"
-      ];
+      ] as const;
+      let title = existingTask.title;
       for (const key of mutable) {
-        if (key in updates && typeof updates[key as string] === "string") {
-          (merged as Record<string, unknown>)[key] = (updates[key as string] as string).trim();
+        if (key in updates && typeof updates[key] === "string") {
+          if (key === "title") {
+            title = (updates[key] as string).trim();
+          } else {
+            meta[key] = (updates[key] as string).trim();
+          }
         }
       }
-      wishlistStore.updateItem(merged);
-      await wishlistStore.save();
+      const merged: TaskEntity = {
+        ...existingTask,
+        title,
+        metadata: meta,
+        updatedAt: nowIso()
+      };
+      const typeErr = validateKnownTaskTypeRequirements(merged);
+      if (typeErr) {
+        return { ok: false, code: typeErr.code, message: typeErr.message };
+      }
+      if (planningStrictValidationEnabled({ effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined })) {
+        const others = store.getAllTasks().filter((x) => x.id !== merged.id);
+        const strictIssue = validateTaskSetForStrictMode([...others, merged]);
+        if (strictIssue) {
+          return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
+        }
+      }
+      if (planning.kind === "sqlite") {
+        planning.sqliteDual!.withTransaction(() => {
+          store.updateTask(merged);
+        });
+      } else {
+        store.updateTask(merged);
+        await store.save();
+      }
+      const itemOut = wishlistIntakeTaskToItem(merged);
       return {
         ok: true,
         code: "wishlist-updated",
         message: `Updated wishlist '${wishlistId}'`,
-        data: { item: merged } as Record<string, unknown>
+        data: { item: itemOut, taskId: merged.id } as Record<string, unknown>
       };
     }
 
     if (command.name === "convert-wishlist") {
-      const wishlistId = typeof args.wishlistId === "string" ? args.wishlistId.trim() : "";
-      if (!wishlistId || !WISHLIST_ID_RE.test(wishlistId)) {
+      const wishlistTaskId =
+        typeof args.wishlistTaskId === "string" && args.wishlistTaskId.trim().length > 0
+          ? args.wishlistTaskId.trim()
+          : "";
+      const wishlistIdLegacy = typeof args.wishlistId === "string" ? args.wishlistId.trim() : "";
+      const lookupKey = wishlistTaskId || wishlistIdLegacy;
+      if (!lookupKey) {
         return {
           ok: false,
           code: "invalid-task-schema",
-          message: "convert-wishlist requires wishlistId matching W<number>"
+          message: "convert-wishlist requires wishlistTaskId (T<number>) or wishlistId (W<number>)"
+        };
+      }
+      if (wishlistTaskId && !TASK_ID_RE.test(wishlistTaskId)) {
+        return {
+          ok: false,
+          code: "invalid-task-schema",
+          message: "wishlistTaskId must match T<number>"
+        };
+      }
+      if (wishlistIdLegacy && !wishlistTaskId && !WISHLIST_ID_RE.test(wishlistIdLegacy)) {
+        return {
+          ok: false,
+          code: "invalid-task-schema",
+          message: "wishlistId must match W<number> when wishlistTaskId is omitted"
         };
       }
       const dec = parseConversionDecomposition(args.decomposition);
@@ -1199,16 +1318,15 @@ export const taskEngineModule: WorkflowModule = {
           message: "convert-wishlist requires non-empty tasks array"
         };
       }
-      const wishlistStore = await planning.openWishlist();
-      const wlItem = wishlistStore.getItem(wishlistId);
-      if (!wlItem) {
-        return { ok: false, code: "task-not-found", message: `Wishlist item '${wishlistId}' not found` };
+      const source = findWishlistIntakeTaskByLegacyOrTaskId(store.getAllTasks(), lookupKey);
+      if (!source) {
+        return { ok: false, code: "task-not-found", message: `Wishlist intake '${lookupKey}' not found` };
       }
-      if (wlItem.status !== "open") {
+      if (source.status !== "proposed") {
         return {
           ok: false,
           code: "invalid-transition",
-          message: "Only open wishlist items can be converted"
+          message: "Only open wishlist intake tasks can be converted"
         };
       }
       const actor =
@@ -1237,13 +1355,16 @@ export const taskEngineModule: WorkflowModule = {
         built.push(bt.task);
       }
       const convertedIds = built.map((t) => t.id);
-      const updatedWishlist: WishlistItem = {
-        ...wlItem,
-        status: "converted",
+      const updatedSource: TaskEntity = {
+        ...source,
+        status: "completed",
         updatedAt: timestamp,
-        convertedAt: timestamp,
-        convertedToTaskIds: convertedIds,
-        conversionDecomposition: dec.value
+        metadata: {
+          ...(source.metadata ?? {}),
+          wishlistConvertedToTaskIds: convertedIds,
+          wishlistConversionDecomposition: dec.value,
+          wishlistConvertedAt: timestamp
+        }
       };
       const applyConvertMutations = (): void => {
         for (const t of built) {
@@ -1252,30 +1373,41 @@ export const taskEngineModule: WorkflowModule = {
             mutationEvidence("create-task", t.id, actor, {
               initialStatus: t.status,
               source: "convert-wishlist",
-              wishlistId
+              wishlistTaskId: source.id,
+              wishlistLegacyId: source.metadata?.[LEGACY_WISHLIST_ID_METADATA_KEY] ?? null
             })
           );
         }
-        wishlistStore.updateItem(updatedWishlist);
+        store.updateTask(updatedSource);
+        store.addMutationEvidence(
+          mutationEvidence("update-task", source.id, actor, {
+            source: "convert-wishlist",
+            convertedToTaskIds: convertedIds
+          })
+        );
       };
       if (planningStrictValidationEnabled({ effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined })) {
-        const strictIssue = validateTaskSetForStrictMode([...store.getAllTasks(), ...built]);
+        const strictIssue = validateTaskSetForStrictMode([
+          ...store.getAllTasks().filter((x) => x.id !== source.id),
+          ...built,
+          updatedSource
+        ]);
         if (strictIssue) {
           return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
         }
       }
       if (planning.kind === "sqlite") {
-        planning.sqliteDual.withTransaction(applyConvertMutations);
+        planning.sqliteDual!.withTransaction(applyConvertMutations);
       } else {
         applyConvertMutations();
         await store.save();
-        await wishlistStore.save();
       }
+      const wishlistShape = wishlistIntakeTaskToItem(updatedSource);
       return {
         ok: true,
         code: "wishlist-converted",
-        message: `Converted wishlist '${wishlistId}' to tasks: ${convertedIds.join(", ")}`,
-        data: { wishlist: updatedWishlist, createdTasks: built } as Record<string, unknown>
+        message: `Converted wishlist intake '${source.id}' to tasks: ${convertedIds.join(", ")}`,
+        data: { wishlist: wishlistShape, createdTasks: built, sourceTaskId: source.id } as Record<string, unknown>
       };
     }
 

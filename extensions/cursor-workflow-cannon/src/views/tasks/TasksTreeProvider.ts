@@ -41,7 +41,7 @@ export class TasksTreeProvider implements vscode.TreeDataProvider<WkNode> {
       );
       ti.id = "g:wishlist-open";
       ti.iconPath = new vscode.ThemeIcon("lightbulb");
-      ti.description = "W### · ideation until convert-wishlist";
+      ti.description = "wishlist_intake · ideation until convert-wishlist";
       return ti;
     }
     if (element.kind === "wishlist-item") {

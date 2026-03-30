@@ -13,14 +13,16 @@ import { composePlanningWishlistArtifact } from "./artifact.js";
 import {
   openPlanningStores,
   validateKnownTaskTypeRequirements,
-  buildWishlistItemFromIntake,
-  validateWishlistIntakePayload,
+  validateWishlistContentFields,
+  allocateNextTaskNumericId,
+  taskEntityFromNewIntake,
   clearBuildPlanSession,
   persistBuildPlanSession,
-  type WishlistItem,
   type TaskEntity,
   type TaskPriority
 } from "../../core/planning/index.js";
+import { planningStrictValidationEnabled } from "../task-engine/planning-config.js";
+import { validateTaskSetForStrictMode } from "../task-engine/strict-task-validation.js";
 
 type PlanningOutputMode = "wishlist" | "tasks" | "response";
 
@@ -42,19 +44,6 @@ function resolveOutputMode(args: Record<string, unknown>): {
     ok: false,
     message: "build-plan outputMode must be one of: wishlist, tasks, response"
   };
-}
-
-function nextWishlistId(items: WishlistItem[]): string {
-  let max = 0;
-  for (const item of items) {
-    const match = /^W(\d+)$/.exec(item.id);
-    if (!match) continue;
-    const parsed = Number(match[1]);
-    if (Number.isFinite(parsed)) {
-      max = Math.max(max, parsed);
-    }
-  }
-  return `W${max + 1}`;
 }
 
 function nextTaskId(tasks: TaskEntity[]): string {
@@ -590,11 +579,8 @@ export const planningModule: WorkflowModule = {
       }
 
       const stores = await openPlanningStores(ctx);
-      const wishlist = await stores.openWishlist();
-      const wishlistId = nextWishlistId(wishlist.getAllItems());
       const now = new Date().toISOString();
       const intake = {
-        id: wishlistId,
         title:
           typeof args.title === "string" && args.title.trim().length > 0
             ? args.title.trim()
@@ -628,7 +614,7 @@ export const planningModule: WorkflowModule = {
             ? args.evidenceRef.trim()
             : `planning:${planningType}:${now}`
       };
-      const valid = validateWishlistIntakePayload(intake);
+      const valid = validateWishlistContentFields(intake);
       if (!valid.ok) {
         return {
           ok: false,
@@ -637,20 +623,40 @@ export const planningModule: WorkflowModule = {
         };
       }
 
-      const item = buildWishlistItemFromIntake(intake, now);
-      item.updatedAt = now;
-      (item as WishlistItem & { metadata?: Record<string, unknown> }).metadata = {
+      const taskId = allocateNextTaskNumericId(stores.taskStore.getAllTasks());
+      const task = taskEntityFromNewIntake(intake, taskId, now, {
         planningType,
         artifactSchemaVersion: artifact.schemaVersion,
         artifact
-      };
-      wishlist.addItem(item);
-      await wishlist.save();
+      });
+      const typeErr = validateKnownTaskTypeRequirements(task);
+      if (typeErr) {
+        return { ok: false, code: typeErr.code, message: typeErr.message };
+      }
+      if (planningStrictValidationEnabled({ effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined })) {
+        const strictIssue = validateTaskSetForStrictMode([...stores.taskStore.getAllTasks(), task]);
+        if (strictIssue) {
+          return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
+        }
+      }
+      try {
+        if (stores.kind === "sqlite") {
+          stores.sqliteDual!.withTransaction(() => {
+            stores.taskStore.addTask(task);
+          });
+        } else {
+          stores.taskStore.addTask(task);
+          await stores.taskStore.save();
+        }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        return { ok: false, code: "invalid-planning-artifact", message: msg };
+      }
       await clearBuildPlanSession(ctx.workspacePath);
       return {
         ok: true,
         code: "planning-artifact-created",
-        message: `Planning artifact created as wishlist item ${wishlistId}`,
+        message: `Planning artifact created as wishlist intake task ${taskId}`,
         data: {
           responseSchemaVersion: 1,
           planningType,
@@ -658,7 +664,8 @@ export const planningModule: WorkflowModule = {
           outputMode,
           scaffoldVersion: 3,
           status: "artifact-created",
-          wishlistId,
+          wishlistId: taskId,
+          taskId,
           adaptiveWarnings,
           artifact,
           unresolvedCritical: [],

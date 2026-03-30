@@ -1,27 +1,17 @@
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
 import { TaskStore } from "./store.js";
-import { WishlistStore } from "./wishlist-store.js";
 import { SqliteDualPlanningStore } from "./sqlite-dual-planning.js";
 import {
   getTaskPersistenceBackend,
   planningSqliteDatabaseRelativePath,
-  planningTaskStoreRelativePath,
-  planningWishlistStoreRelativePath
+  planningTaskStoreRelativePath
 } from "./planning-config.js";
 
-export type OpenedPlanningStores =
-  | {
-      kind: "json";
-      taskStore: TaskStore;
-      sqliteDual: null;
-      openWishlist: () => Promise<WishlistStore>;
-    }
-  | {
-      kind: "sqlite";
-      taskStore: TaskStore;
-      sqliteDual: SqliteDualPlanningStore;
-      openWishlist: () => Promise<WishlistStore>;
-    };
+export type OpenedPlanningStores = {
+  kind: "json" | "sqlite";
+  taskStore: TaskStore;
+  sqliteDual: SqliteDualPlanningStore | null;
+};
 
 export async function openPlanningStores(ctx: ModuleLifecycleContext): Promise<OpenedPlanningStores> {
   if (getTaskPersistenceBackend(ctx.effectiveConfig) === "sqlite") {
@@ -31,16 +21,11 @@ export async function openPlanningStores(ctx: ModuleLifecycleContext): Promise<O
     );
     dual.loadFromDisk();
     const taskStore = TaskStore.forSqliteDual(dual);
-    await taskStore.load(); // binds task document reference from dual
+    await taskStore.load();
     return {
       kind: "sqlite",
       sqliteDual: dual,
-      taskStore,
-      openWishlist: async () => {
-        const w = WishlistStore.forSqliteDual(dual);
-        await w.load();
-        return w;
-      }
+      taskStore
     };
   }
 
@@ -53,14 +38,6 @@ export async function openPlanningStores(ctx: ModuleLifecycleContext): Promise<O
   return {
     kind: "json",
     sqliteDual: null,
-    taskStore,
-    openWishlist: async () => {
-      const w = WishlistStore.forJsonFile(
-        ctx.workspacePath,
-        planningWishlistStoreRelativePath(ctx)
-      );
-      await w.load();
-      return w;
-    }
+    taskStore
   };
 }

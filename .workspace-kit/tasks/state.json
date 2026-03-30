@@ -6639,9 +6639,9 @@
       "id": "T425",
       "title": "[task-engine] Wishlist-as-task schema, metadata, and validation",
       "type": "workspace-kit",
-      "status": "ready",
+      "status": "completed",
       "createdAt": "2026-03-30T16:25:31.899Z",
-      "updatedAt": "2026-03-30T16:25:31.899Z",
+      "updatedAt": "2026-03-30T17:01:54.066Z",
       "priority": "P1",
       "dependsOn": [],
       "unblocks": [
@@ -6665,9 +6665,9 @@
       "id": "T426",
       "title": "[task-engine] One-time wishlist→tasks migration and remove wishlist persistence",
       "type": "workspace-kit",
-      "status": "ready",
+      "status": "completed",
       "createdAt": "2026-03-30T16:25:40.882Z",
-      "updatedAt": "2026-03-30T16:25:40.882Z",
+      "updatedAt": "2026-03-30T17:01:54.234Z",
       "priority": "P1",
       "dependsOn": [
         "T425"
@@ -6693,9 +6693,9 @@
       "id": "T427",
       "title": "[task-engine] Rewire wishlist CLI and internals to task store only",
       "type": "workspace-kit",
-      "status": "ready",
+      "status": "completed",
       "createdAt": "2026-03-30T16:25:40.958Z",
-      "updatedAt": "2026-03-30T16:25:40.958Z",
+      "updatedAt": "2026-03-30T17:01:54.518Z",
       "priority": "P1",
       "dependsOn": [
         "T426"
@@ -6721,9 +6721,9 @@
       "id": "T428",
       "title": "[improvement] Persist operational ingest state in unified module-state row",
       "type": "workspace-kit",
-      "status": "ready",
+      "status": "completed",
       "createdAt": "2026-03-30T16:25:41.031Z",
-      "updatedAt": "2026-03-30T16:25:41.031Z",
+      "updatedAt": "2026-03-30T17:01:54.694Z",
       "priority": "P1",
       "dependsOn": [
         "T426"
@@ -6747,9 +6747,9 @@
       "id": "T429",
       "title": "[planning] Align planning wishlist flows with tasks-only intake",
       "type": "workspace-kit",
-      "status": "ready",
+      "status": "completed",
       "createdAt": "2026-03-30T16:25:51.730Z",
-      "updatedAt": "2026-03-30T16:25:51.730Z",
+      "updatedAt": "2026-03-30T17:01:54.876Z",
       "priority": "P1",
       "dependsOn": [
         "T425",
@@ -6773,9 +6773,9 @@
       "id": "T430",
       "title": "[extension] Dashboard and thin-client parity for tasks-only wishlist",
       "type": "workspace-kit",
-      "status": "ready",
+      "status": "completed",
       "createdAt": "2026-03-30T16:25:51.803Z",
-      "updatedAt": "2026-03-30T16:25:51.803Z",
+      "updatedAt": "2026-03-30T17:01:55.055Z",
       "priority": "P2",
       "dependsOn": [
         "T427"
@@ -6798,9 +6798,9 @@
       "id": "T431",
       "title": "[maintainer] Parity, CLI map, TERMS, and tests sweep for Phase 24",
       "type": "workspace-kit",
-      "status": "ready",
+      "status": "completed",
       "createdAt": "2026-03-30T16:25:51.876Z",
-      "updatedAt": "2026-03-30T16:25:51.876Z",
+      "updatedAt": "2026-03-30T17:01:55.228Z",
       "priority": "P1",
       "dependsOn": [
         "T428",
@@ -6825,9 +6825,9 @@
       "id": "T432",
       "title": "[release] v0.24.0 release notes and migration operator guidance",
       "type": "workspace-kit",
-      "status": "ready",
+      "status": "completed",
       "createdAt": "2026-03-30T16:25:51.948Z",
-      "updatedAt": "2026-03-30T16:25:51.948Z",
+      "updatedAt": "2026-03-30T17:01:55.395Z",
       "priority": "P1",
       "dependsOn": [
         "T431"
@@ -12945,9 +12945,329 @@
       "dependentsUnblocked": [],
       "timestamp": "2026-03-28T21:55:10.054Z",
       "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T425-2026-03-30T17:01:53.962Z-2af33017",
+      "taskId": "T425",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-30T17:01:53.962Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T425-2026-03-30T17:01:54.066Z-2104aa4f",
+      "taskId": "T425",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-30T17:01:54.066Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T426-2026-03-30T17:01:54.152Z-616bdce0",
+      "taskId": "T426",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-30T17:01:54.152Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T426-2026-03-30T17:01:54.234Z-d730f7e7",
+      "taskId": "T426",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-30T17:01:54.234Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T427-2026-03-30T17:01:54.315Z-7c08a75c",
+      "taskId": "T427",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-30T17:01:54.315Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T427-2026-03-30T17:01:54.518Z-c39bdb1c",
+      "taskId": "T427",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-30T17:01:54.518Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T428-2026-03-30T17:01:54.610Z-c54cf035",
+      "taskId": "T428",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-30T17:01:54.610Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T428-2026-03-30T17:01:54.694Z-c093c1cf",
+      "taskId": "T428",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-30T17:01:54.694Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T429-2026-03-30T17:01:54.786Z-0e55834e",
+      "taskId": "T429",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-30T17:01:54.786Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T429-2026-03-30T17:01:54.876Z-ff8cd415",
+      "taskId": "T429",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-30T17:01:54.876Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T430-2026-03-30T17:01:54.967Z-d254555e",
+      "taskId": "T430",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-30T17:01:54.967Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T430-2026-03-30T17:01:55.055Z-c1046555",
+      "taskId": "T430",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-30T17:01:55.055Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T431-2026-03-30T17:01:55.143Z-bf51495d",
+      "taskId": "T431",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-30T17:01:55.143Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T431-2026-03-30T17:01:55.228Z-ffea746c",
+      "taskId": "T431",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-30T17:01:55.228Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T432-2026-03-30T17:01:55.314Z-16dc75b4",
+      "taskId": "T432",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-30T17:01:55.314Z",
+      "actor": "NJLaPrell@gmail.com"
+    },
+    {
+      "transitionId": "T432-2026-03-30T17:01:55.395Z-fa6e1429",
+      "taskId": "T432",
+      "fromState": "in_progress",
+      "toState": "completed",
+      "action": "complete",
+      "guardResults": [
+        {
+          "allowed": true,
+          "guardName": "state-validity"
+        },
+        {
+          "allowed": true,
+          "guardName": "dependency-check"
+        }
+      ],
+      "dependentsUnblocked": [],
+      "timestamp": "2026-03-30T17:01:55.395Z",
+      "actor": "NJLaPrell@gmail.com"
     }
   ],
-  "lastUpdated": "2026-03-30T16:25:51.948Z",
+  "lastUpdated": "2026-03-30T17:01:55.396Z",
   "mutationLog": [
     {
       "mutationId": "create-task-T319-2026-03-27T15:16:30.032Z-20b24ad2",
