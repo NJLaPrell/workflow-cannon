@@ -2,19 +2,13 @@ import * as vscode from "vscode";
 import type { CommandClient } from "../../runtime/command-client.js";
 import { escapeHtml, renderDashboardRootInnerHtml } from "./render-dashboard.js";
 
-const OUTPUT_CHANNEL_ID = "workflow-cannon";
-
-function getLog(): vscode.OutputChannel {
-  return vscode.window.createOutputChannel(OUTPUT_CHANNEL_ID, { log: true });
-}
-
-let outputSingleton: vscode.OutputChannel | undefined;
+let dashboardOutput: vscode.OutputChannel | undefined;
 
 function logDashboard(message: string): void {
-  if (!outputSingleton) {
-    outputSingleton = getLog();
+  if (!dashboardOutput) {
+    dashboardOutput = vscode.window.createOutputChannel("Workflow Cannon", { log: true });
   }
-  outputSingleton.appendLine(`[dashboard] ${message}`);
+  dashboardOutput.appendLine(`[dashboard] ${message}`);
 }
 
 export class DashboardViewProvider implements vscode.WebviewViewProvider {
