@@ -1,5 +1,5 @@
 /**
- * Pure dashboard HTML generation — unit-tested; bundled into media/dashboard-webview.js for the webview.
+ * Pure dashboard HTML generation — unit-tested; applied in the webview via postMessage { html } from the host.
  */
 
 export function escapeHtml(s: string): string {
