@@ -7,9 +7,8 @@ blockers: []
 pending_decisions: []
 next_agent_actions:
   - "Triage transcript **`imp-*`** backlog (`improvement-triage-top-three`) or pick execution tasks from **`get-next-actions`**."
-  - "After **`v0.27.0`** publish: paste **Publish NPM** workflow run URL into **`ROADMAP.md`** evidence snapshot."
 last_session_summary:
-  - "2026-03-31: Phase **26** closeout — **`T390`** (R102 / layering docs + template + `.ai/ARCHITECTURE` refs); **`imp-c584f0e206c404`** (pre-release hook + `transcript:ingest` merge env → **`policyApproval`** JSON); **`imp-df7ebd9967433c`** (AGENTS native SQLite portability); **`imp-5dc1ffa28ccdc3`** verified against existing malformed-**`policyApproval`** denial output in **`run-command.ts`**. Release **`v0.27.0`** (changelog, version, ROADMAP, FEATURE-MATRIX, status YAML)."
+  - "2026-03-31: Phase **26** closeout — **`T390`** (R102 / layering docs + template + `.ai/ARCHITECTURE` refs); **`imp-c584f0e206c404`** (pre-release hook + `transcript:ingest` merge env → **`policyApproval`** JSON); **`imp-df7ebd9967433c`** (AGENTS native SQLite portability); **`imp-5dc1ffa28ccdc3`** verified against existing malformed-**`policyApproval`** denial output in **`run-command.ts`**. Shipped **`v0.27.0`** — PR **#79**, GitHub release, **Publish NPM** `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23823720798`."
 metrics:
   updated_at: "2026-03-31"
   source: "maintainer"
