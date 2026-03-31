@@ -6,18 +6,29 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-03-31
+
+Phase 26 — module platform + improvement execution closeout (**`T388`**, **`T389`**, **`T391`**, **`T393`**, **`T440`–`T442`**, **`T390`**); transcript hook / policy ergonomics (**`imp-c584f0e206c404`**, **`imp-df7ebd9967433c`**); sensitive-run denial messaging already explicit for malformed **`policyApproval`** (**`imp-5dc1ffa28ccdc3`**).
+
 ### Added
 
 - **Contracts** — **`builtin-run-command-manifest.json`** (+ **`builtin-run-command-manifest.ts`**): canonical shipped `workspace-kit run` commands (instruction file, optional **`policyOperationId`**, optional **`defaultResponseTemplateId`**); consumed by module registrations, **`src/core/policy.ts`**, response-template resolution, and CI check scripts.
 - **Task Engine** — **`mutation-utils.ts`**: shared idempotency, metadata path, and wishlist conversion helpers used by **`task-engine-internal.ts`** (smaller dispatch module).
 - **Task Engine** — **`demote`** transition on **`run-transition`**: **`ready` → `proposed`** (return work to triage without **`cancel`**).
 
+### Fixed
+
+- **Pre-release / package scripts** — `scripts/pre-release-transcript-hook.mjs` and `scripts/run-transcript-cli.mjs` merge **`WORKSPACE_KIT_POLICY_APPROVAL`** JSON into **`ingest-transcripts`** CLI args as **`policyApproval`** so headless ingest matches maintainer intent (the `run` path does not read that env var directly).
+
 ### Documentation
 
 - **Maintainer workbooks** — Transcript baseline: improvement lifecycle + triage/demote pointers; cadence **`decision`** operator matrix. Task-engine workbook: SQLite-default persistence, **`demote`** in transition table, state diagram note.
 - **`src/modules/task-engine/README.md`** — Persistence, layout (`mutation-utils`), and lifecycle cross-links aligned with shipped behavior.
-- **`docs/maintainers/ARCHITECTURE.md`** — Default module bundle includes **`agent-behavior`**; builtin run commands and policy bindings are sourced from **`builtin-run-command-manifest.json`**.
+- **`docs/maintainers/ARCHITECTURE.md`** — Default module bundle includes **`agent-behavior`**; builtin run commands and policy bindings are sourced from **`builtin-run-command-manifest.json`**; layering section cross-links **`.ai/module-build.md`** rule **R102** and facade exceptions.
 - **`docs/maintainers/module-build-guide.md`** — Explicit **shipped selective re-exports** snapshot under barrel policy.
+- **`T390`** — **`src/README.md`** documents **R102** vs approved **`core`** facades; **`.ai/ARCHITECTURE.md`** task-store refs align with SQLite default + JSON opt-out; documentation template Related-docs validation avoids duplicate task-store paths.
+- **`docs/maintainers/AGENTS.md`** — Native **`better-sqlite3`** portability / rebuild guidance (postinstall **`ensure-native-sqlite.mjs`**).
+- **`POLICY-APPROVAL.md`**, **`RELEASING.md`**, **`runbooks/cursor-transcript-automation.md`**, **`runbooks/transcript-ingestion-operations.md`** — env → JSON bridging for **`pre-release-transcript-hook`** and **`pnpm run transcript:ingest`**.
 
 ## [0.26.0] - 2026-03-30
 

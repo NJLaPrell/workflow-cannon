@@ -42,7 +42,7 @@ Transcript-derived provenance uses redacted snippets only (see improvement inges
 
 ## Optional automation
 
-- **Pre-release (non-blocking):** `pnpm run pre-release-transcript-hook` writes `artifacts/pre-release-transcript-summary.json` and never fails the release pipeline by itself. Enable explicit approval in CI when invoking ingest.
+- **Pre-release (non-blocking):** `pnpm run pre-release-transcript-hook` writes `artifacts/pre-release-transcript-summary.json` and never fails the release pipeline by itself. Set **`WORKSPACE_KIT_POLICY_APPROVAL`** to valid JSON so the hook forwards **`policyApproval`** into **`ingest-transcripts`** (see **`POLICY-APPROVAL.md`**); otherwise the hook runs **`sync-transcripts`** only.
 
 ## Troubleshooting
 

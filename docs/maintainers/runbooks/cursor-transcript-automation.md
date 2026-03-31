@@ -3,7 +3,7 @@
 ## Package scripts (T271)
 
 - `pnpm run transcript:sync` — runs `workspace-kit run sync-transcripts '{}'` via `scripts/run-transcript-cli.mjs`. **Fails fast** if `dist/cli.js` is missing; run `pnpm run build` first.
-- `pnpm run transcript:ingest` — runs `ingest-transcripts` with `{}` JSON args. **Policy-sensitive:** set `WORKSPACE_KIT_POLICY_APPROVAL` (JSON) or pass approval through interactive `workspace-kit run` flows; see `docs/maintainers/runbooks/transcript-ingestion-operations.md`.
+- `pnpm run transcript:ingest` — runs `ingest-transcripts` via `scripts/run-transcript-cli.mjs`. **Policy-sensitive:** export `WORKSPACE_KIT_POLICY_APPROVAL` as JSON (`{"confirmed":true,"rationale":"…"}`); the script merges it into the third CLI argument as **`policyApproval`** (the `run` path does not read the env var by itself). Alternatively use interactive `workspace-kit run` or pass JSON explicitly; see `docs/maintainers/runbooks/transcript-ingestion-operations.md` and `POLICY-APPROVAL.md`.
 
 ## Folder-open behavior (T272)
 

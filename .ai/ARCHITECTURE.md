@@ -4,8 +4,8 @@ project|name=workflow-cannon|type=architecture_overview|scope=repo
 ref|id=principles|target=.ai/PRINCIPLES.md|type=file|status=active
 ref|id=module_build|target=.ai/module-build.md|type=file|status=active
 ref|id=roadmap|target=docs/maintainers/ROADMAP.md|type=file|status=active
-ref|id=tasks_engine_state|target=.workspace-kit/tasks/state.json|type=file|status=active
-ref|id=tasks_view|target=.workspace-kit/tasks/state.json|type=file|status=active
+ref|id=tasks_engine_state|target=.workspace-kit/tasks/workspace-kit.db|type=file|status=active
+ref|id=tasks_json_optout|target=.workspace-kit/tasks/state.json|type=file|status=active
 ref|id=releasing|target=docs/maintainers/RELEASING.md|type=file|status=active
 truth|order=canonical_ai_docs>code_and_config_reality>generated_human_docs>narrative_docs
 

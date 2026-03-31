@@ -1,38 +1,19 @@
 schema_version: 1
-current_kit_phase: "26"
-next_kit_phase: "27"
+current_kit_phase: "27"
+next_kit_phase: "28"
 last_updated: "2026-03-31"
-active_focus: "**Phase 26** module-platform slice **`T388`**, **`T389`**, **`T391`**, **`T393`** and workbook tasks **`T440`**, **`T441`**, **`T442`** are **`completed`** in task-engine state; **26×** transcript **`imp-*`** remain **`proposed`**. Next: phase closeout / **`v0.27.0`** when ready, or continue improvement triage."
+active_focus: "**Phase 26** shipped as **`v0.27.0`**; **Phase 27** opens with transcript **`imp-*`** triage (**23** **`proposed`**) plus normal maintainer queue."
 blockers: []
-next_agent_actions:
-  - "Optional: triage **`imp-*`** from **`proposed`** (`improvement-triage-top-three`); run phase-closeout playbook when cutting **`v0.27.0`**."
-last_session_summary:
-  - "2026-03-31: Completed **`T388`**, **`T389`**, **`T391`**, **`T393`**, **`T440`**, **`T441`**, **`T442`** — sensitive-run **manifest** + policy aggregation; **task-engine** `mutation-utils` extraction + README; maintainer/`.ai` workbooks + **module-build-guide** barrel snapshot; **`pnpm run check`** + **`pnpm test`** green."
-  - "2026-03-31: **`improvement-triage-top-three`** — created and promoted **`T440`**, **`T441`**, **`T442`** (**`type: improvement`**, Phase 26) from maintainer workbooks: transcript baseline ↔ improvement lifecycle + cadence observability; task-engine workbook ↔ SQLite + **`demote`**. **Not promoted:** existing **`imp-*`** backlog (left **`proposed`** for separate triage)."
-  - "2026-03-30: **26×** transcript **`imp-*`** tasks demoted **`ready` → `proposed`** via `run-transition` **`demote`** (triage queue); Task Engine adds **`demote`** transition for **`ready` → `proposed`**."
-  - "2026-03-30: Phase **26** in task-engine — **`T388`**, **`T389`**, **`T391`**, **`T393`**, and **26× `imp-*`** improvements use phase string **Phase 26 (Module platform and improvement execution)**; each `imp-*` carries `technicalScope` / `acceptanceCriteria` derived from `metadata.provenanceRefs` + `evidenceKey` (transcript path, hash, confidence, parsed excerpt where JSON parses)."
-  - "2026-03-30: Published **`v0.26.0`** — GitHub release + **Publish NPM** workflow `23768654868`; parity fixture `npm install` timeout raised for CI native builds (**PR #77**)."
-  - "2026-03-30: Phase **25** completed — **`T433`–`T439`** merged (playbooks, AGENTS index, `/qt` phase-closeout, invocation runbook, requestable Cursor rule); release prep **`v0.26.0** (changelog + version bump + matrix/roadmap closeout)."
-  - "2026-03-30: **v0.25.0** in-repo — default `tasks.persistenceBackend: sqlite`, ADR `ADR-sqlite-default-persistence.md`, migrated maintainer task data to `.workspace-kit/tasks/workspace-kit.db`; removed committed JSON task/wishlist stores."
-  - "2026-03-30: Released **v0.24.0** — merged **PR #69**, GitHub release + **Publish NPM** workflow `23758351442`; ROADMAP evidence snapshot updated."
-  - "2026-03-30: Phase **24** code + docs: **T425–T432** completed via `run-transition`; package **0.24.0**; parity/check/phase5-gates green."
-  - "2026-03-28: Opened **Phase 24** (`v0.24.0`): ADR `ADR-unified-task-store-wishlist-and-improvement-state.md`, ROADMAP + status YAML, tasks **T425–T432** via `create-task`."
-  - "2026-03-28: Cancelled **T394–T397**, **T398–T402**, **T415–T419** via `run-transition` (reject/cancel + policyApproval) — maintainer deprioritization."
-  - "2026-03-28: Shipped **v0.23.0** — `agent-behavior` module; **T420–T424** completed via task-engine transitions."
-  - "2026-03-28: Phase 21 shipped as v0.22.0 — build-plan session file, dashboard-summary planningSession, extension dashboard, long-session AGENTS + runbook + requestable Cursor rule."
-  - "2026-03-28: ROADMAP Phase 20/21 defined; ready tasks assigned phase strings via update-task; current_kit_phase advanced to 20."
-  - "2026-03-28: Duplicate proposed tasks T398, T401, T403 cancelled (superseded by T356/T357/T384 and completed T366–T376)."
-  - "2026-03-28: Proposed backlog accepted to ready except duplicates; wishlist W2 converted to T410–T414."
-  - "2026-03-28: After field review, all 32 proposed tasks (T351–T365, T366–T376, T377–T382) accepted to `ready` via `run-transition` action `accept`."
-  - "2026-03-28: Agent CLI reliability: six `task-breakdown` planning runs created wishlist W7–W12, converted to proposed tasks T377–T382 (Phase 16 maintenance)."
-  - "2026-03-28: Phase 19 planned (`v0.20.0`): documentation module v2 — v2 keyed schema, runtime decomposition, view-model rendering, hard .ai/ migration. Tasks T366–T376 created from planning artifact W6."
-  - "2026-03-28: Module build docs-vs-reality review completed; findings in `docs/maintainers/MODULE-CLEANUP-REVIEW.md`."
-  - "2026-03-28: State consolidation analysis: decided to migrate per-module state.md + ad-hoc JSON to unified SQLite DB with module schema registration and export-on-commit snapshots."
 pending_decisions: []
+next_agent_actions:
+  - "Triage transcript **`imp-*`** backlog (`improvement-triage-top-three`) or pick execution tasks from **`get-next-actions`**."
+  - "After **`v0.27.0`** publish: paste **Publish NPM** workflow run URL into **`ROADMAP.md`** evidence snapshot."
+last_session_summary:
+  - "2026-03-31: Phase **26** closeout — **`T390`** (R102 / layering docs + template + `.ai/ARCHITECTURE` refs); **`imp-c584f0e206c404`** (pre-release hook + `transcript:ingest` merge env → **`policyApproval`** JSON); **`imp-df7ebd9967433c`** (AGENTS native SQLite portability); **`imp-5dc1ffa28ccdc3`** verified against existing malformed-**`policyApproval`** denial output in **`run-command.ts`**. Release **`v0.27.0`** (changelog, version, ROADMAP, FEATURE-MATRIX, status YAML)."
 metrics:
   updated_at: "2026-03-31"
   source: "maintainer"
-  notes: "Phase 26 platform tasks T388–T393 + T440–T442 completed 2026-03-31; imp-* still proposed. Phase 25 v0.26.0 shipped. Prior: Phase 24 v0.24.0; Phase-20 follow-ups T394–T402 and T415–T419 cancelled 2026-03-28."
+  notes: "Phase 26 released v0.27.0 2026-03-31; 23 imp-* proposed deferred to Phase 27 triage."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null

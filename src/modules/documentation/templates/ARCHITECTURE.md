@@ -62,8 +62,8 @@ Validation:
 {{{
 Emit cross-links to planning and execution surfaces.
 Method:
-1) Confirm paths exist: `docs/maintainers/ROADMAP.md`, `.workspace-kit/tasks/state.json`, and `docs/maintainers/RELEASING.md` when release behavior is architecture-relevant.
-2) Add `.ai/PRINCIPLES.md` or module-build references only if cited elsewhere in this doc set.
+1) Confirm paths exist: `docs/maintainers/ROADMAP.md`, default task store `.workspace-kit/tasks/workspace-kit.db`, JSON opt-out `.workspace-kit/tasks/state.json` if relevant, and `docs/maintainers/RELEASING.md` when release behavior is architecture-relevant. List each distinct path at most once.
+2) Add `.ai/PRINCIPLES.md` or module-build references only if cited elsewhere in this doc set; when describing module boundaries, align with `.ai/module-build.md` rule R102 and documented facade exceptions.
 Output format:
 - Bulleted list of paths with a short “what this covers” fragment after each.
 Validation:
