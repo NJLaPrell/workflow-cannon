@@ -28,7 +28,7 @@ Status legend:
 | Phase 11 - Architectural review follow-up (`T292`–`T295`) | `v0.12.0` | Completed |
 | Phase 12 - Cursor native UI thin client (`T296`–`T310`) | `v0.13.0` | Completed |
 | Phase 25 - Agent playbooks and direction sets (`T433`–`T439`) | `v0.26.0` | Completed |
-| Phase 26 - Module platform and improvement execution (`T388`, `T389`, `T391`, `T393`, transcript `imp-*` queue) | `v0.27.0` | Module slice done in-repo; release pending; `imp-*` proposed until triage |
+| Phase 26 - Module platform and improvement execution (`T388`–`T393`, `T390`, `T440`–`T442`, ready `imp-*`) | `v0.27.0` | Completed (transcript `imp-*` backlog remains **`proposed`** for Phase 27 triage) |
 
 ## Feature Matrix by Phase
 
@@ -205,15 +205,17 @@ Status legend:
 | Requestable Cursor rule (optional) | Thin rule enabling phase-closeout mode without always-on bloat | Completed | `T438` |
 | Milestone matrix alignment | FEATURE-MATRIX + roadmap wording stay consistent with shipped artifacts | Completed | `T439` |
 
-### Phase 26 Module platform and improvement execution (`v0.27.0` target)
+### Phase 26 Module platform and improvement execution (`v0.27.0`)
 
 | Product feature | What users/maintainers get | Status | Task coverage |
 | --- | --- | --- | --- |
-| Command manifest truth | Commands declared in manifests match what ships; fewer “doc says X, CLI does Y” surprises | In progress / ready | `T388` |
-| Module README boundaries | Each module’s README states scope, boundaries, and integration points clearly | In progress / ready | `T389` |
-| Task-engine public surface | Deliberate minimal exports and stable integration seams for kit consumers | In progress / ready | `T391` |
-| `src/modules` barrel policy | Consistent barrel rules so imports and packaging stay predictable | In progress / ready | `T393` |
-| Transcript improvement burn-down | `imp-*` queue executed or decomposed after triage with explicit acceptance | In progress (proposed → triage → ready) | Transcript `imp-*` (see task-engine state) |
+| Command manifest truth | Commands declared in manifests match what ships; fewer “doc says X, CLI does Y” surprises | Completed | `T388` |
+| Module README boundaries | Each module’s README states scope, boundaries, and integration points clearly | Completed | `T389` |
+| Task-engine public surface | Deliberate minimal exports and stable integration seams for kit consumers | Completed | `T391` |
+| `src/modules` barrel policy | Consistent barrel rules so imports and packaging stay predictable | Completed | `T393` |
+| Layering + R102 canon | Maintainer docs and `src/README` explain core↔module facades vs **R102** | Completed | `T390` |
+| Workbook alignment | Transcript baseline + task-engine workbook + cadence observability | Completed | `T440`–`T442` |
+| Transcript improvement burn-down | Promoted **`ready`** `imp-*` closed; **`proposed`** backlog continues in Phase 27 | Partial (by design) | Transcript `imp-*` (see task-engine state) |
 
 ## Supporting Milestone Features (cross-phase)
 

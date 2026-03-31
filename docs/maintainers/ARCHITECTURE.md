@@ -41,10 +41,10 @@ Workflow Cannon is a modular CLI-first workflow platform: structured **tasks** a
 
 ## Layering and known exceptions
 
-- **Intended rule:** `modules/` may depend on `core/` and `contracts/`; avoid **sibling module** imports.
+- **Intended rule:** `modules/` may depend on `core/` and `contracts/`; avoid **sibling module** imports. **`.ai/module-build.md`** rule **R102** states modules must depend only on **`core`** and **`contracts`** and avoid direct imports from sibling modules; the bullets below are the **documented** exceptions that keep facades stable (see also **`src/modules/README.md`**).
 - **Exceptions (stable facades):**
   - **`src/core/planning/index.ts`** re-exports task-engine–owned planning stores and types so **planning**, **approvals**, and **improvement** import from `core/planning` instead of deep `task-engine` paths (implementations remain in task-engine).
-  - **`src/core/config-cli.ts`** imports **`defaultRegistryModules`** to bootstrap the registry for config resolution (documented exception to keep CLI wiring centralized).
+  - **`src/core/config-cli.ts`** imports **`defaultRegistryModules`** from **`src/modules/index.ts`** to bootstrap the registry for config resolution (documented exception to keep CLI wiring centralized).
 - **`src/README.md`** summarizes boundary intent; this section is the maintainer detail.
 
 ### Planning module vs planning persistence

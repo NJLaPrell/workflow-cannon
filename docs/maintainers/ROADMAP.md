@@ -37,7 +37,7 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - **Phase 23 (Agent behavior module)** is **COMPLETE and released** as **`v0.23.0`**: **`T420`–`T424`** — advisory **interaction profiles** via **`agent-behavior`** module (builtins, JSON/SQLite persistence, CRUD/fork, `explain`/`diff`, **`interview-behavior-profile`**, maintainer + **`.ai/AGENTS.md`** + requestable **`.cursor/rules/agent-behavior.mdc`**).
 - **Phase 24 (Unified task intake and improvement operational state)** is **COMPLETE and released** as **`v0.24.0`**: **`T425`–`T432`** — wishlist ideation as **`wishlist_intake`** **`T###`** tasks with optional **`metadata.legacyWishlistId`**; **`migrate-wishlist-intake`** for legacy stores; improvement operational state in unified SQLite when **`tasks.persistenceBackend: sqlite`**. ADR: `docs/maintainers/ADR-unified-task-store-wishlist-and-improvement-state.md`.
 - **Phase 25 (Agent playbooks and direction sets)** is **COMPLETE and released** as **`v0.26.0`**: **`T433`–`T439`** — maintainer **playbooks** under `docs/maintainers/playbooks/` (canon-by-reference); pilot **phase closeout + release** checklist; **`AGENTS.md`** discovery index; **`tasks/phase-closeout.md`** `/qt` template; **`runbooks/agent-playbooks.md`**; requestable **`.cursor/rules/playbook-phase-closeout.mdc`**.
-- **Phase 26 (Module platform and improvement execution)** — **module-platform slice complete in-repo** (**`T388`**, **`T389`**, **`T391`**, **`T393`**) plus workbook alignment tasks **`T440`**, **`T441`**, **`T442`** (**`completed`** in task-engine state). **Transcript-derived `imp-*` improvements** remain **`proposed`** until triage; phase release (**`v0.27.0`**) pending maintainer closeout.
+- **Phase 26 (Module platform and improvement execution)** is **COMPLETE and released** as **`v0.27.0`**: **`T388`**, **`T389`**, **`T391`**, **`T393`**, **`T390`**, workbook tasks **`T440`–`T442`**, and ready transcript improvements **`imp-df7ebd9967433c`**, **`imp-c584f0e206c404`**, **`imp-5dc1ffa28ccdc3`** (policy/script ergonomics + maintainer docs). Additional transcript-derived **`imp-*`** items stay **`proposed`** for **Phase 27** triage (not blocking this release).
 - Historical extraction and first-publish milestones remain recorded below as provenance.
 
 ## Phase plan and release cadence
@@ -309,15 +309,15 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
   - `pnpm run build`, `check`, `test`, and `parity` pass on the release tag.
   - Pilot playbook and index are discoverable from **`docs/maintainers/AGENTS.md`** without contradicting the workflow contract (`TERMS.md`, maintainer-delivery-loop expectations).
 
-### Phase 26 - Module platform and improvement execution -> GitHub release `v0.27.0` (OPEN)
+### Phase 26 - Module platform and improvement execution -> GitHub release `v0.27.0` (COMPLETE)
 
-- **Primary scope:** **`T388`**, **`T389`**, **`T391`**, **`T393`** (**`ready`**); **transcript-backed `imp-*` improvements** (**`proposed`** until triage; phase string aligned in task-engine state).
-- **Outcome:** Module README and boundary docs stay honest with the tree; **command manifest** wiring matches shipped commands where required; **task-engine** exposes a deliberate minimal public surface; **`src/modules` barrel** policy is enforced consistently; **improvement** items are executed or decomposed with clear acceptance instead of lingering as title-only rows.
-- **Dependency structure:** Maintainer picks highest-priority **`ready`** work per delivery loop; **`T388`–`T393`** may parallelize where dependencies allow; `imp-*` items use `improvement-triage-top-three` to promote from **`proposed`** to **`ready`** before deep implementation.
+- **Primary scope:** **`T388`**, **`T389`**, **`T391`**, **`T393`**, **`T390`**; workbook **`T440`–`T442`**; **transcript-backed `imp-*`** triaged and executed where promoted to **`ready`** (remaining **`proposed`** backlog rolls forward to Phase 27).
+- **Outcome:** Module README and boundary docs stay honest with the tree; **command manifest** wiring matches shipped commands where required; **task-engine** exposes a deliberate minimal public surface; **`src/modules` barrel** policy is enforced consistently; pre-release / **`transcript:ingest`** helpers forward **`policyApproval`** correctly; maintainer docs cover **R102** layering exceptions and native SQLite portability.
+- **Dependency structure:** Maintainer delivery loop + `improvement-triage-top-three` for **`proposed` → `ready`** promotion.
 - **Exit signals:**
-  - Phase **26** tasks reach **`completed`** (or are explicitly **`rejected`/`cancelled`** with rationale) and improvements in this phase are **`completed`** or superseded.
-  - `pnpm run build`, `check`, `test`, and `parity` pass on the release tag targeting **`v0.27.0`**.
-  - ROADMAP current-state bullet and **`docs/maintainers/data/workspace-kit-status.yaml`** reflect phase closeout when shipped.
+  - Phase **26** primary and promoted **`ready`** work is **`completed`** in task-engine state; remaining transcript **`imp-*`** items stay **`proposed`** for Phase 27 triage.
+  - `pnpm run build`, `check`, `test`, and `parity` pass on the **`v0.27.0`** release tag.
+  - ROADMAP, FEATURE-MATRIX, and **`docs/maintainers/data/workspace-kit-status.yaml`** reflect phase closeout and release evidence.
 
 ## Recorded decisions
 
@@ -357,4 +357,6 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 - Phase 24 / `v0.24.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23758351442`
 - Phase 25 / `v0.26.0` GitHub release: `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.26.0`
 - Phase 25 / `v0.26.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23768654868`
+- Phase 26 / `v0.27.0` GitHub release: `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.27.0`
+- Phase 26 / `v0.27.0` publish workflow run: (append `Publish NPM` workflow_dispatch URL after publish)
 - npm package: `https://www.npmjs.com/package/@workflow-cannon/workspace-kit`

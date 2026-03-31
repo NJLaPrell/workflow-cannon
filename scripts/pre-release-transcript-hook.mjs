@@ -2,8 +2,9 @@
 
 /**
  * Optional, non-blocking pre-release transcript hook.
- * Runs ingest-transcripts with WORKSPACE_KIT_POLICY_APPROVAL when set; otherwise sync-only summary.
- * Always exits 0 so release gates are advisory unless you wire stricter CI behavior.
+ * When WORKSPACE_KIT_POLICY_APPROVAL is set to valid JSON, forwards it as run JSON
+ * `policyApproval` for ingest-transcripts (workspace-kit run does not read the env var itself).
+ * Otherwise runs sync-transcripts only. Always exits 0 unless you wire stricter CI behavior.
  */
 
 import { mkdir, writeFile } from "node:fs/promises";
@@ -13,6 +14,21 @@ import { resolve } from "node:path";
 const ROOT = process.cwd();
 const ARTIFACTS = resolve(ROOT, "artifacts");
 const OUT = resolve(ARTIFACTS, "pre-release-transcript-summary.json");
+
+/** @returns {string | null} JSON third-arg for `workspace-kit run ingest-transcripts`, or null if env unset/invalid */
+function ingestArgsFromEnvApproval() {
+  const raw = process.env.WORKSPACE_KIT_POLICY_APPROVAL?.trim();
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return JSON.stringify({ policyApproval: parsed });
+    }
+  } catch {
+    // treat as absent
+  }
+  return null;
+}
 
 function runNode(args) {
   return new Promise((res, rej) => {
@@ -29,7 +45,8 @@ function runNode(args) {
 async function main() {
   await mkdir(ARTIFACTS, { recursive: true });
   const cli = resolve(ROOT, "dist/cli.js");
-  const hasApproval = Boolean(process.env.WORKSPACE_KIT_POLICY_APPROVAL?.trim());
+  const ingestJson = ingestArgsFromEnvApproval();
+  const hasApproval = ingestJson != null;
 
   const summary = {
     schemaVersion: 1,
@@ -38,8 +55,8 @@ async function main() {
     ok: true,
     cliOutput: null,
     note: hasApproval
-      ? "Ran ingest-transcripts with WORKSPACE_KIT_POLICY_APPROVAL."
-      : "No WORKSPACE_KIT_POLICY_APPROVAL; ran sync-transcripts only. Set env to include recommendation generation."
+      ? "Ran ingest-transcripts with policyApproval merged from WORKSPACE_KIT_POLICY_APPROVAL JSON (see POLICY-APPROVAL.md: run path still requires JSON approval; this hook bridges env → args)."
+      : "No valid WORKSPACE_KIT_POLICY_APPROVAL JSON; ran sync-transcripts only. Set env to a JSON object like {\"confirmed\":true,\"rationale\":\"pre-release ingest\"} to run ingest."
   };
 
   try {
@@ -48,7 +65,7 @@ async function main() {
         cli,
         "run",
         "ingest-transcripts",
-        "{}"
+        ingestJson
       ]);
       summary.cliOutput = stdout.trim().slice(0, 50_000);
     } else {

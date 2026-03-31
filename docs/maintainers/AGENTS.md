@@ -73,6 +73,10 @@ Before changing **task-engine state**, **policy traces**, **approvals**, **trans
 - **Do not** hand-edit `.workspace-kit/tasks/state.json` for lifecycle transitions except documented recovery; use `workspace-kit run run-transition` (`docs/maintainers/AGENT-CLI-MAP.md`).
 - **Cursor rule:** `.cursor/rules/workspace-kit-cli-execution.mdc` mirrors this section and links the Agent CLI map.
 
+### Native SQLite (`better-sqlite3`) portability
+
+Default task persistence uses **`better-sqlite3`** (a native addon). After changing Node.js versions, copying `node_modules` between machines, or installing the published package on a new runtime, the compiled `.node` binary may not load. Run **`pnpm rebuild better-sqlite3`** (or **`npm rebuild better-sqlite3`**) in the project root. Package **`postinstall`** runs **`scripts/ensure-native-sqlite.mjs`**, which attempts an automatic rebuild when load fails with a known ABI mismatch signature.
+
 ### When the agent must run terminal commands (examples)
 
 1. **Task transition**
