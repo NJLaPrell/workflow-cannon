@@ -1,10 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { execFile } from "node:child_process";
-import { APPROVALS_POLICY_COMMAND_NAMES } from "../modules/approvals/policy-sensitive-commands.js";
-import { DOCUMENTATION_POLICY_COMMAND_NAMES } from "../modules/documentation/policy-sensitive-commands.js";
-import { IMPROVEMENT_POLICY_COMMAND_NAMES } from "../modules/improvement/policy-sensitive-commands.js";
-import { TASK_ENGINE_POLICY_COMMAND_NAMES } from "../modules/task-engine/policy-sensitive-commands.js";
+import { BUILTIN_RUN_COMMAND_MANIFEST } from "../contracts/builtin-run-command-manifest.js";
 
 export const POLICY_TRACE_SCHEMA_VERSION = 1 as const;
 
@@ -27,15 +24,11 @@ export type PolicyOperationId =
   | "improvement.ingest-transcripts";
 
 function buildBuiltinCommandToOperation(): Record<string, PolicyOperationId | undefined> {
-  const pairs: ReadonlyArray<readonly [string, PolicyOperationId]> = [
-    ...DOCUMENTATION_POLICY_COMMAND_NAMES,
-    ...TASK_ENGINE_POLICY_COMMAND_NAMES,
-    ...APPROVALS_POLICY_COMMAND_NAMES,
-    ...IMPROVEMENT_POLICY_COMMAND_NAMES
-  ];
   const out: Record<string, PolicyOperationId | undefined> = {};
-  for (const [name, op] of pairs) {
-    out[name] = op;
+  for (const row of BUILTIN_RUN_COMMAND_MANIFEST) {
+    if (row.policyOperationId) {
+      out[row.name] = row.policyOperationId as PolicyOperationId;
+    }
   }
   return out;
 }

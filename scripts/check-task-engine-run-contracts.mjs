@@ -3,7 +3,7 @@ import path from "node:path";
 import process from "node:process";
 
 const ROOT = process.cwd();
-const INTERNAL_PATH = path.join(ROOT, "src/modules/task-engine/task-engine-internal.ts");
+const MANIFEST_PATH = path.join(ROOT, "src/contracts/builtin-run-command-manifest.json");
 const SCHEMA_PATH = path.join(ROOT, "schemas/task-engine-run-contracts.schema.json");
 const PKG_PATH = path.join(ROOT, "package.json");
 
@@ -20,7 +20,7 @@ function loadJson(filePath) {
   }
 }
 
-const indexSrc = fs.readFileSync(INTERNAL_PATH, "utf8");
+const manifest = loadJson(MANIFEST_PATH);
 const pkg = loadJson(PKG_PATH);
 const schema = loadJson(SCHEMA_PATH);
 
@@ -30,9 +30,9 @@ if (schema.packageVersion !== pkg.version) {
   );
 }
 
-const commandNames = [...indexSrc.matchAll(/name:\s*"([a-z0-9-]+)"/g)].map((m) => m[1]);
+const commandNames = manifest.filter((r) => r.moduleId === "task-engine").map((r) => r.name);
 if (commandNames.length === 0) {
-  fail("Could not discover task-engine command names from task-engine-internal.ts.");
+  fail('Could not discover task-engine command names from builtin-run-command-manifest.json (moduleId "task-engine").');
 }
 
 const commandSet = new Set(commandNames);

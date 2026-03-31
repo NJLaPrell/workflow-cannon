@@ -3,12 +3,7 @@ import path from "node:path";
 import process from "node:process";
 
 const ROOT = process.cwd();
-const MODULES_DIR = path.join(ROOT, "src/modules");
-
-/** Extra registration sources beyond index.ts (avoid scanning transitions.ts etc. for `name:` false positives). */
-const MODULE_REGISTRATION_FILES = {
-  "task-engine": ["index.ts", "task-engine-internal.ts"]
-};
+const MANIFEST_PATH = path.join(ROOT, "src/contracts/builtin-run-command-manifest.json");
 const CLI_MAP_PATH = path.join(ROOT, "docs/maintainers/AGENT-CLI-MAP.md");
 const EXCLUSIONS_PATH = path.join(ROOT, "docs/maintainers/data/agent-cli-map-exclusions.json");
 
@@ -25,28 +20,19 @@ function loadJson(filePath) {
   }
 }
 
-function collectRunCommandsFromModules() {
+function collectRunCommandsFromManifest() {
+  const manifest = loadJson(MANIFEST_PATH);
+  if (!Array.isArray(manifest) || manifest.length === 0) {
+    fail("builtin-run-command-manifest.json must be a non-empty array.");
+  }
   const commands = new Set();
-  const moduleDirs = fs
-    .readdirSync(MODULES_DIR, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name);
-
-  for (const moduleDir of moduleDirs) {
-    const modPath = path.join(MODULES_DIR, moduleDir);
-    const fileNames = MODULE_REGISTRATION_FILES[moduleDir] ?? ["index.ts"];
-    const source = fileNames
-      .map((f) => path.join(modPath, f))
-      .filter((p) => fs.existsSync(p))
-      .map((p) => fs.readFileSync(p, "utf8"))
-      .join("\n");
-    for (const match of source.matchAll(/name:\s*"([a-z0-9-]+)"/g)) {
-      commands.add(match[1]);
+  for (const row of manifest) {
+    if (typeof row.name === "string" && row.name.trim()) {
+      commands.add(row.name.trim());
     }
   }
-
   if (commands.size === 0) {
-    fail("No run commands discovered from module index files.");
+    fail("No run commands discovered from builtin-run-command-manifest.json.");
   }
   return commands;
 }
@@ -60,7 +46,7 @@ function collectDocumentedCommands(mapPath) {
   return commands;
 }
 
-const runCommands = collectRunCommandsFromModules();
+const runCommands = collectRunCommandsFromManifest();
 const documented = collectDocumentedCommands(CLI_MAP_PATH);
 const exclusionsDoc = loadJson(EXCLUSIONS_PATH);
 const excluded = new Set(

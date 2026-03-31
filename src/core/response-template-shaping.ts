@@ -7,6 +7,7 @@ import {
   truncateTemplateWarning
 } from "./response-template-contract.js";
 import { getResponseTemplateDefinition } from "./response-template-registry.js";
+import { getBuiltinCommandDefaultTemplateId } from "../contracts/builtin-run-command-manifest.js";
 import { parseTemplateDirectiveFromText } from "./instruction-template-mapper.js";
 
 function readResponseTemplatesConfig(
@@ -152,7 +153,10 @@ export function applyResponseTemplateApplication(
   }
 
   const override = cfg.commandOverrides[commandName];
-  const chosenId = requestedRaw ?? override ?? cfg.defaultTemplateId ?? "default";
+  const manifestDefault = getBuiltinCommandDefaultTemplateId(commandName);
+  const chosenId = requestedRaw ?? override ?? manifestDefault ?? cfg.defaultTemplateId ?? "default";
+  const requestedTemplateIdForMeta =
+    requestedRaw ?? override ?? manifestDefault ?? cfg.defaultTemplateId ?? null;
 
   const warnings: string[] = [...parseWarnings];
   const def = getResponseTemplateDefinition(chosenId);
@@ -167,7 +171,7 @@ export function applyResponseTemplateApplication(
         message: truncateTemplateWarning(`Unknown response template '${chosenId}'.`),
         responseTemplate: buildMeta(
           {
-            requestedTemplateId: requestedRaw ?? override ?? cfg.defaultTemplateId,
+            requestedTemplateId: requestedTemplateIdForMeta,
             appliedTemplateId: null,
             enforcementMode: cfg.enforcementMode,
             warnings
@@ -180,7 +184,7 @@ export function applyResponseTemplateApplication(
       ...result,
       responseTemplate: buildMeta(
         {
-          requestedTemplateId: requestedRaw ?? override ?? cfg.defaultTemplateId,
+          requestedTemplateId: requestedTemplateIdForMeta,
           appliedTemplateId: null,
           enforcementMode: cfg.enforcementMode,
           warnings
@@ -201,7 +205,7 @@ export function applyResponseTemplateApplication(
     data: nextData,
     responseTemplate: buildMeta(
       {
-        requestedTemplateId: requestedRaw ?? override ?? cfg.defaultTemplateId,
+        requestedTemplateId: requestedTemplateIdForMeta,
         appliedTemplateId: def.id,
         enforcementMode: cfg.enforcementMode,
         warnings

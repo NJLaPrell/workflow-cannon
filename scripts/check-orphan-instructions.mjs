@@ -10,6 +10,16 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.join(__dirname, "..");
 const modulesDir = path.join(repoRoot, "src", "modules");
+const manifestPath = path.join(repoRoot, "src", "contracts", "builtin-run-command-manifest.json");
+const manifestRows = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+const manifestFilesByModule = new Map();
+for (const row of manifestRows) {
+  if (!row.moduleId || !row.file) continue;
+  if (!manifestFilesByModule.has(row.moduleId)) {
+    manifestFilesByModule.set(row.moduleId, new Set());
+  }
+  manifestFilesByModule.get(row.moduleId).add(row.file);
+}
 
 /** Instruction-adjacent markdown that is not a `workspace-kit run` subcommand catalog entry. */
 const ORPHAN_CHECK_ALLOWLIST = new Set(["documentation/documentation-maintainer.md"]);
@@ -35,8 +45,11 @@ for (const ent of fs.readdirSync(modulesDir, { withFileTypes: true })) {
     const rel = `${modId}/${file}`;
     if (ORPHAN_CHECK_ALLOWLIST.has(rel)) continue;
     const needle = `"${file}"`;
-    if (!indexSrc.includes(needle)) {
-      errors.push(`Orphan instruction markdown: src/modules/${modId}/instructions/${file} (not referenced in module .ts as file: ${needle})`);
+    const inManifest = manifestFilesByModule.get(modId)?.has(file);
+    if (!inManifest && !indexSrc.includes(needle)) {
+      errors.push(
+        `Orphan instruction markdown: src/modules/${modId}/instructions/${file} (not in builtin-run-command-manifest.json and not referenced in module .ts as file: ${needle})`
+      );
     }
   }
 }

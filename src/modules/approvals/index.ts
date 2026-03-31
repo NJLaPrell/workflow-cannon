@@ -1,4 +1,5 @@
 import type { WorkflowModule } from "../../contracts/module-contract.js";
+import { builtinInstructionEntriesForModule } from "../../contracts/builtin-run-command-manifest.js";
 import { resolveActorWithFallback } from "../../core/policy.js";
 import { runReviewItem } from "./review-runtime.js";
 
@@ -19,13 +20,7 @@ export const approvalsModule: WorkflowModule = {
     },
     instructions: {
       directory: "src/modules/approvals/instructions",
-      entries: [
-        {
-          name: "review-item",
-          file: "review-item.md",
-          description: "Review and record an approval decision."
-        }
-      ]
+      entries: builtinInstructionEntriesForModule("approvals")
     }
   },
 

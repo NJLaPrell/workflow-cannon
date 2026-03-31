@@ -1,4 +1,5 @@
 import type { ConfigRegistryView, WorkflowModule } from "../../contracts/module-contract.js";
+import { builtinInstructionEntriesForModule } from "../../contracts/builtin-run-command-manifest.js";
 import {
   explainConfigPath,
   normalizeConfigForExport,
@@ -89,18 +90,7 @@ export const workspaceConfigModule: WorkflowModule = {
     },
     instructions: {
       directory: "src/modules/workspace-config/instructions",
-      entries: [
-        {
-          name: "explain-config",
-          file: "explain-config.md",
-          description: "Agent-first JSON: effective config value and winning layer for a dotted path."
-        },
-        {
-          name: "resolve-config",
-          file: "resolve-config.md",
-          description: "Agent-first JSON: full effective config (sorted) and merge layer ids."
-        }
-      ]
+      entries: builtinInstructionEntriesForModule("workspace-config")
     }
   },
 

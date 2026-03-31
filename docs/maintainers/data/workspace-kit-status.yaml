@@ -1,12 +1,14 @@
 schema_version: 1
 current_kit_phase: "26"
 next_kit_phase: "27"
-last_updated: "2026-03-30"
-active_focus: "**Phase 26** execution — module platform **`T388`**, **`T389`**, **`T391`**, **`T393`** are **`ready`**; **26×** transcript **`imp-*`** improvements are **`proposed`** (promote via `accept` after triage). Phase **25** shipped as **`v0.26.0`**."
+last_updated: "2026-03-31"
+active_focus: "**Phase 26** module-platform slice **`T388`**, **`T389`**, **`T391`**, **`T393`** and workbook tasks **`T440`**, **`T441`**, **`T442`** are **`completed`** in task-engine state; **26×** transcript **`imp-*`** remain **`proposed`**. Next: phase closeout / **`v0.27.0`** when ready, or continue improvement triage."
 blockers: []
 next_agent_actions:
-  - "Run maintainer delivery loop on Phase **26** `T388`–`T393` `ready` queue; use `improvement-triage-top-three` to promote up to three `imp-*` from `proposed` when burning down transcript improvements."
+  - "Optional: triage **`imp-*`** from **`proposed`** (`improvement-triage-top-three`); run phase-closeout playbook when cutting **`v0.27.0`**."
 last_session_summary:
+  - "2026-03-31: Completed **`T388`**, **`T389`**, **`T391`**, **`T393`**, **`T440`**, **`T441`**, **`T442`** — sensitive-run **manifest** + policy aggregation; **task-engine** `mutation-utils` extraction + README; maintainer/`.ai` workbooks + **module-build-guide** barrel snapshot; **`pnpm run check`** + **`pnpm test`** green."
+  - "2026-03-31: **`improvement-triage-top-three`** — created and promoted **`T440`**, **`T441`**, **`T442`** (**`type: improvement`**, Phase 26) from maintainer workbooks: transcript baseline ↔ improvement lifecycle + cadence observability; task-engine workbook ↔ SQLite + **`demote`**. **Not promoted:** existing **`imp-*`** backlog (left **`proposed`** for separate triage)."
   - "2026-03-30: **26×** transcript **`imp-*`** tasks demoted **`ready` → `proposed`** via `run-transition` **`demote`** (triage queue); Task Engine adds **`demote`** transition for **`ready` → `proposed`**."
   - "2026-03-30: Phase **26** in task-engine — **`T388`**, **`T389`**, **`T391`**, **`T393`**, and **26× `imp-*`** improvements use phase string **Phase 26 (Module platform and improvement execution)**; each `imp-*` carries `technicalScope` / `acceptanceCriteria` derived from `metadata.provenanceRefs` + `evidenceKey` (transcript path, hash, confidence, parsed excerpt where JSON parses)."
   - "2026-03-30: Published **`v0.26.0`** — GitHub release + **Publish NPM** workflow `23768654868`; parity fixture `npm install` timeout raised for CI native builds (**PR #77**)."
@@ -28,9 +30,9 @@ last_session_summary:
   - "2026-03-28: State consolidation analysis: decided to migrate per-module state.md + ad-hoc JSON to unified SQLite DB with module schema registration and export-on-commit snapshots."
 pending_decisions: []
 metrics:
-  updated_at: "2026-03-30"
+  updated_at: "2026-03-31"
   source: "maintainer"
-  notes: "Phase 26 open (T388–T393 ready; transcript imp-* proposed until triage). Phase 25 released as v0.26.0 (playbooks / direction sets). Prior: Phase 24 v0.24.0; Phase-20 follow-ups T394–T402 and T415–T419 cancelled 2026-03-28."
+  notes: "Phase 26 platform tasks T388–T393 + T440–T442 completed 2026-03-31; imp-* still proposed. Phase 25 v0.26.0 shipped. Prior: Phase 24 v0.24.0; Phase-20 follow-ups T394–T402 and T415–T419 cancelled 2026-03-28."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null

@@ -72,15 +72,10 @@ test("Phase6b: strict mode fails on unknown defaultTemplateId", async () => {
     ),
     "utf8"
   );
-  await mkdir(path.join(workspacePath, ".workspace-kit", "tasks"), { recursive: true });
-  await writeFile(
-    path.join(workspacePath, ".workspace-kit", "tasks", "state.json"),
-    JSON.stringify({ schemaVersion: 1, tasks: [], transitionLog: [], lastUpdated: new Date().toISOString() }),
-    "utf8"
-  );
 
   const cap = { lines: [], errors: [], writeLine: (m) => cap.lines.push(m), writeError: (m) => cap.errors.push(m) };
-  const code = await runCli(["run", "list-tasks", "{}"], { cwd: workspacePath, ...cap });
+  // Use a command with no builtin manifest defaultResponseTemplateId so resolution reaches config defaultTemplateId.
+  const code = await runCli(["run", "list-behavior-profiles", "{}"], { cwd: workspacePath, ...cap });
   assert.equal(code, 1);
   const out = JSON.parse(cap.lines.join(""));
   assert.equal(out.ok, false);

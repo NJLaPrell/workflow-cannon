@@ -14,7 +14,7 @@ Workflow Cannon is a modular CLI-first workflow platform: structured **tasks** a
 
 ### Module registry
 
-- **`defaultRegistryModules`** lists the shipped bundle: `workspace-config`, `documentation`, `task-engine`, `approvals`, `planning`, `improvement` (see [`src/modules/README.md`](../../src/modules/README.md)).
+- **`defaultRegistryModules`** lists the shipped bundle: `workspace-config`, `documentation`, `agent-behavior`, `task-engine`, `approvals`, `planning`, `improvement` (see [`src/modules/README.md`](../../src/modules/README.md)).
 - Registry validates **`dependsOn`**, honors **`optionalPeers`** / **`requiresPeers`** on instruction entries, and determines startup order.
 - Modules can be disabled via workspace config; disabled modules omit their commands from the router (see **Agent instruction surface** in [`TERMS.md`](./TERMS.md)).
 
@@ -27,7 +27,7 @@ Workflow Cannon is a modular CLI-first workflow platform: structured **tasks** a
 ### Policy and approvals
 
 - Sensitive `workspace-kit run` commands map to **`PolicyOperationId`** values for traces and **`policyApproval`** JSON (Tier A/B per [`POLICY-APPROVAL.md`](./POLICY-APPROVAL.md)).
-- Builtin command → operation bindings are assembled from per-module **`policy-sensitive-commands.ts`** files (avoid duplicating parallel maps in `policy.ts`).
+- Builtin **`workspace-kit run`** commands are declared in **`src/contracts/builtin-run-command-manifest.json`** (loaded by `builtin-run-command-manifest.ts`): instruction file, optional **`policyOperationId`**, optional default response-template id. Policy aggregates sensitive bindings in `src/core/policy.ts`.
 - `init` / `upgrade` / **`config` mutations** use env-based **`WORKSPACE_KIT_POLICY_APPROVAL`**, not the `run` JSON field.
 
 ### Configuration

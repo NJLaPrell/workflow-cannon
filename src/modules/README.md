@@ -14,6 +14,8 @@ Shipped capability modules are registered in **`defaultRegistryModules`** in [`i
 | `planning` | Guided `build-plan` interviews and wishlist artifact output | _(none)_ |
 | `improvement` | Recommendations, transcript ingest, enhancement loop | _(none)_ |
 
+Table order matches the **`defaultRegistryModules`** array in [`index.ts`](./index.ts) (bootstrap-friendly ordering).
+
 ## Module contract
 
 Each module should:

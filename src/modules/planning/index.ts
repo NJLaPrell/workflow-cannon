@@ -21,6 +21,7 @@ import {
   type TaskEntity,
   type TaskPriority
 } from "../../core/planning/index.js";
+import { builtinInstructionEntriesForModule } from "../../contracts/builtin-run-command-manifest.js";
 import { planningStrictValidationEnabled } from "../task-engine/planning-config.js";
 import { validateTaskSetForStrictMode } from "../task-engine/strict-task-validation.js";
 
@@ -193,23 +194,7 @@ export const planningModule: WorkflowModule = {
     },
     instructions: {
       directory: "src/modules/planning/instructions",
-      entries: [
-        {
-          name: "build-plan",
-          file: "build-plan.md",
-          description: "Generate a dependency-aware execution plan."
-        },
-        {
-          name: "list-planning-types",
-          file: "list-planning-types.md",
-          description: "List supported planning workflow types and their intent."
-        },
-        {
-          name: "explain-planning-rules",
-          file: "explain-planning-rules.md",
-          description: "Explain effective planning defaults and rule packs for a workflow type."
-        }
-      ]
+      entries: builtinInstructionEntriesForModule("planning")
     }
   },
   async onCommand(command, ctx) {

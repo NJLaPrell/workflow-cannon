@@ -1,4 +1,5 @@
 import type { WorkflowModule } from "../../contracts/module-contract.js";
+import { builtinInstructionEntriesForModule } from "../../contracts/builtin-run-command-manifest.js";
 import { queryLineageChain } from "../../core/lineage-store.js";
 import { resolveSessionId } from "../../core/session-policy.js";
 import {
@@ -30,33 +31,7 @@ export const improvementModule: WorkflowModule = {
     },
     instructions: {
       directory: "src/modules/improvement/instructions",
-      entries: [
-        {
-          name: "generate-recommendations",
-          file: "generate-recommendations.md",
-          description: "Produce evidence-backed workflow recommendations."
-        },
-        {
-          name: "query-lineage",
-          file: "query-lineage.md",
-          description: "Reconstruct lineage chain for a recommendation task id."
-        },
-        {
-          name: "sync-transcripts",
-          file: "sync-transcripts.md",
-          description: "Sync local transcript JSONL files into the archive."
-        },
-        {
-          name: "ingest-transcripts",
-          file: "ingest-transcripts.md",
-          description: "Run transcript sync and recommendation generation in one flow."
-        },
-        {
-          name: "transcript-automation-status",
-          file: "transcript-automation-status.md",
-          description: "Emit stable JSON status for transcript sync, ingest, and retry queue."
-        }
-      ]
+      entries: builtinInstructionEntriesForModule("improvement")
     }
   },
 

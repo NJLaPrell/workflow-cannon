@@ -28,7 +28,7 @@ Status legend:
 | Phase 11 - Architectural review follow-up (`T292`–`T295`) | `v0.12.0` | Completed |
 | Phase 12 - Cursor native UI thin client (`T296`–`T310`) | `v0.13.0` | Completed |
 | Phase 25 - Agent playbooks and direction sets (`T433`–`T439`) | `v0.26.0` | Completed |
-| Phase 26 - Module platform and improvement execution (`T388`, `T389`, `T391`, `T393`, transcript `imp-*` queue) | `v0.27.0` | In progress (`T###` ready; `imp-*` proposed until triage) |
+| Phase 26 - Module platform and improvement execution (`T388`, `T389`, `T391`, `T393`, transcript `imp-*` queue) | `v0.27.0` | Module slice done in-repo; release pending; `imp-*` proposed until triage |
 
 ## Feature Matrix by Phase
 

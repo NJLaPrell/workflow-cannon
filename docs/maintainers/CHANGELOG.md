@@ -8,7 +8,16 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ### Added
 
+- **Contracts** — **`builtin-run-command-manifest.json`** (+ **`builtin-run-command-manifest.ts`**): canonical shipped `workspace-kit run` commands (instruction file, optional **`policyOperationId`**, optional **`defaultResponseTemplateId`**); consumed by module registrations, **`src/core/policy.ts`**, response-template resolution, and CI check scripts.
+- **Task Engine** — **`mutation-utils.ts`**: shared idempotency, metadata path, and wishlist conversion helpers used by **`task-engine-internal.ts`** (smaller dispatch module).
 - **Task Engine** — **`demote`** transition on **`run-transition`**: **`ready` → `proposed`** (return work to triage without **`cancel`**).
+
+### Documentation
+
+- **Maintainer workbooks** — Transcript baseline: improvement lifecycle + triage/demote pointers; cadence **`decision`** operator matrix. Task-engine workbook: SQLite-default persistence, **`demote`** in transition table, state diagram note.
+- **`src/modules/task-engine/README.md`** — Persistence, layout (`mutation-utils`), and lifecycle cross-links aligned with shipped behavior.
+- **`docs/maintainers/ARCHITECTURE.md`** — Default module bundle includes **`agent-behavior`**; builtin run commands and policy bindings are sourced from **`builtin-run-command-manifest.json`**.
+- **`docs/maintainers/module-build-guide.md`** — Explicit **shipped selective re-exports** snapshot under barrel policy.
 
 ## [0.26.0] - 2026-03-30
 

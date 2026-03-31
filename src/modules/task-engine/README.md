@@ -5,13 +5,13 @@ Phase 1 core module for structured task lifecycle management.
 ## Capabilities
 
 - **Task schema**: Typed `TaskEntity` with status, priority, dependencies, scope, and acceptance criteria
-- **Lifecycle transitions**: Six states (`proposed`, `ready`, `in_progress`, `blocked`, `completed`, `cancelled`) with guard-validated transitions
+- **Lifecycle transitions**: Six states (`proposed`, `ready`, `in_progress`, `blocked`, `completed`, `cancelled`) with guard-validated transitions (including **`demote`**: `ready` → `proposed`; see `instructions/run-transition.md`)
 - **Guard system**: Pluggable `TransitionGuard` hooks with built-in `state-validity` and `dependency-check` guards
 - **Auto-unblock**: Dependents automatically move `blocked → ready` when all deps complete
-- **Persistence**: File-backed JSON store at `.workspace-kit/tasks/state.json` with atomic writes
+- **Persistence**: Config-driven — default **SQLite** planning row (`tasks.persistenceBackend: sqlite`); optional JSON file opt-out (see `config.md`, `planning-open.ts`, `sqlite-dual-planning.ts`)
 - **Evidence**: Every transition produces a timestamped `TransitionEvidence` record
 - **Next-action suggestions**: Priority-sorted ready queue with blocking chain analysis
-- **Wishlist (ideation)**: Separate namespace `W###` persisted at `.workspace-kit/wishlist/state.json`, with strict intake and `convert-wishlist` into phased `T###` tasks (see `docs/maintainers/runbooks/wishlist-workflow.md`)
+- **Wishlist (ideation)**: Legacy `W###` path and **`wishlist_intake`** tasks; see maintainer runbooks
 - **Run API schemas**: Versioned command argument/response contracts in `schemas/task-engine-run-contracts.schema.json` (kept in sync with command registration by `scripts/check-task-engine-run-contracts.mjs`)
 
 ## Commands
@@ -30,25 +30,26 @@ Phase 1 core module for structured task lifecycle management.
 
 - **Stable for cross-module use:** import planning persistence and shared types from **`src/core/planning/index.js`** (facade) rather than deep `task-engine` internals when possible.
 - **Task-engine barrel (`src/modules/index.ts`):** re-exports selected symbols (`taskEngineModule`, `TaskStore`, wishlist helpers, …) for CLI wiring and integrators — see **`docs/maintainers/module-build-guide.md` → Barrel export policy**.
-- **Internals:** `task-engine-internal.ts` holds module registration and `onCommand` dispatch; `index.ts` is the package-facing export surface.
+- **Internals:** `task-engine-internal.ts` holds module registration and `onCommand` dispatch; shared mutation/idempotency helpers live in **`mutation-utils.ts`**; `index.ts` is the package-facing export surface.
 
 ## Architecture
 
 ```
-index.ts          Re-exports module + shared types/helpers
+index.ts                 Re-exports module + shared types/helpers
 task-engine-internal.ts  Registration + onCommand dispatch
-types.ts          Core type definitions
-transitions.ts    Allowed transition map, guards, TransitionValidator
-store.ts          File-backed JSON TaskStore
-wishlist-store.ts File-backed JSON WishlistStore
-service.ts        TransitionService (orchestrates transitions + auto-unblock)
-suggestions.ts    Next-action suggestion engine
-instructions/     Markdown instruction files for each command
+mutation-utils.ts        Idempotency digests, metadata path reads, conversion helpers
+types.ts                 Core type definitions
+transitions.ts           Allowed transition map, guards, TransitionValidator
+store.ts                 TaskStore (JSON file or SQLite-backed via planning layer)
+wishlist-store.ts        WishlistStore (legacy JSON paths where applicable)
+service.ts               TransitionService (orchestrates transitions + auto-unblock)
+suggestions.ts           Next-action suggestion engine
+instructions/            Markdown instruction files for each command
 ```
 
 ## Concurrency semantics
 
-- `TaskStore` is designed for single-workspace use with atomic file replace on save (`write tmp` -> `rename`).
+- `TaskStore` is designed for single-workspace use with atomic file replace on save (`write tmp` -> `rename`) when using JSON files; SQLite uses transactional updates via the planning store.
 - Multi-writer behavior is best-effort: concurrent writers do not produce partial JSON, but last-writer-wins can overwrite another writer's in-memory view.
 - `transitionLog` and `tasks` updates are therefore deterministic for one active writer process; cross-process orchestration should serialize writes through one `workspace-kit` command path.
 - Policy traces (`.workspace-kit/policy/traces.jsonl`) append one JSON line per event; concurrent appends must remain line-delimited JSON, but ordering between processes is not guaranteed.

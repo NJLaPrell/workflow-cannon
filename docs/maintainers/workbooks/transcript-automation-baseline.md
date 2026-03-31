@@ -9,6 +9,13 @@ AI-canonical companion: `.ai/workbooks/transcript-automation-baseline.md`.
 - Primary implementation scope: `T244`, `T245`, `T246`, `T247`, `T248`, `T259`.
 - Follow-on hardening tasks (`T249`-`T258`, `T260`-`T266`) must remain compatible with this baseline unless explicitly re-planned.
 
+## Improvement task lifecycle (execution planning)
+
+- `generate-recommendations` / transcript ingest may create **`type: improvement`** tasks (including `imp-*` ids) in the **Task Engine** store (default **SQLite** via `tasks.persistenceBackend: sqlite`; see `docs/maintainers/ADR-sqlite-default-persistence.md`).
+- New recommendations are typically **`proposed`** until a maintainer promotes them to **`ready`** with `workspace-kit run run-transition` **`action":"accept"`** (bounded triage: [`improvement-triage-top-three.md`](../playbooks/improvement-triage-top-three.md)).
+- To pull work out of the ready queue without cancelling, use **`action":"demote"`** (`ready` → `proposed`); see [`AGENT-CLI-MAP.md`](../AGENT-CLI-MAP.md) and `src/modules/task-engine/instructions/run-transition.md`.
+- Friction research and logging before tasks exist: [`improvement-task-discovery.md`](../playbooks/improvement-task-discovery.md).
+
 ## Command model
 
 - `workspace-kit run sync-transcripts`
@@ -57,6 +64,20 @@ All keys resolve through canonical layered config precedence.
 - nested `sync` summary
 - `cadence` decision fields (`minIntervalMinutes`, `skipIfNoNewTranscripts`, `decision`)
 - `generatedRecommendations` block when generation runs
+
+### `cadence.decision` values (operator matrix)
+
+Values are produced by `resolveCadenceDecision` (`src/modules/improvement/transcript-sync-runtime.ts`). The JSON field `cadence.decision` is always one of these strings. **`generate-recommendations`** runs when the cadence allows **or** when the caller sets **`forceGenerate`** / **`runGenerate`** to `true` (override — generation can run even if `decision` shows a skip).
+
+| `cadence.decision` | `generate-recommendations` when no override | Typical follow-up |
+| --- | --- | --- |
+| `skipped-no-new-transcripts` | No (if `skipIfNoNewTranscripts` is true and sync copied 0 files) | Wait for new transcripts, disable skip, or pass **`forceGenerate`** / **`runGenerate`** with policy approval |
+| `skipped-min-interval` | No | Wait for interval, lower `improvement.cadence.minIntervalMinutes`, or force generate |
+| `run-first-ingest` | Yes | First ingest or no prior `lastIngestRunAt` |
+| `run-invalid-last-ingest-at` | Yes | Corrupt/unparseable prior timestamp — treated as allow |
+| `run-min-interval-satisfied` | Yes | Interval elapsed since last ingest |
+
+Deeper operations guidance: [`runbooks/transcript-ingestion-operations.md`](../runbooks/transcript-ingestion-operations.md).
 
 ## Rollout guardrails
 

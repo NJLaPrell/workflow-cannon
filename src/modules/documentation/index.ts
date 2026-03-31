@@ -1,4 +1,5 @@
 import type { WorkflowModule } from "../../contracts/module-contract.js";
+import { builtinInstructionEntriesForModule } from "../../contracts/builtin-run-command-manifest.js";
 import { generateDocument, generateAllDocuments } from "./runtime.js";
 export type {
   DocumentationBatchResult,
@@ -41,18 +42,7 @@ export const documentationModule: WorkflowModule = {
     },
     instructions: {
       directory: "src/modules/documentation/instructions",
-      entries: [
-        {
-          name: "document-project",
-          file: "document-project.md",
-          description: "Generate all project docs from templates to .ai and docs/maintainers surfaces."
-        },
-        {
-          name: "generate-document",
-          file: "generate-document.md",
-          description: "Generate a single document by type for .ai and docs/maintainers surfaces."
-        }
-      ]
+      entries: builtinInstructionEntriesForModule("documentation")
     }
   },
   async onCommand(command, ctx) {

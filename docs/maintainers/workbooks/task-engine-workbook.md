@@ -9,8 +9,8 @@ AI-canonical companion: `.ai/workbooks/task-engine-workbook.md`.
 | Decision | Choice | Rationale |
 | --- | --- | --- |
 | Scope | Dogfood on own tasks + design API for external consumers | Proves the engine on real work while keeping the contract general |
-| Task-state role | Engine-owned canonical JSON state under `.workspace-kit/tasks/state.json` | Engine owns execution state directly |
-| Persistence | File-backed JSON in `.workspace-kit/tasks/state.json` (configurable via module config) | Durable between runs, easy to inspect, consistent with existing kit state |
+| Task-state role | Engine-owned canonical task store (default **SQLite** planning row; JSON file opt-out) | Engine owns execution state directly; see `tasks.persistenceBackend` |
+| Persistence | Default SQLite (`workspace_planning_state.task_store_json`); optional JSON at `.workspace-kit/tasks/state.json` when `tasks.persistenceBackend: json` | Durable between runs; aligns with unified planning DB |
 | Agent integration | Full: CLI dispatch + instruction files + engine reads context and suggests next actions | Agents need discoverability, not just raw dispatch |
 | Dependency behavior | Auto-unblock: dependents move `blocked → ready` when all deps complete | Reduces manual bookkeeping, matches how we actually work |
 | Guard complexity | Full guards: state validation + dependency checks + custom guard hooks | Hooks let modules register pre-transition validators from day one |
@@ -19,7 +19,7 @@ AI-canonical companion: `.ai/workbooks/task-engine-workbook.md`.
 | Human surface | Task-engine commands (`list-tasks`, `get-next-actions`) over canonical state | Operator workflow uses command/query surfaces instead of markdown mirrors |
 | Next-action intelligence | Ready queue sorted by priority with blocking chain analysis | Context-aware recommendations deferred to Phase 3 Enhancement Engine |
 | Evidence | Every transition produces a timestamped evidence record | Consistent with the evidence-first pattern established in Phase 0 |
-| Migration | One-time migration from markdown tracking into engine-owned JSON state | Ongoing execution stays in `.workspace-kit/tasks/state.json` via task commands |
+| Migration | One-time migration from markdown tracking into engine-owned state | Ongoing execution persists via task commands (SQLite default or JSON opt-out) |
 
 ---
 
@@ -29,8 +29,9 @@ Six core lifecycle states, fixed in Phase 1 (extensibility deferred):
 
 ```
 proposed → ready → in_progress → completed
-                → blocked      → ready (unblock)
-                → cancelled
+    ↑        ↓
+  demote    → blocked → ready (unblock)
+            → cancelled (per transition table)
 ```
 
 ### State Definitions
@@ -54,6 +55,7 @@ proposed → ready → in_progress → completed
 | --- | --- | --- | --- | --- |
 | `proposed` | `ready` | accept | none | no (re-propose requires new task) |
 | `proposed` | `cancelled` | reject | none | no |
+| `ready` | `proposed` | demote | none | yes (via accept) |
 | `ready` | `in_progress` | start | `dependency-check`: all deps must be `completed` | yes (via pause) |
 | `ready` | `blocked` | block | none | yes (via unblock) |
 | `ready` | `cancelled` | cancel | none | no |

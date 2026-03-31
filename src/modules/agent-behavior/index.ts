@@ -2,6 +2,7 @@ export { BUILTIN_PROFILES, DEFAULT_BUILTIN_PROFILE_ID } from "./builtins.js";
 export { validateBehaviorProfile, mergeDimensions } from "./validate.js";
 
 import type { WorkflowModule } from "../../contracts/module-contract.js";
+import { builtinInstructionEntriesForModule } from "../../contracts/builtin-run-command-manifest.js";
 import { BUILTIN_PROFILES, DEFAULT_BUILTIN_PROFILE_ID } from "./builtins.js";
 import { diffProfiles, summarizeProfileMarkdown } from "./explain.js";
 import {
@@ -49,18 +50,7 @@ export const agentBehaviorModule: WorkflowModule = {
     },
     instructions: {
       directory: "src/modules/agent-behavior/instructions",
-      entries: [
-        { name: "list-behavior-profiles", file: "list-behavior-profiles.md", description: "List builtin and custom behavior profile ids." },
-        { name: "get-behavior-profile", file: "get-behavior-profile.md", description: "Get one behavior profile by id (resolved)." },
-        { name: "resolve-behavior-profile", file: "resolve-behavior-profile.md", description: "Effective profile + provenance for the workspace." },
-        { name: "set-active-behavior-profile", file: "set-active-behavior-profile.md", description: "Set or clear the workspace active behavior profile." },
-        { name: "create-behavior-profile", file: "create-behavior-profile.md", description: "Create a custom profile, optionally forked from a base." },
-        { name: "update-behavior-profile", file: "update-behavior-profile.md", description: "Patch a custom behavior profile." },
-        { name: "delete-behavior-profile", file: "delete-behavior-profile.md", description: "Delete a custom behavior profile." },
-        { name: "diff-behavior-profiles", file: "diff-behavior-profiles.md", description: "Structured diff of two profiles." },
-        { name: "explain-behavior-profiles", file: "explain-behavior-profiles.md", description: "Deterministic markdown summary or compare." },
-        { name: "interview-behavior-profile", file: "interview-behavior-profile.md", description: "Guided interview to draft a custom profile." }
-      ]
+      entries: builtinInstructionEntriesForModule("agent-behavior")
     }
   },
 

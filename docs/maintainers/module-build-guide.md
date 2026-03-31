@@ -104,6 +104,10 @@ Stop work when there is unapproved critical risk (irreversible data loss or crit
 - **Rule**: add a barrel re-export only when (a) tests or `src/` entrypoints need it without deep imports, or (b) the symbol is part of the supported npm API. Otherwise import from `src/modules/<module>/index.js` directly inside the repo.
 - **Changelog**: trimming or adding re-exports may impact npm consumers — note it in `docs/maintainers/CHANGELOG.md`.
 
+### Shipped selective re-exports (current)
+
+As of the default registry in `src/modules/index.ts`, the barrel **re-exports** (beyond `defaultRegistryModules`): **`agent-behavior`** helpers and types, **`approvals`**, **`documentation`** (module + selected doc types), **`improvement`** (module + confidence helpers), **`planning`**, **`workspace-config`**, and **`task-engine`** (module, `TaskStore`, transition helpers, wishlist validators, planning paths). Modules **not** re-exported at the barrel (e.g. consume via `src/modules/<id>/index.js`) should stay that way until a stable npm API needs them.
+
 ## Definition Of Done
 
 A module task is done only when all are true:

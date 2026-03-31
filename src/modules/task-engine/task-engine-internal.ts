@@ -1,6 +1,6 @@
 import type { WorkflowModule } from "../../contracts/module-contract.js";
-import crypto from "node:crypto";
-import type { TaskEntity, TaskMutationEvidence, TaskMutationType, TaskPriority, TaskStatus } from "./types.js";
+import { builtinInstructionEntriesForModule } from "../../contracts/builtin-run-command-manifest.js";
+import type { TaskEntity, TaskMutationType, TaskPriority, TaskStatus } from "./types.js";
 import { maybeSpawnTranscriptHookAfterCompletion } from "../../core/transcript-completion-hook.js";
 import { TaskStore } from "./store.js";
 import { TransitionService } from "./service.js";
@@ -15,7 +15,7 @@ import { planningSqliteDatabaseRelativePath, planningStrictValidationEnabled } f
 import { validateTaskSetForStrictMode } from "./strict-task-validation.js";
 import { validateKnownTaskTypeRequirements } from "./task-type-validation.js";
 import { UnifiedStateDb } from "../../core/state/unified-state-db.js";
-import type { WishlistConversionDecomposition, WishlistItem } from "./wishlist-types.js";
+import type { WishlistItem } from "./wishlist-types.js";
 import {
   buildWishlistItemFromIntake,
   validateWishlistContentFields,
@@ -34,9 +34,20 @@ import {
   wishlistIntakeTaskToItem,
   WISHLIST_INTAKE_TASK_TYPE
 } from "./wishlist-intake.js";
+import {
+  buildTaskFromConversionPayload,
+  digestPayload,
+  findIdempotentMutation,
+  isRecordLike,
+  mutationEvidence,
+  nowIso,
+  parseConversionDecomposition,
+  readIdempotencyValue,
+  readMetadataPath,
+  SAFE_METADATA_PATH_RE,
+  TASK_ID_RE
+} from "./mutation-utils.js";
 
-const TASK_ID_RE = /^T\d+$/;
-const SAFE_METADATA_PATH_RE = /^[a-zA-Z0-9_-]+(?:\.[a-zA-Z0-9_-]+)*$/;
 const MUTABLE_TASK_FIELDS = new Set([
   "title",
   "type",
@@ -51,81 +62,6 @@ const MUTABLE_TASK_FIELDS = new Set([
   "acceptanceCriteria"
 ]);
 
-function isRecordLike(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function readMetadataPath(
-  metadata: Record<string, unknown> | undefined,
-  path: string
-): unknown {
-  if (!metadata || !SAFE_METADATA_PATH_RE.test(path)) {
-    return undefined;
-  }
-  const parts = path.split(".");
-  let current: unknown = metadata;
-  for (const part of parts) {
-    if (!isRecordLike(current)) {
-      return undefined;
-    }
-    if (!Object.prototype.hasOwnProperty.call(current, part)) {
-      return undefined;
-    }
-    current = current[part];
-  }
-  return current;
-}
-
-function stableStringify(value: unknown): string {
-  if (Array.isArray(value)) {
-    return `[${value.map((entry) => stableStringify(entry)).join(",")}]`;
-  }
-  if (value && typeof value === "object") {
-    const record = value as Record<string, unknown>;
-    const keys = Object.keys(record).sort();
-    return `{${keys.map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`).join(",")}}`;
-  }
-  return JSON.stringify(value);
-}
-
-function digestPayload(value: unknown): string {
-  return crypto.createHash("sha256").update(stableStringify(value)).digest("hex");
-}
-
-function readIdempotencyValue(
-  args: Record<string, unknown>
-): string | undefined {
-  const raw = args.clientMutationId;
-  if (typeof raw !== "string") {
-    return undefined;
-  }
-  const trimmed = raw.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
-}
-
-function findIdempotentMutation(
-  store: TaskStore,
-  mutationType: TaskMutationType,
-  taskId: string,
-  clientMutationId: string
-): { payloadDigest?: string } | null {
-  const log = store.getMutationLog();
-  for (let idx = log.length - 1; idx >= 0; idx -= 1) {
-    const entry = log[idx];
-    if (entry.mutationType !== mutationType || entry.taskId !== taskId) {
-      continue;
-    }
-    if (!entry.details || entry.details.clientMutationId !== clientMutationId) {
-      continue;
-    }
-    return {
-      payloadDigest:
-        typeof entry.details.payloadDigest === "string" ? entry.details.payloadDigest : undefined
-    };
-  }
-  return null;
-}
-
 function strictValidationError(
   store: TaskStore,
   effectiveConfig: Record<string, unknown> | undefined
@@ -134,100 +70,6 @@ function strictValidationError(
     return null;
   }
   return validateTaskSetForStrictMode(store.getAllTasks());
-}
-
-function nowIso(): string {
-  return new Date().toISOString();
-}
-
-function parseConversionDecomposition(
-  raw: unknown
-): { ok: true; value: WishlistConversionDecomposition } | { ok: false; message: string } {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    return { ok: false, message: "convert-wishlist requires 'decomposition' object" };
-  }
-  const o = raw as Record<string, unknown>;
-  const rationale = typeof o.rationale === "string" ? o.rationale.trim() : "";
-  const boundaries = typeof o.boundaries === "string" ? o.boundaries.trim() : "";
-  const dependencyIntent = typeof o.dependencyIntent === "string" ? o.dependencyIntent.trim() : "";
-  if (!rationale || !boundaries || !dependencyIntent) {
-    return {
-      ok: false,
-      message: "decomposition requires non-empty rationale, boundaries, and dependencyIntent"
-    };
-  }
-  return { ok: true, value: { rationale, boundaries, dependencyIntent } };
-}
-
-function buildTaskFromConversionPayload(
-  row: Record<string, unknown>,
-  timestamp: string
-): { ok: true; task: TaskEntity } | { ok: false; message: string } {
-  const id = typeof row.id === "string" ? row.id.trim() : "";
-  if (!TASK_ID_RE.test(id)) {
-    return { ok: false, message: "Each converted task requires 'id' matching T<number>" };
-  }
-  const title = typeof row.title === "string" ? row.title.trim() : "";
-  if (!title) {
-    return { ok: false, message: `Task '${id}' requires non-empty title` };
-  }
-  const phase = typeof row.phase === "string" ? row.phase.trim() : "";
-  if (!phase) {
-    return { ok: false, message: `Task '${id}' requires 'phase' for workable tasks` };
-  }
-  const type = typeof row.type === "string" && row.type.trim() ? row.type.trim() : "workspace-kit";
-  const priority =
-    typeof row.priority === "string" && ["P1", "P2", "P3"].includes(row.priority)
-      ? (row.priority as TaskPriority)
-      : undefined;
-  const approach = typeof row.approach === "string" ? row.approach.trim() : "";
-  if (!approach) {
-    return { ok: false, message: `Task '${id}' requires 'approach'` };
-  }
-  const technicalScope = Array.isArray(row.technicalScope)
-    ? row.technicalScope.filter((x) => typeof x === "string")
-    : [];
-  const acceptanceCriteria = Array.isArray(row.acceptanceCriteria)
-    ? row.acceptanceCriteria.filter((x) => typeof x === "string")
-    : [];
-  if (technicalScope.length === 0) {
-    return { ok: false, message: `Task '${id}' requires non-empty technicalScope array` };
-  }
-  if (acceptanceCriteria.length === 0) {
-    return { ok: false, message: `Task '${id}' requires non-empty acceptanceCriteria array` };
-  }
-  const task: TaskEntity = {
-    id,
-    title,
-    type,
-    status: "proposed",
-    createdAt: timestamp,
-    updatedAt: timestamp,
-    priority,
-    dependsOn: Array.isArray(row.dependsOn) ? row.dependsOn.filter((x) => typeof x === "string") : undefined,
-    unblocks: Array.isArray(row.unblocks) ? row.unblocks.filter((x) => typeof x === "string") : undefined,
-    phase,
-    approach,
-    technicalScope,
-    acceptanceCriteria
-  };
-  return { ok: true, task };
-}
-
-function mutationEvidence(
-  mutationType: TaskMutationType,
-  taskId: string,
-  actor?: string,
-  details?: Record<string, unknown>
-): TaskMutationEvidence {
-  return {
-    mutationId: `${mutationType}-${taskId}-${nowIso()}-${crypto.randomUUID().slice(0, 8)}`,
-    mutationType,
-    taskId,
-    timestamp: nowIso(),
-    actor,
-    details
-  };
 }
 
 export const taskEngineModule: WorkflowModule = {
@@ -247,144 +89,7 @@ export const taskEngineModule: WorkflowModule = {
     },
     instructions: {
       directory: "src/modules/task-engine/instructions",
-      entries: [
-        {
-          name: "run-transition",
-          file: "run-transition.md",
-          description: "Execute a validated task status transition."
-        },
-        {
-          name: "create-task",
-          file: "create-task.md",
-          description: "Create a new task through validated task-engine persistence."
-        },
-        {
-          name: "update-task",
-          file: "update-task.md",
-          description: "Update mutable task fields without lifecycle bypass."
-        },
-        {
-          name: "update-wishlist",
-          file: "update-wishlist.md",
-          description: "Update mutable fields on an open Wishlist item."
-        },
-        {
-          name: "archive-task",
-          file: "archive-task.md",
-          description: "Archive a task without destructive deletion."
-        },
-        {
-          name: "add-dependency",
-          file: "add-dependency.md",
-          description: "Add a dependency edge between tasks with cycle checks."
-        },
-        {
-          name: "remove-dependency",
-          file: "remove-dependency.md",
-          description: "Remove a dependency edge between tasks."
-        },
-        {
-          name: "get-dependency-graph",
-          file: "get-dependency-graph.md",
-          description: "Get dependency graph data for one task or the full store."
-        },
-        {
-          name: "get-task-history",
-          file: "get-task-history.md",
-          description: "Get transition and mutation history for a task."
-        },
-        {
-          name: "get-recent-task-activity",
-          file: "get-recent-task-activity.md",
-          description: "List recent transition and mutation activity across tasks."
-        },
-        {
-          name: "get-task-summary",
-          file: "get-task-summary.md",
-          description: "Get aggregate task-state summary for active tasks."
-        },
-        {
-          name: "get-blocked-summary",
-          file: "get-blocked-summary.md",
-          description: "Get blocked-task dependency summary for active tasks."
-        },
-        {
-          name: "create-task-from-plan",
-          file: "create-task-from-plan.md",
-          description: "Promote planning output into a canonical task."
-        },
-        {
-          name: "convert-wishlist",
-          file: "convert-wishlist.md",
-          description: "Convert a Wishlist item into one or more phased tasks and close the wishlist item."
-        },
-        {
-          name: "create-wishlist",
-          file: "create-wishlist.md",
-          description: "Create a Wishlist ideation item with strict required fields (separate namespace from tasks)."
-        },
-        {
-          name: "get-wishlist",
-          file: "get-wishlist.md",
-          description: "Retrieve a single Wishlist item by ID."
-        },
-        {
-          name: "get-task",
-          file: "get-task.md",
-          description: "Retrieve a single task by ID."
-        },
-        {
-          name: "list-tasks",
-          file: "list-tasks.md",
-          description: "List tasks with optional status/phase filters."
-        },
-        {
-          name: "list-wishlist",
-          file: "list-wishlist.md",
-          description: "List Wishlist items (ideation-only; not part of task execution queues)."
-        },
-        {
-          name: "get-ready-queue",
-          file: "get-ready-queue.md",
-          description: "Get ready tasks sorted by priority."
-        },
-        {
-          name: "get-next-actions",
-          file: "get-next-actions.md",
-          description: "Get prioritized next-action suggestions with blocking analysis."
-        },
-        {
-          name: "migrate-task-persistence",
-          file: "migrate-task-persistence.md",
-          description: "Copy task + wishlist state between JSON files and a single SQLite database (offline migration)."
-        },
-        {
-          name: "migrate-wishlist-intake",
-          file: "migrate-wishlist-intake.md",
-          description:
-            "One-time migration: legacy wishlist rows become wishlist_intake tasks; SQLite planning drops the wishlist JSON column."
-        },
-        {
-          name: "list-module-states",
-          file: "list-module-states.md",
-          description: "List unified SQLite module-state rows for diagnostics and migration verification."
-        },
-        {
-          name: "get-module-state",
-          file: "get-module-state.md",
-          description: "Read one module-state row from unified SQLite storage."
-        },
-        {
-          name: "dashboard-summary",
-          file: "dashboard-summary.md",
-          description: "Stable JSON cockpit summary for UI clients (tasks + maintainer status snapshot)."
-        },
-        {
-          name: "explain-task-engine-model",
-          file: "explain-task-engine-model.md",
-          description: "Explain model variants, planning boundaries, lifecycle transitions, and required fields."
-        }
-      ]
+      entries: builtinInstructionEntriesForModule("task-engine")
     }
   },
 
