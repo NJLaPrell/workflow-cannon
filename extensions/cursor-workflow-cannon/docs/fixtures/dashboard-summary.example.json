@@ -10,8 +10,13 @@
       "nextKitPhase": "15",
       "activeFocus": "Example snapshot after Wishlist support."
     },
+    "proposedImprovementsSummary": {
+      "schemaVersion": 1,
+      "count": 1,
+      "top": [{ "id": "imp-example", "title": "Example proposed improvement", "phase": "Phase 29" }]
+    },
     "stateSummary": {
-      "proposed": 0,
+      "proposed": 1,
       "ready": 2,
       "in_progress": 0,
       "blocked": 0,

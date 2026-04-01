@@ -40,6 +40,10 @@ Open the **Workflow Cannon** activity bar to use Dashboard (webview), Tasks (tre
 
 The extension runs `node <repo>/dist/cli.js` (or the published package path under `node_modules`). If dashboard/tasks fail with “CLI not found”, run `pnpm run build` at the repo root.
 
+**Workspace root:** Cursor must open the folder that contains `.workspace-kit/manifest.json` (the Workflow Cannon repo root). If you open a parent directory, the extension will not attach and you get no dashboard/tasks—or you may be pointed at a different task store than you expect.
+
+**Proposed vs ready:** The dashboard “Suggested next” and “Ready preview” rows only reflect tasks in **`ready`** status. **`proposed`** improvement work appears under **Proposed improvements** on the dashboard (after a refresh) and under the **Improvements** group in the Tasks tree. Planning appears when a `build-plan` session file exists.
+
 ## Testing
 
 - Unit + integration tests (Node-only, no Cursor binary):

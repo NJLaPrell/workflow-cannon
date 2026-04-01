@@ -48,6 +48,28 @@ function renderWishlistOpenList(items: unknown): string {
   );
 }
 
+function renderProposedImprovementsList(count: number, items: unknown): string {
+  if (!Array.isArray(items) || items.length === 0) {
+    return `<p class="muted">No proposed improvements in the task store (<code>type: improvement</code> + <code>status: proposed</code>, or <code>imp-*</code> ids). Open the <b>repository root</b> as the workspace folder (folder must contain <code>.workspace-kit/manifest.json</code>). Confirm in a terminal: <code>workspace-kit run list-tasks '{}'</code> matches this view.</p>`;
+  }
+  const more =
+    count > items.length
+      ? '<p class="muted">Showing ' + String(items.length) + " of " + String(count) + " · use Tasks sidebar <b>Improvements</b> or <code>list-tasks</code>.</p>"
+      : "";
+  return (
+    more +
+    "<pre>" +
+    items
+      .map((x) => {
+        const row = x as { id?: unknown; title?: unknown; phase?: unknown };
+        const ph = row?.phase != null && String(row.phase).length > 0 ? " · " + escapeHtml(String(row.phase)) : "";
+        return "- " + escapeHtml(String(row?.id ?? "")) + " " + escapeHtml(String(row?.title ?? "")) + ph;
+      })
+      .join("\n") +
+    "</pre>"
+  );
+}
+
 function renderBlockedList(items: unknown): string {
   if (!Array.isArray(items) || items.length === 0) {
     return '<p class="muted">No blocked tasks.</p>';
@@ -110,6 +132,9 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
   const blockedSummary = (d.blockedSummary as Record<string, unknown>) || {};
   const blockedTop = Array.isArray(blockedSummary.top) ? (blockedSummary.top as unknown[]).slice(0, 3) : [];
   const readyTop = Array.isArray(d.readyQueueTop) ? (d.readyQueueTop as unknown[]).slice(0, 3) : [];
+  const pis = (d.proposedImprovementsSummary as Record<string, unknown> | undefined) ?? {};
+  const piCount = typeof pis.count === "number" ? pis.count : 0;
+  const piTop = Array.isArray(pis.top) ? (pis.top as unknown[]) : [];
   const rqb = d.readyQueueBreakdown as
     | { improvement?: unknown; other?: unknown; schemaVersion?: unknown }
     | undefined;
@@ -153,19 +178,23 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
     String(wishlist.totalCount ?? 0) +
     "</p>" +
     renderWishlistOpenList(wishlistOpenTop) +
+    "<p><b>Proposed improvements</b> (triage backlog — not in ready queue until accepted) · " +
+    String(piCount) +
+    "</p>" +
+    renderProposedImprovementsList(piCount, piTop) +
     "<p><b>Blocked</b> " +
     String(blockedSummary.count ?? 0) +
     "</p>" +
     renderBlockedList(blockedTop) +
-    "<p><b>Ready preview</b> " +
+    "<p><b>Ready preview</b> (execution queue — " +
     String(d.readyQueueCount ?? 0) +
-    "</p>" +
+    ")</p>" +
     breakdownLine +
     renderReadyList(readyTop) +
-    "<p><b>Suggested next</b> " +
+    "<p><b>Suggested next</b> (first ready task only) " +
     (sn && (sn.id != null || sn.title != null)
       ? escapeHtml(String(sn.id ?? "") + " — " + String(sn.title ?? ""))
-      : "—") +
+      : '<span class="muted">— none · promote tasks to <code>ready</code> or complete triage (<code>improvement</code> → accept)</span>') +
     "</p>" +
     renderPlanningSession(planningSession) +
     '<p class="muted">Store updated ' +

@@ -572,6 +572,15 @@ export const taskEngineModule: WorkflowModule = {
         title: i.title
       }));
 
+      const proposedImprovements = tasks
+        .filter((t) => t.status === "proposed" && isImprovementLikeTask(t))
+        .sort((a, b) => a.id.localeCompare(b.id));
+      const proposedImprovementsTop = proposedImprovements.slice(0, 15).map((t) => ({
+        id: t.id,
+        title: t.title,
+        phase: t.phase ?? null
+      }));
+
       const planningSession = toDashboardPlanningSession(await readBuildPlanSession(ctx.workspacePath));
 
       const data = {
@@ -580,6 +589,11 @@ export const taskEngineModule: WorkflowModule = {
         workspaceStatus,
         planningSession,
         stateSummary: suggestion.stateSummary,
+        proposedImprovementsSummary: {
+          schemaVersion: 1 as const,
+          count: proposedImprovements.length,
+          top: proposedImprovementsTop
+        },
         readyQueueTop: readyTop,
         readyQueueCount: readyQueue.length,
         readyQueueBreakdown: {
