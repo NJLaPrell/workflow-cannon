@@ -43,13 +43,14 @@
     "pre-release-transcript-hook": "pnpm run build && node scripts/pre-release-transcript-hook.mjs",
     "transcript:sync": "node scripts/run-transcript-cli.mjs sync-transcripts",
     "transcript:ingest": "node scripts/run-transcript-cli.mjs ingest-transcripts",
-    "ext:compile": "cd extensions/cursor-workflow-cannon && npm run compile",
+    "ext:compile": "pnpm --filter cursor-workflow-cannon run compile",
     "ui:prepare": "pnpm run build && pnpm run ext:compile",
-    "ui:watch": "cd extensions/cursor-workflow-cannon && npm run watch"
+    "ui:watch": "pnpm --filter cursor-workflow-cannon run watch"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.5.0",
+    "@types/vscode": "^1.85.0",
     "typescript": "^5.9.3"
   },
   "files": [

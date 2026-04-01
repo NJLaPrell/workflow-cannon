@@ -2,10 +2,12 @@
 
 ## Automated checks (no IDE required)
 
-From `extensions/cursor-workflow-cannon`:
+From repository root (workspace install — do not use `npm install` in the extension folder):
 
 ```bash
-npm install && npm test
+pnpm install
+pnpm run build
+pnpm --filter cursor-workflow-cannon test
 ```
 
 Includes **dashboard HTML rendering** tests (`render-dashboard.ts` + fixture) so regressions show up in CI-style runs before you F5.
@@ -23,8 +25,9 @@ Includes **dashboard HTML rendering** tests (`render-dashboard.ts` + fixture) so
 ## Prerequisites
 
 1. From repo root run:
+   - `pnpm install`
    - `pnpm run build`
-   - `cd extensions/cursor-workflow-cannon && npm install && npm run compile`
+   - `pnpm run ext:compile` (or `pnpm --filter cursor-workflow-cannon run compile`)
 2. Open the repository in Cursor/VS Code.
 3. Launch **Extension Development Host** for `extensions/cursor-workflow-cannon`.
 

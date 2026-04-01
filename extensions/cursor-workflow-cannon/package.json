@@ -1,5 +1,6 @@
 {
   "name": "cursor-workflow-cannon",
+  "private": true,
   "displayName": "Workflow Cannon",
   "description": "Thin client UI for Workflow Cannon — dashboard, tasks, and config via workspace-kit CLI.",
   "version": "0.1.2",
@@ -127,12 +128,11 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "check": "tsc -p ./ --noEmit",
-    "package": "npm run compile",
-    "test": "npm run compile && node --test test/**/*.test.mjs"
+    "package": "pnpm run compile",
+    "test": "pnpm run compile && node --test test/**/*.test.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
-    "@types/vscode": "^1.85.0",
     "typescript": "^5.9.3"
   }
 }

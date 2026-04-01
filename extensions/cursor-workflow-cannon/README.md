@@ -4,12 +4,14 @@ Thin UI over `workspace-kit`: **no direct edits** to `.workspace-kit/tasks/state
 
 ## Dev setup
 
-From repository root:
+From repository root (the extension is a **pnpm workspace** package — see root **`pnpm-workspace.yaml`**; there is **no** `package-lock.json` here):
 
 ```bash
 pnpm install
 pnpm run ui:prepare
 ```
+
+**Types:** `@types/vscode` is a **root** `devDependency` so TypeScript resolves `import … from "vscode"` when you compile from the workspace. Always install from the repo root first.
 
 One-key launch in Cursor/VS Code:
 
@@ -49,17 +51,11 @@ The extension runs `node <repo>/dist/cli.js` (or the published package path unde
 - Unit + integration tests (Node-only, no Cursor binary):
 
 ```bash
-cd extensions/cursor-workflow-cannon
-npm test
-```
-
-- Root build is required first because integration tests invoke real `dist/cli.js` from the repository:
-
-```bash
 pnpm run build
-cd extensions/cursor-workflow-cannon
-npm test
+pnpm --filter cursor-workflow-cannon test
 ```
+
+- Root **`pnpm run build`** is required first because integration tests invoke real `dist/cli.js` from the repository.
 
 ## Commands and operations
 

@@ -35,6 +35,9 @@ jobs:
       - name: Test
         run: pnpm test
 
+      - name: Cursor extension (pnpm workspace)
+        run: pnpm --filter cursor-workflow-cannon run check && pnpm --filter cursor-workflow-cannon run compile
+
   release-readiness:
     runs-on: ubuntu-latest
     env:

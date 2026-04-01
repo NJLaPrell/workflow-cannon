@@ -64,7 +64,7 @@ Or with pnpm: `pnpm add @workflow-cannon/workspace-kit` then `pnpm exec workspac
 | **CLI** | `workspace-kit` — `doctor`, `config`, `run <module-command>` (see `workspace-kit run` with no args for the list). |
 | **Task engine** | Canonical queue in SQLite by default (`.workspace-kit/tasks/workspace-kit.db`); set `tasks.persistenceBackend: json` to use `.workspace-kit/tasks/state.json` instead. Lifecycle via `run-transition`. **Which task id to create** (`T###` execution vs wishlist intake vs `imp-*`): one-page table in [`docs/maintainers/runbooks/wishlist-workflow.md`](docs/maintainers/runbooks/wishlist-workflow.md). **Persistence map:** [`docs/maintainers/runbooks/task-persistence-operator.md`](docs/maintainers/runbooks/task-persistence-operator.md). |
 | **Docs** | Maintainer process, roadmap, and changelog under `docs/maintainers/`. |
-| **Cursor extension** (optional) | Thin UI in `extensions/cursor-workflow-cannon/` — build with `pnpm run ui:prepare`. |
+| **Cursor extension** (optional) | Thin UI in `extensions/cursor-workflow-cannon/` — pnpm workspace member; build with `pnpm run ui:prepare` after root `pnpm install` (see **`CONTRIBUTING.md`**). |
 
 There is **no** built-in IDE slash command like `/qt` from this package; editor integrations are **your** config (e.g. `.cursor/commands/`), while **`workspace-kit`** is the supported CLI.
 

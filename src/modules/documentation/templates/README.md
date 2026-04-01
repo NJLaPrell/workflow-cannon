@@ -55,7 +55,7 @@ Or with pnpm: `pnpm add @workflow-cannon/workspace-kit` then `pnpm exec wk --hel
 | **CLI** | `workspace-kit` — `doctor`, `config`, `run <module-command>` (see `workspace-kit run` with no args for the list). |
 | **Task engine** | Canonical queue in `.workspace-kit/tasks/state.json`; lifecycle via `run-transition`. Wishlist ideation uses ids `W###` (see maintainer runbooks). |
 | **Docs** | Maintainer process, roadmap, and changelog under `docs/maintainers/`. |
-| **Cursor extension** (optional) | Thin UI in `extensions/cursor-workflow-cannon/` — build with `pnpm run ui:prepare`. |
+| **Cursor extension** (optional) | Thin UI in `extensions/cursor-workflow-cannon/` — pnpm workspace; build with `pnpm run ui:prepare` (see root **`CONTRIBUTING.md`**). |
 
 There is **no** built-in IDE slash command like `/qt` from this package; editor integrations are **your** config (e.g. `.cursor/commands/`), while **`workspace-kit`** is the supported CLI.
 
