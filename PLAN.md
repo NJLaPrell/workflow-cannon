@@ -320,6 +320,15 @@ Synthesis of each item’s upsides and downsides. **Further work:** *Develop* = 
 
 ---
 
+## Registered as wishlist intake
+
+The 20 feature directions above are recorded in the **task store** as **`wishlist_intake`** tasks (ids **T471**–**T490** as of the seed run), via `workspace-kit run create-wishlist` with `requestor` / `evidenceRef` pointing at this file. They stay out of execution **ready-queue** suggestions until converted with `convert-wishlist` per `docs/maintainers/runbooks/wishlist-workflow.md`.
+
+- **List:** `pnpm run build` then `node dist/cli.js run list-wishlist '{}'`.
+- **Re-seed (duplicates rows):** only if intentional — `WK_SEED_PLAN_WISHLIST=1 node scripts/seed-plan-wishlist-intake.mjs` (see script header).
+
+---
+
 ## Follow-up (optional)
 
 Rank and slice these against `docs/maintainers/FEATURE-MATRIX.md` gaps, Phase 29+ roadmap intent, and previously deferred extension scope — prioritizing by impact, implementation cost, and fit with incremental, reversible delivery.
