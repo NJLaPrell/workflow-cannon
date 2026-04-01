@@ -13,17 +13,72 @@
     "proposedImprovementsSummary": {
       "schemaVersion": 1,
       "count": 1,
-      "top": [{ "id": "imp-example", "title": "Example proposed improvement", "phase": "Phase 29" }]
+      "top": [{ "id": "imp-example", "title": "Example proposed improvement", "phase": "Phase 29" }],
+      "phaseBuckets": [
+        {
+          "schemaVersion": 1,
+          "phaseKey": "14",
+          "label": "Phase 14 (current) (0)",
+          "count": 0,
+          "top": []
+        },
+        {
+          "schemaVersion": 1,
+          "phaseKey": "15",
+          "label": "Phase 15 (next) (0)",
+          "count": 0,
+          "top": []
+        },
+        {
+          "schemaVersion": 1,
+          "phaseKey": "29",
+          "label": "Phase 29 (1)",
+          "count": 1,
+          "top": [{ "id": "imp-example", "title": "Example proposed improvement", "phase": "Phase 29" }]
+        }
+      ]
     },
     "proposedExecutionSummary": {
       "schemaVersion": 1,
       "count": 0,
-      "top": []
+      "top": [],
+      "phaseBuckets": [
+        {
+          "schemaVersion": 1,
+          "phaseKey": "14",
+          "label": "Phase 14 (current) (0)",
+          "count": 0,
+          "top": []
+        },
+        {
+          "schemaVersion": 1,
+          "phaseKey": "15",
+          "label": "Phase 15 (next) (0)",
+          "count": 0,
+          "top": []
+        }
+      ]
     },
     "readyImprovementsSummary": {
       "schemaVersion": 1,
       "count": 0,
-      "top": []
+      "top": [],
+      "phaseBuckets": [
+        {
+          "schemaVersion": 1,
+          "phaseKey": "14",
+          "label": "Phase 14 (current) (0)",
+          "count": 0,
+          "top": []
+        },
+        {
+          "schemaVersion": 1,
+          "phaseKey": "15",
+          "label": "Phase 15 (next) (0)",
+          "count": 0,
+          "top": []
+        }
+      ]
     },
     "readyExecutionSummary": {
       "schemaVersion": 1,
@@ -31,6 +86,31 @@
       "top": [
         { "id": "T319", "title": "[task-engine] Define Wishlist item schema and validation contract", "priority": "P1", "phase": "Phase 14 - Wishlist intake and conversion" },
         { "id": "T320", "title": "Example second ready task", "priority": "P2", "phase": null }
+      ],
+      "phaseBuckets": [
+        {
+          "schemaVersion": 1,
+          "phaseKey": "14",
+          "label": "Phase 14 (current) (1)",
+          "count": 1,
+          "top": [
+            { "id": "T319", "title": "[task-engine] Define Wishlist item schema and validation contract", "priority": "P1", "phase": "Phase 14 - Wishlist intake and conversion" }
+          ]
+        },
+        {
+          "schemaVersion": 1,
+          "phaseKey": "15",
+          "label": "Phase 15 (next) (0)",
+          "count": 0,
+          "top": []
+        },
+        {
+          "schemaVersion": 1,
+          "phaseKey": null,
+          "label": "Not Phased (1)",
+          "count": 1,
+          "top": [{ "id": "T320", "title": "Example second ready task", "priority": "P2", "phase": null }]
+        }
       ]
     },
     "stateSummary": {
@@ -61,7 +141,8 @@
     },
     "blockedSummary": {
       "count": 0,
-      "top": []
+      "top": [],
+      "phaseBuckets": []
     },
     "suggestedNext": {
       "id": "T319",
@@ -70,6 +151,22 @@
       "priority": "P1",
       "phase": "Phase 14 - Wishlist intake and conversion"
     },
-    "blockingAnalysis": []
+    "blockingAnalysis": [],
+    "dependencyOverview": {
+      "schemaVersion": 1,
+      "activeTaskCount": 2,
+      "includedTaskCount": 2,
+      "edgeCount": 1,
+      "truncated": false,
+      "perfNote": null,
+      "nodes": [
+        { "id": "T319", "status": "ready" },
+        { "id": "T320", "status": "ready" }
+      ],
+      "edges": [{ "from": "T319", "to": "T320" }],
+      "mermaidFlowchart": "flowchart TD\n  n_T319 --> n_T320",
+      "criticalPathReady": ["T320", "T319"]
+    },
+    "planningSession": null
   }
 }

@@ -1,15 +1,15 @@
 schema_version: 1
-current_kit_phase: "34"
-next_kit_phase: "35"
-last_updated: "2026-04-02"
-active_focus: "**Phase 34** execution wave — **`phaseKey` 34** ready: **`T505`**, **`T506`** (consumer), **`T511`**, **`T518`** (Cursor extension). Then **`phaseKey` 35**: **`T507`**, **`T510`**, **`T513`**, **`T520`**, **`T523`** (task engine / queue / planning handoff). Then **`phaseKey` 36**: remaining **`ready`** (policy, integrations, improvement loop, doc architecture **`T491`–`T504`**). Filter: **`list-tasks`** `{\"status\":\"ready\",\"phaseKey\":\"34\"}` etc."
+current_kit_phase: "35"
+next_kit_phase: "36"
+last_updated: "2026-04-01"
+active_focus: "**Phase 35** — **`phaseKey` 35** ready: **`T507`**, **`T510`**, **`T513`**, **`T520`**, **`T523`** (task engine / queue / planning handoff). Then **`phaseKey` 36**: remaining **`ready`** (policy, integrations, improvement loop, doc architecture **`T491`–`T504`**)."
 blockers: []
 pending_decisions: []
 next_agent_actions:
-  - "**Now:** `{\"phaseKey\":\"34\",\"status\":\"ready\"}` — extension + consumer (**`T505`–`T506`**, **`T511`**, **`T518`**)."
-  - "**Next wave:** `{\"phaseKey\":\"35\",\"status\":\"ready\"}` — **`T507`**, **`T510`**, **`T513`**, **`T520`**, **`T523`**."
+  - "**Now:** `{\"phaseKey\":\"35\",\"status\":\"ready\"}` — **`T507`**, **`T510`**, **`T513`**, **`T520`**, **`T523`**."
   - "**Then:** `{\"phaseKey\":\"36\",\"status\":\"ready\"}` — twenty-five tasks (see script **`scripts/apply-ready-task-phase-buckets.mjs`**)."
 last_session_summary:
+  - "2026-04-01: Phase **34** closeout — shipped **`v0.34.0`** — **`T505`**, **`T506`**, **`T511`**, **`T518`** **`completed`**: consumer README lap, **`explain-config`** **`facet`**, **`dashboard-summary`** **`dependencyOverview`**, extension dashboard dependency + planning cards, contract/schema/docs. **`current_kit_phase`** **35**."
   - "2026-04-02: **`update-task`** — rebucketed all **`ready`** tasks: **`phaseKey` 34** (**`T505`**, **`T506`**, **`T511`**, **`T518`**); **35** (**`T507`**, **`T510`**, **`T513`**, **`T520`**, **`T523`**); **36** (twenty-five others incl. **`T491`–`T504`**). Script **`scripts/apply-ready-task-phase-buckets.mjs`**."
   - "2026-04-02: Open PLAN wishlist items **`T471`–`T477`**, **`T479`–`T487`**, **`T489`**, **`T490`** — **`update-wishlist`** (implementation **`expectedOutcome`**), **`convert-wishlist`** → **`T507`–`T524`**, **`update-task`** **`phaseKey`**, **`run-transition accept`** → **`ready`**. Script **`scripts/convert-open-wishlist-to-ready.mjs`**. Left **`T470`** test seed open."
   - "2026-04-01: Wishlist **`T478`** → **`T505`** and **`T488`** → **`T506`** vetted (**`update-wishlist`**), **`convert-wishlist`**, **`run-transition accept`** → **`ready`**. Improvements **`T491`–`T504`** refined (**`update-task`**) and **`accept`** → **`ready`** (agent/human doc split, token hygiene, onboarding + **`explain-config --facet`**)."
@@ -31,7 +31,7 @@ last_session_summary:
 metrics:
   updated_at: "2026-04-01"
   source: "maintainer"
-  notes: "Ready queue phased: 34 extension+consumer (4), 35 engine+planning (5), 36 remainder (25). Phase 33 released v0.33.0."
+  notes: "Phase 34 released v0.34.0. Ready queue: 35 engine+planning (5), 36 remainder (25)."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null

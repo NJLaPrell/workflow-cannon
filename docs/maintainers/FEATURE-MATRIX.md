@@ -35,6 +35,7 @@ Status legend:
 | Phase 31 - Policy, approvals, and sensitivity (`T454`, `T453`, `T468`) | `v0.31.0` | Completed |
 | Phase 32 - Architecture boundaries and platform surfaces (`T456`, `T457`, `T458`) | `v0.32.0` | Completed |
 | Phase 33 - Documentation, editor integration, and CLI ergonomics (`T455`, `T459`–`T461`, `T462`–`T463`, `T464`, `T469`) | `v0.33.0` | Completed |
+| Phase 34 - Cursor extension and consumer experience (`T505`, `T506`, `T511`, `T518`) | `v0.34.0` | Completed |
 
 ## Feature Matrix by Phase
 
@@ -277,6 +278,15 @@ Status legend:
 | Staged `pnpm run check` | Labeled steps, hints on failure, same substantive checks as before | Completed | `T463` |
 | Bounded unknown-command errors | Capped samples + discovery hint for huge command menus | Completed | `T464` |
 | Help text discovery | Top-level `--help` states `run` menu explicitly | Completed | `T469` |
+
+### Phase 34 Cursor extension and consumer experience (`v0.34.0`)
+
+| Product feature | What users/maintainers get | Status | Task coverage |
+| --- | --- | --- | --- |
+| Consumer read-only onboarding | README documents `doctor` / `run` / `get-next-actions` for `npx` installs without maintainer docs | Completed | `T505` |
+| Config explain facets | `explain-config` with `facet` returns bounded key sets; tests ⊆ `resolve-config` effective values | Completed | `T506` |
+| Dashboard dependency surface | `dashboard-summary` carries subgraph + critical path + Mermaid source; extension renders text overview | Completed | `T511` |
+| Planning resume card | Extension shows `build-plan` resume CLI + stale/empty copy; E2E checklist | Completed | `T518` |
 
 ## Supporting Milestone Features (cross-phase)
 

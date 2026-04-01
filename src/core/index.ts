@@ -108,6 +108,12 @@ export {
   type ConfigValueType
 } from "./config-metadata.js";
 export {
+  CONFIG_FACET_IDS,
+  isConfigFacetId,
+  listKeysForConfigFacet,
+  type ConfigFacetId
+} from "./config-facets.js";
+export {
   appendConfigMutation,
   CONFIG_MUTATIONS_SCHEMA_VERSION,
   summarizeForEvidence,

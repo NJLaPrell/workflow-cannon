@@ -23,7 +23,12 @@ export class TasksTreeProvider implements vscode.TreeDataProvider<WkNode> {
 
   getTreeItem(element: WkNode): vscode.TreeItem {
     if (element.kind === "group") {
-      const ti = new vscode.TreeItem(element.label, vscode.TreeItemCollapsibleState.Expanded);
+      const collapsed =
+        element.status === "completed" || element.status === "cancelled";
+      const ti = new vscode.TreeItem(
+        element.label,
+        collapsed ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.Expanded
+      );
       ti.id = `g:${element.status}`;
       ti.iconPath = new vscode.ThemeIcon("list-tree");
       return ti;
@@ -40,11 +45,22 @@ export class TasksTreeProvider implements vscode.TreeDataProvider<WkNode> {
       return ti;
     }
     if (element.kind === "improvement-group") {
-      const n = element.tasks.length;
+      const n = element.phaseBuckets.reduce((acc, b) => acc + b.tasks.length, 0);
       const ti = new vscode.TreeItem(`Improvements (${n})`, vscode.TreeItemCollapsibleState.Expanded);
       ti.id = "g:improvements-active";
       ti.iconPath = new vscode.ThemeIcon("wrench");
       ti.description = "type: improvement · proposed (T### or imp-*; triage backlog)";
+      return ti;
+    }
+    if (element.kind === "phase-bucket") {
+      const terminalParent =
+        element.parentSegment === "completed" || element.parentSegment === "cancelled";
+      const ti = new vscode.TreeItem(
+        element.label,
+        terminalParent ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.Expanded
+      );
+      ti.id = `pb:${element.parentSegment}:${element.phaseKey ?? "none"}`;
+      ti.iconPath = new vscode.ThemeIcon("folder");
       return ti;
     }
     if (element.kind === "wishlist-item") {
@@ -81,25 +97,42 @@ export class TasksTreeProvider implements vscode.TreeDataProvider<WkNode> {
       return this.loadRoots();
     }
     if (element.kind === "group") {
-      return element.tasks.map((task) => ({ kind: "task" as const, task }));
+      return element.phaseBuckets;
     }
     if (element.kind === "wishlist-group") {
       return element.items.map((item) => ({ kind: "wishlist-item" as const, item }));
     }
     if (element.kind === "improvement-group") {
+      return element.phaseBuckets;
+    }
+    if (element.kind === "phase-bucket") {
       return element.tasks.map((task) => ({ kind: "task" as const, task }));
     }
     return [];
   }
 
   private async loadRoots(): Promise<WkNode[]> {
-    const taskRes = await this.client.run("list-tasks", {});
+    const [taskRes, dashRes] = await Promise.all([
+      this.client.run("list-tasks", {}),
+      this.client.run("dashboard-summary", {})
+    ]);
 
     if (!taskRes.ok || !taskRes.data || !Array.isArray((taskRes.data as { tasks?: unknown }).tasks)) {
       return [];
     }
 
     const tasks = (taskRes.data as { tasks: unknown[] }).tasks;
-    return buildTaskTreeRootsFromTasks(tasks);
+    let workspace: { currentKitPhase: string | null; nextKitPhase: string | null } | null = null;
+    if (dashRes.ok && dashRes.data && typeof dashRes.data === "object") {
+      const ws = (dashRes.data as { workspaceStatus?: Record<string, unknown> }).workspaceStatus;
+      if (ws && typeof ws === "object") {
+        workspace = {
+          currentKitPhase:
+            typeof ws.currentKitPhase === "string" ? ws.currentKitPhase : null,
+          nextKitPhase: typeof ws.nextKitPhase === "string" ? ws.nextKitPhase : null
+        };
+      }
+    }
+    return buildTaskTreeRootsFromTasks(tasks, workspace);
   }
 }

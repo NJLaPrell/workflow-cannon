@@ -1,5 +1,6 @@
 import type { ConfigRegistryView, WorkflowModule } from "../../contracts/module-contract.js";
 import { builtinInstructionEntriesForModule } from "../../contracts/builtin-run-command-manifest.js";
+import { CONFIG_FACET_IDS, listKeysForConfigFacet } from "../../core/config-facets.js";
 import {
   explainConfigPath,
   normalizeConfigForExport,
@@ -16,11 +17,13 @@ async function handleExplainConfig(
   data?: Record<string, unknown>;
 }> {
   const pathArg = typeof args.path === "string" ? args.path.trim() : "";
-  if (!pathArg) {
+  const facetRaw = typeof args.facet === "string" ? args.facet.trim() : "";
+
+  if (pathArg && facetRaw) {
     return {
       ok: false,
       code: "invalid-config-path",
-      message: "explain-config requires string 'path' (dot-separated, e.g. tasks.storeRelativePath)"
+      message: "explain-config: pass either 'path' or 'facet', not both"
     };
   }
 
@@ -34,6 +37,40 @@ async function handleExplainConfig(
     registry: ctx.registry,
     invocationConfig
   });
+
+  if (facetRaw) {
+    const keys = listKeysForConfigFacet(facetRaw);
+    if (!keys || keys.length === 0) {
+      return {
+        ok: false,
+        code: "invalid-config-facet",
+        message: `explain-config: unknown or empty facet '${facetRaw}'. Use one of: ${CONFIG_FACET_IDS.join(", ")}`
+      };
+    }
+    const entries = keys.map((keyPath) => ({
+      path: keyPath,
+      ...(explainConfigPath(keyPath, layers) as Record<string, unknown>)
+    }));
+    return {
+      ok: true,
+      code: "config-explained",
+      data: {
+        facet: facetRaw,
+        facetKeys: keys,
+        entries,
+        count: entries.length
+      }
+    };
+  }
+
+  if (!pathArg) {
+    return {
+      ok: false,
+      code: "invalid-config-path",
+      message:
+        "explain-config requires string 'path' (e.g. tasks.storeRelativePath) or string 'facet' (e.g. tasks, planning)"
+    };
+  }
 
   const explained = explainConfigPath(pathArg, layers);
   return {

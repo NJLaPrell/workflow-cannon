@@ -127,6 +127,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     button { margin-top: 8px; padding: 4px 8px; cursor: pointer; }
     .ok { color: var(--vscode-testing-iconPassed); }
     .bad { color: var(--vscode-errorForeground); }
+    .phase-stack { margin: 4px 0 8px 0; }
+    details.phase-bucket { margin-bottom: 6px; }
+    details.phase-bucket summary { cursor: pointer; user-select: none; font-weight: 600; }
+    details.phase-bucket pre { margin-top: 4px; }
+    .planning-card { border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35)); border-radius: 6px; padding: 8px; margin: 10px 0; }
+    .dependency-overview { margin: 10px 0; }
+    .a11y-note { font-size: 11px; }
+    pre.resume-cli, pre.mermaid-src { font-size: 11px; }
   </style>
 </head>
 <body>

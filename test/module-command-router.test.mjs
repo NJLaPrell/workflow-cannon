@@ -9,6 +9,7 @@ import {
   agentBehaviorModule,
   documentationModule,
   formatUnknownCommandMessage,
+  getAtPath,
   taskEngineModule,
   workspaceConfigModule
 } from "../dist/index.js";
@@ -112,6 +113,57 @@ test("ModuleCommandRouter explain-config shows sqlite as default tasks.persisten
   assert.equal(result.ok, true);
   assert.equal(result.code, "config-explained");
   assert.equal(result.data?.effectiveValue, "sqlite");
+});
+
+test("ModuleCommandRouter explain-config rejects path and facet together", async () => {
+  const registry = new ModuleRegistry([
+    workspaceConfigModule,
+    documentationModule,
+    agentBehaviorModule,
+    taskEngineModule
+  ]);
+  const router = new ModuleCommandRouter(registry);
+
+  const result = await router.execute(
+    "explain-config",
+    { path: "tasks.persistenceBackend", facet: "tasks" },
+    { ...lifecycleContext, moduleRegistry: registry }
+  );
+
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "invalid-config-path");
+});
+
+test("ModuleCommandRouter explain-config facet entries match resolve-config effective values", async () => {
+  const registry = new ModuleRegistry([
+    workspaceConfigModule,
+    documentationModule,
+    agentBehaviorModule,
+    taskEngineModule
+  ]);
+  const router = new ModuleCommandRouter(registry);
+  const ctx = { ...lifecycleContext, moduleRegistry: registry };
+
+  const resolved = await router.execute("resolve-config", {}, ctx);
+  assert.equal(resolved.ok, true);
+  const effective = resolved.data?.effective;
+  assert.ok(effective && typeof effective === "object");
+
+  for (const facet of ["tasks", "kit"]) {
+    const explained = await router.execute("explain-config", { facet }, ctx);
+    assert.equal(explained.ok, true);
+    assert.equal(explained.code, "config-explained");
+    const facetKeys = explained.data?.facetKeys;
+    const entries = explained.data?.entries;
+    assert.ok(Array.isArray(facetKeys) && facetKeys.length > 0);
+    assert.ok(Array.isArray(entries) && entries.length === facetKeys.length);
+    for (const entry of entries) {
+      const path = entry.path;
+      assert.ok(typeof path === "string");
+      const ev = getAtPath(effective, path);
+      assert.deepEqual(entry.effectiveValue, ev);
+    }
+  }
 });
 
 test("ModuleCommandRouter executes resolve-config", async () => {

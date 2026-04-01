@@ -53,6 +53,8 @@ npx workspace-kit --help
 npx workspace-kit run
 ```
 
+**Read-only first lap (no default config writes):** `npx workspace-kit doctor`, `npx workspace-kit run` (command menu), `npx workspace-kit run get-next-actions '{}'` — same discovery path as in-repo **`pnpm run wk …`** but with the global/local install on your `PATH`.
+
 `--help` prints the top-level guide; `run` with no subcommand lists every module command. In a repo that already contains maintainer docs, paths like `docs/maintainers/AGENT-CLI-MAP.md` match this repository; in a consumer project, use the copy shipped under `node_modules/@workflow-cannon/workspace-kit/` or your own docs link.
 
 Or with pnpm: `pnpm add @workflow-cannon/workspace-kit` then `pnpm exec workspace-kit --help` and `pnpm exec workspace-kit run`.

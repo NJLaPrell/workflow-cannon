@@ -34,6 +34,8 @@ Includes **dashboard HTML rendering** tests (`render-dashboard.ts` + fixture) so
 ## Checklist
 
 - [ ] **Dashboard loads**: open the Workflow Cannon activity bar and confirm Dashboard renders state summary from `workspace-kit run dashboard-summary`.
+- [ ] **Dependency overview**: confirm **Dependency overview** (counts, critical path text, optional Mermaid source) matches your task store; with **>50** active tasks, confirm truncated subgraph + perf note (full graph remains available via `get-dependency-graph`).
+- [ ] **Planning session card**: with no `build-plan` snapshot, card explains empty state + stale behavior; start `build-plan`, then confirm **Resume** shows the CLI line from `dashboard-summary` / `.workspace-kit/planning/build-plan-session.json` and clears after completion.
 - [ ] **Dashboard refresh works**: run `Workflow Cannon: Refresh Dashboard`; UI updates without errors.
 - [ ] **Ready queue command works**: run `Workflow Cannon: Show Ready Queue`; quick pick opens.
 - [ ] **Task action works**: run `Workflow Cannon: Task Action`, pick a task, apply an allowed transition, and confirm success feedback.

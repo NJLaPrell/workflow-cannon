@@ -16,6 +16,25 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 - **Post-completion transcript hook** — When **`improvement.hooks.afterTaskCompleted`** is **`ingest`**, the spawned child passes **`policyApproval`** from **`WORKSPACE_KIT_POLICY_APPROVAL`** (JSON) plus **`forceGenerate: true`** so **`ingest-transcripts`** syncs and always runs recommendation generation; invalid/missing env falls back to **`sync-transcripts`** with a logged skip reason (**`src/core/transcript-completion-hook.ts`**).
 - **Cursor extension** — **`pnpm-workspace.yaml`** adds **`extensions/cursor-workflow-cannon`** as a workspace package; removed nested **`package-lock.json`**; **`ext:compile`** / **`ui:watch`** use **`pnpm --filter cursor-workflow-cannon`**. **`@types/vscode`** is a **root** `devDependency` so `tsc` resolves the **`vscode`** API under pnpm. **CI** runs extension **`check`** + **`compile`** after **`pnpm test`**. Maintainer docs: **`CONTRIBUTING.md`**, extension **`README.md`**, **`docs/e2e.md`**.
 
+## [0.34.0] - 2026-04-01
+
+Phase 34 — Cursor extension and consumer experience (**`T505`**, **`T506`**, **`T511`**, **`T518`**).
+
+### Added
+
+- **`explain-config` facets** — JSON arg **`facet`** (`tasks`, `planning`, `improvement`, `kit`, `modules`, `policy`, `responseTemplates`) returns bounded **`entries[]`** per registered key; mutually exclusive with **`path`** (**`src/core/config-facets.ts`**, **`workspace-config`** module).
+- **`dashboard-summary` → `dependencyOverview`** — Active-task dependency subgraph (same edge direction as **`get-dependency-graph`**), optional Mermaid source, **`criticalPathReady`** chain, truncation + perf note when there are many active tasks (**`dashboard-dependency-overview.ts`**).
+- **Extension dashboard** — Renders dependency overview + **planning session** resume card (empty/stale copy + **`resumeCli`**); **`docs/e2e.md`** checklist for large queues and **`build-plan`** refresh behavior.
+
+### Changed
+
+- **README** — Consumer quick start adds an explicit read-only first lap (**`doctor`**, **`run`**, **`get-next-actions`**) for **`npx workspace-kit`** installs.
+
+### Docs / contracts
+
+- **Instructions** — **`explain-config.md`**, **`dashboard-summary.md`** updated for facet + **`dependencyOverview`**.
+- **Schemas** — **`task-engine-run-contracts.schema.json`** **`packageVersion`** **`0.34.0`**; **`dependencyOverview`** required on **`dashboard-summary`** response contract.
+
 ## [0.33.0] - 2026-03-31
 
 Phase 33 — documentation, editor integration, and CLI ergonomics (**`T455`**, **`T459`**, **`T460`**, **`T461`**, **`T462`**, **`T463`**, **`T464`**, **`T469`**).

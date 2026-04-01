@@ -4,10 +4,15 @@ import assert from "node:assert/strict";
 import {
   buildTaskTreeRootsFromTasks,
   effectiveTaskType,
+  inferTreeTaskPhaseKey,
   isActiveImprovementForTree,
   isImprovementLikeForTree,
   isWishlistIntakeOpenForTree
 } from "../dist/views/tasks/build-task-tree.js";
+
+function tasksUnderGroup(g) {
+  return g.phaseBuckets.flatMap((b) => b.tasks);
+}
 
 test("effectiveTaskType infers wishlist_intake from legacyWishlistId when type missing", () => {
   assert.equal(
@@ -125,11 +130,11 @@ test("buildTaskTreeRootsFromTasks adds improvement group and status groups witho
   assert.equal(roots.length, 3);
   assert.equal(roots[0].kind, "wishlist-group");
   assert.equal(roots[1].kind, "improvement-group");
-  assert.equal(roots[1].tasks.length, 1);
+  assert.equal(tasksUnderGroup(roots[1]).length, 1);
   assert.equal(roots[2].kind, "group");
   assert.equal(roots[2].status, "proposed");
-  assert.equal(roots[2].tasks.length, 1);
-  assert.equal(roots[2].tasks[0].id, "T390");
+  assert.equal(tasksUnderGroup(roots[2]).length, 1);
+  assert.equal(tasksUnderGroup(roots[2])[0].id, "T390");
 });
 
 test("buildTaskTreeRootsFromTasks puts ready improvements under ready group, not Improvements", () => {
@@ -140,12 +145,12 @@ test("buildTaskTreeRootsFromTasks puts ready improvements under ready group, not
   ]);
   const impGroup = roots.find((r) => r.kind === "improvement-group");
   assert.ok(impGroup);
-  assert.equal(impGroup.tasks.length, 1);
-  assert.equal(impGroup.tasks[0].id, "imp-a");
+  assert.equal(tasksUnderGroup(impGroup).length, 1);
+  assert.equal(tasksUnderGroup(impGroup)[0].id, "imp-a");
   const readyGroup = roots.find((r) => r.kind === "group" && r.status === "ready");
   assert.ok(readyGroup);
-  assert.equal(readyGroup.tasks.length, 2);
-  const readyIds = new Set(readyGroup.tasks.map((t) => t.id));
+  assert.equal(tasksUnderGroup(readyGroup).length, 2);
+  const readyIds = new Set(tasksUnderGroup(readyGroup).map((t) => t.id));
   assert.ok(readyIds.has("imp-b"));
   assert.ok(readyIds.has("T390"));
 });
@@ -161,5 +166,33 @@ test("buildTaskTreeRootsFromTasks puts imp-* ready tasks in ready group when typ
   );
   const readyGroup = roots.find((r) => r.kind === "group" && r.status === "ready");
   assert.ok(readyGroup);
-  assert.equal(readyGroup.tasks.length, 2);
+  assert.equal(tasksUnderGroup(readyGroup).length, 2);
+});
+
+test("inferTreeTaskPhaseKey prefers phaseKey then parses phase text", () => {
+  assert.equal(inferTreeTaskPhaseKey({ phaseKey: "34", phase: "Phase 99 (x)" }), "34");
+  assert.equal(inferTreeTaskPhaseKey({ phase: "Phase 28 (foo)" }), "28");
+  assert.equal(inferTreeTaskPhaseKey({ phase: "36 remainder" }), "36");
+  assert.equal(inferTreeTaskPhaseKey({}), null);
+});
+
+test("phase buckets order current, next, other keys, then Not Phased", () => {
+  const roots = buildTaskTreeRootsFromTasks(
+    [
+      { id: "A", title: "a", status: "ready", phaseKey: "36" },
+      { id: "B", title: "b", status: "ready", phaseKey: "34" },
+      { id: "C", title: "c", status: "ready" },
+      { id: "D", title: "d", status: "ready", phaseKey: "35" }
+    ],
+    { currentKitPhase: "34", nextKitPhase: "35" }
+  );
+  const ready = roots.find((r) => r.kind === "group" && r.status === "ready");
+  assert.ok(ready);
+  const labels = ready.phaseBuckets.map((b) => b.label);
+  assert.ok(labels[0].includes("(current)"));
+  assert.ok(labels[1].includes("(next)"));
+  assert.equal(ready.phaseBuckets[2].phaseKey, "36");
+  assert.equal(ready.phaseBuckets[3].phaseKey, null);
+  assert.equal(ready.phaseBuckets[3].tasks.length, 1);
+  assert.equal(ready.phaseBuckets[3].tasks[0].id, "C");
 });

@@ -109,23 +109,220 @@ function renderBlockedList(items: unknown): string {
   );
 }
 
+/**
+ * When `dashboard-summary` includes `phaseBuckets`, mirror the Tasks tree: one `<details>` per phase with full counts in the summary line.
+ */
+function renderReadyPhaseBuckets(phaseBuckets: unknown, fallbackTop: unknown, emptyMessage: string): string {
+  if (!Array.isArray(phaseBuckets) || phaseBuckets.length === 0) {
+    return renderReadyList(fallbackTop, emptyMessage);
+  }
+  return (
+    '<div class="phase-stack">' +
+    phaseBuckets
+      .map((raw) => {
+        const b = raw as { label?: unknown; top?: unknown };
+        const summary = escapeHtml(String(b.label ?? ""));
+        const body = renderReadyList(b.top ?? [], "No tasks in this phase.");
+        return '<details open class="phase-bucket"><summary>' + summary + "</summary>" + body + "</details>";
+      })
+      .join("") +
+    "</div>"
+  );
+}
+
+function renderProposedPhaseBuckets(
+  phaseBuckets: unknown,
+  totalCount: number,
+  fallbackTop: unknown
+): string {
+  if (!Array.isArray(phaseBuckets) || phaseBuckets.length === 0) {
+    return renderProposedImprovementsList(totalCount, fallbackTop);
+  }
+  const sumCounts = phaseBuckets.reduce((acc, x) => {
+    const c = (x as { count?: unknown }).count;
+    return acc + (typeof c === "number" ? c : 0);
+  }, 0);
+  const more =
+    sumCounts < totalCount
+      ? '<p class="muted">Preview capped per phase · see Tasks view or <code>list-tasks</code> for full lists.</p>'
+      : "";
+  return (
+    more +
+    '<div class="phase-stack">' +
+    phaseBuckets
+      .map((raw) => {
+        const b = raw as { label?: unknown; top?: unknown; count?: unknown };
+        const summary = escapeHtml(String(b.label ?? ""));
+        const c = typeof b.count === "number" ? b.count : 0;
+        const inner =
+          c === 0
+            ? '<p class="muted">No tasks in this phase.</p>'
+            : renderProposedImprovementsList(c, b.top ?? []);
+        return '<details open class="phase-bucket"><summary>' + summary + "</summary>" + inner + "</details>";
+      })
+      .join("") +
+    "</div>"
+  );
+}
+
+/** Proposed execution uses the same row shape as improvements for phase bodies. */
+function renderProposedExecutionPhaseBuckets(
+  phaseBuckets: unknown,
+  totalCount: number,
+  fallbackTop: unknown
+): string {
+  if (!Array.isArray(phaseBuckets) || phaseBuckets.length === 0) {
+    return renderProposedExecutionList(totalCount, fallbackTop);
+  }
+  const sumCountsPe = phaseBuckets.reduce((acc, x) => {
+    const c = (x as { count?: unknown }).count;
+    return acc + (typeof c === "number" ? c : 0);
+  }, 0);
+  const more =
+    sumCountsPe < totalCount
+      ? '<p class="muted">Preview capped per phase · see Tasks view or <code>list-tasks</code>.</p>'
+      : "";
+  return (
+    more +
+    '<div class="phase-stack">' +
+    phaseBuckets
+      .map((raw) => {
+        const b = raw as { label?: unknown; top?: unknown; count?: unknown };
+        const summary = escapeHtml(String(b.label ?? ""));
+        const c = typeof b.count === "number" ? b.count : 0;
+        const inner =
+          c === 0
+            ? '<p class="muted">No tasks in this phase.</p>'
+            : renderProposedExecutionList(c, b.top ?? []);
+        return '<details open class="phase-bucket"><summary>' + summary + "</summary>" + inner + "</details>";
+      })
+      .join("") +
+    "</div>"
+  );
+}
+
+function renderBlockedPhaseBuckets(phaseBuckets: unknown, fallbackTop: unknown, totalBlocked: number): string {
+  if (!Array.isArray(phaseBuckets) || phaseBuckets.length === 0) {
+    return renderBlockedList(fallbackTop);
+  }
+  const sumBlocked = phaseBuckets.reduce((acc, x) => {
+    const c = (x as { count?: unknown }).count;
+    return acc + (typeof c === "number" ? c : 0);
+  }, 0);
+  const more =
+    sumBlocked < totalBlocked
+      ? '<p class="muted">Preview capped per phase · full list in Tasks or <code>get-next-actions</code>.</p>'
+      : "";
+  return (
+    more +
+    '<div class="phase-stack">' +
+    phaseBuckets
+      .map((raw) => {
+        const b = raw as { label?: unknown; top?: unknown; count?: unknown };
+        const summary = escapeHtml(String(b.label ?? ""));
+        const c = typeof b.count === "number" ? b.count : 0;
+        const inner =
+          c === 0
+            ? '<p class="muted">No blocked tasks in this phase.</p>'
+            : renderBlockedList(b.top ?? []);
+        return '<details open class="phase-bucket"><summary>' + summary + "</summary>" + inner + "</details>";
+      })
+      .join("") +
+    "</div>"
+  );
+}
+
 function renderPlanningSession(ps: unknown): string {
   if (!ps || typeof ps !== "object") {
-    return '<p class="muted"><b>Planning session</b> —</p>';
+    return (
+      '<section class="planning-card" aria-label="Planning session">' +
+      "<p><b>Planning session</b></p>" +
+      '<p class="muted">No in-flight <code>build-plan</code> snapshot. When <code>.workspace-kit/planning/build-plan-session.json</code> exists, this card shows progress and a resume command.</p>' +
+      '<p class="muted"><b>Stale</b> — When the interview completes or the session file is removed, this card clears until a new session starts (use Refresh).</p>' +
+      "</section>"
+    );
   }
   const o = ps as Record<string, unknown>;
-  const pct = typeof o.completionPct === "number" ? o.completionPct : "—";
+  const pct = typeof o.completionPct === "number" ? String(o.completionPct) : "—";
+  const crit =
+    typeof o.answeredCritical === "number" && typeof o.totalCritical === "number"
+      ? escapeHtml(String(o.answeredCritical)) +
+        " / " +
+        escapeHtml(String(o.totalCritical)) +
+        " critical answered"
+      : "";
   return (
+    '<section class="planning-card" aria-label="Planning session resume">' +
     "<p><b>Planning session</b> " +
     escapeHtml(String(o.planningType ?? "")) +
     " · " +
     escapeHtml(String(o.status ?? "")) +
-    " · " +
-    pct +
-    "% critical</p>" +
-    '<pre class="muted">' +
+    "</p>" +
+    "<p>" +
+    escapeHtml(pct) +
+    "% critical complete" +
+    (crit ? " · " + crit : "") +
+    "</p>" +
+    '<p class="muted">Updated ' +
+    escapeHtml(String(o.updatedAt ?? "—")) +
+    "</p>" +
+    "<p><b>Resume</b> (shell):</p>" +
+    '<pre class="resume-cli">' +
     escapeHtml(String(o.resumeCli ?? "")) +
-    "</pre>"
+    "</pre>" +
+    '<p class="muted"><b>Stale</b> — Completing or discarding the interview removes this block on refresh.</p>' +
+    "</section>"
+  );
+}
+
+/** Dependency subgraph + critical path from `dashboard-summary` `dependencyOverview` (text / Mermaid source only). */
+function renderDependencyOverviewHtml(dep: unknown): string {
+  if (dep === null || dep === undefined || typeof dep !== "object") {
+    return (
+      '<section class="dependency-overview" aria-label="Dependency overview">' +
+      '<p class="muted"><b>Dependency overview</b> — no data.</p>' +
+      "</section>"
+    );
+  }
+  const d = dep as Record<string, unknown>;
+  const active = typeof d.activeTaskCount === "number" ? d.activeTaskCount : "—";
+  const included = typeof d.includedTaskCount === "number" ? d.includedTaskCount : "—";
+  const edgeCount = typeof d.edgeCount === "number" ? d.edgeCount : "—";
+  const truncated = d.truncated === true;
+  const perf =
+    typeof d.perfNote === "string" && d.perfNote.length > 0
+      ? '<p class="muted">' + escapeHtml(d.perfNote) + "</p>"
+      : "";
+  const path = Array.isArray(d.criticalPathReady)
+    ? (d.criticalPathReady as unknown[]).map((x) => String(x))
+    : [];
+  const pathLine =
+    path.length > 0
+      ? "<p><b>Critical path (ready frontier)</b> " + escapeHtml(path.join(" → ")) + "</p>"
+      : '<p class="muted"><b>Critical path (ready frontier)</b> — none (no ready tasks in the subgraph).</p>';
+  const mermaid = typeof d.mermaidFlowchart === "string" ? d.mermaidFlowchart : "";
+  const mermaidBlock =
+    mermaid.length > 0
+      ? '<p class="muted"><b>Mermaid</b> (source — not auto-rendered in this panel)</p><pre class="mermaid-src" aria-label="Mermaid dependency graph">' +
+        escapeHtml(mermaid) +
+        "</pre>"
+      : '<p class="muted"><b>Mermaid</b> — omitted when edge count is very high; use <code>get-dependency-graph</code> for tooling.</p>';
+  const truncNote = truncated ? '<p class="muted">Truncated subgraph for large queues (N&gt;50 active tasks).</p>' : "";
+  return (
+    '<section class="dependency-overview" aria-label="Dependency overview">' +
+    "<p><b>Dependency overview</b> · " +
+    escapeHtml(String(included)) +
+    " / " +
+    escapeHtml(String(active)) +
+    " tasks · " +
+    escapeHtml(String(edgeCount)) +
+    " edges</p>" +
+    perf +
+    truncNote +
+    pathLine +
+    mermaidBlock +
+    '<p class="muted a11y-note">No interactive diagram — text and Mermaid source only (screen-reader friendly lists).</p>' +
+    "</section>"
   );
 }
 
@@ -214,25 +411,25 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
     "<p><b>Ready · improvements</b> (" +
     String(readyImpCount) +
     ") — same store as execution queue; triage via accept → <code>ready</code></p>" +
-    renderReadyList(readyImpTop, "No ready improvements.") +
+    renderReadyPhaseBuckets(ris.phaseBuckets, readyImpTop, "No ready improvements.") +
     "<p><b>Ready · execution</b> (" +
     String(readyExeCount) +
     ")</p>" +
     breakdownLine +
-    renderReadyList(readyExeTop, "No ready execution tasks.") +
+    renderReadyPhaseBuckets(res.phaseBuckets, readyExeTop, "No ready execution tasks.") +
     "<p><b>Proposed · improvements</b> (backlog until accepted) · " +
     String(piCount) +
     "</p>" +
-    renderProposedImprovementsList(piCount, piTop) +
+    renderProposedPhaseBuckets(pis.phaseBuckets, piCount, piTop) +
     "<p><b>Proposed · execution</b> (workspace-kit tasks awaiting promote) · " +
     String(peCount) +
     "</p>" +
-    renderProposedExecutionList(peCount, peTop) +
+    renderProposedExecutionPhaseBuckets(pes.phaseBuckets, peCount, peTop) +
     "<p><b>Blocked</b> " +
     String(blockedSummary.count ?? 0) +
     "</p>" +
-    renderBlockedList(blockedTop) +
-    "<p><b>Wishlist</b> (W### — ideation; convert to tasks for the queue) · open " +
+    renderBlockedPhaseBuckets(blockedSummary.phaseBuckets, blockedTop, Number(blockedSummary.count ?? 0)) +
+    "<p><b>Wishlist</b> · open " +
     String(wishlist.openCount ?? 0) +
     " / total " +
     String(wishlist.totalCount ?? 0) +
@@ -243,6 +440,7 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
       ? escapeHtml(String(sn.id ?? "") + " — " + String(sn.title ?? ""))
       : '<span class="muted">— none · promote tasks to <code>ready</code> or complete triage (<code>improvement</code> → accept)</span>') +
     "</p>" +
+    renderDependencyOverviewHtml(d.dependencyOverview) +
     renderPlanningSession(planningSession) +
     '<p class="muted">Store updated ' +
     escapeHtml(String(d.taskStoreLastUpdated ?? "")) +

@@ -57,6 +57,60 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /T319/);
   assert.match(html, /T320/);
   assert.match(html, /W1/);
+  assert.match(html, /phase-bucket/);
+  assert.match(html, /Not Phased/);
+  assert.match(html, /Dependency overview/);
+  assert.match(html, /Critical path \(ready frontier\)/);
+  assert.match(html, /T320/);
+  assert.match(html, /planning-card/);
+  assert.match(html, /No in-flight/);
+});
+
+test("renderDashboardRootInnerHtml planning card shows resume CLI when session present", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [] },
+      readyQueueTop: [],
+      readyQueueCount: 0,
+      suggestedNext: null,
+      planningSession: {
+        schemaVersion: 1,
+        updatedAt: "2026-04-01T12:00:00.000Z",
+        planningType: "wishlist",
+        outputMode: "wishlist",
+        status: "in_progress",
+        completionPct: 40,
+        answeredCritical: 2,
+        totalCritical: 5,
+        resumeCli: "pnpm run wk run build-plan '{\"action\":\"resume\"}'"
+      },
+      taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
+      workspaceStatus: { currentKitPhase: "1", nextKitPhase: "2", activeFocus: "Test" },
+      blockingAnalysis: [],
+      dependencyOverview: {
+        schemaVersion: 1,
+        activeTaskCount: 0,
+        includedTaskCount: 0,
+        edgeCount: 0,
+        truncated: false,
+        perfNote: null,
+        nodes: [],
+        edges: [],
+        mermaidFlowchart: "",
+        criticalPathReady: []
+      }
+    }
+  });
+  assert.match(html, /Resume/);
+  assert.match(html, /build-plan/);
+  assert.match(html, /40%/);
 });
 
 test("renderDashboardRootInnerHtml handles null suggestedNext", () => {
@@ -75,11 +129,25 @@ test("renderDashboardRootInnerHtml handles null suggestedNext", () => {
       suggestedNext: null,
       planningSession: null,
       taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
-      workspaceStatus: { currentKitPhase: "1", nextKitPhase: "2", activeFocus: "Test" }
+      workspaceStatus: { currentKitPhase: "1", nextKitPhase: "2", activeFocus: "Test" },
+      blockingAnalysis: [],
+      dependencyOverview: {
+        schemaVersion: 1,
+        activeTaskCount: 0,
+        includedTaskCount: 0,
+        edgeCount: 0,
+        truncated: false,
+        perfNote: null,
+        nodes: [],
+        edges: [],
+        mermaidFlowchart: "",
+        criticalPathReady: []
+      }
     }
   });
   assert.match(html, /Suggested next/);
   assert.match(html, /No proposed improvements/);
+  assert.match(html, /No in-flight/);
 });
 
 test("renderDashboardRootInnerHtml shows readyQueueBreakdown when present", () => {
@@ -99,7 +167,20 @@ test("renderDashboardRootInnerHtml shows readyQueueBreakdown when present", () =
       suggestedNext: null,
       planningSession: null,
       taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
-      workspaceStatus: { currentKitPhase: "1", nextKitPhase: "2", activeFocus: "Test" }
+      workspaceStatus: { currentKitPhase: "1", nextKitPhase: "2", activeFocus: "Test" },
+      blockingAnalysis: [],
+      dependencyOverview: {
+        schemaVersion: 1,
+        activeTaskCount: 0,
+        includedTaskCount: 0,
+        edgeCount: 0,
+        truncated: false,
+        perfNote: null,
+        nodes: [],
+        edges: [],
+        mermaidFlowchart: "",
+        criticalPathReady: []
+      }
     }
   });
   assert.match(html, /Ready queue · 3 improvements · 1 other/);

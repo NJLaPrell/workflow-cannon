@@ -790,12 +790,42 @@ test("taskEngineModule onCommand dashboard-summary returns stable shape", async 
   assert.ok(Array.isArray(d.wishlist.openTop));
   assert.equal(d.wishlist.openTop.length, 0);
   assert.equal(d.planningSession, null);
-  assert.deepEqual(d.readyImprovementsSummary, { schemaVersion: 1, count: 0, top: [] });
+  assert.equal(d.readyImprovementsSummary.schemaVersion, 1);
+  assert.equal(d.readyImprovementsSummary.count, 0);
+  assert.ok(Array.isArray(d.readyImprovementsSummary.phaseBuckets));
   assert.equal(d.readyExecutionSummary.schemaVersion, 1);
   assert.equal(d.readyExecutionSummary.count, 1);
   assert.equal(d.readyExecutionSummary.top.length, 1);
   assert.equal(d.readyExecutionSummary.top[0].id, "T001");
-  assert.deepEqual(d.proposedExecutionSummary, { schemaVersion: 1, count: 0, top: [] });
+  assert.ok(Array.isArray(d.readyExecutionSummary.phaseBuckets));
+  assert.ok(d.readyExecutionSummary.phaseBuckets.length >= 1);
+  assert.equal(d.proposedExecutionSummary.schemaVersion, 1);
+  assert.equal(d.proposedExecutionSummary.count, 0);
+  assert.ok(Array.isArray(d.proposedExecutionSummary.phaseBuckets));
+  assert.ok(d.dependencyOverview);
+  assert.equal(d.dependencyOverview.schemaVersion, 1);
+  assert.equal(d.dependencyOverview.truncated, false);
+  assert.equal(d.dependencyOverview.activeTaskCount, 1);
+  assert.deepEqual(d.dependencyOverview.criticalPathReady, ["T001"]);
+});
+
+test("taskEngineModule dashboard-summary dependencyOverview critical path orders prerequisites", async () => {
+  const workspace = await tmpDir();
+  const store = TaskStore.forJsonFile(workspace);
+  store.addTask(makeTask({ id: "T100", status: "ready", title: "Root" }));
+  store.addTask(
+    makeTask({ id: "T101", status: "ready", title: "Leaf", dependsOn: ["T100"] })
+  );
+  await store.save();
+
+  const ctx = jsonTaskEngineCtx(workspace);
+  const result = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
+  assert.equal(result.ok, true);
+  const dep = result.data.dependencyOverview;
+  assert.equal(dep.schemaVersion, 1);
+  assert.equal(dep.truncated, false);
+  assert.equal(dep.edgeCount, 1);
+  assert.deepEqual(dep.criticalPathReady, ["T100", "T101"]);
 });
 
 test("taskEngineModule dashboard-summary splits ready improvements vs execution", async () => {

@@ -7,6 +7,11 @@ import { TransitionService } from "./service.js";
 import { TaskEngineError, getAllowedTransitionsFrom } from "./transitions.js";
 import { getNextActions, isImprovementLikeTask } from "./suggestions.js";
 import { readWorkspaceStatusSnapshot } from "./dashboard-status.js";
+import { buildDashboardDependencyOverview } from "./dashboard-dependency-overview.js";
+import {
+  buildDashboardPhaseBucketsForBlocking,
+  buildDashboardPhaseBucketsForTasks
+} from "./dashboard-phase-buckets.js";
 import { inferTaskPhaseKey } from "./phase-resolution.js";
 import { buildQueueHealthReport, buildQueueHintsForTasks } from "./queue-health.js";
 import { readBuildPlanSession, toDashboardPlanningSession } from "../../core/planning/build-plan-session-file.js";
@@ -600,6 +605,45 @@ export const taskEngineModule: WorkflowModule = {
 
       const planningSession = toDashboardPlanningSession(await readBuildPlanSession(ctx.workspacePath));
 
+      const dashboardPhaseTop = 15;
+      const toProposedRow = (t: (typeof tasks)[0]) => ({
+        id: t.id,
+        title: t.title,
+        phase: t.phase ?? null
+      });
+      const readyImprovementsPhaseBuckets = buildDashboardPhaseBucketsForTasks(
+        readyImprovements,
+        workspaceStatus,
+        toReadyRow,
+        dashboardPhaseTop
+      );
+      const readyExecutionPhaseBuckets = buildDashboardPhaseBucketsForTasks(
+        readyExecution,
+        workspaceStatus,
+        toReadyRow,
+        dashboardPhaseTop
+      );
+      const proposedImprovementsPhaseBuckets = buildDashboardPhaseBucketsForTasks(
+        proposedImprovements,
+        workspaceStatus,
+        toProposedRow,
+        dashboardPhaseTop
+      );
+      const proposedExecutionPhaseBuckets = buildDashboardPhaseBucketsForTasks(
+        proposedExecution,
+        workspaceStatus,
+        toProposedRow,
+        dashboardPhaseTop
+      );
+      const blockedPhaseBuckets = buildDashboardPhaseBucketsForBlocking(
+        suggestion.blockingAnalysis,
+        (id) => tasks.find((x) => x.id === id),
+        workspaceStatus,
+        dashboardPhaseTop
+      );
+
+      const dependencyOverview = buildDashboardDependencyOverview(tasks);
+
       const data = {
         schemaVersion: 1 as const,
         taskStoreLastUpdated: store.getLastUpdated(),
@@ -609,22 +653,26 @@ export const taskEngineModule: WorkflowModule = {
         proposedImprovementsSummary: {
           schemaVersion: 1 as const,
           count: proposedImprovements.length,
-          top: proposedImprovementsTop
+          top: proposedImprovementsTop,
+          phaseBuckets: proposedImprovementsPhaseBuckets
         },
         proposedExecutionSummary: {
           schemaVersion: 1 as const,
           count: proposedExecution.length,
-          top: proposedExecutionTop
+          top: proposedExecutionTop,
+          phaseBuckets: proposedExecutionPhaseBuckets
         },
         readyImprovementsSummary: {
           schemaVersion: 1 as const,
           count: readyImprovements.length,
-          top: readyImprovementsTop
+          top: readyImprovementsTop,
+          phaseBuckets: readyImprovementsPhaseBuckets
         },
         readyExecutionSummary: {
           schemaVersion: 1 as const,
           count: readyExecution.length,
-          top: readyExecutionTop
+          top: readyExecutionTop,
+          phaseBuckets: readyExecutionPhaseBuckets
         },
         readyQueueTop: readyTop,
         readyQueueCount: readyQueue.length,
@@ -642,7 +690,8 @@ export const taskEngineModule: WorkflowModule = {
         },
         blockedSummary: {
           count: suggestion.blockingAnalysis.length,
-          top: blockedTop
+          top: blockedTop,
+          phaseBuckets: blockedPhaseBuckets
         },
         suggestedNext: suggestion.suggestedNext
           ? {
@@ -653,6 +702,7 @@ export const taskEngineModule: WorkflowModule = {
               phase: suggestion.suggestedNext.phase ?? null
             }
           : null,
+        dependencyOverview,
         blockingAnalysis: suggestion.blockingAnalysis
       } satisfies Record<string, unknown>;
 

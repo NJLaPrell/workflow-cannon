@@ -6,13 +6,13 @@
   "type": "object",
   "required": ["schemaVersion", "packageVersion", "moduleId", "commands"],
   "additionalProperties": false,
-  "packageVersion": "0.33.0",
+  "packageVersion": "0.34.0",
   "properties": {
     "schemaVersion": {
       "const": 1
     },
     "packageVersion": {
-      "const": "0.33.0",
+      "const": "0.34.0",
       "description": "Must match package.json version."
     },
     "moduleId": {
@@ -594,10 +594,27 @@
                 "wishlist",
                 "blockedSummary",
                 "suggestedNext",
-                "blockingAnalysis"
+                "blockingAnalysis",
+                "dependencyOverview"
               ],
               "additionalProperties": true,
               "properties": {
+                "dependencyOverview": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "activeTaskCount",
+                    "includedTaskCount",
+                    "edgeCount",
+                    "truncated",
+                    "perfNote",
+                    "nodes",
+                    "edges",
+                    "mermaidFlowchart",
+                    "criticalPathReady"
+                  ],
+                  "additionalProperties": true
+                },
                 "planningSession": {
                   "type": ["object", "null"],
                   "required": [
