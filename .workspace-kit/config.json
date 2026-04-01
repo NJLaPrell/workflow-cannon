@@ -1,7 +1,7 @@
 {
   "kit": {
-    "currentPhaseNumber": 33,
-    "currentPhaseLabel": "Phase 33 (documentation, editor integration, and CLI ergonomics)"
+    "currentPhaseNumber": 34,
+    "currentPhaseLabel": "Phase 34 (post–v0.33.0 maintenance)"
   },
   "tasks": {
     "persistenceBackend": "sqlite",

@@ -16,6 +16,33 @@ export function readAfterTaskCompletedHook(effective: Record<string, unknown>): 
   return "off";
 }
 
+/**
+ * Build the third CLI argument for `workspace-kit run ingest-transcripts` when spawning from the
+ * post-completion hook. Merges `WORKSPACE_KIT_POLICY_APPROVAL` JSON into `policyApproval` (run path
+ * does not read the env var). Adds `forceGenerate: true` so each hook run syncs transcripts then
+ * runs recommendation generation (policy traces, task friction, etc.), not only when cadence would allow.
+ */
+export function buildIngestTranscriptsArgsForHook(
+  env: NodeJS.ProcessEnv = process.env
+): { jsonArgs: string; hasApproval: boolean } {
+  const raw = env.WORKSPACE_KIT_POLICY_APPROVAL?.trim();
+  if (!raw) {
+    return { jsonArgs: "{}", hasApproval: false };
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return {
+        jsonArgs: JSON.stringify({ policyApproval: parsed, forceGenerate: true }),
+        hasApproval: true
+      };
+    }
+  } catch {
+    /* treat as absent */
+  }
+  return { jsonArgs: "{}", hasApproval: false };
+}
+
 export function resolveWorkspaceKitCli(workspacePath: string): string | null {
   const candidates = [
     path.join(workspacePath, "node_modules", "@workflow-cannon", "workspace-kit", "dist", "cli.js"),
@@ -83,8 +110,19 @@ export function maybeSpawnTranscriptHookAfterCompletion(
   }
 
   let subcommand = "sync-transcripts";
-  if (mode === "ingest" && process.env.WORKSPACE_KIT_POLICY_APPROVAL?.trim()) {
-    subcommand = "ingest-transcripts";
+  let jsonArgs = "{}";
+  if (mode === "ingest") {
+    const { jsonArgs: ingestArgs, hasApproval } = buildIngestTranscriptsArgsForHook();
+    if (hasApproval) {
+      subcommand = "ingest-transcripts";
+      jsonArgs = ingestArgs;
+    } else {
+      appendHookEvent(workspacePath, "skipped", {
+        reason: "ingest-requires-WORKSPACE_KIT_POLICY_APPROVAL-json-env",
+        mode,
+        fallback: "sync-transcripts"
+      });
+    }
   }
 
   const cli = resolveWorkspaceKitCli(workspacePath);
@@ -111,7 +149,7 @@ export function maybeSpawnTranscriptHookAfterCompletion(
   }
   appendHookEvent(workspacePath, "started", { mode, subcommand });
 
-  const child = spawn(process.execPath, [cli, "run", subcommand, "{}"], {
+  const child = spawn(process.execPath, [cli, "run", subcommand, jsonArgs], {
     cwd: workspacePath,
     detached: true,
     stdio: "ignore",

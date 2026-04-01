@@ -8,6 +8,7 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ### Changed
 
+- **Post-completion transcript hook** — When **`improvement.hooks.afterTaskCompleted`** is **`ingest`**, the spawned child passes **`policyApproval`** from **`WORKSPACE_KIT_POLICY_APPROVAL`** (JSON) plus **`forceGenerate: true`** so **`ingest-transcripts`** syncs and always runs recommendation generation; invalid/missing env falls back to **`sync-transcripts`** with a logged skip reason (**`src/core/transcript-completion-hook.ts`**).
 - **Cursor extension** — **`pnpm-workspace.yaml`** adds **`extensions/cursor-workflow-cannon`** as a workspace package; removed nested **`package-lock.json`**; **`ext:compile`** / **`ui:watch`** use **`pnpm --filter cursor-workflow-cannon`**. **`@types/vscode`** is a **root** `devDependency` so `tsc` resolves the **`vscode`** API under pnpm. **CI** runs extension **`check`** + **`compile`** after **`pnpm test`**. Maintainer docs: **`CONTRIBUTING.md`**, extension **`README.md`**, **`docs/e2e.md`**.
 
 ## [0.33.0] - 2026-03-31

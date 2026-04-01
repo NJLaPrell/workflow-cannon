@@ -91,6 +91,7 @@ export {
 } from "./response-template-registry.js";
 export { applyResponseTemplateApplication } from "./response-template-shaping.js";
 export {
+  buildIngestTranscriptsArgsForHook,
   maybeSpawnTranscriptHookAfterCompletion,
   readAfterTaskCompletedHook,
   resolveWorkspaceKitCli

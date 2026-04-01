@@ -9,6 +9,7 @@ import {
   ModuleCommandRouter,
   ModuleRegistry,
   approvalsModule,
+  buildIngestTranscriptsArgsForHook,
   documentationModule,
   improvementModule,
   planningModule,
@@ -22,6 +23,23 @@ import {
 test("Phase6c: readAfterTaskCompletedHook defaults to off", () => {
   assert.equal(readAfterTaskCompletedHook({}), "off");
   assert.equal(readAfterTaskCompletedHook({ improvement: { hooks: { afterTaskCompleted: "sync" } } }), "sync");
+});
+
+test("Phase6c: buildIngestTranscriptsArgsForHook merges policy + forceGenerate", () => {
+  const empty = buildIngestTranscriptsArgsForHook({});
+  assert.equal(empty.hasApproval, false);
+  assert.equal(empty.jsonArgs, "{}");
+
+  const bad = buildIngestTranscriptsArgsForHook({ WORKSPACE_KIT_POLICY_APPROVAL: "not-json" });
+  assert.equal(bad.hasApproval, false);
+
+  const good = buildIngestTranscriptsArgsForHook({
+    WORKSPACE_KIT_POLICY_APPROVAL: JSON.stringify({ confirmed: true, rationale: "hook" })
+  });
+  assert.equal(good.hasApproval, true);
+  const parsed = JSON.parse(good.jsonArgs);
+  assert.deepEqual(parsed.policyApproval, { confirmed: true, rationale: "hook" });
+  assert.equal(parsed.forceGenerate, true);
 });
 
 test("Phase6c: resolveWorkspaceKitCli finds dist/cli in this repo", () => {

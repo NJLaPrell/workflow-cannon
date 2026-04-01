@@ -28,7 +28,12 @@ Keep local transcript archives out of version control if they may contain sensit
 
 ## Post-completion hook (T274)
 
-`improvement.hooks.afterTaskCompleted`: `off` (default), `sync`, or `ingest` (ingest requires `WORKSPACE_KIT_POLICY_APPROVAL` in the environment of the process running `workspace-kit`, or the hook falls back to sync). Spawns a **detached** child so `run-transition` returns immediately.
+`improvement.hooks.afterTaskCompleted`: `off` (default), `sync`, or `ingest`.
+
+- **`sync`** — detached `workspace-kit run sync-transcripts '{}'` after a task transitions to **`completed`** (no policy JSON needed).
+- **`ingest`** — requires **`WORKSPACE_KIT_POLICY_APPROVAL`** in the environment of the process running **`workspace-kit run run-transition`** (same JSON shape as other env approvals: `{"confirmed":true,"rationale":"…"}`). The hook **merges** that into the child’s third CLI argument as **`policyApproval`** and sets **`forceGenerate: true`**, so the child runs **`ingest-transcripts`**: **sync transcripts**, then **always** runs **`generate-recommendations`** (not cadence-gated). If the env var is missing or invalid JSON, the hook logs **`ingest-requires-WORKSPACE_KIT_POLICY_APPROVAL-json-env`** and falls back to **`sync-transcripts`** only.
+
+Spawns a **detached** child so `run-transition` returns immediately.
 
 Hook observability and overlap controls:
 
