@@ -6,6 +6,8 @@ import type { ModuleInstructionEntry } from "./module-contract.js";
  */
 export type ModuleCommandManifestRow = ModuleInstructionEntry & {
   moduleId: string;
+  /** Declared in `builtin-run-command-manifest.json`; enforced by `scripts/check-builtin-command-manifest.mjs`. */
+  policySensitivity: "non-sensitive" | "sensitive" | "sensitive-with-dryrun";
   /**
    * When set, this command requires JSON `policyApproval` (or session grant) for `workspace-kit run`
    * when sensitive per `isSensitiveModuleCommand` rules in `src/core/policy.ts`.

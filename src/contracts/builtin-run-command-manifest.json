@@ -1,53 +1,404 @@
 [
-  { "moduleId": "workspace-config", "name": "explain-config", "file": "explain-config.md", "description": "Agent-first JSON: effective config value and winning layer for a dotted path." },
-  { "moduleId": "workspace-config", "name": "resolve-config", "file": "resolve-config.md", "description": "Agent-first JSON: full effective config (sorted) and merge layer ids." },
-  { "moduleId": "documentation", "name": "document-project", "file": "document-project.md", "description": "Generate all project docs from templates to .ai and docs/maintainers surfaces.", "policyOperationId": "doc.document-project", "defaultResponseTemplateId": "default" },
-  { "moduleId": "documentation", "name": "generate-document", "file": "generate-document.md", "description": "Generate a single document by type for .ai and docs/maintainers surfaces.", "policyOperationId": "doc.generate-document", "defaultResponseTemplateId": "default" },
-  { "moduleId": "agent-behavior", "name": "list-behavior-profiles", "file": "list-behavior-profiles.md", "description": "List builtin and custom behavior profile ids." },
-  { "moduleId": "agent-behavior", "name": "get-behavior-profile", "file": "get-behavior-profile.md", "description": "Get one behavior profile by id (resolved)." },
-  { "moduleId": "agent-behavior", "name": "resolve-behavior-profile", "file": "resolve-behavior-profile.md", "description": "Effective profile + provenance for the workspace." },
-  { "moduleId": "agent-behavior", "name": "set-active-behavior-profile", "file": "set-active-behavior-profile.md", "description": "Set or clear the workspace active behavior profile." },
-  { "moduleId": "agent-behavior", "name": "create-behavior-profile", "file": "create-behavior-profile.md", "description": "Create a custom profile, optionally forked from a base." },
-  { "moduleId": "agent-behavior", "name": "update-behavior-profile", "file": "update-behavior-profile.md", "description": "Patch a custom behavior profile." },
-  { "moduleId": "agent-behavior", "name": "delete-behavior-profile", "file": "delete-behavior-profile.md", "description": "Delete a custom behavior profile." },
-  { "moduleId": "agent-behavior", "name": "diff-behavior-profiles", "file": "diff-behavior-profiles.md", "description": "Structured diff of two profiles." },
-  { "moduleId": "agent-behavior", "name": "explain-behavior-profiles", "file": "explain-behavior-profiles.md", "description": "Deterministic markdown summary or compare." },
-  { "moduleId": "agent-behavior", "name": "interview-behavior-profile", "file": "interview-behavior-profile.md", "description": "Guided interview to draft a custom profile." },
-  { "moduleId": "task-engine", "name": "run-transition", "file": "run-transition.md", "description": "Execute a validated task status transition.", "policyOperationId": "tasks.run-transition", "defaultResponseTemplateId": "default" },
-  { "moduleId": "task-engine", "name": "create-task", "file": "create-task.md", "description": "Create a new task through validated task-engine persistence.", "defaultResponseTemplateId": "default" },
-  { "moduleId": "task-engine", "name": "update-task", "file": "update-task.md", "description": "Update mutable task fields without lifecycle bypass.", "defaultResponseTemplateId": "default" },
-  { "moduleId": "task-engine", "name": "update-wishlist", "file": "update-wishlist.md", "description": "Update mutable fields on an open Wishlist item.", "defaultResponseTemplateId": "default" },
-  { "moduleId": "task-engine", "name": "archive-task", "file": "archive-task.md", "description": "Archive a task without destructive deletion.", "defaultResponseTemplateId": "default" },
-  { "moduleId": "task-engine", "name": "add-dependency", "file": "add-dependency.md", "description": "Add a dependency edge between tasks with cycle checks.", "defaultResponseTemplateId": "default" },
-  { "moduleId": "task-engine", "name": "remove-dependency", "file": "remove-dependency.md", "description": "Remove a dependency edge between tasks.", "defaultResponseTemplateId": "default" },
-  { "moduleId": "task-engine", "name": "get-dependency-graph", "file": "get-dependency-graph.md", "description": "Get dependency graph data for one task or the full store.", "defaultResponseTemplateId": "default" },
-  { "moduleId": "task-engine", "name": "get-task-history", "file": "get-task-history.md", "description": "Get transition and mutation history for a task.", "defaultResponseTemplateId": "default" },
-  { "moduleId": "task-engine", "name": "get-recent-task-activity", "file": "get-recent-task-activity.md", "description": "List recent transition and mutation activity across tasks.", "defaultResponseTemplateId": "default" },
-  { "moduleId": "task-engine", "name": "get-task-summary", "file": "get-task-summary.md", "description": "Get aggregate task-state summary for active tasks.", "defaultResponseTemplateId": "default" },
-  { "moduleId": "task-engine", "name": "get-blocked-summary", "file": "get-blocked-summary.md", "description": "Get blocked-task dependency summary for active tasks.", "defaultResponseTemplateId": "default" },
-  { "moduleId": "task-engine", "name": "create-task-from-plan", "file": "create-task-from-plan.md", "description": "Promote planning output into a canonical task.", "defaultResponseTemplateId": "default" },
-  { "moduleId": "task-engine", "name": "convert-wishlist", "file": "convert-wishlist.md", "description": "Convert a Wishlist item into one or more phased tasks and close the wishlist item.", "defaultResponseTemplateId": "default" },
-  { "moduleId": "task-engine", "name": "create-wishlist", "file": "create-wishlist.md", "description": "Create a Wishlist ideation item with strict required fields (separate namespace from tasks).", "defaultResponseTemplateId": "default" },
-  { "moduleId": "task-engine", "name": "get-wishlist", "file": "get-wishlist.md", "description": "Retrieve a single Wishlist item by ID.", "defaultResponseTemplateId": "default" },
-  { "moduleId": "task-engine", "name": "get-task", "file": "get-task.md", "description": "Retrieve a single task by ID.", "defaultResponseTemplateId": "default" },
-  { "moduleId": "task-engine", "name": "list-tasks", "file": "list-tasks.md", "description": "List tasks with optional status/phase filters.", "defaultResponseTemplateId": "default" },
-  { "moduleId": "task-engine", "name": "list-wishlist", "file": "list-wishlist.md", "description": "List Wishlist items (ideation-only; not part of task execution queues).", "defaultResponseTemplateId": "default" },
-  { "moduleId": "task-engine", "name": "get-ready-queue", "file": "get-ready-queue.md", "description": "Get ready tasks sorted by priority.", "defaultResponseTemplateId": "default" },
-  { "moduleId": "task-engine", "name": "get-next-actions", "file": "get-next-actions.md", "description": "Get prioritized next-action suggestions with blocking analysis.", "defaultResponseTemplateId": "default" },
-  { "moduleId": "task-engine", "name": "queue-health", "file": "queue-health.md", "description": "Read-only audit: ready queue phase alignment vs canonical phase and dependency blocking.", "defaultResponseTemplateId": "default" },
-  { "moduleId": "task-engine", "name": "migrate-task-persistence", "file": "migrate-task-persistence.md", "description": "Copy task + wishlist state between JSON files and a single SQLite database (offline migration).", "defaultResponseTemplateId": "default" },
-  { "moduleId": "task-engine", "name": "migrate-wishlist-intake", "file": "migrate-wishlist-intake.md", "description": "One-time migration: legacy wishlist rows become wishlist_intake tasks; SQLite planning drops the wishlist JSON column.", "defaultResponseTemplateId": "default" },
-  { "moduleId": "task-engine", "name": "list-module-states", "file": "list-module-states.md", "description": "List unified SQLite module-state rows for diagnostics and migration verification.", "defaultResponseTemplateId": "default" },
-  { "moduleId": "task-engine", "name": "get-module-state", "file": "get-module-state.md", "description": "Read one module-state row from unified SQLite storage.", "defaultResponseTemplateId": "default" },
-  { "moduleId": "task-engine", "name": "dashboard-summary", "file": "dashboard-summary.md", "description": "Stable JSON cockpit summary for UI clients (tasks + maintainer status snapshot).", "defaultResponseTemplateId": "default" },
-  { "moduleId": "task-engine", "name": "explain-task-engine-model", "file": "explain-task-engine-model.md", "description": "Explain model variants, planning boundaries, lifecycle transitions, and required fields.", "defaultResponseTemplateId": "default" },
-  { "moduleId": "approvals", "name": "review-item", "file": "review-item.md", "description": "Review and record an approval decision.", "policyOperationId": "approvals.review-item", "defaultResponseTemplateId": "default" },
-  { "moduleId": "planning", "name": "build-plan", "file": "build-plan.md", "description": "Generate a dependency-aware execution plan.", "defaultResponseTemplateId": "default" },
-  { "moduleId": "planning", "name": "list-planning-types", "file": "list-planning-types.md", "description": "List supported planning workflow types and their intent.", "defaultResponseTemplateId": "default" },
-  { "moduleId": "planning", "name": "explain-planning-rules", "file": "explain-planning-rules.md", "description": "Explain effective planning defaults and rule packs for a workflow type.", "defaultResponseTemplateId": "default" },
-  { "moduleId": "improvement", "name": "generate-recommendations", "file": "generate-recommendations.md", "description": "Produce evidence-backed workflow recommendations.", "policyOperationId": "improvement.generate-recommendations", "defaultResponseTemplateId": "default" },
-  { "moduleId": "improvement", "name": "query-lineage", "file": "query-lineage.md", "description": "Reconstruct lineage chain for a recommendation task id.", "defaultResponseTemplateId": "default" },
-  { "moduleId": "improvement", "name": "sync-transcripts", "file": "sync-transcripts.md", "description": "Sync local transcript JSONL files into the archive.", "defaultResponseTemplateId": "default" },
-  { "moduleId": "improvement", "name": "ingest-transcripts", "file": "ingest-transcripts.md", "description": "Run transcript sync and recommendation generation in one flow.", "policyOperationId": "improvement.ingest-transcripts", "defaultResponseTemplateId": "default" },
-  { "moduleId": "improvement", "name": "transcript-automation-status", "file": "transcript-automation-status.md", "description": "Emit stable JSON status for transcript sync, ingest, and retry queue.", "defaultResponseTemplateId": "default" }
+  {
+    "moduleId": "workspace-config",
+    "name": "explain-config",
+    "file": "explain-config.md",
+    "description": "Agent-first JSON: effective config value and winning layer for a dotted path.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "workspace-config",
+    "name": "resolve-config",
+    "file": "resolve-config.md",
+    "description": "Agent-first JSON: full effective config (sorted) and merge layer ids.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "documentation",
+    "name": "document-project",
+    "file": "document-project.md",
+    "description": "Generate all project docs from templates to .ai and docs/maintainers surfaces.",
+    "policyOperationId": "doc.document-project",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive-with-dryrun"
+  },
+  {
+    "moduleId": "documentation",
+    "name": "generate-document",
+    "file": "generate-document.md",
+    "description": "Generate a single document by type for .ai and docs/maintainers surfaces.",
+    "policyOperationId": "doc.generate-document",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive-with-dryrun"
+  },
+  {
+    "moduleId": "agent-behavior",
+    "name": "list-behavior-profiles",
+    "file": "list-behavior-profiles.md",
+    "description": "List builtin and custom behavior profile ids.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "agent-behavior",
+    "name": "get-behavior-profile",
+    "file": "get-behavior-profile.md",
+    "description": "Get one behavior profile by id (resolved).",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "agent-behavior",
+    "name": "resolve-behavior-profile",
+    "file": "resolve-behavior-profile.md",
+    "description": "Effective profile + provenance for the workspace.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "agent-behavior",
+    "name": "set-active-behavior-profile",
+    "file": "set-active-behavior-profile.md",
+    "description": "Set or clear the workspace active behavior profile.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "agent-behavior",
+    "name": "create-behavior-profile",
+    "file": "create-behavior-profile.md",
+    "description": "Create a custom profile, optionally forked from a base.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "agent-behavior",
+    "name": "update-behavior-profile",
+    "file": "update-behavior-profile.md",
+    "description": "Patch a custom behavior profile.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "agent-behavior",
+    "name": "delete-behavior-profile",
+    "file": "delete-behavior-profile.md",
+    "description": "Delete a custom behavior profile.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "agent-behavior",
+    "name": "diff-behavior-profiles",
+    "file": "diff-behavior-profiles.md",
+    "description": "Structured diff of two profiles.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "agent-behavior",
+    "name": "explain-behavior-profiles",
+    "file": "explain-behavior-profiles.md",
+    "description": "Deterministic markdown summary or compare.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "agent-behavior",
+    "name": "interview-behavior-profile",
+    "file": "interview-behavior-profile.md",
+    "description": "Guided interview to draft a custom profile.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "run-transition",
+    "file": "run-transition.md",
+    "description": "Execute a validated task status transition.",
+    "policyOperationId": "tasks.run-transition",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "create-task",
+    "file": "create-task.md",
+    "description": "Create a new task through validated task-engine persistence.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "update-task",
+    "file": "update-task.md",
+    "description": "Update mutable task fields without lifecycle bypass.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "update-wishlist",
+    "file": "update-wishlist.md",
+    "description": "Update mutable fields on an open Wishlist item.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "archive-task",
+    "file": "archive-task.md",
+    "description": "Archive a task without destructive deletion.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "add-dependency",
+    "file": "add-dependency.md",
+    "description": "Add a dependency edge between tasks with cycle checks.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "remove-dependency",
+    "file": "remove-dependency.md",
+    "description": "Remove a dependency edge between tasks.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "get-dependency-graph",
+    "file": "get-dependency-graph.md",
+    "description": "Get dependency graph data for one task or the full store.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "get-task-history",
+    "file": "get-task-history.md",
+    "description": "Get transition and mutation history for a task.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "get-recent-task-activity",
+    "file": "get-recent-task-activity.md",
+    "description": "List recent transition and mutation activity across tasks.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "get-task-summary",
+    "file": "get-task-summary.md",
+    "description": "Get aggregate task-state summary for active tasks.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "get-blocked-summary",
+    "file": "get-blocked-summary.md",
+    "description": "Get blocked-task dependency summary for active tasks.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "create-task-from-plan",
+    "file": "create-task-from-plan.md",
+    "description": "Promote planning output into a canonical task.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "convert-wishlist",
+    "file": "convert-wishlist.md",
+    "description": "Convert a Wishlist item into one or more phased tasks and close the wishlist item.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "create-wishlist",
+    "file": "create-wishlist.md",
+    "description": "Create a Wishlist ideation item with strict required fields (separate namespace from tasks).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "get-wishlist",
+    "file": "get-wishlist.md",
+    "description": "Retrieve a single Wishlist item by ID.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "get-task",
+    "file": "get-task.md",
+    "description": "Retrieve a single task by ID.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "list-tasks",
+    "file": "list-tasks.md",
+    "description": "List tasks with optional status/phase filters.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "list-wishlist",
+    "file": "list-wishlist.md",
+    "description": "List Wishlist items (ideation-only; not part of task execution queues).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "get-ready-queue",
+    "file": "get-ready-queue.md",
+    "description": "Get ready tasks sorted by priority.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "get-next-actions",
+    "file": "get-next-actions.md",
+    "description": "Get prioritized next-action suggestions with blocking analysis.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "queue-health",
+    "file": "queue-health.md",
+    "description": "Read-only audit: ready queue phase alignment vs canonical phase and dependency blocking.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "migrate-task-persistence",
+    "file": "migrate-task-persistence.md",
+    "description": "Copy task + wishlist state between JSON files and a single SQLite database (offline migration).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "migrate-wishlist-intake",
+    "file": "migrate-wishlist-intake.md",
+    "description": "One-time migration: legacy wishlist rows become wishlist_intake tasks; SQLite planning drops the wishlist JSON column.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "list-module-states",
+    "file": "list-module-states.md",
+    "description": "List unified SQLite module-state rows for diagnostics and migration verification.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "get-module-state",
+    "file": "get-module-state.md",
+    "description": "Read one module-state row from unified SQLite storage.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "dashboard-summary",
+    "file": "dashboard-summary.md",
+    "description": "Stable JSON cockpit summary for UI clients (tasks + maintainer status snapshot).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "explain-task-engine-model",
+    "file": "explain-task-engine-model.md",
+    "description": "Explain model variants, planning boundaries, lifecycle transitions, and required fields.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "approvals",
+    "name": "review-item",
+    "file": "review-item.md",
+    "description": "Review and record an approval decision.",
+    "policyOperationId": "approvals.review-item",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "planning",
+    "name": "build-plan",
+    "file": "build-plan.md",
+    "description": "Generate a dependency-aware execution plan.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "planning",
+    "name": "list-planning-types",
+    "file": "list-planning-types.md",
+    "description": "List supported planning workflow types and their intent.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "planning",
+    "name": "explain-planning-rules",
+    "file": "explain-planning-rules.md",
+    "description": "Explain effective planning defaults and rule packs for a workflow type.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "improvement",
+    "name": "generate-recommendations",
+    "file": "generate-recommendations.md",
+    "description": "Produce evidence-backed workflow recommendations.",
+    "policyOperationId": "improvement.generate-recommendations",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "improvement",
+    "name": "query-lineage",
+    "file": "query-lineage.md",
+    "description": "Reconstruct lineage chain for a recommendation task id.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "improvement",
+    "name": "sync-transcripts",
+    "file": "sync-transcripts.md",
+    "description": "Sync local transcript JSONL files into the archive.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "improvement",
+    "name": "ingest-transcripts",
+    "file": "ingest-transcripts.md",
+    "description": "Run transcript sync and recommendation generation in one flow.",
+    "policyOperationId": "improvement.ingest-transcripts",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "improvement",
+    "name": "transcript-automation-status",
+    "file": "transcript-automation-status.md",
+    "description": "Emit stable JSON status for transcript sync, ingest, and retry queue.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  }
 ]

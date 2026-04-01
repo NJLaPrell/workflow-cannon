@@ -12,6 +12,11 @@ export type BuiltinRunCommandManifestRow = {
   name: string;
   file: string;
   description?: string;
+  /**
+   * Shipped policy classification for `workspace-kit run` (validated in CI).
+   * Must stay aligned with `isSensitiveModuleCommand` / dry-run rules in `src/core/policy.ts`.
+   */
+  policySensitivity: "non-sensitive" | "sensitive" | "sensitive-with-dryrun";
   policyOperationId?: string;
   defaultResponseTemplateId?: string;
   requiresPeers?: string[];

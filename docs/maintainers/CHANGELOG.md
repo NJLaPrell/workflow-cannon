@@ -6,6 +6,24 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.31.0] - 2026-03-31
+
+Phase 31 — policy, approvals, and sensitivity (**`T454`**, **`T453`**, **`T468`**).
+
+### Added
+
+- **Manifest** — every **`builtin-run-command-manifest.json`** row declares **`policySensitivity`** (`non-sensitive` | `sensitive` | `sensitive-with-dryrun`); CI enforces consistency with **`policyOperationId`** and doc dry-run rules.
+- **Maintainer guide** — **`docs/maintainers/how-to-mark-policy-sensitive-run-command.md`** (how to classify new **`workspace-kit run`** commands).
+- **Policy helpers** — repo-relative doc anchors **`POLICY_APPROVAL_TWO_LANES_DOC`**, **`POLICY_APPROVAL_RUN_CANONICAL_DOC`**, wrong-lane copy in **`src/core/policy.ts`**.
+- **Tests** — **`test/policy-manifest-sensitivity.test.mjs`** (manifest vs **`isSensitiveModuleCommand`**); Phase 31 wrong-lane denial in **`test/phase11-architectural-followup.test.mjs`**.
+
+### Changed
+
+- **`workspace-kit run`** — clearer **`policy-denied`** when **`WORKSPACE_KIT_POLICY_APPROVAL`** is set but JSON **`policyApproval`** is missing on a sensitive command; shorter invalid/missing messages with links to the two-lane table.
+- **`workspace-kit doctor`** — when env approval is set, prints a one-line reminder that it does not apply to **`run`**.
+- **Documentation** — **`POLICY-APPROVAL.md`** canonical approval section; **`AGENT-CLI-MAP.md`** two-lane subsection; **`CLI-VISUAL-GUIDE.md`** wrong-lane recovery; **`AGENTS.md`** pointer; **`cli.ts`** config/init denial text uses two-lane anchor.
+- **Schemas** — **`task-engine-run-contracts.schema.json`** **`packageVersion`** **`0.31.0`**.
+
 ## [0.30.0] - 2026-03-31
 
 Phase 30 — persistence, packaging, and task-store evolution (**`T450`–`T452`**, **`T466`**, **`T467`**).

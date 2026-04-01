@@ -165,6 +165,7 @@ export const exampleModule: WorkflowModule = {
 
 ## Related References
 
+- `docs/maintainers/how-to-mark-policy-sensitive-run-command.md` — classify new **`workspace-kit run`** commands (**`policySensitivity`** + **`policyOperationId`**).
 - `.ai/PRINCIPLES.md`
 - `docs/maintainers/PRINCIPLES.md`
 - `src/README.md`

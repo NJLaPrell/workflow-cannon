@@ -52,6 +52,25 @@ export async function collectDoctorPlanningPersistenceIssues(
   }
 }
 
+/** When env approval is set, remind operators it does not apply to `workspace-kit run`. */
+export function collectPolicyLaneEnvDoctorSummaryLines(): string[] {
+  const raw = process.env.WORKSPACE_KIT_POLICY_APPROVAL?.trim();
+  if (!raw) {
+    return [];
+  }
+  try {
+    const o = JSON.parse(raw) as { confirmed?: unknown };
+    if (o.confirmed !== true) {
+      return [];
+    }
+  } catch {
+    return [];
+  }
+  return [
+    "Note: WORKSPACE_KIT_POLICY_APPROVAL is set — it does not apply to workspace-kit run; use JSON policyApproval in the third argument (docs/maintainers/POLICY-APPROVAL.md#two-approval-surfaces-do-not-mix-them-up)."
+  ];
+}
+
 /** Human-readable persistence summary after `doctor` passes (effective backend + canonical paths). */
 export async function collectTaskPersistenceDoctorSummaryLines(cwd: string): Promise<string[]> {
   const { effective } = await resolveRegistryAndConfig(cwd, defaultRegistryModules, {});

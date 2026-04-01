@@ -148,6 +148,8 @@ flowchart LR
   class N bad
 ```
 
+**Wrong-lane recovery:** If you exported **`WORKSPACE_KIT_POLICY_APPROVAL`** but invoked **`workspace-kit run …`** without **`policyApproval`** in the JSON string, the denial JSON explains that the env gate does not apply to `run`. Fix: pass `policyApproval` in the third argument, or use **`init` / `upgrade` / `config`** for env-based approval — see [`POLICY-APPROVAL.md`](./POLICY-APPROVAL.md#two-approval-surfaces-do-not-mix-them-up).
+
 ---
 
 ## `workspace-kit run` — default module bundle (router order)

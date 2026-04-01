@@ -1,13 +1,14 @@
 schema_version: 1
-current_kit_phase: "31"
-next_kit_phase: "32"
+current_kit_phase: "32"
+next_kit_phase: "33"
 last_updated: "2026-03-31"
-active_focus: "**Phase 31** — policy, approvals, and sensitivity; **`T453`–`T455`**, **`T468`** (**`workspace-kit`**, **`ready`**) with **`dependsOn`** **`T453`→`T454`**, **`T468`→`T453`**. Phase **30** shipped **`v0.30.0`** (**`T450`–`T452`**, **`T466`**, **`T467`**). Phases **32–33** queued."
+active_focus: "**Phase 32** — architecture boundaries and platform surfaces; **`T456`–`T458`** (**`workspace-kit`**, **`ready`**) with **`dependsOn`** **`T458`→`T456`**. Phase **31** shipped **`v0.31.0`** (**`T454`**, **`T453`**, **`T468`**). Phase **33** queued."
 blockers: []
 pending_decisions: []
 next_agent_actions:
-  - "Pull next **`ready`** **`workspace-kit`** tasks from **`node dist/cli.js run get-next-actions '{}'`** (or **`wk`**) for Phase **31**."
+  - "Pull next **`ready`** **`workspace-kit`** tasks from **`node dist/cli.js run get-next-actions '{}'`** (or **`wk`**) for Phase **32**."
 last_session_summary:
+  - "2026-03-31: Phase **31** closeout — shipped **`v0.31.0`** — policy manifest **`policySensitivity`** + CI; wrong-lane **`policy-denied`**; **`doctor`** env reminder; POLICY-APPROVAL canonical copy + AGENT-CLI-MAP / visual guide links (**`T454`**, **`T453`**, **`T468`** **`completed`**). **`current_kit_phase`** **32**."
   - "2026-03-31: Phase **30** closeout — shipped **`v0.30.0`** — GitHub release https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.30.0 — ADRs + runbooks; **`doctor`** persistence summary + dynamic native load; **`task-store-migration`**; id onboarding (**`T450`–`T452`**, **`T466`**, **`T467`** **`completed`**). **`current_kit_phase`** **31**."
   - "2026-04-01: **`update-task`** — **`T450`–`T469`**: **`phase`**, **`phaseKey`**, **`dependsOn`** per four-phase plan (**30** persistence/store · **31** policy · **32** boundaries/platform · **33** docs/editor/CLI); script **`scripts/apply-phase-30-33-architect-tasks.mjs`**; maintainer snapshot **`current_kit_phase`** **30**."
   - "2026-03-31: Phase **28** shipped **`v0.29.0`** — GitHub release `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.29.0`; Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23826775242` — **`queue-health`**, **`kit.*`** phase config + doctor mismatch, **`phaseKey`** / **`list-tasks`** hints, **`wk`** bin, maintainer doc alignment (**`T392`**, **`T443`–`T449`** **`completed`**)."
@@ -22,7 +23,7 @@ last_session_summary:
 metrics:
   updated_at: "2026-04-01"
   source: "maintainer"
-  notes: "Phase 30 released v0.30.0; execution focus Phase 31 (T453+)."
+  notes: "Phase 31 released v0.31.0; execution focus Phase 32 (T456+)."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null

@@ -11,6 +11,16 @@ export const POLICY_APPROVAL_HUMAN_DOC = "docs/maintainers/POLICY-APPROVAL.md";
 /** Maintainer doc: tier table + copy-paste patterns for agents (Tier A/B `run` vs CLI env approval). */
 export const AGENT_CLI_MAP_HUMAN_DOC = "docs/maintainers/AGENT-CLI-MAP.md";
 
+/** Table: env vs JSON approval lanes (POLICY-APPROVAL). */
+export const POLICY_APPROVAL_TWO_LANES_DOC = `${POLICY_APPROVAL_HUMAN_DOC}#two-approval-surfaces-do-not-mix-them-up`;
+
+/** Canonical “what counts as approval” for `workspace-kit run` (chat/env lane mismatch). */
+export const POLICY_APPROVAL_RUN_CANONICAL_DOC = `${POLICY_APPROVAL_HUMAN_DOC}#canonical-what-counts-as-approval-for-workspace-kit-run`;
+
+/** When operators set WORKSPACE_KIT_POLICY_APPROVAL but invoke a sensitive `workspace-kit run` without JSON policyApproval. */
+export const POLICY_RUN_ENV_LANE_MISMATCH_DETAIL =
+  "WORKSPACE_KIT_POLICY_APPROVAL is not read for workspace-kit run; pass policyApproval inside the third JSON argument (or use a session grant / interactive approval per POLICY-APPROVAL).";
+
 export type PolicyOperationId =
   | "cli.upgrade"
   | "cli.init"

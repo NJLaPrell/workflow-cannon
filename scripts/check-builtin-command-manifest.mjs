@@ -2,6 +2,7 @@
 /**
  * Validate src/contracts/builtin-run-command-manifest.json:
  * - unique command names
+ * - policySensitivity on every row (non-sensitive | sensitive | sensitive-with-dryrun) consistent with policyOperationId
  * - policyOperationId values match known PolicyOperationId module-run subset
  * - defaultResponseTemplateId values exist in builtin response-template registry
  * - instruction files exist on disk per module
@@ -21,6 +22,8 @@ const KNOWN_POLICY_OPERATION_IDS = new Set([
   "improvement.generate-recommendations",
   "improvement.ingest-transcripts"
 ]);
+
+const ALLOWED_SENSITIVITY = new Set(["non-sensitive", "sensitive", "sensitive-with-dryrun"]);
 
 function fail(message) {
   console.error(`[check-builtin-command-manifest] ${message}`);
@@ -53,6 +56,40 @@ for (const row of manifest) {
     fail(`Duplicate command name '${row.name}' in manifest.`);
   }
   seenNames.add(row.name);
+
+  if (!row.policySensitivity || !ALLOWED_SENSITIVITY.has(row.policySensitivity)) {
+    fail(
+      `Command '${row.name}' must set policySensitivity to one of: non-sensitive, sensitive, sensitive-with-dryrun (declares shipped policy classification for CI + docs).`
+    );
+  }
+
+  if (row.policySensitivity === "non-sensitive") {
+    if (row.policyOperationId !== undefined) {
+      fail(`Command '${row.name}': policySensitivity non-sensitive must not set policyOperationId.`);
+    }
+  } else {
+    if (typeof row.policyOperationId !== "string" || !row.policyOperationId.trim()) {
+      fail(`Command '${row.name}': sensitive rows must declare policyOperationId.`);
+    }
+  }
+
+  if (row.policySensitivity === "sensitive-with-dryrun") {
+    const id = row.policyOperationId;
+    if (id !== "doc.document-project" && id !== "doc.generate-document") {
+      fail(
+        `Command '${row.name}': sensitive-with-dryrun is only valid for doc.document-project / doc.generate-document (matches policy.ts dryRun exception).`
+      );
+    }
+  }
+
+  if (
+    row.policySensitivity === "sensitive" &&
+    (row.policyOperationId === "doc.document-project" || row.policyOperationId === "doc.generate-document")
+  ) {
+    fail(
+      `Command '${row.name}': doc generation commands must use policySensitivity sensitive-with-dryrun (dryRun can waive sensitivity).`
+    );
+  }
 
   if (row.policyOperationId !== undefined) {
     if (typeof row.policyOperationId !== "string" || !KNOWN_POLICY_OPERATION_IDS.has(row.policyOperationId)) {

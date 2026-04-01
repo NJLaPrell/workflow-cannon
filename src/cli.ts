@@ -6,6 +6,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   AGENT_CLI_MAP_HUMAN_DOC,
   POLICY_APPROVAL_HUMAN_DOC,
+  POLICY_APPROVAL_TWO_LANES_DOC,
   appendPolicyTrace,
   parsePolicyApprovalFromEnv,
   resolveActorWithFallback,
@@ -16,6 +17,7 @@ import { runWorkspaceConfigCli } from "./core/config-cli.js";
 import { handleRunCommand } from "./cli/run-command.js";
 import {
   collectDoctorPlanningPersistenceIssues,
+  collectPolicyLaneEnvDoctorSummaryLines,
   collectTaskPersistenceDoctorSummaryLines
 } from "./cli/doctor-planning-issues.js";
 import { ModuleRegistryError } from "./core/module-registry.js";
@@ -156,7 +158,7 @@ async function requireCliPolicyApproval(
   const approval = parsePolicyApprovalFromEnv(process.env);
   if (!approval) {
     writeError(
-      `workspace-kit ${commandLabel} (${operationId}) requires WORKSPACE_KIT_POLICY_APPROVAL with JSON {"confirmed":true,"rationale":"..."} (agent-mediated). For workspace-kit run sensitive commands, use policyApproval in JSON args instead — see docs/maintainers/POLICY-APPROVAL.md.`
+      `workspace-kit ${commandLabel} (${operationId}) requires WORKSPACE_KIT_POLICY_APPROVAL with JSON {"confirmed":true,"rationale":"..."} (env lane). Sensitive workspace-kit run commands use JSON policyApproval instead — see ${POLICY_APPROVAL_TWO_LANES_DOC}.`
     );
     await appendPolicyTrace(cwd, {
       timestamp: new Date().toISOString(),
@@ -923,6 +925,9 @@ export async function runCli(
     "Effective workspace config resolved; task planning persistence checks passed (including SQLite when configured)."
   );
   for (const line of await collectTaskPersistenceDoctorSummaryLines(cwd)) {
+    writeLine(line);
+  }
+  for (const line of collectPolicyLaneEnvDoctorSummaryLines()) {
     writeLine(line);
   }
   writeLine(`Next: workspace-kit run — list module commands; see ${AGENT_CLI_MAP_HUMAN_DOC} for tier/policy copy-paste.`);

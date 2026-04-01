@@ -6,6 +6,12 @@ Use this page when you see **`policy-denied`**, **`missing WORKSPACE_KIT_POLICY_
 
 **Tiered copy-paste for agents:** `docs/maintainers/AGENT-CLI-MAP.md` lists every Tier A/B `workspace-kit run` command with example JSON and `operationId` values.
 
+## Canonical: what counts as approval for `workspace-kit run`
+
+For **sensitive** `workspace-kit run` commands, the CLI accepts **`policyApproval` in the third JSON argument**, a **valid session grant** for the same `operationId` + `WORKSPACE_KIT_SESSION_ID`, or **interactive approval** when stdio is a TTY and `WORKSPACE_KIT_INTERACTIVE_APPROVAL` enables the prompt.
+
+**Not sufficient:** chat messages, ticket comments, or setting **`WORKSPACE_KIT_POLICY_APPROVAL`** alone — that env var is for **`init` / `upgrade` / `config`**, not the `run` path. See the table below and **`docs/maintainers/AGENT-CLI-MAP.md`**.
+
 ## Two approval surfaces (do not mix them up)
 
 | Surface | When it applies | How to approve |
@@ -46,7 +52,7 @@ workspace-kit config set improvement.cadence.minIntervalMinutes 20 --json
 
 Agents (Cursor, CI, headless scripts) usually **do not** have a TTY, so **`WORKSPACE_KIT_INTERACTIVE_APPROVAL` does not prompt** unless you inject stdin via the test hook. Treat **`policyApproval` JSON on `workspace-kit run`** as the default path.
 
-**Chat is not approval.** Typing “approved” in Cursor chat **does not** satisfy policy. The CLI must receive **`policyApproval`** in the third argument JSON (or a valid **session grant** from an earlier approved command in the same **`WORKSPACE_KIT_SESSION_ID`**).
+**Chat is not approval** — see [Canonical: what counts as approval for `workspace-kit run`](#canonical-what-counts-as-approval-for-workspace-kit-run) above.
 
 **Multi-turn session (avoid repeating rationale):**
 

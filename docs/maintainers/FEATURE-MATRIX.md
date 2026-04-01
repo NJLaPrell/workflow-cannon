@@ -32,6 +32,7 @@ Status legend:
 | Phase 27 - Transcript improvement execution (nine promoted **`ready`** `imp-*`) | `v0.28.0` | Completed (see Phase 27 section below; remaining **`proposed`** `imp-*` roll forward) |
 | Phase 28 - Maintainer and agent operability (`T392`, `T443`–`T449`) | `v0.29.0` | Completed |
 | Phase 30 - Persistence, packaging, and task-store evolution (`T450`–`T452`, `T466`, `T467`) | `v0.30.0` | Completed |
+| Phase 31 - Policy, approvals, and sensitivity (`T454`, `T453`, `T468`) | `v0.31.0` | Completed |
 
 ## Feature Matrix by Phase
 
@@ -245,6 +246,14 @@ Status legend:
 | Dual persistence operator map | One runbook for backend, paths, recovery; `doctor` prints effective backend summary after pass | Completed | `T452` |
 | Task / wishlist / improvement id onboarding | Single table for “which id do I create?”; TERMS + README + AGENT-CLI-MAP links | Completed | `T466` |
 | Task store schema evolution | Documented policy; read `schemaVersion` 1/2 with normalize-on-load; tests | Completed | `T467` |
+
+### Phase 31 Policy, approvals, and sensitivity (`v0.31.0`)
+
+| Product feature | What users/maintainers get | Status | Task coverage |
+| --- | --- | --- | --- |
+| Policy sensitivity registry | Every builtin `run` command declares `policySensitivity` in manifest; CI enforces alignment with `policy.ts` | Completed | `T454` |
+| Wrong-lane denials | `policy-denied` explains env vs JSON approval when `WORKSPACE_KIT_POLICY_APPROVAL` is set but `run` lacks JSON `policyApproval` | Completed | `T453` |
+| Canonical approval copy | Single POLICY-APPROVAL section for what counts as approval; shorter CLI/agents pointers | Completed | `T468` |
 
 ## Supporting Milestone Features (cross-phase)
 

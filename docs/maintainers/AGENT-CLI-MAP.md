@@ -66,6 +66,15 @@ Exception: **documented recovery** (e.g. repair after corruption) may require a 
 
 **Extra sensitivity:** `policy.extraSensitiveModuleCommands` in effective config adds **Tier B** entries dynamically; denials may show `operationId` **`policy.dynamic-sensitive`**.
 
+### Two approval lanes (single cross-reference)
+
+| Lane | Mechanism | Applies to |
+| --- | --- | --- |
+| **JSON `policyApproval`** | Third CLI argument to `workspace-kit run … '<json>'` | Sensitive **`run`** subcommands (Tier A/B) |
+| **Env `WORKSPACE_KIT_POLICY_APPROVAL`** | `export WORKSPACE_KIT_POLICY_APPROVAL='{"confirmed":true,"rationale":"…"}'` | **`workspace-kit init`**, **`upgrade`**, **`config`** mutations only |
+
+**`workspace-kit run` does not read the env var** for approval. If you set the env var but omit JSON `policyApproval`, you get **`policy-denied`** with a wrong-lane hint. Diagram: [`CLI-VISUAL-GUIDE.md`](./CLI-VISUAL-GUIDE.md) → **Approval lanes (two doors)**. Normative detail: [`POLICY-APPROVAL.md`](./POLICY-APPROVAL.md) → **Two approval surfaces**.
+
 ## Tier A — Task Engine transitions
 
 | Intent | Invocation | `operationId` | Evidence |

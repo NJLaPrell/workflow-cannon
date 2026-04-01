@@ -4,8 +4,11 @@ import {
   appendPolicyTrace,
   isSensitiveModuleCommandForEffective,
   parsePolicyApproval,
+  parsePolicyApprovalFromEnv,
   AGENT_CLI_MAP_HUMAN_DOC,
   POLICY_APPROVAL_HUMAN_DOC,
+  POLICY_APPROVAL_TWO_LANES_DOC,
+  POLICY_RUN_ENV_LANE_MISMATCH_DETAIL,
   resolveActorWithFallback,
   resolvePolicyOperationIdForCommand,
   type PolicyApprovalPayload
@@ -86,7 +89,7 @@ export async function handleRunCommand(
     writeLine("");
     writeLine(`Usage: workspace-kit run <command> [json-args]`);
     writeLine(
-      `Instruction files: src/modules/<module>/instructions/<command>.md — policy-sensitive runs need JSON policyApproval (${POLICY_APPROVAL_HUMAN_DOC}).`
+      `Instruction files: src/modules/<module>/instructions/<command>.md — sensitive runs need JSON policyApproval (not env WORKSPACE_KIT_POLICY_APPROVAL); see ${POLICY_APPROVAL_TWO_LANES_DOC}.`
     );
     writeLine(`Agent-oriented tier table + copy-paste patterns: ${AGENT_CLI_MAP_HUMAN_DOC}.`);
     return codes.success;
@@ -132,7 +135,7 @@ export async function handleRunCommand(
               operationId: policyOp,
               remediationDoc: POLICY_APPROVAL_HUMAN_DOC,
               message: "Sensitive command denied at interactive policy prompt.",
-              hint: `Set WORKSPACE_KIT_INTERACTIVE_APPROVAL=off or pass policyApproval in JSON. See ${POLICY_APPROVAL_HUMAN_DOC}.`
+              hint: `Set WORKSPACE_KIT_INTERACTIVE_APPROVAL=off or pass policyApproval in JSON. See ${POLICY_APPROVAL_TWO_LANES_DOC}.`
             },
             null,
             2
@@ -164,6 +167,12 @@ export async function handleRunCommand(
             : "missing policyApproval in JSON args"
         });
       }
+      const envApprovalPresent = Boolean(parsePolicyApprovalFromEnv(process.env));
+      const wrongEnvLane = envApprovalPresent && !hasPolicyApprovalField;
+      const baseHint =
+        policyOp != null
+          ? `Operation ${policyOp} requires explicit JSON policyApproval (or session grant / TTY interactive approval). Details: ${POLICY_APPROVAL_TWO_LANES_DOC}`
+          : "Check policy.extraSensitiveModuleCommands and pass policyApproval in JSON args.";
       writeLine(
         JSON.stringify(
           {
@@ -171,13 +180,12 @@ export async function handleRunCommand(
             code: "policy-denied",
             operationId: policyOp ?? null,
             remediationDoc: POLICY_APPROVAL_HUMAN_DOC,
-            message: hasPolicyApprovalField
-              ? 'Sensitive command received an invalid policyApproval object. Use {"policyApproval":{"confirmed":true,"rationale":"why","scope":"session"}} (scope optional) or use an existing session grant for this operation.'
-              : 'Sensitive command requires policyApproval in JSON args (or an existing session grant for this operation). Example: {"policyApproval":{"confirmed":true,"rationale":"why","scope":"session"}}. See remediationDoc for env vs JSON approval surfaces.',
-            hint:
-              policyOp != null
-                ? `Operation ${policyOp} requires explicit approval; WORKSPACE_KIT_POLICY_APPROVAL is not read for workspace-kit run. Optional: set WORKSPACE_KIT_INTERACTIVE_APPROVAL=on in a TTY for a prompt (see ${POLICY_APPROVAL_HUMAN_DOC}).`
-                : "Operation could not be mapped to policyOperationId; check policy.extraSensitiveModuleCommands and pass policyApproval in JSON args."
+            message: wrongEnvLane
+              ? `Sensitive run denied: ${POLICY_RUN_ENV_LANE_MISMATCH_DETAIL} See ${POLICY_APPROVAL_TWO_LANES_DOC}.`
+              : hasPolicyApprovalField
+                ? 'Invalid policyApproval in JSON args. Use {"policyApproval":{"confirmed":true,"rationale":"why","scope":"session"}} (scope optional) or a session grant. See remediationDoc.'
+                : 'Missing policyApproval in JSON args. Example: {"policyApproval":{"confirmed":true,"rationale":"why","scope":"session"}}. See remediationDoc.',
+            hint: wrongEnvLane ? POLICY_RUN_ENV_LANE_MISMATCH_DETAIL : baseHint
           },
           null,
           2

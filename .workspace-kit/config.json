@@ -1,7 +1,7 @@
 {
   "kit": {
-    "currentPhaseNumber": 29,
-    "currentPhaseLabel": "Phase 29 (next execution slice)"
+    "currentPhaseNumber": 32,
+    "currentPhaseLabel": "Phase 32 (architecture boundaries and platform surfaces)"
   },
   "tasks": {
     "persistenceBackend": "sqlite",

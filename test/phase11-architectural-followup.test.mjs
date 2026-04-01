@@ -39,6 +39,30 @@ function cap() {
   };
 }
 
+test("Phase31: env WORKSPACE_KIT_POLICY_APPROVAL without run JSON surfaces wrong-lane denial", async () => {
+  const workspacePath = await seededWorkspace();
+  const prev = process.env.WORKSPACE_KIT_POLICY_APPROVAL;
+  process.env.WORKSPACE_KIT_POLICY_APPROVAL = JSON.stringify({
+    confirmed: true,
+    rationale: "env lane only — must not satisfy workspace-kit run"
+  });
+  try {
+    const io = cap();
+    const code = await runCli(["run", "ingest-transcripts", "{}"], { cwd: workspacePath, ...io });
+    assert.equal(code, 1);
+    const out = JSON.parse(io.lines.join(""));
+    assert.equal(out.code, "policy-denied");
+    assert.match(String(out.message), /not read|WORKSPACE_KIT_POLICY_APPROVAL/i);
+    assert.match(String(out.hint), /not read|policyApproval/i);
+  } finally {
+    if (prev === undefined) {
+      delete process.env.WORKSPACE_KIT_POLICY_APPROVAL;
+    } else {
+      process.env.WORKSPACE_KIT_POLICY_APPROVAL = prev;
+    }
+  }
+});
+
 test("Phase11: malformed policyApproval is denied with stable policy fields", async () => {
   const workspacePath = await seededWorkspace();
   const io = cap();
