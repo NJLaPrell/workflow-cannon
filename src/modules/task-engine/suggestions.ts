@@ -16,6 +16,29 @@ export function isImprovementLikeTask(t: TaskEntity): boolean {
   return typeof t.id === "string" && IMPROVEMENT_ID_RE.test(t.id);
 }
 
+/** Canonical queue partition for filtered next-actions (`metadata.queueNamespace`); missing → `"default"`. */
+export function getTaskQueueNamespace(task: TaskEntity): string {
+  const meta = task.metadata;
+  if (meta !== null && typeof meta === "object" && !Array.isArray(meta)) {
+    const raw = (meta as Record<string, unknown>).queueNamespace;
+    if (typeof raw === "string" && raw.trim().length > 0) {
+      return raw.trim();
+    }
+  }
+  return "default";
+}
+
+export function filterTasksByQueueNamespace(
+  tasks: TaskEntity[],
+  queueNamespace?: string
+): TaskEntity[] {
+  const ns = typeof queueNamespace === "string" ? queueNamespace.trim() : "";
+  if (!ns) {
+    return tasks;
+  }
+  return tasks.filter((t) => getTaskQueueNamespace(t) === ns);
+}
+
 const PRIORITY_ORDER: Record<string, number> = {
   P1: 0,
   P2: 1,
@@ -66,15 +89,24 @@ function buildBlockingAnalysis(tasks: TaskEntity[]): BlockingAnalysisEntry[] {
   return entries.sort((a, b) => b.blockingCount - a.blockingCount);
 }
 
-export function getNextActions(tasks: TaskEntity[]): NextActionSuggestion {
-  const readyQueue = tasks
+export type GetNextActionsOptions = {
+  /** When set, only tasks in this namespace participate (see `getTaskQueueNamespace`). */
+  queueNamespace?: string;
+};
+
+export function getNextActions(
+  tasks: TaskEntity[],
+  options?: GetNextActionsOptions
+): NextActionSuggestion {
+  const scoped = filterTasksByQueueNamespace(tasks, options?.queueNamespace);
+  const readyQueue = scoped
     .filter((t) => t.status === "ready" && !isWishlistIntakeTask(t))
     .sort((a, b) => priorityRank(a) - priorityRank(b));
 
   return {
     readyQueue,
     suggestedNext: readyQueue[0] ?? null,
-    stateSummary: buildStateSummary(tasks),
-    blockingAnalysis: buildBlockingAnalysis(tasks)
+    stateSummary: buildStateSummary(scoped),
+    blockingAnalysis: buildBlockingAnalysis(scoped)
   };
 }

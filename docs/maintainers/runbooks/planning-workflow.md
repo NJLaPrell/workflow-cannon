@@ -49,3 +49,28 @@ workspace-kit run resolve-config '{}'
 ```
 
 to inspect active effective values.
+
+## Implementation estimate pack (post-`convert-wishlist`, human-owned)
+
+**Banner:** Effort / risk / sizing in task metadata is **human judgment**, not computed by the kit. Agents must not treat these fields as commitments or schedules.
+
+After **`convert-wishlist`** (or **`create-task`**) creates execution tasks, maintainers may attach an **optional** stub under **`metadata.implementationEstimatePack`** so planning handoff stays in one JSON place until refined:
+
+```json
+{
+  "metadata": {
+    "implementationEstimatePack": {
+      "schemaVersion": 1,
+      "engineeringDaysRange": [2, 5],
+      "riskNotes": "Touches task-engine transitions; add integration test.",
+      "confidence": "low",
+      "lastReviewedBy": "human",
+      "assumptionBanner": "Estimates are non-binding; validate in triage."
+    }
+  }
+}
+```
+
+Apply with **`workspace-kit run update-task`** (JSON **`policyApproval`** when required). The shape is **not** validated by strict task schema in v1 — keep keys stable and document changes here. See **`ADR-task-queue-namespace.md`** for **`metadata.queueNamespace`** (separate concern).
+
+**Pilot:** pick one converted task and add the stub; confirm **`pnpm run check`** / task strict mode still pass.

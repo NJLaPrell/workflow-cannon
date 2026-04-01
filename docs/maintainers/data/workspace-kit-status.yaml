@@ -1,14 +1,14 @@
 schema_version: 1
-current_kit_phase: "35"
-next_kit_phase: "36"
+current_kit_phase: "36"
+next_kit_phase: "37"
 last_updated: "2026-04-01"
-active_focus: "**Phase 35** — **`phaseKey` 35** ready: **`T507`**, **`T510`**, **`T513`**, **`T520`**, **`T523`** (task engine / queue / planning handoff). Then **`phaseKey` 36**: remaining **`ready`** (policy, integrations, improvement loop, doc architecture **`T491`–`T504`**)."
+active_focus: "**Phase 36** — twenty-five **`ready`** tasks (policy, integrations, improvement loop, doc architecture **`T491`–`T504`**). Filter: **`list-tasks`** `{\"status\":\"ready\",\"phaseKey\":\"36\"}`. Script **`scripts/apply-ready-task-phase-buckets.mjs`**."
 blockers: []
 pending_decisions: []
 next_agent_actions:
-  - "**Now:** `{\"phaseKey\":\"35\",\"status\":\"ready\"}` — **`T507`**, **`T510`**, **`T513`**, **`T520`**, **`T523`**."
-  - "**Then:** `{\"phaseKey\":\"36\",\"status\":\"ready\"}` — twenty-five tasks (see script **`scripts/apply-ready-task-phase-buckets.mjs`**)."
+  - "**Now:** `{\"phaseKey\":\"36\",\"status\":\"ready\"}` — twenty-five tasks (see **`scripts/apply-ready-task-phase-buckets.mjs`**)."
 last_session_summary:
+  - "2026-04-01: Phase **35** closeout — **`v0.35.0`** — GitHub release https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.35.0 — **`T507`**, **`T510`**, **`T513`**, **`T520`**, **`T523`** **`completed`** (**`run-transition`** **`start`**/**`complete`** with JSON **`policyApproval`**): **`queue-git-alignment`**, **`replay-queue-snapshot`**, **`queueNamespace`** + ADR, synthetic load script (**`mkdtemp`** import fix), planning estimate pack docs. npm: **`Publish NPM`** workflow manual. **`current_kit_phase`** **36**."
   - "2026-04-01: Phase **34** closeout — **`v0.34.0`** tag + GitHub release https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.34.0 — **`T505`**, **`T506`**, **`T511`**, **`T518`** **`completed`**: consumer README lap, **`explain-config`** **`facet`**, **`dashboard-summary`** **`dependencyOverview`**, extension dashboard dependency + planning cards, contract/schema/docs. npm: run **`Publish NPM`** workflow manually. **`current_kit_phase`** **35**."
   - "2026-04-02: **`update-task`** — rebucketed all **`ready`** tasks: **`phaseKey` 34** (**`T505`**, **`T506`**, **`T511`**, **`T518`**); **35** (**`T507`**, **`T510`**, **`T513`**, **`T520`**, **`T523`**); **36** (twenty-five others incl. **`T491`–`T504`**). Script **`scripts/apply-ready-task-phase-buckets.mjs`**."
   - "2026-04-02: Open PLAN wishlist items **`T471`–`T477`**, **`T479`–`T487`**, **`T489`**, **`T490`** — **`update-wishlist`** (implementation **`expectedOutcome`**), **`convert-wishlist`** → **`T507`–`T524`**, **`update-task`** **`phaseKey`**, **`run-transition accept`** → **`ready`**. Script **`scripts/convert-open-wishlist-to-ready.mjs`**. Left **`T470`** test seed open."
@@ -31,7 +31,7 @@ last_session_summary:
 metrics:
   updated_at: "2026-04-01"
   source: "maintainer"
-  notes: "Phase 34 released v0.34.0. Ready queue: 35 engine+planning (5), 36 remainder (25)."
+  notes: "Phase 35 released v0.35.0. Phase 36 ready queue: 25 tasks (see apply-ready-task-phase-buckets)."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null

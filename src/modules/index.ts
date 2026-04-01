@@ -59,7 +59,11 @@ export {
   getAllowedTransitionsFrom,
   stateValidityGuard,
   dependencyCheckGuard,
-  getNextActions
+  buildQueueGitAlignmentReport,
+  filterTasksByQueueNamespace,
+  getNextActions,
+  getTaskQueueNamespace,
+  probeGitHead
 } from "./task-engine/index.js";
 export type {
   TaskEntity,

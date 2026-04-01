@@ -6,11 +6,12 @@ Get all tasks in `ready` state, sorted by priority (P1 first).
 
 ```
 workspace-kit run get-ready-queue '{}'
+workspace-kit run get-ready-queue '{"queueNamespace":"squad-a"}'
 ```
 
 ## Arguments
 
-None required.
+Optional **`queueNamespace`** — same semantics as **`get-next-actions`** (see **`ADR-task-queue-namespace.md`**). Response includes **`queueNamespace`**: filter applied or **`null`**.
 
 ## Returns
 

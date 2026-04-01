@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "tasks": [
+    {
+      "id": "T1",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "First",
+      "createdAt": "2026-01-01T00:00:00.000Z",
+      "updatedAt": "2026-01-01T00:00:00.000Z",
+      "priority": "P2"
+    },
+    {
+      "id": "T2",
+      "status": "ready",
+      "type": "workspace-kit",
+      "title": "Second",
+      "createdAt": "2026-01-01T00:00:00.000Z",
+      "updatedAt": "2026-01-01T00:00:00.000Z",
+      "priority": "P1"
+    }
+  ],
+  "transitionLog": [],
+  "lastUpdated": "2026-01-01T00:00:00.000Z"
+}

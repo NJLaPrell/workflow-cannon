@@ -38,8 +38,10 @@ Optional: `priority` (`P1`–`P3`), `type`, `dependsOn`, `unblocks`.
 ## Example
 
 ```bash
-workspace-kit run convert-wishlist '{"wishlistTaskId":"T10","decomposition":{"rationale":"Split schema vs commands","boundaries":"No UI in this slice","dependencyIntent":"T400 blocks T401"},"tasks":[{"id":"T400","title":"Add planning hook","phase":"Phase 24","priority":"P1","approach":"Task-backed intake","technicalScope":["Wire convert path"],"acceptanceCriteria":["convert-wishlist works"]}]}'
+workspace-kit run convert-wishlist '{"wishlistTaskId":"T10","decomposition":{"rationale":"Split schema vs commands","boundaries":"No UI in this slice","dependencyIntent":"T400 blocks T401"},"tasks":[{"id":"T400","title":"Add planning hook","phase":"Phase 24","priority":"P1","approach":"Task-backed intake","technicalScope":["Wire convert path"],"acceptanceCriteria":["convert-wishlist works"],"metadata":{"queueNamespace":"cli-squad","implementationEstimatePack":{"schemaVersion":1,"engineeringDaysRange":[2,5],"confidence":"low","assumptionBanner":"Human-owned estimate; non-binding."}}}]}'
 ```
+
+Optional **`metadata.implementationEstimatePack`** and **`metadata.queueNamespace`** on per-task payloads — see **`docs/maintainers/runbooks/planning-workflow.md`** (estimate pack) and **`ADR-task-queue-namespace.md`**.
 
 Legacy **`W###`** lookup (after migration with provenance):
 

@@ -6,11 +6,16 @@ Get prioritized next-action suggestions based on the current task state.
 
 ```
 workspace-kit run get-next-actions '{}'
+workspace-kit run get-next-actions '{"queueNamespace":"default"}'
 ```
 
 ## Arguments
 
-None required.
+| Field | Type | Description |
+| --- | --- | --- |
+| `queueNamespace` | string (optional) | When set, only tasks with matching **`metadata.queueNamespace`** are used (missing/empty metadata → **`default`**). See **`docs/maintainers/ADR-task-queue-namespace.md`**. |
+
+Response includes **`queueNamespace`**: the filter applied, or **`null`** when unfiltered.
 
 ## Returns
 

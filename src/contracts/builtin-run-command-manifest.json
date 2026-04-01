@@ -160,6 +160,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "replay-queue-snapshot",
+    "file": "replay-queue-snapshot.md",
+    "description": "Read-only replay of get-next-actions against frozen tasks from JSON (no live store writes).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "get-dependency-graph",
     "file": "get-dependency-graph.md",
     "description": "Get dependency graph data for one task or the full store.",
@@ -267,6 +275,14 @@
     "name": "get-next-actions",
     "file": "get-next-actions.md",
     "description": "Get prioritized next-action suggestions with blocking analysis.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "queue-git-alignment",
+    "file": "queue-git-alignment.md",
+    "description": "Read-only heuristic: git HEAD vs last task transition; stale in_progress hints (merge ≠ complete guardian).",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },

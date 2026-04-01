@@ -35,6 +35,7 @@ Canonical process remains: [`AGENTS.md`](../AGENTS.md), [`AGENT-CLI-MAP.md`](../
 
 - **Read-only discovery:** `workspace-kit doctor`, `workspace-kit run list-tasks`, `workspace-kit run get-next-actions`, `workspace-kit run get-task`, `workspace-kit run explain-task-engine-model` (Tier C unless otherwise documented).
 - **Queue consistency (ready tasks):** `workspace-kit run queue-health '{}'` — one JSON payload for phase alignment vs canonical phase (`kit.currentPhaseNumber` or maintainer status YAML) plus **`ready`** rows whose **`dependsOn`** are not yet **`completed`**. Optional: `workspace-kit run list-tasks` with **`"includeQueueHints":true`** for per-row hints. See [`AGENT-CLI-MAP.md`](../AGENT-CLI-MAP.md) → **Queue health and ready-queue consistency**.
+- **Merge ≠ done (heuristic):** `workspace-kit run queue-git-alignment '{}'` — read-only JSON comparing git HEAD commit time to the latest task transition plus stale **`in_progress`** hints. Independent of network; does not fix state. See [`ADR-task-queue-namespace.md`](../ADR-task-queue-namespace.md) for optional **`queueNamespace`** filters on **`get-next-actions`** / **`get-ready-queue`**.
 - **Lifecycle changes:** only **`run-transition`** (and other documented mutators) with correct **`policyApproval`** tiering — not hand-edited `state.json` except documented recovery.
 
 **Transcript alignment:** `imp-3bf93773a8c983` (`transcript:ae9aedbeb39d77297a12fc0b697ac6918a06bbaf`).
@@ -74,6 +75,10 @@ Canonical process remains: [`AGENTS.md`](../AGENTS.md), [`AGENT-CLI-MAP.md`](../
 - Keep FEATURE-MATRIX and [`ROADMAP.md`](../ROADMAP.md) phase/release wording aligned when closing a phase.
 
 **Transcript alignment:** `imp-d3d2643f55fd43` (`transcript:a6877694cdfb1762abc19b7319b14ad86e450239`).
+
+## 7a. Synthetic load harness (maintainers, opt-in)
+
+**Script:** `node scripts/task-engine-synthetic-load.mjs [taskCount]` from repo root after `pnpm run build`. Not part of **`pnpm test`** — use locally or in optional CI to catch **`list-tasks`** regressions on large JSON stores. Exits non-zero if a single filtered list pass exceeds 30s.
 
 ## 7. Task-engine package surface vs large internal modules
 

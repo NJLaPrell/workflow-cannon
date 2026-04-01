@@ -36,6 +36,7 @@ Status legend:
 | Phase 32 - Architecture boundaries and platform surfaces (`T456`, `T457`, `T458`) | `v0.32.0` | Completed |
 | Phase 33 - Documentation, editor integration, and CLI ergonomics (`T455`, `T459`–`T461`, `T462`–`T463`, `T464`, `T469`) | `v0.33.0` | Completed |
 | Phase 34 - Cursor extension and consumer experience (`T505`, `T506`, `T511`, `T518`) | `v0.34.0` | Completed |
+| Phase 35 - Task engine, queue operations, and planning handoff (`T507`, `T510`, `T513`, `T520`, `T523`) | `v0.35.0` | Completed |
 
 ## Feature Matrix by Phase
 
@@ -287,6 +288,16 @@ Status legend:
 | Config explain facets | `explain-config` with `facet` returns bounded key sets; tests ⊆ `resolve-config` effective values | Completed | `T506` |
 | Dashboard dependency surface | `dashboard-summary` carries subgraph + critical path + Mermaid source; extension renders text overview | Completed | `T511` |
 | Planning resume card | Extension shows `build-plan` resume CLI + stale/empty copy; E2E checklist | Completed | `T518` |
+
+### Phase 35 Task engine, queue operations, and planning handoff (`v0.35.0`)
+
+| Product feature | What users/maintainers get | Status | Task coverage |
+| --- | --- | --- | --- |
+| Merge ≠ done guardian | `queue-git-alignment` read-only JSON (git vs transitions, stale in_progress) | Completed | `T507` |
+| Queue replay forensics | `replay-queue-snapshot` frozen-task replay; skew caveat in payload | Completed | `T510` |
+| Team queue namespaces | `metadata.queueNamespace` + filtered `get-next-actions` / `get-ready-queue` | Completed | `T513` |
+| Synthetic load harness | `scripts/task-engine-synthetic-load.mjs` (opt-in, not default CI test) | Completed | `T520` |
+| Estimate pack handoff | Human-owned `metadata.implementationEstimatePack` template in planning runbook + convert example | Completed | `T523` |
 
 ## Supporting Milestone Features (cross-phase)
 

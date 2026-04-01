@@ -22,7 +22,9 @@ Phase 1 core module for structured task lifecycle management.
 | `get-task` | Retrieve a single task by ID |
 | `list-tasks` | List tasks with optional status/phase filters |
 | `get-ready-queue` | Get ready tasks sorted by priority |
-| `get-next-actions` | Get prioritized next-action suggestions |
+| `get-next-actions` | Get prioritized next-action suggestions (optional `queueNamespace` filter) |
+| `queue-git-alignment` | Read-only heuristic: git HEAD vs last transition; stale `in_progress` hints |
+| `replay-queue-snapshot` | Read-only replay of next-actions against frozen `tasks[]` or snapshot file |
 | `queue-health` | Read-only ready-queue audit (phase alignment + unmet `dependsOn` on ready tasks) |
 | `dashboard-summary` | Cockpit JSON for UIs (includes maintainer status snapshot) |
 | `create-wishlist` / `list-wishlist` / `get-wishlist` / `update-wishlist` | Wishlist ideation (no task phase) |

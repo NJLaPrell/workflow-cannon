@@ -16,6 +16,23 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 - **Post-completion transcript hook** — When **`improvement.hooks.afterTaskCompleted`** is **`ingest`**, the spawned child passes **`policyApproval`** from **`WORKSPACE_KIT_POLICY_APPROVAL`** (JSON) plus **`forceGenerate: true`** so **`ingest-transcripts`** syncs and always runs recommendation generation; invalid/missing env falls back to **`sync-transcripts`** with a logged skip reason (**`src/core/transcript-completion-hook.ts`**).
 - **Cursor extension** — **`pnpm-workspace.yaml`** adds **`extensions/cursor-workflow-cannon`** as a workspace package; removed nested **`package-lock.json`**; **`ext:compile`** / **`ui:watch`** use **`pnpm --filter cursor-workflow-cannon`**. **`@types/vscode`** is a **root** `devDependency` so `tsc` resolves the **`vscode`** API under pnpm. **CI** runs extension **`check`** + **`compile`** after **`pnpm test`**. Maintainer docs: **`CONTRIBUTING.md`**, extension **`README.md`**, **`docs/e2e.md`**.
 
+## [0.35.0] - 2026-04-01
+
+Phase 35 — task engine, queue operations, and planning handoff (**`T507`**, **`T510`**, **`T513`**, **`T520`**, **`T523`**).
+
+### Added
+
+- **`queue-git-alignment`** — Read-only JSON: git HEAD vs latest transition timestamp, optional stale **`in_progress`** hints (**`queue-git-alignment.ts`**); runbook cross-link in **`agent-task-engine-ergonomics.md`**.
+- **`replay-queue-snapshot`** — Read-only **`get-next-actions`** replay from inline **`tasks[]`** or **`snapshotRelativePath`**; **`replay-queue-snapshot.ts`**; caveat text for code/snapshot skew.
+- **Queue namespace filter** — Optional **`metadata.queueNamespace`**; **`get-next-actions`** / **`get-ready-queue`** / replay accept **`queueNamespace`**; ADR **`ADR-task-queue-namespace.md`**.
+- **Maintainer harness** — **`scripts/task-engine-synthetic-load.mjs`** (not **`pnpm test`**) — synthetic tasks + **`list-tasks`** timing tripwire.
+- **Planning handoff** — **`planning-workflow.md`** implementation estimate pack (human-owned **`metadata.implementationEstimatePack`**); **`convert-wishlist`** example + **`explain-task-engine-model`** optional field hints.
+
+### Docs / contracts
+
+- **Schemas** — **`task-engine-run-contracts.schema.json`** **`0.35.0`**; **`queueNamespace`** on **`get-next-actions`** / **`get-ready-queue`** responses.
+- **Agent CLI map exclusions** — **`queue-git-alignment`**, **`replay-queue-snapshot`**.
+
 ## [0.34.0] - 2026-04-01
 
 Phase 34 — Cursor extension and consumer experience (**`T505`**, **`T506`**, **`T511`**, **`T518`**).

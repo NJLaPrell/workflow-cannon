@@ -3,6 +3,7 @@ import test from "node:test";
 import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
   TaskStore,
@@ -15,7 +16,9 @@ import {
   getAllowedTransitionsFrom,
   stateValidityGuard,
   dependencyCheckGuard,
+  buildQueueGitAlignmentReport,
   getNextActions,
+  getTaskQueueNamespace,
   taskEngineModule,
   UnifiedStateDb,
   ModuleRegistry,
@@ -632,7 +635,9 @@ test("taskEngineModule registration includes all instruction entries", () => {
   assert.ok(names.includes("list-tasks"));
   assert.ok(names.includes("get-ready-queue"));
   assert.ok(names.includes("get-next-actions"));
+  assert.ok(names.includes("queue-git-alignment"));
   assert.ok(names.includes("queue-health"));
+  assert.ok(names.includes("replay-queue-snapshot"));
   assert.ok(names.includes("dashboard-summary"));
   assert.ok(names.includes("create-wishlist"));
   assert.ok(names.includes("list-wishlist"));
@@ -1031,6 +1036,151 @@ test("taskEngineModule explain-task-engine-model returns variants and lifecycle"
   assert.ok(result.data.variants.some((v) => v.variant === "wishlist-intake-task"));
   assert.ok(Array.isArray(result.data.executionTaskLifecycle));
   assert.ok(result.data.executionTaskLifecycle.some((x) => x.status === "ready"));
+  const execVar = result.data.variants.find((v) => v.variant === "execution-task");
+  assert.ok(execVar.optionalFields.includes("metadata.queueNamespace"));
+});
+
+test("getTaskQueueNamespace defaults and reads metadata", () => {
+  const now = new Date().toISOString();
+  assert.equal(getTaskQueueNamespace(makeTask({})), "default");
+  assert.equal(
+    getTaskQueueNamespace(
+      makeTask({ metadata: { queueNamespace: "alpha" } })
+    ),
+    "alpha"
+  );
+});
+
+test("buildQueueGitAlignmentReport merge-ahead signal when git newer than transitions", () => {
+  const now = new Date().toISOString();
+  const report = buildQueueGitAlignmentReport({
+    workspacePath: "/tmp/wk",
+    tasks: [
+      makeTask({
+        id: "T9",
+        status: "in_progress",
+        updatedAt: "2020-01-01T00:00:00.000Z"
+      })
+    ],
+    transitionLog: [
+      {
+        transitionId: "x",
+        taskId: "T1",
+        fromState: "ready",
+        toState: "in_progress",
+        action: "start",
+        guardResults: [],
+        dependentsUnblocked: [],
+        timestamp: "2020-06-01T12:00:00.000Z"
+      }
+    ],
+    storeLastUpdated: now,
+    git: { ok: true, headSha: "abc", headCommitDateIso: "2025-01-01T00:00:00.000Z" },
+    staleInProgressDays: 7
+  });
+  assert.equal(report.schemaVersion, 1);
+  assert.equal(report.signalMergeAheadOfTransitions, true);
+  assert.ok(report.inProgressStale.length >= 1);
+});
+
+test("taskEngineModule queue-git-alignment returns schemaVersion 1", async () => {
+  const workspace = await tmpDir();
+  const store = TaskStore.forJsonFile(workspace);
+  store.addTask(makeTask({ id: "T1", status: "ready" }));
+  await store.save();
+  const ctx = jsonTaskEngineCtx(workspace);
+  const result = await taskEngineModule.onCommand({ name: "queue-git-alignment", args: {} }, ctx);
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "queue-git-alignment");
+  assert.equal(result.data.schemaVersion, 1);
+  assert.ok("summary" in result.data);
+});
+
+test("taskEngineModule replay-queue-snapshot is deterministic for fixture tasks", async () => {
+  const workspace = await tmpDir();
+  const ctx = jsonTaskEngineCtx(workspace);
+  const tasks = [
+    makeTask({ id: "Ta", status: "ready", priority: "P2" }),
+    makeTask({ id: "Tb", status: "ready", priority: "P1" })
+  ];
+  const r1 = await taskEngineModule.onCommand(
+    { name: "replay-queue-snapshot", args: { tasks } },
+    ctx
+  );
+  assert.equal(r1.ok, true);
+  assert.equal(r1.code, "queue-replay");
+  assert.equal(r1.data.suggestedNext.id, "Tb");
+  const r2 = await taskEngineModule.onCommand(
+    { name: "replay-queue-snapshot", args: { tasks } },
+    ctx
+  );
+  assert.deepEqual(r1.data.readyQueue.map((t) => t.id), r2.data.readyQueue.map((t) => t.id));
+});
+
+test("taskEngineModule replay-queue-snapshot respects queueNamespace", async () => {
+  const workspace = await tmpDir();
+  const ctx = jsonTaskEngineCtx(workspace);
+  const tasks = [
+    makeTask({
+      id: "Ta",
+      status: "ready",
+      priority: "P1",
+      metadata: { queueNamespace: "a" }
+    }),
+    makeTask({ id: "Tb", status: "ready", priority: "P1", metadata: { queueNamespace: "b" } })
+  ];
+  const r = await taskEngineModule.onCommand(
+    { name: "replay-queue-snapshot", args: { tasks, queueNamespace: "b" } },
+    ctx
+  );
+  assert.equal(r.ok, true);
+  assert.equal(r.data.readyQueue.length, 1);
+  assert.equal(r.data.readyQueue[0].id, "Tb");
+});
+
+test("taskEngineModule replay-queue-snapshot loads snapshotRelativePath under workspace", async () => {
+  const workspace = await tmpDir();
+  const ctx = jsonTaskEngineCtx(workspace);
+  const fixture = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures/replay-queue-tiny.json");
+  const raw = await readFile(fixture, "utf8");
+  await mkdir(path.join(workspace, "snap"), { recursive: true });
+  await writeFile(path.join(workspace, "snap/r.json"), raw, "utf8");
+  const r = await taskEngineModule.onCommand(
+    { name: "replay-queue-snapshot", args: { snapshotRelativePath: "snap/r.json" } },
+    ctx
+  );
+  assert.equal(r.ok, true);
+  assert.equal(r.data.suggestedNext.id, "T2");
+});
+
+test("taskEngineModule get-next-actions queueNamespace filters ready queue", async () => {
+  const workspace = await tmpDir();
+  const store = TaskStore.forJsonFile(workspace);
+  store.addTask(
+    makeTask({
+      id: "Ta",
+      status: "ready",
+      priority: "P1",
+      metadata: { queueNamespace: "x" }
+    })
+  );
+  store.addTask(
+    makeTask({
+      id: "Tb",
+      status: "ready",
+      priority: "P2",
+      metadata: { queueNamespace: "y" }
+    })
+  );
+  await store.save();
+  const ctx = jsonTaskEngineCtx(workspace);
+  const r = await taskEngineModule.onCommand(
+    { name: "get-next-actions", args: { queueNamespace: "y" } },
+    ctx
+  );
+  assert.equal(r.ok, true);
+  assert.equal(r.data.suggestedNext.id, "Tb");
+  assert.equal(r.data.queueNamespace, "y");
 });
 
 test("taskEngineModule onCommand get-ready-queue returns priority-sorted tasks", async () => {
@@ -1049,6 +1199,7 @@ test("taskEngineModule onCommand get-ready-queue returns priority-sorted tasks",
   assert.equal(result.ok, true);
   assert.equal(result.data.count, 2);
   assert.equal(result.data.tasks[0].id, "T002");
+  assert.equal(result.data.queueNamespace, null);
 });
 
 test("taskEngineModule routes through ModuleCommandRouter", async () => {

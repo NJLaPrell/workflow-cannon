@@ -5,7 +5,17 @@ import { maybeSpawnTranscriptHookAfterCompletion } from "../../core/transcript-c
 import { TaskStore } from "./store.js";
 import { TransitionService } from "./service.js";
 import { TaskEngineError, getAllowedTransitionsFrom } from "./transitions.js";
-import { getNextActions, isImprovementLikeTask } from "./suggestions.js";
+import {
+  filterTasksByQueueNamespace,
+  getNextActions,
+  isImprovementLikeTask
+} from "./suggestions.js";
+import { buildQueueGitAlignmentReport, probeGitHead } from "./queue-git-alignment.js";
+import {
+  loadTasksFromSnapshotFile,
+  parseTasksFromSnapshotPayload,
+  replayQueueFromTasks
+} from "./replay-queue-snapshot.js";
 import { readWorkspaceStatusSnapshot } from "./dashboard-status.js";
 import { buildDashboardDependencyOverview } from "./dashboard-dependency-overview.js";
 import {
@@ -54,6 +64,11 @@ import {
   SAFE_METADATA_PATH_RE,
   TASK_ID_RE
 } from "./mutation-utils.js";
+
+function readQueueNamespaceArg(args: Record<string, unknown>): string | undefined {
+  const q = args.queueNamespace;
+  return typeof q === "string" && q.trim().length > 0 ? q.trim() : undefined;
+}
 
 const MUTABLE_TASK_FIELDS = new Set([
   "title",
@@ -730,6 +745,61 @@ export const taskEngineModule: WorkflowModule = {
       };
     }
 
+    if (command.name === "queue-git-alignment") {
+      const staleRaw = args.staleInProgressDays;
+      const staleInProgressDays =
+        typeof staleRaw === "number" && Number.isFinite(staleRaw) && staleRaw > 0
+          ? Math.min(Math.floor(staleRaw), 3650)
+          : undefined;
+      const report = buildQueueGitAlignmentReport({
+        workspacePath: ctx.workspacePath,
+        tasks: store.getActiveTasks(),
+        transitionLog: store.getTransitionLog(),
+        storeLastUpdated: store.getLastUpdated(),
+        git: probeGitHead(ctx.workspacePath),
+        staleInProgressDays
+      });
+      return {
+        ok: true,
+        code: "queue-git-alignment",
+        message: report.summary,
+        data: report as unknown as Record<string, unknown>
+      };
+    }
+
+    if (command.name === "replay-queue-snapshot") {
+      const ns = readQueueNamespaceArg(args);
+      let taskList: TaskEntity[];
+      try {
+        const snapPath =
+          typeof args.snapshotRelativePath === "string" ? args.snapshotRelativePath.trim() : "";
+        if (snapPath) {
+          taskList = await loadTasksFromSnapshotFile(ctx.workspacePath, snapPath);
+        } else if (Array.isArray(args.tasks)) {
+          taskList = parseTasksFromSnapshotPayload({ tasks: args.tasks });
+        } else {
+          return {
+            ok: false,
+            code: "invalid-task-schema",
+            message: "replay-queue-snapshot requires snapshotRelativePath (repo-relative) or tasks[] array"
+          };
+        }
+      } catch (e) {
+        return {
+          ok: false,
+          code: "import-parse-error",
+          message: (e as Error).message
+        };
+      }
+      const data = replayQueueFromTasks(taskList, ns ? { queueNamespace: ns } : undefined);
+      return {
+        ok: true,
+        code: "queue-replay",
+        message: `Replayed ${data.taskCount} tasks (read-only)`,
+        data: data as unknown as Record<string, unknown>
+      };
+    }
+
     if (command.name === "list-tasks") {
       const statusFilter = typeof args.status === "string" ? args.status as TaskStatus : undefined;
       const phaseFilter = typeof args.phase === "string" ? args.phase : undefined;
@@ -804,7 +874,11 @@ export const taskEngineModule: WorkflowModule = {
     }
 
     if (command.name === "get-ready-queue") {
-      const tasks = store.getActiveTasks();
+      const ns = readQueueNamespaceArg(args);
+      let tasks = store.getActiveTasks();
+      if (ns) {
+        tasks = filterTasksByQueueNamespace(tasks, ns);
+      }
       const ready = tasks
         .filter((t) => t.status === "ready" && !isWishlistIntakeTask(t))
         .sort((a, b) => {
@@ -817,13 +891,19 @@ export const taskEngineModule: WorkflowModule = {
         ok: true,
         code: "ready-queue-retrieved",
         message: `${ready.length} tasks in ready queue`,
-        data: { tasks: ready, count: ready.length, scope: "tasks-only" } as Record<string, unknown>
+        data: {
+          tasks: ready,
+          count: ready.length,
+          scope: "tasks-only",
+          queueNamespace: ns ?? null
+        } as Record<string, unknown>
       };
     }
 
     if (command.name === "get-next-actions") {
       const tasks = store.getActiveTasks();
-      const suggestion = getNextActions(tasks);
+      const ns = readQueueNamespaceArg(args);
+      const suggestion = getNextActions(tasks, ns ? { queueNamespace: ns } : undefined);
 
       return {
         ok: true,
@@ -831,7 +911,11 @@ export const taskEngineModule: WorkflowModule = {
         message: suggestion.suggestedNext
           ? `Suggested next: ${suggestion.suggestedNext.id} — ${suggestion.suggestedNext.title}`
           : "No tasks in ready queue",
-        data: { ...suggestion, scope: "tasks-only" } as unknown as Record<string, unknown>
+        data: {
+          ...suggestion,
+          scope: "tasks-only",
+          queueNamespace: ns ?? null
+        } as unknown as Record<string, unknown>
       };
     }
 
@@ -863,6 +947,8 @@ export const taskEngineModule: WorkflowModule = {
                 "phase",
                 "phaseKey",
                 "metadata",
+                "metadata.queueNamespace",
+                "metadata.implementationEstimatePack",
                 "ownership",
                 "approach",
                 "technicalScope",

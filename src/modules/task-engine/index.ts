@@ -29,7 +29,13 @@ export {
   stateValidityGuard,
   dependencyCheckGuard
 } from "./transitions.js";
-export { getNextActions, isImprovementLikeTask } from "./suggestions.js";
+export {
+  filterTasksByQueueNamespace,
+  getNextActions,
+  getTaskQueueNamespace,
+  isImprovementLikeTask
+} from "./suggestions.js";
+export { buildQueueGitAlignmentReport, probeGitHead } from "./queue-git-alignment.js";
 export { readWorkspaceStatusSnapshot } from "./dashboard-status.js";
 export { WishlistStore } from "./wishlist-store.js";
 export type { WishlistItem, WishlistStatus, WishlistStoreDocument } from "./wishlist-types.js";
