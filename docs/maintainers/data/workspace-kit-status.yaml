@@ -1,18 +1,19 @@
 schema_version: 1
 current_kit_phase: "27"
 next_kit_phase: "28"
-last_updated: "2026-03-31"
-active_focus: "**Phase 26** shipped as **`v0.27.0`**; **Phase 27** opens with transcript **`imp-*`** triage (**23** **`proposed`**) plus normal maintainer queue."
+last_updated: "2026-04-01"
+active_focus: "**Phase 27** — **`improvement-triage-top-three`** promoted **3** transcript **`imp-*`** to **`ready`** (**`imp-a7dcdec79a791b`**, **`imp-5ba2f6a0c3bd4a`**, **`imp-4cf9c424e5bfb2`**); **20** **`proposed`** **`imp-*`** remain."
 blockers: []
 pending_decisions: []
 next_agent_actions:
-  - "Triage transcript **`imp-*`** backlog (`improvement-triage-top-three`) or pick execution tasks from **`get-next-actions`**."
+  - "Execute or re-rank **`ready`** improvements: **`imp-a7dcdec79a791b`**, **`imp-5ba2f6a0c3bd4a`**, **`imp-4cf9c424e5bfb2`** (`get-next-actions`). Optional: another **`improvement-triage-top-three`** pass for remaining **`proposed`**."
 last_session_summary:
+  - "2026-04-01: **`improvement-triage-top-three`** — promoted **`imp-a7dcdec79a791b`** (planning → tasks / **`convert-wishlist`** shape + store discovery friction), **`imp-5ba2f6a0c3bd4a`** (git merge vs task-engine state confusion), **`imp-4cf9c424e5bfb2`** (monolithic task-engine **`index.ts`**, agent context overload). **Not promoted (examples):** overlapping doc-module v2 threads, P3 low-confidence path-only excerpts, broad architecture-only reviews — **20** **`proposed`** remain."
   - "2026-03-31: Phase **26** closeout — **`T390`** (R102 / layering docs + template + `.ai/ARCHITECTURE` refs); **`imp-c584f0e206c404`** (pre-release hook + `transcript:ingest` merge env → **`policyApproval`** JSON); **`imp-df7ebd9967433c`** (AGENTS native SQLite portability); **`imp-5dc1ffa28ccdc3`** verified against existing malformed-**`policyApproval`** denial output in **`run-command.ts`**. Shipped **`v0.27.0`** — PR **#79**, GitHub release, **Publish NPM** `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23823720798`."
 metrics:
   updated_at: "2026-03-31"
   source: "maintainer"
-  notes: "Phase 26 released v0.27.0 2026-03-31; 23 imp-* proposed deferred to Phase 27 triage."
+  notes: "Phase 27: 3 imp-* ready after triage 2026-04-01; 20 imp-* proposed remain."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null
