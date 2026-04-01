@@ -9,7 +9,7 @@ next_agent_actions:
   - "Triage or **`accept`** **`T443`–`T447`** when ready to implement queue-health / phase canon / **`list-tasks`** hints / **AGENT-CLI-MAP** patterns."
   - "Optional **`improvement-triage-top-three`** for remaining **`proposed`** **`imp-*`**."
 last_session_summary:
-  - "2026-03-31: Phase **27** closeout — shipped **`v0.28.0`**; runbook **`docs/maintainers/runbooks/agent-task-engine-ergonomics.md`**; nine **`imp-*`** **`completed`** via **`run-transition`**; ROADMAP + FEATURE-MATRIX + changelog updated. **`T443`–`T447`** remain **`proposed`** (Phase 27 label → execute under Phase 28)."
+  - "2026-03-31: Phase **27** closeout — **`v0.28.0`** GitHub release + **Publish NPM** `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23825952328`; runbook **`docs/maintainers/runbooks/agent-task-engine-ergonomics.md`**; nine **`imp-*`** **`completed`**. **`T443`–`T447`** remain **`proposed`** for Phase **28**."
   - "2026-04-01: **`create-task`** — five **`proposed`** **`workspace-kit`** tasks **`T443`–`T447`** (task-engine queue-health / canonical phase / structured phase / **`list-tasks`** hints / **AGENT-CLI-MAP** queue pattern), phase **Phase 27 (task engine operability for agents)**; provenance agent reflection on multi-step queue audits."
   - "2026-04-01 (round 3): **`improvement-triage-top-three`** — promoted **`imp-f39584e6613337`**, **`imp-d3d2643f55fd43`**, **`imp-6a07b608c1b752`**."
   - "2026-04-01 (round 2): **`improvement-triage-top-three`** — promoted **`imp-190189d4b01bc1`**, **`imp-d8ed5fa0b6c093`**, **`imp-3bf93773a8c983`**."
