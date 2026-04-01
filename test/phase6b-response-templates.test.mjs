@@ -80,6 +80,10 @@ test("Phase6b: strict mode fails on unknown defaultTemplateId", async () => {
   const out = JSON.parse(cap.lines.join(""));
   assert.equal(out.ok, false);
   assert.equal(out.code, "response-template-invalid");
+  assert.ok(
+    String(out.message).includes("defaultTemplateId"),
+    `expected defaultTemplateId in message: ${out.message}`
+  );
 });
 
 test("Phase6b: strict mode fails on explicit template id vs instruction directive conflict", async () => {
@@ -118,6 +122,8 @@ test("Phase6b: strict mode fails on explicit template id vs instruction directiv
   const out = JSON.parse(cap.lines.join(""));
   assert.equal(out.ok, false);
   assert.equal(out.code, "response-template-conflict");
+  assert.ok(String(out.message).includes("`instruction`"), `expected field name in message: ${out.message}`);
+  assert.ok(String(out.message).includes("Advisory mode"), `expected advisory hint: ${out.message}`);
 });
 
 test("Phase6b: strict mode fails on unknown explicit template id", async () => {
@@ -153,4 +159,8 @@ test("Phase6b: strict mode fails on unknown explicit template id", async () => {
   const out = JSON.parse(cap.lines.join(""));
   assert.equal(out.ok, false);
   assert.equal(out.code, "response-template-invalid");
+  assert.ok(
+    String(out.message).includes("responseTemplateId"),
+    `expected resolution source in message: ${out.message}`
+  );
 });

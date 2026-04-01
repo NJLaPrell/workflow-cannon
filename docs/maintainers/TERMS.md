@@ -136,6 +136,11 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
   - **Enforced in**: Task engine commands, atomic `convert-wishlist`, optional SQLite planning DB (legacy rows may include a second wishlist column until `migrate-wishlist-intake` runs).
   - **Disambiguation**: Say **planning persistence** (or **task-engine persistence**) when discussing `TaskStore`, `tasks.persistenceBackend`, or the planning DB file — not “the planning module,” which is the separate `planning` module package under `src/modules/planning/`.
 
+- **Build-plan session file**
+  - **Definition**: Gitignored snapshot **`.workspace-kit/planning/build-plan-session.json`** holding in-flight **`build-plan`** interview context (progress, resume CLI hint). Used by operator UIs and **`dashboard-summary`** (redacted **`planningSession`**). It is **not** the authoritative task store; promoted artifacts and execution tasks still live in task-engine persistence.
+  - **Defined in**: `src/core/planning/build-plan-session-file.ts`, `src/modules/planning/README.md`, `docs/maintainers/ARCHITECTURE.md` (planning vs persistence).
+  - **Enforced in**: planning module + facade helpers; must not be treated as a second source of truth for **`T###`** lifecycle.
+
 - **phaseKey (task field)**
   - **Definition**: Optional stable phase identifier on an **Execution Task** (e.g. `"28"`) used by `queue-health` and `list-tasks` hints alongside the human `phase` label string.
   - **Defined in**: `src/modules/task-engine/types.ts` (`TaskEntity.phaseKey`), `src/modules/task-engine/phase-resolution.ts`.

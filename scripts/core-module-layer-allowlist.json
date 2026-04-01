@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "description": "R102: src/core must not import from src/modules except these documented facades. CI: scripts/check-core-module-layer-allowlist.mjs",
+  "entries": [
+    {
+      "file": "src/core/config-cli.ts",
+      "specifier": "../modules/index.js",
+      "rationale": "Registry bootstrap for layered config resolution (ARCHITECTURE layering exceptions)."
+    },
+    {
+      "file": "src/core/planning/index.ts",
+      "specifier": "../../modules/task-engine/planning-open.js",
+      "rationale": "Planning persistence facade — re-export only."
+    },
+    {
+      "file": "src/core/planning/index.ts",
+      "specifier": "../../modules/task-engine/store.js",
+      "rationale": "Planning persistence facade — re-export only."
+    },
+    {
+      "file": "src/core/planning/index.ts",
+      "specifier": "../../modules/task-engine/wishlist-store.js",
+      "rationale": "Planning persistence facade — re-export only."
+    },
+    {
+      "file": "src/core/planning/index.ts",
+      "specifier": "../../modules/task-engine/service.js",
+      "rationale": "Planning persistence facade — re-export only."
+    },
+    {
+      "file": "src/core/planning/index.ts",
+      "specifier": "../../modules/task-engine/task-type-validation.js",
+      "rationale": "Planning persistence facade — re-export only."
+    },
+    {
+      "file": "src/core/planning/index.ts",
+      "specifier": "../../modules/task-engine/wishlist-validation.js",
+      "rationale": "Planning persistence facade — re-export only."
+    },
+    {
+      "file": "src/core/planning/index.ts",
+      "specifier": "../../modules/task-engine/wishlist-intake.js",
+      "rationale": "Planning persistence facade — re-export only."
+    },
+    {
+      "file": "src/core/planning/index.ts",
+      "specifier": "../../modules/task-engine/types.js",
+      "rationale": "Planning persistence facade — re-export only."
+    },
+    {
+      "file": "src/core/planning/index.ts",
+      "specifier": "../../modules/task-engine/wishlist-types.js",
+      "rationale": "Planning persistence facade — re-export only."
+    }
+  ]
+}

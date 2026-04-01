@@ -11,12 +11,20 @@ Version **1** (`RESPONSE_TEMPLATE_CONTRACT_VERSION`). Defines how `workspace-kit
 
 Registered in runtime (`listBuiltinResponseTemplateIds`): includes `default`, `compact`, `completed_task`, and `COMPLETED_TASK` (plain-English alias).
 
-## Resolution order
+## Resolution order (single precedence chain)
 
-1. JSON arg `responseTemplateId`
-2. First match from `responseTemplateDirective`, `instructionTemplateDirective`, or `instruction` (plain-English; see `parseTemplateDirectiveFromText`)
-3. `responseTemplates.commandOverrides[commandName]` from effective config
-4. `responseTemplates.defaultTemplateId` (default `default`)
+Applied in **`src/core/response-template-shaping.ts`** (`applyResponseTemplateApplication`). First non-null wins for the **requested** id before builtin registry validation:
+
+1. JSON arg **`responseTemplateId`** (explicit string).
+2. First plain-English hit, in order: **`responseTemplateDirective`**, **`instructionTemplateDirective`**, **`instruction`** (parsed by `parseTemplateDirectiveFromText` in `src/core/instruction-template-mapper.ts`).
+3. **`responseTemplates.commandOverrides[commandName]`** from effective config.
+4. Builtin manifest default for the command (**`defaultResponseTemplateId`** in **`src/contracts/builtin-run-command-manifest.json`**), when set.
+5. **`responseTemplates.defaultTemplateId`** from effective config (kit default string **`default`** when unset).
+6. Literal fallback **`default`**.
+
+**Explicit vs plain-English:** If both **`responseTemplateId`** and a directive field resolve to different template ids, **advisory** mode warns and keeps the **explicit** id; **strict** mode fails with **`response-template-conflict`** and names the directive field that disagreed.
+
+**Strict unknown template:** **`response-template-invalid`** messages include **which precedence step** chose the unresolved id (e.g. JSON arg vs `defaultTemplateId`).
 
 ## Output shape
 

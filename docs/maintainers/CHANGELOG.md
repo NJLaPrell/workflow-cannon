@@ -6,6 +6,21 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-03-31
+
+Phase 32 — architecture boundaries and platform surfaces (**`T456`**, **`T457`**, **`T458`**).
+
+### Added
+
+- **R102 CI** — **`scripts/core-module-layer-allowlist.json`** + **`scripts/check-core-module-layer-allowlist.mjs`**; wired into **`pnpm run check`**.
+- **Docs** — **`module-build-guide.md`** escalation path for new core→module edges; **`ARCHITECTURE.md`** Mermaid for planning module vs task-engine persistence; **`TERMS.md`** **Build-plan session file**; **`src/modules/planning/README.md`** “where state lives” table; **`AGENT-CLI-MAP.md`** response-template subsection.
+
+### Changed
+
+- **Response templates** — **`response-template-contract.md`** and **`runbooks/response-templates.md`** match code precedence (manifest default before config default); strict **`response-template-invalid`** / **`response-template-conflict`** messages include resolution source and directive field names (**`src/core/response-template-shaping.ts`**).
+- **Tests** — **`test/phase6b-response-templates.test.mjs`** asserts message substrings for strict failures.
+- **Schemas** — **`task-engine-run-contracts.schema.json`** **`packageVersion`** **`0.32.0`**.
+
 ## [0.31.0] - 2026-03-31
 
 Phase 31 — policy, approvals, and sensitivity (**`T454`**, **`T453`**, **`T468`**).

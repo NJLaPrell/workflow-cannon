@@ -40,10 +40,17 @@ function readResponseTemplatesConfig(
   return { enforcementMode, defaultTemplateId: def, commandOverrides };
 }
 
+type DirectiveFieldName = "responseTemplateDirective" | "instructionTemplateDirective" | "instruction";
+
 function resolveRequestedTemplateId(
-  commandName: string,
+  _commandName: string,
   args: Record<string, unknown>
-): { templateId: string | null; parseWarnings: string[]; strictViolations: string[] } {
+): {
+  templateId: string | null;
+  directiveField: DirectiveFieldName | null;
+  parseWarnings: string[];
+  strictViolations: string[];
+} {
   const parseWarnings: string[] = [];
   const strictViolations: string[] = [];
   const explicit =
@@ -51,38 +58,74 @@ function resolveRequestedTemplateId(
       ? args.responseTemplateId.trim()
       : null;
 
-  const directiveSources = [
-    typeof args.responseTemplateDirective === "string" ? args.responseTemplateDirective : "",
-    typeof args.instructionTemplateDirective === "string" ? args.instructionTemplateDirective : "",
-    typeof args.instruction === "string" ? args.instruction : ""
-  ].filter(Boolean);
+  const directiveSources: { field: DirectiveFieldName; text: string }[] = [
+    {
+      field: "responseTemplateDirective",
+      text: typeof args.responseTemplateDirective === "string" ? args.responseTemplateDirective : ""
+    },
+    {
+      field: "instructionTemplateDirective",
+      text: typeof args.instructionTemplateDirective === "string" ? args.instructionTemplateDirective : ""
+    },
+    { field: "instruction", text: typeof args.instruction === "string" ? args.instruction : "" }
+  ];
 
   let fromText: string | null = null;
-  for (const src of directiveSources) {
-    const parsed = parseTemplateDirectiveFromText(src);
+  let directiveField: DirectiveFieldName | null = null;
+  for (const { field, text } of directiveSources) {
+    if (!text) continue;
+    const parsed = parseTemplateDirectiveFromText(text);
     parseWarnings.push(...parsed.warnings);
     if (parsed.templateId) {
       fromText = parsed.templateId;
+      directiveField = field;
       break;
     }
   }
 
   if (explicit && fromText && explicit !== fromText) {
+    const fieldLabel = directiveField ?? "plain-English directive";
     parseWarnings.push(
       truncateTemplateWarning(
-        `responseTemplateId '${explicit}' disagrees with instruction directive '${fromText}'; using explicit id.`
+        `responseTemplateId '${explicit}' disagrees with ${fieldLabel} (parsed id '${fromText}'); using explicit id.`
       )
     );
     strictViolations.push(
       truncateTemplateWarning(
-        `In strict mode, responseTemplateId '${explicit}' conflicts with instruction directive '${fromText}'.`
+        `Strict mode: JSON responseTemplateId '${explicit}' conflicts with \`${fieldLabel}\` (parsed id '${fromText}'). Advisory mode would still apply the explicit id.`
       )
     );
   }
 
-  if (explicit) return { templateId: explicit, parseWarnings, strictViolations };
-  if (fromText) return { templateId: fromText, parseWarnings, strictViolations };
-  return { templateId: null, parseWarnings, strictViolations };
+  if (explicit) return { templateId: explicit, directiveField, parseWarnings, strictViolations };
+  if (fromText) return { templateId: fromText, directiveField, parseWarnings, strictViolations };
+  return { templateId: null, directiveField: null, parseWarnings, strictViolations };
+}
+
+function describeTemplateResolutionSource(args: {
+  commandName: string;
+  args: Record<string, unknown>;
+  requestedRaw: string | null;
+  directiveField: DirectiveFieldName | null;
+  override: string | undefined;
+  manifestDefault: string | undefined;
+  chosenId: string;
+  cfgDefault: string;
+}): string {
+  const explicit = typeof args.args.responseTemplateId === "string" && args.args.responseTemplateId.trim();
+  if (explicit) {
+    return "JSON arg `responseTemplateId`";
+  }
+  if (args.directiveField) {
+    return `plain-English \`${args.directiveField}\``;
+  }
+  if (args.override !== undefined && args.override === args.chosenId) {
+    return `\`responseTemplates.commandOverrides['${args.commandName}']\``;
+  }
+  if (args.manifestDefault !== undefined && args.manifestDefault === args.chosenId) {
+    return `builtin manifest defaultResponseTemplateId for \`${args.commandName}\``;
+  }
+  return `\`responseTemplates.defaultTemplateId\` (effective '${args.cfgDefault}')`;
 }
 
 function attachPresentation(
@@ -128,10 +171,8 @@ export function applyResponseTemplateApplication(
 ): ModuleCommandResult {
   const startNs = process.hrtime.bigint();
   const cfg = readResponseTemplatesConfig(effective);
-  const { templateId: requestedRaw, parseWarnings, strictViolations } = resolveRequestedTemplateId(
-    commandName,
-    args
-  );
+  const { templateId: requestedRaw, directiveField, parseWarnings, strictViolations } =
+    resolveRequestedTemplateId(commandName, args);
 
   if (cfg.enforcementMode === "strict" && strictViolations.length > 0) {
     const warnings = [...parseWarnings, ...strictViolations];
@@ -158,17 +199,29 @@ export function applyResponseTemplateApplication(
   const requestedTemplateIdForMeta =
     requestedRaw ?? override ?? manifestDefault ?? cfg.defaultTemplateId ?? null;
 
+  const resolutionSource = describeTemplateResolutionSource({
+    commandName,
+    args,
+    requestedRaw,
+    directiveField,
+    override,
+    manifestDefault,
+    chosenId,
+    cfgDefault: cfg.defaultTemplateId ?? "default"
+  });
+
   const warnings: string[] = [...parseWarnings];
   const def = getResponseTemplateDefinition(chosenId);
 
   if (!def) {
-    warnings.push(truncateTemplateWarning(`Unknown response template '${chosenId}'.`));
+    const unknownDetail = `Unknown response template '${chosenId}' (chosen by ${resolutionSource}).`;
+    warnings.push(truncateTemplateWarning(unknownDetail));
     if (cfg.enforcementMode === "strict") {
       return {
         ...result,
         ok: false,
         code: "response-template-invalid",
-        message: truncateTemplateWarning(`Unknown response template '${chosenId}'.`),
+        message: truncateTemplateWarning(unknownDetail),
         responseTemplate: buildMeta(
           {
             requestedTemplateId: requestedTemplateIdForMeta,

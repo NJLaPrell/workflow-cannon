@@ -163,6 +163,18 @@ export const exampleModule: WorkflowModule = {
 - Do not bypass release, migration, or policy gates for speed.
 - If requested work conflicts with principles, call it out and ask for confirmation before proceeding.
 
+## R102 core→module imports (allowlist)
+
+**Rule:** `src/core/**/*.ts` must not import from `src/modules/**` except for edges recorded in **`scripts/core-module-layer-allowlist.json`**.
+
+**CI:** `pnpm run check` runs **`scripts/check-core-module-layer-allowlist.mjs`**. A new import triggers a failure until the allowlist and docs are updated.
+
+**Escalation path when you need a new facade edge:**
+
+1. Prefer **avoiding** a new core→module import — re-export through an existing module public API or add a **`core/`** wrapper that other modules call instead of reaching through `core` into `modules`.
+2. If a facade is truly required (same class as **`core/planning`** or **`config-cli`**): add `{ "file", "specifier", "rationale" }` to **`scripts/core-module-layer-allowlist.json`**, extend **`docs/maintainers/ARCHITECTURE.md`** → **Layering and known exceptions**, and update **`src/README.md`** if the exception is part of the default mental model.
+3. Run **`pnpm run check`** locally before merge.
+
 ## Related References
 
 - `docs/maintainers/how-to-mark-policy-sensitive-run-command.md` — classify new **`workspace-kit run`** commands (**`policySensitivity`** + **`policyOperationId`**).

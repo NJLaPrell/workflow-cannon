@@ -75,6 +75,13 @@ Exception: **documented recovery** (e.g. repair after corruption) may require a 
 
 **`workspace-kit run` does not read the env var** for approval. If you set the env var but omit JSON `policyApproval`, you get **`policy-denied`** with a wrong-lane hint. Diagram: [`CLI-VISUAL-GUIDE.md`](./CLI-VISUAL-GUIDE.md) → **Approval lanes (two doors)**. Normative detail: [`POLICY-APPROVAL.md`](./POLICY-APPROVAL.md) → **Two approval surfaces**.
 
+## Response templates on `workspace-kit run`
+
+Optional JSON shaping: pass **`responseTemplateId`** and/or plain-English in **`responseTemplateDirective`** / **`instructionTemplateDirective`** / **`instruction`**. Effective config may set **`responseTemplates.commandOverrides`**, **`responseTemplates.defaultTemplateId`**, and **`responseTemplates.enforcementMode`** (`advisory` vs **`strict`**).
+
+- **Precedence table + strict behavior:** [`response-template-contract.md`](./response-template-contract.md) and runbook [`runbooks/response-templates.md`](./runbooks/response-templates.md).
+- **Strict failures:** unknown resolved template → **`response-template-invalid`** (message includes which source picked the id); explicit id vs directive mismatch → **`response-template-conflict`**.
+
 ## Tier A — Task Engine transitions
 
 | Intent | Invocation | `operationId` | Evidence |

@@ -42,6 +42,7 @@ Workflow Cannon is a modular CLI-first workflow platform: structured **tasks** a
 ## Layering and known exceptions
 
 - **Intended rule:** `modules/` may depend on `core/` and `contracts/`; avoid **sibling module** imports. **`.ai/module-build.md`** rule **R102** states modules must depend only on **`core`** and **`contracts`** and avoid direct imports from sibling modules; the bullets below are the **documented** exceptions that keep facades stable (see also **`src/modules/README.md`**).
+- **Machine-checked allowlist:** `src/core` must not import from `src/modules` except edges listed in **`scripts/core-module-layer-allowlist.json`**, enforced by **`pnpm run check`** (`scripts/check-core-module-layer-allowlist.mjs`). Adding a new core→module import requires an allowlist row, a short **rationale**, updates here and in **`src/README.md`** when the facade is user-visible, and maintainer review (see **`docs/maintainers/module-build-guide.md`** → **R102 core→module imports**).
 - **Exceptions (stable facades):**
   - **`src/core/planning/index.ts`** re-exports task-engine–owned planning stores and types so **planning**, **approvals**, and **improvement** import from `core/planning` instead of deep `task-engine` paths (implementations remain in task-engine).
   - **`src/core/config-cli.ts`** imports **`defaultRegistryModules`** from **`src/modules/index.ts`** to bootstrap the registry for config resolution (documented exception to keep CLI wiring centralized).
@@ -51,6 +52,25 @@ Workflow Cannon is a modular CLI-first workflow platform: structured **tasks** a
 
 - **Planning module** (`src/modules/planning/`): user-facing **`build-plan`** interviews, rules, and wishlist artifact output.
 - **Planning persistence** (task-engine / SQLite): **`openPlanningStores`**, `TaskStore`, `WishlistStore`, migrations — shared **execution** state for tasks and wishlist. The planning **module** consumes the facade under `core/planning`; it does not own the store implementations.
+
+```mermaid
+flowchart LR
+  subgraph cli ["CLI / callers"]
+    PM["planning module\n(build-plan, …)"]
+    Other["other modules\n(via core/planning)"]
+  end
+  subgraph core ["core facade"]
+    CP["core/planning"]
+  end
+  subgraph persist ["Durable state (task-engine)"]
+    TE["TaskStore / WishlistStore\nSQLite or JSON paths"]
+  end
+  PM --> CP
+  Other --> CP
+  CP --> TE
+```
+
+**Write paths (summary):** durable task and wishlist documents are written only through **task-engine** store APIs reached via **`core/planning`** (or direct task-engine commands). The planning module writes **interview output** into those stores and may mirror **in-flight** context to **`.workspace-kit/planning/build-plan-session.json`** (operator resume — not a substitute for the task store; see **TERMS** → **Build-plan session file**).
 
 ## Key building blocks (concise)
 

@@ -33,6 +33,7 @@ Status legend:
 | Phase 28 - Maintainer and agent operability (`T392`, `T443`–`T449`) | `v0.29.0` | Completed |
 | Phase 30 - Persistence, packaging, and task-store evolution (`T450`–`T452`, `T466`, `T467`) | `v0.30.0` | Completed |
 | Phase 31 - Policy, approvals, and sensitivity (`T454`, `T453`, `T468`) | `v0.31.0` | Completed |
+| Phase 32 - Architecture boundaries and platform surfaces (`T456`, `T457`, `T458`) | `v0.32.0` | Completed |
 
 ## Feature Matrix by Phase
 
@@ -254,6 +255,14 @@ Status legend:
 | Policy sensitivity registry | Every builtin `run` command declares `policySensitivity` in manifest; CI enforces alignment with `policy.ts` | Completed | `T454` |
 | Wrong-lane denials | `policy-denied` explains env vs JSON approval when `WORKSPACE_KIT_POLICY_APPROVAL` is set but `run` lacks JSON `policyApproval` | Completed | `T453` |
 | Canonical approval copy | Single POLICY-APPROVAL section for what counts as approval; shorter CLI/agents pointers | Completed | `T468` |
+
+### Phase 32 Architecture boundaries and platform surfaces (`v0.32.0`)
+
+| Product feature | What users/maintainers get | Status | Task coverage |
+| --- | --- | --- | --- |
+| R102 core→module allowlist | CI fails on new `src/core` imports from `src/modules` unless allowlisted and documented | Completed | `T456` |
+| Response template precedence + errors | One contract/runbook chain; strict mode names directive field and which step chose an unknown id | Completed | `T457` |
+| Planning vs persistence clarity | Planning README table, ARCHITECTURE Mermaid, TERMS for build-plan session file | Completed | `T458` |
 
 ## Supporting Milestone Features (cross-phase)
 
