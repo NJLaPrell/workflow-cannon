@@ -14,6 +14,8 @@ export {
 export {
   ModuleCommandRouter,
   ModuleCommandRouterError,
+  UNKNOWN_COMMAND_SAMPLE_LIMIT,
+  formatUnknownCommandMessage,
   type ModuleCommandDescriptor,
   type ModuleCommandRouterOptions
 } from "./module-command-router.js";

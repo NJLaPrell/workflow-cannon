@@ -435,7 +435,8 @@ async function printWorkspaceKitTopLevelHelp(writeLine: (message: string) => voi
   const versionSuffix = version ? ` v${version}` : "";
   writeLine(`Workflow Cannon — workspace-kit${versionSuffix} (${CANONICAL_KIT_NAME})`);
   writeLine("");
-  writeLine("CLI for deterministic, policy-governed task workflows. Module commands are listed separately.");
+  writeLine("CLI for deterministic, policy-governed task workflows.");
+  writeLine("Command discovery: run `workspace-kit run` with no subcommand (after `doctor` passes) to print every module command.");
   writeLine("Also installed as the short command `wk` (same binary as `workspace-kit`).");
   writeLine("");
   writeLine("Start here (first time in a kit-enabled repo)");

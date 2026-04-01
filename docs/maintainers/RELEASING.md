@@ -49,7 +49,7 @@ If a gate fails, do not publish. Capture the blocker in task-engine state and up
    - Execute `pnpm run parity` for packaged-artifact parity validation.
    - Execute `pnpm run check-release-metadata` for package.json field validation.
   - Optional: `pnpm run pre-release-transcript-hook` for a non-blocking transcript sync/ingest summary artifact (requires build). With **`WORKSPACE_KIT_POLICY_APPROVAL`** set to JSON like `{"confirmed":true,"rationale":"pre-release ingest"}`, the hook merges it into **`ingest-transcripts`** args as **`policyApproval`** (the `run` path does not read the env var directly; see **`POLICY-APPROVAL.md`**).
-  - Execute `pnpm run phase4-gates` (or phase-scoped successor, currently `pnpm run phase5-gates`) for compatibility/planning/release-channel enforcement.
+  - Execute **`pnpm run maintainer-gates`** (compatibility + planning + release-channel) and **`pnpm run pre-merge-gates`** (maintainer gates + **`pnpm run test`**). Legacy aliases **`pnpm run phase4-gates`** and **`pnpm run phase5-gates`** call the same commands.
    - Confirm release automation workflows are green.
   - Run a doc consistency sweep before approval:
     - Verify canonical-source links in `README.md`, `docs/maintainers/ROADMAP.md`, and `docs/maintainers/AGENTS.md` resolve.
@@ -92,6 +92,12 @@ After publish:
    - enhancement recommendations for approval review
 
 This closes the loop with the Enhancement Engine direction: release outcomes should continuously improve future release quality.
+
+## Changing `.ai/PRINCIPLES.md` (R00x machine rules)
+
+- **Edit** `.ai/PRINCIPLES.md` directly (pipe-delimited machine dialect). After changing **`rule|id=R###`** rows, update **`scripts/fixtures/principles-rule-ids.json`** in the same PR so **`pnpm run check`** stays green.
+- **Human governance order** is snapshotted from **`docs/maintainers/AGENTS.md`** § Source-of-truth; reordering those bullets requires updating **`scripts/fixtures/governance-doc-order.json`**.
+- For trade-off philosophy, cross-check **`.ai/PRINCIPLES.md`** against **`docs/maintainers/ROADMAP.md`** / **`docs/maintainers/DECISIONS.md`** as needed.
 
 ## Related documents
 

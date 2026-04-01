@@ -2,6 +2,9 @@
 quicktaskVersion: 1
 taskName: incident-triage
 ---
+
+> **`/qt` is not `workspace-kit`:** This template is editor-only. It never satisfies JSON **`policyApproval`**. To change task-engine or other kit-owned state, run the matching line from **`docs/maintainers/AGENT-CLI-MAP.md`** in a terminal.
+
 # incident-triage
 
 - Goal: Collect incident facts, impact, owner, and next action.

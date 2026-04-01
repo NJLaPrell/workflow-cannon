@@ -34,6 +34,7 @@ Status legend:
 | Phase 30 - Persistence, packaging, and task-store evolution (`T450`–`T452`, `T466`, `T467`) | `v0.30.0` | Completed |
 | Phase 31 - Policy, approvals, and sensitivity (`T454`, `T453`, `T468`) | `v0.31.0` | Completed |
 | Phase 32 - Architecture boundaries and platform surfaces (`T456`, `T457`, `T458`) | `v0.32.0` | Completed |
+| Phase 33 - Documentation, editor integration, and CLI ergonomics (`T455`, `T459`–`T461`, `T462`–`T463`, `T464`, `T469`) | `v0.33.0` | Completed |
 
 ## Feature Matrix by Phase
 
@@ -263,6 +264,19 @@ Status legend:
 | R102 core→module allowlist | CI fails on new `src/core` imports from `src/modules` unless allowlisted and documented | Completed | `T456` |
 | Response template precedence + errors | One contract/runbook chain; strict mode names directive field and which step chose an unknown id | Completed | `T457` |
 | Planning vs persistence clarity | Planning README table, ARCHITECTURE Mermaid, TERMS for build-plan session file | Completed | `T458` |
+
+### Phase 33 Documentation, editor integration, and CLI ergonomics (`v0.33.0`)
+
+| Product feature | What users/maintainers get | Status | Task coverage |
+| --- | --- | --- | --- |
+| Progressive governance onboarding | README path + AGENTS tiers; explicit canonical vs mirror vs generated table | Completed | `T455` |
+| `/qt` vs policy clarity | Template reminder blocks; AGENTS + consumer cadence warnings | Completed | `T459` |
+| Cursor rule sync policy | module-build-guide Cursor section; slim maintainer-delivery-loop rule | Completed | `T460` |
+| Machine/human drift checks | CI fixtures for PRINCIPLES rule ids + AGENTS source-of-truth paths; RELEASING edit order | Completed | `T461` |
+| Neutral gate script names | `maintainer-gates` / `pre-merge-gates` with `phase4-gates` / `phase5-gates` aliases | Completed | `T462` |
+| Staged `pnpm run check` | Labeled steps, hints on failure, same substantive checks as before | Completed | `T463` |
+| Bounded unknown-command errors | Capped samples + discovery hint for huge command menus | Completed | `T464` |
+| Help text discovery | Top-level `--help` states `run` menu explicitly | Completed | `T469` |
 
 ## Supporting Milestone Features (cross-phase)
 

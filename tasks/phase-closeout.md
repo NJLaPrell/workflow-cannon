@@ -2,6 +2,9 @@
 quicktaskVersion: 1
 taskName: phase-closeout
 ---
+
+> **`/qt` is not `workspace-kit`:** This template is editor-only. It never satisfies JSON **`policyApproval`**. To change task-engine or other kit-owned state, run the matching line from **`docs/maintainers/AGENT-CLI-MAP.md`** in a terminal (Tier **A** **`run-transition`**, etc.).
+
 # phase-closeout
 
 ## 1) Load the playbook

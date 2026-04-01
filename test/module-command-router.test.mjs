@@ -5,8 +5,10 @@ import {
   ModuleCommandRouter,
   ModuleCommandRouterError,
   ModuleRegistry,
+  UNKNOWN_COMMAND_SAMPLE_LIMIT,
   agentBehaviorModule,
   documentationModule,
+  formatUnknownCommandMessage,
   taskEngineModule,
   workspaceConfigModule
 } from "../dist/index.js";
@@ -180,6 +182,17 @@ test("ModuleCommandRouter throws unknown-command for missing command", async () 
     () => router.execute("not-a-command", undefined, lifecycleContext),
     (error) => error instanceof ModuleCommandRouterError && error.code === "unknown-command"
   );
+});
+
+test("formatUnknownCommandMessage caps listed commands and stays bounded", () => {
+  const many = Array.from({ length: 80 }, (_, i) => `cmd-${String(i).padStart(3, "0")}`);
+  const msg = formatUnknownCommandMessage("nope", many);
+  assert.ok(msg.includes("Sample of"));
+  assert.ok(msg.includes("65 more (not listed)"));
+  assert.ok(msg.includes("workspace-kit run"));
+  assert.ok(msg.length < 900, "message should not enumerate every command");
+  const commas = msg.split(",").length;
+  assert.ok(commas <= UNKNOWN_COMMAND_SAMPLE_LIMIT + 4);
 });
 
 test("ModuleCommandRouter executes task-engine run-transition returning validation error for missing args", async () => {

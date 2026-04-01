@@ -113,6 +113,7 @@ test("runCli --help prints orientation and exits 0", async () => {
   assert.equal(code, 0);
   assert.ok(capture.lines.some((l) => l.includes("Workflow Cannon")));
   assert.ok(capture.lines.some((l) => l.includes("workspace-kit run")));
+  assert.ok(capture.lines.some((l) => l.includes("Command discovery")));
   assert.ok(capture.lines.some((l) => l.includes("get-next-actions")));
 });
 
@@ -543,4 +544,18 @@ test("runCli run returns error for invalid JSON args", async () => {
   const code = await runCli(["run", "generate-document", "not-json"], { cwd: process.cwd(), ...capture });
   assert.equal(code, 2);
   assert.ok(capture.errors.some((e) => e.includes("Invalid JSON")));
+});
+
+test("runCli run unknown subcommand prints capped hint (not full command dump)", async () => {
+  const capture = createCapture();
+  const code = await runCli(
+    ["run", "__not_a_real_workspace_kit_command__", "{}"],
+    { cwd: process.cwd(), ...capture }
+  );
+  assert.equal(code, 3);
+  const err = capture.errors.find((e) => e.includes("Module command failed"));
+  assert.ok(err, "expected module command failure");
+  assert.match(err, /Sample of/);
+  assert.match(err, /doctor --agent-instruction-surface/);
+  assert.ok(err.length < 2500);
 });

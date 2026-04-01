@@ -2,6 +2,9 @@
 quicktaskVersion: 1
 taskName: release-notes
 ---
+
+> **`/qt` is not `workspace-kit`:** This template is editor-only. It never satisfies JSON **`policyApproval`**. To change task-engine or other kit-owned state, run the matching line from **`docs/maintainers/AGENT-CLI-MAP.md`** in a terminal.
+
 # release-notes
 
 - Goal: Draft user-facing release notes from merged changes.

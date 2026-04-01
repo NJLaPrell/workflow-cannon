@@ -5,49 +5,11 @@ alwaysApply: true
 
 # Maintainer delivery workflow (canonical)
 
-This file merges **task → PR**, **branching/tagging**, **commit**, and **PR review/merge** expectations. Follow it for maintainer work whether you use **chat**, the **terminal**, or **`workspace-kit`** for task state.
+Full numbered loop (branch → implement → validate → PR → merge → **`run-transition`**), branching/tagging, commit strategy, and PR expectations live in **`docs/maintainers/playbooks/task-to-main.md`** (single-task playbook) and **`docs/maintainers/AGENTS.md`** (task execution + CLI-first execution). Attach **`@task-to-main.md`** when driving one **`T###`** to **`main`**.
 
-## Playbook: single task → `main`
+## Non-negotiables
 
-When the goal is to land **exactly one** execution task (**`T###`**) via a feature branch and PR (pull `main`, branch, implement, PR, review/fix loop, merge, then **`run-transition` `complete`**), follow the ordered checklist **`docs/maintainers/playbooks/task-to-main.md`** (playbook id `task-to-main`). Prefer attaching it in the editor (`@`) or enable the requestable rule **`.cursor/rules/playbook-task-to-main.mdc`**. The playbook **sequences** the numbered loop below; it does not replace Git or **`workspace-kit`** ownership.
+- **Git + GitHub** own branch, PR, review, merge. **`workspace-kit`** owns task lifecycle and evidence in the configured task store (default SQLite under **`.workspace-kit/tasks/`**). Do not treat merged PRs as task **`complete`** without the matching Tier A **`run-transition`** when the task is in scope.
+- **Blocked?** Record the blocker in task-engine state first; the SQLite/JSON task store is authoritative over chat.
 
-## Task → PR delivery loop
-
-1. Select the highest-priority **ready** task (or continue **in_progress** per dependency order).
-2. Work on a **feature branch** (not `main`): one coherent objective per branch; name predictably (e.g. `feature/T285-agent-cli-map`).
-3. Implement the **smallest coherent slice** that satisfies the task’s acceptance criteria.
-4. **Validate** with project checks (`pnpm run build`, `pnpm test`, `pnpm run parity` or the task-specific commands).
-5. **Commit** with focused, reason-oriented messages; do not batch unrelated changes.
-6. **Open a PR** to `main` with description focused on **why**, **risk**, validation/evidence, and migration/compatibility if relevant.
-7. **Review / merge** via normal GitHub flow; avoid merging past known release or safety gates.
-8. **Update task-engine state** with `workspace-kit run run-transition` (and `policyApproval` when required)—after or in sync with merged work, not as a substitute for Git.
-
-If blocked: record the blocker and next action in task-engine state **first**; treat the configured task store (default SQLite) as canonical (regenerated views are secondary).
-
-## Branching / tagging
-
-- Keep branches scoped to **one coherent objective**.
-- Use **predictable release tags** tied to published versions and `docs/maintainers/RELEASING.md`.
-- Ensure tags map to **validated release artifacts** and evidence.
-
-## Commit strategy
-
-- Focused commits with clear intent.
-- Concise, reason-oriented messages.
-- Do not batch unrelated changes in one commit.
-- Preserve reviewability and rollback clarity.
-
-## PR review / merge
-
-PRs should:
-
-- Explain **why** and **risk**, not only what changed.
-- Include **validation/evidence** appropriate to impact.
-- Note **migration or compatibility** implications when relevant.
-
-Avoid merging changes that skip known **release** or **safety** gates.
-
-## CLI vs Git
-
-- **`workspace-kit`** owns task lifecycle, policy, and evidence in the configured task store (default SQLite under `.workspace-kit/tasks/`).
-- **Git + GitHub** own branch, PR, review, and merge. The kit does not replace that workflow.
+Optional requestable rule: **`.cursor/rules/playbook-task-to-main.mdc`**.

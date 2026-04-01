@@ -32,6 +32,22 @@ export class ModuleCommandRouterError extends Error {
   }
 }
 
+/** Cap unknown-command error text when the router lists hundreds of module commands. */
+export const UNKNOWN_COMMAND_SAMPLE_LIMIT = 15;
+
+export function formatUnknownCommandMessage(attempted: string, allNames: string[]): string {
+  const sorted = [...allNames].sort((a, b) => a.localeCompare(b));
+  const n = sorted.length;
+  const cap = UNKNOWN_COMMAND_SAMPLE_LIMIT;
+  const shown = sorted.slice(0, cap);
+  const omitted = n > cap ? ` … and ${n - cap} more (not listed)` : "";
+  const sample = shown.join(", ");
+  return (
+    `Unknown command '${attempted}'. Sample of ${Math.min(n, cap)}/${n}: ${sample}${omitted}. ` +
+    "Run `workspace-kit run` with no subcommand (or `wk doctor --agent-instruction-surface`) for the full catalog."
+  );
+}
+
 type IndexedCommand = {
   descriptor: ModuleCommandDescriptor;
   module: WorkflowModule;
@@ -69,12 +85,10 @@ export class ModuleCommandRouter {
     const commandName = this.resolveCommandName(name);
     const indexed = this.commands.get(commandName);
     if (!indexed) {
-      const known = this.listCommands()
-        .map((command) => command.name)
-        .join(", ");
+      const names = this.listCommands().map((command) => command.name);
       throw new ModuleCommandRouterError(
         "unknown-command",
-        `Unknown command '${name}'. Known commands: ${known || "none"}`
+        formatUnknownCommandMessage(name, names)
       );
     }
 

@@ -22,6 +22,15 @@ Use this template for each new entry:
 - Package identity: `@workflow-cannon/workspace-kit`.
 - Extraction strategy: subtree split from `packages/workspace-kit`.
 
+## D-033 - Governance onboarding, doc mirrors, and drift checks
+
+- Date: 2026-03-31
+- Status: accepted
+- Context: Maintainer and agent docs overlapped across `docs/maintainers/`, `.cursor/rules/`, `.ai/`, and editor `/qt` templates, increasing sync cost and policy confusion.
+- Decision: Use **progressive disclosure** (README + `AGENTS.md` tiers); treat **`.cursor/rules/*.mdc`** as pointer-first mirrors of maintainer canon; label **`/qt`** templates as editor-only (no policy satisfaction); add CI **fixtures** for `.ai/PRINCIPLES.md` `rule|id=R###` inventory and for `AGENTS.md` § Source-of-truth backtick path order; rename primary release gate scripts to **`maintainer-gates`** / **`pre-merge-gates`** while keeping **`phase4-gates`** / **`phase5-gates`** as compatibility aliases.
+- Consequences: Intentional changes to rule ids or precedence paths require updating **`scripts/fixtures/principles-rule-ids.json`** and **`scripts/fixtures/governance-doc-order.json`** (or adjusting checks with the same PR).
+- Follow-ups: Optional deprecation warning on **`phase*`** script names if maintainers want a removal timeline.
+
 ## ADR hygiene expectations
 
 - Record medium/high-impact architecture or policy model changes in either this file (`D-XXX`) or `docs/adr/` before merge.

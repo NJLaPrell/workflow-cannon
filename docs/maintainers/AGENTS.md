@@ -17,6 +17,23 @@ Basic operating guidance for AI agents working in this repository.
 
 **Documentation precedence (conflict resolution):** If two sources disagree, walk the numbered list above — higher entries win for **governance and process**. For a short narrative map (router vs doctor catalog, policy surfaces, layering exceptions), see **`docs/maintainers/ARCHITECTURE.md` → Documentation precedence**.
 
+## Documentation tiers (progressive disclosure)
+
+- **T0 (~bootstrap)** — From the top of this file through **CLI-first execution**: enough to pick the next doc and avoid unsafe shortcuts.
+- **T1 (depth)** — Playbooks, runbooks, **`ARCHITECTURE`**, **`AGENT-CLI-MAP`**, **`CLI-VISUAL-GUIDE`**, module guides, and **`.ai/`** machine contracts.
+
+## Canonical, generated, and mirrored docs
+
+| Kind | Where | Notes |
+| --- | --- | --- |
+| Canonical maintainer prose | `docs/maintainers/*.md` | Primary edits for process and strategy. |
+| Machine / generated | `.ai/*.md` | Some outputs are **generated** by the documentation module; **`.ai/PRINCIPLES.md`** and **`.ai/module-build.md`** are **hand-maintained** machine dialect — see **`docs/maintainers/RELEASING.md`** when changing **`rule|id=R###`**. |
+| Cursor enforcement mirrors | `.cursor/rules/*.mdc` | Pointer-first; see **`docs/maintainers/module-build-guide.md`** → **Cursor rules**. |
+
+## `/qt` quick-task templates (`tasks/*.md`)
+
+**`/qt`** only materializes **`tasks/*.md`** in the editor. It **does not** run **`workspace-kit`** and **cannot** satisfy **`policyApproval`** (or env approval). If a template step changes task-engine or other kit-owned state, run the **exact** line from **`docs/maintainers/AGENT-CLI-MAP.md`** in a real shell (Tier **A** **`run-transition`**, Tier **B** sensitive **`run`**, etc.).
+
 ## Maintainer playbooks (direction sets)
 
 **Playbooks** are ordered maintainer checklists under [`docs/maintainers/playbooks/`](./playbooks/) that **link** canonical docs instead of copying them. Authoring rules and stable ids: [`playbooks/README.md`](./playbooks/README.md). Terminology: [`TERMS.md`](./TERMS.md) → **Direction set (maintainer playbook)**.
@@ -61,6 +78,7 @@ When a session is long, was compacted, or you are unsure stale chat context matc
 
 ## Working rules
 
+- **`pnpm run check`** — TypeScript **`--noEmit`**, manifest/contract guards, CLI map coverage, orphan instructions, principles rule-id snapshot, and AGENTS source-of-truth path snapshot. Stages and fix hints: **`scripts/run-check-stages.mjs`**.
 - Keep strategy in `docs/maintainers/ROADMAP.md`, execution detail in task-engine state (`workspace-kit run` task commands), and release process in `docs/maintainers/RELEASING.md`; treat the configured task store (default SQLite) as the persistence view.
 - Treat `docs/maintainers/` governance/process docs as canonical; overlapping `.cursor/rules/` files are enforcement mirrors and should not introduce conflicting policy.
 - When scope changes, update all related docs in the same change set.

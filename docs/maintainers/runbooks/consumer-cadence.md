@@ -4,6 +4,8 @@ Defines update cadence states for `@workflow-cannon/workspace-kit` consumers and
 
 AI-canonical companion: `.ai/runbooks/consumer-cadence.md`.
 
+**Editor `/qt` templates** under `tasks/*.md` are not part of this cadence: they do not run **`workspace-kit`** or satisfy policy. Use **`docs/maintainers/AGENT-CLI-MAP.md`** for real mutations.
+
 ## Cadence States
 
 | State | Meaning | npm dist-tag | Consumer action |

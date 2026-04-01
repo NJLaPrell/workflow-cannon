@@ -28,7 +28,7 @@ pnpm run build
 | 3 | `pnpm run wk run` | **Command menu** — every runnable `workspace-kit run <cmd>` |
 | 4 | `pnpm run wk run get-next-actions '{}'` | Read-only suggestion for what to do next |
 
-**Developing:** after edits, `pnpm run build` then `pnpm test` (or `pnpm run phase5-gates` before larger changes). The **published** package exposes two equivalent bins — **`wk`** (short) and **`workspace-kit`** (explicit). In **this** repo, `pnpm` does not put the root package on `pnpm exec`’s path; use **`pnpm run wk …`** (script alias → **`dist/cli.js`**) or call **`node dist/cli.js`** directly. Pass module commands as **`pnpm run wk run <cmd> '<json>'`** (no extra `--` before `run` — pnpm would forward a literal `--` to the CLI).
+**Developing:** after edits, `pnpm run build` then `pnpm test` (or `pnpm run pre-merge-gates` / legacy `pnpm run phase5-gates` before larger changes). The **published** package exposes two equivalent bins — **`wk`** (short) and **`workspace-kit`** (explicit). In **this** repo, `pnpm` does not put the root package on `pnpm exec`’s path; use **`pnpm run wk …`** (script alias → **`dist/cli.js`**) or call **`node dist/cli.js`** directly. Pass module commands as **`pnpm run wk run <cmd> '<json>'`** (no extra `--` before `run` — pnpm would forward a literal `--` to the CLI).
 
 | Situation | Example |
 | --- | --- |
@@ -67,6 +67,14 @@ Or with pnpm: `pnpm add @workflow-cannon/workspace-kit` then `pnpm exec workspac
 | **Cursor extension** (optional) | Thin UI in `extensions/cursor-workflow-cannon/` — build with `pnpm run ui:prepare`. |
 
 There is **no** built-in IDE slash command like `/qt` from this package; editor integrations are **your** config (e.g. `.cursor/commands/`), while **`workspace-kit`** is the supported CLI.
+
+## New contributors — safe task transition (≤5 hops)
+
+1. **README** (this page) — install, `wk doctor`, `wk run` menu.  
+2. [`docs/maintainers/AGENTS.md`](docs/maintainers/AGENTS.md) — source-of-truth order, tiers, **`/qt`** limits.  
+3. [`docs/maintainers/AGENT-CLI-MAP.md`](docs/maintainers/AGENT-CLI-MAP.md) — Tier **A** **`run-transition`** copy-paste JSON.  
+4. [`docs/maintainers/POLICY-APPROVAL.md`](docs/maintainers/POLICY-APPROVAL.md) — when JSON **`policyApproval`** is required vs env approval.  
+5. Run in a shell, e.g. `pnpm run wk run run-transition '{"taskId":"T###","action":"start","policyApproval":{"confirmed":true,"rationale":"your reason"}}'` (replace **`T###`**).
 
 ## Policy and approvals (read this before mutating state)
 

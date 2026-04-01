@@ -25,5 +25,5 @@ Behavior requirements:
 
 ## `/qt` vs `workspace-kit`
 
-`/qt` is **prompt scaffolding** only: it does not execute `workspace-kit` or write task-engine state. When a template would “save” task status, policy-gated work, or kit-owned mutations, the same step must name the **`workspace-kit run ...`** line (or label the step **planning-only**). See **`docs/maintainers/AGENT-CLI-MAP.md`**.
+`/qt` is **prompt scaffolding** only: it does not execute `workspace-kit`, does not write task-engine state, and **does not satisfy** JSON **`policyApproval`** (or env approval) for sensitive **`workspace-kit run`** commands—chat-only “approved” text is not enough. When a template would persist task status, policy-gated work, or other kit-owned mutations, the operator must run the exact **`workspace-kit run ...`** line from **`docs/maintainers/AGENT-CLI-MAP.md`** in a real shell (or label the step **planning-only**). See **`docs/maintainers/POLICY-APPROVAL.md`** for the two-lane model.
 

@@ -6,6 +6,22 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.33.0] - 2026-03-31
+
+Phase 33 — documentation, editor integration, and CLI ergonomics (**`T455`**, **`T459`**, **`T460`**, **`T461`**, **`T462`**, **`T463`**, **`T464`**, **`T469`**).
+
+### Added
+
+- **Scripts** — **`scripts/run-check-stages.mjs`** stages **`pnpm run check`** with labeled steps and failure hints; **`scripts/check-principles-rule-snapshot.mjs`** + **`scripts/fixtures/principles-rule-ids.json`**; **`scripts/check-governance-doc-order.mjs`** + **`scripts/fixtures/governance-doc-order.json`** (AGENTS § Source-of-truth path order).
+- **Gates** — **`pnpm run maintainer-gates`** and **`pnpm run pre-merge-gates`** as intention-revealing names; **`phase4-gates`** / **`phase5-gates`** remain aliases.
+- **Docs** — README **New contributors** path (≤5 hops to a safe **`run-transition`**); AGENTS **documentation tiers**, **canonical vs mirror**, expanded **`/qt`** warning; **`docs/maintainers/module-build-guide.md`** Cursor rules policy; **`docs/maintainers/DECISIONS.md`** governance/drift decision; **`docs/maintainers/RELEASING.md`** principles edit order + gate names; **`tasks/*.md`** kit-invocation reminder block; consumer cadence **`/qt`** note.
+
+### Changed
+
+- **CLI** — Unknown **`workspace-kit run`** subcommand errors list a capped sample of commands plus discovery hints (**`src/core/module-command-router.ts`**); top-level **`--help`** states command discovery explicitly (**`src/cli.ts`**).
+- **Cursor** — **`.cursor/rules/maintainer-delivery-loop.mdc`** slimmed to pointer-first (full loop in **`task-to-main.md`** / **`AGENTS.md`**).
+- **Schemas** — **`task-engine-run-contracts.schema.json`** **`packageVersion`** **`0.33.0`**.
+
 ## [0.32.0] - 2026-03-31
 
 Phase 32 — architecture boundaries and platform surfaces (**`T456`**, **`T457`**, **`T458`**).

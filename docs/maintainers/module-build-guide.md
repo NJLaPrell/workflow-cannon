@@ -16,6 +16,12 @@ Use this precedence when sources disagree:
 3. Generated human docs
 4. Narrative docs
 
+## Cursor rules (`.cursor/rules`)
+
+- **Canonical process prose** lives under **`docs/maintainers/`** (plus **`.ai/`** for machine-oriented contracts).
+- **`.cursor/rules/*.mdc`** files are **Cursor enforcement mirrors**: keep them **short** and **link** to the maintainer doc that carries the full checklist.
+- **Adding a new rule?** Prefer updating the maintainer doc first, then add or extend a **thin** `.mdc` that points at it. Only duplicate text in a rule when the editor must enforce without opening links—and note the canonical path in the rule header so editors know where to edit.
+
 ## Module Build Contract
 
 Every module change must satisfy these baseline rules:
