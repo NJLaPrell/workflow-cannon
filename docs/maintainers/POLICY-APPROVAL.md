@@ -20,6 +20,8 @@ For **sensitive** `workspace-kit run` commands, the CLI accepts **`policyApprova
 | **`WORKSPACE_KIT_POLICY_APPROVAL` env** | **`workspace-kit init`**, **`workspace-kit upgrade`**, **`workspace-kit config`** mutating subcommands (`set`, `unset`, `edit`, …) | Export env var to JSON: `{"confirmed":true,"rationale":"…"}`. |
 | **`WORKSPACE_KIT_INTERACTIVE_APPROVAL` env** | **`workspace-kit run`** sensitive commands only, when stdin+stdout are TTY (or tests inject `readStdinLine`) | Set to `on`, `1`, `true`, or `yes`. Prompts **d / o / s** (Deny / Allow once / Allow for session). Does **not** apply in CI when stdio is not a TTY unless you use the programmatic test hook. |
 
+**Local `.env`:** On startup, `workspace-kit` loads the first `.env` found walking up from the current working directory into `process.env` (via `dotenv`, **`override: false`** — shell-exported variables win). Use the same JSON value for `WORKSPACE_KIT_POLICY_APPROVAL` as in the table above. Committed template: **`.env.example`** (actual **`.env`** is gitignored).
+
 **`workspace-kit run` does not read `WORKSPACE_KIT_POLICY_APPROVAL`** for the run path itself. Repo helpers **`scripts/run-transcript-cli.mjs`** (`pnpm run transcript:ingest`) and **`scripts/pre-release-transcript-hook.mjs`** parse that env var and pass **`policyApproval`** inside the **third JSON argument** to `ingest-transcripts` so headless flows match maintainer intent. Other package scripts that wrap `run` must do the same—or invoke `init`/`config`/`upgrade`, which do read the env var.
 
 Machine-readable denial responses from `run` include **`operationId`** (e.g. `improvement.generate-recommendations`) and **`remediationDoc`** pointing here.

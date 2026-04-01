@@ -21,6 +21,7 @@ import {
   collectTaskPersistenceDoctorSummaryLines
 } from "./cli/doctor-planning-issues.js";
 import { ModuleRegistryError } from "./core/module-registry.js";
+import { loadWorkspaceDotenv } from "./core/load-workspace-dotenv.js";
 import { resolveRegistryAndConfig } from "./core/module-registry-resolve.js";
 import { defaultRegistryModules } from "./modules/index.js";
 
@@ -533,6 +534,7 @@ export async function runCli(
   options: WorkspaceKitCliOptions = {}
 ): Promise<number> {
   const cwd = options.cwd ?? process.cwd();
+  loadWorkspaceDotenv(cwd);
   const writeLine = options.writeLine ?? console.log;
   const writeError = options.writeError ?? console.error;
   const readStdinLine = options.readStdinLine;

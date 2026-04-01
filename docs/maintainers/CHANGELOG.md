@@ -6,6 +6,10 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+### Added
+
+- **CLI `.env` loading** — **`workspace-kit`** loads the first **`.env`** found walking up from cwd (**`dotenv`**, **`override: false`**). Repository **`.env.example`** documents **`WORKSPACE_KIT_POLICY_APPROVAL`** for local hook / config mutations; **`.env`** is gitignored.
+
 ### Changed
 
 - **Post-completion transcript hook** — When **`improvement.hooks.afterTaskCompleted`** is **`ingest`**, the spawned child passes **`policyApproval`** from **`WORKSPACE_KIT_POLICY_APPROVAL`** (JSON) plus **`forceGenerate: true`** so **`ingest-transcripts`** syncs and always runs recommendation generation; invalid/missing env falls back to **`sync-transcripts`** with a logged skip reason (**`src/core/transcript-completion-hook.ts`**).

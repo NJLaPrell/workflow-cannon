@@ -1,5 +1,7 @@
 node_modules/
 dist/
+# Local policy / secrets — copy `.env.example` to `.env` (not committed)
+.env
 .DS_Store
 artifacts/
 # Optional: omit policy traces from VCS (remove if you want traces committed)
