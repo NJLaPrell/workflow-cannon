@@ -1,7 +1,7 @@
 {
   "kit": {
     "currentPhaseNumber": 34,
-    "currentPhaseLabel": "Phase 34 (post–v0.33.0 maintenance)"
+    "currentPhaseLabel": "Phase 34 — Cursor extension & consumer experience (ready: T505, T506, T511, T518)"
   },
   "tasks": {
     "persistenceBackend": "sqlite",
