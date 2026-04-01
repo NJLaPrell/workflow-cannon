@@ -47,11 +47,15 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   const html = renderDashboardRootInnerHtml(fixture);
   assert.match(html, /Current phase/);
   assert.match(html, /Next phase/);
+  assert.match(html, /<p><b>Tasks<\/b><\/p>/);
+  assert.match(html, /Ready · improvements/);
+  assert.match(html, /Ready · execution/);
   assert.match(html, /Wishlist/);
-  assert.match(html, /Ready preview/);
-  assert.match(html, /Proposed improvements/);
+  assert.match(html, /Proposed · improvements/);
+  assert.match(html, /Proposed · execution/);
   assert.match(html, /imp-example/);
   assert.match(html, /T319/);
+  assert.match(html, /T320/);
   assert.match(html, /W1/);
 });
 
@@ -61,6 +65,9 @@ test("renderDashboardRootInnerHtml handles null suggestedNext", () => {
     data: {
       stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
       proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
       wishlist: { openCount: 0, totalCount: 0, openTop: [] },
       blockedSummary: { count: 0, top: [] },
       readyQueueTop: [],
@@ -80,6 +87,10 @@ test("renderDashboardRootInnerHtml shows readyQueueBreakdown when present", () =
     ok: true,
     data: {
       stateSummary: { proposed: 0, ready: 4, in_progress: 0, blocked: 0, completed: 0 },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 3, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 1, top: [] },
       wishlist: { openCount: 0, totalCount: 0, openTop: [] },
       blockedSummary: { count: 0, top: [] },
       readyQueueTop: [],

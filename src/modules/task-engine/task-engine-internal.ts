@@ -556,12 +556,17 @@ export const taskEngineModule: WorkflowModule = {
       const workspaceStatus = await readWorkspaceStatusSnapshot(ctx.workspacePath);
       const readyQueue = suggestion.readyQueue;
       const readyImprovementCount = readyQueue.filter(isImprovementLikeTask).length;
-      const readyTop = readyQueue.slice(0, 15).map((t) => ({
+      const readyImprovements = readyQueue.filter(isImprovementLikeTask);
+      const readyExecution = readyQueue.filter((t) => !isImprovementLikeTask(t));
+      const toReadyRow = (t: (typeof readyQueue)[0]) => ({
         id: t.id,
         title: t.title,
         priority: t.priority ?? null,
         phase: t.phase ?? null
-      }));
+      });
+      const readyTop = readyQueue.slice(0, 15).map(toReadyRow);
+      const readyImprovementsTop = readyImprovements.slice(0, 15).map(toReadyRow);
+      const readyExecutionTop = readyExecution.slice(0, 15).map(toReadyRow);
       const blockedTop = suggestion.blockingAnalysis.slice(0, 15);
 
       const wishlistItems = listWishlistIntakeTasksAsItems(store.getAllTasks());
@@ -581,6 +586,18 @@ export const taskEngineModule: WorkflowModule = {
         phase: t.phase ?? null
       }));
 
+      const proposedExecution = tasks
+        .filter(
+          (t) =>
+            t.status === "proposed" && !isImprovementLikeTask(t) && !isWishlistIntakeTask(t)
+        )
+        .sort((a, b) => a.id.localeCompare(b.id));
+      const proposedExecutionTop = proposedExecution.slice(0, 15).map((t) => ({
+        id: t.id,
+        title: t.title,
+        phase: t.phase ?? null
+      }));
+
       const planningSession = toDashboardPlanningSession(await readBuildPlanSession(ctx.workspacePath));
 
       const data = {
@@ -593,6 +610,21 @@ export const taskEngineModule: WorkflowModule = {
           schemaVersion: 1 as const,
           count: proposedImprovements.length,
           top: proposedImprovementsTop
+        },
+        proposedExecutionSummary: {
+          schemaVersion: 1 as const,
+          count: proposedExecution.length,
+          top: proposedExecutionTop
+        },
+        readyImprovementsSummary: {
+          schemaVersion: 1 as const,
+          count: readyImprovements.length,
+          top: readyImprovementsTop
+        },
+        readyExecutionSummary: {
+          schemaVersion: 1 as const,
+          count: readyExecution.length,
+          top: readyExecutionTop
         },
         readyQueueTop: readyTop,
         readyQueueCount: readyQueue.length,

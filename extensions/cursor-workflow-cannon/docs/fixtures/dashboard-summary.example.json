@@ -15,6 +15,24 @@
       "count": 1,
       "top": [{ "id": "imp-example", "title": "Example proposed improvement", "phase": "Phase 29" }]
     },
+    "proposedExecutionSummary": {
+      "schemaVersion": 1,
+      "count": 0,
+      "top": []
+    },
+    "readyImprovementsSummary": {
+      "schemaVersion": 1,
+      "count": 0,
+      "top": []
+    },
+    "readyExecutionSummary": {
+      "schemaVersion": 1,
+      "count": 2,
+      "top": [
+        { "id": "T319", "title": "[task-engine] Define Wishlist item schema and validation contract", "priority": "P1", "phase": "Phase 14 - Wishlist intake and conversion" },
+        { "id": "T320", "title": "Example second ready task", "priority": "P2", "phase": null }
+      ]
+    },
     "stateSummary": {
       "proposed": 1,
       "ready": 2,
@@ -31,7 +49,10 @@
       "totalCount": 3,
       "openTop": [{ "id": "W1", "title": "Example open wishlist item" }]
     },
-    "readyQueueTop": [],
+    "readyQueueTop": [
+      { "id": "T319", "title": "[task-engine] Define Wishlist item schema and validation contract", "priority": "P1", "phase": "Phase 14 - Wishlist intake and conversion" },
+      { "id": "T320", "title": "Example second ready task", "priority": "P2", "phase": null }
+    ],
     "readyQueueCount": 2,
     "readyQueueBreakdown": {
       "schemaVersion": 1,

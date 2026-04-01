@@ -8,6 +8,7 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ### Added
 
+- **Dashboard payload** — **`dashboard-summary`** includes **`readyImprovementsSummary`**, **`readyExecutionSummary`**, and **`proposedExecutionSummary`** so UIs can list improvement vs execution work separately (Cursor webview groups them under **Tasks**).
 - **CLI `.env` loading** — **`workspace-kit`** loads the first **`.env`** found walking up from cwd (**`dotenv`**, **`override: false`**). Repository **`.env.example`** documents **`WORKSPACE_KIT_POLICY_APPROVAL`** for local hook / config mutations; **`.env`** is gitignored.
 
 ### Changed

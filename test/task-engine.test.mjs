@@ -790,6 +790,39 @@ test("taskEngineModule onCommand dashboard-summary returns stable shape", async 
   assert.ok(Array.isArray(d.wishlist.openTop));
   assert.equal(d.wishlist.openTop.length, 0);
   assert.equal(d.planningSession, null);
+  assert.deepEqual(d.readyImprovementsSummary, { schemaVersion: 1, count: 0, top: [] });
+  assert.equal(d.readyExecutionSummary.schemaVersion, 1);
+  assert.equal(d.readyExecutionSummary.count, 1);
+  assert.equal(d.readyExecutionSummary.top.length, 1);
+  assert.equal(d.readyExecutionSummary.top[0].id, "T001");
+  assert.deepEqual(d.proposedExecutionSummary, { schemaVersion: 1, count: 0, top: [] });
+});
+
+test("taskEngineModule dashboard-summary splits ready improvements vs execution", async () => {
+  const workspace = await tmpDir();
+  const store = TaskStore.forJsonFile(workspace);
+  const now = new Date().toISOString();
+  store.addTask(
+    makeTask({ id: "imp-deadbeef", status: "ready", priority: "P1", type: "improvement", title: "Imp ready" })
+  );
+  store.addTask(
+    makeTask({ id: "T900", status: "ready", priority: "P2", type: "workspace-kit", title: "Exec ready" })
+  );
+  store.addTask(
+    makeTask({ id: "T901", status: "proposed", type: "workspace-kit", title: "Exec proposed" })
+  );
+  await store.save();
+
+  const ctx = jsonTaskEngineCtx(workspace);
+  const result = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
+  assert.equal(result.ok, true);
+  const d = result.data;
+  assert.equal(d.readyImprovementsSummary.count, 1);
+  assert.equal(d.readyImprovementsSummary.top[0].id, "imp-deadbeef");
+  assert.equal(d.readyExecutionSummary.count, 1);
+  assert.equal(d.readyExecutionSummary.top[0].id, "T900");
+  assert.equal(d.proposedExecutionSummary.count, 1);
+  assert.equal(d.proposedExecutionSummary.top[0].id, "T901");
 });
 
 test("taskEngineModule onCommand run-transition validates required args", async () => {

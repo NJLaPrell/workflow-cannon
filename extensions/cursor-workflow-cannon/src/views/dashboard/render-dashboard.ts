@@ -15,9 +15,9 @@ export function renderActiveFocusHtml(raw: string): string {
   return renderMarkdownBoldAfterEscape(escapeHtml(raw));
 }
 
-function renderReadyList(items: unknown): string {
+function renderReadyList(items: unknown, emptyMessage = "No ready tasks."): string {
   if (!Array.isArray(items) || items.length === 0) {
-    return '<p class="muted">No ready tasks.</p>';
+    return '<p class="muted">' + escapeHtml(emptyMessage) + "</p>";
   }
   return (
     "<pre>" +
@@ -50,11 +50,33 @@ function renderWishlistOpenList(items: unknown): string {
 
 function renderProposedImprovementsList(count: number, items: unknown): string {
   if (!Array.isArray(items) || items.length === 0) {
-    return `<p class="muted">No proposed improvements in the task store (<code>type: improvement</code> + <code>status: proposed</code>, or <code>imp-*</code> ids). Open the <b>repository root</b> as the workspace folder (folder must contain <code>.workspace-kit/manifest.json</code>). Confirm in a terminal: <code>workspace-kit run list-tasks '{}'</code> matches this view.</p>`;
+    return `<p class="muted">No proposed improvements (<code>type: improvement</code> or <code>imp-*</code> + <code>status: proposed</code>). Run <code>generate-recommendations</code> / accept triage per playbook. Confirm: <code>workspace-kit run list-tasks '{}'</code>.</p>`;
   }
   const more =
     count > items.length
-      ? '<p class="muted">Showing ' + String(items.length) + " of " + String(count) + " · use Tasks sidebar <b>Improvements</b> or <code>list-tasks</code>.</p>"
+      ? '<p class="muted">Showing ' + String(items.length) + " of " + String(count) + " · Tasks sidebar <b>Improvements</b> or <code>list-tasks</code>.</p>"
+      : "";
+  return (
+    more +
+    "<pre>" +
+    items
+      .map((x) => {
+        const row = x as { id?: unknown; title?: unknown; phase?: unknown };
+        const ph = row?.phase != null && String(row.phase).length > 0 ? " · " + escapeHtml(String(row.phase)) : "";
+        return "- " + escapeHtml(String(row?.id ?? "")) + " " + escapeHtml(String(row?.title ?? "")) + ph;
+      })
+      .join("\n") +
+    "</pre>"
+  );
+}
+
+function renderProposedExecutionList(count: number, items: unknown): string {
+  if (!Array.isArray(items) || items.length === 0) {
+    return '<p class="muted">No proposed execution tasks (<code>status: proposed</code>, not improvement-type, not wishlist).</p>';
+  }
+  const more =
+    count > items.length
+      ? '<p class="muted">Showing ' + String(items.length) + " of " + String(count) + ".</p>"
       : "";
   return (
     more +
@@ -130,11 +152,27 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
   const wishlistOpenTop = Array.isArray(wishlist.openTop) ? wishlist.openTop : [];
   const planningSession = d.planningSession;
   const blockedSummary = (d.blockedSummary as Record<string, unknown>) || {};
-  const blockedTop = Array.isArray(blockedSummary.top) ? (blockedSummary.top as unknown[]).slice(0, 3) : [];
-  const readyTop = Array.isArray(d.readyQueueTop) ? (d.readyQueueTop as unknown[]).slice(0, 3) : [];
+  const blockedTop = Array.isArray(blockedSummary.top) ? (blockedSummary.top as unknown[]).slice(0, 8) : [];
+  const ris = (d.readyImprovementsSummary as Record<string, unknown> | undefined) ?? {};
+  const res = (d.readyExecutionSummary as Record<string, unknown> | undefined) ?? {};
+  let readyImpTop = Array.isArray(ris.top) ? (ris.top as unknown[]) : [];
+  let readyExeTop = Array.isArray(res.top) ? (res.top as unknown[]) : [];
+  let readyImpCount = typeof ris.count === "number" ? ris.count : readyImpTop.length;
+  let readyExeCount = typeof res.count === "number" ? res.count : readyExeTop.length;
+  const oldReadyOnly = !("readyImprovementsSummary" in d) && !("readyExecutionSummary" in d);
+  if (oldReadyOnly && Array.isArray(d.readyQueueTop) && (d.readyQueueTop as unknown[]).length > 0) {
+    readyExeTop = (d.readyQueueTop as unknown[]).slice(0, 15);
+    readyExeCount =
+      typeof d.readyQueueCount === "number" ? (d.readyQueueCount as number) : readyExeTop.length;
+    readyImpTop = [];
+    readyImpCount = 0;
+  }
   const pis = (d.proposedImprovementsSummary as Record<string, unknown> | undefined) ?? {};
   const piCount = typeof pis.count === "number" ? pis.count : 0;
   const piTop = Array.isArray(pis.top) ? (pis.top as unknown[]) : [];
+  const pes = (d.proposedExecutionSummary as Record<string, unknown> | undefined) ?? {};
+  const peCount = typeof pes.count === "number" ? pes.count : 0;
+  const peTop = Array.isArray(pes.top) ? (pes.top as unknown[]) : [];
   const rqb = d.readyQueueBreakdown as
     | { improvement?: unknown; other?: unknown; schemaVersion?: unknown }
     | undefined;
@@ -161,7 +199,8 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
     '<p class="muted focus-md">' +
     renderActiveFocusHtml(String(ws?.activeFocus ?? "")) +
     "</p>" +
-    "<p class=\"ok\">Tasks · proposed " +
+    "<p><b>Tasks</b></p>" +
+    "<p class=\"ok\">Counts · proposed " +
     String(ss.proposed ?? 0) +
     " · ready " +
     String(ss.ready ?? 0) +
@@ -172,26 +211,34 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
     " · done " +
     String(ss.completed ?? 0) +
     "</p>" +
-    "<p><b>Wishlist</b> (W### — ideation; not in ready queue until converted to tasks) · open " +
+    "<p><b>Ready · improvements</b> (" +
+    String(readyImpCount) +
+    ") — same store as execution queue; triage via accept → <code>ready</code></p>" +
+    renderReadyList(readyImpTop, "No ready improvements.") +
+    "<p><b>Ready · execution</b> (" +
+    String(readyExeCount) +
+    ")</p>" +
+    breakdownLine +
+    renderReadyList(readyExeTop, "No ready execution tasks.") +
+    "<p><b>Proposed · improvements</b> (backlog until accepted) · " +
+    String(piCount) +
+    "</p>" +
+    renderProposedImprovementsList(piCount, piTop) +
+    "<p><b>Proposed · execution</b> (workspace-kit tasks awaiting promote) · " +
+    String(peCount) +
+    "</p>" +
+    renderProposedExecutionList(peCount, peTop) +
+    "<p><b>Blocked</b> " +
+    String(blockedSummary.count ?? 0) +
+    "</p>" +
+    renderBlockedList(blockedTop) +
+    "<p><b>Wishlist</b> (W### — ideation; convert to tasks for the queue) · open " +
     String(wishlist.openCount ?? 0) +
     " / total " +
     String(wishlist.totalCount ?? 0) +
     "</p>" +
     renderWishlistOpenList(wishlistOpenTop) +
-    "<p><b>Proposed improvements</b> (triage backlog — not in ready queue until accepted) · " +
-    String(piCount) +
-    "</p>" +
-    renderProposedImprovementsList(piCount, piTop) +
-    "<p><b>Blocked</b> " +
-    String(blockedSummary.count ?? 0) +
-    "</p>" +
-    renderBlockedList(blockedTop) +
-    "<p><b>Ready preview</b> (execution queue — " +
-    String(d.readyQueueCount ?? 0) +
-    ")</p>" +
-    breakdownLine +
-    renderReadyList(readyTop) +
-    "<p><b>Suggested next</b> (first ready task only) " +
+    "<p><b>Suggested next</b> (highest-priority ready, any type) " +
     (sn && (sn.id != null || sn.title != null)
       ? escapeHtml(String(sn.id ?? "") + " — " + String(sn.title ?? ""))
       : '<span class="muted">— none · promote tasks to <code>ready</code> or complete triage (<code>improvement</code> → accept)</span>') +
