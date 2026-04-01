@@ -20,6 +20,7 @@
   },
   "scripts": {
     "postinstall": "node scripts/ensure-native-sqlite.mjs",
+    "wk": "node dist/cli.js",
     "build": "tsc -p tsconfig.json",
     "rebuild-sqlite": "pnpm rebuild better-sqlite3",
     "check": "tsc -p tsconfig.json --noEmit && node scripts/check-builtin-command-manifest.mjs && node scripts/check-task-engine-run-contracts.mjs && node scripts/check-agent-cli-map-coverage.mjs && node scripts/check-orphan-instructions.mjs",

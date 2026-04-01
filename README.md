@@ -23,27 +23,26 @@ pnpm run build
 
 | Step | Command | What you get |
 | --- | --- | --- |
-| 1 | `pnpm exec wk --help` | Orientation: top-level commands, first-run path, doc pointers |
-| 2 | `pnpm exec wk doctor` | Confirms kit contract files and config resolve |
-| 3 | `pnpm exec wk run` | **Command menu** — every runnable `workspace-kit run <cmd>` |
-| 4 | `pnpm exec wk run get-next-actions '{}'` | Read-only suggestion for what to do next |
+| 1 | `pnpm run wk --help` | Orientation: top-level commands, first-run path, doc pointers |
+| 2 | `pnpm run wk doctor` | Confirms kit contract files and config resolve |
+| 3 | `pnpm run wk run` | **Command menu** — every runnable `workspace-kit run <cmd>` |
+| 4 | `pnpm run wk run get-next-actions '{}'` | Read-only suggestion for what to do next |
 
-**Developing:** after edits, `pnpm run build` then `pnpm test` (or `pnpm run phase5-gates` before larger changes). The package exposes two equivalent bins — **`wk`** (short) and **`workspace-kit`** (explicit). Use whichever is on your `PATH`:
+**Developing:** after edits, `pnpm run build` then `pnpm test` (or `pnpm run phase5-gates` before larger changes). The **published** package exposes two equivalent bins — **`wk`** (short) and **`workspace-kit`** (explicit). In **this** repo, `pnpm` does not put the root package on `pnpm exec`’s path; use **`pnpm run wk …`** (script alias → **`dist/cli.js`**) or call **`node dist/cli.js`** directly. Pass module commands as **`pnpm run wk run <cmd> '<json>'`** (no extra `--` before `run` — pnpm would forward a literal `--` to the CLI).
 
 | Situation | Example |
 | --- | --- |
-| This repo, after `pnpm install` | `pnpm exec wk --help` or `pnpm exec workspace-kit --help` |
-| Global / linked install | `wk --help` or `workspace-kit --help` |
+| This repo, after `pnpm run build` | `pnpm run wk --help` or `node dist/cli.js --help` |
+| Global / linked install of the package | `wk --help` or `workspace-kit --help` |
 | Another project with the package installed | `npx wk --help` or `npx workspace-kit --help` |
-| Bootstrap without pnpm module path (exception) | `node dist/cli.js --help` — same entrypoint as the published bins |
 
 **`workspace-kit run` with no subcommand is the full module command list** — that is the usual “what can I run?” answer.
 
 Try **read-only** task-engine queries:
 
 ```bash
-pnpm exec wk run list-tasks '{}'
-pnpm exec wk run get-next-actions '{}'
+pnpm run wk run list-tasks '{}'
+pnpm run wk run get-next-actions '{}'
 ```
 
 ## Quick start (use the package in another project)

@@ -21,7 +21,7 @@ Phase 28 — maintainer and agent operability: read-only **`queue-health`** audi
 
 - **`docs/maintainers/AGENT-CLI-MAP.md`** — Queue health / consistency section; Tier C examples include **`queue-health`**.
 - **`docs/maintainers/TERMS.md`**, **`src/modules/planning/README.md`**, **`src/modules/task-engine/README.md`** — Planning vs persistence disambiguation + **`phaseKey`** term.
-- **README** / **`docs/maintainers/README.md`** — Prefer **`pnpm exec wk`** examples; document **`node dist/cli.js`** as bootstrap exception only.
+- **README** / **`docs/maintainers/README.md`** — Clone flow uses **`pnpm run wk …`** (root **`package.json`** **`wk`** script → **`dist/cli.js`**) because `pnpm exec` does not resolve the workspace package’s own bins; use **`pnpm run wk run <cmd> '<json>'`** for module commands (avoid **`pnpm run wk -- run …`**, which forwards a literal `--`). Published installs use **`wk`** / **`workspace-kit`** on `PATH`.
 
 ## [0.28.0] - 2026-03-31
 

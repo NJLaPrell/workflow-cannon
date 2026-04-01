@@ -26,18 +26,18 @@ pnpm run build
 Verify the kit sees your workspace:
 
 ```bash
-pnpm exec wk doctor
-pnpm exec wk --help
+pnpm run wk doctor
+pnpm run wk --help
 ```
 
 Try **read-only** task-engine queries:
 
 ```bash
-pnpm exec wk run list-tasks '{}'
-pnpm exec wk run get-next-actions '{}'
+pnpm run wk run list-tasks '{}'
+pnpm run wk run get-next-actions '{}'
 ```
 
-**Developing:** after edits, `pnpm run build` then `pnpm test` (or `pnpm run phase5-gates` before larger changes). Prefer **`pnpm exec wk`** / **`pnpm exec workspace-kit`** from the repo root; the published package also exposes the short bin **`wk`**. **`node dist/cli.js`** is the same entrypoint when you need a literal path (pre-link bootstrap).
+**Developing:** after edits, `pnpm run build` then `pnpm test` (or `pnpm run phase5-gates` before larger changes). In this source repo use **`pnpm run wk …`** (see root `package.json` **`wk`** script) or **`node dist/cli.js`**. Module commands: **`pnpm run wk run <cmd> '<json>'`**. After **`npm install @workflow-cannon/workspace-kit`** elsewhere, **`wk`** / **`workspace-kit`** are on `PATH` via `node_modules/.bin`.
 
 ## Quick start (use the package in another project)
 

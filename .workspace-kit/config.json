@@ -1,7 +1,7 @@
 {
   "kit": {
-    "currentPhaseNumber": 28,
-    "currentPhaseLabel": "Phase 28 (maintainer and agent operability)"
+    "currentPhaseNumber": 29,
+    "currentPhaseLabel": "Phase 29 (next execution slice)"
   },
   "tasks": {
     "persistenceBackend": "sqlite",
