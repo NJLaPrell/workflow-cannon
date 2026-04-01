@@ -2,13 +2,14 @@ schema_version: 1
 current_kit_phase: "28"
 next_kit_phase: "29"
 last_updated: "2026-03-31"
-active_focus: "**Phase 28** — **`proposed`** backlog: transcript **`imp-*`** plus **`T443`–`T447`** (task-engine queue operability for agents); promote via **`improvement-triage-top-three`** / **`accept`** when staffing."
+active_focus: "**Phase 28** — eight **`ready`** **`workspace-kit`** tasks (**`T392`**, **`T443`–`T449`**) on **Phase 28 (maintainer and agent operability)**; **`proposed`** queue empty. Start **`T443`** and/or **`T448`** (no deps); **`T444`**/**`T445`**/**`T446`**/**`T447`**/**`T449`** follow the recorded **`dependsOn`** chain."
 blockers: []
 pending_decisions: []
 next_agent_actions:
-  - "Triage or **`accept`** **`T443`–`T447`** when ready to implement queue-health / phase canon / **`list-tasks`** hints / **AGENT-CLI-MAP** patterns."
-  - "Optional **`improvement-triage-top-three`** for remaining **`proposed`** **`imp-*`**."
+  - "Pick **`in_progress`** on **`T443`** (queue-health) and/or **`T448`** (**`wk`** bin); then **`T444`** → **`T445`**, **`T446`** → **`T447`**, **`T449`** after **`T448`** per **`dependsOn`**."
+  - "Deliver **`T392`** when staffing (deps **`T389`**, **`T390`** **`completed`**)."
 last_session_summary:
+  - "2026-03-31: **`update-task`** + **`run-transition accept`** — **`T392`**, **`T443`–`T447`**, **`T448`**, **`T449`** → **`ready`**, phase **Phase 28 (maintainer and agent operability)**; **`dependsOn`**: **`T444`→`T443`**, **`T445`→`T444`**, **`T446`→`T443`**, **`T447`→`T443`+`T446`**, **`T449`→`T448`**; **`T392`** unchanged **`T389`**, **`T390`**. **`run-transition reject`** — fourteen **`proposed`** **`imp-*`** → **`cancelled`** (triage). **`proposed`** count **0**."
   - "2026-04-01: **`create-task`** — **`T448`** **`proposed`** (add **`wk`** bin alias); **`T449`** **`proposed`** (audit repo CLI references → **`wk`** / **`workspace-kit`**) **`dependsOn`**: **`T448`**; phase **Phase 28 (CLI and bin ergonomics)**."
   - "2026-03-31: Phase **27** closeout — **`v0.28.0`** GitHub release + **Publish NPM** `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23825952328`; runbook **`docs/maintainers/runbooks/agent-task-engine-ergonomics.md`**; nine **`imp-*`** **`completed`**. **`T443`–`T447`** remain **`proposed`** for Phase **28**."
   - "2026-04-01: **`create-task`** — five **`proposed`** **`workspace-kit`** tasks **`T443`–`T447`** (task-engine queue-health / canonical phase / structured phase / **`list-tasks`** hints / **AGENT-CLI-MAP** queue pattern), phase **Phase 27 (task engine operability for agents)**; provenance agent reflection on multi-step queue audits."
@@ -19,7 +20,7 @@ last_session_summary:
 metrics:
   updated_at: "2026-03-31"
   source: "maintainer"
-  notes: "Phase 27 released v0.28.0 (nine imp-*). Proposed follow-up: T443–T447 + remaining imp-*."
+  notes: "Phase 27 released v0.28.0 (nine imp-*). Phase 28: T392 + T443–T449 ready; imp-* proposed backlog cleared via reject (2026-03-31)."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null
