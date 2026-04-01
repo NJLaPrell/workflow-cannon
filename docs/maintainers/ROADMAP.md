@@ -38,6 +38,7 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - **Phase 24 (Unified task intake and improvement operational state)** is **COMPLETE and released** as **`v0.24.0`**: **`T425`–`T432`** — wishlist ideation as **`wishlist_intake`** **`T###`** tasks with optional **`metadata.legacyWishlistId`**; **`migrate-wishlist-intake`** for legacy stores; improvement operational state in unified SQLite when **`tasks.persistenceBackend: sqlite`**. ADR: `docs/maintainers/ADR-unified-task-store-wishlist-and-improvement-state.md`.
 - **Phase 25 (Agent playbooks and direction sets)** is **COMPLETE and released** as **`v0.26.0`**: **`T433`–`T439`** — maintainer **playbooks** under `docs/maintainers/playbooks/` (canon-by-reference); pilot **phase closeout + release** checklist; **`AGENTS.md`** discovery index; **`tasks/phase-closeout.md`** `/qt` template; **`runbooks/agent-playbooks.md`**; requestable **`.cursor/rules/playbook-phase-closeout.mdc`**.
 - **Phase 26 (Module platform and improvement execution)** is **COMPLETE and released** as **`v0.27.0`**: **`T388`**, **`T389`**, **`T391`**, **`T393`**, **`T390`**, workbook tasks **`T440`–`T442`**, and ready transcript improvements **`imp-df7ebd9967433c`**, **`imp-c584f0e206c404`**, **`imp-5dc1ffa28ccdc3`** (policy/script ergonomics + maintainer docs). Additional transcript-derived **`imp-*`** items stay **`proposed`** for **Phase 27** triage (not blocking this release).
+- **Phase 27 (Transcript improvement execution)** is **COMPLETE and released** as **`v0.28.0`**: nine **`ready`** transcript improvements — **`imp-5ba2f6a0c3bd4a`**, **`imp-6a07b608c1b752`**, **`imp-3bf93773a8c983`**, **`imp-a7dcdec79a791b`**, **`imp-190189d4b01bc1`**, **`imp-d3d2643f55fd43`**, **`imp-4cf9c424e5bfb2`**, **`imp-f39584e6613337`**, **`imp-d8ed5fa0b6c093`** — closed with maintainer runbook **`docs/maintainers/runbooks/agent-task-engine-ergonomics.md`** (evidence-key table + FEATURE-MATRIX alignment). Remaining **`proposed`** **`imp-*`** backlog rolls to **Phase 28** triage. **`T443`–`T447`** (task-engine operability for agents) remain **`proposed`** for **Phase 28** delivery.
 - Historical extraction and first-publish milestones remain recorded below as provenance.
 
 ## Phase plan and release cadence
@@ -319,6 +320,14 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
   - `pnpm run build`, `check`, `test`, and `parity` pass on the **`v0.27.0`** release tag.
   - ROADMAP, FEATURE-MATRIX, and **`docs/maintainers/data/workspace-kit-status.yaml`** reflect phase closeout and release evidence.
 
+### Phase 27 - Transcript improvement execution -> GitHub release `v0.28.0` (COMPLETE)
+
+- **Primary scope:** Nine **`ready`** transcript improvements: **`imp-5ba2f6a0c3bd4a`**, **`imp-6a07b608c1b752`**, **`imp-3bf93773a8c983`**, **`imp-a7dcdec79a791b`**, **`imp-190189d4b01bc1`**, **`imp-d3d2643f55fd43`**, **`imp-4cf9c424e5bfb2`**, **`imp-f39584e6613337`**, **`imp-d8ed5fa0b6c093`**. (Separate **`proposed`** execution tasks **`T443`–`T447`** carry the phase label *Phase 27 (task engine operability for agents)* but ship under **Phase 28** when accepted.)
+- **Outcome:** Maintainer runbook **`docs/maintainers/runbooks/agent-task-engine-ergonomics.md`** documents Git vs task-state boundaries, read-only kit inspection, planning vs execution queues, improvement listing, product vs implementation maps, task-engine **`index.ts`** public surface, soft (**`agent-behavior`**) vs hard (policy/principles) layers, and extension vs CLI — each tied to transcript **`evidenceKey`** rows for verification. FEATURE-MATRIX Phase 27 milestone row stays aligned.
+- **Exit signals:**
+  - Listed **`imp-*`** items are **`completed`** in task-engine state with release evidence recorded below.
+  - `pnpm run build`, `check`, `test`, `parity`, and `phase5-gates` pass on the **`v0.28.0`** release tag.
+
 ## Recorded decisions
 
 | Decision | Choice |
@@ -359,4 +368,5 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 - Phase 25 / `v0.26.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23768654868`
 - Phase 26 / `v0.27.0` GitHub release: `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.27.0`
 - Phase 26 / `v0.27.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23823720798`
+- Phase 27 / `v0.28.0` — record GitHub release + **Publish NPM** workflow run URL here after publish (same pattern as Phase 26 evidence lines above).
 - npm package: `https://www.npmjs.com/package/@workflow-cannon/workspace-kit`

@@ -6,6 +6,16 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-03-31
+
+Phase 27 — transcript improvement execution closeout: nine **`ready`** **`imp-*`** items addressed via maintainer runbook **`docs/maintainers/runbooks/agent-task-engine-ergonomics.md`** (Git vs task-engine completion, read-only kit inspection, planning vs execution queue, improvement listing, product vs implementation maps, task-engine public **`index.ts`** surface, **`agent-behavior`** soft layer vs policy/principles, extension thin client vs CLI). ROADMAP + FEATURE-MATRIX milestone rows aligned.
+
+### Documentation
+
+- **`docs/maintainers/runbooks/agent-task-engine-ergonomics.md`** — Phase 27 ergonomics runbook with transcript **`evidenceKey`** verification table.
+- **`docs/maintainers/AGENT-CLI-MAP.md`** — Optional session opener clarifies **`suggestedNext`** vs **`get-task`**.
+- **`docs/maintainers/AGENTS.md`** — Links the new runbook from long-session / discovery context.
+
 ## [0.27.0] - 2026-03-31
 
 Phase 26 — module platform + improvement execution closeout (**`T388`**, **`T389`**, **`T391`**, **`T393`**, **`T440`–`T442`**, **`T390`**); transcript hook / policy ergonomics (**`imp-c584f0e206c404`**, **`imp-df7ebd9967433c`**); sensitive-run denial messaging already explicit for malformed **`policyApproval`** (**`imp-5dc1ffa28ccdc3`**).

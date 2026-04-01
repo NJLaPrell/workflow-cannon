@@ -29,6 +29,7 @@ Status legend:
 | Phase 12 - Cursor native UI thin client (`T296`–`T310`) | `v0.13.0` | Completed |
 | Phase 25 - Agent playbooks and direction sets (`T433`–`T439`) | `v0.26.0` | Completed |
 | Phase 26 - Module platform and improvement execution (`T388`–`T393`, `T390`, `T440`–`T442`, ready `imp-*`) | `v0.27.0` | Completed (transcript `imp-*` backlog remains **`proposed`** for Phase 27 triage) |
+| Phase 27 - Transcript improvement execution (nine promoted **`ready`** `imp-*`) | `v0.28.0` | Completed (see Phase 27 section below; remaining **`proposed`** `imp-*` roll forward) |
 
 ## Feature Matrix by Phase
 
@@ -216,6 +217,12 @@ Status legend:
 | Layering + R102 canon | Maintainer docs and `src/README` explain core↔module facades vs **R102** | Completed | `T390` |
 | Workbook alignment | Transcript baseline + task-engine workbook + cadence observability | Completed | `T440`–`T442` |
 | Transcript improvement burn-down | Promoted **`ready`** `imp-*` closed; **`proposed`** backlog continues in Phase 27 | Partial (by design) | Transcript `imp-*` (see task-engine state) |
+
+### Phase 27 Transcript improvement execution (`v0.28.0`)
+
+| Product feature | What users/maintainers get | Status | Task coverage |
+| --- | --- | --- | --- |
+| Agent task-engine ergonomics runbook | Single maintainer runbook tying Git, CLI discovery, planning vs execution queue, FEATURE-MATRIX vs architecture, task-engine public surface, behavior-vs-policy layering, and extension thin-client boundaries | Completed | `imp-5ba2f6a0c3bd4a`, `imp-6a07b608c1b752`, `imp-3bf93773a8c983`, `imp-a7dcdec79a791b`, `imp-190189d4b01bc1`, `imp-d3d2643f55fd43`, `imp-4cf9c424e5bfb2`, `imp-f39584e6613337`, `imp-d8ed5fa0b6c093` |
 
 ## Supporting Milestone Features (cross-phase)
 

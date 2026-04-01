@@ -1,0 +1,129 @@
+# Agent task-engine ergonomics
+
+Maintainer runbook for **agents and operators** who juggle Git, the Task Engine, planning output, and the Cursor extension. It consolidates guidance that repeatedly surfaced in Phase 27 transcript-backed **`imp-*`** work.
+
+Canonical process remains: [`AGENTS.md`](../AGENTS.md), [`AGENT-CLI-MAP.md`](../AGENT-CLI-MAP.md), [`POLICY-APPROVAL.md`](../POLICY-APPROVAL.md), [`RELEASING.md`](../RELEASING.md).
+
+## 1. Git merge is not task completion
+
+**Problem:** A pull request can be merged while Task Engine rows still show **`ready`** or **`in_progress`**. Git history and task-engine state are independent sources of truth.
+
+**Expectation:**
+
+- After merged work satisfies a task’s acceptance criteria, run **`workspace-kit run run-transition`** with **`complete`** (Tier A, JSON **`policyApproval`**). See [`AGENT-CLI-MAP.md`](../AGENT-CLI-MAP.md).
+- Do not infer **`completed`** from “PR merged” or from local **`git`** output alone.
+
+**Transcript alignment:** `imp-5ba2f6a0c3bd4a` (`transcript:792c03b277fad3bdfd7fafbc0b5c079174f13b7b`).
+
+## 2. Today’s code and task-engine state beat aspirational docs
+
+**Problem:** Roadmaps, chat plans, and old phase labels can describe a *target* architecture that differs from the current tree or default persistence.
+
+**Expectation:**
+
+- For **what ships**, prefer **`workspace-kit doctor`**, **`workspace-kit run`** (no subcommand), module **`README`** files, and [`ARCHITECTURE.md`](../ARCHITECTURE.md) over narrative summaries.
+- Default task persistence is **SQLite** when using kit defaults; JSON remains an explicit opt-out. See [`AGENTS.md`](../AGENTS.md) and task-engine **`config.md`**.
+- When docs and code disagree, treat the discrepancy as a **doc bug** or a **tracked task**, not as permission to assume the older story.
+
+**Transcript alignment:** `imp-6a07b608c1b752` (`transcript:17404c335f324980e3353bb3601f3ca92d8b9268`).
+
+## 3. Read-only inspection of `.workspace-kit`
+
+**Problem:** Agents sometimes mutate kit state by hand or skip discovery commands.
+
+**Expectation:**
+
+- **Read-only discovery:** `workspace-kit doctor`, `workspace-kit run list-tasks`, `workspace-kit run get-next-actions`, `workspace-kit run get-task`, `workspace-kit run explain-task-engine-model` (Tier C unless otherwise documented).
+- **Lifecycle changes:** only **`run-transition`** (and other documented mutators) with correct **`policyApproval`** tiering — not hand-edited `state.json` except documented recovery.
+
+**Transcript alignment:** `imp-3bf93773a8c983` (`transcript:ae9aedbeb39d77297a12fc0b697ac6918a06bbaf`).
+
+## 4. Planning engine → workable tasks
+
+**Problem:** Operators confuse wishlist artifacts, planning sessions, and execution tasks.
+
+**Expectation:**
+
+- Use the planning module runbook: [`planning-workflow.md`](./planning-workflow.md) — especially **`build-plan`** with explicit **`finalize`** / wishlist flags when capturing decomposition.
+- Convert wishlist-style outputs to execution work with **`convert-wishlist`** (or the current intake path for **`T###`** wishlist tasks, per [`ADR-unified-task-store-wishlist-and-improvement-state.md`](../ADR-unified-task-store-wishlist-and-improvement-state.md)).
+- **`get-next-actions`** lists **execution** queue candidates; wishlist / intake items are governed by their own commands and filters.
+
+**Transcript alignment:** `imp-a7dcdec79a791b` (`transcript:d298f9c6e0fee583eccc4a72da2cd9f05fbe216e`).
+
+## 5. Improvement queue at a glance
+
+**Problem:** Long lists of **`imp-*`** titles are hard to scan; agents re-derive context from chat.
+
+**Expectation:**
+
+- Run **`workspace-kit run get-next-actions '{}'`** for the prioritized head and full **`readyQueue`** payload.
+- Filter improvements: **`workspace-kit run list-tasks`** with `{"type":"improvement",...}` (phase / status filters as needed). Examples in [`AGENT-CLI-MAP.md`](../AGENT-CLI-MAP.md).
+- Promotion from **`proposed`** → **`ready`** follows [`improvement-triage-top-three.md`](../playbooks/improvement-triage-top-three.md) (at most three per triage pass).
+
+**Transcript alignment:** `imp-190189d4b01bc1` (`transcript:41f6d2ae104f1f751a5a8effb70dab3d2ad5c606`).
+
+## 6. Product language vs implementation map
+
+**Problem:** Stakeholders ask for a “feature map” while engineers need task IDs and module boundaries.
+
+**Expectation:**
+
+- Product-oriented milestone table: [`FEATURE-MATRIX.md`](../FEATURE-MATRIX.md) (phase → capability → task coverage).
+- Implementation and layering detail: [`ARCHITECTURE.md`](../ARCHITECTURE.md), module READMEs under `src/modules/*/README.md`.
+- Keep FEATURE-MATRIX and [`ROADMAP.md`](../ROADMAP.md) phase/release wording aligned when closing a phase.
+
+**Transcript alignment:** `imp-d3d2643f55fd43` (`transcript:a6877694cdfb1762abc19b7319b14ad86e450239`).
+
+## 7. Task-engine package surface vs large internal modules
+
+**Problem:** `task-engine-internal.ts` is large; consumers need a stable import story.
+
+**Expectation:**
+
+- **Public integration surface:** `src/modules/task-engine/index.ts` — typed exports for **`TaskStore`**, **`TransitionService`**, **`getNextActions`**, wishlist helpers, planning store openers, and the **`taskEngineModule`** registration object.
+- **Dispatch and command wiring** live in **`task-engine-internal.ts`** (and related files). Prefer importing from **`index.ts`** in other packages or tests unless you are editing the module implementation.
+
+**Transcript alignment:** `imp-4cf9c424e5bfb2` (`transcript:5295b907609739616ee735747472151630762939`).
+
+## 8. “Soft” collaboration layer vs policy and principles
+
+**Problem:** Design chats mix **interaction style** (tone, depth, exploration) with **governance** (policy, approvals, release gates).
+
+**Expectation:**
+
+- **Hard layer:** `.ai/PRINCIPLES.md`, policy tiers, task acceptance criteria, [`RELEASING.md`](../RELEASING.md).
+- **Soft layer:** **`agent-behavior`** profiles — advisory only, subordinate to principles. Canonical spec: [`plans/agent-behavior-module.md`](../plans/agent-behavior-module.md).
+- On conflict, follow **PRINCIPLES** rule **R011** (soft-gate: state the conflict, confirm with the human).
+
+**Transcript alignment:** `imp-f39584e6613337` (`transcript:552bf255395db672a565e13eccb5f6834690bd0a`).
+
+## 9. Extension dashboard vs maintainer CLI
+
+**Problem:** The Cursor extension shows aggregates; maintainers still need JSON contracts and playbooks.
+
+**Expectation:**
+
+- Extension is a **thin client** over **`workspace-kit run`** JSON (e.g. **`dashboard-summary`**). It does not replace [`AGENT-CLI-MAP.md`](../AGENT-CLI-MAP.md) or instruction files under `src/modules/*/instructions/`.
+- Deeper parity and roadmap for UI vs CLI: [`plans/extension-dashboard-parity-plan.md`](../plans/extension-dashboard-parity-plan.md).
+
+**Transcript alignment:** `imp-d8ed5fa0b6c093` (`transcript:f5bc615dd46b727a8c7f95f709415ce5c10e143e`).
+
+## Optional: `suggestedNext` vs `get-task`
+
+`get-next-actions` returns **`suggestedNext`** as a **full task record** for the queue head. Use **`get-task`** when you need a specific id after other mutations, historical context, or when **`suggestedNext`** is not the task you intend to implement. See [`AGENT-CLI-MAP.md`](../AGENT-CLI-MAP.md) → **Optional session opener**.
+
+## Phase 27 evidence index
+
+| Task id | evidenceKey (transcript hash) |
+| --- | --- |
+| `imp-5ba2f6a0c3bd4a` | `transcript:792c03b277fad3bdfd7fafbc0b5c079174f13b7b` |
+| `imp-6a07b608c1b752` | `transcript:17404c335f324980e3353bb3601f3ca92d8b9268` |
+| `imp-3bf93773a8c983` | `transcript:ae9aedbeb39d77297a12fc0b697ac6918a06bbaf` |
+| `imp-a7dcdec79a791b` | `transcript:d298f9c6e0fee583eccc4a72da2cd9f05fbe216e` |
+| `imp-190189d4b01bc1` | `transcript:41f6d2ae104f1f751a5a8effb70dab3d2ad5c606` |
+| `imp-d3d2643f55fd43` | `transcript:a6877694cdfb1762abc19b7319b14ad86e450239` |
+| `imp-4cf9c424e5bfb2` | `transcript:5295b907609739616ee735747472151630762939` |
+| `imp-f39584e6613337` | `transcript:552bf255395db672a565e13eccb5f6834690bd0a` |
+| `imp-d8ed5fa0b6c093` | `transcript:f5bc615dd46b727a8c7f95f709415ce5c10e143e` |
+
+Verifiers can open the cited transcript paths from task metadata (`workspace-kit run get-task '{"taskId":"<imp-id>"}'`) and confirm this runbook addresses the same themes.

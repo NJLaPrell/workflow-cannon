@@ -45,7 +45,8 @@ When a session is long, was compacted, or you are unsure stale chat context matc
 2. Run **`workspace-kit doctor`**, then **`workspace-kit run get-next-actions '{}'`** (or use the Workflow Cannon extension dashboard, which calls **`dashboard-summary`**).
 3. Re-read **`docs/maintainers/data/workspace-kit-status.yaml`** and the authoritative task list via **`workspace-kit run list-tasks`** / **`get-next-actions`** (or the configured task store file if using JSON) — do not rely on chat memory for task `status` or phase alone.
 4. Optional: attach **`.cursor/rules/cursor-long-session-hygiene.mdc`** in Cursor for a short reload checklist; prefer **requestable** rules over bloating always-on rules. See **`docs/maintainers/runbooks/cursor-long-session.md`**.
-5. **`/qt`** templates: any step that persists kit state must include the matching **`workspace-kit`** invocation from **`docs/maintainers/AGENT-CLI-MAP.md`** before you treat the template as closed.
+5. Task queue / Git / extension mental model: **`docs/maintainers/runbooks/agent-task-engine-ergonomics.md`** (merge ≠ task **`complete`**, **`suggestedNext`** vs **`get-task`**, read-only kit inspection).
+6. **`/qt`** templates: any step that persists kit state must include the matching **`workspace-kit`** invocation from **`docs/maintainers/AGENT-CLI-MAP.md`** before you treat the template as closed.
 
 ## Core expectations
 

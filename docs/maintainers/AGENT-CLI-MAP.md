@@ -191,6 +191,7 @@ Instruction paths: run `workspace-kit run` with no subcommand to list commands; 
 5. Task Engine run schemas: `schemas/task-engine-run-contracts.schema.json` (versioned with package; command coverage verified by `pnpm run check`).
 6. Agent behavior plan: `docs/maintainers/plans/agent-behavior-module.md` + profile schema `schemas/agent-behavior-profile.schema.json`.
 7. Planning module runbook: `docs/maintainers/runbooks/planning-workflow.md`.
+8. Agent task-engine ergonomics: `docs/maintainers/runbooks/agent-task-engine-ergonomics.md`.
 
 ## Optional session opener (habit hook)
 
@@ -198,11 +199,13 @@ Use this Tier C starter block at session start to avoid stale queue assumptions:
 
 ```bash
 workspace-kit run get-next-actions '{}'
-# then inspect a concrete task before implementation
-workspace-kit run get-task '{"taskId":"T351"}'
+# If you are implementing the queue head, suggestedNext is already a full task record — re-fetch with get-task only after other mutations or when you need a specific id:
+workspace-kit run get-task '{"taskId":"<id-from-suggestedNext>"}'
 ```
 
-`get-next-actions` gives queue guidance (`suggestedNext`) but does not replace task detail review (`Approach`, `Technical scope`, `Acceptance criteria`).
+`get-next-actions` returns **`suggestedNext`** as a complete task object (same fields you get from **`get-task`** for that id). Use **`get-task`** when the queue head is not your target, after writes that may reorder the queue, or when you need to re-load after a transition. For implementation, still read **`Approach`**, **`Technical scope`**, and **`Acceptance criteria`** on the record you intend to ship.
+
+Maintainer-oriented narrative for Git vs task state, planning vs queue, and extension vs CLI: [`runbooks/agent-task-engine-ergonomics.md`](./runbooks/agent-task-engine-ergonomics.md).
 
 ## Optional guardrail: hand-edit detection
 
