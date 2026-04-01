@@ -380,6 +380,6 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 - Phase 28 / `v0.29.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23826775242`
 - Phase 33 / `v0.33.0` GitHub release: `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.33.0`
 - Phase 33 / `v0.33.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23829185551`
-- Phase 34 / `v0.34.0` GitHub release: (publish after tag — maintainer fills workflow URL)
-- Phase 34 / `v0.34.0` publish workflow run: (publish after tag — maintainer fills npm publish run URL)
+- Phase 34 / `v0.34.0` GitHub release: `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.34.0`
+- Phase 34 / `v0.34.0` npm publish: manual **`Publish NPM`** workflow (`publish-npm.yml`) after tag — not tag-triggered
 - npm package: `https://www.npmjs.com/package/@workflow-cannon/workspace-kit`
