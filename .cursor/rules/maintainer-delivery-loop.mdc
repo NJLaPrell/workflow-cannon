@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Maintainer delivery workflow (canonical)
 
-Full numbered loop (branch → implement → validate → PR → merge → **`run-transition`**), branching/tagging, commit strategy, and PR expectations live in **`docs/maintainers/playbooks/task-to-main.md`** (single-task playbook) and **`docs/maintainers/AGENTS.md`** (task execution + CLI-first execution). Attach **`@task-to-main.md`** when driving one **`T###`** to **`main`**.
+Full numbered loop (branch → implement → validate → PR → merge → **`run-transition`**), branching/tagging, commit strategy, and PR expectations: **machine summary** **`.ai/MACHINE-PLAYBOOKS.md`**; **human playbook** **`docs/maintainers/playbooks/task-to-main.md`**; **CLI execution** **`docs/maintainers/AGENTS.md`**. Attach **`@task-to-main.md`** when driving one **`T###`** to **`main`**.
 
 ## Non-negotiables
 

@@ -1,0 +1,24 @@
+# Copy to .github/workflows/workspace-kit-doctor.yml in a consumer fork.
+name: workspace-kit doctor (sample)
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  doctor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+      - run: pnpm install
+      - run: pnpm exec workspace-kit doctor
+        working-directory: .
+      # Optional: queue-health (read-only JSON)
+      # - run: pnpm exec workspace-kit run queue-health '{}'

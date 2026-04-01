@@ -7,7 +7,7 @@ alwaysApply: false
 
 When context may be stale:
 
-1. Open `docs/maintainers/AGENTS.md` → **Long threads and context reload**.
-2. Run `workspace-kit doctor` and `workspace-kit run get-next-actions '{}'` from repo root.
+1. Open **`.ai/LONG-SESSION-RELOAD.md`** (agent checklist).
+2. Run `pnpm run wk doctor` and `pnpm run wk -- run get-next-actions '{}'` from repo root.
 3. Do not trust chat memory for task `status`; use task-engine CLI reads.
-4. Full detail: `docs/maintainers/runbooks/cursor-long-session.md`.
+4. Maintainer narrative (optional): `docs/maintainers/runbooks/cursor-long-session.md`.

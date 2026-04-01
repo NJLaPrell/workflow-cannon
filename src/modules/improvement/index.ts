@@ -44,6 +44,7 @@ export const improvementModule: WorkflowModule = {
       data?: Record<string, unknown>;
     }>> = {
       "generate-recommendations": async () => {
+        const dryRun = args.dryRun === true;
         const transcriptsRoot = typeof args.transcriptsRoot === "string" ? args.transcriptsRoot : undefined;
         const fromTag = typeof args.fromTag === "string" ? args.fromTag : undefined;
         const toTag = typeof args.toTag === "string" ? args.toTag : undefined;
@@ -52,6 +53,24 @@ export const improvementModule: WorkflowModule = {
           archivePath: transcriptsRoot
         };
         try {
+          if (dryRun) {
+            const result = await runGenerateRecommendations(ctx, {
+              transcriptsRoot,
+              fromTag,
+              toTag,
+              dryRun: true
+            });
+            return {
+              ok: true,
+              code: "recommendations-rehearsal",
+              message: `Dry run: ${result.simulatedCreates?.length ?? 0} would-create improvement task id(s); ${result.skipped} duplicate(s) skipped; ${result.candidates} candidate(s)`,
+              data: {
+                dryRun: true,
+                syncSkipped: true,
+                ...(result as unknown as Record<string, unknown>)
+              } as Record<string, unknown>
+            };
+          }
           const state = await loadImprovementState(ctx.workspacePath, ctx.effectiveConfig as Record<string, unknown> | undefined);
           const sync = await runSyncTranscripts(ctx, syncArgs, state);
           state.lastSyncRunAt = new Date().toISOString();

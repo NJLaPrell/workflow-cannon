@@ -3,7 +3,7 @@
  *
  * NOT idempotent — each run mints 20 new T### rows. To run intentionally:
  *   WK_SEED_PLAN_WISHLIST=1 node scripts/seed-plan-wishlist-intake.mjs
- * (after `pnpm run build`). See PLAN.md → “Registered as wishlist intake”.
+ * (after `pnpm run build`). See `docs/exercises/workflow-cannon-feature-ideation.md` → “Registered as wishlist intake”.
  */
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -19,8 +19,9 @@ if (process.env.WK_SEED_PLAN_WISHLIST !== "1") {
   process.exit(1);
 }
 
-const requestor = "PLAN.md product ideation exercise";
-const evidenceRef = "PLAN.md (repo root) — feature directions + review summary";
+const requestor = "docs/exercises/workflow-cannon-feature-ideation.md product ideation exercise";
+const evidenceRef =
+  "docs/exercises/workflow-cannon-feature-ideation.md — feature directions + review summary";
 
 const proposals = [
   {

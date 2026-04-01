@@ -820,6 +820,14 @@ export const taskEngineModule: WorkflowModule = {
         : [];
       const includeArchived = args.includeArchived === true;
       const includeQueueHints = args.includeQueueHints === true;
+      const confidenceTierFilter =
+        typeof args.confidenceTier === "string" && args.confidenceTier.trim().length > 0
+          ? args.confidenceTier.trim()
+          : undefined;
+      const blockedReasonCategoryFilter =
+        typeof args.blockedReasonCategory === "string" && args.blockedReasonCategory.trim().length > 0
+          ? args.blockedReasonCategory.trim()
+          : undefined;
 
       let tasks = includeArchived ? store.getAllTasks() : store.getActiveTasks();
       if (statusFilter) {
@@ -850,6 +858,16 @@ export const taskEngineModule: WorkflowModule = {
       if (metadataFilters.length > 0) {
         tasks = tasks.filter((t) =>
           metadataFilters.every(([path, expected]) => readMetadataPath(t.metadata, path) === expected)
+        );
+      }
+      if (confidenceTierFilter) {
+        tasks = tasks.filter(
+          (t) => readMetadataPath(t.metadata, "confidenceTier") === confidenceTierFilter
+        );
+      }
+      if (blockedReasonCategoryFilter) {
+        tasks = tasks.filter(
+          (t) => readMetadataPath(t.metadata, "blockedReasonCategory") === blockedReasonCategoryFilter
         );
       }
 

@@ -1,6 +1,6 @@
 {
   "name": "@workflow-cannon/workspace-kit",
-  "version": "0.35.0",
+  "version": "0.36.0",
   "private": false,
   "packageManager": "pnpm@10.0.0",
   "license": "MIT",
@@ -45,7 +45,11 @@
     "transcript:ingest": "node scripts/run-transcript-cli.mjs ingest-transcripts",
     "ext:compile": "pnpm --filter cursor-workflow-cannon run compile",
     "ui:prepare": "pnpm run build && pnpm run ext:compile",
-    "ui:watch": "pnpm --filter cursor-workflow-cannon run watch"
+    "ui:watch": "pnpm --filter cursor-workflow-cannon run watch",
+    "export-evidence-bundle": "node scripts/export-evidence-bundle.mjs",
+    "playbook-run-steps": "node scripts/playbook-run-steps.mjs",
+    "lint-response-templates": "node scripts/lint-response-templates.mjs",
+    "generate-kit-trust-boundary": "node scripts/generate-kit-trust-boundary.mjs"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",

@@ -22,6 +22,12 @@ Use this precedence when sources disagree:
 - **`.cursor/rules/*.mdc`** files are **Cursor enforcement mirrors**: keep them **short** and **link** to the maintainer doc that carries the full checklist.
 - **Adding a new rule?** Prefer updating the maintainer doc first, then add or extend a **thin** `.mdc` that points at it. Only duplicate text in a rule when the editor must enforce without opening links—and note the canonical path in the rule header so editors know where to edit.
 
+## Workbook and `.ai` mirror pairing
+
+- **Human workbooks** under **`docs/maintainers/workbooks/`** pair with machine-dialect files under **`.ai/workbooks/`** when both exist for the same topic.
+- **Edit order:** change maintainer intent in **`docs/maintainers/`** first, then regenerate or hand-sync **`.ai/`** via the documentation module (**`document-project`** / **`generate-document`**) per **`src/modules/documentation/RULES.md`**.
+- **Agents** should follow **`.ai/`** + **`src/modules/*/instructions/`** for operating guidance, not maintainer workbooks, unless a task explicitly scopes maintainer doc edits.
+
 ## Module Build Contract
 
 Every module change must satisfy these baseline rules:

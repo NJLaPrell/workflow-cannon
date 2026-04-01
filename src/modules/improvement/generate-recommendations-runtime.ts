@@ -64,6 +64,8 @@ export type GenerateRecommendationsArgs = {
   /** When both set with toTag, run git diff evidence between tags. */
   fromTag?: string;
   toTag?: string;
+  /** When true, compute candidates and simulate creates without persisting tasks, lineage, or improvement state. */
+  dryRun?: boolean;
 };
 
 export async function runGenerateRecommendations(
@@ -74,12 +76,15 @@ export async function runGenerateRecommendations(
   created: string[];
   skipped: number;
   candidates: number;
+  dryRun?: boolean;
+  simulatedCreates?: string[];
   dedupe: {
     skippedDuplicateEvidenceKey: number;
     skippedExistingTaskId: number;
     cappedRemaining: number;
   };
 }> {
+  const dryRun = args.dryRun === true;
   const runId = randomUUID();
   const planning = await openPlanningStores(ctx);
   const store = planning.taskStore;
@@ -103,6 +108,7 @@ export async function runGenerateRecommendations(
 
   const allTasks = store.getAllTasks();
   const created: string[] = [];
+  const simulatedCreates: string[] = [];
   let skippedDuplicateEvidenceKey = 0;
   let skippedExistingTaskId = 0;
   let cappedRemaining = 0;
@@ -122,9 +128,27 @@ export async function runGenerateRecommendations(
       continue;
     }
 
-    if (created.length >= maxCreates) {
+    const wouldCount = dryRun ? simulatedCreates.length : created.length;
+    if (wouldCount >= maxCreates) {
       cappedRemaining += 1;
       continue;
+    }
+
+    if (dryRun) {
+      simulatedCreates.push(id);
+      continue;
+    }
+
+    const meta: Record<string, unknown> = {
+      evidenceKey: c.evidenceKey,
+      evidenceKind: c.evidenceKind,
+      confidence: c.confidence.score,
+      confidenceTier: c.confidence.tier,
+      confidenceReasons: c.confidence.reasons,
+      provenanceRefs: c.provenanceRefs
+    };
+    if (c.evidenceKind === "transcript" && typeof c.provenanceRefs.transcriptPath === "string") {
+      meta.transcriptSourceRelPath = c.provenanceRefs.transcriptPath;
     }
 
     const task: TaskEntity = {
@@ -135,14 +159,7 @@ export async function runGenerateRecommendations(
       createdAt: now,
       updatedAt: now,
       priority: priorityForTier(c.confidence.tier),
-      metadata: {
-        evidenceKey: c.evidenceKey,
-        evidenceKind: c.evidenceKind,
-        confidence: c.confidence.score,
-        confidenceTier: c.confidence.tier,
-        confidenceReasons: c.confidence.reasons,
-        provenanceRefs: c.provenanceRefs
-      }
+      metadata: meta
     };
 
     store.addTask(task);
@@ -164,8 +181,10 @@ export async function runGenerateRecommendations(
     });
   }
 
-  await store.save();
-  await saveImprovementState(ctx.workspacePath, state, ctx.effectiveConfig as Record<string, unknown> | undefined);
+  if (!dryRun) {
+    await store.save();
+    await saveImprovementState(ctx.workspacePath, state, ctx.effectiveConfig as Record<string, unknown> | undefined);
+  }
 
   const skipped = skippedDuplicateEvidenceKey + skippedExistingTaskId;
   return {
@@ -173,6 +192,7 @@ export async function runGenerateRecommendations(
     created,
     skipped,
     candidates: candidates.length,
+    ...(dryRun ? { dryRun: true as const, simulatedCreates } : {}),
     dedupe: {
       skippedDuplicateEvidenceKey,
       skippedExistingTaskId,

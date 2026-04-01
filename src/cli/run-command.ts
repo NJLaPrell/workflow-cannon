@@ -206,6 +206,14 @@ export async function handleRunCommand(
   try {
     const rawResult = await router.execute(subcommand, commandArgs, ctx);
     if (sensitive && resolvedSensitiveApproval && policyOp) {
+      const rehearsal =
+        subcommand === "generate-recommendations" && commandArgs.dryRun === true ? "policy-rehearsal" : null;
+      const traceMessage =
+        rehearsal && rawResult.message
+          ? `${rehearsal} ${rawResult.message}`
+          : rehearsal
+            ? rehearsal
+            : rawResult.message;
       await appendPolicyTrace(cwd, {
         timestamp: new Date().toISOString(),
         operationId: policyOp,
@@ -214,7 +222,7 @@ export async function handleRunCommand(
         allowed: true,
         rationale: resolvedSensitiveApproval.rationale,
         commandOk: rawResult.ok,
-        message: rawResult.message
+        message: traceMessage
       });
       const recordSession =
         rawResult.ok &&

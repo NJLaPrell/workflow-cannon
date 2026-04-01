@@ -12,6 +12,8 @@ workspace-kit run list-tasks '{"type":"improvement","category":"reliability","ta
 workspace-kit run list-tasks '{"metadataFilters":{"owner.team":"platform","risk.level":"high"}}'
 workspace-kit run list-tasks '{"phaseKey":"28","status":"ready"}'
 workspace-kit run list-tasks '{"includeQueueHints":true,"status":"ready"}'
+workspace-kit run list-tasks '{"type":"improvement","confidenceTier":"medium"}'
+workspace-kit run list-tasks '{"status":"blocked","blockedReasonCategory":"external_dependency"}'
 ```
 
 ## Arguments
@@ -25,6 +27,8 @@ workspace-kit run list-tasks '{"includeQueueHints":true,"status":"ready"}'
 | `category` | string | no | Filter by `metadata.category` |
 | `tags` | string or string[] | no | Filter by `metadata.tags` (all tags must match) |
 | `metadataFilters` | object | no | Safe metadata path filters; keys must match `segment(.segment)*` |
+| `confidenceTier` | string | no | Filter improvement (or any task) by `metadata.confidenceTier` (`high` / `medium` / `low`) |
+| `blockedReasonCategory` | string | no | Filter by `metadata.blockedReasonCategory` (v1 taxonomy: `human_review`, `external_dependency`, `scope_unclear`) |
 | `includeArchived` | boolean | no | Include archived tasks when `true` |
 | `includeQueueHints` | boolean | no | When `true`, adds `queueHintRows` (same order as `tasks`) with `phaseAligned`, `blockedByDependencies`, `unmetDependencies` |
 

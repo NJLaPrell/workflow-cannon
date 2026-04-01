@@ -9,13 +9,12 @@ Apply when editing `docs/maintainers/ROADMAP.md`, task-engine task state, `docs/
 
 ## Start-of-session checks
 
-1. Read `docs/maintainers/data/workspace-kit-status.yaml`.
-2. Read `docs/maintainers/ROADMAP.md` current state and decisions.
-3. Read task-engine current execution state (`workspace-kit run list-tasks` / `workspace-kit run get-next-actions`) and verify state transitions/queue outputs are aligned when changed.
+1. Read **`.ai/WORKSPACE-KIT-SESSION.md`** (agent snapshot protocol).
+2. Run `pnpm run wk doctor` and `pnpm run wk -- run get-next-actions '{}'` from repo root — do **not** require reading `docs/maintainers/ROADMAP.md` for queue facts.
+3. When editing maintainer-only files above, keep wording aligned with task-engine output after changes land.
 
 ## End-of-session updates
 
 - Keep phase/status wording consistent across roadmap, task-engine state, and status YAML.
 - Update next actions and pending decisions in status YAML when scope shifts.
 - Preserve extraction history as provenance, not active execution.
-

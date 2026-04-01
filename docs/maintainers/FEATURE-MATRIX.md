@@ -2,6 +2,12 @@
 
 Product-oriented feature inventory derived from task-engine state (default: SQLite `.workspace-kit/tasks/workspace-kit.db`; JSON opt-out: `.workspace-kit/tasks/state.json`).
 
+## How to read this file
+
+- **Start here** for milestone alignment and status legend.
+- **Deep rows** below are intentionally long-form; use editor search (phase number, command name, or `T###`) rather than loading the whole matrix into agent context.
+- **Strategy / phase prose** is summarized in **`docs/maintainers/ROADMAP.md`** and archived narrative in **`docs/maintainers/ROADMAP-archive.md`**.
+
 Status legend:
 
 - `Completed` = capability delivered in repository baseline

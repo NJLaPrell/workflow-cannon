@@ -1,0 +1,14 @@
+{
+  "id": "pilot-task-to-main",
+  "description": "Read-only smoke: doctor + bare run discovery (no task mutations).",
+  "steps": [
+    {
+      "argv": ["node", "dist/cli.js", "doctor"],
+      "expectCode": 0
+    },
+    {
+      "argv": ["node", "dist/cli.js", "run"],
+      "expectCode": 0
+    }
+  ]
+}

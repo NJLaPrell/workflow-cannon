@@ -2,6 +2,8 @@
 
 Basic operating guidance for AI agents working in this repository.
 
+**Agent vs maintainer docs:** For routine **`workspace-kit`** execution, CLI tiers, and policy approval, prefer **`.ai/AGENTS.md`**, **`.ai/machine-cli-policy.md`**, **`.ai/WORKSPACE-KIT-SESSION.md`**, and module **`instructions/`** — not long-form `docs/maintainers/` prose. This file remains the **human-oriented** source-of-truth list and maintainer playbooks index.
+
 ## Source-of-truth order
 
 1. `.ai/PRINCIPLES.md` — goals, trade-off order, approval gates

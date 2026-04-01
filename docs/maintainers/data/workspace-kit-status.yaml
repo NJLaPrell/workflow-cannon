@@ -1,14 +1,15 @@
 schema_version: 1
-current_kit_phase: "36"
-next_kit_phase: "37"
+current_kit_phase: "37"
+next_kit_phase: "38"
 last_updated: "2026-04-01"
-active_focus: "**Phase 36** — twenty-five **`ready`** tasks (policy, integrations, improvement loop, doc architecture **`T491`–`T504`**). Filter: **`list-tasks`** `{\"status\":\"ready\",\"phaseKey\":\"36\"}`. Script **`scripts/apply-ready-task-phase-buckets.mjs`**."
+active_focus: "**Phase 37** — next maintainer slice after **v0.36.0**; queue via **`get-next-actions`** / **`list-tasks`**."
 blockers: []
 pending_decisions: []
 next_agent_actions:
-  - "**Now:** `{\"phaseKey\":\"36\",\"status\":\"ready\"}` — twenty-five tasks (see **`scripts/apply-ready-task-phase-buckets.mjs`**)."
+  - "**Now:** Run `pnpm run wk -- run get-next-actions '{}'` after pulling **v0.36.0**; phase **36** tasks should be **`completed`** in task-engine state."
 last_session_summary:
-  - "2026-04-01: Phase **35** closeout — **`v0.35.0`** — GitHub release https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.35.0 — **`T507`**, **`T510`**, **`T513`**, **`T520`**, **`T523`** **`completed`** (**`run-transition`** **`start`**/**`complete`** with JSON **`policyApproval`**): **`queue-git-alignment`**, **`replay-queue-snapshot`**, **`queueNamespace`** + ADR, synthetic load script (**`mkdtemp`** import fix), planning estimate pack docs. npm: **`Publish NPM`** workflow manual. **`current_kit_phase`** **36**."
+  - "2026-04-01: Phase **36** closeout — **`v0.36.0`** — policy rehearsal (`generate-recommendations` **`dryRun`**), agent/machine doc split (`.ai` quickrefs + rules), `list-tasks` **`confidenceTier`** / **`blockedReasonCategory`**, config **`config-registry.json`**, evidence bundle + playbook runner + trust-boundary scripts, IDE status protocol, ROADMAP archive + PLAN move, ADRs, examples. npm: manual **Publish NPM** after tag."
+  - "2026-04-01: Phase **35** closeout — **`v0.35.0`** — GitHub release https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.35.0 — **`T507`**, **`T510`**, **`T513`**, **`T520`**, **`T523`** **`completed`** (**`run-transition`** **`start`**/**`complete`** with JSON **`policyApproval`**): **`queue-git-alignment`**, **`replay-queue-snapshot`**, **`queueNamespace`** + ADR, synthetic load script, planning estimate pack docs. npm: **`Publish NPM`** workflow manual. **`current_kit_phase`** **36**."
   - "2026-04-01: Phase **34** closeout — **`v0.34.0`** tag + GitHub release https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.34.0 — **`T505`**, **`T506`**, **`T511`**, **`T518`** **`completed`**: consumer README lap, **`explain-config`** **`facet`**, **`dashboard-summary`** **`dependencyOverview`**, extension dashboard dependency + planning cards, contract/schema/docs. npm: run **`Publish NPM`** workflow manually. **`current_kit_phase`** **35**."
   - "2026-04-02: **`update-task`** — rebucketed all **`ready`** tasks: **`phaseKey` 34** (**`T505`**, **`T506`**, **`T511`**, **`T518`**); **35** (**`T507`**, **`T510`**, **`T513`**, **`T520`**, **`T523`**); **36** (twenty-five others incl. **`T491`–`T504`**). Script **`scripts/apply-ready-task-phase-buckets.mjs`**."
   - "2026-04-02: Open PLAN wishlist items **`T471`–`T477`**, **`T479`–`T487`**, **`T489`**, **`T490`** — **`update-wishlist`** (implementation **`expectedOutcome`**), **`convert-wishlist`** → **`T507`–`T524`**, **`update-task`** **`phaseKey`**, **`run-transition accept`** → **`ready`**. Script **`scripts/convert-open-wishlist-to-ready.mjs`**. Left **`T470`** test seed open."
@@ -17,7 +18,7 @@ last_session_summary:
   - "2026-03-31: Phase **33** closeout — shipped **`v0.33.0`** — GitHub release https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.33.0 — Publish NPM https://github.com/NJLaPrell/workflow-cannon/actions/runs/23829185551 — governance onboarding + `/qt` warnings + Cursor rule slim + principles/AGENTS CI snapshots + **`maintainer-gates`**/**`pre-merge-gates`** + staged **`pnpm run check`** + capped unknown-**`run`** errors + **`--help`** discovery (**`T455`**, **`T459`**, **`T460`**, **`T461`**, **`T462`**, **`T463`**, **`T464`**, **`T469`** **`completed`**). **`current_kit_phase`** **34**."
   - "2026-03-31: Phase **32** closeout — shipped **`v0.32.0`** — GitHub release https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.32.0 — Publish NPM https://github.com/NJLaPrell/workflow-cannon/actions/runs/23828867222 — R102 **`core-module-layer-allowlist`** + CI; response-template precedence canon + strict messages; planning README / ARCHITECTURE / TERMS persistence clarity (**`T456`**, **`T457`**, **`T458`** **`completed`**). **`current_kit_phase`** **33**."
   - "2026-03-31: Phase **31** closeout — shipped **`v0.31.0`** — GitHub release https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.31.0 — Publish NPM https://github.com/NJLaPrell/workflow-cannon/actions/runs/23828084173 — policy manifest **`policySensitivity`** + CI; wrong-lane **`policy-denied`**; **`doctor`** env reminder; POLICY-APPROVAL canonical copy + AGENT-CLI-MAP / visual guide links (**`T454`**, **`T453`**, **`T468`** **`completed`**). **`current_kit_phase`** **32**."
-  - "2026-03-31: Phase **30** closeout — shipped **`v0.30.0`** — GitHub release https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.30.0 — ADRs + runbooks; **`doctor`** persistence summary + dynamic native load; **`task-store-migration`**; id onboarding (**`T450`–`T452`**, **`T466`**, **`T467`** **`completed`**). **`current_kit_phase`** **31**."
+  - "2026-03-31: Phase **30** closeout — shipped **`v0.30.0`** — ADRs + runbooks; **`doctor`** persistence summary + dynamic native load; **`task-store-migration`**; id onboarding (**`T450`–`T452`**, **`T466`**, **`T467`** **`completed`**). **`current_kit_phase`** **31**."
   - "2026-04-01: **`update-task`** — **`T450`–`T469`**: **`phase`**, **`phaseKey`**, **`dependsOn`** per four-phase plan (**30** persistence/store · **31** policy · **32** boundaries/platform · **33** docs/editor/CLI); script **`scripts/apply-phase-30-33-architect-tasks.mjs`**; maintainer snapshot **`current_kit_phase`** **30**."
   - "2026-03-31: Phase **28** shipped **`v0.29.0`** — GitHub release `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.29.0`; Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23826775242` — **`queue-health`**, **`kit.*`** phase config + doctor mismatch, **`phaseKey`** / **`list-tasks`** hints, **`wk`** bin, maintainer doc alignment (**`T392`**, **`T443`–`T449`** **`completed`**)."
   - "2026-03-31: **`update-task`** + **`run-transition accept`** — **`T392`**, **`T443`–`T447`**, **`T448`**, **`T449`** → **`ready`**, phase **Phase 28 (maintainer and agent operability)**; **`dependsOn`**: **`T444`→`T443`**, **`T445`→`T444`**, **`T446`→`T443`**, **`T447`→`T443`+`T446`**, **`T449`→`T448`**; **`T392`** unchanged **`T389`**, **`T390`**. **`run-transition reject`** — fourteen **`proposed`** **`imp-*`** → **`cancelled`** (triage). **`proposed`** count **0**."
@@ -31,7 +32,7 @@ last_session_summary:
 metrics:
   updated_at: "2026-04-01"
   source: "maintainer"
-  notes: "Phase 35 released v0.35.0. Phase 36 ready queue: 25 tasks (see apply-ready-task-phase-buckets)."
+  notes: "Phase 36 released v0.36.0. Phase 37+ planning: use task-engine queue."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null

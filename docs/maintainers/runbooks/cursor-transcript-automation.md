@@ -26,6 +26,8 @@ Folder-open tasks run when the workspace loads, **not** on a wall-clock schedule
 
 Keep local transcript archives out of version control if they may contain sensitive content; default archive path `agent-transcripts/` is often gitignored in consumer repos (project policy).
 
+New transcript-derived improvement tasks may include **`metadata.transcriptSourceRelPath`** (and **`provenanceRefs.transcriptPath`**) so operators can trace a row back to a JSONL file without opening nested metadata; scrub or redact paths when sharing exports.
+
 ## Post-completion hook (T274)
 
 `improvement.hooks.afterTaskCompleted`: `off` (default), `sync`, or `ingest`.

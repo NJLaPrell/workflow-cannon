@@ -161,6 +161,16 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
   - **Defined in**: `docs/maintainers/AGENT-CLI-MAP.md` and `docs/maintainers/POLICY-APPROVAL.md` (policy semantics unchanged).
   - **Enforced in**: router omission + `peer-module-disabled` if a command were invoked without satisfied peers; **does not** replace JSON `policyApproval` or env approval where those tiers apply.
 
+- **transcriptSourceRelPath (improvement metadata)**
+  - **Definition**: Optional **`metadata.transcriptSourceRelPath`** on **`type: improvement`** tasks created from transcript ingest, mirroring **`metadata.provenanceRefs.transcriptPath`** for stable filtering without opening nested objects.
+  - **Defined in**: `src/modules/improvement/generate-recommendations-runtime.ts`, `docs/maintainers/runbooks/cursor-transcript-automation.md`.
+  - **Enforced in**: writer path on new recommendations only; omit when not transcript-sourced.
+
+- **blockedReasonCategory (task metadata, v1)**
+  - **Definition**: Optional string label for why a blocked task is waiting (`human_review`, `external_dependency`, `scope_unclear` — see **`docs/maintainers/ADR-blocked-reason-category-v1.md`**).
+  - **Defined in**: ADR above; consumed by `list-tasks` JSON filter **`blockedReasonCategory`**.
+  - **Enforced in**: none in v1 (values are advisory; unknown strings tolerated).
+
 ## Related docs
 
 - `README.md` — project intent and direction

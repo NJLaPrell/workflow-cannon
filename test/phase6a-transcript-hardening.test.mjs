@@ -179,6 +179,45 @@ test("Phase6a: generate-recommendations returns dedupe metrics and runId", async
   assert.equal(g2.data.candidates, 0);
 });
 
+test("Phase6a: generate-recommendations dryRun skips persistence", async () => {
+  const workspacePath = await tmpWs();
+  await mkdir(path.join(workspacePath, "agent-transcripts"), { recursive: true });
+  await writeFile(
+    path.join(workspacePath, "agent-transcripts", "dry.jsonl"),
+    '{"role":"user","text":"broken error"}\n',
+    "utf8"
+  );
+  await mkdir(path.join(workspacePath, ".workspace-kit", "tasks"), { recursive: true });
+  await writeFile(
+    path.join(workspacePath, ".workspace-kit", "tasks", "state.json"),
+    JSON.stringify({ schemaVersion: 1, tasks: [], transitionLog: [], lastUpdated: new Date().toISOString() }),
+    "utf8"
+  );
+
+  const registry = new ModuleRegistry([
+    workspaceConfigModule,
+    documentationModule,
+    taskEngineModule,
+    approvalsModule,
+    planningModule,
+    improvementModule
+  ]);
+  const router = new ModuleCommandRouter(registry);
+  const resolved = await resolveWorkspaceConfigWithLayers({ workspacePath, registry });
+  const ctx = buildContext(workspacePath, registry, resolved.effective);
+
+  const dry = await router.execute(
+    "generate-recommendations",
+    { transcriptsRoot: "agent-transcripts", dryRun: true },
+    ctx
+  );
+  assert.equal(dry.ok, true);
+  assert.equal(dry.code, "recommendations-rehearsal");
+  assert.equal(dry.data.dryRun, true);
+  assert.ok(Array.isArray(dry.data.simulatedCreates));
+  assert.equal(dry.data.created.length, 0);
+});
+
 test("Phase6a: sync discovers Cursor global ~/.cursor/projects/<slug>/agent-transcripts", async () => {
   const prevHome = process.env.HOME;
   const prevWkHome = process.env.WORKSPACE_KIT_HOME;

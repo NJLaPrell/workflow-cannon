@@ -29,6 +29,8 @@ workspace-kit run run-transition '{"taskId":"T###","action":"start","policyAppro
 2. **Validate** with project checks (`pnpm run build`, `pnpm run check`, `pnpm run test`, and `pnpm run parity` when the change touches packaged/consumed behavior — or the task-specific commands).
 3. **Commit** with a focused, reason-oriented message; avoid unrelated changes in the same commit.
 
+**Optional automation:** `pnpm run playbook-run-steps examples/playbooks/pilot-task-to-main.json --log artifacts/playbook-run.log.jsonl` runs explicit argv steps (doctor + bare `run` discovery) and appends per-step evidence — it does **not** replace this playbook or GitHub review.
+
 ## 3) Open a pull request to `main`
 
 1. `git push` the branch to `origin` (set upstream if first push).
