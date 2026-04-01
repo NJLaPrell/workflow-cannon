@@ -1,24 +1,51 @@
 import fs from "node:fs";
 import path from "node:path";
-import Database from "better-sqlite3";
+import type DatabaseCtor from "better-sqlite3";
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
 import { getTaskPersistenceBackend, planningSqliteDatabaseRelativePath } from "./planning-config.js";
+import { normalizeTaskStoreDocumentFromUnknown } from "./task-store-migration.js";
+
+type SqliteDb = InstanceType<typeof DatabaseCtor>;
 
 export type DoctorPlanningIssue = {
   path: string;
   reason: string;
 };
 
+function nativeSqliteFailureLooksLikeAbiMismatch(msg: string): boolean {
+  return (
+    msg.includes("NODE_MODULE_VERSION") ||
+    msg.includes("was compiled against a different Node.js") ||
+    msg.includes("better_sqlite3.node")
+  );
+}
+
 /**
- * When effective config selects SQLite for task/wishlist persistence, verify the DB file exists
- * and can be opened read-only; if a planning row is present, validate embedded JSON schemaVersion.
+ * When effective config selects SQLite for task/wishlist persistence, verify the native addon loads,
+ * the DB file exists and can be opened read-only; if a planning row is present, validate embedded task JSON.
  */
-export function validatePlanningPersistenceForDoctor(
+export async function validatePlanningPersistenceForDoctor(
   workspacePath: string,
   effectiveConfig: Record<string, unknown>
-): DoctorPlanningIssue[] {
+): Promise<DoctorPlanningIssue[]> {
   const issues: DoctorPlanningIssue[] = [];
   if (getTaskPersistenceBackend(effectiveConfig) !== "sqlite") {
+    return issues;
+  }
+
+  let Database: typeof DatabaseCtor;
+  try {
+    ({ default: Database } = await import("better-sqlite3"));
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const hint =
+      nativeSqliteFailureLooksLikeAbiMismatch(msg) ?
+        "Run `pnpm rebuild better-sqlite3` or `npm rebuild better-sqlite3` in the install root (package postinstall usually retries this for ABI mismatch)."
+      : "See docs/maintainers/runbooks/native-sqlite-consumer-install.md for install and troubleshooting.";
+    issues.push({
+      path: "better-sqlite3",
+      reason: `native-sqlite-load-failed: ${msg} — ${hint}`
+    });
     return issues;
   }
 
@@ -36,7 +63,7 @@ export function validatePlanningPersistenceForDoctor(
     return issues;
   }
 
-  let db: Database.Database;
+  let db: SqliteDb;
   try {
     db = new Database(dbAbs, { readonly: true });
   } catch (err) {
@@ -62,15 +89,10 @@ export function validatePlanningPersistenceForDoctor(
 
     if (row) {
       try {
-        const taskDoc = JSON.parse(row.task_store_json) as { schemaVersion?: number };
-        if (taskDoc.schemaVersion !== 1) {
-          issues.push({
-            path: relDisplay,
-            reason: `sqlite-task_store_json: unsupported schemaVersion (expected 1, got ${taskDoc.schemaVersion})`
-          });
-        }
-      } catch {
-        issues.push({ path: relDisplay, reason: "sqlite-task_store_json: invalid JSON" });
+        normalizeTaskStoreDocumentFromUnknown(JSON.parse(row.task_store_json));
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        issues.push({ path: relDisplay, reason: `sqlite-task_store_json: ${msg}` });
       }
       if (hasWishlist && "wishlist_store_json" in row && typeof row.wishlist_store_json === "string") {
         try {

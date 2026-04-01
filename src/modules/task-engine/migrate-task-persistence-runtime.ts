@@ -7,6 +7,7 @@ import { UnifiedStateDb } from "../../core/state/unified-state-db.js";
 import type { TaskStoreDocument } from "./types.js";
 import type { WishlistStoreDocument } from "./wishlist-types.js";
 import { TaskEngineError } from "./transitions.js";
+import { normalizeTaskStoreDocumentFromUnknown } from "./task-store-migration.js";
 import { SqliteDualPlanningStore } from "./sqlite-dual-planning.js";
 import {
   planningSqliteDatabaseRelativePath,
@@ -81,14 +82,7 @@ export async function runMigrateTaskPersistence(
     let taskDoc = emptyTaskDoc();
     try {
       const raw = await fs.readFile(taskPath, "utf8");
-      const parsed = JSON.parse(raw) as TaskStoreDocument;
-      if (parsed.schemaVersion !== 1) {
-        throw new TaskEngineError("import-parse-error", `Unsupported task schema ${parsed.schemaVersion}`);
-      }
-      if (!Array.isArray(parsed.mutationLog)) {
-        parsed.mutationLog = [];
-      }
-      taskDoc = parsed;
+      taskDoc = normalizeTaskStoreDocumentFromUnknown(JSON.parse(raw));
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === "ENOENT") {
         taskDoc = emptyTaskDoc();

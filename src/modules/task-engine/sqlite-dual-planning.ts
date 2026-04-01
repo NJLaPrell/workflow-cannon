@@ -4,6 +4,7 @@ import Database from "better-sqlite3";
 import type { TaskStoreDocument } from "./types.js";
 import type { WishlistStoreDocument } from "./wishlist-types.js";
 import { TaskEngineError } from "./transitions.js";
+import { normalizeTaskStoreDocumentFromUnknown } from "./task-store-migration.js";
 
 const TASK_ONLY_DDL = `
 CREATE TABLE IF NOT EXISTS workspace_planning_state (
@@ -119,22 +120,13 @@ export class SqliteDualPlanningStore {
         return;
       }
       try {
-        const taskParsed = JSON.parse(row.task_store_json) as TaskStoreDocument;
+        const taskParsed = normalizeTaskStoreDocumentFromUnknown(JSON.parse(row.task_store_json));
         const wishParsed = JSON.parse(row.wishlist_store_json) as WishlistStoreDocument;
-        if (taskParsed.schemaVersion !== 1) {
-          throw new TaskEngineError(
-            "storage-read-error",
-            `Unsupported task store schema in SQLite: ${taskParsed.schemaVersion}`
-          );
-        }
         if (wishParsed.schemaVersion !== 1) {
           throw new TaskEngineError(
             "storage-read-error",
             `Unsupported wishlist schema in SQLite: ${wishParsed.schemaVersion}`
           );
-        }
-        if (!Array.isArray(taskParsed.mutationLog)) {
-          taskParsed.mutationLog = [];
         }
         if (!Array.isArray(wishParsed.items)) {
           throw new TaskEngineError("storage-read-error", "Wishlist items missing in SQLite row");
@@ -162,16 +154,7 @@ export class SqliteDualPlanningStore {
       return;
     }
     try {
-      const taskParsed = JSON.parse(row.task_store_json) as TaskStoreDocument;
-      if (taskParsed.schemaVersion !== 1) {
-        throw new TaskEngineError(
-          "storage-read-error",
-          `Unsupported task store schema in SQLite: ${taskParsed.schemaVersion}`
-        );
-      }
-      if (!Array.isArray(taskParsed.mutationLog)) {
-        taskParsed.mutationLog = [];
-      }
+      const taskParsed = normalizeTaskStoreDocumentFromUnknown(JSON.parse(row.task_store_json));
       this._taskDoc = taskParsed;
       this._wishlistDoc = emptyWishlistDocument();
     } catch (err) {

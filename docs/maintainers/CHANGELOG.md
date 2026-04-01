@@ -6,6 +6,22 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.30.0] - 2026-03-31
+
+Phase 30 — persistence, packaging, and task-store evolution (**`T450`–`T452`**, **`T466`**, **`T467`**).
+
+### Added
+
+- **ADR** — **`docs/maintainers/ADR-native-sqlite-consumer-distribution.md`**, **`ADR-task-store-sqlite-document-model.md`**, **`ADR-task-store-schemaversion-policy.md`**.
+- **Runbooks** — **`docs/maintainers/runbooks/native-sqlite-consumer-install.md`**, **`docs/maintainers/runbooks/task-persistence-operator.md`**.
+- **Task Engine** — **`task-store-migration.ts`**: accept **`schemaVersion` `2`** on read (no-op forward label); normalize to **`1`** for runtime and JSON save.
+- **CLI** — **`workspace-kit doctor`**: dynamic **`better-sqlite3`** import when **`tasks.persistenceBackend`** is **`sqlite`** (clearer failure when the native addon cannot load); post-pass lines for effective persistence backend and canonical paths.
+
+### Changed
+
+- **Documentation** — Wishlist workflow runbook (**which id to create**), **TERMS**, **README**, **AGENT-CLI-MAP**, **AGENTS** (native SQLite pointer), **consumer cadence** runbook (persistence map link), **task-engine workbook** (persistence + schema policy).
+- **Schemas** — **`schemas/task-engine-run-contracts.schema.json`** `packageVersion` const aligned with **`package.json`** (**`0.30.0`**).
+
 ## [0.29.0] - 2026-03-31
 
 Phase 28 — maintainer and agent operability: read-only **`queue-health`** audit, canonical **`kit.currentPhaseNumber`** / **`kit.currentPhaseLabel`** config keys (with **`workspace-kit doctor`** mismatch detection vs **`workspace-kit-status.yaml`**), optional **`phaseKey`** on tasks, **`list-tasks`** **`phaseKey`** filter and **`includeQueueHints`**, short **`wk`** bin alias alongside **`workspace-kit`**, and glossary/README cross-links disambiguating **planning module (CLI)** vs **planning persistence (task engine)** (**`T392`**, **`T443`–**`T449`**).

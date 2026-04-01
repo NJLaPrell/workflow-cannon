@@ -168,6 +168,8 @@ workspace-kit run list-tasks '{"includeQueueHints":true,"status":"ready"}'
 workspace-kit run list-tasks '{"phaseKey":"28","status":"ready"}'
 ```
 
+**Task id spaces** (when to mint **`T###`**, wishlist intake, vs **`imp-*`**): [`runbooks/wishlist-workflow.md`](./runbooks/wishlist-workflow.md).
+
 Instruction: `src/modules/task-engine/instructions/queue-health.md`. Related runbook: [`runbooks/agent-task-engine-ergonomics.md`](./runbooks/agent-task-engine-ergonomics.md).
 
 ## Tier C — Safe discovery / read-only examples

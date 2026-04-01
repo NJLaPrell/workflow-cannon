@@ -1,15 +1,30 @@
 # Wishlist workflow (Task Engine)
 
-Wishlist items capture **high-level ideas** before they become executable work. They use ids **`W<number>`** and live in **`.workspace-kit/wishlist/state.json`**. Canonical tasks use **`T<number>`** and **phase** assignment only after conversion.
+## Which id should I create?
+
+| I want to… | Id / type | Command / surface |
+| --- | --- | --- |
+| Track **executable** work (`ready` queue, transitions, **`dependsOn`**) | **`T###`**, normal task types | **`create-task`**, **`run-transition`**, **`list-tasks`** |
+| Capture **ideation** before scheduling (strict intake fields) | **`T###`** with **`type: "wishlist_intake"`** | **`create-wishlist`** (auto-allocates **`T###`**; optional legacy provenance id → **`metadata.legacyWishlistId`**) |
+| Triage **transcript / enhancement** suggestions | **`imp-*`** (improvement tasks) | **`generate-recommendations`**, **`accept`** / **`reject`** transitions |
+
+Glossary: **`docs/maintainers/TERMS.md`** (**Wishlist**, **Execution Task**, **Improvement Task**). ADR: **`docs/maintainers/ADR-unified-task-store-wishlist-and-improvement-state.md`**.
+
+---
+
+Wishlist **intake** captures high-level ideas before they become scheduled execution work. **New** intake is stored with the unified task store (default SQLite or JSON opt-out) as rows with **`type: "wishlist_intake"`** and **`T###`** ids. The standalone **`.workspace-kit/wishlist/state.json`** file is **legacy**; use **`migrate-wishlist-intake`** when upgrading old workspaces.
 
 ## Intake (strict fields)
 
-Required on `create-wishlist`:
+Required on **`create-wishlist`**:
 
-- `id` — `W` + digits (e.g. `W1`)
 - `title`, `problemStatement`, `expectedOutcome`, `impact`, `constraints`, `successSignals`, `requestor`, `evidenceRef`
 
-Do **not** pass `phase` on wishlist items.
+Optional:
+
+- `id` — only when you need a **legacy `W###` provenance** key; stored as **`metadata.legacyWishlistId`**. Otherwise omit for auto **`T###`**.
+
+Do **not** pass `phase` on wishlist intake tasks.
 
 ## Breaking into workable tasks
 

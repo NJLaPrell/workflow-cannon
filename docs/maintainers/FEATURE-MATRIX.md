@@ -31,6 +31,7 @@ Status legend:
 | Phase 26 - Module platform and improvement execution (`T388`–`T393`, `T390`, `T440`–`T442`, ready `imp-*`) | `v0.27.0` | Completed (remaining transcript `imp-*` triage continued in Phase 27) |
 | Phase 27 - Transcript improvement execution (nine promoted **`ready`** `imp-*`) | `v0.28.0` | Completed (see Phase 27 section below; remaining **`proposed`** `imp-*` roll forward) |
 | Phase 28 - Maintainer and agent operability (`T392`, `T443`–`T449`) | `v0.29.0` | Completed |
+| Phase 30 - Persistence, packaging, and task-store evolution (`T450`–`T452`, `T466`, `T467`) | `v0.30.0` | Completed |
 
 ## Feature Matrix by Phase
 
@@ -234,6 +235,16 @@ Status legend:
 | Structured phase on tasks | Optional `phaseKey` on tasks; `list-tasks` filter and hints use stable keys alongside human `phase` labels | Completed | `T445`, `T446` |
 | Short CLI bin | `wk` alias for the same entrypoint as `workspace-kit` after install | Completed | `T448`, `T449` |
 | Planning vs persistence clarity | TERMS + module READMEs disambiguate planning module (CLI) vs task-engine persistence | Completed | `T392` |
+
+### Phase 30 Persistence, packaging, and task-store evolution (`v0.30.0`)
+
+| Product feature | What users/maintainers get | Status | Task coverage |
+| --- | --- | --- | --- |
+| Native SQLite consumer stance | ADR + runbook; `doctor` loads `better-sqlite3` only when SQLite persistence is configured and prints rebuild/runbook hints on failure | Completed | `T450` |
+| Task store document model | ADR locks document-first SQLite JSON blobs vs normalized tables | Completed | `T451` |
+| Dual persistence operator map | One runbook for backend, paths, recovery; `doctor` prints effective backend summary after pass | Completed | `T452` |
+| Task / wishlist / improvement id onboarding | Single table for “which id do I create?”; TERMS + README + AGENT-CLI-MAP links | Completed | `T466` |
+| Task store schema evolution | Documented policy; read `schemaVersion` 1/2 with normalize-on-load; tests | Completed | `T467` |
 
 ## Supporting Milestone Features (cross-phase)
 

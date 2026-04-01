@@ -1,13 +1,15 @@
 schema_version: 1
-current_kit_phase: "29"
-next_kit_phase: "30"
+current_kit_phase: "31"
+next_kit_phase: "32"
 last_updated: "2026-03-31"
-active_focus: "**Phase 29** — next roadmap slice after **`v0.29.0`** / Phase **28** closeout; execution queue per task-engine state."
+active_focus: "**Phase 31** — policy, approvals, and sensitivity; **`T453`–`T455`**, **`T468`** (**`workspace-kit`**, **`ready`**) with **`dependsOn`** **`T453`→`T454`**, **`T468`→`T453`**. Phase **30** shipped **`v0.30.0`** (**`T450`–`T452`**, **`T466`**, **`T467`**). Phases **32–33** queued."
 blockers: []
 pending_decisions: []
 next_agent_actions:
-  - "Pull next **`ready`** **`workspace-kit`** tasks from **`workspace-kit run get-next-actions '{}'`** after phase kickoff."
+  - "Pull next **`ready`** **`workspace-kit`** tasks from **`node dist/cli.js run get-next-actions '{}'`** (or **`wk`**) for Phase **31**."
 last_session_summary:
+  - "2026-03-31: Phase **30** closeout — shipped **`v0.30.0`**: ADRs + runbooks (native SQLite, document SQLite model, schemaVersion policy); **`doctor`** dynamic native load + persistence summary; **`task-store-migration`** read **`schemaVersion` `1`/`2`**; wishlist/id onboarding docs (**`T450`–`T452`**, **`T466`**, **`T467`** **`completed`**). **`current_kit_phase`** **31**."
+  - "2026-04-01: **`update-task`** — **`T450`–`T469`**: **`phase`**, **`phaseKey`**, **`dependsOn`** per four-phase plan (**30** persistence/store · **31** policy · **32** boundaries/platform · **33** docs/editor/CLI); script **`scripts/apply-phase-30-33-architect-tasks.mjs`**; maintainer snapshot **`current_kit_phase`** **30**."
   - "2026-03-31: Phase **28** shipped **`v0.29.0`** — GitHub release `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.29.0`; Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23826775242` — **`queue-health`**, **`kit.*`** phase config + doctor mismatch, **`phaseKey`** / **`list-tasks`** hints, **`wk`** bin, maintainer doc alignment (**`T392`**, **`T443`–`T449`** **`completed`**)."
   - "2026-03-31: **`update-task`** + **`run-transition accept`** — **`T392`**, **`T443`–`T447`**, **`T448`**, **`T449`** → **`ready`**, phase **Phase 28 (maintainer and agent operability)**; **`dependsOn`**: **`T444`→`T443`**, **`T445`→`T444`**, **`T446`→`T443`**, **`T447`→`T443`+`T446`**, **`T449`→`T448`**; **`T392`** unchanged **`T389`**, **`T390`**. **`run-transition reject`** — fourteen **`proposed`** **`imp-*`** → **`cancelled`** (triage). **`proposed`** count **0**."
   - "2026-04-01: **`create-task`** — **`T448`** **`proposed`** (add **`wk`** bin alias); **`T449`** **`proposed`** (audit repo CLI references → **`wk`** / **`workspace-kit`**) **`dependsOn`**: **`T448`**; phase **Phase 28 (CLI and bin ergonomics)**."
@@ -18,9 +20,9 @@ last_session_summary:
   - "2026-04-01 (round 1): **`improvement-triage-top-three`** — promoted **`imp-a7dcdec79a791b`**, **`imp-5ba2f6a0c3bd4a`**, **`imp-4cf9c424e5bfb2`** (planning/git/task-engine index themes)."
   - "2026-03-31: Phase **26** closeout — **`T390`** (R102 / layering docs + template + `.ai/ARCHITECTURE` refs); **`imp-c584f0e206c404`** (pre-release hook + `transcript:ingest` merge env → **`policyApproval`** JSON); **`imp-df7ebd9967433c`** (AGENTS native SQLite portability); **`imp-5dc1ffa28ccdc3`** verified against existing malformed-**`policyApproval`** denial output in **`run-command.ts`**. Shipped **`v0.27.0`** — PR **#79**, GitHub release, **Publish NPM** `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23823720798`."
 metrics:
-  updated_at: "2026-03-31"
+  updated_at: "2026-04-01"
   source: "maintainer"
-  notes: "Phase 28 released v0.29.0 (T392, T443–T449). Phase 29: next execution slice from task-engine queue."
+  notes: "Phase 30 released v0.30.0; execution focus Phase 31 (T453+)."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null

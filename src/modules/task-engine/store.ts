@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import type { TaskEntity, TaskMutationEvidence, TaskStoreDocument, TransitionEvidence } from "./types.js";
 import { TaskEngineError } from "./transitions.js";
 import type { SqliteDualPlanningStore } from "./sqlite-dual-planning.js";
+import { normalizeTaskStoreDocumentFromUnknown } from "./task-store-migration.js";
 
 export const DEFAULT_TASK_STORE_PATH = ".workspace-kit/tasks/state.json";
 
@@ -39,17 +40,8 @@ export class TaskStore {
       loadDocument: async () => {
         try {
           const raw = await fs.readFile(filePath, "utf8");
-          const parsed = JSON.parse(raw) as TaskStoreDocument;
-          if (parsed.schemaVersion !== 1) {
-            throw new TaskEngineError(
-              "storage-read-error",
-              `Unsupported schema version: ${parsed.schemaVersion}`
-            );
-          }
-          if (!Array.isArray(parsed.mutationLog)) {
-            parsed.mutationLog = [];
-          }
-          return parsed;
+          const parsed = JSON.parse(raw) as unknown;
+          return normalizeTaskStoreDocumentFromUnknown(parsed);
         } catch (err) {
           if ((err as NodeJS.ErrnoException).code === "ENOENT") {
             return emptyStore();

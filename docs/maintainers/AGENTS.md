@@ -76,7 +76,7 @@ Before changing **task-engine state**, **policy traces**, **approvals**, **trans
 
 ### Native SQLite (`better-sqlite3`) portability
 
-Default task persistence uses **`better-sqlite3`** (a native addon). After changing Node.js versions, copying `node_modules` between machines, or installing the published package on a new runtime, the compiled `.node` binary may not load. Run **`pnpm rebuild better-sqlite3`** (or **`npm rebuild better-sqlite3`**) in the project root. Package **`postinstall`** runs **`scripts/ensure-native-sqlite.mjs`**, which attempts an automatic rebuild when load fails with a known ABI mismatch signature.
+Default task persistence uses **`better-sqlite3`**. **`workspace-kit doctor`** surfaces load failures with rebuild hints when **`tasks.persistenceBackend`** is **`sqlite`**. Full consumer troubleshooting (symptoms, ordered recovery, postinstall behavior): **`docs/maintainers/runbooks/native-sqlite-consumer-install.md`**. Distribution stance: **`docs/maintainers/ADR-native-sqlite-consumer-distribution.md`**.
 
 ### When the agent must run terminal commands (examples)
 

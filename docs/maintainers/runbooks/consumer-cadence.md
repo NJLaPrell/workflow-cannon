@@ -67,4 +67,5 @@ Any non-zero exit blocks the transition and must be resolved before re-attemptin
 
 - `docs/maintainers/RELEASING.md` — release procedure and evidence
 - `docs/maintainers/release-gate-matrix.md` — gate inventory and ownership
+- `docs/maintainers/runbooks/task-persistence-operator.md` — effective SQLite vs JSON backend and paths (operator map)
 - `.workspace-kit/tasks/state.json` — regression and blocker tracking

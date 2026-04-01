@@ -14,7 +14,10 @@ import {
 import { buildAgentInstructionSurface } from "./core/agent-instruction-surface.js";
 import { runWorkspaceConfigCli } from "./core/config-cli.js";
 import { handleRunCommand } from "./cli/run-command.js";
-import { collectDoctorPlanningPersistenceIssues } from "./cli/doctor-planning-issues.js";
+import {
+  collectDoctorPlanningPersistenceIssues,
+  collectTaskPersistenceDoctorSummaryLines
+} from "./cli/doctor-planning-issues.js";
 import { ModuleRegistryError } from "./core/module-registry.js";
 import { resolveRegistryAndConfig } from "./core/module-registry-resolve.js";
 import { defaultRegistryModules } from "./modules/index.js";
@@ -919,6 +922,9 @@ export async function runCli(
   writeLine(
     "Effective workspace config resolved; task planning persistence checks passed (including SQLite when configured)."
   );
+  for (const line of await collectTaskPersistenceDoctorSummaryLines(cwd)) {
+    writeLine(line);
+  }
   writeLine(`Next: workspace-kit run — list module commands; see ${AGENT_CLI_MAP_HUMAN_DOC} for tier/policy copy-paste.`);
   return EXIT_SUCCESS;
 }

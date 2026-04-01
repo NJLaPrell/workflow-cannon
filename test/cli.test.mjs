@@ -171,6 +171,7 @@ test("runCli doctor validates canonical files", async () => {
   assert.equal(code, 0);
   assert.match(capture.lines[0], /doctor passed/);
   assert.ok(capture.lines.some((l) => l.includes("AGENT-CLI-MAP.md")));
+  assert.ok(capture.lines.some((l) => l.includes("Effective task persistence:")));
 });
 
 test("runCli doctor --agent-instruction-surface emits JSON catalog", async () => {

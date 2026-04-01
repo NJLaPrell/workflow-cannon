@@ -156,9 +156,9 @@ type TransitionContext = {
 
 ### Store location
 
-Default: `.workspace-kit/tasks/state.json`
+JSON opt-out: `.workspace-kit/tasks/state.json` (when `tasks.persistenceBackend: json`). Default kit layout uses SQLite (`.workspace-kit/tasks/workspace-kit.db`) with embedded JSON documents — see **`docs/maintainers/runbooks/task-persistence-operator.md`**.
 
-Configurable via `src/modules/task-engine/config.md` `storePath` setting.
+Configurable via `src/modules/task-engine/config.md` / `tasks` keys.
 
 ### Store schema
 
@@ -167,6 +167,7 @@ type TaskStoreDocument = {
   schemaVersion: 1;
   tasks: TaskEntity[];
   transitionLog: TransitionEvidence[];
+  mutationLog?: TaskMutationEvidence[];
   lastUpdated: string;
 };
 ```
@@ -175,7 +176,7 @@ type TaskStoreDocument = {
 
 - **Load**: Read and parse on engine initialization. If file does not exist, initialize with empty state.
 - **Save**: Write after each transition batch (atomic: write to temp file, rename).
-- **Schema version**: Version `1` for Phase 1. Future versions will include migration logic.
+- **Schema version**: **`normalizeTaskStoreDocumentFromUnknown`** (`src/modules/task-engine/task-store-migration.ts`) accepts read versions **`1`** and **`2`** (v2 is currently a no-op forward label); runtime normalizes to **`schemaVersion: 1`** and saves **`1`** until a release explicitly bumps the writer. Policy: **`docs/maintainers/ADR-task-store-schemaversion-policy.md`**.
 - **Directory creation**: Auto-create `.workspace-kit/tasks/` directory if missing.
 
 ---

@@ -308,6 +308,31 @@ test("TaskStore concurrent saves do not produce malformed JSON", async () => {
   assert.ok(typeof parsed.lastUpdated === "string");
 });
 
+test("TaskStore accepts schemaVersion 2 on read and persists as schemaVersion 1", async () => {
+  const workspace = await tmpDir();
+  const tasksDir = path.join(workspace, ".workspace-kit", "tasks");
+  await mkdir(tasksDir, { recursive: true });
+  const storePath = path.join(tasksDir, "state.json");
+  const iso = new Date().toISOString();
+  await writeFile(
+    storePath,
+    JSON.stringify({
+      schemaVersion: 2,
+      tasks: [makeTask({ id: "T501", status: "ready" })],
+      transitionLog: [],
+      lastUpdated: iso
+    }),
+    "utf8"
+  );
+  const store = TaskStore.forJsonFile(workspace);
+  await store.load();
+  assert.equal(store.getTask("T501")?.id, "T501");
+  await store.save();
+  const raw = await readFile(storePath, "utf8");
+  const parsed = JSON.parse(raw);
+  assert.equal(parsed.schemaVersion, 1);
+});
+
 test("appendPolicyTrace concurrent writes preserve line-delimited JSON", async () => {
   const workspace = await tmpDir();
   const now = new Date().toISOString();
@@ -765,6 +790,7 @@ test("taskEngineModule onCommand dashboard-summary returns stable shape", async 
   assert.ok(Array.isArray(d.wishlist.openTop));
   assert.equal(d.wishlist.openTop.length, 0);
   assert.equal(d.planningSession, null);
+  assert.deepEqual(d.proposedImprovementsSummary, { schemaVersion: 1, count: 0, top: [] });
 });
 
 test("taskEngineModule onCommand run-transition validates required args", async () => {
