@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
+import { realpathSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import {
   AGENT_CLI_MAP_HUMAN_DOC,
   POLICY_APPROVAL_HUMAN_DOC,
@@ -948,9 +949,18 @@ async function main(): Promise<void> {
   }
 }
 
-const isDirectExecution =
-  typeof process.argv[1] === "string" && import.meta.url === pathToFileURL(process.argv[1]).href;
+function isCliInvokedDirectly(): boolean {
+  const argvScript = process.argv[1];
+  if (typeof argvScript !== "string") {
+    return false;
+  }
+  try {
+    return realpathSync(argvScript) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+}
 
-if (isDirectExecution) {
+if (isCliInvokedDirectly()) {
   void main();
 }
