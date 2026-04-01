@@ -2,19 +2,20 @@ schema_version: 1
 current_kit_phase: "27"
 next_kit_phase: "28"
 last_updated: "2026-04-01"
-active_focus: "**Phase 27** — **6** transcript **`imp-*`** **`ready`** (two triage rounds); **17** **`proposed`** **`imp-*`** remain."
+active_focus: "**Phase 27** — **9** transcript **`imp-*`** **`ready`** (three triage rounds); **14** **`proposed`** **`imp-*`** remain."
 blockers: []
 pending_decisions: []
 next_agent_actions:
-  - "Execute or re-rank **`ready`** improvements (6 ids — `get-next-actions`). Optional: **`improvement-triage-top-three`** for **17** remaining **`proposed`**."
+  - "Execute or re-rank **`ready`** improvements (9 ids — `get-next-actions`). Optional: **`improvement-triage-top-three`** for **14** remaining **`proposed`**."
 last_session_summary:
-  - "2026-04-01 (round 2): **`improvement-triage-top-three`** — promoted **`imp-190189d4b01bc1`** (improvement-queue / **`imp-*`** summary clarity for operators), **`imp-d8ed5fa0b6c093`** (maintainer docs vs extension alignment), **`imp-3bf93773a8c983`** (audit-style pass anchored in repo contents). Skipped **`imp-b7226ee16b28e3`** (overlaps task-engine thread already covered by **`imp-4cf9c424e5bfb2`**). **17** **`proposed`** remain."
-  - "2026-04-01 (round 1): **`improvement-triage-top-three`** — promoted **`imp-a7dcdec79a791b`**, **`imp-5ba2f6a0c3bd4a`**, **`imp-4cf9c424e5bfb2`**."
+  - "2026-04-01 (round 3): **`improvement-triage-top-three`** — promoted **`imp-f39584e6613337`** (consolidated implementation plan vs answers / soft-gate behaviors), **`imp-d3d2643f55fd43`** (feature-map / product language grounded in repo), **`imp-6a07b608c1b752`** (today’s code vs target-model alignment). Still skipping **`imp-b7226ee16b28e3`** (task-engine refactor thread overlap). **14** **`proposed`** remain."
+  - "2026-04-01 (round 2): **`improvement-triage-top-three`** — promoted **`imp-190189d4b01bc1`**, **`imp-d8ed5fa0b6c093`**, **`imp-3bf93773a8c983`**."
+  - "2026-04-01 (round 1): **`improvement-triage-top-three`** — promoted **`imp-a7dcdec79a791b`**, **`imp-5ba2f6a0c3bd4a`**, **`imp-4cf9c424e5bfb2`** (planning/git/task-engine index themes)."
   - "2026-03-31: Phase **26** closeout — **`T390`** (R102 / layering docs + template + `.ai/ARCHITECTURE` refs); **`imp-c584f0e206c404`** (pre-release hook + `transcript:ingest` merge env → **`policyApproval`** JSON); **`imp-df7ebd9967433c`** (AGENTS native SQLite portability); **`imp-5dc1ffa28ccdc3`** verified against existing malformed-**`policyApproval`** denial output in **`run-command.ts`**. Shipped **`v0.27.0`** — PR **#79**, GitHub release, **Publish NPM** `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23823720798`."
 metrics:
   updated_at: "2026-04-01"
   source: "maintainer"
-  notes: "Phase 27: 6 imp-* ready after two triage passes 2026-04-01; 17 imp-* proposed remain."
+  notes: "Phase 27: 9 imp-* ready after three triage passes 2026-04-01; 14 imp-* proposed remain."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null
