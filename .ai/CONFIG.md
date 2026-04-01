@@ -2,65 +2,113 @@
 
 Generated from `src/core/config-metadata.ts`. Do not edit by hand; run `workspace-kit config generate-docs`.
 
-|slot1= Key |slot2= Type |slot3= Default |slot4= Scope |slot5= Module |slot6= Exposure |slot7= Sensitive |slot8= Approval |slot9=
-|slot1= --- |slot2= --- |slot3= --- |slot4= --- |slot5= --- |slot6= --- |slot7= --- |slot8= --- |slot9=
-|slot1= improvement.cadence.maxRecommendationCandidatesPerRun |slot2= number |slot3= 500 |slot4= project |slot5= improvement |slot6= maintainer |slot7= false |slot8= false |slot9=
+| Key | Type | Default | Scope | Module | Exposure | Sensitive | Approval |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| improvement.cadence.maxRecommendationCandidatesPerRun | number | 500 | project | improvement | maintainer | false | false |
 
 **Description:** Upper bound on new improvement tasks created per generate-recommendations run (safety cap; direct runs still respect dedupe).
 
-|slot1= improvement.cadence.minIntervalMinutes |slot2= number |slot3= 15 |slot4= project |slot5= improvement |slot6= maintainer |slot7= false |slot8= false |slot9=
+| improvement.cadence.minIntervalMinutes | number | 15 | project | improvement | maintainer | false | false |
 
 **Description:** Minimum minutes between one-shot ingest recommendation generation runs.
 
-|slot1= improvement.cadence.skipIfNoNewTranscripts |slot2= boolean |slot3= true |slot4= project |slot5= improvement |slot6= maintainer |slot7= false |slot8= false |slot9=
+| improvement.cadence.skipIfNoNewTranscripts | boolean | true | project | improvement | maintainer | false | false |
 
 **Description:** Skip recommendation generation when transcript sync copies no new files.
 
-|slot1= improvement.hooks.afterTaskCompleted |slot2= string |slot3= "off" |slot4= project |slot5= improvement |slot6= maintainer |slot7= false |slot8= false |slot9=
+| improvement.hooks.afterTaskCompleted | string | "off" | project | improvement | maintainer | false | false |
 
 **Description:** Optional background transcript sync after task-engine transition to completed: off (default), sync, or ingest (ingest requires WORKSPACE_KIT_POLICY_APPROVAL in env).
 
-|slot1= improvement.transcripts.archivePath |slot2= string |slot3= "agent-transcripts" |slot4= project |slot5= improvement |slot6= public |slot7= false |slot8= false |slot9=
+| improvement.transcripts.archivePath | string | "agent-transcripts" | project | improvement | public | false | false |
 
 **Description:** Relative local archive path where synced transcript JSONL files are copied.
 
-|slot1= improvement.transcripts.discoveryPaths |slot2= array |slot3= [] |slot4= project |slot5= improvement |slot6= maintainer |slot7= false |slot8= false |slot9=
+| improvement.transcripts.discoveryPaths | array | [] | project | improvement | maintainer | false | false |
 
 **Description:** Ordered relative paths tried when improvement.transcripts.sourcePath is unset (first existing wins). After these, sync tries Cursor global ~/.cursor/projects/<slug>/agent-transcripts.
 
-|slot1= improvement.transcripts.maxBytesPerFile |slot2= number |slot3= 50000000 |slot4= project |slot5= improvement |slot6= maintainer |slot7= false |slot8= false |slot9=
+| improvement.transcripts.maxBytesPerFile | number | 50000000 | project | improvement | maintainer | false | false |
 
 **Description:** Skip transcript files larger than this many bytes during sync.
 
-|slot1= improvement.transcripts.maxFilesPerSync |slot2= number |slot3= 5000 |slot4= project |slot5= improvement |slot6= maintainer |slot7= false |slot8= false |slot9=
+| improvement.transcripts.maxFilesPerSync | number | 5000 | project | improvement | maintainer | false | false |
 
 **Description:** Maximum JSONL transcript files processed per sync (deterministic order).
 
-|slot1= improvement.transcripts.maxTotalScanBytes |slot2= number |slot3= 500000000 |slot4= project |slot5= improvement |slot6= maintainer |slot7= false |slot8= false |slot9=
+| improvement.transcripts.maxTotalScanBytes | number | 500000000 | project | improvement | maintainer | false | false |
 
 **Description:** Approximate cap on total bytes read for hashing during one sync.
 
-|slot1= improvement.transcripts.sourcePath |slot2= string |slot3= "" |slot4= project |slot5= improvement |slot6= public |slot7= false |slot8= false |slot9=
+| improvement.transcripts.sourcePath | string | "" | project | improvement | public | false | false |
 
 **Description:** Optional relative path to transcript JSONL source. When empty, sync uses discoveryPaths (repo-relative, then Cursor global ~/.cursor/projects/<slug>/agent-transcripts).
 
-|slot1= policy.extraSensitiveModuleCommands |slot2= array |slot3= [] |slot4= project |slot5= workspace-kit |slot6= maintainer |slot7= true |slot8= true |slot9=
+| kit.currentPhaseLabel | string | "" | project | workspace-kit | maintainer | false | false |
+
+**Description:** Optional human-readable phase label (for explain-config / operator context); does not replace task.phase strings.
+
+| kit.currentPhaseNumber | number | 0 | project | workspace-kit | maintainer | false | false |
+
+**Description:** Optional positive integer marking the maintainer’s current kit phase number. When set, queue-health and phase hints prefer this over parsing docs/maintainers/data/workspace-kit-status.yaml. Must agree with that YAML when both are set (workspace-kit doctor warns on mismatch).
+
+| modules.disabled | array | [] | project | workspace-kit | maintainer | false | false |
+
+**Description:** Module ids to disable after computing the candidate enabled set (default-by-flag or modules.enabled whitelist).
+
+| modules.enabled | array | [] | project | workspace-kit | maintainer | false | false |
+
+**Description:** When non-empty, only these module ids are enabled (whitelist); then modules.disabled subtracts. When empty, all modules use registration.enabledByDefault.
+
+| planning.adaptiveFinalizePolicy | string | "off" | project | planning | maintainer | false | false |
+
+**Description:** Controls finalize handling for unresolved adaptive follow-up questions: off (ignore), warn (allow finalize with warnings), block (deny finalize).
+
+| planning.defaultQuestionDepth | string | "adaptive" | project | planning | maintainer | false | false |
+
+**Description:** Planning interview depth mode: minimal (critical only), guided (critical + static follow-ups), or adaptive (context-driven follow-ups).
+
+| planning.hardBlockCriticalUnknowns | boolean | true | project | planning | maintainer | false | false |
+
+**Description:** When true, planning finalize requests fail until critical unknown questions are answered.
+
+| planning.rulePacks | object | {} | project | planning | maintainer | false | false |
+
+**Description:** Optional object overrides for planning rule packs by workflow type (`baseQuestions` and `adaptiveQuestions`).
+
+| policy.extraSensitiveModuleCommands | array | [] | project | workspace-kit | maintainer | true | true |
 
 **Description:** Additional module command names (e.g. run subcommands) treated as sensitive for policy approval.
 
-|slot1= responseTemplates.commandOverrides |slot2= object |slot3= {} |slot4= project |slot5= workspace-kit |slot6= maintainer |slot7= false |slot8= false |slot9=
+| responseTemplates.commandOverrides | object | {} | project | workspace-kit | maintainer | false | false |
 
 **Description:** Map of module command name to builtin response template id.
 
-|slot1= responseTemplates.defaultTemplateId |slot2= string |slot3= "default" |slot4= project |slot5= workspace-kit |slot6= maintainer |slot7= false |slot8= false |slot9=
+| responseTemplates.defaultTemplateId | string | "default" | project | workspace-kit | maintainer | false | false |
 
 **Description:** Builtin response template id applied when a run does not specify one.
 
-|slot1= responseTemplates.enforcementMode |slot2= string |slot3= "advisory" |slot4= project |slot5= workspace-kit |slot6= maintainer |slot7= false |slot8= false |slot9=
+| responseTemplates.enforcementMode | string | "advisory" | project | workspace-kit | maintainer | false | false |
 
 **Description:** `advisory`: unknown template ids, invalid default/override ids, and explicit-vs-directive template conflicts emit warnings only. `strict`: same conditions fail the command (`response-template-invalid` or `response-template-conflict`) after the module runs; use for CI governance.
 
-|slot1= tasks.storeRelativePath |slot2= string |slot3= ".workspace-kit/tasks/state.json" |slot4= project |slot5= task-engine |slot6= public |slot7= false |slot8= false |slot9=
+| tasks.persistenceBackend | string | "sqlite" | project | task-engine | public | false | false |
+
+**Description:** Task + wishlist persistence: sqlite (default) or json (opt-out for legacy workflows).
+
+| tasks.sqliteDatabaseRelativePath | string | ".workspace-kit/tasks/workspace-kit.db" | project | task-engine | public | false | false |
+
+**Description:** Relative path (from workspace root) to the SQLite file when persistenceBackend is sqlite.
+
+| tasks.storeRelativePath | string | ".workspace-kit/tasks/state.json" | project | task-engine | public | false | false |
 
 **Description:** Relative path (from workspace root) to the task engine JSON state file.
+
+| tasks.strictValidation | boolean | false | project | task-engine | public | false | false |
+
+**Description:** When true, task mutations validate the full active task set before persistence and fail on invalid task records.
+
+| tasks.wishlistStoreRelativePath | string | ".workspace-kit/wishlist/state.json" | project | task-engine | public | false | false |
+
+**Description:** Relative path (from workspace root) to the Wishlist JSON store when persistenceBackend is json.
 

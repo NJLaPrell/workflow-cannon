@@ -124,14 +124,21 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
   - **Enforced in**: `workspace-kit doctor --agent-instruction-surface` JSON output and router registration (`ModuleCommandRouter`).
 
 - **Planning module (CLI)**
-  - **Definition**: The `planning` capability module that runs guided **`build-plan`** interviews, rule packs, and wishlist artifact composition (`src/modules/planning/`).
+  - **Definition**: The `planning` capability module that runs guided **`build-plan`** interviews, rule packs, and wishlist artifact composition (`src/modules/planning/`). This is **not** where execution tasks are stored — it consumes task-engine persistence through `openPlanningStores` and related facades.
   - **Defined in**: `src/modules/planning/`, planning instructions, `docs/maintainers/runbooks/planning-workflow.md`.
-  - **Enforced in**: `workspace-kit run` planning commands and planning config keys.
+  - **Enforced in**: `workspace-kit run` planning commands and `planning.*` config keys.
+  - **Disambiguation**: Prefer the phrase **planning module** when discussing CLI flows and `planning.*` settings; use **Planning persistence** for SQLite/JSON task stores and `tasks.*` paths.
 
 - **Planning persistence (task engine)**
   - **Definition**: Task-engine–owned storage for the **task** document (JSON file or SQLite `task_store_json`). Wishlist ideation is persisted **inside** the task document as `wishlist_intake` tasks; `WishlistStore` remains for **migration** off legacy artifacts only.
   - **Defined in**: `src/modules/task-engine/` (stores, `planning-open.ts`, `sqlite-dual-planning.ts`), `src/core/planning/index.ts`.
   - **Enforced in**: Task engine commands, atomic `convert-wishlist`, optional SQLite planning DB (legacy rows may include a second wishlist column until `migrate-wishlist-intake` runs).
+  - **Disambiguation**: Say **planning persistence** (or **task-engine persistence**) when discussing `TaskStore`, `tasks.persistenceBackend`, or the planning DB file — not “the planning module,” which is the separate `planning` module package under `src/modules/planning/`.
+
+- **phaseKey (task field)**
+  - **Definition**: Optional stable phase identifier on an **Execution Task** (e.g. `"28"`) used by `queue-health` and `list-tasks` hints alongside the human `phase` label string.
+  - **Defined in**: `src/modules/task-engine/types.ts` (`TaskEntity.phaseKey`), `src/modules/task-engine/phase-resolution.ts`.
+  - **Enforced in**: `create-task` / `update-task` when set; legacy tasks may omit it and still infer a key from free-text `phase` when possible.
 
 - **Optional peer module (`optionalPeers`)**
   - **Definition**: A module id listed on another module’s registration indicating integration when present; **missing optional peers do not block** registry construction (contrast with `dependsOn`).

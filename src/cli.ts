@@ -431,9 +431,10 @@ async function printWorkspaceKitTopLevelHelp(writeLine: (message: string) => voi
   writeLine(`Workflow Cannon — workspace-kit${versionSuffix} (${CANONICAL_KIT_NAME})`);
   writeLine("");
   writeLine("CLI for deterministic, policy-governed task workflows. Module commands are listed separately.");
+  writeLine("Also installed as the short command `wk` (same binary as `workspace-kit`).");
   writeLine("");
   writeLine("Start here (first time in a kit-enabled repo)");
-  writeLine("  1) workspace-kit doctor");
+  writeLine("  1) workspace-kit doctor   (or: wk doctor)");
   writeLine("  2) workspace-kit run              ← lists every module command (your command menu)");
   writeLine("  3) workspace-kit run get-next-actions '{}'   ← safe read: suggested next work");
   writeLine("");

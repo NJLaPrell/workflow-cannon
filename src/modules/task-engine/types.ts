@@ -21,6 +21,8 @@ export type TaskEntity = {
   dependsOn?: string[];
   unblocks?: string[];
   phase?: string;
+  /** Stable phase identifier (e.g. `"28"`) for audits; optional on legacy tasks. */
+  phaseKey?: string;
   metadata?: Record<string, unknown>;
   ownership?: string;
   approach?: string;

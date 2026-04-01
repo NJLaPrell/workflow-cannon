@@ -1,4 +1,8 @@
 {
+  "kit": {
+    "currentPhaseNumber": 28,
+    "currentPhaseLabel": "Phase 28 (maintainer and agent operability)"
+  },
   "tasks": {
     "persistenceBackend": "sqlite",
     "sqliteDatabaseRelativePath": ".workspace-kit/tasks/workspace-kit.db"

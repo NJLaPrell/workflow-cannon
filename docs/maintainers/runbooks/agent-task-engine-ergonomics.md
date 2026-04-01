@@ -34,6 +34,7 @@ Canonical process remains: [`AGENTS.md`](../AGENTS.md), [`AGENT-CLI-MAP.md`](../
 **Expectation:**
 
 - **Read-only discovery:** `workspace-kit doctor`, `workspace-kit run list-tasks`, `workspace-kit run get-next-actions`, `workspace-kit run get-task`, `workspace-kit run explain-task-engine-model` (Tier C unless otherwise documented).
+- **Queue consistency (ready tasks):** `workspace-kit run queue-health '{}'` — one JSON payload for phase alignment vs canonical phase (`kit.currentPhaseNumber` or maintainer status YAML) plus **`ready`** rows whose **`dependsOn`** are not yet **`completed`**. Optional: `workspace-kit run list-tasks` with **`"includeQueueHints":true`** for per-row hints. See [`AGENT-CLI-MAP.md`](../AGENT-CLI-MAP.md) → **Queue health and ready-queue consistency**.
 - **Lifecycle changes:** only **`run-transition`** (and other documented mutators) with correct **`policyApproval`** tiering — not hand-edited `state.json` except documented recovery.
 
 **Transcript alignment:** `imp-3bf93773a8c983` (`transcript:ae9aedbeb39d77297a12fc0b697ac6918a06bbaf`).

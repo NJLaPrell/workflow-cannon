@@ -38,6 +38,8 @@ export const KIT_CONFIG_DEFAULTS: Record<string, unknown> = {
     enabled: [] as string[],
     disabled: [] as string[]
   },
+  /** Maintainer-declared current kit phase (optional); overrides YAML-derived phase for queue audits when set. */
+  kit: {} as Record<string, unknown>,
   tasks: {
     storeRelativePath: ".workspace-kit/tasks/state.json",
     wishlistStoreRelativePath: ".workspace-kit/wishlist/state.json",

@@ -1,14 +1,14 @@
 schema_version: 1
-current_kit_phase: "28"
-next_kit_phase: "29"
+current_kit_phase: "29"
+next_kit_phase: "30"
 last_updated: "2026-03-31"
-active_focus: "**Phase 28** — eight **`ready`** **`workspace-kit`** tasks (**`T392`**, **`T443`–`T449`**) on **Phase 28 (maintainer and agent operability)**; **`proposed`** queue empty. Start **`T443`** and/or **`T448`** (no deps); **`T444`**/**`T445`**/**`T446`**/**`T447`**/**`T449`** follow the recorded **`dependsOn`** chain."
+active_focus: "**Phase 29** — next roadmap slice after **`v0.29.0`** / Phase **28** closeout; execution queue per task-engine state."
 blockers: []
 pending_decisions: []
 next_agent_actions:
-  - "Pick **`in_progress`** on **`T443`** (queue-health) and/or **`T448`** (**`wk`** bin); then **`T444`** → **`T445`**, **`T446`** → **`T447`**, **`T449`** after **`T448`** per **`dependsOn`**."
-  - "Deliver **`T392`** when staffing (deps **`T389`**, **`T390`** **`completed`**)."
+  - "Pull next **`ready`** **`workspace-kit`** tasks from **`workspace-kit run get-next-actions '{}'`** after phase kickoff."
 last_session_summary:
+  - "2026-03-31: Phase **28** shipped **`v0.29.0`** — **`queue-health`**, **`kit.*`** phase config + doctor mismatch, **`phaseKey`** / **`list-tasks`** hints, **`wk`** bin, maintainer doc alignment (**`T392`**, **`T443`–`T449`** **`completed`**)."
   - "2026-03-31: **`update-task`** + **`run-transition accept`** — **`T392`**, **`T443`–`T447`**, **`T448`**, **`T449`** → **`ready`**, phase **Phase 28 (maintainer and agent operability)**; **`dependsOn`**: **`T444`→`T443`**, **`T445`→`T444`**, **`T446`→`T443`**, **`T447`→`T443`+`T446`**, **`T449`→`T448`**; **`T392`** unchanged **`T389`**, **`T390`**. **`run-transition reject`** — fourteen **`proposed`** **`imp-*`** → **`cancelled`** (triage). **`proposed`** count **0**."
   - "2026-04-01: **`create-task`** — **`T448`** **`proposed`** (add **`wk`** bin alias); **`T449`** **`proposed`** (audit repo CLI references → **`wk`** / **`workspace-kit`**) **`dependsOn`**: **`T448`**; phase **Phase 28 (CLI and bin ergonomics)**."
   - "2026-03-31: Phase **27** closeout — **`v0.28.0`** GitHub release + **Publish NPM** `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23825952328`; runbook **`docs/maintainers/runbooks/agent-task-engine-ergonomics.md`**; nine **`imp-*`** **`completed`**. **`T443`–`T447`** remain **`proposed`** for Phase **28**."
@@ -20,7 +20,7 @@ last_session_summary:
 metrics:
   updated_at: "2026-03-31"
   source: "maintainer"
-  notes: "Phase 27 released v0.28.0 (nine imp-*). Phase 28: T392 + T443–T449 ready; imp-* proposed backlog cleared via reject (2026-03-31)."
+  notes: "Phase 28 released v0.29.0 (T392, T443–T449). Phase 29: next execution slice from task-engine queue."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null

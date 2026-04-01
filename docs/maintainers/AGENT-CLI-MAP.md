@@ -139,6 +139,37 @@ These are **`workspace-kit` top-level commands**, not `run` subcommands. They re
 | Upgrade kit-owned paths | `WORKSPACE_KIT_POLICY_APPROVAL='{"confirmed":true,"rationale":"upgrade"}' workspace-kit upgrade` |
 | Mutate config keys | `WORKSPACE_KIT_POLICY_APPROVAL='{"confirmed":true,"rationale":"set cadence"}' workspace-kit config set improvement.cadence.minIntervalMinutes 20 --json` |
 
+## Queue health and ready-queue consistency (Tier C)
+
+Use **`queue-health`** when you need a **single JSON answer** to “are ready tasks aligned with the current phase, and are any **`ready`** rows still blocked by incomplete dependencies?” — without ad-hoc `jq` over the full task list.
+
+**Canonical phase resolution (precedence):**
+
+1. **`kit.currentPhaseNumber`** in effective workspace config (`.workspace-kit/config.json` / user layer) when set to a **positive integer**.
+2. Otherwise, leading digits parsed from **`docs/maintainers/data/workspace-kit-status.yaml`** → **`current_kit_phase`** (for example `"28"` → **`28`**).
+
+**`workspace-kit doctor`** fails when **both** config and YAML supply a phase number and they **disagree** (maintainer drift signal).
+
+**Copy-paste — full audit:**
+
+```bash
+workspace-kit run queue-health '{}'
+```
+
+**Copy-paste — same phase/dependency hints on a filtered `list-tasks` result** (default `list-tasks` shape unchanged when omitted):
+
+```bash
+workspace-kit run list-tasks '{"includeQueueHints":true,"status":"ready"}'
+```
+
+**Copy-paste — filter by stable `phaseKey`** (uses `task.phaseKey` or infers from `task.phase` text when possible):
+
+```bash
+workspace-kit run list-tasks '{"phaseKey":"28","status":"ready"}'
+```
+
+Instruction: `src/modules/task-engine/instructions/queue-health.md`. Related runbook: [`runbooks/agent-task-engine-ergonomics.md`](./runbooks/agent-task-engine-ergonomics.md).
+
 ## Tier C — Safe discovery / read-only examples
 
 Non-sensitive commands (no `policyApproval` unless you added `extraSensitiveModuleCommands`):
@@ -146,6 +177,7 @@ Non-sensitive commands (no `policyApproval` unless you added `extraSensitiveModu
 ```bash
 workspace-kit run list-tasks '{}'
 workspace-kit run get-next-actions '{}'
+workspace-kit run queue-health '{}'
 workspace-kit run get-task '{"taskId":"T285"}'
 workspace-kit run list-tasks '{"type":"improvement","phase":"Phase 16 - Maintenance and stability"}'
 workspace-kit run list-tasks '{"category":"reliability","tags":["ui"],"metadataFilters":{"owner.team":"platform"}}'

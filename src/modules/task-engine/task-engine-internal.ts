@@ -7,6 +7,8 @@ import { TransitionService } from "./service.js";
 import { TaskEngineError, getAllowedTransitionsFrom } from "./transitions.js";
 import { getNextActions, isImprovementLikeTask } from "./suggestions.js";
 import { readWorkspaceStatusSnapshot } from "./dashboard-status.js";
+import { inferTaskPhaseKey } from "./phase-resolution.js";
+import { buildQueueHealthReport, buildQueueHintsForTasks } from "./queue-health.js";
 import { readBuildPlanSession, toDashboardPlanningSession } from "../../core/planning/build-plan-session-file.js";
 import { openPlanningStores } from "./planning-open.js";
 import { runMigrateWishlistIntake } from "./migrate-wishlist-intake-runtime.js";
@@ -55,6 +57,7 @@ const MUTABLE_TASK_FIELDS = new Set([
   "dependsOn",
   "unblocks",
   "phase",
+  "phaseKey",
   "metadata",
   "ownership",
   "approach",
@@ -230,6 +233,7 @@ export const taskEngineModule: WorkflowModule = {
         dependsOn: Array.isArray(args.dependsOn) ? args.dependsOn.filter((x) => typeof x === "string") : undefined,
         unblocks: Array.isArray(args.unblocks) ? args.unblocks.filter((x) => typeof x === "string") : undefined,
         phase: typeof args.phase === "string" ? args.phase : undefined,
+        phaseKey: typeof args.phaseKey === "string" && args.phaseKey.trim().length > 0 ? args.phaseKey.trim() : undefined,
         metadata: typeof args.metadata === "object" && args.metadata !== null ? args.metadata as Record<string, unknown> : undefined,
         ownership: typeof args.ownership === "string" ? args.ownership : undefined,
         approach: typeof args.approach === "string" ? args.approach : undefined,
@@ -256,6 +260,7 @@ export const taskEngineModule: WorkflowModule = {
         dependsOn: task.dependsOn ?? [],
         unblocks: task.unblocks ?? [],
         phase: task.phase ?? null,
+        phaseKey: task.phaseKey ?? null,
         metadata: task.metadata ?? null,
         ownership: task.ownership ?? null,
         approach: task.approach ?? null,
@@ -613,9 +618,27 @@ export const taskEngineModule: WorkflowModule = {
       };
     }
 
+    if (command.name === "queue-health") {
+      const tasks = store.getActiveTasks();
+      const workspaceStatus = await readWorkspaceStatusSnapshot(ctx.workspacePath);
+      const report = buildQueueHealthReport({
+        tasks,
+        effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+        workspaceStatus
+      });
+      return {
+        ok: true,
+        code: "queue-health",
+        message: `Queue health: ${report.summary.readyCount} ready; ${report.summary.misalignedPhaseCount} phase mismatches; ${report.summary.blockedByDependenciesCount} ready with unmet dependencies`,
+        data: report as unknown as Record<string, unknown>
+      };
+    }
+
     if (command.name === "list-tasks") {
       const statusFilter = typeof args.status === "string" ? args.status as TaskStatus : undefined;
       const phaseFilter = typeof args.phase === "string" ? args.phase : undefined;
+      const phaseKeyFilter =
+        typeof args.phaseKey === "string" && args.phaseKey.trim().length > 0 ? args.phaseKey.trim() : undefined;
       const typeFilter = typeof args.type === "string" && args.type.trim().length > 0 ? args.type.trim() : undefined;
       const categoryFilter =
         typeof args.category === "string" && args.category.trim().length > 0 ? args.category.trim() : undefined;
@@ -630,6 +653,7 @@ export const taskEngineModule: WorkflowModule = {
         ? Object.entries(args.metadataFilters).filter(([path]) => SAFE_METADATA_PATH_RE.test(path))
         : [];
       const includeArchived = args.includeArchived === true;
+      const includeQueueHints = args.includeQueueHints === true;
 
       let tasks = includeArchived ? store.getAllTasks() : store.getActiveTasks();
       if (statusFilter) {
@@ -637,6 +661,9 @@ export const taskEngineModule: WorkflowModule = {
       }
       if (phaseFilter) {
         tasks = tasks.filter((t) => t.phase === phaseFilter);
+      }
+      if (phaseKeyFilter) {
+        tasks = tasks.filter((t) => inferTaskPhaseKey(t) === phaseKeyFilter);
       }
       if (typeFilter) {
         tasks = tasks.filter((t) => t.type === typeFilter);
@@ -660,11 +687,23 @@ export const taskEngineModule: WorkflowModule = {
         );
       }
 
+      const data: Record<string, unknown> = { tasks, count: tasks.length, scope: "tasks-only" };
+      if (includeQueueHints) {
+        const hintBaseTasks = includeArchived ? store.getAllTasks() : store.getActiveTasks();
+        const workspaceStatus = await readWorkspaceStatusSnapshot(ctx.workspacePath);
+        data.queueHintRows = buildQueueHintsForTasks({
+          tasks: hintBaseTasks,
+          effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+          workspaceStatus,
+          taskRows: tasks
+        });
+      }
+
       return {
         ok: true,
         code: "tasks-listed",
         message: `Found ${tasks.length} tasks`,
-        data: { tasks, count: tasks.length, scope: "tasks-only" } as Record<string, unknown>
+        data
       };
     }
 
@@ -726,6 +765,7 @@ export const taskEngineModule: WorkflowModule = {
                 "dependsOn",
                 "unblocks",
                 "phase",
+                "phaseKey",
                 "metadata",
                 "ownership",
                 "approach",

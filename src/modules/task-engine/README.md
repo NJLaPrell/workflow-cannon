@@ -4,7 +4,7 @@ Phase 1 core module for structured task lifecycle management.
 
 ## Capabilities
 
-- **Task schema**: Typed `TaskEntity` with status, priority, dependencies, scope, and acceptance criteria
+- **Task schema**: Typed `TaskEntity` with status, priority, dependencies, scope, acceptance criteria, optional `phaseKey` for stable phase audits, and human `phase` labels
 - **Lifecycle transitions**: Six states (`proposed`, `ready`, `in_progress`, `blocked`, `completed`, `cancelled`) with guard-validated transitions (including **`demote`**: `ready` → `proposed`; see `instructions/run-transition.md`)
 - **Guard system**: Pluggable `TransitionGuard` hooks with built-in `state-validity` and `dependency-check` guards
 - **Auto-unblock**: Dependents automatically move `blocked → ready` when all deps complete
@@ -23,6 +23,8 @@ Phase 1 core module for structured task lifecycle management.
 | `list-tasks` | List tasks with optional status/phase filters |
 | `get-ready-queue` | Get ready tasks sorted by priority |
 | `get-next-actions` | Get prioritized next-action suggestions |
+| `queue-health` | Read-only ready-queue audit (phase alignment + unmet `dependsOn` on ready tasks) |
+| `dashboard-summary` | Cockpit JSON for UIs (includes maintainer status snapshot) |
 | `create-wishlist` / `list-wishlist` / `get-wishlist` / `update-wishlist` | Wishlist ideation (no task phase) |
 | `convert-wishlist` | Promote a wishlist item into one or more tasks; closes wishlist as `converted` |
 

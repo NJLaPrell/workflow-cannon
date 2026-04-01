@@ -123,6 +123,34 @@ const REGISTRY: Record<string, ConfigKeyMetadata> = {
     exposure: "maintainer",
     writableLayers: ["project", "user"]
   },
+  "kit.currentPhaseNumber": {
+    key: "kit.currentPhaseNumber",
+    type: "number",
+    description:
+      "Optional positive integer marking the maintainer’s current kit phase number. When set, queue-health and phase hints prefer this over parsing docs/maintainers/data/workspace-kit-status.yaml. Must agree with that YAML when both are set (workspace-kit doctor warns on mismatch).",
+    default: 0,
+    domainScope: "project",
+    owningModule: "workspace-kit",
+    sensitive: false,
+    requiresRestart: false,
+    requiresApproval: false,
+    exposure: "maintainer",
+    writableLayers: ["project", "user"]
+  },
+  "kit.currentPhaseLabel": {
+    key: "kit.currentPhaseLabel",
+    type: "string",
+    description:
+      "Optional human-readable phase label (for explain-config / operator context); does not replace task.phase strings.",
+    default: "",
+    domainScope: "project",
+    owningModule: "workspace-kit",
+    sensitive: false,
+    requiresRestart: false,
+    requiresApproval: false,
+    exposure: "maintainer",
+    writableLayers: ["project", "user"]
+  },
   "planning.defaultQuestionDepth": {
     key: "planning.defaultQuestionDepth",
     type: "string",
@@ -491,7 +519,8 @@ export function validatePersistedConfigDocument(
     "policy",
     "improvement",
     "responseTemplates",
-    "modules"
+    "modules",
+    "kit"
   ]);
   for (const k of Object.keys(data)) {
     if (!allowed.has(k)) {
@@ -573,6 +602,28 @@ export function validatePersistedConfigDocument(
     }
     if (m.disabled !== undefined) {
       validateValueForMetadata(REGISTRY["modules.disabled"]!, m.disabled);
+    }
+  }
+  const kit = data.kit;
+  if (kit !== undefined) {
+    if (typeof kit !== "object" || kit === null || Array.isArray(kit)) {
+      throw new Error(`config-invalid(${label}): kit must be an object`);
+    }
+    const k = kit as Record<string, unknown>;
+    for (const key of Object.keys(k)) {
+      if (key !== "currentPhaseNumber" && key !== "currentPhaseLabel") {
+        throw new Error(`config-invalid(${label}): unknown kit.${key}`);
+      }
+    }
+    if (k.currentPhaseNumber !== undefined) {
+      validateValueForMetadata(REGISTRY["kit.currentPhaseNumber"]!, k.currentPhaseNumber);
+      const n = k.currentPhaseNumber;
+      if (typeof n !== "number" || !Number.isInteger(n) || n < 1) {
+        throw new Error(`config-invalid(${label}): kit.currentPhaseNumber must be a positive integer`);
+      }
+    }
+    if (k.currentPhaseLabel !== undefined) {
+      validateValueForMetadata(REGISTRY["kit.currentPhaseLabel"]!, k.currentPhaseLabel);
     }
   }
   const improvement = data.improvement;

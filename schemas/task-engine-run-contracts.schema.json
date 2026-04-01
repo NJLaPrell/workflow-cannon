@@ -6,13 +6,13 @@
   "type": "object",
   "required": ["schemaVersion", "packageVersion", "moduleId", "commands"],
   "additionalProperties": false,
-  "packageVersion": "0.28.0",
+  "packageVersion": "0.29.0",
   "properties": {
     "schemaVersion": {
       "const": 1
     },
     "packageVersion": {
-      "const": "0.28.0",
+      "const": "0.29.0",
       "description": "Must match package.json version."
     },
     "moduleId": {
@@ -42,6 +42,7 @@
         "list-wishlist",
         "get-ready-queue",
         "get-next-actions",
+        "queue-health",
         "explain-task-engine-model",
         "migrate-task-persistence",
         "migrate-wishlist-intake",
@@ -72,6 +73,7 @@
         "list-wishlist": { "$ref": "#/$defs/contractListWishlist" },
         "get-ready-queue": { "$ref": "#/$defs/contractReadyQueue" },
         "get-next-actions": { "$ref": "#/$defs/contractNextActions" },
+        "queue-health": { "$ref": "#/$defs/contractQueueHealth" },
         "explain-task-engine-model": { "$ref": "#/$defs/contractExplainTaskEngineModel" },
         "migrate-task-persistence": { "$ref": "#/$defs/contractMigrateTaskPersistence" },
         "migrate-wishlist-intake": { "$ref": "#/$defs/contractMigrateWishlistIntake" },
@@ -427,7 +429,9 @@
                   },
                   "additionalProperties": false
                 },
-                "includeArchived": { "type": "boolean" }
+                "includeArchived": { "type": "boolean" },
+                "phaseKey": { "type": "string" },
+                "includeQueueHints": { "type": "boolean" }
               }
             },
             "responseData": {
@@ -490,6 +494,24 @@
             "responseData": {
               "type": "object",
               "required": ["readyQueue", "suggestedNext", "stateSummary", "blockingAnalysis", "scope"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractQueueHealth": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": false
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["schemaVersion", "scope", "canonicalPhase", "readyTaskSummaries", "summary"],
               "additionalProperties": true
             }
           }

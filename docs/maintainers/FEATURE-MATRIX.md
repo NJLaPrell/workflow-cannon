@@ -30,6 +30,7 @@ Status legend:
 | Phase 25 - Agent playbooks and direction sets (`T433`–`T439`) | `v0.26.0` | Completed |
 | Phase 26 - Module platform and improvement execution (`T388`–`T393`, `T390`, `T440`–`T442`, ready `imp-*`) | `v0.27.0` | Completed (remaining transcript `imp-*` triage continued in Phase 27) |
 | Phase 27 - Transcript improvement execution (nine promoted **`ready`** `imp-*`) | `v0.28.0` | Completed (see Phase 27 section below; remaining **`proposed`** `imp-*` roll forward) |
+| Phase 28 - Maintainer and agent operability (`T392`, `T443`–`T449`) | `v0.29.0` | Completed |
 
 ## Feature Matrix by Phase
 
@@ -223,6 +224,16 @@ Status legend:
 | Product feature | What users/maintainers get | Status | Task coverage |
 | --- | --- | --- | --- |
 | Agent task-engine ergonomics runbook | Single maintainer runbook tying Git, CLI discovery, planning vs execution queue, FEATURE-MATRIX vs architecture, task-engine public surface, behavior-vs-policy layering, and extension thin-client boundaries | Completed | `imp-5ba2f6a0c3bd4a`, `imp-6a07b608c1b752`, `imp-3bf93773a8c983`, `imp-a7dcdec79a791b`, `imp-190189d4b01bc1`, `imp-d3d2643f55fd43`, `imp-4cf9c424e5bfb2`, `imp-f39584e6613337`, `imp-d8ed5fa0b6c093` |
+
+### Phase 28 Maintainer and agent operability (`v0.29.0`)
+
+| Product feature | What users/maintainers get | Status | Task coverage |
+| --- | --- | --- | --- |
+| Queue health audit | One `workspace-kit run queue-health` JSON answer for ready-queue phase alignment and unmet dependencies on `ready` tasks | Completed | `T443`, `T446`, `T447` |
+| Canonical kit phase in config | `kit.currentPhaseNumber` / `kit.currentPhaseLabel` in effective config; doctor warns when config and status YAML disagree | Completed | `T444` |
+| Structured phase on tasks | Optional `phaseKey` on tasks; `list-tasks` filter and hints use stable keys alongside human `phase` labels | Completed | `T445`, `T446` |
+| Short CLI bin | `wk` alias for the same entrypoint as `workspace-kit` after install | Completed | `T448`, `T449` |
+| Planning vs persistence clarity | TERMS + module READMEs disambiguate planning module (CLI) vs task-engine persistence | Completed | `T392` |
 
 ## Supporting Milestone Features (cross-phase)
 

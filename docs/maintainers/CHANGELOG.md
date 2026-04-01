@@ -6,6 +6,23 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-03-31
+
+Phase 28 — maintainer and agent operability: read-only **`queue-health`** audit, canonical **`kit.currentPhaseNumber`** / **`kit.currentPhaseLabel`** config keys (with **`workspace-kit doctor`** mismatch detection vs **`workspace-kit-status.yaml`**), optional **`phaseKey`** on tasks, **`list-tasks`** **`phaseKey`** filter and **`includeQueueHints`**, short **`wk`** bin alias alongside **`workspace-kit`**, and glossary/README cross-links disambiguating **planning module (CLI)** vs **planning persistence (task engine)** (**`T392`**, **`T443`–**`T449`**).
+
+### Added
+
+- **Task Engine** — **`workspace-kit run queue-health '{}'`**: ready-queue phase alignment + unmet **`dependsOn`** on **`ready`** tasks in one JSON payload.
+- **Task Engine** — **`list-tasks`**: optional **`includeQueueHints`**, **`phaseKey`** filter, and optional **`TaskEntity.phaseKey`** on create/update.
+- **Config** — **`kit.currentPhaseNumber`**, **`kit.currentPhaseLabel`** (maintainer; documented in generated **`CONFIG.md`**).
+- **CLI** — Published **`wk`** bin (same **`dist/cli.js`** as **`workspace-kit`**).
+
+### Documentation
+
+- **`docs/maintainers/AGENT-CLI-MAP.md`** — Queue health / consistency section; Tier C examples include **`queue-health`**.
+- **`docs/maintainers/TERMS.md`**, **`src/modules/planning/README.md`**, **`src/modules/task-engine/README.md`** — Planning vs persistence disambiguation + **`phaseKey`** term.
+- **README** / **`docs/maintainers/README.md`** — Prefer **`pnpm exec wk`** examples; document **`node dist/cli.js`** as bootstrap exception only.
+
 ## [0.28.0] - 2026-03-31
 
 Phase 27 — transcript improvement execution closeout: nine **`ready`** **`imp-*`** items addressed via maintainer runbook **`docs/maintainers/runbooks/agent-task-engine-ergonomics.md`** (Git vs task-engine completion, read-only kit inspection, planning vs execution queue, improvement listing, product vs implementation maps, task-engine public **`index.ts`** surface, **`agent-behavior`** soft layer vs policy/principles, extension thin client vs CLI). ROADMAP + FEATURE-MATRIX milestone rows aligned.

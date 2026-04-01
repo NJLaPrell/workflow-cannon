@@ -23,26 +23,27 @@ pnpm run build
 
 | Step | Command | What you get |
 | --- | --- | --- |
-| 1 | `node dist/cli.js --help` | Orientation: top-level commands, first-run path, doc pointers |
-| 2 | `node dist/cli.js doctor` | Confirms kit contract files and config resolve |
-| 3 | `node dist/cli.js run` | **Command menu** — every runnable `workspace-kit run <cmd>` |
-| 4 | `node dist/cli.js run get-next-actions '{}'` | Read-only suggestion for what to do next |
+| 1 | `pnpm exec wk --help` | Orientation: top-level commands, first-run path, doc pointers |
+| 2 | `pnpm exec wk doctor` | Confirms kit contract files and config resolve |
+| 3 | `pnpm exec wk run` | **Command menu** — every runnable `workspace-kit run <cmd>` |
+| 4 | `pnpm exec wk run get-next-actions '{}'` | Read-only suggestion for what to do next |
 
-**Developing:** after edits, `pnpm run build` then `pnpm test` (or `pnpm run phase5-gates` before larger changes). **`workspace-kit` is not on your PATH by default** — invoke it in one of these ways:
+**Developing:** after edits, `pnpm run build` then `pnpm test` (or `pnpm run phase5-gates` before larger changes). The package exposes two equivalent bins — **`wk`** (short) and **`workspace-kit`** (explicit). Use whichever is on your `PATH`:
 
 | Situation | Example |
 | --- | --- |
-| This repo, after `pnpm run build` | `node dist/cli.js --help` (same subcommands as `workspace-kit`) |
-| This repo, dev dependency on PATH via pnpm | `pnpm exec workspace-kit --help` |
-| Another project with the package installed | `npx workspace-kit --help` or `pnpm exec workspace-kit --help` |
+| This repo, after `pnpm install` | `pnpm exec wk --help` or `pnpm exec workspace-kit --help` |
+| Global / linked install | `wk --help` or `workspace-kit --help` |
+| Another project with the package installed | `npx wk --help` or `npx workspace-kit --help` |
+| Bootstrap without pnpm module path (exception) | `node dist/cli.js --help` — same entrypoint as the published bins |
 
 **`workspace-kit run` with no subcommand is the full module command list** — that is the usual “what can I run?” answer.
 
 Try **read-only** task-engine queries:
 
 ```bash
-node dist/cli.js run list-tasks '{}'
-node dist/cli.js run get-next-actions '{}'
+pnpm exec wk run list-tasks '{}'
+pnpm exec wk run get-next-actions '{}'
 ```
 
 ## Quick start (use the package in another project)

@@ -607,6 +607,7 @@ test("taskEngineModule registration includes all instruction entries", () => {
   assert.ok(names.includes("list-tasks"));
   assert.ok(names.includes("get-ready-queue"));
   assert.ok(names.includes("get-next-actions"));
+  assert.ok(names.includes("queue-health"));
   assert.ok(names.includes("dashboard-summary"));
   assert.ok(names.includes("create-wishlist"));
   assert.ok(names.includes("list-wishlist"));
@@ -793,6 +794,138 @@ test("taskEngineModule onCommand get-next-actions works on populated store", asy
   assert.equal(result.ok, true);
   assert.equal(result.code, "next-actions-retrieved");
   assert.match(result.message, /T002/);
+});
+
+test("taskEngineModule onCommand queue-health detects unmet deps on ready tasks", async () => {
+  const workspace = await tmpDir();
+  const store = TaskStore.forJsonFile(workspace);
+  const now = new Date().toISOString();
+  store.addTask({
+    id: "T1",
+    status: "in_progress",
+    type: "workspace-kit",
+    title: "Blocking",
+    createdAt: now,
+    updatedAt: now
+  });
+  store.addTask({
+    id: "T2",
+    status: "ready",
+    type: "workspace-kit",
+    title: "Ready blocked",
+    createdAt: now,
+    updatedAt: now,
+    priority: "P1",
+    dependsOn: ["T1"],
+    phase: "Phase 28 (test)"
+  });
+  await store.save();
+  const ctx = {
+    runtimeVersion: "0.1",
+    workspacePath: workspace,
+    effectiveConfig: {
+      tasks: { persistenceBackend: "json" },
+      kit: { currentPhaseNumber: 28 }
+    }
+  };
+  const result = await taskEngineModule.onCommand({ name: "queue-health", args: {} }, ctx);
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "queue-health");
+  assert.equal(result.data.summary.blockedByDependenciesCount, 1);
+  assert.equal(result.data.summary.misalignedPhaseCount, 0);
+  const row = result.data.readyTaskSummaries.find((r) => r.taskId === "T2");
+  assert.ok(row);
+  assert.equal(row.blockedByDependencies, true);
+  assert.deepEqual(row.unmetDependencies, ["T1"]);
+});
+
+test("taskEngineModule onCommand queue-health detects phase mismatch", async () => {
+  const workspace = await tmpDir();
+  const store = TaskStore.forJsonFile(workspace);
+  const now = new Date().toISOString();
+  store.addTask({
+    id: "T2",
+    status: "ready",
+    type: "workspace-kit",
+    title: "Wrong phase",
+    createdAt: now,
+    updatedAt: now,
+    priority: "P1",
+    phase: "Phase 99 (stale)"
+  });
+  await store.save();
+  const ctx = {
+    runtimeVersion: "0.1",
+    workspacePath: workspace,
+    effectiveConfig: {
+      tasks: { persistenceBackend: "json" },
+      kit: { currentPhaseNumber: 28 }
+    }
+  };
+  const result = await taskEngineModule.onCommand({ name: "queue-health", args: {} }, ctx);
+  assert.equal(result.ok, true);
+  assert.equal(result.data.summary.misalignedPhaseCount, 1);
+  const row = result.data.readyTaskSummaries[0];
+  assert.equal(row.phaseAligned, false);
+});
+
+test("taskEngineModule list-tasks includeQueueHints aligns with queue-health signals", async () => {
+  const workspace = await tmpDir();
+  const store = TaskStore.forJsonFile(workspace);
+  const now = new Date().toISOString();
+  store.addTask({
+    id: "T1",
+    status: "in_progress",
+    type: "workspace-kit",
+    title: "Blocking",
+    createdAt: now,
+    updatedAt: now
+  });
+  store.addTask({
+    id: "T2",
+    status: "ready",
+    type: "workspace-kit",
+    title: "Ready blocked",
+    createdAt: now,
+    updatedAt: now,
+    dependsOn: ["T1"],
+    phase: "Phase 28 (test)"
+  });
+  await store.save();
+  const ctx = {
+    runtimeVersion: "0.1",
+    workspacePath: workspace,
+    effectiveConfig: {
+      tasks: { persistenceBackend: "json" },
+      kit: { currentPhaseNumber: 28 }
+    }
+  };
+  const result = await taskEngineModule.onCommand(
+    { name: "list-tasks", args: { status: "ready", includeQueueHints: true } },
+    ctx
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.data.tasks.length, 1);
+  assert.ok(Array.isArray(result.data.queueHintRows));
+  assert.equal(result.data.queueHintRows.length, 1);
+  assert.equal(result.data.queueHintRows[0].blockedByDependencies, true);
+  assert.equal(result.data.queueHintRows[0].phaseAligned, true);
+});
+
+test("taskEngineModule list-tasks phaseKey filter matches inferred phase", async () => {
+  const workspace = await tmpDir();
+  const store = TaskStore.forJsonFile(workspace);
+  store.addTask(makeTask({ id: "T10", status: "ready", phase: "Phase 28 (x)" }));
+  store.addTask(makeTask({ id: "T11", status: "ready", phase: "Phase 9" }));
+  await store.save();
+  const ctx = jsonTaskEngineCtx(workspace);
+  const result = await taskEngineModule.onCommand(
+    { name: "list-tasks", args: { phaseKey: "28", status: "ready" } },
+    ctx
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.data.count, 1);
+  assert.equal(result.data.tasks[0].id, "T10");
 });
 
 test("taskEngineModule explain-task-engine-model returns variants and lifecycle", async () => {
