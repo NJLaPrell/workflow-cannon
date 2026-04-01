@@ -1,13 +1,15 @@
 schema_version: 1
 current_kit_phase: "34"
 next_kit_phase: "35"
-last_updated: "2026-03-31"
-active_focus: "**Phase 34** — next roadmap slice (see **`docs/maintainers/ROADMAP.md`** and task-engine **`get-next-actions`**). Phase **33** shipped **`v0.33.0`** (**`T455`**, **`T459`–`T461`**, **`T462`–`T463`**, **`T464`**, **`T469`**). Phase **32** shipped **`v0.32.0`**."
+last_updated: "2026-04-02"
+active_focus: "**Phase 34** — ready queue now includes **Phase 35 PLAN conversions **`T507`–`T524`** (ex-**`T471`–`T490`** wishlist, minus prior **`T478`/`T488`** and test **`T470`**), plus **`T505`**, **`T506`**, **`T491`–`T504`**. Use **`get-next-actions`** / **`queue-health`**. Phase **33** shipped **`v0.33.0`**."
 blockers: []
 pending_decisions: []
 next_agent_actions:
-  - "Ready queue empty; triage **`proposed`** or plan next phase via **`docs/maintainers/ROADMAP.md`**."
+  - "Ready queue: thirty-four tasks; Phase 35 slice **`T507`–`T524`** (PLAN backlog). Pick with **`get-next-actions`** or **`list-tasks`** `{\"phaseKey\":\"35\",\"status\":\"ready\"}`."
 last_session_summary:
+  - "2026-04-02: Open PLAN wishlist items **`T471`–`T477`**, **`T479`–`T487`**, **`T489`**, **`T490`** — **`update-wishlist`** (implementation **`expectedOutcome`**), **`convert-wishlist`** → **`T507`–`T524`**, **`update-task`** **`phaseKey`**, **`run-transition accept`** → **`ready`**. Script **`scripts/convert-open-wishlist-to-ready.mjs`**. Left **`T470`** test seed open."
+  - "2026-04-01: Wishlist **`T478`** → **`T505`** and **`T488`** → **`T506`** vetted (**`update-wishlist`**), **`convert-wishlist`**, **`run-transition accept`** → **`ready`**. Improvements **`T491`–`T504`** refined (**`update-task`**) and **`accept`** → **`ready`** (agent/human doc split, token hygiene, onboarding + **`explain-config --facet`**)."
   - "2026-04-01: **`T465`** **`completed`** — Cursor extension on **pnpm workspace** (`pnpm-workspace.yaml`); root **`@types/vscode`**; **`ext:compile`** / **`ui:watch`** via **`pnpm --filter cursor-workflow-cannon`**; CI extension step; **`CONTRIBUTING.md`**; changelog **[Unreleased]** note."
   - "2026-03-31: Phase **33** closeout — shipped **`v0.33.0`** — GitHub release https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.33.0 — Publish NPM https://github.com/NJLaPrell/workflow-cannon/actions/runs/23829185551 — governance onboarding + `/qt` warnings + Cursor rule slim + principles/AGENTS CI snapshots + **`maintainer-gates`**/**`pre-merge-gates`** + staged **`pnpm run check`** + capped unknown-**`run`** errors + **`--help`** discovery (**`T455`**, **`T459`**, **`T460`**, **`T461`**, **`T462`**, **`T463`**, **`T464`**, **`T469`** **`completed`**). **`current_kit_phase`** **34**."
   - "2026-03-31: Phase **32** closeout — shipped **`v0.32.0`** — GitHub release https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.32.0 — Publish NPM https://github.com/NJLaPrell/workflow-cannon/actions/runs/23828867222 — R102 **`core-module-layer-allowlist`** + CI; response-template precedence canon + strict messages; planning README / ARCHITECTURE / TERMS persistence clarity (**`T456`**, **`T457`**, **`T458`** **`completed`**). **`current_kit_phase`** **33**."
@@ -26,7 +28,7 @@ last_session_summary:
 metrics:
   updated_at: "2026-04-01"
   source: "maintainer"
-  notes: "Phase 33 released v0.33.0; execution focus Phase 34."
+  notes: "Phase 34 + Phase 35 PLAN tasks T507–T524 ready; T505, T506, T491–T504; Phase 33 released v0.33.0."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null
