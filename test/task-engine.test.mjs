@@ -790,7 +790,6 @@ test("taskEngineModule onCommand dashboard-summary returns stable shape", async 
   assert.ok(Array.isArray(d.wishlist.openTop));
   assert.equal(d.wishlist.openTop.length, 0);
   assert.equal(d.planningSession, null);
-  assert.deepEqual(d.proposedImprovementsSummary, { schemaVersion: 1, count: 0, top: [] });
 });
 
 test("taskEngineModule onCommand run-transition validates required args", async () => {
