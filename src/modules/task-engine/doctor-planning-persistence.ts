@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type DatabaseCtor from "better-sqlite3";
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
-import { getTaskPersistenceBackend, planningSqliteDatabaseRelativePath } from "./planning-config.js";
+import { planningSqliteDatabaseRelativePath } from "./planning-config.js";
 import { normalizeTaskStoreDocumentFromUnknown } from "./task-store-migration.js";
 
 type SqliteDb = InstanceType<typeof DatabaseCtor>;
@@ -29,9 +29,6 @@ export async function validatePlanningPersistenceForDoctor(
   effectiveConfig: Record<string, unknown>
 ): Promise<DoctorPlanningIssue[]> {
   const issues: DoctorPlanningIssue[] = [];
-  if (getTaskPersistenceBackend(effectiveConfig) !== "sqlite") {
-    return issues;
-  }
 
   let Database: typeof DatabaseCtor;
   try {

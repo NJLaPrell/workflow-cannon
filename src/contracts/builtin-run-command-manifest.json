@@ -298,7 +298,15 @@
     "moduleId": "task-engine",
     "name": "migrate-task-persistence",
     "file": "migrate-task-persistence.md",
-    "description": "Copy task + wishlist state between JSON files and a single SQLite database (offline migration).",
+    "description": "Import legacy task + wishlist JSON into SQLite (json-to-sqlite / json-to-unified-sqlite); sqlite-to-json removed in v0.40.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "get-kit-persistence-map",
+    "file": "get-kit-persistence-map.md",
+    "description": "Read-only JSON map of unified SQLite paths, planning table/columns, and legacy import file locations for agents.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },

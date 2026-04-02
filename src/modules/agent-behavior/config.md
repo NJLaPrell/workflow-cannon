@@ -2,8 +2,7 @@
 
 Uses workspace **task persistence** settings for storage:
 
-- When `tasks.persistenceBackend` is `json`, state is stored at `.workspace-kit/agent-behavior/state.json`.
-- When `tasks.persistenceBackend` is `sqlite`, state is stored in unified `workspace_module_state` for `module_id` **`agent-behavior`** (same file as `tasks.sqliteDatabaseRelativePath`).
+- Workspace state is stored in unified **`workspace_module_state`** for `module_id` **`agent-behavior`** (**`tasks.sqliteDatabaseRelativePath`**). A legacy **`.workspace-kit/agent-behavior/state.json`** may be read once when migrating from file to SQLite.
 
 Interview sessions always use `.workspace-kit/agent-behavior/interview-session.json` (JSON file).
 

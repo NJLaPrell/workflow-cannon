@@ -1,14 +1,15 @@
 schema_version: 1
-current_kit_phase: "40"
-next_kit_phase: "41"
+current_kit_phase: "41"
+next_kit_phase: "42"
 last_updated: "2026-04-02"
-active_focus: "**Phase 40** — next maintainer slice after **v0.39.0**; queue via **`get-next-actions`** / **`list-tasks`**."
+active_focus: "**Phase 41** — next maintainer slice after **v0.40.0**; queue via **`get-next-actions`** / **`list-tasks`**."
 blockers: []
 pending_decisions: []
 next_agent_actions:
-  - "**Now:** Run `pnpm run wk doctor` then `pnpm run wk run get-next-actions '{}'` for **phase 40** queue; confirm **v0.39.0** tag + npm publish evidence when shipped."
+  - "**Now:** Run `pnpm run wk doctor` then `pnpm run wk run get-next-actions '{}'` for **phase 41** queue; add **v0.40.0** GitHub release + Publish NPM workflow URLs when shipped."
 last_session_summary:
-  - "2026-04-02: Phase **39** closeout — **`v0.39.0`** — SQLite **`PRAGMA user_version`** migrations + **`busy_timeout`**, **`doctor`** **`quick_check`**, **`backup-planning-sqlite`**, ADR **`ADR-json-persistence-deprecation.md`**, runbook **`json-to-sqlite-one-shot-upgrade.md`**, **`list-module-states`** **`kitSqliteUserVersion`**. Tasks **`T525`–`T530`** **`completed`**. GitHub release https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.39.0 — Publish NPM https://github.com/NJLaPrell/workflow-cannon/actions/runs/23917332644. **`current_kit_phase`** **40**."
+  - "2026-04-02: Phase **40** closeout — **`v0.40.0`** — SQLite-only runtime (**`openPlanningStores`**), **`get-kit-persistence-map`**, config rejects **`tasks.persistenceBackend: json`**, removed **`sqlite-to-json`**, improvement/agent-behavior writes unified SQLite, ADR **`ADR-json-persistence-deprecation.md`** executed. GitHub release (add URL after tag) — Publish NPM (add run URL). **`current_kit_phase`** **41**."
+  - "2026-04-02: Phase **39** closeout — **`v0.39.0`** — SQLite **`PRAGMA user_version`** migrations + **`busy_timeout`**, **`doctor`** **`quick_check`**, **`backup-planning-sqlite`**, ADR **`ADR-json-persistence-deprecation.md`**, runbook **`json-to-sqlite-one-shot-upgrade.md`**, **`list-module-states`** **`kitSqliteUserVersion`**. Tasks **`T525`–`T530`** **`completed`**. GitHub release https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.39.0 — Publish NPM https://github.com/NJLaPrell/workflow-cannon/actions/runs/23917332644."
   - "2026-04-02: Phase **37** closeout — **`v0.37.0`** — README/AGENTS/CONTRIBUTING/TERMS names (Workflow Cannon vs `@workflow-cannon/workspace-kit` vs `wk`), **`AGENT-CLI-MAP`** shell JSON stdout guidance, runbook **`improvement-lifecycle-churn-notes.md`**, **`dashboard-summary`** **`completedSummary`**/**`cancelledSummary`** + extension collapsed phase buckets. npm: manual **Publish NPM** after tag. **`current_kit_phase`** **38**."
   - "2026-04-01: Phase **36** closeout — **`v0.36.0`** — policy rehearsal (`generate-recommendations` **`dryRun`**), agent/machine doc split (`.ai` quickrefs + rules), `list-tasks` **`confidenceTier`** / **`blockedReasonCategory`**, config **`config-registry.json`**, evidence bundle + playbook runner + trust-boundary scripts, IDE status protocol, ROADMAP archive + PLAN move, ADRs, examples. npm: manual **Publish NPM** after tag."
   - "2026-04-01: Phase **35** closeout — **`v0.35.0`** — GitHub release https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.35.0 — **`T507`**, **`T510`**, **`T513`**, **`T520`**, **`T523`** **`completed`** (**`run-transition`** **`start`**/**`complete`** with JSON **`policyApproval`**): **`queue-git-alignment`**, **`replay-queue-snapshot`**, **`queueNamespace`** + ADR, synthetic load script, planning estimate pack docs. npm: **`Publish NPM`** workflow manual. **`current_kit_phase`** **36**."
@@ -34,7 +35,7 @@ last_session_summary:
 metrics:
   updated_at: "2026-04-02"
   source: "maintainer"
-  notes: "Phase 39 released v0.39.0 (SQLite hardening). Phase 40+ planning: use task-engine queue."
+  notes: "Phase 40 released v0.40.0 (SQLite-only runtime). Phase 41+ planning: use task-engine queue."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null

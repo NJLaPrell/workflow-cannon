@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 
 import {
   TaskStore,
+  SqliteDualPlanningStore,
   TransitionService,
   TaskEngineError,
   TransitionValidator,
@@ -47,23 +48,48 @@ async function tmpDir(prefix = "te-") {
   return mkdtemp(path.join(os.tmpdir(), prefix));
 }
 
-/** Task-engine tests seed JSON via `TaskStore.forJsonFile`; pin JSON persistence (kit default is SQLite). */
-function jsonTaskEngineCtx(workspace) {
+/** Integration tests use SQLite planning store (runtime is sqlite-only since v0.40). */
+function sqliteTaskEngineCtx(workspace, partialEffective = {}) {
+  const rawTasks = partialEffective.tasks;
+  const taskExtra =
+    rawTasks && typeof rawTasks === "object" && !Array.isArray(rawTasks) ? rawTasks : {};
+  const { tasks: _drop, ...restTop } = partialEffective;
   return {
     runtimeVersion: "0.1",
     workspacePath: workspace,
-    effectiveConfig: { tasks: { persistenceBackend: "json" } }
+    effectiveConfig: {
+      ...restTop,
+      tasks: {
+        persistenceBackend: "sqlite",
+        sqliteDatabaseRelativePath: ".workspace-kit/tasks/workspace-kit.db",
+        ...taskExtra
+      }
+    }
   };
 }
 
 async function storeWithTasks(tasks, dir) {
   const workspace = dir ?? await tmpDir();
-  const store = TaskStore.forJsonFile(workspace);
+  await mkdir(path.join(workspace, ".workspace-kit", "tasks"), { recursive: true });
+  const dual = new SqliteDualPlanningStore(workspace, ".workspace-kit/tasks/workspace-kit.db");
+  dual.loadFromDisk();
+  const store = TaskStore.forSqliteDual(dual);
+  await store.load();
   for (const task of tasks) {
     store.addTask(task);
   }
   await store.save();
   return { store, workspace };
+}
+
+async function seedSqliteStore(workspace, fn) {
+  await mkdir(path.join(workspace, ".workspace-kit", "tasks"), { recursive: true });
+  const dual = new SqliteDualPlanningStore(workspace, ".workspace-kit/tasks/workspace-kit.db");
+  dual.loadFromDisk();
+  const store = TaskStore.forSqliteDual(dual);
+  await store.load();
+  fn(store);
+  await store.save();
 }
 
 // ---------------------------------------------------------------------------
@@ -626,6 +652,7 @@ test("taskEngineModule registration includes all instruction entries", () => {
   assert.ok(names.includes("add-dependency"));
   assert.ok(names.includes("remove-dependency"));
   assert.ok(names.includes("get-dependency-graph"));
+  assert.ok(names.includes("get-kit-persistence-map"));
   assert.ok(names.includes("get-task-history"));
   assert.ok(names.includes("get-recent-task-activity"));
   assert.ok(names.includes("get-task-summary"));
@@ -644,6 +671,7 @@ test("taskEngineModule registration includes all instruction entries", () => {
   assert.ok(names.includes("get-wishlist"));
   assert.ok(names.includes("update-wishlist"));
   assert.ok(names.includes("convert-wishlist"));
+  assert.ok(names.includes("migrate-task-persistence"));
 });
 
 test("taskEngineModule passes ModuleRegistry validation", () => {
@@ -652,7 +680,7 @@ test("taskEngineModule passes ModuleRegistry validation", () => {
 
 test("taskEngineModule onCommand list-tasks returns empty on fresh store", async () => {
   const workspace = await tmpDir();
-  const ctx = jsonTaskEngineCtx(workspace);
+  const ctx = sqliteTaskEngineCtx(workspace);
   const result = await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, ctx);
   assert.equal(result.ok, true);
   assert.equal(result.code, "tasks-listed");
@@ -662,33 +690,33 @@ test("taskEngineModule onCommand list-tasks returns empty on fresh store", async
 
 test("taskEngineModule list-tasks supports type/category/tags/metadata filters", async () => {
   const workspace = await tmpDir();
-  const ctx = jsonTaskEngineCtx(workspace);
-  const store = TaskStore.forJsonFile(workspace);
-  store.addTask(
-    makeTask({
-      id: "T410",
-      type: "improvement",
-      phase: "Phase 16 - Maintenance and stability",
-      metadata: {
-        category: "reliability",
-        tags: ["ui", "sqlite"],
-        owner: { team: "platform" }
-      }
-    })
-  );
-  store.addTask(
-    makeTask({
-      id: "T411",
-      type: "workspace-kit",
-      phase: "Phase 16 - Maintenance and stability",
-      metadata: {
-        category: "ops",
-        tags: ["docs"],
-        owner: { team: "maintainers" }
-      }
-    })
-  );
-  await store.save();
+  const ctx = sqliteTaskEngineCtx(workspace);
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T410",
+        type: "improvement",
+        phase: "Phase 16 - Maintenance and stability",
+        metadata: {
+          category: "reliability",
+          tags: ["ui", "sqlite"],
+          owner: { team: "platform" }
+        }
+      })
+    );
+    store.addTask(
+      makeTask({
+        id: "T411",
+        type: "workspace-kit",
+        phase: "Phase 16 - Maintenance and stability",
+        metadata: {
+          category: "ops",
+          tags: ["docs"],
+          owner: { team: "maintainers" }
+        }
+      })
+    );
+  });
 
   const result = await taskEngineModule.onCommand(
     {
@@ -709,16 +737,16 @@ test("taskEngineModule list-tasks supports type/category/tags/metadata filters",
 
 test("taskEngineModule list-tasks filter combinations return empty results when unmatched", async () => {
   const workspace = await tmpDir();
-  const ctx = jsonTaskEngineCtx(workspace);
-  const store = TaskStore.forJsonFile(workspace);
-  store.addTask(
-    makeTask({
-      id: "T412",
-      type: "improvement",
-      metadata: { category: "reliability", tags: ["ui"], risk: { level: "low" } }
-    })
-  );
-  await store.save();
+  const ctx = sqliteTaskEngineCtx(workspace);
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T412",
+        type: "improvement",
+        metadata: { category: "reliability", tags: ["ui"], risk: { level: "low" } }
+      })
+    );
+  });
 
   const result = await taskEngineModule.onCommand(
     {
@@ -734,7 +762,7 @@ test("taskEngineModule list-tasks filter combinations return empty results when 
 
 test("taskEngineModule onCommand get-task returns task-not-found for missing task", async () => {
   const workspace = await tmpDir();
-  const ctx = jsonTaskEngineCtx(workspace);
+  const ctx = sqliteTaskEngineCtx(workspace);
   const result = await taskEngineModule.onCommand(
     { name: "get-task", args: { taskId: "T999" } },
     ctx
@@ -745,11 +773,11 @@ test("taskEngineModule onCommand get-task returns task-not-found for missing tas
 
 test("taskEngineModule onCommand get-task includes recentTransitions after transitions", async () => {
   const workspace = await tmpDir();
-  const store = TaskStore.forJsonFile(workspace);
-  store.addTask(makeTask({ id: "T001", status: "ready" }));
-  await store.save();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T001", status: "ready" }));
+  });
 
-  const ctx = jsonTaskEngineCtx(workspace);
+  const ctx = sqliteTaskEngineCtx(workspace);
   let r = await taskEngineModule.onCommand(
     { name: "run-transition", args: { taskId: "T001", action: "start" } },
     ctx
@@ -771,11 +799,11 @@ test("taskEngineModule onCommand get-task includes recentTransitions after trans
 
 test("taskEngineModule onCommand dashboard-summary returns stable shape", async () => {
   const workspace = await tmpDir();
-  const store = TaskStore.forJsonFile(workspace);
-  store.addTask(makeTask({ id: "T001", status: "ready", priority: "P1" }));
-  await store.save();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T001", status: "ready", priority: "P1" }));
+  });
 
-  const ctx = jsonTaskEngineCtx(workspace);
+  const ctx = sqliteTaskEngineCtx(workspace);
   const result = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
   assert.equal(result.ok, true);
   assert.equal(result.code, "dashboard-summary");
@@ -822,14 +850,14 @@ test("taskEngineModule onCommand dashboard-summary returns stable shape", async 
 
 test("taskEngineModule dashboard-summary dependencyOverview critical path orders prerequisites", async () => {
   const workspace = await tmpDir();
-  const store = TaskStore.forJsonFile(workspace);
-  store.addTask(makeTask({ id: "T100", status: "ready", title: "Root" }));
-  store.addTask(
-    makeTask({ id: "T101", status: "ready", title: "Leaf", dependsOn: ["T100"] })
-  );
-  await store.save();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T100", status: "ready", title: "Root" }));
+    store.addTask(
+      makeTask({ id: "T101", status: "ready", title: "Leaf", dependsOn: ["T100"] })
+    );
+  });
 
-  const ctx = jsonTaskEngineCtx(workspace);
+  const ctx = sqliteTaskEngineCtx(workspace);
   const result = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
   assert.equal(result.ok, true);
   const dep = result.data.dependencyOverview;
@@ -841,20 +869,19 @@ test("taskEngineModule dashboard-summary dependencyOverview critical path orders
 
 test("taskEngineModule dashboard-summary splits ready improvements vs execution", async () => {
   const workspace = await tmpDir();
-  const store = TaskStore.forJsonFile(workspace);
-  const now = new Date().toISOString();
-  store.addTask(
-    makeTask({ id: "imp-deadbeef", status: "ready", priority: "P1", type: "improvement", title: "Imp ready" })
-  );
-  store.addTask(
-    makeTask({ id: "T900", status: "ready", priority: "P2", type: "workspace-kit", title: "Exec ready" })
-  );
-  store.addTask(
-    makeTask({ id: "T901", status: "proposed", type: "workspace-kit", title: "Exec proposed" })
-  );
-  await store.save();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({ id: "imp-deadbeef", status: "ready", priority: "P1", type: "improvement", title: "Imp ready" })
+    );
+    store.addTask(
+      makeTask({ id: "T900", status: "ready", priority: "P2", type: "workspace-kit", title: "Exec ready" })
+    );
+    store.addTask(
+      makeTask({ id: "T901", status: "proposed", type: "workspace-kit", title: "Exec proposed" })
+    );
+  });
 
-  const ctx = jsonTaskEngineCtx(workspace);
+  const ctx = sqliteTaskEngineCtx(workspace);
   const result = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
   assert.equal(result.ok, true);
   const d = result.data;
@@ -868,7 +895,7 @@ test("taskEngineModule dashboard-summary splits ready improvements vs execution"
 
 test("taskEngineModule onCommand run-transition validates required args", async () => {
   const workspace = await tmpDir();
-  const ctx = jsonTaskEngineCtx(workspace);
+  const ctx = sqliteTaskEngineCtx(workspace);
   const result = await taskEngineModule.onCommand(
     { name: "run-transition", args: {} },
     ctx
@@ -879,13 +906,13 @@ test("taskEngineModule onCommand run-transition validates required args", async 
 
 test("taskEngineModule onCommand get-next-actions works on populated store", async () => {
   const workspace = await tmpDir();
-  const store = TaskStore.forJsonFile(workspace);
-  store.addTask(makeTask({ id: "T001", status: "ready", priority: "P2", title: "Second" }));
-  store.addTask(makeTask({ id: "T002", status: "ready", priority: "P1", title: "First" }));
-  store.addTask(makeTask({ id: "T003", status: "completed", title: "Done" }));
-  await store.save();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T001", status: "ready", priority: "P2", title: "Second" }));
+    store.addTask(makeTask({ id: "T002", status: "ready", priority: "P1", title: "First" }));
+    store.addTask(makeTask({ id: "T003", status: "completed", title: "Done" }));
+  });
 
-  const ctx = jsonTaskEngineCtx(workspace);
+  const ctx = sqliteTaskEngineCtx(workspace);
   const result = await taskEngineModule.onCommand(
     { name: "get-next-actions", args: {} },
     ctx
@@ -897,36 +924,29 @@ test("taskEngineModule onCommand get-next-actions works on populated store", asy
 
 test("taskEngineModule onCommand queue-health detects unmet deps on ready tasks", async () => {
   const workspace = await tmpDir();
-  const store = TaskStore.forJsonFile(workspace);
   const now = new Date().toISOString();
-  store.addTask({
-    id: "T1",
-    status: "in_progress",
-    type: "workspace-kit",
-    title: "Blocking",
-    createdAt: now,
-    updatedAt: now
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask({
+      id: "T1",
+      status: "in_progress",
+      type: "workspace-kit",
+      title: "Blocking",
+      createdAt: now,
+      updatedAt: now
+    });
+    store.addTask({
+      id: "T2",
+      status: "ready",
+      type: "workspace-kit",
+      title: "Ready blocked",
+      createdAt: now,
+      updatedAt: now,
+      priority: "P1",
+      dependsOn: ["T1"],
+      phase: "Phase 28 (test)"
+    });
   });
-  store.addTask({
-    id: "T2",
-    status: "ready",
-    type: "workspace-kit",
-    title: "Ready blocked",
-    createdAt: now,
-    updatedAt: now,
-    priority: "P1",
-    dependsOn: ["T1"],
-    phase: "Phase 28 (test)"
-  });
-  await store.save();
-  const ctx = {
-    runtimeVersion: "0.1",
-    workspacePath: workspace,
-    effectiveConfig: {
-      tasks: { persistenceBackend: "json" },
-      kit: { currentPhaseNumber: 28 }
-    }
-  };
+  const ctx = sqliteTaskEngineCtx(workspace, { kit: { currentPhaseNumber: 28 } });
   const result = await taskEngineModule.onCommand({ name: "queue-health", args: {} }, ctx);
   assert.equal(result.ok, true);
   assert.equal(result.code, "queue-health");
@@ -940,27 +960,20 @@ test("taskEngineModule onCommand queue-health detects unmet deps on ready tasks"
 
 test("taskEngineModule onCommand queue-health detects phase mismatch", async () => {
   const workspace = await tmpDir();
-  const store = TaskStore.forJsonFile(workspace);
   const now = new Date().toISOString();
-  store.addTask({
-    id: "T2",
-    status: "ready",
-    type: "workspace-kit",
-    title: "Wrong phase",
-    createdAt: now,
-    updatedAt: now,
-    priority: "P1",
-    phase: "Phase 99 (stale)"
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask({
+      id: "T2",
+      status: "ready",
+      type: "workspace-kit",
+      title: "Wrong phase",
+      createdAt: now,
+      updatedAt: now,
+      priority: "P1",
+      phase: "Phase 99 (stale)"
+    });
   });
-  await store.save();
-  const ctx = {
-    runtimeVersion: "0.1",
-    workspacePath: workspace,
-    effectiveConfig: {
-      tasks: { persistenceBackend: "json" },
-      kit: { currentPhaseNumber: 28 }
-    }
-  };
+  const ctx = sqliteTaskEngineCtx(workspace, { kit: { currentPhaseNumber: 28 } });
   const result = await taskEngineModule.onCommand({ name: "queue-health", args: {} }, ctx);
   assert.equal(result.ok, true);
   assert.equal(result.data.summary.misalignedPhaseCount, 1);
@@ -970,35 +983,28 @@ test("taskEngineModule onCommand queue-health detects phase mismatch", async () 
 
 test("taskEngineModule list-tasks includeQueueHints aligns with queue-health signals", async () => {
   const workspace = await tmpDir();
-  const store = TaskStore.forJsonFile(workspace);
   const now = new Date().toISOString();
-  store.addTask({
-    id: "T1",
-    status: "in_progress",
-    type: "workspace-kit",
-    title: "Blocking",
-    createdAt: now,
-    updatedAt: now
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask({
+      id: "T1",
+      status: "in_progress",
+      type: "workspace-kit",
+      title: "Blocking",
+      createdAt: now,
+      updatedAt: now
+    });
+    store.addTask({
+      id: "T2",
+      status: "ready",
+      type: "workspace-kit",
+      title: "Ready blocked",
+      createdAt: now,
+      updatedAt: now,
+      dependsOn: ["T1"],
+      phase: "Phase 28 (test)"
+    });
   });
-  store.addTask({
-    id: "T2",
-    status: "ready",
-    type: "workspace-kit",
-    title: "Ready blocked",
-    createdAt: now,
-    updatedAt: now,
-    dependsOn: ["T1"],
-    phase: "Phase 28 (test)"
-  });
-  await store.save();
-  const ctx = {
-    runtimeVersion: "0.1",
-    workspacePath: workspace,
-    effectiveConfig: {
-      tasks: { persistenceBackend: "json" },
-      kit: { currentPhaseNumber: 28 }
-    }
-  };
+  const ctx = sqliteTaskEngineCtx(workspace, { kit: { currentPhaseNumber: 28 } });
   const result = await taskEngineModule.onCommand(
     { name: "list-tasks", args: { status: "ready", includeQueueHints: true } },
     ctx
@@ -1013,11 +1019,11 @@ test("taskEngineModule list-tasks includeQueueHints aligns with queue-health sig
 
 test("taskEngineModule list-tasks phaseKey filter matches inferred phase", async () => {
   const workspace = await tmpDir();
-  const store = TaskStore.forJsonFile(workspace);
-  store.addTask(makeTask({ id: "T10", status: "ready", phase: "Phase 28 (x)" }));
-  store.addTask(makeTask({ id: "T11", status: "ready", phase: "Phase 9" }));
-  await store.save();
-  const ctx = jsonTaskEngineCtx(workspace);
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T10", status: "ready", phase: "Phase 28 (x)" }));
+    store.addTask(makeTask({ id: "T11", status: "ready", phase: "Phase 9" }));
+  });
+  const ctx = sqliteTaskEngineCtx(workspace);
   const result = await taskEngineModule.onCommand(
     { name: "list-tasks", args: { phaseKey: "28", status: "ready" } },
     ctx
@@ -1029,7 +1035,7 @@ test("taskEngineModule list-tasks phaseKey filter matches inferred phase", async
 
 test("taskEngineModule explain-task-engine-model returns variants and lifecycle", async () => {
   const workspace = await tmpDir();
-  const ctx = jsonTaskEngineCtx(workspace);
+  const ctx = sqliteTaskEngineCtx(workspace);
   const result = await taskEngineModule.onCommand(
     { name: "explain-task-engine-model", args: {} },
     ctx
@@ -1091,10 +1097,10 @@ test("buildQueueGitAlignmentReport merge-ahead signal when git newer than transi
 
 test("taskEngineModule queue-git-alignment returns schemaVersion 1", async () => {
   const workspace = await tmpDir();
-  const store = TaskStore.forJsonFile(workspace);
-  store.addTask(makeTask({ id: "T1", status: "ready" }));
-  await store.save();
-  const ctx = jsonTaskEngineCtx(workspace);
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T1", status: "ready" }));
+  });
+  const ctx = sqliteTaskEngineCtx(workspace);
   const result = await taskEngineModule.onCommand({ name: "queue-git-alignment", args: {} }, ctx);
   assert.equal(result.ok, true);
   assert.equal(result.code, "queue-git-alignment");
@@ -1104,7 +1110,7 @@ test("taskEngineModule queue-git-alignment returns schemaVersion 1", async () =>
 
 test("taskEngineModule replay-queue-snapshot is deterministic for fixture tasks", async () => {
   const workspace = await tmpDir();
-  const ctx = jsonTaskEngineCtx(workspace);
+  const ctx = sqliteTaskEngineCtx(workspace);
   const tasks = [
     makeTask({ id: "Ta", status: "ready", priority: "P2" }),
     makeTask({ id: "Tb", status: "ready", priority: "P1" })
@@ -1125,7 +1131,7 @@ test("taskEngineModule replay-queue-snapshot is deterministic for fixture tasks"
 
 test("taskEngineModule replay-queue-snapshot respects queueNamespace", async () => {
   const workspace = await tmpDir();
-  const ctx = jsonTaskEngineCtx(workspace);
+  const ctx = sqliteTaskEngineCtx(workspace);
   const tasks = [
     makeTask({
       id: "Ta",
@@ -1146,7 +1152,7 @@ test("taskEngineModule replay-queue-snapshot respects queueNamespace", async () 
 
 test("taskEngineModule replay-queue-snapshot loads snapshotRelativePath under workspace", async () => {
   const workspace = await tmpDir();
-  const ctx = jsonTaskEngineCtx(workspace);
+  const ctx = sqliteTaskEngineCtx(workspace);
   const fixture = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures/replay-queue-tiny.json");
   const raw = await readFile(fixture, "utf8");
   await mkdir(path.join(workspace, "snap"), { recursive: true });
@@ -1161,25 +1167,25 @@ test("taskEngineModule replay-queue-snapshot loads snapshotRelativePath under wo
 
 test("taskEngineModule get-next-actions queueNamespace filters ready queue", async () => {
   const workspace = await tmpDir();
-  const store = TaskStore.forJsonFile(workspace);
-  store.addTask(
-    makeTask({
-      id: "Ta",
-      status: "ready",
-      priority: "P1",
-      metadata: { queueNamespace: "x" }
-    })
-  );
-  store.addTask(
-    makeTask({
-      id: "Tb",
-      status: "ready",
-      priority: "P2",
-      metadata: { queueNamespace: "y" }
-    })
-  );
-  await store.save();
-  const ctx = jsonTaskEngineCtx(workspace);
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "Ta",
+        status: "ready",
+        priority: "P1",
+        metadata: { queueNamespace: "x" }
+      })
+    );
+    store.addTask(
+      makeTask({
+        id: "Tb",
+        status: "ready",
+        priority: "P2",
+        metadata: { queueNamespace: "y" }
+      })
+    );
+  });
+  const ctx = sqliteTaskEngineCtx(workspace);
   const r = await taskEngineModule.onCommand(
     { name: "get-next-actions", args: { queueNamespace: "y" } },
     ctx
@@ -1191,13 +1197,13 @@ test("taskEngineModule get-next-actions queueNamespace filters ready queue", asy
 
 test("taskEngineModule onCommand get-ready-queue returns priority-sorted tasks", async () => {
   const workspace = await tmpDir();
-  const store = TaskStore.forJsonFile(workspace);
-  store.addTask(makeTask({ id: "T001", status: "ready", priority: "P3" }));
-  store.addTask(makeTask({ id: "T002", status: "ready", priority: "P1" }));
-  store.addTask(makeTask({ id: "T003", status: "blocked" }));
-  await store.save();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T001", status: "ready", priority: "P3" }));
+    store.addTask(makeTask({ id: "T002", status: "ready", priority: "P1" }));
+    store.addTask(makeTask({ id: "T003", status: "blocked" }));
+  });
 
-  const ctx = jsonTaskEngineCtx(workspace);
+  const ctx = sqliteTaskEngineCtx(workspace);
   const result = await taskEngineModule.onCommand(
     { name: "get-ready-queue", args: {} },
     ctx
@@ -1212,7 +1218,7 @@ test("taskEngineModule routes through ModuleCommandRouter", async () => {
   const registry = new ModuleRegistry([taskEngineModule]);
   const router = new ModuleCommandRouter(registry);
   const workspace = await tmpDir();
-  const ctx = jsonTaskEngineCtx(workspace);
+  const ctx = sqliteTaskEngineCtx(workspace);
 
   const result = await router.execute("list-tasks", {}, ctx);
   assert.equal(result.ok, true);
@@ -1221,7 +1227,7 @@ test("taskEngineModule routes through ModuleCommandRouter", async () => {
 
 test("taskEngineModule create-task and update-task commands persist mutations", async () => {
   const workspace = await tmpDir();
-  const ctx = jsonTaskEngineCtx(workspace);
+  const ctx = sqliteTaskEngineCtx(workspace);
 
   const created = await taskEngineModule.onCommand(
     { name: "create-task", args: { id: "T400", title: "Created task", status: "ready" } },
@@ -1244,7 +1250,7 @@ test("taskEngineModule create-task and update-task commands persist mutations", 
 
 test("taskEngineModule create-task validates known requirements for improvement type", async () => {
   const workspace = await tmpDir();
-  const ctx = jsonTaskEngineCtx(workspace);
+  const ctx = sqliteTaskEngineCtx(workspace);
 
   const created = await taskEngineModule.onCommand(
     {
@@ -1259,7 +1265,7 @@ test("taskEngineModule create-task validates known requirements for improvement 
 
 test("taskEngineModule update-task validates known requirements for improvement type", async () => {
   const workspace = await tmpDir();
-  const ctx = jsonTaskEngineCtx(workspace);
+  const ctx = sqliteTaskEngineCtx(workspace);
 
   const created = await taskEngineModule.onCommand(
     {
@@ -1287,7 +1293,7 @@ test("taskEngineModule update-task validates known requirements for improvement 
 
 test("taskEngineModule create-task supports idempotent replay with clientMutationId", async () => {
   const workspace = await tmpDir();
-  const ctx = jsonTaskEngineCtx(workspace);
+  const ctx = sqliteTaskEngineCtx(workspace);
   const args = {
     id: "T404",
     title: "Idempotent create",
@@ -1307,7 +1313,7 @@ test("taskEngineModule create-task supports idempotent replay with clientMutatio
 
 test("taskEngineModule create-task rejects idempotency key payload conflicts", async () => {
   const workspace = await tmpDir();
-  const ctx = jsonTaskEngineCtx(workspace);
+  const ctx = sqliteTaskEngineCtx(workspace);
 
   const first = await taskEngineModule.onCommand(
     {
@@ -1331,7 +1337,7 @@ test("taskEngineModule create-task rejects idempotency key payload conflicts", a
 
 test("taskEngineModule update-task supports idempotent replay with clientMutationId", async () => {
   const workspace = await tmpDir();
-  const ctx = jsonTaskEngineCtx(workspace);
+  const ctx = sqliteTaskEngineCtx(workspace);
 
   const created = await taskEngineModule.onCommand(
     { name: "create-task", args: { id: "T406", title: "Before", status: "ready" } },
@@ -1356,7 +1362,7 @@ test("taskEngineModule update-task supports idempotent replay with clientMutatio
 
 test("taskEngineModule update-task rejects idempotency key payload conflicts", async () => {
   const workspace = await tmpDir();
-  const ctx = jsonTaskEngineCtx(workspace);
+  const ctx = sqliteTaskEngineCtx(workspace);
 
   const created = await taskEngineModule.onCommand(
     { name: "create-task", args: { id: "T407", title: "Before", status: "ready" } },
@@ -1380,20 +1386,20 @@ test("taskEngineModule update-task rejects idempotency key payload conflicts", a
 
 test("taskEngineModule strictValidation toggle enforces pre-save task validation", async () => {
   const workspace = await tmpDir();
-  const store = TaskStore.forJsonFile(workspace);
   const now = new Date().toISOString();
-  store.addTask({
-    id: "BAD-ID",
-    status: "ready",
-    type: "workspace-kit",
-    title: "Legacy invalid id",
-    createdAt: now,
-    updatedAt: now
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask({
+      id: "BAD-ID",
+      status: "ready",
+      type: "workspace-kit",
+      title: "Legacy invalid id",
+      createdAt: now,
+      updatedAt: now
+    });
+    store.addTask(makeTask({ id: "T408", title: "Target task", status: "ready" }));
   });
-  store.addTask(makeTask({ id: "T408", title: "Target task", status: "ready" }));
-  await store.save();
 
-  const ctxOff = jsonTaskEngineCtx(workspace);
+  const ctxOff = sqliteTaskEngineCtx(workspace);
   const offResult = await taskEngineModule.onCommand(
     { name: "update-task", args: { taskId: "T408", updates: { title: "Updated with strict off" } } },
     ctxOff
@@ -1401,11 +1407,7 @@ test("taskEngineModule strictValidation toggle enforces pre-save task validation
   assert.equal(offResult.ok, true);
   assert.equal(offResult.code, "task-updated");
 
-  const ctxOn = {
-    runtimeVersion: "0.1",
-    workspacePath: workspace,
-    effectiveConfig: { tasks: { persistenceBackend: "json", strictValidation: true } }
-  };
+  const ctxOn = sqliteTaskEngineCtx(workspace, { tasks: { strictValidation: true } });
   const onResult = await taskEngineModule.onCommand(
     { name: "update-task", args: { taskId: "T408", updates: { title: "Updated with strict on" } } },
     ctxOn
@@ -1416,10 +1418,10 @@ test("taskEngineModule strictValidation toggle enforces pre-save task validation
 
 test("taskEngineModule archive-task excludes task from default active queries", async () => {
   const workspace = await tmpDir();
-  const ctx = jsonTaskEngineCtx(workspace);
-  const store = TaskStore.forJsonFile(workspace);
-  store.addTask(makeTask({ id: "T401", status: "ready" }));
-  await store.save();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T401", status: "ready" }));
+  });
+  const ctx = sqliteTaskEngineCtx(workspace);
 
   const archived = await taskEngineModule.onCommand({ name: "archive-task", args: { taskId: "T401" } }, ctx);
   assert.equal(archived.ok, true);
@@ -1439,11 +1441,11 @@ test("taskEngineModule archive-task excludes task from default active queries", 
 
 test("taskEngineModule dependency and history commands return deterministic output", async () => {
   const workspace = await tmpDir();
-  const ctx = jsonTaskEngineCtx(workspace);
-  const store = TaskStore.forJsonFile(workspace);
-  store.addTask(makeTask({ id: "T500", status: "ready" }));
-  store.addTask(makeTask({ id: "T501", status: "ready" }));
-  await store.save();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T500", status: "ready" }));
+    store.addTask(makeTask({ id: "T501", status: "ready" }));
+  });
+  const ctx = sqliteTaskEngineCtx(workspace);
 
   const depResult = await taskEngineModule.onCommand(
     { name: "add-dependency", args: { taskId: "T501", dependencyTaskId: "T500" } },
@@ -1475,7 +1477,7 @@ const wishlistIntake = {
 
 test("taskEngineModule wishlist: create, list, convert closes wishlist and creates tasks", async () => {
   const workspace = await tmpDir();
-  const ctx = jsonTaskEngineCtx(workspace);
+  const ctx = sqliteTaskEngineCtx(workspace);
 
   let r = await taskEngineModule.onCommand({ name: "create-wishlist", args: wishlistIntake }, ctx);
   assert.equal(r.ok, true);
@@ -1526,7 +1528,7 @@ test("taskEngineModule wishlist: create, list, convert closes wishlist and creat
 
 test("taskEngineModule get-next-actions never includes wishlist ids", async () => {
   const workspace = await tmpDir();
-  const ctx = jsonTaskEngineCtx(workspace);
+  const ctx = sqliteTaskEngineCtx(workspace);
   await taskEngineModule.onCommand({ name: "create-wishlist", args: wishlistIntake }, ctx);
 
   const r = await taskEngineModule.onCommand({ name: "get-next-actions", args: {} }, ctx);
@@ -1561,7 +1563,7 @@ test("migrate-task-persistence json-to-sqlite then create-task uses SQLite store
     "utf8"
   );
 
-  const ctx = jsonTaskEngineCtx(workspace);
+  const ctx = sqliteTaskEngineCtx(workspace);
   let r = await taskEngineModule.onCommand(
     { name: "migrate-task-persistence", args: { direction: "json-to-sqlite" } },
     ctx
@@ -1624,7 +1626,7 @@ test("migrate-task-persistence json-to-unified-sqlite writes task-engine module 
     "utf8"
   );
 
-  const ctx = jsonTaskEngineCtx(workspace);
+  const ctx = sqliteTaskEngineCtx(workspace);
   const r = await taskEngineModule.onCommand(
     { name: "migrate-task-persistence", args: { direction: "json-to-unified-sqlite" } },
     ctx
@@ -1646,7 +1648,7 @@ test("taskEngineModule list-module-states and get-module-state query unified sta
   unified.setModuleState("task-engine", 1, { sample: true });
   unified.setModuleState("planning", 1, { prompts: 3 });
 
-  const ctx = jsonTaskEngineCtx(workspace);
+  const ctx = sqliteTaskEngineCtx(workspace);
   let r = await taskEngineModule.onCommand({ name: "list-module-states", args: {} }, ctx);
   assert.equal(r.ok, true);
   assert.equal(r.code, "module-states-listed");

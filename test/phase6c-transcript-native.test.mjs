@@ -55,7 +55,10 @@ test("Phase6c: run-transition to completed does not throw with hook config", asy
     JSON.stringify(
       {
         schemaVersion: 1,
-        tasks: { persistenceBackend: "json" },
+        tasks: {
+          persistenceBackend: "sqlite",
+          sqliteDatabaseRelativePath: ".workspace-kit/tasks/workspace-kit.db"
+        },
         improvement: {
           hooks: { afterTaskCompleted: "sync" }
         }
@@ -105,6 +108,13 @@ test("Phase6c: run-transition to completed does not throw with hook config", asy
     resolvedActor: "tester@example.com",
     moduleRegistry: registry
   };
+
+  const mig = await router.execute(
+    "migrate-task-persistence",
+    { direction: "json-to-sqlite" },
+    ctx
+  );
+  assert.equal(mig.ok, true, mig.message);
 
   const r = await router.execute(
     "run-transition",

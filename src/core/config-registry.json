@@ -2,7 +2,7 @@
   "tasks.storeRelativePath": {
     "key": "tasks.storeRelativePath",
     "type": "string",
-    "description": "Relative path (from workspace root) to the task engine JSON state file.",
+    "description": "Relative path (from workspace root) to legacy task JSON used only by migrate-task-persistence when importing old files.",
     "default": ".workspace-kit/tasks/state.json",
     "domainScope": "project",
     "owningModule": "task-engine",
@@ -18,7 +18,7 @@
   "tasks.wishlistStoreRelativePath": {
     "key": "tasks.wishlistStoreRelativePath",
     "type": "string",
-    "description": "Relative path (from workspace root) to the Wishlist JSON store when persistenceBackend is json.",
+    "description": "Relative path (from workspace root) to legacy wishlist JSON used only by migrate-task-persistence / migrate-wishlist-intake when importing old files.",
     "default": ".workspace-kit/wishlist/state.json",
     "domainScope": "project",
     "owningModule": "task-engine",
@@ -34,10 +34,9 @@
   "tasks.persistenceBackend": {
     "key": "tasks.persistenceBackend",
     "type": "string",
-    "description": "Task + wishlist persistence: sqlite (default) or json (opt-out for legacy workflows).",
+    "description": "Task + wishlist runtime persistence: sqlite only (unified planning DB).",
     "default": "sqlite",
     "allowedValues": [
-      "json",
       "sqlite"
     ],
     "domainScope": "project",

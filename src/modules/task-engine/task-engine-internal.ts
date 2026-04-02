@@ -29,6 +29,7 @@ import { openPlanningStores } from "./planning-open.js";
 import { runMigrateWishlistIntake } from "./migrate-wishlist-intake-runtime.js";
 import { runBackupPlanningSqlite } from "./backup-planning-sqlite-runtime.js";
 import { runMigrateTaskPersistence } from "./migrate-task-persistence-runtime.js";
+import { runGetKitPersistenceMap } from "./kit-persistence-map-runtime.js";
 import { planningSqliteDatabaseRelativePath, planningStrictValidationEnabled } from "./planning-config.js";
 import { validateTaskSetForStrictMode } from "./strict-task-validation.js";
 import { validateKnownTaskTypeRequirements } from "./task-type-validation.js";
@@ -128,6 +129,9 @@ export const taskEngineModule: WorkflowModule = {
     }
     if (command.name === "migrate-wishlist-intake") {
       return runMigrateWishlistIntake(ctx, args as Record<string, unknown>);
+    }
+    if (command.name === "get-kit-persistence-map") {
+      return runGetKitPersistenceMap(ctx);
     }
     if (command.name === "list-module-states" || command.name === "get-module-state") {
       const unified = new UnifiedStateDb(ctx.workspacePath, planningSqliteDatabaseRelativePath(ctx));
@@ -1142,14 +1146,9 @@ export const taskEngineModule: WorkflowModule = {
         }
       }
       try {
-        if (planning.kind === "sqlite") {
-          planning.sqliteDual!.withTransaction(() => {
-            store.addTask(task);
-          });
-        } else {
+        planning.sqliteDual.withTransaction(() => {
           store.addTask(task);
-          await store.save();
-        }
+        });
       } catch (err) {
         if (err instanceof TaskEngineError) {
           return { ok: false, code: err.code, message: err.message };
@@ -1261,14 +1260,9 @@ export const taskEngineModule: WorkflowModule = {
           return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
         }
       }
-      if (planning.kind === "sqlite") {
-        planning.sqliteDual!.withTransaction(() => {
-          store.updateTask(merged);
-        });
-      } else {
+      planning.sqliteDual.withTransaction(() => {
         store.updateTask(merged);
-        await store.save();
-      }
+      });
       const itemOut = wishlistIntakeTaskToItem(merged);
       return {
         ok: true,
@@ -1396,12 +1390,7 @@ export const taskEngineModule: WorkflowModule = {
           return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
         }
       }
-      if (planning.kind === "sqlite") {
-        planning.sqliteDual!.withTransaction(applyConvertMutations);
-      } else {
-        applyConvertMutations();
-        await store.save();
-      }
+      planning.sqliteDual.withTransaction(applyConvertMutations);
       const wishlistShape = wishlistIntakeTaskToItem(updatedSource);
       return {
         ok: true,

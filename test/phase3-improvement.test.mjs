@@ -19,7 +19,7 @@ import {
   HEURISTIC_1_ADMISSION_THRESHOLD,
   shouldAdmitRecommendation
 } from "../dist/index.js";
-import { withJsonTaskPersistence } from "./config-test-helpers.mjs";
+import { withSqliteTaskPersistence } from "./config-test-helpers.mjs";
 
 async function tmpWs() {
   return mkdtemp(path.join(os.tmpdir(), "wk-phase3-"));
@@ -77,7 +77,7 @@ test("Phase3: generate-recommendations, review-item, query-lineage", async () =>
   const ctx = {
     runtimeVersion: "0.1",
     workspacePath,
-    effectiveConfig: withJsonTaskPersistence(resolved.effective),
+    effectiveConfig: withSqliteTaskPersistence(resolved.effective),
     resolvedActor: "tester@example.com",
     moduleRegistry: registry
   };
@@ -153,10 +153,17 @@ test("Phase3: decline from in_progress uses decline transition", async () => {
   const ctx = {
     runtimeVersion: "0.1",
     workspacePath,
-    effectiveConfig: withJsonTaskPersistence(resolved.effective),
+    effectiveConfig: withSqliteTaskPersistence(resolved.effective),
     resolvedActor: "tester@example.com",
     moduleRegistry: registry
   };
+
+  const mig = await router.execute(
+    "migrate-task-persistence",
+    { direction: "json-to-sqlite" },
+    ctx
+  );
+  assert.equal(mig.ok, true, mig.message);
 
   const r = await router.execute("review-item", { taskId, decision: "decline" }, ctx);
   assert.equal(r.ok, true, r.message);

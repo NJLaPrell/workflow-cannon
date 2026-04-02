@@ -489,8 +489,9 @@ export const planningModule: WorkflowModule = {
               message: `Task '${task.id}' already exists`
             };
           }
-          store.addTask(task);
-          await store.save();
+          stores.sqliteDual.withTransaction(() => {
+            stores.taskStore.addTask(task);
+          });
         }
         await clearBuildPlanSession(ctx.workspacePath);
         return {
@@ -625,14 +626,9 @@ export const planningModule: WorkflowModule = {
         }
       }
       try {
-        if (stores.kind === "sqlite") {
-          stores.sqliteDual!.withTransaction(() => {
-            stores.taskStore.addTask(task);
-          });
-        } else {
+        stores.sqliteDual.withTransaction(() => {
           stores.taskStore.addTask(task);
-          await stores.taskStore.save();
-        }
+        });
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         return { ok: false, code: "invalid-planning-artifact", message: msg };

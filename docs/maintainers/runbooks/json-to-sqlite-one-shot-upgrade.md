@@ -1,6 +1,6 @@
 # One-shot upgrade: JSON task/wishlist stores → unified SQLite
 
-Use this runbook when **`tasks.persistenceBackend`** is **`json`** (or legacy files exist) and you want the default **SQLite** layout under **`tasks.sqliteDatabaseRelativePath`** (default **`.workspace-kit/tasks/workspace-kit.db`**).
+Use this runbook when **legacy JSON** task/wishlist files exist (for example **`.workspace-kit/tasks/state.json`**) and you want data in the default **SQLite** layout under **`tasks.sqliteDatabaseRelativePath`** (default **`.workspace-kit/tasks/workspace-kit.db`**). **v0.40+** rejects **`tasks.persistenceBackend: "json"`** — migrate first, then rely on sqlite-only runtime.
 
 ## Preconditions
 
@@ -25,7 +25,7 @@ Use this runbook when **`tasks.persistenceBackend`** is **`json`** (or legacy fi
 
 3. **Wishlist intake** (when upgrading from legacy SQLite dual-column wishlist — follow **`migrate-wishlist-intake`** if applicable).
 
-4. **Flip config** — Ensure effective config uses **`tasks.persistenceBackend: "sqlite"`** (or omit; **sqlite** is default). Remove **`json`** override after you confirm data in SQLite.
+4. **Flip config** — Omit **`tasks.persistenceBackend`** or set **`sqlite`** (default). Remove any legacy **`json`** key (**v0.40+** will reject it if present).
 
 5. **Verify**
 

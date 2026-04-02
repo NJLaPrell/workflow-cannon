@@ -1,12 +1,22 @@
 import assert from "node:assert/strict";
 import { constants } from "node:fs";
-import { access, mkdtemp, readFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
 import { planningModule } from "../dist/modules/planning/index.js";
 import { TaskStore } from "../dist/modules/task-engine/store.js";
+import { SqliteDualPlanningStore } from "../dist/modules/task-engine/sqlite-dual-planning.js";
+
+async function loadSqliteTaskStore(workspace) {
+  await mkdir(path.join(workspace, ".workspace-kit", "tasks"), { recursive: true });
+  const dual = new SqliteDualPlanningStore(workspace, ".workspace-kit/tasks/workspace-kit.db");
+  dual.loadFromDisk();
+  const store = TaskStore.forSqliteDual(dual);
+  await store.load();
+  return store;
+}
 
 async function tmpDir(prefix = "planning-") {
   return mkdtemp(path.join(os.tmpdir(), prefix));
@@ -204,14 +214,18 @@ test("planningModule build-plan can persist tasks in tasks output mode", async (
     {
       runtimeVersion: "0.1",
       workspacePath: workspace,
-      effectiveConfig: { tasks: { persistenceBackend: "json" } }
+      effectiveConfig: {
+        tasks: {
+          persistenceBackend: "sqlite",
+          sqliteDatabaseRelativePath: ".workspace-kit/tasks/workspace-kit.db"
+        }
+      }
     }
   );
   assert.equal(result.ok, true);
   assert.equal(result.code, "planning-task-output-created");
   const outputTaskId = result.data.taskOutputs[0].id;
-  const taskStore = TaskStore.forJsonFile(workspace);
-  await taskStore.load();
+  const taskStore = await loadSqliteTaskStore(workspace);
   const created = taskStore.getTask(outputTaskId);
   assert.ok(created);
   assert.equal(created?.metadata?.planRef !== undefined, true);
@@ -376,7 +390,12 @@ test("planningModule build-plan finalize can persist wishlist artifact", async (
     {
       runtimeVersion: "0.1",
       workspacePath: workspace,
-      effectiveConfig: { tasks: { persistenceBackend: "json" } }
+      effectiveConfig: {
+        tasks: {
+          persistenceBackend: "sqlite",
+          sqliteDatabaseRelativePath: ".workspace-kit/tasks/workspace-kit.db"
+        }
+      }
     }
   );
   assert.equal(result.ok, true);
@@ -384,8 +403,7 @@ test("planningModule build-plan finalize can persist wishlist artifact", async (
   assert.equal(result.data.taskId, "T1");
   assert.equal(result.data.wishlistId, "T1");
 
-  const taskStore = TaskStore.forJsonFile(workspace);
-  await taskStore.load();
+  const taskStore = await loadSqliteTaskStore(workspace);
   const created = taskStore.getTask("T1");
   assert.ok(created);
   assert.equal(created.type, "wishlist_intake");

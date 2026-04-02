@@ -13,7 +13,7 @@ const PATHS = {
   featureMatrix: resolve(ROOT, "docs/maintainers/FEATURE-MATRIX.md")
 };
 
-/** JSON file when `tasks.persistenceBackend: json`; else SQLite `task_store_json` row. */
+/** Prefer `.workspace-kit/tasks/state.json` if present; else SQLite `task_store_json` row. */
 async function readTaskStateText() {
   try {
     return await readFile(PATHS.taskStateJson, "utf8");

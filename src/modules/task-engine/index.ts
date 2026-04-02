@@ -46,6 +46,8 @@ export {
   WISHLIST_ID_RE
 } from "./wishlist-validation.js";
 export { openPlanningStores } from "./planning-open.js";
+export type { OpenedPlanningStores } from "./planning-open.js";
+export { SqliteDualPlanningStore } from "./sqlite-dual-planning.js";
 export {
   getTaskPersistenceBackend,
   planningSqliteDatabaseRelativePath,

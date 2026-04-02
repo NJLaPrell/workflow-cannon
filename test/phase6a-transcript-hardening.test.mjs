@@ -18,7 +18,7 @@ import {
 } from "../dist/index.js";
 import { buildCursorProjectsAgentTranscriptsPath } from "../dist/modules/improvement/transcript-sync-runtime.js";
 import { runCli } from "../dist/cli.js";
-import { withJsonTaskPersistence } from "./config-test-helpers.mjs";
+import { withSqliteTaskPersistence } from "./config-test-helpers.mjs";
 
 async function tmpWs() {
   return mkdtemp(path.join(os.tmpdir(), "wk-phase6a-"));
@@ -28,7 +28,7 @@ function buildContext(workspacePath, registry, effectiveConfig) {
   return {
     runtimeVersion: "0.1",
     workspacePath,
-    effectiveConfig: withJsonTaskPersistence(effectiveConfig),
+    effectiveConfig: withSqliteTaskPersistence(effectiveConfig),
     resolvedActor: "tester@example.com",
     moduleRegistry: registry
   };

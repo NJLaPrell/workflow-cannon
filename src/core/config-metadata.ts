@@ -182,6 +182,11 @@ export function validatePersistedConfigDocument(
       validateValueForMetadata(REGISTRY["tasks.wishlistStoreRelativePath"]!, t.wishlistStoreRelativePath);
     }
     if (t.persistenceBackend !== undefined) {
+      if (t.persistenceBackend === "json") {
+        throw new Error(
+          `config-invalid(${label}): tasks.persistenceBackend "json" is not supported (v0.40+). Remove it (default is sqlite) or migrate with workspace-kit run migrate-task-persistence — docs/maintainers/runbooks/json-to-sqlite-one-shot-upgrade.md`
+        );
+      }
       validateValueForMetadata(REGISTRY["tasks.persistenceBackend"]!, t.persistenceBackend);
     }
     if (t.sqliteDatabaseRelativePath !== undefined) {

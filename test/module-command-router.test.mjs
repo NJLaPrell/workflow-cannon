@@ -49,6 +49,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "get-behavior-profile",
     "get-blocked-summary",
     "get-dependency-graph",
+    "get-kit-persistence-map",
     "get-module-state",
     "get-next-actions",
     "get-ready-queue",

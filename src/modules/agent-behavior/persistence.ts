@@ -2,21 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
 import { UnifiedStateDb } from "../../core/state/unified-state-db.js";
-import {
-  getTaskPersistenceBackend,
-  planningSqliteDatabaseRelativePath
-} from "../task-engine/planning-config.js";
+import { planningSqliteDatabaseRelativePath } from "../task-engine/planning-config.js";
 import type { BehaviorWorkspaceStateV1 } from "./types.js";
 
 const MODULE_ID = "agent-behavior";
 const STATE_SCHEMA = 1;
 const JSON_REL = path.join(".workspace-kit", "agent-behavior", "state.json");
-
-export function behaviorPersistenceMode(
-  effectiveConfig: Record<string, unknown> | undefined
-): "json" | "sqlite" {
-  return getTaskPersistenceBackend(effectiveConfig) === "sqlite" ? "sqlite" : "json";
-}
 
 export function behaviorSqliteRelativePath(
   effectiveConfig: Record<string, unknown> | undefined
@@ -63,20 +54,11 @@ export async function loadBehaviorWorkspaceState(
   ctx: ModuleLifecycleContext
 ): Promise<BehaviorWorkspaceStateV1> {
   const cfg = ctx.effectiveConfig as Record<string, unknown> | undefined;
-  if (behaviorPersistenceMode(cfg) === "sqlite") {
-    const rel = behaviorSqliteRelativePath(cfg);
-    const db = new UnifiedStateDb(ctx.workspacePath, rel);
-    const row = db.getModuleState(MODULE_ID);
-    if (row?.state) {
-      return parseState(row.state);
-    }
-    const fp = jsonPath(ctx.workspacePath);
-    try {
-      const raw = JSON.parse(await fs.promises.readFile(fp, "utf8")) as unknown;
-      return parseState(raw);
-    } catch {
-      return emptyState();
-    }
+  const rel = behaviorSqliteRelativePath(cfg);
+  const db = new UnifiedStateDb(ctx.workspacePath, rel);
+  const row = db.getModuleState(MODULE_ID);
+  if (row?.state) {
+    return parseState(row.state);
   }
   const fp = jsonPath(ctx.workspacePath);
   try {
@@ -97,13 +79,7 @@ export async function saveBehaviorWorkspaceState(
     activeProfileId: state.activeProfileId,
     customProfiles: { ...state.customProfiles }
   };
-  if (behaviorPersistenceMode(cfg) === "sqlite") {
-    const rel = behaviorSqliteRelativePath(cfg);
-    const db = new UnifiedStateDb(ctx.workspacePath, rel);
-    db.setModuleState(MODULE_ID, STATE_SCHEMA, body as unknown as Record<string, unknown>);
-    return;
-  }
-  const fp = jsonPath(ctx.workspacePath);
-  await fs.promises.mkdir(path.dirname(fp), { recursive: true });
-  await fs.promises.writeFile(fp, `${JSON.stringify(body, null, 2)}\n`, "utf8");
+  const rel = behaviorSqliteRelativePath(cfg);
+  const db = new UnifiedStateDb(ctx.workspacePath, rel);
+  db.setModuleState(MODULE_ID, STATE_SCHEMA, body as unknown as Record<string, unknown>);
 }

@@ -85,7 +85,7 @@ Or with pnpm: `pnpm add @workflow-cannon/workspace-kit` then `pnpm exec wk --hel
 | Area | What |
 | --- | --- |
 | **CLI** | `workspace-kit` — `doctor`, `config`, `run <module-command>` (see `workspace-kit run` with no args for the list). |
-| **Task engine** | Canonical queue in SQLite by default (`.workspace-kit/tasks/workspace-kit.db`); set `tasks.persistenceBackend: json` to use `.workspace-kit/tasks/state.json` instead. Lifecycle via `run-transition`. **Which task id to create** (`T###` execution vs wishlist intake vs `imp-*`): one-page table in [`docs/maintainers/runbooks/wishlist-workflow.md`](docs/maintainers/runbooks/wishlist-workflow.md). **Persistence map:** [`docs/maintainers/runbooks/task-persistence-operator.md`](docs/maintainers/runbooks/task-persistence-operator.md). |
+| **Task engine** | Queue lives in SQLite (`.workspace-kit/tasks/workspace-kit.db`); **`tasks.persistenceBackend: json`** is rejected (**v0.40+**). Import legacy JSON via **`migrate-task-persistence`**. Lifecycle via `run-transition`. **Which task id to create** (`T###` execution vs wishlist intake vs `imp-*`): [`docs/maintainers/runbooks/wishlist-workflow.md`](docs/maintainers/runbooks/wishlist-workflow.md). **Persistence map:** **`workspace-kit run get-kit-persistence-map`** and [`docs/maintainers/runbooks/task-persistence-operator.md`](docs/maintainers/runbooks/task-persistence-operator.md). |
 | **Docs** | Maintainer process, roadmap, and changelog under `docs/maintainers/`. |
 | **Cursor extension** (optional) | Thin UI in `extensions/cursor-workflow-cannon/` — pnpm workspace member; build with `pnpm run ui:prepare` after root `pnpm install` (see **`CONTRIBUTING.md`**). |
 

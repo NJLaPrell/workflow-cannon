@@ -9,6 +9,7 @@
     "create-wishlist",
     "dashboard-summary",
     "get-blocked-summary",
+    "get-kit-persistence-map",
     "get-module-state",
     "get-dependency-graph",
     "get-ready-queue",

@@ -6,13 +6,13 @@
   "type": "object",
   "required": ["schemaVersion", "packageVersion", "moduleId", "commands"],
   "additionalProperties": false,
-  "packageVersion": "0.39.0",
+  "packageVersion": "0.40.0",
   "properties": {
     "schemaVersion": {
       "const": 1
     },
     "packageVersion": {
-      "const": "0.39.0",
+      "const": "0.40.0",
       "description": "Must match package.json version."
     },
     "moduleId": {
@@ -30,6 +30,7 @@
         "backup-planning-sqlite",
         "remove-dependency",
         "get-dependency-graph",
+        "get-kit-persistence-map",
         "get-task-history",
         "get-recent-task-activity",
         "get-task-summary",
@@ -64,6 +65,7 @@
         "backup-planning-sqlite": { "$ref": "#/$defs/contractBackupPlanningSqlite" },
         "remove-dependency": { "$ref": "#/$defs/contractDependencyMutation" },
         "get-dependency-graph": { "$ref": "#/$defs/contractDependencyGraph" },
+        "get-kit-persistence-map": { "$ref": "#/$defs/contractKitPersistenceMap" },
         "get-task-history": { "$ref": "#/$defs/contractTaskHistory" },
         "get-recent-task-activity": { "$ref": "#/$defs/contractRecentTaskActivity" },
         "get-task-summary": { "$ref": "#/$defs/contractTaskSummary" },
@@ -545,6 +547,24 @@
             "responseData": {
               "type": "object",
               "required": ["modelVersion", "variants", "planningBoundary", "executionTaskLifecycle"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractKitPersistenceMap": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": false
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["schemaVersion", "unifiedSqliteRelativePath", "runtime"],
               "additionalProperties": true
             }
           }

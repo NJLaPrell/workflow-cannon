@@ -5,15 +5,8 @@ import { resolveRegistryAndConfig } from "../core/module-registry-resolve.js";
 import { readWorkspaceStatusSnapshot } from "../modules/task-engine/dashboard-status.js";
 import { resolveCanonicalPhase } from "../modules/task-engine/phase-resolution.js";
 import { validatePlanningPersistenceForDoctor } from "../modules/task-engine/doctor-planning-persistence.js";
-import {
-  getTaskPersistenceBackend,
-  planningSqliteDatabaseRelativePath,
-  planningTaskStoreRelativePath,
-  planningWishlistStoreRelativePath
-} from "../modules/task-engine/planning-config.js";
+import { planningSqliteDatabaseRelativePath } from "../modules/task-engine/planning-config.js";
 import { readKitSqliteUserVersion } from "../core/state/workspace-kit-sqlite.js";
-import { DEFAULT_TASK_STORE_PATH } from "../modules/task-engine/store.js";
-import { DEFAULT_WISHLIST_PATH } from "../modules/task-engine/wishlist-store.js";
 import { defaultRegistryModules } from "../modules/index.js";
 
 export type DoctorPlanningIssue = { path: string; reason: string };
@@ -76,32 +69,25 @@ export function collectPolicyLaneEnvDoctorSummaryLines(): string[] {
 /** Human-readable persistence summary after `doctor` passes (effective backend + canonical paths). */
 export async function collectTaskPersistenceDoctorSummaryLines(cwd: string): Promise<string[]> {
   const { effective } = await resolveRegistryAndConfig(cwd, defaultRegistryModules, {});
-  const backend = getTaskPersistenceBackend(effective);
   const lines: string[] = [];
-  if (backend === "sqlite") {
-    const dbRel = planningSqliteDatabaseRelativePath({
-      workspacePath: cwd,
-      effectiveConfig: effective,
-      runtimeVersion: "doctor"
-    } as ModuleLifecycleContext);
-    const rel = path.relative(cwd, path.resolve(cwd, dbRel)) || dbRel;
-    lines.push(`Effective task persistence: sqlite — DB path: ${rel}`);
-    const dbAbs = path.resolve(cwd, dbRel);
-    if (fs.existsSync(dbAbs)) {
-      try {
-        const uv = readKitSqliteUserVersion(dbAbs);
-        lines.push(`Kit SQLite schema (PRAGMA user_version): ${uv}`);
-      } catch {
-        lines.push("Kit SQLite schema (PRAGMA user_version): unavailable");
-      }
+  const dbRel = planningSqliteDatabaseRelativePath({
+    workspacePath: cwd,
+    effectiveConfig: effective,
+    runtimeVersion: "doctor"
+  } as ModuleLifecycleContext);
+  const rel = path.relative(cwd, path.resolve(cwd, dbRel)) || dbRel;
+  lines.push(`Effective task persistence: sqlite — DB path: ${rel}`);
+  const dbAbs = path.resolve(cwd, dbRel);
+  if (fs.existsSync(dbAbs)) {
+    try {
+      const uv = readKitSqliteUserVersion(dbAbs);
+      lines.push(`Kit SQLite schema (PRAGMA user_version): ${uv}`);
+    } catch {
+      lines.push("Kit SQLite schema (PRAGMA user_version): unavailable");
     }
-    lines.push("Native SQLite help: docs/maintainers/runbooks/native-sqlite-consumer-install.md");
-    lines.push("Backend paths + recovery: docs/maintainers/runbooks/task-persistence-operator.md");
-  } else {
-    const taskRel = planningTaskStoreRelativePath({ effectiveConfig: effective }) ?? DEFAULT_TASK_STORE_PATH;
-    const wishRel = planningWishlistStoreRelativePath({ effectiveConfig: effective }) ?? DEFAULT_WISHLIST_PATH;
-    lines.push(`Effective task persistence: json — task file: ${taskRel}; wishlist file: ${wishRel}`);
-    lines.push("SQLite opt-in + operator map: docs/maintainers/runbooks/task-persistence-operator.md");
   }
+  lines.push("Native SQLite help: docs/maintainers/runbooks/native-sqlite-consumer-install.md");
+  lines.push("Persistence map (JSON): workspace-kit run get-kit-persistence-map '{}'");
+  lines.push("Backend paths + recovery: docs/maintainers/runbooks/task-persistence-operator.md");
   return lines;
 }

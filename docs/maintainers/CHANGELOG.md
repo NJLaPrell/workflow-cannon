@@ -8,6 +8,31 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.40.0] - 2026-04-02
+
+Phase 40 — **SQLite-only runtime** for task planning, improvement state, and agent-behavior state; JSON persistence opt-out removed.
+
+### Breaking
+
+- **`tasks.persistenceBackend: "json"`** is **invalid** — config validation fails with a migration pointer. Runtime **`openPlanningStores`** no longer reads **`state.json`** for execution.
+- **`migrate-task-persistence`**: **`sqlite-to-json`** removed — use **`backup-planning-sqlite`** for a portable database file.
+- **`migrate-wishlist-intake`** operates on the planning SQLite DB only (run **`json-to-sqlite`** first if the workspace still has JSON stores).
+
+### Added
+
+- **`workspace-kit run get-kit-persistence-map`** — read-only JSON map of unified DB path, planning table/columns, legacy import paths, and module-state hints for agents.
+
+### Changed
+
+- **Improvement** / **agent-behavior** persistence: **writes** go to **`workspace_module_state`** in the configured kit SQLite file; legacy sidecar JSON files are optional **read** fallback when migrating.
+- **`workspace-kit doctor`** persistence summary always describes **sqlite**; points to **`get-kit-persistence-map`** for structured layout.
+- **Exports** — **`SqliteDualPlanningStore`**, **`openPlanningStores`**, **`OpenedPlanningStores`** from the package **`modules`** surface (for tests and advanced callers).
+
+### Docs
+
+- **ADR** — **`ADR-json-persistence-deprecation.md`** updated to **executed** (**v0.40.0**).
+- **Runbooks / instructions** — **`migrate-task-persistence`**, **`task-persistence-operator.md`**, **`json-to-sqlite-one-shot-upgrade.md`** aligned with sqlite-only runtime.
+
 ## [0.39.0] - 2026-04-02
 
 Phase 39 — SQLite persistence hardening (schema versioning, integrity, backup, operator docs).

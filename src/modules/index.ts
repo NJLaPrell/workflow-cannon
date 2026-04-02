@@ -50,6 +50,8 @@ export { planningModule } from "./planning/index.js";
 export {
   taskEngineModule,
   TaskStore,
+  SqliteDualPlanningStore,
+  openPlanningStores,
   TransitionService,
   TaskEngineError,
   TransitionValidator,

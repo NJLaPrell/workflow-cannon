@@ -28,7 +28,12 @@ test("resolve-behavior-profile and create custom (json workspace)", async () => 
     const ctx = {
       runtimeVersion: "0.23.0",
       workspacePath: dir,
-      effectiveConfig: { tasks: { persistenceBackend: "json" } }
+      effectiveConfig: {
+        tasks: {
+          persistenceBackend: "sqlite",
+          sqliteDatabaseRelativePath: ".workspace-kit/tasks/workspace-kit.db"
+        }
+      }
     };
 
     const res = await router.execute("resolve-behavior-profile", {}, ctx);
@@ -66,7 +71,12 @@ test("interview-behavior-profile completes and finalize draft", async () => {
     const ctx = {
       runtimeVersion: "0.23.0",
       workspacePath: dir,
-      effectiveConfig: { tasks: { persistenceBackend: "json" } }
+      effectiveConfig: {
+        tasks: {
+          persistenceBackend: "sqlite",
+          sqliteDatabaseRelativePath: ".workspace-kit/tasks/workspace-kit.db"
+        }
+      }
     };
 
     let s = await router.execute("interview-behavior-profile", { action: "start" }, ctx);

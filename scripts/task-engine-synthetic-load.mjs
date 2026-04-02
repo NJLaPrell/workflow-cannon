@@ -14,6 +14,7 @@ import os from "node:os";
 import path from "node:path";
 import { performance } from "node:perf_hooks";
 import { TaskStore } from "../dist/modules/task-engine/store.js";
+import { SqliteDualPlanningStore } from "../dist/modules/task-engine/sqlite-dual-planning.js";
 import { taskEngineModule } from "../dist/modules/task-engine/index.js";
 
 const n = Math.min(Math.max(Number.parseInt(process.argv[2] ?? "200", 10) || 200, 10), 50_000);
@@ -21,8 +22,11 @@ const maxListMs = 30_000;
 
 const tmp = await mkdtemp(path.join(os.tmpdir(), "wk-synth-"));
 try {
-  const store = TaskStore.forJsonFile(tmp, ".workspace-kit/tasks/state.json");
   await mkdir(path.join(tmp, ".workspace-kit", "tasks"), { recursive: true });
+  const dual = new SqliteDualPlanningStore(tmp, ".workspace-kit/tasks/workspace-kit.db");
+  dual.loadFromDisk();
+  const store = TaskStore.forSqliteDual(dual);
+  await store.load();
   const now = new Date().toISOString();
   for (let i = 0; i < n; i++) {
     const id = `T${String(900000 + i)}`;
@@ -41,7 +45,12 @@ try {
   const ctx = {
     runtimeVersion: "0.1",
     workspacePath: tmp,
-    effectiveConfig: { tasks: { persistenceBackend: "json", storeRelativePath: ".workspace-kit/tasks/state.json" } }
+    effectiveConfig: {
+      tasks: {
+        persistenceBackend: "sqlite",
+        sqliteDatabaseRelativePath: ".workspace-kit/tasks/workspace-kit.db"
+      }
+    }
   };
 
   const t0 = performance.now();

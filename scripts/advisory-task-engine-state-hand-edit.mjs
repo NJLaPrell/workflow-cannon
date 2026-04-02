@@ -64,7 +64,7 @@ function main() {
   if (!existsSync(STATE_PATH)) {
     if (existsSync(".workspace-kit/tasks/workspace-kit.db")) {
       console.warn(
-        "[advisory-task-state] skip: SQLite task store (.workspace-kit/tasks/workspace-kit.db); this advisory only applies when tasks.persistenceBackend is json"
+        "[advisory-task-state] skip: SQLite task store (.workspace-kit/tasks/workspace-kit.db); JSON file hand-edit advisory was removed in v0.40 (sqlite-only runtime)"
       );
       return;
     }

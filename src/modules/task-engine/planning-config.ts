@@ -1,18 +1,11 @@
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
 
-export type TaskPersistenceBackend = "json" | "sqlite";
+export type TaskPersistenceBackend = "sqlite";
 
+/** Runtime persistence is SQLite-only; config must not set `tasks.persistenceBackend` to `json`. */
 export function getTaskPersistenceBackend(
-  config: Record<string, unknown> | undefined
+  _config: Record<string, unknown> | undefined
 ): TaskPersistenceBackend {
-  const tasks = config?.tasks;
-  if (!tasks || typeof tasks !== "object" || Array.isArray(tasks)) {
-    return "sqlite";
-  }
-  const b = (tasks as Record<string, unknown>).persistenceBackend;
-  if (b === "json") {
-    return "json";
-  }
   return "sqlite";
 }
 
