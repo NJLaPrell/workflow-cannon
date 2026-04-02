@@ -25,8 +25,11 @@ export function runGetKitPersistenceMap(ctx: ModuleLifecycleContext): ModuleComm
       planning: {
         table: "workspace_planning_state",
         taskDocumentColumn: "task_store_json",
+        relationalTasksTable: "task_engine_tasks",
+        relationalFlagColumn: "relational_tasks",
+        envelopeLogColumns: ["transition_log_json", "mutation_log_json"],
         note:
-          "Tasks and transition/mutation logs live in task_store_json. Legacy wishlist_store_json may exist until migrate-wishlist-intake."
+          "When relational_tasks=0, task bodies and logs live in task_store_json. After workspace-kit run migrate-task-persistence sqlite-blob-to-relational, task bodies live in task_engine_tasks; logs also in envelope columns; task_store_json mirrors logs with empty tasks array. Legacy wishlist_store_json may exist until migrate-wishlist-intake."
       },
       legacyJsonImportOnly: {
         taskStoreRelativePath: taskRel,

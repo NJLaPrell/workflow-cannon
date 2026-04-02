@@ -84,6 +84,9 @@ const MUTABLE_TASK_FIELDS = new Set([
   "metadata",
   "ownership",
   "approach",
+  "summary",
+  "description",
+  "risk",
   "technicalScope",
   "acceptanceCriteria"
 ]);
@@ -101,7 +104,7 @@ function strictValidationError(
 export const taskEngineModule: WorkflowModule = {
   registration: {
     id: "task-engine",
-    version: "0.6.0",
+    version: "0.7.0",
     contractVersion: "1",
     stateSchema: 1,
     capabilities: ["task-engine"],
@@ -276,6 +279,9 @@ export const taskEngineModule: WorkflowModule = {
         metadata: typeof args.metadata === "object" && args.metadata !== null ? args.metadata as Record<string, unknown> : undefined,
         ownership: typeof args.ownership === "string" ? args.ownership : undefined,
         approach: typeof args.approach === "string" ? args.approach : undefined,
+        summary: typeof args.summary === "string" ? args.summary : undefined,
+        description: typeof args.description === "string" ? args.description : undefined,
+        risk: typeof args.risk === "string" ? args.risk : undefined,
         technicalScope: Array.isArray(args.technicalScope) ? args.technicalScope.filter((x) => typeof x === "string") : undefined,
         acceptanceCriteria: Array.isArray(args.acceptanceCriteria) ? args.acceptanceCriteria.filter((x) => typeof x === "string") : undefined
       };
@@ -303,6 +309,9 @@ export const taskEngineModule: WorkflowModule = {
         metadata: task.metadata ?? null,
         ownership: task.ownership ?? null,
         approach: task.approach ?? null,
+        summary: task.summary ?? null,
+        description: task.description ?? null,
+        risk: task.risk ?? null,
         technicalScope: task.technicalScope ?? [],
         acceptanceCriteria: task.acceptanceCriteria ?? []
       };

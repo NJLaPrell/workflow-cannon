@@ -8,6 +8,26 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.41.0] - 2026-04-02
+
+Phase 41 — **relational SQLite task store** (optional in-place migration from document blob).
+
+### Added
+
+- **Table `task_engine_tasks`** — one row per **`TaskEntity`** with typed columns, JSON array/metadata overflow, and indexes on **`status`**, **`type+status`**, **`phase_key`**, **`queue_namespace+status`**.
+- **Envelope columns** on **`workspace_planning_state`** — **`transition_log_json`**, **`mutation_log_json`**, **`relational_tasks`** (0 = blob mode, 1 = relational mode).
+- **`migrate-task-persistence`** direction **`sqlite-blob-to-relational`** — explicit, transactional migration with verification; supports **`dryRun`**.
+- **`TaskEntity`** optional fields **`summary`**, **`description`**, **`risk`** — set via **`create-task`** / **`update-task`**; persisted in relational rows.
+- **ADR** — **`docs/maintainers/ADR-relational-sqlite-task-store.md`**.
+- **Export** — **`TASK_ENGINE_TASKS_TABLE`** from **`@workflow-cannon/workspace-kit`** core entry.
+- **Compatibility matrix** — **`task-engine`** module **`0.7.0`** (relational persistence surface).
+
+### Changed
+
+- **`PRAGMA user_version`** for kit SQLite is **2** when migrations have run (**`KIT_SQLITE_USER_VERSION`**).
+- **`get-kit-persistence-map`**, **`task-persistence-operator.md`**, **`TERMS.md`**, **`migrate-task-persistence`** instruction — document relational layout and migration.
+- **`check-planning-doc-consistency`** — reads **`task_engine_tasks`** when **`relational_tasks=1`**.
+
 ## [0.40.0] - 2026-04-02
 
 Phase 40 — **SQLite-only runtime** for task planning, improvement state, and agent-behavior state; JSON persistence opt-out removed.

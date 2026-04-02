@@ -136,8 +136,8 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
   - **Disambiguation**: Prefer the phrase **planning module** when discussing CLI flows and `planning.*` settings; use **Planning persistence** for SQLite/JSON task stores and `tasks.*` paths.
 
 - **Planning persistence (task engine)**
-  - **Definition**: Task-engine–owned storage for the **task** document (JSON file or SQLite `task_store_json`). Wishlist ideation is persisted **inside** the task document as `wishlist_intake` tasks; `WishlistStore` remains for **migration** off legacy artifacts only.
-  - **Defined in**: `src/modules/task-engine/` (stores, `planning-open.ts`, `sqlite-dual-planning.ts`), `src/core/planning/index.ts`.
+  - **Definition**: Task-engine–owned storage for execution tasks: legacy JSON file import path, or SQLite — either a single **`task_store_json`** document blob or, after **`migrate-task-persistence`** **`sqlite-blob-to-relational`**, normalized rows in **`task_engine_tasks`** plus envelope log columns on **`workspace_planning_state`** (**`relational_tasks=1`**). Wishlist ideation is persisted **inside** the task document as `wishlist_intake` tasks; `WishlistStore` remains for **migration** off legacy artifacts only.
+  - **Defined in**: `src/modules/task-engine/` (stores, `planning-open.ts`, `sqlite-dual-planning.ts`), `src/core/state/workspace-kit-sqlite.ts`, `src/core/planning/index.ts`.
   - **Enforced in**: Task engine commands, atomic `convert-wishlist`, optional SQLite planning DB (legacy rows may include a second wishlist column until `migrate-wishlist-intake` runs).
   - **Disambiguation**: Say **planning persistence** (or **task-engine persistence**) when discussing `TaskStore`, `tasks.persistenceBackend`, or the planning DB file — not “the planning module,” which is the separate `planning` module package under `src/modules/planning/`.
 

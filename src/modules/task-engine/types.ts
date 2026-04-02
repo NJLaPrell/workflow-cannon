@@ -26,6 +26,12 @@ export type TaskEntity = {
   metadata?: Record<string, unknown>;
   ownership?: string;
   approach?: string;
+  /** Optional short summary (relational row column + update-task). */
+  summary?: string;
+  /** Optional longer description body. */
+  description?: string;
+  /** Optional risk label or note for maintainers. */
+  risk?: string;
   technicalScope?: string[];
   acceptanceCriteria?: string[];
 };

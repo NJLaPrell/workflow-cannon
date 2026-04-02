@@ -24,6 +24,20 @@ async function readTaskStateText() {
   }
   try {
     const db = new Database(PATHS.taskStateSqlite, { readonly: true });
+    const cols = db.prepare("PRAGMA table_info(workspace_planning_state)").all();
+    const names = new Set(cols.map((c) => c.name));
+    const hasRel = names.has("relational_tasks") && names.has("transition_log_json");
+    let relational = 0;
+    if (hasRel) {
+      const r = db.prepare("SELECT relational_tasks AS rt FROM workspace_planning_state WHERE id = 1").get();
+      relational = r?.rt === 1 ? 1 : 0;
+    }
+    if (relational === 1) {
+      const trows = db.prepare("SELECT id, status FROM task_engine_tasks").all();
+      const synthetic = { tasks: trows.map((row) => ({ id: row.id, status: row.status })) };
+      db.close();
+      return JSON.stringify(synthetic);
+    }
     const row = db.prepare("SELECT task_store_json FROM workspace_planning_state WHERE id = 1").get();
     db.close();
     return row && typeof row.task_store_json === "string" ? row.task_store_json : null;

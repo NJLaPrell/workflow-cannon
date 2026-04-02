@@ -1595,6 +1595,74 @@ test("migrate-task-persistence json-to-sqlite then create-task uses SQLite store
   assert.equal(r.data.task.title, "sqlite persistence smoke");
 });
 
+test("migrate-task-persistence sqlite-blob-to-relational round-trips tasks and logs", async () => {
+  const workspace = await tmpDir();
+  await mkdir(path.join(workspace, ".workspace-kit", "tasks"), { recursive: true });
+  const dual = new SqliteDualPlanningStore(workspace, ".workspace-kit/tasks/workspace-kit.db");
+  dual.loadFromDisk();
+  const store = TaskStore.forSqliteDual(dual);
+  await store.load();
+  store.addTask(
+    makeTask({
+      id: "T900",
+      title: "relational seed",
+      summary: "short",
+      description: "longer body",
+      risk: "low",
+      metadata: { evidenceKey: "k1", evidenceKind: "transcript", queueNamespace: "ns1" }
+    })
+  );
+  store.addEvidence({
+    transitionId: "tr1",
+    taskId: "T900",
+    fromState: "proposed",
+    toState: "ready",
+    action: "accept",
+    guardResults: [],
+    dependentsUnblocked: [],
+    timestamp: new Date().toISOString()
+  });
+  await store.save();
+  assert.equal(dual.relationalTasksEnabled, false);
+
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const mig = await taskEngineModule.onCommand(
+    { name: "migrate-task-persistence", args: { direction: "sqlite-blob-to-relational" } },
+    ctx
+  );
+  assert.equal(mig.ok, true);
+  assert.equal(mig.code, "migrated-sqlite-blob-to-relational");
+
+  const dual2 = new SqliteDualPlanningStore(workspace, ".workspace-kit/tasks/workspace-kit.db");
+  dual2.loadFromDisk();
+  assert.equal(dual2.relationalTasksEnabled, true);
+  const store2 = TaskStore.forSqliteDual(dual2);
+  await store2.load();
+  const t = store2.getTask("T900");
+  assert.ok(t);
+  assert.equal(t.title, "relational seed");
+  assert.equal(t.summary, "short");
+  assert.equal(t.description, "longer body");
+  assert.equal(t.risk, "low");
+  assert.equal(t.metadata?.evidenceKey, "k1");
+  assert.equal(store2.getTransitionLog().length, 1);
+
+  const upd = await taskEngineModule.onCommand(
+    {
+      name: "update-task",
+      args: { taskId: "T900", updates: { title: "after relational" } }
+    },
+    ctx
+  );
+  assert.equal(upd.ok, true);
+
+  const dual3 = new SqliteDualPlanningStore(workspace, ".workspace-kit/tasks/workspace-kit.db");
+  dual3.loadFromDisk();
+  const store3 = TaskStore.forSqliteDual(dual3);
+  await store3.load();
+  assert.equal(store3.getTask("T900").title, "after relational");
+});
+
 test("migrate-task-persistence json-to-unified-sqlite writes task-engine module row", async () => {
   const workspace = await tmpDir();
   const taskPath = path.join(workspace, ".workspace-kit", "tasks", "state.json");

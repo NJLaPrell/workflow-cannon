@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted (**v0.30.0**).
+Accepted (**v0.30.0**). **SQLite execution store:** relational rows (**`task_engine_tasks`**) are the recommended layout after explicit migration — see **[`ADR-relational-sqlite-task-store.md`](./ADR-relational-sqlite-task-store.md)** (**v0.41.0+**). JSON file persistence remains document-first.
 
 ## Context
 

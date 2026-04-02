@@ -14,7 +14,7 @@ Single place to answer: **where is data?**, **how do I import legacy JSON?**, an
 
 | Role | Location | Config keys |
 | --- | --- | --- |
-| **Runtime** task + wishlist documents | SQLite: **`tasks.sqliteDatabaseRelativePath`** or default **`.workspace-kit/tasks/workspace-kit.db`** (`workspace_planning_state`) | `tasks.sqliteDatabaseRelativePath` |
+| **Runtime** task + wishlist documents | SQLite: **`tasks.sqliteDatabaseRelativePath`** or default **`.workspace-kit/tasks/workspace-kit.db`** — row **`workspace_planning_state`**; optional relational layout **`task_engine_tasks`** after **`migrate-task-persistence`** **`sqlite-blob-to-relational`** | `tasks.sqliteDatabaseRelativePath` |
 | **Legacy import only** | Task JSON: **`tasks.storeRelativePath`** or default **`.workspace-kit/tasks/state.json`**; wishlist JSON: **`tasks.wishlistStoreRelativePath`** or default **`.workspace-kit/wishlist/state.json`** | Used by **`migrate-task-persistence`** only |
 | **Module state** (improvement, agent-behavior, …) | Same SQLite file as planning: **`workspace_module_state`** | `tasks.sqliteDatabaseRelativePath` |
 
@@ -22,7 +22,7 @@ Single place to answer: **where is data?**, **how do I import legacy JSON?**, an
 
 - **Missing SQLite file** when backend is sqlite: run **`workspace-kit run migrate-task-persistence`** with **`direction: "json-to-sqlite"`** (see command instruction), or create a fresh DB via migration from JSON; **`doctor`** errors include this hint.
 - **Native addon will not load** (sqlite backend): **`docs/maintainers/runbooks/native-sqlite-consumer-install.md`**.
-- **Export / portability**: **`backup-planning-sqlite`** for a **`.db`** copy; **`migrate-task-persistence`** imports **`json-to-sqlite`** / **`json-to-unified-sqlite`** only (**`sqlite-to-json`** removed in **v0.40.0**).
+- **Export / portability**: **`backup-planning-sqlite`** for a **`.db`** copy; **`migrate-task-persistence`** imports **`json-to-sqlite`** / **`json-to-unified-sqlite`**, or upgrades blob-only SQLite to relational rows via **`sqlite-blob-to-relational`** (**`sqlite-to-json`** removed in **v0.40.0**). Take a backup before **`sqlite-blob-to-relational`**.
 - **Blessed hot backup**: **`workspace-kit run backup-planning-sqlite`** with **`outputPath`** — uses SQLite’s online backup API (prefer over copying **`.db`** while writers are active). See **`json-to-sqlite-one-shot-upgrade.md`** for ordering with migrations.
 - **Integrity**: **`workspace-kit doctor`** runs **`PRAGMA quick_check`** on the planning DB when SQLite is configured; failures link **`native-sqlite-consumer-install.md`**.
 - **Schema version**: **`PRAGMA user_version`** is owned by the kit (centralized migrations on write). **`doctor`** persistence lines include **`Kit SQLite schema (PRAGMA user_version): N`** when the file exists; **`list-module-states`** returns **`kitSqliteUserVersion`**. New or legacy files may show **`0`** until the first read/write open runs migrations (**v0.39.0+**).
@@ -41,5 +41,6 @@ Maintainers validate SQLite paths via tests and **`pnpm run parity`**; avoid han
 - [`ADR-sqlite-default-persistence.md`](../ADR-sqlite-default-persistence.md)
 - [`ADR-task-sqlite-persistence.md`](../ADR-task-sqlite-persistence.md)
 - [`ADR-task-store-sqlite-document-model.md`](../ADR-task-store-sqlite-document-model.md)
+- [`ADR-relational-sqlite-task-store.md`](../ADR-relational-sqlite-task-store.md)
 - [`ADR-native-sqlite-consumer-distribution.md`](../ADR-native-sqlite-consumer-distribution.md)
 - [`ADR-json-persistence-deprecation.md`](../ADR-json-persistence-deprecation.md)

@@ -8,4 +8,4 @@ This root file is intentionally pointer-only to avoid split release history.
 
 - See `docs/maintainers/CHANGELOG.md` for all release notes, migration notes, and historical entries.
 
-Latest release: **v0.40.0** (Phase 40: SQLite-only task runtime, **`get-kit-persistence-map`**, removal of JSON persistence / **`sqlite-to-json`**; see canonical changelog).
+Latest release: **v0.41.0** (Phase 41: relational SQLite **`task_engine_tasks`**, **`sqlite-blob-to-relational`** migration, optional **`summary`/`description`/`risk`** on tasks; see canonical changelog).

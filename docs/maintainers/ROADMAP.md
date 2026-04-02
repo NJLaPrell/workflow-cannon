@@ -10,6 +10,7 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 ## Current state
 
 - **Completed phases 0–35** — per-phase narrative is archived in **[`ROADMAP-archive.md`](./ROADMAP-archive.md)** so this file stays short; release evidence and the detailed phase plan below remain here.
+- **Phase 41 (relational SQLite task store)** shipped as **`v0.41.0`** — **`T540`–`T545`**: ADR, **`task_engine_tasks`** + envelope columns, **`SqliteDualPlanningStore`** row persistence, **`sqlite-blob-to-relational`** migration, doctor/runbooks/CI parity; see **`docs/maintainers/CHANGELOG.md`** and **[`ADR-relational-sqlite-task-store.md`](./ADR-relational-sqlite-task-store.md)**.
 - **Phase 36 (policy, integrations, improvement loop, documentation architecture)** shipped as **`v0.36.0`** — see **`docs/maintainers/CHANGELOG.md`** and task-engine `phaseKey` **36** completion.
 - **Phase 37 (maintainer onboarding, shell JSON guidance, improvement churn closure, dashboard terminal parity)** shipped as **`v0.37.0`** — see **`docs/maintainers/CHANGELOG.md`** and task-engine `phaseKey` **37** completion (`imp-*` slice).
 - **Maintainer snapshot** — `docs/maintainers/data/workspace-kit-status.yaml` (`current_kit_phase`, `next_agent_actions`).

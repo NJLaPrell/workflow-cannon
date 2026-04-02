@@ -39,6 +39,7 @@ export async function runMigrateTaskPersistence(
   args: Record<string, unknown>
 ): Promise<ModuleCommandResult> {
   const direction = typeof args.direction === "string" ? args.direction.trim() : "";
+  const dryRun = args.dryRun === true;
   if (direction === "sqlite-to-json") {
     return {
       ok: false,
@@ -47,15 +48,81 @@ export async function runMigrateTaskPersistence(
         "sqlite-to-json was removed in v0.40.0 — use backup-planning-sqlite for a portable .db copy; see docs/maintainers/runbooks/task-persistence-operator.md"
     };
   }
+  if (direction === "sqlite-blob-to-relational") {
+    const dbRel = planningSqliteDatabaseRelativePath(ctx);
+    const dual = new SqliteDualPlanningStore(ctx.workspacePath, dbRel);
+    if (!fsSync.existsSync(dual.dbPath)) {
+      return {
+        ok: false,
+        code: "storage-write-error",
+        message: `SQLite database not found at ${dual.dbPath} — nothing to migrate`
+      };
+    }
+    dual.loadFromDisk();
+    if (dual.relationalTasksEnabled) {
+      return {
+        ok: false,
+        code: "invalid-task-schema",
+        message: "Planning database already uses relational task rows (relational_tasks=1)"
+      };
+    }
+    const taskCount = dual.taskDocument.tasks.length;
+    const transitionCount = dual.taskDocument.transitionLog.length;
+    const mutationCount = (dual.taskDocument.mutationLog ?? []).length;
+    if (dryRun) {
+      return {
+        ok: true,
+        code: "migrate-dry-run",
+        message: "Dry run: would copy task bodies into task_engine_tasks and enable relational_tasks",
+        data: {
+          dbPath: dual.dbPath,
+          taskCount,
+          transitionCount,
+          mutationCount
+        }
+      };
+    }
+    try {
+      dual.enableRelationalPersistenceAndPersist();
+    } catch (err) {
+      return {
+        ok: false,
+        code: "storage-write-error",
+        message: `Relational migration failed: ${(err as Error).message}`
+      };
+    }
+    const verify = new SqliteDualPlanningStore(ctx.workspacePath, dbRel);
+    verify.loadFromDisk();
+    if (!verify.relationalTasksEnabled) {
+      return {
+        ok: false,
+        code: "storage-write-error",
+        message: "Relational migration verification failed: relational_tasks not set after persist"
+      };
+    }
+    if (verify.taskDocument.tasks.length !== taskCount) {
+      return {
+        ok: false,
+        code: "storage-write-error",
+        message: `Relational migration verification failed: task count ${verify.taskDocument.tasks.length} !== ${taskCount}`
+      };
+    }
+    return {
+      ok: true,
+      code: "migrated-sqlite-blob-to-relational",
+      message: `Migrated ${taskCount} task(s) to relational rows at ${dual.dbPath}`,
+      data: { dbPath: dual.dbPath, taskCount }
+    };
+  }
+
   if (direction !== "json-to-sqlite" && direction !== "json-to-unified-sqlite") {
     return {
       ok: false,
       code: "invalid-task-schema",
       message:
-        "migrate-task-persistence requires direction: 'json-to-sqlite' | 'json-to-unified-sqlite'"
+        "migrate-task-persistence requires direction: 'json-to-sqlite' | 'json-to-unified-sqlite' | 'sqlite-blob-to-relational'"
     };
   }
-  const dryRun = args.dryRun === true;
   const force = args.force === true;
 
   const taskRel = planningTaskStoreRelativePath(ctx) ?? DEFAULT_TASK_STORE_PATH;

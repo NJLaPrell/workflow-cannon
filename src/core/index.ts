@@ -139,6 +139,7 @@ export {
 export { UnifiedStateDb, type ModuleStateRow } from "./state/unified-state-db.js";
 export {
   KIT_SQLITE_USER_VERSION,
+  TASK_ENGINE_TASKS_TABLE,
   prepareKitSqliteDatabase,
   readKitSqliteUserVersion
 } from "./state/workspace-kit-sqlite.js";

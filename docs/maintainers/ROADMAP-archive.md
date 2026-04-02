@@ -2,6 +2,10 @@
 
 **Maintainers:** historical “current state” bullets that used to sit at the top of `ROADMAP.md`. Strategy, decisions, and evidence tables in the main roadmap file stay canonical for process; this file is **read-mostly** provenance to reduce above-the-fold token load on `ROADMAP.md`.
 
+## Recent archived “current state” bullets (post phase 35)
+
+- **Phase 41 (Relational SQLite task store)** is **COMPLETE and released** as **`v0.41.0`**: **`T540`–`T545`** — ADR **`ADR-relational-sqlite-task-store.md`**, table **`task_engine_tasks`** + envelope columns + **`PRAGMA user_version` 2**, **`SqliteDualPlanningStore`** row persistence, **`migrate-task-persistence`** **`sqlite-blob-to-relational`**, doctor/runbooks/**`get-kit-persistence-map`**, planning consistency script + tests; **`TaskEntity`** **`summary`/`description`/`risk`**; task-engine module **0.7.0** in compatibility matrix.
+
 ## Archived “current state” bullets (phases 0–35)
 
 - Project tracking has been reset for the split repository baseline.

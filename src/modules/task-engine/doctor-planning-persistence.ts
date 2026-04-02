@@ -2,8 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import type DatabaseCtor from "better-sqlite3";
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
+import { TASK_ENGINE_TASKS_TABLE } from "../../core/state/workspace-kit-sqlite.js";
 import { planningSqliteDatabaseRelativePath } from "./planning-config.js";
 import { normalizeTaskStoreDocumentFromUnknown } from "./task-store-migration.js";
+import { rowToTaskEntity, type TaskEngineTaskRow } from "./sqlite-task-row-mapping.js";
 
 type SqliteDb = InstanceType<typeof DatabaseCtor>;
 
@@ -85,23 +87,86 @@ export async function validatePlanningPersistenceForDoctor(
     }
 
     const cols = db.prepare("PRAGMA table_info(workspace_planning_state)").all() as { name: string }[];
-    const hasWishlist = cols.some((c) => c.name === "wishlist_store_json");
+    const colSet = new Set(cols.map((c) => c.name));
+    const hasWishlist = colSet.has("wishlist_store_json");
+    const hasRelational = colSet.has("relational_tasks") && colSet.has("transition_log_json");
+    const hasTaskTable = Boolean(
+      (
+        db
+          .prepare("SELECT 1 AS ok FROM sqlite_master WHERE type = 'table' AND name = ?")
+          .get(TASK_ENGINE_TASKS_TABLE) as { ok: number } | undefined
+      )?.ok
+    );
     const row = hasWishlist
-      ? (db
-          .prepare(
-            "SELECT task_store_json, wishlist_store_json FROM workspace_planning_state WHERE id = 1"
-          )
-          .get() as { task_store_json: string; wishlist_store_json: string } | undefined)
-      : (db
-          .prepare("SELECT task_store_json FROM workspace_planning_state WHERE id = 1")
-          .get() as { task_store_json: string } | undefined);
+      ? hasRelational
+        ? (db
+            .prepare(
+              "SELECT task_store_json, wishlist_store_json, transition_log_json, mutation_log_json, relational_tasks FROM workspace_planning_state WHERE id = 1"
+            )
+            .get() as
+            | {
+                task_store_json: string;
+                wishlist_store_json: string;
+                transition_log_json: string;
+                mutation_log_json: string;
+                relational_tasks: number;
+              }
+            | undefined)
+        : (db
+            .prepare(
+              "SELECT task_store_json, wishlist_store_json FROM workspace_planning_state WHERE id = 1"
+            )
+            .get() as { task_store_json: string; wishlist_store_json: string } | undefined)
+      : hasRelational
+        ? (db
+            .prepare(
+              "SELECT task_store_json, transition_log_json, mutation_log_json, relational_tasks FROM workspace_planning_state WHERE id = 1"
+            )
+            .get() as
+            | {
+                task_store_json: string;
+                transition_log_json: string;
+                mutation_log_json: string;
+                relational_tasks: number;
+              }
+            | undefined)
+        : (db
+            .prepare("SELECT task_store_json FROM workspace_planning_state WHERE id = 1")
+            .get() as { task_store_json: string } | undefined);
 
     if (row) {
+      const relationalOn =
+        hasRelational &&
+        "relational_tasks" in row &&
+        typeof (row as { relational_tasks: unknown }).relational_tasks === "number" &&
+        (row as { relational_tasks: number }).relational_tasks === 1;
       try {
         normalizeTaskStoreDocumentFromUnknown(JSON.parse(row.task_store_json));
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         issues.push({ path: relDisplay, reason: `sqlite-task_store_json: ${msg}` });
+      }
+      if (relationalOn && hasTaskTable && "transition_log_json" in row && "mutation_log_json" in row) {
+        const envRow = row as {
+          transition_log_json: string;
+          mutation_log_json: string;
+        };
+        try {
+          JSON.parse(envRow.transition_log_json);
+          JSON.parse(envRow.mutation_log_json);
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          issues.push({ path: relDisplay, reason: `sqlite-envelope-logs: ${msg}` });
+        }
+        try {
+          const trows = db.prepare(`SELECT * FROM ${TASK_ENGINE_TASKS_TABLE}`).all() as TaskEngineTaskRow[];
+          for (const tr of trows) {
+            rowToTaskEntity(tr);
+          }
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          issues.push({ path: relDisplay, reason: `sqlite-${TASK_ENGINE_TASKS_TABLE}: ${msg}` });
+        }
       }
       if (hasWishlist && "wishlist_store_json" in row && typeof row.wishlist_store_json === "string") {
         try {

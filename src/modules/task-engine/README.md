@@ -8,7 +8,7 @@ Phase 1 core module for structured task lifecycle management.
 - **Lifecycle transitions**: Six states (`proposed`, `ready`, `in_progress`, `blocked`, `completed`, `cancelled`) with guard-validated transitions (including **`demote`**: `ready` → `proposed`; see `instructions/run-transition.md`)
 - **Guard system**: Pluggable `TransitionGuard` hooks with built-in `state-validity` and `dependency-check` guards
 - **Auto-unblock**: Dependents automatically move `blocked → ready` when all deps complete
-- **Persistence**: Config-driven — default **SQLite** planning row (`tasks.persistenceBackend: sqlite`); optional JSON file opt-out (see `config.md`, `planning-open.ts`, `sqlite-dual-planning.ts`)
+- **Persistence**: Config-driven — **SQLite** only (`tasks.persistenceBackend: sqlite`); document blob **`task_store_json`** or relational **`task_engine_tasks`** after **`migrate-task-persistence`** **`sqlite-blob-to-relational`** (**v0.41+**); see `config.md`, `planning-open.ts`, `sqlite-dual-planning.ts`, maintainer ADR **`ADR-relational-sqlite-task-store.md`**
 - **Evidence**: Every transition produces a timestamped `TransitionEvidence` record
 - **Next-action suggestions**: Priority-sorted ready queue with blocking chain analysis
 - **Wishlist (ideation)**: Legacy `W###` path and **`wishlist_intake`** tasks; see maintainer runbooks
