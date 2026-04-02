@@ -21,16 +21,23 @@ pnpm run build
 
 ### Where to start after build
 
+These use the short bin name **`wk`** (same as **`workspace-kit`**). **`pnpm exec …`** works in a fresh shell without changing **`PATH`**:
+
 | Step | Command | What you get |
 | --- | --- | --- |
-| 1 | `wk --help` | Orientation: top-level commands, first-run path, doc pointers |
-| 2 | `wk doctor` | Confirms kit contract files and config resolve |
-| 3 | `wk run` | **Command menu** — every runnable `workspace-kit run <cmd>` |
-| 4 | `wk run get-next-actions '{}'` | Read-only suggestion for what to do next |
+| 1 | `pnpm exec wk --help` | Orientation: top-level commands, first-run path, doc pointers |
+| 2 | `pnpm exec wk doctor` | Confirms kit contract files and config resolve |
+| 3 | `pnpm exec wk run` | **Command menu** — every runnable `workspace-kit run <cmd>` |
+| 4 | `pnpm exec wk run get-next-actions '{}'` | Read-only suggestion for what to do next |
 
-**In this clone**, if `wk` is not on your shell **`PATH`**, run the same invocations as **`pnpm exec wk …`** (for example **`pnpm exec wk doctor`**).
+**Typing `wk` without `pnpm exec`:** shells usually do **not** put **`node_modules/.bin`** on **`PATH`**, so **`wk`** alone often errors with **`command not found`**. After **`pnpm install`**, pick one:
 
-**How to run `wk` here:** after `pnpm install`, the package is linked into **`node_modules/.bin`** (via a root **`devDependency`** on **`workspace-kit@workspace:^`**). Use **`pnpm exec wk …`** so you do not need a global install. If your shell already puts **`node_modules/.bin`** on **`PATH`**, you can type **`wk`** directly (same as in a consumer project).
+- **`pnpm exec wk …`** — works from any directory under the repo (recommended default).
+- **One-liner** (current shell, from repo root): `export PATH="$PWD/node_modules/.bin:$PATH"` — then **`wk --help`** works like a global tool.
+- **direnv:** this repo ships **`.envrc`** with **`PATH_add node_modules/.bin`**. Install [direnv](https://direnv.net/), then **`direnv allow`** in the clone; **`wk`** resolves automatically when you **`cd`** here.
+- **Global for your user:** from the repo, **`pnpm link --global`**, then **`wk`** works everywhere until you **`pnpm unlink --global`**.
+
+**How it works:** **`pnpm install`** links **`wk`** into **`node_modules/.bin`** (root **`devDependency`** **`@workflow-cannon/workspace-kit@workspace:^`**). No global npm install required for **`pnpm exec wk`**.
 
 **Developing:** after edits, `pnpm run build` then `pnpm test` (or `pnpm run pre-merge-gates` / legacy `pnpm run phase5-gates` before larger changes). The long bin name **`workspace-kit`** is the same binary as **`wk`**. Fallbacks: **`pnpm run wk …`** (npm script → **`node dist/cli.js`**) or **`node dist/cli.js`**. For module commands via the script, use **`pnpm run wk run <cmd> '<json>'`** (no extra `--` before `run` — pnpm would forward a literal `--` to the CLI).
 
