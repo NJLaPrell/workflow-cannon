@@ -60,6 +60,11 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /T320/);
   assert.match(html, /W1/);
   assert.match(html, /phase-bucket/);
+  assert.match(html, /dashboard-terminal-tasks/);
+  assert.match(html, /<p><b>Completed<\/b>/);
+  assert.match(html, /<p><b>Cancelled<\/b>/);
+  assert.match(html, /terminal-phase-bucket/);
+  assert.match(html, /T099/);
   assert.match(html, /Not Phased/);
   assert.match(html, /Dependency overview/);
   assert.match(html, /Critical path \(ready frontier\)/);

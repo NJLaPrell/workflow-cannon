@@ -15,7 +15,7 @@ pnpm test
 
 ## Cursor / VS Code extension
 
-The repo is a **pnpm workspace** (`pnpm-workspace.yaml`): the kit (`@workflow-cannon/workspace-kit`) and **`extensions/cursor-workflow-cannon`** install together from the root. Do **not** run `npm install` inside the extension directory.
+The **Workflow Cannon** repo is a **pnpm workspace** (`pnpm-workspace.yaml`): the kit package **`@workflow-cannon/workspace-kit`** (CLI commands **`workspace-kit`** / **`wk`**) and **`extensions/cursor-workflow-cannon`** install together from the root. Do **not** run `npm install` inside the extension directory.
 
 - **Build kit + extension:** `pnpm run ui:prepare`
 - **Extension only (after root `pnpm install`):** `pnpm --filter cursor-workflow-cannon run compile` or `pnpm run ext:compile`

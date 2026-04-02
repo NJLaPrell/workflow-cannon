@@ -23,6 +23,11 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
 
 ## Terms and definitions
 
+- **Workflow Cannon (repository / product)**
+  - **Definition**: The **GitHub repository** and maintainer-facing **product name** for this monorepo (`workflow-cannon`).
+  - **Contrast**: The installable npm artifact is **`@workflow-cannon/workspace-kit`**; its binaries are **`workspace-kit`** and **`wk`** (same executable).
+  - **Defined in**: `README.md` (Names), `docs/maintainers/AGENTS.md` (Source-of-truth preamble).
+
 - **Directive**
   - **Definition**: High-level intent that tells the agent what outcome to optimize for.
   - **Defined in**: `docs/maintainers/TERMS.md` and supporting rationale in `README.md` / `docs/maintainers/ROADMAP.md`.

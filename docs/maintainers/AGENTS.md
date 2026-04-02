@@ -6,6 +6,8 @@ Basic operating guidance for AI agents working in this repository.
 
 ## Source-of-truth order
 
+**Names:** The repo/product is **Workflow Cannon**; the published CLI package is **`@workflow-cannon/workspace-kit`**, invoked as **`workspace-kit`** or **`wk`** ([`README.md`](../../README.md) → Names).
+
 1. `.ai/PRINCIPLES.md` — goals, trade-off order, approval gates
 2. `.ai/module-build.md` — module development contracts and enforcement
 3. `docs/maintainers/ROADMAP.md` — phase strategy and release cadence

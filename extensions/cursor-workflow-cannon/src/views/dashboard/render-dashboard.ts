@@ -232,6 +232,51 @@ function renderBlockedPhaseBuckets(phaseBuckets: unknown, fallbackTop: unknown, 
   );
 }
 
+/**
+ * Terminal statuses (completed / cancelled): same phase-bucket shape as ready/proposed, but `<details>` stay **closed** until expanded (matches Tasks tree defaults).
+ */
+function renderTerminalTaskPhaseBuckets(
+  phaseBuckets: unknown,
+  fallbackTop: unknown,
+  totalInStatus: number,
+  emptyMessage: string
+): string {
+  if (!Array.isArray(phaseBuckets) || phaseBuckets.length === 0) {
+    return renderReadyList(fallbackTop, emptyMessage);
+  }
+  const sum = phaseBuckets.reduce((acc, x) => {
+    const c = (x as { count?: unknown }).count;
+    return acc + (typeof c === "number" ? c : 0);
+  }, 0);
+  const more =
+    sum < totalInStatus
+      ? '<p class="muted">Preview capped per phase · full list in Tasks or <code>list-tasks</code>.</p>'
+      : "";
+  return (
+    more +
+    '<div class="phase-stack">' +
+    phaseBuckets
+      .map((raw) => {
+        const b = raw as { label?: unknown; top?: unknown; count?: unknown };
+        const summary = escapeHtml(String(b.label ?? ""));
+        const c = typeof b.count === "number" ? b.count : 0;
+        const inner =
+          c === 0
+            ? '<p class="muted">No tasks in this phase.</p>'
+            : renderReadyList(b.top ?? [], "No tasks in this phase.");
+        return (
+          '<details class="phase-bucket terminal-phase-bucket"><summary>' +
+          summary +
+          "</summary>" +
+          inner +
+          "</details>"
+        );
+      })
+      .join("") +
+    "</div>"
+  );
+}
+
 function renderPlanningSession(ps: unknown): string {
   if (!ps || typeof ps !== "object") {
     return (
@@ -501,6 +546,29 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
     String(blockedSummary.count ?? 0) +
     "</p>" +
     renderBlockedPhaseBuckets(blockedSummary.phaseBuckets, blockedTop, Number(blockedSummary.count ?? 0)) +
+    (() => {
+      const cs = d.completedSummary as Record<string, unknown> | undefined;
+      const ks = d.cancelledSummary as Record<string, unknown> | undefined;
+      if (!cs && !ks) {
+        return "";
+      }
+      const compCount = typeof cs?.count === "number" ? cs.count : 0;
+      const cancCount = typeof ks?.count === "number" ? ks.count : 0;
+      const compTop = Array.isArray(cs?.top) ? (cs!.top as unknown[]).slice(0, 15) : [];
+      const cancTop = Array.isArray(ks?.top) ? (ks!.top as unknown[]).slice(0, 15) : [];
+      return (
+        '<section class="dashboard-terminal-tasks" aria-label="Completed and cancelled tasks">' +
+        "<p><b>Completed</b> (" +
+        String(compCount) +
+        ") — terminal · collapsed until expanded (same phase buckets as Tasks tree)</p>" +
+        renderTerminalTaskPhaseBuckets(cs?.phaseBuckets, compTop, compCount, "No completed tasks.") +
+        "<p><b>Cancelled</b> (" +
+        String(cancCount) +
+        ")</p>" +
+        renderTerminalTaskPhaseBuckets(ks?.phaseBuckets, cancTop, cancCount, "No cancelled tasks.") +
+        "</section>"
+      );
+    })() +
     "<p><b>Wishlist</b> · open " +
     String(wishlist.openCount ?? 0) +
     " / total " +

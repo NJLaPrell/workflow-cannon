@@ -56,6 +56,16 @@ workspace-kit run run-transition '{"taskId":"T285","action":"start","policyAppro
 
 Exception: **documented recovery** (e.g. repair after corruption) may require a maintainer to edit JSON under a tracked PR with evidence; that is out-of-contract for routine agent work.
 
+## Shell scripts and JSON stdout
+
+Successful **`workspace-kit run …`** invocations print **one JSON value to stdout** (often **pretty-printed across multiple lines**). Operators wrapping **`pnpm exec wk run`** / **`workspace-kit run`** in shell scripts should:
+
+1. **Capture all stdout**, then **`trim`**, then **`JSON.parse` the whole string** — do not assume one line equals one JSON value and do not split on newlines to “find” JSON.
+2. Treat **stderr separately** — diagnostics or progress may appear there; interleaving with stdout is not a supported contract for splitting streams into JSON.
+3. Use **`clientMutationId`** on mutating commands (where supported) so retries are **idempotent** when you re-send the same logical operation after a timeout or ambiguous transport failure.
+4. Distinguish **parse failures** (your script could not decode stdout as JSON — exit code may still be 0 if the process wrote non-JSON garbage) from **`ok: false`** in a successfully parsed payload (the kit returned a structured error). A parse error does **not** prove the kit skipped a mutation; check task-engine state before re-running destructive sequences.
+5. Prefer **`set -euo pipefail`** (bash) and explicit capture: `out=$(pnpm exec wk run list-tasks '{}' 2>/dev/null)` then parse **`out`** — adjust stderr handling to your logging needs.
+
 ## Tier overview
 
 | Tier | Meaning | Approval |

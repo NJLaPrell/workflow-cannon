@@ -32,6 +32,8 @@ Optional JSON object; accepts standard invocation `config` overlay only (no extr
 | `readyQueueCount` | Full ready queue length |
 | `readyQueueBreakdown` | `{ schemaVersion: 1, improvement, other }` — split of the ready queue (`improvement` = `type: improvement` or `imp-*` id; `other` = remainder; wishlist intake never appears in the ready queue) |
 | `blockedSummary` | `{ count, top, phaseBuckets }` — `top` is up to 15 blocking analysis rows; `phaseBuckets` groups those rows by the **blocked task’s** phase (same ordering as above) |
+| `completedSummary` | `{ schemaVersion: 1, count, top, phaseBuckets }` — **completed** tasks only; same `phaseBuckets` ordering as the Tasks sidebar / ready queues; `top` is up to 15 global preview rows (operator UIs may collapse this section by default) |
+| `cancelledSummary` | Same shape as `completedSummary` for **cancelled** tasks |
 | `suggestedNext` | First **ready** task after priority sort, or `null` when the ready queue is empty (proposed work does not appear here) |
 | `planningSession` | Shallow `build-plan` session snapshot for the dashboard, or `null` when no session file |
 | `blockingAnalysis` | Full blocking analysis list |

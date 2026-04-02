@@ -150,6 +150,33 @@
       "top": [],
       "phaseBuckets": []
     },
+    "completedSummary": {
+      "schemaVersion": 1,
+      "count": 1,
+      "top": [{ "id": "T099", "title": "Example completed task", "phase": "Phase 14" }],
+      "phaseBuckets": [
+        {
+          "schemaVersion": 1,
+          "phaseKey": "14",
+          "label": "Phase 14 (current) (1)",
+          "count": 1,
+          "top": [{ "id": "T099", "title": "Example completed task", "phase": "Phase 14" }]
+        },
+        {
+          "schemaVersion": 1,
+          "phaseKey": "15",
+          "label": "Phase 15 (next) (0)",
+          "count": 0,
+          "top": []
+        }
+      ]
+    },
+    "cancelledSummary": {
+      "schemaVersion": 1,
+      "count": 0,
+      "top": [],
+      "phaseBuckets": []
+    },
     "suggestedNext": {
       "id": "T319",
       "title": "[task-engine] Define Wishlist item schema and validation contract",

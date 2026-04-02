@@ -8,10 +8,18 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.37.0] - 2026-04-02
+
+Phase 37 — maintainer onboarding clarity, shell JSON guidance, improvement churn closure, and dashboard parity for terminal task statuses.
+
 ### Added
 
 - **Dashboard payload** — **`dashboard-summary`** includes **`readyImprovementsSummary`**, **`readyExecutionSummary`**, and **`proposedExecutionSummary`** so UIs can list improvement vs execution work separately (Cursor webview groups them under **Tasks**).
 - **CLI `.env` loading** — **`workspace-kit`** loads the first **`.env`** found walking up from cwd (**`dotenv`**, **`override: false`**). Repository **`.env.example`** documents **`WORKSPACE_KIT_POLICY_APPROVAL`** for local hook / config mutations; **`.env`** is gitignored.
+- **`dashboard-summary` → `completedSummary` / `cancelledSummary`** — phase buckets aligned with the Tasks sidebar; Cursor dashboard renders them in **collapsed** `<details>` until expanded.
+- **Onboarding names** — **`README.md`** table (**Workflow Cannon** vs **`@workflow-cannon/workspace-kit`** vs **`wk`** / **`workspace-kit`**); **`docs/maintainers/AGENTS.md`** preamble; **`CONTRIBUTING.md`**; **`TERMS.md`** product vs package entry.
+- **`AGENT-CLI-MAP.md`** — **Shell scripts and JSON stdout** (full stdout parse, stderr, **`clientMutationId`**, parse vs **`ok: false`**).
+- **Runbook** — **`docs/maintainers/runbooks/improvement-lifecycle-churn-notes.md`** (queue-health “noisy improvement” follow-ups).
 
 ### Changed
 

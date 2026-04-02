@@ -8,6 +8,16 @@ AI agents: read **`./.ai/`** first for machine-oriented contracts (module build 
 
 **[`@workflow-cannon/workspace-kit`](https://www.npmjs.com/package/@workflow-cannon/workspace-kit)** — CLI, task engine, and workflow contracts for repos that want deterministic, policy-governed automation with clear evidence.
 
+### Names (repo vs package vs commands)
+
+| What | Meaning |
+| --- | --- |
+| **Workflow Cannon** | This GitHub repository and product umbrella (`workflow-cannon`). |
+| **`@workflow-cannon/workspace-kit`** | The npm package name you install in other projects. |
+| **`workspace-kit`** / **`wk`** | The same CLI binary — long and short command names (see Quick start). |
+
+The npm package is **not** named “Workflow Cannon”; use the table above when searching docs, issues, or registry metadata.
+
 ## Quick start (clone this repo)
 
 **Needs:** Node.js **22+** (see CI), **pnpm 10** (see `packageManager` in `package.json`).
@@ -39,7 +49,7 @@ These use the short bin name **`wk`** (same as **`workspace-kit`**). **`pnpm exe
 
 **How it works:** **`pnpm install`** links **`wk`** into **`node_modules/.bin`** (root **`devDependency`** **`@workflow-cannon/workspace-kit@workspace:^`**). No global npm install required for **`pnpm exec wk`**.
 
-**Developing:** after edits, `pnpm run build` then `pnpm test` (or `pnpm run pre-merge-gates` / legacy `pnpm run phase5-gates` before larger changes). The long bin name **`workspace-kit`** is the same binary as **`wk`**. Fallbacks: **`pnpm run wk …`** (npm script → **`node dist/cli.js`**) or **`node dist/cli.js`**. For module commands via the script, use **`pnpm run wk run <cmd> '<json>'`** (no extra `--` before `run` — pnpm would forward a literal `--` to the CLI).
+**Developing:** after edits, `pnpm run build` then `pnpm test` (or `pnpm run pre-merge-gates` / legacy `pnpm run phase5-gates` before larger changes). The long bin name **`workspace-kit`** is the same binary as **`wk`**. Fallbacks: **`pnpm run wk …`** (npm script → **`node dist/cli.js`**) or **`node dist/cli.js`**. For module commands via the script, use **`pnpm run wk run <cmd> '<json>'`** (no extra `--` before `run` — pnpm would forward a literal `--` to the CLI). **Wrapping `wk run` in shell scripts:** stdout is a **single JSON document** (often multi-line pretty-printed); parse the **full** stdout string — see [`docs/maintainers/AGENT-CLI-MAP.md`](docs/maintainers/AGENT-CLI-MAP.md) → **Shell scripts and JSON stdout**.
 
 | Situation | Example |
 | --- | --- |

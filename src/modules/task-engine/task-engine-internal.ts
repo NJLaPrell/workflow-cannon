@@ -657,6 +657,27 @@ export const taskEngineModule: WorkflowModule = {
         dashboardPhaseTop
       );
 
+      const completedTasks = tasks
+        .filter((t) => t.status === "completed")
+        .sort((a, b) => a.id.localeCompare(b.id));
+      const cancelledTasks = tasks
+        .filter((t) => t.status === "cancelled")
+        .sort((a, b) => a.id.localeCompare(b.id));
+      const completedTop = completedTasks.slice(0, 15).map(toProposedRow);
+      const cancelledTop = cancelledTasks.slice(0, 15).map(toProposedRow);
+      const completedPhaseBuckets = buildDashboardPhaseBucketsForTasks(
+        completedTasks,
+        workspaceStatus,
+        toProposedRow,
+        dashboardPhaseTop
+      );
+      const cancelledPhaseBuckets = buildDashboardPhaseBucketsForTasks(
+        cancelledTasks,
+        workspaceStatus,
+        toProposedRow,
+        dashboardPhaseTop
+      );
+
       const dependencyOverview = buildDashboardDependencyOverview(tasks);
 
       const data = {
@@ -707,6 +728,18 @@ export const taskEngineModule: WorkflowModule = {
           count: suggestion.blockingAnalysis.length,
           top: blockedTop,
           phaseBuckets: blockedPhaseBuckets
+        },
+        completedSummary: {
+          schemaVersion: 1 as const,
+          count: completedTasks.length,
+          top: completedTop,
+          phaseBuckets: completedPhaseBuckets
+        },
+        cancelledSummary: {
+          schemaVersion: 1 as const,
+          count: cancelledTasks.length,
+          top: cancelledTop,
+          phaseBuckets: cancelledPhaseBuckets
         },
         suggestedNext: suggestion.suggestedNext
           ? {

@@ -807,6 +807,12 @@ test("taskEngineModule onCommand dashboard-summary returns stable shape", async 
   assert.equal(d.proposedExecutionSummary.schemaVersion, 1);
   assert.equal(d.proposedExecutionSummary.count, 0);
   assert.ok(Array.isArray(d.proposedExecutionSummary.phaseBuckets));
+  assert.equal(d.completedSummary.schemaVersion, 1);
+  assert.equal(d.completedSummary.count, 0);
+  assert.ok(Array.isArray(d.completedSummary.phaseBuckets));
+  assert.equal(d.cancelledSummary.schemaVersion, 1);
+  assert.equal(d.cancelledSummary.count, 0);
+  assert.ok(Array.isArray(d.cancelledSummary.phaseBuckets));
   assert.ok(d.dependencyOverview);
   assert.equal(d.dependencyOverview.schemaVersion, 1);
   assert.equal(d.dependencyOverview.truncated, false);
