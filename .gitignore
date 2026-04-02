@@ -4,6 +4,9 @@ dist/
 .env
 .DS_Store
 artifacts/
+# SQLite WAL sidecars (main .db may be tracked for this repo’s task store)
+.workspace-kit/tasks/*.db-wal
+.workspace-kit/tasks/*.db-shm
 # Optional: omit policy traces from VCS (remove if you want traces committed)
 .workspace-kit/policy/
 .workspace-kit/config/
