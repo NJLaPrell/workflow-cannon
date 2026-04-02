@@ -355,6 +355,6 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 - Phase 35 / `v0.35.0` npm publish: manual **`Publish NPM`** workflow (`publish-npm.yml`) after tag — not tag-triggered
 - Phase 36 / `v0.36.0` GitHub release: `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.36.0`
 - Phase 36 / `v0.36.0` npm publish: manual **`Publish NPM`** workflow (`publish-npm.yml`) after tag — not tag-triggered
-- Phase 37 / `v0.37.0` GitHub release: (tag after merge) — maintainer Phase **37** closeout
+- Phase 37 / `v0.37.0` GitHub release: `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.37.0`
 - Phase 37 / `v0.37.0` npm publish: manual **`Publish NPM`** workflow (`publish-npm.yml`) after tag — not tag-triggered
 - npm package: `https://www.npmjs.com/package/@workflow-cannon/workspace-kit`
