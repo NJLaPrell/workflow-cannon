@@ -27,10 +27,12 @@ import { buildQueueHealthReport, buildQueueHintsForTasks } from "./queue-health.
 import { readBuildPlanSession, toDashboardPlanningSession } from "../../core/planning/build-plan-session-file.js";
 import { openPlanningStores } from "./planning-open.js";
 import { runMigrateWishlistIntake } from "./migrate-wishlist-intake-runtime.js";
+import { runBackupPlanningSqlite } from "./backup-planning-sqlite-runtime.js";
 import { runMigrateTaskPersistence } from "./migrate-task-persistence-runtime.js";
 import { planningSqliteDatabaseRelativePath, planningStrictValidationEnabled } from "./planning-config.js";
 import { validateTaskSetForStrictMode } from "./strict-task-validation.js";
 import { validateKnownTaskTypeRequirements } from "./task-type-validation.js";
+import { readKitSqliteUserVersion } from "../../core/state/workspace-kit-sqlite.js";
 import { UnifiedStateDb } from "../../core/state/unified-state-db.js";
 import type { WishlistItem } from "./wishlist-types.js";
 import {
@@ -121,17 +123,30 @@ export const taskEngineModule: WorkflowModule = {
     if (command.name === "migrate-task-persistence") {
       return runMigrateTaskPersistence(ctx, args as Record<string, unknown>);
     }
+    if (command.name === "backup-planning-sqlite") {
+      return runBackupPlanningSqlite(ctx, args as Record<string, unknown>);
+    }
     if (command.name === "migrate-wishlist-intake") {
       return runMigrateWishlistIntake(ctx, args as Record<string, unknown>);
     }
     if (command.name === "list-module-states" || command.name === "get-module-state") {
       const unified = new UnifiedStateDb(ctx.workspacePath, planningSqliteDatabaseRelativePath(ctx));
+      const dbAbs = unified.dbPath;
+      let kitSqliteUserVersion: number | null = null;
+      try {
+        const fs = await import("node:fs");
+        if (fs.existsSync(dbAbs)) {
+          kitSqliteUserVersion = readKitSqliteUserVersion(dbAbs);
+        }
+      } catch {
+        kitSqliteUserVersion = null;
+      }
       if (command.name === "list-module-states") {
         return {
           ok: true,
           code: "module-states-listed",
           message: "Listed module state rows",
-          data: { rows: unified.listModuleStates() }
+          data: { rows: unified.listModuleStates(), kitSqliteUserVersion }
         };
       }
       const moduleId = typeof args.moduleId === "string" ? args.moduleId.trim() : "";

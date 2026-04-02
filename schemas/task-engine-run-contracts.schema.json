@@ -6,13 +6,13 @@
   "type": "object",
   "required": ["schemaVersion", "packageVersion", "moduleId", "commands"],
   "additionalProperties": false,
-  "packageVersion": "0.37.0",
+  "packageVersion": "0.39.0",
   "properties": {
     "schemaVersion": {
       "const": 1
     },
     "packageVersion": {
-      "const": "0.37.0",
+      "const": "0.39.0",
       "description": "Must match package.json version."
     },
     "moduleId": {
@@ -27,6 +27,7 @@
         "update-wishlist",
         "archive-task",
         "add-dependency",
+        "backup-planning-sqlite",
         "remove-dependency",
         "get-dependency-graph",
         "get-task-history",
@@ -60,6 +61,7 @@
         "update-wishlist": { "$ref": "#/$defs/contractUpdateWishlist" },
         "archive-task": { "$ref": "#/$defs/contractArchiveTask" },
         "add-dependency": { "$ref": "#/$defs/contractDependencyMutation" },
+        "backup-planning-sqlite": { "$ref": "#/$defs/contractBackupPlanningSqlite" },
         "remove-dependency": { "$ref": "#/$defs/contractDependencyMutation" },
         "get-dependency-graph": { "$ref": "#/$defs/contractDependencyGraph" },
         "get-task-history": { "$ref": "#/$defs/contractTaskHistory" },
@@ -678,6 +680,32 @@
             "responseData": {
               "type": "object",
               "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractBackupPlanningSqlite": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "required": ["outputPath"],
+              "additionalProperties": true,
+              "properties": {
+                "outputPath": { "type": "string" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["source", "destination"],
+              "additionalProperties": true,
+              "properties": {
+                "source": { "type": "string" },
+                "destination": { "type": "string" }
+              }
             }
           }
         }

@@ -1,15 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
-
-const DDL = `
-CREATE TABLE IF NOT EXISTS workspace_module_state (
-  module_id TEXT PRIMARY KEY,
-  state_schema_version INTEGER NOT NULL,
-  state_json TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-);
-`;
+import { prepareKitSqliteDatabase } from "./workspace-kit-sqlite.js";
 
 export type ModuleStateRow = {
   moduleId: string;
@@ -38,8 +30,7 @@ export class UnifiedStateDb {
     if (this.db) return this.db;
     fs.mkdirSync(path.dirname(this.dbPath), { recursive: true });
     this.db = new Database(this.dbPath);
-    this.db.pragma("journal_mode = WAL");
-    this.db.exec(DDL);
+    prepareKitSqliteDatabase(this.db);
     return this.db;
   }
 

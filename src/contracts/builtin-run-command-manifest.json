@@ -312,6 +312,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "backup-planning-sqlite",
+    "file": "backup-planning-sqlite.md",
+    "description": "Online backup of the planning SQLite DB via better-sqlite3 (preferred over raw file copy under write load).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "list-module-states",
     "file": "list-module-states.md",
     "description": "List unified SQLite module-state rows for diagnostics and migration verification.",

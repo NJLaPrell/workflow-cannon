@@ -75,6 +75,18 @@ export async function validatePlanningPersistenceForDoctor(
   }
 
   try {
+    const qcRows = db.prepare("PRAGMA quick_check").all() as Record<string, unknown>[];
+    for (const row of qcRows) {
+      const cell = Object.values(row)[0];
+      if (typeof cell === "string" && cell.toLowerCase() !== "ok") {
+        issues.push({
+          path: relDisplay,
+          reason: `sqlite-quick_check-failed: ${cell} — see docs/maintainers/runbooks/native-sqlite-consumer-install.md`
+        });
+        return issues;
+      }
+    }
+
     const cols = db.prepare("PRAGMA table_info(workspace_planning_state)").all() as { name: string }[];
     const hasWishlist = cols.some((c) => c.name === "wishlist_store_json");
     const row = hasWishlist

@@ -32,6 +32,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
   assert.deepEqual(commandNames, [
     "add-dependency",
     "archive-task",
+    "backup-planning-sqlite",
     "convert-wishlist",
     "create-behavior-profile",
     "create-task",

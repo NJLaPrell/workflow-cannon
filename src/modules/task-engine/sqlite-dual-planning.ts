@@ -1,17 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
+import { prepareKitSqliteDatabase } from "../../core/state/workspace-kit-sqlite.js";
 import type { TaskStoreDocument } from "./types.js";
 import type { WishlistStoreDocument } from "./wishlist-types.js";
 import { TaskEngineError } from "./transitions.js";
 import { normalizeTaskStoreDocumentFromUnknown } from "./task-store-migration.js";
-
-const TASK_ONLY_DDL = `
-CREATE TABLE IF NOT EXISTS workspace_planning_state (
-  id INTEGER PRIMARY KEY CHECK (id = 1),
-  task_store_json TEXT NOT NULL
-);
-`;
 
 function emptyTaskStoreDocument(): TaskStoreDocument {
   return {
@@ -77,23 +71,9 @@ export class SqliteDualPlanningStore {
     }
     const dir = path.dirname(this.dbPath);
     fs.mkdirSync(dir, { recursive: true });
-    const fileExisted = fs.existsSync(this.dbPath);
     this.db = new Database(this.dbPath);
-    this.db.pragma("journal_mode = WAL");
-    if (!fileExisted) {
-      this.db.exec(TASK_ONLY_DDL);
-      this._tableShape = "task-only";
-    } else {
-      const master = this.db
-        .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='workspace_planning_state'")
-        .get() as { name: string } | undefined;
-      if (!master) {
-        this.db.exec(TASK_ONLY_DDL);
-        this._tableShape = "task-only";
-      } else {
-        this._tableShape = detectTableShape(this.db);
-      }
-    }
+    prepareKitSqliteDatabase(this.db);
+    this._tableShape = detectTableShape(this.db);
     return this.db;
   }
 

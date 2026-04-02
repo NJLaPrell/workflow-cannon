@@ -3,6 +3,7 @@
   "excludedRunCommands": [
     "add-dependency",
     "archive-task",
+    "backup-planning-sqlite",
     "convert-wishlist",
     "create-task-from-plan",
     "create-wishlist",

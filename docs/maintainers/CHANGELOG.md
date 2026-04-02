@@ -8,6 +8,24 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.39.0] - 2026-04-02
+
+Phase 39 — SQLite persistence hardening (schema versioning, integrity, backup, operator docs).
+
+### Added
+
+- **Centralized kit SQLite migrations** — **`PRAGMA user_version`** with baseline DDL for **`workspace_planning_state`** + **`workspace_module_state`** on open (**`src/core/state/workspace-kit-sqlite.ts`**); shared **`busy_timeout`** (10s) + WAL.
+- **`workspace-kit run backup-planning-sqlite`** — Online backup of the planning DB via **`better-sqlite3`** (**`backup-planning-sqlite-runtime.ts`**).
+- **`workspace-kit doctor`** — **`PRAGMA quick_check`** for configured SQLite planning DB; persistence summary includes **Kit SQLite schema (`user_version`)** when the file exists.
+- **`list-module-states`** — Response includes **`kitSqliteUserVersion`**.
+- **ADR** — **`docs/maintainers/ADR-json-persistence-deprecation.md`** (JSON opt-out deprecation direction + future semver-major removal).
+- **Runbook** — **`docs/maintainers/runbooks/json-to-sqlite-one-shot-upgrade.md`**.
+- **Exports** — **`KIT_SQLITE_USER_VERSION`**, **`prepareKitSqliteDatabase`**, **`readKitSqliteUserVersion`** from **`@workflow-cannon/workspace-kit`** core entry.
+
+### Docs
+
+- **`task-persistence-operator.md`** — backup, **`quick_check`**, **`user_version`**, concurrency notes.
+
 ## [0.37.0] - 2026-04-02
 
 Phase 37 — maintainer onboarding clarity, shell JSON guidance, improvement churn closure, and dashboard parity for terminal task statuses.

@@ -2,6 +2,9 @@
 /**
  * Evidence bundle exporter (maintainer / audit). Allowlisted paths only; optional redaction for common token patterns.
  * Usage: node scripts/export-evidence-bundle.mjs [--dry-run] [--out artifacts/evidence-bundle.zip]
+ *
+ * Optional: run `workspace-kit run backup-planning-sqlite '{"outputPath":"artifacts/planning-snapshot.db"}'`
+ * before zipping if you want an online-backup snapshot of the planning DB under concurrent writes.
  */
 import fs from "node:fs";
 import path from "node:path";

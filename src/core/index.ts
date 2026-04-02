@@ -137,5 +137,10 @@ export {
   readLineageEvents
 } from "./lineage-store.js";
 export { UnifiedStateDb, type ModuleStateRow } from "./state/unified-state-db.js";
+export {
+  KIT_SQLITE_USER_VERSION,
+  prepareKitSqliteDatabase,
+  readKitSqliteUserVersion
+} from "./state/workspace-kit-sqlite.js";
 
 export type CoreRuntimeVersion = "0.1";

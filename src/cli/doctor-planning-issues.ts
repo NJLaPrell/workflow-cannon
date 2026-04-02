@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 import type { ModuleLifecycleContext } from "../contracts/module-contract.js";
 import { resolveRegistryAndConfig } from "../core/module-registry-resolve.js";
@@ -10,6 +11,7 @@ import {
   planningTaskStoreRelativePath,
   planningWishlistStoreRelativePath
 } from "../modules/task-engine/planning-config.js";
+import { readKitSqliteUserVersion } from "../core/state/workspace-kit-sqlite.js";
 import { DEFAULT_TASK_STORE_PATH } from "../modules/task-engine/store.js";
 import { DEFAULT_WISHLIST_PATH } from "../modules/task-engine/wishlist-store.js";
 import { defaultRegistryModules } from "../modules/index.js";
@@ -84,6 +86,15 @@ export async function collectTaskPersistenceDoctorSummaryLines(cwd: string): Pro
     } as ModuleLifecycleContext);
     const rel = path.relative(cwd, path.resolve(cwd, dbRel)) || dbRel;
     lines.push(`Effective task persistence: sqlite — DB path: ${rel}`);
+    const dbAbs = path.resolve(cwd, dbRel);
+    if (fs.existsSync(dbAbs)) {
+      try {
+        const uv = readKitSqliteUserVersion(dbAbs);
+        lines.push(`Kit SQLite schema (PRAGMA user_version): ${uv}`);
+      } catch {
+        lines.push("Kit SQLite schema (PRAGMA user_version): unavailable");
+      }
+    }
     lines.push("Native SQLite help: docs/maintainers/runbooks/native-sqlite-consumer-install.md");
     lines.push("Backend paths + recovery: docs/maintainers/runbooks/task-persistence-operator.md");
   } else {
