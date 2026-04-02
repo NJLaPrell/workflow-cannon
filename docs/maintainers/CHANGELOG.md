@@ -26,6 +26,16 @@ Phase 39 — SQLite persistence hardening (schema versioning, integrity, backup,
 
 - **`task-persistence-operator.md`** — backup, **`quick_check`**, **`user_version`**, concurrency notes.
 
+## [0.38.0] - 2026-04-02
+
+Phase 38 — maintainer **kit phase** slice (**`current_kit_phase` 38** in `docs/maintainers/data/workspace-kit-status.yaml`) with **no separate `@workflow-cannon/workspace-kit` npm release**. The published line stayed at **v0.37.0** until **v0.39.0** (Phase 39). This version exists for **phase ↔ semver alignment** in history and tags.
+
+### Notes
+
+- **Queue / docs** — ROADMAP and maintainer snapshots advanced toward Phase 39 (e.g. **v0.37.0** release evidence on **`main`**); no consumer-facing package bump.
+- **Install** — Use **v0.37.0** or **v0.39.0** on npm; **v0.38.0** is not published to the registry.
+- **Git tag** — **`v0.38.0`** marks the last **`main`** commit before the **v0.39.0** Phase 39 implementation merge (checkpoint only; that tree still reports **`0.37.0`** in **`package.json`**).
+
 ## [0.37.0] - 2026-04-02
 
 Phase 37 — maintainer onboarding clarity, shell JSON guidance, improvement churn closure, and dashboard parity for terminal task statuses.
