@@ -197,6 +197,6 @@ export const exampleModule: WorkflowModule = {
 - `src/modules/README.md`
 - `src/contracts/module-contract.ts`
 - `src/core/module-registry.ts`
-- `.workspace-kit/tasks/state.json`
+- Configured task store (default `.workspace-kit/tasks/workspace-kit.db`; see **`docs/maintainers/runbooks/task-persistence-operator.md`**)
 
 - `docs/maintainers/RELEASING.md`

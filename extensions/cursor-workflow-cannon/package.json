@@ -131,6 +131,9 @@
     "package": "pnpm run compile",
     "test": "pnpm run compile && node --test test/**/*.test.mjs"
   },
+  "dependencies": {
+    "@workflow-cannon/workspace-kit": "workspace:^"
+  },
   "devDependencies": {
     "@types/node": "^22.10.0",
     "typescript": "^5.9.3"

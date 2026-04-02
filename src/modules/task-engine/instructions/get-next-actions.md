@@ -28,4 +28,4 @@ A `NextActionSuggestion` object containing:
 
 ## Agent Usage
 
-Use this command to decide what to work on next without manually inspecting .workspace-kit/tasks/state.json. The `suggestedNext` field gives you the single best task to start.
+Use this command to decide what to work on next without manually opening the raw task store (default SQLite `.workspace-kit/tasks/workspace-kit.db`; JSON `.workspace-kit/tasks/state.json` only when opted in / legacy). The `suggestedNext` field gives you the single best task to start.

@@ -45,6 +45,17 @@ function buildBuiltinCommandToOperation(): Record<string, PolicyOperationId | un
 
 const COMMAND_TO_OPERATION: Record<string, PolicyOperationId | undefined> = buildBuiltinCommandToOperation();
 
+/** Shipped `workspace-kit run` sensitivity: single manifest-derived map (see `builtin-run-command-manifest.json`). */
+const COMMAND_POLICY_SENSITIVITY = new Map(
+  BUILTIN_RUN_COMMAND_MANIFEST.map((r) => [r.name, r.policySensitivity] as const)
+);
+
+export function getPolicySensitivityForBuiltinCommand(
+  commandName: string
+): "non-sensitive" | "sensitive" | "sensitive-with-dryrun" | undefined {
+  return COMMAND_POLICY_SENSITIVITY.get(commandName);
+}
+
 export function getOperationIdForCommand(commandName: string): PolicyOperationId | undefined {
   return COMMAND_TO_OPERATION[commandName];
 }
@@ -77,16 +88,18 @@ export function resolvePolicyOperationIdForCommand(
 }
 
 /**
- * Sensitive when mutation / write is possible. Documentation commands are exempt when dryRun is true.
+ * Sensitive per shipped manifest `policySensitivity`.
+ * `sensitive-with-dryrun` (documentation generators) is waived when `options.dryRun === true`.
  */
 export function isSensitiveModuleCommand(
   commandName: string,
   args: Record<string, unknown>
 ): boolean {
-  const op = COMMAND_TO_OPERATION[commandName];
-  if (!op) return false;
-
-  if (op === "doc.document-project" || op === "doc.generate-document") {
+  const sens = COMMAND_POLICY_SENSITIVITY.get(commandName);
+  if (!sens || sens === "non-sensitive") {
+    return false;
+  }
+  if (sens === "sensitive-with-dryrun") {
     const options =
       typeof args.options === "object" && args.options !== null
         ? (args.options as Record<string, unknown>)
@@ -95,7 +108,6 @@ export function isSensitiveModuleCommand(
       return false;
     }
   }
-
   return true;
 }
 

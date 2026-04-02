@@ -8,6 +8,6 @@ alwaysApply: false
 When context may be stale:
 
 1. Open **`.ai/LONG-SESSION-RELOAD.md`** (agent checklist).
-2. Run `pnpm run wk doctor` and `pnpm run wk -- run get-next-actions '{}'` from repo root.
+2. Run `pnpm run wk doctor` and `pnpm run wk run get-next-actions '{}'` from repo root (do not insert `pnpm`'s `--` between `wk` and `run`).
 3. Do not trust chat memory for task `status`; use task-engine CLI reads.
 4. Maintainer narrative (optional): `docs/maintainers/runbooks/cursor-long-session.md`.

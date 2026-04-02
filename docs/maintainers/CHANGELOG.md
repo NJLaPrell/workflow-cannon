@@ -8,6 +8,28 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.43.0] - 2026-04-02
+
+Phase 43 — **platform and maintainability refactors** (`T548`–`T555`).
+
+### Added
+
+- **`assign-task-phase`** / **`clear-task-phase`** — narrow phase mutations with instructions and tests; maintainer script **`scripts/apply-ready-task-phase-buckets.mjs`** now shells these instead of generic **`update-task`**.
+- **Runbook** — **`docs/maintainers/runbooks/kit-sqlite-schema-migrations.md`** (single **`prepareKitSqliteDatabase`** / **`user_version`** story across kit SQLite surfaces).
+- **Shared types** — **`src/contracts/dashboard-summary-run.ts`** exported as **`@workflow-cannon/workspace-kit/contracts/dashboard-summary-run`** for **`extensions/cursor-workflow-cannon`**.
+- **CI guard** — **`scripts/check-maintainer-doc-canonicals.mjs`** (no stale “state.json as primary” table line; no **`pnpm run wk -- run`** in maintainer-facing docs).
+
+### Changed
+
+- **Task engine** — wishlist commands moved to **`task-engine-wishlist-on-command.ts`**; **`dashboard-summary`** to **`task-engine-dashboard-on-command.ts`**; policy sensitivity continues to track **`builtin-run-command-manifest.json`**.
+- **CLI** — profile / drift / owned-path helpers extracted to **`src/cli/profile-support.ts`** and baseline content to **`src/cli/profile-baseline-content.ts`** (**`cli.ts`** slimmer).
+- **Docs** — SQLite-default task persistence wording aligned across maintainer README templates, workbooks, **`.ai`**, Cursor rules (**`pnpm run wk run`** — no `--` between **`wk`** and **`run`**); **`AGENT-CLI-MAP.md`** copy-paste for phase commands.
+- **Compatibility matrix** — **`task-engine`** module **`0.9.0`**.
+
+### Docs
+
+- **Task Engine run contracts** — **`schemas/task-engine-run-contracts.schema.json`** **`0.43.0`**.
+
 ## [0.42.0] - 2026-04-02
 
 Phase 42 — **maintainer workspace phase snapshot CLI** (`T546`, `T547`).

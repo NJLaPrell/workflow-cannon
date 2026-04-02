@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import type { DashboardSummaryCommandSuccess } from "@workflow-cannon/workspace-kit/contracts/dashboard-summary-run";
 import type { CommandClient } from "../../runtime/command-client.js";
 import { escapeHtml, renderDashboardRootInnerHtml } from "./render-dashboard.js";
 
@@ -70,9 +71,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     const { webview } = this.view;
-    let raw: Record<string, unknown>;
+    let raw: DashboardSummaryCommandSuccess | Record<string, unknown>;
     try {
-      raw = (await this.client.run("dashboard-summary", {})) as Record<string, unknown>;
+      raw = (await this.client.run("dashboard-summary", {})) as DashboardSummaryCommandSuccess | Record<string, unknown>;
     } catch (e) {
       raw = {
         ok: false,

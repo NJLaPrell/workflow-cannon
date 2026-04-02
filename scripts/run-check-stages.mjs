@@ -67,6 +67,13 @@ const stages = [
     command: process.execPath,
     args: ["scripts/check-governance-doc-order.mjs"],
     hint: "If you reorder docs/maintainers/AGENTS.md § Source-of-truth, update scripts/fixtures/governance-doc-order.json."
+  },
+  {
+    id: "maintainer-doc-canonicals",
+    label: "Maintainer doc canon (task store + pnpm wk invocation)",
+    command: process.execPath,
+    args: ["scripts/check-maintainer-doc-canonicals.mjs"],
+    hint: "Fix stale state.json-as-primary lines or `pnpm run wk -- run` examples; see scripts/check-maintainer-doc-canonicals.mjs."
   }
 ];
 

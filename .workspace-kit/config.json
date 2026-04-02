@@ -1,7 +1,7 @@
 {
   "kit": {
-    "currentPhaseNumber": 43,
-    "currentPhaseLabel": "Phase 43 — platform and maintainability refactors"
+    "currentPhaseNumber": 44,
+    "currentPhaseLabel": "Phase 44 — next (plan in ROADMAP; Phase 43 shipped v0.43.0)"
   },
   "tasks": {
     "persistenceBackend": "sqlite",

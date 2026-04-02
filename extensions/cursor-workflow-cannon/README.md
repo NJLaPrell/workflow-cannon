@@ -1,6 +1,6 @@
 # Workflow Cannon — Cursor / VS Code extension
 
-Thin UI over `workspace-kit`: **no direct edits** to `.workspace-kit/tasks/state.json` or config files.
+Thin UI over `workspace-kit`: **no direct edits** to the task store (default SQLite `.workspace-kit/tasks/workspace-kit.db`) or config files.
 
 ## Dev setup
 
@@ -11,7 +11,7 @@ pnpm install
 pnpm run ui:prepare
 ```
 
-**Types:** `@types/vscode` is a **root** `devDependency` so TypeScript resolves `import … from "vscode"` when you compile from the workspace. Always install from the repo root first.
+**Types:** `@types/vscode` is a **root** `devDependency` so TypeScript resolves `import … from "vscode"` when you compile from the workspace. Always install from the repo root first. **`dashboard-summary`** JSON shapes are imported from **`@workflow-cannon/workspace-kit/contracts/dashboard-summary-run`** (workspace dependency — keep in sync with the kit implementation).
 
 One-key launch in Cursor/VS Code:
 

@@ -10,7 +10,7 @@ Design workbook for Phase 1 Task Engine core. All decisions in this document are
 | --- | --- | --- |
 | Scope | Dogfood on own tasks + design API for external consumers | Proves the engine on real work while keeping the contract general |
 | Task-state role | Engine-owned canonical task store (default **SQLite** planning row; JSON file opt-out) | Engine owns execution state directly; see `tasks.persistenceBackend` |
-| Persistence | Default SQLite (`workspace_planning_state.task_store_json`); optional JSON at `.workspace-kit/tasks/state.json` when `tasks.persistenceBackend: json` | Durable between runs; aligns with unified planning DB |
+| Persistence | Default SQLite (relational task rows + planning envelope); `.workspace-kit/tasks/state.json` is legacy import / `migrate-task-persistence` only (`tasks.persistenceBackend: "json"` is invalid at runtime) | Durable between runs; aligns with unified planning DB |
 | Agent integration | Full: CLI dispatch + instruction files + engine reads context and suggests next actions | Agents need discoverability, not just raw dispatch |
 | Dependency behavior | Auto-unblock: dependents move `blocked → ready` when all deps complete | Reduces manual bookkeeping, matches how we actually work |
 | Guard complexity | Full guards: state validation + dependency checks + custom guard hooks | Hooks let modules register pre-transition validators from day one |
@@ -156,7 +156,7 @@ type TransitionContext = {
 
 ### Store location
 
-JSON opt-out: `.workspace-kit/tasks/state.json` (when `tasks.persistenceBackend: json`). Default kit layout uses SQLite (`.workspace-kit/tasks/workspace-kit.db`) with embedded JSON documents — see **`docs/maintainers/runbooks/task-persistence-operator.md`**.
+JSON at `.workspace-kit/tasks/state.json` is **legacy import / migration** only; runtime default is SQLite (`.workspace-kit/tasks/workspace-kit.db`). See **`docs/maintainers/runbooks/task-persistence-operator.md`**.
 
 Configurable via `src/modules/task-engine/config.md` / `tasks` keys.
 
@@ -249,9 +249,9 @@ Commands exposed via module command router (`workspace-kit run <command>`):
 
 ## 9. Canonical task state
 
-The task system persists canonical execution state in `.workspace-kit/tasks/state.json`.
+The task engine persists canonical execution state in the **configured task store** (default **SQLite** under `tasks.sqliteDatabaseRelativePath`, usually `.workspace-kit/tasks/workspace-kit.db`). A JSON file at `.workspace-kit/tasks/state.json` remains as a **legacy import path** for `migrate-task-persistence`, not the default runtime primary.
 
-This JSON state is the single source of truth for:
+That store is the single source of truth for:
 
 - task lifecycle status
 - dependency relationships
@@ -262,7 +262,7 @@ This JSON state is the single source of truth for:
 
 ## 10. Migration Strategy
 
-Migration from markdown task tracking is complete. New execution tracking changes must be made directly in `.workspace-kit/tasks/state.json` through task-system commands and transitions.
+Migration from markdown task tracking is complete. New execution changes go through **task-engine commands** (`run-transition`, `update-task`, etc.) against the live store — not ad-hoc JSON edits except documented recovery.
 
 ---
 

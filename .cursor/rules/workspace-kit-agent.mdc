@@ -10,7 +10,7 @@ Apply when editing `docs/maintainers/ROADMAP.md`, task-engine task state, `docs/
 ## Start-of-session checks
 
 1. Read **`.ai/WORKSPACE-KIT-SESSION.md`** (agent snapshot protocol).
-2. Run `pnpm run wk doctor` and `pnpm run wk -- run get-next-actions '{}'` from repo root — do **not** require reading `docs/maintainers/ROADMAP.md` for queue facts.
+2. Run `pnpm run wk doctor` and `pnpm run wk run get-next-actions '{}'` from repo root — do **not** require reading `docs/maintainers/ROADMAP.md` for queue facts (avoid `pnpm run wk -- run …`, which forwards a stray `--` to the CLI).
 3. When editing maintainer-only files above, keep wording aligned with task-engine output after changes land.
 
 ## End-of-session updates

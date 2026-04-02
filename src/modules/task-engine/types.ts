@@ -84,7 +84,9 @@ export type TaskMutationType =
   | "archive-task"
   | "add-dependency"
   | "remove-dependency"
-  | "create-task-from-plan";
+  | "create-task-from-plan"
+  | "assign-task-phase"
+  | "clear-task-phase";
 
 export type TaskMutationEvidence = {
   mutationId: string;

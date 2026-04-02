@@ -32,6 +32,10 @@ importers:
         version: 5.9.3
 
   extensions/cursor-workflow-cannon:
+    dependencies:
+      '@workflow-cannon/workspace-kit':
+        specifier: workspace:^
+        version: link:../..
     devDependencies:
       '@types/node':
         specifier: ^22.10.0

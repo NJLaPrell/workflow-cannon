@@ -6,13 +6,13 @@
   "type": "object",
   "required": ["schemaVersion", "packageVersion", "moduleId", "commands"],
   "additionalProperties": false,
-  "packageVersion": "0.42.0",
+  "packageVersion": "0.43.0",
   "properties": {
     "schemaVersion": {
       "const": 1
     },
     "packageVersion": {
-      "const": "0.42.0",
+      "const": "0.43.0",
       "description": "Must match package.json version."
     },
     "moduleId": {
@@ -28,6 +28,7 @@
         "update-workspace-phase-snapshot",
         "archive-task",
         "add-dependency",
+        "assign-task-phase",
         "backup-planning-sqlite",
         "remove-dependency",
         "get-dependency-graph",
@@ -37,6 +38,7 @@
         "get-task-summary",
         "get-blocked-summary",
         "create-task-from-plan",
+        "clear-task-phase",
         "convert-wishlist",
         "create-wishlist",
         "get-wishlist",
@@ -64,6 +66,7 @@
         "update-workspace-phase-snapshot": { "$ref": "#/$defs/contractUpdateWorkspacePhaseSnapshot" },
         "archive-task": { "$ref": "#/$defs/contractArchiveTask" },
         "add-dependency": { "$ref": "#/$defs/contractDependencyMutation" },
+        "assign-task-phase": { "$ref": "#/$defs/contractAssignTaskPhase" },
         "backup-planning-sqlite": { "$ref": "#/$defs/contractBackupPlanningSqlite" },
         "remove-dependency": { "$ref": "#/$defs/contractDependencyMutation" },
         "get-dependency-graph": { "$ref": "#/$defs/contractDependencyGraph" },
@@ -73,6 +76,7 @@
         "get-task-summary": { "$ref": "#/$defs/contractTaskSummary" },
         "get-blocked-summary": { "$ref": "#/$defs/contractBlockedSummary" },
         "create-task-from-plan": { "$ref": "#/$defs/contractCreateTaskFromPlan" },
+        "clear-task-phase": { "$ref": "#/$defs/contractClearTaskPhase" },
         "convert-wishlist": { "$ref": "#/$defs/contractConvertWishlist" },
         "create-wishlist": { "$ref": "#/$defs/contractCreateWishlist" },
         "get-wishlist": { "$ref": "#/$defs/contractGetWishlist" },
@@ -209,6 +213,54 @@
             "responseData": {
               "type": "object",
               "required": ["task", "presentation"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractAssignTaskPhase": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "required": ["taskId", "phaseKey"],
+              "additionalProperties": true,
+              "properties": {
+                "taskId": { "type": "string", "minLength": 1 },
+                "phaseKey": { "type": "string", "minLength": 1 },
+                "phase": { "type": "string" },
+                "clientMutationId": { "type": "string", "minLength": 1 }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["task"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractClearTaskPhase": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "required": ["taskId"],
+              "additionalProperties": true,
+              "properties": {
+                "taskId": { "type": "string", "minLength": 1 },
+                "clientMutationId": { "type": "string", "minLength": 1 }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["task"],
               "additionalProperties": true
             }
           }

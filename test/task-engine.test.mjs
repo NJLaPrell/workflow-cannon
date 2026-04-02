@@ -650,6 +650,8 @@ test("taskEngineModule registration includes all instruction entries", () => {
   assert.ok(names.includes("update-task"));
   assert.ok(names.includes("archive-task"));
   assert.ok(names.includes("add-dependency"));
+  assert.ok(names.includes("assign-task-phase"));
+  assert.ok(names.includes("clear-task-phase"));
   assert.ok(names.includes("remove-dependency"));
   assert.ok(names.includes("get-dependency-graph"));
   assert.ok(names.includes("get-kit-persistence-map"));
@@ -1247,6 +1249,38 @@ test("taskEngineModule create-task and update-task commands persist mutations", 
   const fetched = await taskEngineModule.onCommand({ name: "get-task", args: { taskId: "T400" } }, ctx);
   assert.equal(fetched.ok, true);
   assert.equal(fetched.data.task.title, "Updated task title");
+});
+
+test("taskEngineModule assign-task-phase and clear-task-phase persist", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const created = await taskEngineModule.onCommand(
+    { name: "create-task", args: { id: "T401", title: "Phase test", status: "ready" } },
+    ctx
+  );
+  assert.equal(created.ok, true);
+
+  const assigned = await taskEngineModule.onCommand(
+    {
+      name: "assign-task-phase",
+      args: { taskId: "T401", phaseKey: "43", phase: "Phase 43 (test bucket)" }
+    },
+    ctx
+  );
+  assert.equal(assigned.ok, true);
+  assert.equal(assigned.code, "task-phase-assigned");
+
+  let got = await taskEngineModule.onCommand({ name: "get-task", args: { taskId: "T401" } }, ctx);
+  assert.equal(got.data.task.phaseKey, "43");
+  assert.equal(got.data.task.phase, "Phase 43 (test bucket)");
+
+  const cleared = await taskEngineModule.onCommand({ name: "clear-task-phase", args: { taskId: "T401" } }, ctx);
+  assert.equal(cleared.ok, true);
+  assert.equal(cleared.code, "task-phase-cleared");
+
+  got = await taskEngineModule.onCommand({ name: "get-task", args: { taskId: "T401" } }, ctx);
+  assert.equal(got.data.task.phase, undefined);
+  assert.equal(got.data.task.phaseKey, undefined);
 });
 
 test("taskEngineModule create-task validates known requirements for improvement type", async () => {

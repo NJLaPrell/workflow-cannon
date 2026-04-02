@@ -27,7 +27,7 @@ Human playbook: `docs/maintainers/playbooks/improvement-triage-top-three.md`.
 
 Recommendation tasks carry **`metadata.confidenceTier`** (`high` / `medium` / `low`). Filter with:
 
-`pnpm run wk -- run list-tasks '{"type":"improvement","status":"ready","confidenceTier":"medium"}'`
+`pnpm run wk run list-tasks '{"type":"improvement","status":"ready","confidenceTier":"medium"}'`
 
 ## Long-session reload
 

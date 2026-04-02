@@ -160,6 +160,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "assign-task-phase",
+    "file": "assign-task-phase.md",
+    "description": "Set task phaseKey and phase label (maintainer bucket) without generic update-task.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "remove-dependency",
     "file": "remove-dependency.md",
     "description": "Remove a dependency edge between tasks.",
@@ -219,6 +227,14 @@
     "name": "create-task-from-plan",
     "file": "create-task-from-plan.md",
     "description": "Promote planning output into a canonical task.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "clear-task-phase",
+    "file": "clear-task-phase.md",
+    "description": "Remove phase and phaseKey from a task.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },

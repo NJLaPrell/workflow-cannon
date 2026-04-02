@@ -7,7 +7,7 @@
 Use `workspace-kit run run-transition` with JSON **`policyApproval`** as the **third** CLI argument (not chat-only approval).
 
 ```bash
-pnpm run wk -- run run-transition '{"taskId":"T###","action":"start","policyApproval":{"confirmed":true,"rationale":"begin work"}}'
+pnpm run wk run run-transition '{"taskId":"T###","action":"start","policyApproval":{"confirmed":true,"rationale":"begin work"}}'
 ```
 
 ## Tier B — sensitive `workspace-kit run` (non-transition)
@@ -24,4 +24,4 @@ For `workspace-kit config`, `init`, and `upgrade`, approval may use env **`WORKS
 
 ## Discovery without dumping catalogs
 
-Prefer `pnpm run wk -- run` with no subcommand for a short command list, then open `src/modules/<module>/instructions/<command>.md` for the specific surface. Avoid pasting full `doctor` JSON catalogs into chat unless debugging.
+Prefer `pnpm run wk run` with no subcommand for a short command list, then open `src/modules/<module>/instructions/<command>.md` for the specific surface. Avoid pasting full `doctor` JSON catalogs into chat unless debugging.

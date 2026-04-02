@@ -53,6 +53,7 @@ export {
   appendPolicyTrace,
   getExtraSensitiveModuleCommandsFromEffective,
   getOperationIdForCommand,
+  getPolicySensitivityForBuiltinCommand,
   isSensitiveModuleCommand,
   isSensitiveModuleCommandForEffective,
   parsePolicyApproval,

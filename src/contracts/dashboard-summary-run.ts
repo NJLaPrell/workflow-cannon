@@ -1,0 +1,81 @@
+/**
+ * Shared contract for `workspace-kit run dashboard-summary` success payloads.
+ * Consumed by the Cursor extension webview renderer; keep aligned with `task-engine-dashboard-on-command.ts`.
+ */
+
+export type DashboardTaskRow = {
+  id: string;
+  title: string;
+  priority?: string | null;
+  phase?: string | null;
+};
+
+export type DashboardWishlistRow = {
+  id: string;
+  title: string;
+};
+
+export type DashboardBlockedRow = {
+  taskId?: string;
+  blockedBy?: string[];
+  [key: string]: unknown;
+};
+
+export type DashboardPhaseBucket = Record<string, unknown>;
+
+export type DashboardListSummary = {
+  schemaVersion: 1;
+  count: number;
+  top: DashboardTaskRow[];
+  phaseBuckets: DashboardPhaseBucket[];
+};
+
+export type DashboardSummaryData = {
+  schemaVersion: 1;
+  taskStoreLastUpdated: string;
+  workspaceStatus: Record<string, unknown> | null;
+  planningSession: unknown;
+  stateSummary: Record<string, unknown>;
+  proposedImprovementsSummary: DashboardListSummary;
+  proposedExecutionSummary: DashboardListSummary;
+  readyImprovementsSummary: DashboardListSummary;
+  readyExecutionSummary: DashboardListSummary;
+  readyQueueTop: DashboardTaskRow[];
+  readyQueueCount: number;
+  readyQueueBreakdown: {
+    schemaVersion: 1;
+    improvement: number;
+    other: number;
+  };
+  executionPlanningScope: "tasks-only";
+  wishlist: {
+    schemaVersion: 1;
+    openCount: number;
+    totalCount: number;
+    openTop: DashboardWishlistRow[];
+  };
+  blockedSummary: {
+    count: number;
+    top: DashboardBlockedRow[];
+    phaseBuckets: DashboardPhaseBucket[];
+  };
+  completedSummary: DashboardListSummary;
+  cancelledSummary: DashboardListSummary;
+  suggestedNext: {
+    id: string;
+    title: string;
+    status: string;
+    priority?: string | null;
+    phase?: string | null;
+  } | null;
+  dependencyOverview: Record<string, unknown>;
+  blockingAnalysis: unknown[];
+};
+
+/** Success envelope for `dashboard-summary` (extension + tooling). */
+export type DashboardSummaryCommandSuccess = {
+  ok: true;
+  code: "dashboard-summary";
+  message: string;
+  data: DashboardSummaryData;
+};

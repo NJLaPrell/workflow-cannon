@@ -6,6 +6,8 @@ Single maintainer reference for **what agents must run in a terminal** when work
 
 **Related:** `docs/maintainers/POLICY-APPROVAL.md` (approval semantics), `docs/maintainers/TERMS.md` (terminology), module instructions under `src/modules/*/instructions/*.md` (exact JSON fields per command).
 
+**Cursor extension (monorepo):** TypeScript shapes for **`dashboard-summary`** success payloads are shared from **`@workflow-cannon/workspace-kit/contracts/dashboard-summary-run`** (see `extensions/cursor-workflow-cannon/README.md`).
+
 ## 30-second bootstrap (run this first)
 
 If a session might touch `.workspace-kit/` state, lifecycle transitions, policy traces, approvals, or generated maintainer docs, run this first:
@@ -213,6 +215,8 @@ workspace-kit run list-tasks '{"type":"improvement","confidenceTier":"medium"}'
 workspace-kit run list-tasks '{"status":"blocked","blockedReasonCategory":"external_dependency"}'
 workspace-kit run create-task '{"id":"T900","title":"retry-safe mutation","status":"ready","clientMutationId":"agent-run-20260327-1"}'
 workspace-kit run update-task '{"taskId":"T900","updates":{"title":"retry-safe mutation v2"},"clientMutationId":"agent-run-20260327-2"}'
+workspace-kit run assign-task-phase '{"taskId":"T900","phaseKey":"43","phase":"Phase 43 (example)","clientMutationId":"agent-run-phase-1"}'
+workspace-kit run clear-task-phase '{"taskId":"T900","clientMutationId":"agent-run-phase-2"}'
 workspace-kit run update-workspace-phase-snapshot '{"currentKitPhase":"43","nextKitPhase":"44","dryRun":true}'
 workspace-kit run explain-task-engine-model '{}'
 workspace-kit run list-planning-types '{}'

@@ -2,6 +2,8 @@
 /**
  * Bucket ready tasks into phaseKey 34 / 35 / 36 with stable phase labels.
  * Idempotent if re-run with same mapping.
+ *
+ * Uses `assign-task-phase` (narrow mutation + evidence) instead of generic `update-task`.
  */
 import { execFileSync } from "node:child_process";
 import path from "node:path";
@@ -79,23 +81,26 @@ function main() {
   if (extra.length) throw new Error(`Ready tasks not in script (add to a bucket): ${extra.join(", ")}`);
 
   for (const id of P34) {
-    run("update-task", {
+    run("assign-task-phase", {
       taskId: id,
-      updates: { phase: LABEL["34"], phaseKey: "34" },
+      phaseKey: "34",
+      phase: LABEL["34"],
       actor: "phase-bucket-script"
     });
   }
   for (const id of P35) {
-    run("update-task", {
+    run("assign-task-phase", {
       taskId: id,
-      updates: { phase: LABEL["35"], phaseKey: "35" },
+      phaseKey: "35",
+      phase: LABEL["35"],
       actor: "phase-bucket-script"
     });
   }
   for (const id of P36) {
-    run("update-task", {
+    run("assign-task-phase", {
       taskId: id,
-      updates: { phase: LABEL["36"], phaseKey: "36" },
+      phaseKey: "36",
+      phase: LABEL["36"],
       actor: "phase-bucket-script"
     });
   }
