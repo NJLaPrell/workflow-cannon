@@ -30,6 +30,10 @@ Phase 43 — **platform and maintainability refactors** (`T548`–`T555`).
 
 - **Task Engine run contracts** — **`schemas/task-engine-run-contracts.schema.json`** **`0.43.0`**.
 
+### Fixed
+
+- **`package.json` `exports`** — include **`./package.json`** so parity / fixture smoke can resolve the manifest (Node **exports** is otherwise exclusive).
+
 ## [0.42.0] - 2026-04-02
 
 Phase 42 — **maintainer workspace phase snapshot CLI** (`T546`, `T547`).

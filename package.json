@@ -16,7 +16,8 @@
   "main": "dist/index.js",
   "exports": {
     ".": "./dist/index.js",
-    "./contracts/dashboard-summary-run": "./dist/contracts/dashboard-summary-run.js"
+    "./contracts/dashboard-summary-run": "./dist/contracts/dashboard-summary-run.js",
+    "./package.json": "./package.json"
   },
   "bin": {
     "workspace-kit": "dist/cli.js",
