@@ -75,7 +75,8 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "set-active-behavior-profile",
     "update-behavior-profile",
     "update-task",
-    "update-wishlist"
+    "update-wishlist",
+    "update-workspace-phase-snapshot"
   ]);
 });
 

@@ -128,6 +128,14 @@ Default task persistence uses **`better-sqlite3`**. **`workspace-kit doctor`** s
    workspace-kit config set improvement.cadence.minIntervalMinutes 30 --json
    ```
 
+## Workspace phase snapshot (maintainers)
+
+`docs/maintainers/data/workspace-kit-status.yaml` carries **`current_kit_phase`** and **`next_kit_phase`** for dashboards and phase hints. That snapshot is **not** the task-engine queue: each task has its own **`phaseKey`** / **`phase`** string in the configured task store.
+
+- **Preferred mutation:** `workspace-kit run update-workspace-phase-snapshot '{"currentKitPhase":"N","nextKitPhase":"M"}'` (optional fields; `dryRun` supported; see `src/modules/task-engine/instructions/update-workspace-phase-snapshot.md`).
+- **Config alignment:** when **`kit.currentPhaseNumber`** is set in workspace config, it must match **`current_kit_phase`** or **`workspace-kit doctor`** reports **`kit-phase-config-status-yaml-mismatch`**.
+- **Recovery:** hand-editing the YAML is only for documented recovery; use the CLI for normal phase bumps (see [`playbooks/phase-closeout-and-release.md`](./playbooks/phase-closeout-and-release.md)).
+
 ## Agent behavior profiles (advisory)
 
 Optional **interaction posture** (how to collaborate in chat) via the **`agent-behavior`** module. Profiles are **not** permission to skip policy, approvals, or PRINCIPLES.

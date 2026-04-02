@@ -53,3 +53,4 @@ Tier **B** `workspace-kit run` commands (non-transition) also require JSON `poli
 
 - Capture release evidence per [`RELEASING.md`](../RELEASING.md) → **Required release evidence**.
 - Update maintainer snapshots (for example [`docs/maintainers/ROADMAP.md`](../ROADMAP.md), [`docs/maintainers/data/workspace-kit-status.yaml`](../data/workspace-kit-status.yaml)) when the phase closeout task requires it.
+- Bump **`current_kit_phase`** / **`next_kit_phase`** via **`workspace-kit run update-workspace-phase-snapshot`** (and align **`kit.currentPhaseNumber`** in config when used) so **`doctor`** stays green — see [`AGENTS.md`](../AGENTS.md) → **Workspace phase snapshot**.

@@ -30,6 +30,7 @@ import { runMigrateWishlistIntake } from "./migrate-wishlist-intake-runtime.js";
 import { runBackupPlanningSqlite } from "./backup-planning-sqlite-runtime.js";
 import { runMigrateTaskPersistence } from "./migrate-task-persistence-runtime.js";
 import { runGetKitPersistenceMap } from "./kit-persistence-map-runtime.js";
+import { runUpdateWorkspacePhaseSnapshot } from "./update-workspace-phase-snapshot-runtime.js";
 import { planningSqliteDatabaseRelativePath, planningStrictValidationEnabled } from "./planning-config.js";
 import { validateTaskSetForStrictMode } from "./strict-task-validation.js";
 import { validateKnownTaskTypeRequirements } from "./task-type-validation.js";
@@ -104,7 +105,7 @@ function strictValidationError(
 export const taskEngineModule: WorkflowModule = {
   registration: {
     id: "task-engine",
-    version: "0.7.0",
+    version: "0.8.0",
     contractVersion: "1",
     stateSchema: 1,
     capabilities: ["task-engine"],
@@ -135,6 +136,9 @@ export const taskEngineModule: WorkflowModule = {
     }
     if (command.name === "get-kit-persistence-map") {
       return runGetKitPersistenceMap(ctx);
+    }
+    if (command.name === "update-workspace-phase-snapshot") {
+      return runUpdateWorkspacePhaseSnapshot(ctx, args as Record<string, unknown>);
     }
     if (command.name === "list-module-states" || command.name === "get-module-state") {
       const unified = new UnifiedStateDb(ctx.workspacePath, planningSqliteDatabaseRelativePath(ctx));

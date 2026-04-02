@@ -1,7 +1,7 @@
 {
   "kit": {
-    "currentPhaseNumber": 42,
-    "currentPhaseLabel": "Phase 42 — next maintainer slice after v0.41.0"
+    "currentPhaseNumber": 43,
+    "currentPhaseLabel": "Phase 43 — platform and maintainability refactors"
   },
   "tasks": {
     "persistenceBackend": "sqlite",

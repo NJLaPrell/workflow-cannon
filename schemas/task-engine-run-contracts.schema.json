@@ -6,13 +6,13 @@
   "type": "object",
   "required": ["schemaVersion", "packageVersion", "moduleId", "commands"],
   "additionalProperties": false,
-  "packageVersion": "0.41.0",
+  "packageVersion": "0.42.0",
   "properties": {
     "schemaVersion": {
       "const": 1
     },
     "packageVersion": {
-      "const": "0.41.0",
+      "const": "0.42.0",
       "description": "Must match package.json version."
     },
     "moduleId": {
@@ -25,6 +25,7 @@
         "create-task",
         "update-task",
         "update-wishlist",
+        "update-workspace-phase-snapshot",
         "archive-task",
         "add-dependency",
         "backup-planning-sqlite",
@@ -60,6 +61,7 @@
         "create-task": { "$ref": "#/$defs/contractCreateTask" },
         "update-task": { "$ref": "#/$defs/contractUpdateTask" },
         "update-wishlist": { "$ref": "#/$defs/contractUpdateWishlist" },
+        "update-workspace-phase-snapshot": { "$ref": "#/$defs/contractUpdateWorkspacePhaseSnapshot" },
         "archive-task": { "$ref": "#/$defs/contractArchiveTask" },
         "add-dependency": { "$ref": "#/$defs/contractDependencyMutation" },
         "backup-planning-sqlite": { "$ref": "#/$defs/contractBackupPlanningSqlite" },
@@ -339,6 +341,29 @@
             "responseData": {
               "type": "object",
               "required": ["wishlist", "presentation"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractUpdateWorkspacePhaseSnapshot": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "currentKitPhase": { "type": "string" },
+                "nextKitPhase": { "type": ["string", "null"] },
+                "dryRun": { "type": "boolean" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["fileRelativePath", "snapshotBefore", "snapshotAfter", "dryRun"],
               "additionalProperties": true
             }
           }

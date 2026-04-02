@@ -213,6 +213,7 @@ workspace-kit run list-tasks '{"type":"improvement","confidenceTier":"medium"}'
 workspace-kit run list-tasks '{"status":"blocked","blockedReasonCategory":"external_dependency"}'
 workspace-kit run create-task '{"id":"T900","title":"retry-safe mutation","status":"ready","clientMutationId":"agent-run-20260327-1"}'
 workspace-kit run update-task '{"taskId":"T900","updates":{"title":"retry-safe mutation v2"},"clientMutationId":"agent-run-20260327-2"}'
+workspace-kit run update-workspace-phase-snapshot '{"currentKitPhase":"43","nextKitPhase":"44","dryRun":true}'
 workspace-kit run explain-task-engine-model '{}'
 workspace-kit run list-planning-types '{}'
 workspace-kit run explain-planning-rules '{"planningType":"new-feature"}'
@@ -240,7 +241,7 @@ workspace-kit doctor
 
 **Agent behavior** (`list-behavior-profiles`, `get-behavior-profile`, `resolve-behavior-profile`, `set-active-behavior-profile`, `create-behavior-profile`, `update-behavior-profile`, `delete-behavior-profile`, `diff-behavior-profiles`, `explain-behavior-profiles`, `interview-behavior-profile`) are **Tier C**: advisory interaction posture only; **subordinate** to PRINCIPLES and policy. They persist under `.workspace-kit/agent-behavior/` (JSON) or unified SQLite (`module_id` `agent-behavior`) when `tasks.persistenceBackend` is `sqlite`.
 
-**Wishlist mutations** (`create-wishlist`, `update-wishlist`, `convert-wishlist`), **`migrate-task-persistence`**, and **`migrate-wishlist-intake`** are Tier C by default (same as `create-task`): they persist workspace state (JSON files and/or the configured SQLite planning DB under `tasks.sqliteDatabaseRelativePath`) but do not use `policyApproval` unless listed in `policy.extraSensitiveModuleCommands`.
+**Wishlist mutations** (`create-wishlist`, `update-wishlist`, `convert-wishlist`), **`migrate-task-persistence`**, and **`migrate-wishlist-intake`** are Tier C by default (same as `create-task`): they persist workspace state (JSON files and/or the configured SQLite planning DB under `tasks.sqliteDatabaseRelativePath`) but do not use `policyApproval` unless listed in `policy.extraSensitiveModuleCommands`. **`update-workspace-phase-snapshot`** is Tier C and writes only the two phase scalar lines in **`docs/maintainers/data/workspace-kit-status.yaml`** (see **`AGENTS.md`** → workspace phase snapshot).
 
 Instruction paths: run `workspace-kit run` with no subcommand to list commands; each line lists `(moduleId)` and points to the module’s instruction file pattern above.
 

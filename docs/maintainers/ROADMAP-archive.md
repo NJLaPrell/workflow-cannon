@@ -5,6 +5,7 @@
 ## Recent archived “current state” bullets (post phase 35)
 
 - **Phase 41 (Relational SQLite task store)** is **COMPLETE and released** as **`v0.41.0`**: **`T540`–`T545`** — ADR **`ADR-relational-sqlite-task-store.md`**, table **`task_engine_tasks`** + envelope columns + **`PRAGMA user_version` 2**, **`SqliteDualPlanningStore`** row persistence, **`migrate-task-persistence`** **`sqlite-blob-to-relational`**, doctor/runbooks/**`get-kit-persistence-map`**, planning consistency script + tests; **`TaskEntity`** **`summary`/`description`/`risk`**; task-engine module **0.7.0** in compatibility matrix.
+- **Phase 42 (Maintainer workspace phase snapshot)** is **COMPLETE and released** as **`v0.42.0`**: **`T546`**, **`T547`** — **`update-workspace-phase-snapshot`** for **`docs/maintainers/data/workspace-kit-status.yaml`** phase fields; **`doctor`** remediation; maintainer **`AGENTS.md`** / **`.ai/WORKSPACE-KIT-SESSION.md`** / phase-closeout playbook; task-engine module **0.8.0** in compatibility matrix.
 
 ## Archived “current state” bullets (phases 0–35)
 

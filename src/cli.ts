@@ -430,6 +430,12 @@ function writeDoctorFailureRemediation(
   }
   writeError("  - workspace-kit --help — orientation and top-level commands");
   writeError("  - workspace-kit run — list module commands (after doctor passes)");
+  const phaseMismatch = issues.some((issue) => issue.reason === "kit-phase-config-status-yaml-mismatch");
+  if (phaseMismatch) {
+    writeError(
+      "  - Phase snapshot mismatch (kit.currentPhaseNumber vs docs/maintainers/data/workspace-kit-status.yaml): align both, or run workspace-kit run update-workspace-phase-snapshot '{\"currentKitPhase\":\"N\"}' (and optionally nextKitPhase) — see docs/maintainers/AGENTS.md (workspace phase snapshot)."
+    );
+  }
 }
 
 async function printWorkspaceKitTopLevelHelp(writeLine: (message: string) => void): Promise<void> {

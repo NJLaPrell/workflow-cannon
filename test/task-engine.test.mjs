@@ -670,6 +670,7 @@ test("taskEngineModule registration includes all instruction entries", () => {
   assert.ok(names.includes("list-wishlist"));
   assert.ok(names.includes("get-wishlist"));
   assert.ok(names.includes("update-wishlist"));
+  assert.ok(names.includes("update-workspace-phase-snapshot"));
   assert.ok(names.includes("convert-wishlist"));
   assert.ok(names.includes("migrate-task-persistence"));
 });

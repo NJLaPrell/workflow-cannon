@@ -11,10 +11,11 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 
 - **Completed phases 0–35** — per-phase narrative is archived in **[`ROADMAP-archive.md`](./ROADMAP-archive.md)** so this file stays short; release evidence and the detailed phase plan below remain here.
 - **Phase 41 (relational SQLite task store)** shipped as **`v0.41.0`** — **`T540`–`T545`**: ADR, **`task_engine_tasks`** + envelope columns, **`SqliteDualPlanningStore`** row persistence, **`sqlite-blob-to-relational`** migration, doctor/runbooks/CI parity; see **`docs/maintainers/CHANGELOG.md`** and **[`ADR-relational-sqlite-task-store.md`](./ADR-relational-sqlite-task-store.md)**.
+- **Phase 42 (maintainer workspace phase snapshot)** shipped as **`v0.42.0`** — **`T546`**, **`T547`**: **`update-workspace-phase-snapshot`**, doctor remediation, maintainer/agent docs; **`task-engine`** **`0.8.0`** in **`compatibility-matrix.json`**.
 - **Phase 36 (policy, integrations, improvement loop, documentation architecture)** shipped as **`v0.36.0`** — see **`docs/maintainers/CHANGELOG.md`** and task-engine `phaseKey` **36** completion.
 - **Phase 37 (maintainer onboarding, shell JSON guidance, improvement churn closure, dashboard terminal parity)** shipped as **`v0.37.0`** — see **`docs/maintainers/CHANGELOG.md`** and task-engine `phaseKey` **37** completion (`imp-*` slice).
 - **Maintainer snapshot** — `docs/maintainers/data/workspace-kit-status.yaml` (`current_kit_phase`, `next_agent_actions`).
-- **Execution queue** — canonical task-engine store (default `.workspace-kit/tasks/workspace-kit.db`; JSON opt-out `.workspace-kit/tasks/state.json`); use `pnpm run wk -- run list-tasks` / `get-next-actions` rather than inferring phase from prose alone.
+- **Execution queue** — canonical task-engine store (default `.workspace-kit/tasks/workspace-kit.db`; JSON opt-out `.workspace-kit/tasks/state.json`); use `pnpm run wk run list-tasks` / `get-next-actions` rather than inferring phase from prose alone.
 - **Product / feature inventory** — **`docs/maintainers/FEATURE-MATRIX.md`**.
 - Historical extraction and first-publish milestones remain recorded below as provenance.
 ## Phase plan and release cadence
@@ -358,4 +359,6 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 - Phase 36 / `v0.36.0` npm publish: manual **`Publish NPM`** workflow (`publish-npm.yml`) after tag — not tag-triggered
 - Phase 37 / `v0.37.0` GitHub release: `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.37.0`
 - Phase 37 / `v0.37.0` npm publish: manual **`Publish NPM`** workflow (`publish-npm.yml`) after tag — not tag-triggered
+- Phase 41 / `v0.41.0` publish workflow run: `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23919642520`
+- Phase 42 / `v0.42.0` GitHub release: (tag `v0.42.0` on **`main`**) — run **`Publish NPM`** workflow (`publish-npm.yml`) after tag when cutting npm
 - npm package: `https://www.npmjs.com/package/@workflow-cannon/workspace-kit`

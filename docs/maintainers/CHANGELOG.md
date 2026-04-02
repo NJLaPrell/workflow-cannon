@@ -8,6 +8,25 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.42.0] - 2026-04-02
+
+Phase 42 — **maintainer workspace phase snapshot CLI** (`T546`, `T547`).
+
+### Added
+
+- **`workspace-kit run update-workspace-phase-snapshot`** — atomic update of **`current_kit_phase`** and/or **`next_kit_phase`** in **`docs/maintainers/data/workspace-kit-status.yaml`**; supports **`dryRun`** and JSON **`null`** for **`nextKitPhase`** to remove that line; instruction **`update-workspace-phase-snapshot.md`**.
+- **Tests** — YAML apply helpers (**`applyWorkspacePhaseSnapshotToYaml`**, escaping, **`nextKitPhase: null`**) in **`test/dashboard-status-yaml.test.mjs`**.
+
+### Changed
+
+- **`workspace-kit doctor`** — when **`kit-phase-config-status-yaml-mismatch`** is reported, remediation output mentions **`update-workspace-phase-snapshot`** and **`AGENTS.md`** (workspace phase snapshot).
+- **Compatibility matrix** — **`task-engine`** module **`0.8.0`** (new run command).
+- **Maintainer docs** — **`AGENTS.md`** (workspace phase snapshot subsection), **`phase-closeout-and-release.md`**, **`.ai/WORKSPACE-KIT-SESSION.md`** (correct **`pnpm run wk run`** pattern + snapshot note), **`AGENT-CLI-MAP.md`** copy-paste.
+
+### Docs
+
+- **Task Engine run contracts** — **`schemas/task-engine-run-contracts.schema.json`** **`0.42.0`**.
+
 ## [0.41.0] - 2026-04-02
 
 Phase 41 — **relational SQLite task store** (optional in-place migration from document blob).

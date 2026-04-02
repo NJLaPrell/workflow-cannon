@@ -136,6 +136,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "update-workspace-phase-snapshot",
+    "file": "update-workspace-phase-snapshot.md",
+    "description": "Update current_kit_phase and/or next_kit_phase in docs/maintainers/data/workspace-kit-status.yaml (atomic write).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "archive-task",
     "file": "archive-task.md",
     "description": "Archive a task without destructive deletion.",

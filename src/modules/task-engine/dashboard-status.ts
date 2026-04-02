@@ -1,6 +1,9 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
+/** Relative path from workspace root to maintainer phase snapshot (dashboard + doctor). */
+export const WORKSPACE_KIT_STATUS_YAML_RELATIVE = "docs/maintainers/data/workspace-kit-status.yaml";
+
 /** Best-effort parse of maintainer status YAML for dashboard UIs (no full YAML dependency). */
 export type WorkspaceStatusSnapshot = {
   currentKitPhase: string | null;
@@ -89,10 +92,86 @@ export function parseWorkspaceKitStatusYaml(raw: string): WorkspaceStatusSnapsho
   };
 }
 
+/** Escape inner string for a double-quoted YAML scalar on one line. */
+export function escapeWorkspaceKitStatusYamlDoubleQuoted(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
+/**
+ * True when `value` is safe for `current_kit_phase` / `next_kit_phase` single-line scalars.
+ * Rejects empty, control characters, and newlines.
+ */
+export function isValidWorkspacePhaseSnapshotValue(value: string): boolean {
+  const t = value.trim();
+  if (t.length === 0 || t.length > 120) {
+    return false;
+  }
+  if (/[\x00-\x1f\x7f]/.test(t)) {
+    return false;
+  }
+  return !t.includes("\n") && !t.includes("\r");
+}
+
+export type WorkspacePhaseSnapshotYamlUpdates = {
+  currentKitPhase?: string;
+  /** When present and `null`, removes the `next_kit_phase` line entirely. */
+  nextKitPhase?: string | null;
+};
+
+export type ApplyWorkspacePhaseSnapshotYamlResult =
+  | { ok: true; yaml: string }
+  | { ok: false; message: string };
+
+/**
+ * Replace only `current_kit_phase` and/or `next_kit_phase` top-level lines; all other bytes unchanged.
+ * Does not parse full YAML — assumes repo-style single-line scalars for these keys.
+ */
+export function applyWorkspacePhaseSnapshotToYaml(
+  raw: string,
+  updates: WorkspacePhaseSnapshotYamlUpdates
+): ApplyWorkspacePhaseSnapshotYamlResult {
+  const touchCurrent = updates.currentKitPhase !== undefined;
+  const touchNext = updates.nextKitPhase !== undefined;
+  if (!touchCurrent && !touchNext) {
+    return { ok: false, message: "Provide at least one of currentKitPhase or nextKitPhase" };
+  }
+  let out = raw;
+  if (touchCurrent) {
+    const v = updates.currentKitPhase!.trim();
+    if (!isValidWorkspacePhaseSnapshotValue(v)) {
+      return { ok: false, message: "Invalid currentKitPhase (non-empty printable single-line string required)" };
+    }
+    const line = `current_kit_phase: "${escapeWorkspaceKitStatusYamlDoubleQuoted(v)}"`;
+    if (!/^\s*current_kit_phase:\s/m.test(out)) {
+      return { ok: false, message: "workspace-kit-status.yaml missing current_kit_phase line" };
+    }
+    out = out.replace(/^\s*current_kit_phase:\s*[^\n]*$/m, line);
+  }
+  if (touchNext) {
+    const nextVal = updates.nextKitPhase;
+    if (nextVal === null) {
+      out = out.replace(/^\s*next_kit_phase:\s*[^\n]*\n?/m, "");
+    } else if (typeof nextVal === "string") {
+      const v = nextVal.trim();
+      if (!isValidWorkspacePhaseSnapshotValue(v)) {
+        return { ok: false, message: "Invalid nextKitPhase (non-empty printable single-line string required)" };
+      }
+      const line = `next_kit_phase: "${escapeWorkspaceKitStatusYamlDoubleQuoted(v)}"`;
+      if (!/^\s*next_kit_phase:\s/m.test(out)) {
+        return { ok: false, message: "workspace-kit-status.yaml missing next_kit_phase line" };
+      }
+      out = out.replace(/^\s*next_kit_phase:\s*[^\n]*$/m, line);
+    } else {
+      return { ok: false, message: "nextKitPhase must be a string or null" };
+    }
+  }
+  return { ok: true, yaml: out };
+}
+
 export async function readWorkspaceStatusSnapshot(
   workspacePath: string
 ): Promise<WorkspaceStatusSnapshot | null> {
-  const filePath = path.join(workspacePath, "docs/maintainers/data/workspace-kit-status.yaml");
+  const filePath = path.join(workspacePath, WORKSPACE_KIT_STATUS_YAML_RELATIVE);
   try {
     const raw = await fs.readFile(filePath, "utf8");
     return parseWorkspaceKitStatusYaml(raw);
