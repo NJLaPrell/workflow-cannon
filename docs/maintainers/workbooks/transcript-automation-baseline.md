@@ -2,7 +2,7 @@
 
 Canonical design baseline for Phase 5 transcript intelligence automation.
 
-AI-canonical companion: `.ai/workbooks/transcript-automation-baseline.md`.
+**Maintainer-canonical** prose. **Machine dialect:** `.ai/workbooks/transcript-automation-baseline.md` (sync via the documentation module per `src/modules/documentation/RULES.md`).
 
 ## Scope
 

@@ -1,8 +1,8 @@
 # Phase 2 workbook — config, policy, local task cutover
 
 Binding design for `v0.4.0` (tasks `T218` → `T187` → `T200` → `T188` → `T201` → `T189`).  
-AI-canonical companion: `.ai/workbooks/phase2-config-policy-workbook.md`.  
-Implementation must match this document unless a deliberate decision update is recorded in task-engine state (`.workspace-kit/tasks/state.json`) and here.
+**Maintainer-canonical** prose. **Machine dialect:** `.ai/workbooks/phase2-config-policy-workbook.md` (sync via the documentation module per `src/modules/documentation/RULES.md`).  
+Implementation must match this document unless a deliberate decision update is recorded in task-engine state (default **SQLite** under `.workspace-kit/tasks/` or JSON opt-out) and here.
 
 ## 1. Non-goals for v0.4.0
 

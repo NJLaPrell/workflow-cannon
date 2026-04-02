@@ -32,6 +32,13 @@ Basic operating guidance for AI agents working in this repository.
 | Machine / generated | `.ai/*.md` | Some outputs are **generated** by the documentation module; **`.ai/PRINCIPLES.md`** and **`.ai/module-build.md`** are **hand-maintained** machine dialect — see **`docs/maintainers/RELEASING.md`** when changing **`rule|id=R###`**. |
 | Cursor enforcement mirrors | `.cursor/rules/*.mdc` | Pointer-first; see **`docs/maintainers/module-build-guide.md`** → **Cursor rules**. |
 
+### Maintainer mirror pairing (human vs `.ai/`)
+
+- **Editing:** When content exists under both **`docs/maintainers/`** and **`.ai/`**, treat **`docs/maintainers/`** as **human-canonical** for maintainer intent unless a file header says otherwise. Change human sources first, then regenerate or hand-sync **`.ai/`** with **`workspace-kit run document-project`** / **`generate-document`** per **`src/modules/documentation/RULES.md`** (workflow: **`docs/maintainers/module-build-guide.md` → Workbook and `.ai` mirror pairing**).
+- **Workbooks:** Pairs under **`docs/maintainers/workbooks/`** and **`.ai/workbooks/`** — the maintainer workbook carries narrative decisions; **`.ai/workbooks/`** is the machine dialect for agents and validation.
+- **Config reference:** **`docs/maintainers/CONFIG.md`** and **`.ai/CONFIG.md`** are generated together from **`src/core/config-metadata.ts`** via **`workspace-kit config generate-docs`**; do not hand-edit either file.
+- **Agents:** Keep using **`.ai/AGENTS.md`** and **`src/modules/*/instructions/`** for routine operations — this subsection is for **maintainers** reconciling mirrored docs, not an alternate agent entry path.
+
 ## `/qt` quick-task templates (`tasks/*.md`)
 
 **`/qt`** only materializes **`tasks/*.md`** in the editor. It **does not** run **`workspace-kit`** and **cannot** satisfy **`policyApproval`** (or env approval). If a template step changes task-engine or other kit-owned state, run the **exact** line from **`docs/maintainers/AGENT-CLI-MAP.md`** in a real shell (Tier **A** **`run-transition`**, Tier **B** sensitive **`run`**, etc.).

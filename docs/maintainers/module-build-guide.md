@@ -26,6 +26,7 @@ Use this precedence when sources disagree:
 
 - **Human workbooks** under **`docs/maintainers/workbooks/`** pair with machine-dialect files under **`.ai/workbooks/`** when both exist for the same topic.
 - **Edit order:** change maintainer intent in **`docs/maintainers/`** first, then regenerate or hand-sync **`.ai/`** via the documentation module (**`document-project`** / **`generate-document`**) per **`src/modules/documentation/RULES.md`**.
+- **Config reference tables** — **`docs/maintainers/CONFIG.md`** and **`.ai/CONFIG.md`** are another generated pair from **`src/core/config-metadata.ts`** (**`workspace-kit config generate-docs`**); same human-then-regenerate rule applies.
 - **Agents** should follow **`.ai/`** + **`src/modules/*/instructions/`** for operating guidance, not maintainer workbooks, unless a task explicitly scopes maintainer doc edits.
 
 ## Module Build Contract

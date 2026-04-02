@@ -2,7 +2,7 @@
 
 Design workbook for Phase 1 Task Engine core. All decisions in this document are binding for T184–T217 implementation.
 
-AI-canonical companion: `.ai/workbooks/task-engine-workbook.md`.
+**Maintainer-canonical** prose. **Machine dialect:** `.ai/workbooks/task-engine-workbook.md` (sync via the documentation module per `src/modules/documentation/RULES.md`).
 
 ## Design Decisions (resolved)
 
