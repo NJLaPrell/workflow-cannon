@@ -36,7 +36,7 @@ export type {
   DocumentationGenerationEvidence,
   DocumentationValidationIssue
 } from "./documentation/types.js";
-export { improvementModule } from "./improvement/index.js";
+export { improvementModule, buildImprovementTaskPayload } from "./improvement/index.js";
 export {
   computeHeuristicConfidence,
   HEURISTIC_1_ADMISSION_THRESHOLD,

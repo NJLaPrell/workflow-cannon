@@ -12,6 +12,10 @@ export type LineageRecPayload = {
   recommendationTaskId: string;
   evidenceKey: string;
   title: string;
+  /** Improvement intake: concrete issue statement (mirrors task metadata.issue when present). */
+  issue?: string;
+  /** Improvement intake: primary recommended fix (mirrors task metadata.proposedSolutions[0] when present). */
+  proposedSolution?: string;
   confidence: number;
   confidenceTier: string;
   provenanceRefs: Record<string, string>;

@@ -13,6 +13,7 @@ import {
   type IngestCandidate
 } from "./ingest.js";
 import { priorityForTier } from "./confidence.js";
+import { buildImprovementTaskPayload } from "./improvement-task-payload.js";
 
 function hasEvidenceKey(tasks: TaskEntity[], key: string): boolean {
   return tasks.some((t) => {
@@ -139,13 +140,16 @@ export async function runGenerateRecommendations(
       continue;
     }
 
+    const body = buildImprovementTaskPayload(c);
     const meta: Record<string, unknown> = {
       evidenceKey: c.evidenceKey,
       evidenceKind: c.evidenceKind,
       confidence: c.confidence.score,
       confidenceTier: c.confidence.tier,
       confidenceReasons: c.confidence.reasons,
-      provenanceRefs: c.provenanceRefs
+      provenanceRefs: c.provenanceRefs,
+      issue: body.issue,
+      proposedSolutions: [body.proposedSolution]
     };
     if (c.evidenceKind === "transcript" && typeof c.provenanceRefs.transcriptPath === "string") {
       meta.transcriptSourceRelPath = c.provenanceRefs.transcriptPath;
@@ -155,10 +159,13 @@ export async function runGenerateRecommendations(
       id,
       status: "ready",
       type: "improvement",
-      title: c.title,
+      title: body.title,
       createdAt: now,
       updatedAt: now,
       priority: priorityForTier(c.confidence.tier),
+      approach: body.approach,
+      technicalScope: body.technicalScope,
+      acceptanceCriteria: body.acceptanceCriteria,
       metadata: meta
     };
 
@@ -173,7 +180,9 @@ export async function runGenerateRecommendations(
       payload: {
         recommendationTaskId: id,
         evidenceKey: c.evidenceKey,
-        title: c.title,
+        title: body.title,
+        issue: body.issue,
+        proposedSolution: body.proposedSolution,
         confidence: c.confidence.score,
         confidenceTier: c.confidence.tier,
         provenanceRefs: c.provenanceRefs

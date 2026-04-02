@@ -14,10 +14,12 @@ import {
 } from "./transcript-sync-runtime.js";
 import { loadImprovementState, saveImprovementState } from "./improvement-state.js";
 
+export { buildImprovementTaskPayload } from "./improvement-task-payload.js";
+
 export const improvementModule: WorkflowModule = {
   registration: {
     id: "improvement",
-    version: "0.8.0",
+    version: "0.9.0",
     contractVersion: "1",
     stateSchema: 1,
     capabilities: ["improvement"],
