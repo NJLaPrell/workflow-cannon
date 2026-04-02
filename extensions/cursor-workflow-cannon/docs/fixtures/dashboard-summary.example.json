@@ -8,7 +8,13 @@
     "workspaceStatus": {
       "currentKitPhase": "14",
       "nextKitPhase": "15",
-      "activeFocus": "Example snapshot after Wishlist support."
+      "activeFocus": "Example snapshot after Wishlist support.",
+      "lastUpdated": "2026-03-27",
+      "blockers": [],
+      "pendingDecisions": [],
+      "nextAgentActions": [
+        "**Now:** Run `wk run get-next-actions` — example maintainer line (truncated in dashboard overview)."
+      ]
     },
     "proposedImprovementsSummary": {
       "schemaVersion": 1,

@@ -22,7 +22,7 @@ Optional JSON object; accepts standard invocation `config` overlay only (no extr
 | --- | --- |
 | `schemaVersion` | Always `1` for this contract |
 | `taskStoreLastUpdated` | ISO timestamp from task store document |
-| `workspaceStatus` | `{ currentKitPhase, nextKitPhase, activeFocus, lastUpdated }` or file-missing yields `null` |
+| `workspaceStatus` | `{ currentKitPhase, nextKitPhase, activeFocus, lastUpdated, blockers[], pendingDecisions[], nextAgentActions[] }` shallow-parse from `workspace-kit-status.yaml`; file-missing yields `null` |
 | `stateSummary` | Task counts by status + `total` (same shape as `get-next-actions`) |
 | `proposedImprovementsSummary` | `{ schemaVersion: 1, count, top, phaseBuckets }` — `top` is up to 15 **proposed** improvement tasks globally; `phaseBuckets` mirrors the Tasks sidebar: ordered **current** / **next** phase (from maintainer YAML, including **0-count** slots), then other phase keys, then **Not Phased**; each bucket has `{ schemaVersion: 1, phaseKey, label, count, top }` where bucket `top` is up to 15 preview rows |
 | `proposedExecutionSummary` | Same `phaseBuckets` shape for **proposed** non-improvement, non-wishlist tasks |

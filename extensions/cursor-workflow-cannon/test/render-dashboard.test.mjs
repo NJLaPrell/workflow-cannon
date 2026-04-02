@@ -45,8 +45,10 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   const fixturePath = path.join(__dirname, "../docs/fixtures/dashboard-summary.example.json");
   const fixture = JSON.parse(readFileSync(fixturePath, "utf8"));
   const html = renderDashboardRootInnerHtml(fixture);
+  assert.match(html, /dashboard-overview/);
   assert.match(html, /Current phase/);
   assert.match(html, /Next phase/);
+  assert.match(html, /Next action/);
   assert.match(html, /<p><b>Tasks<\/b><\/p>/);
   assert.match(html, /Ready · improvements/);
   assert.match(html, /Ready · execution/);

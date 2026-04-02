@@ -275,6 +275,86 @@ function renderPlanningSession(ps: unknown): string {
   );
 }
 
+const MAX_OVERVIEW_ACTION_CHARS = 220;
+
+function truncateOverviewLine(s: string, max: number): string {
+  const one = s.replace(/\s+/g, " ").trim();
+  if (one.length <= max) {
+    return one;
+  }
+  return one.slice(0, Math.max(1, max - 1)) + "…";
+}
+
+/**
+ * Brief maintainer snapshot: phases + status date + blockers / decisions / first next action.
+ * Does not repeat task roll-ups (those stay under **Tasks**).
+ */
+function renderWorkspaceOverviewSection(ws: Record<string, unknown> | null): string {
+  if (!ws) {
+    return (
+      '<section class="dashboard-overview" aria-label="Workspace status">' +
+      '<p class="muted">No <code>docs/maintainers/data/workspace-kit-status.yaml</code> snapshot (or file not readable).</p>' +
+      "</section>"
+    );
+  }
+
+  const curRaw = ws.currentKitPhase != null ? String(ws.currentKitPhase).trim() : "";
+  const cur = curRaw.length > 0 ? escapeHtml(curRaw) : "—";
+  const nextTrim = ws.nextKitPhase != null ? String(ws.nextKitPhase).trim() : "";
+  const hasNext = nextTrim.length > 0;
+
+  let html =
+    '<section class="dashboard-overview" aria-label="Workspace status">' +
+    "<p><b>Current phase</b> " +
+    cur +
+    "</p>";
+  if (hasNext) {
+    html += "<p><b>Next phase</b> " + escapeHtml(nextTrim) + "</p>";
+  }
+
+  const lu = ws.lastUpdated != null ? String(ws.lastUpdated).trim() : "";
+  if (lu.length > 0) {
+    html += '<p class="muted">Status file · ' + escapeHtml(lu) + "</p>";
+  }
+
+  const blockers = Array.isArray(ws.blockers)
+    ? (ws.blockers as unknown[]).map((x) => String(x)).filter((s) => s.trim().length > 0)
+    : [];
+  if (blockers.length > 0) {
+    const shown = blockers.slice(0, 2).map((b) => renderMarkdownBoldAfterEscape(escapeHtml(truncateOverviewLine(b, 100))));
+    const more =
+      blockers.length > 2
+        ? ' <span class="muted">(+' + String(blockers.length - 2) + " more)</span>"
+        : "";
+    html += "<p><b>Blockers</b> " + shown.join(" · ") + more + "</p>";
+  }
+
+  const pending = Array.isArray(ws.pendingDecisions)
+    ? (ws.pendingDecisions as unknown[]).map((x) => String(x)).filter((s) => s.trim().length > 0)
+    : [];
+  if (pending.length > 0) {
+    const shown = pending.slice(0, 2).map((b) => renderMarkdownBoldAfterEscape(escapeHtml(truncateOverviewLine(b, 100))));
+    const more = pending.length > 2 ? " …" : "";
+    html += "<p><b>Pending decisions</b> " + shown.join(" · ") + more + "</p>";
+  }
+
+  const actions = Array.isArray(ws.nextAgentActions)
+    ? (ws.nextAgentActions as unknown[]).map((x) => String(x)).filter((s) => s.trim().length > 0)
+    : [];
+  if (actions.length > 0) {
+    const t = truncateOverviewLine(actions[0], MAX_OVERVIEW_ACTION_CHARS);
+    const more =
+      actions.length > 1
+        ? ' <span class="muted">(+' + String(actions.length - 1) + " in file)</span>"
+        : "";
+    html +=
+      '<p class="muted"><b>Next action</b> ' + renderMarkdownBoldAfterEscape(escapeHtml(t)) + more + "</p>";
+  }
+
+  html += "</section>";
+  return html;
+}
+
 /** Dependency subgraph + critical path from `dashboard-summary` `dependencyOverview` (text / Mermaid source only). */
 function renderDependencyOverviewHtml(dep: unknown): string {
   if (dep === null || dep === undefined || typeof dep !== "object") {
@@ -387,15 +467,7 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
       : "";
 
   return (
-    "<p><b>Current phase</b> " +
-    escapeHtml(String(ws?.currentKitPhase ?? "—")) +
-    "</p>" +
-    "<p><b>Next phase</b> " +
-    escapeHtml(String(ws?.nextKitPhase ?? "—")) +
-    "</p>" +
-    '<p class="muted focus-md">' +
-    renderActiveFocusHtml(String(ws?.activeFocus ?? "")) +
-    "</p>" +
+    renderWorkspaceOverviewSection(ws as Record<string, unknown> | null) +
     "<p><b>Tasks</b></p>" +
     "<p class=\"ok\">Counts · proposed " +
     String(ss.proposed ?? 0) +
