@@ -19,6 +19,7 @@ import {
   mutationEvidence,
   nowIso,
   parseConversionDecomposition,
+  planningConcurrencySaveOpts,
   TASK_ID_RE
 } from "./mutation-utils.js";
 import {
@@ -97,9 +98,12 @@ export function runWishlistStoreCommand(
       }
     }
     try {
-      planning.sqliteDual.withTransaction(() => {
-        store.addTask(task);
-      });
+      planning.sqliteDual.withTransaction(
+        () => {
+          store.addTask(task);
+        },
+        planningConcurrencySaveOpts(args)
+      );
     } catch (err) {
       if (err instanceof TaskEngineError) {
         return { ok: false, code: err.code, message: err.message };
@@ -211,9 +215,12 @@ export function runWishlistStoreCommand(
         return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
       }
     }
-    planning.sqliteDual.withTransaction(() => {
-      store.updateTask(merged);
-    });
+    planning.sqliteDual.withTransaction(
+      () => {
+        store.updateTask(merged);
+      },
+      planningConcurrencySaveOpts(args)
+    );
     const itemOut = wishlistIntakeTaskToItem(merged);
     return {
       ok: true,
@@ -341,7 +348,7 @@ export function runWishlistStoreCommand(
         return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
       }
     }
-    planning.sqliteDual.withTransaction(applyConvertMutations);
+    planning.sqliteDual.withTransaction(applyConvertMutations, planningConcurrencySaveOpts(args));
     const wishlistShape = wishlistIntakeTaskToItem(updatedSource);
     return {
       ok: true,

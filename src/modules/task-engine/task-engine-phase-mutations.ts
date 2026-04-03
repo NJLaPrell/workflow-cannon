@@ -6,6 +6,7 @@ import {
   findIdempotentMutation,
   mutationEvidence,
   nowIso,
+  planningConcurrencySaveOpts,
   readIdempotencyValue
 } from "./mutation-utils.js";
 import { validateKnownTaskTypeRequirements } from "./task-type-validation.js";
@@ -92,7 +93,7 @@ export async function runAssignTaskPhase(args: {
   if (strictIssue) {
     return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
   }
-  await store.save();
+  await store.save(planningConcurrencySaveOpts(rawArgs));
   return {
     ok: true,
     code: "task-phase-assigned",
@@ -159,7 +160,7 @@ export async function runClearTaskPhase(args: {
   if (strictIssue) {
     return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
   }
-  await store.save();
+  await store.save(planningConcurrencySaveOpts(rawArgs));
   return {
     ok: true,
     code: "task-phase-cleared",

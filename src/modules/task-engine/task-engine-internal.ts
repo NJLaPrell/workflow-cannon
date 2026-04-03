@@ -42,6 +42,8 @@ import {
   nowIso,
   readIdempotencyValue,
   readMetadataPath,
+  planningConcurrencySaveOpts,
+  readOptionalExpectedPlanningGeneration,
   SAFE_METADATA_PATH_RE,
   TASK_ID_RE
 } from "./mutation-utils.js";
@@ -82,7 +84,7 @@ function strictValidationError(
 export const taskEngineModule: WorkflowModule = {
   registration: {
     id: "task-engine",
-    version: "0.9.0",
+    version: "0.10.0",
     contractVersion: "1",
     stateSchema: 1,
     capabilities: ["task-engine"],
@@ -191,7 +193,15 @@ export const taskEngineModule: WorkflowModule = {
 
       try {
         const service = new TransitionService(store);
-        const result = await service.runTransition({ taskId, action, actor });
+        const expectedPlanningGeneration = readOptionalExpectedPlanningGeneration(
+          args as Record<string, unknown>
+        );
+        const result = await service.runTransition({
+          taskId,
+          action,
+          actor,
+          expectedPlanningGeneration
+        });
         if (result.evidence.toState === "completed") {
           maybeSpawnTranscriptHookAfterCompletion(
             ctx.workspacePath,
@@ -204,7 +214,8 @@ export const taskEngineModule: WorkflowModule = {
           message: `${taskId}: ${result.evidence.fromState} → ${result.evidence.toState} (${action})`,
           data: {
             evidence: result.evidence,
-            autoUnblocked: result.autoUnblocked
+            autoUnblocked: result.autoUnblocked,
+            planningGeneration: planning.sqliteDual.getPlanningGeneration()
           } as Record<string, unknown>
         };
       } catch (err) {
@@ -337,12 +348,15 @@ export const taskEngineModule: WorkflowModule = {
       if (strictIssue) {
         return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
       }
-      await store.save();
+      await store.save(planningConcurrencySaveOpts(args as Record<string, unknown>));
       return {
         ok: true,
         code: "task-created",
         message: `Created task '${id}'`,
-        data: { task } as Record<string, unknown>
+        data: {
+          task,
+          planningGeneration: planning.sqliteDual.getPlanningGeneration()
+        } as Record<string, unknown>
       };
     }
 
@@ -411,8 +425,16 @@ export const taskEngineModule: WorkflowModule = {
       if (strictIssue) {
         return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
       }
-      await store.save();
-      return { ok: true, code: "task-updated", message: `Updated task '${taskId}'`, data: { task: updatedTask } as Record<string, unknown> };
+      await store.save(planningConcurrencySaveOpts(args as Record<string, unknown>));
+      return {
+        ok: true,
+        code: "task-updated",
+        message: `Updated task '${taskId}'`,
+        data: {
+          task: updatedTask,
+          planningGeneration: planning.sqliteDual.getPlanningGeneration()
+        } as Record<string, unknown>
+      };
     }
 
     if (command.name === "assign-task-phase") {
@@ -422,13 +444,17 @@ export const taskEngineModule: WorkflowModule = {
           : ctx.resolvedActor !== undefined
             ? ctx.resolvedActor
             : undefined;
-      return runAssignTaskPhase({
+      const r = await runAssignTaskPhase({
         store,
         ctx,
         strictValidationError,
         actor,
         rawArgs: args as Record<string, unknown>
       });
+      if (r.ok && r.data && typeof r.data === "object") {
+        (r.data as Record<string, unknown>).planningGeneration = planning.sqliteDual.getPlanningGeneration();
+      }
+      return r;
     }
 
     if (command.name === "clear-task-phase") {
@@ -438,13 +464,17 @@ export const taskEngineModule: WorkflowModule = {
           : ctx.resolvedActor !== undefined
             ? ctx.resolvedActor
             : undefined;
-      return runClearTaskPhase({
+      const r = await runClearTaskPhase({
         store,
         ctx,
         strictValidationError,
         actor,
         rawArgs: args as Record<string, unknown>
       });
+      if (r.ok && r.data && typeof r.data === "object") {
+        (r.data as Record<string, unknown>).planningGeneration = planning.sqliteDual.getPlanningGeneration();
+      }
+      return r;
     }
 
     if (command.name === "archive-task") {
@@ -470,8 +500,16 @@ export const taskEngineModule: WorkflowModule = {
       if (strictIssue) {
         return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
       }
-      await store.save();
-      return { ok: true, code: "task-archived", message: `Archived task '${taskId}'`, data: { task: updatedTask } as Record<string, unknown> };
+      await store.save(planningConcurrencySaveOpts(args as Record<string, unknown>));
+      return {
+        ok: true,
+        code: "task-archived",
+        message: `Archived task '${taskId}'`,
+        data: {
+          task: updatedTask,
+          planningGeneration: planning.sqliteDual.getPlanningGeneration()
+        } as Record<string, unknown>
+      };
     }
 
     if (command.name === "get-task") {
@@ -512,7 +550,12 @@ export const taskEngineModule: WorkflowModule = {
       return {
         ok: true,
         code: "task-retrieved",
-        data: { task, recentTransitions, allowedActions } as Record<string, unknown>
+        data: {
+          task,
+          recentTransitions,
+          allowedActions,
+          planningGeneration: planning.sqliteDual.getPlanningGeneration()
+        } as Record<string, unknown>
       };
     }
 
@@ -557,12 +600,15 @@ export const taskEngineModule: WorkflowModule = {
       if (strictIssue) {
         return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
       }
-      await store.save();
+      await store.save(planningConcurrencySaveOpts(args as Record<string, unknown>));
       return {
         ok: true,
         code: command.name === "add-dependency" ? "dependency-added" : "dependency-removed",
         message: `${command.name} applied for '${taskId}'`,
-        data: { task: updatedTask } as Record<string, unknown>
+        data: {
+          task: updatedTask,
+          planningGeneration: planning.sqliteDual.getPlanningGeneration()
+        } as Record<string, unknown>
       };
     }
 
@@ -612,7 +658,7 @@ export const taskEngineModule: WorkflowModule = {
     }
 
     if (command.name === "dashboard-summary") {
-      return runDashboardSummaryCommand(ctx, store);
+      return runDashboardSummaryCommand(ctx, store, planning.sqliteDual.getPlanningGeneration());
     }
 
     if (command.name === "queue-health") {
@@ -757,7 +803,12 @@ export const taskEngineModule: WorkflowModule = {
         );
       }
 
-      const data: Record<string, unknown> = { tasks, count: tasks.length, scope: "tasks-only" };
+      const data: Record<string, unknown> = {
+        tasks,
+        count: tasks.length,
+        scope: "tasks-only",
+        planningGeneration: planning.sqliteDual.getPlanningGeneration()
+      };
       if (includeQueueHints) {
         const hintBaseTasks = includeArchived ? store.getAllTasks() : store.getActiveTasks();
         const workspaceStatus = await readWorkspaceStatusSnapshot(ctx.workspacePath);
@@ -799,7 +850,8 @@ export const taskEngineModule: WorkflowModule = {
           tasks: ready,
           count: ready.length,
           scope: "tasks-only",
-          queueNamespace: ns ?? null
+          queueNamespace: ns ?? null,
+          planningGeneration: planning.sqliteDual.getPlanningGeneration()
         } as Record<string, unknown>
       };
     }
@@ -818,7 +870,8 @@ export const taskEngineModule: WorkflowModule = {
         data: {
           ...suggestion,
           scope: "tasks-only",
-          queueNamespace: ns ?? null
+          queueNamespace: ns ?? null,
+          planningGeneration: planning.sqliteDual.getPlanningGeneration()
         } as unknown as Record<string, unknown>
       };
     }

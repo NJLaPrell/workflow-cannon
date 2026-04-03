@@ -18,9 +18,13 @@ function emptyStore(): TaskStoreDocument {
   };
 }
 
+export type TaskStoreSaveOptions = {
+  expectedPlanningGeneration?: number;
+};
+
 export type TaskStorePersistence = {
   loadDocument: () => Promise<TaskStoreDocument>;
-  saveDocument: (doc: TaskStoreDocument) => Promise<void>;
+  saveDocument: (doc: TaskStoreDocument, opts?: TaskStoreSaveOptions) => Promise<void>;
   pathLabel: string;
 };
 
@@ -55,7 +59,7 @@ export class TaskStore {
           );
         }
       },
-      saveDocument: async (doc) => {
+      saveDocument: async (doc, _opts) => {
         const dir = path.dirname(filePath);
         const tmpPath = `${filePath}.${crypto.randomUUID().slice(0, 8)}.tmp`;
         try {
@@ -81,9 +85,9 @@ export class TaskStore {
     return new TaskStore({
       pathLabel: `${dual.getDisplayPath()}#task_engine`,
       loadDocument: async () => dual.taskDocument,
-      saveDocument: async (doc) => {
+      saveDocument: async (doc, opts) => {
         dual.seedFromDocuments(doc, dual.wishlistDocument);
-        dual.persistSync();
+        dual.persistSync(opts);
       }
     });
   }
@@ -92,9 +96,9 @@ export class TaskStore {
     this.document = await this.persistence.loadDocument();
   }
 
-  async save(): Promise<void> {
+  async save(opts?: TaskStoreSaveOptions): Promise<void> {
     this.document.lastUpdated = new Date().toISOString();
-    await this.persistence.saveDocument(this.document);
+    await this.persistence.saveDocument(this.document, opts);
   }
 
   getAllTasks(): TaskEntity[] {

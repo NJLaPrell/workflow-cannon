@@ -4,6 +4,7 @@ import { CommandClient } from "./runtime/command-client.js";
 import { StateWatcher } from "./runtime/state-watcher.js";
 import { DashboardViewProvider } from "./views/dashboard/DashboardViewProvider.js";
 import { TasksTreeProvider } from "./views/tasks/TasksTreeProvider.js";
+import { TasksTreeDragController } from "./views/tasks/TasksTreeDragController.js";
 import { ConfigViewProvider } from "./views/config/ConfigViewProvider.js";
 import { buildTaskDetailMarkdown } from "./task-detail-markdown.js";
 
@@ -32,11 +33,16 @@ export function activate(context: vscode.ExtensionContext): void {
     dashboard = new DashboardViewProvider(context.extensionUri, client, onKitStateChanged);
     configView = new ConfigViewProvider(context.extensionUri, client, onKitStateChanged);
     tasks = new TasksTreeProvider(client, onKitStateChanged);
+    const tasksDnd = new TasksTreeDragController(client, () => kitStateEmitter.fire());
 
     context.subscriptions.push(
       vscode.window.registerWebviewViewProvider(DashboardViewProvider.viewId, dashboard),
       vscode.window.registerWebviewViewProvider(ConfigViewProvider.viewId, configView),
-      vscode.window.createTreeView("workflowCannon.tasks", { treeDataProvider: tasks, showCollapseAll: true })
+      vscode.window.createTreeView("workflowCannon.tasks", {
+        treeDataProvider: tasks,
+        showCollapseAll: true,
+        dragAndDropController: tasksDnd
+      })
     );
   }
 

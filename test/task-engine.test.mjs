@@ -573,6 +573,20 @@ test("getNextActions suggests highest priority task", () => {
   assert.equal(result.suggestedNext.id, "T002");
 });
 
+test("getNextActions dep-blocked ready tasks follow runnable; suggestedNext skips unmet dependsOn", () => {
+  const tasks = [
+    makeTask({ id: "T001", status: "completed" }),
+    makeTask({ id: "T002", status: "ready", priority: "P1", dependsOn: ["T999"] }),
+    makeTask({ id: "T003", status: "ready", priority: "P2" })
+  ];
+  const result = getNextActions(tasks);
+  assert.equal(result.suggestedNext?.id, "T003");
+  assert.deepEqual(
+    result.readyQueue.map((t) => t.id),
+    ["T003", "T002"]
+  );
+});
+
 test("getNextActions returns null suggestedNext when no ready tasks", () => {
   const tasks = [
     makeTask({ id: "T001", status: "completed" }),
@@ -636,6 +650,21 @@ test("getNextActions handles all-complete state", () => {
   assert.equal(result.readyQueue.length, 0);
   assert.equal(result.suggestedNext, null);
   assert.equal(result.stateSummary.completed, 2);
+});
+
+test("SqliteDualPlanningStore bumps planning_generation on TaskStore.save", async () => {
+  const workspace = await tmpDir();
+  const dual = new SqliteDualPlanningStore(workspace, ".workspace-kit/tasks/plan-gen.db");
+  dual.loadFromDisk();
+  const store = TaskStore.forSqliteDual(dual);
+  await store.load();
+  assert.equal(dual.getPlanningGeneration(), 0);
+  store.addTask(makeTask({ id: "T7001", title: "gen", status: "proposed" }));
+  await store.save();
+  assert.equal(dual.getPlanningGeneration(), 1);
+  const dual2 = new SqliteDualPlanningStore(workspace, ".workspace-kit/tasks/plan-gen.db");
+  dual2.loadFromDisk();
+  assert.equal(dual2.getPlanningGeneration(), 1);
 });
 
 // ---------------------------------------------------------------------------

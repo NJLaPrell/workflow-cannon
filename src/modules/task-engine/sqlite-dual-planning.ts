@@ -73,6 +73,8 @@ export class SqliteDualPlanningStore {
   private _tableShape: TableShape = "task-only";
   /** When true, load/save tasks via task_engine_tasks + envelope log columns. */
   private _relationalTasks = false;
+  /** Monotonic optimistic-lock counter for unified planning SQLite row (tasks + wishlist + logs). */
+  private _planningGeneration = 0;
 
   constructor(workspacePath: string, databaseRelativePath: string) {
     this.dbPath = path.resolve(workspacePath, databaseRelativePath);
@@ -97,6 +99,11 @@ export class SqliteDualPlanningStore {
     return this._relationalTasks;
   }
 
+  /** Current planning generation (SQLite `workspace_planning_state.planning_generation`). */
+  getPlanningGeneration(): number {
+    return this._planningGeneration;
+  }
+
   getDisplayPath(): string {
     return this.dbPath;
   }
@@ -111,6 +118,18 @@ export class SqliteDualPlanningStore {
     prepareKitSqliteDatabase(this.db);
     this._tableShape = detectTableShape(this.db);
     return this.db;
+  }
+
+  private refreshPlanningGenFromOpenDb(db: Database.Database): void {
+    const cols = planningStateColumnSet(db);
+    if (!cols.has("planning_generation")) {
+      this._planningGeneration = 0;
+      return;
+    }
+    const row = db
+      .prepare("SELECT planning_generation AS g FROM workspace_planning_state WHERE id = 1")
+      .get() as { g: number } | undefined;
+    this._planningGeneration = row !== undefined ? Number(row.g) || 0 : 0;
   }
 
   private loadRelationalTasks(db: Database.Database): void {
@@ -158,13 +177,15 @@ export class SqliteDualPlanningStore {
       this._wishlistDoc = emptyWishlistDocument();
       this._tableShape = "task-only";
       this._relationalTasks = false;
+      this._planningGeneration = 0;
       return;
     }
     const db = this.ensureDb();
-    this._tableShape = detectTableShape(db);
-    const hasRel = kitSqliteHasRelationalTaskDdl(db);
+    try {
+      this._tableShape = detectTableShape(db);
+      const hasRel = kitSqliteHasRelationalTaskDdl(db);
 
-    if (this._tableShape === "legacy-dual") {
+      if (this._tableShape === "legacy-dual") {
       const pcols = planningStateColumnSet(db);
       const hasEnvelope = pcols.has("relational_tasks") && pcols.has("transition_log_json");
       const row = hasEnvelope
@@ -261,6 +282,9 @@ export class SqliteDualPlanningStore {
         `Failed to parse SQLite planning row: ${(err as Error).message}`
       );
     }
+    } finally {
+      this.refreshPlanningGenFromOpenDb(db);
+    }
   }
 
   /** Replace in-memory documents (used by migrate). */
@@ -278,7 +302,49 @@ export class SqliteDualPlanningStore {
     this.persistSync();
   }
 
-  private persistRelational(db: Database.Database): void {
+  private runPersistMutation(
+    db: Database.Database,
+    options: { expectedPlanningGeneration?: number },
+    work?: () => void
+  ): void {
+    const pcols = planningStateColumnSet(db);
+    if (!pcols.has("planning_generation")) {
+      throw new TaskEngineError(
+        "storage-write-error",
+        "workspace_planning_state missing planning_generation column; upgrade workspace-kit and reopen the database"
+      );
+    }
+    let currentGen = 0;
+    const gRow = db
+      .prepare("SELECT planning_generation AS g FROM workspace_planning_state WHERE id = 1")
+      .get() as { g: number } | undefined;
+    if (gRow !== undefined) {
+      currentGen = Number(gRow.g) || 0;
+    }
+    if (
+      options.expectedPlanningGeneration !== undefined &&
+      options.expectedPlanningGeneration !== currentGen
+    ) {
+      throw new TaskEngineError(
+        "planning-generation-mismatch",
+        `expectedPlanningGeneration ${options.expectedPlanningGeneration} does not match current planning generation ${currentGen}`
+      );
+    }
+    if (work) {
+      work();
+    }
+    this._taskDoc.lastUpdated = new Date().toISOString();
+    this._wishlistDoc.lastUpdated = new Date().toISOString();
+    const nextGen = currentGen + 1;
+    if (this._relationalTasks && kitSqliteHasRelationalTaskDdl(db)) {
+      this.persistRelational(db, nextGen);
+    } else {
+      this.persistBlobOnly(db, nextGen);
+    }
+    this._planningGeneration = nextGen;
+  }
+
+  private persistRelational(db: Database.Database, nextPlanningGeneration: number): void {
     const mirror = relationalBlobMirror(this._taskDoc);
     const blobJson = JSON.stringify(mirror);
     const tr = JSON.stringify(this._taskDoc.transitionLog);
@@ -330,12 +396,12 @@ export class SqliteDualPlanningStore {
         | undefined;
       if (exists) {
         db.prepare(
-          `UPDATE workspace_planning_state SET task_store_json = ?, wishlist_store_json = ?, transition_log_json = ?, mutation_log_json = ?, relational_tasks = 1 WHERE id = 1`
-        ).run(blobJson, w, tr, ml);
+          `UPDATE workspace_planning_state SET task_store_json = ?, wishlist_store_json = ?, transition_log_json = ?, mutation_log_json = ?, relational_tasks = 1, planning_generation = ? WHERE id = 1`
+        ).run(blobJson, w, tr, ml, nextPlanningGeneration);
       } else {
         db.prepare(
-          `INSERT INTO workspace_planning_state (id, task_store_json, wishlist_store_json, transition_log_json, mutation_log_json, relational_tasks) VALUES (1, ?, ?, ?, ?, 1)`
-        ).run(blobJson, w, tr, ml);
+          `INSERT INTO workspace_planning_state (id, task_store_json, wishlist_store_json, transition_log_json, mutation_log_json, relational_tasks, planning_generation) VALUES (1, ?, ?, ?, ?, 1, ?)`
+        ).run(blobJson, w, tr, ml, nextPlanningGeneration);
       }
       return;
     }
@@ -345,16 +411,16 @@ export class SqliteDualPlanningStore {
       | undefined;
     if (exists) {
       db.prepare(
-        `UPDATE workspace_planning_state SET task_store_json = ?, transition_log_json = ?, mutation_log_json = ?, relational_tasks = 1 WHERE id = 1`
-      ).run(blobJson, tr, ml);
+        `UPDATE workspace_planning_state SET task_store_json = ?, transition_log_json = ?, mutation_log_json = ?, relational_tasks = 1, planning_generation = ? WHERE id = 1`
+      ).run(blobJson, tr, ml, nextPlanningGeneration);
     } else {
       db.prepare(
-        `INSERT INTO workspace_planning_state (id, task_store_json, transition_log_json, mutation_log_json, relational_tasks) VALUES (1, ?, ?, ?, 1)`
-      ).run(blobJson, tr, ml);
+        `INSERT INTO workspace_planning_state (id, task_store_json, transition_log_json, mutation_log_json, relational_tasks, planning_generation) VALUES (1, ?, ?, ?, 1, ?)`
+      ).run(blobJson, tr, ml, nextPlanningGeneration);
     }
   }
 
-  private persistBlobOnly(db: Database.Database): void {
+  private persistBlobOnly(db: Database.Database, nextPlanningGeneration: number): void {
     const t = JSON.stringify(this._taskDoc);
     if (this._tableShape === "legacy-dual") {
       const w = JSON.stringify(this._wishlistDoc);
@@ -363,12 +429,12 @@ export class SqliteDualPlanningStore {
         | undefined;
       if (exists) {
         db.prepare(
-          "UPDATE workspace_planning_state SET task_store_json = ?, wishlist_store_json = ? WHERE id = 1"
-        ).run(t, w);
+          "UPDATE workspace_planning_state SET task_store_json = ?, wishlist_store_json = ?, planning_generation = ? WHERE id = 1"
+        ).run(t, w, nextPlanningGeneration);
       } else {
         db.prepare(
-          "INSERT INTO workspace_planning_state (id, task_store_json, wishlist_store_json) VALUES (1, ?, ?)"
-        ).run(t, w);
+          "INSERT INTO workspace_planning_state (id, task_store_json, wishlist_store_json, planning_generation) VALUES (1, ?, ?, ?)"
+        ).run(t, w, nextPlanningGeneration);
       }
       return;
     }
@@ -377,39 +443,31 @@ export class SqliteDualPlanningStore {
       | { ok: number }
       | undefined;
     if (exists) {
-      db.prepare("UPDATE workspace_planning_state SET task_store_json = ? WHERE id = 1").run(t);
+      db.prepare("UPDATE workspace_planning_state SET task_store_json = ?, planning_generation = ? WHERE id = 1").run(
+        t,
+        nextPlanningGeneration
+      );
     } else {
-      db.prepare("INSERT INTO workspace_planning_state (id, task_store_json) VALUES (1, ?)").run(t);
+      db.prepare(
+        "INSERT INTO workspace_planning_state (id, task_store_json, planning_generation) VALUES (1, ?, ?)"
+      ).run(t, nextPlanningGeneration);
     }
   }
 
-  persistSync(): void {
-    this._taskDoc.lastUpdated = new Date().toISOString();
-    this._wishlistDoc.lastUpdated = new Date().toISOString();
+  persistSync(options?: { expectedPlanningGeneration?: number }): void {
     const db = this.ensureDb();
     this._tableShape = detectTableShape(db);
-    if (this._relationalTasks && kitSqliteHasRelationalTaskDdl(db)) {
-      db.transaction(() => this.persistRelational(db))();
-    } else {
-      this.persistBlobOnly(db);
-    }
+    db.transaction(() => this.runPersistMutation(db, options ?? {}))();
   }
 
-  /** Run synchronous work inside one SQLite transaction and flush at the end. */
-  withTransaction(work: () => void): void {
+  /**
+   * Run synchronous work inside one SQLite transaction, then flush with planning generation bump.
+   * Pass `expectedPlanningGeneration` when using optimistic concurrency (must match row before work runs).
+   */
+  withTransaction(work: () => void, options?: { expectedPlanningGeneration?: number }): void {
     const db = this.ensureDb();
     this._tableShape = detectTableShape(db);
-    const txn = db.transaction(() => {
-      work();
-      this._taskDoc.lastUpdated = new Date().toISOString();
-      this._wishlistDoc.lastUpdated = new Date().toISOString();
-      if (this._relationalTasks && kitSqliteHasRelationalTaskDdl(db)) {
-        this.persistRelational(db);
-      } else {
-        this.persistBlobOnly(db);
-      }
-    });
-    txn();
+    db.transaction(() => this.runPersistMutation(db, options ?? {}, work))();
   }
 
   /**
@@ -423,6 +481,14 @@ export class SqliteDualPlanningStore {
       return;
     }
     const hasRel = kitSqliteHasRelationalTaskDdl(db);
+    const oldTableCols = planningStateColumnSet(db);
+    let preservedPlanningGen = 0;
+    if (oldTableCols.has("planning_generation")) {
+      const gr = db
+        .prepare("SELECT planning_generation AS g FROM workspace_planning_state WHERE id = 1")
+        .get() as { g: number } | undefined;
+      preservedPlanningGen = gr !== undefined ? Number(gr.g) || 0 : 0;
+    }
     const oldRow = hasRel
       ? (db
           .prepare(
@@ -454,23 +520,27 @@ export class SqliteDualPlanningStore {
         "ALTER TABLE workspace_planning_state_new ADD COLUMN relational_tasks INTEGER NOT NULL DEFAULT 0"
       );
     }
+    db.exec(
+      "ALTER TABLE workspace_planning_state_new ADD COLUMN planning_generation INTEGER NOT NULL DEFAULT 0"
+    );
     const row = db
       .prepare("SELECT task_store_json FROM workspace_planning_state WHERE id = 1")
       .get() as { task_store_json: string } | undefined;
     const taskJson = row?.task_store_json ?? JSON.stringify(emptyTaskStoreDocument());
     if (hasRel) {
       db.prepare(
-        "INSERT OR REPLACE INTO workspace_planning_state_new (id, task_store_json, transition_log_json, mutation_log_json, relational_tasks) VALUES (1, ?, ?, ?, ?)"
+        "INSERT OR REPLACE INTO workspace_planning_state_new (id, task_store_json, transition_log_json, mutation_log_json, relational_tasks, planning_generation) VALUES (1, ?, ?, ?, ?, ?)"
       ).run(
         taskJson,
         oldRow?.transition_log_json ?? "[]",
         oldRow?.mutation_log_json ?? "[]",
-        oldRow?.relational_tasks ?? 0
+        oldRow?.relational_tasks ?? 0,
+        preservedPlanningGen
       );
     } else {
-      db.prepare("INSERT OR REPLACE INTO workspace_planning_state_new (id, task_store_json) VALUES (1, ?)").run(
-        taskJson
-      );
+      db.prepare(
+        "INSERT OR REPLACE INTO workspace_planning_state_new (id, task_store_json, planning_generation) VALUES (1, ?, ?)"
+      ).run(taskJson, preservedPlanningGen);
     }
     db.exec("DROP TABLE workspace_planning_state");
     db.exec("ALTER TABLE workspace_planning_state_new RENAME TO workspace_planning_state");

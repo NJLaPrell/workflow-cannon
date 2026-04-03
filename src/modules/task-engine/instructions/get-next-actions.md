@@ -21,11 +21,13 @@ Response includes **`queueNamespace`**: the filter applied, or **`null`** when u
 
 A `NextActionSuggestion` object containing:
 
-- `readyQueue`: Tasks in `ready` state sorted by priority (P1 first)
-- `suggestedNext`: The highest-priority ready task, or null if queue is empty
+- `readyQueue`: Ready tasks (excluding wishlist intake) sorted by **priority** (P1 first), then **task id** as a tie-break. Tasks whose `dependsOn` are not all **`completed`** appear **after** runnable ready tasks (dependency-blocked ready work is secondary).
+- `suggestedNext`: The first runnable ready task in that ordering, or `null` if no ready task can start (empty queue or every ready task is blocked by incomplete dependencies).
 - `stateSummary`: Count of tasks in each state
 - `blockingAnalysis`: Which blocked tasks are waiting on what, sorted by blocking count (most-blocked first)
 
+The response **`data`** also includes **`planningGeneration`** (integer) when using SQLite planning persistence — monotonic optimistic-lock generation for the unified planning row.
+
 ## Agent Usage
 
-Use this command to decide what to work on next without manually opening the raw task store (default SQLite `.workspace-kit/tasks/workspace-kit.db`; JSON `.workspace-kit/tasks/state.json` only when opted in / legacy). The `suggestedNext` field gives you the single best task to start.
+Use this command to decide what to work on next without manually opening the raw task store (default SQLite `.workspace-kit/tasks/workspace-kit.db`; JSON `.workspace-kit/tasks/state.json` only when opted in / legacy). The `suggestedNext` field points at work that is **ready and dependency-runnable**, not merely highest priority among blocked-by-deps tasks.

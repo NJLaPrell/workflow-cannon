@@ -49,6 +49,44 @@ function priorityRank(task: TaskEntity): number {
   return PRIORITY_ORDER[task.priority ?? ""] ?? 99;
 }
 
+/** Deterministic ordering within the ready queue: priority rank, then task id. */
+function sortReadyTasks(tasks: TaskEntity[]): TaskEntity[] {
+  return [...tasks].sort((a, b) => {
+    const pr = priorityRank(a) - priorityRank(b);
+    if (pr !== 0) {
+      return pr;
+    }
+    return a.id.localeCompare(b.id);
+  });
+}
+
+/**
+ * Ready tasks whose dependsOn are all completed vs ready-but-blocked-by-deps.
+ * Runnable tasks are listed first in `getNextActions.readyQueue`; `suggestedNext` is only ever runnable.
+ */
+function partitionReadyByDependencies(tasks: TaskEntity[]): {
+  runnableReady: TaskEntity[];
+  dependencyBlockedReady: TaskEntity[];
+} {
+  const completedIds = new Set(tasks.filter((t) => t.status === "completed").map((t) => t.id));
+  const readyCandidates = tasks.filter((t) => t.status === "ready" && !isWishlistIntakeTask(t));
+  const runnableReady: TaskEntity[] = [];
+  const dependencyBlockedReady: TaskEntity[] = [];
+  for (const t of readyCandidates) {
+    const deps = t.dependsOn ?? [];
+    const depsSatisfied = deps.every((depId) => completedIds.has(depId));
+    if (depsSatisfied) {
+      runnableReady.push(t);
+    } else {
+      dependencyBlockedReady.push(t);
+    }
+  }
+  return {
+    runnableReady: sortReadyTasks(runnableReady),
+    dependencyBlockedReady: sortReadyTasks(dependencyBlockedReady)
+  };
+}
+
 function buildStateSummary(tasks: TaskEntity[]): NextActionSuggestion["stateSummary"] {
   const counts: Record<TaskStatus, number> = {
     proposed: 0,
@@ -99,13 +137,12 @@ export function getNextActions(
   options?: GetNextActionsOptions
 ): NextActionSuggestion {
   const scoped = filterTasksByQueueNamespace(tasks, options?.queueNamespace);
-  const readyQueue = scoped
-    .filter((t) => t.status === "ready" && !isWishlistIntakeTask(t))
-    .sort((a, b) => priorityRank(a) - priorityRank(b));
+  const { runnableReady, dependencyBlockedReady } = partitionReadyByDependencies(scoped);
+  const readyQueue = [...runnableReady, ...dependencyBlockedReady];
 
   return {
     readyQueue,
-    suggestedNext: readyQueue[0] ?? null,
+    suggestedNext: runnableReady[0] ?? null,
     stateSummary: buildStateSummary(scoped),
     blockingAnalysis: buildBlockingAnalysis(scoped)
   };

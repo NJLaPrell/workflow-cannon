@@ -3,7 +3,7 @@ import Database from "better-sqlite3";
 type SqliteDatabase = InstanceType<typeof Database>;
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 2;
+export const KIT_SQLITE_USER_VERSION = 3;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 
@@ -87,6 +87,15 @@ function migrateV1ToV2(db: SqliteDatabase): void {
   }
 }
 
+function migrateV2ToV3(db: SqliteDatabase): void {
+  const cols = columnNames(db, "workspace_planning_state");
+  if (!cols.has("planning_generation")) {
+    db.exec(
+      "ALTER TABLE workspace_planning_state ADD COLUMN planning_generation INTEGER NOT NULL DEFAULT 0"
+    );
+  }
+}
+
 /**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
@@ -107,6 +116,12 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
   }
   if (current < 2) {
     migrateV1ToV2(db);
+    db.pragma("user_version = 2");
+  }
+  const afterV2 = db.pragma("user_version", { simple: true });
+  current = typeof afterV2 === "number" ? afterV2 : Number(afterV2);
+  if (current < 3) {
+    migrateV2ToV3(db);
     db.pragma(`user_version = ${KIT_SQLITE_USER_VERSION}`);
   }
 }

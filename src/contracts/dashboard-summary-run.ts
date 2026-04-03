@@ -32,6 +32,8 @@ export type DashboardListSummary = {
 
 export type DashboardSummaryData = {
   schemaVersion: 1;
+  /** Monotonic optimistic-lock generation for the unified planning SQLite row. */
+  planningGeneration: number;
   taskStoreLastUpdated: string;
   workspaceStatus: Record<string, unknown> | null;
   planningSession: unknown;

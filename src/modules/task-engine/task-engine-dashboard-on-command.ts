@@ -13,7 +13,8 @@ import type { TaskStore } from "./store.js";
 
 export async function runDashboardSummaryCommand(
   ctx: ModuleLifecycleContext,
-  store: TaskStore
+  store: TaskStore,
+  planningGeneration: number
 ): Promise<ModuleCommandResult> {
   const tasks = store.getActiveTasks();
   const suggestion = getNextActions(tasks);
@@ -123,6 +124,7 @@ export async function runDashboardSummaryCommand(
 
   const data = {
     schemaVersion: 1 as const,
+    planningGeneration,
     taskStoreLastUpdated: store.getLastUpdated(),
     workspaceStatus,
     planningSession,

@@ -1,15 +1,15 @@
 {
-  "kit": {
-    "currentPhaseNumber": 44,
-    "currentPhaseLabel": "Phase 44 — next (plan in ROADMAP; Phase 43 shipped v0.43.0)"
-  },
-  "tasks": {
-    "persistenceBackend": "sqlite",
-    "sqliteDatabaseRelativePath": ".workspace-kit/tasks/workspace-kit.db"
-  },
   "improvement": {
     "hooks": {
       "afterTaskCompleted": "ingest"
     }
+  },
+  "kit": {
+    "currentPhaseLabel": "Phase 45 — planningGenerationPolicy, tests, extension UX, audit, docs (T578–T584); Phase 44 shipped v0.44.0",
+    "currentPhaseNumber": 45
+  },
+  "tasks": {
+    "persistenceBackend": "sqlite",
+    "sqliteDatabaseRelativePath": ".workspace-kit/tasks/workspace-kit.db"
   }
 }

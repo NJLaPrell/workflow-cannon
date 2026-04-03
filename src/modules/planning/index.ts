@@ -23,6 +23,7 @@ import {
 } from "../../core/planning/index.js";
 import { builtinInstructionEntriesForModule } from "../../contracts/builtin-run-command-manifest.js";
 import { planningStrictValidationEnabled } from "../task-engine/planning-config.js";
+import { planningConcurrencySaveOpts } from "../task-engine/mutation-utils.js";
 import { validateTaskSetForStrictMode } from "../task-engine/strict-task-validation.js";
 
 type PlanningOutputMode = "wishlist" | "tasks" | "response";
@@ -489,9 +490,12 @@ export const planningModule: WorkflowModule = {
               message: `Task '${task.id}' already exists`
             };
           }
-          stores.sqliteDual.withTransaction(() => {
-            stores.taskStore.addTask(task);
-          });
+          stores.sqliteDual.withTransaction(
+            () => {
+              stores.taskStore.addTask(task);
+            },
+            planningConcurrencySaveOpts(args as Record<string, unknown>)
+          );
         }
         await clearBuildPlanSession(ctx.workspacePath);
         return {
@@ -626,9 +630,12 @@ export const planningModule: WorkflowModule = {
         }
       }
       try {
-        stores.sqliteDual.withTransaction(() => {
-          stores.taskStore.addTask(task);
-        });
+        stores.sqliteDual.withTransaction(
+          () => {
+            stores.taskStore.addTask(task);
+          },
+          planningConcurrencySaveOpts(args as Record<string, unknown>)
+        );
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         return { ok: false, code: "invalid-planning-artifact", message: msg };

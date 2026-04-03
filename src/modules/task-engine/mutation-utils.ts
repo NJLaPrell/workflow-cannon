@@ -169,3 +169,22 @@ export function buildTaskFromConversionPayload(
   };
   return { ok: true, task };
 }
+
+/** Optional optimistic concurrency token from mutating command JSON (`expectedPlanningGeneration`). */
+export function readOptionalExpectedPlanningGeneration(args: Record<string, unknown>): number | undefined {
+  const v = args.expectedPlanningGeneration;
+  if (typeof v === "number" && Number.isInteger(v) && v >= 0) {
+    return v;
+  }
+  if (typeof v === "string" && /^\d+$/.test(v.trim())) {
+    return Number(v.trim());
+  }
+  return undefined;
+}
+
+export function planningConcurrencySaveOpts(
+  args: Record<string, unknown>
+): { expectedPlanningGeneration: number } | undefined {
+  const g = readOptionalExpectedPlanningGeneration(args);
+  return g !== undefined ? { expectedPlanningGeneration: g } : undefined;
+}

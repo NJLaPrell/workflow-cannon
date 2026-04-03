@@ -8,6 +8,26 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.44.0] - 2026-04-02
+
+Phase 44 — **planning-store optimistic concurrency**, **dependency-aware `get-next-actions`**, **Cursor extension Tasks tree DnD** (`T571`, `T557`–`T559`, `T573`–`T577`).
+
+### Added
+
+- **SQLite `planning_generation`** — kit migration **`user_version` 3**; monotonic counter on `workspace_planning_state`; optional JSON **`expectedPlanningGeneration`** on mutating task-engine / wishlist / planning paths; mismatch → **`planning-generation-mismatch`**.
+- **Read surfaces** — **`planningGeneration`** on **`get-task`**, **`list-tasks`**, **`get-ready-queue`**, **`get-next-actions`**, **`dashboard-summary`**, and successful mutation payloads where applicable.
+- **`get-next-actions`** — **`suggestedNext`** is never a ready task blocked by incomplete **`dependsOn`**; dependency-blocked ready tasks sort after runnable ready work (same priority + id tie-breaks within each segment).
+- **Extension** — Tasks sidebar **drag-and-drop** for `T###` rows (phase folders → **`assign-task-phase`** / **`clear-task-phase`**; status groups → **`run-transition`** with policy prompt). Design: **`extensions/cursor-workflow-cannon/docs/tasks-tree-dnd.md`**.
+
+### Docs
+
+- **ADR** — **`docs/maintainers/ADR-planning-generation-optimistic-concurrency.md`**.
+- **Task Engine** — **`get-next-actions.md`**, **`run-transition.md`** (optional **`expectedPlanningGeneration`**).
+
+### Changed
+
+- **Kit SQLite** — **`KIT_SQLITE_USER_VERSION`** **3**; **`migrateToTaskOnlyTableSchema`** preserves **`planning_generation`** when recreating `workspace_planning_state`.
+
 ## [0.43.0] - 2026-04-02
 
 Phase 43 — **platform and maintainability refactors** (`T548`–`T555`).

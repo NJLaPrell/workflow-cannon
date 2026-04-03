@@ -15,6 +15,7 @@ workspace-kit run run-transition '{"taskId":"T184","action":"start","policyAppro
 | `taskId` | string | yes | The task ID to transition (e.g., `T184`) |
 | `action` | string | yes | The transition action: `accept`, `reject`, `demote`, `start`, `block`, `cancel`, `complete`, `pause`, `unblock` |
 | `actor` | string | no | Who or what triggered the transition |
+| `expectedPlanningGeneration` | integer | no | When set, must match current SQLite `workspace_planning_state.planning_generation` or the command fails with **`planning-generation-mismatch`** (optimistic concurrency; see **`ADR-planning-generation-optimistic-concurrency.md`**) |
 
 ## Allowed Actions by State
 
@@ -27,4 +28,4 @@ workspace-kit run run-transition '{"taskId":"T184","action":"start","policyAppro
 
 ## Returns
 
-Transition evidence record with `transitionId`, state changes, guard results, and any auto-unblocked dependents.
+Success **`data`** includes transition **`evidence`**, **`autoUnblocked`**, and **`planningGeneration`** (new value after persist). On mismatch when **`expectedPlanningGeneration`** was supplied, **`code`** is **`planning-generation-mismatch`**.

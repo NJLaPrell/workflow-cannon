@@ -12,6 +12,8 @@ export type TransitionRequest = {
   taskId: string;
   action: string;
   actor?: string;
+  /** When set, SQLite planning row must match this generation or persist fails (`planning-generation-mismatch`). */
+  expectedPlanningGeneration?: number;
 };
 
 export type TransitionResult = {
@@ -94,7 +96,11 @@ export class TransitionService {
       this.store.addEvidence(unblockEvidence);
     }
 
-    await this.store.save();
+    await this.store.save(
+      request.expectedPlanningGeneration !== undefined
+        ? { expectedPlanningGeneration: request.expectedPlanningGeneration }
+        : undefined
+    );
 
     return { evidence, autoUnblocked: autoUnblockResults };
   }
