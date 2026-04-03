@@ -16,7 +16,7 @@ rule|R103|must|significant_architecture_or_policy_changes|record_decision_and_co
 rule|R104|must|breaking_changes|include_explicit_migration_and_compatibility_notes_before_acceptance|risk=critical|ap=required|ov=stop|st=active|refs=docs/maintainers/CHANGELOG.md,docs/maintainers/RELEASING.md
 rule|R105|must|change_control|track_strategic_intent_in_roadmap_and_principles|risk=medium|ap=none|ov=warn|st=active|refs=docs/maintainers/ROADMAP.md,.ai/PRINCIPLES.md
 rule|R106|must|change_control|track_execution_state_in_task_engine|risk=medium|ap=none|ov=warn|st=active|refs=.workspace-kit/tasks/state.json
-rule|R107|must|change_control|record_major_technical_choices_in_decisions_or_adrs|risk=medium|ap=none|ov=warn|st=active|refs=docs/maintainers/DECISIONS.md,docs/adr/README.md
+rule|R107|must|change_control|record_major_technical_choices_in_decisions_or_adrs|risk=medium|ap=none|ov=warn|st=active|refs=docs/maintainers/DECISIONS.md
 rule|R108|must|conflict_resolution|prefer_evidence_from_tests_incidents_and_user_impact_when_maintainers_disagree|risk=high|ap=none|ov=warn|st=active
 rule|R109|must|conflict_resolution|prefer_the_safer_reversible_option_when_evidence_is_inconclusive|risk=high|ap=none|ov=warn|st=active
 rule|R110|should|conflict_resolution|use_time_boxed_experiments_with_exit_criteria_for_unresolved_tradeoffs|risk=medium|ap=prompt|ov=prompt|st=active

@@ -8,6 +8,10 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+### Removed
+
+- **Repository hygiene** — tracked `.workspace-kit/backups` snapshot tree; one-off migration scripts (`architect-review-proposals-2026-03-31`, `phase29-architect-ready-tasks`, `apply-phase-30-33-architect-tasks`, `convert-open-wishlist-to-ready`, `rewrite-active-improvements`, `seed-plan-wishlist-intake`); orphan `docs/policies/*`, `docs/workflows/task-pr-delivery-workflow.md`, and misleading `docs/adr/README.md`; superseded maintainer notes `RUNTIME-PATH-AUDIT-PHASE11.md`, `ARCHITECTURAL-REVIEW-FINDINGS.md`. **`.gitignore`** now excludes `.workspace-kit/backups/`.
+
 ## [0.47.0] - 2026-04-02
 
 Phase 47 — **agent guidance profile (RPG party v1)** (**`T585`–`T590`**).
@@ -648,7 +652,7 @@ Phase 11 — architectural review follow-up hardening and release-process alignm
 
 - **Phase 11 policy/session edge tests** in `test/phase11-architectural-followup.test.mjs` covering malformed `policyApproval`, session-id mismatch for grants, and non-interactive denial behavior with stable denial fields.
 - **Concurrency contention tests** in `test/task-engine.test.mjs` for concurrent task-store saves and concurrent policy-trace appends (line-delimited JSON assertions).
-- **Runtime path audit note**: `docs/maintainers/RUNTIME-PATH-AUDIT-PHASE11.md`.
+- **Runtime path audit** (Phase 11): `ModuleRegistry` / CLI workspace-root resolution hardening; regression coverage in `test/module-registry.test.mjs`.
 
 ### Changed
 
@@ -691,7 +695,7 @@ Phase 8 — improvement backlog triage: maintainer onboarding, policy clarity, a
 - **CLI messages** — `init` / `upgrade` / `config` mutating paths cite **`docs/maintainers/POLICY-APPROVAL.md`** and operation ids where applicable.
 - **README / AGENTS** — explicit CLI invocation table, task-state as execution truth, link to policy doc.
 - **Transcript ingestion runbook** — corrected guidance: `run` does not read `WORKSPACE_KIT_POLICY_APPROVAL`; wrapper scripts may still use env for detached ingest.
-- **FEATURE-MATRIX / ARCHITECTURAL-REVIEW-FINDINGS** — Phase 7–8 rows and remediation snapshot; removed incorrect “Phase 6 includes imp-2cf5” feature claim.
+- **FEATURE-MATRIX** — Phase 7–8 rows and architectural-review remediation snapshot; removed incorrect “Phase 6 includes imp-2cf5” feature claim.
 
 ### Fixed
 
