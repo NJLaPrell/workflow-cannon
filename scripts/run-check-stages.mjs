@@ -41,6 +41,13 @@ const stages = [
     hint: "Instruction markdown and manifest rows must match for sensitive run commands."
   },
   {
+    id: "pilot-run-args-snapshot",
+    label: "Pilot run-args snapshot vs task-engine contracts",
+    command: process.execPath,
+    args: ["scripts/check-pilot-run-args-snapshot.mjs"],
+    hint: "Regenerate schemas/pilot-run-args.snapshot.json via node scripts/refresh-pilot-run-args-snapshot.mjs after changing pilot command arg contracts."
+  },
+  {
     id: "agent-cli-map",
     label: "AGENT-CLI-MAP coverage of sensitive commands",
     command: process.execPath,

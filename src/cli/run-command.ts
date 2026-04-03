@@ -15,6 +15,7 @@ import {
 } from "../core/policy.js";
 import { getSessionGrant, recordSessionGrant, resolveSessionId } from "../core/session-policy.js";
 import { applyResponseTemplateApplication } from "../core/response-template-shaping.js";
+import { validatePilotRunCommandArgs } from "../core/run-args-pilot-validation.js";
 import { defaultRegistryModules } from "../modules/index.js";
 import { promptSensitiveRunApproval } from "./interactive-policy.js";
 
@@ -77,6 +78,14 @@ export async function handleRunCommand(
     const message = err instanceof Error ? err.message : String(err);
     writeError(`Module registry / config resolution failed: ${message}`);
     return codes.validationFailure;
+  }
+
+  if (subcommand) {
+    const pilotErr = validatePilotRunCommandArgs(subcommand, commandArgs, effective);
+    if (pilotErr) {
+      writeLine(JSON.stringify(pilotErr, null, 2));
+      return codes.validationFailure;
+    }
   }
 
   if (!subcommand) {

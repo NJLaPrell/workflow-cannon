@@ -20,6 +20,7 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - **Phase 46 (roadmap data generation + task features)** shipped as **`v0.46.0`** — **`T591`–`T598`**: JSON Schema–validated **`roadmap-data.json`** / **`feature-taxonomy.json`**, deterministic **`ROADMAP.md`** + **`FEATURE-TAXONOMY.md`** generation, CI validation + ROADMAP drift gate; relational **`features_json`** (**`user_version` 4**), **`create-task`** / **`update-task`** / **`list-tasks`** **`features`** filter; **`task-engine`** **`0.12.0`**, **`documentation`** **`0.4.0`** in **`compatibility-matrix.json`**.
 - **Phase 47 (agent guidance profile)** shipped as **`v0.47.0`** — **`T585`–`T590`**: ADR **`ADR-agent-guidance-profile-rpg-party-v1.md`**, **`kit.agentGuidance.*`** config keys, **`resolve-agent-guidance`** / **`set-agent-guidance`**, **`resolve-behavior-profile`** **`agentGuidance.advisoryModulation`**, dashboard tier card; **`workspace-config`** **`0.5.0`**, **`task-engine`** **`0.13.0`**, **`agent-behavior`** **`0.2.0`** in **`compatibility-matrix.json`**.
 - **Phase 48 (wishlist intake agent workflow)** shipped as **`v0.48.0`** — **`T604`–`T607`**: maintainer playbook **`wishlist-intake-to-execution`**, **`list-wishlist`** / **`get-wishlist`** instruction alignment (unified SQLite intake), requestable Cursor rule **`.cursor/rules/playbook-wishlist-intake-to-execution.mdc`**, discovery updates in **`AGENTS.md`**, **`playbooks/README.md`**, **`agent-playbooks.md`**, **`.ai/MACHINE-PLAYBOOKS.md`**.
+- **Phase 50 (T600 pilot — runtime run-args validation)** shipped as **`v0.50.0`** — **`T616`–`T620`**: ADR **`ADR-runtime-run-args-validation-pilot.md`**, AJV pilot on **`run-transition`** / **`dashboard-summary`** / **`create-task`** / **`update-task`**, **`schemas/pilot-run-args.snapshot.json`** + CI drift guard, contract updates for **`taskId`** / **`expectedPlanningGeneration`** / invocation keys; **`task-engine`** **`0.14.0`** in **`compatibility-matrix.json`**.
 - **Phase 49 (extension dashboard agent handoff + maintainer inventory)** shipped as **`v0.49.0`** — **`T608`–`T613`**: **`persisted-artifacts-and-cli-inventory.md`**, **`ARCHITECTURE.md`** cross-link; Cursor extension dashboard **Chat** / **Accept** rows, Tasks wishlist context prefill, palette playbook prefills; maintainer runbook **`agent-task-engine-ergonomics`** subsection.
 - **Phase 36 (policy, integrations, improvement loop, documentation architecture)** shipped as **`v0.36.0`** — see **`docs/maintainers/CHANGELOG.md`** and task-engine `phaseKey` **36** completion.
 - **Phase 37 (maintainer onboarding, shell JSON guidance, improvement churn closure, dashboard terminal parity)** shipped as **`v0.37.0`** — see **`docs/maintainers/CHANGELOG.md`** and task-engine `phaseKey` **37** completion (`imp-*` slice).
@@ -70,6 +71,13 @@ Stable **slugs** for task ↔ feature mapping (see [`FEATURE-TAXONOMY.md`](./FEA
 Each phase ends with a GitHub release. Phases are sequential unless explicitly re-planned.
 
 For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MATRIX.md`.
+
+### Phase 50 - T600 pilot: runtime run-args validation -> GitHub release `v0.50.0` (COMPLETE)
+
+- **Primary scope:** **`T616`–`T620`** — ADR **`ADR-runtime-run-args-validation-pilot.md`**; **`src/core/run-args-pilot-validation.ts`** + **`src/cli/run-command.ts`** integration; **`schemas/pilot-run-args.snapshot.json`** with **`check-pilot-run-args-snapshot`** / **`refresh-pilot-run-args-snapshot`**; contract updates (**`taskId`** for **`imp-*`**, **`expectedPlanningGeneration`**, **`dashboard-summary`** **`config`**/**`actor`**); maintainer docs + inventory row; **`task-engine`** **`0.14.0`**.
+- **Outcome:** Pilot **`run`** commands fail fast on malformed JSON with **`invalid-run-args`**; planning **`require`** surfaces **`planning-generation-required`** before sensitive policy work when the token is missing; CI blocks snapshot drift vs **`task-engine-run-contracts.schema.json`**.
+- **Exit signals:**
+  - **`pnpm run build`**, **`check`**, **`test`**, **`parity`** on the release tag; maintainer evidence per **`RELEASING.md`**.
 
 ### Phase 49 - Extension dashboard agent handoff + maintainer inventory -> GitHub release `v0.49.0` (COMPLETE)
 

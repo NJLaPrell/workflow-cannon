@@ -1,7 +1,7 @@
 # Persisted artifacts and high-traffic CLI inventory
 
 **Audience:** maintainers and agents planning schema, store, or router changes.  
-**Non-goals:** This table does not replace **`src/contracts/builtin-run-command-manifest.json`** (full command list) or module **`instructions/*.md`** (behavior). Runtime validation pilot (**`T600`**) and error/remediation catalog (**`T602`**) are out of scope.
+**Non-goals:** This table does not replace **`src/contracts/builtin-run-command-manifest.json`** (full command list) or module **`instructions/*.md`** (behavior). Broader **`run`** validation beyond the Phase 50 pilot allowlist and error/remediation catalog (**`T602`**) remain follow-up work.
 
 **When to update this file**
 
@@ -15,6 +15,7 @@
 | Artifact | R/W | Contract | Enforcement | Owner |
 | --- | --- | --- | --- | --- |
 | `schemas/task-engine-run-contracts.schema.json` | Read (generated bumps) | JSON Schema | `pnpm run check` (task-engine run contracts stage); publish/parity consumers | task-engine |
+| `schemas/pilot-run-args.snapshot.json` | Read | Extracted args schemas for pilot `run` commands | `pnpm run check` (pilot-run-args-snapshot); refresh via `node scripts/refresh-pilot-run-args-snapshot.mjs` | core / task-engine |
 | `schemas/task-engine-state.schema.json` | Read | JSON Schema | Documentation / validation helpers | task-engine |
 | `schemas/compatibility-matrix.schema.json` | Read | JSON Schema | `scripts/check-compatibility.mjs` | release / workspace-config |
 | `schemas/parity-evidence.schema.json` | Read | JSON Schema | Parity evidence contract | CI / parity |
@@ -45,7 +46,7 @@ Shapes are defined in **`src/contracts/`** (TypeScript) and/or **`schemas/task-e
 
 | Command | Mutating | Args / success reference | Schema / TS | Enforcement | Owner |
 | --- | --- | --- | --- | --- | --- |
-| `dashboard-summary` | No | `{}` → `DashboardSummaryData` | `src/contracts/dashboard-summary-run.ts` + run-contracts schema | Extension compile; contract stage in `pnpm run check` | task-engine |
+| `dashboard-summary` | No | `{}` or optional `config` / `actor` → `DashboardSummaryData` | `src/contracts/dashboard-summary-run.ts` + run-contracts schema; CLI pilot AJV | Extension compile; contract + pilot snapshot stages in `pnpm run check` | task-engine |
 | `list-tasks` | No | Filters in instruction | Run-contracts dashboard/task list facets | `check` | task-engine |
 | `get-next-actions` | No | `{}` or filters | Run-contracts / instruction | `check` | task-engine |
 | `get-task` | No | `taskId`, optional `historyLimit` | Instruction + store | `check` | task-engine |

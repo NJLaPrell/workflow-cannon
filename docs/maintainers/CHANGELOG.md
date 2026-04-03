@@ -12,6 +12,24 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 - **Repository hygiene** — tracked `.workspace-kit/backups` snapshot tree; one-off migration scripts (`architect-review-proposals-2026-03-31`, `phase29-architect-ready-tasks`, `apply-phase-30-33-architect-tasks`, `convert-open-wishlist-to-ready`, `rewrite-active-improvements`, `seed-plan-wishlist-intake`); orphan `docs/policies/*`, `docs/workflows/task-pr-delivery-workflow.md`, and misleading `docs/adr/README.md`; superseded maintainer notes `RUNTIME-PATH-AUDIT-PHASE11.md`, `ARCHITECTURAL-REVIEW-FINDINGS.md`. **`.gitignore`** now excludes `.workspace-kit/backups/`.
 
+## [0.50.0] - 2026-04-03
+
+Phase 50 — **T600 pilot: runtime `run` JSON args validation** (**`T616`–`T620`**).
+
+### Added
+
+- **CLI** — Pilot validation before module dispatch for **`run-transition`**, **`dashboard-summary`**, **`create-task`**, **`update-task`**: AJV against merged args schema; failures return **`invalid-run-args`** with **`details.errors`** (JSON Pointer–friendly paths). When **`tasks.planningGenerationPolicy`** is **`require`**, pilot mutators without **`expectedPlanningGeneration`** fail early with **`planning-generation-required`**.
+- **Schemas** — **`schemas/pilot-run-args.snapshot.json`** (extracted args for pilot commands + package version pin); **`scripts/check-pilot-run-args-snapshot.mjs`** and **`scripts/refresh-pilot-run-args-snapshot.mjs`**; new **`pnpm run check`** stage **`pilot-run-args-snapshot`**.
+- **Run contracts** — **`task-engine-run-contracts.schema.json`**: **`taskId`** patterns include improvements **`imp-*`**; optional **`expectedPlanningGeneration`** on **`run-transition`** / **`create-task`** / **`update-task`** args; optional **`config`** / **`actor`** on those args and on **`dashboard-summary`** args.
+
+### Docs
+
+- **`docs/maintainers/ADR-runtime-run-args-validation-pilot.md`**, **`module-build-guide.md`** (pilot extension), **`persisted-artifacts-and-cli-inventory.md`**.
+
+### Changed
+
+- **Task-engine module** — **`0.14.0`** (compatibility matrix).
+
 ## [0.49.0] - 2026-04-03
 
 Phase 49 — **extension dashboard agent handoff + maintainer inventory** (**`T608`–`T613`**).

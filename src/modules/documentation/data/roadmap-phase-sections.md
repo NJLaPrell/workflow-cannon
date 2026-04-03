@@ -1,3 +1,10 @@
+### Phase 50 - T600 pilot: runtime run-args validation -> GitHub release `v0.50.0` (COMPLETE)
+
+- **Primary scope:** **`T616`–`T620`** — ADR **`ADR-runtime-run-args-validation-pilot.md`**; **`src/core/run-args-pilot-validation.ts`** + **`src/cli/run-command.ts`** integration; **`schemas/pilot-run-args.snapshot.json`** with **`check-pilot-run-args-snapshot`** / **`refresh-pilot-run-args-snapshot`**; contract updates (**`taskId`** for **`imp-*`**, **`expectedPlanningGeneration`**, **`dashboard-summary`** **`config`**/**`actor`**); maintainer docs + inventory row; **`task-engine`** **`0.14.0`**.
+- **Outcome:** Pilot **`run`** commands fail fast on malformed JSON with **`invalid-run-args`**; planning **`require`** surfaces **`planning-generation-required`** before sensitive policy work when the token is missing; CI blocks snapshot drift vs **`task-engine-run-contracts.schema.json`**.
+- **Exit signals:**
+  - **`pnpm run build`**, **`check`**, **`test`**, **`parity`** on the release tag; maintainer evidence per **`RELEASING.md`**.
+
 ### Phase 49 - Extension dashboard agent handoff + maintainer inventory -> GitHub release `v0.49.0` (COMPLETE)
 
 - **Primary scope:** **`T608`–`T613`** — maintainer inventory **[`data/persisted-artifacts-and-cli-inventory.md`](./data/persisted-artifacts-and-cli-inventory.md)** + **`ARCHITECTURE.md`** link; Cursor extension wishlist **Chat** (`deeplink.prompt.prefill`), **Accept** / **Chat** on **Proposed · improvements** and **Proposed · execution** dashboard rows; Tasks tree wishlist context menu; palette commands for **improvement-triage-top-three** and **task-to-main**; operator docs in extension **`README`** and **`agent-task-engine-ergonomics`**.

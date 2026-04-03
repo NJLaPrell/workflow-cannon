@@ -122,6 +122,13 @@ Stop work when there is unapproved critical risk (irreversible data loss or crit
 
 As of the default registry in `src/modules/index.ts`, the barrel **re-exports** (beyond `defaultRegistryModules`): **`agent-behavior`** helpers and types, **`approvals`**, **`documentation`** (module + selected doc types), **`improvement`** (module + confidence helpers), **`planning`**, **`workspace-config`**, and **`task-engine`** (module, `TaskStore`, transition helpers, wishlist validators, planning paths). Modules **not** re-exported at the barrel (e.g. consume via `src/modules/<id>/index.js`) should stay that way until a stable npm API needs them.
 
+## CLI `run` JSON args pilot (Phase 50 / T600)
+
+- **ADR:** **`docs/maintainers/ADR-runtime-run-args-validation-pilot.md`**
+- **Runtime:** **`src/core/run-args-pilot-validation.ts`** (allowlisted commands only; R102 — no `src/modules` imports). Integration: **`src/cli/run-command.ts`** after config resolution.
+- **Contracts:** Edit **`schemas/task-engine-run-contracts.schema.json`** `commands.<name>.args` (via `$defs`); bump **`packageVersion`** with **`package.json`**; run **`node scripts/refresh-pilot-run-args-snapshot.mjs`**; extend **`PILOT_COMMANDS`** / **`PLANNING_TOKEN_COMMANDS`** in **`run-args-pilot-validation.ts`** when adding commands to the pilot.
+- **CI:** **`pnpm run check`** includes **`check-pilot-run-args-snapshot.mjs`** — drift fails until the snapshot is refreshed.
+
 ## Definition Of Done
 
 A module task is done only when all are true:

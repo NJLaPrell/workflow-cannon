@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "sourceSchemaPackageVersion": "0.50.0",
+  "pilotCommands": [
+    "run-transition",
+    "dashboard-summary",
+    "create-task",
+    "update-task"
+  ],
+  "commands": {
+    "run-transition": {
+      "type": "object",
+      "required": [
+        "taskId",
+        "action"
+      ],
+      "properties": {
+        "taskId": {
+          "type": "string",
+          "pattern": "^(T[0-9]+|imp-[0-9a-f]{14})$"
+        },
+        "action": {
+          "type": "string"
+        },
+        "policyApproval": {
+          "type": "object"
+        },
+        "expectedPlanningGeneration": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            }
+          ]
+        },
+        "actor": {
+          "type": "string"
+        },
+        "config": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": true
+    },
+    "dashboard-summary": {
+      "type": "object",
+      "properties": {
+        "config": {
+          "type": "object"
+        },
+        "actor": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "create-task": {
+      "type": "object",
+      "required": [
+        "id",
+        "title"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^T[0-9]+$"
+        },
+        "title": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "proposed",
+            "ready"
+          ]
+        },
+        "clientMutationId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expectedPlanningGeneration": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            }
+          ]
+        },
+        "actor": {
+          "type": "string"
+        },
+        "config": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": true
+    },
+    "update-task": {
+      "type": "object",
+      "required": [
+        "taskId",
+        "updates"
+      ],
+      "properties": {
+        "taskId": {
+          "type": "string",
+          "pattern": "^(T[0-9]+|imp-[0-9a-f]{14})$"
+        },
+        "updates": {
+          "type": "object"
+        },
+        "clientMutationId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expectedPlanningGeneration": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            }
+          ]
+        },
+        "actor": {
+          "type": "string"
+        },
+        "config": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

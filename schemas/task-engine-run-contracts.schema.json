@@ -6,13 +6,13 @@
   "type": "object",
   "required": ["schemaVersion", "packageVersion", "moduleId", "commands"],
   "additionalProperties": false,
-  "packageVersion": "0.49.0",
+  "packageVersion": "0.50.0",
   "properties": {
     "schemaVersion": {
       "const": 1
     },
     "packageVersion": {
-      "const": "0.49.0",
+      "const": "0.50.0",
       "description": "Must match package.json version."
     },
     "moduleId": {
@@ -121,9 +121,20 @@
               "required": ["taskId", "action"],
               "additionalProperties": true,
               "properties": {
-                "taskId": { "type": "string", "pattern": "^T[0-9]+$" },
+                "taskId": {
+                  "type": "string",
+                  "pattern": "^(T[0-9]+|imp-[0-9a-f]{14})$"
+                },
                 "action": { "type": "string" },
-                "policyApproval": { "type": "object" }
+                "policyApproval": { "type": "object" },
+                "expectedPlanningGeneration": {
+                  "oneOf": [
+                    { "type": "integer", "minimum": 0 },
+                    { "type": "string", "pattern": "^[0-9]+$" }
+                  ]
+                },
+                "actor": { "type": "string" },
+                "config": { "type": "object" }
               }
             },
             "responseData": {
@@ -148,7 +159,15 @@
                 "id": { "type": "string", "pattern": "^T[0-9]+$" },
                 "title": { "type": "string" },
                 "status": { "type": "string", "enum": ["proposed", "ready"] },
-                "clientMutationId": { "type": "string", "minLength": 1 }
+                "clientMutationId": { "type": "string", "minLength": 1 },
+                "expectedPlanningGeneration": {
+                  "oneOf": [
+                    { "type": "integer", "minimum": 0 },
+                    { "type": "string", "pattern": "^[0-9]+$" }
+                  ]
+                },
+                "actor": { "type": "string" },
+                "config": { "type": "object" }
               }
             },
             "responseData": {
@@ -182,9 +201,20 @@
               "required": ["taskId", "updates"],
               "additionalProperties": true,
               "properties": {
-                "taskId": { "type": "string", "pattern": "^T[0-9]+$" },
+                "taskId": {
+                  "type": "string",
+                  "pattern": "^(T[0-9]+|imp-[0-9a-f]{14})$"
+                },
                 "updates": { "type": "object" },
-                "clientMutationId": { "type": "string", "minLength": 1 }
+                "clientMutationId": { "type": "string", "minLength": 1 },
+                "expectedPlanningGeneration": {
+                  "oneOf": [
+                    { "type": "integer", "minimum": 0 },
+                    { "type": "string", "pattern": "^[0-9]+$" }
+                  ]
+                },
+                "actor": { "type": "string" },
+                "config": { "type": "object" }
               }
             },
             "responseData": {
@@ -690,7 +720,11 @@
           "properties": {
             "args": {
               "type": "object",
-              "additionalProperties": false
+              "additionalProperties": false,
+              "properties": {
+                "config": { "type": "object" },
+                "actor": { "type": "string" }
+              }
             },
             "responseData": {
               "type": "object",

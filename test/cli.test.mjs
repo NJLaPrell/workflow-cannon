@@ -536,7 +536,8 @@ test("runCli run returns validation failure for run-transition with missing args
   assert.equal(code, 1);
   const output = JSON.parse(capture.lines.join(""));
   assert.equal(output.ok, false);
-  assert.equal(output.code, "invalid-task-schema");
+  assert.equal(output.code, "invalid-run-args");
+  assert.ok(Array.isArray(output.details?.errors));
 });
 
 test("runCli run returns error for invalid JSON args", async () => {
