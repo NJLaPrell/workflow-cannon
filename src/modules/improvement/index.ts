@@ -13,6 +13,12 @@ import {
   type TranscriptSyncArgs
 } from "./transcript-sync-runtime.js";
 import { loadImprovementState, saveImprovementState } from "./improvement-state.js";
+import { readOptionalExpectedPlanningGeneration } from "../task-engine/mutation-utils.js";
+
+function pickExpectedPlanningGeneration(args: Record<string, unknown>): { expectedPlanningGeneration?: number } {
+  const g = readOptionalExpectedPlanningGeneration(args);
+  return g !== undefined ? { expectedPlanningGeneration: g } : {};
+}
 
 export { buildImprovementTaskPayload } from "./improvement-task-payload.js";
 
@@ -60,7 +66,8 @@ export const improvementModule: WorkflowModule = {
               transcriptsRoot,
               fromTag,
               toTag,
-              dryRun: true
+              dryRun: true,
+              ...pickExpectedPlanningGeneration(args as Record<string, unknown>)
             });
             return {
               ok: true,
@@ -80,7 +87,8 @@ export const improvementModule: WorkflowModule = {
           const result = await runGenerateRecommendations(ctx, {
             transcriptsRoot: sync.archivePath,
             fromTag,
-            toTag
+            toTag,
+            ...pickExpectedPlanningGeneration(args as Record<string, unknown>)
           });
           return {
             ok: true,
@@ -137,7 +145,8 @@ export const improvementModule: WorkflowModule = {
           let recommendations: Awaited<ReturnType<typeof runGenerateRecommendations>> | null = null;
           if (generate) {
             recommendations = await runGenerateRecommendations(ctx, {
-              transcriptsRoot: sync.archivePath
+              transcriptsRoot: sync.archivePath,
+              ...pickExpectedPlanningGeneration(args as Record<string, unknown>)
             });
             state.lastIngestRunAt = now.toISOString();
           }

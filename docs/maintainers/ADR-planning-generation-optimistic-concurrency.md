@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — implemented in **v0.44.0** (Phase 44).
+Accepted — storage + optional token in **v0.44.0** (Phase 44); enforcement policy + maintainer **`require`** default in **v0.45.0** (Phase 45).
 
 ## Context
 
@@ -14,7 +14,7 @@ The unified planning SQLite database (tasks + wishlist envelope + relational tas
 2. **Reads** expose **`planningGeneration`** on task-engine read APIs (`get-task`, `list-tasks`, `get-next-actions`, `dashboard-summary`, etc.).
 3. **Mutations** accept optional **`expectedPlanningGeneration`**. When present and not equal to the stored value before the transaction, the operation fails with **`planning-generation-mismatch`** (client should re-read and retry).
 4. **Default:** Omitting **`expectedPlanningGeneration`** preserves **last-writer-wins** behavior for legacy scripts.
-5. **Enforcement policy** (`planningGenerationPolicy`: off / warn / require) is **Phase 45** work (**`T581`**) — this ADR defines field names and storage only.
+5. **Enforcement policy** — config **`tasks.planningGenerationPolicy`**: **`off`** (published default; omit token → last-writer-wins), **`warn`** (omit allowed; **`planningGenerationPolicyWarnings`** on success payloads), **`require`** (omit → **`planning-generation-required`**). **Doctor** prints the effective policy. Shipped **v0.45.0** / **`T581`**.
 
 ## Non-goals
 
@@ -24,7 +24,11 @@ The unified planning SQLite database (tasks + wishlist envelope + relational tas
 
 - **Kit SQLite `user_version` 3** migration adds `planning_generation INTEGER NOT NULL DEFAULT 0`.
 - Consumers that want strong consistency pass **`expectedPlanningGeneration`** on every mutating `workspace-kit run` after reading **`planningGeneration`** from the prior response.
-- **`T581`** will wire **`planningGenerationPolicy`** and doctor visibility without changing the additive JSON shape introduced here.
+- **`clientMutationId`** idempotent **replay** paths do not re-persist and **do not** require **`expectedPlanningGeneration`** under **`require`** (documented in **`AGENT-CLI-MAP.md`**; tests in **`task-engine.test.mjs`**) — **`T584`**.
+
+## Appendix: per-task SQL vs full-document persist (**`T580`**)
+
+Relational **`task_engine_tasks`** rows could allow narrower **`UPDATE`**s instead of rewriting the full task envelope on every mutation, reducing blast radius for large queues. **Recommendation (Phase 45 research):** keep the current unified generation counter and transactional snapshot persist until a dedicated task profiles a measured win; splitting generations per sub-store would complicate the single optimistic-lock story. Revisit if envelope size or contention shows up in operator evidence.
 
 ## References
 

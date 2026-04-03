@@ -15,7 +15,7 @@ workspace-kit run run-transition '{"taskId":"T184","action":"start","policyAppro
 | `taskId` | string | yes | The task ID to transition (e.g., `T184`) |
 | `action` | string | yes | The transition action: `accept`, `reject`, `demote`, `start`, `block`, `cancel`, `complete`, `pause`, `unblock` |
 | `actor` | string | no | Who or what triggered the transition |
-| `expectedPlanningGeneration` | integer | no | When set, must match current SQLite `workspace_planning_state.planning_generation` or the command fails with **`planning-generation-mismatch`** (optimistic concurrency; see **`ADR-planning-generation-optimistic-concurrency.md`**) |
+| `expectedPlanningGeneration` | integer | no | When set, must match current SQLite `workspace_planning_state.planning_generation` or the command fails with **`planning-generation-mismatch`** (optimistic concurrency; see **`ADR-planning-generation-optimistic-concurrency.md`**). When **`tasks.planningGenerationPolicy`** is **`require`**, omission fails with **`planning-generation-required`** — read **`planningGeneration`** from **`list-tasks`** / **`get-next-actions`** / **`get-task`** first. |
 
 ## Allowed Actions by State
 
@@ -28,4 +28,4 @@ workspace-kit run run-transition '{"taskId":"T184","action":"start","policyAppro
 
 ## Returns
 
-Success **`data`** includes transition **`evidence`**, **`autoUnblocked`**, and **`planningGeneration`** (new value after persist). On mismatch when **`expectedPlanningGeneration`** was supplied, **`code`** is **`planning-generation-mismatch`**.
+Success **`data`** includes transition **`evidence`**, **`autoUnblocked`**, **`planningGeneration`**, **`planningGenerationPolicy`**, and optionally **`planningGenerationPolicyWarnings`** (when policy is **`warn`** and the token was omitted). On mismatch when **`expectedPlanningGeneration`** was supplied, **`code`** is **`planning-generation-mismatch`**. When policy is **`require`** and the field was omitted, **`code`** is **`planning-generation-required`**.

@@ -22,7 +22,11 @@ import {
   type TaskPriority
 } from "../../core/planning/index.js";
 import { builtinInstructionEntriesForModule } from "../../contracts/builtin-run-command-manifest.js";
-import { planningStrictValidationEnabled } from "../task-engine/planning-config.js";
+import {
+  enforcePlanningGenerationPolicy,
+  getPlanningGenerationPolicy,
+  planningStrictValidationEnabled
+} from "../task-engine/planning-config.js";
 import { planningConcurrencySaveOpts } from "../task-engine/mutation-utils.js";
 import { validateTaskSetForStrictMode } from "../task-engine/strict-task-validation.js";
 
@@ -490,6 +494,15 @@ export const planningModule: WorkflowModule = {
               message: `Task '${task.id}' already exists`
             };
           }
+          const bpGate = enforcePlanningGenerationPolicy(
+            getPlanningGenerationPolicy({
+              effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined
+            }),
+            args as Record<string, unknown>
+          );
+          if (!bpGate.ok) {
+            return { ok: false, code: bpGate.code, message: bpGate.message };
+          }
           stores.sqliteDual.withTransaction(
             () => {
               stores.taskStore.addTask(task);
@@ -628,6 +641,15 @@ export const planningModule: WorkflowModule = {
         if (strictIssue) {
           return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
         }
+      }
+      const bpWishGate = enforcePlanningGenerationPolicy(
+        getPlanningGenerationPolicy({
+          effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined
+        }),
+        args as Record<string, unknown>
+      );
+      if (!bpWishGate.ok) {
+        return { ok: false, code: bpWishGate.code, message: bpWishGate.message };
       }
       try {
         stores.sqliteDual.withTransaction(

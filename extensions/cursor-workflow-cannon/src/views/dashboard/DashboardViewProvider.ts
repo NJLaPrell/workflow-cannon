@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import type { DashboardSummaryCommandSuccess } from "@workflow-cannon/workspace-kit/contracts/dashboard-summary-run";
 import type { CommandClient } from "../../runtime/command-client.js";
+import { ingestPlanningMetaFromData } from "../../planning-generation-cache.js";
 import { escapeHtml, renderDashboardRootInnerHtml } from "./render-dashboard.js";
 
 let dashboardOutput: vscode.OutputChannel | undefined;
@@ -80,6 +81,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         code: "extension-push-error",
         message: e instanceof Error ? e.message : String(e)
       };
+    }
+    if (raw.ok === true && raw.data && typeof raw.data === "object") {
+      ingestPlanningMetaFromData(raw.data as Record<string, unknown>);
     }
     let rootInner: string;
     try {

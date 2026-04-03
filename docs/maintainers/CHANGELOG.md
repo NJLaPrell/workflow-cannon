@@ -8,6 +8,26 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.45.0] - 2026-04-02
+
+Phase 45 — **`planningGenerationPolicy`**, tests, extension UX, maintainer doc lap (**`T578`–`T584`**).
+
+### Added
+
+- **`tasks.planningGenerationPolicy`** — **`off`** (published default), **`warn`** (advisory **`planningGenerationPolicyWarnings`** on mutating success JSON), **`require`** (omit **`expectedPlanningGeneration`** → **`planning-generation-required`**). Registered in **`config-registry.json`** and **`validatePersistedConfigDocument`**.
+- **Read payloads** — **`planningGenerationPolicy`** on **`list-tasks`**, **`get-task`**, **`get-next-actions`**, **`get-ready-queue`**, **`dashboard-summary`** (extension contract **`DashboardSummaryData`**).
+- **Doctor** — prints effective planning generation policy after persistence summary lines.
+- **Extension** — dashboard **Planning generation** card; caches token from **`list-tasks`** / **`dashboard-summary`**; Tasks DnD + palette **`run-transition`** pass **`expectedPlanningGeneration`** when policy is **`require`**.
+
+### Changed
+
+- **Task engine** — module **`0.11.0`**; mutating commands (task-engine, wishlist, planning persist paths, improvement **`generate-recommendations`**) enforce policy; idempotent **`clientMutationId`** replays skip **`require`** (no re-persist).
+- **Maintainer repo** — **`.workspace-kit/config.json`** sets **`tasks.planningGenerationPolicy": "require"`** for strong consistency.
+
+### Docs
+
+- **`ADR-planning-generation-optimistic-concurrency.md`** — policy + **`T580`** appendix; **`AGENT-CLI-MAP.md`** planning section; **`task-persistence-operator.md`**; **`run-transition.md`**.
+
 ## [0.44.0] - 2026-04-02
 
 Phase 44 — **planning-store optimistic concurrency**, **dependency-aware `get-next-actions`**, **Cursor extension Tasks tree DnD** (`T571`, `T557`–`T559`, `T573`–`T577`).

@@ -5,6 +5,7 @@ import {
   effectiveTaskType,
   type WkNode
 } from "./build-task-tree.js";
+import { ingestPlanningMetaFromData } from "../../planning-generation-cache.js";
 
 export class TasksTreeProvider implements vscode.TreeDataProvider<WkNode> {
   private _onDidChange = new vscode.EventEmitter<WkNode | undefined | void>();
@@ -116,6 +117,13 @@ export class TasksTreeProvider implements vscode.TreeDataProvider<WkNode> {
       this.client.run("list-tasks", {}),
       this.client.run("dashboard-summary", {})
     ]);
+
+    if (taskRes.ok && taskRes.data && typeof taskRes.data === "object") {
+      ingestPlanningMetaFromData(taskRes.data as Record<string, unknown>);
+    }
+    if (dashRes.ok && dashRes.data && typeof dashRes.data === "object") {
+      ingestPlanningMetaFromData(dashRes.data as Record<string, unknown>);
+    }
 
     if (!taskRes.ok || !taskRes.data || !Array.isArray((taskRes.data as { tasks?: unknown }).tasks)) {
       return [];

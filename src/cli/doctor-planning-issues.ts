@@ -5,7 +5,10 @@ import { resolveRegistryAndConfig } from "../core/module-registry-resolve.js";
 import { readWorkspaceStatusSnapshot } from "../modules/task-engine/dashboard-status.js";
 import { resolveCanonicalPhase } from "../modules/task-engine/phase-resolution.js";
 import { validatePlanningPersistenceForDoctor } from "../modules/task-engine/doctor-planning-persistence.js";
-import { planningSqliteDatabaseRelativePath } from "../modules/task-engine/planning-config.js";
+import {
+  getPlanningGenerationPolicy,
+  planningSqliteDatabaseRelativePath
+} from "../modules/task-engine/planning-config.js";
 import { readKitSqliteUserVersion } from "../core/state/workspace-kit-sqlite.js";
 import { defaultRegistryModules } from "../modules/index.js";
 
@@ -89,5 +92,9 @@ export async function collectTaskPersistenceDoctorSummaryLines(cwd: string): Pro
   lines.push("Native SQLite help: docs/maintainers/runbooks/native-sqlite-consumer-install.md");
   lines.push("Persistence map (JSON): workspace-kit run get-kit-persistence-map '{}'");
   lines.push("Backend paths + recovery: docs/maintainers/runbooks/task-persistence-operator.md");
+  const pol = getPlanningGenerationPolicy({ effectiveConfig: effective });
+  lines.push(
+    `Planning generation policy: ${pol} (tasks.planningGenerationPolicy — require/warn: pass expectedPlanningGeneration from prior reads; see ADR-planning-generation-optimistic-concurrency.md)`
+  );
   return lines;
 }

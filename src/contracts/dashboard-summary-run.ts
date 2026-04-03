@@ -30,10 +30,14 @@ export type DashboardListSummary = {
   phaseBuckets: DashboardPhaseBucket[];
 };
 
+export type PlanningGenerationPolicy = "off" | "warn" | "require";
+
 export type DashboardSummaryData = {
   schemaVersion: 1;
   /** Monotonic optimistic-lock generation for the unified planning SQLite row. */
   planningGeneration: number;
+  /** Effective `tasks.planningGenerationPolicy` for mutating commands. */
+  planningGenerationPolicy: PlanningGenerationPolicy;
   taskStoreLastUpdated: string;
   workspaceStatus: Record<string, unknown> | null;
   planningSession: unknown;

@@ -122,6 +122,18 @@ workspace-kit run run-transition '{"taskId":"T285","action":"complete","policyAp
 
 See `src/modules/task-engine/instructions/run-transition.md` for allowed `action` values by state.
 
+### Planning generation (SQLite optimistic lock)
+
+Config **`tasks.planningGenerationPolicy`**: **`off`** (consumer default; optional **`expectedPlanningGeneration`**), **`warn`** (omit allowed; watch **`planningGenerationPolicyWarnings`** on success JSON), **`require`** (**this repo** — mutating task-engine / wishlist / planning persist / **`generate-recommendations`** must pass **`expectedPlanningGeneration`** from **`planningGeneration`** on your **last read**).
+
+**Strong-consistency lap (policy `require`):** (1) `workspace-kit run list-tasks '{}'` (or **`get-next-actions`**, **`get-task`**, **`dashboard-summary`**) → read **`data.planningGeneration`**. (2) Include **`"expectedPlanningGeneration": <int>`** on the mutating command. (3) On **`planning-generation-mismatch`**, re-read and retry.
+
+**Idempotency:** **`clientMutationId`** replay responses (**`*-idempotent-replay`**) do not write the planning row again and **do not** require **`expectedPlanningGeneration`** even under **`require`**. Same id + different payload → **`idempotency-key-conflict`** (unchanged).
+
+**Human / IDE:** Cursor extension dashboard shows **Planning generation** + policy; Tasks DnD and palette transitions pass **`expectedPlanningGeneration`** when the cached policy is **`require`** (refresh Tasks/Dashboard if you see mismatches).
+
+ADR: **`docs/maintainers/ADR-planning-generation-optimistic-concurrency.md`**.
+
 ## Tier B — Policy-sensitive `workspace-kit run` (non-transition)
 
 | Intent | Invocation | `operationId` | Notes |

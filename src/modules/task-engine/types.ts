@@ -119,7 +119,8 @@ export type TaskEngineErrorCode =
   | "storage-write-error"
   | "invalid-adapter"
   | "import-parse-error"
-  | "planning-generation-mismatch";
+  | "planning-generation-mismatch"
+  | "planning-generation-required";
 
 export type TaskAdapter = {
   name: string;

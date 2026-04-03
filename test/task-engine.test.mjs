@@ -1480,6 +1480,106 @@ test("taskEngineModule strictValidation toggle enforces pre-save task validation
   assert.equal(onResult.code, "strict-task-validation-failed");
 });
 
+test("taskEngineModule planningGenerationPolicy require blocks mutation without expectedPlanningGeneration", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T600", status: "ready" }));
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+
+  const denied = await taskEngineModule.onCommand(
+    { name: "run-transition", args: { taskId: "T600", action: "start" } },
+    ctx
+  );
+  assert.equal(denied.ok, false);
+  assert.equal(denied.code, "planning-generation-required");
+
+  const listed = await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, ctx);
+  assert.equal(listed.ok, true);
+  const gen = listed.data.planningGeneration;
+
+  const ok = await taskEngineModule.onCommand(
+    {
+      name: "run-transition",
+      args: { taskId: "T600", action: "start", expectedPlanningGeneration: gen }
+    },
+    ctx
+  );
+  assert.equal(ok.ok, true);
+  assert.equal(ok.code, "transition-applied");
+});
+
+test("taskEngineModule planningGenerationPolicy require rejects wrong expectedPlanningGeneration", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T601", status: "ready" }));
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const listed = await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, ctx);
+  const gen = listed.data.planningGeneration;
+
+  const bad = await taskEngineModule.onCommand(
+    {
+      name: "run-transition",
+      args: { taskId: "T601", action: "start", expectedPlanningGeneration: gen + 99 }
+    },
+    ctx
+  );
+  assert.equal(bad.ok, false);
+  assert.equal(bad.code, "planning-generation-mismatch");
+});
+
+test("taskEngineModule planningGenerationPolicy warn surfaces planningGenerationPolicyWarnings", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T602", status: "ready" }));
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "warn" } });
+  const r = await taskEngineModule.onCommand(
+    { name: "run-transition", args: { taskId: "T602", action: "start" } },
+    ctx
+  );
+  assert.equal(r.ok, true);
+  assert.ok(Array.isArray(r.data.planningGenerationPolicyWarnings));
+  assert.ok(r.data.planningGenerationPolicyWarnings.length >= 1);
+});
+
+test("taskEngineModule create-task idempotent replay skips require gate (no re-persist)", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const lt = await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, ctx);
+  const g0 = lt.data.planningGeneration;
+  const payload = {
+    id: "T603",
+    title: "Idem",
+    status: "proposed",
+    approach: "a",
+    technicalScope: ["scope"],
+    acceptanceCriteria: ["crit"],
+    clientMutationId: "cmid-require-replay",
+    expectedPlanningGeneration: g0
+  };
+  const first = await taskEngineModule.onCommand({ name: "create-task", args: payload }, ctx);
+  assert.equal(first.ok, true);
+  const gen1 = first.data.planningGeneration;
+
+  const replay = await taskEngineModule.onCommand({
+    name: "create-task",
+    args: {
+      id: "T603",
+      title: "Idem",
+      status: "proposed",
+      approach: "a",
+      technicalScope: ["scope"],
+      acceptanceCriteria: ["crit"],
+      clientMutationId: "cmid-require-replay"
+    }
+  }, ctx);
+  assert.equal(replay.ok, true);
+  assert.equal(replay.code, "task-create-idempotent-replay");
+  assert.equal(replay.data.planningGeneration, gen1);
+});
+
 test("taskEngineModule archive-task excludes task from default active queries", async () => {
   const workspace = await tmpDir();
   await seedSqliteStore(workspace, (store) => {

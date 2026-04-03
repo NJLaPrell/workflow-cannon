@@ -14,6 +14,8 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - **Phase 42 (maintainer workspace phase snapshot)** shipped as **`v0.42.0`** — **`T546`**, **`T547`**: **`update-workspace-phase-snapshot`**, doctor remediation, maintainer/agent docs; **`task-engine`** **`0.8.0`** in **`compatibility-matrix.json`**.
 - **Phase 43 (platform and maintainability refactors)** shipped as **`v0.43.0`** — **`T548`–`T555`**: SQLite migration runbook, task-engine / CLI decomposition, doc canon + invocation guard, policy registry alignment, extension **`dashboard-summary`** shared types, **`assign-task-phase`** / **`clear-task-phase`**; **`task-engine`** **`0.9.0`** in **`compatibility-matrix.json`**.
 - **Phase 44 (planning generation + extension Tasks DnD + next-actions deps)** shipped as **`v0.44.0`** — **`T571`**, **`T557`–`T559`**, **`T573`–`T577`**: SQLite **`planning_generation`** (**`user_version` 3**), optional **`expectedPlanningGeneration`** on mutating commands, **`planningGeneration`** on reads, dependency-aware **`get-next-actions`**, Cursor extension Tasks tree drag-and-drop + **`tasks-tree-dnd.md`**; ADR **`ADR-planning-generation-optimistic-concurrency.md`**; **`task-engine`** **`0.10.0`** in **`compatibility-matrix.json`**.
+- **Phase 45 (planningGenerationPolicy + tests + extension + audit + idempotency docs)** shipped as **`v0.45.0`** — **`T578`–`T584`**: config **`tasks.planningGenerationPolicy`** (**`off`** / **`warn`** / **`require`**), **`planning-generation-required`**, doctor line, read payloads include **`planningGenerationPolicy`**, maintainer **`.workspace-kit/config.json`** uses **`require`**, Cursor dashboard + DnD pass **`expectedPlanningGeneration`**, improvement **`generate-recommendations`** / planning **`build-plan`** gates, persisted-config validation for **`tasks.strictValidation`** + **`planningGenerationPolicy`**, ADR appendix (**`T580`**) + **`AGENT-CLI-MAP`** / runbook updates (**`T579`**); **`task-engine`** **`0.11.0`** in **`compatibility-matrix.json`**.
+- **Phase 47 (agent guidance profile)** — **planned** — onboarding-chosen **interaction difficulty** (canonical copy deck: **RPG party** set — NPC → BBEG) persisted in workspace config, machine **`resolve`** surface for agents/tooling, optional **`agent-behavior`** advisory consumption, extension/docs lap. Execution queue: proposed **`T585`–`T590`** (`phaseKey` **47**); target release **`v0.47.0`** when accepted and delivered.
 - **Phase 36 (policy, integrations, improvement loop, documentation architecture)** shipped as **`v0.36.0`** — see **`docs/maintainers/CHANGELOG.md`** and task-engine `phaseKey` **36** completion.
 - **Phase 37 (maintainer onboarding, shell JSON guidance, improvement churn closure, dashboard terminal parity)** shipped as **`v0.37.0`** — see **`docs/maintainers/CHANGELOG.md`** and task-engine `phaseKey` **37** completion (`imp-*` slice).
 - **Maintainer snapshot** — `docs/maintainers/data/workspace-kit-status.yaml` (`current_kit_phase`, `next_agent_actions`).
@@ -25,6 +27,16 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 Each phase ends with a GitHub release. Phases are sequential unless explicitly re-planned.
 
 For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MATRIX.md`.
+
+### Phase 47 - Agent guidance profile (RPG party) -> GitHub release `v0.47.0` (PROPOSED)
+
+- **Primary scope:** **`T585`–`T590`** — design + ADR (**`T585`**); config registry + validation (**`T586`**); CLI **`resolve`** for effective tier (**`T587`**); onboarding write path (**`T588`**); **`agent-behavior`** advisory integration (**`T589`**); extension + **`FEATURE-MATRIX`** / runbook (**`T590`**).
+- **Outcome:** Users pick a **guidance tier** at onboarding (fun labels with descriptions); stored value drives **more or less** explanation, check-ins, and directing questions in advisory surfaces. Stable enum and **`profileSetId`** (e.g. **`rpg_party_v1`**) decouple product copy from behavior logic.
+- **Exit signals:**
+  - Tier persisted and validated; default safe for existing workspaces.
+  - Agents can read effective guidance via documented JSON command (**`T587`**).
+  - Onboarding path sets tier without hand-editing config (**`T588`**).
+  - **`pnpm run build`**, **`check`**, **`test`** pass on the release tag; maintainer evidence per **`RELEASING.md`**.
 
 ### Phase 0 - Foundation hardening -> GitHub release `v0.2.0`
 

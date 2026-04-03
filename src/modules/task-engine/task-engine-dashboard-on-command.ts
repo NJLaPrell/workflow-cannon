@@ -1,5 +1,6 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../contracts/module-contract.js";
 import type { DashboardSummaryData } from "../../contracts/dashboard-summary-run.js";
+import { getPlanningGenerationPolicy } from "./planning-config.js";
 import { getNextActions, isImprovementLikeTask } from "./suggestions.js";
 import { readWorkspaceStatusSnapshot } from "./dashboard-status.js";
 import { buildDashboardDependencyOverview } from "./dashboard-dependency-overview.js";
@@ -125,6 +126,9 @@ export async function runDashboardSummaryCommand(
   const data = {
     schemaVersion: 1 as const,
     planningGeneration,
+    planningGenerationPolicy: getPlanningGenerationPolicy({
+      effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined
+    }),
     taskStoreLastUpdated: store.getLastUpdated(),
     workspaceStatus,
     planningSession,

@@ -82,6 +82,27 @@
       "user"
     ]
   },
+  "tasks.planningGenerationPolicy": {
+    "key": "tasks.planningGenerationPolicy",
+    "type": "string",
+    "description": "How strictly mutating task-engine / planning-store commands must pass expectedPlanningGeneration for SQLite optimistic concurrency: off (optional token, last-writer-wins when omitted), warn (omit allowed but response may include planningGenerationPolicyWarnings), require (omit fails with planning-generation-required). Published default is off; maintainer repos often set require.",
+    "default": "off",
+    "allowedValues": [
+      "off",
+      "warn",
+      "require"
+    ],
+    "domainScope": "project",
+    "owningModule": "task-engine",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "public",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
   "modules.enabled": {
     "key": "modules.enabled",
     "type": "array",

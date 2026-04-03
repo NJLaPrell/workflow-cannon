@@ -170,7 +170,9 @@ export function validatePersistedConfigDocument(
         k !== "storeRelativePath" &&
         k !== "wishlistStoreRelativePath" &&
         k !== "persistenceBackend" &&
-        k !== "sqliteDatabaseRelativePath"
+        k !== "sqliteDatabaseRelativePath" &&
+        k !== "strictValidation" &&
+        k !== "planningGenerationPolicy"
       ) {
         throw new Error(`config-invalid(${label}): unknown tasks.${k}`);
       }
@@ -191,6 +193,12 @@ export function validatePersistedConfigDocument(
     }
     if (t.sqliteDatabaseRelativePath !== undefined) {
       validateValueForMetadata(REGISTRY["tasks.sqliteDatabaseRelativePath"]!, t.sqliteDatabaseRelativePath);
+    }
+    if (t.strictValidation !== undefined) {
+      validateValueForMetadata(REGISTRY["tasks.strictValidation"]!, t.strictValidation);
+    }
+    if (t.planningGenerationPolicy !== undefined) {
+      validateValueForMetadata(REGISTRY["tasks.planningGenerationPolicy"]!, t.planningGenerationPolicy);
     }
   }
   const policy = data.policy;

@@ -5,6 +5,7 @@
   "data": {
     "schemaVersion": 1,
     "planningGeneration": 0,
+    "planningGenerationPolicy": "off",
     "taskStoreLastUpdated": "2026-03-27T12:00:00.000Z",
     "workspaceStatus": {
       "currentKitPhase": "14",

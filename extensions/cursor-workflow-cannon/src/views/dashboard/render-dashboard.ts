@@ -467,6 +467,24 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
     );
   }
   const d = p.data ?? {};
+  const planningGen = typeof d.planningGeneration === "number" ? d.planningGeneration : null;
+  const planningPol =
+    d.planningGenerationPolicy === "off" ||
+    d.planningGenerationPolicy === "warn" ||
+    d.planningGenerationPolicy === "require"
+      ? d.planningGenerationPolicy
+      : "off";
+  const planningGenSection =
+    planningGen !== null
+      ? '<section class="planning-gen" aria-label="Planning optimistic lock">' +
+        "<p><b>Planning generation</b> " +
+        escapeHtml(String(planningGen)) +
+        " · <b>policy</b> " +
+        escapeHtml(planningPol) +
+        "</p>" +
+        '<p class="muted">Mutating <code>workspace-kit run</code> commands accept <code>expectedPlanningGeneration</code> from this counter when <code>tasks.planningGenerationPolicy</code> is <code>require</code> (this repo). Refresh after other writers.</p>' +
+        "</section>"
+      : "";
   const ss = (d.stateSummary as Record<string, unknown>) || {};
   const sn = d.suggestedNext as { id?: unknown; title?: unknown } | null | undefined;
   const ws = (d.workspaceStatus as Record<string, unknown> | null | undefined) ?? null;
@@ -513,6 +531,7 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
 
   return (
     renderWorkspaceOverviewSection(ws as Record<string, unknown> | null) +
+    planningGenSection +
     "<p><b>Tasks</b></p>" +
     "<p class=\"ok\">Counts · proposed " +
     String(ss.proposed ?? 0) +

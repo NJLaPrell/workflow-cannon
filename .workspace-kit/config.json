@@ -5,11 +5,12 @@
     }
   },
   "kit": {
-    "currentPhaseLabel": "Phase 45 — planningGenerationPolicy, tests, extension UX, audit, docs (T578–T584); Phase 44 shipped v0.44.0",
-    "currentPhaseNumber": 45
+    "currentPhaseLabel": "Phase 46 — follow get-next-actions; Phase 45 shipped v0.45.0 (planningGenerationPolicy, extension, T578–T584)",
+    "currentPhaseNumber": 46
   },
   "tasks": {
     "persistenceBackend": "sqlite",
-    "sqliteDatabaseRelativePath": ".workspace-kit/tasks/workspace-kit.db"
+    "sqliteDatabaseRelativePath": ".workspace-kit/tasks/workspace-kit.db",
+    "planningGenerationPolicy": "require"
   }
 }

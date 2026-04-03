@@ -29,7 +29,12 @@ import {
   validateWishlistUpdatePayload,
   WISHLIST_ID_RE
 } from "./wishlist-validation.js";
-import { planningStrictValidationEnabled } from "./planning-config.js";
+import {
+  enforcePlanningGenerationPolicy,
+  getPlanningGenerationPolicy,
+  mergePlanningGenerationPolicyWarnings,
+  planningStrictValidationEnabled
+} from "./planning-config.js";
 import { validateTaskSetForStrictMode } from "./strict-task-validation.js";
 import { validateKnownTaskTypeRequirements } from "./task-type-validation.js";
 
@@ -97,6 +102,13 @@ export function runWishlistStoreCommand(
         return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
       }
     }
+    const wlCreateGate = enforcePlanningGenerationPolicy(
+      getPlanningGenerationPolicy({ effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined }),
+      args
+    );
+    if (!wlCreateGate.ok) {
+      return { ok: false, code: wlCreateGate.code, message: wlCreateGate.message };
+    }
     try {
       planning.sqliteDual.withTransaction(
         () => {
@@ -111,16 +123,18 @@ export function runWishlistStoreCommand(
       throw err;
     }
     const itemOut = wishlistIntakeTaskToItem(task);
+    const createdWl: Record<string, unknown> = {
+      wishlist: itemOut,
+      item: itemOut,
+      taskId: task.id,
+      task
+    };
+    mergePlanningGenerationPolicyWarnings(createdWl, wlCreateGate.warnings);
     return {
       ok: true,
       code: "wishlist-created",
       message: `Created wishlist intake task '${task.id}'`,
-      data: {
-        wishlist: itemOut,
-        item: itemOut,
-        taskId: task.id,
-        task
-      } as Record<string, unknown>
+      data: createdWl
     };
   }
 
@@ -215,6 +229,13 @@ export function runWishlistStoreCommand(
         return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
       }
     }
+    const wlUpdGate = enforcePlanningGenerationPolicy(
+      getPlanningGenerationPolicy({ effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined }),
+      args
+    );
+    if (!wlUpdGate.ok) {
+      return { ok: false, code: wlUpdGate.code, message: wlUpdGate.message };
+    }
     planning.sqliteDual.withTransaction(
       () => {
         store.updateTask(merged);
@@ -222,11 +243,13 @@ export function runWishlistStoreCommand(
       planningConcurrencySaveOpts(args)
     );
     const itemOut = wishlistIntakeTaskToItem(merged);
+    const updWl: Record<string, unknown> = { item: itemOut, taskId: merged.id };
+    mergePlanningGenerationPolicyWarnings(updWl, wlUpdGate.warnings);
     return {
       ok: true,
       code: "wishlist-updated",
       message: `Updated wishlist '${wishlistId}'`,
-      data: { item: itemOut, taskId: merged.id } as Record<string, unknown>
+      data: updWl
     };
   }
 
@@ -348,13 +371,26 @@ export function runWishlistStoreCommand(
         return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
       }
     }
+    const wlCvGate = enforcePlanningGenerationPolicy(
+      getPlanningGenerationPolicy({ effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined }),
+      args
+    );
+    if (!wlCvGate.ok) {
+      return { ok: false, code: wlCvGate.code, message: wlCvGate.message };
+    }
     planning.sqliteDual.withTransaction(applyConvertMutations, planningConcurrencySaveOpts(args));
     const wishlistShape = wishlistIntakeTaskToItem(updatedSource);
+    const cvData: Record<string, unknown> = {
+      wishlist: wishlistShape,
+      createdTasks: built,
+      sourceTaskId: source.id
+    };
+    mergePlanningGenerationPolicyWarnings(cvData, wlCvGate.warnings);
     return {
       ok: true,
       code: "wishlist-converted",
       message: `Converted wishlist intake '${source.id}' to tasks: ${convertedIds.join(", ")}`,
-      data: { wishlist: wishlistShape, createdTasks: built, sourceTaskId: source.id } as Record<string, unknown>
+      data: cvData
     };
   }
 

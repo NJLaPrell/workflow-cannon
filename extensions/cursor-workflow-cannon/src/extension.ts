@@ -7,6 +7,7 @@ import { TasksTreeProvider } from "./views/tasks/TasksTreeProvider.js";
 import { TasksTreeDragController } from "./views/tasks/TasksTreeDragController.js";
 import { ConfigViewProvider } from "./views/config/ConfigViewProvider.js";
 import { buildTaskDetailMarkdown } from "./task-detail-markdown.js";
+import { expectedPlanningGenerationArgs } from "./planning-generation-cache.js";
 
 function readWorkflowCannonNodeSetting(): string | undefined {
   return vscode.workspace.getConfiguration("workflowCannon").get<string>("nodeExecutable")?.trim() || undefined;
@@ -77,7 +78,8 @@ export function activate(context: vscode.ExtensionContext): void {
     const r = await runtime.run("run-transition", {
       taskId,
       action,
-      policyApproval: { confirmed: true, rationale }
+      policyApproval: { confirmed: true, rationale },
+      ...expectedPlanningGenerationArgs()
     });
     if (!r.ok) {
       await vscode.window.showErrorMessage((r.message ?? JSON.stringify(r)).slice(0, 900));

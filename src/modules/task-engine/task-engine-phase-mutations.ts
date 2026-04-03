@@ -10,6 +10,11 @@ import {
   readIdempotencyValue
 } from "./mutation-utils.js";
 import { validateKnownTaskTypeRequirements } from "./task-type-validation.js";
+import {
+  enforcePlanningGenerationPolicy,
+  getPlanningGenerationPolicy,
+  mergePlanningGenerationPolicyWarnings
+} from "./planning-config.js";
 
 const PHASE_KEY_RE = /^[A-Za-z0-9][A-Za-z0-9._\-]{0,63}$/;
 
@@ -75,6 +80,16 @@ export async function runAssignTaskPhase(args: {
     }
   }
 
+  const assignGate = enforcePlanningGenerationPolicy(
+    getPlanningGenerationPolicy({
+      effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined
+    }),
+    rawArgs
+  );
+  if (!assignGate.ok) {
+    return { ok: false, code: assignGate.code, message: assignGate.message };
+  }
+
   const updatedTask: TaskEntity = { ...task, ...updates, updatedAt: nowIso() };
   const knownTypeValidationError = validateKnownTaskTypeRequirements(updatedTask);
   if (knownTypeValidationError) {
@@ -94,11 +109,13 @@ export async function runAssignTaskPhase(args: {
     return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
   }
   await store.save(planningConcurrencySaveOpts(rawArgs));
+  const assignData: Record<string, unknown> = { task: updatedTask };
+  mergePlanningGenerationPolicyWarnings(assignData, assignGate.warnings);
   return {
     ok: true,
     code: "task-phase-assigned",
     message: `Assigned phase '${phaseKey}' on task '${taskId}'`,
-    data: { task: updatedTask } as Record<string, unknown>
+    data: assignData
   };
 }
 
@@ -141,6 +158,16 @@ export async function runClearTaskPhase(args: {
     }
   }
 
+  const clearGate = enforcePlanningGenerationPolicy(
+    getPlanningGenerationPolicy({
+      effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined
+    }),
+    rawArgs
+  );
+  if (!clearGate.ok) {
+    return { ok: false, code: clearGate.code, message: clearGate.message };
+  }
+
   const updatedTask: TaskEntity = { ...task, updatedAt: nowIso() };
   delete updatedTask.phase;
   delete updatedTask.phaseKey;
@@ -161,10 +188,12 @@ export async function runClearTaskPhase(args: {
     return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
   }
   await store.save(planningConcurrencySaveOpts(rawArgs));
+  const clearData: Record<string, unknown> = { task: updatedTask };
+  mergePlanningGenerationPolicyWarnings(clearData, clearGate.warnings);
   return {
     ok: true,
     code: "task-phase-cleared",
     message: `Cleared phase fields on task '${taskId}'`,
-    data: { task: updatedTask } as Record<string, unknown>
+    data: clearData
   };
 }

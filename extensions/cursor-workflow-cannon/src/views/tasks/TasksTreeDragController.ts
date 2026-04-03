@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import type { CommandClient } from "../../runtime/command-client.js";
+import { expectedPlanningGenerationArgs } from "../../planning-generation-cache.js";
 import type { WkNode } from "./build-task-tree.js";
 import {
   TASKS_TREE_DND_MIME,
@@ -85,7 +86,8 @@ export class TasksTreeDragController implements vscode.TreeDragAndDropController
       }
       if (drop.phaseKey === null) {
         const r = await this.client.run("clear-task-phase", {
-          taskId: payload.taskId
+          taskId: payload.taskId,
+          ...expectedPlanningGenerationArgs()
         });
         if (!r.ok) {
           void vscode.window.showErrorMessage((r.message ?? JSON.stringify(r)).slice(0, 900));
@@ -96,7 +98,8 @@ export class TasksTreeDragController implements vscode.TreeDragAndDropController
       }
       const r = await this.client.run("assign-task-phase", {
         taskId: payload.taskId,
-        phaseKey: drop.phaseKey
+        phaseKey: drop.phaseKey,
+        ...expectedPlanningGenerationArgs()
       });
       if (!r.ok) {
         void vscode.window.showErrorMessage((r.message ?? JSON.stringify(r)).slice(0, 900));
@@ -130,7 +133,8 @@ export class TasksTreeDragController implements vscode.TreeDragAndDropController
     const r = await this.client.run("run-transition", {
       taskId: payload.taskId,
       action,
-      policyApproval: { confirmed: true, rationale }
+      policyApproval: { confirmed: true, rationale },
+      ...expectedPlanningGenerationArgs()
     });
     if (!r.ok) {
       void vscode.window.showErrorMessage((r.message ?? JSON.stringify(r)).slice(0, 900));

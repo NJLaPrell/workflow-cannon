@@ -14,6 +14,9 @@ import {
 } from "./ingest.js";
 import { priorityForTier } from "./confidence.js";
 import { buildImprovementTaskPayload } from "./improvement-task-payload.js";
+import { planningConcurrencySaveOpts } from "../task-engine/mutation-utils.js";
+import { enforcePlanningGenerationPolicy, getPlanningGenerationPolicy } from "../task-engine/planning-config.js";
+import { TaskEngineError } from "../task-engine/transitions.js";
 
 function hasEvidenceKey(tasks: TaskEntity[], key: string): boolean {
   return tasks.some((t) => {
@@ -67,6 +70,8 @@ export type GenerateRecommendationsArgs = {
   toTag?: string;
   /** When true, compute candidates and simulate creates without persisting tasks, lineage, or improvement state. */
   dryRun?: boolean;
+  /** When tasks.planningGenerationPolicy is require, must match current planning row before persist. */
+  expectedPlanningGeneration?: number;
 };
 
 export async function runGenerateRecommendations(
@@ -191,7 +196,16 @@ export async function runGenerateRecommendations(
   }
 
   if (!dryRun) {
-    await store.save();
+    const grGate = enforcePlanningGenerationPolicy(
+      getPlanningGenerationPolicy({
+        effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined
+      }),
+      args as Record<string, unknown>
+    );
+    if (!grGate.ok) {
+      throw new TaskEngineError(grGate.code, grGate.message);
+    }
+    await store.save(planningConcurrencySaveOpts(args as Record<string, unknown>));
     await saveImprovementState(ctx.workspacePath, state, ctx.effectiveConfig as Record<string, unknown> | undefined);
   }
 

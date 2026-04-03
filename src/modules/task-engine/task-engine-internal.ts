@@ -1,4 +1,4 @@
-import type { WorkflowModule } from "../../contracts/module-contract.js";
+import type { ModuleCommandResult, WorkflowModule } from "../../contracts/module-contract.js";
 import { builtinInstructionEntriesForModule } from "../../contracts/builtin-run-command-manifest.js";
 import type { TaskEntity, TaskMutationType, TaskPriority, TaskStatus } from "./types.js";
 import { maybeSpawnTranscriptHookAfterCompletion } from "../../core/transcript-completion-hook.js";
@@ -28,7 +28,13 @@ import { runUpdateWorkspacePhaseSnapshot } from "./update-workspace-phase-snapsh
 import { runAssignTaskPhase, runClearTaskPhase } from "./task-engine-phase-mutations.js";
 import { runWishlistStoreCommand } from "./task-engine-wishlist-on-command.js";
 import { runDashboardSummaryCommand } from "./task-engine-dashboard-on-command.js";
-import { planningSqliteDatabaseRelativePath, planningStrictValidationEnabled } from "./planning-config.js";
+import {
+  enforcePlanningGenerationPolicy,
+  getPlanningGenerationPolicy,
+  mergePlanningGenerationPolicyWarnings,
+  planningSqliteDatabaseRelativePath,
+  planningStrictValidationEnabled
+} from "./planning-config.js";
 import { validateTaskSetForStrictMode } from "./strict-task-validation.js";
 import { validateKnownTaskTypeRequirements } from "./task-type-validation.js";
 import { readKitSqliteUserVersion } from "../../core/state/workspace-kit-sqlite.js";
@@ -81,10 +87,37 @@ function strictValidationError(
   return validateTaskSetForStrictMode(store.getAllTasks());
 }
 
+function planningGenPolicyGate(
+  ctx: { effectiveConfig?: Record<string, unknown> },
+  args: Record<string, unknown>
+): { block: ModuleCommandResult | null; warnings?: string[] } {
+  const policy = getPlanningGenerationPolicy({
+    effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined
+  });
+  const gate = enforcePlanningGenerationPolicy(policy, args);
+  if (!gate.ok) {
+    return { block: { ok: false, code: gate.code, message: gate.message } };
+  }
+  return { block: null, warnings: gate.warnings };
+}
+
+function attachPolicyMeta(
+  data: Record<string, unknown>,
+  ctx: { effectiveConfig?: Record<string, unknown> },
+  planningGen: number,
+  warnings?: string[]
+): void {
+  data.planningGeneration = planningGen;
+  data.planningGenerationPolicy = getPlanningGenerationPolicy({
+    effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined
+  });
+  mergePlanningGenerationPolicyWarnings(data, warnings);
+}
+
 export const taskEngineModule: WorkflowModule = {
   registration: {
     id: "task-engine",
-    version: "0.10.0",
+    version: "0.11.0",
     contractVersion: "1",
     stateSchema: 1,
     capabilities: ["task-engine"],
@@ -191,6 +224,11 @@ export const taskEngineModule: WorkflowModule = {
         };
       }
 
+      const pgTransition = planningGenPolicyGate(ctx, args as Record<string, unknown>);
+      if (pgTransition.block) {
+        return pgTransition.block;
+      }
+
       try {
         const service = new TransitionService(store);
         const expectedPlanningGeneration = readOptionalExpectedPlanningGeneration(
@@ -208,15 +246,16 @@ export const taskEngineModule: WorkflowModule = {
             (ctx.effectiveConfig ?? {}) as Record<string, unknown>
           );
         }
+        const data: Record<string, unknown> = {
+          evidence: result.evidence,
+          autoUnblocked: result.autoUnblocked
+        };
+        attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration(), pgTransition.warnings);
         return {
           ok: true,
           code: "transition-applied",
           message: `${taskId}: ${result.evidence.fromState} → ${result.evidence.toState} (${action})`,
-          data: {
-            evidence: result.evidence,
-            autoUnblocked: result.autoUnblocked,
-            planningGeneration: planning.sqliteDual.getPlanningGeneration()
-          } as Record<string, unknown>
+          data
         };
       } catch (err) {
         if (err instanceof TaskEngineError) {
@@ -318,11 +357,16 @@ export const taskEngineModule: WorkflowModule = {
               message: `clientMutationId '${clientMutationId}' was already used for a different ${evidenceType} payload on ${id}`
             };
           }
+          const replayCreate: Record<string, unknown> = {
+            task: store.getTask(id),
+            replayed: true
+          };
+          attachPolicyMeta(replayCreate, ctx, planning.sqliteDual.getPlanningGeneration());
           return {
             ok: true,
             code: "task-create-idempotent-replay",
             message: `Idempotent create replay for task '${id}'`,
-            data: { task: store.getTask(id), replayed: true } as Record<string, unknown>
+            data: replayCreate
           };
         }
       }
@@ -337,6 +381,10 @@ export const taskEngineModule: WorkflowModule = {
           message: knownTypeValidationError.message
         };
       }
+      const pgCreate = planningGenPolicyGate(ctx, args as Record<string, unknown>);
+      if (pgCreate.block) {
+        return pgCreate.block;
+      }
       store.addTask(task);
       store.addMutationEvidence(mutationEvidence(evidenceType, id, actor, {
         initialStatus: task.status,
@@ -349,14 +397,13 @@ export const taskEngineModule: WorkflowModule = {
         return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
       }
       await store.save(planningConcurrencySaveOpts(args as Record<string, unknown>));
+      const createdData: Record<string, unknown> = { task };
+      attachPolicyMeta(createdData, ctx, planning.sqliteDual.getPlanningGeneration(), pgCreate.warnings);
       return {
         ok: true,
         code: "task-created",
         message: `Created task '${id}'`,
-        data: {
-          task,
-          planningGeneration: planning.sqliteDual.getPlanningGeneration()
-        } as Record<string, unknown>
+        data: createdData
       };
     }
 
@@ -397,13 +444,19 @@ export const taskEngineModule: WorkflowModule = {
               message: `clientMutationId '${clientMutationId}' was already used for a different update-task payload on ${taskId}`
             };
           }
+          const replayUpd: Record<string, unknown> = { task, replayed: true };
+          attachPolicyMeta(replayUpd, ctx, planning.sqliteDual.getPlanningGeneration());
           return {
             ok: true,
             code: "task-update-idempotent-replay",
             message: `Idempotent update replay for task '${taskId}'`,
-            data: { task, replayed: true } as Record<string, unknown>
+            data: replayUpd
           };
         }
+      }
+      const pgUpd = planningGenPolicyGate(ctx, args as Record<string, unknown>);
+      if (pgUpd.block) {
+        return pgUpd.block;
       }
       const knownTypeValidationError = validateKnownTaskTypeRequirements(updatedTask);
       if (knownTypeValidationError) {
@@ -426,14 +479,13 @@ export const taskEngineModule: WorkflowModule = {
         return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
       }
       await store.save(planningConcurrencySaveOpts(args as Record<string, unknown>));
+      const updData: Record<string, unknown> = { task: updatedTask };
+      attachPolicyMeta(updData, ctx, planning.sqliteDual.getPlanningGeneration(), pgUpd.warnings);
       return {
         ok: true,
         code: "task-updated",
         message: `Updated task '${taskId}'`,
-        data: {
-          task: updatedTask,
-          planningGeneration: planning.sqliteDual.getPlanningGeneration()
-        } as Record<string, unknown>
+        data: updData
       };
     }
 
@@ -452,7 +504,7 @@ export const taskEngineModule: WorkflowModule = {
         rawArgs: args as Record<string, unknown>
       });
       if (r.ok && r.data && typeof r.data === "object") {
-        (r.data as Record<string, unknown>).planningGeneration = planning.sqliteDual.getPlanningGeneration();
+        attachPolicyMeta(r.data as Record<string, unknown>, ctx, planning.sqliteDual.getPlanningGeneration());
       }
       return r;
     }
@@ -472,7 +524,7 @@ export const taskEngineModule: WorkflowModule = {
         rawArgs: args as Record<string, unknown>
       });
       if (r.ok && r.data && typeof r.data === "object") {
-        (r.data as Record<string, unknown>).planningGeneration = planning.sqliteDual.getPlanningGeneration();
+        attachPolicyMeta(r.data as Record<string, unknown>, ctx, planning.sqliteDual.getPlanningGeneration());
       }
       return r;
     }
@@ -492,6 +544,10 @@ export const taskEngineModule: WorkflowModule = {
       if (!task) {
         return { ok: false, code: "task-not-found", message: `Task '${taskId}' not found` };
       }
+      const pgArchive = planningGenPolicyGate(ctx, args as Record<string, unknown>);
+      if (pgArchive.block) {
+        return pgArchive.block;
+      }
       const archivedAt = nowIso();
       const updatedTask = { ...task, archived: true, archivedAt, updatedAt: archivedAt };
       store.updateTask(updatedTask);
@@ -501,14 +557,13 @@ export const taskEngineModule: WorkflowModule = {
         return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
       }
       await store.save(planningConcurrencySaveOpts(args as Record<string, unknown>));
+      const archData: Record<string, unknown> = { task: updatedTask };
+      attachPolicyMeta(archData, ctx, planning.sqliteDual.getPlanningGeneration(), pgArchive.warnings);
       return {
         ok: true,
         code: "task-archived",
         message: `Archived task '${taskId}'`,
-        data: {
-          task: updatedTask,
-          planningGeneration: planning.sqliteDual.getPlanningGeneration()
-        } as Record<string, unknown>
+        data: archData
       };
     }
 
@@ -547,15 +602,16 @@ export const taskEngineModule: WorkflowModule = {
         targetStatus: to
       }));
 
+      const gtData: Record<string, unknown> = {
+        task,
+        recentTransitions,
+        allowedActions
+      };
+      attachPolicyMeta(gtData, ctx, planning.sqliteDual.getPlanningGeneration());
       return {
         ok: true,
         code: "task-retrieved",
-        data: {
-          task,
-          recentTransitions,
-          allowedActions,
-          planningGeneration: planning.sqliteDual.getPlanningGeneration()
-        } as Record<string, unknown>
+        data: gtData
       };
     }
 
@@ -592,6 +648,10 @@ export const taskEngineModule: WorkflowModule = {
       } else {
         deps.delete(dependencyTaskId);
       }
+      const pgDep = planningGenPolicyGate(ctx, args as Record<string, unknown>);
+      if (pgDep.block) {
+        return pgDep.block;
+      }
       const updatedTask = { ...task, dependsOn: [...deps], updatedAt: nowIso() };
       store.updateTask(updatedTask);
       const mutationType = command.name === "add-dependency" ? "add-dependency" : "remove-dependency";
@@ -601,14 +661,13 @@ export const taskEngineModule: WorkflowModule = {
         return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
       }
       await store.save(planningConcurrencySaveOpts(args as Record<string, unknown>));
+      const depData: Record<string, unknown> = { task: updatedTask };
+      attachPolicyMeta(depData, ctx, planning.sqliteDual.getPlanningGeneration(), pgDep.warnings);
       return {
         ok: true,
         code: command.name === "add-dependency" ? "dependency-added" : "dependency-removed",
         message: `${command.name} applied for '${taskId}'`,
-        data: {
-          task: updatedTask,
-          planningGeneration: planning.sqliteDual.getPlanningGeneration()
-        } as Record<string, unknown>
+        data: depData
       };
     }
 
@@ -806,9 +865,9 @@ export const taskEngineModule: WorkflowModule = {
       const data: Record<string, unknown> = {
         tasks,
         count: tasks.length,
-        scope: "tasks-only",
-        planningGeneration: planning.sqliteDual.getPlanningGeneration()
+        scope: "tasks-only"
       };
+      attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
       if (includeQueueHints) {
         const hintBaseTasks = includeArchived ? store.getAllTasks() : store.getActiveTasks();
         const workspaceStatus = await readWorkspaceStatusSnapshot(ctx.workspacePath);
@@ -842,17 +901,18 @@ export const taskEngineModule: WorkflowModule = {
           return pa.localeCompare(pb);
         });
 
+      const rqData: Record<string, unknown> = {
+        tasks: ready,
+        count: ready.length,
+        scope: "tasks-only",
+        queueNamespace: ns ?? null
+      };
+      attachPolicyMeta(rqData, ctx, planning.sqliteDual.getPlanningGeneration());
       return {
         ok: true,
         code: "ready-queue-retrieved",
         message: `${ready.length} tasks in ready queue`,
-        data: {
-          tasks: ready,
-          count: ready.length,
-          scope: "tasks-only",
-          queueNamespace: ns ?? null,
-          planningGeneration: planning.sqliteDual.getPlanningGeneration()
-        } as Record<string, unknown>
+        data: rqData
       };
     }
 
@@ -861,18 +921,19 @@ export const taskEngineModule: WorkflowModule = {
       const ns = readQueueNamespaceArg(args);
       const suggestion = getNextActions(tasks, ns ? { queueNamespace: ns } : undefined);
 
+      const naData: Record<string, unknown> = {
+        ...suggestion,
+        scope: "tasks-only",
+        queueNamespace: ns ?? null
+      };
+      attachPolicyMeta(naData, ctx, planning.sqliteDual.getPlanningGeneration());
       return {
         ok: true,
         code: "next-actions-retrieved",
         message: suggestion.suggestedNext
           ? `Suggested next: ${suggestion.suggestedNext.id} — ${suggestion.suggestedNext.title}`
           : "No tasks in ready queue",
-        data: {
-          ...suggestion,
-          scope: "tasks-only",
-          queueNamespace: ns ?? null,
-          planningGeneration: planning.sqliteDual.getPlanningGeneration()
-        } as unknown as Record<string, unknown>
+        data: naData
       };
     }
 
@@ -995,6 +1056,13 @@ export const taskEngineModule: WorkflowModule = {
       planning
     );
     if (wishlistResult !== undefined) {
+      if (wishlistResult.ok && wishlistResult.data && typeof wishlistResult.data === "object") {
+        attachPolicyMeta(
+          wishlistResult.data as Record<string, unknown>,
+          ctx,
+          planning.sqliteDual.getPlanningGeneration()
+        );
+      }
       return wishlistResult;
     }
 
