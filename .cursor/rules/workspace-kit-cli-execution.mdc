@@ -22,6 +22,6 @@ Agents must use **`workspace-kit`** for kit-owned persistence. Chat-only approva
 - **Improvement research → log:** `docs/maintainers/playbooks/improvement-task-discovery.md` — optional requestable **`.cursor/rules/playbook-improvement-task-discovery.mdc`**
 - **Improvement triage (≤3 → ready):** `docs/maintainers/playbooks/improvement-triage-top-three.md` — optional requestable **`.cursor/rules/playbook-improvement-triage-top-three.mdc`**
 
-## `/qt` note
+## Maintainer task templates (`tasks/*.md`)
 
-`/qt` only interprets `tasks/*.md` templates. Steps that persist kit state must include the matching **`workspace-kit` line** from the Agent CLI map.
+Files under **`tasks/*.md`** are **prompt-only** copy; they do not run **`workspace-kit`**. Steps that persist kit state must include the matching **`workspace-kit` line** from the Agent CLI map.

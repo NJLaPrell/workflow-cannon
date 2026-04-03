@@ -182,20 +182,20 @@ export const proposals = [
   },
   {
     id: "T459",
-    title: "[improvement] Reduce /qt vs workspace-kit policy confusion",
+    title: "[improvement] Reduce editor task-template vs workspace-kit policy confusion",
     original:
-      "`/qt` explicitly doesn't run the kit — README is clear: editor `/qt` is templates only. So you have a friendly-looking workflow affordance that cannot satisfy policy or persist state.",
+      "Optional `tasks/*.md` templates do not run the kit — they are prompt-only. Friendly editor affordances can still look like they satisfy policy or persist state when they do not.",
     plan:
-      "Theme: safe affordances. Template headers, Cursor command docs, link to AGENT-CLI-MAP line; consider `/qt` stub warning when step mentions policy; same class: any editor-only shortcuts.",
+      "Theme: safe affordances. Template headers, maintainer docs, link to AGENT-CLI-MAP line; explicit warnings when a step mentions policy; same class: any editor-only shortcuts.",
     technicalScope: [
-      "Inventory `/qt` templates and add mandatory kit-invocation reminder block.",
+      "Inventory `tasks/*.md` templates and add mandatory kit-invocation reminder block.",
       "Document in consumer cadence runbooks.",
       "If repo ships `.cursor/commands`, ensure copy matches POLICY-APPROVAL."
     ],
     acceptanceCriteria: [
       "Every template that mutates kit state includes copy-paste workspace-kit line or explicit \"run separately\".",
-      "AGENTS.md `/qt` section references template convention.",
-      "No claim that `/qt` satisfies policy."
+      "AGENTS.md maintainer task-templates section references template convention.",
+      "No claim that prompt templates satisfy policy."
     ]
   },
   {

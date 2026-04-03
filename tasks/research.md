@@ -1,9 +1,9 @@
 ---
-quicktaskVersion: 1
+templateVersion: 1
 taskName: research
 ---
 
-> **`/qt` is not `workspace-kit`:** This template is editor-only. It never satisfies JSON **`policyApproval`**. To change task-engine or other kit-owned state, run the matching line from **`docs/maintainers/AGENT-CLI-MAP.md`** in a terminal.
+> **Not `workspace-kit`:** This file is a **prompt-only** maintainer template. It does not run the CLI, write task-engine state, or satisfy JSON **`policyApproval`**. To mutate kit-owned state, run the matching line from **`docs/maintainers/AGENT-CLI-MAP.md`** in a terminal.
 
 # research
 
@@ -14,5 +14,5 @@ taskName: research
 **Persist via CLI:** Planning only — no task-engine or policy-gated `workspace-kit` persistence for this template.
 
 ---
-Run (example): `/qt/research your input here`
+**Use:** Open or @-attach `tasks/research.md` with your research question.
 

@@ -41,9 +41,9 @@ Basic operating guidance for AI agents working in this repository.
 - **Config reference:** **`docs/maintainers/CONFIG.md`** and **`.ai/CONFIG.md`** are generated together from **`src/core/config-metadata.ts`** via **`workspace-kit config generate-docs`**; do not hand-edit either file.
 - **Agents:** Keep using **`.ai/AGENTS.md`** and **`src/modules/*/instructions/`** for routine operations — this subsection is for **maintainers** reconciling mirrored docs, not an alternate agent entry path.
 
-## `/qt` quick-task templates (`tasks/*.md`)
+## Maintainer task templates (`tasks/*.md`)
 
-**`/qt`** only materializes **`tasks/*.md`** in the editor. It **does not** run **`workspace-kit`** and **cannot** satisfy **`policyApproval`** (or env approval). If a template step changes task-engine or other kit-owned state, run the **exact** line from **`docs/maintainers/AGENT-CLI-MAP.md`** in a real shell (Tier **A** **`run-transition`**, Tier **B** sensitive **`run`**, etc.).
+Files under **`tasks/*.md`** are **optional prompt-only** workflows. They **do not** run **`workspace-kit`** and **cannot** satisfy **`policyApproval`** (or env approval). If a template step changes task-engine or other kit-owned state, run the **exact** line from **`docs/maintainers/AGENT-CLI-MAP.md`** in a real shell (Tier **A** **`run-transition`**, Tier **B** sensitive **`run`**, etc.).
 
 ## Maintainer playbooks (direction sets)
 
@@ -74,7 +74,7 @@ When a session is long, was compacted, or you are unsure stale chat context matc
 3. Re-read **`docs/maintainers/data/workspace-kit-status.yaml`** and the authoritative task list via **`workspace-kit run list-tasks`** / **`get-next-actions`** (or the configured task store file if using JSON) — do not rely on chat memory for task `status` or phase alone.
 4. Optional: attach **`.cursor/rules/cursor-long-session-hygiene.mdc`** in Cursor for a short reload checklist; prefer **requestable** rules over bloating always-on rules. See **`docs/maintainers/runbooks/cursor-long-session.md`**.
 5. Task queue / Git / extension mental model: **`docs/maintainers/runbooks/agent-task-engine-ergonomics.md`** (merge ≠ task **`complete`**, **`suggestedNext`** vs **`get-task`**, read-only kit inspection).
-6. **`/qt`** templates: any step that persists kit state must include the matching **`workspace-kit`** invocation from **`docs/maintainers/AGENT-CLI-MAP.md`** before you treat the template as closed.
+6. **`tasks/*.md` templates:** any step that persists kit state must include the matching **`workspace-kit`** invocation from **`docs/maintainers/AGENT-CLI-MAP.md`** before you treat the template as closed.
 
 ## Core expectations
 

@@ -213,7 +213,7 @@ Phase 33 — documentation, editor integration, and CLI ergonomics (**`T455`**, 
 
 - **Scripts** — **`scripts/run-check-stages.mjs`** stages **`pnpm run check`** with labeled steps and failure hints; **`scripts/check-principles-rule-snapshot.mjs`** + **`scripts/fixtures/principles-rule-ids.json`**; **`scripts/check-governance-doc-order.mjs`** + **`scripts/fixtures/governance-doc-order.json`** (AGENTS § Source-of-truth path order).
 - **Gates** — **`pnpm run maintainer-gates`** and **`pnpm run pre-merge-gates`** as intention-revealing names; **`phase4-gates`** / **`phase5-gates`** remain aliases.
-- **Docs** — README **New contributors** path (≤5 hops to a safe **`run-transition`**); AGENTS **documentation tiers**, **canonical vs mirror**, expanded **`/qt`** warning; **`docs/maintainers/module-build-guide.md`** Cursor rules policy; **`docs/maintainers/DECISIONS.md`** governance/drift decision; **`docs/maintainers/RELEASING.md`** principles edit order + gate names; **`tasks/*.md`** kit-invocation reminder block; consumer cadence **`/qt`** note.
+- **Docs** — README **New contributors** path (≤5 hops to a safe **`run-transition`**); AGENTS **documentation tiers**, **canonical vs mirror**, expanded task-template (prompt-only) warning; **`docs/maintainers/module-build-guide.md`** Cursor rules policy; **`docs/maintainers/DECISIONS.md`** governance/drift decision; **`docs/maintainers/RELEASING.md`** principles edit order + gate names; **`tasks/*.md`** kit-invocation reminder block; consumer cadence task-template note.
 
 ### Changed
 
@@ -329,7 +329,7 @@ Phase 26 — module platform + improvement execution closeout (**`T388`**, **`T3
 
 ### Documentation
 
-- **Agent playbooks / direction sets** (`T433`–`T439`) — TERMS + `docs/maintainers/playbooks/` (README, pilot `phase-closeout-and-release`), `AGENTS.md` discovery table + optional requestable `.cursor/rules/playbook-phase-closeout.mdc`, `tasks/phase-closeout.md` `/qt` template, `runbooks/agent-playbooks.md`; FEATURE-MATRIX + ROADMAP Phase 25 closeout.
+- **Agent playbooks / direction sets** (`T433`–`T439`) — TERMS + `docs/maintainers/playbooks/` (README, pilot `phase-closeout-and-release`), `AGENTS.md` discovery table + optional requestable `.cursor/rules/playbook-phase-closeout.mdc`, `tasks/phase-closeout.md` maintainer template, `runbooks/agent-playbooks.md`; FEATURE-MATRIX + ROADMAP Phase 25 closeout.
 - **CLI visual guide** — `docs/maintainers/CLI-VISUAL-GUIDE.md` (ASCII topology + Mermaid: top-level commands, agent decision flow, approval lanes, default module router). Linked from README, `AGENTS.md`, `AGENT-CLI-MAP.md`, `ARCHITECTURE.md`; machine ref in `.ai/AGENTS.md`.
 
 ## [0.25.0] - 2026-03-30
@@ -583,7 +583,7 @@ Phase 9–10 — interactive policy UX, strict response-template opt-in, and **A
 
 ### Added
 
-- **`docs/maintainers/AGENT-CLI-MAP.md`** — tier table (task transitions vs other sensitive `workspace-kit run` commands), `/qt` vs CLI boundaries, and copy-paste JSON for each policy `operationId`.
+- **`docs/maintainers/AGENT-CLI-MAP.md`** — tier table (task transitions vs other sensitive `workspace-kit run` commands), maintainer templates vs CLI boundaries, and copy-paste JSON for each policy `operationId`.
 - **`WORKSPACE_KIT_INTERACTIVE_APPROVAL`** — optional TTY prompt for sensitive `workspace-kit run` (`src/cli/interactive-policy.ts`, `readStdinLine` test hook on `WorkspaceKitCliOptions`).
 - **Strict response templates:** `enforcementMode: strict` fails on unknown default/override template ids and on `responseTemplateId` vs instruction directive mismatch (`response-template-conflict`).
 - **`.cursor/rules/workspace-kit-cli-execution.mdc`** — always-on rule mirroring CLI-first execution; **`pnpm run advisory:task-state-hand-edit`** — non-blocking advisory when `state.json` diffs look like hand-edits (CI: `continue-on-error`).
@@ -592,7 +592,7 @@ Phase 9–10 — interactive policy UX, strict response-template opt-in, and **A
 
 - **`workspace-kit run`** (no subcommand) and **`workspace-kit doctor`** success output point agents at instruction paths, `POLICY-APPROVAL.md`, and **`AGENT-CLI-MAP.md`**.
 - **`docs/maintainers/POLICY-APPROVAL.md`** — Agents / IDE / non-TTY subsection (session id, chat is not approval).
-- **`docs/maintainers/AGENTS.md`** and **`.ai/AGENTS.md`** — CLI-first rules and concrete examples; **`tasks/*.md`** and **`.cursor/commands/qt.md`** — persistence vs planning-only labeling.
+- **`docs/maintainers/AGENTS.md`** and **`.ai/AGENTS.md`** — CLI-first rules and concrete examples; **`tasks/*.md`** — persistence vs planning-only labeling.
 - **`docs/maintainers/CONFIG.md`** — `responseTemplates.enforcementMode` strict/advisory semantics documented in metadata and generated reference.
 - **Task engine** — `.workspace-kit/tasks/state.json` is tracked in git (`.gitignore` updated); Phase 9–10 tasks completed in maintainer workflow.
 

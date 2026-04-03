@@ -143,7 +143,7 @@ test("runCli --version prints a semver line", async () => {
 });
 
 test("runCli init generates profile-driven project context artifacts", async () => {
-  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "qt-wskit-init-"));
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-init-"));
   await createDoctorFixture(fixtureRoot);
 
   const capture = createCapture();
@@ -163,7 +163,7 @@ test("runCli init generates profile-driven project context artifacts", async () 
 });
 
 test("runCli doctor validates canonical files", async () => {
-  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "qt-wskit-"));
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-"));
   await createDoctorFixture(fixtureRoot);
 
   const capture = createCapture();
@@ -176,7 +176,7 @@ test("runCli doctor validates canonical files", async () => {
 });
 
 test("runCli doctor --agent-instruction-surface emits JSON catalog", async () => {
-  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "qt-wskit-surface-"));
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-surface-"));
   await createDoctorFixture(fixtureRoot);
 
   const capture = createCapture();
@@ -196,7 +196,7 @@ test("runCli doctor --agent-instruction-surface emits JSON catalog", async () =>
 });
 
 test("runCli doctor returns validation failure when required files are missing", async () => {
-  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "qt-wskit-missing-"));
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-missing-"));
   const capture = createCapture();
   const code = await runCli(["doctor"], { cwd: fixtureRoot, ...capture });
 
@@ -208,7 +208,7 @@ test("runCli doctor returns validation failure when required files are missing",
 });
 
 test("runCli doctor fails when sqlite persistence configured but DB missing", async () => {
-  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "qt-wskit-dr-sqlite-miss-"));
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-dr-sqlite-miss-"));
   await createDoctorFixture(fixtureRoot);
   await writeFile(
     path.join(fixtureRoot, ".workspace-kit", "config.json"),
@@ -233,7 +233,7 @@ test("runCli doctor fails when sqlite persistence configured but DB missing", as
 });
 
 test("runCli doctor passes when sqlite DB exists but planning row not yet written", async () => {
-  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "qt-wskit-dr-sqlite-empty-"));
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-dr-sqlite-empty-"));
   await createDoctorFixture(fixtureRoot);
   await mkdir(path.join(fixtureRoot, ".workspace-kit", "tasks"), { recursive: true });
   await writeFile(
@@ -268,7 +268,7 @@ test("runCli doctor passes when sqlite DB exists but planning row not yet writte
 });
 
 test("runCli doctor passes when sqlite DB exists with valid planning row", async () => {
-  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "qt-wskit-dr-sqlite-ok-"));
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-dr-sqlite-ok-"));
   await createDoctorFixture(fixtureRoot);
   await mkdir(path.join(fixtureRoot, ".workspace-kit", "tasks"), { recursive: true });
   await writeFile(
@@ -318,7 +318,7 @@ test("runCli doctor passes when sqlite DB exists with valid planning row", async
 });
 
 test("runCli check validates profile baseline fields", async () => {
-  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "qt-wskit-check-pass-"));
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-check-pass-"));
   await createDoctorFixture(fixtureRoot);
 
   const capture = createCapture();
@@ -329,7 +329,7 @@ test("runCli check validates profile baseline fields", async () => {
 });
 
 test("runCli check returns validation failure for invalid profile values", async () => {
-  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "qt-wskit-check-fail-"));
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-check-fail-"));
   await mkdir(path.join(fixtureRoot, "schemas"), { recursive: true });
   await writeFile(
     path.join(fixtureRoot, "workspace-kit.profile.json"),
@@ -353,7 +353,7 @@ test("runCli check returns validation failure for invalid profile values", async
 });
 
 test("runCli init updates generated project context after profile name changes", async () => {
-  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "qt-wskit-init-update-"));
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-init-update-"));
   await createDoctorFixture(fixtureRoot);
 
   const firstRunCapture = createCapture();
@@ -387,7 +387,7 @@ test("runCli init updates generated project context after profile name changes",
 });
 
 test("runCli upgrade overwrites kit-owned assets and preserves profile", async () => {
-  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "qt-wskit-upgrade-"));
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-upgrade-"));
   await createDoctorFixture(fixtureRoot);
 
   await writeFile(
@@ -434,7 +434,7 @@ test("runCli upgrade overwrites kit-owned assets and preserves profile", async (
 });
 
 test("runCli upgrade returns validation failure for invalid profile", async () => {
-  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "qt-wskit-upgrade-fail-"));
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-upgrade-fail-"));
   await mkdir(path.join(fixtureRoot, ".workspace-kit"), { recursive: true });
   await writeFile(
     path.join(fixtureRoot, "workspace-kit.profile.json"),
@@ -449,7 +449,7 @@ test("runCli upgrade returns validation failure for invalid profile", async () =
 });
 
 test("runCli drift-check passes for aligned managed assets", async () => {
-  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "qt-wskit-drift-pass-"));
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-drift-pass-"));
   await createDoctorFixture(fixtureRoot);
 
   const upgradeCapture = createCapture();
@@ -463,7 +463,7 @@ test("runCli drift-check passes for aligned managed assets", async () => {
 });
 
 test("runCli drift-check fails when managed asset content drifts", async () => {
-  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "qt-wskit-drift-fail-"));
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-drift-fail-"));
   await createDoctorFixture(fixtureRoot);
 
   const upgradeCapture = createCapture();

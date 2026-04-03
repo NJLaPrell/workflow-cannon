@@ -7,7 +7,7 @@ import { mkdtemp, readFile } from "node:fs/promises";
 import { UnifiedStateDb } from "../dist/core/state/unified-state-db.js";
 
 test("UnifiedStateDb writes and reads module rows", async () => {
-  const workspace = await mkdtemp(path.join(os.tmpdir(), "qt-unified-state-db-"));
+  const workspace = await mkdtemp(path.join(os.tmpdir(), "wk-unified-state-db-"));
   const db = new UnifiedStateDb(workspace, ".workspace-kit/state/workspace-kit.db");
 
   db.setModuleState("planning", 1, { lastPlanId: "W101", mode: "tasks" });
@@ -26,7 +26,7 @@ test("UnifiedStateDb writes and reads module rows", async () => {
 });
 
 test("UnifiedStateDb can export snapshot on each commit", async () => {
-  const workspace = await mkdtemp(path.join(os.tmpdir(), "qt-unified-state-snapshot-"));
+  const workspace = await mkdtemp(path.join(os.tmpdir(), "wk-unified-state-snapshot-"));
   const snapshotRelativePath = ".workspace-kit/state/state-snapshot.json";
   const db = new UnifiedStateDb(workspace, ".workspace-kit/state/workspace-kit.db", {
     exportSnapshotRelativePath: snapshotRelativePath

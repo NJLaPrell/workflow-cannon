@@ -1,9 +1,9 @@
 ---
-quicktaskVersion: 1
+templateVersion: 1
 taskName: phase-closeout
 ---
 
-> **`/qt` is not `workspace-kit`:** This template is editor-only. It never satisfies JSON **`policyApproval`**. To change task-engine or other kit-owned state, run the matching line from **`docs/maintainers/AGENT-CLI-MAP.md`** in a terminal (Tier **A** **`run-transition`**, etc.).
+> **Not `workspace-kit`:** This file is a **prompt-only** maintainer template. It does not run the CLI, write task-engine state, or satisfy JSON **`policyApproval`**. To mutate kit-owned state, run the matching line from **`docs/maintainers/AGENT-CLI-MAP.md`** in a terminal (Tier **A** **`run-transition`**, etc.).
 
 # phase-closeout
 
@@ -36,4 +36,4 @@ workspace-kit run run-transition '{"taskId":"T###","action":"complete","policyAp
 Replace `T###` and rationale strings per task. Do **not** hand-edit `.workspace-kit/tasks/state.json` for routine lifecycle moves.
 
 ---
-Run (example): `/qt/phase-closeout Phase 25 → v0.26.0`
+**Use:** Open or @-attach `tasks/phase-closeout.md` with your phase/release context (e.g. `Phase 25 → v0.26.0`).

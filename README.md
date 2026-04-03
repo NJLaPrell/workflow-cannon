@@ -89,12 +89,12 @@ Or with pnpm: `pnpm add @workflow-cannon/workspace-kit` then `pnpm exec wk --hel
 | **Docs** | Maintainer process, roadmap, and changelog under `docs/maintainers/`. |
 | **Cursor extension** (optional) | Thin UI in `extensions/cursor-workflow-cannon/` — pnpm workspace member; build with `pnpm run ui:prepare` after root `pnpm install` (see **`CONTRIBUTING.md`**). |
 
-There is **no** built-in IDE slash command like `/qt` from this package; editor integrations are **your** config (e.g. `.cursor/commands/`), while **`workspace-kit`** is the supported CLI.
+Optional maintainer prompt templates may live under **`tasks/*.md`** in a repo (prompt-only; they do **not** run **`workspace-kit`**). Editor integrations are **your** config; **`workspace-kit`** is the supported CLI for kit-owned state.
 
 ## New contributors — safe task transition (≤5 hops)
 
 1. **README** (this page) — install, `wk doctor`, `wk run` menu.  
-2. [`docs/maintainers/AGENTS.md`](docs/maintainers/AGENTS.md) — source-of-truth order, tiers, **`/qt`** limits.  
+2. [`docs/maintainers/AGENTS.md`](docs/maintainers/AGENTS.md) — source-of-truth order, tiers, and **`tasks/*.md`** template limits (prompt-only).  
 3. [`docs/maintainers/AGENT-CLI-MAP.md`](docs/maintainers/AGENT-CLI-MAP.md) — Tier **A** **`run-transition`** copy-paste JSON.  
 4. [`docs/maintainers/POLICY-APPROVAL.md`](docs/maintainers/POLICY-APPROVAL.md) — when JSON **`policyApproval`** is required vs env approval.  
 5. Run in a shell, e.g. `pnpm exec wk run run-transition '{"taskId":"T###","action":"start","policyApproval":{"confirmed":true,"rationale":"your reason"}}'` (replace **`T###`**).

@@ -22,7 +22,7 @@ A third item is **sequenced after engine work**: **`list-tasks` filters** (Phase
 
 ## Non-goals
 
-- Replacing `/qt` file-based templates (unchanged by design).
+- Replacing file-based maintainer templates under `tasks/*.md` (unchanged by design).
 - Changing Task Engine contracts solely for the extension (`T337` owns filter semantics).
 
 ## Implementation order (suggested)

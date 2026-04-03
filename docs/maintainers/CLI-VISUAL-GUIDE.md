@@ -114,7 +114,7 @@ flowchart TD
   class TIERA,TIERB,ENV stop
 ```
 
-**Editor `/qt` reminder:** templates under `tasks/*.md` do **not** execute the CLI. If a step persists kit state, the agent must run the matching **`workspace-kit`** line from **`AGENT-CLI-MAP.md`** (or the module instruction file).
+**Maintainer template reminder:** files under `tasks/*.md` do **not** execute the CLI. If a step persists kit state, the agent must run the matching **`workspace-kit`** line from **`AGENT-CLI-MAP.md`** (or the module instruction file).
 
 ---
 

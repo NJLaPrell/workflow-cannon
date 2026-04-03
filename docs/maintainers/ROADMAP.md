@@ -136,7 +136,7 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 
 ### Phase 10 - Agent/CLI parity -> GitHub release `v0.11.0`
 
-- Primary scope: **`T285`–`T291`** — canonical Agent CLI map; CLI-first **`AGENTS.md`** / **`.ai/AGENTS.md`**; always-applied Cursor rule; `/qt` template persistence labels; `doctor` / bare `run` discovery output; multi-turn non-TTY session documentation; optional advisory check for suspicious `state.json` edits.
+- Primary scope: **`T285`–`T291`** — canonical Agent CLI map; CLI-first **`AGENTS.md`** / **`.ai/AGENTS.md`**; always-applied Cursor rule; **`tasks/*.md`** template persistence labels; `doctor` / bare `run` discovery output; multi-turn non-TTY session documentation; optional advisory check for suspicious `state.json` edits.
 - Outcome: agents can answer “what do I run?” from maintainer docs and CLI output; fewer chat-only “approvals” and hand-edited task state.
 - Exit signals:
   - Phase 10 tasks are **`completed`** in task-engine state; gates green on the release tag; **`docs/maintainers/AGENT-CLI-MAP.md`** linked from policy and AGENTS entrypoints.
@@ -257,7 +257,7 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 ### Phase 21 - Agent reliability and planning dashboard -> GitHub release `v0.22.0` (COMPLETE)
 
 - Primary scope: **`T404`–`T409`**, **`T410`–`T414`**.
-- **Agent context reliability** (`T404`–`T409`): requestable Cursor rule globs; long-session reload ritual in `AGENTS.md`; slim always-on rules to pointer-first prose; `/qt` template closure reminders; optional stronger task-state integrity checks; maintainer session hygiene for long threads.
+- **Agent context reliability** (`T404`–`T409`): requestable Cursor rule globs; long-session reload ritual in `AGENTS.md`; slim always-on rules to pointer-first prose; **`tasks/*.md`** template closure reminders; optional stronger task-state integrity checks; maintainer session hygiene for long threads.
 - **Planning dashboard** (`T410`–`T414`): persist in-flight `build-plan` context for dashboard signals; aggregate planning visibility into `dashboard-summary`; extension dashboard panel + active-context refresh; planning quick actions from dashboard; maintainer docs and extension parity plan alignment.
 - Outcome: agents re-anchor on canon and CLI under long context; operators see planning health and shortcuts from the extension without breaking the thin-client model.
 - Exit signals:

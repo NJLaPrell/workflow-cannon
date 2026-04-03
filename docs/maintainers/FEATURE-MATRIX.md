@@ -182,10 +182,10 @@ Status legend:
 
 | Product feature | What users/maintainers get | Status | Task coverage |
 | --- | --- | --- | --- |
-| Agent CLI map | Single maintainer page: tiers, `/qt` vs CLI, copy-paste JSON per sensitive `operationId` | Completed | `T285` |
+| Agent CLI map | Single maintainer page: tiers, maintainer templates vs CLI, copy-paste JSON per sensitive `operationId` | Completed | `T285` |
 | CLI-first AGENTS guidance | `.ai/AGENTS.md` + `docs/maintainers/AGENTS.md` encode MUST-level CLI execution with examples | Completed | `T286` |
 | Cursor CLI rule | Always-on `.cursor/rules/workspace-kit-cli-execution.mdc` mirrors maintainer contract | Completed | `T287` |
-| `/qt` persistence labels | `tasks/*.md` + `.cursor/commands/qt.md` mark planning-only vs real `workspace-kit` lines | Completed | `T288` |
+| Task template persistence labels | `tasks/*.md` mark planning-only vs real `workspace-kit` lines | Completed | `T288` |
 | Command discovery UX | `workspace-kit doctor` + bare `run` output point to instructions + Agent CLI map | Completed | `T289` |
 | Multi-turn agent sessions | `POLICY-APPROVAL.md` documents non-TTY, `WORKSPACE_KIT_SESSION_ID`, and “chat is not approval” | Completed | `T290` |
 | Task state hand-edit advisory | `pnpm run advisory:task-state-hand-edit` (warn-only; CI non-blocking) | Completed | `T291` |
@@ -214,7 +214,7 @@ Status legend:
 | Playbook canon and authoring contract | Shared vocabulary (direction set ↔ playbook), compose-by-reference rules, no fork of RELEASING/delivery-loop prose | Completed | `T433` |
 | Pilot phase-closeout + release playbook | One attachable checklist orchestrating task queue, delivery loop, human release gate, and RELEASING evidence | Completed | `T434` |
 | Agent discovery index | `AGENTS.md` table mapping playbook ids to paths and “use when” | Completed | `T435` |
-| `/qt` phase-closeout template | `tasks/phase-closeout.md` entry that points agents at the pilot playbook and CLI map lines | Completed | `T436` |
+| Phase-closeout maintainer template | `tasks/phase-closeout.md` entry that points agents at the pilot playbook and CLI map lines | Completed | `T436` |
 | Invocation runbook | How to attach playbooks, optional rules, and limits of auto-triggering | Completed | `T437` |
 | Requestable Cursor rule (optional) | Thin rule enabling phase-closeout mode without always-on bloat | Completed | `T438` |
 | Milestone matrix alignment | FEATURE-MATRIX + roadmap wording stay consistent with shipped artifacts | Completed | `T439` |
@@ -278,7 +278,7 @@ Status legend:
 | Product feature | What users/maintainers get | Status | Task coverage |
 | --- | --- | --- | --- |
 | Progressive governance onboarding | README path + AGENTS tiers; explicit canonical vs mirror vs generated table | Completed | `T455` |
-| `/qt` vs policy clarity | Template reminder blocks; AGENTS + consumer cadence warnings | Completed | `T459` |
+| Task template vs policy clarity | Template reminder blocks; AGENTS + consumer cadence warnings | Completed | `T459` |
 | Cursor rule sync policy | module-build-guide Cursor section; slim maintainer-delivery-loop rule | Completed | `T460` |
 | Machine/human drift checks | CI fixtures for PRINCIPLES rule ids + AGENTS source-of-truth paths; RELEASING edit order | Completed | `T461` |
 | Neutral gate script names | `maintainer-gates` / `pre-merge-gates` with `phase4-gates` / `phase5-gates` aliases | Completed | `T462` |

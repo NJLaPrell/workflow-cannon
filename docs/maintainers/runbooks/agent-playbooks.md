@@ -6,7 +6,7 @@ Playbooks live under [`docs/maintainers/playbooks/`](../playbooks/). They are **
 
 1. **Explicit attachment** — Include the playbook file in the editor context (e.g. `@docs/maintainers/playbooks/phase-closeout-and-release.md`, `@docs/maintainers/playbooks/task-to-main.md`, `@docs/maintainers/playbooks/improvement-task-discovery.md`, or `@docs/maintainers/playbooks/improvement-triage-top-three.md` in Cursor) or paste a short excerpt plus the path.
 2. **Requestable Cursor rules** — e.g. `.cursor/rules/playbook-phase-closeout.mdc` (phase closeout + release), `.cursor/rules/playbook-task-to-main.mdc` (single **`T###`** → PR → merge), `.cursor/rules/playbook-improvement-task-discovery.mdc` (improvement research → log), `.cursor/rules/playbook-improvement-triage-top-three.mdc` (**≤3** **`improvement`** **`proposed`** → **`ready`**). Attach the rule when you want that mode. They are **not** a substitute for reading [`POLICY-APPROVAL.md`](../POLICY-APPROVAL.md) or running [`workspace-kit`](../AGENT-CLI-MAP.md) commands.
-3. **`/qt` templates** — Templates under `tasks/*.md` (e.g. `tasks/phase-closeout.md`) tell the agent to open a playbook first; `/qt` itself does **not** execute `workspace-kit` or satisfy policy.
+3. **`tasks/*.md` templates** — e.g. `tasks/phase-closeout.md` can tell the agent to open a playbook first; those files do **not** execute `workspace-kit` or satisfy policy.
 
 There is **no** product hook that auto-injects playbooks into every session. If the path is not in context, assume the agent has **not** loaded it.
 

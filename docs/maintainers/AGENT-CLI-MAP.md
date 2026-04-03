@@ -44,9 +44,9 @@ When **researching** friction to log as **`improvement`** tasks or via **`genera
 
 When **promoting** up to three **`type: "improvement"`** tasks from **`proposed`** to **`ready`**, use **`docs/maintainers/playbooks/improvement-triage-top-three.md`** (id `improvement-triage-top-three`); Tier A **`run-transition`** with **`action":"accept"`** and **`policyApproval`**. Optional requestable **`.cursor/rules/playbook-improvement-triage-top-three.mdc`**. Human summary: **`docs/maintainers/AGENTS.md`** → **Improvement triage**.
 
-## `/qt` vs `workspace-kit`
+## Maintainer task templates (`tasks/*.md`) vs `workspace-kit`
 
-The editor **`/qt`** command only loads prompt templates from `tasks/*.md`. It does **not** execute `workspace-kit`, write task-engine state, or satisfy policy. If a workflow step changes kit-owned files or policy-sensitive behavior, the agent must run the **`workspace-kit` line** from this map (or the linked instruction file)—not only describe it in chat.
+Optional Markdown under **`tasks/*.md`** is **prompt-only** reference for agents and humans. Those files do **not** execute **`workspace-kit`**, write task-engine state, or satisfy policy. If a workflow step changes kit-owned files or policy-sensitive behavior, the agent must run the **`workspace-kit` line** from this map (or the linked instruction file)—not only describe it in chat.
 
 ## Contract: no hand-editing task lifecycle
 

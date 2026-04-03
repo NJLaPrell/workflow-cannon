@@ -59,7 +59,7 @@ Or with pnpm: `pnpm add @workflow-cannon/workspace-kit` then `pnpm exec wk --hel
 | **Docs** | Maintainer process, roadmap, and changelog under `docs/maintainers/`. |
 | **Cursor extension** (optional) | Thin UI in `extensions/cursor-workflow-cannon/` — pnpm workspace; build with `pnpm run ui:prepare` (see root **`CONTRIBUTING.md`**). |
 
-There is **no** built-in IDE slash command like `/qt` from this package; editor integrations are **your** config (e.g. `.cursor/commands/`), while **`workspace-kit`** is the supported CLI.
+Optional maintainer prompt templates may live under **`tasks/*.md`** in a repo (prompt-only; they do **not** run **`workspace-kit`**). Editor integrations are **your** config; **`workspace-kit`** is the supported CLI for kit-owned state.
 
 ## Policy and approvals (read this before mutating state)
 
