@@ -322,6 +322,33 @@ function renderPlanningSession(ps: unknown): string {
 
 const MAX_OVERVIEW_ACTION_CHARS = 220;
 
+function renderAgentGuidanceSection(ag: unknown): string {
+  if (!ag || typeof ag !== "object") {
+    return "";
+  }
+  const o = ag as Record<string, unknown>;
+  const tier = typeof o.tier === "number" ? o.tier : null;
+  const label = typeof o.displayLabel === "string" ? o.displayLabel : "";
+  if (tier === null) {
+    return "";
+  }
+  const defNote =
+    o.usingDefaultTier === true
+      ? ' <span class="muted">(default tier — persist with <code>set-agent-guidance</code>)</span>'
+      : "";
+  return (
+    '<section class="agent-guidance-card" aria-label="Agent guidance">' +
+    "<p><b>Agent guidance</b> · tier " +
+    escapeHtml(String(tier)) +
+    " · " +
+    escapeHtml(label) +
+    defNote +
+    "</p>" +
+    '<p class="muted">Advisory only (subordinate to policy). CLI: <code>workspace-kit run resolve-agent-guidance</code> / <code>set-agent-guidance</code>.</p>' +
+    "</section>"
+  );
+}
+
 function truncateOverviewLine(s: string, max: number): string {
   const one = s.replace(/\s+/g, " ").trim();
   if (one.length <= max) {
@@ -530,6 +557,7 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
       : "";
 
   return (
+    renderAgentGuidanceSection(d.agentGuidance) +
     renderWorkspaceOverviewSection(ws as Record<string, unknown> | null) +
     planningGenSection +
     "<p><b>Tasks</b></p>" +

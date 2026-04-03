@@ -1,5 +1,6 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../contracts/module-contract.js";
 import type { DashboardSummaryData } from "../../contracts/dashboard-summary-run.js";
+import { resolveAgentGuidanceFromEffectiveConfig } from "../../core/agent-guidance-catalog.js";
 import { getPlanningGenerationPolicy } from "./planning-config.js";
 import { getNextActions, isImprovementLikeTask } from "./suggestions.js";
 import { readWorkspaceStatusSnapshot } from "./dashboard-status.js";
@@ -123,6 +124,19 @@ export async function runDashboardSummaryCommand(
 
   const dependencyOverview = buildDashboardDependencyOverview(tasks);
 
+  const effCfg =
+    ctx.effectiveConfig && typeof ctx.effectiveConfig === "object" && !Array.isArray(ctx.effectiveConfig)
+      ? (ctx.effectiveConfig as Record<string, unknown>)
+      : {};
+  const guidanceResolved = resolveAgentGuidanceFromEffectiveConfig(effCfg);
+  const agentGuidance = {
+    schemaVersion: 1 as const,
+    profileSetId: guidanceResolved.profileSetId,
+    tier: guidanceResolved.tier,
+    displayLabel: guidanceResolved.displayLabel,
+    usingDefaultTier: guidanceResolved.usingDefaultTier
+  };
+
   const data = {
     schemaVersion: 1 as const,
     planningGeneration,
@@ -199,7 +213,8 @@ export async function runDashboardSummaryCommand(
         }
       : null,
     dependencyOverview,
-    blockingAnalysis: suggestion.blockingAnalysis
+    blockingAnalysis: suggestion.blockingAnalysis,
+    agentGuidance
   } satisfies DashboardSummaryData;
 
   return {

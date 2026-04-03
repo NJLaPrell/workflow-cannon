@@ -98,6 +98,12 @@ export function validateValueForMetadata(meta: ConfigKeyMetadata, value: unknown
   if (meta.type === "number" && typeof value !== "number") {
     throw typeError(meta.key, "number", value);
   }
+  if (meta.key === "kit.agentGuidance.tier") {
+    if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > 5) {
+      throw new Error(`config-constraint(${meta.key}): must be an integer from 1 to 5`);
+    }
+    return;
+  }
   if (meta.type === "object") {
     if (value === null || typeof value !== "object" || Array.isArray(value)) {
       throw typeError(meta.key, "object", value);
@@ -253,7 +259,7 @@ export function validatePersistedConfigDocument(
     }
     const k = kit as Record<string, unknown>;
     for (const key of Object.keys(k)) {
-      if (key !== "currentPhaseNumber" && key !== "currentPhaseLabel") {
+      if (key !== "currentPhaseNumber" && key !== "currentPhaseLabel" && key !== "agentGuidance") {
         throw new Error(`config-invalid(${label}): unknown kit.${key}`);
       }
     }
@@ -266,6 +272,30 @@ export function validatePersistedConfigDocument(
     }
     if (k.currentPhaseLabel !== undefined) {
       validateValueForMetadata(REGISTRY["kit.currentPhaseLabel"]!, k.currentPhaseLabel);
+    }
+    if (k.agentGuidance !== undefined) {
+      if (
+        typeof k.agentGuidance !== "object" ||
+        k.agentGuidance === null ||
+        Array.isArray(k.agentGuidance)
+      ) {
+        throw new Error(`config-invalid(${label}): kit.agentGuidance must be an object`);
+      }
+      const ag = k.agentGuidance as Record<string, unknown>;
+      for (const ak of Object.keys(ag)) {
+        if (ak !== "profileSetId" && ak !== "tier" && ak !== "displayLabel") {
+          throw new Error(`config-invalid(${label}): unknown kit.agentGuidance.${ak}`);
+        }
+      }
+      if (ag.profileSetId !== undefined) {
+        validateValueForMetadata(REGISTRY["kit.agentGuidance.profileSetId"]!, ag.profileSetId);
+      }
+      if (ag.tier !== undefined) {
+        validateValueForMetadata(REGISTRY["kit.agentGuidance.tier"]!, ag.tier);
+      }
+      if (ag.displayLabel !== undefined) {
+        validateValueForMetadata(REGISTRY["kit.agentGuidance.displayLabel"]!, ag.displayLabel);
+      }
     }
   }
   const improvement = data.improvement;

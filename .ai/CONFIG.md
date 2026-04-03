@@ -44,6 +44,18 @@ Generated from `src/core/config-metadata.ts`. Do not edit by hand; run `workspac
 
 **Description:** Optional relative path to transcript JSONL source. When empty, sync uses discoveryPaths (repo-relative, then Cursor global ~/.cursor/projects/<slug>/agent-transcripts).
 
+| kit.agentGuidance.displayLabel | string | "" | project | workspace-kit | maintainer | false | true |
+
+**Description:** Optional echo of the user-facing label chosen during onboarding (e.g. Bard); does not drive validation — tier is authoritative.
+
+| kit.agentGuidance.profileSetId | string | "rpg_party_v1" | project | workspace-kit | maintainer | false | true |
+
+**Description:** Agent guidance catalog id. v1: rpg_party_v1 (RPG party tier labels). Advisory only — subordinate to PRINCIPLES and policy.
+
+| kit.agentGuidance.tier | number | 2 | project | workspace-kit | maintainer | false | true |
+
+**Description:** Interaction difficulty tier 1–5 (NPC → BBEG) for advisory agent guidance; see ADR-agent-guidance-profile-rpg-party-v1.md.
+
 | kit.currentPhaseLabel | string | "" | project | workspace-kit | maintainer | false | false |
 
 **Description:** Optional human-readable phase label (for explain-config / operator context); does not replace task.phase strings.
@@ -94,7 +106,11 @@ Generated from `src/core/config-metadata.ts`. Do not edit by hand; run `workspac
 
 | tasks.persistenceBackend | string | "sqlite" | project | task-engine | public | false | false |
 
-**Description:** Task + wishlist persistence: sqlite (default) or json (opt-out for legacy workflows).
+**Description:** Task + wishlist runtime persistence: sqlite only (unified planning DB).
+
+| tasks.planningGenerationPolicy | string | "off" | project | task-engine | public | false | false |
+
+**Description:** How strictly mutating task-engine / planning-store commands must pass expectedPlanningGeneration for SQLite optimistic concurrency: off (optional token, last-writer-wins when omitted), warn (omit allowed but response may include planningGenerationPolicyWarnings), require (omit fails with planning-generation-required). Published default is off; maintainer repos often set require.
 
 | tasks.sqliteDatabaseRelativePath | string | ".workspace-kit/tasks/workspace-kit.db" | project | task-engine | public | false | false |
 
@@ -102,7 +118,7 @@ Generated from `src/core/config-metadata.ts`. Do not edit by hand; run `workspac
 
 | tasks.storeRelativePath | string | ".workspace-kit/tasks/state.json" | project | task-engine | public | false | false |
 
-**Description:** Relative path (from workspace root) to the task engine JSON state file.
+**Description:** Relative path (from workspace root) to legacy task JSON used only by migrate-task-persistence when importing old files.
 
 | tasks.strictValidation | boolean | false | project | task-engine | public | false | false |
 
@@ -110,5 +126,5 @@ Generated from `src/core/config-metadata.ts`. Do not edit by hand; run `workspac
 
 | tasks.wishlistStoreRelativePath | string | ".workspace-kit/wishlist/state.json" | project | task-engine | public | false | false |
 
-**Description:** Relative path (from workspace root) to the Wishlist JSON store when persistenceBackend is json.
+**Description:** Relative path (from workspace root) to legacy wishlist JSON used only by migrate-task-persistence / migrate-wishlist-intake when importing old files.
 

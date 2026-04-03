@@ -8,6 +8,25 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.47.0] - 2026-04-02
+
+Phase 47 — **agent guidance profile (RPG party v1)** (**`T585`–`T590`**).
+
+### Added
+
+- **Design** — **`docs/maintainers/ADR-agent-guidance-profile-rpg-party-v1.md`** (frozen tier catalog NPC → BBEG, storage keys, advisory boundary).
+- **Config** — **`kit.agentGuidance.profileSetId`**, **`kit.agentGuidance.tier`** (1–5), **`kit.agentGuidance.displayLabel`**; validation in persisted project/user config.
+- **CLI** — **`resolve-agent-guidance`**, **`set-agent-guidance`** (optional **`interactive:true`**).
+- **Agent behavior** — **`resolve-behavior-profile`** includes **`data.agentGuidance`** with **`advisoryModulation`** (tier × explanation verbosity).
+- **Task engine / extension** — **`dashboard-summary`** **`agentGuidance`** summary; dashboard webview shows tier + label.
+- **Docs** — **`docs/maintainers/runbooks/agent-guidance-onboarding.md`**, **`FEATURE-MATRIX`**, **`AGENT-CLI-MAP`**; task-engine run contract requires **`agentGuidance`** on dashboard payload.
+
+### Changed
+
+- **Workspace-config module** — **`0.5.0`** (compatibility matrix).
+- **Task-engine module** — **`0.13.0`** (compatibility matrix).
+- **Agent-behavior module** — **`0.2.0`** (registration version).
+
 ## [0.46.0] - 2026-04-02
 
 Phase 46 — **roadmap data generation**, **feature taxonomy docs**, **task `features` persistence** (**`T591`–`T598`**).

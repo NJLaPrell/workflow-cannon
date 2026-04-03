@@ -6,13 +6,13 @@
   "type": "object",
   "required": ["schemaVersion", "packageVersion", "moduleId", "commands"],
   "additionalProperties": false,
-  "packageVersion": "0.46.0",
+  "packageVersion": "0.47.0",
   "properties": {
     "schemaVersion": {
       "const": 1
     },
     "packageVersion": {
-      "const": "0.46.0",
+      "const": "0.47.0",
       "description": "Must match package.json version."
     },
     "moduleId": {
@@ -707,7 +707,8 @@
                 "blockedSummary",
                 "suggestedNext",
                 "blockingAnalysis",
-                "dependencyOverview"
+                "dependencyOverview",
+                "agentGuidance"
               ],
               "additionalProperties": true,
               "properties": {

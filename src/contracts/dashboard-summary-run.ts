@@ -34,6 +34,15 @@ export type DashboardListSummary = {
 
 export type PlanningGenerationPolicy = "off" | "warn" | "require";
 
+/** Effective agent guidance (RPG party v1) for dashboard / extension — advisory only. */
+export type DashboardAgentGuidanceSummary = {
+  schemaVersion: 1;
+  profileSetId: string;
+  tier: number;
+  displayLabel: string;
+  usingDefaultTier: boolean;
+};
+
 export type DashboardSummaryData = {
   schemaVersion: 1;
   /** Monotonic optimistic-lock generation for the unified planning SQLite row. */
@@ -79,6 +88,8 @@ export type DashboardSummaryData = {
   } | null;
   dependencyOverview: Record<string, unknown>;
   blockingAnalysis: unknown[];
+  /** Present when kit resolves agent guidance (Phase 47+). */
+  agentGuidance: DashboardAgentGuidanceSummary | null;
 };
 
 /** Success envelope for `dashboard-summary` (extension + tooling). */

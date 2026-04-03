@@ -5,8 +5,8 @@
     }
   },
   "kit": {
-    "currentPhaseLabel": "Phase 47 — agent guidance (T585–T590); Phase 46 shipped v0.46.0",
-    "currentPhaseNumber": 47
+    "currentPhaseLabel": "Phase 48 — post v0.47.0 (agent guidance shipped); Phase 47 complete",
+    "currentPhaseNumber": 48
   },
   "tasks": {
     "persistenceBackend": "sqlite",

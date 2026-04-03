@@ -183,6 +183,24 @@ async function readProjectConfigFile(workspacePath: string): Promise<Record<stri
   return obj;
 }
 
+/** Read `.workspace-kit/config.json` for mutation (validated). Returns `{}` when missing. */
+export async function readProjectConfigDocument(workspacePath: string): Promise<Record<string, unknown>> {
+  return readProjectConfigFile(workspacePath);
+}
+
+/** Atomically write project config after validation. */
+export async function writeProjectConfigDocument(
+  workspacePath: string,
+  doc: Record<string, unknown>
+): Promise<void> {
+  validatePersistedConfigDocument(doc, ".workspace-kit/config.json");
+  const fp = getProjectConfigPath(workspacePath);
+  await fs.mkdir(path.dirname(fp), { recursive: true });
+  const tmp = `${fp}.${process.pid}.${Date.now()}.tmp`;
+  await fs.writeFile(tmp, stableStringifyConfig(doc), "utf8");
+  await fs.rename(tmp, fp);
+}
+
 export async function loadUserLayer(): Promise<ConfigLayer> {
   const data = await readUserConfigFile();
   return { id: "user", data };

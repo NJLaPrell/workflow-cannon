@@ -1,4 +1,4 @@
-### Phase 47 - Agent guidance profile (RPG party) -> GitHub release `v0.47.0` (PROPOSED)
+### Phase 47 - Agent guidance profile (RPG party) -> GitHub release `v0.47.0` (COMPLETE)
 
 - **Primary scope:** **`T585`–`T590`** — design + ADR (**`T585`**); config registry + validation (**`T586`**); CLI **`resolve`** for effective tier (**`T587`**); onboarding write path (**`T588`**); **`agent-behavior`** advisory integration (**`T589`**); extension + **`FEATURE-MATRIX`** / runbook (**`T590`**).
 - **Outcome:** Users pick a **guidance tier** at onboarding (fun labels with descriptions); stored value drives **more or less** explanation, check-ins, and directing questions in advisory surfaces. Stable enum and **`profileSetId`** (e.g. **`rpg_party_v1`**) decouple product copy from behavior logic.

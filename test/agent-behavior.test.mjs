@@ -40,6 +40,9 @@ test("resolve-behavior-profile and create custom (json workspace)", async () => 
     assert.equal(res.ok, true);
     assert.equal(res.data?.effective?.id, "builtin:balanced");
     assert.ok(Array.isArray(res.data?.provenance));
+    assert.equal(res.data?.agentGuidance?.schemaVersion, 1);
+    assert.equal(res.data?.agentGuidance?.tier, 2);
+    assert.ok(res.data?.agentGuidance?.advisoryModulation);
 
     const c = await router.execute(
       "create-behavior-profile",

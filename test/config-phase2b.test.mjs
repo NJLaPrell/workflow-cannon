@@ -212,6 +212,29 @@ test("extraSensitiveModuleCommands gates explain-config", async () => {
   assert.equal(out.ok, true);
 });
 
+test("config validate rejects kit.agentGuidance.tier out of range", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "wk-ag-tier-"));
+  await minimalWorkspace(root);
+  await mkdir(path.join(root, ".workspace-kit"), { recursive: true });
+  await writeFile(
+    path.join(root, ".workspace-kit", "config.json"),
+    JSON.stringify(
+      {
+        schemaVersion: 1,
+        kit: { agentGuidance: { profileSetId: "rpg_party_v1", tier: 9 } }
+      },
+      null,
+      2
+    ),
+    "utf8"
+  );
+  const cap = captureIo();
+  const code = await runCli(["config", "validate", "--json"], { cwd: root, ...cap });
+  assert.ok(code === 1 || code === 3, `expected validation or registry resolve failure, got ${code}`);
+  const errText = cap.errors.join("\n");
+  assert.match(errText, /1 to 5|kit\.agentGuidance\.tier|config-constraint/);
+});
+
 test("config generate-docs writes CONFIG.md files", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "wk-docs-"));
   await minimalWorkspace(root);

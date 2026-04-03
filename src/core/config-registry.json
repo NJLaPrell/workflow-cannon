@@ -167,6 +167,57 @@
       "user"
     ]
   },
+  "kit.agentGuidance.profileSetId": {
+    "key": "kit.agentGuidance.profileSetId",
+    "type": "string",
+    "description": "Agent guidance catalog id. v1: rpg_party_v1 (RPG party tier labels). Advisory only — subordinate to PRINCIPLES and policy.",
+    "default": "rpg_party_v1",
+    "allowedValues": [
+      "rpg_party_v1"
+    ],
+    "domainScope": "project",
+    "owningModule": "workspace-kit",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": true,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "kit.agentGuidance.tier": {
+    "key": "kit.agentGuidance.tier",
+    "type": "number",
+    "description": "Interaction difficulty tier 1–5 (NPC → BBEG) for advisory agent guidance; see ADR-agent-guidance-profile-rpg-party-v1.md.",
+    "default": 2,
+    "domainScope": "project",
+    "owningModule": "workspace-kit",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": true,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "kit.agentGuidance.displayLabel": {
+    "key": "kit.agentGuidance.displayLabel",
+    "type": "string",
+    "description": "Optional echo of the user-facing label chosen during onboarding (e.g. Bard); does not drive validation — tier is authoritative.",
+    "default": "",
+    "domainScope": "project",
+    "owningModule": "workspace-kit",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": true,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
   "planning.defaultQuestionDepth": {
     "key": "planning.defaultQuestionDepth",
     "type": "string",

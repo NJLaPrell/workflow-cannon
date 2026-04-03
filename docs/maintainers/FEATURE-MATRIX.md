@@ -44,6 +44,7 @@ Status legend:
 | Phase 34 - Cursor extension and consumer experience (`T505`, `T506`, `T511`, `T518`) | `v0.34.0` | Completed |
 | Phase 35 - Task engine, queue operations, and planning handoff (`T507`, `T510`, `T513`, `T520`, `T523`) | `v0.35.0` | Completed |
 | Phase 46 - Roadmap data generation + task features (`T591`–`T598`) | `v0.46.0` | Completed |
+| Phase 47 - Agent guidance profile — RPG party tier (`T585`–`T590`) | `v0.47.0` | Completed |
 
 ## Feature Matrix by Phase
 
@@ -325,6 +326,15 @@ Status legend:
 | Evidence lifecycle controls | Retention, compaction, and redaction policy for append-only `.workspace-kit` runtime artifacts | Completed | `T240` |
 | Release channel operational mapping | Executable channel mapping across git tags, GitHub release labels, and npm dist-tags | Completed | `T241` |
 | Planning-doc consistency guard | CI drift check that enforces status consistency across roadmap, tasks, and feature matrix docs | Completed | `T242` |
+
+### Phase 47 Agent guidance profile (`v0.47.0`)
+
+| Product feature | What users/maintainers get | Status | Task coverage |
+| --- | --- | --- | --- |
+| Agent guidance tier (advisory) | Persisted `kit.agentGuidance` (profile set `rpg_party_v1`, tier 1–5); `resolve-agent-guidance`; `set-agent-guidance`; default tier 2 when unset; ADR with frozen copy deck | Completed | `T585`–`T587` |
+| Onboarding / config path | Interactive or JSON `set-agent-guidance`; `config set` on `kit.agentGuidance.*` with env approval when required | Completed | `T588` |
+| Behavior profile modulation | `resolve-behavior-profile` includes `agentGuidance.advisoryModulation` (tier × verbosity) | Completed | `T589` |
+| Extension + docs | Dashboard shows effective tier; maintainer runbook; AGENT-CLI-MAP lines | Completed | `T590` |
 
 ## Notes
 

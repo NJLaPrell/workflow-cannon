@@ -3,6 +3,11 @@ export { validateBehaviorProfile, mergeDimensions } from "./validate.js";
 
 import type { WorkflowModule } from "../../contracts/module-contract.js";
 import { builtinInstructionEntriesForModule } from "../../contracts/builtin-run-command-manifest.js";
+import {
+  advisoryModulationForProfile,
+  explanationVerbosityRank,
+  resolveAgentGuidanceFromEffectiveConfig
+} from "../../core/agent-guidance-catalog.js";
 import { BUILTIN_PROFILES, DEFAULT_BUILTIN_PROFILE_ID } from "./builtins.js";
 import { diffProfiles, summarizeProfileMarkdown } from "./explain.js";
 import {
@@ -36,7 +41,7 @@ async function withStore(
 export const agentBehaviorModule: WorkflowModule = {
   registration: {
     id: "agent-behavior",
-    version: "0.1.0",
+    version: "0.2.0",
     contractVersion: "1",
     stateSchema: 1,
     capabilities: ["agent-behavior"],
@@ -90,13 +95,28 @@ export const agentBehaviorModule: WorkflowModule = {
       const raw = await loadBehaviorWorkspaceState(ctx);
       const store = new BehaviorProfileStore(raw);
       const { effective, provenance } = store.resolveEffectiveWithProvenance();
+      const effCfg =
+        ctx.effectiveConfig && typeof ctx.effectiveConfig === "object" && !Array.isArray(ctx.effectiveConfig)
+          ? (ctx.effectiveConfig as Record<string, unknown>)
+          : {};
+      const guidance = resolveAgentGuidanceFromEffectiveConfig(effCfg);
+      const evRank = explanationVerbosityRank(effective.dimensions?.explanationVerbosity);
+      const advisoryModulation = advisoryModulationForProfile(guidance, evRank);
       return {
         ok: true,
         code: "behavior-profile-resolved",
         data: {
           effective,
           provenance,
-          schemaVersion: 1
+          schemaVersion: 1,
+          agentGuidance: {
+            schemaVersion: 1,
+            profileSetId: guidance.profileSetId,
+            tier: guidance.tier,
+            displayLabel: guidance.displayLabel,
+            usingDefaultTier: guidance.usingDefaultTier,
+            advisoryModulation
+          }
         }
       };
     }

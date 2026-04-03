@@ -878,6 +878,25 @@ test("taskEngineModule onCommand dashboard-summary returns stable shape", async 
   assert.equal(d.dependencyOverview.truncated, false);
   assert.equal(d.dependencyOverview.activeTaskCount, 1);
   assert.deepEqual(d.dependencyOverview.criticalPathReady, ["T001"]);
+  assert.ok(d.agentGuidance);
+  assert.equal(d.agentGuidance.schemaVersion, 1);
+  assert.equal(d.agentGuidance.usingDefaultTier, true);
+  assert.equal(d.agentGuidance.tier, 2);
+  assert.equal(d.agentGuidance.profileSetId, "rpg_party_v1");
+});
+
+test("taskEngineModule dashboard-summary agentGuidance reflects effective config tier", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, () => {});
+  const ctx = sqliteTaskEngineCtx(workspace, {
+    kit: { agentGuidance: { profileSetId: "rpg_party_v1", tier: 5, displayLabel: "BBEG" } }
+  });
+  const result = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
+  assert.equal(result.ok, true);
+  const ag = result.data.agentGuidance;
+  assert.equal(ag.tier, 5);
+  assert.equal(ag.usingDefaultTier, false);
+  assert.equal(ag.displayLabel, "BBEG");
 });
 
 test("taskEngineModule dashboard-summary dependencyOverview critical path orders prerequisites", async () => {

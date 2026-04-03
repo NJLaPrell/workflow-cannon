@@ -14,6 +14,20 @@
     "policySensitivity": "non-sensitive"
   },
   {
+    "moduleId": "workspace-config",
+    "name": "resolve-agent-guidance",
+    "file": "resolve-agent-guidance.md",
+    "description": "Effective agent guidance tier (RPG party v1), labels, and behavioral hints — advisory only.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "workspace-config",
+    "name": "set-agent-guidance",
+    "file": "set-agent-guidance.md",
+    "description": "Persist kit.agentGuidance tier (1–5) to project config; optional interactive picker.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
     "moduleId": "documentation",
     "name": "document-project",
     "file": "document-project.md",

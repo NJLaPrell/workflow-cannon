@@ -11,4 +11,8 @@ export type {
   ModuleRegistration,
   WorkflowModule
 } from "./module-contract.js";
-export type { DashboardSummaryCommandSuccess, DashboardSummaryData } from "./dashboard-summary-run.js";
+export type {
+  DashboardAgentGuidanceSummary,
+  DashboardSummaryCommandSuccess,
+  DashboardSummaryData
+} from "./dashboard-summary-run.js";
