@@ -1,4 +1,4 @@
-import type { WorkspaceStatusSnapshot } from "./dashboard-status.js";
+import type { WorkspaceStatusSnapshot } from "./dashboard/dashboard-status.js";
 import type { TaskEntity } from "./types.js";
 
 /** Parse leading digits from maintainer status YAML `current_kit_phase` (e.g. `"28"`). */

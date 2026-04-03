@@ -1,8 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
-import type { WishlistItem, WishlistStoreDocument } from "./wishlist-types.js";
-import { TaskEngineError } from "./transitions.js";
+import type { WishlistItem, WishlistStoreDocument } from "../wishlist/wishlist-types.js";
+import { TaskEngineError } from "../transitions.js";
 import type { SqliteDualPlanningStore } from "./sqlite-dual-planning.js";
 
 export const DEFAULT_WISHLIST_PATH = ".workspace-kit/wishlist/state.json";

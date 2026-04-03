@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
-import { planningSqliteDatabaseRelativePath } from "./planning-config.js";
+import type { ModuleLifecycleContext } from "../../../contracts/module-contract.js";
+import { planningSqliteDatabaseRelativePath } from "../planning-config.js";
 
 /**
  * Hot backup of the configured planning SQLite file using better-sqlite3's online backup API.

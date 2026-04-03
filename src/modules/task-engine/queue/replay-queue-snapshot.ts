@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { TaskEntity, TaskStoreDocument } from "./types.js";
-import { getNextActions } from "./suggestions.js";
+import type { TaskEntity, TaskStoreDocument } from "../types.js";
+import { getNextActions } from "../suggestions.js";
 
 export const REPLAY_QUEUE_SNAPSHOT_SCHEMA_VERSION = 1 as const;
 

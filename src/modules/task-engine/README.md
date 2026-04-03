@@ -8,7 +8,7 @@ Phase 1 core module for structured task lifecycle management.
 - **Lifecycle transitions**: Six states (`proposed`, `ready`, `in_progress`, `blocked`, `completed`, `cancelled`) with guard-validated transitions (including **`demote`**: `ready` → `proposed`; see `instructions/run-transition.md`)
 - **Guard system**: Pluggable `TransitionGuard` hooks with built-in `state-validity` and `dependency-check` guards
 - **Auto-unblock**: Dependents automatically move `blocked → ready` when all deps complete
-- **Persistence**: Config-driven — **SQLite** only (`tasks.persistenceBackend: sqlite`); document blob **`task_store_json`** or relational **`task_engine_tasks`** after **`migrate-task-persistence`** **`sqlite-blob-to-relational`** (**v0.41+**); see `config.md`, `planning-open.ts`, `sqlite-dual-planning.ts`, maintainer ADR **`ADR-relational-sqlite-task-store.md`**
+- **Persistence**: Config-driven — **SQLite** only (`tasks.persistenceBackend: sqlite`); document blob **`task_store_json`** or relational **`task_engine_tasks`** after **`migrate-task-persistence`** **`sqlite-blob-to-relational`** (**v0.41+**); see `config.md`, `persistence/planning-open.ts`, `persistence/sqlite-dual-planning.ts`, maintainer ADR **`ADR-relational-sqlite-task-store.md`**
 - **Evidence**: Every transition produces a timestamped `TransitionEvidence` record
 - **Next-action suggestions**: Priority-sorted ready queue with blocking chain analysis
 - **Wishlist (ideation)**: Legacy `W###` path and **`wishlist_intake`** tasks; see maintainer runbooks
@@ -44,10 +44,12 @@ task-engine-internal.ts  Registration + onCommand dispatch
 mutation-utils.ts        Idempotency digests, metadata path reads, conversion helpers
 types.ts                 Core type definitions
 transitions.ts           Allowed transition map, guards, TransitionValidator
-store.ts                 TaskStore (JSON file or SQLite-backed via planning layer)
-wishlist-store.ts        WishlistStore (legacy JSON paths where applicable)
 service.ts               TransitionService (orchestrates transitions + auto-unblock)
 suggestions.ts           Next-action suggestion engine
+persistence/             Task + wishlist stores, SQLite dual store, migrations, kit map runtimes
+wishlist/                Wishlist types, validation, intake helpers, wishlist command handler
+dashboard/               Maintainer status YAML + dashboard-summary data builders
+queue/                   Queue health, git alignment, snapshot replay helpers
 instructions/            Markdown instruction files for each command
 ```
 

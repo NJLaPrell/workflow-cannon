@@ -5,10 +5,10 @@ import {
   prepareKitSqliteDatabase,
   TASK_ENGINE_TASKS_TABLE,
   kitSqliteHasRelationalTaskDdl
-} from "../../core/state/workspace-kit-sqlite.js";
-import type { TaskStoreDocument } from "./types.js";
-import type { WishlistStoreDocument } from "./wishlist-types.js";
-import { TaskEngineError } from "./transitions.js";
+} from "../../../core/state/workspace-kit-sqlite.js";
+import type { TaskStoreDocument } from "../types.js";
+import type { WishlistStoreDocument } from "../wishlist/wishlist-types.js";
+import { TaskEngineError } from "../transitions.js";
 import { normalizeTaskStoreDocumentFromUnknown } from "./task-store-migration.js";
 import {
   relationalBlobMirror,

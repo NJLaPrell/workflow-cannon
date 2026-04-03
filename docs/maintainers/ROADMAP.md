@@ -20,6 +20,7 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - **Phase 46 (roadmap data generation + task features)** shipped as **`v0.46.0`** — **`T591`–`T598`**: JSON Schema–validated **`roadmap-data.json`** / **`feature-taxonomy.json`**, deterministic **`ROADMAP.md`** + **`FEATURE-TAXONOMY.md`** generation, CI validation + ROADMAP drift gate; relational **`features_json`** (**`user_version` 4**), **`create-task`** / **`update-task`** / **`list-tasks`** **`features`** filter; **`task-engine`** **`0.12.0`**, **`documentation`** **`0.4.0`** in **`compatibility-matrix.json`**.
 - **Phase 47 (agent guidance profile)** shipped as **`v0.47.0`** — **`T585`–`T590`**: ADR **`ADR-agent-guidance-profile-rpg-party-v1.md`**, **`kit.agentGuidance.*`** config keys, **`resolve-agent-guidance`** / **`set-agent-guidance`**, **`resolve-behavior-profile`** **`agentGuidance.advisoryModulation`**, dashboard tier card; **`workspace-config`** **`0.5.0`**, **`task-engine`** **`0.13.0`**, **`agent-behavior`** **`0.2.0`** in **`compatibility-matrix.json`**.
 - **Phase 48 (wishlist intake agent workflow)** shipped as **`v0.48.0`** — **`T604`–`T607`**: maintainer playbook **`wishlist-intake-to-execution`**, **`list-wishlist`** / **`get-wishlist`** instruction alignment (unified SQLite intake), requestable Cursor rule **`.cursor/rules/playbook-wishlist-intake-to-execution.mdc`**, discovery updates in **`AGENTS.md`**, **`playbooks/README.md`**, **`agent-playbooks.md`**, **`.ai/MACHINE-PLAYBOOKS.md`**.
+- **Phase 51 (task-engine module structure)** shipped as **`v0.51.0`** — **`T621`–`T623`**: maintainer **`README.md`** map; colocate stores, SQLite, migrations, wishlist helpers, dashboard builders, and queue utilities under **`src/modules/task-engine/{persistence,wishlist,dashboard,queue}/`** with import + doc path updates; **`task-engine`** **`0.14.0`** unchanged in **`compatibility-matrix.json`**.
 - **Phase 50 (T600 pilot — runtime run-args validation)** shipped as **`v0.50.0`** — **`T616`–`T620`**: ADR **`ADR-runtime-run-args-validation-pilot.md`**, AJV pilot on **`run-transition`** / **`dashboard-summary`** / **`create-task`** / **`update-task`**, **`schemas/pilot-run-args.snapshot.json`** + CI drift guard, contract updates for **`taskId`** / **`expectedPlanningGeneration`** / invocation keys; **`task-engine`** **`0.14.0`** in **`compatibility-matrix.json`**.
 - **Phase 49 (extension dashboard agent handoff + maintainer inventory)** shipped as **`v0.49.0`** — **`T608`–`T613`**: **`persisted-artifacts-and-cli-inventory.md`**, **`ARCHITECTURE.md`** cross-link; Cursor extension dashboard **Chat** / **Accept** rows, Tasks wishlist context prefill, palette playbook prefills; maintainer runbook **`agent-task-engine-ergonomics`** subsection.
 - **Phase 36 (policy, integrations, improvement loop, documentation architecture)** shipped as **`v0.36.0`** — see **`docs/maintainers/CHANGELOG.md`** and task-engine `phaseKey` **36** completion.
@@ -71,6 +72,13 @@ Stable **slugs** for task ↔ feature mapping (see [`FEATURE-TAXONOMY.md`](./FEA
 Each phase ends with a GitHub release. Phases are sequential unless explicitly re-planned.
 
 For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MATRIX.md`.
+
+### Phase 51 - Task-engine internal layout -> GitHub release `v0.51.0` (COMPLETE)
+
+- **Primary scope:** **`T621`–`T623`** — **`src/modules/task-engine/README.md`** folder map; mechanical moves to **`persistence/`** (stores, SQLite, migrations, kit map runtimes), **`wishlist/`** (types, validation, intake, wishlist command handler), **`dashboard/`** (status YAML + **`dashboard-summary`** builders), **`queue/`** (health, git alignment, replay); import updates across **`task-engine`**, **`src/core/planning/`**, CLI, tests, **`scripts/core-module-layer-allowlist.json`**; maintainer doc path hygiene.
+- **Outcome:** Same **`taskEngineModule`** id and command surface; clearer ownership boundaries for future work without deep-import churn for consumers of **`index.ts`** / planning facade.
+- **Exit signals:**
+  - **`pnpm run build`**, **`check`**, **`test`**, **`parity`**, **`pre-merge-gates`** on the release tag; maintainer evidence per **`RELEASING.md`**.
 
 ### Phase 50 - T600 pilot: runtime run-args validation -> GitHub release `v0.50.0` (COMPLETE)
 

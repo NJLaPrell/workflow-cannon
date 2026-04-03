@@ -4,8 +4,8 @@ import type DatabaseCtor from "better-sqlite3";
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
 import { TASK_ENGINE_TASKS_TABLE } from "../../core/state/workspace-kit-sqlite.js";
 import { planningSqliteDatabaseRelativePath } from "./planning-config.js";
-import { normalizeTaskStoreDocumentFromUnknown } from "./task-store-migration.js";
-import { rowToTaskEntity, type TaskEngineTaskRow } from "./sqlite-task-row-mapping.js";
+import { normalizeTaskStoreDocumentFromUnknown } from "./persistence/task-store-migration.js";
+import { rowToTaskEntity, type TaskEngineTaskRow } from "./persistence/sqlite-task-row-mapping.js";
 
 type SqliteDb = InstanceType<typeof DatabaseCtor>;
 

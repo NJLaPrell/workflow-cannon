@@ -1,15 +1,17 @@
 schema_version: 1
-current_kit_phase: "51"
-next_kit_phase: "51"
+current_kit_phase: "52"
+next_kit_phase: "52"
 last_updated: "2026-04-03"
-active_focus: "**Phase 51** (current) — Phase **50** shipped **`v0.50.0`**: **`T616`–`T620`** (T600 pilot — **`ADR-runtime-run-args-validation-pilot.md`**, **`run-args-pilot-validation`**, **`pilot-run-args.snapshot.json`** + CI, run-contract arg fixes; **`T614`/`T615`** parent items **`cancelled`** for later). **`current_kit_phase` / `next_kit_phase` 51**."
+active_focus: "**Phase 52** (current) — Phase **51** shipped **`v0.51.0`**: **`T621`–`T623`** (task-engine **`persistence/`** / **`wishlist/`** / **`dashboard/`** / **`queue/`** colocation + doc path hygiene). **`current_kit_phase` / `next_kit_phase` 52**."
 blockers: []
 pending_decisions: []
 next_agent_actions:
-  - "**Now:** `pnpm run wk doctor` then `pnpm run wk run get-next-actions '{}'` — Phase **50** **`T616`–`T620`** **`completed`**; **`T614`/`T615`** **`cancelled`**; pick next work from the **`ready`** queue or planning intake."
+  - "**Now:** `pnpm run wk doctor` then `pnpm run wk run get-next-actions '{}'` — Phase **51** **`T621`–`T623`** **`completed`**; pick next work from the **`ready`** queue or planning intake."
+  - "2026-04-03: Phase **51** **`v0.51.0`** — task-engine subdirectory colocation (**`T621`–`T623`**); Git tag / GitHub release / Publish NPM: maintainer after merge to **`main`**."
   - "2026-04-03: Phase **50** **`v0.50.0`** — GitHub release `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.50.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23962170532`."
   - "2026-04-03: Phase **49** **`v0.49.0`** — GitHub release `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.49.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23958564398`."
 last_session_summary:
+  - "2026-04-03: Phase **51** closeout — **`v0.51.0`** — **`T621`–`T623`** **`completed`**: task-engine **`README.md`** map; moves to **`persistence/`**, **`wishlist/`**, **`dashboard/`**, **`queue/`**; import + maintainer doc path updates; **`pnpm run check`**, **`test`**, **`parity`**, **`pre-merge-gates`** green. **`update-workspace-phase-snapshot`** **`current_kit_phase` 52** / **`next_kit_phase` 52**; **`kit.currentPhaseNumber`** **52**. Git tag / GitHub release / Publish NPM: maintainer after merge to **`main`**."
   - "2026-04-03: Phase **50** closeout — **`v0.50.0`** — **`T616`–`T620`** **`completed`**: T600 pilot runtime **`run`** JSON validation (**`invalid-run-args`**, early **`planning-generation-required`**), **`schemas/pilot-run-args.snapshot.json`** + **`check-pilot-run-args-snapshot`**, contract/schema bumps (**`task-engine`** **0.14.0**); **`T614`/`T615`** **`cancelled`** (parent scope deferred). **`update-workspace-phase-snapshot`** **`current_kit_phase` 51** / **`next_kit_phase` 51**; **`kit.currentPhaseNumber`** **51**. GitHub release `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.50.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23962170532`."
   - "2026-04-03: Phase **49** closeout — **`v0.49.0`** — **`T608`–`T613`** **`completed`**: **`persisted-artifacts-and-cli-inventory.md`**, **`ARCHITECTURE.md`** link; Cursor extension **`run-transition-with-approval`**, proposed-row **Accept**/**Chat**, wishlist tree context menu, **`playbook-chat-prompts`**, palette commands; extension **`README`** + **`agent-task-engine-ergonomics`**; **`roadmap-data.json`** / **`ROADMAP.md`** Phase **49** section; **`task-engine-run-contracts.schema.json`** **0.49.0**. GitHub release `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.49.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23958564398`. **`update-workspace-phase-snapshot`** **`current_kit_phase` 50** / **`next_kit_phase` 50**; **`kit.currentPhaseNumber`** **50**."
   - "2026-04-03: Phase **48** closeout — **`v0.48.0`** — **`T604`–`T607`** **`completed`**: playbook **`wishlist-intake-to-execution`**, **`list-wishlist`**/**`get-wishlist`** docs (unified SQLite), **`.cursor/rules/playbook-wishlist-intake-to-execution.mdc`**, **`AGENTS.md`** / **`playbooks/README.md`** / **`agent-playbooks.md`** / **`.ai/MACHINE-PLAYBOOKS.md`**; **`roadmap-data.json`** + regenerated **`ROADMAP.md`**; **`task-engine-run-contracts.schema.json`** **0.48.0**. Git tag / GitHub release / Publish NPM: maintainer. **`current_kit_phase` 49** / **`next_kit_phase` 49**."
@@ -50,7 +52,7 @@ last_session_summary:
 metrics:
   updated_at: "2026-04-03"
   source: "maintainer"
-  notes: "Phase 50 shipped v0.50.0 (T616–T620): T600 run-args pilot + CI snapshot; T614/T615 cancelled. Phase 51: open — use get-next-actions for next slice."
+  notes: "Phase 51 shipped v0.51.0 (T621–T623): task-engine subdirectory colocation. Phase 52: open — use get-next-actions for next slice."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null

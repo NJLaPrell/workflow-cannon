@@ -1,15 +1,15 @@
 import fsSync from "node:fs";
-import type { ModuleCommandResult, ModuleLifecycleContext } from "../../contracts/module-contract.js";
-import type { WishlistStoreDocument } from "./wishlist-types.js";
+import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
+import type { WishlistStoreDocument } from "../wishlist/wishlist-types.js";
 import { TaskStore } from "./store.js";
 import { SqliteDualPlanningStore } from "./sqlite-dual-planning.js";
-import { planningSqliteDatabaseRelativePath } from "./planning-config.js";
+import { planningSqliteDatabaseRelativePath } from "../planning-config.js";
 import {
   allocateNextTaskNumericId,
   isWishlistIntakeTask,
   LEGACY_WISHLIST_ID_METADATA_KEY,
   taskEntityFromWishlistItem
-} from "./wishlist-intake.js";
+} from "../wishlist/wishlist-intake.js";
 
 function emptyWishDoc(): WishlistStoreDocument {
   return {

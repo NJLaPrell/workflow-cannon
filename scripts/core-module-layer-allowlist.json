@@ -9,17 +9,17 @@
     },
     {
       "file": "src/core/planning/index.ts",
-      "specifier": "../../modules/task-engine/planning-open.js",
+      "specifier": "../../modules/task-engine/persistence/planning-open.js",
       "rationale": "Planning persistence facade — re-export only."
     },
     {
       "file": "src/core/planning/index.ts",
-      "specifier": "../../modules/task-engine/store.js",
+      "specifier": "../../modules/task-engine/persistence/store.js",
       "rationale": "Planning persistence facade — re-export only."
     },
     {
       "file": "src/core/planning/index.ts",
-      "specifier": "../../modules/task-engine/wishlist-store.js",
+      "specifier": "../../modules/task-engine/persistence/wishlist-store.js",
       "rationale": "Planning persistence facade — re-export only."
     },
     {
@@ -34,12 +34,12 @@
     },
     {
       "file": "src/core/planning/index.ts",
-      "specifier": "../../modules/task-engine/wishlist-validation.js",
+      "specifier": "../../modules/task-engine/wishlist/wishlist-validation.js",
       "rationale": "Planning persistence facade — re-export only."
     },
     {
       "file": "src/core/planning/index.ts",
-      "specifier": "../../modules/task-engine/wishlist-intake.js",
+      "specifier": "../../modules/task-engine/wishlist/wishlist-intake.js",
       "rationale": "Planning persistence facade — re-export only."
     },
     {
@@ -49,7 +49,7 @@
     },
     {
       "file": "src/core/planning/index.ts",
-      "specifier": "../../modules/task-engine/wishlist-types.js",
+      "specifier": "../../modules/task-engine/wishlist/wishlist-types.js",
       "rationale": "Planning persistence facade — re-export only."
     }
   ]

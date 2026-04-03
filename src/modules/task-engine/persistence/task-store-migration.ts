@@ -1,5 +1,5 @@
-import type { TaskStoreDocument } from "./types.js";
-import { TaskEngineError } from "./transitions.js";
+import type { TaskStoreDocument } from "../types.js";
+import { TaskEngineError } from "../transitions.js";
 
 /** Schema versions accepted on read; normalized to canonical `schemaVersion: 1` in memory and on save (today). */
 export function isSupportedReadTaskStoreSchemaVersion(v: unknown): boolean {

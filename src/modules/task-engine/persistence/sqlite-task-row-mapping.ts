@@ -1,5 +1,5 @@
-import type { TaskEntity, TaskStoreDocument } from "./types.js";
-import { TaskEngineError } from "./transitions.js";
+import type { TaskEntity, TaskStoreDocument } from "../types.js";
+import { TaskEngineError } from "../transitions.js";
 
 export type TaskEngineTaskRow = {
   id: string;

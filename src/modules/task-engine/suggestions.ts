@@ -4,7 +4,7 @@ import type {
   NextActionSuggestion,
   BlockingAnalysisEntry
 } from "./types.js";
-import { isWishlistIntakeTask } from "./wishlist-intake.js";
+import { isWishlistIntakeTask } from "./wishlist/wishlist-intake.js";
 
 /** Matches transcript-backed ids from improvement ingest (`imp-` + hex). Keep in sync with `ingest.ts`. */
 const IMPROVEMENT_ID_RE = /^imp-[a-f0-9]+$/i;

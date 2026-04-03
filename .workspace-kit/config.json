@@ -5,8 +5,8 @@
     }
   },
   "kit": {
-    "currentPhaseLabel": "Phase 51 — post v0.50.0 (T600 run-args validation pilot shipped)",
-    "currentPhaseNumber": 51
+    "currentPhaseLabel": "Phase 52 — post v0.51.0 (task-engine module structure shipped)",
+    "currentPhaseNumber": 52
   },
   "tasks": {
     "persistenceBackend": "sqlite",

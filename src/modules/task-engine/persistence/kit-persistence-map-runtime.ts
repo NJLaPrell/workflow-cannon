@@ -1,9 +1,9 @@
-import type { ModuleCommandResult, ModuleLifecycleContext } from "../../contracts/module-contract.js";
+import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
 import {
   planningSqliteDatabaseRelativePath,
   planningTaskStoreRelativePath,
   planningWishlistStoreRelativePath
-} from "./planning-config.js";
+} from "../planning-config.js";
 import { DEFAULT_TASK_STORE_PATH } from "./store.js";
 import { DEFAULT_WISHLIST_PATH } from "./wishlist-store.js";
 

@@ -1,6 +1,6 @@
 import type { WorkspaceStatusSnapshot } from "./dashboard-status.js";
-import { inferTaskPhaseKey } from "./phase-resolution.js";
-import type { TaskEntity } from "./types.js";
+import { inferTaskPhaseKey } from "../phase-resolution.js";
+import type { TaskEntity } from "../types.js";
 
 export type DashboardPhaseBucket<T> = {
   schemaVersion: 1;

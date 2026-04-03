@@ -1,5 +1,5 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../contracts/module-contract.js";
-import type { TaskStore } from "./store.js";
+import type { TaskStore } from "./persistence/store.js";
 import type { TaskEntity } from "./types.js";
 import {
   digestPayload,

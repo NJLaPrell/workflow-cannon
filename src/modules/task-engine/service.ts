@@ -6,7 +6,7 @@ import type {
   TransitionGuard
 } from "./types.js";
 import { TaskEngineError, TransitionValidator, getTransitionAction, resolveTargetState } from "./transitions.js";
-import { TaskStore } from "./store.js";
+import { TaskStore } from "./persistence/store.js";
 
 export type TransitionRequest = {
   taskId: string;

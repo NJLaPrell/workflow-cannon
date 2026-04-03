@@ -8,4 +8,4 @@ This root file is intentionally pointer-only to avoid split release history.
 
 - See `docs/maintainers/CHANGELOG.md` for all release notes, migration notes, and historical entries.
 
-Latest release: **v0.49.0** (Phase 49: extension dashboard playbook handoff + maintainer persisted-artifacts inventory; see canonical changelog).
+Latest release: **v0.51.0** (Phase 51: task-engine internal layout — persistence/wishlist/dashboard/queue colocation; see canonical changelog).

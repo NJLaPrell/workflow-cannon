@@ -33,5 +33,5 @@ Relational **`task_engine_tasks`** rows could allow narrower **`UPDATE`**s inste
 ## References
 
 - `src/core/state/workspace-kit-sqlite.ts` — migrations
-- `src/modules/task-engine/sqlite-dual-planning.ts` — persist + `withTransaction`
+- `src/modules/task-engine/persistence/sqlite-dual-planning.ts` — persist + `withTransaction`
 - `docs/maintainers/runbooks/kit-sqlite-schema-migrations.md`

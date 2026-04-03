@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { ModuleLifecycleContext } from "../contracts/module-contract.js";
 import { resolveRegistryAndConfig } from "../core/module-registry-resolve.js";
-import { readWorkspaceStatusSnapshot } from "../modules/task-engine/dashboard-status.js";
+import { readWorkspaceStatusSnapshot } from "../modules/task-engine/dashboard/dashboard-status.js";
 import { resolveCanonicalPhase } from "../modules/task-engine/phase-resolution.js";
 import { validatePlanningPersistenceForDoctor } from "../modules/task-engine/doctor-planning-persistence.js";
 import {

@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import path from "node:path";
-import type { TaskEntity, TransitionEvidence } from "./types.js";
+import type { TaskEntity, TransitionEvidence } from "../types.js";
 
 export const QUEUE_GIT_ALIGNMENT_SCHEMA_VERSION = 1 as const;
 

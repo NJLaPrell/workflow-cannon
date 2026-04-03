@@ -1,6 +1,6 @@
 import type { TaskEntity } from "./types.js";
-import { LEGACY_WISHLIST_ID_METADATA_KEY, WISHLIST_INTAKE_TASK_TYPE } from "./wishlist-intake.js";
-import { WISHLIST_ID_RE } from "./wishlist-validation.js";
+import { LEGACY_WISHLIST_ID_METADATA_KEY, WISHLIST_INTAKE_TASK_TYPE } from "./wishlist/wishlist-intake.js";
+import { WISHLIST_ID_RE } from "./wishlist/wishlist-validation.js";
 
 export type KnownTaskTypeValidationError = {
   code: "invalid-task-type-requirements";

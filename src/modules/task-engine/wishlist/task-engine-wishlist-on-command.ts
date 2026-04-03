@@ -1,8 +1,8 @@
-import type { ModuleCommandResult, ModuleLifecycleContext } from "../../contracts/module-contract.js";
-import { TaskEngineError } from "./transitions.js";
-import type { TaskEntity } from "./types.js";
-import type { OpenedPlanningStores } from "./planning-open.js";
-import type { TaskStore } from "./store.js";
+import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
+import { TaskEngineError } from "../transitions.js";
+import type { TaskEntity } from "../types.js";
+import type { OpenedPlanningStores } from "../persistence/planning-open.js";
+import type { TaskStore } from "../persistence/store.js";
 import {
   allocateNextTaskNumericId,
   findWishlistIntakeTaskByLegacyOrTaskId,
@@ -21,7 +21,7 @@ import {
   parseConversionDecomposition,
   planningConcurrencySaveOpts,
   TASK_ID_RE
-} from "./mutation-utils.js";
+} from "../mutation-utils.js";
 import {
   buildWishlistItemFromIntake,
   validateWishlistContentFields,
@@ -34,9 +34,9 @@ import {
   getPlanningGenerationPolicy,
   mergePlanningGenerationPolicyWarnings,
   planningStrictValidationEnabled
-} from "./planning-config.js";
-import { validateTaskSetForStrictMode } from "./strict-task-validation.js";
-import { validateKnownTaskTypeRequirements } from "./task-type-validation.js";
+} from "../planning-config.js";
+import { validateTaskSetForStrictMode } from "../strict-task-validation.js";
+import { validateKnownTaskTypeRequirements } from "../task-type-validation.js";
 
 const WISHLIST_COMMANDS = new Set([
   "create-wishlist",

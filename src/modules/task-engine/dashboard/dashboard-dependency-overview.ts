@@ -1,4 +1,4 @@
-import type { TaskEntity } from "./types.js";
+import type { TaskEntity } from "../types.js";
 
 /** Full graph when active task count is at or below this; larger workspaces use a capped subgraph. */
 export const DASHBOARD_DEPENDENCY_FULL_GRAPH_CAP = 50;

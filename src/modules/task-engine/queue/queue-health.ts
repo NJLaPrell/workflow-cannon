@@ -1,8 +1,8 @@
-import type { WorkspaceStatusSnapshot } from "./dashboard-status.js";
-import { getNextActions } from "./suggestions.js";
-import { inferTaskPhaseKey, resolveCanonicalPhase, type CanonicalPhaseResolution } from "./phase-resolution.js";
-import type { TaskEntity } from "./types.js";
-import { isWishlistIntakeTask } from "./wishlist-intake.js";
+import type { WorkspaceStatusSnapshot } from "../dashboard/dashboard-status.js";
+import { getNextActions } from "../suggestions.js";
+import { inferTaskPhaseKey, resolveCanonicalPhase, type CanonicalPhaseResolution } from "../phase-resolution.js";
+import type { TaskEntity } from "../types.js";
+import { isWishlistIntakeTask } from "../wishlist/wishlist-intake.js";
 
 export type ReadyTaskQueueHealthRow = {
   taskId: string;

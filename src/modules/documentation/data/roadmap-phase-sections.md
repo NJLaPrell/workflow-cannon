@@ -1,3 +1,10 @@
+### Phase 51 - Task-engine internal layout -> GitHub release `v0.51.0` (COMPLETE)
+
+- **Primary scope:** **`T621`–`T623`** — **`src/modules/task-engine/README.md`** folder map; mechanical moves to **`persistence/`** (stores, SQLite, migrations, kit map runtimes), **`wishlist/`** (types, validation, intake, wishlist command handler), **`dashboard/`** (status YAML + **`dashboard-summary`** builders), **`queue/`** (health, git alignment, replay); import updates across **`task-engine`**, **`src/core/planning/`**, CLI, tests, **`scripts/core-module-layer-allowlist.json`**; maintainer doc path hygiene.
+- **Outcome:** Same **`taskEngineModule`** id and command surface; clearer ownership boundaries for future work without deep-import churn for consumers of **`index.ts`** / planning facade.
+- **Exit signals:**
+  - **`pnpm run build`**, **`check`**, **`test`**, **`parity`**, **`pre-merge-gates`** on the release tag; maintainer evidence per **`RELEASING.md`**.
+
 ### Phase 50 - T600 pilot: runtime run-args validation -> GitHub release `v0.50.0` (COMPLETE)
 
 - **Primary scope:** **`T616`–`T620`** — ADR **`ADR-runtime-run-args-validation-pilot.md`**; **`src/core/run-args-pilot-validation.ts`** + **`src/cli/run-command.ts`** integration; **`schemas/pilot-run-args.snapshot.json`** with **`check-pilot-run-args-snapshot`** / **`refresh-pilot-run-args-snapshot`**; contract updates (**`taskId`** for **`imp-*`**, **`expectedPlanningGeneration`**, **`dashboard-summary`** **`config`**/**`actor`**); maintainer docs + inventory row; **`task-engine`** **`0.14.0`**.

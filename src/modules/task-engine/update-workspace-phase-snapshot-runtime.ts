@@ -6,7 +6,7 @@ import {
   applyWorkspacePhaseSnapshotToYaml,
   parseWorkspaceKitStatusYaml,
   WORKSPACE_KIT_STATUS_YAML_RELATIVE
-} from "./dashboard-status.js";
+} from "./dashboard/dashboard-status.js";
 
 /** Atomic update of `current_kit_phase` / `next_kit_phase` in workspace-kit-status.yaml. */
 export async function runUpdateWorkspacePhaseSnapshot(

@@ -1,18 +1,18 @@
 import fs from "node:fs/promises";
 import fsSync from "node:fs";
 import path from "node:path";
-import type { ModuleCommandResult, ModuleLifecycleContext } from "../../contracts/module-contract.js";
-import { UnifiedStateDb } from "../../core/state/unified-state-db.js";
-import type { TaskStoreDocument } from "./types.js";
-import type { WishlistStoreDocument } from "./wishlist-types.js";
-import { TaskEngineError } from "./transitions.js";
+import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
+import { UnifiedStateDb } from "../../../core/state/unified-state-db.js";
+import type { TaskStoreDocument } from "../types.js";
+import type { WishlistStoreDocument } from "../wishlist/wishlist-types.js";
+import { TaskEngineError } from "../transitions.js";
 import { normalizeTaskStoreDocumentFromUnknown } from "./task-store-migration.js";
 import { SqliteDualPlanningStore } from "./sqlite-dual-planning.js";
 import {
   planningSqliteDatabaseRelativePath,
   planningTaskStoreRelativePath,
   planningWishlistStoreRelativePath
-} from "./planning-config.js";
+} from "../planning-config.js";
 import { DEFAULT_TASK_STORE_PATH } from "./store.js";
 import { DEFAULT_WISHLIST_PATH } from "./wishlist-store.js";
 

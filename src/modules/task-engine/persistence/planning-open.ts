@@ -1,7 +1,7 @@
-import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
+import type { ModuleLifecycleContext } from "../../../contracts/module-contract.js";
 import { TaskStore } from "./store.js";
 import { SqliteDualPlanningStore } from "./sqlite-dual-planning.js";
-import { planningSqliteDatabaseRelativePath } from "./planning-config.js";
+import { planningSqliteDatabaseRelativePath } from "../planning-config.js";
 
 export type OpenedPlanningStores = {
   taskStore: TaskStore;

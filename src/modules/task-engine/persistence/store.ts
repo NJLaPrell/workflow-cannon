@@ -1,8 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
-import type { TaskEntity, TaskMutationEvidence, TaskStoreDocument, TransitionEvidence } from "./types.js";
-import { TaskEngineError } from "./transitions.js";
+import type { TaskEntity, TaskMutationEvidence, TaskStoreDocument, TransitionEvidence } from "../types.js";
+import { TaskEngineError } from "../transitions.js";
 import type { SqliteDualPlanningStore } from "./sqlite-dual-planning.js";
 import { normalizeTaskStoreDocumentFromUnknown } from "./task-store-migration.js";
 

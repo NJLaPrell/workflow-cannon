@@ -12,6 +12,14 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 - **Repository hygiene** — tracked `.workspace-kit/backups` snapshot tree; one-off migration scripts (`architect-review-proposals-2026-03-31`, `phase29-architect-ready-tasks`, `apply-phase-30-33-architect-tasks`, `convert-open-wishlist-to-ready`, `rewrite-active-improvements`, `seed-plan-wishlist-intake`); orphan `docs/policies/*`, `docs/workflows/task-pr-delivery-workflow.md`, and misleading `docs/adr/README.md`; superseded maintainer notes `RUNTIME-PATH-AUDIT-PHASE11.md`, `ARCHITECTURAL-REVIEW-FINDINGS.md`. **`.gitignore`** now excludes `.workspace-kit/backups/`.
 
+## [0.51.0] - 2026-04-03
+
+Phase 51 — **task-engine internal layout** (**`T621`–`T623`**): README map plus colocation under **`persistence/`**, **`wishlist/`**, **`dashboard/`**, and **`queue/`** (behavior-identical; public exports unchanged via **`index.ts`** / **`src/core/planning/`**).
+
+### Changed
+
+- **Task-engine module** — Source files grouped by domain; import paths and maintainer doc links updated (**`TERMS.md`**, ADRs, instruction implementation paths, core allowlist).
+
 ## [0.50.0] - 2026-04-03
 
 Phase 50 — **T600 pilot: runtime `run` JSON args validation** (**`T616`–`T620`**).

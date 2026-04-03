@@ -2,7 +2,7 @@ import type { ModuleCommandResult, WorkflowModule } from "../../contracts/module
 import { builtinInstructionEntriesForModule } from "../../contracts/builtin-run-command-manifest.js";
 import type { TaskEntity, TaskMutationType, TaskPriority, TaskStatus } from "./types.js";
 import { maybeSpawnTranscriptHookAfterCompletion } from "../../core/transcript-completion-hook.js";
-import { TaskStore } from "./store.js";
+import { TaskStore } from "./persistence/store.js";
 import { TransitionService } from "./service.js";
 import { TaskEngineError, getAllowedTransitionsFrom } from "./transitions.js";
 import {
@@ -10,24 +10,24 @@ import {
   getNextActions,
   isImprovementLikeTask
 } from "./suggestions.js";
-import { buildQueueGitAlignmentReport, probeGitHead } from "./queue-git-alignment.js";
+import { buildQueueGitAlignmentReport, probeGitHead } from "./queue/queue-git-alignment.js";
 import {
   loadTasksFromSnapshotFile,
   parseTasksFromSnapshotPayload,
   replayQueueFromTasks
-} from "./replay-queue-snapshot.js";
-import { readWorkspaceStatusSnapshot } from "./dashboard-status.js";
+} from "./queue/replay-queue-snapshot.js";
+import { readWorkspaceStatusSnapshot } from "./dashboard/dashboard-status.js";
 import { inferTaskPhaseKey } from "./phase-resolution.js";
-import { buildQueueHealthReport, buildQueueHintsForTasks } from "./queue-health.js";
-import { openPlanningStores } from "./planning-open.js";
-import { runMigrateWishlistIntake } from "./migrate-wishlist-intake-runtime.js";
-import { runBackupPlanningSqlite } from "./backup-planning-sqlite-runtime.js";
-import { runMigrateTaskPersistence } from "./migrate-task-persistence-runtime.js";
-import { runGetKitPersistenceMap } from "./kit-persistence-map-runtime.js";
+import { buildQueueHealthReport, buildQueueHintsForTasks } from "./queue/queue-health.js";
+import { openPlanningStores } from "./persistence/planning-open.js";
+import { runMigrateWishlistIntake } from "./persistence/migrate-wishlist-intake-runtime.js";
+import { runBackupPlanningSqlite } from "./persistence/backup-planning-sqlite-runtime.js";
+import { runMigrateTaskPersistence } from "./persistence/migrate-task-persistence-runtime.js";
+import { runGetKitPersistenceMap } from "./persistence/kit-persistence-map-runtime.js";
 import { runUpdateWorkspacePhaseSnapshot } from "./update-workspace-phase-snapshot-runtime.js";
 import { runAssignTaskPhase, runClearTaskPhase } from "./task-engine-phase-mutations.js";
-import { runWishlistStoreCommand } from "./task-engine-wishlist-on-command.js";
-import { runDashboardSummaryCommand } from "./task-engine-dashboard-on-command.js";
+import { runWishlistStoreCommand } from "./wishlist/task-engine-wishlist-on-command.js";
+import { runDashboardSummaryCommand } from "./dashboard/task-engine-dashboard-on-command.js";
 import {
   enforcePlanningGenerationPolicy,
   getPlanningGenerationPolicy,
@@ -39,7 +39,7 @@ import { validateTaskSetForStrictMode } from "./strict-task-validation.js";
 import { validateKnownTaskTypeRequirements } from "./task-type-validation.js";
 import { readKitSqliteUserVersion } from "../../core/state/workspace-kit-sqlite.js";
 import { UnifiedStateDb } from "../../core/state/unified-state-db.js";
-import { isWishlistIntakeTask, WISHLIST_INTAKE_TASK_TYPE } from "./wishlist-intake.js";
+import { isWishlistIntakeTask, WISHLIST_INTAKE_TASK_TYPE } from "./wishlist/wishlist-intake.js";
 import {
   digestPayload,
   findIdempotentMutation,

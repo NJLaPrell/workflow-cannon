@@ -176,7 +176,7 @@ type TaskStoreDocument = {
 
 - **Load**: Read and parse on engine initialization. If file does not exist, initialize with empty state.
 - **Save**: Write after each transition batch (atomic: write to temp file, rename).
-- **Schema version**: **`normalizeTaskStoreDocumentFromUnknown`** (`src/modules/task-engine/task-store-migration.ts`) accepts read versions **`1`** and **`2`** (v2 is currently a no-op forward label); runtime normalizes to **`schemaVersion: 1`** and saves **`1`** until a release explicitly bumps the writer. Policy: **`docs/maintainers/ADR-task-store-schemaversion-policy.md`**.
+- **Schema version**: **`normalizeTaskStoreDocumentFromUnknown`** (`src/modules/task-engine/persistence/task-store-migration.ts`) accepts read versions **`1`** and **`2`** (v2 is currently a no-op forward label); runtime normalizes to **`schemaVersion: 1`** and saves **`1`** until a release explicitly bumps the writer. Policy: **`docs/maintainers/ADR-task-store-schemaversion-policy.md`**.
 - **Directory creation**: Auto-create `.workspace-kit/tasks/` directory if missing.
 
 ---

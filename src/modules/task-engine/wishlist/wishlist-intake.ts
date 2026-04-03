@@ -1,4 +1,4 @@
-import type { TaskEntity, TaskStatus } from "./types.js";
+import type { TaskEntity, TaskStatus } from "../types.js";
 import type { WishlistItem, WishlistStatus } from "./wishlist-types.js";
 import { WISHLIST_ID_RE } from "./wishlist-validation.js";
 

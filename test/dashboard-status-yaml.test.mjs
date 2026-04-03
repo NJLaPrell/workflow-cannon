@@ -6,7 +6,7 @@ import { fileURLToPath } from "url";
 import {
   applyWorkspacePhaseSnapshotToYaml,
   parseWorkspaceKitStatusYaml
-} from "../dist/modules/task-engine/dashboard-status.js";
+} from "../dist/modules/task-engine/dashboard/dashboard-status.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.join(__dirname, "..");

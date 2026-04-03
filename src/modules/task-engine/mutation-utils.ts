@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import type { TaskEntity, TaskMutationEvidence, TaskMutationType, TaskPriority } from "./types.js";
-import type { TaskStore } from "./store.js";
-import type { WishlistConversionDecomposition } from "./wishlist-types.js";
+import type { TaskStore } from "./persistence/store.js";
+import type { WishlistConversionDecomposition } from "./wishlist/wishlist-types.js";
 
 /** Task id pattern `T` + digits (create-task, convert-wishlist validation). */
 export const TASK_ID_RE = /^T\d+$/;

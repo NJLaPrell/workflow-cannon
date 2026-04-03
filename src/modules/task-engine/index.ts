@@ -17,7 +17,7 @@ export type {
   TaskMutationType
 } from "./types.js";
 
-export { TaskStore } from "./store.js";
+export { TaskStore } from "./persistence/store.js";
 export { TransitionService } from "./service.js";
 export {
   TaskEngineError,
@@ -35,19 +35,19 @@ export {
   getTaskQueueNamespace,
   isImprovementLikeTask
 } from "./suggestions.js";
-export { buildQueueGitAlignmentReport, probeGitHead } from "./queue-git-alignment.js";
-export { readWorkspaceStatusSnapshot } from "./dashboard-status.js";
-export { WishlistStore } from "./wishlist-store.js";
-export type { WishlistItem, WishlistStatus, WishlistStoreDocument } from "./wishlist-types.js";
+export { buildQueueGitAlignmentReport, probeGitHead } from "./queue/queue-git-alignment.js";
+export { readWorkspaceStatusSnapshot } from "./dashboard/dashboard-status.js";
+export { WishlistStore } from "./persistence/wishlist-store.js";
+export type { WishlistItem, WishlistStatus, WishlistStoreDocument } from "./wishlist/wishlist-types.js";
 export {
   validateWishlistIntakePayload,
   validateWishlistUpdatePayload,
   buildWishlistItemFromIntake,
   WISHLIST_ID_RE
-} from "./wishlist-validation.js";
-export { openPlanningStores } from "./planning-open.js";
-export type { OpenedPlanningStores } from "./planning-open.js";
-export { SqliteDualPlanningStore } from "./sqlite-dual-planning.js";
+} from "./wishlist/wishlist-validation.js";
+export { openPlanningStores } from "./persistence/planning-open.js";
+export type { OpenedPlanningStores } from "./persistence/planning-open.js";
+export { SqliteDualPlanningStore } from "./persistence/sqlite-dual-planning.js";
 export {
   getTaskPersistenceBackend,
   planningSqliteDatabaseRelativePath,

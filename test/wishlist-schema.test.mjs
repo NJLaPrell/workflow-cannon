@@ -5,7 +5,7 @@ import {
   validateWishlistIntakePayload,
   validateWishlistUpdatePayload,
   WISHLIST_ID_RE
-} from "../dist/modules/task-engine/wishlist-validation.js";
+} from "../dist/modules/task-engine/wishlist/wishlist-validation.js";
 
 test("WISHLIST_ID_RE accepts W1 and W42", () => {
   assert.equal(WISHLIST_ID_RE.test("W1"), true);

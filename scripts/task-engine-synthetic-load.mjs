@@ -13,8 +13,8 @@ import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { performance } from "node:perf_hooks";
-import { TaskStore } from "../dist/modules/task-engine/store.js";
-import { SqliteDualPlanningStore } from "../dist/modules/task-engine/sqlite-dual-planning.js";
+import { TaskStore } from "../dist/modules/task-engine/persistence/store.js";
+import { SqliteDualPlanningStore } from "../dist/modules/task-engine/persistence/sqlite-dual-planning.js";
 import { taskEngineModule } from "../dist/modules/task-engine/index.js";
 
 const n = Math.min(Math.max(Number.parseInt(process.argv[2] ?? "200", 10) || 200, 10), 50_000);

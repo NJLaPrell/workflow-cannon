@@ -1,17 +1,17 @@
-import type { ModuleCommandResult, ModuleLifecycleContext } from "../../contracts/module-contract.js";
-import type { DashboardSummaryData } from "../../contracts/dashboard-summary-run.js";
-import { resolveAgentGuidanceFromEffectiveConfig } from "../../core/agent-guidance-catalog.js";
-import { getPlanningGenerationPolicy } from "./planning-config.js";
-import { getNextActions, isImprovementLikeTask } from "./suggestions.js";
+import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
+import type { DashboardSummaryData } from "../../../contracts/dashboard-summary-run.js";
+import { resolveAgentGuidanceFromEffectiveConfig } from "../../../core/agent-guidance-catalog.js";
+import { getPlanningGenerationPolicy } from "../planning-config.js";
+import { getNextActions, isImprovementLikeTask } from "../suggestions.js";
 import { readWorkspaceStatusSnapshot } from "./dashboard-status.js";
 import { buildDashboardDependencyOverview } from "./dashboard-dependency-overview.js";
 import {
   buildDashboardPhaseBucketsForBlocking,
   buildDashboardPhaseBucketsForTasks
 } from "./dashboard-phase-buckets.js";
-import { readBuildPlanSession, toDashboardPlanningSession } from "../../core/planning/build-plan-session-file.js";
-import { isWishlistIntakeTask, listWishlistIntakeTasksAsItems } from "./wishlist-intake.js";
-import type { TaskStore } from "./store.js";
+import { readBuildPlanSession, toDashboardPlanningSession } from "../../../core/planning/build-plan-session-file.js";
+import { isWishlistIntakeTask, listWishlistIntakeTasksAsItems } from "../wishlist/wishlist-intake.js";
+import type { TaskStore } from "../persistence/store.js";
 
 export async function runDashboardSummaryCommand(
   ctx: ModuleLifecycleContext,

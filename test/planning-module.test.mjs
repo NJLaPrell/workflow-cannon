@@ -6,8 +6,8 @@ import path from "node:path";
 import test from "node:test";
 
 import { planningModule } from "../dist/modules/planning/index.js";
-import { TaskStore } from "../dist/modules/task-engine/store.js";
-import { SqliteDualPlanningStore } from "../dist/modules/task-engine/sqlite-dual-planning.js";
+import { TaskStore } from "../dist/modules/task-engine/persistence/store.js";
+import { SqliteDualPlanningStore } from "../dist/modules/task-engine/persistence/sqlite-dual-planning.js";
 
 async function loadSqliteTaskStore(workspace) {
   await mkdir(path.join(workspace, ".workspace-kit", "tasks"), { recursive: true });
