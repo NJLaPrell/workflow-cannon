@@ -5,8 +5,8 @@
     }
   },
   "kit": {
-    "currentPhaseLabel": "Phase 49 — post v0.48.0 (wishlist intake playbook shipped); Phase 48 complete",
-    "currentPhaseNumber": 49
+    "currentPhaseLabel": "Phase 50 — post v0.49.0 (extension handoff + inventory shipped)",
+    "currentPhaseNumber": 50
   },
   "tasks": {
     "persistenceBackend": "sqlite",

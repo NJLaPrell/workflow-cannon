@@ -1,7 +1,14 @@
 import * as vscode from "vscode";
 import type { DashboardSummaryCommandSuccess } from "@workflow-cannon/workspace-kit/contracts/dashboard-summary-run";
+import { prefillCursorChat } from "../../cursor-chat-prefill.js";
 import type { CommandClient } from "../../runtime/command-client.js";
 import { ingestPlanningMetaFromData } from "../../planning-generation-cache.js";
+import { buildWishlistIntakeAgentPrompt } from "../../wishlist-chat-prompt.js";
+import {
+  buildImprovementTriagePrompt,
+  buildTaskToMainPrompt
+} from "../../playbook-chat-prompts.js";
+import { confirmAndRunTransition } from "../../run-transition-with-approval.js";
 import { escapeHtml, renderDashboardRootInnerHtml } from "./render-dashboard.js";
 
 let dashboardOutput: vscode.OutputChannel | undefined;
@@ -21,7 +28,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly client: CommandClient,
-    private readonly onKitStateChanged: vscode.Event<void>
+    private readonly onKitStateChanged: vscode.Event<void>,
+    private readonly notifyKitStateChanged: () => void
   ) {
     onKitStateChanged(() => {
       void this.pushUpdate();
@@ -54,6 +62,38 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (msg?.type === "openConfig") {
         await vscode.commands.executeCommand("workbench.view.extension.workflow-cannon");
         await vscode.commands.executeCommand("workflowCannon.validateConfig");
+      }
+      if (msg?.type === "prefillWishlistChat") {
+        const raw = msg?.wishlistId;
+        const wishlistId = typeof raw === "string" ? raw.trim() : "";
+        const prompt = buildWishlistIntakeAgentPrompt(
+          wishlistId.length > 0 ? { wishlistId } : undefined
+        );
+        await prefillCursorChat(prompt);
+      }
+      if (msg?.type === "prefillImprovementTriageChat") {
+        const raw = msg?.taskId;
+        const taskId = typeof raw === "string" ? raw.trim() : "";
+        const prompt = buildImprovementTriagePrompt(
+          taskId.length > 0 ? { taskId } : undefined
+        );
+        await prefillCursorChat(prompt);
+      }
+      if (msg?.type === "prefillTaskToMainChat") {
+        const raw = msg?.taskId;
+        const taskId = typeof raw === "string" ? raw.trim() : "";
+        const prompt = buildTaskToMainPrompt(taskId.length > 0 ? { taskId } : undefined);
+        await prefillCursorChat(prompt);
+      }
+      if (msg?.type === "dashboardTransition") {
+        const rawId = msg?.taskId;
+        const rawAction = msg?.action;
+        const taskId = typeof rawId === "string" ? rawId.trim() : "";
+        const action = typeof rawAction === "string" ? rawAction.trim() : "";
+        if (taskId.length > 0 && action.length > 0) {
+          await confirmAndRunTransition(this.client, this.notifyKitStateChanged, taskId, action);
+          await this.pushUpdate();
+        }
       }
     });
     void this.pushUpdate();
@@ -111,7 +151,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       `script-src ${webview.cspSource} 'unsafe-inline'`
     ].join("; ");
 
-    const bootstrap = `(function(){var vscode=acquireVsCodeApi();var btn=document.getElementById("btn");var validate=document.getElementById("validate");var tasks=document.getElementById("tasks");var config=document.getElementById("config");if(!btn||!validate||!tasks||!config)return;btn.addEventListener("click",function(){vscode.postMessage({type:"refresh"});});validate.addEventListener("click",function(){vscode.postMessage({type:"validateConfig"});});tasks.addEventListener("click",function(){vscode.postMessage({type:"openTasks"});});config.addEventListener("click",function(){vscode.postMessage({type:"openConfig"});});})();`;
+    const bootstrap = `(function(){var vscode=acquireVsCodeApi();var btn=document.getElementById("btn");var validate=document.getElementById("validate");var tasks=document.getElementById("tasks");var config=document.getElementById("config");var root=document.getElementById("root");if(!btn||!validate||!tasks||!config)return;btn.addEventListener("click",function(){vscode.postMessage({type:"refresh"});});validate.addEventListener("click",function(){vscode.postMessage({type:"validateConfig"});});tasks.addEventListener("click",function(){vscode.postMessage({type:"openTasks"});});config.addEventListener("click",function(){vscode.postMessage({type:"openConfig"});});if(root)root.addEventListener("click",function(ev){var t=ev.target;if(!t||t.tagName!=="BUTTON")return;var act=t.getAttribute("data-wc-action");if(!act)return;if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="proposed-imp-chat"){vscode.postMessage({type:"prefillImprovementTriageChat",taskId:tid});return;}if(act==="proposed-exe-chat"){vscode.postMessage({type:"prefillTaskToMainChat",taskId:tid});return;}});})();`;
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -130,6 +170,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .focus-md b { font-weight: 600; }
     pre { white-space: pre-wrap; background: var(--vscode-textCodeBlock-background); padding: 8px; border-radius: 4px; }
     button { margin-top: 8px; padding: 4px 8px; cursor: pointer; }
+    .dash-row-list { display: flex; flex-direction: column; gap: 4px; margin: 6px 0 8px 0; }
+    .dash-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 4px 6px; border-radius: 4px; background: var(--vscode-textCodeBlock-background); }
+    .dash-row-label { flex: 1; min-width: 0; white-space: pre-wrap; word-break: break-word; font-size: 12px; line-height: 1.35; }
+    .dash-row-actions { display: flex; flex-wrap: wrap; gap: 4px; flex-shrink: 0; align-items: flex-start; }
+    button.dash-row-action { margin-top: 0; flex-shrink: 0; padding: 2px 8px; font-size: 11px; }
     .ok { color: var(--vscode-testing-iconPassed); }
     .bad { color: var(--vscode-errorForeground); }
     .phase-stack { margin: 4px 0 8px 0; }

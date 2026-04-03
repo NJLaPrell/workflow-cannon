@@ -66,11 +66,22 @@ pnpm --filter cursor-workflow-cannon test
 - `Workflow Cannon: Validate Config`
 - `Workflow Cannon: Task Action`
 - `Workflow Cannon: Show Task Detail`
+- `Workflow Cannon: Show Wishlist Detail`
 - `Workflow Cannon: Start Task`
 - `Workflow Cannon: Complete Task`
 - `Workflow Cannon: Block Task`
 - `Workflow Cannon: Pause Task`
 - `Workflow Cannon: Unblock Task`
+- `Workflow Cannon: Prefill Chat — Wishlist Intake Playbook` (palette; optional wishlist id argument)
+- `Workflow Cannon: Prefill Chat — Improvement Triage (Top Three)`
+- `Workflow Cannon: Prefill Chat — Task to Main Playbook`
+- **Tasks tree** — right-click an open wishlist row → **Prefill Chat — Wishlist Intake (this row)** (same prompt as Dashboard **Chat** for that id)
+
+### Chat prefill (Cursor)
+
+The extension seeds Cursor Composer using **`vscode.commands.executeCommand("deeplink.prompt.prefill", { text })`** (same entry Cursor uses internally). If that command is missing or fails, it tries the **`cursor://anysphere.cursor-deeplink/prompt?text=…`** URI, then copies the prompt to the clipboard with a warning. Very long prompts may hit URI length limits — trim in-session or paste from clipboard. Standard VS Code (non-Cursor) may not register the deeplink command; clipboard fallback is expected.
+
+Dashboard **Wishlist** open rows include **Chat**; **Proposed · improvements** and **Proposed · execution** rows include **Accept** (modal **`policyApproval`** rationale + **`expectedPlanningGeneration`** when the workspace requires it) and **Chat** (improvement triage vs task-to-main playbook text). See `docs/maintainers/playbooks/wishlist-intake-to-execution.md`, `improvement-triage-top-three.md`, `task-to-main.md`.
 
 Manual operator checklist: `docs/e2e.md`  
 Security notes: `SECURITY.md`

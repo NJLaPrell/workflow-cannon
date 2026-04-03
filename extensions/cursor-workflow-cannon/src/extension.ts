@@ -6,8 +6,12 @@ import { DashboardViewProvider } from "./views/dashboard/DashboardViewProvider.j
 import { TasksTreeProvider } from "./views/tasks/TasksTreeProvider.js";
 import { TasksTreeDragController } from "./views/tasks/TasksTreeDragController.js";
 import { ConfigViewProvider } from "./views/config/ConfigViewProvider.js";
+import { prefillCursorChat } from "./cursor-chat-prefill.js";
 import { buildTaskDetailMarkdown } from "./task-detail-markdown.js";
-import { expectedPlanningGenerationArgs } from "./planning-generation-cache.js";
+import { buildWishlistIntakeAgentPrompt } from "./wishlist-chat-prompt.js";
+import { buildImprovementTriagePrompt, buildTaskToMainPrompt } from "./playbook-chat-prompts.js";
+import { confirmAndRunTransition } from "./run-transition-with-approval.js";
+import type { WkNode } from "./views/tasks/build-task-tree.js";
 
 function readWorkflowCannonNodeSetting(): string | undefined {
   return vscode.workspace.getConfiguration("workflowCannon").get<string>("nodeExecutable")?.trim() || undefined;
@@ -31,7 +35,9 @@ export function activate(context: vscode.ExtensionContext): void {
     watcher.start();
     context.subscriptions.push(watcher);
 
-    dashboard = new DashboardViewProvider(context.extensionUri, client, onKitStateChanged);
+    dashboard = new DashboardViewProvider(context.extensionUri, client, onKitStateChanged, () =>
+      kitStateEmitter.fire()
+    );
     configView = new ConfigViewProvider(context.extensionUri, client, onKitStateChanged);
     tasks = new TasksTreeProvider(client, onKitStateChanged);
     const tasksDnd = new TasksTreeDragController(client, () => kitStateEmitter.fire());
@@ -62,31 +68,7 @@ export function activate(context: vscode.ExtensionContext): void {
     if (!runtime) {
       return;
     }
-    const ok = await vscode.window.showWarningMessage(
-      `Apply transition '${action}' to ${taskId}?`,
-      { modal: true },
-      "Apply"
-    );
-    if (ok !== "Apply") {
-      return;
-    }
-    const rationale =
-      (await vscode.window.showInputBox({
-        prompt: `Policy rationale for run-transition: ${action} on ${taskId}`,
-        placeHolder: "Shown in policy trace / approval"
-      })) ?? "vscode-extension";
-    const r = await runtime.run("run-transition", {
-      taskId,
-      action,
-      policyApproval: { confirmed: true, rationale },
-      ...expectedPlanningGenerationArgs()
-    });
-    if (!r.ok) {
-      await vscode.window.showErrorMessage((r.message ?? JSON.stringify(r)).slice(0, 900));
-    } else {
-      await vscode.window.showInformationMessage(r.message ?? "Transition OK");
-      kitStateEmitter.fire();
-    }
+    await confirmAndRunTransition(runtime, () => kitStateEmitter.fire(), taskId, action);
   };
 
   const showTaskDetail = async (taskId: string) => {
@@ -285,6 +267,28 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("workflowCannon.task.unblock", async (taskId?: string) => {
       if (!taskId) return;
       await runTransition(taskId, "unblock");
+    }),
+    vscode.commands.registerCommand("workflowCannon.chat.prefillWishlistFlow", async (wishlistId?: string) => {
+      const id = typeof wishlistId === "string" ? wishlistId.trim() : "";
+      const prompt = buildWishlistIntakeAgentPrompt(id.length > 0 ? { wishlistId: id } : undefined);
+      await prefillCursorChat(prompt);
+    }),
+    vscode.commands.registerCommand("workflowCannon.chat.prefillImprovementTriage", async (taskId?: string) => {
+      const id = typeof taskId === "string" ? taskId.trim() : "";
+      const prompt = buildImprovementTriagePrompt(id.length > 0 ? { taskId: id } : undefined);
+      await prefillCursorChat(prompt);
+    }),
+    vscode.commands.registerCommand("workflowCannon.chat.prefillTaskToMain", async (taskId?: string) => {
+      const id = typeof taskId === "string" ? taskId.trim() : "";
+      const prompt = buildTaskToMainPrompt(id.length > 0 ? { taskId: id } : undefined);
+      await prefillCursorChat(prompt);
+    }),
+    vscode.commands.registerCommand("workflowCannon.wishlist.prefillIntakeChatFromTree", async (node: WkNode) => {
+      if (!node || node.kind !== "wishlist-item") {
+        void vscode.window.showWarningMessage("Select an open wishlist row (Tasks → Wishlist).");
+        return;
+      }
+      await vscode.commands.executeCommand("workflowCannon.chat.prefillWishlistFlow", node.item.id);
     })
   );
 }

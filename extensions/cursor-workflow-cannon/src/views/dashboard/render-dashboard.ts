@@ -37,14 +37,50 @@ function renderWishlistOpenList(items: unknown): string {
     return '<p class="muted">No open wishlist items.</p>';
   }
   return (
-    '<p class="muted"><b>Open wishlist preview</b></p><pre>' +
+    '<p class="muted"><b>Open wishlist preview</b> · <span class="muted">Chat</span> prefills Cursor with the intake playbook prompt.</p>' +
+    '<div class="dash-row-list" role="list">' +
     items
       .map((x) => {
         const row = x as { id?: unknown; title?: unknown };
-        return "- " + escapeHtml(String(row?.id ?? "")) + " " + escapeHtml(String(row?.title ?? ""));
+        const id = String(row?.id ?? "").trim();
+        const title = escapeHtml(String(row?.title ?? ""));
+        const label = escapeHtml(id) + (id ? " " : "") + title;
+        const idAttr = escapeHtml(id);
+        return (
+          '<div class="dash-row" role="listitem">' +
+          '<span class="dash-row-label">- ' +
+          label +
+          "</span>" +
+          '<button type="button" class="dash-row-action" data-wc-action="wishlist-chat" data-wishlist-id="' +
+          idAttr +
+          '" title="Prefill Cursor chat with wishlist intake playbook (this item)">Chat</button>' +
+          "</div>"
+        );
       })
-      .join("\n") +
-    "</pre>"
+      .join("") +
+    "</div>"
+  );
+}
+
+function renderProposedImprovementRow(row: { id?: unknown; title?: unknown; phase?: unknown }): string {
+  const id = String(row?.id ?? "").trim();
+  const title = escapeHtml(String(row?.title ?? ""));
+  const ph = row?.phase != null && String(row.phase).length > 0 ? " · " + escapeHtml(String(row.phase)) : "";
+  const label = "- " + escapeHtml(id) + (id ? " " : "") + title + ph;
+  const idAttr = escapeHtml(id);
+  return (
+    '<div class="dash-row" role="listitem">' +
+    '<span class="dash-row-label">' +
+    label +
+    "</span>" +
+    '<span class="dash-row-actions">' +
+    '<button type="button" class="dash-row-action" data-wc-action="proposed-imp-accept" data-task-id="' +
+    idAttr +
+    '" title="Accept → ready (confirms policy rationale)">Accept</button>' +
+    '<button type="button" class="dash-row-action" data-wc-action="proposed-imp-chat" data-task-id="' +
+    idAttr +
+    '" title="Prefill Composer with improvement triage playbook">Chat</button>' +
+    "</span></div>"
   );
 }
 
@@ -58,15 +94,32 @@ function renderProposedImprovementsList(count: number, items: unknown): string {
       : "";
   return (
     more +
-    "<pre>" +
-    items
-      .map((x) => {
-        const row = x as { id?: unknown; title?: unknown; phase?: unknown };
-        const ph = row?.phase != null && String(row.phase).length > 0 ? " · " + escapeHtml(String(row.phase)) : "";
-        return "- " + escapeHtml(String(row?.id ?? "")) + " " + escapeHtml(String(row?.title ?? "")) + ph;
-      })
-      .join("\n") +
-    "</pre>"
+    '<p class="muted"><b>Row actions</b> · <span class="muted">Accept</span> runs <code>run-transition</code> (modal rationale + planning token when required). <span class="muted">Chat</span> seeds <code>improvement-triage-top-three</code> playbook.</p>' +
+    '<div class="dash-row-list" role="list">' +
+    items.map((x) => renderProposedImprovementRow(x as { id?: unknown; title?: unknown; phase?: unknown })).join("") +
+    "</div>"
+  );
+}
+
+function renderProposedExecutionRow(row: { id?: unknown; title?: unknown; phase?: unknown }): string {
+  const id = String(row?.id ?? "").trim();
+  const title = escapeHtml(String(row?.title ?? ""));
+  const ph = row?.phase != null && String(row.phase).length > 0 ? " · " + escapeHtml(String(row.phase)) : "";
+  const label = "- " + escapeHtml(id) + (id ? " " : "") + title + ph;
+  const idAttr = escapeHtml(id);
+  return (
+    '<div class="dash-row" role="listitem">' +
+    '<span class="dash-row-label">' +
+    label +
+    "</span>" +
+    '<span class="dash-row-actions">' +
+    '<button type="button" class="dash-row-action" data-wc-action="proposed-exe-accept" data-task-id="' +
+    idAttr +
+    '" title="Accept → ready (confirms policy rationale)">Accept</button>' +
+    '<button type="button" class="dash-row-action" data-wc-action="proposed-exe-chat" data-task-id="' +
+    idAttr +
+    '" title="Prefill Composer with task-to-main playbook">Chat</button>' +
+    "</span></div>"
   );
 }
 
@@ -80,15 +133,10 @@ function renderProposedExecutionList(count: number, items: unknown): string {
       : "";
   return (
     more +
-    "<pre>" +
-    items
-      .map((x) => {
-        const row = x as { id?: unknown; title?: unknown; phase?: unknown };
-        const ph = row?.phase != null && String(row.phase).length > 0 ? " · " + escapeHtml(String(row.phase)) : "";
-        return "- " + escapeHtml(String(row?.id ?? "")) + " " + escapeHtml(String(row?.title ?? "")) + ph;
-      })
-      .join("\n") +
-    "</pre>"
+    '<p class="muted"><b>Row actions</b> · <span class="muted">Chat</span> seeds <code>task-to-main</code> playbook.</p>' +
+    '<div class="dash-row-list" role="list">' +
+    items.map((x) => renderProposedExecutionRow(x as { id?: unknown; title?: unknown; phase?: unknown })).join("") +
+    "</div>"
   );
 }
 

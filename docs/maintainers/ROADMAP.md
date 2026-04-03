@@ -20,6 +20,7 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - **Phase 46 (roadmap data generation + task features)** shipped as **`v0.46.0`** — **`T591`–`T598`**: JSON Schema–validated **`roadmap-data.json`** / **`feature-taxonomy.json`**, deterministic **`ROADMAP.md`** + **`FEATURE-TAXONOMY.md`** generation, CI validation + ROADMAP drift gate; relational **`features_json`** (**`user_version` 4**), **`create-task`** / **`update-task`** / **`list-tasks`** **`features`** filter; **`task-engine`** **`0.12.0`**, **`documentation`** **`0.4.0`** in **`compatibility-matrix.json`**.
 - **Phase 47 (agent guidance profile)** shipped as **`v0.47.0`** — **`T585`–`T590`**: ADR **`ADR-agent-guidance-profile-rpg-party-v1.md`**, **`kit.agentGuidance.*`** config keys, **`resolve-agent-guidance`** / **`set-agent-guidance`**, **`resolve-behavior-profile`** **`agentGuidance.advisoryModulation`**, dashboard tier card; **`workspace-config`** **`0.5.0`**, **`task-engine`** **`0.13.0`**, **`agent-behavior`** **`0.2.0`** in **`compatibility-matrix.json`**.
 - **Phase 48 (wishlist intake agent workflow)** shipped as **`v0.48.0`** — **`T604`–`T607`**: maintainer playbook **`wishlist-intake-to-execution`**, **`list-wishlist`** / **`get-wishlist`** instruction alignment (unified SQLite intake), requestable Cursor rule **`.cursor/rules/playbook-wishlist-intake-to-execution.mdc`**, discovery updates in **`AGENTS.md`**, **`playbooks/README.md`**, **`agent-playbooks.md`**, **`.ai/MACHINE-PLAYBOOKS.md`**.
+- **Phase 49 (extension dashboard agent handoff + maintainer inventory)** shipped as **`v0.49.0`** — **`T608`–`T613`**: **`persisted-artifacts-and-cli-inventory.md`**, **`ARCHITECTURE.md`** cross-link; Cursor extension dashboard **Chat** / **Accept** rows, Tasks wishlist context prefill, palette playbook prefills; maintainer runbook **`agent-task-engine-ergonomics`** subsection.
 - **Phase 36 (policy, integrations, improvement loop, documentation architecture)** shipped as **`v0.36.0`** — see **`docs/maintainers/CHANGELOG.md`** and task-engine `phaseKey` **36** completion.
 - **Phase 37 (maintainer onboarding, shell JSON guidance, improvement churn closure, dashboard terminal parity)** shipped as **`v0.37.0`** — see **`docs/maintainers/CHANGELOG.md`** and task-engine `phaseKey` **37** completion (`imp-*` slice).
 - **Maintainer snapshot** — `docs/maintainers/data/workspace-kit-status.yaml` (`current_kit_phase`, `next_agent_actions`).
@@ -69,6 +70,13 @@ Stable **slugs** for task ↔ feature mapping (see [`FEATURE-TAXONOMY.md`](./FEA
 Each phase ends with a GitHub release. Phases are sequential unless explicitly re-planned.
 
 For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MATRIX.md`.
+
+### Phase 49 - Extension dashboard agent handoff + maintainer inventory -> GitHub release `v0.49.0` (COMPLETE)
+
+- **Primary scope:** **`T608`–`T613`** — maintainer inventory **[`data/persisted-artifacts-and-cli-inventory.md`](./data/persisted-artifacts-and-cli-inventory.md)** + **`ARCHITECTURE.md`** link; Cursor extension wishlist **Chat** (`deeplink.prompt.prefill`), **Accept** / **Chat** on **Proposed · improvements** and **Proposed · execution** dashboard rows; Tasks tree wishlist context menu; palette commands for **improvement-triage-top-three** and **task-to-main**; operator docs in extension **`README`** and **`agent-task-engine-ergonomics`**.
+- **Outcome:** Operators seed Composer from documented playbooks without retyping; dashboard mirrors **`policyApproval`** + **`expectedPlanningGeneration`** transition hygiene; inventory maps schemas, stores, and high-traffic **`wk run`** surfaces for follow-on validation work (**`T600`**+).
+- **Exit signals:**
+  - Extension unit tests green; **`pnpm run build`**, **`check`**, **`test`**, **`parity`** on the release tag; maintainer evidence per **`RELEASING.md`**.
 
 ### Phase 48 - Wishlist intake agent workflow -> GitHub release `v0.48.0` (COMPLETE)
 
@@ -434,4 +442,5 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 - Phase 42 / `v0.42.0` GitHub release: `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.42.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23920361117`
 - Phase 47 / `v0.47.0` GitHub release: `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.47.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23931954622`
 - Phase 48 / `v0.48.0` GitHub release: `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.48.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23950345949`
+- Phase 49 / `v0.49.0` — record GitHub release + Publish NPM workflow URLs here after tag (maintainer evidence per RELEASING.md)
 - npm package: `https://www.npmjs.com/package/@workflow-cannon/workspace-kit`

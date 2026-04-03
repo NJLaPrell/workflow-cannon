@@ -39,6 +39,10 @@ Workflow Cannon is a modular CLI-first workflow platform: structured **tasks** a
 - **Tasks** and **wishlist** default to **SQLite** (`tasks.persistenceBackend: sqlite`, one file under `tasks.sqliteDatabaseRelativePath`). Set **`tasks.persistenceBackend: json`** to use JSON files instead (see `docs/maintainers/ADR-sqlite-default-persistence.md` and `ADR-task-sqlite-persistence.md`).
 - **Unified module state** (Phase 18 track) extends SQLite for additional module rows and CLI introspection (`get-module-state`, `list-module-states`) where enabled.
 
+### Persisted artifacts and CLI inventory
+
+Maintainers aligning **schemas**, **SQLite layout**, **manifest-listed `run` commands**, and **extension-facing JSON** should start from **[`data/persisted-artifacts-and-cli-inventory.md`](./data/persisted-artifacts-and-cli-inventory.md)**. It maps on-disk artifacts and high-traffic commands to **JSON Schema / TypeScript contracts**, **enforcement** (`pnpm run check` stages, parity, doctor), and **owning modules**. Update it when you add a schema file, task-store migration, dashboard contract field, or a new stable **`workspace-kit run`** success shape consumed by tooling.
+
 ## Layering and known exceptions
 
 - **Intended rule:** `modules/` may depend on `core/` and `contracts/`; avoid **sibling module** imports. **`.ai/module-build.md`** rule **R102** states modules must depend only on **`core`** and **`contracts`** and avoid direct imports from sibling modules; the bullets below are the **documented** exceptions that keep facades stable (see also **`src/modules/README.md`**).
@@ -92,6 +96,7 @@ When instructions conflict, follow the ordered list in [`AGENTS.md`](./AGENTS.md
 
 ## Related docs
 
+- [`data/persisted-artifacts-and-cli-inventory.md`](./data/persisted-artifacts-and-cli-inventory.md) — maintainer index: persisted JSON/SQLite, schemas, extension-critical `wk run` commands, enforcement hooks
 - [`CLI-VISUAL-GUIDE.md`](./CLI-VISUAL-GUIDE.md) — ASCII + Mermaid map of top-level commands, `run` router, and approval lanes (companion to [`AGENT-CLI-MAP.md`](./AGENT-CLI-MAP.md))
 - [`ROADMAP.md`](./ROADMAP.md) — phases (including Phase 18 module platform + state consolidation and Phase 19 documentation v2)
 - Task execution queue — default SQLite `.workspace-kit/tasks/workspace-kit.db`; JSON opt-out `.workspace-kit/tasks/state.json`

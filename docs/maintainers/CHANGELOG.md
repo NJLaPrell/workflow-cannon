@@ -12,6 +12,20 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 - **Repository hygiene** — tracked `.workspace-kit/backups` snapshot tree; one-off migration scripts (`architect-review-proposals-2026-03-31`, `phase29-architect-ready-tasks`, `apply-phase-30-33-architect-tasks`, `convert-open-wishlist-to-ready`, `rewrite-active-improvements`, `seed-plan-wishlist-intake`); orphan `docs/policies/*`, `docs/workflows/task-pr-delivery-workflow.md`, and misleading `docs/adr/README.md`; superseded maintainer notes `RUNTIME-PATH-AUDIT-PHASE11.md`, `ARCHITECTURAL-REVIEW-FINDINGS.md`. **`.gitignore`** now excludes `.workspace-kit/backups/`.
 
+## [0.49.0] - 2026-04-03
+
+Phase 49 — **extension dashboard agent handoff + maintainer inventory** (**`T608`–`T613`**).
+
+### Added
+
+- **Maintainer inventory** — **`docs/maintainers/data/persisted-artifacts-and-cli-inventory.md`**: schemas, kit persistence, compatibility/status data, extension-critical **`wk run`** commands, enforcement hooks; linked from **`ARCHITECTURE.md`** with update triggers.
+- **Cursor extension** — Dashboard **Proposed · improvements** / **Proposed · execution** rows: **Accept** (**`run-transition`** **`accept`** with modal rationale + **`expectedPlanningGeneration`** when required) and **Chat** (Composer seeds for **`improvement-triage-top-three`** and **`task-to-main`** playbooks). Command palette: **Prefill Chat — Improvement Triage**, **Prefill Chat — Task to Main**. Tasks tree context menu on open wishlist rows → same wishlist intake prefill as Dashboard **Chat**.
+- **Docs** — Extension **`README`** (prefill mechanism and fallbacks); **`docs/maintainers/runbooks/agent-task-engine-ergonomics.md`** § Extension dashboard → **Chat prefill**.
+
+### Changed
+
+- **Extension** package **`cursor-workflow-cannon`** **0.1.5** (shared **`run-transition-with-approval`** helper, **`playbook-chat-prompts`** module).
+
 ## [0.48.0] - 2026-04-03
 
 Phase 48 — **wishlist intake agent workflow** (**`T604`–`T607`**).

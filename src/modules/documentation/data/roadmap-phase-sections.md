@@ -1,3 +1,10 @@
+### Phase 49 - Extension dashboard agent handoff + maintainer inventory -> GitHub release `v0.49.0` (COMPLETE)
+
+- **Primary scope:** **`T608`–`T613`** — maintainer inventory **[`data/persisted-artifacts-and-cli-inventory.md`](./data/persisted-artifacts-and-cli-inventory.md)** + **`ARCHITECTURE.md`** link; Cursor extension wishlist **Chat** (`deeplink.prompt.prefill`), **Accept** / **Chat** on **Proposed · improvements** and **Proposed · execution** dashboard rows; Tasks tree wishlist context menu; palette commands for **improvement-triage-top-three** and **task-to-main**; operator docs in extension **`README`** and **`agent-task-engine-ergonomics`**.
+- **Outcome:** Operators seed Composer from documented playbooks without retyping; dashboard mirrors **`policyApproval`** + **`expectedPlanningGeneration`** transition hygiene; inventory maps schemas, stores, and high-traffic **`wk run`** surfaces for follow-on validation work (**`T600`**+).
+- **Exit signals:**
+  - Extension unit tests green; **`pnpm run build`**, **`check`**, **`test`**, **`parity`** on the release tag; maintainer evidence per **`RELEASING.md`**.
+
 ### Phase 48 - Wishlist intake agent workflow -> GitHub release `v0.48.0` (COMPLETE)
 
 - **Primary scope:** **`T604`–`T607`** — playbook **`wishlist-intake-to-execution.md`** composes **`wishlist-workflow.md`**, **`convert-wishlist`**, **`AGENT-CLI-MAP`**; instruction docs **`list-wishlist`** / **`get-wishlist`** match unified SQLite persistence; requestable **`.cursor/rules/playbook-wishlist-intake-to-execution.mdc`**; register playbook id in maintainer + machine indexes.

@@ -3,7 +3,7 @@
   "private": true,
   "displayName": "Workflow Cannon",
   "description": "Thin client UI for Workflow Cannon — dashboard, tasks, and config via workspace-kit CLI.",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "publisher": "workflow-cannon",
   "license": "MIT",
   "type": "module",
@@ -28,7 +28,11 @@
     "onCommand:workflowCannon.task.complete",
     "onCommand:workflowCannon.task.block",
     "onCommand:workflowCannon.task.pause",
-    "onCommand:workflowCannon.task.unblock"
+    "onCommand:workflowCannon.task.unblock",
+    "onCommand:workflowCannon.chat.prefillWishlistFlow",
+    "onCommand:workflowCannon.chat.prefillImprovementTriage",
+    "onCommand:workflowCannon.chat.prefillTaskToMain",
+    "onCommand:workflowCannon.wishlist.prefillIntakeChatFromTree"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -121,8 +125,33 @@
       {
         "command": "workflowCannon.task.unblock",
         "title": "Workflow Cannon: Unblock Task"
+      },
+      {
+        "command": "workflowCannon.chat.prefillWishlistFlow",
+        "title": "Workflow Cannon: Prefill Chat — Wishlist Intake Playbook"
+      },
+      {
+        "command": "workflowCannon.chat.prefillImprovementTriage",
+        "title": "Workflow Cannon: Prefill Chat — Improvement Triage (Top Three)"
+      },
+      {
+        "command": "workflowCannon.chat.prefillTaskToMain",
+        "title": "Workflow Cannon: Prefill Chat — Task to Main Playbook"
+      },
+      {
+        "command": "workflowCannon.wishlist.prefillIntakeChatFromTree",
+        "title": "Workflow Cannon: Prefill Chat — Wishlist Intake (this row)"
       }
-    ]
+    ],
+    "menus": {
+      "view/item/context": [
+        {
+          "command": "workflowCannon.wishlist.prefillIntakeChatFromTree",
+          "when": "view == workflowCannon.tasks && viewItem == wkcWishlist",
+          "group": "workflowCannon@1"
+        }
+      ]
+    }
   },
   "scripts": {
     "compile": "tsc -p ./",

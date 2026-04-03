@@ -59,6 +59,10 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /T319/);
   assert.match(html, /T320/);
   assert.match(html, /W1/);
+  assert.match(html, /data-wc-action="wishlist-chat"/);
+  assert.match(html, /data-wc-action="proposed-imp-accept"/);
+  assert.match(html, /data-wc-action="proposed-imp-chat"/);
+  assert.match(html, /dash-row-action/);
   assert.match(html, /phase-bucket/);
   assert.match(html, /dashboard-terminal-tasks/);
   assert.match(html, /<p><b>Completed<\/b>/);
@@ -155,6 +159,47 @@ test("renderDashboardRootInnerHtml handles null suggestedNext", () => {
   assert.match(html, /Suggested next/);
   assert.match(html, /No proposed improvements/);
   assert.match(html, /No in-flight/);
+});
+
+test("renderDashboardRootInnerHtml proposed execution rows expose accept and chat actions", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      stateSummary: { proposed: 1, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: {
+        schemaVersion: 1,
+        count: 1,
+        top: [{ id: "T777", title: "Example proposed execution", phase: "Phase 9" }]
+      },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [] },
+      readyQueueTop: [],
+      readyQueueCount: 0,
+      suggestedNext: null,
+      planningSession: null,
+      taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
+      workspaceStatus: { currentKitPhase: "1", nextKitPhase: "2", activeFocus: "Test" },
+      blockingAnalysis: [],
+      dependencyOverview: {
+        schemaVersion: 1,
+        activeTaskCount: 0,
+        includedTaskCount: 0,
+        edgeCount: 0,
+        truncated: false,
+        perfNote: null,
+        nodes: [],
+        edges: [],
+        mermaidFlowchart: "",
+        criticalPathReady: []
+      }
+    }
+  });
+  assert.match(html, /data-wc-action="proposed-exe-accept"/);
+  assert.match(html, /data-wc-action="proposed-exe-chat"/);
+  assert.match(html, /T777/);
 });
 
 test("renderDashboardRootInnerHtml shows readyQueueBreakdown when present", () => {
