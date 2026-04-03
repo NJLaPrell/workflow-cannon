@@ -6,7 +6,7 @@ Product-oriented feature inventory derived from task-engine state (default: SQLi
 
 - **Start here** for milestone alignment and status legend.
 - **Deep rows** below are intentionally long-form; use editor search (phase number, command name, or `T###`) rather than loading the whole matrix into agent context.
-- **Strategy / phase prose** is summarized in **`docs/maintainers/ROADMAP.md`** and archived narrative in **`docs/maintainers/ROADMAP-archive.md`**.
+- **Strategy / phase prose** is summarized in **`docs/maintainers/ROADMAP.md`** (generated from **`src/modules/documentation/data/roadmap-data.json`**) and archived narrative in **`docs/maintainers/ROADMAP-archive.md`**.
 
 Status legend:
 
@@ -43,6 +43,7 @@ Status legend:
 | Phase 33 - Documentation, editor integration, and CLI ergonomics (`T455`, `T459`–`T461`, `T462`–`T463`, `T464`, `T469`) | `v0.33.0` | Completed |
 | Phase 34 - Cursor extension and consumer experience (`T505`, `T506`, `T511`, `T518`) | `v0.34.0` | Completed |
 | Phase 35 - Task engine, queue operations, and planning handoff (`T507`, `T510`, `T513`, `T520`, `T523`) | `v0.35.0` | Completed |
+| Phase 46 - Roadmap data generation + task features (`T591`–`T598`) | `v0.46.0` | Completed |
 
 ## Feature Matrix by Phase
 

@@ -13,7 +13,7 @@ workspace-kit run create-task '{"id":"T400","title":"My task","status":"proposed
 - `id` (string, required): `T<number>` task ID.
 - `title` (string, required): task title.
 - `status` (string, optional): `proposed` or `ready` (default `proposed`).
-- Optional task fields: `type`, `priority`, `dependsOn`, `unblocks`, `phase`, `metadata`, `ownership`, `approach`, `technicalScope`, `acceptanceCriteria`, `actor`.
+- Optional task fields: `type`, `priority`, `dependsOn`, `unblocks`, `phase`, `phaseKey`, `metadata`, `ownership`, `approach`, `summary`, `description`, `risk`, `technicalScope`, `acceptanceCriteria`, `features` (string[] of taxonomy slugs from `feature-taxonomy.json`; unknown slugs produce advisory warnings), `actor`.
 - `clientMutationId` (string, optional): idempotency key for safe retries.
 
 Known type guardrails:

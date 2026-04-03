@@ -26,6 +26,8 @@ export type TaskEngineTaskRow = {
   evidence_key: string | null;
   evidence_kind: string | null;
   metadata_json: string | null;
+  /** Present from kit SQLite user_version 4+ relational rows; absent on pre-migration reads. */
+  features_json?: string | null;
 };
 
 function parseJsonArray(s: string, field: string): string[] {
@@ -81,7 +83,8 @@ export function taskEntityToRow(t: TaskEntity): TaskEngineTaskRow {
     queue_namespace: queueNamespace ?? null,
     evidence_key: evidenceKey ?? null,
     evidence_kind: evidenceKind ?? null,
-    metadata_json: md ? JSON.stringify(md) : null
+    metadata_json: md ? JSON.stringify(md) : null,
+    features_json: t.features?.length ? JSON.stringify(t.features) : "[]"
   };
 }
 
@@ -100,6 +103,25 @@ export function rowToTaskEntity(row: TaskEngineTaskRow): TaskEntity {
       );
     }
   }
+  let features: string[] | undefined;
+  const fj = row.features_json;
+  if (fj !== null && fj !== undefined && fj !== "" && fj !== "[]") {
+    try {
+      const parsed = JSON.parse(fj) as unknown;
+      if (Array.isArray(parsed)) {
+        const slugs = parsed.filter((x): x is string => typeof x === "string");
+        if (slugs.length > 0) {
+          features = slugs;
+        }
+      }
+    } catch (e) {
+      throw new TaskEngineError(
+        "storage-read-error",
+        `Invalid features_json for task ${row.id}: ${(e as Error).message}`
+      );
+    }
+  }
+
   const task: TaskEntity = {
     id: row.id,
     status: row.status as TaskEntity["status"],
@@ -121,7 +143,8 @@ export function rowToTaskEntity(row: TaskEngineTaskRow): TaskEntity {
     summary: row.summary ?? undefined,
     description: row.description ?? undefined,
     risk: row.risk ?? undefined,
-    metadata
+    metadata,
+    features
   };
   if (task.dependsOn?.length === 0) {
     delete task.dependsOn;

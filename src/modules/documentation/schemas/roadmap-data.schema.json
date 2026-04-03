@@ -1,0 +1,74 @@
+{
+  "$id": "https://workflow-cannon.dev/schemas/roadmap-data.schema.json",
+  "title": "Roadmap data",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "title",
+    "subtitle",
+    "scope",
+    "currentState",
+    "featureTaxonomy",
+    "phasePlanIntro",
+    "phaseSectionsFile",
+    "decisions",
+    "executionEvidence"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "subtitle": {
+      "type": "string",
+      "minLength": 1
+    },
+    "scope": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "currentState": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "featureTaxonomy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "intro", "taxonomyFile"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "intro": { "type": "string" },
+        "taxonomyFile": { "type": "string", "minLength": 1 }
+      }
+    },
+    "phasePlanIntro": {
+      "type": "string",
+      "minLength": 1
+    },
+    "phaseSectionsFile": {
+      "type": "string",
+      "minLength": 1
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["decision", "choice"],
+        "properties": {
+          "decision": { "type": "string", "minLength": 1 },
+          "choice": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "executionEvidence": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

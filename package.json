@@ -1,6 +1,6 @@
 {
   "name": "@workflow-cannon/workspace-kit",
-  "version": "0.45.0",
+  "version": "0.46.0",
   "private": false,
   "packageManager": "pnpm@10.0.0",
   "license": "MIT",
@@ -71,6 +71,7 @@
     "package.json"
   ],
   "dependencies": {
+    "ajv": "^8.17.1",
     "better-sqlite3": "^12.8.0",
     "dotenv": "^17.3.1"
   },

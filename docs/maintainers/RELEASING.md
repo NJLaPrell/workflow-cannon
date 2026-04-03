@@ -56,6 +56,7 @@ If a gate fails, do not publish. Capture the blocker in task-engine state and up
     - Run `pnpm run check-planning-consistency` and treat failures as release-blocking doc defects.
     - Confirm policy/approval references point to `docs/maintainers/POLICY-APPROVAL.md` and `docs/maintainers/AGENT-CLI-MAP.md`.
     - Confirm changelog updates are in `docs/maintainers/CHANGELOG.md` (root `CHANGELOG.md` is pointer-only).
+    - Roadmap / taxonomy: committed **`docs/maintainers/ROADMAP.md`** and **`FEATURE-TAXONOMY.md`** must match the documentation module renderer (validated by **`pnpm run check`** → **`scripts/check-documentation-data.mjs`**). Regenerate from **`src/modules/documentation/data/`** before tagging if you changed roadmap or taxonomy JSON.
 4. **Present for approval**
    - Summarize scope, risk, evidence, and migration notes.
    - Obtain explicit human approval before proceeding.

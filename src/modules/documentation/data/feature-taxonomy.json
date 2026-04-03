@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 1,
+  "features": [
+    {
+      "category": "Task engine & queue",
+      "slug": "task-schema",
+      "name": "Task schema & envelopes",
+      "covers": "IDs, types, phase labels, priority, scope, acceptance criteria"
+    },
+    {
+      "category": "Task engine & queue",
+      "slug": "task-lifecycle",
+      "name": "Lifecycle transitions",
+      "covers": "Status machine, demotions, transition evidence"
+    },
+    {
+      "category": "Task engine & queue",
+      "slug": "task-guards",
+      "name": "Guards & validation",
+      "covers": "State validity, dependency checks, policy hooks on transitions"
+    },
+    {
+      "category": "Task engine & queue",
+      "slug": "task-dependencies",
+      "name": "Dependencies & unblock",
+      "covers": "dependsOn, blocked → ready cascades"
+    },
+    {
+      "category": "Task engine & queue",
+      "slug": "next-actions",
+      "name": "Next-actions & queue intelligence",
+      "covers": "get-next-actions, blocking analysis, ordering, queue namespaces"
+    },
+    {
+      "category": "Task engine & queue",
+      "slug": "task-mutations",
+      "name": "Task mutations & history",
+      "covers": "create/update, transition logs, introspection commands"
+    },
+    {
+      "category": "Persistence & planning store",
+      "slug": "task-persistence",
+      "name": "Task persistence backends",
+      "covers": "SQLite blob vs relational rows, dual-planning stores"
+    },
+    {
+      "category": "Persistence & planning store",
+      "slug": "store-migrations",
+      "name": "Migrations & recovery",
+      "covers": "user_version, migration commands, operator recovery"
+    },
+    {
+      "category": "Persistence & planning store",
+      "slug": "planning-concurrency",
+      "name": "Planning generation & concurrency",
+      "covers": "planningGeneration, expectedPlanningGeneration, idempotency"
+    },
+    {
+      "category": "Config, policy & trust",
+      "slug": "config-model",
+      "name": "Config model & resolution",
+      "covers": "Registry, precedence, explain/resolve, generated CONFIG docs"
+    },
+    {
+      "category": "Config, policy & trust",
+      "slug": "config-cli",
+      "name": "Config CLI & layers",
+      "covers": "Project/user layers, validation, safe writes, mutation evidence"
+    },
+    {
+      "category": "Config, policy & trust",
+      "slug": "policy-registry",
+      "name": "Sensitive operations & policy registry",
+      "covers": "Gated ops, extension from effective config, CLI tiering"
+    },
+    {
+      "category": "Config, policy & trust",
+      "slug": "approvals",
+      "name": "Approvals & decision records",
+      "covers": "Decisions on recommendations and sensitive flows"
+    },
+    {
+      "category": "Config, policy & trust",
+      "slug": "policy-traces",
+      "name": "Policy traces & versioning",
+      "covers": "Trace schema, upgrade notes, audit output"
+    },
+    {
+      "category": "Improvement loop & signals",
+      "slug": "recommendations",
+      "name": "Recommendation generation",
+      "covers": "generate-recommendations, cursors, cadence"
+    },
+    {
+      "category": "Improvement loop & signals",
+      "slug": "evidence-dedupe",
+      "name": "Evidence & deduplication",
+      "covers": "evidenceKey, provenance, confidence/heuristics"
+    },
+    {
+      "category": "Improvement loop & signals",
+      "slug": "improvement-triage",
+      "name": "Improvement backlog & triage",
+      "covers": "proposed → ready, churn signals, maintainer rubrics"
+    },
+    {
+      "category": "Transcripts & automation",
+      "slug": "transcript-sync",
+      "name": "Transcript sync & privacy",
+      "covers": "Paths, redaction, storage boundaries"
+    },
+    {
+      "category": "Transcripts & automation",
+      "slug": "automation-hooks",
+      "name": "Editor & CI automation hooks",
+      "covers": "Cursor/VS Code tasks, optional hooks"
+    },
+    {
+      "category": "CLI, modules & agent surfaces",
+      "slug": "module-platform",
+      "name": "Command router & module platform",
+      "covers": "Enable/disable, dispatch, startup contracts"
+    },
+    {
+      "category": "CLI, modules & agent surfaces",
+      "slug": "instructions",
+      "name": "Instructions & machine operability",
+      "covers": "instructions/*.md, JSON shapes, agent-first flows"
+    },
+    {
+      "category": "CLI, modules & agent surfaces",
+      "slug": "response-templates",
+      "name": "Response templates",
+      "covers": "Registry, advisory enforcement, result shaping"
+    },
+    {
+      "category": "CLI, modules & agent surfaces",
+      "slug": "agent-behavior",
+      "name": "Agent behavior profiles",
+      "covers": "Resolve/interview behavior (advisory; not permission)"
+    },
+    {
+      "category": "Docs, playbooks & maintainer UX",
+      "slug": "doc-generation",
+      "name": "Documentation generation",
+      "covers": "document-project, template validation, .ai pairing"
+    },
+    {
+      "category": "Docs, playbooks & maintainer UX",
+      "slug": "playbooks",
+      "name": "Playbooks, runbooks, TERMS",
+      "covers": "Direction sets, ops procedures, glossary alignment"
+    },
+    {
+      "category": "Extension & human visibility",
+      "slug": "cursor-extension",
+      "name": "Cursor extension & dashboard",
+      "covers": "Tasks UI, DnD, dashboard-summary, human-visible store fields"
+    },
+    {
+      "category": "Release, quality & consumers",
+      "slug": "doctor-diagnostics",
+      "name": "Doctor & diagnostics",
+      "covers": "wk doctor, persistence map, phase snapshot alignment"
+    },
+    {
+      "category": "Release, quality & consumers",
+      "slug": "ci-guards",
+      "name": "Check pipeline & CI gates",
+      "covers": "pnpm run check, instruction coverage, contract guards"
+    },
+    {
+      "category": "Release, quality & consumers",
+      "slug": "release-versioning",
+      "name": "Release & versioning",
+      "covers": "Tags, changelog, phase closeout evidence"
+    },
+    {
+      "category": "Release, quality & consumers",
+      "slug": "consumer-parity",
+      "name": "Consumer parity & compatibility",
+      "covers": "Compatibility matrix, packaged checks, native SQLite consumer"
+    }
+  ]
+}

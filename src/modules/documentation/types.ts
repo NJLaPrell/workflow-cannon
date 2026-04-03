@@ -15,7 +15,13 @@ export type DocumentationConflict = {
 };
 
 export type DocumentationValidationIssue = {
-  check: "schema" | "section-coverage" | "template-resolution" | "write-boundary" | "conflict";
+  check:
+    | "schema"
+    | "section-coverage"
+    | "template-resolution"
+    | "write-boundary"
+    | "conflict"
+    | "documentation-data";
   message: string;
   resolved: boolean;
 };

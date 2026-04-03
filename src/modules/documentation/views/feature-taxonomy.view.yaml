@@ -1,0 +1,12 @@
+id: feature-taxonomy
+version: 1
+doc_type: terms
+target: FEATURE-TAXONOMY.md
+source_profile: core
+sections:
+  - id: meta
+    source: meta
+    renderer: renderMetaSection
+render_policies:
+  - id: default
+    mode: append

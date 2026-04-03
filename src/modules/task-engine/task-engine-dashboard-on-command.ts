@@ -28,7 +28,8 @@ export async function runDashboardSummaryCommand(
     id: t.id,
     title: t.title,
     priority: t.priority ?? null,
-    phase: t.phase ?? null
+    phase: t.phase ?? null,
+    features: t.features?.length ? t.features : null
   });
   const readyTop = readyQueue.slice(0, 15).map(toReadyRow);
   const readyImprovementsTop = readyImprovements.slice(0, 15).map(toReadyRow);
@@ -46,20 +47,18 @@ export async function runDashboardSummaryCommand(
   const proposedImprovements = tasks
     .filter((t) => t.status === "proposed" && isImprovementLikeTask(t))
     .sort((a, b) => a.id.localeCompare(b.id));
-  const proposedImprovementsTop = proposedImprovements.slice(0, 15).map((t) => ({
+  const slimListRow = (t: (typeof tasks)[0]) => ({
     id: t.id,
     title: t.title,
-    phase: t.phase ?? null
-  }));
+    phase: t.phase ?? null,
+    features: t.features?.length ? t.features : null
+  });
+  const proposedImprovementsTop = proposedImprovements.slice(0, 15).map(slimListRow);
 
   const proposedExecution = tasks
     .filter((t) => t.status === "proposed" && !isImprovementLikeTask(t) && !isWishlistIntakeTask(t))
     .sort((a, b) => a.id.localeCompare(b.id));
-  const proposedExecutionTop = proposedExecution.slice(0, 15).map((t) => ({
-    id: t.id,
-    title: t.title,
-    phase: t.phase ?? null
-  }));
+  const proposedExecutionTop = proposedExecution.slice(0, 15).map(slimListRow);
 
   const planningSession = toDashboardPlanningSession(await readBuildPlanSession(ctx.workspacePath));
 
@@ -67,7 +66,8 @@ export async function runDashboardSummaryCommand(
   const toProposedRow = (t: (typeof tasks)[0]) => ({
     id: t.id,
     title: t.title,
-    phase: t.phase ?? null
+    phase: t.phase ?? null,
+    features: t.features?.length ? t.features : null
   });
   const readyImprovementsPhaseBuckets = buildDashboardPhaseBucketsForTasks(
     readyImprovements,
@@ -194,7 +194,8 @@ export async function runDashboardSummaryCommand(
           title: suggestion.suggestedNext.title,
           status: suggestion.suggestedNext.status,
           priority: suggestion.suggestedNext.priority ?? null,
-          phase: suggestion.suggestedNext.phase ?? null
+          phase: suggestion.suggestedNext.phase ?? null,
+          features: suggestion.suggestedNext.features?.length ? suggestion.suggestedNext.features : null
         }
       : null,
     dependencyOverview,

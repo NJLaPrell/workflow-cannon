@@ -8,6 +8,26 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.46.0] - 2026-04-02
+
+Phase 46 — **roadmap data generation**, **feature taxonomy docs**, **task `features` persistence** (**`T591`–`T598`**).
+
+### Added
+
+- **Documentation data** — JSON Schema for **`roadmap-data.json`** and **`feature-taxonomy.json`** (`src/modules/documentation/schemas/*.schema.json`); runtime validation (`data-schema-validate.ts`, **`ajv`** dependency).
+- **Deterministic maintainer docs** — **`docs/maintainers/ROADMAP.md`** and **`FEATURE-TAXONOMY.md`** assembled from data + **`roadmap-phase-sections.md`** (`roadmap-render.ts`); **`generate-document`** / **`document-project`** paths; new view **`feature-taxonomy.view.yaml`**.
+- **CI / check** — **`scripts/check-documentation-data.mjs`** (validate JSON + drift gate vs committed markdown); stage in **`pnpm run check`**.
+- **Task engine** — optional **`features`** string array on **`TaskEntity`**; relational column **`features_json`**; kit SQLite **`user_version` 4**; **`create-task`** / **`update-task`** accept **`features`**; **`list-tasks`** filter **`features`** (OR semantics); advisory warnings for unknown taxonomy slugs; **`dashboard-summary`** / extension types include optional **`features`** on task rows.
+
+### Changed
+
+- **Documentation module** — **`0.4.0`** (compatibility matrix).
+- **Task engine module** — **`0.12.0`** (compatibility matrix).
+
+### Docs
+
+- **`AGENT-CLI-MAP.md`**, **`list-tasks.md`**, **`create-task.md`**, **`update-task.md`**, **`module-build-guide.md`**, **`RELEASING.md`**, **`RULES.md`**, **`FEATURE-MATRIX.md`**.
+
 ## [0.45.0] - 2026-04-02
 
 Phase 45 — **`planningGenerationPolicy`**, tests, extension UX, maintainer doc lap (**`T578`–`T584`**).

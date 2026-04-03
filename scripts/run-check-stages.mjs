@@ -74,6 +74,13 @@ const stages = [
     command: process.execPath,
     args: ["scripts/check-maintainer-doc-canonicals.mjs"],
     hint: "Fix stale state.json-as-primary lines or `pnpm run wk -- run` examples; see scripts/check-maintainer-doc-canonicals.mjs."
+  },
+  {
+    id: "documentation-data",
+    label: "Documentation data JSON + ROADMAP/FEATURE-TAXONOMY drift gate",
+    command: process.execPath,
+    args: ["scripts/check-documentation-data.mjs"],
+    hint: "Fix `src/modules/documentation/data/*.json` or regenerate maintainer markdown via `pnpm run wk run generate-document` (ROADMAP.md / FEATURE-TAXONOMY.md); see scripts/check-documentation-data.mjs."
   }
 ];
 

@@ -14,6 +14,7 @@ workspace-kit run list-tasks '{"phaseKey":"28","status":"ready"}'
 workspace-kit run list-tasks '{"includeQueueHints":true,"status":"ready"}'
 workspace-kit run list-tasks '{"type":"improvement","confidenceTier":"medium"}'
 workspace-kit run list-tasks '{"status":"blocked","blockedReasonCategory":"external_dependency"}'
+workspace-kit run list-tasks '{"features":["doc-generation"]}'
 ```
 
 ## Arguments
@@ -23,6 +24,7 @@ workspace-kit run list-tasks '{"status":"blocked","blockedReasonCategory":"exter
 | `status` | string | no | Filter by task status |
 | `phase` | string | no | Filter by exact `task.phase` string |
 | `phaseKey` | string | no | Filter by stable phase key (`task.phaseKey` or inferred from `task.phase`, e.g. `28`) |
+| `features` | string or string[] | no | Filter by feature taxonomy slug(s): **OR** semantics — task matches if `task.features` includes **any** listed slug |
 | `type` | string | no | Filter by task type (for example `improvement`) |
 | `category` | string | no | Filter by `metadata.category` |
 | `tags` | string or string[] | no | Filter by `metadata.tags` (all tags must match) |

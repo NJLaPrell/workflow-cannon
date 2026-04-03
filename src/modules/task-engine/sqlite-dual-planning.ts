@@ -354,8 +354,8 @@ export class SqliteDualPlanningStore {
         id, status, type, title, created_at, updated_at, archived, archived_at,
         priority, phase, phase_key, ownership, approach,
         depends_on_json, unblocks_json, technical_scope_json, acceptance_criteria_json,
-        summary, description, risk, queue_namespace, evidence_key, evidence_kind, metadata_json
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        summary, description, risk, queue_namespace, evidence_key, evidence_kind, metadata_json, features_json
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `;
     const insert = db.prepare(insertSql);
     db.prepare(`DELETE FROM ${TASK_ENGINE_TASKS_TABLE}`).run();
@@ -385,7 +385,8 @@ export class SqliteDualPlanningStore {
         r.queue_namespace,
         r.evidence_key,
         r.evidence_kind,
-        r.metadata_json
+        r.metadata_json,
+        r.features_json ?? "[]"
       );
     }
 

@@ -53,6 +53,7 @@ import {
   SAFE_METADATA_PATH_RE,
   TASK_ID_RE
 } from "./mutation-utils.js";
+import { collectUnknownFeatureSlugWarnings } from "./feature-slug-validation.js";
 
 function readQueueNamespaceArg(args: Record<string, unknown>): string | undefined {
   const q = args.queueNamespace;
@@ -74,7 +75,8 @@ const MUTABLE_TASK_FIELDS = new Set([
   "description",
   "risk",
   "technicalScope",
-  "acceptanceCriteria"
+  "acceptanceCriteria",
+  "features"
 ]);
 
 function strictValidationError(
@@ -117,7 +119,7 @@ function attachPolicyMeta(
 export const taskEngineModule: WorkflowModule = {
   registration: {
     id: "task-engine",
-    version: "0.11.0",
+    version: "0.12.0",
     contractVersion: "1",
     stateSchema: 1,
     capabilities: ["task-engine"],
@@ -276,6 +278,13 @@ export const taskEngineModule: WorkflowModule = {
           : ctx.resolvedActor !== undefined
             ? ctx.resolvedActor
             : undefined;
+      if (args.features !== undefined && !Array.isArray(args.features)) {
+        return {
+          ok: false,
+          code: "invalid-task-schema",
+          message: "create-task field 'features' must be an array of strings when provided"
+        };
+      }
       const id = typeof args.id === "string" && args.id.trim().length > 0 ? args.id.trim() : undefined;
       const title = typeof args.title === "string" && args.title.trim().length > 0 ? args.title.trim() : undefined;
       const type = typeof args.type === "string" && args.type.trim().length > 0 ? args.type.trim() : "workspace-kit";
@@ -314,7 +323,8 @@ export const taskEngineModule: WorkflowModule = {
         description: typeof args.description === "string" ? args.description : undefined,
         risk: typeof args.risk === "string" ? args.risk : undefined,
         technicalScope: Array.isArray(args.technicalScope) ? args.technicalScope.filter((x) => typeof x === "string") : undefined,
-        acceptanceCriteria: Array.isArray(args.acceptanceCriteria) ? args.acceptanceCriteria.filter((x) => typeof x === "string") : undefined
+        acceptanceCriteria: Array.isArray(args.acceptanceCriteria) ? args.acceptanceCriteria.filter((x) => typeof x === "string") : undefined,
+        features: Array.isArray(args.features) ? args.features.filter((x) => typeof x === "string") : undefined
       };
       if (command.name === "create-task-from-plan") {
         const planRef = typeof args.planRef === "string" && args.planRef.trim().length > 0 ? args.planRef.trim() : undefined;
@@ -344,7 +354,8 @@ export const taskEngineModule: WorkflowModule = {
         description: task.description ?? null,
         risk: task.risk ?? null,
         technicalScope: task.technicalScope ?? [],
-        acceptanceCriteria: task.acceptanceCriteria ?? []
+        acceptanceCriteria: task.acceptanceCriteria ?? [],
+        features: task.features ?? []
       };
       const payloadDigest = digestPayload(createPayloadForDigest);
       if (clientMutationId) {
@@ -385,6 +396,7 @@ export const taskEngineModule: WorkflowModule = {
       if (pgCreate.block) {
         return pgCreate.block;
       }
+      const featureSlugWarnings = collectUnknownFeatureSlugWarnings(task.features);
       store.addTask(task);
       store.addMutationEvidence(mutationEvidence(evidenceType, id, actor, {
         initialStatus: task.status,
@@ -398,7 +410,10 @@ export const taskEngineModule: WorkflowModule = {
       }
       await store.save(planningConcurrencySaveOpts(args as Record<string, unknown>));
       const createdData: Record<string, unknown> = { task };
-      attachPolicyMeta(createdData, ctx, planning.sqliteDual.getPlanningGeneration(), pgCreate.warnings);
+      attachPolicyMeta(createdData, ctx, planning.sqliteDual.getPlanningGeneration(), [
+        ...(pgCreate.warnings ?? []),
+        ...featureSlugWarnings
+      ]);
       return {
         ok: true,
         code: "task-created",
@@ -432,7 +447,17 @@ export const taskEngineModule: WorkflowModule = {
           message: `update-task cannot mutate immutable fields: ${invalidKeys.join(", ")}`
         };
       }
-      const updatedTask = { ...task, ...updates, updatedAt: nowIso() };
+      if (updates.features !== undefined) {
+        if (!Array.isArray(updates.features) || !(updates.features as unknown[]).every((x) => typeof x === "string")) {
+          return {
+            ok: false,
+            code: "invalid-task-update",
+            message: "update-task field 'features' must be an array of strings when provided"
+          };
+        }
+      }
+      const updatedTask = { ...task, ...updates, updatedAt: nowIso() } as TaskEntity;
+      const featureSlugWarningsUpd = collectUnknownFeatureSlugWarnings(updatedTask.features);
       const payloadDigest = digestPayload({ taskId, updates });
       if (clientMutationId) {
         const prior = findIdempotentMutation(store, "update-task", taskId, clientMutationId);
@@ -480,7 +505,10 @@ export const taskEngineModule: WorkflowModule = {
       }
       await store.save(planningConcurrencySaveOpts(args as Record<string, unknown>));
       const updData: Record<string, unknown> = { task: updatedTask };
-      attachPolicyMeta(updData, ctx, planning.sqliteDual.getPlanningGeneration(), pgUpd.warnings);
+      attachPolicyMeta(updData, ctx, planning.sqliteDual.getPlanningGeneration(), [
+        ...(pgUpd.warnings ?? []),
+        ...featureSlugWarningsUpd
+      ]);
       return {
         ok: true,
         code: "task-updated",
@@ -819,6 +847,13 @@ export const taskEngineModule: WorkflowModule = {
         typeof args.blockedReasonCategory === "string" && args.blockedReasonCategory.trim().length > 0
           ? args.blockedReasonCategory.trim()
           : undefined;
+      const featuresFilterRaw = args.features;
+      const featuresFilter =
+        typeof featuresFilterRaw === "string"
+          ? [featuresFilterRaw.trim()].filter((s) => s.length > 0)
+          : Array.isArray(featuresFilterRaw)
+            ? featuresFilterRaw.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)
+            : [];
 
       let tasks = includeArchived ? store.getAllTasks() : store.getActiveTasks();
       if (statusFilter) {
@@ -860,6 +895,12 @@ export const taskEngineModule: WorkflowModule = {
         tasks = tasks.filter(
           (t) => readMetadataPath(t.metadata, "blockedReasonCategory") === blockedReasonCategoryFilter
         );
+      }
+      if (featuresFilter.length > 0) {
+        tasks = tasks.filter((t) => {
+          const tf = t.features ?? [];
+          return featuresFilter.some((slug) => tf.includes(slug));
+        });
       }
 
       const data: Record<string, unknown> = {
@@ -969,8 +1010,12 @@ export const taskEngineModule: WorkflowModule = {
                 "metadata.implementationEstimatePack",
                 "ownership",
                 "approach",
+                "summary",
+                "description",
+                "risk",
                 "technicalScope",
-                "acceptanceCriteria"
+                "acceptanceCriteria",
+                "features"
               ]
             },
             {

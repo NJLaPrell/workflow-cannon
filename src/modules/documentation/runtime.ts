@@ -10,6 +10,7 @@ import { autoResolveAiSchema, validateAiSchema } from "./validator.js";
 import { isPathWithinRoot, loadRuntimeConfig } from "./runtime-config.js";
 import { detectConflicts, renderTemplate, resolveExpectedDocFamily, validateSectionCoverage } from "./runtime-render-support.js";
 import { runGenerateAllDocuments } from "./runtime-batch.js";
+import { renderFeatureTaxonomyDocFromSourceRoot, renderRoadmapFromSourceRoot } from "./roadmap-render.js";
 
 type GenerateDocumentArgs = { documentType?: string; options?: DocumentationGenerateOptions };
 
@@ -52,6 +53,7 @@ export async function generateDocument(args: GenerateDocumentArgs, ctx: ModuleLi
   const templatePath = resolve(config.sourceRoot, config.templatesRoot, documentType);
   const aiOutputPath = resolve(aiRoot, documentType);
   const humanOutputPath = resolve(humanRoot, documentType);
+  const isDataDrivenMaintainerDoc = documentType === "ROADMAP.md" || documentType === "FEATURE-TAXONOMY.md";
 
   if (!isPathWithinRoot(aiOutputPath, aiRoot) || !isPathWithinRoot(humanOutputPath, humanRoot)) {
     return {
@@ -76,30 +78,33 @@ export async function generateDocument(args: GenerateDocumentArgs, ctx: ModuleLi
   }
 
   let templateContent = "";
-  let templateFound = existsSync(templatePath);
-  if (templateFound) {
-    templateContent = await readFile(templatePath, "utf8");
-    filesRead.push(templatePath);
-  } else {
-    validationIssues.push({
-      check: "template-resolution",
-      message: `Template not found for '${documentType}'`,
-      resolved: Boolean(options.allowWithoutTemplate)
-    });
-    if (!options.allowWithoutTemplate) {
-      return {
-        ok: false,
-        evidence: {
-          documentType,
-          filesRead,
-          filesWritten,
-          filesSkipped,
-          validationIssues,
-          conflicts,
-          attemptsUsed: 0,
-          timestamp: new Date().toISOString()
-        }
-      };
+  let templateFound = false;
+  if (!isDataDrivenMaintainerDoc) {
+    templateFound = existsSync(templatePath);
+    if (templateFound) {
+      templateContent = await readFile(templatePath, "utf8");
+      filesRead.push(templatePath);
+    } else {
+      validationIssues.push({
+        check: "template-resolution",
+        message: `Template not found for '${documentType}'`,
+        resolved: Boolean(options.allowWithoutTemplate)
+      });
+      if (!options.allowWithoutTemplate) {
+        return {
+          ok: false,
+          evidence: {
+            documentType,
+            filesRead,
+            filesWritten,
+            filesSkipped,
+            validationIssues,
+            conflicts,
+            attemptsUsed: 0,
+            timestamp: new Date().toISOString()
+          }
+        };
+      }
     }
   }
 
@@ -181,7 +186,28 @@ export async function generateDocument(args: GenerateDocumentArgs, ctx: ModuleLi
   });
 
   let humanOutput = `# ${documentType}\n\nGenerated without template.`;
-  if (templateFound) {
+  if (isDataDrivenMaintainerDoc) {
+    const rendered =
+      documentType === "ROADMAP.md"
+        ? renderRoadmapFromSourceRoot(config.sourceRoot)
+        : renderFeatureTaxonomyDocFromSourceRoot(config.sourceRoot);
+    if (!("markdown" in rendered)) {
+      for (const msg of rendered.errors) {
+        validationIssues.push({
+          check: "documentation-data",
+          message: msg,
+          resolved: false
+        });
+      }
+    } else {
+      humanOutput = rendered.markdown;
+      for (const p of rendered.filesRead) {
+        if (!filesRead.includes(p)) {
+          filesRead.push(p);
+        }
+      }
+    }
+  } else if (templateFound) {
     const rendered = renderTemplate(templateContent);
     humanOutput = rendered.output;
     if (rendered.unresolvedBlocks) {
@@ -267,7 +293,8 @@ export async function generateDocument(args: GenerateDocumentArgs, ctx: ModuleLi
       filesSkipped.push(aiOutputPath);
     }
     if (canOverwriteHuman || !humanExists) {
-      await writeFile(humanOutputPath, `${humanOutput}\n`, "utf8");
+      const humanNormalized = `${humanOutput.replace(/\n+$/, "")}\n`;
+      await writeFile(humanOutputPath, humanNormalized, "utf8");
       filesWritten.push(humanOutputPath);
     } else {
       filesSkipped.push(humanOutputPath);

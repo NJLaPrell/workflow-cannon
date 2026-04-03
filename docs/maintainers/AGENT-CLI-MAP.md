@@ -208,6 +208,12 @@ workspace-kit run list-tasks '{"includeQueueHints":true,"status":"ready"}'
 workspace-kit run list-tasks '{"phaseKey":"28","status":"ready"}'
 ```
 
+**Copy-paste — filter by feature taxonomy slug(s)** (OR match: task is included if it lists **any** of the given slugs on **`features`**):
+
+```bash
+workspace-kit run list-tasks '{"features":["doc-generation","task-schema"]}'
+```
+
 **Task id spaces** (when to mint **`T###`**, wishlist intake, vs **`imp-*`**): [`runbooks/wishlist-workflow.md`](./runbooks/wishlist-workflow.md).
 
 Instruction: `src/modules/task-engine/instructions/queue-health.md`. Related runbook: [`runbooks/agent-task-engine-ergonomics.md`](./runbooks/agent-task-engine-ergonomics.md).
@@ -225,8 +231,9 @@ workspace-kit run list-tasks '{"type":"improvement","phase":"Phase 16 - Maintena
 workspace-kit run list-tasks '{"category":"reliability","tags":["ui"],"metadataFilters":{"owner.team":"platform"}}'
 workspace-kit run list-tasks '{"type":"improvement","confidenceTier":"medium"}'
 workspace-kit run list-tasks '{"status":"blocked","blockedReasonCategory":"external_dependency"}'
-workspace-kit run create-task '{"id":"T900","title":"retry-safe mutation","status":"ready","clientMutationId":"agent-run-20260327-1"}'
-workspace-kit run update-task '{"taskId":"T900","updates":{"title":"retry-safe mutation v2"},"clientMutationId":"agent-run-20260327-2"}'
+workspace-kit run list-tasks '{"features":["doc-generation"]}'
+workspace-kit run create-task '{"id":"T900","title":"retry-safe mutation","status":"ready","features":["ci-guards"],"clientMutationId":"agent-run-20260327-1"}'
+workspace-kit run update-task '{"taskId":"T900","updates":{"title":"retry-safe mutation v2","features":["ci-guards","release-versioning"]},"clientMutationId":"agent-run-20260327-2"}'
 workspace-kit run assign-task-phase '{"taskId":"T900","phaseKey":"43","phase":"Phase 43 (example)","clientMutationId":"agent-run-phase-1"}'
 workspace-kit run clear-task-phase '{"taskId":"T900","clientMutationId":"agent-run-phase-2"}'
 workspace-kit run update-workspace-phase-snapshot '{"currentKitPhase":"43","nextKitPhase":"44","dryRun":true}'

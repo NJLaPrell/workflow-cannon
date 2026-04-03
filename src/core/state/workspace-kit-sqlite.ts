@@ -3,7 +3,7 @@ import Database from "better-sqlite3";
 type SqliteDatabase = InstanceType<typeof Database>;
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 3;
+export const KIT_SQLITE_USER_VERSION = 4;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 
@@ -96,6 +96,17 @@ function migrateV2ToV3(db: SqliteDatabase): void {
   }
 }
 
+function migrateV3ToV4(db: SqliteDatabase): void {
+  if (!tableExists(db, TASK_ENGINE_TASKS_TABLE)) {
+    return;
+  }
+  const cols = columnNames(db, TASK_ENGINE_TASKS_TABLE);
+  if (cols.has("features_json")) {
+    return;
+  }
+  db.exec("ALTER TABLE task_engine_tasks ADD COLUMN features_json TEXT NOT NULL DEFAULT '[]'");
+}
+
 /**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
@@ -107,21 +118,28 @@ export function prepareKitSqliteDatabase(db: SqliteDatabase): void {
 }
 
 function migrateKitSqliteSchema(db: SqliteDatabase): void {
-  const raw = db.pragma("user_version", { simple: true });
-  let current = typeof raw === "number" ? raw : Number(raw);
+  const readUv = (): number => {
+    const raw = db.pragma("user_version", { simple: true });
+    return typeof raw === "number" ? raw : Number(raw);
+  };
+  let current = readUv();
   if (current < 1) {
     db.exec(BASELINE_DDL);
-    current = 1;
     db.pragma("user_version = 1");
+    current = 1;
   }
   if (current < 2) {
     migrateV1ToV2(db);
     db.pragma("user_version = 2");
+    current = 2;
   }
-  const afterV2 = db.pragma("user_version", { simple: true });
-  current = typeof afterV2 === "number" ? afterV2 : Number(afterV2);
   if (current < 3) {
     migrateV2ToV3(db);
+    db.pragma("user_version = 3");
+    current = 3;
+  }
+  if (current < 4) {
+    migrateV3ToV4(db);
     db.pragma(`user_version = ${KIT_SQLITE_USER_VERSION}`);
   }
 }

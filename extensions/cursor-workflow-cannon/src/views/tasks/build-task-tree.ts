@@ -14,6 +14,8 @@ export type TreeTaskEntity = {
   phaseKey?: string;
   type?: string;
   metadata?: Record<string, unknown>;
+  /** Feature taxonomy slugs when present on task rows from `list-tasks`. */
+  features?: string[];
 };
 
 export type WishlistRow = { id: string; title: string };
@@ -99,6 +101,11 @@ function isValidTaskRow(t: unknown): t is TreeTaskEntity {
   }
   if (o.phaseKey !== undefined && typeof o.phaseKey !== "string") {
     return false;
+  }
+  if (o.features !== undefined) {
+    if (!Array.isArray(o.features) || !o.features.every((x) => typeof x === "string")) {
+      return false;
+    }
   }
   return true;
 }

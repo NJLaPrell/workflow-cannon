@@ -11,7 +11,7 @@ workspace-kit run update-task '{"taskId":"T400","updates":{"title":"Updated titl
 ## Arguments
 
 - `taskId` (string, required): task to update.
-- `updates` (object, required): mutable fields only.
+- `updates` (object, required): mutable fields only (`title`, `type`, `priority`, `dependsOn`, `unblocks`, `phase`, `phaseKey`, `metadata`, `ownership`, `approach`, `summary`, `description`, `risk`, `technicalScope`, `acceptanceCriteria`, `features`).
 - `actor` (string, optional): actor identifier.
 - `clientMutationId` (string, optional): idempotency key for safe retries.
 

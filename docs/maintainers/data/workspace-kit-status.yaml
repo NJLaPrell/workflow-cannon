@@ -1,8 +1,8 @@
 schema_version: 1
-current_kit_phase: "46"
+current_kit_phase: "47"
 next_kit_phase: "47"
 last_updated: "2026-04-03"
-active_focus: "**Phase 46** (current) — follow **`pnpm run wk run get-next-actions '{}'`** after queue refresh. **Phase 47** — **proposed** agent guidance profile (**RPG party** onboarding tier): **`T585`–`T590`** in task store (`phaseKey` **47**); see **`docs/maintainers/ROADMAP.md`** → Phase 47. **Phase 45** shipped **`v0.45.0`** (**`T578`–`T584`** **`completed`**)."
+active_focus: "**Phase 47** (current) — agent guidance profile (**RPG party** onboarding tier): **`T585`–`T590`** in task store (`phaseKey` **47**); see **`docs/maintainers/ROADMAP.md`**. **Phase 46** shipped **`v0.46.0`** (**`T591`–`T598`** **`completed`** — roadmap data + task **`features`**). **Phase 45** shipped **`v0.45.0`** (**`T578`–`T584`** **`completed`**)."
 blockers: []
 pending_decisions:
   - "Accept Phase 47 bundle (**`T585`–`T590`**) when ready to prioritize agent guidance profile (config + onboarding + resolve + agent-behavior + extension/docs)."
@@ -10,6 +10,7 @@ next_agent_actions:
   - "**Now:** Run `pnpm run wk doctor` then `pnpm run wk run get-next-actions '{}'` for the current phase queue."
   - "2026-04-02: **`create-task`** — Phase **47** proposed **`T585`–`T590`**: agent guidance profile (RPG party catalog), config registry, **`resolve`** CLI, onboarding persistence, **`agent-behavior`** consumption, extension + maintainer docs; **`ROADMAP.md`** Phase 47 section + **`current state`** bullet."
 last_session_summary:
+  - "2026-04-03: Phase **46** closeout — **`v0.46.0`** — **`T591`–`T598`** **`completed`**: JSON Schema documentation data, deterministic **`ROADMAP.md`**/**`FEATURE-TAXONOMY.md`**, CI drift gate, SQLite **`user_version` 4 **`features_json`**, **`list-tasks`** **`features`** filter; **`task-engine`** **0.12.0**, **`documentation`** **0.4.0**; Git tag / GitHub release / Publish NPM: maintainer after merge to **`main`**. **`update-workspace-phase-snapshot`** **`current_kit_phase` 47** / **`next_kit_phase` 47**."
   - "2026-04-02: Phase **45** closeout — **`v0.45.0`** — **`T578`–`T584`** **`completed`**: **`planningGenerationPolicy`**, extension planning-gen UX, improvement/planning gates, tests; **`task-engine`** **0.11.0**; Git tag / GitHub release / Publish NPM: maintainer after merge to **`main`**. **`update-workspace-phase-snapshot`** **`current_kit_phase` 46** / **`next_kit_phase` 47**."
   - "2026-04-03: Split planning-generation **`ready`** queue — **`assign-task-phase`**: **`T574`–`T577`** → **`phaseKey` 44**; **`T578`–`T584`** → **`phaseKey` 45** (core vs policy/tests/extension/audit/docs/research)."
   - "2026-04-03: **Current phase set to 44** — **`update-workspace-phase-snapshot`** **`current_kit_phase` 44** / **`next_kit_phase` 45**; **`assign-task-phase`** **`phaseKey` 44** for **`T574`–`T584`**; **`kit.currentPhaseNumber`** **44** in **`.workspace-kit/config.json`**."
@@ -45,7 +46,7 @@ last_session_summary:
 metrics:
   updated_at: "2026-04-03"
   source: "maintainer"
-  notes: "Phase 45 shipped v0.45.0. Phase 46: follow get-next-actions. Phase 47 proposals T585–T590 (agent guidance profile) recorded — triage when ready."
+  notes: "Phase 46 shipped v0.46.0. Phase 47: T585–T590 (agent guidance profile) — triage when ready."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null

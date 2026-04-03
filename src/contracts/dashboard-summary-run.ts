@@ -8,6 +8,8 @@ export type DashboardTaskRow = {
   title: string;
   priority?: string | null;
   phase?: string | null;
+  /** Feature taxonomy slugs when present on the task (`feature-taxonomy.json`). */
+  features?: string[] | null;
 };
 
 export type DashboardWishlistRow = {
@@ -73,6 +75,7 @@ export type DashboardSummaryData = {
     status: string;
     priority?: string | null;
     phase?: string | null;
+    features?: string[] | null;
   } | null;
   dependencyOverview: Record<string, unknown>;
   blockingAnalysis: unknown[];

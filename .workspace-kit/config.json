@@ -5,12 +5,12 @@
     }
   },
   "kit": {
-    "currentPhaseLabel": "Phase 46 — follow get-next-actions; Phase 45 shipped v0.45.0 (planningGenerationPolicy, extension, T578–T584)",
-    "currentPhaseNumber": 46
+    "currentPhaseLabel": "Phase 47 — agent guidance (T585–T590); Phase 46 shipped v0.46.0",
+    "currentPhaseNumber": 47
   },
   "tasks": {
     "persistenceBackend": "sqlite",
-    "sqliteDatabaseRelativePath": ".workspace-kit/tasks/workspace-kit.db",
-    "planningGenerationPolicy": "require"
+    "planningGenerationPolicy": "require",
+    "sqliteDatabaseRelativePath": ".workspace-kit/tasks/workspace-kit.db"
   }
 }

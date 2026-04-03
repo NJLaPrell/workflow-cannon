@@ -34,6 +34,8 @@ export type TaskEntity = {
   risk?: string;
   technicalScope?: string[];
   acceptanceCriteria?: string[];
+  /** Optional feature taxonomy slugs (`feature-taxonomy.json`); persisted relationally as `features_json`. */
+  features?: string[];
 };
 
 export type GuardResult = {

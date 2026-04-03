@@ -40,6 +40,9 @@ export function validateTaskEntityForStrictMode(task: TaskEntity): string | null
   if (task.acceptanceCriteria !== undefined && !isStringArray(task.acceptanceCriteria)) {
     return `task '${task.id}' has invalid acceptanceCriteria values`;
   }
+  if (task.features !== undefined && !isStringArray(task.features)) {
+    return `task '${task.id}' has invalid features values`;
+  }
   if (task.type === "wishlist_intake" && task.phase !== undefined && String(task.phase).trim().length > 0) {
     return `task '${task.id}': wishlist_intake tasks must not set phase (ideation-only until converted)`;
   }
