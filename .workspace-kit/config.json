@@ -5,8 +5,8 @@
     }
   },
   "kit": {
-    "currentPhaseLabel": "Phase 48 — post v0.47.0 (agent guidance shipped); Phase 47 complete",
-    "currentPhaseNumber": 48
+    "currentPhaseLabel": "Phase 49 — post v0.48.0 (wishlist intake playbook shipped); Phase 48 complete",
+    "currentPhaseNumber": 49
   },
   "tasks": {
     "persistenceBackend": "sqlite",

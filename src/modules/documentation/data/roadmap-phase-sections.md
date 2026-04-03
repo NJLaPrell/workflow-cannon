@@ -1,3 +1,11 @@
+### Phase 48 - Wishlist intake agent workflow -> GitHub release `v0.48.0` (COMPLETE)
+
+- **Primary scope:** **`T604`–`T607`** — playbook **`wishlist-intake-to-execution.md`** composes **`wishlist-workflow.md`**, **`convert-wishlist`**, **`AGENT-CLI-MAP`**; instruction docs **`list-wishlist`** / **`get-wishlist`** match unified SQLite persistence; requestable **`.cursor/rules/playbook-wishlist-intake-to-execution.mdc`**; register playbook id in maintainer + machine indexes.
+- **Outcome:** Agents have an ordered flow to rank **`wishlist_intake`**, ask **now vs delay**, clarify scope, pick a target **`phaseKey`**, and run **`convert-wishlist`** with **`expectedPlanningGeneration`** when **`planningGenerationPolicy`** is **`require`**.
+- **Exit signals:**
+  - Playbook + rule + indexes list stable id **`wishlist-intake-to-execution`** without contradicting **`wishlist-workflow.md`**.
+  - **`pnpm run build`**, **`check`**, **`test`**, **`parity`** pass on the release tag; maintainer evidence per **`RELEASING.md`**.
+
 ### Phase 47 - Agent guidance profile (RPG party) -> GitHub release `v0.47.0` (COMPLETE)
 
 - **Primary scope:** **`T585`–`T590`** — design + ADR (**`T585`**); config registry + validation (**`T586`**); CLI **`resolve`** for effective tier (**`T587`**); onboarding write path (**`T588`**); **`agent-behavior`** advisory integration (**`T589`**); extension + **`FEATURE-MATRIX`** / runbook (**`T590`**).

@@ -19,6 +19,7 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 - **Phase 45 (planningGenerationPolicy + tests + extension + audit + idempotency docs)** shipped as **`v0.45.0`** — **`T578`–`T584`**: config **`tasks.planningGenerationPolicy`** (**`off`** / **`warn`** / **`require`**), **`planning-generation-required`**, doctor line, read payloads include **`planningGenerationPolicy`**, maintainer **`.workspace-kit/config.json`** uses **`require`**, Cursor dashboard + DnD pass **`expectedPlanningGeneration`**, improvement **`generate-recommendations`** / planning **`build-plan`** gates, persisted-config validation for **`tasks.strictValidation`** + **`planningGenerationPolicy`**, ADR appendix (**`T580`**) + **`AGENT-CLI-MAP`** / runbook updates (**`T579`**); **`task-engine`** **`0.11.0`** in **`compatibility-matrix.json`**.
 - **Phase 46 (roadmap data generation + task features)** shipped as **`v0.46.0`** — **`T591`–`T598`**: JSON Schema–validated **`roadmap-data.json`** / **`feature-taxonomy.json`**, deterministic **`ROADMAP.md`** + **`FEATURE-TAXONOMY.md`** generation, CI validation + ROADMAP drift gate; relational **`features_json`** (**`user_version` 4**), **`create-task`** / **`update-task`** / **`list-tasks`** **`features`** filter; **`task-engine`** **`0.12.0`**, **`documentation`** **`0.4.0`** in **`compatibility-matrix.json`**.
 - **Phase 47 (agent guidance profile)** shipped as **`v0.47.0`** — **`T585`–`T590`**: ADR **`ADR-agent-guidance-profile-rpg-party-v1.md`**, **`kit.agentGuidance.*`** config keys, **`resolve-agent-guidance`** / **`set-agent-guidance`**, **`resolve-behavior-profile`** **`agentGuidance.advisoryModulation`**, dashboard tier card; **`workspace-config`** **`0.5.0`**, **`task-engine`** **`0.13.0`**, **`agent-behavior`** **`0.2.0`** in **`compatibility-matrix.json`**.
+- **Phase 48 (wishlist intake agent workflow)** shipped as **`v0.48.0`** — **`T604`–`T607`**: maintainer playbook **`wishlist-intake-to-execution`**, **`list-wishlist`** / **`get-wishlist`** instruction alignment (unified SQLite intake), requestable Cursor rule **`.cursor/rules/playbook-wishlist-intake-to-execution.mdc`**, discovery updates in **`AGENTS.md`**, **`playbooks/README.md`**, **`agent-playbooks.md`**, **`.ai/MACHINE-PLAYBOOKS.md`**.
 - **Phase 36 (policy, integrations, improvement loop, documentation architecture)** shipped as **`v0.36.0`** — see **`docs/maintainers/CHANGELOG.md`** and task-engine `phaseKey` **36** completion.
 - **Phase 37 (maintainer onboarding, shell JSON guidance, improvement churn closure, dashboard terminal parity)** shipped as **`v0.37.0`** — see **`docs/maintainers/CHANGELOG.md`** and task-engine `phaseKey` **37** completion (`imp-*` slice).
 - **Maintainer snapshot** — `docs/maintainers/data/workspace-kit-status.yaml` (`current_kit_phase`, `next_agent_actions`).
@@ -68,6 +69,14 @@ Stable **slugs** for task ↔ feature mapping (see [`FEATURE-TAXONOMY.md`](./FEA
 Each phase ends with a GitHub release. Phases are sequential unless explicitly re-planned.
 
 For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MATRIX.md`.
+
+### Phase 48 - Wishlist intake agent workflow -> GitHub release `v0.48.0` (COMPLETE)
+
+- **Primary scope:** **`T604`–`T607`** — playbook **`wishlist-intake-to-execution.md`** composes **`wishlist-workflow.md`**, **`convert-wishlist`**, **`AGENT-CLI-MAP`**; instruction docs **`list-wishlist`** / **`get-wishlist`** match unified SQLite persistence; requestable **`.cursor/rules/playbook-wishlist-intake-to-execution.mdc`**; register playbook id in maintainer + machine indexes.
+- **Outcome:** Agents have an ordered flow to rank **`wishlist_intake`**, ask **now vs delay**, clarify scope, pick a target **`phaseKey`**, and run **`convert-wishlist`** with **`expectedPlanningGeneration`** when **`planningGenerationPolicy`** is **`require`**.
+- **Exit signals:**
+  - Playbook + rule + indexes list stable id **`wishlist-intake-to-execution`** without contradicting **`wishlist-workflow.md`**.
+  - **`pnpm run build`**, **`check`**, **`test`**, **`parity`** pass on the release tag; maintainer evidence per **`RELEASING.md`**.
 
 ### Phase 47 - Agent guidance profile (RPG party) -> GitHub release `v0.47.0` (COMPLETE)
 

@@ -23,6 +23,14 @@ Pick at most three `proposed` improvement tasks, document rationale, **`accept`*
 
 Human playbook: `docs/maintainers/playbooks/improvement-triage-top-three.md`.
 
+## Wishlist intake → execution
+
+Rank **`wishlist_intake`** items with **`list-wishlist`** / **`get-wishlist`**, confirm operator timing, clarify scope, pick a target **`phaseKey`**, then **`convert-wishlist`** with **`expectedPlanningGeneration`** when policy is **`require`**.
+
+Human playbook: `docs/maintainers/playbooks/wishlist-intake-to-execution.md`.
+
+Optional Cursor rule: `.cursor/rules/playbook-wishlist-intake-to-execution.mdc`.
+
 ### Confidence tiers (improvement inbox)
 
 Recommendation tasks carry **`metadata.confidenceTier`** (`high` / `medium` / `low`). Filter with:

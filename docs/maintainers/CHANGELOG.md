@@ -12,6 +12,20 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 - **Repository hygiene** — tracked `.workspace-kit/backups` snapshot tree; one-off migration scripts (`architect-review-proposals-2026-03-31`, `phase29-architect-ready-tasks`, `apply-phase-30-33-architect-tasks`, `convert-open-wishlist-to-ready`, `rewrite-active-improvements`, `seed-plan-wishlist-intake`); orphan `docs/policies/*`, `docs/workflows/task-pr-delivery-workflow.md`, and misleading `docs/adr/README.md`; superseded maintainer notes `RUNTIME-PATH-AUDIT-PHASE11.md`, `ARCHITECTURAL-REVIEW-FINDINGS.md`. **`.gitignore`** now excludes `.workspace-kit/backups/`.
 
+## [0.48.0] - 2026-04-03
+
+Phase 48 — **wishlist intake agent workflow** (**`T604`–`T607`**).
+
+### Added
+
+- **Playbook** — **`docs/maintainers/playbooks/wishlist-intake-to-execution.md`** (id **`wishlist-intake-to-execution`**): rank **`wishlist_intake`**, operator **now vs delay**, scope clarification, target **`phaseKey`**, **`convert-wishlist`** with planning-generation hygiene; links **`TERMS.md`** / **`wishlist-workflow.md`** for id spaces.
+- **Cursor** — requestable **`.cursor/rules/playbook-wishlist-intake-to-execution.mdc`**.
+
+### Changed
+
+- **Task-engine instructions** — **`list-wishlist.md`**, **`get-wishlist.md`** describe unified SQLite (or JSON task document) persistence; legacy **`.workspace-kit/wishlist/state.json`** called out as migration-only.
+- **Discovery** — **`docs/maintainers/playbooks/README.md`**, **`AGENTS.md`**, **`runbooks/agent-playbooks.md`**, **`.ai/MACHINE-PLAYBOOKS.md`** register the new playbook id.
+
 ## [0.47.0] - 2026-04-02
 
 Phase 47 — **agent guidance profile (RPG party v1)** (**`T585`–`T590`**).
