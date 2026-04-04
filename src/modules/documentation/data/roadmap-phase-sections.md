@@ -25,3 +25,8 @@
 - **Outcome:** Supervisors can register assignments against **`T###`** rows, workers submit structured handoffs, supervisors reconcile or block/cancel; persistence map and doctor surface **`user_version` 7**; team path complements subagent registry without launching remote workers from Node.
 - **Exit signals:**
   - **`pnpm run build`**, **`check`**, **`test`**, **`parity`**, **`pre-merge-gates`** on the release tag; maintainer evidence per **`RELEASING.md`**.
+
+### Phase 59 - Cursor chat prefill experiments (CANCELLED)
+
+- **Primary scope (was):** **`T668`–`T670`** — hands-on Cursor prefill matrix, recommendation doc, optional hardening (**non-release** metadata).
+- **Outcome:** Maintainer **`run-transition`** **`cancel`** on all three tasks **2026-04-04**; no **`v0.59.0`**; execution queue returns to improvement / backlog until replanned.

@@ -12,7 +12,7 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 ## Current state
 
 - **Shipped:** latest **`v0.58.0`** (Phase 58 — team execution v1: SQLite **`user_version` 7**, **`team-execution`** module, ADR **`ADR-team-execution-v1.md`**). Phase 57 (**`v0.57.0`**, subagents) and prior trains remain summarized in **[`ROADMAP-archive.md`](./ROADMAP-archive.md)**; version facts in **[`CHANGELOG.md`](./CHANGELOG.md)**.
-- **Next:** Phase **59** execution queue (**`T668`–`T670`**, Cursor chat prefill experiment track — maintainer snapshot + task-engine state).
+- **Next:** Phase **59** track **`T668`–`T670`** **`cancelled`** (2026-04-04); use **`get-next-actions`** / **`list-tasks`** for current **`ready`** work until new execution scope is **`accept`**ed. Maintainer snapshot + task-engine state remain authoritative.
 - **Maintainer snapshot** — `docs/maintainers/data/workspace-kit-status.yaml` (`current_kit_phase`, `next_agent_actions`).
 - **Execution queue** — canonical task-engine store (default `.workspace-kit/tasks/workspace-kit.db`; JSON opt-out `.workspace-kit/tasks/state.json`); use `pnpm run wk run list-tasks` / `get-next-actions` rather than inferring phase from prose alone.
 - **Product / feature inventory** — **`docs/maintainers/FEATURE-MATRIX.md`**.
@@ -91,6 +91,11 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 - **Outcome:** Supervisors can register assignments against **`T###`** rows, workers submit structured handoffs, supervisors reconcile or block/cancel; persistence map and doctor surface **`user_version` 7**; team path complements subagent registry without launching remote workers from Node.
 - **Exit signals:**
   - **`pnpm run build`**, **`check`**, **`test`**, **`parity`**, **`pre-merge-gates`** on the release tag; maintainer evidence per **`RELEASING.md`**.
+
+### Phase 59 - Cursor chat prefill experiments (CANCELLED)
+
+- **Primary scope (was):** **`T668`–`T670`** — hands-on Cursor prefill matrix, recommendation doc, optional hardening (**non-release** metadata).
+- **Outcome:** Maintainer **`run-transition`** **`cancel`** on all three tasks **2026-04-04**; no **`v0.59.0`**; execution queue returns to improvement / backlog until replanned.
 
 ## Recorded decisions
 
