@@ -6,13 +6,13 @@
   "type": "object",
   "required": ["schemaVersion", "packageVersion", "moduleId", "commands"],
   "additionalProperties": false,
-  "packageVersion": "0.52.0",
+  "packageVersion": "0.53.0",
   "properties": {
     "schemaVersion": {
       "const": 1
     },
     "packageVersion": {
-      "const": "0.52.0",
+      "const": "0.53.0",
       "description": "Must match package.json version."
     },
     "moduleId": {
@@ -29,6 +29,7 @@
         "archive-task",
         "add-dependency",
         "assign-task-phase",
+        "backfill-task-feature-links",
         "backup-planning-sqlite",
         "remove-dependency",
         "get-dependency-graph",
@@ -51,10 +52,13 @@
         "queue-health",
         "replay-queue-snapshot",
         "explain-task-engine-model",
+        "export-feature-taxonomy-json",
         "migrate-task-persistence",
         "migrate-wishlist-intake",
         "dashboard-summary",
         "get-module-state",
+        "list-components",
+        "list-features",
         "list-module-states"
       ],
       "additionalProperties": false,
@@ -67,6 +71,7 @@
         "archive-task": { "$ref": "#/$defs/contractArchiveTask" },
         "add-dependency": { "$ref": "#/$defs/contractDependencyMutation" },
         "assign-task-phase": { "$ref": "#/$defs/contractAssignTaskPhase" },
+        "backfill-task-feature-links": { "$ref": "#/$defs/contractBase" },
         "backup-planning-sqlite": { "$ref": "#/$defs/contractBackupPlanningSqlite" },
         "remove-dependency": { "$ref": "#/$defs/contractDependencyMutation" },
         "get-dependency-graph": { "$ref": "#/$defs/contractDependencyGraph" },
@@ -89,10 +94,13 @@
         "queue-health": { "$ref": "#/$defs/contractQueueHealth" },
         "replay-queue-snapshot": { "$ref": "#/$defs/contractBase" },
         "explain-task-engine-model": { "$ref": "#/$defs/contractExplainTaskEngineModel" },
+        "export-feature-taxonomy-json": { "$ref": "#/$defs/contractBase" },
         "migrate-task-persistence": { "$ref": "#/$defs/contractMigrateTaskPersistence" },
         "migrate-wishlist-intake": { "$ref": "#/$defs/contractMigrateWishlistIntake" },
         "dashboard-summary": { "$ref": "#/$defs/contractDashboardSummary" },
         "get-module-state": { "$ref": "#/$defs/contractGetModuleState" },
+        "list-components": { "$ref": "#/$defs/contractBase" },
+        "list-features": { "$ref": "#/$defs/contractListFeatures" },
         "list-module-states": { "$ref": "#/$defs/contractListModuleStates" }
       }
     }
@@ -548,12 +556,44 @@
                 "phaseKey": { "type": "string" },
                 "includeQueueHints": { "type": "boolean" },
                 "confidenceTier": { "type": "string" },
-                "blockedReasonCategory": { "type": "string" }
+                "blockedReasonCategory": { "type": "string" },
+                "features": {
+                  "oneOf": [
+                    { "type": "string" },
+                    { "type": "array", "items": { "type": "string" } }
+                  ]
+                },
+                "featureId": { "type": "string" },
+                "componentId": { "type": "string" },
+                "queueNamespace": { "type": "string" }
               }
             },
             "responseData": {
               "type": "object",
               "required": ["tasks", "count", "scope"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractListFeatures": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "componentId": { "type": "string" },
+                "actor": { "type": "string" },
+                "config": { "type": "object" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["features", "count"],
               "additionalProperties": true
             }
           }

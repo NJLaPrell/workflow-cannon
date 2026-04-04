@@ -1,11 +1,12 @@
 {
   "schemaVersion": 1,
-  "sourceSchemaPackageVersion": "0.52.0",
+  "sourceSchemaPackageVersion": "0.53.0",
   "pilotCommands": [
     "run-transition",
     "dashboard-summary",
     "create-task",
-    "update-task"
+    "update-task",
+    "list-features"
   ],
   "commands": {
     "run-transition": {
@@ -142,6 +143,21 @@
         }
       },
       "additionalProperties": true
+    },
+    "list-features": {
+      "type": "object",
+      "properties": {
+        "componentId": {
+          "type": "string"
+        },
+        "actor": {
+          "type": "string"
+        },
+        "config": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
     }
   }
 }

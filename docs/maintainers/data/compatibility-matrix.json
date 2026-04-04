@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-04-03T21:30:00.000Z",
+  "generatedAt": "2026-04-04T12:00:00.000Z",
   "runtime": {
     "runtimeVersion": "0.1",
     "moduleContractVersion": "1",
@@ -18,7 +18,7 @@
     },
     {
       "id": "documentation",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "contractVersion": "1",
       "compatibilityLevel": "strict",
       "supportedRuntime": "0.1",
@@ -26,7 +26,7 @@
     },
     {
       "id": "task-engine",
-      "version": "0.14.1",
+      "version": "0.15.0",
       "contractVersion": "1",
       "compatibilityLevel": "strict",
       "supportedRuntime": "0.1",

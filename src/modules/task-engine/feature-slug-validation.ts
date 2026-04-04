@@ -17,6 +17,12 @@ function loadKnownFeatureSlugs(): Set<string> {
   if (slugSet) {
     return slugSet;
   }
+  slugSet = loadKnownFeatureSlugsFromJsonFile();
+  return slugSet;
+}
+
+/** Load taxonomy slugs from shipped `feature-taxonomy.json` (no memo — prefer `loadKnownFeatureSlugs()` for hot path). */
+export function loadKnownFeatureSlugsFromJsonFile(): Set<string> {
   const path = resolveFeatureTaxonomyPath();
   const raw = JSON.parse(readFileSync(path, "utf8")) as { features?: Array<{ slug?: string }> };
   const next = new Set<string>();
@@ -25,16 +31,18 @@ function loadKnownFeatureSlugs(): Set<string> {
       next.add(f.slug);
     }
   }
-  slugSet = next;
-  return slugSet;
+  return next;
 }
 
-/** Advisory warnings for slugs not present in shipped `feature-taxonomy.json`. */
-export function collectUnknownFeatureSlugWarnings(features: string[] | undefined): string[] {
+/** Advisory warnings for slugs not present in the known set (registry or JSON fallback). */
+export function collectUnknownFeatureSlugWarnings(
+  features: string[] | undefined,
+  knownSlugs?: Set<string>
+): string[] {
   if (!features?.length) {
     return [];
   }
-  const known = loadKnownFeatureSlugs();
+  const known = knownSlugs ?? loadKnownFeatureSlugs();
   const unknown = features.filter((s) => !known.has(s));
   if (unknown.length === 0) {
     return [];

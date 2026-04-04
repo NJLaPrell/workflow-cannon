@@ -1,5 +1,8 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import Database from "better-sqlite3";
+import { readKitSqliteUserVersion } from "../../core/state/workspace-kit-sqlite.js";
+import { KIT_FEATURE_REGISTRY_MIN_USER_VERSION } from "../../core/state/feature-registry-migration.js";
 import type { FeatureTaxonomyData, RoadmapData } from "./data-schema-validate.js";
 import { documentationDataDir, readAndValidateFeatureTaxonomyData, readAndValidateRoadmapData } from "./data-schema-validate.js";
 
@@ -68,7 +71,7 @@ export function renderFeatureTaxonomyMaintainerDoc(tax: FeatureTaxonomyData): st
     "",
     "## Categories and features",
     "",
-    "The table below is generated from **`src/modules/documentation/data/feature-taxonomy.json`**.",
+    "The table below is generated from the **planning SQLite feature registry** when available (`user_version` 5+), otherwise from **`src/modules/documentation/data/feature-taxonomy.json`** (export with `export-feature-taxonomy-json`).",
     "",
     renderRoadmapTaxonomyTable(tax),
     "",
@@ -83,7 +86,74 @@ export type RoadmapRenderResult = {
   filesRead: string[];
 };
 
-export function renderRoadmapFromSourceRoot(sourceRoot: string): RoadmapRenderResult | { ok: false; errors: string[] } {
+export type RoadmapRenderOptions = {
+  /** When set and `user_version` ≥ 5, taxonomy tables are read from the registry instead of JSON. */
+  planningDatabaseAbsolutePath?: string;
+};
+
+/** Read taxonomy rows from planning SQLite (readonly; no migrations). */
+export function loadFeatureTaxonomyDataFromPlanningDbAbsolute(dbAbsPath: string): FeatureTaxonomyData | null {
+  if (!existsSync(dbAbsPath)) {
+    return null;
+  }
+  let uv = 0;
+  try {
+    uv = readKitSqliteUserVersion(dbAbsPath);
+  } catch {
+    return null;
+  }
+  if (uv < KIT_FEATURE_REGISTRY_MIN_USER_VERSION) {
+    return null;
+  }
+  const db = new Database(dbAbsPath, { readonly: true });
+  try {
+    const rows = db
+      .prepare(
+        `SELECT c.display_name AS category, f.id AS slug, f.name AS name, f.covers AS covers
+         FROM task_engine_features f
+         INNER JOIN task_engine_components c ON c.id = f.component_id
+         ORDER BY c.sort_order ASC, c.id ASC, f.id ASC`
+      )
+      .all() as Array<{ category: string; slug: string; name: string; covers: string }>;
+    if (rows.length === 0) {
+      return null;
+    }
+    return { schemaVersion: 1, features: rows };
+  } catch {
+    return null;
+  } finally {
+    db.close();
+  }
+}
+
+function resolveTaxonomyForRender(
+  sourceRoot: string,
+  taxonomyFile: string,
+  options: RoadmapRenderOptions | undefined,
+  filesRead: string[]
+): { ok: true; data: FeatureTaxonomyData; jsonPath: string } | { ok: false; errors: string[] } {
+  const dbPath = options?.planningDatabaseAbsolutePath;
+  if (dbPath) {
+    const fromDb = loadFeatureTaxonomyDataFromPlanningDbAbsolute(dbPath);
+    if (fromDb && fromDb.features.length > 0) {
+      filesRead.push(dbPath);
+      const dir = documentationDataDir(sourceRoot);
+      const jsonPath = join(dir, taxonomyFile);
+      return { ok: true, data: fromDb, jsonPath };
+    }
+  }
+  const tax = readAndValidateFeatureTaxonomyData(sourceRoot, taxonomyFile);
+  if (!tax.ok) {
+    return { ok: false, errors: tax.errors };
+  }
+  filesRead.push(tax.path);
+  return { ok: true, data: tax.data, jsonPath: tax.path };
+}
+
+export function renderRoadmapFromSourceRoot(
+  sourceRoot: string,
+  options?: RoadmapRenderOptions
+): RoadmapRenderResult | { ok: false; errors: string[] } {
   const rd = readAndValidateRoadmapData(sourceRoot);
   if (!rd.ok) {
     return { ok: false, errors: rd.errors };
@@ -97,30 +167,38 @@ export function renderRoadmapFromSourceRoot(sourceRoot: string): RoadmapRenderRe
   } catch (e) {
     return { ok: false, errors: [`${phasePath}: ${(e as Error).message}`] };
   }
-  const tax = readAndValidateFeatureTaxonomyData(sourceRoot, data.featureTaxonomy.taxonomyFile);
+  const filesRead: string[] = [rd.path, phasePath];
+  const tax = resolveTaxonomyForRender(sourceRoot, data.featureTaxonomy.taxonomyFile, options, filesRead);
   if (!tax.ok) {
     return { ok: false, errors: tax.errors };
   }
   const markdown = renderRoadmapMarkdown(data, phaseBody, tax.data);
   return {
     markdown,
-    filesRead: [rd.path, phasePath, tax.path]
+    filesRead
   };
 }
 
 export function renderFeatureTaxonomyDocFromSourceRoot(
-  sourceRoot: string
+  sourceRoot: string,
+  options?: RoadmapRenderOptions
 ): RoadmapRenderResult | { ok: false; errors: string[] } {
   const roadmap = readAndValidateRoadmapData(sourceRoot);
   if (!roadmap.ok) {
     return { ok: false, errors: roadmap.errors };
   }
-  const tax = readAndValidateFeatureTaxonomyData(sourceRoot, roadmap.data.featureTaxonomy.taxonomyFile);
+  const filesRead: string[] = [roadmap.path];
+  const tax = resolveTaxonomyForRender(
+    sourceRoot,
+    roadmap.data.featureTaxonomy.taxonomyFile,
+    options,
+    filesRead
+  );
   if (!tax.ok) {
     return { ok: false, errors: tax.errors };
   }
   return {
     markdown: renderFeatureTaxonomyMaintainerDoc(tax.data),
-    filesRead: [roadmap.path, tax.path]
+    filesRead
   };
 }

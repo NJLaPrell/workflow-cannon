@@ -55,6 +55,16 @@ import {
 } from "./mutation-utils.js";
 import { collectUnknownFeatureSlugWarnings } from "./feature-slug-validation.js";
 import {
+  featureRegistryActiveOnConnection,
+  listFeatureIdsForComponent,
+  listRegistryComponents,
+  listRegistryFeatures,
+  resolveKnownFeatureSlugSet
+} from "./persistence/feature-registry-queries.js";
+import { runBackfillTaskFeatureLinks } from "./persistence/backfill-task-feature-links-runtime.js";
+import { runExportFeatureTaxonomyJson } from "./persistence/export-feature-taxonomy-json-runtime.js";
+import { findUnknownFeatureIds, taskTypeFailsClosedOnUnknownFeatures } from "./task-feature-mutation-validation.js";
+import {
   CLI_REMEDIATION_DOCS,
   CLI_REMEDIATION_INSTRUCTIONS
 } from "../../core/cli-remediation.js";
@@ -134,7 +144,7 @@ function attachPolicyMeta(
 export const taskEngineModule: WorkflowModule = {
   registration: {
     id: "task-engine",
-    version: "0.14.1",
+    version: "0.15.0",
     contractVersion: "1",
     stateSchema: 1,
     capabilities: ["task-engine"],
@@ -222,6 +232,59 @@ export const taskEngineModule: WorkflowModule = {
       };
     }
     const store = planning.taskStore;
+
+    if (command.name === "list-components") {
+      const db = planning.sqliteDual.getDatabase();
+      if (!featureRegistryActiveOnConnection(db)) {
+        return {
+          ok: false,
+          code: "invalid-task-schema",
+          message: "list-components requires kit SQLite user_version >= 5 (relational feature registry)"
+        };
+      }
+      const components = listRegistryComponents(db);
+      const data: Record<string, unknown> = { components, count: components.length };
+      attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
+      return {
+        ok: true,
+        code: "feature-components-listed",
+        message: `${components.length} component(s)`,
+        data
+      };
+    }
+
+    if (command.name === "list-features") {
+      const db = planning.sqliteDual.getDatabase();
+      if (!featureRegistryActiveOnConnection(db)) {
+        return {
+          ok: false,
+          code: "invalid-task-schema",
+          message: "list-features requires kit SQLite user_version >= 5 (relational feature registry)"
+        };
+      }
+      const componentId = typeof args.componentId === "string" ? args.componentId.trim() : undefined;
+      const features = listRegistryFeatures(db, componentId);
+      const data: Record<string, unknown> = {
+        features,
+        count: features.length,
+        componentId: componentId ?? null
+      };
+      attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
+      return {
+        ok: true,
+        code: "feature-rows-listed",
+        message: `${features.length} feature(s)`,
+        data
+      };
+    }
+
+    if (command.name === "backfill-task-feature-links") {
+      return runBackfillTaskFeatureLinks(ctx, args as Record<string, unknown>);
+    }
+
+    if (command.name === "export-feature-taxonomy-json") {
+      return runExportFeatureTaxonomyJson(ctx, args as Record<string, unknown>);
+    }
 
     if (command.name === "run-transition") {
       const taskId = typeof args.taskId === "string" ? args.taskId : undefined;
@@ -420,7 +483,16 @@ export const taskEngineModule: WorkflowModule = {
       if (pgCreate.block) {
         return pgCreate.block;
       }
-      const featureSlugWarnings = collectUnknownFeatureSlugWarnings(task.features);
+      const knownSlugs = resolveKnownFeatureSlugSet(planning.sqliteDual.getDatabase());
+      const badFeat = findUnknownFeatureIds(task.features, knownSlugs);
+      if (badFeat.length > 0 && taskTypeFailsClosedOnUnknownFeatures(task.type)) {
+        return {
+          ok: false,
+          code: "unknown-feature-id",
+          message: `Unknown feature id(s): ${badFeat.join(", ")}`
+        };
+      }
+      const featureSlugWarnings = collectUnknownFeatureSlugWarnings(task.features, knownSlugs);
       store.addTask(task);
       store.addMutationEvidence(mutationEvidence(evidenceType, id, actor, {
         initialStatus: task.status,
@@ -486,7 +558,16 @@ export const taskEngineModule: WorkflowModule = {
         }
       }
       const updatedTask = { ...task, ...updates, updatedAt: nowIso() } as TaskEntity;
-      const featureSlugWarningsUpd = collectUnknownFeatureSlugWarnings(updatedTask.features);
+      const knownUpd = resolveKnownFeatureSlugSet(planning.sqliteDual.getDatabase());
+      const badUpd = findUnknownFeatureIds(updatedTask.features, knownUpd);
+      if (badUpd.length > 0 && taskTypeFailsClosedOnUnknownFeatures(updatedTask.type)) {
+        return {
+          ok: false,
+          code: "unknown-feature-id",
+          message: `Unknown feature id(s): ${badUpd.join(", ")}`
+        };
+      }
+      const featureSlugWarningsUpd = collectUnknownFeatureSlugWarnings(updatedTask.features, knownUpd);
       const payloadDigest = digestPayload({ taskId, updates });
       if (clientMutationId) {
         const prior = findIdempotentMutation(store, "update-task", taskId, clientMutationId);
@@ -786,7 +867,12 @@ export const taskEngineModule: WorkflowModule = {
     }
 
     if (command.name === "dashboard-summary") {
-      return runDashboardSummaryCommand(ctx, store, planning.sqliteDual.getPlanningGeneration());
+      return runDashboardSummaryCommand(
+        ctx,
+        store,
+        planning.sqliteDual.getPlanningGeneration(),
+        planning.sqliteDual
+      );
     }
 
     if (command.name === "queue-health") {
@@ -942,6 +1028,27 @@ export const taskEngineModule: WorkflowModule = {
           const tf = t.features ?? [];
           return featuresFilter.some((slug) => tf.includes(slug));
         });
+      }
+      const featureIdSingle =
+        typeof args.featureId === "string" && args.featureId.trim().length > 0 ? args.featureId.trim() : undefined;
+      const componentIdFilter =
+        typeof args.componentId === "string" && args.componentId.trim().length > 0
+          ? args.componentId.trim()
+          : undefined;
+      if (featureIdSingle) {
+        tasks = tasks.filter((t) => (t.features ?? []).includes(featureIdSingle));
+      }
+      if (componentIdFilter) {
+        const ldb = planning.sqliteDual.getDatabase();
+        if (!featureRegistryActiveOnConnection(ldb)) {
+          return {
+            ok: false,
+            code: "invalid-task-schema",
+            message: "list-tasks componentId filter requires kit SQLite user_version >= 5 (feature registry)"
+          };
+        }
+        const compFeatIds = new Set(listFeatureIdsForComponent(ldb, componentIdFilter));
+        tasks = tasks.filter((t) => (t.features ?? []).some((f) => compFeatIds.has(f)));
       }
 
       const data: Record<string, unknown> = {

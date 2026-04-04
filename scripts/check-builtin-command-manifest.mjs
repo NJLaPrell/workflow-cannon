@@ -20,7 +20,9 @@ const KNOWN_POLICY_OPERATION_IDS = new Set([
   "tasks.run-transition",
   "approvals.review-item",
   "improvement.generate-recommendations",
-  "improvement.ingest-transcripts"
+  "improvement.ingest-transcripts",
+  "task-engine.backfill-task-feature-links",
+  "task-engine.export-feature-taxonomy-json"
 ]);
 
 const ALLOWED_SENSITIVITY = new Set(["non-sensitive", "sensitive", "sensitive-with-dryrun"]);

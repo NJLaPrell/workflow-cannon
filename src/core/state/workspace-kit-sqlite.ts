@@ -1,9 +1,10 @@
 import Database from "better-sqlite3";
+import { seedFeatureRegistryIfEmpty } from "./feature-registry-migration.js";
 
 type SqliteDatabase = InstanceType<typeof Database>;
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 4;
+export const KIT_SQLITE_USER_VERSION = 5;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 
@@ -107,11 +108,19 @@ function migrateV3ToV4(db: SqliteDatabase): void {
   db.exec("ALTER TABLE task_engine_tasks ADD COLUMN features_json TEXT NOT NULL DEFAULT '[]'");
 }
 
+function migrateV4ToV5(db: SqliteDatabase): void {
+  if (!tableExists(db, TASK_ENGINE_TASKS_TABLE)) {
+    return;
+  }
+  seedFeatureRegistryIfEmpty(db, TASK_ENGINE_TASKS_TABLE);
+}
+
 /**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
  */
 export function prepareKitSqliteDatabase(db: SqliteDatabase): void {
+  db.pragma("foreign_keys = ON");
   db.pragma("busy_timeout = 10000");
   db.pragma("journal_mode = WAL");
   migrateKitSqliteSchema(db);
@@ -140,6 +149,11 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
   }
   if (current < 4) {
     migrateV3ToV4(db);
+    db.pragma("user_version = 4");
+    current = 4;
+  }
+  if (current < 5) {
+    migrateV4ToV5(db);
     db.pragma(`user_version = ${KIT_SQLITE_USER_VERSION}`);
   }
 }

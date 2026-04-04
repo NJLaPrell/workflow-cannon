@@ -12,6 +12,27 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 - **Git / playbooks** — Renamed **`task-to-main`** → **`task-to-phase-branch`**: execution tasks merge via PR into **`release/phase-<N>`**; phase branch merges to **`main`** at closeout per **`phase-closeout-and-release.md`**. Cursor extension command **`workflowCannon.chat.prefillTaskToPhaseBranch`** (was **`prefillTaskToMain`**). Example playbook runner: **`examples/playbooks/pilot-task-to-phase-branch.json`**.
 
+## [0.53.0] - 2026-04-04
+
+Phase 53 — **relational feature registry** (**`T630`–`T639`**): SQLite taxonomy tables, authoritative **`task_engine_task_features`** junction, registry-aware task CRUD and **`list-tasks`** filters, maintainer backfill/export commands, doc generation from the planning DB when present, and CI-stable committed **`ROADMAP.md`** / **`FEATURE-TAXONOMY.md`** via **`WORKSPACE_KIT_DOC_TAXONOMY_JSON_ONLY`**.
+
+### Added
+
+- **ADR** — **`docs/maintainers/ADR-relational-feature-registry.md`** (Path A, junction Option 1).
+- **SQLite** — **`user_version` 5**: **`task_engine_components`**, **`task_engine_features`**, **`task_engine_task_features`**; **`PRAGMA foreign_keys = ON`** on kit SQLite opens; idempotent migration + seed from **`feature-taxonomy.json`**.
+- **Task engine** — **`list-components`**, **`list-features`**, **`backfill-task-feature-links`**, **`export-feature-taxonomy-json`**; **`list-tasks`** filters **`featureId`** / **`componentId`**; error code **`unknown-feature-id`** for invalid feature slugs on execution tasks.
+- **Documentation** — Roadmap / feature-taxonomy rendering can load taxonomy from the planning database; set **`WORKSPACE_KIT_DOC_TAXONOMY_JSON_ONLY=1`** when regenerating committed maintainer markdown so **`pnpm run check`** matches CI (JSON sources) when a local planning DB exists.
+- **Extension contract** — Optional **`featureDetails`** on **`dashboard-summary`** task rows (shared **`@workflow-cannon/workspace-kit/contracts/dashboard-summary-run`**).
+
+### Changed
+
+- **Persistence** — Task feature links authoritative in the junction; legacy **`features_json`** cleared on persist when the registry is active; reads merge junction + legacy for transition windows.
+- **Run contracts / pilot** — Schema **`0.53.0`**; pilot snapshot includes **`list-features`** and extended **`list-tasks`** / **`contractListFeatures`**.
+
+### Changed (module version)
+
+- **Task-engine module** — **`0.15.0`**; **documentation module** — **`0.5.0`** (compatibility matrix).
+
 ## [0.52.0] - 2026-04-03
 
 Phase 52 — **agent/human CLI ergonomics** (**`T624`–`T629`**): stable failure **`remediation`** metadata, doctor **`errorRemediationCatalog`**, pilot **`--schema-only`** JSON Schema + **`sampleArgs`**, extension + visual guide cross-links.

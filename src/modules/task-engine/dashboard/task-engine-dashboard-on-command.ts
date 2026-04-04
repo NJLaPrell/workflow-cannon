@@ -1,5 +1,5 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
-import type { DashboardSummaryData } from "../../../contracts/dashboard-summary-run.js";
+import type { DashboardFeatureDetail, DashboardSummaryData } from "../../../contracts/dashboard-summary-run.js";
 import { resolveAgentGuidanceFromEffectiveConfig } from "../../../core/agent-guidance-catalog.js";
 import { getPlanningGenerationPolicy } from "../planning-config.js";
 import { getNextActions, isImprovementLikeTask } from "../suggestions.js";
@@ -12,11 +12,36 @@ import {
 import { readBuildPlanSession, toDashboardPlanningSession } from "../../../core/planning/build-plan-session-file.js";
 import { isWishlistIntakeTask, listWishlistIntakeTasksAsItems } from "../wishlist/wishlist-intake.js";
 import type { TaskStore } from "../persistence/store.js";
+import type { SqliteDualPlanningStore } from "../persistence/sqlite-dual-planning.js";
+import { buildFeatureEnrichmentBySlug, type FeatureEnrichment } from "../persistence/feature-registry-queries.js";
+
+function featureDetailsForTask(
+  slugs: string[] | undefined,
+  enrich: Map<string, FeatureEnrichment>
+): DashboardFeatureDetail[] | null {
+  if (!slugs?.length) {
+    return null;
+  }
+  const out: DashboardFeatureDetail[] = [];
+  for (const s of slugs) {
+    const row = enrich.get(s);
+    if (row) {
+      out.push({
+        slug: row.slug,
+        name: row.name,
+        componentId: row.componentId,
+        componentDisplayName: row.componentDisplayName
+      });
+    }
+  }
+  return out.length > 0 ? out : null;
+}
 
 export async function runDashboardSummaryCommand(
   ctx: ModuleLifecycleContext,
   store: TaskStore,
-  planningGeneration: number
+  planningGeneration: number,
+  sqliteDual?: SqliteDualPlanningStore
 ): Promise<ModuleCommandResult> {
   const tasks = store.getActiveTasks();
   const suggestion = getNextActions(tasks);
@@ -25,12 +50,14 @@ export async function runDashboardSummaryCommand(
   const readyImprovementCount = readyQueue.filter(isImprovementLikeTask).length;
   const readyImprovements = readyQueue.filter(isImprovementLikeTask);
   const readyExecution = readyQueue.filter((t) => !isImprovementLikeTask(t));
+  const enrich = sqliteDual ? buildFeatureEnrichmentBySlug(sqliteDual.getDatabase()) : new Map();
   const toReadyRow = (t: (typeof readyQueue)[0]) => ({
     id: t.id,
     title: t.title,
     priority: t.priority ?? null,
     phase: t.phase ?? null,
-    features: t.features?.length ? t.features : null
+    features: t.features?.length ? t.features : null,
+    featureDetails: featureDetailsForTask(t.features, enrich)
   });
   const readyTop = readyQueue.slice(0, 15).map(toReadyRow);
   const readyImprovementsTop = readyImprovements.slice(0, 15).map(toReadyRow);
@@ -52,7 +79,8 @@ export async function runDashboardSummaryCommand(
     id: t.id,
     title: t.title,
     phase: t.phase ?? null,
-    features: t.features?.length ? t.features : null
+    features: t.features?.length ? t.features : null,
+    featureDetails: featureDetailsForTask(t.features, enrich)
   });
   const proposedImprovementsTop = proposedImprovements.slice(0, 15).map(slimListRow);
 
@@ -68,7 +96,8 @@ export async function runDashboardSummaryCommand(
     id: t.id,
     title: t.title,
     phase: t.phase ?? null,
-    features: t.features?.length ? t.features : null
+    features: t.features?.length ? t.features : null,
+    featureDetails: featureDetailsForTask(t.features, enrich)
   });
   const readyImprovementsPhaseBuckets = buildDashboardPhaseBucketsForTasks(
     readyImprovements,
@@ -209,7 +238,8 @@ export async function runDashboardSummaryCommand(
           status: suggestion.suggestedNext.status,
           priority: suggestion.suggestedNext.priority ?? null,
           phase: suggestion.suggestedNext.phase ?? null,
-          features: suggestion.suggestedNext.features?.length ? suggestion.suggestedNext.features : null
+          features: suggestion.suggestedNext.features?.length ? suggestion.suggestedNext.features : null,
+          featureDetails: featureDetailsForTask(suggestion.suggestedNext.features, enrich)
         }
       : null,
     dependencyOverview,

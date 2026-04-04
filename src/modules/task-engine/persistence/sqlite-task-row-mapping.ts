@@ -53,8 +53,13 @@ function parseOptionalStringArray(json: string | null, field: string): string[] 
   return arr.length ? arr : undefined;
 }
 
+export type TaskEntityToRowOptions = {
+  /** When true, persist `features_json` as `[]` (junction holds links; kit user_version 5+). */
+  omitFeaturesJson?: boolean;
+};
+
 /** Serialize TaskEntity → DB row (transaction caller supplies table name). */
-export function taskEntityToRow(t: TaskEntity): TaskEngineTaskRow {
+export function taskEntityToRow(t: TaskEntity, options?: TaskEntityToRowOptions): TaskEngineTaskRow {
   const md = t.metadata && typeof t.metadata === "object" ? (t.metadata as Record<string, unknown>) : undefined;
   const queueNamespace = typeof md?.queueNamespace === "string" ? md.queueNamespace : undefined;
   const evidenceKey = typeof md?.evidenceKey === "string" ? md.evidenceKey : undefined;
@@ -84,11 +89,17 @@ export function taskEntityToRow(t: TaskEntity): TaskEngineTaskRow {
     evidence_key: evidenceKey ?? null,
     evidence_kind: evidenceKind ?? null,
     metadata_json: md ? JSON.stringify(md) : null,
-    features_json: t.features?.length ? JSON.stringify(t.features) : "[]"
+    features_json:
+      options?.omitFeaturesJson === true ? "[]" : t.features?.length ? JSON.stringify(t.features) : "[]"
   };
 }
 
-export function rowToTaskEntity(row: TaskEngineTaskRow): TaskEntity {
+export type RowToTaskEntityOptions = {
+  /** When set (registry mode), merge junction slugs with legacy `features_json` (junction wins when non-empty). */
+  taskFeatureLinkMap?: Map<string, string[]> | null;
+};
+
+export function rowToTaskEntity(row: TaskEngineTaskRow, options?: RowToTaskEntityOptions): TaskEntity {
   let metadata: Record<string, unknown> | undefined;
   if (row.metadata_json) {
     try {
@@ -104,22 +115,38 @@ export function rowToTaskEntity(row: TaskEngineTaskRow): TaskEntity {
     }
   }
   let features: string[] | undefined;
-  const fj = row.features_json;
-  if (fj !== null && fj !== undefined && fj !== "" && fj !== "[]") {
+  const parseFeaturesJsonColumn = (): string[] => {
+    const fj = row.features_json;
+    if (fj === null || fj === undefined || fj === "" || fj === "[]") {
+      return [];
+    }
     try {
       const parsed = JSON.parse(fj) as unknown;
-      if (Array.isArray(parsed)) {
-        const slugs = parsed.filter((x): x is string => typeof x === "string");
-        if (slugs.length > 0) {
-          features = slugs;
-        }
+      if (!Array.isArray(parsed)) {
+        return [];
       }
+      return parsed.filter((x): x is string => typeof x === "string");
     } catch (e) {
       throw new TaskEngineError(
         "storage-read-error",
         `Invalid features_json for task ${row.id}: ${(e as Error).message}`
       );
     }
+  };
+
+  const map = options?.taskFeatureLinkMap;
+  if (map) {
+    const linked = map.get(row.id);
+    const fromJunction = linked && linked.length > 0 ? [...linked].sort() : [];
+    if (fromJunction.length > 0) {
+      features = fromJunction;
+    } else {
+      const legacy = parseFeaturesJsonColumn();
+      features = legacy.length > 0 ? legacy : undefined;
+    }
+  } else {
+    const legacy = parseFeaturesJsonColumn();
+    features = legacy.length > 0 ? legacy : undefined;
   }
 
   const task: TaskEntity = {

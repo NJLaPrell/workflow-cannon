@@ -294,6 +294,40 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "list-components",
+    "file": "list-components.md",
+    "description": "List feature-registry component rows (relational taxonomy).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "list-features",
+    "file": "list-features.md",
+    "description": "List feature-registry feature rows; optional componentId filter.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "backfill-task-feature-links",
+    "file": "backfill-task-feature-links.md",
+    "description": "Copy legacy features_json slugs into task_engine_task_features; clear legacy column.",
+    "defaultResponseTemplateId": "default",
+    "policyOperationId": "task-engine.backfill-task-feature-links",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "export-feature-taxonomy-json",
+    "file": "export-feature-taxonomy-json.md",
+    "description": "Export registry to documentation data feature-taxonomy.json (schema-validated).",
+    "defaultResponseTemplateId": "default",
+    "policyOperationId": "task-engine.export-feature-taxonomy-json",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "list-wishlist",
     "file": "list-wishlist.md",
     "description": "List Wishlist items (ideation-only; not part of task execution queues).",

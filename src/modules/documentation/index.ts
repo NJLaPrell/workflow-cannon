@@ -28,7 +28,7 @@ function parseOptions(raw: Record<string, unknown>): DocumentationGenerateOption
 export const documentationModule: WorkflowModule = {
   registration: {
     id: "documentation",
-    version: "0.4.0",
+    version: "0.5.0",
     contractVersion: "1",
     stateSchema: 1,
     capabilities: ["documentation"],

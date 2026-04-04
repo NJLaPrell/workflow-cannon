@@ -13,7 +13,13 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SCHEMA_PATH = path.join(ROOT, "schemas/task-engine-run-contracts.schema.json");
 const OUT_PATH = path.join(ROOT, "schemas/pilot-run-args.snapshot.json");
 
-const PILOT_COMMANDS = ["run-transition", "dashboard-summary", "create-task", "update-task"];
+const PILOT_COMMANDS = [
+  "run-transition",
+  "dashboard-summary",
+  "create-task",
+  "update-task",
+  "list-features"
+];
 
 const schema = JSON.parse(fs.readFileSync(SCHEMA_PATH, "utf8"));
 const pkgVersion =

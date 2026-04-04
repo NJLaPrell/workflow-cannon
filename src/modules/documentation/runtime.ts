@@ -10,7 +10,11 @@ import { autoResolveAiSchema, validateAiSchema } from "./validator.js";
 import { isPathWithinRoot, loadRuntimeConfig } from "./runtime-config.js";
 import { detectConflicts, renderTemplate, resolveExpectedDocFamily, validateSectionCoverage } from "./runtime-render-support.js";
 import { runGenerateAllDocuments } from "./runtime-batch.js";
-import { renderFeatureTaxonomyDocFromSourceRoot, renderRoadmapFromSourceRoot } from "./roadmap-render.js";
+import {
+  renderFeatureTaxonomyDocFromSourceRoot,
+  renderRoadmapFromSourceRoot,
+  type RoadmapRenderOptions
+} from "./roadmap-render.js";
 
 type GenerateDocumentArgs = { documentType?: string; options?: DocumentationGenerateOptions };
 
@@ -187,10 +191,18 @@ export async function generateDocument(args: GenerateDocumentArgs, ctx: ModuleLi
 
   let humanOutput = `# ${documentType}\n\nGenerated without template.`;
   if (isDataDrivenMaintainerDoc) {
+    const docTaxonomyJsonOnly =
+      process.env.WORKSPACE_KIT_DOC_TAXONOMY_JSON_ONLY === "1" ||
+      process.env.WORKSPACE_KIT_DOC_TAXONOMY_JSON_ONLY === "true";
+    const planningDbAbs = resolve(ctx.workspacePath, ".workspace-kit/tasks/workspace-kit.db");
+    const roadmapRenderOpts: RoadmapRenderOptions | undefined =
+      !docTaxonomyJsonOnly && existsSync(planningDbAbs)
+        ? { planningDatabaseAbsolutePath: planningDbAbs }
+        : undefined;
     const rendered =
       documentType === "ROADMAP.md"
-        ? renderRoadmapFromSourceRoot(config.sourceRoot)
-        : renderFeatureTaxonomyDocFromSourceRoot(config.sourceRoot);
+        ? renderRoadmapFromSourceRoot(config.sourceRoot, roadmapRenderOpts)
+        : renderFeatureTaxonomyDocFromSourceRoot(config.sourceRoot, roadmapRenderOpts);
     if (!("markdown" in rendered)) {
       for (const msg of rendered.errors) {
         validationIssues.push({

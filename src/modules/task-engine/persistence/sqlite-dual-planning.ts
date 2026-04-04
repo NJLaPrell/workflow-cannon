@@ -16,6 +16,11 @@ import {
   taskEntityToRow,
   type TaskEngineTaskRow
 } from "./sqlite-task-row-mapping.js";
+import {
+  featureRegistryActiveOnConnection,
+  loadTaskFeatureLinkMap,
+  replaceAllTaskFeatureLinks
+} from "./feature-registry-queries.js";
 
 function emptyTaskStoreDocument(): TaskStoreDocument {
   return {
@@ -108,6 +113,11 @@ export class SqliteDualPlanningStore {
     return this.dbPath;
   }
 
+  /** Opened SQLite handle (creates file + migrations as needed). For read-only helpers (feature registry). */
+  getDatabase(): Database.Database {
+    return this.ensureDb();
+  }
+
   private ensureDb(): Database.Database {
     if (this.db) {
       return this.db;
@@ -134,7 +144,8 @@ export class SqliteDualPlanningStore {
 
   private loadRelationalTasks(db: Database.Database): void {
     const rows = db.prepare(`SELECT * FROM ${TASK_ENGINE_TASKS_TABLE} ORDER BY id ASC`).all() as TaskEngineTaskRow[];
-    this._taskDoc.tasks = rows.map((r) => rowToTaskEntity(r));
+    const linkMap = loadTaskFeatureLinkMap(db);
+    this._taskDoc.tasks = rows.map((r) => rowToTaskEntity(r, { taskFeatureLinkMap: linkMap }));
   }
 
   private parseLogs(transitionJson: string, mutationJson: string): void {
@@ -358,9 +369,10 @@ export class SqliteDualPlanningStore {
       ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `;
     const insert = db.prepare(insertSql);
+    const registry = featureRegistryActiveOnConnection(db);
     db.prepare(`DELETE FROM ${TASK_ENGINE_TASKS_TABLE}`).run();
     for (const t of this._taskDoc.tasks) {
-      const r = taskEntityToRow(t);
+      const r = taskEntityToRow(t, registry ? { omitFeaturesJson: true } : undefined);
       insert.run(
         r.id,
         r.status,
@@ -388,6 +400,9 @@ export class SqliteDualPlanningStore {
         r.metadata_json,
         r.features_json ?? "[]"
       );
+    }
+    if (registry) {
+      replaceAllTaskFeatureLinks(db, this._taskDoc.tasks);
     }
 
     if (this._tableShape === "legacy-dual") {

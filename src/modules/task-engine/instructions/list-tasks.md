@@ -15,6 +15,8 @@ workspace-kit run list-tasks '{"includeQueueHints":true,"status":"ready"}'
 workspace-kit run list-tasks '{"type":"improvement","confidenceTier":"medium"}'
 workspace-kit run list-tasks '{"status":"blocked","blockedReasonCategory":"external_dependency"}'
 workspace-kit run list-tasks '{"features":["doc-generation"]}'
+workspace-kit run list-tasks '{"featureId":"doc-generation"}'
+workspace-kit run list-tasks '{"componentId":"cli-modules-agent-surfaces"}'
 ```
 
 ## Arguments
@@ -25,6 +27,8 @@ workspace-kit run list-tasks '{"features":["doc-generation"]}'
 | `phase` | string | no | Filter by exact `task.phase` string |
 | `phaseKey` | string | no | Filter by stable phase key (`task.phaseKey` or inferred from `task.phase`, e.g. `28`) |
 | `features` | string or string[] | no | Filter by feature taxonomy slug(s): **OR** semantics — task matches if `task.features` includes **any** listed slug |
+| `featureId` | string | no | Single slug filter: task must list this feature (requires relational registry / `user_version` 5+ for consistent junction reads) |
+| `componentId` | string | no | Filter tasks that have **any** feature belonging to this component id (slugified category id from registry; `user_version` 5+) |
 | `type` | string | no | Filter by task type (for example `improvement`) |
 | `category` | string | no | Filter by `metadata.category` |
 | `tags` | string or string[] | no | Filter by `metadata.tags` (all tags must match) |

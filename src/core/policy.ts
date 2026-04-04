@@ -31,7 +31,9 @@ export type PolicyOperationId =
   | "tasks.run-transition"
   | "approvals.review-item"
   | "improvement.generate-recommendations"
-  | "improvement.ingest-transcripts";
+  | "improvement.ingest-transcripts"
+  | "task-engine.backfill-task-feature-links"
+  | "task-engine.export-feature-taxonomy-json";
 
 function buildBuiltinCommandToOperation(): Record<string, PolicyOperationId | undefined> {
   const out: Record<string, PolicyOperationId | undefined> = {};

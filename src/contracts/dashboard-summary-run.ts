@@ -3,6 +3,13 @@
  * Consumed by the Cursor extension webview renderer; keep aligned with `task-engine-dashboard-on-command.ts`.
  */
 
+export type DashboardFeatureDetail = {
+  slug: string;
+  name: string;
+  componentId: string;
+  componentDisplayName: string;
+};
+
 export type DashboardTaskRow = {
   id: string;
   title: string;
@@ -10,6 +17,8 @@ export type DashboardTaskRow = {
   phase?: string | null;
   /** Feature taxonomy slugs when present on the task (`feature-taxonomy.json`). */
   features?: string[] | null;
+  /** Resolved labels when relational feature registry is active (`user_version` 5+). */
+  featureDetails?: DashboardFeatureDetail[] | null;
 };
 
 export type DashboardWishlistRow = {
@@ -85,6 +94,7 @@ export type DashboardSummaryData = {
     priority?: string | null;
     phase?: string | null;
     features?: string[] | null;
+    featureDetails?: DashboardFeatureDetail[] | null;
   } | null;
   dependencyOverview: Record<string, unknown>;
   blockingAnalysis: unknown[];

@@ -34,7 +34,7 @@ export type TaskEntity = {
   risk?: string;
   technicalScope?: string[];
   acceptanceCriteria?: string[];
-  /** Optional feature taxonomy slugs (`feature-taxonomy.json`); persisted relationally as `features_json`. */
+  /** Optional feature taxonomy slugs; persisted in `task_engine_task_features` when registry active (`user_version` 5+). */
   features?: string[];
 };
 
@@ -122,7 +122,8 @@ export type TaskEngineErrorCode =
   | "invalid-adapter"
   | "import-parse-error"
   | "planning-generation-mismatch"
-  | "planning-generation-required";
+  | "planning-generation-required"
+  | "unknown-feature-id";
 
 export type TaskAdapter = {
   name: string;

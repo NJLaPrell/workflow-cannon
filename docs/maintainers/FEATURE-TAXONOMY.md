@@ -12,7 +12,7 @@ Canonical **product features** for mapping **task-engine** work: each task shoul
 
 ## Categories and features
 
-The table below is generated from **`src/modules/documentation/data/feature-taxonomy.json`**.
+The table below is generated from the **planning SQLite feature registry** when available (`user_version` 5+), otherwise from **`src/modules/documentation/data/feature-taxonomy.json`** (export with `export-feature-taxonomy-json`).
 
 | Category | Slug | Feature | Covers |
 | --- | --- | --- | --- |

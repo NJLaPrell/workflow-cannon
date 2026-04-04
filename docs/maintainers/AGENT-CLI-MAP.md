@@ -137,7 +137,7 @@ ADR: **`docs/maintainers/ADR-planning-generation-optimistic-concurrency.md`**.
 ### Recovery: `planning-generation-required` and `invalid-run-args`
 
 - **`planning-generation-required`** — Re-read **`planningGeneration`** from **`list-tasks`**, **`get-task`**, **`get-next-actions`**, or **`dashboard-summary`**, then resend the mutating JSON with **`expectedPlanningGeneration`**. Failure JSON may include **`remediation.docPath`** → **`ADR-planning-generation-optimistic-concurrency.md`** and **`remediation.instructionPath`** for the command you invoked.
-- **`invalid-run-args`** (pilot commands) — Fix the JSON shape against the bundled schema: **`workspace-kit run <command> --schema-only`** for **`run-transition`**, **`create-task`**, **`update-task`**, **`dashboard-summary`**. See **`docs/maintainers/ADR-runtime-run-args-validation-pilot.md`**.
+- **`invalid-run-args`** (pilot commands) — Fix the JSON shape against the bundled schema: **`workspace-kit run <command> --schema-only`** for **`run-transition`**, **`create-task`**, **`update-task`**, **`dashboard-summary`**, **`list-features`**. See **`docs/maintainers/ADR-runtime-run-args-validation-pilot.md`**.
 - **`policy-denied`** — Use JSON **`policyApproval`** on the **`run`** argv object (not env **`WORKSPACE_KIT_POLICY_APPROVAL`**). Check **`remediation.docPath`** → **`POLICY-APPROVAL.md`** when present.
 - **`unknown-command`** — Router failures print structured JSON with **`remediation`**; run **`workspace-kit run`** (no subcommand) or **`doctor --agent-instruction-surface`** for the catalog.
 
@@ -150,6 +150,8 @@ ADR: **`docs/maintainers/ADR-planning-generation-optimistic-concurrency.md`**.
 | Improvement recommendations | `workspace-kit run generate-recommendations '<json>'` | `improvement.generate-recommendations` | Always sensitive |
 | Transcript ingest + recommendations | `workspace-kit run ingest-transcripts '<json>'` | `improvement.ingest-transcripts` | Always sensitive |
 | Approval queue decision | `workspace-kit run review-item '<json>'` | `approvals.review-item` | Always sensitive |
+| Backfill task↔feature junction | `workspace-kit run backfill-task-feature-links '<json>'` | `task-engine.backfill-task-feature-links` | Copies legacy **`features_json`** into **`task_engine_task_features`** |
+| Export taxonomy JSON from registry | `workspace-kit run export-feature-taxonomy-json '<json>'` | `task-engine.export-feature-taxonomy-json` | Writes **`src/modules/documentation/data/feature-taxonomy.json`** |
 | Config-declared extra commands | `workspace-kit run <name> '<json>'` | `policy.dynamic-sensitive` if listed in `policy.extraSensitiveModuleCommands` | Must still pass **`policyApproval`** |
 
 **Copy-paste — document batch (real writes):**
@@ -174,6 +176,20 @@ workspace-kit run generate-recommendations '{"policyApproval":{"confirmed":true,
 
 ```bash
 workspace-kit run review-item '{"taskId":"imp-example","decision":"accept","actor":"agent@example","policyApproval":{"confirmed":true,"rationale":"accept after review"}}'
+```
+
+**Copy-paste — backfill junction from legacy `features_json`:**
+
+```bash
+workspace-kit run backfill-task-feature-links '{"dryRun":true}'
+workspace-kit run backfill-task-feature-links '{"policyApproval":{"confirmed":true,"rationale":"backfill task feature links"}}'
+```
+
+**Copy-paste — export taxonomy JSON from SQLite registry:**
+
+```bash
+workspace-kit run export-feature-taxonomy-json '{"dryRun":true}'
+workspace-kit run export-feature-taxonomy-json '{"policyApproval":{"confirmed":true,"rationale":"export taxonomy for commit"}}'
 ```
 
 ## CLI mutations (`init` / `upgrade` / `config`) — env approval, not JSON `policyApproval`
@@ -221,6 +237,21 @@ workspace-kit run list-tasks '{"phaseKey":"28","status":"ready"}'
 workspace-kit run list-tasks '{"features":["doc-generation","task-schema"]}'
 ```
 
+**Copy-paste — filter by single feature slug or by component id** (relational registry, `user_version` 5+):
+
+```bash
+workspace-kit run list-tasks '{"featureId":"doc-generation"}'
+workspace-kit run list-tasks '{"componentId":"task-engine-queue"}'
+```
+
+**Copy-paste — inspect feature registry (read-only):**
+
+```bash
+workspace-kit run list-components '{}'
+workspace-kit run list-features '{}'
+workspace-kit run list-features '{"componentId":"task-engine-queue"}'
+```
+
 **Task id spaces** (when to mint **`T###`**, wishlist intake, vs **`imp-*`**): [`runbooks/wishlist-workflow.md`](./runbooks/wishlist-workflow.md).
 
 Instruction: `src/modules/task-engine/instructions/queue-health.md`. Related runbook: [`runbooks/agent-task-engine-ergonomics.md`](./runbooks/agent-task-engine-ergonomics.md).
@@ -239,6 +270,8 @@ workspace-kit run list-tasks '{"category":"reliability","tags":["ui"],"metadataF
 workspace-kit run list-tasks '{"type":"improvement","confidenceTier":"medium"}'
 workspace-kit run list-tasks '{"status":"blocked","blockedReasonCategory":"external_dependency"}'
 workspace-kit run list-tasks '{"features":["doc-generation"]}'
+workspace-kit run list-components '{}'
+workspace-kit run list-features '{}'
 workspace-kit run create-task '{"id":"T900","title":"retry-safe mutation","status":"ready","features":["ci-guards"],"clientMutationId":"agent-run-20260327-1"}'
 workspace-kit run update-task '{"taskId":"T900","updates":{"title":"retry-safe mutation v2","features":["ci-guards","release-versioning"]},"clientMutationId":"agent-run-20260327-2"}'
 workspace-kit run assign-task-phase '{"taskId":"T900","phaseKey":"43","phase":"Phase 43 (example)","clientMutationId":"agent-run-phase-1"}'
