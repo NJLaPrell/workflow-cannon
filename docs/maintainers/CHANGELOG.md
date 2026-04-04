@@ -13,6 +13,19 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 - Phase **59** Cursor chat prefill experiments **`T668`–`T670`** **`cancelled`** via task-engine **`run-transition`** (**2026-04-04**); roadmap pointer + maintainer status YAML aligned.
 - Maintainer snapshot + **`kit.currentPhaseNumber`** reset to **Phase 58** as current (**2026-04-04**); **`current_kit_phase` / `next_kit_phase` 58**.
 
+## [0.58.1] - 2026-04-04
+
+Phase 58 follow-up — extension dashboard UX (**`T672`–`T673`**) and behavior interview hardening (**`T674`–`T678`**).
+
+### Added
+
+- **`interview-behavior-profile`** — **`action:status`** (read-only resume); **`start`** refuses to wipe an existing session unless **`forceRestart:true`**; **`finalize`** without **`customId`** allocates **`custom:chat-behavior-interview`** (+ numeric suffixes); playbook fingerprint gate in **`pnpm run check`**.
+- **Cursor extension `0.1.6`** — Tasks tree + drag-and-drop removed; dashboard uses nested **`<details>`** rollups (closed by default) and **Detail** buttons for task rows / suggested next (opens markdown task detail).
+
+### Changed
+
+- **`.ai/playbooks/workspace-kit-chat-behavior-interview.md`** (+ generated maintainer mirror) — documents **`status`**, safe **`start`**, default finalize path.
+
 ## [0.58.0] - 2026-04-04
 
 Phase 58 — **Team execution v1** (**`T665`–`T667`**): supervisor/worker assignment rows + handoff/reconcile contracts in kit SQLite; CLI + runbook; **`get-next-actions`** integration explicitly deferred.

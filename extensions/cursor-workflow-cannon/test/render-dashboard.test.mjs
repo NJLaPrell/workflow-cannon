@@ -50,6 +50,8 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /Next phase/);
   assert.match(html, /Next action/);
   assert.match(html, /<p><b>Tasks<\/b><\/p>/);
+  assert.match(html, /dashboard-tasks-block/);
+  assert.match(html, /status-section/);
   assert.match(html, /Ready · improvements/);
   assert.match(html, /Ready · execution/);
   assert.match(html, /Wishlist/);
@@ -62,11 +64,13 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /data-wc-action="wishlist-chat"/);
   assert.match(html, /data-wc-action="proposed-imp-accept"/);
   assert.match(html, /data-wc-action="proposed-imp-chat"/);
+  assert.match(html, /data-wc-action="task-detail"/);
   assert.match(html, /dash-row-action/);
   assert.match(html, /phase-bucket/);
+  assert.doesNotMatch(html, /<details open class="phase-bucket"/);
   assert.match(html, /dashboard-terminal-tasks/);
-  assert.match(html, /<p><b>Completed<\/b>/);
-  assert.match(html, /<p><b>Cancelled<\/b>/);
+  assert.match(html, /<b>Completed<\/b>/);
+  assert.match(html, /<b>Cancelled<\/b>/);
   assert.match(html, /terminal-phase-bucket/);
   assert.match(html, /T099/);
   assert.match(html, /Not Phased/);

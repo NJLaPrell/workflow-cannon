@@ -1,6 +1,25 @@
 import type { BehaviorDimensions, BehaviorProfile } from "./types.js";
 import { BEHAVIOR_PROFILE_SCHEMA_VERSION } from "./types.js";
 
+/** Sync marker — `scripts/check-behavior-interview-playbook-alignment.mjs` + playbook HTML comment must match. */
+export const INTERVIEW_QUESTION_IDS_FINGERPRINT =
+  "changeAppetite,deliberationDepth,explanationVerbosity,explorationStyle,ambiguityHandling,checkInFrequency";
+
+export const DEFAULT_INTERVIEW_CUSTOM_ID_BASE = "custom:chat-behavior-interview";
+
+export function allocateSequentialInterviewCustomId(isTaken: (id: string) => boolean): string | null {
+  if (!isTaken(DEFAULT_INTERVIEW_CUSTOM_ID_BASE)) {
+    return DEFAULT_INTERVIEW_CUSTOM_ID_BASE;
+  }
+  for (let i = 2; i <= 50; i++) {
+    const id = `${DEFAULT_INTERVIEW_CUSTOM_ID_BASE}-${i}`;
+    if (!isTaken(id)) {
+      return id;
+    }
+  }
+  return null;
+}
+
 export const INTERVIEW_QUESTIONS: {
   id: string;
   prompt: string;

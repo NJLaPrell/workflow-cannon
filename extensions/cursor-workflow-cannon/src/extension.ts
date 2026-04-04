@@ -3,16 +3,12 @@ import { findWorkflowCannonRoot } from "./workspace-detect.js";
 import { CommandClient } from "./runtime/command-client.js";
 import { StateWatcher } from "./runtime/state-watcher.js";
 import { DashboardViewProvider } from "./views/dashboard/DashboardViewProvider.js";
-import { TasksTreeProvider } from "./views/tasks/TasksTreeProvider.js";
-import { TasksTreeDragController } from "./views/tasks/TasksTreeDragController.js";
 import { ConfigViewProvider } from "./views/config/ConfigViewProvider.js";
 import { prefillCursorChat } from "./cursor-chat-prefill.js";
 import { buildTaskDetailMarkdown } from "./task-detail-markdown.js";
 import { buildWishlistIntakeAgentPrompt } from "./wishlist-chat-prompt.js";
 import { buildImprovementTriagePrompt, buildTaskToPhaseBranchPrompt } from "./playbook-chat-prompts.js";
 import { confirmAndRunTransition } from "./run-transition-with-approval.js";
-import type { WkNode } from "./views/tasks/build-task-tree.js";
-
 function readWorkflowCannonNodeSetting(): string | undefined {
   return vscode.workspace.getConfiguration("workflowCannon").get<string>("nodeExecutable")?.trim() || undefined;
 }
@@ -28,7 +24,6 @@ export function activate(context: vscode.ExtensionContext): void {
 
   let dashboard: DashboardViewProvider | undefined;
   let configView: ConfigViewProvider | undefined;
-  let tasks: TasksTreeProvider | undefined;
 
   if (client && folder) {
     const watcher = new StateWatcher(folder, () => kitStateEmitter.fire());
@@ -39,17 +34,10 @@ export function activate(context: vscode.ExtensionContext): void {
       kitStateEmitter.fire()
     );
     configView = new ConfigViewProvider(context.extensionUri, client, onKitStateChanged);
-    tasks = new TasksTreeProvider(client, onKitStateChanged);
-    const tasksDnd = new TasksTreeDragController(client, () => kitStateEmitter.fire());
 
     context.subscriptions.push(
       vscode.window.registerWebviewViewProvider(DashboardViewProvider.viewId, dashboard),
-      vscode.window.registerWebviewViewProvider(ConfigViewProvider.viewId, configView),
-      vscode.window.createTreeView("workflowCannon.tasks", {
-        treeDataProvider: tasks,
-        showCollapseAll: true,
-        dragAndDropController: tasksDnd
-      })
+      vscode.window.registerWebviewViewProvider(ConfigViewProvider.viewId, configView)
     );
   }
 
@@ -170,11 +158,11 @@ export function activate(context: vscode.ExtensionContext): void {
       dashboard.refresh();
     }),
     vscode.commands.registerCommand("workflowCannon.refreshTasks", () => {
-      if (!tasks) {
+      if (!dashboard) {
         void requireClient();
         return;
       }
-      tasks.refresh();
+      dashboard.refresh();
     }),
     vscode.commands.registerCommand("workflowCannon.showReadyQueue", async () => {
       const runtime = requireClient();
@@ -282,13 +270,6 @@ export function activate(context: vscode.ExtensionContext): void {
       const id = typeof taskId === "string" ? taskId.trim() : "";
       const prompt = buildTaskToPhaseBranchPrompt(id.length > 0 ? { taskId: id } : undefined);
       await prefillCursorChat(prompt);
-    }),
-    vscode.commands.registerCommand("workflowCannon.wishlist.prefillIntakeChatFromTree", async (node: WkNode) => {
-      if (!node || node.kind !== "wishlist-item") {
-        void vscode.window.showWarningMessage("Select an open wishlist row (Tasks → Wishlist).");
-        return;
-      }
-      await vscode.commands.executeCommand("workflowCannon.chat.prefillWishlistFlow", node.item.id);
     })
   );
 }

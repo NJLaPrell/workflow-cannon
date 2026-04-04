@@ -36,7 +36,9 @@ F5 typical `launch.json` (workspace root):
 }
 ```
 
-Open the **Workflow Cannon** activity bar to use Dashboard (webview), Tasks (tree), and Config (webview).
+Open the **Workflow Cannon** activity bar to use **Dashboard** (webview — task queue rollups + actions) and **Config** (webview).
+
+**Tasks tree / drag-and-drop** were removed in extension **0.1.6** — use dashboard **Detail** on a task row (or palette **Show Task Detail**) and **`workspace-kit run run-transition`** / **`list-tasks`** from a terminal for transitions. Proposed-row **Accept**/**Chat** on the dashboard is unchanged.
 
 ## CLI bridge
 
@@ -48,7 +50,7 @@ The extension runs `node <repo>/dist/cli.js` (or the published package path unde
 
 **Workspace root:** Cursor must open the folder that contains `.workspace-kit/manifest.json` (the Workflow Cannon repo root). If you open a parent directory, the extension will not attach and you get no dashboard/tasks—or you may be pointed at a different task store than you expect.
 
-**Proposed vs ready:** The dashboard “Suggested next” and “Ready preview” rows only reflect tasks in **`ready`** status. **`proposed`** improvement work appears under **Proposed improvements** on the dashboard (after a refresh) and under the **Improvements** group in the Tasks tree. Planning appears when a `build-plan` session file exists.
+**Proposed vs ready:** The dashboard “Suggested next” and ready/proposed sections only reflect tasks in the configured task store. **`proposed`** improvement work appears under **Proposed improvements** on the dashboard (after a refresh). Planning appears when a `build-plan` session file exists.
 
 ## Testing
 
@@ -66,7 +68,7 @@ pnpm --filter cursor-workflow-cannon test
 - `Workflow Cannon: Open Dashboard`
 - `Workflow Cannon: Refresh Dashboard`
 - `Workflow Cannon: Show Ready Queue`
-- `Workflow Cannon: Refresh Tasks`
+- `Workflow Cannon: Refresh Tasks` (refreshes the **Dashboard** webview)
 - `Workflow Cannon: Validate Config`
 - `Workflow Cannon: Task Action`
 - `Workflow Cannon: Show Task Detail`
@@ -79,8 +81,6 @@ pnpm --filter cursor-workflow-cannon test
 - `Workflow Cannon: Prefill Chat — Wishlist Intake Playbook` (palette; optional wishlist id argument)
 - `Workflow Cannon: Prefill Chat — Improvement Triage (Top Three)`
 - `Workflow Cannon: Prefill Chat — Task to Phase Branch Playbook`
-- **Tasks tree** — right-click an open wishlist row → **Prefill Chat — Wishlist Intake (this row)** (same prompt as Dashboard **Chat** for that id)
-
 ### Chat prefill (Cursor)
 
 The extension seeds Cursor Composer using **`vscode.commands.executeCommand("deeplink.prompt.prefill", { text })`** (same entry Cursor uses internally). If that command is missing or fails, it tries the **`cursor://anysphere.cursor-deeplink/prompt?text=…`** URI, then copies the prompt to the clipboard with a warning. Very long prompts may hit URI length limits — trim in-session or paste from clipboard. Standard VS Code (non-Cursor) may not register the deeplink command; clipboard fallback is expected.

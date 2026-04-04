@@ -15,20 +15,34 @@ export function renderActiveFocusHtml(raw: string): string {
   return renderMarkdownBoldAfterEscape(escapeHtml(raw));
 }
 
-function renderReadyList(items: unknown, emptyMessage = "No ready tasks."): string {
+function renderTaskRowList(items: unknown, emptyMessage = "No ready tasks."): string {
   if (!Array.isArray(items) || items.length === 0) {
     return '<p class="muted">' + escapeHtml(emptyMessage) + "</p>";
   }
   return (
-    "<pre>" +
+    '<div class="dash-row-list" role="list">' +
     items
       .map((x) => {
         const row = x as { id?: unknown; title?: unknown; priority?: unknown };
+        const id = String(row?.id ?? "").trim();
         const pri = row?.priority ? " [" + escapeHtml(String(row.priority)) + "]" : "";
-        return "- " + escapeHtml(String(row?.id ?? "")) + " " + escapeHtml(String(row?.title ?? "")) + pri;
+        const label = "- " + escapeHtml(id) + (id ? " " : "") + escapeHtml(String(row?.title ?? "")) + pri;
+        const idAttr = escapeHtml(id);
+        return (
+          '<div class="dash-row" role="listitem">' +
+          '<span class="dash-row-label">' +
+          label +
+          "</span>" +
+          (id.length > 0
+            ? '<button type="button" class="dash-row-action" data-wc-action="task-detail" data-task-id="' +
+              idAttr +
+              '" title="Open task detail (markdown)">Detail</button>'
+            : "") +
+          "</div>"
+        );
       })
-      .join("\n") +
-    "</pre>"
+      .join("") +
+    "</div>"
   );
 }
 
@@ -145,24 +159,38 @@ function renderBlockedList(items: unknown): string {
     return '<p class="muted">No blocked tasks.</p>';
   }
   return (
-    "<pre>" +
+    '<div class="dash-row-list" role="list">' +
     items
       .map((x) => {
         const row = x as { taskId?: unknown; blockedBy?: unknown };
+        const tid = String(row?.taskId ?? "").trim();
         const deps = Array.isArray(row?.blockedBy) ? (row.blockedBy as string[]).join(", ") : "";
-        return "- " + escapeHtml(String(row?.taskId ?? "")) + " blocked by " + escapeHtml(deps);
+        const label = "- " + escapeHtml(tid) + " blocked by " + escapeHtml(deps);
+        const idAttr = escapeHtml(tid);
+        return (
+          '<div class="dash-row" role="listitem">' +
+          '<span class="dash-row-label">' +
+          label +
+          "</span>" +
+          (tid.length > 0
+            ? '<button type="button" class="dash-row-action" data-wc-action="task-detail" data-task-id="' +
+              idAttr +
+              '" title="Open task detail (markdown)">Detail</button>'
+            : "") +
+          "</div>"
+        );
       })
-      .join("\n") +
-    "</pre>"
+      .join("") +
+    "</div>"
   );
 }
 
 /**
- * When `dashboard-summary` includes `phaseBuckets`, mirror the Tasks tree: one `<details>` per phase with full counts in the summary line.
+ * When `dashboard-summary` includes `phaseBuckets`, one `<details>` per phase (closed until expanded).
  */
 function renderReadyPhaseBuckets(phaseBuckets: unknown, fallbackTop: unknown, emptyMessage: string): string {
   if (!Array.isArray(phaseBuckets) || phaseBuckets.length === 0) {
-    return renderReadyList(fallbackTop, emptyMessage);
+    return renderTaskRowList(fallbackTop, emptyMessage);
   }
   return (
     '<div class="phase-stack">' +
@@ -170,8 +198,8 @@ function renderReadyPhaseBuckets(phaseBuckets: unknown, fallbackTop: unknown, em
       .map((raw) => {
         const b = raw as { label?: unknown; top?: unknown };
         const summary = escapeHtml(String(b.label ?? ""));
-        const body = renderReadyList(b.top ?? [], "No tasks in this phase.");
-        return '<details open class="phase-bucket"><summary>' + summary + "</summary>" + body + "</details>";
+        const body = renderTaskRowList(b.top ?? [], "No tasks in this phase.");
+        return '<details class="phase-bucket"><summary>' + summary + "</summary>" + body + "</details>";
       })
       .join("") +
     "</div>"
@@ -192,7 +220,7 @@ function renderProposedPhaseBuckets(
   }, 0);
   const more =
     sumCounts < totalCount
-      ? '<p class="muted">Preview capped per phase · see Tasks view or <code>list-tasks</code> for full lists.</p>'
+      ? '<p class="muted">Preview capped per phase · expand sections below or <code>list-tasks</code> for full lists.</p>'
       : "";
   return (
     more +
@@ -206,7 +234,7 @@ function renderProposedPhaseBuckets(
           c === 0
             ? '<p class="muted">No tasks in this phase.</p>'
             : renderProposedImprovementsList(c, b.top ?? []);
-        return '<details open class="phase-bucket"><summary>' + summary + "</summary>" + inner + "</details>";
+        return '<details class="phase-bucket"><summary>' + summary + "</summary>" + inner + "</details>";
       })
       .join("") +
     "</div>"
@@ -228,7 +256,7 @@ function renderProposedExecutionPhaseBuckets(
   }, 0);
   const more =
     sumCountsPe < totalCount
-      ? '<p class="muted">Preview capped per phase · see Tasks view or <code>list-tasks</code>.</p>'
+      ? '<p class="muted">Preview capped per phase · expand below or <code>list-tasks</code>.</p>'
       : "";
   return (
     more +
@@ -242,7 +270,7 @@ function renderProposedExecutionPhaseBuckets(
           c === 0
             ? '<p class="muted">No tasks in this phase.</p>'
             : renderProposedExecutionList(c, b.top ?? []);
-        return '<details open class="phase-bucket"><summary>' + summary + "</summary>" + inner + "</details>";
+        return '<details class="phase-bucket"><summary>' + summary + "</summary>" + inner + "</details>";
       })
       .join("") +
     "</div>"
@@ -259,7 +287,7 @@ function renderBlockedPhaseBuckets(phaseBuckets: unknown, fallbackTop: unknown, 
   }, 0);
   const more =
     sumBlocked < totalBlocked
-      ? '<p class="muted">Preview capped per phase · full list in Tasks or <code>get-next-actions</code>.</p>'
+      ? '<p class="muted">Preview capped per phase · full list via <code>list-tasks</code> or <code>get-next-actions</code>.</p>'
       : "";
   return (
     more +
@@ -273,7 +301,7 @@ function renderBlockedPhaseBuckets(phaseBuckets: unknown, fallbackTop: unknown, 
           c === 0
             ? '<p class="muted">No blocked tasks in this phase.</p>'
             : renderBlockedList(b.top ?? []);
-        return '<details open class="phase-bucket"><summary>' + summary + "</summary>" + inner + "</details>";
+        return '<details class="phase-bucket"><summary>' + summary + "</summary>" + inner + "</details>";
       })
       .join("") +
     "</div>"
@@ -281,7 +309,7 @@ function renderBlockedPhaseBuckets(phaseBuckets: unknown, fallbackTop: unknown, 
 }
 
 /**
- * Terminal statuses (completed / cancelled): same phase-bucket shape as ready/proposed, but `<details>` stay **closed** until expanded (matches Tasks tree defaults).
+ * Terminal statuses (completed / cancelled): phase buckets closed until expanded.
  */
 function renderTerminalTaskPhaseBuckets(
   phaseBuckets: unknown,
@@ -290,7 +318,7 @@ function renderTerminalTaskPhaseBuckets(
   emptyMessage: string
 ): string {
   if (!Array.isArray(phaseBuckets) || phaseBuckets.length === 0) {
-    return renderReadyList(fallbackTop, emptyMessage);
+    return renderTaskRowList(fallbackTop, emptyMessage);
   }
   const sum = phaseBuckets.reduce((acc, x) => {
     const c = (x as { count?: unknown }).count;
@@ -298,7 +326,7 @@ function renderTerminalTaskPhaseBuckets(
   }, 0);
   const more =
     sum < totalInStatus
-      ? '<p class="muted">Preview capped per phase · full list in Tasks or <code>list-tasks</code>.</p>'
+      ? '<p class="muted">Preview capped per phase · full list via <code>list-tasks</code>.</p>'
       : "";
   return (
     more +
@@ -311,7 +339,7 @@ function renderTerminalTaskPhaseBuckets(
         const inner =
           c === 0
             ? '<p class="muted">No tasks in this phase.</p>'
-            : renderReadyList(b.top ?? [], "No tasks in this phase.");
+            : renderTaskRowList(b.top ?? [], "No tasks in this phase.");
         return (
           '<details class="phase-bucket terminal-phase-bucket"><summary>' +
           summary +
@@ -526,6 +554,20 @@ function renderDependencyOverviewHtml(dep: unknown): string {
   );
 }
 
+/** Closed-by-default roll-up for a dashboard status band (ready / proposed / blocked / terminal). */
+function renderStatusRollup(summaryInnerHtml: string, bodyHtml: string): string {
+  return (
+    '<details class="status-section">' +
+    "<summary>" +
+    summaryInnerHtml +
+    "</summary>" +
+    '<div class="status-section-body">' +
+    bodyHtml +
+    "</div>" +
+    "</details>"
+  );
+}
+
 /** Inner HTML for #root from a `workspace-kit run dashboard-summary`–shaped payload (or extension error object). */
 export function renderDashboardRootInnerHtml(payload: unknown): string {
   if (payload === null || payload === undefined) {
@@ -604,10 +646,48 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
         " other</p>"
       : "";
 
-  return (
-    renderAgentGuidanceSection(d.agentGuidance) +
-    renderWorkspaceOverviewSection(ws as Record<string, unknown> | null) +
-    planningGenSection +
+  const snId = sn && sn.id != null ? String(sn.id).trim() : "";
+  const snTitle = sn && sn.title != null ? String(sn.title) : "";
+  const suggestedNextHtml =
+    snId.length > 0 || snTitle.length > 0
+      ? '<div class="dash-row suggested-next-row" role="listitem">' +
+        '<span class="dash-row-label">' +
+        escapeHtml(snId + (snId && snTitle ? " — " : "") + snTitle) +
+        "</span>" +
+        (snId.length > 0
+          ? '<button type="button" class="dash-row-action" data-wc-action="task-detail" data-task-id="' +
+            escapeHtml(snId) +
+            '" title="Open task detail (markdown)">Detail</button>'
+          : "") +
+        "</div>"
+      : '<span class="muted">— none · promote tasks to <code>ready</code> or complete triage (<code>improvement</code> → accept)</span>';
+
+  const terminalSection = (() => {
+    const cs = d.completedSummary as Record<string, unknown> | undefined;
+    const ks = d.cancelledSummary as Record<string, unknown> | undefined;
+    if (!cs && !ks) {
+      return "";
+    }
+    const compCount = typeof cs?.count === "number" ? cs.count : 0;
+    const cancCount = typeof ks?.count === "number" ? ks.count : 0;
+    const compTop = Array.isArray(cs?.top) ? (cs!.top as unknown[]).slice(0, 15) : [];
+    const cancTop = Array.isArray(ks?.top) ? (ks!.top as unknown[]).slice(0, 15) : [];
+    const inner =
+      renderStatusRollup(
+        "<b>Completed</b> (" + String(compCount) + ") — terminal",
+        renderTerminalTaskPhaseBuckets(cs?.phaseBuckets, compTop, compCount, "No completed tasks.")
+      ) +
+      renderStatusRollup(
+        "<b>Cancelled</b> (" + String(cancCount) + ")",
+        renderTerminalTaskPhaseBuckets(ks?.phaseBuckets, cancTop, cancCount, "No cancelled tasks.")
+      );
+    return (
+      '<section class="dashboard-terminal-tasks" aria-label="Completed and cancelled tasks">' + inner + "</section>"
+    );
+  })();
+
+  const tasksBlock =
+    '<section class="dashboard-tasks-block" aria-label="Task queue rollups">' +
     "<p><b>Tasks</b></p>" +
     "<p class=\"ok\">Counts · proposed " +
     String(ss.proposed ?? 0) +
@@ -620,61 +700,44 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
     " · done " +
     String(ss.completed ?? 0) +
     "</p>" +
-    "<p><b>Ready · improvements</b> (" +
-    String(readyImpCount) +
-    ") — same store as execution queue; triage via accept → <code>ready</code></p>" +
-    renderReadyPhaseBuckets(ris.phaseBuckets, readyImpTop, "No ready improvements.") +
-    "<p><b>Ready · execution</b> (" +
-    String(readyExeCount) +
-    ")</p>" +
-    breakdownLine +
-    renderReadyPhaseBuckets(res.phaseBuckets, readyExeTop, "No ready execution tasks.") +
-    "<p><b>Proposed · improvements</b> (backlog until accepted) · " +
-    String(piCount) +
-    "</p>" +
-    renderProposedPhaseBuckets(pis.phaseBuckets, piCount, piTop) +
-    "<p><b>Proposed · execution</b> (workspace-kit tasks awaiting promote) · " +
-    String(peCount) +
-    "</p>" +
-    renderProposedExecutionPhaseBuckets(pes.phaseBuckets, peCount, peTop) +
-    "<p><b>Blocked</b> " +
-    String(blockedSummary.count ?? 0) +
-    "</p>" +
-    renderBlockedPhaseBuckets(blockedSummary.phaseBuckets, blockedTop, Number(blockedSummary.count ?? 0)) +
-    (() => {
-      const cs = d.completedSummary as Record<string, unknown> | undefined;
-      const ks = d.cancelledSummary as Record<string, unknown> | undefined;
-      if (!cs && !ks) {
-        return "";
-      }
-      const compCount = typeof cs?.count === "number" ? cs.count : 0;
-      const cancCount = typeof ks?.count === "number" ? ks.count : 0;
-      const compTop = Array.isArray(cs?.top) ? (cs!.top as unknown[]).slice(0, 15) : [];
-      const cancTop = Array.isArray(ks?.top) ? (ks!.top as unknown[]).slice(0, 15) : [];
-      return (
-        '<section class="dashboard-terminal-tasks" aria-label="Completed and cancelled tasks">' +
-        "<p><b>Completed</b> (" +
-        String(compCount) +
-        ") — terminal · collapsed until expanded (same phase buckets as Tasks tree)</p>" +
-        renderTerminalTaskPhaseBuckets(cs?.phaseBuckets, compTop, compCount, "No completed tasks.") +
-        "<p><b>Cancelled</b> (" +
-        String(cancCount) +
-        ")</p>" +
-        renderTerminalTaskPhaseBuckets(ks?.phaseBuckets, cancTop, cancCount, "No cancelled tasks.") +
-        "</section>"
-      );
-    })() +
+    renderStatusRollup(
+      "<b>Ready · improvements</b> (" +
+        String(readyImpCount) +
+        ") — same store as execution queue; triage via accept → <code>ready</code>",
+      renderReadyPhaseBuckets(ris.phaseBuckets, readyImpTop, "No ready improvements.")
+    ) +
+    renderStatusRollup(
+      "<b>Ready · execution</b> (" + String(readyExeCount) + ")",
+      breakdownLine + renderReadyPhaseBuckets(res.phaseBuckets, readyExeTop, "No ready execution tasks.")
+    ) +
+    renderStatusRollup(
+      "<b>Proposed · improvements</b> (backlog until accepted) · " + String(piCount),
+      renderProposedPhaseBuckets(pis.phaseBuckets, piCount, piTop)
+    ) +
+    renderStatusRollup(
+      "<b>Proposed · execution</b> (workspace-kit tasks awaiting promote) · " + String(peCount),
+      renderProposedExecutionPhaseBuckets(pes.phaseBuckets, peCount, peTop)
+    ) +
+    renderStatusRollup(
+      "<b>Blocked</b> " + String(blockedSummary.count ?? 0),
+      renderBlockedPhaseBuckets(blockedSummary.phaseBuckets, blockedTop, Number(blockedSummary.count ?? 0))
+    ) +
+    terminalSection +
+    "</section>";
+
+  return (
+    renderAgentGuidanceSection(d.agentGuidance) +
+    renderWorkspaceOverviewSection(ws as Record<string, unknown> | null) +
+    planningGenSection +
+    tasksBlock +
     "<p><b>Wishlist</b> · open " +
     String(wishlist.openCount ?? 0) +
     " / total " +
     String(wishlist.totalCount ?? 0) +
     "</p>" +
     renderWishlistOpenList(wishlistOpenTop) +
-    "<p><b>Suggested next</b> (highest-priority ready, any type) " +
-    (sn && (sn.id != null || sn.title != null)
-      ? escapeHtml(String(sn.id ?? "") + " — " + String(sn.title ?? ""))
-      : '<span class="muted">— none · promote tasks to <code>ready</code> or complete triage (<code>improvement</code> → accept)</span>') +
-    "</p>" +
+    "<p><b>Suggested next</b> (highest-priority ready, any type)</p>" +
+    suggestedNextHtml +
     renderDependencyOverviewHtml(d.dependencyOverview) +
     renderPlanningSession(planningSession) +
     '<p class="muted">Store updated ' +

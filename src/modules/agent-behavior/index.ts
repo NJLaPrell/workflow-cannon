@@ -11,6 +11,7 @@ import {
 import { BUILTIN_PROFILES, DEFAULT_BUILTIN_PROFILE_ID } from "./builtins.js";
 import { diffProfiles, summarizeProfileMarkdown } from "./explain.js";
 import {
+  allocateSequentialInterviewCustomId,
   buildDraftProfileFromInterview,
   INTERVIEW_QUESTIONS,
   dimensionsFromAnswers
@@ -36,6 +37,24 @@ async function withStore(
     await saveBehaviorWorkspaceState(ctx, store.getState());
   }
   return result;
+}
+
+function behaviorInterviewResumePayload(
+  session: NonNullable<Awaited<ReturnType<typeof readBehaviorInterviewSession>>>
+): Record<string, unknown> {
+  const complete = session.stepIndex >= INTERVIEW_QUESTIONS.length;
+  const q =
+    !complete && session.stepIndex >= 0 && session.stepIndex < INTERVIEW_QUESTIONS.length
+      ? INTERVIEW_QUESTIONS[session.stepIndex]
+      : null;
+  return {
+    stepIndex: session.stepIndex,
+    totalSteps: INTERVIEW_QUESTIONS.length,
+    complete,
+    question: q,
+    answers: session.answers,
+    resumeCli: `pnpm run wk run interview-behavior-profile '{"action":"answer","value":"<option>"}'`
+  };
 }
 
 export const agentBehaviorModule: WorkflowModule = {
@@ -340,7 +359,35 @@ export const agentBehaviorModule: WorkflowModule = {
         return { ok: true, code: "behavior-interview-discarded", data: {} };
       }
 
+      if (action === "status") {
+        const session = await readBehaviorInterviewSession(ws);
+        if (!session) {
+          return { ok: true, code: "behavior-interview-status", data: { active: false } };
+        }
+        return {
+          ok: true,
+          code: "behavior-interview-status",
+          data: { active: true, ...behaviorInterviewResumePayload(session) }
+        };
+      }
+
       if (action === "start") {
+        const existing = await readBehaviorInterviewSession(ws);
+        const forceRestart = args.forceRestart === true;
+        if (existing && !forceRestart) {
+          const complete = existing.stepIndex >= INTERVIEW_QUESTIONS.length;
+          return {
+            ok: false,
+            code: "behavior-interview-session-exists",
+            message: complete
+              ? "Interview finished but not finalized — use action:finalize or action:discard, or pass forceRestart:true to wipe."
+              : "Interview in progress — use action:status to resume, action:discard to clear, or forceRestart:true to wipe and restart.",
+            data: behaviorInterviewResumePayload(existing)
+          };
+        }
+        if (existing && forceRestart) {
+          await clearBehaviorInterviewSession(ws);
+        }
         await persistBehaviorInterviewSession(ws, { stepIndex: 0, answers: {} });
         const q = INTERVIEW_QUESTIONS[0]!;
         return {
@@ -438,69 +485,91 @@ export const agentBehaviorModule: WorkflowModule = {
             message: "Interview not complete; answer all questions first"
           };
         }
-        const customId = typeof args.customId === "string" ? args.customId.trim() : "";
-        if (!customId.startsWith("custom:")) {
+        const explicitId = typeof args.customId === "string" ? args.customId.trim() : "";
+        if (explicitId.length > 0 && !explicitId.startsWith("custom:")) {
           return {
             ok: false,
             code: "invalid-args",
-            message: "finalize requires customId (custom:<slug>)"
+            message: "When customId is provided it must be custom:<slug>"
           };
         }
-        const dims = dimensionsFromAnswers(session.answers);
+        const snap = session;
+        const dims = dimensionsFromAnswers(snap.answers);
         if (!dims) {
           return { ok: false, code: "invalid-state", message: "Missing answers" };
         }
-        let built: ReturnType<typeof buildDraftProfileFromInterview>;
-        try {
-          built = buildDraftProfileFromInterview(
-            session.answers,
-            customId,
-            typeof args.label === "string" ? args.label : undefined
-          );
-        } catch (e) {
-          return { ok: false, code: "invalid-profile", message: (e as Error).message };
-        }
-        const vr = validateBehaviorProfile(built);
-        if (!vr.ok) {
-          return { ok: false, code: "invalid-profile", message: vr.message };
-        }
-        const draft = vr.profile;
         const apply = args.apply === true;
-        if (apply) {
-          const persist = await withStore(ctx, async (store) => {
-            if (store.getRawProfile(customId)) {
+        const labelFromArgs = typeof args.label === "string" ? args.label.trim() : "";
+        const persist = await withStore(ctx, async (store) => {
+          let customId = explicitId;
+          if (!customId) {
+            const next = allocateSequentialInterviewCustomId((id) => !!store.getRawProfile(id));
+            if (!next) {
               return {
                 ok: false,
-                code: "duplicate-profile-id",
-                message: `Profile '${customId}' already exists`
+                code: "interview-id-exhausted",
+                message: "No free custom:chat-behavior-interview slot (clear or rename an existing custom profile)"
               };
             }
+            customId = next;
+          } else if (store.getRawProfile(customId)) {
+            return {
+              ok: false,
+              code: "duplicate-profile-id",
+              message: `Profile '${customId}' already exists`
+            };
+          }
+          const label =
+            labelFromArgs.length > 0
+              ? labelFromArgs
+              : explicitId.length > 0
+                ? "Interview profile"
+                : "Scribe's profile";
+          let built: ReturnType<typeof buildDraftProfileFromInterview>;
+          try {
+            built = buildDraftProfileFromInterview(snap.answers, customId, label);
+          } catch (e) {
+            return { ok: false, code: "invalid-profile", message: (e as Error).message };
+          }
+          const vr = validateBehaviorProfile(built);
+          if (!vr.ok) {
+            return { ok: false, code: "invalid-profile", message: vr.message };
+          }
+          const draft = vr.profile;
+          if (apply) {
             store.putCustomProfile(draft);
             store.setActiveProfileId(customId);
-            return { ok: true, code: "ok", data: { profile: draft, activeProfileId: customId } };
-          });
-          if (!persist.ok) {
-            return persist;
+            return {
+              ok: true,
+              code: "ok",
+              data: { profile: draft, activeProfileId: customId, allocatedCustomId: customId }
+            };
           }
-          await clearBehaviorInterviewSession(ws);
+          return { ok: true, code: "ok", data: { profile: draft, apply: false, allocatedCustomId: customId } };
+        });
+        if (!persist.ok) {
+          return persist;
+        }
+        await clearBehaviorInterviewSession(ws);
+        if (apply) {
           return {
             ok: true,
             code: "behavior-interview-finalized",
             data: persist.data
           };
         }
-        await clearBehaviorInterviewSession(ws);
         return {
           ok: true,
           code: "behavior-interview-draft",
-          data: { profile: draft, apply: false }
+          data: persist.data
         };
       }
 
       return {
         ok: false,
         code: "invalid-args",
-        message: "interview-behavior-profile requires action: start | answer | back | finalize | discard"
+        message:
+          "interview-behavior-profile requires action: start | answer | back | finalize | discard | status"
       };
     }
 

@@ -102,6 +102,13 @@ const stages = [
     command: process.execPath,
     args: ["scripts/check-orphan-ai-sources.mjs"],
     hint: "Add missing .ai paths to docs/maintainers/data/ai-to-docs-coverage.json."
+  },
+  {
+    id: "behavior-interview-playbook",
+    label: "Behavior interview playbook ↔ interview.ts question fingerprint",
+    command: process.execPath,
+    args: ["scripts/check-behavior-interview-playbook-alignment.mjs"],
+    hint: "Keep INTERVIEW_QUESTION_IDS_FINGERPRINT and .ai/playbooks/workspace-kit-chat-behavior-interview.md HTML comment in sync with INTERVIEW_QUESTIONS."
   }
 ];
 

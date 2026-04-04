@@ -55,10 +55,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (msg?.type === "validateConfig") {
         await vscode.commands.executeCommand("workflowCannon.validateConfig");
       }
-      if (msg?.type === "openTasks") {
-        await vscode.commands.executeCommand("workbench.view.extension.workflow-cannon");
-        await vscode.commands.executeCommand("workflowCannon.refreshTasks");
-      }
       if (msg?.type === "openConfig") {
         await vscode.commands.executeCommand("workbench.view.extension.workflow-cannon");
         await vscode.commands.executeCommand("workflowCannon.validateConfig");
@@ -93,6 +89,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         if (taskId.length > 0 && action.length > 0) {
           await confirmAndRunTransition(this.client, this.notifyKitStateChanged, taskId, action);
           await this.pushUpdate();
+        }
+      }
+      if (msg?.type === "openTaskDetail") {
+        const tid = typeof msg.taskId === "string" ? msg.taskId.trim() : "";
+        if (tid.length > 0) {
+          await vscode.commands.executeCommand("workflowCannon.task.showDetail", tid);
         }
       }
     });
@@ -151,7 +153,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       `script-src ${webview.cspSource} 'unsafe-inline'`
     ].join("; ");
 
-    const bootstrap = `(function(){var vscode=acquireVsCodeApi();var btn=document.getElementById("btn");var validate=document.getElementById("validate");var tasks=document.getElementById("tasks");var config=document.getElementById("config");var root=document.getElementById("root");if(!btn||!validate||!tasks||!config)return;btn.addEventListener("click",function(){vscode.postMessage({type:"refresh"});});validate.addEventListener("click",function(){vscode.postMessage({type:"validateConfig"});});tasks.addEventListener("click",function(){vscode.postMessage({type:"openTasks"});});config.addEventListener("click",function(){vscode.postMessage({type:"openConfig"});});if(root)root.addEventListener("click",function(ev){var t=ev.target;if(!t||t.tagName!=="BUTTON")return;var act=t.getAttribute("data-wc-action");if(!act)return;if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="proposed-imp-chat"){vscode.postMessage({type:"prefillImprovementTriageChat",taskId:tid});return;}if(act==="proposed-exe-chat"){vscode.postMessage({type:"prefillTaskToPhaseBranchChat",taskId:tid});return;}});})();`;
+    const bootstrap = `(function(){var vscode=acquireVsCodeApi();var btn=document.getElementById("btn");var validate=document.getElementById("validate");var config=document.getElementById("config");var root=document.getElementById("root");if(!btn||!validate||!config)return;btn.addEventListener("click",function(){vscode.postMessage({type:"refresh"});});validate.addEventListener("click",function(){vscode.postMessage({type:"validateConfig"});});config.addEventListener("click",function(){vscode.postMessage({type:"openConfig"});});if(root)root.addEventListener("click",function(ev){var t=ev.target;if(!t||t.tagName!=="BUTTON")return;var act=t.getAttribute("data-wc-action");if(!act)return;if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="proposed-imp-chat"){vscode.postMessage({type:"prefillImprovementTriageChat",taskId:tid});return;}if(act==="proposed-exe-chat"){vscode.postMessage({type:"prefillTaskToPhaseBranchChat",taskId:tid});return;}});})();`;
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -181,6 +183,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     details.phase-bucket { margin-bottom: 6px; }
     details.phase-bucket summary { cursor: pointer; user-select: none; font-weight: 600; }
     details.phase-bucket pre { margin-top: 4px; }
+    .dashboard-tasks-block { margin-top: 14px; }
+    details.status-section { margin-bottom: 8px; }
+    details.status-section > summary { cursor: pointer; user-select: none; font-weight: 600; }
+    details.status-section > .status-section-body { padding-left: 2px; }
+    .suggested-next-row { margin: 4px 0 8px 0; }
     .planning-card { border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35)); border-radius: 6px; padding: 8px; margin: 10px 0; }
     .dependency-overview { margin: 10px 0; }
     .a11y-note { font-size: 11px; }
@@ -192,7 +199,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   <div>
     <button id="btn">Refresh</button>
     <button id="validate">Validate Config</button>
-    <button id="tasks">Open Tasks</button>
     <button id="config">Open Config</button>
   </div>
   <script>${bootstrap}</script>
