@@ -94,6 +94,36 @@ export function validateValueForMetadata(meta: ConfigKeyMetadata, value: unknown
         }
       }
     }
+    if (meta.key === "kit.githubInvocation.allowedRepositories") {
+      for (const item of value) {
+        if (typeof item !== "string" || !item.trim()) {
+          throw new Error(`config-type-error(${meta.key}): array entries must be non-empty strings`);
+        }
+        const s = item.trim();
+        if (!/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/.test(s)) {
+          throw new Error(
+            `config-type-error(${meta.key}): entries must be GitHub repo full names (owner/repo)`
+          );
+        }
+      }
+      return;
+    }
+    if (
+      meta.key === "kit.githubInvocation.planOnlyRunCommands" ||
+      meta.key === "kit.githubInvocation.sensitiveRunCommands"
+    ) {
+      for (const item of value) {
+        if (typeof item !== "string" || !item.trim()) {
+          throw new Error(`config-type-error(${meta.key}): array entries must be non-empty strings`);
+        }
+        if (!/^[a-z][a-z0-9-]*$/i.test(item.trim())) {
+          throw new Error(
+            `config-type-error(${meta.key}): command entries must be alphanumeric/hyphen subcommand ids`
+          );
+        }
+      }
+      return;
+    }
     return;
   }
   if (meta.type === "string" && typeof value !== "string") {
@@ -111,6 +141,15 @@ export function validateValueForMetadata(meta: ConfigKeyMetadata, value: unknown
     }
     return;
   }
+  if (
+    meta.key === "kit.githubInvocation.commentDebounceSeconds" ||
+    meta.key === "kit.githubInvocation.rateLimitEventsPerHour"
+  ) {
+    if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+      throw new Error(`config-constraint(${meta.key}): must be a non-negative integer`);
+    }
+    return;
+  }
   if (meta.type === "object") {
     if (value === null || typeof value !== "object" || Array.isArray(value)) {
       throw typeError(meta.key, "object", value);
@@ -122,6 +161,19 @@ export function validateValueForMetadata(meta: ConfigKeyMetadata, value: unknown
         }
         if (typeof v !== "string" || !v.trim()) {
           throw new Error(`config-type-error(${meta.key}): values must be non-empty strings`);
+        }
+      }
+    }
+    if (meta.key === "kit.githubInvocation.eventPlaybookMap") {
+      const allowedRoutes = new Set(["plan", "implement", "review", "fix-review", "none"]);
+      for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+        if (typeof k !== "string" || !k.trim()) {
+          throw new Error(`config-type-error(${meta.key}): keys must be non-empty strings`);
+        }
+        if (typeof v !== "string" || !allowedRoutes.has(v)) {
+          throw new Error(
+            `config-type-error(${meta.key}): values must be one of plan, implement, review, fix-review, none`
+          );
         }
       }
     }
@@ -267,7 +319,12 @@ export function validatePersistedConfigDocument(
     }
     const k = kit as Record<string, unknown>;
     for (const key of Object.keys(k)) {
-      if (key !== "currentPhaseNumber" && key !== "currentPhaseLabel" && key !== "agentGuidance") {
+      if (
+        key !== "currentPhaseNumber" &&
+        key !== "currentPhaseLabel" &&
+        key !== "agentGuidance" &&
+        key !== "githubInvocation"
+      ) {
         throw new Error(`config-invalid(${label}): unknown kit.${key}`);
       }
     }
@@ -303,6 +360,62 @@ export function validatePersistedConfigDocument(
       }
       if (ag.displayLabel !== undefined) {
         validateValueForMetadata(REGISTRY["kit.agentGuidance.displayLabel"]!, ag.displayLabel);
+      }
+    }
+    if (k.githubInvocation !== undefined) {
+      if (
+        typeof k.githubInvocation !== "object" ||
+        k.githubInvocation === null ||
+        Array.isArray(k.githubInvocation)
+      ) {
+        throw new Error(`config-invalid(${label}): kit.githubInvocation must be an object`);
+      }
+      const gi = k.githubInvocation as Record<string, unknown>;
+      for (const gk of Object.keys(gi)) {
+        if (
+          gk !== "enabled" &&
+          gk !== "allowedRepositories" &&
+          gk !== "eventPlaybookMap" &&
+          gk !== "commentDebounceSeconds" &&
+          gk !== "rateLimitEventsPerHour" &&
+          gk !== "planOnlyRunCommands" &&
+          gk !== "sensitiveRunCommands"
+        ) {
+          throw new Error(`config-invalid(${label}): unknown kit.githubInvocation.${gk}`);
+        }
+      }
+      if (gi.enabled !== undefined) {
+        validateValueForMetadata(REGISTRY["kit.githubInvocation.enabled"]!, gi.enabled);
+      }
+      if (gi.allowedRepositories !== undefined) {
+        validateValueForMetadata(REGISTRY["kit.githubInvocation.allowedRepositories"]!, gi.allowedRepositories);
+      }
+      if (gi.eventPlaybookMap !== undefined) {
+        validateValueForMetadata(REGISTRY["kit.githubInvocation.eventPlaybookMap"]!, gi.eventPlaybookMap);
+      }
+      if (gi.commentDebounceSeconds !== undefined) {
+        validateValueForMetadata(
+          REGISTRY["kit.githubInvocation.commentDebounceSeconds"]!,
+          gi.commentDebounceSeconds
+        );
+      }
+      if (gi.rateLimitEventsPerHour !== undefined) {
+        validateValueForMetadata(
+          REGISTRY["kit.githubInvocation.rateLimitEventsPerHour"]!,
+          gi.rateLimitEventsPerHour
+        );
+      }
+      if (gi.planOnlyRunCommands !== undefined) {
+        validateValueForMetadata(
+          REGISTRY["kit.githubInvocation.planOnlyRunCommands"]!,
+          gi.planOnlyRunCommands
+        );
+      }
+      if (gi.sensitiveRunCommands !== undefined) {
+        validateValueForMetadata(
+          REGISTRY["kit.githubInvocation.sensitiveRunCommands"]!,
+          gi.sensitiveRunCommands
+        );
       }
     }
   }

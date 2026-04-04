@@ -64,6 +64,34 @@ Generated from `src/core/config-metadata.ts`. Do not edit by hand; run `workspac
 
 **Description:** Optional positive integer marking the maintainer’s current kit phase number. When set, queue-health and phase hints prefer this over parsing docs/maintainers/data/workspace-kit-status.yaml. Must agree with that YAML when both are set (workspace-kit doctor warns on mismatch).
 
+| kit.githubInvocation.allowedRepositories | array | [] | project | workspace-kit | maintainer | true | true |
+
+**Description:** Full repository names (owner/repo) permitted for GitHub-native invocation. Empty = deny all remote runs.
+
+| kit.githubInvocation.commentDebounceSeconds | number | 0 | project | workspace-kit | maintainer | false | true |
+
+**Description:** Minimum seconds between automated runner actions for the same issue/PR thread (in-process only; multi-replica setups need external coordination). 0 disables debounce.
+
+| kit.githubInvocation.enabled | boolean | false | project | workspace-kit | maintainer | true | true |
+
+**Description:** When true, the reference GitHub delivery runner may spawn workspace-kit for allowed repositories (still requires allowlist + signature or trusted Actions context). Default false: no remote invocation.
+
+| kit.githubInvocation.eventPlaybookMap | object | {} | project | workspace-kit | maintainer | true | true |
+
+**Description:** Maps GitHub event name (e.g. issue_comment, pull_request_review) to route kind: plan, implement, review, fix-review, or none. Slash commands in the comment body override this map. See ADR-github-native-invocation.md.
+
+| kit.githubInvocation.planOnlyRunCommands | array | ["get-next-actions","list-tasks","get-task"] | project | workspace-kit | maintainer | true | true |
+
+**Description:** workspace-kit run subcommand names allowed for plan route (e.g. get-next-actions, list-tasks, get-task). Runner rejects plan invocations outside this list.
+
+| kit.githubInvocation.rateLimitEventsPerHour | number | 0 | project | workspace-kit | maintainer | false | false |
+
+**Description:** Placeholder for future rate limiting: max automated invocations per rolling hour per repo (0 = not enforced by reference runner).
+
+| kit.githubInvocation.sensitiveRunCommands | array | ["run-transition"] | project | workspace-kit | maintainer | true | true |
+
+**Description:** workspace-kit run subcommand names permitted for implement/review routes when WORKSPACE_KIT_GITHUB_RUN_ARGS_JSON + WORKSPACE_KIT_GITHUB_RUN_POLICY_APPROVAL are supplied (maintainer-controlled JSON).
+
 | modules.disabled | array | [] | project | workspace-kit | maintainer | false | false |
 
 **Description:** Module ids to disable after computing the candidate enabled set (default-by-flag or modules.enabled whitelist).
@@ -103,6 +131,10 @@ Generated from `src/core/config-metadata.ts`. Do not edit by hand; run `workspac
 | responseTemplates.enforcementMode | string | "advisory" | project | workspace-kit | maintainer | false | false |
 
 **Description:** `advisory`: unknown template ids, invalid default/override ids, and explicit-vs-directive template conflicts emit warnings only. `strict`: same conditions fail the command (`response-template-invalid` or `response-template-conflict`) after the module runs; use for CI governance.
+
+| skills.discoveryRoots | array | [".claude/skills"] | project | skills | maintainer | false | false |
+
+**Description:** Workspace-relative directories scanned for skill packs (Claude-shaped: <root>/<skill-id>/SKILL.md).
 
 | tasks.persistenceBackend | string | "sqlite" | project | task-engine | public | false | false |
 

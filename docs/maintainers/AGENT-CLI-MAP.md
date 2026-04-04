@@ -132,6 +132,10 @@ workspace-kit run run-transition '{"taskId":"T285","action":"complete","policyAp
 
 See `src/modules/task-engine/instructions/run-transition.md` for allowed `action` values by state.
 
+### GitHub-native runner (Phase 55)
+
+Headless **`run-transition`** from GitHub Actions must pass **`policyApproval` inside the third JSON argument** — same as any Tier A **`workspace-kit run`**. The reference script **`tools/github-invocation/run-github-delivery.mjs`** expects maintainer-supplied **`WORKSPACE_KIT_GITHUB_RUN_ARGS_JSON`** (full argv JSON object) plus **`WORKSPACE_KIT_GITHUB_RUN_POLICY_APPROVAL`** when **`policyApproval` is omitted** from that object; it never treats issue comments as approval. Plan-only automation uses **`kit.githubInvocation.planOnlyRunCommands`** (default includes **`get-next-actions`**, **`list-tasks`**, **`get-task`**). Runbook: **`docs/maintainers/runbooks/github-workflow-cannon-invocation.md`**; ADR: **`docs/maintainers/ADR-github-native-invocation.md`**.
+
 ### Planning generation (SQLite optimistic lock)
 
 Config **`tasks.planningGenerationPolicy`**: **`off`** (consumer default; optional **`expectedPlanningGeneration`**), **`warn`** (omit allowed; watch **`planningGenerationPolicyWarnings`** on success JSON), **`require`** (**this repo** — mutating task-engine / wishlist / planning persist / **`generate-recommendations`** must pass **`expectedPlanningGeneration`** from **`planningGeneration`** on your **last read**).

@@ -8,9 +8,25 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
-### Changed (maintainer workflow)
+(nothing yet)
 
-- **Git / playbooks** — Renamed **`task-to-main`** → **`task-to-phase-branch`**: execution tasks merge via PR into **`release/phase-<N>`**; phase branch merges to **`main`** at closeout per **`phase-closeout-and-release.md`**. Cursor extension command **`workflowCannon.chat.prefillTaskToPhaseBranch`** (was **`prefillTaskToMain`**). Example playbook runner: **`examples/playbooks/pilot-task-to-phase-branch.json`**.
+## [0.55.0] - 2026-04-03
+
+Phase 55 — **GitHub-native invocation** (**`T649`–`T653`**): ADR **`ADR-github-native-invocation.md`**, **`kit.githubInvocation.*`** config + validation, **`src/core/github-invocation.ts`**, reference runner **`tools/github-invocation/run-github-delivery.mjs`**, runbook **`runbooks/github-workflow-cannon-invocation.md`**, sample **`docs/examples/github/workflow-cannon-invocation.sample.yml`**. Wishlist provenance **`T566`**.
+
+### Added
+
+- **Config** — **`kit.githubInvocation.enabled`**, **`allowedRepositories`**, **`eventPlaybookMap`**, **`commentDebounceSeconds`**, **`rateLimitEventsPerHour`** (placeholder), **`planOnlyRunCommands`**, **`sensitiveRunCommands`**; generated **`CONFIG.md`** / **`.ai/CONFIG.md`** updated.
+- **Library** — Webhook HMAC-SHA256 verification, slash-command routing, repo allowlist helper, structured audit record builder (exported from **`@workflow-cannon/workspace-kit`**).
+- **Runner** — Plan route invokes allowlisted **`workspace-kit run`** subcommands; mutating routes require maintainer-supplied **`WORKSPACE_KIT_GITHUB_RUN_ARGS_JSON`** + **`WORKSPACE_KIT_GITHUB_RUN_POLICY_APPROVAL`** (no comment-as-approval).
+
+### Changed (maintainer docs)
+
+- **`POLICY-APPROVAL.md`**, **`RELEASING.md`**, **`AGENT-CLI-MAP.md`** — GitHub runner policy cross-links.
+
+### Changed (module version)
+
+- **Workspace-config module** — **`0.6.0`** (compatibility matrix).
 
 ## [0.54.0] - 2026-04-04
 

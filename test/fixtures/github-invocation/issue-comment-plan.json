@@ -1,0 +1,12 @@
+{
+  "action": "created",
+  "repository": {
+    "full_name": "fixture-owner/workflow-cannon"
+  },
+  "issue": {
+    "number": 42
+  },
+  "comment": {
+    "body": "/cannon-plan\n\nDiscuss T649 next."
+  }
+}

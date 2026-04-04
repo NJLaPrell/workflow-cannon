@@ -111,6 +111,20 @@ export {
   type ConfigValueType
 } from "./config-metadata.js";
 export {
+  buildAuditRecord,
+  extractTaskIdsFromText,
+  getGithubDeliveryMeta,
+  getInvocationCommentBody,
+  getIssueCommentBody,
+  getRepositoryFullName,
+  isRepositoryAllowed,
+  parseCannonSlashCommand,
+  resolveRouteKind,
+  verifyGithubWebhookSignatureSha256,
+  type GithubInvocationAuditRecord,
+  type GithubInvocationRouteKind
+} from "./github-invocation.js";
+export {
   CONFIG_FACET_IDS,
   isConfigFacetId,
   listKeysForConfigFacet,

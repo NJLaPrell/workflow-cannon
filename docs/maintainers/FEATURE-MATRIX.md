@@ -46,6 +46,7 @@ Status legend:
 | Phase 46 - Roadmap data generation + task features (`T591`–`T598`) | `v0.46.0` | Completed |
 | Phase 47 - Agent guidance profile — RPG party tier (`T585`–`T590`) | `v0.47.0` | Completed |
 | Phase 54 - Skill packs v1 (`T640`–`T644`) | `v0.54.0` | Completed |
+| Phase 55 - GitHub-native invocation (`T649`–`T653`) | `v0.55.0` | Completed |
 
 ## Feature Matrix by Phase
 
@@ -345,6 +346,15 @@ Status legend:
 | Inspect / apply / recommend | **`list-skills`**, **`inspect-skill`**, **`apply-skill`** (preview default; audit optional), **`recommend-skills`** | Completed | `T642`, `T644` |
 | Task attachments | **`metadata.skillIds`** validated against discovered pack ids | Completed | `T643` |
 | Sample + docs | **`.claude/skills/sample-wc-skill/`**, ADR **`ADR-skill-packs-v1.md`**, runbook **`runbooks/skill-packs-dual-install.md`** | Completed | `T644` |
+
+### Phase 55 GitHub-native invocation (`v0.55.0`)
+
+| Product feature | What users/maintainers get | Status | Task coverage |
+| --- | --- | --- | --- |
+| ADR + threat model | **`ADR-github-native-invocation.md`**: App vs Actions, HMAC, slash taxonomy, policy non-bypass | Completed | `T649` |
+| Config surface | **`kit.githubInvocation.*`**: allowlist, **`eventPlaybookMap`**, debounce placeholder, command allowlists | Completed | `T650` |
+| Core helpers + runner | **`github-invocation.ts`** (verify, route, audit shape); **`run-github-delivery.mjs`** plan + policy-gated mutating path | Completed | `T651`, `T652` |
+| Maintainer enablement | Runbook **`github-workflow-cannon-invocation.md`**, sample workflow under **`docs/examples/github/`** | Completed | `T653` |
 
 ## Notes
 

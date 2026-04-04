@@ -4,6 +4,7 @@
 
 ## Recent archived “current state” bullets (post phase 35)
 
+- **Phase 55 (GitHub-native invocation)** is **COMPLETE and released** as **`v0.55.0`**: **`T649`–`T653`** — ADR **`ADR-github-native-invocation.md`**, **`kit.githubInvocation.*`** config + validation, **`src/core/github-invocation.ts`**, reference runner **`tools/github-invocation/run-github-delivery.mjs`**, maintainer runbook **`runbooks/github-workflow-cannon-invocation.md`**, sample workflow **`docs/examples/github/workflow-cannon-invocation.sample.yml`**; wishlist **`T566`** provenance; workspace-config **0.6.0** in compatibility matrix.
 - **Phase 53 (Relational feature registry)** is **COMPLETE and released** as **`v0.53.0`**: **`T630`–`T639`** — ADR **`ADR-relational-feature-registry.md`**, SQLite **`task_engine_components`** / **`task_engine_features`** / **`task_engine_task_features`**, **`user_version` 5** migration + seed, junction persistence + **`backfill-task-feature-links`** / **`export-feature-taxonomy-json`**, **`list-components`** / **`list-features`**, **`list-tasks`** **`featureId`** / **`componentId`**, **`unknown-feature-id`**; roadmap/taxonomy doc gen from planning DB when present; **`WORKSPACE_KIT_DOC_TAXONOMY_JSON_ONLY`** for CI-committed doc parity; task-engine **0.15.0**, documentation **0.5.0** in compatibility matrix.
 - **Phase 52 (Agent/human CLI ergonomics)** is **COMPLETE and released** as **`v0.52.0`**: **`T624`–`T629`** — **`remediation`** field on **`workspace-kit run`** failures; **`errorRemediationCatalog`** on **`doctor --agent-instruction-surface`**; **`run <pilot-cmd> --schema-only`**; maintainer docs + extension README; task-engine module **0.14.1** in compatibility matrix.
 - **Phase 41 (Relational SQLite task store)** is **COMPLETE and released** as **`v0.41.0`**: **`T540`–`T545`** — ADR **`ADR-relational-sqlite-task-store.md`**, table **`task_engine_tasks`** + envelope columns + **`PRAGMA user_version` 2**, **`SqliteDualPlanningStore`** row persistence, **`migrate-task-persistence`** **`sqlite-blob-to-relational`**, doctor/runbooks/**`get-kit-persistence-map`**, planning consistency script + tests; **`TaskEntity`** **`summary`/`description`/`risk`**; task-engine module **0.7.0** in compatibility matrix.
@@ -54,6 +55,13 @@
 ## Archived phase plan sections (completed phases)
 
 These **`### Phase …`** blocks were moved out of **`src/modules/documentation/data/roadmap-phase-sections.md`** so **[`ROADMAP.md`](./ROADMAP.md)** lists only **planned** and **in-flight** phase detail. Shipped scope/outcomes remain provenance here; release facts stay in **[`CHANGELOG.md`](./CHANGELOG.md)**.
+
+### Phase 55 - GitHub-native invocation (issues, PR comments, review loops) -> GitHub release `v0.55.0` (COMPLETE)
+
+- **Primary scope:** **`T649`–`T653`** — ADR + threat model + event/playbook taxonomy (**`T649`**); **`kit.githubInvocation.*`** config for event→route map and runner hooks (**`T650`**); HMAC verification + reference runner MVP with plan-first path (**`T651`**); `/cannon-implement` / `/cannon-review` / `/cannon-fix-review` + audit linkage to **`T###`** via structured JSON logs (**`T652`**); sample workflow + maintainer runbook + closeout evidence (**`T653`**). Converted from wishlist **`T566`**; no bypass of **`run-transition`** or policy lanes.
+- **Outcome:** Repos can trigger **`workspace-kit`** from GitHub with locked-down allowlists, optional webhook HMAC or trusted Actions context, correlation from delivery id to task ids in audit JSON, and maintainer copy-paste setup.
+- **Exit signals:**
+  - **`pnpm run build`**, **`check`**, **`test`**, **`parity`**, **`pre-merge-gates`** on the release tag; maintainer evidence per **`RELEASING.md`**.
 
 ### Phase 52 - Agent/human CLI ergonomics -> GitHub release `v0.52.0` (COMPLETE)
 

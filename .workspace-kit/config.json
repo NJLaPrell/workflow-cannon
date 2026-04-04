@@ -5,8 +5,8 @@
     }
   },
   "kit": {
-    "currentPhaseLabel": "Phase 55 — post v0.54.0 (skill packs shipped)",
-    "currentPhaseNumber": 55
+    "currentPhaseLabel": "Phase 56 — lifecycle hooks (v0.55.0 shipped)",
+    "currentPhaseNumber": 56
   },
   "tasks": {
     "persistenceBackend": "sqlite",

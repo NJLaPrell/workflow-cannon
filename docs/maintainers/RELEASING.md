@@ -32,6 +32,7 @@ All gates must pass before publish (see `docs/maintainers/release-gate-matrix.md
 4. Consumer-impacting flows are validated against packaged artifacts (`pnpm run parity`).
 5. Migration risk is reviewed for config/template/schema/state changes.
 6. Security-sensitive changes (policy/approval/secrets/workspace mutation) are explicitly reviewed.
+7. When shipping or altering **GitHub-native invocation** (Phase 55 runner, **`kit.githubInvocation.*`**), capture audit JSON samples in release notes or internal evidence and confirm no tokens or raw **`policyApproval`** values appear in workflow logs (see **`docs/maintainers/runbooks/github-workflow-cannon-invocation.md`**).
 
 If a gate fails, do not publish. Capture the blocker in task-engine state and update task-engine state/context as needed for human review.
 

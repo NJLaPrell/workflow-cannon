@@ -1,0 +1,39 @@
+# SAMPLE ONLY — not active until copied into .github/workflows/ and customized.
+# Phase 55 reference: opt-in GitHub Actions → workspace-kit (plan-first).
+# See docs/maintainers/runbooks/github-workflow-cannon-invocation.md
+#
+# Replace YOUR_ORG/YOUR_REPO in .workspace-kit/config.json kit.githubInvocation.allowedRepositories
+# and enable kit.githubInvocation.enabled via maintainer config workflow.
+
+name: workflow-cannon-github-invocation (sample)
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  cannon-plan:
+    if: contains(github.event.comment.body, '/cannon-plan')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install and build workspace-kit
+        run: pnpm install && pnpm run build
+
+      - name: Run reference delivery runner (plan)
+        env:
+          GITHUB_ACTIONS: "true"
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+        run: node tools/github-invocation/run-github-delivery.mjs --cwd .

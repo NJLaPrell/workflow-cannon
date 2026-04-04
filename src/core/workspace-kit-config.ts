@@ -39,7 +39,17 @@ export const KIT_CONFIG_DEFAULTS: Record<string, unknown> = {
     disabled: [] as string[]
   },
   /** Maintainer-declared current kit phase (optional); overrides YAML-derived phase for queue audits when set. */
-  kit: {} as Record<string, unknown>,
+  kit: {
+    githubInvocation: {
+      enabled: false,
+      allowedRepositories: [] as string[],
+      eventPlaybookMap: {} as Record<string, string>,
+      commentDebounceSeconds: 0,
+      rateLimitEventsPerHour: 0,
+      planOnlyRunCommands: ["get-next-actions", "list-tasks", "get-task"],
+      sensitiveRunCommands: ["run-transition"]
+    }
+  } as Record<string, unknown>,
   tasks: {
     storeRelativePath: ".workspace-kit/tasks/state.json",
     wishlistStoreRelativePath: ".workspace-kit/wishlist/state.json",

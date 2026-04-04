@@ -539,5 +539,110 @@
       "project",
       "user"
     ]
+  },
+  "kit.githubInvocation.enabled": {
+    "key": "kit.githubInvocation.enabled",
+    "type": "boolean",
+    "description": "When true, the reference GitHub delivery runner may spawn workspace-kit for allowed repositories (still requires allowlist + signature or trusted Actions context). Default false: no remote invocation.",
+    "default": false,
+    "domainScope": "project",
+    "owningModule": "workspace-kit",
+    "sensitive": true,
+    "requiresRestart": false,
+    "requiresApproval": true,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project"
+    ]
+  },
+  "kit.githubInvocation.allowedRepositories": {
+    "key": "kit.githubInvocation.allowedRepositories",
+    "type": "array",
+    "description": "Full repository names (owner/repo) permitted for GitHub-native invocation. Empty = deny all remote runs.",
+    "default": [],
+    "domainScope": "project",
+    "owningModule": "workspace-kit",
+    "sensitive": true,
+    "requiresRestart": false,
+    "requiresApproval": true,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project"
+    ]
+  },
+  "kit.githubInvocation.eventPlaybookMap": {
+    "key": "kit.githubInvocation.eventPlaybookMap",
+    "type": "object",
+    "description": "Maps GitHub event name (e.g. issue_comment, pull_request_review) to route kind: plan, implement, review, fix-review, or none. Slash commands in the comment body override this map. See ADR-github-native-invocation.md.",
+    "default": {},
+    "domainScope": "project",
+    "owningModule": "workspace-kit",
+    "sensitive": true,
+    "requiresRestart": false,
+    "requiresApproval": true,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project"
+    ]
+  },
+  "kit.githubInvocation.commentDebounceSeconds": {
+    "key": "kit.githubInvocation.commentDebounceSeconds",
+    "type": "number",
+    "description": "Minimum seconds between automated runner actions for the same issue/PR thread (in-process only; multi-replica setups need external coordination). 0 disables debounce.",
+    "default": 0,
+    "domainScope": "project",
+    "owningModule": "workspace-kit",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": true,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project"
+    ]
+  },
+  "kit.githubInvocation.rateLimitEventsPerHour": {
+    "key": "kit.githubInvocation.rateLimitEventsPerHour",
+    "type": "number",
+    "description": "Placeholder for future rate limiting: max automated invocations per rolling hour per repo (0 = not enforced by reference runner).",
+    "default": 0,
+    "domainScope": "project",
+    "owningModule": "workspace-kit",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project"
+    ]
+  },
+  "kit.githubInvocation.planOnlyRunCommands": {
+    "key": "kit.githubInvocation.planOnlyRunCommands",
+    "type": "array",
+    "description": "workspace-kit run subcommand names allowed for plan route (e.g. get-next-actions, list-tasks, get-task). Runner rejects plan invocations outside this list.",
+    "default": ["get-next-actions", "list-tasks", "get-task"],
+    "domainScope": "project",
+    "owningModule": "workspace-kit",
+    "sensitive": true,
+    "requiresRestart": false,
+    "requiresApproval": true,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project"
+    ]
+  },
+  "kit.githubInvocation.sensitiveRunCommands": {
+    "key": "kit.githubInvocation.sensitiveRunCommands",
+    "type": "array",
+    "description": "workspace-kit run subcommand names permitted for implement/review routes when WORKSPACE_KIT_GITHUB_RUN_ARGS_JSON + WORKSPACE_KIT_GITHUB_RUN_POLICY_APPROVAL are supplied (maintainer-controlled JSON).",
+    "default": ["run-transition"],
+    "domainScope": "project",
+    "owningModule": "workspace-kit",
+    "sensitive": true,
+    "requiresRestart": false,
+    "requiresApproval": true,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project"
+    ]
   }
 }
