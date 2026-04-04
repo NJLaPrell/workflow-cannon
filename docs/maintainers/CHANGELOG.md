@@ -11,6 +11,7 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 ### Changed (task queue)
 
 - Phase **59** Cursor chat prefill experiments **`T668`–`T670`** **`cancelled`** via task-engine **`run-transition`** (**2026-04-04**); roadmap pointer + maintainer status YAML aligned.
+- Maintainer snapshot + **`kit.currentPhaseNumber`** reset to **Phase 58** as current (**2026-04-04**); **`current_kit_phase` / `next_kit_phase` 58**.
 
 ## [0.58.0] - 2026-04-04
 
