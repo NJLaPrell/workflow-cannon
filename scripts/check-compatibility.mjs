@@ -33,7 +33,8 @@ async function main() {
       approvalsModule,
       planningModule,
       improvementModule,
-      skillsModule
+      skillsModule,
+      subagentsModule
     }
   ] = await Promise.all([import("../dist/index.js"), import("../dist/modules/index.js")]);
 
@@ -69,7 +70,8 @@ async function main() {
     approvalsModule,
     planningModule,
     improvementModule,
-    skillsModule
+    skillsModule,
+    subagentsModule
   ];
 
   try {

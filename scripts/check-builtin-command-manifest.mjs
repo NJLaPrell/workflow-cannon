@@ -23,7 +23,8 @@ const KNOWN_POLICY_OPERATION_IDS = new Set([
   "improvement.ingest-transcripts",
   "task-engine.backfill-task-feature-links",
   "task-engine.export-feature-taxonomy-json",
-  "skills.apply-skill"
+  "skills.apply-skill",
+  "subagents.persist"
 ]);
 
 const ALLOWED_SENSITIVITY = new Set(["non-sensitive", "sensitive", "sensitive-with-dryrun"]);

@@ -11,8 +11,8 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 
 ## Current state
 
-- **Shipped:** latest **`v0.56.0`** (Phase 56). Narrative for completed phases (including **0–35** bullets and **`### Phase …`** detail through prior trains) is in **[`ROADMAP-archive.md`](./ROADMAP-archive.md)**; version facts in **[`CHANGELOG.md`](./CHANGELOG.md)**.
-- **Next:** Future phase planning lives in task-engine state + maintainer roadmap edits; there is no committed **`v0.57.0`** scope string in this snapshot.
+- **Shipped:** latest **`v0.57.0`** (Phase 57 — native subagents v1: SQLite **`user_version` 6**, **`subagents`** module, ADR **`ADR-subagent-registry-v1.md`**). Prior trains through Phase 56 remain in **[`ROADMAP-archive.md`](./ROADMAP-archive.md)**; version facts in **[`CHANGELOG.md`](./CHANGELOG.md)**.
+- **Next:** Phase **58** execution queue (**`T665`–`T667`**, team model) — task-engine state + maintainer snapshot; regenerate **`ROADMAP.md`** after **`roadmap-data.json`** edits.
 - **Maintainer snapshot** — `docs/maintainers/data/workspace-kit-status.yaml` (`current_kit_phase`, `next_agent_actions`).
 - **Execution queue** — canonical task-engine store (default `.workspace-kit/tasks/workspace-kit.db`; JSON opt-out `.workspace-kit/tasks/state.json`); use `pnpm run wk run list-tasks` / `get-next-actions` rather than inferring phase from prose alone.
 - **Product / feature inventory** — **`docs/maintainers/FEATURE-MATRIX.md`**.
@@ -74,6 +74,13 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 
 - **Primary scope:** **`T640`–`T644`** — ADR + versioned manifest schema (**`T640`**) with **Claude Code interoperability**: normative mapping from per-skill directories and **`SKILL.md`** (YAML frontmatter + body, optional **`scripts/`** / **`references/`** / etc.) so a pack installed under **`.claude/skills/`** is valid on a configured Workflow Cannon skill root without parallel authoring unless the ADR introduces an optional sidecar; config + discovery incl. default **`.claude/skills/<id>/SKILL.md`** recognition (**`T641`**); **`apply-skill`** resolves instructions from **`SKILL.md`** for Claude-shaped packs (**`T642`**); attach skills to tasks and playbooks with ids aligned to discovered pack names (**`T643`**); **`recommend-skills`** v1 + **Claude-shaped** sample pack + maintainer docs for dual install (**`T644`**). Provenance: wishlist **`T564`** referenced from **`T640`** acceptance scope.
 - **Outcome:** Packs are discoverable, inspectable, and applicable with explicit policy lanes; **skill trees that satisfy current Claude Code skill layout expectations generally work in Workflow Cannon** when placed on a configured root (unsupported Claude-only frontmatter or runtime knobs documented as non-goals or no-ops per ADR); optional task/playbook attachment and deterministic recommendations.
+- **Exit signals:**
+  - **`pnpm run build`**, **`check`**, **`test`**, **`parity`**, **`pre-merge-gates`** on the release tag; maintainer evidence per **`RELEASING.md`**.
+
+### Phase 57 - Native subagents v1 -> GitHub release `v0.57.0` (COMPLETE)
+
+- **Primary scope:** **`T662`–`T664`** — ADR + SQLite **`user_version` 6** tables (**`kit_subagent_definitions`**, **`kit_subagent_sessions`**, **`kit_subagent_messages`**) (**`T662`**); **`subagents`** module + manifest + policy **`subagents.persist`** (**`T663`**); spawn/message/close commands + operator runbook + **`AGENT-CLI-MAP`** (**`T664`**). Execution host remains Cursor (or similar); kit persists provenance only.
+- **Outcome:** Delegated agent definitions and session/message audit are queryable in kit SQLite; Tier B mutations are policy-gated like other sensitive **`run`** commands.
 - **Exit signals:**
   - **`pnpm run build`**, **`check`**, **`test`**, **`parity`**, **`pre-merge-gates`** on the release tag; maintainer evidence per **`RELEASING.md`**.
 

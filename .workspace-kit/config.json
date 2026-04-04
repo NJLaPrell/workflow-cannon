@@ -5,8 +5,13 @@
     }
   },
   "kit": {
-    "currentPhaseLabel": "Phase 57 — next (v0.56.0 shipped)",
-    "currentPhaseNumber": 57
+    "agentGuidance": {
+      "displayLabel": "Wizard",
+      "profileSetId": "rpg_party_v1",
+      "tier": 4
+    },
+    "currentPhaseLabel": "Phase 58 — next (v0.57.0 shipped)",
+    "currentPhaseNumber": 58
   },
   "tasks": {
     "persistenceBackend": "sqlite",

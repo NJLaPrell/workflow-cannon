@@ -44,6 +44,11 @@ export function runGetKitPersistenceMap(ctx: ModuleLifecycleContext): ModuleComm
         improvement: ".workspace-kit/improvement/state.json",
         agentBehavior: ".workspace-kit/agent-behavior/state.json",
         note: "Read once when migrating from file to unified SQLite; saves go to workspace_module_state."
+      },
+      subagents: {
+        minKitSqliteUserVersion: 6,
+        tables: ["kit_subagent_definitions", "kit_subagent_sessions", "kit_subagent_messages"],
+        note: "Definitions + session/message audit for delegated agent work; host (e.g. Cursor) executes; kit persists provenance. See docs/maintainers/ADR-subagent-registry-v1.md."
       }
     } as Record<string, unknown>
   };

@@ -10,6 +10,26 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 (nothing yet)
 
+## [0.57.0] - 2026-04-04
+
+Phase 57 — **Native subagents v1** (**`T662`–`T664`**): kit-owned definitions + session/message persistence; Cursor remains execution host.
+
+### Added
+
+- **SQLite `user_version` 6** — Tables **`kit_subagent_definitions`**, **`kit_subagent_sessions`**, **`kit_subagent_messages`** (migration in **`src/core/state/workspace-kit-sqlite.ts`**).
+- **`subagents` module** (`0.1.0`) — Commands: **`list-subagents`**, **`get-subagent`**, **`list-subagent-sessions`**, **`get-subagent-session`**, **`register-subagent`**, **`retire-subagent`**, **`spawn-subagent`**, **`message-subagent`**, **`close-subagent-session`**. Mutations use policy operation **`subagents.persist`**.
+- **ADR** — **`docs/maintainers/ADR-subagent-registry-v1.md`**; runbook **`docs/maintainers/runbooks/subagent-registry.md`** (generated from **`.ai/runbooks/subagent-registry.md`**).
+- **`get-kit-persistence-map`** — **`subagents`** section documents tables and minimum **`user_version`**.
+
+### Changed (maintainer docs)
+
+- **`roadmap-data.json`** / **`roadmap-phase-sections.md`** + regenerated **`ROADMAP.md`** for **`v0.57.0`** / Phase **58** pointer.
+- **`ai-to-docs-coverage.json`** — maps **`.ai/runbooks/subagent-registry.md`** → **`docs/maintainers/runbooks/subagent-registry.md`**.
+
+### Changed (module versions)
+
+- **Task-engine module** — **`0.18.0`** (schema bump); **subagents** — **`0.1.0`** (compatibility matrix).
+
 ## [0.56.0] - 2026-04-04
 
 Phase 56 — **Lifecycle hooks** (**`T645`–`T648`**) + **`.ai` → `docs/maintainers/` pipeline** (**`T654`–`T661`**).

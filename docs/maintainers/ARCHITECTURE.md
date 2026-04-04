@@ -14,7 +14,7 @@ Workflow Cannon is a modular CLI-first workflow platform: structured **tasks** a
 
 ### Module registry
 
-- **`defaultRegistryModules`** lists the shipped bundle: `workspace-config`, `documentation`, `agent-behavior`, `task-engine`, `approvals`, `planning`, `improvement` (see [`src/modules/README.md`](../../src/modules/README.md)).
+- **`defaultRegistryModules`** lists the shipped bundle: `workspace-config`, `documentation`, `agent-behavior`, `skills`, `subagents`, `task-engine`, `approvals`, `planning`, `improvement` (see [`src/modules/README.md`](../../src/modules/README.md)).
 - Registry validates **`dependsOn`**, honors **`optionalPeers`** / **`requiresPeers`** on instruction entries, and determines startup order.
 - Modules can be disabled via workspace config; disabled modules omit their commands from the router (see **Agent instruction surface** in [`TERMS.md`](./TERMS.md)).
 
@@ -37,6 +37,7 @@ Workflow Cannon is a modular CLI-first workflow platform: structured **tasks** a
 ### Persistence
 
 - **Tasks** and **wishlist** default to **SQLite** (`tasks.persistenceBackend: sqlite`, one file under `tasks.sqliteDatabaseRelativePath`). Set **`tasks.persistenceBackend: json`** to use JSON files instead (see `docs/maintainers/ADR-sqlite-default-persistence.md` and `ADR-task-sqlite-persistence.md`).
+- **Subagent registry** (Phase 57): relational tables **`kit_subagent_definitions`**, **`kit_subagent_sessions`**, **`kit_subagent_messages`** at **`PRAGMA user_version` ≥ 6**; Cursor (or another host) executes delegated agents while the kit stores definitions and session/message provenance (see **`docs/maintainers/ADR-subagent-registry-v1.md`**).
 - **Unified module state** (Phase 18 track) extends SQLite for additional module rows and CLI introspection (`get-module-state`, `list-module-states`) where enabled.
 
 ### Persisted artifacts and CLI inventory

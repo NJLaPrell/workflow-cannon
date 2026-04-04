@@ -35,7 +35,7 @@
 
 | Location | R/W | Contract / notes | Enforcement | Owner |
 | --- | --- | --- | --- | --- |
-| `.workspace-kit/tasks/workspace-kit.db` | R/W | Relational task + wishlist + module state; `PRAGMA user_version` migrations | Runtime store APIs; `doctor`; `get-kit-persistence-map` | task-engine |
+| `.workspace-kit/tasks/workspace-kit.db` | R/W | Relational task + wishlist + module state + subagent registry (`user_version` ≥ 6); `PRAGMA user_version` migrations | Runtime store APIs; `doctor`; `get-kit-persistence-map` | task-engine / subagents |
 | `.workspace-kit/tasks/state.json` | R/W | JSON opt-out task document (documented recovery path) | Config `tasks.persistenceBackend` | task-engine |
 | `.workspace-kit/planning/build-plan-session.json` | R/W | In-flight planning interview (not a substitute for task store) | Planning module + dashboard card | planning |
 | `.workspace-kit/manifest.json` | Read | Workspace marker for kit | `doctor` / CLI resolve | core |
@@ -51,6 +51,8 @@ Shapes are defined in **`src/contracts/`** (TypeScript) and/or **`schemas/task-e
 | `get-next-actions` | No | `{}` or filters | Run-contracts / instruction | `check` | task-engine |
 | `get-task` | No | `taskId`, optional `historyLimit` | Instruction + store | `check` | task-engine |
 | `run-transition` | Yes | `taskId`, `action`, `policyApproval`, optional `expectedPlanningGeneration` | Instruction; policy traces | Policy + planning-generation guards | task-engine |
+| `list-subagents`, `get-subagent`, `list-subagent-sessions`, `get-subagent-session` | No | Instruction + `subagents` module | Builtin manifest / instruction coverage | `check` | subagents |
+| `register-subagent`, `retire-subagent`, `spawn-subagent`, `message-subagent`, `close-subagent-session` | Yes | `policyApproval` (+ `expectedPlanningGeneration` when required); `subagents.persist` | Policy traces; planning-generation guards | `check` | subagents |
 
 **Builtin manifest:** All shipped `run` subcommands are listed in **`src/contracts/builtin-run-command-manifest.json`** (module id, instruction file, optional `policyOperationId`). **`pnpm run check`** includes instruction coverage and router/manifest alignment (`check-task-engine-run-contracts`, orphan instruction guards).
 

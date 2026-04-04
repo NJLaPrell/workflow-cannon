@@ -11,3 +11,10 @@
 - **Outcome:** Packs are discoverable, inspectable, and applicable with explicit policy lanes; **skill trees that satisfy current Claude Code skill layout expectations generally work in Workflow Cannon** when placed on a configured root (unsupported Claude-only frontmatter or runtime knobs documented as non-goals or no-ops per ADR); optional task/playbook attachment and deterministic recommendations.
 - **Exit signals:**
   - **`pnpm run build`**, **`check`**, **`test`**, **`parity`**, **`pre-merge-gates`** on the release tag; maintainer evidence per **`RELEASING.md`**.
+
+### Phase 57 - Native subagents v1 -> GitHub release `v0.57.0` (COMPLETE)
+
+- **Primary scope:** **`T662`–`T664`** — ADR + SQLite **`user_version` 6** tables (**`kit_subagent_definitions`**, **`kit_subagent_sessions`**, **`kit_subagent_messages`**) (**`T662`**); **`subagents`** module + manifest + policy **`subagents.persist`** (**`T663`**); spawn/message/close commands + operator runbook + **`AGENT-CLI-MAP`** (**`T664`**). Execution host remains Cursor (or similar); kit persists provenance only.
+- **Outcome:** Delegated agent definitions and session/message audit are queryable in kit SQLite; Tier B mutations are policy-gated like other sensitive **`run`** commands.
+- **Exit signals:**
+  - **`pnpm run build`**, **`check`**, **`test`**, **`parity`**, **`pre-merge-gates`** on the release tag; maintainer evidence per **`RELEASING.md`**.

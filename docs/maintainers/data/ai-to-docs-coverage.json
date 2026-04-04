@@ -35,6 +35,7 @@
     { "source": ".ai/runbooks/agent-structured-workspace-report.md", "output": "docs/maintainers/runbooks/agent-structured-workspace-report.md" },
     { "source": ".ai/runbooks/recommendation-and-transcript-triggers.md", "output": "docs/maintainers/runbooks/recommendation-and-transcript-triggers.md" },
     { "source": ".ai/runbooks/release-channels.md", "output": "docs/maintainers/runbooks/release-channels.md" },
-    { "source": ".ai/runbooks/lifecycle-hooks.md", "output": "docs/maintainers/runbooks/lifecycle-hooks.md" }
+    { "source": ".ai/runbooks/lifecycle-hooks.md", "output": "docs/maintainers/runbooks/lifecycle-hooks.md" },
+    { "source": ".ai/runbooks/subagent-registry.md", "output": "docs/maintainers/runbooks/subagent-registry.md" }
   ]
 }

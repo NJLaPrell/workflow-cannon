@@ -4,7 +4,7 @@ import { seedFeatureRegistryIfEmpty } from "./feature-registry-migration.js";
 type SqliteDatabase = InstanceType<typeof Database>;
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 5;
+export const KIT_SQLITE_USER_VERSION = 6;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 
@@ -115,6 +115,47 @@ function migrateV4ToV5(db: SqliteDatabase): void {
   seedFeatureRegistryIfEmpty(db, TASK_ENGINE_TASKS_TABLE);
 }
 
+/** Subagent registry v1: definitions, sessions, message log (Phase 57). */
+const SUBAGENT_DDL = `
+CREATE TABLE IF NOT EXISTS kit_subagent_definitions (
+  id TEXT PRIMARY KEY NOT NULL,
+  display_name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  allowed_commands_json TEXT NOT NULL DEFAULT '[]',
+  retired INTEGER NOT NULL DEFAULT 0,
+  metadata_json TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_kit_subagent_definitions_retired ON kit_subagent_definitions(retired);
+CREATE TABLE IF NOT EXISTS kit_subagent_sessions (
+  id TEXT PRIMARY KEY NOT NULL,
+  definition_id TEXT NOT NULL,
+  execution_task_id TEXT,
+  status TEXT NOT NULL,
+  host_hint TEXT,
+  metadata_json TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY (definition_id) REFERENCES kit_subagent_definitions(id)
+);
+CREATE INDEX IF NOT EXISTS idx_kit_subagent_sessions_def ON kit_subagent_sessions(definition_id);
+CREATE INDEX IF NOT EXISTS idx_kit_subagent_sessions_task ON kit_subagent_sessions(execution_task_id);
+CREATE TABLE IF NOT EXISTS kit_subagent_messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id TEXT NOT NULL,
+  direction TEXT NOT NULL,
+  body TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (session_id) REFERENCES kit_subagent_sessions(id)
+);
+CREATE INDEX IF NOT EXISTS idx_kit_subagent_messages_session ON kit_subagent_messages(session_id);
+`;
+
+function migrateV5ToV6(db: SqliteDatabase): void {
+  db.exec(SUBAGENT_DDL);
+}
+
 /**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
@@ -154,6 +195,11 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
   }
   if (current < 5) {
     migrateV4ToV5(db);
+    db.pragma("user_version = 5");
+    current = 5;
+  }
+  if (current < 6) {
+    migrateV5ToV6(db);
     db.pragma(`user_version = ${KIT_SQLITE_USER_VERSION}`);
   }
 }

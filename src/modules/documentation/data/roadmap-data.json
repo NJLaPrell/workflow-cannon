@@ -7,8 +7,8 @@
     "The legacy source repository is treated as an external consumer and parity fixture, not as the source of kit implementation."
   ],
   "currentState": [
-    "**Shipped:** latest **`v0.56.0`** (Phase 56). Narrative for completed phases (including **0–35** bullets and **`### Phase …`** detail through prior trains) is in **[`ROADMAP-archive.md`](./ROADMAP-archive.md)**; version facts in **[`CHANGELOG.md`](./CHANGELOG.md)**.",
-    "**Next:** Future phase planning lives in task-engine state + maintainer roadmap edits; there is no committed **`v0.57.0`** scope string in this snapshot.",
+    "**Shipped:** latest **`v0.57.0`** (Phase 57 — native subagents v1: SQLite **`user_version` 6**, **`subagents`** module, ADR **`ADR-subagent-registry-v1.md`**). Prior trains through Phase 56 remain in **[`ROADMAP-archive.md`](./ROADMAP-archive.md)**; version facts in **[`CHANGELOG.md`](./CHANGELOG.md)**.",
+    "**Next:** Phase **58** execution queue (**`T665`–`T667`**, team model) — task-engine state + maintainer snapshot; regenerate **`ROADMAP.md`** after **`roadmap-data.json`** edits.",
     "**Maintainer snapshot** — `docs/maintainers/data/workspace-kit-status.yaml` (`current_kit_phase`, `next_agent_actions`).",
     "**Execution queue** — canonical task-engine store (default `.workspace-kit/tasks/workspace-kit.db`; JSON opt-out `.workspace-kit/tasks/state.json`); use `pnpm run wk run list-tasks` / `get-next-actions` rather than inferring phase from prose alone.",
     "**Product / feature inventory** — **`docs/maintainers/FEATURE-MATRIX.md`**.",

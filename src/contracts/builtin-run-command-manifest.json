@@ -506,6 +506,83 @@
     "policySensitivity": "non-sensitive"
   },
   {
+    "moduleId": "subagents",
+    "name": "list-subagents",
+    "file": "list-subagents.md",
+    "description": "List subagent definitions in kit SQLite (user_version 6+).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "subagents",
+    "name": "get-subagent",
+    "file": "get-subagent.md",
+    "description": "Get one subagent definition by id.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "subagents",
+    "name": "list-subagent-sessions",
+    "file": "list-subagent-sessions.md",
+    "description": "List subagent sessions with optional filters.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "subagents",
+    "name": "get-subagent-session",
+    "file": "get-subagent-session.md",
+    "description": "Get one session and its message log.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "subagents",
+    "name": "register-subagent",
+    "file": "register-subagent.md",
+    "description": "Create or update a subagent definition (allowedCommands, metadata).",
+    "policyOperationId": "subagents.persist",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "subagents",
+    "name": "retire-subagent",
+    "file": "retire-subagent.md",
+    "description": "Retire a subagent definition (no new sessions).",
+    "policyOperationId": "subagents.persist",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "subagents",
+    "name": "spawn-subagent",
+    "file": "spawn-subagent.md",
+    "description": "Record a subagent session (spawn provenance); host executes separately.",
+    "policyOperationId": "subagents.persist",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "subagents",
+    "name": "message-subagent",
+    "file": "message-subagent.md",
+    "description": "Append an inbound/outbound/system message to a session.",
+    "policyOperationId": "subagents.persist",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "subagents",
+    "name": "close-subagent-session",
+    "file": "close-subagent-session.md",
+    "description": "Close a subagent session.",
+    "policyOperationId": "subagents.persist",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
     "moduleId": "skills",
     "name": "list-skills",
     "file": "list-skills.md",

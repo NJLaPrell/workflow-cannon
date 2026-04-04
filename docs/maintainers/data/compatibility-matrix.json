@@ -26,7 +26,7 @@
     },
     {
       "id": "task-engine",
-      "version": "0.17.0",
+      "version": "0.18.0",
       "contractVersion": "1",
       "compatibilityLevel": "strict",
       "supportedRuntime": "0.1",
@@ -58,6 +58,14 @@
     },
     {
       "id": "skills",
+      "version": "0.1.0",
+      "contractVersion": "1",
+      "compatibilityLevel": "compatible",
+      "supportedRuntime": "0.1",
+      "severity": "warn"
+    },
+    {
+      "id": "subagents",
       "version": "0.1.0",
       "contractVersion": "1",
       "compatibilityLevel": "compatible",

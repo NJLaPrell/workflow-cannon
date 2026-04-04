@@ -34,7 +34,8 @@ export type PolicyOperationId =
   | "improvement.ingest-transcripts"
   | "task-engine.backfill-task-feature-links"
   | "task-engine.export-feature-taxonomy-json"
-  | "skills.apply-skill";
+  | "skills.apply-skill"
+  | "subagents.persist";
 
 function buildBuiltinCommandToOperation(): Record<string, PolicyOperationId | undefined> {
   const out: Record<string, PolicyOperationId | undefined> = {};

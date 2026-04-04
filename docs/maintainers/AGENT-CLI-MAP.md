@@ -167,6 +167,11 @@ ADR: **`docs/maintainers/ADR-planning-generation-optimistic-concurrency.md`**.
 | Backfill task↔feature junction | `workspace-kit run backfill-task-feature-links '<json>'` | `task-engine.backfill-task-feature-links` | Copies legacy **`features_json`** into **`task_engine_task_features`** |
 | Export taxonomy JSON from registry | `workspace-kit run export-feature-taxonomy-json '<json>'` | `task-engine.export-feature-taxonomy-json` | Writes **`src/modules/documentation/data/feature-taxonomy.json`** |
 | Apply skill pack (non-preview) | `workspace-kit run apply-skill '<json>'` | `skills.apply-skill` | Sensitive unless `options.dryRun === true` (default preview is dry-run; see instruction file) |
+| Register subagent definition | `workspace-kit run register-subagent '<json>'` | `subagents.persist` | Declares id + explicit `allowedCommands` (no wildcards) |
+| Retire subagent definition | `workspace-kit run retire-subagent '<json>'` | `subagents.persist` | Sets **`retired`**; does not delete rows |
+| Spawn subagent session (record) | `workspace-kit run spawn-subagent '<json>'` | `subagents.persist` | Persists session; host (e.g. Cursor) runs the agent |
+| Append subagent message | `workspace-kit run message-subagent '<json>'` | `subagents.persist` | Append-only handoff log |
+| Close subagent session | `workspace-kit run close-subagent-session '<json>'` | `subagents.persist` | Sets session **`closed`** |
 | Config-declared extra commands | `workspace-kit run <name> '<json>'` | `policy.dynamic-sensitive` if listed in `policy.extraSensitiveModuleCommands` | Must still pass **`policyApproval`** |
 
 **Copy-paste — document batch (real writes):**
@@ -217,6 +222,13 @@ workspace-kit run apply-skill '{"skillId":"sample-wc-skill"}'
 
 ```bash
 workspace-kit run apply-skill '{"skillId":"sample-wc-skill","options":{"dryRun":false,"recordAudit":true},"policyApproval":{"confirmed":true,"rationale":"record skill apply audit"}}'
+```
+
+**Copy-paste — register subagent + spawn session (replace `expectedPlanningGeneration` when required):**
+
+```bash
+workspace-kit run register-subagent '{"subagentId":"researcher","allowedCommands":["list-tasks","get-task"],"policyApproval":{"confirmed":true,"rationale":"register delegated agent"}}'
+workspace-kit run spawn-subagent '{"subagentId":"researcher","sessionId":"sess-20260404-1","hostHint":"cursor","policyApproval":{"confirmed":true,"rationale":"record spawn"}}'
 ```
 
 ## CLI mutations (`init` / `upgrade` / `config`) — env approval, not JSON `policyApproval`
@@ -328,8 +340,14 @@ workspace-kit run diff-behavior-profiles '{"profileIdA":"builtin:cautious","prof
 workspace-kit run explain-behavior-profiles '{"mode":"summarize","profileId":"builtin:calculated"}'
 workspace-kit run explain-behavior-profiles '{"mode":"compare","profileIds":["builtin:cautious","builtin:experimental"]}'
 workspace-kit run interview-behavior-profile '{"action":"start"}'
+workspace-kit run list-subagents '{}'
+workspace-kit run get-subagent '{"subagentId":"researcher"}'
+workspace-kit run list-subagent-sessions '{}'
+workspace-kit run get-subagent-session '{"sessionId":"sess-20260404-1"}'
 workspace-kit doctor
 ```
+
+**Subagents (read path)** (`list-subagents`, `get-subagent`, `list-subagent-sessions`, `get-subagent-session`) are **Tier C** when the manifest marks them non-sensitive; mutating subagent commands are **Tier B** (`subagents.persist`). See runbook `docs/maintainers/runbooks/subagent-registry.md`.
 
 **Agent behavior** (`list-behavior-profiles`, `get-behavior-profile`, `resolve-behavior-profile`, `set-active-behavior-profile`, `create-behavior-profile`, `update-behavior-profile`, `delete-behavior-profile`, `diff-behavior-profiles`, `explain-behavior-profiles`, `interview-behavior-profile`) are **Tier C**: advisory interaction posture only; **subordinate** to PRINCIPLES and policy. They persist under `.workspace-kit/agent-behavior/` (JSON) or unified SQLite (`module_id` `agent-behavior`) when `tasks.persistenceBackend` is `sqlite`.
 

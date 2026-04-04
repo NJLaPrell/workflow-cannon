@@ -7,7 +7,8 @@ export type ModuleCapability =
   | "diagnostics"
   | "migration"
   | "agent-behavior"
-  | "skills";
+  | "skills"
+  | "subagents";
 
 export type ModuleDocumentContract = {
   path: string;
