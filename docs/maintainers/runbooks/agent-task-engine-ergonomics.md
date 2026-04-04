@@ -1,3 +1,5 @@
+<!-- GENERATED FROM .ai/runbooks/agent-task-engine-ergonomics.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+
 # Agent task-engine ergonomics
 
 Maintainer runbook for **agents and operators** who juggle Git, the Task Engine, planning output, and the Cursor extension. It consolidates guidance that repeatedly surfaced in Phase 27 transcript-backed **`imp-*`** work.

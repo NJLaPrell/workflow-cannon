@@ -6,7 +6,7 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -42,7 +42,16 @@ if (!tr.ok) {
   process.exit(1);
 }
 
-const renderedRoadmap = renderRoadmapFromSourceRoot(root);
+const docTaxonomyJsonOnly =
+  process.env.WORKSPACE_KIT_DOC_TAXONOMY_JSON_ONLY === "1" ||
+  process.env.WORKSPACE_KIT_DOC_TAXONOMY_JSON_ONLY === "true";
+const planningDbAbs = path.join(root, ".workspace-kit/tasks/workspace-kit.db");
+const roadmapRenderOpts =
+  !docTaxonomyJsonOnly && existsSync(planningDbAbs)
+    ? { planningDatabaseAbsolutePath: planningDbAbs }
+    : undefined;
+
+const renderedRoadmap = renderRoadmapFromSourceRoot(root, roadmapRenderOpts);
 if (!("markdown" in renderedRoadmap)) {
   console.error("roadmap render failed:\n", renderedRoadmap.errors.join("\n"));
   process.exit(1);
@@ -56,7 +65,7 @@ if (onDiskRoadmap !== renderedRoadmap.markdown) {
   process.exit(1);
 }
 
-const renderedTax = renderFeatureTaxonomyDocFromSourceRoot(root);
+const renderedTax = renderFeatureTaxonomyDocFromSourceRoot(root, roadmapRenderOpts);
 if (!("markdown" in renderedTax)) {
   console.error("feature taxonomy doc render failed:\n", renderedTax.errors.join("\n"));
   process.exit(1);

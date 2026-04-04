@@ -1,3 +1,5 @@
+<!-- GENERATED FROM .ai/runbooks/agent-structured-workspace-report.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+
 # Agent structured workspace report (guidance)
 
 When ending a session or handing off to a maintainer, prefer a **short, reproducible** summary instead of a huge dump of absolute paths and unverified claims.

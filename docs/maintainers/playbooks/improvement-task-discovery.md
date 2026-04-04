@@ -1,3 +1,5 @@
+<!-- GENERATED FROM .ai/playbooks/improvement-task-discovery.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+
 # Playbook: improvement task discovery
 
 **Playbook id:** `improvement-task-discovery`  

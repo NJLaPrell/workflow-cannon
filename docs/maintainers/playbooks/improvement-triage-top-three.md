@@ -1,3 +1,5 @@
+<!-- GENERATED FROM .ai/playbooks/improvement-triage-top-three.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+
 # Playbook: improvement triage — top 3 to ready queue
 
 **Playbook id:** `improvement-triage-top-three`  

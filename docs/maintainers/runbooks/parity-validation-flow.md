@@ -1,95 +1,24 @@
-# Parity Validation Flow
+<!-- GENERATED FROM .ai/runbooks/parity-validation-flow.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
 
-Canonical ordered command chain for validating packaged-artifact parity in `@workflow-cannon/workspace-kit`.
+meta|doc=runbook|truth=canonical|schema=base.v2|status=active|profile=runbook
 
-AI-canonical companion: `.ai/runbooks/parity-validation-flow.md`.
+runbook|name=parity_validation_flow|scope=release_readiness|owner=maintainers
+ref|id=maintainer_view|target=docs/maintainers/runbooks/parity-validation-flow.md|type=file|status=active
+ref|id=release_gates|target=docs/maintainers/release-gate-matrix.md|type=file|status=active
+ref|id=releasing|target=docs/maintainers/RELEASING.md|type=file|status=active
+ref|id=parity_schema|target=schemas/parity-evidence.schema.json|type=file|status=active
 
-## Purpose
+intent|slot1=validate_packaged_artifact_behavior_matches_expected_runtime_contract_before_release
+rule|id=R001|level=must|scope=run_parity_commands_in_fixed_order_and_stop_on_first_non_zero_exit|status=active|why=rationale_for_R001
+rule|id=R002|level=must|scope=write_parity_evidence_artifact_for_pass_and_fail_outcomes|status=active|why=rationale_for_R002
+rule|id=R003|level=must|scope=treat_parity_failures_as_release_blocking_until_resolved|status=active|why=rationale_for_R003
 
-Parity validation confirms that the **packaged artifact** (what consumers install) behaves identically to the source-repo state. Every release candidate must pass this flow before promotion to `stable`.
+chain|step=1|command=pnpm run build|expect_exit=0
+chain|step=2|command=pnpm run check|expect_exit=0
+chain|step=3|command=pnpm run test|expect_exit=0
+chain|step=4|command=pnpm run pack:dry-run|expect_exit=0
+chain|step=5|command=node scripts/check-release-metadata.mjs|expect_exit=0
+chain|step=6|command=npm install <tarball> (test/fixtures/parity)|expect_exit=0
+chain|step=7|command=npm run smoke (test/fixtures/parity)|expect_exit=0
 
-For contributor **first clone** ordering (build → test → parity), see **`docs/maintainers/runbooks/first-run-validation.md`**.
-
-## Canonical Command Chain
-
-Commands are executed in this exact order. Any non-zero exit halts the chain.
-
-| Step | Command | Expected exit | Output artifact | Machine-parseable |
-| --- | --- | --- | --- | --- |
-| 1 | `pnpm run build` | 0 | `dist/` directory populated | No |
-| 2 | `pnpm run check` | 0 | — (typecheck only) | No |
-| 3 | `pnpm run test` | 0 | — (test runner output) | No |
-| 4 | `pnpm run pack:dry-run` | 0 | `artifacts/workspace-kit-pack/*.tgz` | No |
-| 5 | `node scripts/check-release-metadata.mjs` | 0 | — (stdout pass/fail) | No |
-| 6 | Fixture install: `npm install <tarball>` in `test/fixtures/parity/` | 0 | `node_modules/` in fixture | No |
-| 7 | Fixture smoke: `npm run smoke` in `test/fixtures/parity/` | 0 | — (stdout pass/fail) | No |
-
-The full chain is automated by `scripts/run-parity.mjs` (`pnpm run parity`).
-
-## Non-Zero Exit Behavior
-
-- Any step that exits non-zero is a **hard failure**.
-- The runner stops immediately — later steps are not executed.
-- The failing step name and stderr (first 500 chars) are captured in the evidence artifact.
-- The evidence `overall` field is set to `"fail"`.
-
-## Evidence Output Contract
-
-On completion (pass or fail), `scripts/run-parity.mjs` writes:
-
-- **Location:** `artifacts/parity-evidence.json`
-- **Schema:** see `schemas/parity-evidence.schema.json`
-- **Key fields:**
-  - `schemaVersion`: integer, currently `1`
-  - `runner`: string, path to runner script
-  - `timestamp`: ISO 8601 string
-  - `overall`: `"pass"` or `"fail"`
-  - `steps`: array of step results, each with `name`, `status`, `durationMs`, and optional `error`
-
-## Fixture Requirements
-
-### Fixture directory
-
-`test/fixtures/parity/`
-
-### Fixture contents
-
-- `package.json` — minimal consumer package with `"smoke"` script
-- `smoke.mjs` — verifies package exports resolve and CLI bin entry is present
-
-### Fixture bootstrap
-
-Before running fixture steps, the parity runner:
-
-1. Locates the tarball produced by `pack:dry-run` in `artifacts/workspace-kit-pack/`.
-2. Installs it into the fixture directory with `npm install --no-save <tarball>`.
-3. Runs `npm run smoke` in the fixture directory.
-
-No manual fixture setup is required — the runner handles bootstrap from the packed artifact.
-
-### Artifact output paths
-
-| Artifact | Path | Retention |
-| --- | --- | --- |
-| Packed tarball | `artifacts/workspace-kit-pack/*.tgz` | Kept until next pack run |
-| Parity evidence | `artifacts/parity-evidence.json` | Kept until next parity run; should be captured by CI as workflow artifact |
-| Fixture `node_modules/` | `test/fixtures/parity/node_modules/` | Ephemeral; gitignored |
-
-## Running Locally
-
-```bash
-pnpm run parity
-```
-
-This executes the full chain and writes evidence to `artifacts/parity-evidence.json`.
-
-## Running in CI
-
-The CI workflow (`.github/workflows/ci.yml`) runs parity as a dedicated job. See `docs/maintainers/release-gate-matrix.md` gate G8.
-
-## Related documents
-
-- `docs/maintainers/runbooks/consumer-cadence.md` — cadence states and transition validation
-- `docs/maintainers/release-gate-matrix.md` — gate inventory
-- `docs/maintainers/RELEASING.md` — release procedure
-- `schemas/parity-evidence.schema.json` — evidence schema
+artifact|target=artifacts/parity-evidence.json|schema=schemas/parity-evidence.schema.json

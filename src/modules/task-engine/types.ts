@@ -123,7 +123,8 @@ export type TaskEngineErrorCode =
   | "import-parse-error"
   | "planning-generation-mismatch"
   | "planning-generation-required"
-  | "unknown-feature-id";
+  | "unknown-feature-id"
+  | "hook-denied";
 
 export type TaskAdapter = {
   name: string;

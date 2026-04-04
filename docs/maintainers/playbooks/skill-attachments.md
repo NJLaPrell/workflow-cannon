@@ -1,3 +1,5 @@
+<!-- GENERATED FROM .ai/playbooks/skill-attachments.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+
 # Skill attachments on execution tasks (v1)
 
 Ordered direction set: attach discovered **skill pack** ids to **`T###`** rows for agent context.

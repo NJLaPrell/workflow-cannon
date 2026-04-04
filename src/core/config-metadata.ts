@@ -323,7 +323,8 @@ export function validatePersistedConfigDocument(
         key !== "currentPhaseNumber" &&
         key !== "currentPhaseLabel" &&
         key !== "agentGuidance" &&
-        key !== "githubInvocation"
+        key !== "githubInvocation" &&
+        key !== "lifecycleHooks"
       ) {
         throw new Error(`config-invalid(${label}): unknown kit.${key}`);
       }
@@ -416,6 +417,45 @@ export function validatePersistedConfigDocument(
           REGISTRY["kit.githubInvocation.sensitiveRunCommands"]!,
           gi.sensitiveRunCommands
         );
+      }
+    }
+    if (k.lifecycleHooks !== undefined) {
+      if (
+        typeof k.lifecycleHooks !== "object" ||
+        k.lifecycleHooks === null ||
+        Array.isArray(k.lifecycleHooks)
+      ) {
+        throw new Error(`config-invalid(${label}): kit.lifecycleHooks must be an object`);
+      }
+      const lh = k.lifecycleHooks as Record<string, unknown>;
+      for (const lk of Object.keys(lh)) {
+        if (
+          lk !== "enabled" &&
+          lk !== "mode" &&
+          lk !== "traceRelativePath" &&
+          lk !== "handlers"
+        ) {
+          throw new Error(`config-invalid(${label}): unknown kit.lifecycleHooks.${lk}`);
+        }
+      }
+      if (lh.enabled !== undefined) {
+        validateValueForMetadata(REGISTRY["kit.lifecycleHooks.enabled"]!, lh.enabled);
+      }
+      if (lh.mode !== undefined) {
+        validateValueForMetadata(REGISTRY["kit.lifecycleHooks.mode"]!, lh.mode);
+      }
+      if (lh.traceRelativePath !== undefined) {
+        validateValueForMetadata(REGISTRY["kit.lifecycleHooks.traceRelativePath"]!, lh.traceRelativePath);
+      }
+      if (lh.handlers !== undefined) {
+        if (!Array.isArray(lh.handlers)) {
+          throw new Error(`config-invalid(${label}): kit.lifecycleHooks.handlers must be an array`);
+        }
+        for (const h of lh.handlers) {
+          if (typeof h !== "object" || h === null || Array.isArray(h)) {
+            throw new Error(`config-invalid(${label}): kit.lifecycleHooks.handlers entries must be objects`);
+          }
+        }
       }
     }
   }

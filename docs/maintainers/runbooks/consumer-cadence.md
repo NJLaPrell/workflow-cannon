@@ -1,73 +1,19 @@
-# Consumer Update Cadence
+<!-- GENERATED FROM .ai/runbooks/consumer-cadence.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
 
-Defines update cadence states for `@workflow-cannon/workspace-kit` consumers and the validation contract for each state transition.
+meta|doc=runbook|truth=canonical|schema=base.v2|status=active|profile=runbook
 
-AI-canonical companion: `.ai/runbooks/consumer-cadence.md`.
+runbook|name=consumer_update_cadence|scope=release_channel_transitions|owner=maintainers
+ref|id=maintainer_view|target=docs/maintainers/runbooks/consumer-cadence.md|type=file|status=active
+ref|id=gate_matrix|target=docs/maintainers/release-gate-matrix.md|type=file|status=active
+ref|id=releasing|target=docs/maintainers/RELEASING.md|type=file|status=active
 
-**Maintainer task templates** under `tasks/*.md` are not part of this cadence: they do not run **`workspace-kit`** or satisfy policy. Use **`docs/maintainers/AGENT-CLI-MAP.md`** for real mutations.
+state|name=candidate|dist_tag=next|intent=pre_release_validation
+state|name=stable|dist_tag=latest|intent=recommended_production_channel
+state|name=patch|dist_tag=latest|intent=fast_follow_fix_for_stable
 
-## Cadence States
+transition|from=candidate|to=stable|requires=ci_pass,parity_pass,fixture_pass,no_open_p1,maintainer_signoff
+transition|from=candidate|to=candidate|requires=fix_merged,new_candidate_publish,restart_validation
+transition|from=stable|to=patch|requires=regression_confirmed,ci_pass,parity_pass,evidence_captured
 
-| State | Meaning | npm dist-tag | Consumer action |
-| --- | --- | --- | --- |
-| `candidate` | Pre-release under validation; not yet recommended for production | `next` | Install with `@next`; run parity fixture; report issues |
-| `stable` | Validated release; recommended for production consumers | `latest` | Normal install/update via `@latest` |
-| `patch` | Follow-up fix for a `stable` release; fast-tracked validation | `latest` | Normal update; review changelog for specific fix |
-
-## State Transitions
-
-```
-candidate ─── validation pass ───► stable
-candidate ─── validation fail ───► (remain candidate; fix and re-candidate)
-stable ─────── regression ────────► patch candidate ──► patch (stable)
-```
-
-## Required Validation Per Transition
-
-### candidate → stable
-
-1. All CI gates pass (see `docs/maintainers/release-gate-matrix.md`).
-2. Parity validation passes against packaged artifact:
-   - `pnpm run pack:dry-run`
-   - `node scripts/run-parity.mjs` (exits 0 with evidence artifact)
-3. Consumer fixture install succeeds:
-   - `cd test/fixtures/parity && npm install <tarball>` exits 0
-   - Fixture smoke commands exit 0
-4. No open P1 issues against the candidate version.
-5. Maintainer signs off on changelog and migration notes (if any).
-
-### candidate → candidate (re-candidate after fix)
-
-1. Fix is merged and CI passes.
-2. New candidate version is published with `--tag next`.
-3. Restart `candidate → stable` validation from step 1.
-
-### stable → patch
-
-1. Regression is confirmed and tracked in task-engine state (`.workspace-kit/tasks/state.json`).
-2. Fix is implemented and passes all CI gates.
-3. Parity validation passes (same as candidate → stable steps 2-3).
-4. Patch is published with `--tag latest`.
-5. Evidence is captured per `docs/maintainers/RELEASING.md`.
-
-## Fixture and Command Contract
-
-Repeatable cadence validation uses these commands in order:
-
-| Step | Command | Expected exit | Artifact |
-| --- | --- | --- | --- |
-| 1 | `pnpm run build` | 0 | `dist/` populated |
-| 2 | `pnpm run check` | 0 | No type errors |
-| 3 | `pnpm run test` | 0 | All tests pass |
-| 4 | `pnpm run pack:dry-run` | 0 | Tarball in `artifacts/workspace-kit-pack/` |
-| 5 | `node scripts/check-release-metadata.mjs` | 0 | Metadata validated |
-| 6 | `node scripts/run-parity.mjs` | 0 | `artifacts/parity-evidence.json` |
-
-Any non-zero exit blocks the transition and must be resolved before re-attempting.
-
-## Related documents
-
-- `docs/maintainers/RELEASING.md` — release procedure and evidence
-- `docs/maintainers/release-gate-matrix.md` — gate inventory and ownership
-- `docs/maintainers/runbooks/task-persistence-operator.md` — effective SQLite vs JSON backend and paths (operator map)
-- `.workspace-kit/tasks/state.json` — regression and blocker tracking
+rule|id=R001|level=must|scope=block_transition_on_any_non_zero_validation_command|status=active|why=rationale_for_R001
+rule|id=R002|level=must|scope=track_regression_blockers_in_task_engine_state|status=active|why=rationale_for_R002

@@ -1,3 +1,5 @@
+<!-- GENERATED FROM .ai/playbooks/wishlist-intake-to-execution.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+
 # Playbook: wishlist intake → execution
 
 **Playbook id:** `wishlist-intake-to-execution`  

@@ -1,3 +1,5 @@
+<!-- GENERATED FROM .ai/playbooks/README.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+
 # Maintainer playbooks (direction sets)
 
 Versioned **direction sets** for recurring maintainer and agent flows. Terminology aligns with **Direction set (maintainer playbook)** in [`docs/maintainers/TERMS.md`](../TERMS.md).

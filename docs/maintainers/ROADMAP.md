@@ -11,8 +11,8 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 
 ## Current state
 
-- **Shipped:** latest **`v0.55.0`** (Phase 55). Narrative for completed phases (including **0–35** bullets and **`### Phase …`** detail through prior trains) is in **[`ROADMAP-archive.md`](./ROADMAP-archive.md)**; version facts in **[`CHANGELOG.md`](./CHANGELOG.md)**.
-- **Planned:** Phase 56 — **`v0.56.0`** (agent & task lifecycle hooks) — **`T645`–`T648`** (wishlist **`T563`**); see **Phase plan** below and task-engine state.
+- **Shipped:** latest **`v0.56.0`** (Phase 56). Narrative for completed phases (including **0–35** bullets and **`### Phase …`** detail through prior trains) is in **[`ROADMAP-archive.md`](./ROADMAP-archive.md)**; version facts in **[`CHANGELOG.md`](./CHANGELOG.md)**.
+- **Next:** Future phase planning lives in task-engine state + maintainer roadmap edits; there is no committed **`v0.57.0`** scope string in this snapshot.
 - **Maintainer snapshot** — `docs/maintainers/data/workspace-kit-status.yaml` (`current_kit_phase`, `next_agent_actions`).
 - **Execution queue** — canonical task-engine store (default `.workspace-kit/tasks/workspace-kit.db`; JSON opt-out `.workspace-kit/tasks/state.json`); use `pnpm run wk run list-tasks` / `get-next-actions` rather than inferring phase from prose alone.
 - **Product / feature inventory** — **`docs/maintainers/FEATURE-MATRIX.md`**.
@@ -24,36 +24,36 @@ Stable **slugs** for task ↔ feature mapping (see [`FEATURE-TAXONOMY.md`](./FEA
 
 | Category | Slug | Feature | Covers |
 | --- | --- | --- | --- |
-| Task engine & queue | `task-schema` | Task schema & envelopes | IDs, types, phase labels, priority, scope, acceptance criteria |
-| Task engine & queue | `task-lifecycle` | Lifecycle transitions | Status machine, demotions, transition evidence |
-| Task engine & queue | `task-guards` | Guards & validation | State validity, dependency checks, policy hooks on transitions |
-| Task engine & queue | `task-dependencies` | Dependencies & unblock | dependsOn, blocked → ready cascades |
 | Task engine & queue | `next-actions` | Next-actions & queue intelligence | get-next-actions, blocking analysis, ordering, queue namespaces |
+| Task engine & queue | `task-dependencies` | Dependencies & unblock | dependsOn, blocked → ready cascades |
+| Task engine & queue | `task-guards` | Guards & validation | State validity, dependency checks, policy hooks on transitions |
+| Task engine & queue | `task-lifecycle` | Lifecycle transitions | Status machine, demotions, transition evidence |
 | Task engine & queue | `task-mutations` | Task mutations & history | create/update, transition logs, introspection commands |
-| Persistence & planning store | `task-persistence` | Task persistence backends | SQLite blob vs relational rows, dual-planning stores |
-| Persistence & planning store | `store-migrations` | Migrations & recovery | user_version, migration commands, operator recovery |
+| Task engine & queue | `task-schema` | Task schema & envelopes | IDs, types, phase labels, priority, scope, acceptance criteria |
 | Persistence & planning store | `planning-concurrency` | Planning generation & concurrency | planningGeneration, expectedPlanningGeneration, idempotency |
-| Config, policy & trust | `config-model` | Config model & resolution | Registry, precedence, explain/resolve, generated CONFIG docs |
-| Config, policy & trust | `config-cli` | Config CLI & layers | Project/user layers, validation, safe writes, mutation evidence |
-| Config, policy & trust | `policy-registry` | Sensitive operations & policy registry | Gated ops, extension from effective config, CLI tiering |
+| Persistence & planning store | `store-migrations` | Migrations & recovery | user_version, migration commands, operator recovery |
+| Persistence & planning store | `task-persistence` | Task persistence backends | SQLite blob vs relational rows, dual-planning stores |
 | Config, policy & trust | `approvals` | Approvals & decision records | Decisions on recommendations and sensitive flows |
+| Config, policy & trust | `config-cli` | Config CLI & layers | Project/user layers, validation, safe writes, mutation evidence |
+| Config, policy & trust | `config-model` | Config model & resolution | Registry, precedence, explain/resolve, generated CONFIG docs |
+| Config, policy & trust | `policy-registry` | Sensitive operations & policy registry | Gated ops, extension from effective config, CLI tiering |
 | Config, policy & trust | `policy-traces` | Policy traces & versioning | Trace schema, upgrade notes, audit output |
-| Improvement loop & signals | `recommendations` | Recommendation generation | generate-recommendations, cursors, cadence |
 | Improvement loop & signals | `evidence-dedupe` | Evidence & deduplication | evidenceKey, provenance, confidence/heuristics |
 | Improvement loop & signals | `improvement-triage` | Improvement backlog & triage | proposed → ready, churn signals, maintainer rubrics |
-| Transcripts & automation | `transcript-sync` | Transcript sync & privacy | Paths, redaction, storage boundaries |
+| Improvement loop & signals | `recommendations` | Recommendation generation | generate-recommendations, cursors, cadence |
 | Transcripts & automation | `automation-hooks` | Editor & CI automation hooks | Cursor/VS Code tasks, optional hooks |
-| CLI, modules & agent surfaces | `module-platform` | Command router & module platform | Enable/disable, dispatch, startup contracts |
-| CLI, modules & agent surfaces | `instructions` | Instructions & machine operability | instructions/*.md, JSON shapes, agent-first flows |
-| CLI, modules & agent surfaces | `response-templates` | Response templates | Registry, advisory enforcement, result shaping |
+| Transcripts & automation | `transcript-sync` | Transcript sync & privacy | Paths, redaction, storage boundaries |
 | CLI, modules & agent surfaces | `agent-behavior` | Agent behavior profiles | Resolve/interview behavior (advisory; not permission) |
+| CLI, modules & agent surfaces | `instructions` | Instructions & machine operability | instructions/*.md, JSON shapes, agent-first flows |
+| CLI, modules & agent surfaces | `module-platform` | Command router & module platform | Enable/disable, dispatch, startup contracts |
+| CLI, modules & agent surfaces | `response-templates` | Response templates | Registry, advisory enforcement, result shaping |
 | Docs, playbooks & maintainer UX | `doc-generation` | Documentation generation | document-project, template validation, .ai pairing |
 | Docs, playbooks & maintainer UX | `playbooks` | Playbooks, runbooks, TERMS | Direction sets, ops procedures, glossary alignment |
 | Extension & human visibility | `cursor-extension` | Cursor extension & dashboard | Tasks UI, DnD, dashboard-summary, human-visible store fields |
-| Release, quality & consumers | `doctor-diagnostics` | Doctor & diagnostics | wk doctor, persistence map, phase snapshot alignment |
 | Release, quality & consumers | `ci-guards` | Check pipeline & CI gates | pnpm run check, instruction coverage, contract guards |
-| Release, quality & consumers | `release-versioning` | Release & versioning | Tags, changelog, phase closeout evidence |
 | Release, quality & consumers | `consumer-parity` | Consumer parity & compatibility | Compatibility matrix, packaged checks, native SQLite consumer |
+| Release, quality & consumers | `doctor-diagnostics` | Doctor & diagnostics | wk doctor, persistence map, phase snapshot alignment |
+| Release, quality & consumers | `release-versioning` | Release & versioning | Tags, changelog, phase closeout evidence |
 
 ## Phase plan and release cadence
 
@@ -62,13 +62,6 @@ Each phase ends with a GitHub release. Phases are sequential unless explicitly r
 This section lists **planned and in-flight** phases only. **Completed** phase blocks (scope/outcome/exit) are archived in [`ROADMAP-archive.md`](./ROADMAP-archive.md) under **Archived phase plan sections**.
 
 For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MATRIX.md`.
-
-### Phase 56 - Agent & task lifecycle hooks -> GitHub release `v0.56.0` (PLANNED)
-
-- **Primary scope:** **`T645`–`T648`** — ADR + registration config + trace schema (**`T645`**); read-only hook dispatch + persisted traces on pilot events (**`T646`**); mutating outcomes + write hooks + shell hardening (**`T647`**); PR-oriented events (or documented stubs) + maintainer catalog + performance budgets (**`T648`**). Provenance: wishlist **`T563`**.
-- **Outcome:** Named lifecycle events, deterministic handler ordering, structured audit traces, and documented fail-closed vs warn posture; HTTP webhook transport explicitly out of scope for this phase per task acceptance.
-- **Exit signals:**
-  - **`pnpm run build`**, **`check`**, **`test`**, **`parity`**, **`pre-merge-gates`** on the release tag; maintainer evidence per **`RELEASING.md`**.
 
 ### Phase 53 - Relational feature registry (DB taxonomy Path A) -> GitHub release `v0.53.0` (COMPLETE)
 

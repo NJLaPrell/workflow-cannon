@@ -1,3 +1,5 @@
+<!-- GENERATED FROM .ai/runbooks/ide-kit-status-protocol.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+
 # IDE-agnostic kit status protocol
 
 **Audience:** maintainers building editor or CI integrations. **Core remains CLI-canonical** — this document describes the read-only JSON contract thin clients should use.

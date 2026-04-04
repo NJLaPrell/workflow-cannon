@@ -1,3 +1,5 @@
+<!-- GENERATED FROM .ai/runbooks/first-run-validation.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+
 # First-run validation (contributors)
 
 Use this page when a clone “almost works” or **tests / parity** fail on first try.

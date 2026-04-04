@@ -1,3 +1,5 @@
+<!-- GENERATED FROM .ai/playbooks/task-to-phase-branch.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+
 # Playbook: deliver a task to the phase integration branch
 
 **Playbook id:** `task-to-phase-branch`  

@@ -213,7 +213,7 @@ async function handleSetAgentGuidance(
 export const workspaceConfigModule: WorkflowModule = {
   registration: {
     id: "workspace-config",
-    version: "0.6.0",
+    version: "0.7.0",
     contractVersion: "1",
     stateSchema: 1,
     capabilities: ["diagnostics"],

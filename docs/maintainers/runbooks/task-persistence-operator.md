@@ -1,3 +1,5 @@
+<!-- GENERATED FROM .ai/runbooks/task-persistence-operator.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+
 # Task persistence operator map (SQLite-only runtime)
 
 Single place to answer: **where is data?**, **how do I import legacy JSON?**, and **how do I recover?**

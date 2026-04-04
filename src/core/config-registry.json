@@ -644,5 +644,54 @@
     "writableLayers": [
       "project"
     ]
+  },
+  "kit.lifecycleHooks.enabled": {
+    "key": "kit.lifecycleHooks.enabled",
+    "type": "boolean",
+    "description": "When true, registered kit.lifecycleHooks.handlers may run for configured lifecycle events (see ADR-agent-task-lifecycle-hooks-v1.md).",
+    "default": false,
+    "domainScope": "project",
+    "owningModule": "workspace-kit",
+    "sensitive": true,
+    "requiresRestart": false,
+    "requiresApproval": true,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "kit.lifecycleHooks.mode": {
+    "key": "kit.lifecycleHooks.mode",
+    "type": "string",
+    "description": "Hook posture: off (disabled), observe (handlers run; deny/modify logged only), enforce (deny stops work; modify merges allowed patches).",
+    "default": "off",
+    "allowedValues": ["off", "observe", "enforce"],
+    "domainScope": "project",
+    "owningModule": "workspace-kit",
+    "sensitive": true,
+    "requiresRestart": false,
+    "requiresApproval": true,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "kit.lifecycleHooks.traceRelativePath": {
+    "key": "kit.lifecycleHooks.traceRelativePath",
+    "type": "string",
+    "description": "Workspace-relative append-only JSONL trace path for hook invocations (no secrets; see lifecycle hooks runbook).",
+    "default": ".workspace-kit/kit/lifecycle-hook-traces.jsonl",
+    "domainScope": "project",
+    "owningModule": "workspace-kit",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
   }
 }

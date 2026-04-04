@@ -1,3 +1,5 @@
+<!-- GENERATED FROM .ai/runbooks/cursor-long-session.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+
 # Cursor long-session hygiene
 
 Use this runbook when agent threads run for a long time, after context compaction, or when behavior diverges from documented kit policy.

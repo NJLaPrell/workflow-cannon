@@ -1,3 +1,5 @@
+<!-- GENERATED FROM .ai/runbooks/native-sqlite-consumer-install.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+
 # Native SQLite consumer install and recovery
 
 Canonical troubleshooting for **`better-sqlite3`** when using **`tasks.persistenceBackend: sqlite`** (the kit default).

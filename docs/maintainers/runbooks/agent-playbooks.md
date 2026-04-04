@@ -1,3 +1,5 @@
+<!-- GENERATED FROM .ai/runbooks/agent-playbooks.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+
 # Invoking maintainer playbooks (agents and operators)
 
 Playbooks live under [`docs/maintainers/playbooks/`](../playbooks/). They are **markdown direction sets** — not executable scripts and not loaded automatically by `workspace-kit`.

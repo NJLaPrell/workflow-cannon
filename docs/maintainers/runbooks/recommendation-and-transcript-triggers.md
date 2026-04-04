@@ -1,3 +1,5 @@
+<!-- GENERATED FROM .ai/runbooks/recommendation-and-transcript-triggers.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+
 # When recommendations and transcript jobs run
 
 Default posture: **nothing runs on a timer inside the package**. Any “automatic” behavior is **optional**, **config-driven**, or **external** (your CI/cron).

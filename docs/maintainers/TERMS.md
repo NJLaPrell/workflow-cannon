@@ -16,8 +16,8 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
 - **Canonical goals and principles**: `.ai/PRINCIPLES.md` — decision rules and trade-off order
 - **Project intent and boundaries**: `README.md`, `docs/maintainers/ROADMAP.md`, `docs/maintainers/ARCHITECTURE.md`
 - **Execution and planning**: task-engine state (default SQLite `.workspace-kit/tasks/workspace-kit.db`; JSON opt-out `.workspace-kit/tasks/state.json`) — queue, dependencies, and execution tracking
-- **Operational runbooks**: `docs/maintainers/RELEASING.md` and files under `docs/maintainers/runbooks/`
-- **Maintainer playbooks (direction sets)**: `docs/maintainers/playbooks/` — ordered checklists that **compose** canonical docs by link; see `docs/maintainers/playbooks/README.md`
+- **Operational runbooks**: `docs/maintainers/RELEASING.md` plus generated runbooks under `docs/maintainers/runbooks/` (canonical sources: `.ai/runbooks/`; see `docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md`)
+- **Maintainer playbooks (direction sets)**: `docs/maintainers/playbooks/` — generated from `.ai/playbooks/` (same ADR); ordered checklists that **compose** canonical docs by link; see `docs/maintainers/playbooks/README.md`
 - **Agent enforcement layer**: `.cursor/rules/*.mdc` — editor/agent behavior rules
 - **Reusable agent task templates**: `tasks/*.md`
 

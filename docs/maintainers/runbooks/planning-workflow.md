@@ -1,3 +1,5 @@
+<!-- GENERATED FROM .ai/runbooks/planning-workflow.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+
 # Planning workflow runbook
 
 Operational guide for the Phase 17 planning module.

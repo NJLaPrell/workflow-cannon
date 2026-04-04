@@ -10,6 +10,23 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 (nothing yet)
 
+## [0.56.0] - 2026-04-04
+
+Phase 56 — **Lifecycle hooks** (**`T645`–`T648`**) + **`.ai` → `docs/maintainers/` pipeline** (**`T654`–`T661`**).
+
+### Added
+
+- **Hooks** — ADR **`ADR-agent-task-lifecycle-hooks-v1.md`**; **`kit.lifecycleHooks.*`** (enabled, mode, trace path, handlers); **`KitLifecycleHookBus`** in **`src/core/kit-lifecycle-hooks.ts`**; integration on **`workspace-kit run`** module commands and **`TransitionService`** (transition + task-store persist); runbook **`runbooks/lifecycle-hooks.md`**; reserved **`before-pr-mutation`** / **`after-pr-mutation`** stubs.
+- **Docs pipeline** — ADR **`ADR-ai-canonical-maintainer-docs-pipeline.md`**; **`docs/maintainers/data/docs-from-ai-exceptions.yaml`** + **`ai-to-docs-coverage.json`**; **`pnpm run generate-maintainer-docs-from-ai`**; **`check-ai-to-docs-drift`** + **`check-orphan-ai-sources`** in **`pnpm run check`**.
+
+### Changed (maintainer docs)
+
+- Covered **workbooks**, **runbooks**, and **playbooks** under **`docs/maintainers/`** are emitted from **`.ai/`** with a generator banner; **`AGENTS.md`**, **`TERMS.md`**, and **`module-build-guide.md`** updated for the new workflow.
+
+### Changed (module versions)
+
+- **Workspace-config module** — **`0.7.0`**; **task-engine module** — **`0.17.0`** (compatibility matrix).
+
 ## [0.55.0] - 2026-04-03
 
 Phase 55 — **GitHub-native invocation** (**`T649`–`T653`**): ADR **`ADR-github-native-invocation.md`**, **`kit.githubInvocation.*`** config + validation, **`src/core/github-invocation.ts`**, reference runner **`tools/github-invocation/run-github-delivery.mjs`**, runbook **`runbooks/github-workflow-cannon-invocation.md`**, sample **`docs/examples/github/workflow-cannon-invocation.sample.yml`**. Wishlist provenance **`T566`**.

@@ -30,14 +30,15 @@ Basic operating guidance for AI agents working in this repository.
 
 | Kind | Where | Notes |
 | --- | --- | --- |
-| Canonical maintainer prose | `docs/maintainers/*.md` | Primary edits for process and strategy. |
+| Canonical maintainer prose | `docs/maintainers/*.md` | Primary edits for process and strategy **except** paths emitted by the Phase 56 `.ai` → `docs` pipeline (see below). |
+| `.ai` → `docs` pipeline (Phase 56) | `.ai/workbooks/`, `.ai/runbooks/`, `.ai/playbooks/` → matching `docs/maintainers/` | **`docs/maintainers/data/ai-to-docs-coverage.json`** is the manifest; run **`pnpm run generate-maintainer-docs-from-ai`** after editing sources. See **`docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md`**. |
 | Machine / generated | `.ai/*.md` | Some outputs are **generated** by the documentation module; **`.ai/PRINCIPLES.md`** and **`.ai/module-build.md`** are **hand-maintained** machine dialect — see **`docs/maintainers/RELEASING.md`** when changing **`rule|id=R###`**. |
 | Cursor enforcement mirrors | `.cursor/rules/*.mdc` | Pointer-first; see **`docs/maintainers/module-build-guide.md`** → **Cursor rules**. |
 
 ### Maintainer mirror pairing (human vs `.ai/`)
 
 - **Editing:** When content exists under both **`docs/maintainers/`** and **`.ai/`**, treat **`docs/maintainers/`** as **human-canonical** for maintainer intent unless a file header says otherwise. Change human sources first, then regenerate or hand-sync **`.ai/`** with **`workspace-kit run document-project`** / **`generate-document`** per **`src/modules/documentation/RULES.md`** (workflow: **`docs/maintainers/module-build-guide.md` → Workbook and `.ai` mirror pairing**).
-- **Workbooks:** Pairs under **`docs/maintainers/workbooks/`** and **`.ai/workbooks/`** — the maintainer workbook carries narrative decisions; **`.ai/workbooks/`** is the machine dialect for agents and validation.
+- **Workbooks (covered set):** Canonical **`.ai/workbooks/`**; human renders under **`docs/maintainers/workbooks/`** are **generated** (see coverage map). Legacy uncovered pairs may still follow human-first rules in **`module-build-guide.md`**.
 - **Config reference:** **`docs/maintainers/CONFIG.md`** and **`.ai/CONFIG.md`** are generated together from **`src/core/config-metadata.ts`** via **`workspace-kit config generate-docs`**; do not hand-edit either file.
 - **Agents:** Keep using **`.ai/AGENTS.md`** and **`src/modules/*/instructions/`** for routine operations — this subsection is for **maintainers** reconciling mirrored docs, not an alternate agent entry path.
 
@@ -47,7 +48,7 @@ Files under **`tasks/*.md`** are **optional prompt-only** workflows. They **do n
 
 ## Maintainer playbooks (direction sets)
 
-**Playbooks** are ordered maintainer checklists under [`docs/maintainers/playbooks/`](./playbooks/) that **link** canonical docs instead of copying them. Authoring rules and stable ids: [`playbooks/README.md`](./playbooks/README.md). Terminology: [`TERMS.md`](./TERMS.md) → **Direction set (maintainer playbook)**.
+**Playbooks** are ordered maintainer checklists under [`docs/maintainers/playbooks/`](./playbooks/) (generated from **`.ai/playbooks/`** — edit sources, then **`pnpm run generate-maintainer-docs-from-ai`**) that **link** canonical docs instead of copying them. Authoring rules and stable ids: [`playbooks/README.md`](./playbooks/README.md). Terminology: [`TERMS.md`](./TERMS.md) → **Direction set (maintainer playbook)**.
 
 | Playbook id | Path | Use when |
 | --- | --- | --- |

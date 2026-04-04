@@ -1,3 +1,5 @@
+<!-- GENERATED FROM .ai/runbooks/wishlist-workflow.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+
 # Wishlist workflow (Task Engine)
 
 ## Which id should I create?

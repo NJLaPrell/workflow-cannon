@@ -1,3 +1,5 @@
+<!-- GENERATED FROM .ai/runbooks/cursor-transcript-automation.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+
 # Cursor / VS Code transcript automation
 
 ## Package scripts (T271)

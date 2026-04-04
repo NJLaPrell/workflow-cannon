@@ -1,3 +1,5 @@
+<!-- GENERATED FROM .ai/runbooks/github-workflow-cannon-invocation.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+
 # Runbook: GitHub-native Workflow Cannon invocation
 
 **Audience:** maintainers wiring **GitHub Actions** or **webhooks** to the Phase 55 reference runner.  

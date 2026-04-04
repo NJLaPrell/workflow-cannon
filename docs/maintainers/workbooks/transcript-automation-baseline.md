@@ -1,87 +1,39 @@
-# Transcript Automation Baseline (Phase 5)
+<!-- GENERATED FROM .ai/workbooks/transcript-automation-baseline.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
 
-Canonical design baseline for Phase 5 transcript intelligence automation.
+meta|doc=workbook|truth=canonical|schema=base.v2|status=active|profile=workbook
 
-**Maintainer-canonical** prose. **Machine dialect:** `.ai/workbooks/transcript-automation-baseline.md` (sync via the documentation module per `src/modules/documentation/RULES.md`).
+workbook|name=transcript_automation_baseline|phase=5|status=baseline_locked
+ref|id=maintainer_view|target=docs/maintainers/workbooks/transcript-automation-baseline.md|type=file|status=active
+ref|id=roadmap|target=docs/maintainers/ROADMAP.md|type=file|status=active
+ref|id=task_engine_state|target=.workspace-kit/tasks/workspace-kit.db|type=file|status=active
+ref|id=task_engine_state_json_optout|target=.workspace-kit/tasks/state.json|type=file|status=active
+ref|id=improvement_config|target=src/modules/improvement/config.md|type=file|status=active
+ref|id=improvement_triage_playbook|target=docs/maintainers/playbooks/improvement-triage-top-three.md|type=file|status=active
+ref|id=improvement_discovery_playbook|target=docs/maintainers/playbooks/improvement-task-discovery.md|type=file|status=active
 
-## Scope
+scope|primary_tasks=T244,T245,T246,T247,T248,T259
+scope|follow_on_tasks=T249-T258,T260-T266
 
-- Primary implementation scope: `T244`, `T245`, `T246`, `T247`, `T248`, `T259`.
-- Follow-on hardening tasks (`T249`-`T258`, `T260`-`T266`) must remain compatible with this baseline unless explicitly re-planned.
+command|name=sync-transcripts|purpose=copy_source_jsonl_into_local_archive|sensitivity=non_sensitive
+command|name=ingest-transcripts|purpose=sync_then_conditionally_generate_recommendations|sensitivity=policy_sensitive
+command|name=generate-recommendations|purpose=create_improvement_tasks_from_evidence|sensitivity=policy_sensitive
 
-## Improvement task lifecycle (execution planning)
+config|key=improvement.transcripts.sourcePath|default=.cursor/agent-transcripts
+config|key=improvement.transcripts.archivePath|default=agent-transcripts
+config|key=improvement.cadence.minIntervalMinutes|default=15
+config|key=improvement.cadence.skipIfNoNewTranscripts|default=true
 
-- `generate-recommendations` / transcript ingest may create **`type: improvement`** tasks (including `imp-*` ids) in the **Task Engine** store (default **SQLite** via `tasks.persistenceBackend: sqlite`; see `docs/maintainers/ADR-sqlite-default-persistence.md`).
-- New recommendations are typically **`proposed`** until a maintainer promotes them to **`ready`** with `workspace-kit run run-transition` **`action":"accept"`** (bounded triage: [`improvement-triage-top-three.md`](../playbooks/improvement-triage-top-three.md)).
-- To pull work out of the ready queue without cancelling, use **`action":"demote"`** (`ready` → `proposed`); see [`AGENT-CLI-MAP.md`](../AGENT-CLI-MAP.md) and `src/modules/task-engine/instructions/run-transition.md`.
-- Friction research and logging before tasks exist: [`improvement-task-discovery.md`](../playbooks/improvement-task-discovery.md).
+cadence|rule=skip_when_no_new_transcripts_and_skipIfNoNewTranscripts_true
+cadence|rule=skip_when_elapsed_minutes_below_minIntervalMinutes
+cadence|rule=generate_when_first_run_or_interval_satisfied_or_forceGenerate_true
+cadence|decision_skipped_no_new_transcripts=skipped-no-new-transcripts
+cadence|decision_skipped_min_interval=skipped-min-interval
+cadence|decision_run_first_ingest=run-first-ingest
+cadence|decision_run_invalid_last_ingest_at=run-invalid-last-ingest-at
+cadence|decision_run_min_interval_satisfied=run-min-interval-satisfied
+improvement_lifecycle|proposed_ready=run_transition_accept
+improvement_lifecycle|ready_proposed_demote=run_transition_demote
 
-## Command model
-
-- `workspace-kit run sync-transcripts`
-  - Purpose: copy transcript JSONL files from configured source path into local archive path.
-  - Behavior: deterministic, non-destructive copy; source is read-only; existing identical files are skipped; conflicting destination files are skipped and reported.
-- `workspace-kit run ingest-transcripts` (policy-sensitive)
-  - Purpose: run sync + recommendation generation in one explicit flow.
-  - Behavior: runs sync first, applies cadence policy, then runs `generate-recommendations` when cadence allows or `forceGenerate` is set.
-- `workspace-kit run generate-recommendations`
-  - Purpose: generate recommendation tasks from transcript/policy/config/task evidence.
-  - Behavior: evidence-key dedupe + append-only lineage as in Phase 3.
-
-## Config contract
-
-All keys resolve through canonical layered config precedence.
-
-- `improvement.transcripts.sourcePath` (default: `.cursor/agent-transcripts`)
-- `improvement.transcripts.archivePath` (default: `agent-transcripts`)
-- `improvement.cadence.minIntervalMinutes` (default: `15`)
-- `improvement.cadence.skipIfNoNewTranscripts` (default: `true`)
-
-## Cadence and backoff policy
-
-- Manual-first and event-driven by default (no scheduler required).
-- Ingest cadence decision rules:
-  - Skip generation when `skipIfNoNewTranscripts=true` and sync copies zero files.
-  - Skip generation when elapsed time since last ingest is below `minIntervalMinutes`.
-  - Allow generation when first run, interval is satisfied, or generation is forced.
-- Decision reason is returned in structured output (`cadence.decision`).
-
-## Safety and privacy boundaries
-
-- Transcript archives are local-only by default (`agent-transcripts/` ignored by git).
-- Sync never mutates source transcripts.
-- Output includes machine-readable counters and error details without requiring raw log inspection.
-- Recommendation generation remains policy-gated for mutating task creation.
-
-## Observability contract
-
-`sync-transcripts` summary includes:
-
-- `scanned`, `copied`, `skippedExisting`, `skippedConflict`, `errors[]`, `copiedFiles[]`
-
-`ingest-transcripts` summary includes:
-
-- nested `sync` summary
-- `cadence` decision fields (`minIntervalMinutes`, `skipIfNoNewTranscripts`, `decision`)
-- `generatedRecommendations` block when generation runs
-
-### `cadence.decision` values (operator matrix)
-
-Values are produced by `resolveCadenceDecision` (`src/modules/improvement/transcript-sync-runtime.ts`). The JSON field `cadence.decision` is always one of these strings. **`generate-recommendations`** runs when the cadence allows **or** when the caller sets **`forceGenerate`** / **`runGenerate`** to `true` (override — generation can run even if `decision` shows a skip).
-
-| `cadence.decision` | `generate-recommendations` when no override | Typical follow-up |
-| --- | --- | --- |
-| `skipped-no-new-transcripts` | No (if `skipIfNoNewTranscripts` is true and sync copied 0 files) | Wait for new transcripts, disable skip, or pass **`forceGenerate`** / **`runGenerate`** with policy approval |
-| `skipped-min-interval` | No | Wait for interval, lower `improvement.cadence.minIntervalMinutes`, or force generate |
-| `run-first-ingest` | Yes | First ingest or no prior `lastIngestRunAt` |
-| `run-invalid-last-ingest-at` | Yes | Corrupt/unparseable prior timestamp — treated as allow |
-| `run-min-interval-satisfied` | Yes | Interval elapsed since last ingest |
-
-Deeper operations guidance: [`runbooks/transcript-ingestion-operations.md`](../runbooks/transcript-ingestion-operations.md).
-
-## Rollout guardrails
-
-- Keep this baseline authoritative for all transcript-automation follow-on tasks.
-- Any compatibility-impacting changes to command semantics, config keys, or cadence logic require roadmap/task/doc updates in the same change set.
-- Preserve fail-closed policy behavior for sensitive recommendation-generation flows.
-
+guardrail|slot1=G001|slot2=must|slot3=keep_transcript_archives_local_only_by_default|status=active
+guardrail|slot1=G002|slot2=must|slot3=keep_source_transcripts_read_only_during_sync|status=active
+guardrail|slot1=G003|slot2=must|slot3=require_same_change_updates_for_command_config_or_cadence_semantic_changes|status=active

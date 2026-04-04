@@ -1,6 +1,7 @@
 import type { ModuleCommandResult, WorkflowModule } from "../../contracts/module-contract.js";
 import { builtinInstructionEntriesForModule } from "../../contracts/builtin-run-command-manifest.js";
 import type { TaskEntity, TaskMutationType, TaskPriority, TaskStatus } from "./types.js";
+import { createKitLifecycleHookBus } from "../../core/kit-lifecycle-hooks.js";
 import { maybeSpawnTranscriptHookAfterCompletion } from "../../core/transcript-completion-hook.js";
 import { TaskStore } from "./persistence/store.js";
 import { TransitionService } from "./service.js";
@@ -145,7 +146,7 @@ function attachPolicyMeta(
 export const taskEngineModule: WorkflowModule = {
   registration: {
     id: "task-engine",
-    version: "0.16.0",
+    version: "0.17.0",
     contractVersion: "1",
     stateSchema: 1,
     capabilities: ["task-engine"],
@@ -316,7 +317,15 @@ export const taskEngineModule: WorkflowModule = {
       }
 
       try {
-        const service = new TransitionService(store);
+        const hookBus = createKitLifecycleHookBus(
+          ctx.workspacePath,
+          (ctx.effectiveConfig ?? {}) as Record<string, unknown>
+        );
+        const service = new TransitionService(
+          store,
+          [],
+          hookBus.isEnabled() ? hookBus : undefined
+        );
         const expectedPlanningGeneration = readOptionalExpectedPlanningGeneration(
           args as Record<string, unknown>
         );

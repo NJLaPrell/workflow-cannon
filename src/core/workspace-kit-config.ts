@@ -48,6 +48,12 @@ export const KIT_CONFIG_DEFAULTS: Record<string, unknown> = {
       rateLimitEventsPerHour: 0,
       planOnlyRunCommands: ["get-next-actions", "list-tasks", "get-task"],
       sensitiveRunCommands: ["run-transition"]
+    },
+    lifecycleHooks: {
+      enabled: false,
+      mode: "off",
+      traceRelativePath: ".workspace-kit/kit/lifecycle-hook-traces.jsonl",
+      handlers: [] as unknown[]
     }
   } as Record<string, unknown>,
   tasks: {

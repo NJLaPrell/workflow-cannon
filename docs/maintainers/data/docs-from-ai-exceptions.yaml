@@ -1,0 +1,65 @@
+# Docs paths under docs/ that are NOT generated from .ai/ by the Phase 56 pipeline.
+# Each row excuses the path from check-ai-to-docs-drift.mjs (repo-root relative).
+# Review quarterly to shrink this list.
+version: 1
+exceptions:
+  - path: docs/maintainers/AGENTS.md
+    reason: Human-oriented maintainer index; machine dialect stays `.ai/AGENTS.md` (different files until a structured merge is defined).
+    owner: maintainers
+  - path: docs/maintainers/TERMS.md
+    reason: Human glossary prose; machine dialect stays `.ai/TERMS.md`.
+    owner: maintainers
+  - path: docs/maintainers/AGENT-CLI-MAP.md
+    reason: Maintainer tier table and copy-paste depth; not generated from `.ai/` in Phase 56.
+    owner: maintainers
+  - path: docs/maintainers/CLI-VISUAL-GUIDE.md
+    reason: Visual companion to AGENT-CLI-MAP; hand-maintained.
+    owner: maintainers
+  - path: docs/maintainers/ROADMAP.md
+    reason: Rendered from src/modules/documentation/data/roadmap-data.json (documentation module).
+    owner: maintainers
+  - path: docs/maintainers/ROADMAP-archive.md
+    reason: Historical narrative archive; not part of .ai → docs generator scope.
+    owner: maintainers
+  - path: docs/maintainers/FEATURE-TAXONOMY.md
+    reason: Rendered from documentation module data JSON.
+    owner: maintainers
+  - path: docs/maintainers/FEATURE-MATRIX.md
+    reason: Maintainer matrix; hand or data-driven updates outside Phase 56 coverage.
+    owner: maintainers
+  - path: docs/maintainers/CONFIG.md
+    reason: Generated from config metadata (pnpm run wk config generate-docs), not .ai sources.
+    owner: maintainers
+  - path: docs/maintainers/CHANGELOG.md
+    reason: Release log; hand-maintained with machine assistance.
+    owner: maintainers
+  - path: docs/maintainers/DECISIONS.md
+    reason: Maintainer decision log; not mirrored from .ai in this phase.
+    owner: maintainers
+  - path: docs/maintainers/SECURITY.md
+    reason: Canonical copy may track .ai/SECURITY.md separately; exception avoids false drift until unified.
+    owner: maintainers
+  - path: docs/maintainers/ARCHITECTURE.md
+    reason: Large architecture narrative; out of Phase 56 drift set (optional future pilot).
+    owner: maintainers
+  - path: docs/maintainers/module-build-guide.md
+    reason: Hand-maintained workbook pointer updates only; core narrative still maintainer-owned until full split.
+    owner: maintainers
+  - path: docs/maintainers/plans/**
+    reason: Planning drafts; not generated outputs.
+    owner: maintainers
+  - path: docs/maintainers/data/**
+    reason: Data artifacts (YAML/JSON inventories) except ai-to-docs-coverage.json which is hand-maintained manifest.
+    owner: maintainers
+  - path: docs/maintainers/ADR-*.md
+    reason: ADRs are maintainer acceptance records; not emitted from .ai in v1 pipeline (cross-link only).
+    owner: maintainers
+  - path: docs/maintainers/RELEASING.md
+    reason: Human release process; paired with .ai/RELEASING.md but not auto-synced in drift gate v1.
+    owner: maintainers
+  - path: docs/exercises/**
+    reason: Out of scope per ai-canonical-docs-mirror-pipeline plan.
+    owner: maintainers
+  - path: docs/maintainers/workbooks/README.md
+    reason: Index/readme for workbook folder; hand-maintained.
+    owner: maintainers

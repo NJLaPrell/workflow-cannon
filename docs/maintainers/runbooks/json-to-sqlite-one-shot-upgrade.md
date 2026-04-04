@@ -1,3 +1,5 @@
+<!-- GENERATED FROM .ai/runbooks/json-to-sqlite-one-shot-upgrade.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+
 # One-shot upgrade: JSON task/wishlist stores → unified SQLite
 
 Use this runbook when **legacy JSON** task/wishlist files exist (for example **`.workspace-kit/tasks/state.json`**) and you want data in the default **SQLite** layout under **`tasks.sqliteDatabaseRelativePath`** (default **`.workspace-kit/tasks/workspace-kit.db`**). **v0.40+** rejects **`tasks.persistenceBackend: "json"`** — migrate first, then rely on sqlite-only runtime.

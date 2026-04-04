@@ -1,4 +1,5 @@
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
+import { createKitLifecycleHookBus } from "../../core/kit-lifecycle-hooks.js";
 import { appendLineageEvent } from "../../core/lineage-store.js";
 import { openPlanningStores, TransitionService, type TaskEntity } from "../../core/planning/index.js";
 import {
@@ -58,7 +59,11 @@ export async function runReviewItem(
     };
   }
 
-  const service = new TransitionService(store);
+  const hookBus = createKitLifecycleHookBus(
+    ctx.workspacePath,
+    (ctx.effectiveConfig ?? {}) as Record<string, unknown>
+  );
+  const service = new TransitionService(store, [], hookBus.isEnabled() ? hookBus : undefined);
 
   const run = async (action: string) => {
     await service.runTransition({ taskId, action, actor });

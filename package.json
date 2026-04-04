@@ -1,6 +1,6 @@
 {
   "name": "@workflow-cannon/workspace-kit",
-  "version": "0.55.0",
+  "version": "0.56.0",
   "private": false,
   "packageManager": "pnpm@10.0.0",
   "license": "MIT",
@@ -54,7 +54,8 @@
     "export-evidence-bundle": "node scripts/export-evidence-bundle.mjs",
     "playbook-run-steps": "node scripts/playbook-run-steps.mjs",
     "lint-response-templates": "node scripts/lint-response-templates.mjs",
-    "generate-kit-trust-boundary": "node scripts/generate-kit-trust-boundary.mjs"
+    "generate-kit-trust-boundary": "node scripts/generate-kit-trust-boundary.mjs",
+    "generate-maintainer-docs-from-ai": "node scripts/generate-maintainer-docs-from-ai.mjs"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",

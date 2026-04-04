@@ -88,6 +88,20 @@ const stages = [
     command: process.execPath,
     args: ["scripts/check-documentation-data.mjs"],
     hint: "Fix `src/modules/documentation/data/*.json` or regenerate maintainer markdown via `pnpm run wk run generate-document` (ROADMAP.md / FEATURE-TAXONOMY.md); see scripts/check-documentation-data.mjs."
+  },
+  {
+    id: "ai-to-docs-drift",
+    label: ".ai → docs/maintainers drift gate (Phase 56)",
+    command: process.execPath,
+    args: ["scripts/check-ai-to-docs-drift.mjs"],
+    hint: "Edit .ai sources, run pnpm run generate-maintainer-docs-from-ai, commit outputs. See docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md."
+  },
+  {
+    id: "orphan-ai-sources",
+    label: "Orphan .ai markdown under covered maintainer trees",
+    command: process.execPath,
+    args: ["scripts/check-orphan-ai-sources.mjs"],
+    hint: "Add missing .ai paths to docs/maintainers/data/ai-to-docs-coverage.json."
   }
 ];
 

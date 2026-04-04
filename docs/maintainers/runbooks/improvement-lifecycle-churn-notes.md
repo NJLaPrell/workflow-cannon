@@ -1,3 +1,5 @@
+<!-- GENERATED FROM .ai/runbooks/improvement-lifecycle-churn-notes.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+
 # Improvement lifecycle churn (queue-health follow-ups)
 
 Queue-health heuristics flagged **frequent transitions** on several thin **`improvement`** tasks while they were open. This runbook records a **post-hoc closure** for the Phase **37** meta tasks that asked for root-cause notes tied to **`get-task-history`**.

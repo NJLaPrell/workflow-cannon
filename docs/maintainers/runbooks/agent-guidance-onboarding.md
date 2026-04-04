@@ -1,3 +1,5 @@
+<!-- GENERATED FROM .ai/runbooks/agent-guidance-onboarding.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+
 # Agent guidance onboarding (RPG party v1)
 
 **Advisory only** — guidance tier does not replace PRINCIPLES, policy, or `policyApproval`. See **`docs/maintainers/ADR-agent-guidance-profile-rpg-party-v1.md`**.

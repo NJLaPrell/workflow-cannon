@@ -1,3 +1,5 @@
+<!-- GENERATED FROM .ai/runbooks/transcript-ingestion-operations.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+
 # Transcript ingestion — operations runbook
 
 Manual-first workflow for syncing agent transcripts, generating improvement recommendations, and operating frequent runs safely.

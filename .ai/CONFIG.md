@@ -92,6 +92,18 @@ Generated from `src/core/config-metadata.ts`. Do not edit by hand; run `workspac
 
 **Description:** workspace-kit run subcommand names permitted for implement/review routes when WORKSPACE_KIT_GITHUB_RUN_ARGS_JSON + WORKSPACE_KIT_GITHUB_RUN_POLICY_APPROVAL are supplied (maintainer-controlled JSON).
 
+| kit.lifecycleHooks.enabled | boolean | false | project | workspace-kit | maintainer | true | true |
+
+**Description:** When true, registered kit.lifecycleHooks.handlers may run for configured lifecycle events (see ADR-agent-task-lifecycle-hooks-v1.md).
+
+| kit.lifecycleHooks.mode | string | "off" | project | workspace-kit | maintainer | true | true |
+
+**Description:** Hook posture: off (disabled), observe (handlers run; deny/modify logged only), enforce (deny stops work; modify merges allowed patches).
+
+| kit.lifecycleHooks.traceRelativePath | string | ".workspace-kit/kit/lifecycle-hook-traces.jsonl" | project | workspace-kit | maintainer | false | false |
+
+**Description:** Workspace-relative append-only JSONL trace path for hook invocations (no secrets; see lifecycle hooks runbook).
+
 | modules.disabled | array | [] | project | workspace-kit | maintainer | false | false |
 
 **Description:** Module ids to disable after computing the candidate enabled set (default-by-flag or modules.enabled whitelist).

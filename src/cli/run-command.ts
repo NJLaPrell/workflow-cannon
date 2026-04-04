@@ -15,6 +15,7 @@ import {
   type PolicyApprovalPayload
 } from "../core/policy.js";
 import { getSessionGrant, recordSessionGrant, resolveSessionId } from "../core/session-policy.js";
+import { createKitLifecycleHookBus } from "../core/kit-lifecycle-hooks.js";
 import { applyResponseTemplateApplication } from "../core/response-template-shaping.js";
 import {
   buildRunArgsSchemaOnlyPayload,
@@ -262,6 +263,29 @@ export async function handleRunCommand(
     moduleRegistry: registry
   };
 
+  const hookBus = createKitLifecycleHookBus(cwd, effective);
+  if (hookBus.isEnabled()) {
+    const preCmd = await hookBus.emitBeforeModuleCommand(subcommand, commandArgs);
+    if (preCmd.denied && hookBus.getMode() === "enforce") {
+      await hookBus.emitAfterModuleCommand(subcommand, false, "hook-denied");
+      writeLine(
+        JSON.stringify(
+          {
+            ok: false,
+            code: "hook-denied",
+            message: preCmd.denied.reason
+          },
+          null,
+          2
+        )
+      );
+      return codes.validationFailure;
+    }
+    if (preCmd.commandArgsPatch && hookBus.getMode() === "enforce") {
+      Object.assign(commandArgs, preCmd.commandArgsPatch);
+    }
+  }
+
   try {
     const rawResult = await router.execute(subcommand, commandArgs, ctx);
     if (sensitive && resolvedSensitiveApproval && policyOp) {
@@ -296,9 +320,21 @@ export async function handleRunCommand(
       }
     }
     const result = applyResponseTemplateApplication(subcommand, commandArgs, rawResult, effective);
+    if (hookBus.isEnabled()) {
+      await hookBus.emitAfterModuleCommand(subcommand, rawResult.ok, rawResult.code);
+    }
     writeLine(JSON.stringify(result, null, 2));
     return result.ok ? codes.success : codes.validationFailure;
   } catch (error) {
+    if (hookBus.isEnabled()) {
+      const code =
+        error instanceof ModuleCommandRouterError
+          ? error.code
+          : error instanceof Error
+            ? error.name
+            : "internal-error";
+      await hookBus.emitAfterModuleCommand(subcommand, false, code);
+    }
     if (error instanceof ModuleCommandRouterError) {
       writeLine(
         JSON.stringify(

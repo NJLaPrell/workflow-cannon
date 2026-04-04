@@ -1,3 +1,5 @@
+<!-- GENERATED FROM .ai/runbooks/kit-sqlite-schema-migrations.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+
 # Kit SQLite schema versioning and migrations
 
 **Audience:** maintainers extending workspace-kit SQLite surfaces. **Single shared entrypoint:** `prepareKitSqliteDatabase` in `src/core/state/workspace-kit-sqlite.ts`.

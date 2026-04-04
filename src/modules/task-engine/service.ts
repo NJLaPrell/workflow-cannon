@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import type { KitLifecycleHookBus } from "../../core/kit-lifecycle-hooks.js";
 import type {
   TaskEntity,
   TaskStatus,
@@ -24,10 +25,12 @@ export type TransitionResult = {
 export class TransitionService {
   private readonly store: TaskStore;
   private readonly validator: TransitionValidator;
+  private readonly hookBus?: KitLifecycleHookBus;
 
-  constructor(store: TaskStore, customGuards: TransitionGuard[] = []) {
+  constructor(store: TaskStore, customGuards: TransitionGuard[] = [], hookBus?: KitLifecycleHookBus) {
     this.store = store;
     this.validator = new TransitionValidator(customGuards);
+    this.hookBus = hookBus;
   }
 
   async runTransition(request: TransitionRequest): Promise<TransitionResult> {
@@ -36,11 +39,27 @@ export class TransitionService {
       throw new TaskEngineError("task-not-found", `Task '${request.taskId}' not found`);
     }
 
-    const targetState = resolveTargetState(task.status, request.action);
+    let effectiveAction = request.action;
+    if (this.hookBus?.isEnabled()) {
+      const hookPre = await this.hookBus.emitBeforeTaskTransition({
+        taskId: request.taskId,
+        action: effectiveAction,
+        fromState: task.status,
+        actor: request.actor ?? null
+      });
+      if (hookPre.denied) {
+        throw new TaskEngineError("hook-denied", hookPre.denied.reason);
+      }
+      if (hookPre.actionOverride) {
+        effectiveAction = hookPre.actionOverride;
+      }
+    }
+
+    const targetState = resolveTargetState(task.status, effectiveAction);
     if (!targetState) {
       throw new TaskEngineError(
         "invalid-transition",
-        `Action '${request.action}' is not valid from state '${task.status}'`
+        `Action '${effectiveAction}' is not valid from state '${task.status}'`
       );
     }
 
@@ -74,7 +93,7 @@ export class TransitionService {
     };
     this.store.updateTask(updatedTask);
 
-    const action = getTransitionAction(fromState, targetState) ?? request.action;
+    const action = getTransitionAction(fromState, targetState) ?? effectiveAction;
     const autoUnblockResults = targetState === "completed"
       ? this.autoUnblock(request.taskId, timestamp, request.actor)
       : [];
@@ -96,11 +115,33 @@ export class TransitionService {
       this.store.addEvidence(unblockEvidence);
     }
 
+    if (this.hookBus?.isEnabled()) {
+      const persistGate = await this.hookBus.emitBeforeTaskStorePersist({
+        taskId: request.taskId,
+        fromState,
+        toState: targetState
+      });
+      if (persistGate.denied) {
+        throw new TaskEngineError("hook-denied", persistGate.denied.reason);
+      }
+    }
+
     await this.store.save(
       request.expectedPlanningGeneration !== undefined
         ? { expectedPlanningGeneration: request.expectedPlanningGeneration }
         : undefined
     );
+
+    if (this.hookBus?.isEnabled()) {
+      await this.hookBus.emitAfterTaskStorePersist({ taskId: request.taskId, toState: targetState });
+      await this.hookBus.emitAfterTaskTransition({
+        taskId: request.taskId,
+        fromState,
+        toState: targetState,
+        transitionId: evidence.transitionId,
+        action
+      });
+    }
 
     return { evidence, autoUnblocked: autoUnblockResults };
   }

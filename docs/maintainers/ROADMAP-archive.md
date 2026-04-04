@@ -4,6 +4,7 @@
 
 ## Recent archived “current state” bullets (post phase 35)
 
+- **Phase 56 (Agent/task lifecycle hooks + `.ai` → `docs` pipeline)** is **COMPLETE and released** as **`v0.56.0`**: **`T645`–`T648`** — ADR **`ADR-agent-task-lifecycle-hooks-v1.md`**, **`kit.lifecycleHooks.*`**, dispatcher **`src/core/kit-lifecycle-hooks.ts`**, CLI + transition + persist wiring, runbook **`runbooks/lifecycle-hooks.md`**, PR hook **stubs**; **`T654`–`T661`** — ADR **`ADR-ai-canonical-maintainer-docs-pipeline.md`**, exception manifest + coverage map, **`pnpm run generate-maintainer-docs-from-ai`**, drift + orphan checks in **`pnpm run check`**; workspace-config **0.7.0**, task-engine **0.17.0** in compatibility matrix.
 - **Phase 55 (GitHub-native invocation)** is **COMPLETE and released** as **`v0.55.0`**: **`T649`–`T653`** — ADR **`ADR-github-native-invocation.md`**, **`kit.githubInvocation.*`** config + validation, **`src/core/github-invocation.ts`**, reference runner **`tools/github-invocation/run-github-delivery.mjs`**, maintainer runbook **`runbooks/github-workflow-cannon-invocation.md`**, sample workflow **`docs/examples/github/workflow-cannon-invocation.sample.yml`**; wishlist **`T566`** provenance; workspace-config **0.6.0** in compatibility matrix.
 - **Phase 53 (Relational feature registry)** is **COMPLETE and released** as **`v0.53.0`**: **`T630`–`T639`** — ADR **`ADR-relational-feature-registry.md`**, SQLite **`task_engine_components`** / **`task_engine_features`** / **`task_engine_task_features`**, **`user_version` 5** migration + seed, junction persistence + **`backfill-task-feature-links`** / **`export-feature-taxonomy-json`**, **`list-components`** / **`list-features`**, **`list-tasks`** **`featureId`** / **`componentId`**, **`unknown-feature-id`**; roadmap/taxonomy doc gen from planning DB when present; **`WORKSPACE_KIT_DOC_TAXONOMY_JSON_ONLY`** for CI-committed doc parity; task-engine **0.15.0**, documentation **0.5.0** in compatibility matrix.
 - **Phase 52 (Agent/human CLI ergonomics)** is **COMPLETE and released** as **`v0.52.0`**: **`T624`–`T629`** — **`remediation`** field on **`workspace-kit run`** failures; **`errorRemediationCatalog`** on **`doctor --agent-instruction-surface`**; **`run <pilot-cmd> --schema-only`**; maintainer docs + extension README; task-engine module **0.14.1** in compatibility matrix.
@@ -55,6 +56,13 @@
 ## Archived phase plan sections (completed phases)
 
 These **`### Phase …`** blocks were moved out of **`src/modules/documentation/data/roadmap-phase-sections.md`** so **[`ROADMAP.md`](./ROADMAP.md)** lists only **planned** and **in-flight** phase detail. Shipped scope/outcomes remain provenance here; release facts stay in **[`CHANGELOG.md`](./CHANGELOG.md)**.
+
+### Phase 56 - Agent & task lifecycle hooks + maintainer doc pipeline -> GitHub release `v0.56.0` (COMPLETE)
+
+- **Primary scope:** **`T645`–`T648`** — ADR + **`kit.lifecycleHooks.*`** + trace schema; deterministic hook dispatch (**observe** / **enforce**) on task transitions, module commands, and task-store persist; shell + node handlers with timeouts; PR hook events reserved as documented stubs; maintainer catalog runbook. **`T654`–`T661`** — `.ai/` canonical coverage for workbooks, runbooks, and playbooks; exception manifest; generator + **`pnpm run check`** drift/orphan gates; **`AGENTS.md`** / **`TERMS.md`** alignment for generated families.
+- **Outcome:** Operators can register audited, ordered hooks without forking the CLI; maintainer-facing runbooks/playbooks/workbooks in **`docs/maintainers/`** for covered paths are regenerated from **`.ai/`** only.
+- **Exit signals:**
+  - **`pnpm run build`**, **`check`**, **`test`**, **`parity`**, **`pre-merge-gates`** on the release tag; maintainer evidence per **`RELEASING.md`**.
 
 ### Phase 55 - GitHub-native invocation (issues, PR comments, review loops) -> GitHub release `v0.55.0` (COMPLETE)
 

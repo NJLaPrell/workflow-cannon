@@ -47,6 +47,7 @@ Status legend:
 | Phase 47 - Agent guidance profile — RPG party tier (`T585`–`T590`) | `v0.47.0` | Completed |
 | Phase 54 - Skill packs v1 (`T640`–`T644`) | `v0.54.0` | Completed |
 | Phase 55 - GitHub-native invocation (`T649`–`T653`) | `v0.55.0` | Completed |
+| Phase 56 - Lifecycle hooks + `.ai` → `docs` pipeline (`T645`–`T648`, `T654`–`T661`) | `v0.56.0` | Completed |
 
 ## Feature Matrix by Phase
 
@@ -355,6 +356,15 @@ Status legend:
 | Config surface | **`kit.githubInvocation.*`**: allowlist, **`eventPlaybookMap`**, debounce placeholder, command allowlists | Completed | `T650` |
 | Core helpers + runner | **`github-invocation.ts`** (verify, route, audit shape); **`run-github-delivery.mjs`** plan + policy-gated mutating path | Completed | `T651`, `T652` |
 | Maintainer enablement | Runbook **`github-workflow-cannon-invocation.md`**, sample workflow under **`docs/examples/github/`** | Completed | `T653` |
+
+### Phase 56 Lifecycle hooks + maintainer doc pipeline (`v0.56.0`)
+
+| Product feature | What users/maintainers get | Status | Task coverage |
+| --- | --- | --- | --- |
+| Hook ADR + config | **`ADR-agent-task-lifecycle-hooks-v1.md`**, **`kit.lifecycleHooks.*`**, JSONL traces | Completed | `T645`, `T646` |
+| Dispatch + enforce | Node/shell handlers; **observe** vs **enforce**; transition + **`run`** + persist events | Completed | `T647` |
+| PR stubs + catalog | Reserved PR mutation events; runbook **`lifecycle-hooks.md`**; performance/ordering guidance | Completed | `T648` |
+| `.ai` → `docs` gate | Coverage map + exceptions; **`generate-maintainer-docs-from-ai`**; drift + orphan **`pnpm run check`** stages | Completed | `T654`–`T661` |
 
 ## Notes
 
