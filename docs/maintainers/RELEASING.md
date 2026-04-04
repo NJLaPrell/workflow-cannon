@@ -62,7 +62,7 @@ If a gate fails, do not publish. Capture the blocker in task-engine state and up
 4. **Present for approval**
    - Summarize scope, risk, evidence, and migration notes.
    - Obtain explicit human approval before proceeding.
-   - Optional structured wrap-up for agents/operators after ship: [`docs/maintainers/playbooks/phase-closeout-and-release.md`](playbooks/phase-closeout-and-release.md) §7 **Phase delivery summary** (does not replace this gate or evidence requirements).
+   - Optional structured wrap-up for agents/operators after ship: [`docs/maintainers/playbooks/phase-closeout-and-release.md`](playbooks/phase-closeout-and-release.md) §7 **Phase delivery summary** — use the copy-paste template as written (short lines, **`{placeholders}`** only); does not replace this gate or evidence requirements.
 5. **Publish**
    - Run publish automation (triggers `publish-npm.yml` workflow).
    - Record release tag, workflow run URL, and npm reference.

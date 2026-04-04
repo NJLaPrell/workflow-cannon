@@ -51,7 +51,7 @@ Files under **`tasks/*.md`** are **optional prompt-only** workflows. They **do n
 
 | Playbook id | Path | Use when |
 | --- | --- | --- |
-| `phase-closeout-and-release` | [`playbooks/phase-closeout-and-release.md`](./playbooks/phase-closeout-and-release.md) | Closing a phase and cutting a release (queue, delivery loop, human publish gate, RELEASING evidence) |
+| `phase-closeout-and-release` | [`playbooks/phase-closeout-and-release.md`](./playbooks/phase-closeout-and-release.md) | Closing a phase and cutting a release (queue, delivery loop, human publish gate, RELEASING evidence); **§7** compact agent wrap-up after ship |
 | `task-to-phase-branch` | [`playbooks/task-to-phase-branch.md`](./playbooks/task-to-phase-branch.md) | Single task: `release/phase-<N>` integration branch, task branch, PR into phase branch, merge, `run-transition` complete |
 | `improvement-task-discovery` | [`playbooks/improvement-task-discovery.md`](./playbooks/improvement-task-discovery.md) | Research and log improvements: transcripts, docs drift, architecture, policy/CLI UX, release friction |
 | `improvement-triage-top-three` | [`playbooks/improvement-triage-top-three.md`](./playbooks/improvement-triage-top-three.md) | Triage **`improvement`** tasks: rubric, pick ≤3, **`accept`** to **`ready`**, verify queue |

@@ -37,7 +37,7 @@ Replace `T###` and rationale strings per task. Do **not** hand-edit `.workspace-
 
 ## 4) Phase delivery summary
 
-After publish and evidence steps (**playbook §6**), emit the **Phase delivery summary** using the copy-paste template in **`docs/maintainers/playbooks/phase-closeout-and-release.md` §7**, filled only from **CLI / task-store / maintainer-doc evidence** (not memory).
+After publish and evidence steps (**playbook §6**), emit the **Phase delivery summary** using the copy-paste template in **`docs/maintainers/playbooks/phase-closeout-and-release.md` §7**, filled only from **CLI / task-store / maintainer-doc evidence** (not memory). Keep the pasted block compact: substitute **`{placeholders}`** only — do not embed long governance asides in the template body (methodology stays in the playbook **§7 evidence rules**).
 
 ---
 **Use:** Open or @-attach `tasks/phase-closeout.md` with your phase/release context (e.g. `Phase 25 → v0.26.0`).

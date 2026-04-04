@@ -11,7 +11,7 @@ When the operator is **closing a phase** and preparing a **release**:
 2. Use **`docs/maintainers/AGENTS.md`** for source-of-truth order and **`docs/maintainers/AGENT-CLI-MAP.md`** for every **`workspace-kit run`** line that mutates kit-owned state.
 3. **Policy:** sensitive `workspace-kit run` commands require JSON **`policyApproval`** in the third CLI argument; `config` / `init` / `upgrade` use env approval per **`docs/maintainers/POLICY-APPROVAL.md`**. Chat-only approval does not satisfy policy.
 4. **Human gate:** do not publish or run release automation until explicit human approval — see **`docs/maintainers/RELEASING.md`**.
-5. After publish, use the playbook’s **§7 Phase delivery summary** for the final user-facing wrap-up (evidence-backed counts; not JSON **`responseTemplateId`** on **`wk run`**).
+5. After publish, end with the playbook’s **§7 Phase delivery summary** copy-paste template **verbatim shape**: short lines and **`{placeholders}`** only — no long parentheticals in the template body. Counts come from **`list-tasks`** / task store + **`docs/maintainers/ROADMAP.md`**, not memory. This is **not** JSON **`responseTemplateId`** on **`wk run`**.
 
 Invocation options and limits of auto-loading: **`docs/maintainers/runbooks/agent-playbooks.md`**.
 

@@ -15,7 +15,11 @@ Optional Cursor rule: `.cursor/rules/playbook-task-to-phase-branch.mdc`. Maintai
 
 When the phase is done: validate and fix on **`release/phase-<N>`**, obtain human approval, **merge phase branch to `main`**, then follow `docs/maintainers/RELEASING.md` on the **`main`** tip.
 
+After publish and evidence (**playbook §6**), end with **§7 Phase delivery summary**: compact copy-paste block, **`{placeholders}`** only — counts from **`list-tasks`** / task store + roadmap scope (see playbook **§7 evidence rules**), not chat memory.
+
 Human playbook: `docs/maintainers/playbooks/phase-closeout-and-release.md`.
+
+Optional Cursor rule: `.cursor/rules/playbook-phase-closeout.mdc`.
 
 ## Improvement discovery (research → log)
 

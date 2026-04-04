@@ -5,6 +5,8 @@
 
 This file is an **ordered checklist**. Canonical prose lives in the linked docs — do not treat this as a fork of [`RELEASING.md`](../RELEASING.md).
 
+**Agent sessions:** Attach this playbook (`@` the path) when closing a phase so steps stay in context. After publish and evidence (**§6**), end with **§7** using the copy-paste template — placeholders only; do not paste long governance asides into the template body.
+
 ## 0) Attach context
 
 - Confirm [`docs/maintainers/TERMS.md`](../TERMS.md) vocabulary (task-engine state, approval gates, evidence).
@@ -71,23 +73,26 @@ This section is the **session summary format** for operators and agents (what to
 
 ### Evidence rules (do not invent counts)
 
-- **`{tasksCompleted}`:** Count execution tasks for this phase that reached **`complete`** in the **configured task store** (default SQLite **`.workspace-kit/tasks/workspace-kit.db`**). Use **`workspace-kit run list-tasks`** (filter by **`phaseKey`** matching the closed phase and/or task ids listed under that phase in [`ROADMAP.md`](../ROADMAP.md)). Do **not** infer from chat memory.
-- **`{followOnTasks}`:** Maintainer-defined: count **new or newly-accepted execution tasks** intended for the **next** phase (e.g. **`ready`** with **`phaseKey`** = next phase, or tasks created during this closeout cycle), again from **task-engine output** + [`ROADMAP.md`](../ROADMAP.md). If none, state **`0`** or **none** explicitly.
-- **Features delivered:** Each bullet should trace to shipped scope — e.g. [`docs/maintainers/CHANGELOG.md`](../CHANGELOG.md) entry for the release, the phase row in [`ROADMAP.md`](../ROADMAP.md), and/or ADR titles under **`docs/maintainers/`**.
+Use **`workspace-kit run list-tasks`** (and [`ROADMAP.md`](../ROADMAP.md) for phase scope), not chat memory.
+
+- **`{tasksCompleted}`:** Integer count of execution tasks for this phase that reached **`complete`** in the configured task store (filter by **`phaseKey`** and/or ids listed for that phase in [`ROADMAP.md`](../ROADMAP.md)).
+- **`{followOnTasks}`:** Integer or **`none`** — count of **new or newly-accepted** execution tasks intended for the **next** phase (e.g. **`ready`** with matching **`phaseKey`**). Use **`0`** or **`none`** when applicable.
+- **Features delivered:** Short bullets only; each must map to shipped work (e.g. release line in [`CHANGELOG.md`](../CHANGELOG.md), phase row in [`ROADMAP.md`](../ROADMAP.md), or an ADR filename under **`docs/maintainers/`**). Put URLs or long citations outside this block if needed.
 
 ### Copy-paste template
 
-Replace placeholders; omit or shorten **Notes** lines when not applicable.
+Replace **`{placeholders}`** with values from the evidence rules above. Omit a **Notes** sub-bullet entirely when it does not apply.
 
 ```markdown
 Phase {phase} has been delivered!
 {tasksCompleted} tasks complete
-{followOnTasks} follow-on tasks created (or accepted to ready — per task store + ROADMAP)
+{followOnTasks} follow-on tasks
 
 Features delivered:
-- {feature — cite changelog / ROADMAP / ADR}
+- {feature}
+- {feature}
 
 Notes:
-- **Risks / issues:** {short label}: {brief entry}
-- **Opinions / additional tasking:** {short label}: {brief entry}
+- **Risks / issues:** {label}: {brief}
+- **Opinions / additional tasking:** {label}: {brief}
 ```
