@@ -28,15 +28,19 @@ const steps = [
 
 function runStep(step) {
   const start = Date.now();
+  const maxBuffer = 50 * 1024 * 1024;
   try {
-    execSync(step.command, { cwd: step.cwd, stdio: "pipe", timeout: 120_000 });
+    execSync(step.command, { cwd: step.cwd, stdio: "pipe", timeout: 120_000, maxBuffer });
     return { name: step.name, status: "pass", durationMs: Date.now() - start };
   } catch (err) {
+    const stderr = err.stderr?.toString() ?? "";
+    const stdout = err.stdout?.toString() ?? "";
+    const combined = (stderr + "\n" + stdout).trim();
     return {
       name: step.name,
       status: "fail",
       durationMs: Date.now() - start,
-      error: err.stderr?.toString().slice(0, 500) || err.message
+      error: combined.slice(-8000) || err.message
     };
   }
 }
