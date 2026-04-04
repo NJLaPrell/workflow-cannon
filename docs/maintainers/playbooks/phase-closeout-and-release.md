@@ -64,3 +64,30 @@ Tier **B** `workspace-kit run` commands (non-transition) also require JSON `poli
 - Capture release evidence per [`RELEASING.md`](../RELEASING.md) → **Required release evidence**.
 - Update maintainer snapshots (for example [`docs/maintainers/ROADMAP.md`](../ROADMAP.md), [`docs/maintainers/data/workspace-kit-status.yaml`](../data/workspace-kit-status.yaml)) when the phase closeout task requires it.
 - Bump **`current_kit_phase`** / **`next_kit_phase`** via **`workspace-kit run update-workspace-phase-snapshot`** (and align **`kit.currentPhaseNumber`** in config when used) so **`doctor`** stays green — see [`AGENTS.md`](../AGENTS.md) → **Workspace phase snapshot**.
+
+## 7) Phase delivery summary (agent wrap-up)
+
+This section is the **session summary format** for operators and agents (what to paste or say when the phase is shipped). It is **not** the Phase 6b JSON **`responseTemplateId`** / **`responseTemplate`** metadata on **`workspace-kit run`** — those only shape CLI JSON output; see [`response-template-contract.md`](../response-template-contract.md) and [`runbooks/response-templates.md`](../runbooks/response-templates.md).
+
+### Evidence rules (do not invent counts)
+
+- **`{tasksCompleted}`:** Count execution tasks for this phase that reached **`complete`** in the **configured task store** (default SQLite **`.workspace-kit/tasks/workspace-kit.db`**). Use **`workspace-kit run list-tasks`** (filter by **`phaseKey`** matching the closed phase and/or task ids listed under that phase in [`ROADMAP.md`](../ROADMAP.md)). Do **not** infer from chat memory.
+- **`{followOnTasks}`:** Maintainer-defined: count **new or newly-accepted execution tasks** intended for the **next** phase (e.g. **`ready`** with **`phaseKey`** = next phase, or tasks created during this closeout cycle), again from **task-engine output** + [`ROADMAP.md`](../ROADMAP.md). If none, state **`0`** or **none** explicitly.
+- **Features delivered:** Each bullet should trace to shipped scope — e.g. [`docs/maintainers/CHANGELOG.md`](../CHANGELOG.md) entry for the release, the phase row in [`ROADMAP.md`](../ROADMAP.md), and/or ADR titles under **`docs/maintainers/`**.
+
+### Copy-paste template
+
+Replace placeholders; omit or shorten **Notes** lines when not applicable.
+
+```markdown
+Phase {phase} has been delivered!
+{tasksCompleted} tasks complete
+{followOnTasks} follow-on tasks created (or accepted to ready — per task store + ROADMAP)
+
+Features delivered:
+- {feature — cite changelog / ROADMAP / ADR}
+
+Notes:
+- **Risks / issues:** {short label}: {brief entry}
+- **Opinions / additional tasking:** {short label}: {brief entry}
+```
