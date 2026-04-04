@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/skill-pack-manifest.schema.json",
+  "title": "Workflow Cannon skill pack manifest (optional sidecar)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["skillPackManifestVersion", "id", "version", "displayName", "instructionsRelPath"],
+  "properties": {
+    "skillPackManifestVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "displayName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "instructionsRelPath": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Path relative to the skill directory (typically SKILL.md)."
+    },
+    "discoveryTags": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "declaredCommands": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "hookEventNames": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "policySensitivityHint": {
+      "type": "string",
+      "enum": ["non-sensitive", "sensitive", "sensitive-with-dryrun"]
+    }
+  }
+}

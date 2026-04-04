@@ -6,7 +6,8 @@ export type ModuleCapability =
   | "approvals"
   | "diagnostics"
   | "migration"
-  | "agent-behavior";
+  | "agent-behavior"
+  | "skills";
 
 export type ModuleDocumentContract = {
   path: string;

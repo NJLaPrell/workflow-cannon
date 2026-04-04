@@ -12,6 +12,20 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 - **Git / playbooks** — Renamed **`task-to-main`** → **`task-to-phase-branch`**: execution tasks merge via PR into **`release/phase-<N>`**; phase branch merges to **`main`** at closeout per **`phase-closeout-and-release.md`**. Cursor extension command **`workflowCannon.chat.prefillTaskToPhaseBranch`** (was **`prefillTaskToMain`**). Example playbook runner: **`examples/playbooks/pilot-task-to-phase-branch.json`**.
 
+## [0.54.0] - 2026-04-04
+
+Phase 54 — **skill packs v1** (**`T640`–`T644`**): Claude Code–shaped **`.claude/skills/<id>/SKILL.md`** discovery, optional **`workspace-kit-skill.json`** sidecar (JSON Schema), **`list-skills`** / **`inspect-skill`** / **`apply-skill`** / **`recommend-skills`**, task **`metadata.skillIds`** validation, shipped sample **`.claude/skills/sample-wc-skill/`**, ADR **`ADR-skill-packs-v1.md`**.
+
+### Added
+
+- **Skills module** — **`0.1.0`**: discovery via **`skills.discoveryRoots`** (default **`.claude/skills`**); read commands **`list-skills`**, **`inspect-skill`**, **`recommend-skills`**; **`apply-skill`** with default preview (**`options.dryRun`** true) and optional **`recordAudit`** append to **`.workspace-kit/evidence/skill-apply-audit.jsonl`** when **`dryRun`**: false (policy **Tier B**, **`skills.apply-skill`**).
+- **Schema** — **`schemas/skill-pack-manifest.schema.json`**; fixture **`scripts/fixtures/skill-pack-manifest-min.json`**.
+- **Task engine** — Validates **`metadata.skillIds`** on **`create-task`** / **`update-task`** when the skills module is enabled (**`unknown-skill-id`**, **`invalid-task-skill-ids`**).
+
+### Changed (module version)
+
+- **Task-engine module** — **`0.16.0`**; **skills module** — **`0.1.0`** (compatibility matrix).
+
 ## [0.53.0] - 2026-04-04
 
 Phase 53 — **relational feature registry** (**`T630`–`T639`**): SQLite taxonomy tables, authoritative **`task_engine_task_features`** junction, registry-aware task CRUD and **`list-tasks`** filters, maintainer backfill/export commands, doc generation from the planning DB when present, and CI-stable committed **`ROADMAP.md`** / **`FEATURE-TAXONOMY.md`** via **`WORKSPACE_KIT_DOC_TAXONOMY_JSON_ONLY`**.

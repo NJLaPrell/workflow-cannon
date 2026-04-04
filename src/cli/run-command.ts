@@ -23,6 +23,20 @@ import {
 import { defaultRegistryModules } from "../modules/index.js";
 import { promptSensitiveRunApproval } from "./interactive-policy.js";
 
+/** Default apply-skill preview mode for policy (dryRun true when omitted). */
+function normalizeApplySkillArgs(args: Record<string, unknown>): Record<string, unknown> {
+  const next = { ...args };
+  const opt =
+    typeof next.options === "object" && next.options !== null && !Array.isArray(next.options)
+      ? { ...(next.options as Record<string, unknown>) }
+      : {};
+  if (!Object.hasOwn(opt, "dryRun")) {
+    opt.dryRun = true;
+  }
+  next.options = opt;
+  return next;
+}
+
 export type RunCommandIo = {
   writeLine: (message: string) => void;
   writeError: (message: string) => void;
@@ -113,6 +127,10 @@ export async function handleRunCommand(
       writeLine(JSON.stringify(pilotErr, null, 2));
       return codes.validationFailure;
     }
+  }
+
+  if (subcommand === "apply-skill") {
+    commandArgs = normalizeApplySkillArgs(commandArgs);
   }
 
   if (!subcommand) {

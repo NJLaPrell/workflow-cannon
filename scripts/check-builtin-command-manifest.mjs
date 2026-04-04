@@ -22,7 +22,8 @@ const KNOWN_POLICY_OPERATION_IDS = new Set([
   "improvement.generate-recommendations",
   "improvement.ingest-transcripts",
   "task-engine.backfill-task-feature-links",
-  "task-engine.export-feature-taxonomy-json"
+  "task-engine.export-feature-taxonomy-json",
+  "skills.apply-skill"
 ]);
 
 const ALLOWED_SENSITIVITY = new Set(["non-sensitive", "sensitive", "sensitive-with-dryrun"]);
@@ -77,9 +78,13 @@ for (const row of manifest) {
 
   if (row.policySensitivity === "sensitive-with-dryrun") {
     const id = row.policyOperationId;
-    if (id !== "doc.document-project" && id !== "doc.generate-document") {
+    if (
+      id !== "doc.document-project" &&
+      id !== "doc.generate-document" &&
+      id !== "skills.apply-skill"
+    ) {
       fail(
-        `Command '${row.name}': sensitive-with-dryrun is only valid for doc.document-project / doc.generate-document (matches policy.ts dryRun exception).`
+        `Command '${row.name}': sensitive-with-dryrun is only valid for doc commands and skills.apply-skill (matches policy.ts dryRun exception).`
       );
     }
   }

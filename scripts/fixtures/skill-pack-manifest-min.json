@@ -1,0 +1,8 @@
+{
+  "skillPackManifestVersion": 1,
+  "id": "fixture-min",
+  "version": "1.0.0",
+  "displayName": "Fixture Min",
+  "instructionsRelPath": "SKILL.md",
+  "discoveryTags": ["test"]
+}

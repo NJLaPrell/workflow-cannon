@@ -8,4 +8,4 @@ This root file is intentionally pointer-only to avoid split release history.
 
 - See `docs/maintainers/CHANGELOG.md` for all release notes, migration notes, and historical entries.
 
-Latest release: **v0.53.0** (Phase 53: relational feature registry — junction taxonomy, list-tasks filters, doc gen + CI env; see canonical changelog).
+Latest release: **v0.54.0** (Phase 54: skill packs v1 — Claude-shaped `.claude/skills`, `list-skills` / `apply-skill`, task `metadata.skillIds`; see canonical changelog).

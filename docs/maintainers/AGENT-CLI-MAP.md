@@ -78,6 +78,16 @@ Successful **`workspace-kit run …`** invocations print **one JSON value to std
 
 **Extra sensitivity:** `policy.extraSensitiveModuleCommands` in effective config adds **Tier B** entries dynamically; denials may show `operationId` **`policy.dynamic-sensitive`**.
 
+### Skill packs (read-only discovery; Tier C)
+
+```bash
+workspace-kit run list-skills '{}'
+workspace-kit run inspect-skill '{"skillId":"sample-wc-skill"}'
+workspace-kit run recommend-skills '{"tags":["example"]}'
+```
+
+**`apply-skill`** defaults to preview mode (policy waived); non-preview / audit paths are **Tier B** — see **Tier B** table below.
+
 ### Two approval lanes (single cross-reference)
 
 | Lane | Mechanism | Applies to |
@@ -152,6 +162,7 @@ ADR: **`docs/maintainers/ADR-planning-generation-optimistic-concurrency.md`**.
 | Approval queue decision | `workspace-kit run review-item '<json>'` | `approvals.review-item` | Always sensitive |
 | Backfill task↔feature junction | `workspace-kit run backfill-task-feature-links '<json>'` | `task-engine.backfill-task-feature-links` | Copies legacy **`features_json`** into **`task_engine_task_features`** |
 | Export taxonomy JSON from registry | `workspace-kit run export-feature-taxonomy-json '<json>'` | `task-engine.export-feature-taxonomy-json` | Writes **`src/modules/documentation/data/feature-taxonomy.json`** |
+| Apply skill pack (non-preview) | `workspace-kit run apply-skill '<json>'` | `skills.apply-skill` | Sensitive unless `options.dryRun === true` (default preview is dry-run; see instruction file) |
 | Config-declared extra commands | `workspace-kit run <name> '<json>'` | `policy.dynamic-sensitive` if listed in `policy.extraSensitiveModuleCommands` | Must still pass **`policyApproval`** |
 
 **Copy-paste — document batch (real writes):**
@@ -190,6 +201,18 @@ workspace-kit run backfill-task-feature-links '{"policyApproval":{"confirmed":tr
 ```bash
 workspace-kit run export-feature-taxonomy-json '{"dryRun":true}'
 workspace-kit run export-feature-taxonomy-json '{"policyApproval":{"confirmed":true,"rationale":"export taxonomy for commit"}}'
+```
+
+**Copy-paste — apply skill (Claude-shaped `SKILL.md` preview, default dry-run):**
+
+```bash
+workspace-kit run apply-skill '{"skillId":"sample-wc-skill"}'
+```
+
+**Copy-paste — apply skill with audit append (non-preview, mutating):**
+
+```bash
+workspace-kit run apply-skill '{"skillId":"sample-wc-skill","options":{"dryRun":false,"recordAudit":true},"policyApproval":{"confirmed":true,"rationale":"record skill apply audit"}}'
 ```
 
 ## CLI mutations (`init` / `upgrade` / `config`) — env approval, not JSON `policyApproval`

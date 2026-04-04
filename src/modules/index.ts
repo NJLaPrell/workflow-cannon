@@ -7,6 +7,7 @@ import { approvalsModule } from "./approvals/index.js";
 import { documentationModule } from "./documentation/index.js";
 import { improvementModule } from "./improvement/index.js";
 import { planningModule } from "./planning/index.js";
+import { skillsModule } from "./skills/index.js";
 import { taskEngineModule } from "./task-engine/index.js";
 import { workspaceConfigModule } from "./workspace-config/index.js";
 
@@ -14,6 +15,7 @@ export const defaultRegistryModules: WorkflowModule[] = [
   workspaceConfigModule,
   documentationModule,
   agentBehaviorModule,
+  skillsModule,
   taskEngineModule,
   approvalsModule,
   planningModule,
@@ -37,6 +39,7 @@ export type {
   DocumentationValidationIssue
 } from "./documentation/types.js";
 export { improvementModule, buildImprovementTaskPayload } from "./improvement/index.js";
+export { skillsModule } from "./skills/index.js";
 export {
   computeHeuristicConfidence,
   HEURISTIC_1_ADMISSION_THRESHOLD,

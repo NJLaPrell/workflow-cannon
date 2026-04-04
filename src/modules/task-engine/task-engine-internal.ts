@@ -68,6 +68,7 @@ import {
   CLI_REMEDIATION_DOCS,
   CLI_REMEDIATION_INSTRUCTIONS
 } from "../../core/cli-remediation.js";
+import { validateTaskSkillAttachments } from "../skills/task-skill-validation.js";
 
 function readQueueNamespaceArg(args: Record<string, unknown>): string | undefined {
   const q = args.queueNamespace;
@@ -144,7 +145,7 @@ function attachPolicyMeta(
 export const taskEngineModule: WorkflowModule = {
   registration: {
     id: "task-engine",
-    version: "0.15.0",
+    version: "0.16.0",
     contractVersion: "1",
     stateSchema: 1,
     capabilities: ["task-engine"],
@@ -493,6 +494,14 @@ export const taskEngineModule: WorkflowModule = {
         };
       }
       const featureSlugWarnings = collectUnknownFeatureSlugWarnings(task.features, knownSlugs);
+      const skillAttach = validateTaskSkillAttachments(
+        ctx.workspacePath,
+        ctx.effectiveConfig as Record<string, unknown> | undefined,
+        task.metadata
+      );
+      if (!skillAttach.ok) {
+        return { ok: false, code: skillAttach.code, message: skillAttach.message };
+      }
       store.addTask(task);
       store.addMutationEvidence(mutationEvidence(evidenceType, id, actor, {
         initialStatus: task.status,
@@ -568,6 +577,14 @@ export const taskEngineModule: WorkflowModule = {
         };
       }
       const featureSlugWarningsUpd = collectUnknownFeatureSlugWarnings(updatedTask.features, knownUpd);
+      const skillAttachUpd = validateTaskSkillAttachments(
+        ctx.workspacePath,
+        ctx.effectiveConfig as Record<string, unknown> | undefined,
+        updatedTask.metadata
+      );
+      if (!skillAttachUpd.ok) {
+        return { ok: false, code: skillAttachUpd.code, message: skillAttachUpd.message };
+      }
       const payloadDigest = digestPayload({ taskId, updates });
       if (clientMutationId) {
         const prior = findIdempotentMutation(store, "update-task", taskId, clientMutationId);
@@ -1163,7 +1180,8 @@ export const taskEngineModule: WorkflowModule = {
                 "risk",
                 "technicalScope",
                 "acceptanceCriteria",
-                "features"
+                "features",
+                "metadata.skillIds"
               ]
             },
             {

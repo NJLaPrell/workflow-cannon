@@ -56,6 +56,7 @@ Files under **`tasks/*.md`** are **optional prompt-only** workflows. They **do n
 | `improvement-task-discovery` | [`playbooks/improvement-task-discovery.md`](./playbooks/improvement-task-discovery.md) | Research and log improvements: transcripts, docs drift, architecture, policy/CLI UX, release friction |
 | `improvement-triage-top-three` | [`playbooks/improvement-triage-top-three.md`](./playbooks/improvement-triage-top-three.md) | Triage **`improvement`** tasks: rubric, pick ≤3, **`accept`** to **`ready`**, verify queue |
 | `wishlist-intake-to-execution` | [`playbooks/wishlist-intake-to-execution.md`](./playbooks/wishlist-intake-to-execution.md) | Wishlist ideation → execution: rank intake, **`convert-wishlist`**, phase bucket, planning tokens |
+| `skill-attachments` | [`playbooks/skill-attachments.md`](./playbooks/skill-attachments.md) | Attach **`metadata.skillIds`** using ids from **`list-skills`** |
 
 How to attach playbooks in an editor session and limits of auto-loading: [`runbooks/agent-playbooks.md`](./runbooks/agent-playbooks.md).
 

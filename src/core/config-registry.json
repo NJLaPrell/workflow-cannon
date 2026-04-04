@@ -523,5 +523,21 @@
       "project",
       "user"
     ]
+  },
+  "skills.discoveryRoots": {
+    "key": "skills.discoveryRoots",
+    "type": "array",
+    "description": "Workspace-relative directories scanned for skill packs (Claude-shaped: <root>/<skill-id>/SKILL.md).",
+    "default": [".claude/skills"],
+    "domainScope": "project",
+    "owningModule": "skills",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
   }
 }

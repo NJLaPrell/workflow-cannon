@@ -84,6 +84,11 @@ export const MODULE_CONFIG_CONTRIBUTIONS: Record<string, Record<string, unknown>
     defaultQuestionDepth: "adaptive",
     hardBlockCriticalUnknowns: true,
     rulePacks: {}
+  },
+  skills: {
+    skills: {
+      discoveryRoots: [".claude/skills"]
+    }
   }
 };
 

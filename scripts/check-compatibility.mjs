@@ -24,8 +24,18 @@ async function main() {
   const failures = [];
   const warnings = [];
 
-  const [{ ModuleRegistry, POLICY_TRACE_SCHEMA_VERSION }, { workspaceConfigModule, documentationModule, taskEngineModule, approvalsModule, planningModule, improvementModule }] =
-    await Promise.all([import("../dist/index.js"), import("../dist/modules/index.js")]);
+  const [
+    { ModuleRegistry, POLICY_TRACE_SCHEMA_VERSION },
+    {
+      workspaceConfigModule,
+      documentationModule,
+      taskEngineModule,
+      approvalsModule,
+      planningModule,
+      improvementModule,
+      skillsModule
+    }
+  ] = await Promise.all([import("../dist/index.js"), import("../dist/modules/index.js")]);
 
   let matrix;
   let schema;
@@ -58,7 +68,8 @@ async function main() {
     taskEngineModule,
     approvalsModule,
     planningModule,
-    improvementModule
+    improvementModule,
+    skillsModule
   ];
 
   try {

@@ -45,6 +45,7 @@ Status legend:
 | Phase 35 - Task engine, queue operations, and planning handoff (`T507`, `T510`, `T513`, `T520`, `T523`) | `v0.35.0` | Completed |
 | Phase 46 - Roadmap data generation + task features (`T591`–`T598`) | `v0.46.0` | Completed |
 | Phase 47 - Agent guidance profile — RPG party tier (`T585`–`T590`) | `v0.47.0` | Completed |
+| Phase 54 - Skill packs v1 (`T640`–`T644`) | `v0.54.0` | Completed |
 
 ## Feature Matrix by Phase
 
@@ -335,6 +336,15 @@ Status legend:
 | Onboarding / config path | Interactive or JSON `set-agent-guidance`; `config set` on `kit.agentGuidance.*` with env approval when required | Completed | `T588` |
 | Behavior profile modulation | `resolve-behavior-profile` includes `agentGuidance.advisoryModulation` (tier × verbosity) | Completed | `T589` |
 | Extension + docs | Dashboard shows effective tier; maintainer runbook; AGENT-CLI-MAP lines | Completed | `T590` |
+
+### Phase 54 Skill packs v1 (`v0.54.0`)
+
+| Product feature | What users/maintainers get | Status | Task coverage |
+| --- | --- | --- | --- |
+| Claude-shaped discovery | Default **`.claude/skills/<id>/SKILL.md`** + optional **`workspace-kit-skill.json`**; **`skills.discoveryRoots`** | Completed | `T640`, `T641` |
+| Inspect / apply / recommend | **`list-skills`**, **`inspect-skill`**, **`apply-skill`** (preview default; audit optional), **`recommend-skills`** | Completed | `T642`, `T644` |
+| Task attachments | **`metadata.skillIds`** validated against discovered pack ids | Completed | `T643` |
+| Sample + docs | **`.claude/skills/sample-wc-skill/`**, ADR **`ADR-skill-packs-v1.md`**, runbook **`runbooks/skill-packs-dual-install.md`** | Completed | `T644` |
 
 ## Notes
 

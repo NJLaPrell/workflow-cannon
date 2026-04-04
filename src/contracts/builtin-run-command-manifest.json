@@ -504,5 +504,38 @@
     "description": "Emit stable JSON status for transcript sync, ingest, and retry queue.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "skills",
+    "name": "list-skills",
+    "file": "list-skills.md",
+    "description": "List discovered skill packs under configured skill roots (Claude-shaped SKILL.md trees).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "skills",
+    "name": "inspect-skill",
+    "file": "inspect-skill.md",
+    "description": "Inspect one skill pack by id (manifest fields + instruction body preview).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "skills",
+    "name": "apply-skill",
+    "file": "apply-skill.md",
+    "description": "Resolve SKILL.md instructions for a pack; optional audit append when not in dry-run preview mode.",
+    "policyOperationId": "skills.apply-skill",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive-with-dryrun"
+  },
+  {
+    "moduleId": "skills",
+    "name": "recommend-skills",
+    "file": "recommend-skills.md",
+    "description": "Deterministic skill recommendations from tags / phase / task-type filters.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
   }
 ]

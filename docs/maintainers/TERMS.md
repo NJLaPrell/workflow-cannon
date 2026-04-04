@@ -103,6 +103,11 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
   - **Defined in**: future capability-pack docs and roadmap/task references.
   - **Enforced in**: activation/sync workflows and rule/template loading behavior.
 
+- **Skill pack**
+  - **Definition**: A discoverable instruction bundle under a configured skill root (default **`.claude/skills/<skill-id>/`**) with **`SKILL.md`** (YAML frontmatter + Markdown body) and optional **`workspace-kit-skill.json`** sidecar; kit id equals the directory name.
+  - **Defined in**: **`docs/maintainers/ADR-skill-packs-v1.md`**, **`skills`** module instructions under **`src/modules/skills/instructions/`**.
+  - **Enforced in**: **`list-skills`** / **`inspect-skill`** / **`apply-skill`** / **`recommend-skills`**; **`metadata.skillIds`** validation on task create/update when the skills module is enabled.
+
 - **Wishlist**
   - **Definition**: Ideation backlog represented as Task Engine tasks with `type: "wishlist_intake"` and stable `T###` ids. Legacy `W###` ids may appear only as provenance in `metadata.legacyWishlistId` after a one-time migration; new intake does not mint `W###` ids.
   - **Defined in**: `src/modules/task-engine/wishlist/wishlist-intake.ts`, `wishlist/wishlist-types.ts` (legacy wire shapes), instructions under `src/modules/task-engine/instructions/`, ADR `docs/maintainers/ADR-unified-task-store-wishlist-and-improvement-state.md`.

@@ -80,6 +80,13 @@ export function validateValueForMetadata(meta: ConfigKeyMetadata, value: unknown
         }
       }
     }
+    if (meta.key === "skills.discoveryRoots") {
+      for (const item of value) {
+        if (typeof item !== "string" || item.trim().length === 0) {
+          throw new Error(`config-type-error(${meta.key}): array entries must be non-empty strings`);
+        }
+      }
+    }
     if (meta.key === "modules.enabled" || meta.key === "modules.disabled") {
       for (const item of value) {
         if (typeof item !== "string" || item.trim().length === 0) {
@@ -153,6 +160,7 @@ export function validatePersistedConfigDocument(
     "documentation",
     "policy",
     "improvement",
+    "skills",
     "responseTemplates",
     "modules",
     "kit"
@@ -394,6 +402,21 @@ export function validatePersistedConfigDocument(
           hk.afterTaskCompleted
         );
       }
+    }
+  }
+  const skills = data.skills;
+  if (skills !== undefined) {
+    if (typeof skills !== "object" || skills === null || Array.isArray(skills)) {
+      throw new Error(`config-invalid(${label}): skills must be an object`);
+    }
+    const sk = skills as Record<string, unknown>;
+    for (const k of Object.keys(sk)) {
+      if (k !== "discoveryRoots") {
+        throw new Error(`config-invalid(${label}): unknown skills.${k}`);
+      }
+    }
+    if (sk.discoveryRoots !== undefined) {
+      validateValueForMetadata(REGISTRY["skills.discoveryRoots"]!, sk.discoveryRoots);
     }
   }
   const responseTemplates = data.responseTemplates;

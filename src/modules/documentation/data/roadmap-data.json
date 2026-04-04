@@ -7,8 +7,8 @@
     "The legacy source repository is treated as an external consumer and parity fixture, not as the source of kit implementation."
   ],
   "currentState": [
-    "**Shipped:** latest **`v0.52.0`** (Phase 52). Narrative for completed phases (including **0–35** bullets and **`### Phase …`** detail through Phase 52) is in **[`ROADMAP-archive.md`](./ROADMAP-archive.md)**; version facts in **[`CHANGELOG.md`](./CHANGELOG.md)**.",
-    "**Planned:** Phase 53 — **`v0.53.0`** (relational feature registry) — **`T630`–`T639`**; Phase 54 — **`v0.54.0`** (skill packs v1; Claude Code **`SKILL.md`** / **`.claude/skills/`** interoperability per ADR) — **`T640`–`T644`**; Phase 55 — **`v0.55.0`** (GitHub-native invocation) — **`T649`–`T653`** (wishlist **`T566`**); Phase 56 — **`v0.56.0`** (agent & task lifecycle hooks) — **`T645`–`T648`** (wishlist **`T563`**); see **Phase plan** below and task-engine state.",
+    "**Shipped:** latest **`v0.54.0`** (Phase 54). Narrative for completed phases (including **0–35** bullets and **`### Phase …`** detail through prior trains) is in **[`ROADMAP-archive.md`](./ROADMAP-archive.md)**; version facts in **[`CHANGELOG.md`](./CHANGELOG.md)**.",
+    "**Planned:** Phase 55 — **`v0.55.0`** (GitHub-native invocation) — **`T649`–`T653`** (wishlist **`T566`**); Phase 56 — **`v0.56.0`** (agent & task lifecycle hooks) — **`T645`–`T648`** (wishlist **`T563`**); see **Phase plan** below and task-engine state.",
     "**Maintainer snapshot** — `docs/maintainers/data/workspace-kit-status.yaml` (`current_kit_phase`, `next_agent_actions`).",
     "**Execution queue** — canonical task-engine store (default `.workspace-kit/tasks/workspace-kit.db`; JSON opt-out `.workspace-kit/tasks/state.json`); use `pnpm run wk run list-tasks` / `get-next-actions` rather than inferring phase from prose alone.",
     "**Product / feature inventory** — **`docs/maintainers/FEATURE-MATRIX.md`**.",
