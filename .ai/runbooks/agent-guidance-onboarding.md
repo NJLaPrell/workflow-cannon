@@ -2,6 +2,8 @@
 
 **Advisory only** — guidance tier does not replace PRINCIPLES, policy, or `policyApproval`. See **`docs/maintainers/ADR-agent-guidance-profile-rpg-party-v1.md`**.
 
+**Cursor chat:** **`docs/maintainers/playbooks/workspace-kit-chat-onboarding.md`** or slash **`/onboarding`**.
+
 ## Pick a tier (no hand-editing JSON)
 
 **Option A — `workspace-kit run` (JSON tier):**

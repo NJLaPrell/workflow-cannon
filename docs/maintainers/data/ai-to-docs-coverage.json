@@ -12,6 +12,7 @@
     { "source": ".ai/playbooks/wishlist-intake-to-execution.md", "output": "docs/maintainers/playbooks/wishlist-intake-to-execution.md" },
     { "source": ".ai/playbooks/improvement-triage-top-three.md", "output": "docs/maintainers/playbooks/improvement-triage-top-three.md" },
     { "source": ".ai/playbooks/improvement-task-discovery.md", "output": "docs/maintainers/playbooks/improvement-task-discovery.md" },
+    { "source": ".ai/playbooks/workspace-kit-chat-onboarding.md", "output": "docs/maintainers/playbooks/workspace-kit-chat-onboarding.md" },
     { "source": ".ai/runbooks/agent-playbooks.md", "output": "docs/maintainers/runbooks/agent-playbooks.md" },
     { "source": ".ai/runbooks/github-workflow-cannon-invocation.md", "output": "docs/maintainers/runbooks/github-workflow-cannon-invocation.md" },
     { "source": ".ai/runbooks/skill-packs-dual-install.md", "output": "docs/maintainers/runbooks/skill-packs-dual-install.md" },

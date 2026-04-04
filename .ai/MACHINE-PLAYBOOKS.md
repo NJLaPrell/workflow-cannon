@@ -41,6 +41,14 @@ Human playbook: `docs/maintainers/playbooks/wishlist-intake-to-execution.md`.
 
 Optional Cursor rule: `.cursor/rules/playbook-wishlist-intake-to-execution.mdc`.
 
+## Chat onboarding (`/onboarding`)
+
+Numbered **Your Role** / **Agent Temperament**; persist after each answer; **`get-next-actions`** token before mutating `run` when policy **`require`**.
+
+Human playbook: `docs/maintainers/playbooks/workspace-kit-chat-onboarding.md`.
+
+Optional Cursor rule: `.cursor/rules/playbook-workspace-kit-chat-onboarding.mdc`.
+
 ### Confidence tiers (improvement inbox)
 
 Recommendation tasks carry **`metadata.confidenceTier`** (`high` / `medium` / `low`). Filter with:

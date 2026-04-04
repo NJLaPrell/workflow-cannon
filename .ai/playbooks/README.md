@@ -34,6 +34,7 @@ Use the **filename stem** as the stable id.
 | `improvement-triage-top-three` | [`improvement-triage-top-three.md`](./improvement-triage-top-three.md) | Analyze **`improvement`** backlog; promote **≤3** best **`proposed`** → **`ready`** (Tier A **`accept`**) |
 | `wishlist-intake-to-execution` | [`wishlist-intake-to-execution.md`](./wishlist-intake-to-execution.md) | Rank wishlist ideation, confirm timing, clarify scope, pick target phase, run **`convert-wishlist`** with planning-generation hygiene |
 | `skill-attachments` | [`skill-attachments.md`](./skill-attachments.md) | Attach **`metadata.skillIds`** to execution tasks using discovered pack ids |
+| `workspace-kit-chat-onboarding` | [`workspace-kit-chat-onboarding.md`](./workspace-kit-chat-onboarding.md) | Cursor **`/onboarding`**: tavern flow; numbered **Your Role** / **Agent Temperament**; save each step |
 
 ## Discovery
 

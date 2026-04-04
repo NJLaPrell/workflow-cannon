@@ -58,6 +58,7 @@ Files under **`tasks/*.md`** are **optional prompt-only** workflows. They **do n
 | `improvement-triage-top-three` | [`playbooks/improvement-triage-top-three.md`](./playbooks/improvement-triage-top-three.md) | Triage **`improvement`** tasks: rubric, pick ≤3, **`accept`** to **`ready`**, verify queue |
 | `wishlist-intake-to-execution` | [`playbooks/wishlist-intake-to-execution.md`](./playbooks/wishlist-intake-to-execution.md) | Wishlist ideation → execution: rank intake, **`convert-wishlist`**, phase bucket, planning tokens |
 | `skill-attachments` | [`playbooks/skill-attachments.md`](./playbooks/skill-attachments.md) | Attach **`metadata.skillIds`** using ids from **`list-skills`** |
+| `workspace-kit-chat-onboarding` | [`playbooks/workspace-kit-chat-onboarding.md`](./playbooks/workspace-kit-chat-onboarding.md) | Cursor **`/onboarding`**: numbered role & temperament; save each step |
 
 How to attach playbooks in an editor session and limits of auto-loading: [`runbooks/agent-playbooks.md`](./runbooks/agent-playbooks.md).
 
@@ -68,6 +69,7 @@ Optional requestable Cursor rules:
 - **Improvement** research and logging (transcripts, docs, architecture, ops): `.cursor/rules/playbook-improvement-task-discovery.mdc`
 - **Improvement** triage (≤3 **`proposed`** → **`ready`**): `.cursor/rules/playbook-improvement-triage-top-three.mdc`
 - **Wishlist** intake → execution (**`convert-wishlist`** workflow): `.cursor/rules/playbook-wishlist-intake-to-execution.mdc`
+- **Chat onboarding** (**`/onboarding`**): `.cursor/rules/playbook-workspace-kit-chat-onboarding.mdc`
 
 ## Long threads and context reload
 
