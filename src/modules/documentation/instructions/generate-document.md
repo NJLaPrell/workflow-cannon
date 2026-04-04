@@ -43,3 +43,7 @@ Generate a single document for both canonical AI and human-readable surfaces usi
 10. Run section coverage validation (all required sections present, correct headings/order where required); retry/resolve on failure.
 11. Detect conflicts with higher-precedence docs and stop/prompt when policy-sensitive or unresolved.
 12. Emit run evidence: inputs, files read/written, validation results, retries used, conflict outcomes, timestamp.
+
+## Response template (CLI shaping)
+
+For **`documentType`** **`ROADMAP.md`** or **`FEATURE-TAXONOMY.md`**, a successful non-dry-run applies the builtin **`phase_ship`** response template by default (unless you override via **`responseTemplateId`** / directive / **`commandOverrides`**), adding **`data.presentation.matchedSections`** for evidence keys such as **`filesWritten`**. See **`docs/maintainers/response-template-contract.md`**.

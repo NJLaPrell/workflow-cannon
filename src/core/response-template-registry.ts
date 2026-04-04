@@ -28,6 +28,29 @@ const BUILTIN: Record<string, ResponseTemplateDefinition> = {
     scope: "command",
     description: "Alias id matching plain-English directive spelling.",
     expectedSections: ["ok", "code", "message", "data"]
+  },
+  /**
+   * Applied contextually after phase-ship steps (task complete, phase snapshot write, roadmap/taxonomy regen).
+   * `matchedSections` lists which of these keys exist on `data` for quick scanning.
+   */
+  phase_ship: {
+    id: "phase_ship",
+    version: 1,
+    scope: "command",
+    description:
+      "Phase closeout / release handoff: emphasizes transition evidence, planning generation, and maintainer snapshot fields when present.",
+    expectedSections: [
+      "evidence",
+      "planningGeneration",
+      "planningGenerationPolicy",
+      "autoUnblocked",
+      "snapshotBefore",
+      "snapshotAfter",
+      "fileRelativePath",
+      "dryRun",
+      "filesWritten",
+      "filesRead"
+    ]
   }
 };
 

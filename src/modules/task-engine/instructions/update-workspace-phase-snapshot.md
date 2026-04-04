@@ -45,3 +45,7 @@ Clear **`next_kit_phase`** (removes the line; parsers treat missing key as null)
 ```bash
 workspace-kit run update-workspace-phase-snapshot '{"nextKitPhase":null}'
 ```
+
+## Response template (CLI shaping)
+
+Non-dry-run success uses the builtin **`phase_ship`** response template by default (unless overridden by **`responseTemplateId`**, a directive, or **`responseTemplates.commandOverrides`**) so **`data.presentation.matchedSections`** highlights **`snapshotBefore`**, **`snapshotAfter`**, etc. Dry-run responses keep the normal manifest/default template chain. See **`docs/maintainers/response-template-contract.md`**.

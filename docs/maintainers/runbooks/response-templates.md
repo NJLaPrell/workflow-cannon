@@ -15,15 +15,16 @@ Phase **6b** adds optional **response template** metadata to `workspace-kit run`
 | 1 | JSON **`responseTemplateId`** |
 | 2 | **`responseTemplateDirective`**, then **`instructionTemplateDirective`**, then **`instruction`** (first parse win) |
 | 3 | **`responseTemplates.commandOverrides[commandName]`** |
-| 4 | Builtin **`defaultResponseTemplateId`** for the command (manifest), when present |
-| 5 | **`responseTemplates.defaultTemplateId`** |
-| 6 | Fallback id **`default`** |
+| 4 | Contextual **`phase_ship`** — **`run-transition`** with **`action`:** **`complete`**; **`update-workspace-phase-snapshot`** without **`dryRun`:** **`true`**; **`generate-document`** for **`ROADMAP.md`** / **`FEATURE-TAXONOMY.md`** without **`options.dryRun`:** **`true`** |
+| 5 | Builtin **`defaultResponseTemplateId`** for the command (manifest), when present |
+| 6 | **`responseTemplates.defaultTemplateId`** |
+| 7 | Fallback id **`default`** |
 
 ## Defaults
 
 - `responseTemplates.enforcementMode`: `advisory` (warnings only)
 - `responseTemplates.defaultTemplateId`: `default`
-- Builtin ids: `default`, `compact`, `completed_task`, `COMPLETED_TASK`
+- Builtin ids: `default`, `compact`, `completed_task`, `COMPLETED_TASK`, `phase_ship` (contextual; see step 4)
 
 ## Config
 

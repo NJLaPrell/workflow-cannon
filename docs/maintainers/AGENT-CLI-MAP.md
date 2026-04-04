@@ -99,7 +99,7 @@ workspace-kit run recommend-skills '{"tags":["example"]}'
 
 ## Response templates on `workspace-kit run`
 
-Optional JSON shaping: pass **`responseTemplateId`** and/or plain-English in **`responseTemplateDirective`** / **`instructionTemplateDirective`** / **`instruction`**. Effective config may set **`responseTemplates.commandOverrides`**, **`responseTemplates.defaultTemplateId`**, and **`responseTemplates.enforcementMode`** (`advisory` vs **`strict`**).
+Optional JSON shaping: pass **`responseTemplateId`** and/or plain-English in **`responseTemplateDirective`** / **`instructionTemplateDirective`** / **`instruction`**. Effective config may set **`responseTemplates.commandOverrides`**, **`responseTemplates.defaultTemplateId`**, and **`responseTemplates.enforcementMode`** (`advisory` vs **`strict`**). **Phase closeout:** the kit applies contextual **`phase_ship`** after **`run-transition`** **`complete`**, non-dry-run **`update-workspace-phase-snapshot`**, and non-dry-run **`generate-document`** for **`ROADMAP.md`** / **`FEATURE-TAXONOMY.md`** unless you override (see **`response-template-contract.md`**).
 
 - **Precedence table + strict behavior:** [`response-template-contract.md`](./response-template-contract.md) and runbook [`runbooks/response-templates.md`](./runbooks/response-templates.md).
 - **Strict failures:** unknown resolved template → **`response-template-invalid`** (message includes which source picked the id); explicit id vs directive mismatch → **`response-template-conflict`**.

@@ -71,7 +71,7 @@ Tier **B** `workspace-kit run` commands (non-transition) also require JSON `poli
 
 ## 7) Phase delivery summary (agent wrap-up)
 
-This section is the **session summary format** for operators and agents (what to paste or say when the phase is shipped). It is **not** the Phase 6b JSON **`responseTemplateId`** / **`responseTemplate`** metadata on **`workspace-kit run`** — those only shape CLI JSON output; see [`response-template-contract.md`](../response-template-contract.md) and [`runbooks/response-templates.md`](../runbooks/response-templates.md).
+This section is the **session summary format** for operators and agents (what to paste or say when the phase is shipped). Separately, **`workspace-kit run`** applies the builtin **`phase_ship`** response template automatically on **`run-transition`** **`complete`**, **`update-workspace-phase-snapshot`** (non-dry-run), and **`generate-document`** for **`ROADMAP.md`** / **`FEATURE-TAXONOMY.md`** (non-dry-run), so JSON includes **`data.presentation.matchedSections`** for closeout fields unless you override with **`responseTemplateId`**. See [`response-template-contract.md`](../response-template-contract.md) and [`runbooks/response-templates.md`](../runbooks/response-templates.md).
 
 ### Evidence rules (do not invent counts)
 

@@ -9,7 +9,7 @@ Version **1** (`RESPONSE_TEMPLATE_CONTRACT_VERSION`). Defines how `workspace-kit
 
 ## Builtin template ids
 
-Registered in runtime (`listBuiltinResponseTemplateIds`): includes `default`, `compact`, `completed_task`, and `COMPLETED_TASK` (plain-English alias).
+Registered in runtime (`listBuiltinResponseTemplateIds`): includes `default`, `compact`, `completed_task`, `COMPLETED_TASK` (plain-English alias), and **`phase_ship`** (contextual phase closeout / release shaping).
 
 ## Resolution order (single precedence chain)
 
@@ -18,9 +18,13 @@ Applied in **`src/core/response-template-shaping.ts`** (`applyResponseTemplateAp
 1. JSON arg **`responseTemplateId`** (explicit string).
 2. First plain-English hit, in order: **`responseTemplateDirective`**, **`instructionTemplateDirective`**, **`instruction`** (parsed by `parseTemplateDirectiveFromText` in `src/core/instruction-template-mapper.ts`).
 3. **`responseTemplates.commandOverrides[commandName]`** from effective config.
-4. Builtin manifest default for the command (**`defaultResponseTemplateId`** in **`src/contracts/builtin-run-command-manifest.json`**), when set.
-5. **`responseTemplates.defaultTemplateId`** from effective config (kit default string **`default`** when unset).
-6. Literal fallback **`default`**.
+4. **Contextual `phase_ship`** — `resolveContextualResponseTemplateId` in **`src/core/response-template-shaping.ts`** returns **`phase_ship`** when:
+   - **`run-transition`** and **`action`** is **`complete`**; or
+   - **`update-workspace-phase-snapshot`** and **`dryRun`** is not **`true`**; or
+   - **`generate-document`** with **`documentType`** **`ROADMAP.md`** or **`FEATURE-TAXONOMY.md`** and **`options.dryRun`** is not **`true`**.
+5. Builtin manifest default for the command (**`defaultResponseTemplateId`** in **`src/contracts/builtin-run-command-manifest.json`**), when set.
+6. **`responseTemplates.defaultTemplateId`** from effective config (kit default string **`default`** when unset).
+7. Literal fallback **`default`**.
 
 **Explicit vs plain-English:** If both **`responseTemplateId`** and a directive field resolve to different template ids, **advisory** mode warns and keeps the **explicit** id; **strict** mode fails with **`response-template-conflict`** and names the directive field that disagreed.
 

@@ -92,7 +92,10 @@ export {
   getResponseTemplateDefinition,
   listBuiltinResponseTemplateIds
 } from "./response-template-registry.js";
-export { applyResponseTemplateApplication } from "./response-template-shaping.js";
+export {
+  applyResponseTemplateApplication,
+  resolveContextualResponseTemplateId
+} from "./response-template-shaping.js";
 export {
   buildIngestTranscriptsArgsForHook,
   maybeSpawnTranscriptHookAfterCompletion,

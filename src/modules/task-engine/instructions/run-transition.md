@@ -29,3 +29,7 @@ workspace-kit run run-transition '{"taskId":"T184","action":"start","policyAppro
 ## Returns
 
 Success **`data`** includes transition **`evidence`**, **`autoUnblocked`**, **`planningGeneration`**, **`planningGenerationPolicy`**, and optionally **`planningGenerationPolicyWarnings`** (when policy is **`warn`** and the token was omitted). On mismatch when **`expectedPlanningGeneration`** was supplied, **`code`** is **`planning-generation-mismatch`**. When policy is **`require`** and the field was omitted, **`code`** is **`planning-generation-required`**.
+
+## Response template (CLI shaping)
+
+When **`action`** is **`complete`**, the kit applies the builtin **`phase_ship`** response template unless you pass **`responseTemplateId`** (or a template directive) or a config **`commandOverrides`** entry for **`run-transition`**. That adds **`data.presentation.matchedSections`** for closeout fields (e.g. **`evidence`**, **`planningGeneration`**). See **`docs/maintainers/response-template-contract.md`**.

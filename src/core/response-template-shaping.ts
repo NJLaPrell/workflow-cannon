@@ -102,12 +102,53 @@ function resolveRequestedTemplateId(
   return { templateId: null, directiveField: null, parseWarnings, strictViolations };
 }
 
+/**
+ * Builtin contextual template for maintainer phase closeout / release flows.
+ * Runs before manifest `defaultResponseTemplateId` so routine commands keep manifest defaults.
+ */
+export function resolveContextualResponseTemplateId(
+  commandName: string,
+  args: Record<string, unknown>
+): string | undefined {
+  if (commandName === "run-transition") {
+    const action = typeof args.action === "string" ? args.action.trim() : "";
+    if (action === "complete") {
+      return "phase_ship";
+    }
+    return undefined;
+  }
+  if (commandName === "update-workspace-phase-snapshot") {
+    if (args.dryRun === true) {
+      return undefined;
+    }
+    return "phase_ship";
+  }
+  if (commandName === "generate-document") {
+    const opts = args.options;
+    const dry =
+      opts !== null &&
+      typeof opts === "object" &&
+      !Array.isArray(opts) &&
+      (opts as Record<string, unknown>).dryRun === true;
+    if (dry) {
+      return undefined;
+    }
+    const dt = typeof args.documentType === "string" ? args.documentType.trim() : "";
+    if (dt === "ROADMAP.md" || dt === "FEATURE-TAXONOMY.md") {
+      return "phase_ship";
+    }
+    return undefined;
+  }
+  return undefined;
+}
+
 function describeTemplateResolutionSource(args: {
   commandName: string;
   args: Record<string, unknown>;
   requestedRaw: string | null;
   directiveField: DirectiveFieldName | null;
   override: string | undefined;
+  contextualId: string | undefined;
   manifestDefault: string | undefined;
   chosenId: string;
   cfgDefault: string;
@@ -121,6 +162,9 @@ function describeTemplateResolutionSource(args: {
   }
   if (args.override !== undefined && args.override === args.chosenId) {
     return `\`responseTemplates.commandOverrides['${args.commandName}']\``;
+  }
+  if (args.contextualId !== undefined && args.contextualId === args.chosenId) {
+    return `contextual \`phase_ship\` for \`${args.commandName}\` (phase closeout / release)`;
   }
   if (args.manifestDefault !== undefined && args.manifestDefault === args.chosenId) {
     return `builtin manifest defaultResponseTemplateId for \`${args.commandName}\``;
@@ -195,9 +239,11 @@ export function applyResponseTemplateApplication(
 
   const override = cfg.commandOverrides[commandName];
   const manifestDefault = getBuiltinCommandDefaultTemplateId(commandName);
-  const chosenId = requestedRaw ?? override ?? manifestDefault ?? cfg.defaultTemplateId ?? "default";
+  const contextualId = resolveContextualResponseTemplateId(commandName, args);
+  const chosenId =
+    requestedRaw ?? override ?? contextualId ?? manifestDefault ?? cfg.defaultTemplateId ?? "default";
   const requestedTemplateIdForMeta =
-    requestedRaw ?? override ?? manifestDefault ?? cfg.defaultTemplateId ?? null;
+    requestedRaw ?? override ?? contextualId ?? manifestDefault ?? cfg.defaultTemplateId ?? null;
 
   const resolutionSource = describeTemplateResolutionSource({
     commandName,
@@ -205,6 +251,7 @@ export function applyResponseTemplateApplication(
     requestedRaw,
     directiveField,
     override,
+    contextualId,
     manifestDefault,
     chosenId,
     cfgDefault: cfg.defaultTemplateId ?? "default"
