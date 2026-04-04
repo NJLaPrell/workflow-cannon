@@ -5,11 +5,11 @@ alwaysApply: true
 
 # Maintainer delivery workflow (canonical)
 
-Full numbered loop (branch → implement → validate → PR → merge → **`run-transition`**), branching/tagging, commit strategy, and PR expectations: **machine summary** **`.ai/MACHINE-PLAYBOOKS.md`**; **human playbook** **`docs/maintainers/playbooks/task-to-main.md`**; **CLI execution** **`docs/maintainers/AGENTS.md`**. Attach **`@task-to-main.md`** when driving one **`T###`** to **`main`**.
+Full numbered loop (branch → implement → validate → PR → merge → **`run-transition`**), branching/tagging, commit strategy, and PR expectations: **machine summary** **`.ai/MACHINE-PLAYBOOKS.md`**; **human playbook** **`docs/maintainers/playbooks/task-to-phase-branch.md`**; **CLI execution** **`docs/maintainers/AGENTS.md`**. Attach **`@task-to-phase-branch.md`** when driving one **`T###`** through a PR into **`release/phase-<N>`** (phase integration branch — see **`.cursor/rules/branching-tagging-strategy.mdc`**). Merging **`release/phase-<N>`** → **`main`** is **phase closeout**, not this loop.
 
 ## Non-negotiables
 
 - **Git + GitHub** own branch, PR, review, merge. **`workspace-kit`** owns task lifecycle and evidence in the configured task store (default SQLite under **`.workspace-kit/tasks/`**). Do not treat merged PRs as task **`complete`** without the matching Tier A **`run-transition`** when the task is in scope.
 - **Blocked?** Record the blocker in task-engine state first; the SQLite/JSON task store is authoritative over chat.
 
-Optional requestable rule: **`.cursor/rules/playbook-task-to-main.mdc`**.
+Optional requestable rule: **`.cursor/rules/playbook-task-to-phase-branch.mdc`**.

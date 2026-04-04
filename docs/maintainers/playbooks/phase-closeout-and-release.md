@@ -8,6 +8,7 @@ This file is an **ordered checklist**. Canonical prose lives in the linked docs 
 ## 0) Attach context
 
 - Confirm [`docs/maintainers/TERMS.md`](../TERMS.md) vocabulary (task-engine state, approval gates, evidence).
+- **Phase integration branch** for phase **`<N>`** is **`release/phase-<N>`** (see **`.cursor/rules/branching-tagging-strategy.mdc`** and [`task-to-phase-branch.md`](./task-to-phase-branch.md)).
 - For **policy-sensitive** `workspace-kit run` commands, use JSON **`policyApproval`** on the **third** CLI argument; for `config` / `init` / `upgrade`, see [`POLICY-APPROVAL.md`](../POLICY-APPROVAL.md).
 
 ## 1) Refresh execution state (read-only discovery)
@@ -20,7 +21,7 @@ Do **not** infer task `status` from chat memory — the configured task store (d
 
 ## 2) Finish remaining phase work (delivery loop)
 
-Follow the **maintainer delivery loop** (feature branch per coherent slice, validate, PR, merge, then task transitions):
+Follow the **maintainer delivery loop** for each execution task: task branch from **`release/phase-<N>`**, validate, **PR into the phase branch** (not `main`), merge, then task transitions — see [`task-to-phase-branch.md`](./task-to-phase-branch.md).
 
 - Cursor rule mirror: `.cursor/rules/maintainer-delivery-loop.mdc`
 - Human-oriented summary: [`docs/maintainers/AGENTS.md`](../AGENTS.md) (task execution + CLI-first execution)
@@ -37,19 +38,28 @@ workspace-kit run run-transition '{"taskId":"T###","action":"start","policyAppro
 workspace-kit run run-transition '{"taskId":"T###","action":"complete","policyApproval":{"confirmed":true,"rationale":"acceptance criteria met"}}'
 ```
 
-## 3) Human gate — stop before publish
+## 3) Integrate the phase branch before merging to `main`
+
+When **all** phase tasks that belong on **`release/phase-<N>`** are **`completed`** (or explicitly handled) and you are preparing the release:
+
+1. `git fetch origin` and `git checkout release/phase-<N>`, then `git pull origin release/phase-<N>`.
+2. Run full validation on that tip (`pnpm run build`, `pnpm run check`, `pnpm run test`, `pnpm run parity`, and **`pre-merge-gates`** / maintainer gates as in [`RELEASING.md`](../RELEASING.md)).
+3. **Fix failures on the phase branch** — small follow-up PRs or commits targeting **`release/phase-<N>`** until checks are green and there are no known release blockers.
+
+## 4) Human gate — stop before publish
 
 **Do not** run publish automation or tag-driven release actions until a human explicitly approves, per [`RELEASING.md`](../RELEASING.md) (“Present for approval”).
 
 Summarize scope, risk, validation evidence, and migration notes; obtain **explicit** confirmation to proceed with publish.
 
-## 4) Release procedure (execute per RELEASING)
+## 5) Release procedure (execute per RELEASING)
 
-Run the full **Release procedure** in [`RELEASING.md`](../RELEASING.md): define scope, prepare artifacts (changelog + `package.json` version), run validation commands (`build`, `check`, `test`, `parity`, `check-release-metadata`, `pre-merge-gates` — alias: `phase5-gates`, doc consistency sweep), **then** publish after approval, then record evidence (tag, workflow run URL, npm).
+1. **Merge `release/phase-<N>` into `main`** via PR (or equivalent reviewed merge) using the repo’s preferred strategy, consistent with **maintainer-delivery-loop**. **`main`** should be the tip you tag unless policy says otherwise.
+2. Run the full **Release procedure** in [`RELEASING.md`](../RELEASING.md): define scope, prepare artifacts (changelog + `package.json` version), run validation commands (`build`, `check`, `test`, `parity`, `check-release-metadata`, `pre-merge-gates` — alias: `phase5-gates`, doc consistency sweep), **then** publish after approval, then record evidence (tag, workflow run URL, npm).
 
 Tier **B** `workspace-kit run` commands (non-transition) also require JSON `policyApproval` — see [`AGENT-CLI-MAP.md`](../AGENT-CLI-MAP.md) and [`POLICY-APPROVAL.md`](../POLICY-APPROVAL.md).
 
-## 5) After publish
+## 6) After publish
 
 - Capture release evidence per [`RELEASING.md`](../RELEASING.md) → **Required release evidence**.
 - Update maintainer snapshots (for example [`docs/maintainers/ROADMAP.md`](../ROADMAP.md), [`docs/maintainers/data/workspace-kit-status.yaml`](../data/workspace-kit-status.yaml)) when the phase closeout task requires it.

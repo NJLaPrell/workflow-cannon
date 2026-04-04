@@ -8,6 +8,10 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+### Changed (maintainer workflow)
+
+- **Git / playbooks** — Renamed **`task-to-main`** → **`task-to-phase-branch`**: execution tasks merge via PR into **`release/phase-<N>`**; phase branch merges to **`main`** at closeout per **`phase-closeout-and-release.md`**. Cursor extension command **`workflowCannon.chat.prefillTaskToPhaseBranch`** (was **`prefillTaskToMain`**). Example playbook runner: **`examples/playbooks/pilot-task-to-phase-branch.json`**.
+
 ## [0.52.0] - 2026-04-03
 
 Phase 52 — **agent/human CLI ergonomics** (**`T624`–`T629`**): stable failure **`remediation`** metadata, doctor **`errorRemediationCatalog`**, pilot **`--schema-only`** JSON Schema + **`sampleArgs`**, extension + visual guide cross-links.

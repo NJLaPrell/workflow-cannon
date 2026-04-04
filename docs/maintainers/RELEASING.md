@@ -39,6 +39,7 @@ If a gate fails, do not publish. Capture the blocker in task-engine state and up
 
 1. **Define release scope**
    - Confirm included tasks and intended release outcome.
+   - When the phase shipped on a **`release/phase-<N>`** integration branch, **merge that branch into `main`** (reviewed PR) before tagging; run the validation steps below on the **`main`** tip you will publish.
    - Classify risk (low/medium/high) and note rollout caveats.
 2. **Prepare release artifacts**
    - Update canonical changelog `docs/maintainers/CHANGELOG.md` with user-visible impact (`CHANGELOG.md` at repo root is pointer-only).

@@ -7,7 +7,18 @@ alwaysApply: false
 
 > **Always-on merged rule:** `.cursor/rules/maintainer-delivery-loop.mdc` — use that for enforcement in chat; this file remains a focused reference.
 
-- Keep branches scoped to one coherent objective.
+## Phase integration branches
+
+- **Pattern:** `release/phase-<N>` where **`<N>`** is the workspace kit phase number (example: `release/phase-52`).
+- **Purpose:** Long-lived integration line for the phase. **Create from `main`** when a new phase starts (if the branch does not already exist on `origin`); **merge back to `main`** at phase closeout before tagging a release (see [`docs/maintainers/playbooks/phase-closeout-and-release.md`](../../docs/maintainers/playbooks/phase-closeout-and-release.md)).
+
+## Task branches
+
+- Branch from the **current** **`release/phase-<N>`** tip, not from `main`, unless a maintainer explicitly documents an exception.
+- **Naming:** one coherent objective per branch; predictable task prefix (e.g. `feature/T###-short-slug`).
+
+## Tags and releases
+
 - Use predictable release tags tied to published versions.
 - Ensure tags map to validated release artifacts and evidence.
 

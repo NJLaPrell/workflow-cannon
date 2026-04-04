@@ -14,7 +14,7 @@ ref|id=cli_visual_guide|target=.ai/machine-cli-policy.md|type=file|status=active
 ref|id=agent_behavior_plan|target=src/modules/agent-behavior/README.md|type=file|status=active
 ref|id=terms|target=.ai/TERMS.md|type=file|status=active
 ref|id=module_guide|target=.ai/module-build.md|type=file|status=active
-ref|id=playbook_task_to_main|target=.ai/MACHINE-PLAYBOOKS.md|type=file|status=active
+ref|id=playbook_task_to_phase_branch|target=.ai/MACHINE-PLAYBOOKS.md|type=file|status=active
 ref|id=playbook_improvement_task_discovery|target=.ai/MACHINE-PLAYBOOKS.md|type=file|status=active
 ref|id=playbook_improvement_triage_top_three|target=.ai/MACHINE-PLAYBOOKS.md|type=file|status=active
 truth|order=ai_principles>ai_module_build>roadmap>tasks_engine_state>tasks_json_optout>tasks_view>agent_cli_map>policy_approval>releasing>terms>module_guide
@@ -34,7 +34,7 @@ rule|id=A020|level=must|scope=agent|directive=execute_tasks_in_dependency_order_
 rule|id=A021|level=must|scope=agent|directive=treat_task_metadata_scope_acceptance_as_binding_implementation_guidance|risk=medium|approval=none|override=warn|status=active|refs=.workspace-kit/tasks/workspace-kit.db,.workspace-kit/tasks/state.json|why=rationale_for_A021
 rule|id=A022|level=must|scope=agent|directive=split_oversized_tasks_before_implementation|risk=low|approval=none|override=warn|status=active|refs=.workspace-kit/tasks/workspace-kit.db,.workspace-kit/tasks/state.json|why=rationale_for_A022
 
-rule|id=A027|level=must|scope=agent|directive=when_delivering_single_execution_task_to_main_follow_ordered_playbook_task_to_main_attach_file_or_requestable_playbook_task_to_main_rule|risk=medium|approval=none|override=warn|status=active|refs=.ai/MACHINE-PLAYBOOKS.md,.cursor/rules/maintainer-delivery-loop.mdc,.cursor/rules/playbook-task-to-main.mdc|why=branch_pr_review_merge_aligns_with_task_engine_transitions
+rule|id=A027|level=must|scope=agent|directive=when_delivering_single_execution_task_follow_ordered_playbook_task_to_phase_branch_attach_file_or_requestable_playbook_task_to_phase_branch_rule|risk=medium|approval=none|override=warn|status=active|refs=.ai/MACHINE-PLAYBOOKS.md,.cursor/rules/maintainer-delivery-loop.mdc,.cursor/rules/playbook-task-to-phase-branch.mdc|why=branch_pr_review_merge_aligns_with_task_engine_transitions
 
 rule|id=A028|level=must|scope=agent|directive=when_researching_and_logging_improvement_work_follow_playbook_improvement_task_discovery_attach_or_playbook_improvement_task_discovery_rule|risk=medium|approval=none|override=warn|status=active|refs=.ai/MACHINE-PLAYBOOKS.md,.cursor/rules/playbook-improvement-task-discovery.mdc|why=structured_friction_surfaces_and_tier_b_persistence
 

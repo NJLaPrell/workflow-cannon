@@ -118,11 +118,11 @@ Canonical process remains: [`AGENTS.md`](../AGENTS.md), [`AGENT-CLI-MAP.md`](../
 
 **Intent:** Seed Composer with the same maintainer playbook text the docs describe, without retyping long **`@`** paths or CLI reminders.
 
-**Surfaces:** Command palette (**Workflow Cannon: Prefill Chat — …** for wishlist intake, improvement triage, task-to-main). Dashboard **Chat** on open wishlist rows; **Accept** / **Chat** on **Proposed · improvements** and **Proposed · execution** rows (**Accept** → **`run-transition`** with modal rationale + **`expectedPlanningGeneration`** when required — same hygiene as Tasks DnD). Tasks tree context menu on an open wishlist row → same prefill as Dashboard **Chat** for that id.
+**Surfaces:** Command palette (**Workflow Cannon: Prefill Chat — …** for wishlist intake, improvement triage, task-to-phase-branch). Dashboard **Chat** on open wishlist rows; **Accept** / **Chat** on **Proposed · improvements** and **Proposed · execution** rows (**Accept** → **`run-transition`** with modal rationale + **`expectedPlanningGeneration`** when required — same hygiene as Tasks DnD). Tasks tree context menu on an open wishlist row → same prefill as Dashboard **Chat** for that id.
 
 **Mechanism:** Primary **`deeplink.prompt.prefill`** `{ text }`; fallback URI then clipboard + toast. Very long prompts may exceed URI limits. Non-Cursor VS Code may lack the deeplink command — clipboard fallback is expected.
 
-**Playbooks:** [`wishlist-intake-to-execution.md`](../playbooks/wishlist-intake-to-execution.md), [`improvement-triage-top-three.md`](../playbooks/improvement-triage-top-three.md), [`task-to-main.md`](../playbooks/task-to-main.md). Source: `extensions/cursor-workflow-cannon/src/cursor-chat-prefill.ts`, `wishlist-chat-prompt.ts`, `playbook-chat-prompts.ts`.
+**Playbooks:** [`wishlist-intake-to-execution.md`](../playbooks/wishlist-intake-to-execution.md), [`improvement-triage-top-three.md`](../playbooks/improvement-triage-top-three.md), [`task-to-phase-branch.md`](../playbooks/task-to-phase-branch.md). Source: `extensions/cursor-workflow-cannon/src/cursor-chat-prefill.ts`, `wishlist-chat-prompt.ts`, `playbook-chat-prompts.ts`.
 
 ## Optional: `suggestedNext` vs `get-task`
 

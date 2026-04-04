@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   buildImprovementTriagePrompt,
-  buildTaskToMainPrompt
+  buildTaskToPhaseBranchPrompt
 } from "../dist/playbook-chat-prompts.js";
 
 test("buildImprovementTriagePrompt references playbook id and path", () => {
@@ -17,13 +17,13 @@ test("buildImprovementTriagePrompt focuses task id when provided", () => {
   assert.match(p, /get-task/);
 });
 
-test("buildTaskToMainPrompt references task-to-main playbook id and path", () => {
-  const p = buildTaskToMainPrompt();
-  assert.match(p, /task-to-main\.md/);
-  assert.match(p, /task-to-main/);
+test("buildTaskToPhaseBranchPrompt references task-to-phase-branch playbook id and path", () => {
+  const p = buildTaskToPhaseBranchPrompt();
+  assert.match(p, /task-to-phase-branch\.md/);
+  assert.match(p, /task-to-phase-branch/);
 });
 
-test("buildTaskToMainPrompt focuses execution task id when provided", () => {
-  const p = buildTaskToMainPrompt({ taskId: "T999" });
+test("buildTaskToPhaseBranchPrompt focuses execution task id when provided", () => {
+  const p = buildTaskToPhaseBranchPrompt({ taskId: "T999" });
   assert.match(p, /\*\*T999\*\*/);
 });

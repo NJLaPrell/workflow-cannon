@@ -118,7 +118,7 @@ function renderProposedExecutionRow(row: { id?: unknown; title?: unknown; phase?
     '" title="Accept → ready (confirms policy rationale)">Accept</button>' +
     '<button type="button" class="dash-row-action" data-wc-action="proposed-exe-chat" data-task-id="' +
     idAttr +
-    '" title="Prefill Composer with task-to-main playbook">Chat</button>' +
+    '" title="Prefill Composer with task-to-phase-branch playbook">Chat</button>' +
     "</span></div>"
   );
 }
@@ -133,7 +133,7 @@ function renderProposedExecutionList(count: number, items: unknown): string {
       : "";
   return (
     more +
-    '<p class="muted"><b>Row actions</b> · <span class="muted">Chat</span> seeds <code>task-to-main</code> playbook.</p>' +
+    '<p class="muted"><b>Row actions</b> · <span class="muted">Chat</span> seeds <code>task-to-phase-branch</code> playbook.</p>' +
     '<div class="dash-row-list" role="list">' +
     items.map((x) => renderProposedExecutionRow(x as { id?: unknown; title?: unknown; phase?: unknown })).join("") +
     "</div>"

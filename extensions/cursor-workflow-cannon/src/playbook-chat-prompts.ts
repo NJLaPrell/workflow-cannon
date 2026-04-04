@@ -19,17 +19,17 @@ export function buildImprovementTriagePrompt(options?: { taskId?: string }): str
   );
 }
 
-export function buildTaskToMainPrompt(options?: { taskId?: string }): string {
+export function buildTaskToPhaseBranchPrompt(options?: { taskId?: string }): string {
   const id = options?.taskId?.trim();
   const focus =
     id && id.length > 0
-      ? `Deliver execution task **${id}** to **main** using the maintainer delivery loop.\n\n`
+      ? `Deliver execution task **${id}** into **\`release/phase-<N>\`** using the maintainer delivery loop (PR base = phase branch, not the main line).\n\n`
       : "Pick one **`workspace-kit`** execution task from **`ready`** (or clarify scope first).\n\n";
 
   return (
-    "Follow **`docs/maintainers/playbooks/task-to-main.md`** (playbook id **`task-to-main`**).\n\n" +
+    "Follow **`docs/maintainers/playbooks/task-to-phase-branch.md`** (playbook id **`task-to-phase-branch`**).\n\n" +
     focus +
-    "Branch → implement → validate → PR → merge → **`workspace-kit run run-transition`** **`complete`** with **`policyApproval`** per **`docs/maintainers/POLICY-APPROVAL.md`**.\n\n" +
-    "Optional: **`.cursor/rules/playbook-task-to-main.mdc`**."
+    "Phase branch → task branch → implement → validate → PR into **`release/phase-<N>`** → merge → **`workspace-kit run run-transition`** **`complete`** with **`policyApproval`** per **`docs/maintainers/POLICY-APPROVAL.md`**.\n\n" +
+    "Optional: **`.cursor/rules/playbook-task-to-phase-branch.mdc`**."
   );
 }

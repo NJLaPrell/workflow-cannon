@@ -18,7 +18,7 @@ Agents must use **`workspace-kit`** for kit-owned persistence. Chat-only approva
 - **Tier table + copy-paste:** `docs/maintainers/AGENT-CLI-MAP.md`
 - **Approval semantics:** `docs/maintainers/POLICY-APPROVAL.md`
 - **Instruction paths:** `src/modules/<module>/instructions/<command>.md` (discover via `workspace-kit run` with no subcommand)
-- **Single-task maintainer delivery (branch / PR / merge / transitions):** `docs/maintainers/playbooks/task-to-main.md` — use with **`maintainer-delivery-loop.mdc`**; optional requestable **`.cursor/rules/playbook-task-to-main.mdc`**
+- **Single-task maintainer delivery (branch / PR / merge / transitions):** `docs/maintainers/playbooks/task-to-phase-branch.md` — use with **`maintainer-delivery-loop.mdc`**; optional requestable **`.cursor/rules/playbook-task-to-phase-branch.mdc`**
 - **Improvement research → log:** `docs/maintainers/playbooks/improvement-task-discovery.md` — optional requestable **`.cursor/rules/playbook-improvement-task-discovery.mdc`**
 - **Improvement triage (≤3 → ready):** `docs/maintainers/playbooks/improvement-triage-top-three.md` — optional requestable **`.cursor/rules/playbook-improvement-triage-top-three.mdc`**
 

@@ -1,13 +1,13 @@
 ---
-description: Optional single-task delivery mode — branch, PR, review loop, merge, task transitions
+description: Optional single-task delivery mode — branch from phase branch, PR, review loop, merge, task transitions
 alwaysApply: false
 ---
 
-# Task-to-main playbook mode (requestable)
+# Task-to-phase-branch playbook mode (requestable)
 
-When the operator is driving **one** execution task (**`T###`**) from work-in-progress to **merged `main`** (feature branch, PR, review, merge, task-engine **`complete`**):
+When the operator is driving **one** execution task (**`T###`**) from work-in-progress to **merged `release/phase-<N>`** (task branch from phase branch, PR, review, merge, task-engine **`complete`**):
 
-1. Open and follow **`docs/maintainers/playbooks/task-to-main.md`** (playbook id `task-to-main`). Prefer attaching that file (`@`) so numbered steps stay in context.
+1. Open and follow **`docs/maintainers/playbooks/task-to-phase-branch.md`** (playbook id `task-to-phase-branch`). Prefer attaching that file (`@`) so numbered steps stay in context.
 2. Stay aligned with **`.cursor/rules/maintainer-delivery-loop.mdc`** (canonical task → PR loop); the playbook **orders** the same expectations for a single task.
 3. Use **`docs/maintainers/AGENT-CLI-MAP.md`** for every **`workspace-kit run run-transition`** line; JSON **`policyApproval`** in the **third** argument per **`docs/maintainers/POLICY-APPROVAL.md`**.
 

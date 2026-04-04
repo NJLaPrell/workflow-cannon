@@ -32,9 +32,9 @@ When the workspace root is not a kit source checkout, instruction paths still re
 - If work is application/source edits only, use normal code workflow; optional Tier C reads (`list-tasks`, `get-next-actions`) are safe discovery helpers.
 - For `workspace-kit run` sensitive operations, pass JSON `policyApproval`; for top-level `workspace-kit config|init|upgrade`, use env `WORKSPACE_KIT_POLICY_APPROVAL`.
 
-## Maintainer playbook: one task to `main`
+## Maintainer playbook: one task to the phase integration branch
 
-When delivering **one** **`T###`** via GitHub PR to **`main`**, use the ordered playbook **`docs/maintainers/playbooks/task-to-main.md`** (id `task-to-main`): branch from updated **`main`**, implement, open PR, review (and iterate with PR comments until checks pass), merge, then **`run-transition`** with **`complete`** and evidence. Pairs with **`.cursor/rules/maintainer-delivery-loop.mdc`**; optional requestable **`.cursor/rules/playbook-task-to-main.mdc`**. Human summary: **`docs/maintainers/AGENTS.md`** → **Task execution**.
+When delivering **one** **`T###`** via GitHub PR **into `release/phase-<N>`** (not **`main`**), use the ordered playbook **`docs/maintainers/playbooks/task-to-phase-branch.md`** (id `task-to-phase-branch`): ensure the phase branch exists (from **`main`** when starting a phase), branch the task from **`release/phase-<N>`**, implement, open PR with **base = phase branch**, review (and iterate with PR comments until checks pass), merge into the phase branch, then **`run-transition`** with **`complete`** and evidence. Pairs with **`.cursor/rules/maintainer-delivery-loop.mdc`** and **`.cursor/rules/branching-tagging-strategy.mdc`**; optional requestable **`.cursor/rules/playbook-task-to-phase-branch.mdc`**. Phase → **`main`** happens at closeout per **`docs/maintainers/playbooks/phase-closeout-and-release.md`**. Human summary: **`docs/maintainers/AGENTS.md`** → **Task execution**.
 
 ## Maintainer playbook: improvement discovery
 

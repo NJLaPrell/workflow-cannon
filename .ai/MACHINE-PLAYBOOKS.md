@@ -2,14 +2,20 @@
 
 Full checklists with links live under `docs/maintainers/playbooks/` for **maintainers**. Agents follow the compressed expectations below; attach requestable Cursor rules when the editor supports it.
 
-## Single task → `main` (delivery loop)
+## Single task → phase integration branch (delivery loop)
 
-1. Pull latest `main`, create a feature branch.
+1. Ensure **`release/phase-<N>`** exists (from `main` if new phase); branch a **task branch** from that line.
 2. Implement with commits; run `pnpm run check` / `pnpm run test` as appropriate.
-3. Open PR, iterate review, merge via GitHub.
+3. Open **PR targeting `release/phase-<N>`** (not `main`); iterate review; merge into the phase branch.
 4. Run Tier A `run-transition` **`start`** / **`complete`** with JSON **`policyApproval`** so task-engine state matches merged work.
 
-Optional Cursor rule: `.cursor/rules/playbook-task-to-main.mdc`. Maintainer detail: human playbook `docs/maintainers/playbooks/task-to-main.md` (reference only for humans).
+Optional Cursor rule: `.cursor/rules/playbook-task-to-phase-branch.mdc`. Maintainer detail: human playbook `docs/maintainers/playbooks/task-to-phase-branch.md` (reference only for humans).
+
+## Phase closeout → `main` + release
+
+When the phase is done: validate and fix on **`release/phase-<N>`**, obtain human approval, **merge phase branch to `main`**, then follow `docs/maintainers/RELEASING.md` on the **`main`** tip.
+
+Human playbook: `docs/maintainers/playbooks/phase-closeout-and-release.md`.
 
 ## Improvement discovery (research → log)
 

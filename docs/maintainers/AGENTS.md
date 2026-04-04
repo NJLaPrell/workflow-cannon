@@ -52,7 +52,7 @@ Files under **`tasks/*.md`** are **optional prompt-only** workflows. They **do n
 | Playbook id | Path | Use when |
 | --- | --- | --- |
 | `phase-closeout-and-release` | [`playbooks/phase-closeout-and-release.md`](./playbooks/phase-closeout-and-release.md) | Closing a phase and cutting a release (queue, delivery loop, human publish gate, RELEASING evidence) |
-| `task-to-main` | [`playbooks/task-to-main.md`](./playbooks/task-to-main.md) | Single task: pull `main`, feature branch, PR, review/fix loop, merge, `run-transition` complete |
+| `task-to-phase-branch` | [`playbooks/task-to-phase-branch.md`](./playbooks/task-to-phase-branch.md) | Single task: `release/phase-<N>` integration branch, task branch, PR into phase branch, merge, `run-transition` complete |
 | `improvement-task-discovery` | [`playbooks/improvement-task-discovery.md`](./playbooks/improvement-task-discovery.md) | Research and log improvements: transcripts, docs drift, architecture, policy/CLI UX, release friction |
 | `improvement-triage-top-three` | [`playbooks/improvement-triage-top-three.md`](./playbooks/improvement-triage-top-three.md) | Triage **`improvement`** tasks: rubric, pick ≤3, **`accept`** to **`ready`**, verify queue |
 | `wishlist-intake-to-execution` | [`playbooks/wishlist-intake-to-execution.md`](./playbooks/wishlist-intake-to-execution.md) | Wishlist ideation → execution: rank intake, **`convert-wishlist`**, phase bucket, planning tokens |
@@ -62,7 +62,7 @@ How to attach playbooks in an editor session and limits of auto-loading: [`runbo
 Optional requestable Cursor rules:
 
 - Phase closeout + release: `.cursor/rules/playbook-phase-closeout.mdc`
-- Single **`T###`** to **`main`** (branch, PR, review loop, merge, transitions): `.cursor/rules/playbook-task-to-main.mdc`
+- Single **`T###`** into **`release/phase-<N>`** (branch, PR, review loop, merge, transitions): `.cursor/rules/playbook-task-to-phase-branch.mdc`
 - **Improvement** research and logging (transcripts, docs, architecture, ops): `.cursor/rules/playbook-improvement-task-discovery.mdc`
 - **Improvement** triage (≤3 **`proposed`** → **`ready`**): `.cursor/rules/playbook-improvement-triage-top-three.mdc`
 - **Wishlist** intake → execution (**`convert-wishlist`** workflow): `.cursor/rules/playbook-wishlist-intake-to-execution.mdc`
@@ -148,7 +148,7 @@ Optional **interaction posture** (how to collaborate in chat) via the **`agent-b
 
 ## Task execution
 
-- **Single task → `main` (maintainer delivery):** When you are implementing **one** execution task (**`T###`**) through a feature branch, pull request, review, and merge to **`main`**, **follow the ordered playbook** [`playbooks/task-to-main.md`](./playbooks/task-to-main.md) — attach it (`@`) or enable **`.cursor/rules/playbook-task-to-main.mdc`**. It sequences pull/branch, commits, PR, review/fix iterations, merge, and Tier A **`run-transition`** (`start` / `complete`) with **`policyApproval`**. Same expectations as **`.cursor/rules/maintainer-delivery-loop.mdc`**, step-by-step for one task.
+- **Single task → phase branch (maintainer delivery):** When you are implementing **one** execution task (**`T###`**) through a task branch from **`release/phase-<N>`**, pull request **into that phase branch**, review, and merge, **follow the ordered playbook** [`playbooks/task-to-phase-branch.md`](./playbooks/task-to-phase-branch.md) — attach it (`@`) or enable **`.cursor/rules/playbook-task-to-phase-branch.mdc`**. It sequences phase-branch hygiene, task branch, commits, PR, review/fix iterations, merge into **`release/phase-<N>`**, and Tier A **`run-transition`** (`start` / `complete`) with **`policyApproval`**. Same expectations as **`.cursor/rules/maintainer-delivery-loop.mdc`**, step-by-step for one task. **Merging the phase branch to `main`** is **phase closeout** ([`playbooks/phase-closeout-and-release.md`](./playbooks/phase-closeout-and-release.md)), not this playbook.
 - Execute tasks in dependency order from task-engine state (`workspace-kit run list-tasks` / `get-next-actions`).
 - Optional session opener: run `workspace-kit run get-next-actions '{}'`, then fetch the chosen task with `workspace-kit run get-task '{"taskId":"Txxx"}'` before implementation.
 - Treat each task's `Approach`, `Technical scope`, and `Acceptance criteria` as binding implementation guidance.

@@ -1,5 +1,5 @@
 {
-  "id": "pilot-task-to-main",
+  "id": "pilot-task-to-phase-branch",
   "description": "Read-only smoke: doctor + bare run discovery (no task mutations).",
   "steps": [
     {

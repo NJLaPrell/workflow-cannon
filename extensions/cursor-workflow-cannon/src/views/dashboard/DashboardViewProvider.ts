@@ -6,7 +6,7 @@ import { ingestPlanningMetaFromData } from "../../planning-generation-cache.js";
 import { buildWishlistIntakeAgentPrompt } from "../../wishlist-chat-prompt.js";
 import {
   buildImprovementTriagePrompt,
-  buildTaskToMainPrompt
+  buildTaskToPhaseBranchPrompt
 } from "../../playbook-chat-prompts.js";
 import { confirmAndRunTransition } from "../../run-transition-with-approval.js";
 import { escapeHtml, renderDashboardRootInnerHtml } from "./render-dashboard.js";
@@ -79,10 +79,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         );
         await prefillCursorChat(prompt);
       }
-      if (msg?.type === "prefillTaskToMainChat") {
+      if (msg?.type === "prefillTaskToPhaseBranchChat") {
         const raw = msg?.taskId;
         const taskId = typeof raw === "string" ? raw.trim() : "";
-        const prompt = buildTaskToMainPrompt(taskId.length > 0 ? { taskId } : undefined);
+        const prompt = buildTaskToPhaseBranchPrompt(taskId.length > 0 ? { taskId } : undefined);
         await prefillCursorChat(prompt);
       }
       if (msg?.type === "dashboardTransition") {
@@ -151,7 +151,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       `script-src ${webview.cspSource} 'unsafe-inline'`
     ].join("; ");
 
-    const bootstrap = `(function(){var vscode=acquireVsCodeApi();var btn=document.getElementById("btn");var validate=document.getElementById("validate");var tasks=document.getElementById("tasks");var config=document.getElementById("config");var root=document.getElementById("root");if(!btn||!validate||!tasks||!config)return;btn.addEventListener("click",function(){vscode.postMessage({type:"refresh"});});validate.addEventListener("click",function(){vscode.postMessage({type:"validateConfig"});});tasks.addEventListener("click",function(){vscode.postMessage({type:"openTasks"});});config.addEventListener("click",function(){vscode.postMessage({type:"openConfig"});});if(root)root.addEventListener("click",function(ev){var t=ev.target;if(!t||t.tagName!=="BUTTON")return;var act=t.getAttribute("data-wc-action");if(!act)return;if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="proposed-imp-chat"){vscode.postMessage({type:"prefillImprovementTriageChat",taskId:tid});return;}if(act==="proposed-exe-chat"){vscode.postMessage({type:"prefillTaskToMainChat",taskId:tid});return;}});})();`;
+    const bootstrap = `(function(){var vscode=acquireVsCodeApi();var btn=document.getElementById("btn");var validate=document.getElementById("validate");var tasks=document.getElementById("tasks");var config=document.getElementById("config");var root=document.getElementById("root");if(!btn||!validate||!tasks||!config)return;btn.addEventListener("click",function(){vscode.postMessage({type:"refresh"});});validate.addEventListener("click",function(){vscode.postMessage({type:"validateConfig"});});tasks.addEventListener("click",function(){vscode.postMessage({type:"openTasks"});});config.addEventListener("click",function(){vscode.postMessage({type:"openConfig"});});if(root)root.addEventListener("click",function(ev){var t=ev.target;if(!t||t.tagName!=="BUTTON")return;var act=t.getAttribute("data-wc-action");if(!act)return;if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="proposed-imp-chat"){vscode.postMessage({type:"prefillImprovementTriageChat",taskId:tid});return;}if(act==="proposed-exe-chat"){vscode.postMessage({type:"prefillTaskToPhaseBranchChat",taskId:tid});return;}});})();`;
 
     return `<!DOCTYPE html>
 <html lang="en">

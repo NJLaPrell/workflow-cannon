@@ -9,7 +9,7 @@ import { ConfigViewProvider } from "./views/config/ConfigViewProvider.js";
 import { prefillCursorChat } from "./cursor-chat-prefill.js";
 import { buildTaskDetailMarkdown } from "./task-detail-markdown.js";
 import { buildWishlistIntakeAgentPrompt } from "./wishlist-chat-prompt.js";
-import { buildImprovementTriagePrompt, buildTaskToMainPrompt } from "./playbook-chat-prompts.js";
+import { buildImprovementTriagePrompt, buildTaskToPhaseBranchPrompt } from "./playbook-chat-prompts.js";
 import { confirmAndRunTransition } from "./run-transition-with-approval.js";
 import type { WkNode } from "./views/tasks/build-task-tree.js";
 
@@ -278,9 +278,9 @@ export function activate(context: vscode.ExtensionContext): void {
       const prompt = buildImprovementTriagePrompt(id.length > 0 ? { taskId: id } : undefined);
       await prefillCursorChat(prompt);
     }),
-    vscode.commands.registerCommand("workflowCannon.chat.prefillTaskToMain", async (taskId?: string) => {
+    vscode.commands.registerCommand("workflowCannon.chat.prefillTaskToPhaseBranch", async (taskId?: string) => {
       const id = typeof taskId === "string" ? taskId.trim() : "";
-      const prompt = buildTaskToMainPrompt(id.length > 0 ? { taskId: id } : undefined);
+      const prompt = buildTaskToPhaseBranchPrompt(id.length > 0 ? { taskId: id } : undefined);
       await prefillCursorChat(prompt);
     }),
     vscode.commands.registerCommand("workflowCannon.wishlist.prefillIntakeChatFromTree", async (node: WkNode) => {
