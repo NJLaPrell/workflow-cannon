@@ -38,7 +38,7 @@ export function runGetKitPersistenceMap(ctx: ModuleLifecycleContext): ModuleComm
       },
       workspaceModuleState: {
         table: "workspace_module_state",
-        knownModuleIds: ["task-engine", "improvement", "agent-behavior"]
+        knownModuleIds: ["task-engine", "improvement", "agent-behavior", "team-execution"]
       },
       legacySidecarJsonFiles: {
         improvement: ".workspace-kit/improvement/state.json",
@@ -49,6 +49,11 @@ export function runGetKitPersistenceMap(ctx: ModuleLifecycleContext): ModuleComm
         minKitSqliteUserVersion: 6,
         tables: ["kit_subagent_definitions", "kit_subagent_sessions", "kit_subagent_messages"],
         note: "Definitions + session/message audit for delegated agent work; host (e.g. Cursor) executes; kit persists provenance. See docs/maintainers/ADR-subagent-registry-v1.md."
+      },
+      teamExecution: {
+        minKitSqliteUserVersion: 7,
+        tables: ["kit_team_assignments"],
+        note: "Supervisor/worker assignment + handoff persistence; host runs agents; kit does not spawn workers. See docs/maintainers/ADR-team-execution-v1.md."
       }
     } as Record<string, unknown>
   };

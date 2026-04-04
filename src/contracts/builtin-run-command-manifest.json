@@ -583,6 +583,59 @@
     "policySensitivity": "sensitive"
   },
   {
+    "moduleId": "team-execution",
+    "name": "list-assignments",
+    "file": "list-assignments.md",
+    "description": "List team assignments in kit SQLite (user_version 7+) with optional filters.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "team-execution",
+    "name": "register-assignment",
+    "file": "register-assignment.md",
+    "description": "Create a supervisor/worker assignment row linked to an execution task id.",
+    "policyOperationId": "team-execution.persist",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "team-execution",
+    "name": "submit-assignment-handoff",
+    "file": "submit-assignment-handoff.md",
+    "description": "Worker submits handoff contract v1 (assigned → submitted).",
+    "policyOperationId": "team-execution.persist",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "team-execution",
+    "name": "block-assignment",
+    "file": "block-assignment.md",
+    "description": "Supervisor blocks an assignment (assigned or submitted → blocked).",
+    "policyOperationId": "team-execution.persist",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "team-execution",
+    "name": "reconcile-assignment",
+    "file": "reconcile-assignment.md",
+    "description": "Supervisor reconciles submitted handoff (submitted → reconciled).",
+    "policyOperationId": "team-execution.persist",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "team-execution",
+    "name": "cancel-assignment",
+    "file": "cancel-assignment.md",
+    "description": "Supervisor cancels an open assignment.",
+    "policyOperationId": "team-execution.persist",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
     "moduleId": "skills",
     "name": "list-skills",
     "file": "list-skills.md",

@@ -18,3 +18,10 @@
 - **Outcome:** Delegated agent definitions and session/message audit are queryable in kit SQLite; Tier B mutations are policy-gated like other sensitive **`run`** commands.
 - **Exit signals:**
   - **`pnpm run build`**, **`check`**, **`test`**, **`parity`**, **`pre-merge-gates`** on the release tag; maintainer evidence per **`RELEASING.md`**.
+
+### Phase 58 - Team execution v1 -> GitHub release `v0.58.0` (COMPLETE)
+
+- **Primary scope:** **`T665`–`T667`** — ADR + SQLite **`user_version` 7** table **`kit_team_assignments`** + handoff/reconcile contract v1 (**`T665`**); **`team-execution`** module commands + validation + **`AGENT-CLI-MAP`** / policy **`team-execution.persist`** (**`T666`**); supervisor runbook + explicit deferral of **`get-next-actions`** assignment surfacing with documented follow-up (**`T667`**).
+- **Outcome:** Supervisors can register assignments against **`T###`** rows, workers submit structured handoffs, supervisors reconcile or block/cancel; persistence map and doctor surface **`user_version` 7**; team path complements subagent registry without launching remote workers from Node.
+- **Exit signals:**
+  - **`pnpm run build`**, **`check`**, **`test`**, **`parity`**, **`pre-merge-gates`** on the release tag; maintainer evidence per **`RELEASING.md`**.

@@ -9,6 +9,7 @@ import { improvementModule } from "./improvement/index.js";
 import { planningModule } from "./planning/index.js";
 import { skillsModule } from "./skills/index.js";
 import { subagentsModule } from "./subagents/index.js";
+import { teamExecutionModule } from "./team-execution/index.js";
 import { taskEngineModule } from "./task-engine/index.js";
 import { workspaceConfigModule } from "./workspace-config/index.js";
 
@@ -18,6 +19,7 @@ export const defaultRegistryModules: WorkflowModule[] = [
   agentBehaviorModule,
   skillsModule,
   subagentsModule,
+  teamExecutionModule,
   taskEngineModule,
   approvalsModule,
   planningModule,
@@ -43,6 +45,7 @@ export type {
 export { improvementModule, buildImprovementTaskPayload } from "./improvement/index.js";
 export { skillsModule } from "./skills/index.js";
 export { subagentsModule } from "./subagents/index.js";
+export { teamExecutionModule } from "./team-execution/index.js";
 export {
   computeHeuristicConfidence,
   HEURISTIC_1_ADMISSION_THRESHOLD,

@@ -7,8 +7,8 @@
     "The legacy source repository is treated as an external consumer and parity fixture, not as the source of kit implementation."
   ],
   "currentState": [
-    "**Shipped:** latest **`v0.57.0`** (Phase 57 — native subagents v1: SQLite **`user_version` 6**, **`subagents`** module, ADR **`ADR-subagent-registry-v1.md`**). Prior trains through Phase 56 remain in **[`ROADMAP-archive.md`](./ROADMAP-archive.md)**; version facts in **[`CHANGELOG.md`](./CHANGELOG.md)**.",
-    "**Next:** Phase **58** execution queue (**`T665`–`T667`**, team model) — task-engine state + maintainer snapshot; regenerate **`ROADMAP.md`** after **`roadmap-data.json`** edits.",
+    "**Shipped:** latest **`v0.58.0`** (Phase 58 — team execution v1: SQLite **`user_version` 7**, **`team-execution`** module, ADR **`ADR-team-execution-v1.md`**). Phase 57 (**`v0.57.0`**, subagents) and prior trains remain summarized in **[`ROADMAP-archive.md`](./ROADMAP-archive.md)**; version facts in **[`CHANGELOG.md`](./CHANGELOG.md)**.",
+    "**Next:** Phase **59** execution queue (**`T668`–`T670`**, Cursor chat prefill experiment track — maintainer snapshot + task-engine state).",
     "**Maintainer snapshot** — `docs/maintainers/data/workspace-kit-status.yaml` (`current_kit_phase`, `next_agent_actions`).",
     "**Execution queue** — canonical task-engine store (default `.workspace-kit/tasks/workspace-kit.db`; JSON opt-out `.workspace-kit/tasks/state.json`); use `pnpm run wk run list-tasks` / `get-next-actions` rather than inferring phase from prose alone.",
     "**Product / feature inventory** — **`docs/maintainers/FEATURE-MATRIX.md`**.",

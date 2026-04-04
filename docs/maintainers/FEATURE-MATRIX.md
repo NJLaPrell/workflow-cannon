@@ -49,6 +49,7 @@ Status legend:
 | Phase 55 - GitHub-native invocation (`T649`–`T653`) | `v0.55.0` | Completed |
 | Phase 56 - Lifecycle hooks + `.ai` → `docs` pipeline (`T645`–`T648`, `T654`–`T661`) | `v0.56.0` | Completed |
 | Phase 57 - Native subagents v1 (`T662`–`T664`) | `v0.57.0` | Completed |
+| Phase 58 - Team execution v1 (`T665`–`T667`) | `v0.58.0` | Completed |
 
 ## Feature Matrix by Phase
 
@@ -375,6 +376,15 @@ Status legend:
 | **subagents** CLI surface | Read: **`list-subagents`**, **`get-subagent`**, **`list-subagent-sessions`**, **`get-subagent-session`**. Write: **`register-subagent`**, **`retire-subagent`**, **`spawn-subagent`**, **`message-subagent`**, **`close-subagent-session`** (**`subagents.persist`**, Tier B) | Completed | `T663` |
 | Operator canon | ADR **`ADR-subagent-registry-v1.md`**, runbook **`runbooks/subagent-registry.md`**, **`get-kit-persistence-map`** subagent section, **`AGENT-CLI-MAP`** | Completed | `T664` |
 | Execution model | Cursor (or another host) runs delegated agents; kit stores definitions + session/message provenance only | Completed | `T662`–`T664` |
+
+### Phase 58 Team execution v1 (`v0.58.0`)
+
+| Product feature | What users/maintainers get | Status | Task coverage |
+| --- | --- | --- | --- |
+| SQLite assignments + migration | **`PRAGMA user_version` 7** with **`kit_team_assignments`**; handoff + reconcile JSON contracts v1 | Completed | `T665` |
+| **team-execution** CLI surface | Read: **`list-assignments`**. Write: **`register-assignment`**, **`submit-assignment-handoff`**, **`block-assignment`**, **`reconcile-assignment`**, **`cancel-assignment`** (**`team-execution.persist`**, Tier B) | Completed | `T666` |
+| Operator canon | ADR **`ADR-team-execution-v1.md`**, runbook **`runbooks/team-execution-supervisor.md`**, **`get-kit-persistence-map`** **`teamExecution`** section, **`AGENT-CLI-MAP`**; **`get-next-actions`** assignment surfacing deferred with explicit runbook note | Completed | `T667` |
+| Execution model | Supervisors/workers run in the host; kit records assignment lifecycle + evidence only | Completed | `T665`–`T667` |
 
 ## Notes
 

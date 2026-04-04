@@ -4,7 +4,7 @@ import { seedFeatureRegistryIfEmpty } from "./feature-registry-migration.js";
 type SqliteDatabase = InstanceType<typeof Database>;
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 6;
+export const KIT_SQLITE_USER_VERSION = 7;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 
@@ -156,6 +156,31 @@ function migrateV5ToV6(db: SqliteDatabase): void {
   db.exec(SUBAGENT_DDL);
 }
 
+/** Supervisor/worker assignment rows (Phase 58 team execution v1). */
+const TEAM_ASSIGNMENT_DDL = `
+CREATE TABLE IF NOT EXISTS kit_team_assignments (
+  id TEXT PRIMARY KEY NOT NULL,
+  execution_task_id TEXT NOT NULL,
+  supervisor_id TEXT NOT NULL,
+  worker_id TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('assigned','submitted','blocked','reconciled','cancelled')),
+  handoff_json TEXT,
+  reconcile_checkpoint_json TEXT,
+  block_reason TEXT,
+  metadata_json TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_kit_team_assignments_task ON kit_team_assignments(execution_task_id);
+CREATE INDEX IF NOT EXISTS idx_kit_team_assignments_status ON kit_team_assignments(status);
+CREATE INDEX IF NOT EXISTS idx_kit_team_assignments_supervisor ON kit_team_assignments(supervisor_id);
+CREATE INDEX IF NOT EXISTS idx_kit_team_assignments_worker ON kit_team_assignments(worker_id);
+`;
+
+function migrateV6ToV7(db: SqliteDatabase): void {
+  db.exec(TEAM_ASSIGNMENT_DDL);
+}
+
 /**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
@@ -200,6 +225,11 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
   }
   if (current < 6) {
     migrateV5ToV6(db);
+    db.pragma("user_version = 6");
+    current = 6;
+  }
+  if (current < 7) {
+    migrateV6ToV7(db);
     db.pragma(`user_version = ${KIT_SQLITE_USER_VERSION}`);
   }
 }

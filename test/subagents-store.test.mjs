@@ -23,7 +23,7 @@ test("kit sqlite migrates to v6 and subagent DDL is usable", () => {
     prepareKitSqliteDatabase(db);
     const uv = db.pragma("user_version", { simple: true });
     assert.equal(uv, KIT_SQLITE_USER_VERSION);
-    assert.equal(uv, 6);
+    assert.ok(uv >= 6);
     const ok = assertSubagentKitSchema(dbPath);
     assert.equal(ok.ok, true);
     const now = new Date().toISOString();

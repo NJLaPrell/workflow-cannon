@@ -146,7 +146,7 @@ function attachPolicyMeta(
 export const taskEngineModule: WorkflowModule = {
   registration: {
     id: "task-engine",
-    version: "0.18.0",
+    version: "0.19.0",
     contractVersion: "1",
     stateSchema: 1,
     capabilities: ["task-engine"],

@@ -172,6 +172,11 @@ ADR: **`docs/maintainers/ADR-planning-generation-optimistic-concurrency.md`**.
 | Spawn subagent session (record) | `workspace-kit run spawn-subagent '<json>'` | `subagents.persist` | Persists session; host (e.g. Cursor) runs the agent |
 | Append subagent message | `workspace-kit run message-subagent '<json>'` | `subagents.persist` | Append-only handoff log |
 | Close subagent session | `workspace-kit run close-subagent-session '<json>'` | `subagents.persist` | Sets session **`closed`** |
+| Register team assignment | `workspace-kit run register-assignment '<json>'` | `team-execution.persist` | Links **`executionTaskId`** to supervisor/worker ids |
+| Submit assignment handoff | `workspace-kit run submit-assignment-handoff '<json>'` | `team-execution.persist` | Worker handoff contract v1 (**`assigned` → `submitted`**) |
+| Block assignment | `workspace-kit run block-assignment '<json>'` | `team-execution.persist` | Supervisor **`assigned`/`submitted` → `blocked`** |
+| Reconcile assignment | `workspace-kit run reconcile-assignment '<json>'` | `team-execution.persist` | Supervisor **`submitted` → `reconciled`** |
+| Cancel assignment | `workspace-kit run cancel-assignment '<json>'` | `team-execution.persist` | Supervisor terminal cancel |
 | Config-declared extra commands | `workspace-kit run <name> '<json>'` | `policy.dynamic-sensitive` if listed in `policy.extraSensitiveModuleCommands` | Must still pass **`policyApproval`** |
 
 **Copy-paste — document batch (real writes):**
@@ -341,6 +346,7 @@ workspace-kit run explain-behavior-profiles '{"mode":"summarize","profileId":"bu
 workspace-kit run explain-behavior-profiles '{"mode":"compare","profileIds":["builtin:cautious","builtin:experimental"]}'
 workspace-kit run interview-behavior-profile '{"action":"start"}'
 workspace-kit run list-subagents '{}'
+workspace-kit run list-assignments '{}'
 workspace-kit run get-subagent '{"subagentId":"researcher"}'
 workspace-kit run list-subagent-sessions '{}'
 workspace-kit run get-subagent-session '{"sessionId":"sess-20260404-1"}'
@@ -348,6 +354,8 @@ workspace-kit doctor
 ```
 
 **Subagents (read path)** (`list-subagents`, `get-subagent`, `list-subagent-sessions`, `get-subagent-session`) are **Tier C** when the manifest marks them non-sensitive; mutating subagent commands are **Tier B** (`subagents.persist`). See runbook `docs/maintainers/runbooks/subagent-registry.md`.
+
+**Team execution (read path)** (`list-assignments`) is **Tier C**; mutating assignment commands are **Tier B** (`team-execution.persist`). See runbook `docs/maintainers/runbooks/team-execution-supervisor.md`.
 
 **Agent behavior** (`list-behavior-profiles`, `get-behavior-profile`, `resolve-behavior-profile`, `set-active-behavior-profile`, `create-behavior-profile`, `update-behavior-profile`, `delete-behavior-profile`, `diff-behavior-profiles`, `explain-behavior-profiles`, `interview-behavior-profile`) are **Tier C**: advisory interaction posture only; **subordinate** to PRINCIPLES and policy. They persist under `.workspace-kit/agent-behavior/` (JSON) or unified SQLite (`module_id` `agent-behavior`) when `tasks.persistenceBackend` is `sqlite`.
 

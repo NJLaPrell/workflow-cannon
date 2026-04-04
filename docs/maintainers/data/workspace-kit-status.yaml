@@ -1,12 +1,12 @@
 schema_version: 1
-current_kit_phase: "58"
-next_kit_phase: "58"
+current_kit_phase: "59"
+next_kit_phase: "59"
 last_updated: "2026-04-04"
-active_focus: "**Phase 58** (current) — Phase **57** shipped **`v0.57.0`**: native subagents v1 (**`T662`–`T664`**), SQLite **`user_version` 6**, **`subagents`** module + ADR **`ADR-subagent-registry-v1.md`**. **`current_kit_phase` / `next_kit_phase` 58**."
+active_focus: "**Phase 59** (current) — Phase **58** shipped **`v0.58.0`**: team execution v1 (**`T665`–`T667`**), SQLite **`user_version` 7**, **`team-execution`** module + ADR **`ADR-team-execution-v1.md`**. **`current_kit_phase` / `next_kit_phase` 59**."
 blockers: []
 pending_decisions: []
 next_agent_actions:
-  - "**Now:** `pnpm run wk doctor` then `pnpm run wk run get-next-actions '{}'` — Phase **57** **`T662`–`T664`** are **`completed`**; head of queue is Phase **58** (**`T665`–`T667`**) after dependency unblock; snapshot **`current_kit_phase` / `next_kit_phase` 58**."
+  - "**Now:** `pnpm run wk doctor` then `pnpm run wk run get-next-actions '{}'` — Phase **58** **`T665`–`T667`** are **`completed`**; head of queue is Phase **59** (**`T668`–`T670`**, Cursor chat prefill experiment track); snapshot **`current_kit_phase` / `next_kit_phase` 59**."
   - "2026-04-04: Phase **57** **`v0.57.0`** — GitHub release `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.57.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23986626078`."
   - "2026-04-04: Phase **56** **`v0.56.0`** — GitHub release + Publish NPM per **`RELEASING.md`** (paste workflow URL here when available)."
   - "2026-04-03: Phase **55** **`v0.55.0`** — GitHub release `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.55.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23973610279`."
@@ -17,6 +17,7 @@ next_agent_actions:
   - "2026-04-03: Phase **50** **`v0.50.0`** — GitHub release `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.50.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23962170532`."
   - "2026-04-03: Phase **49** **`v0.49.0`** — GitHub release `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.49.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23958564398`."
 last_session_summary:
+  - "2026-04-04: Phase **58** closeout — **`v0.58.0`** — **`T665`–`T667`** **`completed`**: ADR **`ADR-team-execution-v1.md`**, SQLite **`user_version` 7** + **`kit_team_assignments`**, **`team-execution`** module (**`team-execution.persist`**), runbook **`team-execution-supervisor.md`**, **`get-kit-persistence-map`** **`teamExecution`** section, **`task-engine`** **0.19.0**, **`team-execution`** **0.1.0**. **`get-next-actions`** assignment surfacing **deferred** (documented in runbook). **`update-workspace-phase-snapshot`** **`current_kit_phase` 59** / **`next_kit_phase` 59**; **`kit.currentPhaseNumber`** **59**. GitHub release + Publish NPM: maintainer after merge to **`main`** (tag **`v0.58.0`**, workflow **`publish-npm.yml`**)."
   - "2026-04-04: Phase **57** closeout — **`v0.57.0`** — **`T662`–`T664`** **`completed`**: ADR **`ADR-subagent-registry-v1.md`**, SQLite **`user_version` 6** + **`subagents`** module (**`subagents.persist`**), runbook **`subagent-registry.md`**, **`get-kit-persistence-map`** subagent section, **`task-engine`** **0.18.0**, **`subagents`** **0.1.0**. **`update-workspace-phase-snapshot`** **`current_kit_phase` 58** / **`next_kit_phase` 58**; **`kit.currentPhaseNumber`** **58**. GitHub release `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.57.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23986626078`."
   - "2026-04-04: Phase **56** closeout — **`v0.56.0`** — **`T645`–`T648`**, **`T654`–`T661`** **`completed`**: lifecycle hooks (**`ADR-agent-task-lifecycle-hooks-v1.md`**, **`kit.lifecycleHooks.*`**, **`src/core/kit-lifecycle-hooks.ts`**, runbook **`lifecycle-hooks.md`**) + `.ai` → `docs` pipeline (**`ADR-ai-canonical-maintainer-docs-pipeline.md`**, coverage + generator + drift/orphan checks). **`workspace-config`** **0.7.0**, **`task-engine`** **0.17.0**. **`update-workspace-phase-snapshot`** **`current_kit_phase` 57** / **`next_kit_phase` 57**; **`kit.currentPhaseNumber`** **57**. Git tag / GitHub release / Publish NPM: maintainer after merge to **`main`**."
   - "2026-04-03: Phase **55** closeout — **`v0.55.0`** — **`T649`–`T653`** **`completed`**: ADR **`ADR-github-native-invocation.md`**, **`kit.githubInvocation.*`** + validation, **`src/core/github-invocation.ts`**, **`tools/github-invocation/run-github-delivery.mjs`**, runbook **`github-workflow-cannon-invocation.md`**, sample **`docs/examples/github/workflow-cannon-invocation.sample.yml`**; **`workspace-config`** **0.6.0** in **`compatibility-matrix.json`**. **`update-workspace-phase-snapshot`** **`current_kit_phase` 56** / **`next_kit_phase` 56**. GitHub release `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.55.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23973610279`."
@@ -66,7 +67,7 @@ last_session_summary:
 metrics:
   updated_at: "2026-04-03"
   source: "maintainer"
-  notes: "Phase 57 shipped v0.57.0 (T662–T664): subagent registry SQLite v6, subagents module. Phase 58 current (T665–T667 team execution)."
+  notes: "Phase 58 shipped v0.58.0 (T665–T667): team execution SQLite v7, team-execution module. Phase 59 current (T668–T670 Cursor chat prefill experiments)."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null

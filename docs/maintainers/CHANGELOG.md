@@ -10,6 +10,22 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 (nothing yet)
 
+## [0.58.0] - 2026-04-04
+
+Phase 58 — **Team execution v1** (**`T665`–`T667`**): supervisor/worker assignment rows + handoff/reconcile contracts in kit SQLite; CLI + runbook; **`get-next-actions`** integration explicitly deferred.
+
+### Added
+
+- **SQLite `user_version` 7** — Table **`kit_team_assignments`** (migration in **`src/core/state/workspace-kit-sqlite.ts`**).
+- **`team-execution` module** (`0.1.0`) — **`list-assignments`**; mutating: **`register-assignment`**, **`submit-assignment-handoff`**, **`block-assignment`**, **`reconcile-assignment`**, **`cancel-assignment`** (**`team-execution.persist`**).
+- **ADR** — **`docs/maintainers/ADR-team-execution-v1.md`**; runbook **`docs/maintainers/runbooks/team-execution-supervisor.md`**.
+- **`get-kit-persistence-map`** — **`teamExecution`** section + **`workspace_module_state.knownModuleIds`** includes **`team-execution`**.
+
+### Changed
+
+- **Task-engine module** — **`0.19.0`** (persistence map + registry ordering unchanged for consumers except new metadata keys).
+- **Maintainer docs** — **`ARCHITECTURE.md`**, **`AGENT-CLI-MAP.md`**, **`src/modules/README.md`**, **`ADR-subagent-registry-v1.md`** (Phase 58 cross-link).
+
 ## [0.57.0] - 2026-04-04
 
 Phase 57 — **Native subagents v1** (**`T662`–`T664`**): kit-owned definitions + session/message persistence; Cursor remains execution host.

@@ -23,7 +23,7 @@ Operators use **Cursor (and similar) subagents** for delegated work. Workflow Ca
 
 - **Migrations:** Opening the DB with a current `workspace-kit` applies DDL when `user_version < 6`.
 - **Consumers:** Use `get-kit-persistence-map` for table names; use CLI for CRUD and session logs.
-- **Follow-ups:** Tighten validation hooks, supervisor assignment model (Phase 58), and optional enforcement when spawning.
+- **Follow-ups:** Tighten validation hooks; supervisor assignment model ships as **ADR-team-execution-v1.md** (`user_version` 7); optional enforcement when spawning.
 
 ## References
 
