@@ -37,6 +37,7 @@ Use the **filename stem** as the stable id.
 | `wishlist-intake-to-execution` | [`wishlist-intake-to-execution.md`](./wishlist-intake-to-execution.md) | Rank wishlist ideation, confirm timing, clarify scope, pick target phase, run **`convert-wishlist`** with planning-generation hygiene |
 | `skill-attachments` | [`skill-attachments.md`](./skill-attachments.md) | Attach **`metadata.skillIds`** to execution tasks using discovered pack ids |
 | `workspace-kit-chat-onboarding` | [`workspace-kit-chat-onboarding.md`](./workspace-kit-chat-onboarding.md) | Cursor **`/onboarding`**: tavern flow; numbered **Your Role** / **Agent Temperament**; save each step |
+| `workspace-kit-chat-behavior-interview` | [`workspace-kit-chat-behavior-interview.md`](./workspace-kit-chat-behavior-interview.md) | Cursor **`/behavior-interview`**: scribe’s quiz; six questions; **`interview-behavior-profile`** |
 
 ## Discovery
 

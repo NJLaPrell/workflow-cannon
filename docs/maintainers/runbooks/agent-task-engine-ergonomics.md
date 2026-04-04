@@ -17,6 +17,19 @@ Canonical process remains: [`AGENTS.md`](../AGENTS.md), [`AGENT-CLI-MAP.md`](../
 
 **Transcript alignment:** `imp-5ba2f6a0c3bd4a` (`transcript:792c03b277fad3bdfd7fafbc0b5c079174f13b7b`).
 
+## 1b. Incremental task hygiene (stay in sync while working)
+
+**Problem:** Agents often leave tasks **`ready`** until merge, then only run **`complete`**. The queue and dashboards look idle while work is active.
+
+**Expectation:**
+
+- After **`get-task`** / **`list-tasks`**, if you are implementing this task and **`status`** is **`ready`**, run **`workspace-kit run run-transition`** with **`action":"start"`** before substantive edits or the **first implementation commit**. If already **`in_progress`**, continue.
+- Pass **`expectedPlanningGeneration`** from the same JSON read when **`tasks.planningGenerationPolicy`** is **`require`** (see [`ADR-planning-generation-optimistic-concurrency.md`](../ADR-planning-generation-optimistic-concurrency.md)).
+- Between **`start`** and **`complete`**, use **`workspace-kit run update-task`** for **`summary`**, **`description`**, **`approach`**, or **`metadata`** (e.g. PR link, milestone label) — the engine has no **`in_review`** status; mutable fields carry progress signals.
+- If blocked on a human or external dependency, prefer **`run-transition`** **`block`** (then **`unblock`** when clear). To park work back on the queue, **`pause`** returns the task to **`ready`** per [`run-transition` instruction](../../../src/modules/task-engine/instructions/run-transition.md).
+
+**Playbook:** ordered checklist in [`task-to-phase-branch.md`](../playbooks/task-to-phase-branch.md) (step **0b**).
+
 ## 2. Today’s code and task-engine state beat aspirational docs
 
 **Problem:** Roadmaps, chat plans, and old phase labels can describe a *target* architecture that differs from the current tree or default persistence.

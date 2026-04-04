@@ -1,0 +1,15 @@
+---
+description: Optional /behavior-interview — scribe’s quiz; numbered questions; interview-behavior-profile
+alwaysApply: false
+---
+
+# Chat behavior interview (requestable)
+
+Follow **`docs/maintainers/playbooks/workspace-kit-chat-behavior-interview.md`**.
+
+- **Welcome:** **## The scribe’s quiz** + **begin** / **discard**; **`start` resets** — never mid-quiz.
+- **Questions 1–6:** numbered player lists; accept digit or **`value`** word; persist each **`answer`** immediately.
+- **Save:** **apply** (default ids **`custom:chat-behavior-interview`**, …) or **custom:slug** + optional **label:**; **discard** clears without saving.
+- **No** `planningGeneration` on this command today — see playbook **gaps**.
+
+Does not override **`workspace-kit-cli-execution.mdc`**.

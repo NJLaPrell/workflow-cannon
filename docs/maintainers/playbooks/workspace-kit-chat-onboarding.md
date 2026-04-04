@@ -103,10 +103,10 @@ After §3 succeeds:
 
 Do you want the long personality interview?
 
-Reply yes or no. If yes, we’ll use interview-behavior-profile (often easiest from a real terminal). If no, I’ll run a quick queue smoke check and close out onboarding.
+Reply yes or no. If yes, follow **`docs/maintainers/playbooks/workspace-kit-chat-behavior-interview.md`** (slash **`/behavior-interview`**) — same tavern-shaped chat flow as this playbook, with **`interview-behavior-profile`** under the hood. If no, I’ll run a quick queue smoke check and close out onboarding.
 ```
 
-**Wait** for yes/no. **Yes** → `interview-behavior-profile` per module instructions. **No** → §5–6.
+**Wait** for yes/no. **Yes** → [workspace-kit-chat-behavior-interview](./workspace-kit-chat-behavior-interview.md) from **§1** (welcome + **begin**). **No** → §5–6.
 
 ## 5) Smoke
 
@@ -134,6 +134,7 @@ Numbered lists are the **default** presentation for §2 and §3. Offer an unnumb
 
 ## See also
 
+- [`workspace-kit-chat-behavior-interview.md`](./workspace-kit-chat-behavior-interview.md) — long personality interview (**`/behavior-interview`**)
 - [`runbooks/agent-guidance-onboarding.md`](../runbooks/agent-guidance-onboarding.md)
 - [`ADR-agent-guidance-profile-rpg-party-v1.md`](../ADR-agent-guidance-profile-rpg-party-v1.md)
 - `.cursor/commands/onboarding.md`

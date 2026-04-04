@@ -59,6 +59,7 @@ Files under **`tasks/*.md`** are **optional prompt-only** workflows. They **do n
 | `wishlist-intake-to-execution` | [`playbooks/wishlist-intake-to-execution.md`](./playbooks/wishlist-intake-to-execution.md) | Wishlist ideation → execution: rank intake, **`convert-wishlist`**, phase bucket, planning tokens |
 | `skill-attachments` | [`playbooks/skill-attachments.md`](./playbooks/skill-attachments.md) | Attach **`metadata.skillIds`** using ids from **`list-skills`** |
 | `workspace-kit-chat-onboarding` | [`playbooks/workspace-kit-chat-onboarding.md`](./playbooks/workspace-kit-chat-onboarding.md) | Cursor **`/onboarding`**: numbered role & temperament; save each step |
+| `workspace-kit-chat-behavior-interview` | [`playbooks/workspace-kit-chat-behavior-interview.md`](./playbooks/workspace-kit-chat-behavior-interview.md) | Cursor **`/behavior-interview`**: scribe’s quiz; six questions; save each answer |
 
 How to attach playbooks in an editor session and limits of auto-loading: [`runbooks/agent-playbooks.md`](./runbooks/agent-playbooks.md).
 
@@ -70,6 +71,7 @@ Optional requestable Cursor rules:
 - **Improvement** triage (≤3 **`proposed`** → **`ready`**): `.cursor/rules/playbook-improvement-triage-top-three.mdc`
 - **Wishlist** intake → execution (**`convert-wishlist`** workflow): `.cursor/rules/playbook-wishlist-intake-to-execution.mdc`
 - **Chat onboarding** (**`/onboarding`**): `.cursor/rules/playbook-workspace-kit-chat-onboarding.mdc`
+- **Chat behavior interview** (**`/behavior-interview`**): `.cursor/rules/playbook-workspace-kit-chat-behavior-interview.mdc`
 
 ## Long threads and context reload
 

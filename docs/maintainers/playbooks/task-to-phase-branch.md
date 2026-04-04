@@ -16,6 +16,21 @@ This file is an **ordered checklist**. Branch naming lives in **`.cursor/rules/b
 
 - Confirm task **`id`**, **`status`**, and **acceptance criteria** via task-engine reads (`workspace-kit run get-task '{"taskId":"T###"}'`) — do not trust chat-only summaries for lifecycle.
 - For **`workspace-kit run run-transition`**, use JSON **`policyApproval`** on the **third** CLI argument ([`AGENT-CLI-MAP.md`](../AGENT-CLI-MAP.md), [`POLICY-APPROVAL.md`](../POLICY-APPROVAL.md)).
+- When **`tasks.planningGenerationPolicy`** is **`require`**, copy **`planningGeneration`** from that same read (or from **`list-tasks`** / **`get-next-actions`**) into **`expectedPlanningGeneration`** on every mutating task-engine command that accepts it.
+
+## 0b) Move the task to `in_progress` before implementation
+
+**Do not** implement the task or create **task-implementation commits** while the row is still **`ready`**.
+
+- If **`status`** is **`ready`**, run **`start`** as soon as you are actually taking ownership (immediately after step **0** is fine; no later than **before the first commit** in section **3**).
+- If **`status`** is already **`in_progress`**, skip.
+- Optional hygiene: use **`workspace-kit run update-task`** to refresh **`summary`**, **`description`**, or **`metadata`** at milestones (PR opened, CI green, scope change) — lifecycle has no separate “in review” state; **`update-task`** carries that signal.
+
+```bash
+workspace-kit run run-transition '{"taskId":"T###","action":"start","expectedPlanningGeneration":<n>,"policyApproval":{"confirmed":true,"rationale":"begin implementation for task-to-phase-branch playbook"}}'
+```
+
+(Omit **`expectedPlanningGeneration`** when policy is not **`require`**.)
 
 ## 1) Ensure the phase integration branch exists
 
@@ -29,11 +44,7 @@ This file is an **ordered checklist**. Branch naming lives in **`.cursor/rules/b
 1. With **`release/phase-<N>`** up to date, create a **task branch** (not the phase branch): one coherent objective; predictable name (e.g. `feature/T###-short-slug`).
 2. `git switch` / `git checkout` the task branch and do all task work there.
 
-**Task engine (typical):** when you **start** implementation, transition the task to **`in_progress`** if it is still **`ready`**:
-
-```bash
-workspace-kit run run-transition '{"taskId":"T###","action":"start","policyApproval":{"confirmed":true,"rationale":"begin implementation for task-to-phase-branch playbook"}}'
-```
+**Task engine:** If you have **not** yet run **`start`** from step **0b**, run it **now** — before section **3** (first implementation commit).
 
 ## 3) Implement, validate, commit
 
@@ -48,6 +59,7 @@ workspace-kit run run-transition '{"taskId":"T###","action":"start","policyAppro
 1. `git push` the task branch to `origin` (set upstream if first push).
 2. Open a **PR targeting `release/phase-<N>`** (base = phase branch, compare = task branch — GitHub UI or `gh pr create --base release/phase-<N>`).
 3. PR body should cover **why**, **risk**, validation / evidence, and migration or compatibility if relevant (see maintainer-delivery-loop **PR review / merge** section).
+4. Optional: **`update-task`** with PR URL or a short status line in **`summary`** / **`metadata`** so the queue reflects reality between **`start`** and **`complete`**.
 
 ## 5) Review the PR
 

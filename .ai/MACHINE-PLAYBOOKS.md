@@ -5,9 +5,10 @@ Full checklists with links live under `docs/maintainers/playbooks/` for **mainta
 ## Single task → phase integration branch (delivery loop)
 
 1. Ensure **`release/phase-<N>`** exists (from `main` if new phase); branch a **task branch** from that line.
-2. Implement with commits; run `pnpm run check` / `pnpm run test` as appropriate.
-3. Open **PR targeting `release/phase-<N>`** (not `main`); iterate review; merge into the phase branch.
-4. Run Tier A `run-transition` **`start`** / **`complete`** with JSON **`policyApproval`** so task-engine state matches merged work.
+2. **Before the first implementation commit:** Tier A `run-transition` **`start`** (JSON **`policyApproval`**) if the task is still **`ready`**; pass **`expectedPlanningGeneration`** when policy **`require`**. Staying **`ready`** while coding is wrong — see playbook step **0b**.
+3. Implement with commits; run `pnpm run check` / `pnpm run test` as appropriate. Optional: Tier C **`update-task`** on **`summary`** / **`metadata`** at milestones (PR opened, CI green).
+4. Open **PR targeting `release/phase-<N>`** (not `main`); iterate review; merge into the phase branch.
+5. After merge: Tier A **`complete`** with JSON **`policyApproval`** so the store matches shipped work.
 
 Optional Cursor rule: `.cursor/rules/playbook-task-to-phase-branch.mdc`. Maintainer detail: human playbook `docs/maintainers/playbooks/task-to-phase-branch.md` (reference only for humans).
 
@@ -48,6 +49,14 @@ Numbered **Your Role** / **Agent Temperament**; persist after each answer; **`ge
 Human playbook: `docs/maintainers/playbooks/workspace-kit-chat-onboarding.md`.
 
 Optional Cursor rule: `.cursor/rules/playbook-workspace-kit-chat-onboarding.mdc`.
+
+## Chat behavior interview (`/behavior-interview`)
+
+Six numbered scribe questions; persist each **`interview-behavior-profile`** answer; **`start` resets** — see playbook **gaps** for resume.
+
+Human playbook: `docs/maintainers/playbooks/workspace-kit-chat-behavior-interview.md`.
+
+Optional Cursor rule: `.cursor/rules/playbook-workspace-kit-chat-behavior-interview.mdc`.
 
 ### Confidence tiers (improvement inbox)
 

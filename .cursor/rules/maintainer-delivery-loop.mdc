@@ -10,6 +10,7 @@ Full numbered loop (branch → implement → validate → PR → merge → **`ru
 ## Non-negotiables
 
 - **Git + GitHub** own branch, PR, review, merge. **`workspace-kit`** owns task lifecycle and evidence in the configured task store (default SQLite under **`.workspace-kit/tasks/`**). Do not treat merged PRs as task **`complete`** without the matching Tier A **`run-transition`** when the task is in scope.
+- **`start` early:** When delivering a **`T###`**, run Tier A **`run-transition`** with **`action":"start"`** as soon as you take ownership — **no later than before the first implementation commit** on the task branch. Do not leave the task **`ready`** while coding. Use **`update-task`** (e.g. **`summary`**, **`metadata`**) at milestones if helpful; there is no separate “PR open” **status**.
 - **Blocked?** Record the blocker in task-engine state first; the SQLite/JSON task store is authoritative over chat.
 
 Optional requestable rule: **`.cursor/rules/playbook-task-to-phase-branch.mdc`**.
