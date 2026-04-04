@@ -39,6 +39,7 @@ The table below is generated from the **planning SQLite feature registry** when 
 | CLI, modules & agent surfaces | `instructions` | Instructions & machine operability | instructions/*.md, JSON shapes, agent-first flows |
 | CLI, modules & agent surfaces | `module-platform` | Command router & module platform | Enable/disable, dispatch, startup contracts |
 | CLI, modules & agent surfaces | `response-templates` | Response templates | Registry, advisory enforcement, result shaping |
+| CLI, modules & agent surfaces | `subagent-registry` | Subagent registry (kit persistence) | Definitions, sessions, messages in SQLite v6; subagents.* run commands; host executes delegated agents |
 | Docs, playbooks & maintainer UX | `doc-generation` | Documentation generation | document-project, template validation, .ai pairing |
 | Docs, playbooks & maintainer UX | `playbooks` | Playbooks, runbooks, TERMS | Direction sets, ops procedures, glossary alignment |
 | Extension & human visibility | `cursor-extension` | Cursor extension & dashboard | Tasks UI, DnD, dashboard-summary, human-visible store fields |
@@ -47,4 +48,4 @@ The table below is generated from the **planning SQLite feature registry** when 
 | Release, quality & consumers | `doctor-diagnostics` | Doctor & diagnostics | wk doctor, persistence map, phase snapshot alignment |
 | Release, quality & consumers | `release-versioning` | Release & versioning | Tags, changelog, phase closeout evidence |
 
-**Count:** 9 categories, 30 features.
+**Count:** 9 categories, 31 features.

@@ -48,6 +48,7 @@ Status legend:
 | Phase 54 - Skill packs v1 (`T640`–`T644`) | `v0.54.0` | Completed |
 | Phase 55 - GitHub-native invocation (`T649`–`T653`) | `v0.55.0` | Completed |
 | Phase 56 - Lifecycle hooks + `.ai` → `docs` pipeline (`T645`–`T648`, `T654`–`T661`) | `v0.56.0` | Completed |
+| Phase 57 - Native subagents v1 (`T662`–`T664`) | `v0.57.0` | Completed |
 
 ## Feature Matrix by Phase
 
@@ -365,6 +366,15 @@ Status legend:
 | Dispatch + enforce | Node/shell handlers; **observe** vs **enforce**; transition + **`run`** + persist events | Completed | `T647` |
 | PR stubs + catalog | Reserved PR mutation events; runbook **`lifecycle-hooks.md`**; performance/ordering guidance | Completed | `T648` |
 | `.ai` → `docs` gate | Coverage map + exceptions; **`generate-maintainer-docs-from-ai`**; drift + orphan **`pnpm run check`** stages | Completed | `T654`–`T661` |
+
+### Phase 57 Native subagents v1 (`v0.57.0`)
+
+| Product feature | What users/maintainers get | Status | Task coverage |
+| --- | --- | --- | --- |
+| SQLite registry + migration | **`PRAGMA user_version` 6** with **`kit_subagent_definitions`**, **`kit_subagent_sessions`**, **`kit_subagent_messages`**; fresh + upgrade paths | Completed | `T662` |
+| **subagents** CLI surface | Read: **`list-subagents`**, **`get-subagent`**, **`list-subagent-sessions`**, **`get-subagent-session`**. Write: **`register-subagent`**, **`retire-subagent`**, **`spawn-subagent`**, **`message-subagent`**, **`close-subagent-session`** (**`subagents.persist`**, Tier B) | Completed | `T663` |
+| Operator canon | ADR **`ADR-subagent-registry-v1.md`**, runbook **`runbooks/subagent-registry.md`**, **`get-kit-persistence-map`** subagent section, **`AGENT-CLI-MAP`** | Completed | `T664` |
+| Execution model | Cursor (or another host) runs delegated agents; kit stores definitions + session/message provenance only | Completed | `T662`–`T664` |
 
 ## Notes
 
