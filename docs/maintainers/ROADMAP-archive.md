@@ -4,6 +4,7 @@
 
 ## Recent archived “current state” bullets (post phase 35)
 
+- **Phase 52 (Agent/human CLI ergonomics)** is **COMPLETE and released** as **`v0.52.0`**: **`T624`–`T629`** — **`remediation`** field on **`workspace-kit run`** failures; **`errorRemediationCatalog`** on **`doctor --agent-instruction-surface`**; **`run <pilot-cmd> --schema-only`**; maintainer docs + extension README; task-engine module **0.14.1** in compatibility matrix.
 - **Phase 41 (Relational SQLite task store)** is **COMPLETE and released** as **`v0.41.0`**: **`T540`–`T545`** — ADR **`ADR-relational-sqlite-task-store.md`**, table **`task_engine_tasks`** + envelope columns + **`PRAGMA user_version` 2**, **`SqliteDualPlanningStore`** row persistence, **`migrate-task-persistence`** **`sqlite-blob-to-relational`**, doctor/runbooks/**`get-kit-persistence-map`**, planning consistency script + tests; **`TaskEntity`** **`summary`/`description`/`risk`**; task-engine module **0.7.0** in compatibility matrix.
 - **Phase 42 (Maintainer workspace phase snapshot)** is **COMPLETE and released** as **`v0.42.0`**: **`T546`**, **`T547`** — **`update-workspace-phase-snapshot`** for **`docs/maintainers/data/workspace-kit-status.yaml`** phase fields; **`doctor`** remediation; maintainer **`AGENTS.md`** / **`.ai/WORKSPACE-KIT-SESSION.md`** / phase-closeout playbook; task-engine module **0.8.0** in compatibility matrix.
 
@@ -52,6 +53,13 @@
 ## Archived phase plan sections (completed phases)
 
 These **`### Phase …`** blocks were moved out of **`src/modules/documentation/data/roadmap-phase-sections.md`** so **[`ROADMAP.md`](./ROADMAP.md)** lists only **planned** and **in-flight** phase detail. Shipped scope/outcomes remain provenance here; release facts stay in **[`CHANGELOG.md`](./CHANGELOG.md)**.
+
+### Phase 52 - Agent/human CLI ergonomics -> GitHub release `v0.52.0` (COMPLETE)
+
+- **Primary scope:** **`T624`–`T629`** — ADR **`ADR-cli-error-remediation-contract.md`**; additive **`remediation`** on structured **`workspace-kit run`** failures; **`doctor --agent-instruction-surface`** **`errorRemediationCatalog`**; pilot **`run <cmd> --schema-only`** for JSON Schema + **`sampleArgs`**; **`AGENT-CLI-MAP`** / **`CLI-VISUAL-GUIDE`** / extension **`README`** cross-links; planning-consistency script fix for archived Phase 4 evidence lines.
+- **Outcome:** Agents get machine-actionable paths on common failures; humans can copy pilot JSON shapes without spelunking AJV errors first.
+- **Exit signals:**
+  - **`pnpm run build`**, **`check`**, **`test`**, **`parity`**, **`pre-merge-gates`** on the release tag; maintainer evidence per **`RELEASING.md`**.
 
 ### Phase 51 - Task-engine internal layout -> GitHub release `v0.51.0` (COMPLETE)
 

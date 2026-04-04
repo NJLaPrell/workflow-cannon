@@ -117,7 +117,10 @@ export class ModuleCommandRouter {
       return {
         ok: false,
         code: "peer-module-disabled",
-        message: `Command '${commandName}' is not executable (${detail}). Enable required modules or follow the instruction markdown for manual guidance. Instruction: ${indexed.descriptor.instructionFile}`
+        message: `Command '${commandName}' is not executable (${detail}). Enable required modules or follow the instruction markdown for manual guidance. Instruction: ${indexed.descriptor.instructionFile}`,
+        remediation: {
+          instructionPath: indexed.descriptor.instructionFile.replace(/\\/g, "/")
+        }
       };
     }
 

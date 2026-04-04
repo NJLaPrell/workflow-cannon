@@ -147,6 +147,7 @@ async function printWorkspaceKitTopLevelHelp(writeLine: (message: string) => voi
   writeLine("  doctor          Validate kit contract files, config, and persistence checks");
   writeLine("  doctor --agent-instruction-surface   JSON catalog of all declared instructions");
   writeLine("  run <cmd> [json]  Run a module command; omit <cmd> to list runnable commands");
+  writeLine("  run <cmd> --schema-only   Pilot: print JSON Schema + sample args (run-transition, create-task, update-task, dashboard-summary)");
   writeLine("  config          Show or change kit config (mutations need env approval — see below)");
   writeLine("  check           Validate workspace-kit.profile.json");
   writeLine("  init            Regenerate profile-driven artifacts (needs env approval)");

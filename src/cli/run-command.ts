@@ -1,4 +1,5 @@
-import { ModuleCommandRouter } from "../core/module-command-router.js";
+import { CLI_REMEDIATION_DOCS } from "../core/cli-remediation.js";
+import { ModuleCommandRouter, ModuleCommandRouterError } from "../core/module-command-router.js";
 import { resolveRegistryAndConfig } from "../core/module-registry-resolve.js";
 import {
   appendPolicyTrace,
@@ -15,7 +16,10 @@ import {
 } from "../core/policy.js";
 import { getSessionGrant, recordSessionGrant, resolveSessionId } from "../core/session-policy.js";
 import { applyResponseTemplateApplication } from "../core/response-template-shaping.js";
-import { validatePilotRunCommandArgs } from "../core/run-args-pilot-validation.js";
+import {
+  buildRunArgsSchemaOnlyPayload,
+  validatePilotRunCommandArgs
+} from "../core/run-args-pilot-validation.js";
 import { defaultRegistryModules } from "../modules/index.js";
 import { promptSensitiveRunApproval } from "./interactive-policy.js";
 
@@ -42,6 +46,29 @@ export async function handleRunCommand(
   const { writeLine, writeError } = io;
 
   const subcommand = args[1];
+  const schemaOnlyFlag =
+    typeof args[2] === "string" && (args[2] === "--schema-only" || args[2] === "-S");
+
+  if (subcommand && schemaOnlyFlag) {
+    const payload = buildRunArgsSchemaOnlyPayload(subcommand);
+    if (!payload) {
+      writeLine(
+        JSON.stringify(
+          {
+            ok: false,
+            code: "schema-only-unsupported",
+            message: `No bundled JSON schema sample for '${subcommand}'. Pilot commands: run-transition, create-task, update-task, dashboard-summary.`,
+            remediation: { docPath: "docs/maintainers/ADR-runtime-run-args-validation-pilot.md" }
+          },
+          null,
+          2
+        )
+      );
+      return codes.validationFailure;
+    }
+    writeLine(JSON.stringify(payload, null, 2));
+    return codes.success;
+  }
 
   let commandArgs: Record<string, unknown> = {};
   if (subcommand && args[2]) {
@@ -98,6 +125,9 @@ export async function handleRunCommand(
     writeLine("");
     writeLine(`Usage: workspace-kit run <command> [json-args]`);
     writeLine(
+      `Pilot commands: workspace-kit run <command> --schema-only  (emits JSON Schema + sample args for run-transition, create-task, update-task, dashboard-summary).`
+    );
+    writeLine(
       `Instruction files: src/modules/<module>/instructions/<command>.md — sensitive runs need JSON policyApproval (not env WORKSPACE_KIT_POLICY_APPROVAL); see ${POLICY_APPROVAL_TWO_LANES_DOC}.`
     );
     writeLine(`Agent-oriented tier table + copy-paste patterns: ${AGENT_CLI_MAP_HUMAN_DOC}.`);
@@ -143,6 +173,7 @@ export async function handleRunCommand(
               code: "policy-denied",
               operationId: policyOp,
               remediationDoc: POLICY_APPROVAL_HUMAN_DOC,
+              remediation: { docPath: CLI_REMEDIATION_DOCS.policyApproval },
               message: "Sensitive command denied at interactive policy prompt.",
               hint: `Set WORKSPACE_KIT_INTERACTIVE_APPROVAL=off or pass policyApproval in JSON. See ${POLICY_APPROVAL_TWO_LANES_DOC}.`
             },
@@ -189,6 +220,7 @@ export async function handleRunCommand(
             code: "policy-denied",
             operationId: policyOp ?? null,
             remediationDoc: POLICY_APPROVAL_HUMAN_DOC,
+            remediation: { docPath: CLI_REMEDIATION_DOCS.policyApproval },
             message: wrongEnvLane
               ? `Sensitive run denied: ${POLICY_RUN_ENV_LANE_MISMATCH_DETAIL} See ${POLICY_APPROVAL_TWO_LANES_DOC}.`
               : hasPolicyApprovalField
@@ -249,6 +281,27 @@ export async function handleRunCommand(
     writeLine(JSON.stringify(result, null, 2));
     return result.ok ? codes.success : codes.validationFailure;
   } catch (error) {
+    if (error instanceof ModuleCommandRouterError) {
+      writeLine(
+        JSON.stringify(
+          {
+            ok: false,
+            code: error.code,
+            message: error.message,
+            remediation:
+              error.code === "unknown-command"
+                ? {
+                    docPath: CLI_REMEDIATION_DOCS.agentCliMap,
+                    docAnchors: ["doctor --agent-instruction-surface", "workspace-kit run (no subcommand lists commands)"]
+                  }
+                : { docPath: CLI_REMEDIATION_DOCS.agentCliMap }
+          },
+          null,
+          2
+        )
+      );
+      return codes.validationFailure;
+    }
     const message = error instanceof Error ? error.message : String(error);
     writeError(`Module command failed: ${message}`);
     return codes.internalError;

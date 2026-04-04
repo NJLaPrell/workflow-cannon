@@ -76,6 +76,9 @@ test("requiresPeers: surface marks row non-executable with peer_disabled", () =>
   );
   const surface = buildAgentInstructionSurface(registry.getAllModules(), registry);
   assert.equal(surface.schemaVersion, 1);
+  assert.equal(surface.errorRemediationCatalog.schemaVersion, 1);
+  assert.ok(Array.isArray(surface.errorRemediationCatalog.entries));
+  assert.ok(surface.errorRemediationCatalog.entries.some((e) => e.code === "policy-denied"));
   const row = surface.commands.find((c) => c.commandName === "peer-gated-cmd");
   assert.ok(row);
   assert.equal(row.executable, false);

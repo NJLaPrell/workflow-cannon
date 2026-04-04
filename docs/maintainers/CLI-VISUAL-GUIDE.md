@@ -47,6 +47,14 @@ List executable subcommands (depends on enabled modules):
 workspace-kit run
 ```
 
+**Pilot JSON shape helper (human / copy-paste):** emit JSON Schema + **`sampleArgs`** without touching the workspace:
+
+```bash
+workspace-kit run run-transition --schema-only
+```
+
+Same pattern for **`create-task`**, **`update-task`**, **`dashboard-summary`**. See **`docs/maintainers/plans/phase-52-human-cli-affordances.md`**.
+
 ---
 
 ## Top-level commands (flow)

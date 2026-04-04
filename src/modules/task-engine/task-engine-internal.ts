@@ -54,6 +54,10 @@ import {
   TASK_ID_RE
 } from "./mutation-utils.js";
 import { collectUnknownFeatureSlugWarnings } from "./feature-slug-validation.js";
+import {
+  CLI_REMEDIATION_DOCS,
+  CLI_REMEDIATION_INSTRUCTIONS
+} from "../../core/cli-remediation.js";
 
 function readQueueNamespaceArg(args: Record<string, unknown>): string | undefined {
   const q = args.queueNamespace;
@@ -91,14 +95,25 @@ function strictValidationError(
 
 function planningGenPolicyGate(
   ctx: { effectiveConfig?: Record<string, unknown> },
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
+  instructionPath: string
 ): { block: ModuleCommandResult | null; warnings?: string[] } {
   const policy = getPlanningGenerationPolicy({
     effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined
   });
   const gate = enforcePlanningGenerationPolicy(policy, args);
   if (!gate.ok) {
-    return { block: { ok: false, code: gate.code, message: gate.message } };
+    return {
+      block: {
+        ok: false,
+        code: gate.code,
+        message: gate.message,
+        remediation: {
+          instructionPath,
+          docPath: CLI_REMEDIATION_DOCS.planningGenerationAdr
+        }
+      }
+    };
   }
   return { block: null, warnings: gate.warnings };
 }
@@ -119,7 +134,7 @@ function attachPolicyMeta(
 export const taskEngineModule: WorkflowModule = {
   registration: {
     id: "task-engine",
-    version: "0.14.0",
+    version: "0.14.1",
     contractVersion: "1",
     stateSchema: 1,
     capabilities: ["task-engine"],
@@ -222,11 +237,16 @@ export const taskEngineModule: WorkflowModule = {
         return {
           ok: false,
           code: "invalid-task-schema",
-          message: "run-transition requires 'taskId' and 'action' arguments"
+          message: "run-transition requires 'taskId' and 'action' arguments",
+          remediation: { instructionPath: CLI_REMEDIATION_INSTRUCTIONS.runTransition }
         };
       }
 
-      const pgTransition = planningGenPolicyGate(ctx, args as Record<string, unknown>);
+      const pgTransition = planningGenPolicyGate(
+        ctx,
+        args as Record<string, unknown>,
+        CLI_REMEDIATION_INSTRUCTIONS.runTransition
+      );
       if (pgTransition.block) {
         return pgTransition.block;
       }
@@ -392,7 +412,11 @@ export const taskEngineModule: WorkflowModule = {
           message: knownTypeValidationError.message
         };
       }
-      const pgCreate = planningGenPolicyGate(ctx, args as Record<string, unknown>);
+      const pgCreate = planningGenPolicyGate(
+        ctx,
+        args as Record<string, unknown>,
+        CLI_REMEDIATION_INSTRUCTIONS.createTask
+      );
       if (pgCreate.block) {
         return pgCreate.block;
       }
@@ -432,7 +456,12 @@ export const taskEngineModule: WorkflowModule = {
             ? ctx.resolvedActor
             : undefined;
       if (!taskId || !updates) {
-        return { ok: false, code: "invalid-task-schema", message: "update-task requires taskId and updates object" };
+        return {
+          ok: false,
+          code: "invalid-task-schema",
+          message: "update-task requires taskId and updates object",
+          remediation: { instructionPath: CLI_REMEDIATION_INSTRUCTIONS.updateTask }
+        };
       }
       const clientMutationId = readIdempotencyValue(args);
       const task = store.getTask(taskId);
@@ -479,7 +508,11 @@ export const taskEngineModule: WorkflowModule = {
           };
         }
       }
-      const pgUpd = planningGenPolicyGate(ctx, args as Record<string, unknown>);
+      const pgUpd = planningGenPolicyGate(
+        ctx,
+        args as Record<string, unknown>,
+        CLI_REMEDIATION_INSTRUCTIONS.updateTask
+      );
       if (pgUpd.block) {
         return pgUpd.block;
       }
@@ -572,7 +605,11 @@ export const taskEngineModule: WorkflowModule = {
       if (!task) {
         return { ok: false, code: "task-not-found", message: `Task '${taskId}' not found` };
       }
-      const pgArchive = planningGenPolicyGate(ctx, args as Record<string, unknown>);
+      const pgArchive = planningGenPolicyGate(
+        ctx,
+        args as Record<string, unknown>,
+        CLI_REMEDIATION_INSTRUCTIONS.archiveTask
+      );
       if (pgArchive.block) {
         return pgArchive.block;
       }
@@ -676,7 +713,11 @@ export const taskEngineModule: WorkflowModule = {
       } else {
         deps.delete(dependencyTaskId);
       }
-      const pgDep = planningGenPolicyGate(ctx, args as Record<string, unknown>);
+      const pgDep = planningGenPolicyGate(
+        ctx,
+        args as Record<string, unknown>,
+        CLI_REMEDIATION_INSTRUCTIONS.addDependency
+      );
       if (pgDep.block) {
         return pgDep.block;
       }

@@ -11,8 +11,8 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 
 ## Current state
 
-- **Shipped:** latest **`v0.51.0`** (Phase 51). Narrative for completed phases (including **0–35** bullets and **`### Phase …`** detail through Phase 51) is in **[`ROADMAP-archive.md`](./ROADMAP-archive.md)**; version facts in **[`CHANGELOG.md`](./CHANGELOG.md)**.
-- **Planned:** Phase 53 — **`v0.53.0`** (relational feature registry) — **`T630`–`T639`**; see **Phase plan** below and task-engine state.
+- **Shipped:** latest **`v0.52.0`** (Phase 52). Narrative for completed phases (including **0–35** bullets and **`### Phase …`** detail through Phase 52) is in **[`ROADMAP-archive.md`](./ROADMAP-archive.md)**; version facts in **[`CHANGELOG.md`](./CHANGELOG.md)**.
+- **Planned:** Phase 53 — **`v0.53.0`** (relational feature registry) — **`T630`–`T639`**; Phase 54 — **`v0.54.0`** (skill packs v1; Claude Code **`SKILL.md`** / **`.claude/skills/`** interoperability per ADR) — **`T640`–`T644`**; Phase 55 — **`v0.55.0`** (GitHub-native invocation) — **`T649`–`T653`** (wishlist **`T566`**); Phase 56 — **`v0.56.0`** (agent & task lifecycle hooks) — **`T645`–`T648`** (wishlist **`T563`**); see **Phase plan** below and task-engine state.
 - **Maintainer snapshot** — `docs/maintainers/data/workspace-kit-status.yaml` (`current_kit_phase`, `next_agent_actions`).
 - **Execution queue** — canonical task-engine store (default `.workspace-kit/tasks/workspace-kit.db`; JSON opt-out `.workspace-kit/tasks/state.json`); use `pnpm run wk run list-tasks` / `get-next-actions` rather than inferring phase from prose alone.
 - **Product / feature inventory** — **`docs/maintainers/FEATURE-MATRIX.md`**.
@@ -63,10 +63,31 @@ This section lists **planned and in-flight** phases only. **Completed** phase bl
 
 For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MATRIX.md`.
 
+### Phase 55 - GitHub-native invocation (issues, PR comments, review loops) -> GitHub release `v0.55.0` (PLANNED)
+
+- **Primary scope:** **`T649`–`T653`** — ADR + threat model + event/playbook taxonomy (**`T649`**); config for event→playbook map and runner hooks (**`T650`**); webhook validation + thin runner MVP, plan-only path first (**`T651`**); `/cannon-implement` / `/cannon-review` / `/cannon-fix-review` + audit linkage to **`T###`** (**`T652`**); sample workflow + maintainer runbook + closeout evidence (**`T653`**). Converted from wishlist **`T566`**; no bypass of **`run-transition`** or policy lanes.
+- **Outcome:** Repos can trigger **`workspace-kit`** from GitHub (Actions/App pattern) with locked-down tokens, correlation from GitHub delivery to task ids, and maintainer copy-paste setup.
+- **Exit signals:**
+  - **`pnpm run build`**, **`check`**, **`test`**, **`parity`**, **`pre-merge-gates`** on the release tag; maintainer evidence per **`RELEASING.md`**.
+
 ### Phase 53 - Relational feature registry (DB taxonomy Path A) -> GitHub release `v0.53.0` (PLANNED)
 
 - **Primary scope:** **`T630`–`T639`** — ADR (**`T630`**) for **Path A** (SQLite registry is source of truth for taxonomy) and **Option 1** (authoritative **`task_engine_task_features`** junction; **`features_json`** not source of truth); schema + migration + seed from legacy taxonomy (**`T631`**); persistence layer (**`T632`**); **`create-task`** / **`update-task`** / reads validate and use junction (**`T633`**); backfill + doctor (**`T634`**); **`list-tasks`** **`featureId`** / **`componentId`** filters (**`T635`**); **`generate-document`** / doc pipeline from DB (**`T636`**); contracts + instructions + **`AGENT-CLI-MAP`** (**`T637`**); Cursor extension **`dashboard-summary`** enrichment (**`T638`**); phase closeout tests + **`CHANGELOG`** + matrix (**`T639`**). **`improvement`** / **`wishlist_intake`**: no required feature links; unknown feature ids fail closed for execution tasks when provided.
 - **Outcome:** Components and features are relational with FKs; task↔feature links are normalized; maintainer-facing taxonomy docs derive from DB (Path A); optional task features remain nullable/empty.
+- **Exit signals:**
+  - **`pnpm run build`**, **`check`**, **`test`**, **`parity`**, **`pre-merge-gates`** on the release tag; maintainer evidence per **`RELEASING.md`**.
+
+### Phase 54 - Skill packs v1 -> GitHub release `v0.54.0` (PLANNED)
+
+- **Primary scope:** **`T640`–`T644`** — ADR + versioned manifest schema (**`T640`**) with **Claude Code interoperability**: normative mapping from per-skill directories and **`SKILL.md`** (YAML frontmatter + body, optional **`scripts/`** / **`references/`** / etc.) so a pack installed under **`.claude/skills/`** is valid on a configured Workflow Cannon skill root without parallel authoring unless the ADR introduces an optional sidecar; config + discovery incl. default **`.claude/skills/<id>/SKILL.md`** recognition (**`T641`**); **`apply-skill`** resolves instructions from **`SKILL.md`** for Claude-shaped packs (**`T642`**); attach skills to tasks and playbooks with ids aligned to discovered pack names (**`T643`**); **`recommend-skills`** v1 + **Claude-shaped** sample pack + maintainer docs for dual install (**`T644`**). Provenance: wishlist **`T564`** referenced from **`T640`** acceptance scope.
+- **Outcome:** Packs are discoverable, inspectable, and applicable with explicit policy lanes; **skill trees that satisfy current Claude Code skill layout expectations generally work in Workflow Cannon** when placed on a configured root (unsupported Claude-only frontmatter or runtime knobs documented as non-goals or no-ops per ADR); optional task/playbook attachment and deterministic recommendations.
+- **Exit signals:**
+  - **`pnpm run build`**, **`check`**, **`test`**, **`parity`**, **`pre-merge-gates`** on the release tag; maintainer evidence per **`RELEASING.md`**.
+
+### Phase 56 - Agent & task lifecycle hooks -> GitHub release `v0.56.0` (PLANNED)
+
+- **Primary scope:** **`T645`–`T648`** — ADR + registration config + trace schema (**`T645`**); read-only hook dispatch + persisted traces on pilot events (**`T646`**); mutating outcomes + write hooks + shell hardening (**`T647`**); PR-oriented events (or documented stubs) + maintainer catalog + performance budgets (**`T648`**). Provenance: wishlist **`T563`**.
+- **Outcome:** Named lifecycle events, deterministic handler ordering, structured audit traces, and documented fail-closed vs warn posture; HTTP webhook transport explicitly out of scope for this phase per task acceptance.
 - **Exit signals:**
   - **`pnpm run build`**, **`check`**, **`test`**, **`parity`**, **`pre-merge-gates`** on the release tag; maintainer evidence per **`RELEASING.md`**.
 
@@ -131,4 +152,5 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 - Phase 49 / `v0.49.0` GitHub release: `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.49.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23958564398`
 - Phase 50 / `v0.50.0` GitHub release: `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.50.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23962170532`
 - Phase 51 / `v0.51.0` GitHub release: `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.51.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23962937423`
+- Phase 52 / `v0.52.0` — tag and Publish NPM workflow: record URL after release (maintainer closeout).
 - npm package: `https://www.npmjs.com/package/@workflow-cannon/workspace-kit`

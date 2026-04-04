@@ -5,8 +5,8 @@
     }
   },
   "kit": {
-    "currentPhaseLabel": "Phase 52 — post v0.51.0 (task-engine module structure shipped)",
-    "currentPhaseNumber": 52
+    "currentPhaseLabel": "Phase 53 — post v0.52.0 (CLI remediation + pilot schema-only shipped)",
+    "currentPhaseNumber": 53
   },
   "tasks": {
     "persistenceBackend": "sqlite",

@@ -3,6 +3,7 @@ import type { ErrorObject, ValidateFunction } from "ajv";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { CLI_REMEDIATION_DOCS, CLI_REMEDIATION_INSTRUCTIONS } from "./cli-remediation.js";
 
 /** Commands in the T600 runtime validation pilot (see ADR-runtime-run-args-validation-pilot.md). */
 const PILOT_COMMANDS = new Set([
@@ -116,6 +117,21 @@ function enforceRequirePlanningToken(
   };
 }
 
+function pilotInstructionPath(commandName: string): string {
+  switch (commandName) {
+    case "run-transition":
+      return CLI_REMEDIATION_INSTRUCTIONS.runTransition;
+    case "create-task":
+      return CLI_REMEDIATION_INSTRUCTIONS.createTask;
+    case "update-task":
+      return CLI_REMEDIATION_INSTRUCTIONS.updateTask;
+    case "dashboard-summary":
+      return CLI_REMEDIATION_INSTRUCTIONS.dashboardSummary;
+    default:
+      return CLI_REMEDIATION_INSTRUCTIONS.runTransition;
+  }
+}
+
 function formatAjvFailure(commandName: string, errors: ErrorObject[] | null | undefined): Record<string, unknown> {
   const list = (errors ?? []).map((e) => ({
     instancePath: e.instancePath ?? "",
@@ -130,7 +146,56 @@ function formatAjvFailure(commandName: string, errors: ErrorObject[] | null | un
     details: {
       command: commandName,
       errors: list
+    },
+    remediation: {
+      instructionPath: pilotInstructionPath(commandName),
+      docPath: CLI_REMEDIATION_DOCS.agentCliMap
     }
+  };
+}
+
+const PILOT_SAMPLE_ARGS: Record<string, Record<string, unknown>> = {
+  "run-transition": {
+    taskId: "T999",
+    action: "start",
+    policyApproval: { confirmed: true, rationale: "begin task work" },
+    expectedPlanningGeneration: 0
+  },
+  "create-task": {
+    id: "T999",
+    title: "Example task title",
+    status: "proposed",
+    expectedPlanningGeneration: 0
+  },
+  "update-task": {
+    taskId: "T999",
+    updates: { title: "Updated title" },
+    expectedPlanningGeneration: 0
+  },
+  "dashboard-summary": {}
+};
+
+/**
+ * JSON payload for `workspace-kit run <pilot-command> --schema-only` (Phase 52).
+ */
+export function buildRunArgsSchemaOnlyPayload(commandName: string): Record<string, unknown> | null {
+  if (!PILOT_COMMANDS.has(commandName)) {
+    return null;
+  }
+  const snap = loadPilotSnapshot();
+  const schema = snap.commands[commandName];
+  const sampleArgs = PILOT_SAMPLE_ARGS[commandName];
+  if (!schema || !sampleArgs) {
+    return null;
+  }
+  return {
+    ok: true,
+    code: "run-args-schema",
+    command: commandName,
+    schema,
+    sampleArgs,
+    instructionPath: pilotInstructionPath(commandName),
+    remediationContract: CLI_REMEDIATION_DOCS.remediationContract
   };
 }
 
@@ -158,7 +223,15 @@ export function validatePilotRunCommandArgs(
     const policy = readPlanningGenerationPolicy(effectiveConfig);
     const gate = enforceRequirePlanningToken(policy, args);
     if (!gate.ok) {
-      return { ok: false, code: gate.code, message: gate.message };
+      return {
+        ok: false,
+        code: gate.code,
+        message: gate.message,
+        remediation: {
+          instructionPath: pilotInstructionPath(commandName),
+          docPath: CLI_REMEDIATION_DOCS.planningGenerationAdr
+        }
+      };
     }
   }
   return null;

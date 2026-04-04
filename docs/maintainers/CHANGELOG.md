@@ -8,9 +8,24 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
-### Removed
+## [0.52.0] - 2026-04-03
 
-- **Repository hygiene** — tracked `.workspace-kit/backups` snapshot tree; one-off migration scripts (`architect-review-proposals-2026-03-31`, `phase29-architect-ready-tasks`, `apply-phase-30-33-architect-tasks`, `convert-open-wishlist-to-ready`, `rewrite-active-improvements`, `seed-plan-wishlist-intake`); orphan `docs/policies/*`, `docs/workflows/task-pr-delivery-workflow.md`, and misleading `docs/adr/README.md`; superseded maintainer notes `RUNTIME-PATH-AUDIT-PHASE11.md`, `ARCHITECTURAL-REVIEW-FINDINGS.md`. **`.gitignore`** now excludes `.workspace-kit/backups/`.
+Phase 52 — **agent/human CLI ergonomics** (**`T624`–`T629`**): stable failure **`remediation`** metadata, doctor **`errorRemediationCatalog`**, pilot **`--schema-only`** JSON Schema + **`sampleArgs`**, extension + visual guide cross-links.
+
+### Added
+
+- **CLI JSON** — Optional **`remediation`** on `workspace-kit run` failures: **`instructionPath`** (repo-relative `src/modules/.../instructions/*.md`) and **`docPath`** (`docs/maintainers/...`); **`policy-denied`** also sets **`remediation.docPath`** (legacy **`remediationDoc`** unchanged). Router **`unknown-command`** now returns structured JSON on stdout (exit **1**) with remediation hints.
+- **`doctor --agent-instruction-surface`** — Payload includes **`errorRemediationCatalog`** (stable `code` → paths). ADR: **`docs/maintainers/ADR-cli-error-remediation-contract.md`**.
+- **Pilot human affordance** — **`workspace-kit run <command> --schema-only`** for **`run-transition`**, **`create-task`**, **`update-task`**, **`dashboard-summary`** → **`code: "run-args-schema"`** with bundled schema + **`sampleArgs`**. Plan: **`docs/maintainers/plans/phase-52-human-cli-affordances.md`**.
+- **Maintainer docs** — **`AGENT-CLI-MAP.md`** recovery subsection; **`CLI-VISUAL-GUIDE.md`**; extension **`README`** operator note.
+
+### Changed
+
+- **Planning consistency script** — Treats shipped **`Phase 4 / v0.6.0` publish** evidence in **`ROADMAP.md`** as **Completed** (aligns with archived phase narrative).
+
+### Changed (module version)
+
+- **Task-engine module** — **`0.14.1`** (compatibility matrix).
 
 ## [0.51.0] - 2026-04-03
 

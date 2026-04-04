@@ -14,6 +14,7 @@ import {
 } from "./transcript-sync-runtime.js";
 import { loadImprovementState, saveImprovementState } from "./improvement-state.js";
 import { readOptionalExpectedPlanningGeneration } from "../task-engine/mutation-utils.js";
+import { CLI_REMEDIATION_INSTRUCTIONS } from "../../core/cli-remediation.js";
 
 function pickExpectedPlanningGeneration(args: Record<string, unknown>): { expectedPlanningGeneration?: number } {
   const g = readOptionalExpectedPlanningGeneration(args);
@@ -98,7 +99,12 @@ export const improvementModule: WorkflowModule = {
           };
         } catch (e) {
           const msg = e instanceof Error ? e.message : String(e);
-          return { ok: false, code: "generate-failed", message: msg };
+          return {
+            ok: false,
+            code: "generate-failed",
+            message: msg,
+            remediation: { instructionPath: CLI_REMEDIATION_INSTRUCTIONS.generateRecommendations }
+          };
         }
       },
       "sync-transcripts": async () => {

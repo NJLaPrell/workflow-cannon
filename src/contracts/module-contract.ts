@@ -56,11 +56,20 @@ export type ResponseTemplateApplicationMeta = {
   };
 };
 
+/** Optional machine-oriented recovery hints; additive for JSON consumers (Phase 52). */
+export type CliRemediation = {
+  instructionPath?: string;
+  docPath?: string;
+  docAnchors?: string[];
+};
+
 export type ModuleCommandResult = {
   ok: boolean;
   code: string;
   message?: string;
   data?: Record<string, unknown>;
+  /** Repo-relative docs / instruction paths when `ok` is false (additive). */
+  remediation?: CliRemediation;
   /** Advisory response-template shaping metadata; always present for `workspace-kit run` JSON output when enabled. */
   responseTemplate?: ResponseTemplateApplicationMeta;
 };

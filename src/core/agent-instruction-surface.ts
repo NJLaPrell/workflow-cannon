@@ -1,4 +1,5 @@
 import type { ModuleInstructionEntry, WorkflowModule } from "../contracts/module-contract.js";
+import { buildErrorRemediationCatalog } from "./cli-remediation.js";
 import type { ModuleActivationReport, ModuleRegistry } from "./module-registry.js";
 
 export type AgentInstructionDegradation =
@@ -15,10 +16,17 @@ export type AgentInstructionSurfaceRow = {
   degradation: AgentInstructionDegradation;
 };
 
+export type ErrorRemediationCatalogPayload = {
+  schemaVersion: 1;
+  entries: ReturnType<typeof buildErrorRemediationCatalog>;
+};
+
 export type AgentInstructionSurfacePayload = {
   schemaVersion: 1;
   commands: AgentInstructionSurfaceRow[];
   activationReport: ModuleActivationReport;
+  /** Stable `code` values with repo-relative doc/instruction hints (Phase 52). */
+  errorRemediationCatalog: ErrorRemediationCatalogPayload;
 };
 
 /**
@@ -77,6 +85,10 @@ export function buildAgentInstructionSurface(
   return {
     schemaVersion: 1,
     commands,
-    activationReport: registry.getActivationReport()
+    activationReport: registry.getActivationReport(),
+    errorRemediationCatalog: {
+      schemaVersion: 1,
+      entries: buildErrorRemediationCatalog()
+    }
   };
 }

@@ -193,6 +193,8 @@ test("runCli doctor --agent-instruction-surface emits JSON catalog", async () =>
   assert.equal(payload.data.schemaVersion, 1);
   assert.ok(Array.isArray(payload.data.commands));
   assert.ok(payload.data.activationReport);
+  assert.equal(payload.data.errorRemediationCatalog?.schemaVersion, 1);
+  assert.ok(Array.isArray(payload.data.errorRemediationCatalog?.entries));
 });
 
 test("runCli doctor returns validation failure when required files are missing", async () => {
@@ -538,6 +540,10 @@ test("runCli run returns validation failure for run-transition with missing args
   assert.equal(output.ok, false);
   assert.equal(output.code, "invalid-run-args");
   assert.ok(Array.isArray(output.details?.errors));
+  assert.equal(
+    output.remediation?.instructionPath,
+    "src/modules/task-engine/instructions/run-transition.md"
+  );
 });
 
 test("runCli run returns error for invalid JSON args", async () => {
@@ -547,16 +553,31 @@ test("runCli run returns error for invalid JSON args", async () => {
   assert.ok(capture.errors.some((e) => e.includes("Invalid JSON")));
 });
 
-test("runCli run unknown subcommand prints capped hint (not full command dump)", async () => {
+test("runCli run unknown subcommand emits JSON with remediation (not stderr dump)", async () => {
   const capture = createCapture();
   const code = await runCli(
     ["run", "__not_a_real_workspace_kit_command__", "{}"],
     { cwd: process.cwd(), ...capture }
   );
-  assert.equal(code, 3);
-  const err = capture.errors.find((e) => e.includes("Module command failed"));
-  assert.ok(err, "expected module command failure");
-  assert.match(err, /Sample of/);
-  assert.match(err, /doctor --agent-instruction-surface/);
-  assert.ok(err.length < 2500);
+  assert.equal(code, 1);
+  const output = JSON.parse(capture.lines.join(""));
+  assert.equal(output.ok, false);
+  assert.equal(output.code, "unknown-command");
+  assert.match(output.message, /Sample of/);
+  assert.ok(output.remediation?.docPath?.includes("AGENT-CLI-MAP.md"));
+});
+
+test("runCli run pilot command --schema-only emits schema payload", async () => {
+  const capture = createCapture();
+  const code = await runCli(["run", "dashboard-summary", "--schema-only"], {
+    cwd: process.cwd(),
+    ...capture
+  });
+  assert.equal(code, 0);
+  const output = JSON.parse(capture.lines.join(""));
+  assert.equal(output.ok, true);
+  assert.equal(output.code, "run-args-schema");
+  assert.equal(output.command, "dashboard-summary");
+  assert.ok(output.schema && typeof output.schema === "object");
+  assert.deepEqual(output.sampleArgs, {});
 });

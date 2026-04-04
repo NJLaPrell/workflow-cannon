@@ -1,16 +1,20 @@
 schema_version: 1
-current_kit_phase: "52"
-next_kit_phase: "52"
-last_updated: "2026-04-03"
-active_focus: "**Phase 52** (current) — Phase **51** shipped **`v0.51.0`**: **`T621`–`T623`** (task-engine **`persistence/`** / **`wishlist/`** / **`dashboard/`** / **`queue/`** colocation + doc path hygiene). **`current_kit_phase` / `next_kit_phase` 52**."
+current_kit_phase: "53"
+next_kit_phase: "53"
+last_updated: "2026-04-04"
+active_focus: "**Phase 53** (current) — Phase **52** shipped **`v0.52.0`**: **`T624`–`T629`** (CLI **`remediation`**, doctor **`errorRemediationCatalog`**, pilot **`--schema-only`**, docs + extension). **`current_kit_phase` / `next_kit_phase` 53**."
 blockers: []
 pending_decisions: []
 next_agent_actions:
-  - "**Now:** `pnpm run wk doctor` then `pnpm run wk run get-next-actions '{}'` — Phase **51** **`T621`–`T623`** **`completed`**; pick next work from the **`ready`** queue or planning intake."
+  - "**Now:** `pnpm run wk doctor` then `pnpm run wk run get-next-actions '{}'` — Phase **52** **`T624`–`T629`** **`completed`**; next phase **53** (**`T630`–`T639`**) per **`ROADMAP.md`**."
+  - "2026-04-04: Phase **52** **`v0.52.0`** — CLI ergonomics (**`T624`–`T629`**). GitHub release + Publish NPM: maintainer after tag push."
   - "2026-04-03: Phase **51** **`v0.51.0`** — task-engine subdirectory colocation (**`T621`–`T623`**). GitHub release `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.51.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23962937423`."
   - "2026-04-03: Phase **50** **`v0.50.0`** — GitHub release `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.50.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23962170532`."
   - "2026-04-03: Phase **49** **`v0.49.0`** — GitHub release `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.49.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23958564398`."
 last_session_summary:
+  - "2026-04-04: Phase **52** closeout — **`v0.52.0`** — **`T624`–`T629`** **`completed`**: **`ADR-cli-error-remediation-contract.md`**, additive **`remediation`** on **`wk run`** failures, **`doctor --agent-instruction-surface`** **`errorRemediationCatalog`**, **`run <cmd> --schema-only`** (pilot four), **`AGENT-CLI-MAP`** recovery + **`CLI-VISUAL-GUIDE`**, extension **`README`**, planning-consistency script Phase 4 shipped-evidence fix; **`task-engine`** **0.14.1**. **`update-workspace-phase-snapshot`** **`current_kit_phase` 53** / **`next_kit_phase` 53**; **`kit.currentPhaseNumber`** **53**. GitHub release + Publish NPM: after tag."
+  - "2026-04-04: Phase **54** (planned **`v0.54.0`**, skill packs v1) — **`update-task`**: **`T640`–`T644`** expanded for **Claude Code** **`.claude/skills/`** / **`SKILL.md`** interoperability (ADR mapping, default discovery path, **`apply-skill`**, task attachment ids, Claude-shaped sample + dual-install docs); **`roadmap-data.json`** / **`roadmap-phase-sections.md`** + **`generate-document`** **`ROADMAP.md`**."
+  - "2026-04-04: Phase **55** (planned **`v0.55.0`**, GitHub-native invocation) — **`update-task`** + **`run-transition accept`**: **`T649`–`T653`** **`proposed` → `ready`** with **`phaseKey` `55`**; copy tightened for completed wishlist parent **`T566`**, ROADMAP **`v0.55.0`** alignment, **`config generate-docs`**, webhook signature wording, **`POLICY-APPROVAL.md`** cross-links."
   - "2026-04-03: Phase **51** closeout — **`v0.51.0`** — **`T621`–`T623`** **`completed`**: task-engine **`README.md`** map; moves to **`persistence/`**, **`wishlist/`**, **`dashboard/`**, **`queue/`**; import + maintainer doc path updates; **`pnpm run check`**, **`test`**, **`parity`**, **`pre-merge-gates`** green. **`update-workspace-phase-snapshot`** **`current_kit_phase` 52** / **`next_kit_phase` 52**; **`kit.currentPhaseNumber`** **52**. GitHub release `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.51.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23962937423`."
   - "2026-04-03: Phase **50** closeout — **`v0.50.0`** — **`T616`–`T620`** **`completed`**: T600 pilot runtime **`run`** JSON validation (**`invalid-run-args`**, early **`planning-generation-required`**), **`schemas/pilot-run-args.snapshot.json`** + **`check-pilot-run-args-snapshot`**, contract/schema bumps (**`task-engine`** **0.14.0**); **`T614`/`T615`** **`cancelled`** (parent scope deferred). **`update-workspace-phase-snapshot`** **`current_kit_phase` 51** / **`next_kit_phase` 51**; **`kit.currentPhaseNumber`** **51**. GitHub release `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.50.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23962170532`."
   - "2026-04-03: Phase **49** closeout — **`v0.49.0`** — **`T608`–`T613`** **`completed`**: **`persisted-artifacts-and-cli-inventory.md`**, **`ARCHITECTURE.md`** link; Cursor extension **`run-transition-with-approval`**, proposed-row **Accept**/**Chat**, wishlist tree context menu, **`playbook-chat-prompts`**, palette commands; extension **`README`** + **`agent-task-engine-ergonomics`**; **`roadmap-data.json`** / **`ROADMAP.md`** Phase **49** section; **`task-engine-run-contracts.schema.json`** **0.49.0**. GitHub release `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.49.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23958564398`. **`update-workspace-phase-snapshot`** **`current_kit_phase` 50** / **`next_kit_phase` 50**; **`kit.currentPhaseNumber`** **50**."
@@ -50,9 +54,9 @@ last_session_summary:
   - "2026-04-01 (round 1): **`improvement-triage-top-three`** — promoted **`imp-a7dcdec79a791b`**, **`imp-5ba2f6a0c3bd4a`**, **`imp-4cf9c424e5bfb2`** (planning/git/task-engine index themes)."
   - "2026-03-31: Phase **26** closeout — **`T390`** (R102 / layering docs + template + `.ai/ARCHITECTURE` refs); **`imp-c584f0e206c404`** (pre-release hook + `transcript:ingest` merge env → **`policyApproval`** JSON); **`imp-df7ebd9967433c`** (AGENTS native SQLite portability); **`imp-5dc1ffa28ccdc3`** verified against existing malformed-**`policyApproval`** denial output in **`run-command.ts`**. Shipped **`v0.27.0`** — PR **#79**, GitHub release, **Publish NPM** `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23823720798`."
 metrics:
-  updated_at: "2026-04-03"
+  updated_at: "2026-04-04"
   source: "maintainer"
-  notes: "Phase 51 shipped v0.51.0 (T621–T623): task-engine subdirectory colocation. Phase 52: open — use get-next-actions for next slice."
+  notes: "Phase 52 shipped v0.52.0 (T624–T629): CLI remediation + schema-only + docs. Phase 53 next (T630–T639 relational feature registry). Phase 55 execution chain T649–T653 accepted to ready (phaseKey 55)."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null

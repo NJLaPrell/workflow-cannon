@@ -48,6 +48,10 @@ async function readTaskStateText() {
 
 function inferRoadmapPhase4Status(text) {
   if (/Phase 4 .*COMPLETE/i.test(text)) return "Completed";
+  // Execution evidence lists shipped phases as "Phase 4 / `v0.6.0` publish …" — not "in flight".
+  if (/Phase 4\s*\/\s*`v0\.6\.0`/i.test(text) && /publish workflow run|GitHub release/i.test(text)) {
+    return "Completed";
+  }
   if (/Phase 4 .*next/i.test(text) || /Phase 4 .*v0\.6\.0/i.test(text)) return "In progress / ready";
   return "Planned";
 }

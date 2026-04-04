@@ -37,6 +37,10 @@ import {
 } from "../planning-config.js";
 import { validateTaskSetForStrictMode } from "../strict-task-validation.js";
 import { validateKnownTaskTypeRequirements } from "../task-type-validation.js";
+import {
+  CLI_REMEDIATION_DOCS,
+  CLI_REMEDIATION_INSTRUCTIONS
+} from "../../../core/cli-remediation.js";
 
 const WISHLIST_COMMANDS = new Set([
   "create-wishlist",
@@ -66,7 +70,12 @@ export function runWishlistStoreCommand(
     if (hasLegacyId) {
       const v = validateWishlistIntakePayload(raw);
       if (!v.ok) {
-        return { ok: false, code: "invalid-task-schema", message: v.errors.join(" ") };
+        return {
+          ok: false,
+          code: "invalid-task-schema",
+          message: v.errors.join(" "),
+          remediation: { instructionPath: CLI_REMEDIATION_INSTRUCTIONS.createWishlist }
+        };
       }
       const wid = (raw.id as string).trim();
       const dup = store
@@ -78,7 +87,8 @@ export function runWishlistStoreCommand(
         return {
           ok: false,
           code: "duplicate-task-id",
-          message: `Wishlist legacy id '${wid}' is already represented as a task`
+          message: `Wishlist legacy id '${wid}' is already represented as a task`,
+          remediation: { instructionPath: CLI_REMEDIATION_INSTRUCTIONS.createWishlist }
         };
       }
       const item: WishlistItem = buildWishlistItemFromIntake(raw, ts);
@@ -87,7 +97,12 @@ export function runWishlistStoreCommand(
     } else {
       const v = validateWishlistContentFields(raw);
       if (!v.ok) {
-        return { ok: false, code: "invalid-task-schema", message: v.errors.join(" ") };
+        return {
+          ok: false,
+          code: "invalid-task-schema",
+          message: v.errors.join(" "),
+          remediation: { instructionPath: CLI_REMEDIATION_INSTRUCTIONS.createWishlist }
+        };
       }
       const newTid = allocateNextTaskNumericId(store.getAllTasks());
       task = taskEntityFromNewIntake(raw, newTid, ts);
@@ -107,7 +122,15 @@ export function runWishlistStoreCommand(
       args
     );
     if (!wlCreateGate.ok) {
-      return { ok: false, code: wlCreateGate.code, message: wlCreateGate.message };
+      return {
+        ok: false,
+        code: wlCreateGate.code,
+        message: wlCreateGate.message,
+        remediation: {
+          instructionPath: CLI_REMEDIATION_INSTRUCTIONS.createWishlist,
+          docPath: CLI_REMEDIATION_DOCS.planningGenerationAdr
+        }
+      };
     }
     try {
       planning.sqliteDual.withTransaction(
