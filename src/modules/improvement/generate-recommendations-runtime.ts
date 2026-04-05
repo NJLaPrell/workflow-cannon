@@ -12,6 +12,7 @@ import {
   type IngestCandidate
 } from "./ingest.js";
 import { priorityForTier } from "./confidence.js";
+import type { ImprovementHeuristicVersion } from "./ingest.js";
 import { buildImprovementTaskPayload } from "./improvement-task-payload.js";
 import { buildImprovementSupportingReasoning } from "./improvement-supporting-reasoning.js";
 import { allocateNextTaskNumericId } from "../task-engine/wishlist/wishlist-intake.js";
@@ -45,6 +46,19 @@ function resolveTranscriptArchivePath(
   const archivePath =
     typeof transcripts.archivePath === "string" ? transcripts.archivePath.trim() : "";
   return archivePath || "agent-transcripts";
+}
+
+export function resolveImprovementHeuristicVersion(ctx: ModuleLifecycleContext): ImprovementHeuristicVersion {
+  const improvement =
+    ctx.effectiveConfig?.improvement && typeof ctx.effectiveConfig.improvement === "object"
+      ? (ctx.effectiveConfig.improvement as Record<string, unknown>)
+      : {};
+  const rec =
+    improvement.recommendations && typeof improvement.recommendations === "object"
+      ? (improvement.recommendations as Record<string, unknown>)
+      : {};
+  const v = rec.heuristicVersion;
+  return v === 2 ? 2 : 1;
 }
 
 export function getMaxRecommendationCandidatesPerRun(ctx: ModuleLifecycleContext): number {
@@ -100,16 +114,19 @@ export async function runGenerateRecommendations(
   const transcriptsRoot = resolveTranscriptArchivePath(ctx, args);
   const fromTag = typeof args.fromTag === "string" ? args.fromTag.trim() : undefined;
   const toTag = typeof args.toTag === "string" ? args.toTag.trim() : undefined;
+  const heuristicVersion = resolveImprovementHeuristicVersion(ctx);
 
   const candidates: IngestCandidate[] = [];
 
-  candidates.push(...(await ingestAgentTranscripts(ctx.workspacePath, transcriptsRoot, state)));
-  candidates.push(...(await ingestPolicyDenials(ctx.workspacePath, state)));
-  candidates.push(...(await ingestConfigMutations(ctx.workspacePath, state)));
-  candidates.push(...ingestTaskTransitionFriction(store.getTransitionLog(), state));
+  candidates.push(
+    ...(await ingestAgentTranscripts(ctx.workspacePath, transcriptsRoot, state, heuristicVersion))
+  );
+  candidates.push(...(await ingestPolicyDenials(ctx.workspacePath, state, heuristicVersion)));
+  candidates.push(...(await ingestConfigMutations(ctx.workspacePath, state, heuristicVersion)));
+  candidates.push(...ingestTaskTransitionFriction(store.getTransitionLog(), state, heuristicVersion));
 
   if (fromTag && toTag) {
-    const g = ingestGitDiffBetweenTags(ctx.workspacePath, fromTag, toTag);
+    const g = ingestGitDiffBetweenTags(ctx.workspacePath, fromTag, toTag, heuristicVersion);
     if (g) candidates.push(g);
   }
 
@@ -168,8 +185,18 @@ export async function runGenerateRecommendations(
       provenanceRefs: c.provenanceRefs,
       issue: body.issue,
       supportingReasoning,
-      proposedSolutions: [body.proposedSolution]
+      proposedSolutions: [body.proposedSolution],
+      heuristicVersion
     };
+    if (c.scoutMeta && typeof c.scoutMeta === "object") {
+      const sm = c.scoutMeta;
+      if (sm.primaryLens !== undefined) meta.primaryLens = sm.primaryLens;
+      if (sm.adversarialLens !== undefined) meta.adversarialLens = sm.adversarialLens;
+      if (sm.findingType !== undefined) meta.findingType = sm.findingType;
+      if (sm.evidenceAnchors !== undefined) meta.evidenceAnchors = sm.evidenceAnchors;
+      if (sm.riskNotes !== undefined) meta.riskNotes = sm.riskNotes;
+      if (sm.noveltyHint !== undefined) meta.noveltyHint = sm.noveltyHint;
+    }
     if (c.evidenceKind === "transcript" && typeof c.provenanceRefs.transcriptPath === "string") {
       meta.transcriptSourceRelPath = c.provenanceRefs.transcriptPath;
     }

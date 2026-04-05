@@ -120,7 +120,7 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
   - **Enforced in**: Task Engine runtime (`run-transition`, queue/summary commands, dependency guards).
 
 - **Improvement Task**
-  - **Definition**: Task Engine row with `type: "improvement"` used for enhancement / problem-report backlog (same **`T###`** id pattern as execution tasks). Maintainer-facing rows should carry a synthesized **problem** in **`metadata.issue`** and **supporting reasoning** in **`metadata.supportingReasoning`** (evidence refs, not raw transcript dumps). **`generate-recommendations`** fills these automatically; manual **`create-task`** must supply them.
+  - **Definition**: Task Engine row with `type: "improvement"` used for enhancement / problem-report backlog (same **`T###`** id pattern as execution tasks). Maintainer-facing rows should carry a synthesized **problem** in **`metadata.issue`** and **supporting reasoning** in **`metadata.supportingReasoning`** (evidence refs, not raw transcript dumps). **`generate-recommendations`** fills these automatically; manual **`create-task`** must supply them. Optional **scout-origin** metadata (`primaryLens`, `adversarialLens`, `findingType`, `evidenceAnchors`, `riskNotes`, `noveltyHint`) is documented under playbook **`improvement-scout`**.
   - **Defined in**: Task Engine task type and validation contracts (`src/modules/task-engine/types.ts`, `src/modules/task-engine/task-type-validation.ts`); improvement pipeline (`src/modules/improvement/generate-recommendations-runtime.ts`).
   - **Enforced in**: `create-task` / `update-task` validation (`invalid-task-type-requirements`) and improvement workflow docs/tasks. Legacy **`imp-<hex>`** ids may omit **`metadata.supportingReasoning`** until updated.
 

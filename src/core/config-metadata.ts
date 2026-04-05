@@ -532,8 +532,29 @@ export function validatePersistedConfigDocument(
     }
     const imp = improvement as Record<string, unknown>;
     for (const k of Object.keys(imp)) {
-      if (k !== "transcripts" && k !== "cadence" && k !== "hooks") {
+      if (k !== "transcripts" && k !== "cadence" && k !== "hooks" && k !== "recommendations") {
         throw new Error(`config-invalid(${label}): unknown improvement.${k}`);
+      }
+    }
+    if (imp.recommendations !== undefined) {
+      if (
+        typeof imp.recommendations !== "object" ||
+        imp.recommendations === null ||
+        Array.isArray(imp.recommendations)
+      ) {
+        throw new Error(`config-invalid(${label}): improvement.recommendations must be an object`);
+      }
+      const rec = imp.recommendations as Record<string, unknown>;
+      for (const rk of Object.keys(rec)) {
+        if (rk !== "heuristicVersion") {
+          throw new Error(`config-invalid(${label}): unknown improvement.recommendations.${rk}`);
+        }
+      }
+      if (rec.heuristicVersion !== undefined) {
+        validateValueForMetadata(
+          REGISTRY["improvement.recommendations.heuristicVersion"]!,
+          rec.heuristicVersion
+        );
       }
     }
     if (imp.transcripts !== undefined) {

@@ -483,6 +483,26 @@
       "user"
     ]
   },
+  "improvement.recommendations.heuristicVersion": {
+    "key": "improvement.recommendations.heuristicVersion",
+    "type": "number",
+    "description": "Improvement ingest admission heuristic: 1 (default, max-of-signals) or 2 (mean-of-signals with alternate threshold).",
+    "default": 1,
+    "allowedValues": [
+      1,
+      2
+    ],
+    "domainScope": "project",
+    "owningModule": "improvement",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
   "improvement.hooks.afterTaskCompleted": {
     "key": "improvement.hooks.afterTaskCompleted",
     "type": "string",

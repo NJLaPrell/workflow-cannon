@@ -2,10 +2,8 @@ import type { WorkflowModule } from "../../contracts/module-contract.js";
 import { builtinInstructionEntriesForModule } from "../../contracts/builtin-run-command-manifest.js";
 import { queryLineageChain } from "../../core/lineage-store.js";
 import { resolveSessionId } from "../../core/session-policy.js";
-import {
-  getMaxRecommendationCandidatesPerRun,
-  runGenerateRecommendations
-} from "./generate-recommendations-runtime.js";
+import { getMaxRecommendationCandidatesPerRun, runGenerateRecommendations } from "./generate-recommendations-runtime.js";
+import { runScoutReport } from "./scout-report-runtime.js";
 import {
   resolveCadenceDecision,
   resolveImprovementTranscriptConfig,
@@ -26,7 +24,7 @@ export { buildImprovementTaskPayload } from "./improvement-task-payload.js";
 export const improvementModule: WorkflowModule = {
   registration: {
     id: "improvement",
-    version: "0.9.1",
+    version: "0.10.0",
     contractVersion: "1",
     stateSchema: 1,
     capabilities: ["improvement"],
@@ -229,6 +227,22 @@ export const improvementModule: WorkflowModule = {
           message: `${chain.events.length} lineage event(s) for ${taskId}`,
           data: chain as unknown as Record<string, unknown>
         };
+      },
+      "scout-report": async () => {
+        const seed = typeof args.seed === "string" ? args.seed : undefined;
+        const persistRotation = args.persistRotation === true;
+        try {
+          const data = await runScoutReport(ctx, { seed, persistRotation });
+          return {
+            ok: true,
+            code: "scout-report-emitted",
+            message: "Scout rehearsal JSON emitted (no improvement tasks created)",
+            data
+          };
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          return { ok: false, code: "scout-report-failed", message: msg };
+        }
       }
     };
     const handler = handlers[command.name];

@@ -28,6 +28,12 @@ Research transcripts/docs/architecture first, then persist a **problem report** 
 
 Human playbook: `docs/maintainers/playbooks/improvement-task-discovery.md`.
 
+## Improvement scout (bounded rehearsal → optional persist)
+
+Use **`improvement-scout`** when you want **capped** candidate findings (1–3), **lens + zone rotation**, and an **evidence floor** before opening tasks. Read-only JSON: `workspace-kit run scout-report '{}'` (no task persistence). Persist only via **`create-task`** or Tier B ingest/generate with **`policyApproval`**.
+
+Human playbook: `docs/maintainers/playbooks/improvement-scout.md`.
+
 ## Improvement triage (≤3 → ready)
 
 Pick at most three `proposed` improvement tasks, document rationale, **`accept`** to **`ready`** with **`policyApproval`** on the transition args.

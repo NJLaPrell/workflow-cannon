@@ -10,6 +10,23 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 (none)
 
+## [0.59.0] - 2026-04-05
+
+Phase 59 — **Improvement Scout** (**`T679`–`T683`**): bounded scout playbook, read-only **`scout-report`**, optional rotation memory, optional ingest **`heuristic_2`**. The earlier Cursor chat prefill track **`T668`–`T670`** remains **`cancelled`**.
+
+### Added
+
+- Playbook **`improvement-scout`** (canonical **`.ai/playbooks`** + maintainer mirror) — primary/adversarial lens catalog, target zones, question stems, evidence floor (≥2 anchors), emit cap, optional scout **`metadata`** keys documented for improvement tasks.
+- **`workspace-kit run scout-report`** — non-sensitive JSON rehearsal (`code: scout-report-emitted`); optional **`persistRotation: true`** appends to **`scoutRotationHistory`** (improvement operational state schema **`3`**, FIFO cap **32**).
+- Config **`improvement.recommendations.heuristicVersion`** **`1`** (default) or **`2`** — alternate mean-of-signals admission curve; new recommendation rows include **`metadata.heuristicVersion`**.
+- Example shape: **`tasks/improvement-scout-proposal.example.md`**.
+- Unit tests: **`test/scout-rotation.test.mjs`**, **`test/improvement-heuristic-2.test.mjs`**.
+
+### Changed
+
+- **`improvement`** module **`0.9.1` → `0.10.0`**; **`docs/maintainers/data/compatibility-matrix.json`** updated.
+- **`TERMS.md`**, **`AGENT-CLI-MAP`**, **`FEATURE-MATRIX.md`**, roadmap sources + generated **`ROADMAP.md`** / **`.ai/ROADMAP.md`** for Phase 59 closeout; maintainer **`AGENTS.md`** playbook index lists **`improvement-scout`**.
+
 ## [0.58.2] - 2026-04-05
 
 Phase 58 visibility — **`dashboard-summary`** surfaces **`kit_team_assignments`** for operators (**`T728`**), plus maintainer doc pipeline / ADR folder hygiene and improvement-task metadata tightening from the prior unreleased train.

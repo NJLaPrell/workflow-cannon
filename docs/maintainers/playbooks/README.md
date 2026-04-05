@@ -33,6 +33,7 @@ Use the **filename stem** as the stable id.
 | `phase-closeout-and-release` | [`phase-closeout-and-release.md`](./phase-closeout-and-release.md) | Finishing a phase: queue hygiene, delivery loop, human release gate, RELEASING evidence; **§7** agent wrap-up (compact template) after ship |
 | `task-to-phase-branch` | [`task-to-phase-branch.md`](./task-to-phase-branch.md) | One **`T###`**: `release/phase-<N>`, task branch, PR into phase branch, review loop, merge, then task-engine **`complete`** |
 | `improvement-task-discovery` | [`improvement-task-discovery.md`](./improvement-task-discovery.md) | Research friction → log **`improvement`** tasks / recommendations (transcripts, docs, architecture, release ops) |
+| `improvement-scout` | [`improvement-scout.md`](./improvement-scout.md) | Bounded scout pass: lenses, target zones, stems, adversarial step, evidence floor; pairs with read-only **`scout-report`** |
 | `improvement-triage-top-three` | [`improvement-triage-top-three.md`](./improvement-triage-top-three.md) | Analyze **`improvement`** backlog; promote **≤3** best **`proposed`** → **`ready`** (Tier A **`accept`**) |
 | `wishlist-intake-to-execution` | [`wishlist-intake-to-execution.md`](./wishlist-intake-to-execution.md) | Rank wishlist ideation, confirm timing, clarify scope, pick target phase, run **`convert-wishlist`** with planning-generation hygiene |
 | `skill-attachments` | [`skill-attachments.md`](./skill-attachments.md) | Attach **`metadata.skillIds`** to execution tasks using discovered pack ids |

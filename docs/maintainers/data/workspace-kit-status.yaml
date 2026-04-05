@@ -1,12 +1,12 @@
 schema_version: 1
-current_kit_phase: "58"
-next_kit_phase: "58"
+current_kit_phase: "59"
+next_kit_phase: "60"
 last_updated: "2026-04-05"
-active_focus: "**Phase 58** (current) — latest **`v0.58.2`**: dashboard **`teamExecution`** (**`kit_team_assignments`** in **`dashboard-summary`**, extension **0.1.7**, **`T728`** **`completed`**) on top of **`v0.58.0`**/**`v0.58.1`** team execution + extension/interview work. Phase **59** **`T668`–`T670`** **`cancelled`**. **`current_kit_phase` / `next_kit_phase` 58**."
+active_focus: "**Phase 59** (current) — **`v0.59.0`**: Improvement Scout (**`T679`–`T683`**) — **`improvement-scout`** playbook, **`scout-report`**, rotation memory (**`scoutRotationHistory`**, state schema **3**), optional ingest **`heuristic_2`** (**`improvement.recommendations.heuristicVersion`**). Prior Cursor prefill track **`T668`–`T670`** **`cancelled`**. **`current_kit_phase` 59** / **`next_kit_phase` 60**."
 blockers: []
 pending_decisions: []
 next_agent_actions:
-  - "**Now:** `pnpm run wk doctor` then `pnpm run wk run get-next-actions '{}'` — **`current_kit_phase` 58** (latest ship **`v0.58.2`**); Phase **59** **`T668`–`T670`** **`cancelled`**; head of **`ready`** queue is improvement / backlog / follow-on architecture tasks until replanned."
+  - "**Now:** `pnpm run wk doctor` then `pnpm run wk run get-next-actions '{}'` — **`current_kit_phase` 59** (latest ship **`v0.59.0`**); Phase **60** architecture queue (**`T695`–`T697`**, etc.) per task store; Phase **59** prefill **`T668`–`T670`** remain **`cancelled`**."
   - "2026-04-04: Phase **58** patch **`v0.58.1`** — **`T672`–`T678`** **`completed`** (extension dashboard rollups + interview CLI hardening). GitHub release + Publish NPM: maintainer after merge (paste workflow URLs here)."
   - "2026-04-04: Phase **58** **`v0.58.0`** — GitHub release `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.58.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23988556542`."
   - "2026-04-04: Phase **57** **`v0.57.0`** — GitHub release `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.57.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23986626078`."
@@ -19,6 +19,7 @@ next_agent_actions:
   - "2026-04-03: Phase **50** **`v0.50.0`** — GitHub release `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.50.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23962170532`."
   - "2026-04-03: Phase **49** **`v0.49.0`** — GitHub release `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.49.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23958564398`."
 last_session_summary:
+  - "2026-04-05: Phase **59** closeout — **`v0.59.0`** — **`T679`–`T683`** **`completed`**: **`improvement-scout`** playbook + **`scout-report`** + improvement state **`scoutRotationHistory`** (schema **3**) + **`improvement.recommendations.heuristicVersion`** **`2`** path; **`improvement`** **0.10.0**. **`update-workspace-phase-snapshot`** **`current_kit_phase` 59** / **`next_kit_phase` 60**; **`kit.currentPhaseNumber`** **59**. Git tag / GitHub release / Publish NPM: maintainer (**paste workflow URLs after ship**)."
   - "2026-04-05: Phase **58** patch **`v0.58.2`** — **`T728`** **`completed`**: **`dashboard-summary` `data.schemaVersion` 2** + **`teamExecution`** read-only facet; Cursor extension **0.1.7** (**Team assignments** card). GitHub release `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.58.2` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23996618134`."
   - "2026-04-04: Phase **58** patch **`v0.58.1`** — **`T672`–`T678`** **`completed`**: Cursor extension **0.1.6** (dashboard-only tasks, **Detail** rows); **`interview-behavior-profile`** **`status`**, non-destructive **`start`**, default **`custom:chat-behavior-interview`** allocation; playbook fingerprint **`pnpm run check`** gate."
   - "2026-04-04: **`update-workspace-phase-snapshot`** + **`kit.currentPhaseNumber`** — maintainer reset **`current_kit_phase` / `next_kit_phase` 58** after Phase **59** **`T668`–`T670`** **`cancelled`** (Cursor chat prefill); doctor/config aligned to **Phase 58** as current."
@@ -73,7 +74,7 @@ last_session_summary:
 metrics:
   updated_at: "2026-04-03"
   source: "maintainer"
-  notes: "Maintainer snapshot current_kit_phase 58 (v0.58.1 shipped). Phase 59 T668–T670 cancelled 2026-04-04; ready queue improvement/backlog until replanned."
+  notes: "Maintainer snapshot current_kit_phase 59 (v0.59.0 Phase 59 scout train). T668–T670 prefill cancelled; ready queue heads into Phase 60 architecture tasks per SQLite store."
   time_to_doctor_minutes: null
   cold_start_success_rate_pct: null
   upgrade_success_rate_pct: null
