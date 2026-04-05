@@ -162,4 +162,5 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 - Phase 55 / `v0.55.0` GitHub release: `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.55.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23973610279`
 - Phase 57 / `v0.57.0` GitHub release: `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.57.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23986626078`
 - Phase 58 / `v0.58.0` GitHub release: `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.58.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23988556542`
+- Phase 58 patch / `v0.58.2` GitHub release: `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.58.2` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23996618134`
 - npm package: `https://www.npmjs.com/package/@workflow-cannon/workspace-kit`
