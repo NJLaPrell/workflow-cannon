@@ -18,7 +18,7 @@ workspace-kit run create-task '{"id":"T400","title":"My task","status":"proposed
 
 Known type guardrails:
 
-- For `type: "improvement"`, Task Engine validates non-empty `acceptanceCriteria` and `technicalScope`.
+- For `type: "improvement"`, Task Engine validates non-empty `acceptanceCriteria` and `technicalScope`, plus non-empty **`metadata.issue`** (problem statement) and **`metadata.supportingReasoning`** (why this is the issue; cite evidence refs). Legacy rows whose id matches **`imp-<hex>`** may omit **`metadata.supportingReasoning`** until updated.
 - Violations return stable error code `invalid-task-type-requirements`.
 
 Idempotency behavior:

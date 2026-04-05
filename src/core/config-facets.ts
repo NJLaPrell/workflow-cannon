@@ -12,7 +12,8 @@ export const CONFIG_FACET_IDS = [
   "kit",
   "modules",
   "policy",
-  "responseTemplates"
+  "responseTemplates",
+  "agentBehavior"
 ] as const;
 
 export type ConfigFacetId = (typeof CONFIG_FACET_IDS)[number];

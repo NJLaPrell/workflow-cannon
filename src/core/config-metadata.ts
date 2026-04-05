@@ -177,6 +177,17 @@ export function validateValueForMetadata(meta: ConfigKeyMetadata, value: unknown
         }
       }
     }
+    if (meta.key === "agentBehavior.customProfiles") {
+      for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+        if (typeof k !== "string" || !k.startsWith("custom:")) {
+          throw new Error(`config-type-error(${meta.key}): keys must start with custom:`);
+        }
+        if (typeof v !== "object" || v === null || Array.isArray(v)) {
+          throw new Error(`config-type-error(${meta.key}): profile values must be objects`);
+        }
+      }
+      return;
+    }
   }
   if (meta.allowedValues && meta.allowedValues.length > 0) {
     if (!meta.allowedValues.some((v) => deepEqualLoose(v, value))) {
@@ -198,6 +209,59 @@ function deepEqualLoose(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
+function getAtPathForConfigValidation(root: Record<string, unknown>, dotted: string): unknown {
+  const parts = dotted.split(".").filter(Boolean);
+  let cur: unknown = root;
+  for (const p of parts) {
+    if (cur === null || cur === undefined || typeof cur !== "object" || Array.isArray(cur)) {
+      return undefined;
+    }
+    cur = (cur as Record<string, unknown>)[p];
+  }
+  return cur;
+}
+
+/**
+ * Validate `.workspace-kit/modules/<moduleId>/config.json`: only keys owned by that module (registry owningModule).
+ */
+export function validateModuleScopedConfigDocument(
+  moduleId: string,
+  data: Record<string, unknown>,
+  label: string
+): void {
+  const allowedTop = new Set<string>();
+  for (const meta of Object.values(REGISTRY)) {
+    if (meta.owningModule === moduleId) {
+      allowedTop.add(meta.key.split(".")[0]!);
+    }
+  }
+  const contentKeys = Object.keys(data).filter((k) => k !== "schemaVersion");
+  if (contentKeys.length > 0 && allowedTop.size === 0) {
+    throw new Error(
+      `config-invalid(${label}): module '${moduleId}' config file has entries but no registered keys for this module`
+    );
+  }
+  if (data.schemaVersion !== undefined && typeof data.schemaVersion !== "number") {
+    throw new Error(`config-invalid(${label}): schemaVersion must be a number`);
+  }
+  for (const k of contentKeys) {
+    if (!allowedTop.has(k)) {
+      throw new Error(
+        `config-invalid(${label}): module '${moduleId}' cannot declare top-level key '${k}' (not owned by this module)`
+      );
+    }
+  }
+  for (const meta of Object.values(REGISTRY)) {
+    if (meta.owningModule !== moduleId) {
+      continue;
+    }
+    const val = getAtPathForConfigValidation(data, meta.key);
+    if (val !== undefined) {
+      validateValueForMetadata(meta, val);
+    }
+  }
+}
+
 /**
  * Validate top-level shape of persisted kit config files (strict unknown-key rejection).
  */
@@ -215,7 +279,9 @@ export function validatePersistedConfigDocument(
     "skills",
     "responseTemplates",
     "modules",
-    "kit"
+    "kit",
+    "planning",
+    "agentBehavior"
   ]);
   for (const k of Object.keys(data)) {
     if (!allowed.has(k)) {
@@ -570,6 +636,53 @@ export function validatePersistedConfigDocument(
     }
     if (sk.discoveryRoots !== undefined) {
       validateValueForMetadata(REGISTRY["skills.discoveryRoots"]!, sk.discoveryRoots);
+    }
+  }
+  const planning = data.planning;
+  if (planning !== undefined) {
+    if (typeof planning !== "object" || planning === null || Array.isArray(planning)) {
+      throw new Error(`config-invalid(${label}): planning must be an object`);
+    }
+    const pl = planning as Record<string, unknown>;
+    for (const k of Object.keys(pl)) {
+      if (
+        k !== "defaultQuestionDepth" &&
+        k !== "hardBlockCriticalUnknowns" &&
+        k !== "adaptiveFinalizePolicy" &&
+        k !== "rulePacks"
+      ) {
+        throw new Error(`config-invalid(${label}): unknown planning.${k}`);
+      }
+    }
+    if (pl.defaultQuestionDepth !== undefined) {
+      validateValueForMetadata(REGISTRY["planning.defaultQuestionDepth"]!, pl.defaultQuestionDepth);
+    }
+    if (pl.hardBlockCriticalUnknowns !== undefined) {
+      validateValueForMetadata(REGISTRY["planning.hardBlockCriticalUnknowns"]!, pl.hardBlockCriticalUnknowns);
+    }
+    if (pl.adaptiveFinalizePolicy !== undefined) {
+      validateValueForMetadata(REGISTRY["planning.adaptiveFinalizePolicy"]!, pl.adaptiveFinalizePolicy);
+    }
+    if (pl.rulePacks !== undefined) {
+      validateValueForMetadata(REGISTRY["planning.rulePacks"]!, pl.rulePacks);
+    }
+  }
+  const agentBehavior = data.agentBehavior;
+  if (agentBehavior !== undefined) {
+    if (typeof agentBehavior !== "object" || agentBehavior === null || Array.isArray(agentBehavior)) {
+      throw new Error(`config-invalid(${label}): agentBehavior must be an object`);
+    }
+    const ab = agentBehavior as Record<string, unknown>;
+    for (const k of Object.keys(ab)) {
+      if (k !== "activeProfileId" && k !== "customProfiles") {
+        throw new Error(`config-invalid(${label}): unknown agentBehavior.${k}`);
+      }
+    }
+    if (ab.activeProfileId !== undefined) {
+      validateValueForMetadata(REGISTRY["agentBehavior.activeProfileId"]!, ab.activeProfileId);
+    }
+    if (ab.customProfiles !== undefined) {
+      validateValueForMetadata(REGISTRY["agentBehavior.customProfiles"]!, ab.customProfiles);
     }
   }
   const responseTemplates = data.responseTemplates;

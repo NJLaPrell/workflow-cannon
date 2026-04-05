@@ -6,6 +6,12 @@ export function escapeHtml(s: string): string {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+/** Stable id for preserving `<details open>` when the host replaces `#root` innerHTML (`DashboardViewProvider` wcReplaceRoot). */
+function wcTrackAttr(trackId: string): string {
+  const safe = trackId.replace(/[^a-zA-Z0-9_-]/g, "_").replace(/_+/g, "_").slice(0, 120);
+  return ' data-wc-track="' + escapeHtml(safe) + '"';
+}
+
 /** Escape first, then turn paired `**segments**` into `<b>…</b>` (safe for webview HTML). */
 export function renderMarkdownBoldAfterEscape(escapedPlain: string): string {
   return escapedPlain.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
@@ -51,24 +57,30 @@ function renderWishlistOpenList(items: unknown): string {
     return '<p class="muted">No Items</p>';
   }
   return (
-    '<p class="muted"><b>Open Wishlist Preview</b> · <span class="muted">Chat</span> prefills Cursor with the intake playbook prompt.</p>' +
+    '<p class="muted"><b>Open Wishlist Preview</b> · <b>Process</b> runs intake in chat; <b>Decline</b> cancels the backing intake task (<code>reject</code> → cancelled).</p>' +
     '<div class="dash-row-list" role="list">' +
     items
       .map((x) => {
-        const row = x as { id?: unknown; title?: unknown };
+        const row = x as { id?: unknown; title?: unknown; taskId?: unknown };
         const id = String(row?.id ?? "").trim();
+        const taskId = String(row?.taskId ?? row?.id ?? "").trim();
         const title = escapeHtml(String(row?.title ?? ""));
         const label = escapeHtml(id) + (id ? " " : "") + title;
         const idAttr = escapeHtml(id);
+        const taskIdAttr = escapeHtml(taskId);
         return (
           '<div class="dash-row" role="listitem">' +
           '<span class="dash-row-label">- ' +
           label +
           "</span>" +
-          '<button type="button" class="dash-row-action" data-wc-action="wishlist-chat" data-wishlist-id="' +
+          '<span class="dash-row-actions">' +
+          '<button type="button" class="dash-row-action dash-row-action-primary" data-wc-action="wishlist-chat" data-wishlist-id="' +
           idAttr +
-          '" title="Prefill Cursor chat with wishlist intake playbook (this item)">Chat</button>' +
-          "</div>"
+          '" title="Open wishlist intake flow for this item (prefills Cursor chat)">Process</button>' +
+          '<button type="button" class="dash-row-action dash-row-action-secondary" data-wc-action="wishlist-decline" data-task-id="' +
+          taskIdAttr +
+          '" title="Decline → cancelled (reject on backing wishlist intake task; confirms policy rationale)">Decline</button>' +
+          "</span></div>"
         );
       })
       .join("") +
@@ -87,16 +99,20 @@ function renderProposedImprovementRow(row: { id?: unknown; title?: unknown; phas
     '<span class="dash-row-label">' +
     label +
     "</span>" +
-    '<button type="button" class="dash-row-action" data-wc-action="proposed-imp-accept" data-task-id="' +
+    '<span class="dash-row-actions">' +
+    '<button type="button" class="dash-row-action dash-row-action-primary" data-wc-action="proposed-imp-accept" data-task-id="' +
     idAttr +
     '" title="Accept → ready (confirms policy rationale)">Accept</button>' +
-    "</div>"
+    '<button type="button" class="dash-row-action dash-row-action-secondary" data-wc-action="proposed-imp-decline" data-task-id="' +
+    idAttr +
+    '" title="Decline → cancelled (reject; confirms policy rationale)">Decline</button>' +
+    "</span></div>"
   );
 }
 
 function renderProposedImprovementsList(count: number, items: unknown): string {
   if (!Array.isArray(items) || items.length === 0) {
-    return `<p class="muted">No proposed improvements (<code>type: improvement</code> or <code>imp-*</code> + <code>status: proposed</code>). Run <code>generate-recommendations</code> / accept triage per playbook. Confirm: <code>workspace-kit run list-tasks '{}'</code>.</p>`;
+    return `<p class="muted">No proposed improvements (<code>type: improvement</code>, <code>status: proposed</code>; legacy <code>imp-*</code> may still appear). Run <code>generate-recommendations</code> / <code>ingest-transcripts</code> or log via <code>create-task</code> per playbook. Confirm: <code>workspace-kit run list-tasks '{}'</code>.</p>`;
   }
   const more =
     count > items.length
@@ -104,7 +120,7 @@ function renderProposedImprovementsList(count: number, items: unknown): string {
       : "";
   return (
     more +
-    '<p class="muted"><b>Row actions</b> · <span class="muted">Accept</span> runs <code>run-transition</code> (modal rationale + planning token when required).</p>' +
+    '<p class="muted"><b>Row actions</b> · <span class="muted">Accept</span> / <span class="muted">Decline</span> run <code>run-transition</code> (<code>accept</code> / <code>reject</code>; modal rationale + planning token when required).</p>' +
     '<div class="dash-row-list" role="list">' +
     items.map((x) => renderProposedImprovementRow(x as { id?: unknown; title?: unknown; phase?: unknown })).join("") +
     "</div>"
@@ -122,10 +138,14 @@ function renderProposedExecutionRow(row: { id?: unknown; title?: unknown; phase?
     '<span class="dash-row-label">' +
     label +
     "</span>" +
-    '<button type="button" class="dash-row-action" data-wc-action="proposed-exe-accept" data-task-id="' +
+    '<span class="dash-row-actions">' +
+    '<button type="button" class="dash-row-action dash-row-action-primary" data-wc-action="proposed-exe-accept" data-task-id="' +
     idAttr +
     '" title="Accept → ready (confirms policy rationale)">Accept</button>' +
-    "</div>"
+    '<button type="button" class="dash-row-action dash-row-action-secondary" data-wc-action="proposed-exe-decline" data-task-id="' +
+    idAttr +
+    '" title="Decline → cancelled (reject; confirms policy rationale)">Decline</button>' +
+    "</span></div>"
   );
 }
 
@@ -139,7 +159,7 @@ function renderProposedExecutionList(count: number, items: unknown): string {
       : "";
   return (
     more +
-    '<p class="muted"><b>Row actions</b> · <span class="muted">Accept</span> runs <code>run-transition</code> when required.</p>' +
+    '<p class="muted"><b>Row actions</b> · <span class="muted">Accept</span> / <span class="muted">Decline</span> run <code>run-transition</code> when required.</p>' +
     '<div class="dash-row-list" role="list">' +
     items.map((x) => renderProposedExecutionRow(x as { id?: unknown; title?: unknown; phase?: unknown })).join("") +
     "</div>"
@@ -190,7 +210,12 @@ function phaseBucketsNonEmpty(phaseBuckets: unknown): unknown[] {
 /**
  * When `dashboard-summary` includes `phaseBuckets`, one `<details>` per phase (closed until expanded).
  */
-function renderReadyPhaseBuckets(phaseBuckets: unknown, fallbackTop: unknown, emptyMessage: string): string {
+function renderReadyPhaseBuckets(
+  phaseBuckets: unknown,
+  fallbackTop: unknown,
+  emptyMessage: string,
+  phaseTrackPrefix: string
+): string {
   const buckets = phaseBucketsNonEmpty(phaseBuckets);
   if (buckets.length === 0) {
     return renderTaskRowList(fallbackTop, emptyMessage);
@@ -198,11 +223,19 @@ function renderReadyPhaseBuckets(phaseBuckets: unknown, fallbackTop: unknown, em
   return (
     '<div class="phase-stack">' +
     buckets
-      .map((raw) => {
+      .map((raw, i) => {
         const b = raw as { label?: unknown; top?: unknown };
         const summary = escapeHtml(String(b.label ?? ""));
         const body = renderTaskRowList(b.top ?? [], "No tasks in this phase.");
-        return '<details class="phase-bucket"><summary>' + summary + "</summary>" + body + "</details>";
+        return (
+          '<details class="phase-bucket"' +
+          wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
+          "><summary>" +
+          summary +
+          "</summary>" +
+          body +
+          "</details>"
+        );
       })
       .join("") +
     "</div>"
@@ -212,7 +245,8 @@ function renderReadyPhaseBuckets(phaseBuckets: unknown, fallbackTop: unknown, em
 function renderProposedPhaseBuckets(
   phaseBuckets: unknown,
   totalCount: number,
-  fallbackTop: unknown
+  fallbackTop: unknown,
+  phaseTrackPrefix: string
 ): string {
   const buckets = phaseBucketsNonEmpty(phaseBuckets);
   if (buckets.length === 0) {
@@ -230,7 +264,7 @@ function renderProposedPhaseBuckets(
     more +
     '<div class="phase-stack">' +
     buckets
-      .map((raw) => {
+      .map((raw, i) => {
         const b = raw as { label?: unknown; top?: unknown; count?: unknown };
         const summary = escapeHtml(String(b.label ?? ""));
         const c = typeof b.count === "number" ? b.count : 0;
@@ -238,7 +272,15 @@ function renderProposedPhaseBuckets(
           c === 0
             ? '<p class="muted">No tasks in this phase.</p>'
             : renderProposedImprovementsList(c, b.top ?? []);
-        return '<details class="phase-bucket"><summary>' + summary + "</summary>" + inner + "</details>";
+        return (
+          '<details class="phase-bucket"' +
+          wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
+          "><summary>" +
+          summary +
+          "</summary>" +
+          inner +
+          "</details>"
+        );
       })
       .join("") +
     "</div>"
@@ -249,7 +291,8 @@ function renderProposedPhaseBuckets(
 function renderProposedExecutionPhaseBuckets(
   phaseBuckets: unknown,
   totalCount: number,
-  fallbackTop: unknown
+  fallbackTop: unknown,
+  phaseTrackPrefix: string
 ): string {
   const bucketsPe = phaseBucketsNonEmpty(phaseBuckets);
   if (bucketsPe.length === 0) {
@@ -267,7 +310,7 @@ function renderProposedExecutionPhaseBuckets(
     more +
     '<div class="phase-stack">' +
     bucketsPe
-      .map((raw) => {
+      .map((raw, i) => {
         const b = raw as { label?: unknown; top?: unknown; count?: unknown };
         const summary = escapeHtml(String(b.label ?? ""));
         const c = typeof b.count === "number" ? b.count : 0;
@@ -275,14 +318,27 @@ function renderProposedExecutionPhaseBuckets(
           c === 0
             ? '<p class="muted">No tasks in this phase.</p>'
             : renderProposedExecutionList(c, b.top ?? []);
-        return '<details class="phase-bucket"><summary>' + summary + "</summary>" + inner + "</details>";
+        return (
+          '<details class="phase-bucket"' +
+          wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
+          "><summary>" +
+          summary +
+          "</summary>" +
+          inner +
+          "</details>"
+        );
       })
       .join("") +
     "</div>"
   );
 }
 
-function renderBlockedPhaseBuckets(phaseBuckets: unknown, fallbackTop: unknown, totalBlocked: number): string {
+function renderBlockedPhaseBuckets(
+  phaseBuckets: unknown,
+  fallbackTop: unknown,
+  totalBlocked: number,
+  phaseTrackPrefix: string
+): string {
   const bucketsBl = phaseBucketsNonEmpty(phaseBuckets);
   if (bucketsBl.length === 0) {
     return renderBlockedList(fallbackTop);
@@ -299,7 +355,7 @@ function renderBlockedPhaseBuckets(phaseBuckets: unknown, fallbackTop: unknown, 
     more +
     '<div class="phase-stack">' +
     bucketsBl
-      .map((raw) => {
+      .map((raw, i) => {
         const b = raw as { label?: unknown; top?: unknown; count?: unknown };
         const summary = escapeHtml(String(b.label ?? ""));
         const c = typeof b.count === "number" ? b.count : 0;
@@ -307,7 +363,15 @@ function renderBlockedPhaseBuckets(phaseBuckets: unknown, fallbackTop: unknown, 
           c === 0
             ? '<p class="muted">No blocked tasks in this phase.</p>'
             : renderBlockedList(b.top ?? []);
-        return '<details class="phase-bucket"><summary>' + summary + "</summary>" + inner + "</details>";
+        return (
+          '<details class="phase-bucket"' +
+          wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
+          "><summary>" +
+          summary +
+          "</summary>" +
+          inner +
+          "</details>"
+        );
       })
       .join("") +
     "</div>"
@@ -321,7 +385,8 @@ function renderTerminalTaskPhaseBuckets(
   phaseBuckets: unknown,
   fallbackTop: unknown,
   totalInStatus: number,
-  emptyMessage: string
+  emptyMessage: string,
+  phaseTrackPrefix: string
 ): string {
   const bucketsTm = phaseBucketsNonEmpty(phaseBuckets);
   if (bucketsTm.length === 0) {
@@ -339,7 +404,7 @@ function renderTerminalTaskPhaseBuckets(
     more +
     '<div class="phase-stack">' +
     bucketsTm
-      .map((raw) => {
+      .map((raw, i) => {
         const b = raw as { label?: unknown; top?: unknown; count?: unknown };
         const summary = escapeHtml(String(b.label ?? ""));
         const c = typeof b.count === "number" ? b.count : 0;
@@ -348,7 +413,9 @@ function renderTerminalTaskPhaseBuckets(
             ? '<p class="muted">No tasks in this phase.</p>'
             : renderTaskRowList(b.top ?? [], "No tasks in this phase.");
         return (
-          '<details class="phase-bucket terminal-phase-bucket"><summary>' +
+          '<details class="phase-bucket terminal-phase-bucket"' +
+          wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
+          "><summary>" +
           summary +
           "</summary>" +
           inner +
@@ -360,45 +427,80 @@ function renderTerminalTaskPhaseBuckets(
   );
 }
 
+/** Readable label for `build-plan` planningType / status strings (dashboard only). */
+function humanizePlanningToken(raw: string): string {
+  const s = raw.trim();
+  if (s.length === 0) {
+    return "";
+  }
+  return s
+    .split(/[-_\s]+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function formatPlanningUpdatedAt(iso: string): string {
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) {
+    return iso;
+  }
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short"
+    }).format(t);
+  } catch {
+    return iso;
+  }
+}
+
 function renderPlanningSession(ps: unknown): string {
   if (!ps || typeof ps !== "object") {
     return (
       '<section class="dash-card" aria-label="Planning session">' +
-      "<p><b>Planning Session</b></p>" +
-      '<p class="muted">No in-flight <code>build-plan</code> snapshot. When <code>.workspace-kit/planning/build-plan-session.json</code> exists, this card shows progress and a resume command.</p>' +
-      '<p class="muted"><b>Stale</b> — When the interview completes or the session file is removed, this card clears until a new session starts (use Refresh).</p>' +
+      "<p><b>Planning Interview</b></p>" +
+      "<p class=\"muted\">No interview in progress. Start or resume with <code>workspace-kit run build-plan</code> when you want guided planning; progress is saved automatically under <code>.workspace-kit/planning/</code>.</p>" +
+      '<p class="muted">This card updates when you refresh after the session file appears or disappears.</p>' +
       "</section>"
     );
   }
   const o = ps as Record<string, unknown>;
   const pct = typeof o.completionPct === "number" ? String(o.completionPct) : "—";
+  const typeRaw = String(o.planningType ?? "").trim();
+  const statusRaw = String(o.status ?? "").trim();
+  const typeDisp = typeRaw.length > 0 ? humanizePlanningToken(typeRaw) : "Planning";
+  const statusDisp = statusRaw.length > 0 ? humanizePlanningToken(statusRaw) : "—";
   const crit =
     typeof o.answeredCritical === "number" && typeof o.totalCritical === "number"
       ? escapeHtml(String(o.answeredCritical)) +
-        " / " +
+        " of " +
         escapeHtml(String(o.totalCritical)) +
-        " critical answered"
+        " required questions answered"
       : "";
+  const when =
+    typeof o.updatedAt === "string" && o.updatedAt.length > 0
+      ? formatPlanningUpdatedAt(o.updatedAt)
+      : "—";
   return (
     '<section class="dash-card" aria-label="Planning session resume">' +
-    "<p><b>Planning Session</b> " +
-    escapeHtml(String(o.planningType ?? "")) +
+    "<p><b>Planning Interview</b> · " +
+    escapeHtml(typeDisp) +
     " · " +
-    escapeHtml(String(o.status ?? "")) +
+    escapeHtml(statusDisp) +
     "</p>" +
     "<p>" +
     escapeHtml(pct) +
-    "% critical complete" +
-    (crit ? " · " + crit : "") +
+    "% through required questions" +
+    (crit ? " (" + crit + ")" : "") +
     "</p>" +
-    '<p class="muted">Updated ' +
-    escapeHtml(String(o.updatedAt ?? "—")) +
+    '<p class="muted">Last saved: ' +
+    escapeHtml(when) +
     "</p>" +
-    "<p><b>Resume</b> (shell):</p>" +
+    "<p><b>Resume</b> (copy into a terminal):</p>" +
     '<pre class="resume-cli">' +
     escapeHtml(String(o.resumeCli ?? "")) +
     "</pre>" +
-    '<p class="muted"><b>Stale</b> — Completing or discarding the interview removes this block on refresh.</p>' +
+    '<p class="muted">When you finish or discard the interview, refresh and this card goes away.</p>' +
     "</section>"
   );
 }
@@ -431,7 +533,7 @@ function buildDashboardStateCountGridHtml(ss: Record<string, unknown>): string {
           '<div class="dash-count-cell" role="listitem">' +
           '<span class="dash-count-label">' +
           escapeHtml(c.label) +
-          '</span><span class="dash-count-num ok">' +
+          '</span> <span class="dash-count-num ok">' +
           escapeHtml(String(c.n)) +
           "</span></div>"
       )
@@ -440,21 +542,28 @@ function buildDashboardStateCountGridHtml(ss: Record<string, unknown>): string {
   );
 }
 
+/**
+ * **Role** — `data.agentGuidance.displayLabel` (effective `kit.agentGuidance` tier + RPG party catalog).
+ * **Agent Temperament** — resolved agent-behavior profile label (`builtin:*` / `custom:*`).
+ */
 function renderAgentGuidanceSection(ag: unknown): string {
   if (!ag || typeof ag !== "object") {
     return "";
   }
   const o = ag as Record<string, unknown>;
   const tier = typeof o.tier === "number" ? o.tier : null;
-  const label = typeof o.displayLabel === "string" ? o.displayLabel.trim() : "";
+  const roleLabel = typeof o.displayLabel === "string" ? o.displayLabel.trim() : "";
+  const tempLabel = typeof o.temperamentLabel === "string" ? o.temperamentLabel.trim() : "";
   if (tier === null) {
     return "";
   }
   return (
-    '<section class="dash-card" aria-label="Collaboration roles">' +
-    "<p><b>You:</b> Maintainer</p>" +
-    "<p><b>Me:</b> " +
-    escapeHtml(label.length > 0 ? label : "—") +
+    '<section class="dash-card" aria-label="Role and agent temperament">' +
+    "<p><b>Role:</b> " +
+    escapeHtml(roleLabel.length > 0 ? roleLabel : "—") +
+    "</p>" +
+    "<p><b>Agent Temperament:</b> " +
+    escapeHtml(tempLabel.length > 0 ? tempLabel : "—") +
     "</p>" +
     "</section>"
   );
@@ -518,65 +627,18 @@ function renderWorkspaceOverviewSection(ws: Record<string, unknown> | null): str
   return html;
 }
 
-/** Dependency subgraph summary + critical path (no raw Mermaid — webview does not render diagrams). */
-function renderDependencyOverviewHtml(dep: unknown): string {
-  if (dep === null || dep === undefined || typeof dep !== "object") {
-    return (
-      '<section class="dash-card dependency-overview" aria-label="Dependency overview">' +
-      '<details class="status-section">' +
-      "<summary><b>Dependency Overview</b> — No Data</summary>" +
-      '<div class="status-section-body">' +
-      '<p class="muted">No dependency subgraph in this summary.</p>' +
-      "</div></details></section>"
-    );
-  }
-  const d = dep as Record<string, unknown>;
-  const active = typeof d.activeTaskCount === "number" ? d.activeTaskCount : "—";
-  const included = typeof d.includedTaskCount === "number" ? d.includedTaskCount : "—";
-  const edgeCount = typeof d.edgeCount === "number" ? d.edgeCount : "—";
-  const truncated = d.truncated === true;
-  const perf =
-    typeof d.perfNote === "string" && d.perfNote.length > 0
-      ? '<p class="muted">' + escapeHtml(d.perfNote) + "</p>"
-      : "";
-  const path = Array.isArray(d.criticalPathReady)
-    ? (d.criticalPathReady as unknown[]).map((x) => String(x))
-    : [];
-  const pathLine =
-    path.length > 0
-      ? "<p><b>Critical Path (Ready Frontier)</b> " + escapeHtml(path.join(" → ")) + "</p>"
-      : '<p class="muted"><b>Critical Path (Ready Frontier)</b> — None (no ready tasks in the subgraph).</p>';
-  const truncNote = truncated ? '<p class="muted">Truncated subgraph for large queues (N&gt;50 active tasks).</p>' : "";
-  const summaryLine =
-    "<b>Dependency Overview</b> · " +
-    escapeHtml(String(included)) +
-    " / " +
-    escapeHtml(String(active)) +
-    " Tasks · " +
-    escapeHtml(String(edgeCount)) +
-    " Edges";
-  const body =
-    perf +
-    truncNote +
-    pathLine +
-    '<p class="muted a11y-note">Graph diagram is not rendered here — use <code>workspace-kit run get-dependency-graph</code> for Mermaid or tooling.</p>';
-  return (
-    '<section class="dash-card dependency-overview" aria-label="Dependency overview">' +
-    '<details class="status-section">' +
-    "<summary>" +
-    summaryLine +
-    "</summary>" +
-    '<div class="status-section-body">' +
-    body +
-    "</div></details></section>"
-  );
-}
-
 /** Closed-by-default roll-up for a dashboard status band (ready / proposed / blocked / terminal). */
-function renderStatusRollup(summaryInnerHtml: string, bodyHtml: string, emptyOnly?: boolean): string {
+function renderStatusRollup(
+  trackId: string,
+  summaryInnerHtml: string,
+  bodyHtml: string,
+  emptyOnly?: boolean
+): string {
   const body = emptyOnly ? '<p class="muted">No Items</p>' : bodyHtml;
   return (
-    '<details class="status-section">' +
+    '<details class="status-section"' +
+    wcTrackAttr(trackId) +
+    ">" +
     "<summary>" +
     summaryInnerHtml +
     "</summary>" +
@@ -658,13 +720,27 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
     const cancTop = Array.isArray(ks?.top) ? (ks!.top as unknown[]).slice(0, 15) : [];
     const inner =
       renderStatusRollup(
+        "status-term-comp",
         "<b>Completed</b> (" + String(compCount) + ")",
-        renderTerminalTaskPhaseBuckets(cs?.phaseBuckets, compTop, compCount, "No completed tasks."),
+        renderTerminalTaskPhaseBuckets(
+          cs?.phaseBuckets,
+          compTop,
+          compCount,
+          "No completed tasks.",
+          "term-comp"
+        ),
         compCount === 0
       ) +
       renderStatusRollup(
+        "status-term-can",
         "<b>Cancelled</b> (" + String(cancCount) + ")",
-        renderTerminalTaskPhaseBuckets(ks?.phaseBuckets, cancTop, cancCount, "No cancelled tasks."),
+        renderTerminalTaskPhaseBuckets(
+          ks?.phaseBuckets,
+          cancTop,
+          cancCount,
+          "No cancelled tasks.",
+          "term-can"
+        ),
         cancCount === 0
       );
     return (
@@ -677,31 +753,38 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
     "<p><b>Tasks</b></p>" +
     buildDashboardStateCountGridHtml(ss) +
     renderStatusRollup(
+      "status-ready-imp",
       "<b>Ready · Improvements</b> (" + String(readyImpCount) + ")",
-      renderReadyPhaseBuckets(ris.phaseBuckets, readyImpTop, "No ready improvements."),
+      renderReadyPhaseBuckets(ris.phaseBuckets, readyImpTop, "No ready improvements.", "rdy-imp"),
       readyImpCount === 0
     ) +
     renderStatusRollup(
+      "status-ready-exe",
       "<b>Ready · Execution</b> (" + String(readyExeCount) + ")",
-      breakdownLine + renderReadyPhaseBuckets(res.phaseBuckets, readyExeTop, "No ready execution tasks."),
+      breakdownLine +
+        renderReadyPhaseBuckets(res.phaseBuckets, readyExeTop, "No ready execution tasks.", "rdy-exe"),
       readyExeCount === 0
     ) +
     renderStatusRollup(
+      "status-prop-imp",
       "<b>Proposed · Improvements</b> (" + String(piCount) + ")",
-      renderProposedPhaseBuckets(pis.phaseBuckets, piCount, piTop),
+      renderProposedPhaseBuckets(pis.phaseBuckets, piCount, piTop, "prop-imp"),
       piCount === 0
     ) +
     renderStatusRollup(
+      "status-prop-exe",
       "<b>Proposed · Execution</b> (" + String(peCount) + ")",
-      renderProposedExecutionPhaseBuckets(pes.phaseBuckets, peCount, peTop),
+      renderProposedExecutionPhaseBuckets(pes.phaseBuckets, peCount, peTop, "prop-exe"),
       peCount === 0
     ) +
     renderStatusRollup(
+      "status-blocked",
       "<b>Blocked</b> (" + String(Number(blockedSummary.count ?? 0)) + ")",
       renderBlockedPhaseBuckets(
         blockedSummary.phaseBuckets,
         blockedTop,
-        Number(blockedSummary.count ?? 0)
+        Number(blockedSummary.count ?? 0),
+        "blk"
       ),
       Number(blockedSummary.count ?? 0) === 0
     ) +
@@ -712,7 +795,9 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
   const wishTotal = Number(wishlist.totalCount ?? 0);
   const wishlistSection =
     '<section class="dash-card" aria-label="Wishlist">' +
-    '<details class="status-section">' +
+    '<details class="status-section"' +
+    wcTrackAttr("wishlist") +
+    ">" +
     "<summary><b>Wishlist</b> · Open " +
     String(wishOpen) +
     " / Total " +
@@ -734,7 +819,6 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
     renderWorkspaceOverviewSection(ws as Record<string, unknown> | null) +
     tasksBlock +
     wishlistSection +
-    renderDependencyOverviewHtml(d.dependencyOverview) +
     renderPlanningSession(planningSession) +
     storeSection
   );

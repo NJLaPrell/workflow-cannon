@@ -883,6 +883,33 @@ test("taskEngineModule onCommand dashboard-summary returns stable shape", async 
   assert.equal(d.agentGuidance.usingDefaultTier, true);
   assert.equal(d.agentGuidance.tier, 2);
   assert.equal(d.agentGuidance.profileSetId, "rpg_party_v1");
+  assert.equal(d.agentGuidance.temperamentProfileId, "builtin:balanced");
+  assert.equal(d.agentGuidance.temperamentLabel, "The Steady Adventurer");
+});
+
+test("taskEngineModule dashboard-summary wishlist openTop includes backing taskId", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const wl = {
+    id: "W901",
+    title: "Dash taskId row",
+    problemStatement: "Need row shape",
+    expectedOutcome: "taskId present",
+    impact: "UI",
+    constraints: "None",
+    successSignals: "Assert passes",
+    requestor: "test",
+    evidenceRef: "task-engine.test.mjs"
+  };
+  const created = await taskEngineModule.onCommand({ name: "create-wishlist", args: wl }, ctx);
+  assert.equal(created.ok, true);
+  const backingTaskId = created.data.taskId;
+  const summary = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
+  assert.equal(summary.ok, true);
+  const row = summary.data.wishlist.openTop[0];
+  assert.equal(row.id, "W901");
+  assert.equal(row.taskId, backingTaskId);
+  assert.match(String(row.taskId), /^T\d+$/);
 });
 
 test("taskEngineModule dashboard-summary agentGuidance reflects effective config tier", async () => {
@@ -897,6 +924,9 @@ test("taskEngineModule dashboard-summary agentGuidance reflects effective config
   assert.equal(ag.tier, 5);
   assert.equal(ag.usingDefaultTier, false);
   assert.equal(ag.displayLabel, "BBEG");
+  assert.equal(typeof ag.temperamentProfileId, "string");
+  assert.equal(typeof ag.temperamentLabel, "string");
+  assert.ok(ag.temperamentLabel.length > 0);
 });
 
 test("taskEngineModule dashboard-summary dependencyOverview critical path orders prerequisites", async () => {
@@ -1338,7 +1368,15 @@ test("taskEngineModule create-task validates known requirements for improvement 
   const created = await taskEngineModule.onCommand(
     {
       name: "create-task",
-      args: { id: "T402", title: "Bad improvement", type: "improvement", status: "ready" }
+      args: {
+        id: "T402",
+        title: "Bad improvement",
+        type: "improvement",
+        status: "ready",
+        acceptanceCriteria: ["done"],
+        technicalScope: ["x"],
+        metadata: { supportingReasoning: "missing issue field" }
+      }
     },
     ctx
   );
@@ -1359,7 +1397,11 @@ test("taskEngineModule update-task validates known requirements for improvement 
         type: "improvement",
         status: "ready",
         acceptanceCriteria: ["ship"],
-        technicalScope: ["task-engine"]
+        technicalScope: ["task-engine"],
+        metadata: {
+          issue: "Operators confuse two CLI paths.",
+          supportingReasoning: "Observed in transcript T123; policy deny on wrong lane."
+        }
       }
     },
     ctx

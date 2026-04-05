@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -69,6 +69,11 @@ test("resolve-behavior-profile and create custom (json workspace)", async () => 
       ctx
     );
     assert.equal(active.ok, true);
+
+    const mirrorPath = path.join(dir, ".workspace-kit", "modules", "agent-behavior", "config.json");
+    const mirror = JSON.parse(await readFile(mirrorPath, "utf8"));
+    assert.equal(mirror.agentBehavior.activeProfileId, "custom:test");
+    assert.ok(mirror.agentBehavior.customProfiles);
 
     const r2 = await router.execute("resolve-behavior-profile", {}, ctx);
     assert.equal(r2.data?.effective?.id, "custom:test");

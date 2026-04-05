@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | Track **executable** work (`ready` queue, transitions, **`dependsOn`**) | **`T###`**, normal task types | **`create-task`**, **`run-transition`**, **`list-tasks`** |
 | Capture **ideation** before scheduling (strict intake fields) | **`T###`** with **`type: "wishlist_intake"`** | **`create-wishlist`** (auto-allocates **`T###`**; optional legacy provenance id → **`metadata.legacyWishlistId`**) |
-| Triage **transcript / enhancement** suggestions | **`imp-*`** (improvement tasks) | **`generate-recommendations`**, **`accept`** / **`reject`** transitions |
+| Log **improvement** / enhancement backlog (**`type: "improvement"`**) | **`T###`** (same id shape as execution tasks) | **`create-task`** (manual problem report) or **`generate-recommendations`** / **`ingest-transcripts`** (auto-allocates next **`T###`**; legacy stores may still contain older **`imp-*`** hashes) |
 
 Glossary: **`docs/maintainers/TERMS.md`** (**Wishlist**, **Execution Task**, **Improvement Task**). ADR: **`docs/maintainers/ADR-unified-task-store-wishlist-and-improvement-state.md`**.
 

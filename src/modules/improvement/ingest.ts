@@ -258,6 +258,10 @@ export function ingestTaskTransitionFriction(
   return out;
 }
 
+/**
+ * @deprecated New recommendations allocate the next **`T###`** (`allocateNextTaskNumericId` in task-engine).
+ * Kept for tests and any external callers that still derive stable ids from evidence keys.
+ */
 export function taskIdForEvidenceKey(evidenceKey: string): string {
   return `imp-${sha256Hex(evidenceKey).slice(0, 14)}`;
 }

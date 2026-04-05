@@ -6,6 +6,24 @@ const LOCK_REL = ".workspace-kit/improvement/transcript-hook.lock";
 const EVENT_LOG_REL = ".workspace-kit/improvement/transcript-hook-events.jsonl";
 const LOCK_STALE_MS = 120_000;
 
+/**
+ * When the post-completion hook spawns ingest/sync, the parent CLI process often exits before the
+ * detached child's `exit` event runs, so the lock file would linger. The child clears this path in a
+ * `finally` (see `handleRunCommand` for sync-transcripts / ingest-transcripts).
+ */
+export const TRANSCRIPT_HOOK_LOCK_ENV_VAR = "WORKSPACE_KIT_TRANSCRIPT_HOOK_LOCK_FILE";
+
+export function releaseTranscriptHookLockFromEnv(): void {
+  const raw = process.env[TRANSCRIPT_HOOK_LOCK_ENV_VAR]?.trim();
+  if (!raw) return;
+  delete process.env[TRANSCRIPT_HOOK_LOCK_ENV_VAR];
+  try {
+    unlinkSync(raw);
+  } catch {
+    /* lock may already be gone */
+  }
+}
+
 export function readAfterTaskCompletedHook(effective: Record<string, unknown>): "off" | "sync" | "ingest" {
   const imp = effective.improvement;
   if (!imp || typeof imp !== "object" || Array.isArray(imp)) return "off";
@@ -153,7 +171,7 @@ export function maybeSpawnTranscriptHookAfterCompletion(
     cwd: workspacePath,
     detached: true,
     stdio: "ignore",
-    env: process.env
+    env: { ...process.env, [TRANSCRIPT_HOOK_LOCK_ENV_VAR]: fp }
   });
   child.unref();
   child.on("exit", () => {

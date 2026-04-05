@@ -9,11 +9,12 @@ import {
   ingestGitDiffBetweenTags,
   ingestPolicyDenials,
   ingestTaskTransitionFriction,
-  taskIdForEvidenceKey,
   type IngestCandidate
 } from "./ingest.js";
 import { priorityForTier } from "./confidence.js";
 import { buildImprovementTaskPayload } from "./improvement-task-payload.js";
+import { buildImprovementSupportingReasoning } from "./improvement-supporting-reasoning.js";
+import { allocateNextTaskNumericId } from "../task-engine/wishlist/wishlist-intake.js";
 import { planningConcurrencySaveOpts } from "../task-engine/mutation-utils.js";
 import { enforcePlanningGenerationPolicy, getPlanningGenerationPolicy } from "../task-engine/planning-config.js";
 import { TaskEngineError } from "../task-engine/transitions.js";
@@ -116,21 +117,17 @@ export async function runGenerateRecommendations(
   const created: string[] = [];
   const simulatedCreates: string[] = [];
   let skippedDuplicateEvidenceKey = 0;
+  /** Retained for JSON shape compatibility; numeric **T###** allocation makes collisions extremely unlikely. */
   let skippedExistingTaskId = 0;
   let cappedRemaining = 0;
 
   const now = new Date().toISOString();
   const maxCreates = getMaxRecommendationCandidatesPerRun(ctx);
+  const shadowTasksForDryRun = dryRun ? [...allTasks] : null;
 
   for (const c of candidates) {
     if (hasEvidenceKey(allTasks, c.evidenceKey)) {
       skippedDuplicateEvidenceKey += 1;
-      continue;
-    }
-
-    const id = taskIdForEvidenceKey(c.evidenceKey);
-    if (store.getTask(id)) {
-      skippedExistingTaskId += 1;
       continue;
     }
 
@@ -141,11 +138,27 @@ export async function runGenerateRecommendations(
     }
 
     if (dryRun) {
+      const id = allocateNextTaskNumericId(shadowTasksForDryRun!);
+      shadowTasksForDryRun!.push({
+        id,
+        status: "proposed",
+        type: "improvement",
+        title: "",
+        createdAt: now,
+        updatedAt: now
+      });
       simulatedCreates.push(id);
       continue;
     }
 
+    const id = allocateNextTaskNumericId(allTasks);
+    if (store.getTask(id)) {
+      skippedExistingTaskId += 1;
+      continue;
+    }
+
     const body = buildImprovementTaskPayload(c);
+    const supportingReasoning = buildImprovementSupportingReasoning(c);
     const meta: Record<string, unknown> = {
       evidenceKey: c.evidenceKey,
       evidenceKind: c.evidenceKind,
@@ -154,6 +167,7 @@ export async function runGenerateRecommendations(
       confidenceReasons: c.confidence.reasons,
       provenanceRefs: c.provenanceRefs,
       issue: body.issue,
+      supportingReasoning,
       proposedSolutions: [body.proposedSolution]
     };
     if (c.evidenceKind === "transcript" && typeof c.provenanceRefs.transcriptPath === "string") {

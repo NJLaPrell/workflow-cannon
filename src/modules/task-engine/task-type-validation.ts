@@ -67,6 +67,15 @@ export function validateKnownTaskTypeRequirements(task: TaskEntity): KnownTaskTy
   if (!nonEmptyStringArray(task.technicalScope)) {
     missing.push("technicalScope");
   }
+  const meta = task.metadata;
+  if (!nonEmptyMetaString(meta, "issue")) {
+    missing.push("metadata.issue");
+  }
+  /** Legacy transcript-hash ids from older `generate-recommendations` runs; may omit `supportingReasoning` until updated. */
+  const legacyImpHashId = typeof task.id === "string" && /^imp-[a-f0-9]+$/i.test(task.id);
+  if (!legacyImpHashId && !nonEmptyMetaString(meta, "supportingReasoning")) {
+    missing.push("metadata.supportingReasoning");
+  }
 
   if (missing.length === 0) {
     return null;

@@ -52,6 +52,12 @@ Replace **`imp-xxxxxxxx`** with the real id. **Do not** hand-edit the task store
 
 If a candidate is already **`ready`**, no transition — optionally **`update-task`** for **`priority`** / notes only if your workflow uses that.
 
+## 3.5) Normalize **`ready`** improvements before **`start`** (hygiene)
+
+If a **`ready`** improvement still reads like ingest noise (trace title, missing **`phaseKey`**, generic acceptance), use **`update-task`** before **`start`** to add **`phaseKey`** (or explicit human **`phase`**), a single-string **`approach`**, non-empty **`technicalScope`** / **`acceptanceCriteria`**, and structured **`metadata.issue`** / **`metadata.supportingReasoning`**. In relational SQLite, **`approach`** is **TEXT** — pass **one string**, not an array (use **`technicalScope`** or **`description`** for bullets).
+
+Worked example (session transcript): **`agent-transcripts/e74c4ba0-83e7-41d8-9e5d-3620929354a6/**`.
+
 ## 4) Verify
 
 1. `workspace-kit run list-tasks '{"type":"improvement","status":"ready"}'` — confirm promoted items.

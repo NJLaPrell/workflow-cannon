@@ -111,7 +111,7 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
 - **Wishlist**
   - **Definition**: Ideation backlog represented as Task Engine tasks with `type: "wishlist_intake"` and stable `T###` ids. Legacy `W###` ids may appear only as provenance in `metadata.legacyWishlistId` after a one-time migration; new intake does not mint `W###` ids.
   - **Defined in**: `src/modules/task-engine/wishlist/wishlist-intake.ts`, `wishlist/wishlist-types.ts` (legacy wire shapes), instructions under `src/modules/task-engine/instructions/`, ADR `docs/maintainers/ADR-unified-task-store-wishlist-and-improvement-state.md`.
-  - **Workflow (which id to create)**: `docs/maintainers/runbooks/wishlist-workflow.md` — table for **`T###` execution** vs **`wishlist_intake`** vs **`imp-*`** improvements.
+  - **Workflow (which id to create)**: `docs/maintainers/runbooks/wishlist-workflow.md` — table for **`T###` execution** vs **`wishlist_intake`** vs **`type: "improvement"`** (same **`T###`** id pattern; legacy **`imp-*`** hashes may remain in older task stores).
   - **Enforced in**: Task Engine `create-wishlist` / `list-wishlist` / `get-wishlist` / `update-wishlist` / `convert-wishlist`, strict known-type rules for `wishlist_intake`, and planning-boundary responses (`scope: tasks-only` for execution queues).
 
 - **Execution Task**
@@ -120,9 +120,9 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
   - **Enforced in**: Task Engine runtime (`run-transition`, queue/summary commands, dependency guards).
 
 - **Improvement Task**
-  - **Definition**: Execution task variant (`type: "improvement"`) used for enhancement/backlog work and governed by known-type validation requirements.
-  - **Defined in**: Task Engine task type and validation contracts (`src/modules/task-engine/types.ts`, `src/modules/task-engine/task-type-validation.ts`).
-  - **Enforced in**: `create-task` / `update-task` validation (`invalid-task-type-requirements`) and improvement workflow docs/tasks.
+  - **Definition**: Task Engine row with `type: "improvement"` used for enhancement / problem-report backlog (same **`T###`** id pattern as execution tasks). Maintainer-facing rows should carry a synthesized **problem** in **`metadata.issue`** and **supporting reasoning** in **`metadata.supportingReasoning`** (evidence refs, not raw transcript dumps). **`generate-recommendations`** fills these automatically; manual **`create-task`** must supply them.
+  - **Defined in**: Task Engine task type and validation contracts (`src/modules/task-engine/types.ts`, `src/modules/task-engine/task-type-validation.ts`); improvement pipeline (`src/modules/improvement/generate-recommendations-runtime.ts`).
+  - **Enforced in**: `create-task` / `update-task` validation (`invalid-task-type-requirements`) and improvement workflow docs/tasks. Legacy **`imp-<hex>`** ids may omit **`metadata.supportingReasoning`** until updated.
 
 - **Unified Work Record**
   - **Definition**: Combined conceptual model of execution tasks (`T###`) and wishlist intake tasks (`type: "wishlist_intake"`) as one planning surface; execution queues remain `tasks-only` while ideation uses task rows with distinct type/metadata.

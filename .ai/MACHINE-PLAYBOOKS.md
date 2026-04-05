@@ -24,7 +24,7 @@ Optional Cursor rule: `.cursor/rules/playbook-phase-closeout.mdc`.
 
 ## Improvement discovery (research → log)
 
-Use Tier B `workspace-kit run` commands from `.ai/machine-cli-policy.md` / maintainer **AGENT-CLI-MAP** to persist recommendations—never chat-only approval for gated commands.
+Research transcripts/docs/architecture first, then persist a **problem report** (`metadata.issue` + `metadata.supportingReasoning`, scoped body)—not raw trace paste. Use Tier B `workspace-kit run` commands from `.ai/machine-cli-policy.md` / maintainer **AGENT-CLI-MAP** to persist—never chat-only approval for gated commands.
 
 Human playbook: `docs/maintainers/playbooks/improvement-task-discovery.md`.
 

@@ -6,7 +6,7 @@ import type {
 } from "./types.js";
 import { isWishlistIntakeTask } from "./wishlist/wishlist-intake.js";
 
-/** Matches transcript-backed ids from improvement ingest (`imp-` + hex). Keep in sync with `ingest.ts`. */
+/** Legacy recommendation ids (`imp-` + hex). New improvements use normal `T###` ids with `type: "improvement"`. */
 const IMPROVEMENT_ID_RE = /^imp-[a-f0-9]+$/i;
 
 export function isImprovementLikeTask(t: TaskEntity): boolean {

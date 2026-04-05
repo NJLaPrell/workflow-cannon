@@ -218,6 +218,38 @@
       "user"
     ]
   },
+  "agentBehavior.activeProfileId": {
+    "key": "agentBehavior.activeProfileId",
+    "type": "string",
+    "description": "Active behavior profile id (e.g. builtin:balanced, custom:slug). Empty string means fall back to builtin default. Mirrored with SQLite module state when present.",
+    "default": "",
+    "domainScope": "project",
+    "owningModule": "agent-behavior",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "agentBehavior.customProfiles": {
+    "key": "agentBehavior.customProfiles",
+    "type": "object",
+    "description": "Custom behavior profiles keyed by custom:<slug>; merged with builtins at resolve time. Mirrored with SQLite when using unified DB.",
+    "default": {},
+    "domainScope": "project",
+    "owningModule": "agent-behavior",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
   "planning.defaultQuestionDepth": {
     "key": "planning.defaultQuestionDepth",
     "type": "string",
@@ -358,7 +390,7 @@
   "improvement.cadence.skipIfNoNewTranscripts": {
     "key": "improvement.cadence.skipIfNoNewTranscripts",
     "type": "boolean",
-    "description": "Skip recommendation generation when transcript sync copies no new files.",
+    "description": "When true, skip the ingest-time recommendation generation step if transcript sync copied no new files; set false to still score policy/diff/task-transition evidence on a cadence.",
     "default": true,
     "domainScope": "project",
     "owningModule": "improvement",

@@ -38,7 +38,7 @@ When delivering **one** **`T###`** via GitHub PR **into `release/phase-<N>`** (n
 
 ## Maintainer playbook: improvement discovery
 
-When **researching** friction to log as **`improvement`** tasks or via **`generate-recommendations`** / transcript ingest, use **`docs/maintainers/playbooks/improvement-task-discovery.md`** (id `improvement-task-discovery`). Optional requestable **`.cursor/rules/playbook-improvement-task-discovery.mdc`**. Human summary: **`docs/maintainers/AGENTS.md`** → **Improvement discovery**.
+When **researching** friction to log as **`type: "improvement"`** tasks (**`T###`** ids; **`create-task`** or **`generate-recommendations`** / **`ingest-transcripts`**), synthesize a **problem report** (`metadata.issue`, `metadata.supportingReasoning`)—not raw transcript/tool dumps. Use **`docs/maintainers/playbooks/improvement-task-discovery.md`** (id `improvement-task-discovery`). Optional requestable **`.cursor/rules/playbook-improvement-task-discovery.mdc`**. Human summary: **`docs/maintainers/AGENTS.md`** → **Improvement discovery**.
 
 ## Maintainer playbook: improvement triage (top 3 → ready)
 
@@ -67,6 +67,15 @@ Successful **`workspace-kit run …`** invocations print **one JSON value to std
 3. Use **`clientMutationId`** on mutating commands (where supported) so retries are **idempotent** when you re-send the same logical operation after a timeout or ambiguous transport failure.
 4. Distinguish **parse failures** (your script could not decode stdout as JSON — exit code may still be 0 if the process wrote non-JSON garbage) from **`ok: false`** in a successfully parsed payload (the kit returned a structured error). A parse error does **not** prove the kit skipped a mutation; check task-engine state before re-running destructive sequences.
 5. Prefer **`set -euo pipefail`** (bash) and explicit capture: `out=$(pnpm exec wk run list-tasks '{}' 2>/dev/null)` then parse **`out`** — adjust stderr handling to your logging needs.
+6. **`pnpm run wk …`** can prepend **package-manager banner lines** before the JSON document and break naive one-line parsers; prefer **`pnpm exec wk …`**, or **`node dist/cli.js run …`** from a built tree when scripts require clean stdout.
+
+### Multi-writer task store (lost updates)
+
+Parallel **`workspace-kit run`** processes that **mutate** task state each do read→modify→write; **last writer wins** without coordination. When **`tasks.planningGenerationPolicy`** is **`require`**, mutating commands should pass **`expectedPlanningGeneration`** from **`get-task`** / **`list-tasks`**. Reads stay safe. Depth: **`docs/maintainers/runbooks/task-persistence-operator.md`** and **`docs/maintainers/ADR-planning-generation-optimistic-concurrency.md`**.
+
+### Relational SQLite: scalar text fields
+
+**`approach`**, **`summary`**, and **`description`** persist as **single TEXT** values. Passing a JSON **array** where the relational row expects a string can yield **better-sqlite3** bind errors (“Too many parameter values”); keep bullet lists in **`technicalScope`** (string[]) or fold prose into one **`approach`** string.
 
 ## Tier overview
 
@@ -279,7 +288,7 @@ workspace-kit run list-features '{}'
 workspace-kit run list-features '{"componentId":"task-engine-queue"}'
 ```
 
-**Task id spaces** (when to mint **`T###`**, wishlist intake, vs **`imp-*`**): [`runbooks/wishlist-workflow.md`](./runbooks/wishlist-workflow.md).
+**Task id spaces** (execution vs wishlist intake vs **`type: "improvement"`** — all use **`T###`** today; legacy **`imp-*`** may remain in older stores): [`runbooks/wishlist-workflow.md`](./runbooks/wishlist-workflow.md).
 
 Instruction: `src/modules/task-engine/instructions/queue-health.md`. Related runbook: [`runbooks/agent-task-engine-ergonomics.md`](./runbooks/agent-task-engine-ergonomics.md).
 

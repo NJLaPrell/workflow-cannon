@@ -4,6 +4,14 @@ Generated from `src/core/config-metadata.ts`. Do not edit by hand; run `workspac
 
 | Key | Type | Default | Scope | Module | Exposure | Sensitive | Approval |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| agentBehavior.activeProfileId | string | "" | project | agent-behavior | maintainer | false | false |
+
+**Description:** Active behavior profile id (e.g. builtin:balanced, custom:slug). Empty string means fall back to builtin default. Mirrored with SQLite module state when present.
+
+| agentBehavior.customProfiles | object | {} | project | agent-behavior | maintainer | false | false |
+
+**Description:** Custom behavior profiles keyed by custom:<slug>; merged with builtins at resolve time. Mirrored with SQLite when using unified DB.
+
 | improvement.cadence.maxRecommendationCandidatesPerRun | number | 500 | project | improvement | maintainer | false | false |
 
 **Description:** Upper bound on new improvement tasks created per generate-recommendations run (safety cap; direct runs still respect dedupe).

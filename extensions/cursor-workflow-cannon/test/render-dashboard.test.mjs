@@ -46,8 +46,8 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   const fixture = JSON.parse(readFileSync(fixturePath, "utf8"));
   const html = renderDashboardRootInnerHtml(fixture);
   assert.match(html, /dash-card/);
-  assert.match(html, /<b>You:<\/b> Maintainer/);
-  assert.match(html, /<b>Me:<\/b> Adventurer/);
+  assert.match(html, /<b>Role:<\/b> Adventurer/);
+  assert.match(html, /<b>Agent Temperament:<\/b> The Steady Adventurer/);
   assert.match(html, /dashboard-overview/);
   assert.match(html, /Current Phase/);
   assert.match(html, /Next Phase/);
@@ -56,10 +56,12 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.doesNotMatch(html, /expectedPlanningGeneration/);
   assert.match(html, /<p><b>Tasks<\/b><\/p>/);
   assert.match(html, /dash-count-grid/);
-  assert.match(html, />Proposed<\/span><span class="dash-count-num ok">1<\/span>/);
-  assert.match(html, />Ready<\/span><span class="dash-count-num ok">2<\/span>/);
+  assert.match(html, />Proposed<\/span> <span class="dash-count-num ok">1<\/span>/);
+  assert.match(html, />Ready<\/span> <span class="dash-count-num ok">2<\/span>/);
   assert.match(html, /dashboard-tasks-block/);
   assert.match(html, /status-section/);
+  assert.match(html, /data-wc-track="status-prop-exe"/);
+  assert.match(html, /data-wc-track="wishlist"/);
   assert.match(html, /Ready · Improvements/);
   assert.match(html, /Ready · Execution/);
   assert.match(html, /Wishlist/);
@@ -69,8 +71,13 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /T319/);
   assert.match(html, /T320/);
   assert.match(html, /W1/);
-  assert.match(html, /data-wc-action="wishlist-chat"/);
-  assert.match(html, /data-wc-action="proposed-imp-accept"/);
+  assert.match(html, /class="dash-row-action dash-row-action-primary"[^>]*data-wc-action="wishlist-chat"/);
+  assert.match(html, />Process<\/button>/);
+  assert.match(html, /class="dash-row-action dash-row-action-secondary"[^>]*data-wc-action="wishlist-decline"/);
+  assert.match(html, />Decline<\/button>/);
+  assert.match(html, /data-task-id="T501"/);
+  assert.match(html, /class="dash-row-action dash-row-action-primary"[^>]*data-wc-action="proposed-imp-accept"/);
+  assert.match(html, /data-wc-action="proposed-imp-decline"/);
   assert.doesNotMatch(html, /proposed-imp-chat/);
   assert.doesNotMatch(html, /proposed-exe-chat/);
   assert.match(html, /data-wc-action="task-detail"/);
@@ -83,12 +90,9 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /terminal-phase-bucket/);
   assert.match(html, /T099/);
   assert.match(html, /Not Phased/);
-  assert.match(html, /Dependency Overview/);
-  assert.match(html, /Critical Path \(Ready Frontier\)/);
-  assert.doesNotMatch(html, /mermaid-src/);
-  assert.doesNotMatch(html, /flowchart TD/);
-  assert.match(html, /Planning Session/);
-  assert.match(html, /No in-flight/);
+  assert.doesNotMatch(html, /Dependency Overview/);
+  assert.match(html, /Planning Interview/);
+  assert.match(html, /No interview in progress/);
   assert.match(html, /Store Updated/);
   assert.doesNotMatch(html, /same store as execution queue/i);
   assert.doesNotMatch(html, /Suggested Next/i);
@@ -103,7 +107,9 @@ test("renderDashboardRootInnerHtml planning card shows resume CLI when session p
         profileSetId: "rpg_party_v1",
         tier: 2,
         displayLabel: "Adventurer",
-        usingDefaultTier: true
+        usingDefaultTier: true,
+        temperamentProfileId: "builtin:balanced",
+        temperamentLabel: "The Steady Adventurer"
       },
       stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
       proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
@@ -143,9 +149,12 @@ test("renderDashboardRootInnerHtml planning card shows resume CLI when session p
       }
     }
   });
+  assert.match(html, /Planning Interview/);
+  assert.match(html, /Wishlist/);
   assert.match(html, /Resume/);
   assert.match(html, /build-plan/);
   assert.match(html, /40%/);
+  assert.match(html, /through required questions/);
 });
 
 test("renderDashboardRootInnerHtml omits suggested-next section", () => {
@@ -157,7 +166,9 @@ test("renderDashboardRootInnerHtml omits suggested-next section", () => {
         profileSetId: "rpg_party_v1",
         tier: 3,
         displayLabel: "Bard",
-        usingDefaultTier: false
+        usingDefaultTier: false,
+        temperamentProfileId: "builtin:cautious",
+        temperamentLabel: "The Wary Scout"
       },
       stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
       proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
@@ -190,7 +201,9 @@ test("renderDashboardRootInnerHtml omits suggested-next section", () => {
   assert.doesNotMatch(html, /Suggested Next/i);
   assert.doesNotMatch(html, /T999/);
   assert.match(html, />No Items</);
-  assert.match(html, /No in-flight/);
+  assert.match(html, /No interview in progress/);
+  assert.match(html, /<b>Role:<\/b> Bard/);
+  assert.match(html, /<b>Agent Temperament:<\/b> The Wary Scout/);
 });
 
 test("renderDashboardRootInnerHtml shows Not Planned when next phase duplicates current", () => {
@@ -264,7 +277,8 @@ test("renderDashboardRootInnerHtml proposed execution rows expose accept action"
       }
     }
   });
-  assert.match(html, /data-wc-action="proposed-exe-accept"/);
+  assert.match(html, /class="dash-row-action dash-row-action-primary"[^>]*data-wc-action="proposed-exe-accept"/);
+  assert.match(html, /data-wc-action="proposed-exe-decline"/);
   assert.doesNotMatch(html, /proposed-exe-chat/);
   assert.match(html, /T777/);
 });

@@ -8,8 +8,9 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
-### Changed (task queue)
+### Changed
 
+- **Improvement tasks** — **`generate-recommendations`** (and ingest-driven generation) now mint the next **`T###`** id instead of **`imp-*`** hashes; new rows include **`metadata.supportingReasoning`**. **`create-task`** / **`update-task`** require **`metadata.issue`** and **`metadata.supportingReasoning`** for **`type: "improvement"`** except legacy **`imp-<hex>`** rows (may add reasoning on a later update). Playbooks and **`AGENT-CLI-MAP`** updated for problem-report logging and cadence hints.
 - Phase **59** Cursor chat prefill experiments **`T668`–`T670`** **`cancelled`** via task-engine **`run-transition`** (**2026-04-04**); roadmap pointer + maintainer status YAML aligned.
 - Maintainer snapshot + **`kit.currentPhaseNumber`** reset to **Phase 58** as current (**2026-04-04**); **`current_kit_phase` / `next_kit_phase` 58**.
 

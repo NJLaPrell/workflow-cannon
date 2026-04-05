@@ -7,13 +7,15 @@ export async function confirmAndRunTransition(
   client: CommandClient,
   onSuccess: () => void,
   taskId: string,
-  action: string
+  action: string,
+  /** Shown in the reject confirmation only, e.g. "this wishlist item". */
+  rejectConfirmSubject?: string
 ): Promise<void> {
-  const ok = await vscode.window.showWarningMessage(
-    `Apply transition '${action}' to ${taskId}?`,
-    { modal: true },
-    "Apply"
-  );
+  const actionPhrase =
+    action === "reject"
+      ? `Decline and cancel ${rejectConfirmSubject ?? "this proposed task"} (reject → cancelled)`
+      : `Apply transition '${action}'`;
+  const ok = await vscode.window.showWarningMessage(`${actionPhrase} for ${taskId}?`, { modal: true }, "Apply");
   if (ok !== "Apply") {
     return;
   }

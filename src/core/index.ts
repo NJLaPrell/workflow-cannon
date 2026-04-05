@@ -44,6 +44,7 @@ export {
   readProjectConfigDocument,
   resolveWorkspaceConfigWithLayers,
   stableStringifyConfig,
+  writeModuleScopedConfigDocument,
   writeProjectConfigDocument,
   type ConfigLayer,
   type ConfigLayerId,
@@ -100,13 +101,16 @@ export {
   buildIngestTranscriptsArgsForHook,
   maybeSpawnTranscriptHookAfterCompletion,
   readAfterTaskCompletedHook,
-  resolveWorkspaceKitCli
+  releaseTranscriptHookLockFromEnv,
+  resolveWorkspaceKitCli,
+  TRANSCRIPT_HOOK_LOCK_ENV_VAR
 } from "./transcript-completion-hook.js";
 export {
   assertWritableKey,
   getConfigKeyMetadata,
   getConfigRegistryExport,
   listConfigMetadata,
+  validateModuleScopedConfigDocument,
   validatePersistedConfigDocument,
   validateValueForMetadata,
   type ConfigKeyExposure,

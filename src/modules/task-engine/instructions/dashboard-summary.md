@@ -30,7 +30,7 @@ Optional JSON object; accepts standard invocation `config` overlay only (no extr
 | `readyExecutionSummary` | `{ schemaVersion: 1, count, top, phaseBuckets }` for the rest of the ready queue |
 | `readyQueueTop` | Up to 15 ready tasks (id, title, priority, phase) |
 | `readyQueueCount` | Full ready queue length |
-| `readyQueueBreakdown` | `{ schemaVersion: 1, improvement, other }` — split of the ready queue (`improvement` = `type: improvement` or `imp-*` id; `other` = remainder; wishlist intake never appears in the ready queue) |
+| `readyQueueBreakdown` | `{ schemaVersion: 1, improvement, other }` — split of the ready queue (`improvement` = `type: improvement` or legacy `imp-*` id; `other` = remainder; wishlist intake never appears in the ready queue) |
 | `blockedSummary` | `{ count, top, phaseBuckets }` — `top` is up to 15 blocking analysis rows; `phaseBuckets` groups those rows by the **blocked task’s** phase (same ordering as above) |
 | `completedSummary` | `{ schemaVersion: 1, count, top, phaseBuckets }` — **completed** tasks only; same `phaseBuckets` ordering as the Tasks sidebar / ready queues; `top` is up to 15 global preview rows (operator UIs may collapse this section by default) |
 | `cancelledSummary` | Same shape as `completedSummary` for **cancelled** tasks |

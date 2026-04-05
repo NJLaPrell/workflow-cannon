@@ -11,7 +11,9 @@
       "profileSetId": "rpg_party_v1",
       "tier": 2,
       "displayLabel": "Adventurer",
-      "usingDefaultTier": true
+      "usingDefaultTier": true,
+      "temperamentProfileId": "builtin:balanced",
+      "temperamentLabel": "The Steady Adventurer"
     },
     "taskStoreLastUpdated": "2026-03-27T12:00:00.000Z",
     "workspaceStatus": {
@@ -140,7 +142,7 @@
       "schemaVersion": 1,
       "openCount": 1,
       "totalCount": 3,
-      "openTop": [{ "id": "W1", "title": "Example open wishlist item" }]
+      "openTop": [{ "id": "W1", "title": "Example open wishlist item", "taskId": "T501" }]
     },
     "readyQueueTop": [
       { "id": "T319", "title": "[task-engine] Define Wishlist item schema and validation contract", "priority": "P1", "phase": "Phase 14 - Wishlist intake and conversion" },

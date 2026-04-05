@@ -9,7 +9,7 @@ Does **not** replace [`RELEASING.md`](../RELEASING.md), policy gates, or maintai
 
 ## Id spaces (do not confuse)
 
-**Wishlist intake** (`wishlist_intake`, stable **`T###`**, wire status **`open`** / **`converted`** / **`cancelled`**) is **ideation before scheduling**. **Improvement** tasks use **`imp-*`** and a different lifecycle (**`generate-recommendations`**, **`accept`** / **`reject`**). **Executable** work uses normal **`T###`** types in the **`tasks-only`** queues.
+**Wishlist intake** (`wishlist_intake`, stable **`T###`**, wire status **`open`** / **`converted`** / **`cancelled`**) is **ideation before scheduling**. **Improvement** tasks use **`type: "improvement"`** with normal **`T###`** ids (pipeline or **`create-task`**); legacy rows may still show **`imp-*`** ids. Lifecycle: **`generate-recommendations`** / triage transitions (**`accept`** / **`reject`**) plus standard task-engine updates. **Executable** work uses normal **`T###`** types in the **`tasks-only`** queues.
 
 Canonical table: [`runbooks/wishlist-workflow.md`](../runbooks/wishlist-workflow.md). Glossary: [`TERMS.md`](../TERMS.md) → **Wishlist**, **Improvement Task**, **Execution Task**.
 

@@ -9,7 +9,7 @@ When driving **wishlist ideation** (**`type: "wishlist_intake"`**) toward **sche
 
 1. Follow **`docs/maintainers/playbooks/wishlist-intake-to-execution.md`** (playbook id `wishlist-intake-to-execution`). Attach it (`@`) while working.
 2. Use **`workspace-kit run list-wishlist`** / **`get-wishlist`** for inventory; **`convert-wishlist`** only for persistence — patterns in **`docs/maintainers/AGENT-CLI-MAP.md`**, **`docs/maintainers/POLICY-APPROVAL.md`** for planning-generation tokens when policy is **`require`**.
-3. Keep **wishlist intake** vs **`imp-*` improvements** straight — see **`docs/maintainers/TERMS.md`** and **`docs/maintainers/runbooks/wishlist-workflow.md`**.
+3. Keep **wishlist intake** vs **`type: "improvement"`** work straight — see **`docs/maintainers/TERMS.md`** and **`docs/maintainers/runbooks/wishlist-workflow.md`** (improvements use **`T###`**; legacy **`imp-*`** may still exist in old stores).
 
 Invocation: **`docs/maintainers/runbooks/agent-playbooks.md`**.
 

@@ -4,10 +4,12 @@ import os from "node:os";
 import path from "node:path";
 import type { ConfigRegistryView } from "../contracts/module-contract.js";
 import { validatePersistedConfigDocument } from "./config-metadata.js";
+import { getModuleScopedConfigPath } from "./module-scoped-config.js";
 
 export type ConfigLayerId =
   | "kit-default"
   | `module:${string}`
+  | `module-file:${string}`
   | "user"
   | "project"
   | "env"
@@ -64,6 +66,8 @@ export const KIT_CONFIG_DEFAULTS: Record<string, unknown> = {
     strictValidation: false
   },
   documentation: {},
+  /** Agent temperament / interview preferences; mirrored to `.workspace-kit/modules/agent-behavior/config.json` when using SQLite. */
+  agentBehavior: {},
   responseTemplates: {
     enforcementMode: "advisory",
     defaultTemplateId: "default",
@@ -324,12 +328,40 @@ export async function resolveWorkspaceConfigWithLayers(
   const { workspacePath, registry, env = process.env, invocationConfig } = options;
   const layers: ConfigLayer[] = [...buildBaseConfigLayers(registry)];
   layers.push(await loadUserLayer());
+  for (const mod of registry.getStartupOrder()) {
+    const id = mod.registration.id;
+    const fp = getModuleScopedConfigPath(workspacePath, id);
+    try {
+      await fs.access(fp);
+    } catch {
+      continue;
+    }
+    const raw = await fs.readFile(fp, "utf8");
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error(`module-config-invalid: ${fp} must be a JSON object`);
+    }
+    layers.push({ id: `module-file:${id}`, data: cloneDeep(parsed as Record<string, unknown>) });
+  }
   layers.push(await loadProjectLayer(workspacePath));
   layers.push({ id: "env", data: envToConfigOverlay(env) });
   if (invocationConfig && Object.keys(invocationConfig).length > 0) {
     layers.push({ id: "invocation", data: cloneDeep(invocationConfig) });
   }
   return { effective: mergeConfigLayers(layers) as EffectiveWorkspaceConfig, layers };
+}
+
+/** Atomic write for `.workspace-kit/modules/<moduleId>/config.json` (sorted JSON, trailing newline). */
+export async function writeModuleScopedConfigDocument(
+  workspacePath: string,
+  moduleId: string,
+  doc: Record<string, unknown>
+): Promise<void> {
+  const fp = getModuleScopedConfigPath(workspacePath, moduleId);
+  await fs.mkdir(path.dirname(fp), { recursive: true });
+  const tmp = `${fp}.${process.pid}.${Date.now()}.tmp`;
+  await fs.writeFile(tmp, stableStringifyConfig(doc), "utf8");
+  await fs.rename(tmp, fp);
 }
 
 export function normalizeConfigForExport(value: unknown): unknown {

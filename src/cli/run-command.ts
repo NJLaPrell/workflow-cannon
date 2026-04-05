@@ -23,6 +23,7 @@ import {
 } from "../core/run-args-pilot-validation.js";
 import { defaultRegistryModules } from "../modules/index.js";
 import { promptSensitiveRunApproval } from "./interactive-policy.js";
+import { releaseTranscriptHookLockFromEnv } from "../core/transcript-completion-hook.js";
 
 /** Default apply-skill preview mode for policy (dryRun true when omitted). */
 function normalizeApplySkillArgs(args: Record<string, unknown>): Record<string, unknown> {
@@ -153,6 +154,7 @@ export async function handleRunCommand(
     return codes.success;
   }
 
+  try {
   const actor = await resolveActorWithFallback(cwd, commandArgs, process.env);
   const sensitive = isSensitiveModuleCommandForEffective(subcommand, commandArgs, effective);
   const sessionId = resolveSessionId(process.env);
@@ -359,5 +361,8 @@ export async function handleRunCommand(
     const message = error instanceof Error ? error.message : String(error);
     writeError(`Module command failed: ${message}`);
     return codes.internalError;
+  }
+  } finally {
+    releaseTranscriptHookLockFromEnv();
   }
 }

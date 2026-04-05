@@ -20,7 +20,7 @@ Immutable fields (`id`, `createdAt`, `status`) are rejected.
 Known type guardrails:
 
 - Updates are validated against known type requirements after patch merge.
-- For `type: "improvement"`, non-empty `acceptanceCriteria` and `technicalScope` are required.
+- For `type: "improvement"`, non-empty `acceptanceCriteria` and `technicalScope` are required, plus non-empty **`metadata.issue`** and **`metadata.supportingReasoning`** (except legacy **`imp-<hex>`** ids, which may omit **`metadata.supportingReasoning`** until updated). Shallow-merge **`updates.metadata`** replaces the whole metadata object—send the full merged map.
 - Violations return stable error code `invalid-task-type-requirements`.
 
 Idempotency behavior:

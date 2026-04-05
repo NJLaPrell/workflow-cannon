@@ -20,9 +20,12 @@ import {
   assertWritableKey,
   getConfigKeyMetadata,
   listConfigMetadata,
+  validateModuleScopedConfigDocument,
   validatePersistedConfigDocument,
-  validateValueForMetadata
+  validateValueForMetadata,
+  type ConfigKeyMetadata
 } from "./config-metadata.js";
+import { MODULE_SCOPED_CONFIG_ROOT, projectPersistConfigPath } from "./module-scoped-config.js";
 import {
   explainConfigPath,
   getAtPath,
@@ -37,6 +40,40 @@ const EXIT_SUCCESS = 0;
 const EXIT_VALIDATION_FAILURE = 1;
 const EXIT_USAGE_ERROR = 2;
 const EXIT_INTERNAL_ERROR = 3;
+
+function validateDiscriminatedPersistedDoc(
+  doc: Record<string, unknown>,
+  scope: "project" | "user",
+  meta: ConfigKeyMetadata,
+  label: string
+): void {
+  if (scope === "user") {
+    validatePersistedConfigDocument(doc, "user config");
+    return;
+  }
+  if (meta.owningModule === "workspace-kit") {
+    validatePersistedConfigDocument(doc, ".workspace-kit/config.json");
+    return;
+  }
+  validateModuleScopedConfigDocument(meta.owningModule, doc, label);
+}
+
+function persistFilePathForMeta(cwd: string, scope: "project" | "user", meta: ConfigKeyMetadata): string {
+  if (scope === "user") {
+    return getUserConfigFilePath();
+  }
+  return projectPersistConfigPath(cwd, meta.owningModule);
+}
+
+function persistLabelForMeta(scope: "project" | "user", meta: ConfigKeyMetadata): string {
+  if (scope === "user") {
+    return "user config";
+  }
+  if (meta.owningModule === "workspace-kit") {
+    return ".workspace-kit/config.json";
+  }
+  return `.workspace-kit/modules/${meta.owningModule}/config.json`;
+}
 
 function cloneCfg(obj: Record<string, unknown>): Record<string, unknown> {
   return JSON.parse(JSON.stringify(obj)) as Record<string, unknown>;
@@ -273,6 +310,33 @@ export async function runWorkspaceConfigCli(
       const u = await readJsonFileOrEmpty(userPath);
       validatePersistedConfigDocument(p, ".workspace-kit/config.json");
       validatePersistedConfigDocument(u, "user config");
+      const modRoot = path.join(cwd, MODULE_SCOPED_CONFIG_ROOT);
+      try {
+        const entries = await fs.readdir(modRoot, { withFileTypes: true });
+        for (const ent of entries) {
+          if (!ent.isDirectory()) {
+            continue;
+          }
+          const modId = ent.name;
+          const mfp = path.join(modRoot, modId, "config.json");
+          try {
+            await fs.access(mfp);
+          } catch {
+            continue;
+          }
+          const md = await readJsonFileOrEmpty(mfp);
+          validateModuleScopedConfigDocument(
+            modId,
+            md,
+            `.workspace-kit/modules/${modId}/config.json`
+          );
+        }
+      } catch (e) {
+        const err = e as NodeJS.ErrnoException;
+        if (err.code !== "ENOENT") {
+          throw e;
+        }
+      }
       await resolveWorkspaceConfigWithLayers({ workspacePath: cwd, registry });
       if (json) {
         emit({ ok: true, code: "config-validated", data: { projectPath, userPath } });
@@ -353,12 +417,13 @@ export async function runWorkspaceConfigCli(
         if (!approval) return EXIT_VALIDATION_FAILURE;
       }
 
-      const fp = scope === "project" ? getProjectConfigPath(cwd) : getUserConfigFilePath();
+      const fp = persistFilePathForMeta(cwd, scope, meta);
+      const plabel = persistLabelForMeta(scope, meta);
       const before = await readJsonFileOrEmpty(fp);
-      validatePersistedConfigDocument(before, scope === "project" ? ".workspace-kit/config.json" : "user config");
+      validateDiscriminatedPersistedDoc(before, scope, meta, plabel);
       const prevVal = getAtPath(before, key);
       const next = setDeep(before, key, parsed);
-      validatePersistedConfigDocument(next, scope === "project" ? ".workspace-kit/config.json" : "user config");
+      validateDiscriminatedPersistedDoc(next, scope, meta, plabel);
 
       const actor = await resolveActorWithFallback(cwd, {}, process.env);
       try {
@@ -429,12 +494,13 @@ export async function runWorkspaceConfigCli(
         const approval = await requireConfigApproval(cwd, `config unset ${key}`, writeError);
         if (!approval) return EXIT_VALIDATION_FAILURE;
       }
-      const fp = scope === "project" ? getProjectConfigPath(cwd) : getUserConfigFilePath();
+      const fp = persistFilePathForMeta(cwd, scope, meta);
+      const plabel = persistLabelForMeta(scope, meta);
       const before = await readJsonFileOrEmpty(fp);
-      validatePersistedConfigDocument(before, scope === "project" ? ".workspace-kit/config.json" : "user config");
+      validateDiscriminatedPersistedDoc(before, scope, meta, plabel);
       const prevVal = getAtPath(before, key);
       const next = unsetDeep(before, key);
-      validatePersistedConfigDocument(next, scope === "project" ? ".workspace-kit/config.json" : "user config");
+      validateDiscriminatedPersistedDoc(next, scope, meta, plabel);
       const actor = await resolveActorWithFallback(cwd, {}, process.env);
 
       try {
@@ -518,7 +584,7 @@ export async function runWorkspaceConfigCli(
         return EXIT_USAGE_ERROR;
       }
       validateValueForMetadata(meta, parsed);
-      const scope = meta.writableLayers.includes("project") ? "project" : "user";
+      const scope: "project" | "user" = meta.writableLayers.includes("project") ? "project" : "user";
       return runWorkspaceConfigCli(
         cwd,
         ["set", "--scope", scope, meta.key, JSON.stringify(parsed)],

@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, writeFile, access } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -114,8 +114,15 @@ test("config set and get round-trip (project layer)", async () => {
   const g = JSON.parse(cap2.lines[0]);
   assert.equal(g.data.value, ".workspace-kit/tasks/custom.json");
 
-  const cfgPath = path.join(root, ".workspace-kit", "config.json");
-  const raw = JSON.parse(await readFile(cfgPath, "utf8"));
+  const modCfgPath = path.join(
+    root,
+    ".workspace-kit",
+    "modules",
+    "task-engine",
+    "config.json"
+  );
+  await access(modCfgPath);
+  const raw = JSON.parse(await readFile(modCfgPath, "utf8"));
   assert.equal(raw.tasks.storeRelativePath, ".workspace-kit/tasks/custom.json");
 
   const mutPath = path.join(root, ".workspace-kit", "config", "mutations.jsonl");
@@ -133,6 +140,30 @@ test("config set rejects unknown key", async () => {
   );
   assert.equal(code, 1);
   assert.match(cap.errors.join(""), /config-unknown-key/);
+});
+
+test("project global config overrides module-scoped task-engine file", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "wk-cfg-layer-"));
+  await minimalWorkspace(root);
+  const home = await mkdtemp(path.join(os.tmpdir(), "wk-h-layer-"));
+  await mkdir(path.join(root, ".workspace-kit", "modules", "task-engine"), { recursive: true });
+  await writeFile(
+    path.join(root, ".workspace-kit", "modules", "task-engine", "config.json"),
+    JSON.stringify({ tasks: { strictValidation: false } }),
+    "utf8"
+  );
+  await writeFile(
+    path.join(root, ".workspace-kit", "config.json"),
+    JSON.stringify({ tasks: { strictValidation: true } }),
+    "utf8"
+  );
+  const cap = captureIo();
+  const code = await withUserHome(home, () =>
+    runCli(["config", "get", "tasks.strictValidation", "--json"], { cwd: root, ...cap })
+  );
+  assert.equal(code, 0);
+  const g = JSON.parse(cap.lines[0]);
+  assert.equal(g.data.value, true);
 });
 
 test("run resolve-config returns effective and layers", async () => {

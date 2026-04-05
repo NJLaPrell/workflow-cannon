@@ -26,6 +26,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private view?: vscode.WebviewView;
   /** Poll dashboard while the sidebar view exists so the panel stays fresh without manual refresh. */
   private dashboardPollTimer: ReturnType<typeof setInterval> | undefined;
+  /** After first full HTML load, refresh only swaps `#root` via postMessage so `<details open>` state survives. */
+  private dashboardRootShellReady = false;
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -53,13 +55,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     webview.onDidReceiveMessage(async (msg) => {
       if (msg?.type === "refresh") {
         await this.pushUpdate();
-      }
-      if (msg?.type === "validateConfig") {
-        await vscode.commands.executeCommand("workflowCannon.validateConfig");
-      }
-      if (msg?.type === "openConfig") {
-        await vscode.commands.executeCommand("workbench.view.extension.workflow-cannon");
-        await vscode.commands.executeCommand("workflowCannon.config.focus");
       }
       if (msg?.type === "prefillWishlistChat") {
         const raw = msg?.wishlistId;
@@ -89,7 +84,15 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         const taskId = typeof rawId === "string" ? rawId.trim() : "";
         const action = typeof rawAction === "string" ? rawAction.trim() : "";
         if (taskId.length > 0 && action.length > 0) {
-          await confirmAndRunTransition(this.client, this.notifyKitStateChanged, taskId, action);
+          const rejectSubject =
+            msg?.transitionKind === "wishlist" ? "this wishlist item" : undefined;
+          await confirmAndRunTransition(
+            this.client,
+            this.notifyKitStateChanged,
+            taskId,
+            action,
+            rejectSubject
+          );
           await this.pushUpdate();
         }
       }
@@ -114,6 +117,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
     }, 45_000);
     webviewView.onDidDispose(() => {
+      this.dashboardRootShellReady = false;
       if (this.dashboardPollTimer) {
         clearInterval(this.dashboardPollTimer);
         this.dashboardPollTimer = undefined;
@@ -161,9 +165,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       `pushUpdate: ok=${String(raw.ok)} code=${String(raw.code ?? "")} htmlBytes≈${rootInner.length}`
     );
     try {
-      webview.html = this.buildHtml(webview, rootInner);
+      if (!this.dashboardRootShellReady) {
+        webview.html = this.buildHtml(webview, rootInner);
+        this.dashboardRootShellReady = true;
+      } else {
+        await webview.postMessage({ type: "wcReplaceRoot", html: rootInner });
+      }
     } catch (e) {
-      logDashboard(`buildHtml failed: ${e instanceof Error ? e.message : String(e)}`);
+      logDashboard(`dashboard push failed: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
@@ -177,7 +186,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       `script-src ${webview.cspSource} 'unsafe-inline'`
     ].join("; ");
 
-    const bootstrap = `(function(){var vscode=acquireVsCodeApi();var btn=document.getElementById("btn");var validate=document.getElementById("validate");var config=document.getElementById("config");var root=document.getElementById("root");if(!btn||!validate||!config)return;btn.addEventListener("click",function(){vscode.postMessage({type:"refresh"});});validate.addEventListener("click",function(){vscode.postMessage({type:"validateConfig"});});config.addEventListener("click",function(){vscode.postMessage({type:"openConfig"});});if(root)root.addEventListener("click",function(ev){var t=ev.target;if(!t||t.tagName!=="BUTTON")return;var act=t.getAttribute("data-wc-action");if(!act)return;if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}});})();`;
+    const bootstrap = `(function(){var vscode=acquireVsCodeApi();window.addEventListener("message",function(ev){var m=ev.data;if(!m||m.type!=="wcReplaceRoot"||typeof m.html!=="string")return;var root=document.getElementById("root");if(!root)return;var open={};root.querySelectorAll("details[data-wc-track]").forEach(function(d){var k=d.getAttribute("data-wc-track");if(k&&d.open)open[k]=true;});root.innerHTML=m.html;Object.keys(open).forEach(function(k){var el=root.querySelector('details[data-wc-track="'+k+'"]');if(el)el.open=true;});});var btn=document.getElementById("btn");var rootEl=document.getElementById("root");if(btn)btn.addEventListener("click",function(){vscode.postMessage({type:"refresh"});});if(rootEl)rootEl.addEventListener("click",function(ev){var t=ev.target;if(!t||t.tagName!=="BUTTON")return;var act=t.getAttribute("data-wc-action");if(!act)return;if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});})();`;
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -195,12 +204,32 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .muted { opacity: 0.75; }
     .focus-md b { font-weight: 600; }
     pre { white-space: pre-wrap; background: var(--vscode-textCodeBlock-background); padding: 8px; border-radius: 4px; }
-    button { margin-top: 8px; padding: 4px 8px; cursor: pointer; }
+    button { cursor: pointer; }
     .dash-row-list { display: flex; flex-direction: column; gap: 4px; margin: 6px 0 8px 0; }
     .dash-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 4px 6px; border-radius: 4px; background: var(--vscode-textCodeBlock-background); }
     .dash-row-label { flex: 1; min-width: 0; white-space: pre-wrap; word-break: break-word; font-size: 12px; line-height: 1.35; }
     .dash-row-actions { display: flex; flex-wrap: wrap; gap: 4px; flex-shrink: 0; align-items: flex-start; }
-    button.dash-row-action { margin-top: 0; flex-shrink: 0; padding: 2px 8px; font-size: 11px; }
+    button.dash-row-action { margin-top: 0; flex-shrink: 0; padding: 2px 8px; font-size: 11px; border-radius: 4px; }
+    /* Primary row actions (Accept, Process, …) — VS Code button palette */
+    button.dash-row-action-primary {
+      color: var(--vscode-button-foreground);
+      background: var(--vscode-button-background);
+      border: 1px solid var(--vscode-button-border, var(--vscode-contrastBorder, transparent));
+    }
+    button.dash-row-action-primary:hover {
+      background: var(--vscode-button-hoverBackground);
+    }
+    button.dash-row-action-primary:active {
+      filter: brightness(0.94);
+    }
+    button.dash-row-action-secondary {
+      color: var(--vscode-foreground);
+      background: transparent;
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.45));
+    }
+    button.dash-row-action-secondary:hover {
+      background: var(--vscode-toolbar-hoverBackground);
+    }
     .ok { color: var(--vscode-testing-iconPassed); }
     .bad { color: var(--vscode-errorForeground); }
     .phase-stack { margin: 4px 0 8px 0; }
@@ -214,21 +243,45 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     details.status-section > .status-section-body { padding-left: 2px; }
     .dash-card > details.status-section:last-child { margin-bottom: 0; }
     .dash-count-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 14px; margin: 4px 0 10px 0; }
-    .dash-count-cell { display: flex; flex-direction: column; align-items: stretch; gap: 2px; min-width: 0; }
-    .dash-count-label { font-size: 11px; opacity: 0.85; line-height: 1.2; }
-    .dash-count-num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; font-size: 13px; line-height: 1.2; }
-    .dependency-overview { margin: 0; }
+    .dash-count-cell { display: flex; flex-direction: row; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
+    .dash-count-label { font-size: 11px; opacity: 0.85; line-height: 1.25; flex: 1; min-width: 0; }
+    .dash-count-num { flex-shrink: 0; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; font-size: 13px; line-height: 1.25; }
     .a11y-note { font-size: 11px; }
     pre.resume-cli { font-size: 11px; }
+    .dash-footer { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--vscode-widget-border, rgba(127,127,127,.25)); }
+    #btn.dash-refresh-btn {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      margin: 0;
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      color: var(--vscode-button-foreground);
+      background: var(--vscode-button-background);
+      transition: background 0.12s ease, filter 0.12s ease;
+    }
+    #btn.dash-refresh-btn:hover {
+      background: var(--vscode-button-hoverBackground);
+    }
+    #btn.dash-refresh-btn:active {
+      filter: brightness(0.92);
+    }
+    #btn.dash-refresh-btn:focus {
+      outline: 1px solid var(--vscode-focusBorder);
+      outline-offset: 2px;
+    }
   </style>
 </head>
 <body>
   <div id="root">${rootInnerHtml}</div>
-  <div>
-    <button id="btn">Refresh</button>
-    <button id="validate">Validate Config</button>
-    <button id="config">Open Config</button>
-  </div>
+  <footer class="dash-footer">
+    <button type="button" id="btn" class="dash-refresh-btn" title="Reload dashboard from workspace-kit">Refresh</button>
+  </footer>
   <script>${bootstrap}</script>
 </body>
 </html>`;

@@ -26,7 +26,7 @@ export { buildImprovementTaskPayload } from "./improvement-task-payload.js";
 export const improvementModule: WorkflowModule = {
   registration: {
     id: "improvement",
-    version: "0.9.0",
+    version: "0.9.1",
     contractVersion: "1",
     stateSchema: 1,
     capabilities: ["improvement"],

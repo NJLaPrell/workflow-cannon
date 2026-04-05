@@ -24,6 +24,8 @@ export type DashboardTaskRow = {
 export type DashboardWishlistRow = {
   id: string;
   title: string;
+  /** Backing `wishlist_intake` task id (`T###`); use for `run-transition`, not necessarily equal to `id` when legacy `W###` is shown. */
+  taskId: string;
 };
 
 export type DashboardBlockedRow = {
@@ -43,13 +45,20 @@ export type DashboardListSummary = {
 
 export type PlanningGenerationPolicy = "off" | "warn" | "require";
 
-/** Effective agent guidance (RPG party v1) for dashboard / extension — advisory only. */
+/**
+ * Effective agent guidance (RPG party v1) + resolved agent-behavior profile for dashboard / extension.
+ * `displayLabel` is the maintainer **Role** (tier catalog / `kit.agentGuidance`).
+ * `temperamentLabel` is the onboarding-style temperament name (The Wary Scout, The Steady Adventurer, …),
+ * derived from the effective behavior profile id / dimensions — not the raw profile `label`.
+ */
 export type DashboardAgentGuidanceSummary = {
   schemaVersion: 1;
   profileSetId: string;
   tier: number;
   displayLabel: string;
   usingDefaultTier: boolean;
+  temperamentProfileId: string;
+  temperamentLabel: string;
 };
 
 export type DashboardSummaryData = {

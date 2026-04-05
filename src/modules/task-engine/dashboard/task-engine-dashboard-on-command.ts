@@ -10,7 +10,14 @@ import {
   buildDashboardPhaseBucketsForTasks
 } from "./dashboard-phase-buckets.js";
 import { readBuildPlanSession, toDashboardPlanningSession } from "../../../core/planning/build-plan-session-file.js";
-import { isWishlistIntakeTask, listWishlistIntakeTasksAsItems } from "../wishlist/wishlist-intake.js";
+import { dashboardOnboardingTemperamentLabel } from "../../agent-behavior/onboarding-temperament-label.js";
+import { loadBehaviorWorkspaceState } from "../../agent-behavior/persistence.js";
+import { BehaviorProfileStore } from "../../agent-behavior/store.js";
+import {
+  findWishlistIntakeTaskByLegacyOrTaskId,
+  isWishlistIntakeTask,
+  listWishlistIntakeTasksAsItems
+} from "../wishlist/wishlist-intake.js";
 import type { TaskStore } from "../persistence/store.js";
 import type { SqliteDualPlanningStore } from "../persistence/sqlite-dual-planning.js";
 import { buildFeatureEnrichmentBySlug, type FeatureEnrichment } from "../persistence/feature-registry-queries.js";
@@ -67,10 +74,15 @@ export async function runDashboardSummaryCommand(
   const wishlistItems = listWishlistIntakeTasksAsItems(store.getAllTasks());
   const wishlistOpenItems = wishlistItems.filter((i) => i.status === "open");
   const wishlistOpenCount = wishlistOpenItems.length;
-  const wishlistOpenTop = wishlistOpenItems.slice(0, 15).map((i) => ({
-    id: i.id,
-    title: i.title
-  }));
+  const wishlistOpenTop = wishlistOpenItems.slice(0, 15).map((i) => {
+    const task = findWishlistIntakeTaskByLegacyOrTaskId(store.getAllTasks(), i.id);
+    const taskId = task?.id ?? i.id;
+    return {
+      id: i.id,
+      title: i.title,
+      taskId
+    };
+  });
 
   const proposedImprovements = tasks
     .filter((t) => t.status === "proposed" && isImprovementLikeTask(t))
@@ -158,12 +170,17 @@ export async function runDashboardSummaryCommand(
       ? (ctx.effectiveConfig as Record<string, unknown>)
       : {};
   const guidanceResolved = resolveAgentGuidanceFromEffectiveConfig(effCfg);
+  const behaviorState = await loadBehaviorWorkspaceState(ctx);
+  const behaviorStore = new BehaviorProfileStore(behaviorState);
+  const { effective: behaviorEffective } = behaviorStore.resolveEffectiveWithProvenance();
   const agentGuidance = {
     schemaVersion: 1 as const,
     profileSetId: guidanceResolved.profileSetId,
     tier: guidanceResolved.tier,
     displayLabel: guidanceResolved.displayLabel,
-    usingDefaultTier: guidanceResolved.usingDefaultTier
+    usingDefaultTier: guidanceResolved.usingDefaultTier,
+    temperamentProfileId: behaviorEffective.id,
+    temperamentLabel: dashboardOnboardingTemperamentLabel(behaviorEffective)
   };
 
   const data = {
