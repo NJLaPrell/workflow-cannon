@@ -11,8 +11,8 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 
 ## Current state
 
-- **Shipped:** latest **`v0.59.0`** (Phase **59** — Improvement Scout **`T679`–`T683`**: **`improvement-scout`** playbook, **`scout-report`**, rotation memory, optional **`heuristic_2`** ingest). Phase **58** (**`v0.58.2`**, team execution + extension follow-ups) and prior trains remain summarized in **[`ROADMAP-archive.md`](./ROADMAP-archive.md)**; version facts in **[`CHANGELOG.md`](./CHANGELOG.md)**.
-- **Next:** Maintainer snapshot advances with **`update-workspace-phase-snapshot`** after closeout; **`T668`–`T670`** (Cursor chat prefill) remain **`cancelled`**. Use **`get-next-actions`** / **`list-tasks`** for **`ready`** work (e.g. Phase **60** architecture tasks).
+- **Shipped:** latest **`v0.60.0`** (Phase **60** — pilot run-args + planning prelude, SQLite **`BEGIN IMMEDIATE`**, **`agent-session-snapshot`**, **`get-next-actions`** **`teamExecutionContext`**, **`dashboard-summary`** **`schemaVersion` 3** + **`subagentRegistry`**, contract exports, extension **0.1.8**). Phase **59** (**`v0.59.0`**, Improvement Scout) and prior trains remain summarized in **[`ROADMAP-archive.md`](./ROADMAP-archive.md)**; version facts in **[`CHANGELOG.md`](./CHANGELOG.md)**.
+- **Next:** Phase **61** plugin platform v1 (**`T684`**+); **`T668`–`T670`** (Cursor chat prefill) remain **`cancelled`**. Use **`get-next-actions`** / **`list-tasks`** for **`ready`** work.
 - **Maintainer snapshot** — `docs/maintainers/data/workspace-kit-status.yaml` (`current_kit_phase`, `next_agent_actions`).
 - **Execution queue** — canonical task-engine store (default `.workspace-kit/tasks/workspace-kit.db`; JSON opt-out `.workspace-kit/tasks/state.json`); use `pnpm run wk run list-tasks` / `get-next-actions` rather than inferring phase from prose alone.
 - **Product / feature inventory** — **`docs/maintainers/FEATURE-MATRIX.md`**.
