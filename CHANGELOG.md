@@ -8,4 +8,4 @@ This root file is intentionally pointer-only to avoid split release history.
 
 - See `docs/maintainers/CHANGELOG.md` for all release notes, migration notes, and historical entries.
 
-Latest release: **v0.57.0** (Phase 57: subagent registry v1 — SQLite v6, `subagents` module; see canonical changelog).
+Latest release: **v0.59.0** (Phase 59: Improvement Scout — `scout-report`, rotation memory, optional `heuristic_2`; see canonical changelog).

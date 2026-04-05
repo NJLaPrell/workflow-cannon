@@ -50,7 +50,7 @@
     },
     {
       "id": "improvement",
-      "version": "0.9.1",
+      "version": "0.10.0",
       "contractVersion": "1",
       "compatibilityLevel": "compatible",
       "supportedRuntime": "0.1",

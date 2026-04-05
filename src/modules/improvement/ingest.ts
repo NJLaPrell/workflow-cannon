@@ -4,10 +4,25 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import crypto from "node:crypto";
 import type { TransitionEvidence } from "../../core/planning/index.js";
-import type { EvidenceKind, ConfidenceSignals } from "./confidence.js";
-import { computeHeuristicConfidence, priorityForTier, shouldAdmitRecommendation } from "./confidence.js";
+import type { EvidenceKind, ConfidenceResult, ConfidenceSignals } from "./confidence.js";
+import {
+  resolveConfidenceForHeuristicVersion,
+  shouldAdmitForHeuristicVersion
+} from "./confidence-heuristic-2.js";
 import type { ImprovementStateDocument } from "./improvement-state.js";
 import { redactTranscriptSnippet } from "./transcript-redaction.js";
+
+export type ImprovementHeuristicVersion = 1 | 2;
+
+/** Optional scout-origin fields merged into improvement task metadata when present. */
+export type ScoutProposalMeta = {
+  primaryLens?: string;
+  adversarialLens?: string;
+  findingType?: string;
+  evidenceAnchors?: string[];
+  riskNotes?: string;
+  noveltyHint?: string;
+};
 
 export type IngestCandidate = {
   evidenceKind: EvidenceKind;
@@ -15,7 +30,8 @@ export type IngestCandidate = {
   title: string;
   provenanceRefs: Record<string, string>;
   signals: ConfidenceSignals;
-  confidence: ReturnType<typeof computeHeuristicConfidence>;
+  confidence: ConfidenceResult;
+  scoutMeta?: ScoutProposalMeta;
 };
 
 function sha256Hex(s: string): string {
@@ -67,7 +83,8 @@ function scoreTranscriptLine(line: string): number {
 export async function ingestAgentTranscripts(
   workspacePath: string,
   transcriptsRootRel: string,
-  state: ImprovementStateDocument
+  state: ImprovementStateDocument,
+  heuristicVersion: ImprovementHeuristicVersion = 1
 ): Promise<IngestCandidate[]> {
   const root = path.resolve(workspacePath, transcriptsRootRel);
   const files = await globJsonlRecursive(root);
@@ -93,8 +110,8 @@ export async function ingestAgentTranscripts(
 
     const evidenceKey = stableEvidenceKey("transcript", [rel, String(start), String(lines.length)]);
     const signals: ConfidenceSignals = { transcriptFriction: maxScore };
-    const confidence = computeHeuristicConfidence("transcript", signals);
-    if (!shouldAdmitRecommendation(confidence)) continue;
+    const confidence = resolveConfidenceForHeuristicVersion(heuristicVersion, "transcript", signals);
+    if (!shouldAdmitForHeuristicVersion(heuristicVersion, confidence)) continue;
 
     out.push({
       evidenceKind: "transcript",
@@ -111,7 +128,8 @@ export async function ingestAgentTranscripts(
 export function ingestGitDiffBetweenTags(
   workspacePath: string,
   fromTag: string,
-  toTag: string
+  toTag: string,
+  heuristicVersion: ImprovementHeuristicVersion = 1
 ): IngestCandidate | null {
   let names: string;
   try {
@@ -128,8 +146,8 @@ export function ingestGitDiffBetweenTags(
   const impact = 0.4 + churn * 0.55;
   const evidenceKey = stableEvidenceKey("git_diff", [fromTag, toTag, fileList.slice(0, 30).join(",")]);
   const signals: ConfidenceSignals = { diffImpact: impact };
-  const confidence = computeHeuristicConfidence("git_diff", signals);
-  if (!shouldAdmitRecommendation(confidence)) return null;
+  const confidence = resolveConfidenceForHeuristicVersion(heuristicVersion, "git_diff", signals);
+  if (!shouldAdmitForHeuristicVersion(heuristicVersion, confidence)) return null;
 
   return {
     evidenceKind: "git_diff",
@@ -143,7 +161,8 @@ export function ingestGitDiffBetweenTags(
 
 export async function ingestPolicyDenials(
   workspacePath: string,
-  state: ImprovementStateDocument
+  state: ImprovementStateDocument,
+  heuristicVersion: ImprovementHeuristicVersion = 1
 ): Promise<IngestCandidate[]> {
   const fp = path.join(workspacePath, ".workspace-kit/policy/traces.jsonl");
   const lines = await readJsonlLines(fp);
@@ -166,8 +185,8 @@ export async function ingestPolicyDenials(
     const hasRationale = typeof rec.rationale === "string" && (rec.rationale as string).length > 0;
     const policyDenial = hasRationale ? 0.72 : 0.55;
     const signals: ConfidenceSignals = { policyDenial };
-    const confidence = computeHeuristicConfidence("policy_deny", signals);
-    if (!shouldAdmitRecommendation(confidence)) continue;
+    const confidence = resolveConfidenceForHeuristicVersion(heuristicVersion, "policy_deny", signals);
+    if (!shouldAdmitForHeuristicVersion(heuristicVersion, confidence)) continue;
 
     out.push({
       evidenceKind: "policy_deny",
@@ -187,7 +206,8 @@ export async function ingestPolicyDenials(
 
 export async function ingestConfigMutations(
   workspacePath: string,
-  state: ImprovementStateDocument
+  state: ImprovementStateDocument,
+  heuristicVersion: ImprovementHeuristicVersion = 1
 ): Promise<IngestCandidate[]> {
   const fp = path.join(workspacePath, ".workspace-kit/config/mutations.jsonl");
   const lines = await readJsonlLines(fp);
@@ -209,8 +229,8 @@ export async function ingestConfigMutations(
     const evidenceKey = stableEvidenceKey("config_mutation", ["mutations.jsonl", ts, k, String(rec.code ?? "")]);
     const mutationRejection = 0.62;
     const signals: ConfidenceSignals = { mutationRejection };
-    const confidence = computeHeuristicConfidence("config_mutation", signals);
-    if (!shouldAdmitRecommendation(confidence)) continue;
+    const confidence = resolveConfidenceForHeuristicVersion(heuristicVersion, "config_mutation", signals);
+    if (!shouldAdmitForHeuristicVersion(heuristicVersion, confidence)) continue;
 
     out.push({
       evidenceKind: "config_mutation",
@@ -226,7 +246,8 @@ export async function ingestConfigMutations(
 
 export function ingestTaskTransitionFriction(
   transitionLog: TransitionEvidence[],
-  state: ImprovementStateDocument
+  state: ImprovementStateDocument,
+  heuristicVersion: ImprovementHeuristicVersion = 1
 ): IngestCandidate[] {
   const start = state.transitionLogLengthCursor;
   const slice = transitionLog.slice(start);
@@ -243,8 +264,8 @@ export function ingestTaskTransitionFriction(
     const taskFriction = Math.min(1, 0.38 + count * 0.08);
     const evidenceKey = stableEvidenceKey("task_transition", [taskId, String(count)]);
     const signals: ConfidenceSignals = { taskFriction };
-    const confidence = computeHeuristicConfidence("task_transition", signals);
-    if (!shouldAdmitRecommendation(confidence)) continue;
+    const confidence = resolveConfidenceForHeuristicVersion(heuristicVersion, "task_transition", signals);
+    if (!shouldAdmitForHeuristicVersion(heuristicVersion, confidence)) continue;
 
     out.push({
       evidenceKind: "task_transition",

@@ -6,7 +6,7 @@
   "type": "object",
   "required": ["schemaVersion", "packageVersion", "moduleId", "commands"],
   "additionalProperties": false,
-  "packageVersion": "0.58.2",
+  "packageVersion": "0.59.0",
   "properties": {
     "schemaVersion": {
       "const": 1

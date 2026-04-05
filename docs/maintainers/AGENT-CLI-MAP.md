@@ -38,7 +38,7 @@ When delivering **one** **`T###`** via GitHub PR **into `release/phase-<N>`** (n
 
 ## Maintainer playbook: improvement discovery
 
-When **researching** friction to log as **`type: "improvement"`** tasks (**`T###`** ids; **`create-task`** or **`generate-recommendations`** / **`ingest-transcripts`**), synthesize a **problem report** (`metadata.issue`, `metadata.supportingReasoning`)—not raw transcript/tool dumps. Use **`docs/maintainers/playbooks/improvement-task-discovery.md`** (id `improvement-task-discovery`). Optional requestable **`.cursor/rules/playbook-improvement-task-discovery.mdc`**. Human summary: **`docs/maintainers/AGENTS.md`** → **Improvement discovery**.
+When **researching** friction to log as **`type: "improvement"`** tasks (**`T###`** ids; **`create-task`** or **`generate-recommendations`** / **`ingest-transcripts`**), synthesize a **problem report** (`metadata.issue`, `metadata.supportingReasoning`)—not raw transcript/tool dumps. Use **`docs/maintainers/playbooks/improvement-task-discovery.md`** (id `improvement-task-discovery`). For a **bounded scout** pass (lens rotation, evidence floor, read-only rehearsal JSON), use **`docs/maintainers/playbooks/improvement-scout.md`** (id `improvement-scout`) and **`workspace-kit run scout-report`** (non-sensitive). Optional requestable **`.cursor/rules/playbook-improvement-task-discovery.mdc`**. Human summary: **`docs/maintainers/AGENTS.md`** → **Improvement discovery**.
 
 ## Maintainer playbook: improvement triage (top 3 → ready)
 
@@ -204,6 +204,13 @@ workspace-kit run generate-document '{"documentType":"ROADMAP.md","options":{"dr
 
 ```bash
 workspace-kit run generate-recommendations '{"policyApproval":{"confirmed":true,"rationale":"weekly improvement pass"}}'
+```
+
+**Copy-paste — improvement scout rehearsal (read-only; optional rotation memory):**
+
+```bash
+workspace-kit run scout-report '{}'
+workspace-kit run scout-report '{"seed":"session-1","persistRotation":true}'
 ```
 
 **Copy-paste — review approval item:**

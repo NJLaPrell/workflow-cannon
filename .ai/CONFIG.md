@@ -22,11 +22,15 @@ Generated from `src/core/config-metadata.ts`. Do not edit by hand; run `workspac
 
 | improvement.cadence.skipIfNoNewTranscripts | boolean | true | project | improvement | maintainer | false | false |
 
-**Description:** Skip recommendation generation when transcript sync copies no new files.
+**Description:** When true, skip the ingest-time recommendation generation step if transcript sync copied no new files; set false to still score policy/diff/task-transition evidence on a cadence.
 
 | improvement.hooks.afterTaskCompleted | string | "off" | project | improvement | maintainer | false | false |
 
 **Description:** Optional background transcript sync after task-engine transition to completed: off (default), sync, or ingest (ingest requires WORKSPACE_KIT_POLICY_APPROVAL in env).
+
+| improvement.recommendations.heuristicVersion | number | 1 | project | improvement | maintainer | false | false |
+
+**Description:** Improvement ingest admission heuristic: 1 (default, max-of-signals) or 2 (mean-of-signals with alternate threshold).
 
 | improvement.transcripts.archivePath | string | "agent-transcripts" | project | improvement | public | false | false |
 

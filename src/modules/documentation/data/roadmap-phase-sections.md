@@ -26,7 +26,9 @@
 - **Exit signals:**
   - **`pnpm run build`**, **`check`**, **`test`**, **`parity`**, **`pre-merge-gates`** on the release tag; maintainer evidence per **`RELEASING.md`**.
 
-### Phase 59 - Cursor chat prefill experiments (CANCELLED)
+### Phase 59 - Improvement scout + ingest heuristics -> GitHub release `v0.59.0` (COMPLETE)
 
-- **Primary scope (was):** **`T668`–`T670`** — hands-on Cursor prefill matrix, recommendation doc, optional hardening (**non-release** metadata).
-- **Outcome:** Maintainer **`run-transition`** **`cancel`** on all three tasks **2026-04-04**; no **`v0.59.0`**; execution queue returns to improvement / backlog until replanned.
+- **Primary scope:** **`T679`–`T683`** — **`improvement-scout`** playbook (lenses, zones, stems, adversarial pass, evidence floor); optional scout **`metadata`** keys on improvement tasks; improvement state schema **`3`** with bounded **`scoutRotationHistory`**; read-only **`scout-report`** command (optional **`persistRotation`**); config **`improvement.recommendations.heuristicVersion`** **`1`**/**`2`** for alternate ingest admission. **Cancelled track (non-release):** **`T668`–`T670`** (Cursor chat prefill experiments) remain **`cancelled`**.
+- **Outcome:** Operators can run a structured scout rehearsal without Tier B approval; rotation memory is opt-in; pipeline tasks can carry scout metadata; **`heuristic_2`** is opt-in and tested beside **`heuristic_1`** defaults.
+- **Exit signals:**
+  - **`pnpm run build`**, **`check`**, **`test`**, **`parity`**, **`pre-merge-gates`** on the release tag; maintainer evidence per **`RELEASING.md`**.

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceSchemaPackageVersion": "0.58.2",
+  "sourceSchemaPackageVersion": "0.59.0",
   "pilotCommands": [
     "run-transition",
     "dashboard-summary",

@@ -482,6 +482,14 @@
   },
   {
     "moduleId": "improvement",
+    "name": "scout-report",
+    "file": "scout-report.md",
+    "description": "Emit read-only scout rehearsal JSON (lenses, zones, stems); optional rotation persistence.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "improvement",
     "name": "sync-transcripts",
     "file": "sync-transcripts.md",
     "description": "Sync local transcript JSONL files into the archive.",

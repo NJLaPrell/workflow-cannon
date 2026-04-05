@@ -50,6 +50,7 @@ Status legend:
 | Phase 56 - Lifecycle hooks + `.ai` → `docs` pipeline (`T645`–`T648`, `T654`–`T661`) | `v0.56.0` | Completed |
 | Phase 57 - Native subagents v1 (`T662`–`T664`) | `v0.57.0` | Completed |
 | Phase 58 - Team execution v1 (`T665`–`T667`) + follow-up (`T672`–`T678`) | `v0.58.1` | Completed |
+| Phase 59 - Improvement scout (`T679`–`T683`; `T668`–`T670` cancelled) | `v0.59.0` | Completed |
 
 ## Feature Matrix by Phase
 
