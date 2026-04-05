@@ -840,7 +840,7 @@ test("taskEngineModule onCommand dashboard-summary returns stable shape", async 
   assert.equal(result.ok, true);
   assert.equal(result.code, "dashboard-summary");
   const d = result.data;
-  assert.equal(d.schemaVersion, 2);
+  assert.equal(d.schemaVersion, 3);
   assert.ok(typeof d.taskStoreLastUpdated === "string");
   assert.equal(d.stateSummary.ready, 1);
   assert.equal(d.readyQueueCount, 1);
@@ -891,6 +891,14 @@ test("taskEngineModule onCommand dashboard-summary returns stable shape", async 
   assert.equal(d.teamExecution.totalCount, 0);
   assert.equal(d.teamExecution.activeCount, 0);
   assert.ok(Array.isArray(d.teamExecution.topActive));
+  assert.ok(d.subagentRegistry);
+  assert.equal(d.subagentRegistry.schemaVersion, 1);
+  assert.equal(d.subagentRegistry.available, true);
+  assert.equal(d.subagentRegistry.definitionsCount, 0);
+  assert.equal(d.subagentRegistry.retiredDefinitionsCount, 0);
+  assert.equal(d.subagentRegistry.openSessionsCount, 0);
+  assert.ok(Array.isArray(d.subagentRegistry.topOpenSessions));
+  assert.equal(d.subagentRegistry.topOpenSessions.length, 0);
 });
 
 test("taskEngineModule dashboard-summary wishlist openTop includes backing taskId", async () => {

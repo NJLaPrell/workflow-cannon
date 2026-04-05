@@ -37,8 +37,9 @@ These use the short bin name **`wk`** (same as **`workspace-kit`**). **`pnpm exe
 | --- | --- | --- |
 | 1 | `pnpm exec wk --help` | Orientation: top-level commands, first-run path, doc pointers |
 | 2 | `pnpm exec wk doctor` | Confirms kit contract files and config resolve |
-| 3 | `pnpm exec wk run` | **Command menu** — every runnable `workspace-kit run <cmd>` |
-| 4 | `pnpm exec wk run get-next-actions '{}'` | Read-only suggestion for what to do next |
+| 3 | `pnpm exec wk doctor --agent-instruction-surface` | JSON catalog: runnable commands, instruction paths, remediation codes |
+| 4 | `pnpm exec wk run` | **Command menu** — every runnable `workspace-kit run <cmd>` |
+| 5 | `pnpm exec wk run get-next-actions '{}'` | Read-only suggestion for what to do next |
 
 **Typing `wk` without `pnpm exec`:** shells usually do **not** put **`node_modules/.bin`** on **`PATH`**, so **`wk`** alone often errors with **`command not found`**. After **`pnpm install`**, pick one:
 

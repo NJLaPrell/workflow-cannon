@@ -1,63 +1,151 @@
 {
   "schemaVersion": 1,
-  "sourceSchemaPackageVersion": "0.59.0",
+  "sourceSchemaPackageVersion": "0.60.0",
   "pilotCommands": [
-    "run-transition",
-    "dashboard-summary",
+    "add-dependency",
+    "agent-session-snapshot",
+    "archive-task",
+    "assign-task-phase",
+    "backfill-task-feature-links",
+    "backup-planning-sqlite",
+    "clear-task-phase",
+    "convert-wishlist",
     "create-task",
+    "create-task-from-plan",
+    "create-wishlist",
+    "dashboard-summary",
+    "explain-task-engine-model",
+    "export-feature-taxonomy-json",
+    "get-blocked-summary",
+    "get-dependency-graph",
+    "get-kit-persistence-map",
+    "get-module-state",
+    "get-next-actions",
+    "get-ready-queue",
+    "get-recent-task-activity",
+    "get-task",
+    "get-task-history",
+    "get-task-summary",
+    "get-wishlist",
+    "list-components",
+    "list-features",
+    "list-module-states",
+    "list-tasks",
+    "list-wishlist",
+    "migrate-task-persistence",
+    "migrate-wishlist-intake",
+    "queue-git-alignment",
+    "queue-health",
+    "remove-dependency",
+    "replay-queue-snapshot",
+    "run-transition",
     "update-task",
-    "list-features"
+    "update-wishlist",
+    "update-workspace-phase-snapshot"
   ],
   "commands": {
-    "run-transition": {
+    "add-dependency": {
       "type": "object",
       "required": [
         "taskId",
-        "action"
+        "dependsOnTaskId"
       ],
       "properties": {
         "taskId": {
           "type": "string",
-          "pattern": "^(T[0-9]+|imp-[0-9a-f]{14})$"
+          "pattern": "^T[0-9]+$"
         },
-        "action": {
+        "dependsOnTaskId": {
+          "type": "string",
+          "pattern": "^T[0-9]+$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "agent-session-snapshot": {
+      "type": "object",
+      "additionalProperties": false
+    },
+    "archive-task": {
+      "type": "object",
+      "required": [
+        "taskId"
+      ],
+      "properties": {
+        "taskId": {
+          "type": "string",
+          "pattern": "^T[0-9]+$"
+        },
+        "archiveReason": {
           "type": "string"
-        },
-        "policyApproval": {
-          "type": "object"
-        },
-        "expectedPlanningGeneration": {
-          "oneOf": [
-            {
-              "type": "integer",
-              "minimum": 0
-            },
-            {
-              "type": "string",
-              "pattern": "^[0-9]+$"
-            }
-          ]
-        },
-        "actor": {
-          "type": "string"
-        },
-        "config": {
-          "type": "object"
         }
       },
       "additionalProperties": true
     },
-    "dashboard-summary": {
+    "assign-task-phase": {
       "type": "object",
+      "required": [
+        "taskId",
+        "phaseKey"
+      ],
       "properties": {
-        "config": {
-          "type": "object"
+        "taskId": {
+          "type": "string",
+          "minLength": 1
         },
-        "actor": {
+        "phaseKey": {
+          "type": "string",
+          "minLength": 1
+        },
+        "phase": {
+          "type": "string"
+        },
+        "clientMutationId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "backfill-task-feature-links": {
+      "type": "object"
+    },
+    "backup-planning-sqlite": {
+      "type": "object",
+      "required": [
+        "outputPath"
+      ],
+      "properties": {
+        "outputPath": {
           "type": "string"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
+    },
+    "clear-task-phase": {
+      "type": "object",
+      "required": [
+        "taskId"
+      ],
+      "properties": {
+        "taskId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "clientMutationId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "convert-wishlist": {
+      "type": "object",
+      "required": [
+        "decomposition",
+        "tasks"
+      ],
+      "additionalProperties": true
     },
     "create-task": {
       "type": "object",
@@ -83,6 +171,310 @@
         "clientMutationId": {
           "type": "string",
           "minLength": 1
+        },
+        "expectedPlanningGeneration": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            }
+          ]
+        },
+        "actor": {
+          "type": "string"
+        },
+        "config": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": true
+    },
+    "create-task-from-plan": {
+      "type": "object",
+      "required": [
+        "planRef"
+      ]
+    },
+    "create-wishlist": {
+      "type": "object",
+      "required": [
+        "title",
+        "problemStatement",
+        "expectedOutcome",
+        "impact",
+        "constraints",
+        "successSignals",
+        "requestor",
+        "evidenceRef"
+      ],
+      "additionalProperties": true
+    },
+    "dashboard-summary": {
+      "type": "object",
+      "properties": {
+        "config": {
+          "type": "object"
+        },
+        "actor": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "explain-task-engine-model": {
+      "type": "object",
+      "additionalProperties": false
+    },
+    "export-feature-taxonomy-json": {
+      "type": "object"
+    },
+    "get-blocked-summary": {
+      "type": "object"
+    },
+    "get-dependency-graph": {
+      "type": "object",
+      "properties": {
+        "taskId": {
+          "type": "string",
+          "pattern": "^T[0-9]+$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "get-kit-persistence-map": {
+      "type": "object",
+      "additionalProperties": false
+    },
+    "get-module-state": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "get-next-actions": {
+      "type": "object",
+      "additionalProperties": false
+    },
+    "get-ready-queue": {
+      "type": "object",
+      "additionalProperties": false
+    },
+    "get-recent-task-activity": {
+      "type": "object"
+    },
+    "get-task": {
+      "type": "object",
+      "required": [
+        "taskId"
+      ],
+      "properties": {
+        "taskId": {
+          "type": "string",
+          "pattern": "^T[0-9]+$"
+        },
+        "historyLimit": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "get-task-history": {
+      "type": "object",
+      "properties": {
+        "taskId": {
+          "type": "string",
+          "pattern": "^T[0-9]+$"
+        },
+        "limit": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "get-task-summary": {
+      "type": "object",
+      "additionalProperties": false
+    },
+    "get-wishlist": {
+      "type": "object",
+      "required": [
+        "wishlistId"
+      ],
+      "properties": {
+        "wishlistId": {
+          "type": "string",
+          "pattern": "^W[0-9]+$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "list-components": {
+      "type": "object"
+    },
+    "list-features": {
+      "type": "object",
+      "properties": {
+        "componentId": {
+          "type": "string"
+        },
+        "actor": {
+          "type": "string"
+        },
+        "config": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    },
+    "list-module-states": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "list-tasks": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "tags": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "metadataFilters": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-zA-Z0-9_-]+(?:\\.[a-zA-Z0-9_-]+)*$": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "includeArchived": {
+          "type": "boolean"
+        },
+        "phaseKey": {
+          "type": "string"
+        },
+        "includeQueueHints": {
+          "type": "boolean"
+        },
+        "confidenceTier": {
+          "type": "string"
+        },
+        "blockedReasonCategory": {
+          "type": "string"
+        },
+        "features": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "featureId": {
+          "type": "string"
+        },
+        "componentId": {
+          "type": "string"
+        },
+        "queueNamespace": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "list-wishlist": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "migrate-task-persistence": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "migrate-wishlist-intake": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "queue-git-alignment": {
+      "type": "object"
+    },
+    "queue-health": {
+      "type": "object",
+      "additionalProperties": false
+    },
+    "remove-dependency": {
+      "type": "object",
+      "required": [
+        "taskId",
+        "dependsOnTaskId"
+      ],
+      "properties": {
+        "taskId": {
+          "type": "string",
+          "pattern": "^T[0-9]+$"
+        },
+        "dependsOnTaskId": {
+          "type": "string",
+          "pattern": "^T[0-9]+$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "replay-queue-snapshot": {
+      "type": "object"
+    },
+    "run-transition": {
+      "type": "object",
+      "required": [
+        "taskId",
+        "action"
+      ],
+      "properties": {
+        "taskId": {
+          "type": "string",
+          "pattern": "^(T[0-9]+|imp-[0-9a-f]{14})$"
+        },
+        "action": {
+          "type": "string"
+        },
+        "policyApproval": {
+          "type": "object"
         },
         "expectedPlanningGeneration": {
           "oneOf": [
@@ -144,20 +536,31 @@
       },
       "additionalProperties": true
     },
-    "list-features": {
+    "update-wishlist": {
+      "type": "object",
+      "required": [
+        "wishlistId",
+        "patch"
+      ],
+      "additionalProperties": true
+    },
+    "update-workspace-phase-snapshot": {
       "type": "object",
       "properties": {
-        "componentId": {
+        "currentKitPhase": {
           "type": "string"
         },
-        "actor": {
-          "type": "string"
+        "nextKitPhase": {
+          "type": [
+            "string",
+            "null"
+          ]
         },
-        "config": {
-          "type": "object"
+        "dryRun": {
+          "type": "boolean"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     }
   }
 }

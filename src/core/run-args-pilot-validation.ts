@@ -5,23 +5,33 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { CLI_REMEDIATION_DOCS, CLI_REMEDIATION_INSTRUCTIONS } from "./cli-remediation.js";
 
-/** Commands in the T600 runtime validation pilot (see ADR-runtime-run-args-validation-pilot.md). */
-const PILOT_COMMANDS = new Set([
-  "run-transition",
-  "dashboard-summary",
-  "create-task",
-  "update-task"
-]);
-
-/** Mutators that honor `tasks.planningGenerationPolicy` === `require` for `expectedPlanningGeneration`. */
-const PLANNING_TOKEN_COMMANDS = new Set(["run-transition", "create-task", "update-task"]);
-
 type PilotSnapshot = {
   schemaVersion: number;
   sourceSchemaPackageVersion: string;
   pilotCommands: string[];
   commands: Record<string, Record<string, unknown>>;
 };
+
+type PreludeFile = {
+  schemaVersion: number;
+  commands: string[];
+};
+
+/** Stripped before AJV: global response-template shaping, not domain args (see response-template-shaping). */
+const RESPONSE_TEMPLATE_RUN_OVERLAY_KEYS = [
+  "responseTemplateId",
+  "responseTemplateDirective",
+  "instructionTemplateDirective",
+  "instruction"
+] as const;
+
+function pilotArgsForSchemaValidation(args: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...args };
+  for (const k of RESPONSE_TEMPLATE_RUN_OVERLAY_KEYS) {
+    delete out[k];
+  }
+  return out;
+}
 
 function resolvePackageRoot(): string {
   return join(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -40,7 +50,21 @@ function loadPilotSnapshot(): PilotSnapshot {
   return raw;
 }
 
+function loadPlanningPreludeCommands(): Set<string> {
+  const root = resolvePackageRoot();
+  const p = join(root, "schemas", "planning-generation-cli-prelude.json");
+  if (!existsSync(p)) {
+    return new Set();
+  }
+  const raw = JSON.parse(readFileSync(p, "utf8")) as PreludeFile;
+  if (!Array.isArray(raw.commands)) {
+    return new Set();
+  }
+  return new Set(raw.commands);
+}
+
 let compiled: Map<string, ValidateFunction> | null = null;
+let preludeSet: Set<string> | null = null;
 
 type AjvLike = { compile: (schema: object) => ValidateFunction };
 
@@ -68,12 +92,21 @@ function getCompiledValidators(): Map<string, ValidateFunction> {
     m.set(cmd, ajv.compile(schema));
   }
   compiled = m;
-  return compiled;
+  return m;
 }
 
 /** Reset cached validators (tests). */
 export function resetPilotRunArgsValidationCache(): void {
   compiled = null;
+  preludeSet = null;
+}
+
+function getPreludeCommandSet(): Set<string> {
+  if (preludeSet) {
+    return preludeSet;
+  }
+  preludeSet = loadPlanningPreludeCommands();
+  return preludeSet;
 }
 
 function readPlanningGenerationPolicy(effective: Record<string, unknown>): "off" | "warn" | "require" {
@@ -99,36 +132,29 @@ function readOptionalExpectedPlanningGeneration(args: Record<string, unknown>): 
   return undefined;
 }
 
-function enforceRequirePlanningToken(
-  policy: "off" | "warn" | "require",
-  args: Record<string, unknown>
-): { ok: true } | { ok: false; code: "planning-generation-required"; message: string } {
-  if (policy !== "require") {
-    return { ok: true };
-  }
-  if (readOptionalExpectedPlanningGeneration(args) !== undefined) {
-    return { ok: true };
-  }
-  return {
-    ok: false,
-    code: "planning-generation-required",
-    message:
-      "tasks.planningGenerationPolicy is 'require': include expectedPlanningGeneration from a prior read (planningGeneration on responses); retry after re-read when you get planning-generation-mismatch"
-  };
-}
-
-function pilotInstructionPath(commandName: string): string {
+function instructionPathForCommand(commandName: string): string {
   switch (commandName) {
     case "run-transition":
       return CLI_REMEDIATION_INSTRUCTIONS.runTransition;
     case "create-task":
+    case "create-task-from-plan":
       return CLI_REMEDIATION_INSTRUCTIONS.createTask;
     case "update-task":
       return CLI_REMEDIATION_INSTRUCTIONS.updateTask;
     case "dashboard-summary":
       return CLI_REMEDIATION_INSTRUCTIONS.dashboardSummary;
+    case "create-wishlist":
+      return CLI_REMEDIATION_INSTRUCTIONS.createWishlist;
+    case "archive-task":
+      return CLI_REMEDIATION_INSTRUCTIONS.archiveTask;
+    case "add-dependency":
+    case "remove-dependency":
+      return CLI_REMEDIATION_INSTRUCTIONS.addDependency;
+    case "generate-recommendations":
+    case "ingest-transcripts":
+      return CLI_REMEDIATION_INSTRUCTIONS.generateRecommendations;
     default:
-      return CLI_REMEDIATION_INSTRUCTIONS.runTransition;
+      return `src/modules/task-engine/instructions/${commandName}.md`;
   }
 }
 
@@ -148,67 +174,90 @@ function formatAjvFailure(commandName: string, errors: ErrorObject[] | null | un
       errors: list
     },
     remediation: {
-      instructionPath: pilotInstructionPath(commandName),
+      instructionPath: instructionPathForCommand(commandName),
       docPath: CLI_REMEDIATION_DOCS.agentCliMap
     }
   };
 }
 
-const PILOT_SAMPLE_ARGS: Record<string, Record<string, unknown>> = {
-  "run-transition": {
-    taskId: "T999",
-    action: "start",
-    policyApproval: { confirmed: true, rationale: "begin task work" },
-    expectedPlanningGeneration: 0
-  },
-  "create-task": {
-    id: "T999",
-    title: "Example task title",
-    status: "proposed",
-    expectedPlanningGeneration: 0
-  },
-  "update-task": {
-    taskId: "T999",
-    updates: { title: "Updated title" },
-    expectedPlanningGeneration: 0
-  },
-  "dashboard-summary": {}
-};
+/** Minimal sample args from JSON Schema `required` + `properties` (session bootstrap / --schema-only). */
+function minimalSampleFromArgsSchema(schema: Record<string, unknown>): Record<string, unknown> {
+  const req = Array.isArray(schema.required) ? (schema.required as string[]) : [];
+  const props =
+    schema.properties && typeof schema.properties === "object" && !Array.isArray(schema.properties)
+      ? (schema.properties as Record<string, Record<string, unknown>>)
+      : {};
+  const out: Record<string, unknown> = {};
+  for (const key of req) {
+    const p = props[key];
+    if (!p || typeof p !== "object" || Array.isArray(p)) {
+      out[key] = null;
+      continue;
+    }
+    const t = p.type;
+    if (t === "string") {
+      if (typeof p.pattern === "string" && p.pattern.includes("T[")) {
+        out[key] = "T000";
+      } else if (typeof p.enum === "object" && Array.isArray(p.enum) && p.enum.length > 0) {
+        out[key] = p.enum[0];
+      } else {
+        out[key] = "";
+      }
+    } else if (t === "integer" || t === "number") {
+      out[key] = 0;
+    } else if (t === "boolean") {
+      out[key] = false;
+    } else if (t === "object") {
+      out[key] = {};
+    } else if (t === "array") {
+      out[key] = [];
+    } else if (Array.isArray(p.oneOf) || Array.isArray(p.anyOf)) {
+      out[key] = 0;
+    } else {
+      out[key] = null;
+    }
+  }
+  if (req.includes("policyApproval") && out.policyApproval === null) {
+    out.policyApproval = { confirmed: true, rationale: "example" };
+  }
+  if (req.includes("updates") && out.updates === null) {
+    out.updates = {};
+  }
+  return out;
+}
 
 /**
- * JSON payload for `workspace-kit run <pilot-command> --schema-only` (Phase 52).
+ * JSON payload for `workspace-kit run <command> --schema-only` when the command is in the pilot snapshot.
  */
 export function buildRunArgsSchemaOnlyPayload(commandName: string): Record<string, unknown> | null {
-  if (!PILOT_COMMANDS.has(commandName)) {
-    return null;
-  }
   const snap = loadPilotSnapshot();
   const schema = snap.commands[commandName];
-  const sampleArgs = PILOT_SAMPLE_ARGS[commandName];
-  if (!schema || !sampleArgs) {
+  if (!schema) {
     return null;
   }
+  const sampleArgs = minimalSampleFromArgsSchema(schema);
   return {
     ok: true,
     code: "run-args-schema",
     command: commandName,
     schema,
     sampleArgs,
-    instructionPath: pilotInstructionPath(commandName),
+    instructionPath: instructionPathForCommand(commandName),
     remediationContract: CLI_REMEDIATION_DOCS.remediationContract
   };
 }
 
 /**
- * When the command is in the pilot allowlist, validates CLI JSON args before module dispatch.
+ * When the command is in the pilot snapshot, validates CLI JSON args before module dispatch.
  * @returns Structured error payload for JSON stdout, or null when validation passes or command is not in the pilot.
  */
 export function validatePilotRunCommandArgs(
   commandName: string,
   args: Record<string, unknown>,
-  effectiveConfig: Record<string, unknown>
+  _effectiveConfig: Record<string, unknown>
 ): Record<string, unknown> | null {
-  if (!PILOT_COMMANDS.has(commandName)) {
+  const snap = loadPilotSnapshot();
+  if (!snap.pilotCommands.includes(commandName)) {
     return null;
   }
   const validators = getCompiledValidators();
@@ -216,23 +265,43 @@ export function validatePilotRunCommandArgs(
   if (!validate) {
     return null;
   }
-  if (!validate(args)) {
+  const domainArgs = pilotArgsForSchemaValidation(args);
+  if (!validate(domainArgs)) {
     return formatAjvFailure(commandName, validate.errors);
   }
-  if (PLANNING_TOKEN_COMMANDS.has(commandName)) {
-    const policy = readPlanningGenerationPolicy(effectiveConfig);
-    const gate = enforceRequirePlanningToken(policy, args);
-    if (!gate.ok) {
-      return {
-        ok: false,
-        code: gate.code,
-        message: gate.message,
-        remediation: {
-          instructionPath: pilotInstructionPath(commandName),
-          docPath: CLI_REMEDIATION_DOCS.planningGenerationAdr
-        }
-      };
-    }
-  }
   return null;
+}
+
+/**
+ * Early planning-generation-required for selected mutators (before policy/session work).
+ * `generate-recommendations` dryRun skips the gate (no task writes).
+ */
+export function enforcePlanningGenerationCliPrelude(
+  commandName: string,
+  args: Record<string, unknown>,
+  effectiveConfig: Record<string, unknown>
+): Record<string, unknown> | null {
+  const policy = readPlanningGenerationPolicy(effectiveConfig);
+  if (policy !== "require") {
+    return null;
+  }
+  if (!getPreludeCommandSet().has(commandName)) {
+    return null;
+  }
+  if (commandName === "generate-recommendations" && args.dryRun === true) {
+    return null;
+  }
+  if (readOptionalExpectedPlanningGeneration(args) !== undefined) {
+    return null;
+  }
+  return {
+    ok: false,
+    code: "planning-generation-required",
+    message:
+      "tasks.planningGenerationPolicy is 'require': include expectedPlanningGeneration from a prior read (planningGeneration on responses); retry after re-read when you get planning-generation-mismatch",
+    remediation: {
+      instructionPath: instructionPathForCommand(commandName),
+      docPath: CLI_REMEDIATION_DOCS.planningGenerationAdr
+    }
+  };
 }

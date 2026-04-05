@@ -10,6 +10,27 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 (none)
 
+## [0.60.0] - 2026-04-05
+
+Phase 60 — **architecture / platform follow-through** (**`T689`–`T740`** and split tasks): unified **task-engine** CLI JSON validation via **`schemas/pilot-run-args.snapshot.json`** (all manifest task-engine commands), **`BEGIN IMMEDIATE`** planning SQLite transactions, **`agent-session-snapshot`**, **`get-next-actions`** **`teamExecutionContext`**, **`dashboard-summary` `schemaVersion` 3** + **`subagentRegistry`**, published contract subpaths, maintainer doc corrections (SQLite-only persistence), planning mutator matrix + waivers check.
+
+### Added
+
+- **`workspace-kit run agent-session-snapshot '{}'`** — read-only composed JSON (planning meta, suggested next, queue-health summary, canonical phase / doctor mismatch hints, open team assignments).
+- **`schemas/planning-generation-cli-prelude.json`** + CLI prelude for **`planning-generation-required`** on selected mutators when policy is **`require`** (e.g. cross-module **`generate-recommendations`** / **`ingest-transcripts`**).
+- **`schemas/run-args-cli-validation-waivers.json`** + **`pnpm run check`** stage for sensitive commands outside task-engine contracts.
+- **`docs/maintainers/data/planning-generation-mutators.md`** — operator matrix for planning-generation behavior.
+- Package **`exports`**: **`./contracts/agent-session-snapshot-run`**, **`./contracts/next-actions-run`**.
+
+### Changed
+
+- **Pilot run-args** — snapshot covers **all** task-engine commands from **`task-engine-run-contracts.schema.json`**; **`wk run <cmd> --schema-only`** uses snapshot schemas + generated samples.
+- **`SqliteDualPlanningStore`** — persist transactions use **`BEGIN IMMEDIATE`** (writer serialization).
+- **`get-next-actions`** — additive **`teamExecutionContext`** (open team assignments, read-only).
+- **`dashboard-summary`** — **`data.schemaVersion` 3** + **`subagentRegistry`** read-only facet; Cursor extension **0.1.8** renders **Subagent registry** card.
+- **`task-engine`** module **`0.19.0` → `0.20.0`**; **`task-engine-run-contracts`** / **`compatibility-matrix.json`** aligned with **`v0.60.0`**.
+- **`ARCHITECTURE.md`** — remove stale runnable **`tasks.persistenceBackend: json`** wording; **`README.md`** / **`.ai/WORKSPACE-KIT-SESSION.md`** — **`doctor --agent-instruction-surface`**, **`agent-session-snapshot`**, Tier A/B **`--schema-only`** guidance.
+
 ## [0.59.0] - 2026-04-05
 
 Phase 59 — **Improvement Scout** (**`T679`–`T683`**): bounded scout playbook, read-only **`scout-report`**, optional rotation memory, optional ingest **`heuristic_2`**. The earlier Cursor chat prefill track **`T668`–`T670`** remains **`cancelled`**.

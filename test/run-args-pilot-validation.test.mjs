@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  enforcePlanningGenerationCliPrelude,
   resetPilotRunArgsValidationCache,
   validatePilotRunCommandArgs
 } from "../dist/core/run-args-pilot-validation.js";
@@ -37,13 +38,16 @@ test("dashboard-summary accepts empty object", () => {
 
 test("planning-generation-required when policy require and token omitted", () => {
   resetPilotRunArgsValidationCache();
-  const err = validatePilotRunCommandArgs(
-    "run-transition",
-    { taskId: "T1", action: "start", policyApproval: { confirmed: true, rationale: "x" } },
-    { tasks: { planningGenerationPolicy: "require" } }
-  );
-  assert.ok(err);
-  assert.equal(err.code, "planning-generation-required");
+  const args = {
+    taskId: "T1",
+    action: "start",
+    policyApproval: { confirmed: true, rationale: "x" }
+  };
+  const effective = { tasks: { planningGenerationPolicy: "require" } };
+  assert.equal(validatePilotRunCommandArgs("run-transition", args, effective), null);
+  const prelude = enforcePlanningGenerationCliPrelude("run-transition", args, effective);
+  assert.ok(prelude);
+  assert.equal(prelude.code, "planning-generation-required");
 });
 
 test("planning token satisfied with integer", () => {

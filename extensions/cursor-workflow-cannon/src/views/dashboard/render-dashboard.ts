@@ -622,6 +622,71 @@ function renderTeamExecutionSection(team: unknown): string {
   );
 }
 
+function renderSubagentRegistrySection(sub: unknown): string {
+  if (!sub || typeof sub !== "object") {
+    return "";
+  }
+  const o = sub as Record<string, unknown>;
+  if (o.schemaVersion !== 1) {
+    return "";
+  }
+  const avail = o.available === true;
+  const defs = typeof o.definitionsCount === "number" ? o.definitionsCount : 0;
+  const openSess = typeof o.openSessionsCount === "number" ? o.openSessionsCount : 0;
+  const top = Array.isArray(o.topOpenSessions) ? (o.topOpenSessions as unknown[]) : [];
+  if (!avail) {
+    return (
+      '<section class="dash-card" aria-label="Subagent registry">' +
+      "<p><b>Subagent registry</b></p>" +
+      '<p class="muted">Subagent data unavailable (kit SQLite below v6 or store not readable).</p>' +
+      "</section>"
+    );
+  }
+  const statusLine =
+    "<p class=\"muted\">Definitions " +
+    String(defs) +
+    " · Open sessions " +
+    String(openSess) +
+    "</p>";
+  if (top.length === 0) {
+    return (
+      '<section class="dash-card" aria-label="Subagent registry">' +
+      "<p><b>Subagent registry</b> (read-only)</p>" +
+      statusLine +
+      '<p class="muted">No open subagent sessions.</p>' +
+      "</section>"
+    );
+  }
+  const rows = top
+    .map((x) => {
+      const r = x as Record<string, unknown>;
+      const sid = escapeHtml(String(r.sessionId ?? ""));
+      const def = escapeHtml(String(r.definitionId ?? ""));
+      const tid = r.executionTaskId != null ? escapeHtml(String(r.executionTaskId)) : "—";
+      const st = escapeHtml(String(r.status ?? ""));
+      return (
+        '<div class="dash-row" role="listitem"><span class="dash-row-label">- ' +
+        sid +
+        " · " +
+        def +
+        " · task " +
+        tid +
+        " · " +
+        st +
+        "</span></div>"
+      );
+    })
+    .join("");
+  return (
+    '<section class="dash-card" aria-label="Subagent registry">' +
+    "<p><b>Subagent registry</b> (read-only)</p>" +
+    statusLine +
+    '<div class="dash-row-list" role="list">' +
+    rows +
+    "</div></section>"
+  );
+}
+
 function renderAgentGuidanceSection(ag: unknown): string {
   if (!ag || typeof ag !== "object") {
     return "";
@@ -894,6 +959,7 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
     renderAgentGuidanceSection(d.agentGuidance) +
     renderWorkspaceOverviewSection(ws as Record<string, unknown> | null) +
     renderTeamExecutionSection(d.teamExecution) +
+    renderSubagentRegistrySection(d.subagentRegistry) +
     tasksBlock +
     wishlistSection +
     renderPlanningSession(planningSession) +

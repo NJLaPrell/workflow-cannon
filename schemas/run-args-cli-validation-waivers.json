@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "description": "Policy-sensitive `workspace-kit run` commands whose args are not (yet) covered by task-engine-run-contracts / pilot-run-args.snapshot.json. Each must stay documented; shrink this list by adding schemas + snapshot entries.",
+  "commands": [
+    "apply-skill",
+    "block-assignment",
+    "cancel-assignment",
+    "close-subagent-session",
+    "document-project",
+    "generate-document",
+    "generate-recommendations",
+    "ingest-transcripts",
+    "message-subagent",
+    "reconcile-assignment",
+    "register-assignment",
+    "register-subagent",
+    "retire-subagent",
+    "review-item",
+    "spawn-subagent",
+    "submit-assignment-handoff"
+  ]
+}

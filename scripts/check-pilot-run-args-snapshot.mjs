@@ -32,7 +32,9 @@ function stableStringify(value) {
 
 const schema = JSON.parse(fs.readFileSync(SCHEMA_PATH, "utf8"));
 const pkgVersion =
-  typeof schema.packageVersion === "string" ? schema.packageVersion : "unknown";
+  typeof schema?.properties?.packageVersion?.const === "string"
+    ? schema.properties.packageVersion.const
+    : "unknown";
 
 if (!fs.existsSync(SNAP_PATH)) {
   fail(`Missing ${path.relative(ROOT, SNAP_PATH)} — run: node scripts/refresh-pilot-run-args-snapshot.mjs`);

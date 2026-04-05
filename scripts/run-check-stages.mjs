@@ -48,6 +48,13 @@ const stages = [
     hint: "Regenerate schemas/pilot-run-args.snapshot.json via node scripts/refresh-pilot-run-args-snapshot.mjs after changing pilot command arg contracts."
   },
   {
+    id: "run-args-cli-validation-waivers",
+    label: "Sensitive run commands: pilot snapshot or explicit waiver",
+    command: process.execPath,
+    args: ["scripts/check-run-args-cli-validation-waivers.mjs"],
+    hint: "Add AJV coverage in pilot snapshot or list explicit rationale in schemas/run-args-cli-validation-waivers.json."
+  },
+  {
     id: "agent-cli-map",
     label: "AGENT-CLI-MAP coverage of sensitive commands",
     command: process.execPath,

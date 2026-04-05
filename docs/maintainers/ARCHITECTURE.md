@@ -36,7 +36,7 @@ Workflow Cannon is a modular CLI-first workflow platform: structured **tasks** a
 
 ### Persistence
 
-- **Tasks** and **wishlist** default to **SQLite** (`tasks.persistenceBackend: sqlite`, one file under `tasks.sqliteDatabaseRelativePath`). Set **`tasks.persistenceBackend: json`** to use JSON files instead (see `docs/maintainers/adrs/ADR-sqlite-default-persistence.md` and `ADR-task-sqlite-persistence.md`).
+- **Tasks** and **wishlist** use **SQLite only** at runtime (`tasks.persistenceBackend: sqlite`, one file under `tasks.sqliteDatabaseRelativePath`). Legacy **`tasks.persistenceBackend: json`** is **not** a supported runnable mode (**v0.40+**); JSON paths remain **import / recovery only** via **`migrate-task-persistence`** (see **`ADR-json-persistence-deprecation.md`**, **`json-to-sqlite-one-shot-upgrade.md`**).
 - **Subagent registry** (Phase 57): relational tables **`kit_subagent_definitions`**, **`kit_subagent_sessions`**, **`kit_subagent_messages`** at **`PRAGMA user_version` ≥ 6**; Cursor (or another host) executes delegated agents while the kit stores definitions and session/message provenance (see **`docs/maintainers/adrs/ADR-subagent-registry-v1.md`**).
 - **Team execution** (Phase 58): relational table **`kit_team_assignments`** at **`PRAGMA user_version` ≥ 7**; supervisor/worker assignment + handoff + reconcile checkpoints over **`T###`** ids (see **`docs/maintainers/adrs/ADR-team-execution-v1.md`**).
 - **Unified module state** (Phase 18 track) extends SQLite for additional module rows and CLI introspection (`get-module-state`, `list-module-states`) where enabled.
@@ -69,7 +69,7 @@ flowchart LR
     CP["core/planning"]
   end
   subgraph persist ["Durable state (task-engine)"]
-    TE["TaskStore / WishlistStore\nSQLite or JSON paths"]
+    TE["TaskStore / WishlistStore\nSQLite (JSON import only)"]
   end
   PM --> CP
   Other --> CP
@@ -101,7 +101,7 @@ When instructions conflict, follow the ordered list in [`AGENTS.md`](./AGENTS.md
 - [`data/persisted-artifacts-and-cli-inventory.md`](./data/persisted-artifacts-and-cli-inventory.md) — maintainer index: persisted JSON/SQLite, schemas, extension-critical `wk run` commands, enforcement hooks
 - [`CLI-VISUAL-GUIDE.md`](./CLI-VISUAL-GUIDE.md) — ASCII + Mermaid map of top-level commands, `run` router, and approval lanes (companion to [`AGENT-CLI-MAP.md`](./AGENT-CLI-MAP.md))
 - [`ROADMAP.md`](./ROADMAP.md) — phases (including Phase 18 module platform + state consolidation and Phase 19 documentation v2)
-- Task execution queue — default SQLite `.workspace-kit/tasks/workspace-kit.db`; JSON opt-out `.workspace-kit/tasks/state.json`
+- Task execution queue — SQLite `.workspace-kit/tasks/workspace-kit.db`; legacy `.workspace-kit/tasks/state.json` is **migrate/import** only, not a live runtime backend (**v0.40+**)
 - [`RELEASING.md`](./RELEASING.md) — release gates and evidence
 - [`.ai/PRINCIPLES.md`](../../.ai/PRINCIPLES.md) — decision priorities
 - [`module-build-guide.md`](./module-build-guide.md) — module authoring

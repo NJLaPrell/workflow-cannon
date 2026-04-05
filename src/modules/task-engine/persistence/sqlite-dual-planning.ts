@@ -473,7 +473,7 @@ export class SqliteDualPlanningStore {
   persistSync(options?: { expectedPlanningGeneration?: number }): void {
     const db = this.ensureDb();
     this._tableShape = detectTableShape(db);
-    db.transaction(() => this.runPersistMutation(db, options ?? {}))();
+    db.transaction(() => this.runPersistMutation(db, options ?? {})).immediate();
   }
 
   /**
@@ -483,7 +483,7 @@ export class SqliteDualPlanningStore {
   withTransaction(work: () => void, options?: { expectedPlanningGeneration?: number }): void {
     const db = this.ensureDb();
     this._tableShape = detectTableShape(db);
-    db.transaction(() => this.runPersistMutation(db, options ?? {}, work))();
+    db.transaction(() => this.runPersistMutation(db, options ?? {}, work)).immediate();
   }
 
   /**

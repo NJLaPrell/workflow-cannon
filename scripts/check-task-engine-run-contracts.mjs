@@ -24,9 +24,13 @@ const manifest = loadJson(MANIFEST_PATH);
 const pkg = loadJson(PKG_PATH);
 const schema = loadJson(SCHEMA_PATH);
 
-if (schema.packageVersion !== pkg.version) {
+const schemaPkg =
+  schema?.properties?.packageVersion && typeof schema.properties.packageVersion === "object"
+    ? schema.properties.packageVersion.const
+    : undefined;
+if (schemaPkg !== pkg.version) {
   fail(
-    `schema packageVersion (${schema.packageVersion}) does not match package.json version (${pkg.version}).`
+    `schema properties.packageVersion.const (${schemaPkg}) does not match package.json version (${pkg.version}).`
   );
 }
 

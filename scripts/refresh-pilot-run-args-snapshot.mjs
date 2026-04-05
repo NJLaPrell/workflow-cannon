@@ -13,17 +13,17 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SCHEMA_PATH = path.join(ROOT, "schemas/task-engine-run-contracts.schema.json");
 const OUT_PATH = path.join(ROOT, "schemas/pilot-run-args.snapshot.json");
 
-const PILOT_COMMANDS = [
-  "run-transition",
-  "dashboard-summary",
-  "create-task",
-  "update-task",
-  "list-features"
-];
-
 const schema = JSON.parse(fs.readFileSync(SCHEMA_PATH, "utf8"));
 const pkgVersion =
-  typeof schema.packageVersion === "string" ? schema.packageVersion : "unknown";
+  typeof schema?.properties?.packageVersion?.const === "string"
+    ? schema.properties.packageVersion.const
+    : "unknown";
+
+const required = schema?.properties?.commands?.required;
+if (!Array.isArray(required) || required.length === 0) {
+  throw new Error("task-engine-run-contracts.schema.json missing properties.commands.required[]");
+}
+const PILOT_COMMANDS = [...required].sort((a, b) => a.localeCompare(b));
 
 /** @type {Record<string, unknown>} */
 const commands = {};

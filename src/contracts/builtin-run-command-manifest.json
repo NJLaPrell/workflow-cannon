@@ -352,6 +352,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "agent-session-snapshot",
+    "file": "agent-session-snapshot.md",
+    "description": "Read-only composed JSON for session reload (planning gen, next-actions, queue-health summary, phase/doctor signals, team context).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "queue-git-alignment",
     "file": "queue-git-alignment.md",
     "description": "Read-only heuristic: git HEAD vs last task transition; stale in_progress hints (merge ≠ complete guardian).",

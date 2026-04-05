@@ -30,6 +30,12 @@ The unified planning SQLite database (tasks + wishlist envelope + relational tas
 
 Relational **`task_engine_tasks`** rows could allow narrower **`UPDATE`**s instead of rewriting the full task envelope on every mutation, reducing blast radius for large queues. **Recommendation (Phase 45 research):** keep the current unified generation counter and transactional snapshot persist until a dedicated task profiles a measured win; splitting generations per sub-store would complicate the single optimistic-lock story. Revisit if envelope size or contention shows up in operator evidence.
 
+## Appendix: Phase 60 — `BEGIN IMMEDIATE` + deferred narrow writes (**`T696` / `T730` / `T737`**)
+
+**`SqliteDualPlanningStore`** persist paths use **`BEGIN IMMEDIATE`** (via better-sqlite3 **`.immediate()`** transactions) so writers take the SQLite reserved lock at transaction start, reducing cross-process interleaving before **`planning_generation`** checks apply.
+
+**Narrow relational `UPDATE` experiments** (per-task hot paths) remain **deferred** pending measured evidence — same trade-off as the **`T580`** appendix above. Phase 60 ships **lock ordering + CLI validation/prelude** first; partial envelope writes are a follow-on only when profiling justifies the complexity.
+
 ## References
 
 - `src/core/state/workspace-kit-sqlite.ts` — migrations

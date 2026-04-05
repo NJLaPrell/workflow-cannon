@@ -18,7 +18,7 @@ import {
   replayQueueFromTasks
 } from "./queue/replay-queue-snapshot.js";
 import { readWorkspaceStatusSnapshot } from "./dashboard/dashboard-status.js";
-import { inferTaskPhaseKey } from "./phase-resolution.js";
+import { inferTaskPhaseKey, resolveCanonicalPhase } from "./phase-resolution.js";
 import { buildQueueHealthReport, buildQueueHintsForTasks } from "./queue/queue-health.js";
 import { openPlanningStores } from "./persistence/planning-open.js";
 import { runMigrateWishlistIntake } from "./persistence/migrate-wishlist-intake-runtime.js";
@@ -70,6 +70,7 @@ import {
   CLI_REMEDIATION_INSTRUCTIONS
 } from "../../core/cli-remediation.js";
 import { validateTaskSkillAttachments } from "../skills/task-skill-validation.js";
+import { summarizeTeamAssignmentsForNextActions } from "../team-execution/assignment-store.js";
 
 function readQueueNamespaceArg(args: Record<string, unknown>): string | undefined {
   const q = args.queueNamespace;
@@ -146,7 +147,7 @@ function attachPolicyMeta(
 export const taskEngineModule: WorkflowModule = {
   registration: {
     id: "task-engine",
-    version: "0.19.0",
+    version: "0.20.0",
     contractVersion: "1",
     stateSchema: 1,
     capabilities: ["task-engine"],
@@ -234,6 +235,61 @@ export const taskEngineModule: WorkflowModule = {
       };
     }
     const store = planning.taskStore;
+
+    if (command.name === "agent-session-snapshot") {
+      const tasks = store.getActiveTasks();
+      const workspaceStatus = await readWorkspaceStatusSnapshot(ctx.workspacePath);
+      const suggestion = getNextActions(tasks);
+      const qh = buildQueueHealthReport({
+        tasks,
+        effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+        workspaceStatus
+      });
+      const phaseRes = resolveCanonicalPhase({
+        effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+        workspaceStatus
+      });
+      const doctorKitPhaseIssues =
+        phaseRes.statusYamlMatchesConfig === false
+          ? [
+              {
+                path: "kit.currentPhaseNumber vs docs/maintainers/data/workspace-kit-status.yaml",
+                reason: "kit-phase-config-status-yaml-mismatch"
+              }
+            ]
+          : [];
+      const taskTitleById = new Map(tasks.map((t) => [t.id, t.title] as const));
+      const teamExecutionContext = summarizeTeamAssignmentsForNextActions(
+        planning.sqliteDual.getDatabase(),
+        (id) => taskTitleById.get(id) ?? null
+      );
+      const data: Record<string, unknown> = {
+        schemaVersion: 1,
+        refreshedAt: new Date().toISOString(),
+        suggestedNext: suggestion.suggestedNext
+          ? {
+              id: suggestion.suggestedNext.id,
+              title: suggestion.suggestedNext.title,
+              status: suggestion.suggestedNext.status
+            }
+          : null,
+        stateSummary: suggestion.stateSummary,
+        queueHealthSummary: qh.summary,
+        canonicalPhase: {
+          canonicalPhaseKey: phaseRes.canonicalPhaseKey,
+          statusYamlMatchesConfig: phaseRes.statusYamlMatchesConfig
+        },
+        doctorKitPhaseIssues,
+        teamExecutionContext
+      };
+      attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
+      return {
+        ok: true,
+        code: "agent-session-snapshot",
+        message: "Read-only composed snapshot for session reload",
+        data
+      };
+    }
 
     if (command.name === "list-components") {
       const db = planning.sqliteDual.getDatabase();
@@ -1135,9 +1191,15 @@ export const taskEngineModule: WorkflowModule = {
       const tasks = store.getActiveTasks();
       const ns = readQueueNamespaceArg(args);
       const suggestion = getNextActions(tasks, ns ? { queueNamespace: ns } : undefined);
+      const taskTitleById = new Map(tasks.map((t) => [t.id, t.title] as const));
+      const teamExecutionContext = summarizeTeamAssignmentsForNextActions(
+        planning.sqliteDual.getDatabase(),
+        (id) => taskTitleById.get(id) ?? null
+      );
 
       const naData: Record<string, unknown> = {
         ...suggestion,
+        teamExecutionContext,
         scope: "tasks-only",
         queueNamespace: ns ?? null
       };

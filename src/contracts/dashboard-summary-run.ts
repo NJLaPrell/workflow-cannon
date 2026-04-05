@@ -91,8 +91,24 @@ export type DashboardTeamExecutionSummary = {
   topActive: DashboardTeamAssignmentRow[];
 };
 
+/** Read-only subagent registry rollup for dashboard / extension (Phase 60+). */
+export type DashboardSubagentRegistrySummary = {
+  schemaVersion: 1;
+  available: boolean;
+  definitionsCount: number;
+  retiredDefinitionsCount: number;
+  openSessionsCount: number;
+  topOpenSessions: Array<{
+    sessionId: string;
+    definitionId: string;
+    executionTaskId: string | null;
+    status: string;
+    updatedAt: string;
+  }>;
+};
+
 export type DashboardSummaryData = {
-  schemaVersion: 2;
+  schemaVersion: 3;
   /** Monotonic optimistic-lock generation for the unified planning SQLite row. */
   planningGeneration: number;
   /** Effective `tasks.planningGenerationPolicy` for mutating commands. */
@@ -141,6 +157,8 @@ export type DashboardSummaryData = {
   agentGuidance: DashboardAgentGuidanceSummary | null;
   /** Team execution assignments from `kit_team_assignments` (Phase 58+); stable read-only facet for operators. */
   teamExecution: DashboardTeamExecutionSummary;
+  /** Subagent definitions + open sessions from `kit_subagent_*` (Phase 60+). */
+  subagentRegistry: DashboardSubagentRegistrySummary;
 };
 
 /** Success envelope for `dashboard-summary` (extension + tooling). */

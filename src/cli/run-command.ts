@@ -19,6 +19,7 @@ import { createKitLifecycleHookBus } from "../core/kit-lifecycle-hooks.js";
 import { applyResponseTemplateApplication } from "../core/response-template-shaping.js";
 import {
   buildRunArgsSchemaOnlyPayload,
+  enforcePlanningGenerationCliPrelude,
   validatePilotRunCommandArgs
 } from "../core/run-args-pilot-validation.js";
 import { defaultRegistryModules } from "../modules/index.js";
@@ -73,7 +74,7 @@ export async function handleRunCommand(
           {
             ok: false,
             code: "schema-only-unsupported",
-            message: `No bundled JSON schema sample for '${subcommand}'. Pilot commands: run-transition, create-task, update-task, dashboard-summary.`,
+            message: `No bundled JSON schema sample for '${subcommand}'. Task-engine commands in schemas/pilot-run-args.snapshot.json are supported; other modules may lack a published args schema yet.`,
             remediation: { docPath: "docs/maintainers/adrs/ADR-runtime-run-args-validation-pilot.md" }
           },
           null,
@@ -129,6 +130,11 @@ export async function handleRunCommand(
       writeLine(JSON.stringify(pilotErr, null, 2));
       return codes.validationFailure;
     }
+    const planPrelude = enforcePlanningGenerationCliPrelude(subcommand, commandArgs, effective);
+    if (planPrelude) {
+      writeLine(JSON.stringify(planPrelude, null, 2));
+      return codes.validationFailure;
+    }
   }
 
   if (subcommand === "apply-skill") {
@@ -145,7 +151,7 @@ export async function handleRunCommand(
     writeLine("");
     writeLine(`Usage: workspace-kit run <command> [json-args]`);
     writeLine(
-      `Pilot commands: workspace-kit run <command> --schema-only  (emits JSON Schema + sample args for run-transition, create-task, update-task, dashboard-summary).`
+      `Task-engine schema: workspace-kit run <command> --schema-only  (JSON Schema + sample args for commands listed in schemas/pilot-run-args.snapshot.json).`
     );
     writeLine(
       `Instruction files: src/modules/<module>/instructions/<command>.md — sensitive runs need JSON policyApproval (not env WORKSPACE_KIT_POLICY_APPROVAL); see ${POLICY_APPROVAL_TWO_LANES_DOC}.`

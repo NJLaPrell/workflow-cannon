@@ -299,6 +299,76 @@ export function listMessagesForSession(db: Database.Database, sessionId: string)
   }));
 }
 
+/** Read-only rollup for `dashboard-summary` / extension (Phase 60+). */
+export type SubagentRegistryDashboardRollup = {
+  schemaVersion: 1;
+  available: boolean;
+  definitionsCount: number;
+  retiredDefinitionsCount: number;
+  openSessionsCount: number;
+  /** Non-terminal sessions, newest first. */
+  topOpenSessions: Array<{
+    sessionId: string;
+    definitionId: string;
+    executionTaskId: string | null;
+    status: string;
+    updatedAt: string;
+  }>;
+};
+
+export function summarizeSubagentsForDashboard(db: Database.Database | undefined): SubagentRegistryDashboardRollup {
+  const empty: SubagentRegistryDashboardRollup = {
+    schemaVersion: 1,
+    available: false,
+    definitionsCount: 0,
+    retiredDefinitionsCount: 0,
+    openSessionsCount: 0,
+    topOpenSessions: []
+  };
+  if (!db) {
+    return empty;
+  }
+  const uvRaw = db.pragma("user_version", { simple: true });
+  const uv = typeof uvRaw === "number" ? uvRaw : Number(uvRaw);
+  if (!Number.isFinite(uv) || uv < SUBAGENT_KIT_MIN_USER_VERSION) {
+    return empty;
+  }
+  try {
+    const defRows = db.prepare("SELECT retired FROM kit_subagent_definitions").all() as { retired: number }[];
+    let retiredDefinitionsCount = 0;
+    for (const r of defRows) {
+      if (Number(r.retired) === 1) {
+        retiredDefinitionsCount++;
+      }
+    }
+    const definitionsCount = defRows.length;
+    const sessRows = db
+      .prepare(`SELECT id, definition_id, execution_task_id, status, updated_at FROM kit_subagent_sessions`)
+      .all() as Record<string, unknown>[];
+    const openSessions = sessRows.filter((r) => String(r.status ?? "") === "open");
+    const topOpenSessions = [...openSessions]
+      .sort((a, b) => String(b.updated_at ?? "").localeCompare(String(a.updated_at ?? "")))
+      .slice(0, 15)
+      .map((r) => ({
+        sessionId: String(r.id),
+        definitionId: String(r.definition_id),
+        executionTaskId: r.execution_task_id != null ? String(r.execution_task_id) : null,
+        status: String(r.status ?? ""),
+        updatedAt: String(r.updated_at ?? "")
+      }));
+    return {
+      schemaVersion: 1,
+      available: true,
+      definitionsCount,
+      retiredDefinitionsCount,
+      openSessionsCount: openSessions.length,
+      topOpenSessions
+    };
+  } catch {
+    return empty;
+  }
+}
+
 export function resolveDbPathAbs(workspacePath: string, dbRel: string): string {
   return path.resolve(workspacePath, dbRel);
 }

@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "excludedRunCommands": [
     "add-dependency",
+    "agent-session-snapshot",
     "archive-task",
     "backup-planning-sqlite",
     "convert-wishlist",

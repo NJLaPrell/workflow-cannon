@@ -1,9 +1,11 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
 import type {
   DashboardFeatureDetail,
+  DashboardSubagentRegistrySummary,
   DashboardSummaryData,
   DashboardTeamExecutionSummary
 } from "../../../contracts/dashboard-summary-run.js";
+import { summarizeSubagentsForDashboard } from "../../subagents/subagent-store.js";
 import { summarizeTeamAssignmentsForDashboard } from "../../team-execution/assignment-store.js";
 import { resolveAgentGuidanceFromEffectiveConfig } from "../../../core/agent-guidance-catalog.js";
 import { getPlanningGenerationPolicy } from "../planning-config.js";
@@ -201,8 +203,20 @@ export async function runDashboardSummaryCommand(
     ? summarizeTeamAssignmentsForDashboard(sqliteDual.getDatabase(), (id) => taskTitleById.get(id) ?? null)
     : teamExecutionEmpty;
 
+  const subagentRegistryEmpty: DashboardSubagentRegistrySummary = {
+    schemaVersion: 1,
+    available: false,
+    definitionsCount: 0,
+    retiredDefinitionsCount: 0,
+    openSessionsCount: 0,
+    topOpenSessions: []
+  };
+  const subagentRegistry: DashboardSubagentRegistrySummary = sqliteDual
+    ? (summarizeSubagentsForDashboard(sqliteDual.getDatabase()) as DashboardSubagentRegistrySummary)
+    : subagentRegistryEmpty;
+
   const data = {
-    schemaVersion: 2 as const,
+    schemaVersion: 3 as const,
     planningGeneration,
     planningGenerationPolicy: getPlanningGenerationPolicy({
       effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined
@@ -280,7 +294,8 @@ export async function runDashboardSummaryCommand(
     dependencyOverview,
     blockingAnalysis: suggestion.blockingAnalysis,
     agentGuidance,
-    teamExecution
+    teamExecution,
+    subagentRegistry
   } satisfies DashboardSummaryData;
 
   return {

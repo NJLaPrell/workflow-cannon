@@ -225,6 +225,79 @@ function emptyTeamDashboardSummary(): DashboardTeamExecutionSummary {
 /**
  * Compact rollup of `kit_team_assignments` for `dashboard-summary` (read-only; no policy surface).
  */
+/** Read-only team assignment facet for `get-next-actions` (queue intelligence). */
+export type NextActionsTeamExecutionContext = {
+  schemaVersion: 1;
+  available: boolean;
+  openCount: number;
+  /** Active assignments (assigned / submitted / blocked), newest first. */
+  topOpen: Array<{
+    assignmentId: string;
+    executionTaskId: string;
+    executionTaskTitle: string | null;
+    supervisorId: string;
+    workerId: string;
+    status: string;
+    updatedAt: string;
+  }>;
+};
+
+export function summarizeTeamAssignmentsForNextActions(
+  db: Sqlite.Database | undefined,
+  resolveTaskTitle: (taskId: string) => string | null
+): NextActionsTeamExecutionContext {
+  const empty: NextActionsTeamExecutionContext = {
+    schemaVersion: 1,
+    available: false,
+    openCount: 0,
+    topOpen: []
+  };
+  if (!db) {
+    return empty;
+  }
+  const uvRaw = db.pragma("user_version", { simple: true });
+  const uv = typeof uvRaw === "number" ? uvRaw : Number(uvRaw);
+  if (!Number.isFinite(uv) || uv < TEAM_EXECUTION_KIT_MIN_USER_VERSION) {
+    return empty;
+  }
+  try {
+    const rows = db
+      .prepare(
+        `SELECT * FROM kit_team_assignments
+         WHERE status IN ('assigned','submitted','blocked')
+         ORDER BY updated_at DESC
+         LIMIT 25`
+      )
+      .all() as Record<string, unknown>[];
+    const topOpen = rows.map((raw) => {
+      const row = mapRow(raw);
+      return {
+        assignmentId: row.id,
+        executionTaskId: row.executionTaskId,
+        executionTaskTitle: resolveTaskTitle(row.executionTaskId),
+        supervisorId: row.supervisorId,
+        workerId: row.workerId,
+        status: row.status,
+        updatedAt: row.updatedAt
+      };
+    });
+    const cntRow = db
+      .prepare(
+        `SELECT COUNT(*) AS c FROM kit_team_assignments WHERE status IN ('assigned','submitted','blocked')`
+      )
+      .get() as { c: number | bigint } | undefined;
+    const openCount = cntRow !== undefined ? Number(cntRow.c) || 0 : topOpen.length;
+    return {
+      schemaVersion: 1,
+      available: true,
+      openCount,
+      topOpen
+    };
+  } catch {
+    return empty;
+  }
+}
+
 export function summarizeTeamAssignmentsForDashboard(
   db: Sqlite.Database,
   resolveTaskTitle: (taskId: string) => string | null
