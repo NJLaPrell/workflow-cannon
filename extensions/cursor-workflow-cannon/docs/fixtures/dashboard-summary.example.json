@@ -6,6 +6,13 @@
     "schemaVersion": 1,
     "planningGeneration": 0,
     "planningGenerationPolicy": "off",
+    "agentGuidance": {
+      "schemaVersion": 1,
+      "profileSetId": "rpg_party_v1",
+      "tier": 2,
+      "displayLabel": "Adventurer",
+      "usingDefaultTier": true
+    },
     "taskStoreLastUpdated": "2026-03-27T12:00:00.000Z",
     "workspaceStatus": {
       "currentKitPhase": "14",
@@ -14,9 +21,7 @@
       "lastUpdated": "2026-03-27",
       "blockers": [],
       "pendingDecisions": [],
-      "nextAgentActions": [
-        "**Now:** Run `wk run get-next-actions` — example maintainer line (truncated in dashboard overview)."
-      ]
+      "nextAgentActions": []
     },
     "proposedImprovementsSummary": {
       "schemaVersion": 1,

@@ -24,6 +24,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewId = "workflowCannon.dashboard";
 
   private view?: vscode.WebviewView;
+  /** Poll dashboard while the sidebar view exists so the panel stays fresh without manual refresh. */
+  private dashboardPollTimer: ReturnType<typeof setInterval> | undefined;
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -57,7 +59,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
       if (msg?.type === "openConfig") {
         await vscode.commands.executeCommand("workbench.view.extension.workflow-cannon");
-        await vscode.commands.executeCommand("workflowCannon.validateConfig");
+        await vscode.commands.executeCommand("workflowCannon.config.focus");
       }
       if (msg?.type === "prefillWishlistChat") {
         const raw = msg?.wishlistId;
@@ -96,6 +98,28 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         if (tid.length > 0) {
           await vscode.commands.executeCommand("workflowCannon.task.showDetail", tid);
         }
+      }
+    });
+    webviewView.onDidChangeVisibility(() => {
+      if (webviewView.visible) {
+        void this.pushUpdate();
+      }
+    });
+    if (this.dashboardPollTimer) {
+      clearInterval(this.dashboardPollTimer);
+    }
+    this.dashboardPollTimer = setInterval(() => {
+      if (this.view?.visible) {
+        void this.pushUpdate();
+      }
+    }, 45_000);
+    webviewView.onDidDispose(() => {
+      if (this.dashboardPollTimer) {
+        clearInterval(this.dashboardPollTimer);
+        this.dashboardPollTimer = undefined;
+      }
+      if (this.view === webviewView) {
+        this.view = undefined;
       }
     });
     void this.pushUpdate();
@@ -153,7 +177,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       `script-src ${webview.cspSource} 'unsafe-inline'`
     ].join("; ");
 
-    const bootstrap = `(function(){var vscode=acquireVsCodeApi();var btn=document.getElementById("btn");var validate=document.getElementById("validate");var config=document.getElementById("config");var root=document.getElementById("root");if(!btn||!validate||!config)return;btn.addEventListener("click",function(){vscode.postMessage({type:"refresh"});});validate.addEventListener("click",function(){vscode.postMessage({type:"validateConfig"});});config.addEventListener("click",function(){vscode.postMessage({type:"openConfig"});});if(root)root.addEventListener("click",function(ev){var t=ev.target;if(!t||t.tagName!=="BUTTON")return;var act=t.getAttribute("data-wc-action");if(!act)return;if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="proposed-imp-chat"){vscode.postMessage({type:"prefillImprovementTriageChat",taskId:tid});return;}if(act==="proposed-exe-chat"){vscode.postMessage({type:"prefillTaskToPhaseBranchChat",taskId:tid});return;}});})();`;
+    const bootstrap = `(function(){var vscode=acquireVsCodeApi();var btn=document.getElementById("btn");var validate=document.getElementById("validate");var config=document.getElementById("config");var root=document.getElementById("root");if(!btn||!validate||!config)return;btn.addEventListener("click",function(){vscode.postMessage({type:"refresh"});});validate.addEventListener("click",function(){vscode.postMessage({type:"validateConfig"});});config.addEventListener("click",function(){vscode.postMessage({type:"openConfig"});});if(root)root.addEventListener("click",function(ev){var t=ev.target;if(!t||t.tagName!=="BUTTON")return;var act=t.getAttribute("data-wc-action");if(!act)return;if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}});})();`;
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -183,15 +207,19 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     details.phase-bucket { margin-bottom: 6px; }
     details.phase-bucket summary { cursor: pointer; user-select: none; font-weight: 600; }
     details.phase-bucket pre { margin-top: 4px; }
-    .dashboard-tasks-block { margin-top: 14px; }
+    .dashboard-tasks-block { margin-top: 0; }
+    .dash-card { border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35)); border-radius: 6px; padding: 8px; margin: 10px 0; }
     details.status-section { margin-bottom: 8px; }
     details.status-section > summary { cursor: pointer; user-select: none; font-weight: 600; }
     details.status-section > .status-section-body { padding-left: 2px; }
-    .suggested-next-row { margin: 4px 0 8px 0; }
-    .planning-card { border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35)); border-radius: 6px; padding: 8px; margin: 10px 0; }
-    .dependency-overview { margin: 10px 0; }
+    .dash-card > details.status-section:last-child { margin-bottom: 0; }
+    .dash-count-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 14px; margin: 4px 0 10px 0; }
+    .dash-count-cell { display: flex; flex-direction: column; align-items: stretch; gap: 2px; min-width: 0; }
+    .dash-count-label { font-size: 11px; opacity: 0.85; line-height: 1.2; }
+    .dash-count-num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; font-size: 13px; line-height: 1.2; }
+    .dependency-overview { margin: 0; }
     .a11y-note { font-size: 11px; }
-    pre.resume-cli, pre.mermaid-src { font-size: 11px; }
+    pre.resume-cli { font-size: 11px; }
   </style>
 </head>
 <body>

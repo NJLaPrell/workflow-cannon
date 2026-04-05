@@ -72,11 +72,18 @@ function emitBucketsFromMap<T, R>(
     }
   };
 
+  /** Omit roadmap current/next slots when they have no tasks (avoids empty phase rows in the dashboard). */
   if (current !== null) {
-    push(current);
+    const curList = byKey.get(current) ?? [];
+    if (curList.length > 0) {
+      push(current);
+    }
   }
   if (next !== null && next !== current) {
-    push(next);
+    const nextList = byKey.get(next) ?? [];
+    if (nextList.length > 0) {
+      push(next);
+    }
   }
 
   const restKeys = [...byKey.keys()]

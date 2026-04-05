@@ -45,25 +45,34 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   const fixturePath = path.join(__dirname, "../docs/fixtures/dashboard-summary.example.json");
   const fixture = JSON.parse(readFileSync(fixturePath, "utf8"));
   const html = renderDashboardRootInnerHtml(fixture);
+  assert.match(html, /dash-card/);
+  assert.match(html, /<b>You:<\/b> Maintainer/);
+  assert.match(html, /<b>Me:<\/b> Adventurer/);
   assert.match(html, /dashboard-overview/);
-  assert.match(html, /Current phase/);
-  assert.match(html, /Next phase/);
-  assert.match(html, /Next action/);
+  assert.match(html, /Current Phase/);
+  assert.match(html, /Next Phase/);
+  assert.doesNotMatch(html, /Next action/i);
+  assert.doesNotMatch(html, /Planning generation/i);
+  assert.doesNotMatch(html, /expectedPlanningGeneration/);
   assert.match(html, /<p><b>Tasks<\/b><\/p>/);
+  assert.match(html, /dash-count-grid/);
+  assert.match(html, />Proposed<\/span><span class="dash-count-num ok">1<\/span>/);
+  assert.match(html, />Ready<\/span><span class="dash-count-num ok">2<\/span>/);
   assert.match(html, /dashboard-tasks-block/);
   assert.match(html, /status-section/);
-  assert.match(html, /Ready · improvements/);
-  assert.match(html, /Ready · execution/);
+  assert.match(html, /Ready · Improvements/);
+  assert.match(html, /Ready · Execution/);
   assert.match(html, /Wishlist/);
-  assert.match(html, /Proposed · improvements/);
-  assert.match(html, /Proposed · execution/);
+  assert.match(html, /Proposed · Improvements/);
+  assert.match(html, /Proposed · Execution/);
   assert.match(html, /imp-example/);
   assert.match(html, /T319/);
   assert.match(html, /T320/);
   assert.match(html, /W1/);
   assert.match(html, /data-wc-action="wishlist-chat"/);
   assert.match(html, /data-wc-action="proposed-imp-accept"/);
-  assert.match(html, /data-wc-action="proposed-imp-chat"/);
+  assert.doesNotMatch(html, /proposed-imp-chat/);
+  assert.doesNotMatch(html, /proposed-exe-chat/);
   assert.match(html, /data-wc-action="task-detail"/);
   assert.match(html, /dash-row-action/);
   assert.match(html, /phase-bucket/);
@@ -74,17 +83,28 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /terminal-phase-bucket/);
   assert.match(html, /T099/);
   assert.match(html, /Not Phased/);
-  assert.match(html, /Dependency overview/);
-  assert.match(html, /Critical path \(ready frontier\)/);
-  assert.match(html, /T320/);
-  assert.match(html, /planning-card/);
+  assert.match(html, /Dependency Overview/);
+  assert.match(html, /Critical Path \(Ready Frontier\)/);
+  assert.doesNotMatch(html, /mermaid-src/);
+  assert.doesNotMatch(html, /flowchart TD/);
+  assert.match(html, /Planning Session/);
   assert.match(html, /No in-flight/);
+  assert.match(html, /Store Updated/);
+  assert.doesNotMatch(html, /same store as execution queue/i);
+  assert.doesNotMatch(html, /Suggested Next/i);
 });
 
 test("renderDashboardRootInnerHtml planning card shows resume CLI when session present", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,
     data: {
+      agentGuidance: {
+        schemaVersion: 1,
+        profileSetId: "rpg_party_v1",
+        tier: 2,
+        displayLabel: "Adventurer",
+        usingDefaultTier: true
+      },
       stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
       proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
       proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
@@ -128,10 +148,17 @@ test("renderDashboardRootInnerHtml planning card shows resume CLI when session p
   assert.match(html, /40%/);
 });
 
-test("renderDashboardRootInnerHtml handles null suggestedNext", () => {
+test("renderDashboardRootInnerHtml omits suggested-next section", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,
     data: {
+      agentGuidance: {
+        schemaVersion: 1,
+        profileSetId: "rpg_party_v1",
+        tier: 3,
+        displayLabel: "Bard",
+        usingDefaultTier: false
+      },
       stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
       proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
       proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
@@ -141,7 +168,7 @@ test("renderDashboardRootInnerHtml handles null suggestedNext", () => {
       blockedSummary: { count: 0, top: [] },
       readyQueueTop: [],
       readyQueueCount: 0,
-      suggestedNext: null,
+      suggestedNext: { id: "T999", title: "Would have been suggested" },
       planningSession: null,
       taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
       workspaceStatus: { currentKitPhase: "1", nextKitPhase: "2", activeFocus: "Test" },
@@ -160,12 +187,48 @@ test("renderDashboardRootInnerHtml handles null suggestedNext", () => {
       }
     }
   });
-  assert.match(html, /Suggested next/);
-  assert.match(html, /No proposed improvements/);
+  assert.doesNotMatch(html, /Suggested Next/i);
+  assert.doesNotMatch(html, /T999/);
+  assert.match(html, />No Items</);
   assert.match(html, /No in-flight/);
 });
 
-test("renderDashboardRootInnerHtml proposed execution rows expose accept and chat actions", () => {
+test("renderDashboardRootInnerHtml shows Not Planned when next phase duplicates current", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [] },
+      readyQueueTop: [],
+      readyQueueCount: 0,
+      suggestedNext: null,
+      planningSession: null,
+      taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
+      workspaceStatus: { currentKitPhase: "14", nextKitPhase: "14", activeFocus: "Test" },
+      blockingAnalysis: [],
+      dependencyOverview: {
+        schemaVersion: 1,
+        activeTaskCount: 0,
+        includedTaskCount: 0,
+        edgeCount: 0,
+        truncated: false,
+        perfNote: null,
+        nodes: [],
+        edges: [],
+        mermaidFlowchart: "",
+        criticalPathReady: []
+      }
+    }
+  });
+  assert.match(html, /Next Phase<\/b> Not Planned/);
+});
+
+test("renderDashboardRootInnerHtml proposed execution rows expose accept action", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,
     data: {
@@ -202,7 +265,7 @@ test("renderDashboardRootInnerHtml proposed execution rows expose accept and cha
     }
   });
   assert.match(html, /data-wc-action="proposed-exe-accept"/);
-  assert.match(html, /data-wc-action="proposed-exe-chat"/);
+  assert.doesNotMatch(html, /proposed-exe-chat/);
   assert.match(html, /T777/);
 });
 
@@ -239,5 +302,5 @@ test("renderDashboardRootInnerHtml shows readyQueueBreakdown when present", () =
       }
     }
   });
-  assert.match(html, /Ready queue · 3 improvements · 1 other/);
+  assert.match(html, /Ready Queue · 3 Improvements · 1 Other/);
 });

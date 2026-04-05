@@ -48,10 +48,10 @@ function renderTaskRowList(items: unknown, emptyMessage = "No ready tasks."): st
 
 function renderWishlistOpenList(items: unknown): string {
   if (!Array.isArray(items) || items.length === 0) {
-    return '<p class="muted">No open wishlist items.</p>';
+    return '<p class="muted">No Items</p>';
   }
   return (
-    '<p class="muted"><b>Open wishlist preview</b> · <span class="muted">Chat</span> prefills Cursor with the intake playbook prompt.</p>' +
+    '<p class="muted"><b>Open Wishlist Preview</b> · <span class="muted">Chat</span> prefills Cursor with the intake playbook prompt.</p>' +
     '<div class="dash-row-list" role="list">' +
     items
       .map((x) => {
@@ -87,14 +87,10 @@ function renderProposedImprovementRow(row: { id?: unknown; title?: unknown; phas
     '<span class="dash-row-label">' +
     label +
     "</span>" +
-    '<span class="dash-row-actions">' +
     '<button type="button" class="dash-row-action" data-wc-action="proposed-imp-accept" data-task-id="' +
     idAttr +
     '" title="Accept → ready (confirms policy rationale)">Accept</button>' +
-    '<button type="button" class="dash-row-action" data-wc-action="proposed-imp-chat" data-task-id="' +
-    idAttr +
-    '" title="Prefill Composer with improvement triage playbook">Chat</button>' +
-    "</span></div>"
+    "</div>"
   );
 }
 
@@ -108,7 +104,7 @@ function renderProposedImprovementsList(count: number, items: unknown): string {
       : "";
   return (
     more +
-    '<p class="muted"><b>Row actions</b> · <span class="muted">Accept</span> runs <code>run-transition</code> (modal rationale + planning token when required). <span class="muted">Chat</span> seeds <code>improvement-triage-top-three</code> playbook.</p>' +
+    '<p class="muted"><b>Row actions</b> · <span class="muted">Accept</span> runs <code>run-transition</code> (modal rationale + planning token when required).</p>' +
     '<div class="dash-row-list" role="list">' +
     items.map((x) => renderProposedImprovementRow(x as { id?: unknown; title?: unknown; phase?: unknown })).join("") +
     "</div>"
@@ -126,14 +122,10 @@ function renderProposedExecutionRow(row: { id?: unknown; title?: unknown; phase?
     '<span class="dash-row-label">' +
     label +
     "</span>" +
-    '<span class="dash-row-actions">' +
     '<button type="button" class="dash-row-action" data-wc-action="proposed-exe-accept" data-task-id="' +
     idAttr +
     '" title="Accept → ready (confirms policy rationale)">Accept</button>' +
-    '<button type="button" class="dash-row-action" data-wc-action="proposed-exe-chat" data-task-id="' +
-    idAttr +
-    '" title="Prefill Composer with task-to-phase-branch playbook">Chat</button>' +
-    "</span></div>"
+    "</div>"
   );
 }
 
@@ -147,7 +139,7 @@ function renderProposedExecutionList(count: number, items: unknown): string {
       : "";
   return (
     more +
-    '<p class="muted"><b>Row actions</b> · <span class="muted">Chat</span> seeds <code>task-to-phase-branch</code> playbook.</p>' +
+    '<p class="muted"><b>Row actions</b> · <span class="muted">Accept</span> runs <code>run-transition</code> when required.</p>' +
     '<div class="dash-row-list" role="list">' +
     items.map((x) => renderProposedExecutionRow(x as { id?: unknown; title?: unknown; phase?: unknown })).join("") +
     "</div>"
@@ -185,16 +177,27 @@ function renderBlockedList(items: unknown): string {
   );
 }
 
+function phaseBucketsNonEmpty(phaseBuckets: unknown): unknown[] {
+  if (!Array.isArray(phaseBuckets)) {
+    return [];
+  }
+  return phaseBuckets.filter((raw) => {
+    const c = (raw as { count?: unknown }).count;
+    return typeof c !== "number" || c > 0;
+  });
+}
+
 /**
  * When `dashboard-summary` includes `phaseBuckets`, one `<details>` per phase (closed until expanded).
  */
 function renderReadyPhaseBuckets(phaseBuckets: unknown, fallbackTop: unknown, emptyMessage: string): string {
-  if (!Array.isArray(phaseBuckets) || phaseBuckets.length === 0) {
+  const buckets = phaseBucketsNonEmpty(phaseBuckets);
+  if (buckets.length === 0) {
     return renderTaskRowList(fallbackTop, emptyMessage);
   }
   return (
     '<div class="phase-stack">' +
-    phaseBuckets
+    buckets
       .map((raw) => {
         const b = raw as { label?: unknown; top?: unknown };
         const summary = escapeHtml(String(b.label ?? ""));
@@ -211,10 +214,11 @@ function renderProposedPhaseBuckets(
   totalCount: number,
   fallbackTop: unknown
 ): string {
-  if (!Array.isArray(phaseBuckets) || phaseBuckets.length === 0) {
+  const buckets = phaseBucketsNonEmpty(phaseBuckets);
+  if (buckets.length === 0) {
     return renderProposedImprovementsList(totalCount, fallbackTop);
   }
-  const sumCounts = phaseBuckets.reduce((acc, x) => {
+  const sumCounts = buckets.reduce((acc: number, x: unknown) => {
     const c = (x as { count?: unknown }).count;
     return acc + (typeof c === "number" ? c : 0);
   }, 0);
@@ -225,7 +229,7 @@ function renderProposedPhaseBuckets(
   return (
     more +
     '<div class="phase-stack">' +
-    phaseBuckets
+    buckets
       .map((raw) => {
         const b = raw as { label?: unknown; top?: unknown; count?: unknown };
         const summary = escapeHtml(String(b.label ?? ""));
@@ -247,10 +251,11 @@ function renderProposedExecutionPhaseBuckets(
   totalCount: number,
   fallbackTop: unknown
 ): string {
-  if (!Array.isArray(phaseBuckets) || phaseBuckets.length === 0) {
+  const bucketsPe = phaseBucketsNonEmpty(phaseBuckets);
+  if (bucketsPe.length === 0) {
     return renderProposedExecutionList(totalCount, fallbackTop);
   }
-  const sumCountsPe = phaseBuckets.reduce((acc, x) => {
+  const sumCountsPe = bucketsPe.reduce((acc: number, x: unknown) => {
     const c = (x as { count?: unknown }).count;
     return acc + (typeof c === "number" ? c : 0);
   }, 0);
@@ -261,7 +266,7 @@ function renderProposedExecutionPhaseBuckets(
   return (
     more +
     '<div class="phase-stack">' +
-    phaseBuckets
+    bucketsPe
       .map((raw) => {
         const b = raw as { label?: unknown; top?: unknown; count?: unknown };
         const summary = escapeHtml(String(b.label ?? ""));
@@ -278,10 +283,11 @@ function renderProposedExecutionPhaseBuckets(
 }
 
 function renderBlockedPhaseBuckets(phaseBuckets: unknown, fallbackTop: unknown, totalBlocked: number): string {
-  if (!Array.isArray(phaseBuckets) || phaseBuckets.length === 0) {
+  const bucketsBl = phaseBucketsNonEmpty(phaseBuckets);
+  if (bucketsBl.length === 0) {
     return renderBlockedList(fallbackTop);
   }
-  const sumBlocked = phaseBuckets.reduce((acc, x) => {
+  const sumBlocked = bucketsBl.reduce((acc: number, x: unknown) => {
     const c = (x as { count?: unknown }).count;
     return acc + (typeof c === "number" ? c : 0);
   }, 0);
@@ -292,7 +298,7 @@ function renderBlockedPhaseBuckets(phaseBuckets: unknown, fallbackTop: unknown, 
   return (
     more +
     '<div class="phase-stack">' +
-    phaseBuckets
+    bucketsBl
       .map((raw) => {
         const b = raw as { label?: unknown; top?: unknown; count?: unknown };
         const summary = escapeHtml(String(b.label ?? ""));
@@ -317,10 +323,11 @@ function renderTerminalTaskPhaseBuckets(
   totalInStatus: number,
   emptyMessage: string
 ): string {
-  if (!Array.isArray(phaseBuckets) || phaseBuckets.length === 0) {
+  const bucketsTm = phaseBucketsNonEmpty(phaseBuckets);
+  if (bucketsTm.length === 0) {
     return renderTaskRowList(fallbackTop, emptyMessage);
   }
-  const sum = phaseBuckets.reduce((acc, x) => {
+  const sum = bucketsTm.reduce((acc: number, x: unknown) => {
     const c = (x as { count?: unknown }).count;
     return acc + (typeof c === "number" ? c : 0);
   }, 0);
@@ -331,7 +338,7 @@ function renderTerminalTaskPhaseBuckets(
   return (
     more +
     '<div class="phase-stack">' +
-    phaseBuckets
+    bucketsTm
       .map((raw) => {
         const b = raw as { label?: unknown; top?: unknown; count?: unknown };
         const summary = escapeHtml(String(b.label ?? ""));
@@ -356,8 +363,8 @@ function renderTerminalTaskPhaseBuckets(
 function renderPlanningSession(ps: unknown): string {
   if (!ps || typeof ps !== "object") {
     return (
-      '<section class="planning-card" aria-label="Planning session">' +
-      "<p><b>Planning session</b></p>" +
+      '<section class="dash-card" aria-label="Planning session">' +
+      "<p><b>Planning Session</b></p>" +
       '<p class="muted">No in-flight <code>build-plan</code> snapshot. When <code>.workspace-kit/planning/build-plan-session.json</code> exists, this card shows progress and a resume command.</p>' +
       '<p class="muted"><b>Stale</b> — When the interview completes or the session file is removed, this card clears until a new session starts (use Refresh).</p>' +
       "</section>"
@@ -373,8 +380,8 @@ function renderPlanningSession(ps: unknown): string {
         " critical answered"
       : "";
   return (
-    '<section class="planning-card" aria-label="Planning session resume">' +
-    "<p><b>Planning session</b> " +
+    '<section class="dash-card" aria-label="Planning session resume">' +
+    "<p><b>Planning Session</b> " +
     escapeHtml(String(o.planningType ?? "")) +
     " · " +
     escapeHtml(String(o.status ?? "")) +
@@ -396,7 +403,42 @@ function renderPlanningSession(ps: unknown): string {
   );
 }
 
-const MAX_OVERVIEW_ACTION_CHARS = 220;
+/** 3-column grid of status counts with right-aligned tabular numbers. */
+function buildDashboardStateCountGridHtml(ss: Record<string, unknown>): string {
+  const order: [string, string][] = [
+    ["proposed", "Proposed"],
+    ["ready", "Ready"],
+    ["in_progress", "In Progress"],
+    ["blocked", "Blocked"],
+    ["completed", "Completed"],
+    ["cancelled", "Cancelled"]
+  ];
+  const cells: { label: string; n: number }[] = [];
+  for (const [key, label] of order) {
+    const v = ss[key];
+    if (typeof v === "number") {
+      cells.push({ label, n: v });
+    }
+  }
+  if (cells.length === 0) {
+    return '<p class="ok">—</p>';
+  }
+  return (
+    '<div class="dash-count-grid" role="list">' +
+    cells
+      .map(
+        (c) =>
+          '<div class="dash-count-cell" role="listitem">' +
+          '<span class="dash-count-label">' +
+          escapeHtml(c.label) +
+          '</span><span class="dash-count-num ok">' +
+          escapeHtml(String(c.n)) +
+          "</span></div>"
+      )
+      .join("") +
+    "</div>"
+  );
+}
 
 function renderAgentGuidanceSection(ag: unknown): string {
   if (!ag || typeof ag !== "object") {
@@ -404,23 +446,16 @@ function renderAgentGuidanceSection(ag: unknown): string {
   }
   const o = ag as Record<string, unknown>;
   const tier = typeof o.tier === "number" ? o.tier : null;
-  const label = typeof o.displayLabel === "string" ? o.displayLabel : "";
+  const label = typeof o.displayLabel === "string" ? o.displayLabel.trim() : "";
   if (tier === null) {
     return "";
   }
-  const defNote =
-    o.usingDefaultTier === true
-      ? ' <span class="muted">(default tier — persist with <code>set-agent-guidance</code>)</span>'
-      : "";
   return (
-    '<section class="agent-guidance-card" aria-label="Agent guidance">' +
-    "<p><b>Agent guidance</b> · tier " +
-    escapeHtml(String(tier)) +
-    " · " +
-    escapeHtml(label) +
-    defNote +
+    '<section class="dash-card" aria-label="Collaboration roles">' +
+    "<p><b>You:</b> Maintainer</p>" +
+    "<p><b>Me:</b> " +
+    escapeHtml(label.length > 0 ? label : "—") +
     "</p>" +
-    '<p class="muted">Advisory only (subordinate to policy). CLI: <code>workspace-kit run resolve-agent-guidance</code> / <code>set-agent-guidance</code>.</p>' +
     "</section>"
   );
 }
@@ -433,14 +468,11 @@ function truncateOverviewLine(s: string, max: number): string {
   return one.slice(0, Math.max(1, max - 1)) + "…";
 }
 
-/**
- * Brief maintainer snapshot: phases + status date + blockers / decisions / first next action.
- * Does not repeat task roll-ups (those stay under **Tasks**).
- */
+/** Maintainer snapshot: phases, blockers, pending decisions (no task roll-ups). */
 function renderWorkspaceOverviewSection(ws: Record<string, unknown> | null): string {
   if (!ws) {
     return (
-      '<section class="dashboard-overview" aria-label="Workspace status">' +
+      '<section class="dash-card dashboard-overview" aria-label="Workspace status">' +
       '<p class="muted">No <code>docs/maintainers/data/workspace-kit-status.yaml</code> snapshot (or file not readable).</p>' +
       "</section>"
     );
@@ -449,21 +481,17 @@ function renderWorkspaceOverviewSection(ws: Record<string, unknown> | null): str
   const curRaw = ws.currentKitPhase != null ? String(ws.currentKitPhase).trim() : "";
   const cur = curRaw.length > 0 ? escapeHtml(curRaw) : "—";
   const nextTrim = ws.nextKitPhase != null ? String(ws.nextKitPhase).trim() : "";
-  const hasNext = nextTrim.length > 0;
+  const nextMeaningful = nextTrim.length > 0 && nextTrim !== curRaw;
+  const nextDisplay = nextMeaningful ? escapeHtml(nextTrim) : "Not Planned";
 
   let html =
-    '<section class="dashboard-overview" aria-label="Workspace status">' +
-    "<p><b>Current phase</b> " +
+    '<section class="dash-card dashboard-overview" aria-label="Workspace status">' +
+    "<p><b>Current Phase</b> " +
     cur +
+    "</p>" +
+    "<p><b>Next Phase</b> " +
+    nextDisplay +
     "</p>";
-  if (hasNext) {
-    html += "<p><b>Next phase</b> " + escapeHtml(nextTrim) + "</p>";
-  }
-
-  const lu = ws.lastUpdated != null ? String(ws.lastUpdated).trim() : "";
-  if (lu.length > 0) {
-    html += '<p class="muted">Status file · ' + escapeHtml(lu) + "</p>";
-  }
 
   const blockers = Array.isArray(ws.blockers)
     ? (ws.blockers as unknown[]).map((x) => String(x)).filter((s) => s.trim().length > 0)
@@ -472,7 +500,7 @@ function renderWorkspaceOverviewSection(ws: Record<string, unknown> | null): str
     const shown = blockers.slice(0, 2).map((b) => renderMarkdownBoldAfterEscape(escapeHtml(truncateOverviewLine(b, 100))));
     const more =
       blockers.length > 2
-        ? ' <span class="muted">(+' + String(blockers.length - 2) + " more)</span>"
+        ? " <span class=\"muted\">(+" + String(blockers.length - 2) + " more)</span>"
         : "";
     html += "<p><b>Blockers</b> " + shown.join(" · ") + more + "</p>";
   }
@@ -483,33 +511,23 @@ function renderWorkspaceOverviewSection(ws: Record<string, unknown> | null): str
   if (pending.length > 0) {
     const shown = pending.slice(0, 2).map((b) => renderMarkdownBoldAfterEscape(escapeHtml(truncateOverviewLine(b, 100))));
     const more = pending.length > 2 ? " …" : "";
-    html += "<p><b>Pending decisions</b> " + shown.join(" · ") + more + "</p>";
-  }
-
-  const actions = Array.isArray(ws.nextAgentActions)
-    ? (ws.nextAgentActions as unknown[]).map((x) => String(x)).filter((s) => s.trim().length > 0)
-    : [];
-  if (actions.length > 0) {
-    const t = truncateOverviewLine(actions[0], MAX_OVERVIEW_ACTION_CHARS);
-    const more =
-      actions.length > 1
-        ? ' <span class="muted">(+' + String(actions.length - 1) + " in file)</span>"
-        : "";
-    html +=
-      '<p class="muted"><b>Next action</b> ' + renderMarkdownBoldAfterEscape(escapeHtml(t)) + more + "</p>";
+    html += "<p><b>Pending Decisions</b> " + shown.join(" · ") + more + "</p>";
   }
 
   html += "</section>";
   return html;
 }
 
-/** Dependency subgraph + critical path from `dashboard-summary` `dependencyOverview` (text / Mermaid source only). */
+/** Dependency subgraph summary + critical path (no raw Mermaid — webview does not render diagrams). */
 function renderDependencyOverviewHtml(dep: unknown): string {
   if (dep === null || dep === undefined || typeof dep !== "object") {
     return (
-      '<section class="dependency-overview" aria-label="Dependency overview">' +
-      '<p class="muted"><b>Dependency overview</b> — no data.</p>' +
-      "</section>"
+      '<section class="dash-card dependency-overview" aria-label="Dependency overview">' +
+      '<details class="status-section">' +
+      "<summary><b>Dependency Overview</b> — No Data</summary>" +
+      '<div class="status-section-body">' +
+      '<p class="muted">No dependency subgraph in this summary.</p>' +
+      "</div></details></section>"
     );
   }
   const d = dep as Record<string, unknown>;
@@ -526,43 +544,44 @@ function renderDependencyOverviewHtml(dep: unknown): string {
     : [];
   const pathLine =
     path.length > 0
-      ? "<p><b>Critical path (ready frontier)</b> " + escapeHtml(path.join(" → ")) + "</p>"
-      : '<p class="muted"><b>Critical path (ready frontier)</b> — none (no ready tasks in the subgraph).</p>';
-  const mermaid = typeof d.mermaidFlowchart === "string" ? d.mermaidFlowchart : "";
-  const mermaidBlock =
-    mermaid.length > 0
-      ? '<p class="muted"><b>Mermaid</b> (source — not auto-rendered in this panel)</p><pre class="mermaid-src" aria-label="Mermaid dependency graph">' +
-        escapeHtml(mermaid) +
-        "</pre>"
-      : '<p class="muted"><b>Mermaid</b> — omitted when edge count is very high; use <code>get-dependency-graph</code> for tooling.</p>';
+      ? "<p><b>Critical Path (Ready Frontier)</b> " + escapeHtml(path.join(" → ")) + "</p>"
+      : '<p class="muted"><b>Critical Path (Ready Frontier)</b> — None (no ready tasks in the subgraph).</p>';
   const truncNote = truncated ? '<p class="muted">Truncated subgraph for large queues (N&gt;50 active tasks).</p>' : "";
-  return (
-    '<section class="dependency-overview" aria-label="Dependency overview">' +
-    "<p><b>Dependency overview</b> · " +
+  const summaryLine =
+    "<b>Dependency Overview</b> · " +
     escapeHtml(String(included)) +
     " / " +
     escapeHtml(String(active)) +
-    " tasks · " +
+    " Tasks · " +
     escapeHtml(String(edgeCount)) +
-    " edges</p>" +
+    " Edges";
+  const body =
     perf +
     truncNote +
     pathLine +
-    mermaidBlock +
-    '<p class="muted a11y-note">No interactive diagram — text and Mermaid source only (screen-reader friendly lists).</p>' +
-    "</section>"
+    '<p class="muted a11y-note">Graph diagram is not rendered here — use <code>workspace-kit run get-dependency-graph</code> for Mermaid or tooling.</p>';
+  return (
+    '<section class="dash-card dependency-overview" aria-label="Dependency overview">' +
+    '<details class="status-section">' +
+    "<summary>" +
+    summaryLine +
+    "</summary>" +
+    '<div class="status-section-body">' +
+    body +
+    "</div></details></section>"
   );
 }
 
 /** Closed-by-default roll-up for a dashboard status band (ready / proposed / blocked / terminal). */
-function renderStatusRollup(summaryInnerHtml: string, bodyHtml: string): string {
+function renderStatusRollup(summaryInnerHtml: string, bodyHtml: string, emptyOnly?: boolean): string {
+  const body = emptyOnly ? '<p class="muted">No Items</p>' : bodyHtml;
   return (
     '<details class="status-section">' +
     "<summary>" +
     summaryInnerHtml +
     "</summary>" +
     '<div class="status-section-body">' +
-    bodyHtml +
+    body +
     "</div>" +
     "</details>"
   );
@@ -584,26 +603,7 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
     );
   }
   const d = p.data ?? {};
-  const planningGen = typeof d.planningGeneration === "number" ? d.planningGeneration : null;
-  const planningPol =
-    d.planningGenerationPolicy === "off" ||
-    d.planningGenerationPolicy === "warn" ||
-    d.planningGenerationPolicy === "require"
-      ? d.planningGenerationPolicy
-      : "off";
-  const planningGenSection =
-    planningGen !== null
-      ? '<section class="planning-gen" aria-label="Planning optimistic lock">' +
-        "<p><b>Planning generation</b> " +
-        escapeHtml(String(planningGen)) +
-        " · <b>policy</b> " +
-        escapeHtml(planningPol) +
-        "</p>" +
-        '<p class="muted">Mutating <code>workspace-kit run</code> commands accept <code>expectedPlanningGeneration</code> from this counter when <code>tasks.planningGenerationPolicy</code> is <code>require</code> (this repo). Refresh after other writers.</p>' +
-        "</section>"
-      : "";
   const ss = (d.stateSummary as Record<string, unknown>) || {};
-  const sn = d.suggestedNext as { id?: unknown; title?: unknown } | null | undefined;
   const ws = (d.workspaceStatus as Record<string, unknown> | null | undefined) ?? null;
   const wishlist = (d.wishlist as Record<string, unknown>) || {};
   const wishlistOpenTop = Array.isArray(wishlist.openTop) ? wishlist.openTop : [];
@@ -637,30 +637,14 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
   const rqbOther = typeof rqb?.other === "number" ? rqb.other : null;
   const breakdownLine =
     rqbImp !== null && rqbOther !== null && rqbImp + rqbOther > 0
-      ? "<p class=\"muted\">Ready queue · " +
+      ? '<p class="muted">Ready Queue · ' +
         String(rqbImp) +
-        " improvement" +
+        " Improvement" +
         (rqbImp === 1 ? "" : "s") +
         " · " +
         String(rqbOther) +
-        " other</p>"
+        " Other</p>"
       : "";
-
-  const snId = sn && sn.id != null ? String(sn.id).trim() : "";
-  const snTitle = sn && sn.title != null ? String(sn.title) : "";
-  const suggestedNextHtml =
-    snId.length > 0 || snTitle.length > 0
-      ? '<div class="dash-row suggested-next-row" role="listitem">' +
-        '<span class="dash-row-label">' +
-        escapeHtml(snId + (snId && snTitle ? " — " : "") + snTitle) +
-        "</span>" +
-        (snId.length > 0
-          ? '<button type="button" class="dash-row-action" data-wc-action="task-detail" data-task-id="' +
-            escapeHtml(snId) +
-            '" title="Open task detail (markdown)">Detail</button>'
-          : "") +
-        "</div>"
-      : '<span class="muted">— none · promote tasks to <code>ready</code> or complete triage (<code>improvement</code> → accept)</span>';
 
   const terminalSection = (() => {
     const cs = d.completedSummary as Record<string, unknown> | undefined;
@@ -674,12 +658,14 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
     const cancTop = Array.isArray(ks?.top) ? (ks!.top as unknown[]).slice(0, 15) : [];
     const inner =
       renderStatusRollup(
-        "<b>Completed</b> (" + String(compCount) + ") — terminal",
-        renderTerminalTaskPhaseBuckets(cs?.phaseBuckets, compTop, compCount, "No completed tasks.")
+        "<b>Completed</b> (" + String(compCount) + ")",
+        renderTerminalTaskPhaseBuckets(cs?.phaseBuckets, compTop, compCount, "No completed tasks."),
+        compCount === 0
       ) +
       renderStatusRollup(
         "<b>Cancelled</b> (" + String(cancCount) + ")",
-        renderTerminalTaskPhaseBuckets(ks?.phaseBuckets, cancTop, cancCount, "No cancelled tasks.")
+        renderTerminalTaskPhaseBuckets(ks?.phaseBuckets, cancTop, cancCount, "No cancelled tasks."),
+        cancCount === 0
       );
     return (
       '<section class="dashboard-terminal-tasks" aria-label="Completed and cancelled tasks">' + inner + "</section>"
@@ -687,61 +673,69 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
   })();
 
   const tasksBlock =
-    '<section class="dashboard-tasks-block" aria-label="Task queue rollups">' +
+    '<section class="dash-card dashboard-tasks-block" aria-label="Task queue rollups">' +
     "<p><b>Tasks</b></p>" +
-    "<p class=\"ok\">Counts · proposed " +
-    String(ss.proposed ?? 0) +
-    " · ready " +
-    String(ss.ready ?? 0) +
-    " · in progress " +
-    String(ss.in_progress ?? 0) +
-    " · blocked " +
-    String(ss.blocked ?? 0) +
-    " · done " +
-    String(ss.completed ?? 0) +
-    "</p>" +
+    buildDashboardStateCountGridHtml(ss) +
     renderStatusRollup(
-      "<b>Ready · improvements</b> (" +
-        String(readyImpCount) +
-        ") — same store as execution queue; triage via accept → <code>ready</code>",
-      renderReadyPhaseBuckets(ris.phaseBuckets, readyImpTop, "No ready improvements.")
+      "<b>Ready · Improvements</b> (" + String(readyImpCount) + ")",
+      renderReadyPhaseBuckets(ris.phaseBuckets, readyImpTop, "No ready improvements."),
+      readyImpCount === 0
     ) +
     renderStatusRollup(
-      "<b>Ready · execution</b> (" + String(readyExeCount) + ")",
-      breakdownLine + renderReadyPhaseBuckets(res.phaseBuckets, readyExeTop, "No ready execution tasks.")
+      "<b>Ready · Execution</b> (" + String(readyExeCount) + ")",
+      breakdownLine + renderReadyPhaseBuckets(res.phaseBuckets, readyExeTop, "No ready execution tasks."),
+      readyExeCount === 0
     ) +
     renderStatusRollup(
-      "<b>Proposed · improvements</b> (backlog until accepted) · " + String(piCount),
-      renderProposedPhaseBuckets(pis.phaseBuckets, piCount, piTop)
+      "<b>Proposed · Improvements</b> (" + String(piCount) + ")",
+      renderProposedPhaseBuckets(pis.phaseBuckets, piCount, piTop),
+      piCount === 0
     ) +
     renderStatusRollup(
-      "<b>Proposed · execution</b> (workspace-kit tasks awaiting promote) · " + String(peCount),
-      renderProposedExecutionPhaseBuckets(pes.phaseBuckets, peCount, peTop)
+      "<b>Proposed · Execution</b> (" + String(peCount) + ")",
+      renderProposedExecutionPhaseBuckets(pes.phaseBuckets, peCount, peTop),
+      peCount === 0
     ) +
     renderStatusRollup(
-      "<b>Blocked</b> " + String(blockedSummary.count ?? 0),
-      renderBlockedPhaseBuckets(blockedSummary.phaseBuckets, blockedTop, Number(blockedSummary.count ?? 0))
+      "<b>Blocked</b> (" + String(Number(blockedSummary.count ?? 0)) + ")",
+      renderBlockedPhaseBuckets(
+        blockedSummary.phaseBuckets,
+        blockedTop,
+        Number(blockedSummary.count ?? 0)
+      ),
+      Number(blockedSummary.count ?? 0) === 0
     ) +
     terminalSection +
+    "</section>";
+
+  const wishOpen = Number(wishlist.openCount ?? 0);
+  const wishTotal = Number(wishlist.totalCount ?? 0);
+  const wishlistSection =
+    '<section class="dash-card" aria-label="Wishlist">' +
+    '<details class="status-section">' +
+    "<summary><b>Wishlist</b> · Open " +
+    String(wishOpen) +
+    " / Total " +
+    String(wishTotal) +
+    "</summary>" +
+    '<div class="status-section-body">' +
+    (wishOpen === 0 ? '<p class="muted">No Items</p>' : renderWishlistOpenList(wishlistOpenTop)) +
+    "</div></details></section>";
+
+  const storeSection =
+    '<section class="dash-card dash-store-meta" aria-label="Task store">' +
+    '<p class="muted">Store Updated ' +
+    escapeHtml(String(d.taskStoreLastUpdated ?? "")) +
+    "</p>" +
     "</section>";
 
   return (
     renderAgentGuidanceSection(d.agentGuidance) +
     renderWorkspaceOverviewSection(ws as Record<string, unknown> | null) +
-    planningGenSection +
     tasksBlock +
-    "<p><b>Wishlist</b> · open " +
-    String(wishlist.openCount ?? 0) +
-    " / total " +
-    String(wishlist.totalCount ?? 0) +
-    "</p>" +
-    renderWishlistOpenList(wishlistOpenTop) +
-    "<p><b>Suggested next</b> (highest-priority ready, any type)</p>" +
-    suggestedNextHtml +
+    wishlistSection +
     renderDependencyOverviewHtml(d.dependencyOverview) +
     renderPlanningSession(planningSession) +
-    '<p class="muted">Store updated ' +
-    escapeHtml(String(d.taskStoreLastUpdated ?? "")) +
-    "</p>"
+    storeSection
   );
 }
