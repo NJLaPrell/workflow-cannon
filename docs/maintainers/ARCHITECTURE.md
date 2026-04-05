@@ -36,9 +36,9 @@ Workflow Cannon is a modular CLI-first workflow platform: structured **tasks** a
 
 ### Persistence
 
-- **Tasks** and **wishlist** default to **SQLite** (`tasks.persistenceBackend: sqlite`, one file under `tasks.sqliteDatabaseRelativePath`). Set **`tasks.persistenceBackend: json`** to use JSON files instead (see `docs/maintainers/ADR-sqlite-default-persistence.md` and `ADR-task-sqlite-persistence.md`).
-- **Subagent registry** (Phase 57): relational tables **`kit_subagent_definitions`**, **`kit_subagent_sessions`**, **`kit_subagent_messages`** at **`PRAGMA user_version` ≥ 6**; Cursor (or another host) executes delegated agents while the kit stores definitions and session/message provenance (see **`docs/maintainers/ADR-subagent-registry-v1.md`**).
-- **Team execution** (Phase 58): relational table **`kit_team_assignments`** at **`PRAGMA user_version` ≥ 7**; supervisor/worker assignment + handoff + reconcile checkpoints over **`T###`** ids (see **`docs/maintainers/ADR-team-execution-v1.md`**).
+- **Tasks** and **wishlist** default to **SQLite** (`tasks.persistenceBackend: sqlite`, one file under `tasks.sqliteDatabaseRelativePath`). Set **`tasks.persistenceBackend: json`** to use JSON files instead (see `docs/maintainers/adrs/ADR-sqlite-default-persistence.md` and `ADR-task-sqlite-persistence.md`).
+- **Subagent registry** (Phase 57): relational tables **`kit_subagent_definitions`**, **`kit_subagent_sessions`**, **`kit_subagent_messages`** at **`PRAGMA user_version` ≥ 6**; Cursor (or another host) executes delegated agents while the kit stores definitions and session/message provenance (see **`docs/maintainers/adrs/ADR-subagent-registry-v1.md`**).
+- **Team execution** (Phase 58): relational table **`kit_team_assignments`** at **`PRAGMA user_version` ≥ 7**; supervisor/worker assignment + handoff + reconcile checkpoints over **`T###`** ids (see **`docs/maintainers/adrs/ADR-team-execution-v1.md`**).
 - **Unified module state** (Phase 18 track) extends SQLite for additional module rows and CLI introspection (`get-module-state`, `list-module-states`) where enabled.
 
 ### Persisted artifacts and CLI inventory

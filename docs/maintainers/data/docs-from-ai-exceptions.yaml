@@ -51,7 +51,7 @@ exceptions:
   - path: docs/maintainers/data/**
     reason: Data artifacts (YAML/JSON inventories) except ai-to-docs-coverage.json which is hand-maintained manifest.
     owner: maintainers
-  - path: docs/maintainers/ADR-*.md
+  - path: docs/maintainers/adrs/ADR-*.md
     reason: ADRs are maintainer acceptance records; not emitted from .ai in v1 pipeline (cross-link only).
     owner: maintainers
   - path: docs/maintainers/RELEASING.md

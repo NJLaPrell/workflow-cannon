@@ -1,4 +1,4 @@
-<!-- GENERATED FROM .ai/workbooks/task-engine-workbook.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+<!-- GENERATED FROM .ai/workbooks/task-engine-workbook.md — edit that file; do not hand-edit this render (see docs/maintainers/adrs/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
 
 meta|doc=workbook|truth=canonical|schema=base.v2|status=active|profile=workbook
 

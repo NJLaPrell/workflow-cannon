@@ -16,7 +16,7 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
 - **Canonical goals and principles**: `.ai/PRINCIPLES.md` — decision rules and trade-off order
 - **Project intent and boundaries**: `README.md`, `docs/maintainers/ROADMAP.md`, `docs/maintainers/ARCHITECTURE.md`
 - **Execution and planning**: task-engine state (default SQLite `.workspace-kit/tasks/workspace-kit.db`; JSON opt-out `.workspace-kit/tasks/state.json`) — queue, dependencies, and execution tracking
-- **Operational runbooks**: `docs/maintainers/RELEASING.md` plus generated runbooks under `docs/maintainers/runbooks/` (canonical sources: `.ai/runbooks/`; see `docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md`)
+- **Operational runbooks**: `docs/maintainers/RELEASING.md` plus generated runbooks under `docs/maintainers/runbooks/` (canonical sources: `.ai/runbooks/`; see `docs/maintainers/adrs/ADR-ai-canonical-maintainer-docs-pipeline.md`)
 - **Maintainer playbooks (direction sets)**: `docs/maintainers/playbooks/` — generated from `.ai/playbooks/` (same ADR); ordered checklists that **compose** canonical docs by link; see `docs/maintainers/playbooks/README.md`
 - **Agent enforcement layer**: `.cursor/rules/*.mdc` — editor/agent behavior rules
 - **Reusable agent task templates**: `tasks/*.md`
@@ -105,12 +105,12 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
 
 - **Skill pack**
   - **Definition**: A discoverable instruction bundle under a configured skill root (default **`.claude/skills/<skill-id>/`**) with **`SKILL.md`** (YAML frontmatter + Markdown body) and optional **`workspace-kit-skill.json`** sidecar; kit id equals the directory name.
-  - **Defined in**: **`docs/maintainers/ADR-skill-packs-v1.md`**, **`skills`** module instructions under **`src/modules/skills/instructions/`**.
+  - **Defined in**: **`docs/maintainers/adrs/ADR-skill-packs-v1.md`**, **`skills`** module instructions under **`src/modules/skills/instructions/`**.
   - **Enforced in**: **`list-skills`** / **`inspect-skill`** / **`apply-skill`** / **`recommend-skills`**; **`metadata.skillIds`** validation on task create/update when the skills module is enabled.
 
 - **Wishlist**
   - **Definition**: Ideation backlog represented as Task Engine tasks with `type: "wishlist_intake"` and stable `T###` ids. Legacy `W###` ids may appear only as provenance in `metadata.legacyWishlistId` after a one-time migration; new intake does not mint `W###` ids.
-  - **Defined in**: `src/modules/task-engine/wishlist/wishlist-intake.ts`, `wishlist/wishlist-types.ts` (legacy wire shapes), instructions under `src/modules/task-engine/instructions/`, ADR `docs/maintainers/ADR-unified-task-store-wishlist-and-improvement-state.md`.
+  - **Defined in**: `src/modules/task-engine/wishlist/wishlist-intake.ts`, `wishlist/wishlist-types.ts` (legacy wire shapes), instructions under `src/modules/task-engine/instructions/`, ADR `docs/maintainers/adrs/ADR-unified-task-store-wishlist-and-improvement-state.md`.
   - **Workflow (which id to create)**: `docs/maintainers/runbooks/wishlist-workflow.md` — table for **`T###` execution** vs **`wishlist_intake`** vs **`type: "improvement"`** (same **`T###`** id pattern; legacy **`imp-*`** hashes may remain in older task stores).
   - **Enforced in**: Task Engine `create-wishlist` / `list-wishlist` / `get-wishlist` / `update-wishlist` / `convert-wishlist`, strict known-type rules for `wishlist_intake`, and planning-boundary responses (`scope: tasks-only` for execution queues).
 
@@ -177,7 +177,7 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
   - **Enforced in**: writer path on new recommendations only; omit when not transcript-sourced.
 
 - **blockedReasonCategory (task metadata, v1)**
-  - **Definition**: Optional string label for why a blocked task is waiting (`human_review`, `external_dependency`, `scope_unclear` — see **`docs/maintainers/ADR-blocked-reason-category-v1.md`**).
+  - **Definition**: Optional string label for why a blocked task is waiting (`human_review`, `external_dependency`, `scope_unclear` — see **`docs/maintainers/adrs/ADR-blocked-reason-category-v1.md`**).
   - **Defined in**: ADR above; consumed by `list-tasks` JSON filter **`blockedReasonCategory`**.
   - **Enforced in**: none in v1 (values are advisory; unknown strings tolerated).
 

@@ -31,7 +31,7 @@ Basic operating guidance for AI agents working in this repository.
 | Kind | Where | Notes |
 | --- | --- | --- |
 | Canonical maintainer prose | `docs/maintainers/*.md` | Primary edits for process and strategy **except** paths emitted by the Phase 56 `.ai` → `docs` pipeline (see below). |
-| `.ai` → `docs` pipeline (Phase 56) | `.ai/workbooks/`, `.ai/runbooks/`, `.ai/playbooks/` → matching `docs/maintainers/` | **`docs/maintainers/data/ai-to-docs-coverage.json`** is the manifest; run **`pnpm run generate-maintainer-docs-from-ai`** after editing sources. See **`docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md`**. |
+| `.ai` → `docs` pipeline (Phase 56) | `.ai/workbooks/`, `.ai/runbooks/`, `.ai/playbooks/` → matching `docs/maintainers/` | **`docs/maintainers/data/ai-to-docs-coverage.json`** is the manifest; run **`pnpm run generate-maintainer-docs-from-ai`** after editing sources. See **`docs/maintainers/adrs/ADR-ai-canonical-maintainer-docs-pipeline.md`**. |
 | Machine / generated | `.ai/*.md` | Some outputs are **generated** by the documentation module; **`.ai/PRINCIPLES.md`** and **`.ai/module-build.md`** are **hand-maintained** machine dialect — see **`docs/maintainers/RELEASING.md`** when changing **`rule|id=R###`**. |
 | Cursor enforcement mirrors | `.cursor/rules/*.mdc` | Pointer-first; see **`docs/maintainers/module-build-guide.md`** → **Cursor rules**. |
 
@@ -113,7 +113,7 @@ Before changing **task-engine state**, **policy traces**, **approvals**, **trans
 
 ### Native SQLite (`better-sqlite3`) portability
 
-Default task persistence uses **`better-sqlite3`**. **`workspace-kit doctor`** surfaces load failures with rebuild hints when **`tasks.persistenceBackend`** is **`sqlite`**. Full consumer troubleshooting (symptoms, ordered recovery, postinstall behavior): **`docs/maintainers/runbooks/native-sqlite-consumer-install.md`**. Distribution stance: **`docs/maintainers/ADR-native-sqlite-consumer-distribution.md`**.
+Default task persistence uses **`better-sqlite3`**. **`workspace-kit doctor`** surfaces load failures with rebuild hints when **`tasks.persistenceBackend`** is **`sqlite`**. Full consumer troubleshooting (symptoms, ordered recovery, postinstall behavior): **`docs/maintainers/runbooks/native-sqlite-consumer-install.md`**. Distribution stance: **`docs/maintainers/adrs/ADR-native-sqlite-consumer-distribution.md`**.
 
 ### When the agent must run terminal commands (examples)
 

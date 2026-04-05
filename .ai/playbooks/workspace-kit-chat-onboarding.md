@@ -134,5 +134,5 @@ Numbered lists are the **default** presentation for §2 and §3. Offer an unnumb
 
 - [`workspace-kit-chat-behavior-interview.md`](./workspace-kit-chat-behavior-interview.md) — long personality interview (**`/behavior-interview`**)
 - [`runbooks/agent-guidance-onboarding.md`](../runbooks/agent-guidance-onboarding.md)
-- [`ADR-agent-guidance-profile-rpg-party-v1.md`](../ADR-agent-guidance-profile-rpg-party-v1.md)
+- [`ADR-agent-guidance-profile-rpg-party-v1.md`](../adrs/ADR-agent-guidance-profile-rpg-party-v1.md)
 - `.cursor/commands/onboarding.md`

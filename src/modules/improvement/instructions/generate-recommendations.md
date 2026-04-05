@@ -9,4 +9,4 @@ Generate evidence-backed improvement recommendations.
 
 ## Rehearsal (`dryRun`)
 
-Pass **`"dryRun":true`** in the third JSON argument alongside required **`policyApproval`**. Response code is **`recommendations-rehearsal`**; policy traces prefix the message with **`policy-rehearsal`** for stable auditing. See **`docs/maintainers/ADR-policy-rehearsal-dry-run.md`**.
+Pass **`"dryRun":true`** in the third JSON argument alongside required **`policyApproval`**. Response code is **`recommendations-rehearsal`**; policy traces prefix the message with **`policy-rehearsal`** for stable auditing. See **`docs/maintainers/adrs/ADR-policy-rehearsal-dry-run.md`**.

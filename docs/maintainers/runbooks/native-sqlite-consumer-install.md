@@ -1,4 +1,4 @@
-<!-- GENERATED FROM .ai/runbooks/native-sqlite-consumer-install.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+<!-- GENERATED FROM .ai/runbooks/native-sqlite-consumer-install.md — edit that file; do not hand-edit this render (see docs/maintainers/adrs/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
 
 # Native SQLite consumer install and recovery
 
@@ -24,4 +24,4 @@ Canonical troubleshooting for **`better-sqlite3`** when using **`tasks.persisten
 
 ## Policy reference
 
-Decision record: **`docs/maintainers/ADR-native-sqlite-consumer-distribution.md`**.
+Decision record: **`docs/maintainers/adrs/ADR-native-sqlite-consumer-distribution.md`**.

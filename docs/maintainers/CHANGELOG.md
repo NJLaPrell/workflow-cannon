@@ -8,11 +8,22 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+(none)
+
+## [0.58.2] - 2026-04-05
+
+Phase 58 visibility — **`dashboard-summary`** surfaces **`kit_team_assignments`** for operators (**`T728`**), plus maintainer doc pipeline / ADR folder hygiene and improvement-task metadata tightening from the prior unreleased train.
+
+### Added
+
+- **`dashboard-summary` `data.schemaVersion` 2** — read-only **`teamExecution`** facet: counts by status, **`topActive`** (up to 15 in-flight rows: assigned / submitted / blocked) with **`executionTaskTitle`** resolved from the task store when the **`T###`** exists. Cursor extension **0.1.7** renders a **Team assignments** card (read-only).
+- **Improvement tasks** — **`generate-recommendations`** (and ingest-driven generation) now mint the next **`T###`** id instead of **`imp-*`** hashes; new rows include **`metadata.supportingReasoning`**. **`create-task`** / **`update-task`** require **`metadata.issue`** and **`metadata.supportingReasoning`** for **`type: "improvement"`** except legacy **`imp-<hex>`** rows (may add reasoning on a later update). Playbooks and **`AGENT-CLI-MAP`** updated for problem-report logging and cadence hints.
+
 ### Changed
 
-- **Improvement tasks** — **`generate-recommendations`** (and ingest-driven generation) now mint the next **`T###`** id instead of **`imp-*`** hashes; new rows include **`metadata.supportingReasoning`**. **`create-task`** / **`update-task`** require **`metadata.issue`** and **`metadata.supportingReasoning`** for **`type: "improvement"`** except legacy **`imp-<hex>`** rows (may add reasoning on a later update). Playbooks and **`AGENT-CLI-MAP`** updated for problem-report logging and cadence hints.
-- Phase **59** Cursor chat prefill experiments **`T668`–`T670`** **`cancelled`** via task-engine **`run-transition`** (**2026-04-04**); roadmap pointer + maintainer status YAML aligned.
-- Maintainer snapshot + **`kit.currentPhaseNumber`** reset to **Phase 58** as current (**2026-04-04**); **`current_kit_phase` / `next_kit_phase` 58**.
+- Maintainer ADRs consolidated under **`docs/maintainers/adrs/`** (imports and cross-links updated). Phase **59** Cursor chat prefill experiments **`T668`–`T670`** **`cancelled`** (**2026-04-04**); roadmap pointer + maintainer status YAML aligned. Maintainer snapshot + **`kit.currentPhaseNumber`** reset to **Phase 58** as current; **`current_kit_phase` / `next_kit_phase` 58**.
+- **`task-engine-run-contracts`** / pilot validation metadata aligned with **`v0.58.2`**.
+- **`compatibility-matrix.json`** — **`improvement`** module **`0.9.0` → `0.9.1`** (runtime alignment).
 
 ## [0.58.1] - 2026-04-04
 
@@ -35,7 +46,7 @@ Phase 58 — **Team execution v1** (**`T665`–`T667`**): supervisor/worker assi
 
 - **SQLite `user_version` 7** — Table **`kit_team_assignments`** (migration in **`src/core/state/workspace-kit-sqlite.ts`**).
 - **`team-execution` module** (`0.1.0`) — **`list-assignments`**; mutating: **`register-assignment`**, **`submit-assignment-handoff`**, **`block-assignment`**, **`reconcile-assignment`**, **`cancel-assignment`** (**`team-execution.persist`**).
-- **ADR** — **`docs/maintainers/ADR-team-execution-v1.md`**; runbook **`docs/maintainers/runbooks/team-execution-supervisor.md`**.
+- **ADR** — **`docs/maintainers/adrs/ADR-team-execution-v1.md`**; runbook **`docs/maintainers/runbooks/team-execution-supervisor.md`**.
 - **`get-kit-persistence-map`** — **`teamExecution`** section + **`workspace_module_state.knownModuleIds`** includes **`team-execution`**.
 
 ### Changed
@@ -51,7 +62,7 @@ Phase 57 — **Native subagents v1** (**`T662`–`T664`**): kit-owned definition
 
 - **SQLite `user_version` 6** — Tables **`kit_subagent_definitions`**, **`kit_subagent_sessions`**, **`kit_subagent_messages`** (migration in **`src/core/state/workspace-kit-sqlite.ts`**).
 - **`subagents` module** (`0.1.0`) — Commands: **`list-subagents`**, **`get-subagent`**, **`list-subagent-sessions`**, **`get-subagent-session`**, **`register-subagent`**, **`retire-subagent`**, **`spawn-subagent`**, **`message-subagent`**, **`close-subagent-session`**. Mutations use policy operation **`subagents.persist`**.
-- **ADR** — **`docs/maintainers/ADR-subagent-registry-v1.md`**; runbook **`docs/maintainers/runbooks/subagent-registry.md`** (generated from **`.ai/runbooks/subagent-registry.md`**).
+- **ADR** — **`docs/maintainers/adrs/ADR-subagent-registry-v1.md`**; runbook **`docs/maintainers/runbooks/subagent-registry.md`** (generated from **`.ai/runbooks/subagent-registry.md`**).
 - **`get-kit-persistence-map`** — **`subagents`** section documents tables and minimum **`user_version`**.
 
 ### Changed (maintainer docs)
@@ -118,7 +129,7 @@ Phase 53 — **relational feature registry** (**`T630`–`T639`**): SQLite taxon
 
 ### Added
 
-- **ADR** — **`docs/maintainers/ADR-relational-feature-registry.md`** (Path A, junction Option 1).
+- **ADR** — **`docs/maintainers/adrs/ADR-relational-feature-registry.md`** (Path A, junction Option 1).
 - **SQLite** — **`user_version` 5**: **`task_engine_components`**, **`task_engine_features`**, **`task_engine_task_features`**; **`PRAGMA foreign_keys = ON`** on kit SQLite opens; idempotent migration + seed from **`feature-taxonomy.json`**.
 - **Task engine** — **`list-components`**, **`list-features`**, **`backfill-task-feature-links`**, **`export-feature-taxonomy-json`**; **`list-tasks`** filters **`featureId`** / **`componentId`**; error code **`unknown-feature-id`** for invalid feature slugs on execution tasks.
 - **Documentation** — Roadmap / feature-taxonomy rendering can load taxonomy from the planning database; set **`WORKSPACE_KIT_DOC_TAXONOMY_JSON_ONLY=1`** when regenerating committed maintainer markdown so **`pnpm run check`** matches CI (JSON sources) when a local planning DB exists.
@@ -140,7 +151,7 @@ Phase 52 — **agent/human CLI ergonomics** (**`T624`–`T629`**): stable failur
 ### Added
 
 - **CLI JSON** — Optional **`remediation`** on `workspace-kit run` failures: **`instructionPath`** (repo-relative `src/modules/.../instructions/*.md`) and **`docPath`** (`docs/maintainers/...`); **`policy-denied`** also sets **`remediation.docPath`** (legacy **`remediationDoc`** unchanged). Router **`unknown-command`** now returns structured JSON on stdout (exit **1**) with remediation hints.
-- **`doctor --agent-instruction-surface`** — Payload includes **`errorRemediationCatalog`** (stable `code` → paths). ADR: **`docs/maintainers/ADR-cli-error-remediation-contract.md`**.
+- **`doctor --agent-instruction-surface`** — Payload includes **`errorRemediationCatalog`** (stable `code` → paths). ADR: **`docs/maintainers/adrs/ADR-cli-error-remediation-contract.md`**.
 - **Pilot human affordance** — **`workspace-kit run <command> --schema-only`** for **`run-transition`**, **`create-task`**, **`update-task`**, **`dashboard-summary`** → **`code: "run-args-schema"`** with bundled schema + **`sampleArgs`**. Plan: **`docs/maintainers/plans/phase-52-human-cli-affordances.md`**.
 - **Maintainer docs** — **`AGENT-CLI-MAP.md`** recovery subsection; **`CLI-VISUAL-GUIDE.md`**; extension **`README`** operator note.
 
@@ -172,7 +183,7 @@ Phase 50 — **T600 pilot: runtime `run` JSON args validation** (**`T616`–`T62
 
 ### Docs
 
-- **`docs/maintainers/ADR-runtime-run-args-validation-pilot.md`**, **`module-build-guide.md`** (pilot extension), **`persisted-artifacts-and-cli-inventory.md`**.
+- **`docs/maintainers/adrs/ADR-runtime-run-args-validation-pilot.md`**, **`module-build-guide.md`** (pilot extension), **`persisted-artifacts-and-cli-inventory.md`**.
 
 ### Changed
 
@@ -212,7 +223,7 @@ Phase 47 — **agent guidance profile (RPG party v1)** (**`T585`–`T590`**).
 
 ### Added
 
-- **Design** — **`docs/maintainers/ADR-agent-guidance-profile-rpg-party-v1.md`** (frozen tier catalog NPC → BBEG, storage keys, advisory boundary).
+- **Design** — **`docs/maintainers/adrs/ADR-agent-guidance-profile-rpg-party-v1.md`** (frozen tier catalog NPC → BBEG, storage keys, advisory boundary).
 - **Config** — **`kit.agentGuidance.profileSetId`**, **`kit.agentGuidance.tier`** (1–5), **`kit.agentGuidance.displayLabel`**; validation in persisted project/user config.
 - **CLI** — **`resolve-agent-guidance`**, **`set-agent-guidance`** (optional **`interactive:true`**).
 - **Agent behavior** — **`resolve-behavior-profile`** includes **`data.agentGuidance`** with **`advisoryModulation`** (tier × explanation verbosity).
@@ -278,7 +289,7 @@ Phase 44 — **planning-store optimistic concurrency**, **dependency-aware `get-
 
 ### Docs
 
-- **ADR** — **`docs/maintainers/ADR-planning-generation-optimistic-concurrency.md`**.
+- **ADR** — **`docs/maintainers/adrs/ADR-planning-generation-optimistic-concurrency.md`**.
 - **Task Engine** — **`get-next-actions.md`**, **`run-transition.md`** (optional **`expectedPlanningGeneration`**).
 
 ### Changed
@@ -340,7 +351,7 @@ Phase 41 — **relational SQLite task store** (optional in-place migration from 
 - **Envelope columns** on **`workspace_planning_state`** — **`transition_log_json`**, **`mutation_log_json`**, **`relational_tasks`** (0 = blob mode, 1 = relational mode).
 - **`migrate-task-persistence`** direction **`sqlite-blob-to-relational`** — explicit, transactional migration with verification; supports **`dryRun`**.
 - **`TaskEntity`** optional fields **`summary`**, **`description`**, **`risk`** — set via **`create-task`** / **`update-task`**; persisted in relational rows.
-- **ADR** — **`docs/maintainers/ADR-relational-sqlite-task-store.md`**.
+- **ADR** — **`docs/maintainers/adrs/ADR-relational-sqlite-task-store.md`**.
 - **Export** — **`TASK_ENGINE_TASKS_TABLE`** from **`@workflow-cannon/workspace-kit`** core entry.
 - **Compatibility matrix** — **`task-engine`** module **`0.7.0`** (relational persistence surface).
 
@@ -385,7 +396,7 @@ Phase 39 — SQLite persistence hardening (schema versioning, integrity, backup,
 - **`workspace-kit run backup-planning-sqlite`** — Online backup of the planning DB via **`better-sqlite3`** (**`backup-planning-sqlite-runtime.ts`**).
 - **`workspace-kit doctor`** — **`PRAGMA quick_check`** for configured SQLite planning DB; persistence summary includes **Kit SQLite schema (`user_version`)** when the file exists.
 - **`list-module-states`** — Response includes **`kitSqliteUserVersion`**.
-- **ADR** — **`docs/maintainers/ADR-json-persistence-deprecation.md`** (JSON opt-out deprecation direction + future semver-major removal).
+- **ADR** — **`docs/maintainers/adrs/ADR-json-persistence-deprecation.md`** (JSON opt-out deprecation direction + future semver-major removal).
 - **Runbook** — **`docs/maintainers/runbooks/json-to-sqlite-one-shot-upgrade.md`**.
 - **Exports** — **`KIT_SQLITE_USER_VERSION`**, **`prepareKitSqliteDatabase`**, **`readKitSqliteUserVersion`** from **`@workflow-cannon/workspace-kit`** core entry.
 
@@ -537,7 +548,7 @@ Phase 30 — persistence, packaging, and task-store evolution (**`T450`–`T452`
 
 ### Added
 
-- **ADR** — **`docs/maintainers/ADR-native-sqlite-consumer-distribution.md`**, **`ADR-task-store-sqlite-document-model.md`**, **`ADR-task-store-schemaversion-policy.md`**.
+- **ADR** — **`docs/maintainers/adrs/ADR-native-sqlite-consumer-distribution.md`**, **`ADR-task-store-sqlite-document-model.md`**, **`ADR-task-store-schemaversion-policy.md`**.
 - **Runbooks** — **`docs/maintainers/runbooks/native-sqlite-consumer-install.md`**, **`docs/maintainers/runbooks/task-persistence-operator.md`**.
 - **Task Engine** — **`task-store-migration.ts`**: accept **`schemaVersion` `2`** on read (no-op forward label); normalize to **`1`** for runtime and JSON save.
 - **CLI** — **`workspace-kit doctor`**: dynamic **`better-sqlite3`** import when **`tasks.persistenceBackend`** is **`sqlite`** (clearer failure when the native addon cannot load); post-pass lines for effective persistence backend and canonical paths.
@@ -618,7 +629,7 @@ Phase 26 — module platform + improvement execution closeout (**`T388`**, **`T3
 
 ### Documentation
 
-- ADR: `docs/maintainers/ADR-sqlite-default-persistence.md`. Updates to `README.md`, `AGENTS.md`, `ARCHITECTURE.md`, `ADR-task-sqlite-persistence.md`, task-engine `config.md` / `migrate-task-persistence` instruction.
+- ADR: `docs/maintainers/adrs/ADR-sqlite-default-persistence.md`. Updates to `README.md`, `AGENTS.md`, `ARCHITECTURE.md`, `ADR-task-sqlite-persistence.md`, task-engine `config.md` / `migrate-task-persistence` instruction.
 
 ## [0.24.0] - 2026-03-30
 
@@ -637,7 +648,7 @@ Phase 24 — unified task intake (`T425`–`T432`): wishlist ideation is **`wish
 
 ### Migration
 
-- After upgrade, run `workspace-kit run migrate-wishlist-intake '{}'` once per workspace (use `dryRun: true` first). See ADR `docs/maintainers/ADR-unified-task-store-wishlist-and-improvement-state.md`.
+- After upgrade, run `workspace-kit run migrate-wishlist-intake '{}'` once per workspace (use `dryRun: true` first). See ADR `docs/maintainers/adrs/ADR-unified-task-store-wishlist-and-improvement-state.md`.
 
 ## [0.23.0] - 2026-03-28
 
@@ -776,7 +787,7 @@ Phase 15 — Optional SQLite persistence for Task Engine + Wishlist (single data
 - **`tasks.persistenceBackend`**: `json` (default) or `sqlite`; **`tasks.sqliteDatabaseRelativePath`** (default `.workspace-kit/tasks/workspace-kit.db`).
 - **`SqliteDualPlanningStore`**: one row stores full task and wishlist JSON documents; WAL journal.
 - **`migrate-task-persistence`** command: `json-to-sqlite` / `sqlite-to-json` with `dryRun` and `force`.
-- **ADR:** `docs/maintainers/ADR-task-sqlite-persistence.md`.
+- **ADR:** `docs/maintainers/adrs/ADR-task-sqlite-persistence.md`.
 
 ### Changed
 

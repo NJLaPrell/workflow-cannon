@@ -840,7 +840,7 @@ test("taskEngineModule onCommand dashboard-summary returns stable shape", async 
   assert.equal(result.ok, true);
   assert.equal(result.code, "dashboard-summary");
   const d = result.data;
-  assert.equal(d.schemaVersion, 1);
+  assert.equal(d.schemaVersion, 2);
   assert.ok(typeof d.taskStoreLastUpdated === "string");
   assert.equal(d.stateSummary.ready, 1);
   assert.equal(d.readyQueueCount, 1);
@@ -885,6 +885,12 @@ test("taskEngineModule onCommand dashboard-summary returns stable shape", async 
   assert.equal(d.agentGuidance.profileSetId, "rpg_party_v1");
   assert.equal(d.agentGuidance.temperamentProfileId, "builtin:balanced");
   assert.equal(d.agentGuidance.temperamentLabel, "The Steady Adventurer");
+  assert.ok(d.teamExecution);
+  assert.equal(d.teamExecution.schemaVersion, 1);
+  assert.equal(d.teamExecution.available, true);
+  assert.equal(d.teamExecution.totalCount, 0);
+  assert.equal(d.teamExecution.activeCount, 0);
+  assert.ok(Array.isArray(d.teamExecution.topActive));
 });
 
 test("taskEngineModule dashboard-summary wishlist openTop includes backing taskId", async () => {

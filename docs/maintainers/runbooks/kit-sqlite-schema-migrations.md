@@ -1,4 +1,4 @@
-<!-- GENERATED FROM .ai/runbooks/kit-sqlite-schema-migrations.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+<!-- GENERATED FROM .ai/runbooks/kit-sqlite-schema-migrations.md — edit that file; do not hand-edit this render (see docs/maintainers/adrs/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
 
 # Kit SQLite schema versioning and migrations
 
@@ -34,4 +34,4 @@ Do **not** add a second ad-hoc migration runner for the same files. If a new SQL
 
 Reconciles Phase 39 **T527** and Phase 41 **T541** with a single documented story; future DDL extends **`migrateKitSqliteSchema`** only.
 
-**v3 (Phase 44):** `workspace_planning_state.planning_generation` — optimistic concurrency counter; see **`docs/maintainers/ADR-planning-generation-optimistic-concurrency.md`**.
+**v3 (Phase 44):** `workspace_planning_state.planning_generation` — optimistic concurrency counter; see **`docs/maintainers/adrs/ADR-planning-generation-optimistic-concurrency.md`**.

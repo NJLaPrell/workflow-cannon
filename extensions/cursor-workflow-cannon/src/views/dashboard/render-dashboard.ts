@@ -546,6 +546,82 @@ function buildDashboardStateCountGridHtml(ss: Record<string, unknown>): string {
  * **Role** — `data.agentGuidance.displayLabel` (effective `kit.agentGuidance` tier + RPG party catalog).
  * **Agent Temperament** — resolved agent-behavior profile label (`builtin:*` / `custom:*`).
  */
+function renderTeamExecutionSection(team: unknown): string {
+  if (!team || typeof team !== "object") {
+    return "";
+  }
+  const o = team as Record<string, unknown>;
+  if (o.schemaVersion !== 1) {
+    return "";
+  }
+  const avail = o.available === true;
+  const total = typeof o.totalCount === "number" ? o.totalCount : 0;
+  const active = typeof o.activeCount === "number" ? o.activeCount : 0;
+  const by = (o.byStatus as Record<string, unknown> | undefined) ?? {};
+  const top = Array.isArray(o.topActive) ? (o.topActive as unknown[]) : [];
+  const statusLine =
+    "<p class=\"muted\">Total " +
+    String(total) +
+    " · Active " +
+    String(active) +
+    " · Assigned " +
+    String(typeof by.assigned === "number" ? by.assigned : 0) +
+    " · Submitted " +
+    String(typeof by.submitted === "number" ? by.submitted : 0) +
+    " · Blocked " +
+    String(typeof by.blocked === "number" ? by.blocked : 0) +
+    "</p>";
+  if (!avail) {
+    return (
+      '<section class="dash-card" aria-label="Team execution">' +
+      "<p><b>Team assignments</b></p>" +
+      '<p class="muted">Team execution data unavailable (kit SQLite below v7 or store not readable).</p>' +
+      "</section>"
+    );
+  }
+  if (top.length === 0) {
+    return (
+      '<section class="dash-card" aria-label="Team execution">' +
+      "<p><b>Team assignments</b></p>" +
+      statusLine +
+      '<p class="muted">No active supervisor assignments.</p>' +
+      "</section>"
+    );
+  }
+  const rows = top
+    .map((x) => {
+      const r = x as Record<string, unknown>;
+      const id = escapeHtml(String(r.id ?? ""));
+      const tid = escapeHtml(String(r.executionTaskId ?? ""));
+      const title = r.executionTaskTitle != null ? escapeHtml(String(r.executionTaskTitle)) : "";
+      const st = escapeHtml(String(r.status ?? ""));
+      const sup = escapeHtml(String(r.supervisorId ?? ""));
+      const wrk = escapeHtml(String(r.workerId ?? ""));
+      const label =
+        "- " +
+        id +
+        " → " +
+        tid +
+        (title ? " " + title : "") +
+        " · " +
+        st +
+        " · sup " +
+        sup +
+        " · worker " +
+        wrk;
+      return '<div class="dash-row" role="listitem"><span class="dash-row-label">' + label + "</span></div>";
+    })
+    .join("");
+  return (
+    '<section class="dash-card" aria-label="Team execution">' +
+    "<p><b>Team assignments</b> (read-only)</p>" +
+    statusLine +
+    '<div class="dash-row-list" role="list">' +
+    rows +
+    "</div></section>"
+  );
+}
+
 function renderAgentGuidanceSection(ag: unknown): string {
   if (!ag || typeof ag !== "object") {
     return "";
@@ -817,6 +893,7 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
   return (
     renderAgentGuidanceSection(d.agentGuidance) +
     renderWorkspaceOverviewSection(ws as Record<string, unknown> | null) +
+    renderTeamExecutionSection(d.teamExecution) +
     tasksBlock +
     wishlistSection +
     renderPlanningSession(planningSession) +

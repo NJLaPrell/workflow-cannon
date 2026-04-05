@@ -46,7 +46,7 @@ Shapes are defined in **`src/contracts/`** (TypeScript) and/or **`schemas/task-e
 
 | Command | Mutating | Args / success reference | Schema / TS | Enforcement | Owner |
 | --- | --- | --- | --- | --- | --- |
-| `dashboard-summary` | No | `{}` or optional `config` / `actor` → `DashboardSummaryData` | `src/contracts/dashboard-summary-run.ts` + run-contracts schema; CLI pilot AJV | Extension compile; contract + pilot snapshot stages in `pnpm run check` | task-engine |
+| `dashboard-summary` | No | `{}` or optional `config` / `actor` → `DashboardSummaryData` (`schemaVersion` **2**; includes read-only **`teamExecution`** rollup from `kit_team_assignments` when kit SQLite `user_version` ≥ 7) | `src/contracts/dashboard-summary-run.ts` + run-contracts schema; CLI pilot AJV | Extension compile; contract + pilot snapshot stages in `pnpm run check` | task-engine |
 | `list-tasks` | No | Filters in instruction | Run-contracts dashboard/task list facets | `check` | task-engine |
 | `get-next-actions` | No | `{}` or filters | Run-contracts / instruction | `check` | task-engine |
 | `get-task` | No | `taskId`, optional `historyLimit` | Instruction + store | `check` | task-engine |

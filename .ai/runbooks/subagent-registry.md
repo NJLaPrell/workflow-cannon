@@ -19,6 +19,6 @@ Record **subagent definitions** and **session/message** provenance in kit SQLite
 
 ## Canon
 
-- ADR: `docs/maintainers/ADR-subagent-registry-v1.md`
+- ADR: `docs/maintainers/adrs/ADR-subagent-registry-v1.md`
 - Persistence map: `workspace-kit run get-kit-persistence-map '{}'`
 - Policy: `docs/maintainers/POLICY-APPROVAL.md` — Tier B for mutating subagent commands.

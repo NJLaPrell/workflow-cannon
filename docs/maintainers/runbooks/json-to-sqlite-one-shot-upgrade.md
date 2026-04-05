@@ -1,4 +1,4 @@
-<!-- GENERATED FROM .ai/runbooks/json-to-sqlite-one-shot-upgrade.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+<!-- GENERATED FROM .ai/runbooks/json-to-sqlite-one-shot-upgrade.md — edit that file; do not hand-edit this render (see docs/maintainers/adrs/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
 
 # One-shot upgrade: JSON task/wishlist stores → unified SQLite
 
@@ -51,4 +51,4 @@ Use this runbook when **legacy JSON** task/wishlist files exist (for example **`
 
 - [`task-persistence-operator.md`](./task-persistence-operator.md)
 - [`native-sqlite-consumer-install.md`](./native-sqlite-consumer-install.md)
-- ADR: [`../ADR-json-persistence-deprecation.md`](../ADR-json-persistence-deprecation.md)
+- ADR: [`ADR-json-persistence-deprecation.md`](../adrs/ADR-json-persistence-deprecation.md)

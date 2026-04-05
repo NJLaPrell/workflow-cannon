@@ -3,7 +3,7 @@
   "code": "dashboard-summary",
   "message": "Dashboard summary built from task store and maintainer status snapshot",
   "data": {
-    "schemaVersion": 1,
+    "schemaVersion": 2,
     "planningGeneration": 0,
     "planningGenerationPolicy": "off",
     "agentGuidance": {
@@ -14,6 +14,20 @@
       "usingDefaultTier": true,
       "temperamentProfileId": "builtin:balanced",
       "temperamentLabel": "The Steady Adventurer"
+    },
+    "teamExecution": {
+      "schemaVersion": 1,
+      "available": true,
+      "totalCount": 0,
+      "activeCount": 0,
+      "byStatus": {
+        "assigned": 0,
+        "submitted": 0,
+        "blocked": 0,
+        "reconciled": 0,
+        "cancelled": 0
+      },
+      "topActive": []
     },
     "taskStoreLastUpdated": "2026-03-27T12:00:00.000Z",
     "workspaceStatus": {

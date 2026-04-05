@@ -8,7 +8,7 @@ Treat **hand-editing the database** as risky—same class of problem as hand-edi
 
 ## JSON opt-out / legacy import
 
-A JSON document at **`.workspace-kit/tasks/state.json`** (path from **`tasks.storeRelativePath`**) is supported as an **opt-out** persistence shape when configured, and remains the **legacy import** surface for **`migrate-task-persistence`**. **`tasks.persistenceBackend: "json"`** is **not** valid for default runtime configuration on current kit versions—see **`docs/maintainers/ADR-json-persistence-deprecation.md`** / **`docs/maintainers/runbooks/json-to-sqlite-one-shot-upgrade.md`**.
+A JSON document at **`.workspace-kit/tasks/state.json`** (path from **`tasks.storeRelativePath`**) is supported as an **opt-out** persistence shape when configured, and remains the **legacy import** surface for **`migrate-task-persistence`**. **`tasks.persistenceBackend: "json"`** is **not** valid for default runtime configuration on current kit versions—see **`docs/maintainers/adrs/ADR-json-persistence-deprecation.md`** / **`docs/maintainers/runbooks/json-to-sqlite-one-shot-upgrade.md`**.
 
 When the engine loads that JSON document, it uses **`JSON.parse`** and expects:
 

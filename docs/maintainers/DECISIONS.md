@@ -33,6 +33,6 @@ Use this template for each new entry:
 
 ## ADR hygiene expectations
 
-- Record medium/high-impact architecture or policy model changes in either this file (`D-XXX`) or a maintainer ADR (`docs/maintainers/ADR-*.md`) before merge.
+- Record medium/high-impact architecture or policy model changes in either this file (`D-XXX`) or a maintainer ADR (`docs/maintainers/adrs/ADR-*.md`) before merge.
 - If a change intentionally does **not** warrant an ADR, include a one-line rationale in the related task notes or PR description.
 - Keep decision ownership explicit: strategic rationale here, queue/execution state in `.workspace-kit/tasks/state.json`.

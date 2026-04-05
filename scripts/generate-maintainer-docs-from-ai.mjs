@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Phase 56 — emit human-facing docs/maintainers/* from canonical .ai/ sources.
- * @see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md
+ * @see docs/maintainers/adrs/ADR-ai-canonical-maintainer-docs-pipeline.md
  */
 import fs from "node:fs";
 import path from "node:path";

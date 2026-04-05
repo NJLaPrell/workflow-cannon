@@ -22,4 +22,4 @@ Canonical troubleshooting for **`better-sqlite3`** when using **`tasks.persisten
 
 ## Policy reference
 
-Decision record: **`docs/maintainers/ADR-native-sqlite-consumer-distribution.md`**.
+Decision record: **`docs/maintainers/adrs/ADR-native-sqlite-consumer-distribution.md`**.

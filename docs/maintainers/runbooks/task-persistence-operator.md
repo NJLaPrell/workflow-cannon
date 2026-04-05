@@ -1,4 +1,4 @@
-<!-- GENERATED FROM .ai/runbooks/task-persistence-operator.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+<!-- GENERATED FROM .ai/runbooks/task-persistence-operator.md — edit that file; do not hand-edit this render (see docs/maintainers/adrs/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
 
 # Task persistence operator map (SQLite-only runtime)
 
@@ -27,7 +27,7 @@ Single place to answer: **where is data?**, **how do I import legacy JSON?**, an
 - **Export / portability**: **`backup-planning-sqlite`** for a **`.db`** copy; **`migrate-task-persistence`** imports **`json-to-sqlite`** / **`json-to-unified-sqlite`**, or upgrades blob-only SQLite to relational rows via **`sqlite-blob-to-relational`** (**`sqlite-to-json`** removed in **v0.40.0**). Take a backup before **`sqlite-blob-to-relational`**.
 - **Blessed hot backup**: **`workspace-kit run backup-planning-sqlite`** with **`outputPath`** — uses SQLite’s online backup API (prefer over copying **`.db`** while writers are active). See **`json-to-sqlite-one-shot-upgrade.md`** for ordering with migrations.
 - **Integrity**: **`workspace-kit doctor`** runs **`PRAGMA quick_check`** on the planning DB when SQLite is configured; failures link **`native-sqlite-consumer-install.md`**.
-- **Optimistic lock**: **`tasks.planningGenerationPolicy`** (**`off`** / **`warn`** / **`require`**) controls whether mutating commands must include **`expectedPlanningGeneration`** (see **`doctor`** summary line and **`ADR-planning-generation-optimistic-concurrency.md`**). Maintainer clones often use **`require`**; published package default remains **`off`**.
+- **Optimistic lock**: **`tasks.planningGenerationPolicy`** (**`off`** / **`warn`** / **`require`**) controls whether mutating commands must include **`expectedPlanningGeneration`** (see **`doctor`** summary line and [`ADR-planning-generation-optimistic-concurrency.md`](../adrs/ADR-planning-generation-optimistic-concurrency.md)). Maintainer clones often use **`require`**; published package default remains **`off`**.
 - **Schema version**: **`PRAGMA user_version`** is owned by the kit (**`prepareKitSqliteDatabase`** / **`migrateKitSqliteSchema`** — see **`docs/maintainers/runbooks/kit-sqlite-schema-migrations.md`**). **`doctor`** persistence lines include **`Kit SQLite schema (PRAGMA user_version): N`** when the file exists; **`list-module-states`** returns **`kitSqliteUserVersion`**. New or legacy files may show **`0`** until the first read/write open runs migrations (**v0.39.0+**).
 - **Concurrency**: Kit DB connections set **`busy_timeout`** (10s) to reduce flakes when **`doctor`** and **`run`** overlap; avoid long manual locks on the same file.
 
@@ -41,9 +41,9 @@ Maintainers validate SQLite paths via tests and **`pnpm run parity`**; avoid han
 
 ## Related ADRs
 
-- [`ADR-sqlite-default-persistence.md`](../ADR-sqlite-default-persistence.md)
-- [`ADR-task-sqlite-persistence.md`](../ADR-task-sqlite-persistence.md)
-- [`ADR-task-store-sqlite-document-model.md`](../ADR-task-store-sqlite-document-model.md)
-- [`ADR-relational-sqlite-task-store.md`](../ADR-relational-sqlite-task-store.md)
-- [`ADR-native-sqlite-consumer-distribution.md`](../ADR-native-sqlite-consumer-distribution.md)
-- [`ADR-json-persistence-deprecation.md`](../ADR-json-persistence-deprecation.md)
+- [`ADR-sqlite-default-persistence.md`](../adrs/ADR-sqlite-default-persistence.md)
+- [`ADR-task-sqlite-persistence.md`](../adrs/ADR-task-sqlite-persistence.md)
+- [`ADR-task-store-sqlite-document-model.md`](../adrs/ADR-task-store-sqlite-document-model.md)
+- [`ADR-relational-sqlite-task-store.md`](../adrs/ADR-relational-sqlite-task-store.md)
+- [`ADR-native-sqlite-consumer-distribution.md`](../adrs/ADR-native-sqlite-consumer-distribution.md)
+- [`ADR-json-persistence-deprecation.md`](../adrs/ADR-json-persistence-deprecation.md)

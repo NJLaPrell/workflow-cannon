@@ -1,4 +1,4 @@
-<!-- GENERATED FROM .ai/runbooks/planning-workflow.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+<!-- GENERATED FROM .ai/runbooks/planning-workflow.md — edit that file; do not hand-edit this render (see docs/maintainers/adrs/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
 
 # Planning workflow runbook
 
@@ -73,6 +73,6 @@ After **`convert-wishlist`** (or **`create-task`**) creates execution tasks, mai
 }
 ```
 
-Apply with **`workspace-kit run update-task`** (JSON **`policyApproval`** when required). The shape is **not** validated by strict task schema in v1 — keep keys stable and document changes here. See **`ADR-task-queue-namespace.md`** for **`metadata.queueNamespace`** (separate concern).
+Apply with **`workspace-kit run update-task`** (JSON **`policyApproval`** when required). The shape is **not** validated by strict task schema in v1 — keep keys stable and document changes here. See [`ADR-task-queue-namespace.md`](../adrs/ADR-task-queue-namespace.md) for **`metadata.queueNamespace`** (separate concern).
 
 **Pilot:** pick one converted task and add the stub; confirm **`pnpm run check`** / task strict mode still pass.

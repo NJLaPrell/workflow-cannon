@@ -13,7 +13,7 @@ workspace-kit run get-next-actions '{"queueNamespace":"default"}'
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `queueNamespace` | string (optional) | When set, only tasks with matching **`metadata.queueNamespace`** are used (missing/empty metadata → **`default`**). See **`docs/maintainers/ADR-task-queue-namespace.md`**. |
+| `queueNamespace` | string (optional) | When set, only tasks with matching **`metadata.queueNamespace`** are used (missing/empty metadata → **`default`**). See **`docs/maintainers/adrs/ADR-task-queue-namespace.md`**. |
 
 Response includes **`queueNamespace`**: the filter applied, or **`null`** when unfiltered.
 

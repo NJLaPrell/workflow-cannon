@@ -11,7 +11,7 @@ Agents and operators consume `workspace-kit run` primarily as **JSON on stdout**
 
 1. **`ModuleCommandResult.remediation`** (optional) may include:
    - `instructionPath` — repo-relative path to `src/modules/<module>/instructions/<command>.md`.
-   - `docPath` — repo-relative path under `docs/maintainers/` (e.g. `POLICY-APPROVAL.md`, `ADR-planning-generation-optimistic-concurrency.md`).
+   - `docPath` — repo-relative path under `docs/maintainers/` (e.g. `POLICY-APPROVAL.md`, `adrs/ADR-planning-generation-optimistic-concurrency.md`).
    - `docAnchors` — short string hints for search (not URLs), optional.
 
 2. **Stability:** Existing `code` strings remain the compatibility contract; new fields are **additive**. Consumers that ignore `remediation` keep working.
@@ -39,5 +39,5 @@ Agents and operators consume `workspace-kit run` primarily as **JSON on stdout**
 
 ## Related
 
-- `docs/maintainers/ADR-runtime-run-args-validation-pilot.md` — pilot JSON Schema for `invalid-run-args`.
+- `docs/maintainers/adrs/ADR-runtime-run-args-validation-pilot.md` — pilot JSON Schema for `invalid-run-args`.
 - `docs/maintainers/plans/phase-52-human-cli-affordances.md` — human `--schema-only` affordance (T627–T629).

@@ -9,7 +9,7 @@ Phase 1 core module for structured task lifecycle management.
 - **Guard system**: Pluggable `TransitionGuard` hooks with built-in `state-validity` and `dependency-check` guards
 - **Auto-unblock**: Dependents automatically move `blocked → ready` when all deps complete
 - **Persistence**: Config-driven — **SQLite** only (`tasks.persistenceBackend: sqlite`); document blob **`task_store_json`** or relational **`task_engine_tasks`** after **`migrate-task-persistence`** **`sqlite-blob-to-relational`** (**v0.41+**); see `config.md`, `persistence/planning-open.ts`, `persistence/sqlite-dual-planning.ts`, maintainer ADR **`ADR-relational-sqlite-task-store.md`**
-- **Related kit tables**: Subagent registry (**`user_version` ≥ 6**) and team assignments (**`user_version` ≥ 7**) live in the same unified DB; see **`get-kit-persistence-map`** and **`docs/maintainers/ADR-team-execution-v1.md`**
+- **Related kit tables**: Subagent registry (**`user_version` ≥ 6**) and team assignments (**`user_version` ≥ 7**) live in the same unified DB; see **`get-kit-persistence-map`** and **`docs/maintainers/adrs/ADR-team-execution-v1.md`**
 - **Evidence**: Every transition produces a timestamped `TransitionEvidence` record
 - **Next-action suggestions**: Priority-sorted ready queue with blocking chain analysis
 - **Wishlist (ideation)**: Legacy `W###` path and **`wishlist_intake`** tasks; see maintainer runbooks

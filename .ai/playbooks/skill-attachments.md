@@ -4,7 +4,7 @@ Ordered direction set: attach discovered **skill pack** ids to **`T###`** rows f
 
 ## Preconditions
 
-- Skills live under **`skills.discoveryRoots`** (default **`.claude/skills/<id>/SKILL.md`**). See **`docs/maintainers/ADR-skill-packs-v1.md`** and **`docs/maintainers/runbooks/skill-packs-dual-install.md`**.
+- Skills live under **`skills.discoveryRoots`** (default **`.claude/skills/<id>/SKILL.md`**). See **`docs/maintainers/adrs/ADR-skill-packs-v1.md`** and **`docs/maintainers/runbooks/skill-packs-dual-install.md`**.
 
 ## Steps
 

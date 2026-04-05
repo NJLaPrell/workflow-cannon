@@ -77,6 +77,6 @@ workspace-kit run ingest-transcripts '{}'
 - Traces append to **`.workspace-kit/policy/traces.jsonl`** (versioned records).
 - Session grants: **`.workspace-kit/policy/session-grants.json`** (when using `scope":"session"`).
 - If denied: read the JSON line from stderr/stdout; use **`operationId`** to confirm which gated operation failed.
-- **Policy rehearsal:** `generate-recommendations` accepts **`"dryRun":true`** in JSON args (still pass **`policyApproval`** when required). Traces prefix **`policy-rehearsal`** on the **`message`** field. See **`docs/maintainers/ADR-policy-rehearsal-dry-run.md`**.
+- **Policy rehearsal:** `generate-recommendations` accepts **`"dryRun":true`** in JSON args (still pass **`policyApproval`** when required). Traces prefix **`policy-rehearsal`** on the **`message`** field. See **`docs/maintainers/adrs/ADR-policy-rehearsal-dry-run.md`**.
 
 See also **`docs/maintainers/runbooks/transcript-ingestion-operations.md`** for transcript-specific operations.

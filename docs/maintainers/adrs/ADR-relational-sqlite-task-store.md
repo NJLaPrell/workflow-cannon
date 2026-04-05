@@ -22,7 +22,7 @@ As the queue grew, whole-document parse/stringify cost and lack of indexable col
 ## Relationship to prior ADR
 
 - **Supersedes** document-first SQLite as the **recommended** long-term shape **after** **`sqlite-blob-to-relational`**; the document-first ADR remains historical context and governs **JSON file** persistence.
-- **Cross-links**: [`ADR-task-store-sqlite-document-model.md`](./ADR-task-store-sqlite-document-model.md), [`task-persistence-operator.md`](./runbooks/task-persistence-operator.md), **`PRAGMA user_version`** (**`workspace-kit-sqlite.ts`**).
+- **Cross-links**: [`ADR-task-store-sqlite-document-model.md`](./ADR-task-store-sqlite-document-model.md), [`task-persistence-operator.md`](../runbooks/task-persistence-operator.md), **`PRAGMA user_version`** (**`workspace-kit-sqlite.ts`**).
 
 ## Consequences
 

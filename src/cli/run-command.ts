@@ -74,7 +74,7 @@ export async function handleRunCommand(
             ok: false,
             code: "schema-only-unsupported",
             message: `No bundled JSON schema sample for '${subcommand}'. Pilot commands: run-transition, create-task, update-task, dashboard-summary.`,
-            remediation: { docPath: "docs/maintainers/ADR-runtime-run-args-validation-pilot.md" }
+            remediation: { docPath: "docs/maintainers/adrs/ADR-runtime-run-args-validation-pilot.md" }
           },
           null,
           2

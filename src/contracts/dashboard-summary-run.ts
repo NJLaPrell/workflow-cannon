@@ -61,8 +61,38 @@ export type DashboardAgentGuidanceSummary = {
   temperamentLabel: string;
 };
 
-export type DashboardSummaryData = {
+/** Read-only team execution rows for dashboard / extension (Phase 58+ visibility). */
+export type DashboardTeamAssignmentRow = {
+  id: string;
+  executionTaskId: string;
+  /** Title from task store when the execution task exists; otherwise null. */
+  executionTaskTitle: string | null;
+  supervisorId: string;
+  workerId: string;
+  status: string;
+  updatedAt: string;
+};
+
+export type DashboardTeamExecutionSummary = {
   schemaVersion: 1;
+  /** False when kit SQLite `user_version` is below team-execution baseline or the summary query failed. */
+  available: boolean;
+  totalCount: number;
+  /** Rows in assigned, submitted, or blocked (work still in flight for supervisors). */
+  activeCount: number;
+  byStatus: {
+    assigned: number;
+    submitted: number;
+    blocked: number;
+    reconciled: number;
+    cancelled: number;
+  };
+  /** Up to 15 most recently updated active assignments. */
+  topActive: DashboardTeamAssignmentRow[];
+};
+
+export type DashboardSummaryData = {
+  schemaVersion: 2;
   /** Monotonic optimistic-lock generation for the unified planning SQLite row. */
   planningGeneration: number;
   /** Effective `tasks.planningGenerationPolicy` for mutating commands. */
@@ -109,6 +139,8 @@ export type DashboardSummaryData = {
   blockingAnalysis: unknown[];
   /** Present when kit resolves agent guidance (Phase 47+). */
   agentGuidance: DashboardAgentGuidanceSummary | null;
+  /** Team execution assignments from `kit_team_assignments` (Phase 58+); stable read-only facet for operators. */
+  teamExecution: DashboardTeamExecutionSummary;
 };
 
 /** Success envelope for `dashboard-summary` (extension + tooling). */

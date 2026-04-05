@@ -22,7 +22,7 @@ Optional machine-readable catalog (same validation as `doctor`, then JSON on std
 workspace-kit doctor --agent-instruction-surface
 ```
 
-Payload shape: `{ ok, code: "agent-instruction-surface", data: { schemaVersion, commands[], activationReport, errorRemediationCatalog } }`. Rows include `executable` and `degradation` when a declared instruction is documentation-only because the owning module or a `requiresPeers` module is disabled. **`errorRemediationCatalog`** maps common failure `code` strings to repo-relative **`instructionPath`** / **`docPath`** hints (see **`docs/maintainers/ADR-cli-error-remediation-contract.md`**). **Documentation-only** does **not** waive `policyApproval` for mutating `workspace-kit run` operations — see `docs/maintainers/POLICY-APPROVAL.md`.
+Payload shape: `{ ok, code: "agent-instruction-surface", data: { schemaVersion, commands[], activationReport, errorRemediationCatalog } }`. Rows include `executable` and `degradation` when a declared instruction is documentation-only because the owning module or a `requiresPeers` module is disabled. **`errorRemediationCatalog`** maps common failure `code` strings to repo-relative **`instructionPath`** / **`docPath`** hints (see **`docs/maintainers/adrs/ADR-cli-error-remediation-contract.md`**). **Documentation-only** does **not** waive `policyApproval` for mutating `workspace-kit run` operations — see `docs/maintainers/POLICY-APPROVAL.md`.
 
 When the workspace root is not a kit source checkout, instruction paths still resolve from the process working directory (same rule as `resolveRegistryAndConfig`); run from the repo root in CI and local dev so paths match this tree.
 
@@ -71,7 +71,7 @@ Successful **`workspace-kit run …`** invocations print **one JSON value to std
 
 ### Multi-writer task store (lost updates)
 
-Parallel **`workspace-kit run`** processes that **mutate** task state each do read→modify→write; **last writer wins** without coordination. When **`tasks.planningGenerationPolicy`** is **`require`**, mutating commands should pass **`expectedPlanningGeneration`** from **`get-task`** / **`list-tasks`**. Reads stay safe. Depth: **`docs/maintainers/runbooks/task-persistence-operator.md`** and **`docs/maintainers/ADR-planning-generation-optimistic-concurrency.md`**.
+Parallel **`workspace-kit run`** processes that **mutate** task state each do read→modify→write; **last writer wins** without coordination. When **`tasks.planningGenerationPolicy`** is **`require`**, mutating commands should pass **`expectedPlanningGeneration`** from **`get-task`** / **`list-tasks`**. Reads stay safe. Depth: **`docs/maintainers/runbooks/task-persistence-operator.md`** and **`docs/maintainers/adrs/ADR-planning-generation-optimistic-concurrency.md`**.
 
 ### Relational SQLite: scalar text fields
 
@@ -143,7 +143,7 @@ See `src/modules/task-engine/instructions/run-transition.md` for allowed `action
 
 ### GitHub-native runner (Phase 55)
 
-Headless **`run-transition`** from GitHub Actions must pass **`policyApproval` inside the third JSON argument** — same as any Tier A **`workspace-kit run`**. The reference script **`tools/github-invocation/run-github-delivery.mjs`** expects maintainer-supplied **`WORKSPACE_KIT_GITHUB_RUN_ARGS_JSON`** (full argv JSON object) plus **`WORKSPACE_KIT_GITHUB_RUN_POLICY_APPROVAL`** when **`policyApproval` is omitted** from that object; it never treats issue comments as approval. Plan-only automation uses **`kit.githubInvocation.planOnlyRunCommands`** (default includes **`get-next-actions`**, **`list-tasks`**, **`get-task`**). Runbook: **`docs/maintainers/runbooks/github-workflow-cannon-invocation.md`**; ADR: **`docs/maintainers/ADR-github-native-invocation.md`**.
+Headless **`run-transition`** from GitHub Actions must pass **`policyApproval` inside the third JSON argument** — same as any Tier A **`workspace-kit run`**. The reference script **`tools/github-invocation/run-github-delivery.mjs`** expects maintainer-supplied **`WORKSPACE_KIT_GITHUB_RUN_ARGS_JSON`** (full argv JSON object) plus **`WORKSPACE_KIT_GITHUB_RUN_POLICY_APPROVAL`** when **`policyApproval` is omitted** from that object; it never treats issue comments as approval. Plan-only automation uses **`kit.githubInvocation.planOnlyRunCommands`** (default includes **`get-next-actions`**, **`list-tasks`**, **`get-task`**). Runbook: **`docs/maintainers/runbooks/github-workflow-cannon-invocation.md`**; ADR: **`docs/maintainers/adrs/ADR-github-native-invocation.md`**.
 
 ### Planning generation (SQLite optimistic lock)
 
@@ -155,12 +155,12 @@ Config **`tasks.planningGenerationPolicy`**: **`off`** (consumer default; option
 
 **Human / IDE:** Cursor extension dashboard shows **Planning generation** + policy; Tasks DnD and palette transitions pass **`expectedPlanningGeneration`** when the cached policy is **`require`** (refresh Tasks/Dashboard if you see mismatches).
 
-ADR: **`docs/maintainers/ADR-planning-generation-optimistic-concurrency.md`**.
+ADR: **`docs/maintainers/adrs/ADR-planning-generation-optimistic-concurrency.md`**.
 
 ### Recovery: `planning-generation-required` and `invalid-run-args`
 
 - **`planning-generation-required`** — Re-read **`planningGeneration`** from **`list-tasks`**, **`get-task`**, **`get-next-actions`**, or **`dashboard-summary`**, then resend the mutating JSON with **`expectedPlanningGeneration`**. Failure JSON may include **`remediation.docPath`** → **`ADR-planning-generation-optimistic-concurrency.md`** and **`remediation.instructionPath`** for the command you invoked.
-- **`invalid-run-args`** (pilot commands) — Fix the JSON shape against the bundled schema: **`workspace-kit run <command> --schema-only`** for **`run-transition`**, **`create-task`**, **`update-task`**, **`dashboard-summary`**, **`list-features`**. See **`docs/maintainers/ADR-runtime-run-args-validation-pilot.md`**.
+- **`invalid-run-args`** (pilot commands) — Fix the JSON shape against the bundled schema: **`workspace-kit run <command> --schema-only`** for **`run-transition`**, **`create-task`**, **`update-task`**, **`dashboard-summary`**, **`list-features`**. See **`docs/maintainers/adrs/ADR-runtime-run-args-validation-pilot.md`**.
 - **`policy-denied`** — Use JSON **`policyApproval`** on the **`run`** argv object (not env **`WORKSPACE_KIT_POLICY_APPROVAL`**). Check **`remediation.docPath`** → **`POLICY-APPROVAL.md`** when present.
 - **`unknown-command`** — Router failures print structured JSON with **`remediation`**; run **`workspace-kit run`** (no subcommand) or **`doctor --agent-instruction-surface`** for the catalog.
 

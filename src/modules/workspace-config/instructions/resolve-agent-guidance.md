@@ -21,5 +21,5 @@ Stable JSON shape:
 
 ## See also
 
-- `docs/maintainers/ADR-agent-guidance-profile-rpg-party-v1.md`
+- `docs/maintainers/adrs/ADR-agent-guidance-profile-rpg-party-v1.md`
 - `set-agent-guidance` — persist tier to project config

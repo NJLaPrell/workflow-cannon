@@ -1,4 +1,4 @@
-<!-- GENERATED FROM .ai/runbooks/cursor-long-session.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+<!-- GENERATED FROM .ai/runbooks/cursor-long-session.md — edit that file; do not hand-edit this render (see docs/maintainers/adrs/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
 
 # Cursor long-session hygiene
 

@@ -17,8 +17,8 @@ export const CLI_REMEDIATION_INSTRUCTIONS = {
 export const CLI_REMEDIATION_DOCS = {
   policyApproval: "docs/maintainers/POLICY-APPROVAL.md",
   agentCliMap: "docs/maintainers/AGENT-CLI-MAP.md",
-  planningGenerationAdr: "docs/maintainers/ADR-planning-generation-optimistic-concurrency.md",
-  remediationContract: "docs/maintainers/ADR-cli-error-remediation-contract.md"
+  planningGenerationAdr: "docs/maintainers/adrs/ADR-planning-generation-optimistic-concurrency.md",
+  remediationContract: "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
 } as const;
 
 /** Stable codes surfaced on doctor --agent-instruction-surface for agents. */

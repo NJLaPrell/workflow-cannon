@@ -14,5 +14,7 @@ export type {
 export type {
   DashboardAgentGuidanceSummary,
   DashboardSummaryCommandSuccess,
-  DashboardSummaryData
+  DashboardSummaryData,
+  DashboardTeamAssignmentRow,
+  DashboardTeamExecutionSummary
 } from "./dashboard-summary-run.js";

@@ -1,8 +1,8 @@
-<!-- GENERATED FROM .ai/runbooks/agent-guidance-onboarding.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+<!-- GENERATED FROM .ai/runbooks/agent-guidance-onboarding.md — edit that file; do not hand-edit this render (see docs/maintainers/adrs/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
 
 # Agent guidance onboarding (RPG party v1)
 
-**Advisory only** — guidance tier does not replace PRINCIPLES, policy, or `policyApproval`. See **`docs/maintainers/ADR-agent-guidance-profile-rpg-party-v1.md`**.
+**Advisory only** — guidance tier does not replace PRINCIPLES, policy, or `policyApproval`. See **`docs/maintainers/adrs/ADR-agent-guidance-profile-rpg-party-v1.md`**.
 
 **Cursor chat:** **`docs/maintainers/playbooks/workspace-kit-chat-onboarding.md`** or slash **`/onboarding`**. Long personality interview: **`docs/maintainers/playbooks/workspace-kit-chat-behavior-interview.md`** or **`/behavior-interview`**.
 

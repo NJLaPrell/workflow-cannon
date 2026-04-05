@@ -1,4 +1,4 @@
-<!-- GENERATED FROM .ai/playbooks/phase-closeout-and-release.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+<!-- GENERATED FROM .ai/playbooks/phase-closeout-and-release.md — edit that file; do not hand-edit this render (see docs/maintainers/adrs/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
 
 # Playbook: phase closeout and release
 

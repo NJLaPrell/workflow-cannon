@@ -94,7 +94,7 @@ const stages = [
     label: ".ai → docs/maintainers drift gate (Phase 56)",
     command: process.execPath,
     args: ["scripts/check-ai-to-docs-drift.mjs"],
-    hint: "Edit .ai sources, run pnpm run generate-maintainer-docs-from-ai, commit outputs. See docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md."
+    hint: "Edit .ai sources, run pnpm run generate-maintainer-docs-from-ai, commit outputs. See docs/maintainers/adrs/ADR-ai-canonical-maintainer-docs-pipeline.md."
   },
   {
     id: "orphan-ai-sources",

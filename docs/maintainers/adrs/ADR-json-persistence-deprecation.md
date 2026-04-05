@@ -19,4 +19,4 @@ Maintainers wanted a **single long-term persistence story** (unified SQLite with
 
 - **Positive:** One runtime path; fewer dual-backend tests; clearer operator story.
 - **Negative:** Consumers on JSON must migrate or pin a release before **v0.40.0**; exotic platforms still need a working **`better-sqlite3`** build.
-- **Related:** [`ADR-sqlite-default-persistence.md`](./ADR-sqlite-default-persistence.md), [`ADR-task-sqlite-persistence.md`](./ADR-task-sqlite-persistence.md), [`runbooks/task-persistence-operator.md`](./runbooks/task-persistence-operator.md).
+- **Related:** [`ADR-sqlite-default-persistence.md`](./ADR-sqlite-default-persistence.md), [`ADR-task-sqlite-persistence.md`](./ADR-task-sqlite-persistence.md), [`runbooks/task-persistence-operator.md`](../runbooks/task-persistence-operator.md).

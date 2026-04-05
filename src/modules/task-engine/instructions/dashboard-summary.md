@@ -20,7 +20,7 @@ Optional JSON object; accepts standard invocation `config` overlay only (no extr
 
 | Field | Description |
 | --- | --- |
-| `schemaVersion` | Always `1` for this contract |
+| `schemaVersion` | `2` — adds read-only **`teamExecution`**; older clients must tolerate unknown fields |
 | `taskStoreLastUpdated` | ISO timestamp from task store document |
 | `workspaceStatus` | `{ currentKitPhase, nextKitPhase, activeFocus, lastUpdated, blockers[], pendingDecisions[], nextAgentActions[] }` shallow-parse from `workspace-kit-status.yaml`; file-missing yields `null` |
 | `stateSummary` | Task counts by status + `total` (same shape as `get-next-actions`) |
@@ -39,3 +39,4 @@ Optional JSON object; accepts standard invocation `config` overlay only (no extr
 | `blockingAnalysis` | Full blocking analysis list |
 | `dependencyOverview` | `{ schemaVersion: 1, activeTaskCount, includedTaskCount, edgeCount, truncated, perfNote, nodes, edges, mermaidFlowchart, criticalPathReady }` — active-task dependency subgraph aligned with `get-dependency-graph` edge direction (`from` depends on `to`); degrades when there are many active tasks (see `perfNote`) |
 | `wishlist.openTop` | Up to 15 **open** wishlist items (`{ id, title }`); W### namespace, separate from tasks until `convert-wishlist` |
+| `teamExecution` | `{ schemaVersion: 1, available, totalCount, activeCount, byStatus, topActive }` — rollup of **`kit_team_assignments`** when kit SQLite **`user_version` ≥ 7**; **`topActive`** is up to 15 rows in **`assigned` / `submitted` / `blocked`** (most recently updated first), each with **`executionTaskTitle`** resolved from the task store when present |

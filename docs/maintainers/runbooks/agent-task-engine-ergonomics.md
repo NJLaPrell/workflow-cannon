@@ -1,4 +1,4 @@
-<!-- GENERATED FROM .ai/runbooks/agent-task-engine-ergonomics.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+<!-- GENERATED FROM .ai/runbooks/agent-task-engine-ergonomics.md — edit that file; do not hand-edit this render (see docs/maintainers/adrs/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
 
 # Agent task-engine ergonomics
 
@@ -24,7 +24,7 @@ Canonical process remains: [`AGENTS.md`](../AGENTS.md), [`AGENT-CLI-MAP.md`](../
 **Expectation:**
 
 - After **`get-task`** / **`list-tasks`**, if you are implementing this task and **`status`** is **`ready`**, run **`workspace-kit run run-transition`** with **`action":"start"`** before substantive edits or the **first implementation commit**. If already **`in_progress`**, continue.
-- Pass **`expectedPlanningGeneration`** from the same JSON read when **`tasks.planningGenerationPolicy`** is **`require`** (see [`ADR-planning-generation-optimistic-concurrency.md`](../ADR-planning-generation-optimistic-concurrency.md)).
+- Pass **`expectedPlanningGeneration`** from the same JSON read when **`tasks.planningGenerationPolicy`** is **`require`** (see [`ADR-planning-generation-optimistic-concurrency.md`](../adrs/ADR-planning-generation-optimistic-concurrency.md)).
 - Between **`start`** and **`complete`**, use **`workspace-kit run update-task`** for **`summary`**, **`description`**, **`approach`**, or **`metadata`** (e.g. PR link, milestone label) — the engine has no **`in_review`** status; mutable fields carry progress signals.
 - If blocked on a human or external dependency, prefer **`run-transition`** **`block`** (then **`unblock`** when clear). To park work back on the queue, **`pause`** returns the task to **`ready`** per [`run-transition` instruction](../../../src/modules/task-engine/instructions/run-transition.md).
 
@@ -50,7 +50,7 @@ Canonical process remains: [`AGENTS.md`](../AGENTS.md), [`AGENT-CLI-MAP.md`](../
 
 - **Read-only discovery:** `workspace-kit doctor`, `workspace-kit run list-tasks`, `workspace-kit run get-next-actions`, `workspace-kit run get-task`, `workspace-kit run explain-task-engine-model` (Tier C unless otherwise documented).
 - **Queue consistency (ready tasks):** `workspace-kit run queue-health '{}'` — one JSON payload for phase alignment vs canonical phase (`kit.currentPhaseNumber` or maintainer status YAML) plus **`ready`** rows whose **`dependsOn`** are not yet **`completed`**. Optional: `workspace-kit run list-tasks` with **`"includeQueueHints":true`** for per-row hints. See [`AGENT-CLI-MAP.md`](../AGENT-CLI-MAP.md) → **Queue health and ready-queue consistency**.
-- **Merge ≠ done (heuristic):** `workspace-kit run queue-git-alignment '{}'` — read-only JSON comparing git HEAD commit time to the latest task transition plus stale **`in_progress`** hints. Independent of network; does not fix state. See [`ADR-task-queue-namespace.md`](../ADR-task-queue-namespace.md) for optional **`queueNamespace`** filters on **`get-next-actions`** / **`get-ready-queue`**.
+- **Merge ≠ done (heuristic):** `workspace-kit run queue-git-alignment '{}'` — read-only JSON comparing git HEAD commit time to the latest task transition plus stale **`in_progress`** hints. Independent of network; does not fix state. See [`ADR-task-queue-namespace.md`](../adrs/ADR-task-queue-namespace.md) for optional **`queueNamespace`** filters on **`get-next-actions`** / **`get-ready-queue`**.
 - **Lifecycle changes:** only **`run-transition`** (and other documented mutators) with correct **`policyApproval`** tiering — not hand-edited `state.json` except documented recovery.
 
 **Transcript alignment:** `imp-3bf93773a8c983` (`transcript:ae9aedbeb39d77297a12fc0b697ac6918a06bbaf`).
@@ -62,7 +62,7 @@ Canonical process remains: [`AGENTS.md`](../AGENTS.md), [`AGENT-CLI-MAP.md`](../
 **Expectation:**
 
 - Use the planning module runbook: [`planning-workflow.md`](./planning-workflow.md) — especially **`build-plan`** with explicit **`finalize`** / wishlist flags when capturing decomposition.
-- Convert wishlist-style outputs to execution work with **`convert-wishlist`** (or the current intake path for **`T###`** wishlist tasks, per [`ADR-unified-task-store-wishlist-and-improvement-state.md`](../ADR-unified-task-store-wishlist-and-improvement-state.md)).
+- Convert wishlist-style outputs to execution work with **`convert-wishlist`** (or the current intake path for **`T###`** wishlist tasks, per [`ADR-unified-task-store-wishlist-and-improvement-state.md`](../adrs/ADR-unified-task-store-wishlist-and-improvement-state.md)).
 - **`get-next-actions`** lists **execution** queue candidates; wishlist / intake items are governed by their own commands and filters.
 
 **Transcript alignment:** `imp-a7dcdec79a791b` (`transcript:d298f9c6e0fee583eccc4a72da2cd9f05fbe216e`).

@@ -1,4 +1,4 @@
-<!-- GENERATED FROM .ai/runbooks/lifecycle-hooks.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+<!-- GENERATED FROM .ai/runbooks/lifecycle-hooks.md — edit that file; do not hand-edit this render (see docs/maintainers/adrs/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
 
 # Runbook: kit lifecycle hooks (Phase 56)
 
@@ -8,7 +8,7 @@ You registered **`kit.lifecycleHooks.handlers`** and need the **event catalog**,
 
 ## Canonical reference
 
-- **ADR:** `docs/maintainers/ADR-agent-task-lifecycle-hooks-v1.md`  
+- **ADR:** `docs/maintainers/adrs/ADR-agent-task-lifecycle-hooks-v1.md`  
 - **Config keys:** **`kit.lifecycleHooks.*`** (see generated **`CONFIG.md`** after `pnpm run wk config generate-docs`)
 
 ## v1 events

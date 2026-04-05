@@ -1,5 +1,10 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
-import type { DashboardFeatureDetail, DashboardSummaryData } from "../../../contracts/dashboard-summary-run.js";
+import type {
+  DashboardFeatureDetail,
+  DashboardSummaryData,
+  DashboardTeamExecutionSummary
+} from "../../../contracts/dashboard-summary-run.js";
+import { summarizeTeamAssignmentsForDashboard } from "../../team-execution/assignment-store.js";
 import { resolveAgentGuidanceFromEffectiveConfig } from "../../../core/agent-guidance-catalog.js";
 import { getPlanningGenerationPolicy } from "../planning-config.js";
 import { getNextActions, isImprovementLikeTask } from "../suggestions.js";
@@ -183,8 +188,21 @@ export async function runDashboardSummaryCommand(
     temperamentLabel: dashboardOnboardingTemperamentLabel(behaviorEffective)
   };
 
+  const taskTitleById = new Map(tasks.map((t) => [t.id, t.title] as const));
+  const teamExecutionEmpty: DashboardTeamExecutionSummary = {
+    schemaVersion: 1,
+    available: false,
+    totalCount: 0,
+    activeCount: 0,
+    byStatus: { assigned: 0, submitted: 0, blocked: 0, reconciled: 0, cancelled: 0 },
+    topActive: []
+  };
+  const teamExecution = sqliteDual
+    ? summarizeTeamAssignmentsForDashboard(sqliteDual.getDatabase(), (id) => taskTitleById.get(id) ?? null)
+    : teamExecutionEmpty;
+
   const data = {
-    schemaVersion: 1 as const,
+    schemaVersion: 2 as const,
     planningGeneration,
     planningGenerationPolicy: getPlanningGenerationPolicy({
       effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined
@@ -261,7 +279,8 @@ export async function runDashboardSummaryCommand(
       : null,
     dependencyOverview,
     blockingAnalysis: suggestion.blockingAnalysis,
-    agentGuidance
+    agentGuidance,
+    teamExecution
   } satisfies DashboardSummaryData;
 
   return {

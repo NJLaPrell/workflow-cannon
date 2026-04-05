@@ -1,4 +1,4 @@
-<!-- GENERATED FROM .ai/runbooks/subagent-registry.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+<!-- GENERATED FROM .ai/runbooks/subagent-registry.md — edit that file; do not hand-edit this render (see docs/maintainers/adrs/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
 
 # Subagent registry (operators)
 
@@ -21,6 +21,6 @@ Record **subagent definitions** and **session/message** provenance in kit SQLite
 
 ## Canon
 
-- ADR: `docs/maintainers/ADR-subagent-registry-v1.md`
+- ADR: `docs/maintainers/adrs/ADR-subagent-registry-v1.md`
 - Persistence map: `workspace-kit run get-kit-persistence-map '{}'`
 - Policy: `docs/maintainers/POLICY-APPROVAL.md` — Tier B for mutating subagent commands.

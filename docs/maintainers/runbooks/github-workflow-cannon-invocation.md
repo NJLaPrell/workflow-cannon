@@ -1,9 +1,9 @@
-<!-- GENERATED FROM .ai/runbooks/github-workflow-cannon-invocation.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+<!-- GENERATED FROM .ai/runbooks/github-workflow-cannon-invocation.md — edit that file; do not hand-edit this render (see docs/maintainers/adrs/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
 
 # Runbook: GitHub-native Workflow Cannon invocation
 
 **Audience:** maintainers wiring **GitHub Actions** or **webhooks** to the Phase 55 reference runner.  
-**ADR:** **`docs/maintainers/ADR-github-native-invocation.md`**.  
+**ADR:** **`docs/maintainers/adrs/ADR-github-native-invocation.md`**.  
 **Policy:** **`docs/maintainers/POLICY-APPROVAL.md`** — GitHub comments are **not** approval; mutating routes need JSON **`policyApproval`** inside **`WORKSPACE_KIT_GITHUB_RUN_ARGS_JSON`**.
 
 ## What ships in-repo

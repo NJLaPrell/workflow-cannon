@@ -1,4 +1,4 @@
-<!-- GENERATED FROM .ai/playbooks/wishlist-intake-to-execution.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+<!-- GENERATED FROM .ai/playbooks/wishlist-intake-to-execution.md — edit that file; do not hand-edit this render (see docs/maintainers/adrs/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
 
 # Playbook: wishlist intake → execution
 
@@ -74,7 +74,7 @@ Use `workspace-kit run list-tasks` with filters as needed; do not infer phase so
 
 1. Build **`decomposition`** (`rationale`, `boundaries`, `dependencyIntent`) and the **`tasks`** array per `src/modules/task-engine/instructions/convert-wishlist.md`. Each task needs workable fields including **`phase`** and optional **`phaseKey`** aligned to the bucket from step 4.
 2. **Tiering and copy-paste** patterns: [`AGENT-CLI-MAP.md`](../AGENT-CLI-MAP.md) — wishlist mutations (including **`convert-wishlist`**) are Tier **C** by default; still obey **planning-generation** rules below.
-3. **Planning generation hygiene:** when `tasks.planningGenerationPolicy` is **`require`**, pass **`expectedPlanningGeneration`** from **`planningGeneration`** on your **last** read (`list-wishlist`, `list-tasks`, `get-task`, `get-next-actions`, etc.). On **`planning-generation-mismatch`**, re-read and retry with the fresh token — see [`ADR-planning-generation-optimistic-concurrency.md`](../ADR-planning-generation-optimistic-concurrency.md).
+3. **Planning generation hygiene:** when `tasks.planningGenerationPolicy` is **`require`**, pass **`expectedPlanningGeneration`** from **`planningGeneration`** on your **last** read (`list-wishlist`, `list-tasks`, `get-task`, `get-next-actions`, etc.). On **`planning-generation-mismatch`**, re-read and retry with the fresh token — see [`ADR-planning-generation-optimistic-concurrency.md`](../adrs/ADR-planning-generation-optimistic-concurrency.md).
 
 ```bash
 workspace-kit run convert-wishlist '{"wishlistTaskId":"<T###>","expectedPlanningGeneration":<n>,"decomposition":{...},"tasks":[...]}'

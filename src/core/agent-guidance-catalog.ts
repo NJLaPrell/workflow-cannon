@@ -1,6 +1,6 @@
 /**
  * Canonical agent guidance tier catalog (RPG party v1) + resolve helpers.
- * @see docs/maintainers/ADR-agent-guidance-profile-rpg-party-v1.md
+ * @see docs/maintainers/adrs/ADR-agent-guidance-profile-rpg-party-v1.md
  */
 
 export const RPG_PARTY_PROFILE_SET_ID = "rpg_party_v1" as const;

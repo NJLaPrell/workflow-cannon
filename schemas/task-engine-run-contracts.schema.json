@@ -6,13 +6,13 @@
   "type": "object",
   "required": ["schemaVersion", "packageVersion", "moduleId", "commands"],
   "additionalProperties": false,
-  "packageVersion": "0.58.1",
+  "packageVersion": "0.58.2",
   "properties": {
     "schemaVersion": {
       "const": 1
     },
     "packageVersion": {
-      "const": "0.58.1",
+      "const": "0.58.2",
       "description": "Must match package.json version."
     },
     "moduleId": {
@@ -782,10 +782,48 @@
                 "suggestedNext",
                 "blockingAnalysis",
                 "dependencyOverview",
-                "agentGuidance"
+                "agentGuidance",
+                "teamExecution"
               ],
               "additionalProperties": true,
               "properties": {
+                "schemaVersion": {
+                  "type": "integer",
+                  "enum": [2]
+                },
+                "teamExecution": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "available",
+                    "totalCount",
+                    "activeCount",
+                    "byStatus",
+                    "topActive"
+                  ],
+                  "additionalProperties": true,
+                  "properties": {
+                    "schemaVersion": { "const": 1 },
+                    "available": { "type": "boolean" },
+                    "totalCount": { "type": "integer", "minimum": 0 },
+                    "activeCount": { "type": "integer", "minimum": 0 },
+                    "byStatus": {
+                      "type": "object",
+                      "required": [
+                        "assigned",
+                        "submitted",
+                        "blocked",
+                        "reconciled",
+                        "cancelled"
+                      ],
+                      "additionalProperties": true
+                    },
+                    "topActive": {
+                      "type": "array",
+                      "items": { "type": "object", "additionalProperties": true }
+                    }
+                  }
+                },
                 "dependencyOverview": {
                   "type": "object",
                   "required": [

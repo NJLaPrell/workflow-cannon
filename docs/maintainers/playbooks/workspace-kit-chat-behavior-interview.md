@@ -1,4 +1,4 @@
-<!-- GENERATED FROM .ai/playbooks/workspace-kit-chat-behavior-interview.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+<!-- GENERATED FROM .ai/playbooks/workspace-kit-chat-behavior-interview.md — edit that file; do not hand-edit this render (see docs/maintainers/adrs/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
 
 # Playbook: Workflow Cannon chat behavior interview (scribe’s quiz)
 

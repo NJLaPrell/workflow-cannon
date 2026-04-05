@@ -36,5 +36,5 @@ Phase **57** shipped **subagent registry** rows for delegated work. Operators st
 
 - Depends on relational **`task_engine_tasks`** (Phase **57** / **56** queue prerequisites).
 - Runbook: `docs/maintainers/runbooks/team-execution-supervisor.md`
-- Subagent ADR (delegation provenance): `docs/maintainers/ADR-subagent-registry-v1.md`
+- Subagent ADR (delegation provenance): `docs/maintainers/adrs/ADR-subagent-registry-v1.md`
 - Code: `src/core/state/workspace-kit-sqlite.ts`, `src/modules/team-execution/`

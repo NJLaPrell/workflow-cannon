@@ -49,4 +49,4 @@ Use this runbook when **legacy JSON** task/wishlist files exist (for example **`
 
 - [`task-persistence-operator.md`](./task-persistence-operator.md)
 - [`native-sqlite-consumer-install.md`](./native-sqlite-consumer-install.md)
-- ADR: [`../ADR-json-persistence-deprecation.md`](../ADR-json-persistence-deprecation.md)
+- ADR: [`ADR-json-persistence-deprecation.md`](../adrs/ADR-json-persistence-deprecation.md)

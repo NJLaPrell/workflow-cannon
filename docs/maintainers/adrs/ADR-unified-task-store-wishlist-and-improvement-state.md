@@ -68,5 +68,5 @@ Maintainers want **one primary intake surface** for durable work items (tasks on
 
 ## Related
 
-- `docs/maintainers/ADR-task-sqlite-persistence.md` (prior dual-column JSON decision—superseded for wishlist by this ADR after migration).
+- `docs/maintainers/adrs/ADR-task-sqlite-persistence.md` (prior dual-column JSON decision—superseded for wishlist by this ADR after migration).
 - Phase 18 unified SQLite / module state registration (storage mechanism for improvement operational document).

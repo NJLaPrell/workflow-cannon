@@ -1,4 +1,4 @@
-<!-- GENERATED FROM .ai/runbooks/skill-packs-dual-install.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+<!-- GENERATED FROM .ai/runbooks/skill-packs-dual-install.md — edit that file; do not hand-edit this render (see docs/maintainers/adrs/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
 
 # Skill packs: dual install (Claude Code + Workflow Cannon)
 

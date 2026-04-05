@@ -1,4 +1,4 @@
-<!-- GENERATED FROM .ai/playbooks/workspace-kit-chat-onboarding.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+<!-- GENERATED FROM .ai/playbooks/workspace-kit-chat-onboarding.md — edit that file; do not hand-edit this render (see docs/maintainers/adrs/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
 
 # Playbook: Workflow Cannon chat onboarding (party setup)
 
@@ -136,5 +136,5 @@ Numbered lists are the **default** presentation for §2 and §3. Offer an unnumb
 
 - [`workspace-kit-chat-behavior-interview.md`](./workspace-kit-chat-behavior-interview.md) — long personality interview (**`/behavior-interview`**)
 - [`runbooks/agent-guidance-onboarding.md`](../runbooks/agent-guidance-onboarding.md)
-- [`ADR-agent-guidance-profile-rpg-party-v1.md`](../ADR-agent-guidance-profile-rpg-party-v1.md)
+- [`ADR-agent-guidance-profile-rpg-party-v1.md`](../adrs/ADR-agent-guidance-profile-rpg-party-v1.md)
 - `.cursor/commands/onboarding.md`

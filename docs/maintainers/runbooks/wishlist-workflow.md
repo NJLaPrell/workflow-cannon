@@ -1,4 +1,4 @@
-<!-- GENERATED FROM .ai/runbooks/wishlist-workflow.md — edit that file; do not hand-edit this render (see docs/maintainers/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+<!-- GENERATED FROM .ai/runbooks/wishlist-workflow.md — edit that file; do not hand-edit this render (see docs/maintainers/adrs/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
 
 # Wishlist workflow (Task Engine)
 
@@ -10,7 +10,7 @@
 | Capture **ideation** before scheduling (strict intake fields) | **`T###`** with **`type: "wishlist_intake"`** | **`create-wishlist`** (auto-allocates **`T###`**; optional legacy provenance id → **`metadata.legacyWishlistId`**) |
 | Log **improvement** / enhancement backlog (**`type: "improvement"`**) | **`T###`** (same id shape as execution tasks) | **`create-task`** (manual problem report) or **`generate-recommendations`** / **`ingest-transcripts`** (auto-allocates next **`T###`**; legacy stores may still contain older **`imp-*`** hashes) |
 
-Glossary: **`docs/maintainers/TERMS.md`** (**Wishlist**, **Execution Task**, **Improvement Task**). ADR: **`docs/maintainers/ADR-unified-task-store-wishlist-and-improvement-state.md`**.
+Glossary: **`docs/maintainers/TERMS.md`** (**Wishlist**, **Execution Task**, **Improvement Task**). ADR: **`docs/maintainers/adrs/ADR-unified-task-store-wishlist-and-improvement-state.md`**.
 
 ---
 

@@ -38,6 +38,6 @@ Supervisor-led runs use **`team-execution`** CLI commands plus the normal **task
 
 ## Related docs
 
-- ADR: `docs/maintainers/ADR-team-execution-v1.md`
+- ADR: `docs/maintainers/adrs/ADR-team-execution-v1.md`
 - Tier table: `docs/maintainers/AGENT-CLI-MAP.md` (**`team-execution.persist`**)
 - Persistence map: `pnpm run wk run get-kit-persistence-map '{}'`

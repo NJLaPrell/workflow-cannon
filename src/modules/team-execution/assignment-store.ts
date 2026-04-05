@@ -1,4 +1,5 @@
 import type Sqlite from "better-sqlite3";
+import type { DashboardTeamExecutionSummary } from "../../contracts/dashboard-summary-run.js";
 import { readKitSqliteUserVersion } from "../../core/state/workspace-kit-sqlite.js";
 
 export const TEAM_EXECUTION_KIT_MIN_USER_VERSION = 7;
@@ -208,6 +209,91 @@ export function listAssignments(db: Sqlite.Database, filter: ListAssignmentsFilt
     ...params
   ) as Record<string, unknown>[];
   return rows.map(mapRow);
+}
+
+function emptyTeamDashboardSummary(): DashboardTeamExecutionSummary {
+  return {
+    schemaVersion: 1,
+    available: false,
+    totalCount: 0,
+    activeCount: 0,
+    byStatus: { assigned: 0, submitted: 0, blocked: 0, reconciled: 0, cancelled: 0 },
+    topActive: []
+  };
+}
+
+/**
+ * Compact rollup of `kit_team_assignments` for `dashboard-summary` (read-only; no policy surface).
+ */
+export function summarizeTeamAssignmentsForDashboard(
+  db: Sqlite.Database,
+  resolveTaskTitle: (taskId: string) => string | null
+): DashboardTeamExecutionSummary {
+  const uvRaw = db.pragma("user_version", { simple: true });
+  const uv = typeof uvRaw === "number" ? uvRaw : Number(uvRaw);
+  if (!Number.isFinite(uv) || uv < TEAM_EXECUTION_KIT_MIN_USER_VERSION) {
+    return emptyTeamDashboardSummary();
+  }
+  try {
+    const byStatus: DashboardTeamExecutionSummary["byStatus"] = {
+      assigned: 0,
+      submitted: 0,
+      blocked: 0,
+      reconciled: 0,
+      cancelled: 0
+    };
+    const countRows = db
+      .prepare("SELECT status, COUNT(*) AS c FROM kit_team_assignments GROUP BY status")
+      .all() as { status: string; c: number | bigint }[];
+    let totalCount = 0;
+    for (const r of countRows) {
+      const c = Number(r.c);
+      totalCount += c;
+      const st = String(r.status);
+      if (st === "assigned") {
+        byStatus.assigned = c;
+      } else if (st === "submitted") {
+        byStatus.submitted = c;
+      } else if (st === "blocked") {
+        byStatus.blocked = c;
+      } else if (st === "reconciled") {
+        byStatus.reconciled = c;
+      } else if (st === "cancelled") {
+        byStatus.cancelled = c;
+      }
+    }
+    const activeCount = byStatus.assigned + byStatus.submitted + byStatus.blocked;
+    const topRows = db
+      .prepare(
+        `SELECT * FROM kit_team_assignments
+         WHERE status IN ('assigned','submitted','blocked')
+         ORDER BY updated_at DESC
+         LIMIT 15`
+      )
+      .all() as Record<string, unknown>[];
+    const topActive = topRows.map((raw) => {
+      const row = mapRow(raw);
+      return {
+        id: row.id,
+        executionTaskId: row.executionTaskId,
+        executionTaskTitle: resolveTaskTitle(row.executionTaskId),
+        supervisorId: row.supervisorId,
+        workerId: row.workerId,
+        status: row.status,
+        updatedAt: row.updatedAt
+      };
+    });
+    return {
+      schemaVersion: 1,
+      available: true,
+      totalCount,
+      activeCount,
+      byStatus,
+      topActive
+    };
+  } catch {
+    return emptyTeamDashboardSummary();
+  }
 }
 
 export function submitHandoff(
