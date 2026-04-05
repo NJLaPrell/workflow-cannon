@@ -80,7 +80,7 @@ export function validateValueForMetadata(meta: ConfigKeyMetadata, value: unknown
         }
       }
     }
-    if (meta.key === "skills.discoveryRoots") {
+    if (meta.key === "skills.discoveryRoots" || meta.key === "plugins.discoveryRoots") {
       for (const item of value) {
         if (typeof item !== "string" || item.trim().length === 0) {
           throw new Error(`config-type-error(${meta.key}): array entries must be non-empty strings`);

@@ -109,6 +109,11 @@ export const MODULE_CONFIG_CONTRIBUTIONS: Record<string, Record<string, unknown>
     skills: {
       discoveryRoots: [".claude/skills"]
     }
+  },
+  plugins: {
+    plugins: {
+      discoveryRoots: [".claude/plugins"]
+    }
   }
 };
 

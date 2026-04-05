@@ -32,3 +32,17 @@
 - **Outcome:** Operators can run a structured scout rehearsal without Tier B approval; rotation memory is opt-in; pipeline tasks can carry scout metadata; **`heuristic_2`** is opt-in and tested beside **`heuristic_1`** defaults.
 - **Exit signals:**
   - **`pnpm run build`**, **`check`**, **`test`**, **`parity`**, **`pre-merge-gates`** on the release tag; maintainer evidence per **`RELEASING.md`**.
+
+### Phase 60 - Run-args pilot + planning prelude + dashboard/subagent surfaces -> GitHub release `v0.60.0` (COMPLETE)
+
+- **Primary scope:** **`T689`–`T740`** (and split tasks) — pilot **`schemas/pilot-run-args.snapshot.json`** for all manifest task-engine commands, **`schemas/planning-generation-cli-prelude.json`**, SQLite **`BEGIN IMMEDIATE`**, **`agent-session-snapshot`**, **`get-next-actions`** **`teamExecutionContext`**, **`dashboard-summary`** **`schemaVersion` 3** + **`subagentRegistry`**, package **`exports`** for contract subpaths, maintainer doc alignment (SQLite-only persistence).
+- **Outcome:** Stronger CLI JSON validation and planning-generation ergonomics; extension **0.1.8** surfaces subagent registry card.
+- **Exit signals:**
+  - **`pnpm run build`**, **`check`**, **`test`**, **`parity`**, **`pre-merge-gates`** on the release tag; maintainer evidence per **`RELEASING.md`**.
+
+### Phase 61 - Claude Code plugin platform v1 -> GitHub release `v0.61.0` (COMPLETE)
+
+- **Primary scope:** **`T684`–`T687`** — ADR + **`schemas/claude-plugin-manifest.schema.json`** + **`plugins.discoveryRoots`**; **`list-plugins`** / **`inspect-plugin`**; **`install-plugin`** / **`enable-plugin`** / **`disable-plugin`** + **`plugins.persist`**; SQLite **`user_version` 8 **`kit_plugin_state`**; **`workspace-kit doctor`** summary; reference fixture **`docs/examples/claude-plugins/`** + CI smoke.
+- **Outcome:** Deterministic plugin manifest validation, filesystem discovery aligned to Anthropic layout, optional SQLite enablement and copy-install with policy gates.
+- **Exit signals:**
+  - **`pnpm run build`**, **`check`**, **`test`**, **`parity`**, **`pre-merge-gates`** on the release tag; maintainer evidence per **`RELEASING.md`**.

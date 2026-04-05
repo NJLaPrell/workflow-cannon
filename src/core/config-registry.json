@@ -592,6 +592,22 @@
       "user"
     ]
   },
+  "plugins.discoveryRoots": {
+    "key": "plugins.discoveryRoots",
+    "type": "array",
+    "description": "Workspace-relative directories scanned for Claude Code–layout plugins: <root>/<plugin>/.claude-plugin/plugin.json.",
+    "default": [".claude/plugins"],
+    "domainScope": "project",
+    "owningModule": "plugins",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
   "kit.githubInvocation.enabled": {
     "key": "kit.githubInvocation.enabled",
     "type": "boolean",

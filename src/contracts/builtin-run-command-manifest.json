@@ -683,5 +683,48 @@
     "description": "Deterministic skill recommendations from tags / phase / task-type filters.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "plugins",
+    "name": "list-plugins",
+    "file": "list-plugins.md",
+    "description": "List Claude-layout plugins under configured discovery roots with manifest validation + enablement flags.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "plugins",
+    "name": "inspect-plugin",
+    "file": "inspect-plugin.md",
+    "description": "Inspect one plugin by manifest name (full manifest, validation diagnostics, SQLite persistence hints).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "plugins",
+    "name": "install-plugin",
+    "file": "install-plugin.md",
+    "description": "Copy a validated Claude-layout plugin tree into a configured discovery root; persist enablement in kit SQLite.",
+    "policyOperationId": "plugins.persist",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "plugins",
+    "name": "enable-plugin",
+    "file": "enable-plugin.md",
+    "description": "Mark a discovered plugin enabled in kit SQLite (affects list-plugins effective enablement).",
+    "policyOperationId": "plugins.persist",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "plugins",
+    "name": "disable-plugin",
+    "file": "disable-plugin.md",
+    "description": "Mark a discovered plugin disabled in kit SQLite (affects list-plugins effective enablement).",
+    "policyOperationId": "plugins.persist",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
   }
 ]

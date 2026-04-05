@@ -11,6 +11,7 @@ import {
 } from "../modules/task-engine/planning-config.js";
 import { readKitSqliteUserVersion } from "../core/state/workspace-kit-sqlite.js";
 import { defaultRegistryModules } from "../modules/index.js";
+import { discoverPluginPackages } from "../modules/plugins/discovery.js";
 
 export type DoctorPlanningIssue = { path: string; reason: string };
 
@@ -97,4 +98,21 @@ export async function collectTaskPersistenceDoctorSummaryLines(cwd: string): Pro
     `Planning generation policy: ${pol} (tasks.planningGenerationPolicy — require/warn: pass expectedPlanningGeneration from prior reads; see ADR-planning-generation-optimistic-concurrency.md)`
   );
   return lines;
+}
+
+/** One-line Claude-layout plugin summary after doctor passes (read-only scan). */
+export async function collectPluginDoctorSummaryLines(cwd: string): Promise<string[]> {
+  try {
+    const { effective } = await resolveRegistryAndConfig(cwd, defaultRegistryModules, {});
+    const res = discoverPluginPackages(cwd, effective);
+    if (!res.ok) {
+      return [`Plugin discovery: ${res.message} (fix roots or permissions; see plugins.discoveryRoots)`];
+    }
+    const bad = res.plugins.filter((p) => !p.manifestValid).length;
+    return [
+      `Claude-layout plugins: ${res.plugins.length} under plugins.discoveryRoots (${bad} with manifest/path validation issues) — workspace-kit run list-plugins '{}'`
+    ];
+  } catch {
+    return [];
+  }
 }

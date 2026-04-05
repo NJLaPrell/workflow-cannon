@@ -11,6 +11,7 @@ export const CONFIG_FACET_IDS = [
   "improvement",
   "kit",
   "modules",
+  "plugins",
   "policy",
   "responseTemplates",
   "agentBehavior"

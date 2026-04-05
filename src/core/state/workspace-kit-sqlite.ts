@@ -4,7 +4,7 @@ import { seedFeatureRegistryIfEmpty } from "./feature-registry-migration.js";
 type SqliteDatabase = InstanceType<typeof Database>;
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 7;
+export const KIT_SQLITE_USER_VERSION = 8;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 
@@ -181,6 +181,22 @@ function migrateV6ToV7(db: SqliteDatabase): void {
   db.exec(TEAM_ASSIGNMENT_DDL);
 }
 
+/** Plugin enablement + install provenance (Phase 61). */
+const PLUGIN_STATE_DDL = `
+CREATE TABLE IF NOT EXISTS kit_plugin_state (
+  plugin_name TEXT PRIMARY KEY NOT NULL,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  root_relative_path TEXT NOT NULL,
+  installed_via TEXT NOT NULL CHECK(installed_via IN ('scan','copy-install')),
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_kit_plugin_state_enabled ON kit_plugin_state(enabled);
+`;
+
+function migrateV7ToV8(db: SqliteDatabase): void {
+  db.exec(PLUGIN_STATE_DDL);
+}
+
 /**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
@@ -230,6 +246,11 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
   }
   if (current < 7) {
     migrateV6ToV7(db);
+    db.pragma("user_version = 7");
+    current = 7;
+  }
+  if (current < 8) {
+    migrateV7ToV8(db);
     db.pragma(`user_version = ${KIT_SQLITE_USER_VERSION}`);
   }
 }

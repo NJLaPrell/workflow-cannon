@@ -140,6 +140,10 @@ Generated from `src/core/config-metadata.ts`. Do not edit by hand; run `workspac
 
 **Description:** Optional object overrides for planning rule packs by workflow type (`baseQuestions` and `adaptiveQuestions`).
 
+| plugins.discoveryRoots | array | [".claude/plugins"] | project | plugins | maintainer | false | false |
+
+**Description:** Workspace-relative directories scanned for Claude Code–layout plugins: <root>/<plugin>/.claude-plugin/plugin.json.
+
 | policy.extraSensitiveModuleCommands | array | [] | project | workspace-kit | maintainer | true | true |
 
 **Description:** Additional module command names (e.g. run subcommands) treated as sensitive for policy approval.

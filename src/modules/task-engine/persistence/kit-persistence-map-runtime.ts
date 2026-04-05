@@ -38,7 +38,7 @@ export function runGetKitPersistenceMap(ctx: ModuleLifecycleContext): ModuleComm
       },
       workspaceModuleState: {
         table: "workspace_module_state",
-        knownModuleIds: ["task-engine", "improvement", "agent-behavior", "team-execution"]
+        knownModuleIds: ["task-engine", "improvement", "agent-behavior", "team-execution", "plugins"]
       },
       legacySidecarJsonFiles: {
         improvement: ".workspace-kit/improvement/state.json",
@@ -54,6 +54,11 @@ export function runGetKitPersistenceMap(ctx: ModuleLifecycleContext): ModuleComm
         minKitSqliteUserVersion: 7,
         tables: ["kit_team_assignments"],
         note: "Supervisor/worker assignment + handoff persistence; host runs agents; kit does not spawn workers. See docs/maintainers/adrs/ADR-team-execution-v1.md."
+      },
+      plugins: {
+        minKitSqliteUserVersion: 8,
+        tables: ["kit_plugin_state"],
+        note: "Claude-layout plugin install provenance + enable/disable toggles; discovery remains filesystem under plugins.discoveryRoots. See docs/maintainers/adrs/ADR-claude-code-plugin-platform-v1.md."
       }
     } as Record<string, unknown>
   };

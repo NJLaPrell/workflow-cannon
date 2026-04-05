@@ -11,8 +11,8 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 
 ## Current state
 
-- **Shipped:** latest **`v0.60.0`** (Phase **60** — pilot run-args + planning prelude, SQLite **`BEGIN IMMEDIATE`**, **`agent-session-snapshot`**, **`get-next-actions`** **`teamExecutionContext`**, **`dashboard-summary`** **`schemaVersion` 3** + **`subagentRegistry`**, contract exports, extension **0.1.8**). Phase **59** (**`v0.59.0`**, Improvement Scout) and prior trains remain summarized in **[`ROADMAP-archive.md`](./ROADMAP-archive.md)**; version facts in **[`CHANGELOG.md`](./CHANGELOG.md)**.
-- **Next:** Phase **61** plugin platform v1 (**`T684`**+); **`T668`–`T670`** (Cursor chat prefill) remain **`cancelled`**. Use **`get-next-actions`** / **`list-tasks`** for **`ready`** work.
+- **Shipped:** latest **`v0.61.0`** (Phase **61** — Claude Code plugin platform v1: **`list-plugins`** / **`inspect-plugin`**, **`install-plugin`** / enable-disable, SQLite **`user_version` 8 **`kit_plugin_state`**, ADR + schema + CI fixture). Phase **60** (**`v0.60.0`**, run-args pilot + dashboard/subagent surfaces) and prior trains remain summarized in **[`ROADMAP-archive.md`](./ROADMAP-archive.md)**; version facts in **[`CHANGELOG.md`](./CHANGELOG.md)**.
+- **Next:** Use **`get-next-actions`** / **`list-tasks`** for **`ready`** work; **`T668`–`T670`** (Cursor chat prefill) remain **`cancelled`**.
 - **Maintainer snapshot** — `docs/maintainers/data/workspace-kit-status.yaml` (`current_kit_phase`, `next_agent_actions`).
 - **Execution queue** — canonical task-engine store (default `.workspace-kit/tasks/workspace-kit.db`; JSON opt-out `.workspace-kit/tasks/state.json`); use `pnpm run wk run list-tasks` / `get-next-actions` rather than inferring phase from prose alone.
 - **Product / feature inventory** — **`docs/maintainers/FEATURE-MATRIX.md`**.
@@ -96,6 +96,20 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 
 - **Primary scope:** **`T679`–`T683`** — **`improvement-scout`** playbook (lenses, zones, stems, adversarial pass, evidence floor); optional scout **`metadata`** keys on improvement tasks; improvement state schema **`3`** with bounded **`scoutRotationHistory`**; read-only **`scout-report`** command (optional **`persistRotation`**); config **`improvement.recommendations.heuristicVersion`** **`1`**/**`2`** for alternate ingest admission. **Cancelled track (non-release):** **`T668`–`T670`** (Cursor chat prefill experiments) remain **`cancelled`**.
 - **Outcome:** Operators can run a structured scout rehearsal without Tier B approval; rotation memory is opt-in; pipeline tasks can carry scout metadata; **`heuristic_2`** is opt-in and tested beside **`heuristic_1`** defaults.
+- **Exit signals:**
+  - **`pnpm run build`**, **`check`**, **`test`**, **`parity`**, **`pre-merge-gates`** on the release tag; maintainer evidence per **`RELEASING.md`**.
+
+### Phase 60 - Run-args pilot + planning prelude + dashboard/subagent surfaces -> GitHub release `v0.60.0` (COMPLETE)
+
+- **Primary scope:** **`T689`–`T740`** (and split tasks) — pilot **`schemas/pilot-run-args.snapshot.json`** for all manifest task-engine commands, **`schemas/planning-generation-cli-prelude.json`**, SQLite **`BEGIN IMMEDIATE`**, **`agent-session-snapshot`**, **`get-next-actions`** **`teamExecutionContext`**, **`dashboard-summary`** **`schemaVersion` 3** + **`subagentRegistry`**, package **`exports`** for contract subpaths, maintainer doc alignment (SQLite-only persistence).
+- **Outcome:** Stronger CLI JSON validation and planning-generation ergonomics; extension **0.1.8** surfaces subagent registry card.
+- **Exit signals:**
+  - **`pnpm run build`**, **`check`**, **`test`**, **`parity`**, **`pre-merge-gates`** on the release tag; maintainer evidence per **`RELEASING.md`**.
+
+### Phase 61 - Claude Code plugin platform v1 -> GitHub release `v0.61.0` (COMPLETE)
+
+- **Primary scope:** **`T684`–`T687`** — ADR + **`schemas/claude-plugin-manifest.schema.json`** + **`plugins.discoveryRoots`**; **`list-plugins`** / **`inspect-plugin`**; **`install-plugin`** / **`enable-plugin`** / **`disable-plugin`** + **`plugins.persist`**; SQLite **`user_version` 8 **`kit_plugin_state`**; **`workspace-kit doctor`** summary; reference fixture **`docs/examples/claude-plugins/`** + CI smoke.
+- **Outcome:** Deterministic plugin manifest validation, filesystem discovery aligned to Anthropic layout, optional SQLite enablement and copy-install with policy gates.
 - **Exit signals:**
   - **`pnpm run build`**, **`check`**, **`test`**, **`parity`**, **`pre-merge-gates`** on the release tag; maintainer evidence per **`RELEASING.md`**.
 

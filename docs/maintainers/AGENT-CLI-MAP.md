@@ -97,6 +97,15 @@ workspace-kit run recommend-skills '{"tags":["example"]}'
 
 **`apply-skill`** defaults to preview mode (policy waived); non-preview / audit paths are **Tier B** — see **Tier B** table below.
 
+### Claude Code plugins (read-only discovery; Tier C)
+
+```bash
+workspace-kit run list-plugins '{}'
+workspace-kit run inspect-plugin '{"pluginName":"wc-phase-61-sample"}'
+```
+
+**`install-plugin`**, **`enable-plugin`**, and **`disable-plugin`** are **Tier B** (`plugins.persist`) — see **Tier B** table below. ADR: [`ADR-claude-code-plugin-platform-v1.md`](./adrs/ADR-claude-code-plugin-platform-v1.md).
+
 ### Two approval lanes (single cross-reference)
 
 | Lane | Mechanism | Applies to |
@@ -186,6 +195,9 @@ ADR: **`docs/maintainers/adrs/ADR-planning-generation-optimistic-concurrency.md`
 | Block assignment | `workspace-kit run block-assignment '<json>'` | `team-execution.persist` | Supervisor **`assigned`/`submitted` → `blocked`** |
 | Reconcile assignment | `workspace-kit run reconcile-assignment '<json>'` | `team-execution.persist` | Supervisor **`submitted` → `reconciled`** |
 | Cancel assignment | `workspace-kit run cancel-assignment '<json>'` | `team-execution.persist` | Supervisor terminal cancel |
+| Install Claude-layout plugin (copy) | `workspace-kit run install-plugin '<json>'` | `plugins.persist` | Copies validated tree into **`plugins.discoveryRoots`**; see instruction file |
+| Enable discovered plugin | `workspace-kit run enable-plugin '<json>'` | `plugins.persist` | Sets **`kit_plugin_state.enabled`** |
+| Disable discovered plugin | `workspace-kit run disable-plugin '<json>'` | `plugins.persist` | Sets **`kit_plugin_state.enabled`** |
 | Config-declared extra commands | `workspace-kit run <name> '<json>'` | `policy.dynamic-sensitive` if listed in `policy.extraSensitiveModuleCommands` | Must still pass **`policyApproval`** |
 
 **Copy-paste — document batch (real writes):**
@@ -250,6 +262,12 @@ workspace-kit run apply-skill '{"skillId":"sample-wc-skill","options":{"dryRun":
 ```bash
 workspace-kit run register-subagent '{"subagentId":"researcher","allowedCommands":["list-tasks","get-task"],"policyApproval":{"confirmed":true,"rationale":"register delegated agent"}}'
 workspace-kit run spawn-subagent '{"subagentId":"researcher","sessionId":"sess-20260404-1","hostHint":"cursor","policyApproval":{"confirmed":true,"rationale":"record spawn"}}'
+```
+
+**Copy-paste — install plugin (copy tree into first discovery root):**
+
+```bash
+workspace-kit run install-plugin '{"sourcePath":"path/to/plugin-root","policyApproval":{"confirmed":true,"rationale":"install plugin from maintainer bundle"}}'
 ```
 
 ## CLI mutations (`init` / `upgrade` / `config`) — env approval, not JSON `policyApproval`

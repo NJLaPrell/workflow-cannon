@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/claude-plugin-manifest.schema.json",
+  "title": "Claude Code plugin manifest (plugin.json)",
+  "description": "Subset aligned with Anthropic Claude Code plugin layout (.claude-plugin/plugin.json). Unknown top-level keys are allowed for forward compatibility; known keys are type-checked.",
+  "type": "object",
+  "required": ["name"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.-]+)?(\\+[0-9A-Za-z.-]+)?$"
+    },
+    "description": { "type": "string" },
+    "author": {
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        {
+          "type": "object",
+          "required": ["name"],
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "email": { "type": "string" },
+            "url": { "type": "string" }
+          },
+          "additionalProperties": true
+        }
+      ]
+    },
+    "homepage": { "type": "string", "minLength": 1 },
+    "repository": {
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "type": "string" },
+            "url": { "type": "string" },
+            "directory": { "type": "string" }
+          },
+          "additionalProperties": true
+        }
+      ]
+    },
+    "license": { "type": "string", "minLength": 1 },
+    "keywords": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "commands": {
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      ]
+    },
+    "agents": {
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      ]
+    },
+    "hooks": {
+      "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "object" }]
+    },
+    "mcpServers": {
+      "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "object" }]
+    }
+  },
+  "additionalProperties": true
+}

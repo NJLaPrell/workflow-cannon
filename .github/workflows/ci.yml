@@ -35,6 +35,9 @@ jobs:
       - name: Test
         run: pnpm test
 
+      - name: Plugin fixture smoke (list-plugins / inspect-plugin)
+        run: node scripts/ci-plugin-fixture-smoke.mjs
+
       - name: Cursor extension (pnpm workspace)
         run: pnpm --filter cursor-workflow-cannon run check && pnpm --filter cursor-workflow-cannon run compile
 

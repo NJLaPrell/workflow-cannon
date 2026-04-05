@@ -7,6 +7,7 @@ import { approvalsModule } from "./approvals/index.js";
 import { documentationModule } from "./documentation/index.js";
 import { improvementModule } from "./improvement/index.js";
 import { planningModule } from "./planning/index.js";
+import { pluginsModule } from "./plugins/index.js";
 import { skillsModule } from "./skills/index.js";
 import { subagentsModule } from "./subagents/index.js";
 import { teamExecutionModule } from "./team-execution/index.js";
@@ -18,6 +19,7 @@ export const defaultRegistryModules: WorkflowModule[] = [
   documentationModule,
   agentBehaviorModule,
   skillsModule,
+  pluginsModule,
   subagentsModule,
   teamExecutionModule,
   taskEngineModule,
@@ -43,6 +45,7 @@ export type {
   DocumentationValidationIssue
 } from "./documentation/types.js";
 export { improvementModule, buildImprovementTaskPayload } from "./improvement/index.js";
+export { pluginsModule } from "./plugins/index.js";
 export { skillsModule } from "./skills/index.js";
 export { subagentsModule } from "./subagents/index.js";
 export { teamExecutionModule } from "./team-execution/index.js";

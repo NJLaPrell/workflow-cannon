@@ -11,7 +11,7 @@
       "const": 1
     },
     "packageVersion": {
-      "const": "0.60.0",
+      "const": "0.61.0",
       "description": "Must match package.json version."
     },
     "moduleId": {

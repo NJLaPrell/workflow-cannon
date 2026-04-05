@@ -1,0 +1,12 @@
+{
+  "name": "wc-phase-61-sample",
+  "version": "0.1.0",
+  "description": "Workflow Cannon Phase 61 reference fixture; validates Claude-layout plugin discovery only.",
+  "author": {
+    "name": "Workflow Cannon maintainers"
+  },
+  "license": "MIT",
+  "keywords": ["workflow-cannon", "fixture", "test"],
+  "commands": ["./commands"],
+  "hooks": "./hooks/hooks.json"
+}

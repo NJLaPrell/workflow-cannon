@@ -18,6 +18,7 @@ import { runWorkspaceConfigCli } from "./core/config-cli.js";
 import { handleRunCommand } from "./cli/run-command.js";
 import {
   collectDoctorPlanningPersistenceIssues,
+  collectPluginDoctorSummaryLines,
   collectPolicyLaneEnvDoctorSummaryLines,
   collectTaskPersistenceDoctorSummaryLines
 } from "./cli/doctor-planning-issues.js";
@@ -566,6 +567,9 @@ export async function runCli(
     writeLine(line);
   }
   for (const line of collectPolicyLaneEnvDoctorSummaryLines()) {
+    writeLine(line);
+  }
+  for (const line of await collectPluginDoctorSummaryLines(cwd)) {
     writeLine(line);
   }
   writeLine(`Next: workspace-kit run — list module commands; see ${AGENT_CLI_MAP_HUMAN_DOC} for tier/policy copy-paste.`);

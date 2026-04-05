@@ -10,6 +10,20 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 (none)
 
+## [0.61.0] - 2026-04-05
+
+Phase 61 — **Claude Code plugin platform v1** (**`T684`–`T687`**): ADR + JSON Schema for **`.claude-plugin/plugin.json`**, **`plugins.discoveryRoots`**, read-only **`list-plugins`** / **`inspect-plugin`**, Tier B **`install-plugin`** / **`enable-plugin`** / **`disable-plugin`** (**`plugins.persist`**), kit SQLite **`user_version` 8** + **`kit_plugin_state`**, **`workspace-kit doctor`** plugin summary line, reference fixture under **`docs/examples/claude-plugins/`**, CI **`scripts/ci-plugin-fixture-smoke.mjs`**, maintainer **`AGENT-CLI-MAP`** + run-args waivers for mutators.
+
+### Added
+
+- **`plugins`** module (**`0.1.0`**) — discovery, manifest validation (**`schemas/claude-plugin-manifest.schema.json`**), SQLite enablement; policy **`plugins.persist`**.
+- **`docs/maintainers/adrs/ADR-claude-code-plugin-platform-v1.md`** — cited Anthropic baseline + explicit non-goals / gap list.
+
+### Changed
+
+- **`task-engine`** module **`0.20.0` → `0.21.0`**; **`KIT_SQLITE_USER_VERSION` `8`**; **`get-kit-persistence-map`** documents **`kit_plugin_state`**.
+- **`task-engine-run-contracts`** / **`pilot-run-args.snapshot.json`** / **`compatibility-matrix.json`** aligned with **`v0.61.0`**.
+
 ## [0.60.0] - 2026-04-05
 
 Phase 60 — **architecture / platform follow-through** (**`T689`–`T740`** and split tasks): unified **task-engine** CLI JSON validation via **`schemas/pilot-run-args.snapshot.json`** (all manifest task-engine commands), **`BEGIN IMMEDIATE`** planning SQLite transactions, **`agent-session-snapshot`**, **`get-next-actions`** **`teamExecutionContext`**, **`dashboard-summary` `schemaVersion` 3** + **`subagentRegistry`**, published contract subpaths, maintainer doc corrections (SQLite-only persistence), planning mutator matrix + waivers check.

@@ -34,6 +34,7 @@ async function main() {
       planningModule,
       improvementModule,
       skillsModule,
+      pluginsModule,
       subagentsModule,
       teamExecutionModule
     }
@@ -72,6 +73,7 @@ async function main() {
     planningModule,
     improvementModule,
     skillsModule,
+    pluginsModule,
     subagentsModule,
     teamExecutionModule
   ];

@@ -24,6 +24,7 @@ const KNOWN_POLICY_OPERATION_IDS = new Set([
   "task-engine.backfill-task-feature-links",
   "task-engine.export-feature-taxonomy-json",
   "skills.apply-skill",
+  "plugins.persist",
   "subagents.persist",
   "team-execution.persist"
 ]);

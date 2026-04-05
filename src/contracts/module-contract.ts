@@ -8,6 +8,7 @@ export type ModuleCapability =
   | "migration"
   | "agent-behavior"
   | "skills"
+  | "plugins"
   | "subagents"
   | "team-execution";
 
