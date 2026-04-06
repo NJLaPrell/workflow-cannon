@@ -305,7 +305,7 @@
       "properties": {
         "wishlistId": {
           "type": "string",
-          "pattern": "^W[0-9]+$"
+          "pattern": "^(?:W|T)[0-9]+$"
         }
       },
       "additionalProperties": false

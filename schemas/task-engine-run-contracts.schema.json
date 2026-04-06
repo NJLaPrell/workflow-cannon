@@ -471,7 +471,7 @@
               "required": ["wishlistId"],
               "additionalProperties": false,
               "properties": {
-                "wishlistId": { "type": "string", "pattern": "^W[0-9]+$" }
+                "wishlistId": { "type": "string", "pattern": "^(?:W|T)[0-9]+$" }
               }
             },
             "responseData": {
