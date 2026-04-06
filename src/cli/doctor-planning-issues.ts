@@ -91,6 +91,9 @@ export async function collectTaskPersistenceDoctorSummaryLines(cwd: string): Pro
     }
   }
   lines.push("Native SQLite help: docs/maintainers/runbooks/native-sqlite-consumer-install.md");
+  lines.push(
+    "Team assignments / subagents: `pnpm exec wk run list-assignments '{}'`, `list-subagents` / `list-subagent-sessions` — rollups in `dashboard-summary`; runbook `.ai/runbooks/subagent-registry.md`; ADRs `docs/maintainers/adrs/ADR-team-execution-v1.md`, `ADR-subagent-registry-v1.md`."
+  );
   lines.push("Persistence map (JSON): workspace-kit run get-kit-persistence-map '{}'");
   lines.push("Backend paths + recovery: docs/maintainers/runbooks/task-persistence-operator.md");
   const pol = getPlanningGenerationPolicy({ effectiveConfig: effective });

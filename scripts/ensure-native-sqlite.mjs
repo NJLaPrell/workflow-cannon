@@ -29,6 +29,9 @@ async function main() {
     const msg = err instanceof Error ? err.message : String(err);
     if (!needsRebuildMessage(msg)) {
       console.error("[workspace-kit] better-sqlite3 load failed:", msg);
+      console.error(
+        "[workspace-kit] Install / troubleshooting: docs/maintainers/runbooks/native-sqlite-consumer-install.md"
+      );
       process.exit(1);
     }
   }
@@ -48,6 +51,9 @@ async function main() {
     });
   }
   if (r.status !== 0) {
+    console.error(
+      "[workspace-kit] Rebuild failed — see docs/maintainers/runbooks/native-sqlite-consumer-install.md"
+    );
     process.exit(r.status ?? 1);
   }
 

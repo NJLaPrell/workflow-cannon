@@ -10,6 +10,22 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 (none)
 
+## [0.62.0] - 2026-04-06
+
+Phase 62 — **Maintainer operability** (**`T703`–`T704`**, **`T742`–`T744`**): operator-facing **`AGENT-CLI-MAP`** for runtime `wk run` argv, team execution + subagent persistence map, wishlist intake ladder, SQLite failure hints tied to **`native-sqlite-consumer-install.md`**, and explicit **`policyApproval`** recipes for **`doc.generate-document`** and **`task-engine.backfill-task-feature-links`**.
+
+### Added
+
+- **`AGENT-CLI-MAP.md`** — runtime invocation section; team/subagent inspection vs mutate map; wishlist intake ladder pointer.
+- **`POLICY-APPROVAL.md`** — copy-paste blocks for **`doc.generate-document`** and **`task-engine.backfill-task-feature-links`**.
+- **`doctor`** summary line — team assignment / subagent CLI entrypoints + ADR pointers.
+- **`wishlist-workflow.md`** — operator ladder (playbook → commands → surfaces).
+
+### Changed
+
+- **`task-engine`** module **`0.21.0` → `0.22.0`** — doctor / SQLite validation messages cite consumer recovery runbook; **`ensure-native-sqlite.mjs`** stderr points at the same runbook.
+- **`generate-document`** / **`backfill-task-feature-links`** instructions — policy / planning-generation notes aligned with **`AGENT-CLI-MAP`**.
+
 ## [0.61.0] - 2026-04-05
 
 Phase 61 — **Claude Code plugin platform v1** (**`T684`–`T687`**): ADR + JSON Schema for **`.claude-plugin/plugin.json`**, **`plugins.discoveryRoots`**, read-only **`list-plugins`** / **`inspect-plugin`**, Tier B **`install-plugin`** / **`enable-plugin`** / **`disable-plugin`** (**`plugins.persist`**), kit SQLite **`user_version` 8** + **`kit_plugin_state`**, **`workspace-kit doctor`** plugin summary line, reference fixture under **`docs/examples/claude-plugins/`**, CI **`scripts/ci-plugin-fixture-smoke.mjs`**, maintainer **`AGENT-CLI-MAP`** + run-args waivers for mutators.

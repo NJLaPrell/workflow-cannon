@@ -37,10 +37,11 @@ export async function validatePlanningPersistenceForDoctor(
     ({ default: Database } = await import("better-sqlite3"));
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    const runbook = "docs/maintainers/runbooks/native-sqlite-consumer-install.md";
     const hint =
       nativeSqliteFailureLooksLikeAbiMismatch(msg) ?
-        "Run `pnpm rebuild better-sqlite3` or `npm rebuild better-sqlite3` in the install root (package postinstall usually retries this for ABI mismatch)."
-      : "See docs/maintainers/runbooks/native-sqlite-consumer-install.md for install and troubleshooting.";
+        `Rebuild the native addon in the install root: \`pnpm rebuild better-sqlite3\` or \`npm rebuild better-sqlite3\` (postinstall retries ABI mismatch). Full ladder: ${runbook}.`
+      : `Install / toolchain / permissions checklist: ${runbook}.`;
     issues.push({
       path: "better-sqlite3",
       reason: `native-sqlite-load-failed: ${msg} — ${hint}`
@@ -68,7 +69,7 @@ export async function validatePlanningPersistenceForDoctor(
   } catch (err) {
     issues.push({
       path: relDisplay,
-      reason: `sqlite-open-failed: ${(err as Error).message}`
+      reason: `sqlite-open-failed: ${(err as Error).message} — check DB path permissions, disk, and WAL sidecars; ordered recovery: docs/maintainers/runbooks/native-sqlite-consumer-install.md`
     });
     return issues;
   }
@@ -185,7 +186,7 @@ export async function validatePlanningPersistenceForDoctor(
   } catch (err) {
     issues.push({
       path: relDisplay,
-      reason: `sqlite-schema-invalid: ${(err as Error).message}`
+      reason: `sqlite-schema-invalid: ${(err as Error).message} — see docs/maintainers/runbooks/native-sqlite-consumer-install.md (corruption / migration recovery).`
     });
   } finally {
     db.close();

@@ -8,7 +8,7 @@ Generate a single document for both canonical AI and human-readable surfaces usi
   - `AGENTS.md`
   - `ARCHITECTURE.md`
   - `PRINCIPLES.md`
-  - `README.md`
+  - `README.md` — human body includes **Chat-first workflows**, filled from `chat_feature|` keyed lines in `.ai/README.md` via `<!--DOC_MODULE:CHAT_FEATURES-->` in `templates/README.md` (see `schemas/documentation-schema.md`).
   - `RELEASING.md`
   - `ROADMAP.md`
   - `SECURITY.md`
@@ -43,6 +43,10 @@ Generate a single document for both canonical AI and human-readable surfaces usi
 10. Run section coverage validation (all required sections present, correct headings/order where required); retry/resolve on failure.
 11. Detect conflicts with higher-precedence docs and stop/prompt when policy-sensitive or unresolved.
 12. Emit run evidence: inputs, files read/written, validation results, retries used, conflict outcomes, timestamp.
+
+## Policy (`operationId` `doc.generate-document`)
+
+Non-**`dryRun`** writes are **Tier B**: pass **`policyApproval`** inside the third JSON argv to **`pnpm exec wk run generate-document '…'`**. Env **`WORKSPACE_KIT_POLICY_APPROVAL`** does **not** approve the `run` path. See **`.ai/AGENT-CLI-MAP.md`** and **`.ai/POLICY-APPROVAL.md`**.
 
 ## Response template (CLI shaping)
 

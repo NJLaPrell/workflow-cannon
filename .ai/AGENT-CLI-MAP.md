@@ -4,7 +4,7 @@ Single maintainer reference for **what agents must run in a terminal** when work
 
 **Prefer diagrams first?** [`CLI-VISUAL-GUIDE.md`](./CLI-VISUAL-GUIDE.md) — ASCII topology, Mermaid decision flow, approval lanes, default module router.
 
-**Related:** `docs/maintainers/POLICY-APPROVAL.md` (approval semantics), `docs/maintainers/TERMS.md` (terminology), module instructions under `src/modules/*/instructions/*.md` (exact JSON fields per command).
+**Related:** `.ai/POLICY-APPROVAL.md` (approval semantics), `.ai/TERMS.md` (terminology), module instructions under `src/modules/*/instructions/*.md` (exact JSON fields per command).
 
 **Cursor extension (monorepo):** TypeScript shapes for **`dashboard-summary`** success payloads are shared from **`@workflow-cannon/workspace-kit/contracts/dashboard-summary-run`** (see `extensions/cursor-workflow-cannon/README.md`).
 
@@ -22,9 +22,40 @@ Optional machine-readable catalog (same validation as `doctor`, then JSON on std
 workspace-kit doctor --agent-instruction-surface
 ```
 
-Payload shape: `{ ok, code: "agent-instruction-surface", data: { schemaVersion, commands[], activationReport, errorRemediationCatalog } }`. Rows include `executable` and `degradation` when a declared instruction is documentation-only because the owning module or a `requiresPeers` module is disabled. **`errorRemediationCatalog`** maps common failure `code` strings to repo-relative **`instructionPath`** / **`docPath`** hints (see **`docs/maintainers/adrs/ADR-cli-error-remediation-contract.md`**). **Documentation-only** does **not** waive `policyApproval` for mutating `workspace-kit run` operations — see `docs/maintainers/POLICY-APPROVAL.md`.
+Payload shape: `{ ok, code: "agent-instruction-surface", data: { schemaVersion, commands[], activationReport, errorRemediationCatalog } }`. Rows include `executable` and `degradation` when a declared instruction is documentation-only because the owning module or a `requiresPeers` module is disabled. **`errorRemediationCatalog`** maps common failure `code` strings to repo-relative **`instructionPath`** / **`docPath`** hints (see **`docs/maintainers/adrs/ADR-cli-error-remediation-contract.md`**). **Documentation-only** does **not** waive `policyApproval` for mutating `workspace-kit run` operations — see `.ai/POLICY-APPROVAL.md`.
 
 When the workspace root is not a kit source checkout, instruction paths still resolve from the process working directory (same rule as `resolveRegistryAndConfig`); run from the repo root in CI and local dev so paths match this tree.
+
+## Runtime `workspace-kit run` invocation (argv, `--schema-only`, approvals)
+
+1. **Shape:** `pnpm exec wk run <command> '<single-json-object>'` — the third argv is one JSON object. Discovery flags attach to the command: `pnpm exec wk run run-transition --schema-only '{}'`.
+2. **Policy:** Tier A/B mutators require `"policyApproval":{"confirmed":true,"rationale":"…"}` **inside** that JSON. The env var **`WORKSPACE_KIT_POLICY_APPROVAL`** does **not** approve `workspace-kit run` — see **Two approval lanes** below.
+3. **Schema discovery:** For pilot-validated commands, use `pnpm exec wk run <command> --schema-only` to emit JSON Schema + `sampleArgs` instead of executing.
+4. **Failures:** **`invalid-run-args`** → fix JSON against the schema from **`--schema-only`**. **`planning-generation-required`** / **`planning-generation-mismatch`** → re-read **`data.planningGeneration`** from **`list-tasks`** / **`get-next-actions`** / **`get-task`**, then pass **`expectedPlanningGeneration`** on commands listed in **`schemas/planning-generation-cli-prelude.json`** (this repo uses policy **`require`**).
+5. **Clean stdout:** Prefer **`pnpm exec wk`** over **`pnpm run wk`** when scripts parse JSON from stdout — see **Shell scripts and JSON stdout** below.
+
+Verified read: `pnpm exec wk run list-tasks '{}'`.
+
+## Team execution assignments and subagent registry (inspect vs mutate)
+
+**Architecture:** `docs/maintainers/adrs/ADR-team-execution-v1.md`, `docs/maintainers/adrs/ADR-subagent-registry-v1.md`.
+
+**SQLite (configured kit DB, `tasks.sqliteDatabaseRelativePath`):**
+
+- **Team execution:** table **`kit_team_assignments`** (`PRAGMA user_version` ≥ 7).
+- **Subagents:** **`kit_subagent_definitions`**, **`kit_subagent_sessions`**, **`kit_subagent_messages`** (`user_version` ≥ 6).
+
+**Read-only rollups**
+
+- **`pnpm exec wk run dashboard-summary '{}'`** — **`data.teamExecution`** and **`data.subagentRegistry`** when schema versions match; see `src/modules/task-engine/instructions/dashboard-summary.md`.
+- **`pnpm exec wk run agent-session-snapshot '{}'`** — composed bundle including open team assignments when present.
+
+**Mutating CLI (Tier B + `policyApproval`; add `expectedPlanningGeneration` when policy `require`)**
+
+- **Team:** `list-assignments`, `register-assignment`, `submit-assignment-handoff`, `reconcile-assignment`, `block-assignment`, `cancel-assignment` — `src/modules/team-execution/instructions/*.md`.
+- **Subagents:** `register-subagent`, `spawn-subagent`, `message-subagent`, `close-subagent-session`, … plus read-only `list-*` / `get-*` — **`.ai/runbooks/subagent-registry.md`**.
+
+**Cursor extension:** dashboard consumes packaged **`dashboard-summary`** JSON (`extensions/cursor-workflow-cannon/README.md`).
 
 ## Quick boundary gate (use this before acting)
 
@@ -34,15 +65,15 @@ When the workspace root is not a kit source checkout, instruction paths still re
 
 ## Maintainer playbook: one task to the phase integration branch
 
-When delivering **one** **`T###`** via GitHub PR **into `release/phase-<N>`** (not **`main`**), use the ordered playbook **`docs/maintainers/playbooks/task-to-phase-branch.md`** (id `task-to-phase-branch`): ensure the phase branch exists (from **`main`** when starting a phase), branch the task from **`release/phase-<N>`**, implement, open PR with **base = phase branch**, review (and iterate with PR comments until checks pass), merge into the phase branch, then **`run-transition`** with **`complete`** and evidence. Pairs with **`.cursor/rules/maintainer-delivery-loop.mdc`** and **`.cursor/rules/branching-tagging-strategy.mdc`**; optional requestable **`.cursor/rules/playbook-task-to-phase-branch.mdc`**. Phase → **`main`** happens at closeout per **`docs/maintainers/playbooks/phase-closeout-and-release.md`**. Human summary: **`docs/maintainers/AGENTS.md`** → **Task execution**.
+When delivering **one** **`T###`** via GitHub PR **into `release/phase-<N>`** (not **`main`**), use the ordered playbook **`.ai/playbooks/task-to-phase-branch.md`** (id `task-to-phase-branch`): ensure the phase branch exists (from **`main`** when starting a phase), branch the task from **`release/phase-<N>`**, implement, open PR with **base = phase branch**, review (and iterate with PR comments until checks pass), merge into the phase branch, then **`run-transition`** with **`complete`** and evidence. Pairs with **`.cursor/rules/maintainer-delivery-loop.mdc`** and **`.cursor/rules/branching-tagging-strategy.mdc`**; optional requestable **`.cursor/rules/playbook-task-to-phase-branch.mdc`**. Phase → **`main`** happens at closeout per **`.ai/playbooks/phase-closeout-and-release.md`**. Human summary: **`.ai/agent-source-of-truth-order.md`** → **Task execution**.
 
 ## Maintainer playbook: improvement discovery
 
-When **researching** friction to log as **`type: "improvement"`** tasks (**`T###`** ids; **`create-task`** or **`generate-recommendations`** / **`ingest-transcripts`**), synthesize a **problem report** (`metadata.issue`, `metadata.supportingReasoning`)—not raw transcript/tool dumps. Use **`docs/maintainers/playbooks/improvement-task-discovery.md`** (id `improvement-task-discovery`). For a **bounded scout** pass (lens rotation, evidence floor, read-only rehearsal JSON), use **`docs/maintainers/playbooks/improvement-scout.md`** (id `improvement-scout`) and **`workspace-kit run scout-report`** (non-sensitive). Optional requestable **`.cursor/rules/playbook-improvement-task-discovery.mdc`**. Human summary: **`docs/maintainers/AGENTS.md`** → **Improvement discovery**.
+When **researching** friction to log as **`type: "improvement"`** tasks (**`T###`** ids; **`create-task`** or **`generate-recommendations`** / **`ingest-transcripts`**), synthesize a **problem report** (`metadata.issue`, `metadata.supportingReasoning`)—not raw transcript/tool dumps. Use **`.ai/playbooks/improvement-task-discovery.md`** (id `improvement-task-discovery`). For a **bounded scout** pass (lens rotation, evidence floor, read-only rehearsal JSON), use **`.ai/playbooks/improvement-scout.md`** (id `improvement-scout`) and **`workspace-kit run scout-report`** (non-sensitive). Optional requestable **`.cursor/rules/playbook-improvement-task-discovery.mdc`**. Human summary: **`.ai/agent-source-of-truth-order.md`** → **Improvement discovery**.
 
 ## Maintainer playbook: improvement triage (top 3 → ready)
 
-When **promoting** up to three **`type: "improvement"`** tasks from **`proposed`** to **`ready`**, use **`docs/maintainers/playbooks/improvement-triage-top-three.md`** (id `improvement-triage-top-three`); Tier A **`run-transition`** with **`action":"accept"`** and **`policyApproval`**. Optional requestable **`.cursor/rules/playbook-improvement-triage-top-three.mdc`**. Human summary: **`docs/maintainers/AGENTS.md`** → **Improvement triage**.
+When **promoting** up to three **`type: "improvement"`** tasks from **`proposed`** to **`ready`**, use **`.ai/playbooks/improvement-triage-top-three.md`** (id `improvement-triage-top-three`); Tier A **`run-transition`** with **`action":"accept"`** and **`policyApproval`**. Optional requestable **`.cursor/rules/playbook-improvement-triage-top-three.mdc`**. Human summary: **`.ai/agent-source-of-truth-order.md`** → **Improvement triage**.
 
 ## Maintainer task templates (`tasks/*.md`) vs `workspace-kit`
 
@@ -71,7 +102,7 @@ Successful **`workspace-kit run …`** invocations print **one JSON value to std
 
 ### Multi-writer task store (lost updates)
 
-Parallel **`workspace-kit run`** processes that **mutate** task state each do read→modify→write; **last writer wins** without coordination. When **`tasks.planningGenerationPolicy`** is **`require`**, mutating commands should pass **`expectedPlanningGeneration`** from **`get-task`** / **`list-tasks`**. Reads stay safe. Depth: **`docs/maintainers/runbooks/task-persistence-operator.md`** and **`docs/maintainers/adrs/ADR-planning-generation-optimistic-concurrency.md`**.
+Parallel **`workspace-kit run`** processes that **mutate** task state each do read→modify→write; **last writer wins** without coordination. When **`tasks.planningGenerationPolicy`** is **`require`**, mutating commands should pass **`expectedPlanningGeneration`** from **`get-task`** / **`list-tasks`**. Reads stay safe. Depth: **`.ai/runbooks/task-persistence-operator.md`** and **`docs/maintainers/adrs/ADR-planning-generation-optimistic-concurrency.md`**.
 
 ### Relational SQLite: scalar text fields
 
@@ -143,7 +174,7 @@ See `src/modules/task-engine/instructions/run-transition.md` for allowed `action
 
 ### GitHub-native runner (Phase 55)
 
-Headless **`run-transition`** from GitHub Actions must pass **`policyApproval` inside the third JSON argument** — same as any Tier A **`workspace-kit run`**. The reference script **`tools/github-invocation/run-github-delivery.mjs`** expects maintainer-supplied **`WORKSPACE_KIT_GITHUB_RUN_ARGS_JSON`** (full argv JSON object) plus **`WORKSPACE_KIT_GITHUB_RUN_POLICY_APPROVAL`** when **`policyApproval` is omitted** from that object; it never treats issue comments as approval. Plan-only automation uses **`kit.githubInvocation.planOnlyRunCommands`** (default includes **`get-next-actions`**, **`list-tasks`**, **`get-task`**). Runbook: **`docs/maintainers/runbooks/github-workflow-cannon-invocation.md`**; ADR: **`docs/maintainers/adrs/ADR-github-native-invocation.md`**.
+Headless **`run-transition`** from GitHub Actions must pass **`policyApproval` inside the third JSON argument** — same as any Tier A **`workspace-kit run`**. The reference script **`tools/github-invocation/run-github-delivery.mjs`** expects maintainer-supplied **`WORKSPACE_KIT_GITHUB_RUN_ARGS_JSON`** (full argv JSON object) plus **`WORKSPACE_KIT_GITHUB_RUN_POLICY_APPROVAL`** when **`policyApproval` is omitted** from that object; it never treats issue comments as approval. Plan-only automation uses **`kit.githubInvocation.planOnlyRunCommands`** (default includes **`get-next-actions`**, **`list-tasks`**, **`get-task`**). Runbook: **`.ai/runbooks/github-workflow-cannon-invocation.md`**; ADR: **`docs/maintainers/adrs/ADR-github-native-invocation.md`**.
 
 ### Planning generation (SQLite optimistic lock)
 
@@ -190,6 +221,12 @@ workspace-kit run document-project '{"options":{"overwriteHuman":true},"policyAp
 workspace-kit run generate-document '{"documentType":"ROADMAP.md","options":{"dryRun":true}}'
 ```
 
+**Copy-paste — single doc real write (`operationId` `doc.generate-document`, Tier B):** pass JSON **`policyApproval`** on the **`run`** argv. **`WORKSPACE_KIT_POLICY_APPROVAL` does not apply** to `run`.
+
+```bash
+workspace-kit run generate-document '{"documentType":"ROADMAP.md","options":{"overwriteHuman":true},"policyApproval":{"confirmed":true,"rationale":"regenerate ROADMAP after data change"}}'
+```
+
 **Copy-paste — recommendations:**
 
 ```bash
@@ -209,11 +246,14 @@ workspace-kit run scout-report '{"seed":"session-1","persistRotation":true}'
 workspace-kit run review-item '{"taskId":"imp-example","decision":"accept","actor":"agent@example","policyApproval":{"confirmed":true,"rationale":"accept after review"}}'
 ```
 
-**Copy-paste — backfill junction from legacy `features_json`:**
+**Copy-paste — backfill junction from legacy `features_json` (`operationId` `task-engine.backfill-task-feature-links`, Tier B; listed in `planning-generation-cli-prelude` — pass `expectedPlanningGeneration` when policy `require`):**
 
 ```bash
-workspace-kit run backfill-task-feature-links '{"dryRun":true}'
-workspace-kit run backfill-task-feature-links '{"policyApproval":{"confirmed":true,"rationale":"backfill task feature links"}}'
+# This repo: policy `require` — even dry-run needs policyApproval + expectedPlanningGeneration from a prior read:
+workspace-kit run list-tasks '{}'
+workspace-kit run backfill-task-feature-links '{"dryRun":true,"policyApproval":{"confirmed":true,"rationale":"dry-run backfill"},"expectedPlanningGeneration":123}'
+# Replace the integer with data.planningGeneration from that read. Live run: dryRun false + same fields.
+workspace-kit run backfill-task-feature-links '{"dryRun":false,"policyApproval":{"confirmed":true,"rationale":"backfill task feature links"},"expectedPlanningGeneration":123}'
 ```
 
 **Copy-paste — export taxonomy JSON from SQLite registry:**
@@ -297,6 +337,8 @@ workspace-kit run list-features '{"componentId":"task-engine-queue"}'
 
 **Task id spaces** (execution vs wishlist intake vs **`type: "improvement"`** — all use **`T###`** today; legacy **`imp-*`** may remain in older stores): [`runbooks/wishlist-workflow.md`](./runbooks/wishlist-workflow.md).
 
+**Wishlist intake operator ladder:** end-to-end playbook [`.ai/playbooks/wishlist-intake-to-execution.md`](./playbooks/wishlist-intake-to-execution.md); model + commands in [`.ai/runbooks/wishlist-workflow.md`](./runbooks/wishlist-workflow.md) (**`list-wishlist`**, **`get-wishlist`**, **`convert-wishlist`**, **`migrate-wishlist-intake`**). Wishlist rows are **not** in default **`get-next-actions`** / **`list-tasks`** scopes — use wishlist commands or **`dashboard-summary`** **`wishlist.*`** counts.
+
 Instruction: `src/modules/task-engine/instructions/queue-health.md`. Related runbook: [`runbooks/agent-task-engine-ergonomics.md`](./runbooks/agent-task-engine-ergonomics.md).
 
 ## Tier C — Safe discovery / read-only examples
@@ -349,7 +391,7 @@ workspace-kit doctor
 
 **Agent behavior** (`list-behavior-profiles`, `get-behavior-profile`, `resolve-behavior-profile`, `set-active-behavior-profile`, `create-behavior-profile`, `update-behavior-profile`, `delete-behavior-profile`, `diff-behavior-profiles`, `explain-behavior-profiles`, `interview-behavior-profile`) are **Tier C**: advisory interaction posture only; **subordinate** to PRINCIPLES and policy. They persist under `.workspace-kit/agent-behavior/` (JSON) or unified SQLite (`module_id` `agent-behavior`) when `tasks.persistenceBackend` is `sqlite`.
 
-**Wishlist mutations** (`create-wishlist`, `update-wishlist`, `convert-wishlist`), **`migrate-task-persistence`**, and **`migrate-wishlist-intake`** are Tier C by default (same as `create-task`): they persist workspace state (JSON files and/or the configured SQLite planning DB under `tasks.sqliteDatabaseRelativePath`) but do not use `policyApproval` unless listed in `policy.extraSensitiveModuleCommands`. **`update-workspace-phase-snapshot`** is Tier C and writes only the two phase scalar lines in **`docs/maintainers/data/workspace-kit-status.yaml`** (see **`AGENTS.md`** → workspace phase snapshot).
+**Wishlist mutations** (`create-wishlist`, `update-wishlist`, `convert-wishlist`), **`migrate-task-persistence`**, and **`migrate-wishlist-intake`** are Tier C by default (same as `create-task`): they persist workspace state (JSON files and/or the configured SQLite planning DB under `tasks.sqliteDatabaseRelativePath`) but do not use `policyApproval` unless listed in `policy.extraSensitiveModuleCommands`. **`update-workspace-phase-snapshot`** is Tier C and writes only the two phase scalar lines in **`docs/maintainers/data/workspace-kit-status.yaml`** (see **`.ai/agent-source-of-truth-order.md`** and task-engine instructions for phase snapshot).
 
 Instruction paths: run `workspace-kit run` with no subcommand to list commands; each line lists `(moduleId)` and points to the module’s instruction file pattern above.
 
@@ -358,11 +400,11 @@ Instruction paths: run `workspace-kit run` with no subcommand to list commands; 
 1. `workspace-kit doctor` — canonical JSON contract files present.
 2. `workspace-kit run` (no arguments) — router-registered commands with descriptions (see `doctor --agent-instruction-surface` for the full declared catalog including non-executable rows).
 3. This file + `src/modules/<module>/instructions/<command>.md` — copy-paste JSON shape.
-4. `docs/maintainers/POLICY-APPROVAL.md` — JSON vs env vs interactive approval.
+4. `.ai/POLICY-APPROVAL.md` — JSON vs env vs interactive approval.
 5. Task Engine run schemas: `schemas/task-engine-run-contracts.schema.json` (versioned with package; command coverage verified by `pnpm run check`).
 6. Agent behavior plan: `docs/maintainers/plans/agent-behavior-module.md` + profile schema `schemas/agent-behavior-profile.schema.json`.
-7. Planning module runbook: `docs/maintainers/runbooks/planning-workflow.md`.
-8. Agent task-engine ergonomics: `docs/maintainers/runbooks/agent-task-engine-ergonomics.md`.
+7. Planning module runbook: `.ai/runbooks/planning-workflow.md`.
+8. Agent task-engine ergonomics: `.ai/runbooks/agent-task-engine-ergonomics.md`.
 
 ## Optional session opener (habit hook)
 
