@@ -404,7 +404,7 @@ Instruction paths: run `workspace-kit run` with no subcommand to list commands; 
 5. Task Engine run schemas: `schemas/task-engine-run-contracts.schema.json` (versioned with package; command coverage verified by `pnpm run check`).
 6. Agent behavior plan: `docs/maintainers/plans/agent-behavior-module.md` + profile schema `schemas/agent-behavior-profile.schema.json`.
 7. Planning module runbook: `.ai/runbooks/planning-workflow.md`.
-8. Agent task-engine ergonomics: `.ai/runbooks/agent-task-engine-ergonomics.md`.
+8. Agent task-engine ergonomics: `.ai/runbooks/agent-task-engine-ergonomics.md` (includes **§0** natural-language → command exemplar table).
 
 ## Optional session opener (habit hook)
 

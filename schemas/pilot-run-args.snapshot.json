@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceSchemaPackageVersion": "0.62.0",
+  "sourceSchemaPackageVersion": "0.62.1",
   "pilotCommands": [
     "add-dependency",
     "agent-session-snapshot",

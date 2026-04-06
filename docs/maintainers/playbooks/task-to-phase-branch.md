@@ -5,12 +5,12 @@
 **Playbook id:** `task-to-phase-branch`  
 **Use when:** Taking a single **execution task** (`T###`) from **ready** / **in_progress** through merged code on the **phase integration branch** (`release/phase-<N>`), with PR review and CI. **`main`** receives the phase only during **phase closeout** — see [`phase-closeout-and-release.md`](./phase-closeout-and-release.md).
 
-This file is an **ordered checklist**. Branch naming lives in **`.cursor/rules/branching-tagging-strategy.mdc`**; commit and PR quality expectations align with **`.cursor/rules/maintainer-delivery-loop.mdc`** and [`docs/maintainers/AGENTS.md`](../AGENTS.md).
+This file is an **ordered checklist**. Branch naming lives in **`.cursor/rules/branching-tagging-strategy.mdc`**; commit and PR quality expectations align with **`.cursor/rules/maintainer-delivery-loop.mdc`** and [`.ai/AGENTS.md`](../AGENTS.md) / [`.ai/agent-source-of-truth-order.md`](../agent-source-of-truth-order.md).
 
 ## Phase integration branch naming
 
 - **Pattern:** `release/phase-<N>` (example: `release/phase-52`).
-- **`<N>`** is the **workspace kit phase number** — align with [`docs/maintainers/data/workspace-kit-status.yaml`](../data/workspace-kit-status.yaml) **`current_kit_phase`**, the task’s **`phaseKey`** / phase metadata, or explicit maintainer agreement. Do **not** invent a phase number from chat alone.
+- **`<N>`** is the **workspace kit phase number** — align with **`docs/maintainers/data/workspace-kit-status.yaml`** **`current_kit_phase`**, the task’s **`phaseKey`** / phase metadata, or explicit maintainer agreement. Do **not** invent a phase number from chat alone.
 
 ## 0) Attach context
 
@@ -45,6 +45,16 @@ workspace-kit run run-transition '{"taskId":"T###","action":"start","expectedPla
 2. `git switch` / `git checkout` the task branch and do all task work there.
 
 **Task engine:** If you have **not** yet run **`start`** from step **0b**, run it **now** — before section **3** (first implementation commit).
+
+## 2b) Parallel task chains in one phase (ROADMAP coupling)
+
+Some phases ship **two or more parallel `T###` chains** on the same **`release/phase-<N>`** train (historically: Phase 52–style splits). Without explicit coupling notes, reviewers assume false sequencing.
+
+**Expectation:**
+
+- In **`docs/maintainers/ROADMAP.md`** (or phase notes / maintainer snapshot prose), **cross-link** related task ranges when they share a release boundary, **or** state explicitly that chains are **independent** (no ordering / merge dependency).
+- Prefer a **short playbook or ROADMAP paragraph** over rewriting historical task graphs.
+- Before closeout, spot-check **`dependsOn`** in the task store for active rows so narrative matches **`workspace-kit run list-tasks`** / **`get-task`** reality — not chat memory.
 
 ## 3) Implement, validate, commit
 

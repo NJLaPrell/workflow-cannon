@@ -10,6 +10,15 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 (none)
 
+## [0.62.1] - 2026-04-06
+
+Patch — **Phase 62 completion** (**`T707`**, **`T709`**): playbook §**2b** for parallel task chains + ROADMAP coupling; agent ergonomics runbook **§0** natural-language → command exemplar map; **`AGENT-CLI-MAP`** pointer.
+
+### Added
+
+- **`.ai/playbooks/task-to-phase-branch.md`** — parallel chains / cross-link expectations.
+- **`.ai/runbooks/agent-task-engine-ergonomics.md`** — exemplar intent → `wk run` table.
+
 ## [0.62.0] - 2026-04-06
 
 Phase 62 — **Maintainer operability** (**`T703`–`T704`**, **`T742`–`T744`**): operator-facing **`AGENT-CLI-MAP`** for runtime `wk run` argv, team execution + subagent persistence map, wishlist intake ladder, SQLite failure hints tied to **`native-sqlite-consumer-install.md`**, and explicit **`policyApproval`** recipes for **`doc.generate-document`** and **`task-engine.backfill-task-feature-links`**.

@@ -4,6 +4,21 @@ Maintainer runbook for **agents and operators** who juggle Git, the Task Engine,
 
 Canonical process remains: [`AGENTS.md`](../AGENTS.md), [`AGENT-CLI-MAP.md`](../AGENT-CLI-MAP.md), [`POLICY-APPROVAL.md`](../POLICY-APPROVAL.md), [`RELEASING.md`](../RELEASING.md).
 
+## 0. Natural language → supported commands (exemplar map)
+
+**Exemplar-only** — not an exhaustive catalog; maintainers trim stale rows. Full tiers and payloads: [`AGENT-CLI-MAP.md`](../AGENT-CLI-MAP.md). Feature slugs: generate **`FEATURE-TAXONOMY.md`** / registry via documented `export-feature-taxonomy-json` when needed.
+
+| Operator says… | Start here |
+| --- | --- |
+| “What should I pick up next?” | `pnpm exec wk run get-next-actions '{}'` then `get-task` on the suggested id |
+| “Is the ready queue consistent?” | `pnpm exec wk run queue-health '{}'`; optional `list-tasks` with `"includeQueueHints":true` |
+| “Show me wishlist ideas” | `pnpm exec wk run list-wishlist '{}'` / `get-wishlist` — not default `get-next-actions` scope |
+| “Team assignments / handoffs?” | `pnpm exec wk run list-assignments '{}'`; rollup: `dashboard-summary` |
+| “Subagent sessions?” | `list-subagents`, `list-subagent-sessions`; rollup: `dashboard-summary` → `subagentRegistry` |
+| “Regenerate maintainer docs” | `generate-document` with `dryRun` first; batch: `document-project` — both Tier B for real writes |
+| “Move task lifecycle” | `run-transition` with JSON `policyApproval` (+ `expectedPlanningGeneration` when policy `require`) |
+| “SQLite / persistence broke” | `wk doctor`; consumer ladder: `docs/maintainers/runbooks/native-sqlite-consumer-install.md` |
+
 ## 1. Git merge is not task completion
 
 **Problem:** A pull request can be merged while Task Engine rows still show **`ready`** or **`in_progress`**. Git history and task-engine state are independent sources of truth.
