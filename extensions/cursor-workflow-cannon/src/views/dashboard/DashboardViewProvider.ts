@@ -4,7 +4,9 @@ import { prefillCursorChat } from "../../cursor-chat-prefill.js";
 import type { CommandClient } from "../../runtime/command-client.js";
 import { ingestPlanningMetaFromData } from "../../planning-generation-cache.js";
 import { buildWishlistIntakeAgentPrompt } from "../../wishlist-chat-prompt.js";
+import { buildPhaseCompleteReleaseChatPrompt } from "../../phase-complete-release-prompt.js";
 import {
+  buildGenerateFeaturesPrompt,
   buildImprovementTriagePrompt,
   buildTaskToPhaseBranchPrompt
 } from "../../playbook-chat-prompts.js";
@@ -64,6 +66,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         );
         await prefillCursorChat(prompt);
       }
+      if (msg?.type === "prefillGenerateFeaturesChat") {
+        await prefillCursorChat(buildGenerateFeaturesPrompt());
+      }
       if (msg?.type === "prefillImprovementTriageChat") {
         const raw = msg?.taskId;
         const taskId = typeof raw === "string" ? raw.trim() : "";
@@ -77,6 +82,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         const taskId = typeof raw === "string" ? raw.trim() : "";
         const prompt = buildTaskToPhaseBranchPrompt(taskId.length > 0 ? { taskId } : undefined);
         await prefillCursorChat(prompt);
+      }
+      if (msg?.type === "prefillPhaseCompleteReleaseChat") {
+        const raw = msg?.phasePhrase;
+        const phasePhrase = typeof raw === "string" ? raw.trim() : "";
+        await prefillCursorChat(buildPhaseCompleteReleaseChatPrompt(phasePhrase));
       }
       if (msg?.type === "dashboardTransition") {
         const rawId = msg?.taskId;
@@ -186,7 +196,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       `script-src ${webview.cspSource} 'unsafe-inline'`
     ].join("; ");
 
-    const bootstrap = `(function(){var vscode=acquireVsCodeApi();window.addEventListener("message",function(ev){var m=ev.data;if(!m||m.type!=="wcReplaceRoot"||typeof m.html!=="string")return;var root=document.getElementById("root");if(!root)return;var open={};root.querySelectorAll("details[data-wc-track]").forEach(function(d){var k=d.getAttribute("data-wc-track");if(k&&d.open)open[k]=true;});root.innerHTML=m.html;Object.keys(open).forEach(function(k){var el=root.querySelector('details[data-wc-track="'+k+'"]');if(el)el.open=true;});});var btn=document.getElementById("btn");var rootEl=document.getElementById("root");if(btn)btn.addEventListener("click",function(){vscode.postMessage({type:"refresh"});});if(rootEl)rootEl.addEventListener("click",function(ev){var t=ev.target;if(!t||t.tagName!=="BUTTON")return;var act=t.getAttribute("data-wc-action");if(!act)return;if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});})();`;
+    const bootstrap = `(function(){var vscode=acquireVsCodeApi();window.addEventListener("message",function(ev){var m=ev.data;if(!m||m.type!=="wcReplaceRoot"||typeof m.html!=="string")return;var root=document.getElementById("root");if(!root)return;var open={};root.querySelectorAll("details[data-wc-track]").forEach(function(d){var k=d.getAttribute("data-wc-track");if(k&&d.open)open[k]=true;});root.innerHTML=m.html;Object.keys(open).forEach(function(k){var el=root.querySelector('details[data-wc-track="'+k+'"]');if(el)el.open=true;});});var btn=document.getElementById("btn");var rootEl=document.getElementById("root");if(btn)btn.addEventListener("click",function(){vscode.postMessage({type:"refresh"});});if(rootEl)rootEl.addEventListener("click",function(ev){var t=ev.target;if(!t||t.tagName!=="BUTTON")return;var act=t.getAttribute("data-wc-action");if(!act)return;ev.stopPropagation();if(act==="generate-features-chat"){vscode.postMessage({type:"prefillGenerateFeaturesChat"});return;}if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}if(act==="phase-complete-release"){var ph=(t.getAttribute("data-wc-phase-phrase")||"").trim();vscode.postMessage({type:"prefillPhaseCompleteReleaseChat",phasePhrase:ph});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});})();`;
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -235,8 +245,55 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .phase-stack { margin: 4px 0 8px 0; }
     details.phase-bucket { margin-bottom: 6px; }
     details.phase-bucket summary { cursor: pointer; user-select: none; font-weight: 600; }
+    details.phase-bucket summary.phase-bucket-summary {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px 10px;
+    }
+    .phase-bucket-summary-label { flex: 1; min-width: 0; }
+    button.dash-phase-release-btn {
+      flex-shrink: 0;
+      margin: 0;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 500;
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--vscode-button-foreground);
+      background: var(--vscode-button-background);
+      border: 1px solid var(--vscode-button-border, var(--vscode-contrastBorder, transparent));
+    }
+    button.dash-phase-release-btn:hover {
+      background: var(--vscode-button-hoverBackground);
+    }
+    button.dash-phase-release-btn:active {
+      filter: brightness(0.94);
+    }
     details.phase-bucket pre { margin-top: 4px; }
     .dashboard-tasks-block { margin-top: 0; }
+    .dash-quick-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 10px 0; }
+    button.dash-quick-action-btn {
+      margin: 0;
+      padding: 5px 12px;
+      font-size: 11px;
+      font-weight: 500;
+      border-radius: 6px;
+      cursor: pointer;
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.45));
+    }
+    button.dash-quick-action-btn.dash-quick-action-primary {
+      color: var(--vscode-button-foreground);
+      background: var(--vscode-button-background);
+      border-color: var(--vscode-button-border, var(--vscode-contrastBorder, transparent));
+    }
+    button.dash-quick-action-btn.dash-quick-action-primary:hover {
+      background: var(--vscode-button-hoverBackground);
+    }
+    button.dash-quick-action-btn.dash-quick-action-primary:active {
+      filter: brightness(0.94);
+    }
     .dash-card { border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35)); border-radius: 6px; padding: 8px; margin: 10px 0; }
     details.status-section { margin-bottom: 8px; }
     details.status-section > summary { cursor: pointer; user-select: none; font-weight: 600; }

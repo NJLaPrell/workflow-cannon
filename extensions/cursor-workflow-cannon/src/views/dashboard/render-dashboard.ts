@@ -6,6 +6,14 @@ export function escapeHtml(s: string): string {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+/** Attribute-safe escaping for double-quoted HTML attributes. */
+export function escapeHtmlAttr(s: string): string {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;");
+}
+
 /** Stable id for preserving `<details open>` when the host replaces `#root` innerHTML (`DashboardViewProvider` wcReplaceRoot). */
 function wcTrackAttr(trackId: string): string {
   const safe = trackId.replace(/[^a-zA-Z0-9_-]/g, "_").replace(/_+/g, "_").slice(0, 120);
@@ -207,6 +215,33 @@ function phaseBucketsNonEmpty(phaseBuckets: unknown): unknown[] {
   });
 }
 
+/** Phrase inserted for `{phase}` in the "Complete & Release" chat template (dashboard). */
+export function resolvePhasePhraseForCompleteRelease(raw: {
+  phaseKey?: unknown;
+  top?: unknown;
+}): string {
+  const pk = raw.phaseKey;
+  if (pk !== null && pk !== undefined && String(pk).trim() !== "") {
+    return `Phase ${String(pk).trim()}`;
+  }
+  const top = raw.top;
+  if (Array.isArray(top) && top.length > 0) {
+    const row = top[0] as { phase?: unknown };
+    if (row?.phase != null && String(row.phase).trim() !== "") {
+      return String(row.phase).trim();
+    }
+  }
+  return "Not Phased";
+}
+
+function readyPhaseBucketHasTasks(raw: unknown): boolean {
+  const b = raw as { count?: unknown; top?: unknown };
+  if (typeof b.count === "number" && b.count > 0) {
+    return true;
+  }
+  return Array.isArray(b.top) && b.top.length > 0;
+}
+
 /**
  * When `dashboard-summary` includes `phaseBuckets`, one `<details>` per phase (closed until expanded).
  */
@@ -224,14 +259,25 @@ function renderReadyPhaseBuckets(
     '<div class="phase-stack">' +
     buckets
       .map((raw, i) => {
-        const b = raw as { label?: unknown; top?: unknown };
-        const summary = escapeHtml(String(b.label ?? ""));
+        const b = raw as { label?: unknown; top?: unknown; phaseKey?: unknown; count?: unknown };
+        const summaryLabel = escapeHtml(String(b.label ?? ""));
+        const phasePhrase = resolvePhasePhraseForCompleteRelease(b);
+        const phasePhraseAttr = escapeHtmlAttr(phasePhrase);
+        const showRelease = readyPhaseBucketHasTasks(raw);
+        const releaseBtn = showRelease
+          ? '<button type="button" class="dash-phase-release-btn" data-wc-action="phase-complete-release" data-wc-phase-phrase="' +
+            phasePhraseAttr +
+            '" title="Open a new chat with a phase closeout prompt">Complete &amp; Release</button>'
+          : "";
         const body = renderTaskRowList(b.top ?? [], "No tasks in this phase.");
         return (
           '<details class="phase-bucket"' +
           wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
-          "><summary>" +
-          summary +
+          '><summary class="phase-bucket-summary">' +
+          '<span class="phase-bucket-summary-label">' +
+          summaryLabel +
+          "</span>" +
+          releaseBtn +
           "</summary>" +
           body +
           "</details>"
@@ -889,8 +935,14 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
     );
   })();
 
+  const tasksQuickActionsPanel =
+    '<div class="dash-quick-actions" role="toolbar" aria-label="Chat playbook shortcuts">' +
+    '<button type="button" class="dash-quick-action-btn dash-quick-action-primary" data-wc-action="generate-features-chat" title="Prefill chat: wishlist intake → execution (same as /generate-features)">Generate Features</button>' +
+    "</div>";
+
   const tasksBlock =
     '<section class="dash-card dashboard-tasks-block" aria-label="Task queue rollups">' +
+    tasksQuickActionsPanel +
     "<p><b>Tasks</b></p>" +
     buildDashboardStateCountGridHtml(ss) +
     renderStatusRollup(

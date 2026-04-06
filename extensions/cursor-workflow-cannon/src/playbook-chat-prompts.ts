@@ -3,6 +3,16 @@
  * Avoid exfil-ish patterns that Cursor's deeplink validator rejects.
  */
 
+import { buildWishlistIntakeAgentPrompt } from "./wishlist-chat-prompt.js";
+
+/** Same playbook as wishlist intake → execution; seeded from `/generate-features` or the dashboard Generate Features control. */
+export function buildGenerateFeaturesPrompt(options?: { wishlistId?: string }): string {
+  return (
+    "The operator ran **Generate Features** (Cursor slash **`/generate-features`**).\n\n" +
+    buildWishlistIntakeAgentPrompt(options)
+  );
+}
+
 export function buildImprovementTriagePrompt(options?: { taskId?: string }): string {
   const id = options?.taskId?.trim();
   const focus =
@@ -11,7 +21,7 @@ export function buildImprovementTriagePrompt(options?: { taskId?: string }): str
       : "List proposed improvements with `workspace-kit run list-tasks '{\"status\":\"proposed\",\"type\":\"improvement\"}'` and pick at most three per the playbook rubric.\n\n";
 
   return (
-    "Run **Improvement triage (top three)** for this workspace.\n\n" +
+    "Run **Improvement triage (top three)** for this workspace (Cursor slash **`/process-proposed-improvements`** when invoked that way).\n\n" +
     focus +
     "Attach **`docs/maintainers/playbooks/improvement-triage-top-three.md`** (playbook id **`improvement-triage-top-three`**).\n\n" +
     "Use **`docs/maintainers/AGENT-CLI-MAP.md`** for **`run-transition`** **`accept`** with JSON **`policyApproval`** when promoting tasks.\n\n" +

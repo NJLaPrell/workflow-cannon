@@ -8,8 +8,10 @@ import {
   renderDashboardRootInnerHtml,
   escapeHtml,
   renderActiveFocusHtml,
-  renderMarkdownBoldAfterEscape
+  renderMarkdownBoldAfterEscape,
+  resolvePhasePhraseForCompleteRelease
 } from "../dist/views/dashboard/render-dashboard.js";
+import { buildPhaseCompleteReleaseChatPrompt } from "../dist/phase-complete-release-prompt.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -54,6 +56,12 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.doesNotMatch(html, /Next action/i);
   assert.doesNotMatch(html, /Planning generation/i);
   assert.doesNotMatch(html, /expectedPlanningGeneration/);
+  assert.match(html, /dash-quick-actions/);
+  assert.match(html, /data-wc-action="generate-features-chat"/);
+  assert.match(html, />Generate Features<\/button>/);
+  const tasksHeading = html.indexOf("<p><b>Tasks</b></p>");
+  const quickBar = html.indexOf("dash-quick-actions");
+  assert.ok(quickBar !== -1 && tasksHeading !== -1 && quickBar < tasksHeading);
   assert.match(html, /<p><b>Tasks<\/b><\/p>/);
   assert.match(html, /dash-count-grid/);
   assert.match(html, />Proposed<\/span> <span class="dash-count-num ok">1<\/span>/);
@@ -317,4 +325,83 @@ test("renderDashboardRootInnerHtml shows readyQueueBreakdown when present", () =
     }
   });
   assert.match(html, /Ready Queue · 3 Improvements · 1 Other/);
+});
+
+test("buildPhaseCompleteReleaseChatPrompt matches phase-closeout template", () => {
+  assert.equal(
+    buildPhaseCompleteReleaseChatPrompt("Phase 64"),
+    "Read the project documentation and complete all Phase 64 tasks, then build, publish, and release Phase 64. I approve."
+  );
+});
+
+test("resolvePhasePhraseForCompleteRelease prefers phaseKey then task.phase", () => {
+  assert.equal(resolvePhasePhraseForCompleteRelease({ phaseKey: "64", top: [] }), "Phase 64");
+  assert.equal(
+    resolvePhasePhraseForCompleteRelease({
+      phaseKey: null,
+      top: [{ phase: "Phase 9 — Example" }]
+    }),
+    "Phase 9 — Example"
+  );
+  assert.equal(resolvePhasePhraseForCompleteRelease({ phaseKey: null, top: [] }), "Not Phased");
+});
+
+test("renderDashboardRootInnerHtml ready phase buckets include Complete & Release button", () => {
+  const row = {
+    id: "T900",
+    title: "Ready task",
+    priority: "P1",
+    phase: "Phase 64",
+    features: null,
+    featureDetails: null
+  };
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      stateSummary: { proposed: 0, ready: 1, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      readyExecutionSummary: {
+        schemaVersion: 1,
+        count: 1,
+        top: [row],
+        phaseBuckets: [
+          {
+            schemaVersion: 1,
+            phaseKey: "64",
+            label: "Phase 64 (current) (1)",
+            count: 1,
+            top: [row]
+          }
+        ]
+      },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [] },
+      readyQueueTop: [],
+      readyQueueCount: 1,
+      suggestedNext: null,
+      planningSession: null,
+      taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
+      workspaceStatus: { currentKitPhase: "64", nextKitPhase: "65", activeFocus: "Test" },
+      blockingAnalysis: [],
+      dependencyOverview: {
+        schemaVersion: 1,
+        activeTaskCount: 0,
+        includedTaskCount: 0,
+        edgeCount: 0,
+        truncated: false,
+        perfNote: null,
+        nodes: [],
+        edges: [],
+        mermaidFlowchart: "",
+        criticalPathReady: []
+      }
+    }
+  });
+  assert.match(html, /class="dash-phase-release-btn"/);
+  assert.match(html, /data-wc-action="phase-complete-release"/);
+  assert.match(html, /data-wc-phase-phrase="Phase 64"/);
+  assert.match(html, /Complete &amp; Release/);
+  assert.match(html, /phase-bucket-summary/);
 });

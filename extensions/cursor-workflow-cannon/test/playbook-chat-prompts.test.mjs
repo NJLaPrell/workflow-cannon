@@ -1,14 +1,22 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  buildGenerateFeaturesPrompt,
   buildImprovementTriagePrompt,
   buildTaskToPhaseBranchPrompt
 } from "../dist/playbook-chat-prompts.js";
+
+test("buildGenerateFeaturesPrompt references slash and wishlist intake playbook", () => {
+  const p = buildGenerateFeaturesPrompt();
+  assert.match(p, /\/generate-features/);
+  assert.match(p, /wishlist-intake-to-execution\.md/);
+});
 
 test("buildImprovementTriagePrompt references playbook id and path", () => {
   const p = buildImprovementTriagePrompt();
   assert.match(p, /improvement-triage-top-three\.md/);
   assert.match(p, /improvement-triage-top-three/);
+  assert.match(p, /\/process-proposed-improvements/);
 });
 
 test("buildImprovementTriagePrompt focuses task id when provided", () => {
