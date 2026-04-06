@@ -46,6 +46,8 @@ Rank **`wishlist_intake`** items with **`list-wishlist`** / **`get-wishlist`**, 
 
 Full checklist: **`.ai/playbooks/wishlist-intake-to-execution.md`**.
 
+Agents attach the **`.ai/playbooks/...`** path; rendered copies under **`docs/maintainers/playbooks/`** are for humans after **`pnpm run generate-maintainer-docs-from-ai`** (see playbook **Agent paths vs maintainer-rendered mirrors**).
+
 Optional Cursor rule: `.cursor/rules/playbook-wishlist-intake-to-execution.mdc`.
 
 ## Chat onboarding (`/onboarding`)
