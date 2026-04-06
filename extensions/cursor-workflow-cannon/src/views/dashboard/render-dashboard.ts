@@ -937,6 +937,7 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
 
   const tasksQuickActionsPanel =
     '<div class="dash-quick-actions" role="toolbar" aria-label="Chat playbook shortcuts">' +
+    '<button type="button" class="dash-quick-action-btn" data-wc-action="add-wishlist-item" title="Create a wishlist intake task (same flow as /add-wishlist-item)">Add wishlist item</button>' +
     '<button type="button" class="dash-quick-action-btn dash-quick-action-primary" data-wc-action="generate-features-chat" title="Prefill chat: wishlist intake → execution (same as /generate-features)">Generate Features</button>' +
     "</div>";
 

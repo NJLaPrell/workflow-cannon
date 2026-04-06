@@ -57,6 +57,8 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.doesNotMatch(html, /Planning generation/i);
   assert.doesNotMatch(html, /expectedPlanningGeneration/);
   assert.match(html, /dash-quick-actions/);
+  assert.match(html, /data-wc-action="add-wishlist-item"/);
+  assert.match(html, />Add wishlist item<\/button>/);
   assert.match(html, /data-wc-action="generate-features-chat"/);
   assert.match(html, />Generate Features<\/button>/);
   const tasksHeading = html.indexOf("<p><b>Tasks</b></p>");
