@@ -1,44 +1,162 @@
 {
   "version": 1,
-  "description": "Source (.ai) → human render (docs/maintainers). Regenerate list when adding paths; drift + orphan checks consume this file.",
+  "description": "Source (.ai) \u2192 human render (docs/maintainers). Regenerate list when adding paths; drift + orphan checks consume this file.",
   "mappings": [
-    { "source": ".ai/workbooks/task-engine-workbook.md", "output": "docs/maintainers/workbooks/task-engine-workbook.md" },
-    { "source": ".ai/workbooks/phase2-config-policy-workbook.md", "output": "docs/maintainers/workbooks/phase2-config-policy-workbook.md" },
-    { "source": ".ai/workbooks/transcript-automation-baseline.md", "output": "docs/maintainers/workbooks/transcript-automation-baseline.md" },
-    { "source": ".ai/playbooks/README.md", "output": "docs/maintainers/playbooks/README.md" },
-    { "source": ".ai/playbooks/phase-closeout-and-release.md", "output": "docs/maintainers/playbooks/phase-closeout-and-release.md" },
-    { "source": ".ai/playbooks/skill-attachments.md", "output": "docs/maintainers/playbooks/skill-attachments.md" },
-    { "source": ".ai/playbooks/task-to-phase-branch.md", "output": "docs/maintainers/playbooks/task-to-phase-branch.md" },
-    { "source": ".ai/playbooks/wishlist-intake-to-execution.md", "output": "docs/maintainers/playbooks/wishlist-intake-to-execution.md" },
-    { "source": ".ai/playbooks/improvement-triage-top-three.md", "output": "docs/maintainers/playbooks/improvement-triage-top-three.md" },
-    { "source": ".ai/playbooks/improvement-task-discovery.md", "output": "docs/maintainers/playbooks/improvement-task-discovery.md" },
-    { "source": ".ai/playbooks/improvement-scout.md", "output": "docs/maintainers/playbooks/improvement-scout.md" },
-    { "source": ".ai/playbooks/workspace-kit-chat-onboarding.md", "output": "docs/maintainers/playbooks/workspace-kit-chat-onboarding.md" },
-    { "source": ".ai/playbooks/workspace-kit-chat-behavior-interview.md", "output": "docs/maintainers/playbooks/workspace-kit-chat-behavior-interview.md" },
-    { "source": ".ai/runbooks/agent-playbooks.md", "output": "docs/maintainers/runbooks/agent-playbooks.md" },
-    { "source": ".ai/runbooks/github-workflow-cannon-invocation.md", "output": "docs/maintainers/runbooks/github-workflow-cannon-invocation.md" },
-    { "source": ".ai/runbooks/skill-packs-dual-install.md", "output": "docs/maintainers/runbooks/skill-packs-dual-install.md" },
-    { "source": ".ai/runbooks/agent-task-engine-ergonomics.md", "output": "docs/maintainers/runbooks/agent-task-engine-ergonomics.md" },
-    { "source": ".ai/runbooks/agent-guidance-onboarding.md", "output": "docs/maintainers/runbooks/agent-guidance-onboarding.md" },
-    { "source": ".ai/runbooks/task-persistence-operator.md", "output": "docs/maintainers/runbooks/task-persistence-operator.md" },
-    { "source": ".ai/runbooks/kit-sqlite-schema-migrations.md", "output": "docs/maintainers/runbooks/kit-sqlite-schema-migrations.md" },
-    { "source": ".ai/runbooks/consumer-cadence.md", "output": "docs/maintainers/runbooks/consumer-cadence.md" },
-    { "source": ".ai/runbooks/json-to-sqlite-one-shot-upgrade.md", "output": "docs/maintainers/runbooks/json-to-sqlite-one-shot-upgrade.md" },
-    { "source": ".ai/runbooks/improvement-lifecycle-churn-notes.md", "output": "docs/maintainers/runbooks/improvement-lifecycle-churn-notes.md" },
-    { "source": ".ai/runbooks/cursor-transcript-automation.md", "output": "docs/maintainers/runbooks/cursor-transcript-automation.md" },
-    { "source": ".ai/runbooks/ide-kit-status-protocol.md", "output": "docs/maintainers/runbooks/ide-kit-status-protocol.md" },
-    { "source": ".ai/runbooks/planning-workflow.md", "output": "docs/maintainers/runbooks/planning-workflow.md" },
-    { "source": ".ai/runbooks/response-templates.md", "output": "docs/maintainers/runbooks/response-templates.md" },
-    { "source": ".ai/runbooks/wishlist-workflow.md", "output": "docs/maintainers/runbooks/wishlist-workflow.md" },
-    { "source": ".ai/runbooks/native-sqlite-consumer-install.md", "output": "docs/maintainers/runbooks/native-sqlite-consumer-install.md" },
-    { "source": ".ai/runbooks/transcript-ingestion-operations.md", "output": "docs/maintainers/runbooks/transcript-ingestion-operations.md" },
-    { "source": ".ai/runbooks/cursor-long-session.md", "output": "docs/maintainers/runbooks/cursor-long-session.md" },
-    { "source": ".ai/runbooks/parity-validation-flow.md", "output": "docs/maintainers/runbooks/parity-validation-flow.md" },
-    { "source": ".ai/runbooks/first-run-validation.md", "output": "docs/maintainers/runbooks/first-run-validation.md" },
-    { "source": ".ai/runbooks/agent-structured-workspace-report.md", "output": "docs/maintainers/runbooks/agent-structured-workspace-report.md" },
-    { "source": ".ai/runbooks/recommendation-and-transcript-triggers.md", "output": "docs/maintainers/runbooks/recommendation-and-transcript-triggers.md" },
-    { "source": ".ai/runbooks/release-channels.md", "output": "docs/maintainers/runbooks/release-channels.md" },
-    { "source": ".ai/runbooks/lifecycle-hooks.md", "output": "docs/maintainers/runbooks/lifecycle-hooks.md" },
-    { "source": ".ai/runbooks/subagent-registry.md", "output": "docs/maintainers/runbooks/subagent-registry.md" }
+    {
+      "source": ".ai/playbooks/README.md",
+      "output": "docs/maintainers/playbooks/README.md"
+    },
+    {
+      "source": ".ai/playbooks/improvement-scout.md",
+      "output": "docs/maintainers/playbooks/improvement-scout.md"
+    },
+    {
+      "source": ".ai/playbooks/improvement-task-discovery.md",
+      "output": "docs/maintainers/playbooks/improvement-task-discovery.md"
+    },
+    {
+      "source": ".ai/playbooks/improvement-triage-top-three.md",
+      "output": "docs/maintainers/playbooks/improvement-triage-top-three.md"
+    },
+    {
+      "source": ".ai/playbooks/phase-closeout-and-release.md",
+      "output": "docs/maintainers/playbooks/phase-closeout-and-release.md"
+    },
+    {
+      "source": ".ai/playbooks/skill-attachments.md",
+      "output": "docs/maintainers/playbooks/skill-attachments.md"
+    },
+    {
+      "source": ".ai/playbooks/task-to-phase-branch.md",
+      "output": "docs/maintainers/playbooks/task-to-phase-branch.md"
+    },
+    {
+      "source": ".ai/playbooks/wishlist-intake-to-execution.md",
+      "output": "docs/maintainers/playbooks/wishlist-intake-to-execution.md"
+    },
+    {
+      "source": ".ai/playbooks/workspace-kit-chat-behavior-interview.md",
+      "output": "docs/maintainers/playbooks/workspace-kit-chat-behavior-interview.md"
+    },
+    {
+      "source": ".ai/playbooks/workspace-kit-chat-onboarding.md",
+      "output": "docs/maintainers/playbooks/workspace-kit-chat-onboarding.md"
+    },
+    {
+      "source": ".ai/runbooks/agent-guidance-onboarding.md",
+      "output": "docs/maintainers/runbooks/agent-guidance-onboarding.md"
+    },
+    {
+      "source": ".ai/runbooks/agent-playbooks.md",
+      "output": "docs/maintainers/runbooks/agent-playbooks.md"
+    },
+    {
+      "source": ".ai/runbooks/agent-structured-workspace-report.md",
+      "output": "docs/maintainers/runbooks/agent-structured-workspace-report.md"
+    },
+    {
+      "source": ".ai/runbooks/agent-task-engine-ergonomics.md",
+      "output": "docs/maintainers/runbooks/agent-task-engine-ergonomics.md"
+    },
+    {
+      "source": ".ai/runbooks/consumer-cadence.md",
+      "output": "docs/maintainers/runbooks/consumer-cadence.md"
+    },
+    {
+      "source": ".ai/runbooks/cursor-long-session.md",
+      "output": "docs/maintainers/runbooks/cursor-long-session.md"
+    },
+    {
+      "source": ".ai/runbooks/cursor-transcript-automation.md",
+      "output": "docs/maintainers/runbooks/cursor-transcript-automation.md"
+    },
+    {
+      "source": ".ai/runbooks/first-run-validation.md",
+      "output": "docs/maintainers/runbooks/first-run-validation.md"
+    },
+    {
+      "source": ".ai/runbooks/github-workflow-cannon-invocation.md",
+      "output": "docs/maintainers/runbooks/github-workflow-cannon-invocation.md"
+    },
+    {
+      "source": ".ai/runbooks/ide-kit-status-protocol.md",
+      "output": "docs/maintainers/runbooks/ide-kit-status-protocol.md"
+    },
+    {
+      "source": ".ai/runbooks/improvement-lifecycle-churn-notes.md",
+      "output": "docs/maintainers/runbooks/improvement-lifecycle-churn-notes.md"
+    },
+    {
+      "source": ".ai/runbooks/json-to-sqlite-one-shot-upgrade.md",
+      "output": "docs/maintainers/runbooks/json-to-sqlite-one-shot-upgrade.md"
+    },
+    {
+      "source": ".ai/runbooks/kit-sqlite-schema-migrations.md",
+      "output": "docs/maintainers/runbooks/kit-sqlite-schema-migrations.md"
+    },
+    {
+      "source": ".ai/runbooks/lifecycle-hooks.md",
+      "output": "docs/maintainers/runbooks/lifecycle-hooks.md"
+    },
+    {
+      "source": ".ai/runbooks/native-sqlite-consumer-install.md",
+      "output": "docs/maintainers/runbooks/native-sqlite-consumer-install.md"
+    },
+    {
+      "source": ".ai/runbooks/parity-validation-flow.md",
+      "output": "docs/maintainers/runbooks/parity-validation-flow.md"
+    },
+    {
+      "source": ".ai/runbooks/planning-workflow.md",
+      "output": "docs/maintainers/runbooks/planning-workflow.md"
+    },
+    {
+      "source": ".ai/runbooks/principal-architectural-review-themes.md",
+      "output": "docs/maintainers/runbooks/principal-architectural-review-themes.md"
+    },
+    {
+      "source": ".ai/runbooks/recommendation-and-transcript-triggers.md",
+      "output": "docs/maintainers/runbooks/recommendation-and-transcript-triggers.md"
+    },
+    {
+      "source": ".ai/runbooks/release-channels.md",
+      "output": "docs/maintainers/runbooks/release-channels.md"
+    },
+    {
+      "source": ".ai/runbooks/response-templates.md",
+      "output": "docs/maintainers/runbooks/response-templates.md"
+    },
+    {
+      "source": ".ai/runbooks/skill-packs-dual-install.md",
+      "output": "docs/maintainers/runbooks/skill-packs-dual-install.md"
+    },
+    {
+      "source": ".ai/runbooks/subagent-registry.md",
+      "output": "docs/maintainers/runbooks/subagent-registry.md"
+    },
+    {
+      "source": ".ai/runbooks/task-persistence-operator.md",
+      "output": "docs/maintainers/runbooks/task-persistence-operator.md"
+    },
+    {
+      "source": ".ai/runbooks/transcript-ingestion-operations.md",
+      "output": "docs/maintainers/runbooks/transcript-ingestion-operations.md"
+    },
+    {
+      "source": ".ai/runbooks/wishlist-workflow.md",
+      "output": "docs/maintainers/runbooks/wishlist-workflow.md"
+    },
+    {
+      "source": ".ai/workbooks/phase2-config-policy-workbook.md",
+      "output": "docs/maintainers/workbooks/phase2-config-policy-workbook.md"
+    },
+    {
+      "source": ".ai/workbooks/task-engine-workbook.md",
+      "output": "docs/maintainers/workbooks/task-engine-workbook.md"
+    },
+    {
+      "source": ".ai/workbooks/transcript-automation-baseline.md",
+      "output": "docs/maintainers/workbooks/transcript-automation-baseline.md"
+    }
   ]
 }

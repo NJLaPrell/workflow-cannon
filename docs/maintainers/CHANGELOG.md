@@ -10,6 +10,21 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 (none)
 
+## [0.63.0] - 2026-04-06
+
+Phase 63 — **Agent canon + wishlist routing** (**`T705`**, **`T708`**): durable **`.ai`** pointers for principal architecture review themes; wishlist intake playbook explicitly separates **agent `.ai` paths** from maintainer-rendered **`docs/maintainers`** mirrors.
+
+### Added
+
+- **`.ai/runbooks/principal-architectural-review-themes.md`** — ranked themes (contracts/schemas, task-engine gravity, extension drift) with anchors.
+- **`AGENT-CLI-MAP.md`** — link to the architecture review index runbook.
+
+### Changed
+
+- **`.ai/playbooks/wishlist-intake-to-execution.md`** — **Agent paths vs maintainer-rendered mirrors** callout; queue facts via CLI snapshot commands.
+- **`docs/maintainers/data/ai-to-docs-coverage.json`** — map **`.ai/runbooks/principal-architectural-review-themes.md`** for Phase 56 orphan/drift gates.
+- **`MACHINE-PLAYBOOKS.md`** — wishlist playbook path note for agents vs generated maintainer copies.
+
 ## [0.62.1] - 2026-04-06
 
 Patch — **Phase 62 completion** (**`T707`**, **`T709`**): playbook §**2b** for parallel task chains + ROADMAP coupling; agent ergonomics runbook **§0** natural-language → command exemplar map; **`AGENT-CLI-MAP`** pointer.

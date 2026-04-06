@@ -6,6 +6,8 @@ Single maintainer reference for **what agents must run in a terminal** when work
 
 **Related:** `.ai/POLICY-APPROVAL.md` (approval semantics), `.ai/TERMS.md` (terminology), module instructions under `src/modules/*/instructions/*.md` (exact JSON fields per command).
 
+**Architecture review index (cold start):** [`.ai/runbooks/principal-architectural-review-themes.md`](./runbooks/principal-architectural-review-themes.md) — ranked themes (schema/contract sprawl, task-engine gravity, extension ↔ package contract drift) with repo anchors.
+
 **Cursor extension (monorepo):** TypeScript shapes for **`dashboard-summary`** success payloads are shared from **`@workflow-cannon/workspace-kit/contracts/dashboard-summary-run`** (see `extensions/cursor-workflow-cannon/README.md`).
 
 ## 30-second bootstrap (run this first)
