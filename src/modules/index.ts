@@ -13,6 +13,7 @@ import { subagentsModule } from "./subagents/index.js";
 import { teamExecutionModule } from "./team-execution/index.js";
 import { taskEngineModule } from "./task-engine/index.js";
 import { workspaceConfigModule } from "./workspace-config/index.js";
+import { checkpointsModule } from "./checkpoints/index.js";
 
 export const defaultRegistryModules: WorkflowModule[] = [
   workspaceConfigModule,
@@ -23,6 +24,7 @@ export const defaultRegistryModules: WorkflowModule[] = [
   subagentsModule,
   teamExecutionModule,
   taskEngineModule,
+  checkpointsModule,
   approvalsModule,
   planningModule,
   improvementModule
@@ -58,6 +60,11 @@ export {
   type EvidenceKind
 } from "./improvement/confidence.js";
 export { workspaceConfigModule } from "./workspace-config/index.js";
+export {
+  checkpointsModule,
+  readAutoCheckpointConfig,
+  tryAutoCheckpointBeforeRun
+} from "./checkpoints/index.js";
 export { planningModule } from "./planning/index.js";
 export {
   taskEngineModule,

@@ -23,6 +23,7 @@ import {
   validatePilotRunCommandArgs
 } from "../core/run-args-pilot-validation.js";
 import { defaultRegistryModules } from "../modules/index.js";
+import { tryAutoCheckpointBeforeRun } from "../modules/checkpoints/checkpoint-auto.js";
 import { promptSensitiveRunApproval } from "./interactive-policy.js";
 import { releaseTranscriptHookLockFromEnv } from "../core/transcript-completion-hook.js";
 
@@ -270,6 +271,27 @@ export async function handleRunCommand(
     resolvedActor: actor,
     moduleRegistry: registry
   };
+
+  const autoCheckpoint = await tryAutoCheckpointBeforeRun({
+    workspacePath: cwd,
+    effectiveConfig: effective,
+    subcommand,
+    actor
+  });
+  if (!autoCheckpoint.ok) {
+    writeLine(
+      JSON.stringify(
+        {
+          ok: false,
+          code: autoCheckpoint.code,
+          message: autoCheckpoint.message
+        },
+        null,
+        2
+      )
+    );
+    return codes.validationFailure;
+  }
 
   const hookBus = createKitLifecycleHookBus(cwd, effective);
   if (hookBus.isEnabled()) {

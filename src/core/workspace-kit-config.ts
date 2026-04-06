@@ -56,6 +56,11 @@ export const KIT_CONFIG_DEFAULTS: Record<string, unknown> = {
       mode: "off",
       traceRelativePath: ".workspace-kit/kit/lifecycle-hook-traces.jsonl",
       handlers: [] as unknown[]
+    },
+    autoCheckpoint: {
+      enabled: false,
+      beforeCommands: ["run-transition"] as string[],
+      stashWhenDirty: true
     }
   } as Record<string, unknown>,
   tasks: {

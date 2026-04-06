@@ -135,6 +135,10 @@
       "output": "docs/maintainers/runbooks/subagent-registry.md"
     },
     {
+      "source": ".ai/runbooks/task-flow-subagent-pilot-phase64.md",
+      "output": "docs/maintainers/runbooks/task-flow-subagent-pilot-phase64.md"
+    },
+    {
       "source": ".ai/runbooks/task-persistence-operator.md",
       "output": "docs/maintainers/runbooks/task-persistence-operator.md"
     },

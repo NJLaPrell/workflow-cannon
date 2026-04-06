@@ -104,6 +104,13 @@ workspace-kit run list-plugins '{}'
 workspace-kit run inspect-plugin '{"pluginName":"wc-phase-61-sample"}'
 ```
 
+**Task-linked checkpoints (read path; Tier C):**
+
+```bash
+workspace-kit run list-checkpoints '{}'
+workspace-kit run compare-checkpoint '{"checkpointId":"ckpt_..."}'
+```
+
 **`install-plugin`**, **`enable-plugin`**, and **`disable-plugin`** are **Tier B** (`plugins.persist`) — see **Tier B** table below. ADR: [`ADR-claude-code-plugin-platform-v1.md`](./adrs/ADR-claude-code-plugin-platform-v1.md).
 
 ### Two approval lanes (single cross-reference)
@@ -198,6 +205,8 @@ ADR: **`docs/maintainers/adrs/ADR-planning-generation-optimistic-concurrency.md`
 | Install Claude-layout plugin (copy) | `workspace-kit run install-plugin '<json>'` | `plugins.persist` | Copies validated tree into **`plugins.discoveryRoots`**; see instruction file |
 | Enable discovered plugin | `workspace-kit run enable-plugin '<json>'` | `plugins.persist` | Sets **`kit_plugin_state.enabled`** |
 | Disable discovered plugin | `workspace-kit run disable-plugin '<json>'` | `plugins.persist` | Sets **`kit_plugin_state.enabled`** |
+| Create task-linked git checkpoint | `workspace-kit run create-checkpoint '<json>'` | `checkpoints.persist` | Head and/or stash; excludes **`.workspace-kit/`** from stash pathspec; ADR: [`ADR-task-linked-checkpoints-v1.md`](../../.ai/adrs/ADR-task-linked-checkpoints-v1.md) |
+| Rewind working tree from checkpoint | `workspace-kit run rewind-to-checkpoint '<json>'` | `checkpoints.rewind` | Stash apply or **`git reset --hard`**; guardrails for vendor/submodules |
 | Config-declared extra commands | `workspace-kit run <name> '<json>'` | `policy.dynamic-sensitive` if listed in `policy.extraSensitiveModuleCommands` | Must still pass **`policyApproval`** |
 
 **Copy-paste — document batch (real writes):**

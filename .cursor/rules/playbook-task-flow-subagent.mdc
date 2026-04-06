@@ -1,0 +1,18 @@
+---
+description: Optional task-flow delivery — attach for single T### branch/PR/run-transition discipline (Cursor 3)
+alwaysApply: false
+---
+
+# Task-flow subagent / delivery mode (optional)
+
+Use when driving **one execution task** through **`release/phase-<N>`** (not **`main`**).
+
+1. Read **`.ai/playbooks/task-to-phase-branch.md`** (or attach **`@.cursor/rules/playbook-task-to-phase-branch.mdc`**).
+2. Queue facts: **`pnpm run wk doctor`**, **`pnpm run wk run get-next-actions '{}'`** — not roadmap prose.
+3. Tier A **`run-transition`**: JSON **`policyApproval`** in the **third** argument; pass **`expectedPlanningGeneration`** when policy **`require`**. Chat-only approval **does not** satisfy policy.
+4. Copy-paste shapes: **`.ai/AGENT-CLI-MAP.md`**, lanes: **`.ai/POLICY-APPROVAL.md`**.
+5. Long sessions: **`.ai/LONG-SESSION-RELOAD.md`**.
+
+**Non-goals:** bypass **`workspace-kit`**, hand-edit SQLite task rows for lifecycle, or treat env **`WORKSPACE_KIT_POLICY_APPROVAL`** as **`run`** approval.
+
+Packaging ADR: **`.ai/adrs/ADR-cursor3-task-flow-subagent-packaging.md`**.

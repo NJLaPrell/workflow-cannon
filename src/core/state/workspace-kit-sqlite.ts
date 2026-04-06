@@ -4,7 +4,7 @@ import { seedFeatureRegistryIfEmpty } from "./feature-registry-migration.js";
 type SqliteDatabase = InstanceType<typeof Database>;
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 8;
+export const KIT_SQLITE_USER_VERSION = 9;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 
@@ -197,6 +197,29 @@ function migrateV7ToV8(db: SqliteDatabase): void {
   db.exec(PLUGIN_STATE_DDL);
 }
 
+/** Task-linked git checkpoints (Phase 64). */
+const TASK_CHECKPOINT_DDL = `
+CREATE TABLE IF NOT EXISTS kit_task_checkpoints (
+  id TEXT PRIMARY KEY NOT NULL,
+  created_at TEXT NOT NULL,
+  task_id TEXT,
+  actor TEXT,
+  label TEXT,
+  action_type TEXT NOT NULL DEFAULT 'manual',
+  ref_kind TEXT NOT NULL CHECK (ref_kind IN ('head','stash')),
+  git_head_sha TEXT NOT NULL,
+  secondary_ref TEXT,
+  manifest_json TEXT NOT NULL,
+  metadata_json TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_kit_task_checkpoints_task ON kit_task_checkpoints(task_id);
+CREATE INDEX IF NOT EXISTS idx_kit_task_checkpoints_created ON kit_task_checkpoints(created_at);
+`;
+
+function migrateV8ToV9(db: SqliteDatabase): void {
+  db.exec(TASK_CHECKPOINT_DDL);
+}
+
 /**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
@@ -251,6 +274,11 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
   }
   if (current < 8) {
     migrateV7ToV8(db);
+    db.pragma("user_version = 8");
+    current = 8;
+  }
+  if (current < 9) {
+    migrateV8ToV9(db);
     db.pragma(`user_version = ${KIT_SQLITE_USER_VERSION}`);
   }
 }

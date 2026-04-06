@@ -10,6 +10,21 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 (none)
 
+## [0.64.0] - 2026-04-06
+
+Phase 64 — **Task-flow subagent packaging + task-linked checkpoints** (**`T745`–`T751`**): optional Cursor rule/skill for single-task delivery; kit SQLite **`user_version` 9** with **`create-checkpoint`**, **`list-checkpoints`**, **`compare-checkpoint`**, **`rewind-to-checkpoint`**; opt-in **`kit.autoCheckpoint`** before selected `wk run` commands; ADRs **`.ai/adrs/ADR-cursor3-task-flow-subagent-packaging.md`** and **`.ai/adrs/ADR-task-linked-checkpoints-v1.md`**.
+
+### Added
+
+- **`checkpoints` module** — git head/stash checkpoints persisted in **`kit_task_checkpoints`**; stash pathspec excludes **`.workspace-kit/`**; clean/dirty detection ignores kit noise for stash/rewind decisions.
+- **`kit.autoCheckpoint.*`** config keys — default off; **`beforeCommands`** includes **`run-transition`** when enabled.
+- **`.cursor/rules/playbook-task-flow-subagent.mdc`**, **`.cursor/skills/task-flow-subagent-delivery/SKILL.md`**, pilot notes **`.ai/runbooks/task-flow-subagent-pilot-phase64.md`**.
+
+### Changed
+
+- **`SqliteDualPlanningStore.closeDatabase()`** — optional handle release for same-path reopen (auto-checkpoint + router sequencing).
+
+
 ## [0.63.0] - 2026-04-06
 
 Phase 63 — **Agent canon + wishlist routing** (**`T705`**, **`T708`**): durable **`.ai`** pointers for principal architecture review themes; wishlist intake playbook explicitly separates **agent `.ai` paths** from maintainer-rendered **`docs/maintainers`** mirrors.

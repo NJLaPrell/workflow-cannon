@@ -726,5 +726,37 @@
     "policyOperationId": "plugins.persist",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "checkpoints",
+    "name": "create-checkpoint",
+    "file": "create-checkpoint.md",
+    "description": "Record a task-linked git checkpoint (head pointer and/or stash) in kit SQLite.",
+    "policyOperationId": "checkpoints.persist",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "checkpoints",
+    "name": "list-checkpoints",
+    "file": "list-checkpoints.md",
+    "description": "List checkpoints from kit SQLite (optional taskId filter).",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "checkpoints",
+    "name": "compare-checkpoint",
+    "file": "compare-checkpoint.md",
+    "description": "Show name-status diff between a checkpoint ref and current HEAD.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "checkpoints",
+    "name": "rewind-to-checkpoint",
+    "file": "rewind-to-checkpoint.md",
+    "description": "Apply stash checkpoint or git reset --hard to head checkpoint (destructive; guardrails).",
+    "policyOperationId": "checkpoints.rewind",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
   }
 ]

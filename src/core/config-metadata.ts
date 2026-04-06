@@ -110,7 +110,8 @@ export function validateValueForMetadata(meta: ConfigKeyMetadata, value: unknown
     }
     if (
       meta.key === "kit.githubInvocation.planOnlyRunCommands" ||
-      meta.key === "kit.githubInvocation.sensitiveRunCommands"
+      meta.key === "kit.githubInvocation.sensitiveRunCommands" ||
+      meta.key === "kit.autoCheckpoint.beforeCommands"
     ) {
       for (const item of value) {
         if (typeof item !== "string" || !item.trim()) {
@@ -390,7 +391,8 @@ export function validatePersistedConfigDocument(
         key !== "currentPhaseLabel" &&
         key !== "agentGuidance" &&
         key !== "githubInvocation" &&
-        key !== "lifecycleHooks"
+        key !== "lifecycleHooks" &&
+        key !== "autoCheckpoint"
       ) {
         throw new Error(`config-invalid(${label}): unknown kit.${key}`);
       }
@@ -522,6 +524,30 @@ export function validatePersistedConfigDocument(
             throw new Error(`config-invalid(${label}): kit.lifecycleHooks.handlers entries must be objects`);
           }
         }
+      }
+    }
+    if (k.autoCheckpoint !== undefined) {
+      if (
+        typeof k.autoCheckpoint !== "object" ||
+        k.autoCheckpoint === null ||
+        Array.isArray(k.autoCheckpoint)
+      ) {
+        throw new Error(`config-invalid(${label}): kit.autoCheckpoint must be an object`);
+      }
+      const ac = k.autoCheckpoint as Record<string, unknown>;
+      for (const ak of Object.keys(ac)) {
+        if (ak !== "enabled" && ak !== "beforeCommands" && ak !== "stashWhenDirty") {
+          throw new Error(`config-invalid(${label}): unknown kit.autoCheckpoint.${ak}`);
+        }
+      }
+      if (ac.enabled !== undefined) {
+        validateValueForMetadata(REGISTRY["kit.autoCheckpoint.enabled"]!, ac.enabled);
+      }
+      if (ac.beforeCommands !== undefined) {
+        validateValueForMetadata(REGISTRY["kit.autoCheckpoint.beforeCommands"]!, ac.beforeCommands);
+      }
+      if (ac.stashWhenDirty !== undefined) {
+        validateValueForMetadata(REGISTRY["kit.autoCheckpoint.stashWhenDirty"]!, ac.stashWhenDirty);
       }
     }
   }

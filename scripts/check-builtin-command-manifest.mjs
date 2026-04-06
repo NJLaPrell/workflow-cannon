@@ -26,7 +26,9 @@ const KNOWN_POLICY_OPERATION_IDS = new Set([
   "skills.apply-skill",
   "plugins.persist",
   "subagents.persist",
-  "team-execution.persist"
+  "team-execution.persist",
+  "checkpoints.persist",
+  "checkpoints.rewind"
 ]);
 
 const ALLOWED_SENSITIVITY = new Set(["non-sensitive", "sensitive", "sensitive-with-dryrun"]);

@@ -10,7 +10,8 @@ export type ModuleCapability =
   | "skills"
   | "plugins"
   | "subagents"
-  | "team-execution";
+  | "team-execution"
+  | "checkpoints";
 
 export type ModuleDocumentContract = {
   path: string;

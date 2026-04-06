@@ -37,7 +37,9 @@ export type PolicyOperationId =
   | "skills.apply-skill"
   | "plugins.persist"
   | "subagents.persist"
-  | "team-execution.persist";
+  | "team-execution.persist"
+  | "checkpoints.persist"
+  | "checkpoints.rewind";
 
 function buildBuiltinCommandToOperation(): Record<string, PolicyOperationId | undefined> {
   const out: Record<string, PolicyOperationId | undefined> = {};

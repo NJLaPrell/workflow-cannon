@@ -68,6 +68,18 @@ Generated from `src/core/config-metadata.ts`. Do not edit by hand; run `workspac
 
 **Description:** Interaction difficulty tier 1–5 (NPC → BBEG) for advisory agent guidance; see ADR-agent-guidance-profile-rpg-party-v1.md.
 
+| kit.autoCheckpoint.beforeCommands | array | ["run-transition"] | project | workspace-kit | maintainer | true | true |
+
+**Description:** `workspace-kit run` subcommand names that trigger an auto-checkpoint when kit.autoCheckpoint.enabled is true (default includes run-transition).
+
+| kit.autoCheckpoint.enabled | boolean | false | project | workspace-kit | maintainer | true | true |
+
+**Description:** When true, workspace-kit run may create a checkpoint before commands listed in kit.autoCheckpoint.beforeCommands (fail-closed on errors; see ADR-task-linked-checkpoints-v1.md).
+
+| kit.autoCheckpoint.stashWhenDirty | boolean | true | project | workspace-kit | maintainer | true | true |
+
+**Description:** When true (default), dirty worktrees use git stash for auto-checkpoints; when false, dirty worktrees fail auto-checkpoint until clean.
+
 | kit.currentPhaseLabel | string | "" | project | workspace-kit | maintainer | false | false |
 
 **Description:** Optional human-readable phase label (for explain-config / operator context); does not replace task.phase strings.

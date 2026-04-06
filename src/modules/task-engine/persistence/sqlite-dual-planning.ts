@@ -118,6 +118,21 @@ export class SqliteDualPlanningStore {
     return this.ensureDb();
   }
 
+  /**
+   * Close the SQLite handle if open. Use when another code path must reopen the same `dbPath`
+   * in-process (avoids multi-handle races on the same file).
+   */
+  closeDatabase(): void {
+    if (this.db) {
+      try {
+        this.db.close();
+      } catch {
+        /* best-effort */
+      }
+      this.db = null;
+    }
+  }
+
   private ensureDb(): Database.Database {
     if (this.db) {
       return this.db;

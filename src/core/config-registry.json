@@ -761,5 +761,53 @@
       "project",
       "user"
     ]
+  },
+  "kit.autoCheckpoint.enabled": {
+    "key": "kit.autoCheckpoint.enabled",
+    "type": "boolean",
+    "description": "When true, workspace-kit run may create a checkpoint before commands listed in kit.autoCheckpoint.beforeCommands (fail-closed on errors; see ADR-task-linked-checkpoints-v1.md).",
+    "default": false,
+    "domainScope": "project",
+    "owningModule": "workspace-kit",
+    "sensitive": true,
+    "requiresRestart": false,
+    "requiresApproval": true,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "kit.autoCheckpoint.beforeCommands": {
+    "key": "kit.autoCheckpoint.beforeCommands",
+    "type": "array",
+    "description": "`workspace-kit run` subcommand names that trigger an auto-checkpoint when kit.autoCheckpoint.enabled is true (default includes run-transition).",
+    "default": ["run-transition"],
+    "domainScope": "project",
+    "owningModule": "workspace-kit",
+    "sensitive": true,
+    "requiresRestart": false,
+    "requiresApproval": true,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "kit.autoCheckpoint.stashWhenDirty": {
+    "key": "kit.autoCheckpoint.stashWhenDirty",
+    "type": "boolean",
+    "description": "When true (default), dirty worktrees use git stash for auto-checkpoints; when false, dirty worktrees fail auto-checkpoint until clean.",
+    "default": true,
+    "domainScope": "project",
+    "owningModule": "workspace-kit",
+    "sensitive": true,
+    "requiresRestart": false,
+    "requiresApproval": true,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
   }
 }
