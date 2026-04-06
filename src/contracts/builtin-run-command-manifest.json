@@ -440,6 +440,14 @@
   },
   {
     "moduleId": "approvals",
+    "name": "list-approval-queue",
+    "file": "list-approval-queue.md",
+    "description": "Read-only: improvement tasks awaiting review-item (ready/in_progress) plus policy artifact hints.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "approvals",
     "name": "review-item",
     "file": "review-item.md",
     "description": "Review and record an approval decision.",

@@ -168,3 +168,63 @@ test("Phase3: decline from in_progress uses decline transition", async () => {
   const r = await router.execute("review-item", { taskId, decision: "decline" }, ctx);
   assert.equal(r.ok, true, r.message);
 });
+
+test("list-approval-queue returns in_progress improvement rows (read-only)", async () => {
+  const workspacePath = await tmpWs();
+  await mkdir(path.join(workspacePath, ".workspace-kit", "tasks"), { recursive: true });
+  const now = new Date().toISOString();
+  const taskId = "imp-list-queue-01";
+  await writeFile(
+    path.join(workspacePath, ".workspace-kit", "tasks", "state.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      tasks: [
+        {
+          id: taskId,
+          status: "in_progress",
+          type: "improvement",
+          title: "queued",
+          phase: "Phase 1",
+          createdAt: now,
+          updatedAt: now,
+          metadata: { evidenceKey: "k1" }
+        }
+      ],
+      transitionLog: [],
+      lastUpdated: now
+    }),
+    "utf8"
+  );
+
+  const registry = new ModuleRegistry([
+    workspaceConfigModule,
+    documentationModule,
+    taskEngineModule,
+    approvalsModule,
+    planningModule,
+    improvementModule
+  ]);
+  const router = new ModuleCommandRouter(registry);
+  const resolved = await resolveWorkspaceConfigWithLayers({ workspacePath, registry });
+  const ctx = {
+    runtimeVersion: "0.1",
+    workspacePath,
+    effectiveConfig: withSqliteTaskPersistence(resolved.effective),
+    resolvedActor: "tester@example.com",
+    moduleRegistry: registry
+  };
+
+  const mig = await router.execute(
+    "migrate-task-persistence",
+    { direction: "json-to-sqlite" },
+    ctx
+  );
+  assert.equal(mig.ok, true, mig.message);
+
+  const q = await router.execute("list-approval-queue", {}, ctx);
+  assert.equal(q.ok, true, q.message);
+  assert.equal(q.code, "approval-queue-listed");
+  assert.equal(q.data?.count, 1);
+  assert.equal(q.data?.reviewItemQueue?.[0]?.id, taskId);
+  assert.ok(Array.isArray(q.data?.operatorHints?.policyArtifacts));
+});

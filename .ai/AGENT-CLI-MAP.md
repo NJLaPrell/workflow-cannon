@@ -62,7 +62,7 @@ Verified read: `pnpm exec wk run list-tasks '{}'`.
 ## Quick boundary gate (use this before acting)
 
 - If work mutates task lifecycle, approvals, policy traces, transcript/improvement stores, or maintainer doc generation outputs, use the matching `workspace-kit` command from this map.
-- If work is application/source edits only, use normal code workflow; optional Tier C reads (`list-tasks`, `get-next-actions`) are safe discovery helpers.
+- If work is application/source edits only, use normal code workflow; optional Tier C reads (`list-tasks`, `get-next-actions`, `list-approval-queue`) are safe discovery helpers.
 - For `workspace-kit run` sensitive operations, pass JSON `policyApproval`; for top-level `workspace-kit config|init|upgrade`, use env `WORKSPACE_KIT_POLICY_APPROVAL`.
 
 ## Maintainer playbook: one task to the phase integration branch
@@ -205,7 +205,7 @@ ADR: **`docs/maintainers/adrs/ADR-planning-generation-optimistic-concurrency.md`
 | Single doc generation | `workspace-kit run generate-document '<json>'` | `doc.generate-document` | Sensitive unless `options.dryRun === true` |
 | Improvement recommendations | `workspace-kit run generate-recommendations '<json>'` | `improvement.generate-recommendations` | Always sensitive |
 | Transcript ingest + recommendations | `workspace-kit run ingest-transcripts '<json>'` | `improvement.ingest-transcripts` | Always sensitive |
-| Approval queue decision | `workspace-kit run review-item '<json>'` | `approvals.review-item` | Always sensitive |
+| Approval queue decision | `workspace-kit run review-item '<json>'` | `approvals.review-item` | Always sensitive; Tier C **`list-approval-queue`** lists **`ready`** / **`in_progress`** improvements first |
 | Backfill task↔feature junction | `workspace-kit run backfill-task-feature-links '<json>'` | `task-engine.backfill-task-feature-links` | Copies legacy **`features_json`** into **`task_engine_task_features`** |
 | Export taxonomy JSON from registry | `workspace-kit run export-feature-taxonomy-json '<json>'` | `task-engine.export-feature-taxonomy-json` | Writes **`src/modules/documentation/data/feature-taxonomy.json`** |
 | Apply skill pack (non-preview) | `workspace-kit run apply-skill '<json>'` | `skills.apply-skill` | Sensitive unless `options.dryRun === true` (default preview is dry-run; see instruction file) |
@@ -246,6 +246,12 @@ workspace-kit run scout-report '{"seed":"session-1","persistRotation":true}'
 
 ```bash
 workspace-kit run review-item '{"taskId":"imp-example","decision":"accept","actor":"agent@example","policyApproval":{"confirmed":true,"rationale":"accept after review"}}'
+```
+
+**Copy-paste — list improvement tasks awaiting `review-item` (read-only Tier C; includes policy artifact paths in JSON):**
+
+```bash
+workspace-kit run list-approval-queue '{}'
 ```
 
 **Copy-paste — backfill junction from legacy `features_json` (`operationId` `task-engine.backfill-task-feature-links`, Tier B; listed in `planning-generation-cli-prelude` — pass `expectedPlanningGeneration` when policy `require`):**
@@ -350,6 +356,7 @@ Non-sensitive commands (no `policyApproval` unless you added `extraSensitiveModu
 ```bash
 workspace-kit run list-tasks '{}'
 workspace-kit run get-next-actions '{}'
+workspace-kit run list-approval-queue '{}'
 workspace-kit run queue-health '{}'
 workspace-kit run get-task '{"taskId":"T285"}'
 workspace-kit run list-tasks '{"type":"improvement","phase":"Phase 16 - Maintenance and stability"}'
