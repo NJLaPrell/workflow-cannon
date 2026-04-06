@@ -6,4 +6,5 @@
 
 - **`.ai/AGENT-CLI-MAP.md`** — tier table and copy-paste JSON for agents.
 - **`.ai/POLICY-APPROVAL.md`** — approval lanes (JSON vs env) for agents.
+- **`list-approval-queue`** — read-only discovery for the improvement **`review-item`** queue and policy artifact paths; copy-paste in **`.ai/AGENT-CLI-MAP.md`** (Tier C block).
 - **`docs/maintainers/AGENT-CLI-MAP.md`** — maintainer-depth companion (humans editing the repo).
