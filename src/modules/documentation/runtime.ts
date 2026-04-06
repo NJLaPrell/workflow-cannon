@@ -8,7 +8,13 @@ import { normalizeDocument } from "./normalizer.js";
 import { renderDocument } from "./renderer.js";
 import { autoResolveAiSchema, validateAiSchema } from "./validator.js";
 import { isPathWithinRoot, loadRuntimeConfig } from "./runtime-config.js";
-import { detectConflicts, renderTemplate, resolveExpectedDocFamily, validateSectionCoverage } from "./runtime-render-support.js";
+import {
+  detectConflicts,
+  injectReadmeChatFeaturesFromNormalized,
+  renderTemplate,
+  resolveExpectedDocFamily,
+  validateSectionCoverage
+} from "./runtime-render-support.js";
 import { runGenerateAllDocuments } from "./runtime-batch.js";
 import {
   renderFeatureTaxonomyDocFromSourceRoot,
@@ -222,6 +228,9 @@ export async function generateDocument(args: GenerateDocumentArgs, ctx: ModuleLi
   } else if (templateFound) {
     const rendered = renderTemplate(templateContent);
     humanOutput = rendered.output;
+    if (documentType === "README.md") {
+      humanOutput = injectReadmeChatFeaturesFromNormalized(humanOutput, normalized);
+    }
     if (rendered.unresolvedBlocks) {
       validationIssues.push({
         check: "section-coverage",

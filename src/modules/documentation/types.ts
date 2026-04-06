@@ -211,6 +211,14 @@ export type NormalizedGuardrail = NormalizedBaseRecord & {
   why: string;
 };
 
+/** Chat-shaped usage guides for README (steps use `>` in keyed source lines). */
+export type NormalizedChatFeature = NormalizedBaseRecord & {
+  id: string;
+  title: string;
+  summary: string;
+  steps: string[];
+};
+
 export type NormalizedDocument = {
   meta: NormalizedMeta | null;
   refs: NormalizedRef[];
@@ -221,6 +229,7 @@ export type NormalizedDocument = {
   terms: NormalizedTerm[];
   commands: NormalizedCommand[];
   workflows: NormalizedWorkflow[];
+  chatFeatures: NormalizedChatFeature[];
   runbooks: NormalizedRunbook[];
   workbooks: NormalizedWorkbook[];
   chains: NormalizedChain[];
@@ -262,7 +271,8 @@ export type ViewModelSection = {
     | "artifacts"
     | "configs"
     | "cadences"
-    | "guardrails";
+    | "guardrails"
+    | "chat_features";
   where?: Record<string, string | number | boolean>;
   sortBy?: string[];
   template?: string;

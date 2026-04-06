@@ -29,3 +29,5 @@ Registered on the documentation module and dispatched through `src/core/module-c
 - `runtime.ts` - orchestration and IO only
 
 Adding a new document target: add/adjust `.ai/<doc>.md` source, create/update matching `views/*.view.yaml`, and ensure a matching template exists if section-coverage checks require it.
+
+For **root/maintainer README** chat guides: add `chat_feature|id=…|title=…|summary=…|steps=…` lines to `.ai/README.md` (`steps` uses `>` between chat beats; see `schemas/documentation-schema.md`). The template marker `<!--DOC_MODULE:CHAT_FEATURES-->` is replaced during `generate-document` / `document-project`.

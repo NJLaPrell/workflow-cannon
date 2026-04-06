@@ -26,6 +26,7 @@ record|type=artifact|required=path,schema|optional=status,refs
 record|type=config|required=key,default|optional=status,refs
 record|type=cadence|required=rule|optional=status,refs
 record|type=guardrail|required=id,level,directive,why|optional=status,refs
+record|type=chat_feature|required=id,title,summary|optional=steps,status,refs
 
 profile|name=core|requiredRecords=meta,ref,rule,check,decision,example,term,command,workflow
 profile|name=runbook|requiredRecords=meta,ref,rule,check,decision,example,term,command,workflow,runbook,chain,artifact,state,transition,promotion,rollback,config,cadence,guardrail

@@ -2,7 +2,7 @@
 
 **Advisory only** — guidance tier does not replace PRINCIPLES, policy, or `policyApproval`. See **`docs/maintainers/adrs/ADR-agent-guidance-profile-rpg-party-v1.md`**.
 
-**Cursor chat:** **`docs/maintainers/playbooks/workspace-kit-chat-onboarding.md`** or slash **`/onboarding`**. Long personality interview: **`docs/maintainers/playbooks/workspace-kit-chat-behavior-interview.md`** or **`/behavior-interview`**.
+**Cursor chat:** **`.ai/playbooks/workspace-kit-chat-onboarding.md`** or slash **`/onboarding`**. Long personality interview: **`.ai/playbooks/workspace-kit-chat-behavior-interview.md`** or **`/behavior-interview`**.
 
 ## Pick a tier (no hand-editing JSON)
 
@@ -41,5 +41,5 @@ The Cursor **Workflow Cannon** dashboard shows the effective tier when **`dashbo
 
 ## See also
 
-- **`docs/maintainers/AGENT-CLI-MAP.md`** — copy-paste lines
+- **`.ai/AGENT-CLI-MAP.md`** — copy-paste lines
 - **`src/modules/agent-behavior/README.md`** — modulation vs stored profiles

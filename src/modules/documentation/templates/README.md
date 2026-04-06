@@ -61,6 +61,12 @@ Or with pnpm: `pnpm add @workflow-cannon/workspace-kit` then `pnpm exec wk --hel
 
 Optional maintainer prompt templates may live under **`tasks/*.md`** in a repo (prompt-only; they do **not** run **`workspace-kit`**). Editor integrations are **your** config; **`workspace-kit`** is the supported CLI for kit-owned state.
 
+## Chat-first workflows (Cursor and agents)
+
+These are **chat-shaped** recipes: what to say, what to attach, and what you should expect back. They intentionally **do not** embed shell one-liners; when kit-owned state must change, the agent still follows [`AGENTS.md`](AGENTS.md) and [`AGENT-CLI-MAP.md`](AGENT-CLI-MAP.md) for real invocations. **Bodies** come from `chat_feature|` records in [`../../.ai/README.md`](../../.ai/README.md); regenerate this file with the documentation module after editing them.
+
+<!--DOC_MODULE:CHAT_FEATURES-->
+
 ## Policy and approvals (read this before mutating state)
 
 Sensitive `workspace-kit run` commands require JSON **`policyApproval`** in the third CLI argument. Chat approval is not enough. Env-based approval applies to `init` / `upgrade` / `config`, not the `run` path.

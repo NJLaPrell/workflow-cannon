@@ -1,0 +1,3 @@
+# Keep human-first docs out of default AI codebase indexing. Agents use `.ai/` per
+# `.cursor/rules/agent-doc-routing.mdc`. Explicit @-mentions of files under `docs/` still work when needed.
+docs/

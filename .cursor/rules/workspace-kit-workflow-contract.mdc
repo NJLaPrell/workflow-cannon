@@ -5,14 +5,14 @@ alwaysApply: true
 
 # Workflow Contract Rule
 
-Use consistent terms from `docs/maintainers/TERMS.md` for directives, rules, guardrails, policy, workflow, and evidence.
+Use consistent terms from **`.ai/TERMS.md`** for directives, rules, guardrails, policy, workflow, and evidence (agents). Maintainer glossary edits remain in `docs/maintainers/TERMS.md`.
 
 Required alignment:
 
 - `README.md` = intent and boundaries only.
-- `docs/maintainers/ROADMAP.md` = strategic decisions and phase framing.
+- **`docs/maintainers/ROADMAP.md`** = maintainer-canonical strategic narrative on disk. **Agents:** use task-engine state + **`pnpm run wk`** for queue facts; do **not** read roadmap prose routinely (**`.cursor/rules/agent-doc-routing.mdc`**).
 - Task-engine state (default SQLite `.workspace-kit/tasks/workspace-kit.db`; JSON opt-out `.workspace-kit/tasks/state.json`) = execution queue and completion tracking.
-- `docs/maintainers/RELEASING.md` = operational release workflow and evidence gates.
+- **`.ai/RELEASING.md`** = release workflow and evidence gates for agents. **`docs/maintainers/RELEASING.md`** = human maintainer depth when editing release policy.
 
 Do not duplicate deep operational detail in `README.md`.
 

@@ -15,13 +15,13 @@ Agents must use **`workspace-kit`** for kit-owned persistence. Chat-only approva
 
 ## Canonical references
 
-- **Tier table + copy-paste:** `docs/maintainers/AGENT-CLI-MAP.md`
-- **Approval semantics:** `docs/maintainers/POLICY-APPROVAL.md`
+- **Tier table + copy-paste:** `.ai/AGENT-CLI-MAP.md`
+- **Approval semantics:** `.ai/POLICY-APPROVAL.md`
 - **Instruction paths:** `src/modules/<module>/instructions/<command>.md` (discover via `workspace-kit run` with no subcommand)
-- **Single-task maintainer delivery (branch / PR / merge / transitions):** `docs/maintainers/playbooks/task-to-phase-branch.md` — use with **`maintainer-delivery-loop.mdc`**; optional requestable **`.cursor/rules/playbook-task-to-phase-branch.mdc`**
-- **Improvement research → log:** `docs/maintainers/playbooks/improvement-task-discovery.md` — optional requestable **`.cursor/rules/playbook-improvement-task-discovery.mdc`**
-- **Improvement triage (≤3 → ready):** `docs/maintainers/playbooks/improvement-triage-top-three.md` — optional requestable **`.cursor/rules/playbook-improvement-triage-top-three.mdc`**
+- **Single-task maintainer delivery (branch / PR / merge / transitions):** `.ai/playbooks/task-to-phase-branch.md` — use with **`maintainer-delivery-loop.mdc`**; optional requestable **`.cursor/rules/playbook-task-to-phase-branch.mdc`**
+- **Improvement research → log:** `.ai/playbooks/improvement-task-discovery.md` — optional requestable **`.cursor/rules/playbook-improvement-task-discovery.mdc`**
+- **Improvement triage (≤3 → ready):** `.ai/playbooks/improvement-triage-top-three.md` — optional requestable **`.cursor/rules/playbook-improvement-triage-top-three.mdc`**
 
 ## Maintainer task templates (`tasks/*.md`)
 
-Files under **`tasks/*.md`** are **prompt-only** copy; they do not run **`workspace-kit`**. Steps that persist kit state must include the matching **`workspace-kit` line** from the Agent CLI map.
+Files under **`tasks/*.md`** are **prompt-only** copy; they do not run **`workspace-kit`**. Steps that persist kit state must include the matching **`workspace-kit` line** from **`.ai/AGENT-CLI-MAP.md`**.

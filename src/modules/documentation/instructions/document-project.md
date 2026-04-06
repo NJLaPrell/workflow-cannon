@@ -18,7 +18,7 @@ View models in `src/modules/documentation/views` map to these output targets:
 - `AGENTS.md`
 - `ARCHITECTURE.md`
 - `PRINCIPLES.md`
-- `README.md`
+- `README.md` (chat guide bodies from `.ai/README.md` `chat_feature|` records — see `generate-document.md`)
 - `RELEASING.md`
 - `ROADMAP.md`
 - `SECURITY.md`

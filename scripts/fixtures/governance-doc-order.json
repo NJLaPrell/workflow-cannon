@@ -1,13 +1,12 @@
 [
   ".ai/PRINCIPLES.md",
   ".ai/module-build.md",
-  "docs/maintainers/ROADMAP.md",
+  ".ai/WORKSPACE-KIT-SESSION.md",
   ".workspace-kit/tasks/workspace-kit.db",
   ".workspace-kit/tasks/state.json",
   "docs/maintainers/data/workspace-kit-status.yaml",
-  "docs/maintainers/RELEASING.md",
-  "docs/maintainers/POLICY-APPROVAL.md",
-  "docs/maintainers/AGENT-CLI-MAP.md",
-  "docs/maintainers/TERMS.md",
-  "docs/maintainers/module-build-guide.md"
+  ".ai/RELEASING.md",
+  ".ai/POLICY-APPROVAL.md",
+  ".ai/AGENT-CLI-MAP.md",
+  ".ai/TERMS.md"
 ]

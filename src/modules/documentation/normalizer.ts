@@ -2,6 +2,7 @@ import type { AiRecord } from "./parser.js";
 import type {
   NormalizedBaseRecord,
   NormalizedCadence,
+  NormalizedChatFeature,
   NormalizedCheck,
   NormalizedCommand,
   NormalizedConfig,
@@ -37,6 +38,15 @@ function asList(v?: string): string[] {
     .filter(Boolean);
 }
 
+/** Step sequences in `chat_feature|…|steps=` use `>` so commas can appear inside a step. */
+function asStepSequence(v?: string): string[] {
+  if (!v) return [];
+  return v
+    .split(">")
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
 export function normalizeDocument(records: AiRecord[]): NormalizedDocument {
   const refs: NormalizedRef[] = [];
   const rules: NormalizedRule[] = [];
@@ -57,6 +67,7 @@ export function normalizeDocument(records: AiRecord[]): NormalizedDocument {
   const configs: NormalizedConfig[] = [];
   const cadences: NormalizedCadence[] = [];
   const guardrails: NormalizedGuardrail[] = [];
+  const chatFeatures: NormalizedChatFeature[] = [];
   const refsById = new Map<string, NormalizedRef>();
   const examplesByParent = new Map<string, NormalizedExample[]>();
   const profileRecords = new Map<"core" | "runbook" | "workbook", Array<NormalizedBaseRecord>>([
@@ -150,9 +161,29 @@ export function normalizeDocument(records: AiRecord[]): NormalizedDocument {
     if (rec.type === "config") configs.push({ key: rec.kv["key"] ?? "", default: rec.kv["default"] ?? "", status, refs: asList(rec.kv["refs"]) });
     if (rec.type === "cadence") cadences.push({ rule: rec.kv["rule"] ?? "", status, refs: asList(rec.kv["refs"]) });
     if (rec.type === "guardrail") guardrails.push({ id: rec.kv["id"] ?? "", level: (rec.kv["level"] as NormalizedGuardrail["level"]) ?? "should", directive: rec.kv["directive"] ?? "", why: rec.kv["why"] ?? "", status, refs: asList(rec.kv["refs"]) });
+    if (rec.type === "chat_feature" || rec.type === "chatfeature") {
+      chatFeatures.push({
+        id: rec.kv["id"] ?? "",
+        title: rec.kv["title"] ?? "",
+        summary: rec.kv["summary"] ?? "",
+        steps: asStepSequence(rec.kv["steps"] ?? rec.kv["do"]),
+        status,
+        refs: asList(rec.kv["refs"])
+      });
+    }
   }
 
-  const core: NormalizedBaseRecord[] = [...refs, ...rules, ...checks, ...decisions, ...examples, ...terms, ...commands, ...workflows];
+  const core: NormalizedBaseRecord[] = [
+    ...refs,
+    ...rules,
+    ...checks,
+    ...decisions,
+    ...examples,
+    ...terms,
+    ...commands,
+    ...workflows,
+    ...chatFeatures
+  ];
   const runbook: NormalizedBaseRecord[] = [...runbooks, ...chains, ...states, ...transitions, ...promotions, ...rollbacks, ...artifacts, ...configs, ...cadences, ...guardrails];
   const workbook: NormalizedBaseRecord[] = [...workbooks, ...states, ...transitions, ...artifacts, ...guardrails];
   profileRecords.set("core", core);
@@ -180,6 +211,7 @@ export function normalizeDocument(records: AiRecord[]): NormalizedDocument {
     configs,
     cadences,
     guardrails,
+    chatFeatures,
     refsById,
     examplesByParent,
     profileRecords

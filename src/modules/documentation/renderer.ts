@@ -1,4 +1,5 @@
 import type {
+  NormalizedChatFeature,
   NormalizedCheck,
   NormalizedCommand,
   NormalizedDecision,
@@ -70,6 +71,23 @@ export function workflow_steps(workflows: NormalizedWorkflow[]): string {
     .join("\n\n");
 }
 
+/** README chat guides: summary plus ordered chat steps (no shell copy-paste). */
+export function chat_feature_guide(features: NormalizedChatFeature[]): string {
+  if (features.length === 0) {
+    return "_No `chat_feature` records — add keyed lines to `.ai/README.md` to populate this block._";
+  }
+  const rows = [...features].sort((a, b) => a.id.localeCompare(b.id));
+  return rows
+    .map((f) => {
+      const body =
+        f.steps.length > 0 ? ordered_list(f.steps) : "_Add `steps=` to the `chat_feature` line (use `>` between steps)._";
+      return `### ${f.title}\n\n**What it is:** ${f.summary}\n\n**How to drive it in chat:**\n\n${body}`;
+    })
+    .join("\n\n");
+}
+
+export const renderChatFeatureSection = (doc: NormalizedDocument) => chat_feature_guide(doc.chatFeatures);
+
 export function chain_steps(chains: Array<{ step: string; command: string; expectExit: number }>): string {
   if (chains.length === 0) return "_No chain steps_";
   return chains
@@ -108,6 +126,7 @@ function renderSection(doc: NormalizedDocument, section: ViewModelSection): stri
     decision_section: (d) => decision_section(d.decisions),
     term_list: (d) => term_list(d.terms),
     workflow_steps: (d) => workflow_steps(d.workflows),
+    renderChatFeatureSection: (d) => chat_feature_guide(d.chatFeatures),
     chain_steps: (d) => chain_steps(d.chains),
     ref_table: (d) => ref_table(d.refs)
   };

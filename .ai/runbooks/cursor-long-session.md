@@ -4,7 +4,7 @@ Use this runbook when agent threads run for a long time, after context compactio
 
 ## Re-anchor checklist
 
-1. **Canon** — `docs/maintainers/AGENTS.md` (source-of-truth order) and `docs/maintainers/ARCHITECTURE.md` (router vs persistence).
+1. **Canon** — `.ai/agent-source-of-truth-order.md` (agent precedence) and `.ai/ARCHITECTURE.md` (router vs persistence).
 2. **Health** — `workspace-kit doctor` from the repository root.
 3. **Execution queue** — `workspace-kit run get-next-actions '{}'` or `workspace-kit run list-tasks '{}'`.
 4. **Operator snapshot** — `docs/maintainers/data/workspace-kit-status.yaml` (`current_kit_phase`, `active_focus`).
@@ -12,7 +12,7 @@ Use this runbook when agent threads run for a long time, after context compactio
 
 ## Cursor rules: always-on vs requestable
 
-- **Always-on** rules (e.g. workspace-kit CLI execution, workflow contract) should stay **short** and pointer-first; deep procedures live in `docs/maintainers/`.
+- **Always-on** rules (e.g. workspace-kit CLI execution, workflow contract) should stay **short** and pointer-first; deep procedures for agents live under **`.ai/`** (see **`.cursor/rules/agent-doc-routing.mdc`**).
 - **Requestable** rules: attach via `@` when needed — for example **`.cursor/rules/cursor-long-session-hygiene.mdc`** for this checklist without loading it into every turn.
 
 ## Task state integrity
@@ -22,6 +22,6 @@ Use this runbook when agent threads run for a long time, after context compactio
 
 ## Related
 
-- `docs/maintainers/AGENT-CLI-MAP.md` — tier table and copy-paste JSON.
-- `docs/maintainers/POLICY-APPROVAL.md` — approval surfaces.
-- `docs/maintainers/plans/extension-dashboard-parity-plan.md` — extension vs CLI parity direction.
+- `.ai/AGENT-CLI-MAP.md` — tier table and copy-paste JSON.
+- `.ai/POLICY-APPROVAL.md` — approval surfaces.
+- `docs/maintainers/plans/extension-dashboard-parity-plan.md` — extension vs CLI parity direction (maintainer plan; optional read).

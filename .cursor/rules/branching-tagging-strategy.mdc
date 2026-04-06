@@ -10,7 +10,7 @@ alwaysApply: false
 ## Phase integration branches
 
 - **Pattern:** `release/phase-<N>` where **`<N>`** is the workspace kit phase number (example: `release/phase-52`).
-- **Purpose:** Long-lived integration line for the phase. **Create from `main`** when a new phase starts (if the branch does not already exist on `origin`); **merge back to `main`** at phase closeout before tagging a release (see [`docs/maintainers/playbooks/phase-closeout-and-release.md`](../../docs/maintainers/playbooks/phase-closeout-and-release.md)).
+- **Purpose:** Long-lived integration line for the phase. **Create from `main`** when a new phase starts (if the branch does not already exist on `origin`); **merge back to `main`** at phase closeout before tagging a release (see [`.ai/playbooks/phase-closeout-and-release.md`](../../.ai/playbooks/phase-closeout-and-release.md)).
 
 ## Task branches
 

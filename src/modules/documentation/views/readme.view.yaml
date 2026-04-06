@@ -13,6 +13,10 @@ sections:
   - id: decisions
     source: decisions
     renderer: renderDecisionSection
+  - id: chat_features
+    source: chat_features
+    renderer: renderChatFeatureSection
+    title: Chat-first workflows (Cursor and agents)
 render_policies:
   - id: default
     mode: append

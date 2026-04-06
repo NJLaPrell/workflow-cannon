@@ -5,7 +5,7 @@ alwaysApply: false
 
 # Chat behavior interview (requestable)
 
-Follow **`docs/maintainers/playbooks/workspace-kit-chat-behavior-interview.md`**.
+Follow **`.ai/playbooks/workspace-kit-chat-behavior-interview.md`**.
 
 - **Welcome:** **## The scribe’s quiz** + **begin** / **discard**; **`start` resets** — never mid-quiz.
 - **Questions 1–6:** numbered player lists; accept digit or **`value`** word; persist each **`answer`** immediately.

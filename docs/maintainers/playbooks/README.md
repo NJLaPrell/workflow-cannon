@@ -2,7 +2,7 @@
 
 # Maintainer playbooks (direction sets)
 
-Versioned **direction sets** for recurring maintainer and agent flows. Terminology aligns with **Direction set (maintainer playbook)** in [`docs/maintainers/TERMS.md`](../TERMS.md).
+Versioned **direction sets** for recurring maintainer and agent flows. Terminology aligns with **Direction set (maintainer playbook)** in [`TERMS.md`](../TERMS.md).
 
 ## What belongs here
 
@@ -19,7 +19,7 @@ Versioned **direction sets** for recurring maintainer and agent flows. Terminolo
 
 1. **Link canon** — each step names the owning doc or instruction path and what to do there.
 2. **Ordered steps only** — numbered or clear sequencing; no hidden branches without calling them out.
-3. **CLI lines** — when a step mutates kit-owned state, cite the copy-paste pattern from [`docs/maintainers/AGENT-CLI-MAP.md`](../AGENT-CLI-MAP.md) (Tier A/B and `policyApproval` as required by [`POLICY-APPROVAL.md`](../POLICY-APPROVAL.md)).
+3. **CLI lines** — when a step mutates kit-owned state, cite the copy-paste pattern from [`AGENT-CLI-MAP.md`](../AGENT-CLI-MAP.md) (Tier A/B and `policyApproval` as required by [`POLICY-APPROVAL.md`](../POLICY-APPROVAL.md)).
 4. **Human gates** — call out explicit operator approval where [`RELEASING.md`](../RELEASING.md) requires it (e.g. before publish).
 
 ## Playbook ids (stable)
@@ -42,5 +42,5 @@ Use the **filename stem** as the stable id.
 
 ## Discovery
 
-- Human/agent entry: [`docs/maintainers/AGENTS.md`](../AGENTS.md) (playbook index).
-- Invocation: [`docs/maintainers/runbooks/agent-playbooks.md`](../runbooks/agent-playbooks.md).
+- Maintainer human index: [`docs/maintainers/AGENTS.md`](../../docs/maintainers/AGENTS.md). **Agents:** repo-root [`AGENTS.md`](../../AGENTS.md) + [`.ai/agent-source-of-truth-order.md`](../agent-source-of-truth-order.md).
+- Invocation: [`.ai/runbooks/agent-playbooks.md`](../runbooks/agent-playbooks.md).

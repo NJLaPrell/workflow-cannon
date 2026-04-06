@@ -1,0 +1,31 @@
+---
+description: Route agents to .ai/ and kit surfaces; avoid docs/ prose
+alwaysApply: true
+---
+
+# Agent documentation routing
+
+## Default (must)
+
+For **operating procedure, policy, CLI tiers, terminology, playbooks, runbooks, and maintainer workflow law**, read **only**:
+
+- **`.ai/**/*.md`** (machine-oriented canon)
+- **`src/modules/*/instructions/*.md`** (command payload shapes)
+- **CLI JSON output** (`pnpm run wk doctor`, `pnpm run wk run …`, etc.)
+
+**Do not** open, search, or summarize prose under **`docs/`** for routine work — that tree is **human-first** (and often generated from `.ai/` sources).
+
+## Exceptions (allowed `docs/` touches)
+
+1. The user **@**‑mentions a `docs/...` path or explicitly asks you to read or edit maintainer docs.
+2. You are **editing** or reviewing a pull request that changes files under **`docs/`**.
+3. A **machine snapshot** exists only under `docs/` — allowed paths:
+   - `docs/maintainers/data/**/*.yaml`
+   - `docs/maintainers/data/**/*.json`
+4. **No `.ai/` equivalent** exists for a referenced artifact (rare); name the gap, read the **single** required file, then stop.
+5. **Documentation module** — you may run **`workspace-kit run document-project`** / **`generate-document`** (and read **`src/modules/documentation/RULES.md`**, **`instructions/*.md`**, **`views/*.yaml`**) without `@`. Those commands **write** under **`docs/maintainers/`** and **`.ai/`** by design; that is not “reading docs for routine bootstrap.” After a write, opening the **specific** paths reported in CLI output or check logs to verify or fix drift is allowed.
+
+## Entrypoints
+
+- Repo root **`AGENTS.md`** → **`.ai/AGENTS.md`** (meta rules) and **`.ai/agent-source-of-truth-order.md`** (numbered precedence list).
+- **`docs/maintainers/AGENTS.md`** is **maintainer/human** index only — **not** an agent bootstrap path.

@@ -1,6 +1,6 @@
 # Machine CLI and policy quickref (agents)
 
-**Canonical maintainer prose** (long tables, diagrams, release detail) stays in `docs/maintainers/AGENT-CLI-MAP.md`, `docs/maintainers/POLICY-APPROVAL.md`, `docs/maintainers/RELEASING.md`, and `docs/maintainers/CLI-VISUAL-GUIDE.md`. **Agents** should use this file plus live CLI output.
+**Agents** use **`.ai/AGENT-CLI-MAP.md`**, **`.ai/POLICY-APPROVAL.md`**, **`.ai/RELEASING.md`**, **`.ai/CLI-VISUAL-GUIDE.md`**, and this file — not `docs/maintainers/` prose (human / generated renders). **Maintainers** may still curate long-form copies under `docs/maintainers/` after running the doc pipeline.
 
 ## Tier A — task lifecycle
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Staged `pnpm run check` — prints a banner per step and fix hints on failure.
- * @see docs/maintainers/AGENTS.md (check composition)
+ * @see .ai/agent-source-of-truth-order.md (governance path order)
  */
 
 import { spawnSync } from "node:child_process";
@@ -77,10 +77,10 @@ const stages = [
   },
   {
     id: "governance-doc-order",
-    label: "AGENTS.md source-of-truth order snapshot",
+    label: "Agent source-of-truth path order snapshot",
     command: process.execPath,
     args: ["scripts/check-governance-doc-order.mjs"],
-    hint: "If you reorder docs/maintainers/AGENTS.md § Source-of-truth, update scripts/fixtures/governance-doc-order.json."
+    hint: "If you reorder .ai/agent-source-of-truth-order.md § Source-of-truth order (agents), update scripts/fixtures/governance-doc-order.json."
   },
   {
     id: "maintainer-doc-canonicals",

@@ -1,9 +1,9 @@
 # AGENTS
 
-**Agents:** Use **`.ai/AGENTS.md`** (machine rules), **`.ai/machine-cli-policy.md`**, **`.ai/WORKSPACE-KIT-SESSION.md`**, **`.ai/MACHINE-PLAYBOOKS.md`**, and **`src/modules/*/instructions/*.md`** for operating procedures. Prefer **`pnpm run wk`** / CLI JSON output over opening `docs/maintainers/*.md` for routine execution.
+**Agents:** Use **`.ai/AGENTS.md`** (meta rules), **`.ai/agent-source-of-truth-order.md`** (numbered precedence), **`.ai/machine-cli-policy.md`**, **`.ai/WORKSPACE-KIT-SESSION.md`**, **`.ai/MACHINE-PLAYBOOKS.md`**, and **`src/modules/*/instructions/*.md`**. Prefer **`pnpm run wk`** / CLI JSON output over opening anything under **`docs/`** for routine execution (see **`.cursor/rules/agent-doc-routing.mdc`**).
 
-**Maintainers:** Canonical human-oriented guidance remains in **`docs/maintainers/AGENTS.md`**.
+**Maintainers:** Human-oriented index and rendered playbooks live in **`docs/maintainers/AGENTS.md`** — not the agent entry path.
 
-- **`.ai/AGENTS.md`** — keyed rules mirrored for tooling and documentation generation.
-- **`docs/maintainers/AGENT-CLI-MAP.md`** — full tier table and copy-paste patterns (human depth).
-- **`docs/maintainers/POLICY-APPROVAL.md`** — approval lanes and evidence.
+- **`.ai/AGENT-CLI-MAP.md`** — tier table and copy-paste JSON for agents.
+- **`.ai/POLICY-APPROVAL.md`** — approval lanes (JSON vs env) for agents.
+- **`docs/maintainers/AGENT-CLI-MAP.md`** — maintainer-depth companion (humans editing the repo).

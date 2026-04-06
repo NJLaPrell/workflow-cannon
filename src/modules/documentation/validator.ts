@@ -185,6 +185,16 @@ export function validateAiSchema(aiOutput: string, ctx: AiValidationContext): Do
         });
       }
     }
+
+    if (rec.type === "chat_feature" || rec.type === "chatfeature") {
+      if (!rec.kv["id"] || !rec.kv["title"] || !rec.kv["summary"]) {
+        issues.push({
+          check: "schema",
+          message: "chat_feature records require id, title, summary",
+          resolved: isLegacySchema || !ctx.strict
+        });
+      }
+    }
   }
 
   const isActive = status === "active";

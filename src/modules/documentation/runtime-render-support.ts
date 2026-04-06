@@ -1,9 +1,19 @@
-import type { DocumentationConflict, DocumentationValidationIssue } from "./types.js";
+import type { DocumentationConflict, DocumentationValidationIssue, NormalizedDocument } from "./types.js";
+import { chat_feature_guide } from "./renderer.js";
 
 export function resolveExpectedDocFamily(docType: string): "rules" | "runbook" | "workbook" {
   if (docType.includes("runbooks/") || docType.startsWith("runbooks/")) return "runbook";
   if (docType.includes("workbooks/") || docType.startsWith("workbooks/")) return "workbook";
   return "rules";
+}
+
+const CHAT_FEATURES_MARKER = "<!--DOC_MODULE:CHAT_FEATURES-->";
+
+/** Injects README bodies generated from `.ai/README.md` `chat_feature|` records. */
+export function injectReadmeChatFeaturesFromNormalized(humanOutput: string, normalized: NormalizedDocument): string {
+  if (!humanOutput.includes(CHAT_FEATURES_MARKER)) return humanOutput;
+  const block = chat_feature_guide(normalized.chatFeatures);
+  return humanOutput.replace(CHAT_FEATURES_MARKER, block);
 }
 
 export function renderTemplate(templateContent: string): { output: string; unresolvedBlocks: boolean } {

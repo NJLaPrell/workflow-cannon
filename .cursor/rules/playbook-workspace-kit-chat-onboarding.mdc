@@ -5,7 +5,7 @@ alwaysApply: false
 
 # Chat onboarding (requestable)
 
-Follow **`docs/maintainers/playbooks/workspace-kit-chat-onboarding.md`**.
+Follow **`.ai/playbooks/workspace-kit-chat-onboarding.md`**.
 
 - **Your Role:** `1.–5.` with **`(Default)`** on Adventurer only; **`(Selected)`** + **`← you are here`** on active tier when saved; fixed prompts from playbook.
 - **Agent Temperament:** `1.–4.` with **`(Default)`** on Steady Adventurer; **`(Selected)`** on matching builtin; no **`builtin:`** in success toasts.

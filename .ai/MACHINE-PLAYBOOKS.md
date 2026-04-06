@@ -1,6 +1,6 @@
 # Machine playbook summaries (agents)
 
-Full checklists with links live under `docs/maintainers/playbooks/` for **maintainers**. Agents follow the compressed expectations below; attach requestable Cursor rules when the editor supports it.
+**Agents:** ordered checklists live in **`.ai/playbooks/*.md`** (attach with `@`). **Maintainers** also have rendered copies under `docs/maintainers/playbooks/` after **`pnpm run generate-maintainer-docs-from-ai`**. Attach requestable Cursor rules when the editor supports it.
 
 ## Single task → phase integration branch (delivery loop)
 
@@ -10,41 +10,41 @@ Full checklists with links live under `docs/maintainers/playbooks/` for **mainta
 4. Open **PR targeting `release/phase-<N>`** (not `main`); iterate review; merge into the phase branch.
 5. After merge: Tier A **`complete`** with JSON **`policyApproval`** so the store matches shipped work.
 
-Optional Cursor rule: `.cursor/rules/playbook-task-to-phase-branch.mdc`. Maintainer detail: human playbook `docs/maintainers/playbooks/task-to-phase-branch.md` (reference only for humans).
+Optional Cursor rule: `.cursor/rules/playbook-task-to-phase-branch.mdc`. Full checklist: **`.ai/playbooks/task-to-phase-branch.md`**.
 
 ## Phase closeout → `main` + release
 
-When the phase is done: validate and fix on **`release/phase-<N>`**, obtain human approval, **merge phase branch to `main`**, then follow `docs/maintainers/RELEASING.md` on the **`main`** tip.
+When the phase is done: validate and fix on **`release/phase-<N>`**, obtain human approval, **merge phase branch to `main`**, then follow **`.ai/RELEASING.md`** on the **`main`** tip.
 
 After publish and evidence (**playbook §6**), end with **§7 Phase delivery summary**: compact copy-paste block, **`{placeholders}`** only — counts from **`list-tasks`** / task store + roadmap scope (see playbook **§7 evidence rules**), not chat memory.
 
-Human playbook: `docs/maintainers/playbooks/phase-closeout-and-release.md`.
+Full checklist: **`.ai/playbooks/phase-closeout-and-release.md`**.
 
 Optional Cursor rule: `.cursor/rules/playbook-phase-closeout.mdc`.
 
 ## Improvement discovery (research → log)
 
-Research transcripts/docs/architecture first, then persist a **problem report** (`metadata.issue` + `metadata.supportingReasoning`, scoped body)—not raw trace paste. Use Tier B `workspace-kit run` commands from `.ai/machine-cli-policy.md` / maintainer **AGENT-CLI-MAP** to persist—never chat-only approval for gated commands.
+Research transcripts/docs/architecture first, then persist a **problem report** (`metadata.issue` + `metadata.supportingReasoning`, scoped body)—not raw trace paste. Use Tier B `workspace-kit run` commands from `.ai/machine-cli-policy.md` / **`.ai/AGENT-CLI-MAP.md`** to persist—never chat-only approval for gated commands.
 
-Human playbook: `docs/maintainers/playbooks/improvement-task-discovery.md`.
+Full checklist: **`.ai/playbooks/improvement-task-discovery.md`**.
 
 ## Improvement scout (bounded rehearsal → optional persist)
 
 Use **`improvement-scout`** when you want **capped** candidate findings (1–3), **lens + zone rotation**, and an **evidence floor** before opening tasks. Read-only JSON: `workspace-kit run scout-report '{}'` (no task persistence). Persist only via **`create-task`** or Tier B ingest/generate with **`policyApproval`**.
 
-Human playbook: `docs/maintainers/playbooks/improvement-scout.md`.
+Full checklist: **`.ai/playbooks/improvement-scout.md`**.
 
 ## Improvement triage (≤3 → ready)
 
 Pick at most three `proposed` improvement tasks, document rationale, **`accept`** to **`ready`** with **`policyApproval`** on the transition args.
 
-Human playbook: `docs/maintainers/playbooks/improvement-triage-top-three.md`.
+Full checklist: **`.ai/playbooks/improvement-triage-top-three.md`**.
 
 ## Wishlist intake → execution
 
 Rank **`wishlist_intake`** items with **`list-wishlist`** / **`get-wishlist`**, confirm operator timing, clarify scope, pick a target **`phaseKey`**, then **`convert-wishlist`** with **`expectedPlanningGeneration`** when policy is **`require`**.
 
-Human playbook: `docs/maintainers/playbooks/wishlist-intake-to-execution.md`.
+Full checklist: **`.ai/playbooks/wishlist-intake-to-execution.md`**.
 
 Optional Cursor rule: `.cursor/rules/playbook-wishlist-intake-to-execution.mdc`.
 
@@ -52,7 +52,7 @@ Optional Cursor rule: `.cursor/rules/playbook-wishlist-intake-to-execution.mdc`.
 
 Numbered **Your Role** / **Agent Temperament**; persist after each answer; **`get-next-actions`** token before mutating `run` when policy **`require`**.
 
-Human playbook: `docs/maintainers/playbooks/workspace-kit-chat-onboarding.md`.
+Full checklist: **`.ai/playbooks/workspace-kit-chat-onboarding.md`**.
 
 Optional Cursor rule: `.cursor/rules/playbook-workspace-kit-chat-onboarding.mdc`.
 
@@ -60,7 +60,7 @@ Optional Cursor rule: `.cursor/rules/playbook-workspace-kit-chat-onboarding.mdc`
 
 Six numbered scribe questions; persist each **`interview-behavior-profile`** answer; **`start` resets** — see playbook **gaps** for resume.
 
-Human playbook: `docs/maintainers/playbooks/workspace-kit-chat-behavior-interview.md`.
+Full checklist: **`.ai/playbooks/workspace-kit-chat-behavior-interview.md`**.
 
 Optional Cursor rule: `.cursor/rules/playbook-workspace-kit-chat-behavior-interview.mdc`.
 

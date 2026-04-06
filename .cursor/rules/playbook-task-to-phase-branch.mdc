@@ -7,10 +7,10 @@ alwaysApply: false
 
 When the operator is driving **one** execution task (**`T###`**) from work-in-progress to **merged `release/phase-<N>`** (task branch from phase branch, PR, review, merge, task-engine **`complete`**):
 
-1. Open and follow **`docs/maintainers/playbooks/task-to-phase-branch.md`** (playbook id `task-to-phase-branch`). Prefer attaching that file (`@`) so numbered steps stay in context — especially **0b** (**`start`** before the first implementation commit; optional **`update-task`** between **`start`** and **`complete`**).
+1. Open and follow **`.ai/playbooks/task-to-phase-branch.md`** (playbook id `task-to-phase-branch`). Prefer attaching that file (`@`) so numbered steps stay in context — especially **0b** (**`start`** before the first implementation commit; optional **`update-task`** between **`start`** and **`complete`**).
 2. Stay aligned with **`.cursor/rules/maintainer-delivery-loop.mdc`** (canonical task → PR loop); the playbook **orders** the same expectations for a single task.
-3. Use **`docs/maintainers/AGENT-CLI-MAP.md`** for every **`workspace-kit run run-transition`** line; JSON **`policyApproval`** in the **third** argument per **`docs/maintainers/POLICY-APPROVAL.md`**.
+3. Use **`.ai/AGENT-CLI-MAP.md`** for every **`workspace-kit run run-transition`** line; JSON **`policyApproval`** in the **third** argument per **`.ai/POLICY-APPROVAL.md`**.
 
-Invocation options and limits of auto-loading: **`docs/maintainers/runbooks/agent-playbooks.md`**.
+Invocation options and limits of auto-loading: **`.ai/runbooks/agent-playbooks.md`**.
 
 This rule does **not** override **`maintainer-delivery-loop.mdc`** or **`workspace-kit-cli-execution.mdc`**; it points at the playbook and the same policy surfaces.

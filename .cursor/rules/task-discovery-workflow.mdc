@@ -7,7 +7,7 @@ alwaysApply: false
 
 When discovering new work:
 
-1. Start from `docs/maintainers/ROADMAP.md` direction and current task-engine state (`workspace-kit run list-tasks` / `get-next-actions`).
+1. Start from **`.ai/WORKSPACE-KIT-SESSION.md`** + current task-engine state (`workspace-kit run list-tasks` / `get-next-actions`). **Maintainers** reconciling strategy still edit **`docs/maintainers/ROADMAP.md`** on disk; agents do not read it for routine queue facts (**`agent-doc-routing.mdc`**).
 2. Validate scope, risk, and evidence expectations.
 3. Convert accepted scope into concrete task-engine tasks (source of truth in the configured task store; default SQLite `.workspace-kit/tasks/workspace-kit.db`).
 4. Keep strategic rationale in roadmap/docs and execution detail in task-engine state.

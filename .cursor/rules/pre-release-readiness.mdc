@@ -5,7 +5,7 @@ alwaysApply: false
 
 # Pre-Release Readiness
 
-Release work must satisfy `docs/maintainers/RELEASING.md` gates before publish:
+Release work must satisfy **`.ai/RELEASING.md`** gates before publish (maintainer long-form: `docs/maintainers/RELEASING.md` when editing policy):
 
 - scope and changelog complete
 - validation checks pass

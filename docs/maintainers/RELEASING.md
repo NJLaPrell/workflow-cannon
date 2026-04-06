@@ -102,7 +102,7 @@ This closes the loop with the Enhancement Engine direction: release outcomes sho
 ## Changing `.ai/PRINCIPLES.md` (R00x machine rules)
 
 - **Edit** `.ai/PRINCIPLES.md` directly (pipe-delimited machine dialect). After changing **`rule|id=R###`** rows, update **`scripts/fixtures/principles-rule-ids.json`** in the same PR so **`pnpm run check`** stays green.
-- **Human governance order** is snapshotted from **`docs/maintainers/AGENTS.md`** § Source-of-truth; reordering those bullets requires updating **`scripts/fixtures/governance-doc-order.json`**.
+- **Agent governance order** is snapshotted from **`.ai/agent-source-of-truth-order.md`** § Source-of-truth order (agents); reordering those bullets requires updating **`scripts/fixtures/governance-doc-order.json`**. **Maintainer** human stack: **`docs/maintainers/AGENTS.md`**.
 - For trade-off philosophy, cross-check **`.ai/PRINCIPLES.md`** against **`docs/maintainers/ROADMAP.md`** / **`docs/maintainers/DECISIONS.md`** as needed.
 
 ## Related documents

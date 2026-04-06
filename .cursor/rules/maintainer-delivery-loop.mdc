@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Maintainer delivery workflow (canonical)
 
-Full numbered loop (branch → implement → validate → PR → merge → **`run-transition`**), branching/tagging, commit strategy, and PR expectations: **machine summary** **`.ai/MACHINE-PLAYBOOKS.md`**; **human playbook** **`docs/maintainers/playbooks/task-to-phase-branch.md`**; **CLI execution** **`docs/maintainers/AGENTS.md`**. Attach **`@task-to-phase-branch.md`** when driving one **`T###`** through a PR into **`release/phase-<N>`** (phase integration branch — see **`.cursor/rules/branching-tagging-strategy.mdc`**). Merging **`release/phase-<N>`** → **`main`** is **phase closeout**, not this loop.
+Full numbered loop (branch → implement → validate → PR → merge → **`run-transition`**), branching/tagging, commit strategy, and PR expectations: **machine summary** **`.ai/MACHINE-PLAYBOOKS.md`**; **playbook** **`.ai/playbooks/task-to-phase-branch.md`** (human render: `docs/maintainers/playbooks/…`); **CLI execution** **`.ai/AGENT-CLI-MAP.md`**. Attach **`.ai/playbooks/task-to-phase-branch.md`** when driving one **`T###`** through a PR into **`release/phase-<N>`** (phase integration branch — see **`.cursor/rules/branching-tagging-strategy.mdc`**). Merging **`release/phase-<N>`** → **`main`** is **phase closeout**, not this loop.
 
 ## Non-negotiables
 

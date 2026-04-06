@@ -7,7 +7,7 @@ alwaysApply: false
 
 At phase start:
 
-1. Align phase definition in `docs/maintainers/ROADMAP.md`, task-engine state (default SQLite under `.workspace-kit/tasks/`), and status YAML.
+1. Align phase definition in **`docs/maintainers/ROADMAP.md`** (file on disk for maintainers), task-engine state (default SQLite under `.workspace-kit/tasks/`), and status YAML. **Agents** editing code: use **`.ai/WORKSPACE-KIT-SESSION.md`** + **`pnpm run wk`**; do not ingest roadmap prose routinely (**`agent-doc-routing.mdc`**).
 2. Confirm task-engine ready queue (`workspace-kit run get-ready-queue`) supports phase goals.
 3. Define evidence expectations for phase-exit confidence.
 4. Identify human-only decisions early.
