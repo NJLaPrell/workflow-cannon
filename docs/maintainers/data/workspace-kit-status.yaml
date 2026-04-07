@@ -1,7 +1,7 @@
 schema_version: 1
-current_kit_phase: "64"
-next_kit_phase: "65"
-last_updated: "2026-04-05"
+current_kit_phase: "65"
+next_kit_phase: "66"
+last_updated: "2026-04-07"
 active_focus: "**Phase 61** (current) — **`v0.61.0`**: Claude Code plugin platform v1 — **`list-plugins`** / **`inspect-plugin`**, **`install-plugin`** / enable-disable, SQLite **`user_version` 8 **`kit_plugin_state`**, ADR + manifest schema + **`docs/examples/claude-plugins/`** CI smoke. **`current_kit_phase` 61** / **`next_kit_phase` 62**."
 blockers: []
 pending_decisions: []
@@ -19,6 +19,7 @@ next_agent_actions:
   - "2026-04-03: Phase **50** **`v0.50.0`** — GitHub release `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.50.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23962170532`."
   - "2026-04-03: Phase **49** **`v0.49.0`** — GitHub release `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.49.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23958564398`."
 last_session_summary:
+  - "2026-04-07: Phase **64** closeout — **`v0.64.1`** — remainder **`T770`**, **`T773`**, **`T780`**, **`T781`**, **`T782`**, **`T783`** **`completed`** (behavior rule sync, collaboration hub, maintainer CLI parity). **`update-workspace-phase-snapshot`** **`current_kit_phase` 65** / **`next_kit_phase` 66**; **`kit.currentPhaseNumber`** **65**. GitHub release `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.64.1` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/24097687865`."
   - "2026-04-05: Phase **61** closeout — **`v0.61.0`** — **`T684`–`T687`** **`completed`**: plugin platform v1 (ADR, schema, **`plugins.discoveryRoots`**, **`list-plugins`** / **`inspect-plugin`**, **`install-plugin`** / enable-disable, SQLite **`kit_plugin_state`**, doctor line, CI fixture). **`update-workspace-phase-snapshot`** **`current_kit_phase` 61** / **`next_kit_phase` 62**; **`kit.currentPhaseNumber`** **61**. GitHub release `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.61.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/24003848161`."
   - "2026-04-05: Phase **60** closeout — **`v0.60.0`** — **`T689`–`T740`** **`completed`**: pilot run-args + prelude, SQLite immediate transactions, team/subagent dashboard surfaces, **`agent-session-snapshot`**, contract exports, extension **0.1.8**. **`update-workspace-phase-snapshot`** **`current_kit_phase` 60** / **`next_kit_phase` 61**; **`kit.currentPhaseNumber`** **60**. GitHub release `https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.60.0` — Publish NPM `https://github.com/NJLaPrell/workflow-cannon/actions/runs/23997372878`."
   - "2026-04-05: Phase **59** closeout — **`v0.59.0`** — **`T679`–`T683`** **`completed`**: **`improvement-scout`** playbook + **`scout-report`** + improvement state **`scoutRotationHistory`** (schema **3**) + **`improvement.recommendations.heuristicVersion`** **`2`** path; **`improvement`** **0.10.0**. **`update-workspace-phase-snapshot`** **`current_kit_phase` 59** / **`next_kit_phase` 60**; **`kit.currentPhaseNumber`** **59**. Git tag / GitHub release / Publish NPM: maintainer (**paste workflow URLs after ship**)."
