@@ -38,6 +38,8 @@ F5 typical `launch.json` (workspace root):
 
 Open the **Workflow Cannon** activity bar to use **Dashboard** (webview — task queue rollups + actions) and **Config** (webview).
 
+**Dashboard refresh:** Besides the bottom **Refresh** button (immediate refetch), the dashboard reloads when the sidebar becomes visible again, when kit-owned files change (workspace-kit watchers), and on a **~45s** timer while the view stays open.
+
 **Tasks tree / drag-and-drop** were removed in extension **0.1.6** — use dashboard **View** on a task row (or palette **Show Task Detail**) and **`workspace-kit run run-transition`** / **`list-tasks`** from a terminal for transitions. Proposed-row **Accept**/**Chat** on the dashboard is unchanged.
 
 ## CLI bridge
