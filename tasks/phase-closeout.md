@@ -9,7 +9,7 @@ taskName: phase-closeout
 
 ## 1) Load the playbook
 
-Open and follow the ordered checklist in **`docs/maintainers/playbooks/phase-closeout-and-release.md`** (playbook id `phase-closeout-and-release`). Attach that file in chat (`@`) so the agent has full context.
+Open and follow the ordered checklist in **`.ai/playbooks/phase-closeout-and-release.md`** (playbook id `phase-closeout-and-release`). Agents: this path is machine canon; maintainer render may exist under **`docs/maintainers/playbooks/`**. Attach the playbook in chat (`@`) so the agent has full context.
 
 Authoring rules and index: `docs/maintainers/playbooks/README.md`. Discovery table: `docs/maintainers/AGENTS.md` → **Maintainer playbooks**.
 
@@ -37,7 +37,7 @@ Replace `T###` and rationale strings per task. Do **not** hand-edit `.workspace-
 
 ## 4) Phase delivery summary
 
-After publish and evidence steps (**playbook §6**), emit the **Phase delivery summary** using the copy-paste template in **`docs/maintainers/playbooks/phase-closeout-and-release.md` §7**, filled only from **CLI / task-store / maintainer-doc evidence** (not memory). Keep the pasted block compact: substitute **`{placeholders}`** only — do not embed long governance asides in the template body (methodology stays in the playbook **§7 evidence rules**).
+After publish and evidence steps (**playbook §6**), emit the **Phase delivery summary** using **§7** in **`.ai/playbooks/phase-closeout-and-release.md`**, filled only from **CLI / task-store / maintainer-doc evidence** (not memory). Expand **`{phaseNumber}`**, **`{featureMarkdownBullets}`**, **`{optionalNotesBlockOrEmpty}`**, and the count tokens fully — do not paste unfilled template slots. Keep the block compact; methodology stays in the playbook **§7 evidence rules**.
 
 ---
 **Use:** Open or @-attach `tasks/phase-closeout.md` with your phase/release context (e.g. `Phase 25 → v0.26.0`).
