@@ -10,6 +10,19 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 (none)
 
+## [0.65.0] - 2026-04-07
+
+Phase 65 — **Dashboard + phase-closeout operator path + policy canon** (**`T784`–`T791`**): Cursor slash **`/complete-phase <N> [approve-release]`** (**.cursor/commands/complete-phase.md**); dashboard **Complete & Release** chat prompt aligned; **`.ai/POLICY-APPROVAL.md`** callout that slash/chat are intent only for Tier A/B **`wk run`**; **`.ai/playbooks/phase-closeout-and-release.md`** §4 pointer; **`.ai/RELEASING.md`** intent **I005**; **`.ai/runbooks/agent-playbooks.md`** + maintainer mirror refreshed for §7 tokens and agent-first paths. Extension **0.1.13** — **`list-approval-queue`** fetched with **`dashboard-summary`**; task rows **View** + tertiary styling; team/subagent rollup parity documented; refresh tooltip + README note on automatic reload.
+
+### Added
+
+- **`.cursor/commands/complete-phase.md`** — phase closeout checklist with **`approve-release`** publish gate.
+
+### Changed
+
+- **`extensions/cursor-workflow-cannon`** — Approvals card live queue; View buttons; refresh copy; README discovery for **`/complete-phase`**.
+- **`.ai`** — Policy, phase-closeout, agent-playbooks runbook, RELEASING intent; maintainer playbook mirrors regenerated where applicable.
+
 ## [0.64.1] - 2026-04-07
 
 Phase 64 patch — **Effective behavior Cursor rule + collaboration surfaces + maintainer CLI parity** (**`T770`**, **`T773`**, **`T780`**, **`T781`**, **`T782`**, **`T783`**): Tier C **`sync-effective-behavior-cursor-rule`** writes **`.cursor/rules/workflow-cannon-effective-agent-behavior.mdc`** from resolved role × temperament; auto-refresh after common profile / **`set-agent-guidance`** mutators (fail-open); Cursor extension debounces the same command on kit file changes and watches **`.workspace-kit/modules/agent-behavior/config.json`**. Dashboard **Collaboration profiles** quick action + README pointers; **New Plan** chat seed uses **`pnpm exec wk`** and mentions **`list-wishlist`**. Maintainer **`AGENT-CLI-MAP.md`** Tier B copy-paste aligned for **`doc.generate-document`** and **`task-engine.backfill-task-feature-links`** (**`policyApproval`** + **`expectedPlanningGeneration`**). Cursor extension **0.1.12**.

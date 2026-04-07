@@ -8,4 +8,4 @@ This root file is intentionally pointer-only to avoid split release history.
 
 - See `docs/maintainers/CHANGELOG.md` for all release notes, migration notes, and historical entries.
 
-Latest release: **v0.64.1** (Phase 64 patch: behavior rule sync, collaboration hub, maintainer AGENT-CLI-MAP Tier B parity; see canonical changelog).
+Latest release: **v0.65.0** (Phase 65: dashboard approvals queue wiring, `/complete-phase` slash, policy/slash canon, operator refresh copy; see canonical changelog).
