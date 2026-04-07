@@ -10,6 +10,19 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 (none)
 
+## [0.64.1] - 2026-04-07
+
+Phase 64 patch — **Effective behavior Cursor rule + collaboration surfaces + maintainer CLI parity** (**`T770`**, **`T773`**, **`T780`**, **`T781`**, **`T782`**, **`T783`**): Tier C **`sync-effective-behavior-cursor-rule`** writes **`.cursor/rules/workflow-cannon-effective-agent-behavior.mdc`** from resolved role × temperament; auto-refresh after common profile / **`set-agent-guidance`** mutators (fail-open); Cursor extension debounces the same command on kit file changes and watches **`.workspace-kit/modules/agent-behavior/config.json`**. Dashboard **Collaboration profiles** quick action + README pointers; **New Plan** chat seed uses **`pnpm exec wk`** and mentions **`list-wishlist`**. Maintainer **`AGENT-CLI-MAP.md`** Tier B copy-paste aligned for **`doc.generate-document`** and **`task-engine.backfill-task-feature-links`** (**`policyApproval`** + **`expectedPlanningGeneration`**). Cursor extension **0.1.12**.
+
+### Added
+
+- **`sync-effective-behavior-cursor-rule`** command + instruction; **`.ai/AGENT-CLI-MAP.md`** Tier C catalog line.
+
+### Changed
+
+- **`agent-behavior`** / **`workspace-config`** — best-effort post-mutation Cursor rule sync.
+- **`extensions/cursor-workflow-cannon`** — collaboration hub prefill, planning prompt wording, phase-closeout chat prompt test alignment.
+
 ## [0.64.0] - 2026-04-06
 
 Phase 64 — **Task-flow subagent packaging + task-linked checkpoints** (**`T745`–`T751`**): optional Cursor rule/skill for single-task delivery; kit SQLite **`user_version` 9** with **`create-checkpoint`**, **`list-checkpoints`**, **`compare-checkpoint`**, **`rewind-to-checkpoint`**; opt-in **`kit.autoCheckpoint`** before selected `wk run` commands; ADRs **`.ai/adrs/ADR-cursor3-task-flow-subagent-packaging.md`** and **`.ai/adrs/ADR-task-linked-checkpoints-v1.md`**.
