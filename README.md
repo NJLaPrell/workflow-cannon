@@ -67,6 +67,8 @@ pnpm exec wk run list-tasks '{}'
 pnpm exec wk run get-next-actions '{}'
 ```
 
+**Collaboration profiles (advisory):** Cursor slash **`/collaboration-profiles`** (see **`.cursor/commands/collaboration-profiles.md`**) plus **`pnpm exec wk run resolve-behavior-profile '{}'`** / **`list-behavior-profiles`** — tone and depth hints only; **Tier A/B `wk run` still needs JSON `policyApproval`**. After changing role tier or active temperament, **`pnpm exec wk run sync-effective-behavior-cursor-rule '{}'`** refreshes the generated **`.cursor/rules/workflow-cannon-effective-agent-behavior.mdc`** (also triggered automatically from common mutators and the Cursor extension when kit files change).
+
 ## Quick start (use the package in another project)
 
 ```bash

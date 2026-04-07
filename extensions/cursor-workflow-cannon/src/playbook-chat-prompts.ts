@@ -84,10 +84,24 @@ export function buildPlanningInterviewPrompt(): string {
   return (
     "The operator clicked **New Plan** on the Workflow Cannon dashboard — run the **planning module interview**.\n\n" +
     "Follow **`.ai/runbooks/planning-workflow.md`**.\n\n" +
-    "1. Run **`pnpm run wk run list-planning-types '{}'`** and choose a **`planningType`** (or use the type the user names).\n" +
-    "2. Iterate **`pnpm run wk run build-plan`** with **`answers`** from **`data.nextQuestions`** until you can **`finalize`**.\n" +
+    "1. Run **`pnpm exec wk run list-planning-types '{}'`** and choose a **`planningType`** (or use the type the user names).\n" +
+    "2. Iterate **`pnpm exec wk run build-plan`** with **`answers`** from **`data.nextQuestions`** until you can **`finalize`**.\n" +
     "3. When **`tasks.planningGenerationPolicy`** is **`require`**, pass **`expectedPlanningGeneration`** from your latest read (`dashboard-summary`, **`get-next-actions`**, or prior **`build-plan`** response).\n" +
-    "4. When the user wants a persisted handoff, use **`finalize:true`** and **`createWishlist:true`** per the runbook.\n\n" +
+    "4. When the user wants a persisted handoff, use **`finalize:true`** and **`createWishlist:true`** per the runbook so **`list-wishlist`** shows the new row.\n\n" +
     "Use **`.ai/AGENT-CLI-MAP.md`** and **`.ai/POLICY-APPROVAL.md`** for gated mutators — chat-only approval does not replace JSON **`policyApproval`** where required."
+  );
+}
+
+/** Dashboard / README — collaboration profiles hub (slash + CLI); advisory-only. */
+export function buildCollaborationProfilesHubPrompt(): string {
+  return (
+    "The operator opened **Collaboration profiles** from the Workflow Cannon dashboard.\n\n" +
+    "**Slash hub (Cursor):** **`/collaboration-profiles`**, **`/onboarding`**, **`/behavior-interview`** — advisory tone/depth only; they do **not** replace JSON **`policyApproval`** on Tier A/B **`wk run`**.\n\n" +
+    "**CLI discovery (read-mostly):**\n" +
+    "- `pnpm exec wk run resolve-behavior-profile '{}'`\n" +
+    "- `pnpm exec wk run list-behavior-profiles '{}'`\n" +
+    "- `pnpm exec wk run resolve-agent-guidance '{}'`\n" +
+    "- `pnpm exec wk run sync-effective-behavior-cursor-rule '{}'` — refresh the generated **`.cursor/rules/workflow-cannon-effective-agent-behavior.mdc`** after role/profile changes.\n\n" +
+    "Canon: **`.cursor/commands/collaboration-profiles.md`**, **`.ai/AGENT-CLI-MAP.md`**, **`.ai/POLICY-APPROVAL.md`**."
   );
 }

@@ -1232,6 +1232,7 @@ export function renderDashboardRootInnerHtml(payload: unknown, listApprovalQueue
   const tasksQuickActionsPanel =
     '<div class="dash-quick-actions" role="toolbar" aria-label="Chat playbook shortcuts">' +
     '<button type="button" class="dash-quick-action-btn" data-wc-action="add-wishlist-item" title="Create a wishlist intake task (same flow as /add-wishlist-item)">Add wishlist item</button>' +
+    '<button type="button" class="dash-quick-action-btn" data-wc-action="collaboration-hub" title="Slash hub + CLI for collaboration profiles; chat does not replace policyApproval">Collaboration profiles</button>' +
     '<button type="button" class="dash-quick-action-btn" data-wc-action="transcript-churn-research-chat" title="Transcript churn research playbook (same intent as slash /research-churn)">Research churn</button>' +
     '<button type="button" class="dash-quick-action-btn dash-quick-action-primary" data-wc-action="generate-features-chat" title="New chat with /generate-features as text (same as slash command)">Generate Features</button>' +
     "</div>";

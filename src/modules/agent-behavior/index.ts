@@ -23,6 +23,10 @@ import {
 } from "./interview-session-file.js";
 import { loadBehaviorWorkspaceState, saveBehaviorWorkspaceState } from "./persistence.js";
 import { BehaviorProfileStore, materializeCustomFromBase } from "./store.js";
+import {
+  executeSyncEffectiveBehaviorCursorRule,
+  scheduleAutoSyncEffectiveBehaviorCursorRule
+} from "./sync-effective-behavior-cursor-rule.js";
 import type { BehaviorProfile } from "./types.js";
 import { mergeDimensions, validateBehaviorProfile } from "./validate.js";
 
@@ -35,6 +39,7 @@ async function withStore(
   const result = await fn(store);
   if (result.ok) {
     await saveBehaviorWorkspaceState(ctx, store.getState());
+    scheduleAutoSyncEffectiveBehaviorCursorRule(ctx);
   }
   return result;
 }
@@ -108,6 +113,10 @@ export const agentBehaviorModule: WorkflowModule = {
         code: "behavior-profile-retrieved",
         data: { profile: resolved }
       };
+    }
+
+    if (name === "sync-effective-behavior-cursor-rule") {
+      return executeSyncEffectiveBehaviorCursorRule(ctx, args);
     }
 
     if (name === "resolve-behavior-profile") {

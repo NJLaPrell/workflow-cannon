@@ -1,47 +1,69 @@
 import * as vscode from "vscode";
 import type { CommandClient } from "./runtime/command-client.js";
+import { ingestPlanningMetaFromData, expectedPlanningGenerationArgs } from "./planning-generation-cache.js";
 
-const INTAKE_FIELDS: { argKey: string; prompt: string }[] = [
-  { argKey: "title", prompt: "Wishlist title (short label)" },
-  { argKey: "problemStatement", prompt: "Problem / gap this addresses" },
-  { argKey: "expectedOutcome", prompt: 'Expected outcome (what "done" looks like)' },
-  { argKey: "impact", prompt: "Impact (why it matters)" },
-  { argKey: "constraints", prompt: "Constraints (hard limits)" },
-  { argKey: "successSignals", prompt: "Success signals (observable)" },
-  { argKey: "requestor", prompt: "Requestor (accountable for intake)" },
-  { argKey: "evidenceRef", prompt: "Evidence ref (link or pointer)" }
-];
+const WISHLIST_FIELD_SPECS: readonly { key: string; prompt: string; placeHolder: string }[] = [
+  { key: "title", prompt: "Short label", placeHolder: "e.g. Faster cold start" },
+  { key: "problemStatement", prompt: "What problem or gap this addresses", placeHolder: "Problem / gap" },
+  { key: "expectedOutcome", prompt: "What done looks like", placeHolder: "Expected outcome" },
+  { key: "impact", prompt: "Why it matters", placeHolder: "Impact" },
+  { key: "constraints", prompt: "Hard limits (time, compatibility, policy)", placeHolder: "Constraints" },
+  { key: "successSignals", prompt: "Observable signals of success", placeHolder: "Success signals" },
+  { key: "requestor", prompt: "Who is asking / accountable", placeHolder: "Team or handle" },
+  { key: "evidenceRef", prompt: "Link or pointer to supporting context", placeHolder: "Issue URL, doc path, …" }
+] as const;
 
-/** Prompt for `create-wishlist` required fields, then run workspace-kit. */
+/**
+ * Prompts for create-wishlist fields, refreshes planning-generation cache, runs create-wishlist.
+ * Laugh all you want — eight boxes beats hand-editing SQLite.
+ */
 export async function promptAndCreateWishlist(client: CommandClient): Promise<void> {
-  const payload: Record<string, string> = {};
-  for (const f of INTAKE_FIELDS) {
-    const v = await vscode.window.showInputBox({
-      title: "New wishlist item",
+  const warm = await client.run("dashboard-summary", {});
+  if (warm.ok && warm.data && typeof warm.data === "object") {
+    ingestPlanningMetaFromData(warm.data as Record<string, unknown>);
+  }
+
+  const payload: Record<string, unknown> = {};
+  for (const f of WISHLIST_FIELD_SPECS) {
+    const value = await vscode.window.showInputBox({
+      title: "Add wishlist item",
       prompt: f.prompt,
+      placeHolder: f.placeHolder,
       ignoreFocusOut: true
     });
-    if (v === undefined) {
+    if (value === undefined) {
       return;
     }
-    const t = v.trim();
+    const t = value.trim();
     if (!t) {
-      void vscode.window.showWarningMessage(`${f.argKey} is required — cancelled.`);
+      void vscode.window.showWarningMessage("Wishlist create cancelled (empty field).");
       return;
     }
-    payload[f.argKey] = t;
+    payload[f.key] = t;
   }
 
-  const r = await client.run("create-wishlist", payload);
-  if (!r.ok) {
-    void vscode.window.showErrorMessage(r.message ?? "create-wishlist failed");
-    return;
+  Object.assign(payload, expectedPlanningGenerationArgs());
+
+  let r = await client.run("create-wishlist", payload);
+  if (!r.ok && r.code === "planning-generation-mismatch") {
+    const again = await client.run("dashboard-summary", {});
+    if (again.ok && again.data && typeof again.data === "object") {
+      ingestPlanningMetaFromData(again.data as Record<string, unknown>);
+    }
+    const retryPayload = { ...payload, ...expectedPlanningGenerationArgs() };
+    r = await client.run("create-wishlist", retryPayload);
   }
-  const id =
-    typeof r.data?.taskId === "string"
-      ? r.data.taskId
-      : typeof r.data?.id === "string"
-        ? r.data.id
-        : "created";
-  void vscode.window.showInformationMessage(`Wishlist intake task ${id} created.`);
+
+  if (r.ok) {
+    const tid = typeof r.data?.taskId === "string" ? r.data.taskId : "";
+    void vscode.window.showInformationMessage(
+      tid ? `Wishlist intake created (${tid}).` : "Wishlist intake created."
+    );
+  } else {
+    const hint =
+      r.code === "planning-generation-mismatch" || r.code === "planning-generation-required"
+        ? " Try Refresh on the dashboard, then run again."
+        : "";
+    void vscode.window.showErrorMessage((r.message ?? String(r.code ?? "create-wishlist failed")) + hint);
+  }
 }

@@ -54,7 +54,8 @@ export class StateWatcher implements vscode.Disposable {
     const patterns = new Set<string>([
       StateWatcher.DEFAULT_TASK_STORE_PATH,
       StateWatcher.DEFAULT_SQLITE_DB_PATH,
-      StateWatcher.CONFIG_PATH
+      StateWatcher.CONFIG_PATH,
+      ".workspace-kit/modules/agent-behavior/config.json"
     ]);
     const configPath = path.join(this.workspaceFolder.uri.fsPath, StateWatcher.CONFIG_PATH);
     try {

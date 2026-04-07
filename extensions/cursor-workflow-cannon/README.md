@@ -87,6 +87,8 @@ The extension seeds Cursor Composer using **`vscode.commands.executeCommand("dee
 
 Dashboard **Generate Features** opens a **new** Agent/Composer chat when Cursor exposes a known **`composer.newAgentChat`** (or alias) command, then prefills the literal **`/generate-features`** string so submitting matches the slash command.
 
+**Collaboration profiles** (quick action) prefills a chat that links **`/collaboration-profiles`**, **`/onboarding`**, **`/behavior-interview`**, and read-mostly **`pnpm exec wk run`** lines (`resolve-behavior-profile`, `list-behavior-profiles`, **`sync-effective-behavior-cursor-rule`**) — advisory only; **chat is not JSON `policyApproval`**.
+
 Dashboard **Wishlist** open rows include **Chat**; **Proposed · improvements** and **Proposed · execution** rows include **Accept** (modal **`policyApproval`** rationale + **`expectedPlanningGeneration`** when the workspace requires it) and **Chat** (improvement triage vs task-to-phase-branch playbook text). Agent canon: **`.ai/playbooks/`** (`wishlist-intake-to-execution.md`, `improvement-triage-top-three.md`, `task-to-phase-branch.md`). Maintainer mirrors: `docs/maintainers/playbooks/`.
 
 Manual operator checklist: `docs/e2e.md`  

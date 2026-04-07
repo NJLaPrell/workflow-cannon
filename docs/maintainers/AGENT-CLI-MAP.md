@@ -190,6 +190,7 @@ ADR: **`docs/maintainers/adrs/ADR-planning-generation-optimistic-concurrency.md`
 | Transcript ingest + recommendations | `workspace-kit run ingest-transcripts '<json>'` | `improvement.ingest-transcripts` | Always sensitive |
 | Approval queue decision | `workspace-kit run review-item '<json>'` | `approvals.review-item` | Always sensitive |
 | Backfill task↔feature junction | `workspace-kit run backfill-task-feature-links '<json>'` | `task-engine.backfill-task-feature-links` | Copies legacy **`features_json`** into **`task_engine_task_features`** |
+| Promote transcript churn after research | `workspace-kit run synthesize-transcript-churn '<json>'` | `tasks.synthesize-transcript-churn` | **`transcript_churn` / `research`** → **`improvement` / `proposed`**; pass **`expectedPlanningGeneration`** when policy **`require`** |
 | Export taxonomy JSON from registry | `workspace-kit run export-feature-taxonomy-json '<json>'` | `task-engine.export-feature-taxonomy-json` | Writes **`src/modules/documentation/data/feature-taxonomy.json`** |
 | Apply skill pack (non-preview) | `workspace-kit run apply-skill '<json>'` | `skills.apply-skill` | Sensitive unless `options.dryRun === true` (default preview is dry-run; see instruction file) |
 | Register subagent definition | `workspace-kit run register-subagent '<json>'` | `subagents.persist` | Declares id + explicit `allowedCommands` (no wildcards) |
@@ -221,6 +222,12 @@ workspace-kit run document-project '{"options":{"overwriteHuman":true},"policyAp
 workspace-kit run generate-document '{"documentType":"ROADMAP.md","options":{"dryRun":true}}'
 ```
 
+**Copy-paste — single doc real write (`operationId` `doc.generate-document`, Tier B):** pass JSON **`policyApproval`** on the **`run`** argv. **`WORKSPACE_KIT_POLICY_APPROVAL` does not apply** to `run`.
+
+```bash
+workspace-kit run generate-document '{"documentType":"ROADMAP.md","options":{"overwriteHuman":true},"policyApproval":{"confirmed":true,"rationale":"regenerate ROADMAP after data change"}}'
+```
+
 **Copy-paste — recommendations:**
 
 ```bash
@@ -240,11 +247,19 @@ workspace-kit run scout-report '{"seed":"session-1","persistRotation":true}'
 workspace-kit run review-item '{"taskId":"imp-example","decision":"accept","actor":"agent@example","policyApproval":{"confirmed":true,"rationale":"accept after review"}}'
 ```
 
-**Copy-paste — backfill junction from legacy `features_json`:**
+**Copy-paste — backfill junction from legacy `features_json` (`operationId` `task-engine.backfill-task-feature-links`, Tier B; pass `expectedPlanningGeneration` when `tasks.planningGenerationPolicy` is `require` — even dry-run):**
 
 ```bash
-workspace-kit run backfill-task-feature-links '{"dryRun":true}'
-workspace-kit run backfill-task-feature-links '{"policyApproval":{"confirmed":true,"rationale":"backfill task feature links"}}'
+workspace-kit run list-tasks '{}'
+workspace-kit run backfill-task-feature-links '{"dryRun":true,"policyApproval":{"confirmed":true,"rationale":"dry-run backfill"},"expectedPlanningGeneration":123}'
+# Replace 123 with data.planningGeneration from the prior read.
+workspace-kit run backfill-task-feature-links '{"dryRun":false,"policyApproval":{"confirmed":true,"rationale":"backfill task feature links"},"expectedPlanningGeneration":123}'
+```
+
+**Copy-paste — synthesize transcript churn → improvement (replace `expectedPlanningGeneration` when policy `require`):**
+
+```bash
+workspace-kit run synthesize-transcript-churn '{"taskId":"T301","synthesis":{"approach":"…","technicalScope":["…"],"acceptanceCriteria":["…"],"metadata":{"issue":"…","supportingReasoning":"…"}},"policyApproval":{"confirmed":true,"rationale":"synthesized from transcripts"}}'
 ```
 
 **Copy-paste — export taxonomy JSON from SQLite registry:**
@@ -388,6 +403,8 @@ workspace-kit run diff-behavior-profiles '{"profileIdA":"builtin:cautious","prof
 workspace-kit run explain-behavior-profiles '{"mode":"summarize","profileId":"builtin:calculated"}'
 workspace-kit run explain-behavior-profiles '{"mode":"compare","profileIds":["builtin:cautious","builtin:experimental"]}'
 workspace-kit run interview-behavior-profile '{"action":"start"}'
+workspace-kit run sync-effective-behavior-cursor-rule '{}'
+workspace-kit run sync-effective-behavior-cursor-rule '{"dryRun":true}'
 workspace-kit run list-subagents '{}'
 workspace-kit run list-assignments '{}'
 workspace-kit run get-subagent '{"subagentId":"researcher"}'
@@ -400,7 +417,7 @@ workspace-kit doctor
 
 **Team execution (read path)** (`list-assignments`) is **Tier C**; mutating assignment commands are **Tier B** (`team-execution.persist`). See runbook `docs/maintainers/runbooks/team-execution-supervisor.md`.
 
-**Agent behavior** (`list-behavior-profiles`, `get-behavior-profile`, `resolve-behavior-profile`, `set-active-behavior-profile`, `create-behavior-profile`, `update-behavior-profile`, `delete-behavior-profile`, `diff-behavior-profiles`, `explain-behavior-profiles`, `interview-behavior-profile`) are **Tier C**: advisory interaction posture only; **subordinate** to PRINCIPLES and policy. They persist under `.workspace-kit/agent-behavior/` (JSON) or unified SQLite (`module_id` `agent-behavior`) when `tasks.persistenceBackend` is `sqlite`.
+**Agent behavior** (`list-behavior-profiles`, `get-behavior-profile`, `resolve-behavior-profile`, `set-active-behavior-profile`, `create-behavior-profile`, `update-behavior-profile`, `delete-behavior-profile`, `diff-behavior-profiles`, `explain-behavior-profiles`, `interview-behavior-profile`, `sync-effective-behavior-cursor-rule`) are **Tier C**: advisory interaction posture only; **subordinate** to PRINCIPLES and policy. They persist under `.workspace-kit/agent-behavior/` (JSON) or unified SQLite (`module_id` `agent-behavior`) when `tasks.persistenceBackend` is `sqlite`. **`sync-effective-behavior-cursor-rule`** writes a generated **`.cursor/rules/*.mdc`** summary (also auto-scheduled after common profile / guidance mutators; fail-open).
 
 **Wishlist mutations** (`create-wishlist`, `update-wishlist`, `convert-wishlist`), **`migrate-task-persistence`**, and **`migrate-wishlist-intake`** are Tier C by default (same as `create-task`): they persist workspace state (JSON files and/or the configured SQLite planning DB under `tasks.sqliteDatabaseRelativePath`) but do not use `policyApproval` unless listed in `policy.extraSensitiveModuleCommands`. **`update-workspace-phase-snapshot`** is Tier C and writes only the two phase scalar lines in **`docs/maintainers/data/workspace-kit-status.yaml`** (see **`AGENTS.md`** → workspace phase snapshot).
 
