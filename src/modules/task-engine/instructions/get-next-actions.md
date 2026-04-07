@@ -23,7 +23,7 @@ A `NextActionSuggestion` object containing:
 
 - `readyQueue`: Ready tasks (excluding wishlist intake) sorted by **priority** (P1 first), then **task id** as a tie-break. Tasks whose `dependsOn` are not all **`completed`** appear **after** runnable ready tasks (dependency-blocked ready work is secondary).
 - `suggestedNext`: The first runnable ready task in that ordering, or `null` if no ready task can start (empty queue or every ready task is blocked by incomplete dependencies).
-- `stateSummary`: Count of tasks in each state
+- `stateSummary`: Count of tasks in each state (**excluding** **`type: wishlist_intake`** — those appear only in wishlist-specific surfaces; **`total`** is the count of non–wishlist-intake tasks)
 - `blockingAnalysis`: Which blocked tasks are waiting on what, sorted by blocking count (most-blocked first)
 - `teamExecutionContext` (Phase 60+): Read-only open **`kit_team_assignments`** rows (assigned / submitted / blocked) with titles resolved from the task store when available — same ordering semantics as dashboard team rollups, without reading SQLite from clients.
 

@@ -3,7 +3,7 @@
   "private": true,
   "displayName": "Workflow Cannon",
   "description": "Thin client UI for Workflow Cannon — dashboard, tasks, and config via workspace-kit CLI.",
-  "version": "0.1.8",
+  "version": "0.1.11",
   "publisher": "workflow-cannon",
   "license": "MIT",
   "type": "module",

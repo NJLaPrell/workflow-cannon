@@ -4,8 +4,9 @@ import { buildWishlistIntakeAgentPrompt } from "../dist/wishlist-chat-prompt.js"
 
 test("buildWishlistIntakeAgentPrompt includes playbook path", () => {
   const p = buildWishlistIntakeAgentPrompt();
-  assert.match(p, /wishlist-intake-to-execution\.md/);
+  assert.match(p, /\.ai\/playbooks\/wishlist-intake-to-execution\.md/);
   assert.match(p, /list-wishlist/);
+  assert.match(p, /AGENT-CLI-MAP\.md/);
 });
 
 test("buildWishlistIntakeAgentPrompt focuses id when provided", () => {

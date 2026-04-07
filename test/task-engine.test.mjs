@@ -618,6 +618,18 @@ test("getNextActions state summary counts all states", () => {
   assert.equal(result.stateSummary.total, 6);
 });
 
+test("getNextActions state summary excludes wishlist intake from proposed and total", () => {
+  const tasks = [
+    makeTask({ id: "T001", status: "proposed" }),
+    makeTask({ id: "T002", status: "proposed", type: "wishlist_intake", title: "Ideation" }),
+    makeTask({ id: "T003", status: "ready" })
+  ];
+  const result = getNextActions(tasks);
+  assert.equal(result.stateSummary.proposed, 1);
+  assert.equal(result.stateSummary.ready, 1);
+  assert.equal(result.stateSummary.total, 2);
+});
+
 test("getNextActions blocking analysis identifies blocked dependencies", () => {
   const tasks = [
     makeTask({ id: "T001", status: "in_progress" }),

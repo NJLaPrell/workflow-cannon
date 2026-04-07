@@ -5,11 +5,8 @@ alwaysApply: false
 
 # Wishlist intake → execution (requestable)
 
-When driving **wishlist ideation** (**`type: "wishlist_intake"`**) toward **scheduled execution tasks** (**`convert-wishlist`**, new **`T###`** with **`phase`** / **`phaseKey`**):
-
-1. Follow **`.ai/playbooks/wishlist-intake-to-execution.md`** (playbook id `wishlist-intake-to-execution`). Attach it (`@`) while working.
-2. Use **`workspace-kit run list-wishlist`** / **`get-wishlist`** for inventory; **`convert-wishlist`** only for persistence — patterns in **`.ai/AGENT-CLI-MAP.md`**, **`.ai/POLICY-APPROVAL.md`** for planning-generation tokens when policy is **`require`**.
-3. Keep **wishlist intake** vs **`type: "improvement"`** work straight — see **`.ai/TERMS.md`** and **`.ai/runbooks/wishlist-workflow.md`** (improvements use **`T###`**; legacy **`imp-*`** may still exist in old stores).
+1. Attach and follow **`.ai/playbooks/wishlist-intake-to-execution.md`** (playbook id `wishlist-intake-to-execution`). That file is the **only** full step list (inventory rubric, phase picking, **`convert-wishlist`**, **`expectedPlanningGeneration`**).
+2. Supporting context: **`.ai/runbooks/wishlist-workflow.md`** (operator ladder, id spaces), **`.ai/TERMS.md`** (**Wishlist** vs **Improvement Task** vs **Execution Task**).
 
 Invocation: **`.ai/runbooks/agent-playbooks.md`**.
 

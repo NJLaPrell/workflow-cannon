@@ -49,6 +49,9 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /<b>Role:<\/b> Adventurer/);
   assert.match(html, /<b>Agent Temperament:<\/b> The Steady Adventurer/);
   assert.match(html, /dashboard-overview/);
+  assert.match(html, /dash-overview-phase-row/);
+  assert.match(html, /data-wc-action="deliver-phase-prompt"/);
+  assert.match(html, />Deliver<\/button>/);
   assert.match(html, /Current Phase/);
   assert.match(html, /Next Phase/);
   assert.doesNotMatch(html, /Next action/i);
@@ -71,6 +74,8 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /T319/);
   assert.match(html, /T320/);
   assert.match(html, /W1/);
+  assert.match(html, /class="dash-row-action dash-row-action-tertiary"[^>]*data-wc-action="wishlist-view"/);
+  assert.match(html, />View<\/button>/);
   assert.match(html, /class="dash-row-action dash-row-action-primary"[^>]*data-wc-action="wishlist-chat"/);
   assert.match(html, />Process<\/button>/);
   assert.match(html, /class="dash-row-action dash-row-action-secondary"[^>]*data-wc-action="wishlist-decline"/);
@@ -92,6 +97,7 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /Not Phased/);
   assert.doesNotMatch(html, /Dependency Overview/);
   assert.match(html, /Planning Interview/);
+  assert.match(html, /data-wc-action="planning-new-plan"/);
   assert.match(html, /No interview in progress/);
   assert.match(html, /Store Updated/);
   assert.doesNotMatch(html, /same store as execution queue/i);
@@ -150,6 +156,8 @@ test("renderDashboardRootInnerHtml planning card shows resume CLI when session p
     }
   });
   assert.match(html, /Planning Interview/);
+  assert.match(html, /data-wc-action="planning-new-plan"/);
+  assert.match(html, />New Plan<\/button>/);
   assert.match(html, /Wishlist/);
   assert.match(html, /Resume/);
   assert.match(html, /build-plan/);
@@ -201,6 +209,7 @@ test("renderDashboardRootInnerHtml omits suggested-next section", () => {
   assert.doesNotMatch(html, /Suggested Next/i);
   assert.doesNotMatch(html, /T999/);
   assert.match(html, />No Items</);
+  assert.match(html, /data-wc-action="planning-new-plan"/);
   assert.match(html, /No interview in progress/);
   assert.match(html, /<b>Role:<\/b> Bard/);
   assert.match(html, /<b>Agent Temperament:<\/b> The Wary Scout/);
@@ -239,6 +248,83 @@ test("renderDashboardRootInnerHtml shows Not Planned when next phase duplicates 
     }
   });
   assert.match(html, /Next Phase<\/b> Not Planned/);
+});
+
+const deliverTestDepOverview = {
+  schemaVersion: 1,
+  activeTaskCount: 0,
+  includedTaskCount: 0,
+  edgeCount: 0,
+  truncated: false,
+  perfNote: null,
+  nodes: [],
+  edges: [],
+  mermaidFlowchart: "",
+  criticalPathReady: []
+};
+
+test("renderDashboardRootInnerHtml disables Deliver with no-ready tooltip when current phase bucket is empty", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [] },
+      readyQueueTop: [],
+      readyQueueCount: 0,
+      suggestedNext: null,
+      planningSession: null,
+      taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
+      workspaceStatus: { currentKitPhase: "1", nextKitPhase: "2", activeFocus: "Test" },
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+  assert.match(html, /class="dash-deliver-chip"[^>]*disabled/);
+  assert.match(html, /There are no ready to work tasks for this phase/);
+  assert.doesNotMatch(html, /class="dash-deliver-chip"[^>]*data-wc-action="deliver-phase-prompt"/);
+});
+
+test("renderDashboardRootInnerHtml enables Deliver when ready execution exists in current phase bucket", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      stateSummary: { proposed: 0, ready: 1, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: {
+        schemaVersion: 1,
+        count: 1,
+        top: [],
+        phaseBuckets: [
+          {
+            schemaVersion: 1,
+            phaseKey: "1",
+            label: "Phase 1 (current) (1)",
+            count: 1,
+            top: []
+          }
+        ]
+      },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [] },
+      readyQueueTop: [],
+      readyQueueCount: 1,
+      suggestedNext: null,
+      planningSession: null,
+      taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
+      workspaceStatus: { currentKitPhase: "1", nextKitPhase: "2", activeFocus: "Test" },
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+  assert.match(html, /class="dash-deliver-chip"[^>]*data-wc-action="deliver-phase-prompt"/);
+  assert.doesNotMatch(html, /class="dash-deliver-chip"[^>]*disabled/);
 });
 
 test("renderDashboardRootInnerHtml proposed execution rows expose accept action", () => {
