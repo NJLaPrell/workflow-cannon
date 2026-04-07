@@ -46,6 +46,8 @@ The extension runs `node <repo>/dist/cli.js` (or the published package path unde
 
 **Copy-ready mutating JSON (operators):** From a terminal at the repo root, `pnpm run wk run run-transition --schema-only` (and other pilot commands) prints **`sampleArgs`** you can paste and edit before running a real `wk run run-transition '<json>'`. Dashboard/Task transitions already inject **`expectedPlanningGeneration`** when policy is **`require`**; use the CLI helper when debugging shape errors. See **`docs/maintainers/plans/phase-52-human-cli-affordances.md`**.
 
+**Approvals & policy card:** The dashboard runs **`list-approval-queue`** in parallel with **`dashboard-summary`** on each refresh so the read-only review-item queue matches **`pnpm exec wk run list-approval-queue '{}'`** for the same workspace (Tier C — no JSON **`policyApproval`**).
+
 **Subagents (Phase 57+, dashboard read-only in Phase 60):** The dashboard webview shows a **read-only subagent registry** card (definitions + open sessions) sourced from packaged **`dashboard-summary`** JSON (`subagentRegistry`). Mutations remain **`pnpm run wk run …`** with JSON **`policyApproval`** (and **`expectedPlanningGeneration`** when required). For JSON shapes before editing args, use **`wk run <cmd> --schema-only`**. See **`docs/maintainers/runbooks/subagent-registry.md`** and **`docs/maintainers/AGENT-CLI-MAP.md`**.
 
 **Workspace root:** Cursor must open the folder that contains `.workspace-kit/manifest.json` (the Workflow Cannon repo root). If you open a parent directory, the extension will not attach and you get no dashboard/tasks—or you may be pointed at a different task store than you expect.

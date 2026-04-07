@@ -189,21 +189,28 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const { webview } = this.view;
     let raw: DashboardSummaryCommandSuccess | Record<string, unknown>;
+    let listApprovalQueueResult: unknown;
     try {
-      raw = (await this.client.run("dashboard-summary", {})) as DashboardSummaryCommandSuccess | Record<string, unknown>;
+      const [summaryRes, aqRes] = await Promise.all([
+        this.client.run("dashboard-summary", {}),
+        this.client.run("list-approval-queue", {})
+      ]);
+      raw = summaryRes as DashboardSummaryCommandSuccess | Record<string, unknown>;
+      listApprovalQueueResult = aqRes;
     } catch (e) {
       raw = {
         ok: false,
         code: "extension-push-error",
         message: e instanceof Error ? e.message : String(e)
       };
+      listApprovalQueueResult = undefined;
     }
     if (raw.ok === true && raw.data && typeof raw.data === "object") {
       ingestPlanningMetaFromData(raw.data as Record<string, unknown>);
     }
     let rootInner: string;
     try {
-      rootInner = renderDashboardRootInnerHtml(raw);
+      rootInner = renderDashboardRootInnerHtml(raw, listApprovalQueueResult);
     } catch (e) {
       rootInner = '<pre class="bad">Host render error: ' + escapeHtml(String(e)) + "</pre>";
     }
