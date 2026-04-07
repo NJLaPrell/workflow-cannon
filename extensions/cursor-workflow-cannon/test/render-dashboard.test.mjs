@@ -98,6 +98,8 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.doesNotMatch(html, /proposed-imp-chat/);
   assert.doesNotMatch(html, /proposed-exe-chat/);
   assert.match(html, /data-wc-action="task-detail"/);
+  assert.match(html, /class="dash-row-action dash-row-action-tertiary"[^>]*data-wc-action="task-detail"/);
+  assert.match(html, /data-wc-action="task-detail"[\s\S]*?>View<\/button>/);
   assert.match(html, /dash-row-action/);
   assert.match(html, /phase-bucket/);
   assert.doesNotMatch(html, /<details open class="phase-bucket"/);
@@ -151,7 +153,11 @@ test("renderDashboardRootInnerHtml approvals section lists review queue and revi
   assert.match(html, /Example imp/);
   assert.match(html, /review-item/);
   assert.match(html, /pnpm exec wk run review-item/);
-  assert.match(html, /data-wc-action="task-detail"[^>]*data-task-id="T900"/);
+  assert.match(
+    html,
+    /class="dash-row-action dash-row-action-tertiary"[^>]*data-wc-action="task-detail"[^>]*data-task-id="T900"/
+  );
+  assert.match(html, /data-wc-action="task-detail"[\s\S]*?data-task-id="T900"[\s\S]*?>View<\/button>/);
 });
 
 test("renderDashboardRootInnerHtml planning card shows resume CLI when session present", () => {
