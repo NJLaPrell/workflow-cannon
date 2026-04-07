@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   GENERATE_FEATURES_SLASH_TEXT,
   RESEARCH_CHURN_SLASH_TEXT,
+  buildCollaborationProfilesHubPrompt,
   buildGenerateFeaturesPrompt,
   buildImprovementTriagePrompt,
   buildPlanningInterviewPrompt,
@@ -72,6 +73,15 @@ test("buildTaskToPhaseBranchPrompt includes kit phase when provided", () => {
 test("buildPlanningInterviewPrompt references planning runbook and build-plan", () => {
   const p = buildPlanningInterviewPrompt();
   assert.match(p, /planning-workflow\.md/);
-  assert.match(p, /list-planning-types/);
+  assert.match(p, /pnpm exec wk run list-planning-types/);
+  assert.match(p, /pnpm exec wk run build-plan/);
+  assert.match(p, /list-wishlist/);
   assert.match(p, /New Plan/);
+});
+
+test("buildCollaborationProfilesHubPrompt references slash hub, sync command, and policy", () => {
+  const p = buildCollaborationProfilesHubPrompt();
+  assert.match(p, /\/collaboration-profiles/);
+  assert.match(p, /sync-effective-behavior-cursor-rule/);
+  assert.match(p, /policyApproval/);
 });

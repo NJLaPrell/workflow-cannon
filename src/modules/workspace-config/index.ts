@@ -1,7 +1,7 @@
 import { createInterface } from "node:readline/promises";
 import { stdin as processStdin, stdout as processStdout } from "node:process";
 
-import type { ConfigRegistryView, WorkflowModule } from "../../contracts/module-contract.js";
+import type { ConfigRegistryView, ModuleLifecycleContext, WorkflowModule } from "../../contracts/module-contract.js";
 import { builtinInstructionEntriesForModule } from "../../contracts/builtin-run-command-manifest.js";
 import {
   catalogEntryForTier,
@@ -17,6 +17,7 @@ import {
   resolveWorkspaceConfigWithLayers,
   writeProjectConfigDocument
 } from "../../core/workspace-kit-config.js";
+import { scheduleAutoSyncEffectiveBehaviorCursorRule } from "../agent-behavior/sync-effective-behavior-cursor-rule.js";
 
 async function handleExplainConfig(
   args: Record<string, unknown>,
@@ -164,7 +165,7 @@ async function promptTierInteractive(): Promise<number | undefined> {
 
 async function handleSetAgentGuidance(
   args: Record<string, unknown>,
-  ctx: { workspacePath: string; registry: ConfigRegistryView }
+  ctx: ModuleLifecycleContext & { registry: ConfigRegistryView }
 ): Promise<{ ok: boolean; code: string; message?: string; data?: Record<string, unknown> }> {
   let tier: number | undefined = typeof args.tier === "number" ? args.tier : undefined;
   if (args.interactive === true) {
@@ -197,6 +198,14 @@ async function handleSetAgentGuidance(
   next.kit = kitBase;
 
   await writeProjectConfigDocument(ctx.workspacePath, next);
+
+  const syncCtx: ModuleLifecycleContext = {
+    runtimeVersion: ctx.runtimeVersion,
+    workspacePath: ctx.workspacePath,
+    effectiveConfig: ctx.effectiveConfig,
+    moduleRegistry: ctx.moduleRegistry ?? ctx.registry
+  };
+  scheduleAutoSyncEffectiveBehaviorCursorRule(syncCtx);
 
   return {
     ok: true,
@@ -245,7 +254,11 @@ export const workspaceConfigModule: WorkflowModule = {
       "explain-config": () => handleExplainConfig(command.args ?? {}, baseCtx),
       "resolve-config": () => handleResolveConfig(command.args ?? {}, baseCtx),
       "resolve-agent-guidance": () => handleResolveAgentGuidance(command.args ?? {}, baseCtx),
-      "set-agent-guidance": () => handleSetAgentGuidance(command.args ?? {}, baseCtx)
+      "set-agent-guidance": () =>
+        handleSetAgentGuidance(command.args ?? {}, {
+          ...ctx,
+          registry: reg
+        })
     };
     const handler = handlers[command.name];
     if (handler) return handler();
