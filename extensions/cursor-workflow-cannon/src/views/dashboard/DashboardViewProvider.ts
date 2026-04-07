@@ -6,9 +6,11 @@ import { ingestPlanningMetaFromData } from "../../planning-generation-cache.js";
 import { buildWishlistIntakeAgentPrompt } from "../../wishlist-chat-prompt.js";
 import { buildPhaseCompleteReleaseChatPrompt } from "../../phase-complete-release-prompt.js";
 import {
-  buildGenerateFeaturesPrompt,
+  GENERATE_FEATURES_SLASH_TEXT,
   buildImprovementTriagePrompt,
-  buildTaskToPhaseBranchPrompt
+  buildPlanningInterviewPrompt,
+  buildTaskToPhaseBranchPrompt,
+  buildTranscriptChurnResearchPrompt
 } from "../../playbook-chat-prompts.js";
 import { confirmAndRunTransition } from "../../run-transition-with-approval.js";
 import { promptAndCreateWishlist } from "../../add-wishlist-item-flow.js";
@@ -68,7 +70,15 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         await prefillCursorChat(prompt);
       }
       if (msg?.type === "prefillGenerateFeaturesChat") {
-        await prefillCursorChat(buildGenerateFeaturesPrompt());
+        await prefillCursorChat(GENERATE_FEATURES_SLASH_TEXT, { newChat: true });
+      }
+      if (msg?.type === "prefillTranscriptChurnResearchChat") {
+        const raw = msg?.taskId;
+        const taskId = typeof raw === "string" ? raw.trim() : "";
+        const prompt = buildTranscriptChurnResearchPrompt(
+          taskId.length > 0 ? { taskId } : undefined
+        );
+        await prefillCursorChat(prompt, { newChat: true });
       }
       if (msg?.type === "addWishlistItem") {
         await promptAndCreateWishlist(this.client);
@@ -88,6 +98,22 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         const taskId = typeof raw === "string" ? raw.trim() : "";
         const prompt = buildTaskToPhaseBranchPrompt(taskId.length > 0 ? { taskId } : undefined);
         await prefillCursorChat(prompt);
+      }
+      if (msg?.type === "openWishlistDetail") {
+        const wid = typeof msg.wishlistId === "string" ? msg.wishlistId.trim() : "";
+        if (wid.length > 0) {
+          await vscode.commands.executeCommand("workflowCannon.wishlist.showDetail", wid);
+        }
+      }
+      if (msg?.type === "prefillPlanningInterviewChat") {
+        await prefillCursorChat(buildPlanningInterviewPrompt(), { newChat: true });
+      }
+      if (msg?.type === "prefillDeliverPhaseChat") {
+        const ph = typeof msg.kitPhase === "string" ? msg.kitPhase.trim() : "";
+        await prefillCursorChat(
+          buildTaskToPhaseBranchPrompt(ph.length > 0 ? { kitPhase: ph } : {}),
+          { newChat: true }
+        );
       }
       if (msg?.type === "prefillPhaseCompleteReleaseChat") {
         const raw = msg?.phasePhrase;
@@ -202,7 +228,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       `script-src ${webview.cspSource} 'unsafe-inline'`
     ].join("; ");
 
-    const bootstrap = `(function(){var vscode=acquireVsCodeApi();window.addEventListener("message",function(ev){var m=ev.data;if(!m||m.type!=="wcReplaceRoot"||typeof m.html!=="string")return;var root=document.getElementById("root");if(!root)return;var open={};root.querySelectorAll("details[data-wc-track]").forEach(function(d){var k=d.getAttribute("data-wc-track");if(k&&d.open)open[k]=true;});root.innerHTML=m.html;Object.keys(open).forEach(function(k){var el=root.querySelector('details[data-wc-track="'+k+'"]');if(el)el.open=true;});});var btn=document.getElementById("btn");var rootEl=document.getElementById("root");if(btn)btn.addEventListener("click",function(){vscode.postMessage({type:"refresh"});});if(rootEl)rootEl.addEventListener("click",function(ev){var t=ev.target;if(!t||t.tagName!=="BUTTON")return;var act=t.getAttribute("data-wc-action");if(!act)return;ev.stopPropagation();if(act==="add-wishlist-item"){vscode.postMessage({type:"addWishlistItem"});return;}if(act==="generate-features-chat"){vscode.postMessage({type:"prefillGenerateFeaturesChat"});return;}if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}if(act==="phase-complete-release"){var ph=(t.getAttribute("data-wc-phase-phrase")||"").trim();vscode.postMessage({type:"prefillPhaseCompleteReleaseChat",phasePhrase:ph});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});})();`;
+    const bootstrap = `(function(){var vscode=acquireVsCodeApi();window.addEventListener("message",function(ev){var m=ev.data;if(!m||m.type!=="wcReplaceRoot"||typeof m.html!=="string")return;var root=document.getElementById("root");if(!root)return;var open={};root.querySelectorAll("details[data-wc-track]").forEach(function(d){var k=d.getAttribute("data-wc-track");if(k&&d.open)open[k]=true;});root.innerHTML=m.html;Object.keys(open).forEach(function(k){var el=root.querySelector('details[data-wc-track="'+k+'"]');if(el)el.open=true;});});var btn=document.getElementById("btn");var rootEl=document.getElementById("root");if(btn)btn.addEventListener("click",function(){vscode.postMessage({type:"refresh"});});if(rootEl)rootEl.addEventListener("click",function(ev){var t=ev.target;if(!t||t.tagName!=="BUTTON")return;var act=t.getAttribute("data-wc-action");if(!act)return;ev.stopPropagation();if(act==="wishlist-view"){var wv=(t.getAttribute("data-wishlist-id")||"").trim();if(wv)vscode.postMessage({type:"openWishlistDetail",wishlistId:wv});return;}if(act==="planning-new-plan"){vscode.postMessage({type:"prefillPlanningInterviewChat"});return;}if(act==="deliver-phase-prompt"){var kp=(t.getAttribute("data-wc-kit-phase")||"").trim();vscode.postMessage({type:"prefillDeliverPhaseChat",kitPhase:kp});return;}if(act==="add-wishlist-item"){vscode.postMessage({type:"addWishlistItem"});return;}if(act==="generate-features-chat"){vscode.postMessage({type:"prefillGenerateFeaturesChat"});return;}if(act==="transcript-churn-research-chat"){var tcTid=(t.getAttribute("data-task-id")||"").trim();vscode.postMessage({type:"prefillTranscriptChurnResearchChat",taskId:tcTid});return;}if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}if(act==="phase-complete-release"){var ph=(t.getAttribute("data-wc-phase-phrase")||"").trim();vscode.postMessage({type:"prefillPhaseCompleteReleaseChat",phasePhrase:ph});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});})();`;
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -245,6 +271,77 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     button.dash-row-action-secondary:hover {
       background: var(--vscode-toolbar-hoverBackground);
+    }
+    button.dash-row-action-tertiary {
+      color: var(--vscode-textLink-foreground);
+      background: transparent;
+      border: 1px solid var(--vscode-textLink-foreground);
+    }
+    button.dash-row-action-tertiary:hover {
+      background: var(--vscode-toolbar-hoverBackground);
+    }
+    button.dash-row-action-tertiary:active {
+      filter: brightness(0.92);
+    }
+    .dash-overview-phase-row {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 0 0 6px 0;
+    }
+    .dash-overview-phase-text { flex: 1; min-width: 0; }
+    button.dash-deliver-chip {
+      margin: 0;
+      flex-shrink: 0;
+      padding: 3px 10px;
+      font-size: 10px;
+      font-weight: 600;
+      border-radius: 5px;
+      letter-spacing: 0.02em;
+      color: var(--vscode-button-foreground);
+      background: var(--vscode-button-background);
+      border: 1px solid var(--vscode-button-border, var(--vscode-contrastBorder, transparent));
+    }
+    button.dash-deliver-chip:hover {
+      background: var(--vscode-button-hoverBackground);
+    }
+    button.dash-deliver-chip:active {
+      filter: brightness(0.94);
+    }
+    button.dash-deliver-chip:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .dash-planning-head {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 0 0 8px 0;
+    }
+    .dash-planning-head-main { flex: 1; min-width: 0; }
+    p.dash-planning-title { margin: 0; }
+    button.dash-new-plan-btn {
+      margin: 0;
+      flex-shrink: 0;
+      padding: 5px 12px;
+      font-size: 11px;
+      font-weight: 500;
+      border-radius: 6px;
+      color: var(--vscode-button-foreground);
+      background: var(--vscode-button-background);
+      border: 1px solid var(--vscode-button-border, var(--vscode-contrastBorder, transparent));
+    }
+    button.dash-new-plan-btn:hover {
+      background: var(--vscode-button-hoverBackground);
+    }
+    button.dash-new-plan-btn:active {
+      filter: brightness(0.94);
     }
     .ok { color: var(--vscode-testing-iconPassed); }
     .bad { color: var(--vscode-errorForeground); }
@@ -311,6 +408,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .dash-count-num { flex-shrink: 0; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; font-size: 13px; line-height: 1.25; }
     .a11y-note { font-size: 11px; }
     pre.resume-cli { font-size: 11px; }
+    ul.dash-hint-list { margin: 4px 0 8px 18px; padding: 0; font-size: 11px; line-height: 1.4; }
+    ul.dash-hint-list li { margin: 2px 0; }
     .dash-footer { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--vscode-widget-border, rgba(127,127,127,.25)); }
     #btn.dash-refresh-btn {
       display: block;

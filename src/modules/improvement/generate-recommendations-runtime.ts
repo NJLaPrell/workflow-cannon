@@ -14,6 +14,7 @@ import {
 import { priorityForTier } from "./confidence.js";
 import type { ImprovementHeuristicVersion } from "./ingest.js";
 import { buildImprovementTaskPayload } from "./improvement-task-payload.js";
+import { TRANSCRIPT_CHURN_TASK_TYPE } from "../task-engine/transcript-churn.js";
 import { buildImprovementSupportingReasoning } from "./improvement-supporting-reasoning.js";
 import { allocateNextTaskNumericId } from "../task-engine/wishlist/wishlist-intake.js";
 import { planningConcurrencySaveOpts } from "../task-engine/mutation-utils.js";
@@ -156,10 +157,11 @@ export async function runGenerateRecommendations(
 
     if (dryRun) {
       const id = allocateNextTaskNumericId(shadowTasksForDryRun!);
+      const isTranscript = c.evidenceKind === "transcript";
       shadowTasksForDryRun!.push({
         id,
-        status: "proposed",
-        type: "improvement",
+        status: isTranscript ? "research" : "proposed",
+        type: isTranscript ? TRANSCRIPT_CHURN_TASK_TYPE : "improvement",
         title: "",
         createdAt: now,
         updatedAt: now
@@ -201,10 +203,11 @@ export async function runGenerateRecommendations(
       meta.transcriptSourceRelPath = c.provenanceRefs.transcriptPath;
     }
 
+    const isTranscript = c.evidenceKind === "transcript";
     const task: TaskEntity = {
       id,
-      status: "ready",
-      type: "improvement",
+      status: isTranscript ? "research" : "proposed",
+      type: isTranscript ? TRANSCRIPT_CHURN_TASK_TYPE : "improvement",
       title: body.title,
       createdAt: now,
       updatedAt: now,

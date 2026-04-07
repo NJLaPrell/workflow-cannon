@@ -21,7 +21,6 @@ import { readWorkspaceStatusSnapshot } from "./dashboard/dashboard-status.js";
 import { inferTaskPhaseKey, resolveCanonicalPhase } from "./phase-resolution.js";
 import { buildQueueHealthReport, buildQueueHintsForTasks } from "./queue/queue-health.js";
 import { openPlanningStores } from "./persistence/planning-open.js";
-import { runMigrateWishlistIntake } from "./persistence/migrate-wishlist-intake-runtime.js";
 import { runBackupPlanningSqlite } from "./persistence/backup-planning-sqlite-runtime.js";
 import { runMigrateTaskPersistence } from "./persistence/migrate-task-persistence-runtime.js";
 import { runGetKitPersistenceMap } from "./persistence/kit-persistence-map-runtime.js";
@@ -38,6 +37,8 @@ import {
 } from "./planning-config.js";
 import { validateTaskSetForStrictMode } from "./strict-task-validation.js";
 import { validateKnownTaskTypeRequirements } from "./task-type-validation.js";
+import { runSynthesizeTranscriptChurnCommand } from "./synthesize-transcript-churn-runtime.js";
+import { TRANSCRIPT_CHURN_TASK_TYPE } from "./transcript-churn.js";
 import { readKitSqliteUserVersion } from "../../core/state/workspace-kit-sqlite.js";
 import { UnifiedStateDb } from "../../core/state/unified-state-db.js";
 import { isWishlistIntakeTask, WISHLIST_INTAKE_TASK_TYPE } from "./wishlist/wishlist-intake.js";
@@ -172,9 +173,6 @@ export const taskEngineModule: WorkflowModule = {
     }
     if (command.name === "backup-planning-sqlite") {
       return runBackupPlanningSqlite(ctx, args as Record<string, unknown>);
-    }
-    if (command.name === "migrate-wishlist-intake") {
-      return runMigrateWishlistIntake(ctx, args as Record<string, unknown>);
     }
     if (command.name === "get-kit-persistence-map") {
       return runGetKitPersistenceMap(ctx);
@@ -420,6 +418,27 @@ export const taskEngineModule: WorkflowModule = {
       }
     }
 
+    if (command.name === "synthesize-transcript-churn") {
+      const pgSyn = planningGenPolicyGate(
+        ctx,
+        args as Record<string, unknown>,
+        CLI_REMEDIATION_INSTRUCTIONS.synthesizeTranscriptChurn
+      );
+      if (pgSyn.block) {
+        return pgSyn.block;
+      }
+      const res = await runSynthesizeTranscriptChurnCommand(ctx, args as Record<string, unknown>);
+      if (res.ok && res.data && typeof res.data === "object") {
+        attachPolicyMeta(
+          res.data as Record<string, unknown>,
+          ctx,
+          planning.sqliteDual.getPlanningGeneration(),
+          pgSyn.warnings
+        );
+      }
+      return res;
+    }
+
     if (command.name === "create-task" || command.name === "create-task-from-plan") {
       const actor =
         typeof args.actor === "string"
@@ -443,12 +462,16 @@ export const taskEngineModule: WorkflowModule = {
           ? args.priority as TaskPriority
           : undefined;
       const clientMutationId = readIdempotencyValue(args);
-      if (!id || !title || !TASK_ID_RE.test(id) || !["proposed", "ready"].includes(status)) {
+      const allowedInitial: TaskStatus[] = ["proposed", "ready"];
+      if (type === TRANSCRIPT_CHURN_TASK_TYPE) {
+        allowedInitial.push("research");
+      }
+      if (!id || !title || !TASK_ID_RE.test(id) || !allowedInitial.includes(status as TaskStatus)) {
         return {
           ok: false,
           code: "invalid-task-schema",
           message:
-            "create-task requires id/title, id format T<number>, and status of proposed or ready"
+            "create-task requires id/title, id format T<number>, and status proposed, ready, or research (research only with type transcript_churn)"
         };
       }
       const evidenceType = command.name === "create-task-from-plan" ? "create-task-from-plan" : "create-task";
@@ -1215,7 +1238,15 @@ export const taskEngineModule: WorkflowModule = {
     }
 
     if (command.name === "explain-task-engine-model") {
-      const allStatuses: TaskStatus[] = ["proposed", "ready", "in_progress", "blocked", "completed", "cancelled"];
+      const allStatuses: TaskStatus[] = [
+        "research",
+        "proposed",
+        "ready",
+        "in_progress",
+        "blocked",
+        "completed",
+        "cancelled"
+      ];
       const lifecycle = allStatuses.map((status) => ({
         status,
         allowedActions: getAllowedTransitionsFrom(status).map((entry) => ({

@@ -19,5 +19,5 @@ export function buildImprovementSupportingReasoning(c: IngestCandidate): string 
     .filter(([, v]) => typeof v === "string" && v.length > 0)
     .map(([k, v]) => `${k}=${truncate(v as string, 140)}`)
     .join("; ");
-  return `${signalLine} Evidence kind **${c.evidenceKind}**; stable key \`${c.evidenceKey}\`. Provenance: ${prov || "(none)"}. The **issue** and **approach** fields are the interpreted problem report; this block records heuristics and trace refs only.`;
+  return `${signalLine} Evidence kind **${c.evidenceKind}**; stable key \`${c.evidenceKey}\`. Provenance: ${prov || "(none)"}. **metadata.issue** is the synthesized problem report; **approach** summarizes recommended change—this block is scoring + pointers only (not a substitute for the report).`;
 }

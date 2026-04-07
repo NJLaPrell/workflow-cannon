@@ -20,6 +20,7 @@ function pickExpectedPlanningGeneration(args: Record<string, unknown>): { expect
 }
 
 export { buildImprovementTaskPayload } from "./improvement-task-payload.js";
+export { analyzeCursorTranscriptLine, extractRoleAndText } from "./transcript-friction.js";
 
 export const improvementModule: WorkflowModule = {
   registration: {

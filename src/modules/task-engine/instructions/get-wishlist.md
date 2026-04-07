@@ -2,7 +2,7 @@
 
 Retrieve **one** wishlist intake task by **task id** (**`T###`**, preferred) or by **legacy wishlist id** (**`W###`**) when the intake row stores **`metadata.legacyWishlistId`**.
 
-Data is read from the **unified task store** (SQLite or JSON task document), not from standalone **`.workspace-kit/wishlist/state.json`** — that file is **legacy**; use **`migrate-wishlist-intake`** when upgrading old workspaces.
+Data is read from the **unified task store** (SQLite under `tasks.sqliteDatabaseRelativePath`).
 
 ## Usage
 

@@ -51,7 +51,7 @@ When you **persist**, the task must read like an **improvement request** / **pro
 
 **Pipeline (`generate-recommendations` / `ingest-transcripts`):**
 
-- Allocates the next **`T###`** for each new improvement row, dedupes by **`metadata.evidenceKey`**, and fills **`metadata.issue`**, **`metadata.supportingReasoning`** (heuristic + provenance summary), **`metadata.proposedSolutions`**, **`approach`**, **`technicalScope`**, **`acceptanceCriteria`**.
+- Allocates the next **`T###`** for each new improvement row, dedupes by **`metadata.evidenceKey`**, sets **`status: proposed`**, and fills **`metadata.issue`** (structured problem report including **pipeline forensics**: why the row opened—scanned lines, friction hits, role, and for transition churn a **digest** of recent `fromState→toState(action)` events), **`metadata.supportingReasoning`** (heuristic + provenance summary), **`metadata.proposedSolutions`**, **`approach`**, **`technicalScope`**, **`acceptanceCriteria`**. **Triage** is where you confirm or reject the automated story ( **`cancel`** if benign). Promote to **`ready`** with **`run-transition`** **`accept`** only when you want execution-time attention.
 
 **Operational habit (log regularly):**
 

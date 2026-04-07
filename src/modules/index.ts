@@ -46,7 +46,12 @@ export type {
   DocumentationGenerationEvidence,
   DocumentationValidationIssue
 } from "./documentation/types.js";
-export { improvementModule, buildImprovementTaskPayload } from "./improvement/index.js";
+export {
+  improvementModule,
+  buildImprovementTaskPayload,
+  analyzeCursorTranscriptLine,
+  extractRoleAndText
+} from "./improvement/index.js";
 export { pluginsModule } from "./plugins/index.js";
 export { skillsModule } from "./skills/index.js";
 export { subagentsModule } from "./subagents/index.js";

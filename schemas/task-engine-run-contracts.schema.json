@@ -54,7 +54,6 @@
         "explain-task-engine-model",
         "export-feature-taxonomy-json",
         "migrate-task-persistence",
-        "migrate-wishlist-intake",
         "dashboard-summary",
         "get-module-state",
         "list-components",
@@ -97,7 +96,6 @@
         "explain-task-engine-model": { "$ref": "#/$defs/contractExplainTaskEngineModel" },
         "export-feature-taxonomy-json": { "$ref": "#/$defs/contractBase" },
         "migrate-task-persistence": { "$ref": "#/$defs/contractMigrateTaskPersistence" },
-        "migrate-wishlist-intake": { "$ref": "#/$defs/contractMigrateWishlistIntake" },
         "dashboard-summary": { "$ref": "#/$defs/contractDashboardSummary" },
         "get-module-state": { "$ref": "#/$defs/contractGetModuleState" },
         "list-components": { "$ref": "#/$defs/contractBase" },
@@ -749,23 +747,6 @@
             "responseData": {
               "type": "object",
               "required": ["migration"],
-              "additionalProperties": true
-            }
-          }
-        }
-      ]
-    },
-    "contractMigrateWishlistIntake": {
-      "allOf": [
-        { "$ref": "#/$defs/contractBase" },
-        {
-          "properties": {
-            "args": {
-              "type": "object",
-              "additionalProperties": true
-            },
-            "responseData": {
-              "type": "object",
               "additionalProperties": true
             }
           }

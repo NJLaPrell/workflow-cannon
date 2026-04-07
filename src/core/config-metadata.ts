@@ -301,7 +301,6 @@ export function validatePersistedConfigDocument(
     for (const k of Object.keys(t)) {
       if (
         k !== "storeRelativePath" &&
-        k !== "wishlistStoreRelativePath" &&
         k !== "persistenceBackend" &&
         k !== "sqliteDatabaseRelativePath" &&
         k !== "strictValidation" &&
@@ -312,9 +311,6 @@ export function validatePersistedConfigDocument(
     }
     if (t.storeRelativePath !== undefined) {
       validateValueForMetadata(REGISTRY["tasks.storeRelativePath"]!, t.storeRelativePath);
-    }
-    if (t.wishlistStoreRelativePath !== undefined) {
-      validateValueForMetadata(REGISTRY["tasks.wishlistStoreRelativePath"]!, t.wishlistStoreRelativePath);
     }
     if (t.persistenceBackend !== undefined) {
       if (t.persistenceBackend === "json") {

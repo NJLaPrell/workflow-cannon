@@ -1,6 +1,7 @@
 import type { TaskEntity } from "./types.js";
 import { LEGACY_WISHLIST_ID_METADATA_KEY, WISHLIST_INTAKE_TASK_TYPE } from "./wishlist/wishlist-intake.js";
 import { WISHLIST_ID_RE } from "./wishlist/wishlist-validation.js";
+import { TRANSCRIPT_CHURN_TASK_TYPE } from "./transcript-churn.js";
 
 export type KnownTaskTypeValidationError = {
   code: "invalid-task-type-requirements";
@@ -51,6 +52,35 @@ export function validateKnownTaskTypeRequirements(task: TaskEntity): KnownTaskTy
       return {
         code: "invalid-task-type-requirements",
         message: `metadata.${LEGACY_WISHLIST_ID_METADATA_KEY} must match W<number> when present`
+      };
+    }
+    return null;
+  }
+
+  if (task.type === TRANSCRIPT_CHURN_TASK_TYPE) {
+    if (task.status !== "research") {
+      return {
+        code: "invalid-task-type-requirements",
+        message: `Type '${TRANSCRIPT_CHURN_TASK_TYPE}' is only valid with status 'research' (use synthesize-transcript-churn to become improvement/proposed)`
+      };
+    }
+    const meta = task.metadata;
+    if (!nonEmptyMetaString(meta, "evidenceKey")) {
+      return {
+        code: "invalid-task-type-requirements",
+        message: `Type '${TRANSCRIPT_CHURN_TASK_TYPE}' requires metadata.evidenceKey`
+      };
+    }
+    if (!nonEmptyStringArray(task.technicalScope) || !nonEmptyStringArray(task.acceptanceCriteria)) {
+      return {
+        code: "invalid-task-type-requirements",
+        message: `Type '${TRANSCRIPT_CHURN_TASK_TYPE}' requires non-empty technicalScope and acceptanceCriteria (pipeline placeholders until synthesis)`
+      };
+    }
+    if (!nonEmptyMetaString(meta, "issue")) {
+      return {
+        code: "invalid-task-type-requirements",
+        message: `Type '${TRANSCRIPT_CHURN_TASK_TYPE}' requires metadata.issue (pipeline forensics body)`
       };
     }
     return null;

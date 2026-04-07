@@ -15,22 +15,6 @@
       "user"
     ]
   },
-  "tasks.wishlistStoreRelativePath": {
-    "key": "tasks.wishlistStoreRelativePath",
-    "type": "string",
-    "description": "Relative path (from workspace root) to legacy wishlist JSON used only by migrate-task-persistence / migrate-wishlist-intake when importing old files.",
-    "default": ".workspace-kit/wishlist/state.json",
-    "domainScope": "project",
-    "owningModule": "task-engine",
-    "sensitive": false,
-    "requiresRestart": false,
-    "requiresApproval": false,
-    "exposure": "public",
-    "writableLayers": [
-      "project",
-      "user"
-    ]
-  },
   "tasks.persistenceBackend": {
     "key": "tasks.persistenceBackend",
     "type": "string",

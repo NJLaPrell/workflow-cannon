@@ -22,6 +22,8 @@ type TransitionEntry = {
 };
 
 const ALLOWED_TRANSITIONS: Record<string, TransitionEntry> = {
+  /** Type change to `improvement` + proposed body: use **`synthesize-transcript-churn`** (not `run-transition`). */
+  "research->cancelled": { action: "reject" },
   "proposed->ready": { action: "accept" },
   "proposed->cancelled": { action: "reject" },
   "ready->proposed": { action: "demote" },

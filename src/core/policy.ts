@@ -29,6 +29,7 @@ export type PolicyOperationId =
   | "doc.document-project"
   | "doc.generate-document"
   | "tasks.run-transition"
+  | "tasks.synthesize-transcript-churn"
   | "approvals.review-item"
   | "improvement.generate-recommendations"
   | "improvement.ingest-transcripts"

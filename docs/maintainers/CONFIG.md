@@ -196,7 +196,3 @@ Generated from `src/core/config-metadata.ts`. Do not edit by hand; run `workspac
 
 **Description:** When true, task mutations validate the full active task set before persistence and fail on invalid task records.
 
-| tasks.wishlistStoreRelativePath | string | ".workspace-kit/wishlist/state.json" | project | task-engine | public | false | false |
-
-**Description:** Relative path (from workspace root) to legacy wishlist JSON used only by migrate-task-persistence / migrate-wishlist-intake when importing old files.
-

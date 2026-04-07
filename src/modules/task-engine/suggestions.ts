@@ -89,6 +89,7 @@ function partitionReadyByDependencies(tasks: TaskEntity[]): {
 
 function buildStateSummary(tasks: TaskEntity[]): NextActionSuggestion["stateSummary"] {
   const counts: Record<TaskStatus, number> = {
+    research: 0,
     proposed: 0,
     ready: 0,
     in_progress: 0,
@@ -96,10 +97,16 @@ function buildStateSummary(tasks: TaskEntity[]): NextActionSuggestion["stateSumm
     completed: 0,
     cancelled: 0
   };
+  let total = 0;
   for (const task of tasks) {
+    /** Wishlist intake (`wishlist_intake`) is ideation — tracked under the wishlist rollups, not the execution queue grid. */
+    if (isWishlistIntakeTask(task)) {
+      continue;
+    }
     counts[task.status]++;
+    total++;
   }
-  return { ...counts, total: tasks.length };
+  return { ...counts, total };
 }
 
 function buildBlockingAnalysis(tasks: TaskEntity[]): BlockingAnalysisEntry[] {

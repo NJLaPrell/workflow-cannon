@@ -82,6 +82,9 @@ function renderWishlistOpenList(items: unknown): string {
           label +
           "</span>" +
           '<span class="dash-row-actions">' +
+          '<button type="button" class="dash-row-action dash-row-action-tertiary" data-wc-action="wishlist-view" data-wishlist-id="' +
+          idAttr +
+          '" title="Open full wishlist fields in the editor">View</button>' +
           '<button type="button" class="dash-row-action dash-row-action-primary" data-wc-action="wishlist-chat" data-wishlist-id="' +
           idAttr +
           '" title="Open wishlist intake flow for this item (prefills Cursor chat)">Process</button>' +
@@ -131,6 +134,48 @@ function renderProposedImprovementsList(count: number, items: unknown): string {
     '<p class="muted"><b>Row actions</b> · <span class="muted">Accept</span> / <span class="muted">Decline</span> run <code>run-transition</code> (<code>accept</code> / <code>reject</code>; modal rationale + planning token when required).</p>' +
     '<div class="dash-row-list" role="list">' +
     items.map((x) => renderProposedImprovementRow(x as { id?: unknown; title?: unknown; phase?: unknown })).join("") +
+    "</div>"
+  );
+}
+
+function renderTranscriptChurnResearchRow(row: { id?: unknown; title?: unknown; phase?: unknown }): string {
+  const id = String(row?.id ?? "").trim();
+  const title = escapeHtml(String(row?.title ?? ""));
+  const ph = row?.phase != null && String(row.phase).length > 0 ? " · " + escapeHtml(String(row.phase)) : "";
+  const label = "- " + escapeHtml(id) + (id ? " " : "") + title + ph;
+  const idAttr = escapeHtml(id);
+  return (
+    '<div class="dash-row" role="listitem">' +
+    '<span class="dash-row-label">' +
+    label +
+    "</span>" +
+    '<span class="dash-row-actions">' +
+    '<button type="button" class="dash-row-action" data-wc-action="task-detail" data-task-id="' +
+    idAttr +
+    '" title="Open task detail (markdown)">Detail</button>' +
+    '<button type="button" class="dash-row-action dash-row-action-primary" data-wc-action="transcript-churn-research-chat" data-task-id="' +
+    idAttr +
+    '" title="Open transcript churn research playbook in chat">Research</button>' +
+    "</span></div>"
+  );
+}
+
+function renderTranscriptChurnResearchList(count: number, items: unknown): string {
+  if (!Array.isArray(items) || items.length === 0) {
+    return (
+      '<p class="muted">No transcript churn rows (<code>type: transcript_churn</code>, <code>status: research</code>). When they appear, investigate then run <code>synthesize-transcript-churn</code> (see <code>.ai/AGENT-CLI-MAP.md</code>).</p>'
+    );
+  }
+  const more =
+    count > items.length
+      ? '<p class="muted">Showing ' + String(items.length) + " of " + String(count) + " · <code>list-tasks</code> with filters.</p>"
+      : "";
+  return (
+    more +
+    '<div class="dash-row-list" role="list">' +
+    (items as unknown[])
+      .map((x) => renderTranscriptChurnResearchRow(x as { id?: unknown; title?: unknown; phase?: unknown }))
+      .join("") +
     "</div>"
   );
 }
@@ -333,6 +378,51 @@ function renderProposedPhaseBuckets(
   );
 }
 
+function renderTranscriptChurnResearchPhaseBuckets(
+  phaseBuckets: unknown,
+  totalCount: number,
+  fallbackTop: unknown,
+  phaseTrackPrefix: string
+): string {
+  const buckets = phaseBucketsNonEmpty(phaseBuckets);
+  if (buckets.length === 0) {
+    return renderTranscriptChurnResearchList(totalCount, fallbackTop);
+  }
+  const sumCounts = buckets.reduce((acc: number, x: unknown) => {
+    const c = (x as { count?: unknown }).count;
+    return acc + (typeof c === "number" ? c : 0);
+  }, 0);
+  const more =
+    sumCounts < totalCount
+      ? '<p class="muted">Preview capped per phase · expand sections below or <code>list-tasks</code> for full lists.</p>'
+      : "";
+  return (
+    more +
+    '<div class="phase-stack">' +
+    buckets
+      .map((raw, i) => {
+        const b = raw as { label?: unknown; top?: unknown; count?: unknown };
+        const summary = escapeHtml(String(b.label ?? ""));
+        const c = typeof b.count === "number" ? b.count : 0;
+        const inner =
+          c === 0
+            ? '<p class="muted">No tasks in this phase.</p>'
+            : renderTranscriptChurnResearchList(c, b.top ?? []);
+        return (
+          '<details class="phase-bucket"' +
+          wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
+          "><summary>" +
+          summary +
+          "</summary>" +
+          inner +
+          "</details>"
+        );
+      })
+      .join("") +
+    "</div>"
+  );
+}
+
 /** Proposed execution uses the same row shape as improvements for phase bodies. */
 function renderProposedExecutionPhaseBuckets(
   phaseBuckets: unknown,
@@ -501,10 +591,16 @@ function formatPlanningUpdatedAt(iso: string): string {
 }
 
 function renderPlanningSession(ps: unknown): string {
+  const newPlanBtn =
+    '<button type="button" class="dash-new-plan-btn" data-wc-action="planning-new-plan" title="Start the planning interview in chat (build-plan)">New Plan</button>';
+
   if (!ps || typeof ps !== "object") {
     return (
       '<section class="dash-card" aria-label="Planning session">' +
-      "<p><b>Planning Interview</b></p>" +
+      '<div class="dash-planning-head">' +
+      '<div class="dash-planning-head-main"><p class="dash-planning-title"><b>Planning Interview</b></p></div>' +
+      newPlanBtn +
+      "</div>" +
       "<p class=\"muted\">No interview in progress. Start or resume with <code>workspace-kit run build-plan</code> when you want guided planning; progress is saved automatically under <code>.workspace-kit/planning/</code>.</p>" +
       '<p class="muted">This card updates when you refresh after the session file appears or disappears.</p>' +
       "</section>"
@@ -529,11 +625,14 @@ function renderPlanningSession(ps: unknown): string {
       : "—";
   return (
     '<section class="dash-card" aria-label="Planning session resume">' +
-    "<p><b>Planning Interview</b> · " +
+    '<div class="dash-planning-head">' +
+    '<div class="dash-planning-head-main"><p class="dash-planning-title"><b>Planning Interview</b> · ' +
     escapeHtml(typeDisp) +
     " · " +
     escapeHtml(statusDisp) +
-    "</p>" +
+    "</p></div>" +
+    newPlanBtn +
+    "</div>" +
     "<p>" +
     escapeHtml(pct) +
     "% through required questions" +
@@ -554,6 +653,7 @@ function renderPlanningSession(ps: unknown): string {
 /** 3-column grid of status counts with right-aligned tabular numbers. */
 function buildDashboardStateCountGridHtml(ss: Record<string, unknown>): string {
   const order: [string, string][] = [
+    ["research", "Research"],
     ["proposed", "Proposed"],
     ["ready", "Ready"],
     ["in_progress", "In Progress"],
@@ -764,8 +864,59 @@ function truncateOverviewLine(s: string, max: number): string {
   return one.slice(0, Math.max(1, max - 1)) + "…";
 }
 
+/** Same leading-digit rule as `dashboard-phase-buckets.ts` `parseWorkspacePhaseKey`. */
+function parseDashboardKitPhaseKey(raw: unknown): string | null {
+  if (raw === null || raw === undefined) {
+    return null;
+  }
+  const m = String(raw).trim().match(/^(\d+)/);
+  return m ? m[1]! : null;
+}
+
+/**
+ * Ready **execution** tasks in the bucket that matches maintainer `current_kit_phase`
+ * (see `readyExecutionSummary.phaseBuckets` from `dashboard-summary`).
+ */
+function countReadyExecutionTasksInCurrentPhase(
+  ws: Record<string, unknown>,
+  readyExecutionSummary: Record<string, unknown>
+): number {
+  const phaseKey = parseDashboardKitPhaseKey(ws.currentKitPhase);
+  if (phaseKey === null) {
+    return 0;
+  }
+  const buckets = Array.isArray(readyExecutionSummary.phaseBuckets)
+    ? readyExecutionSummary.phaseBuckets
+    : [];
+  for (const raw of buckets) {
+    if (!raw || typeof raw !== "object") {
+      continue;
+    }
+    const b = raw as { phaseKey?: unknown; count?: unknown };
+    const bk = b.phaseKey;
+    if (bk === null || bk === undefined) {
+      continue;
+    }
+    if (String(bk) !== phaseKey) {
+      continue;
+    }
+    const n = b.count;
+    return typeof n === "number" && Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
+  }
+  return 0;
+}
+
+const DELIVER_TOOLTIP_NO_READY = "There are no ready to work tasks for this phase.";
+const DELIVER_TOOLTIP_NO_PHASE =
+  "Current phase is not set or could not be read from the workspace snapshot.";
+const DELIVER_TOOLTIP_ENABLED =
+  "Prefill chat: deliver a ready task through the phase branch (task-to-phase-branch)";
+
 /** Maintainer snapshot: phases, blockers, pending decisions (no task roll-ups). */
-function renderWorkspaceOverviewSection(ws: Record<string, unknown> | null): string {
+function renderWorkspaceOverviewSection(
+  ws: Record<string, unknown> | null,
+  readyExecutionSummary?: Record<string, unknown>
+): string {
   if (!ws) {
     return (
       '<section class="dash-card dashboard-overview" aria-label="Workspace status">' +
@@ -780,10 +931,32 @@ function renderWorkspaceOverviewSection(ws: Record<string, unknown> | null): str
   const nextMeaningful = nextTrim.length > 0 && nextTrim !== curRaw;
   const nextDisplay = nextMeaningful ? escapeHtml(nextTrim) : "Not Planned";
 
+  const resSummary = readyExecutionSummary ?? {};
+  const parsedPhase = parseDashboardKitPhaseKey(ws.currentKitPhase);
+  const readyInPhase = countReadyExecutionTasksInCurrentPhase(ws, resSummary);
+  const deliverEnabled = parsedPhase !== null && readyInPhase > 0;
+  const deliverTitle = deliverEnabled
+    ? DELIVER_TOOLTIP_ENABLED
+    : parsedPhase === null
+      ? DELIVER_TOOLTIP_NO_PHASE
+      : DELIVER_TOOLTIP_NO_READY;
+
+  const deliverBtn =
+    '<button type="button" class="dash-deliver-chip"' +
+    (deliverEnabled ? ' data-wc-action="deliver-phase-prompt"' : "") +
+    (curRaw.length > 0 ? ' data-wc-kit-phase="' + escapeHtmlAttr(curRaw) + '"' : "") +
+    (deliverEnabled ? "" : " disabled") +
+    ' title="' +
+    escapeHtmlAttr(deliverTitle) +
+    '">Deliver</button>';
+
   let html =
     '<section class="dash-card dashboard-overview" aria-label="Workspace status">' +
-    "<p><b>Current Phase</b> " +
+    '<p class="dash-overview-phase-row">' +
+    '<span class="dash-overview-phase-text"><b>Current Phase</b> ' +
     cur +
+    "</span>" +
+    deliverBtn +
     "</p>" +
     "<p><b>Next Phase</b> " +
     nextDisplay +
@@ -814,6 +987,124 @@ function renderWorkspaceOverviewSection(ws: Record<string, unknown> | null): str
   return html;
 }
 
+/**
+ * Read-only review-item queue (`list-approval-queue`) + policy canon (T755/T756).
+ */
+function renderApprovalsDiscoverabilitySection(listApprovalQueueResult: unknown | undefined): string {
+  const policyBanner =
+    '<p class="muted approval-policy-banner"><b>Policy:</b> Sensitive <code>workspace-kit run</code> commands need JSON <code>policyApproval</code> in the CLI argument. <b>Chat and this dashboard are not approval.</b> Canon: <code>.ai/POLICY-APPROVAL.md</code>, <code>.ai/AGENT-CLI-MAP.md</code>.</p>';
+
+  if (listApprovalQueueResult === undefined) {
+    return (
+      '<section class="dash-card dashboard-approvals" aria-label="Approvals and policy">' +
+      "<p><b>Approvals &amp; policy</b> (read-only)</p>" +
+      policyBanner +
+      "<p class=\"muted\">Queue data loads when the dashboard refreshes. CLI: <code>pnpm exec wk run list-approval-queue '{}'</code>.</p>" +
+      "</section>"
+    );
+  }
+
+  const wrap = (body: string) =>
+    '<section class="dash-card dashboard-approvals" aria-label="Approvals and policy">' +
+    "<p><b>Approvals &amp; policy</b> (read-only)</p>" +
+    policyBanner +
+    body +
+    "</section>";
+
+  const aq = listApprovalQueueResult as {
+    ok?: unknown;
+    code?: unknown;
+    data?: Record<string, unknown>;
+    message?: unknown;
+  };
+  if (aq.ok !== true || !aq.data || typeof aq.data !== "object") {
+    const hint =
+      typeof aq.message === "string" && aq.message.length > 0
+        ? escapeHtml(aq.message)
+        : typeof aq.code === "string"
+          ? escapeHtml(aq.code)
+          : "unknown error";
+    return wrap(
+      '<p class="muted">Could not load the review-item queue (<code>list-approval-queue</code>): ' +
+        hint +
+        ".</p>" +
+        "<p class=\"muted\">Try <code>pnpm exec wk run list-approval-queue '{}'</code> in a terminal.</p>"
+    );
+  }
+
+  const d = aq.data;
+  const queue = Array.isArray(d.reviewItemQueue) ? (d.reviewItemQueue as unknown[]) : [];
+  const hints = (d.operatorHints as Record<string, unknown> | undefined) ?? {};
+
+  let queueBody: string;
+  if (queue.length === 0) {
+    queueBody =
+      '<p class="muted">No improvement tasks in <b>ready</b> or <b>in_progress</b> (the <code>review-item</code> queue). For <b>proposed</b> improvements, use <b>Proposed · Improvements</b> above or <code>list-tasks</code>.</p>';
+  } else {
+    queueBody =
+      '<p class="muted"><b>Review-item queue</b> — improvements awaiting maintainer review (<code>review-item</code>).</p>' +
+      '<div class="dash-row-list" role="list">' +
+      queue
+        .map((x) => {
+          const row = x as { id?: unknown; title?: unknown; status?: unknown; phase?: unknown; priority?: unknown };
+          const id = String(row?.id ?? "").trim();
+          const st = row?.status != null ? " · " + escapeHtml(String(row.status)) : "";
+          const ph = row?.phase != null && String(row.phase).length > 0 ? " · " + escapeHtml(String(row.phase)) : "";
+          const pri = row?.priority ? " [" + escapeHtml(String(row.priority)) + "]" : "";
+          const label = "- " + escapeHtml(id) + (id ? " " : "") + escapeHtml(String(row?.title ?? "")) + pri + st + ph;
+          const idAttr = escapeHtml(id);
+          return (
+            '<div class="dash-row" role="listitem">' +
+            '<span class="dash-row-label">' +
+            label +
+            "</span>" +
+            (id.length > 0
+              ? '<button type="button" class="dash-row-action" data-wc-action="task-detail" data-task-id="' +
+                idAttr +
+                '" title="Open task detail (markdown)">Detail</button>'
+              : "") +
+            "</div>"
+          );
+        })
+        .join("") +
+      "</div>";
+  }
+
+  const reviewEx = typeof hints.reviewItemExample === "string" ? hints.reviewItemExample.trim() : "";
+  const triageCli = typeof hints.triageProposedImprovements === "string" ? hints.triageProposedImprovements.trim() : "";
+  const playbook = typeof hints.improvementTriagePlaybook === "string" ? hints.improvementTriagePlaybook.trim() : "";
+  const dashSum = typeof hints.dashboardSummary === "string" ? hints.dashboardSummary.trim() : "";
+
+  let hintsHtml = "";
+  if (reviewEx.length > 0) {
+    hintsHtml += "<p><b>Example</b> <code>review-item</code> (terminal):</p><pre class=\"resume-cli\">" + escapeHtml(reviewEx) + "</pre>";
+  }
+  if (triageCli.length > 0) {
+    hintsHtml +=
+      "<p><b>Proposed improvements</b> (triage inventory):</p><pre class=\"resume-cli\">" + escapeHtml(triageCli) + "</pre>";
+  }
+  if (playbook.length > 0) {
+    hintsHtml += '<p class="muted">Improvement triage playbook: <code>' + escapeHtml(playbook) + "</code></p>";
+  }
+  if (dashSum.length > 0) {
+    hintsHtml += '<p class="muted">' + escapeHtml(dashSum) + "</p>";
+  }
+
+  const artifacts = Array.isArray(hints.policyArtifacts) ? (hints.policyArtifacts as unknown[]) : [];
+  if (artifacts.length > 0) {
+    hintsHtml += "<p><b>Policy &amp; decision artifacts</b></p><ul class=\"dash-hint-list\">";
+    for (const raw of artifacts) {
+      const a = raw as { relativePath?: unknown; role?: unknown };
+      const rp = escapeHtml(String(a.relativePath ?? ""));
+      const role = escapeHtml(String(a.role ?? ""));
+      hintsHtml += "<li><code>" + rp + "</code> — " + role + "</li>";
+    }
+    hintsHtml += "</ul>";
+  }
+
+  return wrap(queueBody + hintsHtml);
+}
+
 /** Closed-by-default roll-up for a dashboard status band (ready / proposed / blocked / terminal). */
 function renderStatusRollup(
   trackId: string,
@@ -837,7 +1128,7 @@ function renderStatusRollup(
 }
 
 /** Inner HTML for #root from a `workspace-kit run dashboard-summary`–shaped payload (or extension error object). */
-export function renderDashboardRootInnerHtml(payload: unknown): string {
+export function renderDashboardRootInnerHtml(payload: unknown, listApprovalQueueResult?: unknown): string {
   if (payload === null || payload === undefined) {
     return "<p>No payload</p>";
   }
@@ -879,6 +1170,9 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
   const pes = (d.proposedExecutionSummary as Record<string, unknown> | undefined) ?? {};
   const peCount = typeof pes.count === "number" ? pes.count : 0;
   const peTop = Array.isArray(pes.top) ? (pes.top as unknown[]) : [];
+  const tcrs = (d.transcriptChurnResearchSummary as Record<string, unknown> | undefined) ?? {};
+  const tcrCount = typeof tcrs.count === "number" ? tcrs.count : 0;
+  const tcrTop = Array.isArray(tcrs.top) ? (tcrs.top as unknown[]) : [];
   const rqb = d.readyQueueBreakdown as
     | { improvement?: unknown; other?: unknown; schemaVersion?: unknown }
     | undefined;
@@ -938,7 +1232,8 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
   const tasksQuickActionsPanel =
     '<div class="dash-quick-actions" role="toolbar" aria-label="Chat playbook shortcuts">' +
     '<button type="button" class="dash-quick-action-btn" data-wc-action="add-wishlist-item" title="Create a wishlist intake task (same flow as /add-wishlist-item)">Add wishlist item</button>' +
-    '<button type="button" class="dash-quick-action-btn dash-quick-action-primary" data-wc-action="generate-features-chat" title="Prefill chat: wishlist intake → execution (same as /generate-features)">Generate Features</button>' +
+    '<button type="button" class="dash-quick-action-btn" data-wc-action="transcript-churn-research-chat" title="Transcript churn research playbook (same intent as slash /research-churn)">Research churn</button>' +
+    '<button type="button" class="dash-quick-action-btn dash-quick-action-primary" data-wc-action="generate-features-chat" title="New chat with /generate-features as text (same as slash command)">Generate Features</button>' +
     "</div>";
 
   const tasksBlock =
@@ -946,6 +1241,12 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
     tasksQuickActionsPanel +
     "<p><b>Tasks</b></p>" +
     buildDashboardStateCountGridHtml(ss) +
+    renderStatusRollup(
+      "status-tc-research",
+      "<b>Research · Transcript churn</b> (" + String(tcrCount) + ")",
+      renderTranscriptChurnResearchPhaseBuckets(tcrs.phaseBuckets, tcrCount, tcrTop, "tc-churn"),
+      false
+    ) +
     renderStatusRollup(
       "status-ready-imp",
       "<b>Ready · Improvements</b> (" + String(readyImpCount) + ")",
@@ -1010,7 +1311,8 @@ export function renderDashboardRootInnerHtml(payload: unknown): string {
 
   return (
     renderAgentGuidanceSection(d.agentGuidance) +
-    renderWorkspaceOverviewSection(ws as Record<string, unknown> | null) +
+    renderWorkspaceOverviewSection(ws as Record<string, unknown> | null, res) +
+    renderApprovalsDiscoverabilitySection(listApprovalQueueResult) +
     renderTeamExecutionSection(d.teamExecution) +
     renderSubagentRegistrySection(d.subagentRegistry) +
     tasksBlock +

@@ -11,6 +11,7 @@ import {
 } from "./confidence-heuristic-2.js";
 import type { ImprovementStateDocument } from "./improvement-state.js";
 import { redactTranscriptSnippet } from "./transcript-redaction.js";
+import { analyzeCursorTranscriptLine } from "./transcript-friction.js";
 
 export type ImprovementHeuristicVersion = 1 | 2;
 
@@ -71,15 +72,6 @@ async function globJsonlRecursive(dir: string, acc: string[] = []): Promise<stri
   return acc;
 }
 
-const FRICTION = /\b(error|fail|broken|hosed|bug|crash|denied|invalid|exception)\b/i;
-
-function scoreTranscriptLine(line: string): number {
-  if (!FRICTION.test(line)) return 0;
-  let s = 0.45;
-  if (/\b(always|again|still|never)\b/i.test(line)) s += 0.15;
-  return Math.min(1, s);
-}
-
 export async function ingestAgentTranscripts(
   workspacePath: string,
   transcriptsRootRel: string,
@@ -97,11 +89,17 @@ export async function ingestAgentTranscripts(
     const slice = lines.slice(start);
     let maxScore = 0;
     let sampleLine = "";
+    let winningRole = "unknown";
+    let winningScoredText = "";
+    let frictionHits = 0;
     for (const line of slice) {
-      const sc = scoreTranscriptLine(line);
-      if (sc > maxScore) {
-        maxScore = sc;
+      const a = analyzeCursorTranscriptLine(line);
+      if (a.score > 0) frictionHits += 1;
+      if (a.score > maxScore) {
+        maxScore = a.score;
         sampleLine = line.slice(0, 200);
+        winningRole = a.role;
+        winningScoredText = a.scoredText.slice(0, 500);
       }
     }
     state.transcriptLineCursors[rel] = lines.length;
@@ -113,11 +111,27 @@ export async function ingestAgentTranscripts(
     const confidence = resolveConfidenceForHeuristicVersion(heuristicVersion, "transcript", signals);
     if (!shouldAdmitForHeuristicVersion(heuristicVersion, confidence)) continue;
 
+    const linesScanned = String(slice.length);
+    const pipelineAdmissionSummary = [
+      `Scanned **${slice.length}** new JSONL line(s) in this ingest window.`,
+      `**${frictionHits}** line(s) matched friction keywords in extracted message text (not raw JSON noise).`,
+      `Strongest signal is from a **${winningRole}** turn (see **metadata.provenanceRefs.scoredTextExcerpt** for the text that drove scoring).`,
+      "This row is a **proposed** improvement: validate in triage—**cancel** if the session is benign or already addressed."
+    ].join(" ");
+
     out.push({
       evidenceKind: "transcript",
       evidenceKey,
       title: `Reduce friction hinted in transcript (${path.basename(rel)})`,
-      provenanceRefs: { transcriptPath: rel, sampleLine: redactTranscriptSnippet(sampleLine) },
+      provenanceRefs: {
+        transcriptPath: rel,
+        sampleLine: redactTranscriptSnippet(sampleLine),
+        scoredTextExcerpt: redactTranscriptSnippet(winningScoredText.slice(0, 400)),
+        transcriptRole: winningRole,
+        linesScannedInSlice: linesScanned,
+        frictionHitsInSlice: String(frictionHits),
+        pipelineAdmissionSummary
+      },
       signals,
       confidence
     });
@@ -253,13 +267,16 @@ export function ingestTaskTransitionFriction(
   const slice = transitionLog.slice(start);
   state.transitionLogLengthCursor = transitionLog.length;
 
-  const counts = new Map<string, number>();
+  const eventsByTask = new Map<string, TransitionEvidence[]>();
   for (const ev of slice) {
-    counts.set(ev.taskId, (counts.get(ev.taskId) ?? 0) + 1);
+    const list = eventsByTask.get(ev.taskId) ?? [];
+    list.push(ev);
+    eventsByTask.set(ev.taskId, list);
   }
 
   const out: IngestCandidate[] = [];
-  for (const [taskId, count] of counts) {
+  for (const [taskId, events] of eventsByTask) {
+    const count = events.length;
     if (count < 4) continue;
     const taskFriction = Math.min(1, 0.38 + count * 0.08);
     const evidenceKey = stableEvidenceKey("task_transition", [taskId, String(count)]);
@@ -267,11 +284,26 @@ export function ingestTaskTransitionFriction(
     const confidence = resolveConfidenceForHeuristicVersion(heuristicVersion, "task_transition", signals);
     if (!shouldAdmitForHeuristicVersion(heuristicVersion, confidence)) continue;
 
+    const digest = events
+      .slice(-10)
+      .map((e) => `${e.timestamp.slice(11, 19)} ${e.fromState}→${e.toState}(${e.action})`)
+      .join(" | ");
+    const pipelineAdmissionSummary = [
+      `**${count}** lifecycle transition(s) for **${taskId}** appeared in this ingest window.`,
+      "Churn usually means retries, scope thrash, policy **`run-transition`** loops, or maintainer doc task activity—use the digest below to see the **actual sequence** before deciding if product/docs work is warranted.",
+      "This row is **proposed**: **cancel** if the pattern is expected (e.g. routine doc edits); **accept** to **ready** only when you want execution-time attention."
+    ].join(" ");
+
     out.push({
       evidenceKind: "task_transition",
       evidenceKey,
       title: `Stabilize transitions for task ${taskId} (high churn: ${count} events)`,
-      provenanceRefs: { taskId, transitionEventCount: String(count) },
+      provenanceRefs: {
+        taskId,
+        transitionEventCount: String(count),
+        transitionDigest: digest.slice(0, 1200),
+        pipelineAdmissionSummary
+      },
       signals,
       confidence
     });

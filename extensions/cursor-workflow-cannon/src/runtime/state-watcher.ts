@@ -9,7 +9,6 @@ export class StateWatcher implements vscode.Disposable {
   private debounceTimer: ReturnType<typeof setTimeout> | undefined;
   private static readonly CONFIG_PATH = ".workspace-kit/config.json";
   private static readonly DEFAULT_TASK_STORE_PATH = ".workspace-kit/tasks/state.json";
-  private static readonly DEFAULT_WISHLIST_STORE_PATH = ".workspace-kit/wishlist/state.json";
   private static readonly DEFAULT_SQLITE_DB_PATH = ".workspace-kit/tasks/workspace-kit.db";
 
   constructor(
@@ -54,7 +53,6 @@ export class StateWatcher implements vscode.Disposable {
   private async resolveWatchPatterns(): Promise<string[]> {
     const patterns = new Set<string>([
       StateWatcher.DEFAULT_TASK_STORE_PATH,
-      StateWatcher.DEFAULT_WISHLIST_STORE_PATH,
       StateWatcher.DEFAULT_SQLITE_DB_PATH,
       StateWatcher.CONFIG_PATH
     ]);
@@ -71,10 +69,6 @@ export class StateWatcher implements vscode.Disposable {
         const sqlitePath = (tasks as Record<string, unknown>).sqliteDatabaseRelativePath;
         if (typeof sqlitePath === "string" && sqlitePath.trim().length > 0) {
           patterns.add(sqlitePath.trim());
-        }
-        const wishlistPath = (tasks as Record<string, unknown>).wishlistStoreRelativePath;
-        if (typeof wishlistPath === "string" && wishlistPath.trim().length > 0) {
-          patterns.add(wishlistPath.trim());
         }
       }
     } catch {

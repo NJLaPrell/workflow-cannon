@@ -33,6 +33,14 @@ Assume **no TTY**: use JSON **`policyApproval`** on `workspace-kit run`. **Chat 
 - Traces: `.workspace-kit/policy/traces.jsonl`
 - Session grants: `.workspace-kit/policy/session-grants.json` when using `scope":"session"`
 
+## Discovering approval-adjacent work (read-only)
+
+- **Improvement `review-item` queue** — `workspace-kit run list-approval-queue '{}'` returns **`ready`** and **`in_progress`** improvement tasks (the same ids **`review-item`** accepts) plus stable relative paths for **`traces.jsonl`**, **`session-grants.json`**, and **`.workspace-kit/approvals/decisions.jsonl`**. Instruction: `src/modules/approvals/instructions/list-approval-queue.md`.
+- **Proposed improvements (triage, not `review-item`)** — `workspace-kit run list-tasks '{"type":"improvement","status":"proposed"}'`; playbook **`.ai/playbooks/improvement-triage-top-three.md`**.
+- **Rollups** — `workspace-kit run dashboard-summary '{}'` (**`proposedImprovementsSummary`**, **`readyImprovementsSummary`**, maintainer **`pending_decisions`** in **`workspaceStatus`** when present).
+
+Sensitive runs still require JSON **`policyApproval`** on the **`run`** argv object per the table in **`.ai/AGENT-CLI-MAP.md`** — listing the queue does not waive **`review-item`** policy.
+
 ## Copy-paste patterns
 
 ```bash

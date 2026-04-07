@@ -24,17 +24,6 @@ export function planningTaskStoreRelativePath(ctx: {
   return typeof p === "string" && p.trim().length > 0 ? p.trim() : undefined;
 }
 
-export function planningWishlistStoreRelativePath(ctx: {
-  effectiveConfig?: Record<string, unknown>;
-}): string | undefined {
-  const tasks = ctx.effectiveConfig?.tasks;
-  if (!tasks || typeof tasks !== "object" || Array.isArray(tasks)) {
-    return undefined;
-  }
-  const p = (tasks as Record<string, unknown>).wishlistStoreRelativePath;
-  return typeof p === "string" && p.trim().length > 0 ? p.trim() : undefined;
-}
-
 export function planningSqliteDatabaseRelativePath(ctx: ModuleLifecycleContext): string {
   const tasks = ctx.effectiveConfig?.tasks;
   if (!tasks || typeof tasks !== "object" || Array.isArray(tasks)) {

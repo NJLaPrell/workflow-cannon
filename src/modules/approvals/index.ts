@@ -1,6 +1,7 @@
 import type { WorkflowModule } from "../../contracts/module-contract.js";
 import { builtinInstructionEntriesForModule } from "../../contracts/builtin-run-command-manifest.js";
 import { resolveActorWithFallback } from "../../core/policy.js";
+import { runListApprovalQueue } from "./list-approval-queue-runtime.js";
 import { runReviewItem } from "./review-runtime.js";
 
 export const approvalsModule: WorkflowModule = {
@@ -31,6 +32,15 @@ export const approvalsModule: WorkflowModule = {
       message?: string;
       data?: Record<string, unknown>;
     }>> = {
+      "list-approval-queue": async () => {
+        const result = await runListApprovalQueue(ctx);
+        return {
+          ok: result.ok,
+          code: result.code,
+          message: result.message,
+          data: result.data
+        };
+      },
       "review-item": async () => {
         const args = command.args ?? {};
         const actor =

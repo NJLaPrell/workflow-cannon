@@ -11,16 +11,23 @@ test("buildImprovementTaskPayload: transcript includes issue, resolution, and sc
     title: "legacy",
     provenanceRefs: {
       transcriptPath: "agent-transcripts/a.jsonl",
-      sampleLine: "policy denied again"
+      sampleLine: "policy denied again",
+      scoredTextExcerpt: "policy denied again",
+      transcriptRole: "user",
+      linesScannedInSlice: "3",
+      frictionHitsInSlice: "1",
+      pipelineAdmissionSummary: "Scanned **3** new JSONL line(s). **1** friction hit(s)."
     },
     signals: { transcriptFriction: 0.5 },
     confidence
   });
   assert.ok(p.title.includes("a.jsonl"));
+  assert.ok(p.issue.includes("Problem report"));
   assert.ok(p.issue.includes("agent-transcripts/a.jsonl"));
   assert.ok(p.issue.includes("policy"));
+  assert.ok(p.issue.includes("pipeline forensics"));
   assert.ok(p.proposedSolution.includes("POLICY-APPROVAL"));
-  assert.ok(p.approach.includes("Recommended resolution"));
+  assert.ok(p.approach.includes("Recommended change"));
   assert.ok(p.technicalScope.length >= 2);
   assert.ok(p.acceptanceCriteria.length >= 1);
 });
