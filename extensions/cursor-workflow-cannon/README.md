@@ -38,7 +38,9 @@ F5 typical `launch.json` (workspace root):
 
 Open the **Workflow Cannon** activity bar to use **Dashboard** (webview — task queue rollups + actions) and **Config** (webview).
 
-**Tasks tree / drag-and-drop** were removed in extension **0.1.6** — use dashboard **Detail** on a task row (or palette **Show Task Detail**) and **`workspace-kit run run-transition`** / **`list-tasks`** from a terminal for transitions. Proposed-row **Accept**/**Chat** on the dashboard is unchanged.
+**Dashboard refresh:** Besides the bottom **Refresh** button (immediate refetch), the dashboard reloads when the sidebar becomes visible again, when kit-owned files change (workspace-kit watchers), and on a **~45s** timer while the view stays open.
+
+**Tasks tree / drag-and-drop** were removed in extension **0.1.6** — use dashboard **View** on a task row (or palette **Show Task Detail**) and **`workspace-kit run run-transition`** / **`list-tasks`** from a terminal for transitions. Proposed-row **Accept**/**Chat** on the dashboard is unchanged.
 
 ## CLI bridge
 
@@ -46,7 +48,9 @@ The extension runs `node <repo>/dist/cli.js` (or the published package path unde
 
 **Copy-ready mutating JSON (operators):** From a terminal at the repo root, `pnpm run wk run run-transition --schema-only` (and other pilot commands) prints **`sampleArgs`** you can paste and edit before running a real `wk run run-transition '<json>'`. Dashboard/Task transitions already inject **`expectedPlanningGeneration`** when policy is **`require`**; use the CLI helper when debugging shape errors. See **`docs/maintainers/plans/phase-52-human-cli-affordances.md`**.
 
-**Subagents (Phase 57+, dashboard read-only in Phase 60):** The dashboard webview shows a **read-only subagent registry** card (definitions + open sessions) sourced from packaged **`dashboard-summary`** JSON (`subagentRegistry`). Mutations remain **`pnpm run wk run …`** with JSON **`policyApproval`** (and **`expectedPlanningGeneration`** when required). For JSON shapes before editing args, use **`wk run <cmd> --schema-only`**. See **`docs/maintainers/runbooks/subagent-registry.md`** and **`docs/maintainers/AGENT-CLI-MAP.md`**.
+**Approvals & policy card:** The dashboard runs **`list-approval-queue`** in parallel with **`dashboard-summary`** on each refresh so the read-only review-item queue matches **`pnpm exec wk run list-approval-queue '{}'`** for the same workspace (Tier C — no JSON **`policyApproval`**).
+
+**Team execution & subagent cards (CLI parity):** Both rollups ship inside packaged **`dashboard-summary`** JSON. When the kit task SQLite file is available to the CLI (**`sqliteDual`** in the kit) and **`PRAGMA user_version` ≥ 7**, **`teamExecution`** is built by **`summarizeTeamAssignmentsForDashboard`** over **`kit_team_assignments`** — the same rows as **`pnpm exec wk run list-assignments '{}'`** (counts and **`topActive`** are a bounded slice / aggregate of that table). When **`user_version` ≥ 6**, **`subagentRegistry`** is built by **`summarizeSubagentsForDashboard`** over **`kit_subagent_definitions`** / **`kit_subagent_sessions`**, matching the subagent list surfaces documented in **`.ai/AGENT-CLI-MAP.md`** (team/subagent inspect). If the DB is missing or the schema is below those thresholds, both objects return **`available: false`** with zeroed counts; the dashboard should show empty cards, not stale fabrications. Mutations remain terminal **`pnpm exec wk run …`** with JSON **`policyApproval`** where required. See **`docs/maintainers/runbooks/subagent-registry.md`** for subagent depth.
 
 **Workspace root:** Cursor must open the folder that contains `.workspace-kit/manifest.json` (the Workflow Cannon repo root). If you open a parent directory, the extension will not attach and you get no dashboard/tasks—or you may be pointed at a different task store than you expect.
 
@@ -82,6 +86,8 @@ pnpm --filter cursor-workflow-cannon test
 - `Workflow Cannon: Prefill Chat — Improvement Triage (Top Three)`
 - `Workflow Cannon: Prefill Chat — Task to Phase Branch Playbook`
 ### Chat prefill (Cursor)
+
+**Phase closeout:** operators can invoke Cursor slash **`/complete-phase <N> [approve-release]`** — spec: **`.cursor/commands/complete-phase.md`** (publish steps require **`approve-release`** + **`.ai/RELEASING.md`** gates; **`policyApproval`** JSON still applies to **`wk run`**).
 
 The extension seeds Cursor Composer using **`vscode.commands.executeCommand("deeplink.prompt.prefill", { text })`** (same entry Cursor uses internally). If that command is missing or fails, it tries the **`cursor://anysphere.cursor-deeplink/prompt?text=…`** URI, then copies the prompt to the clipboard with a warning. Very long prompts may hit URI length limits — trim in-session or paste from clipboard. Standard VS Code (non-Cursor) may not register the deeplink command; clipboard fallback is expected.
 

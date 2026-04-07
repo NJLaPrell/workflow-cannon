@@ -2,26 +2,24 @@
 
 # Invoking maintainer playbooks (agents and operators)
 
-Playbooks live under [`docs/maintainers/playbooks/`](../playbooks/). They are **markdown direction sets** — not executable scripts and not loaded automatically by `workspace-kit`.
+Playbooks are **markdown checklists** under **`.ai/playbooks/`** (machine canon). They are not executable scripts and are not auto-loaded by `workspace-kit`. Maintainer-rendered copies under **`docs/maintainers/playbooks/`** exist for humans — **agents** should attach **`.ai/playbooks/…`** per **`AGENTS.md`** and **`.cursor/rules/agent-doc-routing.mdc`**.
 
 ## How agents get playbook content
 
-1. **Explicit attachment** — Include the playbook file in the editor context (e.g. `@docs/maintainers/playbooks/phase-closeout-and-release.md` — **§7 Phase delivery summary** is the required wrap-up for phase ship: compact copy-paste block, **`{placeholders}`** only, evidence-backed counts; `@docs/maintainers/playbooks/task-to-phase-branch.md`, `@docs/maintainers/playbooks/workspace-kit-chat-onboarding.md` (**`/onboarding`**), `@docs/maintainers/playbooks/workspace-kit-chat-behavior-interview.md` (**`/behavior-interview`**); `@docs/maintainers/playbooks/improvement-task-discovery.md`, or `@docs/maintainers/playbooks/improvement-triage-top-three.md` in Cursor) or paste a short excerpt plus the path.
-2. **Requestable Cursor rules** — e.g. `.cursor/rules/playbook-phase-closeout.mdc` (phase closeout + release), `.cursor/rules/playbook-task-to-phase-branch.mdc` (single **`T###`** → PR → **`release/phase-<N>`**), `.cursor/rules/playbook-improvement-task-discovery.mdc` (improvement research → log), `.cursor/rules/playbook-improvement-triage-top-three.mdc` (**≤3** **`improvement`** **`proposed`** → **`ready`**), `.cursor/rules/playbook-wishlist-intake-to-execution.mdc` (wishlist ideation → **`convert-wishlist`**), `.cursor/rules/playbook-workspace-kit-chat-onboarding.mdc` (**`/onboarding`**), `.cursor/rules/playbook-workspace-kit-chat-behavior-interview.mdc` (**`/behavior-interview`**). Attach the rule when you want that mode. They are **not** a substitute for reading [`POLICY-APPROVAL.md`](../POLICY-APPROVAL.md) or running [`workspace-kit`](../AGENT-CLI-MAP.md) commands.
-3. **`tasks/*.md` templates** — e.g. `tasks/phase-closeout.md` can tell the agent to open a playbook first; those files do **not** execute `workspace-kit` or satisfy policy.
-
-There is **no** product hook that auto-injects playbooks into every session. If the path is not in context, assume the agent has **not** loaded it.
+1. **Explicit attachment** — Include the **`.ai`** playbook in context, e.g. **`@.ai/playbooks/phase-closeout-and-release.md`**, **`@.ai/playbooks/task-to-phase-branch.md`**, **`@.ai/playbooks/improvement-task-discovery.md`**, **`@.ai/playbooks/improvement-triage-top-three.md`**. For **phase ship**, **§7 Phase delivery summary** is the required wrap-up: compact copy-paste block, **evidence-backed counts**, and **no unfilled placeholders** — use **`{phaseNumber}`**, **`{completedExecutionTaskCount}`**, **`{followOnExecutionTaskCountOrNone}`**, **`{featureMarkdownBullets}`** (each line **`- …`**)**, **`{optionalNotesBlockOrEmpty}`** per **`.ai/playbooks/phase-closeout-and-release.md`** §7 (there is no **`{feature}`** slot in current canon).
+2. **Requestable Cursor rules** — e.g. **`.cursor/rules/playbook-phase-closeout.mdc`**, **`.cursor/rules/playbook-task-to-phase-branch.mdc`**, **`.cursor/rules/playbook-improvement-task-discovery.mdc`**, **`.cursor/rules/playbook-improvement-triage-top-three.mdc`**, **`.cursor/rules/playbook-wishlist-intake-to-execution.mdc`**, onboarding / behavior-interview rules. They **do not** replace **`POLICY-APPROVAL.md`** or **`workspace-kit run`**.
+3. **Cursor slash commands** — Operator entrypoints under **`.cursor/commands/`** (e.g. **`complete-phase.md`** for **`/complete-phase <N> [approve-release]`**) compose with the same **`.ai`** playbooks; slash text is **intent only** for Tier A/B **`wk run`** (**`.ai/POLICY-APPROVAL.md`**).
+4. **`tasks/*.md` templates** — Prompt-only; they do **not** execute **`workspace-kit`** or satisfy policy.
 
 ## Relationship to canonical docs
 
-Playbooks **compose by reference**. For task lifecycle, approvals, and release gates, follow linked canon:
+Playbooks **compose by reference**:
 
-- [`docs/maintainers/AGENT-CLI-MAP.md`](../AGENT-CLI-MAP.md)
-- [`docs/maintainers/POLICY-APPROVAL.md`](../POLICY-APPROVAL.md)
-- [`docs/maintainers/RELEASING.md`](../RELEASING.md)
-- Maintainer delivery loop (e.g. `.cursor/rules/maintainer-delivery-loop.mdc`)
+- **`.ai/AGENT-CLI-MAP.md`**, **`.ai/POLICY-APPROVAL.md`**, **`.ai/RELEASING.md`**
+- Maintainer delivery loop: **`.cursor/rules/maintainer-delivery-loop.mdc`**
 
 ## Discovery
 
-- Index table: [`docs/maintainers/AGENTS.md`](../AGENTS.md) → **Maintainer playbooks**
-- Playbook catalog and authoring rules: [`docs/maintainers/playbooks/README.md`](../playbooks/README.md)
+- **`.ai/MACHINE-PLAYBOOKS.md`** — compact index
+- **`.cursor/commands/`** — slash command specs (Cursor)
+- Human index: **`docs/maintainers/AGENTS.md`** → Maintainer playbooks (do not use as the agent bootstrap path)

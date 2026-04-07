@@ -98,6 +98,8 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.doesNotMatch(html, /proposed-imp-chat/);
   assert.doesNotMatch(html, /proposed-exe-chat/);
   assert.match(html, /data-wc-action="task-detail"/);
+  assert.match(html, /class="dash-row-action dash-row-action-tertiary"[^>]*data-wc-action="task-detail"/);
+  assert.match(html, /data-wc-action="task-detail"[\s\S]*?>View<\/button>/);
   assert.match(html, /dash-row-action/);
   assert.match(html, /phase-bucket/);
   assert.doesNotMatch(html, /<details open class="phase-bucket"/);
@@ -151,7 +153,11 @@ test("renderDashboardRootInnerHtml approvals section lists review queue and revi
   assert.match(html, /Example imp/);
   assert.match(html, /review-item/);
   assert.match(html, /pnpm exec wk run review-item/);
-  assert.match(html, /data-wc-action="task-detail"[^>]*data-task-id="T900"/);
+  assert.match(
+    html,
+    /class="dash-row-action dash-row-action-tertiary"[^>]*data-wc-action="task-detail"[^>]*data-task-id="T900"/
+  );
+  assert.match(html, /data-wc-action="task-detail"[\s\S]*?data-task-id="T900"[\s\S]*?>View<\/button>/);
 });
 
 test("renderDashboardRootInnerHtml planning card shows resume CLI when session present", () => {
@@ -460,9 +466,11 @@ test("buildPhaseCompleteReleaseChatPrompt matches phase-closeout template", () =
     buildPhaseCompleteReleaseChatPrompt("Phase 64"),
     "The operator added this context: **Phase 64**\n\n" +
       "Follow **`.ai/playbooks/phase-closeout-and-release.md`** (playbook id **`phase-closeout-and-release`**).\n\n" +
-      "Treat **`release/phase-<N>`** as the phase integration branch; phase closeout merges that train to **`main`** and cuts a release per **`.ai/RELEASING.md`** (human depth: **`docs/maintainers/RELEASING.md`** when editing policy).\n\n" +
-      "Use JSON **`policyApproval`** on policy-sensitive **`workspace-kit run`** commands (**`.ai/POLICY-APPROVAL.md`**).\n\n" +
-      "At **§7 Phase delivery summary**, paste the template with **every** token expanded from CLI / task-store / maintainer evidence — no literal **`{feature}`**-style leftovers (see playbook evidence rules for **`{featureMarkdownBullets}`** and **`{optionalNotesBlockOrEmpty}`**).\n\n" +
+      "Operator entrypoint: Cursor slash **`/complete-phase <N> [approve-release]`** — **`.cursor/commands/complete-phase.md`**. " +
+      "Include **`approve-release`** only when explicitly authorizing publish/tag/npm after **`main`** merge; **without it, stop before publish automation** (**`.ai/RELEASING.md`**, playbook §4).\n\n" +
+      "Treat **`release/phase-<N>`** as the phase integration branch; validate there, merge **`release/phase-<N>`** → **`main`**, then cut the release per **`.ai/RELEASING.md`**.\n\n" +
+      "**Slash and chat express intent only.** Tier A/B **`workspace-kit run`** still requires JSON **`policyApproval`** on the **third** CLI argument (**`.ai/POLICY-APPROVAL.md`**, **`.ai/AGENT-CLI-MAP.md`**).\n\n" +
+      "At **§7 Phase delivery summary**, paste the template with **every** token expanded — evidence rules: **`{featureMarkdownBullets}`**, **`{optionalNotesBlockOrEmpty}`** (no stale **`{feature}`** placeholders).\n\n" +
       "Optional: **`.cursor/rules/playbook-phase-closeout.mdc`**."
   );
 });
