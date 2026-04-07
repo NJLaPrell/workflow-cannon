@@ -31,7 +31,8 @@
     "onCommand:workflowCannon.task.unblock",
     "onCommand:workflowCannon.chat.prefillWishlistFlow",
     "onCommand:workflowCannon.chat.prefillImprovementTriage",
-    "onCommand:workflowCannon.chat.prefillTaskToPhaseBranch"
+    "onCommand:workflowCannon.chat.prefillTaskToPhaseBranch",
+    "onCommand:workflowCannon.chat.prefillTranscriptChurnResearch"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -132,6 +133,10 @@
       {
         "command": "workflowCannon.chat.prefillTaskToPhaseBranch",
         "title": "Workflow Cannon: Prefill Chat — Task to Phase Branch Playbook"
+      },
+      {
+        "command": "workflowCannon.chat.prefillTranscriptChurnResearch",
+        "title": "Workflow Cannon: Prefill Chat — Transcript Churn Research (/research-churn)"
       }
     ]
   },

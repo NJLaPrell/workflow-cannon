@@ -69,7 +69,7 @@ function readRelationalFlagFromRow(row: Record<string, unknown> | undefined): bo
   return false;
 }
 
-/** Single-file SQLite backing for task JSON document; legacy rows may include a second wishlist blob until migrated. */
+/** Single-file SQLite backing for task JSON document; legacy rows may include wishlist_store_json until collapsed on store open. */
 export class SqliteDualPlanningStore {
   private db: Database.Database | null = null;
   readonly dbPath: string;

@@ -40,6 +40,12 @@ Pick at most three `proposed` improvement tasks, document rationale, **`accept`*
 
 Full checklist: **`.ai/playbooks/improvement-triage-top-three.md`**.
 
+## Transcript churn (research → proposed)
+
+Investigate **`transcript_churn` / `research`** rows from transcript pipelines, then **`synthesize-transcript-churn`** to **`improvement` / `proposed`** (or **`run-transition`** **`reject`** to cancel).
+
+Full checklist: **`.ai/playbooks/transcript-churn-research.md`**.
+
 ## Wishlist intake → execution
 
 Rank **`wishlist_intake`** items with **`list-wishlist`** / **`get-wishlist`**, confirm operator timing, clarify scope, pick a target **`phaseKey`**, then **`convert-wishlist`** with **`expectedPlanningGeneration`** when policy is **`require`**.

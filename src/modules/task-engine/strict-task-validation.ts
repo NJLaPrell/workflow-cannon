@@ -2,7 +2,15 @@ import type { TaskEntity } from "./types.js";
 import { validateKnownTaskTypeRequirements } from "./task-type-validation.js";
 
 const TASK_ID_RE = /^T\d+$/;
-const ALLOWED_STATUS = new Set(["proposed", "ready", "in_progress", "blocked", "completed", "cancelled"]);
+const ALLOWED_STATUS = new Set([
+  "research",
+  "proposed",
+  "ready",
+  "in_progress",
+  "blocked",
+  "completed",
+  "cancelled"
+]);
 
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((entry) => typeof entry === "string");

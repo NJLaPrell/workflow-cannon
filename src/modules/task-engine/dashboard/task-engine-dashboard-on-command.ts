@@ -10,6 +10,7 @@ import { summarizeTeamAssignmentsForDashboard } from "../../team-execution/assig
 import { resolveAgentGuidanceFromEffectiveConfig } from "../../../core/agent-guidance-catalog.js";
 import { getPlanningGenerationPolicy } from "../planning-config.js";
 import { getNextActions, isImprovementLikeTask } from "../suggestions.js";
+import { TRANSCRIPT_CHURN_TASK_TYPE } from "../transcript-churn.js";
 import { readWorkspaceStatusSnapshot } from "./dashboard-status.js";
 import { buildDashboardDependencyOverview } from "./dashboard-dependency-overview.js";
 import {
@@ -142,6 +143,18 @@ export async function runDashboardSummaryCommand(
     toProposedRow,
     dashboardPhaseTop
   );
+
+  const transcriptChurnResearch = tasks
+    .filter((t) => t.status === "research" && t.type === TRANSCRIPT_CHURN_TASK_TYPE)
+    .sort((a, b) => a.id.localeCompare(b.id));
+  const transcriptChurnResearchTop = transcriptChurnResearch.slice(0, 15).map(slimListRow);
+  const transcriptChurnResearchPhaseBuckets = buildDashboardPhaseBucketsForTasks(
+    transcriptChurnResearch,
+    workspaceStatus,
+    toProposedRow,
+    dashboardPhaseTop
+  );
+
   const blockedPhaseBuckets = buildDashboardPhaseBucketsForBlocking(
     suggestion.blockingAnalysis,
     (id) => tasks.find((x) => x.id === id),
@@ -216,7 +229,7 @@ export async function runDashboardSummaryCommand(
     : subagentRegistryEmpty;
 
   const data = {
-    schemaVersion: 3 as const,
+    schemaVersion: 4 as const,
     planningGeneration,
     planningGenerationPolicy: getPlanningGenerationPolicy({
       effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined
@@ -225,6 +238,12 @@ export async function runDashboardSummaryCommand(
     workspaceStatus,
     planningSession,
     stateSummary: suggestion.stateSummary,
+    transcriptChurnResearchSummary: {
+      schemaVersion: 1 as const,
+      count: transcriptChurnResearch.length,
+      top: transcriptChurnResearchTop,
+      phaseBuckets: transcriptChurnResearchPhaseBuckets
+    },
     proposedImprovementsSummary: {
       schemaVersion: 1 as const,
       count: proposedImprovements.length,

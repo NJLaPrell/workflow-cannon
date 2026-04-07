@@ -126,6 +126,15 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "synthesize-transcript-churn",
+    "file": "synthesize-transcript-churn.md",
+    "description": "Promote transcript_churn/research to improvement/proposed after investigation.",
+    "policyOperationId": "tasks.synthesize-transcript-churn",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "create-task",
     "file": "create-task.md",
     "description": "Create a new task through validated task-engine persistence.",
@@ -378,7 +387,7 @@
     "moduleId": "task-engine",
     "name": "migrate-task-persistence",
     "file": "migrate-task-persistence.md",
-    "description": "Import legacy task + wishlist JSON into SQLite (json-to-sqlite / json-to-unified-sqlite); sqlite-to-json removed in v0.40.",
+    "description": "Import legacy task JSON into SQLite (json-to-sqlite / json-to-unified-sqlite); sqlite-to-json removed in v0.40. Wishlist intake is SQLite-only.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },
@@ -386,15 +395,7 @@
     "moduleId": "task-engine",
     "name": "get-kit-persistence-map",
     "file": "get-kit-persistence-map.md",
-    "description": "Read-only JSON map of unified SQLite paths, planning table/columns, and legacy import file locations for agents.",
-    "defaultResponseTemplateId": "default",
-    "policySensitivity": "non-sensitive"
-  },
-  {
-    "moduleId": "task-engine",
-    "name": "migrate-wishlist-intake",
-    "file": "migrate-wishlist-intake.md",
-    "description": "One-time migration: legacy wishlist rows become wishlist_intake tasks; SQLite planning drops the wishlist JSON column.",
+    "description": "Read-only JSON map of unified SQLite paths, planning table/columns, and legacy task JSON import paths for agents.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },

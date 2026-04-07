@@ -8,13 +8,8 @@ import type { WishlistStoreDocument } from "../wishlist/wishlist-types.js";
 import { TaskEngineError } from "../transitions.js";
 import { normalizeTaskStoreDocumentFromUnknown } from "./task-store-migration.js";
 import { SqliteDualPlanningStore } from "./sqlite-dual-planning.js";
-import {
-  planningSqliteDatabaseRelativePath,
-  planningTaskStoreRelativePath,
-  planningWishlistStoreRelativePath
-} from "../planning-config.js";
+import { planningSqliteDatabaseRelativePath, planningTaskStoreRelativePath } from "../planning-config.js";
 import { DEFAULT_TASK_STORE_PATH } from "./store.js";
-import { DEFAULT_WISHLIST_PATH } from "./wishlist-store.js";
 
 function emptyTaskDoc(): TaskStoreDocument {
   return {
@@ -126,9 +121,7 @@ export async function runMigrateTaskPersistence(
   const force = args.force === true;
 
   const taskRel = planningTaskStoreRelativePath(ctx) ?? DEFAULT_TASK_STORE_PATH;
-  const wishRel = planningWishlistStoreRelativePath(ctx) ?? DEFAULT_WISHLIST_PATH;
   const taskPath = path.resolve(ctx.workspacePath, taskRel);
-  const wishPath = path.resolve(ctx.workspacePath, wishRel);
   const dbRel = planningSqliteDatabaseRelativePath(ctx);
   const dual = new SqliteDualPlanningStore(ctx.workspacePath, dbRel);
 
@@ -158,30 +151,7 @@ export async function runMigrateTaskPersistence(
     }
   }
 
-  let wishDoc = emptyWishDoc();
-  try {
-    const raw = await fs.readFile(wishPath, "utf8");
-    const parsed = JSON.parse(raw) as WishlistStoreDocument;
-    if (parsed.schemaVersion !== 1) {
-      throw new TaskEngineError("import-parse-error", `Unsupported wishlist schema ${parsed.schemaVersion}`);
-    }
-    if (!Array.isArray(parsed.items)) {
-      throw new TaskEngineError("import-parse-error", "Wishlist items must be an array");
-    }
-    wishDoc = parsed;
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-      wishDoc = emptyWishDoc();
-    } else if (err instanceof TaskEngineError) {
-      return { ok: false, code: err.code, message: err.message };
-    } else {
-      return {
-        ok: false,
-        code: "import-parse-error",
-        message: `Failed to read wishlist JSON: ${(err as Error).message}`
-      };
-    }
-  }
+  const wishDoc = emptyWishDoc();
 
   if (dryRun) {
     return {
@@ -189,14 +159,12 @@ export async function runMigrateTaskPersistence(
       code: "migrate-dry-run",
       message:
         direction === "json-to-unified-sqlite"
-          ? "Dry run: would import JSON task/wishlist documents into unified SQLite module state"
-          : "Dry run: would import JSON task/wishlist documents into SQLite",
+          ? "Dry run: would import legacy task JSON into unified SQLite module state (wishlist intake uses SQLite tasks only)"
+          : "Dry run: would import legacy task JSON into SQLite (wishlist intake uses SQLite tasks only)",
       data: {
         dbPath: dual.dbPath,
         taskPath,
-        wishPath,
-        taskCount: taskDoc.tasks.length,
-        wishlistCount: wishDoc.items.length
+        taskCount: taskDoc.tasks.length
       }
     };
   }
@@ -218,8 +186,8 @@ export async function runMigrateTaskPersistence(
     return {
       ok: true,
       code: "migrated-json-to-unified-sqlite",
-      message: `Imported task and wishlist JSON into unified module state at ${dual.dbPath}`,
-      data: { dbPath: dual.dbPath, taskPath, wishPath, moduleId: "task-engine" }
+      message: `Imported task JSON into unified module state at ${dual.dbPath}`,
+      data: { dbPath: dual.dbPath, taskPath, moduleId: "task-engine" }
     };
   }
 
@@ -237,7 +205,7 @@ export async function runMigrateTaskPersistence(
   return {
     ok: true,
     code: "migrated-json-to-sqlite",
-    message: `Imported task and wishlist JSON into ${dual.dbPath}`,
-    data: { dbPath: dual.dbPath, taskPath, wishPath }
+    message: `Imported task JSON into ${dual.dbPath}`,
+    data: { dbPath: dual.dbPath, taskPath }
   };
 }

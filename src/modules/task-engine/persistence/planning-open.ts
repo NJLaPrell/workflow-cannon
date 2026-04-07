@@ -2,6 +2,7 @@ import type { ModuleLifecycleContext } from "../../../contracts/module-contract.
 import { TaskStore } from "./store.js";
 import { SqliteDualPlanningStore } from "./sqlite-dual-planning.js";
 import { planningSqliteDatabaseRelativePath } from "../planning-config.js";
+import { collapseLegacyWishlistSqliteIfNeeded } from "./legacy-wishlist-sqlite-cleanup.js";
 
 export type OpenedPlanningStores = {
   taskStore: TaskStore;
@@ -15,6 +16,8 @@ export async function openPlanningStores(ctx: ModuleLifecycleContext): Promise<O
   );
   dual.loadFromDisk();
   const taskStore = TaskStore.forSqliteDual(dual);
+  await taskStore.load();
+  collapseLegacyWishlistSqliteIfNeeded(dual, taskStore);
   await taskStore.load();
   return { sqliteDual: dual, taskStore };
 }

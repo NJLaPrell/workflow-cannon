@@ -108,7 +108,7 @@ export type DashboardSubagentRegistrySummary = {
 };
 
 export type DashboardSummaryData = {
-  schemaVersion: 3;
+  schemaVersion: 4;
   /** Monotonic optimistic-lock generation for the unified planning SQLite row. */
   planningGeneration: number;
   /** Effective `tasks.planningGenerationPolicy` for mutating commands. */
@@ -117,6 +117,8 @@ export type DashboardSummaryData = {
   workspaceStatus: Record<string, unknown> | null;
   planningSession: unknown;
   stateSummary: Record<string, unknown>;
+  /** `transcript_churn` tasks in **`research`** (pipeline intake before **`synthesize-transcript-churn`**). */
+  transcriptChurnResearchSummary: DashboardListSummary;
   proposedImprovementsSummary: DashboardListSummary;
   proposedExecutionSummary: DashboardListSummary;
   readyImprovementsSummary: DashboardListSummary;

@@ -852,7 +852,11 @@ test("taskEngineModule onCommand dashboard-summary returns stable shape", async 
   assert.equal(result.ok, true);
   assert.equal(result.code, "dashboard-summary");
   const d = result.data;
-  assert.equal(d.schemaVersion, 3);
+  assert.equal(d.schemaVersion, 4);
+  assert.ok(typeof d.planningGeneration === "number");
+  assert.ok(d.transcriptChurnResearchSummary);
+  assert.equal(d.transcriptChurnResearchSummary.schemaVersion, 1);
+  assert.equal(d.transcriptChurnResearchSummary.count, 0);
   assert.ok(typeof d.taskStoreLastUpdated === "string");
   assert.equal(d.stateSummary.ready, 1);
   assert.equal(d.readyQueueCount, 1);
@@ -1802,17 +1806,6 @@ test("migrate-task-persistence json-to-sqlite then create-task uses SQLite store
     lastUpdated: new Date().toISOString()
   };
   await writeFile(taskPath, JSON.stringify(emptyTaskDoc, null, 2) + "\n", "utf8");
-  const wishPath = path.join(workspace, ".workspace-kit", "wishlist", "state.json");
-  await mkdir(path.dirname(wishPath), { recursive: true });
-  await writeFile(
-    wishPath,
-    JSON.stringify(
-      { schemaVersion: 1, items: [], lastUpdated: new Date().toISOString() },
-      null,
-      2
-    ) + "\n",
-    "utf8"
-  );
 
   const ctx = sqliteTaskEngineCtx(workspace);
   let r = await taskEngineModule.onCommand(
@@ -1933,17 +1926,6 @@ test("migrate-task-persistence json-to-unified-sqlite writes task-engine module 
     ) + "\n",
     "utf8"
   );
-  const wishPath = path.join(workspace, ".workspace-kit", "wishlist", "state.json");
-  await mkdir(path.dirname(wishPath), { recursive: true });
-  await writeFile(
-    wishPath,
-    JSON.stringify(
-      { schemaVersion: 1, items: [{ id: "W99", title: "idea", status: "new" }], lastUpdated: new Date().toISOString() },
-      null,
-      2
-    ) + "\n",
-    "utf8"
-  );
 
   const ctx = sqliteTaskEngineCtx(workspace);
   const r = await taskEngineModule.onCommand(
@@ -1958,7 +1940,7 @@ test("migrate-task-persistence json-to-unified-sqlite writes task-engine module 
   assert.ok(row);
   assert.equal(row.stateSchemaVersion, 1);
   assert.equal(Array.isArray(row.state.taskStore.tasks), true);
-  assert.equal(Array.isArray(row.state.wishlistStore.items), true);
+  assert.deepEqual(row.state.wishlistStore.items, []);
 });
 
 test("taskEngineModule list-module-states and get-module-state query unified state rows", async () => {

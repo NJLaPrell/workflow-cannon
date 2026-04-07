@@ -138,6 +138,48 @@ function renderProposedImprovementsList(count: number, items: unknown): string {
   );
 }
 
+function renderTranscriptChurnResearchRow(row: { id?: unknown; title?: unknown; phase?: unknown }): string {
+  const id = String(row?.id ?? "").trim();
+  const title = escapeHtml(String(row?.title ?? ""));
+  const ph = row?.phase != null && String(row.phase).length > 0 ? " · " + escapeHtml(String(row.phase)) : "";
+  const label = "- " + escapeHtml(id) + (id ? " " : "") + title + ph;
+  const idAttr = escapeHtml(id);
+  return (
+    '<div class="dash-row" role="listitem">' +
+    '<span class="dash-row-label">' +
+    label +
+    "</span>" +
+    '<span class="dash-row-actions">' +
+    '<button type="button" class="dash-row-action" data-wc-action="task-detail" data-task-id="' +
+    idAttr +
+    '" title="Open task detail (markdown)">Detail</button>' +
+    '<button type="button" class="dash-row-action dash-row-action-primary" data-wc-action="transcript-churn-research-chat" data-task-id="' +
+    idAttr +
+    '" title="Open transcript churn research playbook in chat">Research</button>' +
+    "</span></div>"
+  );
+}
+
+function renderTranscriptChurnResearchList(count: number, items: unknown): string {
+  if (!Array.isArray(items) || items.length === 0) {
+    return (
+      '<p class="muted">No transcript churn rows (<code>type: transcript_churn</code>, <code>status: research</code>). When they appear, investigate then run <code>synthesize-transcript-churn</code> (see <code>.ai/AGENT-CLI-MAP.md</code>).</p>'
+    );
+  }
+  const more =
+    count > items.length
+      ? '<p class="muted">Showing ' + String(items.length) + " of " + String(count) + " · <code>list-tasks</code> with filters.</p>"
+      : "";
+  return (
+    more +
+    '<div class="dash-row-list" role="list">' +
+    (items as unknown[])
+      .map((x) => renderTranscriptChurnResearchRow(x as { id?: unknown; title?: unknown; phase?: unknown }))
+      .join("") +
+    "</div>"
+  );
+}
+
 function renderProposedExecutionRow(row: { id?: unknown; title?: unknown; phase?: unknown }): string {
   const id = String(row?.id ?? "").trim();
   const title = escapeHtml(String(row?.title ?? ""));
@@ -321,6 +363,51 @@ function renderProposedPhaseBuckets(
           c === 0
             ? '<p class="muted">No tasks in this phase.</p>'
             : renderProposedImprovementsList(c, b.top ?? []);
+        return (
+          '<details class="phase-bucket"' +
+          wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
+          "><summary>" +
+          summary +
+          "</summary>" +
+          inner +
+          "</details>"
+        );
+      })
+      .join("") +
+    "</div>"
+  );
+}
+
+function renderTranscriptChurnResearchPhaseBuckets(
+  phaseBuckets: unknown,
+  totalCount: number,
+  fallbackTop: unknown,
+  phaseTrackPrefix: string
+): string {
+  const buckets = phaseBucketsNonEmpty(phaseBuckets);
+  if (buckets.length === 0) {
+    return renderTranscriptChurnResearchList(totalCount, fallbackTop);
+  }
+  const sumCounts = buckets.reduce((acc: number, x: unknown) => {
+    const c = (x as { count?: unknown }).count;
+    return acc + (typeof c === "number" ? c : 0);
+  }, 0);
+  const more =
+    sumCounts < totalCount
+      ? '<p class="muted">Preview capped per phase · expand sections below or <code>list-tasks</code> for full lists.</p>'
+      : "";
+  return (
+    more +
+    '<div class="phase-stack">' +
+    buckets
+      .map((raw, i) => {
+        const b = raw as { label?: unknown; top?: unknown; count?: unknown };
+        const summary = escapeHtml(String(b.label ?? ""));
+        const c = typeof b.count === "number" ? b.count : 0;
+        const inner =
+          c === 0
+            ? '<p class="muted">No tasks in this phase.</p>'
+            : renderTranscriptChurnResearchList(c, b.top ?? []);
         return (
           '<details class="phase-bucket"' +
           wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
@@ -566,6 +653,7 @@ function renderPlanningSession(ps: unknown): string {
 /** 3-column grid of status counts with right-aligned tabular numbers. */
 function buildDashboardStateCountGridHtml(ss: Record<string, unknown>): string {
   const order: [string, string][] = [
+    ["research", "Research"],
     ["proposed", "Proposed"],
     ["ready", "Ready"],
     ["in_progress", "In Progress"],
@@ -1082,6 +1170,9 @@ export function renderDashboardRootInnerHtml(payload: unknown, listApprovalQueue
   const pes = (d.proposedExecutionSummary as Record<string, unknown> | undefined) ?? {};
   const peCount = typeof pes.count === "number" ? pes.count : 0;
   const peTop = Array.isArray(pes.top) ? (pes.top as unknown[]) : [];
+  const tcrs = (d.transcriptChurnResearchSummary as Record<string, unknown> | undefined) ?? {};
+  const tcrCount = typeof tcrs.count === "number" ? tcrs.count : 0;
+  const tcrTop = Array.isArray(tcrs.top) ? (tcrs.top as unknown[]) : [];
   const rqb = d.readyQueueBreakdown as
     | { improvement?: unknown; other?: unknown; schemaVersion?: unknown }
     | undefined;
@@ -1141,6 +1232,7 @@ export function renderDashboardRootInnerHtml(payload: unknown, listApprovalQueue
   const tasksQuickActionsPanel =
     '<div class="dash-quick-actions" role="toolbar" aria-label="Chat playbook shortcuts">' +
     '<button type="button" class="dash-quick-action-btn" data-wc-action="add-wishlist-item" title="Create a wishlist intake task (same flow as /add-wishlist-item)">Add wishlist item</button>' +
+    '<button type="button" class="dash-quick-action-btn" data-wc-action="transcript-churn-research-chat" title="Transcript churn research playbook (same intent as slash /research-churn)">Research churn</button>' +
     '<button type="button" class="dash-quick-action-btn dash-quick-action-primary" data-wc-action="generate-features-chat" title="New chat with /generate-features as text (same as slash command)">Generate Features</button>' +
     "</div>";
 
@@ -1149,6 +1241,12 @@ export function renderDashboardRootInnerHtml(payload: unknown, listApprovalQueue
     tasksQuickActionsPanel +
     "<p><b>Tasks</b></p>" +
     buildDashboardStateCountGridHtml(ss) +
+    renderStatusRollup(
+      "status-tc-research",
+      "<b>Research · Transcript churn</b> (" + String(tcrCount) + ")",
+      renderTranscriptChurnResearchPhaseBuckets(tcrs.phaseBuckets, tcrCount, tcrTop, "tc-churn"),
+      false
+    ) +
     renderStatusRollup(
       "status-ready-imp",
       "<b>Ready · Improvements</b> (" + String(readyImpCount) + ")",

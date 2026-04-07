@@ -8,6 +8,9 @@ import { buildWishlistIntakeAgentPrompt } from "./wishlist-chat-prompt.js";
 /** Same text the operator would type for slash **`/generate-features`** (dashboard button prefills this in a new chat). */
 export const GENERATE_FEATURES_SLASH_TEXT = "/generate-features";
 
+/** Same text the operator would type for slash **`/research-churn`** (dashboard / command palette can prefill the full playbook prompt instead). */
+export const RESEARCH_CHURN_SLASH_TEXT = "/research-churn";
+
 /**
  * Operator banner + {@link buildWishlistIntakeAgentPrompt} (dashboard **Generate Features** uses {@link GENERATE_FEATURES_SLASH_TEXT} only).
  */
@@ -15,6 +18,25 @@ export function buildGenerateFeaturesPrompt(options?: { wishlistId?: string }): 
   return (
     "The operator ran **Generate Features** (Cursor slash **`/generate-features`**).\n\n" +
     buildWishlistIntakeAgentPrompt(options)
+  );
+}
+
+export function buildTranscriptChurnResearchPrompt(options?: { taskId?: string }): string {
+  const id = options?.taskId?.trim();
+  const focus =
+    id && id.length > 0
+      ? `Focus on transcript churn **${id}**: run \`pnpm exec wk run get-task '{"taskId":"${id}"}'\` and read evidence metadata before synthesizing.\n\n`
+      : `List rows with \`pnpm exec wk run list-tasks '{"status":"research","type":"transcript_churn"}'\` and work them one at a time.\n\n`;
+
+  return (
+    "Run **Transcript churn research** for this workspace (Workflow Cannon dashboard, command palette, or Cursor slash **`" +
+    RESEARCH_CHURN_SLASH_TEXT +
+    "`**).\n\n" +
+    focus +
+    "Attach **`.ai/playbooks/transcript-churn-research.md`** (playbook id **`transcript-churn-research`**).\n\n" +
+    "After investigation, promote with **`pnpm exec wk run synthesize-transcript-churn`** per **`.ai/AGENT-CLI-MAP.md`** (JSON **`policyApproval`** and **`expectedPlanningGeneration`** when policy **`require`**). " +
+    "To abandon: **`run-transition`** **`reject`** from **`research`** → **`cancelled`**.\n\n" +
+    "Do not hand-edit kit-owned stores for type/status promotion."
   );
 }
 

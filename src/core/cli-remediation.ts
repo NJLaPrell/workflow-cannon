@@ -11,7 +11,8 @@ export const CLI_REMEDIATION_INSTRUCTIONS = {
   createWishlist: "src/modules/task-engine/instructions/create-wishlist.md",
   archiveTask: "src/modules/task-engine/instructions/archive-task.md",
   addDependency: "src/modules/task-engine/instructions/add-dependency.md",
-  generateRecommendations: "src/modules/improvement/instructions/generate-recommendations.md"
+  generateRecommendations: "src/modules/improvement/instructions/generate-recommendations.md",
+  synthesizeTranscriptChurn: "src/modules/task-engine/instructions/synthesize-transcript-churn.md"
 } as const;
 
 export const CLI_REMEDIATION_DOCS = {

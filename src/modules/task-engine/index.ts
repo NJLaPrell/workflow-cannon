@@ -51,8 +51,7 @@ export { SqliteDualPlanningStore } from "./persistence/sqlite-dual-planning.js";
 export {
   getTaskPersistenceBackend,
   planningSqliteDatabaseRelativePath,
-  planningTaskStoreRelativePath,
-  planningWishlistStoreRelativePath
+  planningTaskStoreRelativePath
 } from "./planning-config.js";
 
 export { taskEngineModule } from "./task-engine-internal.js";

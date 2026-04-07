@@ -10,4 +10,4 @@ workspace-kit run get-kit-persistence-map '{}'
 
 ## Response
 
-Returns `data` with `schemaVersion`, `unifiedSqliteRelativePath`, `planning`, `legacyJsonImportOnly`, `workspaceModuleState`, and `legacySidecarJsonFiles`.
+Returns `data` with `schemaVersion`, `unifiedSqliteRelativePath`, `planning`, `legacyJsonImportOnly` (task JSON path for **`migrate-task-persistence`** only), `workspaceModuleState`, and `legacySidecarJsonFiles`.

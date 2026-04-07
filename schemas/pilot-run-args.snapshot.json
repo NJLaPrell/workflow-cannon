@@ -33,12 +33,12 @@
     "list-tasks",
     "list-wishlist",
     "migrate-task-persistence",
-    "migrate-wishlist-intake",
     "queue-git-alignment",
     "queue-health",
     "remove-dependency",
     "replay-queue-snapshot",
     "run-transition",
+    "synthesize-transcript-churn",
     "update-task",
     "update-wishlist",
     "update-workspace-phase-snapshot"
@@ -427,10 +427,6 @@
       "type": "object",
       "additionalProperties": true
     },
-    "migrate-wishlist-intake": {
-      "type": "object",
-      "additionalProperties": true
-    },
     "queue-git-alignment": {
       "type": "object"
     },
@@ -472,6 +468,41 @@
         },
         "action": {
           "type": "string"
+        },
+        "policyApproval": {
+          "type": "object"
+        },
+        "expectedPlanningGeneration": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            }
+          ]
+        },
+        "actor": {
+          "type": "string"
+        },
+        "config": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": true
+    },
+    "synthesize-transcript-churn": {
+      "type": "object",
+      "required": ["taskId", "synthesis"],
+      "properties": {
+        "taskId": {
+          "type": "string",
+          "pattern": "^T[0-9]+$"
+        },
+        "synthesis": {
+          "type": "object"
         },
         "policyApproval": {
           "type": "object"

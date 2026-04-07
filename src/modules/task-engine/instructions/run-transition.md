@@ -21,6 +21,7 @@ workspace-kit run run-transition '{"taskId":"T184","action":"start","policyAppro
 
 | Current State | Allowed Actions |
 | --- | --- |
+| `research` | `reject` → cancelled (transcript churn intake; promotion to **`improvement` / `proposed`** uses **`synthesize-transcript-churn`**, not this table) |
 | `proposed` | `accept` → ready, `reject` → cancelled |
 | `ready` | `demote` → proposed, `start` → in_progress, `block` → blocked, `cancel` → cancelled |
 | `in_progress` | `complete` → completed, `block` → blocked, `pause` → ready |

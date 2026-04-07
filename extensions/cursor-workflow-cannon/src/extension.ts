@@ -7,7 +7,11 @@ import { ConfigViewProvider } from "./views/config/ConfigViewProvider.js";
 import { prefillCursorChat } from "./cursor-chat-prefill.js";
 import { buildTaskDetailMarkdown } from "./task-detail-markdown.js";
 import { buildWishlistIntakeAgentPrompt } from "./wishlist-chat-prompt.js";
-import { buildImprovementTriagePrompt, buildTaskToPhaseBranchPrompt } from "./playbook-chat-prompts.js";
+import {
+  buildImprovementTriagePrompt,
+  buildTaskToPhaseBranchPrompt,
+  buildTranscriptChurnResearchPrompt
+} from "./playbook-chat-prompts.js";
 import { confirmAndRunTransition } from "./run-transition-with-approval.js";
 function readWorkflowCannonNodeSetting(): string | undefined {
   return vscode.workspace.getConfiguration("workflowCannon").get<string>("nodeExecutable")?.trim() || undefined;
@@ -270,6 +274,11 @@ export function activate(context: vscode.ExtensionContext): void {
       const id = typeof taskId === "string" ? taskId.trim() : "";
       const prompt = buildTaskToPhaseBranchPrompt(id.length > 0 ? { taskId: id } : undefined);
       await prefillCursorChat(prompt);
+    }),
+    vscode.commands.registerCommand("workflowCannon.chat.prefillTranscriptChurnResearch", async (taskId?: string) => {
+      const id = typeof taskId === "string" ? taskId.trim() : "";
+      const prompt = buildTranscriptChurnResearchPrompt(id.length > 0 ? { taskId: id } : undefined);
+      await prefillCursorChat(prompt, { newChat: true });
     })
   );
 }

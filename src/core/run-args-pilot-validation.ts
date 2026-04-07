@@ -136,6 +136,8 @@ function instructionPathForCommand(commandName: string): string {
   switch (commandName) {
     case "run-transition":
       return CLI_REMEDIATION_INSTRUCTIONS.runTransition;
+    case "synthesize-transcript-churn":
+      return CLI_REMEDIATION_INSTRUCTIONS.synthesizeTranscriptChurn;
     case "create-task":
     case "create-task-from-plan":
       return CLI_REMEDIATION_INSTRUCTIONS.createTask;

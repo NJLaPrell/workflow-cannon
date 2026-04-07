@@ -1,11 +1,6 @@
-import fs from "node:fs/promises";
-import path from "node:path";
-import crypto from "node:crypto";
 import type { WishlistItem, WishlistStoreDocument } from "../wishlist/wishlist-types.js";
 import { TaskEngineError } from "../transitions.js";
 import type { SqliteDualPlanningStore } from "./sqlite-dual-planning.js";
-
-export const DEFAULT_WISHLIST_PATH = ".workspace-kit/wishlist/state.json";
 
 function emptyWishlistDoc(): WishlistStoreDocument {
   return {
@@ -28,59 +23,6 @@ export class WishlistStore {
   constructor(persistence: WishlistStorePersistence) {
     this.persistence = persistence;
     this.document = emptyWishlistDoc();
-  }
-
-  static forJsonFile(workspacePath: string, storeRelativePath?: string): WishlistStore {
-    const filePath = path.resolve(workspacePath, storeRelativePath ?? DEFAULT_WISHLIST_PATH);
-    return new WishlistStore({
-      pathLabel: filePath,
-      loadDocument: async () => {
-        try {
-          const raw = await fs.readFile(filePath, "utf8");
-          const parsed = JSON.parse(raw) as WishlistStoreDocument;
-          if (parsed.schemaVersion !== 1) {
-            throw new TaskEngineError(
-              "storage-read-error",
-              `Unsupported wishlist schema version: ${parsed.schemaVersion}`
-            );
-          }
-          if (!Array.isArray(parsed.items)) {
-            throw new TaskEngineError("storage-read-error", "Wishlist store 'items' must be an array");
-          }
-          return parsed;
-        } catch (err) {
-          if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-            return emptyWishlistDoc();
-          }
-          if (err instanceof TaskEngineError) {
-            throw err;
-          }
-          throw new TaskEngineError(
-            "storage-read-error",
-            `Failed to read wishlist store: ${(err as Error).message}`
-          );
-        }
-      },
-      saveDocument: async (doc) => {
-        const dir = path.dirname(filePath);
-        const tmpPath = `${filePath}.${crypto.randomUUID().slice(0, 8)}.tmp`;
-        try {
-          await fs.mkdir(dir, { recursive: true });
-          await fs.writeFile(tmpPath, JSON.stringify(doc, null, 2) + "\n", "utf8");
-          await fs.rename(tmpPath, filePath);
-        } catch (err) {
-          try {
-            await fs.unlink(tmpPath);
-          } catch {
-            /* cleanup best-effort */
-          }
-          throw new TaskEngineError(
-            "storage-write-error",
-            `Failed to write wishlist store: ${(err as Error).message}`
-          );
-        }
-      }
-    });
   }
 
   static forSqliteDual(dual: SqliteDualPlanningStore): WishlistStore {

@@ -1,4 +1,5 @@
 export type TaskStatus =
+  | "research"
   | "proposed"
   | "ready"
   | "in_progress"
@@ -139,6 +140,7 @@ export type NextActionSuggestion = {
   readyQueue: TaskEntity[];
   suggestedNext: TaskEntity | null;
   stateSummary: {
+    research: number;
     proposed: number;
     ready: number;
     in_progress: number;

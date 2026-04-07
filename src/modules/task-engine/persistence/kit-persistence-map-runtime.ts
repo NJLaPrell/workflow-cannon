@@ -1,18 +1,12 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
-import {
-  planningSqliteDatabaseRelativePath,
-  planningTaskStoreRelativePath,
-  planningWishlistStoreRelativePath
-} from "../planning-config.js";
+import { planningSqliteDatabaseRelativePath, planningTaskStoreRelativePath } from "../planning-config.js";
 import { DEFAULT_TASK_STORE_PATH } from "./store.js";
-import { DEFAULT_WISHLIST_PATH } from "./wishlist-store.js";
 
 const PERSISTENCE_MAP_SCHEMA_VERSION = 1 as const;
 
-/** Read-only JSON map of where kit durable state lives (SQLite runtime; legacy JSON paths for migration). */
+/** Read-only JSON map of where kit durable state lives (SQLite-only runtime; legacy task JSON path for import only). */
 export function runGetKitPersistenceMap(ctx: ModuleLifecycleContext): ModuleCommandResult {
   const taskRel = planningTaskStoreRelativePath(ctx) ?? DEFAULT_TASK_STORE_PATH;
-  const wishRel = planningWishlistStoreRelativePath(ctx) ?? DEFAULT_WISHLIST_PATH;
   const dbRel = planningSqliteDatabaseRelativePath(ctx);
   return {
     ok: true,
@@ -29,12 +23,11 @@ export function runGetKitPersistenceMap(ctx: ModuleLifecycleContext): ModuleComm
         relationalFlagColumn: "relational_tasks",
         envelopeLogColumns: ["transition_log_json", "mutation_log_json"],
         note:
-          "When relational_tasks=0, task bodies and logs live in task_store_json. After workspace-kit run migrate-task-persistence sqlite-blob-to-relational, task bodies live in task_engine_tasks; logs also in envelope columns; task_store_json mirrors logs with empty tasks array. Legacy wishlist_store_json may exist until migrate-wishlist-intake."
+          "When relational_tasks=0, task bodies and logs live in task_store_json. After workspace-kit run migrate-task-persistence sqlite-blob-to-relational, task bodies live in task_engine_tasks; logs also in envelope columns; task_store_json mirrors logs with empty tasks array. Any legacy wishlist_store_json column is collapsed into wishlist_intake tasks on planning store open."
       },
       legacyJsonImportOnly: {
         taskStoreRelativePath: taskRel,
-        wishlistStoreRelativePath: wishRel,
-        note: "Used by migrate-task-persistence json-to-sqlite / json-to-unified-sqlite only; not read at runtime."
+        note: "Used by migrate-task-persistence json-to-sqlite / json-to-unified-sqlite for legacy task JSON only; wishlist intake lives in SQLite task rows."
       },
       workspaceModuleState: {
         table: "workspace_module_state",

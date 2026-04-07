@@ -2,14 +2,34 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   GENERATE_FEATURES_SLASH_TEXT,
+  RESEARCH_CHURN_SLASH_TEXT,
   buildGenerateFeaturesPrompt,
   buildImprovementTriagePrompt,
   buildPlanningInterviewPrompt,
-  buildTaskToPhaseBranchPrompt
+  buildTaskToPhaseBranchPrompt,
+  buildTranscriptChurnResearchPrompt
 } from "../dist/playbook-chat-prompts.js";
 
 test("GENERATE_FEATURES_SLASH_TEXT is the generate-features slash token", () => {
   assert.equal(GENERATE_FEATURES_SLASH_TEXT, "/generate-features");
+});
+
+test("RESEARCH_CHURN_SLASH_TEXT is the research-churn slash token", () => {
+  assert.equal(RESEARCH_CHURN_SLASH_TEXT, "/research-churn");
+});
+
+test("buildTranscriptChurnResearchPrompt references playbook, slash, and synthesize command", () => {
+  const p = buildTranscriptChurnResearchPrompt();
+  assert.match(p, /transcript-churn-research\.md/);
+  assert.match(p, /synthesize-transcript-churn/);
+  assert.match(p, /\/research-churn/);
+  assert.doesNotMatch(p, /research-church/);
+});
+
+test("buildTranscriptChurnResearchPrompt focuses task id when provided", () => {
+  const p = buildTranscriptChurnResearchPrompt({ taskId: "T404" });
+  assert.match(p, /\*\*T404\*\*/);
+  assert.match(p, /get-task/);
 });
 
 test("buildGenerateFeaturesPrompt references slash and wishlist intake playbook", () => {

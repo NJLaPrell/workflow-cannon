@@ -151,6 +151,7 @@ Optional JSON shaping: pass **`responseTemplateId`** and/or plain-English in **`
 | Intent | Invocation | `operationId` | Evidence |
 | --- | --- | --- | --- |
 | Transition task status | `workspace-kit run run-transition '<json>'` | `tasks.run-transition` | Transition record in command JSON output; task store update |
+| Promote transcript churn after research | `workspace-kit run synthesize-transcript-churn '<json>'` | `tasks.synthesize-transcript-churn` | Task becomes **`improvement` / `proposed`**; evidence row appended; prior forensics preserved under **`metadata.researchForensicsSnapshot`** |
 
 **Copy-paste (start work):**
 
@@ -173,6 +174,14 @@ workspace-kit run run-transition '{"taskId":"T285","action":"complete","policyAp
 ```
 
 See `src/modules/task-engine/instructions/run-transition.md` for allowed `action` values by state.
+
+**Copy-paste (transcript churn → improvement, after you investigated the row):**
+
+```bash
+workspace-kit run synthesize-transcript-churn '{"taskId":"T301","synthesis":{"approach":"…","technicalScope":["…"],"acceptanceCriteria":["…"],"metadata":{"issue":"…","supportingReasoning":"…"}},"policyApproval":{"confirmed":true,"rationale":"synthesized from transcripts"}}'
+```
+
+Shape: `src/modules/task-engine/instructions/synthesize-transcript-churn.md`. When **`tasks.planningGenerationPolicy`** is **`require`**, add **`expectedPlanningGeneration`** from your last read.
 
 ### GitHub-native runner (Phase 55)
 
@@ -345,7 +354,7 @@ workspace-kit run list-features '{"componentId":"task-engine-queue"}'
 
 **Task id spaces** (execution vs wishlist intake vs **`type: "improvement"`** — all use **`T###`** today; legacy **`imp-*`** may remain in older stores): [`runbooks/wishlist-workflow.md`](./runbooks/wishlist-workflow.md).
 
-**Wishlist intake operator ladder:** end-to-end playbook [`.ai/playbooks/wishlist-intake-to-execution.md`](./playbooks/wishlist-intake-to-execution.md); model + commands in [`.ai/runbooks/wishlist-workflow.md`](./runbooks/wishlist-workflow.md) (**`list-wishlist`**, **`get-wishlist`**, **`convert-wishlist`**, **`migrate-wishlist-intake`**). Wishlist rows are **not** in default **`get-next-actions`** / **`list-tasks`** scopes — use wishlist commands or **`dashboard-summary`** **`wishlist.*`** counts.
+**Wishlist intake operator ladder:** end-to-end playbook [`.ai/playbooks/wishlist-intake-to-execution.md`](./playbooks/wishlist-intake-to-execution.md); model + commands in [`.ai/runbooks/wishlist-workflow.md`](./runbooks/wishlist-workflow.md) (**`list-wishlist`**, **`get-wishlist`**, **`convert-wishlist`**). Wishlist rows are **not** in default **`get-next-actions`** / **`list-tasks`** scopes — use wishlist commands or **`dashboard-summary`** **`wishlist.*`** counts.
 
 Instruction: `src/modules/task-engine/instructions/queue-health.md`. Related runbook: [`runbooks/agent-task-engine-ergonomics.md`](./runbooks/agent-task-engine-ergonomics.md).
 
@@ -378,7 +387,6 @@ workspace-kit run build-plan '{"planningType":"new-feature","answers":{"featureG
 workspace-kit run build-plan '{"planningType":"new-feature","answers":{"featureGoal":"...","placement":"CLI","technology":"TypeScript","targetAudience":"AI Agent Operators","problemStatement":"...","expectedOutcome":"...","impact":"...","constraints":"...","successSignals":"..."},"finalize":true,"createWishlist":true}'
 workspace-kit run list-wishlist '{}'
 workspace-kit run get-wishlist '{"wishlistId":"T42"}'
-workspace-kit run migrate-wishlist-intake '{"dryRun":true}'
 workspace-kit run explain-config '{}'
 workspace-kit run resolve-config '{}'
 workspace-kit run resolve-agent-guidance '{}'
@@ -400,7 +408,7 @@ workspace-kit doctor
 
 **Agent behavior** (`list-behavior-profiles`, `get-behavior-profile`, `resolve-behavior-profile`, `set-active-behavior-profile`, `create-behavior-profile`, `update-behavior-profile`, `delete-behavior-profile`, `diff-behavior-profiles`, `explain-behavior-profiles`, `interview-behavior-profile`) are **Tier C**: advisory interaction posture only; **subordinate** to PRINCIPLES and policy. They persist under `.workspace-kit/agent-behavior/` (JSON) or unified SQLite (`module_id` `agent-behavior`) when `tasks.persistenceBackend` is `sqlite`.
 
-**Wishlist mutations** (`create-wishlist`, `update-wishlist`, `convert-wishlist`), **`migrate-task-persistence`**, and **`migrate-wishlist-intake`** are Tier C by default (same as `create-task`): they persist workspace state (JSON files and/or the configured SQLite planning DB under `tasks.sqliteDatabaseRelativePath`) but do not use `policyApproval` unless listed in `policy.extraSensitiveModuleCommands`. **`update-workspace-phase-snapshot`** is Tier C and writes only the two phase scalar lines in **`docs/maintainers/data/workspace-kit-status.yaml`** (see **`.ai/agent-source-of-truth-order.md`** and task-engine instructions for phase snapshot).
+**Wishlist mutations** (`create-wishlist`, `update-wishlist`, `convert-wishlist`) and **`migrate-task-persistence`** are Tier C by default (same as `create-task`): they persist workspace state (legacy task JSON import and/or the configured SQLite planning DB under `tasks.sqliteDatabaseRelativePath`) but do not use `policyApproval` unless listed in `policy.extraSensitiveModuleCommands`. **`update-workspace-phase-snapshot`** is Tier C and writes only the two phase scalar lines in **`docs/maintainers/data/workspace-kit-status.yaml`** (see **`.ai/agent-source-of-truth-order.md`** and task-engine instructions for phase snapshot).
 
 Instruction paths: run `workspace-kit run` with no subcommand to list commands; each line lists `(moduleId)` and points to the module’s instruction file pattern above.
 

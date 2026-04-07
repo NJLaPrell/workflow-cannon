@@ -91,6 +91,42 @@ test("Phase3: generate-recommendations, review-item, query-lineage", async () =>
   assert.ok(gen.data?.created?.length >= 1);
 
   const taskId = gen.data.created[0];
+  const peek = await router.execute("get-task", { taskId }, ctx);
+  assert.equal(peek.ok, true, peek.message);
+  assert.equal(peek.data?.task?.type, "transcript_churn");
+  assert.equal(peek.data?.task?.status, "research", "transcript-sourced rows start in research");
+
+  const synth = await router.execute(
+    "synthesize-transcript-churn",
+    {
+      taskId,
+      synthesis: {
+        approach: "Fix the broken thing users hit in transcripts.",
+        technicalScope: ["Identify root cause", "Ship a fix"],
+        acceptanceCriteria: ["No repeat of the reported error in the happy path"],
+        metadata: {
+          issue: "Users see a recurring error in agent transcripts; synthesize into a concrete improvement.",
+          supportingReasoning: "Single transcript line mentions broken/error; promoted after manual review stub."
+        }
+      },
+      actor: "tester@example.com"
+    },
+    ctx
+  );
+  assert.equal(synth.ok, true, synth.message);
+
+  const afterSynth = await router.execute("get-task", { taskId }, ctx);
+  assert.equal(afterSynth.ok, true, afterSynth.message);
+  assert.equal(afterSynth.data?.task?.type, "improvement");
+  assert.equal(afterSynth.data?.task?.status, "proposed");
+
+  const promote = await router.execute(
+    "run-transition",
+    { taskId, action: "accept", actor: "tester@example.com" },
+    ctx
+  );
+  assert.equal(promote.ok, true, promote.message);
+
   const lineage1 = await router.execute("query-lineage", { taskId }, ctx);
   assert.equal(lineage1.ok, true);
   assert.ok(lineage1.data?.byType?.rec?.length >= 1);

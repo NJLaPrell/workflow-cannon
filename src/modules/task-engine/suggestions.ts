@@ -89,6 +89,7 @@ function partitionReadyByDependencies(tasks: TaskEntity[]): {
 
 function buildStateSummary(tasks: TaskEntity[]): NextActionSuggestion["stateSummary"] {
   const counts: Record<TaskStatus, number> = {
+    research: 0,
     proposed: 0,
     ready: 0,
     in_progress: 0,
