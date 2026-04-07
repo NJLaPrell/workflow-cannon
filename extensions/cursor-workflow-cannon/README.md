@@ -87,6 +87,8 @@ pnpm --filter cursor-workflow-cannon test
 - `Workflow Cannon: Prefill Chat — Task to Phase Branch Playbook`
 ### Chat prefill (Cursor)
 
+**Phase closeout:** operators can invoke Cursor slash **`/complete-phase <N> [approve-release]`** — spec: **`.cursor/commands/complete-phase.md`** (publish steps require **`approve-release`** + **`.ai/RELEASING.md`** gates; **`policyApproval`** JSON still applies to **`wk run`**).
+
 The extension seeds Cursor Composer using **`vscode.commands.executeCommand("deeplink.prompt.prefill", { text })`** (same entry Cursor uses internally). If that command is missing or fails, it tries the **`cursor://anysphere.cursor-deeplink/prompt?text=…`** URI, then copies the prompt to the clipboard with a warning. Very long prompts may hit URI length limits — trim in-session or paste from clipboard. Standard VS Code (non-Cursor) may not register the deeplink command; clipboard fallback is expected.
 
 Dashboard **Generate Features** opens a **new** Agent/Composer chat when Cursor exposes a known **`composer.newAgentChat`** (or alias) command, then prefills the literal **`/generate-features`** string so submitting matches the slash command.
