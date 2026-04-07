@@ -54,6 +54,8 @@ When **all** phase tasks that belong on **`release/phase-<N>`** are **`completed
 
 Summarize scope, risk, validation evidence, and migration notes; obtain **explicit** confirmation to proceed with publish.
 
+Slash tokens such as **`approve-release`** (e.g. on **`/complete-phase`**) and chat copy are **operator intent only**; they do **not** satisfy Tier A/B **`workspace-kit run`** approval or waive the publish gate — see **`.ai/POLICY-APPROVAL.md`** → **Operator slash / chat vs Tier A/B `wk run`**.
+
 ## 5) Release procedure (execute per RELEASING)
 
 1. **Merge `release/phase-<N>` into `main`** via PR (or equivalent reviewed merge) using the repo’s preferred strategy, consistent with **maintainer-delivery-loop**. **`main`** should be the tip you tag unless policy says otherwise.
