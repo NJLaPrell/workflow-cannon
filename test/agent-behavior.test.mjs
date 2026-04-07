@@ -196,3 +196,46 @@ test("interview-behavior-profile status and start guard + default finalize id", 
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test("sync-effective-behavior-cursor-rule writes advisory mdc", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "wk-beh-sync-"));
+  try {
+    const registry = new ModuleRegistry([workspaceConfigModule, agentBehaviorModule]);
+    const router = new ModuleCommandRouter(registry);
+    const ctx = {
+      runtimeVersion: "0.23.0",
+      workspacePath: dir,
+      moduleRegistry: registry,
+      effectiveConfig: {
+        tasks: {
+          persistenceBackend: "sqlite",
+          sqliteDatabaseRelativePath: ".workspace-kit/tasks/workspace-kit.db"
+        }
+      }
+    };
+
+    const r = await router.execute("sync-effective-behavior-cursor-rule", {}, ctx);
+    assert.equal(r.ok, true, r.message);
+    assert.equal(r.code, "behavior-cursor-rule-synced");
+    const rel = String(r.data?.relativePath ?? "");
+    assert.ok(rel.endsWith(".mdc"));
+    const abs = path.join(dir, rel);
+    const body = await readFile(abs, "utf8");
+    assert.match(body, /alwaysApply:\s*true/);
+    assert.match(body, /Effective collaboration profile/);
+
+    const dry = await router.execute("sync-effective-behavior-cursor-rule", { dryRun: true }, ctx);
+    assert.equal(dry.ok, true);
+    assert.equal(dry.code, "behavior-cursor-rule-sync-preview");
+
+    const bad = await router.execute(
+      "sync-effective-behavior-cursor-rule",
+      { outputPath: ".cursor/rules/../../../tmp/evil.mdc" },
+      ctx
+    );
+    assert.equal(bad.ok, false);
+    assert.equal(bad.code, "invalid-args");
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});

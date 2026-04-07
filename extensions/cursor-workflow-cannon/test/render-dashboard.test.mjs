@@ -62,6 +62,8 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /dash-quick-actions/);
   assert.match(html, /data-wc-action="add-wishlist-item"/);
   assert.match(html, />Add wishlist item<\/button>/);
+  assert.match(html, /data-wc-action="collaboration-hub"/);
+  assert.match(html, />Collaboration profiles<\/button>/);
   assert.match(html, /data-wc-action="generate-features-chat"/);
   assert.match(html, />Generate Features<\/button>/);
   const tasksHeading = html.indexOf("<p><b>Tasks</b></p>");
@@ -456,7 +458,11 @@ test("renderDashboardRootInnerHtml shows readyQueueBreakdown when present", () =
 test("buildPhaseCompleteReleaseChatPrompt matches phase-closeout template", () => {
   assert.equal(
     buildPhaseCompleteReleaseChatPrompt("Phase 64"),
-    "Read the project documentation and complete all Phase 64 tasks, then build, publish, and release Phase 64. I approve."
+    "The operator added this context: **Phase 64**\n\n" +
+      "Follow **`.ai/playbooks/phase-closeout-and-release.md`** (playbook id **`phase-closeout-and-release`**).\n\n" +
+      "Treat **`release/phase-<N>`** as the phase integration branch; phase closeout merges that train to **`main`** and cuts a release per **`.ai/RELEASING.md`** (human depth: **`docs/maintainers/RELEASING.md`** when editing policy).\n\n" +
+      "Use JSON **`policyApproval`** on policy-sensitive **`workspace-kit run`** commands (**`.ai/POLICY-APPROVAL.md`**).\n\n" +
+      "Optional: **`.cursor/rules/playbook-phase-closeout.mdc`**."
   );
 });
 

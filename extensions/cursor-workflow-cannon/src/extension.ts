@@ -143,9 +143,25 @@ export function activate(context: vscode.ExtensionContext): void {
       statusBar.tooltip = "Workflow Cannon ready queue count";
       statusBar.show();
     };
+    let behaviorRuleSyncTimer: ReturnType<typeof setTimeout> | undefined;
+    const scheduleEffectiveBehaviorRuleSync = (): void => {
+      if (behaviorRuleSyncTimer) {
+        clearTimeout(behaviorRuleSyncTimer);
+      }
+      behaviorRuleSyncTimer = setTimeout(() => {
+        behaviorRuleSyncTimer = undefined;
+        void client.run("sync-effective-behavior-cursor-rule", {}).then((r) => {
+          if (!r.ok && process.env.WORKSPACE_KIT_DEBUG_EXTENSION === "1") {
+            // eslint-disable-next-line no-console
+            console.warn("[workflow-cannon] sync-effective-behavior-cursor-rule:", r.code, r.message);
+          }
+        });
+      }, 1500);
+    };
     void updateStatusBar();
     onKitStateChanged(() => {
       void updateStatusBar();
+      scheduleEffectiveBehaviorRuleSync();
     });
     context.subscriptions.push(statusBar);
   }

@@ -116,6 +116,13 @@
     "policySensitivity": "non-sensitive"
   },
   {
+    "moduleId": "agent-behavior",
+    "name": "sync-effective-behavior-cursor-rule",
+    "file": "sync-effective-behavior-cursor-rule.md",
+    "description": "Render effective role × temperament into an advisory Cursor rule under .cursor/rules.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
     "moduleId": "task-engine",
     "name": "run-transition",
     "file": "run-transition.md",
