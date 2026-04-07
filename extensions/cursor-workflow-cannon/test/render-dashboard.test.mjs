@@ -466,9 +466,11 @@ test("buildPhaseCompleteReleaseChatPrompt matches phase-closeout template", () =
     buildPhaseCompleteReleaseChatPrompt("Phase 64"),
     "The operator added this context: **Phase 64**\n\n" +
       "Follow **`.ai/playbooks/phase-closeout-and-release.md`** (playbook id **`phase-closeout-and-release`**).\n\n" +
-      "Treat **`release/phase-<N>`** as the phase integration branch; phase closeout merges that train to **`main`** and cuts a release per **`.ai/RELEASING.md`** (human depth: **`docs/maintainers/RELEASING.md`** when editing policy).\n\n" +
-      "Use JSON **`policyApproval`** on policy-sensitive **`workspace-kit run`** commands (**`.ai/POLICY-APPROVAL.md`**).\n\n" +
-      "At **§7 Phase delivery summary**, paste the template with **every** token expanded from CLI / task-store / maintainer evidence — no literal **`{feature}`**-style leftovers (see playbook evidence rules for **`{featureMarkdownBullets}`** and **`{optionalNotesBlockOrEmpty}`**).\n\n" +
+      "Operator entrypoint: Cursor slash **`/complete-phase <N> [approve-release]`** — **`.cursor/commands/complete-phase.md`**. " +
+      "Include **`approve-release`** only when explicitly authorizing publish/tag/npm after **`main`** merge; **without it, stop before publish automation** (**`.ai/RELEASING.md`**, playbook §4).\n\n" +
+      "Treat **`release/phase-<N>`** as the phase integration branch; validate there, merge **`release/phase-<N>`** → **`main`**, then cut the release per **`.ai/RELEASING.md`**.\n\n" +
+      "**Slash and chat express intent only.** Tier A/B **`workspace-kit run`** still requires JSON **`policyApproval`** on the **third** CLI argument (**`.ai/POLICY-APPROVAL.md`**, **`.ai/AGENT-CLI-MAP.md`**).\n\n" +
+      "At **§7 Phase delivery summary**, paste the template with **every** token expanded — evidence rules: **`{featureMarkdownBullets}`**, **`{optionalNotesBlockOrEmpty}`** (no stale **`{feature}`** placeholders).\n\n" +
       "Optional: **`.cursor/rules/playbook-phase-closeout.mdc`**."
   );
 });
