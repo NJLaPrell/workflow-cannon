@@ -453,7 +453,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
 <body>
   <div id="root">${rootInnerHtml}</div>
   <footer class="dash-footer">
-    <button type="button" id="btn" class="dash-refresh-btn" title="Reload dashboard from workspace-kit">Refresh</button>
+    <button type="button" id="btn" class="dash-refresh-btn" title="Refetch dashboard-summary and list-approval-queue now. The panel also reloads when you switch back to it, when kit-owned files change, and about every 45s while visible.">Refresh</button>
   </footer>
   <script>${bootstrap}</script>
 </body>
