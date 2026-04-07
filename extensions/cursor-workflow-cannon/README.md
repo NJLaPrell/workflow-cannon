@@ -38,7 +38,7 @@ F5 typical `launch.json` (workspace root):
 
 Open the **Workflow Cannon** activity bar to use **Dashboard** (webview — task queue rollups + actions) and **Config** (webview).
 
-**Tasks tree / drag-and-drop** were removed in extension **0.1.6** — use dashboard **Detail** on a task row (or palette **Show Task Detail**) and **`workspace-kit run run-transition`** / **`list-tasks`** from a terminal for transitions. Proposed-row **Accept**/**Chat** on the dashboard is unchanged.
+**Tasks tree / drag-and-drop** were removed in extension **0.1.6** — use dashboard **View** on a task row (or palette **Show Task Detail**) and **`workspace-kit run run-transition`** / **`list-tasks`** from a terminal for transitions. Proposed-row **Accept**/**Chat** on the dashboard is unchanged.
 
 ## CLI bridge
 

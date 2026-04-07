@@ -48,9 +48,9 @@ function renderTaskRowList(items: unknown, emptyMessage = "No ready tasks."): st
           label +
           "</span>" +
           (id.length > 0
-            ? '<button type="button" class="dash-row-action" data-wc-action="task-detail" data-task-id="' +
+            ? '<button type="button" class="dash-row-action dash-row-action-tertiary" data-wc-action="task-detail" data-task-id="' +
               idAttr +
-              '" title="Open task detail (markdown)">Detail</button>'
+              '" title="Open task view (markdown)">View</button>'
             : "") +
           "</div>"
         );
@@ -150,9 +150,9 @@ function renderTranscriptChurnResearchRow(row: { id?: unknown; title?: unknown; 
     label +
     "</span>" +
     '<span class="dash-row-actions">' +
-    '<button type="button" class="dash-row-action" data-wc-action="task-detail" data-task-id="' +
+    '<button type="button" class="dash-row-action dash-row-action-tertiary" data-wc-action="task-detail" data-task-id="' +
     idAttr +
-    '" title="Open task detail (markdown)">Detail</button>' +
+    '" title="Open task view (markdown)">View</button>' +
     '<button type="button" class="dash-row-action dash-row-action-primary" data-wc-action="transcript-churn-research-chat" data-task-id="' +
     idAttr +
     '" title="Open transcript churn research playbook in chat">Research</button>' +
@@ -238,9 +238,9 @@ function renderBlockedList(items: unknown): string {
           label +
           "</span>" +
           (tid.length > 0
-            ? '<button type="button" class="dash-row-action" data-wc-action="task-detail" data-task-id="' +
+            ? '<button type="button" class="dash-row-action dash-row-action-tertiary" data-wc-action="task-detail" data-task-id="' +
               idAttr +
-              '" title="Open task detail (markdown)">Detail</button>'
+              '" title="Open task view (markdown)">View</button>'
             : "") +
           "</div>"
         );
@@ -1059,9 +1059,9 @@ function renderApprovalsDiscoverabilitySection(listApprovalQueueResult: unknown 
             label +
             "</span>" +
             (id.length > 0
-              ? '<button type="button" class="dash-row-action" data-wc-action="task-detail" data-task-id="' +
+              ? '<button type="button" class="dash-row-action dash-row-action-tertiary" data-wc-action="task-detail" data-task-id="' +
                 idAttr +
-                '" title="Open task detail (markdown)">Detail</button>'
+                '" title="Open task view (markdown)">View</button>'
               : "") +
             "</div>"
           );
