@@ -51,6 +51,7 @@
         "queue-git-alignment",
         "queue-health",
         "replay-queue-snapshot",
+        "synthesize-transcript-churn",
         "explain-task-engine-model",
         "export-feature-taxonomy-json",
         "migrate-task-persistence",
@@ -93,6 +94,7 @@
         "queue-git-alignment": { "$ref": "#/$defs/contractBase" },
         "queue-health": { "$ref": "#/$defs/contractQueueHealth" },
         "replay-queue-snapshot": { "$ref": "#/$defs/contractBase" },
+        "synthesize-transcript-churn": { "$ref": "#/$defs/contractSynthesizeTranscriptChurn" },
         "explain-task-engine-model": { "$ref": "#/$defs/contractExplainTaskEngineModel" },
         "export-feature-taxonomy-json": { "$ref": "#/$defs/contractBase" },
         "migrate-task-persistence": { "$ref": "#/$defs/contractMigrateTaskPersistence" },
@@ -693,6 +695,45 @@
             "responseData": {
               "type": "object",
               "required": ["schemaVersion", "scope", "canonicalPhase", "readyTaskSummaries", "summary"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractSynthesizeTranscriptChurn": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "required": ["taskId", "synthesis"],
+              "additionalProperties": true,
+              "properties": {
+                "taskId": {
+                  "type": "string",
+                  "pattern": "^T[0-9]+$"
+                },
+                "synthesis": {
+                  "type": "object"
+                },
+                "policyApproval": {
+                  "type": "object"
+                },
+                "expectedPlanningGeneration": {
+                  "oneOf": [
+                    { "type": "integer", "minimum": 0 },
+                    { "type": "string", "pattern": "^[0-9]+$" }
+                  ]
+                },
+                "actor": { "type": "string" },
+                "config": { "type": "object" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["task"],
               "additionalProperties": true
             }
           }

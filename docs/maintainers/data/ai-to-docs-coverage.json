@@ -31,6 +31,10 @@
       "output": "docs/maintainers/playbooks/task-to-phase-branch.md"
     },
     {
+      "source": ".ai/playbooks/transcript-churn-research.md",
+      "output": "docs/maintainers/playbooks/transcript-churn-research.md"
+    },
+    {
       "source": ".ai/playbooks/wishlist-intake-to-execution.md",
       "output": "docs/maintainers/playbooks/wishlist-intake-to-execution.md"
     },

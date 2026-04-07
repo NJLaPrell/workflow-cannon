@@ -16,12 +16,12 @@ Glossary: **`docs/maintainers/TERMS.md`** (**Wishlist**, **Execution Task**, **I
 
 1. **Playbook:** **`.ai/playbooks/wishlist-intake-to-execution.md`** — rank **`wishlist_intake`** items, confirm timing, pick **`phaseKey`**, run **`convert-wishlist`** with **`expectedPlanningGeneration`** when policy **`require`**.
 2. **This runbook** — id spaces, strict **`create-wishlist`** fields, **`convert-wishlist`** decomposition + **`tasks[]`** template.
-3. **Inventory / migration:** **`list-wishlist`**, **`get-wishlist`**, optional **`migrate-wishlist-intake`** when upgrading legacy **`.workspace-kit/wishlist/state.json`**.
+3. **Inventory:** **`list-wishlist`**, **`get-wishlist`** (SQLite **`wishlist_intake`** tasks only).
 4. **Surfaces:** wishlist rows are **not** in default **`get-next-actions`** / **`list-tasks`** scopes — use **`list-wishlist`** or **`dashboard-summary`** **`wishlist.*`** counts. Persistence map: **`pnpm exec wk run get-kit-persistence-map '{}'`**; depth: **`.ai/runbooks/task-persistence-operator.md`**.
 
 ---
 
-Wishlist **intake** captures high-level ideas before they become scheduled execution work. **New** intake is stored with the unified task store (default SQLite or JSON opt-out) as rows with **`type: "wishlist_intake"`** and **`T###`** ids. The standalone **`.workspace-kit/wishlist/state.json`** file is **legacy**; use **`migrate-wishlist-intake`** when upgrading old workspaces.
+Wishlist **intake** captures high-level ideas before they become scheduled execution work. **New** intake is stored in the unified planning SQLite as rows with **`type: "wishlist_intake"`** and **`T###`** ids.
 
 ## Intake (strict fields)
 

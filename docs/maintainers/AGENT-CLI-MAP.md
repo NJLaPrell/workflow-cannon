@@ -190,6 +190,7 @@ ADR: **`docs/maintainers/adrs/ADR-planning-generation-optimistic-concurrency.md`
 | Transcript ingest + recommendations | `workspace-kit run ingest-transcripts '<json>'` | `improvement.ingest-transcripts` | Always sensitive |
 | Approval queue decision | `workspace-kit run review-item '<json>'` | `approvals.review-item` | Always sensitive |
 | Backfill task↔feature junction | `workspace-kit run backfill-task-feature-links '<json>'` | `task-engine.backfill-task-feature-links` | Copies legacy **`features_json`** into **`task_engine_task_features`** |
+| Promote transcript churn after research | `workspace-kit run synthesize-transcript-churn '<json>'` | `tasks.synthesize-transcript-churn` | **`transcript_churn` / `research`** → **`improvement` / `proposed`**; pass **`expectedPlanningGeneration`** when policy **`require`** |
 | Export taxonomy JSON from registry | `workspace-kit run export-feature-taxonomy-json '<json>'` | `task-engine.export-feature-taxonomy-json` | Writes **`src/modules/documentation/data/feature-taxonomy.json`** |
 | Apply skill pack (non-preview) | `workspace-kit run apply-skill '<json>'` | `skills.apply-skill` | Sensitive unless `options.dryRun === true` (default preview is dry-run; see instruction file) |
 | Register subagent definition | `workspace-kit run register-subagent '<json>'` | `subagents.persist` | Declares id + explicit `allowedCommands` (no wildcards) |
@@ -245,6 +246,12 @@ workspace-kit run review-item '{"taskId":"imp-example","decision":"accept","acto
 ```bash
 workspace-kit run backfill-task-feature-links '{"dryRun":true}'
 workspace-kit run backfill-task-feature-links '{"policyApproval":{"confirmed":true,"rationale":"backfill task feature links"}}'
+```
+
+**Copy-paste — synthesize transcript churn → improvement (replace `expectedPlanningGeneration` when policy `require`):**
+
+```bash
+workspace-kit run synthesize-transcript-churn '{"taskId":"T301","synthesis":{"approach":"…","technicalScope":["…"],"acceptanceCriteria":["…"],"metadata":{"issue":"…","supportingReasoning":"…"}},"policyApproval":{"confirmed":true,"rationale":"synthesized from transcripts"}}'
 ```
 
 **Copy-paste — export taxonomy JSON from SQLite registry:**

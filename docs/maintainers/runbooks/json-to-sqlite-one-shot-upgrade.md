@@ -1,13 +1,13 @@
 <!-- GENERATED FROM .ai/runbooks/json-to-sqlite-one-shot-upgrade.md — edit that file; do not hand-edit this render (see docs/maintainers/adrs/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
 
-# One-shot upgrade: JSON task/wishlist stores → unified SQLite
+# One-shot upgrade: JSON task store → unified SQLite
 
-Use this runbook when **legacy JSON** task/wishlist files exist (for example **`.workspace-kit/tasks/state.json`**) and you want data in the default **SQLite** layout under **`tasks.sqliteDatabaseRelativePath`** (default **`.workspace-kit/tasks/workspace-kit.db`**). **v0.40+** rejects **`tasks.persistenceBackend: "json"`** — migrate first, then rely on sqlite-only runtime.
+Use this runbook when a **legacy JSON task file** exists (for example **`.workspace-kit/tasks/state.json`**) and you want data in the default **SQLite** layout under **`tasks.sqliteDatabaseRelativePath`** (default **`.workspace-kit/tasks/workspace-kit.db`**). **v0.40+** rejects **`tasks.persistenceBackend: "json"`** — migrate first, then rely on sqlite-only runtime. Wishlist intake is **SQLite task rows only** (no standalone wishlist JSON).
 
 ## Preconditions
 
 - **`workspace-kit doctor`** passes on the workspace (contracts + config), or you accept fixing config first.
-- Back up JSON files if unsure: **`tasks.storeRelativePath`** (default **`.workspace-kit/tasks/state.json`**) and **`tasks.wishlistStoreRelativePath`** (default **`.workspace-kit/wishlist/state.json`**).
+- Back up the task JSON if unsure: **`tasks.storeRelativePath`** (default **`.workspace-kit/tasks/state.json`**).
 
 ## Ordered steps
 
@@ -25,7 +25,7 @@ Use this runbook when **legacy JSON** task/wishlist files exist (for example **`
    workspace-kit run migrate-task-persistence '{"direction":"json-to-sqlite","policyApproval":{"confirmed":true,"rationale":"one-shot json to sqlite"}}'
    ```
 
-3. **Wishlist intake** (when upgrading from legacy SQLite dual-column wishlist — follow **`migrate-wishlist-intake`** if applicable).
+3. **Legacy SQLite wishlist blob** — If the planning DB still has **`wishlist_store_json`**, the next **planning store open** (any normal **`run`** that loads tasks) migrates blob items into **`wishlist_intake`** tasks and drops the column.
 
 4. **Flip config** — Omit **`tasks.persistenceBackend`** or set **`sqlite`** (default). Remove any legacy **`json`** key (**v0.40+** will reject it if present).
 
