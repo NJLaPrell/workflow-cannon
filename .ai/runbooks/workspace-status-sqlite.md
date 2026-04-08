@@ -31,3 +31,12 @@ On **`SqliteDualPlanningStore.loadFromDisk`**, after migrations:
 ## Migrations
 
 DDL and **`user_version`** steps live in **`src/core/state/workspace-kit-sqlite.ts`** (`migrateV9ToV10`).
+
+## CLI (T818)
+
+- **`get-workspace-status`** — read singleton row + **`kitSqliteUserVersion`**.
+- **`update-workspace-status`** — patch with **`expectedWorkspaceRevision`** (optimistic concurrency).
+- **`export-workspace-status`** — write **`docs/maintainers/data/workspace-kit-status.db-export.yaml`** (non-authoritative); use **`dryRun`** to preview **`yamlBody`**.
+- **`workspace-status-history`** — list **`kit_workspace_status_events`** (optional **`limit`**).
+
+**`update-workspace-phase-snapshot`** still updates maintainer YAML for compatibility; on non-dry-run success it **mirrors** the parsed YAML snapshot into **`kit_workspace_status`** when SQLite **v10+** is present ( **`phase_snapshot_yaml_mirror`** event).

@@ -7,6 +7,11 @@ import {
   parseWorkspaceKitStatusYaml,
   WORKSPACE_KIT_STATUS_YAML_RELATIVE
 } from "./dashboard/dashboard-status.js";
+import {
+  openSqliteDualForWorkspaceStatus,
+  replaceWorkspaceStatusFromSnapshot,
+  workspaceStatusTableAvailable
+} from "./persistence/workspace-status-store.js";
 
 /** Atomic update of `current_kit_phase` / `next_kit_phase` in workspace-kit-status.yaml. */
 export async function runUpdateWorkspacePhaseSnapshot(
@@ -112,6 +117,24 @@ export async function runUpdateWorkspacePhaseSnapshot(
   }
 
   const after = parseWorkspaceKitStatusYaml(applied.yaml);
+  let sqliteMirror: { beforeRevision: number; afterRevision: number } | null = null;
+  try {
+    const dual = openSqliteDualForWorkspaceStatus(ctx);
+    const db = dual.getDatabase();
+    if (workspaceStatusTableAvailable(db)) {
+      sqliteMirror = replaceWorkspaceStatusFromSnapshot(db, after, {
+        kind: "phase_snapshot_yaml_mirror",
+        actor: "workspace-kit",
+        command: "update-workspace-phase-snapshot"
+      });
+    }
+  } catch (e) {
+    return {
+      ok: false,
+      code: "storage-write-error",
+      message: `Updated ${WORKSPACE_KIT_STATUS_YAML_RELATIVE} but failed to mirror workspace status to SQLite: ${(e as Error).message}`
+    };
+  }
   return {
     ok: true,
     code: "workspace-phase-snapshot-updated",
@@ -120,7 +143,8 @@ export async function runUpdateWorkspacePhaseSnapshot(
       dryRun: false,
       fileRelativePath: WORKSPACE_KIT_STATUS_YAML_RELATIVE,
       snapshotBefore: before,
-      snapshotAfter: after
+      snapshotAfter: after,
+      sqliteMirror
     } as Record<string, unknown>
   };
 }

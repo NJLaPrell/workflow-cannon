@@ -142,6 +142,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "workspace-status-history",
+    "file": "workspace-status-history.md",
+    "description": "List recent kit_workspace_status_events audit rows.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "create-task",
     "file": "create-task.md",
     "description": "Create a new task through validated task-engine persistence.",
@@ -169,6 +177,14 @@
     "name": "update-workspace-phase-snapshot",
     "file": "update-workspace-phase-snapshot.md",
     "description": "Update current_kit_phase and/or next_kit_phase in docs/maintainers/data/workspace-kit-status.yaml (atomic write).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "update-workspace-status",
+    "file": "update-workspace-status.md",
+    "description": "Patch kit_workspace_status with workspaceRevision optimistic concurrency.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },
@@ -294,6 +310,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "get-workspace-status",
+    "file": "get-workspace-status.md",
+    "description": "Read kit_workspace_status singleton from kit SQLite.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "get-task",
     "file": "get-task.md",
     "description": "Retrieve a single task by ID.",
@@ -341,6 +365,14 @@
     "defaultResponseTemplateId": "default",
     "policyOperationId": "task-engine.export-feature-taxonomy-json",
     "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "export-workspace-status",
+    "file": "export-workspace-status.md",
+    "description": "Write non-authoritative workspace-kit-status.db-export.yaml from kit_workspace_status.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
   },
   {
     "moduleId": "task-engine",
