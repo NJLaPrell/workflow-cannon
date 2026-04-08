@@ -1,35 +1,80 @@
 import fs from "node:fs";
 import path from "node:path";
+import type DatabaseCtor from "better-sqlite3";
 import type { ModuleLifecycleContext } from "../contracts/module-contract.js";
 import { resolveRegistryAndConfig } from "../core/module-registry-resolve.js";
-import { readWorkspaceStatusSnapshot } from "../modules/task-engine/dashboard/dashboard-status.js";
 import { resolveCanonicalPhase } from "../modules/task-engine/phase-resolution.js";
 import { validatePlanningPersistenceForDoctor } from "../modules/task-engine/doctor-planning-persistence.js";
 import {
   getPlanningGenerationPolicy,
   planningSqliteDatabaseRelativePath
 } from "../modules/task-engine/planning-config.js";
+import {
+  readWorkspaceStatusSnapshotFromKitSqliteDb,
+  WORKSPACE_STATUS_DB_EXPORT_RELATIVE,
+  workspaceStatusTableAvailable
+} from "../modules/task-engine/persistence/workspace-status-store.js";
 import { readKitSqliteUserVersion } from "../core/state/workspace-kit-sqlite.js";
 import { defaultRegistryModules } from "../modules/index.js";
 import { discoverPluginPackages } from "../modules/plugins/discovery.js";
 
 export type DoctorPlanningIssue = { path: string; reason: string };
 
+/** Config `kit.currentPhaseNumber` disagrees with `kit_workspace_status.current_kit_phase` (SQLite v10+). */
+export const DOCTOR_KIT_PHASE_WORKSPACE_STATUS_MISMATCH = "kit-phase-config-workspace-status-mismatch";
+
+/** `kit_workspace_status` table present (v10+) but singleton row missing — recovery / repair. */
+export const DOCTOR_KIT_WORKSPACE_STATUS_ROW_MISSING = "kit-workspace-status-row-missing";
+
 export async function collectDoctorKitPhaseIssues(
   cwd: string,
   effective: Record<string, unknown>
 ): Promise<DoctorPlanningIssue[]> {
-  const workspaceStatus = await readWorkspaceStatusSnapshot(cwd);
-  const r = resolveCanonicalPhase({ effectiveConfig: effective, workspaceStatus });
-  if (r.statusYamlMatchesConfig === false) {
-    return [
-      {
-        path: "kit.currentPhaseNumber vs docs/maintainers/data/workspace-kit-status.yaml",
-        reason: "kit-phase-config-status-yaml-mismatch"
-      }
-    ];
+  let Database: typeof DatabaseCtor;
+  try {
+    ({ default: Database } = await import("better-sqlite3"));
+  } catch {
+    return [];
   }
-  return [];
+  const ctx = { workspacePath: cwd, effectiveConfig: effective } as ModuleLifecycleContext;
+  const dbRel = planningSqliteDatabaseRelativePath(ctx);
+  const dbAbs = path.resolve(cwd, dbRel);
+  if (!fs.existsSync(dbAbs)) {
+    return [];
+  }
+  let db: InstanceType<typeof DatabaseCtor>;
+  try {
+    db = new Database(dbAbs, { readonly: true });
+  } catch {
+    return [];
+  }
+  try {
+    if (!workspaceStatusTableAvailable(db)) {
+      return [];
+    }
+    const workspaceStatus = readWorkspaceStatusSnapshotFromKitSqliteDb(db);
+    if (!workspaceStatus) {
+      const rel = path.relative(cwd, dbAbs) || dbRel;
+      return [
+        {
+          path: `${rel} kit_workspace_status`,
+          reason: DOCTOR_KIT_WORKSPACE_STATUS_ROW_MISSING
+        }
+      ];
+    }
+    const r = resolveCanonicalPhase({ effectiveConfig: effective, workspaceStatus });
+    if (r.statusYamlMatchesConfig === false) {
+      return [
+        {
+          path: "kit.currentPhaseNumber vs kit_workspace_status.current_kit_phase (SQLite)",
+          reason: DOCTOR_KIT_PHASE_WORKSPACE_STATUS_MISMATCH
+        }
+      ];
+    }
+    return [];
+  } finally {
+    db.close();
+  }
 }
 
 /** Resolve layered config and run SQLite planning persistence checks for `workspace-kit doctor`. */
@@ -86,6 +131,18 @@ export async function collectTaskPersistenceDoctorSummaryLines(cwd: string): Pro
     try {
       const uv = readKitSqliteUserVersion(dbAbs);
       lines.push(`Kit SQLite schema (PRAGMA user_version): ${uv}`);
+      if (uv >= 10) {
+        const exportAbs = path.resolve(cwd, WORKSPACE_STATUS_DB_EXPORT_RELATIVE);
+        if (fs.existsSync(exportAbs)) {
+          const dbStat = fs.statSync(dbAbs);
+          const exStat = fs.statSync(exportAbs);
+          if (exStat.mtimeMs < dbStat.mtimeMs - 500) {
+            lines.push(
+              `Note: ${WORKSPACE_STATUS_DB_EXPORT_RELATIVE} may be stale (older mtime than planning SQLite). Regenerate: pnpm exec wk run export-workspace-status '{}' (non-authoritative export; see .ai/runbooks/workspace-status-sqlite.md).`
+            );
+          }
+        }
+      }
     } catch {
       lines.push("Kit SQLite schema (PRAGMA user_version): unavailable");
     }

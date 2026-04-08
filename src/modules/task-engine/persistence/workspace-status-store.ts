@@ -111,6 +111,14 @@ export function kitWorkspaceStatusPublicToSnapshot(row: KitWorkspaceStatusPublic
 /** Prefer kit SQLite workspace status (v10+). No YAML read. */
 export function readWorkspaceStatusSnapshotFromDual(dual: SqliteDualPlanningStore): WorkspaceStatusSnapshot | null {
   const db = dual.getDatabase();
+  return readWorkspaceStatusSnapshotFromKitSqliteDb(db);
+}
+
+/**
+ * Read `kit_workspace_status` into a dashboard snapshot (user_version ≥ 10).
+ * Safe on a readonly better-sqlite3 handle (no migrations).
+ */
+export function readWorkspaceStatusSnapshotFromKitSqliteDb(db: SqliteDb): WorkspaceStatusSnapshot | null {
   if (!workspaceStatusTableAvailable(db)) {
     return null;
   }

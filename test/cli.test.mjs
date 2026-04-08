@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, readdir, unlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import Database from "better-sqlite3";
 
 import { runCli } from "../dist/cli.js";
+import { prepareKitSqliteDatabase } from "../dist/core/state/workspace-kit-sqlite.js";
 
 const TEST_CLI_POLICY_APPROVAL = JSON.stringify({
   confirmed: true,
@@ -95,6 +96,47 @@ async function createDoctorFixture(rootDir) {
     emptyTaskDoc
   );
   db.close();
+}
+
+async function replaceDoctorFixtureDbWithV10WorkspaceStatus(rootDir, { sqlitePhase = "67" } = {}) {
+  const dbPath = path.join(rootDir, ".workspace-kit", "tasks", "workspace-kit.db");
+  try {
+    await unlink(dbPath);
+  } catch {
+    // ignore
+  }
+  const db = new Database(dbPath);
+  prepareKitSqliteDatabase(db);
+  const taskDoc = JSON.stringify({
+    schemaVersion: 1,
+    tasks: [],
+    transitionLog: [],
+    mutationLog: [],
+    lastUpdated: new Date().toISOString()
+  });
+  db.prepare("INSERT OR REPLACE INTO workspace_planning_state (id, task_store_json) VALUES (1, ?)").run(taskDoc);
+  db.prepare(
+    "UPDATE kit_workspace_status SET current_kit_phase = ?, updated_at = ? WHERE id = 1"
+  ).run(sqlitePhase, new Date().toISOString());
+  db.close();
+}
+
+async function writeSqliteKitConfig(rootDir, kitPhaseNumber) {
+  await writeFile(
+    path.join(rootDir, ".workspace-kit", "config.json"),
+    JSON.stringify(
+      {
+        schemaVersion: 1,
+        tasks: {
+          persistenceBackend: "sqlite",
+          sqliteDatabaseRelativePath: ".workspace-kit/tasks/workspace-kit.db"
+        },
+        kit: { currentPhaseNumber: kitPhaseNumber }
+      },
+      null,
+      2
+    )
+  );
 }
 
 test("runCli returns usage error for unknown commands", async () => {
@@ -317,6 +359,38 @@ test("runCli doctor passes when sqlite DB exists with valid planning row", async
 
   assert.equal(code, 0);
   assert.match(capture.lines[0], /doctor passed/);
+});
+
+test("runCli doctor ignores maintainer YAML for phase drift when SQLite v10 matches config", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-dr-phase-sqlite-yaml-"));
+  await createDoctorFixture(fixtureRoot);
+  await replaceDoctorFixtureDbWithV10WorkspaceStatus(fixtureRoot, { sqlitePhase: "67" });
+  await writeSqliteKitConfig(fixtureRoot, 67);
+  const yamlDir = path.join(fixtureRoot, "docs", "maintainers", "data");
+  await mkdir(yamlDir, { recursive: true });
+  await writeFile(
+    path.join(yamlDir, "workspace-kit-status.yaml"),
+    'current_kit_phase: "99"\nnext_kit_phase: "100"\n'
+  );
+
+  const capture = createCapture();
+  const code = await runCli(["doctor"], { cwd: fixtureRoot, ...capture });
+
+  assert.equal(code, 0);
+  assert.match(capture.lines[0], /doctor passed/);
+});
+
+test("runCli doctor fails when kit.currentPhaseNumber disagrees with kit_workspace_status", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-dr-phase-sqlite-mismatch-"));
+  await createDoctorFixture(fixtureRoot);
+  await replaceDoctorFixtureDbWithV10WorkspaceStatus(fixtureRoot, { sqlitePhase: "67" });
+  await writeSqliteKitConfig(fixtureRoot, 68);
+
+  const capture = createCapture();
+  const code = await runCli(["doctor"], { cwd: fixtureRoot, ...capture });
+
+  assert.equal(code, 1);
+  assert.ok(capture.errors.some((e) => e.includes("kit-phase-config-workspace-status-mismatch")));
 });
 
 test("runCli check validates profile baseline fields", async () => {

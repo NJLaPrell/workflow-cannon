@@ -44,3 +44,14 @@ DDL and **`user_version`** steps live in **`src/core/state/workspace-kit-sqlite.
 ## Readers (T819)
 
 **`dashboard-summary`**, **`queue-health`**, **`list-tasks`** (queue hints), and **`agent-session-snapshot` / `agent-bootstrap`** compose paths read **`workspaceStatus`** from **`readWorkspaceStatusSnapshotFromDual`** only (no shallow-parse of maintainer YAML for those payloads). When the table or row is absent, **`workspaceStatus`** is **`null`**.
+
+## Doctor (T820)
+
+**`workspace-kit doctor`** phase drift uses **SQLite only** when **`PRAGMA user_version` ≥ 10** and **`kit_workspace_status`** exists:
+
+- Compares **`kit.currentPhaseNumber`** (effective config) to **`kit_workspace_status.current_kit_phase`**.
+- Maintainer YAML **`docs/maintainers/data/workspace-kit-status.yaml`** is **not** consulted for this check (YAML may lag; authority is the DB row).
+- Failure codes: **`kit-phase-config-workspace-status-mismatch`**, **`kit-workspace-status-row-missing`** (table present but singleton row absent).
+- When **`user_version` < 10**, doctor **skips** this phase drift slice (no YAML fallback).
+
+After doctor passes, if **`user_version` ≥ 10** and **`workspace-kit-status.db-export.yaml`** exists with an **mtime older** than the planning SQLite file, doctor prints a **non-fatal note** suggesting **`export-workspace-status`** (export remains non-authoritative).
