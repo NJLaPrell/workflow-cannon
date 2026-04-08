@@ -933,29 +933,6 @@ function renderSubagentRegistrySection(sub: unknown): string {
   );
 }
 
-function renderAgentGuidanceSection(ag: unknown): string {
-  if (!ag || typeof ag !== "object") {
-    return "";
-  }
-  const o = ag as Record<string, unknown>;
-  const tier = typeof o.tier === "number" ? o.tier : null;
-  const roleLabel = typeof o.displayLabel === "string" ? o.displayLabel.trim() : "";
-  const tempLabel = typeof o.temperamentLabel === "string" ? o.temperamentLabel.trim() : "";
-  if (tier === null) {
-    return "";
-  }
-  return (
-    '<section class="dash-card" aria-label="Role and agent temperament">' +
-    "<p><b>Role:</b> " +
-    escapeHtml(roleLabel.length > 0 ? roleLabel : "—") +
-    "</p>" +
-    "<p><b>Agent Temperament:</b> " +
-    escapeHtml(tempLabel.length > 0 ? tempLabel : "—") +
-    "</p>" +
-    "</section>"
-  );
-}
-
 function truncateOverviewLine(s: string, max: number): string {
   const one = s.replace(/\s+/g, " ").trim();
   if (one.length <= max) {
@@ -1012,28 +989,40 @@ const DELIVER_TOOLTIP_NO_PHASE =
 const DELIVER_TOOLTIP_ENABLED =
   "Prefill chat: deliver a ready task through the phase branch (task-to-phase-branch)";
 
-/** Maintainer snapshot: phases, blockers, pending decisions (no task roll-ups). */
-function renderWorkspaceOverviewSection(
-  ws: Record<string, unknown> | null,
-  readyExecutionSummary?: Record<string, unknown>
-): string {
-  if (!ws) {
-    return (
-      '<section class="dash-card dashboard-overview" aria-label="Workspace status">' +
-      '<p class="muted">No workspace status from kit SQLite (<code>get-workspace-status</code>) — run <code>pnpm run wk doctor</code> or ensure planning DB migrated to user_version 10+.</p>' +
-      "</section>"
-    );
+function renderRoleTemperamentLines(ag: unknown): string {
+  if (!ag || typeof ag !== "object") {
+    return "";
   }
+  const o = ag as Record<string, unknown>;
+  const tier = typeof o.tier === "number" ? o.tier : null;
+  const roleLabel = typeof o.displayLabel === "string" ? o.displayLabel.trim() : "";
+  const tempLabel = typeof o.temperamentLabel === "string" ? o.temperamentLabel.trim() : "";
+  if (tier === null) {
+    return "";
+  }
+  return (
+    "<p><b>Role:</b> " +
+    escapeHtml(roleLabel.length > 0 ? roleLabel : "—") +
+    "</p>" +
+    "<p><b>Agent Temperament:</b> " +
+    escapeHtml(tempLabel.length > 0 ? tempLabel : "—") +
+    "</p>"
+  );
+}
 
+/** Current / next phase + Deliver chip (no outer section). */
+function renderPhaseDeliverBlockInner(
+  ws: Record<string, unknown>,
+  readyExecutionSummary: Record<string, unknown>
+): string {
   const curRaw = ws.currentKitPhase != null ? String(ws.currentKitPhase).trim() : "";
   const cur = curRaw.length > 0 ? escapeHtml(curRaw) : "—";
   const nextTrim = ws.nextKitPhase != null ? String(ws.nextKitPhase).trim() : "";
   const nextMeaningful = nextTrim.length > 0 && nextTrim !== curRaw;
   const nextDisplay = nextMeaningful ? escapeHtml(nextTrim) : "Not Planned";
 
-  const resSummary = readyExecutionSummary ?? {};
   const parsedPhase = parseDashboardKitPhaseKey(ws.currentKitPhase);
-  const readyInPhase = countReadyExecutionTasksInCurrentPhase(ws, resSummary);
+  const readyInPhase = countReadyExecutionTasksInCurrentPhase(ws, readyExecutionSummary);
   const deliverEnabled = parsedPhase !== null && readyInPhase > 0;
   const deliverTitle = deliverEnabled
     ? DELIVER_TOOLTIP_ENABLED
@@ -1050,8 +1039,7 @@ function renderWorkspaceOverviewSection(
     escapeHtmlAttr(deliverTitle) +
     '">Deliver</button>';
 
-  let html =
-    '<section class="dash-card dashboard-overview" aria-label="Workspace status">' +
+  return (
     '<p class="dash-overview-phase-row">' +
     '<span class="dash-overview-phase-text"><b>Current Phase</b> ' +
     cur +
@@ -1060,149 +1048,72 @@ function renderWorkspaceOverviewSection(
     "</p>" +
     "<p><b>Next Phase</b> " +
     nextDisplay +
-    "</p>";
+    "</p>"
+  );
+}
+
+/**
+ * First dashboard card: role + temperament when configured, then current/next phase and Deliver.
+ */
+function renderRoleTemperamentAndPhaseSection(
+  ag: unknown,
+  ws: Record<string, unknown> | null,
+  readyExecutionSummary?: Record<string, unknown>
+): string {
+  const rt = renderRoleTemperamentLines(ag);
+  const phaseInner = ws !== null ? renderPhaseDeliverBlockInner(ws, readyExecutionSummary ?? {}) : "";
+  if (rt === "" && phaseInner === "") {
+    return "";
+  }
+  return (
+    '<section class="dash-card dash-role-temperament-phase" aria-label="Role, temperament, and phase">' +
+    rt +
+    phaseInner +
+    "</section>"
+  );
+}
+
+/** Blockers and pending decisions (phase + Deliver live on first card). */
+function renderWorkspaceBlockersPendingSection(ws: Record<string, unknown> | null): string {
+  if (!ws) {
+    return (
+      '<section class="dash-card dashboard-overview" aria-label="Workspace status">' +
+      '<p class="muted">No workspace status from kit SQLite (<code>get-workspace-status</code>) — run <code>pnpm run wk doctor</code> or ensure planning DB migrated to user_version 10+.</p>' +
+      "</section>"
+    );
+  }
 
   const blockers = Array.isArray(ws.blockers)
     ? (ws.blockers as unknown[]).map((x) => String(x)).filter((s) => s.trim().length > 0)
     : [];
+  const pending = Array.isArray(ws.pendingDecisions)
+    ? (ws.pendingDecisions as unknown[]).map((x) => String(x)).filter((s) => s.trim().length > 0)
+    : [];
+  if (blockers.length === 0 && pending.length === 0) {
+    return "";
+  }
+
+  let html =
+    '<section class="dash-card dashboard-overview" aria-label="Workspace blockers and decisions">';
   if (blockers.length > 0) {
-    const shown = blockers.slice(0, 2).map((b) => renderMarkdownBoldAfterEscape(escapeHtml(truncateOverviewLine(b, 100))));
+    const shown = blockers
+      .slice(0, 2)
+      .map((b) => renderMarkdownBoldAfterEscape(escapeHtml(truncateOverviewLine(b, 100))));
     const more =
       blockers.length > 2
         ? " <span class=\"muted\">(+" + String(blockers.length - 2) + " more)</span>"
         : "";
     html += "<p><b>Blockers</b> " + shown.join(" · ") + more + "</p>";
   }
-
-  const pending = Array.isArray(ws.pendingDecisions)
-    ? (ws.pendingDecisions as unknown[]).map((x) => String(x)).filter((s) => s.trim().length > 0)
-    : [];
   if (pending.length > 0) {
-    const shown = pending.slice(0, 2).map((b) => renderMarkdownBoldAfterEscape(escapeHtml(truncateOverviewLine(b, 100))));
+    const shown = pending
+      .slice(0, 2)
+      .map((b) => renderMarkdownBoldAfterEscape(escapeHtml(truncateOverviewLine(b, 100))));
     const more = pending.length > 2 ? " …" : "";
     html += "<p><b>Pending Decisions</b> " + shown.join(" · ") + more + "</p>";
   }
-
   html += "</section>";
   return html;
-}
-
-/**
- * Read-only review-item queue (`list-approval-queue`) + policy canon (T755/T756).
- */
-function renderApprovalsDiscoverabilitySection(listApprovalQueueResult: unknown | undefined): string {
-  const policyBanner =
-    '<p class="muted approval-policy-banner"><b>Policy:</b> Sensitive <code>workspace-kit run</code> commands need JSON <code>policyApproval</code> in the CLI argument. <b>Chat and this dashboard are not approval.</b> Canon: <code>.ai/POLICY-APPROVAL.md</code>, <code>.ai/AGENT-CLI-MAP.md</code>.</p>';
-
-  if (listApprovalQueueResult === undefined) {
-    return (
-      '<section class="dash-card dashboard-approvals" aria-label="Approvals and policy">' +
-      "<p><b>Approvals &amp; policy</b> (read-only)</p>" +
-      policyBanner +
-      "<p class=\"muted\">Queue data loads when the dashboard refreshes. CLI: <code>pnpm exec wk run list-approval-queue '{}'</code>.</p>" +
-      "</section>"
-    );
-  }
-
-  const wrap = (body: string) =>
-    '<section class="dash-card dashboard-approvals" aria-label="Approvals and policy">' +
-    "<p><b>Approvals &amp; policy</b> (read-only)</p>" +
-    policyBanner +
-    body +
-    "</section>";
-
-  const aq = listApprovalQueueResult as {
-    ok?: unknown;
-    code?: unknown;
-    data?: Record<string, unknown>;
-    message?: unknown;
-  };
-  if (aq.ok !== true || !aq.data || typeof aq.data !== "object") {
-    const hint =
-      typeof aq.message === "string" && aq.message.length > 0
-        ? escapeHtml(aq.message)
-        : typeof aq.code === "string"
-          ? escapeHtml(aq.code)
-          : "unknown error";
-    return wrap(
-      '<p class="muted">Could not load the review-item queue (<code>list-approval-queue</code>): ' +
-        hint +
-        ".</p>" +
-        "<p class=\"muted\">Try <code>pnpm exec wk run list-approval-queue '{}'</code> in a terminal.</p>"
-    );
-  }
-
-  const d = aq.data;
-  const queue = Array.isArray(d.reviewItemQueue) ? (d.reviewItemQueue as unknown[]) : [];
-  const hints = (d.operatorHints as Record<string, unknown> | undefined) ?? {};
-
-  let queueBody: string;
-  if (queue.length === 0) {
-    queueBody =
-      '<p class="muted">No improvement tasks in <b>ready</b> or <b>in_progress</b> (the <code>review-item</code> queue). For <b>proposed</b> improvements, use <b>Proposed · Improvements</b> above or <code>list-tasks</code>.</p>';
-  } else {
-    queueBody =
-      '<p class="muted"><b>Review-item queue</b> — improvements awaiting maintainer review (<code>review-item</code>).</p>' +
-      '<div class="dash-row-list" role="list">' +
-      queue
-        .map((x) => {
-          const row = x as { id?: unknown; title?: unknown; status?: unknown; phase?: unknown; priority?: unknown };
-          const id = String(row?.id ?? "").trim();
-          const st = row?.status != null ? " · " + escapeHtml(String(row.status)) : "";
-          const ph = row?.phase != null && String(row.phase).length > 0 ? " · " + escapeHtml(String(row.phase)) : "";
-          const pri = row?.priority ? " [" + escapeHtml(String(row.priority)) + "]" : "";
-          const label = "- " + escapeHtml(id) + (id ? " " : "") + escapeHtml(String(row?.title ?? "")) + pri + st + ph;
-          const idAttr = escapeHtml(id);
-          return (
-            '<div class="dash-row" role="listitem">' +
-            '<span class="dash-row-label">' +
-            label +
-            "</span>" +
-            (id.length > 0
-              ? '<button type="button" class="dash-row-action dash-row-action-tertiary" data-wc-action="task-detail" data-task-id="' +
-                idAttr +
-                '" title="Open task view (markdown)">View</button>'
-              : "") +
-            "</div>"
-          );
-        })
-        .join("") +
-      "</div>";
-  }
-
-  const reviewEx = typeof hints.reviewItemExample === "string" ? hints.reviewItemExample.trim() : "";
-  const triageCli = typeof hints.triageProposedImprovements === "string" ? hints.triageProposedImprovements.trim() : "";
-  const playbook = typeof hints.improvementTriagePlaybook === "string" ? hints.improvementTriagePlaybook.trim() : "";
-  const dashSum = typeof hints.dashboardSummary === "string" ? hints.dashboardSummary.trim() : "";
-
-  let hintsHtml = "";
-  if (reviewEx.length > 0) {
-    hintsHtml += "<p><b>Example</b> <code>review-item</code> (terminal):</p><pre class=\"resume-cli\">" + escapeHtml(reviewEx) + "</pre>";
-  }
-  if (triageCli.length > 0) {
-    hintsHtml +=
-      "<p><b>Proposed improvements</b> (triage inventory):</p><pre class=\"resume-cli\">" + escapeHtml(triageCli) + "</pre>";
-  }
-  if (playbook.length > 0) {
-    hintsHtml += '<p class="muted">Improvement triage playbook: <code>' + escapeHtml(playbook) + "</code></p>";
-  }
-  if (dashSum.length > 0) {
-    hintsHtml += '<p class="muted">' + escapeHtml(dashSum) + "</p>";
-  }
-
-  const artifacts = Array.isArray(hints.policyArtifacts) ? (hints.policyArtifacts as unknown[]) : [];
-  if (artifacts.length > 0) {
-    hintsHtml += "<p><b>Policy &amp; decision artifacts</b></p><ul class=\"dash-hint-list\">";
-    for (const raw of artifacts) {
-      const a = raw as { relativePath?: unknown; role?: unknown };
-      const rp = escapeHtml(String(a.relativePath ?? ""));
-      const role = escapeHtml(String(a.role ?? ""));
-      hintsHtml += "<li><code>" + rp + "</code> — " + role + "</li>";
-    }
-    hintsHtml += "</ul>";
-  }
-
-  return wrap(queueBody + hintsHtml);
 }
 
 /** Closed-by-default roll-up for a dashboard status band (ready / proposed / blocked / terminal). */
@@ -1230,7 +1141,6 @@ function renderStatusRollup(
 /** Inner HTML for #root from a `workspace-kit run dashboard-summary`–shaped payload (or extension error object). */
 export function renderDashboardRootInnerHtml(
   payload: unknown,
-  listApprovalQueueResult?: unknown,
   planningWizardPanel?: PlanningInterviewWizardPanel | null
 ): string {
   if (payload === null || payload === undefined) {
@@ -1415,9 +1325,8 @@ export function renderDashboardRootInnerHtml(
     "</section>";
 
   return (
-    renderAgentGuidanceSection(d.agentGuidance) +
-    renderWorkspaceOverviewSection(ws as Record<string, unknown> | null, res) +
-    renderApprovalsDiscoverabilitySection(listApprovalQueueResult) +
+    renderRoleTemperamentAndPhaseSection(d.agentGuidance, ws as Record<string, unknown> | null, res) +
+    renderWorkspaceBlockersPendingSection(ws as Record<string, unknown> | null) +
     renderTeamExecutionSection(d.teamExecution) +
     renderSubagentRegistrySection(d.subagentRegistry) +
     tasksBlock +
