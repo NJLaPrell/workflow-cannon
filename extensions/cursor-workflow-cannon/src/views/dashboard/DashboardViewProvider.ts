@@ -410,21 +410,16 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const { webview } = this.view;
     let raw: DashboardSummaryCommandSuccess | Record<string, unknown>;
-    let listApprovalQueueResult: unknown;
     try {
-      const [summaryRes, aqRes] = await Promise.all([
-        this.client.run("dashboard-summary", {}),
-        this.client.run("list-approval-queue", {})
-      ]);
-      raw = summaryRes as DashboardSummaryCommandSuccess | Record<string, unknown>;
-      listApprovalQueueResult = aqRes;
+      raw = (await this.client.run("dashboard-summary", {})) as
+        | DashboardSummaryCommandSuccess
+        | Record<string, unknown>;
     } catch (e) {
       raw = {
         ok: false,
         code: "extension-push-error",
         message: e instanceof Error ? e.message : String(e)
       };
-      listApprovalQueueResult = undefined;
     }
     if (raw.ok === true && raw.data && typeof raw.data === "object") {
       ingestPlanningMetaFromData(raw.data as Record<string, unknown>);
@@ -432,7 +427,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     let rootInner: string;
     const wizardPanel: PlanningInterviewWizardPanel | null = raw.ok === true ? this.planningWizardPanel() : null;
     try {
-      rootInner = renderDashboardRootInnerHtml(raw, listApprovalQueueResult, wizardPanel);
+      rootInner = renderDashboardRootInnerHtml(raw, wizardPanel);
     } catch (e) {
       rootInner = '<pre class="bad">Host render error: ' + escapeHtml(String(e)) + "</pre>";
     }
@@ -709,7 +704,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
 <body>
   <div id="root">${rootInnerHtml}</div>
   <footer class="dash-footer">
-    <button type="button" id="btn" class="dash-refresh-btn" title="Refetch dashboard-summary and list-approval-queue now. The panel also reloads when you switch back to it, when kit-owned files change, and about every 45s while visible.">Refresh</button>
+    <button type="button" id="btn" class="dash-refresh-btn" title="Refetch dashboard-summary now. The panel also reloads when you switch back to it, when kit-owned files change, and about every 45s while visible.">Refresh</button>
   </footer>
   <script>${bootstrap}</script>
 </body>

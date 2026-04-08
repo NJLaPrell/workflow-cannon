@@ -51,7 +51,10 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /dash-card/);
   assert.match(html, /<b>Role:<\/b> Adventurer/);
   assert.match(html, /<b>Agent Temperament:<\/b> The Steady Adventurer/);
-  assert.match(html, /dashboard-overview/);
+  assert.match(html, /dash-role-temperament-phase/);
+  const roleIdx = html.indexOf("<b>Role:</b>");
+  const phaseIdx = html.indexOf("Current Phase");
+  assert.ok(roleIdx !== -1 && phaseIdx !== -1 && roleIdx < phaseIdx);
   assert.match(html, /dash-overview-phase-row/);
   assert.match(html, /data-wc-action="deliver-phase-prompt"/);
   assert.match(html, />Deliver<\/button>/);
@@ -117,48 +120,7 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /Store Updated/);
   assert.doesNotMatch(html, /same store as execution queue/i);
   assert.doesNotMatch(html, /Suggested Next/i);
-  assert.match(html, /dashboard-approvals/);
-  assert.match(html, /Chat and this dashboard are not approval/);
-  assert.match(html, /list-approval-queue/);
-});
-
-test("renderDashboardRootInnerHtml approvals section lists review queue and review-item example", () => {
-  const summary = {
-    ok: true,
-    data: {
-      stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
-      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
-      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
-      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
-      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
-      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
-      blockedSummary: { count: 0, top: [] },
-      planningSession: null,
-      taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
-      workspaceStatus: { currentKitPhase: "1", nextKitPhase: "2" }
-    }
-  };
-  const aq = {
-    ok: true,
-    code: "approval-queue-listed",
-    data: {
-      reviewItemQueue: [{ id: "T900", title: "Example imp", status: "ready", phase: "Phase 1", priority: "P2" }],
-      operatorHints: {
-        reviewItemExample: "pnpm exec wk run review-item '{\"taskId\":\"T900\"}'"
-      }
-    }
-  };
-  const html = renderDashboardRootInnerHtml(summary, aq);
-  assert.match(html, /Review-item queue/);
-  assert.match(html, /T900/);
-  assert.match(html, /Example imp/);
-  assert.match(html, /review-item/);
-  assert.match(html, /pnpm exec wk run review-item/);
-  assert.match(
-    html,
-    /class="dash-row-action dash-row-action-tertiary"[^>]*data-wc-action="task-detail"[^>]*data-task-id="T900"/
-  );
-  assert.match(html, /data-wc-action="task-detail"[\s\S]*?data-task-id="T900"[\s\S]*?>View<\/button>/);
+  assert.doesNotMatch(html, /dashboard-approvals/);
 });
 
 test("renderDashboardRootInnerHtml planning card shows resume CLI when session present", () => {
@@ -602,7 +564,6 @@ test("renderDashboardRootInnerHtml embeds planning wizard panel when provided", 
         }
       }
     },
-    undefined,
     { kind: "picker" }
   );
   assert.match(html, /dash-planning-wizard/);
