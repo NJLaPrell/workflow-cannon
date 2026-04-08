@@ -388,6 +388,59 @@ test("renderDashboardRootInnerHtml proposed execution rows expose accept action"
   assert.match(html, /T777/);
 });
 
+test("renderDashboardRootInnerHtml proposed phase buckets show Accept All with taskIds", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      stateSummary: { proposed: 2, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: {
+        schemaVersion: 1,
+        count: 2,
+        top: [],
+        phaseBuckets: [
+          {
+            schemaVersion: 1,
+            phaseKey: "68",
+            label: "Phase 68 (current) (2)",
+            count: 2,
+            top: [
+              { id: "imp-aaa", title: "A", phase: "Phase 68" },
+              { id: "imp-bbb", title: "B", phase: "Phase 68" }
+            ],
+            taskIds: ["imp-aaa", "imp-bbb"]
+          }
+        ]
+      },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [] },
+      readyQueueTop: [],
+      readyQueueCount: 0,
+      suggestedNext: null,
+      planningSession: null,
+      taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
+      workspaceStatus: { currentKitPhase: "68", nextKitPhase: "69", activeFocus: "Test" },
+      blockingAnalysis: [],
+      dependencyOverview: {
+        schemaVersion: 1,
+        activeTaskCount: 0,
+        includedTaskCount: 0,
+        edgeCount: 0,
+        truncated: false,
+        perfNote: null,
+        nodes: [],
+        edges: [],
+        mermaidFlowchart: "",
+        criticalPathReady: []
+      }
+    }
+  });
+  assert.match(html, /data-wc-action="proposed-imp-accept-phase"/);
+  assert.match(html, /data-proposed-task-ids="imp-aaa,imp-bbb"/);
+});
+
 test("renderDashboardRootInnerHtml shows readyQueueBreakdown when present", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,
