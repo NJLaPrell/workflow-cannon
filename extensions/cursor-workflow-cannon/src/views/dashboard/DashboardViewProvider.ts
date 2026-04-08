@@ -284,6 +284,35 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
+  /** Toast + optional open-detail when a guided interview finishes (wishlist / persistence clarity). */
+  private async planningWizardCompletionNotice(
+    code: string,
+    data: Record<string, unknown> | undefined
+  ): Promise<void> {
+    if (code === "planning-artifact-created") {
+      const wid = typeof data?.wishlistId === "string" ? data.wishlistId.trim() : "";
+      const taskId = typeof data?.taskId === "string" ? data.taskId.trim() : "";
+      const openId = wid || taskId;
+      if (openId.length > 0) {
+        const pick = await vscode.window.showInformationMessage(
+          `Wishlist row persisted: ${openId}. Refresh the dashboard or open the full record.`,
+          "Open wishlist detail",
+          "Dismiss"
+        );
+        if (pick === "Open wishlist detail") {
+          await vscode.commands.executeCommand("workflowCannon.wishlist.showDetail", openId);
+        }
+      }
+      return;
+    }
+    if (code === "planning-wishlist-ready") {
+      void vscode.window.showInformationMessage(
+        "Planning interview finished. No wishlist row was written yet — use build-plan finalize with createWishlist from the CLI or chat when you want it persisted."
+      );
+      return;
+    }
+  }
+
   private async onPlanningWizardStart(planningType: string): Promise<void> {
     try {
       await this.ingestPlanningGenFromDashboard();
@@ -301,7 +330,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         return;
       }
       const code = String(res.code ?? "");
-      if (code === "planning-response-ready") {
+      if (
+        code === "planning-response-ready" ||
+        code === "planning-artifact-created" ||
+        code === "planning-wishlist-ready"
+      ) {
         this.planningWizard = {
           kind: "done",
           planningType,
@@ -309,6 +342,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           message: String(res.message ?? "Interview complete")
         };
         this.notifyKitStateChanged();
+        await this.planningWizardCompletionNotice(code, res.data as Record<string, unknown> | undefined);
         await this.pushUpdate();
         return;
       }
@@ -371,7 +405,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         return;
       }
       const code = String(res.code ?? "");
-      if (code === "planning-response-ready") {
+      if (
+        code === "planning-response-ready" ||
+        code === "planning-artifact-created" ||
+        code === "planning-wishlist-ready"
+      ) {
         this.planningWizard = {
           kind: "done",
           planningType,
@@ -379,6 +417,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           message: String(res.message ?? "Interview complete")
         };
         this.notifyKitStateChanged();
+        await this.planningWizardCompletionNotice(code, res.data as Record<string, unknown> | undefined);
         await this.pushUpdate();
         return;
       }

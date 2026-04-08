@@ -586,6 +586,17 @@ test("renderPlanningInterviewWizardPanel question mode escapes prompt and includ
   assert.match(html, /A &amp; B/);
 });
 
+test("renderPlanningInterviewWizardPanel success shows response-only persistence hint", () => {
+  const html = renderPlanningInterviewWizardPanel({
+    kind: "success",
+    planningType: "change",
+    code: "planning-response-ready",
+    message: "All set."
+  });
+  assert.match(html, /Response-only/);
+  assert.match(html, /data-wc-action="planning-wizard-dismiss"/);
+});
+
 test("renderDashboardRootInnerHtml embeds planning wizard panel when provided", () => {
   const html = renderDashboardRootInnerHtml(
     {

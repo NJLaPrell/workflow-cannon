@@ -672,6 +672,14 @@ export function renderPlanningInterviewWizardPanel(panel: PlanningInterviewWizar
     );
   }
   if (panel.kind === "success") {
+    const persistenceHint =
+      panel.code === "planning-response-ready"
+        ? '<p class="muted"><b>Persistence:</b> Response-only — no wishlist row or task was written from this dashboard flow.</p>'
+        : panel.code === "planning-wishlist-ready"
+          ? '<p class="muted"><b>Persistence:</b> Answers saved; create the wishlist row with <code>build-plan</code> finalize + <code>createWishlist</code> from the CLI or chat when ready.</p>'
+          : panel.code === "planning-artifact-created"
+            ? '<p class="muted"><b>Persistence:</b> A wishlist intake row was created — refresh the dashboard or use <b>Open wishlist detail</b> from the toast if shown.</p>'
+            : "";
     return (
       '<div class="dash-planning-wizard ok" aria-label="Planning interview complete">' +
       "<p><b>Interview complete</b> · " +
@@ -682,6 +690,7 @@ export function renderPlanningInterviewWizardPanel(panel: PlanningInterviewWizar
       "<p>" +
       escapeHtml(panel.message) +
       "</p>" +
+      persistenceHint +
       '<button type="button" class="dash-new-plan-btn" data-wc-action="planning-wizard-dismiss">Done</button>' +
       "</div>"
     );
