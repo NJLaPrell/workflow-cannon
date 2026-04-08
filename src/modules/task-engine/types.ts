@@ -124,6 +124,7 @@ export type TaskEngineErrorCode =
   | "import-parse-error"
   | "planning-generation-mismatch"
   | "planning-generation-required"
+  | "workspace-status-import-conflict"
   | "unknown-feature-id"
   | "hook-denied";
 

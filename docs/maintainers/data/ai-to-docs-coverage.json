@@ -147,6 +147,10 @@
       "output": "docs/maintainers/runbooks/task-persistence-operator.md"
     },
     {
+      "source": ".ai/runbooks/workspace-status-sqlite.md",
+      "output": "docs/maintainers/runbooks/workspace-status-sqlite.md"
+    },
+    {
       "source": ".ai/runbooks/transcript-ingestion-operations.md",
       "output": "docs/maintainers/runbooks/transcript-ingestion-operations.md"
     },

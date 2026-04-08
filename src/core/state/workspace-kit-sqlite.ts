@@ -4,7 +4,7 @@ import { seedFeatureRegistryIfEmpty } from "./feature-registry-migration.js";
 type SqliteDatabase = InstanceType<typeof Database>;
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 9;
+export const KIT_SQLITE_USER_VERSION = 10;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 
@@ -220,6 +220,43 @@ function migrateV8ToV9(db: SqliteDatabase): void {
   db.exec(TASK_CHECKPOINT_DDL);
 }
 
+/** Workspace status singleton + audit trail (Phase 67 — ADR-workspace-status-sqlite-authority-v1). */
+const WORKSPACE_STATUS_DDL = `
+CREATE TABLE IF NOT EXISTS kit_workspace_status (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  workspace_revision INTEGER NOT NULL DEFAULT 0,
+  current_kit_phase TEXT,
+  next_kit_phase TEXT,
+  active_focus TEXT,
+  last_updated TEXT,
+  blockers_json TEXT NOT NULL DEFAULT '[]',
+  pending_decisions_json TEXT NOT NULL DEFAULT '[]',
+  next_agent_actions_json TEXT NOT NULL DEFAULT '[]',
+  updated_at TEXT NOT NULL DEFAULT ''
+);
+CREATE TABLE IF NOT EXISTS kit_workspace_status_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  created_at TEXT NOT NULL,
+  event_kind TEXT NOT NULL,
+  actor TEXT,
+  command TEXT,
+  revision_before INTEGER NOT NULL,
+  revision_after INTEGER NOT NULL,
+  details_json TEXT NOT NULL DEFAULT '{}'
+);
+CREATE INDEX IF NOT EXISTS idx_kit_workspace_status_events_created ON kit_workspace_status_events(created_at);
+`;
+
+function migrateV9ToV10(db: SqliteDatabase): void {
+  db.exec(WORKSPACE_STATUS_DDL);
+  const now = new Date().toISOString();
+  db.prepare(
+    `INSERT OR IGNORE INTO kit_workspace_status (
+      id, workspace_revision, blockers_json, pending_decisions_json, next_agent_actions_json, updated_at
+    ) VALUES (1, 0, '[]', '[]', '[]', ?)`
+  ).run(now);
+}
+
 /**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
@@ -279,6 +316,11 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
   }
   if (current < 9) {
     migrateV8ToV9(db);
+    db.pragma("user_version = 9");
+    current = 9;
+  }
+  if (current < 10) {
+    migrateV9ToV10(db);
     db.pragma(`user_version = ${KIT_SQLITE_USER_VERSION}`);
   }
 }
