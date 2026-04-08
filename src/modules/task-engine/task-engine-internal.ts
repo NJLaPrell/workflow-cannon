@@ -29,6 +29,12 @@ import { runBackupPlanningSqlite } from "./persistence/backup-planning-sqlite-ru
 import { runMigrateTaskPersistence } from "./persistence/migrate-task-persistence-runtime.js";
 import { runGetKitPersistenceMap } from "./persistence/kit-persistence-map-runtime.js";
 import { runUpdateWorkspacePhaseSnapshot } from "./update-workspace-phase-snapshot-runtime.js";
+import {
+  runExportWorkspaceStatus,
+  runGetWorkspaceStatus,
+  runUpdateWorkspaceStatus,
+  runWorkspaceStatusHistory
+} from "./workspace-status-commands-runtime.js";
 import { runAssignTaskPhase, runClearTaskPhase } from "./task-engine-phase-mutations.js";
 import { runWishlistStoreCommand } from "./wishlist/task-engine-wishlist-on-command.js";
 import { runDashboardSummaryCommand } from "./dashboard/task-engine-dashboard-on-command.js";
@@ -235,6 +241,18 @@ export const taskEngineModule: WorkflowModule = {
     }
     if (command.name === "update-workspace-phase-snapshot") {
       return runUpdateWorkspacePhaseSnapshot(ctx, args as Record<string, unknown>);
+    }
+    if (command.name === "get-workspace-status") {
+      return runGetWorkspaceStatus(ctx, args as Record<string, unknown>);
+    }
+    if (command.name === "update-workspace-status") {
+      return runUpdateWorkspaceStatus(ctx, args as Record<string, unknown>);
+    }
+    if (command.name === "export-workspace-status") {
+      return runExportWorkspaceStatus(ctx, args as Record<string, unknown>);
+    }
+    if (command.name === "workspace-status-history") {
+      return runWorkspaceStatusHistory(ctx, args as Record<string, unknown>);
     }
     if (command.name === "list-module-states" || command.name === "get-module-state") {
       const unified = new UnifiedStateDb(ctx.workspacePath, planningSqliteDatabaseRelativePath(ctx));

@@ -25,6 +25,7 @@
         "update-task",
         "update-wishlist",
         "update-workspace-phase-snapshot",
+        "update-workspace-status",
         "archive-task",
         "add-dependency",
         "agent-bootstrap",
@@ -44,6 +45,7 @@
         "convert-wishlist",
         "create-wishlist",
         "get-wishlist",
+        "get-workspace-status",
         "get-task",
         "list-tasks",
         "list-wishlist",
@@ -53,8 +55,10 @@
         "queue-health",
         "replay-queue-snapshot",
         "synthesize-transcript-churn",
+        "workspace-status-history",
         "explain-task-engine-model",
         "export-feature-taxonomy-json",
+        "export-workspace-status",
         "migrate-task-persistence",
         "dashboard-summary",
         "get-module-state",
@@ -69,6 +73,7 @@
         "update-task": { "$ref": "#/$defs/contractUpdateTask" },
         "update-wishlist": { "$ref": "#/$defs/contractUpdateWishlist" },
         "update-workspace-phase-snapshot": { "$ref": "#/$defs/contractUpdateWorkspacePhaseSnapshot" },
+        "update-workspace-status": { "$ref": "#/$defs/contractUpdateWorkspaceStatus" },
         "archive-task": { "$ref": "#/$defs/contractArchiveTask" },
         "add-dependency": { "$ref": "#/$defs/contractDependencyMutation" },
         "agent-bootstrap": { "$ref": "#/$defs/contractAgentSessionSnapshot" },
@@ -88,6 +93,7 @@
         "convert-wishlist": { "$ref": "#/$defs/contractConvertWishlist" },
         "create-wishlist": { "$ref": "#/$defs/contractCreateWishlist" },
         "get-wishlist": { "$ref": "#/$defs/contractGetWishlist" },
+        "get-workspace-status": { "$ref": "#/$defs/contractGetWorkspaceStatus" },
         "get-task": { "$ref": "#/$defs/contractGetTask" },
         "list-tasks": { "$ref": "#/$defs/contractListTasks" },
         "list-wishlist": { "$ref": "#/$defs/contractListWishlist" },
@@ -97,8 +103,10 @@
         "queue-health": { "$ref": "#/$defs/contractQueueHealth" },
         "replay-queue-snapshot": { "$ref": "#/$defs/contractBase" },
         "synthesize-transcript-churn": { "$ref": "#/$defs/contractSynthesizeTranscriptChurn" },
+        "workspace-status-history": { "$ref": "#/$defs/contractWorkspaceStatusHistory" },
         "explain-task-engine-model": { "$ref": "#/$defs/contractExplainTaskEngineModel" },
         "export-feature-taxonomy-json": { "$ref": "#/$defs/contractBase" },
+        "export-workspace-status": { "$ref": "#/$defs/contractExportWorkspaceStatus" },
         "migrate-task-persistence": { "$ref": "#/$defs/contractMigrateTaskPersistence" },
         "dashboard-summary": { "$ref": "#/$defs/contractDashboardSummary" },
         "get-module-state": { "$ref": "#/$defs/contractGetModuleState" },
@@ -457,6 +465,94 @@
             "responseData": {
               "type": "object",
               "required": ["fileRelativePath", "snapshotBefore", "snapshotAfter", "dryRun"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractGetWorkspaceStatus": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": { "type": "object", "additionalProperties": true },
+            "responseData": {
+              "type": "object",
+              "required": ["kitSqliteUserVersion"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractUpdateWorkspaceStatus": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "required": ["expectedWorkspaceRevision"],
+              "properties": {
+                "expectedWorkspaceRevision": { "type": "integer", "minimum": 0 },
+                "currentKitPhase": { "type": ["string", "null"] },
+                "nextKitPhase": { "type": ["string", "null"] },
+                "activeFocus": { "type": ["string", "null"] },
+                "lastUpdated": { "type": ["string", "null"] },
+                "blockers": { "type": "array", "items": { "type": "string" } },
+                "pendingDecisions": { "type": "array", "items": { "type": "string" } },
+                "nextAgentActions": { "type": "array", "items": { "type": "string" } },
+                "actor": { "type": "string" },
+                "command": { "type": "string" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["beforeRevision", "afterRevision", "workspaceStatusBefore", "workspaceStatusAfter"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractExportWorkspaceStatus": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "dryRun": { "type": "boolean" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["dryRun", "fileRelativePath"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractWorkspaceStatusHistory": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "limit": { "type": "integer", "minimum": 1, "maximum": 500 }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["events", "limit"],
               "additionalProperties": true
             }
           }

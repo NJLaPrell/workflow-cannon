@@ -17,6 +17,7 @@
     "dashboard-summary",
     "explain-task-engine-model",
     "export-feature-taxonomy-json",
+    "export-workspace-status",
     "get-blocked-summary",
     "get-dependency-graph",
     "get-kit-persistence-map",
@@ -28,6 +29,7 @@
     "get-task-history",
     "get-task-summary",
     "get-wishlist",
+    "get-workspace-status",
     "list-components",
     "list-features",
     "list-module-states",
@@ -40,9 +42,11 @@
     "replay-queue-snapshot",
     "run-transition",
     "synthesize-transcript-churn",
+    "workspace-status-history",
     "update-task",
     "update-wishlist",
-    "update-workspace-phase-snapshot"
+    "update-workspace-phase-snapshot",
+    "update-workspace-status"
   ],
   "commands": {
     "add-dependency": {
@@ -595,6 +599,41 @@
         "dryRun": {
           "type": "boolean"
         }
+      },
+      "additionalProperties": true
+    },
+    "update-workspace-status": {
+      "type": "object",
+      "required": ["expectedWorkspaceRevision"],
+      "properties": {
+        "expectedWorkspaceRevision": { "type": "integer", "minimum": 0 },
+        "currentKitPhase": { "type": ["string", "null"] },
+        "nextKitPhase": { "type": ["string", "null"] },
+        "activeFocus": { "type": ["string", "null"] },
+        "lastUpdated": { "type": ["string", "null"] },
+        "blockers": { "type": "array", "items": { "type": "string" } },
+        "pendingDecisions": { "type": "array", "items": { "type": "string" } },
+        "nextAgentActions": { "type": "array", "items": { "type": "string" } },
+        "actor": { "type": "string" },
+        "command": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "get-workspace-status": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "export-workspace-status": {
+      "type": "object",
+      "properties": {
+        "dryRun": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    },
+    "workspace-status-history": {
+      "type": "object",
+      "properties": {
+        "limit": { "type": "integer", "minimum": 1, "maximum": 500 }
       },
       "additionalProperties": true
     }

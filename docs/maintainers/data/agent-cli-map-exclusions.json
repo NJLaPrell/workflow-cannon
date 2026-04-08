@@ -9,6 +9,7 @@
     "create-task-from-plan",
     "create-wishlist",
     "dashboard-summary",
+    "export-workspace-status",
     "get-blocked-summary",
     "get-dependency-graph",
     "get-kit-persistence-map",
@@ -17,6 +18,7 @@
     "get-recent-task-activity",
     "get-task-history",
     "get-task-summary",
+    "get-workspace-status",
     "list-approval-queue",
     "list-module-states",
     "migrate-task-persistence",
@@ -26,6 +28,8 @@
     "replay-queue-snapshot",
     "sync-transcripts",
     "transcript-automation-status",
-    "update-wishlist"
+    "update-wishlist",
+    "update-workspace-status",
+    "workspace-status-history"
   ]
 }

@@ -51,6 +51,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "explain-config",
     "explain-task-engine-model",
     "export-feature-taxonomy-json",
+    "export-workspace-status",
     "generate-document",
     "get-behavior-profile",
     "get-blocked-summary",
@@ -64,6 +65,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "get-task-history",
     "get-task-summary",
     "get-wishlist",
+    "get-workspace-status",
     "interview-behavior-profile",
     "list-behavior-profiles",
     "list-components",
@@ -87,7 +89,9 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "update-behavior-profile",
     "update-task",
     "update-wishlist",
-    "update-workspace-phase-snapshot"
+    "update-workspace-phase-snapshot",
+    "update-workspace-status",
+    "workspace-status-history"
   ]);
 });
 
