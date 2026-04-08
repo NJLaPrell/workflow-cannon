@@ -27,7 +27,11 @@ import {
   getPlanningGenerationPolicy,
   planningStrictValidationEnabled
 } from "../task-engine/planning-config.js";
-import { planningConcurrencySaveOpts } from "../task-engine/mutation-utils.js";
+import {
+  buildTaskFromConversionPayload,
+  planningConcurrencySaveOpts,
+  TASK_ID_RE
+} from "../task-engine/mutation-utils.js";
 import { validateTaskSetForStrictMode } from "../task-engine/strict-task-validation.js";
 
 type PlanningOutputMode = "wishlist" | "tasks" | "response";
@@ -52,17 +56,107 @@ function resolveOutputMode(args: Record<string, unknown>): {
   };
 }
 
-function nextTaskId(tasks: TaskEntity[]): string {
+function maxNumericTaskIdFromIds(ids: Iterable<string>): number {
   let max = 0;
-  for (const task of tasks) {
-    const match = /^T(\d+)$/.exec(task.id);
+  for (const id of ids) {
+    const match = /^T(\d+)$/.exec(id);
     if (!match) continue;
     const parsed = Number(match[1]);
     if (Number.isFinite(parsed)) {
       max = Math.max(max, parsed);
     }
   }
-  return `T${max + 1}`;
+  return max;
+}
+
+function nextTaskId(tasks: TaskEntity[]): string {
+  return `T${maxNumericTaskIdFromIds(tasks.map((t) => t.id)) + 1}`;
+}
+
+/**
+ * Build execution tasks from operator-supplied drafts (convert-wishlist-compatible rows).
+ * Allocates T### ids for rows missing or holding invalid ids; rejects duplicates against the store and within the batch.
+ */
+function buildTasksFromExecutionDrafts(args: {
+  drafts: unknown;
+  existingTasks: TaskEntity[];
+  planningType: string;
+  planRef: string;
+  capturedAnswerKeys: string[];
+  timestamp: string;
+}):
+  | { ok: true; tasks: TaskEntity[] }
+  | { ok: false; code: string; message: string } {
+  if (!Array.isArray(args.drafts) || args.drafts.length === 0) {
+    return {
+      ok: false,
+      code: "invalid-execution-task-drafts",
+      message: "executionTaskDrafts must be a non-empty array of task objects"
+    };
+  }
+  const existingIds = new Set(args.existingTasks.map((t) => t.id));
+  let nextAlloc = maxNumericTaskIdFromIds(existingIds);
+  const assignedIds: string[] = [];
+  const normalizedRows: Record<string, unknown>[] = [];
+
+  for (const raw of args.drafts) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+      return {
+        ok: false,
+        code: "invalid-execution-task-drafts",
+        message: "Each executionTaskDrafts entry must be an object"
+      };
+    }
+    const row = { ...(raw as Record<string, unknown>) };
+    const idRaw = typeof row.id === "string" ? row.id.trim() : "";
+    let id = idRaw;
+    if (!TASK_ID_RE.test(id)) {
+      nextAlloc += 1;
+      id = `T${nextAlloc}`;
+      row.id = id;
+    }
+    if (existingIds.has(id) || assignedIds.includes(id)) {
+      return {
+        ok: false,
+        code: "duplicate-task-id",
+        message: `executionTaskDrafts references duplicate or existing task id '${id}'`
+      };
+    }
+    assignedIds.push(id);
+    normalizedRows.push(row);
+  }
+
+  const built: TaskEntity[] = [];
+  for (const row of normalizedRows) {
+    const bt = buildTaskFromConversionPayload(row, args.timestamp);
+    if (!bt.ok) {
+      return { ok: false, code: "invalid-execution-task-drafts", message: bt.message };
+    }
+    const knownTypeValidationError = validateKnownTaskTypeRequirements(bt.task);
+    if (knownTypeValidationError) {
+      return {
+        ok: false,
+        code: knownTypeValidationError.code,
+        message: knownTypeValidationError.message
+      };
+    }
+    const withProv: TaskEntity = {
+      ...bt.task,
+      metadata: {
+        ...(bt.task.metadata ?? {}),
+        planRef: args.planRef,
+        planningProvenance: {
+          planningType: args.planningType,
+          outputMode: "tasks",
+          source: "build-plan-execution-drafts",
+          capturedAnswerKeys: args.capturedAnswerKeys
+        }
+      }
+    };
+    built.push(withProv);
+  }
+
+  return { ok: true, tasks: built };
 }
 
 function findMissingAnsweredQuestions(
@@ -435,23 +529,121 @@ export const planningModule: WorkflowModule = {
 
       if (outputMode === "tasks") {
         const persistTasks = args.persistTasks === true;
-        const taskType = typeof args.taskType === "string" && args.taskType.trim().length > 0
-          ? args.taskType.trim()
-          : "task";
-        const taskPriority =
-          typeof args.taskPriority === "string" && ["P1", "P2", "P3"].includes(args.taskPriority)
-            ? args.taskPriority as TaskPriority
-            : undefined;
+        const executionDraftsRaw = args.executionTaskDrafts;
+        const useDraftDecomposition =
+          finalize === true &&
+          Array.isArray(executionDraftsRaw) &&
+          executionDraftsRaw.length > 0;
+
+        if (Array.isArray(executionDraftsRaw) && executionDraftsRaw.length > 0 && !finalize) {
+          return {
+            ok: false,
+            code: "planning-execution-drafts-require-finalize",
+            message:
+              "executionTaskDrafts is only honored when finalize=true (multi-task decomposition finalize path)"
+          };
+        }
+
         const stores = await openPlanningStores(ctx);
         const store = stores.taskStore;
-        const plannedTaskId = nextTaskId(store.getAllTasks());
+        const existing = store.getAllTasks();
         const planRef = `planning:${planningType}:${new Date().toISOString()}`;
-        const scopeFromArtifact = artifact.candidateFeaturesOrChanges.length > 0
-          ? artifact.candidateFeaturesOrChanges
-          : artifact.goals;
-        const criteriaFromSignals = typeof answers.successSignals === "string" && answers.successSignals.trim().length > 0
-          ? [answers.successSignals.trim()]
-          : [];
+        const capturedKeys = Object.keys(artifact.sourceAnswers).sort();
+
+        if (useDraftDecomposition) {
+          const ts = new Date().toISOString();
+          const built = buildTasksFromExecutionDrafts({
+            drafts: executionDraftsRaw,
+            existingTasks: existing,
+            planningType,
+            planRef,
+            capturedAnswerKeys: capturedKeys,
+            timestamp: ts
+          });
+          if (!built.ok) {
+            return { ok: false, code: built.code, message: built.message };
+          }
+          if (
+            planningStrictValidationEnabled({
+              effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined
+            })
+          ) {
+            const strictIssue = validateTaskSetForStrictMode([...existing, ...built.tasks]);
+            if (strictIssue) {
+              return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
+            }
+          }
+          if (persistTasks) {
+            return {
+              ok: false,
+              code: "planning-multi-task-persist-delegated",
+              message:
+                "When executionTaskDrafts is set, build-plan does not persist tasks (persistTasks must be false); materialize drafts with a bulk task-engine command and expectedPlanningGeneration."
+            };
+          }
+          await clearBuildPlanSession(ctx.workspacePath);
+          return {
+            ok: true,
+            code: "planning-multi-task-decomposition-preview",
+            message: `Planning finalize produced ${built.tasks.length} convert-wishlist-compatible execution task draft(s) (preview only)`,
+            data: {
+              responseSchemaVersion: 1,
+              planningType,
+              descriptor,
+              outputMode,
+              persistTasks: false,
+              scaffoldVersion: 3,
+              status: "multi-task-decomposition-preview",
+              unresolvedCritical: [],
+              adaptiveWarnings,
+              adaptiveFollowups,
+              scoringHints,
+              capturedAnswers: answers,
+              artifact,
+              taskOutputs: built.tasks,
+              planningDecomposition: {
+                schemaVersion: 1,
+                kind: "execution-task-drafts",
+                planningType,
+                planRef,
+                convertWishlistTaskRowCompatible: true,
+                taskCount: built.tasks.length
+              },
+              provenance: {
+                planRef,
+                outputMode,
+                persistedTaskIds: [],
+                suggestedTaskIds: built.tasks.map((t) => t.id)
+              },
+              cliGuidance: toCliGuidance({
+                planningType,
+                answers,
+                unresolvedCriticalCount: 0,
+                totalCriticalCount,
+                finalize: true,
+                outputMode
+              })
+            }
+          };
+        }
+
+        const taskType =
+          typeof args.taskType === "string" && args.taskType.trim().length > 0
+            ? args.taskType.trim()
+            : "task";
+        const taskPriority =
+          typeof args.taskPriority === "string" && ["P1", "P2", "P3"].includes(args.taskPriority)
+            ? (args.taskPriority as TaskPriority)
+            : undefined;
+        const plannedTaskId = nextTaskId(existing);
+        const scopeFromArtifact =
+          artifact.candidateFeaturesOrChanges.length > 0
+            ? artifact.candidateFeaturesOrChanges
+            : artifact.goals;
+        const criteriaFromSignals =
+          typeof answers.successSignals === "string" && answers.successSignals.trim().length > 0
+            ? [answers.successSignals.trim()]
+            : [];
         const task: TaskEntity = {
           id: plannedTaskId,
           title:
