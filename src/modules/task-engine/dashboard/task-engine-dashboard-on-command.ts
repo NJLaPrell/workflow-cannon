@@ -11,7 +11,10 @@ import { resolveAgentGuidanceFromEffectiveConfig } from "../../../core/agent-gui
 import { getPlanningGenerationPolicy } from "../planning-config.js";
 import { getNextActions, isImprovementLikeTask } from "../suggestions.js";
 import { TRANSCRIPT_CHURN_TASK_TYPE } from "../transcript-churn.js";
-import { readWorkspaceStatusSnapshot } from "./dashboard-status.js";
+import {
+  openSqliteDualForWorkspaceStatus,
+  readWorkspaceStatusSnapshotFromDual
+} from "../persistence/workspace-status-store.js";
 import { buildDashboardDependencyOverview } from "./dashboard-dependency-overview.js";
 import {
   buildDashboardPhaseBucketsForBlocking,
@@ -60,7 +63,8 @@ export async function runDashboardSummaryCommand(
 ): Promise<ModuleCommandResult> {
   const tasks = store.getActiveTasks();
   const suggestion = getNextActions(tasks);
-  const workspaceStatus = await readWorkspaceStatusSnapshot(ctx.workspacePath);
+  const dualForStatus = sqliteDual ?? openSqliteDualForWorkspaceStatus(ctx);
+  const workspaceStatus = readWorkspaceStatusSnapshotFromDual(dualForStatus);
   const readyQueue = suggestion.readyQueue;
   const readyImprovementCount = readyQueue.filter(isImprovementLikeTask).length;
   const readyImprovements = readyQueue.filter(isImprovementLikeTask);

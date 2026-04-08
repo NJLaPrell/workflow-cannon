@@ -7,6 +7,7 @@ import { planningSqliteDatabaseRelativePath } from "../planning-config.js";
 import { SqliteDualPlanningStore } from "./sqlite-dual-planning.js";
 import { TaskEngineError } from "../transitions.js";
 import type { WorkspaceStatusSnapshot } from "../dashboard/dashboard-status.js";
+
 type SqliteDb = InstanceType<typeof DatabaseCtor>;
 
 /** Non-authoritative export path (ADR: optional YAML export window). */
@@ -93,6 +94,31 @@ export function readKitWorkspaceStatusRow(db: SqliteDb): KitWorkspaceStatusPubli
     nextAgentActions: parseArr(row.next_agent_actions_json),
     updatedAt: row.updated_at
   };
+}
+
+export function kitWorkspaceStatusPublicToSnapshot(row: KitWorkspaceStatusPublic): WorkspaceStatusSnapshot {
+  return {
+    currentKitPhase: row.currentKitPhase,
+    nextKitPhase: row.nextKitPhase,
+    activeFocus: row.activeFocus,
+    lastUpdated: row.lastUpdated,
+    blockers: row.blockers,
+    pendingDecisions: row.pendingDecisions,
+    nextAgentActions: row.nextAgentActions
+  };
+}
+
+/** Prefer kit SQLite workspace status (v10+). No YAML read. */
+export function readWorkspaceStatusSnapshotFromDual(dual: SqliteDualPlanningStore): WorkspaceStatusSnapshot | null {
+  const db = dual.getDatabase();
+  if (!workspaceStatusTableAvailable(db)) {
+    return null;
+  }
+  const row = readKitWorkspaceStatusRow(db);
+  if (!row) {
+    return null;
+  }
+  return kitWorkspaceStatusPublicToSnapshot(row);
 }
 
 export type WorkspaceStatusUpdatePatch = {
