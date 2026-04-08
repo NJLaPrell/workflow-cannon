@@ -1,6 +1,6 @@
 schema_version: 1
-current_kit_phase: "67"
-next_kit_phase: "68"
+current_kit_phase: "68"
+next_kit_phase: "69"
 last_updated: "2026-04-07"
 active_focus: "**Phase 61** (current) — **`v0.61.0`**: Claude Code plugin platform v1 — **`list-plugins`** / **`inspect-plugin`**, **`install-plugin`** / enable-disable, SQLite **`user_version` 8 **`kit_plugin_state`**, ADR + manifest schema + **`docs/examples/claude-plugins/`** CI smoke. **`current_kit_phase` 61** / **`next_kit_phase` 62**."
 blockers: []
