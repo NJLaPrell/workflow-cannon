@@ -104,8 +104,8 @@ async function composeAgentSessionSnapshotPayload(
     phaseRes.statusYamlMatchesConfig === false
       ? [
           {
-            path: "kit.currentPhaseNumber vs docs/maintainers/data/workspace-kit-status.yaml",
-            reason: "kit-phase-config-status-yaml-mismatch"
+            path: "kit.currentPhaseNumber vs kit_workspace_status.current_kit_phase (SQLite)",
+            reason: "kit-phase-config-workspace-status-mismatch"
           }
         ]
       : [];

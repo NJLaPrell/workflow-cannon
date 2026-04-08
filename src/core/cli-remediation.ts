@@ -66,6 +66,15 @@ export function buildErrorRemediationCatalog(): ErrorRemediationCatalogEntry[] {
     {
       code: "peer-module-disabled",
       docPath: CLI_REMEDIATION_DOCS.agentCliMap
+    },
+    {
+      code: "kit-phase-config-workspace-status-mismatch",
+      docPath: "docs/maintainers/runbooks/workspace-status-sqlite.md",
+      instructionPath: "src/modules/task-engine/instructions/get-workspace-status.md"
+    },
+    {
+      code: "kit-workspace-status-row-missing",
+      docPath: "docs/maintainers/runbooks/task-persistence-operator.md"
     }
   ];
 }
