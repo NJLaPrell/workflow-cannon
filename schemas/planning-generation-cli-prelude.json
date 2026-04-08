@@ -19,6 +19,7 @@
     "ingest-transcripts",
     "message-subagent",
     "migrate-task-persistence",
+    "persist-planning-execution-drafts",
     "register-assignment",
     "register-subagent",
     "remove-dependency",

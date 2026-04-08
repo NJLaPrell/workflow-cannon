@@ -6,6 +6,8 @@
 export const CLI_REMEDIATION_INSTRUCTIONS = {
   runTransition: "src/modules/task-engine/instructions/run-transition.md",
   createTask: "src/modules/task-engine/instructions/create-task.md",
+  persistPlanningExecutionDrafts:
+    "src/modules/task-engine/instructions/persist-planning-execution-drafts.md",
   updateTask: "src/modules/task-engine/instructions/update-task.md",
   dashboardSummary: "src/modules/task-engine/instructions/dashboard-summary.md",
   createWishlist: "src/modules/task-engine/instructions/create-wishlist.md",

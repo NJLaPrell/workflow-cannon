@@ -158,6 +158,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "persist-planning-execution-drafts",
+    "file": "persist-planning-execution-drafts.md",
+    "description": "Persist multiple proposed execution tasks from planning decomposition in one transaction (convert-wishlist-compatible rows).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "update-task",
     "file": "update-task.md",
     "description": "Update mutable task fields without lifecycle bypass.",
