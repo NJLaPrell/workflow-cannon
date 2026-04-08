@@ -9,7 +9,7 @@
 3. For **Tier A / Tier B** mutating `wk run` commands, use **`pnpm exec wk run <cmd> --schema-only`** first, edit the emitted **`sampleArgs`**, then add JSON **`policyApproval`** when required — see `.ai/machine-cli-policy.md` tier table.
 4. Treat the configured task store (SQLite `.workspace-kit/tasks/workspace-kit.db`; legacy `.workspace-kit/tasks/state.json` is **import/migrate only**, not a live runtime backend) as authoritative for `status`, `id`, and queue ordering.
 
-**Maintainer phase snapshot fields** (`current_kit_phase` / `next_kit_phase` in `docs/maintainers/data/workspace-kit-status.yaml`): prefer `workspace-kit run update-workspace-phase-snapshot` over hand-editing those two lines; keep `kit.currentPhaseNumber` in config aligned with `current_kit_phase` or `doctor` will fail (see **`.ai/agent-source-of-truth-order.md`**). Per-task `phaseKey` in the task store is separate from this snapshot.
+**Workspace phase snapshot:** canonical **`current_kit_phase` / `next_kit_phase`** for kit readers live in **`kit_workspace_status`** (planning SQLite, **`user_version` ≥ 10**). Prefer **`workspace-kit run update-workspace-phase-snapshot`** (mirrors into SQLite) or **`update-workspace-status`** over hand-editing maintainer YAML. **`kit.currentPhaseNumber`** is a **bootstrap / UX hint** only — it does **not** override the DB row; **`doctor`** may note drift but does not fail on config vs DB mismatch (see **`.ai/runbooks/workspace-status-sqlite.md`**). Per-task **`phaseKey`** in the task store is separate from this snapshot.
 
 ## Humans vs agents
 

@@ -3,7 +3,10 @@ import path from "node:path";
 import type DatabaseCtor from "better-sqlite3";
 import type { ModuleLifecycleContext } from "../contracts/module-contract.js";
 import { resolveRegistryAndConfig } from "../core/module-registry-resolve.js";
-import { resolveCanonicalPhase } from "../modules/task-engine/phase-resolution.js";
+import {
+  configKitPhaseKeyFromEffective,
+  parseKitPhaseNumberFromYaml
+} from "../modules/task-engine/phase-resolution.js";
 import { validatePlanningPersistenceForDoctor } from "../modules/task-engine/doctor-planning-persistence.js";
 import {
   getPlanningGenerationPolicy,
@@ -59,15 +62,6 @@ export async function collectDoctorKitPhaseIssues(
         {
           path: `${rel} kit_workspace_status`,
           reason: DOCTOR_KIT_WORKSPACE_STATUS_ROW_MISSING
-        }
-      ];
-    }
-    const r = resolveCanonicalPhase({ effectiveConfig: effective, workspaceStatus });
-    if (r.statusYamlMatchesConfig === false) {
-      return [
-        {
-          path: "kit.currentPhaseNumber vs kit_workspace_status.current_kit_phase (SQLite)",
-          reason: DOCTOR_KIT_PHASE_WORKSPACE_STATUS_MISMATCH
         }
       ];
     }
@@ -141,6 +135,29 @@ export async function collectTaskPersistenceDoctorSummaryLines(cwd: string): Pro
               `Note: ${WORKSPACE_STATUS_DB_EXPORT_RELATIVE} may be stale (older mtime than planning SQLite). Regenerate: pnpm exec wk run export-workspace-status '{}' (non-authoritative export; see .ai/runbooks/workspace-status-sqlite.md).`
             );
           }
+        }
+        try {
+          let Database: typeof DatabaseCtor;
+          ({ default: Database } = await import("better-sqlite3"));
+          const ro = new Database(dbAbs, { readonly: true });
+          try {
+            if (workspaceStatusTableAvailable(ro)) {
+              const ws = readWorkspaceStatusSnapshotFromKitSqliteDb(ro);
+              if (ws) {
+                const dbPhase = parseKitPhaseNumberFromYaml(ws.currentKitPhase);
+                const cfgPhase = configKitPhaseKeyFromEffective(effective);
+                if (dbPhase !== null && cfgPhase !== null && dbPhase !== cfgPhase) {
+                  lines.push(
+                    `Note: kit.currentPhaseNumber (${cfgPhase}) differs from kit_workspace_status (${dbPhase}); runtime readers use SQLite. Align config for operator UX if you want them to match (see .ai/runbooks/workspace-status-sqlite.md).`
+                  );
+                }
+              }
+            }
+          } finally {
+            ro.close();
+          }
+        } catch {
+          /* optional advisory */
         }
       }
     } catch {

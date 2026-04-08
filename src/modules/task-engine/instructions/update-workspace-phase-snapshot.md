@@ -20,11 +20,11 @@ At least one of **`currentKitPhase`** or **`nextKitPhase`** must be present. **`
 
 Values must be non-empty, single-line strings (max 120 chars after trim); control characters are rejected.
 
-## Relationship to config and doctor
+## Relationship to config, SQLite, and doctor
 
-**`kit.currentPhaseNumber`** in workspace config (when set) must match **`current_kit_phase`** in this file or **`workspace-kit doctor`** reports a mismatch. Updating this command does **not** change config — align **`kit.currentPhaseNumber`** separately (see **`docs/maintainers/POLICY-APPROVAL.md`** for **`config`** mutations).
+On success (non-dry-run), this command **mirrors** the updated YAML snapshot into **`kit_workspace_status`** when planning SQLite is **v10+**. **`kit.currentPhaseNumber`** is a **bootstrap / UX** hint only — it does **not** override the DB row; **`doctor`** may print a note when config disagrees with SQLite but does **not** fail for that alone. Updating this command does **not** change project config (see **`docs/maintainers/POLICY-APPROVAL.md`** for **`config`** mutations).
 
-Per-task **`phaseKey`** in the task store is independent: this file is a **maintainer snapshot** for dashboards and phase hints, not the execution queue.
+Per-task **`phaseKey`** in the task store is independent: maintainer YAML + SQLite workspace status are **workspace-level** snapshots, not the execution queue.
 
 ## Examples
 

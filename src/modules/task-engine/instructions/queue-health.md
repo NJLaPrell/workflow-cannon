@@ -17,7 +17,7 @@ None. Uses the workspace’s effective config and maintainer status snapshot.
 JSON `data` includes:
 
 - `schemaVersion` — always `1`
-- `canonicalPhase` — resolution source (`config` | `status-yaml` | `none`), `canonicalPhaseKey`, workspace-status vs config keys (`statusYamlMatchesConfig` is the same boolean when both config and workspace snapshot supply a phase number)
+- `canonicalPhase` — resolution source (`workspace-status` | `config` | `none`), `canonicalPhaseKey`, `workspaceStatusPhaseKey`, `configPhaseKey`, and informational `configMatchesWorkspaceStatus` when both sides supply a phase number
 - `readyTaskSummaries` — per ready task: `phaseAligned`, `blockedByDependencies`, `unmetDependencies`, `taskPhaseKey`
 - `summary` — aggregate counts (`readyCount`, `misalignedPhaseCount`, `blockedByDependenciesCount`, `healthyReadyCount`)
 

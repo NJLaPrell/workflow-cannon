@@ -380,7 +380,7 @@ test("runCli doctor ignores maintainer YAML for phase drift when SQLite v10 matc
   assert.match(capture.lines[0], /doctor passed/);
 });
 
-test("runCli doctor fails when kit.currentPhaseNumber disagrees with kit_workspace_status", async () => {
+test("runCli doctor passes when kit.currentPhaseNumber disagrees with kit_workspace_status (advisory only)", async () => {
   const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-dr-phase-sqlite-mismatch-"));
   await createDoctorFixture(fixtureRoot);
   await replaceDoctorFixtureDbWithV10WorkspaceStatus(fixtureRoot, { sqlitePhase: "67" });
@@ -389,8 +389,13 @@ test("runCli doctor fails when kit.currentPhaseNumber disagrees with kit_workspa
   const capture = createCapture();
   const code = await runCli(["doctor"], { cwd: fixtureRoot, ...capture });
 
-  assert.equal(code, 1);
-  assert.ok(capture.errors.some((e) => e.includes("kit-phase-config-workspace-status-mismatch")));
+  assert.equal(code, 0);
+  assert.match(capture.lines[0], /doctor passed/);
+  const joined = capture.lines.join("\n");
+  assert.ok(
+    joined.includes("differs from kit_workspace_status"),
+    "expected doctor summary to note config vs SQLite drift"
+  );
 });
 
 test("runCli check validates profile baseline fields", async () => {

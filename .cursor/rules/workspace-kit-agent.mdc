@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Workspace Kit Agent Protocol
 
-Apply when editing `docs/maintainers/ROADMAP.md`, task-engine task state, `docs/maintainers/data/workspace-kit-status.yaml`, or release-critical docs.
+Apply when editing `docs/maintainers/ROADMAP.md`, task-engine task state, `docs/maintainers/data/workspace-kit-status.yaml`, or release-critical docs. **Runtime** phase snapshot authority is **`kit_workspace_status`** in planning SQLite (**v10+**); use **`workspace-kit run update-workspace-phase-snapshot`** / **`update-workspace-status`** so the DB row stays aligned — maintainer YAML is a compatibility/export surface, not the live reader source of truth.
 
 ## Start-of-session checks
 
@@ -15,6 +15,6 @@ Apply when editing `docs/maintainers/ROADMAP.md`, task-engine task state, `docs/
 
 ## End-of-session updates
 
-- Keep phase/status wording consistent across roadmap, task-engine state, and status YAML.
-- Update next actions and pending decisions in status YAML when scope shifts.
+- Keep phase/status wording consistent across roadmap, task-engine state, and workspace status (SQLite + mirrored YAML export as applicable).
+- Update next actions and pending decisions via kit commands (and mirrored YAML when maintainers still edit that file) when scope shifts.
 - Preserve extraction history as provenance, not active execution.

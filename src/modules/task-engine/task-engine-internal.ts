@@ -100,15 +100,7 @@ async function composeAgentSessionSnapshotPayload(
     effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
     workspaceStatus
   });
-  const doctorKitPhaseIssues =
-    phaseRes.statusYamlMatchesConfig === false
-      ? [
-          {
-            path: "kit.currentPhaseNumber vs kit_workspace_status.current_kit_phase (SQLite)",
-            reason: "kit-phase-config-workspace-status-mismatch"
-          }
-        ]
-      : [];
+  const doctorKitPhaseIssues: Array<{ path: string; reason: string }> = [];
   const taskTitleById = new Map(tasks.map((t) => [t.id, t.title] as const));
   const teamExecutionContext = summarizeTeamAssignmentsForNextActions(
     planning.sqliteDual.getDatabase(),
@@ -128,7 +120,8 @@ async function composeAgentSessionSnapshotPayload(
     queueHealthSummary: qh.summary,
     canonicalPhase: {
       canonicalPhaseKey: phaseRes.canonicalPhaseKey,
-      statusYamlMatchesConfig: phaseRes.statusYamlMatchesConfig
+      phaseSource: phaseRes.source,
+      configMatchesWorkspaceStatus: phaseRes.configMatchesWorkspaceStatus
     },
     doctorKitPhaseIssues,
     teamExecutionContext

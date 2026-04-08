@@ -1,6 +1,18 @@
 import type { WorkspaceStatusSnapshot } from "./dashboard/dashboard-status.js";
 import type { TaskEntity } from "./types.js";
 
+/** Phase digits from `kit.currentPhaseNumber` when set (bootstrap / operator UX; not canonical over DB workspace status). */
+export function configKitPhaseKeyFromEffective(effectiveConfig: Record<string, unknown> | undefined): string | null {
+  const kit = effectiveConfig?.kit;
+  const kitObj =
+    kit !== null && typeof kit === "object" && !Array.isArray(kit) ? (kit as Record<string, unknown>) : undefined;
+  const rawNum = kitObj?.currentPhaseNumber;
+  if (typeof rawNum === "number" && Number.isFinite(rawNum) && rawNum > 0) {
+    return String(Math.floor(rawNum));
+  }
+  return null;
+}
+
 /** Parse leading digits from maintainer status YAML `current_kit_phase` (e.g. `"28"`). */
 export function parseKitPhaseNumberFromYaml(phaseRaw: string | null | undefined): string | null {
   if (phaseRaw === null || phaseRaw === undefined) {
@@ -36,50 +48,44 @@ export type CanonicalPhaseResolution = {
   /** Normalized phase number string when resolvable (e.g. `"28"`). */
   canonicalPhaseKey: string | null;
   /** Where `canonicalPhaseKey` came from when set. */
-  source: "config" | "status-yaml" | "none";
+  source: "workspace-status" | "config" | "none";
   configPhaseKey: string | null;
-  yamlPhaseKey: string | null;
+  /** Phase digits parsed from workspace status `current_kit_phase` (DB or YAML-derived snapshot). */
+  workspaceStatusPhaseKey: string | null;
   /**
-   * When both config and YAML supply a phase number: true if equal, false if they disagree.
-   * Null when not comparable (either side missing).
+   * When both config and workspace status supply a phase number: true if equal, false if they disagree.
+   * Informational only — canonical runtime phase is workspace status when its snapshot is present; config is a bootstrap hint.
    */
-  statusYamlMatchesConfig: boolean | null;
+  configMatchesWorkspaceStatus: boolean | null;
 };
 
 /**
- * Precedence: project `kit.currentPhaseNumber` (when set) wins; otherwise YAML `current_kit_phase`.
+ * Precedence: workspace status `current_kit_phase` (when parseable) wins; otherwise `kit.currentPhaseNumber` as fallback seed.
  */
 export function resolveCanonicalPhase(args: {
   effectiveConfig: Record<string, unknown> | undefined;
   workspaceStatus: WorkspaceStatusSnapshot | null;
 }): CanonicalPhaseResolution {
-  const kit = args.effectiveConfig?.kit;
-  const kitObj =
-    kit !== null && typeof kit === "object" && !Array.isArray(kit) ? (kit as Record<string, unknown>) : undefined;
-  const rawNum = kitObj?.currentPhaseNumber;
-  let configPhaseKey: string | null = null;
-  if (typeof rawNum === "number" && Number.isFinite(rawNum) && rawNum > 0) {
-    configPhaseKey = String(Math.floor(rawNum));
-  }
-  const yamlPhaseKey = parseKitPhaseNumberFromYaml(args.workspaceStatus?.currentKitPhase ?? null);
+  const configPhaseKey = configKitPhaseKeyFromEffective(args.effectiveConfig);
+  const workspaceStatusPhaseKey = parseKitPhaseNumberFromYaml(args.workspaceStatus?.currentKitPhase ?? null);
 
-  const canonicalPhaseKey = configPhaseKey ?? yamlPhaseKey ?? null;
-  const source: CanonicalPhaseResolution["source"] = configPhaseKey
-    ? "config"
-    : yamlPhaseKey
-      ? "status-yaml"
+  const canonicalPhaseKey = workspaceStatusPhaseKey ?? configPhaseKey ?? null;
+  const source: CanonicalPhaseResolution["source"] = workspaceStatusPhaseKey
+    ? "workspace-status"
+    : configPhaseKey
+      ? "config"
       : "none";
 
-  let statusYamlMatchesConfig: boolean | null = null;
-  if (configPhaseKey !== null && yamlPhaseKey !== null) {
-    statusYamlMatchesConfig = configPhaseKey === yamlPhaseKey;
+  let configMatchesWorkspaceStatus: boolean | null = null;
+  if (configPhaseKey !== null && workspaceStatusPhaseKey !== null) {
+    configMatchesWorkspaceStatus = configPhaseKey === workspaceStatusPhaseKey;
   }
 
   return {
     canonicalPhaseKey,
     source,
     configPhaseKey,
-    yamlPhaseKey,
-    statusYamlMatchesConfig
+    workspaceStatusPhaseKey,
+    configMatchesWorkspaceStatus
   };
 }

@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
 import { prepareKitSqliteDatabase } from "./workspace-kit-sqlite.js";
+import { syncWorkspaceKitStatusFromYamlIfNeeded } from "../../modules/task-engine/persistence/workspace-status-yaml-import.js";
 
 export type ModuleStateRow = {
   moduleId: string;
@@ -18,8 +19,10 @@ export class UnifiedStateDb {
   private db: Database.Database | null = null;
   readonly dbPath: string;
   readonly exportSnapshotPath: string | null;
+  private readonly workspaceRoot: string;
 
   constructor(workspacePath: string, databaseRelativePath: string, options?: UnifiedStateDbOptions) {
+    this.workspaceRoot = workspacePath;
     this.dbPath = path.resolve(workspacePath, databaseRelativePath);
     this.exportSnapshotPath = options?.exportSnapshotRelativePath
       ? path.resolve(workspacePath, options.exportSnapshotRelativePath)
@@ -31,6 +34,7 @@ export class UnifiedStateDb {
     fs.mkdirSync(path.dirname(this.dbPath), { recursive: true });
     this.db = new Database(this.dbPath);
     prepareKitSqliteDatabase(this.db);
+    syncWorkspaceKitStatusFromYamlIfNeeded(this.workspaceRoot, this.db);
     return this.db;
   }
 

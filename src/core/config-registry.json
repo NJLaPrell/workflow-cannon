@@ -122,7 +122,7 @@
   "kit.currentPhaseNumber": {
     "key": "kit.currentPhaseNumber",
     "type": "number",
-    "description": "Optional positive integer marking the maintainer’s current kit phase number. When set, queue-health and phase hints prefer this over parsing docs/maintainers/data/workspace-kit-status.yaml. Must agree with that YAML when both are set (workspace-kit doctor warns on mismatch).",
+    "description": "Optional positive integer for operator UX / bootstrap when SQLite workspace status is absent. When kit_workspace_status is present (SQLite user_version ≥ 10), readers use the DB row first; this key does not override it. Doctor may note config vs DB drift without failing.",
     "default": 0,
     "domainScope": "project",
     "owningModule": "workspace-kit",

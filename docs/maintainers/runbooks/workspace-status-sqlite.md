@@ -27,8 +27,8 @@ Append-only audit log: **`event_kind`**, optional **`actor`** / **`command`**, *
 
 On **`SqliteDualPlanningStore.loadFromDisk`**, after migrations:
 
-- If **`workspace_revision`** is **0** and **`docs/maintainers/data/workspace-kit-status.yaml`** exists, the kit imports that file into **`kit_workspace_status`** and bumps revision to **1**, recording a **`yaml_seed_import`** event.
-- If **`.workspace-kit/config.json`** sets **`kit.currentPhaseNumber`** and YAML **`current_kit_phase`** yields a **different** phase number, open **fails closed** with **`workspace-status-import-conflict`** until the operator aligns sources.
+- If **`workspace_revision`** is **0** and **`docs/maintainers/data/workspace-kit-status.yaml`** exists, the kit imports that file into **`kit_workspace_status`** and bumps revision to **1**, recording a **`yaml_seed_import`** event. **`kit.currentPhaseNumber`** is **not** consulted for this seed (YAML row content wins).
+- **`UnifiedStateDb.ensureDb`** (module state opens) also runs **`syncWorkspaceKitStatusFromYamlIfNeeded`** after **`prepareKitSqliteDatabase`**, so revision-0 seed is not skipped when only **`UnifiedStateDb`** touched the file before **`SqliteDualPlanningStore.loadFromDisk`**.
 
 ## Migrations
 
@@ -47,13 +47,14 @@ DDL and **`user_version`** steps live in **`src/core/state/workspace-kit-sqlite.
 
 **`dashboard-summary`**, **`queue-health`**, **`list-tasks`** (queue hints), and **`agent-session-snapshot` / `agent-bootstrap`** compose paths read **`workspaceStatus`** from **`readWorkspaceStatusSnapshotFromDual`** only (no shallow-parse of maintainer YAML for those payloads). When the table or row is absent, **`workspaceStatus`** is **`null`**.
 
-## Doctor (T820)
+## Doctor (T820 / T821)
 
-**`workspace-kit doctor`** phase drift uses **SQLite only** when **`PRAGMA user_version` ≥ 10** and **`kit_workspace_status`** exists:
+**`workspace-kit doctor`** workspace-status checks use **SQLite only** when **`PRAGMA user_version` ≥ 10** and **`kit_workspace_status`** exists:
 
-- Compares **`kit.currentPhaseNumber`** (effective config) to **`kit_workspace_status.current_kit_phase`**.
-- Maintainer YAML **`docs/maintainers/data/workspace-kit-status.yaml`** is **not** consulted for this check (YAML may lag; authority is the DB row).
-- Failure codes: **`kit-phase-config-workspace-status-mismatch`**, **`kit-workspace-status-row-missing`** (table present but singleton row absent).
-- When **`user_version` < 10**, doctor **skips** this phase drift slice (no YAML fallback).
+- Maintainer YAML **`docs/maintainers/data/workspace-kit-status.yaml`** is **not** consulted for drift (YAML may lag; authority is the DB row).
+- Failure code: **`kit-workspace-status-row-missing`** when the table exists but the singleton row is absent.
+- Config vs DB phase **mismatch is not a failure** after **T821**: runtime readers use **`kit_workspace_status`**. When **`kit.currentPhaseNumber`** disagrees with the DB phase, doctor may print a **non-fatal note** after a successful pass (operator UX / bootstrap hint only).
+- Legacy remediation code **`kit-phase-config-workspace-status-mismatch`** may still appear in catalogs for older tooling; **`doctor`** no longer emits it.
+- When **`user_version` < 10**, doctor **skips** this slice (no YAML fallback).
 
 After doctor passes, if **`user_version` ≥ 10** and **`workspace-kit-status.db-export.yaml`** exists with an **mtime older** than the planning SQLite file, doctor prints a **non-fatal note** suggesting **`export-workspace-status`** (export remains non-authoritative).

@@ -117,14 +117,6 @@ function writeDoctorFailureRemediation(
   }
   writeError("  - workspace-kit --help — orientation and top-level commands");
   writeError("  - workspace-kit run — list module commands (after doctor passes)");
-  const phaseMismatch = issues.some(
-    (issue) => issue.reason === "kit-phase-config-workspace-status-mismatch"
-  );
-  if (phaseMismatch) {
-    writeError(
-      "  - Phase mismatch (kit.currentPhaseNumber vs kit_workspace_status in SQLite): align config with DB via `pnpm exec wk run update-workspace-phase-snapshot` / `update-workspace-status`, or inspect `pnpm exec wk run get-workspace-status '{}'`. See `.ai/runbooks/workspace-status-sqlite.md`."
-    );
-  }
   const rowMissing = issues.some((issue) => issue.reason === "kit-workspace-status-row-missing");
   if (rowMissing) {
     writeError(

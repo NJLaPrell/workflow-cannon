@@ -575,6 +575,102 @@ function humanizePlanningToken(raw: string): string {
     .join(" ");
 }
 
+/** Dashboard-local guided `build-plan` flow (host runs CLI; webview collects answers). */
+export type PlanningInterviewWizardPanel =
+  | { kind: "picker" }
+  | {
+      kind: "question";
+      planningType: string;
+      questionId: string;
+      prompt: string;
+      examples: string[];
+      whyItMatters: string;
+      progressHint: string;
+    }
+  | { kind: "success"; planningType: string; code: string; message: string }
+  | { kind: "error"; message: string };
+
+export function renderPlanningInterviewWizardPanel(panel: PlanningInterviewWizardPanel): string {
+  const planningTypes: readonly [string, string][] = [
+    ["change", "Change / Refactor"],
+    ["new-feature", "New Feature"],
+    ["task-breakdown", "Task Breakdown"],
+    ["sprint-phase", "Sprint / Phase"],
+    ["task-ordering", "Task Ordering"]
+  ];
+  if (panel.kind === "picker") {
+    const opts = planningTypes
+      .map(
+        ([v, label]) =>
+          '<option value="' + escapeHtmlAttr(v) + '">' + escapeHtml(label) + "</option>"
+      )
+      .join("");
+    return (
+      '<div class="dash-planning-wizard" aria-label="Guided planning interview">' +
+      "<p><b>Guided interview</b> · step through <code>build-plan</code> here (output mode <code>response</code> — no wishlist row).</p>" +
+      '<label class="dash-planning-wizard-label" for="wc-planning-type">Planning type</label> ' +
+      '<select id="wc-planning-type" class="dash-planning-wizard-select">' +
+      opts +
+      "</select> " +
+      '<button type="button" class="dash-new-plan-btn" data-wc-action="planning-wizard-start">Start interview</button>' +
+      '<p class="muted">Answers run through <code>workspace-kit run build-plan</code> on the host; planning-generation tokens come from your last dashboard refresh.</p>' +
+      "</div>"
+    );
+  }
+  if (panel.kind === "question") {
+    const ex =
+      panel.examples.length > 0
+        ? "<p><b>Examples:</b> " + escapeHtml(panel.examples.join(" · ")) + "</p>"
+        : "";
+    return (
+      '<div class="dash-planning-wizard" aria-label="Planning question">' +
+      "<p><b>Question</b> · " +
+      escapeHtml(panel.planningType) +
+      " · " +
+      escapeHtml(panel.progressHint) +
+      "</p>" +
+      "<p>" +
+      escapeHtml(panel.prompt) +
+      "</p>" +
+      ex +
+      (panel.whyItMatters.trim().length > 0
+        ? '<p class="muted"><b>Why it matters:</b> ' + escapeHtml(panel.whyItMatters) + "</p>"
+        : "") +
+      '<label class="dash-planning-wizard-label" for="wc-planning-answer">Your answer</label>' +
+      '<textarea id="wc-planning-answer" class="dash-planning-wizard-textarea" rows="5" spellcheck="true"></textarea>' +
+      '<p class="dash-planning-wizard-actions">' +
+      '<button type="button" class="dash-new-plan-btn" data-wc-action="planning-wizard-submit">Submit answer</button> ' +
+      '<button type="button" class="dash-row-action-secondary" data-wc-action="planning-wizard-cancel">Cancel</button>' +
+      "</p>" +
+      "</div>"
+    );
+  }
+  if (panel.kind === "success") {
+    return (
+      '<div class="dash-planning-wizard ok" aria-label="Planning interview complete">' +
+      "<p><b>Interview complete</b> · " +
+      escapeHtml(panel.planningType) +
+      " · <code>" +
+      escapeHtml(panel.code) +
+      "</code></p>" +
+      "<p>" +
+      escapeHtml(panel.message) +
+      "</p>" +
+      '<button type="button" class="dash-new-plan-btn" data-wc-action="planning-wizard-dismiss">Done</button>' +
+      "</div>"
+    );
+  }
+  return (
+    '<div class="dash-planning-wizard bad" aria-label="Planning interview error">' +
+    "<p><b>Interview error</b></p>" +
+    "<p>" +
+    escapeHtml(panel.message) +
+    "</p>" +
+    '<button type="button" class="dash-new-plan-btn" data-wc-action="planning-wizard-cancel">Reset</button>' +
+    "</div>"
+  );
+}
+
 function formatPlanningUpdatedAt(iso: string): string {
   const t = Date.parse(iso);
   if (!Number.isFinite(t)) {
@@ -590,9 +686,11 @@ function formatPlanningUpdatedAt(iso: string): string {
   }
 }
 
-function renderPlanningSession(ps: unknown): string {
+function renderPlanningSession(ps: unknown, wizardPanel?: PlanningInterviewWizardPanel | null): string {
   const newPlanBtn =
     '<button type="button" class="dash-new-plan-btn" data-wc-action="planning-new-plan" title="Start the planning interview in chat (build-plan)">New Plan</button>';
+  const wizardHtml =
+    wizardPanel !== undefined && wizardPanel !== null ? renderPlanningInterviewWizardPanel(wizardPanel) : "";
 
   if (!ps || typeof ps !== "object") {
     return (
@@ -601,6 +699,7 @@ function renderPlanningSession(ps: unknown): string {
       '<div class="dash-planning-head-main"><p class="dash-planning-title"><b>Planning Interview</b></p></div>' +
       newPlanBtn +
       "</div>" +
+      wizardHtml +
       "<p class=\"muted\">No interview in progress. Start or resume with <code>workspace-kit run build-plan</code> when you want guided planning; progress is saved automatically under <code>.workspace-kit/planning/</code>.</p>" +
       '<p class="muted">This card updates when you refresh after the session file appears or disappears.</p>' +
       "</section>"
@@ -633,6 +732,7 @@ function renderPlanningSession(ps: unknown): string {
     "</p></div>" +
     newPlanBtn +
     "</div>" +
+    wizardHtml +
     "<p>" +
     escapeHtml(pct) +
     "% through required questions" +
@@ -1128,7 +1228,11 @@ function renderStatusRollup(
 }
 
 /** Inner HTML for #root from a `workspace-kit run dashboard-summary`–shaped payload (or extension error object). */
-export function renderDashboardRootInnerHtml(payload: unknown, listApprovalQueueResult?: unknown): string {
+export function renderDashboardRootInnerHtml(
+  payload: unknown,
+  listApprovalQueueResult?: unknown,
+  planningWizardPanel?: PlanningInterviewWizardPanel | null
+): string {
   if (payload === null || payload === undefined) {
     return "<p>No payload</p>";
   }
@@ -1318,7 +1422,7 @@ export function renderDashboardRootInnerHtml(payload: unknown, listApprovalQueue
     renderSubagentRegistrySection(d.subagentRegistry) +
     tasksBlock +
     wishlistSection +
-    renderPlanningSession(planningSession) +
+    renderPlanningSession(planningSession, planningWizardPanel) +
     storeSection
   );
 }

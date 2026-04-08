@@ -86,7 +86,7 @@ Generated from `src/core/config-metadata.ts`. Do not edit by hand; run `workspac
 
 | kit.currentPhaseNumber | number | 0 | project | workspace-kit | maintainer | false | false |
 
-**Description:** Optional positive integer marking the maintainer’s current kit phase number. When set, queue-health and phase hints prefer this over parsing docs/maintainers/data/workspace-kit-status.yaml. Must agree with that YAML when both are set (workspace-kit doctor warns on mismatch).
+**Description:** Optional positive integer for operator UX / bootstrap when SQLite workspace status is absent. When **`kit_workspace_status`** exists (**`user_version` ≥ 10**), readers use the DB row first; this key does not override it. Doctor may note config vs DB drift without failing.
 
 | kit.githubInvocation.allowedRepositories | array | [] | project | workspace-kit | maintainer | true | true |
 

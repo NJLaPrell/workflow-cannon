@@ -9,7 +9,8 @@ import {
   escapeHtml,
   renderActiveFocusHtml,
   renderMarkdownBoldAfterEscape,
-  resolvePhasePhraseForCompleteRelease
+  resolvePhasePhraseForCompleteRelease,
+  renderPlanningInterviewWizardPanel
 } from "../dist/views/dashboard/render-dashboard.js";
 import { buildPhaseCompleteReleaseChatPrompt } from "../dist/phase-complete-release-prompt.js";
 
@@ -545,4 +546,65 @@ test("renderDashboardRootInnerHtml ready phase buckets include Complete & Releas
   assert.match(html, /data-wc-phase-phrase="Phase 64"/);
   assert.match(html, /Complete &amp; Release/);
   assert.match(html, /phase-bucket-summary/);
+});
+
+test("renderPlanningInterviewWizardPanel picker wires start control and planning type select", () => {
+  const html = renderPlanningInterviewWizardPanel({ kind: "picker" });
+  assert.match(html, /id="wc-planning-type"/);
+  assert.match(html, /data-wc-action="planning-wizard-start"/);
+  assert.match(html, /value="change"/);
+});
+
+test("renderPlanningInterviewWizardPanel question mode escapes prompt and includes submit/cancel", () => {
+  const html = renderPlanningInterviewWizardPanel({
+    kind: "question",
+    planningType: "change",
+    questionId: "changeGoal",
+    prompt: 'What <change>?',
+    examples: ['A & B'],
+    whyItMatters: "Trust",
+    progressHint: "1 answered"
+  });
+  assert.match(html, /data-wc-action="planning-wizard-submit"/);
+  assert.match(html, /data-wc-action="planning-wizard-cancel"/);
+  assert.match(html, /&lt;change&gt;/);
+  assert.match(html, /A &amp; B/);
+});
+
+test("renderDashboardRootInnerHtml embeds planning wizard panel when provided", () => {
+  const html = renderDashboardRootInnerHtml(
+    {
+      ok: true,
+      data: {
+        stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
+        proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+        proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+        readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+        readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+        wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+        blockedSummary: { count: 0, top: [] },
+        suggestedNext: null,
+        planningSession: null,
+        taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
+        workspaceStatus: null,
+        blockingAnalysis: [],
+        dependencyOverview: {
+          schemaVersion: 1,
+          activeTaskCount: 0,
+          includedTaskCount: 0,
+          edgeCount: 0,
+          truncated: false,
+          perfNote: null,
+          nodes: [],
+          edges: [],
+          mermaidFlowchart: "",
+          criticalPathReady: []
+        }
+      }
+    },
+    undefined,
+    { kind: "picker" }
+  );
+  assert.match(html, /dash-planning-wizard/);
+  assert.match(html, /wc-planning-type/);
 });

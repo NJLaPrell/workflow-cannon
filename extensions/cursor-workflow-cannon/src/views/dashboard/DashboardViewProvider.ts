@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import type { DashboardSummaryCommandSuccess } from "@workflow-cannon/workspace-kit/contracts/dashboard-summary-run";
 import { prefillCursorChat } from "../../cursor-chat-prefill.js";
 import type { CommandClient } from "../../runtime/command-client.js";
-import { ingestPlanningMetaFromData } from "../../planning-generation-cache.js";
+import { expectedPlanningGenerationArgs, ingestPlanningMetaFromData } from "../../planning-generation-cache.js";
 import { buildWishlistIntakeAgentPrompt } from "../../wishlist-chat-prompt.js";
 import { buildPhaseCompleteReleaseChatPrompt } from "../../phase-complete-release-prompt.js";
 import {
@@ -15,9 +15,25 @@ import {
 } from "../../playbook-chat-prompts.js";
 import { confirmAndRunTransition } from "../../run-transition-with-approval.js";
 import { promptAndCreateWishlist } from "../../add-wishlist-item-flow.js";
-import { escapeHtml, renderDashboardRootInnerHtml } from "./render-dashboard.js";
+import {
+  escapeHtml,
+  renderDashboardRootInnerHtml,
+  type PlanningInterviewWizardPanel
+} from "./render-dashboard.js";
 
 let dashboardOutput: vscode.OutputChannel | undefined;
+
+type DashboardPlanningWizardState =
+  | { kind: "idle" }
+  | {
+      kind: "question";
+      planningType: string;
+      outputMode: string;
+      answers: Record<string, string>;
+      question: { id: string; prompt: string; examples: string[]; whyItMatters: string };
+    }
+  | { kind: "done"; planningType: string; code: string; message: string }
+  | { kind: "error"; message: string };
 
 function logDashboard(message: string): void {
   if (!dashboardOutput) {
@@ -34,6 +50,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private dashboardPollTimer: ReturnType<typeof setInterval> | undefined;
   /** After first full HTML load, refresh only swaps `#root` via postMessage so `<details open>` state survives. */
   private dashboardRootShellReady = false;
+
+  private planningWizard: DashboardPlanningWizardState = { kind: "idle" };
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -109,6 +127,19 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (msg?.type === "prefillPlanningInterviewChat") {
         await prefillCursorChat(buildPlanningInterviewPrompt(), { newChat: true });
       }
+      if (msg?.type === "planningWizardStart") {
+        const pt = typeof msg.planningType === "string" ? msg.planningType.trim() : "";
+        if (pt.length > 0) {
+          void this.onPlanningWizardStart(pt);
+        }
+      }
+      if (msg?.type === "planningWizardSubmit") {
+        const a = typeof msg.answer === "string" ? msg.answer : "";
+        void this.onPlanningWizardSubmit(a);
+      }
+      if (msg?.type === "planningWizardCancel" || msg?.type === "planningWizardDismiss") {
+        void this.onPlanningWizardReset();
+      }
       if (msg?.type === "prefillCollaborationHubChat") {
         await prefillCursorChat(buildCollaborationProfilesHubPrompt(), { newChat: true });
       }
@@ -179,6 +210,196 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     void this.pushUpdate();
   }
 
+  private planningWizardPanel(): PlanningInterviewWizardPanel {
+    switch (this.planningWizard.kind) {
+      case "idle":
+        return { kind: "picker" };
+      case "question":
+        return {
+          kind: "question",
+          planningType: this.planningWizard.planningType,
+          questionId: this.planningWizard.question.id,
+          prompt: this.planningWizard.question.prompt,
+          examples: this.planningWizard.question.examples,
+          whyItMatters: this.planningWizard.question.whyItMatters,
+          progressHint: `${Object.keys(this.planningWizard.answers).length} answered`
+        };
+      case "done":
+        return {
+          kind: "success",
+          planningType: this.planningWizard.planningType,
+          code: this.planningWizard.code,
+          message: this.planningWizard.message
+        };
+      case "error":
+        return { kind: "error", message: this.planningWizard.message };
+    }
+  }
+
+  private pickFirstPlanningQuestion(data: Record<string, unknown> | undefined): {
+    id: string;
+    prompt: string;
+    examples: string[];
+    whyItMatters: string;
+  } | null {
+    const nq = data?.nextQuestions;
+    if (!Array.isArray(nq) || nq.length === 0) {
+      return null;
+    }
+    const q = nq[0] as Record<string, unknown>;
+    const id = typeof q.id === "string" ? q.id.trim() : "";
+    const prompt = typeof q.prompt === "string" ? q.prompt : "";
+    if (!id || !prompt) {
+      return null;
+    }
+    const examples = Array.isArray(q.examples)
+      ? q.examples.filter((x): x is string => typeof x === "string")
+      : [];
+    const whyItMatters = typeof q.whyItMatters === "string" ? q.whyItMatters : "";
+    return { id, prompt, examples, whyItMatters };
+  }
+
+  private async ingestPlanningGenFromDashboard(): Promise<void> {
+    const dash = await this.client.run("dashboard-summary", {});
+    if (dash.ok && dash.data && typeof dash.data === "object") {
+      ingestPlanningMetaFromData(dash.data as Record<string, unknown>);
+    }
+  }
+
+  private async onPlanningWizardStart(planningType: string): Promise<void> {
+    try {
+      await this.ingestPlanningGenFromDashboard();
+      const res = await this.client.run("build-plan", {
+        planningType,
+        outputMode: "response",
+        ...expectedPlanningGenerationArgs()
+      });
+      if (!res.ok) {
+        this.planningWizard = {
+          kind: "error",
+          message: res.message ?? String(res.code ?? "build-plan failed")
+        };
+        await this.pushUpdate();
+        return;
+      }
+      const code = String(res.code ?? "");
+      if (code === "planning-response-ready") {
+        this.planningWizard = {
+          kind: "done",
+          planningType,
+          code,
+          message: String(res.message ?? "Interview complete")
+        };
+        this.notifyKitStateChanged();
+        await this.pushUpdate();
+        return;
+      }
+      if (code === "planning-questions") {
+        const pq = this.pickFirstPlanningQuestion(res.data as Record<string, unknown> | undefined);
+        if (!pq) {
+          this.planningWizard = { kind: "error", message: "build-plan returned no questions" };
+        } else {
+          this.planningWizard = {
+            kind: "question",
+            planningType,
+            outputMode: "response",
+            answers: {},
+            question: pq
+          };
+        }
+        this.notifyKitStateChanged();
+        await this.pushUpdate();
+        return;
+      }
+      this.planningWizard = {
+        kind: "error",
+        message: `Unexpected build-plan code: ${code}`
+      };
+      await this.pushUpdate();
+    } catch (e) {
+      this.planningWizard = {
+        kind: "error",
+        message: e instanceof Error ? e.message : String(e)
+      };
+      await this.pushUpdate();
+    }
+  }
+
+  private async onPlanningWizardSubmit(answer: string): Promise<void> {
+    if (this.planningWizard.kind !== "question") {
+      return;
+    }
+    const text = answer.trim();
+    if (text.length === 0) {
+      void vscode.window.showWarningMessage("Enter an answer before submitting.");
+      return;
+    }
+    const { planningType, outputMode, question, answers } = this.planningWizard;
+    const nextAnswers = { ...answers, [question.id]: text };
+    try {
+      await this.ingestPlanningGenFromDashboard();
+      const res = await this.client.run("build-plan", {
+        planningType,
+        outputMode,
+        answers: nextAnswers,
+        ...expectedPlanningGenerationArgs()
+      });
+      if (!res.ok) {
+        this.planningWizard = {
+          kind: "error",
+          message: res.message ?? String(res.code ?? "build-plan failed")
+        };
+        await this.pushUpdate();
+        return;
+      }
+      const code = String(res.code ?? "");
+      if (code === "planning-response-ready") {
+        this.planningWizard = {
+          kind: "done",
+          planningType,
+          code,
+          message: String(res.message ?? "Interview complete")
+        };
+        this.notifyKitStateChanged();
+        await this.pushUpdate();
+        return;
+      }
+      if (code === "planning-questions") {
+        const pq = this.pickFirstPlanningQuestion(res.data as Record<string, unknown> | undefined);
+        if (!pq) {
+          this.planningWizard = { kind: "error", message: "build-plan returned no next question" };
+        } else {
+          this.planningWizard = {
+            kind: "question",
+            planningType,
+            outputMode,
+            answers: nextAnswers,
+            question: pq
+          };
+        }
+        this.notifyKitStateChanged();
+        await this.pushUpdate();
+        return;
+      }
+      this.planningWizard = {
+        kind: "error",
+        message: `Unexpected build-plan code: ${code}`
+      };
+      await this.pushUpdate();
+    } catch (e) {
+      this.planningWizard = {
+        kind: "error",
+        message: e instanceof Error ? e.message : String(e)
+      };
+      await this.pushUpdate();
+    }
+  }
+
+  private async onPlanningWizardReset(): Promise<void> {
+    this.planningWizard = { kind: "idle" };
+    await this.pushUpdate();
+  }
+
   /**
    * Embeds rendered HTML in `webview.html` so the panel works even when postMessage delivery is flaky.
    * Buttons still use a tiny inline script + postMessage (host only receives clicks).
@@ -209,8 +430,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       ingestPlanningMetaFromData(raw.data as Record<string, unknown>);
     }
     let rootInner: string;
+    const wizardPanel: PlanningInterviewWizardPanel | null = raw.ok === true ? this.planningWizardPanel() : null;
     try {
-      rootInner = renderDashboardRootInnerHtml(raw, listApprovalQueueResult);
+      rootInner = renderDashboardRootInnerHtml(raw, listApprovalQueueResult, wizardPanel);
     } catch (e) {
       rootInner = '<pre class="bad">Host render error: ' + escapeHtml(String(e)) + "</pre>";
     }
@@ -239,7 +461,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       `script-src ${webview.cspSource} 'unsafe-inline'`
     ].join("; ");
 
-    const bootstrap = `(function(){var vscode=acquireVsCodeApi();window.addEventListener("message",function(ev){var m=ev.data;if(!m||m.type!=="wcReplaceRoot"||typeof m.html!=="string")return;var root=document.getElementById("root");if(!root)return;var open={};root.querySelectorAll("details[data-wc-track]").forEach(function(d){var k=d.getAttribute("data-wc-track");if(k&&d.open)open[k]=true;});root.innerHTML=m.html;Object.keys(open).forEach(function(k){var el=root.querySelector('details[data-wc-track="'+k+'"]');if(el)el.open=true;});});var btn=document.getElementById("btn");var rootEl=document.getElementById("root");if(btn)btn.addEventListener("click",function(){vscode.postMessage({type:"refresh"});});if(rootEl)rootEl.addEventListener("click",function(ev){var t=ev.target;if(!t||t.tagName!=="BUTTON")return;var act=t.getAttribute("data-wc-action");if(!act)return;ev.stopPropagation();if(act==="wishlist-view"){var wv=(t.getAttribute("data-wishlist-id")||"").trim();if(wv)vscode.postMessage({type:"openWishlistDetail",wishlistId:wv});return;}if(act==="planning-new-plan"){vscode.postMessage({type:"prefillPlanningInterviewChat"});return;}if(act==="collaboration-hub"){vscode.postMessage({type:"prefillCollaborationHubChat"});return;}if(act==="deliver-phase-prompt"){var kp=(t.getAttribute("data-wc-kit-phase")||"").trim();vscode.postMessage({type:"prefillDeliverPhaseChat",kitPhase:kp});return;}if(act==="add-wishlist-item"){vscode.postMessage({type:"addWishlistItem"});return;}if(act==="generate-features-chat"){vscode.postMessage({type:"prefillGenerateFeaturesChat"});return;}if(act==="transcript-churn-research-chat"){var tcTid=(t.getAttribute("data-task-id")||"").trim();vscode.postMessage({type:"prefillTranscriptChurnResearchChat",taskId:tcTid});return;}if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}if(act==="phase-complete-release"){var ph=(t.getAttribute("data-wc-phase-phrase")||"").trim();vscode.postMessage({type:"prefillPhaseCompleteReleaseChat",phasePhrase:ph});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});})();`;
+    const bootstrap = `(function(){var vscode=acquireVsCodeApi();window.addEventListener("message",function(ev){var m=ev.data;if(!m||m.type!=="wcReplaceRoot"||typeof m.html!=="string")return;var root=document.getElementById("root");if(!root)return;var open={};root.querySelectorAll("details[data-wc-track]").forEach(function(d){var k=d.getAttribute("data-wc-track");if(k&&d.open)open[k]=true;});root.innerHTML=m.html;Object.keys(open).forEach(function(k){var el=root.querySelector('details[data-wc-track="'+k+'"]');if(el)el.open=true;});});var btn=document.getElementById("btn");var rootEl=document.getElementById("root");if(btn)btn.addEventListener("click",function(){vscode.postMessage({type:"refresh"});});if(rootEl)rootEl.addEventListener("click",function(ev){var t=ev.target;if(!t||t.tagName!=="BUTTON")return;var act=t.getAttribute("data-wc-action");if(!act)return;ev.stopPropagation();if(act==="wishlist-view"){var wv=(t.getAttribute("data-wishlist-id")||"").trim();if(wv)vscode.postMessage({type:"openWishlistDetail",wishlistId:wv});return;}if(act==="planning-new-plan"){vscode.postMessage({type:"prefillPlanningInterviewChat"});return;}if(act==="planning-wizard-start"){var sel=document.getElementById("wc-planning-type");var pt=sel&&sel.value?String(sel.value).trim():"";if(pt)vscode.postMessage({type:"planningWizardStart",planningType:pt});return;}if(act==="planning-wizard-submit"){var ta=document.getElementById("wc-planning-answer");var txt=ta&&typeof ta.value==="string"?ta.value.trim():"";vscode.postMessage({type:"planningWizardSubmit",answer:txt});return;}if(act==="planning-wizard-cancel"){vscode.postMessage({type:"planningWizardCancel"});return;}if(act==="planning-wizard-dismiss"){vscode.postMessage({type:"planningWizardDismiss"});return;}if(act==="collaboration-hub"){vscode.postMessage({type:"prefillCollaborationHubChat"});return;}if(act==="deliver-phase-prompt"){var kp=(t.getAttribute("data-wc-kit-phase")||"").trim();vscode.postMessage({type:"prefillDeliverPhaseChat",kitPhase:kp});return;}if(act==="add-wishlist-item"){vscode.postMessage({type:"addWishlistItem"});return;}if(act==="generate-features-chat"){vscode.postMessage({type:"prefillGenerateFeaturesChat"});return;}if(act==="transcript-churn-research-chat"){var tcTid=(t.getAttribute("data-task-id")||"").trim();vscode.postMessage({type:"prefillTranscriptChurnResearchChat",taskId:tcTid});return;}if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}if(act==="phase-complete-release"){var ph=(t.getAttribute("data-wc-phase-phrase")||"").trim();vscode.postMessage({type:"prefillPhaseCompleteReleaseChat",phasePhrase:ph});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});})();`;
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -353,6 +575,40 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     button.dash-new-plan-btn:active {
       filter: brightness(0.94);
+    }
+    .dash-planning-wizard {
+      margin: 8px 0 10px 0;
+      padding: 8px;
+      border-radius: 6px;
+      background: var(--vscode-textCodeBlock-background);
+    }
+    .dash-planning-wizard-label {
+      display: block;
+      margin: 6px 0 2px 0;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .dash-planning-wizard-select {
+      max-width: min(100%, 220px);
+      margin-right: 6px;
+      font-family: var(--vscode-font-family);
+      font-size: 12px;
+    }
+    .dash-planning-wizard-textarea {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      margin: 4px 0 8px 0;
+      padding: 6px;
+      font-family: var(--vscode-font-family);
+      font-size: 12px;
+      color: var(--vscode-foreground);
+      background: var(--vscode-editor-background);
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.45));
+      border-radius: 4px;
+    }
+    .dash-planning-wizard-actions {
+      margin: 0;
     }
     .ok { color: var(--vscode-testing-iconPassed); }
     .bad { color: var(--vscode-errorForeground); }

@@ -28,5 +28,5 @@ Empty object `{}` (optional `config` / `actor` passthrough like other read-only 
 | `stateSummary` | Task counts (same as `get-next-actions`) |
 | `queueHealthSummary` | Compact summary from `queue-health` |
 | `canonicalPhase` | Phase resolution snapshot |
-| `doctorKitPhaseIssues` | Non-empty when **`kit.currentPhaseNumber`** disagrees with **`kit_workspace_status.current_kit_phase`** (SQLite v10+); codes **`kit-phase-config-workspace-status-mismatch`** / **`kit-workspace-status-row-missing`** |
+| `doctorKitPhaseIssues` | Usually empty; severe workspace-status problems surface via **`workspace-kit doctor`**. See **`canonicalPhase.phaseSource`** / **`configMatchesWorkspaceStatus`** for config vs DB informational drift |
 | `teamExecutionContext` | Open team assignments (read-only) |

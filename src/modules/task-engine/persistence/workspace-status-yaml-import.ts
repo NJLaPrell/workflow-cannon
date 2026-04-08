@@ -8,24 +8,8 @@ import {
   parseWorkspaceKitStatusYaml,
   type WorkspaceStatusSnapshot
 } from "../dashboard/dashboard-status.js";
-import { resolveCanonicalPhase } from "../phase-resolution.js";
 
 type SqliteDb = InstanceType<typeof DatabaseCtor>;
-
-function readProjectKitCurrentPhaseNumber(workspacePath: string): number | null {
-  try {
-    const fp = path.join(workspacePath, ".workspace-kit/config.json");
-    const raw = fs.readFileSync(fp, "utf8");
-    const j = JSON.parse(raw) as { kit?: { currentPhaseNumber?: unknown } };
-    const n = j.kit?.currentPhaseNumber;
-    if (typeof n === "number" && Number.isFinite(n) && n > 0) {
-      return Math.floor(n);
-    }
-  } catch {
-    /* missing or invalid project config */
-  }
-  return null;
-}
 
 function snapshotToRowFields(s: WorkspaceStatusSnapshot): {
   current_kit_phase: string | null;
@@ -49,7 +33,7 @@ function snapshotToRowFields(s: WorkspaceStatusSnapshot): {
 
 /**
  * One-time import from maintainer YAML into `kit_workspace_status` when revision is still 0.
- * Fail-closed when project `kit.currentPhaseNumber` disagrees with YAML phase digits.
+ * YAML row content is authoritative for this seed; `kit.currentPhaseNumber` is not consulted (config is a non-canonical hint).
  */
 export function syncWorkspaceKitStatusFromYamlIfNeeded(workspacePath: string, db: SqliteDb): void {
   const dbPath = db.name;
@@ -92,22 +76,6 @@ export function syncWorkspaceKitStatusFromYamlIfNeeded(workspacePath: string, db
   }
 
   const snap = parseWorkspaceKitStatusYaml(rawYaml);
-  const effectiveStub: Record<string, unknown> = {
-    kit: (() => {
-      const n = readProjectKitCurrentPhaseNumber(workspacePath);
-      return n !== null ? { currentPhaseNumber: n } : {};
-    })()
-  };
-  const resolution = resolveCanonicalPhase({
-    effectiveConfig: effectiveStub,
-    workspaceStatus: snap
-  });
-  if (resolution.statusYamlMatchesConfig === false) {
-    throw new TaskEngineError(
-      "workspace-status-import-conflict",
-      `kit.currentPhaseNumber disagrees with current_kit_phase in ${WORKSPACE_KIT_STATUS_YAML_RELATIVE}; align project config and YAML (or remove one side's phase) before opening the planning database`
-    );
-  }
 
   const f = snapshotToRowFields(snap);
   const now = new Date().toISOString();

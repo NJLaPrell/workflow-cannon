@@ -8,7 +8,6 @@ import Database from "better-sqlite3";
 
 import { prepareKitSqliteDatabase } from "../dist/core/state/workspace-kit-sqlite.js";
 import { syncWorkspaceKitStatusFromYamlIfNeeded } from "../dist/modules/task-engine/persistence/workspace-status-yaml-import.js";
-import { TaskEngineError } from "../dist/modules/task-engine/transitions.js";
 
 test("syncWorkspaceKitStatusFromYamlIfNeeded imports YAML when config and YAML phases agree", async () => {
   const workspace = await mkdtemp(path.join(os.tmpdir(), "wk-ws-import-"));
@@ -53,7 +52,7 @@ test("syncWorkspaceKitStatusFromYamlIfNeeded imports YAML when config and YAML p
   }
 });
 
-test("syncWorkspaceKitStatusFromYamlIfNeeded throws when config phase disagrees with YAML", async () => {
+test("syncWorkspaceKitStatusFromYamlIfNeeded imports YAML when config phase disagrees (YAML wins)", async () => {
   const workspace = await mkdtemp(path.join(os.tmpdir(), "wk-ws-conflict-"));
   const yamlDir = path.join(workspace, "docs/maintainers/data");
   fs.mkdirSync(yamlDir, { recursive: true });
@@ -73,10 +72,12 @@ test("syncWorkspaceKitStatusFromYamlIfNeeded throws when config phase disagrees 
   const db = new Database(dbPath);
   try {
     prepareKitSqliteDatabase(db);
-    assert.throws(
-      () => syncWorkspaceKitStatusFromYamlIfNeeded(workspace, db),
-      (e) => e instanceof TaskEngineError && e.code === "workspace-status-import-conflict"
-    );
+    syncWorkspaceKitStatusFromYamlIfNeeded(workspace, db);
+    const row = db
+      .prepare("SELECT workspace_revision, current_kit_phase FROM kit_workspace_status WHERE id = 1")
+      .get();
+    assert.equal(row.workspace_revision, 1);
+    assert.equal(row.current_kit_phase, "67");
   } finally {
     db.close();
   }

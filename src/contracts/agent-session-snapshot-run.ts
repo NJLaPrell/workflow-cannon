@@ -26,7 +26,8 @@ export type AgentSessionSnapshotData = {
   queueHealthSummary: Record<string, unknown>;
   canonicalPhase: {
     canonicalPhaseKey: string | null;
-    statusYamlMatchesConfig: boolean;
+    phaseSource: "workspace-status" | "config" | "none";
+    configMatchesWorkspaceStatus: boolean | null;
   };
   doctorKitPhaseIssues: Array<{ path: string; reason: string }>;
   teamExecutionContext: AgentSessionSnapshotTeamContext;

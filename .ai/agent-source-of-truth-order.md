@@ -7,7 +7,7 @@ Drift-checked against `scripts/fixtures/governance-doc-order.json`. This is the 
 3. `.ai/WORKSPACE-KIT-SESSION.md` — session snapshot protocol; roadmap pointers without opening maintainer prose under docs/
 4. `.workspace-kit/tasks/workspace-kit.db` — default SQLite task store
 5. `.workspace-kit/tasks/state.json` — JSON opt-out task store
-6. `docs/maintainers/data/workspace-kit-status.yaml` — phase snapshot (allowed exception: YAML/JSON under docs/maintainers/data only; do not read adjacent maintainer prose unless excepted)
+6. `kit_workspace_status` in planning SQLite (`PRAGMA user_version` ≥ 10) — canonical workspace phase snapshot for kit readers; **`docs/maintainers/data/workspace-kit-status.yaml`** is a maintainer-edited **compatibility / export** surface, not runtime authority (allowed exception path: YAML/JSON under `docs/maintainers/data` only; do not read adjacent maintainer prose unless excepted)
 7. `.ai/RELEASING.md` — release readiness and evidence gates
 8. `.ai/POLICY-APPROVAL.md` — approval surfaces (`run` JSON vs `config` env)
 9. `.ai/AGENT-CLI-MAP.md` — tier table, copy-paste JSON, operation surfaces

@@ -307,12 +307,18 @@ These are **`workspace-kit` top-level commands**, not `run` subcommands. They re
 
 Use **`queue-health`** when you need a **single JSON answer** to “are ready tasks aligned with the current phase, and are any **`ready`** rows still blocked by incomplete dependencies?” — without ad-hoc `jq` over the full task list.
 
-**Canonical phase resolution (precedence):**
+**Canonical phase resolution (precedence)** when **`kit_workspace_status`** is available (**SQLite `user_version` ≥ 10** and dual-store readers supply a snapshot):
 
-1. **`kit.currentPhaseNumber`** in effective workspace config (`.workspace-kit/config.json` / user layer) when set to a **positive integer**.
-2. Otherwise, leading digits parsed from **`docs/maintainers/data/workspace-kit-status.yaml`** → **`current_kit_phase`** (for example `"28"` → **`28`**).
+1. Leading digits from **`kit_workspace_status.current_kit_phase`** (via **`dashboard-summary` / `queue-health` / `agent-bootstrap`** — not maintainer YAML).
+2. Otherwise **`kit.currentPhaseNumber`** in effective workspace config when set to a **positive integer** (bootstrap / operator UX only).
 
-**`workspace-kit doctor`** fails when **both** config and YAML supply a phase number and they **disagree** (maintainer drift signal).
+**`workspace-kit doctor`** does **not** fail on config vs DB phase mismatch; it may print a **note** after a successful pass. Use **`pnpm exec wk run get-workspace-status '{}'`** / **`update-workspace-status`** / **`update-workspace-phase-snapshot`** to align the **DB** row.
+
+**Copy-paste — read workspace status (SQLite):**
+
+```bash
+pnpm exec wk run get-workspace-status '{}'
+```
 
 **Copy-paste — full audit:**
 
