@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { planningModule } from "../dist/modules/planning/index.js";
+import { planningModule, taskEngineModule } from "../dist/index.js";
 import { TaskStore } from "../dist/modules/task-engine/persistence/store.js";
 import { SqliteDualPlanningStore } from "../dist/modules/task-engine/persistence/sqlite-dual-planning.js";
 
@@ -286,6 +286,105 @@ test("planningModule build-plan rejects executionTaskDrafts without finalize", a
   );
   assert.equal(result.ok, false);
   assert.equal(result.code, "planning-execution-drafts-require-finalize");
+});
+
+test("planningModule build-plan multi-task preview then persist-planning-execution-drafts round-trip", async () => {
+  const workspace = await tmpDir();
+  const ctx = {
+    runtimeVersion: "0.1",
+    workspacePath: workspace,
+    effectiveConfig: {
+      tasks: {
+        persistenceBackend: "sqlite",
+        sqliteDatabaseRelativePath: ".workspace-kit/tasks/workspace-kit.db",
+        planningGenerationPolicy: "require"
+      }
+    }
+  };
+  const lt = await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, ctx);
+  assert.equal(lt.ok, true);
+  const g0 = lt.data.planningGeneration;
+  const answers = {
+    featureGoal: "Multi-task planning flow",
+    placement: "CLI",
+    technology: "TypeScript",
+    targetAudience: "AI Agent Operators"
+  };
+  const executionTaskDrafts = [
+    {
+      title: "Slice one",
+      phase: "Phase 68",
+      approach: "First implementation",
+      technicalScope: ["src/modules/planning"],
+      acceptanceCriteria: ["Unit tests pass"]
+    },
+    {
+      id: "T8888",
+      title: "Slice two",
+      phase: "Phase 68",
+      approach: "Second implementation",
+      technicalScope: ["src/modules/task-engine"],
+      acceptanceCriteria: ["Integration verified"]
+    }
+  ];
+  const bp = await planningModule.onCommand(
+    {
+      name: "build-plan",
+      args: {
+        planningType: "new-feature",
+        outputMode: "tasks",
+        finalize: true,
+        answers,
+        executionTaskDrafts
+      }
+    },
+    ctx
+  );
+  assert.equal(bp.ok, true);
+  assert.equal(bp.code, "planning-multi-task-decomposition-preview");
+  const rows = bp.data.taskOutputs.map((t) => ({
+    id: t.id,
+    title: t.title,
+    type: t.type,
+    phase: t.phase,
+    approach: t.approach,
+    technicalScope: t.technicalScope,
+    acceptanceCriteria: t.acceptanceCriteria,
+    dependsOn: t.dependsOn,
+    unblocks: t.unblocks,
+    priority: t.priority
+  }));
+  const persist = await taskEngineModule.onCommand(
+    {
+      name: "persist-planning-execution-drafts",
+      args: {
+        tasks: rows,
+        expectedPlanningGeneration: g0,
+        clientMutationId: "planning-integration-t811",
+        planRef: bp.data.provenance.planRef,
+        planningType: bp.data.planningType
+      }
+    },
+    ctx
+  );
+  assert.equal(persist.ok, true);
+  assert.equal(persist.code, "planning-execution-drafts-persisted");
+
+  const replay = await taskEngineModule.onCommand(
+    {
+      name: "persist-planning-execution-drafts",
+      args: {
+        tasks: rows,
+        expectedPlanningGeneration: persist.data.planningGeneration,
+        clientMutationId: "planning-integration-t811",
+        planRef: bp.data.provenance.planRef,
+        planningType: bp.data.planningType
+      }
+    },
+    ctx
+  );
+  assert.equal(replay.ok, true);
+  assert.equal(replay.code, "planning-execution-drafts-idempotent-replay");
 });
 
 test("planningModule build-plan rejects persistTasks with executionTaskDrafts", async () => {
