@@ -509,3 +509,106 @@ test("documentation module rejects unsupported command names", async () => {
   assert.equal(result.ok, false);
   assert.equal(result.code, "unsupported-command");
 });
+
+test("buildRepoRootReadmeFromMaintainerBody rewrites maintainer README for repo root", async () => {
+  const { buildRepoRootReadmeFromMaintainerBody } = await import(
+    "../dist/modules/documentation/runtime-render-support.js"
+  );
+  const maint = [
+    "<!-- note -->",
+    "",
+    '<img src="../title_image.png" />',
+    "",
+    "See [road](ROADMAP.md) and [agents](../../AGENTS.md) and [play](playbooks/p.md).",
+    ""
+  ].join("\n");
+  const root = buildRepoRootReadmeFromMaintainerBody(maint);
+  assert.match(root, /^AI agents:/);
+  assert.ok(root.includes('src="title_image.png"'));
+  assert.ok(root.includes("](docs/maintainers/ROADMAP.md)"));
+  assert.ok(root.includes("](AGENTS.md)"));
+  assert.ok(root.includes("](docs/maintainers/playbooks/p.md)"));
+});
+
+test("generate-document writes repo root README.md for README documentType", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "wc-doc-rt-readme-root-"));
+  const { templatesRoot, aiRoot, humanRoot } = await createDocFixture(root);
+  const ctx = { ...baseLifecycleContext(), workspacePath: root };
+
+  const templateContent = [
+    "<!-- t -->",
+    "",
+    "## Overview",
+    "",
+    '<div><img src="../title_image.png" alt="x" /></div>',
+    "",
+    "## Chat",
+    "",
+    "<!--DOC_MODULE:CHAT_FEATURES-->",
+    "",
+    "## Policy",
+    "",
+    "Guide [ROADMAP.md](ROADMAP.md).",
+    ""
+  ].join("\n");
+  await writeFile(path.join(templatesRoot, "README.md"), templateContent);
+
+  const aiReadme = [
+    "meta|v=1|doc=rules|truth=canonical|schema=base.v2|status=active|profile=core",
+    "project|name=t|type=project_readme|scope=onboarding",
+    "chat_feature|id=CFX|title=T|summary=S|steps=a>b",
+    ""
+  ].join("\n");
+  await writeFile(path.join(aiRoot, "README.md"), aiReadme, "utf8");
+
+  const result = await callOnCommand(
+    "generate-document",
+    {
+      documentType: "README.md",
+      options: { dryRun: false, overwrite: true, strict: false, overwriteAi: false }
+    },
+    ctx
+  );
+
+  assert.equal(result.ok, true);
+  const rootReadme = path.join(root, "README.md");
+  assert.ok(
+    result.data.evidence.filesWritten.includes(rootReadme),
+    "expected repo root README in filesWritten"
+  );
+  const disk = await (await import("node:fs/promises")).readFile(rootReadme, "utf8");
+  assert.ok(disk.includes('src="title_image.png"'));
+  assert.ok(disk.startsWith("AI agents:"));
+});
+
+test("generate-document dryRun does not write repo root README.md", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "wc-doc-rt-readme-dry-"));
+  const { templatesRoot, aiRoot } = await createDocFixture(root);
+  const ctx = { ...baseLifecycleContext(), workspacePath: root };
+
+  await writeFile(
+    path.join(templatesRoot, "README.md"),
+    "## Overview\n\n<img src=\"../title_image.png\" />\n\n## Chat\n\n<!--DOC_MODULE:CHAT_FEATURES-->\n\n## Policy\n\nx\n",
+    "utf8"
+  );
+  await writeFile(
+    path.join(aiRoot, "README.md"),
+    "meta|v=1|doc=rules|truth=canonical|schema=base.v2|status=active|profile=core\nproject|name=t|type=project_readme|scope=onboarding\nchat_feature|id=CFX|title=T|summary=S|steps=a\n",
+    "utf8"
+  );
+  await writeFile(path.join(root, "README.md"), "keep-me", "utf8");
+
+  const result = await callOnCommand(
+    "generate-document",
+    {
+      documentType: "README.md",
+      options: { dryRun: true, strict: false, overwriteAi: false }
+    },
+    ctx
+  );
+
+  assert.equal(result.ok, true);
+  assert.ok(!result.data.evidence.filesWritten.includes(path.join(root, "README.md")));
+  const disk = await (await import("node:fs/promises")).readFile(path.join(root, "README.md"), "utf8");
+  assert.equal(disk, "keep-me");
+});

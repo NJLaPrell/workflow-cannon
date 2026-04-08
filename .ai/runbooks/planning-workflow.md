@@ -27,8 +27,8 @@ workspace-kit run build-plan '{"planningType":"new-feature","answers":{"featureG
 - `planning-questions`: additional critical answers required; use `data.nextQuestions`.
 - `planning-ready`: interview is complete; artifact returned but not persisted if `createWishlist:false`.
 - `planning-artifact-created`: wishlist artifact persisted successfully.
-- `planning-critical-unknowns`: finalize denied because unresolved critical unknowns remain.
-- `planning-ready-with-warnings`: finalize allowed only when `planning.hardBlockCriticalUnknowns=false`.
+- `planning-critical-unknowns`: finalize denied because unresolved critical unknowns remain while `planning.hardBlockCriticalUnknowns=true`.
+- `planning-ready-with-warnings`: finalize allowed with unresolved critical unknowns only when `planning.hardBlockCriticalUnknowns=false`; response includes `data.unresolvedCritical` and `data.finalizeWarnings` (`kind: unresolved-critical-soft-finalize`).
 
 Each response includes `data.cliGuidance` with:
 

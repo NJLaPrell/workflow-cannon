@@ -10,8 +10,8 @@
       "profileSetId": "rpg_party_v1",
       "tier": 4
     },
-    "currentPhaseLabel": "Phase 65 — current (v0.64.1 shipped)",
-    "currentPhaseNumber": 65
+    "currentPhaseLabel": "Phase 66 — shipped (v0.66.0); next Phase 67",
+    "currentPhaseNumber": 66
   },
   "tasks": {
     "persistenceBackend": "sqlite",

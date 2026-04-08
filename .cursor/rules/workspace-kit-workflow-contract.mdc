@@ -9,10 +9,10 @@ Use consistent terms from **`.ai/TERMS.md`** for directives, rules, guardrails, 
 
 Required alignment:
 
-- `README.md` = intent and boundaries only.
+- **Repo-root `README.md`** — GitHub-facing landing copy: **generated** by the documentation module (`generate-document` / `document-project` for `README.md`) from `src/modules/documentation/templates/README.md` plus keyed `.ai/README.md` (`chat_feature|` records). **Do not** treat it as the hand-edited source of truth for module-owned sections; edit `.ai/README.md` / the template, then regenerate. **`docs/maintainers/README.md`** is the maintainer human twin; **`.ai/README.md`** is the AI keyed source.
 - **`docs/maintainers/ROADMAP.md`** = maintainer-canonical strategic narrative on disk. **Agents:** use task-engine state + **`pnpm run wk`** for queue facts; do **not** read roadmap prose routinely (**`.cursor/rules/agent-doc-routing.mdc`**).
 - Task-engine state (default SQLite `.workspace-kit/tasks/workspace-kit.db`; JSON opt-out `.workspace-kit/tasks/state.json`) = execution queue and completion tracking.
 - **`.ai/RELEASING.md`** = release workflow and evidence gates for agents. **`docs/maintainers/RELEASING.md`** = human maintainer depth when editing release policy.
 
-Do not duplicate deep operational detail in `README.md`.
+Keep repo-root `README.md` aligned with the documentation module outputs (intent, quick start, chat guides) — avoid duplicating deep maintainer-only procedure there.
 

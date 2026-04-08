@@ -14,9 +14,10 @@ Single maintainer reference for **what agents must run in a terminal** when work
 
 If a session might touch `.workspace-kit/` state, lifecycle transitions, policy traces, approvals, or generated maintainer docs, run this first:
 
-1. `workspace-kit doctor` — confirms canonical task/policy contract files are present.
-2. `workspace-kit run` (no subcommand) — lists **router-registered** commands (executable for the current enabled module set).
-3. Use this map + `src/modules/<module>/instructions/<command>.md` for JSON payload shape.
+1. **One-shot (preferred):** `pnpm exec wk run agent-bootstrap '{}'` — same contract checks as `doctor` **plus** `agent-session-snapshot` fields in one JSON response (read-only).
+2. **Split:** `workspace-kit doctor` — confirms canonical task/policy contract files are present; then `pnpm exec wk run agent-session-snapshot '{}'` for the composed bundle.
+3. `workspace-kit run` (no subcommand) — lists **router-registered** commands (executable for the current enabled module set).
+4. Use this map + `src/modules/<module>/instructions/<command>.md` for JSON payload shape.
 
 Optional machine-readable catalog (same validation as `doctor`, then JSON on stdout):
 

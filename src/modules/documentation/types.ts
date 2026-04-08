@@ -3,6 +3,8 @@ export type DocumentationGenerateOptions = {
   overwrite?: boolean;
   overwriteAi?: boolean;
   overwriteHuman?: boolean;
+  /** When `documentType` is `README.md`, also write repo-root `README.md` (default: same as `overwrite`) */
+  overwriteRepoRootReadme?: boolean;
   strict?: boolean;
   maxValidationAttempts?: number;
   allowWithoutTemplate?: boolean;
@@ -41,6 +43,8 @@ export type DocumentationGenerateResult = {
   ok: boolean;
   aiOutputPath?: string;
   humanOutputPath?: string;
+  /** Set when `README.md` generation also targets the repository root copy */
+  repoRootReadmePath?: string;
   evidence: DocumentationGenerationEvidence;
 };
 

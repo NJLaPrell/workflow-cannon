@@ -10,6 +10,22 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 (none)
 
+## [0.66.0] - 2026-04-08
+
+Phase 66 — **README tri-surface, agent cold start, planning finalize clarity** (**`T792`–`T805`**): `generate-document` / `document-project` for **`README.md`** also writes **repo-root `README.md`** (agent notice, `title_image` path, link rewrites from maintainer body). New read-only **`workspace-kit run agent-bootstrap`** runs the same contract checks as **`workspace-kit doctor`** then returns the **`agent-session-snapshot`** bundle. **`build-plan`** soft finalize (`planning-ready-with-warnings`) includes **`data.finalizeWarnings`**. Doctor contract path extraction to **`src/cli/doctor-contract-validation.ts`**. Agent rule **A032** and workflow-contract: do not hand-edit module-owned root README; refresh via documentation module.
+
+### Added
+
+- **`agent-bootstrap`** command (manifest, instruction, pilot args schema, run-contracts entry).
+- **`finalizeWarnings`** envelope for **`planning-ready-with-warnings`** responses.
+- **`overwriteRepoRootReadme`** option and **`buildRepoRootReadmeFromMaintainerBody`** transform helper.
+
+### Changed
+
+- **`templates/README.md`** — expanded from prior root README (maintainer-relative links; chat block uses `<!--DOC_MODULE:CHAT_FEATURES-->`).
+- **`.ai/WORKSPACE-KIT-SESSION.md`**, **`.ai/AGENT-CLI-MAP.md`** — document **`agent-bootstrap`** as preferred cold start.
+- **`schemas/pilot-run-args.snapshot.json`**, **`schemas/task-engine-run-contracts.schema.json`** — **0.66.0** / new command.
+
 ## [0.65.0] - 2026-04-07
 
 Phase 65 — **Dashboard + phase-closeout operator path + policy canon** (**`T784`–`T791`**): Cursor slash **`/complete-phase <N> [approve-release]`** (**.cursor/commands/complete-phase.md**); dashboard **Complete & Release** chat prompt aligned; **`.ai/POLICY-APPROVAL.md`** callout that slash/chat are intent only for Tier A/B **`wk run`**; **`.ai/playbooks/phase-closeout-and-release.md`** §4 pointer; **`.ai/RELEASING.md`** intent **I005**; **`.ai/runbooks/agent-playbooks.md`** + maintainer mirror refreshed for §7 tokens and agent-first paths. Extension **0.1.13** — **`list-approval-queue`** fetched with **`dashboard-summary`**; task rows **View** + tertiary styling; team/subagent rollup parity documented; refresh tooltip + README note on automatic reload.

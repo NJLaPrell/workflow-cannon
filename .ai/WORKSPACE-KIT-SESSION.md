@@ -5,7 +5,7 @@
 ## Refresh execution context
 
 1. Run `pnpm run wk doctor` (or `node dist/cli.js doctor`) from the repo root. For the **machine-readable instruction catalog** (executable vs documentation-only commands, remediation codes), run `pnpm exec wk doctor --agent-instruction-surface` and keep the JSON output handy before relying on a bare `wk run` text menu.
-2. Prefer **`pnpm run wk run agent-session-snapshot '{}'`** for a **single read-only bundle** (planning generation, suggested next, queue-health summary, phase/doctor mismatch hints, open team assignments). Otherwise run `pnpm run wk run get-next-actions '{}'` and, when filtering, `pnpm run wk run list-tasks '<json-filter>'` (do not insert `pnpm`’s `--` between `wk` and `run` — it breaks the CLI).
+2. For a **single argv cold start** (doctor-equivalent contract checks **plus** the composed session bundle), run **`pnpm exec wk run agent-bootstrap '{}'`** (read-only; includes `planningGeneration`, `suggestedNext`, queue health, phase hints). Otherwise use **`pnpm run wk run agent-session-snapshot '{}'`** alone when doctor was already run separately, or `pnpm run wk run get-next-actions '{}'` plus `pnpm run wk run list-tasks '<json-filter>'` for granular reads (do not insert `pnpm`’s `--` between `wk` and `run` — it breaks the CLI).
 3. For **Tier A / Tier B** mutating `wk run` commands, use **`pnpm exec wk run <cmd> --schema-only`** first, edit the emitted **`sampleArgs`**, then add JSON **`policyApproval`** when required — see `.ai/machine-cli-policy.md` tier table.
 4. Treat the configured task store (SQLite `.workspace-kit/tasks/workspace-kit.db`; legacy `.workspace-kit/tasks/state.json` is **import/migrate only**, not a live runtime backend) as authoritative for `status`, `id`, and queue ordering.
 

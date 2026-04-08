@@ -48,6 +48,7 @@ rule|id=A026|level=should|scope=agent|directive=optional_resolve_behavior_profil
 
 rule|id=A030|level=must|scope=agent|directive=use_document_project_for_batch_and_generate_document_for_single|risk=low|approval=none|override=auto|status=active|refs=src/modules/documentation/RULES.md|why=rationale_for_A030
 rule|id=A031|level=must|scope=agent|directive=follow_documentation_module_rules_md_before_generation|risk=medium|approval=none|override=warn|status=active|refs=src/modules/documentation/RULES.md|why=rationale_for_A031
+rule|id=A032|level=must_not|scope=agent|directive=hand_edit_repo_root_readme_md_for_documentation_module_owned_body|risk=medium|approval=none|override=stop|status=active|refs=.ai/README.md,src/modules/documentation/templates/README.md,src/modules/documentation/RULES.md|why=root_readme_is_generated_tri_surface
 
 command|id=C001|name=document-project|use=module_command_router|scope=documentation|expectation=batch_generation_all_templates|risk=low|status=active
 command|id=C002|name=generate-document|use=module_command_router|scope=documentation|expectation=single_document_generation|risk=low|status=active

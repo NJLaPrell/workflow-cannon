@@ -365,6 +365,7 @@ Non-sensitive commands (no `policyApproval` unless you added `extraSensitiveModu
 ```bash
 workspace-kit run list-tasks '{}'
 workspace-kit run get-next-actions '{}'
+workspace-kit run agent-bootstrap '{}'
 workspace-kit run queue-health '{}'
 workspace-kit run get-task '{"taskId":"T285"}'
 workspace-kit run list-tasks '{"type":"improvement","phase":"Phase 16 - Maintenance and stability"}'

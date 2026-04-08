@@ -17,6 +17,8 @@ function parseOptions(raw: Record<string, unknown>): DocumentationGenerateOption
     overwrite: typeof raw.overwrite === "boolean" ? raw.overwrite : undefined,
     overwriteAi: typeof raw.overwriteAi === "boolean" ? raw.overwriteAi : undefined,
     overwriteHuman: typeof raw.overwriteHuman === "boolean" ? raw.overwriteHuman : undefined,
+    overwriteRepoRootReadme:
+      typeof raw.overwriteRepoRootReadme === "boolean" ? raw.overwriteRepoRootReadme : undefined,
     strict: typeof raw.strict === "boolean" ? raw.strict : undefined,
     maxValidationAttempts:
       typeof raw.maxValidationAttempts === "number" ? raw.maxValidationAttempts : undefined,
@@ -74,6 +76,7 @@ export const documentationModule: WorkflowModule = {
               ok: r.ok,
               aiOutputPath: r.aiOutputPath,
               humanOutputPath: r.humanOutputPath,
+              repoRootReadmePath: r.repoRootReadmePath,
               filesWritten: r.evidence.filesWritten,
               filesSkipped: r.evidence.filesSkipped
             }))
@@ -98,6 +101,7 @@ export const documentationModule: WorkflowModule = {
           data: {
             aiOutputPath: result.aiOutputPath,
             humanOutputPath: result.humanOutputPath,
+            repoRootReadmePath: result.repoRootReadmePath,
             evidence: result.evidence
           }
         };

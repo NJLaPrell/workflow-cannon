@@ -1,6 +1,6 @@
 # document-project
 
-Generate all project documentation by running `generate-document` for every view model in `src/modules/documentation/views`. Outputs AI-optimized docs to `.ai/` and human-readable docs to `docs/maintainers/`.
+Generate all project documentation by running `generate-document` for every view model in `src/modules/documentation/views`. Outputs AI-optimized docs to `.ai/` and human-readable docs to `docs/maintainers/`. When the batch includes `README.md`, also refreshes **repo-root `README.md`** (same transforms as single-doc `generate-document`).
 
 ## Inputs
 
@@ -18,7 +18,7 @@ View models in `src/modules/documentation/views` map to these output targets:
 - `AGENTS.md`
 - `ARCHITECTURE.md`
 - `PRINCIPLES.md`
-- `README.md` (chat guide bodies from `.ai/README.md` `chat_feature|` records — see `generate-document.md`)
+- `README.md` (`.ai/README.md` + `docs/maintainers/README.md` + **repo-root `README.md`** — see `generate-document.md`)
 - `RELEASING.md`
 - `ROADMAP.md`
 - `SECURITY.md`

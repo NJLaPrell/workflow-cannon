@@ -286,6 +286,10 @@ export const planningModule: WorkflowModule = {
               outputMode,
               status: "ready-with-warnings",
               unresolvedCritical: missingCritical,
+              finalizeWarnings: {
+                kind: "unresolved-critical-soft-finalize",
+                unresolvedCritical: missingCritical
+              },
               nextQuestions: [...missingCritical, ...adaptiveFollowups],
               scoringHints,
               capturedAnswers: answers,

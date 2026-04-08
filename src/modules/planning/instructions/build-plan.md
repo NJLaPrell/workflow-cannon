@@ -22,7 +22,7 @@ While an interview is **in progress** or **blocked on finalize**, the module wri
 - `planningType` (required): one of `task-breakdown`, `sprint-phase`, `task-ordering`, `new-feature`, `change`.
 - `outputMode` (optional): one of `wishlist` (default), `tasks`, `response`.
 - `answers` (optional): object of question-id -> answer values.
-- `finalize` (optional boolean): when `true`, hard-blocks completion if critical unknowns remain.
+- `finalize` (optional boolean): when `true`, completes the interview if enough answers exist; **critical unknowns** either **block** (`planning.hardBlockCriticalUnknowns=true`, code `planning-critical-unknowns`) or **allow a soft finalize** (`planning.hardBlockCriticalUnknowns=false`, code `planning-ready-with-warnings` with `data.finalizeWarnings`).
 - `createWishlist` (optional boolean, default `true`): when `finalize:true`, persist the artifact as a new `W###` wishlist item.
 - `persistTasks` (optional boolean, default `false`): with `outputMode:"tasks"`, writes generated task outputs to Task Engine when true.
 - `taskPhase` / `taskType` / `taskPriority` (optional): task output shaping hints for `outputMode:"tasks"`.
@@ -30,6 +30,7 @@ While an interview is **in progress** or **blocked on finalize**, the module wri
 ## Returns
 
 - `planning-questions`: unresolved critical questions (with adaptive follow-ups) to answer next.
+- `planning-ready-with-warnings`: `finalize:true` with unresolved criticals while `planning.hardBlockCriticalUnknowns=false`; includes `data.finalizeWarnings` and `data.unresolvedCritical`.
 - `planning-wishlist-ready`: critical unknowns resolved; plan is ready for wishlist artifact generation.
 - `planning-artifact-created`: final artifact persisted to wishlist namespace (`W###`) and returned in response data.
 - `planning-response-ready`: critical unknowns resolved; response-only artifact returned (no persistence).

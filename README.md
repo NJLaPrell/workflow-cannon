@@ -1,4 +1,8 @@
-AI agents: read **`./.ai/`** first (see repo-root [`AGENTS.md`](AGENTS.md), [`.ai/agent-source-of-truth-order.md`](.ai/agent-source-of-truth-order.md), [`.cursor/rules/agent-doc-routing.mdc`](.cursor/rules/agent-doc-routing.mdc)). For **conflicts between** `.ai/`, `docs/maintainers/`, `.cursor/rules/`, and code, use agent precedence in **`.ai/agent-source-of-truth-order.md`** and [`.ai/ARCHITECTURE.md`](.ai/ARCHITECTURE.md) — do not rely on this README alone. **Maintainers** use [`docs/maintainers/AGENTS.md`](docs/maintainers/AGENTS.md) as the human index.
+AI agents: read **`./.ai/`** first (see repo-root [`AGENTS.md`](AGENTS.md), [`.ai/agent-source-of-truth-order.md`](.ai/agent-source-of-truth-order.md), [`.cursor/rules/agent-doc-routing.mdc`](.cursor/rules/agent-doc-routing.mdc)).
+
+For **conflicts between** `.ai/`, `docs/maintainers/`, `.cursor/rules/`, and code, use agent precedence in **`.ai/agent-source-of-truth-order.md`** and [`.ai/ARCHITECTURE.md`](.ai/ARCHITECTURE.md) — do not rely on this README alone.
+
+**Maintainers** use [`docs/maintainers/AGENTS.md`](docs/maintainers/AGENTS.md) as the human index.
 
 <div align="center">
   <img src="title_image.png" alt="Workflow Cannon" width="720" />
@@ -96,7 +100,7 @@ Optional maintainer prompt templates may live under **`tasks/*.md`** in a repo (
 
 ## Chat-first workflows (Cursor and agents)
 
-These are **chat-shaped** recipes: what to say, what to attach, and what you should expect back. They intentionally **do not** embed shell one-liners; when kit-owned state must change, the agent follows [`.ai/AGENT-CLI-MAP.md`](.ai/AGENT-CLI-MAP.md) and [`.ai/POLICY-APPROVAL.md`](.ai/POLICY-APPROVAL.md) (repo-root [`AGENTS.md`](AGENTS.md)). **Source of truth for this section:** keyed `chat_feature|` lines in [`.ai/README.md`](.ai/README.md) (regenerate [`docs/maintainers/README.md`](docs/maintainers/README.md) with the documentation module).
+These are **chat-shaped** recipes: what to say, what to attach, and what you should expect back. They intentionally **do not** embed shell one-liners; when kit-owned state must change, the agent still follows [`AGENTS.md`](AGENTS.md) and [`AGENT-CLI-MAP.md`](.ai/AGENT-CLI-MAP.md) for real invocations. **Bodies** come from `chat_feature|` records in [`../../.ai/README.md`](.ai/README.md); regenerate **this file** and the repo-root **README.md** with the documentation module after editing them.
 
 ### Bootstrap a focused agent session
 
@@ -115,8 +119,8 @@ These are **chat-shaped** recipes: what to say, what to attach, and what you sho
 **How to drive it in chat:**
 
 1. Name the T### you own
-2. Attach [`docs/maintainers/playbooks/task-to-phase-branch.md`](docs/maintainers/playbooks/task-to-phase-branch.md) with `@` or enable [`.cursor/rules/playbook-task-to-phase-branch.mdc`](.cursor/rules/playbook-task-to-phase-branch.mdc)
-3. Tell the agent to follow the playbook order for branch hygiene, PR targets into `release/phase-N`, and tier-A transitions with JSON policy approval where the maintainer CLI map requires it
+2. Attach `.ai/playbooks/task-to-phase-branch.md` with `@` or enable `.cursor/rules/playbook-task-to-phase-branch.mdc`
+3. Tell the agent to follow the playbook order for branch hygiene, PR targets into `release/phase-N`, and tier-A transitions with JSON policy approval per `.ai/AGENT-CLI-MAP.md`
 
 ### Research friction and log improvement work
 
@@ -125,7 +129,7 @@ These are **chat-shaped** recipes: what to say, what to attach, and what you sho
 **How to drive it in chat:**
 
 1. Describe where friction showed up such as sessions, docs, CLI UX, policy, or release ops
-2. Attach [`docs/maintainers/playbooks/improvement-task-discovery.md`](docs/maintainers/playbooks/improvement-task-discovery.md) or [`.cursor/rules/playbook-improvement-task-discovery.mdc`](.cursor/rules/playbook-improvement-task-discovery.mdc)
+2. Attach `.ai/playbooks/improvement-task-discovery.md` or `.cursor/rules/playbook-improvement-task-discovery.mdc`
 3. Ask the agent to follow the playbook checkpoints and persist only through the tier-B commands it names when work should land in the queue
 
 ### Triage improvement backlog into ready work
@@ -135,7 +139,7 @@ These are **chat-shaped** recipes: what to say, what to attach, and what you sho
 **How to drive it in chat:**
 
 1. Ask for a list of improvement-task candidates that are still proposed
-2. Attach [`docs/maintainers/playbooks/improvement-triage-top-three.md`](docs/maintainers/playbooks/improvement-triage-top-three.md) or [`.cursor/rules/playbook-improvement-triage-top-three.mdc`](.cursor/rules/playbook-improvement-triage-top-three.mdc)
+2. Attach `.ai/playbooks/improvement-triage-top-three.md` or `.cursor/rules/playbook-improvement-triage-top-three.mdc`
 3. Have the agent document rationale for each pick and use accept-style transitions only after the rubric is satisfied
 
 ### Move wishlist ideas toward execution tasks
@@ -145,7 +149,7 @@ These are **chat-shaped** recipes: what to say, what to attach, and what you sho
 **How to drive it in chat:**
 
 1. Paste or describe ranked wishlist items and constraints
-2. Attach [`docs/maintainers/playbooks/wishlist-intake-to-execution.md`](docs/maintainers/playbooks/wishlist-intake-to-execution.md) or [`.cursor/rules/playbook-wishlist-intake-to-execution.mdc`](.cursor/rules/playbook-wishlist-intake-to-execution.mdc)
+2. Attach `.ai/playbooks/wishlist-intake-to-execution.md` or `.cursor/rules/playbook-wishlist-intake-to-execution.mdc`
 3. Tell the agent to follow intake questions then conversion steps the playbook specifies
 
 ### Run structured onboarding in chat
@@ -155,7 +159,7 @@ These are **chat-shaped** recipes: what to say, what to attach, and what you sho
 **How to drive it in chat:**
 
 1. Open Cursor chat where rules can attach
-2. Attach [`docs/maintainers/playbooks/workspace-kit-chat-onboarding.md`](docs/maintainers/playbooks/workspace-kit-chat-onboarding.md) or [`.cursor/rules/playbook-workspace-kit-chat-onboarding.mdc`](.cursor/rules/playbook-workspace-kit-chat-onboarding.mdc)
+2. Attach `.ai/playbooks/workspace-kit-chat-onboarding.md` or `.cursor/rules/playbook-workspace-kit-chat-onboarding.mdc`
 3. Work through each numbered step and save answers when the playbook says to stop and persist
 
 ### Run the behavior interview
@@ -164,7 +168,7 @@ These are **chat-shaped** recipes: what to say, what to attach, and what you sho
 
 **How to drive it in chat:**
 
-1. Attach [`docs/maintainers/playbooks/workspace-kit-chat-behavior-interview.md`](docs/maintainers/playbooks/workspace-kit-chat-behavior-interview.md) or [`.cursor/rules/playbook-workspace-kit-chat-behavior-interview.mdc`](.cursor/rules/playbook-workspace-kit-chat-behavior-interview.mdc)
+1. Attach `.ai/playbooks/workspace-kit-chat-behavior-interview.md` or `.cursor/rules/playbook-workspace-kit-chat-behavior-interview.mdc`
 2. Answer each question in order and save per-step outputs
 3. Ask the agent to summarize effective profile hints without overriding policy or approval gates
 
@@ -174,7 +178,7 @@ These are **chat-shaped** recipes: what to say, what to attach, and what you sho
 
 **How to drive it in chat:**
 
-1. Point the agent at [`src/modules/documentation/RULES.md`](src/modules/documentation/RULES.md) for precedence
+1. Point the agent at `src/modules/documentation/RULES.md` for precedence
 2. Say which document types you touched and that you want the documentation module batch or single-document generation
 3. Have the agent report paths written and validation or evidence lines from the module output
 
@@ -184,8 +188,8 @@ These are **chat-shaped** recipes: what to say, what to attach, and what you sho
 
 **How to drive it in chat:**
 
-1. Attach [`.cursor/rules/cursor-long-session-hygiene.mdc`](.cursor/rules/cursor-long-session-hygiene.mdc) if you want a short checklist
-2. Ask the agent to re-walk [`.ai/agent-source-of-truth-order.md`](.ai/agent-source-of-truth-order.md) (and repo-root [`AGENTS.md`](AGENTS.md))
+1. Attach `.cursor/rules/cursor-long-session-hygiene.mdc` if you want a short checklist
+2. Ask the agent to re-walk `.ai/agent-source-of-truth-order.md`
 3. Direct it to restate task status from the configured task store only after fresh read-only inspection
 
 ## New contributors — safe task transition (≤5 hops)

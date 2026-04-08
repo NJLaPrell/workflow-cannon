@@ -376,6 +376,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "agent-bootstrap",
+    "file": "agent-bootstrap.md",
+    "description": "Read-only cold start: doctor-equivalent contract checks plus agent-session-snapshot JSON in one response.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "queue-git-alignment",
     "file": "queue-git-alignment.md",
     "description": "Read-only heuristic: git HEAD vs last task transition; stale in_progress hints (merge ≠ complete guardian).",

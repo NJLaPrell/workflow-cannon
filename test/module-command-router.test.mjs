@@ -31,6 +31,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
   const commandNames = router.listCommands().map((command) => command.name);
   assert.deepEqual(commandNames, [
     "add-dependency",
+    "agent-bootstrap",
     "agent-session-snapshot",
     "archive-task",
     "assign-task-phase",

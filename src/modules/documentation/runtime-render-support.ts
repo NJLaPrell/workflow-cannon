@@ -36,6 +36,61 @@ export function validateSectionCoverage(templateContent: string, output: string)
   return issues;
 }
 
+/**
+ * Canonical one-line agent routing notice prepended to repo-root README.md.
+ * Maintainer-facing README.md (under humanRoot) omits this; see `buildRepoRootReadmeFromMaintainerBody`.
+ */
+export const ROOT_README_AGENT_NOTICE = [
+  "AI agents: read **`./.ai/`** first (see repo-root [`AGENTS.md`](AGENTS.md), [`.ai/agent-source-of-truth-order.md`](.ai/agent-source-of-truth-order.md), [`.cursor/rules/agent-doc-routing.mdc`](.cursor/rules/agent-doc-routing.mdc)).",
+  "For **conflicts between** `.ai/`, `docs/maintainers/`, `.cursor/rules/`, and code, use agent precedence in **`.ai/agent-source-of-truth-order.md`** and [`.ai/ARCHITECTURE.md`](.ai/ARCHITECTURE.md) — do not rely on this README alone.",
+  "**Maintainers** use [`docs/maintainers/AGENTS.md`](docs/maintainers/AGENTS.md) as the human index.",
+  ""
+].join("\n\n");
+
+/**
+ * Derive GitHub-facing repo root `README.md` from the maintainer human README body:
+ * strip template authoring comment, fix `title_image` path, prepend agent notice, rewrite relative links for repo root.
+ */
+const ROOT_AGENTS_LINK_TOKEN = "__WC_ROOT_AGENTS_MD__";
+
+export function buildRepoRootReadmeFromMaintainerBody(maintainerMarkdown: string): string {
+  let body = maintainerMarkdown.replace(/^\s*<!--[\s\S]*?-->\s*\n?/u, "");
+  body = body.replace(/<img src="\.\.\/title_image\.png"/g, '<img src="title_image.png"');
+  body = body.replace(/\]\(\.\.\/\.\.\/AGENTS\.md\)/g, `](${ROOT_AGENTS_LINK_TOKEN})`);
+  body = body.replace(/\]\(\.\.\/\.\.\/src\//g, "](src/");
+  body = body.replace(/\]\(\.\.\/\.\.\/\.cursor\//g, "](.cursor/");
+  body = body.replace(/\]\(\.\.\/\.\.\/\.ai\//g, "](.ai/");
+  body = body.replace(/\]\(\.\.\/LICENSE\)/g, "](LICENSE)");
+  body = body.replace(/\]\(\.\.\/CONTRIBUTING\.md\)/g, "](CONTRIBUTING.md)");
+  body = body.replace(/\]\(playbooks\//g, "](docs/maintainers/playbooks/");
+  body = body.replace(/\]\(runbooks\//g, "](docs/maintainers/runbooks/");
+  body = body.replace(/\]\(data\//g, "](docs/maintainers/data/");
+
+  for (const name of [
+    "POLICY-APPROVAL.md",
+    "AGENT-CLI-MAP.md",
+    "ROADMAP.md",
+    "CHANGELOG.md",
+    "RELEASING.md",
+    "TERMS.md",
+    "ARCHITECTURE.md",
+    "AGENTS.md"
+  ]) {
+    body = body.replace(
+      new RegExp(`\\]\\(${name.replaceAll(".", "\\.")}\\)`, "g"),
+      `](docs/maintainers/${name})`
+    );
+  }
+
+  body = body.replace(
+    new RegExp(`\\]\\(${ROOT_AGENTS_LINK_TOKEN}\\)`, "g"),
+    "](AGENTS.md)"
+  );
+
+  const normalized = `${ROOT_README_AGENT_NOTICE}${body.replace(/^\n+/, "")}`.replace(/\n+$/, "") + "\n";
+  return normalized;
+}
+
 export function detectConflicts(aiOutput: string, humanOutput: string): DocumentationConflict[] {
   const conflicts: DocumentationConflict[] = [];
   if (`${aiOutput}\n${humanOutput}`.includes("CONFLICT:")) {

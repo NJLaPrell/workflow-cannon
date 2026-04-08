@@ -9,6 +9,7 @@ import { renderDocument } from "./renderer.js";
 import { autoResolveAiSchema, validateAiSchema } from "./validator.js";
 import { isPathWithinRoot, loadRuntimeConfig } from "./runtime-config.js";
 import {
+  buildRepoRootReadmeFromMaintainerBody,
   detectConflicts,
   injectReadmeChatFeaturesFromNormalized,
   renderTemplate,
@@ -51,6 +52,7 @@ export async function generateDocument(args: GenerateDocumentArgs, ctx: ModuleLi
   const options = args.options ?? {};
   const canOverwriteAi = options.overwriteAi ?? options.overwrite ?? true;
   const canOverwriteHuman = options.overwriteHuman ?? options.overwrite ?? true;
+  const canOverwriteRepoRootReadme = options.overwriteRepoRootReadme ?? options.overwrite ?? true;
   const config = await loadRuntimeConfig(ctx.workspacePath);
   const filesRead: string[] = [];
   const filesWritten: string[] = [];
@@ -313,19 +315,60 @@ export async function generateDocument(args: GenerateDocumentArgs, ctx: ModuleLi
     } else {
       filesSkipped.push(aiOutputPath);
     }
-    if (canOverwriteHuman || !humanExists) {
+    const humanWritten = canOverwriteHuman || !humanExists;
+    if (humanWritten) {
       const humanNormalized = `${humanOutput.replace(/\n+$/, "")}\n`;
       await writeFile(humanOutputPath, humanNormalized, "utf8");
       filesWritten.push(humanOutputPath);
     } else {
       filesSkipped.push(humanOutputPath);
     }
+
+    if (documentType === "README.md" && humanWritten) {
+      const repoRootReadmePath = resolve(ctx.workspacePath, "README.md");
+      if (!isPathWithinRoot(repoRootReadmePath, ctx.workspacePath)) {
+        return {
+          ok: false,
+          aiOutputPath,
+          humanOutputPath,
+          evidence: {
+            documentType,
+            filesRead,
+            filesWritten,
+            filesSkipped: [...filesSkipped, repoRootReadmePath],
+            validationIssues: [
+              ...validationIssues,
+              {
+                check: "write-boundary",
+                message: "Resolved repo root README path escapes workspace root",
+                resolved: false
+              }
+            ],
+            conflicts,
+            attemptsUsed,
+            timestamp: new Date().toISOString()
+          }
+        };
+      }
+      const rootReadmeBody = buildRepoRootReadmeFromMaintainerBody(humanOutput);
+      const rootExists = existsSync(repoRootReadmePath);
+      if (!canOverwriteRepoRootReadme && rootExists) {
+        filesSkipped.push(repoRootReadmePath);
+      } else {
+        await writeFile(repoRootReadmePath, rootReadmeBody.replace(/\n+$/, "") + "\n", "utf8");
+        filesWritten.push(repoRootReadmePath);
+      }
+    }
   }
+
+  const repoRootReadmePath =
+    documentType === "README.md" ? resolve(ctx.workspacePath, "README.md") : undefined;
 
   return {
     ok: true,
     aiOutputPath,
     humanOutputPath,
+    repoRootReadmePath: documentType === "README.md" ? repoRootReadmePath : undefined,
     evidence: {
       documentType,
       filesRead,

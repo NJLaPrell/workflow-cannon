@@ -36,7 +36,7 @@ Generates all project docs by iterating every `.view.yaml` in `src/modules/docum
 
 ### `generate-document(documentType, options)` — single
 
-Generates one document pair (AI + human) for the given `documentType`.
+Generates one document pair (AI + human) for the given `documentType`, and when `documentType` is `README.md`, also writes **repository-root `README.md`** (deterministic transforms from the maintainer human body).
 
 - `documentType`: required string basename resolving to both AI and human output targets.
 - `options`:
@@ -44,6 +44,7 @@ Generates one document pair (AI + human) for the given `documentType`.
   - `overwrite?: boolean` (default `true`) - allow replacing existing files (both surfaces)
   - `overwriteAi?: boolean` - override `overwrite` for AI surface only
   - `overwriteHuman?: boolean` - override `overwrite` for human surface only
+  - `overwriteRepoRootReadme?: boolean` - override `overwrite` for repo-root `README.md` only (`README.md` target only)
   - `strict?: boolean` (default `true`) - fail on unresolved warnings (validation/conflict/coverage)
   - `maxValidationAttempts?: number` (default from config) - override retry limit
   - `allowWithoutTemplate?: boolean` (default `false`) - continue without template only when explicitly confirmed

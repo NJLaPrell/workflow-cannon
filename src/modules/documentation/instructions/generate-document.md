@@ -8,7 +8,7 @@ Generate a single document for both canonical AI and human-readable surfaces usi
   - `AGENTS.md`
   - `ARCHITECTURE.md`
   - `PRINCIPLES.md`
-  - `README.md` — human body includes **Chat-first workflows**, filled from `chat_feature|` keyed lines in `.ai/README.md` via `<!--DOC_MODULE:CHAT_FEATURES-->` in `templates/README.md` (see `schemas/documentation-schema.md`).
+  - `README.md` — writes **three** surfaces: `.ai/README.md`, `docs/maintainers/README.md`, and **repository-root `README.md`**. Maintainer/template body uses `../title_image.png`; the root copy uses `title_image.png`, prepends the agent routing notice, and rewrites maintainer-relative links. Chat sections are filled from `chat_feature|` lines in `.ai/README.md` via `<!--DOC_MODULE:CHAT_FEATURES-->` in `templates/README.md` (see `schemas/documentation-schema.md`).
   - `RELEASING.md`
   - `ROADMAP.md`
   - `SECURITY.md`
@@ -25,6 +25,7 @@ Generate a single document for both canonical AI and human-readable surfaces usi
   - `overwrite?: boolean` — allow replacing existing files (default `true`)
   - `overwriteAi?: boolean` — override `overwrite` for AI surface only
   - `overwriteHuman?: boolean` — override `overwrite` for human surface only
+  - `overwriteRepoRootReadme?: boolean` — override `overwrite` for repo-root `README.md` only (default: same as `overwrite`)
   - `strict?: boolean` — fail on unresolved warnings (default `true`)
   - `maxValidationAttempts?: number` — override retry limit
   - `allowWithoutTemplate?: boolean` — continue without template only when explicitly confirmed
@@ -33,7 +34,7 @@ Generate a single document for both canonical AI and human-readable surfaces usi
 
 1. Read `src/modules/documentation/RULES.md` and apply precedence order before generation.
 2. Load module config and resolve output roots from configured paths (`sources.aiRoot`, `sources.humanRoot`).
-3. Restrict writes strictly to configured output roots; reject writes outside those roots.
+3. Restrict writes strictly to configured output roots **and** the repository root for `README.md` only (`README.md` at workspace root); reject any other path outside those roots.
 4. Resolve template for `documentType` from `sources.templatesRoot` (for section/coverage checks) and resolve matching view model target from `views/`.
 5. If template is missing, warn user and ask whether to continue without a template; continue only on explicit confirmation.
 6. Generate AI output first at `<aiRoot>/<documentType>` using `documentation-maintainer.md` + `documentation-schema.md`.

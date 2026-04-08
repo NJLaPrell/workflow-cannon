@@ -17,7 +17,7 @@ term|name=chat_feature|definition=Keyed_record_in_dot_ai_readme_rendered_into_hu
 
 command|id=C001|name=generate-document|use=documentation_module|scope=documentation|expectation=Emits_paired_ai_and_human_files_per_document_type|status=active
 
-workflow|id=W001|name=readme_refresh|when=chat_guides_change|steps=edit_dot_ai_readme_chat_feature_lines,run_documentation_module_for_README_md|done=maintainer_and_root_readmes_pick_up_new_copy|status=active
+workflow|id=W001|name=readme_refresh|when=chat_guides_change|steps=edit_dot_ai_readme_chat_feature_lines_or_templates_readme,run_documentation_module_for_README_md|done=dot_ai_readme_docs_maintainers_readme_and_repo_root_readme_pick_up_new_copy|status=active
 
 chat_feature|id=CF001|title=Bootstrap a focused agent session|summary=Agree on workspace health and the real task queue before implementation so nobody trusts stale chat context.|steps=Open a thread at the repository root>Say you want a cold-start pass that reconciles doctor-style signals with task-engine evidence>Ask for a short summary of the next sensible work item and any blockers
 

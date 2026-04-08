@@ -17,11 +17,11 @@ import { buildAgentInstructionSurface } from "./core/agent-instruction-surface.j
 import { runWorkspaceConfigCli } from "./core/config-cli.js";
 import { handleRunCommand } from "./cli/run-command.js";
 import {
-  collectDoctorPlanningPersistenceIssues,
   collectPluginDoctorSummaryLines,
   collectPolicyLaneEnvDoctorSummaryLines,
   collectTaskPersistenceDoctorSummaryLines
 } from "./cli/doctor-planning-issues.js";
+import { collectDoctorContractIssues } from "./cli/doctor-contract-validation.js";
 import { ModuleRegistryError } from "./core/module-registry.js";
 import { loadWorkspaceDotenv } from "./core/load-workspace-dotenv.js";
 import { resolveRegistryAndConfig } from "./core/module-registry-resolve.js";
@@ -59,11 +59,6 @@ export type WorkspaceKitCliOptions = {
   writeError?: (message: string) => void;
   /** Test hook: simulated stdin lines for interactive sensitive-command approval */
   readStdinLine?: () => Promise<string | null>;
-};
-
-type DoctorIssue = {
-  path: string;
-  reason: string;
 };
 
 async function requireCliPolicyApproval(
@@ -110,7 +105,7 @@ async function recordCliPolicySuccess(
 
 function writeDoctorFailureRemediation(
   writeError: (message: string) => void,
-  issues: DoctorIssue[]
+  issues: { path: string; reason: string }[]
 ): void {
   writeError("");
   writeError("Next steps:");
@@ -498,33 +493,7 @@ export async function runCli(
     doctorRest.includes("--agent-instruction-surface") ||
     doctorRest.includes("agent-instruction-surface");
 
-  const issues: DoctorIssue[] = [];
-  const requiredPaths = Object.values(defaultWorkspaceKitPaths).map((relativePath) =>
-    path.join(cwd, relativePath)
-  );
-
-  for (const requiredPath of requiredPaths) {
-    try {
-      await fs.access(requiredPath);
-    } catch {
-      issues.push({
-        path: path.relative(cwd, requiredPath) || requiredPath,
-        reason: "missing"
-      });
-      continue;
-    }
-
-    try {
-      await parseJsonFile(requiredPath);
-    } catch {
-      issues.push({
-        path: path.relative(cwd, requiredPath) || requiredPath,
-        reason: "invalid-json"
-      });
-    }
-  }
-
-  issues.push(...(await collectDoctorPlanningPersistenceIssues(cwd)));
+  const issues = await collectDoctorContractIssues(cwd);
 
   if (issues.length > 0) {
     writeError("workspace-kit doctor failed validation.");

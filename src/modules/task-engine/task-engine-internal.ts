@@ -1,4 +1,8 @@
-import type { ModuleCommandResult, WorkflowModule } from "../../contracts/module-contract.js";
+import type {
+  ModuleCommandResult,
+  ModuleLifecycleContext,
+  WorkflowModule
+} from "../../contracts/module-contract.js";
 import { builtinInstructionEntriesForModule } from "../../contracts/builtin-run-command-manifest.js";
 import type { TaskEntity, TaskMutationType, TaskPriority, TaskStatus } from "./types.js";
 import { createKitLifecycleHookBus } from "../../core/kit-lifecycle-hooks.js";
@@ -20,7 +24,7 @@ import {
 import { readWorkspaceStatusSnapshot } from "./dashboard/dashboard-status.js";
 import { inferTaskPhaseKey, resolveCanonicalPhase } from "./phase-resolution.js";
 import { buildQueueHealthReport, buildQueueHintsForTasks } from "./queue/queue-health.js";
-import { openPlanningStores } from "./persistence/planning-open.js";
+import { openPlanningStores, type OpenedPlanningStores } from "./persistence/planning-open.js";
 import { runBackupPlanningSqlite } from "./persistence/backup-planning-sqlite-runtime.js";
 import { runMigrateTaskPersistence } from "./persistence/migrate-task-persistence-runtime.js";
 import { runGetKitPersistenceMap } from "./persistence/kit-persistence-map-runtime.js";
@@ -72,6 +76,58 @@ import {
 } from "../../core/cli-remediation.js";
 import { validateTaskSkillAttachments } from "../skills/task-skill-validation.js";
 import { summarizeTeamAssignmentsForNextActions } from "../team-execution/assignment-store.js";
+import { collectDoctorContractIssues } from "../../cli/doctor-contract-validation.js";
+
+async function composeAgentSessionSnapshotPayload(
+  ctx: ModuleLifecycleContext,
+  planning: OpenedPlanningStores
+): Promise<Record<string, unknown>> {
+  const tasks = planning.taskStore.getActiveTasks();
+  const workspaceStatus = await readWorkspaceStatusSnapshot(ctx.workspacePath);
+  const suggestion = getNextActions(tasks);
+  const qh = buildQueueHealthReport({
+    tasks,
+    effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+    workspaceStatus
+  });
+  const phaseRes = resolveCanonicalPhase({
+    effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+    workspaceStatus
+  });
+  const doctorKitPhaseIssues =
+    phaseRes.statusYamlMatchesConfig === false
+      ? [
+          {
+            path: "kit.currentPhaseNumber vs docs/maintainers/data/workspace-kit-status.yaml",
+            reason: "kit-phase-config-status-yaml-mismatch"
+          }
+        ]
+      : [];
+  const taskTitleById = new Map(tasks.map((t) => [t.id, t.title] as const));
+  const teamExecutionContext = summarizeTeamAssignmentsForNextActions(
+    planning.sqliteDual.getDatabase(),
+    (id) => taskTitleById.get(id) ?? null
+  );
+  return {
+    schemaVersion: 1,
+    refreshedAt: new Date().toISOString(),
+    suggestedNext: suggestion.suggestedNext
+      ? {
+          id: suggestion.suggestedNext.id,
+          title: suggestion.suggestedNext.title,
+          status: suggestion.suggestedNext.status
+        }
+      : null,
+    stateSummary: suggestion.stateSummary,
+    queueHealthSummary: qh.summary,
+    canonicalPhase: {
+      canonicalPhaseKey: phaseRes.canonicalPhaseKey,
+      statusYamlMatchesConfig: phaseRes.statusYamlMatchesConfig
+    },
+    doctorKitPhaseIssues,
+    teamExecutionContext
+  };
+}
 
 function readQueueNamespaceArg(args: Record<string, unknown>): string | undefined {
   const q = args.queueNamespace;
@@ -234,58 +290,36 @@ export const taskEngineModule: WorkflowModule = {
     }
     const store = planning.taskStore;
 
-    if (command.name === "agent-session-snapshot") {
-      const tasks = store.getActiveTasks();
-      const workspaceStatus = await readWorkspaceStatusSnapshot(ctx.workspacePath);
-      const suggestion = getNextActions(tasks);
-      const qh = buildQueueHealthReport({
-        tasks,
-        effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
-        workspaceStatus
-      });
-      const phaseRes = resolveCanonicalPhase({
-        effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
-        workspaceStatus
-      });
-      const doctorKitPhaseIssues =
-        phaseRes.statusYamlMatchesConfig === false
-          ? [
-              {
-                path: "kit.currentPhaseNumber vs docs/maintainers/data/workspace-kit-status.yaml",
-                reason: "kit-phase-config-status-yaml-mismatch"
-              }
-            ]
-          : [];
-      const taskTitleById = new Map(tasks.map((t) => [t.id, t.title] as const));
-      const teamExecutionContext = summarizeTeamAssignmentsForNextActions(
-        planning.sqliteDual.getDatabase(),
-        (id) => taskTitleById.get(id) ?? null
-      );
-      const data: Record<string, unknown> = {
-        schemaVersion: 1,
-        refreshedAt: new Date().toISOString(),
-        suggestedNext: suggestion.suggestedNext
-          ? {
-              id: suggestion.suggestedNext.id,
-              title: suggestion.suggestedNext.title,
-              status: suggestion.suggestedNext.status
-            }
-          : null,
-        stateSummary: suggestion.stateSummary,
-        queueHealthSummary: qh.summary,
-        canonicalPhase: {
-          canonicalPhaseKey: phaseRes.canonicalPhaseKey,
-          statusYamlMatchesConfig: phaseRes.statusYamlMatchesConfig
-        },
-        doctorKitPhaseIssues,
-        teamExecutionContext
-      };
-      attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
+    if (command.name === "agent-session-snapshot" || command.name === "agent-bootstrap") {
+      if (command.name === "agent-bootstrap") {
+        const doctorIssues = await collectDoctorContractIssues(ctx.workspacePath);
+        if (doctorIssues.length > 0) {
+          const data: Record<string, unknown> = { doctor: { ok: false, issues: doctorIssues } };
+          attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
+          return {
+            ok: false,
+            code: "agent-bootstrap-doctor-failed",
+            message: `Doctor contract check failed (${doctorIssues.length} issue(s)); run workspace-kit doctor and fix reported paths.`,
+            data
+          };
+        }
+      }
+      const snapshotData = await composeAgentSessionSnapshotPayload(ctx, planning);
+      attachPolicyMeta(snapshotData, ctx, planning.sqliteDual.getPlanningGeneration());
+      if (command.name === "agent-bootstrap") {
+        snapshotData.doctor = { ok: true, issues: [] as Array<{ path: string; reason: string }> };
+        return {
+          ok: true,
+          code: "agent-bootstrap",
+          message: "Doctor passed; composed session snapshot for agent cold start",
+          data: snapshotData
+        };
+      }
       return {
         ok: true,
         code: "agent-session-snapshot",
         message: "Read-only composed snapshot for session reload",
-        data
+        data: snapshotData
       };
     }
 

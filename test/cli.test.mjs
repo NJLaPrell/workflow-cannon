@@ -523,6 +523,17 @@ test("runCli run dispatches document-project batch with dryRun", async () => {
   assert.ok(output.data.summary.total >= 8);
 });
 
+test("runCli run dispatches agent-bootstrap", async () => {
+  const capture = createCapture();
+  const code = await runCli(["run", "agent-bootstrap", "{}"], { cwd: process.cwd(), ...capture });
+  assert.equal(code, 0);
+  const output = JSON.parse(capture.lines.join(""));
+  assert.equal(output.ok, true);
+  assert.equal(output.code, "agent-bootstrap");
+  assert.equal(output.data?.doctor?.ok, true);
+  assert.ok(typeof output.data?.planningGeneration === "number");
+});
+
 test("runCli run returns validation failure for run-transition with missing args", async () => {
   const capture = createCapture();
   const code = await runCli(

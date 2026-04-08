@@ -1,8 +1,9 @@
 {
   "schemaVersion": 1,
-  "sourceSchemaPackageVersion": "0.65.0",
+  "sourceSchemaPackageVersion": "0.66.0",
   "pilotCommands": [
     "add-dependency",
+    "agent-bootstrap",
     "agent-session-snapshot",
     "archive-task",
     "assign-task-phase",
@@ -60,6 +61,10 @@
           "pattern": "^T[0-9]+$"
         }
       },
+      "additionalProperties": false
+    },
+    "agent-bootstrap": {
+      "type": "object",
       "additionalProperties": false
     },
     "agent-session-snapshot": {
