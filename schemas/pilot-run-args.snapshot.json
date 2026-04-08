@@ -36,17 +36,18 @@
     "list-tasks",
     "list-wishlist",
     "migrate-task-persistence",
+    "persist-planning-execution-drafts",
     "queue-git-alignment",
     "queue-health",
     "remove-dependency",
     "replay-queue-snapshot",
     "run-transition",
     "synthesize-transcript-churn",
-    "workspace-status-history",
     "update-task",
     "update-wishlist",
     "update-workspace-phase-snapshot",
-    "update-workspace-status"
+    "update-workspace-status",
+    "workspace-status-history"
   ],
   "commands": {
     "add-dependency": {
@@ -241,6 +242,15 @@
     "export-feature-taxonomy-json": {
       "type": "object"
     },
+    "export-workspace-status": {
+      "type": "object",
+      "properties": {
+        "dryRun": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
     "get-blocked-summary": {
       "type": "object"
     },
@@ -318,6 +328,10 @@
         }
       },
       "additionalProperties": false
+    },
+    "get-workspace-status": {
+      "type": "object",
+      "additionalProperties": true
     },
     "list-components": {
       "type": "object"
@@ -436,6 +450,13 @@
       "type": "object",
       "additionalProperties": true
     },
+    "persist-planning-execution-drafts": {
+      "type": "object",
+      "required": [
+        "tasks"
+      ],
+      "additionalProperties": true
+    },
     "queue-git-alignment": {
       "type": "object"
     },
@@ -504,7 +525,10 @@
     },
     "synthesize-transcript-churn": {
       "type": "object",
-      "required": ["taskId", "synthesis"],
+      "required": [
+        "taskId",
+        "synthesis"
+      ],
       "properties": {
         "taskId": {
           "type": "string",
@@ -604,36 +628,73 @@
     },
     "update-workspace-status": {
       "type": "object",
-      "required": ["expectedWorkspaceRevision"],
+      "required": [
+        "expectedWorkspaceRevision"
+      ],
       "properties": {
-        "expectedWorkspaceRevision": { "type": "integer", "minimum": 0 },
-        "currentKitPhase": { "type": ["string", "null"] },
-        "nextKitPhase": { "type": ["string", "null"] },
-        "activeFocus": { "type": ["string", "null"] },
-        "lastUpdated": { "type": ["string", "null"] },
-        "blockers": { "type": "array", "items": { "type": "string" } },
-        "pendingDecisions": { "type": "array", "items": { "type": "string" } },
-        "nextAgentActions": { "type": "array", "items": { "type": "string" } },
-        "actor": { "type": "string" },
-        "command": { "type": "string" }
-      },
-      "additionalProperties": true
-    },
-    "get-workspace-status": {
-      "type": "object",
-      "additionalProperties": true
-    },
-    "export-workspace-status": {
-      "type": "object",
-      "properties": {
-        "dryRun": { "type": "boolean" }
+        "expectedWorkspaceRevision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "currentKitPhase": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "nextKitPhase": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "activeFocus": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "lastUpdated": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "blockers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "pendingDecisions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "nextAgentActions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "actor": {
+          "type": "string"
+        },
+        "command": {
+          "type": "string"
+        }
       },
       "additionalProperties": true
     },
     "workspace-status-history": {
       "type": "object",
       "properties": {
-        "limit": { "type": "integer", "minimum": 1, "maximum": 500 }
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 500
+        }
       },
       "additionalProperties": true
     }

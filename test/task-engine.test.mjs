@@ -716,6 +716,7 @@ test("taskEngineModule registration includes all instruction entries", () => {
   assert.ok(names.includes("update-workspace-phase-snapshot"));
   assert.ok(names.includes("convert-wishlist"));
   assert.ok(names.includes("migrate-task-persistence"));
+  assert.ok(names.includes("persist-planning-execution-drafts"));
 });
 
 test("taskEngineModule passes ModuleRegistry validation", () => {
@@ -1633,6 +1634,69 @@ test("taskEngineModule planningGenerationPolicy warn surfaces planningGeneration
   assert.equal(r.ok, true);
   assert.ok(Array.isArray(r.data.planningGenerationPolicyWarnings));
   assert.ok(r.data.planningGenerationPolicyWarnings.length >= 1);
+});
+
+test("taskEngineModule persist-planning-execution-drafts creates multiple tasks and idempotent replay", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const lt = await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, ctx);
+  const g0 = lt.data.planningGeneration;
+  const tasks = [
+    {
+      id: "T701",
+      title: "Slice A",
+      phase: "Phase 68",
+      approach: "Implement A",
+      technicalScope: ["src/a"],
+      acceptanceCriteria: ["Tests pass"]
+    },
+    {
+      id: "T702",
+      title: "Slice B",
+      phase: "Phase 68",
+      approach: "Implement B",
+      technicalScope: ["src/b"],
+      acceptanceCriteria: ["Smoke OK"]
+    }
+  ];
+  const first = await taskEngineModule.onCommand(
+    {
+      name: "persist-planning-execution-drafts",
+      args: {
+        tasks,
+        expectedPlanningGeneration: g0,
+        clientMutationId: "bulk-planning-demo",
+        planRef: "planning:new-feature:demo",
+        planningType: "new-feature"
+      }
+    },
+    ctx
+  );
+  assert.equal(first.ok, true);
+  assert.equal(first.code, "planning-execution-drafts-persisted");
+  assert.equal(first.data.count, 2);
+  const g1 = first.data.planningGeneration;
+  const got = await taskEngineModule.onCommand({ name: "get-task", args: { taskId: "T701" } }, ctx);
+  assert.equal(got.ok, true);
+  assert.equal(got.data.task.metadata.planRef, "planning:new-feature:demo");
+  assert.equal(got.data.task.metadata.planningProvenance.source, "persist-planning-execution-drafts");
+
+  const replay = await taskEngineModule.onCommand(
+    {
+      name: "persist-planning-execution-drafts",
+      args: {
+        tasks,
+        expectedPlanningGeneration: g1,
+        clientMutationId: "bulk-planning-demo",
+        planRef: "planning:new-feature:demo",
+        planningType: "new-feature"
+      }
+    },
+    ctx
+  );
+  assert.equal(replay.ok, true);
+  assert.equal(replay.code, "planning-execution-drafts-idempotent-replay");
+  assert.equal(replay.data.replayed, true);
 });
 
 test("taskEngineModule create-task idempotent replay skips require gate (no re-persist)", async () => {

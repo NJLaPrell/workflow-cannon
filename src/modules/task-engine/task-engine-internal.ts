@@ -53,6 +53,7 @@ import { readKitSqliteUserVersion } from "../../core/state/workspace-kit-sqlite.
 import { UnifiedStateDb } from "../../core/state/unified-state-db.js";
 import { isWishlistIntakeTask, WISHLIST_INTAKE_TASK_TYPE } from "./wishlist/wishlist-intake.js";
 import {
+  buildTaskFromConversionPayload,
   digestPayload,
   findIdempotentMutation,
   isRecordLike,
@@ -657,6 +658,248 @@ export const taskEngineModule: WorkflowModule = {
         code: "task-created",
         message: `Created task '${id}'`,
         data: createdData
+      };
+    }
+
+    if (command.name === "persist-planning-execution-drafts") {
+      const actor =
+        typeof args.actor === "string"
+          ? args.actor
+          : ctx.resolvedActor !== undefined
+            ? ctx.resolvedActor
+            : undefined;
+      const tasksRaw = args.tasks;
+      if (!Array.isArray(tasksRaw) || tasksRaw.length === 0) {
+        return {
+          ok: false,
+          code: "invalid-task-schema",
+          message: "persist-planning-execution-drafts requires non-empty tasks array",
+          remediation: { instructionPath: CLI_REMEDIATION_INSTRUCTIONS.persistPlanningExecutionDrafts }
+        };
+      }
+      const planRef =
+        typeof args.planRef === "string" && args.planRef.trim().length > 0 ? args.planRef.trim() : undefined;
+      const planningTypeMeta =
+        typeof args.planningType === "string" && args.planningType.trim().length > 0
+          ? args.planningType.trim()
+          : undefined;
+      const bulkClientMutationId = readIdempotencyValue(args);
+      const timestamp = nowIso();
+      const pgBulk = planningGenPolicyGate(
+        ctx,
+        args as Record<string, unknown>,
+        CLI_REMEDIATION_INSTRUCTIONS.persistPlanningExecutionDrafts
+      );
+      if (pgBulk.block) {
+        return pgBulk.block;
+      }
+
+      const taskPersistDigestForIdempotency = (t: TaskEntity): string =>
+        digestPayload({
+          id: t.id,
+          title: t.title,
+          type: t.type,
+          status: t.status,
+          phase: t.phase,
+          approach: t.approach,
+          technicalScope: t.technicalScope ?? [],
+          acceptanceCriteria: t.acceptanceCriteria ?? [],
+          dependsOn: t.dependsOn ?? [],
+          unblocks: t.unblocks ?? [],
+          priority: t.priority ?? null,
+          metadata: t.metadata ?? null
+        });
+
+      const built: TaskEntity[] = [];
+      for (const row of tasksRaw) {
+        if (!row || typeof row !== "object" || Array.isArray(row)) {
+          return {
+            ok: false,
+            code: "invalid-task-schema",
+            message: "Each tasks[] row must be an object",
+            remediation: { instructionPath: CLI_REMEDIATION_INSTRUCTIONS.persistPlanningExecutionDrafts }
+          };
+        }
+        const bt = buildTaskFromConversionPayload(row as Record<string, unknown>, timestamp);
+        if (!bt.ok) {
+          return {
+            ok: false,
+            code: "invalid-task-schema",
+            message: bt.message,
+            remediation: { instructionPath: CLI_REMEDIATION_INSTRUCTIONS.persistPlanningExecutionDrafts }
+          };
+        }
+        let task = bt.task;
+        const nextMeta: Record<string, unknown> = { ...(task.metadata ?? {}) };
+        if (planRef) {
+          nextMeta.planRef = planRef;
+        }
+        if (planningTypeMeta) {
+          const prevProv = isRecordLike(nextMeta.planningProvenance)
+            ? { ...(nextMeta.planningProvenance as Record<string, unknown>) }
+            : {};
+          prevProv.planningType = planningTypeMeta;
+          prevProv.source = "persist-planning-execution-drafts";
+          nextMeta.planningProvenance = prevProv;
+        }
+        if (Object.keys(nextMeta).length > 0) {
+          task = { ...task, metadata: nextMeta };
+        }
+        const typeErr = validateKnownTaskTypeRequirements(task);
+        if (typeErr) {
+          return { ok: false, code: typeErr.code, message: typeErr.message };
+        }
+        const skillAttach = validateTaskSkillAttachments(
+          ctx.workspacePath,
+          ctx.effectiveConfig as Record<string, unknown> | undefined,
+          task.metadata
+        );
+        if (!skillAttach.ok) {
+          return { ok: false, code: skillAttach.code, message: skillAttach.message };
+        }
+        built.push(task);
+      }
+
+      const seen = new Set<string>();
+      for (const t of built) {
+        if (seen.has(t.id)) {
+          return {
+            ok: false,
+            code: "invalid-task-schema",
+            message: `Duplicate task id in tasks[]: ${t.id}`,
+            remediation: { instructionPath: CLI_REMEDIATION_INSTRUCTIONS.persistPlanningExecutionDrafts }
+          };
+        }
+        seen.add(t.id);
+      }
+
+      if (bulkClientMutationId) {
+        let priorHits = 0;
+        for (const t of built) {
+          const composed = `${bulkClientMutationId}::${t.id}`;
+          const prior = findIdempotentMutation(store, "create-task", t.id, composed);
+          const d = taskPersistDigestForIdempotency(t);
+          if (prior) {
+            if (prior.payloadDigest !== d) {
+              return {
+                ok: false,
+                code: "idempotency-key-conflict",
+                message: `clientMutationId '${bulkClientMutationId}' was already used for a different create-task payload on ${t.id}`
+              };
+            }
+            priorHits += 1;
+            if (!store.getTask(t.id)) {
+              return {
+                ok: false,
+                code: "task-not-found",
+                message: `Idempotent replay expected task '${t.id}' to exist`
+              };
+            }
+          } else if (store.getTask(t.id)) {
+            return {
+              ok: false,
+              code: "duplicate-task-id",
+              message: `Task '${t.id}' already exists`
+            };
+          }
+        }
+        if (priorHits > 0 && priorHits < built.length) {
+          return {
+            ok: false,
+            code: "planning-execution-drafts-partial-idempotency",
+            message:
+              "Mixed idempotency state: some task ids already recorded for this clientMutationId and others are new; retry with a fresh clientMutationId or reconcile task store"
+          };
+        }
+        if (priorHits === built.length) {
+          const createdTasks = built.map((t) => store.getTask(t.id)).filter((x): x is TaskEntity => Boolean(x));
+          const replayData: Record<string, unknown> = {
+            createdTasks,
+            count: createdTasks.length,
+            replayed: true
+          };
+          attachPolicyMeta(
+            replayData,
+            ctx,
+            planning.sqliteDual.getPlanningGeneration(),
+            pgBulk.warnings
+          );
+          return {
+            ok: true,
+            code: "planning-execution-drafts-idempotent-replay",
+            message: `Idempotent replay for ${createdTasks.length} planning execution draft task(s)`,
+            data: replayData
+          };
+        }
+      } else {
+        for (const t of built) {
+          if (store.getTask(t.id)) {
+            return {
+              ok: false,
+              code: "duplicate-task-id",
+              message: `Task '${t.id}' already exists`
+            };
+          }
+        }
+      }
+
+      const knownSlugs = resolveKnownFeatureSlugSet(planning.sqliteDual.getDatabase());
+      for (const t of built) {
+        const badFeat = findUnknownFeatureIds(t.features, knownSlugs);
+        if (badFeat.length > 0 && taskTypeFailsClosedOnUnknownFeatures(t.type)) {
+          return {
+            ok: false,
+            code: "unknown-feature-id",
+            message: `Unknown feature id(s): ${badFeat.join(", ")}`
+          };
+        }
+      }
+
+      if (planningStrictValidationEnabled({ effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined })) {
+        const strictIssue = validateTaskSetForStrictMode([...store.getAllTasks(), ...built]);
+        if (strictIssue) {
+          return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
+        }
+      }
+
+      const featureSlugWarnings: string[] = [];
+      for (const t of built) {
+        featureSlugWarnings.push(...collectUnknownFeatureSlugWarnings(t.features, knownSlugs));
+      }
+
+      const applyBulk = (): void => {
+        for (const t of built) {
+          store.addTask(t);
+          const composedIdem = bulkClientMutationId ? `${bulkClientMutationId}::${t.id}` : undefined;
+          const payloadDigest = taskPersistDigestForIdempotency(t);
+          store.addMutationEvidence(
+            mutationEvidence("create-task", t.id, actor, {
+              initialStatus: t.status,
+              source: "persist-planning-execution-drafts",
+              clientMutationId: composedIdem,
+              payloadDigest
+            })
+          );
+        }
+      };
+
+      planning.sqliteDual.withTransaction(applyBulk, planningConcurrencySaveOpts(args as Record<string, unknown>));
+
+      const strictAfter = strictValidationError(store, ctx.effectiveConfig as Record<string, unknown> | undefined);
+      if (strictAfter) {
+        return { ok: false, code: "strict-task-validation-failed", message: strictAfter };
+      }
+
+      const outData: Record<string, unknown> = { createdTasks: built, count: built.length };
+      attachPolicyMeta(outData, ctx, planning.sqliteDual.getPlanningGeneration(), [
+        ...(pgBulk.warnings ?? []),
+        ...featureSlugWarnings
+      ]);
+      return {
+        ok: true,
+        code: "planning-execution-drafts-persisted",
+        message: `Persisted ${built.length} planning execution draft task(s)`,
+        data: outData
       };
     }
 

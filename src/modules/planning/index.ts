@@ -578,7 +578,7 @@ export const planningModule: WorkflowModule = {
               ok: false,
               code: "planning-multi-task-persist-delegated",
               message:
-                "When executionTaskDrafts is set, build-plan does not persist tasks (persistTasks must be false); materialize drafts with a bulk task-engine command and expectedPlanningGeneration."
+                "When executionTaskDrafts is set, build-plan does not persist tasks (persistTasks must be false); materialize drafts with workspace-kit run persist-planning-execution-drafts (include expectedPlanningGeneration when policy requires it)."
             };
           }
           await clearBuildPlanSession(ctx.workspacePath);
