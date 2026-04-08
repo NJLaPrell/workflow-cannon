@@ -42,3 +42,7 @@ DDL and **`user_version`** steps live in **`src/core/state/workspace-kit-sqlite.
 - **`workspace-status-history`** — list **`kit_workspace_status_events`** (optional **`limit`**).
 
 **`update-workspace-phase-snapshot`** still updates maintainer YAML for compatibility; on non-dry-run success it **mirrors** the parsed YAML snapshot into **`kit_workspace_status`** when SQLite **v10+** is present ( **`phase_snapshot_yaml_mirror`** event).
+
+## Readers (T819)
+
+**`dashboard-summary`**, **`queue-health`**, **`list-tasks`** (queue hints), and **`agent-session-snapshot` / `agent-bootstrap`** compose paths read **`workspaceStatus`** from **`readWorkspaceStatusSnapshotFromDual`** only (no shallow-parse of maintainer YAML for those payloads). When the table or row is absent, **`workspaceStatus`** is **`null`**.

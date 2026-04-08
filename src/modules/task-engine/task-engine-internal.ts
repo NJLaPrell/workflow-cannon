@@ -21,10 +21,10 @@ import {
   parseTasksFromSnapshotPayload,
   replayQueueFromTasks
 } from "./queue/replay-queue-snapshot.js";
-import { readWorkspaceStatusSnapshot } from "./dashboard/dashboard-status.js";
 import { inferTaskPhaseKey, resolveCanonicalPhase } from "./phase-resolution.js";
 import { buildQueueHealthReport, buildQueueHintsForTasks } from "./queue/queue-health.js";
 import { openPlanningStores, type OpenedPlanningStores } from "./persistence/planning-open.js";
+import { readWorkspaceStatusSnapshotFromDual } from "./persistence/workspace-status-store.js";
 import { runBackupPlanningSqlite } from "./persistence/backup-planning-sqlite-runtime.js";
 import { runMigrateTaskPersistence } from "./persistence/migrate-task-persistence-runtime.js";
 import { runGetKitPersistenceMap } from "./persistence/kit-persistence-map-runtime.js";
@@ -89,7 +89,7 @@ async function composeAgentSessionSnapshotPayload(
   planning: OpenedPlanningStores
 ): Promise<Record<string, unknown>> {
   const tasks = planning.taskStore.getActiveTasks();
-  const workspaceStatus = await readWorkspaceStatusSnapshot(ctx.workspacePath);
+  const workspaceStatus = readWorkspaceStatusSnapshotFromDual(planning.sqliteDual);
   const suggestion = getNextActions(tasks);
   const qh = buildQueueHealthReport({
     tasks,
@@ -1034,7 +1034,7 @@ export const taskEngineModule: WorkflowModule = {
 
     if (command.name === "queue-health") {
       const tasks = store.getActiveTasks();
-      const workspaceStatus = await readWorkspaceStatusSnapshot(ctx.workspacePath);
+      const workspaceStatus = readWorkspaceStatusSnapshotFromDual(planning.sqliteDual);
       const report = buildQueueHealthReport({
         tasks,
         effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
@@ -1216,7 +1216,7 @@ export const taskEngineModule: WorkflowModule = {
       attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
       if (includeQueueHints) {
         const hintBaseTasks = includeArchived ? store.getAllTasks() : store.getActiveTasks();
-        const workspaceStatus = await readWorkspaceStatusSnapshot(ctx.workspacePath);
+        const workspaceStatus = readWorkspaceStatusSnapshotFromDual(planning.sqliteDual);
         data.queueHintRows = buildQueueHintsForTasks({
           tasks: hintBaseTasks,
           effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,

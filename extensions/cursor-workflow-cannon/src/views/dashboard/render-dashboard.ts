@@ -920,7 +920,7 @@ function renderWorkspaceOverviewSection(
   if (!ws) {
     return (
       '<section class="dash-card dashboard-overview" aria-label="Workspace status">' +
-      '<p class="muted">No <code>docs/maintainers/data/workspace-kit-status.yaml</code> snapshot (or file not readable).</p>' +
+      '<p class="muted">No workspace status from kit SQLite (<code>get-workspace-status</code>) — run <code>pnpm run wk doctor</code> or ensure planning DB migrated to user_version 10+.</p>' +
       "</section>"
     );
   }
