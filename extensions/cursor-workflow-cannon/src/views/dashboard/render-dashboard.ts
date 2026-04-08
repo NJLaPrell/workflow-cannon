@@ -353,12 +353,22 @@ function renderProposedPhaseBuckets(
       : "";
   return (
     more +
+    '<p class="muted"><b>Row actions</b> · <span class="muted">Accept</span> / <span class="muted">Decline</span> per row. <b>Accept All</b> on a phase heading runs <code>accept</code> for every proposed improvement in that phase (one shared rationale; planning token refreshed between calls).</p>' +
     '<div class="phase-stack">' +
     buckets
       .map((raw, i) => {
-        const b = raw as { label?: unknown; top?: unknown; count?: unknown };
-        const summary = escapeHtml(String(b.label ?? ""));
+        const b = raw as { label?: unknown; top?: unknown; count?: unknown; taskIds?: unknown };
+        const summaryLabel = escapeHtml(String(b.label ?? ""));
+        const taskIds = Array.isArray(b.taskIds)
+          ? (b.taskIds as unknown[]).map((x) => String(x).trim()).filter((id) => id.length > 0)
+          : [];
         const c = typeof b.count === "number" ? b.count : 0;
+        const acceptAllBtn =
+          c > 0 && taskIds.length > 0
+            ? '<button type="button" class="dash-row-action dash-row-action-primary dash-phase-accept-all" data-wc-action="proposed-imp-accept-phase" data-proposed-task-ids="' +
+              escapeHtmlAttr(taskIds.join(",")) +
+              '" title="Accept every proposed improvement in this phase (shared policy rationale)">Accept All</button>'
+            : "";
         const inner =
           c === 0
             ? '<p class="muted">No tasks in this phase.</p>'
@@ -366,8 +376,11 @@ function renderProposedPhaseBuckets(
         return (
           '<details class="phase-bucket"' +
           wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
-          "><summary>" +
-          summary +
+          '><summary class="phase-bucket-summary">' +
+          '<span class="phase-bucket-summary-label">' +
+          summaryLabel +
+          "</span>" +
+          acceptAllBtn +
           "</summary>" +
           inner +
           "</details>"
@@ -444,12 +457,22 @@ function renderProposedExecutionPhaseBuckets(
       : "";
   return (
     more +
+    '<p class="muted"><b>Accept All</b> on a phase heading accepts every proposed execution task in that phase (shared rationale).</p>' +
     '<div class="phase-stack">' +
     bucketsPe
       .map((raw, i) => {
-        const b = raw as { label?: unknown; top?: unknown; count?: unknown };
-        const summary = escapeHtml(String(b.label ?? ""));
+        const b = raw as { label?: unknown; top?: unknown; count?: unknown; taskIds?: unknown };
+        const summaryLabel = escapeHtml(String(b.label ?? ""));
+        const taskIds = Array.isArray(b.taskIds)
+          ? (b.taskIds as unknown[]).map((x) => String(x).trim()).filter((id) => id.length > 0)
+          : [];
         const c = typeof b.count === "number" ? b.count : 0;
+        const acceptAllBtn =
+          c > 0 && taskIds.length > 0
+            ? '<button type="button" class="dash-row-action dash-row-action-primary dash-phase-accept-all" data-wc-action="proposed-exe-accept-phase" data-proposed-task-ids="' +
+              escapeHtmlAttr(taskIds.join(",")) +
+              '" title="Accept every proposed execution task in this phase (shared policy rationale)">Accept All</button>'
+            : "";
         const inner =
           c === 0
             ? '<p class="muted">No tasks in this phase.</p>'
@@ -457,8 +480,11 @@ function renderProposedExecutionPhaseBuckets(
         return (
           '<details class="phase-bucket"' +
           wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
-          "><summary>" +
-          summary +
+          '><summary class="phase-bucket-summary">' +
+          '<span class="phase-bucket-summary-label">' +
+          summaryLabel +
+          "</span>" +
+          acceptAllBtn +
           "</summary>" +
           inner +
           "</details>"
