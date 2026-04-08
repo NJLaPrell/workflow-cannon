@@ -16,6 +16,7 @@ import {
   taskEntityToRow,
   type TaskEngineTaskRow
 } from "./sqlite-task-row-mapping.js";
+import { syncWorkspaceKitStatusFromYamlIfNeeded } from "./workspace-status-yaml-import.js";
 import {
   featureRegistryActiveOnConnection,
   loadTaskFeatureLinkMap,
@@ -73,6 +74,7 @@ function readRelationalFlagFromRow(row: Record<string, unknown> | undefined): bo
 export class SqliteDualPlanningStore {
   private db: Database.Database | null = null;
   readonly dbPath: string;
+  private readonly _workspaceRoot: string;
   private _taskDoc: TaskStoreDocument;
   private _wishlistDoc: WishlistStoreDocument;
   private _tableShape: TableShape = "task-only";
@@ -82,6 +84,7 @@ export class SqliteDualPlanningStore {
   private _planningGeneration = 0;
 
   constructor(workspacePath: string, databaseRelativePath: string) {
+    this._workspaceRoot = path.resolve(workspacePath);
     this.dbPath = path.resolve(workspacePath, databaseRelativePath);
     this._taskDoc = emptyTaskStoreDocument();
     this._wishlistDoc = emptyWishlistDocument();
@@ -207,6 +210,7 @@ export class SqliteDualPlanningStore {
       return;
     }
     const db = this.ensureDb();
+    syncWorkspaceKitStatusFromYamlIfNeeded(this._workspaceRoot, db);
     try {
       this._tableShape = detectTableShape(db);
       const hasRel = kitSqliteHasRelationalTaskDdl(db);

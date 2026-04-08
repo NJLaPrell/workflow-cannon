@@ -25,6 +25,8 @@ test("prepareKitSqliteDatabase applies user_version and baseline tables", async 
       .map((r) => r.name);
     assert.ok(names.includes("workspace_module_state"));
     assert.ok(names.includes("workspace_planning_state"));
+    assert.ok(names.includes("kit_workspace_status"));
+    assert.ok(names.includes("kit_workspace_status_events"));
     const qc = db.prepare("PRAGMA quick_check").all();
     assert.equal(qc.length, 1);
     const cell = Object.values(qc[0])[0];
