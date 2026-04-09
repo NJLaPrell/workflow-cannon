@@ -470,6 +470,18 @@ workspace-kit run cae-get-activation '{"schemaVersion":1,"activationId":"cae.act
 
 See `.ai/cae/cli-read-only.md` for argv and `data` shapes. Tier **C** — no JSON `policyApproval` on these commands.
 
+Additional read-only evaluation commands:
+
+```bash
+workspace-kit run cae-evaluate '{"schemaVersion":1,"evaluationContext":{...}}'
+workspace-kit run cae-explain '{"schemaVersion":1,"traceId":"<traceId>"}'
+workspace-kit run cae-health '{"schemaVersion":1}'
+workspace-kit run cae-conflicts '{"schemaVersion":1,"evaluationContext":{...}}'
+workspace-kit run cae-get-trace '{"schemaVersion":1,"traceId":"<traceId>"}'
+```
+
+Use **`fixtures/cae/evaluation-context/valid/minimal.json`** as a copy-paste template for **`evaluationContext`**. Traces are **ephemeral** until persistence (**T867**).
+
 ## CLI map coverage guardrail
 
 `pnpm run check` includes a strict command-coverage check (`scripts/check-agent-cli-map-coverage.mjs`) that compares discovered `workspace-kit run` commands from module registrations against:

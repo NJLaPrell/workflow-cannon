@@ -62,6 +62,7 @@
 - **Trace & explain (schemas + redaction):** **`.ai/cae/trace-and-explain.md`**, **`schemas/cae/trace.v1.json`**, **`schemas/cae/explain-response.v1.json`** (**`T846`**).
 - **Read-only CLI contract (`cae-*` argv + `data` schemas, agent map checklist):** **`.ai/cae/cli-read-only.md`**, **`schemas/cae/cli-read-only-requests.v1.json`**, **`schemas/cae/cli-read-only-data.v1.json`** (**`T847`**).
 - **Read-only CLI (registry list/get):** **`context-activation`** module — **`cae-list-artifacts`**, **`cae-get-artifact`**, **`cae-list-activations`**, **`cae-get-activation`** (**`T861`**).
+- **Read-only CLI (evaluate / explain / health / conflicts / trace):** **`cae-evaluate`**, **`cae-explain`**, **`cae-health`**, **`cae-conflicts`**, **`cae-get-trace`** (**`T862`**).
 - **Shadow mode (labels + `shadowObservation` on bundle):** **`.ai/cae/shadow-mode.md`**, **`schemas/cae/effective-activation-bundle.v1.json`** (**`T848`**).
 - **Runtime integration (CLI/router hooks, cache keys, ordering vs policy):** **`.ai/cae/runtime-integration.md`** (**`T849`**).
 - **Advisory surfacing (instruction surface / doctor, size budget, naming):** **`.ai/cae/advisory-surfacing.md`** (**`T850`**).
