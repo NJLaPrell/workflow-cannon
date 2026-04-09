@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/cae/trace.v1.json",
+  "title": "CAE evaluation trace (v1)",
+  "description": "Ordered trace events for CAE evaluation (T846). Correlates with bundle.traceId (T843). Builder: T860. Persistence: T845/T867.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "traceId", "events"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "traceId": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 128,
+      "description": "Same id as effective-activation-bundle.traceId when trace documents that evaluation."
+    },
+    "bundleId": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 128,
+      "description": "Optional link to effective bundle (T843)."
+    },
+    "anchors": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Input fingerprints for replay (T842 JCS / equivalent).",
+      "properties": {
+        "evaluationContextContentHash": {
+          "type": "string",
+          "minLength": 16,
+          "maxLength": 128
+        },
+        "registryContentHash": {
+          "type": "string",
+          "minLength": 16,
+          "maxLength": 128
+        }
+      }
+    },
+    "events": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 512,
+      "items": { "$ref": "#/$defs/traceEvent" }
+    },
+    "truncation": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Present when events or payloads were capped (T846 limits).",
+      "properties": {
+        "eventsDroppedFromTail": { "type": "integer", "minimum": 0 },
+        "payloadStringsClipped": { "type": "integer", "minimum": 0 }
+      }
+    }
+  },
+  "$defs": {
+    "activationId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+    },
+    "tracePayloadV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Event-specific data; all keys optional unless noted in .ai/cae/trace-and-explain.md.",
+      "properties": {
+        "activationId": { "$ref": "#/$defs/activationId" },
+        "peerActivationId": { "$ref": "#/$defs/activationId" },
+        "family": {
+          "type": "string",
+          "enum": ["policy", "think", "do", "review"]
+        },
+        "artifactId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "artifactIds": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "detail": {
+          "type": "string",
+          "maxLength": 512
+        },
+        "detailBestEffort": {
+          "type": "string",
+          "maxLength": 2048,
+          "description": "Human-oriented copy; not a semver-stable API field."
+        },
+        "conditionKind": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "matched": { "type": "boolean" },
+        "rankPreview": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "resolution": {
+          "type": "string",
+          "enum": ["shadow", "fail_explicit", "merged", "policy_wins", "advisory_retained"]
+        },
+        "evalMode": {
+          "type": "string",
+          "enum": ["live", "shadow"]
+        },
+        "familyCounts": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "policy": { "type": "integer", "minimum": 0 },
+            "think": { "type": "integer", "minimum": 0 },
+            "do": { "type": "integer", "minimum": 0 },
+            "review": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "instructionPathRedacted": {
+          "type": "string",
+          "maxLength": 256,
+          "description": "Repo-relative path, basename, or opaque token — never absolute filesystem path."
+        },
+        "workspacePathFingerprint": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Hash or token referencing workspace root; not a raw path."
+        },
+        "artifactResolution": {
+          "type": "string",
+          "enum": ["ok", "artifact_missing", "registry_mismatch"]
+        },
+        "lifecycleState": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "aggregateTightness": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9999
+        },
+        "candidateCount": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "traceEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["seq", "eventType", "payload"],
+      "properties": {
+        "seq": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "eventType": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^cae\\.trace\\.[a-z][a-z0-9._-]*(?:\\.[a-z0-9][a-z0-9._-]*)*$",
+          "description": "Taxonomy table: .ai/cae/trace-and-explain.md (known prefixes: cae.trace.activation.*, cae.trace.merge.*)."
+        },
+        "payload": { "$ref": "#/$defs/tracePayloadV1" }
+      }
+    }
+  }
+}

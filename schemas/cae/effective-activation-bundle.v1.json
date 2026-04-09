@@ -58,7 +58,8 @@
     "traceId": {
       "type": "string",
       "minLength": 8,
-      "maxLength": 128
+      "maxLength": 128,
+      "description": "Correlates with schemas/cae/trace.v1.json when a full trace is emitted (T846)."
     },
     "explanationRef": {
       "type": "string",

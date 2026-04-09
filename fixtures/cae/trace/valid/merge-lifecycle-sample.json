@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "traceId": "cae.trace.fixture.merge-sample",
+  "bundleId": "cae.bundle.fixture.merge-sample",
+  "anchors": {
+    "evaluationContextContentHash": "sha256-aaaaaaaaaaaaaaaa",
+    "registryContentHash": "sha256-bbbbbbbbbbbbbbbb"
+  },
+  "events": [
+    {
+      "seq": 0,
+      "eventType": "cae.trace.activation.candidate_seen",
+      "payload": {
+        "activationId": "cae.act.policy.demo",
+        "family": "policy"
+      }
+    },
+    {
+      "seq": 1,
+      "eventType": "cae.trace.merge.family_bucket",
+      "payload": {
+        "family": "policy",
+        "candidateCount": 2
+      }
+    },
+    {
+      "seq": 2,
+      "eventType": "cae.trace.merge.rank",
+      "payload": {
+        "activationId": "cae.act.policy.demo",
+        "aggregateTightness": 2,
+        "priority": 10,
+        "rankPreview": "(2,-10,cae.act.policy.demo)"
+      }
+    },
+    {
+      "seq": 3,
+      "eventType": "cae.trace.merge.merged",
+      "payload": {
+        "activationId": "cae.act.policy.demo",
+        "peerActivationId": "cae.act.policy.alt",
+        "artifactIds": ["cae.doc.example"]
+      }
+    },
+    {
+      "seq": 4,
+      "eventType": "cae.trace.merge.policy_over_advisory",
+      "payload": {
+        "activationId": "cae.act.policy.demo",
+        "peerActivationId": "cae.act.think.hint",
+        "family": "policy",
+        "resolution": "policy_wins"
+      }
+    },
+    {
+      "seq": 5,
+      "eventType": "cae.trace.merge.bundle_materialized",
+      "payload": {
+        "familyCounts": {
+          "policy": 1,
+          "think": 0,
+          "do": 0,
+          "review": 0
+        }
+      }
+    }
+  ]
+}
