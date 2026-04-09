@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "activationId": "cae.activation.do.always-machine-playbooks",
+  "family": "do",
+  "lifecycleState": "active",
+  "priority": 1,
+  "scope": {
+    "conditions": [{ "kind": "always" }]
+  },
+  "artifactRefs": [{ "artifactId": "cae.playbook.machine-playbooks" }],
+  "flags": { "advisoryOnly": true }
+}

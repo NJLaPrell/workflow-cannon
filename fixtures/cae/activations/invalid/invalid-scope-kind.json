@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "activationId": "cae.activation.bad.scope",
+  "family": "policy",
+  "lifecycleState": "active",
+  "priority": 0,
+  "scope": {
+    "conditions": [{ "kind": "naturalLanguage", "text": "when user is sad" }]
+  },
+  "artifactRefs": [{ "artifactId": "cae.playbook.machine-playbooks" }]
+}
