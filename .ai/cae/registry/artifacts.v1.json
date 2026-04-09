@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "description": "Curated CAE artifact registry seed (T857). Each element validates against schemas/cae/registry-entry.v1.json.",
+  "artifacts": [
+    {
+      "schemaVersion": 1,
+      "artifactId": "cae.playbook.improvement-discovery",
+      "artifactType": "playbook",
+      "ref": { "path": ".ai/playbooks/improvement-task-discovery.md" },
+      "title": "Improvement discovery playbook",
+      "tags": ["cae", "improvement", "playbook"]
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "cae.playbook.improvement-triage",
+      "artifactType": "playbook",
+      "ref": { "path": ".ai/playbooks/improvement-triage-top-three.md" },
+      "title": "Improvement triage (top three) playbook",
+      "tags": ["cae", "improvement", "playbook"]
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "cae.playbook.machine-playbooks",
+      "artifactType": "playbook",
+      "ref": { "path": ".ai/MACHINE-PLAYBOOKS.md" },
+      "title": "Machine playbooks index",
+      "tags": ["cae", "playbook"]
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "cae.playbook.phase-closeout",
+      "artifactType": "playbook",
+      "ref": { "path": ".ai/playbooks/phase-closeout-and-release.md" },
+      "title": "Phase closeout and release playbook",
+      "tags": ["cae", "playbook", "release"]
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "cae.playbook.task-to-phase-branch",
+      "artifactType": "playbook",
+      "ref": { "path": ".ai/playbooks/task-to-phase-branch.md" },
+      "title": "Deliver task to phase integration branch",
+      "tags": ["cae", "delivery", "playbook"]
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "cae.playbook.wishlist-intake",
+      "artifactType": "playbook",
+      "ref": { "path": ".ai/playbooks/wishlist-intake-to-execution.md" },
+      "title": "Wishlist intake to execution playbook",
+      "tags": ["cae", "playbook", "wishlist"]
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "cae.policy.agent-cli-map",
+      "artifactType": "policy-doc",
+      "ref": { "path": ".ai/AGENT-CLI-MAP.md" },
+      "title": "Agent CLI map (tiers, copy-paste)",
+      "tags": ["cae", "cli", "policy"]
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "cae.policy.machine-cli-policy",
+      "artifactType": "policy-doc",
+      "ref": { "path": ".ai/machine-cli-policy.md" },
+      "title": "Machine CLI policy",
+      "tags": ["cae", "cli", "policy"]
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "cae.policy.policy-approval",
+      "artifactType": "policy-doc",
+      "ref": { "path": ".ai/POLICY-APPROVAL.md" },
+      "title": "Policy approval lanes",
+      "tags": ["cae", "policy"]
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "cae.policy.principles",
+      "artifactType": "policy-doc",
+      "ref": { "path": ".ai/PRINCIPLES.md" },
+      "title": "Project principles",
+      "tags": ["cae", "policy", "principles"]
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "cae.runbook.cae-debug",
+      "artifactType": "runbook",
+      "ref": { "path": ".ai/runbooks/cae-debug.md" },
+      "title": "Debug CAE",
+      "tags": ["cae", "debug", "runbook"]
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "cae.runbook.workspace-session",
+      "artifactType": "runbook",
+      "ref": { "path": ".ai/WORKSPACE-KIT-SESSION.md" },
+      "title": "Workspace kit session snapshot protocol",
+      "tags": ["cae", "runbook", "session"]
+    }
+  ]
+}
