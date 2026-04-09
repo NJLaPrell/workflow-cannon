@@ -2,8 +2,12 @@ import { Buffer } from "node:buffer";
 
 import type { ModuleCommandResult, WorkflowModule } from "../../contracts/module-contract.js";
 import { builtinInstructionEntriesForModule } from "../../contracts/builtin-run-command-manifest.js";
+import { evaluateActivationBundle } from "../../core/cae/cae-evaluate.js";
 import { loadCaeRegistry } from "../../core/cae/cae-registry-load.js";
 import type { CaeLoadedRegistry } from "../../core/cae/cae-registry-load.js";
+import type { CaeEvaluationContext } from "../../core/cae/evaluation-context-types.js";
+import { getAtPath } from "../../core/workspace-kit-config.js";
+import { getCaeSession, storeCaeSession } from "./trace-store.js";
 
 function requireSchemaV1(args: Record<string, unknown>): ModuleCommandResult | null {
   if (args.schemaVersion !== 1) {
@@ -60,6 +64,34 @@ function loadOrFail(
   return { ok: true, reg: res.value };
 }
 
+function buildCaeExplainResponse(
+  traceId: string,
+  bundle: Record<string, unknown>,
+  trace: Record<string, unknown>,
+  level: "summary" | "verbose"
+): Record<string, unknown> {
+  const fam = bundle.families as Record<string, unknown[]> | undefined;
+  const summaryText = `CAE trace ${traceId}: matched policy=${fam?.policy?.length ?? 0}, think=${fam?.think?.length ?? 0}, do=${fam?.do?.length ?? 0}, review=${fam?.review?.length ?? 0}.`;
+  const base: Record<string, unknown> = {
+    schemaVersion: 1,
+    traceId,
+    level,
+    summaryText,
+    textStability: "best_effort_v1"
+  };
+  if (level === "verbose" && Array.isArray(trace.events)) {
+    base.verboseEvents = (trace.events as Record<string, unknown>[]).map((e) => ({
+      seq: e.seq,
+      eventType: e.eventType,
+      payloadSummary:
+        typeof e.payload === "object" && e.payload !== null
+          ? JSON.stringify(e.payload).slice(0, 1024)
+          : ""
+    }));
+  }
+  return base;
+}
+
 export const contextActivationModule: WorkflowModule = {
   registration: {
     id: "context-activation",
@@ -85,6 +117,7 @@ export const contextActivationModule: WorkflowModule = {
     const args = command.args ?? {};
     const name = command.name;
     const ws = ctx.workspacePath;
+    const effective = (ctx.effectiveConfig as Record<string, unknown> | undefined) ?? {};
 
     if (name === "cae-list-artifacts") {
       const bad = requireSchemaV1(args);
@@ -195,6 +228,162 @@ export const contextActivationModule: WorkflowModule = {
         data: {
           schemaVersion: 1,
           activation: row
+        }
+      };
+    }
+
+    if (name === "cae-evaluate") {
+      const bad = requireSchemaV1(args);
+      if (bad) return bad;
+      const ec = args.evaluationContext;
+      if (!ec || typeof ec !== "object" || Array.isArray(ec)) {
+        return { ok: false, code: "invalid-args", message: "evaluationContext object is required" };
+      }
+      const loaded = loadOrFail(ws);
+      if (!loaded.ok) return loaded;
+      const evalMode = args.evalMode === "shadow" ? "shadow" : "live";
+      const { bundle, trace, traceId } = evaluateActivationBundle(
+        ec as CaeEvaluationContext,
+        loaded.reg,
+        { evalMode }
+      );
+      storeCaeSession(traceId, { bundle, trace });
+      return {
+        ok: true,
+        code: "cae-evaluate-ok",
+        data: {
+          schemaVersion: 1,
+          bundle,
+          trace,
+          traceId,
+          ephemeral: true
+        }
+      };
+    }
+
+    if (name === "cae-explain") {
+      const bad = requireSchemaV1(args);
+      if (bad) return bad;
+      const level = args.level === "verbose" ? "verbose" : "summary";
+      const traceIdArg = typeof args.traceId === "string" ? args.traceId.trim() : "";
+      if (traceIdArg) {
+        const session = getCaeSession(traceIdArg);
+        if (!session) {
+          return {
+            ok: false,
+            code: "cae-trace-not-found",
+            message: `No ephemeral trace for traceId '${traceIdArg}'`
+          };
+        }
+        const explanation = buildCaeExplainResponse(traceIdArg, session.bundle, session.trace, level);
+        return {
+          ok: true,
+          code: "cae-explain-ok",
+          data: {
+            schemaVersion: 1,
+            explanation,
+            trace: session.trace
+          }
+        };
+      }
+      const ec = args.evaluationContext;
+      if (!ec || typeof ec !== "object" || Array.isArray(ec)) {
+        return {
+          ok: false,
+          code: "invalid-args",
+          message: "Provide traceId or evaluationContext for cae-explain"
+        };
+      }
+      const loaded = loadOrFail(ws);
+      if (!loaded.ok) return loaded;
+      const evalMode = args.evalMode === "shadow" ? "shadow" : "live";
+      const { bundle, trace, traceId } = evaluateActivationBundle(
+        ec as CaeEvaluationContext,
+        loaded.reg,
+        { evalMode }
+      );
+      const explanation = buildCaeExplainResponse(traceId, bundle, trace, level);
+      return {
+        ok: true,
+        code: "cae-explain-ok",
+        data: {
+          schemaVersion: 1,
+          explanation,
+          trace
+        }
+      };
+    }
+
+    if (name === "cae-health") {
+      const bad = requireSchemaV1(args);
+      if (bad) return bad;
+      const caeEnabled = getAtPath(effective, "kit.cae.enabled") === true;
+      const load = loadCaeRegistry(ws);
+      const registryStatus = load.ok ? "ok" : "invalid";
+      const issues = load.ok
+        ? []
+        : [{ code: load.code, detail: load.message ?? "" }];
+      const data: Record<string, unknown> = {
+        schemaVersion: 1,
+        caeEnabled,
+        registryStatus,
+        issues
+      };
+      if (load.ok) {
+        data.registryContentHash = load.value.registryDigest;
+      }
+      return { ok: true, code: "cae-health-ok", data };
+    }
+
+    if (name === "cae-conflicts") {
+      const bad = requireSchemaV1(args);
+      if (bad) return bad;
+      const ec = args.evaluationContext;
+      if (!ec || typeof ec !== "object" || Array.isArray(ec)) {
+        return { ok: false, code: "invalid-args", message: "evaluationContext object is required" };
+      }
+      const loaded = loadOrFail(ws);
+      if (!loaded.ok) return loaded;
+      const evalMode = args.evalMode === "shadow" ? "shadow" : "live";
+      const { bundle, trace, traceId } = evaluateActivationBundle(
+        ec as CaeEvaluationContext,
+        loaded.reg,
+        { evalMode }
+      );
+      storeCaeSession(traceId, { bundle, trace });
+      return {
+        ok: true,
+        code: "cae-conflicts-ok",
+        data: {
+          schemaVersion: 1,
+          traceId,
+          conflictShadowSummary: bundle.conflictShadowSummary
+        }
+      };
+    }
+
+    if (name === "cae-get-trace") {
+      const bad = requireSchemaV1(args);
+      if (bad) return bad;
+      const traceId = typeof args.traceId === "string" ? args.traceId.trim() : "";
+      if (!traceId) {
+        return { ok: false, code: "invalid-args", message: "traceId is required" };
+      }
+      const session = getCaeSession(traceId);
+      if (!session) {
+        return {
+          ok: false,
+          code: "cae-trace-not-found",
+          message: `No ephemeral trace for traceId '${traceId}'`
+        };
+      }
+      return {
+        ok: true,
+        code: "cae-get-trace-ok",
+        data: {
+          schemaVersion: 1,
+          trace: session.trace,
+          ephemeral: true
         }
       };
     }

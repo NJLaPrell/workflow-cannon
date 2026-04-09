@@ -850,5 +850,40 @@
     "file": "cae-get-activation.md",
     "description": "Get one CAE activation definition by activationId.",
     "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-evaluate",
+    "file": "cae-evaluate.md",
+    "description": "Evaluate CAE effective activation bundle + trace (read-only).",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-explain",
+    "file": "cae-explain.md",
+    "description": "Explain a CAE trace by traceId or evaluationContext replay.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-health",
+    "file": "cae-health.md",
+    "description": "CAE health: kit.cae.enabled, registry load status, issues.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-conflicts",
+    "file": "cae-conflicts.md",
+    "description": "Run CAE evaluation conflict/shadow summary pass (read-only).",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-get-trace",
+    "file": "cae-get-trace.md",
+    "description": "Fetch ephemeral CAE trace by traceId from session store.",
+    "policySensitivity": "non-sensitive"
   }
 ]
