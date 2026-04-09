@@ -7,7 +7,7 @@
 - [`artifacts/stub-effective-activation-bundle.schema.json`](./artifacts/stub-effective-activation-bundle.schema.json)
 - [`artifacts/stub-trace-event.schema.json`](./artifacts/stub-trace-event.schema.json)
 - [`artifacts/stub-registry-entry.schema.json`](./artifacts/stub-registry-entry.schema.json)
-- [`artifacts/stub-read-only-cli-contract.md`](./artifacts/stub-read-only-cli-contract.md)
+- [`artifacts/cae-read-only-cli-contract.v1.md`](./artifacts/cae-read-only-cli-contract.v1.md) (v1 — **`T847`**; stub redirects)
 
 **Per-task specs:** [`specs/`](./specs/) — one file per `T###` (T837–T869).
 
