@@ -128,6 +128,7 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 - **Read-only CLI contract (`cae-*` argv + `data` schemas, agent map checklist):** **`.ai/cae/cli-read-only.md`**, **`schemas/cae/cli-read-only-requests.v1.json`**, **`schemas/cae/cli-read-only-data.v1.json`** (**`T847`**).
 - **Shadow mode (labels + `shadowObservation` on bundle):** **`.ai/cae/shadow-mode.md`**, **`schemas/cae/effective-activation-bundle.v1.json`** (**`T848`**).
 - **Runtime integration (CLI/router hooks, cache keys, ordering vs policy):** **`.ai/cae/runtime-integration.md`** (**`T849`**).
+- **Advisory surfacing (instruction surface / doctor, size budget, naming):** **`.ai/cae/advisory-surfacing.md`** (**`T850`**).
 - **Enforcement lane (allowlist, forbiddens, shadow gate ADR):** **`.ai/cae/enforcement-lane.md`**, **`.ai/adrs/ADR-cae-enforcement-shadow-gate-v1.md`** (**`T851`**).
 - **Mutation governance (git/PR v1, audit shape, T868 gate):** **`.ai/cae/mutation-governance.md`** (**`T852`**).
 - **Test plan (fixtures, golden vectors, determinism gates):** **`.ai/cae/test-plan.md`** (**`T854`**).
