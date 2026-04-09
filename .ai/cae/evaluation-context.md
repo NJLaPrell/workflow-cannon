@@ -27,7 +27,7 @@ CAE evaluation MUST receive **typed, bounded** slices — no repo-wide JSON dump
 | `governance.policySurface` | short string | **`.ai/POLICY-APPROVAL.md`** | no | e.g. `run-json`. |
 | `queue.readyQueueDepth` | integer | `list-tasks` ready count or dashboard | yes | Bounded integer. |
 | `queue.suggestedNextTaskId` | `T###` \| null | `get-next-actions` | no | — |
-| `mapSignals` | `null` | Reserved | no | If present in v1, MUST be **`null`** (future **`T856`**). |
+| `mapSignals` | `null` | Reserved | no | v1 MUST be **`null`**; forward contract **`.ai/cae/future-cognitive-maps.md`** (**`T856`**). |
 
 ## Canonical serialization for hashing (`bundleId` / `traceId`)
 
