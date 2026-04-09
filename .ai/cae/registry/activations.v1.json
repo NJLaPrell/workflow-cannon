@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "description": "CAE activation definitions seed (T858). Rows validate against schemas/cae/activation-definition.schema.json; artifactIds must exist in artifacts.v1.json.",
+  "activations": [
+    {
+      "schemaVersion": 1,
+      "activationId": "cae.activation.do.always-machine-playbooks",
+      "family": "do",
+      "lifecycleState": "active",
+      "priority": 1,
+      "scope": {
+        "conditions": [{ "kind": "always" }]
+      },
+      "artifactRefs": [{ "artifactId": "cae.playbook.machine-playbooks" }],
+      "flags": { "advisoryOnly": true }
+    },
+    {
+      "schemaVersion": 1,
+      "activationId": "cae.activation.policy.phase70-playbook",
+      "family": "policy",
+      "lifecycleState": "active",
+      "priority": 100,
+      "scope": {
+        "conditions": [{ "kind": "phaseKey", "value": "70" }]
+      },
+      "artifactRefs": [{ "artifactId": "cae.playbook.machine-playbooks" }],
+      "flags": { "shadowEligible": true }
+    },
+    {
+      "schemaVersion": 1,
+      "activationId": "cae.activation.think.run-transition",
+      "family": "think",
+      "lifecycleState": "active",
+      "priority": 20,
+      "scope": {
+        "conditions": [{ "kind": "commandName", "match": "prefix", "value": "run-" }]
+      },
+      "artifactRefs": [{ "artifactId": "cae.runbook.workspace-session" }]
+    },
+    {
+      "schemaVersion": 1,
+      "activationId": "cae.activation.review.cae-tagged",
+      "family": "review",
+      "lifecycleState": "active",
+      "priority": 50,
+      "scope": {
+        "conditions": [{ "kind": "taskTag", "match": "any", "values": ["cae", "phase-70"] }]
+      },
+      "artifactRefs": [{ "artifactId": "cae.playbook.task-to-phase-branch" }]
+    }
+  ]
+}
