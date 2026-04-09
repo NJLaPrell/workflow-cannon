@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "artifactId": "cae.checklist.release-readiness-gate",
+  "artifactType": "checklist",
+  "ref": { "path": "docs/maintainers/RELEASING.md" },
+  "tags": ["release"]
+}

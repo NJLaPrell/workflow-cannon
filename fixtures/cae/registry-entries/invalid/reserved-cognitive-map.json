@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "artifactId": "cae.cognitive-map.future-stub",
+  "artifactType": "cognitive-map",
+  "ref": { "path": ".ai/TERMS.md" }
+}

@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "artifactId": "cae.runbook.workspace-kit-session",
+  "artifactType": "runbook",
+  "ref": { "path": ".ai/WORKSPACE-KIT-SESSION.md", "fragment": "refresh" },
+  "title": "Workspace kit session snapshot protocol"
+}
