@@ -11,6 +11,7 @@ CAE evaluates **bounded, typed** workspace + task + command context and returns 
 | Doc | Purpose |
 | --- | --- |
 | **`tasks/cae/CAE-PROGRAM-CONTEXT.md`** | Program objectives, boundaries, sequencing. |
+| **`.ai/cae/registry/artifacts.v1.json`** | Bootstrap artifact id → path seed (**`T857`**); loader **T858**. |
 | **`.ai/cae/evaluation-context.md`** + **`schemas/cae/evaluation-context.v1.json`** | What builders may put in context (**`T859`**). |
 | **`.ai/cae/runtime-integration.md`** | Where CAE hooks into CLI vs router (**`T849`**). |
 | **`.ai/cae/cli-read-only.md`** | `cae-*` **`wk run`** names, JSON envelope, tier **C** (no **`policyApproval`**) — **`T847`**. |
