@@ -822,5 +822,33 @@
     "policyOperationId": "checkpoints.rewind",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-list-artifacts",
+    "file": "cae-list-artifacts.md",
+    "description": "List CAE artifact registry ids (optional type filter, paginated).",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-get-artifact",
+    "file": "cae-get-artifact.md",
+    "description": "Get one CAE registry entry by artifactId.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-list-activations",
+    "file": "cae-list-activations.md",
+    "description": "List CAE activation definition ids (optional family/lifecycle filter, paginated).",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-get-activation",
+    "file": "cae-get-activation.md",
+    "description": "Get one CAE activation definition by activationId.",
+    "policySensitivity": "non-sensitive"
   }
 ]
