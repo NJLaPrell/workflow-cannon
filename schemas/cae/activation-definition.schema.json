@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/cae/activation-definition.schema.json",
+  "title": "CAE activation definition (v1)",
+  "description": "Machine-readable activation row. v1 forbids executable payloads: no script/code/eval fields; only structured scope conditions and registry artifact references. See .ai/cae/activation-definition-trace-mapping.md for trace events (T846).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "activationId", "family", "lifecycleState", "priority", "scope", "artifactRefs"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "activationId": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 128,
+      "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$",
+      "description": "Stable id for this activation definition (distinct from registry artifactId)."
+    },
+    "family": {
+      "type": "string",
+      "enum": ["policy", "think", "do", "review"]
+    },
+    "lifecycleState": {
+      "type": "string",
+      "enum": ["draft", "active", "retired", "disabled"],
+      "description": "Lifecycle semantics: .ai/cae/lifecycle.md (T841). Evaluator must no-op retired/disabled before scope work."
+    },
+    "priority": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9999,
+      "description": "Higher wins within same family after scope match (precedence merge: T843)."
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["conditions"],
+      "properties": {
+        "conditions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 24,
+          "description": "All conditions must match (AND). v1 structured conditions only — no natural-language predicates.",
+          "items": { "$ref": "#/$defs/scopeCondition" }
+        }
+      }
+    },
+    "artifactRefs": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "description": "References rows in the CAE artifact registry (schemas/cae/registry-entry.v1.json) by artifactId.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["artifactId"],
+        "properties": {
+          "artifactId": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 128,
+            "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+          }
+        }
+      }
+    },
+    "flags": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "shadowEligible": {
+          "type": "boolean",
+          "description": "Eligible to participate in shadow evaluation runs (runtime flag still required — T841/T847)."
+        },
+        "advisoryOnly": {
+          "type": "boolean",
+          "description": "Never participates in enforcement lanes; advisory surfacing only."
+        }
+      }
+    }
+  },
+  "$defs": {
+    "scopeCondition": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": { "kind": { "const": "always" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "match", "value"],
+          "properties": {
+            "kind": { "const": "commandName" },
+            "match": { "type": "string", "enum": ["exact", "prefix"] },
+            "value": { "type": "string", "minLength": 1, "maxLength": 128 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "values"],
+          "properties": {
+            "kind": { "const": "taskTag" },
+            "match": { "type": "string", "enum": ["any", "all"] },
+            "values": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 16,
+              "items": { "type": "string", "minLength": 1, "maxLength": 64 }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "pattern"],
+          "properties": {
+            "kind": { "const": "taskIdPattern" },
+            "pattern": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "description": "ECMA-262 regex string matched against task id by evaluator (T860)."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "value"],
+          "properties": {
+            "kind": { "const": "phaseKey" },
+            "value": { "type": "string", "minLength": 1, "maxLength": 32, "pattern": "^[0-9]+$" }
+          }
+        }
+      ]
+    }
+  }
+}

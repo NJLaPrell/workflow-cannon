@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "activationId": "cae.activation.think.run-transition",
+  "family": "think",
+  "lifecycleState": "active",
+  "priority": 20,
+  "scope": {
+    "conditions": [
+      { "kind": "commandName", "match": "prefix", "value": "run-" }
+    ]
+  },
+  "artifactRefs": [{ "artifactId": "cae.runbook.workspace-kit-session" }]
+}

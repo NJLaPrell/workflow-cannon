@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "activationId": "cae.activation.bad.family",
+  "family": "execute",
+  "lifecycleState": "active",
+  "priority": 0,
+  "scope": { "conditions": [{ "kind": "always" }] },
+  "artifactRefs": [{ "artifactId": "cae.playbook.machine-playbooks" }]
+}

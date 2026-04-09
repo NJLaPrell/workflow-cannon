@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "activationId": "cae.activation.review.cae-tagged",
+  "family": "review",
+  "lifecycleState": "active",
+  "priority": 50,
+  "scope": {
+    "conditions": [
+      { "kind": "taskTag", "match": "any", "values": ["cae", "phase-70"] }
+    ]
+  },
+  "artifactRefs": [{ "artifactId": "cae.checklist.release-readiness-gate" }]
+}
