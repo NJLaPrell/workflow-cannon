@@ -120,6 +120,25 @@
             "ack_required",
             "satisfy_required"
           ]
+        },
+        "ackToken": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Session correlation id; persistence optional (T867)."
+        },
+        "machineCheckable": {
+          "type": "boolean",
+          "description": "If true, satisfy_required may use structured evidence (T860/T866)."
+        },
+        "blockingLane": {
+          "type": "string",
+          "enum": ["none", "advisory", "enforcement"],
+          "description": "Where this ack may gate (T866)."
+        },
+        "surfaceCopyKey": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Stable key for rendered copy; no raw NL in bundle."
         }
       }
     },

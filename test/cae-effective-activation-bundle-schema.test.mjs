@@ -17,10 +17,11 @@ describe("CAE effective-activation-bundle schema (v1)", () => {
   const schema = JSON.parse(fs.readFileSync(schemaPath, "utf8"));
   const validate = ajv.compile(schema);
 
-  it("accepts fixtures/cae/bundles/valid/minimal.json", () => {
-    const data = JSON.parse(
-      fs.readFileSync(path.join(bundlesRoot, "valid", "minimal.json"), "utf8")
-    );
-    assert.equal(validate(data), true, ajv.errorsText(validate.errors));
-  });
+  const validDir = path.join(bundlesRoot, "valid");
+  for (const name of fs.readdirSync(validDir).filter((f) => f.endsWith(".json"))) {
+    it(`accepts fixtures/cae/bundles/valid/${name}`, () => {
+      const data = JSON.parse(fs.readFileSync(path.join(validDir, name), "utf8"));
+      assert.equal(validate(data), true, `${name}: ${ajv.errorsText(validate.errors)}`);
+    });
+  }
 });
