@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/cae/effective-activation-bundle.stub.v1.json",
+  "title": "CAE effective activation bundle (STUB — replace in schema task)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "bundleId", "families", "pendingAcknowledgements", "conflictShadowSummary", "traceId"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "bundleId": { "type": "string", "description": "Deterministic id for this evaluation result" },
+    "families": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policy", "think", "do", "review"],
+      "properties": {
+        "policy": { "type": "array", "items": { "type": "object" } },
+        "think": { "type": "array", "items": { "type": "object" } },
+        "do": { "type": "array", "items": { "type": "object" } },
+        "review": { "type": "array", "items": { "type": "object" } }
+      }
+    },
+    "pendingAcknowledgements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["activationId", "strength"],
+        "properties": {
+          "activationId": { "type": "string" },
+          "strength": {
+            "enum": ["none", "surface", "recommend", "ack_required", "satisfy_required"]
+          }
+        }
+      }
+    },
+    "conflictShadowSummary": {
+      "type": "object",
+      "description": "Merged vs shadowed vs failed conflicts; mode labels for shadow runs"
+    },
+    "traceId": { "type": "string" },
+    "explanationRef": {
+      "type": "string",
+      "description": "Opaque handle for explain command or inline summary key"
+    }
+  }
+}

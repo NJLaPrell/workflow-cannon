@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "artifactId": "cae.playbook.machine-playbooks",
+  "artifactType": "playbook",
+  "ref": { "path": ".ai/MACHINE-PLAYBOOKS.md" },
+  "title": "Machine playbooks index",
+  "tags": ["cae", "playbook"]
+}

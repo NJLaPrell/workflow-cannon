@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "artifactId": "cae.playbook.root-readme",
+  "artifactType": "playbook",
+  "ref": { "path": "README.md" }
+}

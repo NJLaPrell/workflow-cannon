@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/cae/trace-event.stub.v1.json",
+  "title": "CAE trace event (STUB — replace in trace spec task)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "eventType", "timestampMs", "payload"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "eventType": {
+      "type": "string",
+      "description": "e.g. candidate_matched, precedence_applied, merge_result, conflict_detected, ack_emitted"
+    },
+    "timestampMs": { "type": "integer" },
+    "activationId": { "type": "string" },
+    "payload": { "type": "object", "additionalProperties": true }
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/cae/registry-entry.v1.json",
+  "title": "CAE artifact registry entry (v1)",
+  "description": "Normative shape for a single registry row. v1 artifact types exclude reserved cognitive-map; see ADR-cae-artifact-registry-v1.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "artifactId", "artifactType", "ref"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "artifactId": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 128,
+      "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$",
+      "description": "Stable identifier (immutable once published). Lowercase only; segments separated by . _ or -."
+    },
+    "artifactType": {
+      "type": "string",
+      "enum": [
+        "runbook",
+        "playbook",
+        "checklist",
+        "review-template",
+        "reasoning-template",
+        "policy-doc"
+      ]
+    },
+    "ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "description": "Repo-relative file path under allowed roots; no directory traversal.",
+          "oneOf": [
+            {
+              "pattern": "^src(?:/[a-zA-Z0-9_.-]+)+\\.[a-z0-9.]{1,16}$"
+            },
+            {
+              "pattern": "^docs(?:/[a-zA-Z0-9_.-]+)+\\.[a-z0-9.]{1,16}$"
+            },
+            {
+              "pattern": "^tasks(?:/[a-zA-Z0-9_.-]+)+\\.[a-z0-9.]{1,16}$"
+            },
+            {
+              "pattern": "^\\.ai(?:/[a-zA-Z0-9_.-]+)+\\.[a-z0-9.]{1,16}$"
+            }
+          ]
+        },
+        "fragment": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Optional logical subsection slug; does not embed document body."
+        }
+      }
+    },
+    "title": { "type": "string", "maxLength": 256 },
+    "tags": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9._-]*$"
+      }
+    }
+  }
+}

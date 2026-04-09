@@ -4,6 +4,9 @@ dist/
 .env
 .DS_Store
 artifacts/
+# CAE program stubs live under tasks/cae/artifacts/ (not repo-root build artifacts)
+!tasks/cae/artifacts/
+!tasks/cae/artifacts/**
 # SQLite WAL sidecars (main .db may be tracked for this repo’s task store)
 .workspace-kit/tasks/*.db-wal
 .workspace-kit/tasks/*.db-shm
