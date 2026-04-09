@@ -131,6 +131,7 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 - **Advisory surfacing (instruction surface / doctor, size budget, naming):** **`.ai/cae/advisory-surfacing.md`** (**`T850`**).
 - **Enforcement lane (allowlist, forbiddens, shadow gate ADR):** **`.ai/cae/enforcement-lane.md`**, **`.ai/adrs/ADR-cae-enforcement-shadow-gate-v1.md`** (**`T851`**).
 - **Mutation governance (git/PR v1, audit shape, T868 gate):** **`.ai/cae/mutation-governance.md`** (**`T852`**).
+- **Failure / degradation / recovery (matrix + doctor + codes):** **`.ai/cae/failure-recovery.md`** (**`T853`**).
 - **Test plan (fixtures, golden vectors, determinism gates):** **`.ai/cae/test-plan.md`** (**`T854`**).
 - **Operator docs (.ai-first entry + debug runbook):** **`.ai/cae/README.md`**, **`.ai/runbooks/cae-debug.md`** (**`T855`**).
 - **Bootstrap artifact registry seed:** **`.ai/cae/registry/artifacts.v1.json`**, **`tasks/cae/artifacts/inventory-notes.md`** (**`T857`**).
