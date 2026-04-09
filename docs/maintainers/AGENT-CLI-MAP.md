@@ -459,6 +459,17 @@ pnpm run advisory:task-state-hand-edit
 
 In CI this runs as a **non-blocking** step (see `.github/workflows/ci.yml`). It always exits 0; read stderr for warnings. Legitimate recovery edits should be rare and documented in the PR.
 
+## CAE read-only registry (Phase 70)
+
+```bash
+workspace-kit run cae-list-artifacts '{"schemaVersion":1}'
+workspace-kit run cae-get-artifact '{"schemaVersion":1,"artifactId":"cae.playbook.machine-playbooks"}'
+workspace-kit run cae-list-activations '{"schemaVersion":1}'
+workspace-kit run cae-get-activation '{"schemaVersion":1,"activationId":"cae.activation.do.always-machine-playbooks"}'
+```
+
+See `.ai/cae/cli-read-only.md` for argv and `data` shapes. Tier **C** — no JSON `policyApproval` on these commands.
+
 ## CLI map coverage guardrail
 
 `pnpm run check` includes a strict command-coverage check (`scripts/check-agent-cli-map-coverage.mjs`) that compares discovered `workspace-kit run` commands from module registrations against:
