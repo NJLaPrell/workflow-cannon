@@ -365,6 +365,34 @@ workspace-kit run list-features '{"componentId":"task-engine-queue"}'
 
 Instruction: `src/modules/task-engine/instructions/queue-health.md`. Related runbook: [`runbooks/agent-task-engine-ergonomics.md`](./runbooks/agent-task-engine-ergonomics.md).
 
+## CAE read-only CLI (contract v1 — Tier C; handlers `T861` / `T862`)
+
+Normative contract + JSON Schema: **`.ai/cae/cli-read-only.md`**, **`schemas/cae/cli-read-only-requests.v1.json`**, **`schemas/cae/cli-read-only-data.v1.json`**. **`policyOperationId`** pattern: **`context-activation.cae-<name>`** (e.g. **`context-activation.cae-evaluate`**).
+
+Until **`T861` / `T862`** register these names in **`src/contracts/builtin-run-command-manifest.json`**, **`workspace-kit run` (no args)** will not list them — the shapes below are still the **copy-paste contract** for implementers and agents once shipped. **No `policyApproval`.** Prefer **`pnpm exec wk run`** for clean JSON stdout.
+
+**Registry inspection (`T861`):**
+
+```bash
+pnpm exec wk run cae-list-artifacts '{"schemaVersion":1,"limit":50}'
+pnpm exec wk run cae-get-artifact '{"schemaVersion":1,"artifactId":"cae.playbook.machine-playbooks"}'
+pnpm exec wk run cae-list-activations '{"schemaVersion":1,"family":"policy","limit":25}'
+pnpm exec wk run cae-get-activation '{"schemaVersion":1,"activationId":"cae.activation.policy.phase70-playbook"}'
+```
+
+**Evaluation / explain / health / conflicts / trace (`T862`):**
+
+```bash
+pnpm exec wk run cae-evaluate '{"schemaVersion":1,"evaluationContext":{"schemaVersion":1,"task":{"taskId":"T847","status":"in_progress","phaseKey":"70"},"command":{"name":"cae-evaluate"},"workspace":{"currentKitPhase":"70"},"governance":{"policyApprovalRequired":false,"approvalTierHint":"C"},"queue":{"readyQueueDepth":0},"mapSignals":null},"evalMode":"live"}'
+pnpm exec wk run cae-explain '{"schemaVersion":1,"traceId":"cae.trace.example.minimal","level":"summary"}'
+pnpm exec wk run cae-explain '{"schemaVersion":1,"evaluationContext":{"schemaVersion":1,"task":{"taskId":"T847","status":"in_progress","phaseKey":"70"},"command":{"name":"cae-explain"},"workspace":{"currentKitPhase":"70"},"governance":{"policyApprovalRequired":false,"approvalTierHint":"C"},"queue":{"readyQueueDepth":0},"mapSignals":null},"level":"verbose"}'
+pnpm exec wk run cae-health '{"schemaVersion":1,"includeDetails":true}'
+pnpm exec wk run cae-conflicts '{"schemaVersion":1,"evaluationContext":{"schemaVersion":1,"task":{"taskId":"T847","status":"ready","phaseKey":"70"},"command":{"name":"cae-conflicts"},"workspace":{"currentKitPhase":"70"},"governance":{"policyApprovalRequired":false,"approvalTierHint":"C"},"queue":{"readyQueueDepth":3},"mapSignals":null},"evalMode":"shadow"}'
+pnpm exec wk run cae-get-trace '{"schemaVersion":1,"traceId":"cae.trace.example.minimal"}'
+```
+
+When these rows land in the manifest, add matching lines to **`docs/maintainers/AGENT-CLI-MAP.md`** (or an **`agent-cli-map-exclusions.json`** entry with rationale) so **`pnpm run check`** stays green — see **`.ai/cae/cli-read-only.md` § Agent CLI map coverage**.
+
 ## Tier C — Safe discovery / read-only examples
 
 Non-sensitive commands (no `policyApproval` unless you added `extraSensitiveModuleCommands`):
@@ -434,6 +462,7 @@ Instruction paths: run `workspace-kit run` with no subcommand to list commands; 
 6. Agent behavior plan: `docs/maintainers/plans/agent-behavior-module.md` + profile schema `schemas/agent-behavior-profile.schema.json`.
 7. Planning module runbook: `.ai/runbooks/planning-workflow.md`.
 8. Agent task-engine ergonomics: `.ai/runbooks/agent-task-engine-ergonomics.md` (includes **§0** natural-language → command exemplar table).
+9. CAE read-only CLI contract (when enabled): `.ai/cae/cli-read-only.md` + `schemas/cae/cli-read-only-*.v1.json`.
 
 ## Optional session opener (habit hook)
 

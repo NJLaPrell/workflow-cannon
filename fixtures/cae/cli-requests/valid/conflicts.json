@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "evaluationContext": {
+    "schemaVersion": 1,
+    "task": {
+      "taskId": "T847",
+      "status": "ready",
+      "phaseKey": "70"
+    },
+    "command": {
+      "name": "cae-conflicts"
+    },
+    "workspace": {
+      "currentKitPhase": "70"
+    },
+    "governance": {
+      "policyApprovalRequired": false,
+      "approvalTierHint": "C"
+    },
+    "queue": {
+      "readyQueueDepth": 3
+    },
+    "mapSignals": null
+  },
+  "evalMode": "shadow"
+}
