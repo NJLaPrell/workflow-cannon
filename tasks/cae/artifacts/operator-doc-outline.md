@@ -1,5 +1,7 @@
 # CAE operator documentation outline (stub for T855)
 
+**Superseded for navigation by** **`.ai/cae/README.md`** (**`T855`**). Keep this file as a thin historical stub.
+
 Planned machine-canonical locations (confirm in T855):
 
 1. **`.ai/cae/README.md`** — What CAE is; link to program context `tasks/cae/CAE-PROGRAM-CONTEXT.md` until moved.
