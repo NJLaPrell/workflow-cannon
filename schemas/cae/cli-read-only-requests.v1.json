@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/cae/cli-read-only-requests.v1.json",
+  "title": "CAE read-only CLI request argv (v1)",
+  "description": "Third-argument JSON objects for `pnpm exec wk run <cae-command> '<json>'` (T847). Handlers: T861/T862.",
+  "$defs": {
+    "evaluationContext": {
+      "$ref": "https://workflow-cannon.dev/schemas/cae/evaluation-context.v1.json"
+    },
+    "caeListArtifactsRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "limit": { "type": "integer", "minimum": 1, "maximum": 200 },
+        "cursor": { "type": "string", "maxLength": 256 },
+        "artifactType": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "When set, filter to this artifactType (registry enum)."
+        }
+      }
+    },
+    "caeGetArtifactRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "artifactId"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "artifactId": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 128,
+          "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+        }
+      }
+    },
+    "caeListActivationsRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "limit": { "type": "integer", "minimum": 1, "maximum": 200 },
+        "cursor": { "type": "string", "maxLength": 256 },
+        "family": {
+          "type": "string",
+          "enum": ["policy", "think", "do", "review"]
+        },
+        "lifecycleState": { "type": "string", "maxLength": 32 }
+      }
+    },
+    "caeGetActivationRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "activationId"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "activationId": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 128,
+          "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+        }
+      }
+    },
+    "caeEvaluateRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "evaluationContext"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "evaluationContext": { "$ref": "#/$defs/evaluationContext" },
+        "evalMode": {
+          "type": "string",
+          "enum": ["live", "shadow"],
+          "description": "Default live when omitted (T860)."
+        }
+      }
+    },
+    "caeExplainByTraceRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "traceId"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "traceId": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 128
+        },
+        "level": {
+          "type": "string",
+          "enum": ["summary", "verbose"]
+        }
+      }
+    },
+    "caeExplainByReplayRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "evaluationContext"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "evaluationContext": { "$ref": "#/$defs/evaluationContext" },
+        "evalMode": {
+          "type": "string",
+          "enum": ["live", "shadow"]
+        },
+        "level": {
+          "type": "string",
+          "enum": ["summary", "verbose"]
+        }
+      }
+    },
+    "caeExplainRequest": {
+      "oneOf": [
+        { "$ref": "#/$defs/caeExplainByTraceRequest" },
+        { "$ref": "#/$defs/caeExplainByReplayRequest" }
+      ],
+      "description": "Explain by persisted/session traceId OR inline evaluation replay (T846/T862)."
+    },
+    "caeHealthRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "includeDetails": {
+          "type": "boolean",
+          "description": "When true, include extended diagnostics in data (registry digest, rule hints)."
+        }
+      }
+    },
+    "caeConflictsRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "evaluationContext"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "evaluationContext": { "$ref": "#/$defs/evaluationContext" },
+        "evalMode": {
+          "type": "string",
+          "enum": ["live", "shadow"]
+        }
+      }
+    },
+    "caeGetTraceRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "traceId"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "traceId": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 128
+        }
+      }
+    }
+  }
+}
