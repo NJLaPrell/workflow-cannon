@@ -54,6 +54,7 @@
 - **Activation definition schema + trace mapping:** **`schemas/cae/activation-definition.schema.json`**, **`.ai/cae/activation-definition-trace-mapping.md`** (**`T840`**).
 - **Activation lifecycle (states, transitions, pre-filter order):** **`.ai/cae/lifecycle.md`** (**`T841`**).
 - **Evaluation context (bounded slices + schema):** **`.ai/cae/evaluation-context.md`**, **`schemas/cae/evaluation-context.v1.json`** (**`T842`**).
+- **Evaluation context builder (core):** **`src/core/cae/evaluation-context-builder.ts`** (**`T859`**).
 - **Precedence / merge / effective bundle:** **`.ai/cae/precedence-merge.md`**, **`schemas/cae/effective-activation-bundle.v1.json`** (**`T843`**).
 - **Acknowledgement model (vs policyApproval):** **`.ai/cae/acknowledgement-model.md`** (**`T844`**).
 - **Persistence & migration (CAE in planning SQLite):** **`.ai/adrs/ADR-cae-persistence-v1.md`** (**`T845`**).

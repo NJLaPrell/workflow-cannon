@@ -1,6 +1,6 @@
 # CAE evaluation context contract (v1)
 
-**Task:** **`T842`**. **Normative schema:** **`schemas/cae/evaluation-context.v1.json`**. **Builder implementation:** **`T859`**.
+**Task:** **`T842`**. **Normative schema:** **`schemas/cae/evaluation-context.v1.json`**. **Builder implementation:** **`src/core/cae/evaluation-context-builder.ts`** (**`T859`**).
 
 CAE evaluation MUST receive **typed, bounded** slices — no repo-wide JSON dump, no raw SQLite rows, no full filesystem paths in payloads.
 
