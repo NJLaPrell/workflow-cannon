@@ -5,6 +5,7 @@
   ".workspace-kit/tasks/workspace-kit.db",
   ".workspace-kit/tasks/state.json",
   "docs/maintainers/data/workspace-kit-status.yaml",
+  "docs/maintainers/data",
   ".ai/RELEASING.md",
   ".ai/POLICY-APPROVAL.md",
   ".ai/AGENT-CLI-MAP.md",

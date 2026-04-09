@@ -51,6 +51,11 @@
       "file": "src/core/planning/index.ts",
       "specifier": "../../modules/task-engine/wishlist/wishlist-types.js",
       "rationale": "Planning persistence facade — re-export only."
+    },
+    {
+      "file": "src/core/state/unified-state-db.ts",
+      "specifier": "../../modules/task-engine/persistence/workspace-status-yaml-import.js",
+      "rationale": "Unified SQLite open path: seed kit_workspace_status from maintainer YAML when revision warrants (workspace status mirror)."
     }
   ]
 }
