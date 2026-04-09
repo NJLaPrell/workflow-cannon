@@ -10,6 +10,7 @@ ref|id=tasks_view|target=.workspace-kit/tasks/workspace-kit.db|type=file|status=
 ref|id=releasing|target=.ai/machine-cli-policy.md|type=file|status=active
 ref|id=policy_approval|target=.ai/machine-cli-policy.md|type=file|status=active
 ref|id=agent_cli_map|target=.ai/machine-cli-policy.md|type=file|status=active
+ref|id=cae|target=.ai/cae/README.md|type=file|status=active
 ref|id=cli_visual_guide|target=.ai/machine-cli-policy.md|type=file|status=active
 ref|id=agent_behavior_plan|target=src/modules/agent-behavior/README.md|type=file|status=active
 ref|id=terms|target=.ai/TERMS.md|type=file|status=active

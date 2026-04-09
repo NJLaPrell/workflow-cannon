@@ -63,6 +63,10 @@
       "output": "docs/maintainers/runbooks/agent-task-engine-ergonomics.md"
     },
     {
+      "source": ".ai/runbooks/cae-debug.md",
+      "output": "docs/maintainers/runbooks/cae-debug.md"
+    },
+    {
       "source": ".ai/runbooks/consumer-cadence.md",
       "output": "docs/maintainers/runbooks/consumer-cadence.md"
     },

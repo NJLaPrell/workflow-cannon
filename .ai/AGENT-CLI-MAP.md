@@ -19,6 +19,8 @@ If a session might touch `.workspace-kit/` state, lifecycle transitions, policy 
 3. `workspace-kit run` (no subcommand) — lists **router-registered** commands (executable for the current enabled module set).
 4. Use this map + `src/modules/<module>/instructions/<command>.md` for JSON payload shape.
 
+**CAE (`cae-*` read-only commands):** when shipped (**`T861`**, **`T862`**), names + JSON envelope live in **`.ai/cae/cli-read-only.md`**; operator/debug path in **`.ai/cae/README.md`** and **`.ai/runbooks/cae-debug.md`** (**`T855`**).
+
 Optional machine-readable catalog (same validation as `doctor`, then JSON on stdout):
 
 ```bash
