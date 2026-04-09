@@ -56,6 +56,7 @@
 - **Evaluation context (bounded slices + schema):** **`.ai/cae/evaluation-context.md`**, **`schemas/cae/evaluation-context.v1.json`** (**`T842`**).
 - **Evaluation context builder (core):** **`src/core/cae/evaluation-context-builder.ts`** (**`T859`**).
 - **Precedence / merge / effective bundle:** **`.ai/cae/precedence-merge.md`**, **`schemas/cae/effective-activation-bundle.v1.json`** (**`T843`**).
+- **Evaluation engine (v1 matching + deterministic bundle/trace):** **`src/core/cae/cae-evaluate.ts`** (**`T860`**).
 - **Acknowledgement model (vs policyApproval):** **`.ai/cae/acknowledgement-model.md`** (**`T844`**).
 - **Persistence & migration (CAE in planning SQLite):** **`.ai/adrs/ADR-cae-persistence-v1.md`** (**`T845`**).
 - **Trace & explain (schemas + redaction):** **`.ai/cae/trace-and-explain.md`**, **`schemas/cae/trace.v1.json`**, **`schemas/cae/explain-response.v1.json`** (**`T846`**).
