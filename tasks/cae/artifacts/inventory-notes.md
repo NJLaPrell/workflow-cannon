@@ -2,7 +2,7 @@
 
 ## Scope
 
-First tranche of **`artifactId`** → repo file mappings under **`.ai/cae/registry/artifacts.v1.json`**. Focus: high-traffic agent playbooks, policy canon, and CAE operator runbooks. **Not exhaustive** — extend via PRs using the checklist below.
+First tranche of **`artifactId`** → repo file mappings under **`.ai/cae/registry/artifacts.v1.json`**. Activation rows ship alongside in **`activations.v1.json`** (**`T858`**). Focus: high-traffic agent playbooks, policy canon, and CAE operator runbooks. **Not exhaustive** — extend via PRs using the checklist below.
 
 ## Omissions (intentional v1)
 

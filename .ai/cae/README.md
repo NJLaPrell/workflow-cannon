@@ -17,6 +17,7 @@ CAE evaluates **bounded, typed** workspace + task + command context and returns 
 | **`.ai/cae/cli-read-only.md`** | `cae-*` **`wk run`** names, JSON envelope, tier **C** (no **`policyApproval`**) — **`T847`**. |
 | **`.ai/cae/trace-and-explain.md`** | Trace + explain contracts (**`T846`**). |
 | **`.ai/cae/failure-recovery.md`** | Failure × surface matrix (**`T853`**). |
+| **`.ai/cae/error-codes.md`** | Stable loader / CLI error **`code`** strings (**`T858`**). |
 | **`.ai/runbooks/cae-debug.md`** | Operator debug flow (doctor, registry, traces). |
 
 ## Acknowledgement vs `policyApproval`
