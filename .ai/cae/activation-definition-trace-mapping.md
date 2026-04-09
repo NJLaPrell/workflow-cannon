@@ -3,7 +3,7 @@
 **Audience:** implementers of evaluation + trace (**`T860`**, **`T846`**).  
 **Normative definition shape:** `schemas/cae/activation-definition.schema.json` (**`T840`**).
 
-When an activation definition is **considered** during evaluation, the engine SHOULD emit trace events (exact payload shapes in **`T846`**). This table is **semantic** mapping only.
+When an activation definition is **considered** during evaluation, the engine SHOULD emit trace events (normative types in **`schemas/cae/trace.v1.json`**, taxonomy in **`.ai/cae/trace-and-explain.md`**). This table is **semantic** mapping only.
 
 | Definition field / step | Suggested trace `type` (string) | When |
 | --- | --- | --- |

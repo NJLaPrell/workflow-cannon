@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "traceId": "cae.trace.fixture.merge-sample",
+  "level": "verbose",
+  "summaryText": "Verbose walkthrough of merge-sample trace.",
+  "textStability": "best_effort_v1",
+  "verboseEvents": [
+    {
+      "seq": 0,
+      "eventType": "cae.trace.activation.candidate_seen",
+      "payloadSummary": "policy demo candidate"
+    },
+    {
+      "seq": 5,
+      "eventType": "cae.trace.merge.bundle_materialized",
+      "payloadSummary": "policy=1 others=0"
+    }
+  ],
+  "truncation": {
+    "eventsOmitted": 0,
+    "summaryTextCharsOmitted": 0
+  }
+}

@@ -54,9 +54,9 @@ Let **`M(A,B)`** be merge when artifact sets are identical and strengths compati
 
 ## Trace event cross-reference (**`T846`**)
 
-Each step SHOULD emit (types are **suggested strings** until **`T846`** freezes):
+Normative event strings and payloads: **`.ai/cae/trace-and-explain.md`**, **`schemas/cae/trace.v1.json`**. Mapping from this merge spec:
 
-| Step | Suggested trace type |
+| Step | `eventType` |
 | --- | --- |
 | Family partition | `cae.trace.merge.family_bucket` |
 | Sort key computed | `cae.trace.merge.rank` |
@@ -64,6 +64,7 @@ Each step SHOULD emit (types are **suggested strings** until **`T846`** freezes)
 | Shadow tie | `cae.trace.merge.shadow_tie` |
 | Fail explicit | `cae.trace.merge.fail_explicit` |
 | Policy over advisory | `cae.trace.merge.policy_over_advisory` |
+| Final bundle sealed | `cae.trace.merge.bundle_materialized` |
 
 ## Worked examples (normative intent)
 

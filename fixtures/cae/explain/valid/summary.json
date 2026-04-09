@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "traceId": "cae.trace.fixture.minimal",
+  "level": "summary",
+  "summaryText": "Policy family merged one pair; advisory think row suppressed by policy winner.",
+  "textStability": "best_effort_v1"
+}
