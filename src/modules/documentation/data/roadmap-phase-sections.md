@@ -46,3 +46,9 @@
 - **Outcome:** Deterministic plugin manifest validation, filesystem discovery aligned to Anthropic layout, optional SQLite enablement and copy-install with policy gates.
 - **Exit signals:**
   - **`pnpm run build`**, **`check`**, **`test`**, **`parity`**, **`pre-merge-gates`** on the release tag; maintainer evidence per **`RELEASING.md`**.
+
+### Phase 70 - Context Activation Engine (CAE) (IN FLIGHT)
+
+- **Primary scope:** **`T837`–`T869`** — CAE architecture ADR and boundaries (code invariants vs advisory CAE); artifact registry + activation definition schemas + lifecycle; evaluation context contract; precedence / merge / effective bundle semantics; acknowledgement model (separate from `policyApproval`); persistence + trace + explain design; read-only CLI contract; shadow mode; CLI/router integration design; advisory surfacing; narrow enforcement lane design; mutation governance; failure/recovery; test plan; `.ai-first` operator docs; future cognitive-map contract; bootstrap registry seed; implementation (loader, context builder, evaluator, read-only commands, shadow pipeline, runtime hook, advisory payloads, enforcement, trace persistence, governed CRUD or validate-only, integration hardening).
+- **Outcome:** Deterministic activation bundles for policy / think / do / review families; docs referenced by stable artifact ids; read-only inspectability and shadow rollout before allowlisted enforcement; no cognitive-map dependency in v1.
+- **Exit signals:** Phase closeout per **`RELEASING.md`** when implementation train ships; routine gates **`pnpm run build`**, **`check`**, **`test`**, **`parity`** on release candidates.

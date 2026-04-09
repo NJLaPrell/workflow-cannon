@@ -12,7 +12,7 @@ Long-range plan and decision log for the Workflow Cannon package and maintainer 
 ## Current state
 
 - **Shipped:** latest **`v0.61.0`** (Phase **61** — Claude Code plugin platform v1: **`list-plugins`** / **`inspect-plugin`**, **`install-plugin`** / enable-disable, SQLite **`user_version` 8 **`kit_plugin_state`**, ADR + schema + CI fixture). Phase **60** (**`v0.60.0`**, run-args pilot + dashboard/subagent surfaces) and prior trains remain summarized in **[`ROADMAP-archive.md`](./ROADMAP-archive.md)**; version facts in **[`CHANGELOG.md`](./CHANGELOG.md)**.
-- **Next:** Use **`get-next-actions`** / **`list-tasks`** for **`ready`** work; **`T668`–`T670`** (Cursor chat prefill) remain **`cancelled`**.
+- **Next:** Use **`get-next-actions`** / **`list-tasks`** for **`ready`** work; **Phase 70 (CAE)** — tasks **`T837`–`T869`** (Context Activation Engine spec + implementation train); **`T668`–`T670`** (Cursor chat prefill) remain **`cancelled`**.
 - **Maintainer snapshot** — `docs/maintainers/data/workspace-kit-status.yaml` (`current_kit_phase`, `next_agent_actions`).
 - **Execution queue** — canonical task-engine store (default `.workspace-kit/tasks/workspace-kit.db`; JSON opt-out `.workspace-kit/tasks/state.json`); use `pnpm run wk run list-tasks` / `get-next-actions` rather than inferring phase from prose alone.
 - **Product / feature inventory** — **`docs/maintainers/FEATURE-MATRIX.md`**.
@@ -112,6 +112,12 @@ For a product-facing view of features by phase, see `docs/maintainers/FEATURE-MA
 - **Outcome:** Deterministic plugin manifest validation, filesystem discovery aligned to Anthropic layout, optional SQLite enablement and copy-install with policy gates.
 - **Exit signals:**
   - **`pnpm run build`**, **`check`**, **`test`**, **`parity`**, **`pre-merge-gates`** on the release tag; maintainer evidence per **`RELEASING.md`**.
+
+### Phase 70 - Context Activation Engine (CAE) (IN FLIGHT)
+
+- **Primary scope:** **`T837`–`T869`** — CAE architecture ADR and boundaries (code invariants vs advisory CAE); artifact registry + activation definition schemas + lifecycle; evaluation context contract; precedence / merge / effective bundle semantics; acknowledgement model (separate from `policyApproval`); persistence + trace + explain design; read-only CLI contract; shadow mode; CLI/router integration design; advisory surfacing; narrow enforcement lane design; mutation governance; failure/recovery; test plan; `.ai-first` operator docs; future cognitive-map contract; bootstrap registry seed; implementation (loader, context builder, evaluator, read-only commands, shadow pipeline, runtime hook, advisory payloads, enforcement, trace persistence, governed CRUD or validate-only, integration hardening).
+- **Outcome:** Deterministic activation bundles for policy / think / do / review families; docs referenced by stable artifact ids; read-only inspectability and shadow rollout before allowlisted enforcement; no cognitive-map dependency in v1.
+- **Exit signals:** Phase closeout per **`RELEASING.md`** when implementation train ships; routine gates **`pnpm run build`**, **`check`**, **`test`**, **`parity`** on release candidates.
 
 ## Recorded decisions
 

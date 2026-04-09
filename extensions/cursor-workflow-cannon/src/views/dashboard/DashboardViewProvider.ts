@@ -725,10 +725,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .dash-count-cell { display: flex; flex-direction: row; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
     .dash-count-label { font-size: 11px; opacity: 0.85; line-height: 1.25; flex: 1; min-width: 0; }
     .dash-count-num { flex-shrink: 0; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; font-size: 13px; line-height: 1.25; }
-    .a11y-note { font-size: 11px; }
     pre.resume-cli { font-size: 11px; }
-    ul.dash-hint-list { margin: 4px 0 8px 18px; padding: 0; font-size: 11px; line-height: 1.4; }
-    ul.dash-hint-list li { margin: 2px 0; }
     .dash-footer { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--vscode-widget-border, rgba(127,127,127,.25)); }
     #btn.dash-refresh-btn {
       display: block;

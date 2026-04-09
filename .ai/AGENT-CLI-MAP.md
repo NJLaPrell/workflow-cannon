@@ -196,7 +196,7 @@ Config **`tasks.planningGenerationPolicy`**: **`off`** (consumer default; option
 
 **Idempotency:** **`clientMutationId`** replay responses (**`*-idempotent-replay`**) do not write the planning row again and **do not** require **`expectedPlanningGeneration`** even under **`require`**. Same id + different payload → **`idempotency-key-conflict`** (unchanged).
 
-**Human / IDE:** Cursor extension dashboard shows **Planning generation** + policy; Tasks DnD and palette transitions pass **`expectedPlanningGeneration`** when the cached policy is **`require`** (refresh Tasks/Dashboard if you see mismatches).
+**Human / IDE:** The Cursor extension caches **`planningGeneration`** and **`planningGenerationPolicy`** from each **`dashboard-summary`** refresh; dashboard mutations (e.g. proposed-row **Accept** / **Decline**, wishlist **Decline**) and palette **Task** actions merge **`expectedPlanningGeneration`** when policy is **`require`**. Refresh the dashboard after concurrent CLI writes if you see **`planning-generation-mismatch`**. The dashboard does **not** include a read-only **Approvals & policy** discoverability card (removed); use **`pnpm exec wk run list-approval-queue '{}'`** for the review-item queue (**`.ai/POLICY-APPROVAL.md`**).
 
 ADR: **`docs/maintainers/adrs/ADR-planning-generation-optimistic-concurrency.md`**.
 
