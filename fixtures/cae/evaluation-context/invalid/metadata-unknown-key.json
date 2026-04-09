@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "task": {
+    "taskId": "T842",
+    "status": "ready",
+    "phaseKey": "70",
+    "metadata": {
+      "opaqueWorkflowDump": "{ \"huge\": true }"
+    }
+  },
+  "command": { "name": "doctor" },
+  "workspace": { "currentKitPhase": "70" },
+  "governance": {
+    "policyApprovalRequired": false,
+    "approvalTierHint": "none"
+  },
+  "queue": { "readyQueueDepth": 0 }
+}

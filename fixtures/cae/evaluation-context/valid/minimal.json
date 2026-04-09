@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "task": {
+    "taskId": "T842",
+    "status": "in_progress",
+    "phaseKey": "70",
+    "title": "Evaluation context contract v1",
+    "tags": ["cae"],
+    "metadata": {
+      "specPath": "tasks/cae/specs/T842.md",
+      "risk": "medium"
+    }
+  },
+  "command": {
+    "name": "get-task",
+    "moduleId": "task-engine",
+    "argvSummary": "{\"taskId\":\"T842\"}"
+  },
+  "workspace": {
+    "currentKitPhase": "70",
+    "nextKitPhase": "71",
+    "workspaceRootFingerprint": "sha256:deadbeef"
+  },
+  "governance": {
+    "policyApprovalRequired": false,
+    "approvalTierHint": "C",
+    "policySurface": "run-json"
+  },
+  "queue": {
+    "readyQueueDepth": 12,
+    "suggestedNextTaskId": "T843"
+  },
+  "mapSignals": null
+}
