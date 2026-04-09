@@ -88,6 +88,7 @@ Aligned with **`tasks/cae/CAE-PROGRAM-CONTEXT.md`** — **omit in v1**:
 
 ## References
 
+- **`.ai/TERMS.md`** — operational CAE vocabulary (**`T838`**) aligned with this ADR.
 - **`.ai/PRINCIPLES.md`** — trade-off order; CAE is subordinate to safety and trustworthiness.
 - **`.ai/POLICY-APPROVAL.md`**, **`.ai/machine-cli-policy.md`**, **`.ai/AGENT-CLI-MAP.md`** — approval lanes vs acknowledgement.
 - **`tasks/cae/CAE-PROGRAM-CONTEXT.md`** — program north star.
