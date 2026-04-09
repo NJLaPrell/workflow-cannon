@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "cae.bundle.example.minimal",
+  "resolvedAt": "2026-04-09T12:00:00.000Z",
+  "families": {
+    "policy": [
+      {
+        "activationId": "cae.activation.policy.phase70-playbook",
+        "family": "policy",
+        "priority": 100,
+        "aggregateTightness": 4,
+        "artifactIds": ["cae.playbook.machine-playbooks"]
+      }
+    ],
+    "think": [],
+    "do": [
+      {
+        "activationId": "cae.activation.do.always-machine-playbooks",
+        "family": "do",
+        "priority": 1,
+        "aggregateTightness": 5,
+        "artifactIds": ["cae.playbook.machine-playbooks"]
+      }
+    ],
+    "review": []
+  },
+  "pendingAcknowledgements": [],
+  "conflictShadowSummary": {
+    "evalMode": "live",
+    "entries": []
+  },
+  "traceId": "cae.trace.example.minimal",
+  "explanationRef": "explain:minimal"
+}
