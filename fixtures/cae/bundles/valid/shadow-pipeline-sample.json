@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "cae.bundle.fixture.shadow-pipeline",
+  "evaluationPipelineMode": "shadow",
+  "families": {
+    "policy": [],
+    "think": [],
+    "do": [],
+    "review": []
+  },
+  "pendingAcknowledgements": [],
+  "conflictShadowSummary": {
+    "evalMode": "shadow",
+    "entries": []
+  },
+  "traceId": "cae.trace.fixture.shadow-pipeline",
+  "shadowObservation": {
+    "wouldActivate": [
+      {
+        "activationId": "cae.act.policy.demo",
+        "family": "policy",
+        "artifactIds": ["cae.playbook.machine-playbooks"]
+      }
+    ],
+    "wouldRequireAck": [],
+    "wouldEnforce": [
+      {
+        "activationId": "cae.act.policy.demo",
+        "commandName": "run-transition",
+        "lane": "enforcement"
+      }
+    ],
+    "usefulnessSignal": "absent"
+  }
+}

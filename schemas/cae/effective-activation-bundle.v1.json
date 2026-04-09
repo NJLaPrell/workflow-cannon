@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://workflow-cannon.dev/schemas/cae/effective-activation-bundle.v1.json",
   "title": "CAE effective activation bundle (v1)",
-  "description": "Deterministic evaluation output (T843). pendingAcknowledgements item detail: T844. Builder: T860.",
+  "description": "Deterministic evaluation output (T843). pendingAcknowledgements item detail: T844. Shadow labels: T848. Builder: T860.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -65,6 +65,15 @@
       "type": "string",
       "maxLength": 256,
       "description": "Opaque handle for explain / health (T846/T862)."
+    },
+    "evaluationPipelineMode": {
+      "type": "string",
+      "enum": ["live", "shadow"],
+      "description": "Mirrors argv evalMode / evaluator flag (T848). Omitted means live for legacy consumers."
+    },
+    "shadowObservation": {
+      "$ref": "#/$defs/shadowObservation",
+      "description": "Sidecar when shadow classifies would-* outcomes without enforcing (T848/T863)."
     }
   },
   "$defs": {
@@ -140,6 +149,76 @@
           "type": "string",
           "maxLength": 128,
           "description": "Stable key for rendered copy; no raw NL in bundle."
+        }
+      }
+    },
+    "shadowObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "wouldActivate": {
+          "type": "array",
+          "maxItems": 128,
+          "items": { "$ref": "#/$defs/shadowCandidate" }
+        },
+        "wouldRequireAck": {
+          "type": "array",
+          "maxItems": 64,
+          "items": { "$ref": "#/$defs/pendingAcknowledgementItem" }
+        },
+        "wouldEnforce": {
+          "type": "array",
+          "maxItems": 64,
+          "items": { "$ref": "#/$defs/shadowEnforceHint" }
+        },
+        "usefulnessSignal": {
+          "type": "string",
+          "enum": ["absent", "useful", "noisy"],
+          "description": "Operator feedback hook; default absent (T848)."
+        }
+      }
+    },
+    "shadowCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["activationId", "family", "artifactIds"],
+      "properties": {
+        "activationId": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+        },
+        "family": {
+          "type": "string",
+          "enum": ["policy", "think", "do", "review"]
+        },
+        "artifactIds": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+          }
+        }
+      }
+    },
+    "shadowEnforceHint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["activationId", "lane"],
+      "properties": {
+        "activationId": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+        },
+        "commandName": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Router command surface that would be gated (T866)."
+        },
+        "lane": {
+          "type": "string",
+          "enum": ["advisory", "enforcement"]
         }
       }
     },
