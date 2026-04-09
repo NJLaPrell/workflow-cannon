@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "bundleId": "cae.bundle.example.pending-acks",
+  "families": {
+    "policy": [],
+    "think": [],
+    "do": [],
+    "review": []
+  },
+  "pendingAcknowledgements": [
+    {
+      "activationId": "cae.ack.example.none",
+      "strength": "none",
+      "blockingLane": "none",
+      "surfaceCopyKey": "cae.ack.none"
+    },
+    {
+      "activationId": "cae.ack.example.surface",
+      "strength": "surface",
+      "blockingLane": "none",
+      "surfaceCopyKey": "cae.ack.surface"
+    },
+    {
+      "activationId": "cae.ack.example.recommend",
+      "strength": "recommend",
+      "blockingLane": "none",
+      "surfaceCopyKey": "cae.ack.recommend"
+    },
+    {
+      "activationId": "cae.ack.example.ack-required",
+      "strength": "ack_required",
+      "ackToken": "ack-session-demo-1",
+      "blockingLane": "advisory",
+      "surfaceCopyKey": "cae.ack.ack-required"
+    },
+    {
+      "activationId": "cae.ack.example.satisfy-required",
+      "strength": "satisfy_required",
+      "ackToken": "ack-session-demo-2",
+      "machineCheckable": true,
+      "blockingLane": "enforcement",
+      "surfaceCopyKey": "cae.ack.satisfy-required"
+    }
+  ],
+  "conflictShadowSummary": {
+    "evalMode": "shadow",
+    "entries": []
+  },
+  "traceId": "cae.trace.example.pending-acks"
+}
