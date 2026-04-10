@@ -60,7 +60,8 @@ function readJsonFile(abs: string): { err: LoadCaeRegistryResult } | { doc: Reco
   }
 }
 
-function digestRegistry(artifactIds: string[], activationIds: string[]): string {
+/** Stable digest over sorted artifact + activation ids (v1 JSON loader; SQLite path may replace in T894). */
+export function digestCaeRegistryIdSet(artifactIds: string[], activationIds: string[]): string {
   const payload = JSON.stringify({
     artifactIds: [...artifactIds].sort((a, b) => a.localeCompare(b)),
     activationIds: [...activationIds].sort((a, b) => a.localeCompare(b))
@@ -68,7 +69,11 @@ function digestRegistry(artifactIds: string[], activationIds: string[]): string 
   return createHash("sha256").update(payload).digest("hex");
 }
 
-function verifyRefsExist(workspaceRoot: string, artifacts: CaeRegistryArtifactRow[]): LoadCaeRegistryResult | null {
+/** Verify every artifact `ref.path` exists under `workspaceRoot` (repo-relative). */
+export function verifyCaeArtifactRefPathsExist(
+  workspaceRoot: string,
+  artifacts: CaeRegistryArtifactRow[]
+): LoadCaeRegistryResult | null {
   for (const row of artifacts) {
     const ref = row.ref as Record<string, unknown> | undefined;
     const p = ref && typeof ref.path === "string" ? ref.path : "";
@@ -180,11 +185,11 @@ export function loadCaeRegistry(
 
   const verifyPaths = options?.verifyArtifactPaths !== false;
   if (verifyPaths) {
-    const v = verifyRefsExist(workspaceRoot, artifacts);
+    const v = verifyCaeArtifactRefPathsExist(workspaceRoot, artifacts);
     if (v) return v;
   }
 
-  const registryDigest = digestRegistry(
+  const registryDigest = digestCaeRegistryIdSet(
     [...artifactById.keys()],
     [...activationById.keys()]
   );

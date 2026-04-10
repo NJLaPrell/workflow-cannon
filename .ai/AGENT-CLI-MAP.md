@@ -398,6 +398,7 @@ pnpm exec wk run cae-get-trace '{"schemaVersion":1,"traceId":"cae.trace.example.
 
 ```bash
 pnpm exec wk run cae-satisfy-ack '{"schemaVersion":1,"traceId":"<traceId>","ackToken":"<token>","activationId":"cae.activation.policy.phase70-playbook","actor":"operator@example","policyApproval":{"confirmed":true,"rationale":"record CAE ack satisfaction"}}'
+pnpm exec wk run cae-import-json-registry '{"schemaVersion":1,"policyApproval":{"confirmed":true,"rationale":"seed sqlite registry from default JSON paths"}}'
 ```
 
 When these rows land in the manifest, add matching lines to **`docs/maintainers/AGENT-CLI-MAP.md`** (or an **`agent-cli-map-exclusions.json`** entry with rationale) so **`pnpm run check`** stays green — see **`.ai/cae/cli-read-only.md` § Agent CLI map coverage**.

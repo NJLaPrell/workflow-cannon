@@ -65,6 +65,11 @@ export const KIT_CONFIG_DEFAULTS: Record<string, unknown> = {
     /** Context Activation Engine (CAE); see `.ai/cae/README.md`. */
     cae: {
       enabled: false,
+      /**
+       * `json` — load `.ai/cae/registry/*.json` (bootstrap / migration source).
+       * `sqlite` — load active version from kit planning SQLite (`cae_registry_*` tables).
+       */
+      registryStore: "json",
       /** When true with `enabled`, `doctor --agent-instruction-surface` includes a bounded `cae` block. */
       advisoryInstructionSurface: false,
       /** Ephemeral trace bodies stay in-process until optional persistence (**`T867`**). */

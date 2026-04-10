@@ -485,6 +485,7 @@ Governed persistence mutation (**Tier A** — requires JSON `policyApproval` on 
 
 ```bash
 workspace-kit run cae-satisfy-ack '{"schemaVersion":1,"traceId":"<traceId>","ackToken":"<token>","activationId":"cae.activation.policy.phase70-playbook","actor":"operator@example","policyApproval":{"confirmed":true,"rationale":"record ack satisfaction"}}'
+workspace-kit run cae-import-json-registry '{"schemaVersion":1,"policyApproval":{"confirmed":true,"rationale":"seed sqlite registry from default JSON paths"}}'
 ```
 
 Use **`fixtures/cae/evaluation-context/valid/minimal.json`** as a copy-paste template for **`evaluationContext`**. Traces are **ephemeral** until persistence (**T867**).

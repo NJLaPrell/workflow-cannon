@@ -3,6 +3,7 @@ import { Buffer } from "node:buffer";
 import type { ModuleCommandResult, WorkflowModule } from "../../contracts/module-contract.js";
 import { builtinInstructionEntriesForModule } from "../../contracts/builtin-run-command-manifest.js";
 import {
+  caeRegistryTablesReady,
   countCaeAckRows,
   countCaeTraceRows,
   insertCaeAckSatisfaction,
@@ -13,6 +14,10 @@ import {
 import { evaluateActivationBundle } from "../../core/cae/cae-evaluate.js";
 import { loadCaeRegistry } from "../../core/cae/cae-registry-load.js";
 import type { CaeLoadedRegistry } from "../../core/cae/cae-registry-load.js";
+import {
+  loadCaeRegistryFromSqlite,
+  replaceActiveCaeRegistryFromLoaded
+} from "../../core/cae/cae-registry-sqlite.js";
 import type { CaeEvaluationContext } from "../../core/cae/evaluation-context-types.js";
 import { getAtPath } from "../../core/workspace-kit-config.js";
 import {
@@ -87,11 +92,27 @@ function resolveStoredCaeSession(
   }
 }
 
-function loadOrFail(
-  workspacePath: string
+function loadRegistryForCae(
+  workspacePath: string,
+  effective: Record<string, unknown>
 ):
   | { ok: true; reg: CaeLoadedRegistry }
   | { ok: false; code: string; message: string; remediation?: { instructionPath: string } } {
+  const store = getAtPath(effective, "kit.cae.registryStore");
+  if (store === "sqlite") {
+    const res = loadCaeRegistryFromSqlite(workspacePath, effective);
+    if (!res.ok) {
+      return {
+        ok: false,
+        code: res.code,
+        message: res.message,
+        remediation: {
+          instructionPath: "src/modules/context-activation/instructions/cae-import-json-registry.md"
+        }
+      };
+    }
+    return { ok: true, reg: res.value };
+  }
   const res = loadCaeRegistry(workspacePath);
   if (!res.ok) {
     return {
@@ -162,7 +183,7 @@ export const contextActivationModule: WorkflowModule = {
     if (name === "cae-list-artifacts") {
       const bad = requireSchemaV1(args);
       if (bad) return bad;
-      const loaded = loadOrFail(ws);
+      const loaded = loadRegistryForCae(ws, effective);
       if (!loaded.ok) return loaded;
       const { reg } = loaded;
       let ids = [...reg.artifactById.keys()].sort((a, b) => a.localeCompare(b));
@@ -192,7 +213,7 @@ export const contextActivationModule: WorkflowModule = {
       if (!artifactId) {
         return { ok: false, code: "invalid-args", message: "artifactId is required" };
       }
-      const loaded = loadOrFail(ws);
+      const loaded = loadRegistryForCae(ws, effective);
       if (!loaded.ok) return loaded;
       const row = loaded.reg.artifactById.get(artifactId);
       if (!row) {
@@ -215,7 +236,7 @@ export const contextActivationModule: WorkflowModule = {
     if (name === "cae-list-activations") {
       const bad = requireSchemaV1(args);
       if (bad) return bad;
-      const loaded = loadOrFail(ws);
+      const loaded = loadRegistryForCae(ws, effective);
       if (!loaded.ok) return loaded;
       const { reg } = loaded;
       let ids = [...reg.activationById.keys()].sort((a, b) => a.localeCompare(b));
@@ -252,7 +273,7 @@ export const contextActivationModule: WorkflowModule = {
       if (!activationId) {
         return { ok: false, code: "invalid-args", message: "activationId is required" };
       }
-      const loaded = loadOrFail(ws);
+      const loaded = loadRegistryForCae(ws, effective);
       if (!loaded.ok) return loaded;
       const row = loaded.reg.activationById.get(activationId);
       if (!row) {
@@ -279,7 +300,7 @@ export const contextActivationModule: WorkflowModule = {
       if (!ec || typeof ec !== "object" || Array.isArray(ec)) {
         return { ok: false, code: "invalid-args", message: "evaluationContext object is required" };
       }
-      const loaded = loadOrFail(ws);
+      const loaded = loadRegistryForCae(ws, effective);
       if (!loaded.ok) return loaded;
       const evalMode = args.evalMode === "shadow" ? "shadow" : "live";
       const { bundle, trace, traceId } = evaluateActivationBundle(
@@ -339,7 +360,7 @@ export const contextActivationModule: WorkflowModule = {
           message: "Provide traceId or evaluationContext for cae-explain"
         };
       }
-      const loaded = loadOrFail(ws);
+      const loaded = loadRegistryForCae(ws, effective);
       if (!loaded.ok) return loaded;
       const evalMode = args.evalMode === "shadow" ? "shadow" : "live";
       const { bundle, trace, traceId } = evaluateActivationBundle(
@@ -362,7 +383,7 @@ export const contextActivationModule: WorkflowModule = {
     if (name === "cae-registry-validate") {
       const bad = requireSchemaV1(args);
       if (bad) return bad;
-      const loaded = loadOrFail(ws);
+      const loaded = loadRegistryForCae(ws, effective);
       if (!loaded.ok) {
         return {
           ok: false,
@@ -383,12 +404,78 @@ export const contextActivationModule: WorkflowModule = {
       };
     }
 
+    if (name === "cae-import-json-registry") {
+      const bad = requireSchemaV1(args);
+      if (bad) return bad;
+      const artRel =
+        typeof args.artifactsRelativePath === "string" && args.artifactsRelativePath.trim().length > 0
+          ? args.artifactsRelativePath.trim()
+          : undefined;
+      const actRel =
+        typeof args.activationsRelativePath === "string" && args.activationsRelativePath.trim().length > 0
+          ? args.activationsRelativePath.trim()
+          : undefined;
+      const loadedSeed = loadCaeRegistry(ws, {
+        artifactsRelativePath: artRel,
+        activationsRelativePath: actRel
+      });
+      if (!loadedSeed.ok) {
+        return {
+          ok: false,
+          code: loadedSeed.code,
+          message: loadedSeed.message ?? "",
+          remediation: { instructionPath: "src/modules/context-activation/instructions/cae-registry-validate.md" }
+        };
+      }
+      const versionIdRaw = typeof args.versionId === "string" ? args.versionId.trim() : "";
+      const versionId = versionIdRaw.length > 0 ? versionIdRaw : `cae.reg.import.${Date.now()}`;
+      const actor =
+        typeof args.actor === "string" && args.actor.trim().length > 0 ? args.actor.trim() : "import";
+      const note = typeof args.note === "string" ? args.note : null;
+
+      const db = openKitSqliteReadWrite(ws, effective);
+      if (!db) {
+        return {
+          ok: false,
+          code: "cae-kit-sqlite-unavailable",
+          message: "Planning SQLite database not found or not openable"
+        };
+      }
+      try {
+        if (!caeRegistryTablesReady(db)) {
+          return {
+            ok: false,
+            code: "cae-registry-sqlite-not-ready",
+            message: "Kit SQLite schema does not include CAE registry tables (upgrade workspace-kit)"
+          };
+        }
+        replaceActiveCaeRegistryFromLoaded(db, {
+          versionId,
+          createdBy: actor,
+          note,
+          registry: loadedSeed.value
+        });
+      } finally {
+        db.close();
+      }
+      return {
+        ok: true,
+        code: "cae-import-json-registry-ok",
+        data: {
+          schemaVersion: 1,
+          versionId,
+          artifactCount: loadedSeed.value.artifactById.size,
+          activationCount: loadedSeed.value.activationById.size
+        }
+      };
+    }
+
     if (name === "cae-health") {
       const bad = requireSchemaV1(args);
       if (bad) return bad;
       const caeEnabled = getAtPath(effective, "kit.cae.enabled") === true;
       const persistenceEnabled = getAtPath(effective, "kit.cae.persistence") === true;
-      const load = loadCaeRegistry(ws);
+      const load = loadRegistryForCae(ws, effective);
       const registryStatus = load.ok ? "ok" : "invalid";
       const issues = load.ok
         ? []
@@ -402,7 +489,7 @@ export const contextActivationModule: WorkflowModule = {
         issues
       };
       if (load.ok) {
-        data.registryContentHash = load.value.registryDigest;
+        data.registryContentHash = load.reg.registryDigest;
       }
       const includeDetails = args.includeDetails === true;
       if (includeDetails && persistenceEnabled) {
@@ -429,7 +516,7 @@ export const contextActivationModule: WorkflowModule = {
       if (!ec || typeof ec !== "object" || Array.isArray(ec)) {
         return { ok: false, code: "invalid-args", message: "evaluationContext object is required" };
       }
-      const loaded = loadOrFail(ws);
+      const loaded = loadRegistryForCae(ws, effective);
       if (!loaded.ok) return loaded;
       const evalMode = args.evalMode === "shadow" ? "shadow" : "live";
       const { bundle, trace, traceId } = evaluateActivationBundle(
@@ -502,7 +589,7 @@ export const contextActivationModule: WorkflowModule = {
         };
       }
 
-      const loadedReg = loadCaeRegistry(ws);
+      const loadedReg = loadRegistryForCae(ws, effective);
       if (!loadedReg.ok) {
         return {
           ok: false,
@@ -511,7 +598,7 @@ export const contextActivationModule: WorkflowModule = {
           remediation: { instructionPath: "src/modules/context-activation/instructions/cae-registry-validate.md" }
         };
       }
-      const actRow = loadedReg.value.activationById.get(activationId);
+      const actRow = loadedReg.reg.activationById.get(activationId);
       if (!actRow) {
         return {
           ok: false,

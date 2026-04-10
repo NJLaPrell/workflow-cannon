@@ -30,7 +30,8 @@ const KNOWN_POLICY_OPERATION_IDS = new Set([
   "team-execution.persist",
   "checkpoints.persist",
   "checkpoints.rewind",
-  "context-activation.cae-satisfy-ack"
+  "context-activation.cae-satisfy-ack",
+  "context-activation.cae-import-json-registry"
 ]);
 
 const ALLOWED_SENSITIVITY = new Set(["non-sensitive", "sensitive", "sensitive-with-dryrun"]);

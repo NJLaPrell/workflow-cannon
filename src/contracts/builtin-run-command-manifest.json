@@ -832,6 +832,15 @@
   },
   {
     "moduleId": "context-activation",
+    "name": "cae-import-json-registry",
+    "file": "cae-import-json-registry.md",
+    "description": "Import validated CAE JSON registry into kit SQLite as a new active registry version.",
+    "policyOperationId": "context-activation.cae-import-json-registry",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "context-activation",
     "name": "cae-list-artifacts",
     "file": "cae-list-artifacts.md",
     "description": "List CAE artifact registry ids (optional type filter, paginated).",
