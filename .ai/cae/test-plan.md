@@ -52,6 +52,19 @@ Vectors are **input triples** `(registrySnapshotRef, evaluationContextFixture, e
 - **`pnpm run check`** — manifest, doc drift, principles snapshot.
 - **`pnpm run test`** — must include all **`test/cae-*.test.mjs`** files (already picked up by `test/**/*.test.mjs` glob).
 
+## Coverage status (**`T880`** — living)
+
+| Area | Test file(s) | Notes |
+| --- | --- | --- |
+| Evaluator merge / shadow / acks | **`test/cae-evaluate.test.mjs`** | Live + shadow bundles, schema validation. |
+| Enforcement allowlist | **`test/cae-enforcement-allowlist.test.mjs`** | Bundle-aware block predicates. |
+| CLI shadow preflight | **`test/cae-cli-preflight.test.mjs`** | `runCaeCliPreflight`, `mergeCaeIntoCommandResult`. |
+| Failure codes + policy ordering | **`test/cae-failure-recovery.test.mjs`** | Loader codes, **`cae-trace-not-found`**, **`cae-satisfy-ack`** validation, **`policy-denied`** before handler (**`T879`**). |
+| Schemas / argv | **`test/cae-*-schema.test.mjs`**, **`test/cae-evaluation-context-builder.test.mjs`** | Ajv + builder helpers. |
+| SQLite persistence | Idempotent migrations covered by existing kit SQLite tests; CAE rows exercised via **`cae-failure-recovery`** satisfy-ack path. |
+
+Golden vector rows in § Golden vector catalog remain **Planned** until dedicated **`fixtures/cae/golden/`** files land.
+
 ## Cross-references
 
 - **`.ai/cae/cli-read-only.md`**, **`.ai/cae/shadow-mode.md`**, **`.ai/cae/enforcement-lane.md`**

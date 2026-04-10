@@ -18,6 +18,7 @@ CAE evaluates **bounded, typed** workspace + task + command context and returns 
 | **`.ai/cae/trace-and-explain.md`** | Trace + explain contracts (**`T846`**). |
 | **`.ai/cae/failure-recovery.md`** | Failure × surface matrix (**`T853`**). |
 | **`.ai/cae/error-codes.md`** | Stable loader / CLI error **`code`** strings (**`T858`**). |
+| **`.ai/cae/rollout-defaults.md`** | Default-shaped **`kit.cae.*`** flags by rollout stage (advisory → persistence → enforcement). |
 | **`.ai/runbooks/cae-debug.md`** | Operator debug flow (doctor, registry, traces). |
 
 ## Acknowledgement vs `policyApproval`
@@ -26,7 +27,11 @@ CAE **acknowledgement strengths** (`none` | `surface` | `recommend` | `ack_requi
 
 ## Read-only first
 
-Inspect registry and evaluations via **`cae-*`** commands when shipped (**`T861`**, **`T862`**). **No mutation** of activations via CLI until governance (**`T852`**, **`T868`**) allows it.
+Inspect registry and evaluations via **`cae-*`** commands when shipped (**`T861`**, **`T862`**). **Registry JSON** (artifacts / activations under **`.ai/cae/registry/`**) stays **git + PR** — see **`.ai/cae/mutation-governance.md`**.
+
+## Governed mutation (v1)
+
+**`cae-satisfy-ack`** (Tier A — JSON **`policyApproval`**) records acknowledgement satisfaction in kit SQLite **after** a fresh **`loadCaeRegistry`** check, **`ackToken`** match against the activation row, and a persisted **`cae_trace_snapshots`** row for **`traceId`**. It does **not** edit registry files; use normal PR workflow for activation changes.
 
 ## Traces
 

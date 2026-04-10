@@ -10,7 +10,18 @@ export type CaeSessionRecord = {
 const MAX = 512;
 const sessions = new Map<string, CaeSessionRecord>();
 
+let lastEvalAtIso: string | null = null;
+
+export function touchCaeEvalTimestamp(): void {
+  lastEvalAtIso = new Date().toISOString();
+}
+
+export function getLastCaeEvalIso(): string | null {
+  return lastEvalAtIso;
+}
+
 export function storeCaeSession(traceId: string, rec: CaeSessionRecord): void {
+  touchCaeEvalTimestamp();
   sessions.set(traceId, rec);
   while (sessions.size > MAX) {
     const first = sessions.keys().next().value;

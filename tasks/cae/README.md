@@ -2,6 +2,8 @@
 
 **Program context:** [`CAE-PROGRAM-CONTEXT.md`](./CAE-PROGRAM-CONTEXT.md)
 
+**Plan snapshot (human triage, may lag `.ai/`):** [`CAE-PLAN-STATUS.md`](./CAE-PLAN-STATUS.md)
+
 **Shared stubs (evolve in early tasks):**
 
 - [`artifacts/stub-effective-activation-bundle.schema.json`](./artifacts/stub-effective-activation-bundle.schema.json)

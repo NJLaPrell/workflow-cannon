@@ -27,6 +27,13 @@ const stages = [
     hint: "See scripts/check-builtin-command-manifest.mjs and src/modules task-engine command wiring."
   },
   {
+    id: "cae-registry",
+    label: "CAE registry validate (cae-registry-validate)",
+    command: process.execPath,
+    args: ["scripts/check-cae-registry.mjs"],
+    hint: "Fix .ai/cae/registry JSON or CAE loader; see .ai/runbooks/cae-debug.md; run pnpm run build before check."
+  },
+  {
     id: "core-layer-allowlist",
     label: "Core → module import allowlist (R102)",
     command: process.execPath,

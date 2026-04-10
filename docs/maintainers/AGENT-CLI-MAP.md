@@ -462,6 +462,7 @@ In CI this runs as a **non-blocking** step (see `.github/workflows/ci.yml`). It 
 ## CAE read-only registry (Phase 70)
 
 ```bash
+workspace-kit run cae-registry-validate '{"schemaVersion":1}'
 workspace-kit run cae-list-artifacts '{"schemaVersion":1}'
 workspace-kit run cae-get-artifact '{"schemaVersion":1,"artifactId":"cae.playbook.machine-playbooks"}'
 workspace-kit run cae-list-activations '{"schemaVersion":1}'
@@ -478,6 +479,12 @@ workspace-kit run cae-explain '{"schemaVersion":1,"traceId":"<traceId>"}'
 workspace-kit run cae-health '{"schemaVersion":1}'
 workspace-kit run cae-conflicts '{"schemaVersion":1,"evaluationContext":{...}}'
 workspace-kit run cae-get-trace '{"schemaVersion":1,"traceId":"<traceId>"}'
+```
+
+Governed persistence mutation (**Tier A** — requires JSON `policyApproval` on `wk run`; enable **`kit.cae.persistence`** first):
+
+```bash
+workspace-kit run cae-satisfy-ack '{"schemaVersion":1,"traceId":"<traceId>","ackToken":"<token>","activationId":"cae.activation.policy.phase70-playbook","actor":"operator@example","policyApproval":{"confirmed":true,"rationale":"record ack satisfaction"}}'
 ```
 
 Use **`fixtures/cae/evaluation-context/valid/minimal.json`** as a copy-paste template for **`evaluationContext`**. Traces are **ephemeral** until persistence (**T867**).

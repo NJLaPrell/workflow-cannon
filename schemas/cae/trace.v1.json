@@ -154,7 +154,12 @@
         "candidateCount": {
           "type": "integer",
           "minimum": 0
-        }
+        },
+        "layered": { "type": "boolean" },
+        "conflictCount": { "type": "integer", "minimum": 0 },
+        "pendingAckCount": { "type": "integer", "minimum": 0 },
+        "taskLayerCommand": { "type": "string", "maxLength": 128 },
+        "blockId": { "type": "string", "maxLength": 128 }
       }
     },
     "traceEvent": {

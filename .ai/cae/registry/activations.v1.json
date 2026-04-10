@@ -24,6 +24,7 @@
         "conditions": [{ "kind": "phaseKey", "value": "70" }]
       },
       "artifactRefs": [{ "artifactId": "cae.playbook.machine-playbooks" }],
+      "acknowledgement": { "strength": "surface", "token": "phase70-policy-surface" },
       "flags": { "shadowEligible": true }
     },
     {

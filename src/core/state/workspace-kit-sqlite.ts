@@ -4,7 +4,7 @@ import { seedFeatureRegistryIfEmpty } from "./feature-registry-migration.js";
 type SqliteDatabase = InstanceType<typeof Database>;
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 10;
+export const KIT_SQLITE_USER_VERSION = 11;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 
@@ -257,6 +257,30 @@ function migrateV9ToV10(db: SqliteDatabase): void {
   ).run(now);
 }
 
+/** CAE trace + ack satisfaction (ADR-cae-persistence-v1, Phase 70). */
+const CAE_PERSISTENCE_DDL = `
+CREATE TABLE IF NOT EXISTS cae_trace_snapshots (
+  trace_id TEXT PRIMARY KEY NOT NULL,
+  trace_json TEXT NOT NULL,
+  bundle_json TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_cae_trace_snapshots_created ON cae_trace_snapshots(created_at);
+CREATE TABLE IF NOT EXISTS cae_ack_satisfaction (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  trace_id TEXT NOT NULL,
+  ack_token TEXT NOT NULL,
+  activation_id TEXT NOT NULL,
+  satisfied_at TEXT NOT NULL,
+  actor TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_cae_ack_trace ON cae_ack_satisfaction(trace_id);
+`;
+
+function migrateV10ToV11(db: SqliteDatabase): void {
+  db.exec(CAE_PERSISTENCE_DDL);
+}
+
 /**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
@@ -321,7 +345,13 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
   }
   if (current < 10) {
     migrateV9ToV10(db);
-    db.pragma(`user_version = ${KIT_SQLITE_USER_VERSION}`);
+    db.pragma("user_version = 10");
+    current = 10;
+  }
+  if (current < 11) {
+    migrateV10ToV11(db);
+    db.pragma("user_version = 11");
+    current = 11;
   }
 }
 

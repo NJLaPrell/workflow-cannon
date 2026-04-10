@@ -22,6 +22,7 @@
     "retire-subagent",
     "review-item",
     "spawn-subagent",
-    "submit-assignment-handoff"
+    "submit-assignment-handoff",
+    "cae-satisfy-ack"
   ]
 }

@@ -63,6 +63,22 @@
         }
       }
     },
+    "acknowledgement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["strength", "token"],
+      "properties": {
+        "strength": {
+          "type": "string",
+          "enum": ["none", "surface", "recommend", "ack_required", "satisfy_required"]
+        },
+        "token": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      }
+    },
     "flags": {
       "type": "object",
       "additionalProperties": false,

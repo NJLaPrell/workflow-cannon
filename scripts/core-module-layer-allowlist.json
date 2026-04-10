@@ -56,6 +56,16 @@
       "file": "src/core/state/unified-state-db.ts",
       "specifier": "../../modules/task-engine/persistence/workspace-status-yaml-import.js",
       "rationale": "Unified SQLite open path: seed kit_workspace_status from maintainer YAML when revision warrants (workspace status mirror)."
+    },
+    {
+      "file": "src/core/cae/cae-kit-sqlite.ts",
+      "specifier": "../../modules/task-engine/planning-config.js",
+      "rationale": "CAE trace/ack persistence uses the same planning SQLite path resolution as the task engine (ADR-cae-persistence-v1)."
+    },
+    {
+      "file": "src/core/cae/cae-queue-snapshot.ts",
+      "specifier": "../../modules/task-engine/planning-config.js",
+      "rationale": "CAE evaluation context queue depth reads ready-task count from the relational planning DB via the canonical relative path helper."
     }
   ]
 }

@@ -61,6 +61,26 @@ export const KIT_CONFIG_DEFAULTS: Record<string, unknown> = {
       enabled: false,
       beforeCommands: ["run-transition"] as string[],
       stashWhenDirty: true
+    },
+    /** Context Activation Engine (CAE); see `.ai/cae/README.md`. */
+    cae: {
+      enabled: false,
+      /** When true with `enabled`, `doctor --agent-instruction-surface` includes a bounded `cae` block. */
+      advisoryInstructionSurface: false,
+      /** Ephemeral trace bodies stay in-process until optional persistence (**`T867`**). */
+      persistence: false,
+      runtime: {
+        /** When true (and `enabled`), non-`cae-*` `wk run` module commands run shadow CAE preflight (**`T864`**). */
+        shadowPreflight: false
+      },
+      enforcement: {
+        /** Allowlisted blocks only; default off (**`T866`**). */
+        enabled: false
+      },
+      shadow: {
+        /** Product default: shadow labels without blocking (**`T848`**). */
+        defaultOn: false
+      }
     }
   } as Record<string, unknown>,
   tasks: {

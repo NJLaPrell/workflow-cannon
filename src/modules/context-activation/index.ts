@@ -2,12 +2,25 @@ import { Buffer } from "node:buffer";
 
 import type { ModuleCommandResult, WorkflowModule } from "../../contracts/module-contract.js";
 import { builtinInstructionEntriesForModule } from "../../contracts/builtin-run-command-manifest.js";
+import {
+  countCaeAckRows,
+  countCaeTraceRows,
+  insertCaeAckSatisfaction,
+  loadCaeTraceSnapshot,
+  openKitSqliteReadWrite,
+  persistCaeTraceIfEnabled
+} from "../../core/cae/cae-kit-sqlite.js";
 import { evaluateActivationBundle } from "../../core/cae/cae-evaluate.js";
 import { loadCaeRegistry } from "../../core/cae/cae-registry-load.js";
 import type { CaeLoadedRegistry } from "../../core/cae/cae-registry-load.js";
 import type { CaeEvaluationContext } from "../../core/cae/evaluation-context-types.js";
 import { getAtPath } from "../../core/workspace-kit-config.js";
-import { getCaeSession, storeCaeSession } from "./trace-store.js";
+import {
+  getCaeSession,
+  getLastCaeEvalIso,
+  storeCaeSession,
+  type CaeSessionRecord
+} from "./trace-store.js";
 
 function requireSchemaV1(args: Record<string, unknown>): ModuleCommandResult | null {
   if (args.schemaVersion !== 1) {
@@ -45,6 +58,33 @@ function paginateIds(
   const nextStart = start + page.length;
   const nextCursor = nextStart < ids.length ? encodeCursor(nextStart) : null;
   return { page, nextCursor };
+}
+
+function resolveStoredCaeSession(
+  workspacePath: string,
+  effective: Record<string, unknown>,
+  traceId: string
+): { record: CaeSessionRecord; storage: "memory" | "sqlite" } | null {
+  const mem = getCaeSession(traceId);
+  if (mem) {
+    return { record: mem, storage: "memory" };
+  }
+  if (getAtPath(effective, "kit.cae.persistence") !== true) {
+    return null;
+  }
+  const db = openKitSqliteReadWrite(workspacePath, effective);
+  if (!db) {
+    return null;
+  }
+  try {
+    const snap = loadCaeTraceSnapshot(db, traceId);
+    if (!snap) {
+      return null;
+    }
+    return { record: { bundle: snap.bundle, trace: snap.trace }, storage: "sqlite" };
+  } finally {
+    db.close();
+  }
 }
 
 function loadOrFail(
@@ -248,6 +288,8 @@ export const contextActivationModule: WorkflowModule = {
         { evalMode }
       );
       storeCaeSession(traceId, { bundle, trace });
+      const persist = getAtPath(effective, "kit.cae.persistence") === true;
+      persistCaeTraceIfEnabled(ws, effective, persist, traceId, trace, bundle);
       return {
         ok: true,
         code: "cae-evaluate-ok",
@@ -256,7 +298,7 @@ export const contextActivationModule: WorkflowModule = {
           bundle,
           trace,
           traceId,
-          ephemeral: true
+          ephemeral: !persist
         }
       };
     }
@@ -267,22 +309,25 @@ export const contextActivationModule: WorkflowModule = {
       const level = args.level === "verbose" ? "verbose" : "summary";
       const traceIdArg = typeof args.traceId === "string" ? args.traceId.trim() : "";
       if (traceIdArg) {
-        const session = getCaeSession(traceIdArg);
-        if (!session) {
+        const resolved = resolveStoredCaeSession(ws, effective, traceIdArg);
+        if (!resolved) {
           return {
             ok: false,
             code: "cae-trace-not-found",
-            message: `No ephemeral trace for traceId '${traceIdArg}'`
+            message: `No trace for traceId '${traceIdArg}' (memory or persisted store)`
           };
         }
-        const explanation = buildCaeExplainResponse(traceIdArg, session.bundle, session.trace, level);
+        const { record, storage } = resolved;
+        const explanation = buildCaeExplainResponse(traceIdArg, record.bundle, record.trace, level);
         return {
           ok: true,
           code: "cae-explain-ok",
           data: {
             schemaVersion: 1,
             explanation,
-            trace: session.trace
+            trace: record.trace,
+            storage,
+            ephemeral: storage === "memory"
           }
         };
       }
@@ -314,10 +359,35 @@ export const contextActivationModule: WorkflowModule = {
       };
     }
 
+    if (name === "cae-registry-validate") {
+      const bad = requireSchemaV1(args);
+      if (bad) return bad;
+      const loaded = loadOrFail(ws);
+      if (!loaded.ok) {
+        return {
+          ok: false,
+          code: loaded.code,
+          message: loaded.message,
+          remediation: loaded.remediation
+        };
+      }
+      return {
+        ok: true,
+        code: "cae-registry-validate-ok",
+        data: {
+          schemaVersion: 1,
+          registryContentHash: loaded.reg.registryDigest,
+          artifactCount: loaded.reg.artifactById.size,
+          activationCount: loaded.reg.activationById.size
+        }
+      };
+    }
+
     if (name === "cae-health") {
       const bad = requireSchemaV1(args);
       if (bad) return bad;
       const caeEnabled = getAtPath(effective, "kit.cae.enabled") === true;
+      const persistenceEnabled = getAtPath(effective, "kit.cae.persistence") === true;
       const load = loadCaeRegistry(ws);
       const registryStatus = load.ok ? "ok" : "invalid";
       const issues = load.ok
@@ -326,11 +396,28 @@ export const contextActivationModule: WorkflowModule = {
       const data: Record<string, unknown> = {
         schemaVersion: 1,
         caeEnabled,
+        persistenceEnabled,
+        lastEvalAt: getLastCaeEvalIso(),
         registryStatus,
         issues
       };
       if (load.ok) {
         data.registryContentHash = load.value.registryDigest;
+      }
+      const includeDetails = args.includeDetails === true;
+      if (includeDetails && persistenceEnabled) {
+        const db = openKitSqliteReadWrite(ws, effective);
+        if (db) {
+          try {
+            data.traceRowCount = countCaeTraceRows(db);
+            data.ackRowCount = countCaeAckRows(db);
+          } finally {
+            db.close();
+          }
+        } else {
+          data.traceRowCount = 0;
+          data.ackRowCount = 0;
+        }
       }
       return { ok: true, code: "cae-health-ok", data };
     }
@@ -351,13 +438,16 @@ export const contextActivationModule: WorkflowModule = {
         { evalMode }
       );
       storeCaeSession(traceId, { bundle, trace });
+      const persist = getAtPath(effective, "kit.cae.persistence") === true;
+      persistCaeTraceIfEnabled(ws, effective, persist, traceId, trace, bundle);
       return {
         ok: true,
         code: "cae-conflicts-ok",
         data: {
           schemaVersion: 1,
           traceId,
-          conflictShadowSummary: bundle.conflictShadowSummary
+          conflictShadowSummary: bundle.conflictShadowSummary,
+          ephemeral: !persist
         }
       };
     }
@@ -369,21 +459,114 @@ export const contextActivationModule: WorkflowModule = {
       if (!traceId) {
         return { ok: false, code: "invalid-args", message: "traceId is required" };
       }
-      const session = getCaeSession(traceId);
-      if (!session) {
+      const resolved = resolveStoredCaeSession(ws, effective, traceId);
+      if (!resolved) {
         return {
           ok: false,
           code: "cae-trace-not-found",
-          message: `No ephemeral trace for traceId '${traceId}'`
+          message: `No trace for traceId '${traceId}' (memory or persisted store)`
         };
       }
+      const { record, storage } = resolved;
       return {
         ok: true,
         code: "cae-get-trace-ok",
         data: {
           schemaVersion: 1,
-          trace: session.trace,
-          ephemeral: true
+          trace: record.trace,
+          storage,
+          ephemeral: storage === "memory"
+        }
+      };
+    }
+
+    if (name === "cae-satisfy-ack") {
+      const bad = requireSchemaV1(args);
+      if (bad) return bad;
+      if (getAtPath(effective, "kit.cae.persistence") !== true) {
+        return {
+          ok: false,
+          code: "cae-persistence-disabled",
+          message: "Set kit.cae.persistence to true to record acknowledgement satisfaction"
+        };
+      }
+      const traceId = typeof args.traceId === "string" ? args.traceId.trim() : "";
+      const ackToken = typeof args.ackToken === "string" ? args.ackToken.trim() : "";
+      const activationId = typeof args.activationId === "string" ? args.activationId.trim() : "";
+      const actor = typeof args.actor === "string" ? args.actor.trim() : "";
+      if (!traceId || !ackToken || !activationId || !actor) {
+        return {
+          ok: false,
+          code: "invalid-args",
+          message: "traceId, ackToken, activationId, and actor are required strings"
+        };
+      }
+
+      const loadedReg = loadCaeRegistry(ws);
+      if (!loadedReg.ok) {
+        return {
+          ok: false,
+          code: loadedReg.code,
+          message: loadedReg.message ?? "",
+          remediation: { instructionPath: "src/modules/context-activation/instructions/cae-registry-validate.md" }
+        };
+      }
+      const actRow = loadedReg.value.activationById.get(activationId);
+      if (!actRow) {
+        return {
+          ok: false,
+          code: "cae-activation-not-found",
+          message: `Unknown activationId '${activationId}'`
+        };
+      }
+      const ackDef = actRow.acknowledgement as Record<string, unknown> | undefined;
+      const expectedToken =
+        ackDef && typeof ackDef.token === "string" ? ackDef.token.trim() : "";
+      if (!expectedToken) {
+        return {
+          ok: false,
+          code: "cae-ack-not-applicable",
+          message: `Activation '${activationId}' has no acknowledgement.token; registry edits stay git+PR per .ai/cae/mutation-governance.md`
+        };
+      }
+      if (ackToken !== expectedToken) {
+        return {
+          ok: false,
+          code: "cae-ack-token-mismatch",
+          message: "ackToken does not match registry acknowledgement.token for this activation"
+        };
+      }
+
+      const db = openKitSqliteReadWrite(ws, effective);
+      if (!db) {
+        return {
+          ok: false,
+          code: "cae-kit-sqlite-unavailable",
+          message: "Planning SQLite database not found or not openable"
+        };
+      }
+      try {
+        const snap = loadCaeTraceSnapshot(db, traceId);
+        if (!snap) {
+          return {
+            ok: false,
+            code: "cae-trace-not-found",
+            message: `No persisted trace for traceId '${traceId}' — persist traces first (kit.cae.persistence + preflight or cae-evaluate).`
+          };
+        }
+        insertCaeAckSatisfaction(db, { traceId, ackToken, activationId, actor });
+      } finally {
+        db.close();
+      }
+      return {
+        ok: true,
+        code: "cae-satisfy-ack-ok",
+        data: {
+          schemaVersion: 1,
+          traceId,
+          activationId,
+          ackToken,
+          actor
         }
       };
     }

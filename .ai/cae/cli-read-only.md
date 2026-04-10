@@ -1,6 +1,6 @@
 # CAE read-only CLI contract (v1)
 
-**Task:** **`T847`**. **Module id:** **`context-activation`** (per **`ADR-context-activation-engine-architecture-v1.md`**). **`workspace-kit run` names:** **`cae-*`** kebab-case (short, stable for agents). **Handlers:** registry/list/get **`T861`**; evaluate / explain / health / conflicts / trace **`T862`**. **Schemas:** **`schemas/cae/cli-read-only-requests.v1.json`** (argv), **`schemas/cae/cli-read-only-data.v1.json`** (`data` on success).
+**Task:** **`T847`**. **Module id:** **`context-activation`** (per **`ADR-context-activation-engine-architecture-v1.md`**). **`workspace-kit run` names:** **`cae-*`** kebab-case (short, stable for agents). **Handlers:** registry list/get **`T861`**; registry validate **`T868`** (`cae-registry-validate`); evaluate / explain / health / conflicts / trace **`T862`**. **Schemas:** **`schemas/cae/cli-read-only-requests.v1.json`** (argv), **`schemas/cae/cli-read-only-data.v1.json`** (`data` on success).
 
 ## Policy and tier
 
@@ -42,10 +42,11 @@ Use **`context-activation.<cae-verb>`** (dotted segments mirroring `run` names) 
 
 ## Command reference
 
-### Registry inspection (**`T861`**)
+### Registry inspection (**`T861`**, **`T868`**)
 
 | `run` name | `operationId` | Purpose | Success `code` |
 | --- | --- | --- | --- |
+| **`cae-registry-validate`** | `context-activation.cae-registry-validate` | Fail fast if registry / activations JSON cannot load (**PR gate**). | `cae-registry-validate-ok` |
 | **`cae-list-artifacts`** | `context-activation.cae-list-artifacts` | Page through **artifact ids** (optional type filter). | `cae-list-artifacts-ok` |
 | **`cae-get-artifact`** | `context-activation.cae-get-artifact` | Fetch one **registry entry** (`registry-entry.v1`). | `cae-get-artifact-ok` |
 | **`cae-list-activations`** | `context-activation.cae-list-activations` | Page through **activation ids** (optional family / lifecycle filter). | `cae-list-activations-ok` |

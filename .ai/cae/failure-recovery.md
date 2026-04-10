@@ -19,6 +19,10 @@
 | **`cae-artifact-missing`** | **`ref.path`** does not exist on disk. |
 | **`cae-evaluator-internal-error`** | Unexpected throw during evaluation (bug boundary). |
 | **`cae-context-invalid`** | **`evaluationContext`** fails **`evaluation-context.v1.json`**. |
+| **`cae-ack-not-applicable`** | **`cae-satisfy-ack`**: activation has no **`acknowledgement.token`**. |
+| **`cae-ack-token-mismatch`** | **`cae-satisfy-ack`**: token mismatch vs registry. |
+| **`cae-persistence-disabled`** | **`cae-satisfy-ack`** when **`kit.cae.persistence`** is false. |
+| **`cae-kit-sqlite-unavailable`** | Planning SQLite missing or not openable RW. |
 
 Handlers should attach **`remediation.instructionPath`** where applicable (mirror **`cli-remediation`** ADR).
 

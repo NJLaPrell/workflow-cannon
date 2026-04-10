@@ -44,6 +44,12 @@ If **`T868`** ships **`cae-registry-apply`** / **`cae-activation-upsert`**-class
 
 **`T868`** either implements audited mutators **or** explicitly documents **“deferred; use git PR workflow only”** — this file satisfies the latter until **`T868`** states otherwise.
 
+## T868 v1 closeout (validate-only)
+
+- **Mutating `wk run` commands:** **`cae-satisfy-ack`** only (**`T878`**) — SQLite audit row for acknowledgement satisfaction; **re-validates** registry via **`loadCaeRegistry`** before commit; does **not** write registry JSON. No **`cae-registry-apply`** / agent self-service registry edits in v1.
+- **Maintainer workflow (single page):** edit **`.ai/cae/registry/*.json`** + **`schemas/cae/**`** in a normal PR; **`pnpm run check`** (schema + CAE fixtures) must pass; reviewers treat registry diffs like product code (**`T852`** table above).
+- **Validate command:** **`cae-registry-validate`** (Tier C — no **`policyApproval`**) loads the registry the same way as **`cae-health`** and returns **`registryContentHash`** plus row counts — use in CI or pre-merge when touching CAE seed data. See **`.ai/cae/cli-read-only.md`**.
+
 ## Cross-references
 
 - **`.ai/cae/enforcement-lane.md`** — enforcement does not mutate registry.

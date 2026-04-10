@@ -825,6 +825,13 @@
   },
   {
     "moduleId": "context-activation",
+    "name": "cae-registry-validate",
+    "file": "cae-registry-validate.md",
+    "description": "Validate CAE registry + activation JSON loads (PR gate / maintainer workflow).",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
     "name": "cae-list-artifacts",
     "file": "cae-list-artifacts.md",
     "description": "List CAE artifact registry ids (optional type filter, paginated).",
@@ -883,7 +890,16 @@
     "moduleId": "context-activation",
     "name": "cae-get-trace",
     "file": "cae-get-trace.md",
-    "description": "Fetch ephemeral CAE trace by traceId from session store.",
+    "description": "Fetch CAE trace by traceId from session store or kit SQLite when persistence is on.",
     "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-satisfy-ack",
+    "file": "cae-satisfy-ack.md",
+    "description": "Record CAE acknowledgement satisfaction row in kit SQLite (requires kit.cae.persistence).",
+    "policyOperationId": "context-activation.cae-satisfy-ack",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
   }
 ]
