@@ -123,3 +123,218 @@ export function insertCaeAckSatisfaction(
     `INSERT INTO cae_ack_satisfaction (trace_id, ack_token, activation_id, satisfied_at, actor) VALUES (?, ?, ?, ?, ?)`
   ).run(row.traceId, row.ackToken, row.activationId, now, row.actor);
 }
+
+// --- CAE registry (SQLite authoritative rows, Phase 70 / T889) ---
+
+export type CaeRegistryArtifactDbRow = {
+  version_id: string;
+  artifact_id: string;
+  artifact_type: string;
+  path: string;
+  title: string | null;
+  description: string | null;
+  metadata_json: string;
+  retired_at: string | null;
+};
+
+export type CaeRegistryActivationDbRow = {
+  version_id: string;
+  activation_id: string;
+  family: string;
+  priority: number;
+  lifecycle_state: string;
+  scope_json: string;
+  artifact_refs_json: string;
+  acknowledgement_json: string | null;
+  metadata_json: string;
+  retired_at: string | null;
+};
+
+/** True when `cae_registry_versions` exists (post kit SQLite v12 migration). */
+export function caeRegistryTablesReady(db: SqliteDatabase): boolean {
+  try {
+    db.prepare(`SELECT 1 FROM cae_registry_versions LIMIT 1`).get();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Active version id, or null when none is marked active. */
+export function getActiveCaeRegistryVersionId(db: SqliteDatabase): string | null {
+  try {
+    const row = db
+      .prepare(
+        `SELECT version_id FROM cae_registry_versions WHERE is_active = 1 ORDER BY created_at DESC LIMIT 1`
+      )
+      .get() as { version_id: string } | undefined;
+    return row?.version_id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function listCaeRegistryVersionIds(db: SqliteDatabase): string[] {
+  try {
+    const rows = db
+      .prepare(`SELECT version_id FROM cae_registry_versions ORDER BY created_at DESC`)
+      .all() as { version_id: string }[];
+    return rows.map((r) => r.version_id);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Insert a registry version row. When `setActive` is true, clears other active flags first
+ * (at most one active version).
+ */
+export function insertCaeRegistryVersion(
+  db: SqliteDatabase,
+  row: { versionId: string; createdBy: string; note?: string | null; setActive?: boolean }
+): void {
+  const now = new Date().toISOString();
+  const run = db.transaction(() => {
+    if (row.setActive) {
+      db.prepare(`UPDATE cae_registry_versions SET is_active = 0`).run();
+    }
+    db.prepare(
+      `INSERT INTO cae_registry_versions (version_id, created_at, created_by, is_active, note) VALUES (?, ?, ?, ?, ?)`
+    ).run(row.versionId, now, row.createdBy, row.setActive ? 1 : 0, row.note ?? null);
+  });
+  run();
+}
+
+/** Mark `versionId` active; returns false if the version row does not exist. */
+export function activateCaeRegistryVersion(db: SqliteDatabase, versionId: string): boolean {
+  try {
+    const exists = db.prepare(`SELECT 1 FROM cae_registry_versions WHERE version_id = ?`).get(versionId);
+    if (!exists) return false;
+    const run = db.transaction(() => {
+      db.prepare(`UPDATE cae_registry_versions SET is_active = 0`).run();
+      db.prepare(`UPDATE cae_registry_versions SET is_active = 1 WHERE version_id = ?`).run(versionId);
+    });
+    run();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function listCaeRegistryArtifactsForVersion(
+  db: SqliteDatabase,
+  versionId: string
+): CaeRegistryArtifactDbRow[] {
+  try {
+    return db
+      .prepare(
+        `SELECT version_id, artifact_id, artifact_type, path, title, description, metadata_json, retired_at
+         FROM cae_registry_artifacts WHERE version_id = ? ORDER BY artifact_id ASC`
+      )
+      .all(versionId) as CaeRegistryArtifactDbRow[];
+  } catch {
+    return [];
+  }
+}
+
+export function listCaeRegistryActivationsForVersion(
+  db: SqliteDatabase,
+  versionId: string
+): CaeRegistryActivationDbRow[] {
+  try {
+    return db
+      .prepare(
+        `SELECT version_id, activation_id, family, priority, lifecycle_state, scope_json, artifact_refs_json,
+                acknowledgement_json, metadata_json, retired_at
+         FROM cae_registry_activations WHERE version_id = ? ORDER BY activation_id ASC`
+      )
+      .all(versionId) as CaeRegistryActivationDbRow[];
+  } catch {
+    return [];
+  }
+}
+
+export function insertCaeRegistryArtifactRow(
+  db: SqliteDatabase,
+  row: {
+    versionId: string;
+    artifactId: string;
+    artifactType: string;
+    path: string;
+    title?: string | null;
+    description?: string | null;
+    metadataJson?: string;
+    retiredAt?: string | null;
+  }
+): void {
+  db.prepare(
+    `INSERT INTO cae_registry_artifacts (
+       version_id, artifact_id, artifact_type, path, title, description, metadata_json, retired_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    row.versionId,
+    row.artifactId,
+    row.artifactType,
+    row.path,
+    row.title ?? null,
+    row.description ?? null,
+    row.metadataJson ?? "{}",
+    row.retiredAt ?? null
+  );
+}
+
+export function insertCaeRegistryActivationRow(
+  db: SqliteDatabase,
+  row: {
+    versionId: string;
+    activationId: string;
+    family: string;
+    priority: number;
+    lifecycleState: string;
+    scopeJson: string;
+    artifactRefsJson: string;
+    acknowledgementJson?: string | null;
+    metadataJson?: string;
+    retiredAt?: string | null;
+  }
+): void {
+  db.prepare(
+    `INSERT INTO cae_registry_activations (
+       version_id, activation_id, family, priority, lifecycle_state, scope_json, artifact_refs_json,
+       acknowledgement_json, metadata_json, retired_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    row.versionId,
+    row.activationId,
+    row.family,
+    row.priority,
+    row.lifecycleState,
+    row.scopeJson,
+    row.artifactRefsJson,
+    row.acknowledgementJson ?? null,
+    row.metadataJson ?? "{}",
+    row.retiredAt ?? null
+  );
+}
+
+/** Remove all artifact + activation rows for a version (keeps the version header row). */
+export function clearCaeRegistryVersionContents(db: SqliteDatabase, versionId: string): void {
+  const run = db.transaction(() => {
+    db.prepare(`DELETE FROM cae_registry_activations WHERE version_id = ?`).run(versionId);
+    db.prepare(`DELETE FROM cae_registry_artifacts WHERE version_id = ?`).run(versionId);
+  });
+  run();
+}
+
+/**
+ * Delete a version row when it is not active (children removed by FK CASCADE).
+ * Returns false when missing or still active.
+ */
+export function deleteInactiveCaeRegistryVersion(db: SqliteDatabase, versionId: string): boolean {
+  const row = db
+    .prepare(`SELECT is_active FROM cae_registry_versions WHERE version_id = ?`)
+    .get(versionId) as { is_active: number } | undefined;
+  if (!row || row.is_active === 1) return false;
+  db.prepare(`DELETE FROM cae_registry_versions WHERE version_id = ?`).run(versionId);
+  return true;
+}
