@@ -4,7 +4,7 @@ import { seedFeatureRegistryIfEmpty } from "./feature-registry-migration.js";
 type SqliteDatabase = InstanceType<typeof Database>;
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 11;
+export const KIT_SQLITE_USER_VERSION = 12;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 
@@ -282,6 +282,53 @@ function migrateV10ToV11(db: SqliteDatabase): void {
 }
 
 /**
+ * CAE registry (authoritative rows) — Phase 70 CAE SQLite migration (`CAE_PLAN.md` / T887).
+ * Artifact bodies stay on disk; DB holds metadata + activation rules. Activation → artifact
+ * integrity is enforced in validation/application code, not SQLite FKs to artifacts.
+ */
+const CAE_REGISTRY_DDL = `
+CREATE TABLE IF NOT EXISTS cae_registry_versions (
+  version_id TEXT PRIMARY KEY NOT NULL,
+  created_at TEXT NOT NULL,
+  created_by TEXT NOT NULL DEFAULT '',
+  is_active INTEGER NOT NULL DEFAULT 0 CHECK (is_active IN (0, 1)),
+  note TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_cae_registry_versions_created ON cae_registry_versions(created_at);
+CREATE INDEX IF NOT EXISTS idx_cae_registry_versions_active ON cae_registry_versions(is_active) WHERE is_active = 1;
+CREATE TABLE IF NOT EXISTS cae_registry_artifacts (
+  version_id TEXT NOT NULL REFERENCES cae_registry_versions(version_id) ON DELETE CASCADE,
+  artifact_id TEXT NOT NULL,
+  artifact_type TEXT NOT NULL,
+  path TEXT NOT NULL,
+  title TEXT,
+  description TEXT,
+  metadata_json TEXT NOT NULL DEFAULT '{}',
+  retired_at TEXT,
+  PRIMARY KEY (version_id, artifact_id)
+);
+CREATE INDEX IF NOT EXISTS idx_cae_registry_artifacts_version ON cae_registry_artifacts(version_id);
+CREATE TABLE IF NOT EXISTS cae_registry_activations (
+  version_id TEXT NOT NULL REFERENCES cae_registry_versions(version_id) ON DELETE CASCADE,
+  activation_id TEXT NOT NULL,
+  family TEXT NOT NULL,
+  priority INTEGER NOT NULL DEFAULT 0,
+  lifecycle_state TEXT NOT NULL,
+  scope_json TEXT NOT NULL,
+  artifact_refs_json TEXT NOT NULL,
+  acknowledgement_json TEXT,
+  metadata_json TEXT NOT NULL DEFAULT '{}',
+  retired_at TEXT,
+  PRIMARY KEY (version_id, activation_id)
+);
+CREATE INDEX IF NOT EXISTS idx_cae_registry_activations_version ON cae_registry_activations(version_id);
+`;
+
+function migrateV11ToV12(db: SqliteDatabase): void {
+  db.exec(CAE_REGISTRY_DDL);
+}
+
+/**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
  */
@@ -352,6 +399,11 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
     migrateV10ToV11(db);
     db.pragma("user_version = 11");
     current = 11;
+  }
+  if (current < 12) {
+    migrateV11ToV12(db);
+    db.pragma("user_version = 12");
+    current = 12;
   }
 }
 
