@@ -69,18 +69,37 @@ export function digestCaeRegistryIdSet(artifactIds: string[], activationIds: str
   return createHash("sha256").update(payload).digest("hex");
 }
 
-/** Verify every artifact `ref.path` exists under `workspaceRoot` (repo-relative). */
+/**
+ * Verify every artifact `ref.path` resolves inside `workspaceRoot` and exists on disk.
+ * Rejects empty paths, absolute paths, and `..` escapes (**Phase 70 / T892**).
+ */
 export function verifyCaeArtifactRefPathsExist(
   workspaceRoot: string,
   artifacts: CaeRegistryArtifactRow[]
 ): LoadCaeRegistryResult | null {
+  const root = path.resolve(workspaceRoot);
   for (const row of artifacts) {
     const ref = row.ref as Record<string, unknown> | undefined;
-    const p = ref && typeof ref.path === "string" ? ref.path : "";
+    const p = ref && typeof ref.path === "string" ? ref.path.trim() : "";
     if (!p) {
       return { ok: false, code: "cae-artifact-missing", message: "Registry row missing ref.path" };
     }
-    const abs = path.join(workspaceRoot, p);
+    if (path.isAbsolute(p)) {
+      return {
+        ok: false,
+        code: "cae-artifact-path-invalid",
+        message: `Artifact ref.path must be repo-relative, not absolute: ${p}`
+      };
+    }
+    const abs = path.resolve(root, p);
+    const relToRoot = path.relative(root, abs);
+    if (relToRoot.startsWith("..") || path.isAbsolute(relToRoot)) {
+      return {
+        ok: false,
+        code: "cae-artifact-path-invalid",
+        message: `Artifact ref.path escapes workspace root: ${p}`
+      };
+    }
     if (!fs.existsSync(abs)) {
       return {
         ok: false,

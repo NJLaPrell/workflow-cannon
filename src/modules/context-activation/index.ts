@@ -406,7 +406,9 @@ export const contextActivationModule: WorkflowModule = {
           : undefined;
       const loadedSeed = loadCaeRegistry(ws, {
         artifactsRelativePath: artRel,
-        activationsRelativePath: actRel
+        activationsRelativePath: actRel,
+        /** Import must not persist rows pointing at missing or escaped paths (CAE_PLAN C2 / T892). */
+        verifyArtifactPaths: true
       });
       if (!loadedSeed.ok) {
         return {

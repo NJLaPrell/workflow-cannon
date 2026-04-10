@@ -9,7 +9,7 @@ Machine-oriented continuity after a local **`git restore .workspace-kit/tasks/wo
 | **T889** | Tests for registry DB helpers | `completed` | Same test file |
 | **T890** | Epic 2 — `cae-registry-sqlite` loader + `replaceActiveCaeRegistryFromLoaded` | `completed` | `src/core/cae/cae-registry-sqlite.ts`, `test/cae-registry-sqlite.test.mjs` |
 | **T891** | `loadRegistryForCae`, `cae-import-json-registry`, manifest/policy | `completed` | `src/modules/context-activation/index.ts`, manifest + waivers |
-| **T892** | Epic 3 **C2** — import artifact path verification hardening | `ready` | Follow-up when import/loader gaps found |
+| **T892** | Epic 3 **C2** — import artifact path verification hardening | `completed` | `verifyCaeArtifactRefPathsExist` workspace containment + `cae-import-json-registry` explicit verify; **`test/cae-artifact-path-verify.test.mjs`** |
 | **T893** | Epic 3 **C3** — SQLite-only runtime (no JSON authority) | `completed` | Default `kit.cae.registryStore: sqlite`, `cae-registry-effective.ts`, `check-cae-registry.mjs` idempotent seed, kit DB carries active seed version |
 
 **Operator note:** With **`registryStore: sqlite`** (default), **`cae-registry-validate`** reads the kit DB. **`scripts/check-cae-registry.mjs`** idempotently seeds from **`.ai/cae/registry/*.json`** when there is **no active** registry version so **`pnpm run check`** stays green without hand-running import first.

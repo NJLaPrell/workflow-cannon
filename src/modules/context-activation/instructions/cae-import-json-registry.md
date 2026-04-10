@@ -28,6 +28,16 @@ workspace-kit run cae-import-json-registry '{"schemaVersion":1,"artifactsRelativ
 | `actor` | string | no | Recorded in `created_by` (default `import`). |
 | `note` | string | no | Stored on the version row. |
 
+## Path verification (**T892** / CAE_PLAN C2)
+
+Before writing SQLite rows, the handler loads JSON with **`verifyArtifactPaths: true`**. Every artifact **`ref.path`** must:
+
+- be **repo-relative** (not an absolute path),
+- resolve **inside the workspace root** (no `..` escape),
+- refer to a **file that exists** on disk.
+
+Failures use **`cae-artifact-path-invalid`** or **`cae-artifact-missing`** (see **`.ai/cae/error-codes.md`**).
+
 ## Returns
 
 `ok: true`, **`code`**: `cae-import-json-registry-ok`, **`data.versionId`**, counts.
