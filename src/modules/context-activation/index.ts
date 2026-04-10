@@ -12,12 +12,10 @@ import {
   persistCaeTraceIfEnabled
 } from "../../core/cae/cae-kit-sqlite.js";
 import { evaluateActivationBundle } from "../../core/cae/cae-evaluate.js";
+import { loadCaeRegistryForKit } from "../../core/cae/cae-registry-effective.js";
 import { loadCaeRegistry } from "../../core/cae/cae-registry-load.js";
 import type { CaeLoadedRegistry } from "../../core/cae/cae-registry-load.js";
-import {
-  loadCaeRegistryFromSqlite,
-  replaceActiveCaeRegistryFromLoaded
-} from "../../core/cae/cae-registry-sqlite.js";
+import { replaceActiveCaeRegistryFromLoaded } from "../../core/cae/cae-registry-sqlite.js";
 import type { CaeEvaluationContext } from "../../core/cae/evaluation-context-types.js";
 import { getAtPath } from "../../core/workspace-kit-config.js";
 import {
@@ -98,28 +96,19 @@ function loadRegistryForCae(
 ):
   | { ok: true; reg: CaeLoadedRegistry }
   | { ok: false; code: string; message: string; remediation?: { instructionPath: string } } {
-  const store = getAtPath(effective, "kit.cae.registryStore");
-  if (store === "sqlite") {
-    const res = loadCaeRegistryFromSqlite(workspacePath, effective);
-    if (!res.ok) {
-      return {
-        ok: false,
-        code: res.code,
-        message: res.message,
-        remediation: {
-          instructionPath: "src/modules/context-activation/instructions/cae-import-json-registry.md"
-        }
-      };
-    }
-    return { ok: true, reg: res.value };
-  }
-  const res = loadCaeRegistry(workspacePath);
+  const res = loadCaeRegistryForKit(workspacePath, effective);
   if (!res.ok) {
+    const store = getAtPath(effective, "kit.cae.registryStore");
     return {
       ok: false,
       code: res.code,
       message: res.message,
-      remediation: { instructionPath: "src/modules/context-activation/instructions/cae-list-artifacts.md" }
+      remediation: {
+        instructionPath:
+          store === "json"
+            ? "src/modules/context-activation/instructions/cae-list-artifacts.md"
+            : "src/modules/context-activation/instructions/cae-import-json-registry.md"
+      }
     };
   }
   return { ok: true, reg: res.value };

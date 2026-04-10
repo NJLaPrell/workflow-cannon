@@ -34,4 +34,6 @@ workspace-kit run cae-import-json-registry '{"schemaVersion":1,"artifactsRelativ
 
 ## After import
 
-Set **`kit.cae.registryStore`** to **`sqlite`** (project or user config) so CAE commands load from SQLite instead of JSON.
+**`kit.cae.registryStore`** defaults to **`sqlite`** (kit defaults). Use **`json`** only for explicit JSON bootstrap or tests.
+
+**CI / `pnpm run check`:** when the kit DB has **no active** CAE registry version, **`scripts/check-cae-registry.mjs`** seeds from the same default JSON paths before running **`cae-registry-validate`** (idempotent).

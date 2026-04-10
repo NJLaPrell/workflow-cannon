@@ -66,10 +66,10 @@ export const KIT_CONFIG_DEFAULTS: Record<string, unknown> = {
     cae: {
       enabled: false,
       /**
-       * `json` — load `.ai/cae/registry/*.json` (bootstrap / migration source).
-       * `sqlite` — load active version from kit planning SQLite (`cae_registry_*` tables).
+       * `sqlite` — load active version from kit planning SQLite (`cae_registry_*` tables); default (**Phase 70 / CAE_PLAN**).
+       * `json` — load `.ai/cae/registry/*.json` (tests / explicit bootstrap only; not authoritative runtime).
        */
-      registryStore: "json",
+      registryStore: "sqlite",
       /** When true with `enabled`, `doctor --agent-instruction-surface` includes a bounded `cae` block. */
       advisoryInstructionSurface: false,
       /** Ephemeral trace bodies stay in-process until optional persistence (**`T867`**). */

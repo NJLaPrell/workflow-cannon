@@ -1,7 +1,7 @@
 import { getAtPath } from "../workspace-kit-config.js";
 import { buildEvaluationContext } from "./evaluation-context-builder.js";
 import { evaluateActivationBundle } from "./cae-evaluate.js";
-import { loadCaeRegistry } from "./cae-registry-load.js";
+import { loadCaeRegistryForKit } from "./cae-registry-effective.js";
 import type { AgentInstructionSurfaceCae } from "../agent-instruction-surface.js";
 
 const SURFACE_COMMAND = "__agent_instruction_surface__";
@@ -24,7 +24,7 @@ export function buildCaeAdvisoryInstructionSurfaceBlock(
   if (!enabled || !advisory) return undefined;
 
   const phase = String(getAtPath(effective, "kit.currentPhaseNumber") ?? "0");
-  const load = loadCaeRegistry(workspacePath);
+  const load = loadCaeRegistryForKit(workspacePath, effective);
   if (!load.ok) {
     return {
       schemaVersion: 1,

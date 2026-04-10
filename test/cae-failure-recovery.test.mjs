@@ -85,7 +85,7 @@ test("T879: cae-get-trace returns cae-trace-not-found when no session or sqlite 
       runtimeVersion: "0.1",
       workspacePath: ws,
       effectiveConfig: {
-        kit: { cae: { persistence: true } },
+        kit: { cae: { persistence: true, registryStore: "json" } },
         tasks: { sqliteDatabaseRelativePath: ".workspace-kit/tasks/workspace-kit.db" }
       }
     }
@@ -112,7 +112,7 @@ test("T879: cae-satisfy-ack returns cae-ack-token-mismatch when token wrong", as
       runtimeVersion: "0.1",
       workspacePath: ws,
       effectiveConfig: {
-        kit: { cae: { persistence: true } },
+        kit: { cae: { persistence: true, registryStore: "json" } },
         tasks: { sqliteDatabaseRelativePath: ".workspace-kit/tasks/workspace-kit.db" }
       }
     }
@@ -139,7 +139,7 @@ test("T879: cae-satisfy-ack ok when registry + token + persisted trace align", a
       runtimeVersion: "0.1",
       workspacePath: ws,
       effectiveConfig: {
-        kit: { cae: { persistence: true } },
+        kit: { cae: { persistence: true, registryStore: "json" } },
         tasks: { sqliteDatabaseRelativePath: ".workspace-kit/tasks/workspace-kit.db" }
       }
     }
