@@ -45,7 +45,12 @@ test("runCaeCliPreflight: attaches shadow metadata when enabled + shadowPrefligh
     effective: {
       kit: {
         currentPhaseNumber: 70,
-        cae: { enabled: true, runtime: { shadowPreflight: true }, enforcement: { enabled: false } }
+        cae: {
+          enabled: true,
+          registryStore: "json",
+          runtime: { shadowPreflight: true },
+          enforcement: { enabled: false }
+        }
       }
     },
     subcommand: "list-tasks",

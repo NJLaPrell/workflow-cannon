@@ -27,6 +27,10 @@ test("prepareKitSqliteDatabase applies user_version and baseline tables", async 
     assert.ok(names.includes("workspace_planning_state"));
     assert.ok(names.includes("kit_workspace_status"));
     assert.ok(names.includes("kit_workspace_status_events"));
+    assert.ok(names.includes("cae_registry_versions"));
+    assert.ok(names.includes("cae_registry_artifacts"));
+    assert.ok(names.includes("cae_registry_activations"));
+    assert.ok(names.includes("cae_registry_mutations"));
     const qc = db.prepare("PRAGMA quick_check").all();
     assert.equal(qc.length, 1);
     const cell = Object.values(qc[0])[0];

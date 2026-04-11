@@ -6,7 +6,8 @@
 
 | Rule | Detail |
 | --- | --- |
-| **Source of truth** | Registry JSON and activation JSON under **`tasks/cae/`** / **`schemas/cae/`** / repo paths decided in **`T857`** — **versioned in git**, reviewed like product code. |
+| **Source of truth (runtime)** | **Kit SQLite** active **`cae_registry_*`** rows (**Phase 70**). |
+| **Seed / fixtures** | **`.ai/cae/registry/*.json`** and **`schemas/cae/**`** — **versioned in git**; changing seed data still uses **PR + CI** like product code (see **`.ai/cae/json-registry-fate.md`**). |
 | **Who may change** | **Maintainers** via PR with normal review; **no** chat-only or agent-only writes to published registry paths. |
 | **Agents** | May **propose** diffs in PR text; **must not** silently apply registry/activation mutations without maintainer merge. |
 | **Validation** | **`pnpm run check`** + schema tests (`fixtures/cae/**`) must pass before merge; future **`cae-validate-*`** read-only commands (**`T868`**) wrap the same schemas. |
@@ -47,11 +48,12 @@ If **`T868`** ships **`cae-registry-apply`** / **`cae-activation-upsert`**-class
 ## T868 v1 closeout (validate-only)
 
 - **Mutating `wk run` commands:** **`cae-satisfy-ack`** only (**`T878`**) — SQLite audit row for acknowledgement satisfaction; **re-validates** registry via **`loadCaeRegistry`** before commit; does **not** write registry JSON. No **`cae-registry-apply`** / agent self-service registry edits in v1.
-- **Maintainer workflow (single page):** edit **`.ai/cae/registry/*.json`** + **`schemas/cae/**`** in a normal PR; **`pnpm run check`** (schema + CAE fixtures) must pass; reviewers treat registry diffs like product code (**`T852`** table above).
-- **Validate command:** **`cae-registry-validate`** (Tier C — no **`policyApproval`**) loads the registry the same way as **`cae-health`** and returns **`registryContentHash`** plus row counts — use in CI or pre-merge when touching CAE seed data. See **`.ai/cae/cli-read-only.md`**.
+- **Maintainer workflow (seed):** edit **`.ai/cae/registry/*.json`** + **`schemas/cae/**`** in a normal PR when updating **seed** data; **`pnpm run check`** (schema + CAE gates) must pass; then **`cae-import-json-registry`** (Tier A) or CI seed refreshes **SQLite** for runtime consumers.
+- **Validate commands:** **`cae-registry-validate`** / **`cae-validate-registry`** (Tier C — no **`policyApproval`**) load the registry like **`cae-health`** and return **`registryContentHash`** plus row counts — use in CI or pre-merge when touching CAE data. See **`.ai/cae/cli-read-only.md`**.
 
 ## Cross-references
 
+- **`.ai/cae/registry-mutation-governance.md`** — **Epic 5 E1/E2/E3**: SQLite registry admin CLI gate (**`caeMutationApproval`** + **`kit.cae.adminMutations`**), manifest **`policySensitivity`** story, and **`cae_registry_mutations`** audit table.
 - **`.ai/cae/enforcement-lane.md`** — enforcement does not mutate registry.
 - **`ADR-cae-persistence-v1.md`** (**`T845`**) — audit storage posture.
 - **`tasks/cae/specs/T868.md`**

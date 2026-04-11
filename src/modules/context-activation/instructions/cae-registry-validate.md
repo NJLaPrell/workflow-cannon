@@ -6,7 +6,10 @@ Tier **C** — no JSON `policyApproval`.
 
 ```bash
 pnpm exec wk run cae-registry-validate '{"schemaVersion":1}'
+pnpm exec wk run cae-validate-registry '{"schemaVersion":1}'
 ```
+
+**`cae-validate-registry`** is an alias of this command (same **`code`** and payload); see **`cae-validate-registry.md`**.
 
 ## Arguments
 

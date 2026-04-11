@@ -18,4 +18,8 @@ workspace-kit run cae-health '{"schemaVersion":1,"includeDetails":true}'
 
 ## Returns
 
-`cae-health-ok`; **`data`** includes **`caeEnabled`**, **`persistenceEnabled`**, **`lastEvalAt`** (ISO timestamp after any in-process CAE eval that stored a trace), registry status, and **`issues`**.
+`cae-health-ok`; **`data`** includes **`caeEnabled`**, **`persistenceEnabled`**, **`lastEvalAt`** (ISO timestamp after any in-process CAE eval that stored a trace), **`registryStore`**, registry status, and **`issues`**.
+
+When the registry loads successfully, **`data`** also includes **`registryContentHash`**, **`artifactCount`**, **`activationCount`**, and **`activeRegistryVersionId`** (when kit SQLite has an active CAE registry version).
+
+When **`includeDetails`** is **`true`** and **`kit.cae.persistence`** is on, adds **`traceRowCount`** and **`ackRowCount`** from SQLite.

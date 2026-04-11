@@ -10,7 +10,7 @@ import { findCaeEnforcementBlock } from "./cae-enforcement-allowlist.js";
 import { countReadyTasksInPlanningSqlite } from "./cae-queue-snapshot.js";
 import { buildEvaluationContext } from "./evaluation-context-builder.js";
 import type { CaeEvaluationContext } from "./evaluation-context-types.js";
-import { loadCaeRegistry } from "./cae-registry-load.js";
+import { loadCaeRegistryForKit } from "./cae-registry-effective.js";
 
 export type CaeCliPreflightOutcome = {
   shadowAttach: Record<string, unknown> | null;
@@ -109,7 +109,7 @@ export function runCaeCliPreflight(input: {
       input.commandArgs,
       input.router
     );
-    const reg = loadCaeRegistry(input.workspacePath);
+    const reg = loadCaeRegistryForKit(input.workspacePath, input.effective);
     if (!reg.ok) {
       const degraded: Record<string, unknown> = {
         schemaVersion: 1,

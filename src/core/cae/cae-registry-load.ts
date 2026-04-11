@@ -42,6 +42,8 @@ export type LoadCaeRegistryResult =
   | { ok: true; value: CaeLoadedRegistry }
   | { ok: false; code: string; message: string };
 
+export type SingleRecordValidationResult<T> = { ok: true; value: T } | { ok: false; code: string; message: string };
+
 const ajv = new Ajv2020Ctor({ allErrors: true, strict: false });
 const validateArtifact = ajv.compile(registryEntrySchema as object) as ValidateFunction;
 const validateActivation = ajv.compile(activationDefSchema as object) as ValidateFunction;
@@ -60,7 +62,44 @@ function readJsonFile(abs: string): { err: LoadCaeRegistryResult } | { doc: Reco
   }
 }
 
-function digestRegistry(artifactIds: string[], activationIds: string[]): string {
+/** Deterministic JSON for hashing (sorted object keys at every object depth). */
+export function stableStringifyForCaeDigest(value: unknown): string {
+  if (value === undefined) return "null";
+  if (value === null || typeof value !== "object") {
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map((v) => stableStringifyForCaeDigest(v)).join(",")}]`;
+  }
+  const obj = value as Record<string, unknown>;
+  const keys = Object.keys(obj).sort((a, b) => a.localeCompare(b));
+  return `{${keys.map((k) => `${JSON.stringify(k)}:${stableStringifyForCaeDigest(obj[k])}`).join(",")}}`;
+}
+
+/**
+ * Content-based registry digest: active **`versionId`** plus normalized artifact + activation rows (**CAE_PLAN B3 / T894**).
+ * JSON seed path uses **`JSON_REGISTRY_DIGEST_VERSION_ID`** instead of a SQLite version row.
+ */
+export const JSON_REGISTRY_DIGEST_VERSION_ID = "json-registry:v1";
+
+export function digestCaeRegistryContent(
+  versionId: string,
+  artifacts: CaeRegistryArtifactRow[],
+  activations: CaeRegistryActivationRow[]
+): string {
+  const arts = [...artifacts].sort((a, b) => String(a.artifactId).localeCompare(String(b.artifactId)));
+  const acts = [...activations].sort((a, b) => String(a.activationId).localeCompare(String(b.activationId)));
+  const payload = {
+    schemaVersion: 1,
+    versionId,
+    artifacts: arts.map((row) => stableStringifyForCaeDigest(row)),
+    activations: acts.map((row) => stableStringifyForCaeDigest(row))
+  };
+  return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
+}
+
+/** @deprecated Prefer {@link digestCaeRegistryContent} — id-only digest retained for narrow compatibility checks. */
+export function digestCaeRegistryIdSet(artifactIds: string[], activationIds: string[]): string {
   const payload = JSON.stringify({
     artifactIds: [...artifactIds].sort((a, b) => a.localeCompare(b)),
     activationIds: [...activationIds].sort((a, b) => a.localeCompare(b))
@@ -68,14 +107,37 @@ function digestRegistry(artifactIds: string[], activationIds: string[]): string 
   return createHash("sha256").update(payload).digest("hex");
 }
 
-function verifyRefsExist(workspaceRoot: string, artifacts: CaeRegistryArtifactRow[]): LoadCaeRegistryResult | null {
+/**
+ * Verify every artifact `ref.path` resolves inside `workspaceRoot` and exists on disk.
+ * Rejects empty paths, absolute paths, and `..` escapes (**Phase 70 / T892**).
+ */
+export function verifyCaeArtifactRefPathsExist(
+  workspaceRoot: string,
+  artifacts: CaeRegistryArtifactRow[]
+): LoadCaeRegistryResult | null {
+  const root = path.resolve(workspaceRoot);
   for (const row of artifacts) {
     const ref = row.ref as Record<string, unknown> | undefined;
-    const p = ref && typeof ref.path === "string" ? ref.path : "";
+    const p = ref && typeof ref.path === "string" ? ref.path.trim() : "";
     if (!p) {
       return { ok: false, code: "cae-artifact-missing", message: "Registry row missing ref.path" };
     }
-    const abs = path.join(workspaceRoot, p);
+    if (path.isAbsolute(p)) {
+      return {
+        ok: false,
+        code: "cae-artifact-path-invalid",
+        message: `Artifact ref.path must be repo-relative, not absolute: ${p}`
+      };
+    }
+    const abs = path.resolve(root, p);
+    const relToRoot = path.relative(root, abs);
+    if (relToRoot.startsWith("..") || path.isAbsolute(relToRoot)) {
+      return {
+        ok: false,
+        code: "cae-artifact-path-invalid",
+        message: `Artifact ref.path escapes workspace root: ${p}`
+      };
+    }
     if (!fs.existsSync(abs)) {
       return {
         ok: false,
@@ -180,14 +242,11 @@ export function loadCaeRegistry(
 
   const verifyPaths = options?.verifyArtifactPaths !== false;
   if (verifyPaths) {
-    const v = verifyRefsExist(workspaceRoot, artifacts);
+    const v = verifyCaeArtifactRefPathsExist(workspaceRoot, artifacts);
     if (v) return v;
   }
 
-  const registryDigest = digestRegistry(
-    [...artifactById.keys()],
-    [...activationById.keys()]
-  );
+  const registryDigest = digestCaeRegistryContent(JSON_REGISTRY_DIGEST_VERSION_ID, artifacts, activations);
 
   return {
     ok: true,
@@ -199,4 +258,32 @@ export function loadCaeRegistry(
       registryDigest
     }
   };
+}
+
+/** Validate a single artifact object (registry-entry schema). */
+export function validateSingleCaeArtifactRecord(
+  record: unknown
+): SingleRecordValidationResult<CaeRegistryArtifactRow> {
+  if (!validateArtifact(record)) {
+    return {
+      ok: false,
+      code: "cae-registry-schema-invalid",
+      message: ajv.errorsText(validateArtifact.errors)
+    };
+  }
+  return { ok: true, value: record as CaeRegistryArtifactRow };
+}
+
+/** Validate a single activation object (activation-definition schema). */
+export function validateSingleCaeActivationRecord(
+  record: unknown
+): SingleRecordValidationResult<CaeRegistryActivationRow> {
+  if (!validateActivation(record)) {
+    return {
+      ok: false,
+      code: "cae-activations-schema-invalid",
+      message: ajv.errorsText(validateActivation.errors)
+    };
+  }
+  return { ok: true, value: record as CaeRegistryActivationRow };
 }

@@ -832,6 +832,22 @@
   },
   {
     "moduleId": "context-activation",
+    "name": "cae-validate-registry",
+    "file": "cae-validate-registry.md",
+    "description": "Alias of cae-registry-validate — validate active CAE registry (SQLite or JSON per kit.cae.registryStore).",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-import-json-registry",
+    "file": "cae-import-json-registry.md",
+    "description": "Import validated CAE JSON registry into kit SQLite as a new active registry version.",
+    "policyOperationId": "context-activation.cae-import-json-registry",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "context-activation",
     "name": "cae-list-artifacts",
     "file": "cae-list-artifacts.md",
     "description": "List CAE artifact registry ids (optional type filter, paginated).",
@@ -891,6 +907,104 @@
     "name": "cae-get-trace",
     "file": "cae-get-trace.md",
     "description": "Fetch CAE trace by traceId from session store or kit SQLite when persistence is on.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-list-registry-versions",
+    "file": "cae-list-registry-versions.md",
+    "description": "List CAE registry version headers with row counts (SQLite kit DB).",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-get-registry-version",
+    "file": "cae-get-registry-version.md",
+    "description": "Get one CAE registry version header; optional raw artifact/activation rows.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-create-registry-version",
+    "file": "cae-create-registry-version.md",
+    "description": "Create an empty CAE registry version row (optional activate). CAE governance + adminMutations.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-clone-registry-version",
+    "file": "cae-clone-registry-version.md",
+    "description": "Clone artifact+activation rows from an existing registry version to a new version id.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-activate-registry-version",
+    "file": "cae-activate-registry-version.md",
+    "description": "Mark a registry version active (clears other active flags).",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-delete-registry-version",
+    "file": "cae-delete-registry-version.md",
+    "description": "Delete a non-active CAE registry version and its rows (CASCADE).",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-rollback-registry-version",
+    "file": "cae-rollback-registry-version.md",
+    "description": "Activate the chronologically previous registry version (operator rollback).",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-create-artifact",
+    "file": "cae-create-artifact.md",
+    "description": "Insert a validated artifact row into the active (or specified) CAE registry version.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-update-artifact",
+    "file": "cae-update-artifact.md",
+    "description": "Update fields on a non-retired CAE artifact row for a registry version.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-retire-artifact",
+    "file": "cae-retire-artifact.md",
+    "description": "Set retired_at on a CAE artifact row when no activation references it.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-create-activation",
+    "file": "cae-create-activation.md",
+    "description": "Insert a validated activation row into the active (or specified) CAE registry version.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-update-activation",
+    "file": "cae-update-activation.md",
+    "description": "Update fields on a non-retired CAE activation row.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-disable-activation",
+    "file": "cae-disable-activation.md",
+    "description": "Set lifecycle_state to disabled for a CAE activation row.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-retire-activation",
+    "file": "cae-retire-activation.md",
+    "description": "Set retired_at on a CAE activation row.",
     "policySensitivity": "non-sensitive"
   },
   {
