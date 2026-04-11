@@ -42,4 +42,8 @@ Created in task engine with goals, **`technicalScope`**, and **`acceptanceCriter
 | **T913** | Epic 8 **H5** | Governance tests |
 | **T914** | Epic 8 **H6** | Health + doctor registry signals |
 
+**Closed in batch (implementation + tests + docs):** **T894**, **T898**, **T899**, **T903**, **T904**, **T905**, **T906**, **T907**, **T908**, **T909**, **T910**, **T912**, **T914** — see git history on branch **`task/t887-cae-sqlite-registry-schema`**.
+
+**Still `ready` (large follow-on work, not closed in this batch):** **T895**–**T897** (admin CLIs), **T900**–**T902** (governance lane), **T911** (CRUD tests after mutators), **T913** (full governance test matrix).
+
 **Not re-created as new tasks** (already covered by **T887–T893**): Epic 1 **A1–A3**, Epic 2 **B1**, Epic 2 **B2** (partial), Epic 3 **C1–C3**.

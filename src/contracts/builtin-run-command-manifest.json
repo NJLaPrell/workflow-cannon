@@ -832,6 +832,13 @@
   },
   {
     "moduleId": "context-activation",
+    "name": "cae-validate-registry",
+    "file": "cae-validate-registry.md",
+    "description": "Alias of cae-registry-validate — validate active CAE registry (SQLite or JSON per kit.cae.registryStore).",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
     "name": "cae-import-json-registry",
     "file": "cae-import-json-registry.md",
     "description": "Import validated CAE JSON registry into kit SQLite as a new active registry version.",

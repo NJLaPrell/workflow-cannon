@@ -463,6 +463,7 @@ In CI this runs as a **non-blocking** step (see `.github/workflows/ci.yml`). It 
 
 ```bash
 workspace-kit run cae-registry-validate '{"schemaVersion":1}'
+workspace-kit run cae-validate-registry '{"schemaVersion":1}'
 workspace-kit run cae-list-artifacts '{"schemaVersion":1}'
 workspace-kit run cae-get-artifact '{"schemaVersion":1,"artifactId":"cae.playbook.machine-playbooks"}'
 workspace-kit run cae-list-activations '{"schemaVersion":1}'

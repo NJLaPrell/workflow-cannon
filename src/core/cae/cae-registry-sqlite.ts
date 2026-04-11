@@ -29,7 +29,7 @@ import type {
   LoadCaeRegistryResult
 } from "./cae-registry-load.js";
 import {
-  digestCaeRegistryIdSet,
+  digestCaeRegistryContent,
   verifyCaeArtifactRefPathsExist
 } from "./cae-registry-load.js";
 
@@ -254,7 +254,7 @@ export function loadCaeRegistryFromSqliteDb(
     if (v) return v;
   }
 
-  const registryDigest = digestCaeRegistryIdSet([...artifactById.keys()], [...activationById.keys()]);
+  const registryDigest = digestCaeRegistryContent(versionId, artifacts, activations);
 
   const value: CaeLoadedRegistry = {
     artifacts,

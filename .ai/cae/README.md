@@ -11,7 +11,7 @@ CAE evaluates **bounded, typed** workspace + task + command context and returns 
 | Doc | Purpose |
 | --- | --- |
 | **`tasks/cae/CAE-PROGRAM-CONTEXT.md`** | Program objectives, boundaries, sequencing. |
-| **`.ai/cae/registry/artifacts.v1.json`** | Bootstrap artifact id → path seed (**`T857`**); loader **T858**. |
+| **`.ai/cae/registry/*.json`** | **Seed / fixtures only** — runtime registry loads from **kit SQLite** active version by default (**`kit.cae.registryStore: sqlite`**). Import: **`cae-import-json-registry`**. |
 | **`.ai/cae/evaluation-context.md`** + **`schemas/cae/evaluation-context.v1.json`** | What builders may put in context (**`T859`**). |
 | **`.ai/cae/runtime-integration.md`** | Where CAE hooks into CLI vs router (**`T849`**). |
 | **`.ai/cae/cli-read-only.md`** | `cae-*` **`wk run`** names, JSON envelope, tier **C** (no **`policyApproval`**) — **`T847`**. |
@@ -27,11 +27,11 @@ CAE **acknowledgement strengths** (`none` | `surface` | `recommend` | `ack_requi
 
 ## Read-only first
 
-Inspect registry and evaluations via **`cae-*`** commands when shipped (**`T861`**, **`T862`**). **Registry JSON** (artifacts / activations under **`.ai/cae/registry/`**) stays **git + PR** — see **`.ai/cae/mutation-governance.md`**.
+Inspect registry and evaluations via **`cae-*`** commands (**`T861`**, **`T862`**). **Authoritative registry state** lives in **kit SQLite**; JSON under **`.ai/cae/registry/`** is seed/fixture — see **`.ai/cae/json-registry-fate.md`** and **`.ai/cae/mutation-governance.md`** (git+PR still applies to editing those seed files).
 
 ## Governed mutation (v1)
 
-**`cae-satisfy-ack`** (Tier A — JSON **`policyApproval`**) records acknowledgement satisfaction in kit SQLite **after** a fresh **`loadCaeRegistry`** check, **`ackToken`** match against the activation row, and a persisted **`cae_trace_snapshots`** row for **`traceId`**. It does **not** edit registry files; use normal PR workflow for activation changes.
+**`cae-satisfy-ack`** (Tier A — JSON **`policyApproval`**) records acknowledgement satisfaction in kit SQLite **after** a fresh registry load (**`loadCaeRegistryForKit`** / effective **`registryStore`**), **`ackToken`** match against the activation row, and a persisted **`cae_trace_snapshots`** row for **`traceId`**. It does **not** edit registry rows directly; registry edits use admin CLIs (when shipped) or import/seed workflows.
 
 ## Traces
 

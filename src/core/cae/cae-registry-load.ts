@@ -60,7 +60,43 @@ function readJsonFile(abs: string): { err: LoadCaeRegistryResult } | { doc: Reco
   }
 }
 
-/** Stable digest over sorted artifact + activation ids (v1 JSON loader; SQLite path may replace in T894). */
+/** Deterministic JSON for hashing (sorted object keys at every object depth). */
+export function stableStringifyForCaeDigest(value: unknown): string {
+  if (value === undefined) return "null";
+  if (value === null || typeof value !== "object") {
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map((v) => stableStringifyForCaeDigest(v)).join(",")}]`;
+  }
+  const obj = value as Record<string, unknown>;
+  const keys = Object.keys(obj).sort((a, b) => a.localeCompare(b));
+  return `{${keys.map((k) => `${JSON.stringify(k)}:${stableStringifyForCaeDigest(obj[k])}`).join(",")}}`;
+}
+
+/**
+ * Content-based registry digest: active **`versionId`** plus normalized artifact + activation rows (**CAE_PLAN B3 / T894**).
+ * JSON seed path uses **`JSON_REGISTRY_DIGEST_VERSION_ID`** instead of a SQLite version row.
+ */
+export const JSON_REGISTRY_DIGEST_VERSION_ID = "json-registry:v1";
+
+export function digestCaeRegistryContent(
+  versionId: string,
+  artifacts: CaeRegistryArtifactRow[],
+  activations: CaeRegistryActivationRow[]
+): string {
+  const arts = [...artifacts].sort((a, b) => String(a.artifactId).localeCompare(String(b.artifactId)));
+  const acts = [...activations].sort((a, b) => String(a.activationId).localeCompare(String(b.activationId)));
+  const payload = {
+    schemaVersion: 1,
+    versionId,
+    artifacts: arts.map((row) => stableStringifyForCaeDigest(row)),
+    activations: acts.map((row) => stableStringifyForCaeDigest(row))
+  };
+  return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
+}
+
+/** @deprecated Prefer {@link digestCaeRegistryContent} — id-only digest retained for narrow compatibility checks. */
 export function digestCaeRegistryIdSet(artifactIds: string[], activationIds: string[]): string {
   const payload = JSON.stringify({
     artifactIds: [...artifactIds].sort((a, b) => a.localeCompare(b)),
@@ -208,10 +244,7 @@ export function loadCaeRegistry(
     if (v) return v;
   }
 
-  const registryDigest = digestCaeRegistryIdSet(
-    [...artifactById.keys()],
-    [...activationById.keys()]
-  );
+  const registryDigest = digestCaeRegistryContent(JSON_REGISTRY_DIGEST_VERSION_ID, artifacts, activations);
 
   return {
     ok: true,

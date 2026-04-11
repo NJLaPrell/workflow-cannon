@@ -377,6 +377,7 @@ Until **`T861` / `T862`** register these names in **`src/contracts/builtin-run-c
 
 ```bash
 pnpm exec wk run cae-registry-validate '{"schemaVersion":1}'
+pnpm exec wk run cae-validate-registry '{"schemaVersion":1}'
 pnpm exec wk run cae-list-artifacts '{"schemaVersion":1,"limit":50}'
 pnpm exec wk run cae-get-artifact '{"schemaVersion":1,"artifactId":"cae.playbook.machine-playbooks"}'
 pnpm exec wk run cae-list-activations '{"schemaVersion":1,"family":"policy","limit":25}'

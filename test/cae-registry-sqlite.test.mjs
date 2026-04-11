@@ -77,6 +77,44 @@ test("loadCaeRegistryFromSqliteDb: happy path with schema-valid rows", async () 
   }
 });
 
+test("loadCaeRegistryFromSqliteDb fails on invalid artifact metadata_json", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "wk-cae-sqlite-badmeta-"));
+  const dbPath = path.join(dir, "kit.db");
+  const db = new Database(dbPath);
+  try {
+    prepareKitSqliteDatabase(db);
+    insertCaeRegistryVersion(db, {
+      versionId: "cae.reg.badmeta",
+      createdBy: "test",
+      note: "fixture",
+      setActive: true
+    });
+    insertCaeRegistryArtifactRow(db, {
+      versionId: "cae.reg.badmeta",
+      artifactId: "cae.badmeta.artifact",
+      artifactType: "policy-doc",
+      path: ".ai/README.md",
+      title: "x",
+      metadataJson: "NOT JSON {{{"
+    });
+    insertCaeRegistryActivationRow(db, {
+      versionId: "cae.reg.badmeta",
+      activationId: "cae.badmeta.activation",
+      family: "do",
+      priority: 1,
+      lifecycleState: "active",
+      scopeJson: JSON.stringify({ conditions: [{ kind: "always" }] }),
+      artifactRefsJson: JSON.stringify([{ artifactId: "cae.badmeta.artifact" }]),
+      metadataJson: "{}"
+    });
+    const res = loadCaeRegistryFromSqliteDb(db, workspaceRoot, { verifyArtifactPaths: false });
+    assert.equal(res.ok, false);
+    assert.equal(res.code, "cae-registry-sqlite-invalid-json");
+  } finally {
+    db.close();
+  }
+});
+
 test("replaceActiveCaeRegistryFromLoaded round-trips default JSON seed", async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), "wk-cae-sqlite-import-"));
   mkdirSync(path.join(dir, ".workspace-kit", "tasks"), { recursive: true });

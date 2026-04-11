@@ -6,6 +6,7 @@ import {
   caeRegistryTablesReady,
   countCaeAckRows,
   countCaeTraceRows,
+  getActiveCaeRegistryVersionId,
   insertCaeAckSatisfaction,
   loadCaeTraceSnapshot,
   openKitSqliteReadWrite,
@@ -369,7 +370,7 @@ export const contextActivationModule: WorkflowModule = {
       };
     }
 
-    if (name === "cae-registry-validate") {
+    if (name === "cae-registry-validate" || name === "cae-validate-registry") {
       const bad = requireSchemaV1(args);
       if (bad) return bad;
       const loaded = loadRegistryForCae(ws, effective);
@@ -471,16 +472,31 @@ export const contextActivationModule: WorkflowModule = {
       const issues = load.ok
         ? []
         : [{ code: load.code, detail: load.message ?? "" }];
+      const registryStore = getAtPath(effective, "kit.cae.registryStore");
       const data: Record<string, unknown> = {
         schemaVersion: 1,
         caeEnabled,
         persistenceEnabled,
         lastEvalAt: getLastCaeEvalIso(),
         registryStatus,
-        issues
+        issues,
+        registryStore: typeof registryStore === "string" ? registryStore : "sqlite"
       };
       if (load.ok) {
         data.registryContentHash = load.reg.registryDigest;
+        data.artifactCount = load.reg.artifactById.size;
+        data.activationCount = load.reg.activationById.size;
+        const db = openKitSqliteReadWrite(ws, effective);
+        if (db) {
+          try {
+            if (caeRegistryTablesReady(db)) {
+              const vid = getActiveCaeRegistryVersionId(db);
+              if (vid) data.activeRegistryVersionId = vid;
+            }
+          } finally {
+            db.close();
+          }
+        }
       }
       const includeDetails = args.includeDetails === true;
       if (includeDetails && persistenceEnabled) {
