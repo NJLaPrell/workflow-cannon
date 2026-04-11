@@ -4,7 +4,7 @@ import { seedFeatureRegistryIfEmpty } from "./feature-registry-migration.js";
 type SqliteDatabase = InstanceType<typeof Database>;
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 12;
+export const KIT_SQLITE_USER_VERSION = 13;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 
