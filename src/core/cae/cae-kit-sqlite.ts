@@ -407,6 +407,15 @@ export function insertCaeRegistryMutationAudit(
   }
 }
 
+export function countCaeRegistryMutationAuditRows(db: SqliteDatabase): number {
+  try {
+    const row = db.prepare(`SELECT COUNT(*) AS c FROM cae_registry_mutations`).get() as { c: number };
+    return Number(row.c) || 0;
+  } catch {
+    return 0;
+  }
+}
+
 export function updateCaeRegistryArtifactFields(
   db: SqliteDatabase,
   versionId: string,
