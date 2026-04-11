@@ -42,6 +42,8 @@ export type LoadCaeRegistryResult =
   | { ok: true; value: CaeLoadedRegistry }
   | { ok: false; code: string; message: string };
 
+export type SingleRecordValidationResult<T> = { ok: true; value: T } | { ok: false; code: string; message: string };
+
 const ajv = new Ajv2020Ctor({ allErrors: true, strict: false });
 const validateArtifact = ajv.compile(registryEntrySchema as object) as ValidateFunction;
 const validateActivation = ajv.compile(activationDefSchema as object) as ValidateFunction;
@@ -256,4 +258,32 @@ export function loadCaeRegistry(
       registryDigest
     }
   };
+}
+
+/** Validate a single artifact object (registry-entry schema). */
+export function validateSingleCaeArtifactRecord(
+  record: unknown
+): SingleRecordValidationResult<CaeRegistryArtifactRow> {
+  if (!validateArtifact(record)) {
+    return {
+      ok: false,
+      code: "cae-registry-schema-invalid",
+      message: ajv.errorsText(validateArtifact.errors)
+    };
+  }
+  return { ok: true, value: record as CaeRegistryArtifactRow };
+}
+
+/** Validate a single activation object (activation-definition schema). */
+export function validateSingleCaeActivationRecord(
+  record: unknown
+): SingleRecordValidationResult<CaeRegistryActivationRow> {
+  if (!validateActivation(record)) {
+    return {
+      ok: false,
+      code: "cae-activations-schema-invalid",
+      message: ajv.errorsText(validateActivation.errors)
+    };
+  }
+  return { ok: true, value: record as CaeRegistryActivationRow };
 }

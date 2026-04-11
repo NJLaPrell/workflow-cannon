@@ -53,6 +53,7 @@ If **`T868`** ships **`cae-registry-apply`** / **`cae-activation-upsert`**-class
 
 ## Cross-references
 
+- **`.ai/cae/registry-mutation-governance.md`** — **Epic 5 E1/E2/E3**: SQLite registry admin CLI gate (**`caeMutationApproval`** + **`kit.cae.adminMutations`**), manifest **`policySensitivity`** story, and **`cae_registry_mutations`** audit table.
 - **`.ai/cae/enforcement-lane.md`** — enforcement does not mutate registry.
 - **`ADR-cae-persistence-v1.md`** (**`T845`**) — audit storage posture.
 - **`tasks/cae/specs/T868.md`**

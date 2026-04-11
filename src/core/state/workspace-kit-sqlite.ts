@@ -328,6 +328,25 @@ function migrateV11ToV12(db: SqliteDatabase): void {
   db.exec(CAE_REGISTRY_DDL);
 }
 
+/** Append-only audit for CAE registry mutations (Phase 70 / CAE_PLAN Epic 5 E3, T902). */
+const CAE_REGISTRY_MUTATIONS_AUDIT_DDL = `
+CREATE TABLE IF NOT EXISTS cae_registry_mutations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  recorded_at TEXT NOT NULL,
+  actor TEXT NOT NULL,
+  command_name TEXT NOT NULL,
+  version_id TEXT NOT NULL,
+  note TEXT,
+  payload_json TEXT NOT NULL DEFAULT '{}'
+);
+CREATE INDEX IF NOT EXISTS idx_cae_registry_mutations_version ON cae_registry_mutations(version_id);
+CREATE INDEX IF NOT EXISTS idx_cae_registry_mutations_recorded ON cae_registry_mutations(recorded_at);
+`;
+
+function migrateV12ToV13(db: SqliteDatabase): void {
+  db.exec(CAE_REGISTRY_MUTATIONS_AUDIT_DDL);
+}
+
 /**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
@@ -404,6 +423,11 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
     migrateV11ToV12(db);
     db.pragma("user_version = 12");
     current = 12;
+  }
+  if (current < 13) {
+    migrateV12ToV13(db);
+    db.pragma("user_version = 13");
+    current = 13;
   }
 }
 

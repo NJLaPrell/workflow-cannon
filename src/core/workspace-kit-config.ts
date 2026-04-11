@@ -85,7 +85,12 @@ export const KIT_CONFIG_DEFAULTS: Record<string, unknown> = {
       shadow: {
         /** Product default: shadow labels without blocking (**`T848`**). */
         defaultOn: false
-      }
+      },
+      /**
+       * When true with `enabled`, SQLite registry admin mutators (`cae-create-artifact`, version CRUD, …)
+       * are allowed with JSON **`caeMutationApproval`** (CAE governance lane — see **`.ai/cae/registry-mutation-governance.md`**).
+       */
+      adminMutations: false
     }
   } as Record<string, unknown>,
   tasks: {

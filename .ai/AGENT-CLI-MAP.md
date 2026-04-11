@@ -402,6 +402,15 @@ pnpm exec wk run cae-satisfy-ack '{"schemaVersion":1,"traceId":"<traceId>","ackT
 pnpm exec wk run cae-import-json-registry '{"schemaVersion":1,"policyApproval":{"confirmed":true,"rationale":"seed sqlite registry from default JSON paths"}}'
 ```
 
+**CAE SQLite registry admin (Phase 70 — Tier C manifest + in-handler gate; JSON `caeMutationApproval`, not `policyApproval`):**
+
+Requires **`kit.cae.enabled`**, **`kit.cae.registryStore: "sqlite"`**, **`kit.cae.adminMutations: true`**, plus **`caeMutationApproval`** + **`actor`** on mutators. Canon: **`.ai/cae/registry-mutation-governance.md`**.
+
+```bash
+pnpm exec wk run cae-list-registry-versions '{"schemaVersion":1}'
+pnpm exec wk run cae-create-registry-version '{"schemaVersion":1,"actor":"operator","versionId":"cae.reg.admin.example","note":"demo","caeMutationApproval":{"confirmed":true,"rationale":"empty version"},"config":{"kit":{"cae":{"enabled":true,"adminMutations":true,"registryStore":"sqlite"}}}}'
+```
+
 When these rows land in the manifest, add matching lines to **`docs/maintainers/AGENT-CLI-MAP.md`** (or an **`agent-cli-map-exclusions.json`** entry with rationale) so **`pnpm run check`** stays green — see **`.ai/cae/cli-read-only.md` § Agent CLI map coverage**.
 
 ## Tier C — Safe discovery / read-only examples

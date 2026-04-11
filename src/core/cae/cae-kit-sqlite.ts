@@ -338,3 +338,232 @@ export function deleteInactiveCaeRegistryVersion(db: SqliteDatabase, versionId: 
   db.prepare(`DELETE FROM cae_registry_versions WHERE version_id = ?`).run(versionId);
   return true;
 }
+
+export type CaeRegistryVersionMetaRow = {
+  version_id: string;
+  created_at: string;
+  created_by: string;
+  is_active: number;
+  note: string | null;
+};
+
+export function getCaeRegistryVersionMeta(
+  db: SqliteDatabase,
+  versionId: string
+): CaeRegistryVersionMetaRow | null {
+  try {
+    const row = db
+      .prepare(
+        `SELECT version_id, created_at, created_by, is_active, note FROM cae_registry_versions WHERE version_id = ?`
+      )
+      .get(versionId) as CaeRegistryVersionMetaRow | undefined;
+    return row ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export type CaeRegistryVersionListRow = CaeRegistryVersionMetaRow & {
+  artifact_count: number;
+  activation_count: number;
+};
+
+export function listCaeRegistryVersionsWithCounts(db: SqliteDatabase): CaeRegistryVersionListRow[] {
+  try {
+    return db
+      .prepare(
+        `SELECT v.version_id, v.created_at, v.created_by, v.is_active, v.note,
+            (SELECT COUNT(*) FROM cae_registry_artifacts a WHERE a.version_id = v.version_id) AS artifact_count,
+            (SELECT COUNT(*) FROM cae_registry_activations c WHERE c.version_id = v.version_id) AS activation_count
+         FROM cae_registry_versions v
+         ORDER BY v.created_at DESC`
+      )
+      .all() as CaeRegistryVersionListRow[];
+  } catch {
+    return [];
+  }
+}
+
+/** Append-only CAE registry mutation audit (kit SQLite v13+). */
+export function insertCaeRegistryMutationAudit(
+  db: SqliteDatabase,
+  row: {
+    actor: string;
+    commandName: string;
+    versionId: string;
+    note?: string | null;
+    payload?: Record<string, unknown>;
+  }
+): void {
+  const now = new Date().toISOString();
+  const payloadJson = JSON.stringify(row.payload ?? {});
+  try {
+    db.prepare(
+      `INSERT INTO cae_registry_mutations (recorded_at, actor, command_name, version_id, note, payload_json)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    ).run(now, row.actor, row.commandName, row.versionId, row.note ?? null, payloadJson);
+  } catch {
+    /* pre-v13 DB or missing table — skip audit rather than failing the mutation */
+  }
+}
+
+export function updateCaeRegistryArtifactFields(
+  db: SqliteDatabase,
+  versionId: string,
+  artifactId: string,
+  patch: {
+    artifactType?: string;
+    path?: string;
+    title?: string | null;
+    description?: string | null;
+    metadataJson?: string;
+  }
+): boolean {
+  const fields: string[] = [];
+  const vals: unknown[] = [];
+  if (patch.artifactType !== undefined) {
+    fields.push("artifact_type = ?");
+    vals.push(patch.artifactType);
+  }
+  if (patch.path !== undefined) {
+    fields.push("path = ?");
+    vals.push(patch.path);
+  }
+  if (patch.title !== undefined) {
+    fields.push("title = ?");
+    vals.push(patch.title);
+  }
+  if (patch.description !== undefined) {
+    fields.push("description = ?");
+    vals.push(patch.description);
+  }
+  if (patch.metadataJson !== undefined) {
+    fields.push("metadata_json = ?");
+    vals.push(patch.metadataJson);
+  }
+  if (!fields.length) return false;
+  vals.push(versionId, artifactId);
+  const sql = `UPDATE cae_registry_artifacts SET ${fields.join(", ")} WHERE version_id = ? AND artifact_id = ?`;
+  const res = db.prepare(sql).run(...vals);
+  return res.changes > 0;
+}
+
+export function retireCaeRegistryArtifact(
+  db: SqliteDatabase,
+  versionId: string,
+  artifactId: string,
+  retiredAt?: string
+): boolean {
+  const ts = retiredAt ?? new Date().toISOString();
+  const res = db
+    .prepare(
+      `UPDATE cae_registry_artifacts SET retired_at = ? WHERE version_id = ? AND artifact_id = ? AND retired_at IS NULL`
+    )
+    .run(ts, versionId, artifactId);
+  return res.changes > 0;
+}
+
+export function updateCaeRegistryActivationFields(
+  db: SqliteDatabase,
+  versionId: string,
+  activationId: string,
+  patch: {
+    family?: string;
+    priority?: number;
+    lifecycleState?: string;
+    scopeJson?: string;
+    artifactRefsJson?: string;
+    acknowledgementJson?: string | null;
+    metadataJson?: string;
+  }
+): boolean {
+  const fields: string[] = [];
+  const vals: unknown[] = [];
+  if (patch.family !== undefined) {
+    fields.push("family = ?");
+    vals.push(patch.family);
+  }
+  if (patch.priority !== undefined) {
+    fields.push("priority = ?");
+    vals.push(patch.priority);
+  }
+  if (patch.lifecycleState !== undefined) {
+    fields.push("lifecycle_state = ?");
+    vals.push(patch.lifecycleState);
+  }
+  if (patch.scopeJson !== undefined) {
+    fields.push("scope_json = ?");
+    vals.push(patch.scopeJson);
+  }
+  if (patch.artifactRefsJson !== undefined) {
+    fields.push("artifact_refs_json = ?");
+    vals.push(patch.artifactRefsJson);
+  }
+  if (patch.acknowledgementJson !== undefined) {
+    fields.push("acknowledgement_json = ?");
+    vals.push(patch.acknowledgementJson);
+  }
+  if (patch.metadataJson !== undefined) {
+    fields.push("metadata_json = ?");
+    vals.push(patch.metadataJson);
+  }
+  if (!fields.length) return false;
+  vals.push(versionId, activationId);
+  const sql = `UPDATE cae_registry_activations SET ${fields.join(", ")} WHERE version_id = ? AND activation_id = ?`;
+  const res = db.prepare(sql).run(...vals);
+  return res.changes > 0;
+}
+
+export function retireCaeRegistryActivation(
+  db: SqliteDatabase,
+  versionId: string,
+  activationId: string,
+  retiredAt?: string
+): boolean {
+  const ts = retiredAt ?? new Date().toISOString();
+  const res = db
+    .prepare(
+      `UPDATE cae_registry_activations SET retired_at = ? WHERE version_id = ? AND activation_id = ? AND retired_at IS NULL`
+    )
+    .run(ts, versionId, activationId);
+  return res.changes > 0;
+}
+
+/**
+ * Copy artifact + activation rows from one version to another (used by clone).
+ * Target version must already exist as a header row with no children (or caller cleared it).
+ */
+export function copyCaeRegistryVersionContents(
+  db: SqliteDatabase,
+  fromVersionId: string,
+  toVersionId: string
+): void {
+  const arts = listCaeRegistryArtifactsForVersion(db, fromVersionId);
+  for (const r of arts) {
+    insertCaeRegistryArtifactRow(db, {
+      versionId: toVersionId,
+      artifactId: r.artifact_id,
+      artifactType: r.artifact_type,
+      path: r.path,
+      title: r.title,
+      description: r.description,
+      metadataJson: r.metadata_json,
+      retiredAt: r.retired_at
+    });
+  }
+  const acts = listCaeRegistryActivationsForVersion(db, fromVersionId);
+  for (const r of acts) {
+    insertCaeRegistryActivationRow(db, {
+      versionId: toVersionId,
+      activationId: r.activation_id,
+      family: r.family,
+      priority: r.priority,
+      lifecycleState: r.lifecycle_state,
+      scopeJson: r.scope_json,
+      artifactRefsJson: r.artifact_refs_json,
+      acknowledgementJson: r.acknowledgement_json,
+      metadataJson: r.metadata_json,
+      retiredAt: r.retired_at
+    });
+  }
+}

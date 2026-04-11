@@ -8,10 +8,12 @@ import {
   countCaeTraceRows,
   getActiveCaeRegistryVersionId,
   insertCaeAckSatisfaction,
+  insertCaeRegistryMutationAudit,
   loadCaeTraceSnapshot,
   openKitSqliteReadWrite,
   persistCaeTraceIfEnabled
 } from "../../core/cae/cae-kit-sqlite.js";
+import { tryHandleCaeRegistryAdminCommand } from "../../core/cae/cae-registry-admin-cli.js";
 import { evaluateActivationBundle } from "../../core/cae/cae-evaluate.js";
 import { loadCaeRegistryForKit } from "../../core/cae/cae-registry-effective.js";
 import { loadCaeRegistry } from "../../core/cae/cae-registry-load.js";
@@ -169,6 +171,11 @@ export const contextActivationModule: WorkflowModule = {
     const name = command.name;
     const ws = ctx.workspacePath;
     const effective = (ctx.effectiveConfig as Record<string, unknown> | undefined) ?? {};
+
+    const adminRes = tryHandleCaeRegistryAdminCommand(name, args, ws, effective);
+    if (adminRes !== undefined) {
+      return adminRes;
+    }
 
     if (name === "cae-list-artifacts") {
       const bad = requireSchemaV1(args);
@@ -446,6 +453,16 @@ export const contextActivationModule: WorkflowModule = {
           createdBy: actor,
           note,
           registry: loadedSeed.value
+        });
+        insertCaeRegistryMutationAudit(db, {
+          actor,
+          commandName: "cae-import-json-registry",
+          versionId,
+          note,
+          payload: {
+            artifactCount: loadedSeed.value.artifactById.size,
+            activationCount: loadedSeed.value.activationById.size
+          }
         });
       } finally {
         db.close();

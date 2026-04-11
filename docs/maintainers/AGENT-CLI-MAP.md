@@ -489,6 +489,25 @@ workspace-kit run cae-satisfy-ack '{"schemaVersion":1,"traceId":"<traceId>","ack
 workspace-kit run cae-import-json-registry '{"schemaVersion":1,"policyApproval":{"confirmed":true,"rationale":"seed sqlite registry from default JSON paths"}}'
 ```
 
+**CAE SQLite registry admin** — manifest Tier **C** (no JSON `policyApproval`); handlers require **`kit.cae.enabled`**, **`kit.cae.registryStore: "sqlite"`**, **`kit.cae.adminMutations: true`**, plus **`caeMutationApproval`** + **`actor`** on mutators. See **`.ai/cae/registry-mutation-governance.md`**.
+
+```bash
+workspace-kit run cae-list-registry-versions '{"schemaVersion":1}'
+workspace-kit run cae-get-registry-version '{"schemaVersion":1,"versionId":"cae.reg.seed"}'
+workspace-kit run cae-create-registry-version '{"schemaVersion":1,"actor":"operator","versionId":"cae.reg.example","caeMutationApproval":{"confirmed":true,"rationale":"create empty version"}}'
+workspace-kit run cae-clone-registry-version '{"schemaVersion":1,"actor":"operator","fromVersionId":"cae.reg.seed","toVersionId":"cae.reg.clone","caeMutationApproval":{"confirmed":true,"rationale":"clone"}}'
+workspace-kit run cae-activate-registry-version '{"schemaVersion":1,"actor":"operator","versionId":"cae.reg.seed","caeMutationApproval":{"confirmed":true,"rationale":"activate"}}'
+workspace-kit run cae-delete-registry-version '{"schemaVersion":1,"actor":"operator","versionId":"cae.reg.clone","caeMutationApproval":{"confirmed":true,"rationale":"delete inactive"}}'
+workspace-kit run cae-rollback-registry-version '{"schemaVersion":1,"actor":"operator","caeMutationApproval":{"confirmed":true,"rationale":"rollback"}}'
+workspace-kit run cae-create-artifact '{"schemaVersion":1,"actor":"operator","artifact":{"schemaVersion":1,"artifactId":"cae.example.playbook","artifactType":"playbook","ref":{"path":".ai/README.md"}},"caeMutationApproval":{"confirmed":true,"rationale":"add artifact"}}'
+workspace-kit run cae-update-artifact '{"schemaVersion":1,"actor":"operator","artifactId":"cae.example.playbook","artifact":{"title":"renamed"},"caeMutationApproval":{"confirmed":true,"rationale":"patch artifact"}}'
+workspace-kit run cae-retire-artifact '{"schemaVersion":1,"actor":"operator","artifactId":"cae.example.playbook","caeMutationApproval":{"confirmed":true,"rationale":"retire artifact"}}'
+workspace-kit run cae-create-activation '{"schemaVersion":1,"actor":"operator","activation":{"schemaVersion":1,"activationId":"cae.activation.example","family":"do","lifecycleState":"active","priority":1,"scope":{"conditions":[{"kind":"always"}]},"artifactRefs":[{"artifactId":"cae.playbook.machine-playbooks"}]},"caeMutationApproval":{"confirmed":true,"rationale":"add activation"}}'
+workspace-kit run cae-update-activation '{"schemaVersion":1,"actor":"operator","activationId":"cae.activation.example","activation":{"priority":2},"caeMutationApproval":{"confirmed":true,"rationale":"tune activation"}}'
+workspace-kit run cae-disable-activation '{"schemaVersion":1,"actor":"operator","activationId":"cae.activation.example","caeMutationApproval":{"confirmed":true,"rationale":"disable"}}'
+workspace-kit run cae-retire-activation '{"schemaVersion":1,"actor":"operator","activationId":"cae.activation.example","caeMutationApproval":{"confirmed":true,"rationale":"retire activation"}}'
+```
+
 Use **`fixtures/cae/evaluation-context/valid/minimal.json`** as a copy-paste template for **`evaluationContext`**. Traces are **ephemeral** until persistence (**T867**).
 
 ## CLI map coverage guardrail
