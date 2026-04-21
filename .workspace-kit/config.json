@@ -10,8 +10,19 @@
       "profileSetId": "rpg_party_v1",
       "tier": 4
     },
-    "currentPhaseLabel": "Phase 67 — in progress; next Phase 68",
-    "currentPhaseNumber": 67
+    "cae": {
+      "enabled": true,
+      "persistence": true,
+      "advisoryInstructionSurface": true,
+      "runtime": {
+        "shadowPreflight": true
+      },
+      "enforcement": {
+        "enabled": false
+      }
+    },
+    "currentPhaseLabel": "Phase 70 — CAE registry + governance shipped",
+    "currentPhaseNumber": 70
   },
   "tasks": {
     "persistenceBackend": "sqlite",
