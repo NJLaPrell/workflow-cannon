@@ -11,6 +11,7 @@ CAE evaluates **bounded, typed** workspace + task + command context and returns 
 | Doc | Purpose |
 | --- | --- |
 | **`tasks/cae/CAE-PROGRAM-CONTEXT.md`** | Program objectives, boundaries, sequencing. |
+| **`.ai/cae/NEXT.md`** | Current follow-on plan: operator vertical slice, hardening, usability, and remaining gaps. |
 | **`.ai/cae/registry/*.json`** | **Seed / fixtures only** — runtime registry loads from **kit SQLite** active version by default (**`kit.cae.registryStore: sqlite`**). Import: **`cae-import-json-registry`**. |
 | **`.ai/cae/evaluation-context.md`** + **`schemas/cae/evaluation-context.v1.json`** | What builders may put in context (**`T859`**). |
 | **`.ai/cae/runtime-integration.md`** | Where CAE hooks into CLI vs router (**`T849`**). |

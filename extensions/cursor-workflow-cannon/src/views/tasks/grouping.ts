@@ -8,7 +8,15 @@ type TaskEntity = {
   type?: string;
 };
 
-export const STATUS_ORDER = ["ready", "in_progress", "blocked", "proposed", "completed", "cancelled"];
+export const STATUS_ORDER = [
+  "ready",
+  "proposed",
+  "research",
+  "blocked",
+  "completed",
+  "cancelled",
+  "in_progress"
+];
 
 export type TaskGroup = { status: string; label: string; tasks: TaskEntity[] };
 

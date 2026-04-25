@@ -10,6 +10,7 @@ import {
   buildCollaborationProfilesHubPrompt,
   buildImprovementTriagePrompt,
   buildPlanningInterviewPrompt,
+  buildPlanningInterviewResumePrompt,
   buildTaskToPhaseBranchPrompt,
   buildTranscriptChurnResearchPrompt
 } from "../../playbook-chat-prompts.js";
@@ -126,6 +127,13 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
       if (msg?.type === "prefillPlanningInterviewChat") {
         await prefillCursorChat(buildPlanningInterviewPrompt(), { newChat: true });
+      }
+      if (msg?.type === "prefillPlanningResumeChat") {
+        const resumeCli = typeof msg.resumeCli === "string" ? msg.resumeCli.trim() : "";
+        await prefillCursorChat(buildPlanningInterviewResumePrompt(resumeCli), { newChat: true });
+      }
+      if (msg?.type === "planningDiscard") {
+        await this.onPlanningDiscard();
       }
       if (msg?.type === "planningWizardStart") {
         const pt = typeof msg.planningType === "string" ? msg.planningType.trim() : "";
@@ -457,6 +465,25 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     await this.pushUpdate();
   }
 
+  private async onPlanningDiscard(): Promise<void> {
+    const pick = await vscode.window.showWarningMessage(
+      "Discard the saved planning interview?",
+      { modal: true },
+      "Discard"
+    );
+    if (pick !== "Discard") {
+      return;
+    }
+    const res = await this.client.run("build-plan", { action: "discard" });
+    if (!res.ok) {
+      await vscode.window.showErrorMessage(res.message ?? String(res.code ?? "Failed to discard planning interview"));
+      return;
+    }
+    this.planningWizard = { kind: "idle" };
+    this.notifyKitStateChanged();
+    await this.pushUpdate();
+  }
+
   /**
    * Embeds rendered HTML in `webview.html` so the panel works even when postMessage delivery is flaky.
    * Buttons still use a tiny inline script + postMessage (host only receives clicks).
@@ -513,7 +540,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       `script-src ${webview.cspSource} 'unsafe-inline'`
     ].join("; ");
 
-    const bootstrap = `(function(){var vscode=acquireVsCodeApi();window.addEventListener("message",function(ev){var m=ev.data;if(!m||m.type!=="wcReplaceRoot"||typeof m.html!=="string")return;var root=document.getElementById("root");if(!root)return;var open={};root.querySelectorAll("details[data-wc-track]").forEach(function(d){var k=d.getAttribute("data-wc-track");if(k&&d.open)open[k]=true;});root.innerHTML=m.html;Object.keys(open).forEach(function(k){var el=root.querySelector('details[data-wc-track="'+k+'"]');if(el)el.open=true;});});var btn=document.getElementById("btn");var rootEl=document.getElementById("root");if(btn)btn.addEventListener("click",function(){vscode.postMessage({type:"refresh"});});if(rootEl)rootEl.addEventListener("click",function(ev){var t=ev.target;if(!t||t.tagName!=="BUTTON")return;var act=t.getAttribute("data-wc-action");if(!act)return;ev.stopPropagation();if(act==="wishlist-view"){var wv=(t.getAttribute("data-wishlist-id")||"").trim();if(wv)vscode.postMessage({type:"openWishlistDetail",wishlistId:wv});return;}if(act==="planning-new-plan"){vscode.postMessage({type:"prefillPlanningInterviewChat"});return;}if(act==="planning-wizard-start"){var sel=document.getElementById("wc-planning-type");var pt=sel&&sel.value?String(sel.value).trim():"";if(pt)vscode.postMessage({type:"planningWizardStart",planningType:pt});return;}if(act==="planning-wizard-submit"){var ta=document.getElementById("wc-planning-answer");var txt=ta&&typeof ta.value==="string"?ta.value.trim():"";vscode.postMessage({type:"planningWizardSubmit",answer:txt});return;}if(act==="planning-wizard-cancel"){vscode.postMessage({type:"planningWizardCancel"});return;}if(act==="planning-wizard-dismiss"){vscode.postMessage({type:"planningWizardDismiss"});return;}if(act==="collaboration-hub"){vscode.postMessage({type:"prefillCollaborationHubChat"});return;}if(act==="deliver-phase-prompt"){var kp=(t.getAttribute("data-wc-kit-phase")||"").trim();vscode.postMessage({type:"prefillDeliverPhaseChat",kitPhase:kp});return;}if(act==="add-wishlist-item"){vscode.postMessage({type:"addWishlistItem"});return;}if(act==="generate-features-chat"){vscode.postMessage({type:"prefillGenerateFeaturesChat"});return;}if(act==="transcript-churn-research-chat"){var tcTid=(t.getAttribute("data-task-id")||"").trim();vscode.postMessage({type:"prefillTranscriptChurnResearchChat",taskId:tcTid});return;}if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}if(act==="phase-complete-release"){var ph=(t.getAttribute("data-wc-phase-phrase")||"").trim();vscode.postMessage({type:"prefillPhaseCompleteReleaseChat",phasePhrase:ph});return;}if(act==="proposed-imp-accept-phase"||act==="proposed-exe-accept-phase"){var batch=(t.getAttribute("data-proposed-task-ids")||"").trim();var cat=act==="proposed-exe-accept-phase"?"execution":"improvement";vscode.postMessage({type:"dashboardAcceptProposedPhase",category:cat,taskIds:batch});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});})();`;
+    const bootstrap = `(function(){var vscode=acquireVsCodeApi();window.addEventListener("message",function(ev){var m=ev.data;if(!m||m.type!=="wcReplaceRoot"||typeof m.html!=="string")return;var root=document.getElementById("root");if(!root)return;var open={};root.querySelectorAll("details[data-wc-track]").forEach(function(d){var k=d.getAttribute("data-wc-track");if(k&&d.open)open[k]=true;});root.innerHTML=m.html;Object.keys(open).forEach(function(k){var el=root.querySelector('details[data-wc-track="'+k+'"]');if(el)el.open=true;});});var btn=document.getElementById("btn");var rootEl=document.getElementById("root");if(btn)btn.addEventListener("click",function(){vscode.postMessage({type:"refresh"});});if(rootEl)rootEl.addEventListener("click",function(ev){var t=ev.target;if(!t||t.tagName!=="BUTTON")return;var act=t.getAttribute("data-wc-action");if(!act)return;ev.stopPropagation();if(act==="wishlist-view"){var wv=(t.getAttribute("data-wishlist-id")||"").trim();if(wv)vscode.postMessage({type:"openWishlistDetail",wishlistId:wv});return;}if(act==="planning-new-plan"){vscode.postMessage({type:"prefillPlanningInterviewChat"});return;}if(act==="planning-resume-chat"){var rc=(t.getAttribute("data-resume-cli")||"").trim();vscode.postMessage({type:"prefillPlanningResumeChat",resumeCli:rc});return;}if(act==="planning-discard"){vscode.postMessage({type:"planningDiscard"});return;}if(act==="planning-wizard-start"){var sel=document.getElementById("wc-planning-type");var pt=sel&&sel.value?String(sel.value).trim():"";if(pt)vscode.postMessage({type:"planningWizardStart",planningType:pt});return;}if(act==="planning-wizard-submit"){var ta=document.getElementById("wc-planning-answer");var txt=ta&&typeof ta.value==="string"?ta.value.trim():"";vscode.postMessage({type:"planningWizardSubmit",answer:txt});return;}if(act==="planning-wizard-cancel"){vscode.postMessage({type:"planningWizardCancel"});return;}if(act==="planning-wizard-dismiss"){vscode.postMessage({type:"planningWizardDismiss"});return;}if(act==="collaboration-hub"){vscode.postMessage({type:"prefillCollaborationHubChat"});return;}if(act==="deliver-phase-prompt"){var kp=(t.getAttribute("data-wc-kit-phase")||"").trim();vscode.postMessage({type:"prefillDeliverPhaseChat",kitPhase:kp});return;}if(act==="add-wishlist-item"){vscode.postMessage({type:"addWishlistItem"});return;}if(act==="generate-features-chat"){vscode.postMessage({type:"prefillGenerateFeaturesChat"});return;}if(act==="transcript-churn-research-chat"){var tcTid=(t.getAttribute("data-task-id")||"").trim();vscode.postMessage({type:"prefillTranscriptChurnResearchChat",taskId:tcTid});return;}if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}if(act==="phase-complete-release"){var ph=(t.getAttribute("data-wc-phase-phrase")||"").trim();vscode.postMessage({type:"prefillPhaseCompleteReleaseChat",phasePhrase:ph});return;}if(act==="proposed-imp-accept-phase"||act==="proposed-exe-accept-phase"){var batch=(t.getAttribute("data-proposed-task-ids")||"").trim();var cat=act==="proposed-exe-accept-phase"?"execution":"improvement";vscode.postMessage({type:"dashboardAcceptProposedPhase",category:cat,taskIds:batch});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});})();`;
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -611,6 +638,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     .dash-planning-head-main { flex: 1; min-width: 0; }
     p.dash-planning-title { margin: 0; }
+    .dash-planning-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; flex-shrink: 0; }
     button.dash-new-plan-btn {
       margin: 0;
       flex-shrink: 0;
@@ -628,17 +656,35 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     button.dash-new-plan-btn:active {
       filter: brightness(0.94);
     }
+    button.dash-planning-discard-btn {
+      margin: 0;
+      padding: 5px 12px;
+      font-size: 11px;
+      font-weight: 500;
+      border-radius: 6px;
+    }
     .dash-planning-wizard {
       margin: 8px 0 10px 0;
       padding: 8px;
       border-radius: 6px;
       background: var(--vscode-textCodeBlock-background);
     }
+    .dash-planning-wizard-picker-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
     .dash-planning-wizard-label {
       display: block;
       margin: 6px 0 2px 0;
       font-size: 11px;
       font-weight: 600;
+    }
+    .dash-planning-wizard-label-inline {
+      display: inline;
+      margin: 0;
+      flex-shrink: 0;
     }
     .dash-planning-wizard-select {
       max-width: min(100%, 220px);

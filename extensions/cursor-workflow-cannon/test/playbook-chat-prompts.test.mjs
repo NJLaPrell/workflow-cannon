@@ -7,6 +7,7 @@ import {
   buildGenerateFeaturesPrompt,
   buildImprovementTriagePrompt,
   buildPlanningInterviewPrompt,
+  buildPlanningInterviewResumePrompt,
   buildTaskToPhaseBranchPrompt,
   buildTranscriptChurnResearchPrompt
 } from "../dist/playbook-chat-prompts.js";
@@ -76,7 +77,16 @@ test("buildPlanningInterviewPrompt references planning runbook and build-plan", 
   assert.match(p, /pnpm exec wk run list-planning-types/);
   assert.match(p, /pnpm exec wk run build-plan/);
   assert.match(p, /list-wishlist/);
-  assert.match(p, /New Plan/);
+  assert.match(p, /Start Interview/);
+});
+
+test("buildPlanningInterviewResumePrompt embeds saved resume command", () => {
+  const p = buildPlanningInterviewResumePrompt(
+    `workspace-kit run build-plan '{"planningType":"change","answers":{},"finalize":false}'`
+  );
+  assert.match(p, /Resume the in-progress/);
+  assert.match(p, /workspace-kit run build-plan/);
+  assert.match(p, /planning-workflow\.md/);
 });
 
 test("buildCollaborationProfilesHubPrompt references slash hub, sync command, and policy", () => {

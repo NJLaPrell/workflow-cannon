@@ -11,6 +11,7 @@ workspace-kit run build-plan '{"planningType":"new-feature","answers":{"featureG
 workspace-kit run build-plan '{"planningType":"new-feature","answers":{"featureGoal":"...","placement":"CLI","technology":"TypeScript","targetAudience":"AI Agent Operators"},"finalize":true,"createWishlist":true}'
 workspace-kit run build-plan '{"planningType":"new-feature","outputMode":"response","answers":{"featureGoal":"...","placement":"CLI","technology":"TypeScript","targetAudience":"AI Agent Operators"},"finalize":true}'
 workspace-kit run build-plan '{"planningType":"new-feature","outputMode":"tasks","persistTasks":true,"taskPhase":"Phase 18 - Module platform and state consolidation","answers":{"featureGoal":"...","placement":"CLI","technology":"TypeScript","targetAudience":"AI Agent Operators"},"finalize":true}'
+workspace-kit run build-plan '{"action":"discard"}'
 ```
 
 ## Session snapshot (local)
@@ -27,6 +28,7 @@ While an interview is **in progress** or **blocked on finalize**, the module wri
 - `persistTasks` (optional boolean, default `false`): with `outputMode:"tasks"`, writes generated task outputs to Task Engine when true (single-task artifact path only).
 - `taskPhase` / `taskType` / `taskPriority` (optional): task output shaping hints for `outputMode:"tasks"` (single-task artifact path only).
 - `executionTaskDrafts` (optional array): when `finalize:true` and `outputMode:"tasks"`, a **non-empty** array of **convert-wishlist-compatible** task rows (`id` optional — missing/invalid ids are allocated as the next free `T###`; `title`, `phase`, `approach`, non-empty `technicalScope`, non-empty `acceptanceCriteria` required per row; same rules as `convert-wishlist` `tasks[]`). Produces **`planning-multi-task-decomposition-preview`** with `data.taskOutputs[]`, `data.planningDecomposition`, and provenance. **`persistTasks` must be false** (or omitted); multi-row persistence is a separate task-engine bulk command with **`expectedPlanningGeneration`**.
+- `action:"discard"` (optional): clears the saved local planning interview snapshot without requiring `planningType`.
 
 ## Returns
 
@@ -42,6 +44,7 @@ While an interview is **in progress** or **blocked on finalize**, the module wri
 - `planning-multi-task-persist-delegated`: `executionTaskDrafts` set with `persistTasks:true` (not supported on `build-plan`).
 - `planning-adaptive-unknowns`: returned when `finalize:true` and unresolved adaptive follow-ups are blocked by config.
 - `planning-critical-unknowns`: returned when `finalize:true` but critical answers are missing.
+- `planning-session-discarded`: saved local planning interview snapshot was cleared.
 
 All success/error payloads include `data.cliGuidance` with critical-question completion progress and a suggested next `workspace-kit run build-plan` command.
 

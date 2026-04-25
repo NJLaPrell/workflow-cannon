@@ -86,6 +86,19 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /Wishlist/);
   assert.match(html, /Proposed · Improvements/);
   assert.match(html, /Proposed · Execution/);
+  const readyIdx = html.indexOf("Ready · Improvements");
+  const proposedIdx = html.indexOf("Proposed · Improvements");
+  const researchIdx = html.indexOf("Research · Transcript churn");
+  const blockedIdx = html.indexOf("<b>Blocked</b>");
+  const completedIdx = html.indexOf("<b>Completed</b>");
+  const cancelledIdx = html.indexOf("<b>Cancelled</b>");
+  assert.ok(readyIdx !== -1 && proposedIdx !== -1 && readyIdx < proposedIdx);
+  assert.ok(proposedIdx !== -1 && researchIdx !== -1 && proposedIdx < researchIdx);
+  assert.ok(researchIdx !== -1 && blockedIdx !== -1 && researchIdx < blockedIdx);
+  assert.ok(blockedIdx !== -1 && completedIdx !== -1 && blockedIdx < completedIdx);
+  assert.ok(completedIdx !== -1 && cancelledIdx !== -1 && completedIdx < cancelledIdx);
+  assert.match(html, /<details class="status-section" data-wc-track="status-ready-imp">/);
+  assert.match(html, /<details class="status-section" data-wc-track="status-ready-exe" open>/);
   assert.match(html, /imp-example/);
   assert.match(html, /T319/);
   assert.match(html, /T320/);
@@ -115,8 +128,10 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /Not Phased/);
   assert.doesNotMatch(html, /Dependency Overview/);
   assert.match(html, /Planning Interview/);
-  assert.match(html, /data-wc-action="planning-new-plan"/);
+  assert.doesNotMatch(html, /data-wc-action="planning-new-plan"/);
+  assert.doesNotMatch(html, /data-wc-action="planning-resume-chat"/);
   assert.match(html, /No interview in progress/);
+  assert.doesNotMatch(html, /This card updates when/);
   assert.match(html, /Store Updated/);
   assert.doesNotMatch(html, /same store as execution queue/i);
   assert.doesNotMatch(html, /Suggested Next/i);
@@ -175,11 +190,16 @@ test("renderDashboardRootInnerHtml planning card shows resume CLI when session p
     }
   });
   assert.match(html, /Planning Interview/);
-  assert.match(html, /data-wc-action="planning-new-plan"/);
-  assert.match(html, />New Plan<\/button>/);
+  assert.doesNotMatch(html, /data-wc-action="planning-new-plan"/);
+  assert.doesNotMatch(html, />New Plan<\/button>/);
   assert.match(html, /Wishlist/);
-  assert.match(html, /Resume/);
+  assert.match(html, /data-wc-action="planning-resume-chat"/);
+  assert.match(html, />Resume<\/button>/);
+  assert.match(html, /data-wc-action="planning-discard"/);
+  assert.match(html, />Discard<\/button>/);
   assert.match(html, /build-plan/);
+  assert.doesNotMatch(html, /copy into a terminal/);
+  assert.doesNotMatch(html, /wc-planning-type/);
   assert.match(html, /40%/);
   assert.match(html, /through required questions/);
 });
@@ -228,8 +248,10 @@ test("renderDashboardRootInnerHtml omits suggested-next section", () => {
   assert.doesNotMatch(html, /Suggested Next/i);
   assert.doesNotMatch(html, /T999/);
   assert.match(html, />No Items</);
-  assert.match(html, /data-wc-action="planning-new-plan"/);
+  assert.doesNotMatch(html, /data-wc-action="planning-new-plan"/);
+  assert.doesNotMatch(html, /data-wc-action="planning-resume-chat"/);
   assert.match(html, /No interview in progress/);
+  assert.doesNotMatch(html, /This card updates when/);
   assert.match(html, /<b>Role:<\/b> Bard/);
   assert.match(html, /<b>Agent Temperament:<\/b> The Wary Scout/);
 });
@@ -566,8 +588,12 @@ test("renderDashboardRootInnerHtml ready phase buckets include Complete & Releas
 test("renderPlanningInterviewWizardPanel picker wires start control and planning type select", () => {
   const html = renderPlanningInterviewWizardPanel({ kind: "picker" });
   assert.match(html, /id="wc-planning-type"/);
+  assert.match(html, /Planning Type/);
+  assert.match(html, /dash-planning-wizard-picker-row/);
   assert.match(html, /data-wc-action="planning-wizard-start"/);
   assert.match(html, /value="change"/);
+  assert.doesNotMatch(html, /Guided interview/);
+  assert.doesNotMatch(html, /Answers run through/);
 });
 
 test("renderPlanningInterviewWizardPanel question mode escapes prompt and includes submit/cancel", () => {

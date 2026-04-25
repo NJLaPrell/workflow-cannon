@@ -311,6 +311,15 @@ export const planningModule: WorkflowModule = {
 
     if (command.name === "build-plan") {
       const args = command.args ?? {};
+      if (args.action === "discard") {
+        await clearBuildPlanSession(ctx.workspacePath);
+        return {
+          ok: true,
+          code: "planning-session-discarded",
+          message: "Planning interview session discarded",
+          data: { responseSchemaVersion: 1 }
+        };
+      }
       const outputModeResolved = resolveOutputMode(args);
       if (!outputModeResolved.ok) {
         return {

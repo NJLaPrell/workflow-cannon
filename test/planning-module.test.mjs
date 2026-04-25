@@ -51,6 +51,20 @@ test("planningModule build-plan persists then clears local session snapshot", as
   assert.equal(snap.planningType, "task-breakdown");
   assert.ok(String(snap.resumeCli).includes("build-plan"));
 
+  const discard = await planningModule.onCommand(
+    { name: "build-plan", args: { action: "discard" } },
+    ctx
+  );
+  assert.equal(discard.ok, true);
+  assert.equal(discard.code, "planning-session-discarded");
+  await assert.rejects(() => readFile(sessionFile, "utf8"), { code: "ENOENT" });
+
+  await planningModule.onCommand(
+    { name: "build-plan", args: { planningType: "task-breakdown" } },
+    ctx
+  );
+  await access(sessionFile, constants.F_OK);
+
   const done = await planningModule.onCommand(
     {
       name: "build-plan",

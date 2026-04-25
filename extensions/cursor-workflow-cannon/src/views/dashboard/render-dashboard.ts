@@ -633,13 +633,13 @@ export function renderPlanningInterviewWizardPanel(panel: PlanningInterviewWizar
       .join("");
     return (
       '<div class="dash-planning-wizard" aria-label="Guided planning interview">' +
-      "<p><b>Guided interview</b> · step through <code>build-plan</code> here (output mode <code>response</code> — no wishlist row).</p>" +
-      '<label class="dash-planning-wizard-label" for="wc-planning-type">Planning type</label> ' +
+      '<div class="dash-planning-wizard-picker-row">' +
+      '<label class="dash-planning-wizard-label dash-planning-wizard-label-inline" for="wc-planning-type">Planning Type</label>' +
       '<select id="wc-planning-type" class="dash-planning-wizard-select">' +
       opts +
-      "</select> " +
+      "</select>" +
       '<button type="button" class="dash-new-plan-btn" data-wc-action="planning-wizard-start">Start interview</button>' +
-      '<p class="muted">Answers run through <code>workspace-kit run build-plan</code> on the host; planning-generation tokens come from your last dashboard refresh.</p>' +
+      "</div>" +
       "</div>"
     );
   }
@@ -722,8 +722,6 @@ function formatPlanningUpdatedAt(iso: string): string {
 }
 
 function renderPlanningSession(ps: unknown, wizardPanel?: PlanningInterviewWizardPanel | null): string {
-  const newPlanBtn =
-    '<button type="button" class="dash-new-plan-btn" data-wc-action="planning-new-plan" title="Start the planning interview in chat (build-plan)">New Plan</button>';
   const wizardHtml =
     wizardPanel !== undefined && wizardPanel !== null ? renderPlanningInterviewWizardPanel(wizardPanel) : "";
 
@@ -732,11 +730,9 @@ function renderPlanningSession(ps: unknown, wizardPanel?: PlanningInterviewWizar
       '<section class="dash-card" aria-label="Planning session">' +
       '<div class="dash-planning-head">' +
       '<div class="dash-planning-head-main"><p class="dash-planning-title"><b>Planning Interview</b></p></div>' +
-      newPlanBtn +
       "</div>" +
       wizardHtml +
       "<p class=\"muted\">No interview in progress. Start or resume with <code>workspace-kit run build-plan</code> when you want guided planning; progress is saved automatically under <code>.workspace-kit/planning/</code>.</p>" +
-      '<p class="muted">This card updates when you refresh after the session file appears or disappears.</p>' +
       "</section>"
     );
   }
@@ -757,6 +753,16 @@ function renderPlanningSession(ps: unknown, wizardPanel?: PlanningInterviewWizar
     typeof o.updatedAt === "string" && o.updatedAt.length > 0
       ? formatPlanningUpdatedAt(o.updatedAt)
       : "—";
+  const resumeCli = String(o.resumeCli ?? "").trim();
+  const resumeActions =
+    '<span class="dash-planning-actions">' +
+    (resumeCli.length > 0
+      ? '<button type="button" class="dash-new-plan-btn" data-wc-action="planning-resume-chat" data-resume-cli="' +
+        escapeHtmlAttr(resumeCli) +
+        '" title="Open a new Agent chat with the saved planning resume command">Resume</button>'
+      : "") +
+    '<button type="button" class="dash-row-action-secondary dash-planning-discard-btn" data-wc-action="planning-discard" title="Discard the saved planning interview">Discard</button>' +
+    "</span>";
   return (
     '<section class="dash-card" aria-label="Planning session resume">' +
     '<div class="dash-planning-head">' +
@@ -765,9 +771,8 @@ function renderPlanningSession(ps: unknown, wizardPanel?: PlanningInterviewWizar
     " · " +
     escapeHtml(statusDisp) +
     "</p></div>" +
-    newPlanBtn +
+    resumeActions +
     "</div>" +
-    wizardHtml +
     "<p>" +
     escapeHtml(pct) +
     "% through required questions" +
@@ -776,11 +781,7 @@ function renderPlanningSession(ps: unknown, wizardPanel?: PlanningInterviewWizar
     '<p class="muted">Last saved: ' +
     escapeHtml(when) +
     "</p>" +
-    "<p><b>Resume</b> (copy into a terminal):</p>" +
-    '<pre class="resume-cli">' +
-    escapeHtml(String(o.resumeCli ?? "")) +
-    "</pre>" +
-    '<p class="muted">When you finish or discard the interview, refresh and this card goes away.</p>' +
+    '<p class="muted">Resume opens a fresh Agent chat with the saved command; Discard clears the saved interview.</p>' +
     "</section>"
   );
 }
@@ -1156,12 +1157,14 @@ function renderStatusRollup(
   trackId: string,
   summaryInnerHtml: string,
   bodyHtml: string,
-  emptyOnly?: boolean
+  emptyOnly?: boolean,
+  openByDefault?: boolean
 ): string {
   const body = emptyOnly ? '<p class="muted">No Items</p>' : bodyHtml;
   return (
     '<details class="status-section"' +
     wcTrackAttr(trackId) +
+    (openByDefault ? " open" : "") +
     ">" +
     "<summary>" +
     summaryInnerHtml +
@@ -1292,23 +1295,19 @@ export function renderDashboardRootInnerHtml(
     "<p><b>Tasks</b></p>" +
     buildDashboardStateCountGridHtml(ss) +
     renderStatusRollup(
-      "status-tc-research",
-      "<b>Research · Transcript churn</b> (" + String(tcrCount) + ")",
-      renderTranscriptChurnResearchPhaseBuckets(tcrs.phaseBuckets, tcrCount, tcrTop, "tc-churn"),
-      false
-    ) +
-    renderStatusRollup(
       "status-ready-imp",
       "<b>Ready · Improvements</b> (" + String(readyImpCount) + ")",
       renderReadyPhaseBuckets(ris.phaseBuckets, readyImpTop, "No ready improvements.", "rdy-imp"),
-      readyImpCount === 0
+      readyImpCount === 0,
+      readyImpCount > 0
     ) +
     renderStatusRollup(
       "status-ready-exe",
       "<b>Ready · Execution</b> (" + String(readyExeCount) + ")",
       breakdownLine +
         renderReadyPhaseBuckets(res.phaseBuckets, readyExeTop, "No ready execution tasks.", "rdy-exe"),
-      readyExeCount === 0
+      readyExeCount === 0,
+      readyExeCount > 0
     ) +
     renderStatusRollup(
       "status-prop-imp",
@@ -1321,6 +1320,12 @@ export function renderDashboardRootInnerHtml(
       "<b>Proposed · Execution</b> (" + String(peCount) + ")",
       renderProposedExecutionPhaseBuckets(pes.phaseBuckets, peCount, peTop, "prop-exe"),
       peCount === 0
+    ) +
+    renderStatusRollup(
+      "status-tc-research",
+      "<b>Research · Transcript churn</b> (" + String(tcrCount) + ")",
+      renderTranscriptChurnResearchPhaseBuckets(tcrs.phaseBuckets, tcrCount, tcrTop, "tc-churn"),
+      false
     ) +
     renderStatusRollup(
       "status-blocked",
