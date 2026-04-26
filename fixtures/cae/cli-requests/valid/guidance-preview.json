@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "taskId": "T921",
+  "commandName": "get-next-actions",
+  "evalMode": "shadow"
+}

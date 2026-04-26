@@ -4,6 +4,7 @@ import { CommandClient } from "./runtime/command-client.js";
 import { StateWatcher } from "./runtime/state-watcher.js";
 import { DashboardViewProvider } from "./views/dashboard/DashboardViewProvider.js";
 import { ConfigViewProvider } from "./views/config/ConfigViewProvider.js";
+import { GuidanceViewProvider } from "./views/guidance/GuidanceViewProvider.js";
 import { prefillCursorChat } from "./cursor-chat-prefill.js";
 import { buildTaskDetailMarkdown } from "./task-detail-markdown.js";
 import { buildWishlistIntakeAgentPrompt } from "./wishlist-chat-prompt.js";
@@ -28,6 +29,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   let dashboard: DashboardViewProvider | undefined;
   let configView: ConfigViewProvider | undefined;
+  let guidanceView: GuidanceViewProvider | undefined;
 
   if (client && folder) {
     const watcher = new StateWatcher(folder, () => kitStateEmitter.fire());
@@ -38,10 +40,12 @@ export function activate(context: vscode.ExtensionContext): void {
       kitStateEmitter.fire()
     );
     configView = new ConfigViewProvider(context.extensionUri, client, onKitStateChanged);
+    guidanceView = new GuidanceViewProvider(context.extensionUri, client, onKitStateChanged);
 
     context.subscriptions.push(
       vscode.window.registerWebviewViewProvider(DashboardViewProvider.viewId, dashboard),
-      vscode.window.registerWebviewViewProvider(ConfigViewProvider.viewId, configView)
+      vscode.window.registerWebviewViewProvider(ConfigViewProvider.viewId, configView),
+      vscode.window.registerWebviewViewProvider(GuidanceViewProvider.viewId, guidanceView)
     );
   }
 

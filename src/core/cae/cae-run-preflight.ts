@@ -73,7 +73,7 @@ function parseFeatureJson(raw: string | null): string[] | null {
   }
 }
 
-function hydrateTaskRowForCae(
+export function hydrateTaskRowForCae(
   workspacePath: string,
   effective: Record<string, unknown>,
   taskId: string
@@ -125,7 +125,7 @@ function hydrateTaskRowForCae(
   }
 }
 
-function inferApprovalTierHint(
+export function inferApprovalTierHint(
   subcommand: string,
   commandArgs: Record<string, unknown>,
   effective: Record<string, unknown>

@@ -189,6 +189,230 @@
         }
       }
     },
+    "caeGuidanceFamilyCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policy", "think", "do", "review"],
+      "properties": {
+        "policy": { "type": "integer", "minimum": 0 },
+        "think": { "type": "integer", "minimum": 0 },
+        "do": { "type": "integer", "minimum": 0 },
+        "review": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "caeGuidanceProductLabels": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["productName", "technicalName", "terms", "families"],
+      "properties": {
+        "productName": { "type": "string", "maxLength": 64 },
+        "technicalName": { "type": "string", "maxLength": 128 },
+        "terms": { "type": "object", "additionalProperties": { "type": "string" } },
+        "families": { "type": "object", "additionalProperties": { "type": "string" } }
+      }
+    },
+    "caeRecentTraceSummaryRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "traceId",
+        "createdAt",
+        "storage",
+        "evalMode",
+        "familyCounts",
+        "totalGuidanceCount",
+        "pendingAcknowledgementCount",
+        "conflictCount",
+        "bundleId"
+      ],
+      "properties": {
+        "traceId": { "type": "string", "minLength": 8, "maxLength": 128 },
+        "createdAt": { "type": "string", "maxLength": 40 },
+        "storage": { "type": "string", "enum": ["sqlite"] },
+        "evalMode": { "type": "string", "enum": ["live", "shadow"] },
+        "familyCounts": { "$ref": "#/$defs/caeGuidanceFamilyCounts" },
+        "totalGuidanceCount": { "type": "integer", "minimum": 0 },
+        "pendingAcknowledgementCount": { "type": "integer", "minimum": 0 },
+        "conflictCount": { "type": "integer", "minimum": 0 },
+        "bundleId": { "type": ["string", "null"], "maxLength": 128 }
+      }
+    },
+    "caeGuidanceCard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "activationId",
+        "family",
+        "familyLabel",
+        "title",
+        "attention",
+        "artifactIds",
+        "sourceTitles",
+        "priority",
+        "aggregateTightness"
+      ],
+      "properties": {
+        "activationId": { "type": "string", "minLength": 3, "maxLength": 128 },
+        "family": { "type": "string", "enum": ["policy", "think", "do", "review"] },
+        "familyLabel": { "type": "string", "maxLength": 64 },
+        "title": { "type": "string", "maxLength": 256 },
+        "attention": { "type": "string", "enum": ["required", "check", "advisory"] },
+        "artifactIds": {
+          "type": "array",
+          "maxItems": 64,
+          "items": { "type": "string", "maxLength": 128 }
+        },
+        "sourceTitles": {
+          "type": "array",
+          "maxItems": 5,
+          "items": { "type": "string", "maxLength": 256 }
+        },
+        "priority": { "type": "integer" },
+        "aggregateTightness": { "type": "integer" }
+      }
+    },
+    "caeRecentTracesData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "rows", "count", "storage", "retention"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "count": { "type": "integer", "minimum": 0 },
+        "storage": { "type": "string", "enum": ["sqlite"] },
+        "rows": {
+          "type": "array",
+          "maxItems": 200,
+          "items": { "$ref": "#/$defs/caeRecentTraceSummaryRow" }
+        },
+        "retention": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["maxRows", "note"],
+          "properties": {
+            "maxRows": { "type": "integer", "minimum": 1 },
+            "note": { "type": "string", "maxLength": 256 }
+          }
+        }
+      }
+    },
+    "caeGuidancePreviewData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "product",
+        "evalMode",
+        "modeLabel",
+        "traceId",
+        "ephemeral",
+        "evaluationContext",
+        "bundle",
+        "trace",
+        "guidanceCards",
+        "familyCounts",
+        "totalGuidanceCount",
+        "pendingAcknowledgements",
+        "conflictShadowSummary"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "product": { "$ref": "#/$defs/caeGuidanceProductLabels" },
+        "evalMode": { "type": "string", "enum": ["live", "shadow"] },
+        "modeLabel": { "type": "string", "maxLength": 64 },
+        "traceId": { "type": "string", "minLength": 8, "maxLength": 128 },
+        "ephemeral": { "type": "boolean" },
+        "evaluationContext": {
+          "$ref": "https://workflow-cannon.dev/schemas/cae/evaluation-context.v1.json"
+        },
+        "bundle": {
+          "$ref": "https://workflow-cannon.dev/schemas/cae/effective-activation-bundle.v1.json"
+        },
+        "trace": { "$ref": "https://workflow-cannon.dev/schemas/cae/trace.v1.json" },
+        "guidanceCards": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["policy", "think", "do", "review"],
+          "properties": {
+            "policy": { "type": "array", "items": { "$ref": "#/$defs/caeGuidanceCard" } },
+            "think": { "type": "array", "items": { "$ref": "#/$defs/caeGuidanceCard" } },
+            "do": { "type": "array", "items": { "$ref": "#/$defs/caeGuidanceCard" } },
+            "review": { "type": "array", "items": { "$ref": "#/$defs/caeGuidanceCard" } }
+          }
+        },
+        "familyCounts": { "$ref": "#/$defs/caeGuidanceFamilyCounts" },
+        "totalGuidanceCount": { "type": "integer", "minimum": 0 },
+        "pendingAcknowledgements": {
+          "type": "array",
+          "items": {
+            "$ref": "https://workflow-cannon.dev/schemas/cae/effective-activation-bundle.v1.json#/$defs/pendingAcknowledgementItem"
+          }
+        },
+        "conflictShadowSummary": {
+          "$ref": "https://workflow-cannon.dev/schemas/cae/effective-activation-bundle.v1.json#/$defs/conflictShadowSummary"
+        }
+      }
+    },
+    "caeDashboardSummaryData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "product",
+        "health",
+        "validation",
+        "recentTraces",
+        "acknowledgements",
+        "feedback"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "product": { "$ref": "#/$defs/caeGuidanceProductLabels" },
+        "health": { "$ref": "#/$defs/caeHealthData" },
+        "validation": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["ok", "code"],
+          "properties": {
+            "ok": { "type": "boolean" },
+            "code": { "type": "string", "maxLength": 128 }
+          }
+        },
+        "recentTraces": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["available", "rows", "count"],
+          "properties": {
+            "available": { "type": "boolean" },
+            "count": { "type": "integer", "minimum": 0 },
+            "rows": {
+              "type": "array",
+              "maxItems": 200,
+              "items": { "$ref": "#/$defs/caeRecentTraceSummaryRow" }
+            }
+          }
+        },
+        "acknowledgements": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["available", "count", "rows"],
+          "properties": {
+            "available": { "type": "boolean" },
+            "count": { "type": "integer", "minimum": 0 },
+            "rows": { "type": "array", "maxItems": 200 }
+          }
+        },
+        "feedback": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["available", "summary", "rows"],
+          "properties": {
+            "available": { "type": "boolean" },
+            "summary": { "type": "object" },
+            "rows": { "type": "array", "maxItems": 200 }
+          }
+        }
+      }
+    },
     "caeConflictsData": {
       "type": "object",
       "additionalProperties": false,

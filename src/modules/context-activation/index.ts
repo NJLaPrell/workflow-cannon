@@ -1,7 +1,10 @@
 import { Buffer } from "node:buffer";
 
 import type { ModuleCommandResult, WorkflowModule } from "../../contracts/module-contract.js";
-import { builtinInstructionEntriesForModule } from "../../contracts/builtin-run-command-manifest.js";
+import {
+  BUILTIN_RUN_COMMAND_MANIFEST,
+  builtinInstructionEntriesForModule
+} from "../../contracts/builtin-run-command-manifest.js";
 import {
   caeRegistryTablesReady,
   countCaeAckRows,
@@ -10,17 +13,25 @@ import {
   insertCaeAckSatisfaction,
   insertCaeRegistryMutationAudit,
   listCaeAckSatisfactions,
+  listCaeTraceSnapshotSummaries,
   loadCaeTraceSnapshot,
   openKitSqliteReadWrite,
   persistCaeTraceIfEnabled
 } from "../../core/cae/cae-kit-sqlite.js";
 import { tryHandleCaeRegistryAdminCommand } from "../../core/cae/cae-registry-admin-cli.js";
 import { evaluateActivationBundle } from "../../core/cae/cae-evaluate.js";
+import { countReadyTasksInPlanningSqlite } from "../../core/cae/cae-queue-snapshot.js";
+import { buildEvaluationContext } from "../../core/cae/evaluation-context-builder.js";
+import {
+  hydrateTaskRowForCae,
+  inferApprovalTierHint
+} from "../../core/cae/cae-run-preflight.js";
 import { loadCaeRegistryForKit } from "../../core/cae/cae-registry-effective.js";
 import { loadCaeRegistry } from "../../core/cae/cae-registry-load.js";
 import type { CaeLoadedRegistry } from "../../core/cae/cae-registry-load.js";
 import { replaceActiveCaeRegistryFromLoaded } from "../../core/cae/cae-registry-sqlite.js";
 import type { CaeEvaluationContext } from "../../core/cae/evaluation-context-types.js";
+import { isSensitiveModuleCommandForEffective } from "../../core/policy.js";
 import { getAtPath } from "../../core/workspace-kit-config.js";
 import {
   getCaeSession,
@@ -219,6 +230,267 @@ function buildCaeExplainResponse(
   return base;
 }
 
+const GUIDANCE_PRODUCT_LABELS = {
+  productName: "Guidance",
+  technicalName: "Context Activation Engine (CAE)",
+  terms: {
+    cae: "Guidance system",
+    activation: "Guidance item",
+    artifact: "Source rule or playbook",
+    bundle: "Guidance result",
+    trace: "Why this appeared",
+    shadowMode: "Preview mode",
+    liveMode: "Applies now",
+    enforcement: "Hard stop",
+    acknowledgement: "I read this guidance",
+    policyApproval: "Permission for a sensitive command"
+  },
+  families: {
+    policy: "Rules to follow",
+    think: "Things to consider",
+    do: "Suggested steps",
+    review: "Review checks"
+  }
+};
+
+type CaeFamily = "policy" | "think" | "do" | "review";
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function familyCountsFromBundle(bundle: Record<string, unknown>): Record<CaeFamily, number> {
+  const families = asRecord(bundle.families);
+  const count = (family: CaeFamily) => {
+    const rows = families?.[family];
+    return Array.isArray(rows) ? rows.length : 0;
+  };
+  return {
+    policy: count("policy"),
+    think: count("think"),
+    do: count("do"),
+    review: count("review")
+  };
+}
+
+function commandModuleId(commandName: string): string | undefined {
+  return BUILTIN_RUN_COMMAND_MANIFEST.find((row) => row.name === commandName)?.moduleId;
+}
+
+function summarizeGuidanceCards(
+  bundle: Record<string, unknown>,
+  reg: CaeLoadedRegistry
+): Record<CaeFamily, Record<string, unknown>[]> {
+  const families = asRecord(bundle.families);
+  const labelByFamily = GUIDANCE_PRODUCT_LABELS.families as Record<CaeFamily, string>;
+  const out: Record<CaeFamily, Record<string, unknown>[]> = {
+    policy: [],
+    think: [],
+    do: [],
+    review: []
+  };
+  for (const family of ["policy", "think", "do", "review"] as CaeFamily[]) {
+    const rows = Array.isArray(families?.[family]) ? (families[family] as Record<string, unknown>[]) : [];
+    out[family] = rows.map((row) => {
+      const artifactIds = Array.isArray(row.artifactIds)
+        ? row.artifactIds.filter((id): id is string => typeof id === "string")
+        : [];
+      const sourceTitles = artifactIds
+        .map((artifactId) => {
+          const artifact = reg.artifactById.get(artifactId);
+          return typeof artifact?.title === "string" && artifact.title.length > 0
+            ? artifact.title
+            : artifactId;
+        })
+        .slice(0, 5);
+      return {
+        activationId: String(row.activationId ?? ""),
+        family,
+        familyLabel: labelByFamily[family],
+        title: sourceTitles[0] ?? String(row.activationId ?? "Guidance item"),
+        attention:
+          family === "policy"
+            ? "required"
+            : family === "review"
+              ? "check"
+              : "advisory",
+        artifactIds,
+        sourceTitles,
+        priority: Number(row.priority ?? 0),
+        aggregateTightness: Number(row.aggregateTightness ?? 0)
+      };
+    });
+  }
+  return out;
+}
+
+function summarizeTraceSnapshot(row: {
+  traceId: string;
+  createdAt: string;
+  trace: Record<string, unknown>;
+  bundle: Record<string, unknown>;
+}): Record<string, unknown> {
+  const bundle = row.bundle;
+  const counts = familyCountsFromBundle(bundle);
+  const pendingAcknowledgements = Array.isArray(bundle.pendingAcknowledgements)
+    ? bundle.pendingAcknowledgements
+    : [];
+  const conflicts = asRecord(bundle.conflictShadowSummary);
+  const conflictEntries = Array.isArray(conflicts?.entries) ? conflicts.entries : [];
+  return {
+    traceId: row.traceId,
+    createdAt: row.createdAt,
+    storage: "sqlite",
+    evalMode: bundle.evaluationPipelineMode === "shadow" ? "shadow" : "live",
+    familyCounts: counts,
+    totalGuidanceCount: counts.policy + counts.think + counts.do + counts.review,
+    pendingAcknowledgementCount: pendingAcknowledgements.length,
+    conflictCount: conflictEntries.length,
+    bundleId: typeof bundle.bundleId === "string" ? bundle.bundleId : null
+  };
+}
+
+function buildCaeHealthData(
+  workspacePath: string,
+  effective: Record<string, unknown>,
+  includeDetails: boolean
+): Record<string, unknown> {
+  const caeEnabled = getAtPath(effective, "kit.cae.enabled") === true;
+  const persistenceEnabled = getAtPath(effective, "kit.cae.persistence") === true;
+  const load = loadRegistryForCae(workspacePath, effective);
+  const registryStatus = load.ok ? "ok" : "invalid";
+  const issues = load.ok ? [] : [{ code: load.code, detail: load.message ?? "" }];
+  const registryStore = getAtPath(effective, "kit.cae.registryStore");
+  const data: Record<string, unknown> = {
+    schemaVersion: 1,
+    caeEnabled,
+    persistenceEnabled,
+    lastEvalAt: getLastCaeEvalIso(),
+    registryStatus,
+    issues,
+    registryStore: typeof registryStore === "string" ? registryStore : "sqlite"
+  };
+  if (load.ok) {
+    data.registryContentHash = load.reg.registryDigest;
+    data.artifactCount = load.reg.artifactById.size;
+    data.activationCount = load.reg.activationById.size;
+    const db = openKitSqliteReadWrite(workspacePath, effective);
+    if (db) {
+      try {
+        if (caeRegistryTablesReady(db)) {
+          const vid = getActiveCaeRegistryVersionId(db);
+          if (vid) data.activeRegistryVersionId = vid;
+        }
+      } finally {
+        db.close();
+      }
+    }
+  }
+  if (includeDetails && persistenceEnabled) {
+    const db = openKitSqliteReadWrite(workspacePath, effective);
+    if (db) {
+      try {
+        const traceRowCount = countCaeTraceRows(db);
+        data.traceRowCount = traceRowCount;
+        data.ackRowCount = countCaeAckRows(db);
+        if (traceRowCount > 0 && data.lastEvalAt === null) {
+          data.lastEvalAtNote =
+            "lastEvalAt is process-local; persisted traces exist even when this process has not evaluated CAE yet.";
+        }
+      } finally {
+        db.close();
+      }
+    } else {
+      data.traceRowCount = 0;
+      data.ackRowCount = 0;
+    }
+  }
+  return data;
+}
+
+function listRecentTraceSummariesForDashboard(
+  workspacePath: string,
+  effective: Record<string, unknown>,
+  limit: number
+): { available: boolean; rows: Record<string, unknown>[]; count: number; code?: string; message?: string } {
+  if (getAtPath(effective, "kit.cae.persistence") !== true) {
+    return {
+      available: false,
+      rows: [],
+      count: 0,
+      code: "cae-persistence-disabled",
+      message: "Enable kit.cae.persistence to list durable Guidance checks."
+    };
+  }
+  const db = openKitSqliteReadWrite(workspacePath, effective);
+  if (!db) {
+    return {
+      available: false,
+      rows: [],
+      count: 0,
+      code: "cae-kit-sqlite-unavailable",
+      message: "Planning SQLite database not found or not openable"
+    };
+  }
+  try {
+    const rows = listCaeTraceSnapshotSummaries(db, { limit }).map(summarizeTraceSnapshot);
+    return { available: true, rows, count: rows.length };
+  } finally {
+    db.close();
+  }
+}
+
+function buildDashboardSummaryData(
+  workspacePath: string,
+  effective: Record<string, unknown>
+): Record<string, unknown> {
+  const health = buildCaeHealthData(workspacePath, effective, true);
+  const loaded = loadRegistryForCae(workspacePath, effective);
+  const validation = loaded.ok
+    ? {
+        ok: true,
+        code: "cae-registry-validate-ok",
+        registryContentHash: loaded.reg.registryDigest,
+        artifactCount: loaded.reg.artifactById.size,
+        activationCount: loaded.reg.activationById.size
+      }
+    : { ok: false, code: loaded.code, message: loaded.message };
+
+  const recentTraces = listRecentTraceSummariesForDashboard(workspacePath, effective, 10);
+  const acknowledgements: Record<string, unknown> = { available: false, count: 0, rows: [] };
+  const feedback: Record<string, unknown> = { available: false, summary: summarizeShadowFeedback([]), rows: [] };
+  const db = openKitSqliteReadWrite(workspacePath, effective);
+  if (db) {
+    try {
+      const ackRows = listCaeAckSatisfactions(db, { limit: 10 });
+      acknowledgements.available = true;
+      acknowledgements.count = countCaeAckRows(db);
+      acknowledgements.rows = ackRows;
+      const feedbackRows = loadShadowFeedbackRows(db);
+      feedback.available = true;
+      feedback.summary = summarizeShadowFeedback(feedbackRows);
+      feedback.rows = feedbackRows
+        .slice()
+        .sort((a, b) => b.recordedAt.localeCompare(a.recordedAt))
+        .slice(0, 10);
+    } finally {
+      db.close();
+    }
+  }
+
+  return {
+    schemaVersion: 1,
+    product: GUIDANCE_PRODUCT_LABELS,
+    health,
+    validation,
+    recentTraces,
+    acknowledgements,
+    feedback
+  };
+}
+
 export const contextActivationModule: WorkflowModule = {
   registration: {
     id: "context-activation",
@@ -249,6 +521,116 @@ export const contextActivationModule: WorkflowModule = {
     const adminRes = tryHandleCaeRegistryAdminCommand(name, args, ws, effective);
     if (adminRes !== undefined) {
       return adminRes;
+    }
+
+    if (name === "cae-dashboard-summary") {
+      const bad = requireSchemaV1(args);
+      if (bad) return bad;
+      return {
+        ok: true,
+        code: "cae-dashboard-summary-ok",
+        data: buildDashboardSummaryData(ws, effective)
+      };
+    }
+
+    if (name === "cae-recent-traces") {
+      const bad = requireSchemaV1(args);
+      if (bad) return bad;
+      const limit = typeof args.limit === "number" ? Math.floor(args.limit) : 25;
+      const recent = listRecentTraceSummariesForDashboard(ws, effective, limit);
+      if (!recent.available) {
+        return {
+          ok: false,
+          code: recent.code ?? "cae-traces-unavailable",
+          message: recent.message ?? "Recent CAE traces are unavailable"
+        };
+      }
+      return {
+        ok: true,
+        code: "cae-recent-traces-ok",
+        data: {
+          schemaVersion: 1,
+          rows: recent.rows,
+          count: recent.count,
+          storage: "sqlite",
+          retention: {
+            maxRows: 2000,
+            note: "Durable CAE trace snapshots are pruned oldest-first after 2000 rows."
+          }
+        }
+      };
+    }
+
+    if (name === "cae-guidance-preview") {
+      const bad = requireSchemaV1(args);
+      if (bad) return bad;
+      const commandName =
+        typeof args.commandName === "string" && args.commandName.trim().length > 0
+          ? args.commandName.trim()
+          : "";
+      if (!commandName) {
+        return { ok: false, code: "invalid-args", message: "commandName is required" };
+      }
+      const taskId =
+        typeof args.taskId === "string" && args.taskId.trim().length > 0
+          ? args.taskId.trim()
+          : undefined;
+      const moduleId =
+        typeof args.moduleId === "string" && args.moduleId.trim().length > 0
+          ? args.moduleId.trim()
+          : commandModuleId(commandName);
+      const commandArgs = asRecord(args.commandArgs) ?? {};
+      const argvSummary =
+        typeof args.argvSummary === "string" && args.argvSummary.trim().length > 0
+          ? args.argvSummary.trim()
+          : undefined;
+      const phase = String(args.currentKitPhase ?? getAtPath(effective, "kit.currentPhaseNumber") ?? "0");
+      const loaded = loadRegistryForCae(ws, effective);
+      if (!loaded.ok) return loaded;
+
+      const hydratedTask = taskId ? hydrateTaskRowForCae(ws, effective, taskId) : null;
+      const evaluationContext = buildEvaluationContext({
+        taskRow: hydratedTask ?? (taskId ? { id: taskId, status: "ready", phaseKey: null } : null),
+        command: { name: commandName, moduleId, args: commandArgs, argvSummary },
+        workspace: { currentKitPhase: phase },
+        governance: {
+          policyApprovalRequired: isSensitiveModuleCommandForEffective(commandName, commandArgs, effective),
+          approvalTierHint: inferApprovalTierHint(commandName, commandArgs, effective)
+        },
+        queue: {
+          readyQueueDepth: countReadyTasksInPlanningSqlite(ws, effective),
+          suggestedNextTaskId: null
+        }
+      });
+      const evalMode = args.evalMode === "live" ? "live" : "shadow";
+      const { bundle, trace, traceId } = evaluateActivationBundle(evaluationContext, loaded.reg, {
+        evalMode
+      });
+      storeCaeSession(traceId, { bundle, trace });
+      const persist = getAtPath(effective, "kit.cae.persistence") === true;
+      persistCaeTraceIfEnabled(ws, effective, persist, traceId, trace, bundle);
+      const cards = summarizeGuidanceCards(bundle, loaded.reg);
+      const counts = familyCountsFromBundle(bundle);
+      return {
+        ok: true,
+        code: "cae-guidance-preview-ok",
+        data: {
+          schemaVersion: 1,
+          product: GUIDANCE_PRODUCT_LABELS,
+          evalMode,
+          modeLabel: evalMode === "shadow" ? "Preview mode" : "Applies now",
+          traceId,
+          ephemeral: !persist,
+          evaluationContext,
+          bundle,
+          trace,
+          guidanceCards: cards,
+          familyCounts: counts,
+          totalGuidanceCount: counts.policy + counts.think + counts.do + counts.review,
+          pendingAcknowledgements: bundle.pendingAcknowledgements,
+          conflictShadowSummary: bundle.conflictShadowSummary
+        }
+      };
     }
 
     if (name === "cae-list-artifacts") {
@@ -556,59 +938,8 @@ export const contextActivationModule: WorkflowModule = {
     if (name === "cae-health") {
       const bad = requireSchemaV1(args);
       if (bad) return bad;
-      const caeEnabled = getAtPath(effective, "kit.cae.enabled") === true;
-      const persistenceEnabled = getAtPath(effective, "kit.cae.persistence") === true;
-      const load = loadRegistryForCae(ws, effective);
-      const registryStatus = load.ok ? "ok" : "invalid";
-      const issues = load.ok
-        ? []
-        : [{ code: load.code, detail: load.message ?? "" }];
-      const registryStore = getAtPath(effective, "kit.cae.registryStore");
-      const data: Record<string, unknown> = {
-        schemaVersion: 1,
-        caeEnabled,
-        persistenceEnabled,
-        lastEvalAt: getLastCaeEvalIso(),
-        registryStatus,
-        issues,
-        registryStore: typeof registryStore === "string" ? registryStore : "sqlite"
-      };
-      if (load.ok) {
-        data.registryContentHash = load.reg.registryDigest;
-        data.artifactCount = load.reg.artifactById.size;
-        data.activationCount = load.reg.activationById.size;
-        const db = openKitSqliteReadWrite(ws, effective);
-        if (db) {
-          try {
-            if (caeRegistryTablesReady(db)) {
-              const vid = getActiveCaeRegistryVersionId(db);
-              if (vid) data.activeRegistryVersionId = vid;
-            }
-          } finally {
-            db.close();
-          }
-        }
-      }
       const includeDetails = args.includeDetails === true;
-      if (includeDetails && persistenceEnabled) {
-        const db = openKitSqliteReadWrite(ws, effective);
-        if (db) {
-          try {
-            const traceRowCount = countCaeTraceRows(db);
-            data.traceRowCount = traceRowCount;
-            data.ackRowCount = countCaeAckRows(db);
-            if (traceRowCount > 0 && data.lastEvalAt === null) {
-              data.lastEvalAtNote =
-                "lastEvalAt is process-local; persisted traces exist even when this process has not evaluated CAE yet.";
-            }
-          } finally {
-            db.close();
-          }
-        } else {
-          data.traceRowCount = 0;
-          data.ackRowCount = 0;
-        }
-      }
+      const data = buildCaeHealthData(ws, effective, includeDetails);
       return { ok: true, code: "cae-health-ok", data };
     }
 

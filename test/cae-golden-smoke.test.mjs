@@ -78,6 +78,33 @@ test("golden CAE operator path evaluates, explains, fetches persisted trace, and
   assert.ok(evaluated.data.bundle.families.policy.length >= 1);
   assert.ok(evaluated.data.bundle.shadowObservation.wouldActivate.length >= 1);
 
+  const recent = await runCae(ws, "cae-recent-traces", {
+    schemaVersion: 1,
+    limit: 5
+  });
+  assert.equal(recent.ok, true);
+  assert.equal(recent.code, "cae-recent-traces-ok");
+  assert.equal(recent.data.rows[0].traceId, evaluated.data.traceId);
+  assert.ok(recent.data.rows[0].totalGuidanceCount >= 1);
+
+  const summary = await runCae(ws, "cae-dashboard-summary", { schemaVersion: 1 });
+  assert.equal(summary.ok, true);
+  assert.equal(summary.code, "cae-dashboard-summary-ok");
+  assert.equal(summary.data.product.productName, "Guidance");
+  assert.equal(summary.data.recentTraces.available, true);
+
+  const preview = await runCae(ws, "cae-guidance-preview", {
+    schemaVersion: 1,
+    taskId: "T921",
+    commandName: "get-next-actions",
+    evalMode: "shadow"
+  });
+  assert.equal(preview.ok, true);
+  assert.equal(preview.code, "cae-guidance-preview-ok");
+  assert.equal(preview.data.modeLabel, "Preview mode");
+  assert.ok(preview.data.totalGuidanceCount >= 1);
+  assert.ok(preview.data.guidanceCards.do.length >= 1);
+
   const explained = await runCae(ws, "cae-explain", {
     schemaVersion: 1,
     traceId: evaluated.data.traceId,

@@ -63,6 +63,9 @@ describe("CAE cli-read-only-requests schema (v1)", () => {
     ["explain-by-trace.json", "caeExplainByTraceRequest"],
     ["explain-by-replay.json", "caeExplainByReplayRequest"],
     ["health.json", "caeHealthRequest"],
+    ["dashboard-summary.json", "caeDashboardSummaryRequest"],
+    ["recent-traces.json", "caeRecentTracesRequest"],
+    ["guidance-preview.json", "caeGuidancePreviewRequest"],
     ["conflicts.json", "caeConflictsRequest"],
     ["get-trace.json", "caeGetTraceRequest"],
     ["list-acks.json", "caeListAcksRequest"]
@@ -158,6 +161,109 @@ describe("CAE cli-read-only-data schema (v1)", () => {
       caeEnabled: false,
       registryStatus: "absent",
       issues: [{ code: "cae.registry.missing", detail: "stub" }]
+    });
+    assert.equal(ok, true, ajv.errorsText(validate.errors));
+  });
+
+  it("accepts caeRecentTracesData and caeDashboardSummaryData", () => {
+    const recentValidate = compileDef(ajv, DATA_ID, "caeRecentTracesData");
+    const dashboardValidate = compileDef(ajv, DATA_ID, "caeDashboardSummaryData");
+    const product = {
+      productName: "Guidance",
+      technicalName: "Context Activation Engine (CAE)",
+      terms: { trace: "Why this appeared" },
+      families: { policy: "Rules to follow" }
+    };
+    const recent = {
+      schemaVersion: 1,
+      count: 1,
+      storage: "sqlite",
+      rows: [
+        {
+          traceId: "cae.trace.example",
+          createdAt: "2026-04-25T00:00:00.000Z",
+          storage: "sqlite",
+          evalMode: "shadow",
+          familyCounts: { policy: 1, think: 0, do: 0, review: 0 },
+          totalGuidanceCount: 1,
+          pendingAcknowledgementCount: 1,
+          conflictCount: 0,
+          bundleId: "cae.bundle.example"
+        }
+      ],
+      retention: { maxRows: 2000, note: "oldest first" }
+    };
+    assert.equal(recentValidate(recent), true, ajv.errorsText(recentValidate.errors));
+    assert.equal(
+      dashboardValidate({
+        schemaVersion: 1,
+        product,
+        health: {
+          schemaVersion: 1,
+          caeEnabled: true,
+          persistenceEnabled: true,
+          lastEvalAt: null,
+          registryStore: "sqlite",
+          registryStatus: "ok",
+          issues: []
+        },
+        validation: { ok: true, code: "cae-registry-validate-ok" },
+        recentTraces: { available: true, rows: recent.rows, count: 1 },
+        acknowledgements: { available: true, count: 0, rows: [] },
+        feedback: { available: true, summary: {}, rows: [] }
+      }),
+      true,
+      ajv.errorsText(dashboardValidate.errors)
+    );
+  });
+
+  it("accepts caeGuidancePreviewData", () => {
+    const validate = compileDef(ajv, DATA_ID, "caeGuidancePreviewData");
+    const bundle = JSON.parse(
+      fs.readFileSync(path.join(root, "fixtures/cae/bundles/valid/minimal.json"), "utf8")
+    );
+    const trace = JSON.parse(fs.readFileSync(path.join(root, "fixtures/cae/trace/valid/minimal.json"), "utf8"));
+    trace.traceId = bundle.traceId;
+    const evaluationContext = JSON.parse(
+      fs.readFileSync(path.join(root, "fixtures/cae/evaluation-context/valid/minimal.json"), "utf8")
+    );
+    const ok = validate({
+      schemaVersion: 1,
+      product: {
+        productName: "Guidance",
+        technicalName: "Context Activation Engine (CAE)",
+        terms: { trace: "Why this appeared" },
+        families: { policy: "Rules to follow" }
+      },
+      evalMode: "shadow",
+      modeLabel: "Preview mode",
+      traceId: bundle.traceId,
+      ephemeral: false,
+      evaluationContext,
+      bundle,
+      trace,
+      guidanceCards: {
+        policy: [
+          {
+            activationId: "cae.activation.policy.phase70-playbook",
+            family: "policy",
+            familyLabel: "Rules to follow",
+            title: "Phase 70 playbook",
+            attention: "required",
+            artifactIds: ["cae.playbook.machine-playbooks"],
+            sourceTitles: ["Machine playbooks"],
+            priority: 100,
+            aggregateTightness: 4
+          }
+        ],
+        think: [],
+        do: [],
+        review: []
+      },
+      familyCounts: { policy: 1, think: 0, do: 0, review: 0 },
+      totalGuidanceCount: 1,
+      pendingAcknowledgements: bundle.pendingAcknowledgements,
+      conflictShadowSummary: bundle.conflictShadowSummary
     });
     assert.equal(ok, true, ajv.errorsText(validate.errors));
   });

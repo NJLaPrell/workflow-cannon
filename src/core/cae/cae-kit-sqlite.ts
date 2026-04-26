@@ -85,6 +85,51 @@ export function loadCaeTraceSnapshot(
   }
 }
 
+export type CaeTraceSnapshotSummaryRow = {
+  traceId: string;
+  createdAt: string;
+  trace: Record<string, unknown>;
+  bundle: Record<string, unknown>;
+};
+
+export function listCaeTraceSnapshotSummaries(
+  db: SqliteDatabase,
+  filters?: { limit?: number }
+): CaeTraceSnapshotSummaryRow[] {
+  const limit = Math.min(200, Math.max(1, Math.floor(filters?.limit ?? 25)));
+  try {
+    const rows = db
+      .prepare(
+        `SELECT trace_id, trace_json, bundle_json, created_at
+         FROM cae_trace_snapshots
+         ORDER BY created_at DESC, trace_id ASC
+         LIMIT ?`
+      )
+      .all(limit) as {
+      trace_id: string;
+      trace_json: string;
+      bundle_json: string;
+      created_at: string;
+    }[];
+    const out: CaeTraceSnapshotSummaryRow[] = [];
+    for (const row of rows) {
+      try {
+        out.push({
+          traceId: row.trace_id,
+          createdAt: row.created_at,
+          trace: JSON.parse(row.trace_json) as Record<string, unknown>,
+          bundle: JSON.parse(row.bundle_json) as Record<string, unknown>
+        });
+      } catch {
+        // Skip corrupt rows; callers surface registry / DB health separately.
+      }
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
 export function pruneCaeTraceSnapshots(db: SqliteDatabase, maxRows: number): void {
   const n = db.prepare(`SELECT COUNT(*) AS c FROM cae_trace_snapshots`).get() as { c: number };
   const excess = Number(n.c) - maxRows;

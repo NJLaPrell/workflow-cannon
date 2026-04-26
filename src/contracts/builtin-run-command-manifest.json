@@ -897,6 +897,27 @@
   },
   {
     "moduleId": "context-activation",
+    "name": "cae-dashboard-summary",
+    "file": "cae-dashboard-summary.md",
+    "description": "Guidance tab aggregate: CAE health, registry validation, recent traces, acknowledgement, and feedback summaries.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-recent-traces",
+    "file": "cae-recent-traces.md",
+    "description": "List recent durable CAE trace summaries for UI trace browsing.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-guidance-preview",
+    "file": "cae-guidance-preview.md",
+    "description": "Friendly Guidance preview: build bounded CAE context from task/workflow inputs and return grouped guidance cards.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
     "name": "cae-conflicts",
     "file": "cae-conflicts.md",
     "description": "Run CAE evaluation conflict/shadow summary pass (read-only).",

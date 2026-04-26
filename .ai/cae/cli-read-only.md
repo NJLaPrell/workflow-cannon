@@ -63,14 +63,17 @@ Use **`context-activation.<cae-verb>`** (dotted segments mirroring `run` names) 
 | **`cae-evaluate`** | `context-activation.cae-evaluate` | Compute **`effective-activation-bundle`** + **`trace`** + **`traceId`**. | `cae-evaluate-ok` |
 | **`cae-explain`** | `context-activation.cae-explain` | Produce **`explain-response.v1`** from **`traceId`** **or** inline **`evaluationContext`** replay. | `cae-explain-ok` |
 | **`cae-health`** | `context-activation.cae-health` | **`kit.cae.enabled`**, registry load state, optional last-eval timestamp, **`issues[]`**. | `cae-health-ok` |
+| **`cae-dashboard-summary`** | `context-activation.cae-dashboard-summary` | Guidance tab aggregate: health, validation, recent traces, ack, and feedback summaries. | `cae-dashboard-summary-ok` |
+| **`cae-recent-traces`** | `context-activation.cae-recent-traces` | List recent durable trace summaries for the Guidance trace browser. | `cae-recent-traces-ok` |
+| **`cae-guidance-preview`** | `context-activation.cae-guidance-preview` | Build bounded context from friendly task/workflow inputs and return grouped Guidance cards. | `cae-guidance-preview-ok` |
 | **`cae-conflicts`** | `context-activation.cae-conflicts` | Run merge/conflict analysis; return **`conflictShadowSummary`** + correlation **`traceId`**. | `cae-conflicts-ok` |
 | **`cae-get-trace`** | `context-activation.cae-get-trace` | Fetch **`trace.v1`** by id (session or persisted **T867**). | `cae-get-trace-ok` |
 | **`cae-list-acks`** | `context-activation.cae-list-acks` | List persisted CAE acknowledgement satisfaction rows by trace or activation. | `cae-list-acks-ok` |
 | **`cae-shadow-feedback-report`** | `context-activation.cae-shadow-feedback-report` | Summarize recorded shadow usefulness feedback for activation curation. | `cae-shadow-feedback-report-ok` |
 
-**Argv schema:** **`caeEvaluateRequest`**, **`caeExplainRequest`** (**oneOf** trace vs replay), **`caeHealthRequest`**, **`caeConflictsRequest`**, **`caeGetTraceRequest`**, **`caeListAcksRequest`**. Shadow feedback report currently follows its instruction file shape.
+**Argv schema:** **`caeEvaluateRequest`**, **`caeExplainRequest`** (**oneOf** trace vs replay), **`caeHealthRequest`**, **`caeDashboardSummaryRequest`**, **`caeRecentTracesRequest`**, **`caeGuidancePreviewRequest`**, **`caeConflictsRequest`**, **`caeGetTraceRequest`**, **`caeListAcksRequest`**. Shadow feedback report currently follows its instruction file shape.
 
-**`data` schema:** **`caeEvaluateData`**, **`caeExplainData`**, **`caeHealthData`**, **`caeConflictsData`**, **`caeGetTraceData`**, **`caeListAcksData`**. Shadow feedback report currently follows its instruction file shape.
+**`data` schema:** **`caeEvaluateData`**, **`caeExplainData`**, **`caeHealthData`**, **`caeDashboardSummaryData`**, **`caeRecentTracesData`**, **`caeGuidancePreviewData`**, **`caeConflictsData`**, **`caeGetTraceData`**, **`caeListAcksData`**. Shadow feedback report currently follows its instruction file shape.
 
 ### `cae-explain` inputs (normative)
 

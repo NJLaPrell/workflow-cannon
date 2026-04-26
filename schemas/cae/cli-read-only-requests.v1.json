@@ -132,6 +132,63 @@
         }
       }
     },
+    "caeDashboardSummaryRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion"],
+      "properties": {
+        "schemaVersion": { "const": 1 }
+      }
+    },
+    "caeRecentTracesRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "limit": { "type": "integer", "minimum": 1, "maximum": 200 }
+      }
+    },
+    "caeGuidancePreviewRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "commandName"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "taskId": {
+          "type": "string",
+          "pattern": "^T[0-9]{3,}$",
+          "maxLength": 32
+        },
+        "commandName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "moduleId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "commandArgs": {
+          "type": "object",
+          "maxProperties": 64
+        },
+        "argvSummary": {
+          "type": "string",
+          "maxLength": 512
+        },
+        "currentKitPhase": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "evalMode": {
+          "type": "string",
+          "enum": ["live", "shadow"]
+        }
+      }
+    },
     "caeConflictsRequest": {
       "type": "object",
       "additionalProperties": false,
