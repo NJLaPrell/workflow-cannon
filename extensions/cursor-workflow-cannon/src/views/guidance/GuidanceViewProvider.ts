@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import type { CommandClient } from "../../runtime/command-client.js";
 import {
+  renderGuidanceActionResultInnerHtml,
   renderGuidancePreviewInnerHtml,
   renderGuidanceSummaryInnerHtml,
   renderGuidanceTraceDetailInnerHtml
@@ -225,7 +226,7 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
       "Record acknowledgement"
     );
     if (confirmed !== "Record acknowledgement") return;
-    const actor = (await vscode.window.showInputBox({ prompt: "Actor for acknowledgement", value: "dashboard" })) ?? "dashboard";
+    const actor = (await this.resolveActionActor("Actor for acknowledgement")) ?? "dashboard";
     const r = await this.client.run("cae-satisfy-ack", {
       schemaVersion: 1,
       traceId,
@@ -237,7 +238,10 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
         rationale: "Guidance tab acknowledgement confirmation"
       }
     });
-    await webview.postMessage({ type: "showStatus", kind: r.ok ? "ok" : "err", text: JSON.stringify(r, null, 2) });
+    await webview.postMessage({
+      type: "setActionResult",
+      html: renderGuidanceActionResultInnerHtml({ action: "Acknowledgement", result: r })
+    });
     await this.pushSummary(webview);
   }
 
@@ -253,8 +257,12 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
       `Mark ${signal}`
     );
     if (confirmed !== `Mark ${signal}`) return;
-    const actor = (await vscode.window.showInputBox({ prompt: "Actor for feedback", value: "dashboard" })) ?? "dashboard";
-    const r = await this.client.run("cae-record-shadow-feedback", {
+    const actor = (await this.resolveActionActor("Actor for feedback")) ?? "dashboard";
+    const note = await vscode.window.showInputBox({
+      prompt: "Optional feedback note",
+      placeHolder: "What made this Guidance useful or noisy?"
+    });
+    const payload: Record<string, unknown> = {
       schemaVersion: 1,
       traceId,
       activationId,
@@ -265,9 +273,31 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
         confirmed: true,
         rationale: "Guidance tab shadow feedback confirmation"
       }
+    };
+    if (note && note.trim()) payload.note = note.trim();
+    const r = await this.client.run("cae-record-shadow-feedback", payload);
+    await webview.postMessage({
+      type: "setActionResult",
+      html: renderGuidanceActionResultInnerHtml({ action: `${signal === "useful" ? "Useful" : "Noisy"} feedback`, result: r })
     });
-    await webview.postMessage({ type: "showStatus", kind: r.ok ? "ok" : "err", text: JSON.stringify(r, null, 2) });
     await this.pushSummary(webview);
+  }
+
+  private defaultActorFromEnvironment(): string | undefined {
+    const candidates = [
+      process.env.GIT_AUTHOR_EMAIL,
+      process.env.GIT_COMMITTER_EMAIL,
+      process.env.WORKSPACE_KIT_ACTOR,
+      process.env.USER,
+      process.env.USERNAME
+    ];
+    return candidates.find((candidate) => typeof candidate === "string" && candidate.trim().length > 0)?.trim();
+  }
+
+  private async resolveActionActor(prompt: string): Promise<string | undefined> {
+    const actor = this.defaultActorFromEnvironment();
+    if (actor) return actor;
+    return vscode.window.showInputBox({ prompt, value: "dashboard" });
   }
 
   private buildHtmlShell(webview: vscode.Webview): string {
@@ -281,6 +311,7 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
   var summaryRoot = document.getElementById('guidance-summary-root');
   var previewRoot = document.getElementById('guidance-preview-root');
   var traceDetailRoot = document.getElementById('guidance-trace-detail-root');
+  var actionResultRoot = document.getElementById('guidance-action-result-root');
   var statusEl = document.getElementById('gd-status');
   var taskSelect = document.getElementById('gd-task-select');
   var workflowSelect = document.getElementById('gd-workflow-select');
@@ -416,6 +447,11 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
       showStatus('info', 'Trace detail loaded.');
       return;
     }
+    if (m && m.type === 'setActionResult' && actionResultRoot && typeof m.html === 'string') {
+      actionResultRoot.innerHTML = m.html;
+      showStatus('info', 'Guidance action finished.');
+      return;
+    }
     if (m && m.type === 'showStatus') {
       showStatus(m.kind || 'info', m.text || '');
     }
@@ -486,6 +522,7 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
     <button type="button" class="gd-btn gd-primary" id="gd-preview">Check current context</button>
   </section>
   <div id="gd-status" class="gd-status gd-status-info" role="status"></div>
+  <div id="guidance-action-result-root"></div>
   <div id="guidance-trace-detail-root"></div>
   <div id="guidance-preview-root"></div>
   <div id="guidance-summary-root"></div>

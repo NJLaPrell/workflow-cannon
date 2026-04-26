@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  renderGuidanceActionResultInnerHtml,
   renderGuidancePreviewInnerHtml,
   renderGuidanceSummaryInnerHtml,
   renderGuidanceTraceDetailInnerHtml
@@ -155,4 +156,24 @@ test("renderGuidanceTraceDetailInnerHtml renders trace-not-found recovery", () =
   });
   assert.match(html, /Stored trace not found/);
   assert.match(html, /fresh Guidance preview/);
+});
+
+test("renderGuidanceActionResultInnerHtml renders friendly success and raw details", () => {
+  const html = renderGuidanceActionResultInnerHtml({
+    action: "Useful feedback",
+    result: { ok: true, code: "cae-shadow-feedback-recorded", message: "Recorded feedback" }
+  });
+  assert.match(html, /Useful feedback recorded/);
+  assert.match(html, /Recorded feedback/);
+  assert.match(html, /Raw result/);
+});
+
+test("renderGuidanceActionResultInnerHtml renders friendly failure", () => {
+  const html = renderGuidanceActionResultInnerHtml({
+    action: "Acknowledgement",
+    result: { ok: false, code: "policy-denied", message: "Policy approval required" }
+  });
+  assert.match(html, /Acknowledgement failed/);
+  assert.match(html, /Policy approval required/);
+  assert.match(html, /Needs attention/);
 });

@@ -318,3 +318,27 @@ ${traceFetchMissing ? `<section class="gd-card gd-warn-card"><h2>Stored trace no
   <pre>${escapeHtml(JSON.stringify({ explain, traceFetch }, null, 2).slice(0, 20000))}</pre>
 </details>`;
 }
+
+export function renderGuidanceActionResultInnerHtml(payload: unknown): string {
+  const root = asRecord(payload);
+  const action = String(root.action ?? "Guidance action");
+  const result = asRecord(root.result);
+  const ok = result.ok !== false;
+  const title = ok ? `${action} recorded` : `${action} failed`;
+  return `<section class="gd-card ${ok ? "" : "gd-danger"}">
+  <div class="gd-card-head">
+    <h2>${escapeHtml(title)}</h2>
+    <span class="${statusClass(ok)}">${ok ? "Done" : "Needs attention"}</span>
+  </div>
+  <p>${escapeHtml(String(result.message ?? result.code ?? (ok ? "The Guidance action completed." : "The Guidance action did not complete.")))}</p>
+  ${
+    result.code
+      ? `<p class="gd-muted">Result code: <code>${escapeHtml(String(result.code))}</code></p>`
+      : ""
+  }
+  <details>
+    <summary>Raw result</summary>
+    <pre>${escapeHtml(JSON.stringify(result, null, 2).slice(0, 12000))}</pre>
+  </details>
+</section>`;
+}
