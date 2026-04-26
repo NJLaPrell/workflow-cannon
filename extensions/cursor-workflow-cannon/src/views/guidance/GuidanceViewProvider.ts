@@ -1,9 +1,73 @@
 import * as vscode from "vscode";
+import fs from "node:fs/promises";
+import path from "node:path";
 import type { CommandClient } from "../../runtime/command-client.js";
 import {
   renderGuidancePreviewInnerHtml,
   renderGuidanceSummaryInnerHtml
 } from "./render-guidance.js";
+
+type TaskChoice = {
+  id: string;
+  title: string;
+  status: string;
+  phase?: string;
+};
+
+type WorkflowChoice = {
+  name: string;
+  moduleId: string;
+  description: string;
+  curated: boolean;
+};
+
+const CURATED_WORKFLOW_NAMES = new Set([
+  "get-next-actions",
+  "list-tasks",
+  "dashboard-summary",
+  "queue-health",
+  "run-transition",
+  "cae-dashboard-summary",
+  "cae-guidance-preview",
+  "cae-recent-traces",
+  "cae-explain",
+  "generate-document",
+  "document-project"
+]);
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
+function taskChoicesFromPayload(payload: unknown): TaskChoice[] {
+  const data = asRecord(asRecord(payload).data);
+  const tasks = Array.isArray(data.tasks) ? data.tasks : Array.isArray(data.readyQueue) ? data.readyQueue : [];
+  const choices: TaskChoice[] = [];
+  for (const raw of tasks) {
+    const task = asRecord(raw);
+    const id = typeof task.id === "string" ? task.id : "";
+    if (!id) continue;
+    choices.push({
+      id,
+      title: typeof task.title === "string" ? task.title : "",
+      status: typeof task.status === "string" ? task.status : "",
+      phase: typeof task.phase === "string" ? task.phase : undefined
+    });
+  }
+  return choices;
+}
+
+function workflowChoiceFromManifestEntry(raw: unknown): WorkflowChoice | null {
+  const entry = asRecord(raw);
+  const name = typeof entry.name === "string" ? entry.name : "";
+  if (!name) return null;
+  return {
+    name,
+    moduleId: typeof entry.moduleId === "string" ? entry.moduleId : "",
+    description: typeof entry.description === "string" ? entry.description : "",
+    curated: CURATED_WORKFLOW_NAMES.has(name)
+  };
+}
 
 export class GuidanceViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewId = "workflowCannon.guidance";
@@ -77,6 +141,60 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
   private async pushSummary(webview: vscode.Webview): Promise<void> {
     const r = await this.client.run("cae-dashboard-summary", { schemaVersion: 1 });
     await webview.postMessage({ type: "setSummary", html: renderGuidanceSummaryInnerHtml(r) });
+    await this.pushChoices(webview);
+  }
+
+  private async pushChoices(webview: vscode.Webview): Promise<void> {
+    const [nextActions, inProgress, workflows] = await Promise.all([
+      this.client.run("get-next-actions", {}),
+      this.client.run("list-tasks", { status: "in_progress" }),
+      this.loadWorkflowChoices()
+    ]);
+    const byId = new Map<string, TaskChoice>();
+    for (const task of [...taskChoicesFromPayload(nextActions), ...taskChoicesFromPayload(inProgress)]) {
+      byId.set(task.id, task);
+    }
+    await webview.postMessage({
+      type: "setChoices",
+      tasks: [...byId.values()].slice(0, 50),
+      workflows
+    });
+  }
+
+  private async loadWorkflowChoices(): Promise<WorkflowChoice[]> {
+    const manifestPath = path.join(
+      this.client.getWorkspaceRoot(),
+      "src",
+      "contracts",
+      "builtin-run-command-manifest.json"
+    );
+    try {
+      const raw = await fs.readFile(manifestPath, "utf8");
+      const manifest = JSON.parse(raw) as unknown;
+      const byName = new Map<string, WorkflowChoice>();
+      if (Array.isArray(manifest)) {
+        for (const entry of manifest) {
+          const choice = workflowChoiceFromManifestEntry(entry);
+          if (choice) byName.set(choice.name, choice);
+        }
+      }
+      for (const name of CURATED_WORKFLOW_NAMES) {
+        if (!byName.has(name)) {
+          byName.set(name, { name, moduleId: "", description: "Common workflow", curated: true });
+        }
+      }
+      return [...byName.values()].sort((a, b) => {
+        if (a.curated !== b.curated) return a.curated ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      });
+    } catch {
+      return [...CURATED_WORKFLOW_NAMES].map((name) => ({
+        name,
+        moduleId: "",
+        description: "Common workflow",
+        curated: true
+      }));
+    }
   }
 
   private async notifyRefresh(): Promise<void> {
@@ -152,10 +270,48 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
   var summaryRoot = document.getElementById('guidance-summary-root');
   var previewRoot = document.getElementById('guidance-preview-root');
   var statusEl = document.getElementById('gd-status');
+  var taskSelect = document.getElementById('gd-task-select');
+  var workflowSelect = document.getElementById('gd-workflow-select');
+  var workflowList = document.getElementById('gd-workflow-options');
   function showStatus(kind, text) {
     if (!statusEl) return;
     statusEl.className = 'gd-status gd-status-' + (kind || 'info');
     statusEl.textContent = text || '';
+  }
+  function option(label, value, title) {
+    var opt = document.createElement('option');
+    opt.value = value || '';
+    opt.textContent = label || value || '';
+    if (title) opt.title = title;
+    return opt;
+  }
+  function setInputValue(id, value) {
+    var el = document.getElementById(id);
+    if (el) el.value = value || '';
+  }
+  function renderChoices(tasks, workflows) {
+    if (taskSelect) {
+      taskSelect.textContent = '';
+      taskSelect.appendChild(option('Manual / no task', ''));
+      (Array.isArray(tasks) ? tasks : []).forEach(function(task) {
+        var label = String(task.id || '') + (task.title ? ' — ' + String(task.title) : '');
+        taskSelect.appendChild(option(label, String(task.id || ''), String(task.phase || task.status || '')));
+      });
+    }
+    if (workflowSelect) {
+      workflowSelect.textContent = '';
+      workflowSelect.appendChild(option('Manual entry', ''));
+      (Array.isArray(workflows) ? workflows : []).filter(function(w) { return w && w.curated; }).forEach(function(w) {
+        workflowSelect.appendChild(option(String(w.name || ''), String(w.name || ''), String(w.description || '')));
+      });
+    }
+    if (workflowList) {
+      workflowList.textContent = '';
+      (Array.isArray(workflows) ? workflows : []).forEach(function(w) {
+        var opt = option(String(w.name || ''), String(w.name || ''), String(w.moduleId || '') + (w.description ? ' — ' + String(w.description) : ''));
+        workflowList.appendChild(opt);
+      });
+    }
   }
   function requestLoad() {
     vscode.postMessage({ type: 'load' });
@@ -175,6 +331,8 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
       evalMode: live && live.checked ? 'live' : 'shadow'
     });
   }
+  if (taskSelect) taskSelect.addEventListener('change', function() { setInputValue('gd-task-id', taskSelect.value || ''); });
+  if (workflowSelect) workflowSelect.addEventListener('change', function() { if (workflowSelect.value) setInputValue('gd-command-name', workflowSelect.value); });
   document.getElementById('gd-refresh') && document.getElementById('gd-refresh').addEventListener('click', requestLoad);
   document.getElementById('gd-preview') && document.getElementById('gd-preview').addEventListener('click', runPreview);
   document.body.addEventListener('click', function(ev) {
@@ -215,6 +373,10 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
     if (m && m.type === 'setSummary' && summaryRoot && typeof m.html === 'string') {
       summaryRoot.innerHTML = m.html;
       showStatus('info', 'Guidance summary loaded.');
+      return;
+    }
+    if (m && m.type === 'setChoices') {
+      renderChoices(m.tasks, m.workflows);
       return;
     }
     if (m && m.type === 'setPreview' && previewRoot && typeof m.html === 'string') {
@@ -276,9 +438,14 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
   </div>
   <section class="gd-card">
     <h2>Check current context</h2>
+    <p class="gd-muted">Pick a common path first, or use the manual fields when you need to go off-road.</p>
+    <div class="gd-toolbar">
+      <div class="gd-field"><label for="gd-task-select">Task picker</label><select id="gd-task-select" class="gd-input"><option value="">Loading tasks…</option></select></div>
+      <div class="gd-field"><label for="gd-workflow-select">Common workflows</label><select id="gd-workflow-select" class="gd-input"><option value="">Loading workflows…</option></select></div>
+    </div>
     <div class="gd-toolbar">
       <div class="gd-field"><label for="gd-task-id">Task</label><input id="gd-task-id" class="gd-input" placeholder="T921 (optional)" /></div>
-      <div class="gd-field"><label for="gd-command-name">Command or workflow</label><input id="gd-command-name" class="gd-input" value="get-next-actions" /></div>
+      <div class="gd-field"><label for="gd-command-name">Command or workflow</label><input id="gd-command-name" class="gd-input" list="gd-workflow-options" value="get-next-actions" /><datalist id="gd-workflow-options"></datalist></div>
       <div class="gd-field"><label for="gd-module-id">Module</label><input id="gd-module-id" class="gd-input" placeholder="optional" /></div>
     </div>
     <div class="gd-field"><label for="gd-argv-summary">Argv summary</label><input id="gd-argv-summary" class="gd-input" placeholder='optional, e.g. {"status":"ready"}' /></div>
