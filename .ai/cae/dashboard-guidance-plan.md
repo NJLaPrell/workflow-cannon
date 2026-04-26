@@ -27,6 +27,14 @@ Validated evidence:
 - `pnpm run test`
 - `node scripts/check-agent-cli-map-coverage.mjs`
 - `node scripts/check-builtin-command-manifest.mjs`
+- Phase 71 smoke (2026-04-26): `pnpm run build`,
+  `pnpm --filter cursor-workflow-cannon run test`,
+  `workspace-kit run cae-dashboard-summary`,
+  `workspace-kit run cae-guidance-preview` for `T941` + `get-next-actions`
+  with structured `commandArgs`, `workspace-kit run cae-explain` for the
+  persisted preview trace, and a package/static check confirming
+  `workflowCannon.guidance` is contributed while registry editing commands are
+  absent from the Guidance UI.
 
 ## Product framing
 
@@ -256,12 +264,13 @@ explicit confirmation and pass JSON `policyApproval` in the command payload.
 - `CAE-UI-05`: Done — Guidance sidebar view skeleton in the Cursor extension.
 - `CAE-UI-06`: Done — health, registry, recent traces, acks, and feedback
   summaries render.
-- `CAE-UI-07`: Partial — Check current context flow and grouped cards exist;
-  task/workflow picker polish remains.
-- `CAE-UI-08`: Partial — explain action exists; dedicated trace detail panel
-  remains.
-- `CAE-UI-09`: Partial — policy-aware acknowledgement and feedback actions
-  exist; UX polish, actor defaulting, and optional notes remain.
+- `CAE-UI-07`: Done — Check current context flow includes task/workflow
+  pickers, manifest-backed workflow search, structured command args, and
+  grouped cards.
+- `CAE-UI-08`: Done — explain action renders a dedicated trace detail panel
+  with summary first and raw JSON behind details.
+- `CAE-UI-09`: Done — policy-aware acknowledgement and feedback actions render
+  friendly result cards, actor defaults, and optional feedback notes.
 - `CAE-UI-10`: Done — schema, golden smoke, renderer tests, and degraded-state
   coverage exist.
 
@@ -269,17 +278,49 @@ Phase 71 task rows:
 
 - `CAE-UI-11`: Done — Guidance degraded-state coverage and recovery cards
   (`T934`).
-- `CAE-UI-12`: Add task and workflow pickers for Guidance preview.
-- `CAE-UI-13`: Add persisted trace summary metadata and migrate
-  `cae-recent-traces` to prefer it.
-- `CAE-UI-14`: Add dedicated trace detail panel for `cae-explain`.
-- `CAE-UI-15`: Add structured `commandArgs` input and validation.
-- `CAE-UI-16`: Polish acknowledgement and feedback UX with actor defaults and
-  optional notes.
-- `CAE-UI-17`: Add Guidance conflict and match-reason UI so users understand
-  why each item appeared and what conflicts mean.
-- `CAE-UI-18`: Run Guidance MVP manual smoke and release-readiness verification
-  in the extension host before Phase 71 closeout.
+- `CAE-UI-12`: Done — task and workflow pickers for Guidance preview (`T935`).
+- `CAE-UI-13`: Done — persisted trace summary metadata and
+  `cae-recent-traces` summary preference (`T936`).
+- `CAE-UI-14`: Done — dedicated trace detail panel for `cae-explain` (`T937`).
+- `CAE-UI-15`: Done — structured `commandArgs` input and validation (`T938`).
+- `CAE-UI-16`: Done — acknowledgement and feedback UX polish with actor
+  defaults and optional notes (`T939`).
+- `CAE-UI-17`: Done — Guidance conflict and match-reason UI (`T940`).
+- `CAE-UI-18`: Done — Guidance MVP smoke and release-readiness verification
+  before Phase 71 closeout (`T941`).
+
+## Phase 71 release-readiness smoke
+
+Date: 2026-04-26.
+
+Evidence:
+
+- Build/test: `pnpm run build`; `pnpm --filter cursor-workflow-cannon run test`
+  (64 extension tests passing).
+- Status reload contract: `workspace-kit run cae-dashboard-summary
+  '{"schemaVersion":1}'` returned `cae-dashboard-summary-ok`, healthy registry,
+  persistence enabled, recent durable traces, acknowledgement summary, and
+  feedback summary.
+- Task/workflow preview: `workspace-kit run cae-guidance-preview` with
+  `taskId:"T941"`, `commandName:"get-next-actions"`, `evalMode:"shadow"`, and
+  structured `commandArgs:{"phaseKey":"71"}` returned
+  `cae-guidance-preview-ok`, durable trace
+  `cae.trace.3e7cadc906c9f411c7df211ccb3192e35062a45b`, grouped Guidance
+  cards, and bounded evaluation context.
+- Trace explain: `workspace-kit run cae-explain` for that trace returned
+  `cae-explain-ok`, storage `sqlite`, and summary
+  `matched policy=0, think=0, do=1, review=0`.
+- Package metadata: `extensions/cursor-workflow-cannon/package.json`
+  contributes `workflowCannon.guidance` as a webview named `Guidance` beside the
+  existing Workflow Cannon views.
+- Registry editing absence: static Guidance provider check confirmed registry
+  mutation commands such as `cae-create-artifact`, `cae-update-artifact`,
+  `cae-create-activation`, `cae-update-activation`, and
+  `cae-import-json-registry` are absent from the UI.
+
+Manual-host note: this evidence is CLI/static smoke plus extension renderer
+coverage in the local workspace. No interactive VS Code Extension Host window
+was opened in this run; no MVP blocker was found in the executable smoke.
 
 ## Acceptance
 
