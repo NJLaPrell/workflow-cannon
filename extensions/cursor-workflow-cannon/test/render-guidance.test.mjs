@@ -96,10 +96,24 @@ test("renderGuidancePreviewInnerHtml renders grouped guidance actions", () => {
         think: [],
         do: [],
         review: []
+      },
+      conflictShadowSummary: {
+        evalMode: "shadow",
+        entries: [
+          {
+            kind: "same_family_tie",
+            activationIds: ["cae.activation.policy.phase70-playbook", "cae.activation.policy.other"],
+            resolution: "merge",
+            detail: "Two policy activations matched the same workflow."
+          }
+        ]
       }
     }
   });
   assert.match(html, /Rules to follow/);
+  assert.match(html, /Why this appeared/);
+  assert.match(html, /Possible guidance conflicts/);
+  assert.match(html, /Two policy activations matched/);
   assert.match(html, /data-wc-action="guidance-ack"/);
   assert.match(html, /data-wc-action="guidance-feedback"/);
 });
