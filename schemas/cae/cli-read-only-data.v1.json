@@ -234,7 +234,10 @@
         "totalGuidanceCount": { "type": "integer", "minimum": 0 },
         "pendingAcknowledgementCount": { "type": "integer", "minimum": 0 },
         "conflictCount": { "type": "integer", "minimum": 0 },
-        "bundleId": { "type": ["string", "null"], "maxLength": 128 }
+        "bundleId": { "type": ["string", "null"], "maxLength": 128 },
+        "taskId": { "type": "string", "minLength": 3, "maxLength": 128 },
+        "taskTitle": { "type": "string", "maxLength": 512 },
+        "commandName": { "type": "string", "maxLength": 128 }
       }
     },
     "caeGuidanceCard": {

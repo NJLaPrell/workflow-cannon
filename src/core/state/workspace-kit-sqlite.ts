@@ -4,7 +4,7 @@ import { seedFeatureRegistryIfEmpty } from "./feature-registry-migration.js";
 type SqliteDatabase = InstanceType<typeof Database>;
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 13;
+export const KIT_SQLITE_USER_VERSION = 14;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 
@@ -263,6 +263,7 @@ CREATE TABLE IF NOT EXISTS cae_trace_snapshots (
   trace_id TEXT PRIMARY KEY NOT NULL,
   trace_json TEXT NOT NULL,
   bundle_json TEXT NOT NULL,
+  summary_json TEXT,
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_cae_trace_snapshots_created ON cae_trace_snapshots(created_at);
@@ -347,6 +348,17 @@ function migrateV12ToV13(db: SqliteDatabase): void {
   db.exec(CAE_REGISTRY_MUTATIONS_AUDIT_DDL);
 }
 
+function migrateV13ToV14(db: SqliteDatabase): void {
+  if (!tableExists(db, "cae_trace_snapshots")) {
+    db.exec(CAE_PERSISTENCE_DDL);
+    return;
+  }
+  const cols = columnNames(db, "cae_trace_snapshots");
+  if (!cols.has("summary_json")) {
+    db.exec("ALTER TABLE cae_trace_snapshots ADD COLUMN summary_json TEXT");
+  }
+}
+
 /**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
@@ -428,6 +440,11 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
     migrateV12ToV13(db);
     db.pragma("user_version = 13");
     current = 13;
+  }
+  if (current < 14) {
+    migrateV13ToV14(db);
+    db.pragma("user_version = 14");
+    current = 14;
   }
 }
 
