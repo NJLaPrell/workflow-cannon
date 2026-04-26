@@ -16,7 +16,10 @@ import {
 } from "../core/policy.js";
 import { getSessionGrant, recordSessionGrant, resolveSessionId } from "../core/session-policy.js";
 import { createKitLifecycleHookBus } from "../core/kit-lifecycle-hooks.js";
+import { persistCaeTraceIfEnabled } from "../core/cae/cae-kit-sqlite.js";
+import { mergeCaeIntoCommandResult, runCaeCliPreflight } from "../core/cae/cae-run-preflight.js";
 import { applyResponseTemplateApplication } from "../core/response-template-shaping.js";
+import { getAtPath } from "../core/workspace-kit-config.js";
 import {
   buildRunArgsSchemaOnlyPayload,
   enforcePlanningGenerationCliPrelude,
@@ -26,6 +29,7 @@ import { defaultRegistryModules } from "../modules/index.js";
 import { tryAutoCheckpointBeforeRun } from "../modules/checkpoints/checkpoint-auto.js";
 import { promptSensitiveRunApproval } from "./interactive-policy.js";
 import { releaseTranscriptHookLockFromEnv } from "../core/transcript-completion-hook.js";
+import { storeCaeSession } from "../modules/context-activation/trace-store.js";
 
 /** Default apply-skill preview mode for policy (dryRun true when omitted). */
 function normalizeApplySkillArgs(args: Record<string, unknown>): Record<string, unknown> {
@@ -316,6 +320,38 @@ export async function handleRunCommand(
     }
   }
 
+  const caePre = runCaeCliPreflight({
+    workspacePath: cwd,
+    effective,
+    subcommand,
+    commandArgs,
+    router
+  });
+  if (caePre.traceToStore) {
+    storeCaeSession(caePre.traceToStore.traceId, {
+      bundle: caePre.traceToStore.bundle,
+      trace: caePre.traceToStore.trace
+    });
+    persistCaeTraceIfEnabled(
+      cwd,
+      effective,
+      getAtPath(effective, "kit.cae.persistence") === true,
+      caePre.traceToStore.traceId,
+      caePre.traceToStore.trace,
+      caePre.traceToStore.bundle
+    );
+  }
+  if (caePre.enforcementDenial) {
+    const denied = applyResponseTemplateApplication(
+      subcommand,
+      commandArgs,
+      caePre.enforcementDenial,
+      effective
+    );
+    writeLine(JSON.stringify(denied, null, 2));
+    return codes.validationFailure;
+  }
+
   try {
     const rawResult = await router.execute(subcommand, commandArgs, ctx);
     if (sensitive && resolvedSensitiveApproval && policyOp) {
@@ -349,7 +385,8 @@ export async function handleRunCommand(
         );
       }
     }
-    const result = applyResponseTemplateApplication(subcommand, commandArgs, rawResult, effective);
+    const withCae = mergeCaeIntoCommandResult(rawResult, caePre.shadowAttach);
+    const result = applyResponseTemplateApplication(subcommand, commandArgs, withCae, effective);
     if (hookBus.isEnabled()) {
       await hookBus.emitAfterModuleCommand(subcommand, rawResult.ok, rawResult.code);
     }

@@ -8,7 +8,7 @@
   ],
   "currentState": [
     "**Shipped:** latest **`v0.61.0`** (Phase **61** — Claude Code plugin platform v1: **`list-plugins`** / **`inspect-plugin`**, **`install-plugin`** / enable-disable, SQLite **`user_version` 8 **`kit_plugin_state`**, ADR + schema + CI fixture). Phase **60** (**`v0.60.0`**, run-args pilot + dashboard/subagent surfaces) and prior trains remain summarized in **[`ROADMAP-archive.md`](./ROADMAP-archive.md)**; version facts in **[`CHANGELOG.md`](./CHANGELOG.md)**.",
-    "**Next:** Use **`get-next-actions`** / **`list-tasks`** for **`ready`** work; **`T668`–`T670`** (Cursor chat prefill) remain **`cancelled`**.",
+    "**Next:** Use **`get-next-actions`** / **`list-tasks`** for **`ready`** work; **Phase 70 (CAE)** — tasks **`T837`–`T869`** (Context Activation Engine spec + implementation train); **`T668`–`T670`** (Cursor chat prefill) remain **`cancelled`**.",
     "**Maintainer snapshot** — `docs/maintainers/data/workspace-kit-status.yaml` (`current_kit_phase`, `next_agent_actions`).",
     "**Execution queue** — canonical task-engine store (default `.workspace-kit/tasks/workspace-kit.db`; JSON opt-out `.workspace-kit/tasks/state.json`); use `pnpm run wk run list-tasks` / `get-next-actions` rather than inferring phase from prose alone.",
     "**Product / feature inventory** — **`docs/maintainers/FEATURE-MATRIX.md`**.",

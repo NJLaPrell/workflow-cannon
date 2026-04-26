@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/cae/explain-response.v1.json",
+  "title": "CAE explain response (v1)",
+  "description": "Human-facing explanation of a trace (T846). Producer: T862. textStability is intentionally best-effort for natural language.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "traceId", "level", "summaryText", "textStability"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "traceId": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 128
+    },
+    "level": {
+      "type": "string",
+      "enum": ["summary", "verbose"]
+    },
+    "summaryText": {
+      "type": "string",
+      "maxLength": 8192,
+      "description": "Primary narrative; may be truncated with truncation.summaryTextCharsOmitted."
+    },
+    "textStability": {
+      "const": "best_effort_v1",
+      "description": "NL fields are not semver-stable; keys and envelope are."
+    },
+    "verboseEvents": {
+      "type": "array",
+      "maxItems": 512,
+      "description": "Optional digest of events when level=verbose.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["seq", "eventType"],
+        "properties": {
+          "seq": { "type": "integer", "minimum": 0 },
+          "eventType": { "type": "string", "maxLength": 128 },
+          "payloadSummary": {
+            "type": "string",
+            "maxLength": 1024
+          }
+        }
+      }
+    },
+    "truncation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "eventsOmitted": { "type": "integer", "minimum": 0 },
+        "summaryTextCharsOmitted": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

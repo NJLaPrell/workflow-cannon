@@ -22,6 +22,7 @@
     "list-approval-queue",
     "list-module-states",
     "migrate-task-persistence",
+    "persist-planning-execution-drafts",
     "query-lineage",
     "queue-git-alignment",
     "remove-dependency",

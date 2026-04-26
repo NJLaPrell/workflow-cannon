@@ -11,7 +11,7 @@
       "const": 1
     },
     "packageVersion": {
-      "const": "0.66.0",
+      "const": "0.70.0",
       "description": "Must match package.json version."
     },
     "moduleId": {
@@ -60,6 +60,7 @@
         "export-feature-taxonomy-json",
         "export-workspace-status",
         "migrate-task-persistence",
+        "persist-planning-execution-drafts",
         "dashboard-summary",
         "get-module-state",
         "list-components",
@@ -108,6 +109,7 @@
         "export-feature-taxonomy-json": { "$ref": "#/$defs/contractBase" },
         "export-workspace-status": { "$ref": "#/$defs/contractExportWorkspaceStatus" },
         "migrate-task-persistence": { "$ref": "#/$defs/contractMigrateTaskPersistence" },
+        "persist-planning-execution-drafts": { "$ref": "#/$defs/contractPersistPlanningExecutionDrafts" },
         "dashboard-summary": { "$ref": "#/$defs/contractDashboardSummary" },
         "get-module-state": { "$ref": "#/$defs/contractGetModuleState" },
         "list-components": { "$ref": "#/$defs/contractBase" },
@@ -594,6 +596,25 @@
             "responseData": {
               "type": "object",
               "required": ["wishlist", "createdTasks", "presentation"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractPersistPlanningExecutionDrafts": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "required": ["tasks"],
+              "additionalProperties": true
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["createdTasks", "count"],
               "additionalProperties": true
             }
           }

@@ -51,7 +51,10 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /dash-card/);
   assert.match(html, /<b>Role:<\/b> Adventurer/);
   assert.match(html, /<b>Agent Temperament:<\/b> The Steady Adventurer/);
-  assert.match(html, /dashboard-overview/);
+  assert.match(html, /dash-role-temperament-phase/);
+  const roleIdx = html.indexOf("<b>Role:</b>");
+  const phaseIdx = html.indexOf("Current Phase");
+  assert.ok(roleIdx !== -1 && phaseIdx !== -1 && roleIdx < phaseIdx);
   assert.match(html, /dash-overview-phase-row/);
   assert.match(html, /data-wc-action="deliver-phase-prompt"/);
   assert.match(html, />Deliver<\/button>/);
@@ -83,6 +86,19 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /Wishlist/);
   assert.match(html, /Proposed · Improvements/);
   assert.match(html, /Proposed · Execution/);
+  const readyIdx = html.indexOf("Ready · Improvements");
+  const proposedIdx = html.indexOf("Proposed · Improvements");
+  const researchIdx = html.indexOf("Research · Transcript churn");
+  const blockedIdx = html.indexOf("<b>Blocked</b>");
+  const completedIdx = html.indexOf("<b>Completed</b>");
+  const cancelledIdx = html.indexOf("<b>Cancelled</b>");
+  assert.ok(readyIdx !== -1 && proposedIdx !== -1 && readyIdx < proposedIdx);
+  assert.ok(proposedIdx !== -1 && researchIdx !== -1 && proposedIdx < researchIdx);
+  assert.ok(researchIdx !== -1 && blockedIdx !== -1 && researchIdx < blockedIdx);
+  assert.ok(blockedIdx !== -1 && completedIdx !== -1 && blockedIdx < completedIdx);
+  assert.ok(completedIdx !== -1 && cancelledIdx !== -1 && completedIdx < cancelledIdx);
+  assert.match(html, /<details class="status-section" data-wc-track="status-ready-imp">/);
+  assert.match(html, /<details class="status-section" data-wc-track="status-ready-exe" open>/);
   assert.match(html, /imp-example/);
   assert.match(html, /T319/);
   assert.match(html, /T320/);
@@ -112,53 +128,14 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /Not Phased/);
   assert.doesNotMatch(html, /Dependency Overview/);
   assert.match(html, /Planning Interview/);
-  assert.match(html, /data-wc-action="planning-new-plan"/);
+  assert.doesNotMatch(html, /data-wc-action="planning-new-plan"/);
+  assert.doesNotMatch(html, /data-wc-action="planning-resume-chat"/);
   assert.match(html, /No interview in progress/);
+  assert.doesNotMatch(html, /This card updates when/);
   assert.match(html, /Store Updated/);
   assert.doesNotMatch(html, /same store as execution queue/i);
   assert.doesNotMatch(html, /Suggested Next/i);
-  assert.match(html, /dashboard-approvals/);
-  assert.match(html, /Chat and this dashboard are not approval/);
-  assert.match(html, /list-approval-queue/);
-});
-
-test("renderDashboardRootInnerHtml approvals section lists review queue and review-item example", () => {
-  const summary = {
-    ok: true,
-    data: {
-      stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
-      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
-      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
-      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
-      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
-      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
-      blockedSummary: { count: 0, top: [] },
-      planningSession: null,
-      taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
-      workspaceStatus: { currentKitPhase: "1", nextKitPhase: "2" }
-    }
-  };
-  const aq = {
-    ok: true,
-    code: "approval-queue-listed",
-    data: {
-      reviewItemQueue: [{ id: "T900", title: "Example imp", status: "ready", phase: "Phase 1", priority: "P2" }],
-      operatorHints: {
-        reviewItemExample: "pnpm exec wk run review-item '{\"taskId\":\"T900\"}'"
-      }
-    }
-  };
-  const html = renderDashboardRootInnerHtml(summary, aq);
-  assert.match(html, /Review-item queue/);
-  assert.match(html, /T900/);
-  assert.match(html, /Example imp/);
-  assert.match(html, /review-item/);
-  assert.match(html, /pnpm exec wk run review-item/);
-  assert.match(
-    html,
-    /class="dash-row-action dash-row-action-tertiary"[^>]*data-wc-action="task-detail"[^>]*data-task-id="T900"/
-  );
-  assert.match(html, /data-wc-action="task-detail"[\s\S]*?data-task-id="T900"[\s\S]*?>View<\/button>/);
+  assert.doesNotMatch(html, /dashboard-approvals/);
 });
 
 test("renderDashboardRootInnerHtml planning card shows resume CLI when session present", () => {
@@ -213,11 +190,16 @@ test("renderDashboardRootInnerHtml planning card shows resume CLI when session p
     }
   });
   assert.match(html, /Planning Interview/);
-  assert.match(html, /data-wc-action="planning-new-plan"/);
-  assert.match(html, />New Plan<\/button>/);
+  assert.doesNotMatch(html, /data-wc-action="planning-new-plan"/);
+  assert.doesNotMatch(html, />New Plan<\/button>/);
   assert.match(html, /Wishlist/);
-  assert.match(html, /Resume/);
+  assert.match(html, /data-wc-action="planning-resume-chat"/);
+  assert.match(html, />Resume<\/button>/);
+  assert.match(html, /data-wc-action="planning-discard"/);
+  assert.match(html, />Discard<\/button>/);
   assert.match(html, /build-plan/);
+  assert.doesNotMatch(html, /copy into a terminal/);
+  assert.doesNotMatch(html, /wc-planning-type/);
   assert.match(html, /40%/);
   assert.match(html, /through required questions/);
 });
@@ -266,8 +248,10 @@ test("renderDashboardRootInnerHtml omits suggested-next section", () => {
   assert.doesNotMatch(html, /Suggested Next/i);
   assert.doesNotMatch(html, /T999/);
   assert.match(html, />No Items</);
-  assert.match(html, /data-wc-action="planning-new-plan"/);
+  assert.doesNotMatch(html, /data-wc-action="planning-new-plan"/);
+  assert.doesNotMatch(html, /data-wc-action="planning-resume-chat"/);
   assert.match(html, /No interview in progress/);
+  assert.doesNotMatch(html, /This card updates when/);
   assert.match(html, /<b>Role:<\/b> Bard/);
   assert.match(html, /<b>Agent Temperament:<\/b> The Wary Scout/);
 });
@@ -426,6 +410,59 @@ test("renderDashboardRootInnerHtml proposed execution rows expose accept action"
   assert.match(html, /T777/);
 });
 
+test("renderDashboardRootInnerHtml proposed phase buckets show Accept All with taskIds", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      stateSummary: { proposed: 2, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: {
+        schemaVersion: 1,
+        count: 2,
+        top: [],
+        phaseBuckets: [
+          {
+            schemaVersion: 1,
+            phaseKey: "68",
+            label: "Phase 68 (current) (2)",
+            count: 2,
+            top: [
+              { id: "imp-aaa", title: "A", phase: "Phase 68" },
+              { id: "imp-bbb", title: "B", phase: "Phase 68" }
+            ],
+            taskIds: ["imp-aaa", "imp-bbb"]
+          }
+        ]
+      },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [] },
+      readyQueueTop: [],
+      readyQueueCount: 0,
+      suggestedNext: null,
+      planningSession: null,
+      taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
+      workspaceStatus: { currentKitPhase: "68", nextKitPhase: "69", activeFocus: "Test" },
+      blockingAnalysis: [],
+      dependencyOverview: {
+        schemaVersion: 1,
+        activeTaskCount: 0,
+        includedTaskCount: 0,
+        edgeCount: 0,
+        truncated: false,
+        perfNote: null,
+        nodes: [],
+        edges: [],
+        mermaidFlowchart: "",
+        criticalPathReady: []
+      }
+    }
+  });
+  assert.match(html, /data-wc-action="proposed-imp-accept-phase"/);
+  assert.match(html, /data-proposed-task-ids="imp-aaa,imp-bbb"/);
+});
+
 test("renderDashboardRootInnerHtml shows readyQueueBreakdown when present", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,
@@ -551,8 +588,12 @@ test("renderDashboardRootInnerHtml ready phase buckets include Complete & Releas
 test("renderPlanningInterviewWizardPanel picker wires start control and planning type select", () => {
   const html = renderPlanningInterviewWizardPanel({ kind: "picker" });
   assert.match(html, /id="wc-planning-type"/);
+  assert.match(html, /Planning Type/);
+  assert.match(html, /dash-planning-wizard-picker-row/);
   assert.match(html, /data-wc-action="planning-wizard-start"/);
   assert.match(html, /value="change"/);
+  assert.doesNotMatch(html, /Guided interview/);
+  assert.doesNotMatch(html, /Answers run through/);
 });
 
 test("renderPlanningInterviewWizardPanel question mode escapes prompt and includes submit/cancel", () => {
@@ -569,6 +610,17 @@ test("renderPlanningInterviewWizardPanel question mode escapes prompt and includ
   assert.match(html, /data-wc-action="planning-wizard-cancel"/);
   assert.match(html, /&lt;change&gt;/);
   assert.match(html, /A &amp; B/);
+});
+
+test("renderPlanningInterviewWizardPanel success shows response-only persistence hint", () => {
+  const html = renderPlanningInterviewWizardPanel({
+    kind: "success",
+    planningType: "change",
+    code: "planning-response-ready",
+    message: "All set."
+  });
+  assert.match(html, /Response-only/);
+  assert.match(html, /data-wc-action="planning-wizard-dismiss"/);
 });
 
 test("renderDashboardRootInnerHtml embeds planning wizard panel when provided", () => {
@@ -602,7 +654,6 @@ test("renderDashboardRootInnerHtml embeds planning wizard panel when provided", 
         }
       }
     },
-    undefined,
     { kind: "picker" }
   );
   assert.match(html, /dash-planning-wizard/);

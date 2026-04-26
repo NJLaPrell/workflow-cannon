@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "activationId": "cae.activation.policy.phase70-playbook",
+  "family": "policy",
+  "lifecycleState": "active",
+  "priority": 100,
+  "scope": {
+    "conditions": [{ "kind": "phaseKey", "value": "70" }]
+  },
+  "artifactRefs": [{ "artifactId": "cae.playbook.machine-playbooks" }],
+  "flags": { "shadowEligible": true }
+}

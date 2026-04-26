@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/cae/evaluation-context.v1.json",
+  "title": "CAE evaluation context (v1)",
+  "description": "Typed bounded inputs to CAE evaluation (T842). No opaque workflow blobs. Builders: T859. See .ai/cae/evaluation-context.md for sources and redaction.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "task", "command", "workspace", "governance", "queue"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["taskId", "status", "phaseKey"],
+      "properties": {
+        "taskId": {
+          "type": "string",
+          "pattern": "^T[0-9]{3,}$"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "proposed",
+            "ready",
+            "in_progress",
+            "blocked",
+            "completed",
+            "cancelled"
+          ]
+        },
+        "phaseKey": { "type": "string", "minLength": 1, "maxLength": 32, "pattern": "^[0-9]+$" },
+        "title": { "type": "string", "maxLength": 512 },
+        "tags": {
+          "type": "array",
+          "maxItems": 32,
+          "items": { "type": "string", "maxLength": 64 }
+        },
+        "features": {
+          "type": "array",
+          "maxItems": 32,
+          "items": { "type": "string", "maxLength": 64 }
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Allowlisted task.metadata keys only (T842).",
+          "properties": {
+            "specPath": { "type": "string", "maxLength": 256 },
+            "caePhase": { "type": "string", "maxLength": 64 },
+            "phaseProgram": { "type": "string", "maxLength": 64 },
+            "programContextPath": { "type": "string", "maxLength": 256 },
+            "risk": { "type": "string", "enum": ["low", "medium", "high"] }
+          }
+        }
+      }
+    },
+    "command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "moduleId": { "type": "string", "maxLength": 64 },
+        "argvSummary": {
+          "type": "string",
+          "maxLength": 512,
+          "description": "Bounded summary string; never raw argv array or full JSON dump."
+        }
+      }
+    },
+    "workspace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["currentKitPhase"],
+      "properties": {
+        "currentKitPhase": { "type": "string", "maxLength": 16, "pattern": "^[0-9]+$" },
+        "nextKitPhase": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "string", "maxLength": 16, "pattern": "^[0-9]+$" }
+          ]
+        },
+        "workspaceRootFingerprint": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Opaque fingerprint of workspace root (e.g. hex digest); never embed absolute paths."
+        }
+      }
+    },
+    "governance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policyApprovalRequired", "approvalTierHint"],
+      "properties": {
+        "policyApprovalRequired": { "type": "boolean" },
+        "approvalTierHint": {
+          "type": "string",
+          "enum": ["none", "A", "B", "C"]
+        },
+        "policySurface": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "e.g. run-json vs config-env; from .ai/POLICY-APPROVAL.md lanes."
+        }
+      }
+    },
+    "queue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["readyQueueDepth"],
+      "properties": {
+        "readyQueueDepth": { "type": "integer", "minimum": 0, "maximum": 100000 },
+        "suggestedNextTaskId": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "string", "pattern": "^T[0-9]{3,}$" }
+          ]
+        }
+      }
+    },
+    "mapSignals": {
+      "type": "null",
+      "description": "Reserved for future cognitive-map hooks; MUST be null when present in v1."
+    }
+  }
+}

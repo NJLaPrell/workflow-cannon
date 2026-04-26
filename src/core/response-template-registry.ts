@@ -6,7 +6,8 @@ const BUILTIN: Record<string, ResponseTemplateDefinition> = {
     version: 1,
     scope: "global",
     description: "Passthrough with standard ok/code/message/data fields.",
-    expectedSections: ["ok", "code", "message", "data"]
+    /** `cae` is optional — when `data.cae` exists (shadow preflight), `matchedSections` includes it (T885). */
+    expectedSections: ["ok", "code", "message", "data", "cae"]
   },
   compact: {
     id: "compact",

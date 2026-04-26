@@ -592,6 +592,135 @@
       "user"
     ]
   },
+  "kit.cae.enabled": {
+    "key": "kit.cae.enabled",
+    "type": "boolean",
+    "description": "Master switch for Context Activation Engine (CAE): advisory payloads, optional shadow preflight, persistence, and enforcement gates.",
+    "default": false,
+    "domainScope": "project",
+    "owningModule": "context-activation",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "kit.cae.registryStore": {
+    "key": "kit.cae.registryStore",
+    "type": "string",
+    "description": "CAE registry backing store: sqlite (active version in kit planning DB) or json (tests / explicit bootstrap only).",
+    "default": "sqlite",
+    "allowedValues": ["sqlite", "json"],
+    "domainScope": "project",
+    "owningModule": "context-activation",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "kit.cae.advisoryInstructionSurface": {
+    "key": "kit.cae.advisoryInstructionSurface",
+    "type": "boolean",
+    "description": "When true with kit.cae.enabled, bounded CAE context may appear on agent instruction surfaces (e.g. doctor --agent-instruction-surface).",
+    "default": false,
+    "domainScope": "project",
+    "owningModule": "context-activation",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "kit.cae.persistence": {
+    "key": "kit.cae.persistence",
+    "type": "boolean",
+    "description": "When true with kit.cae.enabled, CAE traces and acknowledgement satisfaction rows persist in kit SQLite across processes.",
+    "default": false,
+    "domainScope": "project",
+    "owningModule": "context-activation",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "kit.cae.adminMutations": {
+    "key": "kit.cae.adminMutations",
+    "type": "boolean",
+    "description": "Break-glass: when true with kit.cae.enabled and registryStore sqlite, CAE registry admin mutators may run with JSON caeMutationApproval (see .ai/cae/registry-mutation-governance.md).",
+    "default": false,
+    "domainScope": "project",
+    "owningModule": "context-activation",
+    "sensitive": true,
+    "requiresRestart": false,
+    "requiresApproval": true,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "kit.cae.runtime.shadowPreflight": {
+    "key": "kit.cae.runtime.shadowPreflight",
+    "type": "boolean",
+    "description": "When true (with kit.cae.enabled), non-cae-* module commands may run shadow CAE preflight for telemetry without blocking.",
+    "default": false,
+    "domainScope": "project",
+    "owningModule": "context-activation",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "kit.cae.enforcement.enabled": {
+    "key": "kit.cae.enforcement.enabled",
+    "type": "boolean",
+    "description": "When true with kit.cae.enabled, narrow CAE enforcement allowlist may block or annotate matching commands (opt-in pilot).",
+    "default": false,
+    "domainScope": "project",
+    "owningModule": "context-activation",
+    "sensitive": true,
+    "requiresRestart": false,
+    "requiresApproval": true,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "kit.cae.shadow.defaultOn": {
+    "key": "kit.cae.shadow.defaultOn",
+    "type": "boolean",
+    "description": "Product default for shadow CAE labels on matched activations when shadow mode is applicable.",
+    "default": false,
+    "domainScope": "project",
+    "owningModule": "context-activation",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
   "kit.githubInvocation.enabled": {
     "key": "kit.githubInvocation.enabled",
     "type": "boolean",

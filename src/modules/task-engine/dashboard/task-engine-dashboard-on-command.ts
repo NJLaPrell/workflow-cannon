@@ -139,13 +139,15 @@ export async function runDashboardSummaryCommand(
     proposedImprovements,
     workspaceStatus,
     toProposedRow,
-    dashboardPhaseTop
+    dashboardPhaseTop,
+    { includeAllTaskIds: true }
   );
   const proposedExecutionPhaseBuckets = buildDashboardPhaseBucketsForTasks(
     proposedExecution,
     workspaceStatus,
     toProposedRow,
-    dashboardPhaseTop
+    dashboardPhaseTop,
+    { includeAllTaskIds: true }
   );
 
   const transcriptChurnResearch = tasks

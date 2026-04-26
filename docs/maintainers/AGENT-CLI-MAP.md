@@ -169,7 +169,7 @@ Config **`tasks.planningGenerationPolicy`**: **`off`** (consumer default; option
 
 **Idempotency:** **`clientMutationId`** replay responses (**`*-idempotent-replay`**) do not write the planning row again and **do not** require **`expectedPlanningGeneration`** even under **`require`**. Same id + different payload → **`idempotency-key-conflict`** (unchanged).
 
-**Human / IDE:** Cursor extension dashboard shows **Planning generation** + policy; Tasks DnD and palette transitions pass **`expectedPlanningGeneration`** when the cached policy is **`require`** (refresh Tasks/Dashboard if you see mismatches).
+**Human / IDE:** The Cursor extension caches **`planningGeneration`** and **`planningGenerationPolicy`** from each **`dashboard-summary`** refresh; dashboard mutations (e.g. proposed-row **Accept** / **Decline**, wishlist **Decline**) and palette **Task** actions merge **`expectedPlanningGeneration`** when policy is **`require`**. Refresh the dashboard after concurrent CLI writes if you see **`planning-generation-mismatch`**. The dashboard does **not** include a read-only **Approvals & policy** discoverability card (removed); use **`pnpm exec wk run list-approval-queue '{}'`** for the review-item queue (**`docs/maintainers/POLICY-APPROVAL.md`**).
 
 ADR: **`docs/maintainers/adrs/ADR-planning-generation-optimistic-concurrency.md`**.
 
@@ -458,6 +458,57 @@ pnpm run advisory:task-state-hand-edit
 ```
 
 In CI this runs as a **non-blocking** step (see `.github/workflows/ci.yml`). It always exits 0; read stderr for warnings. Legitimate recovery edits should be rare and documented in the PR.
+
+## CAE read-only registry (Phase 70)
+
+```bash
+workspace-kit run cae-registry-validate '{"schemaVersion":1}'
+workspace-kit run cae-validate-registry '{"schemaVersion":1}'
+workspace-kit run cae-list-artifacts '{"schemaVersion":1}'
+workspace-kit run cae-get-artifact '{"schemaVersion":1,"artifactId":"cae.playbook.machine-playbooks"}'
+workspace-kit run cae-list-activations '{"schemaVersion":1}'
+workspace-kit run cae-get-activation '{"schemaVersion":1,"activationId":"cae.activation.do.always-machine-playbooks"}'
+```
+
+See `.ai/cae/cli-read-only.md` for argv and `data` shapes. Tier **C** — no JSON `policyApproval` on these commands.
+
+Additional read-only evaluation commands:
+
+```bash
+workspace-kit run cae-evaluate '{"schemaVersion":1,"evaluationContext":{...}}'
+workspace-kit run cae-explain '{"schemaVersion":1,"traceId":"<traceId>"}'
+workspace-kit run cae-health '{"schemaVersion":1}'
+workspace-kit run cae-conflicts '{"schemaVersion":1,"evaluationContext":{...}}'
+workspace-kit run cae-get-trace '{"schemaVersion":1,"traceId":"<traceId>"}'
+```
+
+Governed persistence mutation (**Tier A** — requires JSON `policyApproval` on `wk run`; enable **`kit.cae.persistence`** first):
+
+```bash
+workspace-kit run cae-satisfy-ack '{"schemaVersion":1,"traceId":"<traceId>","ackToken":"<token>","activationId":"cae.activation.policy.phase70-playbook","actor":"operator@example","policyApproval":{"confirmed":true,"rationale":"record ack satisfaction"}}'
+workspace-kit run cae-import-json-registry '{"schemaVersion":1,"policyApproval":{"confirmed":true,"rationale":"seed sqlite registry from default JSON paths"}}'
+```
+
+**CAE SQLite registry admin** — manifest Tier **C** (no JSON `policyApproval`); handlers require **`kit.cae.enabled`**, **`kit.cae.registryStore: "sqlite"`**, **`kit.cae.adminMutations: true`**, plus **`caeMutationApproval`** + **`actor`** on mutators. See **`.ai/cae/registry-mutation-governance.md`**.
+
+```bash
+workspace-kit run cae-list-registry-versions '{"schemaVersion":1}'
+workspace-kit run cae-get-registry-version '{"schemaVersion":1,"versionId":"cae.reg.seed"}'
+workspace-kit run cae-create-registry-version '{"schemaVersion":1,"actor":"operator","versionId":"cae.reg.example","caeMutationApproval":{"confirmed":true,"rationale":"create empty version"}}'
+workspace-kit run cae-clone-registry-version '{"schemaVersion":1,"actor":"operator","fromVersionId":"cae.reg.seed","toVersionId":"cae.reg.clone","caeMutationApproval":{"confirmed":true,"rationale":"clone"}}'
+workspace-kit run cae-activate-registry-version '{"schemaVersion":1,"actor":"operator","versionId":"cae.reg.seed","caeMutationApproval":{"confirmed":true,"rationale":"activate"}}'
+workspace-kit run cae-delete-registry-version '{"schemaVersion":1,"actor":"operator","versionId":"cae.reg.clone","caeMutationApproval":{"confirmed":true,"rationale":"delete inactive"}}'
+workspace-kit run cae-rollback-registry-version '{"schemaVersion":1,"actor":"operator","caeMutationApproval":{"confirmed":true,"rationale":"rollback"}}'
+workspace-kit run cae-create-artifact '{"schemaVersion":1,"actor":"operator","artifact":{"schemaVersion":1,"artifactId":"cae.example.playbook","artifactType":"playbook","ref":{"path":".ai/README.md"}},"caeMutationApproval":{"confirmed":true,"rationale":"add artifact"}}'
+workspace-kit run cae-update-artifact '{"schemaVersion":1,"actor":"operator","artifactId":"cae.example.playbook","artifact":{"title":"renamed"},"caeMutationApproval":{"confirmed":true,"rationale":"patch artifact"}}'
+workspace-kit run cae-retire-artifact '{"schemaVersion":1,"actor":"operator","artifactId":"cae.example.playbook","caeMutationApproval":{"confirmed":true,"rationale":"retire artifact"}}'
+workspace-kit run cae-create-activation '{"schemaVersion":1,"actor":"operator","activation":{"schemaVersion":1,"activationId":"cae.activation.example","family":"do","lifecycleState":"active","priority":1,"scope":{"conditions":[{"kind":"always"}]},"artifactRefs":[{"artifactId":"cae.playbook.machine-playbooks"}]},"caeMutationApproval":{"confirmed":true,"rationale":"add activation"}}'
+workspace-kit run cae-update-activation '{"schemaVersion":1,"actor":"operator","activationId":"cae.activation.example","activation":{"priority":2},"caeMutationApproval":{"confirmed":true,"rationale":"tune activation"}}'
+workspace-kit run cae-disable-activation '{"schemaVersion":1,"actor":"operator","activationId":"cae.activation.example","caeMutationApproval":{"confirmed":true,"rationale":"disable"}}'
+workspace-kit run cae-retire-activation '{"schemaVersion":1,"actor":"operator","activationId":"cae.activation.example","caeMutationApproval":{"confirmed":true,"rationale":"retire activation"}}'
+```
+
+Use **`fixtures/cae/evaluation-context/valid/minimal.json`** as a copy-paste template for **`evaluationContext`**. Traces are **ephemeral** until persistence (**T867**).
 
 ## CLI map coverage guardrail
 

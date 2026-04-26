@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "task": {
+    "taskId": "T842",
+    "status": "ready",
+    "phaseKey": "70"
+  },
+  "command": { "name": "list-tasks" },
+  "workspace": { "currentKitPhase": "70" },
+  "governance": {
+    "policyApprovalRequired": false,
+    "approvalTierHint": "C"
+  },
+  "queue": { "readyQueueDepth": 0 },
+  "mapSignals": { "future": "not-allowed-in-v1" }
+}

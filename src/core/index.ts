@@ -24,9 +24,17 @@ export {
   classifyInstructionExecution,
   isInstructionExecutableForRegistry,
   type AgentInstructionDegradation,
+  type AgentInstructionSurfaceCae,
   type AgentInstructionSurfacePayload,
-  type AgentInstructionSurfaceRow
+  type AgentInstructionSurfaceRow,
+  type BuildAgentInstructionSurfaceOptions
 } from "./agent-instruction-surface.js";
+export {
+  CAE_ENFORCEMENT_BLOCK_ALLOWLIST,
+  findCaeEnforcementBlock
+} from "./cae/cae-enforcement-allowlist.js";
+export { noopCaeTracePersistence, type CaeTracePersistencePort } from "./cae/cae-persistence-port.js";
+export { mergeCaeIntoCommandResult, runCaeCliPreflight } from "./cae/cae-run-preflight.js";
 export {
   buildBaseConfigLayers,
   deepMerge,

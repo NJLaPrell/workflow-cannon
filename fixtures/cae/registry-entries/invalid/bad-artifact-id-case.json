@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "artifactId": "CAE.BadCase",
+  "artifactType": "playbook",
+  "ref": { "path": ".ai/PRINCIPLES.md" }
+}

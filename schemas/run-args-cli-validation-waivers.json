@@ -22,6 +22,9 @@
     "retire-subagent",
     "review-item",
     "spawn-subagent",
-    "submit-assignment-handoff"
+    "submit-assignment-handoff",
+    "cae-satisfy-ack",
+    "cae-import-json-registry",
+    "cae-record-shadow-feedback"
   ]
 }

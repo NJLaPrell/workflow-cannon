@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/cae/registry-entry.legacy-stub-redirect.v1.json",
+  "title": "Redirect — normative schema is schemas/cae/registry-entry.v1.json (T839)",
+  "$ref": "../../../schemas/cae/registry-entry.v1.json"
+}

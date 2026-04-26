@@ -6,7 +6,7 @@ Operational guide for the Phase 17 planning module.
 
 ## Intent
 
-Use the planning module to run guided interviews and produce a wishlist artifact (`W###`) for future decomposition. This release intentionally does **not** auto-create execution tasks from planning outputs.
+Use the planning module to run guided interviews and produce a wishlist artifact (`W###`) for future decomposition, **or** (with `outputMode:"tasks"`) preview / persist **execution** task rows. Multi-task materialization uses **`build-plan`** `executionTaskDrafts` + **`persist-planning-execution-drafts`** (see **`.ai/AGENT-CLI-MAP.md`** ladder); single-task artifact synthesis can still use `persistTasks:true` on **`build-plan`** when drafts are omitted. Wishlist-driven decomposition remains in [`.ai/runbooks/wishlist-workflow.md`](./wishlist-workflow.md) (**`convert-wishlist`**).
 
 ## Quickstart
 
@@ -22,6 +22,10 @@ workspace-kit run explain-planning-rules '{"planningType":"new-feature"}'
 
 # Finalize and create a wishlist artifact record.
 workspace-kit run build-plan '{"planningType":"new-feature","answers":{"featureGoal":"...","placement":"CLI","technology":"TypeScript","targetAudience":"AI Agent Operators","problemStatement":"...","expectedOutcome":"...","impact":"...","constraints":"...","successSignals":"..."},"finalize":true,"createWishlist":true}'
+
+# Multi-task execution path (preview then bulk persist; copy tasks from response data.taskOutputs; pass expectedPlanningGeneration when tasks.planningGenerationPolicy is require).
+workspace-kit run build-plan '{"planningType":"new-feature","outputMode":"tasks","finalize":true,"answers":{"featureGoal":"...","placement":"CLI","technology":"TypeScript","targetAudience":"AI Agent Operators"},"executionTaskDrafts":[{"title":"...","phase":"Phase 68","approach":"...","technicalScope":["..."],"acceptanceCriteria":["..."]}]}'
+workspace-kit run persist-planning-execution-drafts '{"tasks":[...],"expectedPlanningGeneration":<n>,"planRef":"...","planningType":"new-feature"}'
 ```
 
 ## Response semantics
@@ -29,6 +33,8 @@ workspace-kit run build-plan '{"planningType":"new-feature","answers":{"featureG
 - `planning-questions`: additional critical answers required; use `data.nextQuestions`.
 - `planning-ready`: interview is complete; artifact returned but not persisted if `createWishlist:false`.
 - `planning-artifact-created`: wishlist artifact persisted successfully.
+- `planning-multi-task-decomposition-preview`: `finalize:true`, `outputMode:"tasks"`, non-empty `executionTaskDrafts` — preview only; persist via **`persist-planning-execution-drafts`**.
+- `planning-execution-drafts-persisted` / `planning-execution-drafts-idempotent-replay`: task-engine bulk writer outcomes (see `src/modules/task-engine/instructions/persist-planning-execution-drafts.md`).
 - `planning-critical-unknowns`: finalize denied because unresolved critical unknowns remain while `planning.hardBlockCriticalUnknowns=true`.
 - `planning-ready-with-warnings`: finalize allowed with unresolved critical unknowns only when `planning.hardBlockCriticalUnknowns=false`; response includes `data.unresolvedCritical` and `data.finalizeWarnings` (`kind: unresolved-critical-soft-finalize`).
 

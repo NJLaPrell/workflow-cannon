@@ -46,3 +46,34 @@
 - **Outcome:** Deterministic plugin manifest validation, filesystem discovery aligned to Anthropic layout, optional SQLite enablement and copy-install with policy gates.
 - **Exit signals:**
   - **`pnpm run build`**, **`check`**, **`test`**, **`parity`**, **`pre-merge-gates`** on the release tag; maintainer evidence per **`RELEASING.md`**.
+
+### Phase 70 - Context Activation Engine (CAE) (IN FLIGHT)
+
+- **Architecture ADR (boundaries, naming, rollout):** **`.ai/adrs/ADR-context-activation-engine-architecture-v1.md`** (**`T837`**).
+- **Registry & artifact IDs (v1 schema + fixtures):** **`.ai/adrs/ADR-cae-artifact-registry-v1.md`**, **`schemas/cae/registry-entry.v1.json`** (**`T839`**).
+- **Activation definition schema + trace mapping:** **`schemas/cae/activation-definition.schema.json`**, **`.ai/cae/activation-definition-trace-mapping.md`** (**`T840`**).
+- **Activation lifecycle (states, transitions, pre-filter order):** **`.ai/cae/lifecycle.md`** (**`T841`**).
+- **Evaluation context (bounded slices + schema):** **`.ai/cae/evaluation-context.md`**, **`schemas/cae/evaluation-context.v1.json`** (**`T842`**).
+- **Evaluation context builder (core):** **`src/core/cae/evaluation-context-builder.ts`** (**`T859`**).
+- **Precedence / merge / effective bundle:** **`.ai/cae/precedence-merge.md`**, **`schemas/cae/effective-activation-bundle.v1.json`** (**`T843`**).
+- **Evaluation engine (v1 matching + deterministic bundle/trace):** **`src/core/cae/cae-evaluate.ts`** (**`T860`**).
+- **Acknowledgement model (vs policyApproval):** **`.ai/cae/acknowledgement-model.md`** (**`T844`**).
+- **Persistence & migration (CAE in planning SQLite):** **`.ai/adrs/ADR-cae-persistence-v1.md`** (**`T845`**).
+- **Trace & explain (schemas + redaction):** **`.ai/cae/trace-and-explain.md`**, **`schemas/cae/trace.v1.json`**, **`schemas/cae/explain-response.v1.json`** (**`T846`**).
+- **Read-only CLI contract (`cae-*` argv + `data` schemas, agent map checklist):** **`.ai/cae/cli-read-only.md`**, **`schemas/cae/cli-read-only-requests.v1.json`**, **`schemas/cae/cli-read-only-data.v1.json`** (**`T847`**).
+- **Read-only CLI (registry list/get):** **`context-activation`** module — **`cae-list-artifacts`**, **`cae-get-artifact`**, **`cae-list-activations`**, **`cae-get-activation`** (**`T861`**).
+- **Read-only CLI (evaluate / explain / health / conflicts / trace):** **`cae-evaluate`**, **`cae-explain`**, **`cae-health`**, **`cae-conflicts`**, **`cae-get-trace`** (**`T862`**).
+- **Shadow mode (labels + `shadowObservation` on bundle):** **`.ai/cae/shadow-mode.md`**, **`schemas/cae/effective-activation-bundle.v1.json`** (**`T848`**).
+- **Runtime integration (CLI/router hooks, cache keys, ordering vs policy):** **`.ai/cae/runtime-integration.md`** (**`T849`**).
+- **Advisory surfacing (instruction surface / doctor, size budget, naming):** **`.ai/cae/advisory-surfacing.md`** (**`T850`**).
+- **Enforcement lane (allowlist, forbiddens, shadow gate ADR):** **`.ai/cae/enforcement-lane.md`**, **`.ai/adrs/ADR-cae-enforcement-shadow-gate-v1.md`** (**`T851`**).
+- **Mutation governance (git/PR v1, audit shape, T868 gate):** **`.ai/cae/mutation-governance.md`** (**`T852`**).
+- **Failure / degradation / recovery (matrix + doctor + codes):** **`.ai/cae/failure-recovery.md`** (**`T853`**).
+- **Test plan (fixtures, golden vectors, determinism gates):** **`.ai/cae/test-plan.md`** (**`T854`**).
+- **Operator docs (.ai-first entry + debug runbook):** **`.ai/cae/README.md`**, **`.ai/runbooks/cae-debug.md`** (**`T855`**).
+- **Bootstrap artifact registry seed:** **`.ai/cae/registry/artifacts.v1.json`**, **`tasks/cae/artifacts/inventory-notes.md`** (**`T857`**).
+- **Registry loader + stable error codes:** **`src/core/cae/cae-registry-load.ts`**, **`.ai/cae/error-codes.md`** (**`T858`**).
+- **Future cognitive-map contract (non-binding; `mapSignals` null v1):** **`.ai/cae/future-cognitive-maps.md`** (**`T856`**).
+- **Primary scope:** **`T837`–`T869`** — CAE architecture ADR and boundaries (code invariants vs advisory CAE); artifact registry + activation definition schemas + lifecycle; evaluation context contract; precedence / merge / effective bundle semantics; acknowledgement model (separate from `policyApproval`); persistence + trace + explain design; read-only CLI contract; shadow mode; CLI/router integration design; advisory surfacing; narrow enforcement lane design; mutation governance; failure/recovery; test plan; `.ai-first` operator docs; future cognitive-map contract; bootstrap registry seed; implementation (loader, context builder, evaluator, read-only commands, shadow pipeline, runtime hook, advisory payloads, enforcement, trace persistence, governed CRUD or validate-only, integration hardening).
+- **Outcome:** Deterministic activation bundles for policy / think / do / review families; docs referenced by stable artifact ids; read-only inspectability and shadow rollout before allowlisted enforcement; no cognitive-map dependency in v1.
+- **Exit signals:** Phase closeout per **`RELEASING.md`** when implementation train ships; routine gates **`pnpm run build`**, **`check`**, **`test`**, **`parity`** on release candidates.

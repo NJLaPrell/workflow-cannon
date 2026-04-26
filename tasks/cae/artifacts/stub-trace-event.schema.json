@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CAE trace (artifact stub)",
+  "description": "Normative schema is schemas/cae/trace.v1.json (envelope + events). This path is kept for CAE program artifact registry (T846).",
+  "$ref": "https://workflow-cannon.dev/schemas/cae/trace.v1.json"
+}

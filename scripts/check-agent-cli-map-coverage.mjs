@@ -5,6 +5,7 @@ import process from "node:process";
 const ROOT = process.cwd();
 const MANIFEST_PATH = path.join(ROOT, "src/contracts/builtin-run-command-manifest.json");
 const CLI_MAP_PATH = path.join(ROOT, "docs/maintainers/AGENT-CLI-MAP.md");
+const AI_CLI_MAP_PATH = path.join(ROOT, ".ai/AGENT-CLI-MAP.md");
 const EXCLUSIONS_PATH = path.join(ROOT, "docs/maintainers/data/agent-cli-map-exclusions.json");
 
 function fail(message) {
@@ -37,17 +38,20 @@ function collectRunCommandsFromManifest() {
   return commands;
 }
 
-function collectDocumentedCommands(mapPath) {
-  const source = fs.readFileSync(mapPath, "utf8");
+function collectDocumentedCommands(...mapPaths) {
   const commands = new Set();
-  for (const match of source.matchAll(/workspace-kit run ([a-z0-9-]+)/g)) {
-    commands.add(match[1]);
+  for (const mapPath of mapPaths) {
+    if (!fs.existsSync(mapPath)) continue;
+    const source = fs.readFileSync(mapPath, "utf8");
+    for (const match of source.matchAll(/(?:workspace-kit|pnpm exec wk) run ([a-z0-9-]+)/g)) {
+      commands.add(match[1]);
+    }
   }
   return commands;
 }
 
 const runCommands = collectRunCommandsFromManifest();
-const documented = collectDocumentedCommands(CLI_MAP_PATH);
+const documented = collectDocumentedCommands(CLI_MAP_PATH, AI_CLI_MAP_PATH);
 const exclusionsDoc = loadJson(EXCLUSIONS_PATH);
 const excluded = new Set(
   Array.isArray(exclusionsDoc?.excludedRunCommands) ? exclusionsDoc.excludedRunCommands : []
@@ -60,7 +64,7 @@ const staleExclusions = [...excluded].filter((cmd) => !runCommands.has(cmd)).sor
 
 if (undocumented.length > 0) {
   fail(
-    `Run command(s) missing from AGENT-CLI-MAP and exclusions: ${undocumented.join(
+    `Run command(s) missing from AGENT-CLI-MAP (.ai or docs/maintainers) and exclusions: ${undocumented.join(
       ", "
     )}. Update docs/maintainers/AGENT-CLI-MAP.md or docs/maintainers/data/agent-cli-map-exclusions.json.`
   );

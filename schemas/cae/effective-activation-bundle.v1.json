@@ -1,0 +1,277 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/cae/effective-activation-bundle.v1.json",
+  "title": "CAE effective activation bundle (v1)",
+  "description": "Deterministic evaluation output (T843). pendingAcknowledgements item detail: T844. Shadow labels: T848. Builder: T860.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "bundleId",
+    "families",
+    "pendingAcknowledgements",
+    "conflictShadowSummary",
+    "traceId"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "bundleId": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 128,
+      "description": "Deterministic id from canonical context + registry snapshot (T842 hashing)."
+    },
+    "resolvedAt": {
+      "type": "string",
+      "maxLength": 40,
+      "description": "ISO-8601 timestamp when bundle was produced (optional)."
+    },
+    "families": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policy", "think", "do", "review"],
+      "properties": {
+        "policy": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/resolvedActivation" }
+        },
+        "think": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/resolvedActivation" }
+        },
+        "do": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/resolvedActivation" }
+        },
+        "review": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/resolvedActivation" }
+        }
+      }
+    },
+    "pendingAcknowledgements": {
+      "type": "array",
+      "description": "Ack slots surfaced on bundle; semantics T844.",
+      "items": { "$ref": "#/$defs/pendingAcknowledgementItem" }
+    },
+    "conflictShadowSummary": { "$ref": "#/$defs/conflictShadowSummary" },
+    "traceId": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 128,
+      "description": "Correlates with schemas/cae/trace.v1.json when a full trace is emitted (T846)."
+    },
+    "explanationRef": {
+      "type": "string",
+      "maxLength": 256,
+      "description": "Opaque handle for explain / health (T846/T862)."
+    },
+    "evaluationPipelineMode": {
+      "type": "string",
+      "enum": ["live", "shadow"],
+      "description": "Mirrors argv evalMode / evaluator flag (T848). Omitted means live for legacy consumers."
+    },
+    "shadowObservation": {
+      "$ref": "#/$defs/shadowObservation",
+      "description": "Sidecar when shadow classifies would-* outcomes without enforcing (T848/T863)."
+    }
+  },
+  "$defs": {
+    "resolvedActivation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["activationId", "family", "priority", "aggregateTightness", "artifactIds"],
+      "properties": {
+        "activationId": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+        },
+        "family": {
+          "type": "string",
+          "enum": ["policy", "think", "do", "review"]
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9999
+        },
+        "aggregateTightness": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255,
+          "description": "From .ai/cae/precedence-merge.md (lower = tighter)."
+        },
+        "artifactIds": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+          }
+        }
+      }
+    },
+    "pendingAcknowledgementItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["activationId", "strength"],
+      "properties": {
+        "activationId": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+        },
+        "strength": {
+          "type": "string",
+          "enum": [
+            "none",
+            "surface",
+            "recommend",
+            "ack_required",
+            "satisfy_required"
+          ]
+        },
+        "ackToken": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Session correlation id; persistence optional (T867)."
+        },
+        "machineCheckable": {
+          "type": "boolean",
+          "description": "If true, satisfy_required may use structured evidence (T860/T866)."
+        },
+        "blockingLane": {
+          "type": "string",
+          "enum": ["none", "advisory", "enforcement"],
+          "description": "Where this ack may gate (T866)."
+        },
+        "surfaceCopyKey": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Stable key for rendered copy; no raw NL in bundle."
+        }
+      }
+    },
+    "shadowObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "wouldActivate": {
+          "type": "array",
+          "maxItems": 128,
+          "items": { "$ref": "#/$defs/shadowCandidate" }
+        },
+        "wouldRequireAck": {
+          "type": "array",
+          "maxItems": 64,
+          "items": { "$ref": "#/$defs/pendingAcknowledgementItem" }
+        },
+        "wouldEnforce": {
+          "type": "array",
+          "maxItems": 64,
+          "items": { "$ref": "#/$defs/shadowEnforceHint" }
+        },
+        "usefulnessSignal": {
+          "type": "string",
+          "enum": ["absent", "useful", "noisy"],
+          "description": "Operator feedback hook; default absent (T848)."
+        }
+      }
+    },
+    "shadowCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["activationId", "family", "artifactIds"],
+      "properties": {
+        "activationId": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+        },
+        "family": {
+          "type": "string",
+          "enum": ["policy", "think", "do", "review"]
+        },
+        "artifactIds": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+          }
+        }
+      }
+    },
+    "shadowEnforceHint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["activationId", "lane"],
+      "properties": {
+        "activationId": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+        },
+        "commandName": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Router command surface that would be gated (T866)."
+        },
+        "lane": {
+          "type": "string",
+          "enum": ["advisory", "enforcement"]
+        }
+      }
+    },
+    "conflictShadowSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evalMode", "entries"],
+      "properties": {
+        "evalMode": {
+          "type": "string",
+          "enum": ["live", "shadow"]
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "activationIds", "resolution"],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "policy_vs_advisory",
+                  "same_family_tie",
+                  "policy_contradiction"
+                ]
+              },
+              "activationIds": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 32,
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+                }
+              },
+              "resolution": {
+                "type": "string",
+                "enum": [
+                  "policy_wins",
+                  "merge",
+                  "shadow",
+                  "fail_explicit"
+                ]
+              },
+              "detail": {
+                "type": "string",
+                "maxLength": 512
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/cae/effective-activation-bundle.stub-redirect.v1.json",
+  "title": "Redirect — normative schema is schemas/cae/effective-activation-bundle.v1.json (T843)",
+  "$ref": "../../../schemas/cae/effective-activation-bundle.v1.json"
+}

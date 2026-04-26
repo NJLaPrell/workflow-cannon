@@ -7,11 +7,13 @@ test("groupTasksByStatus orders groups by canonical status order", () => {
   const groups = groupTasksByStatus([
     { id: "T2", title: "Done", status: "completed" },
     { id: "T1", title: "Ready", status: "ready" },
-    { id: "T3", title: "Blocked", status: "blocked" }
+    { id: "T3", title: "Blocked", status: "blocked" },
+    { id: "T4", title: "Proposed", status: "proposed" },
+    { id: "T5", title: "Research", status: "research" }
   ]);
   assert.deepEqual(
     groups.map((g) => g.status),
-    ["ready", "blocked", "completed"]
+    ["ready", "proposed", "research", "blocked", "completed"]
   );
 });
 

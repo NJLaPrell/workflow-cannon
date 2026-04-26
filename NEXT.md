@@ -73,6 +73,8 @@ Turn phase completion and release into a guided, repeatable, difficult-to-mess-u
 
 ## 3) Package CAE into one operator-grade vertical slice
 
+Detailed CAE plan: `.ai/cae/NEXT.md`.
+
 ### Goal
 Turn CAE from a set of strong primitives into one coherent, end-to-end operator workflow.
 
@@ -81,15 +83,16 @@ Turn CAE from a set of strong primitives into one coherent, end-to-end operator 
 - Recovery, evaluation, registry, governance, and trace pieces exist, but the end-to-end path is not yet crisp enough.
 
 ### Tasks
-- [ ] Define the single primary CAE operator journey for v1.
-- [ ] Document the shortest happy path from registry seed/load to evaluation to explanation to health/conflict inspection.
-- [ ] Document the governed mutation path separately from read-only inspection.
-- [ ] Create one end-to-end CAE smoke scenario with committed fixtures and expected outputs.
-- [ ] Add one "golden path" runbook that an operator can follow without spelunking multiple docs.
-- [ ] Add one "bad path" recovery runbook covering the most likely CAE failure classes.
-- [ ] Audit CAE command names, output contracts, and docs for consistency and discoverability.
-- [ ] Ensure CAE doctor/advisory surfacing points operators to the single golden path doc first.
-- [ ] Decide what is explicitly out of scope for CAE v1 and document it.
+- [ ] Define and document the single primary CAE operator journey for v1.
+- [ ] Create one end-to-end CAE golden smoke scenario with committed fixtures and expected outputs.
+- [ ] Add one golden-path runbook and one bad-path recovery section that cover health, registry validation, evaluation, explain/trace, conflicts, and common failures.
+- [ ] Clean up stale CAE planning docs so SQLite registry authority, trace persistence, and JSON seed fate are described consistently.
+- [ ] Improve CLI preflight context quality by hydrating bounded task data instead of relying on thin inferred rows.
+- [ ] Expand registry content only for high-value workflows with clear activation ownership, fixtures, and review criteria.
+- [ ] Add shadow feedback and acknowledgement inspection before growing enforcement.
+- [ ] Decide whether to defer live enforcement or run a narrow, evidence-backed pilot with rollback instructions.
+- [ ] Add product-boundary CAE smoke coverage for packaged and upgraded workspaces.
+- [ ] Audit CAE command names, output contracts, remediation hints, response templates, and docs for consistency and discoverability.
 
 ### Exit criteria
 - A new maintainer can run one CAE vertical slice end-to-end with confidence.
@@ -162,10 +165,11 @@ Keep the governance model, but remove unnecessary cognitive load and duplicated 
 - [ ] Guided `/complete-phase` operator path
 
 ### Track C — package CAE
-- [ ] CAE v1 operator journey
-- [ ] Golden-path runbook
-- [ ] End-to-end smoke scenario
-- [ ] Failure recovery pass
+- [ ] CAE v1 operator journey (`.ai/cae/NEXT.md`)
+- [ ] Golden-path runbook and committed smoke fixtures
+- [ ] Truth/planning cleanup for CAE docs
+- [ ] Trace persistence and context-quality hardening
+- [ ] Shadow feedback, ack inspection, and enforcement pilot decision
 
 ### Track D — strengthen release confidence
 - [ ] Consumer install smoke

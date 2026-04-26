@@ -172,6 +172,28 @@ function describeTemplateResolutionSource(args: {
   return `\`responseTemplates.defaultTemplateId\` (effective '${args.cfgDefault}')`;
 }
 
+/** When `run` merges shadow CAE into `data.cae`, surface bounded hints for template consumers (T885). */
+export function mergeCaePresentationHints(data: Record<string, unknown> | undefined): Record<string, unknown> {
+  const cae = data?.cae;
+  if (!cae || typeof cae !== "object" || Array.isArray(cae)) {
+    return {};
+  }
+  const c = cae as Record<string, unknown>;
+  const traceId = typeof c.traceId === "string" ? c.traceId : null;
+  const evalMode = typeof c.evalMode === "string" ? c.evalMode : null;
+  const degraded = c.degraded === true;
+  return {
+    cae: {
+      kind: "shadow_preflight_v1",
+      traceId,
+      evalMode,
+      degraded,
+      agentRenderHint:
+        "If present, summarize CAE shadow outcome in one short paragraph; when traceId is set, operators can run cae-explain / cae-get-trace."
+    }
+  };
+}
+
 function attachPresentation(
   templateId: string,
   result: ModuleCommandResult
@@ -295,10 +317,21 @@ export function applyResponseTemplateApplication(
   }
 
   const presentation = attachPresentation(def.id, result);
-  const nextData =
+  let nextData =
     presentation && result.data && typeof result.data === "object" && !Array.isArray(result.data)
       ? { ...(result.data as Record<string, unknown>), presentation }
       : result.data;
+
+  if (nextData && typeof nextData === "object" && !Array.isArray(nextData)) {
+    const d = nextData as Record<string, unknown>;
+    const caeHints = mergeCaePresentationHints(d);
+    if (Object.keys(caeHints).length > 0) {
+      const pres = d.presentation;
+      const basePres =
+        pres && typeof pres === "object" && !Array.isArray(pres) ? { ...(pres as Record<string, unknown>) } : {};
+      nextData = { ...d, presentation: { ...basePres, ...caeHints } };
+    }
+  }
 
   return {
     ...result,

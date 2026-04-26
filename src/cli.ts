@@ -21,6 +21,7 @@ import {
   collectPolicyLaneEnvDoctorSummaryLines,
   collectTaskPersistenceDoctorSummaryLines
 } from "./cli/doctor-planning-issues.js";
+import { collectCaeDoctorSummaryLines } from "./cli/doctor-cae.js";
 import { collectDoctorContractIssues } from "./cli/doctor-contract-validation.js";
 import { ModuleRegistryError } from "./core/module-registry.js";
 import { loadWorkspaceDotenv } from "./core/load-workspace-dotenv.js";
@@ -506,8 +507,11 @@ export async function runCli(
 
   if (wantAgentInstructionSurface) {
     try {
-      const { registry } = await resolveRegistryAndConfig(cwd, defaultRegistryModules);
-      const surface = buildAgentInstructionSurface(registry.getAllModules(), registry);
+      const { registry, effective } = await resolveRegistryAndConfig(cwd, defaultRegistryModules);
+      const surface = buildAgentInstructionSurface(registry.getAllModules(), registry, {
+        workspacePath: cwd,
+        effectiveConfig: effective as Record<string, unknown>
+      });
       writeLine(
         JSON.stringify(
           { ok: true, code: "agent-instruction-surface", data: surface },
@@ -536,6 +540,9 @@ export async function runCli(
     writeLine(line);
   }
   for (const line of collectPolicyLaneEnvDoctorSummaryLines()) {
+    writeLine(line);
+  }
+  for (const line of await collectCaeDoctorSummaryLines(cwd)) {
     writeLine(line);
   }
   for (const line of await collectPluginDoctorSummaryLines(cwd)) {

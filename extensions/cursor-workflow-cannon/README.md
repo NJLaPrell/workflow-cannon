@@ -48,13 +48,13 @@ The extension runs `node <repo>/dist/cli.js` (or the published package path unde
 
 **Copy-ready mutating JSON (operators):** From a terminal at the repo root, `pnpm run wk run run-transition --schema-only` (and other pilot commands) prints **`sampleArgs`** you can paste and edit before running a real `wk run run-transition '<json>'`. Dashboard/Task transitions already inject **`expectedPlanningGeneration`** when policy is **`require`**; use the CLI helper when debugging shape errors. See **`docs/maintainers/plans/phase-52-human-cli-affordances.md`**.
 
-**Approvals & policy card:** The dashboard runs **`list-approval-queue`** in parallel with **`dashboard-summary`** on each refresh so the read-only review-item queue matches **`pnpm exec wk run list-approval-queue '{}'`** for the same workspace (Tier C — no JSON **`policyApproval`**).
+**Role, phase, and deliver:** The dashboard shows **Role** / **Agent temperament** and **Current phase** / **Next phase** in one card (from **`dashboard-summary`**). **Deliver** is enabled when the current phase bucket has at least one **`ready`** execution task; hover shows the count. Refresh runs **`dashboard-summary`** only.
 
 **Team execution & subagent cards (CLI parity):** Both rollups ship inside packaged **`dashboard-summary`** JSON. When the kit task SQLite file is available to the CLI (**`sqliteDual`** in the kit) and **`PRAGMA user_version` ≥ 7**, **`teamExecution`** is built by **`summarizeTeamAssignmentsForDashboard`** over **`kit_team_assignments`** — the same rows as **`pnpm exec wk run list-assignments '{}'`** (counts and **`topActive`** are a bounded slice / aggregate of that table). When **`user_version` ≥ 6**, **`subagentRegistry`** is built by **`summarizeSubagentsForDashboard`** over **`kit_subagent_definitions`** / **`kit_subagent_sessions`**, matching the subagent list surfaces documented in **`.ai/AGENT-CLI-MAP.md`** (team/subagent inspect). If the DB is missing or the schema is below those thresholds, both objects return **`available: false`** with zeroed counts; the dashboard should show empty cards, not stale fabrications. Mutations remain terminal **`pnpm exec wk run …`** with JSON **`policyApproval`** where required. See **`docs/maintainers/runbooks/subagent-registry.md`** for subagent depth.
 
 **Workspace root:** Cursor must open the folder that contains `.workspace-kit/manifest.json` (the Workflow Cannon repo root). If you open a parent directory, the extension will not attach and you get no dashboard/tasks—or you may be pointed at a different task store than you expect.
 
-**Proposed vs ready:** The dashboard “Suggested next” and ready/proposed sections only reflect tasks in the configured task store. **`proposed`** improvement work appears under **Proposed improvements** on the dashboard (after a refresh). Planning appears when a `build-plan` session file exists.
+**Proposed vs ready:** The dashboard “Suggested next” and ready/proposed sections only reflect tasks in the configured task store. **`proposed`** improvement work appears under **Proposed improvements** on the dashboard (after a refresh). When **`dashboard-summary`** returns **`phaseBuckets`** with **`taskIds`**, each phase heading can show **Accept All** (one shared policy rationale; the extension refreshes the planning-generation token between each **`run-transition`** **`accept`**). Planning appears when a `build-plan` session file exists.
 
 ## Testing
 
@@ -66,6 +66,8 @@ pnpm --filter cursor-workflow-cannon test
 ```
 
 - Root **`pnpm run build`** is required first because integration tests invoke real `dist/cli.js` from the repository.
+
+**Manual check (wishlist add):** Dashboard **Add wishlist item** should end with a clear toast (title + id) and an **Open wishlist detail** action; closing any prompt without saving should say the flow was cancelled.
 
 ## Commands and operations
 

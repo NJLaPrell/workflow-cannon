@@ -1,0 +1,263 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/cae/cli-read-only-data.v1.json",
+  "title": "CAE read-only CLI success `data` payloads (v1)",
+  "description": "Shape of `data` when `ok: true` (T847). Outer envelope `{ ok, code, message?, data }` is kit-standard; these defs validate `data` only.",
+  "$defs": {
+    "caeListArtifactsData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "artifactIds"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "artifactIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 128,
+            "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+          },
+          "maxItems": 200
+        },
+        "nextCursor": {
+          "type": ["string", "null"],
+          "maxLength": 256
+        }
+      }
+    },
+    "caeGetArtifactData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "artifact"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "artifact": {
+          "$ref": "https://workflow-cannon.dev/schemas/cae/registry-entry.v1.json"
+        }
+      }
+    },
+    "caeListActivationsData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "activationIds"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "activationIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 128,
+            "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+          },
+          "maxItems": 200
+        },
+        "nextCursor": {
+          "type": ["string", "null"],
+          "maxLength": 256
+        }
+      }
+    },
+    "caeGetActivationData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "activation"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "activation": {
+          "$ref": "https://workflow-cannon.dev/schemas/cae/activation-definition.schema.json"
+        }
+      }
+    },
+    "caeEvaluateData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "bundle", "trace", "traceId"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "traceId": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 128
+        },
+        "bundle": {
+          "$ref": "https://workflow-cannon.dev/schemas/cae/effective-activation-bundle.v1.json"
+        },
+        "trace": {
+          "$ref": "https://workflow-cannon.dev/schemas/cae/trace.v1.json"
+        },
+        "ephemeral": {
+          "type": "boolean",
+          "description": "When true, trace is session/ephemeral only (pre-T867 persistence)."
+        }
+      }
+    },
+    "caeExplainData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "explanation"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "explanation": {
+          "$ref": "https://workflow-cannon.dev/schemas/cae/explain-response.v1.json"
+        },
+        "trace": {
+          "$ref": "https://workflow-cannon.dev/schemas/cae/trace.v1.json",
+          "description": "Present when explain used replay path or engine echoes source trace."
+        },
+        "storage": {
+          "type": "string",
+          "enum": ["memory", "sqlite"]
+        },
+        "ephemeral": {
+          "type": "boolean"
+        }
+      }
+    },
+    "caeHealthData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "caeEnabled", "registryStatus", "issues"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "caeEnabled": {
+          "type": "boolean",
+          "description": "Effective `kit.cae.enabled` after config resolution."
+        },
+        "persistenceEnabled": {
+          "type": "boolean"
+        },
+        "lastEvalAt": {
+          "type": ["string", "null"],
+          "maxLength": 40
+        },
+        "lastEvalAtNote": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "registryStore": {
+          "type": "string",
+          "enum": ["json", "sqlite"]
+        },
+        "registryStatus": {
+          "type": "string",
+          "enum": ["absent", "loading", "ok", "invalid"]
+        },
+        "registryContentHash": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Optional fingerprint of loaded registry snapshot."
+        },
+        "artifactCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "activationCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "activeRegistryVersionId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "traceRowCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ackRowCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "lastSuccessfulEvalAt": {
+          "type": "string",
+          "maxLength": 40,
+          "description": "ISO-ish timestamp of last successful evaluate (T862); nullable semantics via omission."
+        },
+        "issues": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code"],
+            "properties": {
+              "code": { "type": "string", "maxLength": 64 },
+              "detail": { "type": "string", "maxLength": 512 }
+            }
+          }
+        }
+      }
+    },
+    "caeConflictsData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "conflictShadowSummary", "traceId"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "traceId": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 128,
+          "description": "Synthetic or evaluation trace used for the conflict pass."
+        },
+        "conflictShadowSummary": {
+          "$ref": "https://workflow-cannon.dev/schemas/cae/effective-activation-bundle.v1.json#/$defs/conflictShadowSummary"
+        }
+      }
+    },
+    "caeGetTraceData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "trace"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "trace": {
+          "$ref": "https://workflow-cannon.dev/schemas/cae/trace.v1.json"
+        },
+        "ephemeral": {
+          "type": "boolean",
+          "description": "True when trace is not loaded from durable store."
+        },
+        "storage": {
+          "type": "string",
+          "enum": ["memory", "sqlite"]
+        }
+      }
+    },
+    "caeListAcksData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "rows", "count"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "count": { "type": "integer", "minimum": 0 },
+        "filters": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "traceId": { "type": ["string", "null"], "maxLength": 128 },
+            "activationId": { "type": ["string", "null"], "maxLength": 128 }
+          }
+        },
+        "rows": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "traceId", "ackToken", "activationId", "satisfiedAt", "actor"],
+            "properties": {
+              "id": { "type": "integer", "minimum": 1 },
+              "traceId": { "type": "string", "minLength": 8, "maxLength": 128 },
+              "ackToken": { "type": "string", "minLength": 1, "maxLength": 128 },
+              "activationId": { "type": "string", "minLength": 3, "maxLength": 128 },
+              "satisfiedAt": { "type": "string", "maxLength": 40 },
+              "actor": { "type": "string", "minLength": 1, "maxLength": 256 }
+            }
+          }
+        }
+      }
+    }
+  }
+}

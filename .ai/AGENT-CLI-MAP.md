@@ -19,6 +19,8 @@ If a session might touch `.workspace-kit/` state, lifecycle transitions, policy 
 3. `workspace-kit run` (no subcommand) — lists **router-registered** commands (executable for the current enabled module set).
 4. Use this map + `src/modules/<module>/instructions/<command>.md` for JSON payload shape.
 
+**CAE (`cae-*` read-only commands):** when shipped (**`T861`**, **`T862`**), names + JSON envelope live in **`.ai/cae/cli-read-only.md`**; operator/debug path in **`.ai/cae/README.md`** and **`.ai/runbooks/cae-debug.md`** (**`T855`**). **Advisory CAE on `doctor` / agent instruction surface (design):** **`.ai/cae/advisory-surfacing.md`** (**`T850`**).
+
 Optional machine-readable catalog (same validation as `doctor`, then JSON on stdout):
 
 ```bash
@@ -196,7 +198,7 @@ Config **`tasks.planningGenerationPolicy`**: **`off`** (consumer default; option
 
 **Idempotency:** **`clientMutationId`** replay responses (**`*-idempotent-replay`**) do not write the planning row again and **do not** require **`expectedPlanningGeneration`** even under **`require`**. Same id + different payload → **`idempotency-key-conflict`** (unchanged).
 
-**Human / IDE:** Cursor extension dashboard shows **Planning generation** + policy; Tasks DnD and palette transitions pass **`expectedPlanningGeneration`** when the cached policy is **`require`** (refresh Tasks/Dashboard if you see mismatches).
+**Human / IDE:** The Cursor extension caches **`planningGeneration`** and **`planningGenerationPolicy`** from each **`dashboard-summary`** refresh; dashboard mutations (e.g. proposed-row **Accept** / **Decline**, wishlist **Decline**) and palette **Task** actions merge **`expectedPlanningGeneration`** when policy is **`require`**. Refresh the dashboard after concurrent CLI writes if you see **`planning-generation-mismatch`**. The dashboard does **not** include a read-only **Approvals & policy** discoverability card (removed); use **`pnpm exec wk run list-approval-queue '{}'`** for the review-item queue (**`.ai/POLICY-APPROVAL.md`**).
 
 ADR: **`docs/maintainers/adrs/ADR-planning-generation-optimistic-concurrency.md`**.
 
@@ -365,6 +367,55 @@ workspace-kit run list-features '{"componentId":"task-engine-queue"}'
 
 Instruction: `src/modules/task-engine/instructions/queue-health.md`. Related runbook: [`runbooks/agent-task-engine-ergonomics.md`](./runbooks/agent-task-engine-ergonomics.md).
 
+## CAE read-only CLI (contract v1 — Tier C; handlers `T861` / `T862`)
+
+Normative contract + JSON Schema: **`.ai/cae/cli-read-only.md`**, **`schemas/cae/cli-read-only-requests.v1.json`**, **`schemas/cae/cli-read-only-data.v1.json`**. **`policyOperationId`** pattern: **`context-activation.cae-<name>`** (e.g. **`context-activation.cae-evaluate`**).
+
+Until **`T861` / `T862`** register these names in **`src/contracts/builtin-run-command-manifest.json`**, **`workspace-kit run` (no args)** will not list them — the shapes below are still the **copy-paste contract** for implementers and agents once shipped. **No `policyApproval`.** Prefer **`pnpm exec wk run`** for clean JSON stdout.
+
+**Registry inspection (`T861`):**
+
+```bash
+pnpm exec wk run cae-registry-validate '{"schemaVersion":1}'
+pnpm exec wk run cae-validate-registry '{"schemaVersion":1}'
+pnpm exec wk run cae-list-artifacts '{"schemaVersion":1,"limit":50}'
+pnpm exec wk run cae-get-artifact '{"schemaVersion":1,"artifactId":"cae.playbook.machine-playbooks"}'
+pnpm exec wk run cae-list-activations '{"schemaVersion":1,"family":"policy","limit":25}'
+pnpm exec wk run cae-get-activation '{"schemaVersion":1,"activationId":"cae.activation.policy.phase70-playbook"}'
+```
+
+**Evaluation / explain / health / conflicts / trace (`T862`):**
+
+```bash
+pnpm exec wk run cae-evaluate '{"schemaVersion":1,"evaluationContext":{"schemaVersion":1,"task":{"taskId":"T847","status":"in_progress","phaseKey":"70"},"command":{"name":"cae-evaluate"},"workspace":{"currentKitPhase":"70"},"governance":{"policyApprovalRequired":false,"approvalTierHint":"C"},"queue":{"readyQueueDepth":0},"mapSignals":null},"evalMode":"live"}'
+pnpm exec wk run cae-explain '{"schemaVersion":1,"traceId":"cae.trace.example.minimal","level":"summary"}'
+pnpm exec wk run cae-explain '{"schemaVersion":1,"evaluationContext":{"schemaVersion":1,"task":{"taskId":"T847","status":"in_progress","phaseKey":"70"},"command":{"name":"cae-explain"},"workspace":{"currentKitPhase":"70"},"governance":{"policyApprovalRequired":false,"approvalTierHint":"C"},"queue":{"readyQueueDepth":0},"mapSignals":null},"level":"verbose"}'
+pnpm exec wk run cae-health '{"schemaVersion":1,"includeDetails":true}'
+pnpm exec wk run cae-conflicts '{"schemaVersion":1,"evaluationContext":{"schemaVersion":1,"task":{"taskId":"T847","status":"ready","phaseKey":"70"},"command":{"name":"cae-conflicts"},"workspace":{"currentKitPhase":"70"},"governance":{"policyApprovalRequired":false,"approvalTierHint":"C"},"queue":{"readyQueueDepth":3},"mapSignals":null},"evalMode":"shadow"}'
+pnpm exec wk run cae-get-trace '{"schemaVersion":1,"traceId":"cae.trace.example.minimal"}'
+pnpm exec wk run cae-list-acks '{"schemaVersion":1,"activationId":"cae.activation.policy.phase70-playbook"}'
+pnpm exec wk run cae-shadow-feedback-report '{"schemaVersion":1,"activationId":"cae.activation.policy.phase70-playbook"}'
+```
+
+**Governed CAE mutation (Tier A — JSON `policyApproval`; requires `kit.cae.persistence`):**
+
+```bash
+pnpm exec wk run cae-satisfy-ack '{"schemaVersion":1,"traceId":"<traceId>","ackToken":"<token>","activationId":"cae.activation.policy.phase70-playbook","actor":"operator@example","policyApproval":{"confirmed":true,"rationale":"record CAE ack satisfaction"}}'
+pnpm exec wk run cae-import-json-registry '{"schemaVersion":1,"policyApproval":{"confirmed":true,"rationale":"seed sqlite registry from default JSON paths"}}'
+pnpm exec wk run cae-record-shadow-feedback '{"schemaVersion":1,"traceId":"<traceId>","activationId":"cae.activation.policy.phase70-playbook","commandName":"get-next-actions","signal":"useful","actor":"operator@example","policyApproval":{"confirmed":true,"rationale":"record CAE shadow feedback"}}'
+```
+
+**CAE SQLite registry admin (Phase 70 — Tier C manifest + in-handler gate; JSON `caeMutationApproval`, not `policyApproval`):**
+
+Requires **`kit.cae.enabled`**, **`kit.cae.registryStore: "sqlite"`**, **`kit.cae.adminMutations: true`**, plus **`caeMutationApproval`** + **`actor`** on mutators. Canon: **`.ai/cae/registry-mutation-governance.md`**.
+
+```bash
+pnpm exec wk run cae-list-registry-versions '{"schemaVersion":1}'
+pnpm exec wk run cae-create-registry-version '{"schemaVersion":1,"actor":"operator","versionId":"cae.reg.admin.example","note":"demo","caeMutationApproval":{"confirmed":true,"rationale":"empty version"},"config":{"kit":{"cae":{"enabled":true,"adminMutations":true,"registryStore":"sqlite"}}}}'
+```
+
+When these rows land in the manifest, add matching lines to **`docs/maintainers/AGENT-CLI-MAP.md`** (or an **`agent-cli-map-exclusions.json`** entry with rationale) so **`pnpm run check`** stays green — see **`.ai/cae/cli-read-only.md` § Agent CLI map coverage**.
+
 ## Tier C — Safe discovery / read-only examples
 
 Non-sensitive commands (no `policyApproval` unless you added `extraSensitiveModuleCommands`):
@@ -392,6 +443,9 @@ workspace-kit run list-planning-types '{}'
 workspace-kit run explain-planning-rules '{"planningType":"new-feature"}'
 workspace-kit run build-plan '{"planningType":"new-feature","answers":{"featureGoal":"...","placement":"CLI","technology":"TypeScript"}}'
 workspace-kit run build-plan '{"planningType":"new-feature","answers":{"featureGoal":"...","placement":"CLI","technology":"TypeScript","targetAudience":"AI Agent Operators","problemStatement":"...","expectedOutcome":"...","impact":"...","constraints":"...","successSignals":"..."},"finalize":true,"createWishlist":true}'
+# Multi-task execution drafts: finalize + outputMode tasks + executionTaskDrafts[] (convert-wishlist row shape) → code planning-multi-task-decomposition-preview; then persist with expectedPlanningGeneration when policy requires:
+workspace-kit run build-plan '{"planningType":"new-feature","outputMode":"tasks","finalize":true,"answers":{"featureGoal":"...","placement":"CLI","technology":"TypeScript","targetAudience":"AI Agent Operators"},"executionTaskDrafts":[{"title":"...","phase":"Phase 68","approach":"...","technicalScope":["..."],"acceptanceCriteria":["..."]}]}'
+workspace-kit run persist-planning-execution-drafts '{"tasks":[...],"expectedPlanningGeneration":<n>,"planRef":"planning:new-feature:...","planningType":"new-feature","clientMutationId":"agent-bulk-1"}'
 workspace-kit run list-wishlist '{}'
 workspace-kit run get-wishlist '{"wishlistId":"T42"}'
 workspace-kit run explain-config '{}'
@@ -417,7 +471,7 @@ workspace-kit doctor
 
 **Agent behavior** (`list-behavior-profiles`, `get-behavior-profile`, `resolve-behavior-profile`, `set-active-behavior-profile`, `create-behavior-profile`, `update-behavior-profile`, `delete-behavior-profile`, `diff-behavior-profiles`, `explain-behavior-profiles`, `interview-behavior-profile`, `sync-effective-behavior-cursor-rule`) are **Tier C**: advisory interaction posture only; **subordinate** to PRINCIPLES and policy. They persist under `.workspace-kit/agent-behavior/` (JSON) or unified SQLite (`module_id` `agent-behavior`) when `tasks.persistenceBackend` is `sqlite`. **`sync-effective-behavior-cursor-rule`** writes a generated **`.cursor/rules/*.mdc`** summary (also auto-scheduled after common profile / guidance mutators; fail-open).
 
-**Wishlist mutations** (`create-wishlist`, `update-wishlist`, `convert-wishlist`) and **`migrate-task-persistence`** are Tier C by default (same as `create-task`): they persist workspace state (legacy task JSON import and/or the configured SQLite planning DB under `tasks.sqliteDatabaseRelativePath`) but do not use `policyApproval` unless listed in `policy.extraSensitiveModuleCommands`. **`update-workspace-phase-snapshot`** is Tier C and writes only the two phase scalar lines in **`docs/maintainers/data/workspace-kit-status.yaml`** (see **`.ai/agent-source-of-truth-order.md`** and task-engine instructions for phase snapshot).
+**Wishlist mutations** (`create-wishlist`, `update-wishlist`, `convert-wishlist`), **`persist-planning-execution-drafts`**, and **`migrate-task-persistence`** are Tier C by default (same as `create-task`): they persist workspace state (legacy task JSON import and/or the configured SQLite planning DB under `tasks.sqliteDatabaseRelativePath`) but do not use `policyApproval` unless listed in `policy.extraSensitiveModuleCommands`. **`update-workspace-phase-snapshot`** is Tier C and writes only the two phase scalar lines in **`docs/maintainers/data/workspace-kit-status.yaml`** (see **`.ai/agent-source-of-truth-order.md`** and task-engine instructions for phase snapshot).
 
 Instruction paths: run `workspace-kit run` with no subcommand to list commands; each line lists `(moduleId)` and points to the module’s instruction file pattern above.
 
@@ -431,6 +485,7 @@ Instruction paths: run `workspace-kit run` with no subcommand to list commands; 
 6. Agent behavior plan: `docs/maintainers/plans/agent-behavior-module.md` + profile schema `schemas/agent-behavior-profile.schema.json`.
 7. Planning module runbook: `.ai/runbooks/planning-workflow.md`.
 8. Agent task-engine ergonomics: `.ai/runbooks/agent-task-engine-ergonomics.md` (includes **§0** natural-language → command exemplar table).
+9. CAE read-only CLI contract (when enabled): `.ai/cae/cli-read-only.md` + `schemas/cae/cli-read-only-*.v1.json`.
 
 ## Optional session opener (habit hook)
 

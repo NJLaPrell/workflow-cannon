@@ -40,7 +40,10 @@ export type PolicyOperationId =
   | "subagents.persist"
   | "team-execution.persist"
   | "checkpoints.persist"
-  | "checkpoints.rewind";
+  | "checkpoints.rewind"
+  | "context-activation.cae-satisfy-ack"
+  | "context-activation.cae-import-json-registry"
+  | "context-activation.cae-record-shadow-feedback";
 
 function buildBuiltinCommandToOperation(): Record<string, PolicyOperationId | undefined> {
   const out: Record<string, PolicyOperationId | undefined> = {};

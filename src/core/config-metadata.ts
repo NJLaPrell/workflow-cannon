@@ -388,7 +388,8 @@ export function validatePersistedConfigDocument(
         key !== "agentGuidance" &&
         key !== "githubInvocation" &&
         key !== "lifecycleHooks" &&
-        key !== "autoCheckpoint"
+        key !== "autoCheckpoint" &&
+        key !== "cae"
       ) {
         throw new Error(`config-invalid(${label}): unknown kit.${key}`);
       }
@@ -544,6 +545,87 @@ export function validatePersistedConfigDocument(
       }
       if (ac.stashWhenDirty !== undefined) {
         validateValueForMetadata(REGISTRY["kit.autoCheckpoint.stashWhenDirty"]!, ac.stashWhenDirty);
+      }
+    }
+    if (k.cae !== undefined) {
+      if (typeof k.cae !== "object" || k.cae === null || Array.isArray(k.cae)) {
+        throw new Error(`config-invalid(${label}): kit.cae must be an object`);
+      }
+      const cae = k.cae as Record<string, unknown>;
+      for (const ck of Object.keys(cae)) {
+        if (
+          ck !== "enabled" &&
+          ck !== "registryStore" &&
+          ck !== "advisoryInstructionSurface" &&
+          ck !== "persistence" &&
+          ck !== "adminMutations" &&
+          ck !== "runtime" &&
+          ck !== "enforcement" &&
+          ck !== "shadow"
+        ) {
+          throw new Error(`config-invalid(${label}): unknown kit.cae.${ck}`);
+        }
+      }
+      if (cae.enabled !== undefined) {
+        validateValueForMetadata(REGISTRY["kit.cae.enabled"]!, cae.enabled);
+      }
+      if (cae.registryStore !== undefined) {
+        validateValueForMetadata(REGISTRY["kit.cae.registryStore"]!, cae.registryStore);
+      }
+      if (cae.advisoryInstructionSurface !== undefined) {
+        validateValueForMetadata(REGISTRY["kit.cae.advisoryInstructionSurface"]!, cae.advisoryInstructionSurface);
+      }
+      if (cae.persistence !== undefined) {
+        validateValueForMetadata(REGISTRY["kit.cae.persistence"]!, cae.persistence);
+      }
+      if (cae.adminMutations !== undefined) {
+        validateValueForMetadata(REGISTRY["kit.cae.adminMutations"]!, cae.adminMutations);
+      }
+      if (cae.runtime !== undefined) {
+        if (typeof cae.runtime !== "object" || cae.runtime === null || Array.isArray(cae.runtime)) {
+          throw new Error(`config-invalid(${label}): kit.cae.runtime must be an object`);
+        }
+        const rt = cae.runtime as Record<string, unknown>;
+        for (const rk of Object.keys(rt)) {
+          if (rk !== "shadowPreflight") {
+            throw new Error(`config-invalid(${label}): unknown kit.cae.runtime.${rk}`);
+          }
+        }
+        if (rt.shadowPreflight !== undefined) {
+          validateValueForMetadata(REGISTRY["kit.cae.runtime.shadowPreflight"]!, rt.shadowPreflight);
+        }
+      }
+      if (cae.enforcement !== undefined) {
+        if (
+          typeof cae.enforcement !== "object" ||
+          cae.enforcement === null ||
+          Array.isArray(cae.enforcement)
+        ) {
+          throw new Error(`config-invalid(${label}): kit.cae.enforcement must be an object`);
+        }
+        const en = cae.enforcement as Record<string, unknown>;
+        for (const ek of Object.keys(en)) {
+          if (ek !== "enabled") {
+            throw new Error(`config-invalid(${label}): unknown kit.cae.enforcement.${ek}`);
+          }
+        }
+        if (en.enabled !== undefined) {
+          validateValueForMetadata(REGISTRY["kit.cae.enforcement.enabled"]!, en.enabled);
+        }
+      }
+      if (cae.shadow !== undefined) {
+        if (typeof cae.shadow !== "object" || cae.shadow === null || Array.isArray(cae.shadow)) {
+          throw new Error(`config-invalid(${label}): kit.cae.shadow must be an object`);
+        }
+        const sh = cae.shadow as Record<string, unknown>;
+        for (const sk of Object.keys(sh)) {
+          if (sk !== "defaultOn") {
+            throw new Error(`config-invalid(${label}): unknown kit.cae.shadow.${sk}`);
+          }
+        }
+        if (sh.defaultOn !== undefined) {
+          validateValueForMetadata(REGISTRY["kit.cae.shadow.defaultOn"]!, sh.defaultOn);
+        }
       }
     }
   }

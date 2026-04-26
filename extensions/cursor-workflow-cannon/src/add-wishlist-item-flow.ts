@@ -32,6 +32,7 @@ export async function promptAndCreateWishlist(client: CommandClient): Promise<vo
       ignoreFocusOut: true
     });
     if (value === undefined) {
+      void vscode.window.showInformationMessage("Add wishlist item cancelled (closed prompt).");
       return;
     }
     const t = value.trim();
@@ -55,10 +56,27 @@ export async function promptAndCreateWishlist(client: CommandClient): Promise<vo
   }
 
   if (r.ok) {
-    const tid = typeof r.data?.taskId === "string" ? r.data.taskId : "";
-    void vscode.window.showInformationMessage(
-      tid ? `Wishlist intake created (${tid}).` : "Wishlist intake created."
-    );
+    const data = r.data as Record<string, unknown> | undefined;
+    const itemRaw = data?.item ?? data?.wishlist;
+    const item = itemRaw && typeof itemRaw === "object" && itemRaw !== null ? (itemRaw as Record<string, unknown>) : null;
+    const wishlistId = item && typeof item.id === "string" ? item.id.trim() : "";
+    const title = item && typeof item.title === "string" ? item.title.trim() : "";
+    const tid = typeof data?.taskId === "string" ? data.taskId.trim() : "";
+    const summary =
+      wishlistId && title.length > 0
+        ? `Wishlist saved as ${wishlistId}: ${title.slice(0, 100)}${title.length > 100 ? "…" : ""}`
+        : wishlistId
+          ? `Wishlist saved as ${wishlistId}` + (tid ? ` (intake task ${tid})` : "")
+          : tid
+            ? `Wishlist intake task created (${tid}). Open Wishlist or refresh the dashboard to see it.`
+            : "Wishlist intake created.";
+    const pick = await vscode.window.showInformationMessage(summary, "Open wishlist detail", "Dismiss");
+    if (pick === "Open wishlist detail") {
+      const openId = wishlistId || tid;
+      if (openId.length > 0) {
+        await vscode.commands.executeCommand("workflowCannon.wishlist.showDetail", openId);
+      }
+    }
   } else {
     const hint =
       r.code === "planning-generation-mismatch" || r.code === "planning-generation-required"

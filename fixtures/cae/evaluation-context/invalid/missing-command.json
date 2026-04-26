@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "task": {
+    "taskId": "T842",
+    "status": "ready",
+    "phaseKey": "70"
+  },
+  "workspace": { "currentKitPhase": "70" },
+  "governance": {
+    "policyApprovalRequired": true,
+    "approvalTierHint": "A"
+  },
+  "queue": { "readyQueueDepth": 3 }
+}

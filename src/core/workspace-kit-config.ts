@@ -61,6 +61,36 @@ export const KIT_CONFIG_DEFAULTS: Record<string, unknown> = {
       enabled: false,
       beforeCommands: ["run-transition"] as string[],
       stashWhenDirty: true
+    },
+    /** Context Activation Engine (CAE); see `.ai/cae/README.md`. */
+    cae: {
+      enabled: false,
+      /**
+       * `sqlite` — load active version from kit planning SQLite (`cae_registry_*` tables); default (**Phase 70 / CAE_PLAN**).
+       * `json` — load `.ai/cae/registry/*.json` (tests / explicit bootstrap only; not authoritative runtime).
+       */
+      registryStore: "sqlite",
+      /** When true with `enabled`, `doctor --agent-instruction-surface` includes a bounded `cae` block. */
+      advisoryInstructionSurface: false,
+      /** Ephemeral trace bodies stay in-process until optional persistence (**`T867`**). */
+      persistence: false,
+      runtime: {
+        /** When true (and `enabled`), non-`cae-*` `wk run` module commands run shadow CAE preflight (**`T864`**). */
+        shadowPreflight: false
+      },
+      enforcement: {
+        /** Allowlisted blocks only; default off (**`T866`**). */
+        enabled: false
+      },
+      shadow: {
+        /** Product default: shadow labels without blocking (**`T848`**). */
+        defaultOn: false
+      },
+      /**
+       * When true with `enabled`, SQLite registry admin mutators (`cae-create-artifact`, version CRUD, …)
+       * are allowed with JSON **`caeMutationApproval`** (CAE governance lane — see **`.ai/cae/registry-mutation-governance.md`**).
+       */
+      adminMutations: false
     }
   } as Record<string, unknown>,
   tasks: {

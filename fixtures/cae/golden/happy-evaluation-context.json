@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "task": {
+    "taskId": "T921",
+    "status": "in_progress",
+    "phaseKey": "70",
+    "title": "CAE operator golden path",
+    "tags": ["cae"],
+    "metadata": {
+      "phaseProgram": "phase-70-cae-follow-on",
+      "risk": "medium"
+    }
+  },
+  "command": {
+    "name": "get-next-actions",
+    "moduleId": "task-engine",
+    "argvSummary": "{}"
+  },
+  "workspace": {
+    "currentKitPhase": "70"
+  },
+  "governance": {
+    "policyApprovalRequired": false,
+    "approvalTierHint": "C"
+  },
+  "queue": {
+    "readyQueueDepth": 0,
+    "suggestedNextTaskId": "T921"
+  },
+  "mapSignals": null
+}

@@ -1,6 +1,6 @@
 {
   "name": "@workflow-cannon/workspace-kit",
-  "version": "0.66.0",
+  "version": "0.70.0",
   "private": false,
   "packageManager": "pnpm@10.0.0",
   "license": "MIT",
@@ -67,8 +67,11 @@
     "typescript": "^5.9.3"
   },
   "files": [
+    ".ai",
     "dist",
+    "fixtures/cae/golden",
     "scripts/ensure-native-sqlite.mjs",
+    "src/modules/context-activation/instructions",
     "src/modules/documentation",
     "schemas",
     "package.json"

@@ -4,7 +4,7 @@ import { seedFeatureRegistryIfEmpty } from "./feature-registry-migration.js";
 type SqliteDatabase = InstanceType<typeof Database>;
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 10;
+export const KIT_SQLITE_USER_VERSION = 13;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 
@@ -257,6 +257,96 @@ function migrateV9ToV10(db: SqliteDatabase): void {
   ).run(now);
 }
 
+/** CAE trace + ack satisfaction (ADR-cae-persistence-v1, Phase 70). */
+const CAE_PERSISTENCE_DDL = `
+CREATE TABLE IF NOT EXISTS cae_trace_snapshots (
+  trace_id TEXT PRIMARY KEY NOT NULL,
+  trace_json TEXT NOT NULL,
+  bundle_json TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_cae_trace_snapshots_created ON cae_trace_snapshots(created_at);
+CREATE TABLE IF NOT EXISTS cae_ack_satisfaction (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  trace_id TEXT NOT NULL,
+  ack_token TEXT NOT NULL,
+  activation_id TEXT NOT NULL,
+  satisfied_at TEXT NOT NULL,
+  actor TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_cae_ack_trace ON cae_ack_satisfaction(trace_id);
+`;
+
+function migrateV10ToV11(db: SqliteDatabase): void {
+  db.exec(CAE_PERSISTENCE_DDL);
+}
+
+/**
+ * CAE registry (authoritative rows) — Phase 70 CAE SQLite migration (`CAE_PLAN.md` / T887).
+ * Artifact bodies stay on disk; DB holds metadata + activation rules. Activation → artifact
+ * integrity is enforced in validation/application code, not SQLite FKs to artifacts.
+ */
+const CAE_REGISTRY_DDL = `
+CREATE TABLE IF NOT EXISTS cae_registry_versions (
+  version_id TEXT PRIMARY KEY NOT NULL,
+  created_at TEXT NOT NULL,
+  created_by TEXT NOT NULL DEFAULT '',
+  is_active INTEGER NOT NULL DEFAULT 0 CHECK (is_active IN (0, 1)),
+  note TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_cae_registry_versions_created ON cae_registry_versions(created_at);
+CREATE INDEX IF NOT EXISTS idx_cae_registry_versions_active ON cae_registry_versions(is_active) WHERE is_active = 1;
+CREATE TABLE IF NOT EXISTS cae_registry_artifacts (
+  version_id TEXT NOT NULL REFERENCES cae_registry_versions(version_id) ON DELETE CASCADE,
+  artifact_id TEXT NOT NULL,
+  artifact_type TEXT NOT NULL,
+  path TEXT NOT NULL,
+  title TEXT,
+  description TEXT,
+  metadata_json TEXT NOT NULL DEFAULT '{}',
+  retired_at TEXT,
+  PRIMARY KEY (version_id, artifact_id)
+);
+CREATE INDEX IF NOT EXISTS idx_cae_registry_artifacts_version ON cae_registry_artifacts(version_id);
+CREATE TABLE IF NOT EXISTS cae_registry_activations (
+  version_id TEXT NOT NULL REFERENCES cae_registry_versions(version_id) ON DELETE CASCADE,
+  activation_id TEXT NOT NULL,
+  family TEXT NOT NULL,
+  priority INTEGER NOT NULL DEFAULT 0,
+  lifecycle_state TEXT NOT NULL,
+  scope_json TEXT NOT NULL,
+  artifact_refs_json TEXT NOT NULL,
+  acknowledgement_json TEXT,
+  metadata_json TEXT NOT NULL DEFAULT '{}',
+  retired_at TEXT,
+  PRIMARY KEY (version_id, activation_id)
+);
+CREATE INDEX IF NOT EXISTS idx_cae_registry_activations_version ON cae_registry_activations(version_id);
+`;
+
+function migrateV11ToV12(db: SqliteDatabase): void {
+  db.exec(CAE_REGISTRY_DDL);
+}
+
+/** Append-only audit for CAE registry mutations (Phase 70 / CAE_PLAN Epic 5 E3, T902). */
+const CAE_REGISTRY_MUTATIONS_AUDIT_DDL = `
+CREATE TABLE IF NOT EXISTS cae_registry_mutations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  recorded_at TEXT NOT NULL,
+  actor TEXT NOT NULL,
+  command_name TEXT NOT NULL,
+  version_id TEXT NOT NULL,
+  note TEXT,
+  payload_json TEXT NOT NULL DEFAULT '{}'
+);
+CREATE INDEX IF NOT EXISTS idx_cae_registry_mutations_version ON cae_registry_mutations(version_id);
+CREATE INDEX IF NOT EXISTS idx_cae_registry_mutations_recorded ON cae_registry_mutations(recorded_at);
+`;
+
+function migrateV12ToV13(db: SqliteDatabase): void {
+  db.exec(CAE_REGISTRY_MUTATIONS_AUDIT_DDL);
+}
+
 /**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
@@ -321,7 +411,23 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
   }
   if (current < 10) {
     migrateV9ToV10(db);
-    db.pragma(`user_version = ${KIT_SQLITE_USER_VERSION}`);
+    db.pragma("user_version = 10");
+    current = 10;
+  }
+  if (current < 11) {
+    migrateV10ToV11(db);
+    db.pragma("user_version = 11");
+    current = 11;
+  }
+  if (current < 12) {
+    migrateV11ToV12(db);
+    db.pragma("user_version = 12");
+    current = 12;
+  }
+  if (current < 13) {
+    migrateV12ToV13(db);
+    db.pragma("user_version = 13");
+    current = 13;
   }
 }
 

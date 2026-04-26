@@ -79,16 +79,29 @@ export function buildTaskToPhaseBranchPrompt(options?: { taskId?: string; kitPha
   );
 }
 
-/** Dashboard **New Plan** — guided `build-plan` interview (planning module). */
+/** Dashboard **Start Interview** — guided `build-plan` interview (planning module). */
 export function buildPlanningInterviewPrompt(): string {
   return (
-    "The operator clicked **New Plan** on the Workflow Cannon dashboard — run the **planning module interview**.\n\n" +
+    "The operator clicked **Start Interview** on the Workflow Cannon dashboard — run the **planning module interview**.\n\n" +
     "Follow **`.ai/runbooks/planning-workflow.md`**.\n\n" +
     "1. Run **`pnpm exec wk run list-planning-types '{}'`** and choose a **`planningType`** (or use the type the user names).\n" +
     "2. Iterate **`pnpm exec wk run build-plan`** with **`answers`** from **`data.nextQuestions`** until you can **`finalize`**.\n" +
     "3. When **`tasks.planningGenerationPolicy`** is **`require`**, pass **`expectedPlanningGeneration`** from your latest read (`dashboard-summary`, **`get-next-actions`**, or prior **`build-plan`** response).\n" +
     "4. When the user wants a persisted handoff, use **`finalize:true`** and **`createWishlist:true`** per the runbook so **`list-wishlist`** shows the new row.\n\n" +
     "Use **`.ai/AGENT-CLI-MAP.md`** and **`.ai/POLICY-APPROVAL.md`** for gated mutators — chat-only approval does not replace JSON **`policyApproval`** where required."
+  );
+}
+
+/** Dashboard planning session resume — fresh Agent chat gets the exact saved resume command plus guardrails. */
+export function buildPlanningInterviewResumePrompt(resumeCli: string): string {
+  const cli = resumeCli.trim();
+  return (
+    "Resume the in-progress **Workflow Cannon Planning Interview**.\n\n" +
+    "Run this saved resume command from the workspace root, then continue asking/answering the next planning questions until the interview is ready to finalize:\n\n" +
+    "```bash\n" +
+    cli +
+    "\n```\n\n" +
+    "Use **`.ai/runbooks/planning-workflow.md`**, **`.ai/AGENT-CLI-MAP.md`**, and **`.ai/POLICY-APPROVAL.md`**. If a mutating follow-up is required, chat intent still does not replace JSON **`policyApproval`**."
   );
 }
 

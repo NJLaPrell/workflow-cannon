@@ -8,6 +8,8 @@ export type DashboardPhaseBucket<T> = {
   label: string;
   count: number;
   top: T[];
+  /** Every task id in this bucket (not capped by `top`); for dashboard batch accept. */
+  taskIds?: string[];
 };
 
 function parseWorkspacePhaseKey(raw: string | null | undefined): string | null {
@@ -49,7 +51,8 @@ function emitBucketsFromMap<T, R>(
   byKey: Map<string | null, T[]>,
   workspaceStatus: WorkspaceStatusSnapshot | null,
   topPerBucket: number,
-  mapTop: (items: T[]) => R[]
+  mapTop: (items: T[]) => R[],
+  taskIdSelector?: (item: T) => string
 ): DashboardPhaseBucket<R>[] {
   const current = parseWorkspacePhaseKey(workspaceStatus?.currentKitPhase ?? null);
   const next = parseWorkspacePhaseKey(workspaceStatus?.nextKitPhase ?? null);
@@ -60,13 +63,17 @@ function emitBucketsFromMap<T, R>(
   const push = (key: string | null) => {
     const list = byKey.get(key) ?? [];
     const label = phaseBucketLabel(key, current, next, list.length);
-    buckets.push({
+    const row: DashboardPhaseBucket<R> = {
       schemaVersion: 1,
       phaseKey: key,
       label,
       count: list.length,
       top: mapTop(list.slice(0, topPerBucket))
-    });
+    };
+    if (taskIdSelector) {
+      row.taskIds = list.map(taskIdSelector);
+    }
+    buckets.push(row);
     if (key !== null) {
       emitted.add(key);
     }
@@ -109,7 +116,8 @@ export function buildDashboardPhaseBucketsForTasks<T>(
   taskEntities: TaskEntity[],
   workspaceStatus: WorkspaceStatusSnapshot | null,
   mapRow: (t: TaskEntity) => T,
-  topPerBucket: number
+  topPerBucket: number,
+  options?: { includeAllTaskIds?: boolean }
 ): DashboardPhaseBucket<T>[] {
   const byKey = new Map<string | null, TaskEntity[]>();
   for (const t of taskEntities) {
@@ -121,7 +129,8 @@ export function buildDashboardPhaseBucketsForTasks<T>(
       byKey.set(k, [t]);
     }
   }
-  return emitBucketsFromMap(byKey, workspaceStatus, topPerBucket, (items) => items.map(mapRow));
+  const idSel = options?.includeAllTaskIds ? (e: TaskEntity) => e.id : undefined;
+  return emitBucketsFromMap(byKey, workspaceStatus, topPerBucket, (items) => items.map(mapRow), idSel);
 }
 
 export type BlockingRow = { taskId: string; blockedBy: string[] };
