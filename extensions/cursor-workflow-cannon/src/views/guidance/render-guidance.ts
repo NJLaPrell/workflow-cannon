@@ -195,12 +195,17 @@ function renderGuidanceCard(cardRaw: unknown, traceId: string, commandName: stri
   const activationId = String(card.activationId ?? "");
   const artifactIds = asArray(card.artifactIds).map((x) => String(x));
   const titles = asArray(card.sourceTitles).map((x) => String(x));
+  const matchReason =
+    typeof card.matchReason === "string" && card.matchReason
+      ? card.matchReason
+      : `Matched ${titles.length ? titles.slice(0, 2).join(", ") : activationId}; priority ${String(card.priority ?? 0)}, fit ${String(card.aggregateTightness ?? 0)}.`;
   return `<div class="gd-guidance-card">
   <div class="gd-card-head">
     <h3>${escapeHtml(String(card.title ?? activationId))}</h3>
     <span class="gd-pill">${escapeHtml(String(card.attention ?? "advisory"))}</span>
   </div>
   <p class="gd-muted">${escapeHtml(String(card.familyLabel ?? card.family ?? "Guidance item"))}</p>
+  <p><b>Why this appeared:</b> ${escapeHtml(matchReason)}</p>
   <p>${titles.map(escapeHtml).join(", ")}</p>
   <details>
     <summary>Source ids</summary>
@@ -213,6 +218,26 @@ function renderGuidanceCard(cardRaw: unknown, traceId: string, commandName: stri
     <button type="button" class="gd-btn" data-wc-action="guidance-feedback" data-signal="noisy" data-trace-id="${escapeHtmlAttr(traceId)}" data-activation-id="${escapeHtmlAttr(activationId)}" data-command-name="${escapeHtmlAttr(commandName)}">Noisy</button>
   </div>
 </div>`;
+}
+
+function renderConflictSummary(conflictShadowSummary: unknown): string {
+  const summary = asRecord(conflictShadowSummary);
+  const entries = asArray(summary.entries);
+  if (entries.length === 0) return "";
+  return `<section class="gd-card gd-warn-card"><h2>Possible guidance conflicts</h2>${entries
+    .map((raw) => {
+      const entry = asRecord(raw);
+      const activationIds = asArray(entry.activationIds).map((id) => String(id));
+      return `<div class="gd-guidance-card">
+  <div class="gd-card-head">
+    <h3>${escapeHtml(String(entry.kind ?? "conflict"))}</h3>
+    <span class="gd-pill">${escapeHtml(String(entry.resolution ?? "shadow"))}</span>
+  </div>
+  <p>${escapeHtml(String(entry.detail ?? "Guidance candidates overlapped; review the involved activation ids before treating either as final."))}</p>
+  <p class="gd-muted">${activationIds.map((id) => `<code>${escapeHtml(id)}</code>`).join(" ")}</p>
+</div>`;
+    })
+    .join("")}<p class="gd-muted">Conflict cards are advisory in Preview mode; use them to decide whether the registry needs cleanup.</p></section>`;
 }
 
 function renderFamilySection(title: string, cards: unknown, traceId: string, commandName: string): string {
@@ -263,6 +288,7 @@ export function renderGuidancePreviewInnerHtml(payload: unknown): string {
   <p class="gd-muted">Trace <code>${escapeHtml(traceId)}</code>${data.ephemeral ? " · stored in memory only" : " · stored in workspace database"}</p>
 </section>
 ${renderPendingAcks(data.pendingAcknowledgements, traceId)}
+${renderConflictSummary(data.conflictShadowSummary)}
 ${renderFamilySection("Rules to follow", cards.policy, traceId, commandName)}
 ${renderFamilySection("Things to consider", cards.think, traceId, commandName)}
 ${renderFamilySection("Suggested steps", cards.do, traceId, commandName)}
@@ -271,4 +297,74 @@ ${renderFamilySection("Review checks", cards.review, traceId, commandName)}
   <summary>Raw result</summary>
   <pre>${escapeHtml(JSON.stringify(data, null, 2).slice(0, 16000))}</pre>
 </details>`;
+}
+
+function firstTraceEventPayload(trace: UnknownRecord, eventType: string): UnknownRecord {
+  const events = asArray(trace.events);
+  for (const raw of events) {
+    const event = asRecord(raw);
+    if (event.eventType === eventType) return asRecord(event.payload);
+  }
+  return {};
+}
+
+export function renderGuidanceTraceDetailInnerHtml(payload: unknown): string {
+  const root = asRecord(payload);
+  const explain = asRecord(root.explain);
+  const traceFetch = asRecord(root.traceFetch);
+  if (explain.ok === false) {
+    return `<section class="gd-card gd-danger"><h2>Trace detail unavailable</h2><p>${escapeHtml(String(explain.message ?? explain.code ?? "Unknown error"))}</p></section>`;
+  }
+  const explainData = asRecord(explain.data);
+  const explanation = asRecord(explainData.explanation);
+  const trace = asRecord(explainData.trace ?? asRecord(traceFetch.data).trace);
+  const traceId = String(explanation.traceId ?? trace.traceId ?? "");
+  const evalSummary = firstTraceEventPayload(trace, "cae.trace.eval.summary");
+  const ackSummary = firstTraceEventPayload(trace, "cae.trace.ack.summary");
+  const counts = asRecord(evalSummary.familyCounts);
+  const traceFetchMissing = traceFetch.ok === false;
+  return `<section class="gd-card">
+  <div class="gd-card-head">
+    <h2>Trace detail</h2>
+    <span class="gd-pill">${escapeHtml(String(explainData.storage ?? "memory"))}${explainData.ephemeral ? " · ephemeral" : ""}</span>
+  </div>
+  <p>${escapeHtml(String(explanation.summaryText ?? "No explanation summary available."))}</p>
+  <dl class="gd-meta">
+    <div><dt>Trace</dt><dd><code>${escapeHtml(traceId || "unknown")}</code></dd></div>
+    <div><dt>Bundle</dt><dd><code>${escapeHtml(String(trace.bundleId ?? "unknown"))}</code></dd></div>
+    <div><dt>Mode</dt><dd>${escapeHtml(String(evalSummary.evalMode ?? "unknown"))}</dd></div>
+    <div><dt>Conflicts</dt><dd>${escapeHtml(String(evalSummary.conflictCount ?? 0))}</dd></div>
+    <div><dt>Pending acknowledgements</dt><dd>${escapeHtml(String(ackSummary.pendingAckCount ?? 0))}</dd></div>
+  </dl>
+  <div class="gd-counts">${renderFamilyCounts(counts)}</div>
+</section>
+${traceFetchMissing ? `<section class="gd-card gd-warn-card"><h2>Stored trace not found</h2><p>${escapeHtml(String(traceFetch.message ?? traceFetch.code ?? "Trace is no longer available in the durable store."))}</p><p class="gd-muted">Run a fresh Guidance preview with CAE persistence enabled to capture a new durable trace.</p></section>` : ""}
+<details class="gd-card">
+  <summary>Raw trace JSON</summary>
+  <pre>${escapeHtml(JSON.stringify({ explain, traceFetch }, null, 2).slice(0, 20000))}</pre>
+</details>`;
+}
+
+export function renderGuidanceActionResultInnerHtml(payload: unknown): string {
+  const root = asRecord(payload);
+  const action = String(root.action ?? "Guidance action");
+  const result = asRecord(root.result);
+  const ok = result.ok !== false;
+  const title = ok ? `${action} recorded` : `${action} failed`;
+  return `<section class="gd-card ${ok ? "" : "gd-danger"}">
+  <div class="gd-card-head">
+    <h2>${escapeHtml(title)}</h2>
+    <span class="${statusClass(ok)}">${ok ? "Done" : "Needs attention"}</span>
+  </div>
+  <p>${escapeHtml(String(result.message ?? result.code ?? (ok ? "The Guidance action completed." : "The Guidance action did not complete.")))}</p>
+  ${
+    result.code
+      ? `<p class="gd-muted">Result code: <code>${escapeHtml(String(result.code))}</code></p>`
+      : ""
+  }
+  <details>
+    <summary>Raw result</summary>
+    <pre>${escapeHtml(JSON.stringify(result, null, 2).slice(0, 12000))}</pre>
+  </details>
+</section>`;
 }

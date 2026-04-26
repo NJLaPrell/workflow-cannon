@@ -188,7 +188,10 @@ describe("CAE cli-read-only-data schema (v1)", () => {
           totalGuidanceCount: 1,
           pendingAcknowledgementCount: 1,
           conflictCount: 0,
-          bundleId: "cae.bundle.example"
+          bundleId: "cae.bundle.example",
+          taskId: "T921",
+          taskTitle: "CAE operator golden path",
+          commandName: "get-next-actions"
         }
       ],
       retention: { maxRows: 2000, note: "oldest first" }

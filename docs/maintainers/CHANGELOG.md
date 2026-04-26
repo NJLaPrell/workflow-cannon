@@ -10,6 +10,21 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 (none)
 
+## [0.71.0] - 2026-04-26
+
+Phase 71 — **CAE Guidance dashboard MVP** (**`T934`–`T941`**): Guidance view polish for task/workflow picker UX, persisted UI-friendly trace summaries, trace detail panels, structured `commandArgs`, acknowledgement/feedback result cards, conflict and match-reason copy, degraded-state recovery cards, and release-readiness smoke evidence. Kit SQLite bumps to **user_version 14** with additive nullable `cae_trace_snapshots.summary_json`; existing trace rows remain readable through derived-summary fallback.
+
+### Added
+
+- Cursor extension **Guidance** picker flow: ready/in-progress task choices, curated workflow defaults, and manifest-backed workflow search.
+- Persisted CAE trace summary metadata for task/workflow labels, family counts, acknowledgement count, conflict count, eval mode, and storage.
+- Guidance trace detail panels, conflict cards, per-card match-reason copy, structured `commandArgs`, and friendly acknowledgement/feedback result cards.
+
+### Changed
+
+- `cae-recent-traces` prefers persisted summary metadata and falls back to old trace/bundle JSON for compatibility.
+- `.ai/cae/dashboard-guidance-plan.md` records Phase 71 smoke evidence and marks Guidance MVP tracker items complete.
+
 ## [0.66.0] - 2026-04-08
 
 Phase 66 — **README tri-surface, agent cold start, planning finalize clarity** (**`T792`–`T805`**): `generate-document` / `document-project` for **`README.md`** also writes **repo-root `README.md`** (agent notice, `title_image` path, link rewrites from maintainer body). New read-only **`workspace-kit run agent-bootstrap`** runs the same contract checks as **`workspace-kit doctor`** then returns the **`agent-session-snapshot`** bundle. **`build-plan`** soft finalize (`planning-ready-with-warnings`) includes **`data.finalizeWarnings`**. Doctor contract path extraction to **`src/cli/doctor-contract-validation.ts`**. Agent rule **A032** and workflow-contract: do not hand-edit module-owned root README; refresh via documentation module.

@@ -142,6 +142,10 @@ export class CommandClient {
         ));
   }
 
+  getWorkspaceRoot(): string {
+    return this.workspaceRoot;
+  }
+
   /** `workspace-kit run <name> <json>` — parses single JSON object from stdout. */
   async run(commandName: string, args: Record<string, unknown>): Promise<KitRunResult> {
     const jsonArg = JSON.stringify(args);

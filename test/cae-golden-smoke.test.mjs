@@ -86,6 +86,9 @@ test("golden CAE operator path evaluates, explains, fetches persisted trace, and
   assert.equal(recent.code, "cae-recent-traces-ok");
   assert.equal(recent.data.rows[0].traceId, evaluated.data.traceId);
   assert.ok(recent.data.rows[0].totalGuidanceCount >= 1);
+  assert.equal(recent.data.rows[0].taskId, "T921");
+  assert.equal(recent.data.rows[0].taskTitle, "CAE operator golden path");
+  assert.equal(recent.data.rows[0].commandName, "get-next-actions");
 
   const summary = await runCae(ws, "cae-dashboard-summary", { schemaVersion: 1 });
   assert.equal(summary.ok, true);
@@ -146,6 +149,41 @@ test("golden CAE operator path evaluates, explains, fetches persisted trace, and
   assert.equal(listed.ok, true);
   assert.equal(listed.data.count, 1);
   assert.equal(listed.data.rows[0].activationId, "cae.activation.policy.phase70-playbook");
+});
+
+test("cae-recent-traces derives summaries for pre-summary persisted rows", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const db = new Database(path.join(ws, ".workspace-kit", "tasks", "workspace-kit.db"));
+  try {
+    db.prepare(
+      `INSERT INTO cae_trace_snapshots (trace_id, trace_json, bundle_json, created_at)
+       VALUES (?, ?, ?, ?)`
+    ).run(
+      "cae.trace.legacy",
+      JSON.stringify({ schemaVersion: 1, traceId: "cae.trace.legacy", bundleId: "cae.bundle.legacy", events: [] }),
+      JSON.stringify({
+        schemaVersion: 1,
+        traceId: "cae.trace.legacy",
+        bundleId: "cae.bundle.legacy",
+        evaluationPipelineMode: "shadow",
+        families: { policy: [{}], think: [], do: [], review: [] },
+        pendingAcknowledgements: [],
+        conflictShadowSummary: { evalMode: "shadow", entries: [] }
+      }),
+      "2026-04-26T00:00:00.000Z"
+    );
+  } finally {
+    db.close();
+  }
+
+  const recent = await runCae(ws, "cae-recent-traces", {
+    schemaVersion: 1,
+    limit: 1
+  });
+  assert.equal(recent.ok, true);
+  assert.equal(recent.data.rows[0].traceId, "cae.trace.legacy");
+  assert.equal(recent.data.rows[0].totalGuidanceCount, 1);
+  assert.equal(recent.data.rows[0].commandName, undefined);
 });
 
 test("golden negative fixture returns structured trace-not-found recovery", async () => {

@@ -1,9 +1,75 @@
 import * as vscode from "vscode";
+import fs from "node:fs/promises";
+import path from "node:path";
 import type { CommandClient } from "../../runtime/command-client.js";
 import {
+  renderGuidanceActionResultInnerHtml,
   renderGuidancePreviewInnerHtml,
-  renderGuidanceSummaryInnerHtml
+  renderGuidanceSummaryInnerHtml,
+  renderGuidanceTraceDetailInnerHtml
 } from "./render-guidance.js";
+
+type TaskChoice = {
+  id: string;
+  title: string;
+  status: string;
+  phase?: string;
+};
+
+type WorkflowChoice = {
+  name: string;
+  moduleId: string;
+  description: string;
+  curated: boolean;
+};
+
+const CURATED_WORKFLOW_NAMES = new Set([
+  "get-next-actions",
+  "list-tasks",
+  "dashboard-summary",
+  "queue-health",
+  "run-transition",
+  "cae-dashboard-summary",
+  "cae-guidance-preview",
+  "cae-recent-traces",
+  "cae-explain",
+  "generate-document",
+  "document-project"
+]);
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
+function taskChoicesFromPayload(payload: unknown): TaskChoice[] {
+  const data = asRecord(asRecord(payload).data);
+  const tasks = Array.isArray(data.tasks) ? data.tasks : Array.isArray(data.readyQueue) ? data.readyQueue : [];
+  const choices: TaskChoice[] = [];
+  for (const raw of tasks) {
+    const task = asRecord(raw);
+    const id = typeof task.id === "string" ? task.id : "";
+    if (!id) continue;
+    choices.push({
+      id,
+      title: typeof task.title === "string" ? task.title : "",
+      status: typeof task.status === "string" ? task.status : "",
+      phase: typeof task.phase === "string" ? task.phase : undefined
+    });
+  }
+  return choices;
+}
+
+function workflowChoiceFromManifestEntry(raw: unknown): WorkflowChoice | null {
+  const entry = asRecord(raw);
+  const name = typeof entry.name === "string" ? entry.name : "";
+  if (!name) return null;
+  return {
+    name,
+    moduleId: typeof entry.moduleId === "string" ? entry.moduleId : "",
+    description: typeof entry.description === "string" ? entry.description : "",
+    curated: CURATED_WORKFLOW_NAMES.has(name)
+  };
+}
 
 export class GuidanceViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewId = "workflowCannon.guidance";
@@ -37,6 +103,10 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
         const taskId = typeof msg.taskId === "string" ? msg.taskId.trim() : "";
         const moduleId = typeof msg.moduleId === "string" ? msg.moduleId.trim() : "";
         const argvSummary = typeof msg.argvSummary === "string" ? msg.argvSummary.trim() : "";
+        const commandArgs =
+          msg.commandArgs && typeof msg.commandArgs === "object" && !Array.isArray(msg.commandArgs)
+            ? (msg.commandArgs as Record<string, unknown>)
+            : undefined;
         const evalMode = msg.evalMode === "live" ? "live" : "shadow";
         const args: Record<string, unknown> = {
           schemaVersion: 1,
@@ -45,6 +115,7 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
         };
         if (taskId) args.taskId = taskId;
         if (moduleId) args.moduleId = moduleId;
+        if (commandArgs) args.commandArgs = commandArgs;
         if (argvSummary) args.argvSummary = argvSummary;
         const r = commandName
           ? await this.client.run("cae-guidance-preview", args)
@@ -52,12 +123,17 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
         await webview.postMessage({ type: "setPreview", html: renderGuidancePreviewInnerHtml(r) });
       }
       if (msg?.type === "explain" && typeof msg.traceId === "string") {
+        const traceId = msg.traceId.trim();
         const r = await this.client.run("cae-explain", {
           schemaVersion: 1,
-          traceId: msg.traceId.trim(),
+          traceId,
           level: "summary"
         });
-        await webview.postMessage({ type: "showStatus", kind: r.ok ? "ok" : "err", text: JSON.stringify(r, null, 2) });
+        const traceFetch = await this.client.run("cae-get-trace", { schemaVersion: 1, traceId });
+        await webview.postMessage({
+          type: "setTraceDetail",
+          html: renderGuidanceTraceDetailInnerHtml({ explain: r, traceFetch })
+        });
       }
       if (msg?.type === "ack") {
         await this.recordAck(webview, msg);
@@ -77,6 +153,60 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
   private async pushSummary(webview: vscode.Webview): Promise<void> {
     const r = await this.client.run("cae-dashboard-summary", { schemaVersion: 1 });
     await webview.postMessage({ type: "setSummary", html: renderGuidanceSummaryInnerHtml(r) });
+    await this.pushChoices(webview);
+  }
+
+  private async pushChoices(webview: vscode.Webview): Promise<void> {
+    const [nextActions, inProgress, workflows] = await Promise.all([
+      this.client.run("get-next-actions", {}),
+      this.client.run("list-tasks", { status: "in_progress" }),
+      this.loadWorkflowChoices()
+    ]);
+    const byId = new Map<string, TaskChoice>();
+    for (const task of [...taskChoicesFromPayload(nextActions), ...taskChoicesFromPayload(inProgress)]) {
+      byId.set(task.id, task);
+    }
+    await webview.postMessage({
+      type: "setChoices",
+      tasks: [...byId.values()].slice(0, 50),
+      workflows
+    });
+  }
+
+  private async loadWorkflowChoices(): Promise<WorkflowChoice[]> {
+    const manifestPath = path.join(
+      this.client.getWorkspaceRoot(),
+      "src",
+      "contracts",
+      "builtin-run-command-manifest.json"
+    );
+    try {
+      const raw = await fs.readFile(manifestPath, "utf8");
+      const manifest = JSON.parse(raw) as unknown;
+      const byName = new Map<string, WorkflowChoice>();
+      if (Array.isArray(manifest)) {
+        for (const entry of manifest) {
+          const choice = workflowChoiceFromManifestEntry(entry);
+          if (choice) byName.set(choice.name, choice);
+        }
+      }
+      for (const name of CURATED_WORKFLOW_NAMES) {
+        if (!byName.has(name)) {
+          byName.set(name, { name, moduleId: "", description: "Common workflow", curated: true });
+        }
+      }
+      return [...byName.values()].sort((a, b) => {
+        if (a.curated !== b.curated) return a.curated ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      });
+    } catch {
+      return [...CURATED_WORKFLOW_NAMES].map((name) => ({
+        name,
+        moduleId: "",
+        description: "Common workflow",
+        curated: true
+      }));
+    }
   }
 
   private async notifyRefresh(): Promise<void> {
@@ -96,7 +226,7 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
       "Record acknowledgement"
     );
     if (confirmed !== "Record acknowledgement") return;
-    const actor = (await vscode.window.showInputBox({ prompt: "Actor for acknowledgement", value: "dashboard" })) ?? "dashboard";
+    const actor = (await this.resolveActionActor("Actor for acknowledgement")) ?? "dashboard";
     const r = await this.client.run("cae-satisfy-ack", {
       schemaVersion: 1,
       traceId,
@@ -108,7 +238,10 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
         rationale: "Guidance tab acknowledgement confirmation"
       }
     });
-    await webview.postMessage({ type: "showStatus", kind: r.ok ? "ok" : "err", text: JSON.stringify(r, null, 2) });
+    await webview.postMessage({
+      type: "setActionResult",
+      html: renderGuidanceActionResultInnerHtml({ action: "Acknowledgement", result: r })
+    });
     await this.pushSummary(webview);
   }
 
@@ -124,8 +257,12 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
       `Mark ${signal}`
     );
     if (confirmed !== `Mark ${signal}`) return;
-    const actor = (await vscode.window.showInputBox({ prompt: "Actor for feedback", value: "dashboard" })) ?? "dashboard";
-    const r = await this.client.run("cae-record-shadow-feedback", {
+    const actor = (await this.resolveActionActor("Actor for feedback")) ?? "dashboard";
+    const note = await vscode.window.showInputBox({
+      prompt: "Optional feedback note",
+      placeHolder: "What made this Guidance useful or noisy?"
+    });
+    const payload: Record<string, unknown> = {
       schemaVersion: 1,
       traceId,
       activationId,
@@ -136,9 +273,31 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
         confirmed: true,
         rationale: "Guidance tab shadow feedback confirmation"
       }
+    };
+    if (note && note.trim()) payload.note = note.trim();
+    const r = await this.client.run("cae-record-shadow-feedback", payload);
+    await webview.postMessage({
+      type: "setActionResult",
+      html: renderGuidanceActionResultInnerHtml({ action: `${signal === "useful" ? "Useful" : "Noisy"} feedback`, result: r })
     });
-    await webview.postMessage({ type: "showStatus", kind: r.ok ? "ok" : "err", text: JSON.stringify(r, null, 2) });
     await this.pushSummary(webview);
+  }
+
+  private defaultActorFromEnvironment(): string | undefined {
+    const candidates = [
+      process.env.GIT_AUTHOR_EMAIL,
+      process.env.GIT_COMMITTER_EMAIL,
+      process.env.WORKSPACE_KIT_ACTOR,
+      process.env.USER,
+      process.env.USERNAME
+    ];
+    return candidates.find((candidate) => typeof candidate === "string" && candidate.trim().length > 0)?.trim();
+  }
+
+  private async resolveActionActor(prompt: string): Promise<string | undefined> {
+    const actor = this.defaultActorFromEnvironment();
+    if (actor) return actor;
+    return vscode.window.showInputBox({ prompt, value: "dashboard" });
   }
 
   private buildHtmlShell(webview: vscode.Webview): string {
@@ -151,11 +310,51 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
   var vscode = acquireVsCodeApi();
   var summaryRoot = document.getElementById('guidance-summary-root');
   var previewRoot = document.getElementById('guidance-preview-root');
+  var traceDetailRoot = document.getElementById('guidance-trace-detail-root');
+  var actionResultRoot = document.getElementById('guidance-action-result-root');
   var statusEl = document.getElementById('gd-status');
+  var taskSelect = document.getElementById('gd-task-select');
+  var workflowSelect = document.getElementById('gd-workflow-select');
+  var workflowList = document.getElementById('gd-workflow-options');
   function showStatus(kind, text) {
     if (!statusEl) return;
     statusEl.className = 'gd-status gd-status-' + (kind || 'info');
     statusEl.textContent = text || '';
+  }
+  function option(label, value, title) {
+    var opt = document.createElement('option');
+    opt.value = value || '';
+    opt.textContent = label || value || '';
+    if (title) opt.title = title;
+    return opt;
+  }
+  function setInputValue(id, value) {
+    var el = document.getElementById(id);
+    if (el) el.value = value || '';
+  }
+  function renderChoices(tasks, workflows) {
+    if (taskSelect) {
+      taskSelect.textContent = '';
+      taskSelect.appendChild(option('Manual / no task', ''));
+      (Array.isArray(tasks) ? tasks : []).forEach(function(task) {
+        var label = String(task.id || '') + (task.title ? ' — ' + String(task.title) : '');
+        taskSelect.appendChild(option(label, String(task.id || ''), String(task.phase || task.status || '')));
+      });
+    }
+    if (workflowSelect) {
+      workflowSelect.textContent = '';
+      workflowSelect.appendChild(option('Manual entry', ''));
+      (Array.isArray(workflows) ? workflows : []).filter(function(w) { return w && w.curated; }).forEach(function(w) {
+        workflowSelect.appendChild(option(String(w.name || ''), String(w.name || ''), String(w.description || '')));
+      });
+    }
+    if (workflowList) {
+      workflowList.textContent = '';
+      (Array.isArray(workflows) ? workflows : []).forEach(function(w) {
+        var opt = option(String(w.name || ''), String(w.name || ''), String(w.moduleId || '') + (w.description ? ' — ' + String(w.description) : ''));
+        workflowList.appendChild(opt);
+      });
+    }
   }
   function requestLoad() {
     vscode.postMessage({ type: 'load' });
@@ -165,16 +364,33 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
     var commandName = document.getElementById('gd-command-name');
     var moduleId = document.getElementById('gd-module-id');
     var argvSummary = document.getElementById('gd-argv-summary');
+    var commandArgs = document.getElementById('gd-command-args');
     var live = document.getElementById('gd-mode-live');
+    var parsedCommandArgs;
+    var commandArgsText = commandArgs && commandArgs.value ? commandArgs.value.trim() : '';
+    if (commandArgsText) {
+      try {
+        parsedCommandArgs = JSON.parse(commandArgsText);
+        if (!parsedCommandArgs || typeof parsedCommandArgs !== 'object' || Array.isArray(parsedCommandArgs)) {
+          throw new Error('commandArgs must be a JSON object');
+        }
+      } catch (err) {
+        showStatus('err', 'Invalid commandArgs JSON: ' + (err && err.message ? err.message : String(err)));
+        return;
+      }
+    }
     vscode.postMessage({
       type: 'preview',
       taskId: taskId && taskId.value || '',
       commandName: commandName && commandName.value || '',
       moduleId: moduleId && moduleId.value || '',
+      commandArgs: parsedCommandArgs,
       argvSummary: argvSummary && argvSummary.value || '',
       evalMode: live && live.checked ? 'live' : 'shadow'
     });
   }
+  if (taskSelect) taskSelect.addEventListener('change', function() { setInputValue('gd-task-id', taskSelect.value || ''); });
+  if (workflowSelect) workflowSelect.addEventListener('change', function() { if (workflowSelect.value) setInputValue('gd-command-name', workflowSelect.value); });
   document.getElementById('gd-refresh') && document.getElementById('gd-refresh').addEventListener('click', requestLoad);
   document.getElementById('gd-preview') && document.getElementById('gd-preview').addEventListener('click', runPreview);
   document.body.addEventListener('click', function(ev) {
@@ -217,9 +433,23 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
       showStatus('info', 'Guidance summary loaded.');
       return;
     }
+    if (m && m.type === 'setChoices') {
+      renderChoices(m.tasks, m.workflows);
+      return;
+    }
     if (m && m.type === 'setPreview' && previewRoot && typeof m.html === 'string') {
       previewRoot.innerHTML = m.html;
       showStatus('info', 'Guidance preview updated.');
+      return;
+    }
+    if (m && m.type === 'setTraceDetail' && traceDetailRoot && typeof m.html === 'string') {
+      traceDetailRoot.innerHTML = m.html;
+      showStatus('info', 'Trace detail loaded.');
+      return;
+    }
+    if (m && m.type === 'setActionResult' && actionResultRoot && typeof m.html === 'string') {
+      actionResultRoot.innerHTML = m.html;
+      showStatus('info', 'Guidance action finished.');
       return;
     }
     if (m && m.type === 'showStatus') {
@@ -276,16 +506,24 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
   </div>
   <section class="gd-card">
     <h2>Check current context</h2>
+    <p class="gd-muted">Pick a common path first, or use the manual fields when you need to go off-road.</p>
+    <div class="gd-toolbar">
+      <div class="gd-field"><label for="gd-task-select">Task picker</label><select id="gd-task-select" class="gd-input"><option value="">Loading tasks…</option></select></div>
+      <div class="gd-field"><label for="gd-workflow-select">Common workflows</label><select id="gd-workflow-select" class="gd-input"><option value="">Loading workflows…</option></select></div>
+    </div>
     <div class="gd-toolbar">
       <div class="gd-field"><label for="gd-task-id">Task</label><input id="gd-task-id" class="gd-input" placeholder="T921 (optional)" /></div>
-      <div class="gd-field"><label for="gd-command-name">Command or workflow</label><input id="gd-command-name" class="gd-input" value="get-next-actions" /></div>
+      <div class="gd-field"><label for="gd-command-name">Command or workflow</label><input id="gd-command-name" class="gd-input" list="gd-workflow-options" value="get-next-actions" /><datalist id="gd-workflow-options"></datalist></div>
       <div class="gd-field"><label for="gd-module-id">Module</label><input id="gd-module-id" class="gd-input" placeholder="optional" /></div>
     </div>
-    <div class="gd-field"><label for="gd-argv-summary">Argv summary</label><input id="gd-argv-summary" class="gd-input" placeholder='optional, e.g. {"status":"ready"}' /></div>
+    <div class="gd-field"><label for="gd-command-args">Command args JSON</label><textarea id="gd-command-args" class="gd-input" rows="4" placeholder='optional JSON object, e.g. {"status":"ready"}'></textarea></div>
+    <div class="gd-field"><label for="gd-argv-summary">Argv summary</label><input id="gd-argv-summary" class="gd-input" placeholder="optional advanced text override" /></div>
     <p><label><input type="checkbox" id="gd-mode-live" /> Applies now (advanced). Default is Preview mode.</label></p>
     <button type="button" class="gd-btn gd-primary" id="gd-preview">Check current context</button>
   </section>
   <div id="gd-status" class="gd-status gd-status-info" role="status"></div>
+  <div id="guidance-action-result-root"></div>
+  <div id="guidance-trace-detail-root"></div>
   <div id="guidance-preview-root"></div>
   <div id="guidance-summary-root"></div>
   <script>${bootstrap}</script>
