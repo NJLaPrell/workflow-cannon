@@ -102,6 +102,10 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
         const taskId = typeof msg.taskId === "string" ? msg.taskId.trim() : "";
         const moduleId = typeof msg.moduleId === "string" ? msg.moduleId.trim() : "";
         const argvSummary = typeof msg.argvSummary === "string" ? msg.argvSummary.trim() : "";
+        const commandArgs =
+          msg.commandArgs && typeof msg.commandArgs === "object" && !Array.isArray(msg.commandArgs)
+            ? (msg.commandArgs as Record<string, unknown>)
+            : undefined;
         const evalMode = msg.evalMode === "live" ? "live" : "shadow";
         const args: Record<string, unknown> = {
           schemaVersion: 1,
@@ -110,6 +114,7 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
         };
         if (taskId) args.taskId = taskId;
         if (moduleId) args.moduleId = moduleId;
+        if (commandArgs) args.commandArgs = commandArgs;
         if (argvSummary) args.argvSummary = argvSummary;
         const r = commandName
           ? await this.client.run("cae-guidance-preview", args)
@@ -328,12 +333,27 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
     var commandName = document.getElementById('gd-command-name');
     var moduleId = document.getElementById('gd-module-id');
     var argvSummary = document.getElementById('gd-argv-summary');
+    var commandArgs = document.getElementById('gd-command-args');
     var live = document.getElementById('gd-mode-live');
+    var parsedCommandArgs;
+    var commandArgsText = commandArgs && commandArgs.value ? commandArgs.value.trim() : '';
+    if (commandArgsText) {
+      try {
+        parsedCommandArgs = JSON.parse(commandArgsText);
+        if (!parsedCommandArgs || typeof parsedCommandArgs !== 'object' || Array.isArray(parsedCommandArgs)) {
+          throw new Error('commandArgs must be a JSON object');
+        }
+      } catch (err) {
+        showStatus('err', 'Invalid commandArgs JSON: ' + (err && err.message ? err.message : String(err)));
+        return;
+      }
+    }
     vscode.postMessage({
       type: 'preview',
       taskId: taskId && taskId.value || '',
       commandName: commandName && commandName.value || '',
       moduleId: moduleId && moduleId.value || '',
+      commandArgs: parsedCommandArgs,
       argvSummary: argvSummary && argvSummary.value || '',
       evalMode: live && live.checked ? 'live' : 'shadow'
     });
@@ -460,7 +480,8 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
       <div class="gd-field"><label for="gd-command-name">Command or workflow</label><input id="gd-command-name" class="gd-input" list="gd-workflow-options" value="get-next-actions" /><datalist id="gd-workflow-options"></datalist></div>
       <div class="gd-field"><label for="gd-module-id">Module</label><input id="gd-module-id" class="gd-input" placeholder="optional" /></div>
     </div>
-    <div class="gd-field"><label for="gd-argv-summary">Argv summary</label><input id="gd-argv-summary" class="gd-input" placeholder='optional, e.g. {"status":"ready"}' /></div>
+    <div class="gd-field"><label for="gd-command-args">Command args JSON</label><textarea id="gd-command-args" class="gd-input" rows="4" placeholder='optional JSON object, e.g. {"status":"ready"}'></textarea></div>
+    <div class="gd-field"><label for="gd-argv-summary">Argv summary</label><input id="gd-argv-summary" class="gd-input" placeholder="optional advanced text override" /></div>
     <p><label><input type="checkbox" id="gd-mode-live" /> Applies now (advanced). Default is Preview mode.</label></p>
     <button type="button" class="gd-btn gd-primary" id="gd-preview">Check current context</button>
   </section>
