@@ -195,12 +195,17 @@ function renderGuidanceCard(cardRaw: unknown, traceId: string, commandName: stri
   const activationId = String(card.activationId ?? "");
   const artifactIds = asArray(card.artifactIds).map((x) => String(x));
   const titles = asArray(card.sourceTitles).map((x) => String(x));
+  const matchReason =
+    typeof card.matchReason === "string" && card.matchReason
+      ? card.matchReason
+      : `Matched ${titles.length ? titles.slice(0, 2).join(", ") : activationId}; priority ${String(card.priority ?? 0)}, fit ${String(card.aggregateTightness ?? 0)}.`;
   return `<div class="gd-guidance-card">
   <div class="gd-card-head">
     <h3>${escapeHtml(String(card.title ?? activationId))}</h3>
     <span class="gd-pill">${escapeHtml(String(card.attention ?? "advisory"))}</span>
   </div>
   <p class="gd-muted">${escapeHtml(String(card.familyLabel ?? card.family ?? "Guidance item"))}</p>
+  <p><b>Why this appeared:</b> ${escapeHtml(matchReason)}</p>
   <p>${titles.map(escapeHtml).join(", ")}</p>
   <details>
     <summary>Source ids</summary>
@@ -213,6 +218,26 @@ function renderGuidanceCard(cardRaw: unknown, traceId: string, commandName: stri
     <button type="button" class="gd-btn" data-wc-action="guidance-feedback" data-signal="noisy" data-trace-id="${escapeHtmlAttr(traceId)}" data-activation-id="${escapeHtmlAttr(activationId)}" data-command-name="${escapeHtmlAttr(commandName)}">Noisy</button>
   </div>
 </div>`;
+}
+
+function renderConflictSummary(conflictShadowSummary: unknown): string {
+  const summary = asRecord(conflictShadowSummary);
+  const entries = asArray(summary.entries);
+  if (entries.length === 0) return "";
+  return `<section class="gd-card gd-warn-card"><h2>Possible guidance conflicts</h2>${entries
+    .map((raw) => {
+      const entry = asRecord(raw);
+      const activationIds = asArray(entry.activationIds).map((id) => String(id));
+      return `<div class="gd-guidance-card">
+  <div class="gd-card-head">
+    <h3>${escapeHtml(String(entry.kind ?? "conflict"))}</h3>
+    <span class="gd-pill">${escapeHtml(String(entry.resolution ?? "shadow"))}</span>
+  </div>
+  <p>${escapeHtml(String(entry.detail ?? "Guidance candidates overlapped; review the involved activation ids before treating either as final."))}</p>
+  <p class="gd-muted">${activationIds.map((id) => `<code>${escapeHtml(id)}</code>`).join(" ")}</p>
+</div>`;
+    })
+    .join("")}<p class="gd-muted">Conflict cards are advisory in Preview mode; use them to decide whether the registry needs cleanup.</p></section>`;
 }
 
 function renderFamilySection(title: string, cards: unknown, traceId: string, commandName: string): string {
@@ -263,6 +288,7 @@ export function renderGuidancePreviewInnerHtml(payload: unknown): string {
   <p class="gd-muted">Trace <code>${escapeHtml(traceId)}</code>${data.ephemeral ? " · stored in memory only" : " · stored in workspace database"}</p>
 </section>
 ${renderPendingAcks(data.pendingAcknowledgements, traceId)}
+${renderConflictSummary(data.conflictShadowSummary)}
 ${renderFamilySection("Rules to follow", cards.policy, traceId, commandName)}
 ${renderFamilySection("Things to consider", cards.think, traceId, commandName)}
 ${renderFamilySection("Suggested steps", cards.do, traceId, commandName)}
