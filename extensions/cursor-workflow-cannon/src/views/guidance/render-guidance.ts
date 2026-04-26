@@ -272,3 +272,49 @@ ${renderFamilySection("Review checks", cards.review, traceId, commandName)}
   <pre>${escapeHtml(JSON.stringify(data, null, 2).slice(0, 16000))}</pre>
 </details>`;
 }
+
+function firstTraceEventPayload(trace: UnknownRecord, eventType: string): UnknownRecord {
+  const events = asArray(trace.events);
+  for (const raw of events) {
+    const event = asRecord(raw);
+    if (event.eventType === eventType) return asRecord(event.payload);
+  }
+  return {};
+}
+
+export function renderGuidanceTraceDetailInnerHtml(payload: unknown): string {
+  const root = asRecord(payload);
+  const explain = asRecord(root.explain);
+  const traceFetch = asRecord(root.traceFetch);
+  if (explain.ok === false) {
+    return `<section class="gd-card gd-danger"><h2>Trace detail unavailable</h2><p>${escapeHtml(String(explain.message ?? explain.code ?? "Unknown error"))}</p></section>`;
+  }
+  const explainData = asRecord(explain.data);
+  const explanation = asRecord(explainData.explanation);
+  const trace = asRecord(explainData.trace ?? asRecord(traceFetch.data).trace);
+  const traceId = String(explanation.traceId ?? trace.traceId ?? "");
+  const evalSummary = firstTraceEventPayload(trace, "cae.trace.eval.summary");
+  const ackSummary = firstTraceEventPayload(trace, "cae.trace.ack.summary");
+  const counts = asRecord(evalSummary.familyCounts);
+  const traceFetchMissing = traceFetch.ok === false;
+  return `<section class="gd-card">
+  <div class="gd-card-head">
+    <h2>Trace detail</h2>
+    <span class="gd-pill">${escapeHtml(String(explainData.storage ?? "memory"))}${explainData.ephemeral ? " · ephemeral" : ""}</span>
+  </div>
+  <p>${escapeHtml(String(explanation.summaryText ?? "No explanation summary available."))}</p>
+  <dl class="gd-meta">
+    <div><dt>Trace</dt><dd><code>${escapeHtml(traceId || "unknown")}</code></dd></div>
+    <div><dt>Bundle</dt><dd><code>${escapeHtml(String(trace.bundleId ?? "unknown"))}</code></dd></div>
+    <div><dt>Mode</dt><dd>${escapeHtml(String(evalSummary.evalMode ?? "unknown"))}</dd></div>
+    <div><dt>Conflicts</dt><dd>${escapeHtml(String(evalSummary.conflictCount ?? 0))}</dd></div>
+    <div><dt>Pending acknowledgements</dt><dd>${escapeHtml(String(ackSummary.pendingAckCount ?? 0))}</dd></div>
+  </dl>
+  <div class="gd-counts">${renderFamilyCounts(counts)}</div>
+</section>
+${traceFetchMissing ? `<section class="gd-card gd-warn-card"><h2>Stored trace not found</h2><p>${escapeHtml(String(traceFetch.message ?? traceFetch.code ?? "Trace is no longer available in the durable store."))}</p><p class="gd-muted">Run a fresh Guidance preview with CAE persistence enabled to capture a new durable trace.</p></section>` : ""}
+<details class="gd-card">
+  <summary>Raw trace JSON</summary>
+  <pre>${escapeHtml(JSON.stringify({ explain, traceFetch }, null, 2).slice(0, 20000))}</pre>
+</details>`;
+}

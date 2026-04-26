@@ -4,7 +4,8 @@ import path from "node:path";
 import type { CommandClient } from "../../runtime/command-client.js";
 import {
   renderGuidancePreviewInnerHtml,
-  renderGuidanceSummaryInnerHtml
+  renderGuidanceSummaryInnerHtml,
+  renderGuidanceTraceDetailInnerHtml
 } from "./render-guidance.js";
 
 type TaskChoice = {
@@ -116,12 +117,17 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
         await webview.postMessage({ type: "setPreview", html: renderGuidancePreviewInnerHtml(r) });
       }
       if (msg?.type === "explain" && typeof msg.traceId === "string") {
+        const traceId = msg.traceId.trim();
         const r = await this.client.run("cae-explain", {
           schemaVersion: 1,
-          traceId: msg.traceId.trim(),
+          traceId,
           level: "summary"
         });
-        await webview.postMessage({ type: "showStatus", kind: r.ok ? "ok" : "err", text: JSON.stringify(r, null, 2) });
+        const traceFetch = await this.client.run("cae-get-trace", { schemaVersion: 1, traceId });
+        await webview.postMessage({
+          type: "setTraceDetail",
+          html: renderGuidanceTraceDetailInnerHtml({ explain: r, traceFetch })
+        });
       }
       if (msg?.type === "ack") {
         await this.recordAck(webview, msg);
@@ -269,6 +275,7 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
   var vscode = acquireVsCodeApi();
   var summaryRoot = document.getElementById('guidance-summary-root');
   var previewRoot = document.getElementById('guidance-preview-root');
+  var traceDetailRoot = document.getElementById('guidance-trace-detail-root');
   var statusEl = document.getElementById('gd-status');
   var taskSelect = document.getElementById('gd-task-select');
   var workflowSelect = document.getElementById('gd-workflow-select');
@@ -384,6 +391,11 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
       showStatus('info', 'Guidance preview updated.');
       return;
     }
+    if (m && m.type === 'setTraceDetail' && traceDetailRoot && typeof m.html === 'string') {
+      traceDetailRoot.innerHTML = m.html;
+      showStatus('info', 'Trace detail loaded.');
+      return;
+    }
     if (m && m.type === 'showStatus') {
       showStatus(m.kind || 'info', m.text || '');
     }
@@ -453,6 +465,7 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
     <button type="button" class="gd-btn gd-primary" id="gd-preview">Check current context</button>
   </section>
   <div id="gd-status" class="gd-status gd-status-info" role="status"></div>
+  <div id="guidance-trace-detail-root"></div>
   <div id="guidance-preview-root"></div>
   <div id="guidance-summary-root"></div>
   <script>${bootstrap}</script>

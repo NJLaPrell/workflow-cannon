@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 
 import {
   renderGuidancePreviewInnerHtml,
-  renderGuidanceSummaryInnerHtml
+  renderGuidanceSummaryInnerHtml,
+  renderGuidanceTraceDetailInnerHtml
 } from "../dist/views/guidance/render-guidance.js";
 
 test("renderGuidanceSummaryInnerHtml renders health and escapes issue details", () => {
@@ -100,4 +101,58 @@ test("renderGuidancePreviewInnerHtml renders grouped guidance actions", () => {
   assert.match(html, /Rules to follow/);
   assert.match(html, /data-wc-action="guidance-ack"/);
   assert.match(html, /data-wc-action="guidance-feedback"/);
+});
+
+test("renderGuidanceTraceDetailInnerHtml renders summary before raw JSON", () => {
+  const html = renderGuidanceTraceDetailInnerHtml({
+    explain: {
+      ok: true,
+      data: {
+        storage: "sqlite",
+        ephemeral: false,
+        explanation: {
+          traceId: "cae.trace.example",
+          summaryText: "CAE trace cae.trace.example: matched policy=1, think=0, do=0, review=0."
+        },
+        trace: {
+          traceId: "cae.trace.example",
+          bundleId: "cae.bundle.example",
+          events: [
+            {
+              eventType: "cae.trace.eval.summary",
+              payload: {
+                evalMode: "shadow",
+                familyCounts: { policy: 1, think: 0, do: 0, review: 0 },
+                conflictCount: 2
+              }
+            },
+            { eventType: "cae.trace.ack.summary", payload: { pendingAckCount: 1 } }
+          ]
+        }
+      }
+    },
+    traceFetch: { ok: true, data: { storage: "sqlite", trace: { traceId: "cae.trace.example" } } }
+  });
+  assert.match(html, /Trace detail/);
+  assert.match(html, /matched policy=1/);
+  assert.match(html, /Pending acknowledgements/);
+  assert.match(html, /Rules: 1/);
+  assert.match(html, /Raw trace JSON/);
+});
+
+test("renderGuidanceTraceDetailInnerHtml renders trace-not-found recovery", () => {
+  const html = renderGuidanceTraceDetailInnerHtml({
+    explain: {
+      ok: true,
+      data: {
+        explanation: { traceId: "cae.trace.ephemeral", summaryText: "memory trace" },
+        trace: { traceId: "cae.trace.ephemeral", events: [] },
+        storage: "memory",
+        ephemeral: true
+      }
+    },
+    traceFetch: { ok: false, code: "cae-trace-not-found", message: "No persisted trace" }
+  });
+  assert.match(html, /Stored trace not found/);
+  assert.match(html, /fresh Guidance preview/);
 });
