@@ -275,6 +275,43 @@ function familyCountsFromBundle(bundle: Record<string, unknown>): Record<CaeFami
   };
 }
 
+function optionalString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+function buildTraceSummary(
+  traceId: string,
+  bundle: Record<string, unknown>,
+  evaluationContext?: unknown
+): Record<string, unknown> {
+  const counts = familyCountsFromBundle(bundle);
+  const pendingAcknowledgements = Array.isArray(bundle.pendingAcknowledgements)
+    ? bundle.pendingAcknowledgements
+    : [];
+  const conflicts = asRecord(bundle.conflictShadowSummary);
+  const conflictEntries = Array.isArray(conflicts?.entries) ? conflicts.entries : [];
+  const ec = asRecord(evaluationContext);
+  const task = asRecord(ec?.task);
+  const command = asRecord(ec?.command);
+  const summary: Record<string, unknown> = {
+    traceId,
+    storage: "sqlite",
+    evalMode: bundle.evaluationPipelineMode === "shadow" ? "shadow" : "live",
+    familyCounts: counts,
+    totalGuidanceCount: counts.policy + counts.think + counts.do + counts.review,
+    pendingAcknowledgementCount: pendingAcknowledgements.length,
+    conflictCount: conflictEntries.length,
+    bundleId: typeof bundle.bundleId === "string" ? bundle.bundleId : null
+  };
+  const taskId = optionalString(task?.taskId);
+  const taskTitle = optionalString(task?.title);
+  const commandName = optionalString(command?.name);
+  if (taskId) summary.taskId = taskId;
+  if (taskTitle) summary.taskTitle = taskTitle;
+  if (commandName) summary.commandName = commandName;
+  return summary;
+}
+
 function commandModuleId(commandName: string): string | undefined {
   return BUILTIN_RUN_COMMAND_MANIFEST.find((row) => row.name === commandName)?.moduleId;
 }
@@ -331,24 +368,14 @@ function summarizeTraceSnapshot(row: {
   createdAt: string;
   trace: Record<string, unknown>;
   bundle: Record<string, unknown>;
+  summary: Record<string, unknown> | null;
 }): Record<string, unknown> {
-  const bundle = row.bundle;
-  const counts = familyCountsFromBundle(bundle);
-  const pendingAcknowledgements = Array.isArray(bundle.pendingAcknowledgements)
-    ? bundle.pendingAcknowledgements
-    : [];
-  const conflicts = asRecord(bundle.conflictShadowSummary);
-  const conflictEntries = Array.isArray(conflicts?.entries) ? conflicts.entries : [];
   return {
+    ...buildTraceSummary(row.traceId, row.bundle),
+    ...(row.summary ?? {}),
     traceId: row.traceId,
     createdAt: row.createdAt,
-    storage: "sqlite",
-    evalMode: bundle.evaluationPipelineMode === "shadow" ? "shadow" : "live",
-    familyCounts: counts,
-    totalGuidanceCount: counts.policy + counts.think + counts.do + counts.review,
-    pendingAcknowledgementCount: pendingAcknowledgements.length,
-    conflictCount: conflictEntries.length,
-    bundleId: typeof bundle.bundleId === "string" ? bundle.bundleId : null
+    storage: "sqlite"
   };
 }
 
@@ -608,7 +635,15 @@ export const contextActivationModule: WorkflowModule = {
       });
       storeCaeSession(traceId, { bundle, trace });
       const persist = getAtPath(effective, "kit.cae.persistence") === true;
-      persistCaeTraceIfEnabled(ws, effective, persist, traceId, trace, bundle);
+      persistCaeTraceIfEnabled(
+        ws,
+        effective,
+        persist,
+        traceId,
+        trace,
+        bundle,
+        buildTraceSummary(traceId, bundle, evaluationContext)
+      );
       const cards = summarizeGuidanceCards(bundle, loaded.reg);
       const counts = familyCountsFromBundle(bundle);
       return {
@@ -763,7 +798,15 @@ export const contextActivationModule: WorkflowModule = {
       );
       storeCaeSession(traceId, { bundle, trace });
       const persist = getAtPath(effective, "kit.cae.persistence") === true;
-      persistCaeTraceIfEnabled(ws, effective, persist, traceId, trace, bundle);
+      persistCaeTraceIfEnabled(
+        ws,
+        effective,
+        persist,
+        traceId,
+        trace,
+        bundle,
+        buildTraceSummary(traceId, bundle, ec)
+      );
       return {
         ok: true,
         code: "cae-evaluate-ok",

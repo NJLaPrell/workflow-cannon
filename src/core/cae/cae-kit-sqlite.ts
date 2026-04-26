@@ -40,13 +40,14 @@ export function persistCaeTraceIfEnabled(
   persistenceEnabled: boolean,
   traceId: string,
   trace: Record<string, unknown>,
-  bundle: Record<string, unknown>
+  bundle: Record<string, unknown>,
+  summary?: Record<string, unknown>
 ): void {
   if (!persistenceEnabled) return;
   const db = openKitSqliteReadWrite(workspacePath, effective);
   if (!db) return;
   try {
-    persistCaeTraceSnapshot(db, traceId, trace, bundle);
+    persistCaeTraceSnapshot(db, traceId, trace, bundle, summary);
   } finally {
     db.close();
   }
@@ -56,14 +57,18 @@ export function persistCaeTraceSnapshot(
   db: SqliteDatabase,
   traceId: string,
   trace: Record<string, unknown>,
-  bundle: Record<string, unknown>
+  bundle: Record<string, unknown>,
+  summary?: Record<string, unknown>
 ): void {
   const now = new Date().toISOString();
   const traceJson = JSON.stringify(trace);
   const bundleJson = JSON.stringify(bundle);
+  const summaryJson = summary
+    ? JSON.stringify({ ...summary, traceId, createdAt: now, storage: "sqlite" })
+    : null;
   db.prepare(
-    `INSERT OR REPLACE INTO cae_trace_snapshots (trace_id, trace_json, bundle_json, created_at) VALUES (?, ?, ?, ?)`
-  ).run(traceId, traceJson, bundleJson, now);
+    `INSERT OR REPLACE INTO cae_trace_snapshots (trace_id, trace_json, bundle_json, summary_json, created_at) VALUES (?, ?, ?, ?, ?)`
+  ).run(traceId, traceJson, bundleJson, summaryJson, now);
   pruneCaeTraceSnapshots(db, 2000);
 }
 
@@ -90,6 +95,7 @@ export type CaeTraceSnapshotSummaryRow = {
   createdAt: string;
   trace: Record<string, unknown>;
   bundle: Record<string, unknown>;
+  summary: Record<string, unknown> | null;
 };
 
 export function listCaeTraceSnapshotSummaries(
@@ -100,7 +106,7 @@ export function listCaeTraceSnapshotSummaries(
   try {
     const rows = db
       .prepare(
-        `SELECT trace_id, trace_json, bundle_json, created_at
+        `SELECT trace_id, trace_json, bundle_json, summary_json, created_at
          FROM cae_trace_snapshots
          ORDER BY created_at DESC, trace_id ASC
          LIMIT ?`
@@ -109,6 +115,7 @@ export function listCaeTraceSnapshotSummaries(
       trace_id: string;
       trace_json: string;
       bundle_json: string;
+      summary_json?: string | null;
       created_at: string;
     }[];
     const out: CaeTraceSnapshotSummaryRow[] = [];
@@ -118,7 +125,11 @@ export function listCaeTraceSnapshotSummaries(
           traceId: row.trace_id,
           createdAt: row.created_at,
           trace: JSON.parse(row.trace_json) as Record<string, unknown>,
-          bundle: JSON.parse(row.bundle_json) as Record<string, unknown>
+          bundle: JSON.parse(row.bundle_json) as Record<string, unknown>,
+          summary:
+            typeof row.summary_json === "string" && row.summary_json.length > 0
+              ? (JSON.parse(row.summary_json) as Record<string, unknown>)
+              : null
         });
       } catch {
         // Skip corrupt rows; callers surface registry / DB health separately.
