@@ -9,6 +9,7 @@ import {
   getActiveCaeRegistryVersionId,
   insertCaeAckSatisfaction,
   insertCaeRegistryMutationAudit,
+  listCaeAckSatisfactions,
   loadCaeTraceSnapshot,
   openKitSqliteReadWrite,
   persistCaeTraceIfEnabled
@@ -27,6 +28,8 @@ import {
   storeCaeSession,
   type CaeSessionRecord
 } from "./trace-store.js";
+
+type SqliteDatabase = NonNullable<ReturnType<typeof openKitSqliteReadWrite>>;
 
 function requireSchemaV1(args: Record<string, unknown>): ModuleCommandResult | null {
   if (args.schemaVersion !== 1) {
@@ -115,6 +118,77 @@ function loadRegistryForCae(
     };
   }
   return { ok: true, reg: res.value };
+}
+
+const CAE_SHADOW_FEEDBACK_STATE_ID = "context-activation.cae-shadow-feedback";
+
+type CaeShadowFeedbackRow = {
+  traceId: string;
+  activationId: string;
+  commandName: string;
+  signal: "useful" | "noisy";
+  actor: string;
+  recordedAt: string;
+  note?: string;
+};
+
+function loadShadowFeedbackRows(db: SqliteDatabase): CaeShadowFeedbackRow[] {
+  const row = db
+    .prepare(`SELECT state_json FROM workspace_module_state WHERE module_id = ?`)
+    .get(CAE_SHADOW_FEEDBACK_STATE_ID) as { state_json: string } | undefined;
+  if (!row) return [];
+  try {
+    const parsed = JSON.parse(row.state_json) as { rows?: unknown };
+    if (!Array.isArray(parsed.rows)) return [];
+    return parsed.rows.filter((item): item is CaeShadowFeedbackRow => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return false;
+      const r = item as Record<string, unknown>;
+      return (
+        typeof r.traceId === "string" &&
+        typeof r.activationId === "string" &&
+        typeof r.commandName === "string" &&
+        (r.signal === "useful" || r.signal === "noisy") &&
+        typeof r.actor === "string" &&
+        typeof r.recordedAt === "string"
+      );
+    });
+  } catch {
+    return [];
+  }
+}
+
+function saveShadowFeedbackRows(db: SqliteDatabase, rows: CaeShadowFeedbackRow[]): void {
+  const now = new Date().toISOString();
+  const stateJson = JSON.stringify({ schemaVersion: 1, rows: rows.slice(-1000) });
+  db.prepare(
+    `INSERT INTO workspace_module_state (module_id, state_schema_version, state_json, updated_at)
+     VALUES (?, 1, ?, ?)
+     ON CONFLICT(module_id) DO UPDATE SET
+       state_schema_version = excluded.state_schema_version,
+       state_json = excluded.state_json,
+       updated_at = excluded.updated_at`
+  ).run(CAE_SHADOW_FEEDBACK_STATE_ID, stateJson, now);
+}
+
+function summarizeShadowFeedback(rows: CaeShadowFeedbackRow[]): Record<string, unknown> {
+  const byActivation = new Map<string, { activationId: string; useful: number; noisy: number; total: number }>();
+  for (const row of rows) {
+    const cur = byActivation.get(row.activationId) ?? {
+      activationId: row.activationId,
+      useful: 0,
+      noisy: 0,
+      total: 0
+    };
+    cur[row.signal] += 1;
+    cur.total += 1;
+    byActivation.set(row.activationId, cur);
+  }
+  return {
+    total: rows.length,
+    useful: rows.filter((r) => r.signal === "useful").length,
+    noisy: rows.filter((r) => r.signal === "noisy").length,
+    byActivation: [...byActivation.values()].sort((a, b) => b.total - a.total || a.activationId.localeCompare(b.activationId))
+  };
 }
 
 function buildCaeExplainResponse(
@@ -520,8 +594,13 @@ export const contextActivationModule: WorkflowModule = {
         const db = openKitSqliteReadWrite(ws, effective);
         if (db) {
           try {
-            data.traceRowCount = countCaeTraceRows(db);
+            const traceRowCount = countCaeTraceRows(db);
+            data.traceRowCount = traceRowCount;
             data.ackRowCount = countCaeAckRows(db);
+            if (traceRowCount > 0 && data.lastEvalAt === null) {
+              data.lastEvalAtNote =
+                "lastEvalAt is process-local; persisted traces exist even when this process has not evaluated CAE yet.";
+            }
           } finally {
             db.close();
           }
@@ -531,6 +610,134 @@ export const contextActivationModule: WorkflowModule = {
         }
       }
       return { ok: true, code: "cae-health-ok", data };
+    }
+
+    if (name === "cae-list-acks") {
+      const bad = requireSchemaV1(args);
+      if (bad) return bad;
+      const db = openKitSqliteReadWrite(ws, effective);
+      if (!db) {
+        return {
+          ok: false,
+          code: "cae-kit-sqlite-unavailable",
+          message: "Planning SQLite database not found or not openable"
+        };
+      }
+      try {
+        const traceId = typeof args.traceId === "string" ? args.traceId.trim() : undefined;
+        const activationId =
+          typeof args.activationId === "string" ? args.activationId.trim() : undefined;
+        const limit = typeof args.limit === "number" ? args.limit : undefined;
+        const rows = listCaeAckSatisfactions(db, { traceId, activationId, limit });
+        return {
+          ok: true,
+          code: "cae-list-acks-ok",
+          data: {
+            schemaVersion: 1,
+            rows,
+            count: rows.length,
+            filters: {
+              traceId: traceId ?? null,
+              activationId: activationId ?? null
+            }
+          }
+        };
+      } finally {
+        db.close();
+      }
+    }
+
+    if (name === "cae-record-shadow-feedback") {
+      const bad = requireSchemaV1(args);
+      if (bad) return bad;
+      const traceId = typeof args.traceId === "string" ? args.traceId.trim() : "";
+      const activationId = typeof args.activationId === "string" ? args.activationId.trim() : "";
+      const commandName = typeof args.commandName === "string" ? args.commandName.trim() : "";
+      const actor = typeof args.actor === "string" ? args.actor.trim() : "";
+      const signal = args.signal === "useful" || args.signal === "noisy" ? args.signal : "";
+      const note = typeof args.note === "string" && args.note.trim().length > 0 ? args.note.trim() : undefined;
+      if (!traceId || !activationId || !commandName || !actor || !signal) {
+        return {
+          ok: false,
+          code: "invalid-args",
+          message: "traceId, activationId, commandName, actor, and signal ('useful'|'noisy') are required"
+        };
+      }
+      const db = openKitSqliteReadWrite(ws, effective);
+      if (!db) {
+        return {
+          ok: false,
+          code: "cae-kit-sqlite-unavailable",
+          message: "Planning SQLite database not found or not openable"
+        };
+      }
+      try {
+        const feedback: CaeShadowFeedbackRow = {
+          traceId,
+          activationId,
+          commandName,
+          signal,
+          actor,
+          recordedAt: new Date().toISOString(),
+          note
+        };
+        const rows = [...loadShadowFeedbackRows(db), feedback];
+        saveShadowFeedbackRows(db, rows);
+        return {
+          ok: true,
+          code: "cae-record-shadow-feedback-ok",
+          data: {
+            schemaVersion: 1,
+            feedback,
+            summary: summarizeShadowFeedback(rows)
+          }
+        };
+      } finally {
+        db.close();
+      }
+    }
+
+    if (name === "cae-shadow-feedback-report") {
+      const bad = requireSchemaV1(args);
+      if (bad) return bad;
+      const db = openKitSqliteReadWrite(ws, effective);
+      if (!db) {
+        return {
+          ok: false,
+          code: "cae-kit-sqlite-unavailable",
+          message: "Planning SQLite database not found or not openable"
+        };
+      }
+      try {
+        const activationId = typeof args.activationId === "string" ? args.activationId.trim() : "";
+        const commandName = typeof args.commandName === "string" ? args.commandName.trim() : "";
+        const signal = args.signal === "useful" || args.signal === "noisy" ? args.signal : "";
+        const limit = Math.min(200, Math.max(1, typeof args.limit === "number" ? Math.floor(args.limit) : 50));
+        let rows = loadShadowFeedbackRows(db);
+        if (activationId) rows = rows.filter((r) => r.activationId === activationId);
+        if (commandName) rows = rows.filter((r) => r.commandName === commandName);
+        if (signal) rows = rows.filter((r) => r.signal === signal);
+        const sortedRows = rows
+          .slice()
+          .sort((a, b) => b.recordedAt.localeCompare(a.recordedAt))
+          .slice(0, limit);
+        return {
+          ok: true,
+          code: "cae-shadow-feedback-report-ok",
+          data: {
+            schemaVersion: 1,
+            summary: summarizeShadowFeedback(rows),
+            rows: sortedRows,
+            filters: {
+              activationId: activationId || null,
+              commandName: commandName || null,
+              signal: signal || null
+            }
+          }
+        };
+      } finally {
+        db.close();
+      }
     }
 
     if (name === "cae-conflicts") {

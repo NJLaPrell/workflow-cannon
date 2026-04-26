@@ -1,6 +1,8 @@
 # Context Activation Engine (CAE) — plan & implementation status
 
 > **Note (2026-04-10):** Phase 70 implementation work (**T870–T886**) is **completed** in the task engine. The tables below are a **human planning snapshot** from **2026-04-09** and may not reflect the current tree line-by-line. For **machine-truth** behavior and contracts, use **`.ai/cae/`**; for task state, **`pnpm exec wk run list-tasks '{"phaseKey":"70"}'`** (expect terminal statuses).
+>
+> **Follow-on note (2026-04-25):** Current CAE productization work is **T921–T931** in the task engine. Start with **`.ai/cae/operator-golden-path.md`** for the operator smoke path and **`.ai/cae/NEXT.md`** for the follow-on workstreams. The snapshot body below remains provenance only.
 
 **Last reviewed (snapshot body):** 2026-04-09  
 **Canonical specs:** `.ai/cae/README.md`, `tasks/cae/CAE-PROGRAM-CONTEXT.md`, `.ai/adrs/ADR-context-activation-engine-architecture-v1.md`  

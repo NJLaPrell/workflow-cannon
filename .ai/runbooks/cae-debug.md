@@ -8,6 +8,8 @@
 - Doctor reports CAE / registry issues.  
 - Shadow observations disagree with expected activations.
 
+For the happy-path smoke, start with **`.ai/cae/operator-golden-path.md`** first. Use this debug runbook after that flow fails or looks surprising.
+
 ## Flowchart
 
 ```mermaid

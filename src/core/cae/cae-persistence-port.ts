@@ -1,5 +1,7 @@
 /**
- * CAE trace persistence port (**`T867`**) — v1 default is ephemeral / no-op per **`ADR-cae-persistence-v1.md`**.
+ * CAE trace persistence port (**`T867`**) — legacy adapter shape retained for callers that
+ * still need an explicit no-op. Runtime CLI persistence is handled by `cae-kit-sqlite.ts`
+ * when `kit.cae.persistence` is true.
  */
 
 export type CaeTracePersistencePort = {
@@ -10,6 +12,6 @@ export type CaeTracePersistencePort = {
 export const noopCaeTracePersistence: CaeTracePersistencePort = {
   kind: "noop",
   persistEvaluationTrace() {
-    /* v1 default: traces stay in session store only */
+    /* Legacy default: callers that use this adapter intentionally stay ephemeral. */
   }
 };

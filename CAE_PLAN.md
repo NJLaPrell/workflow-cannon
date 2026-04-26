@@ -1,5 +1,7 @@
 CAE Registry Migration Plan — SQLite Runtime Source of Truth
 
+> **Status (2026-04-25):** This is historical migration provenance. The SQLite registry migration has shipped; current operator work is tracked in `.ai/cae/NEXT.md`, and the first smoke path is `.ai/cae/operator-golden-path.md`. Treat statements below as the original implementation plan, not live queue truth.
+
 Purpose
 
 Move the CAE registry from repo JSON files to SQLite as the authoritative runtime source of truth, and expose a complete admin-oriented CLI surface for managing CAE artifacts and activations.
@@ -23,14 +25,14 @@ These are fixed unless explicitly changed by the user:
 
 Current repo state to assume
 
-From the current CAE implementation:
-	•	CAE registry is currently stored in JSON:
+Historical starting point for this plan:
+	•	CAE registry rows originally lived in JSON:
 	•	.ai/cae/registry/artifacts.v1.json
 	•	.ai/cae/registry/activations.v1.json
-	•	Loader logic currently reads and validates those JSON files.
-	•	CAE traces and ack satisfaction already persist in the kit SQLite DB.
-	•	CLI already has read-oriented CAE commands and a limited mutating path for cae-satisfy-ack.
-	•	Artifacts are references to repo files, not embedded content.  ￼
+	•	Those JSON files now remain seed / fixture inputs; the runtime registry authority is kit SQLite.
+	•	CAE traces and ack satisfaction persist in the kit SQLite DB when `kit.cae.persistence` is true.
+	•	CLI has read-oriented CAE commands, governed registry admin commands, `cae-satisfy-ack`, ack inspection, and shadow feedback surfaces.
+	•	Artifacts are references to repo files, not embedded content.
 
 Target architecture
 

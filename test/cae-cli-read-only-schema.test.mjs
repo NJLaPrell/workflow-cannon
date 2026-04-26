@@ -64,7 +64,8 @@ describe("CAE cli-read-only-requests schema (v1)", () => {
     ["explain-by-replay.json", "caeExplainByReplayRequest"],
     ["health.json", "caeHealthRequest"],
     ["conflicts.json", "caeConflictsRequest"],
-    ["get-trace.json", "caeGetTraceRequest"]
+    ["get-trace.json", "caeGetTraceRequest"],
+    ["list-acks.json", "caeListAcksRequest"]
   ];
 
   for (const [file, def] of cases) {
@@ -180,5 +181,25 @@ describe("CAE cli-read-only-data schema (v1)", () => {
       fs.readFileSync(path.join(root, "fixtures/cae/trace/valid/merge-lifecycle-sample.json"), "utf8")
     );
     assert.equal(validate({ schemaVersion: 1, trace, ephemeral: true }), true, ajv.errorsText(validate.errors));
+  });
+
+  it("accepts caeListAcksData", () => {
+    const validate = compileDef(ajv, DATA_ID, "caeListAcksData");
+    const ok = validate({
+      schemaVersion: 1,
+      count: 1,
+      filters: { traceId: null, activationId: "cae.activation.policy.phase70-playbook" },
+      rows: [
+        {
+          id: 1,
+          traceId: "cae.trace.example",
+          ackToken: "phase70-policy-surface",
+          activationId: "cae.activation.policy.phase70-playbook",
+          satisfiedAt: "2026-04-25T00:00:00.000Z",
+          actor: "agent@example"
+        }
+      ]
+    });
+    assert.equal(ok, true, ajv.errorsText(validate.errors));
   });
 });

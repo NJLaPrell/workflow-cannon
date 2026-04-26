@@ -911,6 +911,29 @@
   },
   {
     "moduleId": "context-activation",
+    "name": "cae-list-acks",
+    "file": "cae-list-acks.md",
+    "description": "List persisted CAE acknowledgement satisfaction rows by trace or activation.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-record-shadow-feedback",
+    "file": "cae-record-shadow-feedback.md",
+    "description": "Record operator usefulness feedback for a CAE shadow observation.",
+    "policyOperationId": "context-activation.cae-record-shadow-feedback",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-shadow-feedback-report",
+    "file": "cae-shadow-feedback-report.md",
+    "description": "Summarize CAE shadow usefulness feedback for activation curation.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
     "name": "cae-list-registry-versions",
     "file": "cae-list-registry-versions.md",
     "description": "List CAE registry version headers with row counts (SQLite kit DB).",

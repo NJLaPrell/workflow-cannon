@@ -393,6 +393,8 @@ pnpm exec wk run cae-explain '{"schemaVersion":1,"evaluationContext":{"schemaVer
 pnpm exec wk run cae-health '{"schemaVersion":1,"includeDetails":true}'
 pnpm exec wk run cae-conflicts '{"schemaVersion":1,"evaluationContext":{"schemaVersion":1,"task":{"taskId":"T847","status":"ready","phaseKey":"70"},"command":{"name":"cae-conflicts"},"workspace":{"currentKitPhase":"70"},"governance":{"policyApprovalRequired":false,"approvalTierHint":"C"},"queue":{"readyQueueDepth":3},"mapSignals":null},"evalMode":"shadow"}'
 pnpm exec wk run cae-get-trace '{"schemaVersion":1,"traceId":"cae.trace.example.minimal"}'
+pnpm exec wk run cae-list-acks '{"schemaVersion":1,"activationId":"cae.activation.policy.phase70-playbook"}'
+pnpm exec wk run cae-shadow-feedback-report '{"schemaVersion":1,"activationId":"cae.activation.policy.phase70-playbook"}'
 ```
 
 **Governed CAE mutation (Tier A — JSON `policyApproval`; requires `kit.cae.persistence`):**
@@ -400,6 +402,7 @@ pnpm exec wk run cae-get-trace '{"schemaVersion":1,"traceId":"cae.trace.example.
 ```bash
 pnpm exec wk run cae-satisfy-ack '{"schemaVersion":1,"traceId":"<traceId>","ackToken":"<token>","activationId":"cae.activation.policy.phase70-playbook","actor":"operator@example","policyApproval":{"confirmed":true,"rationale":"record CAE ack satisfaction"}}'
 pnpm exec wk run cae-import-json-registry '{"schemaVersion":1,"policyApproval":{"confirmed":true,"rationale":"seed sqlite registry from default JSON paths"}}'
+pnpm exec wk run cae-record-shadow-feedback '{"schemaVersion":1,"traceId":"<traceId>","activationId":"cae.activation.policy.phase70-playbook","commandName":"get-next-actions","signal":"useful","actor":"operator@example","policyApproval":{"confirmed":true,"rationale":"record CAE shadow feedback"}}'
 ```
 
 **CAE SQLite registry admin (Phase 70 — Tier C manifest + in-handler gate; JSON `caeMutationApproval`, not `policyApproval`):**

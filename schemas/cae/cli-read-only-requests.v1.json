@@ -157,6 +157,26 @@
           "maxLength": 128
         }
       }
+    },
+    "caeListAcksRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "traceId": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 128
+        },
+        "activationId": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 128,
+          "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+        },
+        "limit": { "type": "integer", "minimum": 1, "maximum": 200 }
+      }
     }
   }
 }

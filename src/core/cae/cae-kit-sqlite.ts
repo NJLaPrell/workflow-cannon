@@ -114,6 +114,63 @@ export function countCaeAckRows(db: SqliteDatabase): number {
   }
 }
 
+export type CaeAckSatisfactionRow = {
+  id: number;
+  traceId: string;
+  ackToken: string;
+  activationId: string;
+  satisfiedAt: string;
+  actor: string;
+};
+
+export function listCaeAckSatisfactions(
+  db: SqliteDatabase,
+  filters?: { traceId?: string; activationId?: string; limit?: number }
+): CaeAckSatisfactionRow[] {
+  const where: string[] = [];
+  const params: string[] = [];
+  const traceId = filters?.traceId?.trim();
+  const activationId = filters?.activationId?.trim();
+  if (traceId) {
+    where.push("trace_id = ?");
+    params.push(traceId);
+  }
+  if (activationId) {
+    where.push("activation_id = ?");
+    params.push(activationId);
+  }
+  const limit = Math.min(200, Math.max(1, Math.floor(filters?.limit ?? 50)));
+  const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+  try {
+    const rows = db
+      .prepare(
+        `SELECT id, trace_id, ack_token, activation_id, satisfied_at, actor
+         FROM cae_ack_satisfaction
+         ${whereSql}
+         ORDER BY satisfied_at DESC, id DESC
+         LIMIT ?`
+      )
+      .all(...params, limit) as {
+      id: number;
+      trace_id: string;
+      ack_token: string;
+      activation_id: string;
+      satisfied_at: string;
+      actor: string;
+    }[];
+    return rows.map((r) => ({
+      id: r.id,
+      traceId: r.trace_id,
+      ackToken: r.ack_token,
+      activationId: r.activation_id,
+      satisfiedAt: r.satisfied_at,
+      actor: r.actor
+    }));
+  } catch {
+    return [];
+  }
+}
+
 export function insertCaeAckSatisfaction(
   db: SqliteDatabase,
   row: { traceId: string; ackToken: string; activationId: string; actor: string }

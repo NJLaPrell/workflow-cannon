@@ -121,6 +121,60 @@ test("T879: cae-satisfy-ack returns cae-ack-token-mismatch when token wrong", as
   assert.equal(r.code, "cae-ack-token-mismatch");
 });
 
+test("T928: cae-satisfy-ack returns cae-activation-not-found for unknown activation", async () => {
+  const ws = await tmpWithRegistry();
+  const r = await contextActivationModule.onCommand(
+    {
+      name: "cae-satisfy-ack",
+      args: {
+        schemaVersion: 1,
+        traceId: "trace-ack-test",
+        ackToken: "phase70-policy-surface",
+        activationId: "cae.activation.missing",
+        actor: "test@example",
+        policyApproval: { confirmed: true, rationale: "test" }
+      }
+    },
+    {
+      runtimeVersion: "0.1",
+      workspacePath: ws,
+      effectiveConfig: {
+        kit: { cae: { persistence: true, registryStore: "json" } },
+        tasks: { sqliteDatabaseRelativePath: ".workspace-kit/tasks/workspace-kit.db" }
+      }
+    }
+  );
+  assert.equal(r.ok, false);
+  assert.equal(r.code, "cae-activation-not-found");
+});
+
+test("T928: cae-satisfy-ack returns cae-persistence-disabled when persistence is off", async () => {
+  const ws = await tmpWithRegistry();
+  const r = await contextActivationModule.onCommand(
+    {
+      name: "cae-satisfy-ack",
+      args: {
+        schemaVersion: 1,
+        traceId: "trace-ack-test",
+        ackToken: "phase70-policy-surface",
+        activationId: "cae.activation.policy.phase70-playbook",
+        actor: "test@example",
+        policyApproval: { confirmed: true, rationale: "test" }
+      }
+    },
+    {
+      runtimeVersion: "0.1",
+      workspacePath: ws,
+      effectiveConfig: {
+        kit: { cae: { persistence: false, registryStore: "json" } },
+        tasks: { sqliteDatabaseRelativePath: ".workspace-kit/tasks/workspace-kit.db" }
+      }
+    }
+  );
+  assert.equal(r.ok, false);
+  assert.equal(r.code, "cae-persistence-disabled");
+});
+
 test("T879: cae-satisfy-ack ok when registry + token + persisted trace align", async () => {
   const ws = await tmpWithRegistry();
   const r = await contextActivationModule.onCommand(

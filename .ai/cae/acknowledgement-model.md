@@ -22,10 +22,11 @@
 
 **Rule:** If a mutation requires **`policyApproval`**, CAE **cannot** waive it via **`satisfy_required`**.
 
-## Persistence (v1 default)
+## Persistence and inspection (v1)
 
-- **Default:** acknowledgement state is **session-scoped** (extension host / CLI session memory). **`ackToken`** correlates UI ↔ evaluator within a session.
-- **Optional persistence:** **`T867`** MAY persist rows `(traceId, ackToken, activationId, satisfiedAt, actor)` in planning SQLite when enabled; **off** ⇒ **no-op persistence adapter** for acks.
+- **Default:** acknowledgement state is surfaced in bundles and traces; satisfaction requires the explicit **`cae-satisfy-ack`** command.
+- **Persistence:** when `kit.cae.persistence` is true, **`cae-satisfy-ack`** records `(traceId, ackToken, activationId, satisfiedAt, actor)` in planning SQLite after verifying the activation token and persisted trace.
+- **Inspection:** use **`cae-list-acks`** to inspect satisfied acknowledgements by trace or activation without opening SQLite manually.
 
 ## Blocking semantics
 

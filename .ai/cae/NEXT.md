@@ -1,6 +1,6 @@
 # CAE Next Work Plan
 
-This is the working plan for Context Activation Engine work after Phase 70 implementation. CAE now has strong primitives; the next work is to turn those primitives into an operator-grade product workflow.
+This is the completed follow-on plan for Context Activation Engine work after the Phase 70 SQLite-registry implementation. CAE now has strong primitives and an operator-grade smoke path; remaining Phase 70 work is release closeout evidence, not more implementation scope.
 
 ## Current Status
 
@@ -9,14 +9,14 @@ CAE is implemented as a conservative v1 stack:
 - Runtime registry authority is kit SQLite (`kit.cae.registryStore: sqlite`).
 - `doctor`, `cae-health`, `cae-validate-registry`, read-only registry commands, evaluation, explain, trace, shadow preflight, advisory surfacing, and governed mutation primitives exist.
 - Shadow preflight and advisory payloads can run when configured; live enforcement is intentionally off by default.
-- The current repository registry seed is small: 12 artifacts and 4 activations.
-- Phase 70 task-engine work is terminal: no ready, in-progress, or blocked Phase 70 tasks were present at the last review.
+- The current repository registry seed is small and intentionally curated.
+- Phase 70 implementation and productization rows `T921`-`T931` are terminal in the task engine. Release-closeout rows `T932`+ track evidence and doc-state cleanup.
 
 The problem now is not "build CAE." The problem is "make CAE obvious, trustworthy, and useful without making operators spelunk through a dozen fucking surfaces."
 
-## Task Rows
+## Completed Task Rows
 
-These follow-on rows are opened as Phase 70 ready tasks:
+These follow-on rows were opened as Phase 70 tasks and are now completed provenance:
 
 | Task | Workstream |
 | --- | --- |
@@ -51,12 +51,12 @@ Goal: package CAE into one end-to-end workflow instead of a bag of commands.
 
 Tasks:
 
-- [ ] Define the single primary CAE v1 operator journey.
-- [ ] Create a canonical "golden path" runbook under `.ai/cae/` or `.ai/runbooks/`.
-- [ ] Include exact commands for health, registry validation, evaluation, explanation, trace fetch, and conflict inspection.
-- [ ] Keep read-only inspection separate from governed mutation.
-- [ ] Add a "bad path" recovery section for missing SQLite DB, missing active registry version, malformed registry rows, trace not found, and persistence disabled.
-- [ ] Make `doctor`, `cae-health`, and advisory surfaces point operators toward this golden path first.
+- [x] Define the single primary CAE v1 operator journey.
+- [x] Create a canonical "golden path" runbook under `.ai/cae/` or `.ai/runbooks/`.
+- [x] Include exact commands for health, registry validation, evaluation, explanation, trace fetch, and conflict inspection.
+- [x] Keep read-only inspection separate from governed mutation.
+- [x] Add a "bad path" recovery section for missing SQLite DB, missing active registry version, malformed registry rows, trace not found, and persistence disabled.
+- [x] Make `doctor`, `cae-health`, and advisory surfaces point operators toward this golden path first.
 
 Exit criteria:
 
@@ -70,11 +70,11 @@ Goal: make the operator path reproducible in tests and release validation.
 
 Tasks:
 
-- [ ] Add committed golden fixtures for the primary v1 scenario.
-- [ ] Capture expected normalized output for `cae-evaluate`, `cae-explain`, and trace retrieval.
-- [ ] Add one negative fixture for a common failure path.
-- [ ] Add a smoke test that runs the golden path through command handlers or the CLI with stable output normalization.
-- [ ] Promote this smoke check into the release or pre-merge gate when stable enough.
+- [x] Add committed golden fixtures for the primary v1 scenario.
+- [x] Capture expected normalized output for `cae-evaluate`, `cae-explain`, and trace retrieval.
+- [x] Add one negative fixture for a common failure path.
+- [x] Add a smoke test that runs the golden path through command handlers or the CLI with stable output normalization.
+- [x] Promote this smoke check into the release or pre-merge gate when stable enough.
 
 Exit criteria:
 
@@ -88,11 +88,11 @@ Goal: remove stale CAE planning claims now that SQLite registry authority shippe
 
 Tasks:
 
-- [ ] Update or supersede `CAE_PLAN.md`; its "current repo state" still describes JSON as live registry authority.
-- [ ] Mark `tasks/cae/CAE-PLAN-STATUS.md` as historical, or rewrite it to defer to `.ai/cae/` plus task-engine output.
-- [ ] Keep `.ai/cae/phase-70-registry-task-tracker.md` only if it remains useful as provenance; otherwise demote it to history.
-- [ ] Ensure `.ai/cae/README.md` names the current operator plan and not only the old implementation wave.
-- [ ] Add a drift check or checklist item for CAE docs that mention registry authority, trace persistence, enforcement, or JSON seed fate.
+- [x] Update or supersede `CAE_PLAN.md`; its "current repo state" still describes JSON as live registry authority.
+- [x] Mark `tasks/cae/CAE-PLAN-STATUS.md` as historical, or rewrite it to defer to `.ai/cae/` plus task-engine output.
+- [x] Keep `.ai/cae/phase-70-registry-task-tracker.md` only if it remains useful as provenance; otherwise demote it to history.
+- [x] Ensure `.ai/cae/README.md` names the current operator plan and not only the old implementation wave.
+- [x] Add a drift check or checklist item for CAE docs that mention registry authority, trace persistence, enforcement, or JSON seed fate.
 
 Exit criteria:
 
@@ -106,11 +106,11 @@ Goal: make trace persistence behavior unsurprising.
 
 Tasks:
 
-- [ ] Reconcile `cae-persistence-port.ts` no-op wording with the shipped SQLite trace snapshot path.
-- [ ] Decide whether the v1 persistence abstraction should grow a real SQLite implementation or be removed as stale scaffolding.
-- [ ] Make `cae-health` explain why `lastEvalAt` can be `null` even when persisted trace rows exist.
-- [ ] Add tests for `cae-get-trace` across process boundaries when `kit.cae.persistence` is true.
-- [ ] Document trace retention and pruning behavior in one operator-facing place.
+- [x] Reconcile `cae-persistence-port.ts` no-op wording with the shipped SQLite trace snapshot path.
+- [x] Decide whether the v1 persistence abstraction should grow a real SQLite implementation or be removed as stale scaffolding.
+- [x] Make `cae-health` explain why `lastEvalAt` can be `null` even when persisted trace rows exist.
+- [x] Add tests for `cae-get-trace` across process boundaries when `kit.cae.persistence` is true.
+- [x] Document trace retention and pruning behavior in one operator-facing place.
 
 Exit criteria:
 
@@ -124,11 +124,11 @@ Goal: improve activation relevance by feeding CAE real bounded context.
 
 Tasks:
 
-- [ ] Hydrate task rows for CLI preflight when a `taskId` or `id` is present, rather than using a thin inferred row.
-- [ ] Include bounded task title, tags, features, phase key, and allowlisted metadata in preflight context.
-- [ ] Consider bounded active-task context for commands that do not directly pass `taskId`.
-- [ ] Keep the metadata allowlist strict; do not dump raw task rows, env, paths, or giant argv blobs into CAE.
-- [ ] Add tests showing task-level, command-level, and layered activations differ in useful ways.
+- [x] Hydrate task rows for CLI preflight when a `taskId` or `id` is present, rather than using a thin inferred row.
+- [x] Include bounded task title, tags, features, phase key, and allowlisted metadata in preflight context.
+- [x] Consider bounded active-task context for commands that do not directly pass `taskId`.
+- [x] Keep the metadata allowlist strict; do not dump raw task rows, env, paths, or giant argv blobs into CAE.
+- [x] Add tests showing task-level, command-level, and layered activations differ in useful ways.
 
 Exit criteria:
 
@@ -142,11 +142,11 @@ Goal: make CAE useful across common workflows, not just Phase 70 demos.
 
 Tasks:
 
-- [ ] Add activation coverage for task delivery, phase closeout, release readiness, improvement discovery, wishlist conversion, docs generation, plugin operations, and policy-sensitive task transitions.
-- [ ] Add review-family activations for risky completion, release, registry mutation, and generated-doc drift.
-- [ ] Add think/do-family activations that point to existing playbooks without embedding doc bodies.
-- [ ] Define a registry curation rule: every new activation must have a clear owner, scope condition, artifact reference, and test fixture.
-- [ ] Keep the registry small enough to stay understandable; kill noisy activations quickly.
+- [x] Add activation coverage for task delivery, phase closeout, release readiness, improvement discovery, wishlist conversion, docs generation, plugin operations, and policy-sensitive task transitions.
+- [x] Add review-family activations for risky completion, release, registry mutation, and generated-doc drift.
+- [x] Add think/do-family activations that point to existing playbooks without embedding doc bodies.
+- [x] Define a registry curation rule: every new activation must have a clear owner, scope condition, artifact reference, and test fixture.
+- [x] Keep the registry small enough to stay understandable; kill noisy activations quickly.
 
 Exit criteria:
 
@@ -160,11 +160,11 @@ Goal: learn whether CAE is helping before enforcement grows teeth.
 
 Tasks:
 
-- [ ] Add an operator feedback command or workflow for marking shadow observations as useful or noisy.
-- [ ] Persist feedback with trace id, activation id, command name, actor, and timestamp.
-- [ ] Summarize feedback in `cae-health` or a dedicated read-only report.
-- [ ] Use feedback to decide which activations graduate, change, or get retired.
-- [ ] Document the shadow bake requirement before any enforcement expansion.
+- [x] Add an operator feedback command or workflow for marking shadow observations as useful or noisy.
+- [x] Persist feedback with trace id, activation id, command name, actor, and timestamp.
+- [x] Summarize feedback in `cae-health` or a dedicated read-only report.
+- [x] Use feedback to decide which activations graduate, change, or get retired.
+- [x] Document the shadow bake requirement before any enforcement expansion.
 
 Exit criteria:
 
@@ -178,11 +178,11 @@ Goal: prove acknowledgement semantics end to end.
 
 Tasks:
 
-- [ ] Create a scenario that emits `pendingAcknowledgements`.
-- [ ] Run `cae-satisfy-ack` against a persisted trace and verify the SQLite ack row.
-- [ ] Add a read-only way to inspect satisfied acknowledgements by trace or activation.
-- [ ] Clarify where acknowledgement stops and Tier A/B `policyApproval` begins.
-- [ ] Add tests for invalid token, wrong activation id, missing trace, and persistence disabled.
+- [x] Create a scenario that emits `pendingAcknowledgements`.
+- [x] Run `cae-satisfy-ack` against a persisted trace and verify the SQLite ack row.
+- [x] Add a read-only way to inspect satisfied acknowledgements by trace or activation.
+- [x] Clarify where acknowledgement stops and Tier A/B `policyApproval` begins.
+- [x] Add tests for invalid token, wrong activation id, missing trace, and persistence disabled.
 
 Exit criteria:
 
@@ -196,11 +196,11 @@ Goal: keep enforcement narrow, evidence-backed, and reversible.
 
 Tasks:
 
-- [ ] Define the first real enforcement pilot scenario, or explicitly defer live enforcement.
-- [ ] Require a shadow bake record before enabling live blocks.
-- [ ] Ensure every allowlist row has a stable id, remediation path, tests, and rollback instructions.
-- [ ] Keep `kit.cae.enforcement.enabled` off by default.
-- [ ] Prove enforcement never blocks Tier C bootstrap/read-only commands and never waives code policy.
+- [x] Define the first real enforcement pilot scenario, or explicitly defer live enforcement.
+- [x] Require a shadow bake record before enabling live blocks.
+- [x] Ensure every allowlist row has a stable id, remediation path, tests, and rollback instructions.
+- [x] Keep `kit.cae.enforcement.enabled` off by default.
+- [x] Prove enforcement never blocks Tier C bootstrap/read-only commands and never waives code policy.
 
 Exit criteria:
 
@@ -214,11 +214,11 @@ Goal: prove CAE works outside the repo-local happy path.
 
 Tasks:
 
-- [ ] Add a clean-install smoke scenario that exercises CAE health and registry validation.
-- [ ] Add an upgrade smoke scenario covering a workspace before CAE registry SQLite tables.
-- [ ] Verify packaged artifacts include CAE schemas, instruction files, registry seed data, and runbooks needed by commands.
-- [ ] Test native SQLite failure remediation where CAE registry or trace persistence is requested.
-- [ ] Include CAE vertical-slice evidence in release readiness once stable.
+- [x] Add a clean-install smoke scenario that exercises CAE health and registry validation.
+- [x] Add an upgrade smoke scenario covering a workspace before CAE registry SQLite tables.
+- [x] Verify packaged artifacts include CAE schemas, instruction files, registry seed data, and runbooks needed by commands.
+- [x] Test native SQLite failure remediation where CAE registry or trace persistence is requested.
+- [x] Include CAE vertical-slice evidence in release readiness once stable.
 
 Exit criteria:
 
@@ -232,11 +232,11 @@ Goal: make CAE command output easy for humans and agents to use.
 
 Tasks:
 
-- [ ] Audit every `cae-*` command name, instruction file, `code`, remediation hint, and JSON envelope for consistency.
-- [ ] Ensure `cae-conflicts` has a copy-pasteable minimal request example.
-- [ ] Add response-template hints for the golden path, degraded advisory output, ack-required output, and enforcement-blocked output.
-- [ ] Keep JSON stdout clean; diagnostics and prose must not break automation.
-- [ ] Add examples for common filters and pagination on registry list commands.
+- [x] Audit every `cae-*` command name, instruction file, `code`, remediation hint, and JSON envelope for consistency.
+- [x] Ensure `cae-conflicts` has a copy-pasteable minimal request example.
+- [x] Add response-template hints for the golden path, degraded advisory output, ack-required output, and enforcement-blocked output.
+- [x] Keep JSON stdout clean; diagnostics and prose must not break automation.
+- [x] Add examples for common filters and pagination on registry list commands.
 
 Exit criteria:
 

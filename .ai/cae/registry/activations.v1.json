@@ -29,6 +29,18 @@
     },
     {
       "schemaVersion": 1,
+      "activationId": "cae.activation.do.operator-golden-path",
+      "family": "do",
+      "lifecycleState": "active",
+      "priority": 90,
+      "scope": {
+        "conditions": [{ "kind": "phaseKey", "value": "70" }]
+      },
+      "artifactRefs": [{ "artifactId": "cae.runbook.operator-golden-path" }],
+      "flags": { "advisoryOnly": true, "shadowEligible": true }
+    },
+    {
+      "schemaVersion": 1,
       "activationId": "cae.activation.think.run-transition",
       "family": "think",
       "lifecycleState": "active",
@@ -37,6 +49,94 @@
         "conditions": [{ "kind": "commandName", "match": "prefix", "value": "run-" }]
       },
       "artifactRefs": [{ "artifactId": "cae.runbook.workspace-session" }]
+    },
+    {
+      "schemaVersion": 1,
+      "activationId": "cae.activation.do.task-delivery",
+      "family": "do",
+      "lifecycleState": "active",
+      "priority": 60,
+      "scope": {
+        "conditions": [{ "kind": "commandName", "match": "exact", "value": "run-transition" }]
+      },
+      "artifactRefs": [{ "artifactId": "cae.playbook.task-to-phase-branch" }],
+      "acknowledgement": { "strength": "recommend", "token": "task-delivery-transition" },
+      "flags": { "shadowEligible": true }
+    },
+    {
+      "schemaVersion": 1,
+      "activationId": "cae.activation.review.phase-closeout",
+      "family": "review",
+      "lifecycleState": "active",
+      "priority": 80,
+      "scope": {
+        "conditions": [{ "kind": "commandName", "match": "exact", "value": "update-workspace-phase-snapshot" }]
+      },
+      "artifactRefs": [{ "artifactId": "cae.playbook.phase-closeout" }],
+      "flags": { "shadowEligible": true }
+    },
+    {
+      "schemaVersion": 1,
+      "activationId": "cae.activation.policy.document-project",
+      "family": "policy",
+      "lifecycleState": "active",
+      "priority": 75,
+      "scope": {
+        "conditions": [{ "kind": "commandName", "match": "exact", "value": "document-project" }]
+      },
+      "artifactRefs": [{ "artifactId": "cae.policy.agent-cli-map" }],
+      "acknowledgement": { "strength": "surface", "token": "doc-generation-policy-surface" },
+      "flags": { "shadowEligible": true }
+    },
+    {
+      "schemaVersion": 1,
+      "activationId": "cae.activation.review.doc-generation-task",
+      "family": "review",
+      "lifecycleState": "active",
+      "priority": 65,
+      "scope": {
+        "conditions": [{ "kind": "taskTag", "match": "any", "values": ["doc-generation"] }]
+      },
+      "artifactRefs": [{ "artifactId": "cae.policy.agent-cli-map" }],
+      "flags": { "shadowEligible": true }
+    },
+    {
+      "schemaVersion": 1,
+      "activationId": "cae.activation.review.registry-mutation",
+      "family": "review",
+      "lifecycleState": "active",
+      "priority": 95,
+      "scope": {
+        "conditions": [{ "kind": "commandName", "match": "prefix", "value": "cae-" }]
+      },
+      "artifactRefs": [{ "artifactId": "cae.doc.registry-mutation-governance" }],
+      "acknowledgement": { "strength": "recommend", "token": "cae-registry-mutation-review" },
+      "flags": { "shadowEligible": true }
+    },
+    {
+      "schemaVersion": 1,
+      "activationId": "cae.activation.think.shadow-feedback",
+      "family": "think",
+      "lifecycleState": "active",
+      "priority": 55,
+      "scope": {
+        "conditions": [{ "kind": "commandName", "match": "exact", "value": "cae-record-shadow-feedback" }]
+      },
+      "artifactRefs": [{ "artifactId": "cae.doc.shadow-mode" }],
+      "flags": { "shadowEligible": true }
+    },
+    {
+      "schemaVersion": 1,
+      "activationId": "cae.activation.think.acknowledgement",
+      "family": "think",
+      "lifecycleState": "active",
+      "priority": 55,
+      "scope": {
+        "conditions": [{ "kind": "commandName", "match": "exact", "value": "cae-satisfy-ack" }]
+      },
+      "artifactRefs": [{ "artifactId": "cae.doc.acknowledgement-model" }],
+      "acknowledgement": { "strength": "surface", "token": "cae-ack-model-surface" },
+      "flags": { "shadowEligible": true }
     },
     {
       "schemaVersion": 1,

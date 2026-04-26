@@ -22,4 +22,4 @@ workspace-kit run cae-health '{"schemaVersion":1,"includeDetails":true}'
 
 When the registry loads successfully, **`data`** also includes **`registryContentHash`**, **`artifactCount`**, **`activationCount`**, and **`activeRegistryVersionId`** (when kit SQLite has an active CAE registry version).
 
-When **`includeDetails`** is **`true`** and **`kit.cae.persistence`** is on, adds **`traceRowCount`** and **`ackRowCount`** from SQLite.
+When **`includeDetails`** is **`true`** and **`kit.cae.persistence`** is on, adds **`traceRowCount`** and **`ackRowCount`** from SQLite. If durable traces exist but **`lastEvalAt`** is `null`, the command adds **`lastEvalAtNote`** because `lastEvalAt` is process-local while trace rows are persisted.

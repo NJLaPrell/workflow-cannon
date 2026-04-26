@@ -65,10 +65,12 @@ Use **`context-activation.<cae-verb>`** (dotted segments mirroring `run` names) 
 | **`cae-health`** | `context-activation.cae-health` | **`kit.cae.enabled`**, registry load state, optional last-eval timestamp, **`issues[]`**. | `cae-health-ok` |
 | **`cae-conflicts`** | `context-activation.cae-conflicts` | Run merge/conflict analysis; return **`conflictShadowSummary`** + correlation **`traceId`**. | `cae-conflicts-ok` |
 | **`cae-get-trace`** | `context-activation.cae-get-trace` | Fetch **`trace.v1`** by id (session or persisted **T867**). | `cae-get-trace-ok` |
+| **`cae-list-acks`** | `context-activation.cae-list-acks` | List persisted CAE acknowledgement satisfaction rows by trace or activation. | `cae-list-acks-ok` |
+| **`cae-shadow-feedback-report`** | `context-activation.cae-shadow-feedback-report` | Summarize recorded shadow usefulness feedback for activation curation. | `cae-shadow-feedback-report-ok` |
 
-**Argv schema:** **`caeEvaluateRequest`**, **`caeExplainRequest`** (**oneOf** trace vs replay), **`caeHealthRequest`**, **`caeConflictsRequest`**, **`caeGetTraceRequest`**.
+**Argv schema:** **`caeEvaluateRequest`**, **`caeExplainRequest`** (**oneOf** trace vs replay), **`caeHealthRequest`**, **`caeConflictsRequest`**, **`caeGetTraceRequest`**, **`caeListAcksRequest`**. Shadow feedback report currently follows its instruction file shape.
 
-**`data` schema:** **`caeEvaluateData`**, **`caeExplainData`**, **`caeHealthData`**, **`caeConflictsData`**, **`caeGetTraceData`**.
+**`data` schema:** **`caeEvaluateData`**, **`caeExplainData`**, **`caeHealthData`**, **`caeConflictsData`**, **`caeGetTraceData`**, **`caeListAcksData`**. Shadow feedback report currently follows its instruction file shape.
 
 ### `cae-explain` inputs (normative)
 

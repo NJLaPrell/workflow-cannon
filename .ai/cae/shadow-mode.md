@@ -23,8 +23,8 @@
 
 ## Usefulness vs noise (hooks)
 
-- **v1:** **`shadowObservation.usefulnessSignal`** is **`absent`** unless an operator tool records feedback (**`useful`** \| **`noisy`**). No required persistence (**`T845`** / **`T867`**).
-- **Future:** **`cae-shadow-feedback`** or dashboard capture (**`T863`** operator snippet) may set the field; merge rules stay unchanged (**`T863`**).
+- **v1:** Operators can record feedback with **`cae-record-shadow-feedback`** and inspect it with **`cae-shadow-feedback-report`**. Feedback rows carry `traceId`, `activationId`, `commandName`, `actor`, timestamp, and `signal` (`useful` \| `noisy`).
+- Feedback is curation evidence only. It does not mutate the registry, satisfy acknowledgements, or replace Tier A/B **`policyApproval`**.
 
 ## JSON examples
 

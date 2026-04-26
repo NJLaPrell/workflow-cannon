@@ -2,6 +2,8 @@
 
 Machine-oriented continuity after a local **`git restore .workspace-kit/tasks/workspace-kit.db`** (or any fresh kit DB) dropped in-flight **`T887+`** rows. These IDs were **re-created** in the task store (`create-task` + `run-transition`) on **2026-04-10** with **`clientMutationId` `cae-restore-*`** metadata where applicable.
 
+> **Historical scope:** This tracker records the SQLite-registry migration wave. Current CAE follow-on implementation rows **`T921`–`T931`** are completed; release-closeout rows **`T932`+** track evidence and terminal-state cleanup. Runtime registry authority is kit SQLite; `.ai/cae/registry/*.json` remains seed / fixture input.
+
 | Task   | CAE_PLAN / scope | Task store status | Repo evidence |
 | ------ | ---------------- | ----------------- | ------------- |
 | **T887** | Epic 1 — registry DDL + migration ladder | `completed` | `src/core/state/workspace-kit-sqlite.ts` (`CAE_REGISTRY_DDL`, v11→v12) |
@@ -14,9 +16,9 @@ Machine-oriented continuity after a local **`git restore .workspace-kit/tasks/wo
 
 **Operator note:** With **`registryStore: sqlite`** (default), **`cae-registry-validate`** reads the kit DB. **`scripts/check-cae-registry.mjs`** idempotently seeds from **`.ai/cae/registry/*.json`** when there is **no active** registry version so **`pnpm run check`** stays green without hand-running import first.
 
-## CAE_PLAN follow-on wave (`ready`, **`phaseKey` `70`**)
+## CAE_PLAN follow-on wave (`completed`, **`phaseKey` `70`**)
 
-Created in task engine with goals, **`technicalScope`**, and **`acceptanceCriteria`**; **`metadata.caePlanRef`** points at **CAE_PLAN.md** sections. **`clientMutationId`**: **`cae-plan-enter-<id>-20260410`**.
+Created in task engine with goals, **`technicalScope`**, and **`acceptanceCriteria`**; **`metadata.caePlanRef`** points at **CAE_PLAN.md** sections. These rows are now terminal implementation provenance. **`clientMutationId`**: **`cae-plan-enter-<id>-20260410`**.
 
 | Task | CAE_PLAN | Title (abbrev.) |
 | --- | --- | --- |
@@ -44,6 +46,6 @@ Created in task engine with goals, **`technicalScope`**, and **`acceptanceCriter
 
 **Closed in batch (implementation + tests + docs):** **T894**, **T898**, **T899**, **T903**, **T904**, **T905**, **T906**, **T907**, **T908**, **T909**, **T910**, **T912**, **T914** — see git history on branch **`task/t887-cae-sqlite-registry-schema`**.
 
-**Shipped in repo (admin CLI + CAE governance gate + audit DDL + tests):** **T895**–**T897**, **T900**–**T902**, **T911**, **T913** — see **`src/core/cae/cae-registry-admin-cli.ts`**, **`.ai/cae/registry-mutation-governance.md`**, **`test/cae-registry-admin-cli.test.mjs`**. Reconcile task store with **`run-transition`** **`complete`** when delivering the phase.
+**Shipped in repo (admin CLI + CAE governance gate + audit DDL + tests):** **T895**–**T897**, **T900**–**T902**, **T911**, **T913** — see **`src/core/cae/cae-registry-admin-cli.ts`**, **`.ai/cae/registry-mutation-governance.md`**, **`test/cae-registry-admin-cli.test.mjs`**. Task-engine state has been reconciled with **`run-transition`** completion evidence.
 
 **Not re-created as new tasks** (already covered by **T887–T893**): Epic 1 **A1–A3**, Epic 2 **B1**, Epic 2 **B2** (partial), Epic 3 **C1–C3**.

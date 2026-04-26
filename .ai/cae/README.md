@@ -10,8 +10,10 @@ CAE evaluates **bounded, typed** workspace + task + command context and returns 
 
 | Doc | Purpose |
 | --- | --- |
+| **`.ai/cae/operator-golden-path.md`** | First operator path: health → registry validation → evaluation → explain/trace → conflicts → recovery. |
 | **`tasks/cae/CAE-PROGRAM-CONTEXT.md`** | Program objectives, boundaries, sequencing. |
-| **`.ai/cae/NEXT.md`** | Current follow-on plan: operator vertical slice, hardening, usability, and remaining gaps. |
+| **`.ai/cae/NEXT.md`** | Completed follow-on plan for operator vertical slice, hardening, and usability work. |
+| **`.ai/cae/phase-70-release-evidence.md`** | Phase 70 release-readiness evidence, migration/security review, and publish boundary. |
 | **`.ai/cae/registry/*.json`** | **Seed / fixtures only** — runtime registry loads from **kit SQLite** active version by default (**`kit.cae.registryStore: sqlite`**). Import: **`cae-import-json-registry`**. |
 | **`.ai/cae/evaluation-context.md`** + **`schemas/cae/evaluation-context.v1.json`** | What builders may put in context (**`T859`**). |
 | **`.ai/cae/runtime-integration.md`** | Where CAE hooks into CLI vs router (**`T849`**). |
@@ -44,7 +46,7 @@ Effective **`kit.cae.enabled`** and shadow/enforcement flags are defined with th
 
 ## Debug CAE (flowchart)
 
-See **`.ai/runbooks/cae-debug.md`**.
+Start with **`.ai/cae/operator-golden-path.md`** for the product smoke path. Use **`.ai/runbooks/cae-debug.md`** when that flow returns a structured failure.
 
 ## Related stubs
 

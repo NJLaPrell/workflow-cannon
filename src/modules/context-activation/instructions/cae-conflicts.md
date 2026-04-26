@@ -6,6 +6,7 @@ Run evaluation and return **`conflictShadowSummary`** + **`traceId`** (read-only
 
 ```
 workspace-kit run cae-conflicts '{"schemaVersion":1,"evaluationContext":{...}}'
+workspace-kit run cae-conflicts '{"schemaVersion":1,"evalMode":"shadow","evaluationContext":{"schemaVersion":1,"task":{"taskId":"T921","status":"in_progress","phaseKey":"70","tags":["cae"]},"command":{"name":"document-project","moduleId":"documentation","argvSummary":"{\"options\":{\"dryRun\":true}}"},"workspace":{"currentKitPhase":"70"},"governance":{"policyApprovalRequired":false,"approvalTierHint":"C"},"queue":{"readyQueueDepth":0},"mapSignals":null}}'
 ```
 
 ## Arguments

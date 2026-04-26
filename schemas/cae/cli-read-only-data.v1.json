@@ -105,6 +105,13 @@
         "trace": {
           "$ref": "https://workflow-cannon.dev/schemas/cae/trace.v1.json",
           "description": "Present when explain used replay path or engine echoes source trace."
+        },
+        "storage": {
+          "type": "string",
+          "enum": ["memory", "sqlite"]
+        },
+        "ephemeral": {
+          "type": "boolean"
         }
       }
     },
@@ -118,6 +125,21 @@
           "type": "boolean",
           "description": "Effective `kit.cae.enabled` after config resolution."
         },
+        "persistenceEnabled": {
+          "type": "boolean"
+        },
+        "lastEvalAt": {
+          "type": ["string", "null"],
+          "maxLength": 40
+        },
+        "lastEvalAtNote": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "registryStore": {
+          "type": "string",
+          "enum": ["json", "sqlite"]
+        },
         "registryStatus": {
           "type": "string",
           "enum": ["absent", "loading", "ok", "invalid"]
@@ -126,6 +148,26 @@
           "type": "string",
           "maxLength": 128,
           "description": "Optional fingerprint of loaded registry snapshot."
+        },
+        "artifactCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "activationCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "activeRegistryVersionId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "traceRowCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ackRowCount": {
+          "type": "integer",
+          "minimum": 0
         },
         "lastSuccessfulEvalAt": {
           "type": "string",
@@ -176,6 +218,44 @@
         "ephemeral": {
           "type": "boolean",
           "description": "True when trace is not loaded from durable store."
+        },
+        "storage": {
+          "type": "string",
+          "enum": ["memory", "sqlite"]
+        }
+      }
+    },
+    "caeListAcksData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "rows", "count"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "count": { "type": "integer", "minimum": 0 },
+        "filters": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "traceId": { "type": ["string", "null"], "maxLength": 128 },
+            "activationId": { "type": ["string", "null"], "maxLength": 128 }
+          }
+        },
+        "rows": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "traceId", "ackToken", "activationId", "satisfiedAt", "actor"],
+            "properties": {
+              "id": { "type": "integer", "minimum": 1 },
+              "traceId": { "type": "string", "minLength": 8, "maxLength": 128 },
+              "ackToken": { "type": "string", "minLength": 1, "maxLength": 128 },
+              "activationId": { "type": "string", "minLength": 3, "maxLength": 128 },
+              "satisfiedAt": { "type": "string", "maxLength": 40 },
+              "actor": { "type": "string", "minLength": 1, "maxLength": 256 }
+            }
+          }
         }
       }
     }

@@ -7,8 +7,10 @@ import {
 import { getAtPath } from "../workspace-kit-config.js";
 import { evaluateActivationBundle } from "./cae-evaluate.js";
 import { findCaeEnforcementBlock } from "./cae-enforcement-allowlist.js";
+import { openKitSqliteReadWrite } from "./cae-kit-sqlite.js";
 import { countReadyTasksInPlanningSqlite } from "./cae-queue-snapshot.js";
 import { buildEvaluationContext } from "./evaluation-context-builder.js";
+import type { TaskEngineTaskRowSlice } from "./evaluation-context-builder.js";
 import type { CaeEvaluationContext } from "./evaluation-context-types.js";
 import { loadCaeRegistryForKit } from "./cae-registry-effective.js";
 
@@ -24,6 +26,103 @@ function pickTaskIdFromCommandArgs(args: Record<string, unknown>): string | unde
   const tid = raw.trim();
   if (/^T[0-9]{3,}$/.test(tid)) return tid;
   return undefined;
+}
+
+const CAE_TASK_METADATA_ALLOWLIST = new Set([
+  "specPath",
+  "caePhase",
+  "phaseProgram",
+  "programContextPath",
+  "risk"
+]);
+
+function pickCaeTaskMetadata(raw: string | null, risk: string | null): Record<string, unknown> | null {
+  const out: Record<string, unknown> = {};
+  if (risk === "low" || risk === "medium" || risk === "high") {
+    out.risk = risk;
+  }
+  if (!raw) return Object.keys(out).length ? out : null;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return Object.keys(out).length ? out : null;
+    }
+    for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+      if (!CAE_TASK_METADATA_ALLOWLIST.has(key)) continue;
+      if (key === "risk") {
+        if (value === "low" || value === "medium" || value === "high") out.risk = value;
+        continue;
+      }
+      if (typeof value === "string") out[key] = value;
+    }
+  } catch {
+    return Object.keys(out).length ? out : null;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+function parseFeatureJson(raw: string | null): string[] | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return null;
+    const features = parsed.filter((x): x is string => typeof x === "string");
+    return features.length ? features : null;
+  } catch {
+    return null;
+  }
+}
+
+function hydrateTaskRowForCae(
+  workspacePath: string,
+  effective: Record<string, unknown>,
+  taskId: string
+): TaskEngineTaskRowSlice | null {
+  const db = openKitSqliteReadWrite(workspacePath, effective);
+  if (!db) return null;
+  try {
+    const row = db
+      .prepare(
+        `SELECT id, status, title, phase_key, metadata_json, risk, features_json
+         FROM task_engine_tasks
+         WHERE id = ? AND archived = 0`
+      )
+      .get(taskId) as
+      | {
+          id: string;
+          status: string;
+          title: string;
+          phase_key: string | null;
+          metadata_json: string | null;
+          risk: string | null;
+          features_json: string | null;
+        }
+      | undefined;
+    if (!row) return null;
+    let features: string[] | null = null;
+    try {
+      const linkRows = db
+        .prepare(`SELECT feature_id FROM task_engine_task_features WHERE task_id = ? ORDER BY feature_id ASC`)
+        .all(taskId) as { feature_id: string }[];
+      features = linkRows.length ? linkRows.map((r) => r.feature_id) : null;
+    } catch {
+      features = null;
+    }
+    const finalFeatures = features ?? parseFeatureJson(row.features_json);
+    return {
+      id: row.id,
+      status: row.status,
+      title: row.title,
+      phaseKey: row.phase_key,
+      tags: finalFeatures ?? undefined,
+      features: finalFeatures,
+      metadata: pickCaeTaskMetadata(row.metadata_json, row.risk)
+    };
+  } catch {
+    return null;
+  } finally {
+    db.close();
+  }
 }
 
 function inferApprovalTierHint(
@@ -47,8 +146,9 @@ function buildEvaluationContextForRun(
   const modId = router.describeCommand(subcommand)?.moduleId;
   const tid = pickTaskIdFromCommandArgs(commandArgs);
   const phase = String(getAtPath(effective, "kit.currentPhaseNumber") ?? "0");
+  const hydratedTask = tid ? hydrateTaskRowForCae(workspacePath, effective, tid) : null;
   return buildEvaluationContext({
-    taskRow: tid ? { id: tid, status: "ready", phaseKey: null } : null,
+    taskRow: hydratedTask ?? (tid ? { id: tid, status: "ready", phaseKey: null } : null),
     command: { name: subcommand, moduleId: modId ?? undefined, args: commandArgs },
     workspace: { currentKitPhase: phase },
     governance: {

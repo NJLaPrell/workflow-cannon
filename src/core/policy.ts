@@ -42,7 +42,8 @@ export type PolicyOperationId =
   | "checkpoints.persist"
   | "checkpoints.rewind"
   | "context-activation.cae-satisfy-ack"
-  | "context-activation.cae-import-json-registry";
+  | "context-activation.cae-import-json-registry"
+  | "context-activation.cae-record-shadow-feedback";
 
 function buildBuiltinCommandToOperation(): Record<string, PolicyOperationId | undefined> {
   const out: Record<string, PolicyOperationId | undefined> = {};

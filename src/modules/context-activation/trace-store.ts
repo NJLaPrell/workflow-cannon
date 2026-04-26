@@ -32,3 +32,8 @@ export function storeCaeSession(traceId: string, rec: CaeSessionRecord): void {
 export function getCaeSession(traceId: string): CaeSessionRecord | undefined {
   return sessions.get(traceId);
 }
+
+export function clearCaeSessionsForTests(): void {
+  sessions.clear();
+  lastEvalAtIso = null;
+}

@@ -24,7 +24,7 @@ The script reads **`planningGeneration`** from **`get-next-actions`** and passes
 
 Re-run: same `clientMutationId` per task replays idempotently (`task-create-idempotent-replay`). To re-register with new ids, delete tasks or use new mutation ids in the script.
 
-**Phase 70:** Tasks **T837–T869** are triaged to **`ready`** with `phaseKey` **`70`** and label **Phase 70 - Context Activation Engine (CAE)**. Per-task **`metadata.reviewNotes`** holds the accuracy pass (see **`get-task`**). Roadmap section: `src/modules/documentation/data/roadmap-phase-sections.md`.
+**Historical Phase 70 triage:** Tasks **T837–T869** were triaged to **`ready`** with `phaseKey` **`70`** and label **Phase 70 - Context Activation Engine (CAE)** before implementation. Current status lives in task-engine output; these original rows are completed in the Phase 70 closeout state. Per-task **`metadata.reviewNotes`** holds the accuracy pass (see **`get-task`**). Roadmap section: `src/modules/documentation/data/roadmap-phase-sections.md`.
 
 **Bulk triage script:** `scripts/cae-phase70-triage-accept.mjs` (update-task + `run-transition` **`accept`** with **`policyApproval`** + **`expectedPlanningGeneration`**). Re-run skips non-`proposed` tasks; idempotent **`clientMutationId`** per task for updates/accepts dated `20260408`.
 

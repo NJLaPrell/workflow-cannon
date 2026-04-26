@@ -52,6 +52,46 @@
     },
     {
       "schemaVersion": 1,
+      "artifactId": "cae.runbook.operator-golden-path",
+      "artifactType": "runbook",
+      "ref": { "path": ".ai/cae/operator-golden-path.md" },
+      "title": "CAE operator golden path",
+      "tags": ["cae", "golden-path", "runbook"]
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "cae.doc.shadow-mode",
+      "artifactType": "policy-doc",
+      "ref": { "path": ".ai/cae/shadow-mode.md" },
+      "title": "CAE shadow mode semantics",
+      "tags": ["cae", "shadow", "feedback"]
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "cae.doc.acknowledgement-model",
+      "artifactType": "policy-doc",
+      "ref": { "path": ".ai/cae/acknowledgement-model.md" },
+      "title": "CAE acknowledgement model",
+      "tags": ["acknowledgement", "cae", "policy"]
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "cae.doc.enforcement-lane",
+      "artifactType": "policy-doc",
+      "ref": { "path": ".ai/cae/enforcement-lane.md" },
+      "title": "CAE narrow enforcement lane",
+      "tags": ["cae", "enforcement", "policy"]
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "cae.doc.registry-mutation-governance",
+      "artifactType": "policy-doc",
+      "ref": { "path": ".ai/cae/registry-mutation-governance.md" },
+      "title": "CAE registry mutation governance",
+      "tags": ["cae", "governance", "registry"]
+    },
+    {
+      "schemaVersion": 1,
       "artifactId": "cae.policy.agent-cli-map",
       "artifactType": "policy-doc",
       "ref": { "path": ".ai/AGENT-CLI-MAP.md" },

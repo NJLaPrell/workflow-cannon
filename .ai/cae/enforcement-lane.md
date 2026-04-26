@@ -19,15 +19,21 @@
 2. **Allowlisted block** — if CAE enforcement is **on** and the command × bundle tuple matches **Allowlist § Block dispatch**, return structured failure **before** `module.execute` (same process as pilot arg validation failures: JSON **`ok: false`**, non-zero exit).
 3. **Otherwise** — dispatch unchanged; CAE may still attach **advisory** payloads via **`responseTemplate`** / side channels documented in **`T866`**.
 
+## Current posture
+
+Live enforcement remains **off by default** (`kit.cae.enforcement.enabled` must be explicitly true). Phase 70 continues to treat CAE as advisory/shadow-first; the only shipped live-block pilot is narrow, reversible, and covered by tests.
+
+Rollback is one config change: set `kit.cae.enforcement.enabled` to `false`.
+
 ## Allowlist — block dispatch (live only)
 
-Rows are **AND** predicates. All must match for a block. **Empty until `T866` seeds the first row** — this section is the **shape** contract.
+Rows are **AND** predicates. All must match for a block. **Tier C bootstrap/read-only commands remain forbidden from live CAE blocking.**
 
 | `id` | `commandName` pattern | Bundle / ack condition | Exit / `code` |
 | --- | --- | --- | --- |
-| _(none v1)_ | — | — | — |
+| `pilot-enable-plugin-when-phase70-policy-activation` | exact `enable-plugin` | bundle includes `cae.activation.policy.phase70-playbook` | `cae-enforcement-blocked` |
 
-**`T866`** MUST assign each row a stable **`id`** for remediation catalog entries.
+Any new row needs shadow-bake feedback evidence (`cae-record-shadow-feedback` / `cae-shadow-feedback-report`), a remediation path, tests, and rollback instructions before it ships.
 
 ## Allowlist — require pre-step (non-blocking JSON)
 
