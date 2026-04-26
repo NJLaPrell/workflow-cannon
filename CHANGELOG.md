@@ -8,4 +8,4 @@ This root file is intentionally pointer-only to avoid split release history.
 
 - See `docs/maintainers/CHANGELOG.md` for all release notes, migration notes, and historical entries.
 
-Latest release: **v0.66.0** (Phase 66: README tri-surface + `agent-bootstrap` + planning finalize warnings; see canonical changelog).
+Latest release: **v0.70.0** (Phase 70: CAE SQLite registry authority, governance, operator golden path, and release-readiness evidence; see canonical changelog).

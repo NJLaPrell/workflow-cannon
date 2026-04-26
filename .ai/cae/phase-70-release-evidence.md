@@ -20,8 +20,9 @@ Last local release-readiness pass in this workspace:
 
 - `pnpm exec wk run agent-bootstrap '{}'` passed on 2026-04-26; canonical phase is `70`.
 - `pnpm exec wk run list-tasks '{"phaseKey":"70","status":"ready"}'` showed only release-closeout rows before this cleanup.
-- `pnpm run build && pnpm run check && pnpm run test && pnpm run parity && node scripts/check-release-metadata.mjs && pnpm run pre-merge-gates` passed on 2026-04-26.
-- `artifacts/parity-evidence.json` recorded `overall: "pass"` at `2026-04-26T15:47:12.558Z`.
+- Release version metadata is `0.70.0`.
+- `pnpm run build && pnpm run check && pnpm run test && pnpm run parity && node scripts/check-release-metadata.mjs && pnpm run pre-merge-gates` passed on 2026-04-26 after the `0.70.0` version bump.
+- `artifacts/parity-evidence.json` recorded `overall: "pass"` at `2026-04-26T15:53:08.191Z`.
 - Test summary from the final gate run: 555 tests, 13 suites, 555 pass, 0 fail.
 
 Re-run the full gate chain if the release tip changes before publishing.
