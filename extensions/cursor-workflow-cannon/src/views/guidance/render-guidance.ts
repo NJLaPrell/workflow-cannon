@@ -23,6 +23,40 @@ function boolLabel(value: unknown): string {
   return value === true ? "on" : "off";
 }
 
+function shortTraceId(traceId: string): string {
+  if (traceId.length <= 18) return traceId;
+  return `${traceId.slice(0, 12)}...${traceId.slice(-6)}`;
+}
+
+function commandLabel(value: unknown): string {
+  const commandName = String(value ?? "").trim();
+  if (!commandName) return "Guidance check";
+  return commandName
+    .replace(/^cae-/, "Guidance ")
+    .replace(/-/g, " ")
+    .replace(/\b\w/g, (ch) => ch.toUpperCase());
+}
+
+function activationTitle(row: UnknownRecord): string {
+  const candidates = [row.title, row.activationTitle, row.sourceTitle, row.activationId];
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
+  }
+  return "Guidance item";
+}
+
+function renderRawDetails(summary: string, payload: unknown, limit: number): string {
+  const raw = JSON.stringify(payload, null, 2);
+  const shown = raw.slice(0, limit);
+  const truncated = raw.length > shown.length;
+  return `<details class="gd-card gd-raw-block">
+  <summary>${escapeHtml(summary)}</summary>
+  <p class="gd-muted">${truncated ? `Showing the first ${shown.length} of ${raw.length} characters.` : "Showing the full JSON payload."} Copy grabs exactly what is visible below.</p>
+  <button type="button" class="gd-btn" data-wc-action="guidance-copy-block">Copy shown JSON</button>
+  <pre>${escapeHtml(shown)}</pre>
+</details>`;
+}
+
 function renderFamilyCounts(counts: UnknownRecord): string {
   const parts = [
     ["Rules", counts.policy],
@@ -46,14 +80,17 @@ function renderTraceRows(rows: unknown): string {
       .map((item) => {
         const row = asRecord(item);
         const traceId = String(row.traceId ?? "");
+        const commandName = String(row.commandName ?? row.command ?? "");
+        const mode = String(row.evalMode ?? "");
+        const storage = String(row.storage ?? "");
         const counts = asRecord(row.familyCounts);
         return `<div class="gd-row">
   <div>
-    <b>${escapeHtml(traceId)}</b>
-    <div class="gd-muted">${escapeHtml(String(row.createdAt ?? ""))} · ${escapeHtml(String(row.evalMode ?? ""))} · ${escapeHtml(String(row.storage ?? ""))}</div>
+    <b>${escapeHtml(commandLabel(commandName))}</b>
+    <div class="gd-muted">${escapeHtml(String(row.createdAt ?? ""))}${mode ? ` · ${escapeHtml(mode)}` : ""}${storage ? ` · ${escapeHtml(storage)}` : ""} · trace <code>${escapeHtml(shortTraceId(traceId))}</code></div>
     <div class="gd-counts">${renderFamilyCounts(counts)}</div>
   </div>
-  <button type="button" class="gd-btn" data-wc-action="guidance-explain" data-trace-id="${escapeHtmlAttr(traceId)}">Explain</button>
+  <button type="button" class="gd-btn" data-wc-action="guidance-explain" data-trace-id="${escapeHtmlAttr(traceId)}">Review why</button>
 </div>`;
       })
       .join("") +
@@ -71,8 +108,10 @@ function renderAckRows(rows: unknown): string {
     list
       .map((item) => {
         const row = asRecord(item);
+        const title = activationTitle(row);
+        const activationId = String(row.activationId ?? "");
         return `<div class="gd-row gd-row-compact">
-  <span><b>${escapeHtml(String(row.activationId ?? ""))}</b><br><span class="gd-muted">${escapeHtml(String(row.actor ?? ""))} · ${escapeHtml(String(row.satisfiedAt ?? ""))}</span></span>
+  <span><b>${escapeHtml(title)}</b><br><span class="gd-muted">${escapeHtml(String(row.actor ?? ""))} · ${escapeHtml(String(row.satisfiedAt ?? ""))}${activationId && activationId !== title ? ` · ${escapeHtml(activationId)}` : ""}</span></span>
 </div>`;
       })
       .join("") +
@@ -93,28 +132,28 @@ function renderRecoveryCards(health: UnknownRecord, validation: UnknownRecord, r
   const cards: Array<{ title: string; body: string; action: string }> = [];
   if (health.caeEnabled !== true) {
     cards.push({
-      title: "Turn on the Guidance system",
-      body: "Guidance is disabled, so previews and recovery checks cannot use CAE context.",
-      action: "Enable kit.cae.enabled, then reload this view."
+      title: "Guidance is turned off",
+      body: "Pre-flight checks are unavailable until Guidance is enabled for this workspace.",
+      action: "For maintainers: enable kit.cae.enabled, then reload this view."
     });
   }
   if (health.registryStatus !== "ok" || validation.ok === false) {
     cards.push({
-      title: "Fix the Guidance registry",
-      body: "The active Guidance registry could not be loaded or validated, so Guidance cards may be missing.",
-      action: 'Run `workspace-kit run cae-registry-validate {"schemaVersion":1}` or import a valid active registry, then reload.'
+      title: "Guidance rules need repair",
+      body: "The active rule set could not be loaded or validated, so some cards may be missing or stale.",
+      action: 'For maintainers: run `workspace-kit run cae-registry-validate {"schemaVersion":1}` or import a valid active registry, then reload.'
     });
   }
   if (recent.available === false) {
     const disabled = recent.code === "cae-persistence-disabled";
     cards.push({
-      title: disabled ? "Enable Guidance history" : "Repair Guidance history storage",
+      title: disabled ? "Guidance history is off" : "Guidance history needs repair",
       body: disabled
-        ? "Recent checks are unavailable because CAE persistence is off. Previews can still run, but trace history will be ephemeral."
+        ? "Recent checks are unavailable because durable history is off. Previews can still run, but the history disappears after the session."
         : "Recent checks are unavailable because the workspace database could not be opened.",
       action: disabled
-        ? "Set kit.cae.persistence to true when you want durable Guidance trace history."
-        : "Run workspace-kit doctor and repair the configured planning SQLite database."
+        ? "For maintainers: set kit.cae.persistence to true when you want durable Guidance history."
+        : "For maintainers: run workspace-kit doctor and repair the configured planning SQLite database."
     });
   }
   if (cards.length === 0) return "";
@@ -151,6 +190,7 @@ export function renderGuidanceSummaryInnerHtml(payload: unknown): string {
     <h2>Guidance status</h2>
     <span class="${statusClass(healthy)}">${healthy ? "Ready" : "Needs attention"}</span>
   </div>
+  <p class="gd-muted">Guidance is a pre-flight check for workspace workflows. It is separate from agent behavior settings and does not approve sensitive commands.</p>
   <dl class="gd-meta">
     <div><dt>Guidance system</dt><dd>${escapeHtml(boolLabel(health.caeEnabled))}</dd></div>
     <div><dt>Registry</dt><dd>${escapeHtml(String(health.registryStatus ?? "unknown"))}</dd></div>
@@ -176,7 +216,7 @@ ${renderRecoveryCards(health, validation, recent)}
 <section class="gd-card">
   <div class="gd-card-head"><h2>Acknowledgements</h2><span class="gd-pill">${escapeHtml(String(acks.count ?? 0))}</span></div>
   ${renderAckRows(acks.rows)}
-  <p class="gd-muted">Acknowledgement means “I read this guidance.” It is not permission to run a sensitive command.</p>
+  <p class="gd-muted">Acknowledgement means “I read this guidance.” It is not permission to run a sensitive command and it does not change agent behavior settings.</p>
 </section>
 
 <section class="gd-card">
@@ -184,10 +224,7 @@ ${renderRecoveryCards(health, validation, recent)}
   ${renderFeedbackSummary(feedback)}
 </section>
 
-<details class="gd-card">
-  <summary>Advanced details</summary>
-  <pre>${escapeHtml(JSON.stringify(data, null, 2).slice(0, 12000))}</pre>
-</details>`;
+${renderRawDetails("Advanced details JSON", data, 12000)}`;
 }
 
 function renderGuidanceCard(cardRaw: unknown, traceId: string, commandName: string): string {
@@ -258,12 +295,13 @@ function renderPendingAcks(rows: unknown, traceId: string): string {
       const row = asRecord(item);
       const activationId = String(row.activationId ?? "");
       const ackToken = String(row.ackToken ?? "");
+      const title = activationTitle(row);
       return `<div class="gd-row">
-  <span><b>${escapeHtml(activationId)}</b><br><span class="gd-muted">${escapeHtml(String(row.strength ?? ""))}</span></span>
+  <span><b>${escapeHtml(title)}</b><br><span class="gd-muted">${escapeHtml(String(row.strength ?? ""))}${activationId && activationId !== title ? ` · ${escapeHtml(activationId)}` : ""}</span></span>
   <button type="button" class="gd-btn gd-primary" data-wc-action="guidance-ack" data-trace-id="${escapeHtmlAttr(traceId)}" data-activation-id="${escapeHtmlAttr(activationId)}" data-ack-token="${escapeHtmlAttr(ackToken)}">Acknowledge</button>
 </div>`;
     })
-    .join("")}<p class="gd-muted">This records “I read this guidance.” It does not grant policy approval for another command.</p></section>`;
+    .join("")}<p class="gd-muted">This records “I read this guidance.” It does not grant policy approval for another command or change agent behavior settings.</p></section>`;
 }
 
 export function renderGuidancePreviewInnerHtml(payload: unknown): string {
@@ -279,11 +317,13 @@ export function renderGuidancePreviewInnerHtml(payload: unknown): string {
   const commandName = String(asRecord(data.evaluationContext).command ? asRecord(asRecord(data.evaluationContext).command).name ?? "" : "");
   const cards = asRecord(data.guidanceCards);
   const counts = asRecord(data.familyCounts);
+  const totalCards = Number(counts.policy ?? 0) + Number(counts.think ?? 0) + Number(counts.do ?? 0) + Number(counts.review ?? 0);
   return `<section class="gd-card">
   <div class="gd-card-head">
-    <h2>Guidance that would apply</h2>
+    <h2>Preview summary</h2>
     <span class="gd-pill">${escapeHtml(String(data.modeLabel ?? data.evalMode ?? "Preview mode"))}</span>
   </div>
+  <p>${totalCards > 0 ? `Review ${escapeHtml(String(totalCards))} Guidance item${totalCards === 1 ? "" : "s"} before running this workflow.` : "No special Guidance items matched this workflow."}</p>
   <div class="gd-counts">${renderFamilyCounts(counts)}</div>
   <p class="gd-muted">Trace <code>${escapeHtml(traceId)}</code>${data.ephemeral ? " · stored in memory only" : " · stored in workspace database"}</p>
 </section>
@@ -293,10 +333,7 @@ ${renderFamilySection("Rules to follow", cards.policy, traceId, commandName)}
 ${renderFamilySection("Things to consider", cards.think, traceId, commandName)}
 ${renderFamilySection("Suggested steps", cards.do, traceId, commandName)}
 ${renderFamilySection("Review checks", cards.review, traceId, commandName)}
-<details class="gd-card">
-  <summary>Raw result</summary>
-  <pre>${escapeHtml(JSON.stringify(data, null, 2).slice(0, 16000))}</pre>
-</details>`;
+${renderRawDetails("Raw preview JSON", data, 16000)}`;
 }
 
 function firstTraceEventPayload(trace: UnknownRecord, eventType: string): UnknownRecord {
@@ -325,7 +362,7 @@ export function renderGuidanceTraceDetailInnerHtml(payload: unknown): string {
   const traceFetchMissing = traceFetch.ok === false;
   return `<section class="gd-card">
   <div class="gd-card-head">
-    <h2>Trace detail</h2>
+    <h2>Why this Guidance appeared</h2>
     <span class="gd-pill">${escapeHtml(String(explainData.storage ?? "memory"))}${explainData.ephemeral ? " · ephemeral" : ""}</span>
   </div>
   <p>${escapeHtml(String(explanation.summaryText ?? "No explanation summary available."))}</p>
@@ -338,11 +375,8 @@ export function renderGuidanceTraceDetailInnerHtml(payload: unknown): string {
   </dl>
   <div class="gd-counts">${renderFamilyCounts(counts)}</div>
 </section>
-${traceFetchMissing ? `<section class="gd-card gd-warn-card"><h2>Stored trace not found</h2><p>${escapeHtml(String(traceFetch.message ?? traceFetch.code ?? "Trace is no longer available in the durable store."))}</p><p class="gd-muted">Run a fresh Guidance preview with CAE persistence enabled to capture a new durable trace.</p></section>` : ""}
-<details class="gd-card">
-  <summary>Raw trace JSON</summary>
-  <pre>${escapeHtml(JSON.stringify({ explain, traceFetch }, null, 2).slice(0, 20000))}</pre>
-</details>`;
+${traceFetchMissing ? `<section class="gd-card gd-warn-card"><h2>Stored check not found</h2><p>${escapeHtml(String(traceFetch.message ?? traceFetch.code ?? "This check is no longer available in the durable store."))}</p><p class="gd-muted">Run a fresh Guidance preview with history enabled to capture a new durable check.</p></section>` : ""}
+${renderRawDetails("Raw trace JSON", { explain, traceFetch }, 20000)}`;
 }
 
 export function renderGuidanceActionResultInnerHtml(payload: unknown): string {
@@ -362,9 +396,6 @@ export function renderGuidanceActionResultInnerHtml(payload: unknown): string {
       ? `<p class="gd-muted">Result code: <code>${escapeHtml(String(result.code))}</code></p>`
       : ""
   }
-  <details>
-    <summary>Raw result</summary>
-    <pre>${escapeHtml(JSON.stringify(result, null, 2).slice(0, 12000))}</pre>
-  </details>
+  ${renderRawDetails("Raw action result JSON", result, 12000)}
 </section>`;
 }
