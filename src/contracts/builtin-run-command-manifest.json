@@ -198,6 +198,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "set-current-phase",
+    "file": "set-current-phase.md",
+    "description": "Set canonical workspace current phase through SQLite first, with config hint and export verification.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "archive-task",
     "file": "archive-task.md",
     "description": "Archive a task without destructive deletion.",

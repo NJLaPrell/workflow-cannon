@@ -714,6 +714,7 @@ test("taskEngineModule registration includes all instruction entries", () => {
   assert.ok(names.includes("get-wishlist"));
   assert.ok(names.includes("update-wishlist"));
   assert.ok(names.includes("update-workspace-phase-snapshot"));
+  assert.ok(names.includes("set-current-phase"));
   assert.ok(names.includes("convert-wishlist"));
   assert.ok(names.includes("migrate-task-persistence"));
   assert.ok(names.includes("persist-planning-execution-drafts"));
@@ -721,6 +722,105 @@ test("taskEngineModule registration includes all instruction entries", () => {
 
 test("taskEngineModule passes ModuleRegistry validation", () => {
   assert.doesNotThrow(() => new ModuleRegistry([taskEngineModule]));
+});
+
+test("set-current-phase dry run reports before/after without writes", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+
+  const result = await taskEngineModule.onCommand(
+    { name: "set-current-phase", args: { currentKitPhase: "72", nextKitPhase: "73", dryRun: true } },
+    ctx
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "set-current-phase-dry-run");
+  assert.equal(result.data.dryRun, true);
+  assert.equal(result.data.workspaceStatusBefore.workspaceRevision, 0);
+  assert.equal(result.data.workspaceStatusAfter.currentKitPhase, "72");
+
+  const status = await taskEngineModule.onCommand({ name: "get-workspace-status", args: {} }, ctx);
+  assert.equal(status.ok, true);
+  assert.equal(status.data.workspaceStatus.workspaceRevision, 0);
+  assert.equal(status.data.workspaceStatus.currentKitPhase, null);
+});
+
+test("set-current-phase writes SQLite first, config hint, and export", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+
+  const result = await taskEngineModule.onCommand(
+    {
+      name: "set-current-phase",
+      args: {
+        currentKitPhase: "72",
+        nextKitPhase: "73",
+        currentPhaseLabel: "Phase 72 — Phase-control ergonomics",
+        activeFocus: "phase-control",
+        expectedWorkspaceRevision: 0,
+        clientMutationId: "phase-72-test"
+      }
+    },
+    ctx
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "set-current-phase-updated");
+  assert.equal(result.data.beforeRevision, 0);
+  assert.equal(result.data.afterRevision, 1);
+  assert.equal(result.data.workspaceStatusAfter.currentKitPhase, "72");
+  assert.equal(result.data.workspaceStatusAfter.nextKitPhase, "73");
+  assert.equal(result.data.workspaceStatusAfter.activeFocus, "phase-control");
+  assert.equal(result.data.canonicalPhase.canonicalPhaseKey, "72");
+  assert.equal(result.data.canonicalPhase.configMatchesWorkspaceStatus, true);
+  assert.equal(result.data.exportStatus.written, true);
+
+  const config = JSON.parse(await readFile(path.join(workspace, ".workspace-kit/config.json"), "utf8"));
+  assert.equal(config.kit.currentPhaseNumber, 72);
+  assert.equal(config.kit.currentPhaseLabel, "Phase 72 — Phase-control ergonomics");
+  const exportBody = await readFile(
+    path.join(workspace, "docs/maintainers/data/workspace-kit-status.db-export.yaml"),
+    "utf8"
+  );
+  assert.match(exportBody, /current_kit_phase: "72"/);
+});
+
+test("set-current-phase rejects stale workspace revision", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+
+  const result = await taskEngineModule.onCommand(
+    { name: "set-current-phase", args: { currentKitPhase: "72", expectedWorkspaceRevision: 99 } },
+    ctx
+  );
+
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "workspace-revision-mismatch");
+});
+
+test("set-current-phase idempotent replay does not duplicate audit events", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const args = {
+    currentKitPhase: "72",
+    nextKitPhase: "73",
+    expectedWorkspaceRevision: 0,
+    clientMutationId: "phase-72-replay"
+  };
+
+  const first = await taskEngineModule.onCommand({ name: "set-current-phase", args }, ctx);
+  assert.equal(first.ok, true);
+  const replay = await taskEngineModule.onCommand(
+    { name: "set-current-phase", args: { currentKitPhase: "72", nextKitPhase: "73", clientMutationId: "phase-72-replay" } },
+    ctx
+  );
+  assert.equal(replay.ok, true);
+  assert.equal(replay.code, "set-current-phase-idempotent-replay");
+
+  const history = await taskEngineModule.onCommand({ name: "workspace-status-history", args: { limit: 10 } }, ctx);
+  assert.equal(history.ok, true);
+  const setEvents = history.data.events.filter((event) => event.command === "set-current-phase");
+  assert.equal(setEvents.length, 1);
 });
 
 test("taskEngineModule onCommand list-tasks returns empty on fresh store", async () => {

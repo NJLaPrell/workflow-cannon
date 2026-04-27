@@ -32,6 +32,7 @@ import { runUpdateWorkspacePhaseSnapshot } from "./update-workspace-phase-snapsh
 import {
   runExportWorkspaceStatus,
   runGetWorkspaceStatus,
+  runSetCurrentPhase,
   runUpdateWorkspaceStatus,
   runWorkspaceStatusHistory
 } from "./workspace-status-commands-runtime.js";
@@ -241,6 +242,9 @@ export const taskEngineModule: WorkflowModule = {
     }
     if (command.name === "update-workspace-status") {
       return runUpdateWorkspaceStatus(ctx, args as Record<string, unknown>);
+    }
+    if (command.name === "set-current-phase") {
+      return runSetCurrentPhase(ctx, args as Record<string, unknown>);
     }
     if (command.name === "export-workspace-status") {
       return runExportWorkspaceStatus(ctx, args as Record<string, unknown>);
