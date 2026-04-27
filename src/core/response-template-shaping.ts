@@ -117,7 +117,7 @@ export function resolveContextualResponseTemplateId(
     }
     return undefined;
   }
-  if (commandName === "update-workspace-phase-snapshot") {
+  if (commandName === "set-current-phase" || commandName === "update-workspace-phase-snapshot") {
     if (args.dryRun === true) {
       return undefined;
     }

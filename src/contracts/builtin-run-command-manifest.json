@@ -184,7 +184,7 @@
     "moduleId": "task-engine",
     "name": "update-workspace-phase-snapshot",
     "file": "update-workspace-phase-snapshot.md",
-    "description": "Update current_kit_phase and/or next_kit_phase in docs/maintainers/data/workspace-kit-status.yaml (atomic write).",
+    "description": "Compatibility shim for current_kit_phase and/or next_kit_phase; prefer set-current-phase for SQLite-first rollover.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },

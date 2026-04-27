@@ -24,6 +24,17 @@ test("resolveContextualResponseTemplateId: update-workspace-phase-snapshot", () 
   );
 });
 
+test("resolveContextualResponseTemplateId: set-current-phase", () => {
+  assert.equal(resolveContextualResponseTemplateId("set-current-phase", { currentKitPhase: "58" }), "phase_ship");
+  assert.equal(
+    resolveContextualResponseTemplateId("set-current-phase", {
+      currentKitPhase: "58",
+      dryRun: true
+    }),
+    undefined
+  );
+});
+
 test("resolveContextualResponseTemplateId: generate-document ROADMAP / FEATURE-TAXONOMY", () => {
   assert.equal(
     resolveContextualResponseTemplateId("generate-document", {
