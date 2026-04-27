@@ -10,6 +10,21 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 (none)
 
+## [0.72.0] - 2026-04-27
+
+Phase 72 — **Phase-control ergonomics** (**`T942`–`T946`**): SQLite-first workspace phase control with **`set-current-phase`**, read-only **`phase-status`** for canonical phase / drift / task counts, explicit next-phase task creation options on **`persist-planning-execution-drafts`**, reconciled agent guidance for workspace phase authority, and **`update-workspace-phase-snapshot`** demoted to a compatibility shim that updates SQLite/export before legacy YAML.
+
+### Added
+
+- **`set-current-phase`** command for retry-safe, SQLite-first phase rollover with config hint and export verification.
+- **`phase-status`** command for read-only canonical phase, drift, export freshness, and optional phase task counts.
+- **`persist-planning-execution-drafts`** target phase/status options for explicit next-phase task creation.
+
+### Changed
+
+- Agent guidance now treats **`kit_workspace_status`** as canonical when available and **`kit.currentPhaseNumber`** as a bootstrap / UX hint.
+- **`update-workspace-phase-snapshot`** remains compatible but no longer teaches or performs a YAML-first happy path.
+
 ## [0.71.0] - 2026-04-26
 
 Phase 71 — **CAE Guidance dashboard MVP** (**`T934`–`T941`**): Guidance view polish for task/workflow picker UX, persisted UI-friendly trace summaries, trace detail panels, structured `commandArgs`, acknowledgement/feedback result cards, conflict and match-reason copy, degraded-state recovery cards, and release-readiness smoke evidence. Kit SQLite bumps to **user_version 14** with additive nullable `cae_trace_snapshots.summary_json`; existing trace rows remain readable through derived-summary fallback.
