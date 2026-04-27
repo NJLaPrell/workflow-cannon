@@ -155,6 +155,8 @@ const MUTABLE_TASK_FIELDS = new Set([
   "features"
 ]);
 
+const PHASE_KEY_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
+
 function strictValidationError(
   store: TaskStore,
   effectiveConfig: Record<string, unknown> | undefined
@@ -696,6 +698,28 @@ export const taskEngineModule: WorkflowModule = {
         typeof args.planningType === "string" && args.planningType.trim().length > 0
           ? args.planningType.trim()
           : undefined;
+      const targetPhaseKey =
+        typeof args.targetPhaseKey === "string" && args.targetPhaseKey.trim().length > 0
+          ? args.targetPhaseKey.trim()
+          : undefined;
+      if (targetPhaseKey && !PHASE_KEY_RE.test(targetPhaseKey)) {
+        return {
+          ok: false,
+          code: "invalid-task-schema",
+          message: "targetPhaseKey must be non-empty; letters, digits, dot, underscore, hyphen; max 64 chars"
+        };
+      }
+      const targetPhase =
+        typeof args.targetPhase === "string" && args.targetPhase.trim().length > 0
+          ? args.targetPhase.trim()
+          : undefined;
+      const desiredStatus =
+        args.desiredStatus === "ready" || args.desiredStatus === "proposed"
+          ? (args.desiredStatus as "ready" | "proposed")
+          : undefined;
+      if (args.desiredStatus !== undefined && desiredStatus === undefined) {
+        return { ok: false, code: "invalid-task-schema", message: "desiredStatus must be 'proposed' or 'ready'" };
+      }
       const bulkClientMutationId = readIdempotencyValue(args);
       const timestamp = nowIso();
       const pgBulk = planningGenPolicyGate(
@@ -714,6 +738,7 @@ export const taskEngineModule: WorkflowModule = {
           type: t.type,
           status: t.status,
           phase: t.phase,
+          phaseKey: t.phaseKey ?? null,
           approach: t.approach,
           technicalScope: t.technicalScope ?? [],
           acceptanceCriteria: t.acceptanceCriteria ?? [],
@@ -733,7 +758,8 @@ export const taskEngineModule: WorkflowModule = {
             remediation: { instructionPath: CLI_REMEDIATION_INSTRUCTIONS.persistPlanningExecutionDrafts }
           };
         }
-        const bt = buildTaskFromConversionPayload(row as Record<string, unknown>, timestamp);
+        const rowObj = row as Record<string, unknown>;
+        const bt = buildTaskFromConversionPayload(rowObj, timestamp);
         if (!bt.ok) {
           return {
             ok: false,
@@ -743,6 +769,22 @@ export const taskEngineModule: WorkflowModule = {
           };
         }
         let task = bt.task;
+        const rowPhaseKey =
+          typeof rowObj.phaseKey === "string" && rowObj.phaseKey.trim().length > 0 ? rowObj.phaseKey.trim() : undefined;
+        const rowStatus = rowObj.status === "ready" || rowObj.status === "proposed" ? rowObj.status : undefined;
+        if (rowPhaseKey && !PHASE_KEY_RE.test(rowPhaseKey)) {
+          return {
+            ok: false,
+            code: "invalid-task-schema",
+            message: `Task '${task.id}' phaseKey must be non-empty; letters, digits, dot, underscore, hyphen; max 64 chars`
+          };
+        }
+        task = {
+          ...task,
+          status: (desiredStatus ?? rowStatus ?? task.status) as TaskStatus,
+          phaseKey: targetPhaseKey ?? rowPhaseKey ?? task.phaseKey,
+          phase: targetPhaseKey ? (targetPhase ?? `Phase ${targetPhaseKey}`) : task.phase
+        };
         const nextMeta: Record<string, unknown> = { ...(task.metadata ?? {}) };
         if (planRef) {
           nextMeta.planRef = planRef;

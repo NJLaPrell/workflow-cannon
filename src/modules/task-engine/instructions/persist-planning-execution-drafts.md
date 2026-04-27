@@ -1,6 +1,6 @@
 # persist-planning-execution-drafts
 
-Materialize multiple **proposed** execution tasks in **one** SQLite transaction. Each row in `tasks` uses the same shape as **`convert-wishlist`** `tasks[]` (see **`buildTaskFromConversionPayload`**): `id` (`T###`), `title`, `phase`, `approach`, non-empty `technicalScope`, non-empty `acceptanceCriteria`, optional `type`, `priority`, `dependsOn`, `unblocks`.
+Materialize multiple execution tasks in **one** SQLite transaction. Each row in `tasks` uses the same shape as **`convert-wishlist`** `tasks[]` (see **`buildTaskFromConversionPayload`**): `id` (`T###`), `title`, `phase`, `approach`, non-empty `technicalScope`, non-empty `acceptanceCriteria`, optional `type`, `priority`, `dependsOn`, `unblocks`, `phaseKey`, and `status` (`proposed` or `ready`).
 
 Typical flow: `build-plan` with `outputMode:"tasks"`, `finalize:true`, and `executionTaskDrafts` → response code `planning-multi-task-decomposition-preview` → this command with `tasks` copied from `data.taskOutputs` (and **`expectedPlanningGeneration`** when `tasks.planningGenerationPolicy` is `require`).
 
@@ -10,7 +10,7 @@ Typical flow: `build-plan` with `outputMode:"tasks"`, `finalize:true`, and `exec
 workspace-kit run persist-planning-execution-drafts '{"tasks":[...],"expectedPlanningGeneration":<n>}'
 ```
 
-Optional: `planRef`, `planningType` (merged into each task’s `metadata` / `planningProvenance`), `actor`, `clientMutationId` (per-task idempotency key `clientMutationId::<taskId>` on `create-task` mutation log). **Idempotent replay** requires the same `tasks` rows **and** the same optional `planRef` / `planningType` so payload digests match.
+Optional: `planRef`, `planningType` (merged into each task’s `metadata` / `planningProvenance`), `targetPhaseKey`, `targetPhase`, `desiredStatus`, `actor`, `clientMutationId` (per-task idempotency key `clientMutationId::<taskId>` on `create-task` mutation log). **Idempotent replay** requires the same task payload, phase/status options, and optional `planRef` / `planningType` so payload digests match.
 
 ## Arguments
 
@@ -20,8 +20,19 @@ Optional: `planRef`, `planningType` (merged into each task’s `metadata` / `pla
 | `expectedPlanningGeneration` | When policy is `require` | Same optimistic concurrency token as other mutators. |
 | `planRef` | No | Stored on each task `metadata.planRef` when set. |
 | `planningType` | No | Stored under `metadata.planningProvenance.planningType` with `source: persist-planning-execution-drafts`. |
+| `targetPhaseKey` | No | Overrides every created task’s `phaseKey` for explicit next-phase task creation. |
+| `targetPhase` | No | Label to pair with `targetPhaseKey`; defaults to `Phase <targetPhaseKey>` when omitted. |
+| `desiredStatus` | No | Overrides every created task’s initial status; must be `proposed` or `ready`. Row-level `status` is also accepted when no override is provided. |
 | `clientMutationId` | No | Enables idempotent replay when all tasks were already created with the same composed keys and payload digests. |
 | `actor` | No | Mutation log actor. |
+
+## Phase movement boundary
+
+Use **`set-current-phase`** only to move the workspace-level phase snapshot. It never creates task rows. Use this command when the operator explicitly asks to open or draft tasks for a target phase:
+
+```bash
+workspace-kit run persist-planning-execution-drafts '{"targetPhaseKey":"73","targetPhase":"Phase 73","desiredStatus":"ready","planRef":"planning:new-feature:phase-73","tasks":[...],"expectedPlanningGeneration":<n>,"clientMutationId":"phase-73-task-open"}'
+```
 
 ## Response codes
 
