@@ -21,6 +21,21 @@ type WorkflowChoice = {
   moduleId: string;
   description: string;
   curated: boolean;
+  label: string;
+};
+
+const WORKFLOW_INTENT_LABELS: Record<string, string> = {
+  "get-next-actions": "Find the next task",
+  "list-tasks": "Review the task queue",
+  "dashboard-summary": "Refresh dashboard context",
+  "queue-health": "Check queue health",
+  "run-transition": "Change task status",
+  "cae-dashboard-summary": "Reload Guidance status",
+  "cae-guidance-preview": "Preview Guidance",
+  "cae-recent-traces": "Review recent checks",
+  "cae-explain": "Explain a Guidance check",
+  "generate-document": "Generate one document",
+  "document-project": "Regenerate project docs"
 };
 
 const CURATED_WORKFLOW_NAMES = new Set([
@@ -67,7 +82,8 @@ function workflowChoiceFromManifestEntry(raw: unknown): WorkflowChoice | null {
     name,
     moduleId: typeof entry.moduleId === "string" ? entry.moduleId : "",
     description: typeof entry.description === "string" ? entry.description : "",
-    curated: CURATED_WORKFLOW_NAMES.has(name)
+    curated: CURATED_WORKFLOW_NAMES.has(name),
+    label: WORKFLOW_INTENT_LABELS[name] ?? name
   };
 }
 
@@ -192,7 +208,13 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
       }
       for (const name of CURATED_WORKFLOW_NAMES) {
         if (!byName.has(name)) {
-          byName.set(name, { name, moduleId: "", description: "Common workflow", curated: true });
+          byName.set(name, {
+            name,
+            moduleId: "",
+            description: "Common workflow",
+            curated: true,
+            label: WORKFLOW_INTENT_LABELS[name] ?? name
+          });
         }
       }
       return [...byName.values()].sort((a, b) => {
@@ -204,7 +226,8 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
         name,
         moduleId: "",
         description: "Common workflow",
-        curated: true
+        curated: true,
+        label: WORKFLOW_INTENT_LABELS[name] ?? name
       }));
     }
   }
@@ -332,6 +355,11 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
     var el = document.getElementById(id);
     if (el) el.value = value || '';
   }
+  function workflowLabel(workflow) {
+    if (!workflow) return '';
+    var label = workflow.label || workflow.name || '';
+    return workflow.name && workflow.name !== label ? String(label) + ' (' + String(workflow.name) + ')' : String(label);
+  }
   function renderChoices(tasks, workflows) {
     if (taskSelect) {
       taskSelect.textContent = '';
@@ -343,15 +371,15 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
     }
     if (workflowSelect) {
       workflowSelect.textContent = '';
-      workflowSelect.appendChild(option('Manual entry', ''));
+      workflowSelect.appendChild(option('Choose what you are about to do', ''));
       (Array.isArray(workflows) ? workflows : []).filter(function(w) { return w && w.curated; }).forEach(function(w) {
-        workflowSelect.appendChild(option(String(w.name || ''), String(w.name || ''), String(w.description || '')));
+        workflowSelect.appendChild(option(workflowLabel(w), String(w.name || ''), String(w.description || '')));
       });
     }
     if (workflowList) {
       workflowList.textContent = '';
       (Array.isArray(workflows) ? workflows : []).forEach(function(w) {
-        var opt = option(String(w.name || ''), String(w.name || ''), String(w.moduleId || '') + (w.description ? ' — ' + String(w.description) : ''));
+        var opt = option(workflowLabel(w), String(w.name || ''), String(w.moduleId || '') + (w.description ? ' — ' + String(w.description) : ''));
         workflowList.appendChild(opt);
       });
     }
@@ -389,6 +417,34 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
       evalMode: live && live.checked ? 'live' : 'shadow'
     });
   }
+  function copyVisibleJson(button) {
+    var block = button && button.closest ? button.closest('.gd-raw-block') : null;
+    var pre = block ? block.querySelector('pre') : null;
+    var text = pre ? pre.textContent || '' : '';
+    if (!text) {
+      showStatus('err', 'No JSON block found to copy.');
+      return;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function() {
+        showStatus('ok', 'Copied visible JSON.');
+      }, function(err) {
+        showStatus('err', 'Copy failed: ' + (err && err.message ? err.message : String(err)));
+      });
+      return;
+    }
+    var area = document.createElement('textarea');
+    area.value = text;
+    document.body.appendChild(area);
+    area.select();
+    try {
+      document.execCommand('copy');
+      showStatus('ok', 'Copied visible JSON.');
+    } catch (err) {
+      showStatus('err', 'Copy failed: ' + (err && err.message ? err.message : String(err)));
+    }
+    document.body.removeChild(area);
+  }
   if (taskSelect) taskSelect.addEventListener('change', function() { setInputValue('gd-task-id', taskSelect.value || ''); });
   if (workflowSelect) workflowSelect.addEventListener('change', function() { if (workflowSelect.value) setInputValue('gd-command-name', workflowSelect.value); });
   document.getElementById('gd-refresh') && document.getElementById('gd-refresh').addEventListener('click', requestLoad);
@@ -420,6 +476,10 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
         activationId: t.getAttribute('data-activation-id') || '',
         commandName: t.getAttribute('data-command-name') || ''
       });
+      return;
+    }
+    if (act === 'guidance-copy-block') {
+      copyVisibleJson(t);
     }
   });
   window.addEventListener('message', function(ev) {
@@ -430,7 +490,7 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
     }
     if (m && m.type === 'setSummary' && summaryRoot && typeof m.html === 'string') {
       summaryRoot.innerHTML = m.html;
-      showStatus('info', 'Guidance summary loaded.');
+      showStatus('info', 'Guidance status loaded.');
       return;
     }
     if (m && m.type === 'setChoices') {
@@ -500,32 +560,45 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
 </head>
 <body>
   <h1>Guidance</h1>
-  <p class="gd-muted">Context Guidance powered by CAE. Preview what rules, steps, and checks apply before you run a workflow.</p>
+  <p class="gd-muted">Preview the workspace rules, steps, and review checks that apply before you run a workflow. This is separate from agent behavior settings and from policy approval.</p>
   <div class="gd-toolbar">
     <button type="button" class="gd-btn gd-primary" id="gd-refresh">Reload status</button>
   </div>
+  <div id="guidance-summary-root">
+    <section class="gd-card">
+      <div class="gd-card-head">
+        <h2>Guidance status</h2>
+        <span class="gd-pill">Loading</span>
+      </div>
+      <p class="gd-muted">Guidance status is loading. Recovery steps will appear here before any pre-flight controls if attention is needed.</p>
+    </section>
+  </div>
+  <div id="gd-status" class="gd-status gd-status-info" role="status">Guidance status is loading.</div>
   <section class="gd-card">
     <h2>Check current context</h2>
-    <p class="gd-muted">Pick a common path first, or use the manual fields when you need to go off-road.</p>
+    <p class="gd-muted">Step 1: choose the task. Step 2: choose what you are about to do. Step 3: check Guidance before running the workflow.</p>
     <div class="gd-toolbar">
-      <div class="gd-field"><label for="gd-task-select">Task picker</label><select id="gd-task-select" class="gd-input"><option value="">Loading tasks…</option></select></div>
-      <div class="gd-field"><label for="gd-workflow-select">Common workflows</label><select id="gd-workflow-select" class="gd-input"><option value="">Loading workflows…</option></select></div>
+      <div class="gd-field"><label for="gd-task-select">1. Task</label><select id="gd-task-select" class="gd-input"><option value="">Loading tasks…</option></select></div>
+      <div class="gd-field"><label for="gd-workflow-select">2. Intent</label><select id="gd-workflow-select" class="gd-input"><option value="">Loading workflows…</option></select></div>
     </div>
     <div class="gd-toolbar">
       <div class="gd-field"><label for="gd-task-id">Task</label><input id="gd-task-id" class="gd-input" placeholder="T921 (optional)" /></div>
-      <div class="gd-field"><label for="gd-command-name">Command or workflow</label><input id="gd-command-name" class="gd-input" list="gd-workflow-options" value="get-next-actions" /><datalist id="gd-workflow-options"></datalist></div>
-      <div class="gd-field"><label for="gd-module-id">Module</label><input id="gd-module-id" class="gd-input" placeholder="optional" /></div>
+      <div class="gd-field"><label for="gd-command-name">Workflow</label><input id="gd-command-name" class="gd-input" list="gd-workflow-options" value="get-next-actions" /><datalist id="gd-workflow-options"></datalist></div>
     </div>
-    <div class="gd-field"><label for="gd-command-args">Command args JSON</label><textarea id="gd-command-args" class="gd-input" rows="4" placeholder='optional JSON object, e.g. {"status":"ready"}'></textarea></div>
-    <div class="gd-field"><label for="gd-argv-summary">Argv summary</label><input id="gd-argv-summary" class="gd-input" placeholder="optional advanced text override" /></div>
-    <p><label><input type="checkbox" id="gd-mode-live" /> Applies now (advanced). Default is Preview mode.</label></p>
-    <button type="button" class="gd-btn gd-primary" id="gd-preview">Check current context</button>
+    <details>
+      <summary>Advanced options</summary>
+      <div class="gd-toolbar">
+        <div class="gd-field"><label for="gd-module-id">Module</label><input id="gd-module-id" class="gd-input" placeholder="optional" /></div>
+        <div class="gd-field"><label for="gd-argv-summary">Argv summary</label><input id="gd-argv-summary" class="gd-input" placeholder="optional advanced text override" /></div>
+      </div>
+      <div class="gd-field"><label for="gd-command-args">Command args JSON</label><textarea id="gd-command-args" class="gd-input" rows="4" placeholder='optional JSON object, e.g. {"status":"ready"}'></textarea></div>
+      <p><label><input type="checkbox" id="gd-mode-live" /> Live evaluation mode. This evaluates current Guidance context; it does not run the workflow.</label></p>
+    </details>
+    <button type="button" class="gd-btn gd-primary" id="gd-preview">3. Check Guidance</button>
   </section>
-  <div id="gd-status" class="gd-status gd-status-info" role="status"></div>
   <div id="guidance-action-result-root"></div>
   <div id="guidance-trace-detail-root"></div>
   <div id="guidance-preview-root"></div>
-  <div id="guidance-summary-root"></div>
   <script>${bootstrap}</script>
 </body>
 </html>`;
