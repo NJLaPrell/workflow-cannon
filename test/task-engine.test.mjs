@@ -92,6 +92,12 @@ async function seedSqliteStore(workspace, fn) {
   await store.save();
 }
 
+async function writeWorkspaceStatusYaml(workspace, lines) {
+  const yamlDir = path.join(workspace, "docs", "maintainers", "data");
+  await mkdir(yamlDir, { recursive: true });
+  await writeFile(path.join(yamlDir, "workspace-kit-status.yaml"), [...lines, ""].join("\n"), "utf8");
+}
+
 // ---------------------------------------------------------------------------
 // T184: Transition map
 // ---------------------------------------------------------------------------
@@ -822,6 +828,84 @@ test("set-current-phase idempotent replay does not duplicate audit events", asyn
   assert.equal(history.ok, true);
   const setEvents = history.data.events.filter((event) => event.command === "set-current-phase");
   assert.equal(setEvents.length, 1);
+});
+
+test("update-workspace-phase-snapshot delegates current phase changes through set-current-phase", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace, { kit: { currentPhaseNumber: 71 } });
+  await writeWorkspaceStatusYaml(workspace, ['current_kit_phase: "71"', 'next_kit_phase: "72"']);
+
+  const result = await taskEngineModule.onCommand(
+    { name: "update-workspace-phase-snapshot", args: { currentKitPhase: "72", nextKitPhase: "73" } },
+    ctx
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "workspace-phase-snapshot-updated");
+  assert.equal(result.data.delegatedCommand.name, "set-current-phase");
+  assert.match(result.data.compatibilityWarning, /compatibility shim/);
+
+  const status = await taskEngineModule.onCommand({ name: "get-workspace-status", args: {} }, ctx);
+  assert.equal(status.data.workspaceStatus.currentKitPhase, "72");
+  assert.equal(status.data.workspaceStatus.nextKitPhase, "73");
+  const config = JSON.parse(await readFile(path.join(workspace, ".workspace-kit/config.json"), "utf8"));
+  assert.equal(config.kit.currentPhaseNumber, 72);
+  const exportBody = await readFile(
+    path.join(workspace, "docs/maintainers/data/workspace-kit-status.db-export.yaml"),
+    "utf8"
+  );
+  assert.match(exportBody, /current_kit_phase: "72"/);
+  const compatibilityYaml = await readFile(path.join(workspace, "docs/maintainers/data/workspace-kit-status.yaml"), "utf8");
+  assert.match(compatibilityYaml, /current_kit_phase: "72"/);
+  assert.match(compatibilityYaml, /next_kit_phase: "73"/);
+});
+
+test("update-workspace-phase-snapshot next-only compatibility path updates SQLite before YAML", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+  await writeWorkspaceStatusYaml(workspace, ['current_kit_phase: "72"', 'next_kit_phase: "73"']);
+  await taskEngineModule.onCommand(
+    { name: "set-current-phase", args: { currentKitPhase: "72", nextKitPhase: "73", expectedWorkspaceRevision: 0 } },
+    ctx
+  );
+
+  const result = await taskEngineModule.onCommand(
+    { name: "update-workspace-phase-snapshot", args: { nextKitPhase: "74" } },
+    ctx
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.delegatedCommand, null);
+  assert.equal(result.data.sqliteMirror.beforeRevision, 1);
+  assert.equal(result.data.sqliteMirror.afterRevision, 2);
+  assert.equal(result.data.exportRelativePath, "docs/maintainers/data/workspace-kit-status.db-export.yaml");
+  const status = await taskEngineModule.onCommand({ name: "get-workspace-status", args: {} }, ctx);
+  assert.equal(status.data.workspaceStatus.currentKitPhase, "72");
+  assert.equal(status.data.workspaceStatus.nextKitPhase, "74");
+  const compatibilityYaml = await readFile(path.join(workspace, "docs/maintainers/data/workspace-kit-status.yaml"), "utf8");
+  assert.match(compatibilityYaml, /current_kit_phase: "72"/);
+  assert.match(compatibilityYaml, /next_kit_phase: "74"/);
+});
+
+test("update-workspace-phase-snapshot refuses YAML write when SQLite compatibility update fails", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+  await writeWorkspaceStatusYaml(workspace, ['current_kit_phase: "72"', 'next_kit_phase: "73"']);
+  const dual = new SqliteDualPlanningStore(workspace, ".workspace-kit/tasks/workspace-kit.db");
+  dual.loadFromDisk();
+  dual.getDatabase().prepare("DELETE FROM kit_workspace_status WHERE id = 1").run();
+
+  const result = await taskEngineModule.onCommand(
+    { name: "update-workspace-phase-snapshot", args: { currentKitPhase: "74" } },
+    ctx
+  );
+
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "storage-read-error");
+  assert.match(result.data.repairHint, /phase-status/);
+  const compatibilityYaml = await readFile(path.join(workspace, "docs/maintainers/data/workspace-kit-status.yaml"), "utf8");
+  assert.match(compatibilityYaml, /current_kit_phase: "72"/);
+  assert.doesNotMatch(compatibilityYaml, /current_kit_phase: "74"/);
 });
 
 test("phase-status reports no configured phase on fresh workspace", async () => {

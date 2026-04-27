@@ -22,7 +22,9 @@ Values must be non-empty, single-line strings (max 120 chars after trim); contro
 
 ## Relationship to config, SQLite, and doctor
 
-On success (non-dry-run), this command **mirrors** the updated YAML snapshot into **`kit_workspace_status`** when planning SQLite is **v10+**. **`kit.currentPhaseNumber`** is a **bootstrap / UX** hint only — it does **not** override the DB row; **`doctor`** may print a note when config disagrees with SQLite but does **not** fail for that alone. Updating this command does **not** change project config. Use **`set-current-phase`** when you want the SQLite-first flow that also aligns config hints and writes the non-authoritative DB export.
+On success (non-dry-run), this compatibility command updates SQLite **before** writing the legacy YAML surface. When **`currentKitPhase`** is provided, it routes through **`set-current-phase`** internally so config hints and the non-authoritative DB export stay aligned. When only **`nextKitPhase`** is provided, it patches **`kit_workspace_status.next_kit_phase`**, writes the DB export, then updates the YAML compatibility file. If SQLite/export update fails, the command refuses to write YAML and returns a repair hint.
+
+**`kit.currentPhaseNumber`** is a **bootstrap / UX** hint only — it does **not** override the DB row; **`doctor`** may print a note when config disagrees with SQLite but does **not** fail for that alone. Use **`set-current-phase`** directly when you want the happy-path SQLite-first flow.
 
 Per-task **`phaseKey`** in the task store is independent: maintainer YAML + SQLite workspace status are **workspace-level** snapshots, not the execution queue.
 

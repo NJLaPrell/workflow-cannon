@@ -41,7 +41,7 @@ DDL and **`user_version`** steps live in **`src/core/state/workspace-kit-sqlite.
 - **`export-workspace-status`** — write **`docs/maintainers/data/workspace-kit-status.db-export.yaml`** (non-authoritative); use **`dryRun`** to preview **`yamlBody`**.
 - **`workspace-status-history`** — list **`kit_workspace_status_events`** (optional **`limit`**).
 
-**`update-workspace-phase-snapshot`** still updates maintainer YAML for compatibility; on non-dry-run success it **mirrors** the parsed YAML snapshot into **`kit_workspace_status`** when SQLite **v10+** is present ( **`phase_snapshot_yaml_mirror`** event). New operator flows should start with **`phase-status`** / **`set-current-phase`** unless maintaining legacy YAML compatibility is the point.
+**`update-workspace-phase-snapshot`** still updates maintainer YAML for compatibility, but live runs update SQLite/export first and then write the legacy YAML surface. When **`currentKitPhase`** is provided, it delegates through **`set-current-phase`**; when only **`nextKitPhase`** is provided, it patches **`kit_workspace_status.next_kit_phase`** and exports before touching YAML. New operator flows should start with **`phase-status`** / **`set-current-phase`** unless maintaining legacy YAML compatibility is the point.
 
 ### Migration note: T546 / T547 / T836
 
