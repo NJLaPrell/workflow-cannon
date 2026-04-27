@@ -715,6 +715,7 @@ test("taskEngineModule registration includes all instruction entries", () => {
   assert.ok(names.includes("update-wishlist"));
   assert.ok(names.includes("update-workspace-phase-snapshot"));
   assert.ok(names.includes("set-current-phase"));
+  assert.ok(names.includes("phase-status"));
   assert.ok(names.includes("convert-wishlist"));
   assert.ok(names.includes("migrate-task-persistence"));
   assert.ok(names.includes("persist-planning-execution-drafts"));
@@ -821,6 +822,83 @@ test("set-current-phase idempotent replay does not duplicate audit events", asyn
   assert.equal(history.ok, true);
   const setEvents = history.data.events.filter((event) => event.command === "set-current-phase");
   assert.equal(setEvents.length, 1);
+});
+
+test("phase-status reports no configured phase on fresh workspace", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+
+  const result = await taskEngineModule.onCommand({ name: "phase-status", args: {} }, ctx);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "phase-status-read");
+  assert.equal(result.data.canonicalPhase.canonicalPhaseKey, null);
+  assert.equal(result.data.canonicalPhase.source, "none");
+  assert.equal(result.data.currentKitPhase, null);
+  assert.equal(result.data.nextKitPhase, null);
+});
+
+test("phase-status reads canonical phase and optional task counts", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T7201", phaseKey: "72", phase: "Phase 72", status: "ready" }));
+    store.addTask(makeTask({ id: "T7202", phaseKey: "72", phase: "Phase 72", status: "completed" }));
+    store.addTask(makeTask({ id: "T7301", phaseKey: "73", phase: "Phase 73", status: "proposed" }));
+  });
+  await taskEngineModule.onCommand(
+    { name: "set-current-phase", args: { currentKitPhase: "72", nextKitPhase: "73", expectedWorkspaceRevision: 0 } },
+    ctx
+  );
+
+  const result = await taskEngineModule.onCommand(
+    { name: "phase-status", args: { includeTaskCounts: true } },
+    ctx
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.canonicalPhase.canonicalPhaseKey, "72");
+  assert.equal(result.data.currentKitPhase, "72");
+  assert.equal(result.data.nextKitPhase, "73");
+  assert.equal(result.data.taskCounts.currentPhase.ready, 1);
+  assert.equal(result.data.taskCounts.currentPhase.completed, 1);
+  assert.equal(result.data.taskCounts.nextPhase.proposed, 1);
+  assert.equal(result.data.exportStatus.exists, true);
+});
+
+test("phase-status reports config drift remediation", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace, { kit: { currentPhaseNumber: 71, currentPhaseLabel: "Phase 71" } });
+  await taskEngineModule.onCommand(
+    { name: "set-current-phase", args: { currentKitPhase: "72", expectedWorkspaceRevision: 0 } },
+    ctx
+  );
+
+  const result = await taskEngineModule.onCommand(
+    { name: "phase-status", args: { includeDriftDetails: true } },
+    ctx
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.canonicalPhase.canonicalPhaseKey, "72");
+  assert.equal(result.data.canonicalPhase.configMatchesWorkspaceStatus, false);
+  assert.ok(result.data.driftDetails.some((line) => line.includes("kit.currentPhaseNumber")));
+  assert.ok(result.data.remediationSuggestions.some((line) => line.includes("set-current-phase")));
+});
+
+test("phase-status falls back to config when workspace status row is missing", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace, { kit: { currentPhaseNumber: 72 } });
+  const dual = new SqliteDualPlanningStore(workspace, ".workspace-kit/tasks/workspace-kit.db");
+  dual.loadFromDisk();
+  dual.getDatabase().prepare("DELETE FROM kit_workspace_status WHERE id = 1").run();
+
+  const result = await taskEngineModule.onCommand({ name: "phase-status", args: {} }, ctx);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.workspaceStatus, null);
+  assert.equal(result.data.canonicalPhase.canonicalPhaseKey, "72");
+  assert.equal(result.data.canonicalPhase.source, "config");
 });
 
 test("taskEngineModule onCommand list-tasks returns empty on fresh store", async () => {

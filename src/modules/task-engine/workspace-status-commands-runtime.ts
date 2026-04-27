@@ -1,9 +1,13 @@
+import fs from "node:fs";
+import path from "node:path";
+import type DatabaseCtor from "better-sqlite3";
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../contracts/module-contract.js";
 import { readKitSqliteUserVersion } from "../../core/state/workspace-kit-sqlite.js";
 import { readProjectConfigDocument, writeProjectConfigDocument } from "../../core/workspace-kit-config.js";
-import { parseKitPhaseNumberFromYaml, resolveCanonicalPhase } from "./phase-resolution.js";
+import { inferTaskPhaseKey, parseKitPhaseNumberFromYaml, resolveCanonicalPhase } from "./phase-resolution.js";
 import { TaskEngineError } from "./transitions.js";
 import { digestPayload, readIdempotencyValue } from "./mutation-utils.js";
+import type { TaskEntity, TaskStatus } from "./types.js";
 import {
   findWorkspaceStatusEventByClientMutationId,
   formatWorkspaceStatusDbExportYaml,
@@ -19,6 +23,7 @@ import {
 } from "./persistence/workspace-status-store.js";
 
 const PHASE_TEXT_MAX = 120;
+type SqliteDb = InstanceType<typeof DatabaseCtor>;
 
 function asStringArray(v: unknown): string[] | undefined {
   if (v === undefined) {
@@ -78,6 +83,65 @@ function projectConfigPhaseHint(doc: Record<string, unknown>): { currentPhaseNum
       ? kitObj.currentPhaseLabel.trim()
       : null;
   return { currentPhaseNumber, currentPhaseLabel };
+}
+
+function emptyStatusCounts(): Record<TaskStatus, number> {
+  return {
+    research: 0,
+    proposed: 0,
+    ready: 0,
+    in_progress: 0,
+    blocked: 0,
+    completed: 0,
+    cancelled: 0
+  };
+}
+
+function phaseTaskCounts(tasks: TaskEntity[], phaseKey: string | null): Record<TaskStatus, number> | null {
+  if (!phaseKey) {
+    return null;
+  }
+  const counts = emptyStatusCounts();
+  for (const task of tasks) {
+    if (inferTaskPhaseKey(task) !== phaseKey) {
+      continue;
+    }
+    counts[task.status] += 1;
+  }
+  return counts;
+}
+
+function workspaceStatusExportStatus(ctx: ModuleLifecycleContext, dbPath: string | null): Record<string, unknown> {
+  const fileRelativePath = WORKSPACE_STATUS_DB_EXPORT_RELATIVE;
+  const exportAbs = path.join(ctx.workspacePath, fileRelativePath);
+  const exists = fs.existsSync(exportAbs);
+  if (!dbPath || !fs.existsSync(dbPath)) {
+    return {
+      fileRelativePath,
+      exists,
+      stale: null,
+      reason: "planning-db-unavailable"
+    };
+  }
+  const dbStat = fs.statSync(dbPath);
+  if (!exists) {
+    return {
+      fileRelativePath,
+      exists: false,
+      stale: true,
+      reason: "missing"
+    };
+  }
+  const exportStat = fs.statSync(exportAbs);
+  const stale = exportStat.mtimeMs < dbStat.mtimeMs - 500;
+  return {
+    fileRelativePath,
+    exists: true,
+    stale,
+    reason: stale ? "older-than-planning-db" : "fresh",
+    exportMtime: exportStat.mtime.toISOString(),
+    planningDbMtime: dbStat.mtime.toISOString()
+  };
 }
 
 function patchProjectConfigPhaseHint(
@@ -147,6 +211,87 @@ export async function runGetWorkspaceStatus(
       ok: false,
       code: "storage-read-error",
       message: `Failed to read workspace status: ${(e as Error).message}`
+    };
+  }
+}
+
+export async function runPhaseStatus(
+  ctx: ModuleLifecycleContext,
+  args: Record<string, unknown>,
+  state?: { tasks?: TaskEntity[]; db?: SqliteDb; dbPath?: string }
+): Promise<ModuleCommandResult> {
+  const includeTaskCounts = args.includeTaskCounts === true;
+  const includeDriftDetails = args.includeDriftDetails === true;
+
+  try {
+    let db = state?.db;
+    let dbPath = state?.dbPath ?? null;
+    if (!db) {
+      const dual = openSqliteDualForWorkspaceStatus(ctx);
+      db = dual.getDatabase();
+      dbPath = dual.dbPath;
+    }
+    const workspaceStatus = readKitWorkspaceStatusRow(db);
+    const workspaceSnapshot = workspaceStatus ? kitWorkspaceStatusPublicToSnapshot(workspaceStatus) : null;
+    const configHint = projectConfigPhaseHint(ctx.effectiveConfig ?? {});
+    const canonicalPhase = resolveCanonicalPhase({
+      effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+      workspaceStatus: workspaceSnapshot
+    });
+    const exportStatus = workspaceStatusExportStatus(ctx, dbPath);
+    const remediationSuggestions: string[] = [];
+    const driftDetails: string[] = [];
+
+    if (canonicalPhase.configMatchesWorkspaceStatus === false) {
+      const msg = `kit.currentPhaseNumber (${canonicalPhase.configPhaseKey}) differs from kit_workspace_status (${canonicalPhase.workspaceStatusPhaseKey})`;
+      driftDetails.push(msg);
+      remediationSuggestions.push("pnpm exec wk run set-current-phase '{\"currentKitPhase\":\"<phase>\",\"expectedWorkspaceRevision\":<revision>}'");
+    }
+    if (exportStatus.stale === true) {
+      driftDetails.push(`${WORKSPACE_STATUS_DB_EXPORT_RELATIVE} is ${exportStatus.reason}`);
+      remediationSuggestions.push("pnpm exec wk run export-workspace-status '{}'");
+    }
+
+    const data: Record<string, unknown> = {
+      schemaVersion: 1,
+      workspaceStatus,
+      canonicalPhase,
+      currentKitPhase: workspaceStatus?.currentKitPhase ?? null,
+      nextKitPhase: workspaceStatus?.nextKitPhase ?? null,
+      configHint,
+      exportStatus,
+      remediationSuggestions
+    };
+    if (includeTaskCounts) {
+      const tasks = state?.tasks ?? [];
+      data.taskCounts = {
+        currentPhaseKey: canonicalPhase.canonicalPhaseKey,
+        currentPhase: phaseTaskCounts(tasks, canonicalPhase.canonicalPhaseKey),
+        nextPhaseKey: parseKitPhaseNumberFromYaml(workspaceStatus?.nextKitPhase ?? null),
+        nextPhase: phaseTaskCounts(tasks, parseKitPhaseNumberFromYaml(workspaceStatus?.nextKitPhase ?? null))
+      };
+    }
+    if (includeDriftDetails) {
+      data.driftDetails = driftDetails;
+    }
+
+    return {
+      ok: true,
+      code: "phase-status-read",
+      message:
+        canonicalPhase.canonicalPhaseKey === null
+          ? "No canonical workspace phase configured"
+          : `Current phase ${canonicalPhase.canonicalPhaseKey} (${canonicalPhase.source})`,
+      data
+    };
+  } catch (e) {
+    if (e instanceof TaskEngineError) {
+      return { ok: false, code: e.code, message: e.message };
+    }
+    return {
+      ok: false,
+      code: "storage-read-error",
+      message: `Failed to read phase status: ${(e as Error).message}`
     };
   }
 }

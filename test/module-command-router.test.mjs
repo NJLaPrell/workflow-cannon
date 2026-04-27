@@ -75,6 +75,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "list-wishlist",
     "migrate-task-persistence",
     "persist-planning-execution-drafts",
+    "phase-status",
     "queue-git-alignment",
     "queue-health",
     "remove-dependency",

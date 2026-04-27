@@ -47,6 +47,7 @@
         "create-wishlist",
         "get-wishlist",
         "get-workspace-status",
+        "phase-status",
         "get-task",
         "list-tasks",
         "list-wishlist",
@@ -97,6 +98,7 @@
         "create-wishlist": { "$ref": "#/$defs/contractCreateWishlist" },
         "get-wishlist": { "$ref": "#/$defs/contractGetWishlist" },
         "get-workspace-status": { "$ref": "#/$defs/contractGetWorkspaceStatus" },
+        "phase-status": { "$ref": "#/$defs/contractPhaseStatus" },
         "get-task": { "$ref": "#/$defs/contractGetTask" },
         "list-tasks": { "$ref": "#/$defs/contractListTasks" },
         "list-wishlist": { "$ref": "#/$defs/contractListWishlist" },
@@ -484,6 +486,37 @@
             "responseData": {
               "type": "object",
               "required": ["kitSqliteUserVersion"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractPhaseStatus": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "includeTaskCounts": { "type": "boolean" },
+                "includeDriftDetails": { "type": "boolean" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": [
+                "schemaVersion",
+                "workspaceStatus",
+                "canonicalPhase",
+                "currentKitPhase",
+                "nextKitPhase",
+                "configHint",
+                "exportStatus",
+                "remediationSuggestions"
+              ],
               "additionalProperties": true
             }
           }

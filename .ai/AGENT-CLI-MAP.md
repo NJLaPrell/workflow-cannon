@@ -322,6 +322,13 @@ Use **`queue-health`** when you need a **single JSON answer** to “are ready ta
 pnpm exec wk run get-workspace-status '{}'
 ```
 
+**Copy-paste — read canonical phase and drift:**
+
+```bash
+pnpm exec wk run phase-status '{}'
+pnpm exec wk run phase-status '{"includeTaskCounts":true,"includeDriftDetails":true}'
+```
+
 **Copy-paste — set current phase (SQLite first, config hint + export after):**
 
 ```bash
