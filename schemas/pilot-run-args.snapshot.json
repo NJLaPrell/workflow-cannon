@@ -37,11 +37,13 @@
     "list-wishlist",
     "migrate-task-persistence",
     "persist-planning-execution-drafts",
+    "phase-status",
     "queue-git-alignment",
     "queue-health",
     "remove-dependency",
     "replay-queue-snapshot",
     "run-transition",
+    "set-current-phase",
     "synthesize-transcript-churn",
     "update-task",
     "update-wishlist",
@@ -455,6 +457,66 @@
       "required": [
         "tasks"
       ],
+      "properties": {
+        "tasks": {
+          "type": "array",
+          "minItems": 1
+        },
+        "targetPhaseKey": {
+          "type": "string",
+          "minLength": 1
+        },
+        "targetPhase": {
+          "type": "string",
+          "minLength": 1
+        },
+        "desiredStatus": {
+          "type": "string",
+          "enum": [
+            "proposed",
+            "ready"
+          ]
+        },
+        "planRef": {
+          "type": "string",
+          "minLength": 1
+        },
+        "planningType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "clientMutationId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expectedPlanningGeneration": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            }
+          ]
+        },
+        "actor": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "phase-status": {
+      "type": "object",
+      "properties": {
+        "includeTaskCounts": {
+          "type": "boolean"
+        },
+        "includeDriftDetails": {
+          "type": "boolean"
+        }
+      },
       "additionalProperties": true
     },
     "queue-git-alignment": {
@@ -519,6 +581,53 @@
         },
         "config": {
           "type": "object"
+        }
+      },
+      "additionalProperties": true
+    },
+    "set-current-phase": {
+      "type": "object",
+      "required": [
+        "currentKitPhase"
+      ],
+      "properties": {
+        "currentKitPhase": {
+          "type": "string"
+        },
+        "nextKitPhase": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "currentPhaseLabel": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "activeFocus": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "lastUpdated": {
+          "type": "string"
+        },
+        "expectedWorkspaceRevision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "clientMutationId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "actor": {
+          "type": "string"
+        },
+        "dryRun": {
+          "type": "boolean"
         }
       },
       "additionalProperties": true

@@ -464,6 +464,7 @@ workspace-kit run build-plan '{"planningType":"new-feature","answers":{"featureG
 # Multi-task execution drafts: finalize + outputMode tasks + executionTaskDrafts[] (convert-wishlist row shape) → code planning-multi-task-decomposition-preview; then persist with expectedPlanningGeneration when policy requires:
 workspace-kit run build-plan '{"planningType":"new-feature","outputMode":"tasks","finalize":true,"answers":{"featureGoal":"...","placement":"CLI","technology":"TypeScript","targetAudience":"AI Agent Operators"},"executionTaskDrafts":[{"title":"...","phase":"Phase 68","approach":"...","technicalScope":["..."],"acceptanceCriteria":["..."]}]}'
 workspace-kit run persist-planning-execution-drafts '{"tasks":[...],"expectedPlanningGeneration":<n>,"planRef":"planning:new-feature:...","planningType":"new-feature","clientMutationId":"agent-bulk-1"}'
+workspace-kit run persist-planning-execution-drafts '{"targetPhaseKey":"73","targetPhase":"Phase 73","desiredStatus":"ready","tasks":[...],"expectedPlanningGeneration":<n>,"planRef":"planning:new-feature:phase-73","clientMutationId":"phase-73-task-open"}'
 workspace-kit run list-wishlist '{}'
 workspace-kit run get-wishlist '{"wishlistId":"T42"}'
 workspace-kit run explain-config '{}'

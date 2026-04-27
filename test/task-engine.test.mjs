@@ -901,6 +901,27 @@ test("phase-status falls back to config when workspace status row is missing", a
   assert.equal(result.data.canonicalPhase.source, "config");
 });
 
+test("set-current-phase and phase-status do not create task rows", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T7299", phaseKey: "72", phase: "Phase 72", status: "ready" }));
+  });
+
+  const before = await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, ctx);
+  assert.equal(before.data.count, 1);
+  const moved = await taskEngineModule.onCommand(
+    { name: "set-current-phase", args: { currentKitPhase: "72", expectedWorkspaceRevision: 0 } },
+    ctx
+  );
+  assert.equal(moved.ok, true);
+  const status = await taskEngineModule.onCommand({ name: "phase-status", args: { includeTaskCounts: true } }, ctx);
+  assert.equal(status.ok, true);
+  const after = await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, ctx);
+  assert.equal(after.data.count, 1);
+  assert.equal(after.data.tasks[0].id, "T7299");
+});
+
 test("taskEngineModule onCommand list-tasks returns empty on fresh store", async () => {
   const workspace = await tmpDir();
   const ctx = sqliteTaskEngineCtx(workspace);
@@ -1875,6 +1896,44 @@ test("taskEngineModule persist-planning-execution-drafts creates multiple tasks 
   assert.equal(replay.ok, true);
   assert.equal(replay.code, "planning-execution-drafts-idempotent-replay");
   assert.equal(replay.data.replayed, true);
+});
+
+test("persist-planning-execution-drafts can explicitly open tasks for a target phase", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const lt = await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, ctx);
+  const taskDrafts = [
+    {
+      id: "T731",
+      title: "Next phase slice",
+      phase: "draft placeholder",
+      approach: "Implement the next phase slice",
+      technicalScope: ["src/next"],
+      acceptanceCriteria: ["Next phase task is ready"]
+    }
+  ];
+
+  const created = await taskEngineModule.onCommand(
+    {
+      name: "persist-planning-execution-drafts",
+      args: {
+        tasks: taskDrafts,
+        targetPhaseKey: "73",
+        targetPhase: "Phase 73",
+        desiredStatus: "ready",
+        planRef: "planning:new-feature:phase-73",
+        expectedPlanningGeneration: lt.data.planningGeneration,
+        clientMutationId: "phase-73-task-open"
+      }
+    },
+    ctx
+  );
+
+  assert.equal(created.ok, true);
+  assert.equal(created.data.createdTasks[0].status, "ready");
+  assert.equal(created.data.createdTasks[0].phaseKey, "73");
+  assert.equal(created.data.createdTasks[0].phase, "Phase 73");
+  assert.equal(created.data.createdTasks[0].metadata.planRef, "planning:new-feature:phase-73");
 });
 
 test("taskEngineModule create-task idempotent replay skips require gate (no re-persist)", async () => {
