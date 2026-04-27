@@ -67,11 +67,11 @@ Tier **B** `workspace-kit run` commands (non-transition) also require JSON `poli
 
 - Capture release evidence per [`RELEASING.md`](../RELEASING.md) → **Required release evidence**.
 - Update maintainer snapshots (for example [`docs/maintainers/ROADMAP.md`](../ROADMAP.md), [`docs/maintainers/data/workspace-kit-status.yaml`](../data/workspace-kit-status.yaml)) when the phase closeout task requires it.
-- Bump **`current_kit_phase`** / **`next_kit_phase`** via **`workspace-kit run update-workspace-phase-snapshot`** (and align **`kit.currentPhaseNumber`** in config when used) so **`doctor`** stays green — see [`AGENTS.md`](../AGENTS.md) → **Workspace phase snapshot**.
+- Bump **`current_kit_phase`** / **`next_kit_phase`** via **`workspace-kit run set-current-phase`** so SQLite stays canonical while config hints and the non-authoritative export stay aligned; use **`phase-status`** to verify drift before and after — see [`WORKSPACE-KIT-SESSION.md`](../WORKSPACE-KIT-SESSION.md) → **Workspace phase snapshot**.
 
 ## 7) Phase delivery summary (agent wrap-up)
 
-This section is the **session summary format** for operators and agents (what to paste or say when the phase is shipped). Separately, **`workspace-kit run`** applies the builtin **`phase_ship`** response template automatically on **`run-transition`** **`complete`**, **`update-workspace-phase-snapshot`** (non-dry-run), and **`generate-document`** for **`ROADMAP.md`** / **`FEATURE-TAXONOMY.md`** (non-dry-run), so JSON includes **`data.presentation.matchedSections`** for closeout fields unless you override with **`responseTemplateId`**. See [`response-template-contract.md`](../response-template-contract.md) and [`runbooks/response-templates.md`](../runbooks/response-templates.md).
+This section is the **session summary format** for operators and agents (what to paste or say when the phase is shipped). Separately, **`workspace-kit run`** applies the builtin **`phase_ship`** response template automatically on phase-shipping commands such as **`run-transition`** **`complete`**, compatibility **`update-workspace-phase-snapshot`** (non-dry-run), and **`generate-document`** for **`ROADMAP.md`** / **`FEATURE-TAXONOMY.md`** (non-dry-run), so JSON includes **`data.presentation.matchedSections`** for closeout fields unless you override with **`responseTemplateId`**. See [`response-template-contract.md`](../response-template-contract.md) and [`runbooks/response-templates.md`](../runbooks/response-templates.md).
 
 ### Evidence rules (do not invent counts)
 

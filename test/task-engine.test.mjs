@@ -901,6 +901,16 @@ test("phase-status falls back to config when workspace status row is missing", a
   assert.equal(result.data.canonicalPhase.source, "config");
 });
 
+test("queue-health instruction documents workspace-status-first phase resolution", async () => {
+  const body = await readFile(
+    path.join(process.cwd(), "src/modules/task-engine/instructions/queue-health.md"),
+    "utf8"
+  );
+  assert.match(body, /kit_workspace_status\.current_kit_phase.*otherwise `kit\.currentPhaseNumber`/s);
+  assert.doesNotMatch(body, /from `kit\.currentPhaseNumber` when set, otherwise/);
+  assert.doesNotMatch(body, /doctor` .*fails when `kit\.currentPhaseNumber` disagrees/s);
+});
+
 test("set-current-phase and phase-status do not create task rows", async () => {
   const workspace = await tmpDir();
   const ctx = sqliteTaskEngineCtx(workspace);

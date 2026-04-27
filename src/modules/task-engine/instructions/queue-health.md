@@ -1,6 +1,6 @@
 # queue-health
 
-Read-only audit of the **ready** execution queue: compares each ready task’s inferred phase key to the canonical current phase (from `kit.currentPhaseNumber` when set, otherwise **`kit_workspace_status.current_kit_phase`** in planning SQLite when v10+, else no status-store fallback in this path), and flags ready tasks whose `dependsOn` are not yet `completed`.
+Read-only audit of the **ready** execution queue: compares each ready task’s inferred phase key to the canonical current phase (from **`kit_workspace_status.current_kit_phase`** in planning SQLite when available, otherwise `kit.currentPhaseNumber` as a bootstrap fallback), and flags ready tasks whose `dependsOn` are not yet `completed`.
 
 ## Usage
 
@@ -10,7 +10,7 @@ workspace-kit run queue-health '{}'
 
 ## Arguments
 
-None. Uses the workspace’s effective config and maintainer status snapshot.
+None. Uses the workspace’s effective config and SQLite workspace status snapshot.
 
 ## Returns
 
@@ -23,5 +23,6 @@ JSON `data` includes:
 
 ## Related
 
-- `workspace-kit doctor` — on SQLite v10+, fails when `kit.currentPhaseNumber` disagrees with `kit_workspace_status.current_kit_phase` (see `.ai/runbooks/workspace-status-sqlite.md` Doctor section).
+- `workspace-kit run phase-status` — focused read-only phase, config drift, export freshness, and optional phase task counts.
+- `workspace-kit doctor` — may print a non-fatal note when `kit.currentPhaseNumber` disagrees with `kit_workspace_status.current_kit_phase`; runtime readers use SQLite when present (see `.ai/runbooks/workspace-status-sqlite.md` Doctor section).
 - `workspace-kit run list-tasks` with `includeQueueHints` — optional per-row hints without a second full pass in the client.
