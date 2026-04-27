@@ -92,6 +92,12 @@ async function seedSqliteStore(workspace, fn) {
   await store.save();
 }
 
+async function writeWorkspaceStatusYaml(workspace, lines) {
+  const yamlDir = path.join(workspace, "docs", "maintainers", "data");
+  await mkdir(yamlDir, { recursive: true });
+  await writeFile(path.join(yamlDir, "workspace-kit-status.yaml"), [...lines, ""].join("\n"), "utf8");
+}
+
 // ---------------------------------------------------------------------------
 // T184: Transition map
 // ---------------------------------------------------------------------------
@@ -714,6 +720,8 @@ test("taskEngineModule registration includes all instruction entries", () => {
   assert.ok(names.includes("get-wishlist"));
   assert.ok(names.includes("update-wishlist"));
   assert.ok(names.includes("update-workspace-phase-snapshot"));
+  assert.ok(names.includes("set-current-phase"));
+  assert.ok(names.includes("phase-status"));
   assert.ok(names.includes("convert-wishlist"));
   assert.ok(names.includes("migrate-task-persistence"));
   assert.ok(names.includes("persist-planning-execution-drafts"));
@@ -721,6 +729,291 @@ test("taskEngineModule registration includes all instruction entries", () => {
 
 test("taskEngineModule passes ModuleRegistry validation", () => {
   assert.doesNotThrow(() => new ModuleRegistry([taskEngineModule]));
+});
+
+test("set-current-phase dry run reports before/after without writes", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+
+  const result = await taskEngineModule.onCommand(
+    { name: "set-current-phase", args: { currentKitPhase: "72", nextKitPhase: "73", dryRun: true } },
+    ctx
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "set-current-phase-dry-run");
+  assert.equal(result.data.dryRun, true);
+  assert.equal(result.data.workspaceStatusBefore.workspaceRevision, 0);
+  assert.equal(result.data.workspaceStatusAfter.currentKitPhase, "72");
+
+  const status = await taskEngineModule.onCommand({ name: "get-workspace-status", args: {} }, ctx);
+  assert.equal(status.ok, true);
+  assert.equal(status.data.workspaceStatus.workspaceRevision, 0);
+  assert.equal(status.data.workspaceStatus.currentKitPhase, null);
+});
+
+test("set-current-phase writes SQLite first, config hint, and export", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+
+  const result = await taskEngineModule.onCommand(
+    {
+      name: "set-current-phase",
+      args: {
+        currentKitPhase: "72",
+        nextKitPhase: "73",
+        currentPhaseLabel: "Phase 72 — Phase-control ergonomics",
+        activeFocus: "phase-control",
+        expectedWorkspaceRevision: 0,
+        clientMutationId: "phase-72-test"
+      }
+    },
+    ctx
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "set-current-phase-updated");
+  assert.equal(result.data.beforeRevision, 0);
+  assert.equal(result.data.afterRevision, 1);
+  assert.equal(result.data.workspaceStatusAfter.currentKitPhase, "72");
+  assert.equal(result.data.workspaceStatusAfter.nextKitPhase, "73");
+  assert.equal(result.data.workspaceStatusAfter.activeFocus, "phase-control");
+  assert.equal(result.data.canonicalPhase.canonicalPhaseKey, "72");
+  assert.equal(result.data.canonicalPhase.configMatchesWorkspaceStatus, true);
+  assert.equal(result.data.exportStatus.written, true);
+
+  const config = JSON.parse(await readFile(path.join(workspace, ".workspace-kit/config.json"), "utf8"));
+  assert.equal(config.kit.currentPhaseNumber, 72);
+  assert.equal(config.kit.currentPhaseLabel, "Phase 72 — Phase-control ergonomics");
+  const exportBody = await readFile(
+    path.join(workspace, "docs/maintainers/data/workspace-kit-status.db-export.yaml"),
+    "utf8"
+  );
+  assert.match(exportBody, /current_kit_phase: "72"/);
+});
+
+test("set-current-phase rejects stale workspace revision", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+
+  const result = await taskEngineModule.onCommand(
+    { name: "set-current-phase", args: { currentKitPhase: "72", expectedWorkspaceRevision: 99 } },
+    ctx
+  );
+
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "workspace-revision-mismatch");
+});
+
+test("set-current-phase idempotent replay does not duplicate audit events", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const args = {
+    currentKitPhase: "72",
+    nextKitPhase: "73",
+    expectedWorkspaceRevision: 0,
+    clientMutationId: "phase-72-replay"
+  };
+
+  const first = await taskEngineModule.onCommand({ name: "set-current-phase", args }, ctx);
+  assert.equal(first.ok, true);
+  const replay = await taskEngineModule.onCommand(
+    { name: "set-current-phase", args: { currentKitPhase: "72", nextKitPhase: "73", clientMutationId: "phase-72-replay" } },
+    ctx
+  );
+  assert.equal(replay.ok, true);
+  assert.equal(replay.code, "set-current-phase-idempotent-replay");
+
+  const history = await taskEngineModule.onCommand({ name: "workspace-status-history", args: { limit: 10 } }, ctx);
+  assert.equal(history.ok, true);
+  const setEvents = history.data.events.filter((event) => event.command === "set-current-phase");
+  assert.equal(setEvents.length, 1);
+});
+
+test("update-workspace-phase-snapshot delegates current phase changes through set-current-phase", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace, { kit: { currentPhaseNumber: 71 } });
+  await writeWorkspaceStatusYaml(workspace, ['current_kit_phase: "71"', 'next_kit_phase: "72"']);
+
+  const result = await taskEngineModule.onCommand(
+    { name: "update-workspace-phase-snapshot", args: { currentKitPhase: "72", nextKitPhase: "73" } },
+    ctx
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "workspace-phase-snapshot-updated");
+  assert.equal(result.data.delegatedCommand.name, "set-current-phase");
+  assert.match(result.data.compatibilityWarning, /compatibility shim/);
+
+  const status = await taskEngineModule.onCommand({ name: "get-workspace-status", args: {} }, ctx);
+  assert.equal(status.data.workspaceStatus.currentKitPhase, "72");
+  assert.equal(status.data.workspaceStatus.nextKitPhase, "73");
+  const config = JSON.parse(await readFile(path.join(workspace, ".workspace-kit/config.json"), "utf8"));
+  assert.equal(config.kit.currentPhaseNumber, 72);
+  const exportBody = await readFile(
+    path.join(workspace, "docs/maintainers/data/workspace-kit-status.db-export.yaml"),
+    "utf8"
+  );
+  assert.match(exportBody, /current_kit_phase: "72"/);
+  const compatibilityYaml = await readFile(path.join(workspace, "docs/maintainers/data/workspace-kit-status.yaml"), "utf8");
+  assert.match(compatibilityYaml, /current_kit_phase: "72"/);
+  assert.match(compatibilityYaml, /next_kit_phase: "73"/);
+});
+
+test("update-workspace-phase-snapshot next-only compatibility path updates SQLite before YAML", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+  await writeWorkspaceStatusYaml(workspace, ['current_kit_phase: "72"', 'next_kit_phase: "73"']);
+  await taskEngineModule.onCommand(
+    { name: "set-current-phase", args: { currentKitPhase: "72", nextKitPhase: "73", expectedWorkspaceRevision: 0 } },
+    ctx
+  );
+
+  const result = await taskEngineModule.onCommand(
+    { name: "update-workspace-phase-snapshot", args: { nextKitPhase: "74" } },
+    ctx
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.delegatedCommand, null);
+  assert.equal(result.data.sqliteMirror.beforeRevision, 1);
+  assert.equal(result.data.sqliteMirror.afterRevision, 2);
+  assert.equal(result.data.exportRelativePath, "docs/maintainers/data/workspace-kit-status.db-export.yaml");
+  const status = await taskEngineModule.onCommand({ name: "get-workspace-status", args: {} }, ctx);
+  assert.equal(status.data.workspaceStatus.currentKitPhase, "72");
+  assert.equal(status.data.workspaceStatus.nextKitPhase, "74");
+  const compatibilityYaml = await readFile(path.join(workspace, "docs/maintainers/data/workspace-kit-status.yaml"), "utf8");
+  assert.match(compatibilityYaml, /current_kit_phase: "72"/);
+  assert.match(compatibilityYaml, /next_kit_phase: "74"/);
+});
+
+test("update-workspace-phase-snapshot refuses YAML write when SQLite compatibility update fails", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+  await writeWorkspaceStatusYaml(workspace, ['current_kit_phase: "72"', 'next_kit_phase: "73"']);
+  const dual = new SqliteDualPlanningStore(workspace, ".workspace-kit/tasks/workspace-kit.db");
+  dual.loadFromDisk();
+  dual.getDatabase().prepare("DELETE FROM kit_workspace_status WHERE id = 1").run();
+
+  const result = await taskEngineModule.onCommand(
+    { name: "update-workspace-phase-snapshot", args: { currentKitPhase: "74" } },
+    ctx
+  );
+
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "storage-read-error");
+  assert.match(result.data.repairHint, /phase-status/);
+  const compatibilityYaml = await readFile(path.join(workspace, "docs/maintainers/data/workspace-kit-status.yaml"), "utf8");
+  assert.match(compatibilityYaml, /current_kit_phase: "72"/);
+  assert.doesNotMatch(compatibilityYaml, /current_kit_phase: "74"/);
+});
+
+test("phase-status reports no configured phase on fresh workspace", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+
+  const result = await taskEngineModule.onCommand({ name: "phase-status", args: {} }, ctx);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "phase-status-read");
+  assert.equal(result.data.canonicalPhase.canonicalPhaseKey, null);
+  assert.equal(result.data.canonicalPhase.source, "none");
+  assert.equal(result.data.currentKitPhase, null);
+  assert.equal(result.data.nextKitPhase, null);
+});
+
+test("phase-status reads canonical phase and optional task counts", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T7201", phaseKey: "72", phase: "Phase 72", status: "ready" }));
+    store.addTask(makeTask({ id: "T7202", phaseKey: "72", phase: "Phase 72", status: "completed" }));
+    store.addTask(makeTask({ id: "T7301", phaseKey: "73", phase: "Phase 73", status: "proposed" }));
+  });
+  await taskEngineModule.onCommand(
+    { name: "set-current-phase", args: { currentKitPhase: "72", nextKitPhase: "73", expectedWorkspaceRevision: 0 } },
+    ctx
+  );
+
+  const result = await taskEngineModule.onCommand(
+    { name: "phase-status", args: { includeTaskCounts: true } },
+    ctx
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.canonicalPhase.canonicalPhaseKey, "72");
+  assert.equal(result.data.currentKitPhase, "72");
+  assert.equal(result.data.nextKitPhase, "73");
+  assert.equal(result.data.taskCounts.currentPhase.ready, 1);
+  assert.equal(result.data.taskCounts.currentPhase.completed, 1);
+  assert.equal(result.data.taskCounts.nextPhase.proposed, 1);
+  assert.equal(result.data.exportStatus.exists, true);
+});
+
+test("phase-status reports config drift remediation", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace, { kit: { currentPhaseNumber: 71, currentPhaseLabel: "Phase 71" } });
+  await taskEngineModule.onCommand(
+    { name: "set-current-phase", args: { currentKitPhase: "72", expectedWorkspaceRevision: 0 } },
+    ctx
+  );
+
+  const result = await taskEngineModule.onCommand(
+    { name: "phase-status", args: { includeDriftDetails: true } },
+    ctx
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.canonicalPhase.canonicalPhaseKey, "72");
+  assert.equal(result.data.canonicalPhase.configMatchesWorkspaceStatus, false);
+  assert.ok(result.data.driftDetails.some((line) => line.includes("kit.currentPhaseNumber")));
+  assert.ok(result.data.remediationSuggestions.some((line) => line.includes("set-current-phase")));
+});
+
+test("phase-status falls back to config when workspace status row is missing", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace, { kit: { currentPhaseNumber: 72 } });
+  const dual = new SqliteDualPlanningStore(workspace, ".workspace-kit/tasks/workspace-kit.db");
+  dual.loadFromDisk();
+  dual.getDatabase().prepare("DELETE FROM kit_workspace_status WHERE id = 1").run();
+
+  const result = await taskEngineModule.onCommand({ name: "phase-status", args: {} }, ctx);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.workspaceStatus, null);
+  assert.equal(result.data.canonicalPhase.canonicalPhaseKey, "72");
+  assert.equal(result.data.canonicalPhase.source, "config");
+});
+
+test("queue-health instruction documents workspace-status-first phase resolution", async () => {
+  const body = await readFile(
+    path.join(process.cwd(), "src/modules/task-engine/instructions/queue-health.md"),
+    "utf8"
+  );
+  assert.match(body, /kit_workspace_status\.current_kit_phase.*otherwise `kit\.currentPhaseNumber`/s);
+  assert.doesNotMatch(body, /from `kit\.currentPhaseNumber` when set, otherwise/);
+  assert.doesNotMatch(body, /doctor` .*fails when `kit\.currentPhaseNumber` disagrees/s);
+});
+
+test("set-current-phase and phase-status do not create task rows", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T7299", phaseKey: "72", phase: "Phase 72", status: "ready" }));
+  });
+
+  const before = await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, ctx);
+  assert.equal(before.data.count, 1);
+  const moved = await taskEngineModule.onCommand(
+    { name: "set-current-phase", args: { currentKitPhase: "72", expectedWorkspaceRevision: 0 } },
+    ctx
+  );
+  assert.equal(moved.ok, true);
+  const status = await taskEngineModule.onCommand({ name: "phase-status", args: { includeTaskCounts: true } }, ctx);
+  assert.equal(status.ok, true);
+  const after = await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, ctx);
+  assert.equal(after.data.count, 1);
+  assert.equal(after.data.tasks[0].id, "T7299");
 });
 
 test("taskEngineModule onCommand list-tasks returns empty on fresh store", async () => {
@@ -1697,6 +1990,44 @@ test("taskEngineModule persist-planning-execution-drafts creates multiple tasks 
   assert.equal(replay.ok, true);
   assert.equal(replay.code, "planning-execution-drafts-idempotent-replay");
   assert.equal(replay.data.replayed, true);
+});
+
+test("persist-planning-execution-drafts can explicitly open tasks for a target phase", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const lt = await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, ctx);
+  const taskDrafts = [
+    {
+      id: "T731",
+      title: "Next phase slice",
+      phase: "draft placeholder",
+      approach: "Implement the next phase slice",
+      technicalScope: ["src/next"],
+      acceptanceCriteria: ["Next phase task is ready"]
+    }
+  ];
+
+  const created = await taskEngineModule.onCommand(
+    {
+      name: "persist-planning-execution-drafts",
+      args: {
+        tasks: taskDrafts,
+        targetPhaseKey: "73",
+        targetPhase: "Phase 73",
+        desiredStatus: "ready",
+        planRef: "planning:new-feature:phase-73",
+        expectedPlanningGeneration: lt.data.planningGeneration,
+        clientMutationId: "phase-73-task-open"
+      }
+    },
+    ctx
+  );
+
+  assert.equal(created.ok, true);
+  assert.equal(created.data.createdTasks[0].status, "ready");
+  assert.equal(created.data.createdTasks[0].phaseKey, "73");
+  assert.equal(created.data.createdTasks[0].phase, "Phase 73");
+  assert.equal(created.data.createdTasks[0].metadata.planRef, "planning:new-feature:phase-73");
 });
 
 test("taskEngineModule create-task idempotent replay skips require gate (no re-persist)", async () => {

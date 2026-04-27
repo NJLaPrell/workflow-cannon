@@ -26,6 +26,7 @@
         "update-wishlist",
         "update-workspace-phase-snapshot",
         "update-workspace-status",
+        "set-current-phase",
         "archive-task",
         "add-dependency",
         "agent-bootstrap",
@@ -46,6 +47,7 @@
         "create-wishlist",
         "get-wishlist",
         "get-workspace-status",
+        "phase-status",
         "get-task",
         "list-tasks",
         "list-wishlist",
@@ -75,6 +77,7 @@
         "update-wishlist": { "$ref": "#/$defs/contractUpdateWishlist" },
         "update-workspace-phase-snapshot": { "$ref": "#/$defs/contractUpdateWorkspacePhaseSnapshot" },
         "update-workspace-status": { "$ref": "#/$defs/contractUpdateWorkspaceStatus" },
+        "set-current-phase": { "$ref": "#/$defs/contractSetCurrentPhase" },
         "archive-task": { "$ref": "#/$defs/contractArchiveTask" },
         "add-dependency": { "$ref": "#/$defs/contractDependencyMutation" },
         "agent-bootstrap": { "$ref": "#/$defs/contractAgentSessionSnapshot" },
@@ -95,6 +98,7 @@
         "create-wishlist": { "$ref": "#/$defs/contractCreateWishlist" },
         "get-wishlist": { "$ref": "#/$defs/contractGetWishlist" },
         "get-workspace-status": { "$ref": "#/$defs/contractGetWorkspaceStatus" },
+        "phase-status": { "$ref": "#/$defs/contractPhaseStatus" },
         "get-task": { "$ref": "#/$defs/contractGetTask" },
         "list-tasks": { "$ref": "#/$defs/contractListTasks" },
         "list-wishlist": { "$ref": "#/$defs/contractListWishlist" },
@@ -488,6 +492,37 @@
         }
       ]
     },
+    "contractPhaseStatus": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "includeTaskCounts": { "type": "boolean" },
+                "includeDriftDetails": { "type": "boolean" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": [
+                "schemaVersion",
+                "workspaceStatus",
+                "canonicalPhase",
+                "currentKitPhase",
+                "nextKitPhase",
+                "configHint",
+                "exportStatus",
+                "remediationSuggestions"
+              ],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
     "contractUpdateWorkspaceStatus": {
       "allOf": [
         { "$ref": "#/$defs/contractBase" },
@@ -513,6 +548,45 @@
             "responseData": {
               "type": "object",
               "required": ["beforeRevision", "afterRevision", "workspaceStatusBefore", "workspaceStatusAfter"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractSetCurrentPhase": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "required": ["currentKitPhase"],
+              "properties": {
+                "currentKitPhase": { "type": "string" },
+                "nextKitPhase": { "type": ["string", "null"] },
+                "currentPhaseLabel": { "type": ["string", "null"] },
+                "activeFocus": { "type": ["string", "null"] },
+                "lastUpdated": { "type": "string" },
+                "expectedWorkspaceRevision": { "type": "integer", "minimum": 0 },
+                "clientMutationId": { "type": "string", "minLength": 1 },
+                "actor": { "type": "string" },
+                "dryRun": { "type": "boolean" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": [
+                "dryRun",
+                "workspaceStatusBefore",
+                "workspaceStatusAfter",
+                "configHintBefore",
+                "configHintAfter",
+                "canonicalPhase",
+                "exportStatus",
+                "suggestedFollowUpCommand"
+              ],
               "additionalProperties": true
             }
           }
@@ -610,7 +684,23 @@
             "args": {
               "type": "object",
               "required": ["tasks"],
-              "additionalProperties": true
+              "additionalProperties": true,
+              "properties": {
+                "tasks": { "type": "array", "minItems": 1 },
+                "targetPhaseKey": { "type": "string", "minLength": 1 },
+                "targetPhase": { "type": "string", "minLength": 1 },
+                "desiredStatus": { "type": "string", "enum": ["proposed", "ready"] },
+                "planRef": { "type": "string", "minLength": 1 },
+                "planningType": { "type": "string", "minLength": 1 },
+                "clientMutationId": { "type": "string", "minLength": 1 },
+                "expectedPlanningGeneration": {
+                  "oneOf": [
+                    { "type": "integer", "minimum": 0 },
+                    { "type": "string", "pattern": "^[0-9]+$" }
+                  ]
+                },
+                "actor": { "type": "string" }
+              }
             },
             "responseData": {
               "type": "object",

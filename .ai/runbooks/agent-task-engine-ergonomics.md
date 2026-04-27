@@ -15,6 +15,8 @@ Canonical process remains: [`AGENTS.md`](../AGENTS.md), [`AGENT-CLI-MAP.md`](../
 | “Show me wishlist ideas” | `pnpm exec wk run list-wishlist '{}'` / `get-wishlist` — not default `get-next-actions` scope |
 | “Team assignments / handoffs?” | `pnpm exec wk run list-assignments '{}'`; rollup: `dashboard-summary` |
 | “Subagent sessions?” | `list-subagents`, `list-subagent-sessions`; rollup: `dashboard-summary` → `subagentRegistry` |
+| “What phase are we on?” | `pnpm exec wk run phase-status '{}'`; add `{"includeTaskCounts":true,"includeDriftDetails":true}` for closeout audits |
+| “Move the workspace phase?” | `pnpm exec wk run get-workspace-status '{}'`, then `set-current-phase` with `expectedWorkspaceRevision` |
 | “Regenerate maintainer docs” | `generate-document` with `dryRun` first; batch: `document-project` — both Tier B for real writes |
 | “Move task lifecycle” | `run-transition` with JSON `policyApproval` (+ `expectedPlanningGeneration` when policy `require`) |
 | “SQLite / persistence broke” | `wk doctor`; consumer ladder: `docs/maintainers/runbooks/native-sqlite-consumer-install.md` |
@@ -62,6 +64,7 @@ Canonical process remains: [`AGENTS.md`](../AGENTS.md), [`AGENT-CLI-MAP.md`](../
 **Expectation:**
 
 - **Read-only discovery:** `workspace-kit doctor`, `workspace-kit run list-tasks`, `workspace-kit run get-next-actions`, `workspace-kit run get-task`, `workspace-kit run explain-task-engine-model` (Tier C unless otherwise documented).
+- **Phase snapshot:** `workspace-kit run phase-status '{}'` reads the canonical workspace phase, config drift, export freshness, and optional task counts. `workspace-kit run set-current-phase ...` is the happy-path phase mutation; it patches **`kit_workspace_status`** first, then aligns config hints and the non-authoritative export. Per-task **`phaseKey`** remains separate execution metadata.
 - **Queue consistency (ready tasks):** `workspace-kit run queue-health '{}'` — one JSON payload for phase alignment vs canonical phase (**`kit_workspace_status`** when SQLite v10+, else **`kit.currentPhaseNumber`** fallback) plus **`ready`** rows whose **`dependsOn`** are not yet **`completed`**. Optional: `workspace-kit run list-tasks` with **`"includeQueueHints":true`** for per-row hints. See [`AGENT-CLI-MAP.md`](../AGENT-CLI-MAP.md) → **Queue health and ready-queue consistency**.
 - **Merge ≠ done (heuristic):** `workspace-kit run queue-git-alignment '{}'` — read-only JSON comparing git HEAD commit time to the latest task transition plus stale **`in_progress`** hints. Independent of network; does not fix state. See [`ADR-task-queue-namespace.md`](../adrs/ADR-task-queue-namespace.md) for optional **`queueNamespace`** filters on **`get-next-actions`** / **`get-ready-queue`**.
 - **Lifecycle changes:** only **`run-transition`** (and other documented mutators) with correct **`policyApproval`** tiering — not hand-edited `state.json` except documented recovery.

@@ -35,11 +35,17 @@ DDL and **`user_version`** steps live in **`src/core/state/workspace-kit-sqlite.
 ## CLI (T818)
 
 - **`get-workspace-status`** — read singleton row + **`kitSqliteUserVersion`**.
+- **`phase-status`** — focused read-only phase answer: canonical current/next phase, config hint drift, export freshness, and optional task counts.
+- **`set-current-phase`** — SQLite-first happy-path phase rollover: patches **`kit_workspace_status`**, aligns config hints, and writes the non-authoritative DB export.
 - **`update-workspace-status`** — patch with **`expectedWorkspaceRevision`** (optimistic concurrency).
 - **`export-workspace-status`** — write **`docs/maintainers/data/workspace-kit-status.db-export.yaml`** (non-authoritative); use **`dryRun`** to preview **`yamlBody`**.
 - **`workspace-status-history`** — list **`kit_workspace_status_events`** (optional **`limit`**).
 
-**`update-workspace-phase-snapshot`** still updates maintainer YAML for compatibility; on non-dry-run success it **mirrors** the parsed YAML snapshot into **`kit_workspace_status`** when SQLite **v10+** is present ( **`phase_snapshot_yaml_mirror`** event).
+**`update-workspace-phase-snapshot`** still updates maintainer YAML for compatibility, but live runs update SQLite/export first and then write the legacy YAML surface. When **`currentKitPhase`** is provided, it delegates through **`set-current-phase`**; when only **`nextKitPhase`** is provided, it patches **`kit_workspace_status.next_kit_phase`** and exports before touching YAML. New operator flows should start with **`phase-status`** / **`set-current-phase`** unless maintaining legacy YAML compatibility is the point.
+
+### Migration note: T546 / T547 / T836
+
+**`T546`** and **`T547`** shipped the older YAML-first phase snapshot workflow, and **`T836`** captured the follow-up pain around keeping phase snapshot data and **`kit.currentPhaseLabel`** aligned. Treat those rows as provenance for why the compatibility command exists, not as current operator guidance. The current happy path is **`phase-status`** for read-only discovery and **`set-current-phase`** for rollover; per-task **`phaseKey`** remains independent execution metadata and does not move the workspace phase.
 
 ## Readers (T819)
 

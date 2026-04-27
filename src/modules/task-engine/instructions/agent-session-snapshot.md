@@ -17,6 +17,7 @@ Empty object `{}` (optional `config` / `actor` passthrough like other read-only 
 - **No writes** — Tier C; no `policyApproval`.
 - **Deterministic fields** — `schemaVersion` **1** on `data`; includes `planningGeneration` / `planningGenerationPolicy` via standard policy meta.
 - Prefer this over chaining `doctor` + `list-tasks` + `get-next-actions` + `queue-health` when you only need a reload bundle.
+- For a focused phase answer, use **`phase-status`**; for phase mutation, use **`set-current-phase`** rather than patching config, YAML, and SQLite separately.
 
 ## Response
 

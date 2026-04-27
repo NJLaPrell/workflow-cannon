@@ -314,12 +314,27 @@ Use **`queue-health`** when you need a **single JSON answer** to “are ready ta
 1. Leading digits from **`kit_workspace_status.current_kit_phase`** (via **`dashboard-summary` / `queue-health` / `agent-bootstrap`** — not maintainer YAML).
 2. Otherwise **`kit.currentPhaseNumber`** in effective workspace config when set to a **positive integer** (bootstrap / operator UX only).
 
-**`workspace-kit doctor`** does **not** fail on config vs DB phase mismatch; it may print a **note** after a successful pass. Use **`pnpm exec wk run get-workspace-status '{}'`** / **`update-workspace-status`** / **`update-workspace-phase-snapshot`** to align the **DB** row.
+**`workspace-kit doctor`** does **not** fail on config vs DB phase mismatch; it may print a **note** after a successful pass. Use **`phase-status`** to inspect canonical phase and drift, then **`set-current-phase`** for the SQLite-first mutation that also aligns config hints and the non-authoritative export.
 
 **Copy-paste — read workspace status (SQLite):**
 
 ```bash
 pnpm exec wk run get-workspace-status '{}'
+```
+
+**Copy-paste — read canonical phase and drift:**
+
+```bash
+pnpm exec wk run phase-status '{}'
+pnpm exec wk run phase-status '{"includeTaskCounts":true,"includeDriftDetails":true}'
+```
+
+**Copy-paste — set current phase (SQLite first, config hint + export after):**
+
+```bash
+pnpm exec wk run get-workspace-status '{}'
+pnpm exec wk run set-current-phase '{"currentKitPhase":"72","nextKitPhase":"73","expectedWorkspaceRevision":1,"clientMutationId":"phase-72-rollover"}'
+pnpm exec wk run set-current-phase '{"currentKitPhase":"72","nextKitPhase":"73","dryRun":true}'
 ```
 
 **Copy-paste — full audit:**
@@ -440,7 +455,7 @@ workspace-kit run create-task '{"id":"T900","title":"retry-safe mutation","statu
 workspace-kit run update-task '{"taskId":"T900","updates":{"title":"retry-safe mutation v2","features":["ci-guards","release-versioning"]},"clientMutationId":"agent-run-20260327-2"}'
 workspace-kit run assign-task-phase '{"taskId":"T900","phaseKey":"43","phase":"Phase 43 (example)","clientMutationId":"agent-run-phase-1"}'
 workspace-kit run clear-task-phase '{"taskId":"T900","clientMutationId":"agent-run-phase-2"}'
-workspace-kit run update-workspace-phase-snapshot '{"currentKitPhase":"43","nextKitPhase":"44","dryRun":true}'
+workspace-kit run set-current-phase '{"currentKitPhase":"43","nextKitPhase":"44","dryRun":true}'
 workspace-kit run explain-task-engine-model '{}'
 workspace-kit run list-planning-types '{}'
 workspace-kit run explain-planning-rules '{"planningType":"new-feature"}'
@@ -449,6 +464,7 @@ workspace-kit run build-plan '{"planningType":"new-feature","answers":{"featureG
 # Multi-task execution drafts: finalize + outputMode tasks + executionTaskDrafts[] (convert-wishlist row shape) → code planning-multi-task-decomposition-preview; then persist with expectedPlanningGeneration when policy requires:
 workspace-kit run build-plan '{"planningType":"new-feature","outputMode":"tasks","finalize":true,"answers":{"featureGoal":"...","placement":"CLI","technology":"TypeScript","targetAudience":"AI Agent Operators"},"executionTaskDrafts":[{"title":"...","phase":"Phase 68","approach":"...","technicalScope":["..."],"acceptanceCriteria":["..."]}]}'
 workspace-kit run persist-planning-execution-drafts '{"tasks":[...],"expectedPlanningGeneration":<n>,"planRef":"planning:new-feature:...","planningType":"new-feature","clientMutationId":"agent-bulk-1"}'
+workspace-kit run persist-planning-execution-drafts '{"targetPhaseKey":"73","targetPhase":"Phase 73","desiredStatus":"ready","tasks":[...],"expectedPlanningGeneration":<n>,"planRef":"planning:new-feature:phase-73","clientMutationId":"phase-73-task-open"}'
 workspace-kit run list-wishlist '{}'
 workspace-kit run get-wishlist '{"wishlistId":"T42"}'
 workspace-kit run explain-config '{}'
@@ -474,7 +490,7 @@ workspace-kit doctor
 
 **Agent behavior** (`list-behavior-profiles`, `get-behavior-profile`, `resolve-behavior-profile`, `set-active-behavior-profile`, `create-behavior-profile`, `update-behavior-profile`, `delete-behavior-profile`, `diff-behavior-profiles`, `explain-behavior-profiles`, `interview-behavior-profile`, `sync-effective-behavior-cursor-rule`) are **Tier C**: advisory interaction posture only; **subordinate** to PRINCIPLES and policy. They persist under `.workspace-kit/agent-behavior/` (JSON) or unified SQLite (`module_id` `agent-behavior`) when `tasks.persistenceBackend` is `sqlite`. **`sync-effective-behavior-cursor-rule`** writes a generated **`.cursor/rules/*.mdc`** summary (also auto-scheduled after common profile / guidance mutators; fail-open).
 
-**Wishlist mutations** (`create-wishlist`, `update-wishlist`, `convert-wishlist`), **`persist-planning-execution-drafts`**, and **`migrate-task-persistence`** are Tier C by default (same as `create-task`): they persist workspace state (legacy task JSON import and/or the configured SQLite planning DB under `tasks.sqliteDatabaseRelativePath`) but do not use `policyApproval` unless listed in `policy.extraSensitiveModuleCommands`. **`update-workspace-phase-snapshot`** is Tier C and writes only the two phase scalar lines in **`docs/maintainers/data/workspace-kit-status.yaml`** (see **`.ai/agent-source-of-truth-order.md`** and task-engine instructions for phase snapshot).
+**Wishlist mutations** (`create-wishlist`, `update-wishlist`, `convert-wishlist`), **`persist-planning-execution-drafts`**, and **`migrate-task-persistence`** are Tier C by default (same as `create-task`): they persist workspace state (legacy task JSON import and/or the configured SQLite planning DB under `tasks.sqliteDatabaseRelativePath`) but do not use `policyApproval` unless listed in `policy.extraSensitiveModuleCommands`. **`update-workspace-phase-snapshot`** is Tier C compatibility: it updates SQLite/export first and then writes the legacy **`docs/maintainers/data/workspace-kit-status.yaml`** surface (see **`.ai/agent-source-of-truth-order.md`** and task-engine instructions for phase snapshot).
 
 Instruction paths: run `workspace-kit run` with no subcommand to list commands; each line lists `(moduleId)` and points to the module’s instruction file pattern above.
 

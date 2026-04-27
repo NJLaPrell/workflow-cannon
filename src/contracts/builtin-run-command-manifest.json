@@ -184,7 +184,7 @@
     "moduleId": "task-engine",
     "name": "update-workspace-phase-snapshot",
     "file": "update-workspace-phase-snapshot.md",
-    "description": "Update current_kit_phase and/or next_kit_phase in docs/maintainers/data/workspace-kit-status.yaml (atomic write).",
+    "description": "Compatibility shim for current_kit_phase and/or next_kit_phase; prefer set-current-phase for SQLite-first rollover.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },
@@ -193,6 +193,14 @@
     "name": "update-workspace-status",
     "file": "update-workspace-status.md",
     "description": "Patch kit_workspace_status with workspaceRevision optimistic concurrency.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "set-current-phase",
+    "file": "set-current-phase.md",
+    "description": "Set canonical workspace current phase through SQLite first, with config hint and export verification.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },
@@ -321,6 +329,14 @@
     "name": "get-workspace-status",
     "file": "get-workspace-status.md",
     "description": "Read kit_workspace_status singleton from kit SQLite.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "phase-status",
+    "file": "phase-status.md",
+    "description": "Read canonical phase, config drift, export freshness, and optional phase task counts.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },
