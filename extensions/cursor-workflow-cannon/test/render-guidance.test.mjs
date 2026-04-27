@@ -28,7 +28,8 @@ test("renderGuidanceSummaryInnerHtml renders health and escapes issue details", 
   });
   assert.match(html, /Guidance status/);
   assert.match(html, /How to recover/);
-  assert.match(html, /Fix the Guidance registry/);
+  assert.match(html, /Guidance rules need repair/);
+  assert.match(html, /separate from agent behavior settings/);
   assert.doesNotMatch(html, /<script>/i);
   assert.match(html, /&lt;script&gt;/);
 });
@@ -57,9 +58,47 @@ test("renderGuidanceSummaryInnerHtml renders persistence recovery copy", () => {
       feedback: { available: true, summary: { total: 0, useful: 0, noisy: 0 }, rows: [] }
     }
   });
-  assert.match(html, /Enable Guidance history/);
-  assert.match(html, /trace history will be ephemeral/);
+  assert.match(html, /Guidance history is off/);
+  assert.match(html, /history disappears after the session/);
   assert.match(html, /Persistence off/);
+});
+
+test("renderGuidanceSummaryInnerHtml renders readable recent checks and copyable truncated JSON", () => {
+  const html = renderGuidanceSummaryInnerHtml({
+    ok: true,
+    data: {
+      schemaVersion: 1,
+      health: {
+        caeEnabled: true,
+        persistenceEnabled: true,
+        registryStatus: "ok",
+        activeRegistryVersionId: "v1",
+        issues: [],
+        traceRowCount: 1
+      },
+      validation: { ok: true, code: "cae-registry-validate-ok" },
+      recentTraces: {
+        available: true,
+        count: 1,
+        rows: [
+          {
+            traceId: "cae.trace.1234567890abcdef",
+            commandName: "get-next-actions",
+            createdAt: "2026-04-27T00:00:00.000Z",
+            evalMode: "shadow",
+            storage: "sqlite",
+            familyCounts: { policy: 0, think: 1, do: 2, review: 0 }
+          }
+        ]
+      },
+      acknowledgements: { available: true, count: 0, rows: [] },
+      feedback: { available: true, summary: { total: 0, useful: 0, noisy: 0 }, rows: [] }
+    }
+  });
+  assert.match(html, /Find The Next Actions|Get Next Actions/);
+  assert.match(html, /Review why/);
+  assert.match(html, /Advanced details JSON/);
+  assert.match(html, /data-wc-action="guidance-copy-block"/);
 });
 
 test("renderGuidancePreviewInnerHtml renders grouped guidance actions", () => {
@@ -112,10 +151,13 @@ test("renderGuidancePreviewInnerHtml renders grouped guidance actions", () => {
   });
   assert.match(html, /Rules to follow/);
   assert.match(html, /Why this appeared/);
+  assert.match(html, /Preview summary/);
+  assert.match(html, /Review 1 Guidance item/);
   assert.match(html, /Possible guidance conflicts/);
   assert.match(html, /Two policy activations matched/);
   assert.match(html, /data-wc-action="guidance-ack"/);
   assert.match(html, /data-wc-action="guidance-feedback"/);
+  assert.match(html, /Raw preview JSON/);
 });
 
 test("renderGuidanceTraceDetailInnerHtml renders summary before raw JSON", () => {
@@ -148,11 +190,12 @@ test("renderGuidanceTraceDetailInnerHtml renders summary before raw JSON", () =>
     },
     traceFetch: { ok: true, data: { storage: "sqlite", trace: { traceId: "cae.trace.example" } } }
   });
-  assert.match(html, /Trace detail/);
+  assert.match(html, /Why this Guidance appeared/);
   assert.match(html, /matched policy=1/);
   assert.match(html, /Pending acknowledgements/);
   assert.match(html, /Rules: 1/);
   assert.match(html, /Raw trace JSON/);
+  assert.match(html, /Copy shown JSON/);
 });
 
 test("renderGuidanceTraceDetailInnerHtml renders trace-not-found recovery", () => {
@@ -168,8 +211,8 @@ test("renderGuidanceTraceDetailInnerHtml renders trace-not-found recovery", () =
     },
     traceFetch: { ok: false, code: "cae-trace-not-found", message: "No persisted trace" }
   });
-  assert.match(html, /Stored trace not found/);
-  assert.match(html, /fresh Guidance preview/);
+  assert.match(html, /Stored check not found/);
+  assert.match(html, /fresh Guidance preview|fresh Guidance preview/);
 });
 
 test("renderGuidanceActionResultInnerHtml renders friendly success and raw details", () => {
@@ -179,7 +222,7 @@ test("renderGuidanceActionResultInnerHtml renders friendly success and raw detai
   });
   assert.match(html, /Useful feedback recorded/);
   assert.match(html, /Recorded feedback/);
-  assert.match(html, /Raw result/);
+  assert.match(html, /Raw action result JSON/);
 });
 
 test("renderGuidanceActionResultInnerHtml renders friendly failure", () => {
