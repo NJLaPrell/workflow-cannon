@@ -314,7 +314,7 @@ Use **`queue-health`** when you need a **single JSON answer** to “are ready ta
 1. Leading digits from **`kit_workspace_status.current_kit_phase`** (via **`dashboard-summary` / `queue-health` / `agent-bootstrap`** — not maintainer YAML).
 2. Otherwise **`kit.currentPhaseNumber`** in effective workspace config when set to a **positive integer** (bootstrap / operator UX only).
 
-**`workspace-kit doctor`** does **not** fail on config vs DB phase mismatch; it may print a **note** after a successful pass. Use **`pnpm exec wk run get-workspace-status '{}'`** / **`update-workspace-status`** / **`update-workspace-phase-snapshot`** to align the **DB** row.
+**`workspace-kit doctor`** does **not** fail on config vs DB phase mismatch; it may print a **note** after a successful pass. Use **`phase-status`** to inspect canonical phase and drift, then **`set-current-phase`** for the SQLite-first mutation that also aligns config hints and the non-authoritative export.
 
 **Copy-paste — read workspace status (SQLite):**
 
