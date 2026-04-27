@@ -322,6 +322,14 @@ Use **`queue-health`** when you need a **single JSON answer** to “are ready ta
 pnpm exec wk run get-workspace-status '{}'
 ```
 
+**Copy-paste — set current phase (SQLite first, config hint + export after):**
+
+```bash
+pnpm exec wk run get-workspace-status '{}'
+pnpm exec wk run set-current-phase '{"currentKitPhase":"72","nextKitPhase":"73","expectedWorkspaceRevision":1,"clientMutationId":"phase-72-rollover"}'
+pnpm exec wk run set-current-phase '{"currentKitPhase":"72","nextKitPhase":"73","dryRun":true}'
+```
+
 **Copy-paste — full audit:**
 
 ```bash

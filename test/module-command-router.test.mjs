@@ -85,6 +85,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "run-transition",
     "set-active-behavior-profile",
     "set-agent-guidance",
+    "set-current-phase",
     "sync-effective-behavior-cursor-rule",
     "synthesize-transcript-churn",
     "update-behavior-profile",

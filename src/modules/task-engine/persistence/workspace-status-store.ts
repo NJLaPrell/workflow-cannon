@@ -217,6 +217,8 @@ export function patchWorkspaceStatus(
     patch: WorkspaceStatusUpdatePatch;
     actor?: string | null;
     command?: string | null;
+    eventKind?: string;
+    details?: Record<string, unknown>;
   }
 ): { beforeRevision: number; afterRevision: number } {
   if (!workspaceStatusTableAvailable(db)) {
@@ -249,7 +251,8 @@ export function patchWorkspaceStatus(
   };
 
   const now = next.updatedAt;
-  const details = JSON.stringify({ patchKeys: Object.keys(p) });
+  const details = JSON.stringify({ patchKeys: Object.keys(p), ...(args.details ?? {}) });
+  const eventKind = args.eventKind ?? "update_workspace_status";
 
   db.transaction(() => {
     db.prepare(
@@ -278,10 +281,44 @@ export function patchWorkspaceStatus(
     db.prepare(
       `INSERT INTO kit_workspace_status_events (
         created_at, event_kind, actor, command, revision_before, revision_after, details_json
-      ) VALUES (?, 'update_workspace_status', ?, ?, ?, ?, ?)`
-    ).run(now, args.actor ?? null, args.command ?? null, cur.workspaceRevision, next.workspaceRevision, details);
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)`
+    ).run(now, eventKind, args.actor ?? null, args.command ?? null, cur.workspaceRevision, next.workspaceRevision, details);
   })();
   return { beforeRevision: cur.workspaceRevision, afterRevision: next.workspaceRevision };
+}
+
+export function findWorkspaceStatusEventByClientMutationId(
+  db: SqliteDb,
+  command: string,
+  clientMutationId: string
+): { payloadDigest?: string; revisionBefore: number; revisionAfter: number } | null {
+  if (!workspaceStatusTableAvailable(db)) {
+    return null;
+  }
+  const rows = db
+    .prepare(
+      `SELECT revision_before, revision_after, details_json
+       FROM kit_workspace_status_events
+       WHERE command = ?
+       ORDER BY id DESC`
+    )
+    .all(command) as Array<{ revision_before: number; revision_after: number; details_json: string }>;
+  for (const row of rows) {
+    try {
+      const details = JSON.parse(row.details_json) as Record<string, unknown>;
+      if (details.clientMutationId !== clientMutationId) {
+        continue;
+      }
+      return {
+        payloadDigest: typeof details.payloadDigest === "string" ? details.payloadDigest : undefined,
+        revisionBefore: Number(row.revision_before) || 0,
+        revisionAfter: Number(row.revision_after) || 0
+      };
+    } catch {
+      /* Ignore malformed historical details. */
+    }
+  }
+  return null;
 }
 
 export function listWorkspaceStatusEvents(db: SqliteDb, limit: number): Array<Record<string, unknown>> {

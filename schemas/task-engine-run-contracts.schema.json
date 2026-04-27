@@ -26,6 +26,7 @@
         "update-wishlist",
         "update-workspace-phase-snapshot",
         "update-workspace-status",
+        "set-current-phase",
         "archive-task",
         "add-dependency",
         "agent-bootstrap",
@@ -75,6 +76,7 @@
         "update-wishlist": { "$ref": "#/$defs/contractUpdateWishlist" },
         "update-workspace-phase-snapshot": { "$ref": "#/$defs/contractUpdateWorkspacePhaseSnapshot" },
         "update-workspace-status": { "$ref": "#/$defs/contractUpdateWorkspaceStatus" },
+        "set-current-phase": { "$ref": "#/$defs/contractSetCurrentPhase" },
         "archive-task": { "$ref": "#/$defs/contractArchiveTask" },
         "add-dependency": { "$ref": "#/$defs/contractDependencyMutation" },
         "agent-bootstrap": { "$ref": "#/$defs/contractAgentSessionSnapshot" },
@@ -513,6 +515,45 @@
             "responseData": {
               "type": "object",
               "required": ["beforeRevision", "afterRevision", "workspaceStatusBefore", "workspaceStatusAfter"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractSetCurrentPhase": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "required": ["currentKitPhase"],
+              "properties": {
+                "currentKitPhase": { "type": "string" },
+                "nextKitPhase": { "type": ["string", "null"] },
+                "currentPhaseLabel": { "type": ["string", "null"] },
+                "activeFocus": { "type": ["string", "null"] },
+                "lastUpdated": { "type": "string" },
+                "expectedWorkspaceRevision": { "type": "integer", "minimum": 0 },
+                "clientMutationId": { "type": "string", "minLength": 1 },
+                "actor": { "type": "string" },
+                "dryRun": { "type": "boolean" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": [
+                "dryRun",
+                "workspaceStatusBefore",
+                "workspaceStatusAfter",
+                "configHintBefore",
+                "configHintAfter",
+                "canonicalPhase",
+                "exportStatus",
+                "suggestedFollowUpCommand"
+              ],
               "additionalProperties": true
             }
           }
