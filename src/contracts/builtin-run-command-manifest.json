@@ -334,6 +334,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "phase-status",
+    "file": "phase-status.md",
+    "description": "Read canonical phase, config drift, export freshness, and optional phase task counts.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "get-task",
     "file": "get-task.md",
     "description": "Retrieve a single task by ID.",

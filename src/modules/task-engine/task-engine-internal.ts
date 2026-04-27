@@ -32,6 +32,7 @@ import { runUpdateWorkspacePhaseSnapshot } from "./update-workspace-phase-snapsh
 import {
   runExportWorkspaceStatus,
   runGetWorkspaceStatus,
+  runPhaseStatus,
   runSetCurrentPhase,
   runUpdateWorkspaceStatus,
   runWorkspaceStatusHistory
@@ -337,6 +338,14 @@ export const taskEngineModule: WorkflowModule = {
         message: "Read-only composed snapshot for session reload",
         data: snapshotData
       };
+    }
+
+    if (command.name === "phase-status") {
+      return runPhaseStatus(ctx, args as Record<string, unknown>, {
+        tasks: store.getActiveTasks(),
+        db: planning.sqliteDual.getDatabase(),
+        dbPath: planning.sqliteDual.dbPath
+      });
     }
 
     if (command.name === "list-components") {
