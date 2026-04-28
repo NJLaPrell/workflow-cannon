@@ -1008,6 +1008,12 @@ test("set-current-phase dry run reports before/after without writes", async () =
   assert.equal(result.data.dryRun, true);
   assert.equal(result.data.workspaceStatusBefore.workspaceRevision, 0);
   assert.equal(result.data.workspaceStatusAfter.currentKitPhase, "72");
+  assert.equal(result.data.presentation.phaseRollover.kind, "phase_rollover_v1");
+  assert.equal(result.data.presentation.phaseRollover.dryRun, true);
+  assert.equal(result.data.presentation.phaseRollover.workspaceRevisionBefore, 0);
+  assert.equal(result.data.presentation.phaseRollover.workspaceRevisionAfter, 1);
+  assert.equal(result.data.presentation.phaseRollover.afterPhase.currentKitPhase, "72");
+  assert.equal(result.data.presentation.phaseRollover.exportStatus.dryRun, true);
 
   const status = await taskEngineModule.onCommand({ name: "get-workspace-status", args: {} }, ctx);
   assert.equal(status.ok, true);
@@ -1050,6 +1056,12 @@ test("set-current-phase writes SQLite first, config hint, and export", async () 
   assert.equal(result.data.canonicalPhase.canonicalPhaseKey, "72");
   assert.equal(result.data.canonicalPhase.configMatchesWorkspaceStatus, true);
   assert.equal(result.data.exportStatus.written, true);
+  assert.equal(result.data.presentation.phaseRollover.dryRun, false);
+  assert.equal(result.data.presentation.phaseRollover.replayed, false);
+  assert.equal(result.data.presentation.phaseRollover.workspaceRevisionBefore, 0);
+  assert.equal(result.data.presentation.phaseRollover.workspaceRevisionAfter, 1);
+  assert.equal(result.data.presentation.phaseRollover.configHintStatus.configMatchesWorkspaceStatus, true);
+  assert.equal(result.data.presentation.phaseRollover.suggestedFollowUpCommand, null);
 
   const config = JSON.parse(await readFile(path.join(workspace, ".workspace-kit/config.json"), "utf8"));
   assert.equal(config.kit.currentPhaseNumber, 72);
@@ -1159,6 +1171,9 @@ test("set-current-phase idempotent replay does not duplicate audit events", asyn
   assert.equal(replay.ok, true);
   assert.equal(replay.code, "set-current-phase-idempotent-replay");
   assert.deepEqual(replay.data.workspaceStatusAfter.nextAgentActions, ["Continue Phase 72"]);
+  assert.equal(replay.data.presentation.phaseRollover.replayed, true);
+  assert.equal(replay.data.presentation.phaseRollover.workspaceRevisionBefore, 0);
+  assert.equal(replay.data.presentation.phaseRollover.workspaceRevisionAfter, 1);
 
   const history = await taskEngineModule.onCommand({ name: "workspace-status-history", args: { limit: 10 } }, ctx);
   assert.equal(history.ok, true);

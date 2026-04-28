@@ -49,6 +49,7 @@ const BUILTIN: Record<string, ResponseTemplateDefinition> = {
       "snapshotAfter",
       "fileRelativePath",
       "dryRun",
+      "presentation",
       "filesWritten",
       "filesRead"
     ]

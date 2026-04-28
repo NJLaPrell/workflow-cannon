@@ -204,7 +204,12 @@ function attachPresentation(
   }
   const data = result.data as Record<string, unknown>;
   const matchedSections = def.expectedSections.filter((k) => k in data);
+  const existingPresentation =
+    data.presentation && typeof data.presentation === "object" && !Array.isArray(data.presentation)
+      ? (data.presentation as Record<string, unknown>)
+      : {};
   return {
+    ...existingPresentation,
     templateId: def.id,
     matchedSections
   };
