@@ -48,6 +48,13 @@ const stages = [
     hint: "Instruction markdown and manifest rows must match for sensitive run commands."
   },
   {
+    id: "task-engine-instruction-contract-sections",
+    label: "Task-engine generated instruction contract sections",
+    command: process.execPath,
+    args: ["scripts/check-task-engine-instruction-contract-sections.mjs"],
+    hint: "Run node scripts/check-task-engine-instruction-contract-sections.mjs --write after changing task-engine command contracts."
+  },
+  {
     id: "pilot-run-args-snapshot",
     label: "Pilot run-args snapshot vs task-engine contracts",
     command: process.execPath,
