@@ -50,6 +50,8 @@ export type TransitionContext = {
   allTasks: TaskEntity[];
   timestamp: string;
   actor?: string;
+  clientMutationId?: string;
+  payloadDigest?: string;
 };
 
 export type TransitionGuard = {
@@ -67,6 +69,8 @@ export type TransitionEvidence = {
   fromState: TaskStatus;
   toState: TaskStatus;
   action: string;
+  clientMutationId?: string;
+  payloadDigest?: string;
   guardResults: GuardResult[];
   dependentsUnblocked: string[];
   timestamp: string;
@@ -127,6 +131,7 @@ export type TaskEngineErrorCode =
   | "workspace-status-import-conflict"
   | "workspace-revision-mismatch"
   | "unknown-feature-id"
+  | "idempotency-key-conflict"
   | "hook-denied";
 
 export type TaskAdapter = {

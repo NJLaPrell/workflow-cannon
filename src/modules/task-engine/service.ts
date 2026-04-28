@@ -15,11 +15,13 @@ export type TransitionRequest = {
   actor?: string;
   /** When set, SQLite planning row must match this generation or persist fails (`planning-generation-mismatch`). */
   expectedPlanningGeneration?: number;
+  clientMutationId?: string;
 };
 
 export type TransitionResult = {
   evidence: TransitionEvidence;
   autoUnblocked: TransitionEvidence[];
+  replayed?: boolean;
 };
 
 export class TransitionService {
@@ -34,9 +36,28 @@ export class TransitionService {
   }
 
   async runTransition(request: TransitionRequest): Promise<TransitionResult> {
+    const prior = request.clientMutationId
+      ? this.store.getTransitionLog().find((entry) => entry.clientMutationId === request.clientMutationId)
+      : undefined;
     const task = this.store.getTask(request.taskId);
     if (!task) {
       throw new TaskEngineError("task-not-found", `Task '${request.taskId}' not found`);
+    }
+
+    if (prior) {
+      if (prior.taskId !== request.taskId || prior.action !== request.action) {
+        throw new TaskEngineError(
+          "idempotency-key-conflict",
+          `clientMutationId '${request.clientMutationId}' was already used for a different transition payload`
+        );
+      }
+      if (task.status !== prior.toState) {
+        throw new TaskEngineError(
+          "idempotency-key-conflict",
+          `clientMutationId '${request.clientMutationId}' matches a prior transition, but task '${request.taskId}' is no longer in replay target state '${prior.toState}'`
+        );
+      }
+      return { evidence: prior, autoUnblocked: [], replayed: true };
     }
 
     let effectiveAction = request.action;
@@ -94,6 +115,12 @@ export class TransitionService {
     this.store.updateTask(updatedTask);
 
     const action = getTransitionAction(fromState, targetState) ?? effectiveAction;
+    const payloadDigest = request.clientMutationId
+      ? crypto
+          .createHash("sha256")
+          .update(JSON.stringify({ taskId: request.taskId, action, fromState, toState: targetState }))
+          .digest("hex")
+      : undefined;
     const autoUnblockResults = targetState === "completed"
       ? this.autoUnblock(request.taskId, timestamp, request.actor)
       : [];
@@ -107,7 +134,9 @@ export class TransitionService {
       guardResults: validation.guardResults,
       dependentsUnblocked: autoUnblockResults.map((r) => r.taskId),
       timestamp,
-      actor: request.actor
+      actor: request.actor,
+      clientMutationId: request.clientMutationId,
+      payloadDigest
     };
     this.store.addEvidence(evidence);
 
