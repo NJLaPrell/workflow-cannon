@@ -612,6 +612,24 @@
             "null"
           ]
         },
+        "blockers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "pendingDecisions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "nextAgentActions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "lastUpdated": {
           "type": "string"
         },

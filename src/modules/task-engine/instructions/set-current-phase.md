@@ -17,6 +17,9 @@ workspace-kit run set-current-phase '{"currentKitPhase":"72","nextKitPhase":"73"
 | **`expectedWorkspaceRevision`** | Live writes | Must match current **`workspaceRevision`** unless this is an idempotent replay with the same **`clientMutationId`**. |
 | **`currentPhaseLabel`** | No | Optional config UX label. Omit to write **`Phase <N>`**; use JSON **`null`** to clear the label hint. |
 | **`activeFocus`** | No | Optional workspace status focus text; JSON **`null`** clears it. |
+| **`blockers`** | No | String array replacing workspace-status blockers. Pass **`[]`** during rollover to clear previous-phase blockers. |
+| **`pendingDecisions`** | No | String array replacing workspace-status pending decisions. Pass **`[]`** during rollover to clear previous-phase decisions. |
+| **`nextAgentActions`** | No | String array replacing workspace-status next actions. Pass **`[]`** or the new phase actions during rollover. |
 | **`lastUpdated`** | No | Optional timestamp/string for the workspace status row; defaults to the run time. |
 | **`clientMutationId`** | No | Idempotency key. Same key + same payload replays without a second workspace-status audit event. |
 | **`actor`** | No | Recorded on the workspace-status audit event. |
@@ -24,13 +27,13 @@ workspace-kit run set-current-phase '{"currentKitPhase":"72","nextKitPhase":"73"
 
 ## Behavior
 
-The live command writes **`kit_workspace_status`** first and treats it as canonical runtime truth. After that succeeds, it updates project config hints (**`kit.currentPhaseNumber`** and **`kit.currentPhaseLabel`**) for operator UX and writes the non-authoritative DB export at **`docs/maintainers/data/workspace-kit-status.db-export.yaml`**.
+The live command writes **`kit_workspace_status`** first and treats it as canonical runtime truth. Use it as the phase rollover aggregate: update the phase/focus and replace or clear **`blockers`**, **`pendingDecisions`**, and **`nextAgentActions`** in the same call. After SQLite succeeds, it updates project config hints (**`kit.currentPhaseNumber`** and **`kit.currentPhaseLabel`**) for operator UX and writes the non-authoritative DB export at **`docs/maintainers/data/workspace-kit-status.db-export.yaml`**.
 
 It does **not** modify task **`phaseKey`** values. Workspace current phase and per-task phase buckets are separate.
 
 ## Response
 
-Returns before/after workspace status rows, before/after config hints, canonical phase verification, export status, revisions, and a **`suggestedFollowUpCommand`** when verification detects remaining drift.
+Returns authoritative domain result data: before/after workspace status rows, before/after config hints, canonical phase verification, export status, revisions, and a **`suggestedFollowUpCommand`** when verification detects remaining drift. Summarizer presentation shaping is intentionally separate from this domain response.
 
 ## Examples
 
@@ -44,5 +47,5 @@ Apply:
 
 ```bash
 workspace-kit run get-workspace-status '{}'
-workspace-kit run set-current-phase '{"currentKitPhase":"72","nextKitPhase":"73","expectedWorkspaceRevision":1,"clientMutationId":"phase-72-rollover"}'
+workspace-kit run set-current-phase '{"currentKitPhase":"72","nextKitPhase":"73","activeFocus":"Phase 72 delivery","pendingDecisions":[],"nextAgentActions":["Start Phase 72 delivery"],"blockers":[],"expectedWorkspaceRevision":1,"clientMutationId":"phase-72-rollover"}'
 ```

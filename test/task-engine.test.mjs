@@ -1009,6 +1009,9 @@ test("set-current-phase writes SQLite first, config hint, and export", async () 
         nextKitPhase: "73",
         currentPhaseLabel: "Phase 72 — Phase-control ergonomics",
         activeFocus: "phase-control",
+        blockers: [],
+        pendingDecisions: [],
+        nextAgentActions: ["Deliver Phase 72"],
         expectedWorkspaceRevision: 0,
         clientMutationId: "phase-72-test"
       }
@@ -1023,6 +1026,9 @@ test("set-current-phase writes SQLite first, config hint, and export", async () 
   assert.equal(result.data.workspaceStatusAfter.currentKitPhase, "72");
   assert.equal(result.data.workspaceStatusAfter.nextKitPhase, "73");
   assert.equal(result.data.workspaceStatusAfter.activeFocus, "phase-control");
+  assert.deepEqual(result.data.workspaceStatusAfter.blockers, []);
+  assert.deepEqual(result.data.workspaceStatusAfter.pendingDecisions, []);
+  assert.deepEqual(result.data.workspaceStatusAfter.nextAgentActions, ["Deliver Phase 72"]);
   assert.equal(result.data.canonicalPhase.canonicalPhaseKey, "72");
   assert.equal(result.data.canonicalPhase.configMatchesWorkspaceStatus, true);
   assert.equal(result.data.exportStatus.written, true);
@@ -1035,6 +1041,61 @@ test("set-current-phase writes SQLite first, config hint, and export", async () 
     "utf8"
   );
   assert.match(exportBody, /current_kit_phase: "72"/);
+  assert.match(exportBody, /next_agent_actions:\n  - "Deliver Phase 72"/);
+});
+
+test("set-current-phase replaces stale rollover status text atomically", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+
+  const first = await taskEngineModule.onCommand(
+    {
+      name: "set-current-phase",
+      args: {
+        currentKitPhase: "71",
+        nextKitPhase: "72",
+        activeFocus: "Phase 71 wrap-up",
+        pendingDecisions: ["Decide Phase 71 release date"],
+        nextAgentActions: ["Finish Phase 71 evidence"],
+        blockers: ["Phase 71 blocker"],
+        expectedWorkspaceRevision: 0
+      }
+    },
+    ctx
+  );
+  assert.equal(first.ok, true);
+
+  const rollover = await taskEngineModule.onCommand(
+    {
+      name: "set-current-phase",
+      args: {
+        currentKitPhase: "72",
+        nextKitPhase: "73",
+        activeFocus: "Phase 72 kickoff",
+        pendingDecisions: [],
+        nextAgentActions: ["Start Phase 72 delivery"],
+        blockers: [],
+        expectedWorkspaceRevision: 1,
+        clientMutationId: "phase-72-clean-rollover"
+      }
+    },
+    ctx
+  );
+
+  assert.equal(rollover.ok, true);
+  assert.equal(rollover.data.workspaceStatusAfter.currentKitPhase, "72");
+  assert.equal(rollover.data.workspaceStatusAfter.activeFocus, "Phase 72 kickoff");
+  assert.deepEqual(rollover.data.workspaceStatusAfter.pendingDecisions, []);
+  assert.deepEqual(rollover.data.workspaceStatusAfter.nextAgentActions, ["Start Phase 72 delivery"]);
+  assert.deepEqual(rollover.data.workspaceStatusAfter.blockers, []);
+
+  const exportBody = await readFile(
+    path.join(workspace, "docs/maintainers/data/workspace-kit-status.db-export.yaml"),
+    "utf8"
+  );
+  assert.doesNotMatch(exportBody, /Phase 71/);
+  assert.match(exportBody, /active_focus: "Phase 72 kickoff"/);
+  assert.match(exportBody, /next_agent_actions:\n  - "Start Phase 72 delivery"/);
 });
 
 test("set-current-phase rejects stale workspace revision", async () => {
@@ -1056,6 +1117,8 @@ test("set-current-phase idempotent replay does not duplicate audit events", asyn
   const args = {
     currentKitPhase: "72",
     nextKitPhase: "73",
+    pendingDecisions: [],
+    nextAgentActions: ["Continue Phase 72"],
     expectedWorkspaceRevision: 0,
     clientMutationId: "phase-72-replay"
   };
@@ -1063,11 +1126,21 @@ test("set-current-phase idempotent replay does not duplicate audit events", asyn
   const first = await taskEngineModule.onCommand({ name: "set-current-phase", args }, ctx);
   assert.equal(first.ok, true);
   const replay = await taskEngineModule.onCommand(
-    { name: "set-current-phase", args: { currentKitPhase: "72", nextKitPhase: "73", clientMutationId: "phase-72-replay" } },
+    {
+      name: "set-current-phase",
+      args: {
+        currentKitPhase: "72",
+        nextKitPhase: "73",
+        pendingDecisions: [],
+        nextAgentActions: ["Continue Phase 72"],
+        clientMutationId: "phase-72-replay"
+      }
+    },
     ctx
   );
   assert.equal(replay.ok, true);
   assert.equal(replay.code, "set-current-phase-idempotent-replay");
+  assert.deepEqual(replay.data.workspaceStatusAfter.nextAgentActions, ["Continue Phase 72"]);
 
   const history = await taskEngineModule.onCommand({ name: "workspace-status-history", args: { limit: 10 } }, ctx);
   assert.equal(history.ok, true);
@@ -1193,6 +1266,29 @@ test("phase-status reads canonical phase and optional task counts", async () => 
   assert.equal(result.data.taskCounts.currentPhase.completed, 1);
   assert.equal(result.data.taskCounts.nextPhase.proposed, 1);
   assert.equal(result.data.exportStatus.exists, true);
+});
+
+test("phase-status export freshness follows workspace-status revision, not planning DB mtime", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const moved = await taskEngineModule.onCommand(
+    { name: "set-current-phase", args: { currentKitPhase: "72", nextKitPhase: "73", expectedWorkspaceRevision: 0 } },
+    ctx
+  );
+  assert.equal(moved.ok, true);
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T7298", phaseKey: "72", phase: "Phase 72", status: "ready" }));
+  });
+
+  const result = await taskEngineModule.onCommand({ name: "phase-status", args: { includeDriftDetails: true } }, ctx);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.exportStatus.exists, true);
+  assert.equal(result.data.exportStatus.stale, false);
+  assert.equal(result.data.exportStatus.reason, "fresh");
+  assert.equal(result.data.exportStatus.workspaceRevision, 1);
+  assert.equal(result.data.exportStatus.exportWorkspaceRevision, 1);
+  assert.deepEqual(result.data.driftDetails, []);
 });
 
 test("phase-status reports config drift remediation", async () => {
