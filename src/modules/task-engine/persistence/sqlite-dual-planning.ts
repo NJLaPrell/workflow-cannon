@@ -4,10 +4,12 @@ import Database from "better-sqlite3";
 import {
   prepareKitSqliteDatabase,
   TASK_ENGINE_DEPENDENCIES_TABLE,
+  TASK_ENGINE_MUTATION_LOG_TABLE,
   TASK_ENGINE_TASKS_TABLE,
+  TASK_ENGINE_TRANSITION_LOG_TABLE,
   kitSqliteHasRelationalTaskDdl
 } from "../../../core/state/workspace-kit-sqlite.js";
-import type { TaskStoreDocument } from "../types.js";
+import type { TaskMutationEvidence, TaskStoreDocument, TransitionEvidence } from "../types.js";
 import type { WishlistStoreDocument } from "../wishlist/wishlist-types.js";
 import { TaskEngineError } from "../transitions.js";
 import { normalizeTaskStoreDocumentFromUnknown } from "./task-store-migration.js";
@@ -58,10 +60,43 @@ function planningStateColumnSet(db: Database.Database): Set<string> {
 }
 
 function dependencyTableAvailable(db: Database.Database): boolean {
+  return tableAvailable(db, TASK_ENGINE_DEPENDENCIES_TABLE);
+}
+
+function tableAvailable(db: Database.Database, tableName: string): boolean {
   const row = db
     .prepare("SELECT 1 AS ok FROM sqlite_master WHERE type = 'table' AND name = ?")
-    .get(TASK_ENGINE_DEPENDENCIES_TABLE) as { ok: number } | undefined;
+    .get(tableName) as { ok: number } | undefined;
   return Boolean(row?.ok);
+}
+
+function evidenceTablesAvailable(db: Database.Database): boolean {
+  return tableAvailable(db, TASK_ENGINE_TRANSITION_LOG_TABLE) && tableAvailable(db, TASK_ENGINE_MUTATION_LOG_TABLE);
+}
+
+function parseJsonArrayField(raw: string, label: string): unknown[] {
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) {
+      throw new TaskEngineError("storage-read-error", `${label} must be a JSON array`);
+    }
+    return parsed;
+  } catch (e) {
+    if (e instanceof TaskEngineError) {
+      throw e;
+    }
+    throw new TaskEngineError("storage-read-error", `Failed to parse ${label}: ${(e as Error).message}`);
+  }
+}
+
+function parseJsonObjectField(raw: string | null): Record<string, unknown> | undefined {
+  if (raw === null) {
+    return undefined;
+  }
+  const parsed = JSON.parse(raw) as unknown;
+  return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+    ? parsed as Record<string, unknown>
+    : undefined;
 }
 
 function dependencyProjection(tasks: TaskStoreDocument["tasks"]): {
@@ -260,6 +295,81 @@ export class SqliteDualPlanningStore {
     }
   }
 
+  private loadEvidenceLogs(db: Database.Database): boolean {
+    if (!evidenceTablesAvailable(db)) {
+      return false;
+    }
+    const transitionRows = db
+      .prepare(
+        `SELECT transition_id, task_id, from_state, to_state, action, timestamp, actor,
+                client_mutation_id, payload_digest, guard_results_json, dependents_unblocked_json
+         FROM ${TASK_ENGINE_TRANSITION_LOG_TABLE}
+         ORDER BY timestamp ASC, transition_id ASC`
+      )
+      .all() as Array<{
+        transition_id: string;
+        task_id: string;
+        from_state: TransitionEvidence["fromState"];
+        to_state: TransitionEvidence["toState"];
+        action: string;
+        timestamp: string;
+        actor: string | null;
+        client_mutation_id: string | null;
+        payload_digest: string | null;
+        guard_results_json: string;
+        dependents_unblocked_json: string;
+      }>;
+    const mutationRows = db
+      .prepare(
+        `SELECT mutation_id, mutation_type, task_id, timestamp, actor, details_json
+         FROM ${TASK_ENGINE_MUTATION_LOG_TABLE}
+         ORDER BY timestamp ASC, mutation_id ASC`
+      )
+      .all() as Array<{
+        mutation_id: string;
+        mutation_type: TaskMutationEvidence["mutationType"];
+        task_id: string;
+        timestamp: string;
+        actor: string | null;
+        details_json: string | null;
+      }>;
+    if (transitionRows.length === 0 && mutationRows.length === 0) {
+      return false;
+    }
+    this._taskDoc.transitionLog = transitionRows.map((row) => {
+      const evidence: TransitionEvidence = {
+        transitionId: row.transition_id,
+        taskId: row.task_id,
+        fromState: row.from_state,
+        toState: row.to_state,
+        action: row.action,
+        guardResults: parseJsonArrayField(row.guard_results_json, "guard_results_json") as TransitionEvidence["guardResults"],
+        dependentsUnblocked: parseJsonArrayField(
+          row.dependents_unblocked_json,
+          "dependents_unblocked_json"
+        ) as string[],
+        timestamp: row.timestamp
+      };
+      if (row.actor !== null) evidence.actor = row.actor;
+      if (row.client_mutation_id !== null) evidence.clientMutationId = row.client_mutation_id;
+      if (row.payload_digest !== null) evidence.payloadDigest = row.payload_digest;
+      return evidence;
+    });
+    this._taskDoc.mutationLog = mutationRows.map((row) => {
+      const evidence: TaskMutationEvidence = {
+        mutationId: row.mutation_id,
+        mutationType: row.mutation_type,
+        taskId: row.task_id,
+        timestamp: row.timestamp
+      };
+      if (row.actor !== null) evidence.actor = row.actor;
+      const details = parseJsonObjectField(row.details_json);
+      if (details !== undefined) evidence.details = details;
+      return evidence;
+    });
+    return true;
+  }
+
   /** Load documents from an existing database file; otherwise start empty (no file created). */
   loadFromDisk(): void {
     if (!fs.existsSync(this.dbPath)) {
@@ -310,7 +420,9 @@ export class SqliteDualPlanningStore {
           if (typeof tr !== "string" || typeof mj !== "string") {
             throw new TaskEngineError("storage-read-error", "envelope log columns missing");
           }
-          this.parseLogs(tr, mj);
+          if (!this.loadEvidenceLogs(db)) {
+            this.parseLogs(tr, mj);
+          }
         } else {
           const taskParsed = normalizeTaskStoreDocumentFromUnknown(JSON.parse(row.task_store_json as string));
           const wishParsed = JSON.parse(row.wishlist_store_json as string) as WishlistStoreDocument;
@@ -359,7 +471,9 @@ export class SqliteDualPlanningStore {
         const stub = normalizeTaskStoreDocumentFromUnknown(JSON.parse(row.task_store_json as string));
         this._taskDoc = { ...stub, tasks: [] };
         this.loadRelationalTasks(db);
-        this.parseLogs(row.transition_log_json as string, row.mutation_log_json as string);
+        if (!this.loadEvidenceLogs(db)) {
+          this.parseLogs(row.transition_log_json as string, row.mutation_log_json as string);
+        }
       } else {
         this._taskDoc = normalizeTaskStoreDocumentFromUnknown(JSON.parse(row.task_store_json as string));
         this._wishlistDoc = emptyWishlistDocument();
@@ -499,6 +613,44 @@ export class SqliteDualPlanningStore {
     }
     if (registry) {
       replaceAllTaskFeatureLinks(db, this._taskDoc.tasks);
+    }
+    if (evidenceTablesAvailable(db)) {
+      const insertTransition = db.prepare(
+        `INSERT OR IGNORE INTO ${TASK_ENGINE_TRANSITION_LOG_TABLE} (
+          transition_id, task_id, from_state, to_state, action, timestamp, actor,
+          client_mutation_id, payload_digest, guard_results_json, dependents_unblocked_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      );
+      for (const evidence of this._taskDoc.transitionLog) {
+        insertTransition.run(
+          evidence.transitionId,
+          evidence.taskId,
+          evidence.fromState,
+          evidence.toState,
+          evidence.action,
+          evidence.timestamp,
+          evidence.actor ?? null,
+          evidence.clientMutationId ?? null,
+          evidence.payloadDigest ?? null,
+          JSON.stringify(evidence.guardResults ?? []),
+          JSON.stringify(evidence.dependentsUnblocked ?? [])
+        );
+      }
+      const insertMutation = db.prepare(
+        `INSERT OR IGNORE INTO ${TASK_ENGINE_MUTATION_LOG_TABLE} (
+          mutation_id, mutation_type, task_id, timestamp, actor, details_json
+        ) VALUES (?, ?, ?, ?, ?, ?)`
+      );
+      for (const evidence of this._taskDoc.mutationLog ?? []) {
+        insertMutation.run(
+          evidence.mutationId,
+          evidence.mutationType,
+          evidence.taskId,
+          evidence.timestamp,
+          evidence.actor ?? null,
+          evidence.details !== undefined ? JSON.stringify(evidence.details) : null
+        );
+      }
     }
 
     if (this._tableShape === "legacy-dual") {

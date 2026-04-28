@@ -4,10 +4,12 @@ import { seedFeatureRegistryIfEmpty } from "./feature-registry-migration.js";
 type SqliteDatabase = InstanceType<typeof Database>;
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 15;
+export const KIT_SQLITE_USER_VERSION = 16;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 export const TASK_ENGINE_DEPENDENCIES_TABLE = "task_engine_dependencies";
+export const TASK_ENGINE_TRANSITION_LOG_TABLE = "task_engine_transition_log";
+export const TASK_ENGINE_MUTATION_LOG_TABLE = "task_engine_mutation_log";
 
 /**
  * Baseline DDL for the unified planning DB (task document row + module state). Idempotent via IF NOT EXISTS.
@@ -411,6 +413,128 @@ function migrateV14ToV15(db: SqliteDatabase): void {
   }
 }
 
+const TASK_ENGINE_EVIDENCE_DDL = `
+CREATE TABLE IF NOT EXISTS task_engine_transition_log (
+  transition_id TEXT PRIMARY KEY NOT NULL,
+  task_id TEXT NOT NULL,
+  from_state TEXT NOT NULL,
+  to_state TEXT NOT NULL,
+  action TEXT NOT NULL,
+  timestamp TEXT NOT NULL,
+  actor TEXT,
+  client_mutation_id TEXT,
+  payload_digest TEXT,
+  guard_results_json TEXT NOT NULL DEFAULT '[]',
+  dependents_unblocked_json TEXT NOT NULL DEFAULT '[]'
+);
+CREATE INDEX IF NOT EXISTS idx_task_engine_transition_log_task_time ON task_engine_transition_log(task_id, timestamp);
+CREATE INDEX IF NOT EXISTS idx_task_engine_transition_log_timestamp ON task_engine_transition_log(timestamp);
+CREATE TABLE IF NOT EXISTS task_engine_mutation_log (
+  mutation_id TEXT PRIMARY KEY NOT NULL,
+  mutation_type TEXT NOT NULL,
+  task_id TEXT NOT NULL,
+  timestamp TEXT NOT NULL,
+  actor TEXT,
+  details_json TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_task_engine_mutation_log_task_time ON task_engine_mutation_log(task_id, timestamp);
+CREATE INDEX IF NOT EXISTS idx_task_engine_mutation_log_timestamp ON task_engine_mutation_log(timestamp);
+`;
+
+function parseJsonArray(raw: unknown): unknown[] {
+  if (typeof raw !== "string") {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function readString(record: Record<string, unknown>, key: string): string | null {
+  const value = record[key];
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function migrateV15ToV16(db: SqliteDatabase): void {
+  db.exec(TASK_ENGINE_EVIDENCE_DDL);
+  const row = db
+    .prepare("SELECT transition_log_json, mutation_log_json FROM workspace_planning_state WHERE id = 1")
+    .get() as { transition_log_json?: string; mutation_log_json?: string } | undefined;
+  if (!row) {
+    return;
+  }
+  const transitionCount = db.prepare("SELECT COUNT(*) AS c FROM task_engine_transition_log").get() as { c: number };
+  if (Number(transitionCount.c) === 0) {
+    const insertTransition = db.prepare(
+      `INSERT OR IGNORE INTO task_engine_transition_log (
+        transition_id, task_id, from_state, to_state, action, timestamp, actor,
+        client_mutation_id, payload_digest, guard_results_json, dependents_unblocked_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    );
+    for (const entry of parseJsonArray(row.transition_log_json)) {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        continue;
+      }
+      const record = entry as Record<string, unknown>;
+      const transitionId = readString(record, "transitionId");
+      const taskId = readString(record, "taskId");
+      const fromState = readString(record, "fromState");
+      const toState = readString(record, "toState");
+      const action = readString(record, "action");
+      const timestamp = readString(record, "timestamp");
+      if (!transitionId || !taskId || !fromState || !toState || !action || !timestamp) {
+        continue;
+      }
+      insertTransition.run(
+        transitionId,
+        taskId,
+        fromState,
+        toState,
+        action,
+        timestamp,
+        readString(record, "actor"),
+        readString(record, "clientMutationId"),
+        readString(record, "payloadDigest"),
+        JSON.stringify(Array.isArray(record.guardResults) ? record.guardResults : []),
+        JSON.stringify(Array.isArray(record.dependentsUnblocked) ? record.dependentsUnblocked : [])
+      );
+    }
+  }
+
+  const mutationCount = db.prepare("SELECT COUNT(*) AS c FROM task_engine_mutation_log").get() as { c: number };
+  if (Number(mutationCount.c) === 0) {
+    const insertMutation = db.prepare(
+      `INSERT OR IGNORE INTO task_engine_mutation_log (
+        mutation_id, mutation_type, task_id, timestamp, actor, details_json
+      ) VALUES (?, ?, ?, ?, ?, ?)`
+    );
+    for (const entry of parseJsonArray(row.mutation_log_json)) {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        continue;
+      }
+      const record = entry as Record<string, unknown>;
+      const mutationId = readString(record, "mutationId");
+      const mutationType = readString(record, "mutationType");
+      const taskId = readString(record, "taskId");
+      const timestamp = readString(record, "timestamp");
+      if (!mutationId || !mutationType || !taskId || !timestamp) {
+        continue;
+      }
+      insertMutation.run(
+        mutationId,
+        mutationType,
+        taskId,
+        timestamp,
+        readString(record, "actor"),
+        record.details !== undefined ? JSON.stringify(record.details) : null
+      );
+    }
+  }
+}
+
 /**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
@@ -502,6 +626,11 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
     migrateV14ToV15(db);
     db.pragma("user_version = 15");
     current = 15;
+  }
+  if (current < 16) {
+    migrateV15ToV16(db);
+    db.pragma("user_version = 16");
+    current = 16;
   }
 }
 
