@@ -671,3 +671,20 @@ test("runCli run pilot command --schema-only emits schema payload", async () => 
   assert.ok(output.schema && typeof output.schema === "object");
   assert.deepEqual(output.sampleArgs, {});
 });
+
+test("runCli run persist-planning-execution-drafts --schema-only emits working batch shorthand sample", async () => {
+  const capture = createCapture();
+  const code = await runCli(["run", "persist-planning-execution-drafts", "--schema-only"], {
+    cwd: process.cwd(),
+    ...capture
+  });
+  assert.equal(code, 0);
+  const output = JSON.parse(capture.lines.join(""));
+  assert.equal(output.ok, true);
+  assert.equal(output.command, "persist-planning-execution-drafts");
+  assert.equal(output.sampleArgs.targetPhaseKey, "73");
+  assert.equal(output.sampleArgs.targetPhase, "Phase 73");
+  assert.equal(output.sampleArgs.desiredStatus, "ready");
+  assert.equal(output.sampleArgs.tasks.length, 1);
+  assert.equal(Object.hasOwn(output.sampleArgs.tasks[0], "phase"), false);
+});

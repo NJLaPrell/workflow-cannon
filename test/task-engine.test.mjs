@@ -2245,7 +2245,6 @@ test("persist-planning-execution-drafts can explicitly open tasks for a target p
     {
       id: "T731",
       title: "Next phase slice",
-      phase: "draft placeholder",
       approach: "Implement the next phase slice",
       technicalScope: ["src/next"],
       acceptanceCriteria: ["Next phase task is ready"]
@@ -2273,6 +2272,80 @@ test("persist-planning-execution-drafts can explicitly open tasks for a target p
   assert.equal(created.data.createdTasks[0].phaseKey, "73");
   assert.equal(created.data.createdTasks[0].phase, "Phase 73");
   assert.equal(created.data.createdTasks[0].metadata.planRef, "planning:new-feature:phase-73");
+});
+
+test("persist-planning-execution-drafts command-level phase and status override row defaults", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const lt = await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, ctx);
+  const created = await taskEngineModule.onCommand(
+    {
+      name: "persist-planning-execution-drafts",
+      args: {
+        tasks: [
+          {
+            id: "T732",
+            title: "Conflicting row defaults",
+            phase: "",
+            phaseKey: "1",
+            status: "proposed",
+            approach: "Implement conflict handling",
+            technicalScope: ["src/conflict"],
+            acceptanceCriteria: ["Command-level defaults win"]
+          }
+        ],
+        targetPhaseKey: "73",
+        targetPhase: "Phase 73",
+        desiredStatus: "ready",
+        expectedPlanningGeneration: lt.data.planningGeneration
+      }
+    },
+    ctx
+  );
+
+  assert.equal(created.ok, true);
+  assert.equal(created.data.createdTasks[0].status, "ready");
+  assert.equal(created.data.createdTasks[0].phaseKey, "73");
+  assert.equal(created.data.createdTasks[0].phase, "Phase 73");
+});
+
+test("persist-planning-execution-drafts does not partially persist invalid batches", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const lt = await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, ctx);
+  const result = await taskEngineModule.onCommand(
+    {
+      name: "persist-planning-execution-drafts",
+      args: {
+        tasks: [
+          {
+            id: "T733",
+            title: "Valid first row",
+            approach: "Implement first row",
+            technicalScope: ["src/ok"],
+            acceptanceCriteria: ["Would persist if batch were valid"]
+          },
+          {
+            id: "T734",
+            title: "Invalid second row",
+            technicalScope: ["src/bad"],
+            acceptanceCriteria: ["Missing approach blocks batch"]
+          }
+        ],
+        targetPhaseKey: "73",
+        targetPhase: "Phase 73",
+        desiredStatus: "ready",
+        expectedPlanningGeneration: lt.data.planningGeneration
+      }
+    },
+    ctx
+  );
+
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "invalid-task-schema");
+  const first = await taskEngineModule.onCommand({ name: "get-task", args: { taskId: "T733" } }, ctx);
+  assert.equal(first.ok, false);
+  assert.equal(first.code, "task-not-found");
 });
 
 test("taskEngineModule create-task idempotent replay skips require gate (no re-persist)", async () => {
