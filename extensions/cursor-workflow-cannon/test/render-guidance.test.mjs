@@ -101,9 +101,14 @@ test("renderGuidanceSummaryInnerHtml renders grouped recent activity and manage 
       },
       acknowledgements: { available: true, count: 0, rows: [] },
       feedback: { available: true, summary: { total: 0, useful: 0, noisy: 0 }, rows: [] },
-      registryVersions: {
-        ok: true,
-        data: {
+      guidanceProduct: {
+        schemaVersion: 1,
+        registry: {
+          activeVersionId: "cae.reg.active",
+          artifactCount: 3,
+          activationCount: 4
+        },
+        versions: {
           versions: [
             {
               versionId: "cae.reg.active",
@@ -114,11 +119,15 @@ test("renderGuidanceSummaryInnerHtml renders grouped recent activity and manage 
               activationCount: 4
             }
           ]
+        },
+        library: {
+          artifacts: { artifactIds: ["cae.doc.one"] },
+          activations: { activationIds: ["cae.activation.one"] }
+        },
+        mutationCapability: {
+          canMutate: false,
+          denialReason: "Guidance admin mutations are disabled by config."
         }
-      },
-      library: {
-        artifacts: { artifactIds: ["cae.doc.one"] },
-        activations: { activationIds: ["cae.activation.one"] }
       },
       caeConfig: { adminMutations: false }
     }
@@ -129,7 +138,7 @@ test("renderGuidanceSummaryInnerHtml renders grouped recent activity and manage 
   assert.match(html, /Review why/);
   assert.match(html, /Manage Guidance/);
   assert.match(html, /Guidance Library/);
-  assert.match(html, /read-only/);
+  assert.match(html, /Guidance admin mutations are disabled by config/);
   assert.match(html, /Debug details JSON/);
   assert.match(html, /data-wc-action="guidance-copy-block"/);
 });
