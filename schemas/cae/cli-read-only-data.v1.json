@@ -461,6 +461,11 @@
         },
         "conflictShadowSummary": {
           "$ref": "https://workflow-cannon.dev/schemas/cae/effective-activation-bundle.v1.json#/$defs/conflictShadowSummary"
+        },
+        "draftImpact": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Synthetic draft Guidance impact matrix (baseline vs overlay) when `draftRule` was supplied."
         }
       }
     },

@@ -428,6 +428,52 @@ function renderPendingAcks(rows: unknown, traceId: string): string {
     .join("")}<p class="gd-muted">This records “I read this guidance.” It does not grant policy approval for another command or change agent behavior settings.</p></section>`;
 }
 
+function renderDraftImpactSummaryPanel(raw: unknown): string {
+  const di = asRecord(raw);
+  const samples = asArray(di.samples);
+  if (!samples.length) {
+    return '<section class="gd-card gd-warn-card"><h2>Draft impact</h2><p>No sample matrix rows produced.</p></section>';
+  }
+  const broadBlock = asArray(di.broadScopeWarnings);
+  const broadList = broadBlock
+    .map((w) => {
+      const row = asRecord(w);
+      return `<li>${escapeHtml(String(row.message ?? row.code ?? "warning"))}</li>`;
+    })
+    .join("");
+  const warnBlock =
+    broadList.length > 0 ? `<div class="gd-warning gd-warn-card"><ul>${broadList}</ul></div>` : "";
+  const tableRows = samples
+    .map((sampleRaw) => {
+      const sample = asRecord(sampleRaw);
+      const baseline = asRecord(sample.baselineFamilyCounts);
+      const overlay = asRecord(sample.overlayFamilyCounts);
+      const lbl = escapeHtml(String(sample.label ?? ""));
+      const cmd = escapeHtml(String(sample.commandName ?? ""));
+      const tk = sample.taskId ? ` · ${escapeHtml(String(sample.taskId))}` : "";
+      const vis = sample.draftVisibleInOverlay === true ? "Visible" : "Not shown";
+      return `<tr><td>${lbl}</td><td><code>${cmd}</code>${tk}</td><td>${escapeHtml(
+        `p${String(baseline.policy ?? 0)} t${String(baseline.think ?? 0)} d${String(baseline.do ?? 0)} r${String(
+          baseline.review ?? 0
+        )}`
+      )}</td><td>${escapeHtml(
+        `p${String(overlay.policy ?? 0)} t${String(overlay.think ?? 0)} d${String(overlay.do ?? 0)} r${String(
+          overlay.review ?? 0
+        )}`
+      )}</td><td>${escapeHtml(vis)}</td></tr>`;
+    })
+    .join("");
+  return `<section class="gd-card gd-draft-impact">
+  <h2>Draft impact sampling</h2>
+  <p class="gd-muted">${escapeHtml(String(di.scopePlainSummary ?? ""))}</p>
+  ${warnBlock}
+  <table class="gd-draft-table"><thead><tr><th>Context</th><th>Selection</th><th>Baseline families</th><th>With draft</th><th>Draft</th></tr></thead><tbody>${tableRows}</tbody></table>
+  <p class="gd-muted">Preset <code>${escapeHtml(String(di.scopePreset ?? ""))}</code> · Overlay digest <code>${escapeHtml(
+    String(di.overlayRegistryDigestSnippet ?? "")
+  )}</code></p>
+</section>`;
+}
+
 export function renderGuidancePreviewInnerHtml(payload: unknown): string {
   const root = asRecord(payload);
   if (Object.keys(root).length === 0) {
@@ -449,8 +495,9 @@ export function renderGuidancePreviewInnerHtml(payload: unknown): string {
   </div>
   <p>${totalCards > 0 ? `Review ${escapeHtml(String(totalCards))} guidance item${totalCards === 1 ? "" : "s"} before running this workflow.` : "No special guidance items matched this workflow."}</p>
   <div class="gd-counts">${renderFamilyCounts(counts)}</div>
-  <details class="gd-debug"><summary>Debug check record</summary><p class="gd-muted">Check record <code>${escapeHtml(traceId)}</code>${data.ephemeral ? " · stored in memory only" : " · stored in workspace database"}</p></details>
+  <details class="gd-debug"><summary>Debug check record</summary><p class="gd-muted">Check record <code>${escapeHtml(traceId)}</code>${data.ephemeral ? " · stored in memory only (draft impact preview skips durable trace writes)" : " · stored in workspace database"}</p></details>
 </section>
+${data.draftImpact ? renderDraftImpactSummaryPanel(data.draftImpact) : ""}
 ${renderPendingAcks(data.pendingAcknowledgements, traceId)}
 ${renderConflictSummary(data.conflictShadowSummary)}
 ${renderFamilySection("Rules to follow", cards.policy, traceId, commandName)}
