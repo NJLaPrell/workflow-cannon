@@ -49,6 +49,8 @@
         "get-wishlist",
         "get-workspace-status",
         "classify-kit-state",
+        "claim-next-task",
+        "complete-task",
         "phase-status",
         "phase-delivery-preflight",
         "release-evidence-manifest",
@@ -68,6 +70,7 @@
         "migrate-task-persistence",
         "persist-planning-execution-drafts",
         "review-planning-execution-drafts",
+        "start-task",
         "dashboard-summary",
         "get-module-state",
         "list-components",
@@ -105,6 +108,8 @@
         "get-wishlist": { "$ref": "#/$defs/contractGetWishlist" },
         "get-workspace-status": { "$ref": "#/$defs/contractGetWorkspaceStatus" },
         "classify-kit-state": { "$ref": "#/$defs/contractBase" },
+        "claim-next-task": { "$ref": "#/$defs/contractClaimNextTask" },
+        "complete-task": { "$ref": "#/$defs/contractTaskIntentWithTaskId" },
         "phase-status": { "$ref": "#/$defs/contractPhaseStatus" },
         "phase-delivery-preflight": { "$ref": "#/$defs/contractBase" },
         "release-evidence-manifest": { "$ref": "#/$defs/contractBase" },
@@ -124,6 +129,7 @@
         "migrate-task-persistence": { "$ref": "#/$defs/contractMigrateTaskPersistence" },
         "persist-planning-execution-drafts": { "$ref": "#/$defs/contractPersistPlanningExecutionDrafts" },
         "review-planning-execution-drafts": { "$ref": "#/$defs/contractBase" },
+        "start-task": { "$ref": "#/$defs/contractTaskIntentWithTaskId" },
         "dashboard-summary": { "$ref": "#/$defs/contractDashboardSummary" },
         "get-module-state": { "$ref": "#/$defs/contractGetModuleState" },
         "list-components": { "$ref": "#/$defs/contractBase" },
@@ -168,6 +174,72 @@
             "responseData": {
               "type": "object",
               "required": ["schemaVersion", "commandName", "schemaOnly", "policy", "planning", "readyRun"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractTaskIntentWithTaskId": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "required": ["taskId"],
+              "additionalProperties": true,
+              "properties": {
+                "taskId": {
+                  "type": "string",
+                  "pattern": "^(T[0-9]+|imp-[0-9a-f]{14})$"
+                },
+                "clientMutationId": { "type": "string", "minLength": 1 },
+                "policyApproval": { "type": "object" },
+                "expectedPlanningGeneration": {
+                  "oneOf": [
+                    { "type": "integer", "minimum": 0 },
+                    { "type": "string", "pattern": "^[0-9]+$" }
+                  ]
+                },
+                "actor": { "type": "string" },
+                "config": { "type": "object" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["intent", "taskId", "evidence"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractClaimNextTask": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "queueNamespace": { "type": "string", "minLength": 1 },
+                "clientMutationId": { "type": "string", "minLength": 1 },
+                "policyApproval": { "type": "object" },
+                "expectedPlanningGeneration": {
+                  "oneOf": [
+                    { "type": "integer", "minimum": 0 },
+                    { "type": "string", "pattern": "^[0-9]+$" }
+                  ]
+                },
+                "actor": { "type": "string" },
+                "config": { "type": "object" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["intent"],
               "additionalProperties": true
             }
           }

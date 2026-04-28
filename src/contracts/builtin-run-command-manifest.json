@@ -165,6 +165,33 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "claim-next-task",
+    "file": "claim-next-task.md",
+    "description": "Atomically claim the current suggested ready task by transitioning it to in_progress.",
+    "policyOperationId": "tasks.run-transition",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "start-task",
+    "file": "start-task.md",
+    "description": "Intent wrapper around run-transition start for a task.",
+    "policyOperationId": "tasks.run-transition",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "complete-task",
+    "file": "complete-task.md",
+    "description": "Intent wrapper around run-transition complete for a task.",
+    "policyOperationId": "tasks.run-transition",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "synthesize-transcript-churn",
     "file": "synthesize-transcript-churn.md",
     "description": "Promote transcript_churn/research to improvement/proposed after investigation.",

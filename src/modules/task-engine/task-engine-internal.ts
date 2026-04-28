@@ -588,6 +588,191 @@ function buildAgentMutationPlan(
   };
 }
 
+const TASK_INTENT_ACTIONS: Record<string, string> = {
+  "start-task": "start",
+  "complete-task": "complete"
+};
+
+function hasPriorTransitionForClientMutationId(store: TaskStore, clientMutationId: string | undefined): boolean {
+  return (
+    clientMutationId !== undefined &&
+    store.getTransitionLog().some((entry) => entry.clientMutationId === clientMutationId)
+  );
+}
+
+async function runTaskIntentTransition(
+  commandName: string,
+  ctx: ModuleLifecycleContext,
+  planning: OpenedPlanningStores,
+  args: Record<string, unknown>
+): Promise<ModuleCommandResult> {
+  const action = TASK_INTENT_ACTIONS[commandName];
+  const taskId = readPlanString(args, "taskId");
+  if (!action || !taskId) {
+    return {
+      ok: false,
+      code: "invalid-run-args",
+      message: `${commandName} requires taskId.`,
+      remediation: { instructionPath: `src/modules/task-engine/instructions/${commandName}.md` }
+    };
+  }
+  const clientMutationId = readIdempotencyValue(args);
+  const pgTransition = planningGenPolicyGate(
+    ctx,
+    args,
+    `src/modules/task-engine/instructions/${commandName}.md`
+  );
+  if (pgTransition.block && !hasPriorTransitionForClientMutationId(planning.taskStore, clientMutationId)) {
+    return pgTransition.block;
+  }
+  const hookBus = createKitLifecycleHookBus(ctx.workspacePath, (ctx.effectiveConfig ?? {}) as Record<string, unknown>);
+  const deliveryEvidenceMode = readDeliveryEvidenceEnforcementMode(
+    ctx.effectiveConfig as Record<string, unknown> | undefined
+  );
+  const service = new TransitionService(
+    planning.taskStore,
+    [createDeliveryEvidenceGuard({ enforcementMode: deliveryEvidenceMode })],
+    hookBus.isEnabled() ? hookBus : undefined
+  );
+  try {
+    const result = await service.runTransition({
+      taskId,
+      action,
+      actor: readPlanString(args, "actor"),
+      expectedPlanningGeneration: readOptionalExpectedPlanningGeneration(args),
+      clientMutationId
+    });
+    const data: Record<string, unknown> = {
+      intent: commandName,
+      taskId,
+      action,
+      evidence: result.evidence,
+      autoUnblocked: result.autoUnblocked,
+      replayed: result.replayed === true
+    };
+    attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration(), pgTransition.warnings);
+    return {
+      ok: true,
+      code: result.replayed ? "task-intent-idempotent-replay" : "task-intent-applied",
+      message: `${commandName}: ${taskId} via ${action}`,
+      data
+    };
+  } catch (err) {
+    if (err instanceof TaskEngineError) {
+      return { ok: false, code: err.code, message: err.message };
+    }
+    throw err;
+  }
+}
+
+async function runClaimNextTaskIntent(
+  ctx: ModuleLifecycleContext,
+  planning: OpenedPlanningStores,
+  args: Record<string, unknown>
+): Promise<ModuleCommandResult> {
+  const clientMutationId = readIdempotencyValue(args);
+  const pgTransition = planningGenPolicyGate(
+    ctx,
+    args,
+    "src/modules/task-engine/instructions/claim-next-task.md"
+  );
+  if (pgTransition.block && !hasPriorTransitionForClientMutationId(planning.taskStore, clientMutationId)) {
+    return pgTransition.block;
+  }
+  const ns = readQueueNamespaceArg(args);
+  const activeTasks = planning.taskStore.getActiveTasks();
+  const suggestion = getNextActions(activeTasks, ns ? { queueNamespace: ns } : undefined);
+  const suggested = suggestion.suggestedNext;
+  if (!suggested) {
+    const data: Record<string, unknown> = {
+      intent: "claim-next-task",
+      queueNamespace: ns ?? null,
+      reason: "no-runnable-task",
+      suggestedNext: null
+    };
+    attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration(), pgTransition.warnings);
+    return {
+      ok: true,
+      code: "claim-next-task-noop",
+      message: "No runnable task available to claim.",
+      data
+    };
+  }
+  const current = planning.taskStore.getTask(suggested.id);
+  if (!current || current.status !== "ready") {
+    const data: Record<string, unknown> = {
+      intent: "claim-next-task",
+      queueNamespace: ns ?? null,
+      reason: "suggested-task-changed",
+      suggestedTaskId: suggested.id,
+      currentStatus: current?.status ?? null
+    };
+    attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration(), pgTransition.warnings);
+    return {
+      ok: true,
+      code: "claim-next-task-noop",
+      message: "Suggested task changed before claim.",
+      data
+    };
+  }
+  const blockers = dependencyBlockersForAction(current, "start", activeTasks);
+  if (blockers.length > 0) {
+    const data: Record<string, unknown> = {
+      intent: "claim-next-task",
+      queueNamespace: ns ?? null,
+      reason: "dependency-blocked",
+      suggestedTaskId: suggested.id,
+      dependencyBlockers: blockers
+    };
+    attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration(), pgTransition.warnings);
+    return {
+      ok: true,
+      code: "claim-next-task-noop",
+      message: `Suggested task '${suggested.id}' is dependency-blocked.`,
+      data
+    };
+  }
+  const hookBus = createKitLifecycleHookBus(ctx.workspacePath, (ctx.effectiveConfig ?? {}) as Record<string, unknown>);
+  const deliveryEvidenceMode = readDeliveryEvidenceEnforcementMode(
+    ctx.effectiveConfig as Record<string, unknown> | undefined
+  );
+  const service = new TransitionService(
+    planning.taskStore,
+    [createDeliveryEvidenceGuard({ enforcementMode: deliveryEvidenceMode })],
+    hookBus.isEnabled() ? hookBus : undefined
+  );
+  try {
+    const result = await service.runTransition({
+      taskId: suggested.id,
+      action: "start",
+      actor: readPlanString(args, "actor"),
+      expectedPlanningGeneration: readOptionalExpectedPlanningGeneration(args),
+      clientMutationId
+    });
+    const data: Record<string, unknown> = {
+      intent: "claim-next-task",
+      queueNamespace: ns ?? null,
+      taskId: suggested.id,
+      action: "start",
+      evidence: result.evidence,
+      autoUnblocked: result.autoUnblocked,
+      replayed: result.replayed === true
+    };
+    attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration(), pgTransition.warnings);
+    return {
+      ok: true,
+      code: result.replayed ? "task-intent-idempotent-replay" : "task-intent-applied",
+      message: `Claimed ${suggested.id} — ${suggested.title}`,
+      data
+    };
+  } catch (err) {
+    if (err instanceof TaskEngineError) {
+      return { ok: false, code: err.code, message: err.message };
+    }
+    throw err;
+  }
+}
+
 export const taskEngineModule: WorkflowModule = {
   registration: {
     id: "task-engine",
@@ -730,6 +915,14 @@ export const taskEngineModule: WorkflowModule = {
 
     if (command.name === "agent-mutation-plan") {
       return buildAgentMutationPlan(ctx, planning, args as Record<string, unknown>);
+    }
+
+    if (command.name === "claim-next-task") {
+      return runClaimNextTaskIntent(ctx, planning, args as Record<string, unknown>);
+    }
+
+    if (command.name === "start-task" || command.name === "complete-task") {
+      return runTaskIntentTransition(command.name, ctx, planning, args as Record<string, unknown>);
     }
 
     if (command.name === "phase-status") {
