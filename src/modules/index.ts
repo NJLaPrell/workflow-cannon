@@ -91,6 +91,7 @@ export {
   DELIVERY_EVIDENCE_METADATA_KEY,
   DELIVERY_WAIVER_METADATA_KEY,
   buildPhaseDeliveryPreflight,
+  buildReleaseEvidenceManifest,
   createDeliveryEvidenceGuard,
   evaluateDeliveryEvidence,
   isPhaseDeliveryTask,

@@ -38,6 +38,7 @@ export {
   isPhaseDeliveryTask,
   readDeliveryEvidenceEnforcementMode
 } from "./delivery-evidence.js";
+export { buildReleaseEvidenceManifest } from "./release-evidence-manifest.js";
 export type {
   DeliveryEvidenceEnforcementMode,
   DeliveryEvidenceEvaluation,

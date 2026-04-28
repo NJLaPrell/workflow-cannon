@@ -633,6 +633,128 @@ test("buildPhaseDeliveryPreflight reports completed and in-progress evidence gap
   assert.equal(result.violations[0].taskId, "T001");
 });
 
+function releaseEvidenceArgs(overrides = {}) {
+  return {
+    phaseKey: "74",
+    approval: {
+      actor: "maintainer@example.com",
+      timestamp: "2026-04-28T07:00:00.000Z",
+      rationale: "Approved after reviewing release scope and gates.",
+      scope: "phase-74 publish"
+    },
+    releaseNotes: {
+      source: "release-notes-json",
+      entries: ["Phase 74 release evidence hardening"]
+    },
+    followUpScan: {
+      scannedAt: "2026-04-28T07:00:00.000Z",
+      rationale: "No unresolved follow-up tasks after friction scan."
+    },
+    followUpTasks: [],
+    validations: [{ command: "pnpm run check", conclusion: "success" }],
+    ...overrides
+  };
+}
+
+async function seedReleaseEvidenceWorkspace() {
+  const workspace = await tmpDir();
+  await writeFile(
+    path.join(workspace, "package.json"),
+    JSON.stringify({ name: "@workflow-cannon/workspace-kit", version: "0.74.0" }),
+    "utf8"
+  );
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({
+      id: "T971",
+      status: "completed",
+      phaseKey: "74",
+      metadata: {
+        deliveryEvidence: {
+          schemaVersion: 1,
+          branchName: "feature/T971-test",
+          prUrl: "https://github.com/org/repo/pull/154",
+          prNumber: 154,
+          baseBranch: "release/phase-74",
+          mergeSha: "abc123",
+          checks: [{ name: "test", conclusion: "success" }],
+          validationCommands: [{ command: "pnpm run test", exitCode: 0 }]
+        }
+      }
+    }));
+  });
+  return workspace;
+}
+
+test("taskEngineModule release-evidence-manifest builds manifest from approval and task evidence", async () => {
+  const workspace = await seedReleaseEvidenceWorkspace();
+  const result = await taskEngineModule.onCommand(
+    { name: "release-evidence-manifest", args: releaseEvidenceArgs() },
+    sqliteTaskEngineCtx(workspace)
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "release-evidence-manifest");
+  assert.equal(result.data.manifest.releaseVersion, "0.74.0");
+  assert.equal(result.data.manifest.packageName, "@workflow-cannon/workspace-kit");
+  assert.equal(result.data.manifest.followUpSummary.count, 0);
+  assert.equal(result.data.manifest.taskDeliveryEvidence.length, 1);
+});
+
+test("taskEngineModule release-evidence-manifest fails without approval", async () => {
+  const workspace = await seedReleaseEvidenceWorkspace();
+  const { approval: _approval, ...args } = releaseEvidenceArgs();
+  const result = await taskEngineModule.onCommand(
+    { name: "release-evidence-manifest", args },
+    sqliteTaskEngineCtx(workspace)
+  );
+
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "release-evidence-missing-approval");
+});
+
+test("taskEngineModule release-evidence-manifest fails without release notes", async () => {
+  const workspace = await seedReleaseEvidenceWorkspace();
+  const { releaseNotes: _releaseNotes, ...args } = releaseEvidenceArgs();
+  const result = await taskEngineModule.onCommand(
+    { name: "release-evidence-manifest", args },
+    sqliteTaskEngineCtx(workspace)
+  );
+
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "release-evidence-missing-release-notes");
+});
+
+test("taskEngineModule release-evidence-manifest requires zero-follow-up rationale", async () => {
+  const workspace = await seedReleaseEvidenceWorkspace();
+  const result = await taskEngineModule.onCommand(
+    {
+      name: "release-evidence-manifest",
+      args: releaseEvidenceArgs({ followUpScan: { scannedAt: "2026-04-28T07:00:00.000Z" } })
+    },
+    sqliteTaskEngineCtx(workspace)
+  );
+
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "release-evidence-followup-scan-required");
+});
+
+test("taskEngineModule release-evidence-manifest reconciles follow-up task refs", async () => {
+  const workspace = await seedReleaseEvidenceWorkspace();
+  const result = await taskEngineModule.onCommand(
+    {
+      name: "release-evidence-manifest",
+      args: releaseEvidenceArgs({
+        followUpTasks: [{ taskId: "T999", title: "missing follow-up", status: "ready" }],
+        followUpScan: { scannedAt: "2026-04-28T07:00:00.000Z" }
+      })
+    },
+    sqliteTaskEngineCtx(workspace)
+  );
+
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "release-evidence-followup-task-missing");
+});
+
 // ---------------------------------------------------------------------------
 // T185: Full lifecycle walkthrough
 // ---------------------------------------------------------------------------

@@ -79,6 +79,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "phase-status",
     "queue-git-alignment",
     "queue-health",
+    "release-evidence-manifest",
     "remove-dependency",
     "replay-queue-snapshot",
     "resolve-agent-guidance",
