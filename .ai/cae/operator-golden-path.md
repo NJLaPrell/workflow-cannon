@@ -68,7 +68,7 @@ CAE acknowledgement is not Tier A/B `policyApproval`. If a command is sensitive,
 
 | Symptom / code | Meaning | Next command |
 | --- | --- | --- |
-| `cae-kit-sqlite-unavailable` | The configured kit SQLite DB is missing or not openable. | Run `pnpm run wk doctor`, then inspect `tasks.sqliteDatabaseRelativePath`. |
+| `cae-kit-sqlite-unavailable` | The configured kit SQLite DB is missing or not openable. | Run `pnpm exec wk doctor`, then inspect `tasks.sqliteDatabaseRelativePath`. |
 | `cae-registry-sqlite-not-ready` | Workspace DB predates CAE registry tables. | Run the normal workspace-kit upgrade/init path before CAE registry commands. |
 | `cae-registry-no-active-version` | SQLite registry tables exist but no version is active. | Run `pnpm exec wk run cae-import-json-registry '{"schemaVersion":1,"actor":"operator","policyApproval":{"confirmed":true,"rationale":"seed active CAE registry"}}'`. |
 | `cae-registry-read-error` | JSON seed files are missing when explicitly using `registryStore: "json"`. | Restore `.ai/cae/registry/*.json` or switch back to SQLite registry authority. |

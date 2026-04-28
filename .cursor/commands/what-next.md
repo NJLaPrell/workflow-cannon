@@ -4,7 +4,7 @@ description: Read-only next actions from the task engine (get-next-actions)
 
 The user invoked **`/what-next`**. From the repository root, run:
 
-`pnpm run wk run get-next-actions '{}'`
+`pnpm exec wk run get-next-actions '{}'`
 
 (alternatively `pnpm exec wk run get-next-actions '{}'` when `wk` is not on `PATH`).
 

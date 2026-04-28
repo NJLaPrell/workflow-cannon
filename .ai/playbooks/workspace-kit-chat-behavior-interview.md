@@ -15,7 +15,7 @@
 
 ## 0) Bootstrap (read-only)
 
-- `pnpm run wk doctor` — fail closed if unhealthy.
+- `pnpm exec wk doctor` — fail closed if unhealthy.
 - Optional: `pnpm exec node dist/cli.js run resolve-behavior-profile '{}'` — **`effective.label`** if you want a **“you were rolling as …”** line before the quiz (player labels only).
 
 ## 1) Welcome
@@ -32,7 +32,7 @@ The keeper slides parchment across the bar — six questions, no wrong answers.
 
 `Reply **begin** to start (or **discard** to clear any stale interview session file and bail).`
 
-**On `discard`:** `pnpm run wk run interview-behavior-profile '{"action":"discard"}'` — confirm one line: e.g. `Interview session cleared.` — stop unless they say **begin** again.
+**On `discard`:** `pnpm exec wk run interview-behavior-profile '{"action":"discard"}'` — confirm one line: e.g. `Interview session cleared.` — stop unless they say **begin** again.
 
 **On `begin`:** go to §2.
 
@@ -41,14 +41,14 @@ The keeper slides parchment across the bar — six questions, no wrong answers.
 **Resume / inspect (read-only):**
 
 ```bash
-pnpm run wk run interview-behavior-profile '{"action":"status"}'
+pnpm exec wk run interview-behavior-profile '{"action":"status"}'
 ```
 
 **New session** (fails if a session file already exists — use **`discard`** or **`forceRestart`**):
 
 ```bash
-pnpm run wk run interview-behavior-profile '{"action":"start"}'
-pnpm run wk run interview-behavior-profile '{"action":"start","forceRestart":true}'
+pnpm exec wk run interview-behavior-profile '{"action":"start"}'
+pnpm exec wk run interview-behavior-profile '{"action":"start","forceRestart":true}'
 ```
 
 **Critical:** **`start`** without **`forceRestart`** does **not** silently wipe an existing file. To restart from step 0 after a mistake, run **`discard`** then **`start`**, or one shot: **`start`** with **`forceRestart":true`**.
@@ -60,16 +60,16 @@ pnpm run wk run interview-behavior-profile '{"action":"start","forceRestart":tru
 **Accept:** number **`1`**, **`2`**, **`3`** (or **`1`–`2`** where only two options exist), **or** the exact **`value`** word in the mapping below (case as shown). Map digits → value, then:
 
 ```bash
-pnpm run wk run interview-behavior-profile '{"action":"answer","value":"<value>"}'
+pnpm exec wk run interview-behavior-profile '{"action":"answer","value":"<value>"}'
 ```
 
 **Power-user line** (repeat with their chosen value):
 
 ```bash
-pnpm run wk run interview-behavior-profile '{"action":"answer","value":"balanced"}'
+pnpm exec wk run interview-behavior-profile '{"action":"answer","value":"balanced"}'
 ```
 
-**On `back`:** `pnpm run wk run interview-behavior-profile '{"action":"back"}'` — if JSON says **`atStart`**, say you’re already on the first question; otherwise re-show **`data.question`** in the numbered player format.
+**On `back`:** `pnpm exec wk run interview-behavior-profile '{"action":"back"}'` — if JSON says **`atStart`**, say you’re already on the first question; otherwise re-show **`data.question`** in the numbered player format.
 
 ### Question 1 — change appetite
 
@@ -147,11 +147,11 @@ Response code **`behavior-interview-complete`**. Summarize choices in **plain la
 
 **Wait** for their choice.
 
-**Default apply path (shell):** `pnpm run wk run interview-behavior-profile '{"action":"finalize","apply":true}'`
+**Default apply path (shell):** `pnpm exec wk run interview-behavior-profile '{"action":"finalize","apply":true}'`
 
 **`custom:…` + optional label:** include **`customId`** / **`label`** in the same JSON.
 
-**`discard`:** `pnpm run wk run interview-behavior-profile '{"action":"discard"}'`.
+**`discard`:** `pnpm exec wk run interview-behavior-profile '{"action":"discard"}'`.
 
 **Confirm (player-facing):** one short line — e.g. `Saved — you’re on Scribe’s profile now.` — **no** `builtin:` / **`custom:`** in the toast unless they asked for technical detail.
 
@@ -159,7 +159,7 @@ Response code **`behavior-interview-complete`**. Summarize choices in **plain la
 
 ## 5) Smoke
 
-`pnpm run wk run get-next-actions '{}'`
+`pnpm exec wk run get-next-actions '{}'`
 
 ## 6) Complete
 

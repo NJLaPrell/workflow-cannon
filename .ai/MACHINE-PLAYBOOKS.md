@@ -80,7 +80,7 @@ Optional Cursor rule: `.cursor/rules/playbook-workspace-kit-chat-behavior-interv
 
 Recommendation tasks carry **`metadata.confidenceTier`** (`high` / `medium` / `low`). Filter with:
 
-`pnpm run wk run list-tasks '{"type":"improvement","status":"ready","confidenceTier":"medium"}'`
+`pnpm exec wk run list-tasks '{"type":"improvement","status":"ready","confidenceTier":"medium"}'`
 
 ## Long-session reload
 

@@ -9,7 +9,7 @@ You registered **`kit.lifecycleHooks.handlers`** and need the **event catalog**,
 ## Canonical reference
 
 - **ADR:** `docs/maintainers/adrs/ADR-agent-task-lifecycle-hooks-v1.md`  
-- **Config keys:** **`kit.lifecycleHooks.*`** (see generated **`CONFIG.md`** after `pnpm run wk config generate-docs`)
+- **Config keys:** **`kit.lifecycleHooks.*`** (see generated **`CONFIG.md`** after `pnpm exec wk config generate-docs`)
 
 ## v1 events
 
