@@ -696,13 +696,17 @@ export const taskEngineModule: WorkflowModule = {
           remediation: { instructionPath: CLI_REMEDIATION_INSTRUCTIONS.runTransition }
         };
       }
+      const clientMutationId = readIdempotencyValue(args);
+      const hasPriorTransition =
+        clientMutationId !== undefined &&
+        store.getTransitionLog().some((entry) => entry.clientMutationId === clientMutationId);
 
       const pgTransition = planningGenPolicyGate(
         ctx,
         args as Record<string, unknown>,
         CLI_REMEDIATION_INSTRUCTIONS.runTransition
       );
-      if (pgTransition.block) {
+      if (pgTransition.block && !hasPriorTransition) {
         return pgTransition.block;
       }
 
@@ -726,9 +730,10 @@ export const taskEngineModule: WorkflowModule = {
           taskId,
           action,
           actor,
-          expectedPlanningGeneration
+          expectedPlanningGeneration,
+          clientMutationId
         });
-        if (result.evidence.toState === "completed") {
+        if (!result.replayed && result.evidence.toState === "completed") {
           maybeSpawnTranscriptHookAfterCompletion(
             ctx.workspacePath,
             (ctx.effectiveConfig ?? {}) as Record<string, unknown>
@@ -736,13 +741,16 @@ export const taskEngineModule: WorkflowModule = {
         }
         const data: Record<string, unknown> = {
           evidence: result.evidence,
-          autoUnblocked: result.autoUnblocked
+          autoUnblocked: result.autoUnblocked,
+          replayed: result.replayed === true
         };
         attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration(), pgTransition.warnings);
         return {
           ok: true,
-          code: "transition-applied",
-          message: `${taskId}: ${result.evidence.fromState} → ${result.evidence.toState} (${action})`,
+          code: result.replayed ? "transition-idempotent-replay" : "transition-applied",
+          message: result.replayed
+            ? `Idempotent run-transition replay for ${taskId}: ${result.evidence.fromState} → ${result.evidence.toState} (${action})`
+            : `${taskId}: ${result.evidence.fromState} → ${result.evidence.toState} (${action})`,
           data
         };
       } catch (err) {

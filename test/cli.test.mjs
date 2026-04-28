@@ -710,5 +710,6 @@ test("runCli run run-transition --schema-only exposes runtime action enum", asyn
     "start",
     "unblock"
   ]);
+  assert.equal(output.schema.properties.clientMutationId.type, "string");
   assert.equal(output.sampleArgs.action, "accept");
 });

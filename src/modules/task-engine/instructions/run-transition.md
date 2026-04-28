@@ -16,6 +16,7 @@ workspace-kit run run-transition '{"taskId":"T184","action":"start","policyAppro
 | `action` | string | yes | The transition action: `accept`, `reject`, `demote`, `start`, `block`, `cancel`, `complete`, `decline`, `pause`, `unblock` |
 | `actor` | string | no | Who or what triggered the transition |
 | `expectedPlanningGeneration` | integer | no | When set, must match current SQLite `workspace_planning_state.planning_generation` or the command fails with **`planning-generation-mismatch`** (optimistic concurrency; see **`ADR-planning-generation-optimistic-concurrency.md`**). When **`tasks.planningGenerationPolicy`** is **`require`**, omission fails with **`planning-generation-required`** — read **`planningGeneration`** from **`list-tasks`** / **`get-next-actions`** / **`get-task`** first. |
+| `clientMutationId` | string | no | Retry key. A repeated request with the same key, `taskId`, and `action` returns **`transition-idempotent-replay`** without appending duplicate evidence. Reusing the key for a different transition returns **`idempotency-key-conflict`**. |
 
 ## Allowed Actions by State
 
@@ -32,6 +33,10 @@ workspace-kit run run-transition '{"taskId":"T184","action":"start","policyAppro
 Success **`data`** includes transition **`evidence`**, **`autoUnblocked`**, **`planningGeneration`**, **`planningGenerationPolicy`**, and optionally **`planningGenerationPolicyWarnings`** (when policy is **`warn`** and the token was omitted). On mismatch when **`expectedPlanningGeneration`** was supplied, **`code`** is **`planning-generation-mismatch`**. When policy is **`require`** and the field was omitted, **`code`** is **`planning-generation-required`**.
 
 For task-specific decisions, prefer **`get-task`** and read **`data.allowedActions`**. For global action discovery, **`workspace-kit run run-transition --schema-only`** exposes the `action` enum derived from the runtime transition map, and **`explain-task-engine-model`** exposes the lifecycle table.
+
+## Retry safety
+
+Use **`clientMutationId`** on agent-driven lifecycle mutations. The first successful transition records the key and a stable transition digest on the transition evidence. If CLI output is lost or JSON parsing fails, retry the same `taskId` + `action` with the same key; the command returns **`transition-idempotent-replay`**, sets **`data.replayed: true`**, and does not append another transition-log row. Replays bypass a fresh **`expectedPlanningGeneration`** requirement because the mutation already landed. If the key was used for another task/action, or the task has moved beyond the replay target state, the command returns **`idempotency-key-conflict`**.
 
 ## Delivery evidence on `complete`
 

@@ -460,6 +460,31 @@ test("TransitionService applies valid transition", async () => {
   assert.equal(store.getTask("T001").status, "in_progress");
 });
 
+test("TransitionService replays run-transition clientMutationId without duplicate evidence", async () => {
+  const { store } = await storeWithTasks([makeTask({ id: "T001", status: "ready" })]);
+  const service = new TransitionService(store);
+
+  const first = await service.runTransition({ taskId: "T001", action: "start", clientMutationId: "transition-start-1" });
+  const replay = await service.runTransition({ taskId: "T001", action: "start", clientMutationId: "transition-start-1" });
+
+  assert.equal(replay.replayed, true);
+  assert.equal(replay.evidence.transitionId, first.evidence.transitionId);
+  assert.equal(replay.evidence.clientMutationId, "transition-start-1");
+  assert.ok(replay.evidence.payloadDigest);
+  assert.equal(store.getTransitionLog().length, 1);
+});
+
+test("TransitionService rejects clientMutationId reuse for different transition payload", async () => {
+  const { store } = await storeWithTasks([makeTask({ id: "T001", status: "ready" })]);
+  const service = new TransitionService(store);
+
+  await service.runTransition({ taskId: "T001", action: "start", clientMutationId: "transition-conflict" });
+  await assert.rejects(
+    () => service.runTransition({ taskId: "T001", action: "pause", clientMutationId: "transition-conflict" }),
+    (err) => err instanceof TaskEngineError && err.code === "idempotency-key-conflict"
+  );
+});
+
 test("TransitionService rejects invalid action", async () => {
   const { store } = await storeWithTasks([makeTask({ id: "T001", status: "completed" })]);
 
@@ -1705,6 +1730,83 @@ test("taskEngineModule onCommand run-transition validates required args", async 
   );
   assert.equal(result.ok, false);
   assert.equal(result.code, "invalid-task-schema");
+});
+
+test("taskEngineModule run-transition idempotent replay bypasses fresh planning generation", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T9841", status: "ready" }));
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const first = await taskEngineModule.onCommand(
+    {
+      name: "run-transition",
+      args: {
+        taskId: "T9841",
+        action: "start",
+        expectedPlanningGeneration: 1,
+        clientMutationId: "run-transition-replay"
+      }
+    },
+    ctx
+  );
+  assert.equal(first.ok, true);
+  assert.equal(first.code, "transition-applied");
+  assert.equal(first.data.replayed, false);
+
+  const replay = await taskEngineModule.onCommand(
+    {
+      name: "run-transition",
+      args: {
+        taskId: "T9841",
+        action: "start",
+        clientMutationId: "run-transition-replay"
+      }
+    },
+    ctx
+  );
+  assert.equal(replay.ok, true);
+  assert.equal(replay.code, "transition-idempotent-replay");
+  assert.equal(replay.data.replayed, true);
+  assert.equal(replay.data.evidence.transitionId, first.data.evidence.transitionId);
+  assert.equal(replay.data.planningGeneration, first.data.planningGeneration);
+
+  const got = await taskEngineModule.onCommand({ name: "get-task", args: { taskId: "T9841" } }, ctx);
+  assert.equal(got.data.recentTransitions.length, 1);
+});
+
+test("taskEngineModule run-transition idempotency conflicts on different payload", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T9842", status: "ready" }));
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const first = await taskEngineModule.onCommand(
+    {
+      name: "run-transition",
+      args: {
+        taskId: "T9842",
+        action: "start",
+        expectedPlanningGeneration: 1,
+        clientMutationId: "run-transition-conflict"
+      }
+    },
+    ctx
+  );
+  assert.equal(first.ok, true);
+  const conflict = await taskEngineModule.onCommand(
+    {
+      name: "run-transition",
+      args: {
+        taskId: "T9842",
+        action: "pause",
+        clientMutationId: "run-transition-conflict"
+      }
+    },
+    ctx
+  );
+  assert.equal(conflict.ok, false);
+  assert.equal(conflict.code, "idempotency-key-conflict");
 });
 
 test("taskEngineModule onCommand get-next-actions works on populated store", async () => {
