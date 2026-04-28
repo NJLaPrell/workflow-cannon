@@ -107,6 +107,17 @@ function workflowChoicesFromProduct(payload: unknown): WorkflowChoice[] {
     .filter((choice): choice is WorkflowChoice => choice !== null);
 }
 
+function draftStrengthToFamily(strengthRaw: string): "policy" | "think" | "do" | "review" {
+  const k = strengthRaw.trim().toLowerCase();
+  if (k === "required" || k === "critical" || k === "blocking") return "policy";
+  if (k === "verify" || k === "checklist" || k === "audit") return "review";
+  if (k === "steps" || k === "workflow" || k === "runner") return "do";
+  if (k === "policy" || k === "think" || k === "do" || k === "review") {
+    return k;
+  }
+  return "think";
+}
+
 export class GuidanceViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewId = "workflowCannon.guidance";
 
@@ -160,16 +171,31 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
         await webview.postMessage({ type: "setPreview", html: renderGuidancePreviewInnerHtml(r) });
       }
       if (msg?.type === "draftPreview") {
-        const commandName = typeof msg.commandName === "string" && msg.commandName.trim() ? msg.commandName.trim() : "get-next-actions";
+        const commandName =
+          typeof msg.commandName === "string" && msg.commandName.trim() ? msg.commandName.trim() : "get-next-actions";
         const taskId = typeof msg.taskId === "string" ? msg.taskId.trim() : "";
-        const sourceTitle = typeof msg.sourceTitle === "string" ? msg.sourceTitle.trim() : "";
-        const trigger = typeof msg.trigger === "string" ? msg.trigger.trim() : commandName;
-        const strength = typeof msg.strength === "string" ? msg.strength.trim() : "advisory";
+        const sourceTitleRaw = typeof msg.sourceTitle === "string" ? msg.sourceTitle.trim() : "";
+        const sourceTitle = sourceTitleRaw.length ? sourceTitleRaw.slice(0, 256) : "Draft Guidance change";
+        const triggerRaw = typeof msg.trigger === "string" ? msg.trigger.trim() : "";
+        const strengthRaw =
+          typeof msg.strength === "string" && msg.strength.trim() ? msg.strength.trim() : "advisory";
+        const workflowNameCandidate = triggerRaw.length ? triggerRaw : commandName;
+        const draftRule = {
+          schemaVersion: 1 as const,
+          title: sourceTitle,
+          artifactType: "playbook" as const,
+          family: draftStrengthToFamily(strengthRaw),
+          priority: 750,
+          scopeDraft:
+            workflowNameCandidate === "__always__"
+              ? ({ preset: "always" as const })
+              : { preset: "workflow" as const, workflowName: workflowNameCandidate }
+        };
         const args: Record<string, unknown> = {
           schemaVersion: 1,
-          commandName: trigger,
+          commandName,
           evalMode: "shadow",
-          argvSummary: `Draft guidance update preview: ${sourceTitle || "Untitled guidance"} (${strength})`
+          draftRule
         };
         if (taskId) args.taskId = taskId;
         const r = await this.client.run("cae-guidance-preview", args);
@@ -757,6 +783,9 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
     .gd-kicker { text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.7; font-size: 10px; margin: 0 0 3px; }
     pre { overflow: auto; white-space: pre-wrap; font-family: var(--vscode-editor-font-family); font-size: 11px; }
     code { font-family: var(--vscode-editor-font-family); font-size: 11px; }
+    .gd-draft-table { width: 100%; border-collapse: collapse; font-size: 11px; margin: 8px 0 0; }
+    .gd-draft-table th, .gd-draft-table td { border: 1px solid var(--vscode-widget-border); padding: 4px 6px; text-align: left; vertical-align: top; }
+    .gd-warning ul { margin: 6px 0 0; padding-left: 18px; }
   </style>
 </head>
 <body>

@@ -21,6 +21,7 @@ workspace-kit run cae-guidance-preview '{"schemaVersion":1,"taskId":"T921","comm
 | `argvSummary` | no | Optional pre-summarized argv string. |
 | `currentKitPhase` | no | Optional phase override; defaults to effective `kit.currentPhaseNumber` or `"0"`. |
 | `evalMode` | no | `"shadow"` (default, rendered as Preview mode) or `"live"`. |
+| `draftRule` / `draftGuidanceRule` | no | Optional authoring-shape JSON (**`schemaVersion: 1`**, **`title`**, **`family`**, **`priority`**, **`scopeDraft`**, optional **`acknowledgement`**, **`artifactType`**, **`refPath`**). When present, CAE overlays a validated in-memory artifact + activation on the loaded registry and returns **`data.draftImpact`** (baseline vs overlay sampled family counts). Responses set **`data.ephemeral: true`** and skip durable **`storeCaeSession`** / CAE trace snapshot writes — the draft overlay does not mutate JSON/SQLite registry versions or audits. Alias **`draftGuidanceRule`** mirrors **`draftRule`**. |
 
 ## Returns
 
@@ -29,5 +30,9 @@ workspace-kit run cae-guidance-preview '{"schemaVersion":1,"taskId":"T921","comm
 The `data` object includes the underlying `evaluationContext`, `bundle`, `trace`,
 `traceId`, grouped `guidanceCards`, `familyCounts`, `pendingAcknowledgements`,
 and `conflictShadowSummary`.
+
+When **`draftRule`** / **`draftGuidanceRule`** is sent, **`data`** also includes **`draftImpact`**:
+**`schemaVersion`**, **`draftArtifactId`**, **`draftActivationId`**, **`scopePreset`**, **`scopePlainSummary`**,
+ **`overlayRegistryDigestSnippet`**, **`scopeWarnings`**, **`scopeErrors`**, **`broadScopeWarnings`**, **`primarySampleLabel`**, **`samples`** (rows with **`baselineFamilyCounts`** / **`overlayFamilyCounts`** and **`draftVisibleInOverlay`**). **`bundle`** / **`guidanceCards`** reflect evaluation against the overlaid registry in that mode.
 
 This command is Tier C / read-only and does not accept `policyApproval`.

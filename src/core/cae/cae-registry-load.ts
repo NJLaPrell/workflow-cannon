@@ -287,3 +287,66 @@ export function validateSingleCaeActivationRecord(
   }
   return { ok: true, value: record as CaeRegistryActivationRow };
 }
+
+/** In-memory overlay for preview/tests — does not persist or mutate kit SQLite registries. */
+export function appendValidatedCaeRegistryOverlay(
+  base: CaeLoadedRegistry,
+  appendedArtifacts: CaeRegistryArtifactRow[],
+  appendedActivations: CaeRegistryActivationRow[],
+  digestSeed: string
+):
+  | { ok: false; code: string; message: string }
+  | { ok: true; value: CaeLoadedRegistry } {
+  const seenArt = new Set<string>([...base.artifactById.keys()]);
+  const seenAct = new Set<string>([...base.activationById.keys()]);
+  for (const row of appendedArtifacts) {
+    const id = typeof row.artifactId === "string" ? row.artifactId.trim() : "";
+    if (!id || seenArt.has(id)) {
+      return { ok: false, code: "cae-registry-schema-invalid", message: `Overlay artifact duplicate or missing artifactId` };
+    }
+    seenArt.add(id);
+  }
+  for (const row of appendedActivations) {
+    const id = typeof row.activationId === "string" ? row.activationId.trim() : "";
+    if (!id || seenAct.has(id)) {
+      return { ok: false, code: "cae-registry-schema-invalid", message: `Overlay activation duplicate or missing activationId` };
+    }
+    seenAct.add(id);
+  }
+  const artifacts = [...base.artifacts, ...appendedArtifacts];
+  const activations = [...base.activations, ...appendedActivations];
+  const artifactById = new Map(base.artifactById);
+  for (const row of appendedArtifacts) {
+    artifactById.set(String(row.artifactId), row);
+  }
+  const activationById = new Map(base.activationById);
+  for (const row of appendedActivations) {
+    activationById.set(String(row.activationId), row);
+  }
+  for (const act of appendedActivations) {
+    const refs = act.artifactRefs as Array<{ artifactId?: string }> | undefined;
+    if (!refs?.length) continue;
+    for (const r of refs) {
+      const aid = r.artifactId;
+      if (aid && !artifactById.has(aid)) {
+        return {
+          ok: false,
+          code: "cae-registry-schema-invalid",
+          message: `Overlay activation references unknown artifactId: ${aid}`
+        };
+      }
+    }
+  }
+  const versionIdForDigest = `${JSON_REGISTRY_DIGEST_VERSION_ID}:cae-overlay:${digestSeed}:${base.registryDigest.slice(0, 32)}`;
+  const registryDigest = digestCaeRegistryContent(versionIdForDigest, artifacts, activations);
+  return {
+    ok: true,
+    value: {
+      artifacts,
+      activations,
+      artifactById,
+      activationById,
+      registryDigest
+    }
+  };
+}

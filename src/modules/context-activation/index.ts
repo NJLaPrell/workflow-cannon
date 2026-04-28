@@ -41,6 +41,12 @@ import {
   type CaeSessionRecord
 } from "./trace-store.js";
 import { buildGuidanceRulesCatalogEnvelope } from "./guidance-rules-catalog.js";
+import {
+  buildGuidanceDraftImpactMatrix,
+  buildPreviewEvaluationContext,
+  coerceDraftGuidanceRuleInput,
+  synthesizeDraftArtifactAndOverlay
+} from "../../core/cae/guidance-draft-impact-preview.js";
 
 type SqliteDatabase = NonNullable<ReturnType<typeof openKitSqliteReadWrite>>;
 
@@ -715,39 +721,83 @@ export const contextActivationModule: WorkflowModule = {
           ? args.argvSummary.trim()
           : undefined;
       const phase = String(args.currentKitPhase ?? getAtPath(effective, "kit.currentPhaseNumber") ?? "0");
+      const evalMode = args.evalMode === "live" ? "live" : "shadow";
       const loaded = loadRegistryForCae(ws, effective);
       if (!loaded.ok) return loaded;
 
-      const hydratedTask = taskId ? hydrateTaskRowForCae(ws, effective, taskId) : null;
-      const evaluationContext = buildEvaluationContext({
-        taskRow: hydratedTask ?? (taskId ? { id: taskId, status: "ready", phaseKey: null } : null),
-        command: { name: commandName, moduleId, args: commandArgs, argvSummary },
-        workspace: { currentKitPhase: phase },
-        governance: {
-          policyApprovalRequired: isSensitiveModuleCommandForEffective(commandName, commandArgs, effective),
-          approvalTierHint: inferApprovalTierHint(commandName, commandArgs, effective)
-        },
-        queue: {
-          readyQueueDepth: countReadyTasksInPlanningSqlite(ws, effective),
-          suggestedNextTaskId: null
+      const draftRuleRaw =
+        (args as Record<string, unknown>)["draftRule"] ?? (args as Record<string, unknown>)["draftGuidanceRule"];
+
+      const knownWorkflowNames = [
+        ...GUIDANCE_CURATED_WORKFLOW_NAMES,
+        ...BUILTIN_RUN_COMMAND_MANIFEST.map((entry) => entry.name)
+      ];
+      const uniqueKnownWorkflows = [...new Set(knownWorkflowNames)];
+
+      let overlayRegistry: CaeLoadedRegistry = loaded.reg;
+      let draftImpactBlock: ReturnType<typeof buildGuidanceDraftImpactMatrix> | undefined;
+      if (draftRuleRaw !== undefined && draftRuleRaw !== null) {
+        const parsed = coerceDraftGuidanceRuleInput(draftRuleRaw);
+        if (!parsed.ok) {
+          return { ok: false, code: parsed.code, message: parsed.message };
         }
+        const synthesized = synthesizeDraftArtifactAndOverlay({
+          workspacePath: ws,
+          baseRegistry: loaded.reg,
+          draft: parsed.value,
+          knownWorkflowNames: uniqueKnownWorkflows
+        });
+        if (!synthesized.ok) {
+          return { ok: false, code: synthesized.code, message: synthesized.message };
+        }
+        overlayRegistry = synthesized.overlay;
+        draftImpactBlock = buildGuidanceDraftImpactMatrix({
+          workspacePath: ws,
+          effective,
+          baseRegistry: loaded.reg,
+          overlayRegistry: synthesized.overlay,
+          scopeBuild: synthesized.scopeBuild,
+          primary: {
+            label: "Primary dashboard/workflow preview",
+            commandName,
+            moduleId: moduleId?.length ? moduleId : undefined,
+            taskId,
+            commandArgs,
+            argvSummary
+          },
+          currentKitPhase: phase,
+          evalMode
+        });
+      }
+
+      const evaluationContext = buildPreviewEvaluationContext({
+        workspacePath: ws,
+        effective,
+        commandName,
+        moduleId: moduleId?.length ? moduleId : undefined,
+        taskId,
+        commandArgs,
+        argvSummary,
+        currentKitPhase: phase
       });
-      const evalMode = args.evalMode === "live" ? "live" : "shadow";
-      const { bundle, trace, traceId } = evaluateActivationBundle(evaluationContext, loaded.reg, {
+      const { bundle, trace, traceId } = evaluateActivationBundle(evaluationContext, overlayRegistry, {
         evalMode
       });
-      storeCaeSession(traceId, { bundle, trace });
       const persist = getAtPath(effective, "kit.cae.persistence") === true;
-      persistCaeTraceIfEnabled(
-        ws,
-        effective,
-        persist,
-        traceId,
-        trace,
-        bundle,
-        buildTraceSummary(traceId, bundle, evaluationContext)
-      );
-      const cards = summarizeGuidanceCards(bundle, loaded.reg);
+      const skipPersistenceBecauseDraftImpact = !!draftImpactBlock;
+      if (!skipPersistenceBecauseDraftImpact) {
+        storeCaeSession(traceId, { bundle, trace });
+        persistCaeTraceIfEnabled(
+          ws,
+          effective,
+          persist,
+          traceId,
+          trace,
+          bundle,
+          buildTraceSummary(traceId, bundle, evaluationContext)
+        );
+      }
+      const cards = summarizeGuidanceCards(bundle, overlayRegistry);
       const counts = familyCountsFromBundle(bundle);
       return {
         ok: true,
@@ -758,7 +808,7 @@ export const contextActivationModule: WorkflowModule = {
           evalMode,
           modeLabel: evalMode === "shadow" ? "Preview mode" : "Applies now",
           traceId,
-          ephemeral: !persist,
+          ephemeral: skipPersistenceBecauseDraftImpact ? true : !persist,
           evaluationContext,
           bundle,
           trace,
@@ -766,7 +816,8 @@ export const contextActivationModule: WorkflowModule = {
           familyCounts: counts,
           totalGuidanceCount: counts.policy + counts.think + counts.do + counts.review,
           pendingAcknowledgements: bundle.pendingAcknowledgements,
-          conflictShadowSummary: bundle.conflictShadowSummary
+          conflictShadowSummary: bundle.conflictShadowSummary,
+          ...(draftImpactBlock ? { draftImpact: draftImpactBlock } : {})
         }
       };
     }
