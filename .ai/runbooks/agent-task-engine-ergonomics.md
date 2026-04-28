@@ -71,6 +71,17 @@ Canonical process remains: [`AGENTS.md`](../AGENTS.md), [`AGENT-CLI-MAP.md`](../
 
 **Transcript alignment:** `imp-3bf93773a8c983` (`transcript:ae9aedbeb39d77297a12fc0b697ac6918a06bbaf`).
 
+## 3b. Agent-facing task read contract
+
+**Problem:** Task persistence can move between blob mirrors, relational SQLite tables, compatibility views, and future projections. Agents that parse raw DB columns or arbitrary task metadata get hosed when internals change.
+
+**Expectation:**
+
+- Treat [`agent-task-db-contract.md`](./agent-task-db-contract.md) as the stable v1 read model for normal task workflows.
+- Use command JSON from **`get-next-actions`**, **`list-tasks`**, **`get-task`**, **`queue-health`**, dependency graph, and evidence/history commands. Do not parse **`workspace_planning_state`** blobs, **`metadata_json`**, **`depends_on_json`**, **`unblocks_json`**, **`transition_log_json`**, or **`mutation_log_json`** for routine agent behavior.
+- Empty workspaces, no ready tasks, missing evidence, and first-run stores should return explicit `[]` / `null` values in successful envelopes. Treat stack traces or ambiguous failures in those states as contract bugs.
+- TypeScript consumers can import `@workflow-cannon/workspace-kit/contracts/agent-task-read-contract`; schema consumers can validate against `schemas/agent-task-read-contract.v1.json`.
+
 ## 4. Planning engine → workable tasks
 
 **Problem:** Operators confuse wishlist artifacts, planning sessions, and execution tasks.

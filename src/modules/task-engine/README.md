@@ -14,6 +14,7 @@ Phase 1 core module for structured task lifecycle management.
 - **Next-action suggestions**: Priority-sorted ready queue with blocking chain analysis
 - **Wishlist (ideation)**: Legacy `W###` path and **`wishlist_intake`** tasks; see maintainer runbooks
 - **Run API schemas**: Versioned command argument/response contracts in `schemas/task-engine-run-contracts.schema.json` (kept in sync with command registration by `scripts/check-task-engine-run-contracts.mjs`)
+- **Agent read contract**: Stable task read models in `schemas/agent-task-read-contract.v1.json` and `src/contracts/agent-task-read-contract.ts`; agents should consume command projections instead of raw SQLite tables or blob mirrors
 
 ## Commands
 
@@ -30,6 +31,12 @@ Phase 1 core module for structured task lifecycle management.
 | `dashboard-summary` | Cockpit JSON for UIs (includes maintainer status snapshot) |
 | `create-wishlist` / `list-wishlist` / `get-wishlist` / `update-wishlist` | Wishlist ideation (no task phase) |
 | `convert-wishlist` | Promote a wishlist item into one or more tasks; closes wishlist as `converted` |
+
+## Agent Read Contract
+
+Normal agent workflows should use `get-next-actions`, `list-tasks`, `get-task`, `queue-health`, dependency graph, and evidence/history commands as the read boundary. The versioned v1 projection is documented in `.ai/runbooks/agent-task-db-contract.md`, with TypeScript types exported from `@workflow-cannon/workspace-kit/contracts/agent-task-read-contract` and JSON Schema in `schemas/agent-task-read-contract.v1.json`.
+
+The contract guarantees explicit empty arrays/nulls for empty workspaces, no-ready-task states, missing evidence, and first-run stores. Storage migrations may change SQLite tables and compatibility blobs, but the agent-facing v1 read models stay additive unless a follow-on task publishes a new version and migration plan.
 
 ## Public API boundary
 
