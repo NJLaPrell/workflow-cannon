@@ -988,6 +988,7 @@ test("taskEngineModule registration includes all instruction entries", () => {
   assert.ok(names.includes("convert-wishlist"));
   assert.ok(names.includes("migrate-task-persistence"));
   assert.ok(names.includes("persist-planning-execution-drafts"));
+  assert.ok(names.includes("review-planning-execution-drafts"));
 });
 
 test("taskEngineModule passes ModuleRegistry validation", () => {
@@ -2475,6 +2476,104 @@ test("persist-planning-execution-drafts does not partially persist invalid batch
   const first = await taskEngineModule.onCommand({ name: "get-task", args: { taskId: "T733" } }, ctx);
   assert.equal(first.ok, false);
   assert.equal(first.code, "task-not-found");
+});
+
+test("review-planning-execution-drafts flags UX/CAE batch gaps without persisting", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+
+  const result = await taskEngineModule.onCommand(
+    {
+      name: "review-planning-execution-drafts",
+      args: {
+        targetPhaseKey: "74",
+        targetPhase: "Phase 74",
+        desiredStatus: "ready",
+        tasks: [
+          {
+            id: "T900",
+            title: "Build UX and CAE everything",
+            approach: "Implement the feature",
+            technicalScope: ["Wire UI", "Wire CAE", "Add state", "Add docs", "Add config", "Add workflow"],
+            acceptanceCriteria: ["works"]
+          }
+        ]
+      }
+    },
+    ctx
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "planning-execution-drafts-review-findings");
+  assert.equal(result.data.persisted, false);
+  assert.equal(result.data.status, "fail");
+  const codes = result.data.findings.map((f) => f.code);
+  assert.ok(codes.includes("oversized-task"));
+  assert.ok(codes.includes("missing-verification-coverage"));
+  assert.ok(codes.includes("missing-rollback-activation-slice"));
+  assert.ok(codes.includes("missing-empty-first-run-behavior"));
+  assert.ok(codes.includes("unclear-acceptance-criteria"));
+
+  const list = await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, ctx);
+  assert.equal(list.data.tasks.length, 0);
+});
+
+test("review-planning-execution-drafts passes complete UX/CAE batch and preserves normalized defaults", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const tasks = [
+    {
+      id: "T901",
+      title: "Implement UX empty first-run state",
+      approach: "Add empty and first-run behavior for the draft preview.",
+      technicalScope: ["Render empty state", "Handle fresh workspace no data state"],
+      acceptanceCriteria: ["Empty and first-run states render with clear next actions"]
+    },
+    {
+      id: "T902",
+      title: "Add CAE activation rollback path",
+      approach: "Add activation toggle and rollback guidance.",
+      technicalScope: ["Add activation flag", "Document rollback fallback"],
+      acceptanceCriteria: ["Operators can disable the activation path and recover safely"]
+    },
+    {
+      id: "T903",
+      title: "Verify UX CAE batch behavior",
+      approach: "Add tests and validation coverage.",
+      technicalScope: ["Add unit tests", "Run validation checks"],
+      acceptanceCriteria: ["Tests verify empty state, activation, rollback, and persistence preview behavior"]
+    }
+  ];
+
+  const review = await taskEngineModule.onCommand(
+    {
+      name: "review-planning-execution-drafts",
+      args: { tasks, targetPhaseKey: "74", targetPhase: "Phase 74", desiredStatus: "ready" }
+    },
+    ctx
+  );
+  assert.equal(review.ok, true);
+  assert.equal(review.code, "planning-execution-drafts-review-passed");
+  assert.equal(review.data.status, "pass");
+  assert.equal(review.data.normalizedTaskSummaries[0].phaseKey, "74");
+  assert.equal(review.data.normalizedTaskSummaries[0].status, "ready");
+
+  const lt = await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, ctx);
+  const persisted = await taskEngineModule.onCommand(
+    {
+      name: "persist-planning-execution-drafts",
+      args: {
+        tasks,
+        targetPhaseKey: "74",
+        targetPhase: "Phase 74",
+        desiredStatus: "ready",
+        expectedPlanningGeneration: lt.data.planningGeneration
+      }
+    },
+    ctx
+  );
+  assert.equal(persisted.ok, true);
+  assert.equal(persisted.data.count, 3);
 });
 
 test("taskEngineModule create-task idempotent replay skips require gate (no re-persist)", async () => {

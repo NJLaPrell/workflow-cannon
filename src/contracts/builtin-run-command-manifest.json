@@ -190,6 +190,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "review-planning-execution-drafts",
+    "file": "review-planning-execution-drafts.md",
+    "description": "Dry-run UX/CAE gap review for planning execution drafts before persistence.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "update-task",
     "file": "update-task.md",
     "description": "Update mutable task fields without lifecycle bypass.",
