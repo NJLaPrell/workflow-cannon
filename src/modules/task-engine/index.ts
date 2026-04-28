@@ -26,6 +26,8 @@ export {
   getTransitionAction,
   resolveTargetState,
   getAllowedTransitionsFrom,
+  listTransitionActions,
+  listTransitionActionTable,
   stateValidityGuard,
   dependencyCheckGuard
 } from "./transitions.js";

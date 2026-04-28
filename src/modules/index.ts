@@ -86,6 +86,8 @@ export {
   getTransitionAction,
   resolveTargetState,
   getAllowedTransitionsFrom,
+  listTransitionActions,
+  listTransitionActionTable,
   stateValidityGuard,
   dependencyCheckGuard,
   DELIVERY_EVIDENCE_METADATA_KEY,

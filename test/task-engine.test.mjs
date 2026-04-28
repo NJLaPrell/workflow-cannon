@@ -15,6 +15,7 @@ import {
   getTransitionAction,
   resolveTargetState,
   getAllowedTransitionsFrom,
+  listTransitionActions,
   stateValidityGuard,
   dependencyCheckGuard,
   buildQueueGitAlignmentReport,
@@ -188,6 +189,28 @@ test("getAllowedTransitionsFrom returns all transitions from a state", () => {
 
   const fromCompleted = getAllowedTransitionsFrom("completed");
   assert.equal(fromCompleted.length, 0);
+});
+
+test("run-transition action contract, schema, and docs stay aligned with runtime map", async () => {
+  const runtimeActions = listTransitionActions();
+  assert.ok(runtimeActions.includes("decline"));
+
+  const schema = JSON.parse(
+    await readFile(path.join(process.cwd(), "schemas/task-engine-run-contracts.schema.json"), "utf8")
+  );
+  assert.deepEqual(schema.$defs.contractRunTransition.allOf[1].properties.args.properties.action.enum, runtimeActions);
+
+  const snapshot = JSON.parse(await readFile(path.join(process.cwd(), "schemas/pilot-run-args.snapshot.json"), "utf8"));
+  assert.deepEqual(snapshot.commands["run-transition"].properties.action.enum, runtimeActions);
+
+  const instructions = await readFile(
+    path.join(process.cwd(), "src/modules/task-engine/instructions/run-transition.md"),
+    "utf8"
+  );
+  for (const action of runtimeActions) {
+    assert.match(instructions, new RegExp(`\\\`${action}\\\``));
+  }
+  assert.match(instructions, /`decline` → cancelled/);
 });
 
 // ---------------------------------------------------------------------------
