@@ -21,8 +21,8 @@
         "shadowPreflight": true
       }
     },
-    "currentPhaseLabel": "Phase 72 - kickoff pending",
-    "currentPhaseNumber": 72
+    "currentPhaseLabel": "Phase 73 — Guidance redesign and CAE management UX",
+    "currentPhaseNumber": 73
   },
   "tasks": {
     "persistenceBackend": "sqlite",

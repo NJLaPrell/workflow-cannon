@@ -26,10 +26,10 @@ test("renderGuidanceSummaryInnerHtml renders health and escapes issue details", 
       feedback: { available: true, summary: { total: 0, useful: 0, noisy: 0 }, rows: [] }
     }
   });
-  assert.match(html, /Guidance status/);
+  assert.match(html, /Guidance System/);
   assert.match(html, /How to recover/);
   assert.match(html, /Guidance rules need repair/);
-  assert.match(html, /separate from agent behavior settings/);
+  assert.match(html, /active guidance set/);
   assert.doesNotMatch(html, /<script>/i);
   assert.match(html, /&lt;script&gt;/);
 });
@@ -60,10 +60,10 @@ test("renderGuidanceSummaryInnerHtml renders persistence recovery copy", () => {
   });
   assert.match(html, /Guidance history is off/);
   assert.match(html, /history disappears after the session/);
-  assert.match(html, /Persistence off/);
+  assert.match(html, /History off/);
 });
 
-test("renderGuidanceSummaryInnerHtml renders readable recent checks and copyable truncated JSON", () => {
+test("renderGuidanceSummaryInnerHtml renders grouped recent activity and manage guidance", () => {
   const html = renderGuidanceSummaryInnerHtml({
     ok: true,
     data: {
@@ -79,7 +79,7 @@ test("renderGuidanceSummaryInnerHtml renders readable recent checks and copyable
       validation: { ok: true, code: "cae-registry-validate-ok" },
       recentTraces: {
         available: true,
-        count: 1,
+        count: 2,
         rows: [
           {
             traceId: "cae.trace.1234567890abcdef",
@@ -88,16 +88,49 @@ test("renderGuidanceSummaryInnerHtml renders readable recent checks and copyable
             evalMode: "shadow",
             storage: "sqlite",
             familyCounts: { policy: 0, think: 1, do: 2, review: 0 }
+          },
+          {
+            traceId: "cae.trace.abcdef1234567890",
+            commandName: "get-next-actions",
+            createdAt: "2026-04-26T23:59:59.000Z",
+            evalMode: "shadow",
+            storage: "sqlite",
+            familyCounts: { policy: 0, think: 1, do: 2, review: 0 }
           }
         ]
       },
       acknowledgements: { available: true, count: 0, rows: [] },
-      feedback: { available: true, summary: { total: 0, useful: 0, noisy: 0 }, rows: [] }
+      feedback: { available: true, summary: { total: 0, useful: 0, noisy: 0 }, rows: [] },
+      registryVersions: {
+        ok: true,
+        data: {
+          versions: [
+            {
+              versionId: "cae.reg.active",
+              createdAt: "2026-04-27T00:00:00.000Z",
+              createdBy: "agent",
+              isActive: true,
+              artifactCount: 3,
+              activationCount: 4
+            }
+          ]
+        }
+      },
+      library: {
+        artifacts: { artifactIds: ["cae.doc.one"] },
+        activations: { activationIds: ["cae.activation.one"] }
+      },
+      caeConfig: { adminMutations: false }
     }
   });
   assert.match(html, /Find The Next Actions|Get Next Actions/);
+  assert.match(html, /Recent Activity/);
+  assert.match(html, /2 unchanged checks collapsed/);
   assert.match(html, /Review why/);
-  assert.match(html, /Advanced details JSON/);
+  assert.match(html, /Manage Guidance/);
+  assert.match(html, /Guidance Library/);
+  assert.match(html, /read-only/);
+  assert.match(html, /Debug details JSON/);
   assert.match(html, /data-wc-action="guidance-copy-block"/);
 });
 
@@ -151,11 +184,12 @@ test("renderGuidancePreviewInnerHtml renders grouped guidance actions", () => {
   });
   assert.match(html, /Rules to follow/);
   assert.match(html, /Why this appeared/);
-  assert.match(html, /Preview summary/);
-  assert.match(html, /Review 1 Guidance item/);
+  assert.match(html, /Pre-flight result/);
+  assert.match(html, /Review 1 guidance item/);
   assert.match(html, /Possible guidance conflicts/);
   assert.match(html, /Two policy activations matched/);
   assert.match(html, /data-wc-action="guidance-ack"/);
+  assert.match(html, /data-wc-action="guidance-improve"/);
   assert.match(html, /data-wc-action="guidance-feedback"/);
   assert.match(html, /Raw preview JSON/);
 });
@@ -190,10 +224,10 @@ test("renderGuidanceTraceDetailInnerHtml renders summary before raw JSON", () =>
     },
     traceFetch: { ok: true, data: { storage: "sqlite", trace: { traceId: "cae.trace.example" } } }
   });
-  assert.match(html, /Why this Guidance appeared/);
+  assert.match(html, /Why this guidance appeared/);
   assert.match(html, /matched policy=1/);
   assert.match(html, /Pending acknowledgements/);
-  assert.match(html, /Rules: 1/);
+  assert.match(html, /Required rules: 1/);
   assert.match(html, /Raw trace JSON/);
   assert.match(html, /Copy shown JSON/);
 });
