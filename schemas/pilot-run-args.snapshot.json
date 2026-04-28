@@ -4,11 +4,13 @@
   "pilotCommands": [
     "add-dependency",
     "agent-bootstrap",
+    "agent-mutation-plan",
     "agent-session-snapshot",
     "archive-task",
     "assign-task-phase",
     "backfill-task-feature-links",
     "backup-planning-sqlite",
+    "classify-kit-state",
     "clear-task-phase",
     "convert-wishlist",
     "create-task",
@@ -37,11 +39,14 @@
     "list-wishlist",
     "migrate-task-persistence",
     "persist-planning-execution-drafts",
+    "phase-delivery-preflight",
     "phase-status",
     "queue-git-alignment",
     "queue-health",
+    "release-evidence-manifest",
     "remove-dependency",
     "replay-queue-snapshot",
+    "review-planning-execution-drafts",
     "run-transition",
     "set-current-phase",
     "synthesize-transcript-churn",
@@ -72,6 +77,30 @@
     },
     "agent-bootstrap": {
       "type": "object",
+      "additionalProperties": false
+    },
+    "agent-mutation-plan": {
+      "type": "object",
+      "required": [
+        "commandName"
+      ],
+      "properties": {
+        "commandName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "taskId": {
+          "type": "string",
+          "pattern": "^(T[0-9]+|imp-[0-9a-f]{14})$"
+        },
+        "action": {
+          "type": "string",
+          "minLength": 1
+        },
+        "config": {
+          "type": "object"
+        }
+      },
       "additionalProperties": false
     },
     "agent-session-snapshot": {
@@ -133,6 +162,9 @@
         }
       },
       "additionalProperties": true
+    },
+    "classify-kit-state": {
+      "type": "object"
     },
     "clear-task-phase": {
       "type": "object",
@@ -507,6 +539,9 @@
       },
       "additionalProperties": true
     },
+    "phase-delivery-preflight": {
+      "type": "object"
+    },
     "phase-status": {
       "type": "object",
       "properties": {
@@ -525,6 +560,9 @@
     "queue-health": {
       "type": "object",
       "additionalProperties": false
+    },
+    "release-evidence-manifest": {
+      "type": "object"
     },
     "remove-dependency": {
       "type": "object",
@@ -545,6 +583,9 @@
       "additionalProperties": false
     },
     "replay-queue-snapshot": {
+      "type": "object"
+    },
+    "review-planning-execution-drafts": {
       "type": "object"
     },
     "run-transition": {

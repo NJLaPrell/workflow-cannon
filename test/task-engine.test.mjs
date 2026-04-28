@@ -1037,6 +1037,7 @@ test("taskEngineModule registration includes all instruction entries", () => {
   assert.ok(names.includes("migrate-task-persistence"));
   assert.ok(names.includes("persist-planning-execution-drafts"));
   assert.ok(names.includes("review-planning-execution-drafts"));
+  assert.ok(names.includes("agent-mutation-plan"));
 });
 
 test("taskEngineModule passes ModuleRegistry validation", () => {
@@ -1807,6 +1808,96 @@ test("taskEngineModule run-transition idempotency conflicts on different payload
   );
   assert.equal(conflict.ok, false);
   assert.equal(conflict.code, "idempotency-key-conflict");
+});
+
+test("taskEngineModule agent-mutation-plan prepares sensitive run-transition with lifecycle context", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T9871", status: "in_progress" }));
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const result = await taskEngineModule.onCommand(
+    {
+      name: "agent-mutation-plan",
+      args: { commandName: "run-transition", taskId: "T9871", action: "complete" }
+    },
+    ctx
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "agent-mutation-plan");
+  assert.equal(result.data.commandName, "run-transition");
+  assert.equal(result.data.policy.sensitivity, "sensitive");
+  assert.equal(result.data.policy.approvalLane, "JSON policyApproval in the run args object");
+  assert.equal(result.data.policy.envApprovalApplies, false);
+  assert.equal(result.data.planning.expectedPlanningGenerationRequired, true);
+  assert.equal(result.data.readyRun.args.expectedPlanningGeneration, result.data.planning.planningGeneration);
+  assert.equal(result.data.readyRun.args.policyApproval.rationale, "<human-approved rationale>");
+  assert.equal(result.data.idempotency.clientMutationId, true);
+  assert.equal(result.data.lifecycle.taskStatus, "in_progress");
+  assert.equal(result.data.lifecycle.validNow, true);
+});
+
+test("taskEngineModule agent-mutation-plan reports non-sensitive command metadata", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, () => {});
+  const result = await taskEngineModule.onCommand(
+    { name: "agent-mutation-plan", args: { commandName: "update-task" } },
+    sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } })
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.policy.sensitivity, "non-sensitive");
+  assert.equal(result.data.readyRun.args.policyApproval, undefined);
+  assert.equal(result.data.readyRun.args.clientMutationId, "update-task-<stable-retry-key>");
+  assert.equal(result.data.planning.expectedPlanningGenerationRequired, true);
+});
+
+test("taskEngineModule agent-mutation-plan explains sensitive-with-dryrun policy", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, () => {});
+  const result = await taskEngineModule.onCommand(
+    { name: "agent-mutation-plan", args: { commandName: "generate-document" } },
+    sqliteTaskEngineCtx(workspace)
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.policy.sensitivity, "sensitive-with-dryrun");
+  assert.equal(
+    result.data.policy.jsonApprovalRequired,
+    "when dryRun is false or omitted by command policy"
+  );
+});
+
+test("taskEngineModule agent-mutation-plan reports blocked lifecycle actions", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T9872", status: "ready", dependsOn: ["T9873"] }));
+    store.addTask(makeTask({ id: "T9873", status: "ready" }));
+  });
+  const result = await taskEngineModule.onCommand(
+    {
+      name: "agent-mutation-plan",
+      args: { commandName: "run-transition", taskId: "T9872", action: "start" }
+    },
+    sqliteTaskEngineCtx(workspace)
+  );
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.data.lifecycle.dependencyBlockers, ["T9873"]);
+  assert.equal(result.data.lifecycle.validNow, false);
+});
+
+test("taskEngineModule agent-mutation-plan rejects unknown commands", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, () => {});
+  const result = await taskEngineModule.onCommand(
+    { name: "agent-mutation-plan", args: { commandName: "does-not-exist" } },
+    sqliteTaskEngineCtx(workspace)
+  );
+
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "unknown-command");
 });
 
 test("taskEngineModule onCommand get-next-actions works on populated store", async () => {

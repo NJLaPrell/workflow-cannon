@@ -157,6 +157,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "agent-mutation-plan",
+    "file": "agent-mutation-plan.md",
+    "description": "Read-only preflight plan for workspace-kit run mutations: schema, policy, planning generation, idempotency, and lifecycle state.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "synthesize-transcript-churn",
     "file": "synthesize-transcript-churn.md",
     "description": "Promote transcript_churn/research to improvement/proposed after investigation.",
