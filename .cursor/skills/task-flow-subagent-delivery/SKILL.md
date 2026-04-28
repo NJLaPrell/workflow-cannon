@@ -12,7 +12,7 @@ Single-task maintainer delivery: branch from **`release/phase-<N>`**, implement,
 ## Do this
 
 1. Follow **`.ai/playbooks/task-to-phase-branch.md`** step order (start before first implementation commit).
-2. Use **`pnpm run wk run …`** with JSON args; sensitive commands need **`policyApproval`** in the third argv — see **`.ai/POLICY-APPROVAL.md`**.
+2. Use **`pnpm exec wk run …`** with JSON args; sensitive commands need **`policyApproval`** in the third argv — see **`.ai/POLICY-APPROVAL.md`**.
 3. Keep **`.ai/AGENT-CLI-MAP.md`** open for Tier A/B copy-paste.
 
 ## Do not

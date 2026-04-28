@@ -36,9 +36,9 @@ Store **only** non-secret data in **`.workspace-kit/config.json`**. Webhook secr
 }
 ```
 
-Use **`pnpm run wk config set …`** with **`WORKSPACE_KIT_POLICY_APPROVAL`** for mutating keys (see **`POLICY-APPROVAL.md`**).
+Use **`pnpm exec wk config set …`** with **`WORKSPACE_KIT_POLICY_APPROVAL`** for mutating keys (see **`POLICY-APPROVAL.md`**).
 
-Regenerate **`docs/maintainers/CONFIG.md`** / **`.ai/CONFIG.md`** after registry changes: **`pnpm run wk config generate-docs`**.
+Regenerate **`docs/maintainers/CONFIG.md`** / **`.ai/CONFIG.md`** after registry changes: **`pnpm exec wk config generate-docs`**.
 
 ## Slash commands (comment body)
 

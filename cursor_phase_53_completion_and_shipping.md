@@ -105,7 +105,7 @@ Committed **`ROADMAP.md`** / **`FEATURE-TAXONOMY.md`** must match the check scri
 ```
 
 Regen used:  
-`WORKSPACE_KIT_DOC_TAXONOMY_JSON_ONLY=1 pnpm run wk run generate-document '…'`.
+`WORKSPACE_KIT_DOC_TAXONOMY_JSON_ONLY=1 pnpm exec wk run generate-document '…'`.
 
 ### Tasks + phase
 - **`T630`–`T639`**: **`start`** + **`complete`** with **`expectedPlanningGeneration`** (policy **`require`**).

@@ -20,10 +20,30 @@ test("parseRunCommandOutput parses valid JSON", () => {
   assert.equal(out.code, "tasks-listed");
 });
 
+test("parseRunCommandOutput parses pretty-printed JSON", () => {
+  const out = parseRunCommandOutput('{\n  "ok": true,\n  "code": "tasks-listed"\n}\n', 0);
+  assert.equal(out.ok, true);
+  assert.equal(out.code, "tasks-listed");
+});
+
 test("parseRunCommandOutput returns parse error on malformed output", () => {
   const out = parseRunCommandOutput("not-json", 1);
   assert.equal(out.ok, false);
   assert.equal(out.code, "extension-json-parse");
+});
+
+test("parseRunCommandOutput remediates pnpm banner contamination", () => {
+  const out = parseRunCommandOutput(
+    `> @workflow-cannon/workspace-kit@0.73.0 wk /repo
+> node dist/cli.js run list-tasks '{}'
+
+{"ok":true}`,
+    0
+  );
+  assert.equal(out.ok, false);
+  assert.equal(out.code, "extension-json-parse");
+  assert.equal(out.details.suspectedPackageManagerBanner, true);
+  assert.match(out.message, /pnpm exec wk|node dist\/cli\.js/);
 });
 
 test("CommandClient.run handles non-zero with valid JSON payload", async () => {

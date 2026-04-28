@@ -32,7 +32,7 @@ flowchart TD
 
 ## Ordered checks
 
-1. **`pnpm run wk doctor`** — contract files, planning DB, optional CAE summary lines when implemented.  
+1. **`pnpm exec wk doctor`** — contract files, planning DB, optional CAE summary lines when implemented.  
 2. **Registry path** — artifact registry file on disk (see **`registry/cae/artifacts.v1.json`** or **`.ai/cae/registry/artifacts.v1.json`** per **`T857`**).  
 3. **Read-only commands** — **`cae-list-artifacts`**, **`cae-health`**, **`cae-evaluate`** (**`T861`**, **`T862`**) with **`pnpm exec wk run …`** for clean JSON stdout.  
 4. **Remediation catalog** — structured failures may include **`remediation.instructionPath`**; align with **`src/core/cli-remediation.js`** patterns.

@@ -46,7 +46,7 @@ Open the **Workflow Cannon** activity bar to use **Dashboard** (webview — task
 
 The extension runs `node <repo>/dist/cli.js` (or the published package path under `node_modules`). If dashboard/tasks fail with “CLI not found”, run `pnpm run build` at the repo root.
 
-**Copy-ready mutating JSON (operators):** From a terminal at the repo root, `pnpm run wk run run-transition --schema-only` (and other pilot commands) prints **`sampleArgs`** you can paste and edit before running a real `wk run run-transition '<json>'`. Dashboard/Task transitions already inject **`expectedPlanningGeneration`** when policy is **`require`**; use the CLI helper when debugging shape errors. See **`docs/maintainers/plans/phase-52-human-cli-affordances.md`**.
+**Copy-ready mutating JSON (operators):** From a terminal at the repo root, `pnpm exec wk run run-transition --schema-only` (and other pilot commands) prints **`sampleArgs`** you can paste and edit before running a real `wk run run-transition '<json>'`. Dashboard/Task transitions already inject **`expectedPlanningGeneration`** when policy is **`require`**; use the CLI helper when debugging shape errors. See **`docs/maintainers/plans/phase-52-human-cli-affordances.md`**.
 
 **Role, phase, and deliver:** The dashboard shows **Role** / **Agent temperament** and **Current phase** / **Next phase** in one card (from **`dashboard-summary`**). **Deliver** is enabled when the current phase bucket has at least one **`ready`** execution task; hover shows the count. Refresh runs **`dashboard-summary`** only.
 

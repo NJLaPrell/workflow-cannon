@@ -6,11 +6,11 @@ The user invoked **`/regenerate-docs`**. Follow **`src/modules/documentation/RUL
 
 **Batch (typical after touching multiple templates or `.ai` keyed sources):**
 
-`pnpm run wk run document-project '{}'`
+`pnpm exec wk run document-project '{}'`
 
 **Single document type** (when the user names one type only, e.g. after editing one view/template pair):
 
-`pnpm run wk run generate-document '{"documentType":"<basename>","options":{}}'`
+`pnpm exec wk run generate-document '{"documentType":"<basename>","options":{}}'`
 
 Use **`documentType`** values from **`src/modules/documentation/instructions/generate-document.md`** (e.g. **`README.md`**, **`ROADMAP.md`**, **`AGENTS.md`**, runbooks under **`runbooks/...`**). Honor user intent on **`dryRun`**, **`overwriteAi`**, **`overwriteHuman`**, and **`strict`** flags via the JSON **`options`** object when they ask.
 

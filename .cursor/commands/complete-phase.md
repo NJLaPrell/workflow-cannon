@@ -7,7 +7,7 @@ The user invoked **complete-phase**. Expected shape: **`/complete-phase <N> [app
 Context: GitHub **#84** (phase closeout operator ergonomics).
 
 1. Follow **`.ai/playbooks/phase-closeout-and-release.md`** (playbook id **`phase-closeout-and-release`**). Machine canon lives under **`.ai/`**; **`docs/maintainers/playbooks/`** mirrors are for humans — see **`AGENTS.md`** routing.
-2. `pnpm run wk doctor` and `pnpm run wk run get-next-actions '{}'`.
+2. `pnpm exec wk doctor` and `pnpm exec wk run get-next-actions '{}'`.
 3. `pnpm exec wk run list-tasks` with filters as needed (e.g. **`phaseKey`** **`<N>`**); deliver remaining execution work via **`release/phase-<N>`** using **`.ai/playbooks/task-to-phase-branch.md`** (PR base = phase branch, not **`main`**).
 4. On **`release/phase-<N>`** tip: `pnpm run build`, `pnpm run check`, `pnpm run test`, `pnpm run parity`, plus maintainer gates named in **`.ai/RELEASING.md`**.
 5. Merge **`release/phase-<N>`** → **`main`** through a normal reviewed PR when validation is green.

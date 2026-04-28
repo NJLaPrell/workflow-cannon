@@ -35,7 +35,7 @@ Here’s where **Phase 64** stands against **`.ai/playbooks/phase-closeout-and-r
 ## §0–§1 — Context and discovery
 
 - **`pnpm run wk doctor`**: passed (SQLite tasks, `planningGeneration` **976**, policy note: use JSON **`policyApproval`** on `wk run`, not env-only on the run path).
-- **`pnpm run wk run get-next-actions '{}'`**: suggests **T770** first; global queue shows **10** `ready`, **533** `completed`, etc.
+- **`pnpm exec wk run get-next-actions '{}'`**: suggests **T770** first; global queue shows **10** `ready`, **533** `completed`, etc.
 - **Git**: **`release/phase-64`** exists locally and on **`origin`**. **`main`** is **ahead** of **`release/phase-64`** (merge-base is the phase tip; **`main`** has commits after **`Merge branch 'release/phase-64' into main`**). So the “merge phase train → `main`” step from §5 **already happened** in history; the phase branch is not the current tip of delivery.
 
 ## §2–§3 — Phase work and integration gate

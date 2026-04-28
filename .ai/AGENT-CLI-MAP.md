@@ -100,10 +100,11 @@ Successful **`workspace-kit run …`** invocations print **one JSON value to std
 
 1. **Capture all stdout**, then **`trim`**, then **`JSON.parse` the whole string** — do not assume one line equals one JSON value and do not split on newlines to “find” JSON.
 2. Treat **stderr separately** — diagnostics or progress may appear there; interleaving with stdout is not a supported contract for splitting streams into JSON.
-3. Use **`clientMutationId`** on mutating commands (where supported) so retries are **idempotent** when you re-send the same logical operation after a timeout or ambiguous transport failure.
-4. Distinguish **parse failures** (your script could not decode stdout as JSON — exit code may still be 0 if the process wrote non-JSON garbage) from **`ok: false`** in a successfully parsed payload (the kit returned a structured error). A parse error does **not** prove the kit skipped a mutation; check task-engine state before re-running destructive sequences.
-5. Prefer **`set -euo pipefail`** (bash) and explicit capture: `out=$(pnpm exec wk run list-tasks '{}' 2>/dev/null)` then parse **`out`** — adjust stderr handling to your logging needs.
-6. **`pnpm run wk …`** can prepend **package-manager banner lines** before the JSON document and break naive one-line parsers; prefer **`pnpm exec wk …`**, or **`node dist/cli.js run …`** from a built tree when scripts require clean stdout.
+3. Prefer the exported helper **`parseWorkspaceKitJsonStdout`** from **`@workflow-cannon/workspace-kit`** when writing Node-based automation; it preserves the “one JSON value” contract and returns targeted remediation for package-manager banner contamination.
+4. Use **`clientMutationId`** on mutating commands (where supported) so retries are **idempotent** when you re-send the same logical operation after a timeout or ambiguous transport failure.
+5. Distinguish **parse failures** (your script could not decode stdout as JSON — exit code may still be 0 if the process wrote non-JSON garbage) from **`ok: false`** in a successfully parsed payload (the kit returned a structured error). A parse error does **not** prove the kit skipped a mutation; check task-engine state before re-running destructive sequences.
+6. Prefer **`set -euo pipefail`** (bash) and explicit capture: `out=$(pnpm exec wk run list-tasks '{}' 2>/dev/null)` then parse **`out`** — adjust stderr handling to your logging needs.
+7. **`pnpm run wk …`** can prepend **package-manager banner lines** before the JSON document and break naive one-line parsers; prefer **`pnpm exec wk …`**, or **`node dist/cli.js run …`** from a built tree when scripts require clean stdout.
 
 ### Multi-writer task store (lost updates)
 
