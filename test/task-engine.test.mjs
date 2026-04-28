@@ -1038,6 +1038,9 @@ test("taskEngineModule registration includes all instruction entries", () => {
   assert.ok(names.includes("persist-planning-execution-drafts"));
   assert.ok(names.includes("review-planning-execution-drafts"));
   assert.ok(names.includes("agent-mutation-plan"));
+  assert.ok(names.includes("claim-next-task"));
+  assert.ok(names.includes("start-task"));
+  assert.ok(names.includes("complete-task"));
 });
 
 test("taskEngineModule passes ModuleRegistry validation", () => {
@@ -1898,6 +1901,91 @@ test("taskEngineModule agent-mutation-plan rejects unknown commands", async () =
 
   assert.equal(result.ok, false);
   assert.equal(result.code, "unknown-command");
+});
+
+test("taskEngineModule claim-next-task starts suggested runnable task", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T9881", status: "ready", priority: "P2" }));
+    store.addTask(makeTask({ id: "T9882", status: "ready", priority: "P1" }));
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const result = await taskEngineModule.onCommand(
+    {
+      name: "claim-next-task",
+      args: { expectedPlanningGeneration: 1, clientMutationId: "claim-next-1" }
+    },
+    ctx
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "task-intent-applied");
+  assert.equal(result.data.taskId, "T9882");
+  assert.equal(result.data.evidence.action, "start");
+  const got = await taskEngineModule.onCommand({ name: "get-task", args: { taskId: "T9882" } }, ctx);
+  assert.equal(got.data.task.status, "in_progress");
+});
+
+test("taskEngineModule claim-next-task returns no-op when no runnable task exists", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, () => {});
+  const result = await taskEngineModule.onCommand(
+    { name: "claim-next-task", args: {} },
+    sqliteTaskEngineCtx(workspace)
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "claim-next-task-noop");
+  assert.equal(result.data.reason, "no-runnable-task");
+});
+
+test("taskEngineModule start-task and complete-task use transition evidence and idempotency", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T9883", status: "ready" }));
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const started = await taskEngineModule.onCommand(
+    {
+      name: "start-task",
+      args: { taskId: "T9883", expectedPlanningGeneration: 1, clientMutationId: "start-intent-1" }
+    },
+    ctx
+  );
+  assert.equal(started.ok, true);
+  assert.equal(started.data.evidence.action, "start");
+
+  const replay = await taskEngineModule.onCommand(
+    { name: "start-task", args: { taskId: "T9883", clientMutationId: "start-intent-1" } },
+    ctx
+  );
+  assert.equal(replay.ok, true);
+  assert.equal(replay.code, "task-intent-idempotent-replay");
+  assert.equal(replay.data.evidence.transitionId, started.data.evidence.transitionId);
+
+  const completed = await taskEngineModule.onCommand(
+    {
+      name: "complete-task",
+      args: { taskId: "T9883", expectedPlanningGeneration: 2, clientMutationId: "complete-intent-1" }
+    },
+    ctx
+  );
+  assert.equal(completed.ok, true);
+  assert.equal(completed.data.evidence.action, "complete");
+});
+
+test("taskEngineModule task intents enforce planning generation", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T9884", status: "ready" }));
+  });
+  const result = await taskEngineModule.onCommand(
+    { name: "start-task", args: { taskId: "T9884" } },
+    sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } })
+  );
+
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "planning-generation-required");
 });
 
 test("taskEngineModule onCommand get-next-actions works on populated store", async () => {
