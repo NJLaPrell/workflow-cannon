@@ -2,7 +2,7 @@
 
 Materialize multiple execution tasks in **one** SQLite transaction. Each row in `tasks` uses the same shape as **`convert-wishlist`** `tasks[]` (see **`buildTaskFromConversionPayload`**): `id` (`T###`), `title`, `phase`, `approach`, non-empty `technicalScope`, non-empty `acceptanceCriteria`, optional `type`, `priority`, `dependsOn`, `unblocks`, `phaseKey`, and `status` (`proposed` or `ready`).
 
-Typical flow: `build-plan` with `outputMode:"tasks"`, `finalize:true`, and `executionTaskDrafts` → response code `planning-multi-task-decomposition-preview` → this command with `tasks` copied from `data.taskOutputs` (and **`expectedPlanningGeneration`** when `tasks.planningGenerationPolicy` is `require`).
+Typical flow: `build-plan` with `outputMode:"tasks"`, `finalize:true`, and `executionTaskDrafts` → response code `planning-multi-task-decomposition-preview` → **`review-planning-execution-drafts`** for UX/CAE batches → this command with `tasks` copied from `data.taskOutputs` (and **`expectedPlanningGeneration`** when `tasks.planningGenerationPolicy` is `require`).
 
 ## Usage
 
@@ -11,6 +11,8 @@ workspace-kit run persist-planning-execution-drafts '{"tasks":[...],"expectedPla
 ```
 
 Optional: `planRef`, `planningType` (merged into each task’s `metadata` / `planningProvenance`), `targetPhaseKey`, `targetPhase`, `desiredStatus`, `actor`, `clientMutationId` (per-task idempotency key `clientMutationId::<taskId>` on `create-task` mutation log). **Idempotent replay** requires the same task payload, phase/status options, and optional `planRef` / `planningType` so payload digests match.
+
+For UX/CAE batches, run **`review-planning-execution-drafts`** first. It uses the same normalization shape and returns machine-readable gaps without persisting rows.
 
 ## Arguments
 

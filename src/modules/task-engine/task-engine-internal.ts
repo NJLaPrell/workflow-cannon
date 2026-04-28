@@ -164,6 +164,212 @@ const MUTABLE_TASK_FIELDS = new Set([
 
 const PHASE_KEY_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 
+function normalizePlanningExecutionDraftTasks(
+  ctx: ModuleLifecycleContext,
+  args: Record<string, unknown>,
+  timestamp: string,
+  commandLabel: string
+): { ok: true; tasks: TaskEntity[] } | { ok: false; result: ModuleCommandResult } {
+  const tasksRaw = args.tasks;
+  if (!Array.isArray(tasksRaw) || tasksRaw.length === 0) {
+    return {
+      ok: false,
+      result: {
+        ok: false,
+        code: "invalid-task-schema",
+        message: `${commandLabel} requires non-empty tasks array`,
+        remediation: { instructionPath: CLI_REMEDIATION_INSTRUCTIONS.persistPlanningExecutionDrafts }
+      }
+    };
+  }
+  const planRef =
+    typeof args.planRef === "string" && args.planRef.trim().length > 0 ? args.planRef.trim() : undefined;
+  const planningTypeMeta =
+    typeof args.planningType === "string" && args.planningType.trim().length > 0 ? args.planningType.trim() : undefined;
+  const targetPhaseKey =
+    typeof args.targetPhaseKey === "string" && args.targetPhaseKey.trim().length > 0
+      ? args.targetPhaseKey.trim()
+      : undefined;
+  if (targetPhaseKey && !PHASE_KEY_RE.test(targetPhaseKey)) {
+    return {
+      ok: false,
+      result: {
+        ok: false,
+        code: "invalid-task-schema",
+        message: "targetPhaseKey must be non-empty; letters, digits, dot, underscore, hyphen; max 64 chars"
+      }
+    };
+  }
+  const targetPhase =
+    typeof args.targetPhase === "string" && args.targetPhase.trim().length > 0 ? args.targetPhase.trim() : undefined;
+  const desiredStatus =
+    args.desiredStatus === "ready" || args.desiredStatus === "proposed"
+      ? (args.desiredStatus as "ready" | "proposed")
+      : undefined;
+  if (args.desiredStatus !== undefined && desiredStatus === undefined) {
+    return {
+      ok: false,
+      result: { ok: false, code: "invalid-task-schema", message: "desiredStatus must be 'proposed' or 'ready'" }
+    };
+  }
+
+  const built: TaskEntity[] = [];
+  for (const row of tasksRaw) {
+    if (!row || typeof row !== "object" || Array.isArray(row)) {
+      return {
+        ok: false,
+        result: {
+          ok: false,
+          code: "invalid-task-schema",
+          message: "Each tasks[] row must be an object",
+          remediation: { instructionPath: CLI_REMEDIATION_INSTRUCTIONS.persistPlanningExecutionDrafts }
+        }
+      };
+    }
+    const rowObj = row as Record<string, unknown>;
+    const rowPhaseKey =
+      typeof rowObj.phaseKey === "string" && rowObj.phaseKey.trim().length > 0 ? rowObj.phaseKey.trim() : undefined;
+    const rowStatus = rowObj.status === "ready" || rowObj.status === "proposed" ? rowObj.status : undefined;
+    if (rowPhaseKey && !PHASE_KEY_RE.test(rowPhaseKey)) {
+      return {
+        ok: false,
+        result: {
+          ok: false,
+          code: "invalid-task-schema",
+          message: "Task phaseKey must be non-empty; letters, digits, dot, underscore, hyphen; max 64 chars"
+        }
+      };
+    }
+    const normalizedRow = { ...rowObj };
+    if (targetPhaseKey) {
+      normalizedRow.phase = targetPhase ?? `Phase ${targetPhaseKey}`;
+    }
+    const bt = buildTaskFromConversionPayload(normalizedRow, timestamp);
+    if (!bt.ok) {
+      return {
+        ok: false,
+        result: {
+          ok: false,
+          code: "invalid-task-schema",
+          message: bt.message,
+          remediation: { instructionPath: CLI_REMEDIATION_INSTRUCTIONS.persistPlanningExecutionDrafts }
+        }
+      };
+    }
+    let task = bt.task;
+    task = {
+      ...task,
+      status: (desiredStatus ?? rowStatus ?? task.status) as TaskStatus,
+      phaseKey: targetPhaseKey ?? rowPhaseKey ?? task.phaseKey,
+      phase: targetPhaseKey ? (targetPhase ?? `Phase ${targetPhaseKey}`) : task.phase
+    };
+    const nextMeta: Record<string, unknown> = { ...(task.metadata ?? {}) };
+    if (planRef) {
+      nextMeta.planRef = planRef;
+    }
+    if (planningTypeMeta) {
+      const prevProv = isRecordLike(nextMeta.planningProvenance)
+        ? { ...(nextMeta.planningProvenance as Record<string, unknown>) }
+        : {};
+      prevProv.planningType = planningTypeMeta;
+      prevProv.source = "persist-planning-execution-drafts";
+      nextMeta.planningProvenance = prevProv;
+    }
+    if (Object.keys(nextMeta).length > 0) {
+      task = { ...task, metadata: nextMeta };
+    }
+    const typeErr = validateKnownTaskTypeRequirements(task);
+    if (typeErr) {
+      return { ok: false, result: { ok: false, code: typeErr.code, message: typeErr.message } };
+    }
+    const skillAttach = validateTaskSkillAttachments(
+      ctx.workspacePath,
+      ctx.effectiveConfig as Record<string, unknown> | undefined,
+      task.metadata
+    );
+    if (!skillAttach.ok) {
+      return { ok: false, result: { ok: false, code: skillAttach.code, message: skillAttach.message } };
+    }
+    built.push(task);
+  }
+
+  const seen = new Set<string>();
+  for (const t of built) {
+    if (seen.has(t.id)) {
+      return {
+        ok: false,
+        result: {
+          ok: false,
+          code: "invalid-task-schema",
+          message: `Duplicate task id in tasks[]: ${t.id}`,
+          remediation: { instructionPath: CLI_REMEDIATION_INSTRUCTIONS.persistPlanningExecutionDrafts }
+        }
+      };
+    }
+    seen.add(t.id);
+  }
+
+  return { ok: true, tasks: built };
+}
+
+function reviewPlanningExecutionDraftGaps(tasks: TaskEntity[]): Array<Record<string, unknown>> {
+  const findings: Array<Record<string, unknown>> = [];
+  const textFor = (task: TaskEntity): string =>
+    [
+      task.title,
+      task.approach,
+      ...(task.technicalScope ?? []),
+      ...(task.acceptanceCriteria ?? [])
+    ].join("\n").toLowerCase();
+  const allText = tasks.map(textFor).join("\n");
+  const has = (re: RegExp): boolean => re.test(allText);
+
+  for (const task of tasks) {
+    const scopeCount = task.technicalScope?.length ?? 0;
+    const acceptanceCount = task.acceptanceCriteria?.length ?? 0;
+    if (scopeCount > 5 || acceptanceCount > 5 || scopeCount + acceptanceCount > 10) {
+      findings.push({
+        code: "oversized-task",
+        severity: "warning",
+        taskId: task.id,
+        message: "Task may be too broad; split UX/CAE work into smaller implementation, verification, and rollout slices."
+      });
+    }
+    const vagueCriteria = (task.acceptanceCriteria ?? []).filter((c) => c.trim().length < 15 || /^(works|done|complete)$/i.test(c.trim()));
+    if (vagueCriteria.length > 0) {
+      findings.push({
+        code: "unclear-acceptance-criteria",
+        severity: "warning",
+        taskId: task.id,
+        message: "Acceptance criteria should describe observable behavior, verification, or evidence."
+      });
+    }
+  }
+
+  if (!has(/\b(test|tests|verify|verification|validation|check|coverage|e2e|unit)\b/)) {
+    findings.push({
+      code: "missing-verification-coverage",
+      severity: "error",
+      message: "Batch is missing an explicit verification or test coverage slice."
+    });
+  }
+  if (!has(/\b(rollback|revert|activation|activate|toggle|flag|disable|fallback)\b/)) {
+    findings.push({
+      code: "missing-rollback-activation-slice",
+      severity: "error",
+      message: "Batch is missing rollback, activation, feature-flag, or fallback coverage."
+    });
+  }
+  if (!has(/\b(empty|first-run|first run|initial|blank|no data|fresh workspace)\b/)) {
+    findings.push({
+      code: "missing-empty-first-run-behavior",
+      severity: "error",
+      message: "Batch is missing empty, first-run, or no-data behavior coverage."
+    });
+  }
+  return findings;
+}
+
 function strictValidationError(
   store: TaskStore,
   effectiveConfig: Record<string, unknown> | undefined
@@ -745,6 +951,46 @@ export const taskEngineModule: WorkflowModule = {
         code: "task-created",
         message: `Created task '${id}'`,
         data: createdData
+      };
+    }
+
+    if (command.name === "review-planning-execution-drafts") {
+      const normalized = normalizePlanningExecutionDraftTasks(
+        ctx,
+        args as Record<string, unknown>,
+        nowIso(),
+        "review-planning-execution-drafts"
+      );
+      if (!normalized.ok) {
+        return normalized.result;
+      }
+      const findings = reviewPlanningExecutionDraftGaps(normalized.tasks);
+      const errorCount = findings.filter((f) => f.severity === "error").length;
+      const warningCount = findings.filter((f) => f.severity === "warning").length;
+      return {
+        ok: true,
+        code: errorCount > 0 ? "planning-execution-drafts-review-findings" : "planning-execution-drafts-review-passed",
+        message:
+          findings.length > 0
+            ? `Reviewed ${normalized.tasks.length} draft task(s): ${errorCount} error(s), ${warningCount} warning(s)`
+            : `Reviewed ${normalized.tasks.length} draft task(s): no UX/CAE batch gaps found`,
+        data: {
+          schemaVersion: 1,
+          persisted: false,
+          reviewProfile: "ux-cae-pre-persist-v1",
+          taskCount: normalized.tasks.length,
+          status: errorCount > 0 ? "fail" : warningCount > 0 ? "warn" : "pass",
+          errorCount,
+          warningCount,
+          findings,
+          normalizedTaskSummaries: normalized.tasks.map((task) => ({
+            id: task.id,
+            title: task.title,
+            status: task.status,
+            phase: task.phase,
+            phaseKey: task.phaseKey ?? null
+          }))
+        } as Record<string, unknown>
       };
     }
 
