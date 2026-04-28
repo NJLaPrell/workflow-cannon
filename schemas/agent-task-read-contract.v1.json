@@ -1,0 +1,315 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/agent-task-read-contract.v1.json",
+  "title": "Agent-facing task read contract v1",
+  "description": "Stable read models for agent task workflows. Agents should consume these projections instead of raw SQLite tables or JSON blob mirrors.",
+  "type": "object",
+  "required": ["schemaVersion", "models"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "models": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["taskListItem", "taskDetail", "nextActions", "readEnvelope"],
+      "properties": {
+        "taskListItem": { "$ref": "#/$defs/agentTaskListItem" },
+        "taskDetail": { "$ref": "#/$defs/agentTaskDetail" },
+        "nextActions": { "$ref": "#/$defs/agentTaskNextActions" },
+        "readEnvelope": { "$ref": "#/$defs/agentTaskReadEnvelope" }
+      }
+    }
+  },
+  "$defs": {
+    "taskStatus": {
+      "type": "string",
+      "enum": ["research", "proposed", "ready", "in_progress", "blocked", "completed", "cancelled"]
+    },
+    "taskPriority": {
+      "type": "string",
+      "enum": ["P1", "P2", "P3"]
+    },
+    "nullableString": {
+      "type": ["string", "null"]
+    },
+    "stringArray": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "agentTaskPhaseRef": {
+      "type": "object",
+      "required": ["phaseKey", "phase", "phaseAligned"],
+      "additionalProperties": false,
+      "properties": {
+        "phaseKey": { "$ref": "#/$defs/nullableString" },
+        "phase": { "$ref": "#/$defs/nullableString" },
+        "phaseAligned": { "type": ["boolean", "null"] }
+      }
+    },
+    "agentTaskRoutingMetadata": {
+      "type": "object",
+      "required": ["ownership", "queueNamespace", "features", "source", "hasModuleMetadata"],
+      "additionalProperties": false,
+      "properties": {
+        "ownership": { "$ref": "#/$defs/nullableString" },
+        "queueNamespace": { "type": "string", "minLength": 1 },
+        "features": { "$ref": "#/$defs/stringArray" },
+        "source": { "$ref": "#/$defs/nullableString" },
+        "hasModuleMetadata": { "type": "boolean" }
+      }
+    },
+    "agentTaskDependencyEdge": {
+      "type": "object",
+      "required": ["taskId", "dependsOnTaskId", "satisfied", "dependencyStatus"],
+      "additionalProperties": false,
+      "properties": {
+        "taskId": { "type": "string", "minLength": 1 },
+        "dependsOnTaskId": { "type": "string", "minLength": 1 },
+        "satisfied": { "type": "boolean" },
+        "dependencyStatus": {
+          "oneOf": [
+            { "$ref": "#/$defs/taskStatus" },
+            { "const": "missing" }
+          ]
+        }
+      }
+    },
+    "agentTaskEvidencePointer": {
+      "type": "object",
+      "required": ["kind", "taskId", "id", "timestamp", "summary", "detailCommand"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["delivery", "transition", "mutation", "waiver"] },
+        "taskId": { "type": "string", "minLength": 1 },
+        "id": { "$ref": "#/$defs/nullableString" },
+        "timestamp": { "$ref": "#/$defs/nullableString" },
+        "summary": { "$ref": "#/$defs/nullableString" },
+        "detailCommand": { "$ref": "#/$defs/nullableString" }
+      }
+    },
+    "agentTaskQueueHint": {
+      "type": "object",
+      "required": ["blockedByDependencies", "unmetDependencies", "blockedReason"],
+      "additionalProperties": false,
+      "properties": {
+        "blockedByDependencies": { "type": "boolean" },
+        "unmetDependencies": { "$ref": "#/$defs/stringArray" },
+        "blockedReason": {
+          "type": ["string", "null"],
+          "enum": ["dependencies", "status", "phase_mismatch", null]
+        }
+      }
+    },
+    "agentTaskListItem": {
+      "type": "object",
+      "required": [
+        "contractVersion",
+        "id",
+        "title",
+        "status",
+        "type",
+        "priority",
+        "archived",
+        "createdAt",
+        "updatedAt",
+        "phase",
+        "routing",
+        "dependencies",
+        "queue",
+        "evidence"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "contractVersion": { "const": 1 },
+        "id": { "type": "string", "minLength": 1 },
+        "title": { "type": "string" },
+        "status": { "$ref": "#/$defs/taskStatus" },
+        "type": { "type": "string", "minLength": 1 },
+        "priority": {
+          "oneOf": [
+            { "$ref": "#/$defs/taskPriority" },
+            { "type": "null" }
+          ]
+        },
+        "archived": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "phase": { "$ref": "#/$defs/agentTaskPhaseRef" },
+        "routing": { "$ref": "#/$defs/agentTaskRoutingMetadata" },
+        "dependencies": {
+          "type": "object",
+          "required": ["dependsOn", "unblocks", "edges"],
+          "additionalProperties": false,
+          "properties": {
+            "dependsOn": { "$ref": "#/$defs/stringArray" },
+            "unblocks": { "$ref": "#/$defs/stringArray" },
+            "edges": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/agentTaskDependencyEdge" }
+            }
+          }
+        },
+        "queue": { "$ref": "#/$defs/agentTaskQueueHint" },
+        "evidence": {
+          "type": "object",
+          "required": ["delivery", "latestTransition", "latestMutation"],
+          "additionalProperties": false,
+          "properties": {
+            "delivery": {
+              "oneOf": [{ "$ref": "#/$defs/agentTaskEvidencePointer" }, { "type": "null" }]
+            },
+            "latestTransition": {
+              "oneOf": [{ "$ref": "#/$defs/agentTaskEvidencePointer" }, { "type": "null" }]
+            },
+            "latestMutation": {
+              "oneOf": [{ "$ref": "#/$defs/agentTaskEvidencePointer" }, { "type": "null" }]
+            }
+          }
+        }
+      }
+    },
+    "agentTaskDetail": {
+      "type": "object",
+      "required": [
+        "contractVersion",
+        "id",
+        "title",
+        "status",
+        "type",
+        "priority",
+        "archived",
+        "createdAt",
+        "updatedAt",
+        "phase",
+        "routing",
+        "dependencies",
+        "queue",
+        "evidence",
+        "summary",
+        "description",
+        "approach",
+        "risk",
+        "technicalScope",
+        "acceptanceCriteria",
+        "recentEvidence"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "contractVersion": { "const": 1 },
+        "id": { "type": "string", "minLength": 1 },
+        "title": { "type": "string" },
+        "status": { "$ref": "#/$defs/taskStatus" },
+        "type": { "type": "string", "minLength": 1 },
+        "priority": {
+          "oneOf": [
+            { "$ref": "#/$defs/taskPriority" },
+            { "type": "null" }
+          ]
+        },
+        "archived": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "phase": { "$ref": "#/$defs/agentTaskPhaseRef" },
+        "routing": { "$ref": "#/$defs/agentTaskRoutingMetadata" },
+        "dependencies": {
+          "type": "object",
+          "required": ["dependsOn", "unblocks", "edges"],
+          "additionalProperties": false,
+          "properties": {
+            "dependsOn": { "$ref": "#/$defs/stringArray" },
+            "unblocks": { "$ref": "#/$defs/stringArray" },
+            "edges": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/agentTaskDependencyEdge" }
+            }
+          }
+        },
+        "queue": { "$ref": "#/$defs/agentTaskQueueHint" },
+        "evidence": {
+          "type": "object",
+          "required": ["delivery", "latestTransition", "latestMutation"],
+          "additionalProperties": false,
+          "properties": {
+            "delivery": {
+              "oneOf": [{ "$ref": "#/$defs/agentTaskEvidencePointer" }, { "type": "null" }]
+            },
+            "latestTransition": {
+              "oneOf": [{ "$ref": "#/$defs/agentTaskEvidencePointer" }, { "type": "null" }]
+            },
+            "latestMutation": {
+              "oneOf": [{ "$ref": "#/$defs/agentTaskEvidencePointer" }, { "type": "null" }]
+            }
+          }
+        },
+        "summary": { "$ref": "#/$defs/nullableString" },
+        "description": { "$ref": "#/$defs/nullableString" },
+        "approach": { "$ref": "#/$defs/nullableString" },
+        "risk": { "$ref": "#/$defs/nullableString" },
+        "technicalScope": { "$ref": "#/$defs/stringArray" },
+        "acceptanceCriteria": { "$ref": "#/$defs/stringArray" },
+        "recentEvidence": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/agentTaskEvidencePointer" }
+        }
+      }
+    },
+    "agentTaskNextActions": {
+      "type": "object",
+      "required": ["contractVersion", "readyQueue", "suggestedNext", "stateSummary", "blockingAnalysis"],
+      "additionalProperties": false,
+      "properties": {
+        "contractVersion": { "const": 1 },
+        "readyQueue": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/agentTaskListItem" }
+        },
+        "suggestedNext": {
+          "oneOf": [{ "$ref": "#/$defs/agentTaskListItem" }, { "type": "null" }]
+        },
+        "stateSummary": {
+          "type": "object",
+          "required": ["research", "proposed", "ready", "in_progress", "blocked", "completed", "cancelled", "total"],
+          "additionalProperties": false,
+          "properties": {
+            "research": { "type": "integer", "minimum": 0 },
+            "proposed": { "type": "integer", "minimum": 0 },
+            "ready": { "type": "integer", "minimum": 0 },
+            "in_progress": { "type": "integer", "minimum": 0 },
+            "blocked": { "type": "integer", "minimum": 0 },
+            "completed": { "type": "integer", "minimum": 0 },
+            "cancelled": { "type": "integer", "minimum": 0 },
+            "total": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "blockingAnalysis": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["taskId", "blockedBy", "blockingCount"],
+            "additionalProperties": false,
+            "properties": {
+              "taskId": { "type": "string", "minLength": 1 },
+              "blockedBy": { "$ref": "#/$defs/stringArray" },
+              "blockingCount": { "type": "integer", "minimum": 0 }
+            }
+          }
+        }
+      }
+    },
+    "agentTaskReadEnvelope": {
+      "type": "object",
+      "required": ["ok", "code", "data", "planningGeneration", "planningGenerationPolicy"],
+      "additionalProperties": false,
+      "properties": {
+        "ok": { "const": true },
+        "code": { "type": "string", "minLength": 1 },
+        "data": {},
+        "planningGeneration": { "type": ["integer", "null"], "minimum": 0 },
+        "planningGenerationPolicy": {
+          "type": ["string", "null"],
+          "enum": ["off", "warn", "require", null]
+        }
+      }
+    }
+  }
+}

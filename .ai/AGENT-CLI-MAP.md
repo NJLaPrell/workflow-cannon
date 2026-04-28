@@ -41,6 +41,13 @@ When the workspace root is not a kit source checkout, instruction paths still re
 
 Verified read: `pnpm exec wk run list-tasks '{}'`.
 
+**Agent task read contract:** normal task reads use the versioned v1 projection in
+`.ai/runbooks/agent-task-db-contract.md`, `schemas/agent-task-read-contract.v1.json`,
+and package subpath `@workflow-cannon/workspace-kit/contracts/agent-task-read-contract`.
+Agents should consume `get-next-actions`, `list-tasks`, `get-task`, `queue-health`,
+dependency graph, and evidence/history command JSON instead of raw SQLite tables or
+blob mirrors.
+
 ## Team execution assignments and subagent registry (inspect vs mutate)
 
 **Architecture:** `docs/maintainers/adrs/ADR-team-execution-v1.md`, `docs/maintainers/adrs/ADR-subagent-registry-v1.md`.
