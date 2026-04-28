@@ -668,8 +668,59 @@ test("runCli run pilot command --schema-only emits schema payload", async () => 
   assert.equal(output.ok, true);
   assert.equal(output.code, "run-args-schema");
   assert.equal(output.command, "dashboard-summary");
+  assert.equal(output.schemaSource, "pilot-run-args-snapshot");
   assert.ok(output.schema && typeof output.schema === "object");
   assert.deepEqual(output.sampleArgs, {});
+  assert.equal(output.policy.sensitivity, "non-sensitive");
+  assert.equal(output.idempotency.clientMutationId, false);
+});
+
+test("runCli run non-pilot command --schema-only emits permissive manifest payload", async () => {
+  const capture = createCapture();
+  const code = await runCli(["run", "explain-config", "--schema-only"], {
+    cwd: process.cwd(),
+    ...capture
+  });
+  assert.equal(code, 0);
+  const output = JSON.parse(capture.lines.join(""));
+  assert.equal(output.ok, true);
+  assert.equal(output.code, "run-args-schema");
+  assert.equal(output.command, "explain-config");
+  assert.equal(output.schemaSource, "manifest-permissive-fallback");
+  assert.equal(output.schema.additionalProperties, true);
+  assert.equal(output.moduleId, "workspace-config");
+  assert.equal(output.instructionPath, "src/modules/workspace-config/instructions/explain-config.md");
+  assert.equal(output.policy.sensitivity, "non-sensitive");
+  assert.ok(output.examples[0].argv.includes("workspace-kit run explain-config"));
+});
+
+test("runCli run --schema-only succeeds for every listed executable command", async () => {
+  const catalogCapture = createCapture();
+  const catalogCode = await runCli(["run"], { cwd: process.cwd(), ...catalogCapture });
+  assert.equal(catalogCode, 0);
+  const commandNames = catalogCapture.lines
+    .map((line) => /^  ([^ ]+) \(/.exec(line)?.[1])
+    .filter(Boolean);
+  assert.ok(commandNames.length > 0);
+
+  for (const commandName of commandNames) {
+    const capture = createCapture();
+    const code = await runCli(["run", commandName, "--schema-only"], {
+      cwd: process.cwd(),
+      ...capture
+    });
+    assert.equal(code, 0, `${commandName}: ${capture.lines.join("\n") || capture.errors.join("\n")}`);
+    const output = JSON.parse(capture.lines.join(""));
+    assert.equal(output.ok, true, commandName);
+    assert.equal(output.code, "run-args-schema", commandName);
+    assert.equal(output.command, commandName);
+    assert.ok(output.schema && typeof output.schema === "object", commandName);
+    assert.ok(output.sampleArgs && typeof output.sampleArgs === "object", commandName);
+    assert.ok(output.instructionPath, commandName);
+    assert.ok(output.policy && typeof output.policy === "object", commandName);
+    assert.ok(output.planningGeneration && typeof output.planningGeneration === "object", commandName);
+    assert.ok(Array.isArray(output.examples) && output.examples.length > 0, commandName);
+  }
 });
 
 test("runCli run persist-planning-execution-drafts --schema-only emits working batch shorthand sample", async () => {

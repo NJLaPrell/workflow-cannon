@@ -71,29 +71,8 @@ export async function handleRunCommand(
   const schemaOnlyFlag =
     typeof args[2] === "string" && (args[2] === "--schema-only" || args[2] === "-S");
 
-  if (subcommand && schemaOnlyFlag) {
-    const payload = buildRunArgsSchemaOnlyPayload(subcommand);
-    if (!payload) {
-      writeLine(
-        JSON.stringify(
-          {
-            ok: false,
-            code: "schema-only-unsupported",
-            message: `No bundled JSON schema sample for '${subcommand}'. Task-engine commands in schemas/pilot-run-args.snapshot.json are supported; other modules may lack a published args schema yet.`,
-            remediation: { docPath: "docs/maintainers/adrs/ADR-runtime-run-args-validation-pilot.md" }
-          },
-          null,
-          2
-        )
-      );
-      return codes.validationFailure;
-    }
-    writeLine(JSON.stringify(payload, null, 2));
-    return codes.success;
-  }
-
   let commandArgs: Record<string, unknown> = {};
-  if (subcommand && args[2]) {
+  if (subcommand && args[2] && !schemaOnlyFlag) {
     try {
       const parsed = JSON.parse(args[2]);
       if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
@@ -129,6 +108,50 @@ export async function handleRunCommand(
     return codes.validationFailure;
   }
 
+  if (subcommand && schemaOnlyFlag) {
+    const descriptor = router.describeCommand(subcommand);
+    if (!descriptor) {
+      const names = router.listCommands().map((command) => command.name);
+      writeLine(
+        JSON.stringify(
+          {
+            ok: false,
+            code: "unknown-command",
+            message: `Unknown command '${subcommand}'. Run 'workspace-kit run' with no subcommand for the command catalog.`,
+            details: { availableCommands: names },
+            remediation: { docPath: CLI_REMEDIATION_DOCS.agentCliMap }
+          },
+          null,
+          2
+        )
+      );
+      return codes.validationFailure;
+    }
+    const payload = buildRunArgsSchemaOnlyPayload(subcommand, {
+      name: descriptor.name,
+      moduleId: descriptor.moduleId,
+      instructionPath: descriptor.instructionFile,
+      description: descriptor.description
+    });
+    if (!payload) {
+      writeLine(
+        JSON.stringify(
+          {
+            ok: false,
+            code: "schema-only-unsupported",
+            message: `Command '${subcommand}' is executable but has no schema-only metadata. This is a command contract bug.`,
+            remediation: { docPath: "docs/maintainers/adrs/ADR-runtime-run-args-validation-pilot.md" }
+          },
+          null,
+          2
+        )
+      );
+      return codes.validationFailure;
+    }
+    writeLine(JSON.stringify(payload, null, 2));
+    return codes.success;
+  }
+
   if (subcommand) {
     const pilotErr = validatePilotRunCommandArgs(subcommand, commandArgs, effective);
     if (pilotErr) {
@@ -156,7 +179,7 @@ export async function handleRunCommand(
     writeLine("");
     writeLine(`Usage: workspace-kit run <command> [json-args]`);
     writeLine(
-      `Task-engine schema: workspace-kit run <command> --schema-only  (JSON Schema + sample args for commands listed in schemas/pilot-run-args.snapshot.json).`
+      `Schema discovery: workspace-kit run <command> --schema-only  (JSON Schema or permissive fallback + sample args + policy metadata for every executable command).`
     );
     writeLine(
       `Instruction files: src/modules/<module>/instructions/<command>.md — sensitive runs need JSON policyApproval (not env WORKSPACE_KIT_POLICY_APPROVAL); see ${POLICY_APPROVAL_TWO_LANES_DOC}.`

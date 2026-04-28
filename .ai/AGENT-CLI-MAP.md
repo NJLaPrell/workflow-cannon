@@ -35,7 +35,7 @@ When the workspace root is not a kit source checkout, instruction paths still re
 
 1. **Shape:** `pnpm exec wk run <command> '<single-json-object>'` — the third argv is one JSON object. Discovery flags attach to the command: `pnpm exec wk run run-transition --schema-only '{}'`.
 2. **Policy:** Tier A/B mutators require `"policyApproval":{"confirmed":true,"rationale":"…"}` **inside** that JSON. The env var **`WORKSPACE_KIT_POLICY_APPROVAL`** does **not** approve `workspace-kit run` — see **Two approval lanes** below.
-3. **Schema discovery:** For pilot-validated commands, use `pnpm exec wk run <command> --schema-only` to emit JSON Schema + `sampleArgs` instead of executing.
+3. **Schema discovery:** Use `pnpm exec wk run <command> --schema-only` for any executable command to emit JSON Schema or a permissive fallback, `sampleArgs`, examples, instruction path, policy metadata, planning-generation metadata, and idempotency hints instead of executing.
 4. **Failures:** **`invalid-run-args`** → fix JSON against the schema from **`--schema-only`**. **`planning-generation-required`** / **`planning-generation-mismatch`** → re-read **`data.planningGeneration`** from **`list-tasks`** / **`get-next-actions`** / **`get-task`**, then pass **`expectedPlanningGeneration`** on commands listed in **`schemas/planning-generation-cli-prelude.json`** (this repo uses policy **`require`**).
 5. **Clean stdout:** Prefer **`pnpm exec wk`** over **`pnpm run wk`** when scripts parse JSON from stdout — see **Shell scripts and JSON stdout** below.
 
@@ -206,7 +206,7 @@ ADR: **`docs/maintainers/adrs/ADR-planning-generation-optimistic-concurrency.md`
 ### Recovery: `planning-generation-required` and `invalid-run-args`
 
 - **`planning-generation-required`** — Re-read **`planningGeneration`** from **`list-tasks`**, **`get-task`**, **`get-next-actions`**, or **`dashboard-summary`**, then resend the mutating JSON with **`expectedPlanningGeneration`**. Failure JSON may include **`remediation.docPath`** → **`ADR-planning-generation-optimistic-concurrency.md`** and **`remediation.instructionPath`** for the command you invoked.
-- **`invalid-run-args`** (pilot commands) — Fix the JSON shape against the bundled schema: **`workspace-kit run <command> --schema-only`** for **`run-transition`**, **`create-task`**, **`update-task`**, **`dashboard-summary`**, **`list-features`**. See **`docs/maintainers/adrs/ADR-runtime-run-args-validation-pilot.md`**.
+- **`invalid-run-args`** (strict schema commands) — Fix the JSON shape against the bundled schema: **`workspace-kit run <command> --schema-only`**. Commands without strict validation still return a permissive schema-only fallback with instruction and policy metadata. See **`docs/maintainers/adrs/ADR-runtime-run-args-validation-pilot.md`**.
 - **`policy-denied`** — Use JSON **`policyApproval`** on the **`run`** argv object (not env **`WORKSPACE_KIT_POLICY_APPROVAL`**). Check **`remediation.docPath`** → **`POLICY-APPROVAL.md`** when present.
 - **`unknown-command`** — Router failures print structured JSON with **`remediation`**; run **`workspace-kit run`** (no subcommand) or **`doctor --agent-instruction-surface`** for the catalog.
 
