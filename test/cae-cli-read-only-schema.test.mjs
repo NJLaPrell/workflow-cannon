@@ -201,6 +201,15 @@ describe("CAE cli-read-only-data schema (v1)", () => {
       dashboardValidate({
         schemaVersion: 1,
         product,
+        guidanceProduct: {
+          schemaVersion: 1,
+          rulesCatalog: {
+            schemaVersion: 1,
+            registrySnapshotTag: null,
+            itemCount: 0,
+            items: []
+          }
+        },
         health: {
           schemaVersion: 1,
           caeEnabled: true,
