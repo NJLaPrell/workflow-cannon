@@ -65,6 +65,22 @@
           "type": "string",
           "maxLength": 512,
           "description": "Bounded summary string; never raw argv array or full JSON dump."
+        },
+        "argHints": {
+          "type": "object",
+          "additionalProperties": {
+            "oneOf": [
+              { "type": "string", "maxLength": 256 },
+              { "type": "number" },
+              { "type": "boolean" },
+              { "type": "null" }
+            ]
+          },
+          "propertyNames": {
+            "pattern": "^[A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+){0,5}$"
+          },
+          "maxProperties": 64,
+          "description": "Bounded scalar command argument hints for deterministic scope matching; policyApproval is never included."
         }
       }
     },

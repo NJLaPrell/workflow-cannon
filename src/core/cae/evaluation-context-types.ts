@@ -34,6 +34,8 @@ export type CaeEvaluationContextCommand = {
   name: string;
   moduleId?: string;
   argvSummary?: string;
+  /** Bounded scalar hints derived from command args for deterministic scope matching. */
+  argHints?: Record<string, string | number | boolean | null>;
 };
 
 export type CaeEvaluationContextWorkspace = {
