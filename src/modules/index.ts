@@ -88,6 +88,13 @@ export {
   getAllowedTransitionsFrom,
   stateValidityGuard,
   dependencyCheckGuard,
+  DELIVERY_EVIDENCE_METADATA_KEY,
+  DELIVERY_WAIVER_METADATA_KEY,
+  buildPhaseDeliveryPreflight,
+  createDeliveryEvidenceGuard,
+  evaluateDeliveryEvidence,
+  isPhaseDeliveryTask,
+  readDeliveryEvidenceEnforcementMode,
   buildQueueGitAlignmentReport,
   filterTasksByQueueNamespace,
   getNextActions,
@@ -107,7 +114,10 @@ export type {
   TaskAdapter,
   TaskAdapterCapability,
   NextActionSuggestion,
-  BlockingAnalysisEntry
+  BlockingAnalysisEntry,
+  DeliveryEvidenceEnforcementMode,
+  DeliveryEvidenceEvaluation,
+  DeliveryEvidenceViolation
 } from "./task-engine/index.js";
 export type { WishlistItem, WishlistStatus, WishlistStoreDocument } from "./task-engine/index.js";
 export {

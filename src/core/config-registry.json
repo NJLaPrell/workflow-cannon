@@ -66,6 +66,27 @@
       "user"
     ]
   },
+  "tasks.deliveryEvidence.enforcementMode": {
+    "key": "tasks.deliveryEvidence.enforcementMode",
+    "type": "string",
+    "description": "Completion behavior for phased delivery tasks missing metadata.deliveryEvidence or metadata.deliveryWaiver: off skips the guard, advisory records a structured guard result, enforce blocks completion.",
+    "default": "advisory",
+    "allowedValues": [
+      "off",
+      "advisory",
+      "enforce"
+    ],
+    "domainScope": "project",
+    "owningModule": "task-engine",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "public",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
   "tasks.planningGenerationPolicy": {
     "key": "tasks.planningGenerationPolicy",
     "type": "string",
