@@ -3146,8 +3146,16 @@ test("migrate-task-persistence sqlite-blob-to-relational round-trips tasks and l
   await store.load();
   store.addTask(
     makeTask({
+      id: "T899",
+      title: "dependency seed",
+      status: "completed"
+    })
+  );
+  store.addTask(
+    makeTask({
       id: "T900",
       title: "relational seed",
+      dependsOn: ["T899"],
       summary: "short",
       description: "longer body",
       risk: "low",
@@ -3183,6 +3191,8 @@ test("migrate-task-persistence sqlite-blob-to-relational round-trips tasks and l
   const t = store2.getTask("T900");
   assert.ok(t);
   assert.equal(t.title, "relational seed");
+  assert.deepEqual(t.dependsOn, ["T899"]);
+  assert.deepEqual(store2.getTask("T899").unblocks, ["T900"]);
   assert.equal(t.summary, "short");
   assert.equal(t.description, "longer body");
   assert.equal(t.risk, "low");
@@ -3203,6 +3213,18 @@ test("migrate-task-persistence sqlite-blob-to-relational round-trips tasks and l
   const store3 = TaskStore.forSqliteDual(dual3);
   await store3.load();
   assert.equal(store3.getTask("T900").title, "after relational");
+  assert.deepEqual(store3.getTask("T900").dependsOn, ["T899"]);
+
+  const graph = await taskEngineModule.onCommand({ name: "get-dependency-graph", args: { taskId: "T900" } }, ctx);
+  assert.equal(graph.ok, true);
+  assert.deepEqual(graph.data.dependencyEdges, [
+    {
+      taskId: "T900",
+      dependsOnTaskId: "T899",
+      dependencyStatus: "completed",
+      satisfied: true
+    }
+  ]);
 });
 
 test("migrate-task-persistence json-to-unified-sqlite writes task-engine module row", async () => {

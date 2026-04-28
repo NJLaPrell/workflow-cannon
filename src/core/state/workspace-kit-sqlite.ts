@@ -4,9 +4,10 @@ import { seedFeatureRegistryIfEmpty } from "./feature-registry-migration.js";
 type SqliteDatabase = InstanceType<typeof Database>;
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 14;
+export const KIT_SQLITE_USER_VERSION = 15;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
+export const TASK_ENGINE_DEPENDENCIES_TABLE = "task_engine_dependencies";
 
 /**
  * Baseline DDL for the unified planning DB (task document row + module state). Idempotent via IF NOT EXISTS.
@@ -359,6 +360,57 @@ function migrateV13ToV14(db: SqliteDatabase): void {
   }
 }
 
+const TASK_ENGINE_DEPENDENCIES_DDL = `
+CREATE TABLE IF NOT EXISTS task_engine_dependencies (
+  task_id TEXT NOT NULL,
+  depends_on_task_id TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT '',
+  source TEXT NOT NULL DEFAULT 'dependsOn',
+  PRIMARY KEY (task_id, depends_on_task_id),
+  CHECK (task_id <> depends_on_task_id),
+  FOREIGN KEY (task_id) REFERENCES task_engine_tasks(id) ON DELETE CASCADE,
+  FOREIGN KEY (depends_on_task_id) REFERENCES task_engine_tasks(id) ON DELETE RESTRICT
+);
+CREATE INDEX IF NOT EXISTS idx_task_engine_dependencies_depends_on ON task_engine_dependencies(depends_on_task_id);
+`;
+
+function migrateV14ToV15(db: SqliteDatabase): void {
+  if (!tableExists(db, TASK_ENGINE_TASKS_TABLE)) {
+    return;
+  }
+  db.exec(TASK_ENGINE_DEPENDENCIES_DDL);
+  const existing = db.prepare("SELECT COUNT(*) AS c FROM task_engine_dependencies").get() as { c: number };
+  if (Number(existing.c) > 0) {
+    return;
+  }
+  const taskIds = new Set(
+    (db.prepare(`SELECT id FROM ${TASK_ENGINE_TASKS_TABLE}`).all() as Array<{ id: string }>).map((row) => row.id)
+  );
+  const rows = db
+    .prepare(`SELECT id, depends_on_json FROM ${TASK_ENGINE_TASKS_TABLE}`)
+    .all() as Array<{ id: string; depends_on_json: string }>;
+  const insert = db.prepare(
+    "INSERT OR IGNORE INTO task_engine_dependencies (task_id, depends_on_task_id, created_at, source) VALUES (?, ?, ?, 'dependsOn')"
+  );
+  const now = new Date().toISOString();
+  for (const row of rows) {
+    let deps: unknown;
+    try {
+      deps = JSON.parse(row.depends_on_json);
+    } catch {
+      continue;
+    }
+    if (!Array.isArray(deps)) {
+      continue;
+    }
+    for (const dep of deps) {
+      if (typeof dep === "string" && dep !== row.id && taskIds.has(dep)) {
+        insert.run(row.id, dep, now);
+      }
+    }
+  }
+}
+
 /**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
@@ -445,6 +497,11 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
     migrateV13ToV14(db);
     db.pragma("user_version = 14");
     current = 14;
+  }
+  if (current < 15) {
+    migrateV14ToV15(db);
+    db.pragma("user_version = 15");
+    current = 15;
   }
 }
 

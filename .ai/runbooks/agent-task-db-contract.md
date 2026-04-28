@@ -55,6 +55,7 @@ Do not convert “no ready work”, “no evidence yet”, or “new DB” into 
 - Existing `get-next-actions`, `list-tasks`, and `get-task` consumers remain compatible. Contract adoption must be additive unless a migration task explicitly documents a breaking plan.
 - Raw `metadata` is not part of `AgentTaskListItem`; common routing fields should be promoted into `routing` or another named projection.
 - `dependsOn` remains the semantic source relationship. `unblocks` is a reverse/compatibility projection and must not become a competing source of truth.
+- Relational SQLite stores normalize dependency edges in `task_engine_dependencies`. CLI reads still expose additive `dependsOn`, `unblocks`, and `dependencyEdges` projections so agents do not need to inspect the table directly.
 - Evidence pointers identify where details can be fetched without embedding every transition or mutation row in list responses.
 - SQLite views are allowed for performance, but CLI JSON remains the default agent interface because it carries policy, planning generation, and remediation context.
 

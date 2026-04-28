@@ -1912,7 +1912,12 @@ export const taskEngineModule: WorkflowModule = {
 
     if (command.name === "add-dependency" || command.name === "remove-dependency") {
       const taskId = typeof args.taskId === "string" ? args.taskId : undefined;
-      const dependencyTaskId = typeof args.dependencyTaskId === "string" ? args.dependencyTaskId : undefined;
+      const dependencyTaskId =
+        typeof args.dependencyTaskId === "string"
+          ? args.dependencyTaskId
+          : typeof args.dependsOnTaskId === "string"
+            ? args.dependsOnTaskId
+            : undefined;
       const actor =
         typeof args.actor === "string"
           ? args.actor
@@ -1973,15 +1978,26 @@ export const taskEngineModule: WorkflowModule = {
     if (command.name === "get-dependency-graph") {
       const taskId = typeof args.taskId === "string" ? args.taskId : undefined;
       const tasks = store.getActiveTasks();
+      const byId = new Map(tasks.map((task) => [task.id, task]));
       const nodes = tasks.map((task) => ({ id: task.id, status: task.status }));
       const edges = tasks.flatMap((task) => (task.dependsOn ?? []).map((depId) => ({ from: task.id, to: depId })));
+      const dependencyEdges = edges.map((edge) => {
+        const dep = byId.get(edge.to);
+        return {
+          taskId: edge.from,
+          dependsOnTaskId: edge.to,
+          dependencyStatus: dep?.status ?? "missing",
+          satisfied: dep?.status === "completed"
+        };
+      });
       if (!taskId) {
-        return { ok: true, code: "dependency-graph", data: { nodes, edges } as Record<string, unknown> };
+        return { ok: true, code: "dependency-graph", data: { nodes, edges, dependencyEdges } as Record<string, unknown> };
       }
       const task = tasks.find((candidate) => candidate.id === taskId);
       if (!task) {
         return { ok: false, code: "task-not-found", message: `Task '${taskId}' not found` };
       }
+      const taskDependencyEdges = dependencyEdges.filter((edge) => edge.taskId === taskId);
       return {
         ok: true,
         code: "dependency-graph",
@@ -1990,7 +2006,8 @@ export const taskEngineModule: WorkflowModule = {
           dependsOn: task.dependsOn ?? [],
           directDependents: tasks.filter((candidate) => (candidate.dependsOn ?? []).includes(taskId)).map((x) => x.id),
           nodes,
-          edges
+          edges,
+          dependencyEdges: taskDependencyEdges
         } as Record<string, unknown>
       };
     }

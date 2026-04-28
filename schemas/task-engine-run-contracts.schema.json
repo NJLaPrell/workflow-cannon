@@ -486,7 +486,7 @@
             },
             "responseData": {
               "type": "object",
-              "required": ["nodes", "edges"],
+              "required": ["nodes", "edges", "dependencyEdges"],
               "additionalProperties": true
             }
           }
