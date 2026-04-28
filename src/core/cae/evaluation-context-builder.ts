@@ -23,6 +23,8 @@ const TAG_MAX = 32;
 const FEATURE_MAX = 32;
 const STR_TAG_LEN = 64;
 const STR_META = 256;
+const ARG_HINT_MAX = 64;
+const ARG_HINT_DEPTH_MAX = 6;
 
 const ALLOW_META = new Set([
   "specPath",
@@ -143,6 +145,37 @@ export function deriveArgvSummary(args: Record<string, unknown> | null | undefin
   }
 }
 
+function collectArgHints(
+  value: unknown,
+  prefix: string,
+  depth: number,
+  out: Record<string, string | number | boolean | null>
+): void {
+  if (Object.keys(out).length >= ARG_HINT_MAX || depth > ARG_HINT_DEPTH_MAX) return;
+  if (value === null || typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    if (prefix) {
+      out[prefix] = typeof value === "string" ? clampStr(value, STR_META) : value;
+    }
+    return;
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) return;
+  for (const [key, child] of Object.entries(value as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b))) {
+    if (key === "policyApproval" || !/^[A-Za-z0-9_-]+$/.test(key)) continue;
+    const path = prefix ? `${prefix}.${key}` : key;
+    collectArgHints(child, path, depth + 1, out);
+    if (Object.keys(out).length >= ARG_HINT_MAX) return;
+  }
+}
+
+export function deriveArgHints(
+  args: Record<string, unknown> | null | undefined
+): Record<string, string | number | boolean | null> | undefined {
+  if (!args || typeof args !== "object") return undefined;
+  const hints: Record<string, string | number | boolean | null> = {};
+  collectArgHints(args, "", 1, hints);
+  return Object.keys(hints).length > 0 ? hints : undefined;
+}
+
 function buildTaskSlice(input: BuildEvaluationContextInput): CaeEvaluationContextTask {
   const phaseFallback = input.workspace.currentKitPhase;
   const row = input.taskRow;
@@ -179,6 +212,8 @@ function buildCommandSlice(input: BuildEvaluationContextInput): CaeEvaluationCon
       ? clampStr(String(input.command.argvSummary), ARGV_SUMMARY_MAX)
       : deriveArgvSummary(input.command.args ?? undefined);
   if (summary) cmd.argvSummary = summary;
+  const argHints = deriveArgHints(input.command.args ?? undefined);
+  if (argHints) cmd.argHints = argHints;
   return cmd;
 }
 

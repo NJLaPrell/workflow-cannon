@@ -116,6 +116,28 @@
         {
           "type": "object",
           "additionalProperties": false,
+          "required": ["kind", "path", "value"],
+          "properties": {
+            "kind": { "const": "commandArgEquals" },
+            "path": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_-]+(\\.[A-Za-z0-9_-]+){0,5}$"
+            },
+            "value": {
+              "oneOf": [
+                { "type": "string", "maxLength": 256 },
+                { "type": "number" },
+                { "type": "boolean" },
+                { "type": "null" }
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
           "required": ["kind", "values"],
           "properties": {
             "kind": { "const": "taskTag" },

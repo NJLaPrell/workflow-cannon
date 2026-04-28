@@ -55,6 +55,13 @@ function matchCondition(ctx: CaeEvaluationContext, cond: Record<string, unknown>
     if (m === "prefix") return v.length > 0 && name.startsWith(v);
     return false;
   }
+  if (kind === "commandArgEquals" && typeof cond.path === "string") {
+    const expected = cond.value;
+    if (expected !== null && typeof expected !== "string" && typeof expected !== "number" && typeof expected !== "boolean") {
+      return false;
+    }
+    return ctx.command.argHints?.[cond.path] === expected;
+  }
   if (kind === "taskTag") {
     const values = cond.values;
     const match = cond.match === "all" ? "all" : "any";
