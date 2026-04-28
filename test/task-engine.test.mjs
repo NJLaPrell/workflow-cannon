@@ -3198,6 +3198,16 @@ test("migrate-task-persistence sqlite-blob-to-relational round-trips tasks and l
   assert.equal(t.risk, "low");
   assert.equal(t.metadata?.evidenceKey, "k1");
   assert.equal(store2.getTransitionLog().length, 1);
+  const evidenceDb = new Database(path.join(workspace, ".workspace-kit", "tasks", "workspace-kit.db"));
+  try {
+    assert.equal(
+      evidenceDb.prepare("SELECT COUNT(*) AS c FROM task_engine_transition_log").get().c,
+      1
+    );
+    assert.equal(evidenceDb.prepare("SELECT COUNT(*) AS c FROM task_engine_mutation_log").get().c, 0);
+  } finally {
+    evidenceDb.close();
+  }
 
   const upd = await taskEngineModule.onCommand(
     {
@@ -3214,6 +3224,19 @@ test("migrate-task-persistence sqlite-blob-to-relational round-trips tasks and l
   await store3.load();
   assert.equal(store3.getTask("T900").title, "after relational");
   assert.deepEqual(store3.getTask("T900").dependsOn, ["T899"]);
+  assert.equal(store3.getTransitionLog().length, 1);
+  assert.equal(store3.getMutationLog().length, 1);
+
+  const evidenceDb2 = new Database(path.join(workspace, ".workspace-kit", "tasks", "workspace-kit.db"));
+  try {
+    assert.equal(
+      evidenceDb2.prepare("SELECT COUNT(*) AS c FROM task_engine_transition_log").get().c,
+      1
+    );
+    assert.equal(evidenceDb2.prepare("SELECT COUNT(*) AS c FROM task_engine_mutation_log").get().c, 1);
+  } finally {
+    evidenceDb2.close();
+  }
 
   const graph = await taskEngineModule.onCommand({ name: "get-dependency-graph", args: { taskId: "T900" } }, ctx);
   assert.equal(graph.ok, true);
