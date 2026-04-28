@@ -30,6 +30,7 @@
         "archive-task",
         "add-dependency",
         "agent-bootstrap",
+        "agent-mutation-plan",
         "agent-session-snapshot",
         "assign-task-phase",
         "backfill-task-feature-links",
@@ -85,6 +86,7 @@
         "archive-task": { "$ref": "#/$defs/contractArchiveTask" },
         "add-dependency": { "$ref": "#/$defs/contractDependencyMutation" },
         "agent-bootstrap": { "$ref": "#/$defs/contractAgentSessionSnapshot" },
+        "agent-mutation-plan": { "$ref": "#/$defs/contractAgentMutationPlan" },
         "agent-session-snapshot": { "$ref": "#/$defs/contractAgentSessionSnapshot" },
         "assign-task-phase": { "$ref": "#/$defs/contractAssignTaskPhase" },
         "backfill-task-feature-links": { "$ref": "#/$defs/contractBase" },
@@ -143,6 +145,34 @@
           "type": "object"
         }
       }
+    },
+    "contractAgentMutationPlan": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "required": ["commandName"],
+              "additionalProperties": false,
+              "properties": {
+                "commandName": { "type": "string", "minLength": 1 },
+                "taskId": {
+                  "type": "string",
+                  "pattern": "^(T[0-9]+|imp-[0-9a-f]{14})$"
+                },
+                "action": { "type": "string", "minLength": 1 },
+                "config": { "type": "object" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["schemaVersion", "commandName", "schemaOnly", "policy", "planning", "readyRun"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
     },
     "contractRunTransition": {
       "allOf": [

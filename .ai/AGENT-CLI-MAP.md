@@ -456,6 +456,7 @@ Non-sensitive commands (no `policyApproval` unless you added `extraSensitiveModu
 workspace-kit run list-tasks '{}'
 workspace-kit run get-next-actions '{}'
 workspace-kit run list-approval-queue '{}'
+workspace-kit run agent-mutation-plan '{"commandName":"run-transition","taskId":"T285","action":"start"}'
 workspace-kit run queue-health '{}'
 workspace-kit run classify-kit-state '{}'
 workspace-kit run get-task '{"taskId":"T285"}'
