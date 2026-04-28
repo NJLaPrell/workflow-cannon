@@ -6,6 +6,7 @@ import os from "node:os";
 import path from "node:path";
 
 import {
+  applyResponseTemplateApplication,
   parseTemplateDirectiveFromText,
   truncateTemplateWarning,
   MAX_TEMPLATE_WARNING_LENGTH
@@ -51,6 +52,33 @@ test("Phase6b: run JSON includes responseTemplate for list-tasks", async () => {
   assert.ok(out.responseTemplate);
   assert.equal(out.responseTemplate.enforcementMode, "advisory");
   assert.ok(typeof out.responseTemplate.appliedTemplateId === "string");
+});
+
+test("Phase6b: template presentation preserves command-specific phase rollover projection", () => {
+  const shaped = applyResponseTemplateApplication(
+    "set-current-phase",
+    { currentKitPhase: "72", expectedWorkspaceRevision: 0 },
+    {
+      ok: true,
+      code: "set-current-phase-updated",
+      data: {
+        dryRun: false,
+        presentation: {
+          phaseRollover: {
+            schemaVersion: 1,
+            kind: "phase_rollover_v1",
+            workspaceRevisionBefore: 0,
+            workspaceRevisionAfter: 1
+          }
+        }
+      }
+    },
+    {}
+  );
+
+  assert.equal(shaped.data.presentation.templateId, "phase_ship");
+  assert.equal(shaped.data.presentation.phaseRollover.kind, "phase_rollover_v1");
+  assert.equal(shaped.data.presentation.phaseRollover.workspaceRevisionAfter, 1);
 });
 
 test("Phase6b: strict mode fails on unknown defaultTemplateId", async () => {

@@ -33,7 +33,9 @@ It does **not** modify task **`phaseKey`** values. Workspace current phase and p
 
 ## Response
 
-Returns authoritative domain result data: before/after workspace status rows, before/after config hints, canonical phase verification, export status, revisions, and a **`suggestedFollowUpCommand`** when verification detects remaining drift. Summarizer presentation shaping is intentionally separate from this domain response.
+Returns authoritative domain result data: before/after workspace status rows, before/after config hints, canonical phase verification, export status, revisions, and a **`suggestedFollowUpCommand`** when verification detects remaining drift.
+
+For agent summaries, read **`data.presentation.phaseRollover`**. It is the stable summarizer contract (**`kind: "phase_rollover_v1"`**) and is present for dry runs, live writes, and idempotent replays. It contains the compact before/after phase, workspace revision, config hint, export status, optional task counts, and follow-up command fields derived from the raw domain result. Do not retry a mutation just because summary rendering fails; use this projection to summarize the already-returned result.
 
 ## Examples
 

@@ -205,6 +205,51 @@ function plannedWorkspaceStatusAfter(
   };
 }
 
+function phaseRolloverPresentation(args: {
+  dryRun: boolean;
+  replayed?: boolean;
+  beforeRevision?: number;
+  afterRevision?: number;
+  workspaceStatusBefore: NonNullable<ReturnType<typeof readKitWorkspaceStatusRow>>;
+  workspaceStatusAfter: NonNullable<ReturnType<typeof readKitWorkspaceStatusRow>>;
+  configHintBefore: ReturnType<typeof projectConfigPhaseHint>;
+  configHintAfter: ReturnType<typeof projectConfigPhaseHint>;
+  canonicalPhase: ReturnType<typeof resolveCanonicalPhase>;
+  exportStatus: Record<string, unknown>;
+  suggestedFollowUpCommand: string | null;
+  taskCounts?: Record<TaskStatus, number> | null;
+}): Record<string, unknown> {
+  return {
+    schemaVersion: 1,
+    kind: "phase_rollover_v1",
+    dryRun: args.dryRun,
+    replayed: args.replayed === true,
+    beforePhase: {
+      currentKitPhase: args.workspaceStatusBefore.currentKitPhase,
+      nextKitPhase: args.workspaceStatusBefore.nextKitPhase,
+      activeFocus: args.workspaceStatusBefore.activeFocus
+    },
+    afterPhase: {
+      currentKitPhase: args.workspaceStatusAfter.currentKitPhase,
+      nextKitPhase: args.workspaceStatusAfter.nextKitPhase,
+      activeFocus: args.workspaceStatusAfter.activeFocus
+    },
+    workspaceRevisionBefore: args.beforeRevision ?? args.workspaceStatusBefore.workspaceRevision,
+    workspaceRevisionAfter: args.afterRevision ?? args.workspaceStatusAfter.workspaceRevision,
+    configHintBefore: args.configHintBefore,
+    configHintAfter: args.configHintAfter,
+    configHintStatus: {
+      canonicalPhaseKey: args.canonicalPhase.canonicalPhaseKey,
+      configMatchesWorkspaceStatus: args.canonicalPhase.configMatchesWorkspaceStatus
+    },
+    exportStatus: args.exportStatus,
+    suggestedFollowUpCommand: args.suggestedFollowUpCommand,
+    taskCounts: args.taskCounts ?? null,
+    agentRenderHint:
+      "Use this stable phase_rollover_v1 projection for summaries; raw workspaceStatus/config/export fields remain the source of truth."
+  };
+}
+
 export async function runGetWorkspaceStatus(
   ctx: ModuleLifecycleContext,
   _args: Record<string, unknown>
@@ -549,6 +594,11 @@ export async function runSetCurrentPhase(
     const exportYamlBody = formatWorkspaceStatusDbExportYaml(plannedAfter);
 
     if (dryRun) {
+      const exportStatus = {
+        dryRun: true,
+        fileRelativePath: WORKSPACE_STATUS_DB_EXPORT_RELATIVE,
+        yamlBody: exportYamlBody
+      };
       return {
         ok: true,
         code: "set-current-phase-dry-run",
@@ -560,12 +610,20 @@ export async function runSetCurrentPhase(
           configHintBefore,
           configHintAfter,
           canonicalPhase: canonicalAfter,
-          exportStatus: {
-            dryRun: true,
-            fileRelativePath: WORKSPACE_STATUS_DB_EXPORT_RELATIVE,
-            yamlBody: exportYamlBody
-          },
-          suggestedFollowUpCommand: null
+          exportStatus,
+          suggestedFollowUpCommand: null,
+          presentation: {
+            phaseRollover: phaseRolloverPresentation({
+              dryRun: true,
+              workspaceStatusBefore: before,
+              workspaceStatusAfter: plannedAfter,
+              configHintBefore,
+              configHintAfter,
+              canonicalPhase: canonicalAfter,
+              exportStatus,
+              suggestedFollowUpCommand: null
+            })
+          }
         } as Record<string, unknown>
       };
     }
@@ -623,6 +681,12 @@ export async function runSetCurrentPhase(
       canonicalVerified.configMatchesWorkspaceStatus === false
         ? `workspace-kit config set kit.currentPhaseNumber ${phaseNumber} --json`
         : null;
+    const exportStatus = {
+      dryRun: false,
+      written: true,
+      fileRelativePath: writtenExport,
+      workspaceRevision: after.workspaceRevision
+    };
 
     return {
       ok: true,
@@ -640,13 +704,23 @@ export async function runSetCurrentPhase(
         configHintBefore,
         configHintAfter: projectConfigPhaseHint(configAfter),
         canonicalPhase: canonicalVerified,
-        exportStatus: {
-          dryRun: false,
-          written: true,
-          fileRelativePath: writtenExport,
-          workspaceRevision: after.workspaceRevision
-        },
-        suggestedFollowUpCommand
+        exportStatus,
+        suggestedFollowUpCommand,
+        presentation: {
+          phaseRollover: phaseRolloverPresentation({
+            dryRun: false,
+            replayed,
+            beforeRevision,
+            afterRevision,
+            workspaceStatusBefore: before,
+            workspaceStatusAfter: after,
+            configHintBefore,
+            configHintAfter: projectConfigPhaseHint(configAfter),
+            canonicalPhase: canonicalVerified,
+            exportStatus,
+            suggestedFollowUpCommand
+          })
+        }
       } as Record<string, unknown>
     };
   } catch (e) {
