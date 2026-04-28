@@ -99,6 +99,8 @@ export {
   evaluateDeliveryEvidence,
   isPhaseDeliveryTask,
   readDeliveryEvidenceEnforcementMode,
+  buildTaskPersistenceReadinessReport,
+  runTaskPersistenceReadiness,
   buildQueueGitAlignmentReport,
   filterTasksByQueueNamespace,
   getNextActions,
@@ -122,7 +124,10 @@ export type {
   DeliveryEvidenceEnforcementMode,
   DeliveryEvidenceEvaluation,
   DeliveryEvidenceViolation,
-  KitStateClassification
+  KitStateClassification,
+  TaskPersistenceReadinessCheck,
+  TaskPersistenceReadinessReport,
+  TaskPersistenceReadinessSeverity
 } from "./task-engine/index.js";
 export type { WishlistItem, WishlistStatus, WishlistStoreDocument } from "./task-engine/index.js";
 export {

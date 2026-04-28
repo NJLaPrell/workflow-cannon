@@ -28,6 +28,7 @@ Phase 1 core module for structured task lifecycle management.
 | `queue-git-alignment` | Read-only heuristic: git HEAD vs last transition; stale `in_progress` hints |
 | `replay-queue-snapshot` | Read-only replay of next-actions against frozen `tasks[]` or snapshot file |
 | `queue-health` | Read-only ready-queue audit (phase alignment + unmet `dependsOn` on ready tasks) |
+| `task-persistence-readiness` | Read-only migration readiness report for task persistence integrity and schema context |
 | `dashboard-summary` | Cockpit JSON for UIs (includes maintainer status snapshot) |
 | `create-wishlist` / `list-wishlist` / `get-wishlist` / `update-wishlist` | Wishlist ideation (no task phase) |
 | `convert-wishlist` | Promote a wishlist item into one or more tasks; closes wishlist as `converted` |

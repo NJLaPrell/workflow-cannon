@@ -72,5 +72,14 @@ export {
   planningSqliteDatabaseRelativePath,
   planningTaskStoreRelativePath
 } from "./planning-config.js";
+export {
+  buildTaskPersistenceReadinessReport,
+  runTaskPersistenceReadiness
+} from "./persistence/task-persistence-readiness.js";
+export type {
+  TaskPersistenceReadinessCheck,
+  TaskPersistenceReadinessReport,
+  TaskPersistenceReadinessSeverity
+} from "./persistence/task-persistence-readiness.js";
 
 export { taskEngineModule } from "./task-engine-internal.js";
