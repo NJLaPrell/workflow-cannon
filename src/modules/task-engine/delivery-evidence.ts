@@ -251,10 +251,15 @@ export function createDeliveryEvidenceGuard(
 
       const evaluation = evaluateDeliveryEvidence(task);
       if (evaluation.satisfied) {
+        const code = evaluation.satisfiedBy === "waiver"
+          ? "delivery-waiver-present"
+          : evaluation.satisfiedBy === "not-required"
+            ? "delivery-evidence-not-required"
+            : "delivery-evidence-present";
         return {
           allowed: true,
           guardName: "delivery-evidence",
-          code: evaluation.satisfiedBy === "waiver" ? "delivery-waiver-present" : "delivery-evidence-present"
+          code
         };
       }
 

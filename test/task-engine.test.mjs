@@ -611,6 +611,7 @@ test("TransitionService delivery-evidence guard skips local-only tasks", async (
   const result = await service.runTransition({ taskId: "T001", action: "complete" });
 
   assert.equal(result.evidence.toState, "completed");
+  assert.ok(result.evidence.guardResults.some((r) => r.code === "delivery-evidence-not-required"));
 });
 
 test("buildPhaseDeliveryPreflight reports completed and in-progress evidence gaps", () => {
