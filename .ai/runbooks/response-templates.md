@@ -45,6 +45,10 @@ Example:
 - `responseTemplateId`: explicit template
 - `responseTemplateDirective` / `instructionTemplateDirective` / `instruction`: plain-English, e.g. `"Use the COMPLETED_TASK template"`
 
+## Stable phase summaries
+
+For **`set-current-phase`**, agents should summarize **`data.presentation.phaseRollover`** instead of guessing from command-specific raw fields. The projection uses **`kind: "phase_rollover_v1"`** and is present for dry runs, live writes, and idempotent replays. It includes before/after phase, workspace revision, config hint status, export status, optional task counts, and any **`suggestedFollowUpCommand`**. The raw domain fields remain authoritative; the projection is the stable summarizer contract.
+
 ## Strict mode
 
 Use `enforcementMode: strict` when governance or CI should fail closed on template mistakes:

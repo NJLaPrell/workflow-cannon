@@ -39,5 +39,6 @@ evidence|slot1=E003|slot2=validation_command_results_or_artifact_references|requ
 evidence|slot1=E004|slot2=npm_package_reference|required=true
 evidence|slot1=E005|slot2=migration_notes_if_any|required=conditional
 evidence|slot1=E006|slot2=known_risks_caveats_and_follow_up_tasks|required=true
+evidence|slot1=E007|slot2=workspace_kit_run_release_evidence_manifest_json|required=true
 
 workflow|id=W201|name=post_release|when=after_publish|do=monitor_for_regressions>triage_and_patch_if_needed>capture_friction_themes>route_to_task_engine_roadmap_or_enhancement_queue|done=follow_up_tracked|approval=none|risk=low|status=active

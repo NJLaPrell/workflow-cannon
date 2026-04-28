@@ -7,9 +7,9 @@
 
 ## Commands (read-first)
 
-- `pnpm run wk run list-skills '{}'`
-- `pnpm run wk run inspect-skill '{"skillId":"<id>"}'`
-- `pnpm run wk run recommend-skills '{"tags":["example"]}'`
+- `pnpm exec wk run list-skills '{}'`
+- `pnpm exec wk run inspect-skill '{"skillId":"<id>"}'`
+- `pnpm exec wk run recommend-skills '{"tags":["example"]}'`
 
 ## apply-skill and policy
 

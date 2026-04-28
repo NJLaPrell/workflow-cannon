@@ -1,15 +1,19 @@
 {
   "schemaVersion": 1,
-  "sourceSchemaPackageVersion": "0.73.0",
+  "sourceSchemaPackageVersion": "0.74.0",
   "pilotCommands": [
     "add-dependency",
     "agent-bootstrap",
+    "agent-mutation-plan",
     "agent-session-snapshot",
     "archive-task",
     "assign-task-phase",
     "backfill-task-feature-links",
     "backup-planning-sqlite",
+    "claim-next-task",
+    "classify-kit-state",
     "clear-task-phase",
+    "complete-task",
     "convert-wishlist",
     "create-task",
     "create-task-from-plan",
@@ -37,13 +41,17 @@
     "list-wishlist",
     "migrate-task-persistence",
     "persist-planning-execution-drafts",
+    "phase-delivery-preflight",
     "phase-status",
     "queue-git-alignment",
     "queue-health",
+    "release-evidence-manifest",
     "remove-dependency",
     "replay-queue-snapshot",
+    "review-planning-execution-drafts",
     "run-transition",
     "set-current-phase",
+    "start-task",
     "synthesize-transcript-churn",
     "update-task",
     "update-wishlist",
@@ -72,6 +80,30 @@
     },
     "agent-bootstrap": {
       "type": "object",
+      "additionalProperties": false
+    },
+    "agent-mutation-plan": {
+      "type": "object",
+      "required": [
+        "commandName"
+      ],
+      "properties": {
+        "commandName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "taskId": {
+          "type": "string",
+          "pattern": "^(T[0-9]+|imp-[0-9a-f]{14})$"
+        },
+        "action": {
+          "type": "string",
+          "minLength": 1
+        },
+        "config": {
+          "type": "object"
+        }
+      },
       "additionalProperties": false
     },
     "agent-session-snapshot": {
@@ -134,6 +166,44 @@
       },
       "additionalProperties": true
     },
+    "claim-next-task": {
+      "type": "object",
+      "properties": {
+        "queueNamespace": {
+          "type": "string",
+          "minLength": 1
+        },
+        "clientMutationId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policyApproval": {
+          "type": "object"
+        },
+        "expectedPlanningGeneration": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            }
+          ]
+        },
+        "actor": {
+          "type": "string"
+        },
+        "config": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": true
+    },
+    "classify-kit-state": {
+      "type": "object"
+    },
     "clear-task-phase": {
       "type": "object",
       "required": [
@@ -147,6 +217,44 @@
         "clientMutationId": {
           "type": "string",
           "minLength": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "complete-task": {
+      "type": "object",
+      "required": [
+        "taskId"
+      ],
+      "properties": {
+        "taskId": {
+          "type": "string",
+          "pattern": "^(T[0-9]+|imp-[0-9a-f]{14})$"
+        },
+        "clientMutationId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policyApproval": {
+          "type": "object"
+        },
+        "expectedPlanningGeneration": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            }
+          ]
+        },
+        "actor": {
+          "type": "string"
+        },
+        "config": {
+          "type": "object"
         }
       },
       "additionalProperties": true
@@ -507,6 +615,9 @@
       },
       "additionalProperties": true
     },
+    "phase-delivery-preflight": {
+      "type": "object"
+    },
     "phase-status": {
       "type": "object",
       "properties": {
@@ -525,6 +636,9 @@
     "queue-health": {
       "type": "object",
       "additionalProperties": false
+    },
+    "release-evidence-manifest": {
+      "type": "object"
     },
     "remove-dependency": {
       "type": "object",
@@ -547,6 +661,9 @@
     "replay-queue-snapshot": {
       "type": "object"
     },
+    "review-planning-execution-drafts": {
+      "type": "object"
+    },
     "run-transition": {
       "type": "object",
       "required": [
@@ -559,7 +676,23 @@
           "pattern": "^(T[0-9]+|imp-[0-9a-f]{14})$"
         },
         "action": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "accept",
+            "block",
+            "cancel",
+            "complete",
+            "decline",
+            "demote",
+            "pause",
+            "reject",
+            "start",
+            "unblock"
+          ]
+        },
+        "clientMutationId": {
+          "type": "string",
+          "minLength": 1
         },
         "policyApproval": {
           "type": "object"
@@ -612,6 +745,24 @@
             "null"
           ]
         },
+        "blockers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "pendingDecisions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "nextAgentActions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "lastUpdated": {
           "type": "string"
         },
@@ -628,6 +779,44 @@
         },
         "dryRun": {
           "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+    "start-task": {
+      "type": "object",
+      "required": [
+        "taskId"
+      ],
+      "properties": {
+        "taskId": {
+          "type": "string",
+          "pattern": "^(T[0-9]+|imp-[0-9a-f]{14})$"
+        },
+        "clientMutationId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policyApproval": {
+          "type": "object"
+        },
+        "expectedPlanningGeneration": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            }
+          ]
+        },
+        "actor": {
+          "type": "string"
+        },
+        "config": {
+          "type": "object"
         }
       },
       "additionalProperties": true

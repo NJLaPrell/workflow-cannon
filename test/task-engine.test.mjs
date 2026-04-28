@@ -15,16 +15,20 @@ import {
   getTransitionAction,
   resolveTargetState,
   getAllowedTransitionsFrom,
+  listTransitionActions,
   stateValidityGuard,
   dependencyCheckGuard,
   buildQueueGitAlignmentReport,
   getNextActions,
   getTaskQueueNamespace,
+  createDeliveryEvidenceGuard,
+  buildPhaseDeliveryPreflight,
   taskEngineModule,
   UnifiedStateDb,
   ModuleRegistry,
   ModuleCommandRouter,
-  appendPolicyTrace
+  appendPolicyTrace,
+  classifyKitStatePath
 } from "../dist/index.js";
 
 // ---------------------------------------------------------------------------
@@ -98,6 +102,23 @@ async function writeWorkspaceStatusYaml(workspace, lines) {
   await writeFile(path.join(yamlDir, "workspace-kit-status.yaml"), [...lines, ""].join("\n"), "utf8");
 }
 
+test("classifyKitStatePath distinguishes durable, generated, volatile, and unknown kit paths", () => {
+  assert.equal(
+    classifyKitStatePath(".workspace-kit/tasks/workspace-kit.db").classification,
+    "durable-planning-state"
+  );
+  assert.equal(
+    classifyKitStatePath("docs/maintainers/data/workspace-kit-status.yaml").classification,
+    "generated-export"
+  );
+  assert.equal(
+    classifyKitStatePath(".workspace-kit/cae/runtime/traces.sqlite").classification,
+    "volatile-runtime-state"
+  );
+  assert.equal(classifyKitStatePath(".workspace-kit/config.json").classification, "kit-config");
+  assert.equal(classifyKitStatePath(".workspace-kit/surprise-state.json").classification, "unknown-kit-state");
+});
+
 // ---------------------------------------------------------------------------
 // T184: Transition map
 // ---------------------------------------------------------------------------
@@ -168,6 +189,28 @@ test("getAllowedTransitionsFrom returns all transitions from a state", () => {
 
   const fromCompleted = getAllowedTransitionsFrom("completed");
   assert.equal(fromCompleted.length, 0);
+});
+
+test("run-transition action contract, schema, and docs stay aligned with runtime map", async () => {
+  const runtimeActions = listTransitionActions();
+  assert.ok(runtimeActions.includes("decline"));
+
+  const schema = JSON.parse(
+    await readFile(path.join(process.cwd(), "schemas/task-engine-run-contracts.schema.json"), "utf8")
+  );
+  assert.deepEqual(schema.$defs.contractRunTransition.allOf[1].properties.args.properties.action.enum, runtimeActions);
+
+  const snapshot = JSON.parse(await readFile(path.join(process.cwd(), "schemas/pilot-run-args.snapshot.json"), "utf8"));
+  assert.deepEqual(snapshot.commands["run-transition"].properties.action.enum, runtimeActions);
+
+  const instructions = await readFile(
+    path.join(process.cwd(), "src/modules/task-engine/instructions/run-transition.md"),
+    "utf8"
+  );
+  for (const action of runtimeActions) {
+    assert.match(instructions, new RegExp(`\\\`${action}\\\``));
+  }
+  assert.match(instructions, /`decline` → cancelled/);
 });
 
 // ---------------------------------------------------------------------------
@@ -417,6 +460,31 @@ test("TransitionService applies valid transition", async () => {
   assert.equal(store.getTask("T001").status, "in_progress");
 });
 
+test("TransitionService replays run-transition clientMutationId without duplicate evidence", async () => {
+  const { store } = await storeWithTasks([makeTask({ id: "T001", status: "ready" })]);
+  const service = new TransitionService(store);
+
+  const first = await service.runTransition({ taskId: "T001", action: "start", clientMutationId: "transition-start-1" });
+  const replay = await service.runTransition({ taskId: "T001", action: "start", clientMutationId: "transition-start-1" });
+
+  assert.equal(replay.replayed, true);
+  assert.equal(replay.evidence.transitionId, first.evidence.transitionId);
+  assert.equal(replay.evidence.clientMutationId, "transition-start-1");
+  assert.ok(replay.evidence.payloadDigest);
+  assert.equal(store.getTransitionLog().length, 1);
+});
+
+test("TransitionService rejects clientMutationId reuse for different transition payload", async () => {
+  const { store } = await storeWithTasks([makeTask({ id: "T001", status: "ready" })]);
+  const service = new TransitionService(store);
+
+  await service.runTransition({ taskId: "T001", action: "start", clientMutationId: "transition-conflict" });
+  await assert.rejects(
+    () => service.runTransition({ taskId: "T001", action: "pause", clientMutationId: "transition-conflict" }),
+    (err) => err instanceof TaskEngineError && err.code === "idempotency-key-conflict"
+  );
+});
+
 test("TransitionService rejects invalid action", async () => {
   const { store } = await storeWithTasks([makeTask({ id: "T001", status: "completed" })]);
 
@@ -508,6 +576,249 @@ test("TransitionService evidence includes guard results", async () => {
 
   assert.ok(result.evidence.guardResults.length >= 2);
   assert.ok(result.evidence.guardResults.every((r) => r.allowed));
+});
+
+test("TransitionService completion allows phased task with delivery evidence", async () => {
+  const task = makeTask({
+    id: "T001",
+    status: "in_progress",
+    phaseKey: "74",
+    metadata: {
+      deliveryEvidence: {
+        schemaVersion: 1,
+        branchName: "feature/T001-test",
+        prUrl: "https://github.com/org/repo/pull/1",
+        prNumber: 1,
+        baseBranch: "release/phase-74",
+        mergeSha: "abc123",
+        checks: [{ name: "test", conclusion: "success" }],
+        validationCommands: [{ command: "pnpm run test", exitCode: 0 }]
+      }
+    }
+  });
+  const { store } = await storeWithTasks([task]);
+
+  const service = new TransitionService(store, [
+    createDeliveryEvidenceGuard({ enforcementMode: "enforce" })
+  ]);
+  const result = await service.runTransition({ taskId: "T001", action: "complete" });
+
+  assert.equal(result.evidence.toState, "completed");
+  assert.ok(result.evidence.guardResults.some((r) => r.code === "delivery-evidence-present"));
+});
+
+test("TransitionService completion allows phased task with maintainer waiver", async () => {
+  const task = makeTask({
+    id: "T001",
+    status: "in_progress",
+    phaseKey: "74",
+    metadata: {
+      deliveryWaiver: {
+        schemaVersion: 1,
+        actor: "maintainer@example.com",
+        rationale: "No PR applies to this local-only delivery.",
+        timestamp: "2026-04-28T07:00:00.000Z",
+        scope: "T001"
+      }
+    }
+  });
+  const { store } = await storeWithTasks([task]);
+
+  const service = new TransitionService(store, [
+    createDeliveryEvidenceGuard({ enforcementMode: "enforce" })
+  ]);
+  const result = await service.runTransition({ taskId: "T001", action: "complete" });
+
+  assert.equal(result.evidence.toState, "completed");
+  assert.ok(result.evidence.guardResults.some((r) => r.code === "delivery-waiver-present"));
+});
+
+test("TransitionService completion emits advisory delivery-evidence violation when missing", async () => {
+  const task = makeTask({ id: "T001", status: "in_progress", phaseKey: "74" });
+  const { store } = await storeWithTasks([task]);
+
+  const service = new TransitionService(store, [
+    createDeliveryEvidenceGuard({ enforcementMode: "advisory" })
+  ]);
+  const result = await service.runTransition({ taskId: "T001", action: "complete" });
+
+  assert.equal(result.evidence.toState, "completed");
+  const guard = result.evidence.guardResults.find((r) => r.guardName === "delivery-evidence");
+  assert.equal(guard?.allowed, true);
+  assert.equal(guard?.code, "delivery-evidence-missing");
+});
+
+test("TransitionService completion blocks missing delivery evidence in enforce mode", async () => {
+  const task = makeTask({ id: "T001", status: "in_progress", phaseKey: "74" });
+  const { store } = await storeWithTasks([task]);
+
+  const service = new TransitionService(store, [
+    createDeliveryEvidenceGuard({ enforcementMode: "enforce" })
+  ]);
+
+  await assert.rejects(
+    () => service.runTransition({ taskId: "T001", action: "complete" }),
+    (err) => err instanceof TaskEngineError && err.code === "guard-rejected"
+  );
+});
+
+test("TransitionService delivery-evidence guard skips local-only tasks", async () => {
+  const task = makeTask({
+    id: "T001",
+    status: "in_progress",
+    phaseKey: "74",
+    metadata: { deliveryEvidenceRequired: false }
+  });
+  const { store } = await storeWithTasks([task]);
+
+  const service = new TransitionService(store, [
+    createDeliveryEvidenceGuard({ enforcementMode: "enforce" })
+  ]);
+  const result = await service.runTransition({ taskId: "T001", action: "complete" });
+
+  assert.equal(result.evidence.toState, "completed");
+  assert.ok(result.evidence.guardResults.some((r) => r.code === "delivery-evidence-not-required"));
+});
+
+test("buildPhaseDeliveryPreflight reports completed and in-progress evidence gaps", () => {
+  const tasks = [
+    makeTask({ id: "T001", status: "completed", phaseKey: "74" }),
+    makeTask({
+      id: "T002",
+      status: "in_progress",
+      phaseKey: "74",
+      metadata: { deliveryEvidenceRequired: false }
+    }),
+    makeTask({ id: "T003", status: "ready", phaseKey: "74" })
+  ];
+
+  const result = buildPhaseDeliveryPreflight({ tasks, phaseKey: "74" });
+
+  assert.equal(result.checkedTaskCount, 1);
+  assert.equal(result.violationCount, 1);
+  assert.equal(result.violations[0].taskId, "T001");
+});
+
+function releaseEvidenceArgs(overrides = {}) {
+  return {
+    phaseKey: "74",
+    approval: {
+      actor: "maintainer@example.com",
+      timestamp: "2026-04-28T07:00:00.000Z",
+      rationale: "Approved after reviewing release scope and gates.",
+      scope: "phase-74 publish"
+    },
+    releaseNotes: {
+      source: "release-notes-json",
+      entries: ["Phase 74 release evidence hardening"]
+    },
+    followUpScan: {
+      scannedAt: "2026-04-28T07:00:00.000Z",
+      rationale: "No unresolved follow-up tasks after friction scan."
+    },
+    followUpTasks: [],
+    validations: [{ command: "pnpm run check", conclusion: "success" }],
+    ...overrides
+  };
+}
+
+async function seedReleaseEvidenceWorkspace() {
+  const workspace = await tmpDir();
+  await writeFile(
+    path.join(workspace, "package.json"),
+    JSON.stringify({ name: "@workflow-cannon/workspace-kit", version: "0.74.0" }),
+    "utf8"
+  );
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({
+      id: "T971",
+      status: "completed",
+      phaseKey: "74",
+      metadata: {
+        deliveryEvidence: {
+          schemaVersion: 1,
+          branchName: "feature/T971-test",
+          prUrl: "https://github.com/org/repo/pull/154",
+          prNumber: 154,
+          baseBranch: "release/phase-74",
+          mergeSha: "abc123",
+          checks: [{ name: "test", conclusion: "success" }],
+          validationCommands: [{ command: "pnpm run test", exitCode: 0 }]
+        }
+      }
+    }));
+  });
+  return workspace;
+}
+
+test("taskEngineModule release-evidence-manifest builds manifest from approval and task evidence", async () => {
+  const workspace = await seedReleaseEvidenceWorkspace();
+  const result = await taskEngineModule.onCommand(
+    { name: "release-evidence-manifest", args: releaseEvidenceArgs() },
+    sqliteTaskEngineCtx(workspace)
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "release-evidence-manifest");
+  assert.equal(result.data.manifest.releaseVersion, "0.74.0");
+  assert.equal(result.data.manifest.packageName, "@workflow-cannon/workspace-kit");
+  assert.equal(result.data.manifest.followUpSummary.count, 0);
+  assert.equal(result.data.manifest.taskDeliveryEvidence.length, 1);
+});
+
+test("taskEngineModule release-evidence-manifest fails without approval", async () => {
+  const workspace = await seedReleaseEvidenceWorkspace();
+  const { approval: _approval, ...args } = releaseEvidenceArgs();
+  const result = await taskEngineModule.onCommand(
+    { name: "release-evidence-manifest", args },
+    sqliteTaskEngineCtx(workspace)
+  );
+
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "release-evidence-missing-approval");
+});
+
+test("taskEngineModule release-evidence-manifest fails without release notes", async () => {
+  const workspace = await seedReleaseEvidenceWorkspace();
+  const { releaseNotes: _releaseNotes, ...args } = releaseEvidenceArgs();
+  const result = await taskEngineModule.onCommand(
+    { name: "release-evidence-manifest", args },
+    sqliteTaskEngineCtx(workspace)
+  );
+
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "release-evidence-missing-release-notes");
+});
+
+test("taskEngineModule release-evidence-manifest requires zero-follow-up rationale", async () => {
+  const workspace = await seedReleaseEvidenceWorkspace();
+  const result = await taskEngineModule.onCommand(
+    {
+      name: "release-evidence-manifest",
+      args: releaseEvidenceArgs({ followUpScan: { scannedAt: "2026-04-28T07:00:00.000Z" } })
+    },
+    sqliteTaskEngineCtx(workspace)
+  );
+
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "release-evidence-followup-scan-required");
+});
+
+test("taskEngineModule release-evidence-manifest reconciles follow-up task refs", async () => {
+  const workspace = await seedReleaseEvidenceWorkspace();
+  const result = await taskEngineModule.onCommand(
+    {
+      name: "release-evidence-manifest",
+      args: releaseEvidenceArgs({
+        followUpTasks: [{ taskId: "T999", title: "missing follow-up", status: "ready" }],
+        followUpScan: { scannedAt: "2026-04-28T07:00:00.000Z" }
+      })
+    },
+    sqliteTaskEngineCtx(workspace)
+  );
+
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "release-evidence-followup-task-missing");
 });
 
 // ---------------------------------------------------------------------------
@@ -725,6 +1036,11 @@ test("taskEngineModule registration includes all instruction entries", () => {
   assert.ok(names.includes("convert-wishlist"));
   assert.ok(names.includes("migrate-task-persistence"));
   assert.ok(names.includes("persist-planning-execution-drafts"));
+  assert.ok(names.includes("review-planning-execution-drafts"));
+  assert.ok(names.includes("agent-mutation-plan"));
+  assert.ok(names.includes("claim-next-task"));
+  assert.ok(names.includes("start-task"));
+  assert.ok(names.includes("complete-task"));
 });
 
 test("taskEngineModule passes ModuleRegistry validation", () => {
@@ -745,6 +1061,12 @@ test("set-current-phase dry run reports before/after without writes", async () =
   assert.equal(result.data.dryRun, true);
   assert.equal(result.data.workspaceStatusBefore.workspaceRevision, 0);
   assert.equal(result.data.workspaceStatusAfter.currentKitPhase, "72");
+  assert.equal(result.data.presentation.phaseRollover.kind, "phase_rollover_v1");
+  assert.equal(result.data.presentation.phaseRollover.dryRun, true);
+  assert.equal(result.data.presentation.phaseRollover.workspaceRevisionBefore, 0);
+  assert.equal(result.data.presentation.phaseRollover.workspaceRevisionAfter, 1);
+  assert.equal(result.data.presentation.phaseRollover.afterPhase.currentKitPhase, "72");
+  assert.equal(result.data.presentation.phaseRollover.exportStatus.dryRun, true);
 
   const status = await taskEngineModule.onCommand({ name: "get-workspace-status", args: {} }, ctx);
   assert.equal(status.ok, true);
@@ -764,6 +1086,9 @@ test("set-current-phase writes SQLite first, config hint, and export", async () 
         nextKitPhase: "73",
         currentPhaseLabel: "Phase 72 — Phase-control ergonomics",
         activeFocus: "phase-control",
+        blockers: [],
+        pendingDecisions: [],
+        nextAgentActions: ["Deliver Phase 72"],
         expectedWorkspaceRevision: 0,
         clientMutationId: "phase-72-test"
       }
@@ -778,9 +1103,18 @@ test("set-current-phase writes SQLite first, config hint, and export", async () 
   assert.equal(result.data.workspaceStatusAfter.currentKitPhase, "72");
   assert.equal(result.data.workspaceStatusAfter.nextKitPhase, "73");
   assert.equal(result.data.workspaceStatusAfter.activeFocus, "phase-control");
+  assert.deepEqual(result.data.workspaceStatusAfter.blockers, []);
+  assert.deepEqual(result.data.workspaceStatusAfter.pendingDecisions, []);
+  assert.deepEqual(result.data.workspaceStatusAfter.nextAgentActions, ["Deliver Phase 72"]);
   assert.equal(result.data.canonicalPhase.canonicalPhaseKey, "72");
   assert.equal(result.data.canonicalPhase.configMatchesWorkspaceStatus, true);
   assert.equal(result.data.exportStatus.written, true);
+  assert.equal(result.data.presentation.phaseRollover.dryRun, false);
+  assert.equal(result.data.presentation.phaseRollover.replayed, false);
+  assert.equal(result.data.presentation.phaseRollover.workspaceRevisionBefore, 0);
+  assert.equal(result.data.presentation.phaseRollover.workspaceRevisionAfter, 1);
+  assert.equal(result.data.presentation.phaseRollover.configHintStatus.configMatchesWorkspaceStatus, true);
+  assert.equal(result.data.presentation.phaseRollover.suggestedFollowUpCommand, null);
 
   const config = JSON.parse(await readFile(path.join(workspace, ".workspace-kit/config.json"), "utf8"));
   assert.equal(config.kit.currentPhaseNumber, 72);
@@ -790,6 +1124,61 @@ test("set-current-phase writes SQLite first, config hint, and export", async () 
     "utf8"
   );
   assert.match(exportBody, /current_kit_phase: "72"/);
+  assert.match(exportBody, /next_agent_actions:\n  - "Deliver Phase 72"/);
+});
+
+test("set-current-phase replaces stale rollover status text atomically", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+
+  const first = await taskEngineModule.onCommand(
+    {
+      name: "set-current-phase",
+      args: {
+        currentKitPhase: "71",
+        nextKitPhase: "72",
+        activeFocus: "Phase 71 wrap-up",
+        pendingDecisions: ["Decide Phase 71 release date"],
+        nextAgentActions: ["Finish Phase 71 evidence"],
+        blockers: ["Phase 71 blocker"],
+        expectedWorkspaceRevision: 0
+      }
+    },
+    ctx
+  );
+  assert.equal(first.ok, true);
+
+  const rollover = await taskEngineModule.onCommand(
+    {
+      name: "set-current-phase",
+      args: {
+        currentKitPhase: "72",
+        nextKitPhase: "73",
+        activeFocus: "Phase 72 kickoff",
+        pendingDecisions: [],
+        nextAgentActions: ["Start Phase 72 delivery"],
+        blockers: [],
+        expectedWorkspaceRevision: 1,
+        clientMutationId: "phase-72-clean-rollover"
+      }
+    },
+    ctx
+  );
+
+  assert.equal(rollover.ok, true);
+  assert.equal(rollover.data.workspaceStatusAfter.currentKitPhase, "72");
+  assert.equal(rollover.data.workspaceStatusAfter.activeFocus, "Phase 72 kickoff");
+  assert.deepEqual(rollover.data.workspaceStatusAfter.pendingDecisions, []);
+  assert.deepEqual(rollover.data.workspaceStatusAfter.nextAgentActions, ["Start Phase 72 delivery"]);
+  assert.deepEqual(rollover.data.workspaceStatusAfter.blockers, []);
+
+  const exportBody = await readFile(
+    path.join(workspace, "docs/maintainers/data/workspace-kit-status.db-export.yaml"),
+    "utf8"
+  );
+  assert.doesNotMatch(exportBody, /Phase 71/);
+  assert.match(exportBody, /active_focus: "Phase 72 kickoff"/);
+  assert.match(exportBody, /next_agent_actions:\n  - "Start Phase 72 delivery"/);
 });
 
 test("set-current-phase rejects stale workspace revision", async () => {
@@ -811,6 +1200,8 @@ test("set-current-phase idempotent replay does not duplicate audit events", asyn
   const args = {
     currentKitPhase: "72",
     nextKitPhase: "73",
+    pendingDecisions: [],
+    nextAgentActions: ["Continue Phase 72"],
     expectedWorkspaceRevision: 0,
     clientMutationId: "phase-72-replay"
   };
@@ -818,11 +1209,24 @@ test("set-current-phase idempotent replay does not duplicate audit events", asyn
   const first = await taskEngineModule.onCommand({ name: "set-current-phase", args }, ctx);
   assert.equal(first.ok, true);
   const replay = await taskEngineModule.onCommand(
-    { name: "set-current-phase", args: { currentKitPhase: "72", nextKitPhase: "73", clientMutationId: "phase-72-replay" } },
+    {
+      name: "set-current-phase",
+      args: {
+        currentKitPhase: "72",
+        nextKitPhase: "73",
+        pendingDecisions: [],
+        nextAgentActions: ["Continue Phase 72"],
+        clientMutationId: "phase-72-replay"
+      }
+    },
     ctx
   );
   assert.equal(replay.ok, true);
   assert.equal(replay.code, "set-current-phase-idempotent-replay");
+  assert.deepEqual(replay.data.workspaceStatusAfter.nextAgentActions, ["Continue Phase 72"]);
+  assert.equal(replay.data.presentation.phaseRollover.replayed, true);
+  assert.equal(replay.data.presentation.phaseRollover.workspaceRevisionBefore, 0);
+  assert.equal(replay.data.presentation.phaseRollover.workspaceRevisionAfter, 1);
 
   const history = await taskEngineModule.onCommand({ name: "workspace-status-history", args: { limit: 10 } }, ctx);
   assert.equal(history.ok, true);
@@ -948,6 +1352,29 @@ test("phase-status reads canonical phase and optional task counts", async () => 
   assert.equal(result.data.taskCounts.currentPhase.completed, 1);
   assert.equal(result.data.taskCounts.nextPhase.proposed, 1);
   assert.equal(result.data.exportStatus.exists, true);
+});
+
+test("phase-status export freshness follows workspace-status revision, not planning DB mtime", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const moved = await taskEngineModule.onCommand(
+    { name: "set-current-phase", args: { currentKitPhase: "72", nextKitPhase: "73", expectedWorkspaceRevision: 0 } },
+    ctx
+  );
+  assert.equal(moved.ok, true);
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T7298", phaseKey: "72", phase: "Phase 72", status: "ready" }));
+  });
+
+  const result = await taskEngineModule.onCommand({ name: "phase-status", args: { includeDriftDetails: true } }, ctx);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.exportStatus.exists, true);
+  assert.equal(result.data.exportStatus.stale, false);
+  assert.equal(result.data.exportStatus.reason, "fresh");
+  assert.equal(result.data.exportStatus.workspaceRevision, 1);
+  assert.equal(result.data.exportStatus.exportWorkspaceRevision, 1);
+  assert.deepEqual(result.data.driftDetails, []);
 });
 
 test("phase-status reports config drift remediation", async () => {
@@ -1307,6 +1734,258 @@ test("taskEngineModule onCommand run-transition validates required args", async 
   );
   assert.equal(result.ok, false);
   assert.equal(result.code, "invalid-task-schema");
+});
+
+test("taskEngineModule run-transition idempotent replay bypasses fresh planning generation", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T9841", status: "ready" }));
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const first = await taskEngineModule.onCommand(
+    {
+      name: "run-transition",
+      args: {
+        taskId: "T9841",
+        action: "start",
+        expectedPlanningGeneration: 1,
+        clientMutationId: "run-transition-replay"
+      }
+    },
+    ctx
+  );
+  assert.equal(first.ok, true);
+  assert.equal(first.code, "transition-applied");
+  assert.equal(first.data.replayed, false);
+
+  const replay = await taskEngineModule.onCommand(
+    {
+      name: "run-transition",
+      args: {
+        taskId: "T9841",
+        action: "start",
+        clientMutationId: "run-transition-replay"
+      }
+    },
+    ctx
+  );
+  assert.equal(replay.ok, true);
+  assert.equal(replay.code, "transition-idempotent-replay");
+  assert.equal(replay.data.replayed, true);
+  assert.equal(replay.data.evidence.transitionId, first.data.evidence.transitionId);
+  assert.equal(replay.data.planningGeneration, first.data.planningGeneration);
+
+  const got = await taskEngineModule.onCommand({ name: "get-task", args: { taskId: "T9841" } }, ctx);
+  assert.equal(got.data.recentTransitions.length, 1);
+});
+
+test("taskEngineModule run-transition idempotency conflicts on different payload", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T9842", status: "ready" }));
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const first = await taskEngineModule.onCommand(
+    {
+      name: "run-transition",
+      args: {
+        taskId: "T9842",
+        action: "start",
+        expectedPlanningGeneration: 1,
+        clientMutationId: "run-transition-conflict"
+      }
+    },
+    ctx
+  );
+  assert.equal(first.ok, true);
+  const conflict = await taskEngineModule.onCommand(
+    {
+      name: "run-transition",
+      args: {
+        taskId: "T9842",
+        action: "pause",
+        clientMutationId: "run-transition-conflict"
+      }
+    },
+    ctx
+  );
+  assert.equal(conflict.ok, false);
+  assert.equal(conflict.code, "idempotency-key-conflict");
+});
+
+test("taskEngineModule agent-mutation-plan prepares sensitive run-transition with lifecycle context", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T9871", status: "in_progress" }));
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const result = await taskEngineModule.onCommand(
+    {
+      name: "agent-mutation-plan",
+      args: { commandName: "run-transition", taskId: "T9871", action: "complete" }
+    },
+    ctx
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "agent-mutation-plan");
+  assert.equal(result.data.commandName, "run-transition");
+  assert.equal(result.data.policy.sensitivity, "sensitive");
+  assert.equal(result.data.policy.approvalLane, "JSON policyApproval in the run args object");
+  assert.equal(result.data.policy.envApprovalApplies, false);
+  assert.equal(result.data.planning.expectedPlanningGenerationRequired, true);
+  assert.equal(result.data.readyRun.args.expectedPlanningGeneration, result.data.planning.planningGeneration);
+  assert.equal(result.data.readyRun.args.policyApproval.rationale, "<human-approved rationale>");
+  assert.equal(result.data.idempotency.clientMutationId, true);
+  assert.equal(result.data.lifecycle.taskStatus, "in_progress");
+  assert.equal(result.data.lifecycle.validNow, true);
+});
+
+test("taskEngineModule agent-mutation-plan reports non-sensitive command metadata", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, () => {});
+  const result = await taskEngineModule.onCommand(
+    { name: "agent-mutation-plan", args: { commandName: "update-task" } },
+    sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } })
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.policy.sensitivity, "non-sensitive");
+  assert.equal(result.data.readyRun.args.policyApproval, undefined);
+  assert.equal(result.data.readyRun.args.clientMutationId, "update-task-<stable-retry-key>");
+  assert.equal(result.data.planning.expectedPlanningGenerationRequired, true);
+});
+
+test("taskEngineModule agent-mutation-plan explains sensitive-with-dryrun policy", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, () => {});
+  const result = await taskEngineModule.onCommand(
+    { name: "agent-mutation-plan", args: { commandName: "generate-document" } },
+    sqliteTaskEngineCtx(workspace)
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.policy.sensitivity, "sensitive-with-dryrun");
+  assert.equal(
+    result.data.policy.jsonApprovalRequired,
+    "when dryRun is false or omitted by command policy"
+  );
+});
+
+test("taskEngineModule agent-mutation-plan reports blocked lifecycle actions", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T9872", status: "ready", dependsOn: ["T9873"] }));
+    store.addTask(makeTask({ id: "T9873", status: "ready" }));
+  });
+  const result = await taskEngineModule.onCommand(
+    {
+      name: "agent-mutation-plan",
+      args: { commandName: "run-transition", taskId: "T9872", action: "start" }
+    },
+    sqliteTaskEngineCtx(workspace)
+  );
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.data.lifecycle.dependencyBlockers, ["T9873"]);
+  assert.equal(result.data.lifecycle.validNow, false);
+});
+
+test("taskEngineModule agent-mutation-plan rejects unknown commands", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, () => {});
+  const result = await taskEngineModule.onCommand(
+    { name: "agent-mutation-plan", args: { commandName: "does-not-exist" } },
+    sqliteTaskEngineCtx(workspace)
+  );
+
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "unknown-command");
+});
+
+test("taskEngineModule claim-next-task starts suggested runnable task", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T9881", status: "ready", priority: "P2" }));
+    store.addTask(makeTask({ id: "T9882", status: "ready", priority: "P1" }));
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const result = await taskEngineModule.onCommand(
+    {
+      name: "claim-next-task",
+      args: { expectedPlanningGeneration: 1, clientMutationId: "claim-next-1" }
+    },
+    ctx
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "task-intent-applied");
+  assert.equal(result.data.taskId, "T9882");
+  assert.equal(result.data.evidence.action, "start");
+  const got = await taskEngineModule.onCommand({ name: "get-task", args: { taskId: "T9882" } }, ctx);
+  assert.equal(got.data.task.status, "in_progress");
+});
+
+test("taskEngineModule claim-next-task returns no-op when no runnable task exists", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, () => {});
+  const result = await taskEngineModule.onCommand(
+    { name: "claim-next-task", args: {} },
+    sqliteTaskEngineCtx(workspace)
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "claim-next-task-noop");
+  assert.equal(result.data.reason, "no-runnable-task");
+});
+
+test("taskEngineModule start-task and complete-task use transition evidence and idempotency", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T9883", status: "ready" }));
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const started = await taskEngineModule.onCommand(
+    {
+      name: "start-task",
+      args: { taskId: "T9883", expectedPlanningGeneration: 1, clientMutationId: "start-intent-1" }
+    },
+    ctx
+  );
+  assert.equal(started.ok, true);
+  assert.equal(started.data.evidence.action, "start");
+
+  const replay = await taskEngineModule.onCommand(
+    { name: "start-task", args: { taskId: "T9883", clientMutationId: "start-intent-1" } },
+    ctx
+  );
+  assert.equal(replay.ok, true);
+  assert.equal(replay.code, "task-intent-idempotent-replay");
+  assert.equal(replay.data.evidence.transitionId, started.data.evidence.transitionId);
+
+  const completed = await taskEngineModule.onCommand(
+    {
+      name: "complete-task",
+      args: { taskId: "T9883", expectedPlanningGeneration: 2, clientMutationId: "complete-intent-1" }
+    },
+    ctx
+  );
+  assert.equal(completed.ok, true);
+  assert.equal(completed.data.evidence.action, "complete");
+});
+
+test("taskEngineModule task intents enforce planning generation", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T9884", status: "ready" }));
+  });
+  const result = await taskEngineModule.onCommand(
+    { name: "start-task", args: { taskId: "T9884" } },
+    sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } })
+  );
+
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "planning-generation-required");
 });
 
 test("taskEngineModule onCommand get-next-actions works on populated store", async () => {
@@ -2000,7 +2679,6 @@ test("persist-planning-execution-drafts can explicitly open tasks for a target p
     {
       id: "T731",
       title: "Next phase slice",
-      phase: "draft placeholder",
       approach: "Implement the next phase slice",
       technicalScope: ["src/next"],
       acceptanceCriteria: ["Next phase task is ready"]
@@ -2028,6 +2706,178 @@ test("persist-planning-execution-drafts can explicitly open tasks for a target p
   assert.equal(created.data.createdTasks[0].phaseKey, "73");
   assert.equal(created.data.createdTasks[0].phase, "Phase 73");
   assert.equal(created.data.createdTasks[0].metadata.planRef, "planning:new-feature:phase-73");
+});
+
+test("persist-planning-execution-drafts command-level phase and status override row defaults", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const lt = await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, ctx);
+  const created = await taskEngineModule.onCommand(
+    {
+      name: "persist-planning-execution-drafts",
+      args: {
+        tasks: [
+          {
+            id: "T732",
+            title: "Conflicting row defaults",
+            phase: "",
+            phaseKey: "1",
+            status: "proposed",
+            approach: "Implement conflict handling",
+            technicalScope: ["src/conflict"],
+            acceptanceCriteria: ["Command-level defaults win"]
+          }
+        ],
+        targetPhaseKey: "73",
+        targetPhase: "Phase 73",
+        desiredStatus: "ready",
+        expectedPlanningGeneration: lt.data.planningGeneration
+      }
+    },
+    ctx
+  );
+
+  assert.equal(created.ok, true);
+  assert.equal(created.data.createdTasks[0].status, "ready");
+  assert.equal(created.data.createdTasks[0].phaseKey, "73");
+  assert.equal(created.data.createdTasks[0].phase, "Phase 73");
+});
+
+test("persist-planning-execution-drafts does not partially persist invalid batches", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const lt = await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, ctx);
+  const result = await taskEngineModule.onCommand(
+    {
+      name: "persist-planning-execution-drafts",
+      args: {
+        tasks: [
+          {
+            id: "T733",
+            title: "Valid first row",
+            approach: "Implement first row",
+            technicalScope: ["src/ok"],
+            acceptanceCriteria: ["Would persist if batch were valid"]
+          },
+          {
+            id: "T734",
+            title: "Invalid second row",
+            technicalScope: ["src/bad"],
+            acceptanceCriteria: ["Missing approach blocks batch"]
+          }
+        ],
+        targetPhaseKey: "73",
+        targetPhase: "Phase 73",
+        desiredStatus: "ready",
+        expectedPlanningGeneration: lt.data.planningGeneration
+      }
+    },
+    ctx
+  );
+
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "invalid-task-schema");
+  const first = await taskEngineModule.onCommand({ name: "get-task", args: { taskId: "T733" } }, ctx);
+  assert.equal(first.ok, false);
+  assert.equal(first.code, "task-not-found");
+});
+
+test("review-planning-execution-drafts flags UX/CAE batch gaps without persisting", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+
+  const result = await taskEngineModule.onCommand(
+    {
+      name: "review-planning-execution-drafts",
+      args: {
+        targetPhaseKey: "74",
+        targetPhase: "Phase 74",
+        desiredStatus: "ready",
+        tasks: [
+          {
+            id: "T900",
+            title: "Build UX and CAE everything",
+            approach: "Implement the feature",
+            technicalScope: ["Wire UI", "Wire CAE", "Add state", "Add docs", "Add config", "Add workflow"],
+            acceptanceCriteria: ["works"]
+          }
+        ]
+      }
+    },
+    ctx
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "planning-execution-drafts-review-findings");
+  assert.equal(result.data.persisted, false);
+  assert.equal(result.data.status, "fail");
+  const codes = result.data.findings.map((f) => f.code);
+  assert.ok(codes.includes("oversized-task"));
+  assert.ok(codes.includes("missing-verification-coverage"));
+  assert.ok(codes.includes("missing-rollback-activation-slice"));
+  assert.ok(codes.includes("missing-empty-first-run-behavior"));
+  assert.ok(codes.includes("unclear-acceptance-criteria"));
+
+  const list = await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, ctx);
+  assert.equal(list.data.tasks.length, 0);
+});
+
+test("review-planning-execution-drafts passes complete UX/CAE batch and preserves normalized defaults", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const tasks = [
+    {
+      id: "T901",
+      title: "Implement UX empty first-run state",
+      approach: "Add empty and first-run behavior for the draft preview.",
+      technicalScope: ["Render empty state", "Handle fresh workspace no data state"],
+      acceptanceCriteria: ["Empty and first-run states render with clear next actions"]
+    },
+    {
+      id: "T902",
+      title: "Add CAE activation rollback path",
+      approach: "Add activation toggle and rollback guidance.",
+      technicalScope: ["Add activation flag", "Document rollback fallback"],
+      acceptanceCriteria: ["Operators can disable the activation path and recover safely"]
+    },
+    {
+      id: "T903",
+      title: "Verify UX CAE batch behavior",
+      approach: "Add tests and validation coverage.",
+      technicalScope: ["Add unit tests", "Run validation checks"],
+      acceptanceCriteria: ["Tests verify empty state, activation, rollback, and persistence preview behavior"]
+    }
+  ];
+
+  const review = await taskEngineModule.onCommand(
+    {
+      name: "review-planning-execution-drafts",
+      args: { tasks, targetPhaseKey: "74", targetPhase: "Phase 74", desiredStatus: "ready" }
+    },
+    ctx
+  );
+  assert.equal(review.ok, true);
+  assert.equal(review.code, "planning-execution-drafts-review-passed");
+  assert.equal(review.data.status, "pass");
+  assert.equal(review.data.normalizedTaskSummaries[0].phaseKey, "74");
+  assert.equal(review.data.normalizedTaskSummaries[0].status, "ready");
+
+  const lt = await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, ctx);
+  const persisted = await taskEngineModule.onCommand(
+    {
+      name: "persist-planning-execution-drafts",
+      args: {
+        tasks,
+        targetPhaseKey: "74",
+        targetPhase: "Phase 74",
+        desiredStatus: "ready",
+        expectedPlanningGeneration: lt.data.planningGeneration
+      }
+    },
+    ctx
+  );
+  assert.equal(persisted.ok, true);
+  assert.equal(persisted.data.count, 3);
 });
 
 test("taskEngineModule create-task idempotent replay skips require gate (no re-persist)", async () => {

@@ -66,6 +66,27 @@
       "user"
     ]
   },
+  "tasks.deliveryEvidence.enforcementMode": {
+    "key": "tasks.deliveryEvidence.enforcementMode",
+    "type": "string",
+    "description": "Completion behavior for phased delivery tasks missing metadata.deliveryEvidence or metadata.deliveryWaiver: off skips the guard, advisory records a structured guard result, enforce blocks completion.",
+    "default": "advisory",
+    "allowedValues": [
+      "off",
+      "advisory",
+      "enforce"
+    ],
+    "domainScope": "project",
+    "owningModule": "task-engine",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "public",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
   "tasks.planningGenerationPolicy": {
     "key": "tasks.planningGenerationPolicy",
     "type": "string",
@@ -677,6 +698,22 @@
     "key": "kit.cae.runtime.shadowPreflight",
     "type": "boolean",
     "description": "When true (with kit.cae.enabled), non-cae-* module commands may run shadow CAE preflight for telemetry without blocking.",
+    "default": false,
+    "domainScope": "project",
+    "owningModule": "context-activation",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "kit.cae.runtime.persistShadowPreflight": {
+    "key": "kit.cae.runtime.persistShadowPreflight",
+    "type": "boolean",
+    "description": "When true (with kit.cae.persistence), shadow CAE preflight traces may persist to planning SQLite. Defaults false to avoid dirtying tracked state during routine agent commands.",
     "default": false,
     "domainScope": "project",
     "owningModule": "context-activation",

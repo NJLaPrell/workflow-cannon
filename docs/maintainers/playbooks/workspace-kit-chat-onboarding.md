@@ -7,13 +7,13 @@
 
 **Tone:** Light RPG tavern; **player-facing text** never shows `builtin:` ids or tier numbers unless the operator asks for power-user detail.
 
-**Planning tokens:** When `tasks.planningGenerationPolicy` is **`require`**, read **`planningGeneration`** from **`pnpm run wk run get-next-actions '{}'`** immediately before each **`set-agent-guidance`** or **`set-active-behavior-profile`** (that command returns the token reliably).
+**Planning tokens:** When `tasks.planningGenerationPolicy` is **`require`**, read **`planningGeneration`** from **`pnpm exec wk run get-next-actions '{}'`** immediately before each **`set-agent-guidance`** or **`set-active-behavior-profile`** (that command returns the token reliably).
 
 **Does not replace:** [`.ai/PRINCIPLES.md`](../../PRINCIPLES.md), [`POLICY-APPROVAL.md`](../POLICY-APPROVAL.md), policy tiers, or **`policyApproval`**.
 
 ## 0) Bootstrap (read-only)
 
-- `pnpm run wk doctor` — fail closed if unhealthy.
+- `pnpm exec wk doctor` — fail closed if unhealthy.
 - `pnpm exec node dist/cli.js run resolve-agent-guidance '{}'` — **`tier`**, **`displayLabel`**, **`usingDefaultTier`**.
 - `pnpm exec node dist/cli.js run resolve-behavior-profile '{}'` — **`effective.id`**, **`effective.label`** for temperament **Current:** line.
 - `pnpm exec node dist/cli.js run list-behavior-profiles '{}'` — append **custom** profiles to §3 if needed.
@@ -61,7 +61,7 @@ When **`usingDefaultTier`** is **true**, omit the **Current** line; put **`← y
 
 **Accept:** role name, **keep** / **keep current** (re-persist same tier), or tier **1–5** if they insist. Map to **`set-agent-guidance`** tier: 1 NPC, 2 Adventurer, 3 Bard, 4 Wizard, 5 BBEG.
 
-**Immediately after answer:** `pnpm run wk run get-next-actions '{}'` → then `pnpm run wk run set-agent-guidance '{"tier":<N>,"expectedPlanningGeneration":<g>}'`.
+**Immediately after answer:** `pnpm exec wk run get-next-actions '{}'` → then `pnpm exec wk run set-agent-guidance '{"tier":<N>,"expectedPlanningGeneration":<g>}'`.
 
 **Confirm (one line):** e.g. `Role saved — you’re still a Wizard.` (no `tier` / `set-agent-guidance` in player text).
 
@@ -110,7 +110,7 @@ Reply yes or no. If yes, follow **`docs/maintainers/playbooks/workspace-kit-chat
 
 ## 5) Smoke
 
-`pnpm run wk run get-next-actions '{}'`
+`pnpm exec wk run get-next-actions '{}'`
 
 ## 6) Complete
 

@@ -38,6 +38,17 @@ const ALLOWED_TRANSITIONS: Record<string, TransitionEntry> = {
   "blocked->cancelled": { action: "cancel" }
 };
 
+export function listTransitionActionTable(): { from: TaskStatus; to: TaskStatus; action: string }[] {
+  return Object.entries(ALLOWED_TRANSITIONS).map(([key, entry]) => {
+    const [from, to] = key.split("->") as [TaskStatus, TaskStatus];
+    return { from, to, action: entry.action };
+  });
+}
+
+export function listTransitionActions(): string[] {
+  return [...new Set(listTransitionActionTable().map((entry) => entry.action))].sort((a, b) => a.localeCompare(b));
+}
+
 export function isTransitionAllowed(from: TaskStatus, to: TaskStatus): boolean {
   return `${from}->${to}` in ALLOWED_TRANSITIONS;
 }

@@ -133,6 +133,65 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "phase-delivery-preflight",
+    "file": "phase-delivery-preflight.md",
+    "description": "Read-only audit for phase task PR/merge/check evidence or explicit delivery waivers.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "release-evidence-manifest",
+    "file": "release-evidence-manifest.md",
+    "description": "Build a machine-readable release evidence manifest for phase closeout.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "classify-kit-state",
+    "file": "classify-kit-state.md",
+    "description": "Classify dirty kit-owned paths so agents can distinguish durable planning state from volatile runtime churn.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "agent-mutation-plan",
+    "file": "agent-mutation-plan.md",
+    "description": "Read-only preflight plan for workspace-kit run mutations: schema, policy, planning generation, idempotency, and lifecycle state.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "claim-next-task",
+    "file": "claim-next-task.md",
+    "description": "Atomically claim the current suggested ready task by transitioning it to in_progress.",
+    "policyOperationId": "tasks.run-transition",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "start-task",
+    "file": "start-task.md",
+    "description": "Intent wrapper around run-transition start for a task.",
+    "policyOperationId": "tasks.run-transition",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "complete-task",
+    "file": "complete-task.md",
+    "description": "Intent wrapper around run-transition complete for a task.",
+    "policyOperationId": "tasks.run-transition",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "synthesize-transcript-churn",
     "file": "synthesize-transcript-churn.md",
     "description": "Promote transcript_churn/research to improvement/proposed after investigation.",
@@ -161,6 +220,14 @@
     "name": "persist-planning-execution-drafts",
     "file": "persist-planning-execution-drafts.md",
     "description": "Persist multiple proposed execution tasks from planning decomposition in one transaction (convert-wishlist-compatible rows).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "review-planning-execution-drafts",
+    "file": "review-planning-execution-drafts.md",
+    "description": "Dry-run UX/CAE gap review for planning execution drafts before persistence.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },

@@ -10,11 +10,19 @@ workspace-kit run create-task '{"id":"T400","title":"My task","status":"proposed
 
 ## Arguments
 
-- `id` (string, required): `T<number>` task ID.
-- `title` (string, required): task title.
-- `status` (string, optional): `proposed` or `ready` (default `proposed`).
-- Optional task fields: `type`, `priority`, `dependsOn`, `unblocks`, `phase`, `phaseKey`, `metadata`, `ownership`, `approach`, `summary`, `description`, `risk`, `technicalScope`, `acceptanceCriteria`, `features` (string[] of taxonomy slugs from `feature-taxonomy.json`; unknown slugs produce advisory warnings), `actor`.
-- `clientMutationId` (string, optional): idempotency key for safe retries.
+<!-- workspace-kit:generated task-engine-instruction-contract command=create-task section=args start -->
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | `string` | yes | Task id. |
+| `title` | `string` | yes | Task title. |
+| `status` | string (`proposed`, `ready`) | no | Initial task status. |
+| `clientMutationId` | `string` | no | Retry/idempotency key. |
+| `expectedPlanningGeneration` | `integer` or `string` | no | Optimistic concurrency token from a prior read response. |
+| `actor` | `string` | no | Actor recorded on transition evidence or task mutation metadata. |
+| `config` | `object` | no | Invocation-local config override. |
+<!-- workspace-kit:generated task-engine-instruction-contract command=create-task section=args end -->
+
+The schema permits additional task fields; common fields include `type`, `priority`, `dependsOn`, `unblocks`, `phase`, `phaseKey`, `metadata`, `ownership`, `approach`, `summary`, `description`, `risk`, `technicalScope`, `acceptanceCriteria`, and `features` (taxonomy slugs from `feature-taxonomy.json`; unknown slugs produce advisory warnings).
 
 Known type guardrails:
 

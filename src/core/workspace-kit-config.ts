@@ -76,7 +76,9 @@ export const KIT_CONFIG_DEFAULTS: Record<string, unknown> = {
       persistence: false,
       runtime: {
         /** When true (and `enabled`), non-`cae-*` `wk run` module commands run shadow CAE preflight (**`T864`**). */
-        shadowPreflight: false
+        shadowPreflight: false,
+        /** Persist shadow-preflight traces to tracked planning SQLite. Default false to keep read-ish commands clean. */
+        persistShadowPreflight: false
       },
       enforcement: {
         /** Allowlisted blocks only; default off (**`T866`**). */
@@ -97,7 +99,10 @@ export const KIT_CONFIG_DEFAULTS: Record<string, unknown> = {
     storeRelativePath: ".workspace-kit/tasks/state.json",
     persistenceBackend: "sqlite",
     sqliteDatabaseRelativePath: ".workspace-kit/tasks/workspace-kit.db",
-    strictValidation: false
+    strictValidation: false,
+    deliveryEvidence: {
+      enforcementMode: "advisory"
+    }
   },
   documentation: {},
   /** Agent temperament / interview preferences; mirrored to `.workspace-kit/modules/agent-behavior/config.json` when using SQLite. */

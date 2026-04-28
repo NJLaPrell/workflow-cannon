@@ -20,6 +20,13 @@ export {
   type ModuleCommandRouterOptions
 } from "./module-command-router.js";
 export {
+  looksLikePackageManagerBanner,
+  parseWorkspaceKitJsonStdout,
+  type WorkspaceKitJsonParseFailure,
+  type WorkspaceKitJsonParseOptions,
+  type WorkspaceKitJsonParseSuccess
+} from "./cli-json-output.js";
+export {
   buildAgentInstructionSurface,
   classifyInstructionExecution,
   isInstructionExecutableForRegistry,

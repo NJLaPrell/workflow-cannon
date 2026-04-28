@@ -35,7 +35,7 @@ When the workspace root is not a kit source checkout, instruction paths still re
 
 1. **Shape:** `pnpm exec wk run <command> '<single-json-object>'` — the third argv is one JSON object. Discovery flags attach to the command: `pnpm exec wk run run-transition --schema-only '{}'`.
 2. **Policy:** Tier A/B mutators require `"policyApproval":{"confirmed":true,"rationale":"…"}` **inside** that JSON. The env var **`WORKSPACE_KIT_POLICY_APPROVAL`** does **not** approve `workspace-kit run` — see **Two approval lanes** below.
-3. **Schema discovery:** For pilot-validated commands, use `pnpm exec wk run <command> --schema-only` to emit JSON Schema + `sampleArgs` instead of executing.
+3. **Schema discovery:** Use `pnpm exec wk run <command> --schema-only` for any executable command to emit JSON Schema or a permissive fallback, `sampleArgs`, examples, instruction path, policy metadata, planning-generation metadata, and idempotency hints instead of executing.
 4. **Failures:** **`invalid-run-args`** → fix JSON against the schema from **`--schema-only`**. **`planning-generation-required`** / **`planning-generation-mismatch`** → re-read **`data.planningGeneration`** from **`list-tasks`** / **`get-next-actions`** / **`get-task`**, then pass **`expectedPlanningGeneration`** on commands listed in **`schemas/planning-generation-cli-prelude.json`** (this repo uses policy **`require`**).
 5. **Clean stdout:** Prefer **`pnpm exec wk`** over **`pnpm run wk`** when scripts parse JSON from stdout — see **Shell scripts and JSON stdout** below.
 
@@ -100,10 +100,11 @@ Successful **`workspace-kit run …`** invocations print **one JSON value to std
 
 1. **Capture all stdout**, then **`trim`**, then **`JSON.parse` the whole string** — do not assume one line equals one JSON value and do not split on newlines to “find” JSON.
 2. Treat **stderr separately** — diagnostics or progress may appear there; interleaving with stdout is not a supported contract for splitting streams into JSON.
-3. Use **`clientMutationId`** on mutating commands (where supported) so retries are **idempotent** when you re-send the same logical operation after a timeout or ambiguous transport failure.
-4. Distinguish **parse failures** (your script could not decode stdout as JSON — exit code may still be 0 if the process wrote non-JSON garbage) from **`ok: false`** in a successfully parsed payload (the kit returned a structured error). A parse error does **not** prove the kit skipped a mutation; check task-engine state before re-running destructive sequences.
-5. Prefer **`set -euo pipefail`** (bash) and explicit capture: `out=$(pnpm exec wk run list-tasks '{}' 2>/dev/null)` then parse **`out`** — adjust stderr handling to your logging needs.
-6. **`pnpm run wk …`** can prepend **package-manager banner lines** before the JSON document and break naive one-line parsers; prefer **`pnpm exec wk …`**, or **`node dist/cli.js run …`** from a built tree when scripts require clean stdout.
+3. Prefer the exported helper **`parseWorkspaceKitJsonStdout`** from **`@workflow-cannon/workspace-kit`** when writing Node-based automation; it preserves the “one JSON value” contract and returns targeted remediation for package-manager banner contamination.
+4. Use **`clientMutationId`** on mutating commands (where supported) so retries are **idempotent** when you re-send the same logical operation after a timeout or ambiguous transport failure.
+5. Distinguish **parse failures** (your script could not decode stdout as JSON — exit code may still be 0 if the process wrote non-JSON garbage) from **`ok: false`** in a successfully parsed payload (the kit returned a structured error). A parse error does **not** prove the kit skipped a mutation; check task-engine state before re-running destructive sequences.
+6. Prefer **`set -euo pipefail`** (bash) and explicit capture: `out=$(pnpm exec wk run list-tasks '{}' 2>/dev/null)` then parse **`out`** — adjust stderr handling to your logging needs.
+7. **`pnpm run wk …`** can prepend **package-manager banner lines** before the JSON document and break naive one-line parsers; prefer **`pnpm exec wk …`**, or **`node dist/cli.js run …`** from a built tree when scripts require clean stdout.
 
 ### Multi-writer task store (lost updates)
 
@@ -154,6 +155,9 @@ Optional JSON shaping: pass **`responseTemplateId`** and/or plain-English in **`
 | Intent | Invocation | `operationId` | Evidence |
 | --- | --- | --- | --- |
 | Transition task status | `workspace-kit run run-transition '<json>'` | `tasks.run-transition` | Transition record in command JSON output; task store update |
+| Claim next runnable task | `workspace-kit run claim-next-task '<json>'` | `tasks.run-transition` | Same transition evidence as `run-transition` with action `start`, or structured no-op |
+| Start one task | `workspace-kit run start-task '<json>'` | `tasks.run-transition` | Same transition evidence and idempotency as `run-transition` |
+| Complete one task | `workspace-kit run complete-task '<json>'` | `tasks.run-transition` | Same transition evidence, delivery-evidence guard, and idempotency as `run-transition` |
 | Promote transcript churn after research | `workspace-kit run synthesize-transcript-churn '<json>'` | `tasks.synthesize-transcript-churn` | Task becomes **`improvement` / `proposed`**; evidence row appended; prior forensics preserved under **`metadata.researchForensicsSnapshot`** |
 
 **Copy-paste (start work):**
@@ -205,7 +209,7 @@ ADR: **`docs/maintainers/adrs/ADR-planning-generation-optimistic-concurrency.md`
 ### Recovery: `planning-generation-required` and `invalid-run-args`
 
 - **`planning-generation-required`** — Re-read **`planningGeneration`** from **`list-tasks`**, **`get-task`**, **`get-next-actions`**, or **`dashboard-summary`**, then resend the mutating JSON with **`expectedPlanningGeneration`**. Failure JSON may include **`remediation.docPath`** → **`ADR-planning-generation-optimistic-concurrency.md`** and **`remediation.instructionPath`** for the command you invoked.
-- **`invalid-run-args`** (pilot commands) — Fix the JSON shape against the bundled schema: **`workspace-kit run <command> --schema-only`** for **`run-transition`**, **`create-task`**, **`update-task`**, **`dashboard-summary`**, **`list-features`**. See **`docs/maintainers/adrs/ADR-runtime-run-args-validation-pilot.md`**.
+- **`invalid-run-args`** (strict schema commands) — Fix the JSON shape against the bundled schema: **`workspace-kit run <command> --schema-only`**. Commands without strict validation still return a permissive schema-only fallback with instruction and policy metadata. See **`docs/maintainers/adrs/ADR-runtime-run-args-validation-pilot.md`**.
 - **`policy-denied`** — Use JSON **`policyApproval`** on the **`run`** argv object (not env **`WORKSPACE_KIT_POLICY_APPROVAL`**). Check **`remediation.docPath`** → **`POLICY-APPROVAL.md`** when present.
 - **`unknown-command`** — Router failures print structured JSON with **`remediation`**; run **`workspace-kit run`** (no subcommand) or **`doctor --agent-instruction-surface`** for the catalog.
 
@@ -343,6 +347,19 @@ pnpm exec wk run set-current-phase '{"currentKitPhase":"72","nextKitPhase":"73",
 workspace-kit run queue-health '{}'
 ```
 
+**Copy-paste — phase delivery evidence audit (read-only):**
+
+```bash
+workspace-kit run phase-delivery-preflight '{}'
+workspace-kit run phase-delivery-preflight '{"phaseKey":"74","includeInProgress":true}'
+```
+
+**Copy-paste — release evidence manifest (read-only):**
+
+```bash
+workspace-kit run release-evidence-manifest '{"phaseKey":"74","approval":{"actor":"maintainer@example.com","timestamp":"2026-04-28T07:00:00.000Z","rationale":"approved after reviewing scope and gates","scope":"phase-74 publish"},"releaseNotes":{"source":"release-notes-json","entries":["Phase 74 release evidence hardening"]},"followUpScan":{"scannedAt":"2026-04-28T07:00:00.000Z","rationale":"No unresolved follow-up tasks after transcript/friction scan"},"followUpTasks":[]}'
+```
+
 **Copy-paste — same phase/dependency hints on a filtered `list-tasks` result** (default `list-tasks` shape unchanged when omitted):
 
 ```bash
@@ -442,7 +459,9 @@ Non-sensitive commands (no `policyApproval` unless you added `extraSensitiveModu
 workspace-kit run list-tasks '{}'
 workspace-kit run get-next-actions '{}'
 workspace-kit run list-approval-queue '{}'
+workspace-kit run agent-mutation-plan '{"commandName":"run-transition","taskId":"T285","action":"start"}'
 workspace-kit run queue-health '{}'
+workspace-kit run classify-kit-state '{}'
 workspace-kit run get-task '{"taskId":"T285"}'
 workspace-kit run list-tasks '{"type":"improvement","phase":"Phase 16 - Maintenance and stability"}'
 workspace-kit run list-tasks '{"category":"reliability","tags":["ui"],"metadataFilters":{"owner.team":"platform"}}'
@@ -464,6 +483,7 @@ workspace-kit run build-plan '{"planningType":"new-feature","answers":{"featureG
 # Multi-task execution drafts: finalize + outputMode tasks + executionTaskDrafts[] (convert-wishlist row shape) → code planning-multi-task-decomposition-preview; then persist with expectedPlanningGeneration when policy requires:
 workspace-kit run build-plan '{"planningType":"new-feature","outputMode":"tasks","finalize":true,"answers":{"featureGoal":"...","placement":"CLI","technology":"TypeScript","targetAudience":"AI Agent Operators"},"executionTaskDrafts":[{"title":"...","phase":"Phase 68","approach":"...","technicalScope":["..."],"acceptanceCriteria":["..."]}]}'
 workspace-kit run persist-planning-execution-drafts '{"tasks":[...],"expectedPlanningGeneration":<n>,"planRef":"planning:new-feature:...","planningType":"new-feature","clientMutationId":"agent-bulk-1"}'
+workspace-kit run review-planning-execution-drafts '{"targetPhaseKey":"73","targetPhase":"Phase 73","desiredStatus":"ready","tasks":[...]}'
 workspace-kit run persist-planning-execution-drafts '{"targetPhaseKey":"73","targetPhase":"Phase 73","desiredStatus":"ready","tasks":[...],"expectedPlanningGeneration":<n>,"planRef":"planning:new-feature:phase-73","clientMutationId":"phase-73-task-open"}'
 workspace-kit run list-wishlist '{}'
 workspace-kit run get-wishlist '{"wishlistId":"T42"}'

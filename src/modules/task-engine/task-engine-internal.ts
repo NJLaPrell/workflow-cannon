@@ -17,10 +17,17 @@ import {
 } from "./suggestions.js";
 import { buildQueueGitAlignmentReport, probeGitHead } from "./queue/queue-git-alignment.js";
 import {
+  buildPhaseDeliveryPreflight,
+  createDeliveryEvidenceGuard,
+  readDeliveryEvidenceEnforcementMode
+} from "./delivery-evidence.js";
+import { buildReleaseEvidenceManifest } from "./release-evidence-manifest.js";
+import {
   loadTasksFromSnapshotFile,
   parseTasksFromSnapshotPayload,
   replayQueueFromTasks
 } from "./queue/replay-queue-snapshot.js";
+import { runClassifyKitState } from "./kit-state-classifier.js";
 import { inferTaskPhaseKey, resolveCanonicalPhase } from "./phase-resolution.js";
 import { buildQueueHealthReport, buildQueueHintsForTasks } from "./queue/queue-health.js";
 import { openPlanningStores, type OpenedPlanningStores } from "./persistence/planning-open.js";
@@ -83,6 +90,8 @@ import {
   CLI_REMEDIATION_DOCS,
   CLI_REMEDIATION_INSTRUCTIONS
 } from "../../core/cli-remediation.js";
+import { buildRunArgsSchemaOnlyPayload } from "../../core/run-args-pilot-validation.js";
+import { POLICY_APPROVAL_TWO_LANES_DOC } from "../../core/policy.js";
 import { validateTaskSkillAttachments } from "../skills/task-skill-validation.js";
 import { summarizeTeamAssignmentsForNextActions } from "../team-execution/assignment-store.js";
 import { collectDoctorContractIssues } from "../../cli/doctor-contract-validation.js";
@@ -157,6 +166,212 @@ const MUTABLE_TASK_FIELDS = new Set([
 
 const PHASE_KEY_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 
+function normalizePlanningExecutionDraftTasks(
+  ctx: ModuleLifecycleContext,
+  args: Record<string, unknown>,
+  timestamp: string,
+  commandLabel: string
+): { ok: true; tasks: TaskEntity[] } | { ok: false; result: ModuleCommandResult } {
+  const tasksRaw = args.tasks;
+  if (!Array.isArray(tasksRaw) || tasksRaw.length === 0) {
+    return {
+      ok: false,
+      result: {
+        ok: false,
+        code: "invalid-task-schema",
+        message: `${commandLabel} requires non-empty tasks array`,
+        remediation: { instructionPath: CLI_REMEDIATION_INSTRUCTIONS.persistPlanningExecutionDrafts }
+      }
+    };
+  }
+  const planRef =
+    typeof args.planRef === "string" && args.planRef.trim().length > 0 ? args.planRef.trim() : undefined;
+  const planningTypeMeta =
+    typeof args.planningType === "string" && args.planningType.trim().length > 0 ? args.planningType.trim() : undefined;
+  const targetPhaseKey =
+    typeof args.targetPhaseKey === "string" && args.targetPhaseKey.trim().length > 0
+      ? args.targetPhaseKey.trim()
+      : undefined;
+  if (targetPhaseKey && !PHASE_KEY_RE.test(targetPhaseKey)) {
+    return {
+      ok: false,
+      result: {
+        ok: false,
+        code: "invalid-task-schema",
+        message: "targetPhaseKey must be non-empty; letters, digits, dot, underscore, hyphen; max 64 chars"
+      }
+    };
+  }
+  const targetPhase =
+    typeof args.targetPhase === "string" && args.targetPhase.trim().length > 0 ? args.targetPhase.trim() : undefined;
+  const desiredStatus =
+    args.desiredStatus === "ready" || args.desiredStatus === "proposed"
+      ? (args.desiredStatus as "ready" | "proposed")
+      : undefined;
+  if (args.desiredStatus !== undefined && desiredStatus === undefined) {
+    return {
+      ok: false,
+      result: { ok: false, code: "invalid-task-schema", message: "desiredStatus must be 'proposed' or 'ready'" }
+    };
+  }
+
+  const built: TaskEntity[] = [];
+  for (const row of tasksRaw) {
+    if (!row || typeof row !== "object" || Array.isArray(row)) {
+      return {
+        ok: false,
+        result: {
+          ok: false,
+          code: "invalid-task-schema",
+          message: "Each tasks[] row must be an object",
+          remediation: { instructionPath: CLI_REMEDIATION_INSTRUCTIONS.persistPlanningExecutionDrafts }
+        }
+      };
+    }
+    const rowObj = row as Record<string, unknown>;
+    const rowPhaseKey =
+      typeof rowObj.phaseKey === "string" && rowObj.phaseKey.trim().length > 0 ? rowObj.phaseKey.trim() : undefined;
+    const rowStatus = rowObj.status === "ready" || rowObj.status === "proposed" ? rowObj.status : undefined;
+    if (rowPhaseKey && !PHASE_KEY_RE.test(rowPhaseKey)) {
+      return {
+        ok: false,
+        result: {
+          ok: false,
+          code: "invalid-task-schema",
+          message: "Task phaseKey must be non-empty; letters, digits, dot, underscore, hyphen; max 64 chars"
+        }
+      };
+    }
+    const normalizedRow = { ...rowObj };
+    if (targetPhaseKey) {
+      normalizedRow.phase = targetPhase ?? `Phase ${targetPhaseKey}`;
+    }
+    const bt = buildTaskFromConversionPayload(normalizedRow, timestamp);
+    if (!bt.ok) {
+      return {
+        ok: false,
+        result: {
+          ok: false,
+          code: "invalid-task-schema",
+          message: bt.message,
+          remediation: { instructionPath: CLI_REMEDIATION_INSTRUCTIONS.persistPlanningExecutionDrafts }
+        }
+      };
+    }
+    let task = bt.task;
+    task = {
+      ...task,
+      status: (desiredStatus ?? rowStatus ?? task.status) as TaskStatus,
+      phaseKey: targetPhaseKey ?? rowPhaseKey ?? task.phaseKey,
+      phase: targetPhaseKey ? (targetPhase ?? `Phase ${targetPhaseKey}`) : task.phase
+    };
+    const nextMeta: Record<string, unknown> = { ...(task.metadata ?? {}) };
+    if (planRef) {
+      nextMeta.planRef = planRef;
+    }
+    if (planningTypeMeta) {
+      const prevProv = isRecordLike(nextMeta.planningProvenance)
+        ? { ...(nextMeta.planningProvenance as Record<string, unknown>) }
+        : {};
+      prevProv.planningType = planningTypeMeta;
+      prevProv.source = "persist-planning-execution-drafts";
+      nextMeta.planningProvenance = prevProv;
+    }
+    if (Object.keys(nextMeta).length > 0) {
+      task = { ...task, metadata: nextMeta };
+    }
+    const typeErr = validateKnownTaskTypeRequirements(task);
+    if (typeErr) {
+      return { ok: false, result: { ok: false, code: typeErr.code, message: typeErr.message } };
+    }
+    const skillAttach = validateTaskSkillAttachments(
+      ctx.workspacePath,
+      ctx.effectiveConfig as Record<string, unknown> | undefined,
+      task.metadata
+    );
+    if (!skillAttach.ok) {
+      return { ok: false, result: { ok: false, code: skillAttach.code, message: skillAttach.message } };
+    }
+    built.push(task);
+  }
+
+  const seen = new Set<string>();
+  for (const t of built) {
+    if (seen.has(t.id)) {
+      return {
+        ok: false,
+        result: {
+          ok: false,
+          code: "invalid-task-schema",
+          message: `Duplicate task id in tasks[]: ${t.id}`,
+          remediation: { instructionPath: CLI_REMEDIATION_INSTRUCTIONS.persistPlanningExecutionDrafts }
+        }
+      };
+    }
+    seen.add(t.id);
+  }
+
+  return { ok: true, tasks: built };
+}
+
+function reviewPlanningExecutionDraftGaps(tasks: TaskEntity[]): Array<Record<string, unknown>> {
+  const findings: Array<Record<string, unknown>> = [];
+  const textFor = (task: TaskEntity): string =>
+    [
+      task.title,
+      task.approach,
+      ...(task.technicalScope ?? []),
+      ...(task.acceptanceCriteria ?? [])
+    ].join("\n").toLowerCase();
+  const allText = tasks.map(textFor).join("\n");
+  const has = (re: RegExp): boolean => re.test(allText);
+
+  for (const task of tasks) {
+    const scopeCount = task.technicalScope?.length ?? 0;
+    const acceptanceCount = task.acceptanceCriteria?.length ?? 0;
+    if (scopeCount > 5 || acceptanceCount > 5 || scopeCount + acceptanceCount > 10) {
+      findings.push({
+        code: "oversized-task",
+        severity: "warning",
+        taskId: task.id,
+        message: "Task may be too broad; split UX/CAE work into smaller implementation, verification, and rollout slices."
+      });
+    }
+    const vagueCriteria = (task.acceptanceCriteria ?? []).filter((c) => c.trim().length < 15 || /^(works|done|complete)$/i.test(c.trim()));
+    if (vagueCriteria.length > 0) {
+      findings.push({
+        code: "unclear-acceptance-criteria",
+        severity: "warning",
+        taskId: task.id,
+        message: "Acceptance criteria should describe observable behavior, verification, or evidence."
+      });
+    }
+  }
+
+  if (!has(/\b(test|tests|verify|verification|validation|check|coverage|e2e|unit)\b/)) {
+    findings.push({
+      code: "missing-verification-coverage",
+      severity: "error",
+      message: "Batch is missing an explicit verification or test coverage slice."
+    });
+  }
+  if (!has(/\b(rollback|revert|activation|activate|toggle|flag|disable|fallback)\b/)) {
+    findings.push({
+      code: "missing-rollback-activation-slice",
+      severity: "error",
+      message: "Batch is missing rollback, activation, feature-flag, or fallback coverage."
+    });
+  }
+  if (!has(/\b(empty|first-run|first run|initial|blank|no data|fresh workspace)\b/)) {
+    findings.push({
+      code: "missing-empty-first-run-behavior",
+      severity: "error",
+      message: "Batch is missing empty, first-run, or no-data behavior coverage."
+    });
+  }
+  return findings;
+}
+
 function strictValidationError(
   store: TaskStore,
   effectiveConfig: Record<string, unknown> | undefined
@@ -205,6 +420,359 @@ function attachPolicyMeta(
   mergePlanningGenerationPolicyWarnings(data, warnings);
 }
 
+function readPlanString(args: Record<string, unknown>, field: string): string | undefined {
+  const value = args[field];
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+function dependencyBlockersForAction(task: TaskEntity, action: string | undefined, tasks: TaskEntity[]): string[] {
+  const needsDependencyCheck =
+    (task.status === "ready" && action === "start") || (task.status === "blocked" && action === "unblock");
+  if (!needsDependencyCheck) {
+    return [];
+  }
+  const byId = new Map(tasks.map((row) => [row.id, row]));
+  return (task.dependsOn ?? []).filter((depId) => byId.get(depId)?.status !== "completed");
+}
+
+function withPlanField(sampleArgs: Record<string, unknown>, key: string, value: unknown): Record<string, unknown> {
+  return Object.hasOwn(sampleArgs, key) ? sampleArgs : { ...sampleArgs, [key]: value };
+}
+
+function buildReadyRunArgs(
+  schemaPayload: Record<string, unknown>,
+  commandName: string,
+  args: Record<string, unknown>,
+  planningGeneration: number,
+  planningPolicy: string
+): Record<string, unknown> {
+  let readyArgs =
+    schemaPayload.sampleArgs && typeof schemaPayload.sampleArgs === "object" && !Array.isArray(schemaPayload.sampleArgs)
+      ? { ...(schemaPayload.sampleArgs as Record<string, unknown>) }
+      : {};
+  const taskId = readPlanString(args, "taskId");
+  const action = readPlanString(args, "action");
+  if (taskId) {
+    readyArgs = withPlanField(readyArgs, "taskId", taskId);
+  }
+  if (action) {
+    readyArgs = withPlanField(readyArgs, "action", action);
+  }
+  const planning = schemaPayload.planningGeneration as Record<string, unknown> | undefined;
+  if (planningPolicy === "require" && planning?.cliPrelude === true) {
+    readyArgs = withPlanField(readyArgs, "expectedPlanningGeneration", planningGeneration);
+  }
+  const idempotency = schemaPayload.idempotency as Record<string, unknown> | undefined;
+  if (idempotency?.clientMutationId === true) {
+    readyArgs = withPlanField(readyArgs, "clientMutationId", `${commandName}-<stable-retry-key>`);
+  }
+  const policy = schemaPayload.policy as Record<string, unknown> | undefined;
+  if (policy?.jsonApprovalRequired === true) {
+    readyArgs = withPlanField(readyArgs, "policyApproval", {
+      confirmed: true,
+      rationale: "<human-approved rationale>"
+    });
+  }
+  return readyArgs;
+}
+
+function buildAgentMutationPlan(
+  ctx: ModuleLifecycleContext,
+  planning: OpenedPlanningStores,
+  args: Record<string, unknown>
+): ModuleCommandResult {
+  const commandName = readPlanString(args, "commandName");
+  if (!commandName) {
+    return {
+      ok: false,
+      code: "invalid-run-args",
+      message: "agent-mutation-plan requires commandName.",
+      remediation: { instructionPath: "src/modules/task-engine/instructions/agent-mutation-plan.md" }
+    };
+  }
+
+  const schemaPayload = buildRunArgsSchemaOnlyPayload(commandName);
+  if (!schemaPayload) {
+    return {
+      ok: false,
+      code: "unknown-command",
+      message: `No schema-only metadata found for workspace-kit run command '${commandName}'.`,
+      remediation: { docPath: CLI_REMEDIATION_DOCS.agentCliMap }
+    };
+  }
+
+  const planningGeneration = planning.sqliteDual.getPlanningGeneration();
+  const planningPolicy = getPlanningGenerationPolicy({
+    effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined
+  });
+  const readyArgs = buildReadyRunArgs(schemaPayload, commandName, args, planningGeneration, planningPolicy);
+  const readyArgv = `workspace-kit run ${commandName} '${JSON.stringify(readyArgs)}'`;
+  const data: Record<string, unknown> = {
+    schemaVersion: 1,
+    commandName,
+    schemaOnly: schemaPayload,
+    policy: {
+      ...(schemaPayload.policy as Record<string, unknown> | undefined),
+      approvalLane: "JSON policyApproval in the run args object",
+      envApprovalApplies: false,
+      envApprovalWarning: `WORKSPACE_KIT_POLICY_APPROVAL does not approve workspace-kit run commands; use JSON policyApproval. See ${POLICY_APPROVAL_TWO_LANES_DOC}.`
+    },
+    planning: {
+      planningGeneration,
+      planningGenerationPolicy: planningPolicy,
+      expectedPlanningGenerationRequired:
+        planningPolicy === "require" &&
+        (schemaPayload.planningGeneration as Record<string, unknown> | undefined)?.cliPrelude === true,
+      expectedPlanningGenerationValue: planningGeneration
+    },
+    idempotency: {
+      ...(schemaPayload.idempotency as Record<string, unknown> | undefined),
+      recommendation:
+        (schemaPayload.idempotency as Record<string, unknown> | undefined)?.clientMutationId === true
+          ? "Use a stable clientMutationId when retrying after ambiguous command output."
+          : "No clientMutationId field is declared for this command schema."
+    },
+    readyRun: {
+      args: readyArgs,
+      argv: readyArgv
+    },
+    remediation: {
+      instructionPath: schemaPayload.instructionPath,
+      remediationContract: schemaPayload.remediationContract
+    }
+  };
+
+  if (commandName === "run-transition") {
+    const taskId = readPlanString(args, "taskId");
+    const requestedAction = readPlanString(args, "action");
+    const task = taskId ? planning.taskStore.getTask(taskId) : undefined;
+    if (!taskId) {
+      data.lifecycle = { requested: false, message: "Pass taskId to include task-specific allowedActions." };
+    } else if (!task) {
+      data.lifecycle = {
+        requested: true,
+        taskId,
+        found: false,
+        validNow: false,
+        message: `Task '${taskId}' was not found.`
+      };
+    } else {
+      const allowedActions = getAllowedTransitionsFrom(task.status).map((entry) => ({
+        action: entry.action,
+        targetStatus: entry.to
+      }));
+      const blockers = dependencyBlockersForAction(task, requestedAction, planning.taskStore.getAllTasks());
+      const lifecycleAllowed = requestedAction
+        ? allowedActions.some((entry) => entry.action === requestedAction)
+        : null;
+      data.lifecycle = {
+        requested: true,
+        taskId,
+        found: true,
+        taskStatus: task.status,
+        allowedActions,
+        requestedAction: requestedAction ?? null,
+        lifecycleAllowed,
+        dependencyBlockers: blockers,
+        validNow: lifecycleAllowed === true && blockers.length === 0
+      };
+    }
+  }
+
+  attachPolicyMeta(data, ctx, planningGeneration);
+  return {
+    ok: true,
+    code: "agent-mutation-plan",
+    message: `Prepared mutation plan for workspace-kit run ${commandName}`,
+    data
+  };
+}
+
+const TASK_INTENT_ACTIONS: Record<string, string> = {
+  "start-task": "start",
+  "complete-task": "complete"
+};
+
+function hasPriorTransitionForClientMutationId(store: TaskStore, clientMutationId: string | undefined): boolean {
+  return (
+    clientMutationId !== undefined &&
+    store.getTransitionLog().some((entry) => entry.clientMutationId === clientMutationId)
+  );
+}
+
+async function runTaskIntentTransition(
+  commandName: string,
+  ctx: ModuleLifecycleContext,
+  planning: OpenedPlanningStores,
+  args: Record<string, unknown>
+): Promise<ModuleCommandResult> {
+  const action = TASK_INTENT_ACTIONS[commandName];
+  const taskId = readPlanString(args, "taskId");
+  if (!action || !taskId) {
+    return {
+      ok: false,
+      code: "invalid-run-args",
+      message: `${commandName} requires taskId.`,
+      remediation: { instructionPath: `src/modules/task-engine/instructions/${commandName}.md` }
+    };
+  }
+  const clientMutationId = readIdempotencyValue(args);
+  const pgTransition = planningGenPolicyGate(
+    ctx,
+    args,
+    `src/modules/task-engine/instructions/${commandName}.md`
+  );
+  if (pgTransition.block && !hasPriorTransitionForClientMutationId(planning.taskStore, clientMutationId)) {
+    return pgTransition.block;
+  }
+  const hookBus = createKitLifecycleHookBus(ctx.workspacePath, (ctx.effectiveConfig ?? {}) as Record<string, unknown>);
+  const deliveryEvidenceMode = readDeliveryEvidenceEnforcementMode(
+    ctx.effectiveConfig as Record<string, unknown> | undefined
+  );
+  const service = new TransitionService(
+    planning.taskStore,
+    [createDeliveryEvidenceGuard({ enforcementMode: deliveryEvidenceMode })],
+    hookBus.isEnabled() ? hookBus : undefined
+  );
+  try {
+    const result = await service.runTransition({
+      taskId,
+      action,
+      actor: readPlanString(args, "actor"),
+      expectedPlanningGeneration: readOptionalExpectedPlanningGeneration(args),
+      clientMutationId
+    });
+    const data: Record<string, unknown> = {
+      intent: commandName,
+      taskId,
+      action,
+      evidence: result.evidence,
+      autoUnblocked: result.autoUnblocked,
+      replayed: result.replayed === true
+    };
+    attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration(), pgTransition.warnings);
+    return {
+      ok: true,
+      code: result.replayed ? "task-intent-idempotent-replay" : "task-intent-applied",
+      message: `${commandName}: ${taskId} via ${action}`,
+      data
+    };
+  } catch (err) {
+    if (err instanceof TaskEngineError) {
+      return { ok: false, code: err.code, message: err.message };
+    }
+    throw err;
+  }
+}
+
+async function runClaimNextTaskIntent(
+  ctx: ModuleLifecycleContext,
+  planning: OpenedPlanningStores,
+  args: Record<string, unknown>
+): Promise<ModuleCommandResult> {
+  const clientMutationId = readIdempotencyValue(args);
+  const pgTransition = planningGenPolicyGate(
+    ctx,
+    args,
+    "src/modules/task-engine/instructions/claim-next-task.md"
+  );
+  if (pgTransition.block && !hasPriorTransitionForClientMutationId(planning.taskStore, clientMutationId)) {
+    return pgTransition.block;
+  }
+  const ns = readQueueNamespaceArg(args);
+  const activeTasks = planning.taskStore.getActiveTasks();
+  const suggestion = getNextActions(activeTasks, ns ? { queueNamespace: ns } : undefined);
+  const suggested = suggestion.suggestedNext;
+  if (!suggested) {
+    const data: Record<string, unknown> = {
+      intent: "claim-next-task",
+      queueNamespace: ns ?? null,
+      reason: "no-runnable-task",
+      suggestedNext: null
+    };
+    attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration(), pgTransition.warnings);
+    return {
+      ok: true,
+      code: "claim-next-task-noop",
+      message: "No runnable task available to claim.",
+      data
+    };
+  }
+  const current = planning.taskStore.getTask(suggested.id);
+  if (!current || current.status !== "ready") {
+    const data: Record<string, unknown> = {
+      intent: "claim-next-task",
+      queueNamespace: ns ?? null,
+      reason: "suggested-task-changed",
+      suggestedTaskId: suggested.id,
+      currentStatus: current?.status ?? null
+    };
+    attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration(), pgTransition.warnings);
+    return {
+      ok: true,
+      code: "claim-next-task-noop",
+      message: "Suggested task changed before claim.",
+      data
+    };
+  }
+  const blockers = dependencyBlockersForAction(current, "start", activeTasks);
+  if (blockers.length > 0) {
+    const data: Record<string, unknown> = {
+      intent: "claim-next-task",
+      queueNamespace: ns ?? null,
+      reason: "dependency-blocked",
+      suggestedTaskId: suggested.id,
+      dependencyBlockers: blockers
+    };
+    attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration(), pgTransition.warnings);
+    return {
+      ok: true,
+      code: "claim-next-task-noop",
+      message: `Suggested task '${suggested.id}' is dependency-blocked.`,
+      data
+    };
+  }
+  const hookBus = createKitLifecycleHookBus(ctx.workspacePath, (ctx.effectiveConfig ?? {}) as Record<string, unknown>);
+  const deliveryEvidenceMode = readDeliveryEvidenceEnforcementMode(
+    ctx.effectiveConfig as Record<string, unknown> | undefined
+  );
+  const service = new TransitionService(
+    planning.taskStore,
+    [createDeliveryEvidenceGuard({ enforcementMode: deliveryEvidenceMode })],
+    hookBus.isEnabled() ? hookBus : undefined
+  );
+  try {
+    const result = await service.runTransition({
+      taskId: suggested.id,
+      action: "start",
+      actor: readPlanString(args, "actor"),
+      expectedPlanningGeneration: readOptionalExpectedPlanningGeneration(args),
+      clientMutationId
+    });
+    const data: Record<string, unknown> = {
+      intent: "claim-next-task",
+      queueNamespace: ns ?? null,
+      taskId: suggested.id,
+      action: "start",
+      evidence: result.evidence,
+      autoUnblocked: result.autoUnblocked,
+      replayed: result.replayed === true
+    };
+    attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration(), pgTransition.warnings);
+    return {
+      ok: true,
+      code: result.replayed ? "task-intent-idempotent-replay" : "task-intent-applied",
+      message: `Claimed ${suggested.id} — ${suggested.title}`,
+      data
+    };
+  } catch (err) {
+    if (err instanceof TaskEngineError) {
+      return { ok: false, code: err.code, message: err.message };
+    }
+    throw err;
+  }
+}
+
 export const taskEngineModule: WorkflowModule = {
   registration: {
     id: "task-engine",
@@ -242,6 +810,9 @@ export const taskEngineModule: WorkflowModule = {
     }
     if (command.name === "get-workspace-status") {
       return runGetWorkspaceStatus(ctx, args as Record<string, unknown>);
+    }
+    if (command.name === "classify-kit-state") {
+      return runClassifyKitState(ctx, args as Record<string, unknown>);
     }
     if (command.name === "update-workspace-status") {
       return runUpdateWorkspaceStatus(ctx, args as Record<string, unknown>);
@@ -342,12 +913,83 @@ export const taskEngineModule: WorkflowModule = {
       };
     }
 
+    if (command.name === "agent-mutation-plan") {
+      return buildAgentMutationPlan(ctx, planning, args as Record<string, unknown>);
+    }
+
+    if (command.name === "claim-next-task") {
+      return runClaimNextTaskIntent(ctx, planning, args as Record<string, unknown>);
+    }
+
+    if (command.name === "start-task" || command.name === "complete-task") {
+      return runTaskIntentTransition(command.name, ctx, planning, args as Record<string, unknown>);
+    }
+
     if (command.name === "phase-status") {
       return runPhaseStatus(ctx, args as Record<string, unknown>, {
         tasks: store.getActiveTasks(),
         db: planning.sqliteDual.getDatabase(),
         dbPath: planning.sqliteDual.dbPath
       });
+    }
+
+    if (command.name === "phase-delivery-preflight") {
+      const argObj = args as Record<string, unknown>;
+      const workspaceStatus = readWorkspaceStatusSnapshotFromDual(planning.sqliteDual);
+      const phaseRes = resolveCanonicalPhase({
+        effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+        workspaceStatus
+      });
+      const phaseKey =
+        typeof argObj.phaseKey === "string" && argObj.phaseKey.trim().length > 0
+          ? argObj.phaseKey.trim()
+          : phaseRes.canonicalPhaseKey;
+      const includeInProgress =
+        typeof argObj.includeInProgress === "boolean" ? argObj.includeInProgress : true;
+      const preflight = buildPhaseDeliveryPreflight({
+        tasks: store.getActiveTasks(),
+        phaseKey,
+        includeInProgress
+      });
+      const data: Record<string, unknown> = {
+        ...preflight,
+        canonicalPhase: phaseRes,
+        includeInProgress
+      };
+      attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
+      return {
+        ok: true,
+        code: "phase-delivery-preflight",
+        message:
+          preflight.violationCount === 0
+            ? "Phase delivery evidence preflight passed"
+            : `Phase delivery evidence preflight found ${preflight.violationCount} violation(s)`,
+        data
+      };
+    }
+
+    if (command.name === "release-evidence-manifest") {
+      const result = buildReleaseEvidenceManifest({
+        workspacePath: ctx.workspacePath,
+        tasks: store.getActiveTasks(),
+        commandArgs: args as Record<string, unknown>
+      });
+      if (!result.ok) {
+        return {
+          ok: false,
+          code: result.code,
+          message: result.message,
+          details: result.details
+        };
+      }
+      const data: Record<string, unknown> = { manifest: result.manifest };
+      attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
+      return {
+        ok: true,
+        code: "release-evidence-manifest",
+        message: "Built release evidence manifest",
+        data
+      };
     }
 
     if (command.name === "list-components") {
@@ -421,13 +1063,17 @@ export const taskEngineModule: WorkflowModule = {
           remediation: { instructionPath: CLI_REMEDIATION_INSTRUCTIONS.runTransition }
         };
       }
+      const clientMutationId = readIdempotencyValue(args);
+      const hasPriorTransition =
+        clientMutationId !== undefined &&
+        store.getTransitionLog().some((entry) => entry.clientMutationId === clientMutationId);
 
       const pgTransition = planningGenPolicyGate(
         ctx,
         args as Record<string, unknown>,
         CLI_REMEDIATION_INSTRUCTIONS.runTransition
       );
-      if (pgTransition.block) {
+      if (pgTransition.block && !hasPriorTransition) {
         return pgTransition.block;
       }
 
@@ -436,9 +1082,12 @@ export const taskEngineModule: WorkflowModule = {
           ctx.workspacePath,
           (ctx.effectiveConfig ?? {}) as Record<string, unknown>
         );
+        const deliveryEvidenceMode = readDeliveryEvidenceEnforcementMode(
+          ctx.effectiveConfig as Record<string, unknown> | undefined
+        );
         const service = new TransitionService(
           store,
-          [],
+          [createDeliveryEvidenceGuard({ enforcementMode: deliveryEvidenceMode })],
           hookBus.isEnabled() ? hookBus : undefined
         );
         const expectedPlanningGeneration = readOptionalExpectedPlanningGeneration(
@@ -448,9 +1097,10 @@ export const taskEngineModule: WorkflowModule = {
           taskId,
           action,
           actor,
-          expectedPlanningGeneration
+          expectedPlanningGeneration,
+          clientMutationId
         });
-        if (result.evidence.toState === "completed") {
+        if (!result.replayed && result.evidence.toState === "completed") {
           maybeSpawnTranscriptHookAfterCompletion(
             ctx.workspacePath,
             (ctx.effectiveConfig ?? {}) as Record<string, unknown>
@@ -458,13 +1108,16 @@ export const taskEngineModule: WorkflowModule = {
         }
         const data: Record<string, unknown> = {
           evidence: result.evidence,
-          autoUnblocked: result.autoUnblocked
+          autoUnblocked: result.autoUnblocked,
+          replayed: result.replayed === true
         };
         attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration(), pgTransition.warnings);
         return {
           ok: true,
-          code: "transition-applied",
-          message: `${taskId}: ${result.evidence.fromState} → ${result.evidence.toState} (${action})`,
+          code: result.replayed ? "transition-idempotent-replay" : "transition-applied",
+          message: result.replayed
+            ? `Idempotent run-transition replay for ${taskId}: ${result.evidence.fromState} → ${result.evidence.toState} (${action})`
+            : `${taskId}: ${result.evidence.fromState} → ${result.evidence.toState} (${action})`,
           data
         };
       } catch (err) {
@@ -676,6 +1329,46 @@ export const taskEngineModule: WorkflowModule = {
       };
     }
 
+    if (command.name === "review-planning-execution-drafts") {
+      const normalized = normalizePlanningExecutionDraftTasks(
+        ctx,
+        args as Record<string, unknown>,
+        nowIso(),
+        "review-planning-execution-drafts"
+      );
+      if (!normalized.ok) {
+        return normalized.result;
+      }
+      const findings = reviewPlanningExecutionDraftGaps(normalized.tasks);
+      const errorCount = findings.filter((f) => f.severity === "error").length;
+      const warningCount = findings.filter((f) => f.severity === "warning").length;
+      return {
+        ok: true,
+        code: errorCount > 0 ? "planning-execution-drafts-review-findings" : "planning-execution-drafts-review-passed",
+        message:
+          findings.length > 0
+            ? `Reviewed ${normalized.tasks.length} draft task(s): ${errorCount} error(s), ${warningCount} warning(s)`
+            : `Reviewed ${normalized.tasks.length} draft task(s): no UX/CAE batch gaps found`,
+        data: {
+          schemaVersion: 1,
+          persisted: false,
+          reviewProfile: "ux-cae-pre-persist-v1",
+          taskCount: normalized.tasks.length,
+          status: errorCount > 0 ? "fail" : warningCount > 0 ? "warn" : "pass",
+          errorCount,
+          warningCount,
+          findings,
+          normalizedTaskSummaries: normalized.tasks.map((task) => ({
+            id: task.id,
+            title: task.title,
+            status: task.status,
+            phase: task.phase,
+            phaseKey: task.phaseKey ?? null
+          }))
+        } as Record<string, unknown>
+      };
+    }
+
     if (command.name === "persist-planning-execution-drafts") {
       const actor =
         typeof args.actor === "string"
@@ -759,7 +1452,21 @@ export const taskEngineModule: WorkflowModule = {
           };
         }
         const rowObj = row as Record<string, unknown>;
-        const bt = buildTaskFromConversionPayload(rowObj, timestamp);
+        const rowPhaseKey =
+          typeof rowObj.phaseKey === "string" && rowObj.phaseKey.trim().length > 0 ? rowObj.phaseKey.trim() : undefined;
+        const rowStatus = rowObj.status === "ready" || rowObj.status === "proposed" ? rowObj.status : undefined;
+        if (rowPhaseKey && !PHASE_KEY_RE.test(rowPhaseKey)) {
+          return {
+            ok: false,
+            code: "invalid-task-schema",
+            message: "Task phaseKey must be non-empty; letters, digits, dot, underscore, hyphen; max 64 chars"
+          };
+        }
+        const normalizedRow = { ...rowObj };
+        if (targetPhaseKey) {
+          normalizedRow.phase = targetPhase ?? `Phase ${targetPhaseKey}`;
+        }
+        const bt = buildTaskFromConversionPayload(normalizedRow, timestamp);
         if (!bt.ok) {
           return {
             ok: false,
@@ -769,16 +1476,6 @@ export const taskEngineModule: WorkflowModule = {
           };
         }
         let task = bt.task;
-        const rowPhaseKey =
-          typeof rowObj.phaseKey === "string" && rowObj.phaseKey.trim().length > 0 ? rowObj.phaseKey.trim() : undefined;
-        const rowStatus = rowObj.status === "ready" || rowObj.status === "proposed" ? rowObj.status : undefined;
-        if (rowPhaseKey && !PHASE_KEY_RE.test(rowPhaseKey)) {
-          return {
-            ok: false,
-            code: "invalid-task-schema",
-            message: `Task '${task.id}' phaseKey must be non-empty; letters, digits, dot, underscore, hyphen; max 64 chars`
-          };
-        }
         task = {
           ...task,
           status: (desiredStatus ?? rowStatus ?? task.status) as TaskStatus,

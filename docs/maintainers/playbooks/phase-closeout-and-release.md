@@ -47,8 +47,10 @@ workspace-kit run run-transition '{"taskId":"T###","action":"complete","policyAp
 When **all** phase tasks that belong on **`release/phase-<N>`** are **`completed`** (or explicitly handled) and you are preparing the release:
 
 1. `git fetch origin` and `git checkout release/phase-<N>`, then `git pull origin release/phase-<N>`.
-2. Run full validation on that tip (`pnpm run build`, `pnpm run check`, `pnpm run test`, `pnpm run parity`, and **`pre-merge-gates`** / maintainer gates as in [`RELEASING.md`](../RELEASING.md)).
-3. **Fix failures on the phase branch** — small follow-up PRs or commits targeting **`release/phase-<N>`** until checks are green and there are no known release blockers.
+2. Run `workspace-kit run phase-delivery-preflight '{"phaseKey":"<N>","includeInProgress":false}'` and resolve every violation with PR/merge/check evidence or an explicit maintainer waiver before closeout.
+3. Run `workspace-kit run release-evidence-manifest '<json>'` with human approval, release-note evidence, validation records, known risks, publish artifact placeholders/proof, and follow-up scan data. Resolve structured failures before tag/npm/GitHub release actions.
+4. Run full validation on that tip (`pnpm run build`, `pnpm run check`, `pnpm run test`, `pnpm run parity`, and **`pre-merge-gates`** / maintainer gates as in [`RELEASING.md`](../RELEASING.md)).
+5. **Fix failures on the phase branch** — small follow-up PRs or commits targeting **`release/phase-<N>`** until checks are green and there are no known release blockers.
 
 ## 4) Human gate — stop before publish
 
@@ -67,7 +69,7 @@ Tier **B** `workspace-kit run` commands (non-transition) also require JSON `poli
 
 ## 6) After publish
 
-- Capture release evidence per [`RELEASING.md`](../RELEASING.md) → **Required release evidence**.
+- Capture and cite `workspace-kit run release-evidence-manifest` output per [`RELEASING.md`](../RELEASING.md) → **Required release evidence**.
 - Update maintainer snapshots (for example [`docs/maintainers/ROADMAP.md`](../ROADMAP.md), [`docs/maintainers/data/workspace-kit-status.yaml`](../data/workspace-kit-status.yaml)) when the phase closeout task requires it.
 - Bump **`current_kit_phase`** / **`next_kit_phase`** via **`workspace-kit run set-current-phase`** so SQLite stays canonical while config hints and the non-authoritative export stay aligned; use **`phase-status`** to verify drift before and after — see [`WORKSPACE-KIT-SESSION.md`](../WORKSPACE-KIT-SESSION.md) → **Workspace phase snapshot**.
 
@@ -77,11 +79,11 @@ This section is the **session summary format** for operators and agents (what to
 
 ### Evidence rules (do not invent counts)
 
-Use **`workspace-kit run list-tasks`** (and [`ROADMAP.md`](../ROADMAP.md) for phase scope), not chat memory.
+Use **`workspace-kit run release-evidence-manifest`** and **`workspace-kit run list-tasks`** (and [`ROADMAP.md`](../ROADMAP.md) for phase scope), not chat memory.
 
 - **`{phaseNumber}`:** Phase label you are closing (e.g. **`64`** or **`Phase 64`** — pick one style and stay consistent).
 - **`{completedExecutionTaskCount}`:** Integer count of execution tasks for this phase that reached **`completed`** in the configured task store (filter by **`phaseKey`** and/or ids listed for that phase in [`ROADMAP.md`](../ROADMAP.md)).
-- **`{followOnExecutionTaskCountOrNone}`:** Integer or the word **`none`** — count of **new or newly-accepted** execution tasks intended for the **next** phase (e.g. **`ready`** with the next phase’s **`phaseKey`**). Use **`0`** or **`none`** when applicable.
+- **`{followOnExecutionTaskCountOrNone}`:** Integer or the word **`none`** from `release-evidence-manifest` `followUpSummary.count`. Use **`0`** or **`none`** only when the manifest includes a recorded follow-up scan/rationale.
 - **`{featureMarkdownBullets}`:** One or more lines, **each** starting with **`- `**, each a short summary of shipped work backed by evidence (release line in [`CHANGELOG.md`](../CHANGELOG.md), phase row in [`ROADMAP.md`](../ROADMAP.md), or an ADR filename under **`docs/maintainers/`**). Add or remove lines; do not emit duplicate empty bullets. Put URLs or long citations outside this block if needed.
 - **`{optionalNotesBlockOrEmpty}`:** Leave **blank** if there is nothing to report. Otherwise, after the feature bullets, add a **Notes** block: a **`Notes:`** line, then optional list lines shaped like **`- **Risks / issues:** *label: brief*`** and **`- **Opinions / additional tasking:** *label: brief*`** (omit any line you cannot fill from evidence).
 

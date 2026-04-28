@@ -111,12 +111,30 @@ export function parseRunCommandOutput(stdout: string, exitCode: number): KitRunR
   try {
     return JSON.parse(text) as KitRunResult;
   } catch {
+    const suspectedPackageManagerBanner = looksLikePackageManagerBanner(stdout);
+    const hint = suspectedPackageManagerBanner
+      ? "stdout looks contaminated by a package-manager banner; use pnpm exec wk or node dist/cli.js for parse-sensitive calls"
+      : "capture full stdout and JSON.parse the whole value";
     return {
       ok: false,
       code: "extension-json-parse",
-      message: `exit ${exitCode}; stdout: ${text.slice(0, 400)}`
+      message: `exit ${exitCode}; ${hint}; stdout: ${text.slice(0, 400)}`,
+      remediation: {
+        cleanInvocations: ["pnpm exec wk run <command> '<json>'", "node dist/cli.js run <command> '<json>'"]
+      },
+      details: {
+        suspectedPackageManagerBanner
+      }
     };
   }
+}
+
+function looksLikePackageManagerBanner(stdout: string): boolean {
+  const text = stdout.trimStart();
+  if (!text.startsWith(">")) return false;
+  const firstJson = text.search(/[{\[]/);
+  const banner = firstJson >= 0 ? text.slice(0, firstJson) : text;
+  return /^>\s+.+/m.test(banner) && /^>\s+.+/m.test(banner.split("\n").slice(1).join("\n"));
 }
 
 export class CommandClient {

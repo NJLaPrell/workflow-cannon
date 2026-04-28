@@ -111,19 +111,33 @@ function phaseTaskCounts(tasks: TaskEntity[], phaseKey: string | null): Record<T
   return counts;
 }
 
-function workspaceStatusExportStatus(ctx: ModuleLifecycleContext, dbPath: string | null): Record<string, unknown> {
+function readWorkspaceStatusExportRevision(exportAbs: string): number | null {
+  try {
+    const body = fs.readFileSync(exportAbs, "utf8");
+    const match = body.match(/^# workspace_revision: ([0-9]+)$/m);
+    if (!match) return null;
+    const revision = Number(match[1]);
+    return Number.isInteger(revision) && revision >= 0 ? revision : null;
+  } catch {
+    return null;
+  }
+}
+
+function workspaceStatusExportStatus(
+  ctx: ModuleLifecycleContext,
+  workspaceStatus: NonNullable<ReturnType<typeof readKitWorkspaceStatusRow>> | null
+): Record<string, unknown> {
   const fileRelativePath = WORKSPACE_STATUS_DB_EXPORT_RELATIVE;
   const exportAbs = path.join(ctx.workspacePath, fileRelativePath);
   const exists = fs.existsSync(exportAbs);
-  if (!dbPath || !fs.existsSync(dbPath)) {
+  if (!workspaceStatus) {
     return {
       fileRelativePath,
       exists,
       stale: null,
-      reason: "planning-db-unavailable"
+      reason: "workspace-status-unavailable"
     };
   }
-  const dbStat = fs.statSync(dbPath);
   if (!exists) {
     return {
       fileRelativePath,
@@ -132,15 +146,26 @@ function workspaceStatusExportStatus(ctx: ModuleLifecycleContext, dbPath: string
       reason: "missing"
     };
   }
+  const exportWorkspaceRevision = readWorkspaceStatusExportRevision(exportAbs);
+  if (exportWorkspaceRevision === null) {
+    return {
+      fileRelativePath,
+      exists: true,
+      stale: true,
+      reason: "missing-workspace-revision-marker",
+      workspaceRevision: workspaceStatus.workspaceRevision
+    };
+  }
   const exportStat = fs.statSync(exportAbs);
-  const stale = exportStat.mtimeMs < dbStat.mtimeMs - 500;
+  const stale = exportWorkspaceRevision < workspaceStatus.workspaceRevision;
   return {
     fileRelativePath,
     exists: true,
     stale,
-    reason: stale ? "older-than-planning-db" : "fresh",
-    exportMtime: exportStat.mtime.toISOString(),
-    planningDbMtime: dbStat.mtime.toISOString()
+    reason: stale ? "older-than-workspace-status-revision" : "fresh",
+    exportWorkspaceRevision,
+    workspaceRevision: workspaceStatus.workspaceRevision,
+    exportMtime: exportStat.mtime.toISOString()
   };
 }
 
@@ -177,6 +202,51 @@ function plannedWorkspaceStatusAfter(
     pendingDecisions: patch.pendingDecisions ?? before.pendingDecisions,
     nextAgentActions: patch.nextAgentActions ?? before.nextAgentActions,
     updatedAt: now
+  };
+}
+
+function phaseRolloverPresentation(args: {
+  dryRun: boolean;
+  replayed?: boolean;
+  beforeRevision?: number;
+  afterRevision?: number;
+  workspaceStatusBefore: NonNullable<ReturnType<typeof readKitWorkspaceStatusRow>>;
+  workspaceStatusAfter: NonNullable<ReturnType<typeof readKitWorkspaceStatusRow>>;
+  configHintBefore: ReturnType<typeof projectConfigPhaseHint>;
+  configHintAfter: ReturnType<typeof projectConfigPhaseHint>;
+  canonicalPhase: ReturnType<typeof resolveCanonicalPhase>;
+  exportStatus: Record<string, unknown>;
+  suggestedFollowUpCommand: string | null;
+  taskCounts?: Record<TaskStatus, number> | null;
+}): Record<string, unknown> {
+  return {
+    schemaVersion: 1,
+    kind: "phase_rollover_v1",
+    dryRun: args.dryRun,
+    replayed: args.replayed === true,
+    beforePhase: {
+      currentKitPhase: args.workspaceStatusBefore.currentKitPhase,
+      nextKitPhase: args.workspaceStatusBefore.nextKitPhase,
+      activeFocus: args.workspaceStatusBefore.activeFocus
+    },
+    afterPhase: {
+      currentKitPhase: args.workspaceStatusAfter.currentKitPhase,
+      nextKitPhase: args.workspaceStatusAfter.nextKitPhase,
+      activeFocus: args.workspaceStatusAfter.activeFocus
+    },
+    workspaceRevisionBefore: args.beforeRevision ?? args.workspaceStatusBefore.workspaceRevision,
+    workspaceRevisionAfter: args.afterRevision ?? args.workspaceStatusAfter.workspaceRevision,
+    configHintBefore: args.configHintBefore,
+    configHintAfter: args.configHintAfter,
+    configHintStatus: {
+      canonicalPhaseKey: args.canonicalPhase.canonicalPhaseKey,
+      configMatchesWorkspaceStatus: args.canonicalPhase.configMatchesWorkspaceStatus
+    },
+    exportStatus: args.exportStatus,
+    suggestedFollowUpCommand: args.suggestedFollowUpCommand,
+    taskCounts: args.taskCounts ?? null,
+    agentRenderHint:
+      "Use this stable phase_rollover_v1 projection for summaries; raw workspaceStatus/config/export fields remain the source of truth."
   };
 }
 
@@ -225,11 +295,9 @@ export async function runPhaseStatus(
 
   try {
     let db = state?.db;
-    let dbPath = state?.dbPath ?? null;
     if (!db) {
       const dual = openSqliteDualForWorkspaceStatus(ctx);
       db = dual.getDatabase();
-      dbPath = dual.dbPath;
     }
     const workspaceStatus = readKitWorkspaceStatusRow(db);
     const workspaceSnapshot = workspaceStatus ? kitWorkspaceStatusPublicToSnapshot(workspaceStatus) : null;
@@ -238,7 +306,7 @@ export async function runPhaseStatus(
       effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
       workspaceStatus: workspaceSnapshot
     });
-    const exportStatus = workspaceStatusExportStatus(ctx, dbPath);
+    const exportStatus = workspaceStatusExportStatus(ctx, workspaceStatus);
     const remediationSuggestions: string[] = [];
     const driftDetails: string[] = [];
 
@@ -429,6 +497,26 @@ export async function runSetCurrentPhase(
   if (!activeFocus.ok) {
     return { ok: false, code: "invalid-task-schema", message: activeFocus.message };
   }
+  const blockers = asStringArray(args.blockers);
+  if (args.blockers !== undefined && blockers === undefined) {
+    return { ok: false, code: "invalid-task-schema", message: "blockers must be an array of strings when provided" };
+  }
+  const pendingDecisions = asStringArray(args.pendingDecisions);
+  if (args.pendingDecisions !== undefined && pendingDecisions === undefined) {
+    return {
+      ok: false,
+      code: "invalid-task-schema",
+      message: "pendingDecisions must be an array of strings when provided"
+    };
+  }
+  const nextAgentActions = asStringArray(args.nextAgentActions);
+  if (args.nextAgentActions !== undefined && nextAgentActions === undefined) {
+    return {
+      ok: false,
+      code: "invalid-task-schema",
+      message: "nextAgentActions must be an array of strings when provided"
+    };
+  }
   const currentPhaseLabel = readNullableString(args, "currentPhaseLabel");
   if (!currentPhaseLabel.ok) {
     return { ok: false, code: "invalid-task-schema", message: currentPhaseLabel.message };
@@ -460,12 +548,24 @@ export async function runSetCurrentPhase(
   if (activeFocus.value !== undefined) {
     patch.activeFocus = activeFocus.value;
   }
+  if (blockers !== undefined) {
+    patch.blockers = blockers;
+  }
+  if (pendingDecisions !== undefined) {
+    patch.pendingDecisions = pendingDecisions;
+  }
+  if (nextAgentActions !== undefined) {
+    patch.nextAgentActions = nextAgentActions;
+  }
 
   const payloadDigest = digestPayload({
     command: "set-current-phase",
     currentKitPhase: patch.currentKitPhase,
     nextKitPhase: Object.hasOwn(patch, "nextKitPhase") ? patch.nextKitPhase : undefined,
     activeFocus: Object.hasOwn(patch, "activeFocus") ? patch.activeFocus : undefined,
+    blockers: patch.blockers,
+    pendingDecisions: patch.pendingDecisions,
+    nextAgentActions: patch.nextAgentActions,
     currentPhaseLabel: currentPhaseLabel.value,
     lastUpdated: explicitLastUpdated ? lastUpdated : undefined
   });
@@ -494,6 +594,11 @@ export async function runSetCurrentPhase(
     const exportYamlBody = formatWorkspaceStatusDbExportYaml(plannedAfter);
 
     if (dryRun) {
+      const exportStatus = {
+        dryRun: true,
+        fileRelativePath: WORKSPACE_STATUS_DB_EXPORT_RELATIVE,
+        yamlBody: exportYamlBody
+      };
       return {
         ok: true,
         code: "set-current-phase-dry-run",
@@ -505,12 +610,20 @@ export async function runSetCurrentPhase(
           configHintBefore,
           configHintAfter,
           canonicalPhase: canonicalAfter,
-          exportStatus: {
-            dryRun: true,
-            fileRelativePath: WORKSPACE_STATUS_DB_EXPORT_RELATIVE,
-            yamlBody: exportYamlBody
-          },
-          suggestedFollowUpCommand: null
+          exportStatus,
+          suggestedFollowUpCommand: null,
+          presentation: {
+            phaseRollover: phaseRolloverPresentation({
+              dryRun: true,
+              workspaceStatusBefore: before,
+              workspaceStatusAfter: plannedAfter,
+              configHintBefore,
+              configHintAfter,
+              canonicalPhase: canonicalAfter,
+              exportStatus,
+              suggestedFollowUpCommand: null
+            })
+          }
         } as Record<string, unknown>
       };
     }
@@ -568,6 +681,12 @@ export async function runSetCurrentPhase(
       canonicalVerified.configMatchesWorkspaceStatus === false
         ? `workspace-kit config set kit.currentPhaseNumber ${phaseNumber} --json`
         : null;
+    const exportStatus = {
+      dryRun: false,
+      written: true,
+      fileRelativePath: writtenExport,
+      workspaceRevision: after.workspaceRevision
+    };
 
     return {
       ok: true,
@@ -585,13 +704,23 @@ export async function runSetCurrentPhase(
         configHintBefore,
         configHintAfter: projectConfigPhaseHint(configAfter),
         canonicalPhase: canonicalVerified,
-        exportStatus: {
-          dryRun: false,
-          written: true,
-          fileRelativePath: writtenExport,
-          workspaceRevision: after.workspaceRevision
-        },
-        suggestedFollowUpCommand
+        exportStatus,
+        suggestedFollowUpCommand,
+        presentation: {
+          phaseRollover: phaseRolloverPresentation({
+            dryRun: false,
+            replayed,
+            beforeRevision,
+            afterRevision,
+            workspaceStatusBefore: before,
+            workspaceStatusAfter: after,
+            configHintBefore,
+            configHintAfter: projectConfigPhaseHint(configAfter),
+            canonicalPhase: canonicalVerified,
+            exportStatus,
+            suggestedFollowUpCommand
+          })
+        }
       } as Record<string, unknown>
     };
   } catch (e) {

@@ -15,7 +15,7 @@ Canonical table: [`runbooks/wishlist-workflow.md`](../runbooks/wishlist-workflow
 
 ## Agent paths vs maintainer-rendered mirrors
 
-**Agents** follow **`.cursor/rules/agent-doc-routing.mdc`**: attach and read this playbook from **`.ai/playbooks/wishlist-intake-to-execution.md`** plus **`.ai/AGENT-CLI-MAP.md`**—not maintainer prose under **`docs/maintainers/playbooks/`** for routine execution. When this playbook cites roadmap or phase snapshots, prefer **`pnpm run wk run list-tasks`** / **`get-next-actions`** / **`agent-session-snapshot`** for queue facts (see **`.ai/WORKSPACE-KIT-SESSION.md`**) instead of opening **`docs/maintainers/ROADMAP.md`**.
+**Agents** follow **`.cursor/rules/agent-doc-routing.mdc`**: attach and read this playbook from **`.ai/playbooks/wishlist-intake-to-execution.md`** plus **`.ai/AGENT-CLI-MAP.md`**—not maintainer prose under **`docs/maintainers/playbooks/`** for routine execution. When this playbook cites roadmap or phase snapshots, prefer **`pnpm exec wk run list-tasks`** / **`get-next-actions`** / **`agent-session-snapshot`** for queue facts (see **`.ai/WORKSPACE-KIT-SESSION.md`**) instead of opening **`docs/maintainers/ROADMAP.md`**.
 
 **Maintainers** may edit long-form strategy under **`docs/maintainers/`** and refresh mirrors with **`pnpm run generate-maintainer-docs-from-ai`**.
 
