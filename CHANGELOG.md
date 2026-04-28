@@ -8,4 +8,4 @@ This root file is intentionally pointer-only to avoid split release history.
 
 - See `docs/maintainers/CHANGELOG.md` for all release notes, migration notes, and historical entries.
 
-Latest release: **v0.72.1** (Phase 72 follow-up: Guidance pre-flight UX polish plus completed phase-control/task-engine evidence; see canonical changelog).
+Latest release: **v0.73.0** (Phase 73: Guidance redesign, quieter recent activity, and CAE guidance management UX; see canonical changelog).

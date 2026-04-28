@@ -23,6 +23,15 @@ function boolLabel(value: unknown): string {
   return value === true ? "on" : "off";
 }
 
+function userFacingTerm(value: string): string {
+  return value
+    .replace(/\bregistry\b/gi, "guidance set")
+    .replace(/\bactivation\b/gi, "trigger")
+    .replace(/\bartifact\b/gi, "source")
+    .replace(/\btrace\b/gi, "check record")
+    .replace(/\bshadow tuning\b/gi, "guidance feedback");
+}
+
 function shortTraceId(traceId: string): string {
   if (traceId.length <= 18) return traceId;
   return `${traceId.slice(0, 12)}...${traceId.slice(-6)}`;
@@ -49,7 +58,7 @@ function renderRawDetails(summary: string, payload: unknown, limit: number): str
   const raw = JSON.stringify(payload, null, 2);
   const shown = raw.slice(0, limit);
   const truncated = raw.length > shown.length;
-  return `<details class="gd-card gd-raw-block">
+  return `<details class="gd-card gd-raw-block gd-debug">
   <summary>${escapeHtml(summary)}</summary>
   <p class="gd-muted">${truncated ? `Showing the first ${shown.length} of ${raw.length} characters.` : "Showing the full JSON payload."} Copy grabs exactly what is visible below.</p>
   <button type="button" class="gd-btn" data-wc-action="guidance-copy-block">Copy shown JSON</button>
@@ -59,38 +68,71 @@ function renderRawDetails(summary: string, payload: unknown, limit: number): str
 
 function renderFamilyCounts(counts: UnknownRecord): string {
   const parts = [
-    ["Rules", counts.policy],
-    ["Consider", counts.think],
-    ["Steps", counts.do],
-    ["Review", counts.review]
+    ["Required rules", counts.policy],
+    ["Recommendations", counts.think],
+    ["Suggested steps", counts.do],
+    ["Review checks", counts.review]
   ];
   return parts
     .map(([label, value]) => `<span class="gd-chip">${escapeHtml(String(label))}: ${escapeHtml(String(value ?? 0))}</span>`)
     .join("");
 }
 
-function renderTraceRows(rows: unknown): string {
+function activityKey(row: UnknownRecord): string {
+  const counts = asRecord(row.familyCounts);
+  return [
+    row.commandName ?? row.command ?? "",
+    row.taskId ?? "",
+    row.evalMode ?? "",
+    counts.policy ?? 0,
+    counts.think ?? 0,
+    counts.do ?? 0,
+    counts.review ?? 0,
+    row.pendingAcknowledgementCount ?? 0,
+    row.conflictCount ?? 0
+  ].join("|");
+}
+
+function renderActivityRows(rows: unknown): string {
   const list = asArray(rows);
   if (list.length === 0) {
-    return '<p class="gd-muted">No durable Guidance checks yet. Run a preview with persistence enabled to create one.</p>';
+    return '<p class="gd-muted">No checks yet. Choose a task and workflow above, then run your first pre-flight check.</p>';
+  }
+  const groups: Array<{ key: string; rows: UnknownRecord[] }> = [];
+  for (const item of list) {
+    const row = asRecord(item);
+    const key = activityKey(row);
+    const last = groups[groups.length - 1];
+    if (last && last.key === key) {
+      last.rows.push(row);
+    } else {
+      groups.push({ key, rows: [row] });
+    }
   }
   return (
     '<div class="gd-list">' +
-    list
-      .map((item) => {
-        const row = asRecord(item);
+    groups
+      .map((group) => {
+        const row = group.rows[0];
         const traceId = String(row.traceId ?? "");
         const commandName = String(row.commandName ?? row.command ?? "");
         const mode = String(row.evalMode ?? "");
         const storage = String(row.storage ?? "");
         const counts = asRecord(row.familyCounts);
-        return `<div class="gd-row">
+        const taskId = typeof row.taskId === "string" ? row.taskId : "";
+        const repeated = group.rows.length > 1;
+        return `<div class="gd-row gd-activity-row">
   <div>
     <b>${escapeHtml(commandLabel(commandName))}</b>
-    <div class="gd-muted">${escapeHtml(String(row.createdAt ?? ""))}${mode ? ` · ${escapeHtml(mode)}` : ""}${storage ? ` · ${escapeHtml(storage)}` : ""} · trace <code>${escapeHtml(shortTraceId(traceId))}</code></div>
+    <div class="gd-muted">${taskId ? `${escapeHtml(taskId)} · ` : ""}${escapeHtml(String(row.createdAt ?? ""))}${mode ? ` · ${escapeHtml(mode)}` : ""}</div>
+    <div class="gd-muted">${repeated ? `${group.rows.length} unchanged checks collapsed. ` : "Single check. "}Use Review why when you need the evidence.</div>
     <div class="gd-counts">${renderFamilyCounts(counts)}</div>
+    <details class="gd-debug"><summary>Debug check record</summary><p class="gd-muted">${storage ? `${escapeHtml(storage)} · ` : ""}check record <code>${escapeHtml(shortTraceId(traceId))}</code></p></details>
   </div>
-  <button type="button" class="gd-btn" data-wc-action="guidance-explain" data-trace-id="${escapeHtmlAttr(traceId)}">Review why</button>
+  <div class="gd-actions">
+    <button type="button" class="gd-btn" data-wc-action="guidance-explain" data-trace-id="${escapeHtmlAttr(traceId)}">Review why</button>
+    <button type="button" class="gd-btn" data-wc-action="guidance-improve" data-trace-id="${escapeHtmlAttr(traceId)}" data-activation-id="" data-command-name="${escapeHtmlAttr(commandName)}">Improve guidance</button>
+  </div>
 </div>`;
       })
       .join("") +
@@ -140,7 +182,7 @@ function renderRecoveryCards(health: UnknownRecord, validation: UnknownRecord, r
   if (health.registryStatus !== "ok" || validation.ok === false) {
     cards.push({
       title: "Guidance rules need repair",
-      body: "The active rule set could not be loaded or validated, so some cards may be missing or stale.",
+      body: "The active guidance set could not be loaded or validated, so some cards may be missing or stale.",
       action: 'For maintainers: run `workspace-kit run cae-registry-validate {"schemaVersion":1}` or import a valid active registry, then reload.'
     });
   }
@@ -171,6 +213,78 @@ function renderRecoveryCards(health: UnknownRecord, validation: UnknownRecord, r
 </section>`;
 }
 
+function renderManageGuidance(data: UnknownRecord): string {
+  const health = asRecord(data.health);
+  const validation = asRecord(data.validation);
+  const versionsRoot = asRecord(data.registryVersions);
+  const versionsData = asRecord(versionsRoot.data ?? versionsRoot);
+  const versions = asArray(versionsData.versions).map(asRecord);
+  const active = versions.find((row) => row.isActive === true);
+  const caeConfig = asRecord(data.caeConfig);
+  const library = asRecord(data.library);
+  const artifactIds = asArray(asRecord(library.artifacts).artifactIds).map(String);
+  const activationIds = asArray(asRecord(library.activations).activationIds).map(String);
+  const adminOn = caeConfig.adminMutations === true;
+  const activeVersionId = String(active?.versionId ?? health.activeRegistryVersionId ?? "n/a");
+  return `<section class="gd-card gd-manage">
+  <div class="gd-card-head">
+    <h2>Manage Guidance</h2>
+    <span class="${statusClass(validation.ok === true && health.registryStatus === "ok")}">${validation.ok === true ? "Valid" : "Needs repair"}</span>
+  </div>
+  <p class="gd-muted">Guidance is made from sources plus triggers. Checking guidance is read-only; changing the active guidance set is versioned and audited.</p>
+  <dl class="gd-meta">
+    <div><dt>Active guidance set</dt><dd><code>${escapeHtml(activeVersionId)}</code></dd></div>
+    <div><dt>Sources</dt><dd>${escapeHtml(String(health.artifactCount ?? artifactIds.length ?? 0))}</dd></div>
+    <div><dt>Triggers</dt><dd>${escapeHtml(String(health.activationCount ?? activationIds.length ?? 0))}</dd></div>
+    <div><dt>Admin updates</dt><dd>${adminOn ? "available" : "read-only"}</dd></div>
+  </dl>
+  ${
+    adminOn
+      ? '<p class="gd-muted">Updates require an actor, rationale, and <code>caeMutationApproval</code>. Policy approval is a separate lane.</p>'
+      : '<p class="gd-muted">Admin updates are currently off. You can inspect guidance and prepare draft context, but live CAE mutations stay disabled.</p>'
+  }
+  <div class="gd-actions">
+    <button type="button" class="gd-btn" data-wc-action="guidance-version-clone" data-version-id="${escapeHtmlAttr(activeVersionId)}">Create draft from active set</button>
+    <button type="button" class="gd-btn" data-wc-action="guidance-version-rollback">Roll back to previous set</button>
+  </div>
+  <details>
+    <summary>Guidance Library</summary>
+    <div class="gd-library">
+      <div>
+        <h3>Sources</h3>
+        ${artifactIds.length ? artifactIds.slice(0, 8).map((id) => `<p><code>${escapeHtml(id)}</code></p>`).join("") : '<p class="gd-muted">No sources returned.</p>'}
+      </div>
+      <div>
+        <h3>Triggers</h3>
+        ${activationIds.length ? activationIds.slice(0, 8).map((id) => `<p><code>${escapeHtml(id)}</code></p>`).join("") : '<p class="gd-muted">No triggers returned.</p>'}
+      </div>
+    </div>
+  </details>
+  <details>
+    <summary>Versions and rollback</summary>
+    <div class="gd-list">
+      ${
+        versions.length
+          ? versions
+              .map((row) => {
+                const versionId = String(row.versionId ?? "");
+                return `<div class="gd-row gd-row-compact">
+  <span><b>${escapeHtml(versionId)}</b><br><span class="gd-muted">${row.isActive === true ? "Active" : "Inactive"} · ${escapeHtml(String(row.createdAt ?? ""))} · ${escapeHtml(String(row.artifactCount ?? 0))} sources · ${escapeHtml(String(row.activationCount ?? 0))} triggers</span></span>
+  ${
+    row.isActive === true
+      ? '<span class="gd-pill">Active</span>'
+      : `<button type="button" class="gd-btn" data-wc-action="guidance-version-activate" data-version-id="${escapeHtmlAttr(versionId)}">Activate</button>`
+  }
+</div>`;
+              })
+              .join("")
+          : '<p class="gd-muted">No guidance-set versions returned.</p>'
+      }
+    </div>
+  </details>
+</section>`;
+}
+
 export function renderGuidanceSummaryInnerHtml(payload: unknown): string {
   const root = asRecord(payload);
   if (root.ok === false) {
@@ -185,18 +299,18 @@ export function renderGuidanceSummaryInnerHtml(payload: unknown): string {
   const healthy = health.registryStatus === "ok" && validation.ok === true && health.caeEnabled === true;
   const issues = asArray(health.issues);
 
-  return `<section class="gd-card">
+  return `<section class="gd-card gd-status-card">
   <div class="gd-card-head">
-    <h2>Guidance status</h2>
+    <h2>Guidance System</h2>
     <span class="${statusClass(healthy)}">${healthy ? "Ready" : "Needs attention"}</span>
   </div>
-  <p class="gd-muted">Guidance is a pre-flight check for workspace workflows. It is separate from agent behavior settings and does not approve sensitive commands.</p>
+  <p class="gd-muted">Read-only pre-flight checks use the active guidance set. Sensitive command approval is handled separately when a workflow asks for it.</p>
   <dl class="gd-meta">
     <div><dt>Guidance system</dt><dd>${escapeHtml(boolLabel(health.caeEnabled))}</dd></div>
-    <div><dt>Registry</dt><dd>${escapeHtml(String(health.registryStatus ?? "unknown"))}</dd></div>
-    <div><dt>Active version</dt><dd><code>${escapeHtml(String(health.activeRegistryVersionId ?? "n/a"))}</code></dd></div>
-    <div><dt>Persistence</dt><dd>${escapeHtml(boolLabel(health.persistenceEnabled))}</dd></div>
-    <div><dt>Recent checks</dt><dd>${escapeHtml(String(health.traceRowCount ?? recent.count ?? 0))}</dd></div>
+    <div><dt>Guidance set</dt><dd>${escapeHtml(String(health.registryStatus ?? "unknown"))}</dd></div>
+    <div><dt>Active set</dt><dd><code>${escapeHtml(String(health.activeRegistryVersionId ?? "n/a"))}</code></dd></div>
+    <div><dt>Check history</dt><dd>${escapeHtml(boolLabel(health.persistenceEnabled))}</dd></div>
+    <div><dt>Check records</dt><dd>${escapeHtml(String(health.traceRowCount ?? recent.count ?? 0))}</dd></div>
     <div><dt>Acknowledgements</dt><dd>${escapeHtml(String(acks.count ?? 0))}</dd></div>
   </dl>
   ${health.lastEvalAtNote ? `<p class="gd-muted">${escapeHtml(String(health.lastEvalAtNote))}</p>` : ""}
@@ -209,22 +323,25 @@ export function renderGuidanceSummaryInnerHtml(payload: unknown): string {
 ${renderRecoveryCards(health, validation, recent)}
 
 <section class="gd-card">
-  <div class="gd-card-head"><h2>Recent checks</h2><span class="gd-pill">${recent.available === false ? "Persistence off" : "Stored"}</span></div>
-  ${renderTraceRows(recent.rows)}
+  <div class="gd-card-head"><h2>Recent Activity</h2><span class="gd-pill">${recent.available === false ? "History off" : "Grouped"}</span></div>
+  ${renderActivityRows(recent.rows)}
 </section>
+
+${renderManageGuidance(data)}
 
 <section class="gd-card">
   <div class="gd-card-head"><h2>Acknowledgements</h2><span class="gd-pill">${escapeHtml(String(acks.count ?? 0))}</span></div>
   ${renderAckRows(acks.rows)}
-  <p class="gd-muted">Acknowledgement means “I read this guidance.” It is not permission to run a sensitive command and it does not change agent behavior settings.</p>
+  <p class="gd-muted">Acknowledgement means “I read this guidance.” It is not permission to run a sensitive command.</p>
 </section>
 
 <section class="gd-card">
-  <div class="gd-card-head"><h2>Feedback</h2><span class="gd-pill">Shadow tuning</span></div>
+  <div class="gd-card-head"><h2>Guidance Feedback</h2><span class="gd-pill">Local tuning signal</span></div>
   ${renderFeedbackSummary(feedback)}
+  <p class="gd-muted">Useful/noisy feedback records a signal. It does not change the active guidance set unless you create and activate a versioned update.</p>
 </section>
 
-${renderRawDetails("Advanced details JSON", data, 12000)}`;
+${renderRawDetails("Debug details JSON", data, 12000)}`;
 }
 
 function renderGuidanceCard(cardRaw: unknown, traceId: string, commandName: string): string {
@@ -243,14 +360,15 @@ function renderGuidanceCard(cardRaw: unknown, traceId: string, commandName: stri
   </div>
   <p class="gd-muted">${escapeHtml(String(card.familyLabel ?? card.family ?? "Guidance item"))}</p>
   <p><b>Why this appeared:</b> ${escapeHtml(matchReason)}</p>
-  <p>${titles.map(escapeHtml).join(", ")}</p>
-  <details>
-    <summary>Source ids</summary>
+  <p><b>Sources:</b> ${titles.map(escapeHtml).join(", ") || "No source title returned."}</p>
+  <details class="gd-debug">
+    <summary>Debug source ids</summary>
     <p><code>${escapeHtml(activationId)}</code></p>
     <p>${artifactIds.map((id) => `<code>${escapeHtml(id)}</code>`).join(" ")}</p>
   </details>
   <div class="gd-actions">
-    <button type="button" class="gd-btn" data-wc-action="guidance-explain" data-trace-id="${escapeHtmlAttr(traceId)}">Explain</button>
+    <button type="button" class="gd-btn" data-wc-action="guidance-explain" data-trace-id="${escapeHtmlAttr(traceId)}">Review why</button>
+    <button type="button" class="gd-btn" data-wc-action="guidance-improve" data-trace-id="${escapeHtmlAttr(traceId)}" data-activation-id="${escapeHtmlAttr(activationId)}" data-command-name="${escapeHtmlAttr(commandName)}">Improve this guidance</button>
     <button type="button" class="gd-btn" data-wc-action="guidance-feedback" data-signal="useful" data-trace-id="${escapeHtmlAttr(traceId)}" data-activation-id="${escapeHtmlAttr(activationId)}" data-command-name="${escapeHtmlAttr(commandName)}">Useful</button>
     <button type="button" class="gd-btn" data-wc-action="guidance-feedback" data-signal="noisy" data-trace-id="${escapeHtmlAttr(traceId)}" data-activation-id="${escapeHtmlAttr(activationId)}" data-command-name="${escapeHtmlAttr(commandName)}">Noisy</button>
   </div>
@@ -270,8 +388,8 @@ function renderConflictSummary(conflictShadowSummary: unknown): string {
     <h3>${escapeHtml(String(entry.kind ?? "conflict"))}</h3>
     <span class="gd-pill">${escapeHtml(String(entry.resolution ?? "shadow"))}</span>
   </div>
-  <p>${escapeHtml(String(entry.detail ?? "Guidance candidates overlapped; review the involved activation ids before treating either as final."))}</p>
-  <p class="gd-muted">${activationIds.map((id) => `<code>${escapeHtml(id)}</code>`).join(" ")}</p>
+  <p>${escapeHtml(userFacingTerm(String(entry.detail ?? "Guidance candidates overlapped; review the involved trigger ids before treating either as final.")))}</p>
+  <details class="gd-debug"><summary>Debug trigger ids</summary><p class="gd-muted">${activationIds.map((id) => `<code>${escapeHtml(id)}</code>`).join(" ")}</p></details>
 </div>`;
     })
     .join("")}<p class="gd-muted">Conflict cards are advisory in Preview mode; use them to decide whether the registry needs cleanup.</p></section>`;
@@ -307,7 +425,7 @@ function renderPendingAcks(rows: unknown, traceId: string): string {
 export function renderGuidancePreviewInnerHtml(payload: unknown): string {
   const root = asRecord(payload);
   if (Object.keys(root).length === 0) {
-    return '<p class="gd-muted">Pick a task and workflow, then run a preview.</p>';
+    return '<section class="gd-card gd-empty"><h2>No check yet</h2><p class="gd-muted">Choose a task and workflow, then run a read-only pre-flight check.</p></section>';
   }
   if (root.ok === false) {
     return `<section class="gd-card gd-danger"><h2>Preview failed</h2><p>${escapeHtml(String(root.message ?? root.code ?? "Unknown error"))}</p></section>`;
@@ -318,14 +436,14 @@ export function renderGuidancePreviewInnerHtml(payload: unknown): string {
   const cards = asRecord(data.guidanceCards);
   const counts = asRecord(data.familyCounts);
   const totalCards = Number(counts.policy ?? 0) + Number(counts.think ?? 0) + Number(counts.do ?? 0) + Number(counts.review ?? 0);
-  return `<section class="gd-card">
+  return `<section class="gd-card gd-result-card">
   <div class="gd-card-head">
-    <h2>Preview summary</h2>
+    <h2>Pre-flight result</h2>
     <span class="gd-pill">${escapeHtml(String(data.modeLabel ?? data.evalMode ?? "Preview mode"))}</span>
   </div>
-  <p>${totalCards > 0 ? `Review ${escapeHtml(String(totalCards))} Guidance item${totalCards === 1 ? "" : "s"} before running this workflow.` : "No special Guidance items matched this workflow."}</p>
+  <p>${totalCards > 0 ? `Review ${escapeHtml(String(totalCards))} guidance item${totalCards === 1 ? "" : "s"} before running this workflow.` : "No special guidance items matched this workflow."}</p>
   <div class="gd-counts">${renderFamilyCounts(counts)}</div>
-  <p class="gd-muted">Trace <code>${escapeHtml(traceId)}</code>${data.ephemeral ? " · stored in memory only" : " · stored in workspace database"}</p>
+  <details class="gd-debug"><summary>Debug check record</summary><p class="gd-muted">Check record <code>${escapeHtml(traceId)}</code>${data.ephemeral ? " · stored in memory only" : " · stored in workspace database"}</p></details>
 </section>
 ${renderPendingAcks(data.pendingAcknowledgements, traceId)}
 ${renderConflictSummary(data.conflictShadowSummary)}
@@ -362,13 +480,13 @@ export function renderGuidanceTraceDetailInnerHtml(payload: unknown): string {
   const traceFetchMissing = traceFetch.ok === false;
   return `<section class="gd-card">
   <div class="gd-card-head">
-    <h2>Why this Guidance appeared</h2>
-    <span class="gd-pill">${escapeHtml(String(explainData.storage ?? "memory"))}${explainData.ephemeral ? " · ephemeral" : ""}</span>
+    <h2>Why this guidance appeared</h2>
+    <span class="gd-pill">${explainData.ephemeral ? "Temporary" : "Stored"}</span>
   </div>
-  <p>${escapeHtml(String(explanation.summaryText ?? "No explanation summary available."))}</p>
+  <p>${escapeHtml(userFacingTerm(String(explanation.summaryText ?? "No explanation summary available.")))}</p>
   <dl class="gd-meta">
-    <div><dt>Trace</dt><dd><code>${escapeHtml(traceId || "unknown")}</code></dd></div>
-    <div><dt>Bundle</dt><dd><code>${escapeHtml(String(trace.bundleId ?? "unknown"))}</code></dd></div>
+    <div><dt>Check record</dt><dd><code>${escapeHtml(traceId || "unknown")}</code></dd></div>
+    <div><dt>Guidance result</dt><dd><code>${escapeHtml(String(trace.bundleId ?? "unknown"))}</code></dd></div>
     <div><dt>Mode</dt><dd>${escapeHtml(String(evalSummary.evalMode ?? "unknown"))}</dd></div>
     <div><dt>Conflicts</dt><dd>${escapeHtml(String(evalSummary.conflictCount ?? 0))}</dd></div>
     <div><dt>Pending acknowledgements</dt><dd>${escapeHtml(String(ackSummary.pendingAckCount ?? 0))}</dd></div>
@@ -391,6 +509,7 @@ export function renderGuidanceActionResultInnerHtml(payload: unknown): string {
     <span class="${statusClass(ok)}">${ok ? "Done" : "Needs attention"}</span>
   </div>
   <p>${escapeHtml(String(result.message ?? result.code ?? (ok ? "The Guidance action completed." : "The Guidance action did not complete.")))}</p>
+  ${ok && action.toLowerCase().includes("noisy") ? '<p class="gd-muted">Next step: use “Improve this guidance” to create a draft update from the noisy item.</p>' : ""}
   ${
     result.code
       ? `<p class="gd-muted">Result code: <code>${escapeHtml(String(result.code))}</code></p>`
