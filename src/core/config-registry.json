@@ -710,6 +710,22 @@
       "user"
     ]
   },
+  "kit.cae.runtime.persistShadowPreflight": {
+    "key": "kit.cae.runtime.persistShadowPreflight",
+    "type": "boolean",
+    "description": "When true (with kit.cae.persistence), shadow CAE preflight traces may persist to planning SQLite. Defaults false to avoid dirtying tracked state during routine agent commands.",
+    "default": false,
+    "domainScope": "project",
+    "owningModule": "context-activation",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
   "kit.cae.enforcement.enabled": {
     "key": "kit.cae.enforcement.enabled",
     "type": "boolean",

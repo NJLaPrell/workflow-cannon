@@ -149,6 +149,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "classify-kit-state",
+    "file": "classify-kit-state.md",
+    "description": "Classify dirty kit-owned paths so agents can distinguish durable planning state from volatile runtime churn.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "synthesize-transcript-churn",
     "file": "synthesize-transcript-churn.md",
     "description": "Promote transcript_churn/research to improvement/proposed after investigation.",

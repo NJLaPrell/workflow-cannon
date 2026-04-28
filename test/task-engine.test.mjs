@@ -26,7 +26,8 @@ import {
   UnifiedStateDb,
   ModuleRegistry,
   ModuleCommandRouter,
-  appendPolicyTrace
+  appendPolicyTrace,
+  classifyKitStatePath
 } from "../dist/index.js";
 
 // ---------------------------------------------------------------------------
@@ -99,6 +100,23 @@ async function writeWorkspaceStatusYaml(workspace, lines) {
   await mkdir(yamlDir, { recursive: true });
   await writeFile(path.join(yamlDir, "workspace-kit-status.yaml"), [...lines, ""].join("\n"), "utf8");
 }
+
+test("classifyKitStatePath distinguishes durable, generated, volatile, and unknown kit paths", () => {
+  assert.equal(
+    classifyKitStatePath(".workspace-kit/tasks/workspace-kit.db").classification,
+    "durable-planning-state"
+  );
+  assert.equal(
+    classifyKitStatePath("docs/maintainers/data/workspace-kit-status.yaml").classification,
+    "generated-export"
+  );
+  assert.equal(
+    classifyKitStatePath(".workspace-kit/cae/runtime/traces.sqlite").classification,
+    "volatile-runtime-state"
+  );
+  assert.equal(classifyKitStatePath(".workspace-kit/config.json").classification, "kit-config");
+  assert.equal(classifyKitStatePath(".workspace-kit/surprise-state.json").classification, "unknown-kit-state");
+});
 
 // ---------------------------------------------------------------------------
 // T184: Transition map

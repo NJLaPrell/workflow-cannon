@@ -27,6 +27,7 @@ import {
   parseTasksFromSnapshotPayload,
   replayQueueFromTasks
 } from "./queue/replay-queue-snapshot.js";
+import { runClassifyKitState } from "./kit-state-classifier.js";
 import { inferTaskPhaseKey, resolveCanonicalPhase } from "./phase-resolution.js";
 import { buildQueueHealthReport, buildQueueHintsForTasks } from "./queue/queue-health.js";
 import { openPlanningStores, type OpenedPlanningStores } from "./persistence/planning-open.js";
@@ -248,6 +249,9 @@ export const taskEngineModule: WorkflowModule = {
     }
     if (command.name === "get-workspace-status") {
       return runGetWorkspaceStatus(ctx, args as Record<string, unknown>);
+    }
+    if (command.name === "classify-kit-state") {
+      return runClassifyKitState(ctx, args as Record<string, unknown>);
     }
     if (command.name === "update-workspace-status") {
       return runUpdateWorkspaceStatus(ctx, args as Record<string, unknown>);

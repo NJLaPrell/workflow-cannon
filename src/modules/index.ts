@@ -92,6 +92,7 @@ export {
   DELIVERY_WAIVER_METADATA_KEY,
   buildPhaseDeliveryPreflight,
   buildReleaseEvidenceManifest,
+  classifyKitStatePath,
   createDeliveryEvidenceGuard,
   evaluateDeliveryEvidence,
   isPhaseDeliveryTask,
@@ -118,7 +119,8 @@ export type {
   BlockingAnalysisEntry,
   DeliveryEvidenceEnforcementMode,
   DeliveryEvidenceEvaluation,
-  DeliveryEvidenceViolation
+  DeliveryEvidenceViolation,
+  KitStateClassification
 } from "./task-engine/index.js";
 export type { WishlistItem, WishlistStatus, WishlistStoreDocument } from "./task-engine/index.js";
 export {

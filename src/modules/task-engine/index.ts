@@ -39,6 +39,8 @@ export {
   readDeliveryEvidenceEnforcementMode
 } from "./delivery-evidence.js";
 export { buildReleaseEvidenceManifest } from "./release-evidence-manifest.js";
+export { classifyKitStatePath } from "./kit-state-classifier.js";
+export type { KitStateClassification } from "./kit-state-classifier.js";
 export type {
   DeliveryEvidenceEnforcementMode,
   DeliveryEvidenceEvaluation,
