@@ -688,3 +688,27 @@ test("runCli run persist-planning-execution-drafts --schema-only emits working b
   assert.equal(output.sampleArgs.tasks.length, 1);
   assert.equal(Object.hasOwn(output.sampleArgs.tasks[0], "phase"), false);
 });
+
+test("runCli run run-transition --schema-only exposes runtime action enum", async () => {
+  const capture = createCapture();
+  const code = await runCli(["run", "run-transition", "--schema-only"], {
+    cwd: process.cwd(),
+    ...capture
+  });
+  assert.equal(code, 0, capture.errors.join("\n"));
+  const output = JSON.parse(capture.lines.join(""));
+  assert.equal(output.ok, true);
+  assert.deepEqual(output.schema.properties.action.enum, [
+    "accept",
+    "block",
+    "cancel",
+    "complete",
+    "decline",
+    "demote",
+    "pause",
+    "reject",
+    "start",
+    "unblock"
+  ]);
+  assert.equal(output.sampleArgs.action, "accept");
+});

@@ -158,7 +158,21 @@
                   "type": "string",
                   "pattern": "^(T[0-9]+|imp-[0-9a-f]{14})$"
                 },
-                "action": { "type": "string" },
+                "action": {
+                  "type": "string",
+                  "enum": [
+                    "accept",
+                    "block",
+                    "cancel",
+                    "complete",
+                    "decline",
+                    "demote",
+                    "pause",
+                    "reject",
+                    "start",
+                    "unblock"
+                  ]
+                },
                 "policyApproval": { "type": "object" },
                 "expectedPlanningGeneration": {
                   "oneOf": [
