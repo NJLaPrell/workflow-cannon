@@ -10,23 +10,31 @@ workspace-kit run run-transition '{"taskId":"T184","action":"start","policyAppro
 
 ## Arguments
 
+<!-- workspace-kit:generated task-engine-instruction-contract command=run-transition section=args start -->
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `taskId` | string | yes | The task ID to transition (e.g., `T184`) |
-| `action` | string | yes | The transition action: `accept`, `reject`, `demote`, `start`, `block`, `cancel`, `complete`, `decline`, `pause`, `unblock` |
-| `actor` | string | no | Who or what triggered the transition |
-| `expectedPlanningGeneration` | integer | no | When set, must match current SQLite `workspace_planning_state.planning_generation` or the command fails with **`planning-generation-mismatch`** (optimistic concurrency; see **`ADR-planning-generation-optimistic-concurrency.md`**). When **`tasks.planningGenerationPolicy`** is **`require`**, omission fails with **`planning-generation-required`** — read **`planningGeneration`** from **`list-tasks`** / **`get-next-actions`** / **`get-task`** first. |
-| `clientMutationId` | string | no | Retry key. A repeated request with the same key, `taskId`, and `action` returns **`transition-idempotent-replay`** without appending duplicate evidence. Reusing the key for a different transition returns **`idempotency-key-conflict`**. |
+| `taskId` | `string` | yes | Task id. |
+| `action` | string (`accept`, `block`, `cancel`, `complete`, `decline`, `demote`, `pause`, `reject`, `start`, `unblock`) | yes | Transition action. |
+| `clientMutationId` | `string` | no | Retry/idempotency key. |
+| `policyApproval` | `object` | no | JSON policy approval payload for sensitive run commands. |
+| `expectedPlanningGeneration` | `integer` or `string` | no | Optimistic concurrency token from a prior read response. |
+| `actor` | `string` | no | Actor recorded on transition evidence or task mutation metadata. |
+| `config` | `object` | no | Invocation-local config override. |
+<!-- workspace-kit:generated task-engine-instruction-contract command=run-transition section=args end -->
 
 ## Allowed Actions by State
 
+<!-- workspace-kit:generated task-engine-instruction-contract command=run-transition section=actions start -->
 | Current State | Allowed Actions |
 | --- | --- |
-| `research` | `reject` → cancelled (transcript churn intake; promotion to **`improvement` / `proposed`** uses **`synthesize-transcript-churn`**, not this table) |
+| `research` | `reject` → cancelled |
 | `proposed` | `accept` → ready, `reject` → cancelled |
 | `ready` | `demote` → proposed, `start` → in_progress, `block` → blocked, `cancel` → cancelled |
 | `in_progress` | `complete` → completed, `decline` → cancelled, `block` → blocked, `pause` → ready |
 | `blocked` | `unblock` → ready, `cancel` → cancelled |
+<!-- workspace-kit:generated task-engine-instruction-contract command=run-transition section=actions end -->
+
+For transcript churn intake, promotion to **`improvement` / `proposed`** uses **`synthesize-transcript-churn`**, not this lifecycle action table.
 
 ## Returns
 

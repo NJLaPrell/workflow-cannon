@@ -10,10 +10,18 @@ workspace-kit run update-task '{"taskId":"T400","updates":{"title":"Updated titl
 
 ## Arguments
 
-- `taskId` (string, required): task to update.
-- `updates` (object, required): mutable fields only (`title`, `type`, `priority`, `dependsOn`, `unblocks`, `phase`, `phaseKey`, `metadata`, `ownership`, `approach`, `summary`, `description`, `risk`, `technicalScope`, `acceptanceCriteria`, `features`).
-- `actor` (string, optional): actor identifier.
-- `clientMutationId` (string, optional): idempotency key for safe retries.
+<!-- workspace-kit:generated task-engine-instruction-contract command=update-task section=args start -->
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `taskId` | `string` | yes | Task id. |
+| `updates` | `object` | yes | Mutable task field patch. |
+| `clientMutationId` | `string` | no | Retry/idempotency key. |
+| `expectedPlanningGeneration` | `integer` or `string` | no | Optimistic concurrency token from a prior read response. |
+| `actor` | `string` | no | Actor recorded on transition evidence or task mutation metadata. |
+| `config` | `object` | no | Invocation-local config override. |
+<!-- workspace-kit:generated task-engine-instruction-contract command=update-task section=args end -->
+
+Mutable task fields include `title`, `type`, `priority`, `dependsOn`, `unblocks`, `phase`, `phaseKey`, `metadata`, `ownership`, `approach`, `summary`, `description`, `risk`, `technicalScope`, `acceptanceCriteria`, and `features`.
 
 Immutable fields (`id`, `createdAt`, `status`) are rejected.
 
