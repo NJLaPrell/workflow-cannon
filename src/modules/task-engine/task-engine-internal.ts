@@ -827,7 +827,21 @@ export const taskEngineModule: WorkflowModule = {
           };
         }
         const rowObj = row as Record<string, unknown>;
-        const bt = buildTaskFromConversionPayload(rowObj, timestamp);
+        const rowPhaseKey =
+          typeof rowObj.phaseKey === "string" && rowObj.phaseKey.trim().length > 0 ? rowObj.phaseKey.trim() : undefined;
+        const rowStatus = rowObj.status === "ready" || rowObj.status === "proposed" ? rowObj.status : undefined;
+        if (rowPhaseKey && !PHASE_KEY_RE.test(rowPhaseKey)) {
+          return {
+            ok: false,
+            code: "invalid-task-schema",
+            message: "Task phaseKey must be non-empty; letters, digits, dot, underscore, hyphen; max 64 chars"
+          };
+        }
+        const normalizedRow = { ...rowObj };
+        if (targetPhaseKey) {
+          normalizedRow.phase = targetPhase ?? `Phase ${targetPhaseKey}`;
+        }
+        const bt = buildTaskFromConversionPayload(normalizedRow, timestamp);
         if (!bt.ok) {
           return {
             ok: false,
@@ -837,16 +851,6 @@ export const taskEngineModule: WorkflowModule = {
           };
         }
         let task = bt.task;
-        const rowPhaseKey =
-          typeof rowObj.phaseKey === "string" && rowObj.phaseKey.trim().length > 0 ? rowObj.phaseKey.trim() : undefined;
-        const rowStatus = rowObj.status === "ready" || rowObj.status === "proposed" ? rowObj.status : undefined;
-        if (rowPhaseKey && !PHASE_KEY_RE.test(rowPhaseKey)) {
-          return {
-            ok: false,
-            code: "invalid-task-schema",
-            message: `Task '${task.id}' phaseKey must be non-empty; letters, digits, dot, underscore, hyphen; max 64 chars`
-          };
-        }
         task = {
           ...task,
           status: (desiredStatus ?? rowStatus ?? task.status) as TaskStatus,

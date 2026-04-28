@@ -20,9 +20,9 @@ Optional: `planRef`, `planningType` (merged into each task’s `metadata` / `pla
 | `expectedPlanningGeneration` | When policy is `require` | Same optimistic concurrency token as other mutators. |
 | `planRef` | No | Stored on each task `metadata.planRef` when set. |
 | `planningType` | No | Stored under `metadata.planningProvenance.planningType` with `source: persist-planning-execution-drafts`. |
-| `targetPhaseKey` | No | Overrides every created task’s `phaseKey` for explicit next-phase task creation. |
-| `targetPhase` | No | Label to pair with `targetPhaseKey`; defaults to `Phase <targetPhaseKey>` when omitted. |
-| `desiredStatus` | No | Overrides every created task’s initial status; must be `proposed` or `ready`. Row-level `status` is also accepted when no override is provided. |
+| `targetPhaseKey` | No | Overrides every created task’s `phaseKey` for explicit next-phase task creation. When present, rows may omit `phase`; the command normalizes them before final validation. |
+| `targetPhase` | No | Label to pair with `targetPhaseKey`; defaults to `Phase <targetPhaseKey>` when omitted. Command-level `targetPhase` wins over row-level `phase` when `targetPhaseKey` is present. |
+| `desiredStatus` | No | Overrides every created task’s initial status; must be `proposed` or `ready`. Row-level `status` is accepted only when no command-level override is provided. |
 | `clientMutationId` | No | Enables idempotent replay when all tasks were already created with the same composed keys and payload digests. |
 | `actor` | No | Mutation log actor. |
 
@@ -32,6 +32,12 @@ Use **`set-current-phase`** only to move the workspace-level phase snapshot. It 
 
 ```bash
 workspace-kit run persist-planning-execution-drafts '{"targetPhaseKey":"73","targetPhase":"Phase 73","desiredStatus":"ready","planRef":"planning:new-feature:phase-73","tasks":[...],"expectedPlanningGeneration":<n>,"clientMutationId":"phase-73-task-open"}'
+```
+
+Minimal row shape with command-level phase/status defaults:
+
+```bash
+workspace-kit run persist-planning-execution-drafts '{"targetPhaseKey":"73","targetPhase":"Phase 73","desiredStatus":"ready","tasks":[{"id":"T900","title":"Draft follow-up","approach":"Implement the follow-up","technicalScope":["Wire the command path"],"acceptanceCriteria":["Batch persists without row-level phase"]}],"expectedPlanningGeneration":<n>}'
 ```
 
 ## Response codes

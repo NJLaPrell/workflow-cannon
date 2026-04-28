@@ -228,6 +228,27 @@ function minimalSampleFromArgsSchema(schema: Record<string, unknown>): Record<st
   return out;
 }
 
+function sampleArgsForCommand(commandName: string, schema: Record<string, unknown>): Record<string, unknown> {
+  if (commandName === "persist-planning-execution-drafts") {
+    return {
+      targetPhaseKey: "73",
+      targetPhase: "Phase 73",
+      desiredStatus: "ready",
+      tasks: [
+        {
+          id: "T900",
+          title: "Draft follow-up",
+          approach: "Implement the follow-up",
+          technicalScope: ["Wire the command path"],
+          acceptanceCriteria: ["Batch persists without row-level phase"]
+        }
+      ],
+      expectedPlanningGeneration: 0
+    };
+  }
+  return minimalSampleFromArgsSchema(schema);
+}
+
 /**
  * JSON payload for `workspace-kit run <command> --schema-only` when the command is in the pilot snapshot.
  */
@@ -237,7 +258,7 @@ export function buildRunArgsSchemaOnlyPayload(commandName: string): Record<strin
   if (!schema) {
     return null;
   }
-  const sampleArgs = minimalSampleFromArgsSchema(schema);
+  const sampleArgs = sampleArgsForCommand(commandName, schema);
   return {
     ok: true,
     code: "run-args-schema",
