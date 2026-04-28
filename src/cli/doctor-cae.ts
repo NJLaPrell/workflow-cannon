@@ -19,11 +19,12 @@ export async function collectCaeDoctorSummaryLines(cwd: string): Promise<string[
   const enabled = getAtPath(e, "kit.cae.enabled") === true;
   const persistence = getAtPath(e, "kit.cae.persistence") === true;
   const shadow = getAtPath(e, "kit.cae.runtime.shadowPreflight") === true;
+  const persistShadow = getAtPath(e, "kit.cae.runtime.persistShadowPreflight") === true;
   const enforce = getAtPath(e, "kit.cae.enforcement.enabled") === true;
   const registryStore = getAtPath(e, "kit.cae.registryStore");
   const wantRegistrySummary = registryStore === "sqlite";
   const lines = [
-    `CAE: enabled=${enabled} persistence=${persistence} shadowPreflight=${shadow} enforcement=${enforce}`
+    `CAE: enabled=${enabled} persistence=${persistence} shadowPreflight=${shadow} persistShadowPreflight=${persistShadow} enforcement=${enforce}`
   ];
   const db = openKitSqliteReadWrite(cwd, e);
   if (db) {

@@ -587,12 +587,18 @@ export function validatePersistedConfigDocument(
         }
         const rt = cae.runtime as Record<string, unknown>;
         for (const rk of Object.keys(rt)) {
-          if (rk !== "shadowPreflight") {
+          if (rk !== "shadowPreflight" && rk !== "persistShadowPreflight") {
             throw new Error(`config-invalid(${label}): unknown kit.cae.runtime.${rk}`);
           }
         }
         if (rt.shadowPreflight !== undefined) {
           validateValueForMetadata(REGISTRY["kit.cae.runtime.shadowPreflight"]!, rt.shadowPreflight);
+        }
+        if (rt.persistShadowPreflight !== undefined) {
+          validateValueForMetadata(
+            REGISTRY["kit.cae.runtime.persistShadowPreflight"]!,
+            rt.persistShadowPreflight
+          );
         }
       }
       if (cae.enforcement !== undefined) {

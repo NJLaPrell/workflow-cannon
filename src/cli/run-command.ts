@@ -332,10 +332,13 @@ export async function handleRunCommand(
       bundle: caePre.traceToStore.bundle,
       trace: caePre.traceToStore.trace
     });
+    const persistShadowPreflight =
+      getAtPath(effective, "kit.cae.persistence") === true &&
+      getAtPath(effective, "kit.cae.runtime.persistShadowPreflight") === true;
     persistCaeTraceIfEnabled(
       cwd,
       effective,
-      getAtPath(effective, "kit.cae.persistence") === true,
+      persistShadowPreflight,
       caePre.traceToStore.traceId,
       caePre.traceToStore.trace,
       caePre.traceToStore.bundle
