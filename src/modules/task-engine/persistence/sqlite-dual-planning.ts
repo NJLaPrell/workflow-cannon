@@ -3,6 +3,7 @@ import path from "node:path";
 import Database from "better-sqlite3";
 import {
   prepareKitSqliteDatabase,
+  TASK_ENGINE_DEPENDENCIES_TABLE,
   TASK_ENGINE_TASKS_TABLE,
   kitSqliteHasRelationalTaskDdl
 } from "../../../core/state/workspace-kit-sqlite.js";
@@ -54,6 +55,34 @@ function detectTableShape(db: Database.Database): TableShape {
 function planningStateColumnSet(db: Database.Database): Set<string> {
   const rows = db.prepare("PRAGMA table_info(workspace_planning_state)").all() as { name: string }[];
   return new Set(rows.map((r) => r.name));
+}
+
+function dependencyTableAvailable(db: Database.Database): boolean {
+  const row = db
+    .prepare("SELECT 1 AS ok FROM sqlite_master WHERE type = 'table' AND name = ?")
+    .get(TASK_ENGINE_DEPENDENCIES_TABLE) as { ok: number } | undefined;
+  return Boolean(row?.ok);
+}
+
+function dependencyProjection(tasks: TaskStoreDocument["tasks"]): {
+  dependsOnByTask: Map<string, string[]>;
+  unblocksByTask: Map<string, string[]>;
+} {
+  const dependsOnByTask = new Map<string, string[]>();
+  const unblocksByTask = new Map<string, string[]>();
+  for (const task of tasks) {
+    const deps = [...new Set(task.dependsOn ?? [])].sort();
+    dependsOnByTask.set(task.id, deps);
+    for (const dep of deps) {
+      const list = unblocksByTask.get(dep) ?? [];
+      list.push(task.id);
+      unblocksByTask.set(dep, list);
+    }
+  }
+  for (const [taskId, list] of unblocksByTask) {
+    unblocksByTask.set(taskId, [...new Set(list)].sort());
+  }
+  return { dependsOnByTask, unblocksByTask };
 }
 
 function readRelationalFlagFromRow(row: Record<string, unknown> | undefined): boolean {
@@ -163,7 +192,39 @@ export class SqliteDualPlanningStore {
   private loadRelationalTasks(db: Database.Database): void {
     const rows = db.prepare(`SELECT * FROM ${TASK_ENGINE_TASKS_TABLE} ORDER BY id ASC`).all() as TaskEngineTaskRow[];
     const linkMap = loadTaskFeatureLinkMap(db);
-    this._taskDoc.tasks = rows.map((r) => rowToTaskEntity(r, { taskFeatureLinkMap: linkMap }));
+    const tasks = rows.map((r) => rowToTaskEntity(r, { taskFeatureLinkMap: linkMap }));
+    if (dependencyTableAvailable(db)) {
+      const depRows = db
+        .prepare(
+          `SELECT task_id AS taskId, depends_on_task_id AS dependsOnTaskId FROM ${TASK_ENGINE_DEPENDENCIES_TABLE} ORDER BY task_id ASC, depends_on_task_id ASC`
+        )
+        .all() as Array<{ taskId: string; dependsOnTaskId: string }>;
+      const dependsOnByTask = new Map<string, string[]>();
+      const unblocksByTask = new Map<string, string[]>();
+      for (const row of depRows) {
+        const deps = dependsOnByTask.get(row.taskId) ?? [];
+        deps.push(row.dependsOnTaskId);
+        dependsOnByTask.set(row.taskId, deps);
+        const unblocks = unblocksByTask.get(row.dependsOnTaskId) ?? [];
+        unblocks.push(row.taskId);
+        unblocksByTask.set(row.dependsOnTaskId, unblocks);
+      }
+      for (const task of tasks) {
+        const deps = [...new Set(dependsOnByTask.get(task.id) ?? [])].sort();
+        const unblocks = [...new Set(unblocksByTask.get(task.id) ?? [])].sort();
+        if (deps.length > 0) {
+          task.dependsOn = deps;
+        } else {
+          delete task.dependsOn;
+        }
+        if (unblocks.length > 0) {
+          task.unblocks = unblocks;
+        } else {
+          delete task.unblocks;
+        }
+      }
+    }
+    this._taskDoc.tasks = tasks;
   }
 
   private parseLogs(transitionJson: string, mutationJson: string): void {
@@ -375,6 +436,7 @@ export class SqliteDualPlanningStore {
   }
 
   private persistRelational(db: Database.Database, nextPlanningGeneration: number): void {
+    const projection = dependencyProjection(this._taskDoc.tasks);
     const mirror = relationalBlobMirror(this._taskDoc);
     const blobJson = JSON.stringify(mirror);
     const tr = JSON.stringify(this._taskDoc.transitionLog);
@@ -389,9 +451,13 @@ export class SqliteDualPlanningStore {
     `;
     const insert = db.prepare(insertSql);
     const registry = featureRegistryActiveOnConnection(db);
+    if (dependencyTableAvailable(db)) {
+      db.prepare(`DELETE FROM ${TASK_ENGINE_DEPENDENCIES_TABLE}`).run();
+    }
     db.prepare(`DELETE FROM ${TASK_ENGINE_TASKS_TABLE}`).run();
     for (const t of this._taskDoc.tasks) {
-      const r = taskEntityToRow(t, registry ? { omitFeaturesJson: true } : undefined);
+      const compatTask = { ...t, unblocks: projection.unblocksByTask.get(t.id) ?? [] };
+      const r = taskEntityToRow(compatTask, registry ? { omitFeaturesJson: true } : undefined);
       insert.run(
         r.id,
         r.status,
@@ -419,6 +485,17 @@ export class SqliteDualPlanningStore {
         r.metadata_json,
         r.features_json ?? "[]"
       );
+    }
+    if (dependencyTableAvailable(db)) {
+      const insertDependency = db.prepare(
+        `INSERT OR IGNORE INTO ${TASK_ENGINE_DEPENDENCIES_TABLE} (task_id, depends_on_task_id, created_at, source) VALUES (?, ?, ?, 'dependsOn')`
+      );
+      const now = new Date().toISOString();
+      for (const [taskId, deps] of projection.dependsOnByTask) {
+        for (const depId of deps) {
+          insertDependency.run(taskId, depId, now);
+        }
+      }
     }
     if (registry) {
       replaceAllTaskFeatureLinks(db, this._taskDoc.tasks);
