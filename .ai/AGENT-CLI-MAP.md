@@ -350,6 +350,12 @@ workspace-kit run phase-delivery-preflight '{}'
 workspace-kit run phase-delivery-preflight '{"phaseKey":"74","includeInProgress":true}'
 ```
 
+**Copy-paste — release evidence manifest (read-only):**
+
+```bash
+workspace-kit run release-evidence-manifest '{"phaseKey":"74","approval":{"actor":"maintainer@example.com","timestamp":"2026-04-28T07:00:00.000Z","rationale":"approved after reviewing scope and gates","scope":"phase-74 publish"},"releaseNotes":{"source":"release-notes-json","entries":["Phase 74 release evidence hardening"]},"followUpScan":{"scannedAt":"2026-04-28T07:00:00.000Z","rationale":"No unresolved follow-up tasks after transcript/friction scan"},"followUpTasks":[]}'
+```
+
 **Copy-paste — same phase/dependency hints on a filtered `list-tasks` result** (default `list-tasks` shape unchanged when omitted):
 
 ```bash

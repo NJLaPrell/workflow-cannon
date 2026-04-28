@@ -141,6 +141,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "release-evidence-manifest",
+    "file": "release-evidence-manifest.md",
+    "description": "Build a machine-readable release evidence manifest for phase closeout.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "synthesize-transcript-churn",
     "file": "synthesize-transcript-churn.md",
     "description": "Promote transcript_churn/research to improvement/proposed after investigation.",

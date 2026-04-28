@@ -21,6 +21,7 @@ import {
   createDeliveryEvidenceGuard,
   readDeliveryEvidenceEnforcementMode
 } from "./delivery-evidence.js";
+import { buildReleaseEvidenceManifest } from "./release-evidence-manifest.js";
 import {
   loadTasksFromSnapshotFile,
   parseTasksFromSnapshotPayload,
@@ -386,6 +387,30 @@ export const taskEngineModule: WorkflowModule = {
           preflight.violationCount === 0
             ? "Phase delivery evidence preflight passed"
             : `Phase delivery evidence preflight found ${preflight.violationCount} violation(s)`,
+        data
+      };
+    }
+
+    if (command.name === "release-evidence-manifest") {
+      const result = buildReleaseEvidenceManifest({
+        workspacePath: ctx.workspacePath,
+        tasks: store.getActiveTasks(),
+        commandArgs: args as Record<string, unknown>
+      });
+      if (!result.ok) {
+        return {
+          ok: false,
+          code: result.code,
+          message: result.message,
+          details: result.details
+        };
+      }
+      const data: Record<string, unknown> = { manifest: result.manifest };
+      attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
+      return {
+        ok: true,
+        code: "release-evidence-manifest",
+        message: "Built release evidence manifest",
         data
       };
     }
