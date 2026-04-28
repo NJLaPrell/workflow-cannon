@@ -35,6 +35,7 @@ import { readWorkspaceStatusSnapshotFromDual } from "./persistence/workspace-sta
 import { runBackupPlanningSqlite } from "./persistence/backup-planning-sqlite-runtime.js";
 import { runMigrateTaskPersistence } from "./persistence/migrate-task-persistence-runtime.js";
 import { runGetKitPersistenceMap } from "./persistence/kit-persistence-map-runtime.js";
+import { runTaskPersistenceReadiness } from "./persistence/task-persistence-readiness.js";
 import { runUpdateWorkspacePhaseSnapshot } from "./update-workspace-phase-snapshot-runtime.js";
 import {
   runExportWorkspaceStatus,
@@ -798,6 +799,9 @@ export const taskEngineModule: WorkflowModule = {
     const args = command.args ?? {};
     if (command.name === "migrate-task-persistence") {
       return runMigrateTaskPersistence(ctx, args as Record<string, unknown>);
+    }
+    if (command.name === "task-persistence-readiness") {
+      return runTaskPersistenceReadiness(ctx, args as Record<string, unknown>);
     }
     if (command.name === "backup-planning-sqlite") {
       return runBackupPlanningSqlite(ctx, args as Record<string, unknown>);

@@ -9,6 +9,7 @@ Single place to answer: **where is data?**, **how do I import legacy JSON?**, an
 1. Run **`workspace-kit doctor`** (passes when contract files and persistence checks succeed).
 2. Read **`Effective task persistence: sqlite`** and the DB path on the next line.
 3. For a machine-readable map: **`workspace-kit run get-kit-persistence-map '{}'`**.
+4. Before migrations or constraint tightening, run **`workspace-kit run task-persistence-readiness '{}'`** for stable check codes, affected counts, sample task ids, schema/user_version, and planning generation.
 
 **`.workspace-kit/config.json`**: do not set **`tasks.persistenceBackend`** to **`json`** (rejected). Default is **sqlite** when omitted.
 
@@ -27,6 +28,7 @@ Single place to answer: **where is data?**, **how do I import legacy JSON?**, an
 - **Export / portability**: **`backup-planning-sqlite`** for a **`.db`** copy; **`migrate-task-persistence`** imports **`json-to-sqlite`** / **`json-to-unified-sqlite`**, or upgrades blob-only SQLite to relational rows via **`sqlite-blob-to-relational`** (**`sqlite-to-json`** removed in **v0.40.0**). Take a backup before **`sqlite-blob-to-relational`**.
 - **Blessed hot backup**: **`workspace-kit run backup-planning-sqlite`** with **`outputPath`** — uses SQLite’s online backup API (prefer over copying **`.db`** while writers are active). See **`json-to-sqlite-one-shot-upgrade.md`** for ordering with migrations.
 - **Integrity**: **`workspace-kit doctor`** runs **`PRAGMA quick_check`** on the planning DB when SQLite is configured; failures link **`native-sqlite-consumer-install.md`**.
+- **Migration readiness**: **`workspace-kit run task-persistence-readiness '{}'`** is read-only and reports blockers such as invalid task JSON, enum/timestamp issues, missing dependency targets, evidence-log parse failures, legacy feature storage, and blob/relational drift with stable machine-readable codes.
 - **Optimistic lock**: **`tasks.planningGenerationPolicy`** (**`off`** / **`warn`** / **`require`**) controls whether mutating commands must include **`expectedPlanningGeneration`** (see **`doctor`** summary line and [`ADR-planning-generation-optimistic-concurrency.md`](../adrs/ADR-planning-generation-optimistic-concurrency.md)). Maintainer clones often use **`require`**; published package default remains **`off`**.
 - **Schema version**: **`PRAGMA user_version`** is owned by the kit (**`prepareKitSqliteDatabase`** / **`migrateKitSqliteSchema`** — see **`docs/maintainers/runbooks/kit-sqlite-schema-migrations.md`**). **`doctor`** persistence lines include **`Kit SQLite schema (PRAGMA user_version): N`** when the file exists; **`list-module-states`** returns **`kitSqliteUserVersion`**. New or legacy files may show **`0`** until the first read/write open runs migrations (**v0.39.0+**).
 - **Concurrency**: Kit DB connections set **`busy_timeout`** (10s) to reduce flakes when **`doctor`** and **`run`** overlap; avoid long manual locks on the same file.

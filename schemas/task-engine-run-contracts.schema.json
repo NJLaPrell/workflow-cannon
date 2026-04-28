@@ -68,6 +68,7 @@
         "export-feature-taxonomy-json",
         "export-workspace-status",
         "migrate-task-persistence",
+        "task-persistence-readiness",
         "persist-planning-execution-drafts",
         "review-planning-execution-drafts",
         "start-task",
@@ -127,6 +128,7 @@
         "export-feature-taxonomy-json": { "$ref": "#/$defs/contractBase" },
         "export-workspace-status": { "$ref": "#/$defs/contractExportWorkspaceStatus" },
         "migrate-task-persistence": { "$ref": "#/$defs/contractMigrateTaskPersistence" },
+        "task-persistence-readiness": { "$ref": "#/$defs/contractTaskPersistenceReadiness" },
         "persist-planning-execution-drafts": { "$ref": "#/$defs/contractPersistPlanningExecutionDrafts" },
         "review-planning-execution-drafts": { "$ref": "#/$defs/contractBase" },
         "start-task": { "$ref": "#/$defs/contractTaskIntentWithTaskId" },
@@ -1126,6 +1128,83 @@
               "type": "object",
               "required": ["migration"],
               "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractTaskPersistenceReadiness": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "responseData": {
+              "type": "object",
+              "required": [
+                "schemaVersion",
+                "ready",
+                "dbPath",
+                "sqliteUserVersion",
+                "planningGeneration",
+                "relationalTasks",
+                "taskCount",
+                "transitionCount",
+                "mutationCount",
+                "checks",
+                "summary"
+              ],
+              "additionalProperties": true,
+              "properties": {
+                "schemaVersion": { "const": 1 },
+                "ready": { "type": "boolean" },
+                "dbPath": { "type": "string" },
+                "sqliteUserVersion": { "type": ["integer", "null"], "minimum": 0 },
+                "planningGeneration": { "type": ["integer", "null"], "minimum": 0 },
+                "relationalTasks": { "type": ["boolean", "null"] },
+                "taskCount": { "type": "integer", "minimum": 0 },
+                "transitionCount": { "type": "integer", "minimum": 0 },
+                "mutationCount": { "type": "integer", "minimum": 0 },
+                "checks": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "code",
+                      "severity",
+                      "message",
+                      "affectedCount",
+                      "sampleTaskIds",
+                      "remediation"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "code": { "type": "string", "minLength": 1 },
+                      "severity": { "type": "string", "enum": ["ok", "warning", "error"] },
+                      "message": { "type": "string" },
+                      "affectedCount": { "type": "integer", "minimum": 0 },
+                      "sampleTaskIds": {
+                        "type": "array",
+                        "items": { "type": "string" }
+                      },
+                      "remediation": { "type": ["string", "null"] }
+                    }
+                  }
+                },
+                "summary": {
+                  "type": "object",
+                  "required": ["errorCount", "warningCount", "okCount"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "errorCount": { "type": "integer", "minimum": 0 },
+                    "warningCount": { "type": "integer", "minimum": 0 },
+                    "okCount": { "type": "integer", "minimum": 0 }
+                  }
+                }
+              }
             }
           }
         }

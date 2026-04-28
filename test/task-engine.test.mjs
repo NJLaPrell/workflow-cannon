@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import Database from "better-sqlite3";
 
 import {
   TaskStore,
@@ -28,7 +29,8 @@ import {
   ModuleRegistry,
   ModuleCommandRouter,
   appendPolicyTrace,
-  classifyKitStatePath
+  classifyKitStatePath,
+  buildTaskPersistenceReadinessReport
 } from "../dist/index.js";
 
 // ---------------------------------------------------------------------------
@@ -1035,6 +1037,7 @@ test("taskEngineModule registration includes all instruction entries", () => {
   assert.ok(names.includes("phase-status"));
   assert.ok(names.includes("convert-wishlist"));
   assert.ok(names.includes("migrate-task-persistence"));
+  assert.ok(names.includes("task-persistence-readiness"));
   assert.ok(names.includes("persist-planning-execution-drafts"));
   assert.ok(names.includes("review-planning-execution-drafts"));
   assert.ok(names.includes("agent-mutation-plan"));
@@ -3082,6 +3085,56 @@ test("migrate-task-persistence json-to-sqlite then create-task uses SQLite store
   r = await taskEngineModule.onCommand({ name: "get-task", args: { taskId: "T7777" } }, ctxSqlite);
   assert.equal(r.ok, true);
   assert.equal(r.data.task.title, "sqlite persistence smoke");
+});
+
+test("task-persistence-readiness reports explicit empty store state", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, () => {});
+
+  const result = await taskEngineModule.onCommand(
+    { name: "task-persistence-readiness", args: {} },
+    sqliteTaskEngineCtx(workspace)
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "task-persistence-readiness");
+  assert.equal(result.data.schemaVersion, 1);
+  assert.equal(result.data.ready, true);
+  assert.equal(result.data.taskCount, 0);
+  assert.equal(result.data.transitionCount, 0);
+  assert.equal(result.data.mutationCount, 0);
+  const codes = result.data.checks.map((c) => c.code);
+  assert.ok(codes.includes("task-store-empty"));
+  assert.ok(codes.includes("task-evidence-empty"));
+  assert.equal(result.data.summary.errorCount, 0);
+});
+
+test("task-persistence-readiness flags invalid relational task rows", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T800", status: "ready" }));
+  });
+  const dual = new SqliteDualPlanningStore(workspace, ".workspace-kit/tasks/workspace-kit.db");
+  dual.loadFromDisk();
+  dual.enableRelationalPersistenceAndPersist();
+  dual.closeDatabase();
+
+  const dbPath = path.join(workspace, ".workspace-kit", "tasks", "workspace-kit.db");
+  const db = new Database(dbPath);
+  try {
+    db.prepare("UPDATE task_engine_tasks SET status = ? WHERE id = ?").run("nonsense", "T800");
+  } finally {
+    db.close();
+  }
+
+  const report = buildTaskPersistenceReadinessReport({
+    workspacePath: workspace,
+    effectiveConfig: sqliteTaskEngineCtx(workspace).effectiveConfig
+  });
+
+  assert.equal(report.ready, false);
+  assert.ok(report.checks.some((c) => c.code === "task-shape-invalid" && c.sampleTaskIds.includes("T800")));
+  assert.ok(report.checks.some((c) => c.code === "task-status-invalid" && c.sampleTaskIds.includes("T800")));
 });
 
 test("migrate-task-persistence sqlite-blob-to-relational round-trips tasks and logs", async () => {

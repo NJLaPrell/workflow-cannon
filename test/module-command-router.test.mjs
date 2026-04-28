@@ -97,6 +97,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "start-task",
     "sync-effective-behavior-cursor-rule",
     "synthesize-transcript-churn",
+    "task-persistence-readiness",
     "update-behavior-profile",
     "update-task",
     "update-wishlist",

@@ -531,6 +531,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "task-persistence-readiness",
+    "file": "task-persistence-readiness.md",
+    "description": "Read-only migration readiness report for task persistence JSON, relational rows, dependencies, evidence logs, and SQLite schema context.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "get-kit-persistence-map",
     "file": "get-kit-persistence-map.md",
     "description": "Read-only JSON map of unified SQLite paths, planning table/columns, and legacy task JSON import paths for agents.",

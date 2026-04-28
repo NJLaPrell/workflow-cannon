@@ -53,6 +53,7 @@
     "set-current-phase",
     "start-task",
     "synthesize-transcript-churn",
+    "task-persistence-readiness",
     "update-task",
     "update-wishlist",
     "update-workspace-phase-snapshot",
@@ -857,6 +858,10 @@
           "type": "object"
         }
       },
+      "additionalProperties": true
+    },
+    "task-persistence-readiness": {
+      "type": "object",
       "additionalProperties": true
     },
     "update-task": {
