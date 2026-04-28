@@ -17,7 +17,7 @@ workspace-kit run phase-status '{"includeTaskCounts":true,"includeDriftDetails":
 
 ## Behavior
 
-This command is read-only. It reads **`kit_workspace_status`** when present, resolves canonical phase with the same precedence as queue health (workspace status first, config only as fallback), reports project config phase hints, checks the non-authoritative DB export freshness, and optionally counts tasks by phase bucket.
+This command is read-only. It reads **`kit_workspace_status`** when present, resolves canonical phase with the same precedence as queue health (workspace status first, config only as fallback), reports project config phase hints, checks the non-authoritative DB export freshness by comparing exported **`workspaceRevision`** to the SQLite workspace-status row, and optionally counts tasks by phase bucket. Unrelated task/CAE writes to the planning SQLite file do not make the export stale.
 
 Workspace current phase and task **`phaseKey`** are separate concepts. Task counts use each task’s explicit **`phaseKey`** or inferred **`phase`** label, and the command never changes task rows.
 
@@ -28,7 +28,7 @@ Returns:
 - **`workspaceStatus`**, **`currentKitPhase`**, and **`nextKitPhase`** from SQLite when available.
 - **`canonicalPhase`** with source, config phase key, workspace-status phase key, and config-vs-SQLite match status.
 - **`configHint`** for **`kit.currentPhaseNumber`** / **`kit.currentPhaseLabel`**.
-- **`exportStatus`** for **`docs/maintainers/data/workspace-kit-status.db-export.yaml`**.
+- **`exportStatus`** for **`docs/maintainers/data/workspace-kit-status.db-export.yaml`**, including **`workspaceRevision`** and **`exportWorkspaceRevision`** when the export marker is present.
 - **`remediationSuggestions`** when config or export drift is detected.
 - **`taskCounts`** when requested.
 

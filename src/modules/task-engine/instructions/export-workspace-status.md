@@ -2,6 +2,8 @@
 
 Emit a **non-authoritative** YAML export of **`kit_workspace_status`** to **`docs/maintainers/data/workspace-kit-status.db-export.yaml`** (does not replace maintainer **`workspace-kit-status.yaml`**).
 
+The export includes a comment marker for **`workspace_revision`**. **`phase-status`** uses that marker to decide freshness, so unrelated writes to the planning SQLite file do not make the workspace-status export stale.
+
 ## Usage
 
 Dry run (stdout payload only):
