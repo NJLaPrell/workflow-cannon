@@ -785,6 +785,15 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
     code { font-family: var(--vscode-editor-font-family); font-size: 11px; }
     .gd-draft-table { width: 100%; border-collapse: collapse; font-size: 11px; margin: 8px 0 0; }
     .gd-draft-table th, .gd-draft-table td { border: 1px solid var(--vscode-widget-border); padding: 4px 6px; text-align: left; vertical-align: top; }
+    .gd-meta-tight { margin-top: 4px !important; gap: 4px 10px !important; }
+    .gd-readiness-banner { padding: 6px 0 10px 0; border-bottom: 1px solid var(--vscode-widget-border); margin-bottom: 8px; }
+    .gd-readiness-head { margin-bottom: 4px !important; }
+    .gd-readiness-ok { background: rgba(0, 160, 0, 0.25); color: inherit; }
+    .gd-readiness-warn { background: rgba(200, 150, 0, 0.35); color: inherit; }
+    .gd-readiness-danger { background: rgba(200, 60, 60, 0.38); color: inherit; }
+    .gd-readiness-list { margin: 6px 0 0 0; padding-left: 18px; }
+    .gd-blast-examples { margin: 6px 0 0 0; padding-left: 18px; }
+    .gd-blast.gd-card { margin: 10px 0; }
     .gd-warning ul { margin: 6px 0 0; padding-left: 18px; }
   </style>
 </head>

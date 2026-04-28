@@ -434,6 +434,80 @@ function renderDraftImpactSummaryPanel(raw: unknown): string {
   if (!samples.length) {
     return '<section class="gd-card gd-warn-card"><h2>Draft impact</h2><p>No sample matrix rows produced.</p></section>';
   }
+  const readinessRaw = di.activationReadiness;
+  const readiness = readinessRaw !== undefined && readinessRaw !== null ? asRecord(readinessRaw) : null;
+  const blastRaw = di.blastRadiusSummary;
+  const blast = blastRaw !== undefined && blastRaw !== null ? asRecord(blastRaw) : null;
+  const level = readiness ? String(readiness.level ?? "ok") : "";
+  const levelPillClass =
+    level === "stop_confirm"
+      ? "gd-pill gd-readiness-danger"
+      : level === "warning"
+        ? "gd-pill gd-readiness-warn"
+        : "gd-pill gd-readiness-ok";
+  const levelLabel =
+    level === "stop_confirm" ? "Stop and confirm" : level === "warning" ? "Review warnings" : "Looks OK";
+
+  let readinessBlock = "";
+  if (readiness) {
+    const reasons = asArray(readiness.reasons);
+    const conflictN = Number(readiness.conflictEntryCount ?? 0);
+    const subset = readiness.sameFamilyConflictSubset ? asArray(readiness.sameFamilyConflictSubset) : [];
+    const reasonList =
+      reasons.length > 0
+        ? `<ul class="gd-readiness-list">${reasons
+            .map((r) => {
+              const row = asRecord(r);
+              const sev = String(row.severity ?? "info");
+              return `<li class="gd-sev-${escapeHtml(sev)}">${escapeHtml(String(row.message ?? row.code ?? ""))}</li>`;
+            })
+            .join("")}</ul>`
+        : "";
+    readinessBlock = `<div class="gd-readiness-banner">
+  <div class="gd-card-head gd-readiness-head"><h3>Activation readiness</h3><span class="${levelPillClass}">${escapeHtml(levelLabel)}</span></div>
+  <dl class="gd-meta gd-meta-tight">
+    <div><dt>Preview trace id</dt><dd><code>${escapeHtml(String(readiness.primaryPreviewTraceId ?? ""))}</code></dd></div>
+    <div><dt>Usefulness signal</dt><dd>${escapeHtml(String(readiness.usefulnessSignal ?? "?"))}</dd></div>
+    <div><dt>Conflicts</dt><dd>${escapeHtml(String(conflictN))} · draft in ${escapeHtml(String(readiness.conflictsInvolvingDraft ?? 0))}</dd></div>
+    <div><dt>Acknowledgements Δ</dt><dd>${escapeHtml(String(readiness.acknowledgementDelta ?? 0))}</dd></div>
+  </dl>
+  ${reasonList}
+  ${
+    subset.length > 0
+      ? `<details class="gd-debug"><summary>Conflict detail (truncated)</summary><pre>${escapeHtml(
+          JSON.stringify(subset.slice(0, 5), null, 2).slice(0, 4800)
+        )}</pre></details>`
+      : ""
+  }</div>`;
+  }
+
+  let blastBlock = "";
+  if (blast) {
+    const tally = blast.tallyBySampleKindWhereDraftMatched
+      ? asRecord(blast.tallyBySampleKindWhereDraftMatched)
+      : null;
+    const tallyRows = tally
+      ? Object.entries(tally)
+          .filter(([, v]) => typeof v === "number" && (v as number) > 0)
+          .map(([k, v]) => `<tr><td><code>${escapeHtml(k)}</code></td><td>${escapeHtml(String(v))}</td></tr>`)
+          .join("")
+      : "";
+    const examples = blast.representativeMatchedLabels ? asArray(blast.representativeMatchedLabels) : [];
+    const exBlock =
+      examples.length > 0
+        ? `<ul class="gd-blast-examples">${examples
+            .map((x) => `<li>${escapeHtml(String(x ?? ""))}</li>`)
+            .join("")}</ul>`
+        : "";
+    blastBlock = `<section class="gd-card gd-blast gd-warn-card">
+<h3>Blast radius (sampled)</h3>
+<p class="gd-muted">Draft scope bucket <strong>${escapeHtml(String(blast.draftScopeCategory ?? ""))}</strong> · Samples where draft surfaced: ${escapeHtml(
+      String(blast.samplesWhereDraftMatched ?? 0)
+    )}/${escapeHtml(String(blast.totalSamplesEvaluated ?? 0))}; planning-queue rows sampled: ${escapeHtml(String(blast.planningTasksIncluded ?? 0))}</p>
+${exBlock}
+${tallyRows ? `<table class="gd-draft-table"><thead><tr><th>Sample kind</th><th>Matches</th></tr></thead><tbody>${tallyRows}</tbody></table>` : "<p class=\"gd-muted\">No kind-specific tally (draft invisible on sampled rows).</p>"}</section>`;
+  }
+
   const broadBlock = asArray(di.broadScopeWarnings);
   const broadList = broadBlock
     .map((w) => {
@@ -452,7 +526,8 @@ function renderDraftImpactSummaryPanel(raw: unknown): string {
       const cmd = escapeHtml(String(sample.commandName ?? ""));
       const tk = sample.taskId ? ` · ${escapeHtml(String(sample.taskId))}` : "";
       const vis = sample.draftVisibleInOverlay === true ? "Visible" : "Not shown";
-      return `<tr><td>${lbl}</td><td><code>${cmd}</code>${tk}</td><td>${escapeHtml(
+      const kind = sample.sampleKind ? `<span class="gd-muted"><code>${escapeHtml(String(sample.sampleKind))}</code></span>` : "";
+      return `<tr><td>${lbl} ${kind}</td><td><code>${cmd}</code>${tk}</td><td>${escapeHtml(
         `p${String(baseline.policy ?? 0)} t${String(baseline.think ?? 0)} d${String(baseline.do ?? 0)} r${String(
           baseline.review ?? 0
         )}`
@@ -466,6 +541,8 @@ function renderDraftImpactSummaryPanel(raw: unknown): string {
   return `<section class="gd-card gd-draft-impact">
   <h2>Draft impact sampling</h2>
   <p class="gd-muted">${escapeHtml(String(di.scopePlainSummary ?? ""))}</p>
+  ${readinessBlock}
+  ${blastBlock}
   ${warnBlock}
   <table class="gd-draft-table"><thead><tr><th>Context</th><th>Selection</th><th>Baseline families</th><th>With draft</th><th>Draft</th></tr></thead><tbody>${tableRows}</tbody></table>
   <p class="gd-muted">Preset <code>${escapeHtml(String(di.scopePreset ?? ""))}</code> · Overlay digest <code>${escapeHtml(

@@ -757,6 +757,7 @@ export const contextActivationModule: WorkflowModule = {
           baseRegistry: loaded.reg,
           overlayRegistry: synthesized.overlay,
           scopeBuild: synthesized.scopeBuild,
+          draftFamily: parsed.value.family,
           primary: {
             label: "Primary dashboard/workflow preview",
             commandName,
