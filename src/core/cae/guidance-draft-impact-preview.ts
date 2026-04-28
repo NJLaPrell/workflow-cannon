@@ -11,7 +11,11 @@ import {
 } from "../../contracts/builtin-run-command-manifest.js";
 import { evaluateActivationBundle } from "./cae-evaluate.js";
 import type { CaeEvaluateMode } from "./cae-evaluate.js";
-import { countReadyTasksInPlanningSqlite } from "./cae-queue-snapshot.js";
+import {
+  countReadyTasksInPlanningSqlite,
+  listImpactPreviewPlanningTasks,
+  type ImpactPreviewPlanningTaskRow
+} from "./cae-queue-snapshot.js";
 import { buildEvaluationContext, type TaskEngineTaskRowSlice } from "./evaluation-context-builder.js";
 import type { CaeEvaluationContext } from "./evaluation-context-types.js";
 import { hydrateTaskRowForCae, inferApprovalTierHint } from "./cae-run-preflight.js";
@@ -54,14 +58,65 @@ export type PreviewPrimaryInput = {
   argvSummary?: string;
 };
 
+export type DraftImpactSampleKind =
+  | "primary"
+  | "contrast_workflow"
+  | "broad_drift"
+  | "completing_task_flow"
+  | "planning_task";
+
 export type DraftImpactSampleRowV1 = {
   schemaVersion: 1;
   label: string;
+  sampleKind?: DraftImpactSampleKind;
   commandName: string;
   taskId?: string;
   baselineFamilyCounts: { policy: number; think: number; do: number; review: number };
   overlayFamilyCounts: { policy: number; think: number; do: number; review: number };
   draftVisibleInOverlay: boolean;
+};
+
+/** Product-facing mapping of authoring scope presets to coarse blast buckets (T1002). */
+export type BlastRadiusScopeBucket =
+  | "always_global"
+  | "workflow_intent"
+  | "phase"
+  | "task_selector"
+  | "task_tag"
+  | "completing_task"
+  | "advanced_command"
+  | "unknown_custom";
+
+export type BlastRadiusSummaryV1 = {
+  schemaVersion: 1;
+  draftScopeCategory: BlastRadiusScopeBucket;
+  totalSamplesEvaluated: number;
+  samplesWhereDraftMatched: number;
+  representativeMatchedLabels: string[];
+  planningTasksIncluded: number;
+  /** Counts of samples (where the draft surfaced) keyed by DraftImpactSampleKind */
+  tallyBySampleKindWhereDraftMatched: Partial<Record<DraftImpactSampleKind, number>>;
+};
+
+export type ActivationReadinessReasonV1 = {
+  code: string;
+  message: string;
+  severity: "info" | "warn" | "block";
+};
+
+export type ActivationReadinessV1 = {
+  schemaVersion: 1;
+  /** Conservative enablement posture before publishing a Guidance version */
+  level: "ok" | "warning" | "stop_confirm";
+  reasons: ActivationReadinessReasonV1[];
+  primaryPreviewTraceId: string;
+  conflictEntryCount: number;
+  conflictsInvolvingDraft: number;
+  sameFamilyConflictSubset: Record<string, unknown>[];
+  usefulnessSignal: "absent" | "useful" | "noisy";
+  overlayPendingAckCount: number;
+  baselinePendingAckCount: number;
+  acknowledgementDelta: number;
 };
 
 export type GuidanceDraftImpactV1 = {
@@ -76,6 +131,8 @@ export type GuidanceDraftImpactV1 = {
   broadScopeWarnings: { code: string; message: string }[];
   primarySampleLabel: string;
   samples: DraftImpactSampleRowV1[];
+  blastRadiusSummary: BlastRadiusSummaryV1;
+  activationReadiness: ActivationReadinessV1;
 };
 
 
@@ -283,25 +340,65 @@ export function buildPreviewEvaluationContext(opts: {
   });
 }
 
-function cloneConditions(conds: unknown[]): unknown[] {
-  return conds.map((c) => JSON.parse(JSON.stringify(c)) as unknown);
+const DRAFT_IMPACT_SAMPLE_CAP = 8;
+
+function presetToBlastBucket(preset: GuidanceScopeDraft["preset"] | "unknown"): BlastRadiusScopeBucket {
+  switch (preset) {
+    case "always":
+      return "always_global";
+    case "workflow":
+      return "workflow_intent";
+    case "phase":
+      return "phase";
+    case "task":
+      return "task_selector";
+    case "taskTag":
+      return "task_tag";
+    case "completingTask":
+      return "completing_task";
+    case "advancedCommand":
+      return "advanced_command";
+    default:
+      return "unknown_custom";
+  }
+}
+
+function clashSeverityRank(a: ActivationReadinessV1["level"]): number {
+  return a === "stop_confirm" ? 2 : a === "warning" ? 1 : 0;
+}
+
+function worstReadinessLevel(
+  prev: ActivationReadinessV1["level"],
+  next: ActivationReadinessV1["level"]
+): ActivationReadinessV1["level"] {
+  return clashSeverityRank(next) > clashSeverityRank(prev) ? next : prev;
 }
 
 function normalizePreviewSamples(
   primary: PreviewPrimaryInput,
   preset: GuidanceScopeDraft["preset"] | "unknown",
   breadthWarning: boolean,
-  knownCommands: string[]
-): Array<PreviewPrimaryInput & { label: string }> {
+  knownCommands: string[],
+  planningTasks: ImpactPreviewPlanningTaskRow[]
+): Array<
+  PreviewPrimaryInput & {
+    label: string;
+    sampleKind: DraftImpactSampleKind;
+  }
+> {
   const pickAlt = (avoid: string): string => {
     const alt = knownCommands.find((c) => c !== avoid);
     return alt ?? (avoid === "list-tasks" ? "get-next-actions" : "list-tasks");
   };
 
-  const mk = (
-    partial: Partial<PreviewPrimaryInput> & { label: string }
-  ): PreviewPrimaryInput & { label: string } => ({
+  type NormRow = PreviewPrimaryInput & {
+    label: string;
+    sampleKind: DraftImpactSampleKind;
+  };
+
+  const mk = (partial: Partial<PreviewPrimaryInput> & { label: string; sampleKind: DraftImpactSampleKind }): NormRow => ({
     label: partial.label,
+    sampleKind: partial.sampleKind,
     commandName: partial.commandName ?? primary.commandName,
     moduleId: partial.moduleId ?? primary.moduleId ?? resolveBuiltinModuleId(partial.commandName ?? primary.commandName),
     taskId: partial.taskId ?? primary.taskId,
@@ -310,10 +407,11 @@ function normalizePreviewSamples(
   });
 
   const baseLabel = primary.label?.trim()?.length ? primary.label.trim() : "Primary selection";
-  const rows: Array<PreviewPrimaryInput & { label: string }> = [];
+  const rows: NormRow[] = [];
 
   rows.push(
     mk({
+      sampleKind: "primary",
       label: baseLabel,
       commandName: primary.commandName,
       moduleId: primary.moduleId,
@@ -327,6 +425,7 @@ function normalizePreviewSamples(
     const alt = pickAlt(primary.commandName);
     rows.push(
       mk({
+        sampleKind: "broad_drift",
         label: "Broad-scope drift sample (alternate workflow)",
         commandName: alt,
         moduleId: resolveBuiltinModuleId(alt),
@@ -338,6 +437,7 @@ function normalizePreviewSamples(
   const alternate = pickAlt(primary.commandName);
   rows.push(
     mk({
+      sampleKind: "contrast_workflow",
       label: `Contrast workflow (${alternate})`,
       commandName: alternate,
       moduleId: resolveBuiltinModuleId(alternate),
@@ -348,6 +448,7 @@ function normalizePreviewSamples(
   if (preset === "completingTask") {
     rows.push(
       mk({
+        sampleKind: "completing_task_flow",
         label: "run-transition start (no complete action)",
         commandName: "run-transition",
         moduleId: "task-engine",
@@ -360,16 +461,200 @@ function normalizePreviewSamples(
     );
   }
 
+  for (const t of planningTasks) {
+    rows.push(
+      mk({
+        sampleKind: "planning_task",
+        label: `${t.status === "in_progress" ? "In progress task" : "Ready queue task"} ${t.id}`,
+        commandName: primary.commandName,
+        moduleId: primary.moduleId ?? resolveBuiltinModuleId(primary.commandName),
+        taskId: t.id,
+        commandArgs: primary.commandArgs ?? {},
+        argvSummary: primary.argvSummary
+      })
+    );
+  }
+
   const seen = new Set<string>();
-  const dedup: typeof rows = [];
+  const dedup: NormRow[] = [];
   for (const r of rows) {
-    const key = `${r.commandName}|${r.taskId ?? ""}|${JSON.stringify(r.commandArgs ?? {})}`;
+    const key = `${r.commandName}|${r.taskId ?? ""}|${JSON.stringify(r.commandArgs ?? {})}|${r.label}`;
     if (seen.has(key)) continue;
     seen.add(key);
     dedup.push(r);
-    if (dedup.length >= 6) break;
+    if (dedup.length >= DRAFT_IMPACT_SAMPLE_CAP) break;
   }
   return dedup;
+}
+
+function pickConflicts(bundle: Record<string, unknown>): Record<string, unknown>[] {
+  const css = bundle.conflictShadowSummary as { entries?: unknown[] } | undefined;
+  const e = css?.entries;
+  return Array.isArray(e) ? (e.filter((x) => x && typeof x === "object") as Record<string, unknown>[]) : [];
+}
+
+function conflictTouchesDraft(entries: Record<string, unknown>[], draftId: string): number {
+  let n = 0;
+  for (const ent of entries) {
+    const ids = ent["activationIds"];
+    if (!Array.isArray(ids)) continue;
+    const hit = ids.some((id) => String(id) === draftId);
+    if (hit) n += 1;
+  }
+  return n;
+}
+
+function buildBlastRadiusSummary(params: {
+  preset: GuidanceScopeBuildResult["preset"] | "unknown";
+  samples: DraftImpactSampleRowV1[];
+}): BlastRadiusSummaryV1 {
+  const matched = params.samples.filter((s) => s.draftVisibleInOverlay);
+  const tally: Partial<Record<DraftImpactSampleKind, number>> = {};
+  for (const s of matched) {
+    const k = (s.sampleKind ?? "primary") as DraftImpactSampleKind;
+    tally[k] = (tally[k] ?? 0) + 1;
+  }
+  const rep = matched
+    .map((s) => s.label)
+    .filter((lbl, i, a) => a.indexOf(lbl) === i)
+    .slice(0, 3);
+  const planningIncluded = params.samples.filter((s) => s.sampleKind === "planning_task").length;
+
+  return {
+    schemaVersion: 1,
+    draftScopeCategory: presetToBlastBucket(params.preset),
+    totalSamplesEvaluated: params.samples.length,
+    samplesWhereDraftMatched: matched.length,
+    representativeMatchedLabels: rep,
+    planningTasksIncluded: planningIncluded,
+    tallyBySampleKindWhereDraftMatched: tally
+  };
+}
+
+function buildActivationReadiness(params: {
+  draftFamily: DraftGuidanceRuleInputV1["family"];
+  scopePreset: GuidanceScopeBuildResult["preset"] | "unknown";
+  breadth: { code: string; message: string }[];
+  primaryOverlayBundle: Record<string, unknown>;
+  primaryBaselineBundle: Record<string, unknown>;
+  primaryTraceId: string;
+}): ActivationReadinessV1 {
+  const conflicts = pickConflicts(params.primaryOverlayBundle);
+  const draftConflicts = conflictTouchesDraft(conflicts, PREVIEW_DRAFT_ACTIVATION_ID);
+  let subset = conflicts.filter((c) => {
+    const ids = c["activationIds"];
+    return Array.isArray(ids) && ids.some((id) => String(id) === PREVIEW_DRAFT_ACTIVATION_ID);
+  });
+  if (subset.length > 10) subset = subset.slice(0, 10);
+
+  const shadow = params.primaryOverlayBundle.shadowObservation as
+    | {
+        usefulnessSignal?: string;
+      }
+    | undefined;
+  let usefulnessSignal: "absent" | "useful" | "noisy" =
+    shadow?.usefulnessSignal === "noisy"
+      ? "noisy"
+      : shadow?.usefulnessSignal === "useful"
+        ? "useful"
+        : "absent";
+
+  const baseAck = Array.isArray(params.primaryBaselineBundle.pendingAcknowledgements)
+    ? params.primaryBaselineBundle.pendingAcknowledgements.length
+    : 0;
+  const overAck = Array.isArray(params.primaryOverlayBundle.pendingAcknowledgements)
+    ? params.primaryOverlayBundle.pendingAcknowledgements.length
+    : 0;
+  const ackDelta = overAck - baseAck;
+
+  const reasons: ActivationReadinessReasonV1[] = [];
+
+  let level: ActivationReadinessV1["level"] = "ok";
+
+  if (params.scopePreset === "always" && params.draftFamily === "policy") {
+    reasons.push({
+      code: "cae-readiness-always-policy",
+      message: "Always-on rules in the policy family match every evaluation context; confirm scope is intentional before activation.",
+      severity: "block"
+    });
+    level = worstReadinessLevel(level, "stop_confirm");
+  }
+
+  if (params.breadth.length > 0) {
+    reasons.push({
+      code: "cae-readiness-broad-scope",
+      message: `${params.breadth.length} broad-scope Guidance warning(s); review overlap noise before activating.`,
+      severity: "warn"
+    });
+    level = worstReadinessLevel(level, "warning");
+  }
+
+  if (conflicts.length > 0) {
+    reasons.push({
+      code: "cae-readiness-conflict",
+      message: `${conflicts.length} same-family Guidance conflict entr${conflicts.length === 1 ? "y" : "ies"} in preview overlays (matching priorities with divergent sources).`,
+      severity: conflicts.length > 2 || usefulnessSignal === "noisy" ? "warn" : "warn"
+    });
+    level = worstReadinessLevel(level, "warning");
+  }
+
+  if (draftConflicts > 0) {
+    reasons.push({
+      code: "cae-readiness-draft-in-conflict",
+      message: `This draft participates in ${draftConflicts} conflict cluster(s) at the same priority tier.`,
+      severity: "warn"
+    });
+    level = worstReadinessLevel(level, "warning");
+  }
+
+  if (usefulnessSignal === "noisy") {
+    reasons.push({
+      code: "cae-readiness-noisy-matrix",
+      message: "Guidance usefulness signal flagged as noisy (many overlapping activations/conflicts across this draft preview matrix).",
+      severity: "warn"
+    });
+    level = worstReadinessLevel(level, "warning");
+  }
+
+  if (ackDelta > 2) {
+    reasons.push({
+      code: "cae-readiness-heavy-ack",
+      message: `Overlay introduces ${ackDelta} incremental acknowledgement-dependent activation(s) on the primary context vs baseline.`,
+      severity: "info"
+    });
+  }
+
+  if (reasons.length === 0) {
+    reasons.push({
+      code: "cae-readiness-clean",
+      message: "No automatic blockers surfaced for activation readiness checks on the primary sampled context.",
+      severity: "info"
+    });
+  }
+
+  reasons.sort((a, b) => {
+    const rank = (s: ActivationReadinessReasonV1["severity"]) =>
+      s === "block" ? 2 : s === "warn" ? 1 : 0;
+    return rank(b.severity) - rank(a.severity);
+  });
+
+  return {
+    schemaVersion: 1,
+    level,
+    reasons,
+    primaryPreviewTraceId: params.primaryTraceId,
+    conflictEntryCount: conflicts.length,
+    conflictsInvolvingDraft: draftConflicts,
+    sameFamilyConflictSubset: subset,
+    usefulnessSignal,
+    overlayPendingAckCount: overAck,
+    baselinePendingAckCount: baseAck,
+    acknowledgementDelta: ackDelta
+  };
+}
+
+function cloneConditions(conds: unknown[]): unknown[] {
+  return conds.map((c) => JSON.parse(JSON.stringify(c)) as unknown);
 }
 
 /** Build overlay registry + synthesized draft activation + playbook artifact validated against CAE schemas. */
@@ -454,6 +739,7 @@ export function buildGuidanceDraftImpactMatrix(params: {
   baseRegistry: CaeLoadedRegistry;
   overlayRegistry: CaeLoadedRegistry;
   scopeBuild: GuidanceScopeBuildResult;
+  draftFamily: DraftGuidanceRuleInputV1["family"];
   primary: PreviewPrimaryInput;
   currentKitPhase: string;
   evalMode: CaeEvaluateMode;
@@ -462,15 +748,25 @@ export function buildGuidanceDraftImpactMatrix(params: {
   const breadth = collectBroadScopeWarnings(params.scopeBuild);
   const breadthFlag = breadth.length > 0;
   const preset = params.scopeBuild.preset;
+
+  const planningFetched = listImpactPreviewPlanningTasks(params.workspacePath, params.effective, {
+    currentPhaseKey: params.currentKitPhase.trim() !== "" ? params.currentKitPhase.trim() : undefined,
+    limit: DRAFT_IMPACT_SAMPLE_CAP + 4
+  });
+
   const normalized = normalizePreviewSamples(
     params.primary,
     preset === "unknown" ? "unknown" : preset,
     breadthFlag || preset === "always",
-    knownCmds
+    knownCmds,
+    planningFetched
   );
 
   const rows: DraftImpactSampleRowV1[] = [];
   const mode = params.evalMode === "live" ? "live" : "shadow";
+  let primaryOverlayBundle: Record<string, unknown> | null = null;
+  let primaryBaselineBundle: Record<string, unknown> | null = null;
+  let primaryTraceId = "";
 
   for (let i = 0; i < normalized.length; i++) {
     const s = normalized[i]!;
@@ -488,9 +784,16 @@ export function buildGuidanceDraftImpactMatrix(params: {
     const baseline = evaluateActivationBundle(ec, params.baseRegistry, { evalMode: mode });
     const overlaid = evaluateActivationBundle(ec, params.overlayRegistry, { evalMode: mode });
 
+    if (i === 0) {
+      primaryOverlayBundle = overlaid.bundle as Record<string, unknown>;
+      primaryBaselineBundle = baseline.bundle as Record<string, unknown>;
+      primaryTraceId = overlaid.traceId;
+    }
+
     rows.push({
       schemaVersion: 1,
       label: s.label,
+      sampleKind: s.sampleKind,
       commandName: s.commandName,
       taskId: s.taskId,
       baselineFamilyCounts: familyCountsFromBundle(baseline.bundle as Record<string, unknown>),
@@ -498,6 +801,21 @@ export function buildGuidanceDraftImpactMatrix(params: {
       draftVisibleInOverlay: overlayBundleShowsDraft(overlaid.bundle as Record<string, unknown>)
     });
   }
+
+  const safeOverlay = primaryOverlayBundle ?? {};
+  const safeBaseline = primaryBaselineBundle ?? {};
+  const blastRadiusSummary = buildBlastRadiusSummary({
+    preset: params.scopeBuild.preset,
+    samples: rows
+  });
+  const activationReadiness = buildActivationReadiness({
+    draftFamily: params.draftFamily,
+    scopePreset: params.scopeBuild.preset,
+    breadth,
+    primaryOverlayBundle: safeOverlay,
+    primaryBaselineBundle: safeBaseline,
+    primaryTraceId: primaryTraceId || String((safeOverlay as Record<string, unknown>).traceId ?? "")
+  });
 
   return {
     schemaVersion: 1,
@@ -510,6 +828,8 @@ export function buildGuidanceDraftImpactMatrix(params: {
     scopeErrors: params.scopeBuild.errors,
     broadScopeWarnings: breadth,
     primarySampleLabel: normalized[0]?.label ?? "Primary selection",
-    samples: rows
+    samples: rows,
+    blastRadiusSummary,
+    activationReadiness
   };
 }

@@ -33,6 +33,6 @@ and `conflictShadowSummary`.
 
 When **`draftRule`** / **`draftGuidanceRule`** is sent, **`data`** also includes **`draftImpact`**:
 **`schemaVersion`**, **`draftArtifactId`**, **`draftActivationId`**, **`scopePreset`**, **`scopePlainSummary`**,
- **`overlayRegistryDigestSnippet`**, **`scopeWarnings`**, **`scopeErrors`**, **`broadScopeWarnings`**, **`primarySampleLabel`**, **`samples`** (rows with **`baselineFamilyCounts`** / **`overlayFamilyCounts`** and **`draftVisibleInOverlay`**). **`bundle`** / **`guidanceCards`** reflect evaluation against the overlaid registry in that mode.
+ **`overlayRegistryDigestSnippet`**, **`scopeWarnings`**, **`scopeErrors`**, **`broadScopeWarnings`**, **`primarySampleLabel`**, **`samples`** (rows with optional **`sampleKind`**, **`baselineFamilyCounts`** / **`overlayFamilyCounts`**, **`draftVisibleInOverlay`**), **`blastRadiusSummary`** (draft-scope category, sample match counts/tallies across representative workloads **plus bounded ready/in-progress kit tasks**, representative labels), **`activationReadiness`** (**`level`**: `ok` | `warning` | `stop_confirm`, conflict/conflict-draft counts, usefulness signal vs baseline acknowledgement delta, rationale **`reasons`**). **`bundle`** / **`guidanceCards`** reflect evaluation against the overlaid registry in that mode.
 
 This command is Tier C / read-only and does not accept `policyApproval`.

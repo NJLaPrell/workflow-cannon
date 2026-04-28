@@ -78,6 +78,11 @@ test("cae-guidance-preview draftRule produces draftImpact matrix without registr
   assert.equal(di.schemaVersion, 1);
   assert.ok(Array.isArray(di.samples) && di.samples.length >= 1);
   assert.ok(di.samples.some((row) => row.schemaVersion === 1));
+  assert.equal(di.blastRadiusSummary.schemaVersion, 1);
+  assert.ok(typeof di.blastRadiusSummary.draftScopeCategory === "string");
+  assert.equal(di.activationReadiness.schemaVersion, 1);
+  assert.ok(["ok", "warning", "stop_confirm"].includes(di.activationReadiness.level));
+  assert.ok(Array.isArray(di.activationReadiness.reasons) && di.activationReadiness.reasons.length >= 1);
 });
 
 test("cae-guidance-preview always preset surfaces broad-scope warning metadata", async () => {
@@ -106,4 +111,6 @@ test("cae-guidance-preview always preset surfaces broad-scope warning metadata",
   const di = res.data.draftImpact;
   assert.ok(di);
   assert.ok(Array.isArray(di.broadScopeWarnings) && di.broadScopeWarnings.length >= 1);
+  assert.equal(di.activationReadiness.level, "stop_confirm");
+  assert.ok(String(di.blastRadiusSummary.draftScopeCategory).includes("always"));
 });
