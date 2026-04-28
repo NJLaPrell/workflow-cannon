@@ -343,6 +343,13 @@ pnpm exec wk run set-current-phase '{"currentKitPhase":"72","nextKitPhase":"73",
 workspace-kit run queue-health '{}'
 ```
 
+**Copy-paste — phase delivery evidence audit (read-only):**
+
+```bash
+workspace-kit run phase-delivery-preflight '{}'
+workspace-kit run phase-delivery-preflight '{"phaseKey":"74","includeInProgress":true}'
+```
+
 **Copy-paste — same phase/dependency hints on a filtered `list-tasks` result** (default `list-tasks` shape unchanged when omitted):
 
 ```bash

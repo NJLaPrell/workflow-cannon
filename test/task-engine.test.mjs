@@ -20,6 +20,8 @@ import {
   buildQueueGitAlignmentReport,
   getNextActions,
   getTaskQueueNamespace,
+  createDeliveryEvidenceGuard,
+  buildPhaseDeliveryPreflight,
   taskEngineModule,
   UnifiedStateDb,
   ModuleRegistry,
@@ -508,6 +510,126 @@ test("TransitionService evidence includes guard results", async () => {
 
   assert.ok(result.evidence.guardResults.length >= 2);
   assert.ok(result.evidence.guardResults.every((r) => r.allowed));
+});
+
+test("TransitionService completion allows phased task with delivery evidence", async () => {
+  const task = makeTask({
+    id: "T001",
+    status: "in_progress",
+    phaseKey: "74",
+    metadata: {
+      deliveryEvidence: {
+        schemaVersion: 1,
+        branchName: "feature/T001-test",
+        prUrl: "https://github.com/org/repo/pull/1",
+        prNumber: 1,
+        baseBranch: "release/phase-74",
+        mergeSha: "abc123",
+        checks: [{ name: "test", conclusion: "success" }],
+        validationCommands: [{ command: "pnpm run test", exitCode: 0 }]
+      }
+    }
+  });
+  const { store } = await storeWithTasks([task]);
+
+  const service = new TransitionService(store, [
+    createDeliveryEvidenceGuard({ enforcementMode: "enforce" })
+  ]);
+  const result = await service.runTransition({ taskId: "T001", action: "complete" });
+
+  assert.equal(result.evidence.toState, "completed");
+  assert.ok(result.evidence.guardResults.some((r) => r.code === "delivery-evidence-present"));
+});
+
+test("TransitionService completion allows phased task with maintainer waiver", async () => {
+  const task = makeTask({
+    id: "T001",
+    status: "in_progress",
+    phaseKey: "74",
+    metadata: {
+      deliveryWaiver: {
+        schemaVersion: 1,
+        actor: "maintainer@example.com",
+        rationale: "No PR applies to this local-only delivery.",
+        timestamp: "2026-04-28T07:00:00.000Z",
+        scope: "T001"
+      }
+    }
+  });
+  const { store } = await storeWithTasks([task]);
+
+  const service = new TransitionService(store, [
+    createDeliveryEvidenceGuard({ enforcementMode: "enforce" })
+  ]);
+  const result = await service.runTransition({ taskId: "T001", action: "complete" });
+
+  assert.equal(result.evidence.toState, "completed");
+  assert.ok(result.evidence.guardResults.some((r) => r.code === "delivery-waiver-present"));
+});
+
+test("TransitionService completion emits advisory delivery-evidence violation when missing", async () => {
+  const task = makeTask({ id: "T001", status: "in_progress", phaseKey: "74" });
+  const { store } = await storeWithTasks([task]);
+
+  const service = new TransitionService(store, [
+    createDeliveryEvidenceGuard({ enforcementMode: "advisory" })
+  ]);
+  const result = await service.runTransition({ taskId: "T001", action: "complete" });
+
+  assert.equal(result.evidence.toState, "completed");
+  const guard = result.evidence.guardResults.find((r) => r.guardName === "delivery-evidence");
+  assert.equal(guard?.allowed, true);
+  assert.equal(guard?.code, "delivery-evidence-missing");
+});
+
+test("TransitionService completion blocks missing delivery evidence in enforce mode", async () => {
+  const task = makeTask({ id: "T001", status: "in_progress", phaseKey: "74" });
+  const { store } = await storeWithTasks([task]);
+
+  const service = new TransitionService(store, [
+    createDeliveryEvidenceGuard({ enforcementMode: "enforce" })
+  ]);
+
+  await assert.rejects(
+    () => service.runTransition({ taskId: "T001", action: "complete" }),
+    (err) => err instanceof TaskEngineError && err.code === "guard-rejected"
+  );
+});
+
+test("TransitionService delivery-evidence guard skips local-only tasks", async () => {
+  const task = makeTask({
+    id: "T001",
+    status: "in_progress",
+    phaseKey: "74",
+    metadata: { deliveryEvidenceRequired: false }
+  });
+  const { store } = await storeWithTasks([task]);
+
+  const service = new TransitionService(store, [
+    createDeliveryEvidenceGuard({ enforcementMode: "enforce" })
+  ]);
+  const result = await service.runTransition({ taskId: "T001", action: "complete" });
+
+  assert.equal(result.evidence.toState, "completed");
+});
+
+test("buildPhaseDeliveryPreflight reports completed and in-progress evidence gaps", () => {
+  const tasks = [
+    makeTask({ id: "T001", status: "completed", phaseKey: "74" }),
+    makeTask({
+      id: "T002",
+      status: "in_progress",
+      phaseKey: "74",
+      metadata: { deliveryEvidenceRequired: false }
+    }),
+    makeTask({ id: "T003", status: "ready", phaseKey: "74" })
+  ];
+
+  const result = buildPhaseDeliveryPreflight({ tasks, phaseKey: "74" });
+
+  assert.equal(result.checkedTaskCount, 1);
+  assert.equal(result.violationCount, 1);
+  assert.equal(result.violations[0].taskId, "T001");
 });
 
 // ---------------------------------------------------------------------------

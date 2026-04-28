@@ -30,6 +30,20 @@ export {
   dependencyCheckGuard
 } from "./transitions.js";
 export {
+  DELIVERY_EVIDENCE_METADATA_KEY,
+  DELIVERY_WAIVER_METADATA_KEY,
+  buildPhaseDeliveryPreflight,
+  createDeliveryEvidenceGuard,
+  evaluateDeliveryEvidence,
+  isPhaseDeliveryTask,
+  readDeliveryEvidenceEnforcementMode
+} from "./delivery-evidence.js";
+export type {
+  DeliveryEvidenceEnforcementMode,
+  DeliveryEvidenceEvaluation,
+  DeliveryEvidenceViolation
+} from "./delivery-evidence.js";
+export {
   filterTasksByQueueNamespace,
   getNextActions,
   getTaskQueueNamespace,

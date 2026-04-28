@@ -31,6 +31,47 @@ workspace-kit run run-transition '{"taskId":"T184","action":"start","policyAppro
 
 Success **`data`** includes transition **`evidence`**, **`autoUnblocked`**, **`planningGeneration`**, **`planningGenerationPolicy`**, and optionally **`planningGenerationPolicyWarnings`** (when policy is **`warn`** and the token was omitted). On mismatch when **`expectedPlanningGeneration`** was supplied, **`code`** is **`planning-generation-mismatch`**. When policy is **`require`** and the field was omitted, **`code`** is **`planning-generation-required`**.
 
+## Delivery evidence on `complete`
+
+When a phased execution task is completed, the `delivery-evidence` guard evaluates `task.metadata.deliveryEvidence` or `task.metadata.deliveryWaiver`.
+
+- `tasks.deliveryEvidence.enforcementMode: "advisory"` (default) allows completion and emits a structured guard result when evidence is missing.
+- `tasks.deliveryEvidence.enforcementMode: "enforce"` blocks completion when evidence or waiver metadata is missing.
+- `tasks.deliveryEvidence.enforcementMode: "off"` skips this guard.
+
+Expected `metadata.deliveryEvidence` fields:
+
+```json
+{
+  "schemaVersion": 1,
+  "branchName": "feature/T971-delivery-evidence-gate",
+  "prUrl": "https://github.com/org/repo/pull/123",
+  "prNumber": 123,
+  "baseBranch": "release/phase-74",
+  "mergeSha": "abc123...",
+  "checks": [
+    { "name": "test", "conclusion": "success" }
+  ],
+  "validationCommands": [
+    { "command": "pnpm run test", "exitCode": 0 }
+  ]
+}
+```
+
+Maintainer waiver fields:
+
+```json
+{
+  "schemaVersion": 1,
+  "actor": "maintainer@example.com",
+  "rationale": "local-only task; no PR evidence applies",
+  "timestamp": "2026-04-28T07:00:00.000Z",
+  "scope": "T###"
+}
+```
+
+Use **`phase-delivery-preflight`** before completion to list completed or in-progress phase tasks missing this evidence. For non-shipping/local-only tasks, set `metadata.deliveryEvidenceRequired` to `false` or `metadata.localOnly` / `metadata.nonShipping` to `true`.
+
 ## Response template (CLI shaping)
 
 When **`action`** is **`complete`**, the kit applies the builtin **`phase_ship`** response template unless you pass **`responseTemplateId`** (or a template directive) or a config **`commandOverrides`** entry for **`run-transition`**. That adds **`data.presentation.matchedSections`** for closeout fields (e.g. **`evidence`**, **`planningGeneration`**). See **`docs/maintainers/response-template-contract.md`**.

@@ -97,7 +97,10 @@ export const KIT_CONFIG_DEFAULTS: Record<string, unknown> = {
     storeRelativePath: ".workspace-kit/tasks/state.json",
     persistenceBackend: "sqlite",
     sqliteDatabaseRelativePath: ".workspace-kit/tasks/workspace-kit.db",
-    strictValidation: false
+    strictValidation: false,
+    deliveryEvidence: {
+      enforcementMode: "advisory"
+    }
   },
   documentation: {},
   /** Agent temperament / interview preferences; mirrored to `.workspace-kit/modules/agent-behavior/config.json` when using SQLite. */

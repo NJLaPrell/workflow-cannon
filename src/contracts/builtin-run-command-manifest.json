@@ -133,6 +133,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "phase-delivery-preflight",
+    "file": "phase-delivery-preflight.md",
+    "description": "Read-only audit for phase task PR/merge/check evidence or explicit delivery waivers.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "synthesize-transcript-churn",
     "file": "synthesize-transcript-churn.md",
     "description": "Promote transcript_churn/research to improvement/proposed after investigation.",

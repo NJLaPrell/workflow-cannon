@@ -17,6 +17,11 @@ import {
 } from "./suggestions.js";
 import { buildQueueGitAlignmentReport, probeGitHead } from "./queue/queue-git-alignment.js";
 import {
+  buildPhaseDeliveryPreflight,
+  createDeliveryEvidenceGuard,
+  readDeliveryEvidenceEnforcementMode
+} from "./delivery-evidence.js";
+import {
   loadTasksFromSnapshotFile,
   parseTasksFromSnapshotPayload,
   replayQueueFromTasks
@@ -350,6 +355,41 @@ export const taskEngineModule: WorkflowModule = {
       });
     }
 
+    if (command.name === "phase-delivery-preflight") {
+      const argObj = args as Record<string, unknown>;
+      const workspaceStatus = readWorkspaceStatusSnapshotFromDual(planning.sqliteDual);
+      const phaseRes = resolveCanonicalPhase({
+        effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+        workspaceStatus
+      });
+      const phaseKey =
+        typeof argObj.phaseKey === "string" && argObj.phaseKey.trim().length > 0
+          ? argObj.phaseKey.trim()
+          : phaseRes.canonicalPhaseKey;
+      const includeInProgress =
+        typeof argObj.includeInProgress === "boolean" ? argObj.includeInProgress : true;
+      const preflight = buildPhaseDeliveryPreflight({
+        tasks: store.getActiveTasks(),
+        phaseKey,
+        includeInProgress
+      });
+      const data: Record<string, unknown> = {
+        ...preflight,
+        canonicalPhase: phaseRes,
+        includeInProgress
+      };
+      attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
+      return {
+        ok: true,
+        code: "phase-delivery-preflight",
+        message:
+          preflight.violationCount === 0
+            ? "Phase delivery evidence preflight passed"
+            : `Phase delivery evidence preflight found ${preflight.violationCount} violation(s)`,
+        data
+      };
+    }
+
     if (command.name === "list-components") {
       const db = planning.sqliteDual.getDatabase();
       if (!featureRegistryActiveOnConnection(db)) {
@@ -436,9 +476,12 @@ export const taskEngineModule: WorkflowModule = {
           ctx.workspacePath,
           (ctx.effectiveConfig ?? {}) as Record<string, unknown>
         );
+        const deliveryEvidenceMode = readDeliveryEvidenceEnforcementMode(
+          ctx.effectiveConfig as Record<string, unknown> | undefined
+        );
         const service = new TransitionService(
           store,
-          [],
+          [createDeliveryEvidenceGuard({ enforcementMode: deliveryEvidenceMode })],
           hookBus.isEnabled() ? hookBus : undefined
         );
         const expectedPlanningGeneration = readOptionalExpectedPlanningGeneration(

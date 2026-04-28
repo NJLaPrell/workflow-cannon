@@ -92,7 +92,35 @@ Repeat until satisfied.
 
 1. **Merge** the PR into **`release/phase-<N>`** via normal GitHub flow (`gh pr merge` or UI) using the repo’s preferred strategy (merge / squash / rebase), consistent with **maintainer-delivery-loop**.
 2. Do **not** merge past known **release** or **safety** gates without explicit maintainer decision.
-3. **Update task-engine state** after the work is merged (or in sync with merge): transition the task to **`completed`** when acceptance criteria are met — **not** a substitute for Git, but required kit-owned evidence:
+3. Record delivery metadata on the task before completion. Use `update-task` to preserve existing metadata and add **either** `metadata.deliveryEvidence` **or** `metadata.deliveryWaiver`:
+
+```json
+{
+  "deliveryEvidence": {
+    "schemaVersion": 1,
+    "branchName": "feature/T###-short-slug",
+    "prUrl": "https://github.com/org/repo/pull/123",
+    "prNumber": 123,
+    "baseBranch": "release/phase-<N>",
+    "mergeSha": "<merge-sha>",
+    "checks": [
+      { "name": "test", "conclusion": "success" }
+    ],
+    "validationCommands": [
+      { "command": "pnpm run test", "exitCode": 0 }
+    ]
+  }
+}
+```
+
+Waivers are for maintainer-approved exceptions only and require `schemaVersion`, `actor`, `rationale`, `timestamp`, and `scope`.
+4. Run the read-only evidence audit:
+
+```bash
+workspace-kit run phase-delivery-preflight '{"phaseKey":"<N>","includeInProgress":true}'
+```
+
+5. **Update task-engine state** after the work is merged (or in sync with merge): transition the task to **`completed`** when acceptance criteria are met — **not** a substitute for Git, but required kit-owned evidence:
 
 ```bash
 workspace-kit run run-transition '{"taskId":"T###","action":"complete","policyApproval":{"confirmed":true,"rationale":"merged to release/phase-<N>; acceptance criteria satisfied"}}'
