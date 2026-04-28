@@ -97,3 +97,31 @@ test("cae-dashboard-summary and cae-recent-traces report persistence-disabled tr
   assert.equal(recent.ok, false);
   assert.equal(recent.code, "cae-persistence-disabled");
 });
+
+test("cae-dashboard-summary exposes additive Guidance product model", async () => {
+  const ws = await workspaceWithJsonRegistry();
+  const r = await runCae(
+    ws,
+    "cae-dashboard-summary",
+    { schemaVersion: 1 },
+    {
+      kit: { cae: { enabled: true, persistence: true, registryStore: "json", adminMutations: false } },
+      tasks: { sqliteDatabaseRelativePath: ".workspace-kit/tasks/workspace-kit.db" }
+    }
+  );
+  assert.equal(r.ok, true);
+  assert.equal(r.data.guidanceProduct.schemaVersion, 1);
+  assert.equal(r.data.guidanceProduct.labels.productName, "Guidance");
+  assert.ok(r.data.guidanceProduct.intents.workflows.some((row) => row.name === "get-next-actions"));
+  assert.deepEqual(r.data.guidanceProduct.mutationCapability, {
+    adminMutations: false,
+    canMutate: false,
+    denialReason: "Guidance admin mutations are disabled by config.",
+    approvalModel: {
+      caeMutationApprovalRequired: true,
+      policyApprovalSeparate: true
+    }
+  });
+  assert.ok(Array.isArray(r.data.guidanceProduct.library.artifacts.artifactIds));
+  assert.ok(Array.isArray(r.data.guidanceProduct.library.activations.activationIds));
+});

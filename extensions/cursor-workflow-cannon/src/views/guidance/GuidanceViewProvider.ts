@@ -87,6 +87,26 @@ function workflowChoiceFromManifestEntry(raw: unknown): WorkflowChoice | null {
   };
 }
 
+function workflowChoicesFromProduct(payload: unknown): WorkflowChoice[] {
+  const product = asRecord(payload);
+  const intents = asRecord(product.intents);
+  const workflows = Array.isArray(intents.workflows) ? intents.workflows : [];
+  return workflows
+    .map((raw) => {
+      const row = asRecord(raw);
+      const name = typeof row.name === "string" ? row.name : "";
+      if (!name) return null;
+      return {
+        name,
+        moduleId: typeof row.moduleId === "string" ? row.moduleId : "",
+        description: typeof row.description === "string" ? row.description : "",
+        curated: row.curated === true,
+        label: typeof row.label === "string" && row.label ? row.label : name
+      };
+    })
+    .filter((choice): choice is WorkflowChoice => choice !== null);
+}
+
 export class GuidanceViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewId = "workflowCannon.guidance";
 
@@ -187,39 +207,20 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async pushSummary(webview: vscode.Webview): Promise<void> {
-    const [summary, versions, artifacts, activations, config] = await Promise.all([
-      this.client.run("cae-dashboard-summary", { schemaVersion: 1 }),
-      this.client.run("cae-list-registry-versions", { schemaVersion: 1 }),
-      this.client.run("cae-list-artifacts", { schemaVersion: 1, limit: 25 }),
-      this.client.run("cae-list-activations", { schemaVersion: 1, limit: 25 }),
-      this.client.run("resolve-config", {})
-    ]);
-    const enhanced =
+    const summary = await this.client.run("cae-dashboard-summary", { schemaVersion: 1 });
+    const product =
       summary.ok && summary.data && typeof summary.data === "object"
-        ? {
-            ...summary,
-            data: {
-              ...(summary.data as Record<string, unknown>),
-              registryVersions: versions,
-              library: {
-                artifacts: artifacts.ok ? artifacts.data : { artifactIds: [] },
-                activations: activations.ok ? activations.data : { activationIds: [] }
-              },
-              caeConfig: asRecord(asRecord(config.data).effective).kit
-                ? asRecord(asRecord(asRecord(config.data).effective).kit).cae
-                : {}
-            }
-          }
-        : summary;
-    await webview.postMessage({ type: "setSummary", html: renderGuidanceSummaryInnerHtml(enhanced) });
-    await this.pushChoices(webview);
+        ? asRecord(summary.data).guidanceProduct
+        : undefined;
+    await webview.postMessage({ type: "setSummary", html: renderGuidanceSummaryInnerHtml(summary) });
+    await this.pushChoices(webview, workflowChoicesFromProduct(product));
   }
 
-  private async pushChoices(webview: vscode.Webview): Promise<void> {
+  private async pushChoices(webview: vscode.Webview, productWorkflows: WorkflowChoice[] = []): Promise<void> {
     const [nextActions, inProgress, workflows] = await Promise.all([
       this.client.run("get-next-actions", {}),
       this.client.run("list-tasks", { status: "in_progress" }),
-      this.loadWorkflowChoices()
+      productWorkflows.length > 0 ? Promise.resolve(productWorkflows) : this.loadWorkflowChoices()
     ]);
     const byId = new Map<string, TaskChoice>();
     for (const task of [...taskChoicesFromPayload(nextActions), ...taskChoicesFromPayload(inProgress)]) {

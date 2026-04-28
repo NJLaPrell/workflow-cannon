@@ -216,16 +216,22 @@ function renderRecoveryCards(health: UnknownRecord, validation: UnknownRecord, r
 function renderManageGuidance(data: UnknownRecord): string {
   const health = asRecord(data.health);
   const validation = asRecord(data.validation);
+  const product = asRecord(data.guidanceProduct);
+  const productRegistry = asRecord(product.registry);
+  const productVersions = asRecord(product.versions);
   const versionsRoot = asRecord(data.registryVersions);
-  const versionsData = asRecord(versionsRoot.data ?? versionsRoot);
+  const versionsData = asRecord(productVersions.versions ? productVersions : versionsRoot.data ?? versionsRoot);
   const versions = asArray(versionsData.versions).map(asRecord);
   const active = versions.find((row) => row.isActive === true);
+  const mutationCapability = asRecord(product.mutationCapability);
   const caeConfig = asRecord(data.caeConfig);
-  const library = asRecord(data.library);
+  const library = asRecord(product.library ?? data.library);
   const artifactIds = asArray(asRecord(library.artifacts).artifactIds).map(String);
   const activationIds = asArray(asRecord(library.activations).activationIds).map(String);
-  const adminOn = caeConfig.adminMutations === true;
-  const activeVersionId = String(active?.versionId ?? health.activeRegistryVersionId ?? "n/a");
+  const adminOn = mutationCapability.canMutate === true || caeConfig.adminMutations === true;
+  const activeVersionId = String(active?.versionId ?? productRegistry.activeVersionId ?? health.activeRegistryVersionId ?? "n/a");
+  const sourceCount = productRegistry.artifactCount ?? health.artifactCount ?? artifactIds.length ?? 0;
+  const triggerCount = productRegistry.activationCount ?? health.activationCount ?? activationIds.length ?? 0;
   return `<section class="gd-card gd-manage">
   <div class="gd-card-head">
     <h2>Manage Guidance</h2>
@@ -234,14 +240,14 @@ function renderManageGuidance(data: UnknownRecord): string {
   <p class="gd-muted">Guidance is made from sources plus triggers. Checking guidance is read-only; changing the active guidance set is versioned and audited.</p>
   <dl class="gd-meta">
     <div><dt>Active guidance set</dt><dd><code>${escapeHtml(activeVersionId)}</code></dd></div>
-    <div><dt>Sources</dt><dd>${escapeHtml(String(health.artifactCount ?? artifactIds.length ?? 0))}</dd></div>
-    <div><dt>Triggers</dt><dd>${escapeHtml(String(health.activationCount ?? activationIds.length ?? 0))}</dd></div>
+    <div><dt>Sources</dt><dd>${escapeHtml(String(sourceCount))}</dd></div>
+    <div><dt>Triggers</dt><dd>${escapeHtml(String(triggerCount))}</dd></div>
     <div><dt>Admin updates</dt><dd>${adminOn ? "available" : "read-only"}</dd></div>
   </dl>
   ${
     adminOn
       ? '<p class="gd-muted">Updates require an actor, rationale, and <code>caeMutationApproval</code>. Policy approval is a separate lane.</p>'
-      : '<p class="gd-muted">Admin updates are currently off. You can inspect guidance and prepare draft context, but live CAE mutations stay disabled.</p>'
+      : `<p class="gd-muted">${escapeHtml(String(mutationCapability.denialReason ?? "Admin updates are currently off. You can inspect guidance and prepare draft context, but live CAE mutations stay disabled."))}</p>`
   }
   <div class="gd-actions">
     <button type="button" class="gd-btn" data-wc-action="guidance-version-clone" data-version-id="${escapeHtmlAttr(activeVersionId)}">Create draft from active set</button>

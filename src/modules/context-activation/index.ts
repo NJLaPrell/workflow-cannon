@@ -13,6 +13,7 @@ import {
   insertCaeAckSatisfaction,
   insertCaeRegistryMutationAudit,
   listCaeAckSatisfactions,
+  listCaeRegistryVersionsWithCounts,
   listCaeTraceSnapshotSummaries,
   loadCaeTraceSnapshot,
   openKitSqliteReadWrite,
@@ -253,6 +254,22 @@ const GUIDANCE_PRODUCT_LABELS = {
   }
 };
 
+const GUIDANCE_WORKFLOW_INTENT_LABELS: Record<string, string> = {
+  "get-next-actions": "Find the next task",
+  "list-tasks": "Review the task queue",
+  "dashboard-summary": "Refresh dashboard context",
+  "queue-health": "Check queue health",
+  "run-transition": "Change task status",
+  "cae-dashboard-summary": "Reload Guidance status",
+  "cae-guidance-preview": "Preview Guidance",
+  "cae-recent-traces": "Review recent checks",
+  "cae-explain": "Explain a Guidance check",
+  "generate-document": "Generate one document",
+  "document-project": "Regenerate project docs"
+};
+
+const GUIDANCE_CURATED_WORKFLOW_NAMES = Object.keys(GUIDANCE_WORKFLOW_INTENT_LABELS);
+
 type CaeFamily = "policy" | "think" | "do" | "review";
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -437,6 +454,79 @@ function buildCaeHealthData(
   return data;
 }
 
+function buildGuidanceProductModel(
+  workspacePath: string,
+  effective: Record<string, unknown>,
+  health: Record<string, unknown>,
+  loaded: ReturnType<typeof loadRegistryForCae>
+): Record<string, unknown> {
+  const adminMutations = getAtPath(effective, "kit.cae.adminMutations") === true;
+  const workflowChoices = GUIDANCE_CURATED_WORKFLOW_NAMES.map((name) => {
+    const manifest = BUILTIN_RUN_COMMAND_MANIFEST.find((row) => row.name === name);
+    return {
+      name,
+      moduleId: manifest?.moduleId ?? "",
+      description: manifest?.description ?? "Common workflow",
+      curated: true,
+      label: GUIDANCE_WORKFLOW_INTENT_LABELS[name] ?? name
+    };
+  });
+  const library = loaded.ok
+    ? {
+        artifacts: {
+          artifactIds: [...loaded.reg.artifactById.keys()].sort((a, b) => a.localeCompare(b))
+        },
+        activations: {
+          activationIds: [...loaded.reg.activationById.keys()].sort((a, b) => a.localeCompare(b))
+        }
+      }
+    : { artifacts: { artifactIds: [] }, activations: { activationIds: [] } };
+  const versions: Record<string, unknown> = { versions: [], source: "unavailable" };
+  const db = openKitSqliteReadWrite(workspacePath, effective);
+  if (db) {
+    try {
+      versions.versions = listCaeRegistryVersionsWithCounts(db).map((row) => ({
+        versionId: row.version_id,
+        createdAt: row.created_at,
+        createdBy: row.created_by,
+        isActive: row.is_active === 1,
+        note: row.note,
+        artifactCount: row.artifact_count,
+        activationCount: row.activation_count
+      }));
+      versions.source = "sqlite";
+    } finally {
+      db.close();
+    }
+  }
+  return {
+    schemaVersion: 1,
+    labels: GUIDANCE_PRODUCT_LABELS,
+    intents: {
+      defaultWorkflowName: "get-next-actions",
+      workflows: workflowChoices
+    },
+    registry: {
+      status: health.registryStatus ?? "unknown",
+      activeVersionId: health.activeRegistryVersionId ?? null,
+      artifactCount: loaded.ok ? loaded.reg.artifactById.size : 0,
+      activationCount: loaded.ok ? loaded.reg.activationById.size : 0,
+      store: health.registryStore ?? "sqlite"
+    },
+    library,
+    versions,
+    mutationCapability: {
+      adminMutations,
+      canMutate: adminMutations,
+      denialReason: adminMutations ? null : "Guidance admin mutations are disabled by config.",
+      approvalModel: {
+        caeMutationApprovalRequired: true,
+        policyApprovalSeparate: true
+      }
+    }
+  };
+}
+
 function listRecentTraceSummariesForDashboard(
   workspacePath: string,
   effective: Record<string, unknown>,
@@ -510,6 +600,7 @@ function buildDashboardSummaryData(
   return {
     schemaVersion: 1,
     product: GUIDANCE_PRODUCT_LABELS,
+    guidanceProduct: buildGuidanceProductModel(workspacePath, effective, health, loaded),
     health,
     validation,
     recentTraces,
