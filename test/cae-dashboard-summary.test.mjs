@@ -57,6 +57,8 @@ test("cae-dashboard-summary reports missing active SQLite registry as recoverabl
   assert.equal(r.data.validation.ok, false);
   assert.equal(r.data.validation.code, "cae-registry-sqlite-no-active-version");
   assert.equal(r.data.health.issues[0].code, "cae-registry-sqlite-no-active-version");
+  assert.equal(r.data.guidanceProduct.rulesCatalog.degraded, true);
+  assert.equal(r.data.guidanceProduct.rulesCatalog.itemCount, 0);
 });
 
 test("cae-dashboard-summary reports invalid JSON registry without failing the aggregate", async () => {
@@ -79,6 +81,8 @@ test("cae-dashboard-summary reports invalid JSON registry without failing the ag
   assert.equal(r.data.health.registryStatus, "invalid");
   assert.equal(r.data.validation.ok, false);
   assert.equal(r.data.validation.code, "cae-registry-invalid-json");
+  assert.equal(r.data.guidanceProduct.rulesCatalog.degraded, true);
+  assert.equal(r.data.guidanceProduct.rulesCatalog.itemCount, 0);
 });
 
 test("cae-dashboard-summary and cae-recent-traces report persistence-disabled trace listing", async () => {
@@ -124,4 +128,17 @@ test("cae-dashboard-summary exposes additive Guidance product model", async () =
   });
   assert.ok(Array.isArray(r.data.guidanceProduct.library.artifacts.artifactIds));
   assert.ok(Array.isArray(r.data.guidanceProduct.library.activations.activationIds));
+  const cat = r.data.guidanceProduct.rulesCatalog;
+  assert.equal(cat.schemaVersion, 1);
+  assert.equal(cat.degraded ?? false, false);
+  assert.ok(cat.itemCount > 0, "expected JSON registry fixture to include activations");
+  assert.ok(Array.isArray(cat.items) && cat.items.length > 0);
+  const row = cat.items[0];
+  assert.equal(row.schemaVersion, 1);
+  assert.ok(typeof row.displayTitle === "string" && row.displayTitle.length > 0);
+  assert.ok(typeof row.appliesWhen === "string");
+  assert.ok(["policy", "think", "do", "review"].includes(row.family));
+  assert.ok(row.mutation);
+  assert.ok(typeof row.debug.activationId === "string");
+  assert.ok(Array.isArray(row.debug.artifactIds));
 });

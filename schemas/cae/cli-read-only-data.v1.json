@@ -211,6 +211,115 @@
         "families": { "type": "object", "additionalProperties": { "type": "string" } }
       }
     },
+    "caeGuidanceMutationHintsV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["canClone", "canActivate", "canEditDraft", "canRetire", "denialReason"],
+      "properties": {
+        "canClone": { "type": "boolean" },
+        "canActivate": { "type": "boolean" },
+        "canEditDraft": { "type": "boolean" },
+        "canRetire": { "type": "boolean" },
+        "denialReason": { "type": ["string", "null"] }
+      }
+    },
+    "caeGuidanceRuleCatalogItemV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "ordinal",
+        "family",
+        "familyLabel",
+        "displayTitle",
+        "appliesWhen",
+        "lifecycleState",
+        "lifecycleLabel",
+        "priority",
+        "attention",
+        "sources",
+        "mutation",
+        "debug"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "ordinal": { "type": "integer", "minimum": 1 },
+        "family": {
+          "type": "string",
+          "enum": ["policy", "think", "do", "review"]
+        },
+        "familyLabel": { "type": "string", "maxLength": 128 },
+        "displayTitle": { "type": "string", "maxLength": 512 },
+        "appliesWhen": { "type": "string", "maxLength": 4096 },
+        "lifecycleState": {
+          "type": "string",
+          "enum": ["draft", "active", "retired", "disabled"]
+        },
+        "lifecycleLabel": { "type": "string", "maxLength": 64 },
+        "priority": { "type": "number" },
+        "attention": {
+          "type": "string",
+          "enum": ["required", "check", "advisory"]
+        },
+        "acknowledgementStrength": { "type": ["string", "null"], "maxLength": 64 },
+        "acknowledgementTokenPresent": { "type": "boolean" },
+        "sources": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["title"],
+            "properties": {
+              "title": { "type": "string", "maxLength": 512 }
+            }
+          }
+        },
+        "mutation": {
+          "$ref": "#/$defs/caeGuidanceMutationHintsV1"
+        },
+        "debug": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["activationId", "artifactIds"],
+          "properties": {
+            "activationId": { "type": "string", "maxLength": 256 },
+            "artifactIds": {
+              "type": "array",
+              "maxItems": 64,
+              "items": { "type": "string", "maxLength": 256 }
+            }
+          }
+        }
+      }
+    },
+    "caeGuidanceRulesCatalogV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "registrySnapshotTag", "itemCount", "items"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "registrySnapshotTag": { "type": ["string", "null"], "maxLength": 256 },
+        "itemCount": { "type": "integer", "minimum": 0 },
+        "degraded": { "type": "boolean" },
+        "degradedCode": { "type": "string", "maxLength": 128 },
+        "degradedMessage": { "type": ["string", "null"], "maxLength": 2048 },
+        "items": {
+          "type": "array",
+          "maxItems": 500,
+          "items": { "$ref": "#/$defs/caeGuidanceRuleCatalogItemV1" }
+        }
+      }
+    },
+    "caeGuidanceProductDashboardEnvelope": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["schemaVersion", "rulesCatalog"],
+      "properties": {
+        "schemaVersion": { "type": "integer", "const": 1 },
+        "rulesCatalog": { "$ref": "#/$defs/caeGuidanceRulesCatalogV1" }
+      }
+    },
     "caeRecentTraceSummaryRow": {
       "type": "object",
       "additionalProperties": false,
@@ -361,6 +470,7 @@
       "required": [
         "schemaVersion",
         "product",
+        "guidanceProduct",
         "health",
         "validation",
         "recentTraces",
@@ -370,6 +480,7 @@
       "properties": {
         "schemaVersion": { "const": 1 },
         "product": { "$ref": "#/$defs/caeGuidanceProductLabels" },
+        "guidanceProduct": { "$ref": "#/$defs/caeGuidanceProductDashboardEnvelope" },
         "health": { "$ref": "#/$defs/caeHealthData" },
         "validation": {
           "type": "object",

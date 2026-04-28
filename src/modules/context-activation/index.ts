@@ -40,6 +40,7 @@ import {
   storeCaeSession,
   type CaeSessionRecord
 } from "./trace-store.js";
+import { buildGuidanceRulesCatalogEnvelope } from "./guidance-rules-catalog.js";
 
 type SqliteDatabase = NonNullable<ReturnType<typeof openKitSqliteReadWrite>>;
 
@@ -499,9 +500,20 @@ function buildGuidanceProductModel(
       db.close();
     }
   }
+  const registryStoreRaw = health.registryStore ?? getAtPath(effective, "kit.cae.registryStore");
+  const rulesCatalog = buildGuidanceRulesCatalogEnvelope({
+    loadedOk: loaded.ok,
+    loaded: loaded.ok ? loaded.reg : null,
+    health,
+    registryStoreRaw,
+    adminMutations,
+    familyLabels: GUIDANCE_PRODUCT_LABELS.families as Record<CaeFamily, string>,
+    loadFail: loaded.ok ? undefined : { code: loaded.code, message: loaded.message }
+  });
   return {
     schemaVersion: 1,
     labels: GUIDANCE_PRODUCT_LABELS,
+    rulesCatalog,
     intents: {
       defaultWorkflowName: "get-next-actions",
       workflows: workflowChoices
