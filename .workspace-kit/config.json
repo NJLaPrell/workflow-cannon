@@ -21,8 +21,8 @@
         "shadowPreflight": true
       }
     },
-    "currentPhaseLabel": "Phase 73 — Guidance redesign and CAE management UX",
-    "currentPhaseNumber": 73
+    "currentPhaseLabel": "Phase 74",
+    "currentPhaseNumber": 74
   },
   "tasks": {
     "persistenceBackend": "sqlite",
