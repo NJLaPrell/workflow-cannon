@@ -40,6 +40,13 @@ export function getBuiltinCommandDefaultTemplateId(commandName: string): string 
   return defaultTemplateByCommand.get(commandName);
 }
 
+/** Manifest row for one shipped `workspace-kit run` command, if declared. */
+export function getBuiltinRunCommandManifestRow(
+  commandName: string
+): BuiltinRunCommandManifestRow | undefined {
+  return BUILTIN_RUN_COMMAND_MANIFEST.find((row) => row.name === commandName);
+}
+
 /** Instruction catalog entries for one module — use in `WorkflowModule.registration.instructions.entries`. */
 export function builtinInstructionEntriesForModule(moduleId: string): ModuleInstructionEntry[] {
   return BUILTIN_RUN_COMMAND_MANIFEST.filter((r) => r.moduleId === moduleId).map((r) => {

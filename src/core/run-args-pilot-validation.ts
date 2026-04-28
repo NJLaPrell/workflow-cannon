@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { CLI_REMEDIATION_DOCS, CLI_REMEDIATION_INSTRUCTIONS } from "./cli-remediation.js";
+import { getBuiltinRunCommandManifestRow } from "../contracts/builtin-run-command-manifest.js";
 
 type PilotSnapshot = {
   schemaVersion: number;
@@ -15,6 +16,13 @@ type PilotSnapshot = {
 type PreludeFile = {
   schemaVersion: number;
   commands: string[];
+};
+
+export type RunArgsSchemaOnlyCommandMetadata = {
+  name: string;
+  moduleId: string;
+  instructionPath: string;
+  description?: string;
 };
 
 /** Stripped before AJV: global response-template shaping, not domain args (see response-template-shaping). */
@@ -249,23 +257,84 @@ function sampleArgsForCommand(commandName: string, schema: Record<string, unknow
   return minimalSampleFromArgsSchema(schema);
 }
 
+function buildPermissiveArgsSchema(commandName: string): Record<string, unknown> {
+  return {
+    type: "object",
+    additionalProperties: true,
+    description: `Permissive fallback args schema for '${commandName}'. Use instructionPath for command-specific field guidance until a stricter schema is added.`
+  };
+}
+
+function buildRunArgsExample(commandName: string, sampleArgs: Record<string, unknown>): Record<string, unknown> {
+  return {
+    description: "Minimal argv example",
+    argv: `workspace-kit run ${commandName} '${JSON.stringify(sampleArgs)}'`
+  };
+}
+
+function hasClientMutationId(schema: Record<string, unknown>): boolean {
+  const props =
+    schema.properties && typeof schema.properties === "object" && !Array.isArray(schema.properties)
+      ? (schema.properties as Record<string, unknown>)
+      : {};
+  return Object.hasOwn(props, "clientMutationId");
+}
+
 /**
- * JSON payload for `workspace-kit run <command> --schema-only` when the command is in the pilot snapshot.
+ * JSON payload for `workspace-kit run <command> --schema-only`.
+ *
+ * Strict schemas come from the pilot snapshot. Commands without strict validation still get
+ * router/manifest-backed discovery so every executable run command has one machine-readable shape.
  */
-export function buildRunArgsSchemaOnlyPayload(commandName: string): Record<string, unknown> | null {
+export function buildRunArgsSchemaOnlyPayload(
+  commandName: string,
+  metadata?: RunArgsSchemaOnlyCommandMetadata
+): Record<string, unknown> | null {
   const snap = loadPilotSnapshot();
-  const schema = snap.commands[commandName];
-  if (!schema) {
+  const strictSchema = snap.commands[commandName];
+  const manifest = getBuiltinRunCommandManifestRow(commandName);
+  if (!strictSchema && !metadata && !manifest) {
     return null;
   }
+  const schema = strictSchema ?? buildPermissiveArgsSchema(commandName);
   const sampleArgs = sampleArgsForCommand(commandName, schema);
+  const instructionPath =
+    metadata?.instructionPath ?? (manifest ? `src/modules/${manifest.moduleId}/instructions/${manifest.file}` : instructionPathForCommand(commandName));
+  const preludeCommands = getPreludeCommandSet();
+  const policySensitivity = manifest?.policySensitivity ?? "non-sensitive";
   return {
     ok: true,
     code: "run-args-schema",
     command: commandName,
     schema,
+    schemaSource: strictSchema ? "pilot-run-args-snapshot" : "manifest-permissive-fallback",
     sampleArgs,
-    instructionPath: instructionPathForCommand(commandName),
+    examples: [buildRunArgsExample(commandName, sampleArgs)],
+    instructionPath,
+    moduleId: metadata?.moduleId ?? manifest?.moduleId ?? null,
+    description: metadata?.description ?? manifest?.description ?? null,
+    policy: {
+      sensitivity: policySensitivity,
+      operationId: manifest?.policyOperationId ?? null,
+      jsonApprovalRequired:
+        policySensitivity === "sensitive"
+          ? true
+          : policySensitivity === "sensitive-with-dryrun"
+            ? "when dryRun is false or omitted by command policy"
+            : false
+    },
+    planningGeneration: {
+      cliPrelude: preludeCommands.has(commandName),
+      expectedPlanningGeneration: preludeCommands.has(commandName)
+        ? "required when tasks.planningGenerationPolicy is require"
+        : "not required by CLI prelude"
+    },
+    idempotency: {
+      clientMutationId: hasClientMutationId(schema)
+    },
+    responseTemplate: {
+      defaultResponseTemplateId: manifest?.defaultResponseTemplateId ?? null
+    },
     remediationContract: CLI_REMEDIATION_DOCS.remediationContract
   };
 }
