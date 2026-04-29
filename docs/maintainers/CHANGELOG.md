@@ -10,6 +10,21 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 (none)
 
+## [0.75.0] - 2026-04-29
+
+Phase 75 — **Guidance authoring pipeline + maintainer delivery ergonomics**: product-shaped **Guidance** scope builder (**`T1000`**), real draft **impact preview** (**`T1001`**), **blast-radius / activation-readiness** summaries (**`T1002`**), and a dashboard **authoring wizard** in the Cursor extension (**`T1003`**). Maintainer/agent loop improvements: **`maintainerDelivery`** hints on **`agent-session-snapshot`** / **`get-next-actions`**, **`doctor --delivery-loop`** / **`--delivery-loop-strict`**, CAE **`cae-guidance-preview`** advisory on dirty protected branches, **`apply-task-batch`**, **`list-tasks`** pagination optimizations, slim **`AGENT-CLI-MAP`** with **`.ai/agent-cli-snippets/`**, instruction agent capsules, **`.ai/TERMS.index.json`**, and doc routing hub checks.
+
+### Added
+
+- Guidance **scope builder**, **draft impact preview**, **enforcement / blast-radius readiness** contracts, and extension **guidance wizard** flows tied to shipped phase tasks **`T1000`–`T1003`**.
+- **`maintainerDelivery`** v1 hints; optional task metadata **`maintainerDeliveryProfile`** / **`requiresPhaseBranch`**.
+- **`doctor --delivery-loop`** / **`--delivery-loop-strict`**; CAE synthetic maintainer-delivery advisory card on guidance preview when gated.
+- **`apply-task-batch`**; **`list-tasks`** stable cursor pagination; generated per-command CLI snippet JSON under **`.ai/agent-cli-snippets/`** with repository check scripts.
+
+### Changed
+
+- **`.ai/AGENT-CLI-MAP.md`** split vs **`.ai/AGENT-CLI-MAP.extended.md`**; **`.ai/WORKSPACE-KIT-SESSION.md`** and **`.cursor/rules/maintainer-delivery-loop.mdc`** aligned with delivery-loop discipline.
+
 ## [0.72.0] - 2026-04-27
 
 Phase 72 — **Phase-control ergonomics** (**`T942`–`T946`**): SQLite-first workspace phase control with **`set-current-phase`**, read-only **`phase-status`** for canonical phase / drift / task counts, explicit next-phase task creation options on **`persist-planning-execution-drafts`**, reconciled agent guidance for workspace phase authority, and **`update-workspace-phase-snapshot`** demoted to a compatibility shim that updates SQLite/export before legacy YAML.
