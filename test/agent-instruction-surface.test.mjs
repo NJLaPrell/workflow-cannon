@@ -8,6 +8,8 @@ import {
   taskEngineModule,
   workspaceConfigModule
 } from "../dist/index.js";
+import { resolveRegistryAndConfig } from "../dist/core/module-registry-resolve.js";
+import { defaultRegistryModules } from "../dist/modules/index.js";
 
 const lifecycleContext = {
   runtimeVersion: "0.1",
@@ -97,6 +99,19 @@ test("requiresPeers: surface executable when peer enabled", () => {
   assert.ok(row);
   assert.equal(row.executable, true);
   assert.equal(row.degradation.kind, "executable");
+});
+
+test("instruction surface: policy hints when effectiveConfig provided", async () => {
+  const { registry, effective } = await resolveRegistryAndConfig(process.cwd(), defaultRegistryModules);
+  const surface = buildAgentInstructionSurface(registry.getAllModules(), registry, {
+    effectiveConfig: effective,
+    projection: "full"
+  });
+  const row = surface.commands.find((c) => c.commandName === "run-transition");
+  assert.ok(row);
+  assert.equal(typeof row.jsonApprovalRequired, "boolean");
+  assert.equal(row.jsonApprovalRequired, true);
+  assert.ok(row.policyOperationId);
 });
 
 test("requiresPeers: router executes gated command when peers satisfied", async () => {

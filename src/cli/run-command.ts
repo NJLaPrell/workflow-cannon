@@ -32,6 +32,69 @@ import { promptSensitiveRunApproval } from "./interactive-policy.js";
 import { releaseTranscriptHookLockFromEnv } from "../core/transcript-completion-hook.js";
 import { storeCaeSession } from "../modules/context-activation/trace-store.js";
 
+/** Strip optional `--json` before subcommand (machine catalog for bare `wk run` only). */
+function peelRunArgv(tail: string[]): { jsonCatalog: boolean; rest: string[] } {
+  const rest: string[] = [];
+  let jsonCatalog = false;
+  let i = 0;
+  while (i < tail.length) {
+    const a = tail[i];
+    if (a === "--json" || a === "-j") {
+      jsonCatalog = true;
+      i += 1;
+      continue;
+    }
+    if (a === "--format" && tail[i + 1] === "json") {
+      jsonCatalog = true;
+      i += 2;
+      continue;
+    }
+    if (a.startsWith("--format=") && a.slice("--format=".length) === "json") {
+      jsonCatalog = true;
+      i += 1;
+      continue;
+    }
+    rest.push(a);
+    i += 1;
+  }
+  return { jsonCatalog, rest };
+}
+
+function policyDeniedBody(params: {
+  policyOp: string | null | undefined;
+  message: string;
+  hint: string;
+  wrongEnvLane: boolean;
+  subcommand: string;
+  hasPolicyApprovalField: boolean;
+}): Record<string, unknown> {
+  const { policyOp, message, hint, wrongEnvLane, subcommand, hasPolicyApprovalField } = params;
+  const sample = {
+    policyApproval: { confirmed: true, rationale: "operator-approved sensitive run" }
+  };
+  return {
+    ok: false,
+    code: "policy-denied",
+    operationId: policyOp ?? null,
+    remediationDoc: POLICY_APPROVAL_HUMAN_DOC,
+    remediation: {
+      docPath: CLI_REMEDIATION_DOCS.policyApproval,
+      instructionPath: "src/modules/task-engine/instructions/run-transition.md"
+    },
+    readCommandSuggestion: {
+      command: subcommand,
+      argvTemplateJson: sample,
+      argvExample: `workspace-kit run ${subcommand} '${JSON.stringify(sample)}'`,
+      schemaOnlyExample: `workspace-kit run ${subcommand} --schema-only '{}'`,
+      snippetIndexHint: `.ai/agent-cli-snippets/by-command/${subcommand}.json`
+    },
+    message,
+    hint,
+    wrongEnvLane: wrongEnvLane || undefined,
+    hasPolicyApprovalField: hasPolicyApprovalField || undefined
+  };
+}
+
 /** Default apply-skill preview mode for policy (dryRun true when omitted). */
 function normalizeApplySkillArgs(args: Record<string, unknown>): Record<string, unknown> {
   const next = { ...args };
@@ -68,14 +131,15 @@ export async function handleRunCommand(
 ): Promise<number> {
   const { writeLine, writeError } = io;
 
-  const subcommand = args[1];
+  const { jsonCatalog, rest } = peelRunArgv(args.slice(1));
+  const subcommand = rest[0];
   const schemaOnlyFlag =
-    typeof args[2] === "string" && (args[2] === "--schema-only" || args[2] === "-S");
+    typeof rest[1] === "string" && (rest[1] === "--schema-only" || rest[1] === "-S");
 
   let commandArgs: Record<string, unknown> = {};
-  if (subcommand && args[2] && !schemaOnlyFlag) {
+  if (subcommand && rest[1] && !schemaOnlyFlag) {
     try {
-      const parsed = JSON.parse(args[2]);
+      const parsed = JSON.parse(rest[1]);
       if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
         commandArgs = parsed as Record<string, unknown>;
       } else {
@@ -83,7 +147,7 @@ export async function handleRunCommand(
         return codes.usageError;
       }
     } catch {
-      writeError(`Invalid JSON args: ${args[2]}`);
+      writeError(`Invalid JSON args: ${rest[1]}`);
       return codes.usageError;
     }
   }
@@ -170,6 +234,35 @@ export async function handleRunCommand(
     commandArgs = normalizeApplySkillArgs(commandArgs);
   }
 
+  if (!subcommand && jsonCatalog) {
+    const commands = router.listCommands().map((cmd) => ({
+      name: cmd.name,
+      moduleId: cmd.moduleId,
+      description: cmd.description ?? null,
+      instructionPath: cmd.instructionFile,
+      jsonApprovalRequired: isSensitiveModuleCommandForEffective(cmd.name, {}, effective),
+      policyOperationId: resolvePolicyOperationIdForCommand(cmd.name, effective)
+    }));
+    writeLine(
+      JSON.stringify(
+        {
+          ok: true,
+          code: "run-command-catalog",
+          schemaVersion: 1,
+          data: {
+            canonicalInvokeHint: "pnpm exec wk run",
+            discoverSchemaOnly: "pnpm exec wk run <command> --schema-only '{}'",
+            snippetIndex: ".ai/agent-cli-snippets/INDEX.json",
+            commands
+          }
+        },
+        null,
+        2
+      )
+    );
+    return codes.success;
+  }
+
   if (!subcommand) {
     const commands = router.listCommands();
     writeLine("Available module commands:");
@@ -181,6 +274,9 @@ export async function handleRunCommand(
     writeLine(`Usage: workspace-kit run <command> [json-args]`);
     writeLine(
       `Schema discovery: workspace-kit run <command> --schema-only  (JSON Schema or permissive fallback + sample args + policy metadata for every executable command).`
+    );
+    writeLine(
+      `JSON catalog (agents): workspace-kit run --json  (or --format json) with no subcommand — stable command list + policy hints.`
     );
     writeLine(
       `Instruction files: src/modules/<module>/instructions/<command>.md — sensitive runs need JSON policyApproval (not env WORKSPACE_KIT_POLICY_APPROVAL); see ${POLICY_APPROVAL_TWO_LANES_DOC}.`
@@ -226,15 +322,14 @@ export async function handleRunCommand(
         });
         writeLine(
           JSON.stringify(
-            {
-              ok: false,
-              code: "policy-denied",
-              operationId: policyOp,
-              remediationDoc: POLICY_APPROVAL_HUMAN_DOC,
-              remediation: { docPath: CLI_REMEDIATION_DOCS.policyApproval },
+            policyDeniedBody({
+              policyOp,
               message: "Sensitive command denied at interactive policy prompt.",
-              hint: `Set WORKSPACE_KIT_INTERACTIVE_APPROVAL=off or pass policyApproval in JSON. See ${POLICY_APPROVAL_TWO_LANES_DOC}.`
-            },
+              hint: `Set WORKSPACE_KIT_INTERACTIVE_APPROVAL=off or pass policyApproval in JSON. See ${POLICY_APPROVAL_TWO_LANES_DOC}.`,
+              wrongEnvLane: false,
+              subcommand,
+              hasPolicyApprovalField
+            }),
             null,
             2
           )
@@ -271,21 +366,21 @@ export async function handleRunCommand(
         policyOp != null
           ? `Operation ${policyOp} requires explicit JSON policyApproval (or session grant / TTY interactive approval). Details: ${POLICY_APPROVAL_TWO_LANES_DOC}`
           : "Check policy.extraSensitiveModuleCommands and pass policyApproval in JSON args.";
+      const msg = wrongEnvLane
+        ? `Sensitive run denied: ${POLICY_RUN_ENV_LANE_MISMATCH_DETAIL} See ${POLICY_APPROVAL_TWO_LANES_DOC}.`
+        : hasPolicyApprovalField
+          ? 'Invalid policyApproval in JSON args. Use {"policyApproval":{"confirmed":true,"rationale":"why","scope":"session"}} (scope optional) or a session grant. See remediationDoc.'
+          : 'Missing policyApproval in JSON args. Example: {"policyApproval":{"confirmed":true,"rationale":"why","scope":"session"}}. See remediationDoc.';
       writeLine(
         JSON.stringify(
-          {
-            ok: false,
-            code: "policy-denied",
-            operationId: policyOp ?? null,
-            remediationDoc: POLICY_APPROVAL_HUMAN_DOC,
-            remediation: { docPath: CLI_REMEDIATION_DOCS.policyApproval },
-            message: wrongEnvLane
-              ? `Sensitive run denied: ${POLICY_RUN_ENV_LANE_MISMATCH_DETAIL} See ${POLICY_APPROVAL_TWO_LANES_DOC}.`
-              : hasPolicyApprovalField
-                ? 'Invalid policyApproval in JSON args. Use {"policyApproval":{"confirmed":true,"rationale":"why","scope":"session"}} (scope optional) or a session grant. See remediationDoc.'
-                : 'Missing policyApproval in JSON args. Example: {"policyApproval":{"confirmed":true,"rationale":"why","scope":"session"}}. See remediationDoc.',
-            hint: wrongEnvLane ? POLICY_RUN_ENV_LANE_MISMATCH_DETAIL : baseHint
-          },
+          policyDeniedBody({
+            policyOp,
+            message: msg,
+            hint: wrongEnvLane ? POLICY_RUN_ENV_LANE_MISMATCH_DETAIL : baseHint,
+            wrongEnvLane,
+            subcommand,
+            hasPolicyApprovalField
+          }),
           null,
           2
         )

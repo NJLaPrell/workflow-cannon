@@ -3,6 +3,10 @@ import type { ModuleInstructionEntry, WorkflowModule } from "../contracts/module
 import { buildCaeAdvisoryInstructionSurfaceBlock } from "./cae/cae-instruction-surface-advisory.js";
 import { buildErrorRemediationCatalog } from "./cli-remediation.js";
 import type { ModuleActivationReport, ModuleRegistry } from "./module-registry.js";
+import {
+  isSensitiveModuleCommandForEffective,
+  resolvePolicyOperationIdForCommand
+} from "./policy.js";
 
 export type AgentInstructionDegradation =
   | { kind: "executable" }
@@ -16,6 +20,10 @@ export type AgentInstructionSurfaceRow = {
   instructionPath: string;
   executable: boolean;
   degradation: AgentInstructionDegradation;
+  /** When `effectiveConfig` was supplied to the builder and the row is executable: Tier A/B sensitive runs need JSON `policyApproval`. */
+  jsonApprovalRequired?: boolean;
+  /** Stable operation id when sensitivity is registered (often absent for Tier C). */
+  policyOperationId?: string | null;
 };
 
 export type ErrorRemediationCatalogPayload = {
@@ -131,13 +139,20 @@ function stableInstructionRowJSON(row: AgentInstructionSurfaceRow): string {
           missingPeers: [...row.degradation.missingPeers].sort()
         }
       : { kind: row.degradation.kind };
-  return JSON.stringify({
+  const base: Record<string, unknown> = {
     commandName: row.commandName,
     degradation,
     executable: row.executable,
     instructionPath: row.instructionPath,
     moduleId: row.moduleId
-  });
+  };
+  if (row.jsonApprovalRequired !== undefined) {
+    base.jsonApprovalRequired = row.jsonApprovalRequired;
+  }
+  if (row.policyOperationId !== undefined) {
+    base.policyOperationId = row.policyOperationId;
+  }
+  return JSON.stringify(base);
 }
 
 /** Stable digest over the sorted command row set (for lean projection cache hits). */
@@ -148,7 +163,8 @@ export function digestAgentInstructionSurfaceCommands(commands: AgentInstruction
 
 function collectInstructionSurfaceRows(
   allModules: WorkflowModule[],
-  registry: ModuleRegistry
+  registry: ModuleRegistry,
+  effectiveConfig?: Record<string, unknown>
 ): AgentInstructionSurfaceRow[] {
   const commands: AgentInstructionSurfaceRow[] = [];
   for (const mod of allModules) {
@@ -157,13 +173,23 @@ function collectInstructionSurfaceRows(
     for (const entry of entries) {
       const degradation = classifyInstructionExecution(mod, entry, registry);
       const instructionPath = `${directory}/${entry.file}`.replace(/\\/g, "/");
-      commands.push({
+      const executable = degradation.kind === "executable";
+      const row: AgentInstructionSurfaceRow = {
         commandName: entry.name,
         moduleId,
         instructionPath,
-        executable: degradation.kind === "executable",
+        executable,
         degradation
-      });
+      };
+      if (effectiveConfig && executable) {
+        row.jsonApprovalRequired = isSensitiveModuleCommandForEffective(
+          entry.name,
+          {},
+          effectiveConfig
+        );
+        row.policyOperationId = resolvePolicyOperationIdForCommand(entry.name, effectiveConfig);
+      }
+      commands.push(row);
     }
   }
   commands.sort((a, b) => a.commandName.localeCompare(b.commandName));
@@ -175,7 +201,7 @@ export function buildAgentInstructionSurface(
   registry: ModuleRegistry,
   options?: BuildAgentInstructionSurfaceOptions
 ): AgentInstructionSurfacePayload {
-  const commands = collectInstructionSurfaceRows(allModules, registry);
+  const commands = collectInstructionSurfaceRows(allModules, registry, options?.effectiveConfig);
   const activationReport = registry.getActivationReport();
   const errorRemediationCatalog: ErrorRemediationCatalogPayload = {
     schemaVersion: 1,

@@ -934,6 +934,21 @@ export const taskEngineModule: WorkflowModule = {
       attachPolicyMeta(snapshotData, ctx, planning.sqliteDual.getPlanningGeneration());
       if (command.name === "agent-bootstrap") {
         snapshotData.doctor = { ok: true, issues: [] as Array<{ path: string; reason: string }> };
+        snapshotData.cliFootguns = {
+          canonicalInvoke: "pnpm exec wk run …",
+          avoidPnpmRunWk:
+            "`pnpm run wk run` can inject a stray `--` before the subcommand and break JSON argv — use `pnpm exec wk`",
+          policyApprovalLanes:
+            "Sensitive `wk run` commands: JSON `policyApproval` on argv; `WORKSPACE_KIT_POLICY_APPROVAL` is for init/upgrade/config only — `.ai/POLICY-APPROVAL.md`",
+          planningGeneration:
+            "When `tasks.planningGenerationPolicy` is require, pass `expectedPlanningGeneration` from `list-tasks`, `get-next-actions`, or a prior mutation response",
+          discovery: {
+            commandMenuJson: "pnpm exec wk run --json",
+            doctorJson: "pnpm exec wk doctor --json",
+            schemaOnly: "pnpm exec wk run <command> --schema-only '{}'",
+            snippets: ".ai/agent-cli-snippets/INDEX.json"
+          }
+        };
         const projection = (args as Record<string, unknown>).projection;
         if (projection === "lean") {
           const { defaultRegistryModules } = await import("../index.js");

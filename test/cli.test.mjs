@@ -607,6 +607,38 @@ test("runCli run lists available module commands with no subcommand", async () =
   assert.ok(capture.lines.some((l) => l.includes("instructions")));
 });
 
+test("runCli run --json emits machine command catalog", async () => {
+  const capture = createCapture();
+  const code = await runCli(["run", "--json"], { cwd: process.cwd(), ...capture });
+  assert.equal(code, 0);
+  assert.equal(capture.lines.length, 1);
+  const output = JSON.parse(capture.lines[0]);
+  assert.equal(output.ok, true);
+  assert.equal(output.code, "run-command-catalog");
+  assert.equal(output.schemaVersion, 1);
+  assert.ok(Array.isArray(output.data?.commands));
+  assert.ok(output.data.commands.some((c) => c.name === "list-tasks"));
+  const row = output.data.commands.find((c) => c.name === "run-transition");
+  assert.ok(row);
+  assert.equal(typeof row.jsonApprovalRequired, "boolean");
+  assert.ok(row.instructionPath?.includes("run-transition.md"));
+});
+
+test("runCli doctor --json emits contract-ok envelope", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-doctor-json-"));
+  await createDoctorFixture(fixtureRoot);
+  const capture = createCapture();
+  const code = await runCli(["doctor", "--json"], { cwd: fixtureRoot, ...capture });
+  assert.equal(code, 0);
+  assert.equal(capture.lines.length, 1);
+  const output = JSON.parse(capture.lines[0]);
+  assert.equal(output.ok, true);
+  assert.equal(output.code, "doctor-contract-ok");
+  assert.equal(output.schemaVersion, 1);
+  assert.ok(Array.isArray(output.data?.summaryText));
+  assert.ok(output.data.summaryText.some((s) => /doctor passed/.test(s)));
+});
+
 test("runCli run dispatches generate-document with dryRun", async () => {
   const capture = createCapture();
   const code = await runCli(
@@ -641,6 +673,7 @@ test("runCli run dispatches agent-bootstrap", async () => {
   assert.equal(output.code, "agent-bootstrap");
   assert.equal(output.data?.doctor?.ok, true);
   assert.ok(typeof output.data?.planningGeneration === "number");
+  assert.ok(typeof output.data?.cliFootguns?.discovery?.commandMenuJson === "string");
   assert.equal(output.data?.instructionSurface, undefined);
   assert.equal(output.data?.maintainerDelivery?.schemaVersion, 1);
   assert.ok(Array.isArray(output.data?.maintainerDelivery?.inProgressTasks));

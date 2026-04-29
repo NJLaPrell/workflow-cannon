@@ -130,6 +130,16 @@ function writeDoctorFailureRemediation(
   }
 }
 
+function doctorWantsMachineJson(doctorRest: string[]): boolean {
+  for (let i = 0; i < doctorRest.length; i++) {
+    const t = doctorRest[i];
+    if (t === "--json" || t === "-j") return true;
+    if (t === "--format" && doctorRest[i + 1] === "json") return true;
+    if (t.startsWith("--format=") && t.slice("--format=".length) === "json") return true;
+  }
+  return false;
+}
+
 async function printWorkspaceKitTopLevelHelp(writeLine: (message: string) => void): Promise<void> {
   const version = await readCliBundledPackageVersion();
   const versionSuffix = version ? ` v${version}` : "";
@@ -147,12 +157,16 @@ async function printWorkspaceKitTopLevelHelp(writeLine: (message: string) => voi
   writeLine("Top-level commands");
   writeLine("  doctor          Validate kit contract files, config, and persistence checks");
   writeLine(
+    "  doctor [--json | --format json]   Contract-check result as a single JSON envelope (distinct from --agent-instruction-surface)"
+  );
+  writeLine(
     "  doctor --agent-instruction-surface [--agent-instruction-surface-lean]   JSON instruction catalog (optional lean digest projection)"
   );
   writeLine(
     "  doctor [--delivery-loop] [--delivery-loop-strict]   optional maintainer delivery advisory / gate (dirty + protected branch + in_progress tasks)"
   );
   writeLine("  run <cmd> [json]  Run a module command; omit <cmd> to list runnable commands");
+  writeLine("  run [--json | --format json]   With no <cmd>: machine-readable command catalog (stable names + policy hints)");
   writeLine("  run <cmd> --schema-only   Pilot: print JSON Schema + sample args (run-transition, create-task, update-task, dashboard-summary)");
   writeLine("  config          Show or change kit config (mutations need env approval — see below)");
   writeLine("  check           Validate workspace-kit.profile.json");
@@ -499,6 +513,7 @@ export async function runCli(
   }
 
   const doctorRest = args.slice(1);
+  const wantDoctorJson = doctorWantsMachineJson(doctorRest);
   const wantLeanInstructionSurface =
     doctorRest.includes("--agent-instruction-surface-lean") ||
     doctorRest.includes("agent-instruction-surface-lean");
@@ -512,6 +527,28 @@ export async function runCli(
   const issues = await collectDoctorContractIssues(cwd);
 
   if (issues.length > 0) {
+    if (wantDoctorJson) {
+      writeLine(
+        JSON.stringify(
+          {
+            ok: false,
+            code: "doctor-contract-failed",
+            schemaVersion: 1,
+            message: "workspace-kit doctor failed validation.",
+            data: { issues },
+            remediation: {
+              humanHints: [
+                "workspace-kit --help",
+                "Fix missing or invalid paths reported in data.issues"
+              ]
+            }
+          },
+          null,
+          2
+        )
+      );
+      return EXIT_VALIDATION_FAILURE;
+    }
     writeError("workspace-kit doctor failed validation.");
     for (const issue of issues) {
       writeError(`- ${issue.path}: ${issue.reason}`);
@@ -570,29 +607,55 @@ export async function runCli(
     }
   }
 
-  writeLine("workspace-kit doctor passed.");
-  writeLine("All canonical workspace-kit contract files are present and parseable JSON.");
-  writeLine(
+  const lines: string[] = [];
+  lines.push("workspace-kit doctor passed.");
+  lines.push("All canonical workspace-kit contract files are present and parseable JSON.");
+  lines.push(
     "Effective workspace config resolved; task planning persistence checks passed (including SQLite when configured)."
   );
   for (const line of await collectTaskPersistenceDoctorSummaryLines(cwd)) {
-    writeLine(line);
+    lines.push(line);
   }
   for (const line of collectPolicyLaneEnvDoctorSummaryLines()) {
-    writeLine(line);
+    lines.push(line);
   }
   for (const line of await collectCaeDoctorSummaryLines(cwd)) {
-    writeLine(line);
+    lines.push(line);
   }
   for (const line of await collectPluginDoctorSummaryLines(cwd)) {
-    writeLine(line);
+    lines.push(line);
   }
   if (wantDeliveryLoop && !deliveryLoopStrict && deliveryLoopIssues.length > 0) {
     for (const line of formatMaintainerDeliveryLoopAdvisoryLines(deliveryLoopIssues)) {
-      writeLine(line);
+      lines.push(line);
     }
   }
-  writeLine(`Next: workspace-kit run — list module commands; see ${AGENT_CLI_MAP_HUMAN_DOC} for tier/policy copy-paste.`);
+  lines.push(
+    `Next: workspace-kit run — list module commands; see ${AGENT_CLI_MAP_HUMAN_DOC} for tier/policy copy-paste.`
+  );
+
+  if (wantDoctorJson) {
+    writeLine(
+      JSON.stringify(
+        {
+          ok: true,
+          code: "doctor-contract-ok",
+          schemaVersion: 1,
+          message: "workspace-kit doctor passed.",
+          data: {
+            summaryText: lines,
+            nextHint: `workspace-kit run --json lists commands; see ${AGENT_CLI_MAP_HUMAN_DOC}`
+          }
+        },
+        null,
+        2
+      )
+    );
+    return EXIT_SUCCESS;
+  }
+  for (const line of lines) {
+    writeLine(line);
+  }
   return EXIT_SUCCESS;
 }
 
