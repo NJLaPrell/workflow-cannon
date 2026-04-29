@@ -15,7 +15,7 @@ import { TaskEngineError } from "../transitions.js";
 import { normalizeTaskStoreDocumentFromUnknown } from "./task-store-migration.js";
 import { stripAgentRoutingFromTask } from "../agent-task-routing-projection.js";
 import {
-  relationalBlobMirror,
+  relationalCompatibilityTaskBlob,
   rowToTaskEntity,
   taskEntityToRow,
   type TaskEngineTaskRow
@@ -409,12 +409,7 @@ export class SqliteDualPlanningStore {
       this._relationalTasks = useRel;
       try {
         if (useRel) {
-          const tj = row.task_store_json;
-          if (typeof tj !== "string") {
-            throw new TaskEngineError("storage-read-error", "task_store_json missing");
-          }
-          const stub = normalizeTaskStoreDocumentFromUnknown(JSON.parse(tj));
-          this._taskDoc = { ...stub, tasks: [] };
+          this._taskDoc = emptyTaskStoreDocument();
           this.loadRelationalTasks(db);
           const tr = row.transition_log_json;
           const mj = row.mutation_log_json;
@@ -469,8 +464,7 @@ export class SqliteDualPlanningStore {
       const useRel = hasEnvelope && readRelationalFlagFromRow(row);
       this._relationalTasks = useRel;
       if (useRel) {
-        const stub = normalizeTaskStoreDocumentFromUnknown(JSON.parse(row.task_store_json as string));
-        this._taskDoc = { ...stub, tasks: [] };
+        this._taskDoc = emptyTaskStoreDocument();
         this.loadRelationalTasks(db);
         if (!this.loadEvidenceLogs(db)) {
           this.parseLogs(row.transition_log_json as string, row.mutation_log_json as string);
@@ -552,10 +546,10 @@ export class SqliteDualPlanningStore {
 
   private persistRelational(db: Database.Database, nextPlanningGeneration: number): void {
     const projection = dependencyProjection(this._taskDoc.tasks);
-    const mirror = relationalBlobMirror(this._taskDoc);
-    const blobJson = JSON.stringify(mirror);
-    const tr = JSON.stringify(this._taskDoc.transitionLog);
-    const ml = JSON.stringify(this._taskDoc.mutationLog ?? []);
+    const blobJson = JSON.stringify(relationalCompatibilityTaskBlob(this._taskDoc.lastUpdated));
+    const evidenceRelational = evidenceTablesAvailable(db);
+    const tr = evidenceRelational ? "[]" : JSON.stringify(this._taskDoc.transitionLog);
+    const ml = evidenceRelational ? "[]" : JSON.stringify(this._taskDoc.mutationLog ?? []);
     const insertSql = `
       INSERT OR REPLACE INTO ${TASK_ENGINE_TASKS_TABLE} (
         id, status, type, title, created_at, updated_at, archived, archived_at,

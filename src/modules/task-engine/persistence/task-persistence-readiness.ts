@@ -8,6 +8,7 @@ import type { TaskEntity, TaskMutationEvidence, TransitionEvidence } from "../ty
 import { validateTaskEntityForStrictMode } from "../strict-task-validation.js";
 import { normalizeTaskStoreDocumentFromUnknown } from "./task-store-migration.js";
 import { rowToTaskEntity, type TaskEngineTaskRow } from "./sqlite-task-row-mapping.js";
+import { loadTaskFeatureLinkMap } from "./feature-registry-queries.js";
 
 type SqliteDb = InstanceType<typeof Database>;
 
@@ -56,6 +57,14 @@ function check(args: {
     sampleTaskIds: [...new Set(args.sampleTaskIds ?? [])].slice(0, 10),
     remediation: args.remediation ?? null
   };
+}
+
+function sqliteTablePresent(db: SqliteDb, table: string): boolean {
+  return Boolean(
+    db.prepare("SELECT 1 AS ok FROM sqlite_master WHERE type = 'table' AND name = ?").get(table) as
+      | { ok: number }
+      | undefined
+  );
 }
 
 function columnNames(db: SqliteDb, table: string): Set<string> {
@@ -495,9 +504,11 @@ export function buildTaskPersistenceReadinessReport(args: {
     if (row && typeof row.task_store_json === "string") {
       try {
         const doc = normalizeTaskStoreDocumentFromUnknown(JSON.parse(row.task_store_json));
-        tasks = doc.tasks;
-        transitionCount = doc.transitionLog.length;
-        mutationCount = doc.mutationLog?.length ?? 0;
+        if (relationalTasks !== true) {
+          tasks = doc.tasks;
+          transitionCount = doc.transitionLog.length;
+          mutationCount = doc.mutationLog?.length ?? 0;
+        }
         checks.push(
           check({
             code: "task-store-json-valid",
@@ -508,10 +519,17 @@ export function buildTaskPersistenceReadinessReport(args: {
       } catch (err) {
         checks.push(
           check({
-            code: "task-store-json-invalid",
-            severity: "error",
-            message: `task_store_json is invalid: ${(err as Error).message}`,
-            remediation: "Repair or restore the task document before migration."
+            code:
+              relationalTasks === true ? "task-store-json-invalid-relational-ignored" : "task-store-json-invalid",
+            severity: relationalTasks === true ? "warning" : "error",
+            message:
+              relationalTasks === true
+                ? `task_store_json is invalid but relational runtime does not read it: ${(err as Error).message}`
+                : `task_store_json is invalid: ${(err as Error).message}`,
+            remediation:
+              relationalTasks === true
+                ? "Optional: rewrite compatibility blob to a minimal empty-tasks document for doctor clarity."
+                : "Repair or restore the task document before migration."
           })
         );
       }
@@ -519,8 +537,13 @@ export function buildTaskPersistenceReadinessReport(args: {
 
     if (row && typeof row.transition_log_json === "string" && typeof row.mutation_log_json === "string") {
       try {
-        transitionCount = parseJsonArray(row.transition_log_json, "transition-log-json-invalid", "transition_log_json").length;
-        mutationCount = parseJsonArray(row.mutation_log_json, "mutation-log-json-invalid", "mutation_log_json").length;
+        if (relationalTasks !== true) {
+          transitionCount = parseJsonArray(row.transition_log_json, "transition-log-json-invalid", "transition_log_json").length;
+          mutationCount = parseJsonArray(row.mutation_log_json, "mutation-log-json-invalid", "mutation_log_json").length;
+        } else {
+          parseJsonArray(row.transition_log_json, "transition-log-json-invalid", "transition_log_json");
+          parseJsonArray(row.mutation_log_json, "mutation-log-json-invalid", "mutation_log_json");
+        }
         checks.push(
           check({
             code: "task-envelope-logs-valid",
@@ -552,8 +575,11 @@ export function buildTaskPersistenceReadinessReport(args: {
     if (taskTableCols.size > 0) {
       checks.push(...collectSqliteKitTaskLinkIntegrityChecks(db, TASK_ENGINE_TASKS_TABLE));
       try {
-        const rows = db.prepare(`SELECT * FROM ${TASK_ENGINE_TASKS_TABLE}`).all() as TaskEngineTaskRow[];
-        const relationalTasksRows = rows.map((taskRow) => rowToTaskEntity(taskRow));
+        const rawRows = db.prepare(`SELECT * FROM ${TASK_ENGINE_TASKS_TABLE}`).all() as TaskEngineTaskRow[];
+        const linkMap = loadTaskFeatureLinkMap(db);
+        const relationalTasksRows = rawRows.map((taskRow) =>
+          rowToTaskEntity(taskRow, { taskFeatureLinkMap: linkMap })
+        );
         if (relationalTasks !== true) {
           checks.push(...collectTaskShapeChecks(relationalTasksRows).filter((c) => c.severity !== "ok"));
         }
@@ -569,7 +595,7 @@ export function buildTaskPersistenceReadinessReport(args: {
             affectedCount: relationalTasksRows.length
           })
         );
-        const legacyFeatureRows = rows
+        const legacyFeatureRows = rawRows
           .filter((taskRow) => {
             const raw = taskRow.features_json;
             return typeof raw === "string" && raw !== "" && raw !== "[]";
@@ -580,25 +606,29 @@ export function buildTaskPersistenceReadinessReport(args: {
             check({
               code: "task-legacy-features-json-present",
               severity: "warning",
-              message: "Some relational rows still carry legacy features_json values.",
+              message: "Some relational rows still carry legacy features_json values (ignored at runtime when the feature registry + junction table are active).",
               affectedCount: legacyFeatureRows.length,
               sampleTaskIds: legacyFeatureRows,
-              remediation: "Backfill task feature links before retiring legacy feature fallbacks."
+              remediation: "Optionally clear features_json after confirming task_engine_task_features links cover all slugs."
             })
           );
         }
         if (relationalTasks === true && row && typeof row.task_store_json === "string") {
-          const blobDoc = normalizeTaskStoreDocumentFromUnknown(JSON.parse(row.task_store_json));
-          if (blobDoc.tasks.length > 0 && blobDoc.tasks.length !== relationalTasksRows.length) {
-            checks.push(
-              check({
-                code: "task-blob-relational-count-drift",
-                severity: "warning",
-                message: "task_store_json task count differs from relational task row count.",
-                affectedCount: Math.abs(blobDoc.tasks.length - relationalTasksRows.length),
-                remediation: "Regenerate compatibility mirrors or finish blob hot-path retirement."
-              })
-            );
+          try {
+            const blobDoc = normalizeTaskStoreDocumentFromUnknown(JSON.parse(row.task_store_json));
+            if (blobDoc.tasks.length > 0) {
+              checks.push(
+                check({
+                  code: "task-blob-relational-count-drift",
+                  severity: "warning",
+                  message: "task_store_json embeds tasks while relational_tasks=1; runtime reads task_engine_tasks only.",
+                  affectedCount: blobDoc.tasks.length,
+                  remediation: "Persist once with kit to rewrite the compatibility blob to empty tasks[] or run export hygiene."
+                })
+              );
+            }
+          } catch {
+            /* covered by task-store-json-invalid checks */
           }
         }
       } catch (err) {
@@ -620,6 +650,19 @@ export function buildTaskPersistenceReadinessReport(args: {
           message: "task_engine_tasks table is absent; migration readiness is limited to blob validation.",
           remediation: "Run sqlite-blob-to-relational readiness before relational schema tightening."
         })
+      );
+    }
+
+    if (
+      relationalTasks === true &&
+      sqliteTablePresent(db, TASK_ENGINE_TRANSITION_LOG_TABLE) &&
+      sqliteTablePresent(db, TASK_ENGINE_MUTATION_LOG_TABLE)
+    ) {
+      transitionCount = Number(
+        (db.prepare(`SELECT COUNT(*) AS c FROM ${TASK_ENGINE_TRANSITION_LOG_TABLE}`).get() as { c: number }).c
+      );
+      mutationCount = Number(
+        (db.prepare(`SELECT COUNT(*) AS c FROM ${TASK_ENGINE_MUTATION_LOG_TABLE}`).get() as { c: number }).c
       );
     }
 

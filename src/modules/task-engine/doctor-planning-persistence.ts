@@ -5,6 +5,7 @@ import type { ModuleLifecycleContext } from "../../contracts/module-contract.js"
 import { TASK_ENGINE_TASKS_TABLE } from "../../core/state/workspace-kit-sqlite.js";
 import { planningSqliteDatabaseRelativePath } from "./planning-config.js";
 import { normalizeTaskStoreDocumentFromUnknown } from "./persistence/task-store-migration.js";
+import { loadTaskFeatureLinkMap } from "./persistence/feature-registry-queries.js";
 import { rowToTaskEntity, type TaskEngineTaskRow } from "./persistence/sqlite-task-row-mapping.js";
 
 type SqliteDb = InstanceType<typeof DatabaseCtor>;
@@ -161,8 +162,9 @@ export async function validatePlanningPersistenceForDoctor(
         }
         try {
           const trows = db.prepare(`SELECT * FROM ${TASK_ENGINE_TASKS_TABLE}`).all() as TaskEngineTaskRow[];
+          const fmap = loadTaskFeatureLinkMap(db);
           for (const tr of trows) {
-            rowToTaskEntity(tr);
+            rowToTaskEntity(tr, { taskFeatureLinkMap: fmap });
           }
         } catch (e) {
           const msg = e instanceof Error ? e.message : String(e);
