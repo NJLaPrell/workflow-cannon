@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Source (.ai) \u2192 human render (docs/maintainers). Regenerate list when adding paths; drift + orphan checks consume this file.",
+  "description": "Source (.ai) → human render (docs/maintainers). Regenerate list when adding paths; drift + orphan checks consume this file.",
   "mappings": [
     {
       "source": ".ai/playbooks/improvement-scout.md",
@@ -129,6 +129,10 @@
     {
       "source": ".ai/runbooks/principal-architectural-review-themes.md",
       "output": "docs/maintainers/runbooks/principal-architectural-review-themes.md"
+    },
+    {
+      "source": ".ai/runbooks/README.md",
+      "output": "docs/maintainers/runbooks/README.md"
     },
     {
       "source": ".ai/runbooks/recommendation-and-transcript-triggers.md",
