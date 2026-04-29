@@ -10,6 +10,22 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 (none)
 
+## [0.76.0] - 2026-04-29
+
+Phase 76 — **Agent CLI ergonomics + token efficiency**: task-engine **`list-tasks`** discovery (`id` / `ids` / `idPrefix`, `limit`, `nextCursor`), **`create-task`** **`allocateId`**, **`apply-task-batch`**, dry-run on create/update paths, planning-generation error payloads with remediation; slim **`AGENT-CLI-MAP`** + **`.ai/agent-cli-snippets/`**, instruction **agent capsules** (CI), **`.ai/TERMS.index.json`**, runbooks/ADRs README → **`HUB.md`** routing; **`wk run --json`** (`run-command-catalog`), **`wk doctor --json`**, richer **`policy-denied`** (`readCommandSuggestion`); **`agent-bootstrap`** **`cliFootguns`**; instruction-surface rows include **`jsonApprovalRequired`** / **`policyOperationId`** when built with **`effectiveConfig`**. Improvement batch **T100000–T100006** included.
+
+### Added
+
+- **`workspace-kit run --json`**: stable catalog JSON for agents (no subcommand); default text menu unchanged.
+- **`workspace-kit doctor --json`**: single JSON envelope for contract pass/fail (distinct from **`--agent-instruction-surface`**).
+- **`policy-denied`** responses: **`argvTemplateJson`**, schema-only and per-command snippet path hints.
+- **`agent-bootstrap`**: structured **`cliFootguns`** (invoke, **`pnpm`**, policy lanes, planning gen, discovery).
+- Instruction catalog: optional **`jsonApprovalRequired`** + **`policyOperationId`** on rows when **`effectiveConfig`** is supplied.
+
+### Changed
+
+- **`.ai/WORKSPACE-KIT-SESSION.md`** and top-level **`--help`**: bootstrap bullets for JSON doctor/run and snippet index.
+
 ## [0.75.0] - 2026-04-29
 
 Phase 75 — **Guidance authoring pipeline + maintainer delivery ergonomics**: product-shaped **Guidance** scope builder (**`T1000`**), real draft **impact preview** (**`T1001`**), **blast-radius / activation-readiness** summaries (**`T1002`**), and a dashboard **authoring wizard** in the Cursor extension (**`T1003`**). Maintainer/agent loop improvements: **`maintainerDelivery`** hints on **`agent-session-snapshot`** / **`get-next-actions`**, **`doctor --delivery-loop`** / **`--delivery-loop-strict`**, CAE **`cae-guidance-preview`** advisory on dirty protected branches, **`apply-task-batch`**, **`list-tasks`** pagination optimizations, slim **`AGENT-CLI-MAP`** with **`.ai/agent-cli-snippets/`**, instruction agent capsules, **`.ai/TERMS.index.json`**, and doc routing hub checks.
