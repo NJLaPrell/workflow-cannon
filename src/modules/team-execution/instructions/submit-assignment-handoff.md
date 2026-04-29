@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=submit-assignment-handoff|module=team-execution|schema_only=pnpm exec wk run submit-assignment-handoff --schema-only '{}'
+-->
+
 # submit-assignment-handoff
 
 ```bash

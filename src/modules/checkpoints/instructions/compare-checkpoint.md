@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=compare-checkpoint|module=checkpoints|schema_only=pnpm exec wk run compare-checkpoint --schema-only '{}'
+-->
+
 # compare-checkpoint
 
 Read-only: **`git diff --name-status`** from the checkpoint’s compare ref to current **HEAD**.

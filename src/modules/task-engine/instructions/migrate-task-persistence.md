@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=migrate-task-persistence|module=task-engine|schema_only=pnpm exec wk run migrate-task-persistence --schema-only '{}'
+-->
+
 # migrate-task-persistence
 
 Offline import from legacy **task** JSON into SQLite. Runtime execution uses SQLite only (**v0.40+**); `sqlite-to-json` was removed — use **`backup-planning-sqlite`** for a portable `.db` copy. Wishlist intake lives only as SQLite **`wishlist_intake`** task rows (no standalone wishlist JSON).

@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=register-assignment|module=team-execution|schema_only=pnpm exec wk run register-assignment --schema-only '{}'
+-->
+
 # register-assignment
 
 ```bash

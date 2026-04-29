@@ -1,0 +1,37 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "retire-subagent",
+  "schema": {
+    "type": "object",
+    "additionalProperties": true,
+    "description": "Permissive fallback args schema for 'retire-subagent'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+  },
+  "schemaSource": "manifest-permissive-fallback",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run retire-subagent '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/subagents/instructions/retire-subagent.md",
+  "moduleId": "subagents",
+  "description": "Retire a subagent definition (no new sessions).",
+  "policy": {
+    "sensitivity": "sensitive",
+    "operationId": "subagents.persist",
+    "jsonApprovalRequired": true
+  },
+  "planningGeneration": {
+    "cliPrelude": true,
+    "expectedPlanningGeneration": "required when tasks.planningGenerationPolicy is require"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

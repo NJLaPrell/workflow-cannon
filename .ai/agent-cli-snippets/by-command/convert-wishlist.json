@@ -1,0 +1,43 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "convert-wishlist",
+  "schema": {
+    "type": "object",
+    "required": [
+      "decomposition",
+      "tasks"
+    ],
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {
+    "decomposition": null,
+    "tasks": null
+  },
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run convert-wishlist '{\"decomposition\":null,\"tasks\":null}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/convert-wishlist.md",
+  "moduleId": "task-engine",
+  "description": "Convert a Wishlist item into one or more phased tasks and close the wishlist item.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": true,
+    "expectedPlanningGeneration": "required when tasks.planningGenerationPolicy is require"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

@@ -1,0 +1,50 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "archive-task",
+  "schema": {
+    "type": "object",
+    "required": [
+      "taskId"
+    ],
+    "properties": {
+      "taskId": {
+        "type": "string",
+        "pattern": "^T[0-9]+$"
+      },
+      "archiveReason": {
+        "type": "string"
+      }
+    },
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {
+    "taskId": "T000"
+  },
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run archive-task '{\"taskId\":\"T000\"}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/archive-task.md",
+  "moduleId": "task-engine",
+  "description": "Archive a task without destructive deletion.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": true,
+    "expectedPlanningGeneration": "required when tasks.planningGenerationPolicy is require"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

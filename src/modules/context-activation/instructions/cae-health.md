@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cae-health|module=context-activation|schema_only=pnpm exec wk run cae-health --schema-only '{}'
+-->
+
 # cae-health
 
 Report **`kit.cae.enabled`** (effective config), registry load status, and structured **`issues`**.

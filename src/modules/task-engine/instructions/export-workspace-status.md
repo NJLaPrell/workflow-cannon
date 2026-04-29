@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=export-workspace-status|module=task-engine|schema_only=pnpm exec wk run export-workspace-status --schema-only '{}'
+-->
+
 # export-workspace-status
 
 Emit a **non-authoritative** YAML export of **`kit_workspace_status`** to **`docs/maintainers/data/workspace-kit-status.db-export.yaml`** (does not replace maintainer **`workspace-kit-status.yaml`**).

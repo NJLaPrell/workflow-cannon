@@ -527,7 +527,16 @@ export class SqliteDualPlanningStore {
     ) {
       throw new TaskEngineError(
         "planning-generation-mismatch",
-        `expectedPlanningGeneration ${options.expectedPlanningGeneration} does not match current planning generation ${currentGen}`
+        `expectedPlanningGeneration ${options.expectedPlanningGeneration} does not match current planning generation ${currentGen}`,
+        {
+          currentPlanningGeneration: currentGen,
+          passedExpectedPlanningGeneration: options.expectedPlanningGeneration,
+          retryAfterRead: true,
+          readCommandSuggestion: {
+            command: "list-tasks",
+            args: {}
+          }
+        }
       );
     }
     if (work) {

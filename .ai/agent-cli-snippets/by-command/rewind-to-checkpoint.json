@@ -1,0 +1,37 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "rewind-to-checkpoint",
+  "schema": {
+    "type": "object",
+    "additionalProperties": true,
+    "description": "Permissive fallback args schema for 'rewind-to-checkpoint'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+  },
+  "schemaSource": "manifest-permissive-fallback",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run rewind-to-checkpoint '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/checkpoints/instructions/rewind-to-checkpoint.md",
+  "moduleId": "checkpoints",
+  "description": "Apply stash checkpoint or git reset --hard to head checkpoint (destructive; guardrails).",
+  "policy": {
+    "sensitivity": "sensitive",
+    "operationId": "checkpoints.rewind",
+    "jsonApprovalRequired": true
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

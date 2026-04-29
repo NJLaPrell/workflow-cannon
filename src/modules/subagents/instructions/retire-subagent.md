@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=retire-subagent|module=subagents|schema_only=pnpm exec wk run retire-subagent --schema-only '{}'
+-->
+
 # retire-subagent
 
 ```bash

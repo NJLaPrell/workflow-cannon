@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=get-recent-task-activity|module=task-engine|schema_only=pnpm exec wk run get-recent-task-activity --schema-only '{}'
+-->
+
 # get-recent-task-activity
 
 Retrieve recent merged transition and mutation activity across tasks.

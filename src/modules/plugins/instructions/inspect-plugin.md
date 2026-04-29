@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=inspect-plugin|module=plugins|schema_only=pnpm exec wk run inspect-plugin --schema-only '{}'
+-->
+
 # inspect-plugin
 
 Read-only: return one plugin’s manifest, validation diagnostics, and optional SQLite persistence row.

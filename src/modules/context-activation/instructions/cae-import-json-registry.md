@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cae-import-json-registry|module=context-activation|schema_only=pnpm exec wk run cae-import-json-registry --schema-only '{}'
+-->
+
 # cae-import-json-registry
 
 Import the **validated** CAE JSON registry (default `.ai/cae/registry/*.json`) into **kit planning SQLite** as a **new active** `cae_registry_versions` row plus `cae_registry_artifacts` / `cae_registry_activations` rows.

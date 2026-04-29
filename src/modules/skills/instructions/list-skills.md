@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=list-skills|module=skills|schema_only=pnpm exec wk run list-skills --schema-only '{}'
+-->
+
 # list-skills
 
 ```bash

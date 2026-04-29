@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=scout-report|module=improvement|schema_only=pnpm exec wk run scout-report --schema-only '{}'
+-->
+
 # scout-report
 
 Read-only JSON rehearsal for the **improvement scout** playbook (`improvement-scout`). Emits rotated **primary** / **adversarial** lenses, a **target zone**, a **question stem**, and up to three **candidate findings** (classification `rehearsal`). Does **not** create tasks, advance transcript/policy cursors, or run **`generate-recommendations`**.

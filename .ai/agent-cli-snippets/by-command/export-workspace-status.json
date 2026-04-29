@@ -1,0 +1,41 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "export-workspace-status",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "dryRun": {
+        "type": "boolean"
+      }
+    },
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run export-workspace-status '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/export-workspace-status.md",
+  "moduleId": "task-engine",
+  "description": "Write non-authoritative workspace-kit-status.db-export.yaml from kit_workspace_status.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

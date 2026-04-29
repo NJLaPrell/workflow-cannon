@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=list-module-states|module=task-engine|schema_only=pnpm exec wk run list-module-states --schema-only '{}'
+-->
+
 # list-module-states
 
 List all rows currently stored in unified SQLite module state.

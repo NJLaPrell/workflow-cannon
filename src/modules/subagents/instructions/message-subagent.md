@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=message-subagent|module=subagents|schema_only=pnpm exec wk run message-subagent --schema-only '{}'
+-->
+
 # message-subagent
 
 ```bash

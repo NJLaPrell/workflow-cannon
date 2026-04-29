@@ -26,6 +26,7 @@ import {
   validatePilotRunCommandArgs
 } from "../core/run-args-pilot-validation.js";
 import { defaultRegistryModules } from "../modules/index.js";
+import { TaskEngineError } from "../modules/task-engine/transitions.js";
 import { tryAutoCheckpointBeforeRun } from "../modules/checkpoints/checkpoint-auto.js";
 import { promptSensitiveRunApproval } from "./interactive-policy.js";
 import { releaseTranscriptHookLockFromEnv } from "../core/transcript-completion-hook.js";
@@ -184,7 +185,9 @@ export async function handleRunCommand(
     writeLine(
       `Instruction files: src/modules/<module>/instructions/<command>.md — sensitive runs need JSON policyApproval (not env WORKSPACE_KIT_POLICY_APPROVAL); see ${POLICY_APPROVAL_TWO_LANES_DOC}.`
     );
-    writeLine(`Agent-oriented tier table + copy-paste patterns: ${AGENT_CLI_MAP_HUMAN_DOC}.`);
+    writeLine(
+      `Agent CLI map: .ai/AGENT-CLI-MAP.md (navigation) + .ai/agent-cli-snippets/ (per-command schema-only JSON); maintainer depth: ${AGENT_CLI_MAP_HUMAN_DOC}.`
+    );
     return codes.success;
   }
 
@@ -419,6 +422,27 @@ export async function handleRunCommand(
     writeLine(JSON.stringify(result, null, 2));
     return result.ok ? codes.success : codes.validationFailure;
   } catch (error) {
+    if (error instanceof TaskEngineError) {
+      const body: Record<string, unknown> = {
+        ok: false,
+        code: error.code,
+        message: error.message
+      };
+      if (error.details && Object.keys(error.details).length > 0) {
+        body.data = error.details;
+      }
+      if (error.code === "planning-generation-mismatch" || error.code === "planning-generation-required") {
+        body.remediation = {
+          docPath: "docs/maintainers/adrs/ADR-planning-generation-optimistic-concurrency.md",
+          instructionPath: "src/modules/task-engine/instructions/run-transition.md"
+        };
+      }
+      if (hookBus.isEnabled()) {
+        await hookBus.emitAfterModuleCommand(subcommand, false, error.code);
+      }
+      writeLine(JSON.stringify(body, null, 2));
+      return codes.validationFailure;
+    }
     if (hookBus.isEnabled()) {
       const code =
         error instanceof ModuleCommandRouterError

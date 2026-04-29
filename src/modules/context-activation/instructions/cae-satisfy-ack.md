@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cae-satisfy-ack|module=context-activation|schema_only=pnpm exec wk run cae-satisfy-ack --schema-only '{}'
+-->
+
 # cae-satisfy-ack
 
 Insert a **CAE acknowledgement satisfaction** row into kit planning SQLite (**`cae_ack_satisfaction`**). Requires effective **`kit.cae.persistence`** **`true`** and a writable planning DB (post v11 migration).

@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=create-wishlist|module=task-engine|schema_only=pnpm exec wk run create-wishlist --schema-only '{}'
+-->
+
 # create-wishlist
 
 Create a **wishlist intake** task (`type: "wishlist_intake"`, id `T<number>`). Ideation fields live in **metadata**; these tasks stay out of **ready-queue** suggestions until converted.

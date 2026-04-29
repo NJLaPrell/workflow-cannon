@@ -9,11 +9,14 @@ import type {
 
 export class TaskEngineError extends Error {
   readonly code: TaskEngineErrorCode;
+  /** Optional structured fields for agent JSON (`planning-generation-mismatch`, etc.). */
+  readonly details?: Record<string, unknown>;
 
-  constructor(code: TaskEngineErrorCode, message: string) {
+  constructor(code: TaskEngineErrorCode, message: string, details?: Record<string, unknown>) {
     super(message);
     this.name = "TaskEngineError";
     this.code = code;
+    this.details = details;
   }
 }
 

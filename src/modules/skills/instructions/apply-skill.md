@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=apply-skill|module=skills|schema_only=pnpm exec wk run apply-skill --schema-only '{}'
+-->
+
 # apply-skill
 
 Preview (default; not policy-sensitive):

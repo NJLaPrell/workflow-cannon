@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cae-update-activation|module=context-activation|schema_only=pnpm exec wk run cae-update-activation --schema-only '{}'
+-->
+
 # cae-update-activation
 
 Merge **`activation`** patch into a stored non-retired activation row and re-validate.

@@ -1,0 +1,44 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "agent-bootstrap",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "projection": {
+        "type": "string",
+        "enum": [
+          "lean"
+        ]
+      }
+    },
+    "additionalProperties": false
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run agent-bootstrap '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/agent-bootstrap.md",
+  "moduleId": "task-engine",
+  "description": "Read-only cold start: doctor-equivalent contract checks plus agent-session-snapshot JSON in one response.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

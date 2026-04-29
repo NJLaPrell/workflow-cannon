@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=list-tasks|module=task-engine|schema_only=pnpm exec wk run list-tasks --schema-only '{}'
+-->
+
 # list-tasks
 
 List tasks from the Task Engine store with optional filters.

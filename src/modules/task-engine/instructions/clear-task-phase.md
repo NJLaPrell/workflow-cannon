@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=clear-task-phase|module=task-engine|schema_only=pnpm exec wk run clear-task-phase --schema-only '{}'
+-->
+
 # clear-task-phase
 
 Removes **`phase`** and **`phaseKey`** from a task (fields omitted on the persisted record).

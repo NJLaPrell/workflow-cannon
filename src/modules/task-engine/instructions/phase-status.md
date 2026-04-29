@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=phase-status|module=task-engine|schema_only=pnpm exec wk run phase-status --schema-only '{}'
+-->
+
 # phase-status
 
 Read the canonical workspace phase, drift hints, export freshness, and optional task counts in one JSON payload.

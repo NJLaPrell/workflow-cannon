@@ -1,0 +1,99 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "set-current-phase",
+  "schema": {
+    "type": "object",
+    "required": [
+      "currentKitPhase"
+    ],
+    "properties": {
+      "currentKitPhase": {
+        "type": "string"
+      },
+      "nextKitPhase": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "currentPhaseLabel": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "activeFocus": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "blockers": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "pendingDecisions": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "nextAgentActions": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "lastUpdated": {
+        "type": "string"
+      },
+      "expectedWorkspaceRevision": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "clientMutationId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "actor": {
+        "type": "string"
+      },
+      "dryRun": {
+        "type": "boolean"
+      }
+    },
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {
+    "currentKitPhase": ""
+  },
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run set-current-phase '{\"currentKitPhase\":\"\"}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/set-current-phase.md",
+  "moduleId": "task-engine",
+  "description": "Set canonical workspace current phase through SQLite first, with config hint and export verification.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": true
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

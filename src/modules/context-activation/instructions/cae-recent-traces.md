@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cae-recent-traces|module=context-activation|schema_only=pnpm exec wk run cae-recent-traces --schema-only '{}'
+-->
+
 # cae-recent-traces
 
 List recent durable CAE trace summaries for the Guidance trace browser.

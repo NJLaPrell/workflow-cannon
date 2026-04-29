@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=enable-plugin|module=plugins|schema_only=pnpm exec wk run enable-plugin --schema-only '{}'
+-->
+
 # enable-plugin
 
 **Tier B (sensitive):** set **`kit_plugin_state.enabled = 1`** for a currently discovered plugin.

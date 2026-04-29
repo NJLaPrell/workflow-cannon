@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=backup-planning-sqlite|module=task-engine|schema_only=pnpm exec wk run backup-planning-sqlite --schema-only '{}'
+-->
+
 # backup-planning-sqlite
 
 Online backup of the configured planning SQLite database (`tasks.sqliteDatabaseRelativePath` or default `.workspace-kit/tasks/workspace-kit.db`) using the native SQLite backup API (`better-sqlite3`). Use this instead of raw file copies while kit commands may write to the DB.

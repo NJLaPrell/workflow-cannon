@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=synthesize-transcript-churn|module=task-engine|schema_only=pnpm exec wk run synthesize-transcript-churn --schema-only '{}'
+-->
+
 # synthesize-transcript-churn
 
 Promote a **`type: transcript_churn`** task in **`status: research`** to **`type: improvement`**, **`status: proposed`**, after you have investigated the source transcript(s) and written a real problem report.

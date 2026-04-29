@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=queue-health|module=task-engine|schema_only=pnpm exec wk run queue-health --schema-only '{}'
+-->
+
 # queue-health
 
 Read-only audit of the **ready** execution queue: compares each ready task’s inferred phase key to the canonical current phase (from **`kit_workspace_status.current_kit_phase`** in planning SQLite when available, otherwise `kit.currentPhaseNumber` as a bootstrap fallback), and flags ready tasks whose `dependsOn` are not yet `completed`.

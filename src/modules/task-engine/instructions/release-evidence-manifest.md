@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=release-evidence-manifest|module=task-engine|schema_only=pnpm exec wk run release-evidence-manifest --schema-only '{}'
+-->
+
 # release-evidence-manifest
 
 Build a machine-readable release evidence manifest for phase closeout. This is a read-only command: it validates supplied approval/release-note/follow-up evidence and aggregates task delivery evidence from the task store.

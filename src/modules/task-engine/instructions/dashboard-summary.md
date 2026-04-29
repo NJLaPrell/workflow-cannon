@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=dashboard-summary|module=task-engine|schema_only=pnpm exec wk run dashboard-summary --schema-only '{}'
+-->
+
 # dashboard-summary
 
 Return a single JSON payload for dashboard / cockpit UIs: task counts, ready-queue preview, blocked summary, suggested next task, and (when present) a shallow parse of `docs/maintainers/data/workspace-kit-status.yaml`.

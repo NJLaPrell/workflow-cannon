@@ -1,3 +1,14 @@
+# Documentation schema (machine records)
+
+Agent-facing **record grammar** lives in the pipe-syntax block below. Do not treat this file as a long-form tutorial.
+
+- **JSON Schema (canonical shapes for data files):** `src/modules/documentation/schemas/feature-taxonomy.schema.json`, `roadmap-data.schema.json`
+- **Example instances:** `src/modules/documentation/data/feature-taxonomy.json`, `data/roadmap-data.json`
+- **View contracts (section bindings):** `src/modules/documentation/views/*.view.yaml` — each `sections[]` entry maps a **source** key to a **renderer** id (typed document assembly vs huge template holes).
+- **Governance / workflow prose:** `src/modules/documentation/RULES.md`
+
+---
+
 meta|schema=base.v2|doc=<manifest|rules|runbook|workbook|map|workflows|commands|decisions|glossary|observed|planned|checks>|truth=<canonical|observed|planned>|status=<active|deprecated|draft>|profile=<core|runbook|workbook>
 
 syntax|record=one_per_line|separator=||assignment==|list=,|sequence=>|conjunction=+|bool=true,false

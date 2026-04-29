@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=workspace-status-history|module=task-engine|schema_only=pnpm exec wk run workspace-status-history --schema-only '{}'
+-->
+
 # workspace-status-history
 
 List recent **`kit_workspace_status_events`** rows (newest first).

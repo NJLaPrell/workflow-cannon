@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cae-retire-artifact|module=context-activation|schema_only=pnpm exec wk run cae-retire-artifact --schema-only '{}'
+-->
+
 # cae-retire-artifact
 
 Set **`retired_at`** on an artifact when no non-retired activation references it.

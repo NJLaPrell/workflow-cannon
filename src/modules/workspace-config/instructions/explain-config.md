@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=explain-config|module=workspace-config|schema_only=pnpm exec wk run explain-config --schema-only '{}'
+-->
+
 # explain-config
 
 Agent command. JSON args:

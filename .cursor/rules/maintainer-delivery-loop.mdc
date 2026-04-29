@@ -7,10 +7,17 @@ alwaysApply: true
 
 Full numbered loop (branch → implement → validate → PR → merge → **`run-transition`**), branching/tagging, commit strategy, and PR expectations: **machine summary** **`.ai/MACHINE-PLAYBOOKS.md`**; **playbook** **`.ai/playbooks/task-to-phase-branch.md`** (human render: `docs/maintainers/playbooks/…`); **CLI execution** **`.ai/AGENT-CLI-MAP.md`**. Attach **`.ai/playbooks/task-to-phase-branch.md`** when driving one **`T###`** through a PR into **`release/phase-<N>`** (phase integration branch — see **`.cursor/rules/branching-tagging-strategy.mdc`**). Merging **`release/phase-<N>`** → **`main`** is **phase closeout**, not this loop.
 
+## Agent checklist (minimum)
+
+1. Confirm phase integration branch (e.g. **`release/phase-75`**) exists or create it per playbook.
+2. Create **`task/<id>-…`** (or team convention) from that branch **before** coding.
+3. **`run-transition`** **`start`** with **`policyApproval`** before the first implementation commit lands on the task branch.
+4. Open PR with **base = phase branch**; iterate review; merge; then **`run-transition`** **`complete`** with evidence.
+
+Optional requestable rule: **`.cursor/rules/playbook-task-to-phase-branch.mdc`**.
+
 ## Non-negotiables
 
 - **Git + GitHub** own branch, PR, review, merge. **`workspace-kit`** owns task lifecycle and evidence in the configured task store (default SQLite under **`.workspace-kit/tasks/`**). Do not treat merged PRs as task **`complete`** without the matching Tier A **`run-transition`** when the task is in scope.
 - **`start` early:** When delivering a **`T###`**, run Tier A **`run-transition`** with **`action":"start"`** as soon as you take ownership — **no later than before the first implementation commit** on the task branch. Do not leave the task **`ready`** while coding. Use **`update-task`** (e.g. **`summary`**, **`metadata`**) at milestones if helpful; there is no separate “PR open” **status**.
 - **Blocked?** Record the blocker in task-engine state first; the SQLite/JSON task store is authoritative over chat.
-
-Optional requestable rule: **`.cursor/rules/playbook-task-to-phase-branch.mdc`**.

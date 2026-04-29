@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cae-list-registry-versions|module=context-activation|schema_only=pnpm exec wk run cae-list-registry-versions --schema-only '{}'
+-->
+
 # cae-list-registry-versions
 
 List CAE registry **`cae_registry_versions`** rows with artifact/activation counts (read-only).

@@ -1,0 +1,95 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "update-workspace-status",
+  "schema": {
+    "type": "object",
+    "required": [
+      "expectedWorkspaceRevision"
+    ],
+    "properties": {
+      "expectedWorkspaceRevision": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "currentKitPhase": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "nextKitPhase": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "activeFocus": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "lastUpdated": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "blockers": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "pendingDecisions": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "nextAgentActions": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "actor": {
+        "type": "string"
+      },
+      "command": {
+        "type": "string"
+      }
+    },
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {
+    "expectedWorkspaceRevision": 0
+  },
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run update-workspace-status '{\"expectedWorkspaceRevision\":0}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/update-workspace-status.md",
+  "moduleId": "task-engine",
+  "description": "Patch kit_workspace_status with workspaceRevision optimistic concurrency.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

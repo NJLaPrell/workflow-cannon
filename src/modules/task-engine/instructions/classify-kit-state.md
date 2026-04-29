@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=classify-kit-state|module=task-engine|schema_only=pnpm exec wk run classify-kit-state --schema-only '{}'
+-->
+
 ## Command
 
 `workspace-kit run classify-kit-state`

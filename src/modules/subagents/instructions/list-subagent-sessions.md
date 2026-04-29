@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=list-subagent-sessions|module=subagents|schema_only=pnpm exec wk run list-subagent-sessions --schema-only '{}'
+-->
+
 # list-subagent-sessions
 
 ```bash

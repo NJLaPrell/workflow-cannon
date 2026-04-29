@@ -217,6 +217,17 @@ test("runCli doctor validates canonical files", async () => {
   assert.ok(capture.lines.some((l) => l.includes("Effective task persistence:")));
 });
 
+test("runCli doctor --delivery-loop passes when delivery advisory has no triggers", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-del-loop-"));
+  await createDoctorFixture(fixtureRoot);
+
+  const capture = createCapture();
+  const code = await runCli(["doctor", "--delivery-loop"], { cwd: fixtureRoot, ...capture });
+
+  assert.equal(code, 0);
+  assert.ok(capture.lines.some((l) => /doctor passed/.test(l)));
+});
+
 test("runCli doctor --agent-instruction-surface emits JSON catalog", async () => {
   const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-surface-"));
   await createDoctorFixture(fixtureRoot);
@@ -237,6 +248,25 @@ test("runCli doctor --agent-instruction-surface emits JSON catalog", async () =>
   assert.ok(payload.data.activationReport);
   assert.equal(payload.data.errorRemediationCatalog?.schemaVersion, 1);
   assert.ok(Array.isArray(payload.data.errorRemediationCatalog?.entries));
+});
+
+test("runCli doctor --agent-instruction-surface-lean emits digest projection", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-surface-lean-"));
+  await createDoctorFixture(fixtureRoot);
+
+  const capture = createCapture();
+  const code = await runCli(["doctor", "--agent-instruction-surface-lean"], {
+    cwd: fixtureRoot,
+    ...capture
+  });
+
+  assert.equal(code, 0);
+  const payload = JSON.parse(capture.lines[0]);
+  assert.equal(payload.data.projection, "lean");
+  assert.ok(typeof payload.data.instructionSurfaceDigest === "string");
+  assert.ok(payload.data.instructionSurfaceDigest.startsWith("sha256:"));
+  assert.equal(payload.data.commandCounts?.total > 0, true);
+  assert.equal(payload.data.commands, undefined);
 });
 
 test("runCli doctor returns validation failure when required files are missing", async () => {
@@ -611,6 +641,22 @@ test("runCli run dispatches agent-bootstrap", async () => {
   assert.equal(output.code, "agent-bootstrap");
   assert.equal(output.data?.doctor?.ok, true);
   assert.ok(typeof output.data?.planningGeneration === "number");
+  assert.equal(output.data?.instructionSurface, undefined);
+  assert.equal(output.data?.maintainerDelivery?.schemaVersion, 1);
+  assert.ok(Array.isArray(output.data?.maintainerDelivery?.inProgressTasks));
+});
+
+test("runCli run agent-bootstrap projection lean includes instruction surface digest", async () => {
+  const capture = createCapture();
+  const code = await runCli(
+    ["run", "agent-bootstrap", JSON.stringify({ projection: "lean" })],
+    { cwd: process.cwd(), ...capture }
+  );
+  assert.equal(code, 0);
+  const output = JSON.parse(capture.lines.join(""));
+  assert.equal(output.ok, true);
+  assert.equal(output.data?.instructionSurface?.projection, "lean");
+  assert.ok(typeof output.data?.instructionSurface?.instructionSurfaceDigest === "string");
 });
 
 test("runCli run returns validation failure for run-transition with missing args", async () => {

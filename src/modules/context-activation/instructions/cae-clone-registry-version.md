@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cae-clone-registry-version|module=context-activation|schema_only=pnpm exec wk run cae-clone-registry-version --schema-only '{}'
+-->
+
 # cae-clone-registry-version
 
 Clone all artifact + activation rows from **`fromVersionId`** into a new **`toVersionId`**.

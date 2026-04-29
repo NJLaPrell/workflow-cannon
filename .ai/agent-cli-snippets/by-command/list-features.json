@@ -1,0 +1,47 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "list-features",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "componentId": {
+        "type": "string"
+      },
+      "actor": {
+        "type": "string"
+      },
+      "config": {
+        "type": "object"
+      }
+    },
+    "additionalProperties": false
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run list-features '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/list-features.md",
+  "moduleId": "task-engine",
+  "description": "List feature-registry feature rows; optional componentId filter.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=create-checkpoint|module=checkpoints|schema_only=pnpm exec wk run create-checkpoint --schema-only '{}'
+-->
+
 # create-checkpoint
 
 **Tier B (sensitive):** pass JSON **`policyApproval`** in the third CLI argument.

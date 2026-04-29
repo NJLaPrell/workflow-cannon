@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=archive-task|module=task-engine|schema_only=pnpm exec wk run archive-task --schema-only '{}'
+-->
+
 # archive-task
 
 Archive a task without deleting it from history.

@@ -1,0 +1,41 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "list-wishlist",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "status": {
+        "type": "string"
+      }
+    },
+    "additionalProperties": false
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run list-wishlist '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/list-wishlist.md",
+  "moduleId": "task-engine",
+  "description": "List Wishlist items (ideation-only; not part of task execution queues).",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

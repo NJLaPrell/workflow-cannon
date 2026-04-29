@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=query-lineage|module=improvement|schema_only=pnpm exec wk run query-lineage --schema-only '{}'
+-->
+
 # query-lineage
 
 Read-only audit helper: list immutable lineage events for a recommendation task.

@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cae-explain|module=context-activation|schema_only=pnpm exec wk run cae-explain --schema-only '{}'
+-->
+
 # cae-explain
 
 Produce an **`explain-response.v1`** from a session **`traceId`** or inline **`evaluationContext`** replay.

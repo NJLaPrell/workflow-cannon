@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=list-subagents|module=subagents|schema_only=pnpm exec wk run list-subagents --schema-only '{}'
+-->
+
 # list-subagents
 
 ```bash

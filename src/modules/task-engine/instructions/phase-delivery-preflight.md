@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=phase-delivery-preflight|module=task-engine|schema_only=pnpm exec wk run phase-delivery-preflight --schema-only '{}'
+-->
+
 # phase-delivery-preflight
 
 Read-only audit for phase task delivery evidence before agents mark phase work complete.

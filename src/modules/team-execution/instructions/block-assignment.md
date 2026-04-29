@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=block-assignment|module=team-execution|schema_only=pnpm exec wk run block-assignment --schema-only '{}'
+-->
+
 # block-assignment
 
 ```bash

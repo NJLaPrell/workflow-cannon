@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=resolve-agent-guidance|module=workspace-config|schema_only=pnpm exec wk run resolve-agent-guidance --schema-only '{}'
+-->
+
 # resolve-agent-guidance
 
 ```bash

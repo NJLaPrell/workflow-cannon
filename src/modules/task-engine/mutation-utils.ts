@@ -5,6 +5,65 @@ import type { WishlistConversionDecomposition } from "./wishlist/wishlist-types.
 
 /** Task id pattern `T` + digits (create-task, convert-wishlist validation). */
 export const TASK_ID_RE = /^T\d+$/;
+
+/** Numeric ordering for `T###` ids (falls back to lexicographic). */
+export function compareTaskIdNumeric(a: string, b: string): number {
+  const ma = /^T(\d+)$/.exec(a);
+  const mb = /^T(\d+)$/.exec(b);
+  if (ma && mb) {
+    const da = BigInt(ma[1]);
+    const db = BigInt(mb[1]);
+    if (da < db) {
+      return -1;
+    }
+    if (da > db) {
+      return 1;
+    }
+    return 0;
+  }
+  return a.localeCompare(b);
+}
+
+/** Next monotonic `T` id from the full task set (includes archived — ids are not reused). */
+export function allocateNextTaskId(allTasks: TaskEntity[]): string {
+  let max = 0n;
+  for (const t of allTasks) {
+    const m = /^T(\d+)$/.exec(t.id);
+    if (m) {
+      const v = BigInt(m[1]);
+      if (v > max) {
+        max = v;
+      }
+    }
+  }
+  return `T${(max + 1n).toString()}`;
+}
+
+/** Idempotent replay for server-allocated ids: locate prior `create-task` row by clientMutationId. */
+export function findIdempotentAllocatedCreate(
+  store: TaskStore,
+  mutationType: TaskMutationType,
+  clientMutationId: string
+): { taskId: string; payloadDigest?: string } | null {
+  const log = store.getMutationLog();
+  for (let idx = log.length - 1; idx >= 0; idx -= 1) {
+    const entry = log[idx];
+    if (entry.mutationType !== mutationType) {
+      continue;
+    }
+    if (!entry.details || entry.details.clientMutationId !== clientMutationId) {
+      continue;
+    }
+    if (entry.details.allocateId !== true) {
+      continue;
+    }
+    return {
+      taskId: entry.taskId,
+      payloadDigest: typeof entry.details.payloadDigest === "string" ? entry.details.payloadDigest : undefined
+    };
+  }
+  return null;
+}
 export const SAFE_METADATA_PATH_RE = /^[a-zA-Z0-9_-]+(?:\.[a-zA-Z0-9_-]+)*$/;
 
 export function isRecordLike(value: unknown): value is Record<string, unknown> {

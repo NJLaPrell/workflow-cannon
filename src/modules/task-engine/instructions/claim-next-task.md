@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=claim-next-task|module=task-engine|schema_only=pnpm exec wk run claim-next-task --schema-only '{}'
+-->
+
 # claim-next-task
 
 Atomically claim the current `get-next-actions` suggestion by transitioning it with `start`.

@@ -13,8 +13,14 @@ When guidance conflicts, apply this order:
 5. `src/modules/documentation/instructions/documentation-maintainer.md` (AI-doc generation policy)
 6. `src/modules/documentation/schemas/documentation-schema.md` (record schema contract)
 7. **`src/modules/documentation/schemas/*.schema.json`** — machine JSON Schema for **`data/roadmap-data.json`** and **`data/feature-taxonomy.json`** (validated in CI and before roadmap/taxonomy doc generation; see `data-schema-validate.ts`).
-8. `src/modules/documentation/views/*.view.yaml` (document-type rendering contracts)
+8. **`src/modules/documentation/views/*.view.yaml`** (document-type rendering contracts — each view lists **typed** `sections` with `source` + `renderer`; avoid duplicating long prose in templates when a view-model field suffices)
 9. `docs/maintainers/module-build-guide.md` (human-readable companion guidance)
+
+## Machine vs maintainer surfaces
+
+- **Machine / AI-primary** records and keyed chat content live under **`.ai/`** (see documentation module config for `sources.aiRoot`).
+- **Maintainer human render** under **`docs/maintainers/`** is **derived** from those records + view models + templates — agents run `generate-document` / `document-project`; drift vs `.ai` is gated in CI (`check-ai-to-docs-drift`, `check-orphan-ai-sources`).
+- Prefer extending **structured** fields (record lines, JSON data, view `sections`) over pasting duplicate narrative into templates.
 
 ## Usage Model
 

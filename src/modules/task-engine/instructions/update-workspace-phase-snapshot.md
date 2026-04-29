@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=update-workspace-phase-snapshot|module=task-engine|schema_only=pnpm exec wk run update-workspace-phase-snapshot --schema-only '{}'
+-->
+
 # update-workspace-phase-snapshot
 
 Compatibility command that atomically updates **`current_kit_phase`** and/or **`next_kit_phase`** in **`docs/maintainers/data/workspace-kit-status.yaml`**, then mirrors the parsed snapshot into **`kit_workspace_status`** when available. For the happy-path workspace phase rollover, prefer **`set-current-phase`**; for read-only discovery, prefer **`phase-status`**.

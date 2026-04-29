@@ -1,0 +1,87 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "apply-task-batch",
+  "schema": {
+    "type": "object",
+    "required": [
+      "ops"
+    ],
+    "properties": {
+      "ops": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": true,
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "create-task",
+                "update-task"
+              ]
+            },
+            "payload": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "dryRun": {
+        "type": "boolean"
+      },
+      "expectedPlanningGeneration": {
+        "oneOf": [
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          }
+        ]
+      },
+      "actor": {
+        "type": "string"
+      },
+      "config": {
+        "type": "object"
+      }
+    },
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {
+    "ops": []
+  },
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run apply-task-batch '{\"ops\":[]}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/apply-task-batch.md",
+  "moduleId": "task-engine",
+  "description": "Apply multiple create-task and update-task operations in one planning generation transaction.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": true,
+    "expectedPlanningGeneration": "required when tasks.planningGenerationPolicy is require"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

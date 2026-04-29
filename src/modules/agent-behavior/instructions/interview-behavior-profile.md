@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=interview-behavior-profile|module=agent-behavior|schema_only=pnpm exec wk run interview-behavior-profile --schema-only '{}'
+-->
+
 # interview-behavior-profile
 
 Stateful interview; session file under `.workspace-kit/agent-behavior/interview-session.json`.

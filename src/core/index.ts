@@ -29,10 +29,15 @@ export {
 export {
   buildAgentInstructionSurface,
   classifyInstructionExecution,
+  digestAgentInstructionSurfaceCommands,
+  isAgentInstructionSurfaceFull,
   isInstructionExecutableForRegistry,
   type AgentInstructionDegradation,
   type AgentInstructionSurfaceCae,
+  type AgentInstructionSurfaceCommandCounts,
   type AgentInstructionSurfacePayload,
+  type AgentInstructionSurfacePayloadFull,
+  type AgentInstructionSurfacePayloadLean,
   type AgentInstructionSurfaceRow,
   type BuildAgentInstructionSurfaceOptions
 } from "./agent-instruction-surface.js";

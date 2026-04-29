@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cae-list-artifacts|module=context-activation|schema_only=pnpm exec wk run cae-list-artifacts --schema-only '{}'
+-->
+
 # cae-list-artifacts
 
 List artifact ids from the CAE registry (paginated).

@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=set-current-phase|module=task-engine|schema_only=pnpm exec wk run set-current-phase --schema-only '{}'
+-->
+
 # set-current-phase
 
 Set the workspace current phase through **`kit_workspace_status`** first, then align compatibility / UX surfaces.

@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=reconcile-assignment|module=team-execution|schema_only=pnpm exec wk run reconcile-assignment --schema-only '{}'
+-->
+
 # reconcile-assignment
 
 ```bash

@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cae-get-artifact|module=context-activation|schema_only=pnpm exec wk run cae-get-artifact --schema-only '{}'
+-->
+
 # cae-get-artifact
 
 Fetch one CAE artifact registry row.

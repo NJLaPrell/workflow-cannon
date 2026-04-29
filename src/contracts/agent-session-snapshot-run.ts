@@ -31,6 +31,8 @@ export type AgentSessionSnapshotData = {
   };
   doctorKitPhaseIssues: Array<{ path: string; reason: string }>;
   teamExecutionContext: AgentSessionSnapshotTeamContext;
+  /** Maintainer PR/phase-branch hints (Phase 77); safe on every snapshot read. */
+  maintainerDelivery?: Record<string, unknown>;
   planningGeneration?: number;
   planningGenerationPolicy?: string;
 };

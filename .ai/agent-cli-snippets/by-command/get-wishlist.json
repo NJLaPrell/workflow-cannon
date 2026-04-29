@@ -1,0 +1,47 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "get-wishlist",
+  "schema": {
+    "type": "object",
+    "required": [
+      "wishlistId"
+    ],
+    "properties": {
+      "wishlistId": {
+        "type": "string",
+        "pattern": "^(?:W|T)[0-9]+$"
+      }
+    },
+    "additionalProperties": false
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {
+    "wishlistId": ""
+  },
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run get-wishlist '{\"wishlistId\":\"\"}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/get-wishlist.md",
+  "moduleId": "task-engine",
+  "description": "Retrieve a single Wishlist item by ID.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

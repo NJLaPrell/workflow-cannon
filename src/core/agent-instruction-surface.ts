@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { ModuleInstructionEntry, WorkflowModule } from "../contracts/module-contract.js";
 import { buildCaeAdvisoryInstructionSurfaceBlock } from "./cae/cae-instruction-surface-advisory.js";
 import { buildErrorRemediationCatalog } from "./cli-remediation.js";
@@ -40,8 +41,17 @@ export type AgentInstructionSurfaceCae = {
   traceEventCount?: number;
 };
 
-export type AgentInstructionSurfacePayload = {
+export type AgentInstructionSurfaceCommandCounts = {
+  total: number;
+  executable: number;
+  documentationOnly: number;
+};
+
+/** Full instruction catalog — every declared row (token-heavy). */
+export type AgentInstructionSurfacePayloadFull = {
   schemaVersion: 1;
+  /** Absent or `full` — default machine projection. */
+  projection?: "full";
   commands: AgentInstructionSurfaceRow[];
   activationReport: ModuleActivationReport;
   /** Stable `code` values with repo-relative doc/instruction hints (Phase 52). */
@@ -49,6 +59,30 @@ export type AgentInstructionSurfacePayload = {
   /** Present when `kit.cae.enabled` + `kit.cae.advisoryInstructionSurface` are true. */
   cae?: AgentInstructionSurfaceCae;
 };
+
+/**
+ * Digest-only projection: compare `instructionSurfaceDigest` to a cached full payload;
+ * when unchanged, agents skip reloading `commands[]`.
+ */
+export type AgentInstructionSurfacePayloadLean = {
+  schemaVersion: 1;
+  projection: "lean";
+  instructionSurfaceDigest: string;
+  commandCounts: AgentInstructionSurfaceCommandCounts;
+  activationReport: ModuleActivationReport;
+  errorRemediationCatalog: ErrorRemediationCatalogPayload;
+  cae?: AgentInstructionSurfaceCae;
+};
+
+export type AgentInstructionSurfacePayload =
+  | AgentInstructionSurfacePayloadFull
+  | AgentInstructionSurfacePayloadLean;
+
+export function isAgentInstructionSurfaceFull(
+  surface: AgentInstructionSurfacePayload
+): surface is AgentInstructionSurfacePayloadFull {
+  return surface.projection !== "lean";
+}
 
 /**
  * Classifies whether an instruction can be executed via the command router for the
@@ -85,13 +119,37 @@ export function isInstructionExecutableForRegistry(
 export type BuildAgentInstructionSurfaceOptions = {
   workspacePath?: string;
   effectiveConfig?: Record<string, unknown>;
+  /** When `"lean"`, omit `commands` and return a stable digest for cache checks (Phase 76). */
+  projection?: "full" | "lean";
 };
 
-export function buildAgentInstructionSurface(
+function stableInstructionRowJSON(row: AgentInstructionSurfaceRow): string {
+  const degradation =
+    row.degradation.kind === "peer_disabled"
+      ? {
+          kind: row.degradation.kind,
+          missingPeers: [...row.degradation.missingPeers].sort()
+        }
+      : { kind: row.degradation.kind };
+  return JSON.stringify({
+    commandName: row.commandName,
+    degradation,
+    executable: row.executable,
+    instructionPath: row.instructionPath,
+    moduleId: row.moduleId
+  });
+}
+
+/** Stable digest over the sorted command row set (for lean projection cache hits). */
+export function digestAgentInstructionSurfaceCommands(commands: AgentInstructionSurfaceRow[]): string {
+  const body = commands.map(stableInstructionRowJSON).join("\n");
+  return `sha256:${createHash("sha256").update(body).digest("hex")}`;
+}
+
+function collectInstructionSurfaceRows(
   allModules: WorkflowModule[],
-  registry: ModuleRegistry,
-  options?: BuildAgentInstructionSurfaceOptions
-): AgentInstructionSurfacePayload {
+  registry: ModuleRegistry
+): AgentInstructionSurfaceRow[] {
   const commands: AgentInstructionSurfaceRow[] = [];
   for (const mod of allModules) {
     const moduleId = mod.registration.id;
@@ -109,20 +167,52 @@ export function buildAgentInstructionSurface(
     }
   }
   commands.sort((a, b) => a.commandName.localeCompare(b.commandName));
-  const base: AgentInstructionSurfacePayload = {
+  return commands;
+}
+
+export function buildAgentInstructionSurface(
+  allModules: WorkflowModule[],
+  registry: ModuleRegistry,
+  options?: BuildAgentInstructionSurfaceOptions
+): AgentInstructionSurfacePayload {
+  const commands = collectInstructionSurfaceRows(allModules, registry);
+  const activationReport = registry.getActivationReport();
+  const errorRemediationCatalog: ErrorRemediationCatalogPayload = {
     schemaVersion: 1,
-    commands,
-    activationReport: registry.getActivationReport(),
-    errorRemediationCatalog: {
-      schemaVersion: 1,
-      entries: buildErrorRemediationCatalog()
-    }
+    entries: buildErrorRemediationCatalog()
   };
+
   const ws = options?.workspacePath;
   const eff = options?.effectiveConfig;
+  let cae: AgentInstructionSurfaceCae | undefined;
   if (ws && eff) {
-    const cae = buildCaeAdvisoryInstructionSurfaceBlock(ws, eff);
-    if (cae) base.cae = cae;
+    cae = buildCaeAdvisoryInstructionSurfaceBlock(ws, eff) ?? undefined;
   }
-  return base;
+
+  if (options?.projection === "lean") {
+    const executable = commands.filter((c) => c.executable).length;
+    const lean: AgentInstructionSurfacePayloadLean = {
+      schemaVersion: 1,
+      projection: "lean",
+      instructionSurfaceDigest: digestAgentInstructionSurfaceCommands(commands),
+      commandCounts: {
+        total: commands.length,
+        executable,
+        documentationOnly: commands.length - executable
+      },
+      activationReport,
+      errorRemediationCatalog
+    };
+    if (cae) lean.cae = cae;
+    return lean;
+  }
+
+  const full: AgentInstructionSurfacePayloadFull = {
+    schemaVersion: 1,
+    commands,
+    activationReport,
+    errorRemediationCatalog
+  };
+  if (cae) full.cae = cae;
+  return full;
 }

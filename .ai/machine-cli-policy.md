@@ -25,3 +25,10 @@ For `workspace-kit config`, `init`, and `upgrade`, approval may use env **`WORKS
 ## Discovery without dumping catalogs
 
 Prefer `pnpm exec wk run` with no subcommand for a short command list, then open `src/modules/<module>/instructions/<command>.md` for the specific surface. Avoid pasting full `doctor` JSON catalogs into chat unless debugging.
+
+## Maintainer delivery loop (`doctor`)
+
+- **`pnpm exec wk doctor --delivery-loop`** — advisory when **dirty git** on **`main` / `master` / `release/phase-<n>`** while execution tasks are **`in_progress`** in planning SQLite.
+- **`pnpm exec wk doctor --delivery-loop-strict`** — same condition **fails** **`doctor`** (strict maintainer / CI workflows).
+
+Cold-start JSON **`maintainerDelivery`** on **`agent-bootstrap`**, **`get-next-actions`**, and **`agent-session-snapshot`** summarizes playbook paths and **`inProgressTasks`** without running git.

@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=update-workspace-status|module=task-engine|schema_only=pnpm exec wk run update-workspace-status --schema-only '{}'
+-->
+
 # update-workspace-status
 
 Patch **`kit_workspace_status`** with optimistic concurrency on **`workspaceRevision`**. This is the low-level workspace-status patch command; prefer **`set-current-phase`** for phase rollover and **`phase-status`** for read-only phase discovery.

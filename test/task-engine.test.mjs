@@ -3312,3 +3312,92 @@ test("taskEngineModule list-module-states and get-module-state query unified sta
   assert.equal(r.data.row.moduleId, "task-engine");
 });
 
+test("taskEngineModule list-tasks id filter and pagination cursor", async () => {
+  const workspace = await tmpDir();
+  const t0 = new Date("2026-01-01T00:00:00.000Z").toISOString();
+  const t1 = new Date("2026-01-02T00:00:00.000Z").toISOString();
+  await storeWithTasks(
+    [
+      makeTask({ id: "T7001", title: "a", updatedAt: t1 }),
+      makeTask({ id: "T7002", title: "b", updatedAt: t0 })
+    ],
+    workspace
+  );
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "off" } });
+
+  const byId = await taskEngineModule.onCommand({ name: "list-tasks", args: { id: "T7001" } }, ctx);
+  assert.equal(byId.ok, true);
+  assert.equal(byId.data.tasks.length, 1);
+  assert.equal(byId.data.tasks[0].id, "T7001");
+
+  const page = await taskEngineModule.onCommand({ name: "list-tasks", args: { limit: 1 } }, ctx);
+  assert.equal(page.ok, true);
+  assert.equal(page.data.tasks.length, 1);
+  assert.ok(page.data.nextCursor);
+  const page2 = await taskEngineModule.onCommand(
+    { name: "list-tasks", args: { limit: 1, cursor: page.data.nextCursor } },
+    ctx
+  );
+  assert.equal(page2.ok, true);
+  assert.equal(page2.data.tasks.length, 1);
+  assert.notEqual(page.data.tasks[0].id, page2.data.tasks[0].id);
+});
+
+test("taskEngineModule create-task allocateId and apply-task-batch single generation bump", async () => {
+  const workspace = await tmpDir();
+  await storeWithTasks([makeTask({ id: "T7100", title: "seed" })], workspace);
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const gen0 = (
+    await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, ctx)
+  ).data.planningGeneration;
+
+  const c1 = await taskEngineModule.onCommand(
+    {
+      name: "create-task",
+      args: {
+        allocateId: true,
+        title: "alloc one",
+        status: "proposed",
+        expectedPlanningGeneration: gen0
+      }
+    },
+    ctx
+  );
+  assert.equal(c1.ok, true);
+  assert.match(c1.data.task.id, /^T\d+$/);
+  const gen1 = c1.data.planningGeneration;
+
+  const batch = await taskEngineModule.onCommand(
+    {
+      name: "apply-task-batch",
+      args: {
+        expectedPlanningGeneration: gen1,
+        ops: [
+          { kind: "create-task", payload: { allocateId: true, title: "b1", status: "proposed" } },
+          { kind: "create-task", payload: { allocateId: true, title: "b2", status: "proposed" } }
+        ]
+      }
+    },
+    ctx
+  );
+  assert.equal(batch.ok, true);
+  assert.equal(batch.data.applied, 2);
+  const gen2 = batch.data.planningGeneration;
+  assert.equal(gen2, gen1 + 1);
+
+  const dry = await taskEngineModule.onCommand(
+    {
+      name: "apply-task-batch",
+      args: {
+        dryRun: true,
+        expectedPlanningGeneration: gen2,
+        ops: [{ kind: "create-task", payload: { allocateId: true, title: "ghost", status: "proposed" } }]
+      }
+    },
+    ctx
+  );
+  assert.equal(dry.ok, true);
+  assert.equal(dry.data.dryRun, true);
+  assert.equal(dry.data.planningGeneration, gen2);
+});
+

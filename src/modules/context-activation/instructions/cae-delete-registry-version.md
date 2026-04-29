@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cae-delete-registry-version|module=context-activation|schema_only=pnpm exec wk run cae-delete-registry-version --schema-only '{}'
+-->
+
 # cae-delete-registry-version
 
 Delete a **non-active** registry version (CASCADE removes child rows).

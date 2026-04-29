@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cae-registry-validate|module=context-activation|schema_only=pnpm exec wk run cae-registry-validate --schema-only '{}'
+-->
+
 # cae-registry-validate
 
 Tier **C** — no JSON `policyApproval`.

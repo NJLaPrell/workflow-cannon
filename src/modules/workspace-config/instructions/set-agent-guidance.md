@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=set-agent-guidance|module=workspace-config|schema_only=pnpm exec wk run set-agent-guidance --schema-only '{}'
+-->
+
 # set-agent-guidance
 
 Persist **agent guidance tier** (RPG party v1) under `kit.agentGuidance` in `.workspace-kit/config.json`.

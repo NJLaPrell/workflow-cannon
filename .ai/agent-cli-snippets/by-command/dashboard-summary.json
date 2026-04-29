@@ -1,0 +1,44 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "dashboard-summary",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "config": {
+        "type": "object"
+      },
+      "actor": {
+        "type": "string"
+      }
+    },
+    "additionalProperties": false
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run dashboard-summary '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/dashboard-summary.md",
+  "moduleId": "task-engine",
+  "description": "Stable JSON cockpit summary for UI clients (tasks + maintainer status snapshot).",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

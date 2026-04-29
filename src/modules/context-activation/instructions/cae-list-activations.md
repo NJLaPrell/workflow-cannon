@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cae-list-activations|module=context-activation|schema_only=pnpm exec wk run cae-list-activations --schema-only '{}'
+-->
+
 # cae-list-activations
 
 List activation definition ids (paginated).

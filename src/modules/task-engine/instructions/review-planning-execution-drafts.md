@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=review-planning-execution-drafts|module=task-engine|schema_only=pnpm exec wk run review-planning-execution-drafts --schema-only '{}'
+-->
+
 # review-planning-execution-drafts
 
 Dry-run review for UX/CAE execution task batches before they are persisted.

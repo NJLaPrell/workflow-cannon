@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=get-wishlist|module=task-engine|schema_only=pnpm exec wk run get-wishlist --schema-only '{}'
+-->
+
 # get-wishlist
 
 Retrieve **one** wishlist intake task by **task id** (**`T###`**, preferred) or by **legacy wishlist id** (**`W###`**) when the intake row stores **`metadata.legacyWishlistId`**.

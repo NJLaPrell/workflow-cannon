@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=run-transition|module=task-engine|schema_only=pnpm exec wk run run-transition --schema-only '{}'
+-->
+
 # run-transition
 
 Execute a validated task status transition through the Task Engine lifecycle.

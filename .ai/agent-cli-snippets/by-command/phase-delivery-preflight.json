@@ -1,0 +1,35 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "phase-delivery-preflight",
+  "schema": {
+    "type": "object"
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run phase-delivery-preflight '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/phase-delivery-preflight.md",
+  "moduleId": "task-engine",
+  "description": "Read-only audit for phase task PR/merge/check evidence or explicit delivery waivers.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

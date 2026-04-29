@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cae-create-registry-version|module=context-activation|schema_only=pnpm exec wk run cae-create-registry-version --schema-only '{}'
+-->
+
 # cae-create-registry-version
 
 Create an empty CAE registry version (optional **`setActive`**). Requires **`.ai/cae/registry-mutation-governance.md`** gate: **`kit.cae.enabled`**, **`kit.cae.adminMutations`**, **`caeMutationApproval`**, **`actor`**.

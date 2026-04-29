@@ -1,0 +1,58 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "agent-mutation-plan",
+  "schema": {
+    "type": "object",
+    "required": [
+      "commandName"
+    ],
+    "properties": {
+      "commandName": {
+        "type": "string",
+        "minLength": 1
+      },
+      "taskId": {
+        "type": "string",
+        "pattern": "^(T[0-9]+|imp-[0-9a-f]{14})$"
+      },
+      "action": {
+        "type": "string",
+        "minLength": 1
+      },
+      "config": {
+        "type": "object"
+      }
+    },
+    "additionalProperties": false
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {
+    "commandName": ""
+  },
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run agent-mutation-plan '{\"commandName\":\"\"}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/agent-mutation-plan.md",
+  "moduleId": "task-engine",
+  "description": "Read-only preflight plan for workspace-kit run mutations: schema, policy, planning generation, idempotency, and lifecycle state.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

@@ -217,6 +217,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "apply-task-batch",
+    "file": "apply-task-batch.md",
+    "description": "Apply multiple create-task and update-task operations in one planning generation transaction.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "persist-planning-execution-drafts",
     "file": "persist-planning-execution-drafts.md",
     "description": "Persist multiple proposed execution tasks from planning decomposition in one transaction (convert-wishlist-compatible rows).",

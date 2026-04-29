@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "source": ".ai/TERMS.md",
+  "generatedBy": "scripts/generate-terms-index.mjs",
+  "termCount": 23,
+  "terms": [
+    {
+      "name": "acknowledgement_strength",
+      "anchor": "#term-acknowledgement_strength"
+    },
+    {
+      "name": "activation_artifact",
+      "anchor": "#term-activation_artifact"
+    },
+    {
+      "name": "activation_bundle",
+      "anchor": "#term-activation_bundle"
+    },
+    {
+      "name": "activation_family",
+      "anchor": "#term-activation_family"
+    },
+    {
+      "name": "activation_trace",
+      "anchor": "#term-activation_trace"
+    },
+    {
+      "name": "approval_gate",
+      "anchor": "#term-approval_gate"
+    },
+    {
+      "name": "cae_activation",
+      "anchor": "#term-cae_activation"
+    },
+    {
+      "name": "capability_pack",
+      "anchor": "#term-capability_pack"
+    },
+    {
+      "name": "context_activation_engine",
+      "anchor": "#term-context_activation_engine"
+    },
+    {
+      "name": "directive",
+      "anchor": "#term-directive"
+    },
+    {
+      "name": "escalation_trigger",
+      "anchor": "#term-escalation_trigger"
+    },
+    {
+      "name": "evidence_requirement",
+      "anchor": "#term-evidence_requirement"
+    },
+    {
+      "name": "goal",
+      "anchor": "#term-goal"
+    },
+    {
+      "name": "guardrail",
+      "anchor": "#term-guardrail"
+    },
+    {
+      "name": "module_activation_report",
+      "anchor": "#term-module_activation_report"
+    },
+    {
+      "name": "playbook",
+      "anchor": "#term-playbook"
+    },
+    {
+      "name": "policy",
+      "anchor": "#term-policy"
+    },
+    {
+      "name": "principle",
+      "anchor": "#term-principle"
+    },
+    {
+      "name": "rule",
+      "anchor": "#term-rule"
+    },
+    {
+      "name": "runbook",
+      "anchor": "#term-runbook"
+    },
+    {
+      "name": "shadow_mode",
+      "anchor": "#term-shadow_mode"
+    },
+    {
+      "name": "template_contract",
+      "anchor": "#term-template_contract"
+    },
+    {
+      "name": "workflow",
+      "anchor": "#term-workflow"
+    }
+  ]
+}

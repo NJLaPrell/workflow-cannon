@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=get-workspace-status|module=task-engine|schema_only=pnpm exec wk run get-workspace-status --schema-only '{}'
+-->
+
 # get-workspace-status
 
 Read the singleton **`kit_workspace_status`** row from unified kit SQLite (requires **`PRAGMA user_version` ≥ 10**).

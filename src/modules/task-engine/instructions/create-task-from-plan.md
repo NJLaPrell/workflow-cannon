@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=create-task-from-plan|module=task-engine|schema_only=pnpm exec wk run create-task-from-plan --schema-only '{}'
+-->
+
 # create-task-from-plan
 
 Create a task from planning output while preserving provenance metadata.

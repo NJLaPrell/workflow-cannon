@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cae-activate-registry-version|module=context-activation|schema_only=pnpm exec wk run cae-activate-registry-version --schema-only '{}'
+-->
+
 # cae-activate-registry-version
 
 Mark **`versionId`** active (at most one active version).

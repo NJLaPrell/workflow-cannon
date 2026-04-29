@@ -1,0 +1,37 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "document-project",
+  "schema": {
+    "type": "object",
+    "additionalProperties": true,
+    "description": "Permissive fallback args schema for 'document-project'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+  },
+  "schemaSource": "manifest-permissive-fallback",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run document-project '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/documentation/instructions/document-project.md",
+  "moduleId": "documentation",
+  "description": "Generate all project docs from templates to .ai and docs/maintainers surfaces.",
+  "policy": {
+    "sensitivity": "sensitive-with-dryrun",
+    "operationId": "doc.document-project",
+    "jsonApprovalRequired": "when dryRun is false or omitted by command policy"
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

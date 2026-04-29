@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=spawn-subagent|module=subagents|schema_only=pnpm exec wk run spawn-subagent --schema-only '{}'
+-->
+
 # spawn-subagent
 
 ```bash

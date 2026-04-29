@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=recommend-skills|module=skills|schema_only=pnpm exec wk run recommend-skills --schema-only '{}'
+-->
+
 # recommend-skills
 
 ```bash
