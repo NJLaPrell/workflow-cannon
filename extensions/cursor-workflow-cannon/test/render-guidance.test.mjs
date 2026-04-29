@@ -207,6 +207,34 @@ test("renderGuidancePreviewInnerHtml renders grouped guidance actions", () => {
   assert.match(html, /Raw preview JSON/);
 });
 
+test("renderGuidancePreviewInnerHtml renders enforcement readiness when present", () => {
+  const html = renderGuidancePreviewInnerHtml({
+    ok: true,
+    data: {
+      traceId: "cae.trace.example",
+      evalMode: "shadow",
+      modeLabel: "Preview mode",
+      ephemeral: true,
+      evaluationContext: { command: { name: "get-next-actions" } },
+      familyCounts: { policy: 0, think: 0, do: 0, review: 0 },
+      guidanceCards: { policy: [], think: [], do: [], review: [] },
+      enforcementReadiness: {
+        schemaVersion: 1,
+        familyHardStopCapable: true,
+        previewGatesSatisfied: true,
+        governanceEvidenceComplete: false,
+        conflictStatus: "none",
+        activationReadinessLevel: "ok",
+        previewDigest: "abcd",
+        blockingCodes: ["cae-enforce-governance-evidence-incomplete"],
+        notes: ["Need audit id."]
+      }
+    }
+  });
+  assert.match(html, /Enforcement readiness/);
+  assert.match(html, /cae-enforce-governance-evidence-incomplete/);
+});
+
 test("renderGuidanceTraceDetailInnerHtml renders summary before raw JSON", () => {
   const html = renderGuidanceTraceDetailInnerHtml({
     explain: {

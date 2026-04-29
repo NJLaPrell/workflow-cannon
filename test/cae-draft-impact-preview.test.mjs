@@ -83,6 +83,11 @@ test("cae-guidance-preview draftRule produces draftImpact matrix without registr
   assert.equal(di.activationReadiness.schemaVersion, 1);
   assert.ok(["ok", "warning", "stop_confirm"].includes(di.activationReadiness.level));
   assert.ok(Array.isArray(di.activationReadiness.reasons) && di.activationReadiness.reasons.length >= 1);
+  const er = res.data.enforcementReadiness;
+  assert.ok(er, "enforcementReadiness envelope");
+  assert.equal(er.schemaVersion, 1);
+  assert.equal(er.familyHardStopCapable, false);
+  assert.ok(Array.isArray(er.blockingCodes));
 });
 
 test("cae-guidance-preview always preset surfaces broad-scope warning metadata", async () => {
@@ -113,4 +118,24 @@ test("cae-guidance-preview always preset surfaces broad-scope warning metadata",
   assert.ok(Array.isArray(di.broadScopeWarnings) && di.broadScopeWarnings.length >= 1);
   assert.equal(di.activationReadiness.level, "stop_confirm");
   assert.ok(String(di.blastRadiusSummary.draftScopeCategory).includes("always"));
+});
+
+test("cae-guidance-preview rejects enforcementGovernanceEvidence without draftRule", async () => {
+  const ws = await workspaceWithJsonRegistry();
+  const res = await runCae(
+    ws,
+    "cae-guidance-preview",
+    {
+      schemaVersion: 1,
+      commandName: "get-next-actions",
+      evalMode: "shadow",
+      enforcementGovernanceEvidence: { schemaVersion: 1, actor: "x" }
+    },
+    {
+      kit: { cae: { enabled: true, persistence: true, registryStore: "json" } },
+      tasks: { sqliteDatabaseRelativePath: ".workspace-kit/tasks/workspace-kit.db" }
+    }
+  );
+  assert.equal(res.ok, false);
+  assert.equal(res.code, "invalid-args");
 });

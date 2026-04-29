@@ -583,6 +583,48 @@ ${tallyRows ? `<table class="gd-draft-table"><thead><tr><th>Sample kind</th><th>
 </section>`;
 }
 
+function renderEnforcementReadinessPanel(raw: unknown): string {
+  const er = asRecord(raw);
+  if (Number(er.schemaVersion) !== 1) return "";
+  const pill =
+    er.governanceEvidenceComplete === true
+      ? "gd-pill gd-readiness-ok"
+      : er.previewGatesSatisfied === true
+        ? "gd-pill gd-readiness-warn"
+        : "gd-pill gd-readiness-danger";
+  const pillLabel =
+    er.governanceEvidenceComplete === true
+      ? "Governance evidence OK"
+      : er.previewGatesSatisfied === true
+        ? "Preview gates OK"
+        : "Not promotion-ready";
+  const codes = asArray(er.blockingCodes).map((c) => String(c));
+  const notes = asArray(er.notes).map((n) => String(n));
+  const codesBlock =
+    codes.length > 0
+      ? `<p class="gd-muted"><strong>Codes:</strong> ${codes.map((c) => `<code>${escapeHtml(c)}</code>`).join(", ")}</p>`
+      : "";
+  const notesBlock =
+    notes.length > 0
+      ? `<ul class="gd-readiness-list">${notes.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}</ul>`
+      : "";
+  return `<section class="gd-card gd-warn-card gd-enforcement-readiness">
+  <div class="gd-card-head gd-readiness-head">
+    <h2>Enforcement readiness (contract)</h2>
+    <span class="${pill}">${escapeHtml(pillLabel)}</span>
+  </div>
+  <p class="gd-muted">Hard-stop CAE enforcement stays opt-in (<code>kit.cae.enforcement.enabled</code> + allowlist). This card is the authoring gate — separate from <code>policyApproval</code> and <code>caeMutationApproval</code>.</p>
+  <dl class="gd-meta gd-meta-tight">
+    <div><dt>Family hard-stop capable</dt><dd>${er.familyHardStopCapable === true ? "yes (policy only)" : "no"}</dd></div>
+    <div><dt>Conflict posture</dt><dd><code>${escapeHtml(String(er.conflictStatus ?? ""))}</code></dd></div>
+    <div><dt>Activation readiness</dt><dd><code>${escapeHtml(String(er.activationReadinessLevel ?? ""))}</code></dd></div>
+    <div><dt>Preview digest</dt><dd><code>${escapeHtml(String(er.previewDigest ?? ""))}</code></dd></div>
+  </dl>
+  ${codesBlock}
+  ${notesBlock}
+</section>`;
+}
+
 export function renderGuidancePreviewInnerHtml(payload: unknown): string {
   const root = asRecord(payload);
   if (Object.keys(root).length === 0) {
@@ -607,6 +649,7 @@ export function renderGuidancePreviewInnerHtml(payload: unknown): string {
   <details class="gd-debug"><summary>Debug check record</summary><p class="gd-muted">Check record <code>${escapeHtml(traceId)}</code>${data.ephemeral ? " · stored in memory only (draft impact preview skips durable trace writes)" : " · stored in workspace database"}</p></details>
 </section>
 ${data.draftImpact ? renderDraftImpactSummaryPanel(data.draftImpact) : ""}
+${data.enforcementReadiness ? renderEnforcementReadinessPanel(data.enforcementReadiness) : ""}
 ${renderPendingAcks(data.pendingAcknowledgements, traceId)}
 ${renderConflictSummary(data.conflictShadowSummary)}
 ${renderFamilySection("Rules to follow", cards.policy, traceId, commandName)}
