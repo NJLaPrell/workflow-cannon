@@ -466,6 +466,11 @@
           "type": "object",
           "additionalProperties": true,
           "description": "Synthetic draft Guidance impact matrix (baseline vs overlay) when `draftRule` was supplied."
+        },
+        "enforcementReadiness": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Enforcement promotion readiness when `draftRule` was supplied (T1005); see `.ai/runbooks/cae-enforcement-readiness.md`."
         }
       }
     },

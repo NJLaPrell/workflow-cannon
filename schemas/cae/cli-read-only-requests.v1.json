@@ -221,7 +221,20 @@
           "enum": ["live", "shadow"]
         },
         "draftRule": { "$ref": "#/$defs/caeDraftRuleInputV1" },
-        "draftGuidanceRule": { "$ref": "#/$defs/caeDraftRuleInputV1" }
+        "draftGuidanceRule": { "$ref": "#/$defs/caeDraftRuleInputV1" },
+        "enforcementGovernanceEvidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["schemaVersion"],
+          "properties": {
+            "schemaVersion": { "const": 1 },
+            "registryMutationAuditId": { "type": "string", "minLength": 1, "maxLength": 256 },
+            "rollbackTargetVersionId": { "type": "string", "minLength": 1, "maxLength": 256 },
+            "actor": { "type": "string", "minLength": 1, "maxLength": 256 },
+            "rationale": { "type": "string", "minLength": 1, "maxLength": 4000 }
+          },
+          "description": "Optional post-mutation evidence; only valid with draftRule (T1005)."
+        }
       }
     },
     "caeConflictsRequest": {
