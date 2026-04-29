@@ -167,7 +167,10 @@ export function taskEntityToRow(t: TaskEntity, options?: TaskEntityToRowOptions)
 }
 
 export type RowToTaskEntityOptions = {
-  /** When set (registry mode), merge junction slugs with legacy `features_json` (junction wins when non-empty). */
+  /**
+   * When set (non-null), feature slugs are resolved **only** from the junction map (registry-active DBs).
+   * Legacy `features_json` is ignored — backfill `task_engine_task_features` before relying on links.
+   */
   taskFeatureLinkMap?: Map<string, string[]> | null;
 };
 
@@ -208,15 +211,10 @@ export function rowToTaskEntity(row: TaskEngineTaskRow, options?: RowToTaskEntit
   };
 
   const map = options?.taskFeatureLinkMap;
-  if (map) {
+  if (map !== null && map !== undefined) {
     const linked = map.get(row.id);
     const fromJunction = linked && linked.length > 0 ? [...linked].sort() : [];
-    if (fromJunction.length > 0) {
-      features = fromJunction;
-    } else {
-      const legacy = parseFeaturesJsonColumn();
-      features = legacy.length > 0 ? legacy : undefined;
-    }
+    features = fromJunction.length > 0 ? fromJunction : undefined;
   } else {
     const legacy = parseFeaturesJsonColumn();
     features = legacy.length > 0 ? legacy : undefined;
@@ -255,13 +253,16 @@ export function rowToTaskEntity(row: TaskEngineTaskRow, options?: RowToTaskEntit
   return attachAgentRoutingProjection(task);
 }
 
-/** Mirror envelope logs into task_store_json for tooling that only reads the blob (relational mode). */
-export function relationalBlobMirror(doc: TaskStoreDocument): TaskStoreDocument {
+/**
+ * Compatibility `task_store_json` payload when `relational_tasks=1`.
+ * Task bodies and evidence are canonical in `task_engine_*` tables; this blob stays parseable for doctor/export only.
+ */
+export function relationalCompatibilityTaskBlob(lastUpdated: string): TaskStoreDocument {
   return {
     schemaVersion: 1,
     tasks: [],
-    transitionLog: doc.transitionLog,
-    mutationLog: doc.mutationLog ?? [],
-    lastUpdated: doc.lastUpdated
+    transitionLog: [],
+    mutationLog: [],
+    lastUpdated
   };
 }
