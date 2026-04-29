@@ -4,7 +4,7 @@ import { seedFeatureRegistryIfEmpty } from "./feature-registry-migration.js";
 type SqliteDatabase = InstanceType<typeof Database>;
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 17;
+export const KIT_SQLITE_USER_VERSION = 18;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 export const TASK_ENGINE_DEPENDENCIES_TABLE = "task_engine_dependencies";
@@ -376,13 +376,9 @@ CREATE TABLE IF NOT EXISTS task_engine_dependencies (
 CREATE INDEX IF NOT EXISTS idx_task_engine_dependencies_depends_on ON task_engine_dependencies(depends_on_task_id);
 `;
 
-function migrateV14ToV15(db: SqliteDatabase): void {
-  if (!tableExists(db, TASK_ENGINE_TASKS_TABLE)) {
-    return;
-  }
-  db.exec(TASK_ENGINE_DEPENDENCIES_DDL);
-  const existing = db.prepare("SELECT COUNT(*) AS c FROM task_engine_dependencies").get() as { c: number };
-  if (Number(existing.c) > 0) {
+/** Repopulate normalized dependency rows from each task's depends_on_json (relational task table canonical). */
+function repopulateTaskEngineDependenciesFromJson(db: SqliteDatabase): void {
+  if (!tableExists(db, TASK_ENGINE_TASKS_TABLE) || !tableExists(db, TASK_ENGINE_DEPENDENCIES_TABLE)) {
     return;
   }
   const taskIds = new Set(
@@ -411,6 +407,18 @@ function migrateV14ToV15(db: SqliteDatabase): void {
       }
     }
   }
+}
+
+function migrateV14ToV15(db: SqliteDatabase): void {
+  if (!tableExists(db, TASK_ENGINE_TASKS_TABLE)) {
+    return;
+  }
+  db.exec(TASK_ENGINE_DEPENDENCIES_DDL);
+  const existing = db.prepare("SELECT COUNT(*) AS c FROM task_engine_dependencies").get() as { c: number };
+  if (Number(existing.c) > 0) {
+    return;
+  }
+  repopulateTaskEngineDependenciesFromJson(db);
 }
 
 const TASK_ENGINE_EVIDENCE_DDL = `
@@ -568,6 +576,270 @@ function migrateV16ToV17(db: SqliteDatabase): void {
   db.exec(`CREATE INDEX IF NOT EXISTS idx_task_engine_tasks_routing_blocked ON ${t}(routing_blocked_reason_category)`);
 }
 
+/** SQLite CHECK strings aligned with `TaskStatus` / `TaskPriority` in task-engine types. */
+const TASK_ENGINE_TASK_STATUSES_SQL =
+  "('research','proposed','ready','in_progress','blocked','completed','cancelled')";
+const TASK_ENGINE_PRIORITIES_SQL = "('P1','P2','P3')";
+
+/**
+ * Rebuild `task_engine_tasks` with CHECK constraints, recreate dependency edges, and add FKs
+ * from kit team/subagent/checkpoint tables (Phase 75 / T996).
+ */
+function migrateV17ToV18(db: SqliteDatabase): void {
+  if (!tableExists(db, TASK_ENGINE_TASKS_TABLE)) {
+    return;
+  }
+
+  const badStatus = db
+    .prepare(
+      `SELECT id FROM ${TASK_ENGINE_TASKS_TABLE} WHERE status NOT IN ${TASK_ENGINE_TASK_STATUSES_SQL} LIMIT 8`
+    )
+    .all() as Array<{ id: string }>;
+  if (badStatus.length > 0) {
+    throw new Error(
+      `migrateV17ToV18: invalid task status for ${badStatus.map((r) => r.id).join(", ")} — fix rows (task-persistence-readiness) before migrating`
+    );
+  }
+  const badPriority = db
+    .prepare(
+      `SELECT id FROM ${TASK_ENGINE_TASKS_TABLE} WHERE priority IS NOT NULL AND priority NOT IN ${TASK_ENGINE_PRIORITIES_SQL} LIMIT 8`
+    )
+    .all() as Array<{ id: string }>;
+  if (badPriority.length > 0) {
+    throw new Error(
+      `migrateV17ToV18: invalid priority for ${badPriority.map((r) => r.id).join(", ")} — normalize before migrating`
+    );
+  }
+  const badArchived = db
+    .prepare(`SELECT id FROM ${TASK_ENGINE_TASKS_TABLE} WHERE archived NOT IN (0, 1) LIMIT 8`)
+    .all() as Array<{ id: string }>;
+  if (badArchived.length > 0) {
+    throw new Error(
+      `migrateV17ToV18: archived flag must be 0 or 1 for ${badArchived.map((r) => r.id).join(", ")}`
+    );
+  }
+
+  if (tableExists(db, "kit_team_assignments")) {
+    const orphanTa = db
+      .prepare(
+        `SELECT id FROM kit_team_assignments ta WHERE NOT EXISTS (
+           SELECT 1 FROM ${TASK_ENGINE_TASKS_TABLE} t WHERE t.id = ta.execution_task_id
+         ) LIMIT 8`
+      )
+      .all() as Array<{ id: string }>;
+    if (orphanTa.length > 0) {
+      throw new Error(
+        `migrateV17ToV18: kit_team_assignments rows reference missing tasks: ${orphanTa.map((r) => r.id).join(", ")}`
+      );
+    }
+  }
+
+  const cols = columnNames(db, TASK_ENGINE_TASKS_TABLE);
+  const hasRouting = cols.has("routing_category");
+  const hasFeatures = cols.has("features_json");
+  if (!hasFeatures) {
+    throw new Error("migrateV17ToV18: task_engine_tasks.features_json missing — unexpected schema");
+  }
+
+  db.pragma("foreign_keys = OFF");
+  try {
+    db.transaction(() => {
+      db.exec(`
+CREATE TABLE task_engine_tasks__strict (
+  id TEXT PRIMARY KEY NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ${TASK_ENGINE_TASK_STATUSES_SQL}),
+  type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  archived INTEGER NOT NULL DEFAULT 0 CHECK (archived IN (0, 1)),
+  archived_at TEXT,
+  priority TEXT CHECK (priority IS NULL OR priority IN ${TASK_ENGINE_PRIORITIES_SQL}),
+  phase TEXT,
+  phase_key TEXT,
+  ownership TEXT,
+  approach TEXT,
+  depends_on_json TEXT NOT NULL DEFAULT '[]',
+  unblocks_json TEXT NOT NULL DEFAULT '[]',
+  technical_scope_json TEXT,
+  acceptance_criteria_json TEXT,
+  summary TEXT,
+  description TEXT,
+  risk TEXT,
+  queue_namespace TEXT,
+  evidence_key TEXT,
+  evidence_kind TEXT,
+  metadata_json TEXT,
+  features_json TEXT NOT NULL DEFAULT '[]',
+  routing_category TEXT,
+  routing_confidence_tier TEXT,
+  routing_blocked_reason_category TEXT,
+  routing_tags_json TEXT
+);
+`);
+
+      if (hasRouting) {
+        db.exec(`
+INSERT INTO task_engine_tasks__strict (
+  id, status, type, title, created_at, updated_at, archived, archived_at,
+  priority, phase, phase_key, ownership, approach,
+  depends_on_json, unblocks_json, technical_scope_json, acceptance_criteria_json,
+  summary, description, risk, queue_namespace, evidence_key, evidence_kind, metadata_json,
+  features_json, routing_category, routing_confidence_tier, routing_blocked_reason_category, routing_tags_json
+)
+SELECT
+  id, status, type, title, created_at, updated_at, archived, archived_at,
+  priority, phase, phase_key, ownership, approach,
+  depends_on_json, unblocks_json, technical_scope_json, acceptance_criteria_json,
+  summary, description, risk, queue_namespace, evidence_key, evidence_kind, metadata_json,
+  COALESCE(features_json, '[]'),
+  routing_category, routing_confidence_tier, routing_blocked_reason_category, routing_tags_json
+FROM ${TASK_ENGINE_TASKS_TABLE};
+`);
+      } else {
+        db.exec(`
+INSERT INTO task_engine_tasks__strict (
+  id, status, type, title, created_at, updated_at, archived, archived_at,
+  priority, phase, phase_key, ownership, approach,
+  depends_on_json, unblocks_json, technical_scope_json, acceptance_criteria_json,
+  summary, description, risk, queue_namespace, evidence_key, evidence_kind, metadata_json,
+  features_json, routing_category, routing_confidence_tier, routing_blocked_reason_category, routing_tags_json
+)
+SELECT
+  id, status, type, title, created_at, updated_at, archived, archived_at,
+  priority, phase, phase_key, ownership, approach,
+  depends_on_json, unblocks_json, technical_scope_json, acceptance_criteria_json,
+  summary, description, risk, queue_namespace, evidence_key, evidence_kind, metadata_json,
+  COALESCE(features_json, '[]'),
+  NULL, NULL, NULL, NULL
+FROM ${TASK_ENGINE_TASKS_TABLE};
+`);
+      }
+
+      db.exec(`DROP TABLE ${TASK_ENGINE_TASKS_TABLE}`);
+      db.exec(`ALTER TABLE task_engine_tasks__strict RENAME TO ${TASK_ENGINE_TASKS_TABLE}`);
+
+      db.exec(`CREATE INDEX IF NOT EXISTS idx_task_engine_tasks_status ON ${TASK_ENGINE_TASKS_TABLE}(status)`);
+      db.exec(
+        `CREATE INDEX IF NOT EXISTS idx_task_engine_tasks_type_status ON ${TASK_ENGINE_TASKS_TABLE}(type, status)`
+      );
+      db.exec(`CREATE INDEX IF NOT EXISTS idx_task_engine_tasks_phase_key ON ${TASK_ENGINE_TASKS_TABLE}(phase_key)`);
+      db.exec(
+        `CREATE INDEX IF NOT EXISTS idx_task_engine_tasks_queue_ns_status ON ${TASK_ENGINE_TASKS_TABLE}(queue_namespace, status)`
+      );
+      db.exec(
+        `CREATE INDEX IF NOT EXISTS idx_task_engine_tasks_routing_category ON ${TASK_ENGINE_TASKS_TABLE}(routing_category)`
+      );
+      db.exec(
+        `CREATE INDEX IF NOT EXISTS idx_task_engine_tasks_routing_confidence ON ${TASK_ENGINE_TASKS_TABLE}(routing_confidence_tier)`
+      );
+      db.exec(
+        `CREATE INDEX IF NOT EXISTS idx_task_engine_tasks_routing_blocked ON ${TASK_ENGINE_TASKS_TABLE}(routing_blocked_reason_category)`
+      );
+
+      db.exec(`DROP TABLE IF EXISTS ${TASK_ENGINE_DEPENDENCIES_TABLE}`);
+      db.exec(TASK_ENGINE_DEPENDENCIES_DDL);
+      repopulateTaskEngineDependenciesFromJson(db);
+
+      if (tableExists(db, "kit_team_assignments")) {
+        db.exec(`
+CREATE TABLE kit_team_assignments__fk (
+  id TEXT PRIMARY KEY NOT NULL,
+  execution_task_id TEXT NOT NULL REFERENCES ${TASK_ENGINE_TASKS_TABLE}(id) ON DELETE CASCADE,
+  supervisor_id TEXT NOT NULL,
+  worker_id TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('assigned','submitted','blocked','reconciled','cancelled')),
+  handoff_json TEXT,
+  reconcile_checkpoint_json TEXT,
+  block_reason TEXT,
+  metadata_json TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+`);
+        db.exec(`INSERT INTO kit_team_assignments__fk SELECT * FROM kit_team_assignments`);
+        db.exec(`DROP TABLE kit_team_assignments`);
+        db.exec(`ALTER TABLE kit_team_assignments__fk RENAME TO kit_team_assignments`);
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_kit_team_assignments_task ON kit_team_assignments(execution_task_id)`);
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_kit_team_assignments_status ON kit_team_assignments(status)`);
+        db.exec(
+          `CREATE INDEX IF NOT EXISTS idx_kit_team_assignments_supervisor ON kit_team_assignments(supervisor_id)`
+        );
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_kit_team_assignments_worker ON kit_team_assignments(worker_id)`);
+      }
+
+      if (tableExists(db, "kit_subagent_sessions")) {
+        db.exec(`
+CREATE TABLE kit_subagent_sessions__fk (
+  id TEXT PRIMARY KEY NOT NULL,
+  definition_id TEXT NOT NULL,
+  execution_task_id TEXT REFERENCES ${TASK_ENGINE_TASKS_TABLE}(id) ON DELETE SET NULL,
+  status TEXT NOT NULL,
+  host_hint TEXT,
+  metadata_json TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY (definition_id) REFERENCES kit_subagent_definitions(id)
+);
+`);
+        db.exec(`
+INSERT INTO kit_subagent_sessions__fk
+SELECT
+  id,
+  definition_id,
+  CASE
+    WHEN execution_task_id IS NULL THEN NULL
+    WHEN execution_task_id IN (SELECT id FROM ${TASK_ENGINE_TASKS_TABLE}) THEN execution_task_id
+    ELSE NULL
+  END,
+  status, host_hint, metadata_json, created_at, updated_at
+FROM kit_subagent_sessions;
+`);
+        db.exec(`DROP TABLE kit_subagent_sessions`);
+        db.exec(`ALTER TABLE kit_subagent_sessions__fk RENAME TO kit_subagent_sessions`);
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_kit_subagent_sessions_def ON kit_subagent_sessions(definition_id)`);
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_kit_subagent_sessions_task ON kit_subagent_sessions(execution_task_id)`);
+      }
+
+      if (tableExists(db, "kit_task_checkpoints")) {
+        db.exec(`
+CREATE TABLE kit_task_checkpoints__fk (
+  id TEXT PRIMARY KEY NOT NULL,
+  created_at TEXT NOT NULL,
+  task_id TEXT REFERENCES ${TASK_ENGINE_TASKS_TABLE}(id) ON DELETE SET NULL,
+  actor TEXT,
+  label TEXT,
+  action_type TEXT NOT NULL DEFAULT 'manual',
+  ref_kind TEXT NOT NULL CHECK (ref_kind IN ('head','stash')),
+  git_head_sha TEXT NOT NULL,
+  secondary_ref TEXT,
+  manifest_json TEXT NOT NULL,
+  metadata_json TEXT
+);
+`);
+        db.exec(`
+INSERT INTO kit_task_checkpoints__fk
+SELECT
+  id, created_at,
+  CASE
+    WHEN task_id IS NULL THEN NULL
+    WHEN task_id IN (SELECT id FROM ${TASK_ENGINE_TASKS_TABLE}) THEN task_id
+    ELSE NULL
+  END,
+  actor, label, action_type, ref_kind, git_head_sha, secondary_ref, manifest_json, metadata_json
+FROM kit_task_checkpoints;
+`);
+        db.exec(`DROP TABLE kit_task_checkpoints`);
+        db.exec(`ALTER TABLE kit_task_checkpoints__fk RENAME TO kit_task_checkpoints`);
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_kit_task_checkpoints_task ON kit_task_checkpoints(task_id)`);
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_kit_task_checkpoints_created ON kit_task_checkpoints(created_at)`);
+      }
+    })();
+  } finally {
+    db.pragma("foreign_keys = ON");
+  }
+}
+
 /**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
@@ -669,6 +941,11 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
     migrateV16ToV17(db);
     db.pragma("user_version = 17");
     current = 17;
+  }
+  if (current < 18) {
+    migrateV17ToV18(db);
+    db.pragma("user_version = 18");
+    current = 18;
   }
 }
 

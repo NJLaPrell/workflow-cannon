@@ -41,7 +41,7 @@ test("kit sqlite migrates to v6 and subagent DDL is usable", () => {
     insertSession(db, {
       id: "sess-1",
       definitionId: "test-agent",
-      executionTaskId: "T1",
+      executionTaskId: null,
       status: "open",
       hostHint: "cursor",
       metadata: null,
