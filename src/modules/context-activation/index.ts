@@ -48,8 +48,13 @@ import {
   buildGuidanceDraftImpactMatrix,
   buildPreviewEvaluationContext,
   coerceDraftGuidanceRuleInput,
-  synthesizeDraftArtifactAndOverlay
+  synthesizeDraftArtifactAndOverlay,
+  type DraftGuidanceRuleInputV1
 } from "../../core/cae/guidance-draft-impact-preview.js";
+import {
+  computeGuidanceEnforcementReadiness,
+  type GovernanceEvidenceInputV1
+} from "../../core/cae/guidance-enforcement-readiness.js";
 
 type SqliteDatabase = NonNullable<ReturnType<typeof openKitSqliteReadWrite>>;
 
@@ -736,6 +741,14 @@ export const contextActivationModule: WorkflowModule = {
 
       const draftRuleRaw =
         (args as Record<string, unknown>)["draftRule"] ?? (args as Record<string, unknown>)["draftGuidanceRule"];
+      const govEarly = (args as Record<string, unknown>)["enforcementGovernanceEvidence"];
+      if (govEarly !== undefined && govEarly !== null && (draftRuleRaw === undefined || draftRuleRaw === null)) {
+        return {
+          ok: false,
+          code: "invalid-args",
+          message: "enforcementGovernanceEvidence requires draftRule on cae-guidance-preview."
+        };
+      }
 
       const knownWorkflowNames = [
         ...GUIDANCE_CURATED_WORKFLOW_NAMES,
@@ -745,6 +758,8 @@ export const contextActivationModule: WorkflowModule = {
 
       let overlayRegistry: CaeLoadedRegistry = loaded.reg;
       let draftImpactBlock: ReturnType<typeof buildGuidanceDraftImpactMatrix> | undefined;
+      let draftFamilyForEnforcement: DraftGuidanceRuleInputV1["family"] | undefined;
+      let governanceForPreview: GovernanceEvidenceInputV1 | undefined;
       if (draftRuleRaw !== undefined && draftRuleRaw !== null) {
         const parsed = coerceDraftGuidanceRuleInput(draftRuleRaw);
         if (!parsed.ok) {
@@ -778,6 +793,34 @@ export const contextActivationModule: WorkflowModule = {
           currentKitPhase: phase,
           evalMode
         });
+        draftFamilyForEnforcement = parsed.value.family;
+        const govRaw = (args as Record<string, unknown>)["enforcementGovernanceEvidence"];
+        if (govRaw !== undefined && govRaw !== null) {
+          if (typeof govRaw !== "object" || Array.isArray(govRaw)) {
+            return {
+              ok: false,
+              code: "invalid-args",
+              message: "enforcementGovernanceEvidence must be a JSON object."
+            };
+          }
+          const g = govRaw as Record<string, unknown>;
+          if (g.schemaVersion !== 1) {
+            return {
+              ok: false,
+              code: "invalid-args",
+              message: "enforcementGovernanceEvidence.schemaVersion must be 1."
+            };
+          }
+          governanceForPreview = {
+            schemaVersion: 1,
+            registryMutationAuditId:
+              typeof g.registryMutationAuditId === "string" ? g.registryMutationAuditId : undefined,
+            rollbackTargetVersionId:
+              typeof g.rollbackTargetVersionId === "string" ? g.rollbackTargetVersionId : undefined,
+            actor: typeof g.actor === "string" ? g.actor : undefined,
+            rationale: typeof g.rationale === "string" ? g.rationale : undefined
+          };
+        }
       }
 
       const evaluationContext = buildPreviewEvaluationContext({
@@ -827,7 +870,17 @@ export const contextActivationModule: WorkflowModule = {
           totalGuidanceCount: counts.policy + counts.think + counts.do + counts.review,
           pendingAcknowledgements: bundle.pendingAcknowledgements,
           conflictShadowSummary: bundle.conflictShadowSummary,
-          ...(draftImpactBlock ? { draftImpact: draftImpactBlock } : {})
+          ...(draftImpactBlock && draftFamilyForEnforcement
+            ? {
+                draftImpact: draftImpactBlock,
+                enforcementReadiness: computeGuidanceEnforcementReadiness(
+                  draftImpactBlock,
+                  draftFamilyForEnforcement,
+                  new Date().toISOString(),
+                  governanceForPreview
+                )
+              }
+            : {})
         }
       };
     }

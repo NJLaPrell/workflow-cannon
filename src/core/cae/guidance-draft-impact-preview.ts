@@ -28,6 +28,7 @@ import {
 import { buildGuidanceScopeDraft, GUIDANCE_SCOPE_PRESETS } from "./guidance-scope-builder.js";
 import type { GuidanceScopeBuildResult, GuidanceScopeDraft } from "./guidance-scope-builder.js";
 import { isSensitiveModuleCommandForEffective } from "../policy.js";
+import { assertDraftRuleHasNoEnforcementFlags } from "./guidance-enforcement-readiness.js";
 
 export const PREVIEW_DRAFT_ARTIFACT_ID = "cae.preview.draft.artifact";
 export const PREVIEW_DRAFT_ACTIVATION_ID = "cae.preview.draft.activation";
@@ -149,6 +150,8 @@ export function coerceDraftGuidanceRuleInput(
   if (r.schemaVersion !== 1) {
     return { ok: false, code: "invalid-args", message: "draftRule.schemaVersion must be 1." };
   }
+  const forbid = assertDraftRuleHasNoEnforcementFlags(r);
+  if (!forbid.ok) return forbid;
   const title =
     typeof r.title === "string" && r.title.trim().length > 0
       ? r.title.trim().slice(0, 256)
