@@ -41,6 +41,14 @@ export type AgentTaskRoutingMetadata = {
   source: string | null;
   /** Raw module-specific metadata is intentionally not part of the stable routing contract. */
   hasModuleMetadata: boolean;
+  /** Promoted from `metadata.category` / relational `routing_category`; filter agents use instead of JSON walks. */
+  category: string | null;
+  /** Promoted from `metadata.tags` / relational `routing_tags_json`. */
+  tags: string[];
+  /** Improvement / triage tier when present (`metadata.confidenceTier`). */
+  confidenceTier: string | null;
+  /** Blocked-task taxonomy bucket when present (`metadata.blockedReasonCategory`). */
+  blockedReasonCategory: string | null;
 };
 
 export type AgentTaskDependencyEdge = {

@@ -20,13 +20,26 @@ This is the stable read contract agents should use for normal task workflows. It
 
 These commands may keep their existing response shape during the compatibility window. New fields should be additive. When a command cannot yet return the exact model, it should expose an explicit compatibility projection or document the gap in this runbook before a follow-on task depends on it.
 
+## Promoted routing columns (Phase 75 — T995)
+
+High-traffic **`list-tasks`** filters were historically implemented by scanning `metadata_json`. The relational store mirrors these fields into indexed SQLite columns on **`task_engine_tasks`** (**`routing_category`**, **`routing_tags_json`**, **`routing_confidence_tier`**, **`routing_blocked_reason_category`**) when kit SQLite **`user_version` ≥ 17. Writes keep `metadata_json` as the compatibility source; readers merge column values when legacy rows omit JSON keys.
+
+| Task field / filter | Relational column | `AgentTaskRoutingMetadata` |
+| --- | --- | --- |
+| `metadata.category` | `routing_category` | `category` |
+| `metadata.tags` | `routing_tags_json` | `tags` |
+| `metadata.confidenceTier` | `routing_confidence_tier` | `confidenceTier` |
+| `metadata.blockedReasonCategory` | `routing_blocked_reason_category` | `blockedReasonCategory` |
+
+CLI task payloads include an ephemeral **`agentRouting`** object on each **`TaskEntity`** (same shape as **`AgentTaskRoutingMetadata`**) so agents can route without ad hoc metadata walks. It is not persisted inside `metadata_json` or blobs.
+
 ## Required Model Fields
 
 `AgentTaskListItem` is the common row shape. It includes:
 
 - identity: `id`, `title`, `status`, `type`, `priority`, `archived`, timestamps
 - phase: `phaseKey`, human `phase`, and `phaseAligned`
-- routing: `ownership`, `queueNamespace`, feature slugs, source, and a boolean marker for module metadata
+- routing: `ownership`, `queueNamespace`, feature slugs, `source`, list-task filter projections (`category`, `tags`, `confidenceTier`, `blockedReasonCategory`), and `hasModuleMetadata`
 - dependencies: `dependsOn`, `unblocks`, and normalized dependency `edges`
 - queue hints: dependency-blocked state, unmet dependencies, and an explicit blocked reason
 - evidence pointers: delivery evidence, latest transition, and latest mutation
