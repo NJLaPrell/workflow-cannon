@@ -8,6 +8,12 @@ import {
   renderGuidanceSummaryInnerHtml,
   renderGuidanceTraceDetailInnerHtml
 } from "./render-guidance.js";
+import {
+  buildDraftGuidanceRulePayload,
+  draftStrengthToFamily,
+  withAcknowledgement,
+  type WizardScopePreset
+} from "./guidance-wizard-draft.js";
 
 type TaskChoice = {
   id: string;
@@ -23,6 +29,32 @@ type WorkflowChoice = {
   curated: boolean;
   label: string;
 };
+
+type CatalogNavItem = {
+  displayTitle: string;
+  activationId: string;
+  appliesWhen: string;
+};
+
+function catalogItemsFromProduct(product: unknown): CatalogNavItem[] {
+  if (!product || typeof product !== "object") return [];
+  const rc = asRecord(asRecord(product).rulesCatalog);
+  const items = Array.isArray(rc.items) ? rc.items : [];
+  const out: CatalogNavItem[] = [];
+  for (const raw of items.slice(0, 40)) {
+    const row = asRecord(raw);
+    const dbg = asRecord(row.debug);
+    const activationId = typeof dbg.activationId === "string" ? dbg.activationId : "";
+    if (!activationId) continue;
+    const displayTitle =
+      typeof row.displayTitle === "string" && row.displayTitle.trim()
+        ? row.displayTitle.trim().slice(0, 200)
+        : activationId;
+    const appliesWhen = typeof row.appliesWhen === "string" ? row.appliesWhen.slice(0, 400) : "";
+    out.push({ displayTitle, activationId, appliesWhen });
+  }
+  return out;
+}
 
 const WORKFLOW_INTENT_LABELS: Record<string, string> = {
   "get-next-actions": "Find the next task",
@@ -107,15 +139,67 @@ function workflowChoicesFromProduct(payload: unknown): WorkflowChoice[] {
     .filter((choice): choice is WorkflowChoice => choice !== null);
 }
 
-function draftStrengthToFamily(strengthRaw: string): "policy" | "think" | "do" | "review" {
-  const k = strengthRaw.trim().toLowerCase();
-  if (k === "required" || k === "critical" || k === "blocking") return "policy";
-  if (k === "verify" || k === "checklist" || k === "audit") return "review";
-  if (k === "steps" || k === "workflow" || k === "runner") return "do";
-  if (k === "policy" || k === "think" || k === "do" || k === "review") {
-    return k;
+function buildDraftPreviewPayloadFromMessage(
+  msg: Record<string, unknown>
+): { commandName: string; taskId: string; draftRule: Record<string, unknown> } {
+  const commandName =
+    typeof msg.commandName === "string" && msg.commandName.trim() ? msg.commandName.trim() : "get-next-actions";
+  const taskId = typeof msg.taskId === "string" ? msg.taskId.trim() : "";
+  const msgType = typeof msg.type === "string" ? msg.type : "";
+
+  if (msgType === "draftPreview") {
+    const sourceTitleRaw = typeof msg.sourceTitle === "string" ? msg.sourceTitle.trim() : "";
+    const sourceTitle = sourceTitleRaw.length ? sourceTitleRaw.slice(0, 256) : "Draft Guidance change";
+    const triggerRaw = typeof msg.trigger === "string" ? msg.trigger.trim() : "";
+    const strengthRaw =
+      typeof msg.strength === "string" && msg.strength.trim() ? msg.strength.trim() : "advisory";
+    const workflowNameCandidate = triggerRaw.length ? triggerRaw : commandName;
+    return {
+      commandName,
+      taskId,
+      draftRule: {
+        schemaVersion: 1,
+        title: sourceTitle,
+        artifactType: "playbook",
+        family: draftStrengthToFamily(strengthRaw),
+        priority: 750,
+        scopeDraft:
+          workflowNameCandidate === "__always__"
+            ? { preset: "always" }
+            : { preset: "workflow", workflowName: workflowNameCandidate }
+      }
+    };
   }
-  return "think";
+
+  const title =
+    typeof msg.title === "string" && msg.title.trim() ? msg.title.trim().slice(0, 256) : "Draft Guidance rule";
+  const strengthRaw =
+    typeof msg.strength === "string" && msg.strength.trim() ? msg.strength.trim() : "advisory";
+  const prio = typeof msg.priority === "number" ? msg.priority : Number(msg.priority ?? NaN);
+  const presetRaw = typeof msg.scopePreset === "string" ? msg.scopePreset.trim() : "workflow";
+  const allowed: WizardScopePreset[] = ["workflow", "always", "phase", "task", "completing_task"];
+  const scopePreset = (allowed.includes(presetRaw as WizardScopePreset) ? presetRaw : "workflow") as WizardScopePreset;
+  const workflowName =
+    typeof msg.workflowName === "string" && msg.workflowName.trim() ? msg.workflowName.trim() : undefined;
+  const phaseKey =
+    typeof msg.phaseKey === "string" && msg.phaseKey.trim() ? msg.phaseKey.trim() : undefined;
+  const scopeTaskId =
+    typeof msg.scopeTaskId === "string" && msg.scopeTaskId.trim() ? msg.scopeTaskId.trim() : undefined;
+  const ackStrength = typeof msg.ackStrength === "string" ? msg.ackStrength.trim() : undefined;
+
+  let built = buildDraftGuidanceRulePayload({
+    title,
+    strengthRaw,
+    priority: Number.isFinite(prio) ? prio : 750,
+    scopePreset,
+    workflowName:
+      workflowName ?? (scopePreset === "workflow" || scopePreset === "completing_task" ? commandName : undefined),
+    phaseKey,
+    scopeTaskId
+  });
+  const traceHint = typeof msg.checkTraceId === "string" ? msg.checkTraceId.trim() : taskId || commandName;
+  built = withAcknowledgement(built, ackStrength, traceHint.length ? traceHint : undefined);
+  return { commandName, taskId, draftRule: built };
 }
 
 export class GuidanceViewProvider implements vscode.WebviewViewProvider {
@@ -170,27 +254,10 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
           : { ok: false, code: "invalid-args", message: "Command or workflow is required." };
         await webview.postMessage({ type: "setPreview", html: renderGuidancePreviewInnerHtml(r) });
       }
-      if (msg?.type === "draftPreview") {
-        const commandName =
-          typeof msg.commandName === "string" && msg.commandName.trim() ? msg.commandName.trim() : "get-next-actions";
-        const taskId = typeof msg.taskId === "string" ? msg.taskId.trim() : "";
-        const sourceTitleRaw = typeof msg.sourceTitle === "string" ? msg.sourceTitle.trim() : "";
-        const sourceTitle = sourceTitleRaw.length ? sourceTitleRaw.slice(0, 256) : "Draft Guidance change";
-        const triggerRaw = typeof msg.trigger === "string" ? msg.trigger.trim() : "";
-        const strengthRaw =
-          typeof msg.strength === "string" && msg.strength.trim() ? msg.strength.trim() : "advisory";
-        const workflowNameCandidate = triggerRaw.length ? triggerRaw : commandName;
-        const draftRule = {
-          schemaVersion: 1 as const,
-          title: sourceTitle,
-          artifactType: "playbook" as const,
-          family: draftStrengthToFamily(strengthRaw),
-          priority: 750,
-          scopeDraft:
-            workflowNameCandidate === "__always__"
-              ? ({ preset: "always" as const })
-              : { preset: "workflow" as const, workflowName: workflowNameCandidate }
-        };
+      if (msg?.type === "wizardDraftPreview" || msg?.type === "draftPreview") {
+        const m = msg as Record<string, unknown>;
+        const { commandName, taskId, draftRule } = buildDraftPreviewPayloadFromMessage(m);
+
         const args: Record<string, unknown> = {
           schemaVersion: 1,
           commandName,
@@ -200,6 +267,37 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
         if (taskId) args.taskId = taskId;
         const r = await this.client.run("cae-guidance-preview", args);
         await webview.postMessage({ type: "setPreview", html: renderGuidancePreviewInnerHtml(r) });
+
+        let readinessLevel: string | undefined;
+        if (r.ok && r.data && typeof r.data === "object") {
+          const di = asRecord(asRecord(r.data).draftImpact);
+          const ar = di.activationReadiness ? asRecord(di.activationReadiness) : undefined;
+          readinessLevel = typeof ar?.level === "string" ? (ar.level as string) : undefined;
+        }
+        await webview.postMessage({
+          type: "setDraftWizardOutcome",
+          previewOk: r.ok === true,
+          readinessLevel: readinessLevel ?? null
+        });
+      }
+      if (msg?.type === "copyWizardDraft") {
+        const m = { ...(msg as Record<string, unknown>), type: "wizardDraftPreview" };
+        const { draftRule } = buildDraftPreviewPayloadFromMessage(m);
+        try {
+          const text = JSON.stringify(draftRule, null, 2);
+          await vscode.env.clipboard.writeText(text);
+          await webview.postMessage({
+            type: "showStatus",
+            kind: "ok",
+            text: "Copied draft rule JSON for handoff."
+          });
+        } catch (_e) {
+          await webview.postMessage({
+            type: "showStatus",
+            kind: "err",
+            text: "Could not copy draft JSON."
+          });
+        }
       }
       if (msg?.type === "explain" && typeof msg.traceId === "string") {
         const traceId = msg.traceId.trim();
@@ -239,10 +337,18 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
         ? asRecord(summary.data).guidanceProduct
         : undefined;
     await webview.postMessage({ type: "setSummary", html: renderGuidanceSummaryInnerHtml(summary) });
-    await this.pushChoices(webview, workflowChoicesFromProduct(product));
+    const mut = product ? asRecord(asRecord(product).mutationCapability) : undefined;
+    const canMutate = mut?.canMutate === true;
+    const denialReason = typeof mut?.denialReason === "string" ? mut.denialReason : null;
+    await webview.postMessage({ type: "setGovernance", canMutate, denialReason });
+    await this.pushChoices(webview, workflowChoicesFromProduct(product), catalogItemsFromProduct(product));
   }
 
-  private async pushChoices(webview: vscode.Webview, productWorkflows: WorkflowChoice[] = []): Promise<void> {
+  private async pushChoices(
+    webview: vscode.Webview,
+    productWorkflows: WorkflowChoice[] = [],
+    catalogItems: CatalogNavItem[] = []
+  ): Promise<void> {
     const [nextActions, inProgress, workflows] = await Promise.all([
       this.client.run("get-next-actions", {}),
       this.client.run("list-tasks", { status: "in_progress" }),
@@ -255,7 +361,8 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
     await webview.postMessage({
       type: "setChoices",
       tasks: [...byId.values()].slice(0, 50),
-      workflows
+      workflows,
+      catalogItems
     });
   }
 
@@ -506,7 +613,60 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
     var label = workflow.label || workflow.name || '';
     return workflow.name && workflow.name !== label ? String(label) + ' (' + String(workflow.name) + ')' : String(label);
   }
-  function renderChoices(tasks, workflows) {
+  function gv(id) {
+    var e = document.getElementById(id);
+    return e && e.value != null ? String(e.value).trim() : '';
+  }
+  function gwDraftPreviewBtn() {
+    return document.getElementById('gw-draft-preview');
+  }
+  function updateScopeRows() {
+    var preset = gv('gw-scope-preset');
+    var rowW = document.getElementById('gw-wf-row');
+    var rowPh = document.getElementById('gw-phase-row');
+    var rowTs = document.getElementById('gw-task-row');
+    if (rowW) rowW.style.display = preset === 'workflow' ? '' : 'none';
+    if (rowPh) rowPh.style.display = preset === 'phase' || preset === 'completing_task' ? '' : 'none';
+    if (rowTs) rowTs.style.display = preset === 'task' || preset === 'completing_task' ? '' : 'none';
+  }
+  function renderCatalogNav(items) {
+    var root = document.getElementById('gw-catalog-rows');
+    if (!root) return;
+    root.textContent = '';
+    if (!items || items.length === 0) return;
+    (Array.isArray(items) ? items : []).slice(0, 40).forEach(function(it) {
+      var wrap = document.createElement('div');
+      wrap.className = 'gw-catalog-row gd-row gd-row-compact';
+      wrap.style.flexWrap = 'wrap';
+      var lblWrap = document.createElement('div');
+      lblWrap.style.flex = '1';
+      lblWrap.style.minWidth = '120px';
+      var strong = document.createElement('strong');
+      strong.style.fontSize = '11px';
+      strong.textContent = String(it.displayTitle || '');
+      lblWrap.appendChild(strong);
+      if (it.appliesWhen) {
+        var when = document.createElement('div');
+        when.className = 'gd-muted';
+        when.style.marginTop = '4px';
+        when.style.fontSize = '10px';
+        when.textContent = String(it.appliesWhen);
+        lblWrap.appendChild(when);
+      }
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'gd-btn';
+      b.setAttribute('data-wc-action', 'wizard-catalog-use');
+      b.setAttribute('data-catalog-title', String(it.displayTitle || ''));
+      b.setAttribute('data-catalog-when', String(it.appliesWhen || ''));
+      b.setAttribute('data-activation-id', String(it.activationId || ''));
+      b.textContent = 'Use as template';
+      wrap.appendChild(lblWrap);
+      wrap.appendChild(b);
+      root.appendChild(wrap);
+    });
+  }
+  function renderChoices(tasks, workflows, catalogItems) {
     if (taskSelect) {
       taskSelect.textContent = '';
       taskSelect.appendChild(option('Manual / no task', ''));
@@ -529,6 +689,7 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
         workflowList.appendChild(opt);
       });
     }
+    renderCatalogNav(catalogItems || []);
   }
   function requestLoad(background) {
     if (background) {
@@ -575,30 +736,62 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
       evalMode: live && live.checked ? 'live' : 'shadow'
     });
   }
-  function previewDraft() {
-    var taskId = document.getElementById('gd-task-id');
-    var commandName = document.getElementById('gd-command-name');
-    var sourceTitle = document.getElementById('gd-draft-source-title');
-    var trigger = document.getElementById('gd-draft-trigger');
-    var strength = document.getElementById('gd-draft-strength');
-    setBusy(document.getElementById('gd-draft-preview'), true, 'Previewing...');
+  function wizardPayload() {
+    var taskEl = document.getElementById('gd-task-id');
+    var cmdEl = document.getElementById('gd-command-name');
+    var prioEl = document.getElementById('gw-priority');
+    var pri = prioEl && prioEl.value ? parseInt(prioEl.value, 10) : NaN;
+    var priority = Number.isFinite(pri) ? pri : 750;
+    return {
+      taskId: taskEl && taskEl.value || '',
+      commandName: cmdEl && cmdEl.value || '',
+      title: gv('gw-draft-title'),
+      strength: gv('gw-strength'),
+      priority: priority,
+      scopePreset: gv('gw-scope-preset') || 'workflow',
+      workflowName: gv('gw-wf-name'),
+      phaseKey: gv('gw-phase-key'),
+      scopeTaskId: gv('gw-scope-task-id'),
+      ackStrength: gv('gw-ack-strength'),
+      checkTraceId: gv('gw-check-record')
+    };
+  }
+  function wizardPreview() {
+    setBusy(gwDraftPreviewBtn(), true, 'Previewing...');
     showStatus('info', 'Previewing draft impact against the current workflow...');
-    vscode.postMessage({
-      type: 'draftPreview',
-      taskId: taskId && taskId.value || '',
-      commandName: commandName && commandName.value || '',
-      sourceTitle: sourceTitle && sourceTitle.value || '',
-      trigger: trigger && trigger.value || '',
-      strength: strength && strength.value || ''
-    });
+    var p = wizardPayload();
+    p.type = 'wizardDraftPreview';
+    vscode.postMessage(p);
+  }
+  function wizardReset() {
+    setInputValue('gw-draft-title', '');
+    setInputValue('gw-strength', 'advisory');
+    setInputValue('gw-scope-preset', 'workflow');
+    setInputValue('gw-wf-name', '');
+    setInputValue('gw-phase-key', '');
+    setInputValue('gw-scope-task-id', '');
+    setInputValue('gw-priority', '750');
+    setInputValue('gw-ack-strength', 'none');
+    setInputValue('gw-check-record', '');
+    setInputValue('gw-trigger-id', '');
+    setInputValue('gw-draft-notes', '');
+    updateScopeRows();
+    var copyBtn = document.getElementById('gw-copy-draft-json');
+    if (copyBtn) copyBtn.disabled = true;
+    var readiness = document.getElementById('gw-readiness-note');
+    if (readiness) readiness.textContent = '';
+    showStatus('info', 'Draft wizard reset.');
   }
   function fillDraftFromButton(button) {
-    setInputValue('gd-draft-trigger', button.getAttribute('data-command-name') || document.getElementById('gd-command-name')?.value || '');
-    setInputValue('gd-draft-check-record', button.getAttribute('data-trace-id') || '');
-    setInputValue('gd-draft-trigger-id', button.getAttribute('data-activation-id') || '');
-    var sourceTitle = document.getElementById('gd-draft-source-title');
-    if (sourceTitle && !sourceTitle.value) sourceTitle.value = 'Guidance update from current check';
-    showStatus('ok', 'Draft update context filled. Review it in Manage Guidance, then preview impact.');
+    var cmd = button.getAttribute('data-command-name') || gv('gd-command-name');
+    setInputValue('gw-wf-name', cmd);
+    setInputValue('gw-check-record', button.getAttribute('data-trace-id') || '');
+    setInputValue('gw-trigger-id', button.getAttribute('data-activation-id') || '');
+    var titleEl = document.getElementById('gw-draft-title');
+    if (titleEl && !titleEl.value) titleEl.value = 'Guidance update from current check';
+    setInputValue('gw-scope-preset', 'workflow');
+    updateScopeRows();
+    showStatus('ok', 'Improve context filled — review wizard fields below, then Preview draft impact.');
     scrollToPanel(document.getElementById('gd-manage-draft'));
   }
   function copyVisibleJson(button) {
@@ -631,12 +824,16 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
   }
   if (taskSelect) taskSelect.addEventListener('change', function() { setInputValue('gd-task-id', taskSelect.value || ''); });
   if (workflowSelect) workflowSelect.addEventListener('change', function() { if (workflowSelect.value) setInputValue('gd-command-name', workflowSelect.value); });
+  document.getElementById('gw-scope-preset') && document.getElementById('gw-scope-preset').addEventListener('change', updateScopeRows);
   document.getElementById('gd-refresh') && document.getElementById('gd-refresh').addEventListener('click', function(){ requestLoad(false); });
   document.getElementById('gd-preview') && document.getElementById('gd-preview').addEventListener('click', runPreview);
-  document.getElementById('gd-draft-preview') && document.getElementById('gd-draft-preview').addEventListener('click', previewDraft);
-  document.getElementById('gd-draft-reset') && document.getElementById('gd-draft-reset').addEventListener('click', function(){
-    ['gd-draft-source-title','gd-draft-trigger','gd-draft-strength','gd-draft-check-record','gd-draft-trigger-id','gd-draft-notes'].forEach(function(id){ setInputValue(id, id === 'gd-draft-strength' ? 'advisory' : ''); });
-    showStatus('info', 'Draft update form reset.');
+  document.getElementById('gw-draft-preview') && document.getElementById('gw-draft-preview').addEventListener('click', wizardPreview);
+  document.getElementById('gw-draft-reset') && document.getElementById('gw-draft-reset').addEventListener('click', wizardReset);
+  document.getElementById('gw-new-rule') && document.getElementById('gw-new-rule').addEventListener('click', wizardReset);
+  document.getElementById('gw-copy-draft-json') && document.getElementById('gw-copy-draft-json').addEventListener('click', function(){
+    var p = wizardPayload();
+    p.type = 'copyWizardDraft';
+    vscode.postMessage(p);
   });
   document.body.addEventListener('click', function(ev) {
     var t = ev.target;
@@ -652,6 +849,28 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
     }
     if (act === 'guidance-improve') {
       fillDraftFromButton(t);
+      return;
+    }
+    if (act === 'wizard-catalog-use') {
+      var ttl = t.getAttribute('data-catalog-title') || '';
+      var when = t.getAttribute('data-catalog-when') || '';
+      var aid = t.getAttribute('data-activation-id') || '';
+      setInputValue('gw-draft-title', ttl);
+      setInputValue('gw-scope-preset', 'workflow');
+      var cmd = gv('gd-command-name');
+      if (cmd) setInputValue('gw-wf-name', cmd);
+      var notesEl = document.getElementById('gw-draft-notes');
+      var ln = notesEl && notesEl.value ? String(notesEl.value) : '';
+      var nl = String.fromCharCode(10);
+      var parts = [];
+      if (ttl) parts.push('Title (catalog): ' + ttl);
+      if (when) parts.push('Applies when: ' + when);
+      if (aid) parts.push('Activation id: ' + aid);
+      var block = parts.join(nl);
+      if (notesEl) notesEl.value = ln ? (ln + nl + nl + block) : block;
+      updateScopeRows();
+      showStatus('info', 'Template applied — tweak scope and Preview draft impact.');
+      scrollToPanel(document.getElementById('gd-manage-draft'));
       return;
     }
     if (act === 'guidance-ack') {
@@ -706,13 +925,30 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     if (m && m.type === 'setChoices') {
-      renderChoices(m.tasks, m.workflows);
+      renderChoices(m.tasks, m.workflows, m.catalogItems);
+      return;
+    }
+    if (m && m.type === 'setGovernance') {
+      var wrap = document.getElementById('gw-governance-wrap');
+      var gov = document.getElementById('gw-governance-panel');
+      var copyHint = document.getElementById('gw-handoff-hint');
+      var can = m.canMutate === true;
+      if (wrap) wrap.style.display = can ? 'none' : 'block';
+      if (gov) {
+        var dr = m.denialReason || 'This workspace cannot mutate the CAE registry from the extension.';
+        gov.textContent = 'Governance: ' + dr;
+      }
+      if (copyHint) {
+        copyHint.textContent = can
+          ? 'Preview first. Publishing uses version controls in Guidance System below.'
+          : 'Registry updates are blocked here — use Copy draft JSON after a successful preview for handoff.';
+      }
       return;
     }
     if (m && m.type === 'setPreview' && previewRoot && typeof m.html === 'string') {
       previewRoot.innerHTML = m.html;
       setBusy(previewBtn, false);
-      setBusy(document.getElementById('gd-draft-preview'), false);
+      setBusy(gwDraftPreviewBtn(), false);
       showStatus('ok', 'Pre-flight result updated.');
       scrollToPanel(previewRoot);
       return;
@@ -731,10 +967,26 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
       scrollToPanel(actionResultRoot);
       return;
     }
+    if (m && m.type === 'setDraftWizardOutcome') {
+      var copyBtn = document.getElementById('gw-copy-draft-json');
+      if (copyBtn) copyBtn.disabled = m.previewOk !== true;
+      var readiness = document.getElementById('gw-readiness-note');
+      if (readiness) {
+        if (m.previewOk && m.readinessLevel) {
+          readiness.textContent = 'Activation readiness level: ' + String(m.readinessLevel);
+        } else if (m.previewOk) {
+          readiness.textContent = '';
+        } else {
+          readiness.textContent = 'Fix the draft and preview again before copying JSON.';
+        }
+      }
+      return;
+    }
     if (m && m.type === 'showStatus') {
       showStatus(m.kind || 'info', m.text || '');
     }
   });
+  updateScopeRows();
   requestLoad(false);
 })();`;
 
@@ -795,6 +1047,8 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
     .gd-blast-examples { margin: 6px 0 0 0; padding-left: 18px; }
     .gd-blast.gd-card { margin: 10px 0; }
     .gd-warning ul { margin: 6px 0 0; padding-left: 18px; }
+    .gw-wizard-steps { padding: 8px 0 0; border-top: 1px dashed var(--vscode-widget-border); margin-top: 8px; }
+    .gw-catalog-strip { margin: 10px 0 0; max-height: 220px; overflow: auto; }
   </style>
 </head>
 <body>
@@ -834,26 +1088,78 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
   <div id="guidance-trace-detail-root"></div>
   <section class="gd-card" id="gd-manage-draft">
     <div class="gd-card-head">
-      <h2>Draft Guidance Update</h2>
+      <h2>Guidance authoring wizard</h2>
       <span class="gd-pill">Not active until published</span>
     </div>
-    <p class="gd-muted">Use this when current guidance is missing, useful, or noisy. Previewing a draft is read-only; publishing uses the Manage Guidance version controls.</p>
-    <div class="gd-toolbar">
-      <div class="gd-field"><label for="gd-draft-source-title">Source title</label><input id="gd-draft-source-title" class="gd-input" placeholder="What should users see?" /></div>
-      <div class="gd-field"><label for="gd-draft-trigger">Trigger workflow</label><input id="gd-draft-trigger" class="gd-input" placeholder="get-next-actions" /></div>
-      <div class="gd-field"><label for="gd-draft-strength">Strength</label><select id="gd-draft-strength" class="gd-input"><option value="required">Required rule</option><option value="advisory" selected>Recommendation</option><option value="step">Suggested step</option><option value="review">Review check</option></select></div>
+    <p class="gd-muted">New / Improve / Duplicate from catalog flows: fill the steps below. Preview computes blast radius + activation readiness against the hero task/workflow.</p>
+    <div id="gw-governance-wrap" class="gd-warn-card gd-card" style="margin:10px 0;display:none;padding:10px;font-size:11px;line-height:1.4;border-radius:4px;">
+      <p id="gw-governance-panel"><strong>Governance:</strong></p>
     </div>
-    <details>
-      <summary>Draft context</summary>
-      <div class="gd-toolbar">
-        <div class="gd-field"><label for="gd-draft-check-record">Check record</label><input id="gd-draft-check-record" class="gd-input" placeholder="Filled from Improve this guidance" /></div>
-        <div class="gd-field"><label for="gd-draft-trigger-id">Existing trigger id</label><input id="gd-draft-trigger-id" class="gd-input" placeholder="optional" /></div>
+    <p id="gw-handoff-hint" class="gd-muted" style="font-size:11px;margin:6px 0">Loading governance…</p>
+    <div class="gw-wizard-steps">
+      <section class="gd-card" style="padding:10px;background:transparent;border-style:dashed;margin:10px 0;">
+        <h3>Catalog shortcuts</h3>
+        <p class="gd-muted">Populate the form from a catalog row (read-only; does not mutate the registry).</p>
+        <div id="gw-catalog-rows" class="gw-catalog-strip"></div>
+      </section>
+      <div class="gd-toolbar gd-actions">
+        <button type="button" class="gd-btn" id="gw-new-rule">Clear / new rule draft</button>
       </div>
-      <div class="gd-field"><label for="gd-draft-notes">Notes</label><textarea id="gd-draft-notes" class="gd-input" rows="3" placeholder="What should change and why?"></textarea></div>
-    </details>
-    <div class="gd-actions">
-      <button type="button" class="gd-btn gd-primary" id="gd-draft-preview">Preview Draft Impact</button>
-      <button type="button" class="gd-btn" id="gd-draft-reset">Reset Draft</button>
+      <div class="gd-toolbar">
+        <div class="gd-field"><label for="gw-draft-title">Guidance title</label><input id="gw-draft-title" class="gd-input" placeholder="What operators should see" /></div>
+        <div class="gd-field"><label for="gw-strength">Strength</label>
+          <select id="gw-strength" class="gd-input">
+            <option value="required">Required rule</option>
+            <option value="advisory" selected>Recommendation</option>
+            <option value="step">Suggested steps</option>
+            <option value="verify">Review check</option>
+          </select>
+        </div>
+        <div class="gd-field"><label for="gw-priority">Priority</label><input id="gw-priority" class="gd-input" type="number" min="0" max="9999" value="750" /></div>
+      </div>
+      <div class="gd-toolbar">
+        <div class="gd-field"><label for="gw-scope-preset">Scope preset</label>
+          <select id="gw-scope-preset" class="gd-input">
+            <option value="workflow">Workflow intent</option>
+            <option value="always">Always-on</option>
+            <option value="phase">Phase-bound</option>
+            <option value="task">Task-bound</option>
+            <option value="completing_task">Completing-task</option>
+          </select>
+        </div>
+      </div>
+      <div class="gd-toolbar" id="gw-wf-row">
+        <div class="gd-field"><label for="gw-wf-name">Workflow name</label><input id="gw-wf-name" class="gd-input" placeholder="get-next-actions" /></div>
+      </div>
+      <div class="gd-toolbar" id="gw-phase-row" style="display:none">
+        <div class="gd-field"><label for="gw-phase-key">Phase key</label><input id="gw-phase-key" class="gd-input" placeholder="e.g. phase-75" /></div>
+      </div>
+      <div class="gd-toolbar" id="gw-task-row" style="display:none">
+        <div class="gd-field"><label for="gw-scope-task-id">Scoped task id</label><input id="gw-scope-task-id" class="gd-input" placeholder="T921" /></div>
+      </div>
+      <details>
+        <summary>Acknowledgement + trace context</summary>
+        <div class="gd-toolbar">
+          <div class="gd-field"><label for="gw-ack-strength">Acknowledgement tier</label>
+            <select id="gw-ack-strength" class="gd-input">
+              <option value="none">None</option>
+              <option value="surface">Surface notice</option>
+              <option value="recommend">Recommend ack</option>
+              <option value="ack_required">Ack required</option>
+              <option value="satisfy_required">Satisfaction required</option>
+            </select>
+          </div>
+          <div class="gd-field"><label for="gw-check-record">Check trace id</label><input id="gw-check-record" class="gd-input" placeholder="Improve flow fills trace id" /></div>
+          <div class="gd-field"><label for="gw-trigger-id">Existing activation id</label><input id="gw-trigger-id" class="gd-input" placeholder="optional correlation" /></div>
+        </div>
+      </details>
+      <div class="gd-field" style="max-width:none"><label for="gw-draft-notes">Notes for maintainers</label><textarea id="gw-draft-notes" class="gd-input" rows="3" placeholder="What should change and why?"></textarea></div>
+      <p id="gw-readiness-note" class="gd-muted" style="font-size:11px;"></p>
+      <div class="gd-actions">
+        <button type="button" class="gd-btn gd-primary" id="gw-draft-preview">Preview draft impact</button>
+        <button type="button" class="gd-btn" id="gw-draft-reset">Reset wizard</button>
+        <button type="button" class="gd-btn" disabled id="gw-copy-draft-json">Copy draft JSON</button>
+      </div>
     </div>
   </section>
   <div id="guidance-summary-root">
