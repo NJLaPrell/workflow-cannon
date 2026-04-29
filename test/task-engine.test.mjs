@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
 
+import { prepareKitSqliteDatabase } from "../dist/core/state/workspace-kit-sqlite.js";
 import {
   TaskStore,
   SqliteDualPlanningStore,
@@ -3109,7 +3110,7 @@ test("task-persistence-readiness reports explicit empty store state", async () =
   assert.equal(result.data.summary.errorCount, 0);
 });
 
-test("task-persistence-readiness flags invalid relational task rows", async () => {
+test("relational task_engine_tasks SQLite CHECK rejects invalid status (T996)", async () => {
   const workspace = await tmpDir();
   await seedSqliteStore(workspace, (store) => {
     store.addTask(makeTask({ id: "T800", status: "ready" }));
@@ -3122,19 +3123,22 @@ test("task-persistence-readiness flags invalid relational task rows", async () =
   const dbPath = path.join(workspace, ".workspace-kit", "tasks", "workspace-kit.db");
   const db = new Database(dbPath);
   try {
-    db.prepare("UPDATE task_engine_tasks SET status = ? WHERE id = ?").run("nonsense", "T800");
+    prepareKitSqliteDatabase(db);
+    const report = buildTaskPersistenceReadinessReport({
+      workspacePath: workspace,
+      effectiveConfig: sqliteTaskEngineCtx(workspace).effectiveConfig
+    });
+    assert.equal(report.ready, true);
+
+    assert.throws(
+      () => {
+        db.prepare("UPDATE task_engine_tasks SET status = ? WHERE id = ?").run("nonsense", "T800");
+      },
+      (err) => err instanceof Error && err.code === "SQLITE_CONSTRAINT_CHECK"
+    );
   } finally {
     db.close();
   }
-
-  const report = buildTaskPersistenceReadinessReport({
-    workspacePath: workspace,
-    effectiveConfig: sqliteTaskEngineCtx(workspace).effectiveConfig
-  });
-
-  assert.equal(report.ready, false);
-  assert.ok(report.checks.some((c) => c.code === "task-shape-invalid" && c.sampleTaskIds.includes("T800")));
-  assert.ok(report.checks.some((c) => c.code === "task-status-invalid" && c.sampleTaskIds.includes("T800")));
 });
 
 test("migrate-task-persistence sqlite-blob-to-relational round-trips tasks and logs", async () => {

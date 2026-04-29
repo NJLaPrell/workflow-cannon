@@ -35,3 +35,5 @@ Do **not** add a second ad-hoc migration runner for the same files. If a new SQL
 Reconciles Phase 39 **T527** and Phase 41 **T541** with a single documented story; future DDL extends **`migrateKitSqliteSchema`** only.
 
 **v3 (Phase 44):** `workspace_planning_state.planning_generation` — optimistic concurrency counter; see **`docs/maintainers/adrs/ADR-planning-generation-optimistic-concurrency.md`**.
+
+**v18 (Phase 75 / T996):** rebuild `task_engine_tasks` with **`CHECK`** constraints on `status`, `priority`, and `archived`; add FK wiring on `kit_team_assignments`, `kit_subagent_sessions`, and `kit_task_checkpoints` (invalid optional task refs are nulled for sessions/checkpoints; team orphan rows fail the migration).

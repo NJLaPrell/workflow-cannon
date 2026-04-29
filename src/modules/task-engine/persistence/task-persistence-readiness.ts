@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
-import { TASK_ENGINE_TASKS_TABLE } from "../../../core/state/workspace-kit-sqlite.js";
+import { TASK_ENGINE_TASKS_TABLE, TASK_ENGINE_TRANSITION_LOG_TABLE, TASK_ENGINE_MUTATION_LOG_TABLE } from "../../../core/state/workspace-kit-sqlite.js";
 import { planningSqliteDatabaseRelativePath } from "../planning-config.js";
 import type { TaskEntity, TaskMutationEvidence, TransitionEvidence } from "../types.js";
 import { validateTaskEntityForStrictMode } from "../strict-task-validation.js";
@@ -75,6 +75,150 @@ function parseJsonArray(value: string, code: string, label: string): unknown[] {
     throw new Error(`${code}: ${label} must be a JSON array`);
   }
   return parsed;
+}
+
+function collectSqliteKitTaskLinkIntegrityChecks(db: SqliteDb, taskTable: string): TaskPersistenceReadinessCheck[] {
+  const out: TaskPersistenceReadinessCheck[] = [];
+  const tablePresent = (name: string): boolean =>
+    Boolean(
+      db.prepare("SELECT 1 AS ok FROM sqlite_master WHERE type = 'table' AND name = ?").get(name) as
+        | { ok: number }
+        | undefined
+    );
+
+  if (tablePresent("kit_team_assignments")) {
+    const rows = db
+      .prepare(
+        `SELECT ta.id AS linkId FROM kit_team_assignments ta
+         LEFT JOIN ${taskTable} t ON t.id = ta.execution_task_id
+         WHERE t.id IS NULL LIMIT 11`
+      )
+      .all() as Array<{ linkId: string }>;
+    out.push(
+      rows.length > 0
+        ? check({
+            code: "kit-team-assignment-orphan-execution-task",
+            severity: "error",
+            message: "kit_team_assignments.execution_task_id references missing task_engine_tasks rows.",
+            affectedCount: rows.length,
+            sampleTaskIds: rows.map((r) => r.linkId),
+            remediation:
+              "Delete stray assignments or restore missing tasks before applying kit SQLite user_version 18+ migrations."
+          })
+        : check({
+            code: "kit-team-assignments-task-refs-ok",
+            severity: "ok",
+            message: "Team assignment execution_task_id values reference existing tasks."
+          })
+    );
+  }
+
+  if (tablePresent("kit_subagent_sessions")) {
+    const rows = db
+      .prepare(
+        `SELECT id FROM kit_subagent_sessions
+         WHERE execution_task_id IS NOT NULL
+           AND execution_task_id NOT IN (SELECT id FROM ${taskTable})
+         LIMIT 11`
+      )
+      .all() as Array<{ id: string }>;
+    out.push(
+      rows.length > 0
+        ? check({
+            code: "kit-subagent-session-stale-execution-task",
+            severity: "warning",
+            message: "Some subagent sessions reference execution_task_id values absent from task_engine_tasks.",
+            affectedCount: rows.length,
+            sampleTaskIds: rows.map((r) => r.id),
+            remediation: "Clear stale execution_task_id values or open the workspace once to run v18 migration (SET NULL on invalid refs)."
+          })
+        : check({
+            code: "kit-subagent-sessions-task-refs-ok",
+            severity: "ok",
+            message: "Subagent sessions only reference execution tasks that exist (or NULL)."
+          })
+    );
+  }
+
+  if (tablePresent("kit_task_checkpoints")) {
+    const rows = db
+      .prepare(
+        `SELECT id FROM kit_task_checkpoints
+         WHERE task_id IS NOT NULL AND task_id NOT IN (SELECT id FROM ${taskTable})
+         LIMIT 11`
+      )
+      .all() as Array<{ id: string }>;
+    out.push(
+      rows.length > 0
+        ? check({
+            code: "kit-task-checkpoint-stale-task",
+            severity: "warning",
+            message: "Some git checkpoints reference task_id values absent from task_engine_tasks.",
+            affectedCount: rows.length,
+            sampleTaskIds: rows.map((r) => r.id),
+            remediation: "Backfill tasks or clear stale task_id on checkpoints before relying on FK-clean v18+ schema."
+          })
+        : check({
+            code: "kit-task-checkpoints-task-refs-ok",
+            severity: "ok",
+            message: "Task checkpoints only reference existing tasks (or NULL)."
+          })
+    );
+  }
+
+  if (tablePresent(TASK_ENGINE_TRANSITION_LOG_TABLE)) {
+    const row = db
+      .prepare(
+        `SELECT COUNT(*) AS c FROM ${TASK_ENGINE_TRANSITION_LOG_TABLE} tl
+         WHERE NOT EXISTS (SELECT 1 FROM ${taskTable} t WHERE t.id = tl.task_id)`
+      )
+      .get() as { c: number };
+    const c = Number(row?.c) || 0;
+    out.push(
+      c > 0
+        ? check({
+            code: "task-transition-log-orphan-task-ids",
+            severity: "warning",
+            message:
+              "Transition log rows reference task_id values not present in task_engine_tasks (historical or corrupt).",
+            affectedCount: c,
+            remediation:
+              "SQLite does not FK-bind evidence tables; inspect get-task-history for these ids or repair rows if corrupt."
+          })
+        : check({
+            code: "task-transition-log-task-refs-ok",
+            severity: "ok",
+            message: "Transition log task_id values match relational tasks (or log empty)."
+          })
+    );
+  }
+
+  if (tablePresent(TASK_ENGINE_MUTATION_LOG_TABLE)) {
+    const row = db
+      .prepare(
+        `SELECT COUNT(*) AS c FROM ${TASK_ENGINE_MUTATION_LOG_TABLE} ml
+         WHERE NOT EXISTS (SELECT 1 FROM ${taskTable} t WHERE t.id = ml.task_id)`
+      )
+      .get() as { c: number };
+    const c = Number(row?.c) || 0;
+    out.push(
+      c > 0
+        ? check({
+            code: "task-mutation-log-orphan-task-ids",
+            severity: "warning",
+            message: "Mutation log rows reference task_id values not present in task_engine_tasks.",
+            affectedCount: c,
+            remediation: "Treat as historical evidence; repair only if rows are clearly corrupt."
+          })
+        : check({
+            code: "task-mutation-log-task-refs-ok",
+            severity: "ok",
+            message: "Mutation log task_id values match relational tasks (or log empty)."
+          })
+    );
+  }
+
+  return out;
 }
 
 function collectTaskShapeChecks(tasks: TaskEntity[]): TaskPersistenceReadinessCheck[] {
@@ -406,6 +550,7 @@ export function buildTaskPersistenceReadinessReport(args: {
 
     const taskTableCols = columnNames(db, TASK_ENGINE_TASKS_TABLE);
     if (taskTableCols.size > 0) {
+      checks.push(...collectSqliteKitTaskLinkIntegrityChecks(db, TASK_ENGINE_TASKS_TABLE));
       try {
         const rows = db.prepare(`SELECT * FROM ${TASK_ENGINE_TASKS_TABLE}`).all() as TaskEngineTaskRow[];
         const relationalTasksRows = rows.map((taskRow) => rowToTaskEntity(taskRow));
