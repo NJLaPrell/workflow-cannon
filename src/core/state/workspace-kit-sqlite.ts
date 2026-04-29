@@ -4,7 +4,7 @@ import { seedFeatureRegistryIfEmpty } from "./feature-registry-migration.js";
 type SqliteDatabase = InstanceType<typeof Database>;
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 16;
+export const KIT_SQLITE_USER_VERSION = 17;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 export const TASK_ENGINE_DEPENDENCIES_TABLE = "task_engine_dependencies";
@@ -535,6 +535,39 @@ function migrateV15ToV16(db: SqliteDatabase): void {
   }
 }
 
+function migrateV16ToV17(db: SqliteDatabase): void {
+  if (!tableExists(db, TASK_ENGINE_TASKS_TABLE)) {
+    return;
+  }
+  const t = TASK_ENGINE_TASKS_TABLE;
+  const cols = columnNames(db, t);
+  if (!cols.has("routing_category")) {
+    db.exec(`ALTER TABLE ${t} ADD COLUMN routing_category TEXT`);
+  }
+  if (!cols.has("routing_confidence_tier")) {
+    db.exec(`ALTER TABLE ${t} ADD COLUMN routing_confidence_tier TEXT`);
+  }
+  if (!cols.has("routing_blocked_reason_category")) {
+    db.exec(`ALTER TABLE ${t} ADD COLUMN routing_blocked_reason_category TEXT`);
+  }
+  if (!cols.has("routing_tags_json")) {
+    db.exec(`ALTER TABLE ${t} ADD COLUMN routing_tags_json TEXT`);
+  }
+  db.exec(`
+    UPDATE ${t} SET
+      routing_category = COALESCE(routing_category, json_extract(metadata_json, '$.category')),
+      routing_confidence_tier = COALESCE(routing_confidence_tier, json_extract(metadata_json, '$.confidenceTier')),
+      routing_blocked_reason_category = COALESCE(routing_blocked_reason_category, json_extract(metadata_json, '$.blockedReasonCategory')),
+      routing_tags_json = COALESCE(routing_tags_json, json_extract(metadata_json, '$.tags'))
+    WHERE metadata_json IS NOT NULL
+      AND trim(metadata_json) != ''
+      AND metadata_json != 'null'
+  `);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_task_engine_tasks_routing_category ON ${t}(routing_category)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_task_engine_tasks_routing_confidence ON ${t}(routing_confidence_tier)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_task_engine_tasks_routing_blocked ON ${t}(routing_blocked_reason_category)`);
+}
+
 /**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
@@ -631,6 +664,11 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
     migrateV15ToV16(db);
     db.pragma("user_version = 16");
     current = 16;
+  }
+  if (current < 17) {
+    migrateV16ToV17(db);
+    db.pragma("user_version = 17");
+    current = 17;
   }
 }
 

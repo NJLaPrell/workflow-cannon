@@ -47,7 +47,11 @@ function sampleTask(overrides = {}) {
       queueNamespace: "default",
       features: [],
       source: "chat-schema-agent-db-upgrade-2026-04-28",
-      hasModuleMetadata: true
+      hasModuleMetadata: true,
+      category: null,
+      tags: [],
+      confidenceTier: null,
+      blockedReasonCategory: null
     },
     dependencies: {
       dependsOn: [],

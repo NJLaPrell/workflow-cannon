@@ -1,5 +1,6 @@
 import type { TaskStoreDocument } from "../types.js";
 import { TaskEngineError } from "../transitions.js";
+import { attachAgentRoutingToTasks } from "../agent-task-routing-projection.js";
 
 /** Schema versions accepted on read; normalized to canonical `schemaVersion: 1` in memory and on save (today). */
 export function isSupportedReadTaskStoreSchemaVersion(v: unknown): boolean {
@@ -34,7 +35,7 @@ export function normalizeTaskStoreDocumentFromUnknown(parsed: unknown): TaskStor
   const mutationLog = Array.isArray(o.mutationLog) ? o.mutationLog : [];
   return {
     schemaVersion: 1,
-    tasks: o.tasks as TaskStoreDocument["tasks"],
+    tasks: attachAgentRoutingToTasks(o.tasks as TaskStoreDocument["tasks"]),
     transitionLog: o.transitionLog as TaskStoreDocument["transitionLog"],
     mutationLog: mutationLog as TaskStoreDocument["mutationLog"],
     lastUpdated: o.lastUpdated as string

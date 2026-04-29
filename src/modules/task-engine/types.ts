@@ -1,3 +1,5 @@
+import type { AgentTaskRoutingMetadata } from "../../contracts/agent-task-read-contract.js";
+
 export type TaskStatus =
   | "research"
   | "proposed"
@@ -37,6 +39,8 @@ export type TaskEntity = {
   acceptanceCriteria?: string[];
   /** Optional feature taxonomy slugs; persisted in `task_engine_task_features` when registry active (`user_version` 5+). */
   features?: string[];
+  /** Stable routing projection for agent CLI JSON (omit when persisting — use `metadata` + relational columns). */
+  agentRouting?: AgentTaskRoutingMetadata;
 };
 
 export type GuardResult = {

@@ -48,14 +48,28 @@
     },
     "agentTaskRoutingMetadata": {
       "type": "object",
-      "required": ["ownership", "queueNamespace", "features", "source", "hasModuleMetadata"],
+      "required": [
+        "ownership",
+        "queueNamespace",
+        "features",
+        "source",
+        "hasModuleMetadata",
+        "category",
+        "tags",
+        "confidenceTier",
+        "blockedReasonCategory"
+      ],
       "additionalProperties": false,
       "properties": {
         "ownership": { "$ref": "#/$defs/nullableString" },
         "queueNamespace": { "type": "string", "minLength": 1 },
         "features": { "$ref": "#/$defs/stringArray" },
         "source": { "$ref": "#/$defs/nullableString" },
-        "hasModuleMetadata": { "type": "boolean" }
+        "hasModuleMetadata": { "type": "boolean" },
+        "category": { "$ref": "#/$defs/nullableString" },
+        "tags": { "$ref": "#/$defs/stringArray" },
+        "confidenceTier": { "$ref": "#/$defs/nullableString" },
+        "blockedReasonCategory": { "$ref": "#/$defs/nullableString" }
       }
     },
     "agentTaskDependencyEdge": {

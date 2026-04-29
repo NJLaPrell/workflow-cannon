@@ -1,5 +1,6 @@
 import type { TaskEntity, TaskStoreDocument } from "../types.js";
 import { TaskEngineError } from "../transitions.js";
+import { attachAgentRoutingProjection } from "../agent-task-routing-projection.js";
 
 export type TaskEngineTaskRow = {
   id: string;
@@ -26,6 +27,11 @@ export type TaskEngineTaskRow = {
   evidence_key: string | null;
   evidence_kind: string | null;
   metadata_json: string | null;
+  /** Kit SQLite user_version 17+: promoted list-task filter fields (mirror of metadata keys). */
+  routing_category?: string | null;
+  routing_confidence_tier?: string | null;
+  routing_blocked_reason_category?: string | null;
+  routing_tags_json?: string | null;
   /** Present from kit SQLite user_version 4+ relational rows; absent on pre-migration reads. */
   features_json?: string | null;
 };
@@ -51,6 +57,71 @@ function parseOptionalStringArray(json: string | null, field: string): string[] 
   }
   const arr = parseJsonArray(json, field);
   return arr.length ? arr : undefined;
+}
+
+/** Serialize promoted routing columns from task metadata. */
+function routingColumnsFromMetadata(md: Record<string, unknown> | undefined): Pick<
+  TaskEngineTaskRow,
+  "routing_category" | "routing_confidence_tier" | "routing_blocked_reason_category" | "routing_tags_json"
+> {
+  const category = typeof md?.category === "string" && md.category.length > 0 ? md.category : null;
+  const confidenceTier =
+    typeof md?.confidenceTier === "string" && md.confidenceTier.length > 0 ? md.confidenceTier : null;
+  const blockedReasonCategory =
+    typeof md?.blockedReasonCategory === "string" && md.blockedReasonCategory.length > 0
+      ? md.blockedReasonCategory
+      : null;
+  let routing_tags_json: string | null = null;
+  if (Array.isArray(md?.tags)) {
+    const tags = (md.tags as unknown[]).filter((x): x is string => typeof x === "string" && x.length > 0);
+    if (tags.length > 0) {
+      routing_tags_json = JSON.stringify(tags);
+    }
+  }
+  return {
+    routing_category: category,
+    routing_confidence_tier: confidenceTier,
+    routing_blocked_reason_category: blockedReasonCategory,
+    routing_tags_json
+  };
+}
+
+/** Merge legacy-only column values into metadata when JSON omitted keys (post-promotion backfill). */
+function mergePromotedRoutingIntoMetadata(
+  metadata: Record<string, unknown> | undefined,
+  row: TaskEngineTaskRow
+): Record<string, unknown> | undefined {
+  let md = metadata;
+  const ensure = (): Record<string, unknown> => {
+    if (!md) {
+      md = {};
+    }
+    return md;
+  };
+  if (row.routing_category && (!md || md.category === undefined)) {
+    ensure().category = row.routing_category;
+  }
+  if (row.routing_confidence_tier && (!md || md.confidenceTier === undefined)) {
+    ensure().confidenceTier = row.routing_confidence_tier;
+  }
+  if (row.routing_blocked_reason_category && (!md || md.blockedReasonCategory === undefined)) {
+    ensure().blockedReasonCategory = row.routing_blocked_reason_category;
+  }
+  const rtj = row.routing_tags_json;
+  if (rtj && (!md || md.tags === undefined)) {
+    try {
+      const parsed = JSON.parse(rtj) as unknown;
+      if (Array.isArray(parsed)) {
+        const tags = parsed.filter((x): x is string => typeof x === "string");
+        if (tags.length > 0) {
+          ensure().tags = tags;
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  return md;
 }
 
 export type TaskEntityToRowOptions = {
@@ -89,6 +160,7 @@ export function taskEntityToRow(t: TaskEntity, options?: TaskEntityToRowOptions)
     evidence_key: evidenceKey ?? null,
     evidence_kind: evidenceKind ?? null,
     metadata_json: md ? JSON.stringify(md) : null,
+    ...routingColumnsFromMetadata(md),
     features_json:
       options?.omitFeaturesJson === true ? "[]" : t.features?.length ? JSON.stringify(t.features) : "[]"
   };
@@ -114,6 +186,7 @@ export function rowToTaskEntity(row: TaskEngineTaskRow, options?: RowToTaskEntit
       );
     }
   }
+  metadata = mergePromotedRoutingIntoMetadata(metadata, row);
   let features: string[] | undefined;
   const parseFeaturesJsonColumn = (): string[] => {
     const fj = row.features_json;
@@ -179,7 +252,7 @@ export function rowToTaskEntity(row: TaskEngineTaskRow, options?: RowToTaskEntit
   if (task.unblocks?.length === 0) {
     delete task.unblocks;
   }
-  return task;
+  return attachAgentRoutingProjection(task);
 }
 
 /** Mirror envelope logs into task_store_json for tooling that only reads the blob (relational mode). */

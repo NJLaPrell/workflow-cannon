@@ -13,6 +13,7 @@ import type { TaskMutationEvidence, TaskStoreDocument, TransitionEvidence } from
 import type { WishlistStoreDocument } from "../wishlist/wishlist-types.js";
 import { TaskEngineError } from "../transitions.js";
 import { normalizeTaskStoreDocumentFromUnknown } from "./task-store-migration.js";
+import { stripAgentRoutingFromTask } from "../agent-task-routing-projection.js";
 import {
   relationalBlobMirror,
   rowToTaskEntity,
@@ -560,8 +561,9 @@ export class SqliteDualPlanningStore {
         id, status, type, title, created_at, updated_at, archived, archived_at,
         priority, phase, phase_key, ownership, approach,
         depends_on_json, unblocks_json, technical_scope_json, acceptance_criteria_json,
-        summary, description, risk, queue_namespace, evidence_key, evidence_kind, metadata_json, features_json
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        summary, description, risk, queue_namespace, evidence_key, evidence_kind, metadata_json, features_json,
+        routing_category, routing_confidence_tier, routing_blocked_reason_category, routing_tags_json
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `;
     const insert = db.prepare(insertSql);
     const registry = featureRegistryActiveOnConnection(db);
@@ -597,7 +599,11 @@ export class SqliteDualPlanningStore {
         r.evidence_key,
         r.evidence_kind,
         r.metadata_json,
-        r.features_json ?? "[]"
+        r.features_json ?? "[]",
+        r.routing_category ?? null,
+        r.routing_confidence_tier ?? null,
+        r.routing_blocked_reason_category ?? null,
+        r.routing_tags_json ?? null
       );
     }
     if (dependencyTableAvailable(db)) {
@@ -685,7 +691,11 @@ export class SqliteDualPlanningStore {
   }
 
   private persistBlobOnly(db: Database.Database, nextPlanningGeneration: number): void {
-    const t = JSON.stringify(this._taskDoc);
+    const docForBlob = {
+      ...this._taskDoc,
+      tasks: this._taskDoc.tasks.map((x) => stripAgentRoutingFromTask(x))
+    };
+    const t = JSON.stringify(docForBlob);
     if (this._tableShape === "legacy-dual") {
       const w = JSON.stringify(this._wishlistDoc);
       const exists = db.prepare("SELECT 1 AS ok FROM workspace_planning_state WHERE id = 1").get() as
