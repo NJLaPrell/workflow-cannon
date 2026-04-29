@@ -119,8 +119,9 @@ test("cae-dashboard-summary exposes additive Guidance product model", async () =
   assert.ok(r.data.guidanceProduct.intents.workflows.some((row) => row.name === "get-next-actions"));
   assert.deepEqual(r.data.guidanceProduct.mutationCapability, {
     adminMutations: false,
+    registryStore: "json",
     canMutate: false,
-    denialReason: "Guidance admin mutations are disabled by config.",
+    denialReason: "Guidance registry mutations require SQLite registry store (`kit.cae.registryStore`).",
     approvalModel: {
       caeMutationApprovalRequired: true,
       policyApprovalSeparate: true
@@ -141,4 +142,59 @@ test("cae-dashboard-summary exposes additive Guidance product model", async () =
   assert.ok(row.mutation);
   assert.ok(typeof row.debug.activationId === "string");
   assert.ok(Array.isArray(row.debug.artifactIds));
+});
+
+test("cae-dashboard-summary mutationCapability: sqlite store + admin off denies mutations", async () => {
+  const ws = await workspaceWithJsonRegistry();
+  const r = await runCae(
+    ws,
+    "cae-dashboard-summary",
+    { schemaVersion: 1 },
+    {
+      kit: { cae: { enabled: true, persistence: true, registryStore: "sqlite", adminMutations: false } },
+      tasks: { sqliteDatabaseRelativePath: ".workspace-kit/tasks/workspace-kit.db" }
+    }
+  );
+  assert.equal(r.ok, true);
+  assert.equal(r.data.guidanceProduct.mutationCapability.registryStore, "sqlite");
+  assert.equal(r.data.guidanceProduct.mutationCapability.canMutate, false);
+  assert.match(
+    String(r.data.guidanceProduct.mutationCapability.denialReason),
+    /adminMutations/
+  );
+});
+
+test("cae-dashboard-summary mutationCapability: sqlite store + admin on allows mutations", async () => {
+  const ws = await workspaceWithJsonRegistry();
+  const r = await runCae(
+    ws,
+    "cae-dashboard-summary",
+    { schemaVersion: 1 },
+    {
+      kit: { cae: { enabled: true, persistence: true, registryStore: "sqlite", adminMutations: true } },
+      tasks: { sqliteDatabaseRelativePath: ".workspace-kit/tasks/workspace-kit.db" }
+    }
+  );
+  assert.equal(r.ok, true);
+  assert.equal(r.data.guidanceProduct.mutationCapability.canMutate, true);
+  assert.equal(r.data.guidanceProduct.mutationCapability.denialReason, null);
+});
+
+test("cae-dashboard-summary mutationCapability: json store blocks even when admin on", async () => {
+  const ws = await workspaceWithJsonRegistry();
+  const r = await runCae(
+    ws,
+    "cae-dashboard-summary",
+    { schemaVersion: 1 },
+    {
+      kit: { cae: { enabled: true, persistence: true, registryStore: "json", adminMutations: true } },
+      tasks: { sqliteDatabaseRelativePath: ".workspace-kit/tasks/workspace-kit.db" }
+    }
+  );
+  assert.equal(r.ok, true);
+  assert.equal(r.data.guidanceProduct.mutationCapability.canMutate, false);
+  assert.match(
+    String(r.data.guidanceProduct.mutationCapability.denialReason),
+    /sqlite|registry store/i
+  );
 });

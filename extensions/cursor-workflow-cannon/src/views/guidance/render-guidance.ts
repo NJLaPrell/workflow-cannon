@@ -37,6 +37,30 @@ function shortTraceId(traceId: string): string {
   return `${traceId.slice(0, 12)}...${traceId.slice(-6)}`;
 }
 
+function mutationFailureRemediation(code: unknown): string | null {
+  const c = String(code ?? "");
+  switch (c) {
+    case "cae-mutation-disabled":
+      return "Turn on Guidance: set kit.cae.enabled to true, then reload this view.";
+    case "cae-mutation-json-store":
+      return "Use SQLite for the registry: set kit.cae.registryStore to \"sqlite\", then reload (JSON is bootstrap/read-only for mutations).";
+    case "cae-mutation-admin-off":
+      return "Enable kit.cae.adminMutations for this workspace, then reload.";
+    case "cae-mutation-approval-missing":
+      return "Approve via caeMutationApproval in the CAE command — this is not Tier A/B policyApproval on workspace-kit run. If the UI sent a bad payload, file a bug.";
+    case "invalid-args":
+      return "Often a missing actor or invalid field — set WORKSPACE_KIT_ACTOR / Git identity, fix inputs, retry.";
+    case "cae-registry-version-not-found":
+      return "That version id is not in the SQLite registry — reload, pick a listed version, or clone from active.";
+    case "cae-rollback-impossible":
+      return "No older version exists — create a draft or import before rolling back.";
+    case "cae-registry-sqlite-no-active-version":
+      return "No active guidance set — run cae-registry-validate / fix health before version actions.";
+    default:
+      return null;
+  }
+}
+
 function commandLabel(value: unknown): string {
   const commandName = String(value ?? "").trim();
   if (!commandName) return "Guidance check";
@@ -224,11 +248,18 @@ function renderManageGuidance(data: UnknownRecord): string {
   const versions = asArray(versionsData.versions).map(asRecord);
   const active = versions.find((row) => row.isActive === true);
   const mutationCapability = asRecord(product.mutationCapability);
-  const caeConfig = asRecord(data.caeConfig);
   const library = asRecord(product.library ?? data.library);
   const artifactIds = asArray(asRecord(library.artifacts).artifactIds).map(String);
   const activationIds = asArray(asRecord(library.activations).activationIds).map(String);
-  const adminOn = mutationCapability.canMutate === true || caeConfig.adminMutations === true;
+  const canMutate = mutationCapability.canMutate === true;
+  const denial =
+    typeof mutationCapability.denialReason === "string"
+      ? mutationCapability.denialReason
+      : "Admin updates are not available. Inspect guidance and use draft preview / copy JSON for handoff.";
+  const registryStore = String(mutationCapability.registryStore ?? productRegistry.store ?? health.registryStore ?? "sqlite");
+  const mutDisabledAttrs = canMutate
+    ? ""
+    : ` disabled title="${escapeHtmlAttr(denial)}"`;
   const activeVersionId = String(active?.versionId ?? productRegistry.activeVersionId ?? health.activeRegistryVersionId ?? "n/a");
   const sourceCount = productRegistry.artifactCount ?? health.artifactCount ?? artifactIds.length ?? 0;
   const triggerCount = productRegistry.activationCount ?? health.activationCount ?? activationIds.length ?? 0;
@@ -240,18 +271,19 @@ function renderManageGuidance(data: UnknownRecord): string {
   <p class="gd-muted">Guidance is made from sources plus triggers. Checking guidance is read-only; changing the active guidance set is versioned and audited.</p>
   <dl class="gd-meta">
     <div><dt>Active guidance set</dt><dd><code>${escapeHtml(activeVersionId)}</code></dd></div>
+    <div><dt>Registry backend</dt><dd><code>${escapeHtml(registryStore)}</code></dd></div>
     <div><dt>Sources</dt><dd>${escapeHtml(String(sourceCount))}</dd></div>
     <div><dt>Triggers</dt><dd>${escapeHtml(String(triggerCount))}</dd></div>
-    <div><dt>Admin updates</dt><dd>${adminOn ? "available" : "read-only"}</dd></div>
+    <div><dt>Versioned mutations</dt><dd>${canMutate ? "allowed" : "blocked"}</dd></div>
   </dl>
   ${
-    adminOn
-      ? '<p class="gd-muted">Updates require an actor, rationale, and <code>caeMutationApproval</code>. Policy approval is a separate lane.</p>'
-      : `<p class="gd-muted">${escapeHtml(String(mutationCapability.denialReason ?? "Admin updates are currently off. You can inspect guidance and prepare draft context, but live CAE mutations stay disabled."))}</p>`
+    canMutate
+      ? '<p class="gd-muted">Confirm in the editor before running a mutation. You must supply <code>actor</code>, rationale, and <code>caeMutationApproval</code>. That approval is <strong>only</strong> for CAE registry commands — it is <strong>not</strong> Tier A/B <code>policyApproval</code> on other kit runs.</p>'
+      : `<p class="gd-muted">${escapeHtml(denial)}</p><p class="gd-muted">When versioned mutations are enabled, the extension uses <code>caeMutationApproval</code> in CAE commands — separate from Tier A/B <code>policyApproval</code> on <code>run</code> / <code>run-transition</code>.</p>`
   }
   <div class="gd-actions">
-    <button type="button" class="gd-btn" data-wc-action="guidance-version-clone" data-version-id="${escapeHtmlAttr(activeVersionId)}">Create draft from active set</button>
-    <button type="button" class="gd-btn" data-wc-action="guidance-version-rollback">Roll back to previous set</button>
+    <button type="button" class="gd-btn"${mutDisabledAttrs} data-wc-action="guidance-version-clone" data-version-id="${escapeHtmlAttr(activeVersionId)}">Create draft from active set</button>
+    <button type="button" class="gd-btn"${mutDisabledAttrs} data-wc-action="guidance-version-rollback">Roll back to previous set</button>
   </div>
   <details>
     <summary>Guidance Library</summary>
@@ -279,7 +311,7 @@ function renderManageGuidance(data: UnknownRecord): string {
   ${
     row.isActive === true
       ? '<span class="gd-pill">Active</span>'
-      : `<button type="button" class="gd-btn" data-wc-action="guidance-version-activate" data-version-id="${escapeHtmlAttr(versionId)}">Activate</button>`
+      : `<button type="button" class="gd-btn"${mutDisabledAttrs} data-wc-action="guidance-version-activate" data-version-id="${escapeHtmlAttr(versionId)}">Activate</button>`
   }
 </div>`;
               })
@@ -631,20 +663,53 @@ export function renderGuidanceActionResultInnerHtml(payload: unknown): string {
   const root = asRecord(payload);
   const action = String(root.action ?? "Guidance action");
   const result = asRecord(root.result);
+  const ctx = root.mutationContext && typeof root.mutationContext === "object" ? asRecord(root.mutationContext) : null;
   const ok = result.ok !== false;
   const title = ok ? `${action} recorded` : `${action} failed`;
+  const code = result.code;
+  const msg = String(result.message ?? result.code ?? (ok ? "The Guidance action completed." : "The Guidance action did not complete."));
+  const remed = !ok ? mutationFailureRemediation(code) : null;
+  const data = result.data && typeof result.data === "object" ? asRecord(result.data) : null;
+  let auditBlock = "";
+  if (ok && ctx?.kind === "registry-mutation" && data) {
+    const cmd = typeof ctx.commandName === "string" ? ctx.commandName : "";
+    const actor = typeof ctx.actor === "string" ? ctx.actor : "";
+    const vid =
+      typeof data.versionId === "string"
+        ? data.versionId
+        : typeof data.toVersionId === "string"
+          ? data.toVersionId
+          : typeof data.activatedVersionId === "string"
+            ? data.activatedVersionId
+            : "";
+    const fromV = typeof data.fromVersionId === "string" ? data.fromVersionId : "";
+    const verifyCmd = `pnpm exec wk run cae-dashboard-summary '{"schemaVersion":1}'`;
+    auditBlock = `<div class="gd-card" style="margin-top:8px;padding:8px;border:1px dashed var(--vscode-widget-border)">
+  <h3 style="margin:0 0 6px;font-size:12px">Audit trail (local)</h3>
+  <dl class="gd-meta">
+    <div><dt>Kit command</dt><dd><code>${escapeHtml(cmd)}</code></dd></div>
+    ${actor ? `<div><dt>Actor</dt><dd><code>${escapeHtml(actor)}</code></dd></div>` : ""}
+    ${vid ? `<div><dt>Version</dt><dd><code>${escapeHtml(vid)}</code></dd></div>` : ""}
+    ${fromV ? `<div><dt>Cloned from</dt><dd><code>${escapeHtml(fromV)}</code></dd></div>` : ""}
+    <div><dt>Verify</dt><dd><code>${escapeHtml(verifyCmd)}</code></dd></div>
+  </dl>
+  <p class="gd-muted" style="margin:6px 0 0">Timestamp and audit row id are stored in workspace SQLite (<code>cae_registry_mutation_audit</code>) when mutations succeed.</p>
+</div>`;
+  }
   return `<section class="gd-card ${ok ? "" : "gd-danger"}">
   <div class="gd-card-head">
     <h2>${escapeHtml(title)}</h2>
     <span class="${statusClass(ok)}">${ok ? "Done" : "Needs attention"}</span>
   </div>
-  <p>${escapeHtml(String(result.message ?? result.code ?? (ok ? "The Guidance action completed." : "The Guidance action did not complete.")))}</p>
-  ${ok && action.toLowerCase().includes("noisy") ? '<p class="gd-muted">Next step: use “Improve this guidance” to create a draft update from the noisy item.</p>' : ""}
+  <p>${escapeHtml(msg)}</p>
   ${
-    result.code
-      ? `<p class="gd-muted">Result code: <code>${escapeHtml(String(result.code))}</code></p>`
+    remed
+      ? `<div class="gd-warn-card" style="padding:8px;margin:8px 0;border-radius:3px"><strong>What to do:</strong> ${escapeHtml(remed)}</div>`
       : ""
   }
+  ${ok && action.toLowerCase().includes("noisy") ? '<p class="gd-muted">Next step: use “Improve this guidance” to create a draft update from the noisy item.</p>' : ""}
+  ${result.code ? `<p class="gd-muted">Result code: <code>${escapeHtml(String(result.code))}</code></p>` : ""}
+  ${auditBlock}
   ${renderRawDetails("Raw action result JSON", result, 12000)}
 </section>`;
 }

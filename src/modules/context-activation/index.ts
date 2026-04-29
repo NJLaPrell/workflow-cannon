@@ -40,7 +40,10 @@ import {
   storeCaeSession,
   type CaeSessionRecord
 } from "./trace-store.js";
-import { buildGuidanceRulesCatalogEnvelope } from "./guidance-rules-catalog.js";
+import {
+  buildGuidanceRulesCatalogEnvelope,
+  deriveGuidanceRegistryMutationCapability
+} from "./guidance-rules-catalog.js";
 import {
   buildGuidanceDraftImpactMatrix,
   buildPreviewEvaluationContext,
@@ -507,6 +510,11 @@ function buildGuidanceProductModel(
     }
   }
   const registryStoreRaw = health.registryStore ?? getAtPath(effective, "kit.cae.registryStore");
+  const registryStoreNormalized = typeof registryStoreRaw === "string" ? registryStoreRaw : "sqlite";
+  const mutationGates = deriveGuidanceRegistryMutationCapability({
+    registryStore: registryStoreNormalized,
+    adminMutations
+  });
   const rulesCatalog = buildGuidanceRulesCatalogEnvelope({
     loadedOk: loaded.ok,
     loaded: loaded.ok ? loaded.reg : null,
@@ -535,8 +543,9 @@ function buildGuidanceProductModel(
     versions,
     mutationCapability: {
       adminMutations,
-      canMutate: adminMutations,
-      denialReason: adminMutations ? null : "Guidance admin mutations are disabled by config.",
+      registryStore: registryStoreNormalized,
+      canMutate: mutationGates.canMutate,
+      denialReason: mutationGates.denialReason,
       approvalModel: {
         caeMutationApprovalRequired: true,
         policyApprovalSeparate: true

@@ -131,27 +131,42 @@ function lifecycleLabel(ls: GuidanceRuleCatalogItem["lifecycleState"]): string {
   }
 }
 
-function deriveMutationHints(input: {
-  adminMutations: boolean;
+/** Workspace-level gates for versioned registry mutations (Dashboard / extension). */
+export function deriveGuidanceRegistryMutationCapability(input: {
   registryStore: string;
-  lifecycleState: GuidanceRuleCatalogItem["lifecycleState"];
-}): GuidanceRuleMutationHints {
+  adminMutations: boolean;
+}): { canMutate: boolean; denialReason: string | null } {
   if (input.registryStore !== "sqlite") {
     return {
-      canClone: false,
-      canActivate: false,
-      canEditDraft: false,
-      canRetire: false,
+      canMutate: false,
       denialReason: "Guidance registry mutations require SQLite registry store (`kit.cae.registryStore`)."
     };
   }
   if (!input.adminMutations) {
     return {
+      canMutate: false,
+      denialReason: "Guidance admin mutations are disabled (`kit.cae.adminMutations`)."
+    };
+  }
+  return { canMutate: true, denialReason: null };
+}
+
+function deriveMutationHints(input: {
+  adminMutations: boolean;
+  registryStore: string;
+  lifecycleState: GuidanceRuleCatalogItem["lifecycleState"];
+}): GuidanceRuleMutationHints {
+  const coarse = deriveGuidanceRegistryMutationCapability({
+    registryStore: input.registryStore,
+    adminMutations: input.adminMutations
+  });
+  if (!coarse.canMutate) {
+    return {
       canClone: false,
       canActivate: false,
       canEditDraft: false,
       canRetire: false,
-      denialReason: "Guidance admin mutations are disabled (`kit.cae.adminMutations`)."
+      denialReason: coarse.denialReason
     };
   }
 

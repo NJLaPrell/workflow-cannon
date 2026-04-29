@@ -125,8 +125,9 @@ test("renderGuidanceSummaryInnerHtml renders grouped recent activity and manage 
           activations: { activationIds: ["cae.activation.one"] }
         },
         mutationCapability: {
+          registryStore: "sqlite",
           canMutate: false,
-          denialReason: "Guidance admin mutations are disabled by config."
+          denialReason: "Guidance admin mutations are disabled (`kit.cae.adminMutations`)."
         }
       },
       caeConfig: { adminMutations: false }
@@ -138,7 +139,10 @@ test("renderGuidanceSummaryInnerHtml renders grouped recent activity and manage 
   assert.match(html, /Review why/);
   assert.match(html, /Manage Guidance/);
   assert.match(html, /Guidance Library/);
-  assert.match(html, /Guidance admin mutations are disabled by config/);
+  assert.match(html, /Guidance admin mutations are disabled/);
+  assert.match(html, /Registry backend/);
+  assert.match(html, /disabled/);
+  assert.match(html, /policyApproval/);
   assert.match(html, /Debug details JSON/);
   assert.match(html, /data-wc-action="guidance-copy-block"/);
 });
@@ -266,6 +270,79 @@ test("renderGuidanceActionResultInnerHtml renders friendly success and raw detai
   assert.match(html, /Useful feedback recorded/);
   assert.match(html, /Recorded feedback/);
   assert.match(html, /Raw action result JSON/);
+});
+
+test("renderManageGuidance leaves mutation controls enabled when canMutate", () => {
+  const html = renderGuidanceSummaryInnerHtml({
+    ok: true,
+    data: {
+      schemaVersion: 1,
+      health: {
+        caeEnabled: true,
+        persistenceEnabled: true,
+        registryStatus: "ok",
+        activeRegistryVersionId: "v1",
+        issues: [],
+        traceRowCount: 0
+      },
+      validation: { ok: true, code: "cae-registry-validate-ok" },
+      recentTraces: { available: true, count: 0, rows: [] },
+      acknowledgements: { available: true, count: 0, rows: [] },
+      feedback: { available: true, summary: { total: 0, useful: 0, noisy: 0 }, rows: [] },
+      guidanceProduct: {
+        schemaVersion: 1,
+        registry: {
+          activeVersionId: "cae.reg.active",
+          store: "sqlite",
+          artifactCount: 1,
+          activationCount: 1
+        },
+        versions: { versions: [] },
+        library: { artifacts: { artifactIds: [] }, activations: { activationIds: [] } },
+        mutationCapability: {
+          registryStore: "sqlite",
+          canMutate: true,
+          denialReason: null
+        }
+      }
+    }
+  });
+  assert.doesNotMatch(html, /data-wc-action="guidance-version-clone"[^>]*disabled/);
+});
+
+test("renderGuidanceActionResultInnerHtml surfaces mutation remediation before raw JSON", () => {
+  const html = renderGuidanceActionResultInnerHtml({
+    action: "Guidance set activate",
+    result: {
+      ok: false,
+      code: "cae-mutation-approval-missing",
+      message: "Pass caeMutationApproval…"
+    }
+  });
+  assert.match(html, /What to do:/);
+  assert.match(html, /caeMutationApproval/);
+  assert.match(html, /Raw action result JSON/);
+});
+
+test("renderGuidanceActionResultInnerHtml shows audit panel on registry mutation success", () => {
+  const html = renderGuidanceActionResultInnerHtml({
+    action: "Guidance set activate",
+    result: {
+      ok: true,
+      code: "cae-activate-registry-version-ok",
+      message: "ok",
+      data: { schemaVersion: 1, versionId: "cae.reg.v2" }
+    },
+    mutationContext: {
+      kind: "registry-mutation",
+      commandName: "cae-activate-registry-version",
+      actor: "operator@example.com"
+    }
+  });
+  assert.match(html, /Audit trail/);
+  assert.match(html, /cae-activate-registry-version/);
+  assert.match(html, /cae\.reg\.v2/);
+  assert.match(html, /cae-dashboard-summary/);
 });
 
 test("renderGuidanceActionResultInnerHtml renders friendly failure", () => {

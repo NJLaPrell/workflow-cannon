@@ -207,6 +207,8 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
 
   private view?: vscode.WebviewView;
   private autoRefreshTimer: ReturnType<typeof setTimeout> | undefined;
+  private guidanceRegistryMutationAllowed = false;
+  private guidanceRegistryMutationDenial: string | null = null;
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -338,8 +340,10 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
         : undefined;
     await webview.postMessage({ type: "setSummary", html: renderGuidanceSummaryInnerHtml(summary) });
     const mut = product ? asRecord(asRecord(product).mutationCapability) : undefined;
-    const canMutate = mut?.canMutate === true;
-    const denialReason = typeof mut?.denialReason === "string" ? mut.denialReason : null;
+    this.guidanceRegistryMutationAllowed = mut?.canMutate === true;
+    this.guidanceRegistryMutationDenial = typeof mut?.denialReason === "string" ? mut.denialReason : null;
+    const canMutate = this.guidanceRegistryMutationAllowed;
+    const denialReason = this.guidanceRegistryMutationDenial;
     await webview.postMessage({ type: "setGovernance", canMutate, denialReason });
     await this.pushChoices(webview, workflowChoicesFromProduct(product), catalogItemsFromProduct(product));
   }
@@ -491,54 +495,118 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async recordVersionAction(webview: vscode.Webview, msg: Record<string, unknown>): Promise<void> {
-    const action = typeof msg.action === "string" ? msg.action : "";
-    const versionId = typeof msg.versionId === "string" ? msg.versionId.trim() : "";
-    const command =
-      action === "activate"
-        ? "cae-activate-registry-version"
-        : action === "rollback"
-          ? "cae-rollback-registry-version"
-          : action === "clone"
-            ? "cae-clone-registry-version"
-            : "";
-    if (!command) return;
-    const actor = (await this.resolveActionActor("Actor for CAE guidance-set update")) ?? "dashboard";
-    const rationale = await vscode.window.showInputBox({
-      prompt: "Rationale for CAE guidance-set update",
-      placeHolder: "Why is this guidance-set change needed?"
-    });
-    if (!rationale || !rationale.trim()) return;
-    const payload: Record<string, unknown> = {
-      schemaVersion: 1,
-      actor,
-      note: rationale.trim(),
-      caeMutationApproval: {
-        confirmed: true,
-        rationale: rationale.trim()
-      }
+    const clearBusy = async (): Promise<void> => {
+      await webview.postMessage({ type: "clearVersionActionBusy" });
     };
-    if (command === "cae-activate-registry-version") {
-      if (!versionId) return;
-      payload.versionId = versionId;
-    }
-    if (command === "cae-clone-registry-version") {
-      if (!versionId || versionId === "n/a") return;
-      const stamp = new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
-      const toVersionId = await vscode.window.showInputBox({
-        prompt: "Draft guidance-set version id",
-        value: `cae.reg.draft.${stamp}`
+    try {
+      const action = typeof msg.action === "string" ? msg.action : "";
+      const versionId = typeof msg.versionId === "string" ? msg.versionId.trim() : "";
+      const command =
+        action === "activate"
+          ? "cae-activate-registry-version"
+          : action === "rollback"
+            ? "cae-rollback-registry-version"
+            : action === "clone"
+              ? "cae-clone-registry-version"
+              : "";
+      if (!command) return;
+
+      if (!this.guidanceRegistryMutationAllowed) {
+        await vscode.window.showWarningMessage(
+          this.guidanceRegistryMutationDenial ??
+            "Guidance registry mutations are blocked for this workspace (check kit.cae.registryStore and kit.cae.adminMutations).",
+          { modal: true }
+        );
+        return;
+      }
+
+      const rationale = await vscode.window.showInputBox({
+        prompt: "Rationale for CAE guidance-set update",
+        placeHolder: "Why is this guidance-set change needed?"
       });
-      if (!toVersionId || !toVersionId.trim()) return;
-      payload.fromVersionId = versionId;
-      payload.toVersionId = toVersionId.trim();
-      payload.setActive = false;
+      if (!rationale || !rationale.trim()) return;
+
+      let toVersionIdForConfirm = "";
+      if (command === "cae-clone-registry-version") {
+        if (!versionId || versionId === "n/a") return;
+        const stamp = new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
+        const entered = await vscode.window.showInputBox({
+          prompt: "Draft guidance-set version id",
+          value: `cae.reg.draft.${stamp}`
+        });
+        if (!entered || !entered.trim()) return;
+        toVersionIdForConfirm = entered.trim();
+      }
+
+      const actor = (await this.resolveActionActor("Actor for CAE guidance-set update")) ?? "";
+      if (!actor.trim()) {
+        await vscode.window.showErrorMessage(
+          "Actor is required (set Git email, WORKSPACE_KIT_ACTOR, or enter a value)."
+        );
+        return;
+      }
+
+      const targetSummary =
+        command === "cae-activate-registry-version"
+          ? `Activate version: ${versionId || "(missing)"}`
+          : command === "cae-rollback-registry-version"
+            ? "Roll back to the immediately previous guidance-set version (kit selects the target)."
+            : `Clone from ${versionId} → new draft ${toVersionIdForConfirm}`;
+
+      const detail = [
+        targetSummary,
+        `Actor: ${actor}`,
+        `Rationale: ${rationale.trim()}`,
+        "",
+        "Payload will include caeMutationApproval (CAE governance lane only).",
+        "That is not Tier A/B policyApproval on workspace-kit run or run-transition.",
+        "",
+        "On success, an audit row is written to planning SQLite."
+      ].join("\n");
+
+      const confirmed = await vscode.window.showWarningMessage(
+        "Confirm CAE registry mutation?",
+        { modal: true, detail },
+        "Run mutation"
+      );
+      if (confirmed !== "Run mutation") return;
+
+      const payload: Record<string, unknown> = {
+        schemaVersion: 1,
+        actor: actor.trim(),
+        note: rationale.trim(),
+        caeMutationApproval: {
+          confirmed: true,
+          rationale: rationale.trim()
+        }
+      };
+      if (command === "cae-activate-registry-version") {
+        if (!versionId) return;
+        payload.versionId = versionId;
+      }
+      if (command === "cae-clone-registry-version") {
+        payload.fromVersionId = versionId;
+        payload.toVersionId = toVersionIdForConfirm;
+        payload.setActive = false;
+      }
+
+      const r = await this.client.run(command, payload);
+      await webview.postMessage({
+        type: "setActionResult",
+        html: renderGuidanceActionResultInnerHtml({
+          action: `Guidance set ${action}`,
+          result: r,
+          mutationContext: {
+            kind: "registry-mutation",
+            commandName: command,
+            actor: actor.trim()
+          }
+        })
+      });
+      await this.pushSummary(webview);
+    } finally {
+      await clearBusy();
     }
-    const r = await this.client.run(command, payload);
-    await webview.postMessage({
-      type: "setActionResult",
-      html: renderGuidanceActionResultInnerHtml({ action: `Guidance set ${action}`, result: r })
-    });
-    await this.pushSummary(webview);
   }
 
   private defaultActorFromEnvironment(): string | undefined {
@@ -965,6 +1033,10 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
       document.querySelectorAll('button[disabled]').forEach(function(btn){ setBusy(btn, false); });
       showStatus('info', 'Guidance action finished.');
       scrollToPanel(actionResultRoot);
+      return;
+    }
+    if (m && m.type === 'clearVersionActionBusy') {
+      document.querySelectorAll('[data-wc-action^="guidance-version"]').forEach(function(btn){ setBusy(btn, false); });
       return;
     }
     if (m && m.type === 'setDraftWizardOutcome') {
