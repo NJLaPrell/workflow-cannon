@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=rewind-to-checkpoint|module=checkpoints|schema_only=pnpm exec wk run rewind-to-checkpoint --schema-only '{}'
+-->
+
 # rewind-to-checkpoint
 
 **Tier B (sensitive):** pass JSON **`policyApproval`**.

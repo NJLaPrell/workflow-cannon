@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=generate-recommendations|module=improvement|schema_only=pnpm exec wk run generate-recommendations --schema-only '{}'
+-->
+
 # generate-recommendations
 
 Generate evidence-backed improvement recommendations.

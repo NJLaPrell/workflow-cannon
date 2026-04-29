@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=remove-dependency|module=task-engine|schema_only=pnpm exec wk run remove-dependency --schema-only '{}'
+-->
+
 # remove-dependency
 
 Remove a dependency edge from one task to another.

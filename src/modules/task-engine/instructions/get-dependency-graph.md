@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=get-dependency-graph|module=task-engine|schema_only=pnpm exec wk run get-dependency-graph --schema-only '{}'
+-->
+
 # get-dependency-graph
 
 Return dependency graph data for active tasks.

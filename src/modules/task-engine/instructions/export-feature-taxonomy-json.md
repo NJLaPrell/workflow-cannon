@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=export-feature-taxonomy-json|module=task-engine|schema_only=pnpm exec wk run export-feature-taxonomy-json --schema-only '{}'
+-->
+
 # export-feature-taxonomy-json
 
 Write `src/modules/documentation/data/feature-taxonomy.json` from the SQLite feature registry (validated against taxonomy schema). Path must stay under the documentation `data/` directory.

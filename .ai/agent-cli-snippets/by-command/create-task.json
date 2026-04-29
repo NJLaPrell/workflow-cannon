@@ -1,0 +1,85 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "create-task",
+  "schema": {
+    "type": "object",
+    "required": [
+      "title"
+    ],
+    "properties": {
+      "id": {
+        "type": "string",
+        "pattern": "^T[0-9]+$"
+      },
+      "allocateId": {
+        "type": "boolean"
+      },
+      "dryRun": {
+        "type": "boolean"
+      },
+      "title": {
+        "type": "string"
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "proposed",
+          "ready"
+        ]
+      },
+      "clientMutationId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "expectedPlanningGeneration": {
+        "oneOf": [
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          }
+        ]
+      },
+      "actor": {
+        "type": "string"
+      },
+      "config": {
+        "type": "object"
+      }
+    },
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {
+    "title": ""
+  },
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run create-task '{\"title\":\"\"}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/create-task.md",
+  "moduleId": "task-engine",
+  "description": "Create a new task through validated task-engine persistence.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": true,
+    "expectedPlanningGeneration": "required when tasks.planningGenerationPolicy is require"
+  },
+  "idempotency": {
+    "clientMutationId": true
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

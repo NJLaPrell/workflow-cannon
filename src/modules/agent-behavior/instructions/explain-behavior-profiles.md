@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=explain-behavior-profiles|module=agent-behavior|schema_only=pnpm exec wk run explain-behavior-profiles --schema-only '{}'
+-->
+
 # explain-behavior-profiles
 
 ```bash

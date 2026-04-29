@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=add-dependency|module=task-engine|schema_only=pnpm exec wk run add-dependency --schema-only '{}'
+-->
+
 # add-dependency
 
 Add a dependency edge from one task to another.

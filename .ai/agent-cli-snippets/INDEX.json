@@ -1,0 +1,741 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-04-29T02:30:28.211Z",
+  "commands": [
+    {
+      "name": "add-dependency",
+      "path": ".ai/agent-cli-snippets/by-command/add-dependency.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "agent-bootstrap",
+      "path": ".ai/agent-cli-snippets/by-command/agent-bootstrap.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "agent-mutation-plan",
+      "path": ".ai/agent-cli-snippets/by-command/agent-mutation-plan.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "agent-session-snapshot",
+      "path": ".ai/agent-cli-snippets/by-command/agent-session-snapshot.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "apply-skill",
+      "path": ".ai/agent-cli-snippets/by-command/apply-skill.json",
+      "moduleId": "skills"
+    },
+    {
+      "name": "apply-task-batch",
+      "path": ".ai/agent-cli-snippets/by-command/apply-task-batch.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "archive-task",
+      "path": ".ai/agent-cli-snippets/by-command/archive-task.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "assign-task-phase",
+      "path": ".ai/agent-cli-snippets/by-command/assign-task-phase.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "backfill-task-feature-links",
+      "path": ".ai/agent-cli-snippets/by-command/backfill-task-feature-links.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "backup-planning-sqlite",
+      "path": ".ai/agent-cli-snippets/by-command/backup-planning-sqlite.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "block-assignment",
+      "path": ".ai/agent-cli-snippets/by-command/block-assignment.json",
+      "moduleId": "team-execution"
+    },
+    {
+      "name": "build-plan",
+      "path": ".ai/agent-cli-snippets/by-command/build-plan.json",
+      "moduleId": "planning"
+    },
+    {
+      "name": "cae-activate-registry-version",
+      "path": ".ai/agent-cli-snippets/by-command/cae-activate-registry-version.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-clone-registry-version",
+      "path": ".ai/agent-cli-snippets/by-command/cae-clone-registry-version.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-conflicts",
+      "path": ".ai/agent-cli-snippets/by-command/cae-conflicts.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-create-activation",
+      "path": ".ai/agent-cli-snippets/by-command/cae-create-activation.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-create-artifact",
+      "path": ".ai/agent-cli-snippets/by-command/cae-create-artifact.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-create-registry-version",
+      "path": ".ai/agent-cli-snippets/by-command/cae-create-registry-version.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-dashboard-summary",
+      "path": ".ai/agent-cli-snippets/by-command/cae-dashboard-summary.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-delete-registry-version",
+      "path": ".ai/agent-cli-snippets/by-command/cae-delete-registry-version.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-disable-activation",
+      "path": ".ai/agent-cli-snippets/by-command/cae-disable-activation.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-evaluate",
+      "path": ".ai/agent-cli-snippets/by-command/cae-evaluate.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-explain",
+      "path": ".ai/agent-cli-snippets/by-command/cae-explain.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-get-activation",
+      "path": ".ai/agent-cli-snippets/by-command/cae-get-activation.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-get-artifact",
+      "path": ".ai/agent-cli-snippets/by-command/cae-get-artifact.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-get-registry-version",
+      "path": ".ai/agent-cli-snippets/by-command/cae-get-registry-version.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-get-trace",
+      "path": ".ai/agent-cli-snippets/by-command/cae-get-trace.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-guidance-preview",
+      "path": ".ai/agent-cli-snippets/by-command/cae-guidance-preview.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-health",
+      "path": ".ai/agent-cli-snippets/by-command/cae-health.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-import-json-registry",
+      "path": ".ai/agent-cli-snippets/by-command/cae-import-json-registry.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-list-acks",
+      "path": ".ai/agent-cli-snippets/by-command/cae-list-acks.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-list-activations",
+      "path": ".ai/agent-cli-snippets/by-command/cae-list-activations.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-list-artifacts",
+      "path": ".ai/agent-cli-snippets/by-command/cae-list-artifacts.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-list-registry-versions",
+      "path": ".ai/agent-cli-snippets/by-command/cae-list-registry-versions.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-recent-traces",
+      "path": ".ai/agent-cli-snippets/by-command/cae-recent-traces.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-record-shadow-feedback",
+      "path": ".ai/agent-cli-snippets/by-command/cae-record-shadow-feedback.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-registry-validate",
+      "path": ".ai/agent-cli-snippets/by-command/cae-registry-validate.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-retire-activation",
+      "path": ".ai/agent-cli-snippets/by-command/cae-retire-activation.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-retire-artifact",
+      "path": ".ai/agent-cli-snippets/by-command/cae-retire-artifact.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-rollback-registry-version",
+      "path": ".ai/agent-cli-snippets/by-command/cae-rollback-registry-version.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-satisfy-ack",
+      "path": ".ai/agent-cli-snippets/by-command/cae-satisfy-ack.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-shadow-feedback-report",
+      "path": ".ai/agent-cli-snippets/by-command/cae-shadow-feedback-report.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-update-activation",
+      "path": ".ai/agent-cli-snippets/by-command/cae-update-activation.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-update-artifact",
+      "path": ".ai/agent-cli-snippets/by-command/cae-update-artifact.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-validate-registry",
+      "path": ".ai/agent-cli-snippets/by-command/cae-validate-registry.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cancel-assignment",
+      "path": ".ai/agent-cli-snippets/by-command/cancel-assignment.json",
+      "moduleId": "team-execution"
+    },
+    {
+      "name": "claim-next-task",
+      "path": ".ai/agent-cli-snippets/by-command/claim-next-task.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "classify-kit-state",
+      "path": ".ai/agent-cli-snippets/by-command/classify-kit-state.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "clear-task-phase",
+      "path": ".ai/agent-cli-snippets/by-command/clear-task-phase.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "close-subagent-session",
+      "path": ".ai/agent-cli-snippets/by-command/close-subagent-session.json",
+      "moduleId": "subagents"
+    },
+    {
+      "name": "compare-checkpoint",
+      "path": ".ai/agent-cli-snippets/by-command/compare-checkpoint.json",
+      "moduleId": "checkpoints"
+    },
+    {
+      "name": "complete-task",
+      "path": ".ai/agent-cli-snippets/by-command/complete-task.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "convert-wishlist",
+      "path": ".ai/agent-cli-snippets/by-command/convert-wishlist.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "create-behavior-profile",
+      "path": ".ai/agent-cli-snippets/by-command/create-behavior-profile.json",
+      "moduleId": "agent-behavior"
+    },
+    {
+      "name": "create-checkpoint",
+      "path": ".ai/agent-cli-snippets/by-command/create-checkpoint.json",
+      "moduleId": "checkpoints"
+    },
+    {
+      "name": "create-task",
+      "path": ".ai/agent-cli-snippets/by-command/create-task.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "create-task-from-plan",
+      "path": ".ai/agent-cli-snippets/by-command/create-task-from-plan.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "create-wishlist",
+      "path": ".ai/agent-cli-snippets/by-command/create-wishlist.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "dashboard-summary",
+      "path": ".ai/agent-cli-snippets/by-command/dashboard-summary.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "delete-behavior-profile",
+      "path": ".ai/agent-cli-snippets/by-command/delete-behavior-profile.json",
+      "moduleId": "agent-behavior"
+    },
+    {
+      "name": "diff-behavior-profiles",
+      "path": ".ai/agent-cli-snippets/by-command/diff-behavior-profiles.json",
+      "moduleId": "agent-behavior"
+    },
+    {
+      "name": "disable-plugin",
+      "path": ".ai/agent-cli-snippets/by-command/disable-plugin.json",
+      "moduleId": "plugins"
+    },
+    {
+      "name": "document-project",
+      "path": ".ai/agent-cli-snippets/by-command/document-project.json",
+      "moduleId": "documentation"
+    },
+    {
+      "name": "enable-plugin",
+      "path": ".ai/agent-cli-snippets/by-command/enable-plugin.json",
+      "moduleId": "plugins"
+    },
+    {
+      "name": "explain-behavior-profiles",
+      "path": ".ai/agent-cli-snippets/by-command/explain-behavior-profiles.json",
+      "moduleId": "agent-behavior"
+    },
+    {
+      "name": "explain-config",
+      "path": ".ai/agent-cli-snippets/by-command/explain-config.json",
+      "moduleId": "workspace-config"
+    },
+    {
+      "name": "explain-planning-rules",
+      "path": ".ai/agent-cli-snippets/by-command/explain-planning-rules.json",
+      "moduleId": "planning"
+    },
+    {
+      "name": "explain-task-engine-model",
+      "path": ".ai/agent-cli-snippets/by-command/explain-task-engine-model.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "export-feature-taxonomy-json",
+      "path": ".ai/agent-cli-snippets/by-command/export-feature-taxonomy-json.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "export-workspace-status",
+      "path": ".ai/agent-cli-snippets/by-command/export-workspace-status.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "generate-document",
+      "path": ".ai/agent-cli-snippets/by-command/generate-document.json",
+      "moduleId": "documentation"
+    },
+    {
+      "name": "generate-recommendations",
+      "path": ".ai/agent-cli-snippets/by-command/generate-recommendations.json",
+      "moduleId": "improvement"
+    },
+    {
+      "name": "get-behavior-profile",
+      "path": ".ai/agent-cli-snippets/by-command/get-behavior-profile.json",
+      "moduleId": "agent-behavior"
+    },
+    {
+      "name": "get-blocked-summary",
+      "path": ".ai/agent-cli-snippets/by-command/get-blocked-summary.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "get-dependency-graph",
+      "path": ".ai/agent-cli-snippets/by-command/get-dependency-graph.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "get-kit-persistence-map",
+      "path": ".ai/agent-cli-snippets/by-command/get-kit-persistence-map.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "get-module-state",
+      "path": ".ai/agent-cli-snippets/by-command/get-module-state.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "get-next-actions",
+      "path": ".ai/agent-cli-snippets/by-command/get-next-actions.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "get-ready-queue",
+      "path": ".ai/agent-cli-snippets/by-command/get-ready-queue.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "get-recent-task-activity",
+      "path": ".ai/agent-cli-snippets/by-command/get-recent-task-activity.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "get-subagent",
+      "path": ".ai/agent-cli-snippets/by-command/get-subagent.json",
+      "moduleId": "subagents"
+    },
+    {
+      "name": "get-subagent-session",
+      "path": ".ai/agent-cli-snippets/by-command/get-subagent-session.json",
+      "moduleId": "subagents"
+    },
+    {
+      "name": "get-task",
+      "path": ".ai/agent-cli-snippets/by-command/get-task.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "get-task-history",
+      "path": ".ai/agent-cli-snippets/by-command/get-task-history.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "get-task-summary",
+      "path": ".ai/agent-cli-snippets/by-command/get-task-summary.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "get-wishlist",
+      "path": ".ai/agent-cli-snippets/by-command/get-wishlist.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "get-workspace-status",
+      "path": ".ai/agent-cli-snippets/by-command/get-workspace-status.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "ingest-transcripts",
+      "path": ".ai/agent-cli-snippets/by-command/ingest-transcripts.json",
+      "moduleId": "improvement"
+    },
+    {
+      "name": "inspect-plugin",
+      "path": ".ai/agent-cli-snippets/by-command/inspect-plugin.json",
+      "moduleId": "plugins"
+    },
+    {
+      "name": "inspect-skill",
+      "path": ".ai/agent-cli-snippets/by-command/inspect-skill.json",
+      "moduleId": "skills"
+    },
+    {
+      "name": "install-plugin",
+      "path": ".ai/agent-cli-snippets/by-command/install-plugin.json",
+      "moduleId": "plugins"
+    },
+    {
+      "name": "interview-behavior-profile",
+      "path": ".ai/agent-cli-snippets/by-command/interview-behavior-profile.json",
+      "moduleId": "agent-behavior"
+    },
+    {
+      "name": "list-approval-queue",
+      "path": ".ai/agent-cli-snippets/by-command/list-approval-queue.json",
+      "moduleId": "approvals"
+    },
+    {
+      "name": "list-assignments",
+      "path": ".ai/agent-cli-snippets/by-command/list-assignments.json",
+      "moduleId": "team-execution"
+    },
+    {
+      "name": "list-behavior-profiles",
+      "path": ".ai/agent-cli-snippets/by-command/list-behavior-profiles.json",
+      "moduleId": "agent-behavior"
+    },
+    {
+      "name": "list-checkpoints",
+      "path": ".ai/agent-cli-snippets/by-command/list-checkpoints.json",
+      "moduleId": "checkpoints"
+    },
+    {
+      "name": "list-components",
+      "path": ".ai/agent-cli-snippets/by-command/list-components.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "list-features",
+      "path": ".ai/agent-cli-snippets/by-command/list-features.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "list-module-states",
+      "path": ".ai/agent-cli-snippets/by-command/list-module-states.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "list-planning-types",
+      "path": ".ai/agent-cli-snippets/by-command/list-planning-types.json",
+      "moduleId": "planning"
+    },
+    {
+      "name": "list-plugins",
+      "path": ".ai/agent-cli-snippets/by-command/list-plugins.json",
+      "moduleId": "plugins"
+    },
+    {
+      "name": "list-skills",
+      "path": ".ai/agent-cli-snippets/by-command/list-skills.json",
+      "moduleId": "skills"
+    },
+    {
+      "name": "list-subagent-sessions",
+      "path": ".ai/agent-cli-snippets/by-command/list-subagent-sessions.json",
+      "moduleId": "subagents"
+    },
+    {
+      "name": "list-subagents",
+      "path": ".ai/agent-cli-snippets/by-command/list-subagents.json",
+      "moduleId": "subagents"
+    },
+    {
+      "name": "list-tasks",
+      "path": ".ai/agent-cli-snippets/by-command/list-tasks.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "list-wishlist",
+      "path": ".ai/agent-cli-snippets/by-command/list-wishlist.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "message-subagent",
+      "path": ".ai/agent-cli-snippets/by-command/message-subagent.json",
+      "moduleId": "subagents"
+    },
+    {
+      "name": "migrate-task-persistence",
+      "path": ".ai/agent-cli-snippets/by-command/migrate-task-persistence.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "persist-planning-execution-drafts",
+      "path": ".ai/agent-cli-snippets/by-command/persist-planning-execution-drafts.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "phase-delivery-preflight",
+      "path": ".ai/agent-cli-snippets/by-command/phase-delivery-preflight.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "phase-status",
+      "path": ".ai/agent-cli-snippets/by-command/phase-status.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "query-lineage",
+      "path": ".ai/agent-cli-snippets/by-command/query-lineage.json",
+      "moduleId": "improvement"
+    },
+    {
+      "name": "queue-git-alignment",
+      "path": ".ai/agent-cli-snippets/by-command/queue-git-alignment.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "queue-health",
+      "path": ".ai/agent-cli-snippets/by-command/queue-health.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "recommend-skills",
+      "path": ".ai/agent-cli-snippets/by-command/recommend-skills.json",
+      "moduleId": "skills"
+    },
+    {
+      "name": "reconcile-assignment",
+      "path": ".ai/agent-cli-snippets/by-command/reconcile-assignment.json",
+      "moduleId": "team-execution"
+    },
+    {
+      "name": "register-assignment",
+      "path": ".ai/agent-cli-snippets/by-command/register-assignment.json",
+      "moduleId": "team-execution"
+    },
+    {
+      "name": "register-subagent",
+      "path": ".ai/agent-cli-snippets/by-command/register-subagent.json",
+      "moduleId": "subagents"
+    },
+    {
+      "name": "release-evidence-manifest",
+      "path": ".ai/agent-cli-snippets/by-command/release-evidence-manifest.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "remove-dependency",
+      "path": ".ai/agent-cli-snippets/by-command/remove-dependency.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "replay-queue-snapshot",
+      "path": ".ai/agent-cli-snippets/by-command/replay-queue-snapshot.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "resolve-agent-guidance",
+      "path": ".ai/agent-cli-snippets/by-command/resolve-agent-guidance.json",
+      "moduleId": "workspace-config"
+    },
+    {
+      "name": "resolve-behavior-profile",
+      "path": ".ai/agent-cli-snippets/by-command/resolve-behavior-profile.json",
+      "moduleId": "agent-behavior"
+    },
+    {
+      "name": "resolve-config",
+      "path": ".ai/agent-cli-snippets/by-command/resolve-config.json",
+      "moduleId": "workspace-config"
+    },
+    {
+      "name": "retire-subagent",
+      "path": ".ai/agent-cli-snippets/by-command/retire-subagent.json",
+      "moduleId": "subagents"
+    },
+    {
+      "name": "review-item",
+      "path": ".ai/agent-cli-snippets/by-command/review-item.json",
+      "moduleId": "approvals"
+    },
+    {
+      "name": "review-planning-execution-drafts",
+      "path": ".ai/agent-cli-snippets/by-command/review-planning-execution-drafts.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "rewind-to-checkpoint",
+      "path": ".ai/agent-cli-snippets/by-command/rewind-to-checkpoint.json",
+      "moduleId": "checkpoints"
+    },
+    {
+      "name": "run-transition",
+      "path": ".ai/agent-cli-snippets/by-command/run-transition.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "scout-report",
+      "path": ".ai/agent-cli-snippets/by-command/scout-report.json",
+      "moduleId": "improvement"
+    },
+    {
+      "name": "set-active-behavior-profile",
+      "path": ".ai/agent-cli-snippets/by-command/set-active-behavior-profile.json",
+      "moduleId": "agent-behavior"
+    },
+    {
+      "name": "set-agent-guidance",
+      "path": ".ai/agent-cli-snippets/by-command/set-agent-guidance.json",
+      "moduleId": "workspace-config"
+    },
+    {
+      "name": "set-current-phase",
+      "path": ".ai/agent-cli-snippets/by-command/set-current-phase.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "spawn-subagent",
+      "path": ".ai/agent-cli-snippets/by-command/spawn-subagent.json",
+      "moduleId": "subagents"
+    },
+    {
+      "name": "start-task",
+      "path": ".ai/agent-cli-snippets/by-command/start-task.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "submit-assignment-handoff",
+      "path": ".ai/agent-cli-snippets/by-command/submit-assignment-handoff.json",
+      "moduleId": "team-execution"
+    },
+    {
+      "name": "sync-effective-behavior-cursor-rule",
+      "path": ".ai/agent-cli-snippets/by-command/sync-effective-behavior-cursor-rule.json",
+      "moduleId": "agent-behavior"
+    },
+    {
+      "name": "sync-transcripts",
+      "path": ".ai/agent-cli-snippets/by-command/sync-transcripts.json",
+      "moduleId": "improvement"
+    },
+    {
+      "name": "synthesize-transcript-churn",
+      "path": ".ai/agent-cli-snippets/by-command/synthesize-transcript-churn.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "task-persistence-readiness",
+      "path": ".ai/agent-cli-snippets/by-command/task-persistence-readiness.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "transcript-automation-status",
+      "path": ".ai/agent-cli-snippets/by-command/transcript-automation-status.json",
+      "moduleId": "improvement"
+    },
+    {
+      "name": "update-behavior-profile",
+      "path": ".ai/agent-cli-snippets/by-command/update-behavior-profile.json",
+      "moduleId": "agent-behavior"
+    },
+    {
+      "name": "update-task",
+      "path": ".ai/agent-cli-snippets/by-command/update-task.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "update-wishlist",
+      "path": ".ai/agent-cli-snippets/by-command/update-wishlist.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "update-workspace-phase-snapshot",
+      "path": ".ai/agent-cli-snippets/by-command/update-workspace-phase-snapshot.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "update-workspace-status",
+      "path": ".ai/agent-cli-snippets/by-command/update-workspace-status.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "workspace-status-history",
+      "path": ".ai/agent-cli-snippets/by-command/workspace-status-history.json",
+      "moduleId": "task-engine"
+    }
+  ]
+}

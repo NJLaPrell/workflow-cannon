@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=install-plugin|module=plugins|schema_only=pnpm exec wk run install-plugin --schema-only '{}'
+-->
+
 # install-plugin
 
 **Tier B (sensitive):** copy a validated plugin directory into a configured discovery root and upsert **`kit_plugin_state`** (**`copy-install`**, enabled).

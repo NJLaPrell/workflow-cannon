@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=generate-document|module=documentation|schema_only=pnpm exec wk run generate-document --schema-only '{}'
+-->
+
 # generate-document
 
 Generate a single document for both canonical AI and human-readable surfaces using module config, schema, view models, and deterministic renderers.

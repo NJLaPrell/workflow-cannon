@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cae-retire-activation|module=context-activation|schema_only=pnpm exec wk run cae-retire-activation --schema-only '{}'
+-->
+
 # cae-retire-activation
 
 Set **`retired_at`** on an activation row.

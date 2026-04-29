@@ -3,6 +3,12 @@ version: 1
 doc_type: readme
 target: README.md
 source_profile: core
+# Typed slots for README: map template holes to structured sources (Phase 76)
+machine_slots:
+  meta: meta
+  rules: rules
+  decisions: decisions
+  chat_features: chat_features
 sections:
   - id: meta
     source: meta

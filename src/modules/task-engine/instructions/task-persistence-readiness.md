@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=task-persistence-readiness|module=task-engine|schema_only=pnpm exec wk run task-persistence-readiness --schema-only '{}'
+-->
+
 # task-persistence-readiness
 
 Read-only migration readiness report for task persistence. Use this before schema migrations or constraint tightening so agents get stable machine-readable blockers instead of SQLite confetti.

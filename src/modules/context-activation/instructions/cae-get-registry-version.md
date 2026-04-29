@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cae-get-registry-version|module=context-activation|schema_only=pnpm exec wk run cae-get-registry-version --schema-only '{}'
+-->
+
 # cae-get-registry-version
 
 Fetch one CAE registry version header; optionally include raw SQLite rows.

@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=backfill-task-feature-links|module=task-engine|schema_only=pnpm exec wk run backfill-task-feature-links --schema-only '{}'
+-->
+
 # backfill-task-feature-links
 
 One-time maintenance: copy legacy `features_json` slugs into `task_engine_task_features`, then clear `features_json` to `[]` for touched rows. Requires relational tasks and `user_version` 5+.

@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cae-get-activation|module=context-activation|schema_only=pnpm exec wk run cae-get-activation --schema-only '{}'
+-->
+
 # cae-get-activation
 
 Fetch one CAE activation definition.

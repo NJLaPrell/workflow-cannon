@@ -1,0 +1,77 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "update-task",
+  "schema": {
+    "type": "object",
+    "required": [
+      "taskId",
+      "updates"
+    ],
+    "properties": {
+      "taskId": {
+        "type": "string",
+        "pattern": "^(T[0-9]+|imp-[0-9a-f]{14})$"
+      },
+      "updates": {
+        "type": "object"
+      },
+      "dryRun": {
+        "type": "boolean"
+      },
+      "clientMutationId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "expectedPlanningGeneration": {
+        "oneOf": [
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          }
+        ]
+      },
+      "actor": {
+        "type": "string"
+      },
+      "config": {
+        "type": "object"
+      }
+    },
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {
+    "taskId": "T000",
+    "updates": {}
+  },
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run update-task '{\"taskId\":\"T000\",\"updates\":{}}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/update-task.md",
+  "moduleId": "task-engine",
+  "description": "Update mutable task fields without lifecycle bypass.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": true,
+    "expectedPlanningGeneration": "required when tasks.planningGenerationPolicy is require"
+  },
+  "idempotency": {
+    "clientMutationId": true
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

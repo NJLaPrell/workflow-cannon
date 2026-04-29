@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=agent-mutation-plan|module=task-engine|schema_only=pnpm exec wk run agent-mutation-plan --schema-only '{}'
+-->
+
 # agent-mutation-plan
 
 Build a read-only mutation plan for a `workspace-kit run` command before executing it.

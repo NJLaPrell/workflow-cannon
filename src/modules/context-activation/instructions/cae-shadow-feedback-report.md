@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cae-shadow-feedback-report|module=context-activation|schema_only=pnpm exec wk run cae-shadow-feedback-report --schema-only '{}'
+-->
+
 # cae-shadow-feedback-report
 
 Summarize CAE shadow usefulness feedback recorded by `cae-record-shadow-feedback`.

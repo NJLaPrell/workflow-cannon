@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=create-task|module=task-engine|schema_only=pnpm exec wk run create-task --schema-only '{}'
+-->
+
 # create-task
 
 Create a task record through the Task Engine persistence path.
@@ -13,8 +17,10 @@ workspace-kit run create-task '{"id":"T400","title":"My task","status":"proposed
 <!-- workspace-kit:generated task-engine-instruction-contract command=create-task section=args start -->
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `id` | `string` | yes | Task id. |
 | `title` | `string` | yes | Task title. |
+| `id` | `string` | no | Task id. |
+| `allocateId` | `boolean` | no | Command argument. |
+| `dryRun` | `boolean` | no | Command argument. |
 | `status` | string (`proposed`, `ready`) | no | Initial task status. |
 | `clientMutationId` | `string` | no | Retry/idempotency key. |
 | `expectedPlanningGeneration` | `integer` or `string` | no | Optimistic concurrency token from a prior read response. |

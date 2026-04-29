@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=update-behavior-profile|module=agent-behavior|schema_only=pnpm exec wk run update-behavior-profile --schema-only '{}'
+-->
+
 # update-behavior-profile
 
 ```bash

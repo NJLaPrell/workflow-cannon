@@ -1,0 +1,36 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "migrate-task-persistence",
+  "schema": {
+    "type": "object",
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run migrate-task-persistence '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/migrate-task-persistence.md",
+  "moduleId": "task-engine",
+  "description": "Import legacy task JSON into SQLite (json-to-sqlite / json-to-unified-sqlite); sqlite-to-json removed in v0.40. Wishlist intake is SQLite-only.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": true,
+    "expectedPlanningGeneration": "required when tasks.planningGenerationPolicy is require"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

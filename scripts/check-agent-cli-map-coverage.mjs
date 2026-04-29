@@ -7,6 +7,7 @@ const MANIFEST_PATH = path.join(ROOT, "src/contracts/builtin-run-command-manifes
 const CLI_MAP_PATH = path.join(ROOT, "docs/maintainers/AGENT-CLI-MAP.md");
 const AI_CLI_MAP_PATH = path.join(ROOT, ".ai/AGENT-CLI-MAP.md");
 const EXCLUSIONS_PATH = path.join(ROOT, "docs/maintainers/data/agent-cli-map-exclusions.json");
+const SNIPPET_INDEX_PATH = path.join(ROOT, ".ai/agent-cli-snippets/INDEX.json");
 
 function fail(message) {
   console.error(`[check-agent-cli-map-coverage] ${message}`);
@@ -19,6 +20,27 @@ function loadJson(filePath) {
   } catch (error) {
     fail(`Unable to parse JSON at ${filePath}: ${error.message}`);
   }
+}
+
+function collectSnippetIndexCommandNames(indexPath) {
+  const names = new Set();
+  if (!fs.existsSync(indexPath)) {
+    return names;
+  }
+  try {
+    const doc = JSON.parse(fs.readFileSync(indexPath, "utf8"));
+    if (!Array.isArray(doc?.commands)) {
+      return names;
+    }
+    for (const row of doc.commands) {
+      if (typeof row?.name === "string" && row.name.trim()) {
+        names.add(row.name.trim());
+      }
+    }
+  } catch {
+    return names;
+  }
+  return names;
 }
 
 function collectRunCommandsFromManifest() {
@@ -52,13 +74,15 @@ function collectDocumentedCommands(...mapPaths) {
 
 const runCommands = collectRunCommandsFromManifest();
 const documented = collectDocumentedCommands(CLI_MAP_PATH, AI_CLI_MAP_PATH);
+const fromSnippetIndex = collectSnippetIndexCommandNames(SNIPPET_INDEX_PATH);
+const documentedUnion = new Set([...documented, ...fromSnippetIndex]);
 const exclusionsDoc = loadJson(EXCLUSIONS_PATH);
 const excluded = new Set(
   Array.isArray(exclusionsDoc?.excludedRunCommands) ? exclusionsDoc.excludedRunCommands : []
 );
 
 const undocumented = [...runCommands]
-  .filter((cmd) => !documented.has(cmd) && !excluded.has(cmd))
+  .filter((cmd) => !documentedUnion.has(cmd) && !excluded.has(cmd))
   .sort();
 const staleExclusions = [...excluded].filter((cmd) => !runCommands.has(cmd)).sort();
 
@@ -79,5 +103,5 @@ if (staleExclusions.length > 0) {
 }
 
 console.log(
-  `[check-agent-cli-map-coverage] OK: ${documented.size} documented run commands, ${excluded.size} exclusions, ${runCommands.size} discovered.`
+  `[check-agent-cli-map-coverage] OK: ${documentedUnion.size} documented run commands (${documented.size} map lines + ${fromSnippetIndex.size} snippet index), ${excluded.size} exclusions, ${runCommands.size} discovered.`
 );

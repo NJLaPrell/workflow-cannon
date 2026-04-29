@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cae-validate-registry|module=context-activation|schema_only=pnpm exec wk run cae-validate-registry --schema-only '{}'
+-->
+
 # cae-validate-registry
 
 **Alias** of **`cae-registry-validate`** — same JSON args, same behavior and response codes.

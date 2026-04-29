@@ -3,6 +3,7 @@
   "description": "Commands that receive a CLI-level planning-generation-required check before module dispatch when tasks.planningGenerationPolicy is require. Handler-only gates remain for conditional mutators (e.g. build-plan persistTasks). See docs/maintainers/data/planning-generation-mutators.md.",
   "commands": [
     "add-dependency",
+    "apply-task-batch",
     "archive-task",
     "assign-task-phase",
     "backfill-task-feature-links",

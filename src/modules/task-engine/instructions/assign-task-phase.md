@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=assign-task-phase|module=task-engine|schema_only=pnpm exec wk run assign-task-phase --schema-only '{}'
+-->
+
 # assign-task-phase
 
 Sets **`phaseKey`** and **`phase`** on a task using the same validation path as **`update-task`**, without a generic **`updates`** object. Prefer this for maintainer phase bucketing (replaces ad-hoc **`update-task`** scripts for phase-only changes).

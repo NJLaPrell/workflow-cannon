@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cae-get-trace|module=context-activation|schema_only=pnpm exec wk run cae-get-trace --schema-only '{}'
+-->
+
 # cae-get-trace
 
 Fetch **`trace.v1`**: in-process session first; when **`kit.cae.persistence`** is **`true`**, falls back to kit SQLite **`cae_trace_snapshots`**.

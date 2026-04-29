@@ -22,7 +22,11 @@ import {
   collectTaskPersistenceDoctorSummaryLines
 } from "./cli/doctor-planning-issues.js";
 import { collectCaeDoctorSummaryLines } from "./cli/doctor-cae.js";
-import { collectDoctorContractIssues } from "./cli/doctor-contract-validation.js";
+import { collectDoctorContractIssues, type DoctorContractIssue } from "./cli/doctor-contract-validation.js";
+import {
+  collectMaintainerDeliveryLoopIssues,
+  formatMaintainerDeliveryLoopAdvisoryLines
+} from "./cli/doctor-delivery-loop.js";
 import { ModuleRegistryError } from "./core/module-registry.js";
 import { loadWorkspaceDotenv } from "./core/load-workspace-dotenv.js";
 import { resolveRegistryAndConfig } from "./core/module-registry-resolve.js";
@@ -142,7 +146,12 @@ async function printWorkspaceKitTopLevelHelp(writeLine: (message: string) => voi
   writeLine("");
   writeLine("Top-level commands");
   writeLine("  doctor          Validate kit contract files, config, and persistence checks");
-  writeLine("  doctor --agent-instruction-surface   JSON catalog of all declared instructions");
+  writeLine(
+    "  doctor --agent-instruction-surface [--agent-instruction-surface-lean]   JSON instruction catalog (optional lean digest projection)"
+  );
+  writeLine(
+    "  doctor [--delivery-loop] [--delivery-loop-strict]   optional maintainer delivery advisory / gate (dirty + protected branch + in_progress tasks)"
+  );
   writeLine("  run <cmd> [json]  Run a module command; omit <cmd> to list runnable commands");
   writeLine("  run <cmd> --schema-only   Pilot: print JSON Schema + sample args (run-transition, create-task, update-task, dashboard-summary)");
   writeLine("  config          Show or change kit config (mutations need env approval — see below)");
@@ -490,9 +499,15 @@ export async function runCli(
   }
 
   const doctorRest = args.slice(1);
+  const wantLeanInstructionSurface =
+    doctorRest.includes("--agent-instruction-surface-lean") ||
+    doctorRest.includes("agent-instruction-surface-lean");
   const wantAgentInstructionSurface =
     doctorRest.includes("--agent-instruction-surface") ||
-    doctorRest.includes("agent-instruction-surface");
+    doctorRest.includes("agent-instruction-surface") ||
+    wantLeanInstructionSurface;
+  const deliveryLoopStrict = doctorRest.includes("--delivery-loop-strict");
+  const wantDeliveryLoop = deliveryLoopStrict || doctorRest.includes("--delivery-loop");
 
   const issues = await collectDoctorContractIssues(cwd);
 
@@ -510,7 +525,8 @@ export async function runCli(
       const { registry, effective } = await resolveRegistryAndConfig(cwd, defaultRegistryModules);
       const surface = buildAgentInstructionSurface(registry.getAllModules(), registry, {
         workspacePath: cwd,
-        effectiveConfig: effective as Record<string, unknown>
+        effectiveConfig: effective as Record<string, unknown>,
+        projection: wantLeanInstructionSurface ? "lean" : "full"
       });
       writeLine(
         JSON.stringify(
@@ -531,6 +547,29 @@ export async function runCli(
     return EXIT_SUCCESS;
   }
 
+  let deliveryLoopIssues: DoctorContractIssue[] = [];
+  if (wantDeliveryLoop) {
+    try {
+      const { effective } = await resolveRegistryAndConfig(cwd, defaultRegistryModules, {});
+      deliveryLoopIssues = await collectMaintainerDeliveryLoopIssues(
+        cwd,
+        effective as Record<string, unknown>
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      writeError(`workspace-kit doctor: maintainer delivery loop check failed: ${message}`);
+      return EXIT_INTERNAL_ERROR;
+    }
+    if (deliveryLoopStrict && deliveryLoopIssues.length > 0) {
+      writeError("workspace-kit doctor failed maintainer delivery loop gate (--delivery-loop-strict).");
+      for (const issue of deliveryLoopIssues) {
+        writeError(`- ${issue.path}: ${issue.reason}`);
+      }
+      writeError("  Hint: move work to a task branch from the phase integration branch — .ai/playbooks/task-to-phase-branch.md");
+      return EXIT_VALIDATION_FAILURE;
+    }
+  }
+
   writeLine("workspace-kit doctor passed.");
   writeLine("All canonical workspace-kit contract files are present and parseable JSON.");
   writeLine(
@@ -547,6 +586,11 @@ export async function runCli(
   }
   for (const line of await collectPluginDoctorSummaryLines(cwd)) {
     writeLine(line);
+  }
+  if (wantDeliveryLoop && !deliveryLoopStrict && deliveryLoopIssues.length > 0) {
+    for (const line of formatMaintainerDeliveryLoopAdvisoryLines(deliveryLoopIssues)) {
+      writeLine(line);
+    }
   }
   writeLine(`Next: workspace-kit run — list module commands; see ${AGENT_CLI_MAP_HUMAN_DOC} for tier/policy copy-paste.`);
   return EXIT_SUCCESS;

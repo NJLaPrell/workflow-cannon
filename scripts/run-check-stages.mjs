@@ -76,11 +76,25 @@ const stages = [
     hint: "docs/maintainers/AGENT-CLI-MAP.md — add rows for new policy-sensitive run commands."
   },
   {
+    id: "agent-cli-snippets",
+    label: "Agent CLI per-command schema-only snippets (INDEX)",
+    command: process.execPath,
+    args: ["scripts/check-agent-cli-snippets.mjs"],
+    hint: "pnpm run build && node scripts/generate-agent-cli-snippets.mjs"
+  },
+  {
     id: "orphan-instructions",
     label: "Orphan module instruction files",
     command: process.execPath,
     args: ["scripts/check-orphan-instructions.mjs"],
     hint: "Each src/modules/*/instructions/*.md should be registered on a module or allowlisted."
+  },
+  {
+    id: "instruction-agent-capsules",
+    label: "Module instruction agent capsules (Phase 76)",
+    command: process.execPath,
+    args: ["scripts/check-instruction-agent-capsules.mjs"],
+    hint: "node scripts/check-instruction-agent-capsules.mjs --write"
   },
   {
     id: "principles-rules-snapshot",
@@ -116,6 +130,20 @@ const stages = [
     command: process.execPath,
     args: ["scripts/check-ai-to-docs-drift.mjs"],
     hint: "Edit .ai sources, run pnpm run generate-maintainer-docs-from-ai, commit outputs. See docs/maintainers/adrs/ADR-ai-canonical-maintainer-docs-pipeline.md."
+  },
+  {
+    id: "terms-index",
+    label: ".ai/TERMS.index.json vs TERMS.md term rows",
+    command: process.execPath,
+    args: ["scripts/check-terms-index.mjs"],
+    hint: "node scripts/generate-terms-index.mjs"
+  },
+  {
+    id: "agent-doc-routing-hubs",
+    label: "Agent doc routing hub entrypoints (.ai/*/HUB.md)",
+    command: process.execPath,
+    args: ["scripts/check-agent-doc-routing-hubs.mjs"],
+    hint: "Add missing .ai/cae/HUB.md, .ai/runbooks/HUB.md, and/or .ai/adrs/HUB.md"
   },
   {
     id: "orphan-ai-sources",

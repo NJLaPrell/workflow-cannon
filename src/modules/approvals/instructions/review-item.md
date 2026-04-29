@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=review-item|module=approvals|schema_only=pnpm exec wk run review-item --schema-only '{}'
+-->
+
 # review-item
 
 Review and record an approval decision.

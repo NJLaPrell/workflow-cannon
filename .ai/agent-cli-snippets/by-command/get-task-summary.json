@@ -1,0 +1,36 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "get-task-summary",
+  "schema": {
+    "type": "object",
+    "additionalProperties": false
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run get-task-summary '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/get-task-summary.md",
+  "moduleId": "task-engine",
+  "description": "Get aggregate task-state summary for active tasks.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=sync-effective-behavior-cursor-rule|module=agent-behavior|schema_only=pnpm exec wk run sync-effective-behavior-cursor-rule --schema-only '{}'
+-->
+
 # sync-effective-behavior-cursor-rule
 
 Writes (or previews) a **Cursor rule** (`.mdc`) that summarizes the **effective** RPG-party role tier plus the **resolved behavior profile** (temperament). **Advisory only** — it does not change kit policy or replace JSON **`policyApproval`** on gated **`wk run`** commands.

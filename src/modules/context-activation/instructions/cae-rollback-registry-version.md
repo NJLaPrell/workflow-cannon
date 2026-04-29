@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cae-rollback-registry-version|module=context-activation|schema_only=pnpm exec wk run cae-rollback-registry-version --schema-only '{}'
+-->
+
 # cae-rollback-registry-version
 
 Activate the chronologically **previous** registry version relative to the current active version.

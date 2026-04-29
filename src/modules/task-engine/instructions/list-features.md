@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=list-features|module=task-engine|schema_only=pnpm exec wk run list-features --schema-only '{}'
+-->
+
 # list-features
 
 Read-only: list **feature** rows from the relational registry (`task_engine_features`). Optional `componentId` filter. Requires `user_version` 5+.

@@ -1,0 +1,36 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "queue-health",
+  "schema": {
+    "type": "object",
+    "additionalProperties": false
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run queue-health '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/queue-health.md",
+  "moduleId": "task-engine",
+  "description": "Read-only audit: ready queue phase alignment vs canonical phase and dependency blocking.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

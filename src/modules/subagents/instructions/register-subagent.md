@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=register-subagent|module=subagents|schema_only=pnpm exec wk run register-subagent --schema-only '{}'
+-->
+
 # register-subagent
 
 ```bash

@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cae-conflicts|module=context-activation|schema_only=pnpm exec wk run cae-conflicts --schema-only '{}'
+-->
+
 # cae-conflicts
 
 Run evaluation and return **`conflictShadowSummary`** + **`traceId`** (read-only). Stores ephemeral session like **`cae-evaluate`**.

@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cae-create-activation|module=context-activation|schema_only=pnpm exec wk run cae-create-activation --schema-only '{}'
+-->
+
 # cae-create-activation
 
 Insert a validated activation (**`schemas/cae/activation-definition.schema.json`**) referencing existing non-retired artifacts.

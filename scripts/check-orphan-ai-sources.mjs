@@ -31,6 +31,9 @@ function main() {
     const files = walkMarkdownFiles(tree, []);
     for (const abs of files) {
       const rel = path.relative(root, abs).split(path.sep).join("/");
+      if (path.basename(rel) === "HUB.md") {
+        continue;
+      }
       if (!sources.has(rel)) orphans.push(rel);
     }
   }

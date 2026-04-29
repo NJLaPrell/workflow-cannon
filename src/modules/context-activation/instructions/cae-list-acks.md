@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cae-list-acks|module=context-activation|schema_only=pnpm exec wk run cae-list-acks --schema-only '{}'
+-->
+
 # cae-list-acks
 
 List persisted **CAE acknowledgement satisfaction** rows from kit planning SQLite.

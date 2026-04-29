@@ -1,0 +1,105 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "persist-planning-execution-drafts",
+  "schema": {
+    "type": "object",
+    "required": [
+      "tasks"
+    ],
+    "properties": {
+      "tasks": {
+        "type": "array",
+        "minItems": 1
+      },
+      "targetPhaseKey": {
+        "type": "string",
+        "minLength": 1
+      },
+      "targetPhase": {
+        "type": "string",
+        "minLength": 1
+      },
+      "desiredStatus": {
+        "type": "string",
+        "enum": [
+          "proposed",
+          "ready"
+        ]
+      },
+      "planRef": {
+        "type": "string",
+        "minLength": 1
+      },
+      "planningType": {
+        "type": "string",
+        "minLength": 1
+      },
+      "clientMutationId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "expectedPlanningGeneration": {
+        "oneOf": [
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          }
+        ]
+      },
+      "actor": {
+        "type": "string"
+      }
+    },
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {
+    "targetPhaseKey": "73",
+    "targetPhase": "Phase 73",
+    "desiredStatus": "ready",
+    "tasks": [
+      {
+        "id": "T900",
+        "title": "Draft follow-up",
+        "approach": "Implement the follow-up",
+        "technicalScope": [
+          "Wire the command path"
+        ],
+        "acceptanceCriteria": [
+          "Batch persists without row-level phase"
+        ]
+      }
+    ],
+    "expectedPlanningGeneration": 0
+  },
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run persist-planning-execution-drafts '{\"targetPhaseKey\":\"73\",\"targetPhase\":\"Phase 73\",\"desiredStatus\":\"ready\",\"tasks\":[{\"id\":\"T900\",\"title\":\"Draft follow-up\",\"approach\":\"Implement the follow-up\",\"technicalScope\":[\"Wire the command path\"],\"acceptanceCriteria\":[\"Batch persists without row-level phase\"]}],\"expectedPlanningGeneration\":0}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/persist-planning-execution-drafts.md",
+  "moduleId": "task-engine",
+  "description": "Persist multiple proposed execution tasks from planning decomposition in one transaction (convert-wishlist-compatible rows).",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": true,
+    "expectedPlanningGeneration": "required when tasks.planningGenerationPolicy is require"
+  },
+  "idempotency": {
+    "clientMutationId": true
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

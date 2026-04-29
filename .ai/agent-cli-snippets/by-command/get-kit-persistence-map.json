@@ -1,0 +1,36 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "get-kit-persistence-map",
+  "schema": {
+    "type": "object",
+    "additionalProperties": false
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run get-kit-persistence-map '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/get-kit-persistence-map.md",
+  "moduleId": "task-engine",
+  "description": "Read-only JSON map of unified SQLite paths, planning table/columns, and legacy task JSON import paths for agents.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

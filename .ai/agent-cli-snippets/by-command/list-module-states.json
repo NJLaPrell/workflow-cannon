@@ -1,0 +1,36 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "list-module-states",
+  "schema": {
+    "type": "object",
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run list-module-states '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/list-module-states.md",
+  "moduleId": "task-engine",
+  "description": "List unified SQLite module-state rows for diagnostics and migration verification.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

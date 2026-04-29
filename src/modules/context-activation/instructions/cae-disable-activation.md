@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cae-disable-activation|module=context-activation|schema_only=pnpm exec wk run cae-disable-activation --schema-only '{}'
+-->
+
 # cae-disable-activation
 
 Set **`lifecycle_state`** to **`disabled`** for a non-retired activation.

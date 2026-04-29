@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=start-task|module=task-engine|schema_only=pnpm exec wk run start-task --schema-only '{}'
+-->
+
 # start-task
 
 Intent wrapper around `run-transition` with action `start`.

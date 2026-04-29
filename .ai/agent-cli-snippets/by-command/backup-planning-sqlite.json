@@ -1,0 +1,46 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "backup-planning-sqlite",
+  "schema": {
+    "type": "object",
+    "required": [
+      "outputPath"
+    ],
+    "properties": {
+      "outputPath": {
+        "type": "string"
+      }
+    },
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {
+    "outputPath": ""
+  },
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run backup-planning-sqlite '{\"outputPath\":\"\"}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/backup-planning-sqlite.md",
+  "moduleId": "task-engine",
+  "description": "Online backup of the planning SQLite DB via better-sqlite3 (preferred over raw file copy under write load).",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": true,
+    "expectedPlanningGeneration": "required when tasks.planningGenerationPolicy is require"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

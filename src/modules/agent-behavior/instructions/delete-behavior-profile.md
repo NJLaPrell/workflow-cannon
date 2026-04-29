@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=delete-behavior-profile|module=agent-behavior|schema_only=pnpm exec wk run delete-behavior-profile --schema-only '{}'
+-->
+
 # delete-behavior-profile
 
 ```bash

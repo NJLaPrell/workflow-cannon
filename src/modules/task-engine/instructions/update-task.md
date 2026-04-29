@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=update-task|module=task-engine|schema_only=pnpm exec wk run update-task --schema-only '{}'
+-->
+
 # update-task
 
 Update mutable task fields without changing lifecycle state.
@@ -15,6 +19,7 @@ workspace-kit run update-task '{"taskId":"T400","updates":{"title":"Updated titl
 | --- | --- | --- | --- |
 | `taskId` | `string` | yes | Task id. |
 | `updates` | `object` | yes | Mutable task field patch. |
+| `dryRun` | `boolean` | no | Command argument. |
 | `clientMutationId` | `string` | no | Retry/idempotency key. |
 | `expectedPlanningGeneration` | `integer` or `string` | no | Optimistic concurrency token from a prior read response. |
 | `actor` | `string` | no | Actor recorded on transition evidence or task mutation metadata. |

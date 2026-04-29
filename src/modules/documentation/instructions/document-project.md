@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=document-project|module=documentation|schema_only=pnpm exec wk run document-project --schema-only '{}'
+-->
+
 # document-project
 
 Generate all project documentation by running `generate-document` for every view model in `src/modules/documentation/views`. Outputs AI-optimized docs to `.ai/` and human-readable docs to `docs/maintainers/`. When the batch includes `README.md`, also refreshes **repo-root `README.md`** (same transforms as single-doc `generate-document`).

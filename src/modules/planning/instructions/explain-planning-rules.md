@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=explain-planning-rules|module=planning|schema_only=pnpm exec wk run explain-planning-rules --schema-only '{}'
+-->
+
 # explain-planning-rules
 
 Explain effective planning defaults and resolved rule pack questions for one planning type.

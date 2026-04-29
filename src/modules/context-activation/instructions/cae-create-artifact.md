@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cae-create-artifact|module=context-activation|schema_only=pnpm exec wk run cae-create-artifact --schema-only '{}'
+-->
+
 # cae-create-artifact
 
 Insert a validated artifact row (**`schemas/cae/registry-entry.v1.json`**) into the active or **`versionId`** registry version.

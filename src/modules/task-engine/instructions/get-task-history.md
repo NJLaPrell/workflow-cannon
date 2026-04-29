@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=get-task-history|module=task-engine|schema_only=pnpm exec wk run get-task-history --schema-only '{}'
+-->
+
 # get-task-history
 
 Retrieve merged transition and mutation history for one task.

@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=resolve-behavior-profile|module=agent-behavior|schema_only=pnpm exec wk run resolve-behavior-profile --schema-only '{}'
+-->
+
 # resolve-behavior-profile
 
 ```bash

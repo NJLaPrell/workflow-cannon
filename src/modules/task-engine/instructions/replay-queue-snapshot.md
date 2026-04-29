@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=replay-queue-snapshot|module=task-engine|schema_only=pnpm exec wk run replay-queue-snapshot --schema-only '{}'
+-->
+
 # replay-queue-snapshot
 
 Read-only **replay** of **`get-next-actions`** logic against a **frozen** task list. Does **not** read or write the live task store.

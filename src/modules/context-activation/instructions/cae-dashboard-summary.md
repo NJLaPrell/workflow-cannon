@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cae-dashboard-summary|module=context-activation|schema_only=pnpm exec wk run cae-dashboard-summary --schema-only '{}'
+-->
+
 # cae-dashboard-summary
 
 Read-only aggregate payload for the Cursor **Guidance** tab.

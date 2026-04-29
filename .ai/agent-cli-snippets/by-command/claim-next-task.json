@@ -1,0 +1,67 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "claim-next-task",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "queueNamespace": {
+        "type": "string",
+        "minLength": 1
+      },
+      "clientMutationId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "policyApproval": {
+        "type": "object"
+      },
+      "expectedPlanningGeneration": {
+        "oneOf": [
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          }
+        ]
+      },
+      "actor": {
+        "type": "string"
+      },
+      "config": {
+        "type": "object"
+      }
+    },
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run claim-next-task '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/claim-next-task.md",
+  "moduleId": "task-engine",
+  "description": "Atomically claim the current suggested ready task by transitioning it to in_progress.",
+  "policy": {
+    "sensitivity": "sensitive",
+    "operationId": "tasks.run-transition",
+    "jsonApprovalRequired": true
+  },
+  "planningGeneration": {
+    "cliPrelude": true,
+    "expectedPlanningGeneration": "required when tasks.planningGenerationPolicy is require"
+  },
+  "idempotency": {
+    "clientMutationId": true
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

@@ -1,0 +1,60 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "assign-task-phase",
+  "schema": {
+    "type": "object",
+    "required": [
+      "taskId",
+      "phaseKey"
+    ],
+    "properties": {
+      "taskId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "phaseKey": {
+        "type": "string",
+        "minLength": 1
+      },
+      "phase": {
+        "type": "string"
+      },
+      "clientMutationId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {
+    "taskId": "",
+    "phaseKey": ""
+  },
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run assign-task-phase '{\"taskId\":\"\",\"phaseKey\":\"\"}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/assign-task-phase.md",
+  "moduleId": "task-engine",
+  "description": "Set task phaseKey and phase label (maintainer bucket) without generic update-task.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": true,
+    "expectedPlanningGeneration": "required when tasks.planningGenerationPolicy is require"
+  },
+  "idempotency": {
+    "clientMutationId": true
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

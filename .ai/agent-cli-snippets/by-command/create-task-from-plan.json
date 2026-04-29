@@ -1,0 +1,40 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "create-task-from-plan",
+  "schema": {
+    "type": "object",
+    "required": [
+      "planRef"
+    ]
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {
+    "planRef": null
+  },
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run create-task-from-plan '{\"planRef\":null}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/create-task-from-plan.md",
+  "moduleId": "task-engine",
+  "description": "Promote planning output into a canonical task.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": true,
+    "expectedPlanningGeneration": "required when tasks.planningGenerationPolicy is require"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

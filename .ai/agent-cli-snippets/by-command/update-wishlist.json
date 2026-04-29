@@ -1,0 +1,43 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "update-wishlist",
+  "schema": {
+    "type": "object",
+    "required": [
+      "wishlistId",
+      "patch"
+    ],
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {
+    "wishlistId": null,
+    "patch": null
+  },
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run update-wishlist '{\"wishlistId\":null,\"patch\":null}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/update-wishlist.md",
+  "moduleId": "task-engine",
+  "description": "Update mutable fields on an open Wishlist item.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": true,
+    "expectedPlanningGeneration": "required when tasks.planningGenerationPolicy is require"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

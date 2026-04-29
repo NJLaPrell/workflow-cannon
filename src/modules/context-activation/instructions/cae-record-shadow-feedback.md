@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cae-record-shadow-feedback|module=context-activation|schema_only=pnpm exec wk run cae-record-shadow-feedback --schema-only '{}'
+-->
+
 # cae-record-shadow-feedback
 
 Record whether one CAE shadow observation was useful or noisy. This is feedback for registry curation and enforcement readiness; it does **not** satisfy CAE acknowledgement and does **not** replace Tier A/B `policyApproval`.

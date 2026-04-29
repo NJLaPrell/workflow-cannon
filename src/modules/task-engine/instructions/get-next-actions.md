@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=get-next-actions|module=task-engine|schema_only=pnpm exec wk run get-next-actions --schema-only '{}'
+-->
+
 # get-next-actions
 
 Get prioritized next-action suggestions based on the current task state.

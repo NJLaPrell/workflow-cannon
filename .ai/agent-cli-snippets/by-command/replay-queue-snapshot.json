@@ -1,0 +1,35 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "replay-queue-snapshot",
+  "schema": {
+    "type": "object"
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run replay-queue-snapshot '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/replay-queue-snapshot.md",
+  "moduleId": "task-engine",
+  "description": "Read-only replay of get-next-actions against frozen tasks from JSON (no live store writes).",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

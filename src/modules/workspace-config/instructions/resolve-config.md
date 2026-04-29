@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=resolve-config|module=workspace-config|schema_only=pnpm exec wk run resolve-config --schema-only '{}'
+-->
+
 # resolve-config
 
 Returns the full effective workspace configuration (sorted keys for determinism) plus layer identifiers.

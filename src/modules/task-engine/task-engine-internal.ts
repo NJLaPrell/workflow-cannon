@@ -5,6 +5,8 @@ import type {
 } from "../../contracts/module-contract.js";
 import { builtinInstructionEntriesForModule } from "../../contracts/builtin-run-command-manifest.js";
 import type { TaskEntity, TaskMutationType, TaskPriority, TaskStatus } from "./types.js";
+import { buildAgentInstructionSurface } from "../../core/agent-instruction-surface.js";
+import { resolveRegistryAndConfig } from "../../core/module-registry-resolve.js";
 import { createKitLifecycleHookBus } from "../../core/kit-lifecycle-hooks.js";
 import { maybeSpawnTranscriptHookAfterCompletion } from "../../core/transcript-completion-hook.js";
 import { TaskStore } from "./persistence/store.js";
@@ -63,8 +65,10 @@ import { readKitSqliteUserVersion } from "../../core/state/workspace-kit-sqlite.
 import { UnifiedStateDb } from "../../core/state/unified-state-db.js";
 import { isWishlistIntakeTask, WISHLIST_INTAKE_TASK_TYPE } from "./wishlist/wishlist-intake.js";
 import {
+  allocateNextTaskId,
   buildTaskFromConversionPayload,
   digestPayload,
+  findIdempotentAllocatedCreate,
   findIdempotentMutation,
   isRecordLike,
   mutationEvidence,
@@ -76,6 +80,14 @@ import {
   SAFE_METADATA_PATH_RE,
   TASK_ID_RE
 } from "./mutation-utils.js";
+import {
+  decodeListTasksCursor,
+  encodeListTasksCursor,
+  listTaskIsAfterCursor,
+  listTasksComparator,
+  LIST_TASKS_DEFAULT_LIMIT,
+  LIST_TASKS_MAX_LIMIT
+} from "./list-tasks-pagination.js";
 import { collectUnknownFeatureSlugWarnings } from "./feature-slug-validation.js";
 import {
   featureRegistryActiveOnConnection,
@@ -96,6 +108,8 @@ import { POLICY_APPROVAL_TWO_LANES_DOC } from "../../core/policy.js";
 import { validateTaskSkillAttachments } from "../skills/task-skill-validation.js";
 import { summarizeTeamAssignmentsForNextActions } from "../team-execution/assignment-store.js";
 import { collectDoctorContractIssues } from "../../cli/doctor-contract-validation.js";
+import { runApplyTaskBatchCommand } from "./apply-task-batch-command.js";
+import { buildMaintainerDeliveryHints } from "./maintainer-delivery-hints.js";
 
 async function composeAgentSessionSnapshotPayload(
   ctx: ModuleLifecycleContext,
@@ -119,6 +133,11 @@ async function composeAgentSessionSnapshotPayload(
     planning.sqliteDual.getDatabase(),
     (id) => taskTitleById.get(id) ?? null
   );
+  const maintainerDelivery = buildMaintainerDeliveryHints({
+    tasks,
+    canonicalPhaseKey: phaseRes.canonicalPhaseKey,
+    suggestedNext: suggestion.suggestedNext ? { id: suggestion.suggestedNext.id } : null
+  });
   return {
     schemaVersion: 1,
     refreshedAt: new Date().toISOString(),
@@ -137,7 +156,8 @@ async function composeAgentSessionSnapshotPayload(
       configMatchesWorkspaceStatus: phaseRes.configMatchesWorkspaceStatus
     },
     doctorKitPhaseIssues,
-    teamExecutionContext
+    teamExecutionContext,
+    maintainerDelivery
   };
 }
 
@@ -386,24 +406,34 @@ function strictValidationError(
 function planningGenPolicyGate(
   ctx: { effectiveConfig?: Record<string, unknown> },
   args: Record<string, unknown>,
-  instructionPath: string
+  instructionPath: string,
+  planningGenSnapshot?: number
 ): { block: ModuleCommandResult | null; warnings?: string[] } {
   const policy = getPlanningGenerationPolicy({
     effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined
   });
   const gate = enforcePlanningGenerationPolicy(policy, args);
   if (!gate.ok) {
-    return {
-      block: {
-        ok: false,
-        code: gate.code,
-        message: gate.message,
-        remediation: {
-          instructionPath,
-          docPath: CLI_REMEDIATION_DOCS.planningGenerationAdr
-        }
+    const block: ModuleCommandResult = {
+      ok: false,
+      code: gate.code,
+      message: gate.message,
+      remediation: {
+        instructionPath,
+        docPath: CLI_REMEDIATION_DOCS.planningGenerationAdr
       }
     };
+    if (planningGenSnapshot !== undefined && gate.code === "planning-generation-required") {
+      block.data = {
+        currentPlanningGeneration: planningGenSnapshot,
+        retryAfterRead: true,
+        readCommandSuggestion: {
+          command: "list-tasks",
+          args: {}
+        }
+      };
+    }
+    return { block };
   }
   return { block: null, warnings: gate.warnings };
 }
@@ -621,7 +651,8 @@ async function runTaskIntentTransition(
   const pgTransition = planningGenPolicyGate(
     ctx,
     args,
-    `src/modules/task-engine/instructions/${commandName}.md`
+    `src/modules/task-engine/instructions/${commandName}.md`,
+    planning.sqliteDual.getPlanningGeneration()
   );
   if (pgTransition.block && !hasPriorTransitionForClientMutationId(planning.taskStore, clientMutationId)) {
     return pgTransition.block;
@@ -675,7 +706,8 @@ async function runClaimNextTaskIntent(
   const pgTransition = planningGenPolicyGate(
     ctx,
     args,
-    "src/modules/task-engine/instructions/claim-next-task.md"
+    "src/modules/task-engine/instructions/claim-next-task.md",
+    planning.sqliteDual.getPlanningGeneration()
   );
   if (pgTransition.block && !hasPriorTransitionForClientMutationId(planning.taskStore, clientMutationId)) {
     return pgTransition.block;
@@ -902,6 +934,24 @@ export const taskEngineModule: WorkflowModule = {
       attachPolicyMeta(snapshotData, ctx, planning.sqliteDual.getPlanningGeneration());
       if (command.name === "agent-bootstrap") {
         snapshotData.doctor = { ok: true, issues: [] as Array<{ path: string; reason: string }> };
+        const projection = (args as Record<string, unknown>).projection;
+        if (projection === "lean") {
+          const { defaultRegistryModules } = await import("../index.js");
+          const { registry, effective } = await resolveRegistryAndConfig(
+            ctx.workspacePath,
+            defaultRegistryModules,
+            (ctx.effectiveConfig ?? {}) as Record<string, unknown>
+          );
+          snapshotData.instructionSurface = buildAgentInstructionSurface(
+            registry.getAllModules(),
+            registry,
+            {
+              workspacePath: ctx.workspacePath,
+              effectiveConfig: effective as Record<string, unknown>,
+              projection: "lean"
+            }
+          );
+        }
         return {
           ok: true,
           code: "agent-bootstrap",
@@ -1075,7 +1125,8 @@ export const taskEngineModule: WorkflowModule = {
       const pgTransition = planningGenPolicyGate(
         ctx,
         args as Record<string, unknown>,
-        CLI_REMEDIATION_INSTRUCTIONS.runTransition
+        CLI_REMEDIATION_INSTRUCTIONS.runTransition,
+        planning.sqliteDual.getPlanningGeneration()
       );
       if (pgTransition.block && !hasPriorTransition) {
         return pgTransition.block;
@@ -1140,7 +1191,8 @@ export const taskEngineModule: WorkflowModule = {
       const pgSyn = planningGenPolicyGate(
         ctx,
         args as Record<string, unknown>,
-        CLI_REMEDIATION_INSTRUCTIONS.synthesizeTranscriptChurn
+        CLI_REMEDIATION_INSTRUCTIONS.synthesizeTranscriptChurn,
+        planning.sqliteDual.getPlanningGeneration()
       );
       if (pgSyn.block) {
         return pgSyn.block;
@@ -1171,31 +1223,108 @@ export const taskEngineModule: WorkflowModule = {
           message: "create-task field 'features' must be an array of strings when provided"
         };
       }
-      const id = typeof args.id === "string" && args.id.trim().length > 0 ? args.id.trim() : undefined;
+      const allocateId = args.allocateId === true;
+      const dryRunCreate = args.dryRun === true;
+      const idArgRaw = typeof args.id === "string" ? args.id.trim() : "";
+      const idArg = idArgRaw.length > 0 ? idArgRaw : undefined;
       const title = typeof args.title === "string" && args.title.trim().length > 0 ? args.title.trim() : undefined;
       const type = typeof args.type === "string" && args.type.trim().length > 0 ? args.type.trim() : "workspace-kit";
       const status = typeof args.status === "string" ? args.status : "proposed";
       const priority =
         typeof args.priority === "string" && ["P1", "P2", "P3"].includes(args.priority)
-          ? args.priority as TaskPriority
+          ? (args.priority as TaskPriority)
           : undefined;
       const clientMutationId = readIdempotencyValue(args);
       const allowedInitial: TaskStatus[] = ["proposed", "ready"];
       if (type === TRANSCRIPT_CHURN_TASK_TYPE) {
         allowedInitial.push("research");
       }
-      if (!id || !title || !TASK_ID_RE.test(id) || !allowedInitial.includes(status as TaskStatus)) {
+      if (!title || !allowedInitial.includes(status as TaskStatus)) {
         return {
           ok: false,
           code: "invalid-task-schema",
           message:
-            "create-task requires id/title, id format T<number>, and status proposed, ready, or research (research only with type transcript_churn)"
+            "create-task requires title and status proposed, ready, or research (research only with type transcript_churn)"
+        };
+      }
+      if (allocateId && idArg !== undefined && TASK_ID_RE.test(idArg)) {
+        return {
+          ok: false,
+          code: "invalid-run-args",
+          message:
+            "create-task with allocateId:true cannot include an explicit T### id; omit id, use id:\"auto\", or pass allocateId:false",
+          remediation: { instructionPath: CLI_REMEDIATION_INSTRUCTIONS.createTask }
         };
       }
       const evidenceType = command.name === "create-task-from-plan" ? "create-task-from-plan" : "create-task";
+      if (allocateId && clientMutationId) {
+        const priorAlloc = findIdempotentAllocatedCreate(store, evidenceType, clientMutationId);
+        if (priorAlloc) {
+          const existing = store.getTask(priorAlloc.taskId);
+          if (!existing) {
+            return {
+              ok: false,
+              code: "task-not-found",
+              message: `Idempotent allocate replay expected task '${priorAlloc.taskId}' to exist`
+            };
+          }
+          const replayDigest = digestPayload({
+            id: existing.id,
+            title: existing.title,
+            type: existing.type,
+            status: existing.status,
+            priority: existing.priority,
+            dependsOn: existing.dependsOn ?? [],
+            unblocks: existing.unblocks ?? [],
+            phase: existing.phase ?? null,
+            phaseKey: existing.phaseKey ?? null,
+            metadata: existing.metadata ?? null,
+            ownership: existing.ownership ?? null,
+            approach: existing.approach ?? null,
+            summary: existing.summary ?? null,
+            description: existing.description ?? null,
+            risk: existing.risk ?? null,
+            technicalScope: existing.technicalScope ?? [],
+            acceptanceCriteria: existing.acceptanceCriteria ?? [],
+            features: existing.features ?? []
+          });
+          if (priorAlloc.payloadDigest !== replayDigest) {
+            return {
+              ok: false,
+              code: "idempotency-key-conflict",
+              message: `clientMutationId '${clientMutationId}' was already used for a different ${evidenceType} payload on ${existing.id}`
+            };
+          }
+          const replayCreate: Record<string, unknown> = {
+            task: existing,
+            replayed: true
+          };
+          attachPolicyMeta(replayCreate, ctx, planning.sqliteDual.getPlanningGeneration());
+          return {
+            ok: true,
+            code: "task-create-idempotent-replay",
+            message: `Idempotent create replay for task '${existing.id}'`,
+            data: replayCreate
+          };
+        }
+      }
+      let resolvedId: string;
+      if (allocateId) {
+        resolvedId = allocateNextTaskId(store.getAllTasks());
+      } else {
+        if (!idArg || !TASK_ID_RE.test(idArg)) {
+          return {
+            ok: false,
+            code: "invalid-task-schema",
+            message:
+              "create-task requires id/title, id format T<number>, and status proposed, ready, or research (research only with type transcript_churn); or pass allocateId:true for server-side id allocation"
+          };
+        }
+        resolvedId = idArg;
+      }
       const timestamp = nowIso();
       const task: TaskEntity = {
-        id,
+        id: resolvedId,
         title,
         type,
         status: status as TaskStatus,
@@ -1206,7 +1335,7 @@ export const taskEngineModule: WorkflowModule = {
         unblocks: Array.isArray(args.unblocks) ? args.unblocks.filter((x) => typeof x === "string") : undefined,
         phase: typeof args.phase === "string" ? args.phase : undefined,
         phaseKey: typeof args.phaseKey === "string" && args.phaseKey.trim().length > 0 ? args.phaseKey.trim() : undefined,
-        metadata: typeof args.metadata === "object" && args.metadata !== null ? args.metadata as Record<string, unknown> : undefined,
+        metadata: typeof args.metadata === "object" && args.metadata !== null ? (args.metadata as Record<string, unknown>) : undefined,
         ownership: typeof args.ownership === "string" ? args.ownership : undefined,
         approach: typeof args.approach === "string" ? args.approach : undefined,
         summary: typeof args.summary === "string" ? args.summary : undefined,
@@ -1248,31 +1377,31 @@ export const taskEngineModule: WorkflowModule = {
         features: task.features ?? []
       };
       const payloadDigest = digestPayload(createPayloadForDigest);
-      if (clientMutationId) {
-        const prior = findIdempotentMutation(store, evidenceType, id, clientMutationId);
+      if (!allocateId && clientMutationId) {
+        const prior = findIdempotentMutation(store, evidenceType, resolvedId, clientMutationId);
         if (prior) {
           if (prior.payloadDigest !== payloadDigest) {
             return {
               ok: false,
               code: "idempotency-key-conflict",
-              message: `clientMutationId '${clientMutationId}' was already used for a different ${evidenceType} payload on ${id}`
+              message: `clientMutationId '${clientMutationId}' was already used for a different ${evidenceType} payload on ${resolvedId}`
             };
           }
           const replayCreate: Record<string, unknown> = {
-            task: store.getTask(id),
+            task: store.getTask(resolvedId),
             replayed: true
           };
           attachPolicyMeta(replayCreate, ctx, planning.sqliteDual.getPlanningGeneration());
           return {
             ok: true,
             code: "task-create-idempotent-replay",
-            message: `Idempotent create replay for task '${id}'`,
+            message: `Idempotent create replay for task '${resolvedId}'`,
             data: replayCreate
           };
         }
       }
-      if (store.getTask(id)) {
-        return { ok: false, code: "duplicate-task-id", message: `Task '${id}' already exists` };
+      if (store.getTask(resolvedId)) {
+        return { ok: false, code: "duplicate-task-id", message: `Task '${resolvedId}' already exists` };
       }
       const knownTypeValidationError = validateKnownTaskTypeRequirements(task);
       if (knownTypeValidationError) {
@@ -1285,7 +1414,8 @@ export const taskEngineModule: WorkflowModule = {
       const pgCreate = planningGenPolicyGate(
         ctx,
         args as Record<string, unknown>,
-        CLI_REMEDIATION_INSTRUCTIONS.createTask
+        CLI_REMEDIATION_INSTRUCTIONS.createTask,
+        planning.sqliteDual.getPlanningGeneration()
       );
       if (pgCreate.block) {
         return pgCreate.block;
@@ -1308,13 +1438,33 @@ export const taskEngineModule: WorkflowModule = {
       if (!skillAttach.ok) {
         return { ok: false, code: skillAttach.code, message: skillAttach.message };
       }
+      if (dryRunCreate) {
+        const dryData: Record<string, unknown> = {
+          task,
+          dryRun: true,
+          allocateId: allocateId === true
+        };
+        attachPolicyMeta(dryData, ctx, planning.sqliteDual.getPlanningGeneration(), [
+          ...(pgCreate.warnings ?? []),
+          ...featureSlugWarnings
+        ]);
+        return {
+          ok: true,
+          code: "task-create-dry-run",
+          message: `Dry run: validated create for '${resolvedId}' (no persistence)`,
+          data: dryData
+        };
+      }
       store.addTask(task);
-      store.addMutationEvidence(mutationEvidence(evidenceType, id, actor, {
-        initialStatus: task.status,
-        source: command.name,
-        clientMutationId,
-        payloadDigest
-      }));
+      store.addMutationEvidence(
+        mutationEvidence(evidenceType, resolvedId, actor, {
+          initialStatus: task.status,
+          source: command.name,
+          clientMutationId,
+          payloadDigest,
+          allocateId: allocateId === true
+        })
+      );
       const strictIssue = strictValidationError(store, ctx.effectiveConfig as Record<string, unknown> | undefined);
       if (strictIssue) {
         return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
@@ -1328,7 +1478,7 @@ export const taskEngineModule: WorkflowModule = {
       return {
         ok: true,
         code: "task-created",
-        message: `Created task '${id}'`,
+        message: `Created task '${resolvedId}'`,
         data: createdData
       };
     }
@@ -1422,7 +1572,8 @@ export const taskEngineModule: WorkflowModule = {
       const pgBulk = planningGenPolicyGate(
         ctx,
         args as Record<string, unknown>,
-        CLI_REMEDIATION_INSTRUCTIONS.persistPlanningExecutionDrafts
+        CLI_REMEDIATION_INSTRUCTIONS.persistPlanningExecutionDrafts,
+        planning.sqliteDual.getPlanningGeneration()
       );
       if (pgBulk.block) {
         return pgBulk.block;
@@ -1659,6 +1810,10 @@ export const taskEngineModule: WorkflowModule = {
       };
     }
 
+    if (command.name === "apply-task-batch") {
+      return runApplyTaskBatchCommand(ctx, planning, store, args as Record<string, unknown>);
+    }
+
     if (command.name === "update-task") {
       const taskId = typeof args.taskId === "string" ? args.taskId : undefined;
       const updates = typeof args.updates === "object" && args.updates !== null ? args.updates as Record<string, unknown> : undefined;
@@ -1741,7 +1896,8 @@ export const taskEngineModule: WorkflowModule = {
       const pgUpd = planningGenPolicyGate(
         ctx,
         args as Record<string, unknown>,
-        CLI_REMEDIATION_INSTRUCTIONS.updateTask
+        CLI_REMEDIATION_INSTRUCTIONS.updateTask,
+        planning.sqliteDual.getPlanningGeneration()
       );
       if (pgUpd.block) {
         return pgUpd.block;
@@ -1752,6 +1908,23 @@ export const taskEngineModule: WorkflowModule = {
           ok: false,
           code: knownTypeValidationError.code,
           message: knownTypeValidationError.message
+        };
+      }
+      if (args.dryRun === true) {
+        const dryUpd: Record<string, unknown> = {
+          task: updatedTask,
+          taskId,
+          dryRun: true
+        };
+        attachPolicyMeta(dryUpd, ctx, planning.sqliteDual.getPlanningGeneration(), [
+          ...(pgUpd.warnings ?? []),
+          ...featureSlugWarningsUpd
+        ]);
+        return {
+          ok: true,
+          code: "task-update-dry-run",
+          message: `Dry run: validated update for '${taskId}' (no persistence)`,
+          data: dryUpd
         };
       }
       store.updateTask(updatedTask);
@@ -1838,7 +2011,8 @@ export const taskEngineModule: WorkflowModule = {
       const pgArchive = planningGenPolicyGate(
         ctx,
         args as Record<string, unknown>,
-        CLI_REMEDIATION_INSTRUCTIONS.archiveTask
+        CLI_REMEDIATION_INSTRUCTIONS.archiveTask,
+        planning.sqliteDual.getPlanningGeneration()
       );
       if (pgArchive.block) {
         return pgArchive.block;
@@ -1951,7 +2125,8 @@ export const taskEngineModule: WorkflowModule = {
       const pgDep = planningGenPolicyGate(
         ctx,
         args as Record<string, unknown>,
-        CLI_REMEDIATION_INSTRUCTIONS.addDependency
+        CLI_REMEDIATION_INSTRUCTIONS.addDependency,
+        planning.sqliteDual.getPlanningGeneration()
       );
       if (pgDep.block) {
         return pgDep.block;
@@ -2148,7 +2323,105 @@ export const taskEngineModule: WorkflowModule = {
             ? featuresFilterRaw.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)
             : [];
 
-      let tasks = includeArchived ? store.getAllTasks() : store.getActiveTasks();
+      const listIdSingle =
+        typeof args.id === "string" && args.id.trim().length > 0 ? args.id.trim() : undefined;
+      const listIdsRaw = args.ids;
+      const hasListIdsKey = Object.prototype.hasOwnProperty.call(args, "ids");
+      const listIdsArr: string[] = Array.isArray(listIdsRaw)
+        ? listIdsRaw
+            .filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)
+            .map((s) => s.trim())
+        : typeof listIdsRaw === "string" && listIdsRaw.trim().length > 0
+          ? [listIdsRaw.trim()]
+          : [];
+      if (listIdSingle !== undefined && hasListIdsKey) {
+        return {
+          ok: false,
+          code: "invalid-run-args",
+          message: "list-tasks accepts only one of id or ids",
+          remediation: { instructionPath: "src/modules/task-engine/instructions/list-tasks.md" }
+        };
+      }
+      const idPrefixFilter =
+        typeof args.idPrefix === "string" && args.idPrefix.trim().length > 0 ? args.idPrefix.trim() : undefined;
+      if (idPrefixFilter && !/^T\d*$/.test(idPrefixFilter)) {
+        return {
+          ok: false,
+          code: "invalid-run-args",
+          message: "list-tasks idPrefix must match /^T\\d*$/ (T-prefix with optional digits only)",
+          remediation: { instructionPath: "src/modules/task-engine/instructions/list-tasks.md" }
+        };
+      }
+      const cursorRaw =
+        typeof args.cursor === "string" && args.cursor.trim().length > 0 ? args.cursor.trim() : undefined;
+      const limitRaw = args.limit;
+      let limitFilter: number | undefined;
+      if (limitRaw !== undefined) {
+        const n =
+          typeof limitRaw === "number" && Number.isFinite(limitRaw)
+            ? Math.floor(limitRaw)
+            : typeof limitRaw === "string" && /^\d+$/.test(limitRaw.trim())
+              ? Number(limitRaw.trim())
+              : NaN;
+        if (!Number.isInteger(n) || n <= 0 || n > LIST_TASKS_MAX_LIMIT) {
+          return {
+            ok: false,
+            code: "invalid-run-args",
+            message: `list-tasks limit must be a positive integer <= ${LIST_TASKS_MAX_LIMIT}`,
+            remediation: { instructionPath: "src/modules/task-engine/instructions/list-tasks.md" }
+          };
+        }
+        limitFilter = n;
+      }
+      if (cursorRaw !== undefined && limitFilter === undefined) {
+        limitFilter = LIST_TASKS_DEFAULT_LIMIT;
+      }
+      const cursorDecoded = cursorRaw !== undefined ? decodeListTasksCursor(cursorRaw) : null;
+      if (cursorRaw !== undefined && cursorDecoded === null) {
+        return {
+          ok: false,
+          code: "invalid-run-args",
+          message: "list-tasks cursor is invalid",
+          remediation: { instructionPath: "src/modules/task-engine/instructions/list-tasks.md" }
+        };
+      }
+
+      let explicitIds: string[] | undefined;
+      if (listIdSingle !== undefined) {
+        if (!TASK_ID_RE.test(listIdSingle)) {
+          return {
+            ok: false,
+            code: "invalid-run-args",
+            message: "list-tasks id must match ^T\\d+$",
+            remediation: { instructionPath: "src/modules/task-engine/instructions/list-tasks.md" }
+          };
+        }
+        explicitIds = [listIdSingle];
+      } else if (hasListIdsKey) {
+        const bad = listIdsArr.filter((x) => !TASK_ID_RE.test(x));
+        if (bad.length > 0) {
+          return {
+            ok: false,
+            code: "invalid-run-args",
+            message: `list-tasks ids entries must match ^T\\d+$ (got ${bad[0] ?? "invalid"})`,
+            remediation: { instructionPath: "src/modules/task-engine/instructions/list-tasks.md" }
+          };
+        }
+        explicitIds = [...new Set(listIdsArr)];
+      }
+
+      let tasks: TaskEntity[];
+      if (explicitIds !== undefined) {
+        tasks = explicitIds.map((tid) => store.getTask(tid)).filter((t): t is TaskEntity => Boolean(t));
+      } else {
+        tasks = includeArchived ? store.getAllTasks() : store.getActiveTasks();
+      }
+      if (!includeArchived) {
+        tasks = tasks.filter((t) => !t.archived);
+      }
+      if (idPrefixFilter) {
+        tasks = tasks.filter((t) => t.id.startsWith(idPrefixFilter));
+      }
       if (statusFilter) {
         tasks = tasks.filter((t) => t.status === statusFilter);
       }
@@ -2217,10 +2490,26 @@ export const taskEngineModule: WorkflowModule = {
         tasks = tasks.filter((t) => (t.features ?? []).some((f) => compFeatIds.has(f)));
       }
 
+      tasks.sort(listTasksComparator);
+      let pageCandidates = tasks;
+      if (cursorDecoded) {
+        pageCandidates = tasks.filter((t) => listTaskIsAfterCursor(t, cursorDecoded));
+      }
+      const page =
+        limitFilter !== undefined ? pageCandidates.slice(0, limitFilter) : pageCandidates;
+      const nextCursor =
+        limitFilter !== undefined && pageCandidates.length > limitFilter
+          ? encodeListTasksCursor(page[page.length - 1]!)
+          : undefined;
+
       const data: Record<string, unknown> = {
-        tasks,
-        count: tasks.length,
-        scope: "tasks-only"
+        tasks: page,
+        count: page.length,
+        scope: "tasks-only",
+        listTasksSort: "updatedAt_desc_id_numeric_asc",
+        listTasksCursorSemantics:
+          "Keyset pagination: opaque cursor from prior nextCursor; under concurrent updates rows may move across pages (re-run without cursor for a fresh ordering snapshot).",
+        ...(nextCursor !== undefined ? { nextCursor } : {})
       };
       attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
       if (includeQueueHints) {
@@ -2230,14 +2519,14 @@ export const taskEngineModule: WorkflowModule = {
           tasks: hintBaseTasks,
           effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
           workspaceStatus,
-          taskRows: tasks
+          taskRows: page
         });
       }
 
       return {
         ok: true,
         code: "tasks-listed",
-        message: `Found ${tasks.length} tasks`,
+        message: `Found ${page.length} tasks`,
         data
       };
     }
@@ -2280,12 +2569,23 @@ export const taskEngineModule: WorkflowModule = {
         planning.sqliteDual.getDatabase(),
         (id) => taskTitleById.get(id) ?? null
       );
+      const workspaceStatus = readWorkspaceStatusSnapshotFromDual(planning.sqliteDual);
+      const phaseRes = resolveCanonicalPhase({
+        effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+        workspaceStatus
+      });
+      const maintainerDelivery = buildMaintainerDeliveryHints({
+        tasks,
+        canonicalPhaseKey: phaseRes.canonicalPhaseKey,
+        suggestedNext: suggestion.suggestedNext ? { id: suggestion.suggestedNext.id } : null
+      });
 
       const naData: Record<string, unknown> = {
         ...suggestion,
         teamExecutionContext,
         scope: "tasks-only",
-        queueNamespace: ns ?? null
+        queueNamespace: ns ?? null,
+        maintainerDelivery
       };
       attachPolicyMeta(naData, ctx, planning.sqliteDual.getPlanningGeneration());
       return {
@@ -2336,6 +2636,8 @@ export const taskEngineModule: WorkflowModule = {
                 "metadata",
                 "metadata.queueNamespace",
                 "metadata.implementationEstimatePack",
+                "metadata.maintainerDeliveryProfile",
+                "metadata.requiresPhaseBranch",
                 "ownership",
                 "approach",
                 "summary",

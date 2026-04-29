@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=list-approval-queue|module=approvals|schema_only=pnpm exec wk run list-approval-queue --schema-only '{}'
+-->
+
 # list-approval-queue
 
 Read-only: list **improvement** tasks in **`ready`** or **`in_progress`** — the queue **`review-item`** operates on — plus stable pointers to policy and decision artifacts under **`.workspace-kit/`**.

@@ -1,0 +1,55 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "create-wishlist",
+  "schema": {
+    "type": "object",
+    "required": [
+      "title",
+      "problemStatement",
+      "expectedOutcome",
+      "impact",
+      "constraints",
+      "successSignals",
+      "requestor",
+      "evidenceRef"
+    ],
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {
+    "title": null,
+    "problemStatement": null,
+    "expectedOutcome": null,
+    "impact": null,
+    "constraints": null,
+    "successSignals": null,
+    "requestor": null,
+    "evidenceRef": null
+  },
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run create-wishlist '{\"title\":null,\"problemStatement\":null,\"expectedOutcome\":null,\"impact\":null,\"constraints\":null,\"successSignals\":null,\"requestor\":null,\"evidenceRef\":null}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/create-wishlist.md",
+  "moduleId": "task-engine",
+  "description": "Create a Wishlist ideation item with strict required fields (separate namespace from tasks).",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": true,
+    "expectedPlanningGeneration": "required when tasks.planningGenerationPolicy is require"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

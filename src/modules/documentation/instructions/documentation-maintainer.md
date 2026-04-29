@@ -1,3 +1,8 @@
+<!--
+agentCapsule|v=1|command=documentation-maintainer|module=documentation|schema_only=pnpm exec wk run documentation-maintainer --schema-only '{}'
+-->
+
+
 meta|v=1|doc=generator|truth=canonical|st=active
 
 goal|produce=canonical_project_docs|opt=max_obedience_per_token|minimize=ambiguity,drift,token_waste

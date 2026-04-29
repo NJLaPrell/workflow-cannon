@@ -24,6 +24,7 @@ For **operating procedure, policy, CLI tiers, terminology, playbooks, runbooks, 
    - `docs/maintainers/data/**/*.json`
 4. **No `.ai/` equivalent** exists for a referenced artifact (rare); name the gap, read the **single** required file, then stop.
 5. **Documentation module** — you may run **`workspace-kit run document-project`** / **`generate-document`** (and read **`src/modules/documentation/RULES.md`**, **`instructions/*.md`**, **`views/*.yaml`**) without `@`. Those commands **write** under **`docs/maintainers/`** and **`.ai/`** by design; that is not “reading docs for routine bootstrap.” After a write, opening the **specific** paths reported in CLI output or check logs to verify or fix drift is allowed.
+6. **Routing hubs (avoid folder slurping):** `.ai/cae/HUB.md`, `.ai/runbooks/HUB.md`, `.ai/adrs/HUB.md`
 
 ## Entrypoints
 

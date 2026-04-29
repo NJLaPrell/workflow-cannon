@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=complete-task|module=task-engine|schema_only=pnpm exec wk run complete-task --schema-only '{}'
+-->
+
 # complete-task
 
 Intent wrapper around `run-transition` with action `complete`.

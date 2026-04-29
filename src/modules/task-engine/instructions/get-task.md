@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=get-task|module=task-engine|schema_only=pnpm exec wk run get-task --schema-only '{}'
+-->
+
 # get-task
 
 Retrieve a single task by ID from the Task Engine store.

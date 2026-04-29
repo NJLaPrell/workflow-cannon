@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=transcript-automation-status|module=improvement|schema_only=pnpm exec wk run transcript-automation-status --schema-only '{}'
+-->
+
 # transcript-automation-status
 
 Emit stable JSON describing transcript automation state (read-only).

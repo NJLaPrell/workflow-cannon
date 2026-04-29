@@ -55,6 +55,7 @@ import {
   computeGuidanceEnforcementReadiness,
   type GovernanceEvidenceInputV1
 } from "../../core/cae/guidance-enforcement-readiness.js";
+import { prependMaintainerDeliveryLoopGuidanceCard } from "./maintainer-delivery-guidance.js";
 
 type SqliteDatabase = NonNullable<ReturnType<typeof openKitSqliteReadWrite>>;
 
@@ -851,7 +852,14 @@ export const contextActivationModule: WorkflowModule = {
         );
       }
       const cards = summarizeGuidanceCards(bundle, overlayRegistry);
-      const counts = familyCountsFromBundle(bundle);
+      await prependMaintainerDeliveryLoopGuidanceCard(ws, effective, taskId, cards);
+      const counts = {
+        policy: cards.policy.length,
+        think: cards.think.length,
+        do: cards.do.length,
+        review: cards.review.length
+      };
+      const totalGuidanceCount = counts.policy + counts.think + counts.do + counts.review;
       return {
         ok: true,
         code: "cae-guidance-preview-ok",
@@ -867,7 +875,7 @@ export const contextActivationModule: WorkflowModule = {
           trace,
           guidanceCards: cards,
           familyCounts: counts,
-          totalGuidanceCount: counts.policy + counts.think + counts.do + counts.review,
+          totalGuidanceCount,
           pendingAcknowledgements: bundle.pendingAcknowledgements,
           conflictShadowSummary: bundle.conflictShadowSummary,
           ...(draftImpactBlock && draftFamilyForEnforcement

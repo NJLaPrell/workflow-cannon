@@ -1,0 +1,35 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "backfill-task-feature-links",
+  "schema": {
+    "type": "object"
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run backfill-task-feature-links '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/backfill-task-feature-links.md",
+  "moduleId": "task-engine",
+  "description": "Copy legacy features_json slugs into task_engine_task_features; clear legacy column.",
+  "policy": {
+    "sensitivity": "sensitive",
+    "operationId": "task-engine.backfill-task-feature-links",
+    "jsonApprovalRequired": true
+  },
+  "planningGeneration": {
+    "cliPrelude": true,
+    "expectedPlanningGeneration": "required when tasks.planningGenerationPolicy is require"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

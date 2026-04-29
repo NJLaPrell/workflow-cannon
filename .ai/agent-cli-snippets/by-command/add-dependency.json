@@ -1,0 +1,53 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "add-dependency",
+  "schema": {
+    "type": "object",
+    "required": [
+      "taskId",
+      "dependsOnTaskId"
+    ],
+    "properties": {
+      "taskId": {
+        "type": "string",
+        "pattern": "^T[0-9]+$"
+      },
+      "dependsOnTaskId": {
+        "type": "string",
+        "pattern": "^T[0-9]+$"
+      }
+    },
+    "additionalProperties": false
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {
+    "taskId": "T000",
+    "dependsOnTaskId": "T000"
+  },
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run add-dependency '{\"taskId\":\"T000\",\"dependsOnTaskId\":\"T000\"}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/add-dependency.md",
+  "moduleId": "task-engine",
+  "description": "Add a dependency edge between tasks with cycle checks.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": true,
+    "expectedPlanningGeneration": "required when tasks.planningGenerationPolicy is require"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

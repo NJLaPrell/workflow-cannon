@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=list-checkpoints|module=checkpoints|schema_only=pnpm exec wk run list-checkpoints --schema-only '{}'
+-->
+
 # list-checkpoints
 
 Read-only: list checkpoint rows from **`kit_task_checkpoints`**.

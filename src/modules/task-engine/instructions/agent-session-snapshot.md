@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=agent-session-snapshot|module=task-engine|schema_only=pnpm exec wk run agent-session-snapshot --schema-only '{}'
+-->
+
 # agent-session-snapshot
 
 Read-only composed JSON for agent session reload: planning generation, suggested next task, queue-health summary, canonical phase alignment, doctor phase mismatch codes, and open team assignments.

@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cae-guidance-preview|module=context-activation|schema_only=pnpm exec wk run cae-guidance-preview --schema-only '{}'
+-->
+
 # cae-guidance-preview
 
 Friendly read-only Guidance preview for dashboard users. This command accepts

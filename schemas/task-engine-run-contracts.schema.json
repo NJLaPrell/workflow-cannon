@@ -70,6 +70,7 @@
         "migrate-task-persistence",
         "task-persistence-readiness",
         "persist-planning-execution-drafts",
+        "apply-task-batch",
         "review-planning-execution-drafts",
         "start-task",
         "dashboard-summary",
@@ -89,7 +90,7 @@
         "set-current-phase": { "$ref": "#/$defs/contractSetCurrentPhase" },
         "archive-task": { "$ref": "#/$defs/contractArchiveTask" },
         "add-dependency": { "$ref": "#/$defs/contractDependencyMutation" },
-        "agent-bootstrap": { "$ref": "#/$defs/contractAgentSessionSnapshot" },
+        "agent-bootstrap": { "$ref": "#/$defs/contractAgentBootstrap" },
         "agent-mutation-plan": { "$ref": "#/$defs/contractAgentMutationPlan" },
         "agent-session-snapshot": { "$ref": "#/$defs/contractAgentSessionSnapshot" },
         "assign-task-phase": { "$ref": "#/$defs/contractAssignTaskPhase" },
@@ -130,6 +131,7 @@
         "migrate-task-persistence": { "$ref": "#/$defs/contractMigrateTaskPersistence" },
         "task-persistence-readiness": { "$ref": "#/$defs/contractTaskPersistenceReadiness" },
         "persist-planning-execution-drafts": { "$ref": "#/$defs/contractPersistPlanningExecutionDrafts" },
+        "apply-task-batch": { "$ref": "#/$defs/contractApplyTaskBatch" },
         "review-planning-execution-drafts": { "$ref": "#/$defs/contractBase" },
         "start-task": { "$ref": "#/$defs/contractTaskIntentWithTaskId" },
         "dashboard-summary": { "$ref": "#/$defs/contractDashboardSummary" },
@@ -305,10 +307,12 @@
           "properties": {
             "args": {
               "type": "object",
-              "required": ["id", "title"],
+              "required": ["title"],
               "additionalProperties": true,
               "properties": {
                 "id": { "type": "string", "pattern": "^T[0-9]+$" },
+                "allocateId": { "type": "boolean" },
+                "dryRun": { "type": "boolean" },
                 "title": { "type": "string" },
                 "status": { "type": "string", "enum": ["proposed", "ready"] },
                 "clientMutationId": { "type": "string", "minLength": 1 },
@@ -358,6 +362,7 @@
                   "pattern": "^(T[0-9]+|imp-[0-9a-f]{14})$"
                 },
                 "updates": { "type": "object" },
+                "dryRun": { "type": "boolean" },
                 "clientMutationId": { "type": "string", "minLength": 1 },
                 "expectedPlanningGeneration": {
                   "oneOf": [
@@ -841,6 +846,48 @@
         }
       ]
     },
+    "contractApplyTaskBatch": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "required": ["ops"],
+              "additionalProperties": true,
+              "properties": {
+                "ops": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "object",
+                    "required": ["kind"],
+                    "additionalProperties": true,
+                    "properties": {
+                      "kind": { "type": "string", "enum": ["create-task", "update-task"] },
+                      "payload": { "type": "object" }
+                    }
+                  }
+                },
+                "dryRun": { "type": "boolean" },
+                "expectedPlanningGeneration": {
+                  "oneOf": [
+                    { "type": "integer", "minimum": 0 },
+                    { "type": "string", "pattern": "^[0-9]+$" }
+                  ]
+                },
+                "actor": { "type": "string" },
+                "config": { "type": "object" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
     "contractGetTask": {
       "allOf": [
         { "$ref": "#/$defs/contractBase" },
@@ -905,7 +952,26 @@
                 },
                 "featureId": { "type": "string" },
                 "componentId": { "type": "string" },
-                "queueNamespace": { "type": "string" }
+                "queueNamespace": { "type": "string" },
+                "id": { "type": "string", "pattern": "^T[0-9]+$" },
+                "ids": {
+                  "oneOf": [
+                    { "type": "string", "pattern": "^T[0-9]+$" },
+                    {
+                      "type": "array",
+                      "items": { "type": "string", "pattern": "^T[0-9]+$" },
+                      "minItems": 1
+                    }
+                  ]
+                },
+                "idPrefix": { "type": "string", "pattern": "^T[0-9]*$" },
+                "limit": {
+                  "oneOf": [
+                    { "type": "integer", "minimum": 1 },
+                    { "type": "string", "pattern": "^[0-9]+$" }
+                  ]
+                },
+                "cursor": { "type": "string", "minLength": 1 }
               }
             },
             "responseData": {
@@ -1012,6 +1078,27 @@
             "args": {
               "type": "object",
               "additionalProperties": false
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["schemaVersion", "refreshedAt"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractAgentBootstrap": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "projection": { "type": "string", "enum": ["lean"] }
+              }
             },
             "responseData": {
               "type": "object",

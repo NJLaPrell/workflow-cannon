@@ -1,0 +1,35 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "export-feature-taxonomy-json",
+  "schema": {
+    "type": "object"
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run export-feature-taxonomy-json '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/export-feature-taxonomy-json.md",
+  "moduleId": "task-engine",
+  "description": "Export registry to documentation data feature-taxonomy.json (schema-validated).",
+  "policy": {
+    "sensitivity": "sensitive",
+    "operationId": "task-engine.export-feature-taxonomy-json",
+    "jsonApprovalRequired": true
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

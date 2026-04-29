@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=list-wishlist|module=task-engine|schema_only=pnpm exec wk run list-wishlist --schema-only '{}'
+-->
+
 # list-wishlist
 
 List **wishlist intake** tasks from the **unified task store** (SQLite under `tasks.sqliteDatabaseRelativePath`). Each row is **`type: "wishlist_intake"`** with a stable **`T###`** id; results are mapped to the **wishlist item** wire shape (`id`, `status` **`open`** / **`converted`** / **`cancelled`**, etc.).

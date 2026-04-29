@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=list-plugins|module=plugins|schema_only=pnpm exec wk run list-plugins --schema-only '{}'
+-->
+
 # list-plugins
 
 Read-only: enumerate Claude-layout plugins under **`plugins.discoveryRoots`**, validate **`plugin.json`** against the bundled schema, and merge **enabled** flags from **`kit_plugin_state`** when kit SQLite is at **`user_version` 8+**.

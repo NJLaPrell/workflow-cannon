@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=convert-wishlist|module=task-engine|schema_only=pnpm exec wk run convert-wishlist --schema-only '{}'
+-->
+
 # convert-wishlist
 
 Convert an **open** wishlist intake task (`type: "wishlist_intake"`, status `proposed`) into one or more canonical **tasks** (`T###`), then mark the intake task **completed** with conversion provenance in metadata.

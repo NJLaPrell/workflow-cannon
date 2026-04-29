@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=build-plan|module=planning|schema_only=pnpm exec wk run build-plan --schema-only '{}'
+-->
+
 # build-plan
 
 Create or continue a guided planning interview for a selected planning type.

@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cancel-assignment|module=team-execution|schema_only=pnpm exec wk run cancel-assignment --schema-only '{}'
+-->
+
 # cancel-assignment
 
 ```bash

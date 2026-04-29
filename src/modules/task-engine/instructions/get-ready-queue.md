@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=get-ready-queue|module=task-engine|schema_only=pnpm exec wk run get-ready-queue --schema-only '{}'
+-->
+
 # get-ready-queue
 
 Get all tasks in `ready` state, sorted by priority (P1 first).

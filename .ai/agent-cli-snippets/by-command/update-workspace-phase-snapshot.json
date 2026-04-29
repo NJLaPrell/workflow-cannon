@@ -1,0 +1,50 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "update-workspace-phase-snapshot",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "currentKitPhase": {
+        "type": "string"
+      },
+      "nextKitPhase": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "dryRun": {
+        "type": "boolean"
+      }
+    },
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run update-workspace-phase-snapshot '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/update-workspace-phase-snapshot.md",
+  "moduleId": "task-engine",
+  "description": "Compatibility shim for current_kit_phase and/or next_kit_phase; prefer set-current-phase for SQLite-first rollover.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": true,
+    "expectedPlanningGeneration": "required when tasks.planningGenerationPolicy is require"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

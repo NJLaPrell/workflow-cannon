@@ -1,0 +1,89 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "run-transition",
+  "schema": {
+    "type": "object",
+    "required": [
+      "taskId",
+      "action"
+    ],
+    "properties": {
+      "taskId": {
+        "type": "string",
+        "pattern": "^(T[0-9]+|imp-[0-9a-f]{14})$"
+      },
+      "action": {
+        "type": "string",
+        "enum": [
+          "accept",
+          "block",
+          "cancel",
+          "complete",
+          "decline",
+          "demote",
+          "pause",
+          "reject",
+          "start",
+          "unblock"
+        ]
+      },
+      "clientMutationId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "policyApproval": {
+        "type": "object"
+      },
+      "expectedPlanningGeneration": {
+        "oneOf": [
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          }
+        ]
+      },
+      "actor": {
+        "type": "string"
+      },
+      "config": {
+        "type": "object"
+      }
+    },
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {
+    "taskId": "T000",
+    "action": "accept"
+  },
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run run-transition '{\"taskId\":\"T000\",\"action\":\"accept\"}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/run-transition.md",
+  "moduleId": "task-engine",
+  "description": "Execute a validated task status transition.",
+  "policy": {
+    "sensitivity": "sensitive",
+    "operationId": "tasks.run-transition",
+    "jsonApprovalRequired": true
+  },
+  "planningGeneration": {
+    "cliPrelude": true,
+    "expectedPlanningGeneration": "required when tasks.planningGenerationPolicy is require"
+  },
+  "idempotency": {
+    "clientMutationId": true
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

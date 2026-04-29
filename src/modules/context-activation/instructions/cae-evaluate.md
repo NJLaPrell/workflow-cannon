@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=cae-evaluate|module=context-activation|schema_only=pnpm exec wk run cae-evaluate --schema-only '{}'
+-->
+
 # cae-evaluate
 
 Evaluate CAE activations for a v1 **`evaluationContext`**; returns effective bundle + trace. Stores an **ephemeral** session for **`cae-get-trace`** / **`cae-explain`** until process exit.
