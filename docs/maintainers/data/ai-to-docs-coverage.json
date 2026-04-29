@@ -71,6 +71,10 @@
       "output": "docs/maintainers/runbooks/cae-debug.md"
     },
     {
+      "source": ".ai/runbooks/cae-enforcement-readiness.md",
+      "output": "docs/maintainers/runbooks/cae-enforcement-readiness.md"
+    },
+    {
       "source": ".ai/runbooks/consumer-cadence.md",
       "output": "docs/maintainers/runbooks/consumer-cadence.md"
     },
