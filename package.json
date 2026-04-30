@@ -16,6 +16,7 @@
   "main": "dist/index.js",
   "exports": {
     ".": "./dist/index.js",
+    "./modules": "./dist/modules/index.js",
     "./contracts/agent-task-read-contract": "./dist/contracts/agent-task-read-contract.js",
     "./contracts/dashboard-summary-run": "./dist/contracts/dashboard-summary-run.js",
     "./contracts/agent-session-snapshot-run": "./dist/contracts/agent-session-snapshot-run.js",
