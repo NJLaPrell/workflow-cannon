@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "description": "Explicit allowlist for ../../<sibling-module>/ imports from src/modules (REF-004). Remove entries as facades land.",
+  "entries": [
+    {
+      "file": "src/modules/task-engine/commands/agent-session-commands.ts",
+      "line": "11",
+      "importLine": "import { summarizeTeamAssignmentsForNextActions } from \"../../team-execution/assignment-store.js\";",
+      "rationale": "Dashboard bootstrap uses team assignment rollup; future façade TBD."
+    },
+    {
+      "file": "src/modules/task-engine/commands/task-list-queue-readout-commands.ts",
+      "line": "2",
+      "importLine": "import { summarizeTeamAssignmentsForNextActions } from \"../../team-execution/assignment-store.js\";",
+      "rationale": "Queue readout mirrors dashboard team slice; future façade TBD."
+    },
+    {
+      "file": "src/modules/task-engine/commands/task-engine-dashboard-on-command.ts",
+      "line": "8",
+      "importLine": "import { summarizeSubagentsForDashboard } from \"../../subagents/subagent-store.js\";",
+      "rationale": "Dashboard summary aggregates subagent registry; future façade TBD."
+    },
+    {
+      "file": "src/modules/task-engine/commands/task-engine-dashboard-on-command.ts",
+      "line": "9",
+      "importLine": "import { summarizeTeamAssignmentsForDashboard } from \"../../team-execution/assignment-store.js\";",
+      "rationale": "Dashboard summary aggregates team assignments."
+    },
+    {
+      "file": "src/modules/task-engine/commands/task-engine-dashboard-on-command.ts",
+      "line": "24",
+      "importLine": "import { dashboardOnboardingTemperamentLabel } from \"../../agent-behavior/onboarding-temperament-label.js\";",
+      "rationale": "Guidance dashboard reads behavior profile label."
+    },
+    {
+      "file": "src/modules/task-engine/commands/task-engine-dashboard-on-command.ts",
+      "line": "25",
+      "importLine": "import { loadBehaviorWorkspaceState } from \"../../agent-behavior/persistence.js\";",
+      "rationale": "Guidance dashboard reads behavior workspace state."
+    },
+    {
+      "file": "src/modules/task-engine/commands/task-engine-dashboard-on-command.ts",
+      "line": "26",
+      "importLine": "import { BehaviorProfileStore } from \"../../agent-behavior/store.js\";",
+      "rationale": "Guidance dashboard resolves effective behavior profile."
+    },
+    {
+      "file": "src/modules/task-engine/persistence/export-feature-taxonomy-json-runtime.ts",
+      "line": "4",
+      "importLine": "import { isPathWithinRoot } from \"../../documentation/runtime-config.js\";",
+      "rationale": "Feature taxonomy export reuses documentation path guard helpers."
+    },
+    {
+      "file": "src/modules/task-engine/persistence/export-feature-taxonomy-json-runtime.ts",
+      "line": "9",
+      "importLine": "} from \"../../documentation/data-schema-validate.js\";",
+      "rationale": "Feature taxonomy export shares documentation schema validation."
+    }
+  ]
+}

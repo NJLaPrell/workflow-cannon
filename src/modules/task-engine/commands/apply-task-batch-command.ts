@@ -21,7 +21,7 @@ import { validateKnownTaskTypeRequirements } from "../task-type-validation.js";
 import { collectUnknownFeatureSlugWarnings } from "../feature-slug-validation.js";
 import { findUnknownFeatureIds, taskTypeFailsClosedOnUnknownFeatures } from "../task-feature-mutation-validation.js";
 import { resolveKnownFeatureSlugSet } from "../persistence/feature-registry-queries.js";
-import { validateTaskSkillAttachments } from "../../skills/task-skill-validation.js";
+import { validateTaskSkillAttachments } from "../../../core/skills/task-skill-validation.js";
 import { validateTaskSetForStrictMode } from "../strict-task-validation.js";
 import { TRANSCRIPT_CHURN_TASK_TYPE } from "../transcript-churn.js";
 

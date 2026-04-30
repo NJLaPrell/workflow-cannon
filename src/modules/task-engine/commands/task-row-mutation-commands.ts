@@ -1,6 +1,6 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
 import { CLI_REMEDIATION_INSTRUCTIONS } from "../../../core/cli-remediation.js";
-import { validateTaskSkillAttachments } from "../../skills/task-skill-validation.js";
+import { validateTaskSkillAttachments } from "../../../core/skills/task-skill-validation.js";
 import { attachPolicyMeta } from "../attach-planning-response-meta.js";
 import { collectUnknownFeatureSlugWarnings } from "../feature-slug-validation.js";
 import {
