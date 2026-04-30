@@ -66,6 +66,11 @@
       "file": "src/core/cae/cae-queue-snapshot.ts",
       "specifier": "../../modules/task-engine/planning-config.js",
       "rationale": "CAE evaluation context queue depth reads ready-task count from the relational planning DB via the canonical relative path helper."
+    },
+    {
+      "file": "src/core/skills/task-skill-validation.ts",
+      "specifier": "../../modules/skills/discovery.js",
+      "rationale": "REF-004: task metadata.skillIds validation uses skill pack discovery without task-engine → skills sibling import."
     }
   ]
 }
