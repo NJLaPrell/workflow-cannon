@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
-import { prepareKitSqliteDatabase } from "./workspace-kit-sqlite.js";
+import { prepareKitSqliteDatabase } from "./kit-sqlite/planning-sqlite-kernel.js";
 import { syncWorkspaceKitStatusFromYamlIfNeeded } from "../../modules/task-engine/persistence/workspace-status-yaml-import.js";
 
 export type ModuleStateRow = {
