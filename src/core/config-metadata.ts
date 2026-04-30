@@ -3,63 +3,14 @@
  * CLI, explain, and generated docs consume this registry.
  *
  * Key/value records live in `config-registry.json` (validated at runtime via existing config tests).
+ * Registry accessors live in `./config/metadata/access.ts` (REF-008).
  */
 
-import registryJson from "./config-registry.json" with { type: "json" };
+import type { ConfigKeyMetadata } from "./config/metadata/access.js";
+import { configMetadataRegistry as REGISTRY } from "./config/metadata/access.js";
 
-export type ConfigKeyExposure = "public" | "maintainer" | "internal";
-
-export type ConfigValueType = "string" | "boolean" | "number" | "object" | "array";
-
-export type ConfigKeyMetadata = {
-  key: string;
-  type: ConfigValueType;
-  description: string;
-  default: unknown;
-  /** If set, value must equal one of these (after type coercion). */
-  allowedValues?: unknown[];
-  domainScope: "project" | "user" | "runtime" | "internal";
-  owningModule: string;
-  sensitive: boolean;
-  requiresRestart: boolean;
-  requiresApproval: boolean;
-  exposure: ConfigKeyExposure;
-  /** Persisted layers that may store this key */
-  writableLayers: ("project" | "user")[];
-};
-
-const REGISTRY = registryJson as Record<string, ConfigKeyMetadata>;
-
-export function getConfigKeyMetadata(key: string): ConfigKeyMetadata | undefined {
-  return REGISTRY[key];
-}
-
-export function listConfigMetadata(options?: {
-  exposure?: "public" | "maintainer" | "internal" | "all";
-}): ConfigKeyMetadata[] {
-  const exposure = options?.exposure ?? "public";
-  const order = ["public", "maintainer", "internal"] as const;
-  const maxIdx = exposure === "all" ? 2 : order.indexOf(exposure as (typeof order)[number]);
-  const allowed = maxIdx < 0 ? new Set<ConfigKeyExposure>(["public"]) : new Set(order.slice(0, maxIdx + 1));
-  return Object.values(REGISTRY)
-    .filter((m) => allowed.has(m.exposure))
-    .sort((a, b) => a.key.localeCompare(b.key));
-}
-
-export function assertWritableKey(key: string): ConfigKeyMetadata {
-  const meta = REGISTRY[key];
-  if (!meta) {
-    const err = new Error(`config-unknown-key: '${key}' is not a registered config key`);
-    (err as Error & { code?: string }).code = "config-unknown-key";
-    throw err;
-  }
-  if (meta.exposure === "internal") {
-    const err = new Error(`config-internal-key: '${key}' is internal and not user-writable`);
-    (err as Error & { code?: string }).code = "config-internal-key";
-    throw err;
-  }
-  return meta;
-}
+export type { ConfigKeyExposure, ConfigValueType, ConfigKeyMetadata } from "./config/metadata/access.js";
+export { getConfigKeyMetadata, listConfigMetadata, assertWritableKey } from "./config/metadata/access.js";
 
 export function validateValueForMetadata(meta: ConfigKeyMetadata, value: unknown): void {
   if (meta.type === "array") {
