@@ -7,7 +7,6 @@ import {
   parsePolicyApproval,
   parsePolicyApprovalFromEnv,
   AGENT_CLI_MAP_HUMAN_DOC,
-  POLICY_APPROVAL_HUMAN_DOC,
   POLICY_APPROVAL_TWO_LANES_DOC,
   POLICY_RUN_ENV_LANE_MISMATCH_DETAIL,
   resolveActorWithFallback,
@@ -31,69 +30,7 @@ import { tryAutoCheckpointBeforeRun } from "../modules/checkpoints/checkpoint-au
 import { promptSensitiveRunApproval } from "./interactive-policy.js";
 import { releaseTranscriptHookLockFromEnv } from "../core/transcript-completion-hook.js";
 import { storeCaeSession } from "../modules/context-activation/trace-store.js";
-
-/** Strip optional `--json` before subcommand (machine catalog for bare `wk run` only). */
-function peelRunArgv(tail: string[]): { jsonCatalog: boolean; rest: string[] } {
-  const rest: string[] = [];
-  let jsonCatalog = false;
-  let i = 0;
-  while (i < tail.length) {
-    const a = tail[i];
-    if (a === "--json" || a === "-j") {
-      jsonCatalog = true;
-      i += 1;
-      continue;
-    }
-    if (a === "--format" && tail[i + 1] === "json") {
-      jsonCatalog = true;
-      i += 2;
-      continue;
-    }
-    if (a.startsWith("--format=") && a.slice("--format=".length) === "json") {
-      jsonCatalog = true;
-      i += 1;
-      continue;
-    }
-    rest.push(a);
-    i += 1;
-  }
-  return { jsonCatalog, rest };
-}
-
-function policyDeniedBody(params: {
-  policyOp: string | null | undefined;
-  message: string;
-  hint: string;
-  wrongEnvLane: boolean;
-  subcommand: string;
-  hasPolicyApprovalField: boolean;
-}): Record<string, unknown> {
-  const { policyOp, message, hint, wrongEnvLane, subcommand, hasPolicyApprovalField } = params;
-  const sample = {
-    policyApproval: { confirmed: true, rationale: "operator-approved sensitive run" }
-  };
-  return {
-    ok: false,
-    code: "policy-denied",
-    operationId: policyOp ?? null,
-    remediationDoc: POLICY_APPROVAL_HUMAN_DOC,
-    remediation: {
-      docPath: CLI_REMEDIATION_DOCS.policyApproval,
-      instructionPath: "src/modules/task-engine/instructions/run-transition.md"
-    },
-    readCommandSuggestion: {
-      command: subcommand,
-      argvTemplateJson: sample,
-      argvExample: `workspace-kit run ${subcommand} '${JSON.stringify(sample)}'`,
-      schemaOnlyExample: `workspace-kit run ${subcommand} --schema-only '{}'`,
-      snippetIndexHint: `.ai/agent-cli-snippets/by-command/${subcommand}.json`
-    },
-    message,
-    hint,
-    wrongEnvLane: wrongEnvLane || undefined,
-    hasPolicyApprovalField: hasPolicyApprovalField || undefined
-  };
-}
+import { peelRunArgv, policyDeniedBody } from "./run-helpers.js";
 
 /** Default apply-skill preview mode for policy (dryRun true when omitted). */
 function normalizeApplySkillArgs(args: Record<string, unknown>): Record<string, unknown> {
