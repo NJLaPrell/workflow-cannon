@@ -30,6 +30,7 @@ path|slot1=src/core/module-registry.ts|role=module_graph_validation|has=validate
 path|slot1=src/core/module-command-router.ts|role=module_command_dispatch|has=list_commands,alias_resolution,safe_dispatch,typed_router_errors|deps=src/core/module-registry.ts,src/contracts/module-contract.ts|check=enabled_module_dispatch_only|status=active|refs=src/core/module-command-router.ts
 path|slot1=src/modules|role=module_implementations|has=registration,optional_oncommand|deps=src/core,src/contracts|xdeps=src/modules/*|check=explicit_dependson|status=active|refs=src/modules/README.md
 path|slot1=src/modules/index.ts|role=module_barrel|has=defaultRegistryModules,selective_reexports|deps=module_packages|check=barrel_policy_in_module_build_guide|status=active|refs=docs/maintainers/module-build-guide.md
+path|slot1=package.json|role=npm_exports_map|has=root_entry,contracts_subpaths,modules_barrel_subpath|deps=dist|check=semver_additive_exports|status=active|refs=package.json
 path|slot1=src/modules/*/instructions|role=module_instruction_surface|has=function_like_instruction_markdown_files|deps=module_registration|check=instruction_entries_match_files|status=active|refs=src/contracts/module-contract.ts
 path|slot1=test|role=module_validation_tests|has=module_registry_tests,module_behavior_tests|deps=dist|check=tests_pass|status=active|refs=test/module-registry.test.mjs
 path|slot1=.ai|role=canonical_ai_docs|has=module_build_rules,module_specs|deps=repo_state|check=rules_match_implementation|status=active|refs=.ai/module-build.md
