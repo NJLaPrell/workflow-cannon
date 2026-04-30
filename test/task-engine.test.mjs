@@ -729,7 +729,7 @@ async function seedReleaseEvidenceWorkspace() {
   const workspace = await tmpDir();
   await writeFile(
     path.join(workspace, "package.json"),
-    JSON.stringify({ name: "@workflow-cannon/workspace-kit", version: "0.76.0" }),
+    JSON.stringify({ name: "@workflow-cannon/workspace-kit", version: "0.77.0" }),
     "utf8"
   );
   await seedSqliteStore(workspace, (store) => {
@@ -763,7 +763,7 @@ test("taskEngineModule release-evidence-manifest builds manifest from approval a
 
   assert.equal(result.ok, true);
   assert.equal(result.code, "release-evidence-manifest");
-  assert.equal(result.data.manifest.releaseVersion, "0.76.0");
+  assert.equal(result.data.manifest.releaseVersion, "0.77.0");
   assert.equal(result.data.manifest.packageName, "@workflow-cannon/workspace-kit");
   assert.equal(result.data.manifest.followUpSummary.count, 0);
   assert.equal(result.data.manifest.taskDeliveryEvidence.length, 1);

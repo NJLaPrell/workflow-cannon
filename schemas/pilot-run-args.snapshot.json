@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceSchemaPackageVersion": "0.76.0",
+  "sourceSchemaPackageVersion": "0.77.0",
   "pilotCommands": [
     "add-dependency",
     "agent-bootstrap",
