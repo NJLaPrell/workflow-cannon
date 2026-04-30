@@ -8,7 +8,7 @@ import {
   TASK_ENGINE_TASKS_TABLE,
   TASK_ENGINE_TRANSITION_LOG_TABLE,
   kitSqliteHasRelationalTaskDdl
-} from "../../../core/state/workspace-kit-sqlite.js";
+} from "../../../core/state/kit-sqlite/planning-sqlite-kernel.js";
 import type { TaskMutationEvidence, TaskStoreDocument, TransitionEvidence } from "../types.js";
 import type { WishlistStoreDocument } from "../wishlist/wishlist-types.js";
 import { TaskEngineError } from "../transitions.js";

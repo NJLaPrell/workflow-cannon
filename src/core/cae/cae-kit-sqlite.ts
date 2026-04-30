@@ -8,7 +8,7 @@ import Database from "better-sqlite3";
 
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
 import { planningSqliteDatabaseRelativePath } from "../../modules/task-engine/planning-config.js";
-import { prepareKitSqliteDatabase } from "../state/workspace-kit-sqlite.js";
+import { prepareKitSqliteDatabase } from "../state/kit-sqlite/planning-sqlite-kernel.js";
 
 type SqliteDatabase = InstanceType<typeof Database>;
 
