@@ -15,11 +15,11 @@ import {
   openSqliteDualForWorkspaceStatus,
   readWorkspaceStatusSnapshotFromDual
 } from "../persistence/workspace-status-store.js";
-import { buildDashboardDependencyOverview } from "./dashboard-dependency-overview.js";
+import { buildDashboardDependencyOverview } from "../dashboard/dashboard-dependency-overview.js";
 import {
   buildDashboardPhaseBucketsForBlocking,
   buildDashboardPhaseBucketsForTasks
-} from "./dashboard-phase-buckets.js";
+} from "../dashboard/dashboard-phase-buckets.js";
 import { readBuildPlanSession, toDashboardPlanningSession } from "../../../core/planning/build-plan-session-file.js";
 import { dashboardOnboardingTemperamentLabel } from "../../agent-behavior/onboarding-temperament-label.js";
 import { loadBehaviorWorkspaceState } from "../../agent-behavior/persistence.js";

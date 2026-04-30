@@ -1,4 +1,5 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
+import { attachPolicyMeta } from "../attach-planning-response-meta.js";
 import { TaskEngineError } from "../transitions.js";
 import type { TaskEntity } from "../types.js";
 import type { OpenedPlanningStores } from "../persistence/planning-open.js";
@@ -12,8 +13,8 @@ import {
   taskEntityFromNewIntake,
   taskEntityFromWishlistItem,
   wishlistIntakeTaskToItem
-} from "./wishlist-intake.js";
-import type { WishlistItem } from "./wishlist-types.js";
+} from "../wishlist/wishlist-intake.js";
+import type { WishlistItem } from "../wishlist/wishlist-types.js";
 import {
   buildTaskFromConversionPayload,
   mutationEvidence,
@@ -28,7 +29,7 @@ import {
   validateWishlistIntakePayload,
   validateWishlistUpdatePayload,
   WISHLIST_ID_RE
-} from "./wishlist-validation.js";
+} from "../wishlist/wishlist-validation.js";
 import {
   enforcePlanningGenerationPolicy,
   getPlanningGenerationPolicy,
@@ -418,4 +419,23 @@ export function runWishlistStoreCommand(
   }
 
   return undefined;
+}
+
+/** Like {@link runWishlistStoreCommand} but attaches planning generation to successful `data` payloads. */
+export function runWishlistStoreCommandWithPlanningPolicyMeta(
+  commandName: string,
+  args: Record<string, unknown>,
+  ctx: ModuleLifecycleContext,
+  store: TaskStore,
+  planning: OpenedPlanningStores
+): ModuleCommandResult | undefined {
+  const result = runWishlistStoreCommand(commandName, args, ctx, store, planning);
+  if (result !== undefined && result.ok && result.data && typeof result.data === "object") {
+    attachPolicyMeta(
+      result.data as Record<string, unknown>,
+      ctx,
+      planning.sqliteDual.getPlanningGeneration()
+    );
+  }
+  return result;
 }

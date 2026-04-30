@@ -25,4 +25,4 @@ workspace-kit run list-wishlist '{"status":"open"}'
 
 JSON includes **`items`**, **`count`**, and **`scope: "wishlist-only"`**. When `tasks.planningGenerationPolicy` is **`require`**, include **`expectedPlanningGeneration`** from a prior read on mutating follow-ups (e.g. **`update-wishlist`**, **`convert-wishlist`**).
 
-Implementation: `src/modules/task-engine/wishlist/task-engine-wishlist-on-command.ts` (**`list-wishlist`**).
+Implementation: `src/modules/task-engine/commands/task-engine-wishlist-on-command.ts` (**`list-wishlist`**).

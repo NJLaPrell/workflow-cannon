@@ -1,6 +1,6 @@
 /**
  * Shared contract for `workspace-kit run dashboard-summary` success payloads.
- * Consumed by the Cursor extension webview renderer; keep aligned with `task-engine-dashboard-on-command.ts`.
+ * Consumed by the Cursor extension webview renderer; keep aligned with `src/modules/task-engine/commands/task-engine-dashboard-on-command.ts`.
  */
 
 export type DashboardFeatureDetail = {
