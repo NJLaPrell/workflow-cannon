@@ -30,4 +30,4 @@ Returns **`item`** (wishlist wire shape) and **`taskId`** (canonical **`T###`**)
 
 When `tasks.planningGenerationPolicy` is **`require`**, pass **`expectedPlanningGeneration`** from your last read when chaining into mutating commands.
 
-Implementation: `src/modules/task-engine/wishlist/task-engine-wishlist-on-command.ts` (**`get-wishlist`**); lookup helper: `findWishlistIntakeTaskByLegacyOrTaskId` in `wishlist/wishlist-intake.ts`.
+Implementation: `src/modules/task-engine/commands/task-engine-wishlist-on-command.ts` (**`get-wishlist`**); lookup helper: `findWishlistIntakeTaskByLegacyOrTaskId` in `wishlist/wishlist-intake.ts`.

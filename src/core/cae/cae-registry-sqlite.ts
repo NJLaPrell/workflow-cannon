@@ -12,7 +12,7 @@ import Database from "better-sqlite3";
 import registryEntrySchema from "../../../schemas/cae/registry-entry.v1.json" with { type: "json" };
 import activationDefSchema from "../../../schemas/cae/activation-definition.schema.json" with { type: "json" };
 
-import { prepareKitSqliteDatabase } from "../state/workspace-kit-sqlite.js";
+import { prepareKitSqliteDatabase } from "../state/kit-sqlite/planning-sqlite-kernel.js";
 import {
   caeRegistryTablesReady,
   getActiveCaeRegistryVersionId,

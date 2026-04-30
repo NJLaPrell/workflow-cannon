@@ -20,6 +20,13 @@ const stages = [
     hint: "Fix TS errors, then re-run pnpm run check. Config: tsconfig.json"
   },
   {
+    id: "module-sibling-imports",
+    label: "Module sibling import gate (REF-004)",
+    command: process.execPath,
+    args: ["scripts/check-module-sibling-imports.mjs"],
+    hint: "Move shared logic to core/contracts or add a rationale line to scripts/module-sibling-import-allowlist.json."
+  },
+  {
     id: "command-manifest",
     label: "Shipped command manifest vs handlers",
     command: process.execPath,

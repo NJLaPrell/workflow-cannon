@@ -1,7 +1,7 @@
-import type { ModuleCommandResult, ModuleLifecycleContext } from "../../contracts/module-contract.js";
-import { CLI_REMEDIATION_INSTRUCTIONS } from "../../core/cli-remediation.js";
-import { TaskStore } from "./persistence/store.js";
-import type { OpenedPlanningStores } from "./persistence/planning-open.js";
+import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
+import { CLI_REMEDIATION_INSTRUCTIONS } from "../../../core/cli-remediation.js";
+import { TaskStore } from "../persistence/store.js";
+import type { OpenedPlanningStores } from "../persistence/planning-open.js";
 import {
   allocateNextTaskId,
   digestPayload,
@@ -9,21 +9,21 @@ import {
   nowIso,
   planningConcurrencySaveOpts,
   TASK_ID_RE
-} from "./mutation-utils.js";
-import type { TaskEntity, TaskPriority, TaskStatus } from "./types.js";
+} from "../mutation-utils.js";
+import type { TaskEntity, TaskPriority, TaskStatus } from "../types.js";
 import {
   enforcePlanningGenerationPolicy,
   getPlanningGenerationPolicy,
   mergePlanningGenerationPolicyWarnings,
   planningStrictValidationEnabled
-} from "./planning-config.js";
-import { validateKnownTaskTypeRequirements } from "./task-type-validation.js";
-import { collectUnknownFeatureSlugWarnings } from "./feature-slug-validation.js";
-import { findUnknownFeatureIds, taskTypeFailsClosedOnUnknownFeatures } from "./task-feature-mutation-validation.js";
-import { resolveKnownFeatureSlugSet } from "./persistence/feature-registry-queries.js";
-import { validateTaskSkillAttachments } from "../skills/task-skill-validation.js";
-import { validateTaskSetForStrictMode } from "./strict-task-validation.js";
-import { TRANSCRIPT_CHURN_TASK_TYPE } from "./transcript-churn.js";
+} from "../planning-config.js";
+import { validateKnownTaskTypeRequirements } from "../task-type-validation.js";
+import { collectUnknownFeatureSlugWarnings } from "../feature-slug-validation.js";
+import { findUnknownFeatureIds, taskTypeFailsClosedOnUnknownFeatures } from "../task-feature-mutation-validation.js";
+import { resolveKnownFeatureSlugSet } from "../persistence/feature-registry-queries.js";
+import { validateTaskSkillAttachments } from "../../../core/skills/task-skill-validation.js";
+import { validateTaskSetForStrictMode } from "../strict-task-validation.js";
+import { TRANSCRIPT_CHURN_TASK_TYPE } from "../transcript-churn.js";
 
 const PHASE_KEY_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 

@@ -8,4 +8,4 @@ This root file is intentionally pointer-only to avoid split release history.
 
 - See `docs/maintainers/CHANGELOG.md` for all release notes, migration notes, and historical entries.
 
-Latest release: **v0.76.0** (Phase 76: Agent CLI ergonomics + token efficiency; see canonical changelog).
+Latest release: **v0.77.0** (Phase 77: Megamodule refactor execution; see canonical changelog).

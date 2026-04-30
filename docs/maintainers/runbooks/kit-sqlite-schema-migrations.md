@@ -2,7 +2,7 @@
 
 # Kit SQLite schema versioning and migrations
 
-**Audience:** maintainers extending workspace-kit SQLite surfaces. **Single shared entrypoint:** `prepareKitSqliteDatabase` in `src/core/state/workspace-kit-sqlite.ts`.
+**Audience:** maintainers extending workspace-kit SQLite surfaces. **Single shared entrypoint:** `prepareKitSqliteDatabase` in `src/core/state/kit-sqlite/planning-sqlite-kernel.ts` (re-exported from `workspace-kit-sqlite.ts` for stable imports).
 
 ## Delegation graph
 
@@ -16,7 +16,7 @@ Do **not** add a second ad-hoc migration runner for the same files. If a new SQL
 
 1. Open with `better-sqlite3` (or the kit’s existing adapter pattern).
 2. Call **`prepareKitSqliteDatabase(db)`** immediately after construction.
-3. Bump **`KIT_SQLITE_USER_VERSION`** only when you add a **sequential** step in **`migrateKitSqliteSchema`** (forward-only, idempotent re-open).
+3. Bump **`KIT_SQLITE_USER_VERSION`** only when you add a **sequential** step in **`migrateKitSqliteSchema`** inside **`planning-sqlite-kernel.ts`** (forward-only, idempotent re-open).
 
 ## Version semantics
 
@@ -32,7 +32,7 @@ Do **not** add a second ad-hoc migration runner for the same files. If a new SQL
 
 ## Related work
 
-Reconciles Phase 39 **T527** and Phase 41 **T541** with a single documented story; future DDL extends **`migrateKitSqliteSchema`** only.
+Reconciles Phase 39 **T527** and Phase 41 **T541** with a single documented story; future DDL extends **`migrateKitSqliteSchema`** in **`planning-sqlite-kernel.ts`** only.
 
 **v3 (Phase 44):** `workspace_planning_state.planning_generation` — optimistic concurrency counter; see **`docs/maintainers/adrs/ADR-planning-generation-optimistic-concurrency.md`**.
 

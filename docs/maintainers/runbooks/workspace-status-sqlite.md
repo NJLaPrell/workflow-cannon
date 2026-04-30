@@ -32,7 +32,7 @@ On **`SqliteDualPlanningStore.loadFromDisk`**, after migrations:
 
 ## Migrations
 
-DDL and **`user_version`** steps live in **`src/core/state/workspace-kit-sqlite.ts`** (`migrateV9ToV10`).
+DDL and **`user_version`** steps live in **`src/core/state/kit-sqlite/planning-sqlite-kernel.ts`** (e.g. `migrateV9ToV10`).
 
 ## CLI (T818)
 

@@ -10,6 +10,24 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 (none)
 
+## [0.77.0] - 2026-04-30
+
+Phase 77 — **Megamodule refactor execution (REF-001–REF-010)**: planning SQLite kernel in `core/state/kit-sqlite/planning-sqlite-kernel.ts` with stable `workspace-kit-sqlite` barrel; **REF-004** sibling-import CI gate and core `task-skill-validation`; **REF-005** planning `build-plan` helpers extracted; **REF-007** CLI `run-helpers` (`peelRunArgv`, `policyDeniedBody`); **REF-008** config metadata registry access split; **REF-009** `adapters/` re-exports kit SQLite open path (direction C); **REF-010** additive `package.json` `exports["./modules"]`; **REF-006** CAE kit-SQLite implementation under `core/cae/persistence/` with shim re-export. Execution tasks **T100017–T100026** and linked proposal specs under `tasks/refactor-proposals/`.
+
+### Added
+
+- **`@workflow-cannon/workspace-kit/modules`** export mapping to `dist/modules/index.js` (`defaultRegistryModules` and module barrel).
+- **`src/core/state/kit-sqlite/planning-sqlite-kernel.ts`**: canonical `user_version` / migration ladder; compatibility barrel in `workspace-kit-sqlite.ts`.
+- **`scripts/check-module-sibling-imports.mjs`** plus allowlist for **REF-004** module import hygiene.
+
+### Changed
+
+- **Planning** `build-plan`: interview helpers moved to `build-plan-output-helpers.ts` / `build-plan-execution-drafts.ts`.
+- **CLI** `wk run`: argv peel + policy denial body live in `src/cli/run-helpers.ts`.
+- **Config**: `config/metadata/access.ts` holds registry JSON accessors; `config-metadata.ts` keeps validators + re-exports.
+- **CAE**: `cae-kit-sqlite` implementation path is `core/cae/persistence/` (public import path unchanged).
+- **`adapters/index.ts`**: re-exports `prepareKitSqliteDatabase` / `readKitSqliteUserVersion` (and related) from the kit SQLite kernel; **`src/README.md`** layering copy aligned.
+
 ## [0.76.0] - 2026-04-29
 
 Phase 76 — **Agent CLI ergonomics + token efficiency**: task-engine **`list-tasks`** discovery (`id` / `ids` / `idPrefix`, `limit`, `nextCursor`), **`create-task`** **`allocateId`**, **`apply-task-batch`**, dry-run on create/update paths, planning-generation error payloads with remediation; slim **`AGENT-CLI-MAP`** + **`.ai/agent-cli-snippets/`**, instruction **agent capsules** (CI), **`.ai/TERMS.index.json`**, runbooks/ADRs README → **`HUB.md`** routing; **`wk run --json`** (`run-command-catalog`), **`wk doctor --json`**, richer **`policy-denied`** (`readCommandSuggestion`); **`agent-bootstrap`** **`cliFootguns`**; instruction-surface rows include **`jsonApprovalRequired`** / **`policyOperationId`** when built with **`effectiveConfig`**. Improvement batch **T100000–T100006** included.
