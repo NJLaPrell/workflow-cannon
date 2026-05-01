@@ -1,35 +1,56 @@
 # MODULE_REFACTOR.md
 
-## Purpose
+## Composer 2 handoff brief
 
-This document is the safe execution plan for standardizing Workflow Cannon modules. It is intentionally **pilot-first** and **audit-first**. The goal is not to force every module into identical scaffolding; the goal is to make every module self-describing, easy for agents to modify safely, and mechanically checkable without breaking runtime behavior.
+You are the implementation agent for the Workflow Cannon module-standardization effort. Treat this file as the execution controller for the refactor.
 
-## Refactor principles
+Your first job is **not** to refactor code. Your first job is to audit the current module system, confirm the actual state of the repo, and then make the smallest safe improvements in the order below.
 
-1. Preserve runtime behavior unless a task explicitly says otherwise.
-2. Preserve public package exports unless a breaking-change task is approved.
-3. Audit current module reality before writing standards.
-4. Prove the pattern on one small module before enforcing it globally.
-5. Separate runtime contracts from repository hygiene checks.
-6. Keep module standards minimal unless tooling consumes the extra structure.
-7. Do not make `workspace-kit run` fail because a README or agent guide is missing.
-8. Prefer advisory checks during migration; tighten checks only after modules conform.
-9. Make generated-doc ownership explicit before editing generated docs.
-10. Change one module per refactor task unless the task is explicitly cross-cutting.
+The central rule: **do not turn a documentation/organization refactor into a behavior refactor.**
 
-## Non-goals
+## Mission
 
-These refactor tasks must not accidentally do any of the following:
+Make every Workflow Cannon module self-describing, easy for agents to modify safely, and mechanically checkable, while preserving runtime behavior, public exports, command names, command payloads, policy behavior, and persistence semantics.
+
+## Agent operating protocol
+
+Follow this protocol for every task in this file:
+
+1. Read the task and its dependencies.
+2. Inspect the current repo state before editing.
+3. Identify canonical sources before editing docs.
+4. Make the smallest coherent change.
+5. Prefer one module per code-moving task.
+6. Preserve runtime behavior unless the task explicitly authorizes behavior changes.
+7. Run the relevant checks/tests.
+8. Update this file or the task evidence if the task changes the plan.
+9. Stop and report if a task requires an architecture decision not already made.
+
+## Absolute guardrails
+
+Do **not** accidentally do any of the following:
 
 - Rename shipped `workspace-kit run` commands.
+- Change command payload contracts.
 - Change command behavior while moving files.
 - Change policy sensitivity or approval semantics.
 - Change task persistence semantics.
 - Change module enablement semantics.
-- Remove public exports from `src/modules/index.ts` without an explicit breaking-change task.
-- Force all modules to have state folders, config defaults, config schemas, or one-file-per-command handlers when they do not need them.
-- Convert documentation-only conventions into runtime failures.
+- Remove or narrow public exports from `src/modules/index.ts` without an explicit breaking-change task.
+- Force every module to have state folders, config defaults, config schemas, or one-file-per-command handlers.
+- Make runtime CLI commands fail solely because README/agent-guide hygiene docs are missing.
 - Hand-edit generated docs without identifying the canonical source and regeneration command.
+- Batch-refactor multiple modules unless the task explicitly says to.
+
+## Refactor principles
+
+1. **Audit first.** Do not write standards based on assumptions.
+2. **Pilot first.** Prove the standard on `skills` before enforcing it globally.
+3. **Runtime and hygiene are different.** Runtime contracts belong in runtime code. Documentation/layout checks belong in scripts or generated inventories.
+4. **Advisory before blocking.** New checks should start advisory or allowlisted, then tighten only after migration.
+5. **Required means required. Optional means genuinely optional.** Do not create empty boilerplate files just to satisfy symmetry.
+6. **Behavior preservation is part of done.** File movement is not complete until command behavior and public exports are verified.
+7. **Generated docs must declare ownership.** Every generated section needs a canonical source and regeneration path.
 
 ## Desired end state
 
@@ -46,12 +67,12 @@ Every module should answer, without code search:
 
 ## Minimal standard module shape
 
-Required for every default registry module:
+Required for every default registry module after migration:
 
 ```text
 src/modules/<module-id>/
   README.md        # human/operator module overview
-  AGENTS.md        # agent modification rules for this module, pending naming decision
+  AGENTS.md        # agent modification rules, pending naming confirmation in T-MOD-004
   index.ts         # public exports only, after migration
   module.ts        # WorkflowModule assembly only, after migration
   registration.ts  # ModuleRegistration metadata only, after migration
@@ -70,7 +91,20 @@ Optional, only when the module actually needs it:
   test-support.ts       # reusable module test helpers
 ```
 
-The final standard must say which files are required, which are optional, and what evidence justifies omitting an optional file.
+The final standard must explicitly say which files are required, which are optional, and what evidence justifies omitting an optional file.
+
+## Current known issues to verify
+
+Verify these during T-MOD-000 rather than assuming they remain true:
+
+- `src/modules/README.md` likely has stale dependency information.
+- `approvals`, `planning`, and `improvement` likely have real dependencies not reflected in the README.
+- `skills` and `plugins` likely have no module-level README yet.
+- Multiple modules likely keep registration and command dispatch together in `index.ts`.
+- Some modules return `unknown-command`; others may return `unsupported-command` for the same failure class.
+- Config defaults are likely partly centralized in `src/core/workspace-kit-config.ts`.
+- `context-activation` may be registered under `diagnostics` rather than a dedicated capability.
+- `checkpoints` may have optional-peer semantics that need review against runtime behavior.
 
 ---
 
@@ -78,23 +112,17 @@ The final standard must say which files are required, which are optional, and wh
 
 ## T-MOD-000 — Audit current module reality
 
-### Description
+### Intent
 
-Generate a current-state inventory before changing standards or moving code. This prevents the refactor from being driven by assumptions.
-
-### Goals
-
-- Capture what modules actually declare and own today.
-- Identify stale docs, missing READMEs, missing agent guidance, config ownership, state ownership, command dispatch style, and public exports.
-- Produce a baseline that later checks can compare against.
+Create the factual baseline. No code refactor should happen before this.
 
 ### Scope
 
-Create or update:
+Create:
 
 - `docs/maintainers/MODULE-AUDIT.md`
 
-The audit must cover every module in the default registry:
+Audit every module in `defaultRegistryModules`:
 
 - `workspace-config`
 - `documentation`
@@ -110,16 +138,42 @@ The audit must cover every module in the default registry:
 - `planning`
 - `improvement`
 
+### Required audit fields
+
+For each module, record:
+
+- module ID
+- source folder
+- registration location
+- version
+- capabilities
+- `dependsOn`
+- `optionalPeers`
+- `enabledByDefault`
+- command names
+- instruction files
+- README present/missing
+- RULES present/missing
+- AGENTS present/missing
+- `config.md` present/missing
+- config defaults location, if any
+- config schema location, if any
+- state/persistence ownership
+- tests, if obvious
+- command dispatch style
+- public exports from `src/modules/index.ts`
+- obvious doc drift
+- obvious migration risk
+
 ### Acceptance criteria
 
-- The audit lists each module ID, version, capabilities, `dependsOn`, `optionalPeers`, and `enabledByDefault`.
-- The audit lists every shipped command per module.
-- The audit lists whether README, RULES, AGENTS, config docs, instructions, config defaults, schemas, state files, and tests exist.
-- The audit identifies stale documentation, especially dependency mismatches in `src/modules/README.md`.
-- The audit identifies public exports from `src/modules/index.ts` that must be preserved.
+- `docs/maintainers/MODULE-AUDIT.md` exists.
+- The audit covers every module currently in `defaultRegistryModules`.
+- The audit identifies dependency mismatches in `src/modules/README.md`, if present.
+- The audit identifies public exports that must be preserved.
 - The audit identifies modules with large inline command dispatch.
 - The audit identifies modules using SQLite or other durable state.
-- No runtime code changes are made in this task.
+- No runtime code changes are made.
 
 ### Dependencies
 
@@ -129,28 +183,22 @@ None.
 
 ## T-MOD-001 — Define the minimal module standard draft
 
-### Description
+### Intent
 
-Write the first version of the module standard as a **draft**, based on the audit. This draft should be intentionally minimal and should distinguish required conventions from optional conventions.
-
-### Goals
-
-- Define the smallest useful standard.
-- Separate runtime contract requirements from repository hygiene requirements.
-- Decide which standard elements are docs-only, CI-enforced, or runtime-enforced.
+Write the first module standard as a draft based on the audit. Keep it minimal.
 
 ### Scope
 
 Create or update:
 
-- `.ai/module-standard.md` or the existing canonical AI-doc location selected by the repo rules
+- `.ai/module-standard.md` or the repo-approved AI-doc canonical path
 - `docs/maintainers/MODULE-STANDARD.md`
 - `docs/maintainers/module-build-guide.md`
 
 ### Acceptance criteria
 
-- The standard states its canonical source and regeneration/sync rules.
-- The standard includes explicit non-goals.
+- The standard identifies the canonical source and any generated outputs.
+- The standard includes non-goals.
 - The standard distinguishes required files from optional files.
 - The standard does not require `config.defaults.ts`, `config.schema.json`, `state/`, `types.ts`, or one-file-per-command handlers for modules that do not need them.
 - The standard describes `README.md` as human/operator documentation.
@@ -167,14 +215,9 @@ Create or update:
 
 ## T-MOD-002 — Fix stale module dependency documentation
 
-### Description
+### Intent
 
-Update `src/modules/README.md` so its module dependency table matches actual module registrations.
-
-### Goals
-
-- Restore trust in the module overview.
-- Remove known stale dependency claims before deeper refactoring.
+Repair known doc drift before deeper refactoring.
 
 ### Scope
 
@@ -184,15 +227,16 @@ Update:
 
 ### Acceptance criteria
 
-- `approvals` is documented as depending on `task-engine`.
-- `planning` is documented as depending on `task-engine`.
-- `improvement` is documented as depending on `task-engine` and `planning`.
-- `improvement` is documented as having optional peer `documentation`.
-- `checkpoints` documents its current optional peer relationship with `task-engine`, with a note that runtime semantics will be reviewed in T-MOD-012.
+- Dependency and optional-peer information matches actual registrations.
+- `approvals` is documented as depending on `task-engine` if confirmed by audit.
+- `planning` is documented as depending on `task-engine` if confirmed by audit.
+- `improvement` is documented as depending on `task-engine` and `planning` if confirmed by audit.
+- `improvement` optional peer `documentation` is documented if confirmed by audit.
+- `checkpoints` current optional-peer relationship with `task-engine` is documented, with a note that runtime semantics will be reviewed in T-MOD-012.
 - The table includes `dependsOn` and `optionalPeers` columns.
 - The table order matches `defaultRegistryModules`.
 - The doc says registration metadata is the source of truth for dependencies.
-- If this table is generated or should be generated later, the doc marks it clearly.
+- If the table is generated or should become generated later, mark that clearly.
 
 ### Dependencies
 
@@ -202,15 +246,9 @@ Update:
 
 ## T-MOD-003 — Pilot the standard on `skills`
 
-### Description
+### Intent
 
-Use the `skills` module as the first pilot for the standard. The pilot should prove the smallest useful module shape before changing contracts or enforcing checks globally.
-
-### Goals
-
-- Validate the draft standard on a small module.
-- Preserve behavior while improving local organization and docs.
-- Learn which proposed files are useful and which are ceremony.
+Prove the standard on one small module before enforcing it globally.
 
 ### Scope
 
@@ -224,18 +262,19 @@ Possible changes, subject to the draft standard:
 - add or standardize module-level agent guide
 - split registration/module/index if useful
 - add `commands/index.ts` if useful
-- move skill discovery defaults only if the config ownership decision is made in this task or explicitly deferred
+- move skill discovery defaults only if config ownership is decided here or explicitly deferred
 
 ### Acceptance criteria
 
 - Existing `skills` commands still work: `list-skills`, `inspect-skill`, `apply-skill`, `recommend-skills`.
-- No command names or payload contracts change.
+- No command names change.
+- No payload contracts change.
 - No policy sensitivity changes.
 - Public exports are preserved.
 - README documents purpose, ownership, commands, config, state/audit behavior, dependencies, file layout, and safe extension points.
 - Agent guide documents required files to read before modifying the module.
 - Any file movement is behavior-preserving and covered by tests.
-- The task records lessons learned and updates the draft standard if needed.
+- Lessons learned are recorded in the module standard or audit follow-up section.
 
 ### Dependencies
 
@@ -246,14 +285,9 @@ Possible changes, subject to the draft standard:
 
 ## T-MOD-004 — Revise the module standard from the `skills` pilot
 
-### Description
+### Intent
 
-Update the module standard based on the `skills` pilot. This task decides what becomes required, optional, advisory, or deferred.
-
-### Goals
-
-- Avoid enforcing an unproven abstraction.
-- Convert lessons from the pilot into a durable standard.
+Promote the draft standard into a practical standard after the pilot.
 
 ### Scope
 
@@ -278,19 +312,13 @@ Update:
 
 ---
 
-# Phase B — Tooling and enforcement, advisory first
+# Phase B — Advisory tooling
 
 ## T-MOD-005 — Add advisory module layout checker
 
-### Description
+### Intent
 
-Create a layout checker that reports deviations from the module standard without immediately blocking normal development.
-
-### Goals
-
-- Make drift visible.
-- Avoid breaking the repo while modules are mid-migration.
-- Prepare for final enforcement.
+Make drift visible without breaking the repo during migration.
 
 ### Scope
 
@@ -301,7 +329,7 @@ Create:
 Update:
 
 - `package.json`
-- `pnpm run check` only if the checker can run in advisory/non-blocking mode at first
+- `pnpm run check` only if the checker can run in advisory/non-blocking mode first
 
 ### Acceptance criteria
 
@@ -320,15 +348,9 @@ Update:
 
 ## T-MOD-006 — Add generated module inventory
 
-### Description
+### Intent
 
-Generate a compact machine-readable module inventory from actual registrations and command manifest data.
-
-### Goals
-
-- Give agents a stable map when code search is unavailable.
-- Prevent stale hand-written module tables.
-- Make module docs easier to verify.
+Give agents a stable module map when code search is unavailable.
 
 ### Scope
 
@@ -359,15 +381,9 @@ Update:
 
 ## T-MOD-007 — Standardize unknown-command responses
 
-### Description
+### Intent
 
-Create a shared helper for unknown module commands and migrate modules gradually to a canonical response shape.
-
-### Goals
-
-- Make CLI behavior consistent.
-- Reduce copy/paste error handling.
-- Improve tests and agent remediation.
+Create one shared response helper for unknown module commands.
 
 ### Scope
 
@@ -375,15 +391,15 @@ Create:
 
 - `src/core/module-command-result-helpers.ts`
 
-Update modules opportunistically or in their own migration tasks.
+Update at least one low-risk module or defer module adoption into migration tasks.
 
 ### Acceptance criteria
 
 - Shared helper returns `code: "unknown-command"`.
 - Helper includes module ID and command name in the message.
-- At least one module uses the helper.
+- At least one module uses the helper or a follow-up task is created to apply it module-by-module.
 - Future module migration tasks include migration to the helper.
-- Any remaining `unsupported-command` use is documented as intentional or queued for migration.
+- Remaining `unsupported-command` use is documented as intentional or queued.
 
 ### Dependencies
 
@@ -393,15 +409,9 @@ None.
 
 ## T-MOD-008 — Add command manifest parity checks
 
-### Description
+### Intent
 
-Enforce relationships between the builtin run command manifest, instruction files, and module command dispatch in a way that matches the standard.
-
-### Goals
-
-- Prevent manifest rows without instruction files.
-- Prevent instruction entries that do not map to real files.
-- Make command ownership obvious.
+Keep builtin command manifest, module registrations, and instruction files aligned.
 
 ### Scope
 
@@ -430,14 +440,9 @@ Update or create checks around:
 
 ## T-MOD-009 — Decide where module development metadata belongs
 
-### Description
+### Intent
 
-Decide whether docs/config metadata belongs directly in `ModuleRegistration` or in a separate development metadata file.
-
-### Goals
-
-- Avoid bloating runtime contracts with repository hygiene concerns.
-- Make metadata machine-checkable either way.
+Decide whether docs/config metadata belongs in `ModuleRegistration`, separate metadata files, or generated conventions.
 
 ### Options
 
@@ -461,15 +466,9 @@ Decide whether docs/config metadata belongs directly in `ModuleRegistration` or 
 
 ## T-MOD-010 — Decide module config defaults ownership
 
-### Description
+### Intent
 
 Decide how module-owned config defaults should be represented before moving defaults out of `src/core/workspace-kit-config.ts`.
-
-### Goals
-
-- Make config ownership clearer.
-- Avoid unnecessary files for modules with no config defaults.
-- Preserve effective config behavior.
 
 ### Acceptance criteria
 
@@ -486,14 +485,9 @@ Decide how module-owned config defaults should be represented before moving defa
 
 ## T-MOD-011 — Pilot module-owned config defaults and schemas
 
-### Description
+### Intent
 
-Pilot module-owned config defaults and optional schema validation on `skills` and `plugins`, because both have simple discovery-root config.
-
-### Goals
-
-- Prove config ownership without changing all modules at once.
-- Validate module-scoped config files where useful.
+Pilot module-owned config defaults and optional schema validation on `skills` and `plugins`.
 
 ### Scope
 
@@ -507,10 +501,10 @@ Update only:
 ### Acceptance criteria
 
 - `skills.discoveryRoots` and `plugins.discoveryRoots` behavior remains compatible.
-- Defaults are owned by the modules according to the decision in T-MOD-010.
+- Defaults are owned by the modules according to T-MOD-010.
 - Schemas exist only if the decision requires them.
 - Invalid module-scoped config is reported clearly.
-- No other module is forced to add empty schema/default files in this task.
+- No other module is forced to add empty schema/default files.
 
 ### Dependencies
 
@@ -521,15 +515,9 @@ Update only:
 
 ## T-MOD-012 — Review dependency and optional peer semantics
 
-### Description
+### Intent
 
-Review each module's `dependsOn`, `optionalPeers`, and command-level `requiresPeers` against runtime behavior.
-
-### Goals
-
-- Make dependency declarations truthful.
-- Prevent runtime failures caused by disabled required modules.
-- Clarify hard dependencies vs optional integrations.
+Make module dependencies truthful and command peer requirements explicit.
 
 ### Scope
 
@@ -551,16 +539,11 @@ Review all default modules.
 
 ---
 
-## T-MOD-013 — Add dedicated `context-activation` capability if still warranted
+## T-MOD-013 — Decide dedicated `context-activation` capability
 
-### Description
+### Intent
 
-Decide whether `context-activation` should have a dedicated module capability instead of only using `diagnostics`.
-
-### Goals
-
-- Make CAE discoverable in capability listings if it is a first-class capability.
-- Avoid capability proliferation if `diagnostics` is sufficient.
+Decide whether `context-activation` should have its own module capability instead of only using `diagnostics`.
 
 ### Acceptance criteria
 
@@ -580,12 +563,12 @@ Decide whether `context-activation` should have a dedicated module capability in
 
 ## Migration rule for all module tasks
 
-Each module migration must satisfy these cross-cutting acceptance criteria:
+Every module migration must satisfy these cross-cutting criteria:
 
 - One module per task unless explicitly stated.
 - Behavior-preserving refactor only unless the task states otherwise.
 - Public exports preserved or explicitly documented.
-- Existing commands, command names, and payload contracts preserved.
+- Existing command names and payload contracts preserved.
 - Policy sensitivity preserved.
 - README and agent guide updated.
 - State ownership documented.
@@ -596,15 +579,11 @@ Each module migration must satisfy these cross-cutting acceptance criteria:
 
 ## T-MOD-014 — Migrate `skills` from pilot to final standard
 
-### Description
-
-Finish any remaining `skills` cleanup after the pilot and config decisions.
-
 ### Acceptance criteria
 
 - `skills` conforms to the final standard.
 - `skills` remains the reference implementation for simple modules.
-- Config and command dispatch match the final decisions.
+- Config and command dispatch match final decisions.
 
 ### Dependencies
 
@@ -630,10 +609,6 @@ Finish any remaining `skills` cleanup after the pilot and config decisions.
 ---
 
 ## T-MOD-016 — Extract shared SQLite-backed module helper
-
-### Description
-
-Create a shared helper for modules that open planning SQLite, assert a module-specific schema, attach planning generation metadata, and handle storage errors consistently.
 
 ### Acceptance criteria
 
@@ -803,10 +778,6 @@ Create a shared helper for modules that open planning SQLite, assert a module-sp
 
 ## T-MOD-027 — Migrate `task-engine` last
 
-### Description
-
-Migrate the central task-engine module only after smaller modules prove the pattern.
-
 ### Acceptance criteria
 
 - Existing task-engine commands still work.
@@ -826,10 +797,6 @@ Migrate the central task-engine module only after smaller modules prove the patt
 
 ## T-MOD-028 — Generate or refresh module docs from inventory where useful
 
-### Description
-
-Use generated inventory to reduce stale hand-written module tables.
-
 ### Acceptance criteria
 
 - Generated sections are clearly marked.
@@ -844,10 +811,6 @@ Use generated inventory to reduce stale hand-written module tables.
 ---
 
 ## T-MOD-029 — Tighten module layout checker
-
-### Description
-
-Turn advisory checks into blocking checks after all modules conform.
 
 ### Acceptance criteria
 
@@ -864,11 +827,7 @@ Turn advisory checks into blocking checks after all modules conform.
 
 ---
 
-## T-MOD-030 — Add final module-refactor completion gate
-
-### Description
-
-Close the refactor by verifying standard conformance, behavior preservation, and public API compatibility.
+## T-MOD-030 — Final module-refactor completion gate
 
 ### Acceptance criteria
 
@@ -902,12 +861,19 @@ Close the refactor by verifying standard conformance, behavior preservation, and
 8. T-MOD-014 through T-MOD-027 — Migrate modules one at a time.
 9. T-MOD-028 through T-MOD-030 — Generate docs, tighten checks, and close.
 
+# What to do first
+
+Start with T-MOD-000. Do not skip it. The audit is the input to every other task.
+
+After T-MOD-000, make only the smallest safe doc fix from T-MOD-002 if the audit confirms the dependency drift. Then pilot `skills`.
+
 # Coverage checklist
 
-This revised plan covers:
+This plan covers:
 
 - current-state audit before standardization
 - explicit non-goals
+- Composer-friendly first action
 - pilot-first execution
 - runtime-vs-hygiene separation
 - generated-doc/source-of-truth awareness
