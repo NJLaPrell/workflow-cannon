@@ -98,15 +98,6 @@ export function digestCaeRegistryContent(
   return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
 }
 
-/** @deprecated Prefer {@link digestCaeRegistryContent} — id-only digest retained for narrow compatibility checks. */
-export function digestCaeRegistryIdSet(artifactIds: string[], activationIds: string[]): string {
-  const payload = JSON.stringify({
-    artifactIds: [...artifactIds].sort((a, b) => a.localeCompare(b)),
-    activationIds: [...activationIds].sort((a, b) => a.localeCompare(b))
-  });
-  return createHash("sha256").update(payload).digest("hex");
-}
-
 /**
  * Verify every artifact `ref.path` resolves inside `workspaceRoot` and exists on disk.
  * Rejects empty paths, absolute paths, and `..` escapes (**Phase 70 / T892**).

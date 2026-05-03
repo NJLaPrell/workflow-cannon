@@ -18,7 +18,7 @@ Planning consistency (roadmap / feature matrix / Phase 4 alignment):
 
 Full release-style gate bundle:
 
-- **`pnpm run phase5-gates`** — includes phase4-gates + tests (does not replace `parity`).
+- **`pnpm run pre-merge-gates`** — maintainer metadata/consistency gates plus tests (does not replace `parity`).
 
 ## Common first failures
 

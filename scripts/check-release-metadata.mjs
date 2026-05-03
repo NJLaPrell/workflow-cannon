@@ -30,9 +30,7 @@ const REQUIRED_SCRIPTS = [
   "check-planning-consistency",
   "check-release-channel",
   "maintainer-gates",
-  "pre-merge-gates",
-  "phase4-gates",
-  "phase5-gates"
+  "pre-merge-gates"
 ];
 
 function getNestedValue(obj, dotPath) {

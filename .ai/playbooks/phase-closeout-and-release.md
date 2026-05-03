@@ -61,7 +61,7 @@ Slash tokens such as **`approve-release`** (e.g. on **`/complete-phase`**) and c
 ## 5) Release procedure (execute per RELEASING)
 
 1. **Merge `release/phase-<N>` into `main`** via PR (or equivalent reviewed merge) using the repo’s preferred strategy, consistent with **maintainer-delivery-loop**. **`main`** should be the tip you tag unless policy says otherwise.
-2. Run the full **Release procedure** in [`RELEASING.md`](../RELEASING.md): define scope, prepare artifacts (changelog + `package.json` version), run validation commands (`build`, `check`, `test`, `parity`, `check-release-metadata`, `pre-merge-gates` — alias: `phase5-gates`, doc consistency sweep), **then** publish after approval, then record evidence (tag, workflow run URL, npm).
+2. Run the full **Release procedure** in [`RELEASING.md`](../RELEASING.md): define scope, prepare artifacts (changelog + `package.json` version), run validation commands (`build`, `check`, `test`, `parity`, `check-release-metadata`, `pre-merge-gates`, doc consistency sweep), **then** publish after approval, then record evidence (tag, workflow run URL, npm).
 
 Tier **B** `workspace-kit run` commands (non-transition) also require JSON `policyApproval` — see [`AGENT-CLI-MAP.md`](../AGENT-CLI-MAP.md) and [`POLICY-APPROVAL.md`](../POLICY-APPROVAL.md).
 

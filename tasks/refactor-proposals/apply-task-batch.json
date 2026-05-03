@@ -1,0 +1,292 @@
+{
+  "expectedPlanningGeneration": 1987,
+  "ops": [
+    {
+      "kind": "create-task",
+      "payload": {
+        "allocateId": true,
+        "status": "proposed",
+        "type": "improvement",
+        "title": "[REF-001] Decompose task-engine-internal megamodule",
+        "technicalScope": [
+          "Split src/modules/task-engine/task-engine-internal.ts into task-engine/commands/* (or agreed) handler modules.",
+          "Keep taskEngineModule export and workspace-kit run JSON contracts behavior-identical.",
+          "Run full pnpm run test and spot-check representative wk run commands (schema-only where appropriate)."
+        ],
+        "acceptanceCriteria": [
+          "Dispatch file is intentionally thin (registration + routing only); clustered logic lives outside it.",
+          "pnpm run build and pnpm run test pass; no intentional command JSON regressions.",
+          "Spec: tasks/refactor-proposals/REF-001-decompose-task-engine-internal.md"
+        ],
+        "metadata": {
+          "issue": "task-engine-internal.ts aggregates the entire task-engine onCommand surface in one megamodule, raising defect and merge-risk.",
+          "supportingReasoning": "Line-count and coupling review identified a single dominant file (~2.7k+ lines) as primary maintainability bottleneck; aligns with src/README layering.",
+          "evidenceRefs": [
+            "tasks/refactor-proposals/REF-001-decompose-task-engine-internal.md",
+            "src/modules/task-engine/task-engine-internal.ts"
+          ],
+          "links": { "proposalRef": "REF-001", "dependsOnProposalIds": [], "tracksDoc": "tasks/refactor-proposals/README.md" },
+          "proposedSolutions": [
+            "Per-command-family handlers imported by slim task-engine-internal.ts dispatch",
+            "Optional phased PRs per cluster"
+          ]
+        },
+        "clientMutationId": "ref-open-REF-001-20260429"
+      }
+    },
+    {
+      "kind": "create-task",
+      "payload": {
+        "allocateId": true,
+        "status": "proposed",
+        "type": "improvement",
+        "title": "[REF-002] Decompose context-activation index megamodule",
+        "technicalScope": [
+          "Split modules/context-activation/onCommand surface into handlers/* with thin index.ts registration.",
+          "Extract shared pagination helpers to a dedicated file where duplicated.",
+          "Preserve CAE CLI JSON outputs and imports per module boundary rules."
+        ],
+        "acceptanceCriteria": [
+          "context-activation/index.ts is primarily composition and routing.",
+          "Build and tests green; schema-only smoke for representative cae-* commands.",
+          "Spec: tasks/refactor-proposals/REF-002-decompose-context-activation.md"
+        ],
+        "metadata": {
+          "issue": "context-activation/index.ts mixes CAE evaluation, SQLite, guidance, and pagination in one very large module entry.",
+          "supportingReasoning": "~1.5k line single-file entry complicates isolated changes and parallel maintenance; refactor-proposal pack documents extraction plan.",
+          "evidenceRefs": [
+            "tasks/refactor-proposals/REF-002-decompose-context-activation.md",
+            "src/modules/context-activation/index.ts"
+          ],
+          "links": { "proposalRef": "REF-002", "relatedProposalIds": ["REF-006"], "tracksDoc": "tasks/refactor-proposals/README.md" }
+        },
+        "clientMutationId": "ref-open-REF-002-20260429"
+      }
+    },
+    {
+      "kind": "create-task",
+      "payload": {
+        "allocateId": true,
+        "status": "proposed",
+        "type": "improvement",
+        "title": "[REF-003] Unify kit SQLite planning persistence kernel",
+        "technicalScope": [
+          "Introduce shared core/state kit-sqlite open+migrate primitives incrementally.",
+          "Converge cae-kit-sqlite and sqlite-dual-planning callers without changing on-disk paths by default.",
+          "Maintain compatibility re-exports; extend migration/fixture coverage per RELEASING gates."
+        ],
+        "acceptanceCriteria": [
+          "parity/check-compatibility and tests pass as required for persistence-touching work;",
+          "Single documented user_version bump story; doctor/readiness parity spot-check.",
+          "Spec: tasks/refactor-proposals/REF-003-unify-planning-sqlite-layer.md"
+        ],
+        "metadata": {
+          "issue": "Planning-related SQLite DDL and open paths are fragmented across workspace-kit-sqlite, cae-kit-sqlite, and task-engine persistence, risking drift.",
+          "supportingReasoning": "Architectural review identified overlapping migrations and callers; phased kernel reduces duplicate PRAGMA/migration omissions.",
+          "evidenceRefs": [
+            "tasks/refactor-proposals/REF-003-unify-planning-sqlite-layer.md",
+            "src/core/state/workspace-kit-sqlite.ts",
+            "src/modules/task-engine/persistence/sqlite-dual-planning.ts"
+          ],
+          "links": { "proposalRef": "REF-003", "dependsOnProposalIds": ["REF-004"], "relatedProposalIds": ["REF-009"], "tracksDoc": "tasks/refactor-proposals/README.md" },
+          "risk": "high"
+        },
+        "clientMutationId": "ref-open-REF-003-20260429"
+      }
+    },
+    {
+      "kind": "create-task",
+      "payload": {
+        "allocateId": true,
+        "status": "proposed",
+        "type": "improvement",
+        "title": "[REF-004] Enforce module boundaries and shared validation ports",
+        "technicalScope": [
+          "Inventory sibling-module imports under modules/* (e.g. task-engine vs skills validation).",
+          "Relocate pure shared validation to core or contracts; optionally add CI script allowlist gate.",
+          "Update src/README.md documented exceptions."
+        ],
+        "acceptanceCriteria": [
+          "No unauthorized sibling imports or explicit allowlisted exceptions with rationale;",
+          "Build and tests pass.",
+          "Spec: tasks/refactor-proposals/REF-004-enforce-module-boundaries.md"
+        ],
+        "metadata": {
+          "issue": "Stated module layering (modules depend on core/contracts only) is violated by concrete imports such as task-engine to skills validation.",
+          "supportingReasoning": "Preserves architectural predictability during megamodule refactors; proposal links core/planning facade pattern.",
+          "evidenceRefs": [
+            "tasks/refactor-proposals/REF-004-enforce-module-boundaries.md",
+            "src/README.md",
+            "src/modules/task-engine/apply-task-batch-command.ts"
+          ],
+          "links": {
+            "proposalRef": "REF-004",
+            "unblocksProposalIds": ["REF-003"],
+            "tracksDoc": "tasks/refactor-proposals/README.md"
+          }
+        },
+        "clientMutationId": "ref-open-REF-004-20260429"
+      }
+    },
+    {
+      "kind": "create-task",
+      "payload": {
+        "allocateId": true,
+        "status": "proposed",
+        "type": "improvement",
+        "title": "[REF-005] Split planning module index megamodule",
+        "technicalScope": [
+          "Extract helpers from modules/planning/index.ts into cohesive files (plan-output, execution-drafts, id utils).",
+          "Keep WorkflowModule wiring in index.ts;",
+          "Confirm build-plan semantics and strict planning policies unchanged."
+        ],
+        "acceptanceCriteria": [
+          "Thin index.ts; orthogonal concerns isolated.",
+          "Tests green;",
+          "Spec: tasks/refactor-proposals/REF-005-split-planning-module.md"
+        ],
+        "metadata": {
+          "issue": "modules/planning/index.ts combines interview logic, drafts, outputs, and task-engine coupling in one large surface.",
+          "supportingReasoning": "~900 LOC single file complicates phased build-plan edits; refactor-proposal proposes extraction boundaries.",
+          "evidenceRefs": ["tasks/refactor-proposals/REF-005-split-planning-module.md", "src/modules/planning/index.ts"],
+          "links": { "proposalRef": "REF-005", "tracksDoc": "tasks/refactor-proposals/README.md" }
+        },
+        "clientMutationId": "ref-open-REF-005-20260429"
+      }
+    },
+    {
+      "kind": "create-task",
+      "payload": {
+        "allocateId": true,
+        "status": "proposed",
+        "type": "improvement",
+        "title": "[REF-006] Restructure core/cae into domain subfolders",
+        "technicalScope": [
+          "Create core/cae subfolders (registry, persistence, evaluation, guidance) with incremental moves;",
+          "Use re-export shims as needed;",
+          "Update imports in CLI and context-activation."
+        ],
+        "acceptanceCriteria": [
+          "Build and tests pass; mechanical move-only;",
+          "No dangling imports;",
+          "Spec: tasks/refactor-proposals/REF-006-cae-subpackage-layout.md"
+        ],
+        "metadata": {
+          "issue": "core/cae is a flat swarm of peers; navigability and ownership unclear.",
+          "supportingReasoning": "Structural grouping reduces grep-only discovery burden; aligns with REF-002 handler split.",
+          "evidenceRefs": ["tasks/refactor-proposals/REF-006-cae-subpackage-layout.md"],
+          "links": { "proposalRef": "REF-006", "relatedProposalIds": ["REF-002", "REF-003"], "tracksDoc": "tasks/refactor-proposals/README.md" }
+        },
+        "clientMutationId": "ref-open-REF-006-20260429"
+      }
+    },
+    {
+      "kind": "create-task",
+      "payload": {
+        "allocateId": true,
+        "status": "proposed",
+        "type": "improvement",
+        "title": "[REF-007] Layer workspace-kit CLI (cli run doctor policy helpers)",
+        "technicalScope": [
+          "Extract pure helpers from cli.ts and cli/run-command.ts;",
+          "Aggregate doctor collation under cli/doctor where applicable;",
+          "Preserve WorkspaceKitCliOptions and exit semantics."
+        ],
+        "acceptanceCriteria": [
+          "cli.ts materially thinner;",
+          "Tests plus smoke checklist in PR;",
+          "Spec: tasks/refactor-proposals/REF-007-cli-layering.md"
+        ],
+        "metadata": {
+          "issue": "cli.ts and run-command.ts mix bootstrap doctor run pipeline policy checkpoints.",
+          "supportingReasoning": "Separation lowers regression blast radius when changing wk run only.",
+          "evidenceRefs": ["tasks/refactor-proposals/REF-007-cli-layering.md", "src/cli.ts", "src/cli/run-command.ts"],
+          "links": { "proposalRef": "REF-007", "tracksDoc": "tasks/refactor-proposals/README.md" }
+        },
+        "clientMutationId": "ref-open-REF-007-20260429"
+      }
+    },
+    {
+      "kind": "create-task",
+      "payload": {
+        "allocateId": true,
+        "status": "proposed",
+        "type": "improvement",
+        "title": "[REF-008] Split config stack (config-cli metadata resolution)",
+        "technicalScope": [
+          "Partition config-metadata.ts by facet merges;",
+          "Keep config-cli as orchestration only;",
+          "Avoid silent JSON explanation shape breaks per semver norms."
+        ],
+        "acceptanceCriteria": [
+          "Smaller cohesive config files;",
+          "Build test green;",
+          "Spec: tasks/refactor-proposals/REF-008-split-config-stack.md"
+        ],
+        "metadata": {
+          "issue": "config-cli workspace-kit-config config-metadata overlap inflates deltas for single knobs.",
+          "supportingReasoning": "Facet-oriented split matches registry model and refactor-proposal structure.",
+          "evidenceRefs": ["tasks/refactor-proposals/REF-008-split-config-stack.md"],
+          "links": { "proposalRef": "REF-008", "relatedProposalIds": ["REF-010"], "tracksDoc": "tasks/refactor-proposals/README.md" }
+        },
+        "clientMutationId": "ref-open-REF-008-20260429"
+      }
+    },
+    {
+      "kind": "create-task",
+      "payload": {
+        "allocateId": true,
+        "status": "proposed",
+        "type": "improvement",
+        "title": "[REF-009] Align adapters stub with SQLite integration reality",
+        "technicalScope": [
+          "Choose Direction A adapters B retire C shim per refactor proposal;",
+          "Coordinate optional REF-003 seams;",
+          "Update src/README.md layering honesty."
+        ],
+        "acceptanceCriteria": [
+          "Contributor-facing layering matches code;",
+          "Build test Pass;",
+          "Spec: tasks/refactor-proposals/REF-009-adapters-or-document.md"
+        ],
+        "metadata": {
+          "issue": "src/adapters is nearly empty whereas persistence lives under core/state and task-engine.",
+          "supportingReasoning": "False architectural promise wastes onboarding time;",
+          "evidenceRefs": [
+            "tasks/refactor-proposals/REF-009-adapters-or-document.md",
+            "src/adapters/index.ts",
+            "src/README.md"
+          ],
+          "links": { "proposalRef": "REF-009", "dependsOnProposalIds": ["REF-003"], "tracksDoc": "tasks/refactor-proposals/README.md" }
+        },
+        "clientMutationId": "ref-open-REF-009-20260429"
+      }
+    },
+    {
+      "kind": "create-task",
+      "payload": {
+        "allocateId": true,
+        "status": "proposed",
+        "type": "improvement",
+        "title": "[REF-010] Narrow package exports vs modules barrel re-exports",
+        "technicalScope": [
+          "Audit programmatic consumers of npm package;",
+          "Additive package exports subpaths deprecation before removal;",
+          "Document semver stable API stance."
+        ],
+        "acceptanceCriteria": [
+          "package exports enumerate supported paths;",
+          "CHANGELOG semver policy on removals;",
+          "Spec: tasks/refactor-proposals/REF-010-modules-barrel-exports.md"
+        ],
+        "metadata": {
+          "issue": "Wide modules barrel re-exports ambiguous semver-bound public API for library consumers.",
+          "supportingReasoning": "package.json partial exports precedent should extend intentionally;",
+          "evidenceRefs": ["tasks/refactor-proposals/REF-010-modules-barrel-exports.md", "package.json"],
+          "links": { "proposalRef": "REF-010", "relatedProposalIds": ["REF-008"], "tracksDoc": "tasks/refactor-proposals/README.md" }
+        },
+        "clientMutationId": "ref-open-REF-010-20260429"
+      }
+    }
+  ]
+}

@@ -69,8 +69,8 @@ jobs:
       - name: Dry-run pack
         run: pnpm run pack:dry-run
 
-      - name: Phase 4 gates
-        run: pnpm run phase4-gates
+      - name: Maintainer gates
+        run: pnpm run maintainer-gates
 
       - name: Advisory task-state hand-edit check
         continue-on-error: true
