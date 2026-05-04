@@ -11,13 +11,15 @@ import {
   PHASE_NOTE_REF_TYPES,
   PHASE_NOTE_STATUSES,
   PHASE_NOTE_SUMMARY_MAX,
-  PHASE_NOTE_TYPES
+  PHASE_NOTE_TYPES,
+  PHASE_NOTE_TYPES_CONVERTIBLE_TO_TASK
 } from "../phase-journal/phase-journal-constants.js";
 import { projectPhaseNote, type PhaseNoteProjection } from "../phase-journal/phase-journal-projections.js";
 import { createPhaseJournalStore } from "../phase-journal/phase-journal-store.js";
 import type { CreatePhaseNoteInput, PhaseNoteStatus } from "../phase-journal/phase-journal-types.js";
 import { sortPhaseNotesForContext } from "../phase-journal/phase-journal-scoring.js";
 import { inferPhaseKeyFromTask } from "../phase-journal/phase-journal-phase-key.js";
+import { runConvertPhaseNoteToTaskCommand } from "./phase-journal-convert-command.js";
 
 function readKitUserVersion(db: { pragma: (name: string, options?: { simple: boolean }) => unknown }): number {
   const raw = db.pragma("user_version", { simple: true });
@@ -50,15 +52,17 @@ function parseRefInput(raw: unknown): { type: string; value: string } | null {
   return { type, value };
 }
 
-export function resolvePhaseJournalCommands(
+export async function resolvePhaseJournalCommands(
   command: { name: string; args?: Record<string, unknown> },
   ctx: ModuleLifecycleContext,
   planning: OpenedPlanningStores
-): ModuleCommandResult | null {
+): Promise<ModuleCommandResult | null> {
   const names = new Set([
     "add-phase-note",
+    "convert-phase-note-to-task",
     "list-phase-notes",
     "get-phase-context",
+    "propose-tasks-from-phase-notes",
     "dismiss-phase-note",
     "supersede-phase-note"
   ]);
@@ -298,6 +302,40 @@ export function resolvePhaseJournalCommands(
     const sorted = sortPhaseNotesForContext(pool, { phaseKey, taskId, refKeys });
     const picked = sorted.slice(0, limit).map(projectPhaseNote);
     return okData({ phaseKey, taskId: taskId ?? null, notes: picked, count: picked.length }, "phase-context", "Resolved phase context");
+  }
+
+  if (command.name === "propose-tasks-from-phase-notes") {
+    const taskId = readStringField(args, "taskId");
+    let phaseKey = readStringField(args, "phaseKey");
+    if (!phaseKey && taskId) {
+      phaseKey = inferPhaseKeyFromTask(planning.taskStore.getTask(taskId)) ?? undefined;
+    }
+    if (!phaseKey?.trim()) {
+      return { ok: false, code: "invalid-phase-note-args", message: "Provide phaseKey or taskId for phase inference." };
+    }
+    phaseKey = phaseKey.trim();
+
+    const limitRaw = args.limit;
+    let limit = PHASE_NOTE_LIST_DEFAULT_LIMIT;
+    if (typeof limitRaw === "number" && Number.isFinite(limitRaw)) {
+      limit = Math.min(Math.max(limitRaw, 1), PHASE_NOTE_LIST_MAX_LIMIT);
+    }
+
+    const pool = store.listNotes({ phaseKey, status: "active", limit: PHASE_NOTE_LIST_MAX_LIMIT });
+    const proposals = pool
+      .filter((n) => PHASE_NOTE_TYPES_CONVERTIBLE_TO_TASK.has(n.noteType))
+      .filter((n) => (taskId ? n.taskId === taskId : true))
+      .slice(0, limit)
+      .map(projectPhaseNote);
+    return okData(
+      { phaseKey, taskId: taskId ?? null, proposals, persisted: false, count: proposals.length },
+      "phase-note-proposals-listed",
+      "Listed convertible phase notes as proposals (read-only; no task writes)"
+    );
+  }
+
+  if (command.name === "convert-phase-note-to-task") {
+    return await runConvertPhaseNoteToTaskCommand(ctx, planning, planning.taskStore, args);
   }
 
   if (command.name === "dismiss-phase-note") {

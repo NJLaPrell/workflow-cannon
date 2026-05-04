@@ -1941,6 +1941,74 @@ test("taskEngineModule run-transition idempotent replay does not re-apply phaseN
   }
 });
 
+test("taskEngineModule propose-tasks-from-phase-notes and convert-phase-note-to-task", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T9901",
+        status: "ready",
+        phaseKey: "88",
+        phase: "Phase 88"
+      })
+    );
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const noteRes = await taskEngineModule.onCommand(
+    {
+      name: "add-phase-note",
+      args: {
+        phaseKey: "88",
+        noteType: "task-suggestion",
+        summary: "Proposal: tighten CI gate",
+        taskId: "T9901"
+      }
+    },
+    ctx
+  );
+  assert.equal(noteRes.ok, true);
+  const nid = noteRes.data.note.id;
+
+  const prop = await taskEngineModule.onCommand(
+    {
+      name: "propose-tasks-from-phase-notes",
+      args: { phaseKey: "88" }
+    },
+    ctx
+  );
+  assert.equal(prop.ok, true);
+  assert.equal(prop.data.persisted, false);
+  assert.ok(Array.isArray(prop.data.proposals));
+  assert.ok(prop.data.proposals.some((p) => p.id === nid));
+
+  const conv = await taskEngineModule.onCommand(
+    {
+      name: "convert-phase-note-to-task",
+      args: {
+        noteId: nid,
+        expectedPlanningGeneration: 1
+      }
+    },
+    ctx
+  );
+  assert.equal(conv.ok, true);
+  assert.equal(conv.data.task.status, "proposed");
+  assert.equal(conv.data.task.metadata.phaseJournal.convertedFromNoteId, nid);
+
+  const dup = await taskEngineModule.onCommand(
+    {
+      name: "convert-phase-note-to-task",
+      args: {
+        noteId: nid,
+        expectedPlanningGeneration: conv.data.planningGeneration
+      }
+    },
+    ctx
+  );
+  assert.equal(dup.ok, false);
+  assert.equal(dup.code, "phase-note-not-convertible");
+});
+
 test("taskEngineModule agent-mutation-plan prepares sensitive run-transition with lifecycle context", async () => {
   const workspace = await tmpDir();
   await seedSqliteStore(workspace, (store) => {
