@@ -1,4 +1,6 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
+import { CLI_REMEDIATION_DOCS } from "../../../core/cli-remediation.js";
+import { parsePolicyApproval } from "../../../core/policy.js";
 import { attachPolicyMeta } from "../attach-planning-response-meta.js";
 import type { OpenedPlanningStores } from "../persistence/planning-open.js";
 import { readWorkspaceStatusSnapshotFromDual } from "../persistence/workspace-status-store.js";
@@ -30,6 +32,7 @@ import type { CreatePhaseNoteInput, PhaseNoteStatus, UpdateActivePhaseNotePatch 
 import { sortPhaseNotesForContext } from "../phase-journal/phase-journal-scoring.js";
 import { inferPhaseKeyFromTask, resolvePhaseKeyForPhaseJournalRead, type PhaseJournalPhaseKeySource } from "../phase-journal/phase-journal-phase-key.js";
 import { rejectIfPhaseNoteTextContainsSecret } from "../phase-journal/phase-journal-secret-guard.js";
+import { readPhaseJournalKitPolicy } from "../phase-journal/phase-journal-kit-config.js";
 import { runConvertPhaseNoteToTaskCommand } from "./phase-journal-convert-command.js";
 
 function readKitUserVersion(db: { pragma: (name: string, options?: { simple: boolean }) => unknown }): number {
@@ -42,6 +45,26 @@ function phaseJournalVersionError(current: number): ModuleCommandResult {
     ok: false,
     code: "phase-journal-kit-version",
     message: `Phase journal commands require kit SQLite user_version >= ${PHASE_JOURNAL_MIN_KIT_USER_VERSION} (current ${current}); open the workspace DB once with a current workspace-kit to migrate.`
+  };
+}
+
+function denyCriticalPhaseNoteWithoutPolicy(commandName: "dismiss-phase-note" | "supersede-phase-note"): ModuleCommandResult {
+  const instructionPath =
+    commandName === "supersede-phase-note"
+      ? "src/modules/task-engine/instructions/supersede-phase-note.md"
+      : "src/modules/task-engine/instructions/dismiss-phase-note.md";
+  return {
+    ok: false,
+    code: "phase-note-critical-policy-approval-required",
+    message:
+      "This active critical phase note cannot be dismissed or superseded without JSON policyApproval while kit.phaseJournal.requirePolicyApprovalForCriticalDismissSupersede is true. Pass policyApproval:{\"confirmed\":true,\"rationale\":\"…\"} on the same run invocation.",
+    data: {
+      remediation: {
+        docPath: CLI_REMEDIATION_DOCS.policyApproval,
+        instructionPath
+      },
+      configKey: "kit.phaseJournal.requirePolicyApprovalForCriticalDismissSupersede"
+    }
   };
 }
 
@@ -562,6 +585,15 @@ export async function resolvePhaseJournalCommands(
     if (!existing) {
       return { ok: false, code: "phase-note-not-found", message: `Unknown noteId '${noteId}'.` };
     }
+    const phaseJournalPolicy = readPhaseJournalKitPolicy(ctx.effectiveConfig as Record<string, unknown> | undefined);
+    if (
+      phaseJournalPolicy.requirePolicyApprovalForCriticalDismissSupersede &&
+      existing.status === "active" &&
+      existing.priority === "critical" &&
+      !parsePolicyApproval(args)
+    ) {
+      return denyCriticalPhaseNoteWithoutPolicy("dismiss-phase-note");
+    }
     store.dismissNote(noteId);
     const updated = store.getById(noteId);
     if (!updated) {
@@ -601,6 +633,15 @@ export async function resolvePhaseJournalCommands(
         code: "invalid-phase-note-args",
         message: "supersededBy note must not be past expires_at while still active; extend expiry or pick another note."
       };
+    }
+    const phaseJournalPolicy = readPhaseJournalKitPolicy(ctx.effectiveConfig as Record<string, unknown> | undefined);
+    if (
+      phaseJournalPolicy.requirePolicyApprovalForCriticalDismissSupersede &&
+      from.status === "active" &&
+      from.priority === "critical" &&
+      !parsePolicyApproval(args)
+    ) {
+      return denyCriticalPhaseNoteWithoutPolicy("supersede-phase-note");
     }
     store.supersedeNote(noteId, supersededBy);
     const updated = store.getById(noteId);

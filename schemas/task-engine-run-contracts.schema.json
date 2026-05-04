@@ -650,7 +650,8 @@
               "additionalProperties": true,
               "properties": {
                 "includeTaskCounts": { "type": "boolean" },
-                "includeDriftDetails": { "type": "boolean" }
+                "includeDriftDetails": { "type": "boolean" },
+                "includePhaseJournalSummary": { "type": "boolean" }
               }
             },
             "responseData": {

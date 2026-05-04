@@ -95,3 +95,29 @@ test("validatePersistedConfigDocument rejects bad eventPlaybookMap values", () =
     /eventPlaybookMap/
   );
 });
+
+test("validatePersistedConfigDocument accepts kit.phaseJournal.requirePolicyApprovalForCriticalDismissSupersede", () => {
+  validateDoc(
+    {
+      kit: {
+        phaseJournal: { requirePolicyApprovalForCriticalDismissSupersede: true }
+      }
+    },
+    "fixture"
+  );
+});
+
+test("validatePersistedConfigDocument rejects unknown kit.phaseJournal keys", () => {
+  assert.throws(
+    () =>
+      validateDoc(
+        {
+          kit: {
+            phaseJournal: { requirePolicyApprovalForCriticalDismissSupersede: true, oops: 1 }
+          }
+        },
+        "fixture"
+      ),
+    /unknown kit\.phaseJournal\.oops/
+  );
+});

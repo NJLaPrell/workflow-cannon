@@ -340,6 +340,7 @@ export function validatePersistedConfigDocument(
         key !== "githubInvocation" &&
         key !== "lifecycleHooks" &&
         key !== "autoCheckpoint" &&
+        key !== "phaseJournal" &&
         key !== "cae"
       ) {
         throw new Error(`config-invalid(${label}): unknown kit.${key}`);
@@ -496,6 +497,23 @@ export function validatePersistedConfigDocument(
       }
       if (ac.stashWhenDirty !== undefined) {
         validateValueForMetadata(REGISTRY["kit.autoCheckpoint.stashWhenDirty"]!, ac.stashWhenDirty);
+      }
+    }
+    if (k.phaseJournal !== undefined) {
+      if (typeof k.phaseJournal !== "object" || k.phaseJournal === null || Array.isArray(k.phaseJournal)) {
+        throw new Error(`config-invalid(${label}): kit.phaseJournal must be an object`);
+      }
+      const pj = k.phaseJournal as Record<string, unknown>;
+      for (const pk of Object.keys(pj)) {
+        if (pk !== "requirePolicyApprovalForCriticalDismissSupersede") {
+          throw new Error(`config-invalid(${label}): unknown kit.phaseJournal.${pk}`);
+        }
+      }
+      if (pj.requirePolicyApprovalForCriticalDismissSupersede !== undefined) {
+        validateValueForMetadata(
+          REGISTRY["kit.phaseJournal.requirePolicyApprovalForCriticalDismissSupersede"]!,
+          pj.requirePolicyApprovalForCriticalDismissSupersede
+        );
       }
     }
     if (k.cae !== undefined) {

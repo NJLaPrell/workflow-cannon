@@ -8,6 +8,8 @@ Mark a phase note as dismissed. **`reason` is required** for operator discipline
 
 **`reason`** is scanned by the same built-in secret-shaped pattern guard as phase note bodies; violations return **`phase-note-secret-rejected`**.
 
+When **`kit.phaseJournal.requirePolicyApprovalForCriticalDismissSupersede`** is **`true`**, dismissing an **active** note with **`priority: "critical"`** requires JSON **`policyApproval`** (`confirmed: true` and non-empty **`rationale`**) on the same invocation. Without it, the command returns **`phase-note-critical-policy-approval-required`**.
+
 ## Usage
 
 ```

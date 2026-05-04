@@ -6,6 +6,7 @@ import { readKitSqliteUserVersion } from "../../core/state/workspace-kit-sqlite.
 import { readProjectConfigDocument, writeProjectConfigDocument } from "../../core/workspace-kit-config.js";
 import { inferTaskPhaseKey, parseKitPhaseNumberFromYaml, resolveCanonicalPhase } from "./phase-resolution.js";
 import { TaskEngineError } from "./transitions.js";
+import { buildPhaseJournalStatusSummary } from "./phase-journal/phase-journal-summary.js";
 import { digestPayload, readIdempotencyValue } from "./mutation-utils.js";
 import type { TaskEntity, TaskStatus } from "./types.js";
 import {
@@ -292,12 +293,17 @@ export async function runPhaseStatus(
 ): Promise<ModuleCommandResult> {
   const includeTaskCounts = args.includeTaskCounts === true;
   const includeDriftDetails = args.includeDriftDetails === true;
+  const includePhaseJournalSummary = args.includePhaseJournalSummary === true;
 
   try {
     let db = state?.db;
+    let dbAbsPath = state?.dbPath;
     if (!db) {
       const dual = openSqliteDualForWorkspaceStatus(ctx);
       db = dual.getDatabase();
+      dbAbsPath = dual.dbPath;
+    } else if (!dbAbsPath && typeof db.name === "string") {
+      dbAbsPath = db.name;
     }
     const workspaceStatus = readKitWorkspaceStatusRow(db);
     const workspaceSnapshot = workspaceStatus ? kitWorkspaceStatusPublicToSnapshot(workspaceStatus) : null;
@@ -341,6 +347,23 @@ export async function runPhaseStatus(
     }
     if (includeDriftDetails) {
       data.driftDetails = driftDetails;
+    }
+    if (includePhaseJournalSummary) {
+      if (dbAbsPath) {
+        data.phaseJournal = buildPhaseJournalStatusSummary({
+          db,
+          dbAbsPath,
+          canonicalPhaseKey: canonicalPhase.canonicalPhaseKey,
+          nowMs: Date.now()
+        });
+      } else {
+        data.phaseJournal = {
+          supported: false,
+          kitSqliteUserVersion: 0,
+          phaseKey: canonicalPhase.canonicalPhaseKey,
+          activeCriticalNoteCount: null
+        };
+      }
     }
 
     return {

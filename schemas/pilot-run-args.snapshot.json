@@ -757,6 +757,9 @@
         },
         "includeDriftDetails": {
           "type": "boolean"
+        },
+        "includePhaseJournalSummary": {
+          "type": "boolean"
         }
       },
       "additionalProperties": true
