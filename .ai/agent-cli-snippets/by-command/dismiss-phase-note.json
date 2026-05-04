@@ -1,0 +1,37 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "dismiss-phase-note",
+  "schema": {
+    "type": "object",
+    "additionalProperties": true,
+    "description": "Permissive fallback args schema for 'dismiss-phase-note'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+  },
+  "schemaSource": "manifest-permissive-fallback",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run dismiss-phase-note '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/dismiss-phase-note.md",
+  "moduleId": "task-engine",
+  "description": "Mark a phase note dismissed (requires reason; MVP does not persist reason in-schema).",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

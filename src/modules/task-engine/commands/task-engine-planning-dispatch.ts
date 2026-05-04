@@ -7,6 +7,7 @@ import { resolveFeatureTaxonomyRuntimeCommands } from "./task-feature-taxonomy-r
 import type { OpenedPlanningStores } from "../persistence/planning-open.js";
 import { TaskStore } from "../persistence/store.js";
 import { resolvePhaseDeliveryReadoutCommands } from "./phase-delivery-readout-commands.js";
+import { resolvePhaseJournalCommands } from "./phase-journal-commands.js";
 import { runTransitionOnCommand } from "./run-transition-on-command.js";
 import { runSynthesizeTranscriptChurnOnCommand } from "./synthesize-transcript-churn-on-command.js";
 import { resolveTaskArchiveDependencyCommands } from "./task-archive-dependency-commands.js";
@@ -35,6 +36,11 @@ export async function dispatchTaskEnginePlanningCommands(
   const phaseDeliveryReadout = await resolvePhaseDeliveryReadoutCommands(command, ctx, planning);
   if (phaseDeliveryReadout !== null) {
     return phaseDeliveryReadout;
+  }
+
+  const phaseJournal = await resolvePhaseJournalCommands(command, ctx, planning);
+  if (phaseJournal !== null) {
+    return phaseJournal;
   }
 
   if (command.name === "agent-mutation-plan") {

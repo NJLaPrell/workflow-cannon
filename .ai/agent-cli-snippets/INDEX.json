@@ -1,10 +1,15 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-04-29T02:30:28.211Z",
+  "generatedAt": "2026-05-04T19:02:24.082Z",
   "commands": [
     {
       "name": "add-dependency",
       "path": ".ai/agent-cli-snippets/by-command/add-dependency.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "add-phase-note",
+      "path": ".ai/agent-cli-snippets/by-command/add-phase-note.json",
       "moduleId": "task-engine"
     },
     {
@@ -313,6 +318,11 @@
       "moduleId": "plugins"
     },
     {
+      "name": "dismiss-phase-note",
+      "path": ".ai/agent-cli-snippets/by-command/dismiss-phase-note.json",
+      "moduleId": "task-engine"
+    },
+    {
       "name": "document-project",
       "path": ".ai/agent-cli-snippets/by-command/document-project.json",
       "moduleId": "documentation"
@@ -390,6 +400,11 @@
     {
       "name": "get-next-actions",
       "path": ".ai/agent-cli-snippets/by-command/get-next-actions.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "get-phase-context",
+      "path": ".ai/agent-cli-snippets/by-command/get-phase-context.json",
       "moduleId": "task-engine"
     },
     {
@@ -495,6 +510,11 @@
     {
       "name": "list-module-states",
       "path": ".ai/agent-cli-snippets/by-command/list-module-states.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "list-phase-notes",
+      "path": ".ai/agent-cli-snippets/by-command/list-phase-notes.json",
       "moduleId": "task-engine"
     },
     {
@@ -681,6 +701,11 @@
       "name": "submit-assignment-handoff",
       "path": ".ai/agent-cli-snippets/by-command/submit-assignment-handoff.json",
       "moduleId": "team-execution"
+    },
+    {
+      "name": "supersede-phase-note",
+      "path": ".ai/agent-cli-snippets/by-command/supersede-phase-note.json",
+      "moduleId": "task-engine"
     },
     {
       "name": "sync-effective-behavior-cursor-rule",
