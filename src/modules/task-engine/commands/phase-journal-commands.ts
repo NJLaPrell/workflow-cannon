@@ -16,7 +16,8 @@ import {
 } from "../phase-journal/phase-journal-constants.js";
 import { projectPhaseNote, type PhaseNoteProjection } from "../phase-journal/phase-journal-projections.js";
 import { createPhaseJournalStore } from "../phase-journal/phase-journal-store.js";
-import type { CreatePhaseNoteInput, PhaseNoteStatus, PhaseNoteRow } from "../phase-journal/phase-journal-types.js";
+import type { CreatePhaseNoteInput, PhaseNoteStatus } from "../phase-journal/phase-journal-types.js";
+import { sortPhaseNotesForContext } from "../phase-journal/phase-journal-scoring.js";
 
 function readKitUserVersion(db: { pragma: (name: string, options?: { simple: boolean }) => unknown }): number {
   const raw = db.pragma("user_version", { simple: true });
@@ -62,69 +63,6 @@ function parseRefInput(raw: unknown): { type: string; value: string } | null {
     return null;
   }
   return { type, value };
-}
-
-function scorePhaseNote(
-  note: PhaseNoteRow,
-  ctx: { phaseKey: string; taskId?: string; refKeys: Set<string> }
-): number {
-  let score = 0;
-  if (ctx.taskId && note.taskId === ctx.taskId) {
-    score += 100;
-  }
-  for (const r of note.refs) {
-    const key = `${r.refType}:${r.refValue}`;
-    if (ctx.refKeys.has(key)) {
-      if (r.refType === "module") {
-        score += 40;
-      } else if (r.refType === "file") {
-        score += 30;
-      } else {
-        score += 15;
-      }
-    }
-  }
-  if (note.status === "active" && (note.noteType === "blocker" || note.noteType === "risk")) {
-    score += 25;
-  }
-  if (note.priority === "critical") {
-    score += 35;
-  } else if (note.priority === "high") {
-    score += 20;
-  }
-  const created = Date.parse(note.createdAt);
-  if (!Number.isNaN(created)) {
-    const days = (Date.now() - created) / (86400 * 1000);
-    if (days <= 7) {
-      score += 15;
-    }
-  }
-  if (
-    note.noteType === "decision" ||
-    note.noteType === "gotcha" ||
-    note.noteType === "risk" ||
-    note.noteType === "reusable-context" ||
-    note.noteType === "follow-up"
-  ) {
-    score += 10;
-  }
-  return score;
-}
-
-function sortPhaseContextNotes(notes: PhaseNoteRow[], ctx: { phaseKey: string; taskId?: string; refKeys: Set<string> }) {
-  const scored = notes.map((n) => ({ n, s: scorePhaseNote(n, ctx) }));
-  scored.sort((a, b) => {
-    if (b.s !== a.s) {
-      return b.s - a.s;
-    }
-    const ta = Date.parse(a.n.createdAt);
-    const tb = Date.parse(b.n.createdAt);
-    if (tb !== ta) {
-      return tb - ta;
-    }
-    return a.n.id.localeCompare(b.n.id);
-  });
-  return scored.map((x) => x.n);
 }
 
 export function resolvePhaseJournalCommands(
@@ -372,7 +310,7 @@ export function resolvePhaseJournalCommands(
     }
 
     const pool = store.listNotes({ phaseKey, status: "active", limit: 200 });
-    const sorted = sortPhaseContextNotes(pool, { phaseKey, taskId, refKeys });
+    const sorted = sortPhaseNotesForContext(pool, { phaseKey, taskId, refKeys });
     const picked = sorted.slice(0, limit).map(projectPhaseNote);
     return okData({ phaseKey, taskId: taskId ?? null, notes: picked, count: picked.length }, "phase-context", "Resolved phase context");
   }
