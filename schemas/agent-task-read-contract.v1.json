@@ -114,6 +114,37 @@
         }
       }
     },
+    "agentPhaseJournalHintNote": {
+      "description": "Bounded note row for get-next-actions phaseContext (caps: PHASE_CONTEXT_NEXT_ACTIONS_* / PHASE_NOTE_SUMMARY_MAX).",
+      "type": "object",
+      "required": ["id", "noteType", "priority", "summary"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "noteType": { "type": "string", "minLength": 1 },
+        "priority": { "type": "string", "minLength": 1 },
+        "summary": { "type": "string", "maxLength": 280 }
+      }
+    },
+    "agentNextActionsPhaseContext": {
+      "description": "Non-authoritative phase journal facet on get-next-actions data.",
+      "type": "object",
+      "required": ["phaseKey", "relevantNotes", "taskSuggestionsFromNotes"],
+      "additionalProperties": false,
+      "properties": {
+        "phaseKey": { "type": "string", "minLength": 1 },
+        "relevantNotes": {
+          "type": "array",
+          "maxItems": 8,
+          "items": { "$ref": "#/$defs/agentPhaseJournalHintNote" }
+        },
+        "taskSuggestionsFromNotes": {
+          "type": "array",
+          "maxItems": 5,
+          "items": { "$ref": "#/$defs/agentPhaseJournalHintNote" }
+        }
+      }
+    },
     "agentTaskListItem": {
       "type": "object",
       "required": [
@@ -307,6 +338,10 @@
               "blockingCount": { "type": "integer", "minimum": 0 }
             }
           }
+        },
+        "phaseContext": {
+          "description": "Omitted when phase unknown or phase journal DDL absent; may be explicit null in some serializers.",
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/agentNextActionsPhaseContext" }]
         }
       }
     },
