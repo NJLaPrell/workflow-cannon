@@ -305,6 +305,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "update-phase-note",
+    "file": "update-phase-note.md",
+    "description": "Patch summary, details, or expires_at on an active phase note (preserves idempotency key and provenance).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "update-wishlist",
     "file": "update-wishlist.md",
     "description": "Update mutable fields on an open Wishlist item.",

@@ -3,6 +3,7 @@
   "sourceSchemaPackageVersion": "0.77.0",
   "pilotCommands": [
     "add-dependency",
+    "add-phase-note",
     "agent-bootstrap",
     "agent-mutation-plan",
     "agent-session-snapshot",
@@ -15,11 +16,13 @@
     "classify-kit-state",
     "clear-task-phase",
     "complete-task",
+    "convert-phase-note-to-task",
     "convert-wishlist",
     "create-task",
     "create-task-from-plan",
     "create-wishlist",
     "dashboard-summary",
+    "dismiss-phase-note",
     "explain-task-engine-model",
     "export-feature-taxonomy-json",
     "export-workspace-status",
@@ -28,6 +31,7 @@
     "get-kit-persistence-map",
     "get-module-state",
     "get-next-actions",
+    "get-phase-context",
     "get-ready-queue",
     "get-recent-task-activity",
     "get-task",
@@ -38,12 +42,14 @@
     "list-components",
     "list-features",
     "list-module-states",
+    "list-phase-notes",
     "list-tasks",
     "list-wishlist",
     "migrate-task-persistence",
     "persist-planning-execution-drafts",
     "phase-delivery-preflight",
     "phase-status",
+    "propose-tasks-from-phase-notes",
     "queue-git-alignment",
     "queue-health",
     "release-evidence-manifest",
@@ -53,8 +59,10 @@
     "run-transition",
     "set-current-phase",
     "start-task",
+    "supersede-phase-note",
     "synthesize-transcript-churn",
     "task-persistence-readiness",
+    "update-phase-note",
     "update-task",
     "update-wishlist",
     "update-workspace-phase-snapshot",
@@ -79,6 +87,9 @@
         }
       },
       "additionalProperties": false
+    },
+    "add-phase-note": {
+      "type": "object"
     },
     "agent-bootstrap": {
       "type": "object",
@@ -322,6 +333,9 @@
       },
       "additionalProperties": true
     },
+    "convert-phase-note-to-task": {
+      "type": "object"
+    },
     "convert-wishlist": {
       "type": "object",
       "required": [
@@ -413,6 +427,9 @@
       },
       "additionalProperties": false
     },
+    "dismiss-phase-note": {
+      "type": "object"
+    },
     "explain-task-engine-model": {
       "type": "object",
       "additionalProperties": false
@@ -453,6 +470,9 @@
     "get-next-actions": {
       "type": "object",
       "additionalProperties": false
+    },
+    "get-phase-context": {
+      "type": "object"
     },
     "get-ready-queue": {
       "type": "object",
@@ -532,6 +552,9 @@
     "list-module-states": {
       "type": "object",
       "additionalProperties": true
+    },
+    "list-phase-notes": {
+      "type": "object"
     },
     "list-tasks": {
       "type": "object",
@@ -738,6 +761,9 @@
       },
       "additionalProperties": true
     },
+    "propose-tasks-from-phase-notes": {
+      "type": "object"
+    },
     "queue-git-alignment": {
       "type": "object"
     },
@@ -929,6 +955,9 @@
       },
       "additionalProperties": true
     },
+    "supersede-phase-note": {
+      "type": "object"
+    },
     "synthesize-transcript-churn": {
       "type": "object",
       "required": [
@@ -970,6 +999,9 @@
     "task-persistence-readiness": {
       "type": "object",
       "additionalProperties": true
+    },
+    "update-phase-note": {
+      "type": "object"
     },
     "update-task": {
       "type": "object",

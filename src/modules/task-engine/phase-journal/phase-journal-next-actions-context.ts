@@ -5,6 +5,7 @@ import {
 } from "./phase-journal-constants.js";
 import { createPhaseJournalStore } from "./phase-journal-store.js";
 import { sortPhaseNotesForContext } from "./phase-journal-scoring.js";
+import { filterOutPassiveExpiredActiveNotes } from "./phase-journal-expiry.js";
 import { isPhaseJournalPersistedOnDb } from "./phase-journal-snapshot-summary.js";
 
 type SqliteDb = InstanceType<typeof Database>;
@@ -39,7 +40,11 @@ export function buildNextActionsPhaseContext(
     return null;
   }
   const store = createPhaseJournalStore(db);
-  const pool = store.listNotes({ phaseKey: key, status: "active", limit: 200 });
+  const pool = filterOutPassiveExpiredActiveNotes(
+    store.listNotes({ phaseKey: key, status: "active", limit: 200 }),
+    false,
+    Date.now()
+  );
   const ranked = sortPhaseNotesForContext(pool, {
     phaseKey: key,
     taskId: suggestedTaskId,

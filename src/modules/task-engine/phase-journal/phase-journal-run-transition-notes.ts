@@ -10,6 +10,7 @@ import {
   PHASE_NOTE_TYPES,
   PHASE_NOTES_RUN_TRANSITION_MAX
 } from "./phase-journal-constants.js";
+import { validatePhaseNoteExpiresAtForWrite } from "./phase-journal-expiry.js";
 import { inferPhaseKeyFromTask } from "./phase-journal-phase-key.js";
 import type { CreatePhaseNoteInput } from "./phase-journal-types.js";
 
@@ -173,6 +174,12 @@ export function resolveRunTransitionPhaseNotes(
       taskId = explicitTaskId;
     }
 
+    const expiresAtRaw = readStringField(o, "expiresAt")?.trim() ?? null;
+    const expCheck = validatePhaseNoteExpiresAtForWrite(expiresAtRaw, Date.now());
+    if (!expCheck.ok) {
+      return fail("invalid-phase-note-args", expCheck.message);
+    }
+
     inputs.push({
       phaseKey,
       phaseLabel: readStringField(o, "phaseLabel")?.trim() ?? null,
@@ -187,7 +194,7 @@ export function resolveRunTransitionPhaseNotes(
       summary: summary.trim(),
       details: detailsRaw?.trim() ? detailsRaw : null,
       priority: priorityRaw as CreatePhaseNoteInput["priority"],
-      expiresAt: readStringField(o, "expiresAt")?.trim() ?? null,
+      expiresAt: expiresAtRaw,
       idempotencyKey: idempotencyKeyRaw ?? null,
       refs: refsIn
     });

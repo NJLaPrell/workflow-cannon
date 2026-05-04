@@ -78,6 +78,13 @@ export type CreatePhaseNoteResult = {
   note: PhaseNoteRow;
 };
 
+/** Partial update for `update-phase-note` — only set keys present on the object. */
+export type UpdateActivePhaseNotePatch = {
+  summary?: string;
+  details?: string | null;
+  expiresAt?: string | null;
+};
+
 /** One structured task proposal row for a phase note (`phase_note_task_suggestions`). */
 export type PhaseNoteTaskSuggestionRow = {
   id: string;

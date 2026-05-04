@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-04T22:02:26.728Z",
+  "generatedAt": "2026-05-04T22:28:40.791Z",
   "commands": [
     {
       "name": "add-dependency",
@@ -746,6 +746,11 @@
       "name": "update-behavior-profile",
       "path": ".ai/agent-cli-snippets/by-command/update-behavior-profile.json",
       "moduleId": "agent-behavior"
+    },
+    {
+      "name": "update-phase-note",
+      "path": ".ai/agent-cli-snippets/by-command/update-phase-note.json",
+      "moduleId": "task-engine"
     },
     {
       "name": "update-task",

@@ -23,6 +23,7 @@ import { validateKnownTaskTypeRequirements } from "../task-type-validation.js";
 import { TaskEngineError } from "../transitions.js";
 import type { TaskEntity, TaskPriority, TaskStatus } from "../types.js";
 import { PHASE_NOTE_TYPES_CONVERTIBLE_TO_TASK } from "../phase-journal/phase-journal-constants.js";
+import { isPassivelyExpiredActiveNote } from "../phase-journal/phase-journal-expiry.js";
 import {
   createPhaseJournalStore,
   markPhaseNoteConvertedInConnection,
@@ -95,6 +96,13 @@ export async function runConvertPhaseNoteToTaskCommand(
       ok: false,
       code: "phase-note-not-convertible",
       message: "Note is not an active unconverted phase note."
+    };
+  }
+  if (isPassivelyExpiredActiveNote(note, Date.now())) {
+    return {
+      ok: false,
+      code: "phase-note-expired",
+      message: "Note is past expires_at while still active; extend via update-phase-note before converting."
     };
   }
   if (!PHASE_NOTE_TYPES_CONVERTIBLE_TO_TASK.has(note.noteType)) {

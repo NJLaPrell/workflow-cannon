@@ -107,6 +107,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "synthesize-transcript-churn",
     "task-persistence-readiness",
     "update-behavior-profile",
+    "update-phase-note",
     "update-task",
     "update-wishlist",
     "update-workspace-phase-snapshot",

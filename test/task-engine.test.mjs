@@ -1890,6 +1890,36 @@ test("taskEngineModule run-transition rejects invalid phaseNotes without transit
   assert.equal(got.data.task.status, "ready");
 });
 
+test("taskEngineModule run-transition rejects phaseNotes with expiresAt in the past", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T9846",
+        status: "ready",
+        phaseKey: "78",
+        phase: "Phase 78"
+      })
+    );
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const past = new Date(Date.now() - 3600000).toISOString();
+  const bad = await taskEngineModule.onCommand(
+    {
+      name: "run-transition",
+      args: {
+        taskId: "T9846",
+        action: "start",
+        expectedPlanningGeneration: 1,
+        phaseNotes: [{ noteType: "finding", summary: "late expiry", expiresAt: past }]
+      }
+    },
+    ctx
+  );
+  assert.equal(bad.ok, false);
+  assert.equal(bad.code, "invalid-phase-note-args");
+});
+
 test("taskEngineModule run-transition idempotent replay does not re-apply phaseNotes inserts", async () => {
   const workspace = await tmpDir();
   await seedSqliteStore(workspace, (store) => {
@@ -2235,6 +2265,81 @@ test("taskEngineModule list/get/propose default phaseKey to canonical workspace 
   assert.equal(gpc.data.phaseKeySource, "workspace-status");
   assert.ok(gpc.data.notes.some((n) => n.id === n78.data.note.id));
   assert.ok(!gpc.data.notes.some((n) => n.id === n77.data.note.id));
+});
+
+test("taskEngineModule passive expiry hides active rows; includeExpired lists; update fixes convert", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, () => {});
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const past = new Date(Date.now() - 86400000).toISOString();
+  const addPast = await taskEngineModule.onCommand(
+    {
+      name: "add-phase-note",
+      args: { phaseKey: "99", noteType: "finding", summary: "bad expiry", expiresAt: past }
+    },
+    ctx
+  );
+  assert.equal(addPast.ok, false);
+
+  const future = new Date(Date.now() + 86400000 * 400).toISOString();
+  const add = await taskEngineModule.onCommand(
+    {
+      name: "add-phase-note",
+      args: {
+        phaseKey: "99",
+        noteType: "task-suggestion",
+        summary: "Harvest me",
+        expiresAt: future,
+        idempotencyKey: "passive-expiry-99"
+      }
+    },
+    ctx
+  );
+  assert.equal(add.ok, true);
+  const nid = add.data.note.id;
+
+  const dbPath = path.join(workspace, ".workspace-kit", "tasks", "workspace-kit.db");
+  const db = new Database(dbPath);
+  try {
+    const brief = new Date(Date.now() - 2000).toISOString();
+    db.prepare("UPDATE phase_notes SET expires_at = ? WHERE id = ?").run(brief, nid);
+  } finally {
+    db.close();
+  }
+
+  const listed = await taskEngineModule.onCommand({ name: "list-phase-notes", args: { phaseKey: "99" } }, ctx);
+  assert.equal(listed.ok, true);
+  assert.ok(!listed.data.notes.some((n) => n.id === nid));
+
+  const listedInc = await taskEngineModule.onCommand(
+    { name: "list-phase-notes", args: { phaseKey: "99", includeExpired: true } },
+    ctx
+  );
+  assert.ok(listedInc.data.notes.some((n) => n.id === nid));
+
+  const prop = await taskEngineModule.onCommand({ name: "propose-tasks-from-phase-notes", args: { phaseKey: "99" } }, ctx);
+  assert.equal(prop.ok, true);
+  assert.ok(!prop.data.proposals.some((p) => p.id === nid));
+
+  const convBlock = await taskEngineModule.onCommand(
+    { name: "convert-phase-note-to-task", args: { noteId: nid, expectedPlanningGeneration: 1 } },
+    ctx
+  );
+  assert.equal(convBlock.ok, false);
+  assert.equal(convBlock.code, "phase-note-expired");
+
+  const upd = await taskEngineModule.onCommand(
+    { name: "update-phase-note", args: { noteId: nid, expiresAt: future } },
+    ctx
+  );
+  assert.equal(upd.ok, true);
+  assert.equal(upd.data.note.expiresAt, future);
+
+  const conv = await taskEngineModule.onCommand(
+    { name: "convert-phase-note-to-task", args: { noteId: nid, expectedPlanningGeneration: upd.data.planningGeneration } },
+    ctx
+  );
+  assert.equal(conv.ok, true);
 });
 
 test("taskEngineModule list-phase-notes without phaseKey fails when phase is not inferable", async () => {
