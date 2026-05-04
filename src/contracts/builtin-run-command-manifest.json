@@ -141,6 +141,46 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "add-phase-note",
+    "file": "add-phase-note.md",
+    "description": "Create or return (idempotent) a phase-scoped operational note in planning SQLite.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "dismiss-phase-note",
+    "file": "dismiss-phase-note.md",
+    "description": "Mark a phase note dismissed (requires reason; MVP does not persist reason in-schema).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "get-phase-context",
+    "file": "get-phase-context.md",
+    "description": "Return bounded, relevance-ranked active phase notes for current work.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "list-phase-notes",
+    "file": "list-phase-notes.md",
+    "description": "List phase notes for a phase with optional filters (bounded projection).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "supersede-phase-note",
+    "file": "supersede-phase-note.md",
+    "description": "Mark a phase note superseded by another active note in the same phase.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "release-evidence-manifest",
     "file": "release-evidence-manifest.md",
     "description": "Build a machine-readable release evidence manifest for phase closeout.",
