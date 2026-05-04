@@ -77,3 +77,19 @@ export type CreatePhaseNoteResult = {
   created: boolean;
   note: PhaseNoteRow;
 };
+
+/** One structured task proposal row for a phase note (`phase_note_task_suggestions`). */
+export type PhaseNoteTaskSuggestionRow = {
+  id: string;
+  noteId: string;
+  title: string;
+  description: string;
+  suggestedStatus: string;
+  suggestedPhaseKey: string;
+  suggestedPhaseLabel: string | null;
+  suggestedTaskType: string | null;
+  acceptanceCriteriaJson: string | null;
+  convertedTaskId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};

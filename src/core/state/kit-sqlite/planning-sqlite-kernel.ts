@@ -10,7 +10,7 @@ type SqliteDatabase = InstanceType<typeof Database>;
  */
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 19;
+export const KIT_SQLITE_USER_VERSION = 20;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 export const TASK_ENGINE_DEPENDENCIES_TABLE = "task_engine_dependencies";
@@ -898,6 +898,34 @@ CREATE INDEX idx_phase_note_refs_lookup
 `);
 }
 
+/** Phase journal task suggestions (T100034): structured harvest rows keyed by phase note. */
+function migrateV19ToV20(db: SqliteDatabase): void {
+  if (tableExists(db, "phase_note_task_suggestions")) {
+    return;
+  }
+  db.exec(`
+CREATE TABLE phase_note_task_suggestions (
+  id TEXT PRIMARY KEY,
+  note_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  suggested_status TEXT NOT NULL DEFAULT 'proposed',
+  suggested_phase_key TEXT NOT NULL,
+  suggested_phase_label TEXT,
+  suggested_task_type TEXT,
+  acceptance_criteria_json TEXT,
+  converted_task_id TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY (note_id) REFERENCES phase_notes(id)
+);
+CREATE UNIQUE INDEX idx_phase_note_task_suggestions_note_unique
+  ON phase_note_task_suggestions(note_id);
+CREATE INDEX idx_phase_note_task_suggestions_phase_created
+  ON phase_note_task_suggestions(suggested_phase_key, created_at);
+`);
+}
+
 /**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
@@ -1009,6 +1037,11 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
     migrateV18ToV19(db);
     db.pragma("user_version = 19");
     current = 19;
+  }
+  if (current < 20) {
+    migrateV19ToV20(db);
+    db.pragma("user_version = 20");
+    current = 20;
   }
 }
 

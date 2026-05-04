@@ -3,6 +3,7 @@ import { attachPolicyMeta } from "../attach-planning-response-meta.js";
 import type { OpenedPlanningStores } from "../persistence/planning-open.js";
 import {
   PHASE_JOURNAL_MIN_KIT_USER_VERSION,
+  PHASE_NOTE_TASK_SUGGESTIONS_MIN_KIT_USER_VERSION,
   PHASE_NOTE_DETAILS_MAX,
   PHASE_NOTE_LIST_DEFAULT_LIMIT,
   PHASE_NOTE_LIST_MAX_LIMIT,
@@ -14,8 +15,12 @@ import {
   PHASE_NOTE_TYPES,
   PHASE_NOTE_TYPES_CONVERTIBLE_TO_TASK
 } from "../phase-journal/phase-journal-constants.js";
-import { projectPhaseNote, type PhaseNoteProjection } from "../phase-journal/phase-journal-projections.js";
-import { createPhaseJournalStore } from "../phase-journal/phase-journal-store.js";
+import { projectPhaseNote, projectPhaseNoteTaskSuggestion, type PhaseNoteProjection } from "../phase-journal/phase-journal-projections.js";
+import {
+  createPhaseJournalStore,
+  phaseNoteTaskSuggestionsTableExists,
+  upsertPhaseNoteTaskSuggestionFromNote
+} from "../phase-journal/phase-journal-store.js";
 import type { CreatePhaseNoteInput, PhaseNoteStatus } from "../phase-journal/phase-journal-types.js";
 import { sortPhaseNotesForContext } from "../phase-journal/phase-journal-scoring.js";
 import { inferPhaseKeyFromTask } from "../phase-journal/phase-journal-phase-key.js";
@@ -322,15 +327,58 @@ export async function resolvePhaseJournalCommands(
     }
 
     const pool = store.listNotes({ phaseKey, status: "active", limit: PHASE_NOTE_LIST_MAX_LIMIT });
-    const proposals = pool
+    const convertible = pool
       .filter((n) => PHASE_NOTE_TYPES_CONVERTIBLE_TO_TASK.has(n.noteType))
       .filter((n) => (taskId ? n.taskId === taskId : true))
-      .slice(0, limit)
-      .map(projectPhaseNote);
+      .slice(0, limit);
+    const proposals = convertible.map(projectPhaseNote);
+
+    const persist = args.persist === true;
+    if (!persist) {
+      return okData(
+        {
+          phaseKey,
+          taskId: taskId ?? null,
+          proposals,
+          persistedSuggestions: [],
+          persisted: false,
+          count: proposals.length
+        },
+        "phase-note-proposals-listed",
+        "Listed convertible phase notes as proposals (read-only; no task writes)"
+      );
+    }
+
+    if (uv < PHASE_NOTE_TASK_SUGGESTIONS_MIN_KIT_USER_VERSION) {
+      return {
+        ok: false,
+        code: "phase-note-suggestions-kit-version",
+        message: `persist requires kit SQLite user_version >= ${PHASE_NOTE_TASK_SUGGESTIONS_MIN_KIT_USER_VERSION} (current ${uv}).`
+      };
+    }
+    if (!phaseNoteTaskSuggestionsTableExists(db)) {
+      return {
+        ok: false,
+        code: "phase-note-suggestions-table-missing",
+        message:
+          "phase_note_task_suggestions table is missing; reopen planning SQLite with a current workspace-kit to migrate."
+      };
+    }
+
+    const persistedSuggestions = convertible.map((n) =>
+      projectPhaseNoteTaskSuggestion(upsertPhaseNoteTaskSuggestionFromNote(db, n))
+    );
     return okData(
-      { phaseKey, taskId: taskId ?? null, proposals, persisted: false, count: proposals.length },
-      "phase-note-proposals-listed",
-      "Listed convertible phase notes as proposals (read-only; no task writes)"
+      {
+        phaseKey,
+        taskId: taskId ?? null,
+        proposals,
+        persistedSuggestions,
+        persisted: true,
+        count: proposals.length
+      },
+      "phase-note-proposals-persisted",
+      "Upserted phase_note_task_suggestions rows for convertible notes"
     );
   }
 
