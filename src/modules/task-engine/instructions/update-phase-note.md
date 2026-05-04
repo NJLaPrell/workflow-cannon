@@ -8,6 +8,8 @@ Patch **`summary`**, **`details`**, and/or **`expires_at`** on an **active** pha
 
 At least one mutable field must be supplied. **`expiresAt`** may be **`null`** to clear. New non-null expiry timestamps must be **at or after** the current instant (same rule as **`add-phase-note`**).
 
+Updated **`summary`** / **`details`** are checked by the same built-in secret-shaped pattern guard as **`add-phase-note`**; violations return **`phase-note-secret-rejected`**.
+
 ## Usage
 
 ```

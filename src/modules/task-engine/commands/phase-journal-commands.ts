@@ -29,6 +29,7 @@ import {
 import type { CreatePhaseNoteInput, PhaseNoteStatus, UpdateActivePhaseNotePatch } from "../phase-journal/phase-journal-types.js";
 import { sortPhaseNotesForContext } from "../phase-journal/phase-journal-scoring.js";
 import { inferPhaseKeyFromTask, resolvePhaseKeyForPhaseJournalRead, type PhaseJournalPhaseKeySource } from "../phase-journal/phase-journal-phase-key.js";
+import { rejectIfPhaseNoteTextContainsSecret } from "../phase-journal/phase-journal-secret-guard.js";
 import { runConvertPhaseNoteToTaskCommand } from "./phase-journal-convert-command.js";
 
 function readKitUserVersion(db: { pragma: (name: string, options?: { simple: boolean }) => unknown }): number {
@@ -176,6 +177,17 @@ export async function resolvePhaseJournalCommands(
       };
     }
 
+    const secretSummary = rejectIfPhaseNoteTextContainsSecret(summary.trim(), "summary");
+    if (!secretSummary.ok) {
+      return { ok: false, code: secretSummary.code, message: secretSummary.message };
+    }
+    if (detailsRaw) {
+      const secretDetails = rejectIfPhaseNoteTextContainsSecret(detailsRaw, "details");
+      if (!secretDetails.ok) {
+        return { ok: false, code: secretDetails.code, message: secretDetails.message };
+      }
+    }
+
     const refsRaw = args.refs;
     const refsIn: { refType: string; refValue: string }[] = [];
     if (refsRaw !== undefined) {
@@ -200,6 +212,10 @@ export async function resolvePhaseJournalCommands(
             code: "invalid-phase-note-ref-type",
             message: `ref type '${parsed.type}' is not allowed for MVP phase notes.`
           };
+        }
+        const secretRef = rejectIfPhaseNoteTextContainsSecret(parsed.value, "ref value");
+        if (!secretRef.ok) {
+          return { ok: false, code: secretRef.code, message: secretRef.message };
         }
         refsIn.push({ refType: parsed.type, refValue: parsed.value });
       }
@@ -493,6 +509,18 @@ export async function resolvePhaseJournalCommands(
         message: "Provide at least one of: summary, details, expiresAt."
       };
     }
+    if (patch.summary !== undefined) {
+      const gs = rejectIfPhaseNoteTextContainsSecret(patch.summary, "summary");
+      if (!gs.ok) {
+        return { ok: false, code: gs.code, message: gs.message };
+      }
+    }
+    if (patch.details !== undefined && patch.details !== null) {
+      const gd = rejectIfPhaseNoteTextContainsSecret(patch.details, "details");
+      if (!gd.ok) {
+        return { ok: false, code: gd.code, message: gd.message };
+      }
+    }
     const existing = store.getById(noteId);
     if (!existing) {
       return { ok: false, code: "phase-note-not-found", message: `Unknown noteId '${noteId}'.` };
@@ -525,6 +553,10 @@ export async function resolvePhaseJournalCommands(
     }
     if (reason.length > 2000) {
       return { ok: false, code: "invalid-phase-note-args", message: "reason is too long." };
+    }
+    const secretReason = rejectIfPhaseNoteTextContainsSecret(reason, "dismiss reason");
+    if (!secretReason.ok) {
+      return { ok: false, code: secretReason.code, message: secretReason.message };
     }
     const existing = store.getById(noteId);
     if (!existing) {

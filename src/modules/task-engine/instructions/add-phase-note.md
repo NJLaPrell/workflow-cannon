@@ -16,3 +16,5 @@ workspace-kit run add-phase-note '{"taskId":"T100029","noteType":"finding","summ
 ## Privacy
 
 Do not store secrets, tokens, keys, or large pasted excerpts — summarize only.
+
+The command applies a **built-in secret-shaped pattern guard** (no external redaction service required). Matching payloads fail with **`phase-note-secret-rejected`** and a field-specific hint.

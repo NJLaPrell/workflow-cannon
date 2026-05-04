@@ -12,6 +12,7 @@ import {
 } from "./phase-journal-constants.js";
 import { validatePhaseNoteExpiresAtForWrite } from "./phase-journal-expiry.js";
 import { inferPhaseKeyFromTask } from "./phase-journal-phase-key.js";
+import { rejectIfPhaseNoteTextContainsSecret } from "./phase-journal-secret-guard.js";
 import type { CreatePhaseNoteInput } from "./phase-journal-types.js";
 
 function fail(code: string, message: string): { ok: false; result: ModuleCommandResult } {
@@ -114,6 +115,17 @@ export function resolveRunTransitionPhaseNotes(
       return fail("invalid-phase-note-args", `details exceeds ${PHASE_NOTE_DETAILS_MAX} characters`);
     }
 
+    const gSum = rejectIfPhaseNoteTextContainsSecret(summary.trim(), "summary");
+    if (!gSum.ok) {
+      return fail(gSum.code, gSum.message);
+    }
+    if (detailsRaw) {
+      const gDet = rejectIfPhaseNoteTextContainsSecret(detailsRaw, "details");
+      if (!gDet.ok) {
+        return fail(gDet.code, gDet.message);
+      }
+    }
+
     const refsRaw = o.refs;
     const refsIn: { refType: string; refValue: string }[] = [];
     if (refsRaw !== undefined) {
@@ -133,6 +145,10 @@ export function resolveRunTransitionPhaseNotes(
             "invalid-phase-note-ref-type",
             `ref type '${parsed.type}' is not allowed for MVP phase notes.`
           );
+        }
+        const gRef = rejectIfPhaseNoteTextContainsSecret(parsed.value, "ref value");
+        if (!gRef.ok) {
+          return fail(gRef.code, gRef.message);
         }
         refsIn.push({ refType: parsed.type, refValue: parsed.value });
       }
