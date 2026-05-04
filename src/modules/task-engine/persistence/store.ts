@@ -20,6 +20,11 @@ function emptyStore(): TaskStoreDocument {
 
 export type TaskStoreSaveOptions = {
   expectedPlanningGeneration?: number;
+  /**
+   * When using {@link TaskStore.forSqliteDual}, run this synchronously inside the same SQLite
+   * transaction as the task store flush (before relational/blob writes and planning generation bump).
+   */
+  beforePersistInSqliteTransaction?: () => void;
 };
 
 export type TaskStorePersistence = {
@@ -87,7 +92,14 @@ export class TaskStore {
       loadDocument: async () => dual.taskDocument,
       saveDocument: async (doc, opts) => {
         dual.seedFromDocuments(doc, dual.wishlistDocument);
-        dual.persistSync(opts);
+        const hook = opts?.beforePersistInSqliteTransaction;
+        if (hook) {
+          dual.withTransaction(hook, {
+            expectedPlanningGeneration: opts?.expectedPlanningGeneration
+          });
+        } else {
+          dual.persistSync(opts);
+        }
       }
     });
   }

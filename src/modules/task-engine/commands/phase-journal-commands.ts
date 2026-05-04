@@ -1,7 +1,6 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
 import { attachPolicyMeta } from "../attach-planning-response-meta.js";
 import type { OpenedPlanningStores } from "../persistence/planning-open.js";
-import type { TaskEntity } from "../types.js";
 import {
   PHASE_JOURNAL_MIN_KIT_USER_VERSION,
   PHASE_NOTE_DETAILS_MAX,
@@ -18,6 +17,7 @@ import { projectPhaseNote, type PhaseNoteProjection } from "../phase-journal/pha
 import { createPhaseJournalStore } from "../phase-journal/phase-journal-store.js";
 import type { CreatePhaseNoteInput, PhaseNoteStatus } from "../phase-journal/phase-journal-types.js";
 import { sortPhaseNotesForContext } from "../phase-journal/phase-journal-scoring.js";
+import { inferPhaseKeyFromTask } from "../phase-journal/phase-journal-phase-key.js";
 
 function readKitUserVersion(db: { pragma: (name: string, options?: { simple: boolean }) => unknown }): number {
   const raw = db.pragma("user_version", { simple: true });
@@ -30,21 +30,6 @@ function phaseJournalVersionError(current: number): ModuleCommandResult {
     code: "phase-journal-kit-version",
     message: `Phase journal commands require kit SQLite user_version >= ${PHASE_JOURNAL_MIN_KIT_USER_VERSION} (current ${current}); open the workspace DB once with a current workspace-kit to migrate.`
   };
-}
-
-function inferPhaseKeyFromTask(task: TaskEntity | undefined): string | null {
-  if (!task) {
-    return null;
-  }
-  if (typeof task.phaseKey === "string" && task.phaseKey.trim()) {
-    return task.phaseKey.trim();
-  }
-  const label = typeof task.phase === "string" ? task.phase : "";
-  const m = /\b(?:phase|Phase)\s*([0-9]+)\b/.exec(label);
-  if (m) {
-    return m[1];
-  }
-  return null;
 }
 
 function readStringField(obj: Record<string, unknown>, key: string): string | undefined {

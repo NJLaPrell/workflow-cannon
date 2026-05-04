@@ -66,6 +66,86 @@ function getNoteById(db: SqliteDb, id: string): PhaseNoteRow | null {
   return mapNote(row, loadRefs(db, id));
 }
 
+const insertPhaseNoteSql = `
+INSERT INTO phase_notes (
+  id, phase_key, phase_label, task_id, author, author_kind, session_id, source_command,
+  planning_generation, policy_trace_id, note_type, summary, details, status, priority,
+  created_at, updated_at, expires_at, superseded_by, converted_task_id, idempotency_key
+) VALUES (
+  @id, @phase_key, @phase_label, @task_id, @author, @author_kind, @session_id, @source_command,
+  @planning_generation, @policy_trace_id, @note_type, @summary, @details, @status, @priority,
+  @created_at, @updated_at, @expires_at, NULL, NULL, @idempotency_key
+)`;
+
+const insertPhaseNoteRefSql = `
+INSERT INTO phase_note_refs (id, note_id, ref_type, ref_value)
+VALUES (@id, @note_id, @ref_type, @ref_value)
+`;
+
+/**
+ * Insert one phase note (+ refs). Caller supplies an outer transaction when needed.
+ * Idempotent when `idempotencyKey` matches an existing row (same as {@link PhaseJournalStore#createNoteIdempotent}).
+ */
+export function insertPhaseNoteInConnection(db: SqliteDb, input: CreatePhaseNoteInput): CreatePhaseNoteResult {
+  const now = new Date().toISOString();
+  const status: PhaseNoteStatus = input.status ?? "active";
+  const priority: PhaseNotePriority = input.priority ?? "normal";
+  const refs = input.refs ?? [];
+
+  if (input.idempotencyKey) {
+    const existing = db
+      .prepare(`SELECT id FROM phase_notes WHERE idempotency_key = ?`)
+      .get(input.idempotencyKey) as { id: string } | undefined;
+    if (existing) {
+      const note = getNoteById(db, existing.id);
+      if (!note) {
+        throw new Error("phase journal: idempotency hit but note row missing");
+      }
+      return { created: false, note };
+    }
+  }
+
+  const id = randomUUID();
+  const insert = db.prepare(insertPhaseNoteSql);
+  const insertRef = db.prepare(insertPhaseNoteRefSql);
+
+  insert.run({
+    id,
+    phase_key: input.phaseKey,
+    phase_label: input.phaseLabel ?? null,
+    task_id: input.taskId ?? null,
+    author: input.author ?? null,
+    author_kind: input.authorKind ?? null,
+    session_id: input.sessionId ?? null,
+    source_command: input.sourceCommand ?? null,
+    planning_generation: input.planningGeneration ?? null,
+    policy_trace_id: input.policyTraceId ?? null,
+    note_type: input.noteType,
+    summary: input.summary,
+    details: input.details ?? null,
+    status,
+    priority,
+    created_at: now,
+    updated_at: now,
+    expires_at: input.expiresAt ?? null,
+    idempotency_key: input.idempotencyKey ?? null
+  });
+  for (const r of refs) {
+    insertRef.run({
+      id: randomUUID(),
+      note_id: id,
+      ref_type: r.refType,
+      ref_value: r.refValue
+    });
+  }
+
+  const note = getNoteById(db, id);
+  if (!note) {
+    throw new Error("phase journal: insert succeeded but note not readable");
+  }
+  return { created: true, note };
+}
+
 export class PhaseJournalStore {
   constructor(private readonly db: SqliteDb) {}
 
@@ -77,78 +157,7 @@ export class PhaseJournalStore {
    * Insert a note and refs, or return the existing row when `idempotencyKey` matches.
    */
   createNoteIdempotent(input: CreatePhaseNoteInput): CreatePhaseNoteResult {
-    const now = new Date().toISOString();
-    const status: PhaseNoteStatus = input.status ?? "active";
-    const priority: PhaseNotePriority = input.priority ?? "normal";
-    const refs = input.refs ?? [];
-
-    if (input.idempotencyKey) {
-      const existing = this.db
-        .prepare(`SELECT id FROM phase_notes WHERE idempotency_key = ?`)
-        .get(input.idempotencyKey) as { id: string } | undefined;
-      if (existing) {
-        const note = getNoteById(this.db, existing.id);
-        if (!note) {
-          throw new Error("phase journal: idempotency hit but note row missing");
-        }
-        return { created: false, note };
-      }
-    }
-
-    const id = randomUUID();
-    const insert = this.db.prepare(`
-INSERT INTO phase_notes (
-  id, phase_key, phase_label, task_id, author, author_kind, session_id, source_command,
-  planning_generation, policy_trace_id, note_type, summary, details, status, priority,
-  created_at, updated_at, expires_at, superseded_by, converted_task_id, idempotency_key
-) VALUES (
-  @id, @phase_key, @phase_label, @task_id, @author, @author_kind, @session_id, @source_command,
-  @planning_generation, @policy_trace_id, @note_type, @summary, @details, @status, @priority,
-  @created_at, @updated_at, @expires_at, NULL, NULL, @idempotency_key
-)`);
-
-    const insertRef = this.db.prepare(`
-INSERT INTO phase_note_refs (id, note_id, ref_type, ref_value)
-VALUES (@id, @note_id, @ref_type, @ref_value)
-`);
-
-    this.db.transaction(() => {
-      insert.run({
-        id,
-        phase_key: input.phaseKey,
-        phase_label: input.phaseLabel ?? null,
-        task_id: input.taskId ?? null,
-        author: input.author ?? null,
-        author_kind: input.authorKind ?? null,
-        session_id: input.sessionId ?? null,
-        source_command: input.sourceCommand ?? null,
-        planning_generation: input.planningGeneration ?? null,
-        policy_trace_id: input.policyTraceId ?? null,
-        note_type: input.noteType,
-        summary: input.summary,
-        details: input.details ?? null,
-        status,
-        priority,
-        created_at: now,
-        updated_at: now,
-        expires_at: input.expiresAt ?? null,
-        idempotency_key: input.idempotencyKey ?? null
-      });
-      for (const r of refs) {
-        insertRef.run({
-          id: randomUUID(),
-          note_id: id,
-          ref_type: r.refType,
-          ref_value: r.refValue
-        });
-      }
-    })();
-
-    const note = getNoteById(this.db, id);
-    if (!note) {
-      throw new Error("phase journal: insert succeeded but note not readable");
-    }
-    return { created: true, note };
+    return this.db.transaction(() => insertPhaseNoteInConnection(this.db, input))();
   }
 
   listNotes(filter: ListPhaseNotesFilter): PhaseNoteRow[] {

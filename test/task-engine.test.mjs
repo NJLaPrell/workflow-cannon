@@ -1817,6 +1817,130 @@ test("taskEngineModule run-transition idempotency conflicts on different payload
   assert.equal(conflict.code, "idempotency-key-conflict");
 });
 
+test("taskEngineModule run-transition persists phaseNotes in the same transaction as start", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T9843",
+        status: "ready",
+        phaseKey: "78",
+        phase: "Phase 78"
+      })
+    );
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const tr = await taskEngineModule.onCommand(
+    {
+      name: "run-transition",
+      args: {
+        taskId: "T9843",
+        action: "start",
+        expectedPlanningGeneration: 1,
+        phaseNotes: [
+          { noteType: "finding", summary: "shipped with transition", idempotencyKey: "rt-9843-note-a" }
+        ]
+      }
+    },
+    ctx
+  );
+  assert.equal(tr.ok, true);
+  const dbPath = path.join(workspace, ".workspace-kit", "tasks", "workspace-kit.db");
+  const db = new Database(dbPath);
+  try {
+    const row = db
+      .prepare("SELECT source_command, planning_generation FROM phase_notes WHERE idempotency_key = ?")
+      .get("rt-9843-note-a");
+    assert.ok(row);
+    assert.equal(row.source_command, "run-transition");
+    assert.equal(Number(row.planning_generation), 2);
+  } finally {
+    db.close();
+  }
+});
+
+test("taskEngineModule run-transition rejects invalid phaseNotes without transitioning", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T9844",
+        status: "ready",
+        phaseKey: "78",
+        phase: "Phase 78"
+      })
+    );
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const bad = await taskEngineModule.onCommand(
+    {
+      name: "run-transition",
+      args: {
+        taskId: "T9844",
+        action: "start",
+        expectedPlanningGeneration: 1,
+        phaseNotes: [{ noteType: "invalid-type", summary: "nope" }]
+      }
+    },
+    ctx
+  );
+  assert.equal(bad.ok, false);
+  assert.equal(bad.code, "invalid-phase-note-type");
+  const got = await taskEngineModule.onCommand({ name: "get-task", args: { taskId: "T9844" } }, ctx);
+  assert.equal(got.data.task.status, "ready");
+});
+
+test("taskEngineModule run-transition idempotent replay does not re-apply phaseNotes inserts", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T9845",
+        status: "ready",
+        phaseKey: "78",
+        phase: "Phase 78"
+      })
+    );
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const first = await taskEngineModule.onCommand(
+    {
+      name: "run-transition",
+      args: {
+        taskId: "T9845",
+        action: "start",
+        expectedPlanningGeneration: 1,
+        clientMutationId: "rt-phase-notes-replay",
+        phaseNotes: [{ noteType: "finding", summary: "once", idempotencyKey: "note-once-9845" }]
+      }
+    },
+    ctx
+  );
+  assert.equal(first.ok, true);
+  const replay = await taskEngineModule.onCommand(
+    {
+      name: "run-transition",
+      args: {
+        taskId: "T9845",
+        action: "start",
+        clientMutationId: "rt-phase-notes-replay",
+        phaseNotes: [{ noteType: "finding", summary: "would duplicate if re-run" }]
+      }
+    },
+    ctx
+  );
+  assert.equal(replay.ok, true);
+  assert.equal(replay.code, "transition-idempotent-replay");
+  const dbPath = path.join(workspace, ".workspace-kit", "tasks", "workspace-kit.db");
+  const db = new Database(dbPath);
+  try {
+    const c = db.prepare("SELECT COUNT(*) AS c FROM phase_notes WHERE idempotency_key = ?").get("note-once-9845");
+    assert.equal(Number(c.c), 1);
+  } finally {
+    db.close();
+  }
+});
+
 test("taskEngineModule agent-mutation-plan prepares sensitive run-transition with lifecycle context", async () => {
   const workspace = await tmpDir();
   await seedSqliteStore(workspace, (store) => {

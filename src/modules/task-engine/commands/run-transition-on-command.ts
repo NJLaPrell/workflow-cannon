@@ -7,6 +7,8 @@ import {
   createDeliveryEvidenceGuard,
   readDeliveryEvidenceEnforcementMode
 } from "../delivery-evidence.js";
+import { insertPhaseNoteInConnection } from "../phase-journal/phase-journal-store.js";
+import { resolveRunTransitionPhaseNotes } from "../phase-journal/phase-journal-run-transition-notes.js";
 import {
   readIdempotencyValue,
   readOptionalExpectedPlanningGeneration
@@ -16,6 +18,11 @@ import { TaskStore } from "../persistence/store.js";
 import { planningGenPolicyGate } from "../planning-generation-gate.js";
 import { TransitionService } from "../service.js";
 import { TaskEngineError } from "../transitions.js";
+
+function readKitUserVersion(db: { pragma: (name: string, options?: { simple: boolean }) => unknown }): number {
+  const raw = db.pragma("user_version", { simple: true });
+  return typeof raw === "number" ? raw : Number(raw);
+}
 
 export async function runTransitionOnCommand(
   ctx: ModuleLifecycleContext,
@@ -71,12 +78,45 @@ export async function runTransitionOnCommand(
     const expectedPlanningGeneration = readOptionalExpectedPlanningGeneration(
       args as Record<string, unknown>
     );
+
+    const db = planning.sqliteDual.getDatabase();
+    const transitionTask = store.getTask(taskId);
+    const phaseResolution = resolveRunTransitionPhaseNotes(
+      args as Record<string, unknown>,
+      transitionTask,
+      readKitUserVersion(db),
+      (tid) => store.getTask(tid)
+    );
+    if (!phaseResolution.ok) {
+      const data: Record<string, unknown> = {};
+      attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration(), pgTransition.warnings);
+      return { ...phaseResolution.result, data };
+    }
+
+    const persistNotes = phaseResolution.inputs;
+    const beforePersistInSqliteTransaction =
+      persistNotes.length > 0
+        ? () => {
+            const gr = db
+              .prepare("SELECT planning_generation AS g FROM workspace_planning_state WHERE id = 1")
+              .get() as { g: number } | undefined;
+            const nextPlanningGen = (gr !== undefined ? Number(gr.g) || 0 : 0) + 1;
+            for (const input of persistNotes) {
+              insertPhaseNoteInConnection(db, {
+                ...input,
+                planningGeneration: nextPlanningGen
+              });
+            }
+          }
+        : undefined;
+
     const result = await service.runTransition({
       taskId,
       action,
       actor,
       expectedPlanningGeneration,
-      clientMutationId
+      clientMutationId,
+      beforePersistInSqliteTransaction
     });
     if (!result.replayed && result.evidence.toState === "completed") {
       maybeSpawnTranscriptHookAfterCompletion(
