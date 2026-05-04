@@ -13,6 +13,8 @@ pnpm run check
 pnpm test
 ```
 
+Phase journal behavior from `PHASE_JOURNAL.md` (Example workflow) is regression-tested as **`PHASE_JOURNAL example workflow — golden integration (T100040)`** in `test/task-engine.test.mjs` (same `pnpm test` run).
+
 ## Cursor / VS Code extension
 
 The **Workflow Cannon** repo is a **pnpm workspace** (`pnpm-workspace.yaml`): the kit package **`@workflow-cannon/workspace-kit`** (CLI commands **`workspace-kit`** / **`wk`**) and **`extensions/cursor-workflow-cannon`** install together from the root. Do **not** run `npm install` inside the extension directory.
