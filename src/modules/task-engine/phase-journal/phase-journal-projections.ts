@@ -1,4 +1,4 @@
-import type { PhaseNoteRow } from "./phase-journal-types.js";
+import type { PhaseNoteRow, PhaseNoteTaskSuggestionRow } from "./phase-journal-types.js";
 
 /** Bounded JSON for agent-facing phase journal commands (not raw SQLite rows). */
 export type PhaseNoteProjection = {
@@ -38,5 +38,35 @@ export function projectPhaseNote(row: PhaseNoteRow): PhaseNoteProjection {
     convertedTaskId: row.convertedTaskId,
     idempotencyKey: row.idempotencyKey,
     refs: row.refs.map((r) => ({ type: r.refType, value: r.refValue }))
+  };
+}
+
+export type PhaseNoteTaskSuggestionProjection = {
+  id: string;
+  noteId: string;
+  title: string;
+  description: string;
+  suggestedStatus: string;
+  suggestedPhaseKey: string;
+  suggestedPhaseLabel: string | null;
+  suggestedTaskType: string | null;
+  convertedTaskId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export function projectPhaseNoteTaskSuggestion(row: PhaseNoteTaskSuggestionRow): PhaseNoteTaskSuggestionProjection {
+  return {
+    id: row.id,
+    noteId: row.noteId,
+    title: row.title,
+    description: row.description,
+    suggestedStatus: row.suggestedStatus,
+    suggestedPhaseKey: row.suggestedPhaseKey,
+    suggestedPhaseLabel: row.suggestedPhaseLabel,
+    suggestedTaskType: row.suggestedTaskType,
+    convertedTaskId: row.convertedTaskId,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt
   };
 }

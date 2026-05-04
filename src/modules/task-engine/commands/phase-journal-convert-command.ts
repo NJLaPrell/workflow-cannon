@@ -23,7 +23,12 @@ import { validateKnownTaskTypeRequirements } from "../task-type-validation.js";
 import { TaskEngineError } from "../transitions.js";
 import type { TaskEntity, TaskPriority, TaskStatus } from "../types.js";
 import { PHASE_NOTE_TYPES_CONVERTIBLE_TO_TASK } from "../phase-journal/phase-journal-constants.js";
-import { createPhaseJournalStore, markPhaseNoteConvertedInConnection } from "../phase-journal/phase-journal-store.js";
+import {
+  createPhaseJournalStore,
+  markPhaseNoteConvertedInConnection,
+  markPhaseNoteTaskSuggestionsConvertedInConnection,
+  phaseNoteTaskSuggestionsTableExists
+} from "../phase-journal/phase-journal-store.js";
 
 const CONVERTIBLE_NOTE_TYPES_ARR = [...PHASE_NOTE_TYPES_CONVERTIBLE_TO_TASK];
 
@@ -46,6 +51,8 @@ export async function runConvertPhaseNoteToTaskCommand(
   if (!noteId) {
     return { ok: false, code: "invalid-phase-note-args", message: "noteId is required." };
   }
+
+  const suggestionIdOpt = readStringField(args, "suggestionId")?.trim();
 
   const allocateId = args.allocateId !== false;
   if (!allocateId) {
@@ -96,6 +103,26 @@ export async function runConvertPhaseNoteToTaskCommand(
       code: "phase-note-not-convertible",
       message: `Note type '${note.noteType}' cannot be converted to a task (allowed: ${CONVERTIBLE_NOTE_TYPES_ARR.join(", ")}).`
     };
+  }
+
+  if (suggestionIdOpt) {
+    if (!phaseNoteTaskSuggestionsTableExists(db)) {
+      return {
+        ok: false,
+        code: "invalid-phase-note-args",
+        message: "suggestionId requires kit SQLite DDL for phase_note_task_suggestions (user_version 20+)."
+      };
+    }
+    const row = db.prepare(`SELECT note_id FROM phase_note_task_suggestions WHERE id = ?`).get(suggestionIdOpt) as
+      | { note_id: string }
+      | undefined;
+    if (!row || row.note_id !== noteId) {
+      return {
+        ok: false,
+        code: "phase-note-suggestion-not-found",
+        message: "suggestionId does not match the given noteId."
+      };
+    }
   }
 
   const type = typeof args.type === "string" && args.type.trim().length > 0 ? args.type.trim() : "workspace-kit";
@@ -318,6 +345,7 @@ export async function runConvertPhaseNoteToTaskCommand(
             "Phase note could not be marked converted (concurrent convert, wrong type, or note no longer active)."
           );
         }
+        markPhaseNoteTaskSuggestionsConvertedInConnection(db, noteId, resolvedId, suggestionIdOpt);
       }
     });
   } catch (err) {

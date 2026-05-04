@@ -5,6 +5,8 @@ export const PHASE_NOTE_REFS_MAX = 10;
 export const PHASE_NOTE_LIST_DEFAULT_LIMIT = 8;
 export const PHASE_NOTE_LIST_MAX_LIMIT = 50;
 export const PHASE_JOURNAL_MIN_KIT_USER_VERSION = 19;
+/** Kit SQLite DDL for `phase_note_task_suggestions` (T100034). */
+export const PHASE_NOTE_TASK_SUGGESTIONS_MIN_KIT_USER_VERSION = 20;
 
 /** Max notes accepted on a single `run-transition` (bounded advisory batch). */
 export const PHASE_NOTES_RUN_TRANSITION_MAX = 20;

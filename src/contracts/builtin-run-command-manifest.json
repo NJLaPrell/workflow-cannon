@@ -175,7 +175,7 @@
     "moduleId": "task-engine",
     "name": "propose-tasks-from-phase-notes",
     "file": "propose-tasks-from-phase-notes.md",
-    "description": "Read-only harvest of active follow-up / task-suggestion notes as proposed-task candidates (no persistence).",
+    "description": "Harvest active follow-up / task-suggestion notes as proposed-task candidates; optional persist upserts phase_note_task_suggestions (no execution tasks).",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },

@@ -2009,6 +2009,173 @@ test("taskEngineModule propose-tasks-from-phase-notes and convert-phase-note-to-
   assert.equal(dup.code, "phase-note-not-convertible");
 });
 
+test("taskEngineModule propose persist, convert with suggestionId, dismiss deletes suggestion rows", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T9920",
+        status: "ready",
+        phaseKey: "90",
+        phase: "Phase 90"
+      })
+    );
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const noteRes = await taskEngineModule.onCommand(
+    {
+      name: "add-phase-note",
+      args: {
+        phaseKey: "90",
+        noteType: "follow-up",
+        summary: "Track the flaky gate",
+        taskId: "T9920"
+      }
+    },
+    ctx
+  );
+  assert.equal(noteRes.ok, true);
+  const nid = noteRes.data.note.id;
+
+  const prop = await taskEngineModule.onCommand(
+    {
+      name: "propose-tasks-from-phase-notes",
+      args: { phaseKey: "90", persist: true }
+    },
+    ctx
+  );
+  assert.equal(prop.ok, true);
+  assert.equal(prop.code, "phase-note-proposals-persisted");
+  assert.equal(prop.data.persisted, true);
+  assert.equal(prop.data.persistedSuggestions.length, 1);
+  const sid = prop.data.persistedSuggestions[0].id;
+  assert.equal(prop.data.persistedSuggestions[0].noteId, nid);
+
+  const dbPath = path.join(workspace, ".workspace-kit", "tasks", "workspace-kit.db");
+  const db0 = new Database(dbPath);
+  try {
+    const c0 = db0.prepare("SELECT COUNT(*) AS c FROM phase_note_task_suggestions WHERE note_id = ?").get(nid);
+    assert.equal(Number(c0.c), 1);
+  } finally {
+    db0.close();
+  }
+
+  const conv = await taskEngineModule.onCommand(
+    {
+      name: "convert-phase-note-to-task",
+      args: {
+        noteId: nid,
+        suggestionId: sid,
+        expectedPlanningGeneration: 1
+      }
+    },
+    ctx
+  );
+  assert.equal(conv.ok, true);
+  const db1 = new Database(dbPath);
+  try {
+    const row = db1.prepare("SELECT converted_task_id FROM phase_note_task_suggestions WHERE id = ?").get(sid);
+    assert.equal(typeof row.converted_task_id, "string");
+    assert.ok(row.converted_task_id.length > 0);
+  } finally {
+    db1.close();
+  }
+
+  const noteB = await taskEngineModule.onCommand(
+    {
+      name: "add-phase-note",
+      args: {
+        phaseKey: "90",
+        noteType: "task-suggestion",
+        summary: "Another idea",
+        taskId: "T9920"
+      }
+    },
+    ctx
+  );
+  assert.equal(noteB.ok, true);
+  const nidB = noteB.data.note.id;
+  await taskEngineModule.onCommand(
+    { name: "propose-tasks-from-phase-notes", args: { phaseKey: "90", persist: true } },
+    ctx
+  );
+
+  const dismiss = await taskEngineModule.onCommand(
+    {
+      name: "dismiss-phase-note",
+      args: { noteId: nidB, reason: "not doing it" }
+    },
+    ctx
+  );
+  assert.equal(dismiss.ok, true);
+  const db2 = new Database(dbPath);
+  try {
+    const c1 = db2.prepare("SELECT COUNT(*) AS c FROM phase_note_task_suggestions WHERE note_id = ?").get(nidB);
+    assert.equal(Number(c1.c), 0);
+  } finally {
+    db2.close();
+  }
+});
+
+test("taskEngineModule supersede-phase-note deletes suggestions for superseded note", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T9921",
+        status: "ready",
+        phaseKey: "91",
+        phase: "Phase 91"
+      })
+    );
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const a = await taskEngineModule.onCommand(
+    {
+      name: "add-phase-note",
+      args: { phaseKey: "91", noteType: "follow-up", summary: "Old thread", taskId: "T9921" }
+    },
+    ctx
+  );
+  const b = await taskEngineModule.onCommand(
+    {
+      name: "add-phase-note",
+      args: { phaseKey: "91", noteType: "finding", summary: "Replacement context", taskId: "T9921" }
+    },
+    ctx
+  );
+  assert.equal(a.ok, true);
+  assert.equal(b.ok, true);
+  const idA = a.data.note.id;
+  const idB = b.data.note.id;
+
+  await taskEngineModule.onCommand({ name: "propose-tasks-from-phase-notes", args: { phaseKey: "91", persist: true } }, ctx);
+
+  const dbPath = path.join(workspace, ".workspace-kit", "tasks", "workspace-kit.db");
+  const dbBefore = new Database(dbPath);
+  let hadSuggestion = false;
+  try {
+    const c = dbBefore.prepare("SELECT COUNT(*) AS c FROM phase_note_task_suggestions WHERE note_id = ?").get(idA);
+    hadSuggestion = Number(c.c) === 1;
+  } finally {
+    dbBefore.close();
+  }
+  assert.equal(hadSuggestion, true);
+
+  const sup = await taskEngineModule.onCommand(
+    { name: "supersede-phase-note", args: { noteId: idA, supersededBy: idB } },
+    ctx
+  );
+  assert.equal(sup.ok, true);
+  const dbAfter = new Database(dbPath);
+  try {
+    const c2 = dbAfter.prepare("SELECT COUNT(*) AS c FROM phase_note_task_suggestions WHERE note_id = ?").get(idA);
+    assert.equal(Number(c2.c), 0);
+  } finally {
+    dbAfter.close();
+  }
+});
+
 test("taskEngineModule agent-mutation-plan prepares sensitive run-transition with lifecycle context", async () => {
   const workspace = await tmpDir();
   await seedSqliteStore(workspace, (store) => {

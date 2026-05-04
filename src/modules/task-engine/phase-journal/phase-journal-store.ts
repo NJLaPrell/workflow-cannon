@@ -7,10 +7,18 @@ import type {
   PhaseNotePriority,
   PhaseNoteRefRow,
   PhaseNoteRow,
-  PhaseNoteStatus
+  PhaseNoteStatus,
+  PhaseNoteTaskSuggestionRow
 } from "./phase-journal-types.js";
 
 type SqliteDb = InstanceType<typeof Database>;
+
+export function phaseNoteTaskSuggestionsTableExists(db: SqliteDb): boolean {
+  const row = db
+    .prepare(`SELECT 1 AS ok FROM sqlite_master WHERE type = 'table' AND name = 'phase_note_task_suggestions'`)
+    .get() as { ok: number } | undefined;
+  return row !== undefined;
+}
 
 function mapNote(row: Record<string, unknown>, refs: PhaseNoteRefRow[]): PhaseNoteRow {
   return {
@@ -39,6 +47,23 @@ function mapNote(row: Record<string, unknown>, refs: PhaseNoteRefRow[]): PhaseNo
     convertedTaskId: row.converted_task_id == null ? null : String(row.converted_task_id),
     idempotencyKey: row.idempotency_key == null ? null : String(row.idempotency_key),
     refs
+  };
+}
+
+function mapSuggestion(row: Record<string, unknown>): PhaseNoteTaskSuggestionRow {
+  return {
+    id: String(row.id),
+    noteId: String(row.note_id),
+    title: String(row.title),
+    description: String(row.description),
+    suggestedStatus: String(row.suggested_status),
+    suggestedPhaseKey: String(row.suggested_phase_key),
+    suggestedPhaseLabel: row.suggested_phase_label == null ? null : String(row.suggested_phase_label),
+    suggestedTaskType: row.suggested_task_type == null ? null : String(row.suggested_task_type),
+    acceptanceCriteriaJson: row.acceptance_criteria_json == null ? null : String(row.acceptance_criteria_json),
+    convertedTaskId: row.converted_task_id == null ? null : String(row.converted_task_id),
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at)
   };
 }
 
@@ -171,6 +196,85 @@ export function markPhaseNoteConvertedInConnection(
   return res.changes === 1;
 }
 
+export function deletePhaseNoteTaskSuggestionsForNoteId(db: SqliteDb, noteId: string): void {
+  if (!phaseNoteTaskSuggestionsTableExists(db)) {
+    return;
+  }
+  db.prepare(`DELETE FROM phase_note_task_suggestions WHERE note_id = ?`).run(noteId);
+}
+
+const upsertPhaseNoteTaskSuggestionSql = `
+INSERT INTO phase_note_task_suggestions (
+  id, note_id, title, description, suggested_status, suggested_phase_key, suggested_phase_label,
+  suggested_task_type, acceptance_criteria_json, converted_task_id, created_at, updated_at
+) VALUES (
+  @id, @note_id, @title, @description, 'proposed', @suggested_phase_key, @suggested_phase_label,
+  @suggested_task_type, NULL, NULL, @created_at, @updated_at
+)
+ON CONFLICT(note_id) DO UPDATE SET
+  title = excluded.title,
+  description = excluded.description,
+  suggested_status = 'proposed',
+  suggested_phase_key = excluded.suggested_phase_key,
+  suggested_phase_label = excluded.suggested_phase_label,
+  suggested_task_type = excluded.suggested_task_type,
+  acceptance_criteria_json = NULL,
+  converted_task_id = NULL,
+  updated_at = excluded.updated_at
+`;
+
+/** Upsert one suggestion row per phase note (bounded caller). */
+export function upsertPhaseNoteTaskSuggestionFromNote(db: SqliteDb, note: PhaseNoteRow): PhaseNoteTaskSuggestionRow {
+  const now = new Date().toISOString();
+  const id = randomUUID();
+  const title = note.summary.trim();
+  const description = (note.details?.trim() ? note.details.trim() : note.summary.trim()) || title;
+  db.prepare(upsertPhaseNoteTaskSuggestionSql).run({
+    id,
+    note_id: note.id,
+    title,
+    description,
+    suggested_phase_key: note.phaseKey,
+    suggested_phase_label: note.phaseLabel ?? null,
+    suggested_task_type: "workspace-kit",
+    created_at: now,
+    updated_at: now
+  });
+  const row = db
+    .prepare(`SELECT * FROM phase_note_task_suggestions WHERE note_id = ?`)
+    .get(note.id) as Record<string, unknown> | undefined;
+  if (!row) {
+    throw new Error("phase journal: suggestion upsert lost row");
+  }
+  return mapSuggestion(row);
+}
+
+export function markPhaseNoteTaskSuggestionsConvertedInConnection(
+  db: SqliteDb,
+  noteId: string,
+  convertedTaskId: string,
+  suggestionId?: string
+): void {
+  if (!phaseNoteTaskSuggestionsTableExists(db)) {
+    return;
+  }
+  const now = new Date().toISOString();
+  const sid = suggestionId?.trim();
+  if (sid) {
+    db.prepare(
+      `UPDATE phase_note_task_suggestions
+       SET converted_task_id = ?, updated_at = ?
+       WHERE id = ? AND note_id = ? AND converted_task_id IS NULL`
+    ).run(convertedTaskId, now, sid, noteId);
+    return;
+  }
+  db.prepare(
+    `UPDATE phase_note_task_suggestions
+     SET converted_task_id = ?, updated_at = ?
+     WHERE note_id = ? AND converted_task_id IS NULL`
+  ).run(convertedTaskId, now, noteId);
+}
+
 export class PhaseJournalStore {
   constructor(private readonly db: SqliteDb) {}
 
@@ -212,26 +316,29 @@ LIMIT ${limit}
   }
 
   dismissNote(noteId: string): PhaseNoteRow | null {
-    const now = new Date().toISOString();
-    const res = this.db
-      .prepare(
-        `UPDATE phase_notes SET status = 'dismissed', updated_at = ? WHERE id = ? AND status != 'dismissed'`
-      )
-      .run(now, noteId);
-    if (res.changes === 0) {
+    return this.db.transaction(() => {
+      deletePhaseNoteTaskSuggestionsForNoteId(this.db, noteId);
+      const now = new Date().toISOString();
+      this.db
+        .prepare(
+          `UPDATE phase_notes SET status = 'dismissed', updated_at = ? WHERE id = ? AND status != 'dismissed'`
+        )
+        .run(now, noteId);
       return getNoteById(this.db, noteId);
-    }
-    return getNoteById(this.db, noteId);
+    })();
   }
 
   supersedeNote(fromNoteId: string, supersededByNoteId: string): PhaseNoteRow | null {
-    const now = new Date().toISOString();
-    this.db
-      .prepare(
-        `UPDATE phase_notes SET status = 'superseded', superseded_by = ?, updated_at = ? WHERE id = ?`
-      )
-      .run(supersededByNoteId, now, fromNoteId);
-    return getNoteById(this.db, fromNoteId);
+    return this.db.transaction(() => {
+      deletePhaseNoteTaskSuggestionsForNoteId(this.db, fromNoteId);
+      const now = new Date().toISOString();
+      this.db
+        .prepare(
+          `UPDATE phase_notes SET status = 'superseded', superseded_by = ?, updated_at = ? WHERE id = ?`
+        )
+        .run(supersededByNoteId, now, fromNoteId);
+      return getNoteById(this.db, fromNoteId);
+    })();
   }
 }
 
