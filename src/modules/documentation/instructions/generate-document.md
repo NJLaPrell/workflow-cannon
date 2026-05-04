@@ -26,8 +26,8 @@ Generate a single document for both canonical AI and human-readable surfaces usi
   - `workbooks/task-engine-workbook.md`
 - `options`:
   - `dryRun?: boolean` — compute outputs/validations without writing files
-  - `overwrite?: boolean` — allow replacing existing files (default `true`)
-  - `overwriteAi?: boolean` — override `overwrite` for AI surface only
+  - `overwrite?: boolean` — default `true` for **human** outputs; also sets AI overwrite when `overwriteAi` is omitted (see below)
+  - `overwriteAi?: boolean` — AI surface (`.ai/<documentType>`); defaults to **`false`** so existing keyed sources (e.g. `chat_feature|` in `.ai/README.md`) are read and preserved unless you pass `overwrite: true` without narrowing, or set `overwriteAi: true`
   - `overwriteHuman?: boolean` — override `overwrite` for human surface only
   - `overwriteRepoRootReadme?: boolean` — override `overwrite` for repo-root `README.md` only (default: same as `overwrite`)
   - `strict?: boolean` — fail on unresolved warnings (default `true`)

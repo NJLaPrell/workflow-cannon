@@ -237,7 +237,8 @@ test("ModuleCommandRouter executes generate-document for single doc", async () =
     {
       documentType: "AGENTS.md",
       options: {
-        dryRun: true
+        dryRun: true,
+        overwriteAi: true
       }
     },
     lifecycleContext
