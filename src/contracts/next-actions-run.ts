@@ -3,6 +3,8 @@
  * `teamExecutionContext` is additive (Phase 60+).
  */
 
+import type { AgentNextActionsPhaseContext } from "./agent-phase-journal-read-contract.js";
+
 export type NextActionsTeamExecutionContext = {
   schemaVersion: 1;
   available: boolean;
@@ -28,11 +30,7 @@ export type GetNextActionsPayload = {
   scope: string;
   queueNamespace: string | null;
   maintainerDelivery?: Record<string, unknown>;
-  phaseContext?: {
-    phaseKey: string;
-    relevantNotes: Array<{ id: string; noteType: string; priority: string; summary: string }>;
-    taskSuggestionsFromNotes: Array<{ id: string; noteType: string; priority: string; summary: string }>;
-  };
+  phaseContext?: AgentNextActionsPhaseContext;
   planningGeneration?: number;
   planningGenerationPolicy?: string;
 };

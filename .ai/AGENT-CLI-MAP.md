@@ -17,7 +17,7 @@ Machine-oriented **how to run** workspace-kit in this repo: policy, cold start, 
 
 **Clean stdout:** Prefer **`pnpm exec wk`** over **`pnpm run wk`** when parsing JSON.
 
-**Agent task reads:** `.ai/runbooks/agent-task-db-contract.md`, `schemas/agent-task-read-contract.v1.json` — use command JSON, not raw SQLite.
+**Agent task reads:** `.ai/runbooks/agent-task-db-contract.md`, `schemas/agent-task-read-contract.v1.json`, `schemas/agent-phase-journal-read-contract.v1.json` — use command JSON, not raw SQLite.
 
 ## Runtime invocation
 
