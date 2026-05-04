@@ -642,7 +642,7 @@ test("runCli doctor --json emits contract-ok envelope", async () => {
 test("runCli run dispatches generate-document with dryRun", async () => {
   const capture = createCapture();
   const code = await runCli(
-    ["run", "generate-document", '{"documentType":"AGENTS.md","options":{"dryRun":true}}'],
+    ["run", "generate-document", '{"documentType":"AGENTS.md","options":{"dryRun":true,"overwriteAi":true}}'],
     { cwd: process.cwd(), ...capture }
   );
   assert.equal(code, 0);

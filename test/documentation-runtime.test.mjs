@@ -581,6 +581,46 @@ test("generate-document writes repo root README.md for README documentType", asy
   assert.ok(disk.startsWith("AI agents:"));
 });
 
+test("generate-document README.md preserves curated .ai/README.md when overwriteAi omitted (T100027)", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "wc-doc-rt-readme-preserve-"));
+  const { templatesRoot, aiRoot, humanRoot } = await createDocFixture(root);
+  const ctx = { ...baseLifecycleContext(), workspacePath: root };
+
+  await writeFile(
+    path.join(templatesRoot, "README.md"),
+    "## Overview\n\n<img src=\"../title_image.png\" />\n\n## Chat\n\n<!--DOC_MODULE:CHAT_FEATURES-->\n\n## Policy\n\nx\n",
+    "utf8"
+  );
+  const curated = [
+    "meta|v=1|doc=rules|truth=canonical|schema=base.v2|status=active|profile=core",
+    "project|name=t|type=project_readme|scope=onboarding",
+    "chat_feature|id=PRESERVE_ME|title=Curated|summary=Do not clobber|steps=a>b",
+    ""
+  ].join("\n");
+  await writeFile(path.join(aiRoot, "README.md"), curated, "utf8");
+
+  const result = await callOnCommand(
+    "generate-document",
+    {
+      documentType: "README.md",
+      options: { dryRun: false, strict: false }
+    },
+    ctx
+  );
+
+  assert.equal(result.ok, true);
+  const aiDisk = await (await import("node:fs/promises")).readFile(path.join(aiRoot, "README.md"), "utf8");
+  assert.ok(aiDisk.includes("PRESERVE_ME"), "expected curated chat_feature id to remain on disk");
+  assert.ok(
+    result.data.evidence.filesSkipped.includes(path.join(aiRoot, "README.md")),
+    "expected .ai/README.md listed in filesSkipped when default preserve"
+  );
+  assert.ok(
+    result.data.evidence.filesWritten.some((f) => f === path.join(humanRoot, "README.md")),
+    "expected maintainer README to still refresh"
+  );
+});
+
 test("generate-document dryRun does not write repo root README.md", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "wc-doc-rt-readme-dry-"));
   const { templatesRoot, aiRoot } = await createDocFixture(root);

@@ -50,7 +50,9 @@ export async function generateDocument(args: GenerateDocumentArgs, ctx: ModuleLi
   }
 
   const options = args.options ?? {};
-  const canOverwriteAi = options.overwriteAi ?? options.overwrite ?? true;
+  // Preserve curated `.ai/` docs by default (matches document-project batch). Explicit
+  // `overwrite: true` still opts AI in unless `overwriteAi: false` is set.
+  const canOverwriteAi = options.overwriteAi ?? options.overwrite ?? false;
   const canOverwriteHuman = options.overwriteHuman ?? options.overwrite ?? true;
   const canOverwriteRepoRootReadme = options.overwriteRepoRootReadme ?? options.overwrite ?? true;
   const config = await loadRuntimeConfig(ctx.workspacePath);
