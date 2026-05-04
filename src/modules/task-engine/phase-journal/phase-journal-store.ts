@@ -8,7 +8,8 @@ import type {
   PhaseNoteRefRow,
   PhaseNoteRow,
   PhaseNoteStatus,
-  PhaseNoteTaskSuggestionRow
+  PhaseNoteTaskSuggestionRow,
+  UpdateActivePhaseNotePatch
 } from "./phase-journal-types.js";
 
 type SqliteDb = InstanceType<typeof Database>;
@@ -338,6 +339,34 @@ LIMIT ${limit}
         )
         .run(supersededByNoteId, now, fromNoteId);
       return getNoteById(this.db, fromNoteId);
+    })();
+  }
+
+  /**
+   * Update summary/details/expires_at on an **active** note. Preserves idempotency_key, source_command,
+   * author/session provenance. Stamps `planning_generation` + `updated_at` from caller.
+   */
+  updateActivePhaseNote(
+    noteId: string,
+    patch: UpdateActivePhaseNotePatch,
+    audit: { planningGeneration: number | null; updatedAt: string }
+  ): PhaseNoteRow | null {
+    return this.db.transaction(() => {
+      const cur = getNoteById(this.db, noteId);
+      if (!cur || cur.status !== "active") {
+        return null;
+      }
+      const summary = patch.summary !== undefined ? patch.summary : cur.summary;
+      const details = patch.details !== undefined ? patch.details : cur.details;
+      const expiresAt = patch.expiresAt !== undefined ? patch.expiresAt : cur.expiresAt;
+      this.db
+        .prepare(
+          `UPDATE phase_notes
+           SET summary = ?, details = ?, expires_at = ?, updated_at = ?, planning_generation = ?
+           WHERE id = ? AND status = 'active'`
+        )
+        .run(summary, details, expiresAt, audit.updatedAt, audit.planningGeneration, noteId);
+      return getNoteById(this.db, noteId);
     })();
   }
 }

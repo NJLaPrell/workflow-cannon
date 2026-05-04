@@ -92,7 +92,8 @@ export type {
   PhaseNoteRefRow,
   PhaseNoteRow,
   PhaseNoteStatus,
-  PhaseNoteTaskSuggestionRow
+  PhaseNoteTaskSuggestionRow,
+  UpdateActivePhaseNotePatch
 } from "./phase-journal/phase-journal-types.js";
 
 export { taskEngineModule } from "./task-engine-internal.js";

@@ -22,6 +22,7 @@
       "required": [
         "run-transition",
         "create-task",
+        "update-phase-note",
         "update-task",
         "update-wishlist",
         "update-workspace-phase-snapshot",
@@ -90,6 +91,7 @@
       "properties": {
         "run-transition": { "$ref": "#/$defs/contractRunTransition" },
         "create-task": { "$ref": "#/$defs/contractCreateTask" },
+        "update-phase-note": { "$ref": "#/$defs/contractBase" },
         "update-task": { "$ref": "#/$defs/contractUpdateTask" },
         "update-wishlist": { "$ref": "#/$defs/contractUpdateWishlist" },
         "update-workspace-phase-snapshot": { "$ref": "#/$defs/contractUpdateWorkspacePhaseSnapshot" },

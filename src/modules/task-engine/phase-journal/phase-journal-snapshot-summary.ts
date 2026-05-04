@@ -1,6 +1,7 @@
 import type Database from "better-sqlite3";
 import { PHASE_JOURNAL_MIN_KIT_USER_VERSION } from "./phase-journal-constants.js";
 import { createPhaseJournalStore } from "./phase-journal-store.js";
+import { filterOutPassiveExpiredActiveNotes } from "./phase-journal-expiry.js";
 import { sortPhaseNotesForSnapshotTop } from "./phase-journal-scoring.js";
 
 type SqliteDb = InstanceType<typeof Database>;
@@ -57,7 +58,8 @@ export function buildPhaseJournalSnapshotSummary(
     return null;
   }
   const store = createPhaseJournalStore(db);
-  const notes = store.listNotes({ phaseKey: key, status: "active", limit: 500 });
+  const rawNotes = store.listNotes({ phaseKey: key, status: "active", limit: 500 });
+  const notes = filterOutPassiveExpiredActiveNotes(rawNotes, false, Date.now());
   const activeNoteCount = notes.length;
   const criticalCount = notes.filter((n) => n.priority === "critical").length;
   const openFollowUpCount = notes.filter(

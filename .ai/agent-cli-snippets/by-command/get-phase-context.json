@@ -3,11 +3,9 @@
   "code": "run-args-schema",
   "command": "get-phase-context",
   "schema": {
-    "type": "object",
-    "additionalProperties": true,
-    "description": "Permissive fallback args schema for 'get-phase-context'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+    "type": "object"
   },
-  "schemaSource": "manifest-permissive-fallback",
+  "schemaSource": "pilot-run-args-snapshot",
   "sampleArgs": {},
   "examples": [
     {

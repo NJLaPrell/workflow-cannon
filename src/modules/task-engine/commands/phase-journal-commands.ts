@@ -18,11 +18,15 @@ import {
 } from "../phase-journal/phase-journal-constants.js";
 import { projectPhaseNote, projectPhaseNoteTaskSuggestion, type PhaseNoteProjection } from "../phase-journal/phase-journal-projections.js";
 import {
+  filterOutPassiveExpiredActiveNotes,
+  validatePhaseNoteExpiresAtForWrite
+} from "../phase-journal/phase-journal-expiry.js";
+import {
   createPhaseJournalStore,
   phaseNoteTaskSuggestionsTableExists,
   upsertPhaseNoteTaskSuggestionFromNote
 } from "../phase-journal/phase-journal-store.js";
-import type { CreatePhaseNoteInput, PhaseNoteStatus } from "../phase-journal/phase-journal-types.js";
+import type { CreatePhaseNoteInput, PhaseNoteStatus, UpdateActivePhaseNotePatch } from "../phase-journal/phase-journal-types.js";
 import { sortPhaseNotesForContext } from "../phase-journal/phase-journal-scoring.js";
 import { inferPhaseKeyFromTask, resolvePhaseKeyForPhaseJournalRead, type PhaseJournalPhaseKeySource } from "../phase-journal/phase-journal-phase-key.js";
 import { runConvertPhaseNoteToTaskCommand } from "./phase-journal-convert-command.js";
@@ -94,7 +98,8 @@ export async function resolvePhaseJournalCommands(
     "get-phase-context",
     "propose-tasks-from-phase-notes",
     "dismiss-phase-note",
-    "supersede-phase-note"
+    "supersede-phase-note",
+    "update-phase-note"
   ]);
   if (!names.has(command.name)) {
     return null;
@@ -207,6 +212,12 @@ export async function resolvePhaseJournalCommands(
 
     const idempotencyKey = readStringField(args, "idempotencyKey")?.trim() || null;
 
+    const expiresAtRaw = readStringField(args, "expiresAt")?.trim() ?? null;
+    const expiryGate = validatePhaseNoteExpiresAtForWrite(expiresAtRaw, Date.now());
+    if (!expiryGate.ok) {
+      return { ok: false, code: "invalid-phase-note-args", message: expiryGate.message };
+    }
+
     const input: CreatePhaseNoteInput = {
       phaseKey,
       phaseLabel: readStringField(args, "phaseLabel")?.trim() ?? null,
@@ -221,7 +232,7 @@ export async function resolvePhaseJournalCommands(
       summary: summary.trim(),
       details: detailsRaw?.trim() ? detailsRaw : null,
       priority: priorityRaw as CreatePhaseNoteInput["priority"],
-      expiresAt: readStringField(args, "expiresAt")?.trim() ?? null,
+      expiresAt: expiresAtRaw,
       idempotencyKey,
       refs: refsIn
     };
@@ -283,6 +294,8 @@ export async function resolvePhaseJournalCommands(
     }
 
     let rows = store.listNotes({ phaseKey, status: statusFilter, limit: PHASE_NOTE_LIST_MAX_LIMIT });
+    const includeExpired = args.includeExpired === true;
+    rows = filterOutPassiveExpiredActiveNotes(rows, includeExpired, Date.now());
     const noteTypeFilter = readStringField(args, "noteType")?.trim();
     if (noteTypeFilter) {
       if (!PHASE_NOTE_TYPES.has(noteTypeFilter)) {
@@ -328,7 +341,12 @@ export async function resolvePhaseJournalCommands(
       }
     }
 
-    const pool = store.listNotes({ phaseKey, status: "active", limit: 200 });
+    const includeExpired = args.includeExpired === true;
+    const pool = filterOutPassiveExpiredActiveNotes(
+      store.listNotes({ phaseKey, status: "active", limit: 200 }),
+      includeExpired,
+      Date.now()
+    );
     const sorted = sortPhaseNotesForContext(pool, { phaseKey, taskId, refKeys });
     const picked = sorted.slice(0, limit).map(projectPhaseNote);
     return okData(
@@ -353,7 +371,11 @@ export async function resolvePhaseJournalCommands(
       limit = Math.min(Math.max(limitRaw, 1), PHASE_NOTE_LIST_MAX_LIMIT);
     }
 
-    const pool = store.listNotes({ phaseKey, status: "active", limit: PHASE_NOTE_LIST_MAX_LIMIT });
+    const pool = filterOutPassiveExpiredActiveNotes(
+      store.listNotes({ phaseKey, status: "active", limit: PHASE_NOTE_LIST_MAX_LIMIT }),
+      false,
+      Date.now()
+    );
     const convertible = pool
       .filter((n) => PHASE_NOTE_TYPES_CONVERTIBLE_TO_TASK.has(n.noteType))
       .filter((n) => (taskId ? n.taskId === taskId : true))
@@ -415,6 +437,83 @@ export async function resolvePhaseJournalCommands(
     return await runConvertPhaseNoteToTaskCommand(ctx, planning, planning.taskStore, args);
   }
 
+  if (command.name === "update-phase-note") {
+    const noteId = readStringField(args, "noteId")?.trim() ?? "";
+    if (!noteId) {
+      return { ok: false, code: "invalid-phase-note-args", message: "noteId is required." };
+    }
+    const nowMs = Date.now();
+    const patch: UpdateActivePhaseNotePatch = {};
+    if (typeof args.summary === "string") {
+      const s = args.summary.trim();
+      if (!s) {
+        return { ok: false, code: "invalid-phase-note-args", message: "summary, when provided, must be non-empty." };
+      }
+      if (s.length > PHASE_NOTE_SUMMARY_MAX) {
+        return {
+          ok: false,
+          code: "invalid-phase-note-args",
+          message: `summary exceeds ${PHASE_NOTE_SUMMARY_MAX} characters`
+        };
+      }
+      patch.summary = s;
+    }
+    if ("details" in args) {
+      if (args.details !== null && typeof args.details !== "string") {
+        return { ok: false, code: "invalid-phase-note-args", message: "details must be a string or null." };
+      }
+      const d = args.details === null ? null : String(args.details).trim();
+      if (d && d.length > PHASE_NOTE_DETAILS_MAX) {
+        return {
+          ok: false,
+          code: "invalid-phase-note-args",
+          message: `details exceeds ${PHASE_NOTE_DETAILS_MAX} characters`
+        };
+      }
+      patch.details = d;
+    }
+    if ("expiresAt" in args) {
+      const rawExp = args.expiresAt;
+      if (rawExp !== null && typeof rawExp !== "string") {
+        return { ok: false, code: "invalid-phase-note-args", message: "expiresAt must be a string or null." };
+      }
+      const expFin = rawExp === null ? null : String(rawExp).trim() || null;
+      if (expFin) {
+        const v = validatePhaseNoteExpiresAtForWrite(expFin, nowMs);
+        if (!v.ok) {
+          return { ok: false, code: "invalid-phase-note-args", message: v.message };
+        }
+      }
+      patch.expiresAt = expFin;
+    }
+    if (Object.keys(patch).length === 0) {
+      return {
+        ok: false,
+        code: "invalid-phase-note-args",
+        message: "Provide at least one of: summary, details, expiresAt."
+      };
+    }
+    const existing = store.getById(noteId);
+    if (!existing) {
+      return { ok: false, code: "phase-note-not-found", message: `Unknown noteId '${noteId}'.` };
+    }
+    if (existing.status !== "active") {
+      return { ok: false, code: "phase-note-not-updatable", message: "Only active phase notes can be updated." };
+    }
+    const updated = store.updateActivePhaseNote(noteId, patch, {
+      planningGeneration: gen,
+      updatedAt: new Date().toISOString()
+    });
+    if (!updated) {
+      return {
+        ok: false,
+        code: "phase-note-not-found",
+        message: `Unknown noteId '${noteId}' or note not active.`
+      };
+    }
+    return okData({ note: projectPhaseNote(updated) }, "phase-note-updated", "Updated phase note");
+  }
+
   if (command.name === "dismiss-phase-note") {
     const noteId = readStringField(args, "noteId")?.trim() ?? "";
     if (!noteId) {
@@ -462,6 +561,14 @@ export async function resolvePhaseJournalCommands(
     }
     if (to.status !== "active") {
       return { ok: false, code: "invalid-phase-note-args", message: "supersededBy note must be active." };
+    }
+    const nowMs = Date.now();
+    if (filterOutPassiveExpiredActiveNotes([to], false, nowMs).length === 0) {
+      return {
+        ok: false,
+        code: "invalid-phase-note-args",
+        message: "supersededBy note must not be past expires_at while still active; extend expiry or pick another note."
+      };
     }
     store.supersedeNote(noteId, supersededBy);
     const updated = store.getById(noteId);
