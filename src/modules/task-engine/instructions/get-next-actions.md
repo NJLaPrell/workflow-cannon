@@ -30,6 +30,7 @@ A `NextActionSuggestion` object containing:
 - `stateSummary`: Count of tasks in each state (**excluding** **`type: wishlist_intake`** — those appear only in wishlist-specific surfaces; **`total`** is the count of non–wishlist-intake tasks)
 - `blockingAnalysis`: Which blocked tasks are waiting on what, sorted by blocking count (most-blocked first)
 - `teamExecutionContext` (Phase 60+): Read-only open **`kit_team_assignments`** rows (assigned / submitted / blocked) with titles resolved from the task store when available — same ordering semantics as dashboard team rollups, without reading SQLite from clients.
+- `phaseContext` (Phase 78, optional): When canonical phase is known and kit SQLite supports phase notes (**`user_version` ≥ 19**), bounded **`relevantNotes`** (deterministic relevance vs `suggestedNext`) and **`taskSuggestionsFromNotes`** (active `follow-up` / `task-suggestion` caps). **Non-authoritative** — does not change `readyQueue` / `suggestedNext` ordering.
 
 The response **`data`** also includes **`planningGeneration`** (integer) when using SQLite planning persistence — monotonic optimistic-lock generation for the unified planning row.
 
