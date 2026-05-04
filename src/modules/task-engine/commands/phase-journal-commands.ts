@@ -1,6 +1,7 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
 import { attachPolicyMeta } from "../attach-planning-response-meta.js";
 import type { OpenedPlanningStores } from "../persistence/planning-open.js";
+import { readWorkspaceStatusSnapshotFromDual } from "../persistence/workspace-status-store.js";
 import {
   PHASE_JOURNAL_MIN_KIT_USER_VERSION,
   PHASE_NOTE_TASK_SUGGESTIONS_MIN_KIT_USER_VERSION,
@@ -23,7 +24,7 @@ import {
 } from "../phase-journal/phase-journal-store.js";
 import type { CreatePhaseNoteInput, PhaseNoteStatus } from "../phase-journal/phase-journal-types.js";
 import { sortPhaseNotesForContext } from "../phase-journal/phase-journal-scoring.js";
-import { inferPhaseKeyFromTask } from "../phase-journal/phase-journal-phase-key.js";
+import { inferPhaseKeyFromTask, resolvePhaseKeyForPhaseJournalRead, type PhaseJournalPhaseKeySource } from "../phase-journal/phase-journal-phase-key.js";
 import { runConvertPhaseNoteToTaskCommand } from "./phase-journal-convert-command.js";
 
 function readKitUserVersion(db: { pragma: (name: string, options?: { simple: boolean }) => unknown }): number {
@@ -42,6 +43,30 @@ function phaseJournalVersionError(current: number): ModuleCommandResult {
 function readStringField(obj: Record<string, unknown>, key: string): string | undefined {
   const v = obj[key];
   return typeof v === "string" ? v : undefined;
+}
+
+function resolveJournalReadPhaseKeyForArgs(
+  cmdArgs: Record<string, unknown>,
+  ctx: ModuleLifecycleContext,
+  planning: OpenedPlanningStores
+):
+  | { ok: true; phaseKey: string; phaseKeySource: PhaseJournalPhaseKeySource }
+  | { ok: false; code: string; message: string } {
+  const taskId = readStringField(cmdArgs, "taskId");
+  const phaseKeyIn = readStringField(cmdArgs, "phaseKey");
+  const task = taskId ? planning.taskStore.getTask(taskId) : undefined;
+  const workspaceStatus = readWorkspaceStatusSnapshotFromDual(planning.sqliteDual);
+  const r = resolvePhaseKeyForPhaseJournalRead({
+    phaseKey: phaseKeyIn,
+    taskId,
+    task,
+    effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+    workspaceStatus
+  });
+  if (!r.ok) {
+    return { ok: false, code: r.code, message: r.message };
+  }
+  return { ok: true, phaseKey: r.phaseKey, phaseKeySource: r.source };
 }
 
 function parseRefInput(raw: unknown): { type: string; value: string } | null {
@@ -223,14 +248,12 @@ export async function resolvePhaseJournalCommands(
 
   if (command.name === "list-phase-notes") {
     const taskId = readStringField(args, "taskId");
-    let phaseKey = readStringField(args, "phaseKey");
-    if (!phaseKey && taskId) {
-      phaseKey = inferPhaseKeyFromTask(planning.taskStore.getTask(taskId)) ?? undefined;
+    const pr = resolveJournalReadPhaseKeyForArgs(args, ctx, planning);
+    if (!pr.ok) {
+      return pr;
     }
-    if (!phaseKey?.trim()) {
-      return { ok: false, code: "invalid-phase-note-args", message: "Provide phaseKey or taskId for phase inference." };
-    }
-    phaseKey = phaseKey.trim();
+    const phaseKey = pr.phaseKey;
+    const phaseKeySource = pr.phaseKeySource;
 
     let statusFilter: PhaseNoteStatus | PhaseNoteStatus[] | undefined;
     if (args.status === undefined) {
@@ -273,19 +296,21 @@ export async function resolvePhaseJournalCommands(
     rows = rows.slice(0, limit);
 
     const projections: PhaseNoteProjection[] = rows.map(projectPhaseNote);
-    return okData({ phaseKey, notes: projections, count: projections.length }, "phase-notes-listed", "Listed phase notes");
+    return okData(
+      { phaseKey, phaseKeySource, notes: projections, count: projections.length },
+      "phase-notes-listed",
+      "Listed phase notes"
+    );
   }
 
   if (command.name === "get-phase-context") {
     const taskId = readStringField(args, "taskId");
-    let phaseKey = readStringField(args, "phaseKey");
-    if (!phaseKey && taskId) {
-      phaseKey = inferPhaseKeyFromTask(planning.taskStore.getTask(taskId)) ?? undefined;
+    const pr = resolveJournalReadPhaseKeyForArgs(args, ctx, planning);
+    if (!pr.ok) {
+      return pr;
     }
-    if (!phaseKey?.trim()) {
-      return { ok: false, code: "invalid-phase-note-args", message: "Provide phaseKey or taskId for phase inference." };
-    }
-    phaseKey = phaseKey.trim();
+    const phaseKey = pr.phaseKey;
+    const phaseKeySource = pr.phaseKeySource;
 
     const limitRaw = args.limit;
     let limit = PHASE_NOTE_LIST_DEFAULT_LIMIT;
@@ -306,19 +331,21 @@ export async function resolvePhaseJournalCommands(
     const pool = store.listNotes({ phaseKey, status: "active", limit: 200 });
     const sorted = sortPhaseNotesForContext(pool, { phaseKey, taskId, refKeys });
     const picked = sorted.slice(0, limit).map(projectPhaseNote);
-    return okData({ phaseKey, taskId: taskId ?? null, notes: picked, count: picked.length }, "phase-context", "Resolved phase context");
+    return okData(
+      { phaseKey, phaseKeySource, taskId: taskId ?? null, notes: picked, count: picked.length },
+      "phase-context",
+      "Resolved phase context"
+    );
   }
 
   if (command.name === "propose-tasks-from-phase-notes") {
     const taskId = readStringField(args, "taskId");
-    let phaseKey = readStringField(args, "phaseKey");
-    if (!phaseKey && taskId) {
-      phaseKey = inferPhaseKeyFromTask(planning.taskStore.getTask(taskId)) ?? undefined;
+    const pr = resolveJournalReadPhaseKeyForArgs(args, ctx, planning);
+    if (!pr.ok) {
+      return pr;
     }
-    if (!phaseKey?.trim()) {
-      return { ok: false, code: "invalid-phase-note-args", message: "Provide phaseKey or taskId for phase inference." };
-    }
-    phaseKey = phaseKey.trim();
+    const phaseKey = pr.phaseKey;
+    const phaseKeySource = pr.phaseKeySource;
 
     const limitRaw = args.limit;
     let limit = PHASE_NOTE_LIST_DEFAULT_LIMIT;
@@ -338,6 +365,7 @@ export async function resolvePhaseJournalCommands(
       return okData(
         {
           phaseKey,
+          phaseKeySource,
           taskId: taskId ?? null,
           proposals,
           persistedSuggestions: [],
@@ -371,6 +399,7 @@ export async function resolvePhaseJournalCommands(
     return okData(
       {
         phaseKey,
+        phaseKeySource,
         taskId: taskId ?? null,
         proposals,
         persistedSuggestions,

@@ -10,6 +10,7 @@ Symptom → **one** `.ai/runbooks/*.md` target (agents: prefer this table over d
 | CAE enforcement readiness | [`cae-enforcement-readiness.md`](./cae-enforcement-readiness.md) |
 | GitHub-native `workspace-kit` invocation | [`github-workflow-cannon-invocation.md`](./github-workflow-cannon-invocation.md) |
 | Workspace status + SQLite authority | [`workspace-status-sqlite.md`](./workspace-status-sqlite.md) |
+| Phase journal retention / phase-close defaults | [`phase-journal-retention.md`](./phase-journal-retention.md) |
 | Response templates | [`response-templates.md`](./response-templates.md) |
 | Wishlist workflow | [`wishlist-workflow.md`](./wishlist-workflow.md) |
 | Subagent registry | [`subagent-registry.md`](./subagent-registry.md) |
