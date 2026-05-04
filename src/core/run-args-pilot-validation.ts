@@ -148,6 +148,7 @@ function instructionPathForCommand(commandName: string): string {
       return CLI_REMEDIATION_INSTRUCTIONS.synthesizeTranscriptChurn;
     case "create-task":
     case "create-task-from-plan":
+    case "convert-phase-note-to-task":
       return CLI_REMEDIATION_INSTRUCTIONS.createTask;
     case "update-task":
       return CLI_REMEDIATION_INSTRUCTIONS.updateTask;

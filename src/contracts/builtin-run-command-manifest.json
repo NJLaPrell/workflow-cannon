@@ -173,6 +173,22 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "propose-tasks-from-phase-notes",
+    "file": "propose-tasks-from-phase-notes.md",
+    "description": "Read-only harvest of active follow-up / task-suggestion notes as proposed-task candidates (no persistence).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "convert-phase-note-to-task",
+    "file": "convert-phase-note-to-task.md",
+    "description": "Create a proposed execution task from a convertible phase note and mark the note converted atomically with task persist.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "supersede-phase-note",
     "file": "supersede-phase-note.md",
     "description": "Mark a phase note superseded by another active note in the same phase.",

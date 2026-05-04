@@ -15,6 +15,7 @@
     "complete-task",
     "close-subagent-session",
     "convert-wishlist",
+    "convert-phase-note-to-task",
     "create-task",
     "create-task-from-plan",
     "create-wishlist",

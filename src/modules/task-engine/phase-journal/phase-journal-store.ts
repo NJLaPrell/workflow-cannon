@@ -146,6 +146,31 @@ export function insertPhaseNoteInConnection(db: SqliteDb, input: CreatePhaseNote
   return { created: true, note };
 }
 
+/**
+ * Mark a single active phase note as converted, linking `converted_task_id`.
+ * Returns whether exactly one row was updated.
+ */
+export function markPhaseNoteConvertedInConnection(
+  db: SqliteDb,
+  noteId: string,
+  convertedTaskId: string,
+  eligibleNoteTypes: readonly string[]
+): boolean {
+  const now = new Date().toISOString();
+  const placeholders = eligibleNoteTypes.map(() => "?").join(", ");
+  const res = db
+    .prepare(
+      `UPDATE phase_notes
+       SET status = 'converted', converted_task_id = ?, updated_at = ?
+       WHERE id = ?
+         AND status = 'active'
+         AND converted_task_id IS NULL
+         AND note_type IN (${placeholders})`
+    )
+    .run(convertedTaskId, now, noteId, ...eligibleNoteTypes);
+  return res.changes === 1;
+}
+
 export class PhaseJournalStore {
   constructor(private readonly db: SqliteDb) {}
 

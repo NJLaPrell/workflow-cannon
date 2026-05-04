@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-04T19:02:24.082Z",
+  "generatedAt": "2026-05-04T20:41:45.659Z",
   "commands": [
     {
       "name": "add-dependency",
@@ -265,6 +265,11 @@
     {
       "name": "complete-task",
       "path": ".ai/agent-cli-snippets/by-command/complete-task.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "convert-phase-note-to-task",
+      "path": ".ai/agent-cli-snippets/by-command/convert-phase-note-to-task.json",
       "moduleId": "task-engine"
     },
     {
@@ -575,6 +580,11 @@
     {
       "name": "phase-status",
       "path": ".ai/agent-cli-snippets/by-command/phase-status.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "propose-tasks-from-phase-notes",
+      "path": ".ai/agent-cli-snippets/by-command/propose-tasks-from-phase-notes.json",
       "moduleId": "task-engine"
     },
     {
