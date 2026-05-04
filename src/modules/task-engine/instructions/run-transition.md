@@ -28,7 +28,7 @@ workspace-kit run run-transition '{"taskId":"T184","action":"start","policyAppro
 
 ## Phase notes (optional)
 
-When kit SQLite **`user_version` ≥ 19** (phase journal DDL present), **`phaseNotes`** may be set to an array of objects validated like **`add-phase-note`** (same field names except **`phaseKey`** is taken from the transition task’s **`phaseKey`** / **`phase`** label). Each note defaults **`taskId`** to the transition task; a different **`taskId`** is allowed only when that task resolves to the same phase.
+When kit SQLite **`user_version` ≥ 19** (phase journal DDL present), **`phaseNotes`** may be set to an array of objects validated like **`add-phase-note`** (same field names except **`phaseKey`** is taken from the transition task’s **`phaseKey`** / **`phase`** label), including the **built-in secret-shaped pattern guard** (`**phase-note-secret-rejected**` on pasted credential shapes). Each note defaults **`taskId`** to the transition task; a different **`taskId`** is allowed only when that task resolves to the same phase.
 
 Notes are written in the **same SQLite transaction** as the transition persistence: if validation fails, no transition side effects occur; if the transition persist fails, notes are not committed separately.
 

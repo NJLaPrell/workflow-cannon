@@ -23,3 +23,7 @@ workspace-kit run convert-phase-note-to-task '{"noteId":"<uuid>","expectedPlanni
 - Optional task body overrides: **`title`**, **`summary`**, **`description`**, **`type`**, **`phase`**, **`phaseKey`**, **`priority`**, **`dependsOn`**, **`unblocks`**, **`metadata`**, **`features`**, … — defaults are derived from the note.
 - **`dryRun`**: When **`true`**, validates without persisting.
 - **`clientMutationId`**: Optional idempotency key (same semantics as **`create-task`** with **`allocateId:true`**).
+
+## Secret-safety
+
+Resolved **`title`**, **`summary`**, **`description`** (from overrides or the note body), plus string overrides such as **`approach`**, **`risk`**, **`technicalScope`**, and **`acceptanceCriteria`** entries, are checked with the same built-in pattern guard as phase notes. Violations return **`phase-note-secret-rejected`** before any task row is written.

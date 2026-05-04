@@ -24,6 +24,7 @@ import { TaskEngineError } from "../transitions.js";
 import type { TaskEntity, TaskPriority, TaskStatus } from "../types.js";
 import { PHASE_NOTE_TYPES_CONVERTIBLE_TO_TASK } from "../phase-journal/phase-journal-constants.js";
 import { isPassivelyExpiredActiveNote } from "../phase-journal/phase-journal-expiry.js";
+import { guardPhaseNoteConvertTaskPayload } from "../phase-journal/phase-journal-secret-guard.js";
 import {
   createPhaseJournalStore,
   markPhaseNoteConvertedInConnection,
@@ -144,6 +145,15 @@ export async function runConvertPhaseNoteToTaskCommand(
       : note.details != null && note.details.length > 0
         ? note.details
         : undefined;
+
+  const secretPayload = guardPhaseNoteConvertTaskPayload(args, {
+    title,
+    summary: summaryField,
+    description: typeof description === "string" ? description : undefined
+  });
+  if (!secretPayload.ok) {
+    return { ok: false, code: secretPayload.code, message: secretPayload.message };
+  }
 
   const priority =
     typeof args.priority === "string" && ["P1", "P2", "P3"].includes(args.priority)

@@ -2342,6 +2342,73 @@ test("taskEngineModule passive expiry hides active rows; includeExpired lists; u
   assert.equal(conv.ok, true);
 });
 
+test("taskEngineModule phase journal secret guard rejects shaped tokens", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T9847x",
+        status: "ready",
+        phaseKey: "78",
+        phase: "Phase 78"
+      })
+    );
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const badAdd = await taskEngineModule.onCommand(
+    {
+      name: "add-phase-note",
+      args: {
+        phaseKey: "78",
+        noteType: "finding",
+        summary: `token ghp_${"a".repeat(36)}`
+      }
+    },
+    ctx
+  );
+  assert.equal(badAdd.ok, false);
+  assert.equal(badAdd.code, "phase-note-secret-rejected");
+
+  const badRt = await taskEngineModule.onCommand(
+    {
+      name: "run-transition",
+      args: {
+        taskId: "T9847x",
+        action: "start",
+        expectedPlanningGeneration: 1,
+        phaseNotes: [{ noteType: "finding", summary: `xoxb-${"1".repeat(12)}-more` }]
+      }
+    },
+    ctx
+  );
+  assert.equal(badRt.ok, false);
+  assert.equal(badRt.code, "phase-note-secret-rejected");
+
+  const noteOk = await taskEngineModule.onCommand(
+    {
+      name: "add-phase-note",
+      args: { phaseKey: "78", noteType: "task-suggestion", summary: "Clean harvest suggestion" }
+    },
+    ctx
+  );
+  assert.equal(noteOk.ok, true);
+  const nid = noteOk.data.note.id;
+
+  const badConv = await taskEngineModule.onCommand(
+    {
+      name: "convert-phase-note-to-task",
+      args: {
+        noteId: nid,
+        title: `npm_${"z".repeat(40)}`,
+        expectedPlanningGeneration: noteOk.data.planningGeneration
+      }
+    },
+    ctx
+  );
+  assert.equal(badConv.ok, false);
+  assert.equal(badConv.code, "phase-note-secret-rejected");
+});
+
 test("taskEngineModule list-phase-notes without phaseKey fails when phase is not inferable", async () => {
   const workspace = await tmpDir();
   await seedSqliteStore(workspace, () => {});
