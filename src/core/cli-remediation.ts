@@ -15,7 +15,9 @@ export const CLI_REMEDIATION_INSTRUCTIONS = {
   archiveTask: "src/modules/task-engine/instructions/archive-task.md",
   addDependency: "src/modules/task-engine/instructions/add-dependency.md",
   generateRecommendations: "src/modules/improvement/instructions/generate-recommendations.md",
-  synthesizeTranscriptChurn: "src/modules/task-engine/instructions/synthesize-transcript-churn.md"
+  synthesizeTranscriptChurn: "src/modules/task-engine/instructions/synthesize-transcript-churn.md",
+  dismissPhaseNote: "src/modules/task-engine/instructions/dismiss-phase-note.md",
+  supersedePhaseNote: "src/modules/task-engine/instructions/supersede-phase-note.md"
 } as const;
 
 export const CLI_REMEDIATION_DOCS = {
@@ -38,6 +40,11 @@ export function buildErrorRemediationCatalog(): ErrorRemediationCatalogEntry[] {
       code: "policy-denied",
       docPath: CLI_REMEDIATION_DOCS.policyApproval,
       instructionPath: undefined
+    },
+    {
+      code: "phase-note-critical-policy-approval-required",
+      docPath: CLI_REMEDIATION_DOCS.policyApproval,
+      instructionPath: CLI_REMEDIATION_INSTRUCTIONS.dismissPhaseNote
     },
     {
       code: "planning-generation-required",

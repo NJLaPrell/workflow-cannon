@@ -9,7 +9,7 @@ Read the canonical workspace phase, drift hints, export freshness, and optional 
 ## Usage
 
 ```bash
-workspace-kit run phase-status '{"includeTaskCounts":true,"includeDriftDetails":true}'
+workspace-kit run phase-status '{"includeTaskCounts":true,"includeDriftDetails":true,"includePhaseJournalSummary":true}'
 ```
 
 ## Arguments
@@ -18,10 +18,13 @@ workspace-kit run phase-status '{"includeTaskCounts":true,"includeDriftDetails":
 | --- | --- | --- |
 | **`includeTaskCounts`** | No | When **`true`**, include current-phase and next-phase task counts grouped by task status. |
 | **`includeDriftDetails`** | No | When **`true`**, include human-readable drift detail strings in addition to remediation commands. |
+| **`includePhaseJournalSummary`** | No | When **`true`**, include a bounded **`phaseJournal`** object: kit SQLite user_version reachability, canonical phase key echo, and **`activeCriticalNoteCount`** for active notes in that phase (no note bodies). Omitted when the flag is false/absent. |
 
 ## Behavior
 
 This command is read-only. It reads **`kit_workspace_status`** when present, resolves canonical phase with the same precedence as queue health (workspace status first, config only as fallback), reports project config phase hints, checks the non-authoritative DB export freshness by comparing exported **`workspaceRevision`** to the SQLite workspace-status row, and optionally counts tasks by phase bucket. Unrelated task/CAE writes to the planning SQLite file do not make the export stale.
+
+When **`includePhaseJournalSummary`** is true, critical counts use the same passive-expiry visibility rules as **`list-phase-notes`** (expired active rows are excluded unless the journal store treats them as still listed; the summary uses the phase journal list helper with **`includeExpired: false`**).
 
 Workspace current phase and task **`phaseKey`** are separate concepts. Task counts use each task’s explicit **`phaseKey`** or inferred **`phase`** label, and the command never changes task rows.
 
@@ -35,6 +38,7 @@ Returns:
 - **`exportStatus`** for **`docs/maintainers/data/workspace-kit-status.db-export.yaml`**, including **`workspaceRevision`** and **`exportWorkspaceRevision`** when the export marker is present.
 - **`remediationSuggestions`** when config or export drift is detected.
 - **`taskCounts`** when requested.
+- **`phaseJournal`** when **`includePhaseJournalSummary`** is true: **`supported`**, **`kitSqliteUserVersion`**, **`phaseKey`**, **`activeCriticalNoteCount`** (null when unsupported or phase unknown).
 
 ## Examples
 
@@ -48,4 +52,10 @@ Counts and drift details:
 
 ```bash
 workspace-kit run phase-status '{"includeTaskCounts":true,"includeDriftDetails":true}'
+```
+
+Phase journal observability (counts only):
+
+```bash
+workspace-kit run phase-status '{"includePhaseJournalSummary":true}'
 ```

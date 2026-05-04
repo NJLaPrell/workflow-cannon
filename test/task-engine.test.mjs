@@ -1358,6 +1358,42 @@ test("phase-status reads canonical phase and optional task counts", async () => 
   assert.equal(result.data.exportStatus.exists, true);
 });
 
+test("phase-status includePhaseJournalSummary reports activeCriticalNoteCount", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T7210", phaseKey: "72", phase: "Phase 72", status: "ready" }));
+  });
+  await taskEngineModule.onCommand(
+    { name: "set-current-phase", args: { currentKitPhase: "72", expectedWorkspaceRevision: 0 } },
+    ctx
+  );
+  await taskEngineModule.onCommand(
+    {
+      name: "add-phase-note",
+      args: { phaseKey: "72", noteType: "finding", summary: "crit one", priority: "critical" }
+    },
+    ctx
+  );
+  await taskEngineModule.onCommand(
+    {
+      name: "add-phase-note",
+      args: { phaseKey: "72", noteType: "finding", summary: "norm one", priority: "normal" }
+    },
+    ctx
+  );
+
+  const result = await taskEngineModule.onCommand(
+    { name: "phase-status", args: { includePhaseJournalSummary: true } },
+    ctx
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.phaseJournal.supported, true);
+  assert.equal(result.data.phaseJournal.phaseKey, "72");
+  assert.equal(result.data.phaseJournal.activeCriticalNoteCount, 1);
+});
+
 test("phase-status export freshness follows workspace-status revision, not planning DB mtime", async () => {
   const workspace = await tmpDir();
   const ctx = sqliteTaskEngineCtx(workspace);
@@ -2204,6 +2240,86 @@ test("taskEngineModule supersede-phase-note deletes suggestions for superseded n
   } finally {
     dbAfter.close();
   }
+});
+
+test("taskEngineModule critical dismiss/supersede requires policyApproval when kit.phaseJournal flag set", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T9930", status: "ready", phaseKey: "92", phase: "Phase 92" }));
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, {
+    tasks: { planningGenerationPolicy: "require" },
+    kit: { phaseJournal: { requirePolicyApprovalForCriticalDismissSupersede: true } }
+  });
+
+  const crit = await taskEngineModule.onCommand(
+    {
+      name: "add-phase-note",
+      args: { phaseKey: "92", noteType: "finding", summary: "Blocker", priority: "critical", taskId: "T9930" }
+    },
+    ctx
+  );
+  assert.equal(crit.ok, true);
+  const nid = crit.data.note.id;
+
+  const dismissNo = await taskEngineModule.onCommand(
+    { name: "dismiss-phase-note", args: { noteId: nid, reason: "waived after review" } },
+    ctx
+  );
+  assert.equal(dismissNo.ok, false);
+  assert.equal(dismissNo.code, "phase-note-critical-policy-approval-required");
+
+  const dismissOk = await taskEngineModule.onCommand(
+    {
+      name: "dismiss-phase-note",
+      args: {
+        noteId: nid,
+        reason: "waived after review",
+        policyApproval: { confirmed: true, rationale: "Maintainer approved dismiss of critical note in test." }
+      }
+    },
+    ctx
+  );
+  assert.equal(dismissOk.ok, true);
+
+  const a = await taskEngineModule.onCommand(
+    {
+      name: "add-phase-note",
+      args: { phaseKey: "92", noteType: "finding", summary: "Old critical", priority: "critical", taskId: "T9930" }
+    },
+    ctx
+  );
+  const b = await taskEngineModule.onCommand(
+    {
+      name: "add-phase-note",
+      args: { phaseKey: "92", noteType: "finding", summary: "Replacement", priority: "normal", taskId: "T9930" }
+    },
+    ctx
+  );
+  assert.equal(a.ok, true);
+  assert.equal(b.ok, true);
+  const idA = a.data.note.id;
+  const idB = b.data.note.id;
+
+  const supNo = await taskEngineModule.onCommand(
+    { name: "supersede-phase-note", args: { noteId: idA, supersededBy: idB } },
+    ctx
+  );
+  assert.equal(supNo.ok, false);
+  assert.equal(supNo.code, "phase-note-critical-policy-approval-required");
+
+  const supOk = await taskEngineModule.onCommand(
+    {
+      name: "supersede-phase-note",
+      args: {
+        noteId: idA,
+        supersededBy: idB,
+        policyApproval: { confirmed: true, rationale: "Maintainer approved supersede of critical note in test." }
+      }
+    },
+    ctx
+  );
+  assert.equal(supOk.ok, true);
 });
 
 test("taskEngineModule list/get/propose default phaseKey to canonical workspace phase", async () => {

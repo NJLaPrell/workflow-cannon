@@ -688,6 +688,42 @@ Recommended behavior:
 
 ## MVP build plan
 
+### Phase 78 execution tasks (workspace-kit)
+
+**MVP slices (initial batch, planningGeneration 2098):** **`tasks/phase-journal-phase78-batch.json`**
+
+**Extended coverage — deferred model, retention, contracts, safety, policy, golden path (batch 2, planningGeneration 2099):** **`tasks/phase-journal-phase78-batch-2.json`**
+
+| MVP slice | Task id | `dependsOn` (execution) |
+| --- | --- | --- |
+| T-PJ-001 — schema + store | **T100028** | — |
+| T-PJ-002 — MVP commands | **T100029** | T100028 |
+| T-PJ-003 — `agent-session-snapshot` | **T100030** | T100029 |
+| T-PJ-004 — `get-next-actions` | **T100031** | T100029 |
+| T-PJ-005 — `run-transition` `phaseNotes` | **T100032** | T100029 |
+| T-PJ-006 — propose + convert | **T100033** | T100029 |
+
+**Plan completion slices (same phase):**
+
+| Plan section | Task id | `dependsOn` |
+| --- | --- | --- |
+| `phase_note_task_suggestions` + propose/convert persistence | **T100034** | T100033 |
+| Retention + phase-close defaults & runbook | **T100035** | T100029, T100031 |
+| Agent read contract + additive schemas | **T100036** | T100030, T100031 |
+| `expired` / `expires_at` + optional `update-phase-note` | **T100037** | T100029 |
+| Privacy / secret-safety enforcement | **T100038** | T100029 |
+| Critical-note policy + observability | **T100039** | T100029 |
+| Example workflow → CI golden integration test | **T100040** | T100030–T100039 (full journal stack before golden) |
+
+Replay payloads: **`tasks/phase-journal-phase78-batch.json`** (MVP), **`tasks/phase-journal-phase78-batch-2.json`** (extended). **`T100033`** references defect **T100027** (`generate-document` README overwrite) under **`metadata.phaseJournal.relatedDefects`**.
+
+```bash
+pnpm exec wk run list-tasks '{"ids":["T100028","T100029","T100030","T100031","T100032","T100033"]}'
+pnpm exec wk run list-tasks '{"ids":["T100034","T100035","T100036","T100037","T100038","T100039","T100040"]}'
+```
+
+**Out of scope for these tasks (journal non-goals or later):** embeddings/semantic search/summarization; general AI memory; raw-SQLite agent access; module extraction from task-engine until MVP proves value.
+
 ### T-PJ-001 — Add phase journal schema and store
 
 Acceptance criteria:
