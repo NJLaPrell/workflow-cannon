@@ -10,6 +10,7 @@ import { buildQueueHealthReport } from "../queue/queue-health.js";
 import { getNextActions } from "../suggestions.js";
 import { summarizeTeamAssignmentsForNextActions } from "../../team-execution/assignment-store.js";
 import { buildMaintainerDeliveryHints } from "../maintainer-delivery-hints.js";
+import { buildPhaseJournalSnapshotSummary } from "../phase-journal/phase-journal-snapshot-summary.js";
 
 export async function composeAgentSessionSnapshotPayload(
   ctx: ModuleLifecycleContext,
@@ -38,6 +39,10 @@ export async function composeAgentSessionSnapshotPayload(
     canonicalPhaseKey: phaseRes.canonicalPhaseKey,
     suggestedNext: suggestion.suggestedNext ? { id: suggestion.suggestedNext.id } : null
   });
+  const phaseJournal = buildPhaseJournalSnapshotSummary(
+    planning.sqliteDual.getDatabase(),
+    phaseRes.canonicalPhaseKey
+  );
   return {
     schemaVersion: 1,
     refreshedAt: new Date().toISOString(),
@@ -57,7 +62,8 @@ export async function composeAgentSessionSnapshotPayload(
     },
     doctorKitPhaseIssues,
     teamExecutionContext,
-    maintainerDelivery
+    maintainerDelivery,
+    ...(phaseJournal ? { phaseJournal } : {})
   };
 }
 

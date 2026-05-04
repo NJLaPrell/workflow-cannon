@@ -33,6 +33,20 @@ export type AgentSessionSnapshotData = {
   teamExecutionContext: AgentSessionSnapshotTeamContext;
   /** Maintainer PR/phase-branch hints (Phase 77); safe on every snapshot read. */
   maintainerDelivery?: Record<string, unknown>;
+  /** Phase journal summary (Phase 78); present when canonical phase + kit SQLite v19+. */
+  phaseJournal?: {
+    phaseKey: string;
+    phaseLabel: string | null;
+    activeNoteCount: number;
+    criticalCount: number;
+    openFollowUpCount: number;
+    topNotes: Array<{
+      id: string;
+      noteType: string;
+      priority: string;
+      summary: string;
+    }>;
+  };
   planningGeneration?: number;
   planningGenerationPolicy?: string;
 };

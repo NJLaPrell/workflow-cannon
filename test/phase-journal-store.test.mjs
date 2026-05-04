@@ -78,3 +78,57 @@ test("phase journal list, dismiss, supersede", async () => {
     db.close();
   }
 });
+
+test("buildPhaseJournalSnapshotSummary is bounded and omits details", async () => {
+  const workspace = await mkdtemp(path.join(os.tmpdir(), "wk-phase-journal-snap-"));
+  const dbPath = path.join(workspace, "kit.db");
+  const db = new Database(dbPath);
+  const { buildPhaseJournalSnapshotSummary } = await import(
+    "../dist/modules/task-engine/phase-journal/phase-journal-snapshot-summary.js"
+  );
+  try {
+    prepareKitSqliteDatabase(db);
+    const store = createPhaseJournalStore(db);
+    store.createNoteIdempotent({
+      phaseKey: "12",
+      phaseLabel: "Phase 12",
+      noteType: "follow-up",
+      summary: "short",
+      details: "LONG DETAILS SHOULD NOT APPEAR IN SNAPSHOT",
+      priority: "normal"
+    });
+    store.createNoteIdempotent({
+      phaseKey: "12",
+      noteType: "task-suggestion",
+      summary: "suggest",
+      priority: "critical"
+    });
+    const snap = buildPhaseJournalSnapshotSummary(db, "12");
+    assert.ok(snap);
+    assert.equal(snap.phaseKey, "12");
+    assert.equal(snap.phaseLabel, "Phase 12");
+    assert.equal(snap.activeNoteCount, 2);
+    assert.equal(snap.criticalCount, 1);
+    assert.equal(snap.openFollowUpCount, 2);
+    assert.equal(snap.topNotes.length, 2);
+    assert.ok(!JSON.stringify(snap).includes("LONG DETAILS"));
+  } finally {
+    db.close();
+  }
+});
+
+test("buildPhaseJournalSnapshotSummary returns null without phase key", async () => {
+  const workspace = await mkdtemp(path.join(os.tmpdir(), "wk-phase-journal-snap-null-"));
+  const dbPath = path.join(workspace, "kit.db");
+  const db = new Database(dbPath);
+  const { buildPhaseJournalSnapshotSummary } = await import(
+    "../dist/modules/task-engine/phase-journal/phase-journal-snapshot-summary.js"
+  );
+  try {
+    prepareKitSqliteDatabase(db);
+    assert.equal(buildPhaseJournalSnapshotSummary(db, null), null);
+    assert.equal(buildPhaseJournalSnapshotSummary(db, ""), null);
+  } finally {
+    db.close();
+  }
+});
