@@ -17,6 +17,11 @@ function phaseNotesTableExists(db: SqliteDb): boolean {
   return Boolean(row?.ok);
 }
 
+/** True when planning SQLite has phase journal DDL (v19+ and `phase_notes` table). */
+export function isPhaseJournalPersistedOnDb(db: SqliteDb): boolean {
+  return readKitUserVersion(db) >= PHASE_JOURNAL_MIN_KIT_USER_VERSION && phaseNotesTableExists(db);
+}
+
 /** Default cap for `topNotes` in agent-session-snapshot (PHASE_JOURNAL.md). */
 export const PHASE_JOURNAL_SNAPSHOT_TOP_NOTES = 3;
 
@@ -48,7 +53,7 @@ export function buildPhaseJournalSnapshotSummary(
     return null;
   }
   const key = String(phaseKey).trim();
-  if (readKitUserVersion(db) < PHASE_JOURNAL_MIN_KIT_USER_VERSION || !phaseNotesTableExists(db)) {
+  if (!isPhaseJournalPersistedOnDb(db)) {
     return null;
   }
   const store = createPhaseJournalStore(db);

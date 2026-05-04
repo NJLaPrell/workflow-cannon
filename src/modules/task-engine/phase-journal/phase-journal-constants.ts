@@ -37,3 +37,8 @@ export const PHASE_NOTE_STATUSES = new Set([
   "dismissed",
   "expired"
 ]);
+
+/** `get-next-actions` phaseContext: relevance-ranked notes (non-authoritative). */
+export const PHASE_CONTEXT_NEXT_ACTIONS_RELEVANT_MAX = 8;
+/** `get-next-actions` phaseContext: follow-up / task-suggestion rows. */
+export const PHASE_CONTEXT_NEXT_ACTIONS_SUGGESTIONS_MAX = 5;

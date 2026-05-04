@@ -132,3 +132,38 @@ test("buildPhaseJournalSnapshotSummary returns null without phase key", async ()
     db.close();
   }
 });
+
+test("buildNextActionsPhaseContext ranks by suggested task and caps lists", async () => {
+  const workspace = await mkdtemp(path.join(os.tmpdir(), "wk-phase-journal-na-"));
+  const dbPath = path.join(workspace, "kit.db");
+  const db = new Database(dbPath);
+  const { buildNextActionsPhaseContext } = await import(
+    "../dist/modules/task-engine/phase-journal/phase-journal-next-actions-context.js"
+  );
+  try {
+    prepareKitSqliteDatabase(db);
+    const store = createPhaseJournalStore(db);
+    store.createNoteIdempotent({
+      phaseKey: "5",
+      taskId: "T999",
+      noteType: "finding",
+      summary: "other task",
+      priority: "normal"
+    });
+    store.createNoteIdempotent({
+      phaseKey: "5",
+      taskId: "T100",
+      noteType: "gotcha",
+      summary: "same task gotcha",
+      priority: "normal"
+    });
+    const ctx = buildNextActionsPhaseContext(db, "5", "T100");
+    assert.ok(ctx);
+    assert.equal(ctx.phaseKey, "5");
+    assert.equal(ctx.relevantNotes[0].summary, "same task gotcha");
+    assert.ok(ctx.relevantNotes.length <= 8);
+    assert.ok(ctx.taskSuggestionsFromNotes.length <= 5);
+  } finally {
+    db.close();
+  }
+});

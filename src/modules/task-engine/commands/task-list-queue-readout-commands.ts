@@ -24,6 +24,7 @@ import { buildQueueHintsForTasks } from "../queue/queue-health.js";
 import { filterTasksByQueueNamespace, getNextActions } from "../suggestions.js";
 import type { TaskEntity, TaskStatus } from "../types.js";
 import { isWishlistIntakeTask } from "../wishlist/wishlist-intake.js";
+import { buildNextActionsPhaseContext } from "../phase-journal/phase-journal-next-actions-context.js";
 
 /**
  * Task listing + queue readouts that do not mutate task rows.
@@ -326,13 +327,23 @@ export function resolveTaskListQueueReadoutCommands(
       canonicalPhaseKey: phaseRes.canonicalPhaseKey,
       suggestedNext: suggestion.suggestedNext ? { id: suggestion.suggestedNext.id } : null
     });
+    const suggestedId =
+      suggestion.suggestedNext && typeof suggestion.suggestedNext.id === "string"
+        ? suggestion.suggestedNext.id
+        : undefined;
+    const phaseContext = buildNextActionsPhaseContext(
+      planning.sqliteDual.getDatabase(),
+      phaseRes.canonicalPhaseKey,
+      suggestedId
+    );
 
     const naData: Record<string, unknown> = {
       ...suggestion,
       teamExecutionContext,
       scope: "tasks-only",
       queueNamespace: ns ?? null,
-      maintainerDelivery
+      maintainerDelivery,
+      ...(phaseContext ? { phaseContext } : {})
     };
     attachPolicyMeta(naData, ctx, planning.sqliteDual.getPlanningGeneration());
     return {

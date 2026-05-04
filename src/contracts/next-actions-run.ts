@@ -27,6 +27,12 @@ export type GetNextActionsPayload = {
   teamExecutionContext: NextActionsTeamExecutionContext;
   scope: string;
   queueNamespace: string | null;
+  maintainerDelivery?: Record<string, unknown>;
+  phaseContext?: {
+    phaseKey: string;
+    relevantNotes: Array<{ id: string; noteType: string; priority: string; summary: string }>;
+    taskSuggestionsFromNotes: Array<{ id: string; noteType: string; priority: string; summary: string }>;
+  };
   planningGeneration?: number;
   planningGenerationPolicy?: string;
 };
