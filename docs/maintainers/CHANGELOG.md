@@ -10,6 +10,20 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 (none)
 
+## [0.78.0] - 2026-05-04
+
+Phase 78 — **Phase journal MVP through golden integration** (`PHASE_JOURNAL.md`, SQLite **`phase_notes`** / **`phase_note_task_suggestions`**, commands **`add-phase-note`** through **`convert-phase-note-to-task`**, bounded **`phaseJournal`** on **`agent-session-snapshot`** and **`phaseContext`** on **`get-next-actions`**, **`run-transition`** **`phaseNotes`**, retention + secret guard + critical-note policy, agent read contracts). **`T100040`** adds a CI golden integration test for the journal example workflow; **`T100027`** fixes **`generate-document`** so the AI surface defaults to **preserve** (no accidental stub overwrite of **`.ai/README.md`** / **`chat_feature|`** sources).
+
+### Added
+
+- Phase journal store, migrations, projections, and task-engine command surface (see **`PHASE_JOURNAL.md`** and **`tasks/phase-journal-phase78-batch*.json`**).
+- **`schemas/agent-phase-journal-read-contract.v1.json`** and runtime contract wiring for agent-facing payloads.
+- Golden integration test **`PHASE_JOURNAL example workflow — golden integration (T100040)`** in **`test/task-engine.test.mjs`**; **`CONTRIBUTING.md`** pointer for how to run it.
+
+### Changed
+
+- **`generate-document`**: default **`overwriteAi`** is **`false`** when neither **`overwriteAi`** nor **`overwrite`** is set, matching **`document-project`** batch behavior (**`T100027`**).
+
 ## [0.77.0] - 2026-04-30
 
 Phase 77 — **Megamodule refactor execution (REF-001–REF-010)**: planning SQLite kernel in `core/state/kit-sqlite/planning-sqlite-kernel.ts` with stable `workspace-kit-sqlite` barrel; **REF-004** sibling-import CI gate and core `task-skill-validation`; **REF-005** planning `build-plan` helpers extracted; **REF-007** CLI `run-helpers` (`peelRunArgv`, `policyDeniedBody`); **REF-008** config metadata registry access split; **REF-009** `adapters/` re-exports kit SQLite open path (direction C); **REF-010** additive `package.json` `exports["./modules"]`; **REF-006** CAE kit-SQLite implementation under `core/cae/persistence/` with shim re-export. Execution tasks **T100017–T100026** and linked proposal specs under `tasks/refactor-proposals/`.
