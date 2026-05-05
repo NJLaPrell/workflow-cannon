@@ -1,5 +1,6 @@
-import { execFile } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 export type KitRunResult = {
@@ -26,16 +27,14 @@ type CommandClientOptions = {
 };
 
 /** Pick Node binary for spawning workspace-kit; never uses extension-host `process.execPath` by default. */
-export function pickNodeExecutable(resolve?: () => string | undefined): string {
+export function pickNodeExecutable(resolve?: () => string | undefined, workspaceRoot?: string): string {
   const fromResolver = resolve?.()?.trim();
-  if (fromResolver) {
-    if (fromResolver === "node" || fromResolver === "nodejs") return fromResolver;
-    if (fs.existsSync(fromResolver)) return fromResolver;
-  }
+  const candidates: string[] = [];
+  addNodeCandidate(candidates, fromResolver);
   const fromEnv = process.env.WORKSPACE_KIT_NODE?.trim();
-  if (fromEnv) {
-    if (fromEnv === "node" || fromEnv === "nodejs") return fromEnv;
-    if (fs.existsSync(fromEnv)) return fromEnv;
+  addNodeCandidate(candidates, fromEnv);
+  for (const p of discoverNvmNodeExecutables(workspaceRoot)) {
+    addNodeCandidate(candidates, p);
   }
   if (process.platform === "win32") {
     const programFiles = process.env.ProgramFiles;
@@ -45,14 +44,106 @@ export function pickNodeExecutable(resolve?: () => string | undefined): string {
       programFilesX86 ? path.join(programFilesX86, "nodejs", "node.exe") : ""
     ];
     for (const p of winCandidates) {
-      if (p && fs.existsSync(p)) return p;
+      addNodeCandidate(candidates, p);
     }
   } else {
     for (const p of ["/opt/homebrew/bin/node", "/usr/local/bin/node"]) {
-      if (fs.existsSync(p)) return p;
+      addNodeCandidate(candidates, p);
     }
   }
-  return "node";
+  addNodeCandidate(candidates, "node");
+
+  if (workspaceRoot && hasBetterSqliteDependency(workspaceRoot)) {
+    const nativeCompatible = candidates.find((p) => canRequireBetterSqlite(p, workspaceRoot));
+    if (nativeCompatible) return nativeCompatible;
+  }
+  return candidates[0] ?? "node";
+}
+
+function addNodeCandidate(candidates: string[], candidate?: string): void {
+  const value = candidate?.trim();
+  if (!value) return;
+  if (value !== "node" && value !== "nodejs" && !fs.existsSync(value)) return;
+  if (!candidates.includes(value)) candidates.push(value);
+}
+
+function discoverNvmNodeExecutables(workspaceRoot?: string): string[] {
+  const nvmRoot = process.env.NVM_DIR?.trim() || path.join(os.homedir(), ".nvm");
+  const versionsRoot = path.join(nvmRoot, "versions", "node");
+  const discovered: string[] = [];
+  const versions = listNvmVersionDirs(versionsRoot);
+
+  for (const spec of readWorkspaceNodeVersionSpecs(workspaceRoot)) {
+    for (const nodePath of findNvmNodesForVersionSpec(versionsRoot, versions, spec)) {
+      addNodeCandidate(discovered, nodePath);
+    }
+  }
+
+  addNodeCandidate(discovered, process.env.NVM_BIN ? path.join(process.env.NVM_BIN, "node") : undefined);
+  for (const version of versions) {
+    addNodeCandidate(discovered, path.join(versionsRoot, version, "bin", "node"));
+  }
+  return discovered;
+}
+
+function readWorkspaceNodeVersionSpecs(workspaceRoot?: string): string[] {
+  if (!workspaceRoot) return [];
+  const specs: string[] = [];
+  for (const fileName of [".node-version", ".nvmrc"]) {
+    const filePath = path.join(workspaceRoot, fileName);
+    if (!fs.existsSync(filePath)) continue;
+    const spec = fs.readFileSync(filePath, "utf8").split(/\r?\n/, 1)[0]?.trim();
+    if (spec && !spec.startsWith("#")) specs.push(spec);
+  }
+  return specs;
+}
+
+function listNvmVersionDirs(versionsRoot: string): string[] {
+  if (!fs.existsSync(versionsRoot)) return [];
+  return fs
+    .readdirSync(versionsRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && /^v\d+\.\d+\.\d+$/.test(entry.name))
+    .map((entry) => entry.name)
+    .sort(compareNodeVersionsDesc);
+}
+
+function findNvmNodesForVersionSpec(versionsRoot: string, versions: string[], spec: string): string[] {
+  const normalized = spec.trim().replace(/^node-/, "").replace(/^v/, "");
+  const parts = normalized.split(".");
+  const matching = versions.filter((version) => {
+    const candidate = version.replace(/^v/, "");
+    if (parts.length === 1) return candidate.startsWith(`${parts[0]}.`);
+    if (parts.length === 2) return candidate.startsWith(`${parts[0]}.${parts[1]}.`);
+    return candidate === normalized;
+  });
+  return matching.map((version) => path.join(versionsRoot, version, "bin", "node"));
+}
+
+function compareNodeVersionsDesc(left: string, right: string): number {
+  const l = left.replace(/^v/, "").split(".").map((part) => Number(part));
+  const r = right.replace(/^v/, "").split(".").map((part) => Number(part));
+  for (let i = 0; i < 3; i += 1) {
+    const diff = (r[i] ?? 0) - (l[i] ?? 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
+
+function hasBetterSqliteDependency(workspaceRoot: string): boolean {
+  return fs.existsSync(path.join(workspaceRoot, "node_modules", "better-sqlite3"));
+}
+
+function canRequireBetterSqlite(nodeBin: string, workspaceRoot: string): boolean {
+  try {
+    execFileSync(nodeBin, ["-e", "require('better-sqlite3')"], {
+      cwd: workspaceRoot,
+      stdio: "ignore",
+      timeout: 5_000
+    });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function resolveCliJs(workspaceRoot: string, cliPathOverride?: string): string {
@@ -82,7 +173,7 @@ function execKit(
   resolveNodeExecutable?: () => string | undefined
 ): Promise<CommandClientExecResult> {
   const cliJs = resolveCliJs(workspaceRoot, cliPathOverride);
-  const nodeBin = pickNodeExecutable(resolveNodeExecutable);
+  const nodeBin = pickNodeExecutable(resolveNodeExecutable, workspaceRoot);
   return new Promise((resolve, reject) => {
     execFile(
       nodeBin,

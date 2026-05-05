@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 import { CommandClient, parseRunCommandOutput, pickNodeExecutable } from "../dist/runtime/command-client.js";
@@ -12,6 +14,71 @@ test("pickNodeExecutable uses resolver path when it exists", () => {
 test("pickNodeExecutable falls through when resolver path is bogus", () => {
   const picked = pickNodeExecutable(() => "/__no_such__/node");
   assert.notEqual(picked, "/__no_such__/node");
+});
+
+test("pickNodeExecutable discovers nvm node matching workspace version", () => {
+  const oldHome = process.env.HOME;
+  const oldNvmDir = process.env.NVM_DIR;
+  const oldNvmBin = process.env.NVM_BIN;
+  const oldWorkspaceKitNode = process.env.WORKSPACE_KIT_NODE;
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "wc-node-pick-"));
+  try {
+    process.env.HOME = tempRoot;
+    process.env.NVM_DIR = path.join(tempRoot, ".nvm");
+    delete process.env.NVM_BIN;
+    delete process.env.WORKSPACE_KIT_NODE;
+    const workspaceRoot = path.join(tempRoot, "workspace");
+    const node20 = path.join(process.env.NVM_DIR, "versions", "node", "v20.3.0", "bin", "node");
+    const node22 = path.join(process.env.NVM_DIR, "versions", "node", "v22.22.2", "bin", "node");
+    fs.mkdirSync(path.dirname(node20), { recursive: true });
+    fs.mkdirSync(path.dirname(node22), { recursive: true });
+    fs.mkdirSync(workspaceRoot, { recursive: true });
+    fs.writeFileSync(node20, "");
+    fs.writeFileSync(node22, "");
+    fs.writeFileSync(path.join(workspaceRoot, ".nvmrc"), "22\n");
+
+    assert.equal(pickNodeExecutable(undefined, workspaceRoot), node22);
+  } finally {
+    if (oldHome === undefined) delete process.env.HOME;
+    else process.env.HOME = oldHome;
+    if (oldNvmDir === undefined) delete process.env.NVM_DIR;
+    else process.env.NVM_DIR = oldNvmDir;
+    if (oldNvmBin === undefined) delete process.env.NVM_BIN;
+    else process.env.NVM_BIN = oldNvmBin;
+    if (oldWorkspaceKitNode === undefined) delete process.env.WORKSPACE_KIT_NODE;
+    else process.env.WORKSPACE_KIT_NODE = oldWorkspaceKitNode;
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test("pickNodeExecutable skips native-incompatible resolver candidate", () => {
+  const oldHome = process.env.HOME;
+  const oldNvmDir = process.env.NVM_DIR;
+  const oldNvmBin = process.env.NVM_BIN;
+  const oldWorkspaceKitNode = process.env.WORKSPACE_KIT_NODE;
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "wc-node-native-"));
+  try {
+    process.env.HOME = tempRoot;
+    process.env.NVM_DIR = path.join(tempRoot, ".nvm");
+    delete process.env.NVM_BIN;
+    delete process.env.WORKSPACE_KIT_NODE;
+    const badNode = path.join(tempRoot, "bad-node");
+    fs.writeFileSync(badNode, "#!/bin/sh\nexit 1\n", { mode: 0o755 });
+    fs.mkdirSync(path.join(tempRoot, "node_modules", "better-sqlite3"), { recursive: true });
+    fs.writeFileSync(path.join(tempRoot, "node_modules", "better-sqlite3", "index.js"), "module.exports = {};\n");
+
+    assert.notEqual(pickNodeExecutable(() => badNode, tempRoot), badNode);
+  } finally {
+    if (oldHome === undefined) delete process.env.HOME;
+    else process.env.HOME = oldHome;
+    if (oldNvmDir === undefined) delete process.env.NVM_DIR;
+    else process.env.NVM_DIR = oldNvmDir;
+    if (oldNvmBin === undefined) delete process.env.NVM_BIN;
+    else process.env.NVM_BIN = oldNvmBin;
+    if (oldWorkspaceKitNode === undefined) delete process.env.WORKSPACE_KIT_NODE;
+    else process.env.WORKSPACE_KIT_NODE = oldWorkspaceKitNode;
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
 });
 
 test("parseRunCommandOutput parses valid JSON", () => {
