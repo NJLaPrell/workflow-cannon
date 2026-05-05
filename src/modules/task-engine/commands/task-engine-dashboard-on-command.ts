@@ -238,7 +238,7 @@ export async function runDashboardSummaryCommand(
   const systemStatus = await buildDashboardSystemStatus(ctx, store, dualForStatus);
 
   const data = {
-    schemaVersion: 5 as const,
+    schemaVersion: 6 as const,
     planningGeneration,
     planningGenerationPolicy: getPlanningGenerationPolicy({
       effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined

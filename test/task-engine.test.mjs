@@ -1613,10 +1613,16 @@ test("taskEngineModule onCommand dashboard-summary returns stable shape", async 
   assert.equal(result.ok, true);
   assert.equal(result.code, "dashboard-summary");
   const d = result.data;
-  assert.equal(d.schemaVersion, 5);
+  assert.equal(d.schemaVersion, 6);
   assert.ok(d.systemStatus);
-  assert.equal(d.systemStatus.schemaVersion, 1);
+  assert.equal(d.systemStatus.schemaVersion, 2);
   assert.ok(typeof d.systemStatus.generatedAt === "string");
+  assert.ok(d.systemStatus.identity);
+  assert.equal(d.systemStatus.identity.schemaVersion, 1);
+  assert.ok(d.systemStatus.planningStore);
+  assert.equal(d.systemStatus.planningStore.schemaVersion, 1);
+  assert.equal(d.systemStatus.planningStore.backend, "sqlite");
+  assert.ok(typeof d.systemStatus.planningStore.databaseRelativePath === "string");
   assert.ok(d.systemStatus.phase);
   assert.equal(d.systemStatus.phase.schemaVersion, 1);
   assert.ok(typeof d.systemStatus.phase.ok === "boolean");

@@ -10,6 +10,10 @@ import type { DashboardSystemStatus } from "../../../contracts/dashboard-summary
 import type { ModuleActivationReport } from "../../../core/module-registry.js";
 import type { SqliteDualPlanningStore } from "../persistence/sqlite-dual-planning.js";
 import type { TaskStore } from "../persistence/store.js";
+import {
+  buildDashboardPlanningStoreSummary,
+  buildDashboardWorkspaceIdentity
+} from "./build-dashboard-workspace-snapshot.js";
 import { runPhaseStatus } from "../workspace-status-commands-runtime.js";
 
 const DOCTOR_ISSUES_CAP = 32;
@@ -41,6 +45,8 @@ export async function buildDashboardSystemStatus(
 ): Promise<DashboardSystemStatus> {
   const generatedAt = new Date().toISOString();
   const mod = moduleSlice(ctx);
+  const identity = await buildDashboardWorkspaceIdentity(ctx.workspacePath);
+  const planningStore = buildDashboardPlanningStoreSummary(ctx);
 
   const phaseRes = await runPhaseStatus(
     ctx,
@@ -127,8 +133,10 @@ export async function buildDashboardSystemStatus(
   }
 
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     generatedAt,
+    identity,
+    planningStore,
     phase: phaseBlock,
     doctor: {
       schemaVersion: 1,

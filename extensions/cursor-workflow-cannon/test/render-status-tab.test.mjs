@@ -17,7 +17,9 @@ test("renderStatusTabInnerHtml renders systemStatus sections when present", () =
     ok: true,
     code: "dashboard-summary",
     data: {
-      schemaVersion: 5,
+      schemaVersion: 6,
+      planningGeneration: 99,
+      planningGenerationPolicy: "require",
       agentGuidance: {
         schemaVersion: 1,
         tier: 4,
@@ -29,8 +31,20 @@ test("renderStatusTabInnerHtml renders systemStatus sections when present", () =
       },
       stateSummary: { ready: 1, in_progress: 0, blocked: 0, total: 9 },
       systemStatus: {
-        schemaVersion: 1,
+        schemaVersion: 2,
         generatedAt: "2026-05-05T12:00:00.000Z",
+        identity: {
+          schemaVersion: 1,
+          projectName: "my-project",
+          packageName: "@scope/pkg",
+          workspaceKitVersion: "0.78.0",
+          rootPackageVersion: "1.0.0"
+        },
+        planningStore: {
+          schemaVersion: 1,
+          backend: "sqlite",
+          databaseRelativePath: ".workspace-kit/tasks/workspace-kit.db"
+        },
         phase: {
           schemaVersion: 1,
           ok: true,
@@ -61,12 +75,16 @@ test("renderStatusTabInnerHtml renders systemStatus sections when present", () =
       }
     }
   });
+  assert.match(html, /my-project/);
   assert.match(html, /Wizard/);
   assert.match(html, /Tavern/);
+  assert.match(html, /Planning sync/);
+  assert.match(html, /This workspace/);
+  assert.match(html, /Planning data/);
   assert.match(html, /Canonical phase/);
-  assert.match(html, /Doctor contract checks passed/);
+  assert.match(html, /Contract checks passed/);
   assert.match(html, /task-engine/);
-  assert.match(html, /CAE posture/);
+  assert.match(html, /Context activation \(CAE\)/);
 });
 
 test("renderStatusTabInnerHtml tolerates missing systemStatus on older schema", () => {
@@ -86,4 +104,51 @@ test("renderStatusTabInnerHtml tolerates missing systemStatus on older schema", 
     }
   });
   assert.match(html, /upgrade workspace-kit/);
+});
+
+test("renderStatusTabInnerHtml shows editor folder label when passed", () => {
+  const html = renderStatusTabInnerHtml(
+    {
+      ok: true,
+      code: "dashboard-summary",
+      data: {
+        schemaVersion: 6,
+        planningGeneration: 1,
+        planningGenerationPolicy: "off",
+        systemStatus: {
+          schemaVersion: 2,
+          generatedAt: "2026-05-05T12:00:00.000Z",
+          identity: {
+            schemaVersion: 1,
+            projectName: null,
+            packageName: null,
+            workspaceKitVersion: null,
+            rootPackageVersion: null
+          },
+          planningStore: {
+            schemaVersion: 1,
+            backend: "sqlite",
+            databaseRelativePath: ".workspace-kit/tasks/workspace-kit.db"
+          },
+          phase: {
+            schemaVersion: 1,
+            ok: true,
+            canonicalPhaseKey: "1",
+            driftMessages: [],
+            remediationSuggestions: []
+          },
+          doctor: { schemaVersion: 1, ok: true, issueCount: 0, issues: [] },
+          modules: {
+            schemaVersion: 1,
+            enabledModuleIds: [],
+            disabledModuleIds: []
+          },
+          caeLines: []
+        }
+      }
+    },
+    { editorWorkspaceFolderLabel: "workflow-cannon" }
+  );
+  assert.match(html, /Editor folder/);
+  assert.match(html, /workflow-cannon/);
 });
