@@ -3,6 +3,8 @@
  * Keep aligned with `task-engine-internal.ts` handler output.
  */
 
+import type { AgentPhaseJournalSnapshotBlock } from "./agent-phase-journal-read-contract.js";
+
 export type AgentSessionSnapshotTeamContext = {
   schemaVersion: 1;
   available: boolean;
@@ -33,6 +35,8 @@ export type AgentSessionSnapshotData = {
   teamExecutionContext: AgentSessionSnapshotTeamContext;
   /** Maintainer PR/phase-branch hints (Phase 77); safe on every snapshot read. */
   maintainerDelivery?: Record<string, unknown>;
+  /** Phase journal summary (Phase 78); present when canonical phase + kit SQLite v19+. */
+  phaseJournal?: AgentPhaseJournalSnapshotBlock;
   planningGeneration?: number;
   planningGenerationPolicy?: string;
 };

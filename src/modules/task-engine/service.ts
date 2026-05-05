@@ -16,6 +16,11 @@ export type TransitionRequest = {
   /** When set, SQLite planning row must match this generation or persist fails (`planning-generation-mismatch`). */
   expectedPlanningGeneration?: number;
   clientMutationId?: string;
+  /**
+   * Optional hook: runs inside the SQLite transaction immediately before task rows / blobs are written
+   * (sqlite dual store only). Used for atomic phase journal attachments on `run-transition`.
+   */
+  beforePersistInSqliteTransaction?: () => void;
 };
 
 export type TransitionResult = {
@@ -156,9 +161,16 @@ export class TransitionService {
     }
 
     await this.store.save(
-      request.expectedPlanningGeneration !== undefined
-        ? { expectedPlanningGeneration: request.expectedPlanningGeneration }
-        : undefined
+      request.expectedPlanningGeneration === undefined && !request.beforePersistInSqliteTransaction
+        ? undefined
+        : {
+            ...(request.expectedPlanningGeneration !== undefined
+              ? { expectedPlanningGeneration: request.expectedPlanningGeneration }
+              : {}),
+            ...(request.beforePersistInSqliteTransaction
+              ? { beforePersistInSqliteTransaction: request.beforePersistInSqliteTransaction }
+              : {})
+          }
     );
 
     if (this.hookBus?.isEnabled()) {

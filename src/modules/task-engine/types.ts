@@ -136,7 +136,8 @@ export type TaskEngineErrorCode =
   | "workspace-revision-mismatch"
   | "unknown-feature-id"
   | "idempotency-key-conflict"
-  | "hook-denied";
+  | "hook-denied"
+  | "phase-note-not-convertible";
 
 export type TaskAdapter = {
   name: string;

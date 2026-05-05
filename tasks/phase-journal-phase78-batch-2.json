@@ -1,0 +1,255 @@
+{
+  "expectedPlanningGeneration": 2099,
+  "ops": [
+    {
+      "kind": "create-task",
+      "payload": {
+        "allocateId": false,
+        "id": "T100034",
+        "title": "Phase Journal: phase_note_task_suggestions table + propose/convert persistence",
+        "status": "proposed",
+        "phaseKey": "78",
+        "phase": "Phase 78",
+        "dependsOn": ["T100033"],
+        "planRef": "PHASE_JOURNAL.md",
+        "summary": "Implement deferred SQL table phase_note_task_suggestions and wire propose-tasks-from-phase-notes / convert-phase-note-to-task to structured suggestion rows per journal schema.",
+        "description": "PHASE_JOURNAL.md defines phase_note_task_suggestions as deferrable; this task completes the data model. Add migration with FK to phase_notes, indexes as needed. Extend propose command to optionally persist structured suggestions; convert reads suggestion rows or inline note payloads. Keep MVP path backward compatible if suggestions table empty.",
+        "technicalScope": [
+          "SQLite migration: phase_note_task_suggestions DDL + indexes",
+          "Store/repository methods; transactional convert updates note + suggestion state",
+          "Tests: migration idempotency, FK integrity, propose round-trip, convert idempotency",
+          "Instruction updates if argv or response shapes change"
+        ],
+        "acceptanceCriteria": [
+          "Table matches journal columns (title, description, suggested_status, suggested_phase_key, acceptance_criteria_json, timestamps)",
+          "propose-tasks-from-phase-notes can persist bounded suggestions without auto-creating execution tasks",
+          "convert-phase-note-to-task links suggestion/note and sets converted_task_id on note",
+          "No orphan rows on note dismiss/supersede — define behavior in code + tests",
+          "Manifest/contracts updated if command outputs change"
+        ],
+        "risk": "Medium — schema churn after initial journal ship; coordinate with T100033 completion.",
+        "metadata": {
+          "phaseJournal": {
+            "planSection": "Data model — phase_note_task_suggestions",
+            "dependsOnMvp": ["T-PJ-006"],
+            "linkedTasks": ["T100028", "T100029", "T100033"]
+          }
+        },
+        "clientMutationId": "phase78-pj-phase-note-task-suggestions-20260503"
+      }
+    },
+    {
+      "kind": "create-task",
+      "payload": {
+        "allocateId": false,
+        "id": "T100035",
+        "title": "Phase Journal: retention, phase-close rules, and cross-phase surfacing defaults",
+        "status": "proposed",
+        "phaseKey": "78",
+        "phase": "Phase 78",
+        "dependsOn": ["T100029", "T100031"],
+        "planRef": "PHASE_JOURNAL.md",
+        "summary": "Implement and document retention behavior: default reads target current phase; historical phase requires explicit phaseKey; phase-close expectations for blockers/risk/follow-ups.",
+        "description": "PHASE_JOURNAL.md Retention section: active blockers/risk/follow-ups must be converted, dismissed, superseded, or carried forward at phase close; ordinary notes queryable by phase but not surfaced by default outside phase; get-phase-context defaults to current kit phase when omitted. Add operator guidance (.ai runbook), tests for default phase inference vs explicit historical query, and optional read-only audit helper listing active critical notes for a phaseKey.",
+        "technicalScope": [
+          "Wire default phaseKey resolution from kit_workspace_status / phase-status when commands omit phaseKey",
+          "list-phase-notes / get-phase-context / get-next-actions respect defaults and caps across phases",
+          ".ai/runbooks/phase-journal-retention.md (or similar) with phase-close checklist",
+          "Tests: no cross-phase bleed in default snapshot/next-actions; explicit historical still works"
+        ],
+        "acceptanceCriteria": [
+          "Omitting phaseKey uses canonical current phase when inferable; documented when not inferable",
+          "Default surfaces exclude prior-phase notes unless explicitly requested",
+          "Runbook lists maintainer/agent steps before closing a phase",
+          "Converted notes stay linked; dismissed/superseded excluded from default relevance paths",
+          "Regression tests cover phase boundary behavior"
+        ],
+        "risk": "Medium — wrong default could leak context or hide critical notes.",
+        "metadata": {
+          "phaseJournal": {
+            "planSection": "Retention and phase-close behavior",
+            "linkedTasks": ["T100029", "T100030", "T100031", "T100032"]
+          }
+        },
+        "clientMutationId": "phase78-pj-retention-phase-close-20260503"
+      }
+    },
+    {
+      "kind": "create-task",
+      "payload": {
+        "allocateId": false,
+        "id": "T100036",
+        "title": "Phase Journal: agent read contract + additive JSON schemas",
+        "status": "proposed",
+        "phaseKey": "78",
+        "phase": "Phase 78",
+        "dependsOn": ["T100030", "T100031"],
+        "planRef": "PHASE_JOURNAL.md",
+        "summary": "Update canonical agent-facing contracts and JSON schemas so phaseJournal / phaseContext fields are versioned, additive, bounded, and CI-checked.",
+        "description": "PHASE_JOURNAL.md Agent read contract: agents must not read SQLite; supported surfaces include get-phase-context, list-phase-notes, agent-session-snapshot, get-next-actions. Deliver stable schema fragments (or shared TypeScript types exported for consumers), update exports/tests that snapshot CLI shapes, and reference AGENTS.md / contract package paths as required by repo conventions.",
+        "technicalScope": [
+          "schemas/ or contracts: phaseJournal summary, phaseContext blocks, note projection subset",
+          "Golden tests or schema validation against sample CLI stdout",
+          "Cross-links in .ai docs for command projections only",
+          "Bump contract version fields if present"
+        ],
+        "acceptanceCriteria": [
+          "Published schemas/types document required keys, optional keys, max array lengths",
+          "CI validates manifests/samples against schemas where applicable",
+          "Breaking changes avoided or major version documented",
+          "Cursor/SDK consumers can rely on additive fields without sqlite access"
+        ],
+        "risk": "Low–medium — contract drift vs implementation.",
+        "metadata": {
+          "phaseJournal": {
+            "planSection": "Agent read contract",
+            "linkedTasks": ["T100029", "T100030", "T100031"]
+          }
+        },
+        "clientMutationId": "phase78-pj-agent-read-contract-20260503"
+      }
+    },
+    {
+      "kind": "create-task",
+      "payload": {
+        "allocateId": false,
+        "id": "T100037",
+        "title": "Phase Journal: expiry (expires_at / expired) and optional update-phase-note",
+        "status": "proposed",
+        "phaseKey": "78",
+        "phase": "Phase 78",
+        "dependsOn": ["T100029"],
+        "planRef": "PHASE_JOURNAL.md",
+        "summary": "Complete note lifecycle beyond dismiss/supersede: honor expires_at, transition to expired status in reads, optional mutate command for bounded corrections.",
+        "description": "Data model includes expires_at and status expired; MVP command list omitted explicit expiry/update. Implement filter logic so expired notes excluded from default queries; optional expire-phase-note or batch reconcile; optional update-phase-note limited to summary/details within token caps with audit metadata. Deterministic ordering unchanged.",
+        "technicalScope": [
+          "Read-path filters for expired vs active",
+          "Command(s): expire-phase-note and/or update-phase-note with validation",
+          "Tests: TTL boundary, idempotency, cannot escalate priority via update if forbidden",
+          "Instructions + manifest entries"
+        ],
+        "acceptanceCriteria": [
+          "Default list/get-phase-context exclude expired unless flag requests them",
+          "expires_at in past behaves consistently with expired status",
+          "Update path preserves idempotency keys and provenance",
+          "No bypass of dismiss/supersede semantics",
+          "Contract/schemas updated if new commands land"
+        ],
+        "risk": "Low–medium — edge cases on clock / timezone; keep UTC ISO consistent.",
+        "metadata": {
+          "phaseJournal": {
+            "planSection": "Note statuses + Data model provenance",
+            "linkedTasks": ["T100028", "T100029"]
+          }
+        },
+        "clientMutationId": "phase78-pj-expiry-update-note-20260503"
+      }
+    },
+    {
+      "kind": "create-task",
+      "payload": {
+        "allocateId": false,
+        "id": "T100038",
+        "title": "Phase Journal: secret-safety — redaction integration + validation hardening",
+        "status": "proposed",
+        "phaseKey": "78",
+        "phase": "Phase 78",
+        "dependsOn": ["T100029"],
+        "planRef": "PHASE_JOURNAL.md",
+        "summary": "Enforce Privacy and secret-safety rules on all Phase Journal writes: reuse kit redaction/secret-guard if present; deterministic rejection patterns for obvious secret shapes.",
+        "description": "PHASE_JOURNAL.md forbids secrets, tokens, keys, large pasted excerpts, PII. Integrate with existing Workflow Cannon utilities if available; otherwise implement conservative validators (length, entropy heuristics optional) and structured error codes. Cover add-phase-note, run-transition phaseNotes, convert paths that embed description.",
+        "technicalScope": [
+          "Discover and call shared redaction module or add thin phase-journal guard",
+          "Unit tests: blocked writes for representative secret patterns; allowed sanitized summaries",
+          "Instruction updates: agent-facing prohibition copy",
+          "Optional config hook for org-specific patterns"
+        ],
+        "acceptanceCriteria": [
+          "Writes reject or redact per policy with stable error codes",
+          "Transition-attached phaseNotes use same guard as add-phase-note",
+          "No plaintext secrets persisted in fixtures/tests",
+          "Documented fallback when redaction utility absent"
+        ],
+        "risk": "Medium — false positives frustrate agents; tune messages and allow escape hatch via dismiss workflow only after review.",
+        "metadata": {
+          "phaseJournal": {
+            "planSection": "Privacy and secret-safety rules",
+            "linkedTasks": ["T100029", "T100032"]
+          }
+        },
+        "clientMutationId": "phase78-pj-secret-safety-20260503"
+      }
+    },
+    {
+      "kind": "create-task",
+      "payload": {
+        "allocateId": false,
+        "id": "T100039",
+        "title": "Phase Journal: configurable policy for critical note mutations + observability",
+        "status": "proposed",
+        "phaseKey": "78",
+        "phase": "Phase 78",
+        "dependsOn": ["T100029"],
+        "planRef": "PHASE_JOURNAL.md",
+        "summary": "Optional JSON policyApproval or config gate for dismiss/supersede on priority=critical notes; doctor or phase-status advisory counts for open critical phase notes.",
+        "description": "PHASE_JOURNAL policy table suggests dismiss/supersede may need sensitivity for critical priority. Implement config-driven requirement (default off matches MVP). Add lightweight observability: doctor optional line or phase-status payload snippet with active critical phase note count for current phase — read-only, bounded.",
+        "technicalScope": [
+          "Kit config key design + validation",
+          "Command guard when critical + policy requires approval",
+          "doctor --json or phase-status extension field (additive)",
+          "Tests for default-off and strict-on paths"
+        ],
+        "acceptanceCriteria": [
+          "Default behavior unchanged from MVP when config absent",
+          "When enabled, dismiss/supersede critical notes require Tier B-style approval per machine-cli-policy alignment",
+          "Observability never dumps note bodies; counts only",
+          "Instructions document configuration"
+        ],
+        "risk": "Low — config misuse could lock operators; document escape via maintainer override path.",
+        "metadata": {
+          "phaseJournal": {
+            "planSection": "Policy and approval guidance",
+            "linkedTasks": ["T100029", "T100035"]
+          }
+        },
+        "clientMutationId": "phase78-pj-critical-policy-observability-20260503"
+      }
+    },
+    {
+      "kind": "create-task",
+      "payload": {
+        "allocateId": false,
+        "id": "T100040",
+        "title": "Phase Journal: golden example-workflow integration test",
+        "status": "proposed",
+        "phaseKey": "78",
+        "phase": "Phase 78",
+        "dependsOn": ["T100030", "T100031", "T100032", "T100033", "T100034", "T100035", "T100036", "T100037", "T100038", "T100039"],
+        "planRef": "PHASE_JOURNAL.md",
+        "summary": "Automate the journal's Example workflow section as an integration or smoke test: notes + transition attachment + cross-agent reads + propose/convert path.",
+        "description": "PHASE_JOURNAL.md lists steps 1–10 from task start through get-phase-context, add-phase-note, run-transition phaseNotes, agent-session-snapshot, get-next-actions suggestions, convert to proposed task. Implement one deterministic test (Node test or fixture DB) that exercises the chain without manual chat; gate regressions on Phase Journal behavior.",
+        "technicalScope": [
+          "Fixture planning SQLite or in-memory harness per repo patterns",
+          "Scripted wk run invocations or direct module calls where faster",
+          "Assertions on bounded JSON shapes only",
+          "Document how to run in CONTRIBUTING or module README"
+        ],
+        "acceptanceCriteria": [
+          "Covers add-phase-note + list/get-phase-context + run-transition phaseNotes minimum",
+          "Covers agent-session-snapshot phaseJournal and get-next-actions phaseContext when prior tasks merged",
+          "Covers propose-tasks-from-phase-notes + convert-phase-note-to-task happy path",
+          "Test passes in CI pre-merge gates",
+          "Maps steps to PHASE_JOURNAL.md Example workflow for maintainer traceability"
+        ],
+        "risk": "Low — test maintenance cost if CLI JSON shifts; pin schema assertions.",
+        "metadata": {
+          "phaseJournal": {
+            "planSection": "Example workflow + Success criteria (verification)",
+            "linkedTasks": ["T100029", "T100030", "T100031", "T100032", "T100033"]
+          }
+        },
+        "clientMutationId": "phase78-pj-golden-example-workflow-20260503"
+      }
+    }
+  ]
+}

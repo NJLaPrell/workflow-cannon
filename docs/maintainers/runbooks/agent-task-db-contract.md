@@ -6,13 +6,18 @@
 **Package type surface:** `@workflow-cannon/workspace-kit/contracts/agent-task-read-contract`  
 **JSON Schema:** `schemas/agent-task-read-contract.v1.json`
 
+**Phase journal (Phase 78):** `@workflow-cannon/workspace-kit/contracts/agent-phase-journal-read-contract` — **`schemas/agent-phase-journal-read-contract.v1.json`**. Covers `list-phase-notes` / `get-phase-context` note projections, `propose-tasks-from-phase-notes` persisted suggestion rows, `get-next-actions` **`data.phaseContext`** (also modeled under **`AgentTaskNextActions.phaseContext`** in the task schema), and **`agent-session-snapshot` `data.phaseJournal`**.
+
 This is the stable read contract agents should use for normal task workflows. It deliberately sits above the task-engine persistence layout: current storage may use relational SQLite rows, compatibility blob mirrors, or both, but agents should not parse raw SQLite tables, `workspace_planning_state` blobs, `metadata_json`, `depends_on_json`, `unblocks_json`, `transition_log_json`, or `mutation_log_json` for routine work.
 
 ## Read Surfaces
 
 | Agent need | Current command | Contract model |
 | --- | --- | --- |
-| Pick the next task | `pnpm exec wk run get-next-actions '{}'` | `AgentTaskNextActions` |
+| Pick the next task | `pnpm exec wk run get-next-actions '{}'` | `AgentTaskNextActions` (optional additive **`phaseContext`**) |
+| Phase journal notes / context | `list-phase-notes`, `get-phase-context` | `AgentPhaseNoteProjection` (phase journal schema) |
+| Phase journal session rollup | `pnpm exec wk run agent-session-snapshot '{}'` | `AgentPhaseJournalSnapshotBlock` on **`data.phaseJournal`** when present |
+| Persisted harvest rows | `propose-tasks-from-phase-notes` with **`persist: true`** | `AgentPhaseNoteTaskSuggestionProjection` |
 | List/filter tasks | `pnpm exec wk run list-tasks '<filters>'` | `AgentTaskListItem[]` plus `AgentTaskReadEnvelope` |
 | Inspect one task | `pnpm exec wk run get-task '{"taskId":"T991"}'` | `AgentTaskDetail` |
 | Audit ready queue health | `pnpm exec wk run queue-health '{}'` or `list-tasks` with `includeQueueHints` | `AgentTaskQueueHint` and `AgentTaskPhaseRef` |
@@ -48,7 +53,7 @@ CLI task payloads include an ephemeral **`agentRouting`** object on each **`Task
 
 `AgentTaskDetail` extends the row with implementation guidance: `summary`, `description`, `approach`, `risk`, `technicalScope`, `acceptanceCriteria`, and recent evidence.
 
-`AgentTaskNextActions` wraps the ready queue, `suggestedNext`, counts, and blocking analysis in the same row model.
+`AgentTaskNextActions` wraps the ready queue, `suggestedNext`, counts, blocking analysis, and optional **`phaseContext`** (phase journal hints for the canonical phase).
 
 `AgentTaskReadEnvelope<T>` records `ok`, `code`, `data`, `planningGeneration`, and `planningGenerationPolicy` so agents know whether a later mutation needs optimistic-lock input.
 

@@ -46,6 +46,8 @@ Verified read: `pnpm exec wk run list-tasks '{}'`.
 **Agent task read contract:** normal task reads use the versioned v1 projection in
 `.ai/runbooks/agent-task-db-contract.md`, `schemas/agent-task-read-contract.v1.json`,
 and package subpath `@workflow-cannon/workspace-kit/contracts/agent-task-read-contract`.
+Phase journal projections share **`schemas/agent-phase-journal-read-contract.v1.json`**
+and **`@workflow-cannon/workspace-kit/contracts/agent-phase-journal-read-contract`**.
 Agents should consume `get-next-actions`, `list-tasks`, `get-task`, `queue-health`,
 dependency graph, and evidence/history command JSON instead of raw SQLite tables or
 blob mirrors.

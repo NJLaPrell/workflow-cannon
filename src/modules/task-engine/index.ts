@@ -82,4 +82,18 @@ export type {
   TaskPersistenceReadinessSeverity
 } from "./persistence/task-persistence-readiness.js";
 
+export { PhaseJournalStore, createPhaseJournalStore } from "./phase-journal/phase-journal-store.js";
+export type {
+  CreatePhaseNoteInput,
+  CreatePhaseNoteResult,
+  ListPhaseNotesFilter,
+  PhaseNotePriority,
+  PhaseNoteRefInput,
+  PhaseNoteRefRow,
+  PhaseNoteRow,
+  PhaseNoteStatus,
+  PhaseNoteTaskSuggestionRow,
+  UpdateActivePhaseNotePatch
+} from "./phase-journal/phase-journal-types.js";
+
 export { taskEngineModule } from "./task-engine-internal.js";

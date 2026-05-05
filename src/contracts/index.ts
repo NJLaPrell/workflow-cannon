@@ -19,6 +19,15 @@ export type {
   DashboardTeamExecutionSummary
 } from "./dashboard-summary-run.js";
 export type {
+  AgentNextActionsPhaseContext,
+  AgentPhaseJournalHintNote,
+  AgentPhaseJournalSnapshotBlock,
+  AgentPhaseJournalSnapshotTopNote,
+  AgentPhaseNoteProjection,
+  AgentPhaseNoteProjectionRef,
+  AgentPhaseNoteTaskSuggestionProjection
+} from "./agent-phase-journal-read-contract.js";
+export type {
   AgentTaskDependencyEdge,
   AgentTaskDetail,
   AgentTaskEvidencePointer,

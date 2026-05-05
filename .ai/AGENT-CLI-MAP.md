@@ -17,13 +17,14 @@ Machine-oriented **how to run** workspace-kit in this repo: policy, cold start, 
 
 **Clean stdout:** Prefer **`pnpm exec wk`** over **`pnpm run wk`** when parsing JSON.
 
-**Agent task reads:** `.ai/runbooks/agent-task-db-contract.md`, `schemas/agent-task-read-contract.v1.json` — use command JSON, not raw SQLite.
+**Agent task reads:** `.ai/runbooks/agent-task-db-contract.md`, `schemas/agent-task-read-contract.v1.json`, `schemas/agent-phase-journal-read-contract.v1.json` — use command JSON, not raw SQLite.
 
 ## Runtime invocation
 
 - **Shape:** `pnpm exec wk run <command> '<single-json-object>'` — Tier A/B mutators need **`"policyApproval":{"confirmed":true,"rationale":"…"}`** inside that object. Env **`WORKSPACE_KIT_POLICY_APPROVAL`** does **not** approve `run` (init/upgrade/config only).
 - **Planning generation (`require`):** read **`planningGeneration`** from **`list-tasks` / `get-task` / `get-next-actions`**, then pass **`expectedPlanningGeneration`** on prelude commands (see **`schemas/planning-generation-cli-prelude.json`**).
 - **Failures:** **`invalid-run-args`** → fix against **`--schema-only`**; **`planning-generation-*`** → re-read generation and retry; **`policy-denied`** → JSON approval on argv.
+- **Phase journal (examples):** **`pnpm exec wk run add-phase-note '{}'`**, **`pnpm exec wk run list-phase-notes '{}'`**, **`pnpm exec wk run propose-tasks-from-phase-notes '{}'`**, **`pnpm exec wk run convert-phase-note-to-task '{}'`** — see `src/modules/task-engine/instructions/*.md`.
 
 ## Tier overview
 

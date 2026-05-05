@@ -31,6 +31,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
   const commandNames = router.listCommands().map((command) => command.name);
   assert.deepEqual(commandNames, [
     "add-dependency",
+    "add-phase-note",
     "agent-bootstrap",
     "agent-mutation-plan",
     "agent-session-snapshot",
@@ -43,6 +44,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "classify-kit-state",
     "clear-task-phase",
     "complete-task",
+    "convert-phase-note-to-task",
     "convert-wishlist",
     "create-behavior-profile",
     "create-task",
@@ -51,6 +53,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "dashboard-summary",
     "delete-behavior-profile",
     "diff-behavior-profiles",
+    "dismiss-phase-note",
     "document-project",
     "explain-behavior-profiles",
     "explain-config",
@@ -64,6 +67,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "get-kit-persistence-map",
     "get-module-state",
     "get-next-actions",
+    "get-phase-context",
     "get-ready-queue",
     "get-recent-task-activity",
     "get-task",
@@ -76,12 +80,14 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "list-components",
     "list-features",
     "list-module-states",
+    "list-phase-notes",
     "list-tasks",
     "list-wishlist",
     "migrate-task-persistence",
     "persist-planning-execution-drafts",
     "phase-delivery-preflight",
     "phase-status",
+    "propose-tasks-from-phase-notes",
     "queue-git-alignment",
     "queue-health",
     "release-evidence-manifest",
@@ -96,10 +102,12 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "set-agent-guidance",
     "set-current-phase",
     "start-task",
+    "supersede-phase-note",
     "sync-effective-behavior-cursor-rule",
     "synthesize-transcript-churn",
     "task-persistence-readiness",
     "update-behavior-profile",
+    "update-phase-note",
     "update-task",
     "update-wishlist",
     "update-workspace-phase-snapshot",
@@ -229,7 +237,8 @@ test("ModuleCommandRouter executes generate-document for single doc", async () =
     {
       documentType: "AGENTS.md",
       options: {
-        dryRun: true
+        dryRun: true,
+        overwriteAi: true
       }
     },
     lifecycleContext

@@ -1,0 +1,227 @@
+{
+  "expectedPlanningGeneration": 2098,
+  "ops": [
+    {
+      "kind": "create-task",
+      "payload": {
+        "allocateId": false,
+        "id": "T100028",
+        "title": "Phase Journal: schema + SQLite store (phase_notes / phase_note_refs)",
+        "status": "proposed",
+        "phaseKey": "78",
+        "phase": "Phase 78",
+        "planRef": "PHASE_JOURNAL.md",
+        "summary": "Add idempotent planning-SQLite migration for phase journal tables, indexes, and a typed store API used only inside task-engine (no raw table reads for agents).",
+        "description": "Implement tables `phase_notes` and `phase_note_refs` per PHASE_JOURNAL.md (phase_key join key, provenance, idempotency_key partial unique index when feasible). Wire DDL through existing kit SQLite migration path (prepareKitSqliteDatabase / migrateKitSqliteSchema patterns). Implement internal helpers: create note idempotently, list/filter, dismiss, supersede; preserve existing planning/task-engine behavior when tables empty.",
+        "technicalScope": [
+          "SQL migration: phase_notes + phase_note_refs + required indexes from PHASE_JOURNAL.md",
+          "Store module under src/modules/task-engine/phase-journal/ (or agreed layout): types, persist, idempotent insert",
+          "Unit/integration tests: migration idempotency, CRUD, idempotency key replay",
+          "No new agent-facing commands in this slice — persistence only"
+        ],
+        "acceptanceCriteria": [
+          "phase_notes and phase_note_refs exist with columns and indexes as specified in PHASE_JOURNAL.md MVP",
+          "Store supports create (idempotent), list by phase_key/status, dismiss, supersede without corrupting unrelated rows",
+          "Migration reruns cleanly; relational + planning open paths unchanged for workspaces without notes",
+          "Agents still have no stable read contract to raw tables — internal module tests only until commands land in T100029"
+        ],
+        "risk": "Medium — shared planning SQLite; migration ordering must not break existing user_version chain.",
+        "metadata": {
+          "phaseJournal": {
+            "mvpId": "T-PJ-001",
+            "specPath": "PHASE_JOURNAL.md",
+            "dependsOnMvp": [],
+            "unblocksMvp": ["T-PJ-002", "T-PJ-003", "T-PJ-004", "T-PJ-005", "T-PJ-006"]
+          }
+        },
+        "clientMutationId": "phase78-pj-001-schema-store-20260503"
+      }
+    },
+    {
+      "kind": "create-task",
+      "payload": {
+        "allocateId": false,
+        "id": "T100029",
+        "title": "Phase Journal: MVP commands (add/list/get-phase-context/dismiss/supersede)",
+        "status": "proposed",
+        "phaseKey": "78",
+        "phase": "Phase 78",
+        "dependsOn": ["T100028"],
+        "planRef": "PHASE_JOURNAL.md",
+        "summary": "Expose Phase Journal through workspace-kit run commands with validation, bounded projections, manifest + instructions, and task-engine dispatch wiring.",
+        "description": "Implement add-phase-note, list-phase-notes, get-phase-context (deterministic relevance scoring per journal), dismiss-phase-note, supersede-phase-note. Enforce token limits (summary 280, details 1200, refs max 10, default list limits). Infer phaseKey from taskId when possible. Wire resolvePhaseJournalCommands in planning dispatch. Update builtin-run-command-manifest.json, instructions/*.md, run-contract schemas/tests as required by repo standards.",
+        "technicalScope": [
+          "Command handlers + argv validation + JSON envelopes consistent with task-engine",
+          "Secret-safety / redaction hooks if project utility exists; otherwise instruction-level prohibitions",
+          "get-phase-context: scoring table from PHASE_JOURNAL.md (deterministic tie-break)",
+          "Tests: manifest parity, happy paths, validation failures, idempotent add-phase-note"
+        ],
+        "acceptanceCriteria": [
+          "All five MVP commands registered and callable via wk run with documented JSON shapes",
+          "Validation enforces note types, statuses, priorities, lengths, ref counts; phase/task existence when checkable",
+          "list/get return bounded projections — not raw SQLite rows",
+          "Instruction files + manifest entries + contract checks updated; CI gates pass",
+          "Default policy: non-sensitive reads/writes per PHASE_JOURNAL policy table unless configured otherwise"
+        ],
+        "risk": "Medium — surface area + contract drift if manifest/schemas not updated.",
+        "metadata": {
+          "phaseJournal": {
+            "mvpId": "T-PJ-002",
+            "specPath": "PHASE_JOURNAL.md",
+            "dependsOnMvp": ["T-PJ-001"],
+            "linkedTasks": ["T100028", "T100030", "T100031", "T100032", "T100033"]
+          }
+        },
+        "clientMutationId": "phase78-pj-002-mvp-commands-20260503"
+      }
+    },
+    {
+      "kind": "create-task",
+      "payload": {
+        "allocateId": false,
+        "id": "T100030",
+        "title": "Phase Journal: agent-session-snapshot phaseJournal summary",
+        "status": "proposed",
+        "phaseKey": "78",
+        "phase": "Phase 78",
+        "dependsOn": ["T100029"],
+        "planRef": "PHASE_JOURNAL.md",
+        "summary": "Add additive, bounded phaseJournal block to agent-session-snapshot when phase is known or inferable — summary only, no full details.",
+        "description": "Extend agent-session-snapshot read model per PHASE_JOURNAL.md: phaseKey/phaseLabel, counts (active, critical, open follow-ups), topNotes (max 3 default) without details body. Exclude non-active by default. Deterministic ordering.",
+        "technicalScope": [
+          "Snapshot assembler changes + schema/version bump if contract versioned",
+          "Tests: golden JSON fragments for snapshot with/without notes",
+          "Docs: agent read contract note that agents must use get-phase-context for depth"
+        ],
+        "acceptanceCriteria": [
+          "snapshot.phaseJournal present only when phase context resolved; omits heavy fields",
+          "At most default limits for notes; deterministic output",
+          "Existing snapshot consumers unchanged when journal empty",
+          "Contract/tests document additive shape"
+        ],
+        "risk": "Low–medium — additive JSON; avoid breaking consumers assuming fixed keys.",
+        "metadata": {
+          "phaseJournal": {
+            "mvpId": "T-PJ-003",
+            "specPath": "PHASE_JOURNAL.md",
+            "dependsOnMvp": ["T-PJ-002"],
+            "linkedTasks": ["T100029", "T100031"]
+          }
+        },
+        "clientMutationId": "phase78-pj-003-session-snapshot-20260503"
+      }
+    },
+    {
+      "kind": "create-task",
+      "payload": {
+        "allocateId": false,
+        "id": "T100031",
+        "title": "Phase Journal: get-next-actions phaseContext (non-authoritative hints)",
+        "status": "proposed",
+        "phaseKey": "78",
+        "phase": "Phase 78",
+        "dependsOn": ["T100029"],
+        "planRef": "PHASE_JOURNAL.md",
+        "summary": "Attach bounded phaseContext / taskSuggestionsFromNotes to get-next-actions without overriding task selection rules.",
+        "description": "Per PHASE_JOURNAL.md: include relevantNotes and taskSuggestionsFromNotes arrays with strict caps. Notes explain context only — ready queue ordering, status, and deps remain authoritative.",
+        "technicalScope": [
+          "Next-actions builder integration + relevance reuse or shared helper with get-phase-context",
+          "Tests: selection unchanged when notes present; suggestions bounded",
+          "Documentation in instruction or .ai runbook cross-link"
+        ],
+        "acceptanceCriteria": [
+          "get-next-actions includes phaseContext fields when phase known; bounded and deterministic",
+          "No note can force ready task ordering or mask blocked state",
+          "Empty journal yields no meaningful regression vs prior payloads",
+          "Tests cover note suggestion caps"
+        ],
+        "risk": "Medium — risk of accidentally coupling suggestion UX to automation; keep advisory.",
+        "metadata": {
+          "phaseJournal": {
+            "mvpId": "T-PJ-004",
+            "specPath": "PHASE_JOURNAL.md",
+            "dependsOnMvp": ["T-PJ-002"],
+            "linkedTasks": ["T100029", "T100030"]
+          }
+        },
+        "clientMutationId": "phase78-pj-004-next-actions-20260503"
+      }
+    },
+    {
+      "kind": "create-task",
+      "payload": {
+        "allocateId": false,
+        "id": "T100032",
+        "title": "Phase Journal: optional phaseNotes on run-transition (transactional)",
+        "status": "proposed",
+        "phaseKey": "78",
+        "phase": "Phase 78",
+        "dependsOn": ["T100029"],
+        "planRef": "PHASE_JOURNAL.md",
+        "summary": "Extend run-transition to accept optional phaseNotes[] inheriting task phaseKey; same transaction as transition; idempotent keys; omit behavior unchanged.",
+        "description": "Implement PHASE_JOURNAL.md run-transition attachment: validate phaseNotes same as add-phase-note subset, infer phaseKey from task, fail closed before any write on validation error. Transaction must commit transition + notes together or neither.",
+        "technicalScope": [
+          "Transition command schema + TransitionService / planning transaction boundary",
+          "Tests: transition succeeds with notes; fails atomically on bad note; idempotency replay",
+          "Instruction + manifest updates for run-transition argv"
+        ],
+        "acceptanceCriteria": [
+          "phaseNotes omitted → identical behavior to today",
+          "Successful transition persists 0..n notes with shared provenance",
+          "Validation failure prevents transition side effects",
+          "Idempotent replay does not duplicate notes",
+          "Tier A policy unchanged for transition approval paths"
+        ],
+        "risk": "High — transactional coupling with core lifecycle; requires careful SQLite transaction testing.",
+        "metadata": {
+          "phaseJournal": {
+            "mvpId": "T-PJ-005",
+            "specPath": "PHASE_JOURNAL.md",
+            "dependsOnMvp": ["T-PJ-002"],
+            "linkedTasks": ["T100029", "T100033"]
+          }
+        },
+        "clientMutationId": "phase78-pj-005-run-transition-20260503"
+      }
+    },
+    {
+      "kind": "create-task",
+      "payload": {
+        "allocateId": false,
+        "id": "T100033",
+        "title": "Phase Journal: propose-tasks-from-phase-notes + convert-phase-note-to-task",
+        "status": "proposed",
+        "phaseKey": "78",
+        "phase": "Phase 78",
+        "dependsOn": ["T100029"],
+        "planRef": "PHASE_JOURNAL.md",
+        "summary": "Second-pass commands: read-only proposal harvester + convert note → proposed task via existing create-task paths; mark note converted with converted_task_id.",
+        "description": "Per PHASE_JOURNAL.md: propose-tasks-from-phase-notes scans active follow-up/task-suggestion/risk/blocker notes (bounded). convert-phase-note-to-task creates task with matching phaseKey default, marks note status converted, stores converted_task_id. Cannot bypass lifecycle policy for ready/in_progress without transitions. Optional phase_note_task_suggestions table may be deferred — if deferred, document follow-up task id in metadata.",
+        "technicalScope": [
+          "Command implementations + reuse create-task internals / allocateId",
+          "Policy alignment with create-task for proposed vs sensitive states",
+          "Tests: conversion marks note; duplicate convert rejected; proposal command read-only",
+          "Consider deferring task_suggestions table to metadata-only MVP with explicit journal follow-up"
+        ],
+        "acceptanceCriteria": [
+          "propose-tasks-from-phase-notes never persists tasks by default",
+          "convert to proposed task succeeds and updates note row atomically",
+          "Direct promotion beyond proposed follows existing transition/policy rules only",
+          "Converted notes excluded from default active queries",
+          "Manifest/instructions/contracts updated"
+        ],
+        "risk": "Medium — task creation policy + evidence paths must stay consistent.",
+        "metadata": {
+          "phaseJournal": {
+            "mvpId": "T-PJ-006",
+            "specPath": "PHASE_JOURNAL.md",
+            "dependsOnMvp": ["T-PJ-002"],
+            "linkedTasks": ["T100029", "T100032"],
+            "relatedDefects": ["T100027"]
+          }
+        },
+        "clientMutationId": "phase78-pj-006-convert-propose-20260503"
+      }
+    }
+  ]
+}

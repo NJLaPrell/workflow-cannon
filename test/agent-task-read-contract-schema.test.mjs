@@ -114,7 +114,14 @@ describe("agent-task-read-contract schema (v1)", () => {
               cancelled: 0,
               total: 1
             },
-            blockingAnalysis: []
+            blockingAnalysis: [],
+            phaseContext: {
+              phaseKey: "78",
+              relevantNotes: [
+                { id: "pn-1", noteType: "follow-up", priority: "normal", summary: "Schema CI" }
+              ],
+              taskSuggestionsFromNotes: []
+            }
           },
           readEnvelope: {
             ok: true,
@@ -148,6 +155,31 @@ describe("agent-task-read-contract schema (v1)", () => {
           total: 0
         },
         blockingAnalysis: []
+      }),
+      true,
+      ajv.errorsText(validate.errors)
+    );
+  });
+
+  it("accepts explicit null phaseContext on next actions", () => {
+    const validate = compileDef(ajv, "agentTaskNextActions");
+    assert.equal(
+      validate({
+        contractVersion: 1,
+        readyQueue: [],
+        suggestedNext: null,
+        stateSummary: {
+          research: 0,
+          proposed: 0,
+          ready: 0,
+          in_progress: 0,
+          blocked: 0,
+          completed: 0,
+          cancelled: 0,
+          total: 0
+        },
+        blockingAnalysis: [],
+        phaseContext: null
       }),
       true,
       ajv.errorsText(validate.errors)

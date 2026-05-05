@@ -141,6 +141,62 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "add-phase-note",
+    "file": "add-phase-note.md",
+    "description": "Create or return (idempotent) a phase-scoped operational note in planning SQLite.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "dismiss-phase-note",
+    "file": "dismiss-phase-note.md",
+    "description": "Mark a phase note dismissed (requires reason; MVP does not persist reason in-schema).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "get-phase-context",
+    "file": "get-phase-context.md",
+    "description": "Return bounded, relevance-ranked active phase notes for current work.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "list-phase-notes",
+    "file": "list-phase-notes.md",
+    "description": "List phase notes for a phase with optional filters (bounded projection).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "propose-tasks-from-phase-notes",
+    "file": "propose-tasks-from-phase-notes.md",
+    "description": "Harvest active follow-up / task-suggestion notes as proposed-task candidates; optional persist upserts phase_note_task_suggestions (no execution tasks).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "convert-phase-note-to-task",
+    "file": "convert-phase-note-to-task.md",
+    "description": "Create a proposed execution task from a convertible phase note and mark the note converted atomically with task persist.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "supersede-phase-note",
+    "file": "supersede-phase-note.md",
+    "description": "Mark a phase note superseded by another active note in the same phase.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "release-evidence-manifest",
     "file": "release-evidence-manifest.md",
     "description": "Build a machine-readable release evidence manifest for phase closeout.",
@@ -244,6 +300,14 @@
     "name": "update-task",
     "file": "update-task.md",
     "description": "Update mutable task fields without lifecycle bypass.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "update-phase-note",
+    "file": "update-phase-note.md",
+    "description": "Patch summary, details, or expires_at on an active phase note (preserves idempotency key and provenance).",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },

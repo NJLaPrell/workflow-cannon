@@ -1,3 +1,5 @@
+import type { AgentNextActionsPhaseContext } from "./agent-phase-journal-read-contract.js";
+
 /**
  * Versioned read-model contract for agent-facing task surfaces.
  *
@@ -123,6 +125,8 @@ export type AgentTaskNextActions = {
     blockedBy: string[];
     blockingCount: number;
   }>;
+  /** Phase journal hints for the canonical phase; omitted when unavailable (see JSON schema). */
+  phaseContext?: AgentNextActionsPhaseContext | null;
 };
 
 export type AgentTaskReadEnvelope<TData> = {

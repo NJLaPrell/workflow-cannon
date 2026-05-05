@@ -47,8 +47,8 @@ Generates one document pair (AI + human) for the given `documentType`, and when 
 - `documentType`: required string basename resolving to both AI and human output targets.
 - `options`:
   - `dryRun?: boolean` (default `false`) - compute outputs/validations without writing files
-  - `overwrite?: boolean` (default `true`) - allow replacing existing files (both surfaces)
-  - `overwriteAi?: boolean` - override `overwrite` for AI surface only
+  - `overwrite?: boolean` (default `true`) - human outputs; when `overwriteAi` is omitted, AI surface follows this flag as well
+  - `overwriteAi?: boolean` - AI surface only; defaults to **`false`** (preserve existing `.ai/` files; read+validate instead of stub)
   - `overwriteHuman?: boolean` - override `overwrite` for human surface only
   - `overwriteRepoRootReadme?: boolean` - override `overwrite` for repo-root `README.md` only (`README.md` target only)
   - `strict?: boolean` (default `true`) - fail on unresolved warnings (validation/conflict/coverage)

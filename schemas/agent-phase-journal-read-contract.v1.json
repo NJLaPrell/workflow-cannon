@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/agent-phase-journal-read-contract.v1.json",
+  "title": "Agent-facing phase journal read contract v1",
+  "description": "Stable projections for phase journal commands. Array caps align with src/modules/task-engine/phase-journal/phase-journal-constants.ts and phase-journal-snapshot-summary.ts (relevantNotes ≤8, taskSuggestionsFromNotes ≤5, topNotes ≤3, refs ≤10, summary ≤280, details ≤1200).",
+  "type": "object",
+  "required": ["schemaVersion", "models"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "models": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "phaseNoteProjection",
+        "phaseNoteTaskSuggestionProjection",
+        "phaseJournalSnapshot",
+        "nextActionsPhaseContext"
+      ],
+      "properties": {
+        "phaseNoteProjection": { "$ref": "#/$defs/agentPhaseNoteProjection" },
+        "phaseNoteTaskSuggestionProjection": { "$ref": "#/$defs/agentPhaseNoteTaskSuggestionProjection" },
+        "phaseJournalSnapshot": { "$ref": "#/$defs/agentPhaseJournalSnapshotBlock" },
+        "nextActionsPhaseContext": { "$ref": "#/$defs/agentNextActionsPhaseContext" }
+      }
+    }
+  },
+  "$defs": {
+    "nullableString": {
+      "type": ["string", "null"]
+    },
+    "agentPhaseJournalHintNote": {
+      "type": "object",
+      "required": ["id", "noteType", "priority", "summary"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "noteType": { "type": "string", "minLength": 1 },
+        "priority": { "type": "string", "minLength": 1 },
+        "summary": { "type": "string", "maxLength": 280 }
+      }
+    },
+    "agentNextActionsPhaseContext": {
+      "type": "object",
+      "required": ["phaseKey", "relevantNotes", "taskSuggestionsFromNotes"],
+      "additionalProperties": false,
+      "properties": {
+        "phaseKey": { "type": "string", "minLength": 1 },
+        "relevantNotes": {
+          "type": "array",
+          "maxItems": 8,
+          "items": { "$ref": "#/$defs/agentPhaseJournalHintNote" }
+        },
+        "taskSuggestionsFromNotes": {
+          "type": "array",
+          "maxItems": 5,
+          "items": { "$ref": "#/$defs/agentPhaseJournalHintNote" }
+        }
+      }
+    },
+    "agentPhaseNoteProjectionRef": {
+      "type": "object",
+      "required": ["type", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "minLength": 1 },
+        "value": { "type": "string", "minLength": 1 }
+      }
+    },
+    "agentPhaseNoteProjection": {
+      "type": "object",
+      "required": [
+        "id",
+        "phaseKey",
+        "phaseLabel",
+        "taskId",
+        "noteType",
+        "summary",
+        "details",
+        "status",
+        "priority",
+        "createdAt",
+        "updatedAt",
+        "expiresAt",
+        "supersededBy",
+        "convertedTaskId",
+        "idempotencyKey",
+        "refs"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "phaseKey": { "type": "string", "minLength": 1 },
+        "phaseLabel": { "$ref": "#/$defs/nullableString" },
+        "taskId": { "$ref": "#/$defs/nullableString" },
+        "noteType": { "type": "string", "minLength": 1 },
+        "summary": { "type": "string", "maxLength": 280 },
+        "details": {
+          "oneOf": [{ "type": "null" }, { "type": "string", "maxLength": 1200 }]
+        },
+        "status": { "type": "string", "minLength": 1 },
+        "priority": { "type": "string", "minLength": 1 },
+        "createdAt": { "type": "string", "minLength": 1 },
+        "updatedAt": { "type": "string", "minLength": 1 },
+        "expiresAt": { "$ref": "#/$defs/nullableString" },
+        "supersededBy": { "$ref": "#/$defs/nullableString" },
+        "convertedTaskId": { "$ref": "#/$defs/nullableString" },
+        "idempotencyKey": { "$ref": "#/$defs/nullableString" },
+        "refs": {
+          "type": "array",
+          "maxItems": 10,
+          "items": { "$ref": "#/$defs/agentPhaseNoteProjectionRef" }
+        }
+      }
+    },
+    "agentPhaseNoteTaskSuggestionProjection": {
+      "type": "object",
+      "required": [
+        "id",
+        "noteId",
+        "title",
+        "description",
+        "suggestedStatus",
+        "suggestedPhaseKey",
+        "suggestedPhaseLabel",
+        "suggestedTaskType",
+        "convertedTaskId",
+        "createdAt",
+        "updatedAt"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "noteId": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1, "maxLength": 4000 },
+        "description": { "type": "string", "minLength": 1, "maxLength": 8000 },
+        "suggestedStatus": { "type": "string", "minLength": 1 },
+        "suggestedPhaseKey": { "type": "string", "minLength": 1 },
+        "suggestedPhaseLabel": { "$ref": "#/$defs/nullableString" },
+        "suggestedTaskType": { "$ref": "#/$defs/nullableString" },
+        "convertedTaskId": { "$ref": "#/$defs/nullableString" },
+        "createdAt": { "type": "string", "minLength": 1 },
+        "updatedAt": { "type": "string", "minLength": 1 }
+      }
+    },
+    "agentPhaseJournalSnapshotBlock": {
+      "type": "object",
+      "required": [
+        "phaseKey",
+        "phaseLabel",
+        "activeNoteCount",
+        "criticalCount",
+        "openFollowUpCount",
+        "topNotes"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "phaseKey": { "type": "string", "minLength": 1 },
+        "phaseLabel": { "$ref": "#/$defs/nullableString" },
+        "activeNoteCount": { "type": "integer", "minimum": 0 },
+        "criticalCount": { "type": "integer", "minimum": 0 },
+        "openFollowUpCount": { "type": "integer", "minimum": 0 },
+        "topNotes": {
+          "type": "array",
+          "maxItems": 3,
+          "items": { "$ref": "#/$defs/agentPhaseJournalHintNote" }
+        }
+      }
+    }
+  }
+}

@@ -108,6 +108,22 @@
       "user"
     ]
   },
+  "kit.phaseJournal.requirePolicyApprovalForCriticalDismissSupersede": {
+    "key": "kit.phaseJournal.requirePolicyApprovalForCriticalDismissSupersede",
+    "type": "boolean",
+    "description": "When true, dismissing or superseding an active critical-priority phase note requires a valid JSON policyApproval object on the same workspace-kit run invocation (Tier B-style; see POLICY-APPROVAL). Default false preserves pre-policy MVP behavior.",
+    "default": false,
+    "domainScope": "project",
+    "owningModule": "task-engine",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
   "modules.enabled": {
     "key": "modules.enabled",
     "type": "array",

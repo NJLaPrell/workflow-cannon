@@ -1,7 +1,11 @@
 {
   "version": 1,
-  "description": "Source (.ai) → human render (docs/maintainers). Regenerate list when adding paths; drift + orphan checks consume this file.",
+  "description": "Source (.ai) \u2192 human render (docs/maintainers). Regenerate list when adding paths; drift + orphan checks consume this file.",
   "mappings": [
+    {
+      "source": ".ai/playbooks/README.md",
+      "output": "docs/maintainers/playbooks/README.md"
+    },
     {
       "source": ".ai/playbooks/improvement-scout.md",
       "output": "docs/maintainers/playbooks/improvement-scout.md"
@@ -17,10 +21,6 @@
     {
       "source": ".ai/playbooks/phase-closeout-and-release.md",
       "output": "docs/maintainers/playbooks/phase-closeout-and-release.md"
-    },
-    {
-      "source": ".ai/playbooks/README.md",
-      "output": "docs/maintainers/playbooks/README.md"
     },
     {
       "source": ".ai/playbooks/skill-attachments.md",
@@ -45,6 +45,10 @@
     {
       "source": ".ai/playbooks/workspace-kit-chat-onboarding.md",
       "output": "docs/maintainers/playbooks/workspace-kit-chat-onboarding.md"
+    },
+    {
+      "source": ".ai/runbooks/README.md",
+      "output": "docs/maintainers/runbooks/README.md"
     },
     {
       "source": ".ai/runbooks/agent-guidance-onboarding.md",
@@ -123,16 +127,16 @@
       "output": "docs/maintainers/runbooks/parity-validation-flow.md"
     },
     {
+      "source": ".ai/runbooks/phase-journal-retention.md",
+      "output": "docs/maintainers/runbooks/phase-journal-retention.md"
+    },
+    {
       "source": ".ai/runbooks/planning-workflow.md",
       "output": "docs/maintainers/runbooks/planning-workflow.md"
     },
     {
       "source": ".ai/runbooks/principal-architectural-review-themes.md",
       "output": "docs/maintainers/runbooks/principal-architectural-review-themes.md"
-    },
-    {
-      "source": ".ai/runbooks/README.md",
-      "output": "docs/maintainers/runbooks/README.md"
     },
     {
       "source": ".ai/runbooks/recommendation-and-transcript-triggers.md",

@@ -1358,6 +1358,42 @@ test("phase-status reads canonical phase and optional task counts", async () => 
   assert.equal(result.data.exportStatus.exists, true);
 });
 
+test("phase-status includePhaseJournalSummary reports activeCriticalNoteCount", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T7210", phaseKey: "72", phase: "Phase 72", status: "ready" }));
+  });
+  await taskEngineModule.onCommand(
+    { name: "set-current-phase", args: { currentKitPhase: "72", expectedWorkspaceRevision: 0 } },
+    ctx
+  );
+  await taskEngineModule.onCommand(
+    {
+      name: "add-phase-note",
+      args: { phaseKey: "72", noteType: "finding", summary: "crit one", priority: "critical" }
+    },
+    ctx
+  );
+  await taskEngineModule.onCommand(
+    {
+      name: "add-phase-note",
+      args: { phaseKey: "72", noteType: "finding", summary: "norm one", priority: "normal" }
+    },
+    ctx
+  );
+
+  const result = await taskEngineModule.onCommand(
+    { name: "phase-status", args: { includePhaseJournalSummary: true } },
+    ctx
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.phaseJournal.supported, true);
+  assert.equal(result.data.phaseJournal.phaseKey, "72");
+  assert.equal(result.data.phaseJournal.activeCriticalNoteCount, 1);
+});
+
 test("phase-status export freshness follows workspace-status revision, not planning DB mtime", async () => {
   const workspace = await tmpDir();
   const ctx = sqliteTaskEngineCtx(workspace);
@@ -1815,6 +1851,811 @@ test("taskEngineModule run-transition idempotency conflicts on different payload
   );
   assert.equal(conflict.ok, false);
   assert.equal(conflict.code, "idempotency-key-conflict");
+});
+
+test("taskEngineModule run-transition persists phaseNotes in the same transaction as start", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T9843",
+        status: "ready",
+        phaseKey: "78",
+        phase: "Phase 78"
+      })
+    );
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const tr = await taskEngineModule.onCommand(
+    {
+      name: "run-transition",
+      args: {
+        taskId: "T9843",
+        action: "start",
+        expectedPlanningGeneration: 1,
+        phaseNotes: [
+          { noteType: "finding", summary: "shipped with transition", idempotencyKey: "rt-9843-note-a" }
+        ]
+      }
+    },
+    ctx
+  );
+  assert.equal(tr.ok, true);
+  const dbPath = path.join(workspace, ".workspace-kit", "tasks", "workspace-kit.db");
+  const db = new Database(dbPath);
+  try {
+    const row = db
+      .prepare("SELECT source_command, planning_generation FROM phase_notes WHERE idempotency_key = ?")
+      .get("rt-9843-note-a");
+    assert.ok(row);
+    assert.equal(row.source_command, "run-transition");
+    assert.equal(Number(row.planning_generation), 2);
+  } finally {
+    db.close();
+  }
+});
+
+test("taskEngineModule run-transition rejects invalid phaseNotes without transitioning", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T9844",
+        status: "ready",
+        phaseKey: "78",
+        phase: "Phase 78"
+      })
+    );
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const bad = await taskEngineModule.onCommand(
+    {
+      name: "run-transition",
+      args: {
+        taskId: "T9844",
+        action: "start",
+        expectedPlanningGeneration: 1,
+        phaseNotes: [{ noteType: "invalid-type", summary: "nope" }]
+      }
+    },
+    ctx
+  );
+  assert.equal(bad.ok, false);
+  assert.equal(bad.code, "invalid-phase-note-type");
+  const got = await taskEngineModule.onCommand({ name: "get-task", args: { taskId: "T9844" } }, ctx);
+  assert.equal(got.data.task.status, "ready");
+});
+
+test("taskEngineModule run-transition rejects phaseNotes with expiresAt in the past", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T9846",
+        status: "ready",
+        phaseKey: "78",
+        phase: "Phase 78"
+      })
+    );
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const past = new Date(Date.now() - 3600000).toISOString();
+  const bad = await taskEngineModule.onCommand(
+    {
+      name: "run-transition",
+      args: {
+        taskId: "T9846",
+        action: "start",
+        expectedPlanningGeneration: 1,
+        phaseNotes: [{ noteType: "finding", summary: "late expiry", expiresAt: past }]
+      }
+    },
+    ctx
+  );
+  assert.equal(bad.ok, false);
+  assert.equal(bad.code, "invalid-phase-note-args");
+});
+
+test("taskEngineModule run-transition idempotent replay does not re-apply phaseNotes inserts", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T9845",
+        status: "ready",
+        phaseKey: "78",
+        phase: "Phase 78"
+      })
+    );
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const first = await taskEngineModule.onCommand(
+    {
+      name: "run-transition",
+      args: {
+        taskId: "T9845",
+        action: "start",
+        expectedPlanningGeneration: 1,
+        clientMutationId: "rt-phase-notes-replay",
+        phaseNotes: [{ noteType: "finding", summary: "once", idempotencyKey: "note-once-9845" }]
+      }
+    },
+    ctx
+  );
+  assert.equal(first.ok, true);
+  const replay = await taskEngineModule.onCommand(
+    {
+      name: "run-transition",
+      args: {
+        taskId: "T9845",
+        action: "start",
+        clientMutationId: "rt-phase-notes-replay",
+        phaseNotes: [{ noteType: "finding", summary: "would duplicate if re-run" }]
+      }
+    },
+    ctx
+  );
+  assert.equal(replay.ok, true);
+  assert.equal(replay.code, "transition-idempotent-replay");
+  const dbPath = path.join(workspace, ".workspace-kit", "tasks", "workspace-kit.db");
+  const db = new Database(dbPath);
+  try {
+    const c = db.prepare("SELECT COUNT(*) AS c FROM phase_notes WHERE idempotency_key = ?").get("note-once-9845");
+    assert.equal(Number(c.c), 1);
+  } finally {
+    db.close();
+  }
+});
+
+test("taskEngineModule propose-tasks-from-phase-notes and convert-phase-note-to-task", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T9901",
+        status: "ready",
+        phaseKey: "88",
+        phase: "Phase 88"
+      })
+    );
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const noteRes = await taskEngineModule.onCommand(
+    {
+      name: "add-phase-note",
+      args: {
+        phaseKey: "88",
+        noteType: "task-suggestion",
+        summary: "Proposal: tighten CI gate",
+        taskId: "T9901"
+      }
+    },
+    ctx
+  );
+  assert.equal(noteRes.ok, true);
+  const nid = noteRes.data.note.id;
+
+  const prop = await taskEngineModule.onCommand(
+    {
+      name: "propose-tasks-from-phase-notes",
+      args: { phaseKey: "88" }
+    },
+    ctx
+  );
+  assert.equal(prop.ok, true);
+  assert.equal(prop.data.persisted, false);
+  assert.ok(Array.isArray(prop.data.proposals));
+  assert.ok(prop.data.proposals.some((p) => p.id === nid));
+
+  const conv = await taskEngineModule.onCommand(
+    {
+      name: "convert-phase-note-to-task",
+      args: {
+        noteId: nid,
+        expectedPlanningGeneration: 1
+      }
+    },
+    ctx
+  );
+  assert.equal(conv.ok, true);
+  assert.equal(conv.data.task.status, "proposed");
+  assert.equal(conv.data.task.metadata.phaseJournal.convertedFromNoteId, nid);
+
+  const dup = await taskEngineModule.onCommand(
+    {
+      name: "convert-phase-note-to-task",
+      args: {
+        noteId: nid,
+        expectedPlanningGeneration: conv.data.planningGeneration
+      }
+    },
+    ctx
+  );
+  assert.equal(dup.ok, false);
+  assert.equal(dup.code, "phase-note-not-convertible");
+});
+
+test("taskEngineModule propose persist, convert with suggestionId, dismiss deletes suggestion rows", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T9920",
+        status: "ready",
+        phaseKey: "90",
+        phase: "Phase 90"
+      })
+    );
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const noteRes = await taskEngineModule.onCommand(
+    {
+      name: "add-phase-note",
+      args: {
+        phaseKey: "90",
+        noteType: "follow-up",
+        summary: "Track the flaky gate",
+        taskId: "T9920"
+      }
+    },
+    ctx
+  );
+  assert.equal(noteRes.ok, true);
+  const nid = noteRes.data.note.id;
+
+  const prop = await taskEngineModule.onCommand(
+    {
+      name: "propose-tasks-from-phase-notes",
+      args: { phaseKey: "90", persist: true }
+    },
+    ctx
+  );
+  assert.equal(prop.ok, true);
+  assert.equal(prop.code, "phase-note-proposals-persisted");
+  assert.equal(prop.data.persisted, true);
+  assert.equal(prop.data.persistedSuggestions.length, 1);
+  const sid = prop.data.persistedSuggestions[0].id;
+  assert.equal(prop.data.persistedSuggestions[0].noteId, nid);
+
+  const dbPath = path.join(workspace, ".workspace-kit", "tasks", "workspace-kit.db");
+  const db0 = new Database(dbPath);
+  try {
+    const c0 = db0.prepare("SELECT COUNT(*) AS c FROM phase_note_task_suggestions WHERE note_id = ?").get(nid);
+    assert.equal(Number(c0.c), 1);
+  } finally {
+    db0.close();
+  }
+
+  const conv = await taskEngineModule.onCommand(
+    {
+      name: "convert-phase-note-to-task",
+      args: {
+        noteId: nid,
+        suggestionId: sid,
+        expectedPlanningGeneration: 1
+      }
+    },
+    ctx
+  );
+  assert.equal(conv.ok, true);
+  const db1 = new Database(dbPath);
+  try {
+    const row = db1.prepare("SELECT converted_task_id FROM phase_note_task_suggestions WHERE id = ?").get(sid);
+    assert.equal(typeof row.converted_task_id, "string");
+    assert.ok(row.converted_task_id.length > 0);
+  } finally {
+    db1.close();
+  }
+
+  const noteB = await taskEngineModule.onCommand(
+    {
+      name: "add-phase-note",
+      args: {
+        phaseKey: "90",
+        noteType: "task-suggestion",
+        summary: "Another idea",
+        taskId: "T9920"
+      }
+    },
+    ctx
+  );
+  assert.equal(noteB.ok, true);
+  const nidB = noteB.data.note.id;
+  await taskEngineModule.onCommand(
+    { name: "propose-tasks-from-phase-notes", args: { phaseKey: "90", persist: true } },
+    ctx
+  );
+
+  const dismiss = await taskEngineModule.onCommand(
+    {
+      name: "dismiss-phase-note",
+      args: { noteId: nidB, reason: "not doing it" }
+    },
+    ctx
+  );
+  assert.equal(dismiss.ok, true);
+  const db2 = new Database(dbPath);
+  try {
+    const c1 = db2.prepare("SELECT COUNT(*) AS c FROM phase_note_task_suggestions WHERE note_id = ?").get(nidB);
+    assert.equal(Number(c1.c), 0);
+  } finally {
+    db2.close();
+  }
+});
+
+test("PHASE_JOURNAL example workflow — golden integration (T100040)", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T10040G1",
+        status: "ready",
+        phaseKey: "81",
+        phase: "Phase 81",
+        title: "Golden phase journal workflow carrier"
+      })
+    );
+  });
+  const dbPath = path.join(workspace, ".workspace-kit", "tasks", "workspace-kit.db");
+  const dbu = new Database(dbPath);
+  try {
+    dbu.prepare("UPDATE kit_workspace_status SET current_kit_phase = ? WHERE id = 1").run("81");
+  } finally {
+    dbu.close();
+  }
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const pol = {
+    confirmed: true,
+    rationale: "Golden integration test: Tier A run-transition start with phaseNotes."
+  };
+
+  let gen = 1;
+  const bump = (label, res) => {
+    assert.equal(res.ok, true, `${label}: ${res.message ?? res.code}`);
+    if (typeof res.data?.planningGeneration === "number") {
+      gen = res.data.planningGeneration;
+    }
+  };
+
+  const gpc0 = await taskEngineModule.onCommand(
+    { name: "get-phase-context", args: { taskId: "T10040G1", limit: 8 } },
+    ctx
+  );
+  bump("get-phase-context (empty journal)", gpc0);
+  assert.equal(gpc0.data.phaseKey, "81");
+  assert.equal(gpc0.data.count, 0);
+
+  const noteA = await taskEngineModule.onCommand(
+    {
+      name: "add-phase-note",
+      args: {
+        phaseKey: "81",
+        noteType: "task-suggestion",
+        summary: "Golden: extract flaky sync helper",
+        taskId: "T10040G1",
+        idempotencyKey: "golden-81-suggestion-main"
+      }
+    },
+    ctx
+  );
+  bump("add-phase-note", noteA);
+  const nid = noteA.data.note.id;
+
+  const listed = await taskEngineModule.onCommand({ name: "list-phase-notes", args: { phaseKey: "81" } }, ctx);
+  bump("list-phase-notes", listed);
+  assert.ok(listed.data.notes.some((n) => n.id === nid));
+
+  const gpc1 = await taskEngineModule.onCommand(
+    { name: "get-phase-context", args: { taskId: "T10040G1", limit: 10 } },
+    ctx
+  );
+  bump("get-phase-context (with notes)", gpc1);
+  assert.ok(gpc1.data.notes.some((n) => n.id === nid));
+
+  const rt = await taskEngineModule.onCommand(
+    {
+      name: "run-transition",
+      args: {
+        taskId: "T10040G1",
+        action: "start",
+        expectedPlanningGeneration: gen,
+        policyApproval: pol,
+        phaseNotes: [
+          { noteType: "finding", summary: "Golden: watch CI timeout on cold cache", idempotencyKey: "golden-81-rt-note" }
+        ]
+      }
+    },
+    ctx
+  );
+  bump("run-transition start + phaseNotes", rt);
+  assert.equal(rt.data.evidence.toState, "in_progress");
+
+  const snap = await taskEngineModule.onCommand({ name: "agent-session-snapshot", args: {} }, ctx);
+  bump("agent-session-snapshot", snap);
+  assert.ok(snap.data.phaseJournal);
+  assert.equal(snap.data.phaseJournal.phaseKey, "81");
+  assert.ok(snap.data.phaseJournal.activeNoteCount >= 1);
+  assert.ok(Array.isArray(snap.data.phaseJournal.topNotes));
+  assert.ok(snap.data.phaseJournal.topNotes.some((n) => n.summary.includes("Golden:")));
+
+  const na = await taskEngineModule.onCommand({ name: "get-next-actions", args: {} }, ctx);
+  bump("get-next-actions", na);
+  assert.ok(na.data.phaseContext);
+  assert.equal(na.data.phaseContext.phaseKey, "81");
+  const inSuggestions = na.data.phaseContext.taskSuggestionsFromNotes.some((x) => x.id === nid);
+  const inRelevant = na.data.phaseContext.relevantNotes.some((x) => x.id === nid);
+  assert.ok(inSuggestions || inRelevant, "expected phase note in get-next-actions phaseContext");
+
+  const prop = await taskEngineModule.onCommand(
+    { name: "propose-tasks-from-phase-notes", args: { phaseKey: "81", persist: true } },
+    ctx
+  );
+  bump("propose-tasks-from-phase-notes persist", prop);
+  assert.equal(prop.code, "phase-note-proposals-persisted");
+  const sid = prop.data.persistedSuggestions.find((s) => s.noteId === nid)?.id;
+  assert.ok(sid, "expected persisted suggestion row for convertible note");
+
+  const conv = await taskEngineModule.onCommand(
+    {
+      name: "convert-phase-note-to-task",
+      args: { noteId: nid, suggestionId: sid, expectedPlanningGeneration: gen }
+    },
+    ctx
+  );
+  bump("convert-phase-note-to-task", conv);
+  assert.equal(conv.data.task.status, "proposed");
+  assert.equal(conv.data.task.metadata.phaseJournal.convertedFromNoteId, nid);
+});
+
+test("taskEngineModule supersede-phase-note deletes suggestions for superseded note", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T9921",
+        status: "ready",
+        phaseKey: "91",
+        phase: "Phase 91"
+      })
+    );
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const a = await taskEngineModule.onCommand(
+    {
+      name: "add-phase-note",
+      args: { phaseKey: "91", noteType: "follow-up", summary: "Old thread", taskId: "T9921" }
+    },
+    ctx
+  );
+  const b = await taskEngineModule.onCommand(
+    {
+      name: "add-phase-note",
+      args: { phaseKey: "91", noteType: "finding", summary: "Replacement context", taskId: "T9921" }
+    },
+    ctx
+  );
+  assert.equal(a.ok, true);
+  assert.equal(b.ok, true);
+  const idA = a.data.note.id;
+  const idB = b.data.note.id;
+
+  await taskEngineModule.onCommand({ name: "propose-tasks-from-phase-notes", args: { phaseKey: "91", persist: true } }, ctx);
+
+  const dbPath = path.join(workspace, ".workspace-kit", "tasks", "workspace-kit.db");
+  const dbBefore = new Database(dbPath);
+  let hadSuggestion = false;
+  try {
+    const c = dbBefore.prepare("SELECT COUNT(*) AS c FROM phase_note_task_suggestions WHERE note_id = ?").get(idA);
+    hadSuggestion = Number(c.c) === 1;
+  } finally {
+    dbBefore.close();
+  }
+  assert.equal(hadSuggestion, true);
+
+  const sup = await taskEngineModule.onCommand(
+    { name: "supersede-phase-note", args: { noteId: idA, supersededBy: idB } },
+    ctx
+  );
+  assert.equal(sup.ok, true);
+  const dbAfter = new Database(dbPath);
+  try {
+    const c2 = dbAfter.prepare("SELECT COUNT(*) AS c FROM phase_note_task_suggestions WHERE note_id = ?").get(idA);
+    assert.equal(Number(c2.c), 0);
+  } finally {
+    dbAfter.close();
+  }
+});
+
+test("taskEngineModule critical dismiss/supersede requires policyApproval when kit.phaseJournal flag set", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T9930", status: "ready", phaseKey: "92", phase: "Phase 92" }));
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, {
+    tasks: { planningGenerationPolicy: "require" },
+    kit: { phaseJournal: { requirePolicyApprovalForCriticalDismissSupersede: true } }
+  });
+
+  const crit = await taskEngineModule.onCommand(
+    {
+      name: "add-phase-note",
+      args: { phaseKey: "92", noteType: "finding", summary: "Blocker", priority: "critical", taskId: "T9930" }
+    },
+    ctx
+  );
+  assert.equal(crit.ok, true);
+  const nid = crit.data.note.id;
+
+  const dismissNo = await taskEngineModule.onCommand(
+    { name: "dismiss-phase-note", args: { noteId: nid, reason: "waived after review" } },
+    ctx
+  );
+  assert.equal(dismissNo.ok, false);
+  assert.equal(dismissNo.code, "phase-note-critical-policy-approval-required");
+
+  const dismissOk = await taskEngineModule.onCommand(
+    {
+      name: "dismiss-phase-note",
+      args: {
+        noteId: nid,
+        reason: "waived after review",
+        policyApproval: { confirmed: true, rationale: "Maintainer approved dismiss of critical note in test." }
+      }
+    },
+    ctx
+  );
+  assert.equal(dismissOk.ok, true);
+
+  const a = await taskEngineModule.onCommand(
+    {
+      name: "add-phase-note",
+      args: { phaseKey: "92", noteType: "finding", summary: "Old critical", priority: "critical", taskId: "T9930" }
+    },
+    ctx
+  );
+  const b = await taskEngineModule.onCommand(
+    {
+      name: "add-phase-note",
+      args: { phaseKey: "92", noteType: "finding", summary: "Replacement", priority: "normal", taskId: "T9930" }
+    },
+    ctx
+  );
+  assert.equal(a.ok, true);
+  assert.equal(b.ok, true);
+  const idA = a.data.note.id;
+  const idB = b.data.note.id;
+
+  const supNo = await taskEngineModule.onCommand(
+    { name: "supersede-phase-note", args: { noteId: idA, supersededBy: idB } },
+    ctx
+  );
+  assert.equal(supNo.ok, false);
+  assert.equal(supNo.code, "phase-note-critical-policy-approval-required");
+
+  const supOk = await taskEngineModule.onCommand(
+    {
+      name: "supersede-phase-note",
+      args: {
+        noteId: idA,
+        supersededBy: idB,
+        policyApproval: { confirmed: true, rationale: "Maintainer approved supersede of critical note in test." }
+      }
+    },
+    ctx
+  );
+  assert.equal(supOk.ok, true);
+});
+
+test("taskEngineModule list/get/propose default phaseKey to canonical workspace phase", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T9950", status: "ready", phaseKey: "78", phase: "Phase 78" }));
+  });
+  const dbPath = path.join(workspace, ".workspace-kit", "tasks", "workspace-kit.db");
+  const dbu = new Database(dbPath);
+  try {
+    dbu.prepare("UPDATE kit_workspace_status SET current_kit_phase = ? WHERE id = 1").run("78");
+  } finally {
+    dbu.close();
+  }
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+
+  const n77 = await taskEngineModule.onCommand(
+    {
+      name: "add-phase-note",
+      args: { phaseKey: "77", noteType: "finding", summary: "old phase note" }
+    },
+    ctx
+  );
+  assert.equal(n77.ok, true);
+  const n78 = await taskEngineModule.onCommand(
+    {
+      name: "add-phase-note",
+      args: {
+        phaseKey: "78",
+        noteType: "finding",
+        summary: "current phase note",
+        taskId: "T9950"
+      }
+    },
+    ctx
+  );
+  assert.equal(n78.ok, true);
+
+  const listed = await taskEngineModule.onCommand({ name: "list-phase-notes", args: {} }, ctx);
+  assert.equal(listed.ok, true);
+  assert.equal(listed.data.phaseKey, "78");
+  assert.equal(listed.data.phaseKeySource, "workspace-status");
+  const ids = listed.data.notes.map((n) => n.id);
+  assert.ok(ids.includes(n78.data.note.id));
+  assert.ok(!ids.includes(n77.data.note.id));
+
+  const oldList = await taskEngineModule.onCommand({ name: "list-phase-notes", args: { phaseKey: "77" } }, ctx);
+  assert.equal(oldList.ok, true);
+  assert.equal(oldList.data.phaseKeySource, "phaseKey");
+  assert.ok(oldList.data.notes.some((n) => n.id === n77.data.note.id));
+
+  const prop = await taskEngineModule.onCommand({ name: "propose-tasks-from-phase-notes", args: {} }, ctx);
+  assert.equal(prop.ok, true);
+  assert.equal(prop.data.phaseKey, "78");
+  assert.equal(prop.data.phaseKeySource, "workspace-status");
+
+  const gpc = await taskEngineModule.onCommand({ name: "get-phase-context", args: {} }, ctx);
+  assert.equal(gpc.ok, true);
+  assert.equal(gpc.data.phaseKeySource, "workspace-status");
+  assert.ok(gpc.data.notes.some((n) => n.id === n78.data.note.id));
+  assert.ok(!gpc.data.notes.some((n) => n.id === n77.data.note.id));
+});
+
+test("taskEngineModule passive expiry hides active rows; includeExpired lists; update fixes convert", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, () => {});
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const past = new Date(Date.now() - 86400000).toISOString();
+  const addPast = await taskEngineModule.onCommand(
+    {
+      name: "add-phase-note",
+      args: { phaseKey: "99", noteType: "finding", summary: "bad expiry", expiresAt: past }
+    },
+    ctx
+  );
+  assert.equal(addPast.ok, false);
+
+  const future = new Date(Date.now() + 86400000 * 400).toISOString();
+  const add = await taskEngineModule.onCommand(
+    {
+      name: "add-phase-note",
+      args: {
+        phaseKey: "99",
+        noteType: "task-suggestion",
+        summary: "Harvest me",
+        expiresAt: future,
+        idempotencyKey: "passive-expiry-99"
+      }
+    },
+    ctx
+  );
+  assert.equal(add.ok, true);
+  const nid = add.data.note.id;
+
+  const dbPath = path.join(workspace, ".workspace-kit", "tasks", "workspace-kit.db");
+  const db = new Database(dbPath);
+  try {
+    const brief = new Date(Date.now() - 2000).toISOString();
+    db.prepare("UPDATE phase_notes SET expires_at = ? WHERE id = ?").run(brief, nid);
+  } finally {
+    db.close();
+  }
+
+  const listed = await taskEngineModule.onCommand({ name: "list-phase-notes", args: { phaseKey: "99" } }, ctx);
+  assert.equal(listed.ok, true);
+  assert.ok(!listed.data.notes.some((n) => n.id === nid));
+
+  const listedInc = await taskEngineModule.onCommand(
+    { name: "list-phase-notes", args: { phaseKey: "99", includeExpired: true } },
+    ctx
+  );
+  assert.ok(listedInc.data.notes.some((n) => n.id === nid));
+
+  const prop = await taskEngineModule.onCommand({ name: "propose-tasks-from-phase-notes", args: { phaseKey: "99" } }, ctx);
+  assert.equal(prop.ok, true);
+  assert.ok(!prop.data.proposals.some((p) => p.id === nid));
+
+  const convBlock = await taskEngineModule.onCommand(
+    { name: "convert-phase-note-to-task", args: { noteId: nid, expectedPlanningGeneration: 1 } },
+    ctx
+  );
+  assert.equal(convBlock.ok, false);
+  assert.equal(convBlock.code, "phase-note-expired");
+
+  const upd = await taskEngineModule.onCommand(
+    { name: "update-phase-note", args: { noteId: nid, expiresAt: future } },
+    ctx
+  );
+  assert.equal(upd.ok, true);
+  assert.equal(upd.data.note.expiresAt, future);
+
+  const conv = await taskEngineModule.onCommand(
+    { name: "convert-phase-note-to-task", args: { noteId: nid, expectedPlanningGeneration: upd.data.planningGeneration } },
+    ctx
+  );
+  assert.equal(conv.ok, true);
+});
+
+test("taskEngineModule phase journal secret guard rejects shaped tokens", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T9847x",
+        status: "ready",
+        phaseKey: "78",
+        phase: "Phase 78"
+      })
+    );
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const badAdd = await taskEngineModule.onCommand(
+    {
+      name: "add-phase-note",
+      args: {
+        phaseKey: "78",
+        noteType: "finding",
+        summary: `token ghp_${"a".repeat(36)}`
+      }
+    },
+    ctx
+  );
+  assert.equal(badAdd.ok, false);
+  assert.equal(badAdd.code, "phase-note-secret-rejected");
+
+  const badRt = await taskEngineModule.onCommand(
+    {
+      name: "run-transition",
+      args: {
+        taskId: "T9847x",
+        action: "start",
+        expectedPlanningGeneration: 1,
+        phaseNotes: [{ noteType: "finding", summary: `xoxb-${"1".repeat(12)}-more` }]
+      }
+    },
+    ctx
+  );
+  assert.equal(badRt.ok, false);
+  assert.equal(badRt.code, "phase-note-secret-rejected");
+
+  const noteOk = await taskEngineModule.onCommand(
+    {
+      name: "add-phase-note",
+      args: { phaseKey: "78", noteType: "task-suggestion", summary: "Clean harvest suggestion" }
+    },
+    ctx
+  );
+  assert.equal(noteOk.ok, true);
+  const nid = noteOk.data.note.id;
+
+  const badConv = await taskEngineModule.onCommand(
+    {
+      name: "convert-phase-note-to-task",
+      args: {
+        noteId: nid,
+        title: `npm_${"z".repeat(40)}`,
+        expectedPlanningGeneration: noteOk.data.planningGeneration
+      }
+    },
+    ctx
+  );
+  assert.equal(badConv.ok, false);
+  assert.equal(badConv.code, "phase-note-secret-rejected");
+});
+
+test("taskEngineModule list-phase-notes without phaseKey fails when phase is not inferable", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, () => {});
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  const listed = await taskEngineModule.onCommand({ name: "list-phase-notes", args: {} }, ctx);
+  assert.equal(listed.ok, false);
+  assert.equal(listed.code, "phase-note-phase-unresolved");
 });
 
 test("taskEngineModule agent-mutation-plan prepares sensitive run-transition with lifecycle context", async () => {

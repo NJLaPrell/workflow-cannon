@@ -10,7 +10,7 @@ type SqliteDatabase = InstanceType<typeof Database>;
  */
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 18;
+export const KIT_SQLITE_USER_VERSION = 20;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 export const TASK_ENGINE_DEPENDENCIES_TABLE = "task_engine_dependencies";
@@ -846,6 +846,86 @@ FROM kit_task_checkpoints;
   }
 }
 
+/** Phase journal (T100028): phase-scoped operational notes + refs in planning SQLite. */
+function migrateV18ToV19(db: SqliteDatabase): void {
+  if (tableExists(db, "phase_notes")) {
+    return;
+  }
+  db.exec(`
+CREATE TABLE phase_notes (
+  id TEXT PRIMARY KEY,
+  phase_key TEXT NOT NULL,
+  phase_label TEXT,
+  task_id TEXT,
+  author TEXT,
+  author_kind TEXT,
+  session_id TEXT,
+  source_command TEXT,
+  planning_generation INTEGER,
+  policy_trace_id TEXT,
+  note_type TEXT NOT NULL,
+  summary TEXT NOT NULL,
+  details TEXT,
+  status TEXT NOT NULL DEFAULT 'active',
+  priority TEXT NOT NULL DEFAULT 'normal',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  expires_at TEXT,
+  superseded_by TEXT,
+  converted_task_id TEXT,
+  idempotency_key TEXT
+);
+CREATE TABLE phase_note_refs (
+  id TEXT PRIMARY KEY,
+  note_id TEXT NOT NULL,
+  ref_type TEXT NOT NULL,
+  ref_value TEXT NOT NULL,
+  FOREIGN KEY (note_id) REFERENCES phase_notes(id)
+);
+CREATE INDEX idx_phase_notes_phase_status
+  ON phase_notes (phase_key, status, priority, created_at);
+CREATE INDEX idx_phase_notes_task
+  ON phase_notes (task_id);
+CREATE INDEX idx_phase_notes_idempotency
+  ON phase_notes (idempotency_key);
+CREATE UNIQUE INDEX idx_phase_notes_idempotency_unique
+  ON phase_notes (idempotency_key)
+  WHERE idempotency_key IS NOT NULL;
+CREATE INDEX idx_phase_note_refs_note
+  ON phase_note_refs (note_id);
+CREATE INDEX idx_phase_note_refs_lookup
+  ON phase_note_refs (ref_type, ref_value);
+`);
+}
+
+/** Phase journal task suggestions (T100034): structured harvest rows keyed by phase note. */
+function migrateV19ToV20(db: SqliteDatabase): void {
+  if (tableExists(db, "phase_note_task_suggestions")) {
+    return;
+  }
+  db.exec(`
+CREATE TABLE phase_note_task_suggestions (
+  id TEXT PRIMARY KEY,
+  note_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  suggested_status TEXT NOT NULL DEFAULT 'proposed',
+  suggested_phase_key TEXT NOT NULL,
+  suggested_phase_label TEXT,
+  suggested_task_type TEXT,
+  acceptance_criteria_json TEXT,
+  converted_task_id TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY (note_id) REFERENCES phase_notes(id)
+);
+CREATE UNIQUE INDEX idx_phase_note_task_suggestions_note_unique
+  ON phase_note_task_suggestions(note_id);
+CREATE INDEX idx_phase_note_task_suggestions_phase_created
+  ON phase_note_task_suggestions(suggested_phase_key, created_at);
+`);
+}
+
 /**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
@@ -952,6 +1032,16 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
     migrateV17ToV18(db);
     db.pragma("user_version = 18");
     current = 18;
+  }
+  if (current < 19) {
+    migrateV18ToV19(db);
+    db.pragma("user_version = 19");
+    current = 19;
+  }
+  if (current < 20) {
+    migrateV19ToV20(db);
+    db.pragma("user_version = 20");
+    current = 20;
   }
 }
 
