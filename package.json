@@ -30,6 +30,7 @@
   },
   "scripts": {
     "postinstall": "node scripts/ensure-native-sqlite.mjs",
+    "setup:dev": "node scripts/setup-dev.mjs",
     "wk": "node dist/cli.js",
     "build": "tsc -p tsconfig.json",
     "rebuild-sqlite": "pnpm rebuild better-sqlite3",
@@ -72,6 +73,8 @@
     "dist",
     "fixtures/cae/golden",
     "scripts/ensure-native-sqlite.mjs",
+    "scripts/native-sqlite-diagnostics.mjs",
+    "scripts/setup-dev.mjs",
     "src/modules/context-activation/instructions",
     "src/modules/documentation",
     "schemas",

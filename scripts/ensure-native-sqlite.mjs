@@ -6,20 +6,18 @@
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import {
+  classifyNativeSqliteErrorMessage,
+  formatNodeRuntimeIdentity,
+  nativeSqliteRecoveryHint
+} from "./native-sqlite-diagnostics.mjs";
 
 const pkgRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 /** Directory where the user ran install (npm/pnpm set this for lifecycle scripts). */
 const installRoot = process.env.INIT_CWD?.trim() || pkgRoot;
 
-function needsRebuildMessage(msg) {
-  return (
-    msg.includes("NODE_MODULE_VERSION") ||
-    msg.includes("was compiled against a different Node.js") ||
-    msg.includes("better_sqlite3.node")
-  );
-}
-
 async function main() {
+  let classification;
   try {
     const { default: Database } = await import("better-sqlite3");
     const db = new Database(":memory:");
@@ -27,8 +25,10 @@ async function main() {
     return;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    if (!needsRebuildMessage(msg)) {
+    classification = classifyNativeSqliteErrorMessage(msg);
+    if (!classification.rebuildRecommended) {
       console.error("[workspace-kit] better-sqlite3 load failed:", msg);
+      console.error(`[workspace-kit] ${nativeSqliteRecoveryHint(classification)}`);
       console.error(
         "[workspace-kit] Install / troubleshooting: docs/maintainers/runbooks/native-sqlite-consumer-install.md"
       );
@@ -36,7 +36,10 @@ async function main() {
     }
   }
 
-  console.warn("[workspace-kit] Rebuilding better-sqlite3 for this Node.js (native ABI mismatch)…");
+  console.warn(`[workspace-kit] better-sqlite3 load failed (${classification.kind}).`);
+  console.warn(`[workspace-kit] Runtime: ${formatNodeRuntimeIdentity()}`);
+  console.warn(`[workspace-kit] Install root: ${installRoot}`);
+  console.warn("[workspace-kit] Rebuilding better-sqlite3 for this Node.js runtime...");
   const shell = process.platform === "win32";
   let r = spawnSync("pnpm", ["rebuild", "better-sqlite3"], {
     cwd: installRoot,

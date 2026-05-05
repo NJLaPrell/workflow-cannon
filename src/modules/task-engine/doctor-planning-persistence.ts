@@ -7,6 +7,10 @@ import { planningSqliteDatabaseRelativePath } from "./planning-config.js";
 import { normalizeTaskStoreDocumentFromUnknown } from "./persistence/task-store-migration.js";
 import { loadTaskFeatureLinkMap } from "./persistence/feature-registry-queries.js";
 import { rowToTaskEntity, type TaskEngineTaskRow } from "./persistence/sqlite-task-row-mapping.js";
+import {
+  classifyNativeSqliteErrorMessage,
+  nativeSqliteRecoveryHint
+} from "../../core/native-sqlite-diagnostics.js";
 
 type SqliteDb = InstanceType<typeof DatabaseCtor>;
 
@@ -14,14 +18,6 @@ export type DoctorPlanningIssue = {
   path: string;
   reason: string;
 };
-
-function nativeSqliteFailureLooksLikeAbiMismatch(msg: string): boolean {
-  return (
-    msg.includes("NODE_MODULE_VERSION") ||
-    msg.includes("was compiled against a different Node.js") ||
-    msg.includes("better_sqlite3.node")
-  );
-}
 
 /**
  * When effective config selects SQLite for task/wishlist persistence, verify the native addon loads,
@@ -38,14 +34,11 @@ export async function validatePlanningPersistenceForDoctor(
     ({ default: Database } = await import("better-sqlite3"));
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    const runbook = "docs/maintainers/runbooks/native-sqlite-consumer-install.md";
-    const hint =
-      nativeSqliteFailureLooksLikeAbiMismatch(msg) ?
-        `Rebuild the native addon in the install root: \`pnpm rebuild better-sqlite3\` or \`npm rebuild better-sqlite3\` (postinstall retries ABI mismatch). Full ladder: ${runbook}.`
-      : `Install / toolchain / permissions checklist: ${runbook}.`;
+    const classification = classifyNativeSqliteErrorMessage(msg);
+    const hint = nativeSqliteRecoveryHint(classification);
     issues.push({
       path: "better-sqlite3",
-      reason: `native-sqlite-load-failed: ${msg} — ${hint}`
+      reason: `${classification.kind}: ${msg} — ${hint}`
     });
     return issues;
   }

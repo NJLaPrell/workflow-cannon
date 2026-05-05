@@ -18,6 +18,7 @@ import {
   workspaceStatusTableAvailable
 } from "../modules/task-engine/persistence/workspace-status-store.js";
 import { readKitSqliteUserVersion } from "../core/state/workspace-kit-sqlite.js";
+import { formatNodeRuntimeIdentity } from "../core/native-sqlite-diagnostics.js";
 import { defaultRegistryModules } from "../modules/index.js";
 import { discoverPluginPackages } from "../modules/plugins/discovery.js";
 
@@ -164,6 +165,7 @@ export async function collectTaskPersistenceDoctorSummaryLines(cwd: string): Pro
       lines.push("Kit SQLite schema (PRAGMA user_version): unavailable");
     }
   }
+  lines.push(`Native SQLite runtime: ${formatNodeRuntimeIdentity()}`);
   lines.push("Native SQLite help: docs/maintainers/runbooks/native-sqlite-consumer-install.md");
   lines.push(
     "Team assignments / subagents: `pnpm exec wk run list-assignments '{}'`, `list-subagents` / `list-subagent-sessions` — rollups in `dashboard-summary`; runbook `.ai/runbooks/subagent-registry.md`; ADRs `docs/maintainers/adrs/ADR-team-execution-v1.md`, `ADR-subagent-registry-v1.md`."
