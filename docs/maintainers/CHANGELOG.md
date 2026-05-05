@@ -10,6 +10,25 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 (none)
 
+## [0.79.0] - 2026-05-05
+
+Phase 79 — **Cursor status dashboard, Phase Journal CAE activation, and native SQLite runtime hardening**. This release adds a richer `dashboard-summary` status payload and Cursor editor status dashboard, phase-scoped CAE guidance for Phase Journal workflows, Node version markers for Workflow Cannon development, and first-class `better-sqlite3` diagnostics/recovery for mixed Node architecture setups.
+
+### Added
+
+- Cursor extension status dashboard: command palette entry, singleton editor WebviewPanel, themed status rendering, debounced kit-state refresh, README coverage, and render tests.
+- `dashboard-summary` `systemStatus` fields for phase/workspace health, doctor issues, module posture, CAE lines, identity, and SQLite planning-store details.
+- CAE Phase Journal operator artifact and Phase 79 activations for journal-oriented `wk run` workflows.
+- Native SQLite diagnostics: reusable classifier for architecture mismatch, ABI mismatch, missing binding, toolchain failure, and generic native load errors.
+- `setup:dev` package script plus `.nvmrc` / `.node-version` Node 22 markers for architecture-safe development setup.
+
+### Changed
+
+- `workspace-kit doctor` now prints native SQLite runtime identity (`node`, version, arch, platform, ABI) and points to the recovery runbook.
+- `postinstall` native SQLite recovery logs the active runtime/install root and attempts rebuilds for known recoverable `better-sqlite3` load failures.
+- Cursor extension Node selection now considers configured Node paths, `WORKSPACE_KIT_NODE`, workspace Node version markers via nvm, common install paths, and PATH, then reports candidate diagnostics when native SQLite cannot load.
+- Native SQLite runbooks now document Apple Silicon arm64/Rosetta x64 recovery and rebuild flow.
+
 ## [0.78.0] - 2026-05-04
 
 Phase 78 — **Phase journal MVP through golden integration** (`PHASE_JOURNAL.md`, SQLite **`phase_notes`** / **`phase_note_task_suggestions`**, commands **`add-phase-note`** through **`convert-phase-note-to-task`**, bounded **`phaseJournal`** on **`agent-session-snapshot`** and **`phaseContext`** on **`get-next-actions`**, **`run-transition`** **`phaseNotes`**, retention + secret guard + critical-note policy, agent read contracts). **`T100040`** adds a CI golden integration test for the journal example workflow; **`T100027`** fixes **`generate-document`** so the AI surface defaults to **preserve** (no accidental stub overwrite of **`.ai/README.md`** / **`chat_feature|`** sources).
