@@ -6,6 +6,11 @@
   "version": "0.1.13",
   "publisher": "workflow-cannon",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NJLaPrell/workflow-cannon.git",
+    "directory": "extensions/cursor-workflow-cannon"
+  },
   "type": "module",
   "engines": {
     "vscode": "^1.85.0"
@@ -36,6 +41,14 @@
     "onCommand:workflowCannon.openStatusDashboard"
   ],
   "main": "./dist/extension.js",
+  "files": [
+    "dist",
+    "media",
+    "README.md",
+    "SECURITY.md",
+    "LICENSE",
+    "package.json"
+  ],
   "contributes": {
     "viewsContainers": {
       "activitybar": [
@@ -71,7 +84,7 @@
         "workflowCannon.nodeExecutable": {
           "type": "string",
           "default": "",
-          "markdownDescription": "Path to `node` for running workspace-kit (must match the Node used for `pnpm install`, or native modules like `better-sqlite3` will fail with MODULE_VERSION errors). Leave empty to use `WORKSPACE_KIT_NODE`, then common install paths, then `node` on `PATH` — **not** the editor's embedded Node."
+          "markdownDescription": "Path to `node` for running workspace-kit (must match the Node used for `pnpm install`, or native modules like `better-sqlite3` can fail with ABI/architecture errors). Leave empty to use `WORKSPACE_KIT_NODE`, workspace `.node-version` / `.nvmrc` through nvm, common install paths, then `node` on `PATH` — **not** the editor's embedded Node."
         }
       }
     },

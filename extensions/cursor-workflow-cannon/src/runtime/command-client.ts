@@ -1,5 +1,6 @@
-import { execFile } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 export type KitRunResult = {
@@ -25,17 +26,44 @@ type CommandClientOptions = {
   resolveNodeExecutable?: () => string | undefined;
 };
 
+export type NativeSqliteProbeDiagnostic = {
+  ok: boolean;
+  kind?: string;
+  message?: string;
+};
+
+export type NodeExecutableDiagnostic = {
+  path: string;
+  exists: boolean;
+  version?: string;
+  arch?: string;
+  platform?: string;
+  execPath?: string;
+  modules?: string;
+  identityError?: string;
+  nativeSqlite?: NativeSqliteProbeDiagnostic;
+};
+
 /** Pick Node binary for spawning workspace-kit; never uses extension-host `process.execPath` by default. */
-export function pickNodeExecutable(resolve?: () => string | undefined): string {
-  const fromResolver = resolve?.()?.trim();
-  if (fromResolver) {
-    if (fromResolver === "node" || fromResolver === "nodejs") return fromResolver;
-    if (fs.existsSync(fromResolver)) return fromResolver;
+export function pickNodeExecutable(resolve?: () => string | undefined, workspaceRoot?: string): string {
+  const candidates = buildNodeExecutableCandidates(resolve, workspaceRoot);
+  if (workspaceRoot && hasBetterSqliteDependency(workspaceRoot)) {
+    const nativeCompatible = inspectNodeExecutableCandidates(resolve, workspaceRoot).find(
+      (candidate) => candidate.exists && candidate.nativeSqlite?.ok
+    );
+    if (nativeCompatible) return nativeCompatible.path;
   }
+  return candidates[0] ?? "node";
+}
+
+function buildNodeExecutableCandidates(resolve?: () => string | undefined, workspaceRoot?: string): string[] {
+  const fromResolver = resolve?.()?.trim();
+  const candidates: string[] = [];
+  addNodeCandidate(candidates, fromResolver);
   const fromEnv = process.env.WORKSPACE_KIT_NODE?.trim();
-  if (fromEnv) {
-    if (fromEnv === "node" || fromEnv === "nodejs") return fromEnv;
-    if (fs.existsSync(fromEnv)) return fromEnv;
+  addNodeCandidate(candidates, fromEnv);
+  for (const p of discoverNvmNodeExecutables(workspaceRoot)) {
+    addNodeCandidate(candidates, p);
   }
   if (process.platform === "win32") {
     const programFiles = process.env.ProgramFiles;
@@ -45,14 +73,202 @@ export function pickNodeExecutable(resolve?: () => string | undefined): string {
       programFilesX86 ? path.join(programFilesX86, "nodejs", "node.exe") : ""
     ];
     for (const p of winCandidates) {
-      if (p && fs.existsSync(p)) return p;
+      addNodeCandidate(candidates, p);
     }
   } else {
     for (const p of ["/opt/homebrew/bin/node", "/usr/local/bin/node"]) {
-      if (fs.existsSync(p)) return p;
+      addNodeCandidate(candidates, p);
     }
   }
-  return "node";
+  addNodeCandidate(candidates, "node");
+  return candidates;
+}
+
+function addNodeCandidate(candidates: string[], candidate?: string): void {
+  const value = candidate?.trim();
+  if (!value) return;
+  if (value !== "node" && value !== "nodejs" && !fs.existsSync(value)) return;
+  if (!candidates.includes(value)) candidates.push(value);
+}
+
+function discoverNvmNodeExecutables(workspaceRoot?: string): string[] {
+  const nvmRoot = process.env.NVM_DIR?.trim() || path.join(os.homedir(), ".nvm");
+  const versionsRoot = path.join(nvmRoot, "versions", "node");
+  const discovered: string[] = [];
+  const versions = listNvmVersionDirs(versionsRoot);
+
+  for (const spec of readWorkspaceNodeVersionSpecs(workspaceRoot)) {
+    for (const nodePath of findNvmNodesForVersionSpec(versionsRoot, versions, spec)) {
+      addNodeCandidate(discovered, nodePath);
+    }
+  }
+
+  addNodeCandidate(discovered, process.env.NVM_BIN ? path.join(process.env.NVM_BIN, "node") : undefined);
+  for (const version of versions) {
+    addNodeCandidate(discovered, path.join(versionsRoot, version, "bin", "node"));
+  }
+  return discovered;
+}
+
+function readWorkspaceNodeVersionSpecs(workspaceRoot?: string): string[] {
+  if (!workspaceRoot) return [];
+  const specs: string[] = [];
+  for (const fileName of [".node-version", ".nvmrc"]) {
+    const filePath = path.join(workspaceRoot, fileName);
+    if (!fs.existsSync(filePath)) continue;
+    const spec = fs.readFileSync(filePath, "utf8").split(/\r?\n/, 1)[0]?.trim();
+    if (spec && !spec.startsWith("#")) specs.push(spec);
+  }
+  return specs;
+}
+
+function listNvmVersionDirs(versionsRoot: string): string[] {
+  if (!fs.existsSync(versionsRoot)) return [];
+  return fs
+    .readdirSync(versionsRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && /^v\d+\.\d+\.\d+$/.test(entry.name))
+    .map((entry) => entry.name)
+    .sort(compareNodeVersionsDesc);
+}
+
+function findNvmNodesForVersionSpec(versionsRoot: string, versions: string[], spec: string): string[] {
+  const normalized = spec.trim().replace(/^node-/, "").replace(/^v/, "");
+  const parts = normalized.split(".");
+  const matching = versions.filter((version) => {
+    const candidate = version.replace(/^v/, "");
+    if (parts.length === 1) return candidate.startsWith(`${parts[0]}.`);
+    if (parts.length === 2) return candidate.startsWith(`${parts[0]}.${parts[1]}.`);
+    return candidate === normalized;
+  });
+  return matching.map((version) => path.join(versionsRoot, version, "bin", "node"));
+}
+
+function compareNodeVersionsDesc(left: string, right: string): number {
+  const l = left.replace(/^v/, "").split(".").map((part) => Number(part));
+  const r = right.replace(/^v/, "").split(".").map((part) => Number(part));
+  for (let i = 0; i < 3; i += 1) {
+    const diff = (r[i] ?? 0) - (l[i] ?? 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
+
+function hasBetterSqliteDependency(workspaceRoot: string): boolean {
+  return fs.existsSync(path.join(workspaceRoot, "node_modules", "better-sqlite3"));
+}
+
+export function inspectNodeExecutableCandidates(
+  resolve?: () => string | undefined,
+  workspaceRoot?: string
+): NodeExecutableDiagnostic[] {
+  const hasNativeDependency = Boolean(workspaceRoot && hasBetterSqliteDependency(workspaceRoot));
+  return buildNodeExecutableCandidates(resolve, workspaceRoot).map((nodeBin) => {
+    const identity = inspectNodeIdentity(nodeBin);
+    return {
+      path: nodeBin,
+      ...identity,
+      nativeSqlite:
+        workspaceRoot && hasNativeDependency && identity.exists ? probeBetterSqliteWithNode(nodeBin, workspaceRoot) : undefined
+    };
+  });
+}
+
+function inspectNodeIdentity(nodeBin: string): Omit<NodeExecutableDiagnostic, "path" | "nativeSqlite"> {
+  if (nodeBin !== "node" && nodeBin !== "nodejs" && !fs.existsSync(nodeBin)) {
+    return { exists: false };
+  }
+  try {
+    const stdout = execFileSync(
+      nodeBin,
+      [
+        "-p",
+        "JSON.stringify({version:process.version,arch:process.arch,platform:process.platform,execPath:process.execPath,modules:process.versions.modules})"
+      ],
+      { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 5_000 }
+    );
+    const data = JSON.parse(stdout.trim()) as {
+      version?: string;
+      arch?: string;
+      platform?: string;
+      execPath?: string;
+      modules?: string;
+    };
+    return { exists: true, ...data };
+  } catch (err) {
+    return { exists: true, identityError: errorText(err) };
+  }
+}
+
+function probeBetterSqliteWithNode(nodeBin: string, workspaceRoot: string): NativeSqliteProbeDiagnostic {
+  try {
+    execFileSync(nodeBin, ["-e", "require('better-sqlite3')"], {
+      cwd: workspaceRoot,
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: 5_000
+    });
+    return { ok: true };
+  } catch (err) {
+    const message = errorText(err);
+    return { ok: false, kind: classifyNativeSqliteErrorMessage(message), message: message.slice(0, 500) };
+  }
+}
+
+function errorText(err: unknown): string {
+  const e = err as { message?: unknown; stderr?: unknown; stdout?: unknown };
+  const stderr = Buffer.isBuffer(e.stderr) ? e.stderr.toString("utf8") : typeof e.stderr === "string" ? e.stderr : "";
+  const stdout = Buffer.isBuffer(e.stdout) ? e.stdout.toString("utf8") : typeof e.stdout === "string" ? e.stdout : "";
+  return [stderr.trim(), stdout.trim(), typeof e.message === "string" ? e.message : String(err)]
+    .filter(Boolean)
+    .join("; ");
+}
+
+export function classifyNativeSqliteErrorMessage(message: string): string {
+  const lower = message.toLowerCase();
+  if (/incompatible architecture[\s\S]*?have ['"]?([^,'")\s]+)['"]?, need ['"]?([^,'")\s]+)['"]?/i.test(message)) {
+    return "architecture-mismatch";
+  }
+  if (message.includes("NODE_MODULE_VERSION") || lower.includes("was compiled against a different node.js")) {
+    return "abi-mismatch";
+  }
+  if (lower.includes("cannot find module") || lower.includes("module not found") || lower.includes("enoent")) {
+    return "missing-binding";
+  }
+  if (lower.includes("better_sqlite3.node") || lower.includes("better-sqlite3")) {
+    return "native-load-failed";
+  }
+  return "unknown";
+}
+
+function looksLikeNativeSqliteError(message: string): boolean {
+  const lower = message.toLowerCase();
+  return (
+    lower.includes("better-sqlite3") ||
+    lower.includes("better_sqlite3.node") ||
+    lower.includes("node_module_version") ||
+    lower.includes("incompatible architecture")
+  );
+}
+
+export function formatNodeExecutableDiagnostics(diagnostics: NodeExecutableDiagnostic[]): string {
+  const rendered = diagnostics
+    .slice(0, 8)
+    .map((candidate) => {
+      const identity = candidate.version
+        ? `${candidate.version} arch=${candidate.arch ?? "unknown"} platform=${candidate.platform ?? "unknown"} abi=${candidate.modules ?? "unknown"}`
+        : candidate.identityError
+          ? `identity failed: ${candidate.identityError}`
+          : candidate.exists
+            ? "identity unavailable"
+            : "missing";
+      const native = candidate.nativeSqlite
+        ? candidate.nativeSqlite.ok
+          ? "better-sqlite3 ok"
+          : `better-sqlite3 ${candidate.nativeSqlite.kind ?? "failed"}: ${candidate.nativeSqlite.message ?? "load failed"}`
+        : "better-sqlite3 not probed";
+      return `${candidate.path} (${identity}; ${native})`;
+    })
+    .join(" | ");
+  return `${rendered}. Set workflowCannon.nodeExecutable or WORKSPACE_KIT_NODE to the Node executable that installed node_modules, then rebuild with pnpm rebuild better-sqlite3 if needed.`;
 }
 
 function resolveCliJs(workspaceRoot: string, cliPathOverride?: string): string {
@@ -82,7 +298,7 @@ function execKit(
   resolveNodeExecutable?: () => string | undefined
 ): Promise<CommandClientExecResult> {
   const cliJs = resolveCliJs(workspaceRoot, cliPathOverride);
-  const nodeBin = pickNodeExecutable(resolveNodeExecutable);
+  const nodeBin = pickNodeExecutable(resolveNodeExecutable, workspaceRoot);
   return new Promise((resolve, reject) => {
     execFile(
       nodeBin,
@@ -176,7 +392,17 @@ export class CommandClient {
       if (stderr.trim()) {
         console.warn("workspace-kit stderr:", stderr.slice(0, 500));
       }
-      return parseRunCommandOutput(stdout, exitCode);
+      const parsed = parseRunCommandOutput(stdout, exitCode);
+      if (!parsed.ok && exitCode !== 0 && looksLikeNativeSqliteError(`${stderr}\n${stdout}`)) {
+        const diagnostics = inspectNodeExecutableCandidates(this.resolveNodeExecutable, this.workspaceRoot);
+        return {
+          ok: false,
+          code: "extension-native-sqlite-runtime-incompatible",
+          message: formatNodeExecutableDiagnostics(diagnostics),
+          details: { nodeCandidates: diagnostics }
+        };
+      }
+      return parsed;
     } catch (e) {
       return {
         ok: false,
