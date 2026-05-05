@@ -32,6 +32,7 @@ import {
 import type { TaskStore } from "../persistence/store.js";
 import type { SqliteDualPlanningStore } from "../persistence/sqlite-dual-planning.js";
 import { buildFeatureEnrichmentBySlug, type FeatureEnrichment } from "../persistence/feature-registry-queries.js";
+import { buildDashboardSystemStatus } from "../dashboard/build-dashboard-system-status.js";
 
 function featureDetailsForTask(
   slugs: string[] | undefined,
@@ -234,8 +235,10 @@ export async function runDashboardSummaryCommand(
     ? (summarizeSubagentsForDashboard(sqliteDual.getDatabase()) as DashboardSubagentRegistrySummary)
     : subagentRegistryEmpty;
 
+  const systemStatus = await buildDashboardSystemStatus(ctx, store, dualForStatus);
+
   const data = {
-    schemaVersion: 4 as const,
+    schemaVersion: 5 as const,
     planningGeneration,
     planningGenerationPolicy: getPlanningGenerationPolicy({
       effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined
@@ -320,7 +323,8 @@ export async function runDashboardSummaryCommand(
     blockingAnalysis: suggestion.blockingAnalysis,
     agentGuidance,
     teamExecution,
-    subagentRegistry
+    subagentRegistry,
+    systemStatus
   } satisfies DashboardSummaryData;
 
   return {
