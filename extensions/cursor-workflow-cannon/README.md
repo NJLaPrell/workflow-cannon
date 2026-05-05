@@ -46,7 +46,7 @@ Open the **Workflow Cannon** activity bar to use **Dashboard** (webview — task
 
 ## CLI bridge
 
-The extension runs `node <repo>/dist/cli.js` (or the published package path under `node_modules`). If dashboard/tasks fail with “CLI not found”, run `pnpm run build` at the repo root.
+The extension runs `node <repo>/dist/cli.js` (or the published package path under `node_modules`). If dashboard/tasks fail with “CLI not found”, run `pnpm run build` at the repo root. Native dependencies such as `better-sqlite3` must load under the same Node architecture used for `pnpm install`; the extension prefers `workflowCannon.nodeExecutable`, `WORKSPACE_KIT_NODE`, workspace `.node-version` / `.nvmrc` through nvm, common install paths, then `node` on `PATH`.
 
 **Copy-ready mutating JSON (operators):** From a terminal at the repo root, `pnpm exec wk run run-transition --schema-only` (and other pilot commands) prints **`sampleArgs`** you can paste and edit before running a real `wk run run-transition '<json>'`. Dashboard/Task transitions already inject **`expectedPlanningGeneration`** when policy is **`require`**; use the CLI helper when debugging shape errors. See **`docs/maintainers/plans/phase-52-human-cli-affordances.md`**.
 
