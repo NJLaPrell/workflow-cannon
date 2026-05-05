@@ -574,6 +574,10 @@ Suggested behavior:
 - Validation failure must prevent mutation before writes.
 - Existing transition behavior must remain unchanged when `phaseNotes` is omitted.
 
+### CAE integration (Context Activation)
+
+When CAE is enabled, bounded operator guidance for Phase Journal may surface via registry artifact **`cae.runbook.phase-journal-operator`** (markdown **`.ai/cae/phase-journal-operator.md`**) and phase-scoped activation rows in **`.ai/cae/registry/activations.v1.json`** (search **`phase79-phase-journal`**). This is **advisory**: CAE does not execute `wk run` on your behalf; use the task-engine commands and JSON **`policyApproval`** rules from **`.ai/POLICY-APPROVAL.md`** as usual.
+
 ## Agent read contract
 
 Agents must not read Phase Journal SQLite tables directly.
