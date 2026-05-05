@@ -32,7 +32,8 @@
     "onCommand:workflowCannon.chat.prefillWishlistFlow",
     "onCommand:workflowCannon.chat.prefillImprovementTriage",
     "onCommand:workflowCannon.chat.prefillTaskToPhaseBranch",
-    "onCommand:workflowCannon.chat.prefillTranscriptChurnResearch"
+    "onCommand:workflowCannon.chat.prefillTranscriptChurnResearch",
+    "onCommand:workflowCannon.openStatusDashboard"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -142,6 +143,10 @@
       {
         "command": "workflowCannon.chat.prefillTranscriptChurnResearch",
         "title": "Workflow Cannon: Prefill Chat — Transcript Churn Research (/research-churn)"
+      },
+      {
+        "command": "workflowCannon.openStatusDashboard",
+        "title": "Workflow Cannon: Open Status Dashboard"
       }
     ]
   },

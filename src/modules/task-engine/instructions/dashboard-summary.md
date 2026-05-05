@@ -24,7 +24,7 @@ Optional JSON object; accepts standard invocation `config` overlay only (no extr
 
 | Field | Description |
 | --- | --- |
-| `schemaVersion` | `3` — adds read-only **`subagentRegistry`** (definitions + open sessions); **`2`** added **`teamExecution`**; older clients must tolerate unknown fields |
+| `schemaVersion` | **`5`** adds **`systemStatus`** (phase/drift slice, doctor contract issues, module activation ids, CAE posture lines). **`4`** was identical without **`systemStatus`**. **`3`** adds **`subagentRegistry`**; **`2`** added **`teamExecution`**; older clients must tolerate unknown fields |
 | `taskStoreLastUpdated` | ISO timestamp from task store document |
 | `workspaceStatus` | `{ currentKitPhase, nextKitPhase, activeFocus, lastUpdated, blockers[], pendingDecisions[], nextAgentActions[] }` shallow-parse from `workspace-kit-status.yaml`; file-missing yields `null` |
 | `stateSummary` | Task counts by status + `total` (same shape as `get-next-actions`; **excludes** **`wishlist_intake`** so the grid matches execution/improvement work — wishlist stays in **`wishlist`** / open-wishlist rollups) |
@@ -45,3 +45,4 @@ Optional JSON object; accepts standard invocation `config` overlay only (no extr
 | `wishlist.openTop` | Up to 15 **open** wishlist items (`{ id, title }`); W### namespace, separate from tasks until `convert-wishlist` |
 | `teamExecution` | `{ schemaVersion: 1, available, totalCount, activeCount, byStatus, topActive }` — rollup of **`kit_team_assignments`** when kit SQLite **`user_version` ≥ 7**; **`topActive`** is up to 15 rows in **`assigned` / `submitted` / `blocked`** (most recently updated first), each with **`executionTaskTitle`** resolved from the task store when present |
 | `subagentRegistry` | `{ schemaVersion: 1, available, definitionsCount, retiredDefinitionsCount, openSessionsCount, topOpenSessions }` — rollup of **`kit_subagent_*`** when kit SQLite **`user_version` ≥ 6**; **`topOpenSessions`** lists up to 15 **`status: open`** sessions (newest **`updatedAt`**) |
+| `systemStatus` | `{ schemaVersion: 1, generatedAt, phase, doctor, modules, caeLines }` — composed read-only posture for status dashboards: **`phase`** aligns with **`phase-status`** (canonical phase, export staleness, drift strings); **`doctor`** lists contract-check issues (capped); **`modules`** lists enabled vs disabled module ids from the registry view; **`caeLines`** mirrors CAE posture text from **`doctor`** CAE helpers (shadow trace payload remains on the merged CLI **`data.cae`** envelope when CAE preflight runs) |

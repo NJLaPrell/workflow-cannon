@@ -107,8 +107,54 @@ export type DashboardSubagentRegistrySummary = {
   }>;
 };
 
+/** Doctor contract slice for status dashboards (paths under repo root are relative). */
+export type DashboardDoctorSummary = {
+  schemaVersion: 1;
+  ok: boolean;
+  issueCount: number;
+  issues: Array<{ path: string; reason: string }>;
+};
+
+/** Phase / export / drift slice aligned with `phase-status` (bounded; read-only). */
+export type DashboardPhaseSystemSlice = {
+  schemaVersion: 1;
+  ok: boolean;
+  code?: string;
+  message?: string;
+  canonicalPhaseKey: string | null;
+  source: string | null;
+  currentKitPhase: string | null;
+  nextKitPhase: string | null;
+  configPhaseKey: string | null;
+  workspaceStatusPhaseKey: string | null;
+  configMatchesWorkspaceStatus: boolean | null;
+  exportStale: boolean | null;
+  exportReason: string | null;
+  driftMessages: string[];
+  remediationSuggestions: string[];
+};
+
+export type DashboardModuleActivationSlice = {
+  schemaVersion: 1;
+  enabledModuleIds: string[];
+  disabledModuleIds: string[];
+};
+
+/**
+ * Composed workspace posture for Editor status tab + CLI consumers — one read alongside other dashboard fields.
+ * CAE trace hints remain on the merged CLI envelope (`data.cae`); `caeLines` mirrors `doctor` CAE posture text.
+ */
+export type DashboardSystemStatus = {
+  schemaVersion: 1;
+  generatedAt: string;
+  phase: DashboardPhaseSystemSlice;
+  doctor: DashboardDoctorSummary;
+  modules: DashboardModuleActivationSlice;
+  caeLines: string[];
+};
+
 export type DashboardSummaryData = {
-  schemaVersion: 4;
+  schemaVersion: 5;
   /** Monotonic optimistic-lock generation for the unified planning SQLite row. */
   planningGeneration: number;
   /** Effective `tasks.planningGenerationPolicy` for mutating commands. */
@@ -161,6 +207,8 @@ export type DashboardSummaryData = {
   teamExecution: DashboardTeamExecutionSummary;
   /** Subagent definitions + open sessions from `kit_subagent_*` (Phase 60+). */
   subagentRegistry: DashboardSubagentRegistrySummary;
+  /** Phase/drift, doctor contract, module activation, CAE lines — status tab aggregate (Phase 79+). */
+  systemStatus: DashboardSystemStatus;
 };
 
 /** Success envelope for `dashboard-summary` (extension + tooling). */

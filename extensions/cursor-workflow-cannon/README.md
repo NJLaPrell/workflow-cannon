@@ -36,9 +36,11 @@ F5 typical `launch.json` (workspace root):
 }
 ```
 
-Open the **Workflow Cannon** activity bar to use **Dashboard** (webview — task queue rollups + actions) and **Config** (webview).
+Open the **Workflow Cannon** activity bar to use **Dashboard** (webview — task queue rollups + actions), **Config** (webview), **Guidance**, and the command palette action **Workflow Cannon: Open Status Dashboard** (editor-area tab — phase/drift, doctor contract, modules, CAE lines from **`dashboard-summary`** **`systemStatus`**; kit file changes trigger a debounced refresh).
 
-**Dashboard refresh:** Besides the bottom **Refresh** button (immediate refetch), the dashboard reloads when the sidebar becomes visible again, when kit-owned files change (workspace-kit watchers), and on a **~45s** timer while the view stays open.
+**Status dashboard tab:** Opens an editor **`WebviewPanel`** fed by **`pnpm exec wk run dashboard-summary '{}'`**. Requires **`dashboard-summary`** **`data.schemaVersion` ≥ 5** ( **`systemStatus`** block). While the tab is open, **`StateWatcher`** fires debounced refreshes (**`STATUS_PANEL_DEBOUNCE_MS`** in `StatusDashboardPanel.ts`, default **450ms**) so rapid `.workspace-kit/` edits do not spam the CLI; **Refresh now** is immediate. The merged CLI envelope may still include **`data.cae`** when CAE shadow preflight runs — that is separate from the **`caeLines`** text inside **`systemStatus`**.
+
+**Sidebar Dashboard refresh:** Besides the bottom **Refresh** button (immediate refetch), the sidebar dashboard reloads when the view becomes visible again, when kit-owned files change (workspace-kit watchers), and on a **~45s** timer while the view stays open.
 
 **Tasks tree / drag-and-drop** were removed in extension **0.1.6** — use dashboard **View** on a task row (or palette **Show Task Detail**) and **`workspace-kit run run-transition`** / **`list-tasks`** from a terminal for transitions. Proposed-row **Accept**/**Chat** on the dashboard is unchanged.
 
@@ -72,6 +74,7 @@ pnpm --filter cursor-workflow-cannon test
 ## Commands and operations
 
 - `Workflow Cannon: Open Dashboard`
+- `Workflow Cannon: Open Status Dashboard`
 - `Workflow Cannon: Refresh Dashboard`
 - `Workflow Cannon: Show Ready Queue`
 - `Workflow Cannon: Refresh Tasks` (refreshes the **Dashboard** webview)
