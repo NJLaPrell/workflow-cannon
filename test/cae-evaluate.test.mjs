@@ -65,4 +65,60 @@ describe("CAE evaluateActivationBundle (T860)", () => {
     assert.deepEqual(a.bundle, b.bundle);
     assert.deepEqual(a.trace, b.trace);
   });
+
+  it("phase 79 Phase Journal activations attach cae.runbook.phase-journal-operator for journal commands", () => {
+    const ctx = {
+      schemaVersion: 1,
+      task: {
+        taskId: "T100041",
+        status: "in_progress",
+        phaseKey: "79"
+      },
+      command: {
+        name: "run-transition",
+        moduleId: "task-engine",
+        argvSummary: '{"taskId":"T100041","action":"complete"}'
+      },
+      workspace: {
+        currentKitPhase: "79",
+        nextKitPhase: "80",
+        workspaceRootFingerprint: "sha256:testphasejournal"
+      },
+      governance: {
+        policyApprovalRequired: true,
+        approvalTierHint: "A",
+        policySurface: "run-json"
+      },
+      queue: {
+        readyQueueDepth: 1,
+        suggestedNextTaskId: null
+      },
+      mapSignals: null
+    };
+    const regRes = loadCaeRegistry(root);
+    assert.equal(regRes.ok, true);
+    const { bundle } = evaluateActivationBundle(ctx, regRes.value, { evalMode: "live" });
+    const journalId = "cae.runbook.phase-journal-operator";
+    const thinkArts =
+      bundle.families.think?.flatMap((row) => row.artifactIds ?? []) ?? [];
+    assert.ok(
+      thinkArts.includes(journalId),
+      "expected phase-journal operator artifact in think bundle for run-transition"
+    );
+
+    const ctxGet = { ...ctx, command: { ...ctx.command, name: "get-phase-context" } };
+    const b2 = evaluateActivationBundle(ctxGet, regRes.value, { evalMode: "live" });
+    const think2 =
+      b2.bundle.families.think?.flatMap((row) => row.artifactIds ?? []) ?? [];
+    assert.ok(think2.includes(journalId), "expected journal artifact for get-phase-context");
+
+    const ctxAdd = { ...ctx, command: { ...ctx.command, name: "add-phase-note" } };
+    const b3 = evaluateActivationBundle(ctxAdd, regRes.value, { evalMode: "live" });
+    const doArts3 =
+      b3.bundle.families.do?.flatMap((row) => row.artifactIds ?? []) ?? [];
+    assert.ok(
+      doArts3.includes(journalId),
+      "expected journal artifact in do bundle for add-phase-note"
+    );
+  });
 });
