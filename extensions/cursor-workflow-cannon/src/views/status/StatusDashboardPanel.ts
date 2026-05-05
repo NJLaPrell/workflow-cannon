@@ -94,7 +94,10 @@ export class StatusDashboardPanel {
     this.refreshInFlight = true;
     try {
       const raw = (await this.client.run("dashboard-summary", {})) as Record<string, unknown>;
-      const inner = renderStatusTabInnerHtml(raw);
+      const folderLabel = vscode.workspace.workspaceFolders?.[0]?.name;
+      const inner = renderStatusTabInnerHtml(raw, {
+        editorWorkspaceFolderLabel: folderLabel
+      });
       webview.html = this.wrapHtml(webview, inner);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);

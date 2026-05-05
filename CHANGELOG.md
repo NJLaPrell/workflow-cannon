@@ -8,4 +8,4 @@ This root file is intentionally pointer-only to avoid split release history.
 
 - See `docs/maintainers/CHANGELOG.md` for all release notes, migration notes, and historical entries.
 
-Latest release: **v0.78.0** (Phase 78: Phase journal + doc defaults; see canonical changelog).
+Latest release: **v0.79.0** (Phase 79: status dashboard, Phase Journal CAE activations, and native SQLite runtime recovery; see canonical changelog).

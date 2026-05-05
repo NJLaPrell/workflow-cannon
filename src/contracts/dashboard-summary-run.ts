@@ -140,13 +140,37 @@ export type DashboardModuleActivationSlice = {
   disabledModuleIds: string[];
 };
 
+/** Repo / kit naming — from generated project context, root package.json, installed workspace-kit. */
+export type DashboardWorkspaceIdentity = {
+  schemaVersion: 1;
+  /** From `.workspace-kit/generated/project-context.json` when present. */
+  projectName: string | null;
+  /** Root `package.json` `name` when present. */
+  packageName: string | null;
+  /** Installed `@workflow-cannon/workspace-kit` version from `node_modules`, when resolvable. */
+  workspaceKitVersion: string | null;
+  /** Root `package.json` `version` when present. */
+  rootPackageVersion: string | null;
+};
+
+/** Where tasks / planning SQLite live (runtime is SQLite-only). */
+export type DashboardPlanningStoreSummary = {
+  schemaVersion: 1;
+  backend: "sqlite";
+  /** Repo-relative path from effective config defaulting to `.workspace-kit/tasks/workspace-kit.db`. */
+  databaseRelativePath: string;
+};
+
 /**
  * Composed workspace posture for Editor status tab + CLI consumers — one read alongside other dashboard fields.
  * CAE trace hints remain on the merged CLI envelope (`data.cae`); `caeLines` mirrors `doctor` CAE posture text.
  */
 export type DashboardSystemStatus = {
-  schemaVersion: 1;
+  /** **`2`** adds **`identity`** + **`planningStore`** slices. **`1`** omitted those blocks. */
+  schemaVersion: 1 | 2;
   generatedAt: string;
+  identity?: DashboardWorkspaceIdentity;
+  planningStore?: DashboardPlanningStoreSummary;
   phase: DashboardPhaseSystemSlice;
   doctor: DashboardDoctorSummary;
   modules: DashboardModuleActivationSlice;
@@ -154,7 +178,7 @@ export type DashboardSystemStatus = {
 };
 
 export type DashboardSummaryData = {
-  schemaVersion: 5;
+  schemaVersion: 6;
   /** Monotonic optimistic-lock generation for the unified planning SQLite row. */
   planningGeneration: number;
   /** Effective `tasks.planningGenerationPolicy` for mutating commands. */

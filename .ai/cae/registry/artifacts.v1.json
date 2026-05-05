@@ -137,6 +137,14 @@
       "ref": { "path": ".ai/WORKSPACE-KIT-SESSION.md" },
       "title": "Workspace kit session snapshot protocol",
       "tags": ["cae", "runbook", "session"]
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "cae.runbook.phase-journal-operator",
+      "artifactType": "runbook",
+      "ref": { "path": ".ai/cae/phase-journal-operator.md" },
+      "title": "Phase Journal operator runbook",
+      "tags": ["cae", "phase-journal", "runbook", "task-engine"]
     }
   ]
 }

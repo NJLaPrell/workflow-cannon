@@ -4,6 +4,11 @@
 
 import { escapeHtml } from "../dashboard/render-dashboard.js";
 
+export type RenderStatusTabOptions = {
+  /** VS Code workspace folder short name (primary folder when multi-root). */
+  editorWorkspaceFolderLabel?: string;
+};
+
 function fmtIso(iso: string): string {
   try {
     const d = new Date(iso);
@@ -11,6 +16,13 @@ function fmtIso(iso: string): string {
   } catch {
     return iso;
   }
+}
+
+function policyHuman(p: unknown): string {
+  if (p === "require") return "Require planning token on writes";
+  if (p === "warn") return "Warn when token omitted";
+  if (p === "off") return "Off";
+  return typeof p === "string" ? p : "—";
 }
 
 function card(title: string, bodyInner: string): string {
@@ -36,7 +48,10 @@ function kvRow(label: string, value: string): string {
 }
 
 /** Render inner HTML for `#wc-status-root` (no outer document shell). */
-export function renderStatusTabInnerHtml(payload: Record<string, unknown>): string {
+export function renderStatusTabInnerHtml(
+  payload: Record<string, unknown>,
+  options?: RenderStatusTabOptions
+): string {
   const ok = payload.ok === true;
   if (!ok) {
     const code = typeof payload.code === "string" ? payload.code : "unknown";
@@ -59,17 +74,75 @@ export function renderStatusTabInnerHtml(payload: Record<string, unknown>): stri
   const d = data as Record<string, unknown>;
   const sys = d.systemStatus as Record<string, unknown> | undefined;
   const ag = d.agentGuidance as Record<string, unknown> | null | undefined;
-
+  const ident = sys?.identity as Record<string, unknown> | undefined;
   const parts: string[] = [];
 
+  let displayTitle = "Workflow Cannon";
+  if (ident && typeof ident.projectName === "string" && ident.projectName.trim().length > 0) {
+    displayTitle = ident.projectName.trim();
+  } else if (ident && typeof ident.packageName === "string" && ident.packageName.trim().length > 0) {
+    displayTitle = ident.packageName.trim();
+  }
+
+  const subtitleBits: string[] = [];
+  const folder = options?.editorWorkspaceFolderLabel?.trim();
+  if (folder && folder.length > 0) {
+    subtitleBits.push("Editor folder · " + escapeHtml(folder));
+  }
+  if (sys && typeof sys.generatedAt === "string") {
+    subtitleBits.push("Snapshot · " + escapeHtml(fmtIso(sys.generatedAt)));
+  }
+  const pg = d.planningGeneration;
+  const pol = d.planningGenerationPolicy;
+  if (typeof pg === "number" && Number.isFinite(pg)) {
+    subtitleBits.push(
+      "Planning sync · #" +
+        escapeHtml(String(pg)) +
+        " · " +
+        escapeHtml(policyHuman(pol))
+    );
+  }
+
   parts.push(
-    '<header class="wc-status-head"><h1 class="wc-title">Workflow Cannon status</h1>' +
-      '<p class="wc-sub">' +
-      (sys && typeof sys.generatedAt === "string"
-        ? "Snapshot · " + escapeHtml(fmtIso(sys.generatedAt))
-        : "") +
+    '<header class="wc-status-head"><h1 class="wc-title">' +
+      escapeHtml(displayTitle) +
+      '</h1><p class="wc-sub">' +
+      subtitleBits.join(" · ") +
       "</p></header>"
   );
+
+  if (ident && typeof ident === "object") {
+    const pkg =
+      typeof ident.packageName === "string" && ident.packageName.length > 0 ? ident.packageName : "—";
+    const rootV =
+      typeof ident.rootPackageVersion === "string" && ident.rootPackageVersion.length > 0
+        ? ident.rootPackageVersion
+        : "—";
+    const wk =
+      typeof ident.workspaceKitVersion === "string" && ident.workspaceKitVersion.length > 0
+        ? ident.workspaceKitVersion
+        : "—";
+    const body =
+      kvRow("Package name", escapeHtml(pkg)) +
+      kvRow("Package version", escapeHtml(rootV)) +
+      kvRow("Workspace-kit version", escapeHtml(wk)) +
+      '<p class="wc-hint">Project title comes from your kit profile (generated project context). Package fields are from the repo root <code>package.json</code>; workspace-kit version is read from <code>node_modules</code> when installed.</p>';
+    parts.push(card("This workspace", body));
+  }
+
+  const ps = sys?.planningStore as Record<string, unknown> | undefined;
+  if (ps && typeof ps === "object") {
+    const backend = ps.backend === "sqlite" ? "SQLite" : String(ps.backend ?? "—");
+    const dbp =
+      typeof ps.databaseRelativePath === "string" && ps.databaseRelativePath.length > 0
+        ? ps.databaseRelativePath
+        : "—";
+    const body =
+      kvRow("Storage", escapeHtml(backend)) +
+      kvRow("Planning database file", "<code>" + escapeHtml(dbp) + "</code>") +
+      '<p class="wc-hint">Tasks and planning data live here; path follows your kit config with a safe default.</p>';
+    parts.push(card("Planning data", body));
+  }
 
   if (ag && typeof ag === "object") {
     const tier = ag.tier != null ? String(ag.tier) : "—";
@@ -77,17 +150,17 @@ export function renderStatusTabInnerHtml(payload: Record<string, unknown>): stri
     const temp = typeof ag.temperamentLabel === "string" ? ag.temperamentLabel : "—";
     const profile = typeof ag.temperamentProfileId === "string" ? ag.temperamentProfileId : "";
     const body =
-      kvRow("Role (tier)", escapeHtml(role) + " (" + escapeHtml(tier) + ")") +
+      kvRow("Role", escapeHtml(role) + " (tier " + escapeHtml(tier) + ")") +
       kvRow("Temperament", escapeHtml(temp) + (profile ? " · " + escapeHtml(profile) : "")) +
-      '<p class="wc-hint">Advisory profile — does not replace policy or JSON policyApproval on gated runs.</p>';
-    parts.push(card("Session", body));
+      '<p class="wc-hint">Advisory only — does not replace CLI policy or JSON <code>policyApproval</code>.</p>';
+    parts.push(card("Agent profile", body));
   }
 
   if (!sys || typeof sys !== "object") {
     parts.push(
       card(
         "System posture",
-        '<p class="wc-muted">No <code>systemStatus</code> block — upgrade workspace-kit (dashboard-summary schema v5+) for phase/doctor/modules/CAE lines.</p>'
+        '<p class="wc-muted">No <code>systemStatus</code> block — upgrade workspace-kit (<code>dashboard-summary</code> schema v5+) for phase checks, doctor list, modules, and CAE lines.</p>'
       )
     );
     return parts.join("");
@@ -108,26 +181,26 @@ export function renderStatusTabInnerHtml(payload: Record<string, unknown>): stri
     const driftHtml =
       drift.length > 0
         ? "<ul>" + drift.map((x) => "<li>" + escapeHtml(x) + "</li>").join("") + "</ul>"
-        : '<p class="wc-muted">No drift messages.</p>';
+        : '<p class="wc-muted">No drift notes.</p>';
     const match =
       typeof phase.configMatchesWorkspaceStatus === "boolean"
         ? phase.configMatchesWorkspaceStatus
-          ? "yes"
-          : "no"
+          ? "Yes"
+          : "No"
         : "—";
     const expStale =
-      typeof phase.exportStale === "boolean" ? (phase.exportStale ? "stale" : "fresh") : "—";
+      typeof phase.exportStale === "boolean" ? (phase.exportStale ? "Stale — refresh export" : "Up to date") : "—";
     const body =
       '<p class="wc-phase-badge ' +
       (phaseOk ? "wc-ok" : "wc-bad") +
       '">' +
-      (phaseOk ? "Phase read OK" : escapeHtml(String(phase.message ?? "phase error"))) +
+      (phaseOk ? "Phase info loaded" : escapeHtml(String(phase.message ?? "Phase check failed"))) +
       "</p>" +
       kvRow("Canonical phase", escapeHtml(canon)) +
-      kvRow("Current / next", escapeHtml(cur) + " → " + escapeHtml(nxt)) +
-      kvRow("Config vs workspace-status", escapeHtml(match)) +
-      kvRow("DB export", escapeHtml(expStale)) +
-      "<p><b>Drift</b></p>" +
+      kvRow("Active → next phase", escapeHtml(cur) + " → " + escapeHtml(nxt)) +
+      kvRow("Config matches workspace snapshot", escapeHtml(match)) +
+      kvRow("Maintainer YAML export", escapeHtml(expStale)) +
+      "<p><b>Drift & hints</b></p>" +
       driftHtml;
     parts.push(card("Phase & workspace", body));
   }
@@ -150,10 +223,11 @@ export function renderStatusTabInnerHtml(payload: Record<string, unknown>): stri
       '<p class="' +
       (dOk ? "wc-ok" : "wc-bad") +
       '"><b>' +
-      (dOk ? "Doctor contract checks passed" : "Doctor contract issues: " + String(count)) +
+      (dOk ? "Contract checks passed" : "Issues found: " + String(count)) +
       "</b></p>" +
-      (issueRows ? "<ul>" + issueRows + "</ul>" : "");
-    parts.push(card("Doctor", body));
+      (issueRows ? "<ul>" + issueRows + "</ul>" : "") +
+      '<p class="wc-hint">These are shipped-file contract checks (similar to <code>wk doctor</code>), not your TypeScript build.</p>';
+    parts.push(card("Kit contract files", body));
   }
 
   const mods = sys.modules as Record<string, unknown> | undefined;
@@ -169,7 +243,7 @@ export function renderStatusTabInnerHtml(payload: Record<string, unknown>): stri
     const disTxt =
       dis.length > 0 ? dis.map((x) => escapeHtml(x)).join(", ") : '<span class="wc-muted">none</span>';
     const body =
-      kvRow("Enabled (" + String(en.length) + ")", enTxt) + kvRow("Disabled", disTxt);
+      kvRow("Turned on (" + String(en.length) + ")", enTxt) + kvRow("Turned off", disTxt);
     parts.push(card("Modules", body));
   }
 
@@ -181,16 +255,16 @@ export function renderStatusTabInnerHtml(payload: Record<string, unknown>): stri
       "<ul>" +
       caeLines.map((line) => "<li>" + escapeHtml(line) + "</li>").join("") +
       "</ul>" +
-      '<p class="wc-hint">CLI merges shadow CAE trace hints under <code>data.cae</code> when preflight runs.</p>';
-    parts.push(card("CAE posture", body));
+      '<p class="wc-hint">Separate from any <code>data.cae</code> block on the CLI response when shadow preflight runs.</p>';
+    parts.push(card("Context activation (CAE)", body));
   }
 
   const ss = d.stateSummary as Record<string, unknown> | undefined;
   if (ss && typeof ss === "object") {
     const body =
-      kvRow("Ready / in progress / blocked", escapeHtml(String(ss.ready ?? "—")) + " / " + escapeHtml(String(ss.in_progress ?? "—")) + " / " + escapeHtml(String(ss.blocked ?? "—"))) +
-      kvRow("Total active-ish", escapeHtml(String(ss.total ?? "—")));
-    parts.push(card("Task engine counts", body));
+      kvRow("Ready · Active · Blocked", escapeHtml(String(ss.ready ?? "—")) + " · " + escapeHtml(String(ss.in_progress ?? "—")) + " · " + escapeHtml(String(ss.blocked ?? "—"))) +
+      kvRow("Active tasks (total)", escapeHtml(String(ss.total ?? "—")));
+    parts.push(card("Task counts", body));
   }
 
   return parts.join("");
