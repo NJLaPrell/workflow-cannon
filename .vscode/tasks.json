@@ -4,7 +4,7 @@
     {
       "label": "transcript:sync (folder open)",
       "type": "shell",
-      "command": "pnpm run transcript:sync",
+      "command": "if [ -s \"$HOME/.nvm/nvm.sh\" ]; then . \"$HOME/.nvm/nvm.sh\" && nvm use --silent >/dev/null; fi; pnpm run transcript:sync",
       "problemMatcher": [],
       "isBackground": true,
       "presentation": {
@@ -19,7 +19,7 @@
     {
       "label": "transcript:ingest (manual)",
       "type": "shell",
-      "command": "pnpm run transcript:ingest",
+      "command": "if [ -s \"$HOME/.nvm/nvm.sh\" ]; then . \"$HOME/.nvm/nvm.sh\" && nvm use --silent >/dev/null; fi; pnpm run transcript:ingest",
       "problemMatcher": [],
       "presentation": {
         "reveal": "always",
@@ -30,7 +30,7 @@
     {
       "label": "workflow-cannon: prepare-ui",
       "type": "shell",
-      "command": "pnpm run ui:prepare",
+      "command": "if [ -s \"$HOME/.nvm/nvm.sh\" ]; then . \"$HOME/.nvm/nvm.sh\" && nvm use --silent >/dev/null; fi; pnpm run ui:prepare",
       "problemMatcher": [],
       "presentation": {
         "reveal": "always",
