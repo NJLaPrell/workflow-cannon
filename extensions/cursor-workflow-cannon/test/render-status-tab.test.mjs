@@ -17,7 +17,7 @@ test("renderStatusTabInnerHtml renders systemStatus sections when present", () =
     ok: true,
     code: "dashboard-summary",
     data: {
-      schemaVersion: 6,
+      schemaVersion: 7,
       planningGeneration: 99,
       planningGenerationPolicy: "require",
       agentGuidance: {
@@ -123,7 +123,7 @@ test("renderStatusTabInnerHtml shows editor folder label when passed", () => {
       ok: true,
       code: "dashboard-summary",
       data: {
-        schemaVersion: 6,
+        schemaVersion: 7,
         planningGeneration: 1,
         planningGenerationPolicy: "off",
         systemStatus: {
