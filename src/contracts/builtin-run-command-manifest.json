@@ -1083,6 +1083,13 @@
   },
   {
     "moduleId": "context-activation",
+    "name": "cae-authoring-summary",
+    "file": "cae-authoring-summary.md",
+    "description": "Guidance authoring aggregate: active version, classified artifacts and activations, validation warnings, recent mutations, and readiness status.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
     "name": "cae-recent-traces",
     "file": "cae-recent-traces.md",
     "description": "List recent durable CAE trace summaries for UI trace browsing.",
