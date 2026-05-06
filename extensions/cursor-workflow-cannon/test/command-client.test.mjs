@@ -88,6 +88,38 @@ test("pickNodeExecutable skips native-incompatible resolver candidate", () => {
   }
 });
 
+test("pickNodeExecutable probes installed workspace-kit package root for native dependency", () => {
+  const oldHome = process.env.HOME;
+  const oldNvmDir = process.env.NVM_DIR;
+  const oldNvmBin = process.env.NVM_BIN;
+  const oldWorkspaceKitNode = process.env.WORKSPACE_KIT_NODE;
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "wc-node-package-native-"));
+  try {
+    process.env.HOME = tempRoot;
+    process.env.NVM_DIR = path.join(tempRoot, ".nvm");
+    delete process.env.NVM_BIN;
+    delete process.env.WORKSPACE_KIT_NODE;
+    const workspaceRoot = path.join(tempRoot, "consumer");
+    const packageRoot = path.join(workspaceRoot, "node_modules", "@workflow-cannon", "workspace-kit");
+    const badNode = path.join(tempRoot, "bad-node");
+    fs.mkdirSync(path.join(packageRoot, "node_modules", "better-sqlite3"), { recursive: true });
+    fs.writeFileSync(path.join(packageRoot, "node_modules", "better-sqlite3", "index.js"), "module.exports = {};\n");
+    fs.writeFileSync(badNode, "#!/bin/sh\nexit 1\n", { mode: 0o755 });
+
+    assert.notEqual(pickNodeExecutable(() => badNode, workspaceRoot, [packageRoot]), badNode);
+  } finally {
+    if (oldHome === undefined) delete process.env.HOME;
+    else process.env.HOME = oldHome;
+    if (oldNvmDir === undefined) delete process.env.NVM_DIR;
+    else process.env.NVM_DIR = oldNvmDir;
+    if (oldNvmBin === undefined) delete process.env.NVM_BIN;
+    else process.env.NVM_BIN = oldNvmBin;
+    if (oldWorkspaceKitNode === undefined) delete process.env.WORKSPACE_KIT_NODE;
+    else process.env.WORKSPACE_KIT_NODE = oldWorkspaceKitNode;
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
 test("classifyNativeSqliteErrorMessage detects macOS architecture mismatch", () => {
   const kind = classifyNativeSqliteErrorMessage(
     "dlopen(better_sqlite3.node): mach-o file, but is an incompatible architecture (have 'arm64', need 'x86_64')"
@@ -156,6 +188,14 @@ test("parseRunCommandOutput returns parse error on malformed output", () => {
   const out = parseRunCommandOutput("not-json", 1);
   assert.equal(out.ok, false);
   assert.equal(out.code, "extension-json-parse");
+});
+
+test("parseRunCommandOutput includes stderr when stdout is empty", () => {
+  const out = parseRunCommandOutput("", 1, "SyntaxError: Unexpected token 'with'");
+  assert.equal(out.ok, false);
+  assert.equal(out.code, "extension-json-parse");
+  assert.match(out.message, /stderr: SyntaxError/);
+  assert.match(out.details.stderr, /Unexpected token/);
 });
 
 test("parseRunCommandOutput remediates pnpm banner contamination", () => {

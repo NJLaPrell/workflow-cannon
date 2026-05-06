@@ -45,10 +45,14 @@ export type NodeExecutableDiagnostic = {
 };
 
 /** Pick Node binary for spawning workspace-kit; never uses extension-host `process.execPath` by default. */
-export function pickNodeExecutable(resolve?: () => string | undefined, workspaceRoot?: string): string {
+export function pickNodeExecutable(
+  resolve?: () => string | undefined,
+  workspaceRoot?: string,
+  nativeProbeRoots?: string[]
+): string {
   const candidates = buildNodeExecutableCandidates(resolve, workspaceRoot);
-  if (workspaceRoot && hasBetterSqliteDependency(workspaceRoot)) {
-    const nativeCompatible = inspectNodeExecutableCandidates(resolve, workspaceRoot).find(
+  if (workspaceRoot && findBetterSqliteProbeRoot(workspaceRoot, nativeProbeRoots)) {
+    const nativeCompatible = inspectNodeExecutableCandidates(resolve, workspaceRoot, nativeProbeRoots).find(
       (candidate) => candidate.exists && candidate.nativeSqlite?.ok
     );
     if (nativeCompatible) return nativeCompatible.path;
@@ -153,22 +157,35 @@ function compareNodeVersionsDesc(left: string, right: string): number {
   return 0;
 }
 
-function hasBetterSqliteDependency(workspaceRoot: string): boolean {
-  return fs.existsSync(path.join(workspaceRoot, "node_modules", "better-sqlite3"));
+function hasBetterSqliteDependency(probeRoot: string): boolean {
+  return fs.existsSync(path.join(probeRoot, "node_modules", "better-sqlite3"));
+}
+
+function findBetterSqliteProbeRoot(workspaceRoot: string, nativeProbeRoots?: string[]): string | undefined {
+  const roots = [workspaceRoot, ...(nativeProbeRoots ?? [])];
+  const seen = new Set<string>();
+  for (const root of roots) {
+    const normalized = root.trim();
+    if (!normalized || seen.has(normalized)) continue;
+    seen.add(normalized);
+    if (hasBetterSqliteDependency(normalized)) return normalized;
+  }
+  return undefined;
 }
 
 export function inspectNodeExecutableCandidates(
   resolve?: () => string | undefined,
-  workspaceRoot?: string
+  workspaceRoot?: string,
+  nativeProbeRoots?: string[]
 ): NodeExecutableDiagnostic[] {
-  const hasNativeDependency = Boolean(workspaceRoot && hasBetterSqliteDependency(workspaceRoot));
+  const nativeProbeRoot = workspaceRoot ? findBetterSqliteProbeRoot(workspaceRoot, nativeProbeRoots) : undefined;
   return buildNodeExecutableCandidates(resolve, workspaceRoot).map((nodeBin) => {
     const identity = inspectNodeIdentity(nodeBin);
     return {
       path: nodeBin,
       ...identity,
       nativeSqlite:
-        workspaceRoot && hasNativeDependency && identity.exists ? probeBetterSqliteWithNode(nodeBin, workspaceRoot) : undefined
+        nativeProbeRoot && identity.exists ? probeBetterSqliteWithNode(nodeBin, nativeProbeRoot) : undefined
     };
   });
 }
@@ -289,6 +306,10 @@ function resolveCliJs(workspaceRoot: string, cliPathOverride?: string): string {
   );
 }
 
+function inferCliPackageRoot(cliJs: string): string {
+  return path.dirname(path.dirname(cliJs));
+}
+
 function execKit(
   workspaceRoot: string,
   cliArgs: string[],
@@ -298,7 +319,7 @@ function execKit(
   resolveNodeExecutable?: () => string | undefined
 ): Promise<CommandClientExecResult> {
   const cliJs = resolveCliJs(workspaceRoot, cliPathOverride);
-  const nodeBin = pickNodeExecutable(resolveNodeExecutable, workspaceRoot);
+  const nodeBin = pickNodeExecutable(resolveNodeExecutable, workspaceRoot, [inferCliPackageRoot(cliJs)]);
   return new Promise((resolve, reject) => {
     execFile(
       nodeBin,
@@ -322,8 +343,9 @@ function execKit(
   });
 }
 
-export function parseRunCommandOutput(stdout: string, exitCode: number): KitRunResult {
+export function parseRunCommandOutput(stdout: string, exitCode: number, stderr = ""): KitRunResult {
   const text = stdout.trim();
+  const stderrText = stderr.trim();
   try {
     return JSON.parse(text) as KitRunResult;
   } catch {
@@ -334,12 +356,13 @@ export function parseRunCommandOutput(stdout: string, exitCode: number): KitRunR
     return {
       ok: false,
       code: "extension-json-parse",
-      message: `exit ${exitCode}; ${hint}; stdout: ${text.slice(0, 400)}`,
+      message: `exit ${exitCode}; ${hint}; stdout: ${text.slice(0, 400)}${stderrText ? `; stderr: ${stderrText.slice(0, 800)}` : ""}`,
       remediation: {
         cleanInvocations: ["pnpm exec wk run <command> '<json>'", "node dist/cli.js run <command> '<json>'"]
       },
       details: {
-        suspectedPackageManagerBanner
+        suspectedPackageManagerBanner,
+        stderr: stderrText.slice(0, 2000)
       }
     };
   }
@@ -392,9 +415,19 @@ export class CommandClient {
       if (stderr.trim()) {
         console.warn("workspace-kit stderr:", stderr.slice(0, 500));
       }
-      const parsed = parseRunCommandOutput(stdout, exitCode);
+      const parsed = parseRunCommandOutput(stdout, exitCode, stderr);
       if (!parsed.ok && exitCode !== 0 && looksLikeNativeSqliteError(`${stderr}\n${stdout}`)) {
-        const diagnostics = inspectNodeExecutableCandidates(this.resolveNodeExecutable, this.workspaceRoot);
+        let nativeProbeRoots: string[] | undefined;
+        try {
+          nativeProbeRoots = [inferCliPackageRoot(resolveCliJs(this.workspaceRoot, this.cliPathOverride))];
+        } catch {
+          nativeProbeRoots = undefined;
+        }
+        const diagnostics = inspectNodeExecutableCandidates(
+          this.resolveNodeExecutable,
+          this.workspaceRoot,
+          nativeProbeRoots
+        );
         return {
           ok: false,
           code: "extension-native-sqlite-runtime-incompatible",
