@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import type { DashboardSummaryCommandSuccess } from "@workflow-cannon/workspace-kit/contracts/dashboard-summary-run";
-import { prefillCursorChat } from "../../cursor-chat-prefill.js";
+import { prefillCursorChat, resolveEditorIntegrationState } from "../../cursor-chat-prefill.js";
 import type { CommandClient } from "../../runtime/command-client.js";
 import { expectedPlanningGenerationArgs, ingestPlanningMetaFromData } from "../../planning-generation-cache.js";
 import { buildWishlistIntakeAgentPrompt } from "../../wishlist-chat-prompt.js";
@@ -538,7 +538,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     let rootInner: string;
     const wizardPanel: PlanningInterviewWizardPanel | null = raw.ok === true ? this.planningWizardPanel() : null;
     try {
-      rootInner = renderDashboardRootInnerHtml(raw, wizardPanel);
+      const editorIntegration = await resolveEditorIntegrationState();
+      rootInner = renderDashboardRootInnerHtml(raw, wizardPanel, editorIntegration);
     } catch (e) {
       rootInner = '<pre class="bad">Host render error: ' + escapeHtml(String(e)) + "</pre>";
     }

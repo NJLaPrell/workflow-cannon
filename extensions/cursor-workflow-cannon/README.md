@@ -82,7 +82,7 @@ pnpm --filter cursor-workflow-cannon test
 
 User-facing Cursor slash commands live under **`.cursor/commands/`**: **`/add-wishlist-item`**, **`/generate-features`**, **`/list-tasks`**, **`/what-next`**, **`/onboarding`**, and **`/behavior-interview`**.
 
-The extension seeds Cursor Composer using **`vscode.commands.executeCommand("deeplink.prompt.prefill", { text })`** (same entry Cursor uses internally). If that command is missing or fails, it tries the **`cursor://anysphere.cursor-deeplink/prompt?text=…`** URI, then copies the prompt to the clipboard with a warning. Very long prompts may hit URI length limits — trim in-session or paste from clipboard. Standard VS Code (non-Cursor) may not register the deeplink command; clipboard fallback is expected.
+The extension seeds Cursor Composer using **`vscode.commands.executeCommand("deeplink.prompt.prefill", { text })`** (same entry Cursor uses internally). In Standard VS Code, it uses detected command capabilities to prefer the native chat prefill command. The **`cursor://anysphere.cursor-deeplink/prompt?text=…`** URI fallback is only attempted when the editor URI scheme is **`cursor`**; otherwise the prompt is copied to the clipboard with a warning. The dashboard shows the detected editor integration state (editor, URI scheme, and chat prefill route). Very long prompts may hit URI length limits — trim in-session or paste from clipboard.
 
 Dashboard and palette **Generate Features** open a **new** Agent/Composer chat when Cursor exposes a known **`composer.newAgentChat`** (or alias) command, then prefill the literal **`/generate-features`** string so submitting matches the slash command.
 

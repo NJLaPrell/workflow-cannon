@@ -29,6 +29,18 @@ export function renderActiveFocusHtml(raw: string): string {
   return renderMarkdownBoldAfterEscape(escapeHtml(raw));
 }
 
+type EditorIntegrationRenderState = {
+  appName?: unknown;
+  uriScheme?: unknown;
+  ideKind?: unknown;
+  chatPrefill?: {
+    label?: unknown;
+    canPrefillDirectly?: unknown;
+    externalCursorDeeplink?: unknown;
+    commands?: Record<string, unknown>;
+  };
+};
+
 function renderTaskRowList(items: unknown, emptyMessage = "No ready tasks."): string {
   if (!Array.isArray(items) || items.length === 0) {
     return '<p class="muted">' + escapeHtml(emptyMessage) + "</p>";
@@ -1086,6 +1098,39 @@ function renderAgentStatusBanner(agentStatus: unknown): string {
   );
 }
 
+function renderEditorIntegrationSection(editorIntegration: unknown): string {
+  if (!editorIntegration || typeof editorIntegration !== "object") {
+    return "";
+  }
+  const state = editorIntegration as EditorIntegrationRenderState;
+  const chat = state.chatPrefill && typeof state.chatPrefill === "object" ? state.chatPrefill : {};
+  const appName = typeof state.appName === "string" && state.appName.trim() ? state.appName.trim() : "Unknown editor";
+  const uriScheme = typeof state.uriScheme === "string" && state.uriScheme.trim() ? state.uriScheme.trim() : "unknown";
+  const ideKind = typeof state.ideKind === "string" && state.ideKind.trim() ? state.ideKind.trim() : "other";
+  const chatLabel = typeof chat.label === "string" && chat.label.trim() ? chat.label.trim() : "Clipboard fallback";
+  const direct = chat.canPrefillDirectly === true ? "Direct" : "Clipboard";
+  const external = chat.externalCursorDeeplink === true ? "enabled" : "disabled";
+  return (
+    '<section class="dash-card dash-editor-integration" aria-label="Editor integration">' +
+    "<p><b>Editor</b> " +
+    escapeHtml(appName) +
+    ' <span class="muted">' +
+    escapeHtml(ideKind) +
+    " · scheme " +
+    "<code>" +
+    escapeHtml(uriScheme) +
+    "</code></span></p>" +
+    "<p><b>Chat prefill</b> " +
+    escapeHtml(chatLabel) +
+    ' <span class="muted">' +
+    escapeHtml(direct) +
+    " · cursor URL " +
+    escapeHtml(external) +
+    "</span></p>" +
+    "</section>"
+  );
+}
+
 /** Current / next phase + Deliver chip (no outer section). */
 function renderPhaseDeliverBlockInner(
   ws: Record<string, unknown>,
@@ -1219,7 +1264,8 @@ function renderStatusRollup(
 /** Inner HTML for #root from a `workspace-kit run dashboard-summary`–shaped payload (or extension error object). */
 export function renderDashboardRootInnerHtml(
   payload: unknown,
-  planningWizardPanel?: PlanningInterviewWizardPanel | null
+  planningWizardPanel?: PlanningInterviewWizardPanel | null,
+  editorIntegration?: EditorIntegrationRenderState | null
 ): string {
   if (payload === null || payload === undefined) {
     return "<p>No payload</p>";
@@ -1406,6 +1452,7 @@ export function renderDashboardRootInnerHtml(
 
   return (
     renderAgentStatusBanner(d.agentStatus) +
+    renderEditorIntegrationSection(editorIntegration) +
     renderRoleTemperamentAndPhaseSection(d.agentGuidance, ws as Record<string, unknown> | null, res) +
     renderWorkspaceBlockersPendingSection(ws as Record<string, unknown> | null) +
     renderTeamExecutionSection(d.teamExecution) +

@@ -142,6 +142,27 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.doesNotMatch(html, /dashboard-approvals/);
 });
 
+test("renderDashboardRootInnerHtml renders editor integration state when provided", () => {
+  const fixturePath = path.join(__dirname, "../docs/fixtures/dashboard-summary.example.json");
+  const fixture = JSON.parse(readFileSync(fixturePath, "utf8"));
+  const html = renderDashboardRootInnerHtml(fixture, null, {
+    appName: "Visual Studio Code",
+    uriScheme: "vscode",
+    ideKind: "vscode",
+    chatPrefill: {
+      label: "VS Code Chat",
+      canPrefillDirectly: true,
+      externalCursorDeeplink: false
+    }
+  });
+
+  assert.match(html, /dash-editor-integration/);
+  assert.match(html, /<b>Editor<\/b> Visual Studio Code/);
+  assert.match(html, /<code>vscode<\/code>/);
+  assert.match(html, /<b>Chat prefill<\/b> VS Code Chat/);
+  assert.match(html, /cursor URL disabled/);
+});
+
 test("renderDashboardRootInnerHtml renders escaped WC Agent status banner from agentStatus", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,
