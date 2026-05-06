@@ -43,6 +43,13 @@ function logDashboard(message: string): void {
   dashboardOutput.appendLine(`[dashboard] ${message}`);
 }
 
+function phaseKeyFromPhrase(phasePhrase: string): string | undefined {
+  const raw = phasePhrase.trim();
+  if (!raw || raw.toLowerCase() === "not phased") return undefined;
+  const match = raw.match(/^Phase\s+(.+)$/i);
+  return (match?.[1] ?? raw).trim() || undefined;
+}
+
 export class DashboardViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewId = "workflowCannon.dashboard";
 
@@ -161,6 +168,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (msg?.type === "prefillPhaseCompleteReleaseChat") {
         const raw = msg?.phasePhrase;
         const phasePhrase = typeof raw === "string" ? raw.trim() : "";
+        await this.client.recordActivity({
+          kind: "releasing",
+          command: "phase-complete-release",
+          phaseKey: phaseKeyFromPhrase(phasePhrase),
+          details: { source: "dashboard-complete-release", phasePhrase }
+        });
         await prefillCursorChat(buildPhaseCompleteReleaseChatPrompt(phasePhrase));
       }
       if (msg?.type === "dashboardTransition") {

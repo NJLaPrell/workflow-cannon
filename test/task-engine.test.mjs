@@ -35,6 +35,7 @@ import {
   planningModule
 } from "../dist/index.js";
 import { setAgentActivityLease } from "../dist/modules/task-engine/agent-activity-store.js";
+import { buildAgentActivityLabel } from "../dist/modules/task-engine/agent-activity-recorder.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -1820,6 +1821,88 @@ test("taskEngineModule dashboard-summary agentStatus uses fresh live activity ov
   assert.equal(result.data.agentStatus.kind, "reviewing_pr");
   assert.equal(result.data.agentStatus.label, "Reviewing Pull Request 223");
   assert.equal(result.data.agentStatus.prNumber, 223);
+});
+
+test("buildAgentActivityLabel maps PR, release, approval, validation, and malformed metadata", () => {
+  assert.equal(
+    buildAgentActivityLabel({ kind: "reviewing_pr", prNumber: 192 }),
+    "Reviewing Pull Request 192"
+  );
+  assert.equal(
+    buildAgentActivityLabel({
+      kind: "reviewing_pr",
+      details: { prUrl: "https://github.com/acme/repo/pull/193" }
+    }),
+    "Reviewing Pull Request 193"
+  );
+  assert.equal(buildAgentActivityLabel({ kind: "reviewing_pr", details: { prNumber: "nope" } }), "Reviewing Pull Request");
+  assert.equal(buildAgentActivityLabel({ kind: "releasing", version: "0.9.1" }), "Releasing Build 0.9.1");
+  assert.equal(buildAgentActivityLabel({ kind: "releasing", phaseKey: "81" }), "Releasing Phase 81");
+  assert.equal(
+    buildAgentActivityLabel({ kind: "reviewing_item", details: { reviewItemId: "review-item:T100060" } }),
+    "Reviewing Item review-item:T100060"
+  );
+  assert.equal(
+    buildAgentActivityLabel({ kind: "awaiting_policy_approval", taskId: "T100060" }),
+    "Awaiting Policy Approval for T100060"
+  );
+  assert.equal(
+    buildAgentActivityLabel({ kind: "validating", details: { validationCommand: "pnpm run check" } }),
+    "Validating pnpm run check"
+  );
+});
+
+test("taskEngineModule set-agent-activity generates mapped labels from structured details", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, () => {});
+
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const result = await taskEngineModule.onCommand(
+    {
+      name: "set-agent-activity",
+      args: {
+        kind: "releasing",
+        details: { releaseVersion: "0.9.1" },
+        now: "2026-05-06T00:00:00.000Z",
+        ttlSeconds: 60
+      }
+    },
+    ctx
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.data.agentStatus.kind, "releasing");
+  assert.equal(result.data.agentStatus.label, "Releasing Build 0.9.1");
+  assert.equal(result.data.lease.details.releaseVersion, "0.9.1");
+});
+
+test("taskEngineModule dashboard-summary ignores expired live activity leases", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T041", status: "in_progress", priority: "P1", phaseKey: "81" }));
+  });
+
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const db = new Database(path.join(workspace, ".workspace-kit", "tasks", "workspace-kit.db"));
+  try {
+    prepareKitSqliteDatabase(db);
+    setAgentActivityLease(db, {
+      activityId: "copilot:expired",
+      agentId: "copilot",
+      sessionId: "review",
+      kind: "awaiting_policy_approval",
+      label: "Awaiting Policy Approval for T041",
+      now: "2020-01-01T00:00:00.000Z",
+      expiresAt: "2020-01-01T00:01:00.000Z",
+      details: { taskId: "T041" }
+    });
+  } finally {
+    db.close();
+  }
+  const result = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
+  assert.equal(result.ok, true);
+  assert.equal(result.data.agentStatus.source, "derived");
+  assert.equal(result.data.agentStatus.kind, "working_task");
+  assert.equal(result.data.agentStatus.label, "Working on Task T041");
 });
 
 test("run-transition start records working live activity and complete clears it", async () => {

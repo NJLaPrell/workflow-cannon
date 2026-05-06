@@ -16,4 +16,11 @@ Common kinds: `planning`, `working_task`, `blocked`, `validating`, `reviewing_it
 
 Optional fields: `label`, `agentId`, `sessionId`, `activityId`, `taskId`, `command`, `phaseKey`, `prNumber`, `version`, `details`, and `ttlSeconds`. If `label` is omitted, workspace-kit generates a short label from structured fields. TTL defaults to 10 minutes and is clamped between 30 seconds and 1 hour.
 
+Structured label conventions:
+
+- PR review: pass `prNumber` when known, or `details.prUrl` / `details.pullRequestUrl` so the label can become `Reviewing Pull Request 192` without a GitHub network call.
+- Release: pass `version` for `Releasing Build 0.9.1`; otherwise pass `phaseKey` for `Releasing Phase 81`.
+- Approval review and gates: pass `taskId`, `details.reviewItemId`, `details.approvalItemId`, or `details.itemId` to identify the reviewed item without changing task lifecycle state.
+- Validation: pass `details.validationLabel`, `details.validationCommand`, or `command` for labels like `Validating pnpm run test`.
+
 Failures are explicit for this command. Callers that are recording activity as a side effect should treat failures as best-effort and continue the underlying workflow.
