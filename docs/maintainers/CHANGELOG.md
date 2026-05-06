@@ -10,6 +10,15 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 (none)
 
+## [0.79.1] - 2026-05-05
+
+Hotfix for attached workspaces upgrading to **`0.79.0`**.
+
+### Fixed
+
+- Installed package runs now resolve built-in module instruction contracts from the package root instead of the attached project root, fixing `workspace-kit doctor` failures such as missing `src/modules/workspace-config/instructions/explain-config.md` in consumer projects.
+- The npm package now includes every built-in module `config.md` and `instructions/` directory required by module contract validation.
+
 ## [0.79.0] - 2026-05-05
 
 Phase 79 — **Cursor status dashboard, Phase Journal CAE activation, and native SQLite runtime hardening**. This release adds a richer `dashboard-summary` status payload and Cursor editor status dashboard, phase-scoped CAE guidance for Phase Journal workflows, Node version markers for Workflow Cannon development, and first-class `better-sqlite3` diagnostics/recovery for mixed Node architecture setups.
