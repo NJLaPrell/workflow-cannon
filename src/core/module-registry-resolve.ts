@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { WorkflowModule } from "../contracts/module-contract.js";
 import { ModuleRegistry, ModuleRegistryError, type ModuleRegistryOptions } from "./module-registry.js";
 import {
@@ -8,14 +9,25 @@ import {
   type EffectiveWorkspaceConfig
 } from "./workspace-kit-config.js";
 
+function moduleContractPackageRoot(): string {
+  return resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+}
+
+function hasModuleContractMarker(candidateRoot: string): boolean {
+  return existsSync(resolve(candidateRoot, "src/modules/task-engine/config.md"));
+}
+
 /**
- * Instruction paths in module registration are repo-relative. Use `workspacePath` when it
- * contains the kit sources; otherwise fall back to `process.cwd()` (tests / ephemeral cwd).
+ * Instruction paths in module registration are package-relative. Use `workspacePath` when it
+ * contains the kit sources; otherwise fall back to the installed package root.
  */
 export function pickModuleContractWorkspacePath(workspacePath: string): string {
-  const marker = resolve(workspacePath, "src/modules/task-engine/config.md");
-  if (existsSync(marker)) {
+  if (hasModuleContractMarker(workspacePath)) {
     return workspacePath;
+  }
+  const packageRoot = moduleContractPackageRoot();
+  if (hasModuleContractMarker(packageRoot)) {
+    return packageRoot;
   }
   return process.cwd();
 }

@@ -7,6 +7,7 @@ import path from "node:path";
 import {
   ModuleRegistry,
   ModuleRegistryError,
+  defaultRegistryModules,
   moduleRegistryOptionsFromEffectiveConfig,
   agentBehaviorModule,
   approvalsModule,
@@ -15,7 +16,9 @@ import {
   planningModule,
   taskEngineModule,
   validateModuleSet,
-  workspaceConfigModule
+  workspaceConfigModule,
+  pickModuleContractWorkspacePath,
+  resolveRegistryAndConfig
 } from "../dist/index.js";
 
 test("validateModuleSet accepts valid module dependency graph", () => {
@@ -43,6 +46,15 @@ test("ModuleRegistry resolves instruction contracts from explicit workspacePath"
   } finally {
     process.chdir(originalCwd);
   }
+});
+
+test("module registry resolves package instruction contracts for consumer workspace", async () => {
+  const consumerDir = await mkdtemp(path.join(os.tmpdir(), "wk-consumer-modreg-"));
+  const picked = pickModuleContractWorkspacePath(consumerDir);
+
+  assert.notEqual(picked, consumerDir);
+  const { registry } = await resolveRegistryAndConfig(consumerDir, defaultRegistryModules);
+  assert.ok(registry.getModuleById("workspace-config"));
 });
 
 test("ModuleRegistry returns startup order in dependency sequence", () => {
