@@ -59,6 +59,15 @@ export type DashboardAgentGuidanceSummary = {
   usingDefaultTier: boolean;
   temperamentProfileId: string;
   temperamentLabel: string;
+  agentPresentation?: {
+    schemaVersion: 1;
+    mode: "derived" | "explicit";
+    workLog: "off" | "minimal" | "normal" | "frequent";
+    rationale: "none" | "simple" | "technical";
+    technicality: "plain" | "balanced" | "technical";
+    finalAnswerDetail: "concise" | "normal" | "detailed";
+    privateReasoning: "never_disclose";
+  };
 };
 
 /** Read-only team execution rows for dashboard / extension (Phase 58+ visibility). */

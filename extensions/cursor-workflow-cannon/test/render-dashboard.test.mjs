@@ -149,7 +149,16 @@ test("renderDashboardRootInnerHtml planning card shows resume CLI when session p
         displayLabel: "Adventurer",
         usingDefaultTier: true,
         temperamentProfileId: "builtin:balanced",
-        temperamentLabel: "The Steady Adventurer"
+        temperamentLabel: "The Steady Adventurer",
+        agentPresentation: {
+          schemaVersion: 1,
+          mode: "derived",
+          workLog: "normal",
+          rationale: "simple",
+          technicality: "balanced",
+          finalAnswerDetail: "normal",
+          privateReasoning: "never_disclose"
+        }
       },
       stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
       proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
@@ -190,6 +199,8 @@ test("renderDashboardRootInnerHtml planning card shows resume CLI when session p
     }
   });
   assert.match(html, /Planning Interview/);
+  assert.match(html, /Presentation:/);
+  assert.match(html, /Work-log normal/);
   assert.doesNotMatch(html, /data-wc-action="planning-new-plan"/);
   assert.doesNotMatch(html, />New Plan<\/button>/);
   assert.match(html, /Wishlist/);

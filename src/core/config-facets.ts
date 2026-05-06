@@ -13,6 +13,7 @@ export const CONFIG_FACET_IDS = [
   "modules",
   "plugins",
   "policy",
+  "agentPresentation",
   "responseTemplates",
   "agentBehavior"
 ] as const;

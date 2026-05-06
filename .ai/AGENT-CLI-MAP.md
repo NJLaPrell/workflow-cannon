@@ -52,6 +52,10 @@ Use **`workspace-kit run run-transition`** (and related commands). Do not edit S
 
 Optional **`responseTemplateId`** / directive fields on argv — [`.ai/response-template-contract.md`](./response-template-contract.md), [`.ai/runbooks/response-templates.md`](./runbooks/response-templates.md).
 
+## Agent presentation policy
+
+Baseline visible-agent presentation is configured with **`agentPresentation.*`** and resolved through **`resolve-agent-guidance`** / **`dashboard-summary`**. The generated Cursor rule from **`sync-effective-behavior-cursor-rule`** is the early chat instruction surface; dashboards and **`data.presentation.agentPresentation`** are observability/output metadata only. Private reasoning is never displayed or requested. Use CAE scoped Guidance for situational exceptions such as onboarding plain language, phase closeout technical evidence, or sensitive-command remediation: [`.ai/runbooks/agent-presentation-policy.md`](./runbooks/agent-presentation-policy.md).
+
 ## Where did the big tables go?
 
 - **Tier A/B/C examples, CAE block, queue-health copy-paste, wishlist ladder:** **`.ai/AGENT-CLI-MAP.extended.md`**

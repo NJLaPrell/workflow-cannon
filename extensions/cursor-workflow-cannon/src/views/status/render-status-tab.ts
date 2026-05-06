@@ -149,9 +149,19 @@ export function renderStatusTabInnerHtml(
     const role = typeof ag.displayLabel === "string" ? ag.displayLabel : "—";
     const temp = typeof ag.temperamentLabel === "string" ? ag.temperamentLabel : "—";
     const profile = typeof ag.temperamentProfileId === "string" ? ag.temperamentProfileId : "";
+    const presentation = ag.agentPresentation && typeof ag.agentPresentation === "object"
+      ? (ag.agentPresentation as Record<string, unknown>)
+      : null;
+    const workLog = typeof presentation?.workLog === "string" ? presentation.workLog : "—";
+    const rationale = typeof presentation?.rationale === "string" ? presentation.rationale : "—";
+    const detail = typeof presentation?.finalAnswerDetail === "string" ? presentation.finalAnswerDetail : "—";
     const body =
       kvRow("Role", escapeHtml(role) + " (tier " + escapeHtml(tier) + ")") +
       kvRow("Temperament", escapeHtml(temp) + (profile ? " · " + escapeHtml(profile) : "")) +
+      kvRow(
+        "Presentation",
+        "Work-log " + escapeHtml(workLog) + " · Rationale " + escapeHtml(rationale) + " · Final " + escapeHtml(detail)
+      ) +
       '<p class="wc-hint">Advisory only — does not replace CLI policy or JSON <code>policyApproval</code>.</p>';
     parts.push(card("Agent profile", body));
   }

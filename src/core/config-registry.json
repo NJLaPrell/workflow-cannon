@@ -271,6 +271,115 @@
       "user"
     ]
   },
+  "agentPresentation.mode": {
+    "key": "agentPresentation.mode",
+    "type": "string",
+    "description": "Controls whether visible presentation policy is derived from role and temperament or starts from neutral defaults plus explicit overrides. Private reasoning is never disclosed regardless of this setting.",
+    "default": "derived",
+    "allowedValues": [
+      "derived",
+      "explicit"
+    ],
+    "domainScope": "project",
+    "owningModule": "agent-behavior",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "agentPresentation.workLog": {
+    "key": "agentPresentation.workLog",
+    "type": "string",
+    "description": "Visible work-log cadence for agent progress updates. `derived` combines role tier and temperament; `off` still permits blockers, approvals, destructive-action warnings, verification failures, and residual risks.",
+    "default": "derived",
+    "allowedValues": [
+      "derived",
+      "off",
+      "minimal",
+      "normal",
+      "frequent"
+    ],
+    "domainScope": "project",
+    "owningModule": "agent-behavior",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "agentPresentation.rationale": {
+    "key": "agentPresentation.rationale",
+    "type": "string",
+    "description": "Visible rationale-summary style. This controls short summaries of decisions and tradeoffs, not private chain-of-thought disclosure.",
+    "default": "derived",
+    "allowedValues": [
+      "derived",
+      "none",
+      "simple",
+      "technical"
+    ],
+    "domainScope": "project",
+    "owningModule": "agent-behavior",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "agentPresentation.technicality": {
+    "key": "agentPresentation.technicality",
+    "type": "string",
+    "description": "How technical visible summaries should be. Use CAE scoped guidance for workflow-specific exceptions such as release evidence or onboarding.",
+    "default": "derived",
+    "allowedValues": [
+      "derived",
+      "plain",
+      "balanced",
+      "technical"
+    ],
+    "domainScope": "project",
+    "owningModule": "agent-behavior",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "agentPresentation.finalAnswerDetail": {
+    "key": "agentPresentation.finalAnswerDetail",
+    "type": "string",
+    "description": "Default final-answer detail level. Does not suppress required blockers, approvals, destructive-action warnings, verification failures, or residual risk notes.",
+    "default": "derived",
+    "allowedValues": [
+      "derived",
+      "concise",
+      "normal",
+      "detailed"
+    ],
+    "domainScope": "project",
+    "owningModule": "agent-behavior",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
   "planning.defaultQuestionDepth": {
     "key": "planning.defaultQuestionDepth",
     "type": "string",

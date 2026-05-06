@@ -8,6 +8,7 @@ import type {
 import { summarizeSubagentsForDashboard } from "../../subagents/subagent-store.js";
 import { summarizeTeamAssignmentsForDashboard } from "../../team-execution/assignment-store.js";
 import { resolveAgentGuidanceFromEffectiveConfig } from "../../../core/agent-guidance-catalog.js";
+import { resolveAgentPresentationPolicy } from "../../../core/agent-presentation-policy.js";
 import { getPlanningGenerationPolicy } from "../planning-config.js";
 import { getNextActions, isImprovementLikeTask } from "../suggestions.js";
 import { TRANSCRIPT_CHURN_TASK_TYPE } from "../transcript-churn.js";
@@ -200,6 +201,15 @@ export async function runDashboardSummaryCommand(
   const behaviorState = await loadBehaviorWorkspaceState(ctx);
   const behaviorStore = new BehaviorProfileStore(behaviorState);
   const { effective: behaviorEffective } = behaviorStore.resolveEffectiveWithProvenance();
+  const agentPresentation = resolveAgentPresentationPolicy({
+    effectiveConfig: effCfg,
+    guidance: guidanceResolved,
+    behaviorProfile: {
+      id: behaviorEffective.id,
+      label: behaviorEffective.label,
+      dimensions: behaviorEffective.dimensions
+    }
+  });
   const agentGuidance = {
     schemaVersion: 1 as const,
     profileSetId: guidanceResolved.profileSetId,
@@ -207,7 +217,8 @@ export async function runDashboardSummaryCommand(
     displayLabel: guidanceResolved.displayLabel,
     usingDefaultTier: guidanceResolved.usingDefaultTier,
     temperamentProfileId: behaviorEffective.id,
-    temperamentLabel: dashboardOnboardingTemperamentLabel(behaviorEffective)
+    temperamentLabel: dashboardOnboardingTemperamentLabel(behaviorEffective),
+    agentPresentation
   };
 
   const taskTitleById = new Map(tasks.map((t) => [t.id, t.title] as const));

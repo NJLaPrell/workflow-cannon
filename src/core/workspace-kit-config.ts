@@ -107,6 +107,13 @@ export const KIT_CONFIG_DEFAULTS: Record<string, unknown> = {
   documentation: {},
   /** Agent temperament / interview preferences; mirrored to `.workspace-kit/modules/agent-behavior/config.json` when using SQLite. */
   agentBehavior: {},
+  agentPresentation: {
+    mode: "derived",
+    workLog: "derived",
+    rationale: "derived",
+    technicality: "derived",
+    finalAnswerDetail: "derived"
+  },
   responseTemplates: {
     enforcementMode: "advisory",
     defaultTemplateId: "default",

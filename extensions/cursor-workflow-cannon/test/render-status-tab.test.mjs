@@ -27,7 +27,16 @@ test("renderStatusTabInnerHtml renders systemStatus sections when present", () =
         temperamentLabel: "Tavern",
         temperamentProfileId: "custom:x",
         profileSetId: "rpg_party_v1",
-        usingDefaultTier: false
+        usingDefaultTier: false,
+        agentPresentation: {
+          schemaVersion: 1,
+          mode: "derived",
+          workLog: "frequent",
+          rationale: "technical",
+          technicality: "technical",
+          finalAnswerDetail: "detailed",
+          privateReasoning: "never_disclose"
+        }
       },
       stateSummary: { ready: 1, in_progress: 0, blocked: 0, total: 9 },
       systemStatus: {
@@ -78,6 +87,8 @@ test("renderStatusTabInnerHtml renders systemStatus sections when present", () =
   assert.match(html, /my-project/);
   assert.match(html, /Wizard/);
   assert.match(html, /Tavern/);
+  assert.match(html, /Work-log frequent/);
+  assert.match(html, /Rationale technical/);
   assert.match(html, /Planning sync/);
   assert.match(html, /This workspace/);
   assert.match(html, /Planning data/);

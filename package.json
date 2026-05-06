@@ -37,7 +37,7 @@
     "_comment_check_gates": "maintainer-gates = metadata/consistency checks; pre-merge-gates = maintainer-gates + test.",
     "check": "node scripts/run-check-stages.mjs",
     "clean": "rm -rf dist",
-    "test": "pnpm run build && node --test test/**/*.test.mjs",
+    "test": "pnpm run build && find test -name '*.test.mjs' -print0 | xargs -0 node --test",
     "pack:dry-run": "pnpm run build && pnpm pack --pack-destination ./artifacts/workspace-kit-pack",
     "check-release-metadata": "node scripts/check-release-metadata.mjs",
     "parity": "node scripts/run-parity.mjs",

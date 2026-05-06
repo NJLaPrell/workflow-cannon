@@ -12,6 +12,7 @@ Symptom → **one** `.ai/runbooks/*.md` target (agents: prefer this table over d
 | Workspace status + SQLite authority | [`workspace-status-sqlite.md`](./workspace-status-sqlite.md) |
 | Phase journal retention / phase-close defaults | [`phase-journal-retention.md`](./phase-journal-retention.md) |
 | Response templates | [`response-templates.md`](./response-templates.md) |
+| Agent presentation policy | [`agent-presentation-policy.md`](./agent-presentation-policy.md) |
 | Wishlist workflow | [`wishlist-workflow.md`](./wishlist-workflow.md) |
 | Subagent registry | [`subagent-registry.md`](./subagent-registry.md) |
 | Principal architectural review themes (cold start) | [`principal-architectural-review-themes.md`](./principal-architectural-review-themes.md) |

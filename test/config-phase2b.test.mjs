@@ -185,6 +185,62 @@ test("run resolve-config returns effective and layers", async () => {
   assert.ok(ids.includes("project"));
 });
 
+test("agentPresentation config validates and resolves", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "wk-agent-presentation-"));
+  await minimalWorkspace(root);
+  const home = await mkdtemp(path.join(os.tmpdir(), "wk-agent-presentation-home-"));
+  await writeFile(
+    path.join(root, ".workspace-kit", "config.json"),
+    JSON.stringify({
+      agentPresentation: {
+        mode: "explicit",
+        workLog: "off",
+        rationale: "technical",
+        technicality: "plain",
+        finalAnswerDetail: "concise"
+      }
+    }),
+    "utf8"
+  );
+
+  const cap = captureIo();
+  const code = await withUserHome(home, () =>
+    runCli(["run", "resolve-config", "{}"], { cwd: root, ...cap })
+  );
+  assert.equal(code, 0);
+  const out = JSON.parse(cap.lines.join(""));
+  assert.equal(out.data.effective.agentPresentation.mode, "explicit");
+  assert.equal(out.data.effective.agentPresentation.rationale, "technical");
+
+  const guidanceCap = captureIo();
+  const guidanceCode = await withUserHome(home, () =>
+    runCli(["run", "resolve-agent-guidance", "{}"], { cwd: root, ...guidanceCap })
+  );
+  assert.equal(guidanceCode, 0);
+  const guidance = JSON.parse(guidanceCap.lines.join(""));
+  assert.equal(guidance.data.agentPresentation.schemaVersion, 1);
+  assert.equal(guidance.data.agentPresentation.workLog, "off");
+  assert.equal(guidance.data.agentPresentation.rationale, "technical");
+});
+
+test("agentPresentation config rejects unsafe unknown fields", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "wk-agent-presentation-bad-"));
+  await minimalWorkspace(root);
+  const home = await mkdtemp(path.join(os.tmpdir(), "wk-agent-presentation-bad-home-"));
+  await writeFile(
+    path.join(root, ".workspace-kit", "config.json"),
+    JSON.stringify({ agentPresentation: { chainOfThought: "show" } }),
+    "utf8"
+  );
+
+  const cap = captureIo();
+  const code = await withUserHome(home, () =>
+    runCli(["config", "validate", "--json"], { cwd: root, ...cap })
+  );
+  assert.ok(code === 1 || code === 3, `expected validation failure, got ${code}`);
+  assert.match(cap.errors.join(""), /unknown agentPresentation\.chainOfThought/);
+});
+
 test("policy.trace includes schemaVersion", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "wk-pol-"));
   await minimalWorkspace(root);

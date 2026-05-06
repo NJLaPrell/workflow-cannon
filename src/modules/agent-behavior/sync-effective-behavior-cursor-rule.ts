@@ -9,6 +9,10 @@ import {
   explanationVerbosityRank,
   resolveAgentGuidanceFromEffectiveConfig
 } from "../../core/agent-guidance-catalog.js";
+import {
+  resolveAgentPresentationPolicy,
+  type ResolvedAgentPresentationPolicy
+} from "../../core/agent-presentation-policy.js";
 import { resolveWorkspaceConfigWithLayers } from "../../core/workspace-kit-config.js";
 import { loadBehaviorWorkspaceState } from "./persistence.js";
 import { BehaviorProfileStore } from "./store.js";
@@ -38,6 +42,7 @@ export function renderEffectiveBehaviorCursorRuleMarkdown(params: {
   agentGuidanceLabel: string;
   tier: number;
   modulation: ReturnType<typeof advisoryModulationForProfile>;
+  presentationPolicy: ResolvedAgentPresentationPolicy;
   contentHash: string;
 }): string {
   const fm =
@@ -57,6 +62,14 @@ export function renderEffectiveBehaviorCursorRuleMarkdown(params: {
     `- Prefer **${params.modulation.explanationDepth}** explanations.`,
     `- Use **${params.modulation.checkIns}** check-ins when choosing pacing.`,
     `- Ask **${params.modulation.clarifyingQuestions}** clarifying questions before risky or irreversible steps.`,
+    "",
+    "## Presentation policy (imperative)",
+    `- Visible work-log: **${params.presentationPolicy.workLog}**.`,
+    `- Visible rationale summary: **${params.presentationPolicy.rationale}**.`,
+    `- Technicality: **${params.presentationPolicy.technicality}**.`,
+    `- Final answer detail: **${params.presentationPolicy.finalAnswerDetail}**.`,
+    "- Reason privately. Never reveal chain-of-thought, hidden deliberation, scratchpad notes, or step-by-step private reasoning.",
+    "- Always surface blockers, required approvals, destructive-action warnings, verification failures, and residual risks even when work-log detail is minimal or off.",
     "",
     "## Scope",
     "- This rule is **advisory** only. It does **not** replace **PRINCIPLES**, **POLICY-APPROVAL**, or JSON **policyApproval** on Tier A/B **wk run** commands.",
@@ -85,6 +98,15 @@ async function buildMarkdownForWorkspace(ctx: ModuleLifecycleContext): Promise<{
   const { effective: effProfile } = store.resolveEffectiveWithProvenance();
   const evRank = explanationVerbosityRank(effProfile.dimensions?.explanationVerbosity);
   const modulation = advisoryModulationForProfile(guidance, evRank);
+  const presentationPolicy = resolveAgentPresentationPolicy({
+    effectiveConfig: effective as Record<string, unknown>,
+    guidance,
+    behaviorProfile: {
+      id: effProfile.id,
+      label: effProfile.label,
+      dimensions: effProfile.dimensions
+    }
+  });
   const contentHash = createHash("sha256")
     .update(
       JSON.stringify({
@@ -94,7 +116,14 @@ async function buildMarkdownForWorkspace(ctx: ModuleLifecycleContext): Promise<{
         profileLabel: effProfile.label,
         summary: effProfile.summary,
         dims: effProfile.dimensions,
-        modulation
+        modulation,
+        presentationPolicy: {
+          mode: presentationPolicy.mode,
+          workLog: presentationPolicy.workLog,
+          rationale: presentationPolicy.rationale,
+          technicality: presentationPolicy.technicality,
+          finalAnswerDetail: presentationPolicy.finalAnswerDetail
+        }
       })
     )
     .digest("hex")
@@ -106,6 +135,7 @@ async function buildMarkdownForWorkspace(ctx: ModuleLifecycleContext): Promise<{
     agentGuidanceLabel: guidance.displayLabel,
     tier: guidance.tier,
     modulation,
+    presentationPolicy,
     contentHash
   });
   return { markdown, contentHash, relativePath: DEFAULT_EFFECTIVE_BEHAVIOR_RULE_RELATIVE_PATH };

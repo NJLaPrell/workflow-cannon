@@ -1682,6 +1682,10 @@ test("taskEngineModule onCommand dashboard-summary returns stable shape", async 
   assert.equal(d.agentGuidance.profileSetId, "rpg_party_v1");
   assert.equal(d.agentGuidance.temperamentProfileId, "builtin:balanced");
   assert.equal(d.agentGuidance.temperamentLabel, "The Steady Adventurer");
+  assert.equal(d.agentGuidance.agentPresentation.schemaVersion, 1);
+  assert.equal(d.agentGuidance.agentPresentation.workLog, "normal");
+  assert.equal(d.agentGuidance.agentPresentation.rationale, "simple");
+  assert.equal(d.agentGuidance.agentPresentation.privateReasoning, "never_disclose");
   assert.ok(d.teamExecution);
   assert.equal(d.teamExecution.schemaVersion, 1);
   assert.equal(d.teamExecution.available, true);
@@ -1738,6 +1742,8 @@ test("taskEngineModule dashboard-summary agentGuidance reflects effective config
   assert.equal(typeof ag.temperamentProfileId, "string");
   assert.equal(typeof ag.temperamentLabel, "string");
   assert.ok(ag.temperamentLabel.length > 0);
+  assert.equal(ag.agentPresentation.technicality, "technical");
+  assert.equal(ag.agentPresentation.finalAnswerDetail, "detailed");
 });
 
 test("taskEngineModule dashboard-summary dependencyOverview critical path orders prerequisites", async () => {

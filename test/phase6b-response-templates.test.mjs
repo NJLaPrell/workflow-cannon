@@ -7,6 +7,7 @@ import path from "node:path";
 
 import {
   applyResponseTemplateApplication,
+  mergeAgentPresentationTemplateHints,
   parseTemplateDirectiveFromText,
   truncateTemplateWarning,
   MAX_TEMPLATE_WARNING_LENGTH
@@ -79,6 +80,76 @@ test("Phase6b: template presentation preserves command-specific phase rollover p
   assert.equal(shaped.data.presentation.templateId, "phase_ship");
   assert.equal(shaped.data.presentation.phaseRollover.kind, "phase_rollover_v1");
   assert.equal(shaped.data.presentation.phaseRollover.workspaceRevisionAfter, 1);
+});
+
+test("Phase80: response templates project resolved agent presentation as metadata only", () => {
+  const shaped = applyResponseTemplateApplication(
+    "resolve-agent-guidance",
+    {},
+    {
+      ok: true,
+      code: "agent-guidance-resolved",
+      data: {
+        schemaVersion: 1,
+        tier: 4,
+        displayLabel: "Wizard",
+        agentPresentation: {
+          schemaVersion: 1,
+          mode: "derived",
+          workLog: "frequent",
+          rationale: "technical",
+          technicality: "technical",
+          finalAnswerDetail: "detailed",
+          privateReasoning: "never_disclose",
+          agentInstruction: "private full instruction should not be duplicated"
+        }
+      }
+    },
+    {}
+  );
+
+  assert.equal(shaped.ok, true);
+  assert.equal(shaped.data.presentation.agentPresentation.schemaVersion, 1);
+  assert.equal(shaped.data.presentation.agentPresentation.workLog, "frequent");
+  assert.equal(shaped.data.presentation.agentPresentation.primaryInstructionSource, "generated_cursor_rule");
+  assert.equal(shaped.data.presentation.agentPresentation.responseTemplateRole, "output_metadata_only");
+  assert.equal(shaped.data.presentation.agentPresentation.privateReasoning, "never_disclose");
+  assert.equal(shaped.data.presentation.agentPresentation.agentInstruction, undefined);
+});
+
+test("Phase80: response template presentation hints coexist with CAE hints and explicit template id", () => {
+  const shaped = applyResponseTemplateApplication(
+    "dashboard-summary",
+    { responseTemplateId: "compact" },
+    {
+      ok: true,
+      code: "dashboard-summary",
+      data: {
+        agentGuidance: {
+          agentPresentation: {
+            schemaVersion: 1,
+            mode: "derived",
+            workLog: "normal",
+            rationale: "simple",
+            technicality: "balanced",
+            finalAnswerDetail: "normal",
+            privateReasoning: "never_disclose"
+          }
+        },
+        cae: { traceId: "cae.trace.123", evalMode: "shadow", degraded: false }
+      }
+    },
+    {}
+  );
+
+  assert.equal(shaped.responseTemplate.appliedTemplateId, "compact");
+  assert.equal(shaped.data.presentation.agentPresentation.kind, "agent_presentation_policy_v1");
+  assert.equal(shaped.data.presentation.cae.kind, "shadow_preflight_v1");
+  assert.equal(shaped.data.presentation.cae.traceId, "cae.trace.123");
+});
+
+test("Phase80: response template helper ignores outputs without resolved presentation policy", () => {
+  assert.deepEqual(mergeAgentPresentationTemplateHints({ rows: [] }), {});
 });
 
 test("Phase6b: strict mode fails on unknown defaultTemplateId", async () => {

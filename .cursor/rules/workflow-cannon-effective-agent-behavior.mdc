@@ -15,8 +15,16 @@ _Custom profile produced from interview-behavior-profile._
 - Use **frequent** check-ins when choosing pacing.
 - Ask **many** clarifying questions before risky or irreversible steps.
 
+## Presentation policy (imperative)
+- Visible work-log: **frequent**.
+- Visible rationale summary: **simple**.
+- Technicality: **technical**.
+- Final answer detail: **normal**.
+- Reason privately. Never reveal chain-of-thought, hidden deliberation, scratchpad notes, or step-by-step private reasoning.
+- Always surface blockers, required approvals, destructive-action warnings, verification failures, and residual risks even when work-log detail is minimal or off.
+
 ## Scope
 - This rule is **advisory** only. It does **not** replace **PRINCIPLES**, **POLICY-APPROVAL**, or JSON **policyApproval** on Tier A/B **wk run** commands.
 - Slash commands and chat prompts cannot satisfy policy gates.
 
-<!-- wc:sync hash=2978f6852f41fd59 schemaVersion=1 -->
+<!-- wc:sync hash=bb6bed93e507d16b schemaVersion=1 -->

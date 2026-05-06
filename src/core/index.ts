@@ -115,8 +115,25 @@ export {
 } from "./response-template-registry.js";
 export {
   applyResponseTemplateApplication,
+  mergeAgentPresentationTemplateHints,
   resolveContextualResponseTemplateId
 } from "./response-template-shaping.js";
+export {
+  AGENT_PRESENTATION_POLICY_SCHEMA_VERSION,
+  resolveAgentPresentationPolicy,
+  type AgentPresentationBehaviorDimensions,
+  type AgentPresentationBehaviorProfileInput,
+  type AgentPresentationConfig,
+  type AgentPresentationConfigMode,
+  type AgentPresentationConfigValue,
+  type AgentPresentationFinalAnswerDetail,
+  type AgentPresentationPolicySource,
+  type AgentPresentationRationale,
+  type AgentPresentationTechnicality,
+  type AgentPresentationWorkLog,
+  type AgentPrivateReasoningPolicy,
+  type ResolvedAgentPresentationPolicy
+} from "./agent-presentation-policy.js";
 export {
   buildIngestTranscriptsArgsForHook,
   maybeSpawnTranscriptHookAfterCompletion,

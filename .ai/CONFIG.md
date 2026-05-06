@@ -12,6 +12,26 @@ Generated from `src/core/config-metadata.ts`. Do not edit by hand; run `workspac
 
 **Description:** Custom behavior profiles keyed by custom:<slug>; merged with builtins at resolve time. Mirrored with SQLite when using unified DB.
 
+| agentPresentation.finalAnswerDetail | string | "derived" | project | agent-behavior | maintainer | false | false |
+
+**Description:** Default final-answer detail level. Does not suppress required blockers, approvals, destructive-action warnings, verification failures, or residual risk notes.
+
+| agentPresentation.mode | string | "derived" | project | agent-behavior | maintainer | false | false |
+
+**Description:** Controls whether visible presentation policy is derived from role and temperament or starts from neutral defaults plus explicit overrides. Private reasoning is never disclosed regardless of this setting.
+
+| agentPresentation.rationale | string | "derived" | project | agent-behavior | maintainer | false | false |
+
+**Description:** Visible rationale-summary style. This controls short summaries of decisions and tradeoffs, not private chain-of-thought disclosure.
+
+| agentPresentation.technicality | string | "derived" | project | agent-behavior | maintainer | false | false |
+
+**Description:** How technical visible summaries should be. Use CAE scoped guidance for workflow-specific exceptions such as release evidence or onboarding.
+
+| agentPresentation.workLog | string | "derived" | project | agent-behavior | maintainer | false | false |
+
+**Description:** Visible work-log cadence for agent progress updates. `derived` combines role tier and temperament; `off` still permits blockers, approvals, destructive-action warnings, verification failures, and residual risks.
+
 | improvement.cadence.maxRecommendationCandidatesPerRun | number | 500 | project | improvement | maintainer | false | false |
 
 **Description:** Upper bound on new improvement tasks created per generate-recommendations run (safety cap; direct runs still respect dedupe).
@@ -80,13 +100,49 @@ Generated from `src/core/config-metadata.ts`. Do not edit by hand; run `workspac
 
 **Description:** When true (default), dirty worktrees use git stash for auto-checkpoints; when false, dirty worktrees fail auto-checkpoint until clean.
 
+| kit.cae.adminMutations | boolean | false | project | context-activation | maintainer | true | true |
+
+**Description:** Break-glass: when true with kit.cae.enabled and registryStore sqlite, CAE registry admin mutators may run with JSON caeMutationApproval (see .ai/cae/registry-mutation-governance.md).
+
+| kit.cae.advisoryInstructionSurface | boolean | false | project | context-activation | maintainer | false | false |
+
+**Description:** When true with kit.cae.enabled, bounded CAE context may appear on agent instruction surfaces (e.g. doctor --agent-instruction-surface).
+
+| kit.cae.enabled | boolean | false | project | context-activation | maintainer | false | false |
+
+**Description:** Master switch for Context Activation Engine (CAE): advisory payloads, optional shadow preflight, persistence, and enforcement gates.
+
+| kit.cae.enforcement.enabled | boolean | false | project | context-activation | maintainer | true | true |
+
+**Description:** When true with kit.cae.enabled, narrow CAE enforcement allowlist may block or annotate matching commands (opt-in pilot).
+
+| kit.cae.persistence | boolean | false | project | context-activation | maintainer | false | false |
+
+**Description:** When true with kit.cae.enabled, CAE traces and acknowledgement satisfaction rows persist in kit SQLite across processes.
+
+| kit.cae.registryStore | string | "sqlite" | project | context-activation | maintainer | false | false |
+
+**Description:** CAE registry backing store: sqlite (active version in kit planning DB) or json (tests / explicit bootstrap only).
+
+| kit.cae.runtime.persistShadowPreflight | boolean | false | project | context-activation | maintainer | false | false |
+
+**Description:** When true (with kit.cae.persistence), shadow CAE preflight traces may persist to planning SQLite. Defaults false to avoid dirtying tracked state during routine agent commands.
+
+| kit.cae.runtime.shadowPreflight | boolean | false | project | context-activation | maintainer | false | false |
+
+**Description:** When true (with kit.cae.enabled), non-cae-* module commands may run shadow CAE preflight for telemetry without blocking.
+
+| kit.cae.shadow.defaultOn | boolean | false | project | context-activation | maintainer | false | false |
+
+**Description:** Product default for shadow CAE labels on matched activations when shadow mode is applicable.
+
 | kit.currentPhaseLabel | string | "" | project | workspace-kit | maintainer | false | false |
 
 **Description:** Optional human-readable phase label (for explain-config / operator context); does not replace task.phase strings.
 
 | kit.currentPhaseNumber | number | 0 | project | workspace-kit | maintainer | false | false |
 
-**Description:** Optional positive integer for operator UX / bootstrap when SQLite workspace status is absent. When **`kit_workspace_status`** exists (**`user_version` ≥ 10**), readers use the DB row first; this key does not override it. Doctor may note config vs DB drift without failing.
+**Description:** Optional positive integer for operator UX / bootstrap when SQLite workspace status is absent. When kit_workspace_status is present (SQLite user_version ≥ 10), readers use the DB row first; this key does not override it. Doctor may note config vs DB drift without failing.
 
 | kit.githubInvocation.allowedRepositories | array | [] | project | workspace-kit | maintainer | true | true |
 
@@ -127,6 +183,10 @@ Generated from `src/core/config-metadata.ts`. Do not edit by hand; run `workspac
 | kit.lifecycleHooks.traceRelativePath | string | ".workspace-kit/kit/lifecycle-hook-traces.jsonl" | project | workspace-kit | maintainer | false | false |
 
 **Description:** Workspace-relative append-only JSONL trace path for hook invocations (no secrets; see lifecycle hooks runbook).
+
+| kit.phaseJournal.requirePolicyApprovalForCriticalDismissSupersede | boolean | false | project | task-engine | maintainer | false | false |
+
+**Description:** When true, dismissing or superseding an active critical-priority phase note requires a valid JSON policyApproval object on the same workspace-kit run invocation (Tier B-style; see POLICY-APPROVAL). Default false preserves pre-policy MVP behavior.
 
 | modules.disabled | array | [] | project | workspace-kit | maintainer | false | false |
 
@@ -175,6 +235,10 @@ Generated from `src/core/config-metadata.ts`. Do not edit by hand; run `workspac
 | skills.discoveryRoots | array | [".claude/skills"] | project | skills | maintainer | false | false |
 
 **Description:** Workspace-relative directories scanned for skill packs (Claude-shaped: <root>/<skill-id>/SKILL.md).
+
+| tasks.deliveryEvidence.enforcementMode | string | "advisory" | project | task-engine | public | false | false |
+
+**Description:** Completion behavior for phased delivery tasks missing metadata.deliveryEvidence or metadata.deliveryWaiver: off skips the guard, advisory records a structured guard result, enforce blocks completion.
 
 | tasks.persistenceBackend | string | "sqlite" | project | task-engine | public | false | false |
 

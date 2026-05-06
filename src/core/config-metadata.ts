@@ -229,6 +229,7 @@ export function validatePersistedConfigDocument(
     "policy",
     "improvement",
     "skills",
+    "agentPresentation",
     "responseTemplates",
     "modules",
     "kit",
@@ -783,6 +784,38 @@ export function validatePersistedConfigDocument(
     }
     if (ab.customProfiles !== undefined) {
       validateValueForMetadata(REGISTRY["agentBehavior.customProfiles"]!, ab.customProfiles);
+    }
+  }
+  const agentPresentation = data.agentPresentation;
+  if (agentPresentation !== undefined) {
+    if (
+      typeof agentPresentation !== "object" ||
+      agentPresentation === null ||
+      Array.isArray(agentPresentation)
+    ) {
+      throw new Error(`config-invalid(${label}): agentPresentation must be an object`);
+    }
+    const ap = agentPresentation as Record<string, unknown>;
+    const allowed = new Set(["mode", "workLog", "rationale", "technicality", "finalAnswerDetail"]);
+    for (const k of Object.keys(ap)) {
+      if (!allowed.has(k)) {
+        throw new Error(`config-invalid(${label}): unknown agentPresentation.${k}`);
+      }
+    }
+    if (ap.mode !== undefined) {
+      validateValueForMetadata(REGISTRY["agentPresentation.mode"]!, ap.mode);
+    }
+    if (ap.workLog !== undefined) {
+      validateValueForMetadata(REGISTRY["agentPresentation.workLog"]!, ap.workLog);
+    }
+    if (ap.rationale !== undefined) {
+      validateValueForMetadata(REGISTRY["agentPresentation.rationale"]!, ap.rationale);
+    }
+    if (ap.technicality !== undefined) {
+      validateValueForMetadata(REGISTRY["agentPresentation.technicality"]!, ap.technicality);
+    }
+    if (ap.finalAnswerDetail !== undefined) {
+      validateValueForMetadata(REGISTRY["agentPresentation.finalAnswerDetail"]!, ap.finalAnswerDetail);
     }
   }
   const responseTemplates = data.responseTemplates;

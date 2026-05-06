@@ -38,3 +38,5 @@ Applied in **`src/core/response-template-shaping.ts`** (`applyResponseTemplateAp
 - `telemetry`: `resolveNs`, `warningCount`
 
 When a template applies, `data.presentation` may list `matchedSections` for expected keys.
+
+`data.presentation.agentPresentation` is optional and appears only when the command payload already includes a resolved presentation policy, for example `resolve-agent-guidance` or `dashboard-summary`. It is schema-versioned output metadata, not the primary chat instruction source. It includes visible work-log, rationale summary, technicality, final-answer detail, and `privateReasoning: "never_disclose"`; it must not duplicate generated Cursor rule text or ask for private reasoning.

@@ -1033,6 +1033,20 @@ function renderRoleTemperamentLines(ag: unknown): string {
   const tier = typeof o.tier === "number" ? o.tier : null;
   const roleLabel = typeof o.displayLabel === "string" ? o.displayLabel.trim() : "";
   const tempLabel = typeof o.temperamentLabel === "string" ? o.temperamentLabel.trim() : "";
+  const presentation = o.agentPresentation && typeof o.agentPresentation === "object"
+    ? (o.agentPresentation as Record<string, unknown>)
+    : null;
+  const workLog = typeof presentation?.workLog === "string" ? presentation.workLog : "";
+  const rationale = typeof presentation?.rationale === "string" ? presentation.rationale : "";
+  const detail = typeof presentation?.finalAnswerDetail === "string" ? presentation.finalAnswerDetail : "";
+  const presentationLine = workLog || rationale || detail
+    ? "<p><b>Presentation:</b> " +
+      [workLog ? `Work-log ${workLog}` : "", rationale ? `Rationale ${rationale}` : "", detail ? `Final ${detail}` : ""]
+        .filter(Boolean)
+        .map((x) => escapeHtml(x))
+        .join(" · ") +
+      "</p>"
+    : "";
   if (tier === null) {
     return "";
   }
@@ -1042,7 +1056,8 @@ function renderRoleTemperamentLines(ag: unknown): string {
     "</p>" +
     "<p><b>Agent Temperament:</b> " +
     escapeHtml(tempLabel.length > 0 ? tempLabel : "—") +
-    "</p>"
+    "</p>" +
+    presentationLine
   );
 }
 

@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "description": "Curated draftRule examples for scoped agent presentation Guidance. These are fixtures for preview and documentation; they are not active CAE registry activations.",
+  "examples": [
+    {
+      "id": "presentation.onboarding-simple-language",
+      "purpose": "Use simple language and minimal routine work-log during behavior onboarding without changing maintainer workflows.",
+      "previewCommandName": "interview-behavior-profile",
+      "draftRule": {
+        "schemaVersion": 1,
+        "title": "Presentation: onboarding simple language",
+        "family": "think",
+        "priority": 640,
+        "artifactType": "runbook",
+        "refPath": ".ai/runbooks/agent-presentation-policy.md",
+        "scopeDraft": { "preset": "workflow", "workflowName": "interview-behavior-profile" }
+      }
+    },
+    {
+      "id": "presentation.phase-closeout-technical-evidence",
+      "purpose": "Raise technical detail and final-answer evidence when completing Phase 80 tasks or release closeout work.",
+      "previewCommandName": "run-transition",
+      "previewCommandArgs": { "action": "complete" },
+      "currentKitPhase": "80",
+      "draftRule": {
+        "schemaVersion": 1,
+        "title": "Presentation: phase closeout technical evidence",
+        "family": "review",
+        "priority": 720,
+        "artifactType": "runbook",
+        "refPath": ".ai/runbooks/agent-presentation-policy.md",
+        "scopeDraft": { "preset": "completingTask", "phaseKey": "80" }
+      }
+    },
+    {
+      "id": "presentation.sensitive-command-remediation",
+      "purpose": "Keep policy remediation terse but technical when a sensitive command path needs approval or retry guidance.",
+      "previewCommandName": "set-current-phase",
+      "previewCommandArgs": { "dryRun": false },
+      "draftRule": {
+        "schemaVersion": 1,
+        "title": "Presentation: sensitive command remediation",
+        "family": "policy",
+        "priority": 760,
+        "artifactType": "runbook",
+        "refPath": ".ai/runbooks/agent-presentation-policy.md",
+        "scopeDraft": {
+          "preset": "advancedCommand",
+          "commandName": "set-current-phase",
+          "commandArgPath": "dryRun",
+          "commandArgValue": false
+        },
+        "acknowledgement": {
+          "strength": "surface",
+          "token": "presentation-sensitive-command-remediation"
+        }
+      }
+    }
+  ]
+}

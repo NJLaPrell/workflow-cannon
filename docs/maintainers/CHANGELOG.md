@@ -8,7 +8,13 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
-(none)
+### Added
+
+- Phase 80 agent presentation policy: new `agentPresentation.*` config keys, resolved `resolve-agent-guidance` / `dashboard-summary` policy metadata, always-applied Cursor rule sync for visible work-log/rationale/technicality/final-answer detail, CAE scoped presentation Guidance examples, and safety tests that keep private reasoning undisclosed while preserving blockers, approvals, destructive-action warnings, verification failures, and residual-risk reporting.
+
+### Changed
+
+- Response-template shaping can project bounded `data.presentation.agentPresentation` metadata when command payloads already include resolved policy; generated Cursor rules remain the early chat instruction mechanism and response templates remain output metadata.
 
 ## [0.79.2] - 2026-05-05
 

@@ -9,6 +9,7 @@ import {
   RPG_PARTY_PROFILE_SET_ID,
   resolveAgentGuidanceFromEffectiveConfig
 } from "../../core/agent-guidance-catalog.js";
+import { resolveAgentPresentationPolicy } from "../../core/agent-presentation-policy.js";
 import { CONFIG_FACET_IDS, listKeysForConfigFacet } from "../../core/config-facets.js";
 import {
   explainConfigPath,
@@ -18,6 +19,8 @@ import {
   writeProjectConfigDocument
 } from "../../core/workspace-kit-config.js";
 import { scheduleAutoSyncEffectiveBehaviorCursorRule } from "../agent-behavior/sync-effective-behavior-cursor-rule.js";
+import { loadBehaviorWorkspaceState } from "../agent-behavior/persistence.js";
+import { BehaviorProfileStore } from "../agent-behavior/store.js";
 
 async function handleExplainConfig(
   args: Record<string, unknown>,
@@ -124,7 +127,7 @@ async function handleResolveConfig(
 
 async function handleResolveAgentGuidance(
   args: Record<string, unknown>,
-  ctx: { workspacePath: string; registry: ConfigRegistryView }
+  ctx: ModuleLifecycleContext & { registry: ConfigRegistryView }
 ): Promise<{ ok: boolean; code: string; message?: string; data?: Record<string, unknown> }> {
   const invocationConfig =
     typeof args.config === "object" && args.config !== null && !Array.isArray(args.config)
@@ -138,10 +141,25 @@ async function handleResolveAgentGuidance(
   });
 
   const resolved = resolveAgentGuidanceFromEffectiveConfig(effective as Record<string, unknown>);
+  const behaviorState = await loadBehaviorWorkspaceState(ctx);
+  const behaviorStore = new BehaviorProfileStore(behaviorState);
+  const { effective: behaviorEffective } = behaviorStore.resolveEffectiveWithProvenance();
+  const agentPresentation = resolveAgentPresentationPolicy({
+    effectiveConfig: effective as Record<string, unknown>,
+    guidance: resolved,
+    behaviorProfile: {
+      id: behaviorEffective.id,
+      label: behaviorEffective.label,
+      dimensions: behaviorEffective.dimensions
+    }
+  });
   return {
     ok: true,
     code: "agent-guidance-resolved",
-    data: resolved as unknown as Record<string, unknown>
+    data: {
+      ...(resolved as unknown as Record<string, unknown>),
+      agentPresentation: agentPresentation as unknown as Record<string, unknown>
+    }
   };
 }
 
@@ -249,7 +267,7 @@ export const workspaceConfigModule: WorkflowModule = {
         message: "workspace-config requires moduleRegistry on context (CLI wiring)"
       };
     }
-    const baseCtx = { workspacePath: ctx.workspacePath, registry: reg };
+    const baseCtx = { ...ctx, registry: reg };
     const handlers: Record<string, () => Promise<{ ok: boolean; code: string; message?: string; data?: Record<string, unknown> }>> = {
       "explain-config": () => handleExplainConfig(command.args ?? {}, baseCtx),
       "resolve-config": () => handleResolveConfig(command.args ?? {}, baseCtx),

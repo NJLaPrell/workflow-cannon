@@ -194,6 +194,61 @@ export function mergeCaePresentationHints(data: Record<string, unknown> | undefi
   };
 }
 
+function readResolvedAgentPresentation(data: Record<string, unknown>): Record<string, unknown> | null {
+  const direct = data.agentPresentation;
+  if (direct && typeof direct === "object" && !Array.isArray(direct)) {
+    return direct as Record<string, unknown>;
+  }
+  const agentGuidance = data.agentGuidance;
+  if (agentGuidance && typeof agentGuidance === "object" && !Array.isArray(agentGuidance)) {
+    const nested = (agentGuidance as Record<string, unknown>).agentPresentation;
+    if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+      return nested as Record<string, unknown>;
+    }
+  }
+  return null;
+}
+
+/**
+ * Response templates are late output metadata. Project only concise, already-resolved policy fields;
+ * generated always-applied rules remain the primary chat instruction surface.
+ */
+export function mergeAgentPresentationTemplateHints(
+  data: Record<string, unknown> | undefined
+): Record<string, unknown> {
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return {};
+  }
+  const policy = readResolvedAgentPresentation(data);
+  if (!policy || policy.schemaVersion !== 1) {
+    return {};
+  }
+  const mode = typeof policy.mode === "string" ? policy.mode : "derived";
+  const workLog = typeof policy.workLog === "string" ? policy.workLog : "normal";
+  const rationale = typeof policy.rationale === "string" ? policy.rationale : "simple";
+  const technicality = typeof policy.technicality === "string" ? policy.technicality : "balanced";
+  const finalAnswerDetail =
+    typeof policy.finalAnswerDetail === "string" ? policy.finalAnswerDetail : "normal";
+  const privateReasoning =
+    policy.privateReasoning === "never_disclose" ? "never_disclose" : "never_disclose";
+  return {
+    agentPresentation: {
+      schemaVersion: 1,
+      kind: "agent_presentation_policy_v1",
+      mode,
+      workLog,
+      rationale,
+      technicality,
+      finalAnswerDetail,
+      privateReasoning,
+      primaryInstructionSource: "generated_cursor_rule",
+      responseTemplateRole: "output_metadata_only",
+      agentRenderHint:
+        "Use these fields as concise output-rendering hints only; generated always-applied rules remain the primary chat instruction surface."
+    }
+  };
+}
+
 function attachPresentation(
   templateId: string,
   result: ModuleCommandResult
@@ -329,12 +384,14 @@ export function applyResponseTemplateApplication(
 
   if (nextData && typeof nextData === "object" && !Array.isArray(nextData)) {
     const d = nextData as Record<string, unknown>;
+    const presentationHints = mergeAgentPresentationTemplateHints(d);
     const caeHints = mergeCaePresentationHints(d);
-    if (Object.keys(caeHints).length > 0) {
+    const mergedHints = { ...presentationHints, ...caeHints };
+    if (Object.keys(mergedHints).length > 0) {
       const pres = d.presentation;
       const basePres =
         pres && typeof pres === "object" && !Array.isArray(pres) ? { ...(pres as Record<string, unknown>) } : {};
-      nextData = { ...d, presentation: { ...basePres, ...caeHints } };
+      nextData = { ...d, presentation: { ...basePres, ...mergedHints } };
     }
   }
 

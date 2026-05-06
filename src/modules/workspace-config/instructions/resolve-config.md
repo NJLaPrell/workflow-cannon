@@ -20,3 +20,5 @@ Optional top-level `config` object merged last (invocation overlay), same as oth
 
 - `data.effective` — merged effective config object (key-sorted at each object level).
 - `data.layers` — `{ id: string }[]` for each merge layer (kit-default, module:*, user, project, env, invocation).
+
+`data.effective.agentPresentation` contains the baseline presentation config. `derived` values are resolved by `resolve-agent-guidance` together with role tier and Agent Temperament; use CAE Guidance for command/task-specific exceptions instead of expanding global config.

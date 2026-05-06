@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -223,6 +223,38 @@ test("sync-effective-behavior-cursor-rule writes advisory mdc", async () => {
     const body = await readFile(abs, "utf8");
     assert.match(body, /alwaysApply:\s*true/);
     assert.match(body, /Effective collaboration profile/);
+    assert.match(body, /Presentation policy \(imperative\)/);
+    assert.match(body, /Visible work-log: \*\*normal\*\*/);
+    assert.match(body, /Visible rationale summary: \*\*simple\*\*/);
+    assert.match(body, /Never reveal chain-of-thought/);
+    assert.match(body, /Always surface blockers, required approvals, destructive-action warnings, verification failures, and residual risks/);
+    assert.doesNotMatch(body, /show thoughts/i);
+    assert.doesNotMatch(body, /(?:show|display|provide|include)\s+(?:private\s+)?(?:chain-of-thought|hidden deliberation|scratchpad)/i);
+
+    await mkdir(path.join(dir, ".workspace-kit"), { recursive: true });
+    await writeFile(
+      path.join(dir, ".workspace-kit", "config.json"),
+      JSON.stringify(
+        {
+          agentPresentation: {
+            mode: "explicit",
+            workLog: "off",
+            rationale: "none",
+            technicality: "plain",
+            finalAnswerDetail: "concise"
+          }
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+    const quiet = await router.execute("sync-effective-behavior-cursor-rule", {}, ctx);
+    assert.equal(quiet.ok, true, quiet.message);
+    const quietBody = await readFile(abs, "utf8");
+    assert.match(quietBody, /Visible work-log: \*\*off\*\*/);
+    assert.match(quietBody, /Visible rationale summary: \*\*none\*\*/);
+    assert.match(quietBody, /Always surface blockers, required approvals, destructive-action warnings, verification failures, and residual risks/);
 
     const dry = await router.execute("sync-effective-behavior-cursor-rule", { dryRun: true }, ctx);
     assert.equal(dry.ok, true);

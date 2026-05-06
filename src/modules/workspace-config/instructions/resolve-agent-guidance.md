@@ -20,10 +20,14 @@ Stable JSON shape:
 - `data.catalog` — `{ tier, id, label, description }`
 - `data.hints` — `{ explanationStyle, checkInStyle, questionStyle }` (machine-oriented)
 - `data.usingDefaultTier` — `true` when no persisted `kit.agentGuidance.tier`
+- `data.agentPresentation` — resolved visible presentation policy with `schemaVersion: 1`, `mode`, `workLog`, `rationale`, `technicality`, `finalAnswerDetail`, and `privateReasoning: "never_disclose"`
 
 **Advisory only** — subordinate to PRINCIPLES and policy; hosts may ignore hints.
+
+`agentPresentation` controls visible work-log and summaries only. It never permits private chain-of-thought disclosure. The generated Cursor rule from `sync-effective-behavior-cursor-rule` is the early instruction surface; this command is read-only observability.
 
 ## See also
 
 - `docs/maintainers/adrs/ADR-agent-guidance-profile-rpg-party-v1.md`
+- `.ai/runbooks/agent-presentation-policy.md`
 - `set-agent-guidance` — persist tier to project config

@@ -145,6 +145,14 @@
       "ref": { "path": ".ai/cae/phase-journal-operator.md" },
       "title": "Phase Journal operator runbook",
       "tags": ["cae", "phase-journal", "runbook", "task-engine"]
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "cae.runbook.agent-presentation-policy",
+      "artifactType": "runbook",
+      "ref": { "path": ".ai/runbooks/agent-presentation-policy.md" },
+      "title": "Agent presentation policy and scoped Guidance patterns",
+      "tags": ["agent-presentation", "cae", "guidance", "runbook"]
     }
   ]
 }
