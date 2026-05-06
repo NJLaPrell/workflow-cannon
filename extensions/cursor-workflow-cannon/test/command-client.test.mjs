@@ -271,3 +271,40 @@ test("CommandClient uses cliPathOverride when provided", async () => {
   const out = await client.run("list-tasks", {});
   assert.equal(out.ok, true);
 });
+
+test("CommandClient.recordActivity invokes set-agent-activity best-effort", async () => {
+  const calls = [];
+  const client = new CommandClient("/tmp/noop", {
+    execFn: async (_root, args) => {
+      calls.push(args);
+      return { exitCode: 0, stdout: JSON.stringify({ ok: true, code: "agent-activity-set" }), stderr: "" };
+    }
+  });
+
+  await client.recordActivity({ kind: "planning", command: "build-plan", details: { planningType: "change" } });
+
+  assert.equal(calls.length, 1);
+  assert.deepEqual(calls[0].slice(0, 2), ["run", "set-agent-activity"]);
+  const payload = JSON.parse(calls[0][2]);
+  assert.equal(payload.kind, "planning");
+  assert.equal(payload.command, "build-plan");
+  assert.equal(payload.source, "vscode-extension");
+});
+
+test("CommandClient.clearActivity invokes clear-agent-activity best-effort", async () => {
+  const calls = [];
+  const client = new CommandClient("/tmp/noop", {
+    execFn: async (_root, args) => {
+      calls.push(args);
+      return { exitCode: 0, stdout: JSON.stringify({ ok: true, code: "agent-activity-cleared" }), stderr: "" };
+    }
+  });
+
+  await client.clearActivity({ command: "build-plan" });
+
+  assert.equal(calls.length, 1);
+  assert.deepEqual(calls[0].slice(0, 2), ["run", "clear-agent-activity"]);
+  const payload = JSON.parse(calls[0][2]);
+  assert.equal(payload.command, "build-plan");
+  assert.equal(payload.source, "vscode-extension");
+});

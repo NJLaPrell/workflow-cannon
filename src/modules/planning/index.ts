@@ -30,6 +30,10 @@ import {
 import {
   planningConcurrencySaveOpts
 } from "../task-engine/mutation-utils.js";
+import {
+  clearAgentActivityBestEffort,
+  recordAgentActivityBestEffort
+} from "../task-engine/agent-activity-recorder.js";
 import { validateTaskSetForStrictMode } from "../task-engine/strict-task-validation.js";
 import {
   buildScoringHints,
@@ -40,6 +44,32 @@ import {
   type PlanningOutputMode
 } from "./build-plan-output-helpers.js";
 import { buildTasksFromExecutionDrafts, nextTaskId } from "./build-plan-execution-drafts.js";
+
+async function recordBuildPlanActivity(
+  ctx: Parameters<NonNullable<WorkflowModule["onCommand"]>>[1],
+  planningType: string,
+  outputMode: string
+): Promise<void> {
+  try {
+    const stores = await openPlanningStores(ctx);
+    recordAgentActivityBestEffort(ctx, stores, {
+      kind: "planning",
+      command: "build-plan",
+      details: { planningType, outputMode }
+    });
+  } catch {
+    // Activity is a UI hint; build-plan must remain authoritative if recording is unavailable.
+  }
+}
+
+async function clearBuildPlanActivity(ctx: Parameters<NonNullable<WorkflowModule["onCommand"]>>[1]): Promise<void> {
+  try {
+    const stores = await openPlanningStores(ctx);
+    clearAgentActivityBestEffort(ctx, stores);
+  } catch {
+    // Activity is a UI hint; build-plan must remain authoritative if recording is unavailable.
+  }
+}
 
 export const planningModule: WorkflowModule = {
   registration: {
@@ -78,6 +108,7 @@ export const planningModule: WorkflowModule = {
       const args = command.args ?? {};
       if (args.action === "discard") {
         await clearBuildPlanSession(ctx.workspacePath);
+        await clearBuildPlanActivity(ctx);
         return {
           ok: true,
           code: "planning-session-discarded",
@@ -104,6 +135,7 @@ export const planningModule: WorkflowModule = {
         };
       }
       const descriptor = PLANNING_WORKFLOW_DESCRIPTORS.find((x) => x.type === planningType);
+      await recordBuildPlanActivity(ctx, planningType, outputMode);
       const resolvedRulePack = resolvePlanningRulePack(
         planningType as PlanningWorkflowType,
         ctx.effectiveConfig as Record<string, unknown> | undefined
@@ -272,6 +304,7 @@ export const planningModule: WorkflowModule = {
       });
       if (outputMode === "response") {
         await clearBuildPlanSession(ctx.workspacePath);
+        await clearBuildPlanActivity(ctx);
         return {
           ok: true,
           code: "planning-response-ready",
@@ -356,6 +389,7 @@ export const planningModule: WorkflowModule = {
             };
           }
           await clearBuildPlanSession(ctx.workspacePath);
+          await clearBuildPlanActivity(ctx);
           return {
             ok: true,
             code: "planning-multi-task-decomposition-preview",
@@ -481,6 +515,7 @@ export const planningModule: WorkflowModule = {
           );
         }
         await clearBuildPlanSession(ctx.workspacePath);
+        await clearBuildPlanActivity(ctx);
         return {
           ok: true,
           code: persistTasks ? "planning-task-output-created" : "planning-task-output-preview",
@@ -522,6 +557,7 @@ export const planningModule: WorkflowModule = {
 
       if (!finalize || !createWishlist) {
         await clearBuildPlanSession(ctx.workspacePath);
+        await clearBuildPlanActivity(ctx);
         return {
           ok: true,
           code: "planning-wishlist-ready",
@@ -633,6 +669,7 @@ export const planningModule: WorkflowModule = {
         return { ok: false, code: "invalid-planning-artifact", message: msg };
       }
       await clearBuildPlanSession(ctx.workspacePath);
+      await clearBuildPlanActivity(ctx);
       return {
         ok: true,
         code: "planning-artifact-created",
