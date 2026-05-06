@@ -42,6 +42,7 @@ export function resolveAgentActivityCommands(
     const phaseKey = cleanText(args.phaseKey) ?? null;
     const prNumber = cleanNumber(args.prNumber);
     const version = cleanText(args.version) ?? null;
+    const details = cleanDetails(args.details);
     const lease = recordAgentActivity(ctx, planning, {
       activityId: cleanText(args.activityId),
       agentId: cleanText(args.agentId),
@@ -49,13 +50,13 @@ export function resolveAgentActivityCommands(
       kind,
       label:
         cleanText(args.label) ??
-        buildAgentActivityLabel({ kind, taskId, command: commandName, phaseKey, prNumber, version }),
+        buildAgentActivityLabel({ kind, taskId, command: commandName, phaseKey, prNumber, version, details }),
       taskId,
       command: commandName,
       phaseKey,
       prNumber,
       version,
-      details: cleanDetails(args.details),
+      details,
       ttlSeconds: cleanNumber(args.ttlSeconds)
     });
     return {

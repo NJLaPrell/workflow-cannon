@@ -40,6 +40,67 @@ function cleanText(value: unknown, fallback = ""): string {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : fallback;
 }
 
+function detailsText(details: Record<string, unknown> | null | undefined, keys: string[]): string {
+  if (!details) return "";
+  for (const key of keys) {
+    const value = cleanText(details[key]);
+    if (value) return value;
+  }
+  return "";
+}
+
+function positiveInteger(value: unknown): number | null {
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+function pullRequestNumberFromUrl(value: unknown): number | null {
+  const raw = cleanText(value);
+  if (!raw) return null;
+  const match = raw.match(/\/pull\/(\d+)(?:\b|$|[/?#])/);
+  return match ? positiveInteger(match[1]) : null;
+}
+
+function resolvePullRequestNumber(args: {
+  prNumber?: number | null;
+  details?: Record<string, unknown> | null;
+}): number | null {
+  return (
+    positiveInteger(args.prNumber) ??
+    positiveInteger(args.details?.prNumber) ??
+    positiveInteger(args.details?.pullRequestNumber) ??
+    positiveInteger(args.details?.pr_number) ??
+    pullRequestNumberFromUrl(args.details?.prUrl) ??
+    pullRequestNumberFromUrl(args.details?.pullRequestUrl)
+  );
+}
+
+function resolveVersion(args: { version?: string | null; details?: Record<string, unknown> | null }): string {
+  return cleanText(args.version) || detailsText(args.details, ["releaseVersion", "version", "buildVersion"]);
+}
+
+function resolvePhaseKey(args: { phaseKey?: string | null; details?: Record<string, unknown> | null }): string {
+  return cleanText(args.phaseKey) || detailsText(args.details, ["phaseKey", "phase"]);
+}
+
+function formatPhaseLabel(phaseKey: string): string {
+  return /^phase\b/i.test(phaseKey) ? phaseKey : `Phase ${phaseKey}`;
+}
+
+function resolveReviewItem(args: { taskId?: string | null; details?: Record<string, unknown> | null }): string {
+  return (
+    cleanText(args.taskId) ||
+    detailsText(args.details, ["reviewItemId", "approvalItemId", "itemId", "taskId", "approvalId"])
+  );
+}
+
+function resolveValidationLabel(args: {
+  command?: string | null;
+  details?: Record<string, unknown> | null;
+}): string {
+  return detailsText(args.details, ["validationLabel", "validationCommand", "checkName"]) || cleanText(args.command);
+}
+
 function cleanTtlSeconds(value: unknown): number {
   const n = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(n)) return DEFAULT_TTL_SECONDS;
@@ -63,6 +124,7 @@ export function buildAgentActivityLabel(args: {
   phaseKey?: string | null;
   prNumber?: number | null;
   version?: string | null;
+  details?: Record<string, unknown> | null;
 }): string {
   const taskId = cleanText(args.taskId);
   const command = cleanText(args.command);
@@ -74,17 +136,23 @@ export function buildAgentActivityLabel(args: {
     case "working_task":
       return taskId ? `Working on Task ${taskId}` : "Working on Task";
     case "validating":
-      return command ? `Validating ${command}` : "Validating";
+      return resolveValidationLabel(args) ? `Validating ${resolveValidationLabel(args)}` : "Validating";
     case "releasing":
-      return args.version ? `Releasing ${args.version}` : "Releasing";
+      if (resolveVersion(args)) return `Releasing Build ${resolveVersion(args)}`;
+      if (resolvePhaseKey(args)) return `Releasing ${formatPhaseLabel(resolvePhaseKey(args))}`;
+      return "Releasing";
     case "reviewing_pr":
-      return args.prNumber != null ? `Reviewing Pull Request ${String(args.prNumber)}` : "Reviewing Pull Request";
+      return resolvePullRequestNumber(args) != null
+        ? `Reviewing Pull Request ${String(resolvePullRequestNumber(args))}`
+        : "Reviewing Pull Request";
     case "reviewing_item":
-      return taskId ? `Reviewing Item ${taskId}` : "Reviewing Item";
+      return resolveReviewItem(args) ? `Reviewing Item ${resolveReviewItem(args)}` : "Reviewing Item";
     case "awaiting_policy_approval":
-      return "Awaiting Policy Approval";
+      return resolveReviewItem(args)
+        ? `Awaiting Policy Approval for ${resolveReviewItem(args)}`
+        : "Awaiting Policy Approval";
     case "awaiting_human_gate":
-      return "Awaiting Human Gate";
+      return command ? `Awaiting Human Gate for ${command}` : "Awaiting Human Gate";
     case "delegating_task":
       return taskId ? `Delegating Task ${taskId}` : "Delegating Task";
     case "ready_task":
