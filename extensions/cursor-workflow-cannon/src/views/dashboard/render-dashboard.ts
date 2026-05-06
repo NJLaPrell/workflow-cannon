@@ -1061,6 +1061,31 @@ function renderRoleTemperamentLines(ag: unknown): string {
   );
 }
 
+function renderAgentStatusBanner(agentStatus: unknown): string {
+  let label = "Awaiting Instruction";
+  let kind = "awaiting_instruction";
+  if (agentStatus && typeof agentStatus === "object") {
+    const row = agentStatus as Record<string, unknown>;
+    const rawLabel = typeof row.label === "string" ? row.label.trim() : "";
+    const rawKind = typeof row.kind === "string" ? row.kind.trim() : "";
+    if (rawLabel.length > 0) {
+      label = rawLabel;
+    }
+    if (rawKind.length > 0) {
+      kind = rawKind;
+    }
+  }
+  return (
+    '<section class="dash-agent-status-banner" aria-label="WC Agent status" data-agent-status-kind="' +
+    escapeHtmlAttr(kind) +
+    '">' +
+    '<p><b>WC Agent is:</b> <span class="dash-agent-status-label">' +
+    escapeHtml(label) +
+    "</span></p>" +
+    "</section>"
+  );
+}
+
 /** Current / next phase + Deliver chip (no outer section). */
 function renderPhaseDeliverBlockInner(
   ws: Record<string, unknown>,
@@ -1380,6 +1405,7 @@ export function renderDashboardRootInnerHtml(
     "</section>";
 
   return (
+    renderAgentStatusBanner(d.agentStatus) +
     renderRoleTemperamentAndPhaseSection(d.agentGuidance, ws as Record<string, unknown> | null, res) +
     renderWorkspaceBlockersPendingSection(ws as Record<string, unknown> | null) +
     renderTeamExecutionSection(d.teamExecution) +

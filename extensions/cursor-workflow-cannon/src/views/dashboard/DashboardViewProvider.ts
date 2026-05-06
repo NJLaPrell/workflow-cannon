@@ -627,6 +627,16 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       opacity: 0.45;
       cursor: not-allowed;
     }
+    .dash-agent-status-banner {
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
+      border-left: 3px solid var(--vscode-charts-blue, var(--vscode-button-background));
+      border-radius: 6px;
+      padding: 7px 8px;
+      margin: 0 0 10px 0;
+      background: var(--vscode-sideBar-background);
+    }
+    .dash-agent-status-banner p { margin: 0; line-height: 1.35; }
+    .dash-agent-status-label { overflow-wrap: anywhere; }
     .dash-planning-head {
       display: flex;
       flex-direction: row;
