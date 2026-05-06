@@ -221,6 +221,8 @@ test("package allowlist includes CAE operator artifacts needed outside the repo 
   const pkg = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
   assert.ok(pkg.files.includes(".ai"));
   assert.ok(pkg.files.includes("schemas"));
+  assert.ok(pkg.files.includes("src/modules/*/config.md"));
+  assert.ok(pkg.files.includes("src/modules/*/instructions/**"));
   assert.ok(pkg.files.includes("src/modules/context-activation/instructions"));
   assert.ok(pkg.files.includes("fixtures/cae/golden"));
 });
