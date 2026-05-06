@@ -193,12 +193,18 @@ export type DashboardAgentStatusKind =
   | "working_task"
   | "delegating_task"
   | "ready_task"
-  | "awaiting_instruction";
+  | "awaiting_instruction"
+  | "reviewing_item"
+  | "reviewing_pr"
+  | "validating"
+  | "releasing"
+  | "awaiting_policy_approval"
+  | "awaiting_human_gate";
 
 export type DashboardAgentStatusSummary = {
   schemaVersion: 1;
-  /** `derived` is read-only inference from existing dashboard state; live leases use a later source. */
-  source: "derived";
+  /** `derived` is read-only inference; `live_activity` is a fresh expiring lease. */
+  source: "derived" | "live_activity";
   kind: DashboardAgentStatusKind;
   label: string;
   confidence: "high" | "medium" | "low";

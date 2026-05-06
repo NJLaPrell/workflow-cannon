@@ -35,6 +35,10 @@ import type { SqliteDualPlanningStore } from "../persistence/sqlite-dual-plannin
 import { buildFeatureEnrichmentBySlug, type FeatureEnrichment } from "../persistence/feature-registry-queries.js";
 import { buildDashboardSystemStatus } from "../dashboard/build-dashboard-system-status.js";
 import { buildDashboardAgentStatus } from "../dashboard/dashboard-agent-status.js";
+import {
+  agentActivityLeaseToDashboardStatus,
+  readCurrentAgentActivityLease
+} from "../agent-activity-store.js";
 
 function featureDetailsForTask(
   slugs: string[] | undefined,
@@ -248,7 +252,7 @@ export async function runDashboardSummaryCommand(
     : subagentRegistryEmpty;
 
   const systemStatus = await buildDashboardSystemStatus(ctx, store, dualForStatus);
-  const agentStatus = buildDashboardAgentStatus({
+  const derivedAgentStatus = buildDashboardAgentStatus({
     now: systemStatus.generatedAt,
     tasks,
     planningSession,
@@ -257,6 +261,12 @@ export async function runDashboardSummaryCommand(
     subagentRegistry,
     systemStatus
   });
+  const liveActivity = sqliteDual
+    ? readCurrentAgentActivityLease(sqliteDual.getDatabase(), systemStatus.generatedAt)
+    : null;
+  const agentStatus = liveActivity
+    ? agentActivityLeaseToDashboardStatus(liveActivity)
+    : derivedAgentStatus;
 
   const data = {
     schemaVersion: 7 as const,

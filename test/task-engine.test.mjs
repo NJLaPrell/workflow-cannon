@@ -33,6 +33,7 @@ import {
   classifyKitStatePath,
   buildTaskPersistenceReadinessReport
 } from "../dist/index.js";
+import { setAgentActivityLease } from "../dist/modules/task-engine/agent-activity-store.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -1787,6 +1788,37 @@ test("taskEngineModule dashboard-summary agentStatus reports blocked work before
   assert.equal(result.data.agentStatus.taskId, "T031");
   assert.equal(result.data.agentStatus.phaseKey, "81");
   assert.match(result.data.agentStatus.detail, /T030/);
+});
+
+test("taskEngineModule dashboard-summary agentStatus uses fresh live activity over derived status", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T040", status: "in_progress", priority: "P1", phaseKey: "81" }));
+  });
+
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const db = new Database(path.join(workspace, ".workspace-kit", "tasks", "workspace-kit.db"));
+  try {
+    prepareKitSqliteDatabase(db);
+    setAgentActivityLease(db, {
+      activityId: "copilot:review",
+      agentId: "copilot",
+      sessionId: "review",
+      kind: "reviewing_pr",
+      label: "Reviewing Pull Request 223",
+      prNumber: 223,
+      now: "2026-05-06T00:00:00.000Z",
+      expiresAt: "2999-01-01T00:00:00.000Z"
+    });
+  } finally {
+    db.close();
+  }
+  const result = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
+  assert.equal(result.ok, true);
+  assert.equal(result.data.agentStatus.source, "live_activity");
+  assert.equal(result.data.agentStatus.kind, "reviewing_pr");
+  assert.equal(result.data.agentStatus.label, "Reviewing Pull Request 223");
+  assert.equal(result.data.agentStatus.prNumber, 223);
 });
 
 test("taskEngineModule dashboard-summary wishlist openTop includes backing taskId", async () => {
