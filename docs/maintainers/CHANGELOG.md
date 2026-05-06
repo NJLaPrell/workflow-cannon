@@ -10,6 +10,14 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 (none)
 
+## [0.79.2] - 2026-05-05
+
+Hotfix for the **`0.79.1`** attached-workspace package file allowlist.
+
+### Fixed
+
+- The npm package file allowlist now uses a recursive module instruction glob, ensuring built-in instruction markdown files are included by `npm publish`, not only by local `pnpm pack` dry-runs.
+
 ## [0.79.1] - 2026-05-05
 
 Hotfix for attached workspaces upgrading to **`0.79.0`**.

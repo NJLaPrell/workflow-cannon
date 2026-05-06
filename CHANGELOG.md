@@ -8,4 +8,4 @@ This root file is intentionally pointer-only to avoid split release history.
 
 - See `docs/maintainers/CHANGELOG.md` for all release notes, migration notes, and historical entries.
 
-Latest release: **v0.79.1** (hotfix: attached workspace package-root instruction contract resolution; see canonical changelog).
+Latest release: **v0.79.2** (hotfix: npm-published module instruction files for attached workspaces; see canonical changelog).
