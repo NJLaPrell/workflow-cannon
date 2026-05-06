@@ -10,7 +10,7 @@ type SqliteDatabase = InstanceType<typeof Database>;
  */
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 20;
+export const KIT_SQLITE_USER_VERSION = 21;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 export const TASK_ENGINE_DEPENDENCIES_TABLE = "task_engine_dependencies";
@@ -926,6 +926,38 @@ CREATE INDEX idx_phase_note_task_suggestions_phase_created
 `);
 }
 
+/** WC Agent live activity leases (Phase 81): expiring dashboard status overlay. */
+function migrateV20ToV21(db: SqliteDatabase): void {
+  if (tableExists(db, "kit_agent_activity_leases")) {
+    return;
+  }
+  db.exec(`
+CREATE TABLE kit_agent_activity_leases (
+  activity_id TEXT PRIMARY KEY NOT NULL,
+  agent_id TEXT NOT NULL,
+  session_id TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  label TEXT NOT NULL,
+  task_id TEXT,
+  command TEXT,
+  phase_key TEXT,
+  pr_number INTEGER,
+  version TEXT,
+  details_json TEXT,
+  started_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  FOREIGN KEY (task_id) REFERENCES task_engine_tasks(id) ON DELETE SET NULL
+);
+CREATE INDEX idx_kit_agent_activity_leases_expiry
+  ON kit_agent_activity_leases(expires_at);
+CREATE INDEX idx_kit_agent_activity_leases_agent_session
+  ON kit_agent_activity_leases(agent_id, session_id, updated_at);
+CREATE INDEX idx_kit_agent_activity_leases_task
+  ON kit_agent_activity_leases(task_id);
+`);
+}
+
 /**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
@@ -1042,6 +1074,11 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
     migrateV19ToV20(db);
     db.pragma("user_version = 20");
     current = 20;
+  }
+  if (current < 21) {
+    migrateV20ToV21(db);
+    db.pragma("user_version = 21");
+    current = 21;
   }
 }
 

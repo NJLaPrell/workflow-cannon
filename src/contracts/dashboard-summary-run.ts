@@ -186,8 +186,39 @@ export type DashboardSystemStatus = {
   caeLines: string[];
 };
 
+export type DashboardAgentStatusKind =
+  | "unavailable"
+  | "planning"
+  | "blocked"
+  | "working_task"
+  | "delegating_task"
+  | "ready_task"
+  | "awaiting_instruction"
+  | "reviewing_item"
+  | "reviewing_pr"
+  | "validating"
+  | "releasing"
+  | "awaiting_policy_approval"
+  | "awaiting_human_gate";
+
+export type DashboardAgentStatusSummary = {
+  schemaVersion: 1;
+  /** `derived` is read-only inference; `live_activity` is a fresh expiring lease. */
+  source: "derived" | "live_activity";
+  kind: DashboardAgentStatusKind;
+  label: string;
+  confidence: "high" | "medium" | "low";
+  updatedAt: string;
+  taskId?: string | null;
+  phaseKey?: string | null;
+  command?: string | null;
+  prNumber?: number | null;
+  version?: string | null;
+  detail?: string | null;
+};
+
 export type DashboardSummaryData = {
-  schemaVersion: 6;
+  schemaVersion: 7;
   /** Monotonic optimistic-lock generation for the unified planning SQLite row. */
   planningGeneration: number;
   /** Effective `tasks.planningGenerationPolicy` for mutating commands. */
@@ -242,6 +273,8 @@ export type DashboardSummaryData = {
   subagentRegistry: DashboardSubagentRegistrySummary;
   /** Phase/drift, doctor contract, module activation, CAE lines — status tab aggregate (Phase 79+). */
   systemStatus: DashboardSystemStatus;
+  /** Conservative, read-only WC Agent status derived from dashboard/task state (Phase 81+). */
+  agentStatus: DashboardAgentStatusSummary;
 };
 
 /** Success envelope for `dashboard-summary` (extension + tooling). */

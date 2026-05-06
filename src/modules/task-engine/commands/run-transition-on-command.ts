@@ -18,6 +18,7 @@ import { TaskStore } from "../persistence/store.js";
 import { planningGenPolicyGate } from "../planning-generation-gate.js";
 import { TransitionService } from "../service.js";
 import { TaskEngineError } from "../transitions.js";
+import { recordTaskTransitionActivityBestEffort } from "../agent-activity-recorder.js";
 
 function readKitUserVersion(db: { pragma: (name: string, options?: { simple: boolean }) => unknown }): number {
   const raw = db.pragma("user_version", { simple: true });
@@ -129,6 +130,14 @@ export async function runTransitionOnCommand(
       autoUnblocked: result.autoUnblocked,
       replayed: result.replayed === true
     };
+    if (!result.replayed) {
+      recordTaskTransitionActivityBestEffort(ctx, planning, {
+        task: store.getTask(taskId),
+        taskId,
+        action,
+        command: "run-transition"
+      });
+    }
     attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration(), pgTransition.warnings);
     return {
       ok: true,

@@ -14,6 +14,7 @@ import { TaskEngineError } from "../transitions.js";
 import type { TaskEntity } from "../types.js";
 import { readIdempotencyValue, readOptionalExpectedPlanningGeneration } from "../mutation-utils.js";
 import { readQueueNamespaceArg } from "../queue-namespace-args.js";
+import { recordTaskTransitionActivityBestEffort } from "../agent-activity-recorder.js";
 
 export function readPlanString(args: Record<string, unknown>, field: string): string | undefined {
   const value = args[field];
@@ -97,6 +98,14 @@ export async function runTaskIntentTransition(
       autoUnblocked: result.autoUnblocked,
       replayed: result.replayed === true
     };
+    if (!result.replayed) {
+      recordTaskTransitionActivityBestEffort(ctx, planning, {
+        task: planning.taskStore.getTask(taskId),
+        taskId,
+        action,
+        command: commandName
+      });
+    }
     attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration(), pgTransition.warnings);
     return {
       ok: true,
@@ -206,6 +215,14 @@ export async function runClaimNextTaskIntent(
       autoUnblocked: result.autoUnblocked,
       replayed: result.replayed === true
     };
+    if (!result.replayed) {
+      recordTaskTransitionActivityBestEffort(ctx, planning, {
+        task: planning.taskStore.getTask(suggested.id),
+        taskId: suggested.id,
+        action: "start",
+        command: "claim-next-task"
+      });
+    }
     attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration(), pgTransition.warnings);
     return {
       ok: true,

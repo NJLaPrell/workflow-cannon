@@ -31,8 +31,11 @@ import {
   ModuleCommandRouter,
   appendPolicyTrace,
   classifyKitStatePath,
-  buildTaskPersistenceReadinessReport
+  buildTaskPersistenceReadinessReport,
+  planningModule
 } from "../dist/index.js";
+import { setAgentActivityLease } from "../dist/modules/task-engine/agent-activity-store.js";
+import { buildAgentActivityLabel } from "../dist/modules/task-engine/agent-activity-recorder.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -1613,7 +1616,7 @@ test("taskEngineModule onCommand dashboard-summary returns stable shape", async 
   assert.equal(result.ok, true);
   assert.equal(result.code, "dashboard-summary");
   const d = result.data;
-  assert.equal(d.schemaVersion, 6);
+  assert.equal(d.schemaVersion, 7);
   assert.ok(d.systemStatus);
   assert.equal(d.systemStatus.schemaVersion, 2);
   assert.ok(typeof d.systemStatus.generatedAt === "string");
@@ -1634,6 +1637,12 @@ test("taskEngineModule onCommand dashboard-summary returns stable shape", async 
   assert.ok(Array.isArray(d.systemStatus.modules.enabledModuleIds));
   assert.ok(Array.isArray(d.systemStatus.modules.disabledModuleIds));
   assert.ok(Array.isArray(d.systemStatus.caeLines));
+  assert.ok(d.agentStatus);
+  assert.equal(d.agentStatus.schemaVersion, 1);
+  assert.equal(d.agentStatus.source, "derived");
+  assert.equal(d.agentStatus.kind, "ready_task");
+  assert.equal(d.agentStatus.label, "Ready Task T001");
+  assert.equal(d.agentStatus.taskId, "T001");
   assert.ok(typeof d.planningGeneration === "number");
   assert.ok(d.transcriptChurnResearchSummary);
   assert.equal(d.transcriptChurnResearchSummary.schemaVersion, 1);
@@ -1700,6 +1709,275 @@ test("taskEngineModule onCommand dashboard-summary returns stable shape", async 
   assert.equal(d.subagentRegistry.openSessionsCount, 0);
   assert.ok(Array.isArray(d.subagentRegistry.topOpenSessions));
   assert.equal(d.subagentRegistry.topOpenSessions.length, 0);
+});
+
+test("taskEngineModule dashboard-summary agentStatus falls back to awaiting instruction", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, () => {});
+
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const result = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
+  assert.equal(result.ok, true);
+  assert.equal(result.data.agentStatus.kind, "awaiting_instruction");
+  assert.equal(result.data.agentStatus.label, "Awaiting Instruction");
+  assert.equal(result.data.agentStatus.confidence, "low");
+});
+
+test("taskEngineModule dashboard-summary agentStatus prefers active planning", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T010", status: "in_progress", priority: "P1" }));
+  });
+  await mkdir(path.join(workspace, ".workspace-kit", "planning"), { recursive: true });
+  await writeFile(
+    path.join(workspace, ".workspace-kit", "planning", "build-plan-session.json"),
+    JSON.stringify(
+      {
+        schemaVersion: 1,
+        updatedAt: "2026-05-06T00:00:00.000Z",
+        planningType: "interview",
+        outputMode: "task",
+        status: "in_progress",
+        completionPct: 50,
+        answeredCritical: 1,
+        totalCritical: 2,
+        answers: {},
+        resumeCli: "pnpm exec wk run build-plan '{}'"
+      },
+      null,
+      2
+    ) + "\n",
+    "utf8"
+  );
+
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const result = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
+  assert.equal(result.ok, true);
+  assert.equal(result.data.agentStatus.kind, "planning");
+  assert.equal(result.data.agentStatus.label, "Planning Interview");
+  assert.equal(result.data.agentStatus.command, "build-plan");
+});
+
+test("taskEngineModule dashboard-summary agentStatus reports in-progress task before delegation", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T021", status: "in_progress", priority: "P2", phaseKey: "81" }));
+    store.addTask(makeTask({ id: "T020", status: "in_progress", priority: "P1", phaseKey: "81" }));
+  });
+
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const result = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
+  assert.equal(result.ok, true);
+  assert.equal(result.data.agentStatus.kind, "working_task");
+  assert.equal(result.data.agentStatus.label, "Working on Task T020");
+  assert.equal(result.data.agentStatus.taskId, "T020");
+  assert.equal(result.data.agentStatus.phaseKey, "81");
+});
+
+test("taskEngineModule dashboard-summary agentStatus reports blocked work before in-progress", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T030", status: "ready" }));
+    store.addTask(makeTask({ id: "T031", status: "blocked", dependsOn: ["T030"], phaseKey: "81" }));
+    store.addTask(makeTask({ id: "T032", status: "in_progress", priority: "P1" }));
+  });
+
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const result = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
+  assert.equal(result.ok, true);
+  assert.equal(result.data.agentStatus.kind, "blocked");
+  assert.equal(result.data.agentStatus.label, "Blocked on Task T031");
+  assert.equal(result.data.agentStatus.taskId, "T031");
+  assert.equal(result.data.agentStatus.phaseKey, "81");
+  assert.match(result.data.agentStatus.detail, /T030/);
+});
+
+test("taskEngineModule dashboard-summary agentStatus uses fresh live activity over derived status", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T040", status: "in_progress", priority: "P1", phaseKey: "81" }));
+  });
+
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const db = new Database(path.join(workspace, ".workspace-kit", "tasks", "workspace-kit.db"));
+  try {
+    prepareKitSqliteDatabase(db);
+    setAgentActivityLease(db, {
+      activityId: "copilot:review",
+      agentId: "copilot",
+      sessionId: "review",
+      kind: "reviewing_pr",
+      label: "Reviewing Pull Request 223",
+      prNumber: 223,
+      now: "2026-05-06T00:00:00.000Z",
+      expiresAt: "2999-01-01T00:00:00.000Z"
+    });
+  } finally {
+    db.close();
+  }
+  const result = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
+  assert.equal(result.ok, true);
+  assert.equal(result.data.agentStatus.source, "live_activity");
+  assert.equal(result.data.agentStatus.kind, "reviewing_pr");
+  assert.equal(result.data.agentStatus.label, "Reviewing Pull Request 223");
+  assert.equal(result.data.agentStatus.prNumber, 223);
+});
+
+test("buildAgentActivityLabel maps PR, release, approval, validation, and malformed metadata", () => {
+  assert.equal(
+    buildAgentActivityLabel({ kind: "reviewing_pr", prNumber: 192 }),
+    "Reviewing Pull Request 192"
+  );
+  assert.equal(
+    buildAgentActivityLabel({
+      kind: "reviewing_pr",
+      details: { prUrl: "https://github.com/acme/repo/pull/193" }
+    }),
+    "Reviewing Pull Request 193"
+  );
+  assert.equal(buildAgentActivityLabel({ kind: "reviewing_pr", details: { prNumber: "nope" } }), "Reviewing Pull Request");
+  assert.equal(buildAgentActivityLabel({ kind: "releasing", version: "0.9.1" }), "Releasing Build 0.9.1");
+  assert.equal(buildAgentActivityLabel({ kind: "releasing", phaseKey: "81" }), "Releasing Phase 81");
+  assert.equal(
+    buildAgentActivityLabel({ kind: "reviewing_item", details: { reviewItemId: "review-item:T100060" } }),
+    "Reviewing Item review-item:T100060"
+  );
+  assert.equal(
+    buildAgentActivityLabel({ kind: "awaiting_policy_approval", taskId: "T100060" }),
+    "Awaiting Policy Approval for T100060"
+  );
+  assert.equal(
+    buildAgentActivityLabel({ kind: "validating", details: { validationCommand: "pnpm run check" } }),
+    "Validating pnpm run check"
+  );
+});
+
+test("taskEngineModule set-agent-activity generates mapped labels from structured details", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, () => {});
+
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const result = await taskEngineModule.onCommand(
+    {
+      name: "set-agent-activity",
+      args: {
+        kind: "releasing",
+        details: { releaseVersion: "0.9.1" },
+        now: "2026-05-06T00:00:00.000Z",
+        ttlSeconds: 60
+      }
+    },
+    ctx
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.data.agentStatus.kind, "releasing");
+  assert.equal(result.data.agentStatus.label, "Releasing Build 0.9.1");
+  assert.equal(result.data.lease.details.releaseVersion, "0.9.1");
+});
+
+test("taskEngineModule dashboard-summary ignores expired live activity leases", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T041", status: "in_progress", priority: "P1", phaseKey: "81" }));
+  });
+
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const db = new Database(path.join(workspace, ".workspace-kit", "tasks", "workspace-kit.db"));
+  try {
+    prepareKitSqliteDatabase(db);
+    setAgentActivityLease(db, {
+      activityId: "copilot:expired",
+      agentId: "copilot",
+      sessionId: "review",
+      kind: "awaiting_policy_approval",
+      label: "Awaiting Policy Approval for T041",
+      now: "2020-01-01T00:00:00.000Z",
+      expiresAt: "2020-01-01T00:01:00.000Z",
+      details: { taskId: "T041" }
+    });
+  } finally {
+    db.close();
+  }
+  const result = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
+  assert.equal(result.ok, true);
+  assert.equal(result.data.agentStatus.source, "derived");
+  assert.equal(result.data.agentStatus.kind, "working_task");
+  assert.equal(result.data.agentStatus.label, "Working on Task T041");
+});
+
+test("run-transition start records working live activity and complete clears it", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T071", status: "ready", priority: "P1", phaseKey: "81" }));
+  });
+
+  const ctx = sqliteTaskEngineCtx(workspace);
+  let result = await taskEngineModule.onCommand(
+    { name: "run-transition", args: { taskId: "T071", action: "start" } },
+    ctx
+  );
+  assert.equal(result.ok, true);
+
+  result = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
+  assert.equal(result.ok, true);
+  assert.equal(result.data.agentStatus.source, "live_activity");
+  assert.equal(result.data.agentStatus.kind, "working_task");
+  assert.equal(result.data.agentStatus.label, "Working on Task T071");
+  assert.equal(result.data.agentStatus.taskId, "T071");
+
+  result = await taskEngineModule.onCommand(
+    { name: "run-transition", args: { taskId: "T071", action: "complete" } },
+    ctx
+  );
+  assert.equal(result.ok, true);
+
+  result = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
+  assert.equal(result.ok, true);
+  assert.equal(result.data.agentStatus.source, "derived");
+  assert.notEqual(result.data.agentStatus.kind, "working_task");
+});
+
+test("claim-next-task records working live activity for the claimed task", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T081", status: "ready", priority: "P1", phaseKey: "81" }));
+  });
+
+  const ctx = sqliteTaskEngineCtx(workspace);
+  let result = await taskEngineModule.onCommand({ name: "claim-next-task", args: {} }, ctx);
+  assert.equal(result.ok, true);
+  assert.equal(result.data.taskId, "T081");
+
+  result = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
+  assert.equal(result.ok, true);
+  assert.equal(result.data.agentStatus.source, "live_activity");
+  assert.equal(result.data.agentStatus.kind, "working_task");
+  assert.equal(result.data.agentStatus.taskId, "T081");
+});
+
+test("build-plan records planning live activity while questions remain and clears on discard", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+
+  let result = await planningModule.onCommand(
+    { name: "build-plan", args: { planningType: "new-feature", outputMode: "response" } },
+    ctx
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "planning-questions");
+
+  result = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
+  assert.equal(result.ok, true);
+  assert.equal(result.data.agentStatus.source, "live_activity");
+  assert.equal(result.data.agentStatus.kind, "planning");
+  assert.equal(result.data.agentStatus.command, "build-plan");
+
+  result = await planningModule.onCommand({ name: "build-plan", args: { action: "discard" } }, ctx);
+  assert.equal(result.ok, true);
+
+  result = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
+  assert.equal(result.ok, true);
+  assert.equal(result.data.agentStatus.source, "derived");
 });
 
 test("taskEngineModule dashboard-summary wishlist openTop includes backing taskId", async () => {

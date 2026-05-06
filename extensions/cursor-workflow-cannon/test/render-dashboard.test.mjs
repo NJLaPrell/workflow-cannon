@@ -49,11 +49,15 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   const fixture = JSON.parse(readFileSync(fixturePath, "utf8"));
   const html = renderDashboardRootInnerHtml(fixture);
   assert.match(html, /dash-card/);
+  assert.match(html, /dash-agent-status-banner/);
+  assert.match(html, /<b>WC Agent is:<\/b> <span class="dash-agent-status-label">Awaiting Instruction<\/span>/);
   assert.match(html, /<b>Role:<\/b> Adventurer/);
   assert.match(html, /<b>Agent Temperament:<\/b> The Steady Adventurer/);
   assert.match(html, /dash-role-temperament-phase/);
   const roleIdx = html.indexOf("<b>Role:</b>");
+  const agentStatusIdx = html.indexOf("<b>WC Agent is:</b>");
   const phaseIdx = html.indexOf("Current Phase");
+  assert.ok(agentStatusIdx !== -1 && roleIdx !== -1 && agentStatusIdx < roleIdx);
   assert.ok(roleIdx !== -1 && phaseIdx !== -1 && roleIdx < phaseIdx);
   assert.match(html, /dash-overview-phase-row/);
   assert.match(html, /data-wc-action="deliver-phase-prompt"/);
@@ -136,6 +140,42 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.doesNotMatch(html, /same store as execution queue/i);
   assert.doesNotMatch(html, /Suggested Next/i);
   assert.doesNotMatch(html, /dashboard-approvals/);
+});
+
+test("renderDashboardRootInnerHtml renders escaped WC Agent status banner from agentStatus", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      agentStatus: {
+        schemaVersion: 1,
+        source: "derived",
+        kind: "working_task",
+        label: "Working on Task T123 <script>",
+        confidence: "medium",
+        updatedAt: "2026-05-06T00:00:00.000Z",
+        taskId: "T123"
+      },
+      stateSummary: { proposed: 0, ready: 0, in_progress: 1, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [] },
+      readyQueueTop: [],
+      readyQueueCount: 0,
+      suggestedNext: null,
+      planningSession: null,
+      taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
+      workspaceStatus: { currentKitPhase: "1", nextKitPhase: "2", activeFocus: "Test" },
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+  assert.match(html, /data-agent-status-kind="working_task"/);
+  assert.match(html, /Working on Task T123 &lt;script&gt;/);
+  assert.doesNotMatch(html, /<script>/);
+  assert.ok(html.indexOf("WC Agent is:") < html.indexOf("Current Phase"));
 });
 
 test("renderDashboardRootInnerHtml planning card shows resume CLI when session present", () => {

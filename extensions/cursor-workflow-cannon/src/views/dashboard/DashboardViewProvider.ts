@@ -43,6 +43,13 @@ function logDashboard(message: string): void {
   dashboardOutput.appendLine(`[dashboard] ${message}`);
 }
 
+function phaseKeyFromPhrase(phasePhrase: string): string | undefined {
+  const raw = phasePhrase.trim();
+  if (!raw || raw.toLowerCase() === "not phased") return undefined;
+  const match = raw.match(/^Phase\s+(.+)$/i);
+  return (match?.[1] ?? raw).trim() || undefined;
+}
+
 export class DashboardViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewId = "workflowCannon.dashboard";
 
@@ -161,6 +168,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (msg?.type === "prefillPhaseCompleteReleaseChat") {
         const raw = msg?.phasePhrase;
         const phasePhrase = typeof raw === "string" ? raw.trim() : "";
+        await this.client.recordActivity({
+          kind: "releasing",
+          command: "phase-complete-release",
+          phaseKey: phaseKeyFromPhrase(phasePhrase),
+          details: { source: "dashboard-complete-release", phasePhrase }
+        });
         await prefillCursorChat(buildPhaseCompleteReleaseChatPrompt(phasePhrase));
       }
       if (msg?.type === "dashboardTransition") {
@@ -324,6 +337,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private async onPlanningWizardStart(planningType: string): Promise<void> {
     try {
       await this.ingestPlanningGenFromDashboard();
+      await this.client.recordActivity({
+        kind: "planning",
+        command: "build-plan",
+        details: { planningType, source: "dashboard-planning-wizard" }
+      });
       const res = await this.client.run("build-plan", {
         planningType,
         outputMode: "response",
@@ -349,6 +367,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           code,
           message: String(res.message ?? "Interview complete")
         };
+        await this.client.clearActivity({ command: "build-plan" });
         this.notifyKitStateChanged();
         await this.planningWizardCompletionNotice(code, res.data as Record<string, unknown> | undefined);
         await this.pushUpdate();
@@ -398,6 +417,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     const nextAnswers = { ...answers, [question.id]: text };
     try {
       await this.ingestPlanningGenFromDashboard();
+      await this.client.recordActivity({
+        kind: "planning",
+        command: "build-plan",
+        details: { planningType, source: "dashboard-planning-wizard" }
+      });
       const res = await this.client.run("build-plan", {
         planningType,
         outputMode,
@@ -424,6 +448,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           code,
           message: String(res.message ?? "Interview complete")
         };
+        await this.client.clearActivity({ command: "build-plan" });
         this.notifyKitStateChanged();
         await this.planningWizardCompletionNotice(code, res.data as Record<string, unknown> | undefined);
         await this.pushUpdate();
@@ -462,6 +487,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
 
   private async onPlanningWizardReset(): Promise<void> {
     this.planningWizard = { kind: "idle" };
+    await this.client.clearActivity({ command: "build-plan" });
     await this.pushUpdate();
   }
 
@@ -480,6 +506,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     this.planningWizard = { kind: "idle" };
+    await this.client.clearActivity({ command: "build-plan" });
     this.notifyKitStateChanged();
     await this.pushUpdate();
   }
@@ -627,6 +654,16 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       opacity: 0.45;
       cursor: not-allowed;
     }
+    .dash-agent-status-banner {
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
+      border-left: 3px solid var(--vscode-charts-blue, var(--vscode-button-background));
+      border-radius: 6px;
+      padding: 7px 8px;
+      margin: 0 0 10px 0;
+      background: var(--vscode-sideBar-background);
+    }
+    .dash-agent-status-banner p { margin: 0; line-height: 1.35; }
+    .dash-agent-status-label { overflow-wrap: anywhere; }
     .dash-planning-head {
       display: flex;
       flex-direction: row;

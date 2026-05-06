@@ -59,6 +59,10 @@
       "output": "docs/maintainers/runbooks/agent-playbooks.md"
     },
     {
+      "source": ".ai/runbooks/agent-presentation-policy.md",
+      "output": "docs/maintainers/runbooks/agent-presentation-policy.md"
+    },
+    {
       "source": ".ai/runbooks/agent-structured-workspace-report.md",
       "output": "docs/maintainers/runbooks/agent-structured-workspace-report.md"
     },
