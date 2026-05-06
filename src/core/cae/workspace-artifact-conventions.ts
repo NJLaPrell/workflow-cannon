@@ -99,14 +99,18 @@ export function validateCaeWorkspaceArtifactId(artifactId: string): CaeConventio
   return { ok: true, value: normalized };
 }
 
-export function classifyCaeArtifactIdNamespace(artifactId: string): CaeArtifactIdNamespace {
-  const normalized = artifactId.trim();
+export function classifyCaeRegistryIdNamespace(id: string): CaeArtifactIdNamespace {
+  const normalized = id.trim();
   if (!ARTIFACT_ID_RE.test(normalized)) return "invalid";
   if (normalized.startsWith(CAE_DEFAULT_ARTIFACT_ID_PREFIX)) return "default";
   if (normalized.startsWith(CAE_WORKSPACE_ARTIFACT_ID_PREFIX) && WORKSPACE_ARTIFACT_ID_RE.test(normalized)) {
     return "workspace";
   }
   return "other";
+}
+
+export function classifyCaeArtifactIdNamespace(artifactId: string): CaeArtifactIdNamespace {
+  return classifyCaeRegistryIdNamespace(artifactId);
 }
 
 export function buildCaeWorkspaceArtifactPath(
