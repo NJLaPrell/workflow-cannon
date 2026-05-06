@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceSchemaPackageVersion": "0.79.2",
+  "sourceSchemaPackageVersion": "0.81.0",
   "pilotCommands": [
     "add-dependency",
     "add-phase-note",
@@ -14,6 +14,7 @@
     "backup-planning-sqlite",
     "claim-next-task",
     "classify-kit-state",
+    "clear-agent-activity",
     "clear-task-phase",
     "complete-task",
     "convert-phase-note-to-task",
@@ -57,6 +58,7 @@
     "replay-queue-snapshot",
     "review-planning-execution-drafts",
     "run-transition",
+    "set-agent-activity",
     "set-current-phase",
     "start-task",
     "supersede-phase-note",
@@ -276,6 +278,9 @@
       "additionalProperties": true
     },
     "classify-kit-state": {
+      "type": "object"
+    },
+    "clear-agent-activity": {
       "type": "object"
     },
     "clear-task-phase": {
@@ -854,6 +859,9 @@
         }
       },
       "additionalProperties": true
+    },
+    "set-agent-activity": {
+      "type": "object"
     },
     "set-current-phase": {
       "type": "object",

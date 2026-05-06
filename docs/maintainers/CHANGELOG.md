@@ -8,6 +8,10 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.81.0] - 2026-05-06
+
+Phase 80/81 — **Agent presentation policy and WC Agent status workflow**. This release adds a configurable, safety-bounded presentation policy for agent-visible communication and the WC Agent status banner/activity workflow for dashboard and operator visibility.
+
 ### Added
 
 - Phase 80 agent presentation policy: new `agentPresentation.*` config keys, resolved `resolve-agent-guidance` / `dashboard-summary` policy metadata, always-applied Cursor rule sync for visible work-log/rationale/technicality/final-answer detail, CAE scoped presentation Guidance examples, and safety tests that keep private reasoning undisclosed while preserving blockers, approvals, destructive-action warnings, verification failures, and residual-risk reporting.
