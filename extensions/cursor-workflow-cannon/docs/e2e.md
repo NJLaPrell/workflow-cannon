@@ -36,16 +36,13 @@ Includes **dashboard HTML rendering** tests (`render-dashboard.ts` + fixture) so
 - [ ] **Dashboard loads**: open the Workflow Cannon activity bar and confirm Dashboard renders state summary from `workspace-kit run dashboard-summary`.
 - [ ] **Dependency overview**: confirm **Dependency overview** (counts, critical path text, optional Mermaid source) matches your task store; with **>50** active tasks, confirm truncated subgraph + perf note (full graph remains available via `get-dependency-graph`).
 - [ ] **Planning session card**: with no `build-plan` snapshot, card explains empty state + stale behavior; start `build-plan`, then confirm **Resume** shows the CLI line from `dashboard-summary` / `.workspace-kit/planning/build-plan-session.json` and clears after completion.
-- [ ] **Dashboard refresh works**: run `Workflow Cannon: Refresh Dashboard`; UI updates without errors.
 - [ ] **Ready queue command works**: run `Workflow Cannon: Show Ready Queue`; quick pick opens.
-- [ ] **Task action works**: run `Workflow Cannon: Task Action`, pick a task, apply an allowed transition, and confirm success feedback.
-- [ ] **Direct task commands work**: run `Workflow Cannon: Start Task`, `Complete Task`, `Block Task`, `Pause Task`, `Unblock Task` on applicable tasks.
-- [ ] **Config validation works**: run `Workflow Cannon: Validate Config` and confirm successful output.
-- [ ] **State watcher refreshes**: after a task transition, Tasks tree refreshes without reloading the window.
-- [ ] **Wishlist in Tasks tree**: when open wishlist items exist, **Tasks** shows **Wishlist — open (n)**; click an item and confirm **Show Wishlist Detail** markdown preview.
-- [ ] **Wishlist watcher**: after creating/updating a wishlist item (JSON store), Tasks tree refreshes (same debounce as tasks).
+- [ ] **Generate Features command works**: run `Workflow Cannon: Generate Features`; a new Agent/Composer chat opens with `/generate-features` prefilled.
+- [ ] **State watcher refreshes**: after a task transition, Dashboard refreshes without reloading the window.
+- [ ] **Wishlist detail flow works**: when open wishlist items exist, use dashboard **View** / **Open wishlist detail** and confirm the markdown preview opens.
+- [ ] **Wishlist watcher**: after creating/updating a wishlist item (JSON store), Dashboard refreshes (same debounce as tasks).
 - [ ] **Policy-denied UX**: trigger a sensitive command without required approval and confirm an explicit error is shown (no silent mutation).
-- [ ] **Tasks tree DnD (Phase 44)** — drag a `T###` task (not wishlist intake) onto another **phase folder**: confirm `assign-task-phase` / `clear-task-phase` via modal, then **`get-task`** shows the new `phaseKey`. Drag onto a **status group** (e.g. In progress): confirm `run-transition` prompt + rationale, then status matches CLI. Try an invalid drop (e.g. completed phase bucket, illegal transition) and confirm a clear warning, no silent write.
+- [ ] **Dashboard transitions**: use dashboard row actions for allowed transitions; confirm `run-transition` prompts for rationale/policy when needed and status matches CLI. Try an invalid transition and confirm a clear warning, no silent write.
 
 ## Expected success signals
 

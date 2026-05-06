@@ -42,7 +42,7 @@ Open the **Workflow Cannon** activity bar to use **Dashboard** (webview — task
 
 **Sidebar Dashboard refresh:** Besides the bottom **Refresh** button (immediate refetch), the sidebar dashboard reloads when the view becomes visible again, when kit-owned files change (workspace-kit watchers), and on a **~45s** timer while the view stays open.
 
-**Tasks tree / drag-and-drop** were removed in extension **0.1.6** — use dashboard **View** on a task row (or palette **Show Task Detail**) and **`workspace-kit run run-transition`** / **`list-tasks`** from a terminal for transitions. Proposed-row **Accept**/**Chat** on the dashboard is unchanged.
+**Tasks tree / drag-and-drop** were removed in extension **0.1.6** — use dashboard **View** on a task row and **`workspace-kit run run-transition`** / **`list-tasks`** from a terminal for transitions. Proposed-row **Accept**/**Chat** on the dashboard is unchanged.
 
 ## CLI bridge
 
@@ -75,30 +75,18 @@ pnpm --filter cursor-workflow-cannon test
 
 - `Workflow Cannon: Open Dashboard`
 - `Workflow Cannon: Open Status Dashboard`
-- `Workflow Cannon: Refresh Dashboard`
 - `Workflow Cannon: Show Ready Queue`
-- `Workflow Cannon: Refresh Tasks` (refreshes the **Dashboard** webview)
-- `Workflow Cannon: Validate Config`
-- `Workflow Cannon: Task Action`
-- `Workflow Cannon: Show Task Detail`
-- `Workflow Cannon: Show Wishlist Detail`
-- `Workflow Cannon: Start Task`
-- `Workflow Cannon: Complete Task`
-- `Workflow Cannon: Block Task`
-- `Workflow Cannon: Pause Task`
-- `Workflow Cannon: Unblock Task`
 - `Workflow Cannon: Prefill Chat — Wishlist Intake Playbook` (palette; optional wishlist id argument)
-- `Workflow Cannon: Prefill Chat — Improvement Triage (Top Three)`
-- `Workflow Cannon: Prefill Chat — Task to Phase Branch Playbook`
+- `Workflow Cannon: Generate Features`
 ### Chat prefill (Cursor)
 
-**Phase closeout:** operators can invoke Cursor slash **`/complete-phase <N> [approve-release]`** — spec: **`.cursor/commands/complete-phase.md`** (publish steps require **`approve-release`** + **`.ai/RELEASING.md`** gates; **`policyApproval`** JSON still applies to **`wk run`**).
+User-facing Cursor slash commands live under **`.cursor/commands/`**: **`/add-wishlist-item`**, **`/generate-features`**, **`/list-tasks`**, **`/what-next`**, **`/onboarding`**, and **`/behavior-interview`**.
 
 The extension seeds Cursor Composer using **`vscode.commands.executeCommand("deeplink.prompt.prefill", { text })`** (same entry Cursor uses internally). If that command is missing or fails, it tries the **`cursor://anysphere.cursor-deeplink/prompt?text=…`** URI, then copies the prompt to the clipboard with a warning. Very long prompts may hit URI length limits — trim in-session or paste from clipboard. Standard VS Code (non-Cursor) may not register the deeplink command; clipboard fallback is expected.
 
-Dashboard **Generate Features** opens a **new** Agent/Composer chat when Cursor exposes a known **`composer.newAgentChat`** (or alias) command, then prefills the literal **`/generate-features`** string so submitting matches the slash command.
+Dashboard and palette **Generate Features** open a **new** Agent/Composer chat when Cursor exposes a known **`composer.newAgentChat`** (or alias) command, then prefill the literal **`/generate-features`** string so submitting matches the slash command.
 
-**Collaboration profiles** (quick action) prefills a chat that links **`/collaboration-profiles`**, **`/onboarding`**, **`/behavior-interview`**, and read-mostly **`pnpm exec wk run`** lines (`resolve-behavior-profile`, `list-behavior-profiles`, **`sync-effective-behavior-cursor-rule`**) — advisory only; **chat is not JSON `policyApproval`**.
+**Collaboration profiles** (quick action) prefills a chat that links **`/onboarding`**, **`/behavior-interview`**, and read-mostly **`pnpm exec wk run`** lines (`resolve-behavior-profile`, `list-behavior-profiles`, **`sync-effective-behavior-cursor-rule`**) — advisory only; **chat is not JSON `policyApproval`**.
 
 Dashboard **Wishlist** open rows include **Chat**; **Proposed · improvements** and **Proposed · execution** rows include **Accept** (modal **`policyApproval`** rationale + **`expectedPlanningGeneration`** when the workspace requires it) and **Chat** (improvement triage vs task-to-phase-branch playbook text). Agent canon: **`.ai/playbooks/`** (`wishlist-intake-to-execution.md`, `improvement-triage-top-three.md`, `task-to-phase-branch.md`). Maintainer mirrors: `docs/maintainers/playbooks/`.
 

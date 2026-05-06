@@ -8,9 +8,6 @@ import { buildWishlistIntakeAgentPrompt } from "./wishlist-chat-prompt.js";
 /** Same text the operator would type for slash **`/generate-features`** (dashboard button prefills this in a new chat). */
 export const GENERATE_FEATURES_SLASH_TEXT = "/generate-features";
 
-/** Same text the operator would type for slash **`/research-churn`** (dashboard / command palette can prefill the full playbook prompt instead). */
-export const RESEARCH_CHURN_SLASH_TEXT = "/research-churn";
-
 /**
  * Operator banner + {@link buildWishlistIntakeAgentPrompt} (dashboard **Generate Features** uses {@link GENERATE_FEATURES_SLASH_TEXT} only).
  */
@@ -29,9 +26,7 @@ export function buildTranscriptChurnResearchPrompt(options?: { taskId?: string }
       : `List rows with \`pnpm exec wk run list-tasks '{"status":"research","type":"transcript_churn"}'\` and work them one at a time.\n\n`;
 
   return (
-    "Run **Transcript churn research** for this workspace (Workflow Cannon dashboard, command palette, or Cursor slash **`" +
-    RESEARCH_CHURN_SLASH_TEXT +
-    "`**).\n\n" +
+    "Run **Transcript churn research** for this workspace from the Workflow Cannon dashboard.\n\n" +
     focus +
     "Attach **`.ai/playbooks/transcript-churn-research.md`** (playbook id **`transcript-churn-research`**).\n\n" +
     "After investigation, promote with **`pnpm exec wk run synthesize-transcript-churn`** per **`.ai/AGENT-CLI-MAP.md`** (JSON **`policyApproval`** and **`expectedPlanningGeneration`** when policy **`require`**). " +
@@ -48,7 +43,7 @@ export function buildImprovementTriagePrompt(options?: { taskId?: string }): str
       : "List proposed improvements with `workspace-kit run list-tasks '{\"status\":\"proposed\",\"type\":\"improvement\"}'` and pick at most three per the playbook rubric.\n\n";
 
   return (
-    "Run **Improvement triage (top three)** for this workspace (Cursor slash **`/process-proposed-improvements`** when invoked that way).\n\n" +
+    "Run **Improvement triage (top three)** for this workspace from the dashboard proposed-improvements flow.\n\n" +
     focus +
     "Attach **`docs/maintainers/playbooks/improvement-triage-top-three.md`** (playbook id **`improvement-triage-top-three`**).\n\n" +
     "Use **`docs/maintainers/AGENT-CLI-MAP.md`** for **`run-transition`** **`accept`** with JSON **`policyApproval`** when promoting tasks.\n\n" +
@@ -105,16 +100,16 @@ export function buildPlanningInterviewResumePrompt(resumeCli: string): string {
   );
 }
 
-/** Dashboard / README — collaboration profiles hub (slash + CLI); advisory-only. */
+/** Dashboard / README — collaboration profiles hub (chat + CLI); advisory-only. */
 export function buildCollaborationProfilesHubPrompt(): string {
   return (
     "The operator opened **Collaboration profiles** from the Workflow Cannon dashboard.\n\n" +
-    "**Slash hub (Cursor):** **`/collaboration-profiles`**, **`/onboarding`**, **`/behavior-interview`** — advisory tone/depth only; they do **not** replace JSON **`policyApproval`** on Tier A/B **`wk run`**.\n\n" +
+    "**User chat entrypoints:** **`/onboarding`** and **`/behavior-interview`** tune advisory tone/depth only; they do **not** replace JSON **`policyApproval`** on Tier A/B **`wk run`**.\n\n" +
     "**CLI discovery (read-mostly):**\n" +
     "- `pnpm exec wk run resolve-behavior-profile '{}'`\n" +
     "- `pnpm exec wk run list-behavior-profiles '{}'`\n" +
     "- `pnpm exec wk run resolve-agent-guidance '{}'`\n" +
     "- `pnpm exec wk run sync-effective-behavior-cursor-rule '{}'` — refresh the generated **`.cursor/rules/workflow-cannon-effective-agent-behavior.mdc`** after role/profile changes.\n\n" +
-    "Canon: **`.cursor/commands/collaboration-profiles.md`**, **`.ai/AGENT-CLI-MAP.md`**, **`.ai/POLICY-APPROVAL.md`**."
+    "Canon: **`.ai/AGENT-CLI-MAP.md`**, **`.ai/POLICY-APPROVAL.md`**, and the behavior playbooks under **`.ai/playbooks/`**."
   );
 }

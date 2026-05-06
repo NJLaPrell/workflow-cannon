@@ -38,9 +38,7 @@ Full checklist: **`.ai/playbooks/improvement-scout.md`**.
 
 Pick at most three `proposed` improvement tasks, document rationale, **`accept`** to **`ready`** with **`policyApproval`** on the transition args.
 
-Full checklist: **`.ai/playbooks/improvement-triage-top-three.md`**.
-
-Cursor slash: **`/process-proposed-improvements`** → **`.cursor/commands/process-proposed-improvements.md`**.
+Full checklist: **`.ai/playbooks/improvement-triage-top-three.md`**. This remains a dashboard / agent playbook flow, not a user-facing slash command.
 
 ## Transcript churn (research → proposed)
 

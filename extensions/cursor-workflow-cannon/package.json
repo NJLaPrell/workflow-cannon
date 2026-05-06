@@ -20,25 +20,7 @@
   ],
   "activationEvents": [
     "workspaceContains:.workspace-kit/manifest.json",
-    "onStartupFinished",
-    "onCommand:workflowCannon.openDashboard",
-    "onCommand:workflowCannon.refreshDashboard",
-    "onCommand:workflowCannon.showReadyQueue",
-    "onCommand:workflowCannon.refreshTasks",
-    "onCommand:workflowCannon.validateConfig",
-    "onCommand:workflowCannon.task.pickAction",
-    "onCommand:workflowCannon.task.showDetail",
-    "onCommand:workflowCannon.wishlist.showDetail",
-    "onCommand:workflowCannon.task.start",
-    "onCommand:workflowCannon.task.complete",
-    "onCommand:workflowCannon.task.block",
-    "onCommand:workflowCannon.task.pause",
-    "onCommand:workflowCannon.task.unblock",
-    "onCommand:workflowCannon.chat.prefillWishlistFlow",
-    "onCommand:workflowCannon.chat.prefillImprovementTriage",
-    "onCommand:workflowCannon.chat.prefillTaskToPhaseBranch",
-    "onCommand:workflowCannon.chat.prefillTranscriptChurnResearch",
-    "onCommand:workflowCannon.openStatusDashboard"
+    "onStartupFinished"
   ],
   "main": "./dist/extension.js",
   "files": [
@@ -94,68 +76,16 @@
         "title": "Workflow Cannon: Open Dashboard"
       },
       {
-        "command": "workflowCannon.refreshDashboard",
-        "title": "Workflow Cannon: Refresh Dashboard"
-      },
-      {
         "command": "workflowCannon.showReadyQueue",
         "title": "Workflow Cannon: Show Ready Queue"
-      },
-      {
-        "command": "workflowCannon.refreshTasks",
-        "title": "Workflow Cannon: Refresh Tasks"
-      },
-      {
-        "command": "workflowCannon.validateConfig",
-        "title": "Workflow Cannon: Validate Config"
-      },
-      {
-        "command": "workflowCannon.task.pickAction",
-        "title": "Workflow Cannon: Task Action"
-      },
-      {
-        "command": "workflowCannon.task.showDetail",
-        "title": "Workflow Cannon: Show Task Detail"
-      },
-      {
-        "command": "workflowCannon.wishlist.showDetail",
-        "title": "Workflow Cannon: Show Wishlist Detail"
-      },
-      {
-        "command": "workflowCannon.task.start",
-        "title": "Workflow Cannon: Start Task"
-      },
-      {
-        "command": "workflowCannon.task.complete",
-        "title": "Workflow Cannon: Complete Task"
-      },
-      {
-        "command": "workflowCannon.task.block",
-        "title": "Workflow Cannon: Block Task"
-      },
-      {
-        "command": "workflowCannon.task.pause",
-        "title": "Workflow Cannon: Pause Task"
-      },
-      {
-        "command": "workflowCannon.task.unblock",
-        "title": "Workflow Cannon: Unblock Task"
       },
       {
         "command": "workflowCannon.chat.prefillWishlistFlow",
         "title": "Workflow Cannon: Prefill Chat — Wishlist Intake Playbook"
       },
       {
-        "command": "workflowCannon.chat.prefillImprovementTriage",
-        "title": "Workflow Cannon: Prefill Chat — Improvement Triage (Top Three)"
-      },
-      {
-        "command": "workflowCannon.chat.prefillTaskToPhaseBranch",
-        "title": "Workflow Cannon: Prefill Chat — Task to Phase Branch Playbook"
-      },
-      {
-        "command": "workflowCannon.chat.prefillTranscriptChurnResearch",
-        "title": "Workflow Cannon: Prefill Chat — Transcript Churn Research (/research-churn)"
+        "command": "workflowCannon.chat.generateFeatures",
+        "title": "Workflow Cannon: Generate Features"
       },
       {
         "command": "workflowCannon.openStatusDashboard",
@@ -168,7 +98,7 @@
     "watch": "tsc -watch -p ./",
     "check": "tsc -p ./ --noEmit",
     "package": "pnpm run compile",
-    "test": "pnpm run compile && node --test test/**/*.test.mjs"
+    "test": "pnpm run compile && find test -name '*.test.mjs' -print0 | xargs -0 node --test"
   },
   "dependencies": {
     "@workflow-cannon/workspace-kit": "workspace:^"

@@ -2,7 +2,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   GENERATE_FEATURES_SLASH_TEXT,
-  RESEARCH_CHURN_SLASH_TEXT,
   buildCollaborationProfilesHubPrompt,
   buildGenerateFeaturesPrompt,
   buildImprovementTriagePrompt,
@@ -16,15 +15,10 @@ test("GENERATE_FEATURES_SLASH_TEXT is the generate-features slash token", () => 
   assert.equal(GENERATE_FEATURES_SLASH_TEXT, "/generate-features");
 });
 
-test("RESEARCH_CHURN_SLASH_TEXT is the research-churn slash token", () => {
-  assert.equal(RESEARCH_CHURN_SLASH_TEXT, "/research-churn");
-});
-
-test("buildTranscriptChurnResearchPrompt references playbook, slash, and synthesize command", () => {
+test("buildTranscriptChurnResearchPrompt references playbook and synthesize command", () => {
   const p = buildTranscriptChurnResearchPrompt();
   assert.match(p, /transcript-churn-research\.md/);
   assert.match(p, /synthesize-transcript-churn/);
-  assert.match(p, /\/research-churn/);
   assert.doesNotMatch(p, /research-church/);
 });
 
@@ -44,7 +38,7 @@ test("buildImprovementTriagePrompt references playbook id and path", () => {
   const p = buildImprovementTriagePrompt();
   assert.match(p, /improvement-triage-top-three\.md/);
   assert.match(p, /improvement-triage-top-three/);
-  assert.match(p, /\/process-proposed-improvements/);
+  assert.match(p, /dashboard proposed-improvements flow/);
 });
 
 test("buildImprovementTriagePrompt focuses task id when provided", () => {
@@ -89,9 +83,10 @@ test("buildPlanningInterviewResumePrompt embeds saved resume command", () => {
   assert.match(p, /planning-workflow\.md/);
 });
 
-test("buildCollaborationProfilesHubPrompt references slash hub, sync command, and policy", () => {
+test("buildCollaborationProfilesHubPrompt references user chat entrypoints, sync command, and policy", () => {
   const p = buildCollaborationProfilesHubPrompt();
-  assert.match(p, /\/collaboration-profiles/);
+  assert.match(p, /\/onboarding/);
+  assert.match(p, /\/behavior-interview/);
   assert.match(p, /sync-effective-behavior-cursor-rule/);
   assert.match(p, /policyApproval/);
 });

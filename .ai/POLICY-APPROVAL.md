@@ -30,9 +30,9 @@ Assume **no TTY**: use JSON **`policyApproval`** on `workspace-kit run`. **Chat 
 
 ## Operator slash / chat vs Tier A/B `wk run`
 
-Cursor slash commands (e.g. **`/complete-phase … approve-release`**), Composer text, and ticket comments express **what the human wants done**. They **do not** replace JSON **`policyApproval`** on the **third** argv for policy-sensitive **`pnpm exec wk run …`** — see **`.ai/AGENT-CLI-MAP.md`**. The tool or agent that invokes the CLI must still pass **`policyApproval`** (or a valid session grant) so traces and policy stay auditable.
+Cursor slash commands (for example **`/generate-features`**), Composer text, dashboard chat prompts, and ticket comments express **what the human wants done**. They **do not** replace JSON **`policyApproval`** on the **third** argv for policy-sensitive **`pnpm exec wk run …`** — see **`.ai/AGENT-CLI-MAP.md`**. The tool or agent that invokes the CLI must still pass **`policyApproval`** (or a valid session grant) so traces and policy stay auditable.
 
-**Publish / npm / tag:** Even when an operator includes **`approve-release`** in slash args, phase ship still follows **`.ai/playbooks/phase-closeout-and-release.md`** and the explicit maintainer approval path described from **`.ai/RELEASING.md`** through **`docs/maintainers/RELEASING.md`** — chat-only wording is not the release gate.
+**Publish / npm / tag:** Phase ship still follows **`.ai/playbooks/phase-closeout-and-release.md`** and the explicit maintainer approval path described from **`.ai/RELEASING.md`** through **`docs/maintainers/RELEASING.md`** — chat-only wording is not the release gate.
 
 ## Evidence
 
