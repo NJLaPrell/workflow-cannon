@@ -2,6 +2,7 @@ import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contr
 import { resolveAgentBootstrapOrSnapshot } from "./agent-session-commands.js";
 import { buildAgentMutationPlan } from "./agent-mutation-plan-commands.js";
 import { runApplyTaskBatchCommand } from "./apply-task-batch-command.js";
+import { resolveAgentActivityCommands } from "./agent-activity-commands.js";
 import { resolveFeatureRegistryReadoutCommands } from "./feature-registry-readout-commands.js";
 import { resolveFeatureTaxonomyRuntimeCommands } from "./task-feature-taxonomy-runtime-commands.js";
 import type { OpenedPlanningStores } from "../persistence/planning-open.js";
@@ -27,6 +28,11 @@ export async function dispatchTaskEnginePlanningCommands(
   store: TaskStore
 ): Promise<ModuleCommandResult> {
   const args = command.args ?? {};
+
+  const agentActivity = resolveAgentActivityCommands(command, ctx, planning);
+  if (agentActivity !== null) {
+    return agentActivity;
+  }
 
   const agentBootstrapOrSnapshot = await resolveAgentBootstrapOrSnapshot(command, ctx, planning);
   if (agentBootstrapOrSnapshot !== null) {

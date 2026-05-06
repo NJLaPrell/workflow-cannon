@@ -2,6 +2,7 @@ import { execFile, execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import type { DashboardAgentStatusKind } from "@workflow-cannon/workspace-kit/contracts/dashboard-summary-run";
 
 export type KitRunResult = {
   ok: boolean;
@@ -13,6 +14,18 @@ export type KitRunResult = {
 
 export type CommandClientExecResult = { exitCode: number; stdout: string; stderr: string };
 export type CommandClientExecFn = (workspaceRoot: string, cliArgs: string[]) => Promise<CommandClientExecResult>;
+
+export type CommandClientActivityInput = {
+  kind: DashboardAgentStatusKind;
+  label?: string;
+  taskId?: string;
+  command?: string;
+  phaseKey?: string;
+  prNumber?: number;
+  version?: string;
+  details?: Record<string, unknown>;
+  ttlSeconds?: number;
+};
 
 type CommandClientOptions = {
   cliPathOverride?: string;
@@ -442,6 +455,26 @@ export class CommandClient {
         code: "extension-exec-error",
         message: e instanceof Error ? e.message : String(e)
       };
+    }
+  }
+
+  async recordActivity(input: CommandClientActivityInput): Promise<void> {
+    const out = await this.run("set-agent-activity", {
+      ...input,
+      source: "vscode-extension"
+    });
+    if (!out.ok) {
+      console.warn("workspace-kit activity record failed:", String(out.message ?? out.code ?? "unknown"));
+    }
+  }
+
+  async clearActivity(args: Record<string, unknown> = {}): Promise<void> {
+    const out = await this.run("clear-agent-activity", {
+      ...args,
+      source: "vscode-extension"
+    });
+    if (!out.ok) {
+      console.warn("workspace-kit activity clear failed:", String(out.message ?? out.code ?? "unknown"));
     }
   }
 

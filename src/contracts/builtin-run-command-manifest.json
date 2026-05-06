@@ -221,6 +221,22 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "set-agent-activity",
+    "file": "set-agent-activity.md",
+    "description": "Set a short-lived dashboard agent activity lease for explicit live status.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "clear-agent-activity",
+    "file": "clear-agent-activity.md",
+    "description": "Clear current dashboard agent activity leases for the active agent/session.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "claim-next-task",
     "file": "claim-next-task.md",
     "description": "Atomically claim the current suggested ready task by transitioning it to in_progress.",

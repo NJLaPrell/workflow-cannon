@@ -287,6 +287,10 @@ export function readCurrentAgentActivityLease(
 export function agentActivityLeaseToDashboardStatus(
   lease: AgentActivityLease
 ): DashboardAgentStatusSummary {
+  const detailTaskId =
+    typeof lease.details?.taskId === "string" && lease.details.taskId.trim().length > 0
+      ? lease.details.taskId.trim()
+      : null;
   return {
     schemaVersion: 1,
     source: "live_activity",
@@ -294,7 +298,7 @@ export function agentActivityLeaseToDashboardStatus(
     label: lease.label,
     confidence: "high",
     updatedAt: lease.updatedAt,
-    taskId: lease.taskId,
+    taskId: lease.taskId ?? detailTaskId,
     phaseKey: lease.phaseKey,
     command: lease.command,
     prNumber: lease.prNumber,

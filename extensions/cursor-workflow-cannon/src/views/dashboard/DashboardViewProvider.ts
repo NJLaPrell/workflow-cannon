@@ -324,6 +324,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private async onPlanningWizardStart(planningType: string): Promise<void> {
     try {
       await this.ingestPlanningGenFromDashboard();
+      await this.client.recordActivity({
+        kind: "planning",
+        command: "build-plan",
+        details: { planningType, source: "dashboard-planning-wizard" }
+      });
       const res = await this.client.run("build-plan", {
         planningType,
         outputMode: "response",
@@ -349,6 +354,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           code,
           message: String(res.message ?? "Interview complete")
         };
+        await this.client.clearActivity({ command: "build-plan" });
         this.notifyKitStateChanged();
         await this.planningWizardCompletionNotice(code, res.data as Record<string, unknown> | undefined);
         await this.pushUpdate();
@@ -398,6 +404,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     const nextAnswers = { ...answers, [question.id]: text };
     try {
       await this.ingestPlanningGenFromDashboard();
+      await this.client.recordActivity({
+        kind: "planning",
+        command: "build-plan",
+        details: { planningType, source: "dashboard-planning-wizard" }
+      });
       const res = await this.client.run("build-plan", {
         planningType,
         outputMode,
@@ -424,6 +435,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           code,
           message: String(res.message ?? "Interview complete")
         };
+        await this.client.clearActivity({ command: "build-plan" });
         this.notifyKitStateChanged();
         await this.planningWizardCompletionNotice(code, res.data as Record<string, unknown> | undefined);
         await this.pushUpdate();
@@ -462,6 +474,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
 
   private async onPlanningWizardReset(): Promise<void> {
     this.planningWizard = { kind: "idle" };
+    await this.client.clearActivity({ command: "build-plan" });
     await this.pushUpdate();
   }
 
@@ -480,6 +493,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     this.planningWizard = { kind: "idle" };
+    await this.client.clearActivity({ command: "build-plan" });
     this.notifyKitStateChanged();
     await this.pushUpdate();
   }
