@@ -51,6 +51,10 @@ Example:
 
 For **`set-current-phase`**, agents should summarize **`data.presentation.phaseRollover`** instead of guessing from command-specific raw fields. The projection uses **`kind: "phase_rollover_v1"`** and is present for dry runs, live writes, and idempotent replays. It includes before/after phase, workspace revision, config hint status, export status, optional task counts, and any **`suggestedFollowUpCommand`**. The raw domain fields remain authoritative; the projection is the stable summarizer contract.
 
+## Agent presentation metadata
+
+Commands that already return resolved presentation policy, such as **`resolve-agent-guidance`** and **`dashboard-summary`**, may also include **`data.presentation.agentPresentation`**. This projection is bounded output metadata: visible work-log, rationale summary, technicality, final-answer detail, and **`privateReasoning: "never_disclose"`**. It intentionally omits generated rule text and marks **`responseTemplateRole: "output_metadata_only"`**. The generated Cursor rule remains the early chat instruction mechanism; response templates should not be used to make already-running agents reveal private reasoning or change policy gates.
+
 ## Strict mode
 
 Use `enforcementMode: strict` when governance or CI should fail closed on template mistakes:

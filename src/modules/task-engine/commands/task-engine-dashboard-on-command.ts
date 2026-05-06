@@ -34,6 +34,7 @@ import type { TaskStore } from "../persistence/store.js";
 import type { SqliteDualPlanningStore } from "../persistence/sqlite-dual-planning.js";
 import { buildFeatureEnrichmentBySlug, type FeatureEnrichment } from "../persistence/feature-registry-queries.js";
 import { buildDashboardSystemStatus } from "../dashboard/build-dashboard-system-status.js";
+import { buildDashboardAgentStatus } from "../dashboard/dashboard-agent-status.js";
 
 function featureDetailsForTask(
   slugs: string[] | undefined,
@@ -247,9 +248,18 @@ export async function runDashboardSummaryCommand(
     : subagentRegistryEmpty;
 
   const systemStatus = await buildDashboardSystemStatus(ctx, store, dualForStatus);
+  const agentStatus = buildDashboardAgentStatus({
+    now: systemStatus.generatedAt,
+    tasks,
+    planningSession,
+    suggestion,
+    teamExecution,
+    subagentRegistry,
+    systemStatus
+  });
 
   const data = {
-    schemaVersion: 6 as const,
+    schemaVersion: 7 as const,
     planningGeneration,
     planningGenerationPolicy: getPlanningGenerationPolicy({
       effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined
@@ -335,7 +345,8 @@ export async function runDashboardSummaryCommand(
     agentGuidance,
     teamExecution,
     subagentRegistry,
-    systemStatus
+    systemStatus,
+    agentStatus
   } satisfies DashboardSummaryData;
 
   return {
