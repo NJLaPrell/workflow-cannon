@@ -529,6 +529,49 @@ export function countCaeRegistryMutationAuditRows(db: SqliteDatabase): number {
   }
 }
 
+export type CaeRegistryMutationAuditRow = {
+  id: number;
+  recorded_at: string;
+  actor: string;
+  command_name: string;
+  version_id: string;
+  note: string | null;
+  payload_json: string;
+};
+
+export function listCaeRegistryMutationAuditRows(
+  db: SqliteDatabase,
+  options?: { limit?: number; versionId?: string | null }
+): CaeRegistryMutationAuditRow[] {
+  const limit = Number.isFinite(options?.limit) ? Math.max(1, Math.floor(options!.limit!)) : 25;
+  const versionId = typeof options?.versionId === "string" && options.versionId.trim().length > 0
+    ? options.versionId.trim()
+    : null;
+  try {
+    if (versionId) {
+      return db
+        .prepare(
+          `SELECT id, recorded_at, actor, command_name, version_id, note, payload_json
+           FROM cae_registry_mutations
+           WHERE version_id = ?
+           ORDER BY recorded_at DESC, id DESC
+           LIMIT ?`
+        )
+        .all(versionId, limit) as CaeRegistryMutationAuditRow[];
+    }
+    return db
+      .prepare(
+        `SELECT id, recorded_at, actor, command_name, version_id, note, payload_json
+         FROM cae_registry_mutations
+         ORDER BY recorded_at DESC, id DESC
+         LIMIT ?`
+      )
+      .all(limit) as CaeRegistryMutationAuditRow[];
+  } catch {
+    return [];
+  }
+}
+
 export function updateCaeRegistryArtifactFields(
   db: SqliteDatabase,
   versionId: string,

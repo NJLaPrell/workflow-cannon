@@ -64,6 +64,7 @@ describe("CAE cli-read-only-requests schema (v1)", () => {
     ["explain-by-replay.json", "caeExplainByReplayRequest"],
     ["health.json", "caeHealthRequest"],
     ["dashboard-summary.json", "caeDashboardSummaryRequest"],
+    ["authoring-summary.json", "caeAuthoringSummaryRequest"],
     ["recent-traces.json", "caeRecentTracesRequest"],
     ["guidance-preview.json", "caeGuidancePreviewRequest"],
     ["conflicts.json", "caeConflictsRequest"],
@@ -168,6 +169,7 @@ describe("CAE cli-read-only-data schema (v1)", () => {
   it("accepts caeRecentTracesData and caeDashboardSummaryData", () => {
     const recentValidate = compileDef(ajv, DATA_ID, "caeRecentTracesData");
     const dashboardValidate = compileDef(ajv, DATA_ID, "caeDashboardSummaryData");
+    const authoringValidate = compileDef(ajv, DATA_ID, "caeAuthoringSummaryData");
     const product = {
       productName: "Guidance",
       technicalName: "Context Activation Engine (CAE)",
@@ -226,6 +228,113 @@ describe("CAE cli-read-only-data schema (v1)", () => {
       }),
       true,
       ajv.errorsText(dashboardValidate.errors)
+    );
+    assert.equal(
+      authoringValidate({
+        schemaVersion: 1,
+        product,
+        activeVersion: {
+          schemaVersion: 1,
+          versionId: "cae.reg.v1",
+          createdAt: "2026-04-25T00:00:00.000Z",
+          createdBy: "test",
+          note: null,
+          registryDigest: "digest-1",
+          artifactCount: 1,
+          activationCount: 1,
+          isActive: true
+        },
+        artifacts: {
+          count: 1,
+          rows: [
+            {
+              schemaVersion: 1,
+              activeVersionId: "cae.reg.v1",
+              registryDigest: "digest-1",
+              artifactId: "workspace.playbook.release-sanity",
+              artifactType: "playbook",
+              title: "Release sanity",
+              path: ".ai/cae/artifacts/playbooks/release-sanity.md",
+              source: "workspace",
+              lifecycleStatus: "active",
+              status: "active",
+              fileOwnershipStatus: "workspace-owned",
+              fileExists: true,
+              overrideOfId: null
+            }
+          ]
+        },
+        activations: {
+          count: 1,
+          rows: [
+            {
+              schemaVersion: 1,
+              activeVersionId: "cae.reg.v1",
+              registryDigest: "digest-1",
+              activationId: "workspace.activation.release-sanity",
+              family: "do",
+              priority: 10,
+              lifecycleState: "draft",
+              source: "workspace",
+              lifecycleStatus: "active",
+              status: "draft",
+              overrideOfId: null,
+              artifactRefs: [
+                {
+                  artifactId: "workspace.playbook.release-sanity",
+                  source: "workspace",
+                  status: "active",
+                  fileOwnershipStatus: "workspace-owned"
+                }
+              ]
+            }
+          ]
+        },
+        counts: {
+          schemaVersion: 1,
+          artifactSources: { default: 0, workspace: 1, override: 0 },
+          artifactStatuses: { active: 1, hidden: 0, retired: 0, "missing-file": 0, "external-allowed": 0 },
+          artifactTypes: { playbook: 1 },
+          activationFamilies: { policy: 0, think: 0, do: 1, review: 0 },
+          activationStatuses: { active: 0, draft: 1, disabled: 0, hidden: 0, retired: 0 },
+          recentMutationCount: 1
+        },
+        validation: { ok: true, code: "cae-registry-validate-ok" },
+        validationWarnings: [],
+        recentMutations: {
+          available: true,
+          count: 1,
+          rows: [
+            {
+              id: 1,
+              recordedAt: "2026-04-25T00:00:00.000Z",
+              actor: "test",
+              commandName: "cae-create-artifact",
+              versionId: "cae.reg.v1",
+              note: null
+            }
+          ]
+        },
+        readiness: {
+          schemaVersion: 1,
+          status: "ready",
+          canRender: true,
+          canMutate: true,
+          denialReason: null,
+          issues: []
+        },
+        health: {
+          schemaVersion: 1,
+          caeEnabled: true,
+          persistenceEnabled: true,
+          lastEvalAt: null,
+          registryStore: "sqlite",
+          registryStatus: "ok",
+          issues: []
+        }
+      }),
+      true,
+      ajv.errorsText(authoringValidate.errors)
     );
   });
 

@@ -537,6 +537,247 @@
         }
       }
     },
+    "caeAuthoringArtifactRefSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifactId", "source", "status", "fileOwnershipStatus"],
+      "properties": {
+        "artifactId": { "type": "string", "maxLength": 256 },
+        "source": { "type": ["string", "null"], "enum": ["default", "workspace", "override", null] },
+        "status": {
+          "type": "string",
+          "enum": ["active", "hidden", "retired", "missing-file", "external-allowed", "missing-artifact-row"]
+        },
+        "fileOwnershipStatus": {
+          "type": ["string", "null"],
+          "enum": ["workspace-owned", "default-owned", "external-allowed", "missing-file", null]
+        }
+      }
+    },
+    "caeAuthoringArtifactRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "activeVersionId",
+        "registryDigest",
+        "artifactId",
+        "artifactType",
+        "title",
+        "path",
+        "source",
+        "lifecycleStatus",
+        "status",
+        "fileOwnershipStatus",
+        "fileExists",
+        "overrideOfId"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "activeVersionId": { "type": ["string", "null"], "maxLength": 256 },
+        "registryDigest": { "type": "string", "maxLength": 256 },
+        "artifactId": { "type": "string", "maxLength": 256 },
+        "artifactType": { "type": "string", "maxLength": 64 },
+        "title": { "type": ["string", "null"], "maxLength": 256 },
+        "path": { "type": "string", "maxLength": 512 },
+        "source": { "type": "string", "enum": ["default", "workspace", "override"] },
+        "lifecycleStatus": { "type": "string", "enum": ["active", "hidden", "retired"] },
+        "status": {
+          "type": "string",
+          "enum": ["active", "hidden", "retired", "missing-file", "external-allowed"]
+        },
+        "fileOwnershipStatus": {
+          "type": "string",
+          "enum": ["workspace-owned", "default-owned", "external-allowed", "missing-file"]
+        },
+        "fileExists": { "type": "boolean" },
+        "overrideOfId": { "type": ["string", "null"], "maxLength": 256 }
+      }
+    },
+    "caeAuthoringActivationRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "activeVersionId",
+        "registryDigest",
+        "activationId",
+        "family",
+        "priority",
+        "lifecycleState",
+        "source",
+        "lifecycleStatus",
+        "status",
+        "overrideOfId",
+        "artifactRefs"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "activeVersionId": { "type": ["string", "null"], "maxLength": 256 },
+        "registryDigest": { "type": "string", "maxLength": 256 },
+        "activationId": { "type": "string", "maxLength": 256 },
+        "family": { "type": "string", "maxLength": 64 },
+        "priority": { "type": "number" },
+        "lifecycleState": { "type": "string", "maxLength": 64 },
+        "source": { "type": "string", "enum": ["default", "workspace", "override"] },
+        "lifecycleStatus": { "type": "string", "enum": ["active", "hidden", "retired"] },
+        "status": { "type": "string", "enum": ["active", "draft", "disabled", "hidden", "retired"] },
+        "overrideOfId": { "type": ["string", "null"], "maxLength": 256 },
+        "artifactRefs": {
+          "type": "array",
+          "maxItems": 128,
+          "items": { "$ref": "#/$defs/caeAuthoringArtifactRefSummary" }
+        }
+      }
+    },
+    "caeAuthoringSummaryData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "product",
+        "activeVersion",
+        "artifacts",
+        "activations",
+        "counts",
+        "validation",
+        "validationWarnings",
+        "recentMutations",
+        "readiness",
+        "health"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "product": { "$ref": "#/$defs/caeGuidanceProductLabels" },
+        "activeVersion": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schemaVersion",
+            "versionId",
+            "createdAt",
+            "createdBy",
+            "note",
+            "registryDigest",
+            "artifactCount",
+            "activationCount",
+            "isActive"
+          ],
+          "properties": {
+            "schemaVersion": { "const": 1 },
+            "versionId": { "type": ["string", "null"], "maxLength": 256 },
+            "createdAt": { "type": ["string", "null"], "maxLength": 64 },
+            "createdBy": { "type": ["string", "null"], "maxLength": 256 },
+            "note": { "type": ["string", "null"], "maxLength": 2048 },
+            "registryDigest": { "type": ["string", "null"], "maxLength": 256 },
+            "artifactCount": { "type": "integer", "minimum": 0 },
+            "activationCount": { "type": "integer", "minimum": 0 },
+            "isActive": { "type": "boolean" }
+          }
+        },
+        "artifacts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["count", "rows"],
+          "properties": {
+            "count": { "type": "integer", "minimum": 0 },
+            "rows": { "type": "array", "maxItems": 1000, "items": { "$ref": "#/$defs/caeAuthoringArtifactRow" } }
+          }
+        },
+        "activations": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["count", "rows"],
+          "properties": {
+            "count": { "type": "integer", "minimum": 0 },
+            "rows": { "type": "array", "maxItems": 1000, "items": { "$ref": "#/$defs/caeAuthoringActivationRow" } }
+          }
+        },
+        "counts": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "schemaVersion",
+            "artifactSources",
+            "artifactStatuses",
+            "artifactTypes",
+            "activationFamilies",
+            "activationStatuses",
+            "recentMutationCount"
+          ],
+          "properties": {
+            "schemaVersion": { "const": 1 },
+            "artifactSources": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
+            "artifactStatuses": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
+            "artifactTypes": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
+            "activationFamilies": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
+            "activationStatuses": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
+            "recentMutationCount": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "validation": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["ok", "code"],
+          "properties": {
+            "ok": { "type": "boolean" },
+            "code": { "type": "string", "maxLength": 128 }
+          }
+        },
+        "validationWarnings": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["code"],
+            "properties": {
+              "code": { "type": "string", "maxLength": 128 }
+            }
+          }
+        },
+        "recentMutations": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["available", "count", "rows"],
+          "properties": {
+            "available": { "type": "boolean" },
+            "count": { "type": "integer", "minimum": 0 },
+            "rows": {
+              "type": "array",
+              "maxItems": 200,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["id", "recordedAt", "actor", "commandName", "versionId", "note"],
+                "properties": {
+                  "id": { "type": "integer", "minimum": 1 },
+                  "recordedAt": { "type": "string", "maxLength": 64 },
+                  "actor": { "type": "string", "maxLength": 256 },
+                  "commandName": { "type": "string", "maxLength": 128 },
+                  "versionId": { "type": "string", "maxLength": 256 },
+                  "note": { "type": ["string", "null"], "maxLength": 2048 }
+                }
+              }
+            }
+          }
+        },
+        "readiness": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["schemaVersion", "status", "canRender", "canMutate", "denialReason", "issues"],
+          "properties": {
+            "schemaVersion": { "const": 1 },
+            "status": { "type": "string", "enum": ["ready", "read-only", "degraded"] },
+            "canRender": { "type": "boolean" },
+            "canMutate": { "type": "boolean" },
+            "denialReason": { "type": ["string", "null"], "maxLength": 2048 },
+            "issues": { "type": "array", "maxItems": 64 }
+          }
+        },
+        "health": { "$ref": "#/$defs/caeHealthData" }
+      }
+    },
     "caeConflictsData": {
       "type": "object",
       "additionalProperties": false,
