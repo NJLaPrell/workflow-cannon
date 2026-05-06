@@ -56,6 +56,12 @@ Optional **`responseTemplateId`** / directive fields on argv — [`.ai/response-
 
 Baseline visible-agent presentation is configured with **`agentPresentation.*`** and resolved through **`resolve-agent-guidance`** / **`dashboard-summary`**. The generated Cursor rule from **`sync-effective-behavior-cursor-rule`** is the early chat instruction surface; dashboards and **`data.presentation.agentPresentation`** are observability/output metadata only. Private reasoning is never displayed or requested. Use CAE scoped Guidance for situational exceptions such as onboarding plain language, phase closeout technical evidence, or sensitive-command remediation: [`.ai/runbooks/agent-presentation-policy.md`](./runbooks/agent-presentation-policy.md).
 
+## WC Agent status workflow
+
+`dashboard-summary.data.agentStatus` is a status hint for operators. `source: "derived"` comes from existing task/dashboard facts and is enough for `Awaiting Instruction`, active planning, blocked work, in-progress work, delegation, or suggested ready work. `source: "live_activity"` comes from a fresh expiring lease and is for intent that cannot be inferred, such as PR review, approval queue review, validation, release, policy approval, or human gates.
+
+Record high-signal live activity with **`pnpm exec wk run set-agent-activity '{"kind":"reviewing_pr","prNumber":192}'`** or structured fields like **`version`**, **`phaseKey`**, **`taskId`**, **`details.prUrl`**, **`details.reviewItemId`**, and **`details.validationCommand`**. Clear it with **`clear-agent-activity`** when the flow finishes; otherwise expiry returns the dashboard to derived status. Do not treat live activity as transition evidence, and do not add GitHub/network lookups to `dashboard-summary`.
+
 ## Where did the big tables go?
 
 - **Tier A/B/C examples, CAE block, queue-health copy-paste, wishlist ladder:** **`.ai/AGENT-CLI-MAP.extended.md`**
