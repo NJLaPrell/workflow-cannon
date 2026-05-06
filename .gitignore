@@ -4,6 +4,8 @@ dist/
 .env
 .DS_Store
 artifacts/
+!fixtures/cae/workspace-artifacts/files/
+!fixtures/cae/workspace-artifacts/files/**
 # CAE program stubs live under tasks/cae/artifacts/ (not repo-root build artifacts)
 !tasks/cae/artifacts/
 !tasks/cae/artifacts/**

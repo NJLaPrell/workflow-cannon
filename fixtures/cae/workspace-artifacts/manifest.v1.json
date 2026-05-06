@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "description": "Examples for workspace-authored CAE artifact body paths.",
+  "artifacts": [
+    {
+      "schemaVersion": 1,
+      "artifactId": "workspace.playbook.example",
+      "artifactType": "playbook",
+      "ref": { "path": ".ai/cae/artifacts/playbooks/example-playbook.md" },
+      "title": "Example workspace playbook"
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "workspace.runbook.example",
+      "artifactType": "runbook",
+      "ref": { "path": ".ai/cae/artifacts/runbooks/example-runbook.md" },
+      "title": "Example workspace runbook"
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "workspace.checklist.example",
+      "artifactType": "checklist",
+      "ref": { "path": ".ai/cae/artifacts/checklists/example-checklist.md" },
+      "title": "Example workspace checklist"
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "workspace.review-template.example",
+      "artifactType": "review-template",
+      "ref": { "path": ".ai/cae/artifacts/review-templates/example-review-template.md" },
+      "title": "Example workspace review template"
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "workspace.reasoning-template.example",
+      "artifactType": "reasoning-template",
+      "ref": { "path": ".ai/cae/artifacts/reasoning-templates/example-reasoning-template.md" },
+      "title": "Example workspace reasoning template"
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "workspace.policy-doc.example",
+      "artifactType": "policy-doc",
+      "ref": { "path": ".ai/cae/artifacts/policy-docs/example-policy-doc.md" },
+      "title": "Example workspace policy doc"
+    }
+  ]
+}
