@@ -185,6 +185,124 @@ test("run resolve-config returns effective and layers", async () => {
   assert.ok(ids.includes("project"));
 });
 
+test("task policy config defaults preserve current delivery and advisory intake behavior", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "wk-task-policy-defaults-"));
+  await minimalWorkspace(root);
+  const home = await mkdtemp(path.join(os.tmpdir(), "wk-task-policy-defaults-home-"));
+  const cap = captureIo();
+  const code = await withUserHome(home, () =>
+    runCli(["run", "resolve-config", "{}"], { cwd: root, ...cap })
+  );
+  assert.equal(code, 0);
+  const out = JSON.parse(cap.lines.join(""));
+  assert.equal(out.data.effective.maintainerDelivery.defaultProfile, "github-pr");
+  assert.equal(out.data.effective.maintainerDelivery.profiles["github-pr"].requiresPhaseBranch, true);
+  assert.equal(out.data.effective.maintainerDelivery.profiles["github-pr"].branchPattern, "release/phase-{phaseKey}");
+  assert.equal(out.data.effective.maintainerDelivery.profiles["github-pr"].review, "github-pr");
+  assert.equal(out.data.effective.maintainerDelivery.profiles["github-pr"].evidenceKind, "github-pr");
+  assert.equal(out.data.effective.tasks.intakePolicy.defaultProfile, "advisory");
+  assert.equal(out.data.effective.tasks.intakePolicy.enforcementMode, "advisory");
+});
+
+test("task policy config validates custom profiles and module overrides", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "wk-task-policy-valid-"));
+  await minimalWorkspace(root);
+  const home = await mkdtemp(path.join(os.tmpdir(), "wk-task-policy-valid-home-"));
+  await writeFile(
+    path.join(root, ".workspace-kit", "config.json"),
+    JSON.stringify({
+      maintainerDelivery: {
+        defaultProfile: "manual-review",
+        enforcementMode: "advisory",
+        profiles: {
+          "manual-review": {
+            requiresPhaseBranch: true,
+            branchPattern: "release/phase-{phaseKey}",
+            review: "manual",
+            evidenceKind: "manual"
+          }
+        },
+        moduleOverrides: { planning: { profile: "manual-review", enforcementMode: "enforce" } }
+      },
+      tasks: {
+        intakePolicy: {
+          defaultProfile: "improvement-ready",
+          enforcementMode: "advisory",
+          profiles: {
+            "improvement-ready": {
+              requiredFields: ["title", "metadata.priority"],
+              recommendedFields: ["acceptanceCriteria"],
+              enforcementMode: "advisory"
+            }
+          },
+          moduleOverrides: { improvement: { profile: "improvement-ready" } }
+        }
+      }
+    }),
+    "utf8"
+  );
+
+  const cap = captureIo();
+  const code = await withUserHome(home, () =>
+    runCli(["config", "validate", "--json"], { cwd: root, ...cap })
+  );
+  assert.equal(code, 0);
+});
+
+test("task policy config rejects unknown profiles and malformed field paths", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "wk-task-policy-invalid-"));
+  await minimalWorkspace(root);
+  await writeFile(
+    path.join(root, ".workspace-kit", "config.json"),
+    JSON.stringify({
+      maintainerDelivery: {
+        defaultProfile: "missing-profile",
+        enforcementMode: "enforce",
+        profiles: {}
+      },
+      tasks: {
+        intakePolicy: {
+          defaultProfile: "advisory",
+          profiles: {
+            advisory: {
+              requiredFields: ["metadata..priority"],
+              recommendedFields: []
+            }
+          }
+        }
+      }
+    }),
+    "utf8"
+  );
+  const cap = captureIo();
+  const code = await runCli(["config", "validate", "--json"], { cwd: root, ...cap });
+  assert.ok(code === 1 || code === 3, `expected validation failure, got ${code}`);
+  assert.match(cap.errors.join("\n"), /unknown profile|field paths|maintainerDelivery\.defaultProfile|tasks\.intakePolicy/);
+});
+
+test("task-engine module-scoped config can declare policy surfaces", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "wk-task-policy-module-"));
+  await minimalWorkspace(root);
+  const home = await mkdtemp(path.join(os.tmpdir(), "wk-task-policy-module-home-"));
+  await mkdir(path.join(root, ".workspace-kit", "modules", "task-engine"), { recursive: true });
+  await writeFile(
+    path.join(root, ".workspace-kit", "modules", "task-engine", "config.json"),
+    JSON.stringify({
+      maintainerDelivery: {
+        defaultProfile: "github-pr",
+        moduleOverrides: { improvement: { profile: "github-pr" } }
+      },
+      tasks: { intakePolicy: { defaultProfile: "advisory" } }
+    }),
+    "utf8"
+  );
+  const cap = captureIo();
+  const code = await withUserHome(home, () =>
+    runCli(["config", "validate", "--json"], { cwd: root, ...cap })
+  );
+  assert.equal(code, 0);
+});
+
 test("agentPresentation config validates and resolves", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "wk-agent-presentation-"));
   await minimalWorkspace(root);
