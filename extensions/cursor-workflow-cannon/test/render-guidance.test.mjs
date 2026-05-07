@@ -312,6 +312,13 @@ test("renderGuidanceAuthoringPanelInnerHtml renders the tabbed authoring shell",
   assert.match(html, /cae-create-workspace-artifact/);
   assert.match(html, /cae\.activation\.one/);
   assert.match(html, /Search artifacts/);
+  assert.match(html, /Artifact Editor/);
+  assert.match(html, /gp-artifact-content/);
+  assert.match(html, /Preview Markdown/);
+  assert.match(html, /data-gp-action="artifact-create"/);
+  assert.match(html, /data-gp-action="artifact-update"/);
+  assert.match(html, /data-gp-action="artifact-duplicate-submit"/);
+  assert.match(html, /data-gp-action="artifact-retire-submit"/);
   assert.match(html, /Used by/);
   assert.match(html, /data-gp-action="artifact-open"/);
   assert.match(html, /Duplicate/);

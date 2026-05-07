@@ -134,6 +134,8 @@ function renderArtifacts(data: UnknownRecord): string {
   const readiness = asRecord(data.readiness);
   const canMutate = readiness.canMutate === true;
   const active = asRecord(data.activeVersion);
+  const registryDigest = String(active.registryDigest ?? asRecord(data.validation).registryContentHash ?? "");
+  const activeVersionId = String(active.versionId ?? "");
   const usedBy = new Map<string, number>();
   for (const rawActivation of asArray(asRecord(data.activations).rows)) {
     const activation = asRecord(rawActivation);
@@ -152,7 +154,7 @@ function renderArtifacts(data: UnknownRecord): string {
           const status = String(row.status ?? row.lifecycleStatus ?? "");
           const changed = String(row.updatedAt ?? row.lastChangedAt ?? row.changedAt ?? active.createdAt ?? "n/a");
           const searchable = [artifactId, row.title, row.artifactType, row.path, source, status].map((value) => String(value ?? "").toLowerCase()).join(" ");
-          return `<tr data-gp-artifact-row data-gp-search="${escapeHtmlAttr(searchable)}" data-gp-source="${escapeHtmlAttr(source)}" data-gp-status="${escapeHtmlAttr(status)}">
+          return `<tr data-gp-artifact-row data-gp-search="${escapeHtmlAttr(searchable)}" data-gp-source="${escapeHtmlAttr(source)}" data-gp-status="${escapeHtmlAttr(status)}" data-gp-artifact-id="${escapeHtmlAttr(artifactId)}" data-gp-artifact-title="${escapeHtmlAttr(String(row.title ?? ""))}" data-gp-artifact-type="${escapeHtmlAttr(String(row.artifactType ?? ""))}" data-gp-artifact-path="${escapeHtmlAttr(String(row.path ?? ""))}">
   <td><code>${escapeHtml(artifactId)}</code><small>${escapeHtml(String(row.title ?? "Untitled artifact"))}</small></td>
   <td>${escapeHtml(String(row.artifactType ?? ""))}</td>
   <td><span class="gp-source gp-source-${escapeHtmlAttr(source || "unknown")}">${escapeHtml(source || "unknown")}</span></td>
@@ -172,6 +174,29 @@ function renderArtifacts(data: UnknownRecord): string {
     <select id="gp-artifact-source"><option value="">All sources</option><option value="default">Default</option><option value="workspace">Workspace</option><option value="override">Override</option></select>
     <select id="gp-artifact-status"><option value="">All statuses</option><option value="active">Active</option><option value="hidden">Hidden</option><option value="retired">Retired</option><option value="missing-file">Missing file</option></select>
   </div>
+  <section class="gp-editor" id="gp-artifact-editor" data-gp-active-version="${escapeHtmlAttr(activeVersionId)}" data-gp-registry-digest="${escapeHtmlAttr(registryDigest)}">
+    <div class="gp-band"><h3>Artifact Editor</h3><span class="gp-muted">${canMutate ? "Workspace mutations enabled" : "Read-only"}</span></div>
+    <div class="gp-form-grid">
+      <label>Artifact ID<input id="gp-artifact-id" placeholder="workspace.example.playbook" /></label>
+      <label>Type<select id="gp-artifact-type"><option value="playbook">playbook</option><option value="policy-doc">policy-doc</option><option value="runbook">runbook</option></select></label>
+      <label>Title<input id="gp-artifact-title" placeholder="Example Playbook" /></label>
+      <label>Tags<input id="gp-artifact-tags" placeholder="ops, release" /></label>
+      <label>Path / slug<input id="gp-artifact-slug" placeholder="example-playbook" /></label>
+      <label>Fragment<input id="gp-artifact-fragment" placeholder="#section" /></label>
+    </div>
+    <input id="gp-artifact-source-id" type="hidden" />
+    <label class="gp-editor-block">Markdown<textarea id="gp-artifact-content" rows="7" placeholder="# Example Playbook"></textarea></label>
+    <label class="gp-editor-block">Note<input id="gp-artifact-note" placeholder="Why this artifact change is needed" /></label>
+    <div class="gp-action-row">
+      <button type="button" class="gp-primary" id="gp-artifact-create" data-gp-action="artifact-create"${canMutate ? "" : " disabled"}>Create</button>
+      <button type="button" class="gp-primary" id="gp-artifact-update" data-gp-action="artifact-update"${canMutate ? "" : " disabled"}>Update</button>
+      <button type="button" id="gp-artifact-duplicate" data-gp-action="artifact-duplicate-submit"${canMutate ? "" : " disabled"}>Duplicate</button>
+      <button type="button" id="gp-artifact-retire" data-gp-action="artifact-retire-submit"${canMutate ? "" : " disabled"}>Retire</button>
+      <button type="button" data-gp-action="artifact-preview-form">Preview Markdown</button>
+      <button type="button" data-gp-action="artifact-clear-form">Clear</button>
+    </div>
+    <div id="gp-artifact-preview" class="gp-markdown-preview"></div>
+  </section>
   <table><thead><tr><th>Artifact</th><th>Type</th><th>Source</th><th>Path</th><th>Used by</th><th>Status</th><th>Changed</th><th>Actions</th></tr></thead><tbody>${body}</tbody></table>
 </section>`;
 }
