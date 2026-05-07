@@ -269,7 +269,7 @@ function renderActivationEditor(data: UnknownRecord, canMutate: boolean, active:
               const artifactId = String(row.artifactId ?? "");
               const source = String(row.source ?? "unknown");
               const status = String(row.status ?? row.lifecycleStatus ?? "unknown");
-              return `<label class="gp-pick"><input type="checkbox" data-gp-activation-artifact value="${escapeHtmlAttr(artifactId)}" /> <span><code>${escapeHtml(artifactId)}</code><small>${escapeHtml(String(row.title ?? artifactId))}</small></span><b>${escapeHtml(source)} · ${escapeHtml(status)}</b></label>`;
+              return `<label class="gp-pick"><input type="checkbox" data-gp-activation-artifact data-gp-artifact-type="${escapeHtmlAttr(type)}" value="${escapeHtmlAttr(artifactId)}" /> <span><code>${escapeHtml(artifactId)}</code><small>${escapeHtml(String(row.title ?? artifactId))}</small></span><b>${escapeHtml(source)} · ${escapeHtml(status)}</b></label>`;
             })
             .join("")}</fieldset>`;
         })
@@ -342,10 +342,28 @@ function renderActivationActions(row: UnknownRecord, canMutate: boolean): string
 
 function renderPreview(data: UnknownRecord): string {
   const validation = asRecord(data.validation);
+  const active = asRecord(data.activeVersion);
+  const phase = String(asRecord(data.health).currentPhase ?? "82");
   return `<section class="gp-tab-panel" id="gp-tab-preview" data-gp-panel="preview">
-  <h2>Preview</h2>
-  <div class="gp-band"><div><b>Registry digest</b><p><code>${escapeHtml(String(validation.registryContentHash ?? asRecord(data.activeVersion).registryDigest ?? "unavailable"))}</code></p></div><button type="button" class="gp-primary" data-gp-action="refresh">Refresh</button></div>
-  <p class="gp-muted">Preview data is supplied by the Guidance side view and <code>cae-guidance-preview</code>; this shell keeps the current registry state visible while authoring.</p>
+  <div class="gp-band"><h2>Preview</h2><span class="gp-muted">Draft overlay evidence</span></div>
+  <div class="gp-status-grid">
+    <div><b>Registry digest</b><span><code>${escapeHtml(String(validation.registryContentHash ?? active.registryDigest ?? "unavailable"))}</code></span></div>
+    <div><b>Active version</b><span>${escapeHtml(String(active.versionId ?? "n/a"))}</span></div>
+    <div><b>Readiness</b><span id="gp-preview-readiness">Not run</span></div>
+  </div>
+  <section class="gp-editor" id="gp-preview-editor">
+    <div class="gp-form-grid">
+      <label>Command<input id="gp-preview-command" value="run-transition" /></label>
+      <label>Task ID<input id="gp-preview-task-id" placeholder="T100080" /></label>
+      <label>Phase<input id="gp-preview-phase" value="${escapeHtmlAttr(phase)}" /></label>
+    </div>
+    <label class="gp-editor-block">Command args JSON<textarea id="gp-preview-command-args" rows="4" placeholder='{"action":"complete"}'></textarea></label>
+    <div class="gp-action-row">
+      <button type="button" class="gp-primary" data-gp-action="preview-run-draft">Preview Draft</button>
+      <button type="button" data-gp-action="preview-copy-evidence">Copy Evidence</button>
+    </div>
+  </section>
+  <div id="gp-preview-result" class="gp-preview-result"><p class="gp-muted">Run a draft preview from the activation editor to see impact, warnings, sample matches, and publish evidence.</p></div>
 </section>`;
 }
 

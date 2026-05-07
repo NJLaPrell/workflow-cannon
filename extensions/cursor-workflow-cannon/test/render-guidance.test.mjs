@@ -310,6 +310,10 @@ test("renderGuidanceAuthoringPanelInnerHtml renders the tabbed authoring shell",
   assert.match(html, /New Artifact/);
   assert.match(html, /New Activation/);
   assert.match(html, /Preview Guidance/);
+  assert.match(html, /Preview Draft/);
+  assert.match(html, /Copy Evidence/);
+  assert.match(html, /gp-preview-command-args/);
+  assert.match(html, /gp-preview-result/);
   assert.match(html, /Validate Registry/);
   assert.match(html, /Registry store/);
   assert.match(html, /sqlite/);
