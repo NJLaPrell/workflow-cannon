@@ -1204,6 +1204,13 @@
   },
   {
     "moduleId": "context-activation",
+    "name": "cae-duplicate-default-artifact",
+    "file": "cae-duplicate-default-artifact.md",
+    "description": "Copy a shipped default artifact into a new editable workspace-owned artifact row and file.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
     "name": "cae-update-artifact",
     "file": "cae-update-artifact.md",
     "description": "Update fields on a non-retired CAE artifact row for a registry version.",

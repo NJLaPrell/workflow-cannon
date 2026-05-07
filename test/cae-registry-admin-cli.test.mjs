@@ -67,6 +67,7 @@ async function authoringSummary(ws, effectiveConfig = baseEffective()) {
 const MUTATOR_COMMANDS = [
   "cae-create-artifact",
   "cae-create-workspace-artifact",
+  "cae-duplicate-default-artifact",
   "cae-update-artifact",
   "cae-update-workspace-artifact",
   "cae-retire-artifact",
@@ -885,6 +886,73 @@ test("cae-update-workspace-artifact rejects default artifact ids", async () => {
   );
   assert.equal(updated.ok, false);
   assert.equal(updated.code, "cae-workspace-artifact-id-invalid");
+});
+
+test("cae-duplicate-default-artifact copies default content into a new workspace artifact row", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const sourcePath = path.join(ws, ".ai/MACHINE-PLAYBOOKS.md");
+  const sourceMarkdown = await readFile(sourcePath, "utf8");
+
+  const duplicated = await contextActivationModule.onCommand(
+    {
+      name: "cae-duplicate-default-artifact",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        sourceArtifactId: "cae.playbook.machine-playbooks",
+        artifactId: "workspace.machine-playbooks.copy",
+        slug: "machine-playbooks-copy",
+        title: "Machine Playbooks Copy",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(duplicated.ok, true);
+  assert.equal(duplicated.code, "cae-duplicate-default-artifact-ok");
+  assert.equal(duplicated.data.path, ".ai/cae/artifacts/playbooks/machine-playbooks-copy.md");
+  assert.equal(duplicated.data.sourceArtifactId, "cae.playbook.machine-playbooks");
+
+  const duplicatedMarkdown = await readFile(path.join(ws, duplicated.data.path), "utf8");
+  assert.equal(duplicatedMarkdown, sourceMarkdown);
+  const originalMarkdown = await readFile(sourcePath, "utf8");
+  assert.equal(originalMarkdown, sourceMarkdown);
+
+  const db = new Database(path.join(ws, ".workspace-kit", "tasks", "workspace-kit.db"));
+  const row = db
+    .prepare(
+      `SELECT path, title, description, metadata_json FROM cae_registry_artifacts WHERE version_id = ? AND artifact_id = ?`
+    )
+    .get("cae.reg.seed", "workspace.machine-playbooks.copy");
+  const auditRowCount = db
+    .prepare(`SELECT COUNT(*) AS count FROM cae_registry_mutations WHERE command_name = ? AND payload_json LIKE ?`)
+    .get("cae-duplicate-default-artifact", '%workspace.machine-playbooks.copy%');
+  db.close();
+
+  assert.equal(row.path, ".ai/cae/artifacts/playbooks/machine-playbooks-copy.md");
+  assert.equal(row.title, "Machine Playbooks Copy");
+  assert.match(row.metadata_json, /cae.playbook.machine-playbooks/);
+  assert.match(row.metadata_json, /sourceContentHash/);
+  assert.equal(auditRowCount.count, 1);
+});
+
+test("cae-duplicate-default-artifact rejects non-default source artifact ids", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const duplicated = await contextActivationModule.onCommand(
+    {
+      name: "cae-duplicate-default-artifact",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        sourceArtifactId: "workspace.not-a-default",
+        artifactId: "workspace.copy.target",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(duplicated.ok, false);
+  assert.equal(duplicated.code, "cae-default-artifact-id-invalid");
 });
 
 test("cae-create-draft-activation stores draft lifecycle and returns broad-scope warnings", async () => {
