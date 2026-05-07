@@ -5,12 +5,37 @@ For **conflicts between** `.ai/`, `docs/maintainers/`, `.cursor/rules/`, and cod
 **Maintainers** use [`docs/maintainers/AGENTS.md`](docs/maintainers/AGENTS.md) as the human index.
 
 <div align="center">
-  <img src="title_image.png" alt="Workflow Cannon" width="720" />
+  <p>
+    <a href="https://www.npmjs.com/package/@workflow-cannon/workspace-kit"><img alt="npm" src="https://img.shields.io/badge/npm-workspace--kit-cb3837" /></a>
+    <img alt="Node 22+" src="https://img.shields.io/badge/node-22%2B-339933" />
+    <img alt="pnpm 10" src="https://img.shields.io/badge/pnpm-10-f69220" />
+    <img alt="License MIT" src="https://img.shields.io/badge/license-MIT-1f6feb" />
+  </p>
+  <p>
+    <strong>AI workflow infrastructure for serious repositories.</strong>
+  </p>
+  <p>
+    <strong>Deterministic agent workflows for teams that want receipts, not rituals.</strong>
+  </p>
+  <p>
+    Workflow Cannon gives your repository a real operating system for AI-assisted work: agent-guided chat flows, a dashboard plugin for visibility and action, durable task state, policy-gated execution, and the infrastructure that keeps the whole system disciplined and inspectable.
+  </p>
+  <p>
+    If your team wants AI to operate like part of engineering instead of orbiting around it, this is the layer that makes chat, dashboards, and automation all pull in the same direction.
+  </p>
 </div>
+
+[**Install the package**](https://www.npmjs.com/package/@workflow-cannon/workspace-kit) · [npm package](https://www.npmjs.com/package/@workflow-cannon/workspace-kit) · [maintainer docs](docs/maintainers/AGENTS.md) · [agent entrypoint](AGENTS.md)
 
 # Workflow Cannon
 
-**[`@workflow-cannon/workspace-kit`](https://www.npmjs.com/package/@workflow-cannon/workspace-kit)** — CLI, task engine, and workflow contracts for repos that want deterministic, policy-governed automation with clear evidence.
+> **At a glance**
+>
+> Workflow Cannon is the missing operating layer between a coding agent and a production repository. Teams interact through chat and the dashboard plugin; Workflow Cannon supplies the explicit state, policy enforcement, and evidence that make those surfaces trustworthy.
+
+> **In one line**
+>
+> Workflow Cannon helps engineering teams run AI-assisted development through chat and dashboard workflows with the discipline of infrastructure instead of the fragility of chat memory.
 
 ### Names (repo vs package vs commands)
 
@@ -18,11 +43,193 @@ For **conflicts between** `.ai/`, `docs/maintainers/`, `.cursor/rules/`, and cod
 | --- | --- |
 | **Workflow Cannon** | This GitHub repository and product umbrella (`workflow-cannon`). |
 | **`@workflow-cannon/workspace-kit`** | The npm package name you install in other projects. |
-| **`workspace-kit`** / **`wk`** | The same CLI binary — long and short command names (see Quick start). |
+| **`workspace-kit`** / **`wk`** | The infrastructure CLI behind the chat and dashboard experience. |
 
 The npm package is **not** named “Workflow Cannon”; use the table above when searching docs, issues, or registry metadata.
 
-## Quick start (clone this repo)
+## Quick start
+
+If you want the shortest path to the product's core value, install Workflow Cannon in a real project, open the dashboard plugin, and let your agent work against a system with real state underneath it:
+
+```bash
+npm install @workflow-cannon/workspace-kit
+npx workspace-kit --help
+npx workspace-kit doctor
+npx workspace-kit run
+```
+
+Using pnpm instead:
+
+```bash
+pnpm add @workflow-cannon/workspace-kit
+pnpm exec wk --help
+pnpm exec wk doctor
+pnpm exec wk run
+```
+
+What you get immediately:
+
+- the dashboard plugin gets a trustworthy backend for status, next actions, and task views
+- your chat agent gets explicit repo guidance, durable state, and governed workflows instead of pure prompt memory
+- the underlying commands remain available for validation, debugging, and automation when needed
+
+What the team experience looks like:
+
+- open the dashboard to see status, queue shape, suggested actions, and workflow context
+- work with the agent in chat using playbook-shaped flows instead of free-form prompt gymnastics
+- rely on the underlying command layer when you need validation, inspection, or automation
+
+Try a safe first lap behind the scenes:
+
+```bash
+npx workspace-kit run get-next-actions '{}'
+npx workspace-kit run list-tasks '{}'
+```
+
+## Most important features
+
+| Feature | Why it matters |
+| --- | --- |
+| Agent-first workflow experience | The primary experience lives in chat and the dashboard plugin, not in memorizing terminal commands |
+| Deterministic infrastructure layer | The system beneath chat and dashboard surfaces stays repeatable and machine-readable |
+| Durable task engine | Work state lives in persistence rather than fading inside a model context window |
+| Policy-gated mutations | Sensitive operations require explicit approval where it actually counts |
+| Dashboard visibility | Teams get operational visibility, next actions, and workflow status in a UI built for ongoing use |
+| Evidence surfaces | Transitions, diagnostics, and audit-friendly outputs make handoffs and reviews much less fuzzy |
+| Governed docs generation | Maintainer-facing and agent-facing documentation stay aligned instead of drifting apart |
+| Playbook-shaped chat workflows | Onboarding, delivery, triage, intake, and recovery become repeatable instead of improvised |
+| Clear operating contracts | Repo guidance, package names, and command surfaces are explicit enough for real teams and real automation |
+
+## Why Workflow Cannon exists
+
+Most AI coding workflows break the same way:
+
+- the agent loses the plot halfway through a long session
+- task state drifts from reality
+- approvals live in chat instead of in the system that should enforce them
+- "done" means "I think so"
+
+Workflow Cannon fixes that.
+
+It turns ad hoc agent collaboration into a governed workflow with explicit state, reliable dashboard surfaces, deterministic infrastructure, and evidence you can inspect later without reconstructing what happened from chat fragments. You still get speed. You simply stop paying the hidden tax of drift, ambiguity, and soft approvals.
+
+## Why it hits different
+
+### Grounded by design
+
+Agent work should not depend on tone, momentum, or model improvisation. Workflow Cannon gives chat and dashboard workflows a repeatable command layer and a task engine that keeps execution grounded as sessions grow longer and more complex.
+
+### Policy with teeth
+
+Approvals are enforced where they matter. Sensitive actions require explicit policy approval in command input, not an informal acknowledgment buried somewhere in chat.
+
+### Evidence, not folklore
+
+If work changed state, the system can show you how, when, and why. That matters for handoffs, audits, releases, and the broader question of operational trust.
+
+### Built for real repos
+
+This is not a prompt collection with a thin layer of process on top. Workflow Cannon ships agent-facing guidance, dashboard surfaces, workflow contracts, task persistence, documentation generation, and the infrastructure required to make those pieces work in real engineering environments.
+
+## The pitch in one sentence
+
+Workflow Cannon helps engineering teams run AI-assisted development through chat and dashboard experiences that are backed by a disciplined system instead of held together by chat context alone.
+
+## Without vs with Workflow Cannon
+
+| Without it | With it |
+| --- | --- |
+| Agent behavior depends on prompt memory and chat momentum | Agent behavior is anchored to repo guidance, durable task state, and governed operating flows |
+| Approvals live in conversation fragments | Approvals are enforced through structured command inputs |
+| Task status drifts as sessions get longer | Task state persists outside the context window |
+| Visibility comes from digging through terminals and logs | The dashboard plugin exposes workflow state in a persistent operational surface |
+| Docs for humans and agents quietly fork | Generated surfaces stay aligned to governed source material |
+| Handoffs rely on interpretation | Handoffs have evidence, transitions, and inspectable outputs |
+
+## What makes Workflow Cannon shine
+
+### It gives agents a real operating surface
+
+Instead of relying on a long list of remembered rules, agents get concrete files, task state, command contracts, approval lanes, and generated documentation surfaces. The result is less interpretation and more infrastructure.
+
+### It keeps chat useful without trusting chat too much
+
+The conversation stays fast and flexible. The source of truth stays in the repository, the task engine, and deterministic CLI output. Chat remains the interface, not the entire system.
+
+### It gives the team a dashboard instead of a scavenger hunt
+
+Workflow Cannon pairs chat with a dashboard plugin that keeps status, next actions, and workflow context visible. That means less hunting across terminals, files, and half-remembered thread history.
+
+### It scales past the demo phase
+
+Workflow Cannon is strongest when a team has moved beyond one-off experiments and needs repeatability: onboarding, handoffs, release flow, improvement intake, policy-gated changes, and long-running agent sessions.
+
+### It makes good process feel lighter, not heavier
+
+The goal is not process for its own sake. The goal is less re-explaining, less drift, fewer ambiguous transitions, and much better odds that an agent session produces work you can trust in everyday engineering practice.
+
+## What you can do with it
+
+### Give agent work a real system underneath it
+
+Track execution work in a persisted queue, move tasks through explicit transitions, and keep the current state outside the model's context window.
+
+### Operate through chat and the dashboard plugin
+
+Let the agent drive playbooks in chat while the dashboard shows queue state, suggested actions, status, and workflow context in a surface people can actually live in.
+
+### Gate sensitive changes with policy approval
+
+Require structured approval for operations that should not proceed on confidence alone.
+
+### Keep maintainer and agent documentation in sync
+
+Keep machine-facing and human-facing documentation aligned instead of letting them quietly diverge.
+
+### Drive playbook-shaped workflows in chat
+
+Use repeatable patterns for onboarding, task delivery, backlog triage, improvement intake, and long-session recovery.
+
+### Keep a clean mental model of repo state
+
+Workflow Cannon separates strategic docs, execution state, approval policy, and generated guidance so each layer has a clear role and boundary.
+
+## A better way to think about it
+
+Workflow Cannon sits in the gap between a coding agent and a normal repository.
+
+Without it, the agent mostly has:
+
+- a prompt
+- a codebase
+- a lot of optimism
+
+With it, the agent also has:
+
+- explicit operating guidance
+- dashboard surfaces for status and action
+- a task engine with durable state
+- command contracts with machine-readable output
+- policy enforcement for risky actions
+- generated docs that stay synchronized with source guidance
+
+That difference is the whole game. The model may be the same; the operating environment is not.
+
+## How it works
+
+### 1. Chat and dashboard surface
+
+People work through the agent in chat and the dashboard plugin in the editor. Those are the product surfaces that keep workflows visible, guided, and usable day to day.
+
+### 2. Task and policy layer
+
+Workflow Cannon keeps execution state in a real persistence layer and applies policy approvals to the operations that need them. That reduces ambiguity around transitions and expectations.
+
+### 3. Command and documentation layer
+
+Underneath those experiences, Workflow Cannon provides deterministic commands, generated documentation, and explicit operating contracts so the agent and dashboard are backed by something stronger than convention.
+
+## Explore this repository
 
 **Needs:** Node.js **22+** (see CI), **pnpm 10** (see `packageManager` in `package.json`).
 
@@ -33,68 +240,21 @@ pnpm install
 pnpm run build
 ```
 
-### Where to start after build
+Then open the editor workflow surface:
 
-These use the short bin name **`wk`** (same as **`workspace-kit`**). **`pnpm exec …`** works in a fresh shell without changing **`PATH`**:
-
-| Step | Command | What you get |
-| --- | --- | --- |
-| 1 | `pnpm exec wk --help` | Orientation: top-level commands, first-run path, doc pointers |
-| 2 | `pnpm exec wk doctor` | Confirms kit contract files and config resolve |
-| 3 | `pnpm exec wk doctor --agent-instruction-surface` | JSON catalog: runnable commands, instruction paths, remediation codes |
-| 4 | `pnpm exec wk run` | **Command menu** — every runnable `workspace-kit run <cmd>` |
-| 5 | `pnpm exec wk run get-next-actions '{}'` | Read-only suggestion for what to do next |
-
-**Typing `wk` without `pnpm exec`:** shells usually do **not** put **`node_modules/.bin`** on **`PATH`**, so **`wk`** alone often errors with **`command not found`**. After **`pnpm install`**, pick one:
-
-- **`pnpm exec wk …`** — works from any directory under the repo (recommended default).
-- **One-liner** (current shell, from repo root): `export PATH="$PWD/node_modules/.bin:$PATH"` — then **`wk --help`** works like a global tool.
-- **direnv:** this repo ships **`.envrc`** with **`PATH_add node_modules/.bin`**. Install [direnv](https://direnv.net/), then **`direnv allow`** in the clone; **`wk`** resolves automatically when you **`cd`** here.
-- **Global for your user:** from the repo, **`pnpm link --global`**, then **`wk`** works everywhere until you **`pnpm unlink --global`**.
-
-**How it works:** **`pnpm install`** links **`wk`** into **`node_modules/.bin`** (root **`devDependency`** **`@workflow-cannon/workspace-kit@workspace:^`**). No global npm install required for **`pnpm exec wk`**.
-
-**Developing:** after edits, `pnpm run build` then `pnpm test` (or `pnpm run pre-merge-gates` before larger changes — **`pnpm run maintainer-gates`** if you only need metadata/consistency checks without the full test suite). The long bin name **`workspace-kit`** is the same binary as **`wk`**. For parse-sensitive module commands, prefer **`pnpm exec wk run <cmd> '<json>'`** or **`node dist/cli.js run <cmd> '<json>'`**. Fallback: **`pnpm run wk …`** (npm script → **`node dist/cli.js`**) for human terminal use; do not put an extra `--` before `run`. **Wrapping `wk run` in shell scripts:** stdout is a **single JSON document** (often multi-line pretty-printed); parse the **full** stdout string — see [`docs/maintainers/AGENT-CLI-MAP.md`](docs/maintainers/AGENT-CLI-MAP.md) → **Shell scripts and JSON stdout**.
-
-| Situation | Example |
-| --- | --- |
-| This repo, after `pnpm install` + `pnpm run build` | `pnpm exec wk --help`, or `wk --help` when `.bin` is on `PATH` |
-| Global / linked install of the package | `wk --help` or `workspace-kit --help` |
-| Another project with the package installed | `npx wk --help` or `npx workspace-kit --help` |
-
-**`workspace-kit run` with no subcommand is the full module command list** — that is the usual “what can I run?” answer.
-
-Try **read-only** task-engine queries:
-
-```bash
-pnpm exec wk run list-tasks '{}'
-pnpm exec wk run get-next-actions '{}'
-```
-
-**Collaboration profiles (advisory):** Cursor slash **`/onboarding`** / **`/behavior-interview`** plus **`pnpm exec wk run resolve-behavior-profile '{}'`** / **`list-behavior-profiles`** — tone and depth hints only; **Tier A/B `wk run` still needs JSON `policyApproval`**. After changing role tier or active temperament, **`pnpm exec wk run sync-effective-behavior-cursor-rule '{}'`** refreshes the generated **`.cursor/rules/workflow-cannon-effective-agent-behavior.mdc`** (also triggered automatically from common mutators and the Cursor extension when kit files change).
-
-## Quick start (use the package in another project)
-
-```bash
-npm install @workflow-cannon/workspace-kit
-npx workspace-kit --help
-npx workspace-kit run
-```
-
-**Read-only first lap (no default config writes):** `npx workspace-kit doctor`, `npx workspace-kit run` (command menu), `npx workspace-kit run get-next-actions '{}'` — same discovery path as in-repo **`pnpm exec wk …`** / **`wk …`**.
-
-`--help` prints the top-level guide; `run` with no subcommand lists every module command. In a repo that already contains maintainer docs, paths like `docs/maintainers/AGENT-CLI-MAP.md` match this repository; in a consumer project, use the copy shipped under `node_modules/@workflow-cannon/workspace-kit/` or your own docs link.
-
-Or with pnpm: `pnpm add @workflow-cannon/workspace-kit` then `pnpm exec wk --help` and `pnpm exec wk run` (or `pnpm exec workspace-kit …`).
+- open the Workflow Cannon dashboard in the activity bar
+- use the agent entrypoint and playbooks to drive chat-based workflows
+- drop to the CLI when you need diagnostics, validation, or low-level inspection
 
 ## What this repo contains
 
 | Area | What |
 | --- | --- |
-| **CLI** | `workspace-kit` — `doctor`, `config`, `run <module-command>` (see `workspace-kit run` with no args for the list). |
+| **Chat + dashboard experience** | The primary operating surface for agents and humans working through Workflow Cannon. |
+| **CLI infrastructure** | `workspace-kit` / `wk` provide the deterministic command layer beneath the chat and dashboard experience. |
 | **Task engine** | Queue lives in SQLite (`.workspace-kit/tasks/workspace-kit.db`); **`tasks.persistenceBackend: json`** is rejected (**v0.40+**). Import legacy JSON via **`migrate-task-persistence`**. Lifecycle via `run-transition`. **Which task id to create** (`T###` execution vs wishlist intake vs `type: "improvement"` — same `T###` shape; legacy `imp-*` may exist in older stores): [`docs/maintainers/runbooks/wishlist-workflow.md`](docs/maintainers/runbooks/wishlist-workflow.md). **Persistence map:** **`workspace-kit run get-kit-persistence-map`** and [`docs/maintainers/runbooks/task-persistence-operator.md`](docs/maintainers/runbooks/task-persistence-operator.md). |
 | **Docs** | Maintainer process, roadmap, and changelog under `docs/maintainers/`. |
-| **Cursor extension** (optional) | Thin UI in `extensions/cursor-workflow-cannon/` — pnpm workspace member; build with `pnpm run ui:prepare` after root `pnpm install` (see **`CONTRIBUTING.md`**). |
+| **Cursor extension** | Dashboard and editor workflow surface in `extensions/cursor-workflow-cannon/` — pnpm workspace member; build with `pnpm run ui:prepare` after root `pnpm install` (see **`CONTRIBUTING.md`**). |
 
 Optional maintainer prompt templates may live under **`tasks/*.md`** in a repo (prompt-only; they do **not** run **`workspace-kit`**). Editor integrations are **your** config; **`workspace-kit`** is the supported CLI for kit-owned state.
 
@@ -104,17 +264,17 @@ These are **chat-shaped** recipes: what to say, what to attach, and what you sho
 
 ### Bootstrap a focused agent session
 
-**What it is:** Agree on workspace health and the real task queue before implementation so nobody trusts stale chat context.
+**What it is:** Start a session with real workspace state so the agent is anchored to the repo instead of running on thread momentum.
 
 **How to drive it in chat:**
 
 1. Open a thread at the repository root
-2. Say you want a cold-start pass that reconciles doctor-style signals with task-engine evidence
+2. Say you want a cold-start pass that reconciles dashboard and task-engine signals
 3. Ask for a short summary of the next sensible work item and any blockers
 
 ### Deliver one maintainer task through the phase branch
 
-**What it is:** Sequence branch, PR, review, merge, and task lifecycle the way maintainers expect, with chat steering and the task store as evidence.
+**What it is:** Run a real delivery workflow through chat while the task store, approvals, and branch flow keep the work honest.
 
 **How to drive it in chat:**
 
@@ -124,17 +284,17 @@ These are **chat-shaped** recipes: what to say, what to attach, and what you sho
 
 ### Research friction and log improvement work
 
-**What it is:** Turn messy observations into bounded improvement tasks using the discovery playbook instead of free-form chat notes.
+**What it is:** Turn rough workflow pain into bounded improvement tasks instead of letting good observations die in chat.
 
 **How to drive it in chat:**
 
-1. Describe where friction showed up such as sessions, docs, CLI UX, policy, or release ops
+1. Describe where friction showed up such as sessions, docs, dashboard UX, policy, or release ops
 2. Attach `.ai/playbooks/improvement-task-discovery.md` or `.cursor/rules/playbook-improvement-task-discovery.mdc`
 3. Ask the agent to follow the playbook checkpoints and persist only through the tier-B commands it names when work should land in the queue
 
 ### Triage improvement backlog into ready work
 
-**What it is:** Pick at most three proposed improvements with explicit rubric and evidence before promoting to ready.
+**What it is:** Promote only the strongest improvement work by forcing explicit tradeoffs, evidence, and a bounded shortlist.
 
 **How to drive it in chat:**
 
@@ -144,7 +304,7 @@ These are **chat-shaped** recipes: what to say, what to attach, and what you sho
 
 ### Move wishlist ideas toward execution tasks
 
-**What it is:** Rank ideation, narrow scope, and hand off to execution tasks without losing planning tokens.
+**What it is:** Turn loose ideas into execution-ready work without losing the planning context that made them worth keeping.
 
 **How to drive it in chat:**
 
@@ -154,7 +314,7 @@ These are **chat-shaped** recipes: what to say, what to attach, and what you sho
 
 ### Run structured onboarding in chat
 
-**What it is:** Capture role and temperament as numbered answers you can reuse across sessions.
+**What it is:** Set collaboration defaults once so future sessions start with less drift and less repeated setup.
 
 **How to drive it in chat:**
 
@@ -164,7 +324,7 @@ These are **chat-shaped** recipes: what to say, what to attach, and what you sho
 
 ### Run the behavior interview
 
-**What it is:** Fill the scribe-style questionnaire so collaboration defaults are explicit.
+**What it is:** Make collaboration style explicit so the agent can work with your team instead of guessing at tone and depth.
 
 **How to drive it in chat:**
 
@@ -174,7 +334,7 @@ These are **chat-shaped** recipes: what to say, what to attach, and what you sho
 
 ### Refresh generated maintainer documentation
 
-**What it is:** After changing keyed `.ai` sources or templates under the documentation module, regenerate paired human files deterministically.
+**What it is:** Rebuild the human-facing docs after source changes so the polished surfaces stay aligned with the governed records underneath.
 
 **How to drive it in chat:**
 
@@ -184,7 +344,7 @@ These are **chat-shaped** recipes: what to say, what to attach, and what you sho
 
 ### Recover from a long or compacted chat
 
-**What it is:** Replay governance order and queue facts from files and kit output instead of trusting thread memory.
+**What it is:** Reset the session from repo truth when the thread gets long, compacted, or just a little too confident.
 
 **How to drive it in chat:**
 
