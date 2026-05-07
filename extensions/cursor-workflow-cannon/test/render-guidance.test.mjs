@@ -257,6 +257,7 @@ test("renderGuidanceAuthoringPanelInnerHtml renders the tabbed authoring shell",
         recentMutationCount: 1
       },
       validation: { ok: true, code: "cae-registry-validate-ok", registryContentHash: "abcd" },
+      validationWarnings: [{ code: "cae-warning", detail: "Review <warning>" }],
       readiness: { canMutate: true },
       artifacts: {
         rows: [
@@ -281,7 +282,7 @@ test("renderGuidanceAuthoringPanelInnerHtml renders the tabbed authoring shell",
           }
         ]
       },
-      recentMutations: { rows: [{ recordedAt: "2026-05-06T00:00:00.000Z", commandName: "cae-create-workspace-artifact", actor: "agent", note: "draft" }] }
+      recentMutations: { count: 1, rows: [{ recordedAt: "2026-05-06T00:00:00.000Z", commandName: "cae-create-workspace-artifact", actor: "agent", note: "draft" }] }
     }
   });
   assert.match(html, /data-gp-tab="overview"/);
@@ -289,7 +290,16 @@ test("renderGuidanceAuthoringPanelInnerHtml renders the tabbed authoring shell",
   assert.match(html, /data-gp-tab="activations"/);
   assert.match(html, /data-gp-tab="preview"/);
   assert.match(html, /data-gp-tab="audit"/);
-  assert.match(html, /Guidance authoring is ready/);
+  assert.match(html, /Warnings need review/);
+  assert.match(html, /New Artifact/);
+  assert.match(html, /New Activation/);
+  assert.match(html, /Preview Guidance/);
+  assert.match(html, /Validate Registry/);
+  assert.match(html, /Registry store/);
+  assert.match(html, /sqlite/);
+  assert.match(html, /Validation warnings/);
+  assert.match(html, /Review &lt;warning&gt;/);
+  assert.match(html, /cae-create-workspace-artifact/);
   assert.match(html, /cae\.activation\.one/);
   assert.doesNotMatch(html, /<source>/);
   assert.match(html, /One &lt;source&gt;/);

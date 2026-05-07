@@ -39,11 +39,30 @@ export class GuidancePanel {
     });
     panel.webview.onDidReceiveMessage((msg) => {
       if (msg?.type === "refresh") void this.runRefresh();
+      if (msg?.type === "validateRegistry") void this.runValidation();
     });
     panel.onDidChangeViewState((event) => {
       if (event.webviewPanel.visible) void this.runRefresh();
     });
     void this.runRefresh();
+  }
+
+  private async runValidation(): Promise<void> {
+    const webview = this.panel?.webview;
+    if (!webview) return;
+    try {
+      const result = await this.client.run("cae-registry-validate", { schemaVersion: 1 });
+      const data = (result.data ?? {}) as Record<string, unknown>;
+      const hash = typeof data.registryContentHash === "string" ? ` · ${data.registryContentHash.slice(0, 12)}` : "";
+      await webview.postMessage({
+        type: "validationResult",
+        ok: result.ok === true,
+        text: result.ok === true ? `Registry validation passed${hash}` : String(result.message ?? result.code ?? "Registry validation failed")
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      await webview.postMessage({ type: "validationResult", ok: false, text: message });
+    }
   }
 
   private scheduleRefresh(immediate: boolean): void {
@@ -89,7 +108,7 @@ export class GuidancePanel {
 
   private wrapHtml(webview: vscode.Webview, inner: string): string {
     const csp = ["default-src 'none'", "style-src 'unsafe-inline'", `script-src ${webview.cspSource} 'unsafe-inline'`].join("; ");
-    const bootstrap = `(function(){var vscode=acquireVsCodeApi();function setTab(name){document.querySelectorAll('[data-gp-tab]').forEach(function(b){b.classList.toggle('is-active',b.getAttribute('data-gp-tab')===name);});document.querySelectorAll('[data-gp-panel]').forEach(function(p){p.classList.toggle('is-active',p.getAttribute('data-gp-panel')===name);});}document.body.addEventListener('click',function(ev){var t=ev.target;if(!t||t.tagName!=='BUTTON')return;var tab=t.getAttribute('data-gp-tab');if(tab){setTab(tab);return;}if(t.getAttribute('data-gp-action')==='refresh'){vscode.postMessage({type:'refresh'});}});})();`;
+    const bootstrap = `(function(){var vscode=acquireVsCodeApi();function setTab(name){document.querySelectorAll('[data-gp-tab]').forEach(function(b){b.classList.toggle('is-active',b.getAttribute('data-gp-tab')===name);});document.querySelectorAll('[data-gp-panel]').forEach(function(p){p.classList.toggle('is-active',p.getAttribute('data-gp-panel')===name);});}function setResult(kind,text){var el=document.getElementById('gp-action-result');if(!el)return;el.className='gp-inline-result '+(kind==='ok'?'gp-ok':'gp-warn');el.textContent=text||'';}document.body.addEventListener('click',function(ev){var t=ev.target;if(!t||t.tagName!=='BUTTON')return;var target=t.getAttribute('data-gp-tab-target');if(target){setTab(target);}var tab=t.getAttribute('data-gp-tab');if(tab){setTab(tab);return;}var action=t.getAttribute('data-gp-action');if(action==='refresh'){vscode.postMessage({type:'refresh'});return;}if(action==='validate-registry'){setResult('warn','Validating registry...');vscode.postMessage({type:'validateRegistry'});return;}});window.addEventListener('message',function(ev){var m=ev.data;if(m&&m.type==='validationResult'){setResult(m.ok?'ok':'warn',m.text||'Validation finished.');}});})();`;
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -111,6 +130,11 @@ export class GuidancePanel {
     .gp-tabs { display: flex; gap: 4px; margin: 16px 0 12px; border-bottom: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35)); }
     .gp-tabs button { background: transparent; color: var(--vscode-foreground); border: 0; border-bottom: 2px solid transparent; padding: 8px 12px; cursor: pointer; }
     .gp-tabs button.is-active { border-bottom-color: var(--vscode-focusBorder); color: var(--vscode-button-background); }
+    .gp-action-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 10px; }
+    .gp-action-row button { color: var(--vscode-button-secondaryForeground); background: var(--vscode-button-secondaryBackground); border: 1px solid var(--vscode-button-border, var(--vscode-widget-border)); border-radius: 6px; padding: 7px 12px; cursor: pointer; }
+    .gp-action-row button.gp-primary { color: var(--vscode-button-foreground); background: var(--vscode-button-background); }
+    .gp-inline-result { min-height: 18px; margin: 4px 0 12px; opacity: .88; }
+    .gp-inline-result.gp-ok, .gp-inline-result.gp-warn { border: 0; }
     .gp-tab-panel { display: none; }
     .gp-tab-panel.is-active { display: block; }
     .gp-callout { display: flex; gap: 12px; align-items: baseline; margin: 14px 0 0; padding: 10px 12px; border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35)); border-left-width: 4px; }
@@ -122,6 +146,12 @@ export class GuidancePanel {
     .gp-pill { display: inline-flex; gap: 8px; align-items: center; border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35)); border-radius: 999px; padding: 4px 8px; }
     .gp-pill b { font-weight: 650; }
     .gp-grid { display: grid; gap: 10px; margin: 12px 0; }
+    .gp-status-grid { display: grid; grid-template-columns: repeat(3, minmax(150px, 1fr)); gap: 1px; border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35)); margin: 12px 0; }
+    .gp-status-grid div { padding: 9px 11px; background: var(--vscode-sideBar-background); }
+    .gp-status-grid b, .gp-status-grid span { display: block; }
+    .gp-status-grid span { margin-top: 4px; word-break: break-word; }
+    .gp-warning-list { border-left: 3px solid var(--vscode-inputValidation-warningBorder, #d29922); padding-left: 10px; margin: 10px 0 12px; }
+    .gp-warning-list p { display: flex; gap: 8px; margin: 4px 0; }
     .gp-grid-4 { grid-template-columns: repeat(4, minmax(120px, 1fr)); }
     .gp-grid-3 { grid-template-columns: repeat(3, minmax(120px, 1fr)); }
     .gp-grid div { border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35)); padding: 10px 12px; }
@@ -133,7 +163,7 @@ export class GuidancePanel {
     th { font-size: 11px; text-transform: uppercase; opacity: .76; }
     small { display: block; opacity: .74; margin-top: 3px; }
     code { font-family: var(--vscode-editor-font-family); font-size: 12px; }
-    @media (max-width: 720px) { .gp-head, .gp-band { align-items: flex-start; flex-direction: column; } .gp-grid-4, .gp-grid-3 { grid-template-columns: 1fr; } .gp-tabs { overflow-x: auto; } }
+    @media (max-width: 720px) { .gp-head, .gp-band { align-items: flex-start; flex-direction: column; } .gp-grid-4, .gp-grid-3, .gp-status-grid { grid-template-columns: 1fr; } .gp-tabs { overflow-x: auto; } }
   </style>
 </head>
 <body>${inner}<script>${bootstrap}</script></body>

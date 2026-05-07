@@ -70,14 +70,29 @@ function renderStateCallout(data: UnknownRecord, result: UnknownRecord): string 
 
 function renderOverview(data: UnknownRecord): string {
   const active = asRecord(data.activeVersion);
+  const health = asRecord(data.health);
   const counts = asRecord(data.counts);
   const artifactStatuses = asRecord(counts.artifactStatuses);
   const activationStatuses = asRecord(counts.activationStatuses);
   const families = asRecord(counts.activationFamilies);
   const validation = asRecord(data.validation);
+  const warnings = asArray(data.validationWarnings);
+  const recentMutations = asRecord(data.recentMutations);
+  const recentRows = asArray(recentMutations.rows);
+  const latestMutation = asRecord(recentRows[0]);
+  const activeVersionId = String(active.versionId ?? health.activeRegistryVersionId ?? "No active version");
+  const warningRows = warnings.length
+    ? `<div class="gp-warning-list">${warnings
+        .slice(0, 4)
+        .map((raw) => {
+          const warning = asRecord(raw);
+          return `<p><b>${escapeHtml(String(warning.code ?? "warning"))}</b><span>${escapeHtml(String(warning.detail ?? warning.message ?? "Review this validation warning."))}</span></p>`;
+        })
+        .join("")}</div>`
+    : "";
   return `<section class="gp-tab-panel is-active" id="gp-tab-overview" data-gp-panel="overview">
   <div class="gp-band">
-    <div><h2>Overview</h2><p>${escapeHtml(String(active.versionId ?? "No active version"))}</p></div>
+    <div><h2>Overview</h2><p>${escapeHtml(activeVersionId)}</p></div>
     <div class="gp-pill-row">
       ${pill("Artifacts", active.artifactCount ?? 0, "ok")}
       ${pill("Activations", active.activationCount ?? 0, "ok")}
@@ -85,6 +100,22 @@ function renderOverview(data: UnknownRecord): string {
       ${pill("Validation", validation.ok === true ? "ok" : String(validation.code ?? "unknown"), validation.ok === true ? "ok" : "bad")}
     </div>
   </div>
+  <div class="gp-action-row">
+    <button type="button" class="gp-primary" data-gp-tab-target="artifacts" data-gp-action="new-artifact">New Artifact</button>
+    <button type="button" class="gp-primary" data-gp-tab-target="activations" data-gp-action="new-activation">New Activation</button>
+    <button type="button" data-gp-tab-target="preview" data-gp-action="preview-guidance">Preview Guidance</button>
+    <button type="button" data-gp-action="validate-registry">Validate Registry</button>
+  </div>
+  <div id="gp-action-result" class="gp-inline-result" role="status" aria-live="polite"></div>
+  <div class="gp-status-grid">
+    <div><b>CAE</b><span>${health.caeEnabled === false ? "disabled" : "enabled"}</span></div>
+    <div><b>Registry store</b><span>${escapeHtml(String(health.registryStore ?? "sqlite"))}</span></div>
+    <div><b>Active version</b><span>${escapeHtml(activeVersionId)}</span></div>
+    <div><b>Validation warnings</b><span>${numberText(warnings.length)}</span></div>
+    <div><b>Recent mutations</b><span>${numberText(recentMutations.count ?? counts.recentMutationCount)}</span></div>
+    <div><b>Latest mutation</b><span>${escapeHtml(String(latestMutation.commandName ?? latestMutation.command_name ?? "none"))}</span></div>
+  </div>
+  ${warningRows}
   <div class="gp-grid gp-grid-4">
     <div><b>Policy</b><span>${numberText(families.policy)}</span></div>
     <div><b>Think</b><span>${numberText(families.think)}</span></div>
