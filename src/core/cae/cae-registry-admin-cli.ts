@@ -180,6 +180,39 @@ function workspaceArtifactMarkdown(title: string, contentMarkdown: string | null
   return `# ${title}\n`;
 }
 
+function collectDraftActivationWarnings(activation: CaeRegistryActivationRow): Array<{ code: string; message: string }> {
+  const warnings: Array<{ code: string; message: string }> = [];
+  const conditions =
+    activation.scope && typeof activation.scope === "object" && Array.isArray((activation.scope as { conditions?: unknown[] }).conditions)
+      ? ((activation.scope as { conditions: unknown[] }).conditions as Array<Record<string, unknown>>)
+      : [];
+
+  if (String(activation.family) === "policy") {
+    warnings.push({
+      code: "cae-draft-policy-family",
+      message: "Policy-family draft activations can affect broad Guidance behavior; review before activation."
+    });
+  }
+
+  for (const condition of conditions) {
+    if (condition.kind === "always") {
+      warnings.push({
+        code: "cae-draft-broad-scope-always",
+        message: "Always-on draft activations match every evaluation context."
+      });
+      continue;
+    }
+    if (condition.kind === "commandName" && condition.match === "prefix") {
+      warnings.push({
+        code: "cae-draft-broad-scope-command-prefix",
+        message: "Command-prefix draft activations can match many commands; review scope before activation."
+      });
+    }
+  }
+
+  return warnings;
+}
+
 function checkCaeMutationStaleness(
   db: SqliteDb,
   workspacePath: string,
@@ -233,7 +266,9 @@ export function tryHandleCaeRegistryAdminCommand(
     "cae-retire-artifact",
     "cae-retire-workspace-artifact",
     "cae-create-activation",
+    "cae-create-draft-activation",
     "cae-update-activation",
+    "cae-update-draft-activation",
     "cae-disable-activation",
     "cae-retire-activation",
     "cae-list-registry-versions",
@@ -867,6 +902,65 @@ export function tryHandleCaeRegistryAdminCommand(
       return { ok: true, code: "cae-create-activation-ok", data: { schemaVersion: 1, versionId: v, activationId } };
     }
 
+    if (name === "cae-create-draft-activation") {
+      const v = resolveVersionId(db, args.versionId);
+      if (typeof v !== "string") return v;
+      const input =
+        args.activation && typeof args.activation === "object" && !Array.isArray(args.activation)
+          ? { ...(args.activation as Record<string, unknown>) }
+          : null;
+      if (!input) {
+        return { ok: false, code: "invalid-args", message: "activation is required" };
+      }
+      if (input.lifecycleState !== undefined && input.lifecycleState !== "draft") {
+        return { ok: false, code: "invalid-args", message: "Draft activation commands only accept lifecycleState 'draft'" };
+      }
+      input.lifecycleState = "draft";
+      const validated = validateSingleCaeActivationRecord(input);
+      if (!validated.ok) return { ok: false, code: validated.code, message: validated.message };
+      const act = validated.value;
+      const activationId = String(act.activationId ?? "");
+      const refErr = assertActivationRefsExist(db, v, act);
+      if (refErr) return refErr;
+      const warnings = collectDraftActivationWarnings(act);
+      const run = db.transaction(() => {
+        insertCaeRegistryActivationRow(db, {
+          versionId: v,
+          activationId,
+          family: String(act.family),
+          priority: Number(act.priority) || 0,
+          lifecycleState: "draft",
+          scopeJson: JSON.stringify(act.scope ?? {}),
+          artifactRefsJson: JSON.stringify(act.artifactRefs ?? []),
+          acknowledgementJson: act.acknowledgement ? JSON.stringify(act.acknowledgement) : null,
+          metadataJson: act.flags ? JSON.stringify({ flags: act.flags }) : "{}"
+        });
+        insertCaeRegistryMutationAudit(db, {
+          actor,
+          commandName: name,
+          versionId: v,
+          note: typeof args.note === "string" ? args.note : null,
+          payload: { activationId }
+        });
+      });
+      try {
+        run();
+      } catch {
+        return {
+          ok: false,
+          code: "cae-activation-exists",
+          message: `activationId '${activationId}' already exists for this version`
+        };
+      }
+      const check = postMutationRegistryCheck(db, workspacePath, true);
+      if (check) return check;
+      return {
+        ok: true,
+        code: "cae-create-draft-activation-ok",
+        data: { schemaVersion: 1, versionId: v, activationId, warnings }
+      };
+    }
+
     if (name === "cae-update-activation") {
       const v = resolveVersionId(db, args.versionId);
       if (typeof v !== "string") return v;
@@ -992,6 +1086,142 @@ export function tryHandleCaeRegistryAdminCommand(
       const check = postMutationRegistryCheck(db, workspacePath, true);
       if (check) return check;
       return { ok: true, code: "cae-update-activation-ok", data: { schemaVersion: 1, versionId: v, activationId } };
+    }
+
+    if (name === "cae-update-draft-activation") {
+      const v = resolveVersionId(db, args.versionId);
+      if (typeof v !== "string") return v;
+      const activationId = typeof args.activationId === "string" ? args.activationId.trim() : "";
+      if (!activationId) {
+        return { ok: false, code: "invalid-args", message: "activationId is required" };
+      }
+      const actRow = db
+        .prepare(
+          `SELECT activation_id, family, priority, lifecycle_state, scope_json, artifact_refs_json, acknowledgement_json, metadata_json, retired_at
+           FROM cae_registry_activations WHERE version_id = ? AND activation_id = ?`
+        )
+        .get(v, activationId) as
+        | {
+            family: string;
+            priority: number;
+            lifecycle_state: string;
+            scope_json: string;
+            artifact_refs_json: string;
+            acknowledgement_json: string | null;
+            metadata_json: string;
+            retired_at: string | null;
+          }
+        | undefined;
+      if (!actRow || actRow.retired_at) {
+        return {
+          ok: false,
+          code: "cae-activation-not-found",
+          message: `Unknown or retired activationId '${activationId}'`
+        };
+      }
+      if (actRow.lifecycle_state !== "draft") {
+        return {
+          ok: false,
+          code: "cae-activation-not-draft",
+          message: `activationId '${activationId}' is not in draft lifecycle state`
+        };
+      }
+      const patch =
+        args.activation && typeof args.activation === "object" && !Array.isArray(args.activation)
+          ? ({ ...(args.activation as Record<string, unknown>) } as Record<string, unknown>)
+          : {};
+      if (patch.lifecycleState !== undefined && patch.lifecycleState !== "draft") {
+        return { ok: false, code: "invalid-args", message: "Draft activation commands only accept lifecycleState 'draft'" };
+      }
+      let scope: unknown;
+      let refs: unknown;
+      let ack: unknown;
+      try {
+        scope = patch.scope !== undefined ? patch.scope : JSON.parse(actRow.scope_json);
+      } catch {
+        return { ok: false, code: "cae-registry-sqlite-invalid-json", message: "stored scope_json is corrupt" };
+      }
+      try {
+        refs = patch.artifactRefs !== undefined ? patch.artifactRefs : JSON.parse(actRow.artifact_refs_json);
+      } catch {
+        return { ok: false, code: "cae-registry-sqlite-invalid-json", message: "stored artifact_refs_json is corrupt" };
+      }
+      try {
+        ack =
+          patch.acknowledgement !== undefined
+            ? patch.acknowledgement
+            : actRow.acknowledgement_json
+              ? JSON.parse(actRow.acknowledgement_json)
+              : undefined;
+      } catch {
+        return {
+          ok: false,
+          code: "cae-registry-sqlite-invalid-json",
+          message: "stored acknowledgement_json is corrupt"
+        };
+      }
+      let flags: Record<string, unknown> | undefined;
+      if (patch.flags !== undefined) {
+        flags = patch.flags as Record<string, unknown>;
+      } else {
+        try {
+          const m = JSON.parse(actRow.metadata_json || "{}") as Record<string, unknown>;
+          if (m.flags && typeof m.flags === "object" && !Array.isArray(m.flags)) {
+            flags = m.flags as Record<string, unknown>;
+          }
+        } catch {
+          flags = undefined;
+        }
+      }
+      const merged: CaeRegistryActivationRow = {
+        schemaVersion: 1,
+        activationId,
+        family: typeof patch.family === "string" ? patch.family : actRow.family,
+        lifecycleState: "draft",
+        priority:
+          typeof patch.priority === "number"
+            ? patch.priority
+            : typeof patch.priority === "string"
+              ? Number(patch.priority)
+              : actRow.priority,
+        scope,
+        artifactRefs: refs,
+        acknowledgement: ack as Record<string, unknown> | undefined,
+        flags
+      };
+      const validated = validateSingleCaeActivationRecord(merged);
+      if (!validated.ok) return { ok: false, code: validated.code, message: validated.message };
+      const refErr = assertActivationRefsExist(db, v, validated.value);
+      if (refErr) return refErr;
+      const warnings = collectDraftActivationWarnings(validated.value);
+      const run = db.transaction(() => {
+        updateCaeRegistryActivationFields(db, v, activationId, {
+          family: String(validated.value.family),
+          priority: Number(validated.value.priority) || 0,
+          lifecycleState: "draft",
+          scopeJson: JSON.stringify(validated.value.scope ?? {}),
+          artifactRefsJson: JSON.stringify(validated.value.artifactRefs ?? []),
+          acknowledgementJson: validated.value.acknowledgement
+            ? JSON.stringify(validated.value.acknowledgement)
+            : null,
+          metadataJson: validated.value.flags ? JSON.stringify({ flags: validated.value.flags }) : "{}"
+        });
+        insertCaeRegistryMutationAudit(db, {
+          actor,
+          commandName: name,
+          versionId: v,
+          note: typeof args.note === "string" ? args.note : null,
+          payload: { activationId }
+        });
+      });
+      run();
+      const check = postMutationRegistryCheck(db, workspacePath, true);
+      if (check) return check;
+      return {
+        ok: true,
+        code: "cae-update-draft-activation-ok",
+        data: { schemaVersion: 1, versionId: v, activationId, warnings }
+      };
     }
 
     if (name === "cae-disable-activation") {
