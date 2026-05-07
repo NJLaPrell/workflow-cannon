@@ -131,16 +131,73 @@ function renderOverview(data: UnknownRecord): string {
 }
 
 function renderArtifacts(data: UnknownRecord): string {
+  const readiness = asRecord(data.readiness);
+  const canMutate = readiness.canMutate === true;
+  const active = asRecord(data.activeVersion);
+  const usedBy = new Map<string, number>();
+  for (const rawActivation of asArray(asRecord(data.activations).rows)) {
+    const activation = asRecord(rawActivation);
+    for (const rawRef of asArray(activation.artifactRefs)) {
+      const artifactId = String(asRecord(rawRef).artifactId ?? "");
+      if (artifactId) usedBy.set(artifactId, (usedBy.get(artifactId) ?? 0) + 1);
+    }
+  }
   const rows = asArray(asRecord(data.artifacts).rows).slice(0, 80);
   const body = rows.length
     ? rows
         .map((raw) => {
           const row = asRecord(raw);
-          return `<tr><td><code>${escapeHtml(String(row.artifactId ?? ""))}</code><small>${escapeHtml(String(row.title ?? ""))}</small></td><td>${escapeHtml(String(row.artifactType ?? ""))}</td><td>${escapeHtml(String(row.source ?? ""))}</td><td>${escapeHtml(String(row.status ?? ""))}</td><td>${row.fileExists === false ? "missing" : "present"}</td></tr>`;
+          const artifactId = String(row.artifactId ?? "");
+          const source = String(row.source ?? "");
+          const status = String(row.status ?? row.lifecycleStatus ?? "");
+          const changed = String(row.updatedAt ?? row.lastChangedAt ?? row.changedAt ?? active.createdAt ?? "n/a");
+          const searchable = [artifactId, row.title, row.artifactType, row.path, source, status].map((value) => String(value ?? "").toLowerCase()).join(" ");
+          return `<tr data-gp-artifact-row data-gp-search="${escapeHtmlAttr(searchable)}" data-gp-source="${escapeHtmlAttr(source)}" data-gp-status="${escapeHtmlAttr(status)}">
+  <td><code>${escapeHtml(artifactId)}</code><small>${escapeHtml(String(row.title ?? "Untitled artifact"))}</small></td>
+  <td>${escapeHtml(String(row.artifactType ?? ""))}</td>
+  <td><span class="gp-source gp-source-${escapeHtmlAttr(source || "unknown")}">${escapeHtml(source || "unknown")}</span></td>
+  <td><code>${escapeHtml(String(row.path ?? ""))}</code></td>
+  <td>${numberText(usedBy.get(artifactId) ?? 0)}</td>
+  <td>${escapeHtml(status || "unknown")}${row.fileExists === false ? '<small class="gp-bad-text">missing file</small>' : ""}</td>
+  <td>${escapeHtml(changed)}</td>
+  <td>${renderArtifactActions(row, canMutate)}</td>
+</tr>`;
         })
         .join("")
-    : '<tr><td colspan="5">No artifacts found.</td></tr>';
-  return `<section class="gp-tab-panel" id="gp-tab-artifacts" data-gp-panel="artifacts"><h2>Artifacts</h2><table><thead><tr><th>Artifact</th><th>Type</th><th>Source</th><th>Status</th><th>File</th></tr></thead><tbody>${body}</tbody></table></section>`;
+    : '<tr><td colspan="8">No artifacts found.</td></tr>';
+  return `<section class="gp-tab-panel" id="gp-tab-artifacts" data-gp-panel="artifacts">
+  <div class="gp-band"><h2>Artifacts</h2><span id="gp-artifact-count" class="gp-muted">${numberText(rows.length)} artifacts</span></div>
+  <div class="gp-table-tools">
+    <input id="gp-artifact-search" type="search" placeholder="Search artifacts" />
+    <select id="gp-artifact-source"><option value="">All sources</option><option value="default">Default</option><option value="workspace">Workspace</option><option value="override">Override</option></select>
+    <select id="gp-artifact-status"><option value="">All statuses</option><option value="active">Active</option><option value="hidden">Hidden</option><option value="retired">Retired</option><option value="missing-file">Missing file</option></select>
+  </div>
+  <table><thead><tr><th>Artifact</th><th>Type</th><th>Source</th><th>Path</th><th>Used by</th><th>Status</th><th>Changed</th><th>Actions</th></tr></thead><tbody>${body}</tbody></table>
+</section>`;
+}
+
+function rowButton(label: string, action: string, row: UnknownRecord, enabled: boolean): string {
+  return `<button type="button" data-gp-action="${escapeHtmlAttr(action)}" data-gp-artifact-id="${escapeHtmlAttr(String(row.artifactId ?? ""))}" data-gp-artifact-path="${escapeHtmlAttr(String(row.path ?? ""))}"${enabled ? "" : " disabled"}>${escapeHtml(label)}</button>`;
+}
+
+function renderArtifactActions(row: UnknownRecord, canMutate: boolean): string {
+  const source = String(row.source ?? "");
+  const status = String(row.status ?? row.lifecycleStatus ?? "");
+  const hasPath = typeof row.path === "string" && row.path.trim().length > 0;
+  const active = status === "active";
+  const isDefault = source === "default";
+  const isWorkspace = source === "workspace";
+  const isOverride = source === "override" || typeof row.overrideOfId === "string";
+  const buttons = [
+    rowButton("Open", "artifact-open", row, hasPath && row.fileExists !== false),
+    rowButton("Preview", "artifact-preview", row, active),
+    rowButton("Duplicate", "artifact-duplicate", row, canMutate && isDefault && active),
+    rowButton("Edit", "artifact-edit", row, canMutate && (isWorkspace || isOverride) && active),
+    rowButton("Retire", "artifact-retire", row, canMutate && (isWorkspace || isOverride) && active),
+    rowButton("Hide Default", "artifact-hide-default", row, canMutate && isDefault && active),
+    rowButton("Remove Override", "artifact-remove-override", row, canMutate && isOverride)
+  ];
+  return `<div class="gp-row-actions">${buttons.join("")}</div>`;
 }
 
 function renderActivations(data: UnknownRecord): string {

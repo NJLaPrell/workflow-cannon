@@ -268,6 +268,16 @@ test("renderGuidanceAuthoringPanelInnerHtml renders the tabbed authoring shell",
             source: "workspace",
             status: "active",
             fileExists: true
+          },
+          {
+            artifactId: "cae.doc.workspace",
+            title: "Workspace rule",
+            artifactType: "runbook",
+            path: ".ai/workspace.md",
+            source: "workspace",
+            status: "active",
+            fileExists: false,
+            updatedAt: "2026-05-07T00:00:00.000Z"
           }
         ]
       },
@@ -278,7 +288,7 @@ test("renderGuidanceAuthoringPanelInnerHtml renders the tabbed authoring shell",
             family: "policy",
             lifecycleState: "draft",
             priority: 100,
-            artifactRefs: [{ artifactId: "cae.doc.one" }]
+            artifactRefs: [{ artifactId: "cae.doc.one" }, { artifactId: "cae.doc.workspace" }]
           }
         ]
       },
@@ -301,6 +311,14 @@ test("renderGuidanceAuthoringPanelInnerHtml renders the tabbed authoring shell",
   assert.match(html, /Review &lt;warning&gt;/);
   assert.match(html, /cae-create-workspace-artifact/);
   assert.match(html, /cae\.activation\.one/);
+  assert.match(html, /Search artifacts/);
+  assert.match(html, /Used by/);
+  assert.match(html, /data-gp-action="artifact-open"/);
+  assert.match(html, /Duplicate/);
+  assert.match(html, /Hide Default/);
+  assert.match(html, /Remove Override/);
+  assert.match(html, /missing file/);
+  assert.match(html, /2026-05-07T00:00:00.000Z/);
   assert.doesNotMatch(html, /<source>/);
   assert.match(html, /One &lt;source&gt;/);
 });
