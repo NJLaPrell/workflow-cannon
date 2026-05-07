@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-07T04:26:26.136Z",
+  "generatedAt": "2026-05-07T04:49:02.632Z",
   "commands": [
     {
       "name": "add-dependency",
@@ -250,6 +250,11 @@
     {
       "name": "cae-update-draft-activation",
       "path": ".ai/agent-cli-snippets/by-command/cae-update-draft-activation.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-update-workspace-artifact",
+      "path": ".ai/agent-cli-snippets/by-command/cae-update-workspace-artifact.json",
       "moduleId": "context-activation"
     },
     {
