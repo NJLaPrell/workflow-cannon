@@ -124,6 +124,75 @@ function postMutationRegistryCheckIfActive(
   return postMutationRegistryCheck(db, workspacePath, verifyArtifactPaths);
 }
 
+function readOptionalNonEmptyString(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function staleStateError(input: {
+  expectedActiveVersionId: string | null;
+  actualActiveVersionId: string | null;
+  expectedRegistryDigest: string | null;
+  actualRegistryDigest: string | null;
+}): ModuleCommandResult {
+  return {
+    ok: false,
+    code: "cae-stale-state",
+    message: "CAE registry changed since this authoring state was loaded. Refresh and retry.",
+    data: {
+      schemaVersion: 1,
+      staleState: {
+        expectedActiveVersionId: input.expectedActiveVersionId,
+        actualActiveVersionId: input.actualActiveVersionId,
+        expectedRegistryDigest: input.expectedRegistryDigest,
+        actualRegistryDigest: input.actualRegistryDigest,
+        repair: {
+          action: "refresh-authoring-state",
+          message: "Refresh the CAE authoring summary or reopen the editor, then retry your mutation on the latest state."
+        }
+      }
+    }
+  };
+}
+
+function checkCaeMutationStaleness(
+  db: SqliteDb,
+  workspacePath: string,
+  args: Record<string, unknown>
+): ModuleCommandResult | null {
+  const expectedActiveVersionId = readOptionalNonEmptyString(args.expectedActiveVersionId);
+  const expectedRegistryDigest = readOptionalNonEmptyString(args.expectedRegistryDigest);
+  if (!expectedActiveVersionId && !expectedRegistryDigest) {
+    return null;
+  }
+
+  const actualActiveVersionId = getActiveCaeRegistryVersionId(db);
+  let actualRegistryDigest: string | null = null;
+  if (expectedRegistryDigest && actualActiveVersionId) {
+    const loaded = loadCaeRegistryFromSqliteDb(db, workspacePath, { verifyArtifactPaths: false });
+    if (!loaded.ok) {
+      return { ok: false, code: loaded.code, message: loaded.message };
+    }
+    actualRegistryDigest = loaded.value.registryDigest;
+  }
+
+  const activeVersionMismatch =
+    expectedActiveVersionId !== null && expectedActiveVersionId !== actualActiveVersionId;
+  const registryDigestMismatch =
+    expectedRegistryDigest !== null && expectedRegistryDigest !== actualRegistryDigest;
+  if (!activeVersionMismatch && !registryDigestMismatch) {
+    return null;
+  }
+
+  return staleStateError({
+    expectedActiveVersionId,
+    actualActiveVersionId,
+    expectedRegistryDigest,
+    actualRegistryDigest
+  });
+}
+
 /**
  * Handles CAE registry admin `cae-*` commands; returns `undefined` when `name` is not a registry admin command.
  */
@@ -232,6 +301,8 @@ export function tryHandleCaeRegistryAdminCommand(
     const actorRes = requireActor(args);
     if (typeof actorRes !== "string") return actorRes;
     const actor = actorRes;
+    const stale = checkCaeMutationStaleness(db, workspacePath, args);
+    if (stale) return stale;
 
     if (name === "cae-create-registry-version") {
       const versionIdRaw = typeof args.versionId === "string" ? args.versionId.trim() : "";

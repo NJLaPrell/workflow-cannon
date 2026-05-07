@@ -55,6 +55,15 @@ function appr() {
   return { caeMutationApproval: { confirmed: true, rationale: "unit test" } };
 }
 
+async function authoringSummary(ws, effectiveConfig = baseEffective()) {
+  const result = await contextActivationModule.onCommand(
+    { name: "cae-authoring-summary", args: { schemaVersion: 1 } },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig }
+  );
+  assert.equal(result.ok, true);
+  return result.data;
+}
+
 const MUTATOR_COMMANDS = [
   "cae-create-artifact",
   "cae-update-artifact",
@@ -435,6 +444,102 @@ test("flow: clone → activate → artifact + activation CRUD on working copy", 
     { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
   );
   assert.equal(rArt.ok, true);
+});
+
+test("stale-state guard rejects artifact mutation when expected registry digest is outdated", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const initial = await authoringSummary(ws);
+
+  const drift = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-registry-version",
+      args: {
+        schemaVersion: 1,
+        actor: "drift",
+        versionId: "cae.reg.stale.next",
+        setActive: true,
+        note: "simulate concurrent dashboard change",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(drift.ok, true);
+
+  const stale = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-artifact",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        expectedActiveVersionId: initial.activeVersion.versionId,
+        expectedRegistryDigest: initial.activeVersion.registryDigest,
+        ...appr(),
+        artifact: {
+          schemaVersion: 1,
+          artifactId: "cae.test.stale.artifact",
+          artifactType: "policy-doc",
+          ref: { path: ".ai/AGENT-CLI-MAP.md" },
+          title: "stale"
+        }
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(stale.ok, false);
+  assert.equal(stale.code, "cae-stale-state");
+  assert.equal(stale.data.staleState.expectedActiveVersionId, initial.activeVersion.versionId);
+  assert.equal(stale.data.staleState.expectedRegistryDigest, initial.activeVersion.registryDigest);
+  assert.equal(stale.data.staleState.actualActiveVersionId, "cae.reg.stale.next");
+  assert.match(stale.data.staleState.repair.message, /Refresh/i);
+});
+
+test("stale-state guard rejects activation mutation when expected active version is outdated", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const initial = await authoringSummary(ws);
+
+  const drift = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-registry-version",
+      args: {
+        schemaVersion: 1,
+        actor: "drift",
+        versionId: "cae.reg.stale.activation",
+        setActive: true,
+        note: "simulate concurrent draft switch",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(drift.ok, true);
+
+  const stale = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-activation",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        expectedActiveVersionId: initial.activeVersion.versionId,
+        ...appr(),
+        activation: {
+          schemaVersion: 1,
+          activationId: "cae.test.stale.activation",
+          family: "do",
+          lifecycleState: "active",
+          priority: 10,
+          scope: { conditions: [{ kind: "always" }] },
+          artifactRefs: [{ artifactId: "cae.playbook.machine-playbooks" }]
+        }
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(stale.ok, false);
+  assert.equal(stale.code, "cae-stale-state");
+  assert.equal(stale.data.staleState.expectedActiveVersionId, initial.activeVersion.versionId);
+  assert.equal(stale.data.staleState.actualActiveVersionId, "cae.reg.stale.activation");
+  assert.equal(stale.data.staleState.expectedRegistryDigest, null);
 });
 
 test("import-json-registry writes cae_registry_mutations audit", async () => {
