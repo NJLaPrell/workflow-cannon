@@ -5,11 +5,16 @@ import { BUILTIN_RUN_COMMAND_MANIFEST } from "../../../contracts/builtin-run-com
 import {
   caeRegistryTablesReady,
   countCaeAckRows,
+  countCaeRegistryMutationAuditRows,
   countCaeTraceRows,
   getActiveCaeRegistryVersionId,
+  getCaeRegistryVersionMeta,
   insertCaeAckSatisfaction,
   insertCaeRegistryMutationAudit,
   listCaeAckSatisfactions,
+  listCaeRegistryActivationsForVersion,
+  listCaeRegistryArtifactsForVersion,
+  listCaeRegistryMutationAuditRows,
   listCaeRegistryVersionsWithCounts,
   listCaeTraceSnapshotSummaries,
   loadCaeTraceSnapshot,
@@ -52,6 +57,7 @@ import {
   computeGuidanceEnforcementReadiness,
   type GovernanceEvidenceInputV1
 } from "../../../core/cae/guidance-enforcement-readiness.js";
+import { buildCaeAuthoringClassificationSnapshot } from "../../../core/cae/cae-authoring-source-classification.js";
 import { prependMaintainerDeliveryLoopGuidanceCard } from "../maintainer-delivery-guidance.js";
 
 type SqliteDatabase = NonNullable<ReturnType<typeof openKitSqliteReadWrite>>;
@@ -603,6 +609,219 @@ function buildDashboardSummaryData(
   };
 }
 
+function buildCaeAuthoringCounts(snapshot: ReturnType<typeof buildCaeAuthoringClassificationSnapshot>): Record<string, unknown> {
+  const artifactSource: Record<string, number> = { default: 0, workspace: 0, override: 0 };
+  const artifactStatus: Record<string, number> = {
+    active: 0,
+    hidden: 0,
+    retired: 0,
+    "missing-file": 0,
+    "external-allowed": 0
+  };
+  const artifactType: Record<string, number> = {};
+  const activationFamily: Record<string, number> = { policy: 0, think: 0, do: 0, review: 0 };
+  const activationStatus: Record<string, number> = {
+    active: 0,
+    draft: 0,
+    disabled: 0,
+    hidden: 0,
+    retired: 0
+  };
+
+  for (const artifact of snapshot.artifacts) {
+    artifactSource[artifact.source] = (artifactSource[artifact.source] ?? 0) + 1;
+    artifactStatus[artifact.status] = (artifactStatus[artifact.status] ?? 0) + 1;
+    artifactType[artifact.artifactType] = (artifactType[artifact.artifactType] ?? 0) + 1;
+  }
+  for (const activation of snapshot.activations) {
+    activationFamily[activation.family] = (activationFamily[activation.family] ?? 0) + 1;
+    activationStatus[activation.status] = (activationStatus[activation.status] ?? 0) + 1;
+  }
+
+  return {
+    schemaVersion: 1,
+    artifactSources: artifactSource,
+    artifactStatuses: artifactStatus,
+    artifactTypes: artifactType,
+    activationFamilies: activationFamily,
+    activationStatuses: activationStatus
+  };
+}
+
+function buildAuthoringSummaryData(
+  workspacePath: string,
+  effective: Record<string, unknown>
+): Record<string, unknown> {
+  const health = buildCaeHealthData(workspacePath, effective, true);
+  const loaded = loadRegistryForCae(workspacePath, effective);
+  const validation = loaded.ok
+    ? {
+        ok: true,
+        code: "cae-registry-validate-ok",
+        registryContentHash: loaded.reg.registryDigest,
+        artifactCount: loaded.reg.artifactById.size,
+        activationCount: loaded.reg.activationById.size
+      }
+    : { ok: false, code: loaded.code, message: loaded.message };
+
+  let activeVersion: Record<string, unknown> = {
+    schemaVersion: 1,
+    versionId: typeof health.activeRegistryVersionId === "string" ? health.activeRegistryVersionId : null,
+    createdAt: null,
+    createdBy: null,
+    note: null,
+    registryDigest: loaded.ok ? loaded.reg.registryDigest : null,
+    artifactCount: loaded.ok ? loaded.reg.artifactById.size : 0,
+    activationCount: loaded.ok ? loaded.reg.activationById.size : 0,
+    isActive: typeof health.activeRegistryVersionId === "string"
+  };
+  let artifactRows: Array<{
+    version_id: string;
+    artifact_id: string;
+    artifact_type: string;
+    path: string;
+    title: string | null;
+    description: string | null;
+    metadata_json: string;
+    retired_at: string | null;
+  }> = [];
+  let activationRows: Array<{
+    version_id: string;
+    activation_id: string;
+    family: string;
+    priority: number;
+    lifecycle_state: string;
+    scope_json: string;
+    artifact_refs_json: string;
+    acknowledgement_json: string | null;
+    metadata_json: string;
+    retired_at: string | null;
+  }> = [];
+  let recentMutations: Record<string, unknown> = {
+    available: false,
+    count: 0,
+    rows: [],
+    code: "cae-kit-sqlite-unavailable"
+  };
+
+  const db = openKitSqliteReadWrite(workspacePath, effective);
+  if (db) {
+    try {
+      const activeVersionId = getActiveCaeRegistryVersionId(db);
+      if (activeVersionId) {
+        const meta = getCaeRegistryVersionMeta(db, activeVersionId);
+        artifactRows = listCaeRegistryArtifactsForVersion(db, activeVersionId);
+        activationRows = listCaeRegistryActivationsForVersion(db, activeVersionId);
+        activeVersion = {
+          schemaVersion: 1,
+          versionId: activeVersionId,
+          createdAt: meta?.created_at ?? null,
+          createdBy: meta?.created_by ?? null,
+          note: meta?.note ?? null,
+          registryDigest: loaded.ok ? loaded.reg.registryDigest : null,
+          artifactCount: artifactRows.length,
+          activationCount: activationRows.length,
+          isActive: true
+        };
+        recentMutations = {
+          available: true,
+          count: countCaeRegistryMutationAuditRows(db),
+          rows: listCaeRegistryMutationAuditRows(db, { limit: 10, versionId: activeVersionId }).map((row) => ({
+            id: row.id,
+            recordedAt: row.recorded_at,
+            actor: row.actor,
+            commandName: row.command_name,
+            versionId: row.version_id,
+            note: row.note
+          }))
+        };
+      }
+    } finally {
+      db.close();
+    }
+  }
+
+  if (artifactRows.length === 0 && activationRows.length === 0 && loaded.ok) {
+    const versionId = typeof health.activeRegistryVersionId === "string" ? health.activeRegistryVersionId : "json-registry";
+    artifactRows = loaded.reg.artifacts.map((row) => {
+      const record = row as Record<string, unknown>;
+      const ref = (record.ref as Record<string, unknown> | undefined) ?? {};
+      return {
+        version_id: versionId,
+        artifact_id: String(record.artifactId ?? ""),
+        artifact_type: String(record.artifactType ?? ""),
+        path: String(ref.path ?? ""),
+        title: typeof record.title === "string" ? record.title : null,
+        description: null,
+        metadata_json: JSON.stringify({ tags: record.tags ?? [] }),
+        retired_at: null
+      };
+    });
+    activationRows = loaded.reg.activations.map((row) => {
+      const record = row as Record<string, unknown>;
+      return {
+        version_id: versionId,
+        activation_id: String(record.activationId ?? ""),
+        family: String(record.family ?? ""),
+        priority: Number(record.priority ?? 0),
+        lifecycle_state: typeof record.lifecycleState === "string" ? record.lifecycleState : "active",
+        scope_json: JSON.stringify(record.scope ?? {}),
+        artifact_refs_json: JSON.stringify(record.artifactRefs ?? []),
+        acknowledgement_json: record.acknowledgement ? JSON.stringify(record.acknowledgement) : null,
+        metadata_json: JSON.stringify({ flags: record.flags ?? undefined }),
+        retired_at: null
+      };
+    });
+  }
+
+  const registryDigest = loaded.ok ? loaded.reg.registryDigest : "unavailable";
+  const snapshot = buildCaeAuthoringClassificationSnapshot({
+    workspaceRoot: workspacePath,
+    activeVersionId:
+      typeof activeVersion.versionId === "string" && activeVersion.versionId.length > 0
+        ? (activeVersion.versionId as string)
+        : null,
+    registryDigest,
+    artifactRows,
+    activationRows
+  });
+  const mutationCapability = deriveGuidanceRegistryMutationCapability({
+    registryStore: typeof health.registryStore === "string" ? health.registryStore : "sqlite",
+    adminMutations: getAtPath(effective, "kit.cae.adminMutations") === true
+  });
+  const issues = Array.isArray(health.issues) ? health.issues : [];
+
+  return {
+    schemaVersion: 1,
+    product: GUIDANCE_PRODUCT_LABELS,
+    activeVersion,
+    artifacts: {
+      count: snapshot.artifacts.length,
+      rows: snapshot.artifacts
+    },
+    activations: {
+      count: snapshot.activations.length,
+      rows: snapshot.activations
+    },
+    counts: {
+      ...buildCaeAuthoringCounts(snapshot),
+      recentMutationCount: Number(recentMutations.count ?? 0)
+    },
+    validation,
+    validationWarnings: issues,
+    recentMutations,
+    readiness: {
+      schemaVersion: 1,
+      status: validation.ok ? (mutationCapability.canMutate ? "ready" : "read-only") : "degraded",
+      canRender: true,
+      canMutate: mutationCapability.canMutate,
+      denialReason: mutationCapability.denialReason,
+      issues
+    },
+    health
+  };
+}
+
 export async function runContextActivationOnCommand(
   command: { name: string; args?: Record<string, unknown> },
   ctx: ModuleLifecycleContext
@@ -624,6 +843,16 @@ export async function runContextActivationOnCommand(
         ok: true,
         code: "cae-dashboard-summary-ok",
         data: buildDashboardSummaryData(ws, effective)
+      };
+    }
+
+    if (name === "cae-authoring-summary") {
+      const bad = requireSchemaV1(args);
+      if (bad) return bad;
+      return {
+        ok: true,
+        code: "cae-authoring-summary-ok",
+        data: buildAuthoringSummaryData(ws, effective)
       };
     }
 
@@ -811,6 +1040,7 @@ export async function runContextActivationOnCommand(
           product: GUIDANCE_PRODUCT_LABELS,
           evalMode,
           modeLabel: evalMode === "shadow" ? "Preview mode" : "Applies now",
+          registryContentHash: loaded.reg.registryDigest,
           traceId,
           ephemeral: skipPersistenceBecauseDraftImpact ? true : !persist,
           evaluationContext,

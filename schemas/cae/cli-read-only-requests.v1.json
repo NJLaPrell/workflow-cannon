@@ -173,6 +173,14 @@
         "schemaVersion": { "const": 1 }
       }
     },
+    "caeAuthoringSummaryRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion"],
+      "properties": {
+        "schemaVersion": { "const": 1 }
+      }
+    },
     "caeRecentTracesRequest": {
       "type": "object",
       "additionalProperties": false,

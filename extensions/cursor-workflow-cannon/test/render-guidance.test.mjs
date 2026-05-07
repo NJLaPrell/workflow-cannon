@@ -7,6 +7,7 @@ import {
   renderGuidanceSummaryInnerHtml,
   renderGuidanceTraceDetailInnerHtml
 } from "../dist/views/guidance/render-guidance.js";
+import { renderGuidanceAuthoringPanelInnerHtml } from "../dist/views/guidance/render-guidance-panel.js";
 
 test("renderGuidanceSummaryInnerHtml renders health and escapes issue details", () => {
   const html = renderGuidanceSummaryInnerHtml({
@@ -233,6 +234,267 @@ test("renderGuidancePreviewInnerHtml renders enforcement readiness when present"
   });
   assert.match(html, /Enforcement readiness/);
   assert.match(html, /cae-enforce-governance-evidence-incomplete/);
+});
+
+test("renderGuidanceAuthoringPanelInnerHtml renders the tabbed authoring shell", () => {
+  const html = renderGuidanceAuthoringPanelInnerHtml({
+    ok: true,
+    code: "cae-authoring-summary-ok",
+    data: {
+      schemaVersion: 1,
+      product: { productName: "Guidance" },
+      health: { caeEnabled: true, registryStatus: "ok", registryStore: "sqlite" },
+      activeVersion: {
+        versionId: "cae.reg.active",
+        registryDigest: "abcd",
+        artifactCount: 2,
+        activationCount: 1
+      },
+      counts: {
+        activationFamilies: { policy: 1, think: 0, do: 0, review: 0 },
+        activationStatuses: { draft: 1 },
+        artifactStatuses: { active: 2, "missing-file": 0 },
+        recentMutationCount: 1
+      },
+      validation: { ok: true, code: "cae-registry-validate-ok", registryContentHash: "abcd" },
+      validationWarnings: [{ code: "cae-warning", detail: "Review <warning>" }],
+      readiness: { canMutate: true },
+      artifacts: {
+        rows: [
+          {
+            artifactId: "cae.doc.one",
+            title: "One <source>",
+            artifactType: "policy-doc",
+            source: "workspace",
+            status: "active",
+            fileExists: true
+          },
+          {
+            artifactId: "cae.doc.workspace",
+            title: "Workspace rule",
+            artifactType: "runbook",
+            path: ".ai/workspace.md",
+            source: "workspace",
+            status: "active",
+            fileExists: false,
+            updatedAt: "2026-05-07T00:00:00.000Z"
+          }
+        ]
+      },
+      activations: {
+        rows: [
+          {
+            activationId: "cae.activation.one",
+            family: "policy",
+            scopeJson: '{"conditions":[{"kind":"always"}]}',
+            scopeSummary: "Always",
+            lifecycleState: "draft",
+            status: "draft",
+            source: "workspace",
+            priority: 100,
+            acknowledgement: { strength: "surface", token: "policy-token" },
+            statusWarnings: ["Policy applies broadly"],
+            artifactRefs: [{ artifactId: "cae.doc.one" }, { artifactId: "cae.doc.workspace" }]
+          }
+        ]
+      },
+      recentMutations: { count: 1, rows: [{ recordedAt: "2026-05-06T00:00:00.000Z", commandName: "cae-create-workspace-artifact", actor: "agent", note: "draft" }] }
+    }
+  });
+  assert.match(html, /data-gp-tab="overview"/);
+  assert.match(html, /data-gp-tab="artifacts"/);
+  assert.match(html, /data-gp-tab="activations"/);
+  assert.match(html, /data-gp-tab="preview"/);
+  assert.match(html, /data-gp-tab="audit"/);
+  assert.match(html, /Warnings need review/);
+  assert.match(html, /New Artifact/);
+  assert.match(html, /New Activation/);
+  assert.match(html, /Preview Guidance/);
+  assert.match(html, /Preview Draft/);
+  assert.match(html, /Copy Evidence/);
+  assert.match(html, /gp-preview-command-args/);
+  assert.match(html, /gp-preview-result/);
+  assert.match(html, /Validate Registry/);
+  assert.match(html, /Registry store/);
+  assert.match(html, /sqlite/);
+  assert.match(html, /Validation warnings/);
+  assert.match(html, /Review &lt;warning&gt;/);
+  assert.match(html, /cae-create-workspace-artifact/);
+  assert.match(html, /cae\.activation\.one/);
+  assert.match(html, /Search artifacts/);
+  assert.match(html, /Artifact Editor/);
+  assert.match(html, /gp-artifact-content/);
+  assert.match(html, /Preview Markdown/);
+  assert.match(html, /data-gp-action="artifact-create"/);
+  assert.match(html, /data-gp-action="artifact-update"/);
+  assert.match(html, /data-gp-action="artifact-duplicate-submit"/);
+  assert.match(html, /data-gp-action="artifact-retire-submit"/);
+  assert.match(html, /Search activations/);
+  assert.match(html, /Activation Editor/);
+  assert.match(html, /Scope preset/);
+  assert.match(html, /Command arg equals/);
+  assert.match(html, /Advanced JSON/);
+  assert.match(html, /data-gp-activation-artifact/);
+  assert.match(html, /data-gp-action="activation-create-submit"/);
+  assert.match(html, /data-gp-action="activation-update-submit"/);
+  assert.match(html, /Scope/);
+  assert.match(html, /Policy applies broadly/);
+  assert.match(html, /Activate Draft/);
+  assert.match(html, /data-gp-action="activation-preview"/);
+  assert.match(html, /Used by/);
+  assert.match(html, /data-gp-action="artifact-open"/);
+  assert.match(html, /Duplicate/);
+  assert.match(html, /Hide Default/);
+  assert.match(html, /Remove Override/);
+  assert.match(html, /missing file/);
+  assert.match(html, /2026-05-07T00:00:00.000Z/);
+  assert.doesNotMatch(html, /<source>/);
+  assert.match(html, /One &lt;source&gt;/);
+});
+
+test("renderGuidanceAuthoringPanelInnerHtml surfaces actionable blocked states", () => {
+  const disabled = renderGuidanceAuthoringPanelInnerHtml({
+    ok: true,
+    data: {
+      health: { caeEnabled: false },
+      readiness: { canMutate: false },
+      validation: { ok: true },
+      counts: {},
+      artifacts: { rows: [] },
+      activations: { rows: [] },
+      recentMutations: { rows: [] }
+    }
+  });
+  assert.match(disabled, /Guidance is disabled/);
+  assert.match(disabled, /kit\.cae\.enabled/);
+
+  const jsonStore = renderGuidanceAuthoringPanelInnerHtml({
+    ok: true,
+    data: {
+      health: { caeEnabled: true, registryStatus: "ok", registryStore: "json" },
+      readiness: { canMutate: false },
+      validation: { ok: true },
+      counts: {},
+      artifacts: { rows: [] },
+      activations: { rows: [] },
+      recentMutations: { rows: [] }
+    }
+  });
+  assert.match(jsonStore, /Switch kit\.cae\.registryStore to sqlite/);
+  assert.match(jsonStore, /data-gp-action="refresh"/);
+
+  const nativeSqlite = renderGuidanceAuthoringPanelInnerHtml({
+    ok: true,
+    data: {
+      health: { caeEnabled: true, registryStatus: "ok", registryStore: "sqlite" },
+      activeVersion: { isActive: false },
+      readiness: { canMutate: false },
+      validation: { ok: true },
+      recentMutations: { available: false, code: "cae-kit-sqlite-unavailable", rows: [] },
+      counts: {},
+      artifacts: { rows: [] },
+      activations: { rows: [] }
+    }
+  });
+  assert.match(nativeSqlite, /Native SQLite is unavailable/);
+  assert.match(nativeSqlite, /better-sqlite3/);
+
+  const missingActiveDb = renderGuidanceAuthoringPanelInnerHtml({
+    ok: true,
+    data: {
+      health: { caeEnabled: true, registryStatus: "ok", registryStore: "sqlite" },
+      activeVersion: { isActive: false },
+      readiness: { canMutate: false },
+      validation: { ok: true },
+      recentMutations: { available: true, rows: [] },
+      counts: {},
+      artifacts: { rows: [] },
+      activations: { rows: [] }
+    }
+  });
+  assert.match(missingActiveDb, /No active guidance set/);
+
+  const invalid = renderGuidanceAuthoringPanelInnerHtml({
+    ok: true,
+    data: {
+      health: { caeEnabled: true, registryStatus: "ok", registryStore: "sqlite" },
+      readiness: { canMutate: false },
+      validation: { ok: false, code: "cae-registry-validation-error", message: "broken <rule>" },
+      counts: {},
+      artifacts: { rows: [] },
+      activations: { rows: [] },
+      recentMutations: { rows: [] }
+    }
+  });
+  assert.match(invalid, /Registry validation failed/);
+  assert.match(invalid, /broken &lt;rule&gt;/);
+  assert.match(invalid, /data-gp-action="validate-registry"/);
+
+  const invalidButConfiguredToMutate = renderGuidanceAuthoringPanelInnerHtml({
+    ok: true,
+    data: {
+      health: { caeEnabled: true, registryStatus: "ok", registryStore: "sqlite" },
+      activeVersion: { isActive: true },
+      readiness: { canMutate: true },
+      validation: { ok: false, code: "cae-registry-validation-error", message: "needs repair" },
+      counts: {},
+      artifacts: { rows: [] },
+      activations: { rows: [] },
+      recentMutations: { available: true, rows: [] }
+    }
+  });
+  assert.match(invalidButConfiguredToMutate, /data-gp-action="artifact-create" disabled/);
+  assert.match(invalidButConfiguredToMutate, /data-gp-action="activation-create-submit" disabled/);
+});
+
+test("renderGuidanceAuthoringPanelInnerHtml covers representative dashboard authoring states", () => {
+  const baseData = {
+    product: { productName: "Guidance" },
+    health: { caeEnabled: true, registryStatus: "ok", registryStore: "sqlite", currentPhase: "82" },
+    activeVersion: { versionId: "cae.reg.active", isActive: true, registryDigest: "digest" },
+    readiness: { canMutate: true },
+    validation: { ok: true, registryContentHash: "digest" },
+    counts: {},
+    artifacts: { rows: [] },
+    activations: { rows: [] },
+    recentMutations: { available: true, rows: [] }
+  };
+
+  const healthy = renderGuidanceAuthoringPanelInnerHtml({ ok: true, data: baseData });
+  assert.match(healthy, /Guidance authoring is ready/);
+  assert.match(healthy, /data-gp-action="artifact-create"/);
+  assert.doesNotMatch(healthy, /data-gp-action="artifact-create" disabled/);
+  assert.match(healthy, /data-gp-action="activation-create-submit"/);
+  assert.doesNotMatch(healthy, /data-gp-action="activation-create-submit" disabled/);
+  assert.match(healthy, /data-gp-action="preview-run-draft"/);
+  assert.match(healthy, /data-gp-action="validate-registry"/);
+
+  const warning = renderGuidanceAuthoringPanelInnerHtml({
+    ok: true,
+    data: {
+      ...baseData,
+      readiness: { canMutate: true, issues: [{ code: "cae-warning", message: "Review this warning" }] },
+      validationWarnings: [{ code: "cae-warning", message: "Review this warning" }]
+    }
+  });
+  assert.match(warning, /Warnings need review/);
+  assert.match(warning, /Review this warning/);
+  assert.match(warning, /data-gp-action="validate-registry"/);
+  assert.doesNotMatch(warning, /data-gp-action="activation-create-submit" disabled/);
+
+  const sqliteFailure = renderGuidanceAuthoringPanelInnerHtml({
+    ok: true,
+    data: {
+      ...baseData,
+      activeVersion: { isActive: false },
+      readiness: { canMutate: true },
+      recentMutations: { available: false, code: "cae-kit-sqlite-unavailable", rows: [] }
+    }
+  });
+  assert.match(sqliteFailure, /Native SQLite is unavailable/);
+  assert.match(sqliteFailure, /data-gp-action="refresh"/);
+  assert.match(sqliteFailure, /data-gp-action="artifact-create" disabled/);
+  assert.match(sqliteFailure, /data-gp-action="activation-create-submit" disabled/);
 });
 
 test("renderGuidanceTraceDetailInnerHtml renders summary before raw JSON", () => {

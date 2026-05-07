@@ -52,6 +52,12 @@ pnpm exec wk run cae-conflicts '{"schemaVersion":1,"evalMode":"shadow","evaluati
 
 Success returns `conflictShadowSummary`. Empty `entries[]` means no same-family tie was detected for that context.
 
+## 6. Guidance Authoring Smoke
+
+After the read-only CAE loop works, validate the governed authoring MVP with **`.ai/cae/guidance-authoring-operator.md`**. That runbook covers `cae-authoring-summary`, the Cursor **Open Guidance Authoring** panel, stale-state recovery, disabled mutation recovery, invalid refs, native SQLite failure, and the release evidence checklist.
+
+Do not run authoring mutations in production-like workspaces just to prove the smoke path. Use a disposable workspace or a reviewed branch, and require `actor` plus `caeMutationApproval` on every mutation.
+
 ## Read-Only vs Governed Mutation
 
 Read-only inspection commands do not require `policyApproval`: `cae-health`, `cae-registry-validate`, `cae-list-artifacts`, `cae-list-activations`, `cae-evaluate`, `cae-explain`, `cae-get-trace`, `cae-conflicts`, `cae-list-acks`, and `cae-shadow-feedback-report`.

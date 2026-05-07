@@ -173,6 +173,190 @@ function getAtPathForConfigValidation(root: Record<string, unknown>, dotted: str
   return cur;
 }
 
+const TASK_POLICY_ENFORCEMENT_MODES = new Set(["off", "advisory", "enforce"]);
+
+function assertPolicyName(key: string, value: string): void {
+  if (!/^[a-z][a-z0-9-]*$/.test(value)) {
+    throw new Error(`config-constraint(${key}): policy profile names must match ^[a-z][a-z0-9-]*$`);
+  }
+}
+
+function assertFieldPath(key: string, value: string): void {
+  if (!/^[a-zA-Z0-9_-]+(?:\.[a-zA-Z0-9_-]+)*$/.test(value)) {
+    throw new Error(`config-constraint(${key}): field paths must use dot-separated identifier segments`);
+  }
+}
+
+function assertStringArray(key: string, value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    throw new Error(`config-type-error(${key}): expected array, got ${value === null ? "null" : typeof value}`);
+  }
+  for (const item of value) {
+    if (typeof item !== "string" || item.trim().length === 0) {
+      throw new Error(`config-type-error(${key}): array entries must be non-empty strings`);
+    }
+  }
+  return value;
+}
+
+function validatePolicyEnforcementMode(key: string, value: unknown): void {
+  if (typeof value !== "string" || !TASK_POLICY_ENFORCEMENT_MODES.has(value)) {
+    throw new Error(`config-constraint(${key}): enforcementMode must be one of off, advisory, enforce`);
+  }
+}
+
+function validateMaintainerDeliveryConfig(value: unknown, label: string): void {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error(`config-invalid(${label}): maintainerDelivery must be an object`);
+  }
+  const md = value as Record<string, unknown>;
+  for (const key of Object.keys(md)) {
+    if (key !== "defaultProfile" && key !== "enforcementMode" && key !== "profiles" && key !== "moduleOverrides") {
+      throw new Error(`config-invalid(${label}): unknown maintainerDelivery.${key}`);
+    }
+  }
+  const profileNames = new Set<string>();
+  const profiles = md.profiles;
+  if (profiles !== undefined) {
+    if (typeof profiles !== "object" || profiles === null || Array.isArray(profiles)) {
+      throw new Error(`config-invalid(${label}): maintainerDelivery.profiles must be an object`);
+    }
+    for (const [profileName, profileValue] of Object.entries(profiles as Record<string, unknown>)) {
+      assertPolicyName("maintainerDelivery.profiles", profileName);
+      profileNames.add(profileName);
+      if (typeof profileValue !== "object" || profileValue === null || Array.isArray(profileValue)) {
+        throw new Error(`config-invalid(${label}): maintainerDelivery.profiles.${profileName} must be an object`);
+      }
+      const profile = profileValue as Record<string, unknown>;
+      for (const key of Object.keys(profile)) {
+        if (key !== "requiresPhaseBranch" && key !== "branchPattern" && key !== "review" && key !== "evidenceKind") {
+          throw new Error(`config-invalid(${label}): unknown maintainerDelivery.profiles.${profileName}.${key}`);
+        }
+      }
+      if (profile.requiresPhaseBranch !== undefined && typeof profile.requiresPhaseBranch !== "boolean") {
+        throw new Error(`config-type-error(maintainerDelivery.profiles.${profileName}.requiresPhaseBranch): expected boolean`);
+      }
+      if (profile.branchPattern !== undefined) {
+        if (typeof profile.branchPattern !== "string" || !profile.branchPattern.includes("{phaseKey}")) {
+          throw new Error(`config-constraint(maintainerDelivery.profiles.${profileName}.branchPattern): must be a string containing {phaseKey}`);
+        }
+      }
+      if (profile.review !== undefined && !["github-pr", "manual", "none"].includes(String(profile.review))) {
+        throw new Error(`config-constraint(maintainerDelivery.profiles.${profileName}.review): value not in allowed set`);
+      }
+      if (profile.evidenceKind !== undefined && !["github-pr", "manual", "waiver"].includes(String(profile.evidenceKind))) {
+        throw new Error(`config-constraint(maintainerDelivery.profiles.${profileName}.evidenceKind): value not in allowed set`);
+      }
+    }
+  }
+  if (md.defaultProfile !== undefined) {
+    if (typeof md.defaultProfile !== "string") {
+      throw new Error(`config-type-error(maintainerDelivery.defaultProfile): expected string`);
+    }
+    assertPolicyName("maintainerDelivery.defaultProfile", md.defaultProfile);
+    if (md.defaultProfile !== "github-pr" && !profileNames.has(md.defaultProfile)) {
+      throw new Error(`config-constraint(maintainerDelivery.defaultProfile): unknown profile '${md.defaultProfile}'`);
+    }
+  }
+  if (md.enforcementMode !== undefined) {
+    validatePolicyEnforcementMode("maintainerDelivery.enforcementMode", md.enforcementMode);
+  }
+  validatePolicyOverrides(md.moduleOverrides, profileNames, "maintainerDelivery", "github-pr", label);
+}
+
+function validateTaskIntakePolicyConfig(value: unknown, label: string): void {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error(`config-invalid(${label}): tasks.intakePolicy must be an object`);
+  }
+  const intake = value as Record<string, unknown>;
+  for (const key of Object.keys(intake)) {
+    if (key !== "defaultProfile" && key !== "enforcementMode" && key !== "profiles" && key !== "moduleOverrides") {
+      throw new Error(`config-invalid(${label}): unknown tasks.intakePolicy.${key}`);
+    }
+  }
+  const profileNames = new Set<string>();
+  const profiles = intake.profiles;
+  if (profiles !== undefined) {
+    if (typeof profiles !== "object" || profiles === null || Array.isArray(profiles)) {
+      throw new Error(`config-invalid(${label}): tasks.intakePolicy.profiles must be an object`);
+    }
+    for (const [profileName, profileValue] of Object.entries(profiles as Record<string, unknown>)) {
+      assertPolicyName("tasks.intakePolicy.profiles", profileName);
+      profileNames.add(profileName);
+      if (typeof profileValue !== "object" || profileValue === null || Array.isArray(profileValue)) {
+        throw new Error(`config-invalid(${label}): tasks.intakePolicy.profiles.${profileName} must be an object`);
+      }
+      const profile = profileValue as Record<string, unknown>;
+      for (const key of Object.keys(profile)) {
+        if (key !== "requiredFields" && key !== "recommendedFields" && key !== "enforcementMode") {
+          throw new Error(`config-invalid(${label}): unknown tasks.intakePolicy.profiles.${profileName}.${key}`);
+        }
+      }
+      for (const field of assertStringArray(`tasks.intakePolicy.profiles.${profileName}.requiredFields`, profile.requiredFields ?? [])) {
+        assertFieldPath(`tasks.intakePolicy.profiles.${profileName}.requiredFields`, field);
+      }
+      for (const field of assertStringArray(`tasks.intakePolicy.profiles.${profileName}.recommendedFields`, profile.recommendedFields ?? [])) {
+        assertFieldPath(`tasks.intakePolicy.profiles.${profileName}.recommendedFields`, field);
+      }
+      if (profile.enforcementMode !== undefined) {
+        validatePolicyEnforcementMode(`tasks.intakePolicy.profiles.${profileName}.enforcementMode`, profile.enforcementMode);
+      }
+    }
+  }
+  if (intake.defaultProfile !== undefined) {
+    if (typeof intake.defaultProfile !== "string") {
+      throw new Error(`config-type-error(tasks.intakePolicy.defaultProfile): expected string`);
+    }
+    assertPolicyName("tasks.intakePolicy.defaultProfile", intake.defaultProfile);
+    if (intake.defaultProfile !== "advisory" && !profileNames.has(intake.defaultProfile)) {
+      throw new Error(`config-constraint(tasks.intakePolicy.defaultProfile): unknown profile '${intake.defaultProfile}'`);
+    }
+  }
+  if (intake.enforcementMode !== undefined) {
+    validatePolicyEnforcementMode("tasks.intakePolicy.enforcementMode", intake.enforcementMode);
+  }
+  validatePolicyOverrides(intake.moduleOverrides, profileNames, "tasks.intakePolicy", "advisory", label);
+}
+
+function validatePolicyOverrides(
+  value: unknown,
+  profileNames: Set<string>,
+  keyPrefix: string,
+  builtInProfile: string,
+  label: string
+): void {
+  if (value === undefined) {
+    return;
+  }
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error(`config-invalid(${label}): ${keyPrefix}.moduleOverrides must be an object`);
+  }
+  for (const [moduleId, overrideValue] of Object.entries(value as Record<string, unknown>)) {
+    if (!/^[a-z][a-z0-9-]*$/.test(moduleId)) {
+      throw new Error(`config-constraint(${keyPrefix}.moduleOverrides): module ids must be alphanumeric/hyphen identifiers`);
+    }
+    if (typeof overrideValue !== "object" || overrideValue === null || Array.isArray(overrideValue)) {
+      throw new Error(`config-invalid(${label}): ${keyPrefix}.moduleOverrides.${moduleId} must be an object`);
+    }
+    const override = overrideValue as Record<string, unknown>;
+    for (const key of Object.keys(override)) {
+      if (key !== "profile" && key !== "enforcementMode") {
+        throw new Error(`config-invalid(${label}): unknown ${keyPrefix}.moduleOverrides.${moduleId}.${key}`);
+      }
+    }
+    if (typeof override.profile !== "string") {
+      throw new Error(`config-type-error(${keyPrefix}.moduleOverrides.${moduleId}.profile): expected string`);
+    }
+    assertPolicyName(`${keyPrefix}.moduleOverrides.${moduleId}.profile`, override.profile);
+    if (override.profile !== builtInProfile && !profileNames.has(override.profile)) {
+      throw new Error(`config-constraint(${keyPrefix}.moduleOverrides.${moduleId}.profile): unknown profile '${override.profile}'`);
+    }
+    if (override.enforcementMode !== undefined) {
+      validatePolicyEnforcementMode(`${keyPrefix}.moduleOverrides.${moduleId}.enforcementMode`, override.enforcementMode);
+    }
+  }
+}
+
 /**
  * Validate `.workspace-kit/modules/<moduleId>/config.json`: only keys owned by that module (registry owningModule).
  */
@@ -212,6 +396,21 @@ export function validateModuleScopedConfigDocument(
       validateValueForMetadata(meta, val);
     }
   }
+  if (moduleId === "task-engine") {
+    if (data.maintainerDelivery !== undefined) {
+      validateMaintainerDeliveryConfig(data.maintainerDelivery, label);
+    }
+    const tasks = data.tasks;
+    if (tasks !== undefined) {
+      if (typeof tasks !== "object" || tasks === null || Array.isArray(tasks)) {
+        throw new Error(`config-invalid(${label}): tasks must be an object`);
+      }
+      const intakePolicy = (tasks as Record<string, unknown>).intakePolicy;
+      if (intakePolicy !== undefined) {
+        validateTaskIntakePolicyConfig(intakePolicy, label);
+      }
+    }
+  }
 }
 
 /**
@@ -232,6 +431,7 @@ export function validatePersistedConfigDocument(
     "agentPresentation",
     "responseTemplates",
     "modules",
+    "maintainerDelivery",
     "kit",
     "planning",
     "agentBehavior"
@@ -256,6 +456,8 @@ export function validatePersistedConfigDocument(
         k !== "persistenceBackend" &&
         k !== "sqliteDatabaseRelativePath" &&
         k !== "strictValidation" &&
+        k !== "deliveryEvidence" &&
+        k !== "intakePolicy" &&
         k !== "planningGenerationPolicy"
       ) {
         throw new Error(`config-invalid(${label}): unknown tasks.${k}`);
@@ -281,6 +483,26 @@ export function validatePersistedConfigDocument(
     if (t.planningGenerationPolicy !== undefined) {
       validateValueForMetadata(REGISTRY["tasks.planningGenerationPolicy"]!, t.planningGenerationPolicy);
     }
+    if (t.deliveryEvidence !== undefined) {
+      if (typeof t.deliveryEvidence !== "object" || t.deliveryEvidence === null || Array.isArray(t.deliveryEvidence)) {
+        throw new Error(`config-invalid(${label}): tasks.deliveryEvidence must be an object`);
+      }
+      const de = t.deliveryEvidence as Record<string, unknown>;
+      for (const k of Object.keys(de)) {
+        if (k !== "enforcementMode") {
+          throw new Error(`config-invalid(${label}): unknown tasks.deliveryEvidence.${k}`);
+        }
+      }
+      if (de.enforcementMode !== undefined) {
+        validateValueForMetadata(REGISTRY["tasks.deliveryEvidence.enforcementMode"]!, de.enforcementMode);
+      }
+    }
+    if (t.intakePolicy !== undefined) {
+      validateTaskIntakePolicyConfig(t.intakePolicy, label);
+    }
+  }
+  if (data.maintainerDelivery !== undefined) {
+    validateMaintainerDeliveryConfig(data.maintainerDelivery, label);
   }
   const policy = data.policy;
   if (policy !== undefined) {

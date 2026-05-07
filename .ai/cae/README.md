@@ -11,7 +11,9 @@ CAE evaluates **bounded, typed** workspace + task + command context and returns 
 | Doc | Purpose |
 | --- | --- |
 | **`.ai/cae/operator-golden-path.md`** | First operator path: health → registry validation → evaluation → explain/trace → conflicts → recovery. |
+| **`.ai/cae/guidance-authoring-operator.md`** | Guidance authoring MVP smoke path, degraded-state recovery, and release evidence checklist. |
 | **`.ai/cae/dashboard-guidance-plan.md`** | User-facing Guidance tab product language, UI boundaries, and task seed after Phase 70. |
+| **`.ai/cae/workspace-artifacts.md`** | Workspace-authored artifact body paths, `workspace.*` id namespace, and slug validation convention for dashboard authoring. |
 | **`tasks/cae/CAE-PROGRAM-CONTEXT.md`** | Program objectives, boundaries, sequencing. |
 | **`.ai/cae/NEXT.md`** | Completed follow-on plan for operator vertical slice, hardening, and usability work. |
 | **`.ai/cae/phase-70-release-evidence.md`** | Phase 70 release-readiness evidence, migration/security review, and publish boundary. |
@@ -47,7 +49,7 @@ Effective **`kit.cae.enabled`** and shadow/enforcement flags are defined with th
 
 ## Debug CAE (flowchart)
 
-Start with **`.ai/cae/operator-golden-path.md`** for the product smoke path. Use **`.ai/runbooks/cae-debug.md`** when that flow returns a structured failure.
+Start with **`.ai/cae/operator-golden-path.md`** for the read-only product smoke path. Use **`.ai/cae/guidance-authoring-operator.md`** for the governed Guidance authoring MVP. Use **`.ai/runbooks/cae-debug.md`** when either flow returns a structured failure.
 
 ## Related stubs
 

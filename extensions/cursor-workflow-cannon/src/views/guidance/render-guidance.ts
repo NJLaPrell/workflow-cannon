@@ -48,6 +48,8 @@ function mutationFailureRemediation(code: unknown): string | null {
       return "Enable kit.cae.adminMutations for this workspace, then reload.";
     case "cae-mutation-approval-missing":
       return "Approve via caeMutationApproval in the CAE command — this is not Tier A/B policyApproval on workspace-kit run. If the UI sent a bad payload, file a bug.";
+    case "cae-stale-state":
+      return "This draft is stale. Refresh the Guidance dashboard or reopen the editor, then retry on the latest active version.";
     case "invalid-args":
       return "Often a missing actor or invalid field — set WORKSPACE_KIT_ACTOR / Git identity, fix inputs, retry.";
     case "cae-registry-version-not-found":

@@ -322,6 +322,32 @@ Manual-host note: this evidence is CLI/static smoke plus extension renderer
 coverage in the local workspace. No interactive VS Code Extension Host window
 was opened in this run; no MVP blocker was found in the executable smoke.
 
+## Phase 82 authoring release gate
+
+Use **`.ai/cae/guidance-authoring-operator.md`** as the operator release gate
+for the Guidance authoring MVP. The gate is documentation-first and should be
+recorded in task or release evidence before claiming authoring is releasable.
+
+Required evidence:
+
+- `cae-authoring-summary` returns `cae-authoring-summary-ok` with active
+  version, registry digest, validation state, readiness, and recent mutation
+  availability reviewed.
+- The Cursor **Open Guidance Authoring** panel renders Overview, Artifacts,
+  Activations, Preview, and Audit without raw stack traces.
+- Recovery guidance has been reviewed for stale state, disabled mutations,
+  invalid refs, read-only JSON store, missing active version, and native SQLite
+  failure.
+- Local gates are green: `pnpm run build`, `pnpm --filter cursor-workflow-cannon
+  test`, `pnpm run test`, and `pnpm run check`.
+- PR CI gates are green: `release-readiness`, `test`, and `parity`.
+- If mutation smoke runs, it uses a disposable/reviewed workspace and leaves
+  audit rows with actor and rationale.
+
+If an interactive extension-host smoke is skipped, evidence must say so and cite
+the automated renderer/message-handler coverage that substituted for manual
+inspection.
+
 ## Acceptance
 
 A maintainer who has never used CAE can open **Guidance** and, within one

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
+import { copyFile, mkdtemp, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -1000,6 +1000,66 @@ test("SqliteDualPlanningStore bumps planning_generation on TaskStore.save", asyn
   const dual2 = new SqliteDualPlanningStore(workspace, ".workspace-kit/tasks/plan-gen.db");
   dual2.loadFromDisk();
   assert.equal(dual2.getPlanningGeneration(), 1);
+});
+
+test("SqliteDualPlanningStore reopens after external planning DB replacement", async () => {
+  const workspace = await tmpDir();
+  await mkdir(path.join(workspace, ".workspace-kit", "tasks"), { recursive: true });
+  const dbPath = path.join(workspace, ".workspace-kit", "tasks", "workspace-kit.db");
+
+  const dual = new SqliteDualPlanningStore(workspace, ".workspace-kit/tasks/workspace-kit.db");
+  dual.loadFromDisk();
+  const store = TaskStore.forSqliteDual(dual);
+  await store.load();
+  store.addTask(makeTask({ id: "T9100", title: "before replacement", status: "ready" }));
+  await store.save();
+  dual.getDatabase().pragma("wal_checkpoint(TRUNCATE)");
+  dual.loadFromDisk();
+  const staleGeneration = dual.getPlanningGeneration();
+  assert.equal(staleGeneration, 1);
+
+  const replacementWorkspace = await tmpDir();
+  await mkdir(path.join(replacementWorkspace, ".workspace-kit", "tasks"), { recursive: true });
+  const replacementDbPath = path.join(replacementWorkspace, ".workspace-kit", "tasks", "workspace-kit.db");
+  const replacementDual = new SqliteDualPlanningStore(
+    replacementWorkspace,
+    ".workspace-kit/tasks/workspace-kit.db"
+  );
+  replacementDual.loadFromDisk();
+  const replacementStore = TaskStore.forSqliteDual(replacementDual);
+  await replacementStore.load();
+  replacementStore.addTask(makeTask({ id: "T9200", title: "after replacement", status: "ready" }));
+  await replacementStore.save();
+  replacementStore.addTask(makeTask({ id: "T9201", title: "replacement generation bump", status: "ready" }));
+  await replacementStore.save();
+  assert.equal(replacementDual.getPlanningGeneration(), 2);
+  replacementDual.getDatabase().pragma("wal_checkpoint(TRUNCATE)");
+  replacementDual.closeDatabase();
+
+  const replacementTmpPath = `${dbPath}.replacement`;
+  await copyFile(replacementDbPath, replacementTmpPath);
+  await rm(`${dbPath}-wal`, { force: true });
+  await rm(`${dbPath}-shm`, { force: true });
+  await rm(dbPath, { force: true });
+  await rename(replacementTmpPath, dbPath);
+
+  const freshAfterReplace = new SqliteDualPlanningStore(workspace, ".workspace-kit/tasks/workspace-kit.db");
+  freshAfterReplace.loadFromDisk();
+  assert.equal(freshAfterReplace.taskDocument.tasks.some((t) => t.id === "T9200"), true);
+  freshAfterReplace.closeDatabase();
+
+  store.addTask(makeTask({ id: "T9300", title: "stale write", status: "ready" }));
+  await assert.rejects(
+    () => store.save({ expectedPlanningGeneration: staleGeneration }),
+    (err) => err instanceof TaskEngineError && err.code === "planning-generation-mismatch"
+  );
+
+  await store.load();
+  assert.equal(dual.getPlanningGeneration(), 2);
+  assert.equal(store.getTask("T9100"), undefined);
+  assert.equal(store.getTask("T9300"), undefined);
+  assert.equal(store.getTask("T9200")?.title, "after replacement");
+  assert.equal(store.getTask("T9201")?.title, "replacement generation bump");
 });
 
 // ---------------------------------------------------------------------------

@@ -2,7 +2,7 @@
  * CAE registry admin CLI + governance gate (Phase 70 — T895–T897, T900–T902, T911, T913).
  */
 import assert from "node:assert/strict";
-import { cp, mkdir, mkdtemp } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -55,12 +55,28 @@ function appr() {
   return { caeMutationApproval: { confirmed: true, rationale: "unit test" } };
 }
 
+async function authoringSummary(ws, effectiveConfig = baseEffective()) {
+  const result = await contextActivationModule.onCommand(
+    { name: "cae-authoring-summary", args: { schemaVersion: 1 } },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig }
+  );
+  assert.equal(result.ok, true);
+  return result.data;
+}
+
 const MUTATOR_COMMANDS = [
   "cae-create-artifact",
+  "cae-create-workspace-artifact",
+  "cae-duplicate-default-artifact",
   "cae-update-artifact",
+  "cae-update-workspace-artifact",
   "cae-retire-artifact",
+  "cae-retire-workspace-artifact",
   "cae-create-activation",
+  "cae-create-draft-activation",
+  "cae-activate-draft-activation",
   "cae-update-activation",
+  "cae-update-draft-activation",
   "cae-disable-activation",
   "cae-retire-activation",
   "cae-create-registry-version",
@@ -409,6 +425,22 @@ test("flow: clone → activate → artifact + activation CRUD on working copy", 
   );
   assert.equal(ca.ok, true);
 
+  const evaluationContext = {
+    schemaVersion: 1,
+    task: { taskId: "T999", status: "in_progress", phaseKey: "82", title: "activation lifecycle", tags: ["cae"] },
+    command: { name: "get-task", moduleId: "task-engine", argvSummary: '{"taskId":"T999"}' },
+    workspace: { currentKitPhase: "82", nextKitPhase: "83", workspaceRootFingerprint: "sha256:test" },
+    governance: { policyApprovalRequired: false, approvalTierHint: "C", policySurface: "run-json" },
+    queue: { readyQueueDepth: 1, suggestedNextTaskId: "T100072" },
+    mapSignals: null
+  };
+  const beforeDisable = await contextActivationModule.onCommand(
+    { name: "cae-evaluate", args: { schemaVersion: 1, evaluationContext, evalMode: "live" } },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(beforeDisable.ok, true);
+  assert.equal(beforeDisable.data.bundle.families.do.some((entry) => entry.activationId === actId), true);
+
   const dis = await contextActivationModule.onCommand(
     {
       name: "cae-disable-activation",
@@ -417,6 +449,15 @@ test("flow: clone → activate → artifact + activation CRUD on working copy", 
     { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
   );
   assert.equal(dis.ok, true);
+  assert.equal(dis.data.lifecycleState, "disabled");
+  assert.deepEqual(dis.data.artifactRefs, [{ artifactId: aid }]);
+
+  const afterDisable = await contextActivationModule.onCommand(
+    { name: "cae-evaluate", args: { schemaVersion: 1, evaluationContext, evalMode: "live" } },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(afterDisable.ok, true);
+  assert.equal(afterDisable.data.bundle.families.do.some((entry) => entry.activationId === actId), false);
 
   const rAct = await contextActivationModule.onCommand(
     {
@@ -426,6 +467,24 @@ test("flow: clone → activate → artifact + activation CRUD on working copy", 
     { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
   );
   assert.equal(rAct.ok, true);
+  assert.equal(rAct.data.lifecycleState, "retired");
+  assert.deepEqual(rAct.data.artifactRefs, [{ artifactId: aid }]);
+
+  const lifecycleDb = new Database(path.join(ws, ".workspace-kit", "tasks", "workspace-kit.db"));
+  const lifecycleRow = lifecycleDb
+    .prepare(`SELECT lifecycle_state, retired_at FROM cae_registry_activations WHERE version_id = ? AND activation_id = ?`)
+    .get(cloneId, actId);
+  const disableAudit = lifecycleDb
+    .prepare(`SELECT COUNT(*) AS count FROM cae_registry_mutations WHERE command_name = ? AND payload_json LIKE ?`)
+    .get("cae-disable-activation", `%${actId}%`);
+  const retireAudit = lifecycleDb
+    .prepare(`SELECT COUNT(*) AS count FROM cae_registry_mutations WHERE command_name = ? AND payload_json LIKE ?`)
+    .get("cae-retire-activation", `%${actId}%`);
+  lifecycleDb.close();
+  assert.equal(lifecycleRow.lifecycle_state, "disabled");
+  assert.ok(lifecycleRow.retired_at);
+  assert.equal(disableAudit.count, 1);
+  assert.equal(retireAudit.count, 1);
 
   const rArt = await contextActivationModule.onCommand(
     {
@@ -435,6 +494,846 @@ test("flow: clone → activate → artifact + activation CRUD on working copy", 
     { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
   );
   assert.equal(rArt.ok, true);
+});
+
+test("stale-state guard rejects artifact mutation when expected registry digest is outdated", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const initial = await authoringSummary(ws);
+
+  const drift = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-registry-version",
+      args: {
+        schemaVersion: 1,
+        actor: "drift",
+        versionId: "cae.reg.stale.next",
+        setActive: true,
+        note: "simulate concurrent dashboard change",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(drift.ok, true);
+
+  const stale = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-artifact",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        expectedActiveVersionId: initial.activeVersion.versionId,
+        expectedRegistryDigest: initial.activeVersion.registryDigest,
+        ...appr(),
+        artifact: {
+          schemaVersion: 1,
+          artifactId: "cae.test.stale.artifact",
+          artifactType: "policy-doc",
+          ref: { path: ".ai/AGENT-CLI-MAP.md" },
+          title: "stale"
+        }
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(stale.ok, false);
+  assert.equal(stale.code, "cae-stale-state");
+  assert.equal(stale.data.staleState.expectedActiveVersionId, initial.activeVersion.versionId);
+  assert.equal(stale.data.staleState.expectedRegistryDigest, initial.activeVersion.registryDigest);
+  assert.equal(stale.data.staleState.actualActiveVersionId, "cae.reg.stale.next");
+  assert.match(stale.data.staleState.repair.message, /Refresh/i);
+});
+
+test("stale-state guard rejects activation mutation when expected active version is outdated", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const initial = await authoringSummary(ws);
+
+  const drift = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-registry-version",
+      args: {
+        schemaVersion: 1,
+        actor: "drift",
+        versionId: "cae.reg.stale.activation",
+        setActive: true,
+        note: "simulate concurrent draft switch",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(drift.ok, true);
+
+  const stale = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-activation",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        expectedActiveVersionId: initial.activeVersion.versionId,
+        ...appr(),
+        activation: {
+          schemaVersion: 1,
+          activationId: "cae.test.stale.activation",
+          family: "do",
+          lifecycleState: "active",
+          priority: 10,
+          scope: { conditions: [{ kind: "always" }] },
+          artifactRefs: [{ artifactId: "cae.playbook.machine-playbooks" }]
+        }
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(stale.ok, false);
+  assert.equal(stale.code, "cae-stale-state");
+  assert.equal(stale.data.staleState.expectedActiveVersionId, initial.activeVersion.versionId);
+  assert.equal(stale.data.staleState.actualActiveVersionId, "cae.reg.stale.activation");
+  assert.equal(stale.data.staleState.expectedRegistryDigest, null);
+});
+
+test("cae-create-workspace-artifact writes one markdown file, one registry row, and one audit row", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const result = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-workspace-artifact",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        artifactId: "workspace.sample.playbook",
+        artifactType: "playbook",
+        title: "Workspace Sample Playbook",
+        slug: "sample-playbook",
+        tags: ["ops", "launch"],
+        contentMarkdown: "# Workspace Sample Playbook\n\nHello from a workspace artifact.\n",
+        fragment: "section-1",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "cae-create-workspace-artifact-ok");
+  assert.equal(result.data.path, ".ai/cae/artifacts/playbooks/sample-playbook.md");
+
+  const markdownPath = path.join(ws, result.data.path);
+  const markdown = await readFile(markdownPath, "utf8");
+  assert.match(markdown, /Hello from a workspace artifact/);
+
+  const db = new Database(path.join(ws, ".workspace-kit", "tasks", "workspace-kit.db"));
+  const artifactRowCount = db
+    .prepare(`SELECT COUNT(*) AS count FROM cae_registry_artifacts WHERE version_id = ? AND artifact_id = ?`)
+    .get("cae.reg.seed", "workspace.sample.playbook");
+  const artifactRow = db
+    .prepare(
+      `SELECT path, metadata_json FROM cae_registry_artifacts WHERE version_id = ? AND artifact_id = ?`
+    )
+    .get("cae.reg.seed", "workspace.sample.playbook");
+  const auditRowCount = db
+    .prepare(`SELECT COUNT(*) AS count FROM cae_registry_mutations WHERE command_name = ? AND payload_json LIKE ?`)
+    .get("cae-create-workspace-artifact", '%workspace.sample.playbook%');
+  db.close();
+
+  assert.equal(artifactRowCount.count, 1);
+  assert.equal(artifactRow.path, ".ai/cae/artifacts/playbooks/sample-playbook.md");
+  assert.match(artifactRow.metadata_json, /ops/);
+  assert.match(artifactRow.metadata_json, /launch/);
+  assert.equal(auditRowCount.count, 1);
+});
+
+test("cae-create-workspace-artifact cleans up file when registry insert fails", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const first = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-workspace-artifact",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        artifactId: "workspace.duplicate.id",
+        artifactType: "playbook",
+        title: "First Copy",
+        slug: "original-duplicate-id",
+        contentMarkdown: "# First\n",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(first.ok, true);
+
+  const result = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-workspace-artifact",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        artifactId: "workspace.duplicate.id",
+        artifactType: "playbook",
+        title: "Duplicate Id",
+        slug: "duplicate-id-should-clean-up",
+        contentMarkdown: "# Duplicate\n",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "cae-artifact-exists");
+
+  const markdownPath = path.join(ws, ".ai/cae/artifacts/playbooks/duplicate-id-should-clean-up.md");
+  await assert.rejects(readFile(markdownPath, "utf8"));
+
+  const db = new Database(path.join(ws, ".workspace-kit", "tasks", "workspace-kit.db"));
+  const artifactRowCount = db
+    .prepare(`SELECT COUNT(*) AS count FROM cae_registry_artifacts WHERE version_id = ? AND artifact_id = ?`)
+    .get("cae.reg.seed", "workspace.duplicate.id");
+  db.close();
+  assert.equal(artifactRowCount.count, 1);
+});
+
+test("cae-retire-workspace-artifact retires the row and keeps the markdown file", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const created = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-workspace-artifact",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        artifactId: "workspace.retire.me",
+        artifactType: "playbook",
+        title: "Retire Me",
+        slug: "retire-me",
+        contentMarkdown: "# Retire Me\n",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(created.ok, true);
+
+  const retired = await contextActivationModule.onCommand(
+    {
+      name: "cae-retire-workspace-artifact",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        artifactId: "workspace.retire.me",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(retired.ok, true);
+  assert.equal(retired.code, "cae-retire-workspace-artifact-ok");
+
+  const markdownPath = path.join(ws, ".ai/cae/artifacts/playbooks/retire-me.md");
+  const markdown = await readFile(markdownPath, "utf8");
+  assert.match(markdown, /Retire Me/);
+
+  const db = new Database(path.join(ws, ".workspace-kit", "tasks", "workspace-kit.db"));
+  const retiredRow = db
+    .prepare(`SELECT retired_at FROM cae_registry_artifacts WHERE version_id = ? AND artifact_id = ?`)
+    .get("cae.reg.seed", "workspace.retire.me");
+  const auditRowCount = db
+    .prepare(`SELECT COUNT(*) AS count FROM cae_registry_mutations WHERE command_name = ? AND payload_json LIKE ?`)
+    .get("cae-retire-workspace-artifact", '%workspace.retire.me%');
+  db.close();
+
+  assert.ok(retiredRow.retired_at);
+  assert.equal(auditRowCount.count, 1);
+});
+
+test("cae-retire-workspace-artifact rejects default artifact ids", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const retired = await contextActivationModule.onCommand(
+    {
+      name: "cae-retire-workspace-artifact",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        artifactId: "cae.playbook.machine-playbooks",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(retired.ok, false);
+  assert.equal(retired.code, "cae-workspace-artifact-id-invalid");
+});
+
+test("cae-retire-workspace-artifact blocks retirement when an activation still references it", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const created = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-workspace-artifact",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        artifactId: "workspace.in.use",
+        artifactType: "playbook",
+        title: "In Use",
+        slug: "in-use",
+        contentMarkdown: "# In Use\n",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(created.ok, true);
+
+  const activation = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-activation",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        activation: {
+          schemaVersion: 1,
+          activationId: "cae.activation.workspace-artifact-in-use",
+          family: "do",
+          lifecycleState: "active",
+          priority: 20,
+          scope: { conditions: [{ kind: "always" }] },
+          artifactRefs: [{ artifactId: "workspace.in.use" }]
+        },
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(activation.ok, true);
+
+  const retired = await contextActivationModule.onCommand(
+    {
+      name: "cae-retire-workspace-artifact",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        artifactId: "workspace.in.use",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(retired.ok, false);
+  assert.equal(retired.code, "cae-artifact-in-use");
+});
+
+test("cae-update-workspace-artifact updates markdown, metadata, and reports impacted activations", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const created = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-workspace-artifact",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        artifactId: "workspace.update.me",
+        artifactType: "playbook",
+        title: "Update Me",
+        slug: "update-me",
+        tags: ["ops"],
+        contentMarkdown: "# Update Me\n\nOriginal body.\n",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(created.ok, true);
+
+  const activation = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-activation",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        activation: {
+          schemaVersion: 1,
+          activationId: "cae.activation.workspace-update-impact",
+          family: "do",
+          lifecycleState: "active",
+          priority: 10,
+          scope: { conditions: [{ kind: "always" }] },
+          artifactRefs: [{ artifactId: "workspace.update.me" }]
+        },
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(activation.ok, true);
+
+  const updated = await contextActivationModule.onCommand(
+    {
+      name: "cae-update-workspace-artifact",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        artifactId: "workspace.update.me",
+        artifact: {
+          title: "Updated Workspace Playbook",
+          artifactType: "playbook",
+          tags: ["ops", "release"]
+        },
+        slug: "updated-workspace-playbook",
+        contentMarkdown: "# Updated Workspace Playbook\n\nRefreshed body.\n",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(updated.ok, true);
+  assert.equal(updated.code, "cae-update-workspace-artifact-ok");
+  assert.equal(updated.data.path, ".ai/cae/artifacts/playbooks/updated-workspace-playbook.md");
+  assert.deepEqual(updated.data.impactedActivationIds, ["cae.activation.workspace-update-impact"]);
+  assert.match(JSON.stringify(updated.data.warnings), /cae-workspace-artifact-activation-impact/);
+
+  const oldMarkdownPath = path.join(ws, ".ai/cae/artifacts/playbooks/update-me.md");
+  await assert.rejects(readFile(oldMarkdownPath, "utf8"));
+
+  const newMarkdownPath = path.join(ws, updated.data.path);
+  const markdown = await readFile(newMarkdownPath, "utf8");
+  assert.match(markdown, /Refreshed body/);
+
+  const db = new Database(path.join(ws, ".workspace-kit", "tasks", "workspace-kit.db"));
+  const row = db
+    .prepare(
+      `SELECT path, title, description, metadata_json FROM cae_registry_artifacts WHERE version_id = ? AND artifact_id = ?`
+    )
+    .get("cae.reg.seed", "workspace.update.me");
+  const auditRowCount = db
+    .prepare(`SELECT COUNT(*) AS count FROM cae_registry_mutations WHERE command_name = ? AND payload_json LIKE ?`)
+    .get("cae-update-workspace-artifact", '%workspace.update.me%');
+  db.close();
+
+  assert.equal(row.path, ".ai/cae/artifacts/playbooks/updated-workspace-playbook.md");
+  assert.equal(row.title, "Updated Workspace Playbook");
+  assert.equal(row.description, null);
+  assert.match(row.metadata_json, /release/);
+  assert.match(row.metadata_json, /updated-workspace-playbook/);
+  assert.equal(auditRowCount.count, 1);
+});
+
+test("cae-update-workspace-artifact rejects default artifact ids", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const updated = await contextActivationModule.onCommand(
+    {
+      name: "cae-update-workspace-artifact",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        artifactId: "cae.playbook.machine-playbooks",
+        artifact: { title: "Nope" },
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(updated.ok, false);
+  assert.equal(updated.code, "cae-workspace-artifact-id-invalid");
+});
+
+test("cae-duplicate-default-artifact copies default content into a new workspace artifact row", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const sourcePath = path.join(ws, ".ai/MACHINE-PLAYBOOKS.md");
+  const sourceMarkdown = await readFile(sourcePath, "utf8");
+
+  const duplicated = await contextActivationModule.onCommand(
+    {
+      name: "cae-duplicate-default-artifact",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        sourceArtifactId: "cae.playbook.machine-playbooks",
+        artifactId: "workspace.machine-playbooks.copy",
+        slug: "machine-playbooks-copy",
+        title: "Machine Playbooks Copy",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(duplicated.ok, true);
+  assert.equal(duplicated.code, "cae-duplicate-default-artifact-ok");
+  assert.equal(duplicated.data.path, ".ai/cae/artifacts/playbooks/machine-playbooks-copy.md");
+  assert.equal(duplicated.data.sourceArtifactId, "cae.playbook.machine-playbooks");
+
+  const duplicatedMarkdown = await readFile(path.join(ws, duplicated.data.path), "utf8");
+  assert.equal(duplicatedMarkdown, sourceMarkdown);
+  const originalMarkdown = await readFile(sourcePath, "utf8");
+  assert.equal(originalMarkdown, sourceMarkdown);
+
+  const db = new Database(path.join(ws, ".workspace-kit", "tasks", "workspace-kit.db"));
+  const row = db
+    .prepare(
+      `SELECT path, title, description, metadata_json FROM cae_registry_artifacts WHERE version_id = ? AND artifact_id = ?`
+    )
+    .get("cae.reg.seed", "workspace.machine-playbooks.copy");
+  const auditRowCount = db
+    .prepare(`SELECT COUNT(*) AS count FROM cae_registry_mutations WHERE command_name = ? AND payload_json LIKE ?`)
+    .get("cae-duplicate-default-artifact", '%workspace.machine-playbooks.copy%');
+  db.close();
+
+  assert.equal(row.path, ".ai/cae/artifacts/playbooks/machine-playbooks-copy.md");
+  assert.equal(row.title, "Machine Playbooks Copy");
+  assert.match(row.metadata_json, /cae.playbook.machine-playbooks/);
+  assert.match(row.metadata_json, /sourceContentHash/);
+  assert.equal(auditRowCount.count, 1);
+});
+
+test("cae-duplicate-default-artifact rejects non-default source artifact ids", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const duplicated = await contextActivationModule.onCommand(
+    {
+      name: "cae-duplicate-default-artifact",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        sourceArtifactId: "workspace.not-a-default",
+        artifactId: "workspace.copy.target",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(duplicated.ok, false);
+  assert.equal(duplicated.code, "cae-default-artifact-id-invalid");
+});
+
+test("cae-create-draft-activation stores draft lifecycle and returns broad-scope warnings", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const result = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-draft-activation",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        activation: {
+          schemaVersion: 1,
+          activationId: "cae.activation.draft.policy.always",
+          family: "policy",
+          lifecycleState: "draft",
+          priority: 25,
+          scope: { conditions: [{ kind: "always" }] },
+          artifactRefs: [{ artifactId: "cae.playbook.machine-playbooks" }]
+        },
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "cae-create-draft-activation-ok");
+  assert.match(JSON.stringify(result.data.warnings), /cae-draft-policy-family/);
+  assert.match(JSON.stringify(result.data.warnings), /cae-draft-broad-scope-always/);
+
+  const db = new Database(path.join(ws, ".workspace-kit", "tasks", "workspace-kit.db"));
+  const row = db
+    .prepare(`SELECT lifecycle_state FROM cae_registry_activations WHERE version_id = ? AND activation_id = ?`)
+    .get("cae.reg.seed", "cae.activation.draft.policy.always");
+  db.close();
+  assert.equal(row.lifecycle_state, "draft");
+});
+
+test("cae-update-draft-activation keeps draft lifecycle and returns command-prefix warnings", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const created = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-draft-activation",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        activation: {
+          schemaVersion: 1,
+          activationId: "cae.activation.draft.command-prefix",
+          family: "do",
+          lifecycleState: "draft",
+          priority: 30,
+          scope: { conditions: [{ kind: "commandName", match: "exact", value: "run-transition" }] },
+          artifactRefs: [{ artifactId: "cae.playbook.machine-playbooks" }]
+        },
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(created.ok, true);
+
+  const updated = await contextActivationModule.onCommand(
+    {
+      name: "cae-update-draft-activation",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        activationId: "cae.activation.draft.command-prefix",
+        activation: {
+          lifecycleState: "draft",
+          scope: { conditions: [{ kind: "commandName", match: "prefix", value: "run-" }] },
+          priority: 35
+        },
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(updated.ok, true);
+  assert.equal(updated.code, "cae-update-draft-activation-ok");
+  assert.match(JSON.stringify(updated.data.warnings), /cae-draft-broad-scope-command-prefix/);
+
+  const db = new Database(path.join(ws, ".workspace-kit", "tasks", "workspace-kit.db"));
+  const row = db
+    .prepare(`SELECT lifecycle_state, priority FROM cae_registry_activations WHERE version_id = ? AND activation_id = ?`)
+    .get("cae.reg.seed", "cae.activation.draft.command-prefix");
+  db.close();
+  assert.equal(row.lifecycle_state, "draft");
+  assert.equal(row.priority, 35);
+});
+
+test("cae-update-draft-activation rejects non-draft activations", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const created = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-activation",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        activation: {
+          schemaVersion: 1,
+          activationId: "cae.activation.active.only",
+          family: "do",
+          lifecycleState: "active",
+          priority: 40,
+          scope: { conditions: [{ kind: "always" }] },
+          artifactRefs: [{ artifactId: "cae.playbook.machine-playbooks" }]
+        },
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(created.ok, true);
+
+  const updated = await contextActivationModule.onCommand(
+    {
+      name: "cae-update-draft-activation",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        activationId: "cae.activation.active.only",
+        activation: { priority: 41 },
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(updated.ok, false);
+  assert.equal(updated.code, "cae-activation-not-draft");
+});
+
+test("cae-update-draft-activation rejects unknown artifact refs without partial write or audit", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const created = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-draft-activation",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        activation: {
+          schemaVersion: 1,
+          activationId: "cae.activation.draft.ref.integrity",
+          family: "do",
+          lifecycleState: "draft",
+          priority: 42,
+          scope: { conditions: [{ kind: "commandName", match: "exact", value: "get-task" }] },
+          artifactRefs: [{ artifactId: "cae.playbook.machine-playbooks" }]
+        },
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(created.ok, true);
+
+  const rejected = await contextActivationModule.onCommand(
+    {
+      name: "cae-update-draft-activation",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        activationId: "cae.activation.draft.ref.integrity",
+        activation: { artifactRefs: [{ artifactId: "workspace.missing.ref" }] },
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(rejected.ok, false);
+  assert.equal(rejected.code, "cae-registry-schema-invalid");
+  assert.match(rejected.message, /workspace\.missing\.ref/);
+
+  const db = new Database(path.join(ws, ".workspace-kit", "tasks", "workspace-kit.db"));
+  const row = db
+    .prepare(`SELECT artifact_refs_json FROM cae_registry_activations WHERE version_id = ? AND activation_id = ?`)
+    .get("cae.reg.seed", "cae.activation.draft.ref.integrity");
+  const updateAudit = db
+    .prepare(`SELECT COUNT(*) AS count FROM cae_registry_mutations WHERE command_name = ? AND payload_json LIKE ?`)
+    .get("cae-update-draft-activation", '%cae.activation.draft.ref.integrity%');
+  db.close();
+  assert.deepEqual(JSON.parse(row.artifact_refs_json), [{ artifactId: "cae.playbook.machine-playbooks" }]);
+  assert.equal(updateAudit.count, 0);
+});
+
+test("cae-activate-draft-activation promotes narrow drafts without preview evidence", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const created = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-draft-activation",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        activation: {
+          schemaVersion: 1,
+          activationId: "cae.activation.draft.publish.narrow",
+          family: "do",
+          lifecycleState: "draft",
+          priority: 45,
+          scope: { conditions: [{ kind: "commandName", match: "exact", value: "get-task" }] },
+          artifactRefs: [{ artifactId: "cae.playbook.machine-playbooks" }]
+        },
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(created.ok, true);
+
+  const activated = await contextActivationModule.onCommand(
+    {
+      name: "cae-activate-draft-activation",
+      args: { schemaVersion: 1, actor: "flow", activationId: "cae.activation.draft.publish.narrow", ...appr() }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(activated.ok, true);
+  assert.equal(activated.code, "cae-activate-draft-activation-ok");
+  assert.equal(activated.data.lifecycleState, "active");
+  assert.equal(activated.data.previewEvidenceRequired, false);
+  assert.deepEqual(activated.data.artifactRefs, [{ artifactId: "cae.playbook.machine-playbooks" }]);
+
+  const db = new Database(path.join(ws, ".workspace-kit", "tasks", "workspace-kit.db"));
+  const row = db
+    .prepare(`SELECT lifecycle_state, metadata_json FROM cae_registry_activations WHERE version_id = ? AND activation_id = ?`)
+    .get("cae.reg.seed", "cae.activation.draft.publish.narrow");
+  const auditRowCount = db
+    .prepare(`SELECT COUNT(*) AS count FROM cae_registry_mutations WHERE command_name = ? AND payload_json LIKE ?`)
+    .get("cae-activate-draft-activation", '%cae.activation.draft.publish.narrow%');
+  db.close();
+  assert.equal(row.lifecycle_state, "active");
+  assert.match(row.metadata_json, /"publish"/);
+  assert.equal(auditRowCount.count, 1);
+});
+
+test("cae-activate-draft-activation requires preview evidence for broad policy drafts", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const created = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-draft-activation",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        activation: {
+          schemaVersion: 1,
+          activationId: "cae.activation.draft.publish.policy",
+          family: "policy",
+          lifecycleState: "draft",
+          priority: 20,
+          scope: { conditions: [{ kind: "always" }] },
+          artifactRefs: [{ artifactId: "cae.playbook.machine-playbooks" }]
+        },
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(created.ok, true);
+
+  const activated = await contextActivationModule.onCommand(
+    {
+      name: "cae-activate-draft-activation",
+      args: { schemaVersion: 1, actor: "flow", activationId: "cae.activation.draft.publish.policy", ...appr() }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(activated.ok, false);
+  assert.equal(activated.code, "cae-preview-evidence-required");
+  assert.match(JSON.stringify(activated.data.warnings), /cae-draft-policy-family/);
+});
+
+test("cae-activate-draft-activation accepts fresh guidance preview evidence for broad drafts", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const created = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-draft-activation",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        activation: {
+          schemaVersion: 1,
+          activationId: "cae.activation.draft.publish.previewed",
+          family: "policy",
+          lifecycleState: "draft",
+          priority: 21,
+          scope: { conditions: [{ kind: "always" }] },
+          artifactRefs: [{ artifactId: "cae.playbook.machine-playbooks" }]
+        },
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(created.ok, true);
+
+  const preview = await contextActivationModule.onCommand(
+    {
+      name: "cae-guidance-preview",
+      args: {
+        schemaVersion: 1,
+        taskId: "T100073",
+        commandName: "get-next-actions",
+        evalMode: "shadow",
+        draftRule: {
+          schemaVersion: 1,
+          title: "Previewed Publish",
+          family: "policy",
+          priority: 21,
+          scopeDraft: { preset: "always" },
+          artifactType: "playbook",
+          refPath: ".ai/MACHINE-PLAYBOOKS.md"
+        }
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(preview.ok, true);
+  assert.equal(preview.code, "cae-guidance-preview-ok");
+  assert.equal(typeof preview.data.registryContentHash, "string");
+
+  const activated = await contextActivationModule.onCommand(
+    {
+      name: "cae-activate-draft-activation",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        activationId: "cae.activation.draft.publish.previewed",
+        previewEvidence: preview.data,
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(activated.ok, true);
+  assert.equal(activated.data.lifecycleState, "active");
+  assert.equal(activated.data.previewEvidenceRequired, true);
+  assert.equal(activated.data.publish.previewEvidence.registryDigest, preview.data.registryContentHash);
 });
 
 test("import-json-registry writes cae_registry_mutations audit", async () => {
