@@ -87,6 +87,75 @@
       "user"
     ]
   },
+  "tasks.intakePolicy.defaultProfile": {
+    "key": "tasks.intakePolicy.defaultProfile",
+    "type": "string",
+    "description": "Default task intake policy profile. Built-in advisory preserves current intake behavior while allowing future stricter profiles.",
+    "default": "advisory",
+    "domainScope": "project",
+    "owningModule": "task-engine",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "public",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "tasks.intakePolicy.enforcementMode": {
+    "key": "tasks.intakePolicy.enforcementMode",
+    "type": "string",
+    "description": "How strictly task intake profile requirements are applied: off, advisory, or enforce.",
+    "default": "advisory",
+    "allowedValues": [
+      "off",
+      "advisory",
+      "enforce"
+    ],
+    "domainScope": "project",
+    "owningModule": "task-engine",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "public",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "tasks.intakePolicy.profiles": {
+    "key": "tasks.intakePolicy.profiles",
+    "type": "object",
+    "description": "Named task intake profiles with requiredFields, recommendedFields, and optional per-profile enforcementMode.",
+    "default": {},
+    "domainScope": "project",
+    "owningModule": "task-engine",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "public",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "tasks.intakePolicy.moduleOverrides": {
+    "key": "tasks.intakePolicy.moduleOverrides",
+    "type": "object",
+    "description": "Module-specific task intake policy overrides keyed by module id; each override references a named intake profile and optional enforcementMode.",
+    "default": {},
+    "domainScope": "project",
+    "owningModule": "task-engine",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "public",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
   "tasks.planningGenerationPolicy": {
     "key": "tasks.planningGenerationPolicy",
     "type": "string",
@@ -97,6 +166,75 @@
       "warn",
       "require"
     ],
+    "domainScope": "project",
+    "owningModule": "task-engine",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "public",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "maintainerDelivery.defaultProfile": {
+    "key": "maintainerDelivery.defaultProfile",
+    "type": "string",
+    "description": "Default maintainer delivery profile. Built-in github-pr preserves the phase branch plus GitHub PR review and evidence flow.",
+    "default": "github-pr",
+    "domainScope": "project",
+    "owningModule": "task-engine",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "public",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "maintainerDelivery.enforcementMode": {
+    "key": "maintainerDelivery.enforcementMode",
+    "type": "string",
+    "description": "How strictly maintainer delivery profile requirements are applied: off, advisory, or enforce.",
+    "default": "advisory",
+    "allowedValues": [
+      "off",
+      "advisory",
+      "enforce"
+    ],
+    "domainScope": "project",
+    "owningModule": "task-engine",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "public",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "maintainerDelivery.profiles": {
+    "key": "maintainerDelivery.profiles",
+    "type": "object",
+    "description": "Named maintainer delivery profiles defining branch, review, phase-branch, and evidence expectations.",
+    "default": {},
+    "domainScope": "project",
+    "owningModule": "task-engine",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "public",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "maintainerDelivery.moduleOverrides": {
+    "key": "maintainerDelivery.moduleOverrides",
+    "type": "object",
+    "description": "Module-specific maintainer delivery overrides keyed by module id; each override references a named delivery profile and optional enforcementMode.",
+    "default": {},
     "domainScope": "project",
     "owningModule": "task-engine",
     "sensitive": false,

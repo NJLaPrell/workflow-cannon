@@ -100,9 +100,34 @@ export const KIT_CONFIG_DEFAULTS: Record<string, unknown> = {
     persistenceBackend: "sqlite",
     sqliteDatabaseRelativePath: ".workspace-kit/tasks/workspace-kit.db",
     strictValidation: false,
+    intakePolicy: {
+      defaultProfile: "advisory",
+      enforcementMode: "advisory",
+      profiles: {
+        advisory: {
+          requiredFields: [] as string[],
+          recommendedFields: ["title", "summary", "technicalScope", "acceptanceCriteria"],
+          enforcementMode: "advisory"
+        }
+      },
+      moduleOverrides: {} as Record<string, unknown>
+    },
     deliveryEvidence: {
       enforcementMode: "advisory"
     }
+  },
+  maintainerDelivery: {
+    defaultProfile: "github-pr",
+    enforcementMode: "advisory",
+    profiles: {
+      "github-pr": {
+        requiresPhaseBranch: true,
+        branchPattern: "release/phase-{phaseKey}",
+        review: "github-pr",
+        evidenceKind: "github-pr"
+      }
+    },
+    moduleOverrides: {} as Record<string, unknown>
   },
   documentation: {},
   /** Agent temperament / interview preferences; mirrored to `.workspace-kit/modules/agent-behavior/config.json` when using SQLite. */
