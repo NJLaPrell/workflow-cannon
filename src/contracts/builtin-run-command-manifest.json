@@ -1211,6 +1211,13 @@
   },
   {
     "moduleId": "context-activation",
+    "name": "cae-update-workspace-artifact",
+    "file": "cae-update-workspace-artifact.md",
+    "description": "Update a workspace-owned artifact row and markdown file while surfacing impacted activation refs.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
     "name": "cae-retire-artifact",
     "file": "cae-retire-artifact.md",
     "description": "Set retired_at on a CAE artifact row when no activation references it.",
