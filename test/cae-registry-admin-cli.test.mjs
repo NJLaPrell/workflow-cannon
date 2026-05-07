@@ -470,6 +470,22 @@ test("flow: clone → activate → artifact + activation CRUD on working copy", 
   assert.equal(rAct.data.lifecycleState, "retired");
   assert.deepEqual(rAct.data.artifactRefs, [{ artifactId: aid }]);
 
+  const lifecycleDb = new Database(path.join(ws, ".workspace-kit", "tasks", "workspace-kit.db"));
+  const lifecycleRow = lifecycleDb
+    .prepare(`SELECT lifecycle_state, retired_at FROM cae_registry_activations WHERE version_id = ? AND activation_id = ?`)
+    .get(cloneId, actId);
+  const disableAudit = lifecycleDb
+    .prepare(`SELECT COUNT(*) AS count FROM cae_registry_mutations WHERE command_name = ? AND payload_json LIKE ?`)
+    .get("cae-disable-activation", `%${actId}%`);
+  const retireAudit = lifecycleDb
+    .prepare(`SELECT COUNT(*) AS count FROM cae_registry_mutations WHERE command_name = ? AND payload_json LIKE ?`)
+    .get("cae-retire-activation", `%${actId}%`);
+  lifecycleDb.close();
+  assert.equal(lifecycleRow.lifecycle_state, "disabled");
+  assert.ok(lifecycleRow.retired_at);
+  assert.equal(disableAudit.count, 1);
+  assert.equal(retireAudit.count, 1);
+
   const rArt = await contextActivationModule.onCommand(
     {
       name: "cae-retire-artifact",
@@ -1111,6 +1127,59 @@ test("cae-update-draft-activation rejects non-draft activations", async () => {
   );
   assert.equal(updated.ok, false);
   assert.equal(updated.code, "cae-activation-not-draft");
+});
+
+test("cae-update-draft-activation rejects unknown artifact refs without partial write or audit", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const created = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-draft-activation",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        activation: {
+          schemaVersion: 1,
+          activationId: "cae.activation.draft.ref.integrity",
+          family: "do",
+          lifecycleState: "draft",
+          priority: 42,
+          scope: { conditions: [{ kind: "commandName", match: "exact", value: "get-task" }] },
+          artifactRefs: [{ artifactId: "cae.playbook.machine-playbooks" }]
+        },
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(created.ok, true);
+
+  const rejected = await contextActivationModule.onCommand(
+    {
+      name: "cae-update-draft-activation",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        activationId: "cae.activation.draft.ref.integrity",
+        activation: { artifactRefs: [{ artifactId: "workspace.missing.ref" }] },
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(rejected.ok, false);
+  assert.equal(rejected.code, "cae-registry-schema-invalid");
+  assert.match(rejected.message, /workspace\.missing\.ref/);
+
+  const db = new Database(path.join(ws, ".workspace-kit", "tasks", "workspace-kit.db"));
+  const row = db
+    .prepare(`SELECT artifact_refs_json FROM cae_registry_activations WHERE version_id = ? AND activation_id = ?`)
+    .get("cae.reg.seed", "cae.activation.draft.ref.integrity");
+  const updateAudit = db
+    .prepare(`SELECT COUNT(*) AS count FROM cae_registry_mutations WHERE command_name = ? AND payload_json LIKE ?`)
+    .get("cae-update-draft-activation", '%cae.activation.draft.ref.integrity%');
+  db.close();
+  assert.deepEqual(JSON.parse(row.artifact_refs_json), [{ artifactId: "cae.playbook.machine-playbooks" }]);
+  assert.equal(updateAudit.count, 0);
 });
 
 test("cae-activate-draft-activation promotes narrow drafts without preview evidence", async () => {
