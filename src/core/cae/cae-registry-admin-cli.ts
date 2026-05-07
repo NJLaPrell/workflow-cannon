@@ -31,6 +31,7 @@ import { loadCaeRegistryFromSqliteDb } from "./cae-registry-sqlite.js";
 import {
   CAE_WORKSPACE_ARTIFACT_ID_PREFIX,
   buildCaeWorkspaceArtifactPath,
+  classifyCaeArtifactIdNamespace,
   validateCaeWorkspaceArtifactId
 } from "./workspace-artifact-conventions.js";
 import {
@@ -230,6 +231,7 @@ export function tryHandleCaeRegistryAdminCommand(
     "cae-create-workspace-artifact",
     "cae-update-artifact",
     "cae-retire-artifact",
+    "cae-retire-workspace-artifact",
     "cae-create-activation",
     "cae-update-activation",
     "cae-disable-activation",
@@ -761,12 +763,19 @@ export function tryHandleCaeRegistryAdminCommand(
       return { ok: true, code: "cae-update-artifact-ok", data: { schemaVersion: 1, versionId: v, artifactId } };
     }
 
-    if (name === "cae-retire-artifact") {
+    if (name === "cae-retire-artifact" || name === "cae-retire-workspace-artifact") {
       const v = resolveVersionId(db, args.versionId);
       if (typeof v !== "string") return v;
       const artifactId = typeof args.artifactId === "string" ? args.artifactId.trim() : "";
       if (!artifactId) {
         return { ok: false, code: "invalid-args", message: "artifactId is required" };
+      }
+      if (name === "cae-retire-workspace-artifact" && classifyCaeArtifactIdNamespace(artifactId) !== "workspace") {
+        return {
+          ok: false,
+          code: "cae-workspace-artifact-id-invalid",
+          message: "Workspace artifact ids must start with 'workspace.' and follow the CAE registry id pattern"
+        };
       }
       const refs = db
         .prepare(
@@ -808,7 +817,11 @@ export function tryHandleCaeRegistryAdminCommand(
       });
       const check = postMutationRegistryCheck(db, workspacePath, true);
       if (check) return check;
-      return { ok: true, code: "cae-retire-artifact-ok", data: { schemaVersion: 1, versionId: v, artifactId } };
+      return {
+        ok: true,
+        code: name === "cae-retire-workspace-artifact" ? "cae-retire-workspace-artifact-ok" : "cae-retire-artifact-ok",
+        data: { schemaVersion: 1, versionId: v, artifactId }
+      };
     }
 
     if (name === "cae-create-activation") {

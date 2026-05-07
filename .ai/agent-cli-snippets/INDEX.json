@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-07T03:43:13.369Z",
+  "generatedAt": "2026-05-07T03:49:47.590Z",
   "commands": [
     {
       "name": "add-dependency",
@@ -210,6 +210,11 @@
     {
       "name": "cae-retire-artifact",
       "path": ".ai/agent-cli-snippets/by-command/cae-retire-artifact.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-retire-workspace-artifact",
+      "path": ".ai/agent-cli-snippets/by-command/cae-retire-workspace-artifact.json",
       "moduleId": "context-activation"
     },
     {
