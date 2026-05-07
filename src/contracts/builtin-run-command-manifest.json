@@ -1232,9 +1232,23 @@
   },
   {
     "moduleId": "context-activation",
+    "name": "cae-create-draft-activation",
+    "file": "cae-create-draft-activation.md",
+    "description": "Insert a validated draft activation row and surface broad-scope authoring warnings.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
     "name": "cae-update-activation",
     "file": "cae-update-activation.md",
     "description": "Update fields on a non-retired CAE activation row.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-update-draft-activation",
+    "file": "cae-update-draft-activation.md",
+    "description": "Update a draft activation row without allowing draft-to-active promotion.",
     "policySensitivity": "non-sensitive"
   },
   {
