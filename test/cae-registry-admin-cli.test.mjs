@@ -69,6 +69,7 @@ const MUTATOR_COMMANDS = [
   "cae-create-workspace-artifact",
   "cae-update-artifact",
   "cae-retire-artifact",
+  "cae-retire-workspace-artifact",
   "cae-create-activation",
   "cae-update-activation",
   "cae-disable-activation",
@@ -640,6 +641,134 @@ test("cae-create-workspace-artifact cleans up file when registry insert fails", 
     .get("cae.reg.seed", "workspace.duplicate.id");
   db.close();
   assert.equal(artifactRowCount.count, 1);
+});
+
+test("cae-retire-workspace-artifact retires the row and keeps the markdown file", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const created = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-workspace-artifact",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        artifactId: "workspace.retire.me",
+        artifactType: "playbook",
+        title: "Retire Me",
+        slug: "retire-me",
+        contentMarkdown: "# Retire Me\n",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(created.ok, true);
+
+  const retired = await contextActivationModule.onCommand(
+    {
+      name: "cae-retire-workspace-artifact",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        artifactId: "workspace.retire.me",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(retired.ok, true);
+  assert.equal(retired.code, "cae-retire-workspace-artifact-ok");
+
+  const markdownPath = path.join(ws, ".ai/cae/artifacts/playbooks/retire-me.md");
+  const markdown = await readFile(markdownPath, "utf8");
+  assert.match(markdown, /Retire Me/);
+
+  const db = new Database(path.join(ws, ".workspace-kit", "tasks", "workspace-kit.db"));
+  const retiredRow = db
+    .prepare(`SELECT retired_at FROM cae_registry_artifacts WHERE version_id = ? AND artifact_id = ?`)
+    .get("cae.reg.seed", "workspace.retire.me");
+  const auditRowCount = db
+    .prepare(`SELECT COUNT(*) AS count FROM cae_registry_mutations WHERE command_name = ? AND payload_json LIKE ?`)
+    .get("cae-retire-workspace-artifact", '%workspace.retire.me%');
+  db.close();
+
+  assert.ok(retiredRow.retired_at);
+  assert.equal(auditRowCount.count, 1);
+});
+
+test("cae-retire-workspace-artifact rejects default artifact ids", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const retired = await contextActivationModule.onCommand(
+    {
+      name: "cae-retire-workspace-artifact",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        artifactId: "cae.playbook.machine-playbooks",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(retired.ok, false);
+  assert.equal(retired.code, "cae-workspace-artifact-id-invalid");
+});
+
+test("cae-retire-workspace-artifact blocks retirement when an activation still references it", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const created = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-workspace-artifact",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        artifactId: "workspace.in.use",
+        artifactType: "playbook",
+        title: "In Use",
+        slug: "in-use",
+        contentMarkdown: "# In Use\n",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(created.ok, true);
+
+  const activation = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-activation",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        activation: {
+          schemaVersion: 1,
+          activationId: "cae.activation.workspace-artifact-in-use",
+          family: "do",
+          lifecycleState: "active",
+          priority: 20,
+          scope: { conditions: [{ kind: "always" }] },
+          artifactRefs: [{ artifactId: "workspace.in.use" }]
+        },
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(activation.ok, true);
+
+  const retired = await contextActivationModule.onCommand(
+    {
+      name: "cae-retire-workspace-artifact",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        artifactId: "workspace.in.use",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(retired.ok, false);
+  assert.equal(retired.code, "cae-artifact-in-use");
 });
 
 test("import-json-registry writes cae_registry_mutations audit", async () => {

@@ -1218,6 +1218,13 @@
   },
   {
     "moduleId": "context-activation",
+    "name": "cae-retire-workspace-artifact",
+    "file": "cae-retire-workspace-artifact.md",
+    "description": "Retire a workspace-owned artifact row while keeping the backing file by default.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
     "name": "cae-create-activation",
     "file": "cae-create-activation.md",
     "description": "Insert a validated activation row into the active (or specified) CAE registry version.",
