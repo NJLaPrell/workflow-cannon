@@ -1040,6 +1040,7 @@ export async function runContextActivationOnCommand(
           product: GUIDANCE_PRODUCT_LABELS,
           evalMode,
           modeLabel: evalMode === "shadow" ? "Preview mode" : "Applies now",
+          registryContentHash: loaded.reg.registryDigest,
           traceId,
           ephemeral: skipPersistenceBecauseDraftImpact ? true : !persist,
           evaluationContext,

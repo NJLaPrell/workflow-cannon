@@ -1253,6 +1253,13 @@
   },
   {
     "moduleId": "context-activation",
+    "name": "cae-activate-draft-activation",
+    "file": "cae-activate-draft-activation.md",
+    "description": "Promote a draft activation to active after validation and required Guidance preview evidence.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
     "name": "cae-update-activation",
     "file": "cae-update-activation.md",
     "description": "Update fields on a non-retired CAE activation row.",

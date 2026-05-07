@@ -74,6 +74,7 @@ const MUTATOR_COMMANDS = [
   "cae-retire-workspace-artifact",
   "cae-create-activation",
   "cae-create-draft-activation",
+  "cae-activate-draft-activation",
   "cae-update-activation",
   "cae-update-draft-activation",
   "cae-disable-activation",
@@ -1110,6 +1111,160 @@ test("cae-update-draft-activation rejects non-draft activations", async () => {
   );
   assert.equal(updated.ok, false);
   assert.equal(updated.code, "cae-activation-not-draft");
+});
+
+test("cae-activate-draft-activation promotes narrow drafts without preview evidence", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const created = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-draft-activation",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        activation: {
+          schemaVersion: 1,
+          activationId: "cae.activation.draft.publish.narrow",
+          family: "do",
+          lifecycleState: "draft",
+          priority: 45,
+          scope: { conditions: [{ kind: "commandName", match: "exact", value: "get-task" }] },
+          artifactRefs: [{ artifactId: "cae.playbook.machine-playbooks" }]
+        },
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(created.ok, true);
+
+  const activated = await contextActivationModule.onCommand(
+    {
+      name: "cae-activate-draft-activation",
+      args: { schemaVersion: 1, actor: "flow", activationId: "cae.activation.draft.publish.narrow", ...appr() }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(activated.ok, true);
+  assert.equal(activated.code, "cae-activate-draft-activation-ok");
+  assert.equal(activated.data.lifecycleState, "active");
+  assert.equal(activated.data.previewEvidenceRequired, false);
+  assert.deepEqual(activated.data.artifactRefs, [{ artifactId: "cae.playbook.machine-playbooks" }]);
+
+  const db = new Database(path.join(ws, ".workspace-kit", "tasks", "workspace-kit.db"));
+  const row = db
+    .prepare(`SELECT lifecycle_state, metadata_json FROM cae_registry_activations WHERE version_id = ? AND activation_id = ?`)
+    .get("cae.reg.seed", "cae.activation.draft.publish.narrow");
+  const auditRowCount = db
+    .prepare(`SELECT COUNT(*) AS count FROM cae_registry_mutations WHERE command_name = ? AND payload_json LIKE ?`)
+    .get("cae-activate-draft-activation", '%cae.activation.draft.publish.narrow%');
+  db.close();
+  assert.equal(row.lifecycle_state, "active");
+  assert.match(row.metadata_json, /"publish"/);
+  assert.equal(auditRowCount.count, 1);
+});
+
+test("cae-activate-draft-activation requires preview evidence for broad policy drafts", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const created = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-draft-activation",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        activation: {
+          schemaVersion: 1,
+          activationId: "cae.activation.draft.publish.policy",
+          family: "policy",
+          lifecycleState: "draft",
+          priority: 20,
+          scope: { conditions: [{ kind: "always" }] },
+          artifactRefs: [{ artifactId: "cae.playbook.machine-playbooks" }]
+        },
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(created.ok, true);
+
+  const activated = await contextActivationModule.onCommand(
+    {
+      name: "cae-activate-draft-activation",
+      args: { schemaVersion: 1, actor: "flow", activationId: "cae.activation.draft.publish.policy", ...appr() }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(activated.ok, false);
+  assert.equal(activated.code, "cae-preview-evidence-required");
+  assert.match(JSON.stringify(activated.data.warnings), /cae-draft-policy-family/);
+});
+
+test("cae-activate-draft-activation accepts fresh guidance preview evidence for broad drafts", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const created = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-draft-activation",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        activation: {
+          schemaVersion: 1,
+          activationId: "cae.activation.draft.publish.previewed",
+          family: "policy",
+          lifecycleState: "draft",
+          priority: 21,
+          scope: { conditions: [{ kind: "always" }] },
+          artifactRefs: [{ artifactId: "cae.playbook.machine-playbooks" }]
+        },
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(created.ok, true);
+
+  const preview = await contextActivationModule.onCommand(
+    {
+      name: "cae-guidance-preview",
+      args: {
+        schemaVersion: 1,
+        taskId: "T100073",
+        commandName: "get-next-actions",
+        evalMode: "shadow",
+        draftRule: {
+          schemaVersion: 1,
+          title: "Previewed Publish",
+          family: "policy",
+          priority: 21,
+          scopeDraft: { preset: "always" },
+          artifactType: "playbook",
+          refPath: ".ai/MACHINE-PLAYBOOKS.md"
+        }
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(preview.ok, true);
+  assert.equal(preview.code, "cae-guidance-preview-ok");
+  assert.equal(typeof preview.data.registryContentHash, "string");
+
+  const activated = await contextActivationModule.onCommand(
+    {
+      name: "cae-activate-draft-activation",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        activationId: "cae.activation.draft.publish.previewed",
+        previewEvidence: preview.data,
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(activated.ok, true);
+  assert.equal(activated.data.lifecycleState, "active");
+  assert.equal(activated.data.previewEvidenceRequired, true);
+  assert.equal(activated.data.publish.previewEvidence.registryDigest, preview.data.registryContentHash);
 });
 
 test("import-json-registry writes cae_registry_mutations audit", async () => {
