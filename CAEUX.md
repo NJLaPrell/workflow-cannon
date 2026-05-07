@@ -790,12 +790,12 @@ The MVP should be delivered as a vertical authoring slice, not as isolated backe
 
 **Deliverables:**
 
-- Add command/view entry point for Guidance authoring.
-- Render panel shell with tabs for Overview, Artifacts, Activations, Preview, and compact Audit.
-- Wire refresh to `cae-authoring-summary`.
-- Show disabled-CAE, missing-DB, native SQLite, and registry validation failures as actionable states.
+- Add a dedicated editor-area command/view entry point for Guidance authoring.
+- Render a stable shell with Overview, Artifacts, Activations, Preview, and compact Audit tabs.
+- Back panel readiness and refresh from `cae-authoring-summary` rather than embedding ad hoc registry logic in the webview.
+- Show actionable degraded states for disabled CAE, missing registry or DB, native SQLite failures, and registry validation failures.
 
-**Acceptance:** Users can open a stable Guidance panel and see current CAE authoring status without touching terminal commands.
+**Acceptance:** Users can open a dedicated Guidance authoring panel and see authoring readiness without touching terminal commands; CRUD stays out of scope for this slice.
 
 ### CAEUX-MVP-13 - Overview Tab
 
@@ -805,8 +805,9 @@ The MVP should be delivered as a vertical authoring slice, not as isolated backe
 
 **Deliverables:**
 
-- Show CAE enabled status, registry store, active version, artifact counts, activation counts, draft count, validation warnings, and recent mutation summary.
-- Add actions for New Artifact, New Activation, Preview Guidance, and Validate Registry.
+- Render a read-mostly overview card set over `cae-authoring-summary` showing enabled status, registry store, active version, artifact counts, activation counts, draft count, validation warnings, and recent mutation summary.
+- Add bounded entry actions for New Artifact, New Activation, Preview Guidance, and Validate Registry.
+- Keep the tab focused on readiness and navigation rather than in-tab authoring workflows.
 
 **Acceptance:** The overview answers whether authoring is ready, what exists, and what action the user can take next.
 
@@ -818,9 +819,10 @@ The MVP should be delivered as a vertical authoring slice, not as isolated backe
 
 **Deliverables:**
 
-- Add searchable/filterable artifacts table.
+- Add a searchable and filterable artifacts table.
 - Show title, ID, type, source, path, used-by count, status, and last changed when available.
-- Add row actions for Open, Preview, Duplicate, Edit, Retire, Hide Default, and Remove Override as applicable.
+- Enable row actions for Open, Preview, Duplicate, Edit, Retire, Hide Default, and Remove Override only when the source and lifecycle make the action valid.
+- Keep editing and mutation confirmation work in downstream slices.
 
 **Acceptance:** Defaults and workspace artifacts are visibly distinct and only valid row actions are enabled.
 
@@ -832,10 +834,11 @@ The MVP should be delivered as a vertical authoring slice, not as isolated backe
 
 **Deliverables:**
 
-- Add artifact form for ID, type, title, tags, path, and fragment.
-- Add markdown content editor or open-file workflow for workspace-owned files.
-- Add rendered/sanitized preview.
-- Wire create, update, duplicate, and retire flows to backend commands.
+- Add a workspace-artifact editor for ID, type, title, tags, path, and fragment.
+- Support markdown content editing or a bounded open-file workflow for workspace-owned files only.
+- Add rendered or sanitized preview for the current workspace artifact draft.
+- Wire create, update, duplicate, and retire entry points to existing backend commands without allowing direct default edits.
+- Keep mutation confirmations, publish-style prompts, and cross-artifact recovery behavior out of scope.
 
 **Acceptance:** A user can create a workspace artifact, edit it, preview it, and retire it without leaving the dashboard.
 
@@ -847,9 +850,10 @@ The MVP should be delivered as a vertical authoring slice, not as isolated backe
 
 **Deliverables:**
 
-- Add activations table grouped by `policy`, `think`, `do`, and `review`.
+- Add an activations table grouped by `policy`, `think`, `do`, and `review`.
 - Show lifecycle, priority, scope summary, artifact refs, acknowledgement, source, and status warnings.
-- Add actions for Edit, Duplicate if supported, Preview, Activate Draft, Disable, and Retire.
+- Surface bounded row actions for Edit, Preview, Activate Draft, Disable, and Retire, plus Duplicate only if supported by the current backend contract.
+- Keep editor logic, publish gating, and confirmation UX in downstream slices.
 
 **Acceptance:** Users can see which rules drive Guidance and identify drafts, active rows, and risky scopes.
 
@@ -861,10 +865,11 @@ The MVP should be delivered as a vertical authoring slice, not as isolated backe
 
 **Deliverables:**
 
-- Add form fields for activation ID, family, priority, lifecycle, artifact refs, acknowledgement, and scope.
+- Add structured form fields for activation ID, family, priority, lifecycle, artifact refs, acknowledgement, and scope.
 - Add preset controls for Always, command exact, command prefix, task tag, task ID pattern, phase key, and command arg equals.
-- Add artifact picker grouped by type with source/status badges.
-- Add advanced JSON drawer for escape-hatch editing.
+- Add an artifact picker grouped by type with source and status badges.
+- Add an advanced JSON drawer as an escape hatch rather than the default path.
+- Keep activation publish, readiness verdicts, and confirmation UX in downstream slices.
 
 **Acceptance:** Users can create a draft activation with structured controls, and invalid scope JSON cannot be saved.
 
@@ -876,10 +881,11 @@ The MVP should be delivered as a vertical authoring slice, not as isolated backe
 
 **Deliverables:**
 
-- Wire `cae-guidance-preview` with draft overlays from the editor.
+- Wire `cae-guidance-preview` with draft overlays from the activation editor.
 - Show baseline vs draft Guidance cards, family count deltas, broad-scope warnings, conflict summary, pending acknowledgements, and sample matches.
-- Show readiness verdict: OK, Warning, Stop and confirm.
-- Feed fresh preview evidence into activation publish flow.
+- Show a bounded readiness verdict of OK, Warning, or Stop and confirm.
+- Produce fresh preview evidence that downstream publish and confirmation flows can consume.
+- Keep publish confirmation and mutation result UX out of scope.
 
 **Acceptance:** Users can preview a draft and understand where it applies before activating it.
 
@@ -892,8 +898,9 @@ The MVP should be delivered as a vertical authoring slice, not as isolated backe
 **Deliverables:**
 
 - Add confirmation flows for activation publish, disable, retire, hide default, and artifact retire.
-- Capture `actor` and CAE mutation rationale where required.
-- Add result toasts with actions such as Open File, Preview, View Audit, and Refresh.
+- Capture `actor` and CAE mutation rationale where required by the backend contract.
+- Add result toasts with follow-up actions such as Open File, Preview, View Audit, and Refresh.
+- Keep the actual mutation logic in existing backend commands and the editor/table tasks that invoke them.
 
 **Acceptance:** Mutations are not silent, and users can immediately inspect the result.
 
@@ -905,11 +912,12 @@ The MVP should be delivered as a vertical authoring slice, not as isolated backe
 
 **Deliverables:**
 
-- Handle stale registry save failures with Refresh and Review Changes actions.
-- Render disabled CAE, JSON-store read-only mode, admin mutations off, missing DB, and native SQLite load failures.
-- Ensure forms do not keep enabling save after an unrecoverable authoring precondition fails.
+- Handle stale registry save failures with Refresh and Review Changes actions in the Guidance authoring surface.
+- Render actionable degraded states for disabled CAE, JSON-store read-only mode, admin mutations off, missing DB or registry, and native SQLite load failures.
+- Ensure forms and save affordances do not remain enabled after an unrecoverable authoring precondition fails.
+- Keep this slice focused on authoring guardrails rather than backend recovery redesign.
 
-**Acceptance:** Failure states are legible and actionable instead of blank or terminal-only.
+**Acceptance:** Failure states are legible and actionable instead of blank or terminal-only, and unsafe saves are disabled once authoring preconditions fail.
 
 ### CAEUX-MVP-21 - MVP Backend Tests
 
@@ -919,11 +927,12 @@ The MVP should be delivered as a vertical authoring slice, not as isolated backe
 
 **Deliverables:**
 
-- Add tests for artifact create/update/duplicate/retire.
-- Add tests for draft activation create/update/activate/disable.
+- Add backend command-contract tests for artifact create, update, duplicate, retire, and related authoring flows delivered by MVP-05 through MVP-08.
+- Add backend command-contract tests for draft activation create, update, activate, disable, and retire flows delivered by MVP-09 through MVP-11.
 - Add tests for validation, referential integrity, audit rows, stale registry errors, and partial-write rollback.
+- Keep coverage bounded to delivered backend contracts rather than dashboard UI execution.
 
-**Acceptance:** Backend tests cover successful flows and main failure modes without relying on dashboard UI.
+**Acceptance:** Backend tests cover successful command flows and the main mutation-safety failures without relying on dashboard UI.
 
 ### CAEUX-MVP-22 - MVP Dashboard Tests
 
@@ -934,8 +943,9 @@ The MVP should be delivered as a vertical authoring slice, not as isolated backe
 **Deliverables:**
 
 - Add render tests for empty, healthy, warning, disabled, and SQLite failure states.
-- Add message-handler tests for create, update, preview, activate, disable, and retire flows.
-- Add a manual or automated webview smoke path for the complete MVP loop.
+- Add message-handler tests for the supported create, update, preview, activate, disable, and retire entry points exposed by the panel.
+- Add a bounded manual or automated webview smoke path for the MVP authoring loop.
+- Keep coverage focused on panel rendering and message handling rather than duplicating backend command-contract tests.
 
 **Acceptance:** The UI can be validated without manually inspecting every screen after each change.
 
@@ -948,8 +958,9 @@ The MVP should be delivered as a vertical authoring slice, not as isolated backe
 **Deliverables:**
 
 - Add or update operator docs for Guidance authoring.
-- Document recovery from stale state, missing files, invalid refs, and disabled mutations.
-- Add release evidence checklist for CAE authoring.
+- Document recovery from stale state, missing files, invalid refs, disabled mutations, and the major degraded states surfaced by the authoring panel.
+- Add a release evidence checklist or smoke path for CAE authoring.
+- Keep this slice focused on operability guidance and release readiness rather than product behavior changes.
 
 **Acceptance:** A maintainer can run the MVP smoke path and recover from expected failure modes using checked-in guidance.
 
