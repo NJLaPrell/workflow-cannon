@@ -90,6 +90,10 @@
       {
         "command": "workflowCannon.openStatusDashboard",
         "title": "Workflow Cannon: Open Status Dashboard"
+      },
+      {
+        "command": "workflowCannon.openGuidancePanel",
+        "title": "Workflow Cannon: Open Guidance Authoring"
       }
     ]
   },

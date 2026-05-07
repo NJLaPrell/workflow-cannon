@@ -7,6 +7,7 @@ import {
   renderGuidanceSummaryInnerHtml,
   renderGuidanceTraceDetailInnerHtml
 } from "../dist/views/guidance/render-guidance.js";
+import { renderGuidanceAuthoringPanelInnerHtml } from "../dist/views/guidance/render-guidance-panel.js";
 
 test("renderGuidanceSummaryInnerHtml renders health and escapes issue details", () => {
   const html = renderGuidanceSummaryInnerHtml({
@@ -233,6 +234,142 @@ test("renderGuidancePreviewInnerHtml renders enforcement readiness when present"
   });
   assert.match(html, /Enforcement readiness/);
   assert.match(html, /cae-enforce-governance-evidence-incomplete/);
+});
+
+test("renderGuidanceAuthoringPanelInnerHtml renders the tabbed authoring shell", () => {
+  const html = renderGuidanceAuthoringPanelInnerHtml({
+    ok: true,
+    code: "cae-authoring-summary-ok",
+    data: {
+      schemaVersion: 1,
+      product: { productName: "Guidance" },
+      health: { caeEnabled: true, registryStatus: "ok", registryStore: "sqlite" },
+      activeVersion: {
+        versionId: "cae.reg.active",
+        registryDigest: "abcd",
+        artifactCount: 2,
+        activationCount: 1
+      },
+      counts: {
+        activationFamilies: { policy: 1, think: 0, do: 0, review: 0 },
+        activationStatuses: { draft: 1 },
+        artifactStatuses: { active: 2, "missing-file": 0 },
+        recentMutationCount: 1
+      },
+      validation: { ok: true, code: "cae-registry-validate-ok", registryContentHash: "abcd" },
+      readiness: { canMutate: true },
+      artifacts: {
+        rows: [
+          {
+            artifactId: "cae.doc.one",
+            title: "One <source>",
+            artifactType: "policy-doc",
+            source: "workspace",
+            status: "active",
+            fileExists: true
+          }
+        ]
+      },
+      activations: {
+        rows: [
+          {
+            activationId: "cae.activation.one",
+            family: "policy",
+            lifecycleState: "draft",
+            priority: 100,
+            artifactRefs: [{ artifactId: "cae.doc.one" }]
+          }
+        ]
+      },
+      recentMutations: { rows: [{ recordedAt: "2026-05-06T00:00:00.000Z", commandName: "cae-create-workspace-artifact", actor: "agent", note: "draft" }] }
+    }
+  });
+  assert.match(html, /data-gp-tab="overview"/);
+  assert.match(html, /data-gp-tab="artifacts"/);
+  assert.match(html, /data-gp-tab="activations"/);
+  assert.match(html, /data-gp-tab="preview"/);
+  assert.match(html, /data-gp-tab="audit"/);
+  assert.match(html, /Guidance authoring is ready/);
+  assert.match(html, /cae\.activation\.one/);
+  assert.doesNotMatch(html, /<source>/);
+  assert.match(html, /One &lt;source&gt;/);
+});
+
+test("renderGuidanceAuthoringPanelInnerHtml surfaces actionable blocked states", () => {
+  const disabled = renderGuidanceAuthoringPanelInnerHtml({
+    ok: true,
+    data: {
+      health: { caeEnabled: false },
+      readiness: { canMutate: false },
+      validation: { ok: true },
+      counts: {},
+      artifacts: { rows: [] },
+      activations: { rows: [] },
+      recentMutations: { rows: [] }
+    }
+  });
+  assert.match(disabled, /Guidance is disabled/);
+  assert.match(disabled, /kit\.cae\.enabled/);
+
+  const jsonStore = renderGuidanceAuthoringPanelInnerHtml({
+    ok: true,
+    data: {
+      health: { caeEnabled: true, registryStatus: "ok", registryStore: "json" },
+      readiness: { canMutate: false },
+      validation: { ok: true },
+      counts: {},
+      artifacts: { rows: [] },
+      activations: { rows: [] },
+      recentMutations: { rows: [] }
+    }
+  });
+  assert.match(jsonStore, /Switch <code>kit\.cae\.registryStore<\/code> to <code>sqlite<\/code>/);
+
+  const nativeSqlite = renderGuidanceAuthoringPanelInnerHtml({
+    ok: true,
+    data: {
+      health: { caeEnabled: true, registryStatus: "ok", registryStore: "sqlite" },
+      activeVersion: { isActive: false },
+      readiness: { canMutate: false },
+      validation: { ok: true },
+      recentMutations: { available: false, code: "cae-kit-sqlite-unavailable", rows: [] },
+      counts: {},
+      artifacts: { rows: [] },
+      activations: { rows: [] }
+    }
+  });
+  assert.match(nativeSqlite, /Native SQLite is unavailable/);
+  assert.match(nativeSqlite, /better-sqlite3/);
+
+  const missingActiveDb = renderGuidanceAuthoringPanelInnerHtml({
+    ok: true,
+    data: {
+      health: { caeEnabled: true, registryStatus: "ok", registryStore: "sqlite" },
+      activeVersion: { isActive: false },
+      readiness: { canMutate: false },
+      validation: { ok: true },
+      recentMutations: { available: true, rows: [] },
+      counts: {},
+      artifacts: { rows: [] },
+      activations: { rows: [] }
+    }
+  });
+  assert.match(missingActiveDb, /No active guidance set/);
+
+  const invalid = renderGuidanceAuthoringPanelInnerHtml({
+    ok: true,
+    data: {
+      health: { caeEnabled: true, registryStatus: "ok", registryStore: "sqlite" },
+      readiness: { canMutate: false },
+      validation: { ok: false, code: "cae-registry-validation-error", message: "broken <rule>" },
+      counts: {},
+      artifacts: { rows: [] },
+      activations: { rows: [] },
+      recentMutations: { rows: [] }
+    }
+  });
+  assert.match(invalid, /Registry validation failed/);
+  assert.match(invalid, /broken &lt;rule&gt;/);
 });
 
 test("renderGuidanceTraceDetailInnerHtml renders summary before raw JSON", () => {

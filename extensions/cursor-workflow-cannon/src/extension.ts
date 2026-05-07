@@ -5,6 +5,7 @@ import { StateWatcher } from "./runtime/state-watcher.js";
 import { DashboardViewProvider } from "./views/dashboard/DashboardViewProvider.js";
 import { ConfigViewProvider } from "./views/config/ConfigViewProvider.js";
 import { GuidanceViewProvider } from "./views/guidance/GuidanceViewProvider.js";
+import { GuidancePanel } from "./views/guidance/GuidancePanel.js";
 import { StatusDashboardPanel } from "./views/status/StatusDashboardPanel.js";
 import { prefillCursorChat } from "./cursor-chat-prefill.js";
 import { buildTaskDetailMarkdown } from "./task-detail-markdown.js";
@@ -32,6 +33,7 @@ export function activate(context: vscode.ExtensionContext): void {
   let dashboard: DashboardViewProvider | undefined;
   let configView: ConfigViewProvider | undefined;
   let guidanceView: GuidanceViewProvider | undefined;
+  let guidancePanel: GuidancePanel | undefined;
   let statusDashboard: StatusDashboardPanel | undefined;
 
   if (client && folder) {
@@ -44,6 +46,7 @@ export function activate(context: vscode.ExtensionContext): void {
     );
     configView = new ConfigViewProvider(context.extensionUri, client, onKitStateChanged);
     guidanceView = new GuidanceViewProvider(context.extensionUri, client, onKitStateChanged);
+    guidancePanel = new GuidancePanel(context.extensionUri, client, onKitStateChanged);
     statusDashboard = new StatusDashboardPanel(context.extensionUri, client, onKitStateChanged);
 
     context.subscriptions.push(
@@ -184,6 +187,13 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       }
       statusDashboard.open();
+    }),
+    vscode.commands.registerCommand("workflowCannon.openGuidancePanel", () => {
+      if (!guidancePanel) {
+        void requireClient();
+        return;
+      }
+      guidancePanel.open();
     }),
     vscode.commands.registerCommand("workflowCannon.refreshDashboard", () => {
       if (!dashboard) {
