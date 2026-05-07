@@ -54,12 +54,15 @@ export type CaeAuthoringActivationSummary = {
   activationId: string;
   family: string;
   priority: number;
+  scopeSummary: string;
   lifecycleState: string;
   source: CaeAuthoringArtifactSource;
   lifecycleStatus: CaeAuthoringLifecycleStatus;
   status: CaeAuthoringActivationStatus;
   overrideOfId: string | null;
+  acknowledgement: { strength: string; token: string | null } | null;
   artifactRefs: CaeAuthoringArtifactRefSummary[];
+  statusWarnings: string[];
 };
 
 export type BuildCaeAuthoringClassificationInput = {
@@ -179,6 +182,46 @@ function parseArtifactRefs(raw: string): Array<{ artifactId: string }> {
   }
 }
 
+function parseJsonRecord(raw: string | null): Record<string, unknown> | null {
+  if (!raw || !raw.trim()) return null;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
+function summarizeScope(raw: string): string {
+  const scope = parseJsonRecord(raw);
+  const conditions = Array.isArray(scope?.conditions) ? scope.conditions : [];
+  if (conditions.length === 0) return "Always";
+  return conditions
+    .map((condition) => {
+      if (!condition || typeof condition !== "object" || Array.isArray(condition)) return "unknown condition";
+      const row = condition as Record<string, unknown>;
+      const kind = String(row.kind ?? "condition");
+      if (kind === "always") return "Always";
+      if (kind === "phaseKey") return `Phase ${String(row.value ?? "")}`.trim();
+      if (kind === "commandName") return `Command ${String(row.match ?? "is")} ${String(row.value ?? "")}`.trim();
+      if (kind === "taskId") return `Task ${String(row.value ?? "")}`.trim();
+      if (kind === "taskTag") {
+        const values = Array.isArray(row.values) ? row.values.map((value) => String(value)).join(", ") : String(row.value ?? "");
+        return `Task tag ${String(row.match ?? "has")} ${values}`.trim();
+      }
+      return `${kind} ${String(row.value ?? "")}`.trim();
+    })
+    .filter(Boolean)
+    .join("; ");
+}
+
+function summarizeAcknowledgement(raw: string | null): { strength: string; token: string | null } | null {
+  const ack = parseJsonRecord(raw);
+  const strength = trimString(ack?.strength);
+  if (!strength || strength === "none") return null;
+  return { strength, token: trimString(ack?.token) };
+}
+
 function deriveActivationSource(activationId: string, overrideOfId: string | null): CaeAuthoringArtifactSource {
   if (overrideOfId) return "override";
   const namespace = classifyCaeRegistryIdNamespace(activationId);
@@ -247,6 +290,15 @@ export function classifyCaeAuthoringActivationRow(input: {
       fileOwnershipStatus: artifact?.fileOwnershipStatus ?? null
     };
   });
+  const statusWarnings = artifactRefs.flatMap((ref) => {
+    if (ref.status === "missing-artifact-row") return [`Missing artifact ${ref.artifactId}`];
+    if (ref.status !== "active") return [`Artifact ${ref.artifactId} is ${ref.status}`];
+    return [];
+  });
+  const scopeSummary = summarizeScope(input.row.scope_json);
+  if (scopeSummary === "Always" && input.row.family === "policy") {
+    statusWarnings.push("Policy applies broadly");
+  }
   return {
     schemaVersion: 1,
     activeVersionId: input.activeVersionId,
@@ -254,12 +306,15 @@ export function classifyCaeAuthoringActivationRow(input: {
     activationId: input.row.activation_id,
     family: input.row.family,
     priority: input.row.priority,
+    scopeSummary,
     lifecycleState: input.row.lifecycle_state,
     source,
     lifecycleStatus,
     status: deriveActivationStatus(lifecycleStatus, input.row.lifecycle_state),
     overrideOfId,
-    artifactRefs
+    acknowledgement: summarizeAcknowledgement(input.row.acknowledgement_json),
+    artifactRefs,
+    statusWarnings
   };
 }
 

@@ -148,6 +148,9 @@ test("CAE authoring classification exposes stable source, lifecycle, and file ow
   const activations = new Map(snapshot.activations.map((activation) => [activation.activationId, activation]));
   assert.equal(activations.get("cae.activation.default").source, "default");
   assert.equal(activations.get("cae.activation.default").status, "active");
+  assert.equal(activations.get("cae.activation.default").scopeSummary, "Always");
+  assert.equal(activations.get("cae.activation.default").acknowledgement, null);
+  assert.deepEqual(activations.get("cae.activation.default").statusWarnings, ["Artifact workspace.playbook.custom-copy is external-allowed", "Missing artifact workspace.playbook.unknown"]);
   assert.deepEqual(activations.get("cae.activation.default").artifactRefs, [
     {
       artifactId: "cae.playbook.default-release",

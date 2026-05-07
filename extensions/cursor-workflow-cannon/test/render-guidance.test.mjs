@@ -286,8 +286,13 @@ test("renderGuidanceAuthoringPanelInnerHtml renders the tabbed authoring shell",
           {
             activationId: "cae.activation.one",
             family: "policy",
+            scopeSummary: "Always",
             lifecycleState: "draft",
+            status: "draft",
+            source: "workspace",
             priority: 100,
+            acknowledgement: { strength: "surface", token: "policy-token" },
+            statusWarnings: ["Policy applies broadly"],
             artifactRefs: [{ artifactId: "cae.doc.one" }, { artifactId: "cae.doc.workspace" }]
           }
         ]
@@ -319,6 +324,11 @@ test("renderGuidanceAuthoringPanelInnerHtml renders the tabbed authoring shell",
   assert.match(html, /data-gp-action="artifact-update"/);
   assert.match(html, /data-gp-action="artifact-duplicate-submit"/);
   assert.match(html, /data-gp-action="artifact-retire-submit"/);
+  assert.match(html, /Search activations/);
+  assert.match(html, /Scope/);
+  assert.match(html, /Policy applies broadly/);
+  assert.match(html, /Activate Draft/);
+  assert.match(html, /data-gp-action="activation-preview"/);
   assert.match(html, /Used by/);
   assert.match(html, /data-gp-action="artifact-open"/);
   assert.match(html, /Duplicate/);

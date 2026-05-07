@@ -226,17 +226,70 @@ function renderArtifactActions(row: UnknownRecord, canMutate: boolean): string {
 }
 
 function renderActivations(data: UnknownRecord): string {
+  const readiness = asRecord(data.readiness);
+  const canMutate = readiness.canMutate === true;
   const rows = asArray(asRecord(data.activations).rows).slice(0, 80);
+  const familyOrder = ["policy", "think", "do", "review"];
   const body = rows.length
-    ? rows
-        .map((raw) => {
-          const row = asRecord(raw);
-          const refs = asArray(row.artifactRefs).map((ref) => String(asRecord(ref).artifactId ?? "")).filter(Boolean);
-          return `<tr><td><code>${escapeHtml(String(row.activationId ?? ""))}</code></td><td>${escapeHtml(String(row.family ?? ""))}</td><td>${escapeHtml(String(row.lifecycleState ?? row.status ?? ""))}</td><td>${escapeHtml(String(row.priority ?? ""))}</td><td>${escapeHtml(refs.join(", "))}</td></tr>`;
+    ? familyOrder
+        .flatMap((family) => {
+          const familyRows = rows.map(asRecord).filter((row) => String(row.family ?? "") === family);
+          if (familyRows.length === 0) return [];
+          return [
+            `<tr class="gp-group-row"><td colspan="9">${escapeHtml(family)} · ${numberText(familyRows.length)}</td></tr>`,
+            ...familyRows.map((row) => renderActivationRow(row, canMutate))
+          ];
         })
         .join("")
-    : '<tr><td colspan="5">No activations found.</td></tr>';
-  return `<section class="gp-tab-panel" id="gp-tab-activations" data-gp-panel="activations"><h2>Activations</h2><table><thead><tr><th>Activation</th><th>Family</th><th>Lifecycle</th><th>Priority</th><th>Artifacts</th></tr></thead><tbody>${body}</tbody></table></section>`;
+    : '<tr><td colspan="9">No activations found.</td></tr>';
+  return `<section class="gp-tab-panel" id="gp-tab-activations" data-gp-panel="activations">
+  <div class="gp-band"><h2>Activations</h2><span id="gp-activation-count" class="gp-muted">${numberText(rows.length)} activations</span></div>
+  <div class="gp-table-tools">
+    <input id="gp-activation-search" type="search" placeholder="Search activations" />
+    <select id="gp-activation-family"><option value="">All families</option><option value="policy">Policy</option><option value="think">Think</option><option value="do">Do</option><option value="review">Review</option></select>
+    <select id="gp-activation-status"><option value="">All statuses</option><option value="active">Active</option><option value="draft">Draft</option><option value="disabled">Disabled</option><option value="hidden">Hidden</option><option value="retired">Retired</option></select>
+  </div>
+  <table><thead><tr><th>Activation</th><th>Lifecycle</th><th>Priority</th><th>Scope</th><th>Artifacts</th><th>Ack</th><th>Source</th><th>Warnings</th><th>Actions</th></tr></thead><tbody>${body}</tbody></table>
+</section>`;
+}
+
+function renderActivationRow(row: UnknownRecord, canMutate: boolean): string {
+  const activationId = String(row.activationId ?? "");
+  const family = String(row.family ?? "");
+  const status = String(row.status ?? row.lifecycleState ?? "");
+  const source = String(row.source ?? "");
+  const refs = asArray(row.artifactRefs).map((ref) => String(asRecord(ref).artifactId ?? "")).filter(Boolean);
+  const ack = asRecord(row.acknowledgement);
+  const warnings = asArray(row.statusWarnings).map((warning) => String(warning));
+  const searchable = [activationId, family, status, source, row.scopeSummary, refs.join(" "), warnings.join(" ")].map((value) => String(value ?? "").toLowerCase()).join(" ");
+  return `<tr data-gp-activation-row data-gp-search="${escapeHtmlAttr(searchable)}" data-gp-family="${escapeHtmlAttr(family)}" data-gp-status="${escapeHtmlAttr(status)}">
+  <td><code>${escapeHtml(activationId)}</code><small>${escapeHtml(family)}</small></td>
+  <td>${escapeHtml(status || "unknown")}</td>
+  <td>${escapeHtml(String(row.priority ?? ""))}</td>
+  <td>${escapeHtml(String(row.scopeSummary ?? "n/a"))}</td>
+  <td>${escapeHtml(refs.join(", "))}</td>
+  <td>${ack.strength ? `${escapeHtml(String(ack.strength))}<small>${escapeHtml(String(ack.token ?? ""))}</small>` : "none"}</td>
+  <td><span class="gp-source gp-source-${escapeHtmlAttr(source || "unknown")}">${escapeHtml(source || "unknown")}</span></td>
+  <td>${warnings.length ? warnings.map((warning) => `<small class="gp-bad-text">${escapeHtml(warning)}</small>`).join("") : "none"}</td>
+  <td>${renderActivationActions(row, canMutate)}</td>
+</tr>`;
+}
+
+function renderActivationActions(row: UnknownRecord, canMutate: boolean): string {
+  const activationId = String(row.activationId ?? "");
+  const status = String(row.status ?? "");
+  const source = String(row.source ?? "");
+  const isEditable = source === "workspace" || source === "override" || status === "draft";
+  const button = (label: string, action: string, enabled: boolean) =>
+    `<button type="button" data-gp-action="${escapeHtmlAttr(action)}" data-gp-activation-id="${escapeHtmlAttr(activationId)}"${enabled ? "" : " disabled"}>${escapeHtml(label)}</button>`;
+  return `<div class="gp-row-actions">${[
+    button("Edit", "activation-edit", canMutate && isEditable),
+    button("Duplicate", "activation-duplicate", canMutate && status !== "retired"),
+    button("Preview", "activation-preview", status !== "retired"),
+    button("Activate Draft", "activation-activate-draft", canMutate && status === "draft"),
+    button("Disable", "activation-disable", canMutate && status === "active"),
+    button("Retire", "activation-retire", canMutate && status !== "retired")
+  ].join("")}</div>`;
 }
 
 function renderPreview(data: UnknownRecord): string {
