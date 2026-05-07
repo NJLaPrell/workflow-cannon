@@ -27,6 +27,38 @@ function pill(label: string, value: unknown, tone?: string): string {
   return `<span class="gp-pill gp-${escapeHtmlAttr(cls)}"><span>${escapeHtml(label)}</span><b>${escapeHtml(String(value ?? "n/a"))}</b></span>`;
 }
 
+function callout(tone: "ok" | "warn" | "bad", title: string, message: string, actions: Array<{ label: string; action: string }> = []): string {
+  const buttons = actions.length
+    ? `<div class="gp-action-row">${actions
+        .map((action) => `<button type="button" data-gp-action="${escapeHtmlAttr(action.action)}">${escapeHtml(action.label)}</button>`)
+        .join("")}</div>`
+    : "";
+  return `<section class="gp-callout gp-${tone}"><b>${escapeHtml(title)}</b><span>${escapeHtml(message)}</span>${buttons}</section>`;
+}
+
+function authoringMutationBlockReason(data: UnknownRecord): string | null {
+  const readiness = asRecord(data.readiness);
+  const health = asRecord(data.health);
+  const validation = asRecord(data.validation);
+  const activeVersion = asRecord(data.activeVersion);
+  const recentMutations = asRecord(data.recentMutations);
+  const registryStore = String(health.registryStore ?? readiness.registryStore ?? "unknown");
+  const registryStatus = String(health.registryStatus ?? "unknown");
+  const recentMutationCode = String(recentMutations.code ?? "");
+  if (health.caeEnabled === false) return "Guidance is disabled for this workspace.";
+  if (registryStatus && registryStatus !== "ok" && registryStatus !== "unknown") return `Guidance set is ${registryStatus}.`;
+  if (registryStore !== "sqlite" && registryStore !== "unknown") return "Guidance authoring is read-only until the registry store is SQLite.";
+  if (registryStore === "sqlite" && recentMutations.available === false && recentMutationCode === "cae-kit-sqlite-unavailable") return "Native SQLite is unavailable.";
+  if (registryStore === "sqlite" && activeVersion.isActive === false) return "No active SQLite guidance set is available.";
+  if (validation.ok === false) return String(validation.message ?? validation.code ?? "Registry validation failed.");
+  if (readiness.canMutate !== true) return String(readiness.denialReason ?? "Mutations are disabled for this workspace.");
+  return null;
+}
+
+function canMutateAuthoring(data: UnknownRecord): boolean {
+  return authoringMutationBlockReason(data) === null;
+}
+
 function renderStateCallout(data: UnknownRecord, result: UnknownRecord): string {
   if (result.ok !== true) {
     return `<section class="gp-callout gp-bad"><b>Guidance authoring is unavailable</b><span>${escapeHtml(String(result.message ?? result.code ?? "Unknown failure"))}</span></section>`;
@@ -42,30 +74,38 @@ function renderStateCallout(data: UnknownRecord, result: UnknownRecord): string 
   const recentMutationCode = String(recentMutations.code ?? "");
 
   if (health.caeEnabled === false) {
-    return '<section class="gp-callout gp-bad"><b>Guidance is disabled</b><span>Set <code>kit.cae.enabled</code> to <code>true</code>, then refresh.</span></section>';
+    return callout("bad", "Guidance is disabled", "Set kit.cae.enabled to true, then refresh.", [{ label: "Refresh", action: "refresh" }]);
   }
   if (registryStatus && registryStatus !== "ok" && registryStatus !== "unknown") {
-    return `<section class="gp-callout gp-bad"><b>Guidance set is ${escapeHtml(registryStatus)}</b><span>Run registry validation and repair the listed issue before authoring.</span></section>`;
+    return callout("bad", `Guidance set is ${registryStatus}`, "Run registry validation and repair the listed issue before authoring.", [
+      { label: "Validate Registry", action: "validate-registry" },
+      { label: "Refresh", action: "refresh" }
+    ]);
   }
   if (registryStore !== "sqlite" && registryStore !== "unknown") {
-    return '<section class="gp-callout gp-warn"><b>Authoring is read-only</b><span>Switch <code>kit.cae.registryStore</code> to <code>sqlite</code> to enable guided mutations.</span></section>';
+    return callout("warn", "Authoring is read-only", "Switch kit.cae.registryStore to sqlite to enable guided mutations.", [{ label: "Refresh", action: "refresh" }]);
   }
   if (registryStore === "sqlite" && recentMutations.available === false && recentMutationCode === "cae-kit-sqlite-unavailable") {
-    return '<section class="gp-callout gp-bad"><b>Native SQLite is unavailable</b><span>Rebuild <code>better-sqlite3</code> for the editor Node, then refresh.</span></section>';
+    return callout("bad", "Native SQLite is unavailable", "Rebuild better-sqlite3 for the editor Node, then refresh.", [{ label: "Refresh", action: "refresh" }]);
   }
   if (registryStore === "sqlite" && activeVersion.isActive === false) {
-    return '<section class="gp-callout gp-bad"><b>No active guidance set</b><span>Initialize or activate a SQLite guidance-set version before authoring.</span></section>';
+    return callout("bad", "No active guidance set", "Initialize or activate a SQLite guidance-set version before authoring.", [{ label: "Refresh", action: "refresh" }]);
   }
   if (validation.ok === false) {
-    return `<section class="gp-callout gp-bad"><b>Registry validation failed</b><span>${escapeHtml(String(validation.message ?? validation.code ?? "Fix validation errors before editing."))}</span></section>`;
+    return callout("bad", "Registry validation failed", String(validation.message ?? validation.code ?? "Fix validation errors before editing."), [
+      { label: "Validate Registry", action: "validate-registry" },
+      { label: "Refresh", action: "refresh" }
+    ]);
   }
   if (readiness.canMutate === false) {
-    return `<section class="gp-callout gp-warn"><b>Authoring is in review mode</b><span>${escapeHtml(String(readiness.denialReason ?? "Mutations are disabled for this workspace."))}</span></section>`;
+    return callout("warn", "Authoring is in review mode", String(readiness.denialReason ?? "Mutations are disabled for this workspace."), [{ label: "Refresh", action: "refresh" }]);
   }
   if (issues.length > 0) {
-    return `<section class="gp-callout gp-warn"><b>Warnings need review</b><span>${escapeHtml(String(asRecord(issues[0]).message ?? asRecord(issues[0]).code ?? "Review warnings before editing."))}</span></section>`;
+    return callout("warn", "Warnings need review", String(asRecord(issues[0]).message ?? asRecord(issues[0]).code ?? "Review warnings before editing."), [
+      { label: "Validate Registry", action: "validate-registry" }
+    ]);
   }
-  return '<section class="gp-callout gp-ok"><b>Guidance authoring is ready</b><span>Active set, validation, and SQLite authoring surface are available.</span></section>';
+  return callout("ok", "Guidance authoring is ready", "Active set, validation, and SQLite authoring surface are available.");
 }
 
 function renderOverview(data: UnknownRecord): string {
@@ -131,8 +171,7 @@ function renderOverview(data: UnknownRecord): string {
 }
 
 function renderArtifacts(data: UnknownRecord): string {
-  const readiness = asRecord(data.readiness);
-  const canMutate = readiness.canMutate === true;
+  const canMutate = canMutateAuthoring(data);
   const active = asRecord(data.activeVersion);
   const registryDigest = String(active.registryDigest ?? asRecord(data.validation).registryContentHash ?? "");
   const activeVersionId = String(active.versionId ?? "");
@@ -226,8 +265,7 @@ function renderArtifactActions(row: UnknownRecord, canMutate: boolean): string {
 }
 
 function renderActivations(data: UnknownRecord): string {
-  const readiness = asRecord(data.readiness);
-  const canMutate = readiness.canMutate === true;
+  const canMutate = canMutateAuthoring(data);
   const active = asRecord(data.activeVersion);
   const rows = asArray(asRecord(data.activations).rows).slice(0, 80);
   const familyOrder = ["policy", "think", "do", "review"];

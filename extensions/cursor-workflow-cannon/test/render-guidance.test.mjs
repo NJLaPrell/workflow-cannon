@@ -380,7 +380,8 @@ test("renderGuidanceAuthoringPanelInnerHtml surfaces actionable blocked states",
       recentMutations: { rows: [] }
     }
   });
-  assert.match(jsonStore, /Switch <code>kit\.cae\.registryStore<\/code> to <code>sqlite<\/code>/);
+  assert.match(jsonStore, /Switch kit\.cae\.registryStore to sqlite/);
+  assert.match(jsonStore, /data-gp-action="refresh"/);
 
   const nativeSqlite = renderGuidanceAuthoringPanelInnerHtml({
     ok: true,
@@ -427,6 +428,23 @@ test("renderGuidanceAuthoringPanelInnerHtml surfaces actionable blocked states",
   });
   assert.match(invalid, /Registry validation failed/);
   assert.match(invalid, /broken &lt;rule&gt;/);
+  assert.match(invalid, /data-gp-action="validate-registry"/);
+
+  const invalidButConfiguredToMutate = renderGuidanceAuthoringPanelInnerHtml({
+    ok: true,
+    data: {
+      health: { caeEnabled: true, registryStatus: "ok", registryStore: "sqlite" },
+      activeVersion: { isActive: true },
+      readiness: { canMutate: true },
+      validation: { ok: false, code: "cae-registry-validation-error", message: "needs repair" },
+      counts: {},
+      artifacts: { rows: [] },
+      activations: { rows: [] },
+      recentMutations: { available: true, rows: [] }
+    }
+  });
+  assert.match(invalidButConfiguredToMutate, /data-gp-action="artifact-create" disabled/);
+  assert.match(invalidButConfiguredToMutate, /data-gp-action="activation-create-submit" disabled/);
 });
 
 test("renderGuidanceTraceDetailInnerHtml renders summary before raw JSON", () => {
