@@ -494,6 +494,7 @@ workspace-kit run cae-import-json-registry '{"schemaVersion":1,"policyApproval":
 ```bash
 workspace-kit run cae-list-registry-versions '{"schemaVersion":1}'
 workspace-kit run cae-get-registry-version '{"schemaVersion":1,"versionId":"cae.reg.seed"}'
+workspace-kit run cae-authoring-summary '{"schemaVersion":1}'
 workspace-kit run cae-create-registry-version '{"schemaVersion":1,"actor":"operator","versionId":"cae.reg.example","caeMutationApproval":{"confirmed":true,"rationale":"create empty version"}}'
 workspace-kit run cae-clone-registry-version '{"schemaVersion":1,"actor":"operator","fromVersionId":"cae.reg.seed","toVersionId":"cae.reg.clone","caeMutationApproval":{"confirmed":true,"rationale":"clone"}}'
 workspace-kit run cae-activate-registry-version '{"schemaVersion":1,"actor":"operator","versionId":"cae.reg.seed","caeMutationApproval":{"confirmed":true,"rationale":"activate"}}'
