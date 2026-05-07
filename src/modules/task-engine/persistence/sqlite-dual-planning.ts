@@ -47,6 +47,11 @@ function emptyWishlistDocument(): WishlistStoreDocument {
 
 type TableShape = "legacy-dual" | "task-only";
 
+type DbFileIdentity = {
+  dev: string;
+  ino: string;
+};
+
 function detectTableShape(db: Database.Database): TableShape {
   const rows = db.prepare("PRAGMA table_info(workspace_planning_state)").all() as { name: string }[];
   if (rows.some((r) => r.name === "wishlist_store_json")) {
@@ -135,9 +140,33 @@ function readRelationalFlagFromRow(row: Record<string, unknown> | undefined): bo
   return false;
 }
 
+function readDbFileIdentity(dbPath: string): DbFileIdentity | null {
+  try {
+    const stat = fs.statSync(dbPath, { bigint: true });
+    return {
+      dev: stat.dev.toString(),
+      ino: stat.ino.toString()
+    };
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+      return null;
+    }
+    throw err;
+  }
+}
+
+function sameDbFileIdentity(a: DbFileIdentity | null, b: DbFileIdentity | null): boolean {
+  if (a === null || b === null) {
+    return a === b;
+  }
+  return a.dev === b.dev && a.ino === b.ino;
+}
+
 /** Single-file SQLite backing for task JSON document; legacy rows may include wishlist_store_json until collapsed on store open. */
 export class SqliteDualPlanningStore {
   private db: Database.Database | null = null;
+  private _dbFileIdentity: DbFileIdentity | null = null;
+  private _reloadOnNextRead = false;
   readonly dbPath: string;
   private readonly _workspaceRoot: string;
   private _taskDoc: TaskStoreDocument;
@@ -156,10 +185,12 @@ export class SqliteDualPlanningStore {
   }
 
   get taskDocument(): TaskStoreDocument {
+    this.reloadIfCachedStateStale();
     return this._taskDoc;
   }
 
   get wishlistDocument(): WishlistStoreDocument {
+    this.reloadIfCachedStateStale();
     return this._wishlistDoc;
   }
 
@@ -174,6 +205,7 @@ export class SqliteDualPlanningStore {
 
   /** Current planning generation (SQLite `workspace_planning_state.planning_generation`). */
   getPlanningGeneration(): number {
+    this.reloadIfCachedStateStale();
     return this._planningGeneration;
   }
 
@@ -198,31 +230,138 @@ export class SqliteDualPlanningStore {
         /* best-effort */
       }
       this.db = null;
+      this._dbFileIdentity = null;
     }
   }
 
-  private ensureDb(): Database.Database {
-    if (this.db) {
-      return this.db;
+  private closeReplacedDatabaseHandle(): void {
+    if (!this.db) {
+      return;
     }
-    const dir = path.dirname(this.dbPath);
-    fs.mkdirSync(dir, { recursive: true });
-    this.db = new Database(this.dbPath);
-    prepareKitSqliteDatabase(this.db);
-    this._tableShape = detectTableShape(this.db);
-    return this.db;
+    const preservedPath = `${this.dbPath}.replaced-${process.pid}-${Date.now()}.tmp`;
+    let preservedCurrent = false;
+    try {
+      if (fs.existsSync(this.dbPath)) {
+        fs.renameSync(this.dbPath, preservedPath);
+        preservedCurrent = true;
+      }
+    } catch {
+      preservedCurrent = false;
+    }
+    try {
+      this.db.close();
+    } catch {
+      /* best-effort */
+    } finally {
+      this.db = null;
+      this._dbFileIdentity = null;
+      try {
+        fs.rmSync(this.dbPath, { force: true });
+        fs.rmSync(`${this.dbPath}-wal`, { force: true });
+        fs.rmSync(`${this.dbPath}-shm`, { force: true });
+        if (preservedCurrent) {
+          fs.renameSync(preservedPath, this.dbPath);
+        }
+      } catch {
+        /* best-effort */
+      }
+    }
   }
 
-  private refreshPlanningGenFromOpenDb(db: Database.Database): void {
+  private currentDbFileIdentityChanged(): boolean {
+    if (!this.db) {
+      return false;
+    }
+    const current = readDbFileIdentity(this.dbPath);
+    return !sameDbFileIdentity(this._dbFileIdentity, current);
+  }
+
+  private readPlanningGenFromOpenDb(db: Database.Database): number {
     const cols = planningStateColumnSet(db);
     if (!cols.has("planning_generation")) {
-      this._planningGeneration = 0;
-      return;
+      return 0;
     }
     const row = db
       .prepare("SELECT planning_generation AS g FROM workspace_planning_state WHERE id = 1")
       .get() as { g: number } | undefined;
-    this._planningGeneration = row !== undefined ? Number(row.g) || 0 : 0;
+    return row !== undefined ? Number(row.g) || 0 : 0;
+  }
+
+  private reloadIfCachedStateStale(): void {
+    if (!this.db) {
+      return;
+    }
+    if (this._reloadOnNextRead) {
+      this._reloadOnNextRead = false;
+      this.closeReplacedDatabaseHandle();
+      this.loadFromDisk();
+      return;
+    }
+    if (this.currentDbFileIdentityChanged()) {
+      this.closeReplacedDatabaseHandle();
+      this.loadFromDisk();
+      return;
+    }
+    if (this.readPlanningGenFromOpenDb(this.db) !== this._planningGeneration) {
+      this.loadFromDisk();
+    }
+  }
+
+  private reloadBeforeReuseIfNeeded(): void {
+    if (!this.db) {
+      return;
+    }
+    if (this._reloadOnNextRead) {
+      this._reloadOnNextRead = false;
+      this.closeReplacedDatabaseHandle();
+      this.loadFromDisk();
+      return;
+    }
+    if (this.currentDbFileIdentityChanged()) {
+      this.closeReplacedDatabaseHandle();
+      this.loadFromDisk();
+      return;
+    }
+    if (this.readPlanningGenFromOpenDb(this.db) !== this._planningGeneration) {
+      this.loadFromDisk();
+    }
+  }
+
+  private openDatabase(): Database.Database {
+    const dir = path.dirname(this.dbPath);
+    fs.mkdirSync(dir, { recursive: true });
+    this.db = new Database(this.dbPath);
+    prepareKitSqliteDatabase(this.db);
+    this._dbFileIdentity = readDbFileIdentity(this.dbPath);
+    this._tableShape = detectTableShape(this.db);
+    return this.db;
+  }
+
+  private ensureDb(options?: { reloadOnReplacement?: boolean }): Database.Database {
+    if (this.db) {
+      if (this.currentDbFileIdentityChanged()) {
+        this.closeReplacedDatabaseHandle();
+        if (options?.reloadOnReplacement !== false) {
+          this.loadFromDisk();
+          if (this.db) {
+            return this.db;
+          }
+        }
+      } else {
+        if (options?.reloadOnReplacement !== false) {
+          this.reloadBeforeReuseIfNeeded();
+          if (this.db) {
+            return this.db;
+          }
+        }
+        return this.db;
+      }
+    }
+    return this.openDatabase();
+  }
+
+  private refreshPlanningGenFromOpenDb(db: Database.Database): void {
+    this._planningGeneration = this.readPlanningGenFromOpenDb(db);
   }
 
   private loadRelationalTasks(db: Database.Database): void {
@@ -381,7 +520,7 @@ export class SqliteDualPlanningStore {
       this._planningGeneration = 0;
       return;
     }
-    const db = this.ensureDb();
+    const db = this.ensureDb({ reloadOnReplacement: false });
     syncWorkspaceKitStatusFromYamlIfNeeded(this._workspaceRoot, db);
     try {
       this._tableShape = detectTableShape(db);
@@ -484,6 +623,7 @@ export class SqliteDualPlanningStore {
     }
     } finally {
       this.refreshPlanningGenFromOpenDb(db);
+      this._dbFileIdentity = readDbFileIdentity(this.dbPath);
     }
   }
 
@@ -525,6 +665,7 @@ export class SqliteDualPlanningStore {
       options.expectedPlanningGeneration !== undefined &&
       options.expectedPlanningGeneration !== currentGen
     ) {
+      this._reloadOnNextRead = true;
       throw new TaskEngineError(
         "planning-generation-mismatch",
         `expectedPlanningGeneration ${options.expectedPlanningGeneration} does not match current planning generation ${currentGen}`,
@@ -551,6 +692,7 @@ export class SqliteDualPlanningStore {
       this.persistBlobOnly(db, nextGen);
     }
     this._planningGeneration = nextGen;
+    this._dbFileIdentity = readDbFileIdentity(this.dbPath);
   }
 
   private persistRelational(db: Database.Database, nextPlanningGeneration: number): void {
