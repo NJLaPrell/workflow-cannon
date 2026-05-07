@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-07T03:31:02.886Z",
+  "generatedAt": "2026-05-07T03:43:13.369Z",
   "commands": [
     {
       "name": "add-dependency",
@@ -100,6 +100,11 @@
     {
       "name": "cae-create-registry-version",
       "path": ".ai/agent-cli-snippets/by-command/cae-create-registry-version.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-create-workspace-artifact",
+      "path": ".ai/agent-cli-snippets/by-command/cae-create-workspace-artifact.json",
       "moduleId": "context-activation"
     },
     {

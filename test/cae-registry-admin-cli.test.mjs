@@ -2,7 +2,7 @@
  * CAE registry admin CLI + governance gate (Phase 70 — T895–T897, T900–T902, T911, T913).
  */
 import assert from "node:assert/strict";
-import { cp, mkdir, mkdtemp } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -66,6 +66,7 @@ async function authoringSummary(ws, effectiveConfig = baseEffective()) {
 
 const MUTATOR_COMMANDS = [
   "cae-create-artifact",
+  "cae-create-workspace-artifact",
   "cae-update-artifact",
   "cae-retire-artifact",
   "cae-create-activation",
@@ -540,6 +541,105 @@ test("stale-state guard rejects activation mutation when expected active version
   assert.equal(stale.data.staleState.expectedActiveVersionId, initial.activeVersion.versionId);
   assert.equal(stale.data.staleState.actualActiveVersionId, "cae.reg.stale.activation");
   assert.equal(stale.data.staleState.expectedRegistryDigest, null);
+});
+
+test("cae-create-workspace-artifact writes one markdown file, one registry row, and one audit row", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const result = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-workspace-artifact",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        artifactId: "workspace.sample.playbook",
+        artifactType: "playbook",
+        title: "Workspace Sample Playbook",
+        slug: "sample-playbook",
+        tags: ["ops", "launch"],
+        contentMarkdown: "# Workspace Sample Playbook\n\nHello from a workspace artifact.\n",
+        fragment: "section-1",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "cae-create-workspace-artifact-ok");
+  assert.equal(result.data.path, ".ai/cae/artifacts/playbooks/sample-playbook.md");
+
+  const markdownPath = path.join(ws, result.data.path);
+  const markdown = await readFile(markdownPath, "utf8");
+  assert.match(markdown, /Hello from a workspace artifact/);
+
+  const db = new Database(path.join(ws, ".workspace-kit", "tasks", "workspace-kit.db"));
+  const artifactRowCount = db
+    .prepare(`SELECT COUNT(*) AS count FROM cae_registry_artifacts WHERE version_id = ? AND artifact_id = ?`)
+    .get("cae.reg.seed", "workspace.sample.playbook");
+  const artifactRow = db
+    .prepare(
+      `SELECT path, metadata_json FROM cae_registry_artifacts WHERE version_id = ? AND artifact_id = ?`
+    )
+    .get("cae.reg.seed", "workspace.sample.playbook");
+  const auditRowCount = db
+    .prepare(`SELECT COUNT(*) AS count FROM cae_registry_mutations WHERE command_name = ? AND payload_json LIKE ?`)
+    .get("cae-create-workspace-artifact", '%workspace.sample.playbook%');
+  db.close();
+
+  assert.equal(artifactRowCount.count, 1);
+  assert.equal(artifactRow.path, ".ai/cae/artifacts/playbooks/sample-playbook.md");
+  assert.match(artifactRow.metadata_json, /ops/);
+  assert.match(artifactRow.metadata_json, /launch/);
+  assert.equal(auditRowCount.count, 1);
+});
+
+test("cae-create-workspace-artifact cleans up file when registry insert fails", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const first = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-workspace-artifact",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        artifactId: "workspace.duplicate.id",
+        artifactType: "playbook",
+        title: "First Copy",
+        slug: "original-duplicate-id",
+        contentMarkdown: "# First\n",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(first.ok, true);
+
+  const result = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-workspace-artifact",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        artifactId: "workspace.duplicate.id",
+        artifactType: "playbook",
+        title: "Duplicate Id",
+        slug: "duplicate-id-should-clean-up",
+        contentMarkdown: "# Duplicate\n",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "cae-artifact-exists");
+
+  const markdownPath = path.join(ws, ".ai/cae/artifacts/playbooks/duplicate-id-should-clean-up.md");
+  await assert.rejects(readFile(markdownPath, "utf8"));
+
+  const db = new Database(path.join(ws, ".workspace-kit", "tasks", "workspace-kit.db"));
+  const artifactRowCount = db
+    .prepare(`SELECT COUNT(*) AS count FROM cae_registry_artifacts WHERE version_id = ? AND artifact_id = ?`)
+    .get("cae.reg.seed", "workspace.duplicate.id");
+  db.close();
+  assert.equal(artifactRowCount.count, 1);
 });
 
 test("import-json-registry writes cae_registry_mutations audit", async () => {

@@ -3,6 +3,9 @@
  * Policy: `caeRegistryMutationGateError` (Epic 5) — not Tier A `policyApproval`.
  */
 
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import path from "node:path";
+
 import Database from "better-sqlite3";
 
 import type { ModuleCommandResult } from "../../contracts/module-contract.js";
@@ -25,6 +28,11 @@ import {
 } from "./cae-kit-sqlite.js";
 import { caeRegistryMutationGateError } from "./cae-registry-mutation-gate.js";
 import { loadCaeRegistryFromSqliteDb } from "./cae-registry-sqlite.js";
+import {
+  CAE_WORKSPACE_ARTIFACT_ID_PREFIX,
+  buildCaeWorkspaceArtifactPath,
+  validateCaeWorkspaceArtifactId
+} from "./workspace-artifact-conventions.js";
 import {
   validateSingleCaeActivationRecord,
   validateSingleCaeArtifactRecord,
@@ -156,6 +164,21 @@ function staleStateError(input: {
   };
 }
 
+function readOptionalString(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
+}
+
+function workspaceArtifactDefaultSlug(artifactId: string): string {
+  return artifactId.startsWith(CAE_WORKSPACE_ARTIFACT_ID_PREFIX)
+    ? artifactId.slice(CAE_WORKSPACE_ARTIFACT_ID_PREFIX.length)
+    : artifactId;
+}
+
+function workspaceArtifactMarkdown(title: string, contentMarkdown: string | null): string {
+  if (typeof contentMarkdown === "string") return contentMarkdown;
+  return `# ${title}\n`;
+}
+
 function checkCaeMutationStaleness(
   db: SqliteDb,
   workspacePath: string,
@@ -204,6 +227,7 @@ export function tryHandleCaeRegistryAdminCommand(
 ): ModuleCommandResult | undefined {
   const adminCommands = new Set([
     "cae-create-artifact",
+    "cae-create-workspace-artifact",
     "cae-update-artifact",
     "cae-retire-artifact",
     "cae-create-activation",
@@ -501,6 +525,129 @@ export function tryHandleCaeRegistryAdminCommand(
       const check = postMutationRegistryCheck(db, workspacePath, true);
       if (check) return check;
       return { ok: true, code: "cae-create-artifact-ok", data: { schemaVersion: 1, versionId: v, artifactId } };
+    }
+
+    if (name === "cae-create-workspace-artifact") {
+      const v = resolveVersionId(db, args.versionId);
+      if (typeof v !== "string") return v;
+
+      const rawArtifactId = typeof args.artifactId === "string" ? args.artifactId : "";
+      const validArtifactId = validateCaeWorkspaceArtifactId(rawArtifactId);
+      if (!validArtifactId.ok) {
+        return { ok: false, code: validArtifactId.code, message: validArtifactId.message };
+      }
+
+      const artifactType = readOptionalString(args.artifactType)?.trim() ?? "";
+      const title = readOptionalString(args.title)?.trim() ?? "";
+      if (!title) {
+        return { ok: false, code: "invalid-args", message: "title is required" };
+      }
+
+      const rawSlug = readOptionalString(args.slug)?.trim() ?? workspaceArtifactDefaultSlug(validArtifactId.value);
+      const builtPath = buildCaeWorkspaceArtifactPath(artifactType, rawSlug);
+      if (!builtPath.ok) {
+        return { ok: false, code: builtPath.code, message: builtPath.message };
+      }
+
+      const contentMarkdown = readOptionalString(args.contentMarkdown);
+      if (args.contentMarkdown !== undefined && contentMarkdown === null) {
+        return { ok: false, code: "invalid-args", message: "contentMarkdown must be a string when provided" };
+      }
+
+      const fragment = readOptionalString(args.fragment)?.trim() ?? null;
+      if (args.fragment !== undefined && fragment === null) {
+        return { ok: false, code: "invalid-args", message: "fragment must be a string when provided" };
+      }
+
+      let tags: string[] | undefined;
+      if (args.tags !== undefined) {
+        if (!Array.isArray(args.tags) || args.tags.some((tag) => typeof tag !== "string" || tag.trim().length === 0)) {
+          return { ok: false, code: "invalid-args", message: "tags must be an array of non-empty strings when provided" };
+        }
+        tags = args.tags.map((tag) => tag.trim());
+      }
+
+      const artifact = {
+        schemaVersion: 1,
+        artifactId: validArtifactId.value,
+        artifactType,
+        ref: fragment ? { path: builtPath.value.path, fragment } : { path: builtPath.value.path },
+        title,
+        ...(tags ? { tags } : {})
+      };
+      const validated = validateSingleCaeArtifactRecord(artifact);
+      if (!validated.ok) return { ok: false, code: validated.code, message: validated.message };
+
+      const absoluteDirectory = path.join(workspacePath, builtPath.value.directory);
+      const absolutePath = path.join(workspacePath, builtPath.value.path);
+      const markdown = workspaceArtifactMarkdown(title, contentMarkdown);
+
+      try {
+        mkdirSync(absoluteDirectory, { recursive: true });
+        writeFileSync(absolutePath, markdown, { encoding: "utf8", flag: "wx" });
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "EEXIST") {
+          return {
+            ok: false,
+            code: "cae-workspace-artifact-file-exists",
+            message: `Workspace artifact file already exists at '${builtPath.value.path}'`
+          };
+        }
+        throw error;
+      }
+
+      const pathProbe = verifyCaeArtifactRefPathsExist(workspacePath, [validated.value]);
+      if (pathProbe && pathProbe.ok === false) {
+        rmSync(absolutePath, { force: true });
+        return pathProbe;
+      }
+
+      const ref = validated.value.ref as { path?: string; fragment?: string };
+      const meta: Record<string, unknown> = {};
+      if (Array.isArray(validated.value.tags)) meta.tags = validated.value.tags;
+      if (typeof ref?.fragment === "string") meta.fragment = ref.fragment;
+
+      let registryFailure: ModuleCommandResult | null = null;
+      const run = db.transaction(() => {
+        insertCaeRegistryArtifactRow(db, {
+          versionId: v,
+          artifactId: validArtifactId.value,
+          artifactType: String(validated.value.artifactType),
+          path: String(ref?.path ?? ""),
+          title: typeof validated.value.title === "string" ? validated.value.title : null,
+          description: typeof validated.value.description === "string" ? validated.value.description : null,
+          metadataJson: JSON.stringify(meta)
+        });
+        insertCaeRegistryMutationAudit(db, {
+          actor,
+          commandName: name,
+          versionId: v,
+          note: typeof args.note === "string" ? args.note : null,
+          payload: { artifactId: validArtifactId.value, path: builtPath.value.path }
+        });
+        registryFailure = postMutationRegistryCheck(db, workspacePath, true);
+        if (registryFailure) {
+          throw new Error("cae-workspace-artifact-registry-check-failed");
+        }
+      });
+
+      try {
+        run();
+      } catch {
+        rmSync(absolutePath, { force: true });
+        if (registryFailure) return registryFailure;
+        return {
+          ok: false,
+          code: "cae-artifact-exists",
+          message: `artifactId '${validArtifactId.value}' already exists for this version`
+        };
+      }
+
+      return {
+        ok: true,
+        code: "cae-create-workspace-artifact-ok",
+        data: { schemaVersion: 1, versionId: v, artifactId: validArtifactId.value, path: builtPath.value.path }
+      };
     }
 
     if (name === "cae-update-artifact") {

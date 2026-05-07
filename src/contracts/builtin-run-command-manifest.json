@@ -1197,6 +1197,13 @@
   },
   {
     "moduleId": "context-activation",
+    "name": "cae-create-workspace-artifact",
+    "file": "cae-create-workspace-artifact.md",
+    "description": "Create a workspace-owned markdown artifact file and matching registry row in one mutation.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
     "name": "cae-update-artifact",
     "file": "cae-update-artifact.md",
     "description": "Update fields on a non-retired CAE artifact row for a registry version.",
