@@ -46,7 +46,7 @@ export function activate(context: vscode.ExtensionContext): void {
     );
     configView = new ConfigViewProvider(context.extensionUri, client, onKitStateChanged);
     guidanceView = new GuidanceViewProvider(context.extensionUri, client, onKitStateChanged);
-    guidancePanel = new GuidancePanel(context.extensionUri, client, onKitStateChanged);
+    guidancePanel = new GuidancePanel(context.extensionUri, client, onKitStateChanged, folder);
     statusDashboard = new StatusDashboardPanel(context.extensionUri, client, onKitStateChanged);
 
     context.subscriptions.push(
