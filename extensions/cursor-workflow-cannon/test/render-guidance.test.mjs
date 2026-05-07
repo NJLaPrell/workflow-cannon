@@ -286,6 +286,7 @@ test("renderGuidanceAuthoringPanelInnerHtml renders the tabbed authoring shell",
           {
             activationId: "cae.activation.one",
             family: "policy",
+            scopeJson: '{"conditions":[{"kind":"always"}]}',
             scopeSummary: "Always",
             lifecycleState: "draft",
             status: "draft",
@@ -325,6 +326,13 @@ test("renderGuidanceAuthoringPanelInnerHtml renders the tabbed authoring shell",
   assert.match(html, /data-gp-action="artifact-duplicate-submit"/);
   assert.match(html, /data-gp-action="artifact-retire-submit"/);
   assert.match(html, /Search activations/);
+  assert.match(html, /Activation Editor/);
+  assert.match(html, /Scope preset/);
+  assert.match(html, /Command arg equals/);
+  assert.match(html, /Advanced JSON/);
+  assert.match(html, /data-gp-activation-artifact/);
+  assert.match(html, /data-gp-action="activation-create-submit"/);
+  assert.match(html, /data-gp-action="activation-update-submit"/);
   assert.match(html, /Scope/);
   assert.match(html, /Policy applies broadly/);
   assert.match(html, /Activate Draft/);

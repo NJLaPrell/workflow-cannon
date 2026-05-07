@@ -54,6 +54,7 @@ export type CaeAuthoringActivationSummary = {
   activationId: string;
   family: string;
   priority: number;
+  scopeJson: string;
   scopeSummary: string;
   lifecycleState: string;
   source: CaeAuthoringArtifactSource;
@@ -204,7 +205,8 @@ function summarizeScope(raw: string): string {
       if (kind === "always") return "Always";
       if (kind === "phaseKey") return `Phase ${String(row.value ?? "")}`.trim();
       if (kind === "commandName") return `Command ${String(row.match ?? "is")} ${String(row.value ?? "")}`.trim();
-      if (kind === "taskId") return `Task ${String(row.value ?? "")}`.trim();
+      if (kind === "commandArgEquals") return `Arg ${String(row.path ?? "")} equals ${String(row.value ?? "")}`.trim();
+      if (kind === "taskIdPattern") return `Task ID ${String(row.pattern ?? "")}`.trim();
       if (kind === "taskTag") {
         const values = Array.isArray(row.values) ? row.values.map((value) => String(value)).join(", ") : String(row.value ?? "");
         return `Task tag ${String(row.match ?? "has")} ${values}`.trim();
@@ -306,6 +308,7 @@ export function classifyCaeAuthoringActivationRow(input: {
     activationId: input.row.activation_id,
     family: input.row.family,
     priority: input.row.priority,
+    scopeJson: input.row.scope_json,
     scopeSummary,
     lifecycleState: input.row.lifecycle_state,
     source,

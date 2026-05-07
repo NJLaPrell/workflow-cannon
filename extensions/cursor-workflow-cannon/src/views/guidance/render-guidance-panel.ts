@@ -228,6 +228,7 @@ function renderArtifactActions(row: UnknownRecord, canMutate: boolean): string {
 function renderActivations(data: UnknownRecord): string {
   const readiness = asRecord(data.readiness);
   const canMutate = readiness.canMutate === true;
+  const active = asRecord(data.activeVersion);
   const rows = asArray(asRecord(data.activations).rows).slice(0, 80);
   const familyOrder = ["policy", "think", "do", "review"];
   const body = rows.length
@@ -249,8 +250,55 @@ function renderActivations(data: UnknownRecord): string {
     <select id="gp-activation-family"><option value="">All families</option><option value="policy">Policy</option><option value="think">Think</option><option value="do">Do</option><option value="review">Review</option></select>
     <select id="gp-activation-status"><option value="">All statuses</option><option value="active">Active</option><option value="draft">Draft</option><option value="disabled">Disabled</option><option value="hidden">Hidden</option><option value="retired">Retired</option></select>
   </div>
+  ${renderActivationEditor(data, canMutate, active)}
   <table><thead><tr><th>Activation</th><th>Lifecycle</th><th>Priority</th><th>Scope</th><th>Artifacts</th><th>Ack</th><th>Source</th><th>Warnings</th><th>Actions</th></tr></thead><tbody>${body}</tbody></table>
 </section>`;
+}
+
+function renderActivationEditor(data: UnknownRecord, canMutate: boolean, active: UnknownRecord): string {
+  const registryDigest = String(active.registryDigest ?? asRecord(data.validation).registryContentHash ?? "");
+  const activeVersionId = String(active.versionId ?? "");
+  const artifacts = asArray(asRecord(data.artifacts).rows).map(asRecord).filter((row) => String(row.status ?? row.lifecycleStatus ?? "") === "active");
+  const types = Array.from(new Set(artifacts.map((row) => String(row.artifactType ?? "artifact")))).sort();
+  const picker = types.length
+    ? types
+        .map((type) => {
+          const rows = artifacts.filter((row) => String(row.artifactType ?? "artifact") === type);
+          return `<fieldset class="gp-picker-group"><legend>${escapeHtml(type)}</legend>${rows
+            .map((row) => {
+              const artifactId = String(row.artifactId ?? "");
+              const source = String(row.source ?? "unknown");
+              const status = String(row.status ?? row.lifecycleStatus ?? "unknown");
+              return `<label class="gp-pick"><input type="checkbox" data-gp-activation-artifact value="${escapeHtmlAttr(artifactId)}" /> <span><code>${escapeHtml(artifactId)}</code><small>${escapeHtml(String(row.title ?? artifactId))}</small></span><b>${escapeHtml(source)} · ${escapeHtml(status)}</b></label>`;
+            })
+            .join("")}</fieldset>`;
+        })
+        .join("")
+    : '<p class="gp-muted">No active artifacts are available for draft activation refs.</p>';
+  return `<section class="gp-editor" id="gp-activation-editor" data-gp-active-version="${escapeHtmlAttr(activeVersionId)}" data-gp-registry-digest="${escapeHtmlAttr(registryDigest)}">
+    <div class="gp-band"><h3>Activation Editor</h3><span class="gp-muted">${canMutate ? "Draft mutations enabled" : "Read-only"}</span></div>
+    <div class="gp-form-grid">
+      <label>Activation ID<input id="gp-activation-id" placeholder="workspace.activation.draft.example" /></label>
+      <label>Family<select id="gp-activation-family-field"><option value="policy">policy</option><option value="think">think</option><option value="do" selected>do</option><option value="review">review</option></select></label>
+      <label>Priority<input id="gp-activation-priority" type="number" min="0" max="9999" value="1" /></label>
+      <label>Lifecycle<select id="gp-activation-lifecycle"><option value="draft">draft</option></select></label>
+      <label>Acknowledgement<select id="gp-activation-ack-strength"><option value="none">none</option><option value="surface">surface</option><option value="recommend">recommend</option><option value="ack_required">ack required</option><option value="satisfy_required">satisfy required</option></select></label>
+      <label>Ack token<input id="gp-activation-ack-token" placeholder="policy-token" /></label>
+    </div>
+    <div class="gp-form-grid">
+      <label>Scope preset<select id="gp-activation-scope-preset"><option value="always">Always</option><option value="command-exact">Command exact</option><option value="command-prefix">Command prefix</option><option value="task-tag">Task tag</option><option value="task-id-pattern">Task ID pattern</option><option value="phase-key">Phase key</option><option value="command-arg-equals">Command arg equals</option></select></label>
+      <label>Scope value<input id="gp-activation-scope-value" placeholder="run-task" /></label>
+      <label>Arg path / tag match<input id="gp-activation-scope-path" placeholder="taskId or args.foo" /></label>
+    </div>
+    <details class="gp-editor-block"><summary>Advanced JSON</summary><textarea id="gp-activation-scope-json" rows="6" placeholder='{"conditions":[{"kind":"always"}]}'></textarea></details>
+    <div class="gp-picker" id="gp-activation-artifact-picker">${picker}</div>
+    <label class="gp-editor-block">Note<input id="gp-activation-note" placeholder="Why this draft activation is needed" /></label>
+    <div class="gp-action-row">
+      <button type="button" class="gp-primary" data-gp-action="activation-create-submit"${canMutate ? "" : " disabled"}>Create Draft</button>
+      <button type="button" class="gp-primary" data-gp-action="activation-update-submit"${canMutate ? "" : " disabled"}>Update Draft</button>
+      <button type="button" data-gp-action="activation-clear-form">Clear</button>
+    </div>
+  </section>`;
 }
 
 function renderActivationRow(row: UnknownRecord, canMutate: boolean): string {
@@ -262,7 +310,7 @@ function renderActivationRow(row: UnknownRecord, canMutate: boolean): string {
   const ack = asRecord(row.acknowledgement);
   const warnings = asArray(row.statusWarnings).map((warning) => String(warning));
   const searchable = [activationId, family, status, source, row.scopeSummary, refs.join(" "), warnings.join(" ")].map((value) => String(value ?? "").toLowerCase()).join(" ");
-  return `<tr data-gp-activation-row data-gp-search="${escapeHtmlAttr(searchable)}" data-gp-family="${escapeHtmlAttr(family)}" data-gp-status="${escapeHtmlAttr(status)}">
+  return `<tr data-gp-activation-row data-gp-search="${escapeHtmlAttr(searchable)}" data-gp-family="${escapeHtmlAttr(family)}" data-gp-status="${escapeHtmlAttr(status)}" data-gp-activation-id="${escapeHtmlAttr(activationId)}" data-gp-activation-family="${escapeHtmlAttr(family)}" data-gp-activation-priority="${escapeHtmlAttr(String(row.priority ?? ""))}" data-gp-activation-scope-json="${escapeHtmlAttr(String(row.scopeJson ?? ""))}" data-gp-activation-refs="${escapeHtmlAttr(refs.join(","))}" data-gp-activation-ack-strength="${escapeHtmlAttr(String(ack.strength ?? "none"))}" data-gp-activation-ack-token="${escapeHtmlAttr(String(ack.token ?? ""))}">
   <td><code>${escapeHtml(activationId)}</code><small>${escapeHtml(family)}</small></td>
   <td>${escapeHtml(status || "unknown")}</td>
   <td>${escapeHtml(String(row.priority ?? ""))}</td>
