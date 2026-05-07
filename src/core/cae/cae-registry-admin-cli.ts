@@ -91,6 +91,18 @@ function caeNonRetiredArtifactExists(db: SqliteDb, versionId: string, artifactId
   return Boolean(row);
 }
 
+function parseActivationArtifactRefs(raw: string): Array<{ artifactId: string }> {
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item): item is { artifactId: string } => {
+      return !!item && typeof item === "object" && !Array.isArray(item) && typeof (item as { artifactId?: unknown }).artifactId === "string";
+    });
+  } catch {
+    return [];
+  }
+}
+
 function assertActivationRefsExist(
   db: SqliteDb,
   versionId: string,
@@ -1672,9 +1684,9 @@ export function tryHandleCaeRegistryAdminCommand(
       }
       const live = db
         .prepare(
-          `SELECT 1 FROM cae_registry_activations WHERE version_id = ? AND activation_id = ? AND retired_at IS NULL`
+          `SELECT artifact_refs_json FROM cae_registry_activations WHERE version_id = ? AND activation_id = ? AND retired_at IS NULL`
         )
-        .get(v, activationId);
+        .get(v, activationId) as { artifact_refs_json: string } | undefined;
       if (!live) {
         return {
           ok: false,
@@ -1682,6 +1694,7 @@ export function tryHandleCaeRegistryAdminCommand(
           message: `Unknown or retired activationId '${activationId}'`
         };
       }
+      const artifactRefs = parseActivationArtifactRefs(live.artifact_refs_json);
       const okUp = updateCaeRegistryActivationFields(db, v, activationId, { lifecycleState: "disabled" });
       if (!okUp) {
         return { ok: false, code: "cae-activation-not-found", message: `Unknown activationId '${activationId}'` };
@@ -1695,7 +1708,11 @@ export function tryHandleCaeRegistryAdminCommand(
       });
       const check = postMutationRegistryCheck(db, workspacePath, true);
       if (check) return check;
-      return { ok: true, code: "cae-disable-activation-ok", data: { schemaVersion: 1, versionId: v, activationId } };
+      return {
+        ok: true,
+        code: "cae-disable-activation-ok",
+        data: { schemaVersion: 1, versionId: v, activationId, lifecycleState: "disabled", artifactRefs }
+      };
     }
 
     if (name === "cae-retire-activation") {
@@ -1705,6 +1722,12 @@ export function tryHandleCaeRegistryAdminCommand(
       if (!activationId) {
         return { ok: false, code: "invalid-args", message: "activationId is required" };
       }
+      const live = db
+        .prepare(
+          `SELECT artifact_refs_json FROM cae_registry_activations WHERE version_id = ? AND activation_id = ? AND retired_at IS NULL`
+        )
+        .get(v, activationId) as { artifact_refs_json: string } | undefined;
+      const artifactRefs = live ? parseActivationArtifactRefs(live.artifact_refs_json) : [];
       const okRet = retireCaeRegistryActivation(db, v, activationId);
       if (!okRet) {
         return {
@@ -1722,7 +1745,11 @@ export function tryHandleCaeRegistryAdminCommand(
       });
       const check = postMutationRegistryCheck(db, workspacePath, true);
       if (check) return check;
-      return { ok: true, code: "cae-retire-activation-ok", data: { schemaVersion: 1, versionId: v, activationId } };
+      return {
+        ok: true,
+        code: "cae-retire-activation-ok",
+        data: { schemaVersion: 1, versionId: v, activationId, lifecycleState: "retired", artifactRefs }
+      };
     }
 
     return {
