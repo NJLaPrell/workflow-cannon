@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import type { CommandClient } from "../../runtime/command-client.js";
+import { buildGuidanceMutationActionResultMessage } from "./guidance-panel-messages.js";
 import { renderGuidanceAuthoringPanelInnerHtml } from "./render-guidance-panel.js";
 
 const VIEW_TYPE = "workflowCannon.guidancePanel";
@@ -106,23 +107,11 @@ export class GuidancePanel {
   }
 
   private async postMutationResult(command: string, result: Awaited<ReturnType<CommandClient["run"]>>, options: { openPath?: string } = {}): Promise<void> {
-    const ok = result.ok === true;
-    const text = ok ? `${command} completed.` : String(result.message ?? result.code ?? `${command} failed.`);
-    const stale = !ok && (String(result.code ?? "") === "cae-stale-state" || text.toLowerCase().includes("stale"));
-    await this.panel?.webview.postMessage({
-      type: "actionResult",
-      ok,
-      text,
-      actions: stale
-        ? [
-            { label: "Refresh", action: "refresh" },
-            { label: "Review Changes", action: "select-audit" }
-          ]
-        : []
-    });
-    if (!ok) return;
+    const message = buildGuidanceMutationActionResultMessage(command, result);
+    await this.panel?.webview.postMessage(message);
+    if (!message.ok) return;
     const actions = options.openPath ? ["Open File", "Refresh", "View Audit", "Preview"] : ["Refresh", "View Audit", "Preview"];
-    const choice = await vscode.window.showInformationMessage(text, ...actions);
+    const choice = await vscode.window.showInformationMessage(message.text, ...actions);
     if (choice === "Open File" && options.openPath) await this.openArtifact(options.openPath);
     if (choice === "Refresh") await this.runRefresh();
     if (choice === "View Audit") await this.panel?.webview.postMessage({ type: "selectTab", tab: "audit" });

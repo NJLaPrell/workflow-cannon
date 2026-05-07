@@ -447,6 +447,56 @@ test("renderGuidanceAuthoringPanelInnerHtml surfaces actionable blocked states",
   assert.match(invalidButConfiguredToMutate, /data-gp-action="activation-create-submit" disabled/);
 });
 
+test("renderGuidanceAuthoringPanelInnerHtml covers representative dashboard authoring states", () => {
+  const baseData = {
+    product: { productName: "Guidance" },
+    health: { caeEnabled: true, registryStatus: "ok", registryStore: "sqlite", currentPhase: "82" },
+    activeVersion: { versionId: "cae.reg.active", isActive: true, registryDigest: "digest" },
+    readiness: { canMutate: true },
+    validation: { ok: true, registryContentHash: "digest" },
+    counts: {},
+    artifacts: { rows: [] },
+    activations: { rows: [] },
+    recentMutations: { available: true, rows: [] }
+  };
+
+  const healthy = renderGuidanceAuthoringPanelInnerHtml({ ok: true, data: baseData });
+  assert.match(healthy, /Guidance authoring is ready/);
+  assert.match(healthy, /data-gp-action="artifact-create"/);
+  assert.doesNotMatch(healthy, /data-gp-action="artifact-create" disabled/);
+  assert.match(healthy, /data-gp-action="activation-create-submit"/);
+  assert.doesNotMatch(healthy, /data-gp-action="activation-create-submit" disabled/);
+  assert.match(healthy, /data-gp-action="preview-run-draft"/);
+  assert.match(healthy, /data-gp-action="validate-registry"/);
+
+  const warning = renderGuidanceAuthoringPanelInnerHtml({
+    ok: true,
+    data: {
+      ...baseData,
+      readiness: { canMutate: true, issues: [{ code: "cae-warning", message: "Review this warning" }] },
+      validationWarnings: [{ code: "cae-warning", message: "Review this warning" }]
+    }
+  });
+  assert.match(warning, /Warnings need review/);
+  assert.match(warning, /Review this warning/);
+  assert.match(warning, /data-gp-action="validate-registry"/);
+  assert.doesNotMatch(warning, /data-gp-action="activation-create-submit" disabled/);
+
+  const sqliteFailure = renderGuidanceAuthoringPanelInnerHtml({
+    ok: true,
+    data: {
+      ...baseData,
+      activeVersion: { isActive: false },
+      readiness: { canMutate: true },
+      recentMutations: { available: false, code: "cae-kit-sqlite-unavailable", rows: [] }
+    }
+  });
+  assert.match(sqliteFailure, /Native SQLite is unavailable/);
+  assert.match(sqliteFailure, /data-gp-action="refresh"/);
+  assert.match(sqliteFailure, /data-gp-action="artifact-create" disabled/);
+  assert.match(sqliteFailure, /data-gp-action="activation-create-submit" disabled/);
+});
+
 test("renderGuidanceTraceDetailInnerHtml renders summary before raw JSON", () => {
   const html = renderGuidanceTraceDetailInnerHtml({
     explain: {
