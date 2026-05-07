@@ -424,6 +424,22 @@ test("flow: clone → activate → artifact + activation CRUD on working copy", 
   );
   assert.equal(ca.ok, true);
 
+  const evaluationContext = {
+    schemaVersion: 1,
+    task: { taskId: "T999", status: "in_progress", phaseKey: "82", title: "activation lifecycle", tags: ["cae"] },
+    command: { name: "get-task", moduleId: "task-engine", argvSummary: '{"taskId":"T999"}' },
+    workspace: { currentKitPhase: "82", nextKitPhase: "83", workspaceRootFingerprint: "sha256:test" },
+    governance: { policyApprovalRequired: false, approvalTierHint: "C", policySurface: "run-json" },
+    queue: { readyQueueDepth: 1, suggestedNextTaskId: "T100072" },
+    mapSignals: null
+  };
+  const beforeDisable = await contextActivationModule.onCommand(
+    { name: "cae-evaluate", args: { schemaVersion: 1, evaluationContext, evalMode: "live" } },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(beforeDisable.ok, true);
+  assert.equal(beforeDisable.data.bundle.families.do.some((entry) => entry.activationId === actId), true);
+
   const dis = await contextActivationModule.onCommand(
     {
       name: "cae-disable-activation",
@@ -432,6 +448,15 @@ test("flow: clone → activate → artifact + activation CRUD on working copy", 
     { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
   );
   assert.equal(dis.ok, true);
+  assert.equal(dis.data.lifecycleState, "disabled");
+  assert.deepEqual(dis.data.artifactRefs, [{ artifactId: aid }]);
+
+  const afterDisable = await contextActivationModule.onCommand(
+    { name: "cae-evaluate", args: { schemaVersion: 1, evaluationContext, evalMode: "live" } },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(afterDisable.ok, true);
+  assert.equal(afterDisable.data.bundle.families.do.some((entry) => entry.activationId === actId), false);
 
   const rAct = await contextActivationModule.onCommand(
     {
@@ -441,6 +466,8 @@ test("flow: clone → activate → artifact + activation CRUD on working copy", 
     { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
   );
   assert.equal(rAct.ok, true);
+  assert.equal(rAct.data.lifecycleState, "retired");
+  assert.deepEqual(rAct.data.artifactRefs, [{ artifactId: aid }]);
 
   const rArt = await contextActivationModule.onCommand(
     {
