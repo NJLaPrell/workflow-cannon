@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-07T04:58:59.784Z",
+  "generatedAt": "2026-05-07T14:57:57.418Z",
   "commands": [
     {
       "name": "add-dependency",
@@ -66,6 +66,11 @@
       "name": "build-plan",
       "path": ".ai/agent-cli-snippets/by-command/build-plan.json",
       "moduleId": "planning"
+    },
+    {
+      "name": "cae-activate-draft-activation",
+      "path": ".ai/agent-cli-snippets/by-command/cae-activate-draft-activation.json",
+      "moduleId": "context-activation"
     },
     {
       "name": "cae-activate-registry-version",

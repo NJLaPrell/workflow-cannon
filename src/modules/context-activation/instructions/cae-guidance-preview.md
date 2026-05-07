@@ -33,8 +33,8 @@ workspace-kit run cae-guidance-preview '{"schemaVersion":1,"taskId":"T921","comm
 `ok: true`, `code: "cae-guidance-preview-ok"`, and `data.schemaVersion: 1`.
 
 The `data` object includes the underlying `evaluationContext`, `bundle`, `trace`,
-`traceId`, grouped `guidanceCards`, `familyCounts`, `pendingAcknowledgements`,
-and `conflictShadowSummary`.
+`registryContentHash`, `traceId`, grouped `guidanceCards`, `familyCounts`,
+`pendingAcknowledgements`, and `conflictShadowSummary`.
 
 When **`draftRule`** / **`draftGuidanceRule`** is sent, **`data`** also includes **`draftImpact`**:
 **`schemaVersion`**, **`draftArtifactId`**, **`draftActivationId`**, **`scopePreset`**, **`scopePlainSummary`**,

@@ -103,6 +103,55 @@ function parseActivationArtifactRefs(raw: string): Array<{ artifactId: string }>
   }
 }
 
+function parseActivationMetadata(raw: string): Record<string, unknown> {
+  try {
+    const parsed = JSON.parse(raw || "{}") as unknown;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function readPreviewEvidence(raw: unknown):
+  | { ok: true; value: null }
+  | {
+      ok: true;
+      value: {
+        registryDigest: string | null;
+        traceId: string | null;
+        activationId: string | null;
+        activationReadinessLevel: string | null;
+        conflictStatus: string | null;
+      };
+    }
+  | { ok: false; code: string; message: string } {
+  if (raw === undefined || raw === null) return { ok: true, value: null };
+  if (typeof raw !== "object" || Array.isArray(raw)) {
+    return { ok: false, code: "invalid-args", message: "previewEvidence must be a JSON object when provided" };
+  }
+  const record = raw as Record<string, unknown>;
+  if (record.schemaVersion !== 1) {
+    return { ok: false, code: "invalid-args", message: "previewEvidence.schemaVersion must be 1" };
+  }
+  const draftImpact = record.draftImpact && typeof record.draftImpact === "object" && !Array.isArray(record.draftImpact)
+    ? (record.draftImpact as Record<string, unknown>)
+    : {};
+  const readiness = record.enforcementReadiness && typeof record.enforcementReadiness === "object" && !Array.isArray(record.enforcementReadiness)
+    ? (record.enforcementReadiness as Record<string, unknown>)
+    : {};
+  return {
+    ok: true,
+    value: {
+      registryDigest: readOptionalNonEmptyString(record.registryContentHash) ?? readOptionalNonEmptyString(record.registryDigest),
+      traceId: readOptionalNonEmptyString(record.traceId),
+      activationId: readOptionalNonEmptyString(record.activationId),
+      activationReadinessLevel:
+        readOptionalNonEmptyString(readiness.activationReadinessLevel) ?? readOptionalNonEmptyString(draftImpact.activationReadinessLevel),
+      conflictStatus: readOptionalNonEmptyString(readiness.conflictStatus)
+    }
+  };
+}
+
 function assertActivationRefsExist(
   db: SqliteDb,
   versionId: string,
@@ -311,6 +360,7 @@ export function tryHandleCaeRegistryAdminCommand(
     "cae-retire-workspace-artifact",
     "cae-create-activation",
     "cae-create-draft-activation",
+    "cae-activate-draft-activation",
     "cae-update-activation",
     "cae-update-draft-activation",
     "cae-disable-activation",
@@ -1672,6 +1722,179 @@ export function tryHandleCaeRegistryAdminCommand(
         ok: true,
         code: "cae-update-draft-activation-ok",
         data: { schemaVersion: 1, versionId: v, activationId, warnings }
+      };
+    }
+
+    if (name === "cae-activate-draft-activation") {
+      const v = resolveVersionId(db, args.versionId);
+      if (typeof v !== "string") return v;
+      const activationId = typeof args.activationId === "string" ? args.activationId.trim() : "";
+      if (!activationId) {
+        return { ok: false, code: "invalid-args", message: "activationId is required" };
+      }
+      const actRow = db
+        .prepare(
+          `SELECT activation_id, family, priority, lifecycle_state, scope_json, artifact_refs_json, acknowledgement_json, metadata_json, retired_at
+           FROM cae_registry_activations WHERE version_id = ? AND activation_id = ?`
+        )
+        .get(v, activationId) as
+        | {
+            family: string;
+            priority: number;
+            lifecycle_state: string;
+            scope_json: string;
+            artifact_refs_json: string;
+            acknowledgement_json: string | null;
+            metadata_json: string;
+            retired_at: string | null;
+          }
+        | undefined;
+      if (!actRow || actRow.retired_at) {
+        return {
+          ok: false,
+          code: "cae-activation-not-found",
+          message: `Unknown or retired activationId '${activationId}'`
+        };
+      }
+      if (actRow.lifecycle_state !== "draft") {
+        return {
+          ok: false,
+          code: "cae-activation-not-draft",
+          message: `activationId '${activationId}' is not in draft lifecycle state`
+        };
+      }
+
+      let scope: unknown;
+      let refs: unknown;
+      let ack: unknown;
+      try {
+        scope = JSON.parse(actRow.scope_json);
+      } catch {
+        return { ok: false, code: "cae-registry-sqlite-invalid-json", message: "stored scope_json is corrupt" };
+      }
+      try {
+        refs = JSON.parse(actRow.artifact_refs_json);
+      } catch {
+        return { ok: false, code: "cae-registry-sqlite-invalid-json", message: "stored artifact_refs_json is corrupt" };
+      }
+      try {
+        ack = actRow.acknowledgement_json ? JSON.parse(actRow.acknowledgement_json) : undefined;
+      } catch {
+        return { ok: false, code: "cae-registry-sqlite-invalid-json", message: "stored acknowledgement_json is corrupt" };
+      }
+
+      const storedMetadata = parseActivationMetadata(actRow.metadata_json);
+      const flags = storedMetadata.flags && typeof storedMetadata.flags === "object" && !Array.isArray(storedMetadata.flags)
+        ? (storedMetadata.flags as Record<string, unknown>)
+        : undefined;
+      const activeActivation: CaeRegistryActivationRow = {
+        schemaVersion: 1,
+        activationId,
+        family: actRow.family,
+        lifecycleState: "active",
+        priority: actRow.priority,
+        scope,
+        artifactRefs: refs,
+        acknowledgement: ack as Record<string, unknown> | undefined,
+        flags
+      };
+      const validated = validateSingleCaeActivationRecord(activeActivation);
+      if (!validated.ok) return { ok: false, code: validated.code, message: validated.message };
+      const refErr = assertActivationRefsExist(db, v, validated.value);
+      if (refErr) return refErr;
+
+      const warnings = collectDraftActivationWarnings({ ...validated.value, lifecycleState: "draft" });
+      const requiresPreviewEvidence = warnings.length > 0;
+      const previewEvidence = readPreviewEvidence(args.previewEvidence);
+      if (!previewEvidence.ok) return { ok: false, code: previewEvidence.code, message: previewEvidence.message };
+      if (requiresPreviewEvidence && !previewEvidence.value) {
+        return {
+          ok: false,
+          code: "cae-preview-evidence-required",
+          message: "Broad or policy-family draft activations require fresh cae-guidance-preview evidence before activation.",
+          data: { schemaVersion: 1, activationId, warnings }
+        };
+      }
+      if (previewEvidence.value?.activationId && previewEvidence.value.activationId !== activationId) {
+        return {
+          ok: false,
+          code: "cae-preview-evidence-activation-mismatch",
+          message: `previewEvidence.activationId '${previewEvidence.value.activationId}' does not match activationId '${activationId}'`
+        };
+      }
+      if (requiresPreviewEvidence && !previewEvidence.value?.registryDigest) {
+        return {
+          ok: false,
+          code: "cae-preview-evidence-missing-registry-digest",
+          message: "previewEvidence.registryContentHash is required for broad or policy-family draft activation."
+        };
+      }
+      if (previewEvidence.value?.registryDigest) {
+        const loaded = loadCaeRegistryFromSqliteDb(db, workspacePath, { verifyArtifactPaths: false });
+        if (!loaded.ok) return { ok: false, code: loaded.code, message: loaded.message };
+        if (previewEvidence.value.registryDigest !== loaded.value.registryDigest) {
+          return staleStateError({
+            expectedActiveVersionId: null,
+            actualActiveVersionId: getActiveCaeRegistryVersionId(db),
+            expectedRegistryDigest: previewEvidence.value.registryDigest,
+            actualRegistryDigest: loaded.value.registryDigest
+          });
+        }
+      }
+
+      const activatedAt = new Date().toISOString();
+      const publishMetadata = {
+        activatedAt,
+        actor,
+        previewEvidenceRequired: requiresPreviewEvidence,
+        previewEvidence: previewEvidence.value
+          ? {
+              registryDigest: previewEvidence.value.registryDigest,
+              traceId: previewEvidence.value.traceId,
+              activationReadinessLevel: previewEvidence.value.activationReadinessLevel,
+              conflictStatus: previewEvidence.value.conflictStatus
+            }
+          : null,
+        warningCodes: warnings.map((warning) => warning.code)
+      };
+      const nextMetadata = { ...storedMetadata, publish: publishMetadata };
+      const artifactRefs = Array.isArray(validated.value.artifactRefs)
+        ? validated.value.artifactRefs.map((ref) => ({ artifactId: String((ref as { artifactId?: unknown }).artifactId ?? "") }))
+        : [];
+      const run = db.transaction(() => {
+        updateCaeRegistryActivationFields(db, v, activationId, {
+          family: String(validated.value.family),
+          priority: Number(validated.value.priority) || 0,
+          lifecycleState: "active",
+          scopeJson: JSON.stringify(validated.value.scope ?? {}),
+          artifactRefsJson: JSON.stringify(validated.value.artifactRefs ?? []),
+          acknowledgementJson: validated.value.acknowledgement ? JSON.stringify(validated.value.acknowledgement) : null,
+          metadataJson: JSON.stringify(nextMetadata)
+        });
+        insertCaeRegistryMutationAudit(db, {
+          actor,
+          commandName: name,
+          versionId: v,
+          note: typeof args.note === "string" ? args.note : null,
+          payload: { activationId, lifecycleState: "active", requiresPreviewEvidence, previewEvidence: publishMetadata.previewEvidence }
+        });
+      });
+      run();
+      const check = postMutationRegistryCheck(db, workspacePath, true);
+      if (check) return check;
+      return {
+        ok: true,
+        code: "cae-activate-draft-activation-ok",
+        data: {
+          schemaVersion: 1,
+          versionId: v,
+          activationId,
+          lifecycleState: "active",
+          artifactRefs,
+          warnings,
+          previewEvidenceRequired: requiresPreviewEvidence,
+          publish: publishMetadata
+        }
       };
     }
 
