@@ -29,6 +29,7 @@ export type CommandClientActivityInput = {
 
 type CommandClientOptions = {
   cliPathOverride?: string;
+  extensionRoot?: string;
   execFn?: CommandClientExecFn;
   timeoutMs?: number;
   /**
@@ -57,29 +58,35 @@ export type NodeExecutableDiagnostic = {
   nativeSqlite?: NativeSqliteProbeDiagnostic;
 };
 
+const WORKFLOW_CANNON_NODE_MAJOR = "22";
+
 /** Pick Node binary for spawning workspace-kit; never uses extension-host `process.execPath` by default. */
 export function pickNodeExecutable(
   resolve?: () => string | undefined,
   workspaceRoot?: string,
-  nativeProbeRoots?: string[]
+  nativeProbeRoots?: string[],
+  runtimeRoots?: string[]
 ): string {
-  const candidates = buildNodeExecutableCandidates(resolve, workspaceRoot);
+  const candidates = buildNodeExecutableCandidates(resolve, runtimeRoots);
   if (workspaceRoot && findBetterSqliteProbeRoot(workspaceRoot, nativeProbeRoots)) {
-    const nativeCompatible = inspectNodeExecutableCandidates(resolve, workspaceRoot, nativeProbeRoots).find(
-      (candidate) => candidate.exists && candidate.nativeSqlite?.ok
+    const diagnostics = inspectNodeExecutableCandidates(resolve, workspaceRoot, nativeProbeRoots, runtimeRoots);
+    const preferredNativeCompatible = diagnostics.find(
+      (candidate) => candidate.exists && isPreferredNodeMajor(candidate.version) && candidate.nativeSqlite?.ok
     );
+    if (preferredNativeCompatible) return preferredNativeCompatible.path;
+    const nativeCompatible = diagnostics.find((candidate) => candidate.exists && candidate.nativeSqlite?.ok);
     if (nativeCompatible) return nativeCompatible.path;
   }
   return candidates[0] ?? "node";
 }
 
-function buildNodeExecutableCandidates(resolve?: () => string | undefined, workspaceRoot?: string): string[] {
+function buildNodeExecutableCandidates(resolve?: () => string | undefined, runtimeRoots?: string[]): string[] {
   const fromResolver = resolve?.()?.trim();
   const candidates: string[] = [];
   addNodeCandidate(candidates, fromResolver);
   const fromEnv = process.env.WORKSPACE_KIT_NODE?.trim();
   addNodeCandidate(candidates, fromEnv);
-  for (const p of discoverNvmNodeExecutables(workspaceRoot)) {
+  for (const p of discoverNvmNodeExecutables(runtimeRoots)) {
     addNodeCandidate(candidates, p);
   }
   if (process.platform === "win32") {
@@ -108,13 +115,13 @@ function addNodeCandidate(candidates: string[], candidate?: string): void {
   if (!candidates.includes(value)) candidates.push(value);
 }
 
-function discoverNvmNodeExecutables(workspaceRoot?: string): string[] {
+function discoverNvmNodeExecutables(runtimeRoots?: string[]): string[] {
   const nvmRoot = process.env.NVM_DIR?.trim() || path.join(os.homedir(), ".nvm");
   const versionsRoot = path.join(nvmRoot, "versions", "node");
   const discovered: string[] = [];
   const versions = listNvmVersionDirs(versionsRoot);
 
-  for (const spec of readWorkspaceNodeVersionSpecs(workspaceRoot)) {
+  for (const spec of readRuntimeNodeVersionSpecs(runtimeRoots)) {
     for (const nodePath of findNvmNodesForVersionSpec(versionsRoot, versions, spec)) {
       addNodeCandidate(discovered, nodePath);
     }
@@ -127,15 +134,21 @@ function discoverNvmNodeExecutables(workspaceRoot?: string): string[] {
   return discovered;
 }
 
-function readWorkspaceNodeVersionSpecs(workspaceRoot?: string): string[] {
-  if (!workspaceRoot) return [];
+function readRuntimeNodeVersionSpecs(runtimeRoots?: string[]): string[] {
   const specs: string[] = [];
-  for (const fileName of [".node-version", ".nvmrc"]) {
-    const filePath = path.join(workspaceRoot, fileName);
-    if (!fs.existsSync(filePath)) continue;
-    const spec = fs.readFileSync(filePath, "utf8").split(/\r?\n/, 1)[0]?.trim();
-    if (spec && !spec.startsWith("#")) specs.push(spec);
+  const seenRoots = new Set<string>();
+  for (const root of runtimeRoots ?? []) {
+    const normalizedRoot = root.trim();
+    if (!normalizedRoot || seenRoots.has(normalizedRoot)) continue;
+    seenRoots.add(normalizedRoot);
+    for (const fileName of [".node-version", ".nvmrc"]) {
+      const filePath = path.join(normalizedRoot, fileName);
+      if (!fs.existsSync(filePath)) continue;
+      const spec = fs.readFileSync(filePath, "utf8").split(/\r?\n/, 1)[0]?.trim();
+      if (spec && !spec.startsWith("#") && !specs.includes(spec)) specs.push(spec);
+    }
   }
+  if (!specs.includes(WORKFLOW_CANNON_NODE_MAJOR)) specs.push(WORKFLOW_CANNON_NODE_MAJOR);
   return specs;
 }
 
@@ -189,10 +202,11 @@ function findBetterSqliteProbeRoot(workspaceRoot: string, nativeProbeRoots?: str
 export function inspectNodeExecutableCandidates(
   resolve?: () => string | undefined,
   workspaceRoot?: string,
-  nativeProbeRoots?: string[]
+  nativeProbeRoots?: string[],
+  runtimeRoots?: string[]
 ): NodeExecutableDiagnostic[] {
   const nativeProbeRoot = workspaceRoot ? findBetterSqliteProbeRoot(workspaceRoot, nativeProbeRoots) : undefined;
-  return buildNodeExecutableCandidates(resolve, workspaceRoot).map((nodeBin) => {
+  return buildNodeExecutableCandidates(resolve, runtimeRoots).map((nodeBin) => {
     const identity = inspectNodeIdentity(nodeBin);
     return {
       path: nodeBin,
@@ -201,6 +215,10 @@ export function inspectNodeExecutableCandidates(
         nativeProbeRoot && identity.exists ? probeBetterSqliteWithNode(nodeBin, nativeProbeRoot) : undefined
     };
   });
+}
+
+function isPreferredNodeMajor(version?: string): boolean {
+  return version?.replace(/^v/, "").split(".", 1)[0] === WORKFLOW_CANNON_NODE_MAJOR;
 }
 
 function inspectNodeIdentity(nodeBin: string): Omit<NodeExecutableDiagnostic, "path" | "nativeSqlite"> {
@@ -298,14 +316,17 @@ export function formatNodeExecutableDiagnostics(diagnostics: NodeExecutableDiagn
       return `${candidate.path} (${identity}; ${native})`;
     })
     .join(" | ");
-  return `${rendered}. Set workflowCannon.nodeExecutable or WORKSPACE_KIT_NODE to the Node executable that installed node_modules, then rebuild with pnpm rebuild better-sqlite3 if needed.`;
+  return `${rendered}. Set workflowCannon.nodeExecutable or WORKSPACE_KIT_NODE to a Node 22 executable that can load Workflow Cannon's node_modules, then rebuild with pnpm rebuild better-sqlite3 if needed.`;
 }
 
-function resolveCliJs(workspaceRoot: string, cliPathOverride?: string): string {
+export function resolveCliJs(workspaceRoot: string, cliPathOverride?: string, extensionRoot?: string): string {
   if (cliPathOverride && fs.existsSync(cliPathOverride)) {
     return cliPathOverride;
   }
   const candidates = [
+    extensionRoot
+      ? path.join(extensionRoot, "node_modules", "@workflow-cannon", "workspace-kit", "dist", "cli.js")
+      : "",
     path.join(workspaceRoot, "dist", "cli.js"),
     path.join(workspaceRoot, "node_modules", "@workflow-cannon", "workspace-kit", "dist", "cli.js")
   ];
@@ -329,10 +350,13 @@ function execKit(
   maxBuffer = 20 * 1024 * 1024,
   timeoutMs = 30_000,
   cliPathOverride?: string,
-  resolveNodeExecutable?: () => string | undefined
+  resolveNodeExecutable?: () => string | undefined,
+  extensionRoot?: string
 ): Promise<CommandClientExecResult> {
-  const cliJs = resolveCliJs(workspaceRoot, cliPathOverride);
-  const nodeBin = pickNodeExecutable(resolveNodeExecutable, workspaceRoot, [inferCliPackageRoot(cliJs)]);
+  const cliJs = resolveCliJs(workspaceRoot, cliPathOverride, extensionRoot);
+  const cliPackageRoot = inferCliPackageRoot(cliJs);
+  const runtimeRoots = [cliPackageRoot, extensionRoot].filter((root): root is string => Boolean(root));
+  const nodeBin = pickNodeExecutable(resolveNodeExecutable, workspaceRoot, [cliPackageRoot], runtimeRoots);
   return new Promise((resolve, reject) => {
     execFile(
       nodeBin,
@@ -392,12 +416,14 @@ function looksLikePackageManagerBanner(stdout: string): boolean {
 export class CommandClient {
   private readonly timeoutMs: number;
   private readonly cliPathOverride?: string;
+  private readonly extensionRoot?: string;
   private readonly resolveNodeExecutable?: () => string | undefined;
   private readonly execFn: CommandClientExecFn;
 
   constructor(private readonly workspaceRoot: string, options?: CommandClientOptions) {
     this.timeoutMs = options?.timeoutMs ?? 30_000;
     this.cliPathOverride = options?.cliPathOverride;
+    this.extensionRoot = options?.extensionRoot;
     this.resolveNodeExecutable = options?.resolveNodeExecutable;
     this.execFn =
       options?.execFn ??
@@ -408,7 +434,8 @@ export class CommandClient {
           20 * 1024 * 1024,
           this.timeoutMs,
           this.cliPathOverride,
-          this.resolveNodeExecutable
+          this.resolveNodeExecutable,
+          this.extensionRoot
         ));
   }
 
@@ -431,15 +458,22 @@ export class CommandClient {
       const parsed = parseRunCommandOutput(stdout, exitCode, stderr);
       if (!parsed.ok && exitCode !== 0 && looksLikeNativeSqliteError(`${stderr}\n${stdout}`)) {
         let nativeProbeRoots: string[] | undefined;
+        let runtimeRoots: string[] | undefined;
         try {
-          nativeProbeRoots = [inferCliPackageRoot(resolveCliJs(this.workspaceRoot, this.cliPathOverride))];
+          const cliPackageRoot = inferCliPackageRoot(
+            resolveCliJs(this.workspaceRoot, this.cliPathOverride, this.extensionRoot)
+          );
+          nativeProbeRoots = [cliPackageRoot];
+          runtimeRoots = [cliPackageRoot, this.extensionRoot].filter((root): root is string => Boolean(root));
         } catch {
           nativeProbeRoots = undefined;
+          runtimeRoots = this.extensionRoot ? [this.extensionRoot] : undefined;
         }
         const diagnostics = inspectNodeExecutableCandidates(
           this.resolveNodeExecutable,
           this.workspaceRoot,
-          nativeProbeRoots
+          nativeProbeRoots,
+          runtimeRoots
         );
         return {
           ok: false,

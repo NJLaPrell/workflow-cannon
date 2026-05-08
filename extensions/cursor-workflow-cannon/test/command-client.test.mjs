@@ -10,8 +10,24 @@ import {
   formatNodeExecutableDiagnostics,
   inspectNodeExecutableCandidates,
   parseRunCommandOutput,
-  pickNodeExecutable
+  pickNodeExecutable,
+  resolveCliJs
 } from "../dist/runtime/command-client.js";
+
+function writeFakeNode(filePath, version, body = "exit 0") {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(
+    filePath,
+    `#!/bin/sh
+if [ "$1" = "-p" ]; then
+  echo '{"version":"v${version}","arch":"arm64","platform":"darwin","execPath":"${filePath}","modules":"127"}'
+  exit 0
+fi
+${body}
+`,
+    { mode: 0o755 }
+  );
+}
 
 test("pickNodeExecutable uses resolver path when it exists", () => {
   const picked = pickNodeExecutable(() => process.execPath);
@@ -23,7 +39,7 @@ test("pickNodeExecutable falls through when resolver path is bogus", () => {
   assert.notEqual(picked, "/__no_such__/node");
 });
 
-test("pickNodeExecutable discovers nvm node matching workspace version", () => {
+test("pickNodeExecutable ignores attached workspace Node markers and discovers Workflow Cannon Node 22", () => {
   const oldHome = process.env.HOME;
   const oldNvmDir = process.env.NVM_DIR;
   const oldNvmBin = process.env.NVM_BIN;
@@ -35,14 +51,12 @@ test("pickNodeExecutable discovers nvm node matching workspace version", () => {
     delete process.env.NVM_BIN;
     delete process.env.WORKSPACE_KIT_NODE;
     const workspaceRoot = path.join(tempRoot, "workspace");
-    const node20 = path.join(process.env.NVM_DIR, "versions", "node", "v20.3.0", "bin", "node");
+    const node18 = path.join(process.env.NVM_DIR, "versions", "node", "v18.19.0", "bin", "node");
     const node22 = path.join(process.env.NVM_DIR, "versions", "node", "v22.22.2", "bin", "node");
-    fs.mkdirSync(path.dirname(node20), { recursive: true });
-    fs.mkdirSync(path.dirname(node22), { recursive: true });
     fs.mkdirSync(workspaceRoot, { recursive: true });
-    fs.writeFileSync(node20, "");
-    fs.writeFileSync(node22, "");
-    fs.writeFileSync(path.join(workspaceRoot, ".nvmrc"), "22\n");
+    writeFakeNode(node18, "18.19.0");
+    writeFakeNode(node22, "22.22.2");
+    fs.writeFileSync(path.join(workspaceRoot, ".nvmrc"), "18\n");
 
     assert.equal(pickNodeExecutable(undefined, workspaceRoot), node22);
   } finally {
@@ -54,6 +68,38 @@ test("pickNodeExecutable discovers nvm node matching workspace version", () => {
     else process.env.NVM_BIN = oldNvmBin;
     if (oldWorkspaceKitNode === undefined) delete process.env.WORKSPACE_KIT_NODE;
     else process.env.WORKSPACE_KIT_NODE = oldWorkspaceKitNode;
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test("resolveCliJs prefers extension-packaged workspace-kit over attached workspace package", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "wc-cli-resolve-"));
+  try {
+    const workspaceRoot = path.join(tempRoot, "workspace");
+    const extensionRoot = path.join(tempRoot, "extension");
+    const workspaceCli = path.join(
+      workspaceRoot,
+      "node_modules",
+      "@workflow-cannon",
+      "workspace-kit",
+      "dist",
+      "cli.js"
+    );
+    const extensionCli = path.join(
+      extensionRoot,
+      "node_modules",
+      "@workflow-cannon",
+      "workspace-kit",
+      "dist",
+      "cli.js"
+    );
+    fs.mkdirSync(path.dirname(workspaceCli), { recursive: true });
+    fs.mkdirSync(path.dirname(extensionCli), { recursive: true });
+    fs.writeFileSync(workspaceCli, "// workspace cli\n");
+    fs.writeFileSync(extensionCli, "// extension cli\n");
+
+    assert.equal(resolveCliJs(workspaceRoot, undefined, extensionRoot), extensionCli);
+  } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
 });

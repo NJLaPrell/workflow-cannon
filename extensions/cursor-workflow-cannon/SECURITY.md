@@ -10,7 +10,7 @@
 
 1. UI action -> extension command handler.
 2. Handler invokes `CommandClient`.
-3. `CommandClient` executes `workspace-kit` (`dist/cli.js` or package install path).
+3. `CommandClient` executes `workspace-kit` (extension-bundled package first, then built `dist/cli.js` or workspace package install path).
 4. JSON response is rendered in webview/tree with sanitization.
 
 ## Guardrails

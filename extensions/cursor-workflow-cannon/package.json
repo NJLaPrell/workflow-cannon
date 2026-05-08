@@ -66,7 +66,7 @@
         "workflowCannon.nodeExecutable": {
           "type": "string",
           "default": "",
-          "markdownDescription": "Path to `node` for running workspace-kit (must match the Node used for `pnpm install`, or native modules like `better-sqlite3` can fail with ABI/architecture errors). Leave empty to use `WORKSPACE_KIT_NODE`, workspace `.node-version` / `.nvmrc` through nvm, common install paths, then `node` on `PATH` — **not** the editor's embedded Node."
+          "markdownDescription": "Path to `node` for running workspace-kit. Leave empty to use `WORKSPACE_KIT_NODE`, Workflow Cannon's Node 22 runtime markers through nvm, common install paths, then `node` on `PATH`. The extension does not use the attached project's `.node-version` / `.nvmrc` unless you explicitly point this setting or `WORKSPACE_KIT_NODE` at that Node."
         }
       }
     },

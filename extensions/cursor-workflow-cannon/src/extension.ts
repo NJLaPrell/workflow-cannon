@@ -25,7 +25,10 @@ export function activate(context: vscode.ExtensionContext): void {
   const root = findWorkflowCannonRoot();
   const folder = root ? vscode.workspace.getWorkspaceFolder(vscode.Uri.file(root)) : undefined;
   const client = root
-    ? new CommandClient(root, { resolveNodeExecutable: readWorkflowCannonNodeSetting })
+    ? new CommandClient(root, {
+        extensionRoot: context.extensionUri.fsPath,
+        resolveNodeExecutable: readWorkflowCannonNodeSetting
+      })
     : undefined;
   const kitStateEmitter = new vscode.EventEmitter<void>();
   const onKitStateChanged = kitStateEmitter.event;
