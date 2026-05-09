@@ -315,6 +315,8 @@ test("renderGuidanceAuthoringPanelInnerHtml renders the tabbed authoring shell",
   assert.match(html, /data-gp-tab="versions"/);
   assert.match(html, /id="gp-versions-json"/);
   assert.match(html, /data-gp-tab="preview"/);
+  assert.match(html, /data-gp-tab="portability"/);
+  assert.match(html, /gp-portability-out/);
   assert.match(html, /data-gp-tab="audit"/);
   assert.match(html, /Warnings need review/);
   assert.match(html, /New Artifact/);
@@ -330,7 +332,8 @@ test("renderGuidanceAuthoringPanelInnerHtml renders the tabbed authoring shell",
   assert.match(html, /Validation warnings/);
   assert.match(html, /Review &lt;warning&gt;/);
   assert.match(html, /cae-create-workspace-artifact/);
-  assert.match(html, /cae\.activation\.one/);
+  assert.match(html, /activation-bulk-retire/);
+  assert.match(html, /data-gp-activation-bulk=/);
   assert.match(html, /Search artifacts/);
   assert.match(html, /Artifact Editor/);
   assert.match(html, /gp-artifact-templates-json/);
@@ -458,6 +461,50 @@ test("renderGuidanceAuthoringPanelInnerHtml surfaces actionable blocked states",
   });
   assert.match(invalidButConfiguredToMutate, /data-gp-action="artifact-create" disabled/);
   assert.match(invalidButConfiguredToMutate, /data-gp-action="activation-create-submit" disabled/);
+});
+
+test("renderGuidanceAuthoringPanelInnerHtml shows onboarding when no active workspace artifacts", () => {
+  const html = renderGuidanceAuthoringPanelInnerHtml({
+    ok: true,
+    code: "cae-authoring-summary-ok",
+    data: {
+      schemaVersion: 1,
+      product: { productName: "Guidance" },
+      health: { caeEnabled: true, registryStatus: "ok", registryStore: "sqlite" },
+      activeVersion: {
+        versionId: "cae.reg.active",
+        isActive: true,
+        registryDigest: "abcd",
+        artifactCount: 1,
+        activationCount: 0
+      },
+      counts: {
+        activationFamilies: {},
+        activationStatuses: {},
+        artifactStatuses: { active: 1 },
+        recentMutationCount: 0
+      },
+      validation: { ok: true, code: "cae-registry-validate-ok", registryContentHash: "abcd" },
+      validationWarnings: [],
+      readiness: { canMutate: true },
+      artifacts: {
+        rows: [
+          {
+            artifactId: "cae.default.only",
+            title: "Default only",
+            artifactType: "playbook",
+            source: "default",
+            status: "active",
+            fileExists: true
+          }
+        ]
+      },
+      activations: { rows: [] },
+      recentMutations: { count: 0, rows: [], available: true },
+      workspaceArtifactMarkdownTemplates: []
+    }
+  });
+  assert.match(html, /First workspace Guidance/);
 });
 
 test("renderGuidanceAuthoringPanelInnerHtml covers representative dashboard authoring states", () => {

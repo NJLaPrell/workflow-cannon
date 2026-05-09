@@ -69,6 +69,29 @@ function canMutateAuthoring(data: UnknownRecord): boolean {
   return authoringMutationBlockReason(data) === null;
 }
 
+function countWorkspaceActiveArtifacts(data: UnknownRecord): number {
+  let n = 0;
+  for (const raw of asArray(asRecord(data.artifacts).rows)) {
+    const row = asRecord(raw);
+    const source = String(row.source ?? "");
+    const status = String(row.status ?? row.lifecycleStatus ?? "").toLowerCase();
+    if (source === "workspace" && status === "active") n += 1;
+  }
+  return n;
+}
+
+const PREVIEW_COMMAND_SUGGESTIONS = [
+  "run-transition",
+  "list-tasks",
+  "get-next-actions",
+  "dashboard-summary",
+  "cae-guidance-preview",
+  "cae-registry-validate",
+  "cae-export-guidance-pack",
+  "cae-import-guidance-pack-dry-run",
+  "cae-reconcile-defaults"
+];
+
 function renderStateCallout(data: UnknownRecord, result: UnknownRecord): string {
   if (result.ok !== true) {
     return `<section class="gp-callout gp-bad"><b>Guidance authoring is unavailable</b><span>${escapeHtml(String(result.message ?? result.code ?? "Unknown failure"))}</span></section>`;
@@ -131,6 +154,11 @@ function renderOverview(data: UnknownRecord): string {
   const recentRows = asArray(recentMutations.rows);
   const latestMutation = asRecord(recentRows[0]);
   const activeVersionId = String(active.versionId ?? health.activeRegistryVersionId ?? "No active version");
+  const wsActiveArtifacts = countWorkspaceActiveArtifacts(data);
+  const showOnboarding = wsActiveArtifacts === 0 && canMutateAuthoring(data);
+  const onboarding = showOnboarding
+    ? `<section class="gp-callout gp-warn"><b>First workspace Guidance</b><span>You have no active workspace-owned artifacts yet. Pick a starter template (Artifacts tab), duplicate a default row, then bind a draft activation and run Preview before publishing.</span><div class="gp-action-row"><button type="button" class="gp-primary" data-gp-tab-target="artifacts" data-gp-action="new-artifact">Open Artifact editor</button><button type="button" data-gp-tab-target="activations" data-gp-action="new-activation">Open Activation editor</button></div></section>`
+    : "";
   const warningRows = warnings.length
     ? `<div class="gp-warning-list">${warnings
         .slice(0, 4)
@@ -156,6 +184,7 @@ function renderOverview(data: UnknownRecord): string {
     <button type="button" data-gp-tab-target="preview" data-gp-action="preview-guidance">Preview Guidance</button>
     <button type="button" data-gp-action="validate-registry">Validate Registry</button>
   </div>
+  ${onboarding}
   <div id="gp-action-result" class="gp-inline-result" role="status" aria-live="polite"></div>
   <div class="gp-status-grid">
     <div><b>CAE</b><span>${health.caeEnabled === false ? "disabled" : "enabled"}</span></div>
@@ -305,21 +334,27 @@ function renderActivations(data: UnknownRecord): string {
           const familyRows = rows.map(asRecord).filter((row) => String(row.family ?? "") === family);
           if (familyRows.length === 0) return [];
           return [
-            `<tr class="gp-group-row"><td colspan="9">${escapeHtml(family)} · ${numberText(familyRows.length)}</td></tr>`,
+            `<tr class="gp-group-row"><td colspan="10">${escapeHtml(family)} · ${numberText(familyRows.length)}</td></tr>`,
             ...familyRows.map((row) => renderActivationRow(row, canMutate))
           ];
         })
         .join("")
-    : '<tr><td colspan="9">No activations found.</td></tr>';
+    : '<tr><td colspan="10">No activations found.</td></tr>';
   return `<section class="gp-tab-panel" id="gp-tab-activations" data-gp-panel="activations">
   <div class="gp-band"><h2>Activations</h2><span id="gp-activation-count" class="gp-muted">${numberText(rows.length)} activations</span></div>
   <div class="gp-table-tools">
     <input id="gp-activation-search" type="search" placeholder="Search activations" />
     <select id="gp-activation-family"><option value="">All families</option><option value="policy">Policy</option><option value="think">Think</option><option value="do">Do</option><option value="review">Review</option></select>
-    <select id="gp-activation-status"><option value="">All statuses</option><option value="active">Active</option><option value="draft">Draft</option><option value="disabled">Disabled</option><option value="hidden">Hidden</option><option value="retired">Retired</option></select>
+    <select id="gp-activation-status"><option value="">All statuses</option><option value="active">Active</option><option value="draft">Draft (authoring)</option><option value="disabled">Disabled</option><option value="hidden">Hidden</option><option value="retired">Retired</option></select>
+  </div>
+  <div class="gp-action-row">
+    <button type="button" data-gp-action="activation-bulk-select-visible">Select visible rows</button>
+    <button type="button" data-gp-action="activation-bulk-clear">Clear selection</button>
+    <button type="button" data-gp-action="activation-bulk-disable"${canMutate ? "" : " disabled"}>Disable selected</button>
+    <button type="button" data-gp-action="activation-bulk-retire"${canMutate ? "" : " disabled"}>Retire selected</button>
   </div>
   ${renderActivationEditor(data, canMutate, active)}
-  <table><thead><tr><th>Activation</th><th>Lifecycle</th><th>Priority</th><th>Scope</th><th>Artifacts</th><th>Ack</th><th>Source</th><th>Warnings</th><th>Actions</th></tr></thead><tbody>${body}</tbody></table>
+  <table><thead><tr><th class="gp-bulk-col"></th><th>Activation</th><th>Lifecycle</th><th>Priority</th><th>Scope</th><th>Artifacts</th><th>Ack</th><th>Source</th><th>Warnings</th><th>Actions</th></tr></thead><tbody>${body}</tbody></table>
 </section>`;
 }
 
@@ -385,6 +420,7 @@ function renderActivationRow(row: UnknownRecord, canMutate: boolean): string {
   const warnings = asArray(row.statusWarnings).map((warning) => String(warning));
   const searchable = [activationId, family, status, source, row.scopeSummary, refs.join(" "), warnings.join(" ")].map((value) => String(value ?? "").toLowerCase()).join(" ");
   return `<tr data-gp-activation-row data-gp-search="${escapeHtmlAttr(searchable)}" data-gp-family="${escapeHtmlAttr(family)}" data-gp-status="${escapeHtmlAttr(status)}" data-gp-activation-id="${escapeHtmlAttr(activationId)}" data-gp-activation-family="${escapeHtmlAttr(family)}" data-gp-activation-priority="${escapeHtmlAttr(String(row.priority ?? ""))}" data-gp-activation-scope-json="${escapeHtmlAttr(String(row.scopeJson ?? ""))}" data-gp-activation-refs="${escapeHtmlAttr(refs.join(","))}" data-gp-activation-ack-strength="${escapeHtmlAttr(String(ack.strength ?? "none"))}" data-gp-activation-ack-token="${escapeHtmlAttr(String(ack.token ?? ""))}">
+  <td class="gp-bulk-col"><input type="checkbox" aria-label="Select activation" data-gp-activation-bulk="${escapeHtmlAttr(activationId)}" data-gp-bulk-status="${escapeHtmlAttr(status)}" /></td>
   <td><code>${escapeHtml(activationId)}</code><small>${escapeHtml(family)}</small></td>
   <td>${escapeHtml(status || "unknown")}</td>
   <td>${escapeHtml(String(row.priority ?? ""))}</td>
@@ -418,8 +454,10 @@ function renderPreview(data: UnknownRecord): string {
   const validation = asRecord(data.validation);
   const active = asRecord(data.activeVersion);
   const phase = String(asRecord(data.health).currentPhase ?? "82");
+  const cmdOptions = PREVIEW_COMMAND_SUGGESTIONS.map((c) => `<option value="${escapeHtmlAttr(c)}"></option>`).join("");
   return `<section class="gp-tab-panel" id="gp-tab-preview" data-gp-panel="preview">
   <div class="gp-band"><h2>Preview</h2><span class="gp-muted">Draft overlay evidence</span></div>
+  <section class="gp-callout gp-ok"><b>Conflict assistant</b><span>When counts tie within the same family, higher priority wins. Policy can block advisory families — check <b>Conflicts</b> and same-family subset in the result. Narrow scope, raise priority, or split activations if the draft is shadowed.</span></section>
   <div class="gp-status-grid">
     <div><b>Registry digest</b><span><code>${escapeHtml(String(validation.registryContentHash ?? active.registryDigest ?? "unavailable"))}</code></span></div>
     <div><b>Active version</b><span>${escapeHtml(String(active.versionId ?? "n/a"))}</span></div>
@@ -427,7 +465,8 @@ function renderPreview(data: UnknownRecord): string {
   </div>
   <section class="gp-editor" id="gp-preview-editor">
     <div class="gp-form-grid">
-      <label>Command<input id="gp-preview-command" value="run-transition" /></label>
+      <label>Command<input id="gp-preview-command" list="gp-preview-cmd-suggestions" value="run-transition" autocomplete="off" /></label>
+      <datalist id="gp-preview-cmd-suggestions">${cmdOptions}</datalist>
       <label>Task ID<input id="gp-preview-task-id" placeholder="T100080" /></label>
       <label>Phase<input id="gp-preview-phase" value="${escapeHtmlAttr(phase)}" /></label>
     </div>
@@ -437,7 +476,21 @@ function renderPreview(data: UnknownRecord): string {
       <button type="button" data-gp-action="preview-copy-evidence">Copy Evidence</button>
     </div>
   </section>
-  <div id="gp-preview-result" class="gp-preview-result"><p class="gp-muted">Run a draft preview from the activation editor to see impact, warnings, sample matches, and publish evidence.</p></div>
+  <div id="gp-preview-result" class="gp-preview-result"><p class="gp-muted">Run a draft preview from the activation editor to see impact, warnings, sample matches (kind + matched flag), same-family conflicts, and publish evidence.</p></div>
+</section>`;
+}
+
+function renderPortability(canMutate: boolean): string {
+  return `<section class="gp-tab-panel" id="gp-tab-portability" data-gp-panel="portability">
+  <div class="gp-band"><h2>Portability & defaults</h2><span class="gp-muted">Reconcile · export · import dry-run</span></div>
+  <section class="gp-callout gp-ok"><b>Capabilities</b><span>Dashboard edits require <code>kit.cae.adminMutations</code> and a CAE mutation confirmation. Sensitive lifecycle moves (activate, retire, rollback, import) still go through <code>workspace-kit run</code> with JSON <code>policyApproval</code> where the command is gated — chat text is not approval.</span></section>
+  <div class="gp-action-row">
+    <button type="button" class="gp-primary" data-gp-action="portability-reconcile">Compare package defaults</button>
+    <button type="button" data-gp-action="portability-export"${canMutate ? "" : " disabled"}>Export pack to tmp</button>
+    <button type="button" data-gp-action="portability-import-dry"${canMutate ? "" : " disabled"}>Dry-run import from tmp</button>
+  </div>
+  <p class="gp-muted">Export writes <code>.workspace-kit/tmp/guidance-pack.json</code> (created on demand). Dry-run reads that relative path.</p>
+  <pre id="gp-portability-out" class="gp-versions-dump">Click a button to load kit output.</pre>
 </section>`;
 }
 
@@ -449,7 +502,7 @@ function renderVersions(data: UnknownRecord): string {
   <div class="gp-action-row">
     <button type="button" class="gp-primary" data-gp-action="versions-refresh">Refresh version list</button>
   </div>
-  <p class="gp-muted">Active version from last authoring snapshot: <code>${escapeHtml(vid)}</code></p>
+  <p class="gp-muted">Active version from last authoring snapshot: <code>${escapeHtml(vid)}</code>. Open the <b>Audit</b> tab for the mutation timeline (command, actor, note).</p>
   <pre id="gp-versions-json" class="gp-versions-dump">Click “Refresh version list” to load rows from kit SQLite.</pre>
 </section>`;
 }
@@ -471,6 +524,7 @@ export function renderGuidanceAuthoringPanelInnerHtml(result: unknown): string {
   const envelope = asRecord(result);
   const data = asRecord(envelope.data);
   const title = String(asRecord(data.product).productName ?? "Guidance");
+  const canMutate = canMutateAuthoring(data);
   return `<main class="gp-shell">
   <header class="gp-head">
     <div><p class="gp-kicker">Workflow Cannon</p><h1>${escapeHtml(title)}</h1></div>
@@ -483,6 +537,7 @@ export function renderGuidanceAuthoringPanelInnerHtml(result: unknown): string {
     <button type="button" data-gp-tab="activations">Activations</button>
     <button type="button" data-gp-tab="versions">Versions</button>
     <button type="button" data-gp-tab="preview">Preview</button>
+    <button type="button" data-gp-tab="portability">Portability</button>
     <button type="button" data-gp-tab="audit">Audit</button>
   </nav>
   ${renderOverview(data)}
@@ -490,6 +545,7 @@ export function renderGuidanceAuthoringPanelInnerHtml(result: unknown): string {
   ${renderActivations(data)}
   ${renderVersions(data)}
   ${renderPreview(data)}
+  ${renderPortability(canMutate)}
   ${renderAudit(data)}
 </main>`;
 }
