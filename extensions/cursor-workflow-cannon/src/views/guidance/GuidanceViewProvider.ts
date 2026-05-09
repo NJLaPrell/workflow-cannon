@@ -707,6 +707,7 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
     if (rowTs) rowTs.style.display = preset === 'task' || preset === 'completing_task' ? '' : 'none';
   }
   function activateTab(tabName) {
+    activeTab = tabName;
     document.querySelectorAll('.gd-tab').forEach(function(btn) {
       btn.classList.toggle('gd-tab-active', btn.getAttribute('data-tab') === tabName);
     });
@@ -1069,6 +1070,7 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     if (m && m.type === 'setTraceDetail' && traceDetailRoot && typeof m.html === 'string') {
+      activateTab('check');
       traceDetailRoot.innerHTML = m.html;
       document.querySelectorAll('[data-wc-action="guidance-explain"]').forEach(function(btn){ setBusy(btn, false); });
       showStatus('info', 'Trace detail loaded.');
@@ -1076,6 +1078,7 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     if (m && m.type === 'setActionResult' && actionResultRoot && typeof m.html === 'string') {
+      activateTab('check');
       actionResultRoot.innerHTML = m.html;
       document.querySelectorAll('button[disabled]').forEach(function(btn){ setBusy(btn, false); });
       showStatus('info', 'Guidance action finished.');
