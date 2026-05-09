@@ -1016,6 +1016,43 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       border-color: var(--vscode-textLink-foreground);
       opacity: 0.85;
     }
+    .wc-rec-next-wishlist {
+      border-color: var(--vscode-textLink-foreground);
+    }
+    .wc-rec-tag-wishlist {
+      background: rgba(78, 148, 220, 0.18);
+      color: var(--vscode-textLink-foreground);
+      border-color: rgba(78, 148, 220, 0.45);
+    }
+    .wc-rec-tag-open {
+      background: var(--vscode-textCodeBlock-background);
+      color: var(--vscode-foreground);
+      opacity: 0.65;
+    }
+    .wc-rec-wl-hint {
+      font-size: 10px;
+      margin: 0 0 6px 0;
+      line-height: 1.3;
+    }
+    .wc-rec-footer-actions {
+      margin-left: auto;
+      display: inline-flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    button.wc-rec-wl-view {
+      background: var(--vscode-button-secondaryBackground, var(--vscode-button-background));
+      color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground));
+    }
+    button.wc-rec-wl-view:hover {
+      background: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-hoverBackground));
+    }
+    .wc-ready-scope-note {
+      font-size: 10.5px;
+      line-height: 1.35;
+      margin: 6px 0 10px 0;
+    }
     button.wc-rec-start-btn {
       margin-left: auto;
       padding: 2px 9px;

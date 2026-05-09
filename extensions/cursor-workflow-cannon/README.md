@@ -58,6 +58,8 @@ The extension runs its bundled `@workflow-cannon/workspace-kit` CLI when availab
 
 **Proposed vs ready:** The dashboard “Suggested next” and ready/proposed sections only reflect tasks in the configured task store. **`proposed`** improvement work appears under **Proposed improvements** on the dashboard (after a refresh). When **`dashboard-summary`** returns **`phaseBuckets`** with **`taskIds`**, each phase heading can show **Accept All** (one shared policy rationale; the extension refreshes the planning-generation token between each **`run-transition`** **`accept`**). Planning appears when a `build-plan` session file exists.
 
+**Execution queue vs wishlist:** **Ready** / **proposed** numbers on **Overview** and **Task Engine** follow the kit **execution queue** (same as `getNextActions` / `dashboard-summary` rollups) — they **exclude** **`wishlist_intake`** tasks even when those rows are `status: ready`. The note appears under the stat pills and task filters; **Recommended Next** falls back to the first **open wishlist** row when no execution/improvement ready work exists. Full SQLite truth: **`wk run list-tasks`**.
+
 ## Testing
 
 - Unit + integration tests (Node-only, no Cursor binary):

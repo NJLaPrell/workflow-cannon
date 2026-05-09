@@ -74,11 +74,12 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, />Collaboration profiles<\/button>/);
   assert.match(html, /data-wc-action="generate-features-chat"/);
   assert.match(html, />Generate Features<\/button>/);
-  const tasksHeading = html.indexOf("<p><b>Tasks</b></p>");
+  const taskBlock = html.indexOf("dashboard-tasks-block");
   const quickBar = html.indexOf("dash-quick-actions");
-  assert.ok(quickBar !== -1 && tasksHeading !== -1 && quickBar < tasksHeading);
-  assert.match(html, /<p><b>Tasks<\/b><\/p>/);
+  assert.ok(taskBlock !== -1 && quickBar !== -1 && taskBlock < quickBar);
   assert.match(html, /dash-count-grid/);
+  assert.match(html, /wc-ready-scope-note/);
+  assert.match(html, /wishlist_intake/);
   assert.match(html, />Proposed<\/span> <span class="dash-count-num ok">1<\/span>/);
   assert.match(html, />Ready<\/span> <span class="dash-count-num ok">2<\/span>/);
   assert.match(html, /dashboard-tasks-block/);
@@ -101,8 +102,9 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.ok(researchIdx !== -1 && blockedIdx !== -1 && researchIdx < blockedIdx);
   assert.ok(blockedIdx !== -1 && completedIdx !== -1 && blockedIdx < completedIdx);
   assert.ok(completedIdx !== -1 && cancelledIdx !== -1 && completedIdx < cancelledIdx);
-  assert.match(html, /<details class="status-section" data-wc-track="status-ready-imp">/);
-  assert.match(html, /<details class="status-section" data-wc-track="status-ready-exe" open>/);
+  assert.match(html, /data-wc-track="status-ready-imp"/);
+  assert.match(html, /data-wc-track="status-ready-exe"/);
+  assert.match(html, /data-wc-filter="ready"/);
   assert.match(html, /imp-example/);
   assert.match(html, /T319/);
   assert.match(html, /T320/);
@@ -136,7 +138,7 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.doesNotMatch(html, /data-wc-action="planning-resume-chat"/);
   assert.match(html, /No interview in progress/);
   assert.doesNotMatch(html, /This card updates when/);
-  assert.match(html, /Store Updated/);
+  assert.match(html, /Store updated/);
   assert.doesNotMatch(html, /same store as execution queue/i);
   assert.doesNotMatch(html, /Suggested Next/i);
   assert.doesNotMatch(html, /dashboard-approvals/);
@@ -326,6 +328,60 @@ test("renderDashboardRootInnerHtml omits suggested-next section", () => {
   assert.doesNotMatch(html, /This card updates when/);
   assert.match(html, /<b>Role:<\/b> Bard/);
   assert.match(html, /<b>Agent Temperament:<\/b> The Wary Scout/);
+  assert.match(html, /wc-ready-scope-note/);
+  assert.match(html, /wishlist_intake/);
+});
+
+test("renderDashboardRootInnerHtml recommends wishlist when execution ready queue is empty", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      agentGuidance: {
+        schemaVersion: 1,
+        profileSetId: "rpg_party_v1",
+        tier: 3,
+        displayLabel: "Bard",
+        usingDefaultTier: false,
+        temperamentProfileId: "builtin:cautious",
+        temperamentLabel: "The Wary Scout"
+      },
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      wishlist: {
+        openCount: 1,
+        totalCount: 1,
+        openTop: [{ id: "W-open-1", title: "Wishlist backlog item", taskId: "T-wl-1" }]
+      },
+      blockedSummary: { count: 0, top: [] },
+      readyQueueTop: [],
+      readyQueueCount: 0,
+      suggestedNext: null,
+      planningSession: null,
+      taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
+      workspaceStatus: { currentKitPhase: "1", nextKitPhase: "2", activeFocus: "Test" },
+      blockingAnalysis: [],
+      dependencyOverview: {
+        schemaVersion: 1,
+        activeTaskCount: 0,
+        includedTaskCount: 0,
+        edgeCount: 0,
+        truncated: false,
+        perfNote: null,
+        nodes: [],
+        edges: [],
+        mermaidFlowchart: "",
+        criticalPathReady: []
+      }
+    }
+  });
+  assert.match(html, /wc-rec-next-wishlist/);
+  assert.match(html, /Wishlist backlog item/);
+  assert.match(html, /data-wc-action="wishlist-chat"/);
+  assert.match(html, /data-wishlist-id="W-open-1"/);
+  assert.match(html, /No execution-queue ready work/);
 });
 
 test("renderDashboardRootInnerHtml shows Not Planned when next phase duplicates current", () => {

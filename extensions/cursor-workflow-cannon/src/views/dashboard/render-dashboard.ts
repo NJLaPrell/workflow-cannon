@@ -29,6 +29,17 @@ export function renderActiveFocusHtml(raw: string): string {
   return renderMarkdownBoldAfterEscape(escapeHtml(raw));
 }
 
+/** Muted copy: execution-queue rollups exclude `wishlist_intake` (kit semantics). */
+function renderExecutionReadyScopeFootnote(): string {
+  return (
+    '<p class="muted wc-ready-scope-note">' +
+    "<b>Note:</b> <b>Ready</b> / proposed counts here follow the kit <em>execution queue</em> — " +
+    "<code>wishlist_intake</code> rows are omitted even when their status is ready. " +
+    "Use the <b>Wishlist</b> section on Task Engine, or " +
+    "<code>wk run list-tasks</code> for the full store view.</p>"
+  );
+}
+
 /** ★ "Recommended Next" card — first ready task (execution preferred over improvement). */
 function renderRecommendedNextCard(
   item: unknown,
@@ -71,6 +82,55 @@ function renderRecommendedNextCard(
     catTag +
     phaseTag +
     viewBtn +
+    "</div>" +
+    "</div>"
+  );
+}
+
+/**
+ * When the execution ready queue is empty, surface the first open wishlist row so
+ * "what to do next" is not a dead end.
+ */
+function renderRecommendedNextWishlistCard(item: unknown): string {
+  if (!item || typeof item !== "object") {
+    return "";
+  }
+  const row = item as { id?: unknown; title?: unknown; taskId?: unknown };
+  const wishlistId = String(row.id ?? "").trim();
+  const title = String(row.title ?? "").trim();
+  if (wishlistId.length === 0 && title.length === 0) {
+    return "";
+  }
+  const displayTitle = title.length > 0 ? title : wishlistId;
+  const idAttr = escapeHtmlAttr(wishlistId);
+  const processBtn =
+    wishlistId.length > 0
+      ? '<button type="button" class="wc-rec-start-btn" data-wc-action="wishlist-chat" data-wishlist-id="' +
+        idAttr +
+        '" title="Prefill wishlist intake chat">Process &rarr;</button>'
+      : "";
+  const viewBtn =
+    wishlistId.length > 0
+      ? '<button type="button" class="wc-rec-start-btn wc-rec-wl-view" data-wc-action="wishlist-view" data-wishlist-id="' +
+        idAttr +
+        '" title="Open wishlist fields in the editor">View</button>'
+      : "";
+  return (
+    '<div class="wc-rec-next wc-rec-next-wishlist">' +
+    '<div class="wc-rec-header">' +
+    '<span class="wc-rec-label">&#9733; Recommended Next</span>' +
+    "</div>" +
+    '<p class="muted wc-rec-wl-hint">No execution-queue ready work — first open wishlist item.</p>' +
+    "<p class=\"wc-rec-title\">" +
+    escapeHtml(displayTitle) +
+    "</p>" +
+    '<div class="wc-rec-footer">' +
+    '<span class="wc-rec-tag wc-rec-tag-wishlist">wishlist</span>' +
+    '<span class="wc-rec-tag wc-rec-tag-open">open</span>' +
+    '<span class="wc-rec-footer-actions">' +
+    processBtn +
+    viewBtn +
+    "</span>" +
     "</div>" +
     "</div>"
   );
@@ -1717,6 +1777,7 @@ export function renderDashboardRootInnerHtml(
     '<section class="dash-card dashboard-tasks-block" aria-label="Task queue rollups">' +
     tasksQuickActionsPanel +
     renderFilterChipBar() +
+    renderExecutionReadyScopeFootnote() +
     renderStatusRollup(
       "status-ready-imp",
       "<b>Ready · Improvements</b> (" + String(readyImpCount) + ")",
@@ -1793,9 +1854,12 @@ export function renderDashboardRootInnerHtml(
   const firstReadyItem = readyExeTop[0] ?? readyImpTop[0];
   const firstReadyCategory: "execution" | "improvement" =
     readyExeTop.length > 0 ? "execution" : "improvement";
+  const firstWishlistOpen = wishlistOpenTop[0];
   const recNextCard = firstReadyItem
     ? renderRecommendedNextCard(firstReadyItem, firstReadyCategory)
-    : "";
+    : firstWishlistOpen
+      ? renderRecommendedNextWishlistCard(firstWishlistOpen)
+      : "";
 
   const totalReadyCount = readyImpCount + readyExeCount;
   const totalProposedCount = piCount + peCount;
@@ -1808,6 +1872,7 @@ export function renderDashboardRootInnerHtml(
   const overviewContent =
     recNextCard +
     renderStatPills(totalReadyCount, totalProposedCount, totalBlockedCount, totalDoneCount) +
+    renderExecutionReadyScopeFootnote() +
     renderAgentStatusBanner(d.agentStatus) +
     renderEditorIntegrationSection(editorIntegration) +
     renderRoleTemperamentAndPhaseSection(d.agentGuidance, ws as Record<string, unknown> | null, res) +
