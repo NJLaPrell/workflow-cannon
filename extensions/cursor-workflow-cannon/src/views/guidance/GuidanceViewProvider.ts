@@ -1120,84 +1120,94 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
   <style>
     *, *::before, *::after { box-sizing: border-box; }
     html, body { height: 100%; margin: 0; overflow: hidden; }
-    body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); font-size: 12px; display: flex; flex-direction: column; }
-    h1 { font-size: 15px; margin: 0 0 2px; font-weight: 700; }
-    h2 { font-size: 13px; margin: 0; }
-    h3 { font-size: 12px; margin: 0; }
-    .gd-muted { opacity: 0.78; line-height: 1.35; }
-    .gd-toolbar, .gd-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-    .gd-toolbar { margin: 8px 0; }
-    .gd-field { display: flex; flex-direction: column; gap: 3px; min-width: 120px; flex: 1; }
-    .gd-field label { font-weight: 600; }
-    .gd-input { padding: 4px 6px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border); }
-    .gd-btn { padding: 4px 10px; cursor: pointer; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: 1px solid var(--vscode-widget-border); border-radius: 2px; }
-    .gd-btn:disabled { cursor: progress; opacity: 0.65; }
-    .gd-primary, .gd-btn.gd-primary { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
-    .gd-status { white-space: pre-wrap; font-family: var(--vscode-editor-font-family); font-size: 11px; padding: 5px 12px; flex-shrink: 0; background: var(--vscode-textCodeBlock-background); border-top: 1px solid var(--vscode-widget-border); }
-    .gd-status-ok { background: rgba(0, 160, 0, 0.15); }
-    .gd-status-err { background: rgba(200, 60, 60, 0.2); }
-    .gd-card { border: 1px solid var(--vscode-widget-border); border-radius: 3px; background: var(--vscode-editor-background); padding: 8px; margin: 8px 0; }
-    .gd-danger { background: rgba(200, 60, 60, 0.2); }
-    .gd-hero { border-color: var(--vscode-focusBorder); background: color-mix(in srgb, var(--vscode-button-background) 9%, var(--vscode-editor-background)); }
-    .gd-result-card { border-color: var(--vscode-focusBorder); }
+    body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); font-size: 12px; display: flex; flex-direction: column; background: var(--vscode-sideBar-background); }
+    h1 { font-size: 14px; margin: 0 0 2px; font-weight: 700; }
+    h2 { font-size: 12px; margin: 0; font-weight: 600; }
+    h3 { font-size: 11px; margin: 0; font-weight: 600; }
+    .gd-muted { opacity: 0.75; line-height: 1.35; }
+    .gd-toolbar, .gd-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .gd-toolbar { margin: 6px 0; }
+    .gd-field { display: flex; flex-direction: column; gap: 3px; min-width: 100px; flex: 1; }
+    .gd-field label { font-weight: 600; font-size: 11px; }
+    .gd-input { padding: 4px 6px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.45)); border-radius: 4px; font-family: var(--vscode-font-family); font-size: 12px; }
+    /* ── Buttons: match dashboard action palette ── */
+    button { cursor: pointer; font-family: var(--vscode-font-family); }
+    .gd-btn { padding: 3px 10px; font-size: 11px; font-weight: 500; border-radius: 4px; cursor: pointer; background: transparent; color: var(--vscode-foreground); border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.45)); }
+    .gd-btn:hover { background: var(--vscode-toolbar-hoverBackground); }
+    .gd-btn:active { filter: brightness(0.94); }
+    .gd-btn:disabled { cursor: not-allowed; opacity: 0.45; }
+    .gd-btn.gd-primary, .gd-primary { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: 1px solid var(--vscode-button-border, var(--vscode-contrastBorder, transparent)); border-radius: 4px; padding: 3px 12px; font-size: 11px; font-weight: 500; }
+    .gd-btn.gd-primary:hover, .gd-primary:hover { background: var(--vscode-button-hoverBackground); }
+    .gd-btn.gd-primary:active, .gd-primary:active { filter: brightness(0.94); }
+    .gd-btn.gd-primary:disabled, .gd-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+    /* ── Status bar ── */
+    .gd-status { white-space: pre-wrap; font-family: var(--vscode-editor-font-family); font-size: 11px; padding: 4px 12px; flex-shrink: 0; background: var(--vscode-sideBar-background); border-top: 1px solid var(--vscode-widget-border, rgba(127,127,127,.25)); opacity: 0.8; }
+    .gd-status-ok { color: var(--vscode-testing-iconPassed, #3fb950); opacity: 1; }
+    .gd-status-err { color: var(--vscode-errorForeground); opacity: 1; }
+    /* ── Cards ── */
+    .gd-card { border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35)); border-radius: 6px; background: var(--vscode-editor-background); padding: 8px; margin: 6px 0; }
+    .gd-danger { background: rgba(200, 60, 60, 0.15); border-color: rgba(200,60,60,.4); }
+    .gd-hero { border-color: var(--vscode-button-background); background: color-mix(in srgb, var(--vscode-button-background) 7%, var(--vscode-editor-background)); }
     .gd-loading { border-style: dashed; }
-    .gd-warn-card { background: rgba(200, 150, 0, 0.12); }
-    .gd-ok-card { background: rgba(0, 160, 0, 0.08); border-color: rgba(0, 160, 0, 0.3); }
+    .gd-warn-card { background: rgba(200, 150, 0, 0.1); border-color: rgba(200,150,0,.35); }
+    .gd-ok-card { background: rgba(0, 160, 0, 0.07); border-color: rgba(0, 160, 0, 0.3); }
     .gd-card-head { display: flex; justify-content: space-between; gap: 8px; align-items: center; margin-bottom: 6px; }
-    .gd-pill, .gd-chip { font-size: 10px; padding: 1px 6px; border-radius: 8px; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); white-space: nowrap; }
-    .gd-ok { background: rgba(0, 160, 0, 0.25); }
-    .gd-warn { background: var(--vscode-inputValidation-warningBackground); color: var(--vscode-inputValidation-warningForeground); }
-    .gd-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; margin: 8px 0 0; }
-    .gd-meta dt { font-weight: 600; }
-    .gd-meta dd { margin: 2px 0 0; }
+    .gd-pill, .gd-chip { font-size: 10px; padding: 1px 7px; border-radius: 8px; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); white-space: nowrap; font-weight: 500; }
+    .gd-ok { background: rgba(0, 160, 0, 0.22); }
+    .gd-warn { background: rgba(200,150,0,.25); }
+    /* ── Metadata grid ── */
+    .gd-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 10px; margin: 8px 0 0; font-size: 11px; }
+    .gd-meta dt { font-weight: 600; opacity: 0.75; }
+    .gd-meta dd { margin: 0; word-break: break-all; }
+    .gd-meta-tight { margin-top: 4px !important; gap: 3px 10px !important; }
     .gd-counts { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
     .gd-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
-    .gd-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; border-top: 1px solid var(--vscode-widget-border); padding-top: 6px; }
+    .gd-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; border-top: 1px solid var(--vscode-widget-border, rgba(127,127,127,.2)); padding-top: 6px; }
     .gd-row-compact { align-items: flex-start; }
-    .gd-guidance-card { border-top: 1px solid var(--vscode-widget-border); margin-top: 8px; padding-top: 8px; }
-    .gd-debug summary { opacity: 0.82; }
+    .gd-guidance-card { border-top: 1px solid var(--vscode-widget-border, rgba(127,127,127,.2)); margin-top: 8px; padding-top: 8px; }
+    .gd-debug summary { opacity: 0.75; font-size: 11px; cursor: pointer; }
     .gd-library { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-    .gd-kicker { display: block; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.65; font-size: 10px; margin: 0 0 2px; }
-    pre { overflow: auto; white-space: pre-wrap; font-family: var(--vscode-editor-font-family); font-size: 11px; }
+    .gd-kicker { display: block; text-transform: uppercase; letter-spacing: 0.07em; opacity: 0.55; font-size: 9.5px; font-weight: 700; margin: 0 0 1px; }
+    pre { overflow: auto; white-space: pre-wrap; font-family: var(--vscode-editor-font-family); font-size: 11px; background: var(--vscode-textCodeBlock-background); padding: 6px; border-radius: 4px; }
     code { font-family: var(--vscode-editor-font-family); font-size: 11px; }
     .gd-draft-table { width: 100%; border-collapse: collapse; font-size: 11px; margin: 8px 0 0; }
-    .gd-draft-table th, .gd-draft-table td { border: 1px solid var(--vscode-widget-border); padding: 4px 6px; text-align: left; vertical-align: top; }
-    .gd-meta-tight { margin-top: 4px !important; gap: 4px 10px !important; }
-    .gd-readiness-banner { padding: 6px 0 10px 0; border-bottom: 1px solid var(--vscode-widget-border); margin-bottom: 8px; }
+    .gd-draft-table th, .gd-draft-table td { border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.3)); padding: 4px 6px; text-align: left; vertical-align: top; }
+    .gd-readiness-banner { padding: 6px 0 10px 0; border-bottom: 1px solid var(--vscode-widget-border, rgba(127,127,127,.2)); margin-bottom: 8px; }
     .gd-readiness-head { margin-bottom: 4px !important; }
-    .gd-readiness-ok { background: rgba(0, 160, 0, 0.25); color: inherit; }
-    .gd-readiness-warn { background: rgba(200, 150, 0, 0.35); color: inherit; }
-    .gd-readiness-danger { background: rgba(200, 60, 60, 0.38); color: inherit; }
+    .gd-readiness-ok { background: rgba(0, 160, 0, 0.22); color: inherit; border-radius: 4px; padding: 2px 6px; }
+    .gd-readiness-warn { background: rgba(200, 150, 0, 0.3); color: inherit; border-radius: 4px; padding: 2px 6px; }
+    .gd-readiness-danger { background: rgba(200, 60, 60, 0.32); color: inherit; border-radius: 4px; padding: 2px 6px; }
     .gd-readiness-list { margin: 6px 0 0 0; padding-left: 18px; }
     .gd-blast-examples { margin: 6px 0 0 0; padding-left: 18px; }
-    .gd-blast.gd-card { margin: 10px 0; }
+    .gd-blast.gd-card { margin: 8px 0; }
     .gd-warning ul { margin: 6px 0 0; padding-left: 18px; }
-    .gw-wizard-steps { padding: 8px 0 0; border-top: 1px dashed var(--vscode-widget-border); margin-top: 8px; }
-    .gw-catalog-strip { margin: 10px 0 0; max-height: 180px; overflow: auto; }
+    .gw-wizard-steps { padding: 8px 0 0; border-top: 1px dashed var(--vscode-widget-border, rgba(127,127,127,.3)); margin-top: 8px; }
+    .gw-catalog-strip { margin: 8px 0 0; max-height: 180px; overflow: auto; }
     /* ── Persistent header ── */
-    .gd-header { padding: 8px 12px 0; flex-shrink: 0; }
-    /* ── Three-tab bar ── */
-    .gd-tab-bar { display: flex; border-bottom: 1px solid var(--vscode-widget-border); flex-shrink: 0; }
-    .gd-tab { flex: 1; padding: 7px 0; border: none; border-bottom: 2px solid transparent; background: none; color: var(--vscode-foreground); opacity: 0.6; font-size: 12px; cursor: pointer; font-family: var(--vscode-font-family); }
-    .gd-tab.gd-tab-active { opacity: 1; font-weight: 600; border-bottom: 2px solid var(--vscode-focusBorder); }
+    .gd-header { padding: 6px 12px 0; flex-shrink: 0; }
+    /* ── Three-tab bar — matches .wc-tab-bar in dashboard ── */
+    .gd-tab-bar { display: flex; gap: 0; margin: 4px -12px 0 -12px; padding: 0 4px; border-bottom: 1px solid var(--vscode-widget-border, rgba(127,127,127,.3)); flex-shrink: 0; overflow-x: auto; scrollbar-width: none; }
+    .gd-tab-bar::-webkit-scrollbar { display: none; }
+    .gd-tab { flex: 1; padding: 5px 9px; font-size: 11px; font-weight: 500; font-family: var(--vscode-font-family); border: none; border-bottom: 2px solid transparent; margin-bottom: -1px; background: transparent; color: var(--vscode-foreground); opacity: 0.55; cursor: pointer; white-space: nowrap; }
+    .gd-tab:hover { opacity: 0.85; }
+    .gd-tab.gd-tab-active { opacity: 1; font-weight: 600; border-bottom-color: var(--vscode-button-background); }
     /* ── Tab panels ── */
-    .gd-panel { flex: 1; overflow-y: auto; padding: 10px 12px; display: none; }
+    .gd-panel { flex: 1; overflow-y: auto; padding: 8px 12px; display: none; }
     #panel-check { display: block; }
-    /* ── Manage sub-section bar ── */
-    .gd-subsection-bar { display: flex; gap: 4px; margin-bottom: 10px; }
-    .gd-subsection-btn { flex: 1; padding: 4px 0; border: 1px solid var(--vscode-widget-border); border-radius: 2px; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); font-size: 10px; cursor: pointer; font-family: var(--vscode-font-family); }
-    .gd-subsection-btn.gd-subsection-active { border-color: var(--vscode-focusBorder); font-weight: 600; color: var(--vscode-foreground); }
+    /* ── Manage sub-section bar — pill tabs ── */
+    .gd-subsection-bar { display: flex; gap: 4px; margin: 0 0 8px; }
+    .gd-subsection-btn { flex: 1; padding: 3px 6px; border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.4)); border-radius: 4px; background: transparent; color: var(--vscode-foreground); opacity: 0.6; font-size: 10px; font-weight: 500; cursor: pointer; font-family: var(--vscode-font-family); white-space: nowrap; }
+    .gd-subsection-btn:hover { opacity: 0.85; background: var(--vscode-toolbar-hoverBackground); }
+    .gd-subsection-btn.gd-subsection-active { opacity: 1; font-weight: 600; border-color: var(--vscode-button-background); color: var(--vscode-foreground); background: color-mix(in srgb, var(--vscode-button-background) 10%, transparent); }
     .gd-subsection { display: none; }
     #subsection-wizard { display: block; }
-    /* ── Status bar ── */
-    #gd-status { flex-shrink: 0; }
   </style>
 </head>
 <body>
   <!-- Persistent header -->
   <div class="gd-header">
     <span class="gd-kicker">Workflow Cannon</span>
-    <h1>Guidance</h1>
+    <h1>CAE</h1>
   </div>
 
   <!-- Persistent tab bar: Check | History | Manage — all equal weight -->

@@ -3,7 +3,6 @@ import { findWorkflowCannonRoot } from "./workspace-detect.js";
 import { CommandClient } from "./runtime/command-client.js";
 import { StateWatcher } from "./runtime/state-watcher.js";
 import { DashboardViewProvider } from "./views/dashboard/DashboardViewProvider.js";
-import { ConfigViewProvider } from "./views/config/ConfigViewProvider.js";
 import { GuidanceViewProvider } from "./views/guidance/GuidanceViewProvider.js";
 import { GuidancePanel } from "./views/guidance/GuidancePanel.js";
 import { StatusDashboardPanel } from "./views/status/StatusDashboardPanel.js";
@@ -34,7 +33,6 @@ export function activate(context: vscode.ExtensionContext): void {
   const onKitStateChanged = kitStateEmitter.event;
 
   let dashboard: DashboardViewProvider | undefined;
-  let configView: ConfigViewProvider | undefined;
   let guidanceView: GuidanceViewProvider | undefined;
   let guidancePanel: GuidancePanel | undefined;
   let statusDashboard: StatusDashboardPanel | undefined;
@@ -47,14 +45,12 @@ export function activate(context: vscode.ExtensionContext): void {
     dashboard = new DashboardViewProvider(context.extensionUri, client, onKitStateChanged, () =>
       kitStateEmitter.fire()
     );
-    configView = new ConfigViewProvider(context.extensionUri, client, onKitStateChanged);
     guidanceView = new GuidanceViewProvider(context.extensionUri, client, onKitStateChanged);
     guidancePanel = new GuidancePanel(context.extensionUri, client, onKitStateChanged, folder);
     statusDashboard = new StatusDashboardPanel(context.extensionUri, client, onKitStateChanged);
 
     context.subscriptions.push(
       vscode.window.registerWebviewViewProvider(DashboardViewProvider.viewId, dashboard),
-      vscode.window.registerWebviewViewProvider(ConfigViewProvider.viewId, configView),
       vscode.window.registerWebviewViewProvider(GuidanceViewProvider.viewId, guidanceView)
     );
   }
