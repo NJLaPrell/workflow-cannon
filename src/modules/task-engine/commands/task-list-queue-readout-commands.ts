@@ -325,7 +325,8 @@ export function resolveTaskListQueueReadoutCommands(
     const maintainerDelivery = buildMaintainerDeliveryHints({
       tasks,
       canonicalPhaseKey: phaseRes.canonicalPhaseKey,
-      suggestedNext: suggestion.suggestedNext ? { id: suggestion.suggestedNext.id } : null
+      suggestedNext: suggestion.suggestedNext ? { id: suggestion.suggestedNext.id } : null,
+      effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined
     });
     const suggestedId =
       suggestion.suggestedNext && typeof suggestion.suggestedNext.id === "string"

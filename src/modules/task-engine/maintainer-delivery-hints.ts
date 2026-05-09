@@ -1,10 +1,36 @@
+import type { ResolvedMaintainerDeliveryPolicyV1 } from "./maintainer-delivery-policy-resolver.js";
+import { resolveMaintainerDeliveryPolicy } from "./maintainer-delivery-policy-resolver.js";
+import {
+  MAINTAINER_DELIVERY_PROFILE_METADATA_KEY,
+  REQUIRES_PHASE_BRANCH_METADATA_KEY
+} from "./maintainer-delivery-metadata-keys.js";
 import type { TaskEntity } from "./types.js";
 import { WISHLIST_INTAKE_TASK_TYPE } from "./wishlist/wishlist-intake.js";
 
-/** Optional task metadata: documented in .ai/WORKSPACE-KIT-SESSION.md */
-export const MAINTAINER_DELIVERY_PROFILE_METADATA_KEY = "maintainerDeliveryProfile";
-/** Optional: maintainer sets true to document PR/phase-branch delivery expectation */
-export const REQUIRES_PHASE_BRANCH_METADATA_KEY = "requiresPhaseBranch";
+export {
+  MAINTAINER_DELIVERY_PROFILE_METADATA_KEY,
+  REQUIRES_PHASE_BRANCH_METADATA_KEY
+} from "./maintainer-delivery-metadata-keys.js";
+
+/** Compact resolver output for agent readouts (no explain chain, no network). */
+export type MaintainerDeliveryResolvedPolicyCompactV1 = {
+  schemaVersion: 1;
+  profileName: string;
+  reviewMode: string;
+  evidenceMode: string;
+  prProvider: string;
+  mergeStrategy: string;
+  phaseToMainMode: string;
+  requiresPhaseBranch: boolean;
+  phaseIntegrationBranch: string | null;
+  taskBranchExample: string | null;
+  mergeTargetPattern: string;
+  mergeTargetBranch: string | null;
+  maintainerDeliveryEnforcementMode: string;
+  deliveryEvidenceEnforcementMode: string;
+  /** Resolver warning codes only — messages stay in logs / separate tooling. */
+  warningCodes?: string[];
+};
 
 export type MaintainerDeliveryHintsV1 = {
   schemaVersion: 1;
@@ -23,7 +49,47 @@ export type MaintainerDeliveryHintsV1 = {
   /** From `suggestedNext` task metadata when present. */
   suggestedNextMaintainerDeliveryProfile: string | null;
   suggestedNextRequiresPhaseBranch: boolean;
+  /**
+   * When `buildMaintainerDeliveryHints` is called with `effectiveConfig`, compact resolved policy
+   * for the suggested-next task (if any).
+   */
+  resolvedPolicySuggestedNext?: MaintainerDeliveryResolvedPolicyCompactV1 | null;
+  /**
+   * When `effectiveConfig` is passed, one entry per in-progress execution task (same order as
+   * `inProgressTasks`).
+   */
+  resolvedPolicyInProgress?: Array<{
+    id: string;
+    title: string;
+    resolvedPolicy: MaintainerDeliveryResolvedPolicyCompactV1;
+  }>;
 };
+
+export function toCompactMaintainerDeliveryPolicy(
+  resolved: ResolvedMaintainerDeliveryPolicyV1,
+  warnings?: readonly { code: string }[]
+): MaintainerDeliveryResolvedPolicyCompactV1 {
+  const out: MaintainerDeliveryResolvedPolicyCompactV1 = {
+    schemaVersion: 1,
+    profileName: resolved.profileName,
+    reviewMode: resolved.reviewMode,
+    evidenceMode: resolved.evidenceMode,
+    prProvider: resolved.prProvider,
+    mergeStrategy: resolved.mergeStrategy,
+    phaseToMainMode: resolved.phaseToMainMode,
+    requiresPhaseBranch: resolved.requiresPhaseBranch,
+    phaseIntegrationBranch: resolved.phaseIntegrationBranch,
+    taskBranchExample: resolved.taskBranchExample,
+    mergeTargetPattern: resolved.mergeTarget.pattern,
+    mergeTargetBranch: resolved.mergeTarget.branch,
+    maintainerDeliveryEnforcementMode: resolved.maintainerDeliveryEnforcementMode,
+    deliveryEvidenceEnforcementMode: resolved.deliveryEvidenceEnforcementMode
+  };
+  if (warnings && warnings.length > 0) {
+    out.warningCodes = warnings.map((w) => w.code);
+  }
+  return out;
+}
 
 function readProfile(meta: Record<string, unknown> | undefined): string | null {
   if (!meta) return null;
@@ -44,22 +110,25 @@ export function buildMaintainerDeliveryHints(input: {
   tasks: TaskEntity[];
   canonicalPhaseKey: string | null;
   suggestedNext: { id: string } | null;
+  /** When set, attaches compact `resolveMaintainerDeliveryPolicy` output for queue-relevant tasks. */
+  effectiveConfig?: Record<string, unknown> | undefined;
 }): MaintainerDeliveryHintsV1 {
-  const inProgressTasks = input.tasks
-    .filter((t) => t.status === "in_progress" && !isWishlistIntakeEntity(t))
-    .map((t) => ({
-      id: t.id,
-      title: t.title,
-      maintainerDeliveryProfile: readProfile(t.metadata),
-      requiresPhaseBranch: readRequiresPhaseBranch(t.metadata)
-    }));
+  const inProgressEntities = input.tasks.filter(
+    (t) => t.status === "in_progress" && !isWishlistIntakeEntity(t)
+  );
+  const inProgressTasks = inProgressEntities.map((t) => ({
+    id: t.id,
+    title: t.title,
+    maintainerDeliveryProfile: readProfile(t.metadata),
+    requiresPhaseBranch: readRequiresPhaseBranch(t.metadata)
+  }));
   const sn = input.suggestedNext
     ? input.tasks.find((t) => t.id === input.suggestedNext!.id)
     : undefined;
   const phaseIntegrationBranch = input.canonicalPhaseKey
     ? `release/phase-${input.canonicalPhaseKey}`
     : null;
-  return {
+  const base: MaintainerDeliveryHintsV1 = {
     schemaVersion: 1,
     playbookPath: ".ai/playbooks/task-to-phase-branch.md",
     playbookCursorRulePath: ".cursor/rules/playbook-task-to-phase-branch.mdc",
@@ -70,6 +139,37 @@ export function buildMaintainerDeliveryHints(input: {
     inProgressTasks,
     suggestedNextMaintainerDeliveryProfile: readProfile(sn?.metadata),
     suggestedNextRequiresPhaseBranch: readRequiresPhaseBranch(sn?.metadata)
+  };
+
+  if (input.effectiveConfig === undefined) {
+    return base;
+  }
+
+  let resolvedPolicySuggestedNext: MaintainerDeliveryResolvedPolicyCompactV1 | null = null;
+  if (sn) {
+    const { resolvedPolicy, warnings } = resolveMaintainerDeliveryPolicy({
+      effectiveConfig: input.effectiveConfig,
+      task: sn
+    });
+    resolvedPolicySuggestedNext = toCompactMaintainerDeliveryPolicy(resolvedPolicy, warnings);
+  }
+
+  const resolvedPolicyInProgress = inProgressEntities.map((t) => {
+    const { resolvedPolicy, warnings } = resolveMaintainerDeliveryPolicy({
+      effectiveConfig: input.effectiveConfig,
+      task: t
+    });
+    return {
+      id: t.id,
+      title: t.title,
+      resolvedPolicy: toCompactMaintainerDeliveryPolicy(resolvedPolicy, warnings)
+    };
+  });
+
+  return {
+    ...base,
+    resolvedPolicySuggestedNext,
+    ...(resolvedPolicyInProgress.length > 0 ? { resolvedPolicyInProgress } : {})
   };
 }
 

@@ -58,7 +58,10 @@ import {
   type GovernanceEvidenceInputV1
 } from "../../../core/cae/guidance-enforcement-readiness.js";
 import { buildCaeAuthoringClassificationSnapshot } from "../../../core/cae/cae-authoring-source-classification.js";
-import { prependMaintainerDeliveryLoopGuidanceCard } from "../maintainer-delivery-guidance.js";
+import {
+  prependMaintainerDeliveryLoopGuidanceCard,
+  prependMaintainerDeliveryPolicyGuidanceCard
+} from "../maintainer-delivery-guidance.js";
 
 type SqliteDatabase = NonNullable<ReturnType<typeof openKitSqliteReadWrite>>;
 
@@ -1024,6 +1027,7 @@ export async function runContextActivationOnCommand(
         );
       }
       const cards = summarizeGuidanceCards(bundle, overlayRegistry);
+      await prependMaintainerDeliveryPolicyGuidanceCard(ws, effective, taskId, cards);
       await prependMaintainerDeliveryLoopGuidanceCard(ws, effective, taskId, cards);
       const counts = {
         policy: cards.policy.length,
