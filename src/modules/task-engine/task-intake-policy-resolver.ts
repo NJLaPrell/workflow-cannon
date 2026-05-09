@@ -1,9 +1,9 @@
 import type {
+  TaskIntakeEnforcementMode,
   TaskIntakeFieldRule,
   TaskIntakeOverride,
   TaskIntakePolicyConfig,
-  TaskIntakeProfile,
-  TaskPolicyEnforcementMode
+  TaskIntakeProfile
 } from "./policy-config.js";
 import {
   DEFAULT_TASK_INTAKE_POLICY,
@@ -54,7 +54,7 @@ export type ResolveTaskIntakePolicyArgs = {
 export type ResolvedTaskIntakePolicyV1 = {
   schemaVersion: 1;
   profileName: string;
-  enforcementMode: TaskPolicyEnforcementMode;
+  enforcementMode: TaskIntakeEnforcementMode;
   action: string;
   context: {
     taskId: string | null;
@@ -81,8 +81,8 @@ function cloneDefaultConfig(): TaskIntakePolicyConfig {
   return JSON.parse(JSON.stringify(DEFAULT_TASK_INTAKE_POLICY)) as TaskIntakePolicyConfig;
 }
 
-function parseEnforcement(raw: unknown): TaskPolicyEnforcementMode | undefined {
-  if (raw === "off" || raw === "advisory" || raw === "enforce") {
+function parseIntakeEnforcementMode(raw: unknown): TaskIntakeEnforcementMode | undefined {
+  if (raw === "off" || raw === "advisory" || raw === "enforce" || raw === "enforce-on-accept") {
     return raw;
   }
   return undefined;
@@ -130,7 +130,7 @@ function parseProfile(raw: unknown, fallback?: TaskIntakeProfile): TaskIntakePro
     recommendedFields: stringArray(raw.recommendedFields),
     forbiddenFields: stringArray(raw.forbiddenFields),
     fieldRules: parseFieldRules(raw.fieldRules),
-    enforcementMode: parseEnforcement(raw.enforcementMode) ?? base.enforcementMode
+    enforcementMode: parseIntakeEnforcementMode(raw.enforcementMode) ?? base.enforcementMode
   };
 }
 
@@ -155,14 +155,14 @@ export function parseTaskIntakePolicyConfig(
       if (isRecord(overrideRaw) && typeof overrideRaw.profile === "string") {
         moduleOverrides[moduleId] = {
           profile: overrideRaw.profile,
-          enforcementMode: parseEnforcement(overrideRaw.enforcementMode)
+          enforcementMode: parseIntakeEnforcementMode(overrideRaw.enforcementMode)
         };
       }
     }
   }
   return {
     defaultProfile: typeof raw.defaultProfile === "string" ? raw.defaultProfile : defaults.defaultProfile,
-    enforcementMode: parseEnforcement(raw.enforcementMode) ?? defaults.enforcementMode,
+    enforcementMode: parseIntakeEnforcementMode(raw.enforcementMode) ?? defaults.enforcementMode,
     profiles,
     moduleOverrides
   };

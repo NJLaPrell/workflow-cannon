@@ -106,11 +106,12 @@
   "tasks.intakePolicy.enforcementMode": {
     "key": "tasks.intakePolicy.enforcementMode",
     "type": "string",
-    "description": "How strictly task intake profile requirements are applied: off, advisory, or enforce.",
+    "description": "How strictly task intake profile requirements are applied: off, advisory, enforce-on-accept (block proposed→ready only), or enforce (also block create→ready when incomplete).",
     "default": "advisory",
     "allowedValues": [
       "off",
       "advisory",
+      "enforce-on-accept",
       "enforce"
     ],
     "domainScope": "project",

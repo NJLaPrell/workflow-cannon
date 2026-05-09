@@ -11,6 +11,7 @@ import {
   buildDeliveryEvidencePolicyContext,
   resolveMaintainerDeliveryPolicy
 } from "../maintainer-delivery-policy-resolver.js";
+import { createTaskIntakeAcceptGuard } from "../task-intake-mutation-policy.js";
 import { insertPhaseNoteInConnection } from "../phase-journal/phase-journal-store.js";
 import { resolveRunTransitionPhaseNotes } from "../phase-journal/phase-journal-run-transition-notes.js";
 import {
@@ -79,6 +80,7 @@ export async function runTransitionOnCommand(
     const service = new TransitionService(
       store,
       [
+        createTaskIntakeAcceptGuard({ effectiveConfig }),
         createDeliveryEvidenceGuard({
           enforcementMode: deliveryEvidenceMode,
           resolvePolicyContext: (task) => {

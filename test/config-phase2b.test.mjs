@@ -238,7 +238,7 @@ test("task policy config validates custom profiles and module overrides", async 
                 priority: { allowedValues: ["P1", "P2", "P3"] },
                 "metadata.issue": { minLength: 12, requiresAny: ["metadata.supportingReasoning"] }
               },
-              enforcementMode: "advisory"
+              enforcementMode: "enforce-on-accept"
             }
           },
           moduleOverrides: { improvement: { profile: "improvement-ready" } }

@@ -24,6 +24,7 @@ import { resolveKnownFeatureSlugSet } from "../persistence/feature-registry-quer
 import { validateTaskSkillAttachments } from "../../../core/skills/task-skill-validation.js";
 import { validateTaskSetForStrictMode } from "../strict-task-validation.js";
 import { TRANSCRIPT_CHURN_TASK_TYPE } from "../transcript-churn.js";
+import { evaluateIntakeForCreate, readIntakeModuleIdFromArgs } from "../task-intake-mutation-policy.js";
 
 const PHASE_KEY_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 
@@ -51,6 +52,7 @@ type StagedCreate = {
   task: TaskEntity;
   digest: string;
   allocateId: boolean;
+  taskIntake: Record<string, unknown>;
 };
 
 type StagedUpdate = {
@@ -137,6 +139,7 @@ export async function runApplyTaskBatchCommand(
   const knownSlugs = resolveKnownFeatureSlugSet(planning.sqliteDual.getDatabase());
   const staged: Array<StagedCreate | StagedUpdate> = [];
   let virtual: TaskEntity[] = store.getAllTasks().map((t) => ({ ...t }));
+  const batchIntakeWarnings: string[] = [];
 
   for (let i = 0; i < opsRaw.length; i++) {
     const row = opsRaw[i];
@@ -298,6 +301,22 @@ export async function runApplyTaskBatchCommand(
       if (!skillAttach.ok) {
         return { ok: false, code: skillAttach.code, message: skillAttach.message };
       }
+      const intakeCreate = evaluateIntakeForCreate({
+        effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+        task,
+        moduleId: readIntakeModuleIdFromArgs(payload)
+      });
+      if (intakeCreate.block) {
+        return {
+          ok: false,
+          code: intakeCreate.block.code,
+          message: `${intakeCreate.block.message} (apply-task-batch ops[${i}])`,
+          data: { ...(typeof intakeCreate.block.data === "object" && intakeCreate.block.data ? intakeCreate.block.data : {}), opIndex: i }
+        };
+      }
+      for (const w of intakeCreate.stringWarnings) {
+        batchIntakeWarnings.push(`ops[${i}]: ${w}`);
+      }
       const digest = digestPayload({
         id: task.id,
         title: task.title,
@@ -318,7 +337,7 @@ export async function runApplyTaskBatchCommand(
         acceptanceCriteria: task.acceptanceCriteria ?? [],
         features: task.features ?? []
       });
-      staged.push({ kind: "create", task, digest, allocateId });
+      staged.push({ kind: "create", task, digest, allocateId, taskIntake: intakeCreate.intakePayload });
       virtual = [...virtual, { ...task }];
     } else if (kind === "update-task") {
       const p = op.payload;
@@ -432,10 +451,12 @@ export async function runApplyTaskBatchCommand(
       dryRun: true,
       stagedCount: staged.length,
       staged: staged.map((s) =>
-        s.kind === "create" ? { kind: s.kind, task: s.task } : { kind: s.kind, task: s.task }
+        s.kind === "create"
+          ? { kind: s.kind, task: s.task, taskIntake: s.taskIntake }
+          : { kind: s.kind, task: s.task }
       )
     };
-    attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration(), gate.warnings);
+    attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration(), [...(gate.warnings ?? []), ...batchIntakeWarnings]);
     return {
       ok: true,
       code: "apply-task-batch-dry-run",
@@ -487,13 +508,14 @@ export async function runApplyTaskBatchCommand(
     applied: staged.length,
     results: staged.map((s) =>
       s.kind === "create"
-        ? { kind: s.kind, task: s.task }
+        ? { kind: s.kind, task: s.task, taskIntake: s.taskIntake }
         : { kind: s.kind, taskId: s.task.id, task: s.task }
     )
   };
   attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration(), [
     ...(gate.warnings ?? []),
-    ...featureSlugWarnings
+    ...featureSlugWarnings,
+    ...batchIntakeWarnings
   ]);
   return {
     ok: true,
