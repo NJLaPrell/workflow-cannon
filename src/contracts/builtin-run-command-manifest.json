@@ -1106,6 +1106,13 @@
   },
   {
     "moduleId": "context-activation",
+    "name": "cae-list-workspace-artifact-templates",
+    "file": "cae-list-workspace-artifact-templates.md",
+    "description": "List built-in starter markdown templates for workspace CAE artifacts.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
     "name": "cae-recent-traces",
     "file": "cae-recent-traces.md",
     "description": "List recent durable CAE trace summaries for UI trace browsing.",
@@ -1258,6 +1265,13 @@
     "name": "cae-create-workspace-artifact",
     "file": "cae-create-workspace-artifact.md",
     "description": "Create a workspace-owned markdown artifact file and matching registry row in one mutation.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-duplicate-artifact-to-workspace",
+    "file": "cae-duplicate-artifact-to-workspace.md",
+    "description": "Copy a default or workspace CAE artifact into a new editable workspace-owned artifact row and file.",
     "policySensitivity": "non-sensitive"
   },
   {

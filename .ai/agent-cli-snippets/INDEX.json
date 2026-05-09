@@ -148,6 +148,11 @@
       "moduleId": "context-activation"
     },
     {
+      "name": "cae-duplicate-artifact-to-workspace",
+      "path": ".ai/agent-cli-snippets/by-command/cae-duplicate-artifact-to-workspace.json",
+      "moduleId": "context-activation"
+    },
+    {
       "name": "cae-duplicate-default-artifact",
       "path": ".ai/agent-cli-snippets/by-command/cae-duplicate-default-artifact.json",
       "moduleId": "context-activation"
@@ -230,6 +235,11 @@
     {
       "name": "cae-list-registry-versions",
       "path": ".ai/agent-cli-snippets/by-command/cae-list-registry-versions.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-list-workspace-artifact-templates",
+      "path": ".ai/agent-cli-snippets/by-command/cae-list-workspace-artifact-templates.json",
       "moduleId": "context-activation"
     },
     {

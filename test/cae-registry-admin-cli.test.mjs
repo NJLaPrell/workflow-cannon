@@ -69,6 +69,7 @@ const MUTATOR_COMMANDS = [
   "cae-create-artifact",
   "cae-create-workspace-artifact",
   "cae-duplicate-default-artifact",
+  "cae-duplicate-artifact-to-workspace",
   "cae-update-artifact",
   "cae-update-workspace-artifact",
   "cae-archive-retired-workspace-artifact-file",
@@ -89,6 +90,110 @@ const MUTATOR_COMMANDS = [
   "cae-delete-registry-version",
   "cae-rollback-registry-version"
 ];
+
+test("cae-list-workspace-artifact-templates is read-only (no mutation gate)", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const r = await contextActivationModule.onCommand(
+    { name: "cae-list-workspace-artifact-templates", args: { schemaVersion: 1 } },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective({ cae: { adminMutations: false } }) }
+  );
+  assert.equal(r.ok, true);
+  assert.equal(r.code, "cae-list-workspace-artifact-templates-ok");
+  assert.ok(Array.isArray(r.data.templates));
+  assert.ok(r.data.templates.length >= 1);
+  assert.ok(typeof r.data.templates[0].id === "string");
+});
+
+test("cae-create-workspace-artifact rejects markdown without H1", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const result = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-workspace-artifact",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        artifactId: "workspace.bad.no.h1",
+        artifactType: "playbook",
+        title: "No heading",
+        slug: "no-h1-body",
+        contentMarkdown: "Just prose, no heading.\n",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "cae-workspace-artifact-markdown-heading");
+});
+
+test("cae-duplicate-artifact-to-workspace copies a workspace artifact into a new workspace row", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const body = "# Source Playbook\n\nBody for duplicate source.\n";
+  const created = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-workspace-artifact",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        artifactId: "workspace.dup.source.playbook",
+        artifactType: "playbook",
+        title: "Source Playbook",
+        slug: "dup-source-playbook",
+        contentMarkdown: body,
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(created.ok, true);
+
+  const duplicated = await contextActivationModule.onCommand(
+    {
+      name: "cae-duplicate-artifact-to-workspace",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        sourceArtifactId: "workspace.dup.source.playbook",
+        artifactId: "workspace.dup.target.playbook",
+        slug: "dup-target-playbook",
+        title: "Target Playbook",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(duplicated.ok, true);
+  assert.equal(duplicated.code, "cae-duplicate-artifact-to-workspace-ok");
+  const copy = await readFile(path.join(ws, duplicated.data.path), "utf8");
+  assert.equal(copy, body);
+
+  const db = new Database(path.join(ws, ".workspace-kit", "tasks", "workspace-kit.db"));
+  const meta = db
+    .prepare(`SELECT metadata_json FROM cae_registry_artifacts WHERE version_id = ? AND artifact_id = ?`)
+    .get("cae.reg.seed", "workspace.dup.target.playbook");
+  db.close();
+  assert.match(meta.metadata_json, /workspace\.dup\.source\.playbook/);
+  assert.match(meta.metadata_json, /sourceNamespace/);
+});
+
+test("cae-duplicate-artifact-to-workspace rejects invalid source namespaces", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const r = await contextActivationModule.onCommand(
+    {
+      name: "cae-duplicate-artifact-to-workspace",
+      args: {
+        schemaVersion: 1,
+        actor: "flow",
+        sourceArtifactId: "override.weird.id",
+        artifactId: "workspace.copy.invalid",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(r.ok, false);
+  assert.equal(r.code, "cae-duplicate-source-artifact-invalid");
+});
 
 test("cae-list-registry-versions is read-only (no mutation gate)", async () => {
   const ws = await workspaceWithSeededRegistry();
@@ -609,7 +714,7 @@ test("cae-create-workspace-artifact writes one markdown file, one registry row, 
         title: "Workspace Sample Playbook",
         slug: "sample-playbook",
         tags: ["ops", "launch"],
-        contentMarkdown: "# Workspace Sample Playbook\n\nHello from a workspace artifact.\n",
+        contentMarkdown: "# Workspace Sample Playbook\n\n## section-1\n\nHello from a workspace artifact.\n",
         fragment: "section-1",
         ...appr()
       }

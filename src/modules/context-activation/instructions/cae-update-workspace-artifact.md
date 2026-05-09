@@ -38,6 +38,8 @@ workspace-kit run cae-update-workspace-artifact '{"schemaVersion":1,"actor":"ope
 | `expectedActiveVersionId` | string | no | Optional optimistic-concurrency token from the last authoring read. Mutations fail with **`cae-stale-state`** when the active version changed. |
 | `expectedRegistryDigest` | string | no | Optional registry digest from the last authoring read. Mutations fail with **`cae-stale-state`** when the active registry content changed. |
 
+The effective markdown body after the merge (new `contentMarkdown` or existing file contents) must pass the same structural checks as **`cae-create-workspace-artifact`**: non-empty, at least one **H1**, and when a fragment is set on the ref, a matching `## <fragment>` heading. Failures return **`cae-workspace-artifact-markdown-*`** codes.
+
 ## Returns
 
 `ok: true`, **`code`**: `cae-update-workspace-artifact-ok`.

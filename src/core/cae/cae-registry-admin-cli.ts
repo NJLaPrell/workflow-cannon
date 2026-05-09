@@ -44,6 +44,8 @@ import {
   buildCaeReconcileDefaultsReport
 } from "./cae-reconcile-defaults.js";
 import { scanCaeWorkspaceArtifactIntegrity } from "./cae-workspace-artifact-integrity-scan.js";
+import { validateWorkspaceArtifactMarkdown } from "./workspace-artifact-markdown-validate.js";
+import { listWorkspaceArtifactTemplatesV1 } from "./workspace-artifact-templates.js";
 import {
   buildGuidancePackExport,
   dryRunGuidancePackImport,
@@ -399,6 +401,8 @@ export function tryHandleCaeRegistryAdminCommand(
     "cae-create-artifact",
     "cae-create-workspace-artifact",
     "cae-duplicate-default-artifact",
+    "cae-duplicate-artifact-to-workspace",
+    "cae-list-workspace-artifact-templates",
     "cae-update-artifact",
     "cae-update-workspace-artifact",
     "cae-archive-retired-workspace-artifact-file",
@@ -440,10 +444,19 @@ export function tryHandleCaeRegistryAdminCommand(
     name === "cae-reconcile-defaults" ||
     name === "cae-export-guidance-pack" ||
     name === "cae-import-guidance-pack-dry-run" ||
-    name === "cae-scan-workspace-artifact-integrity";
+    name === "cae-scan-workspace-artifact-integrity" ||
+    name === "cae-list-workspace-artifact-templates";
   if (!readOnly) {
     const gate = caeRegistryMutationGateError(effective, args);
     if (gate) return gate;
+  }
+
+  if (name === "cae-list-workspace-artifact-templates") {
+    return {
+      ok: true,
+      code: "cae-list-workspace-artifact-templates-ok",
+      data: { schemaVersion: 1, templates: listWorkspaceArtifactTemplatesV1() }
+    };
   }
 
   const db = openKitSqliteReadWrite(workspacePath, effective);
@@ -1026,6 +1039,14 @@ export function tryHandleCaeRegistryAdminCommand(
       const absoluteDirectory = path.join(workspacePath, builtPath.value.directory);
       const absolutePath = path.join(workspacePath, builtPath.value.path);
       const markdown = workspaceArtifactMarkdown(title, contentMarkdown);
+      const mdCheck = validateWorkspaceArtifactMarkdown({
+        contentMarkdown: markdown,
+        title,
+        fragment: fragment ?? undefined
+      });
+      if (!mdCheck.ok) {
+        return { ok: false, code: mdCheck.code, message: mdCheck.message };
+      }
 
       try {
         mkdirSync(absoluteDirectory, { recursive: true });
@@ -1095,7 +1116,13 @@ export function tryHandleCaeRegistryAdminCommand(
       };
     }
 
-    if (name === "cae-duplicate-default-artifact") {
+    if (name === "cae-duplicate-default-artifact" || name === "cae-duplicate-artifact-to-workspace") {
+      const allowWorkspaceSource = name === "cae-duplicate-artifact-to-workspace";
+      const duplicateOkCode = allowWorkspaceSource ? "cae-duplicate-artifact-to-workspace-ok" : "cae-duplicate-default-artifact-ok";
+      const duplicateRegistryErr = allowWorkspaceSource
+        ? "cae-duplicate-artifact-to-workspace-registry-check-failed"
+        : "cae-duplicate-default-artifact-registry-check-failed";
+
       const v = resolveVersionId(db, args.versionId);
       if (typeof v !== "string") return v;
 
@@ -1103,11 +1130,19 @@ export function tryHandleCaeRegistryAdminCommand(
       if (!sourceArtifactId) {
         return { ok: false, code: "invalid-args", message: "sourceArtifactId is required" };
       }
-      if (classifyCaeArtifactIdNamespace(sourceArtifactId) !== "default") {
+      const sourceNs = classifyCaeArtifactIdNamespace(sourceArtifactId);
+      if (!allowWorkspaceSource && sourceNs !== "default") {
         return {
           ok: false,
           code: "cae-default-artifact-id-invalid",
           message: "Source artifact must be a default-owned CAE artifact id starting with 'cae.'"
+        };
+      }
+      if (allowWorkspaceSource && sourceNs !== "default" && sourceNs !== "workspace") {
+        return {
+          ok: false,
+          code: "cae-duplicate-source-artifact-invalid",
+          message: "sourceArtifactId must be a default (cae.*) or workspace (workspace.*) artifact id"
         };
       }
 
@@ -1192,6 +1227,15 @@ export function tryHandleCaeRegistryAdminCommand(
       const validated = validateSingleCaeArtifactRecord(artifact);
       if (!validated.ok) return { ok: false, code: validated.code, message: validated.message };
 
+      const mdDup = validateWorkspaceArtifactMarkdown({
+        contentMarkdown: sourceMarkdown,
+        title,
+        fragment: fragment ?? undefined
+      });
+      if (!mdDup.ok) {
+        return { ok: false, code: mdDup.code, message: mdDup.message };
+      }
+
       const absoluteDirectory = path.join(workspacePath, builtPath.value.directory);
       const absolutePath = path.join(workspacePath, builtPath.value.path);
       try {
@@ -1217,6 +1261,7 @@ export function tryHandleCaeRegistryAdminCommand(
       const ref = validated.value.ref as { path?: string; fragment?: string };
       const meta: Record<string, unknown> = {
         sourceArtifactId,
+        sourceNamespace: sourceNs,
         sourceContentHash: createHash("sha256").update(sourceMarkdown).digest("hex"),
         slug: builtPath.value.slug
       };
@@ -1248,7 +1293,7 @@ export function tryHandleCaeRegistryAdminCommand(
         });
         registryFailure = postMutationRegistryCheck(db, workspacePath, true);
         if (registryFailure) {
-          throw new Error("cae-duplicate-default-artifact-registry-check-failed");
+          throw new Error(duplicateRegistryErr);
         }
       });
 
@@ -1266,7 +1311,7 @@ export function tryHandleCaeRegistryAdminCommand(
 
       return {
         ok: true,
-        code: "cae-duplicate-default-artifact-ok",
+        code: duplicateOkCode,
         data: {
           schemaVersion: 1,
           versionId: v,
@@ -1517,6 +1562,24 @@ export function tryHandleCaeRegistryAdminCommand(
       const nextAbsolutePath = path.join(workspacePath, builtPath.value.path);
       const nextMarkdown = contentMarkdown ?? currentMarkdown;
       const pathChanged = builtPath.value.path !== cur.path;
+
+      const refForMd = validated.value.ref as { path?: string; fragment?: string };
+      const fragForMd =
+        typeof refForMd.fragment === "string" && refForMd.fragment.trim().length > 0
+          ? refForMd.fragment.trim()
+          : undefined;
+      const mdTitle =
+        (typeof validated.value.title === "string" && validated.value.title.trim().length > 0
+          ? validated.value.title.trim()
+          : (cur.title ?? "").trim()) || artifactId;
+      const mdCheck = validateWorkspaceArtifactMarkdown({
+        contentMarkdown: nextMarkdown,
+        title: mdTitle,
+        fragment: fragForMd
+      });
+      if (!mdCheck.ok) {
+        return { ok: false, code: mdCheck.code, message: mdCheck.message };
+      }
 
       try {
         mkdirSync(path.dirname(nextAbsolutePath), { recursive: true });

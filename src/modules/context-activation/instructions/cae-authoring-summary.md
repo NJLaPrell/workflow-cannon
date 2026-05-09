@@ -29,5 +29,6 @@ The `data` object includes:
 - `validation` and `validationWarnings` — registry validation result and current CAE issues.
 - `recentMutations` — latest CAE registry mutation audit rows when SQLite is available.
 - `readiness` — aggregate authoring readiness and coarse mutation capability.
+- `workspaceArtifactMarkdownTemplates` — built-in starter templates (`id`, `artifactType`, `title`, `contentMarkdown`) for the Guidance artifact editor.
 
 This command is Tier C / read-only and does not accept `policyApproval`.

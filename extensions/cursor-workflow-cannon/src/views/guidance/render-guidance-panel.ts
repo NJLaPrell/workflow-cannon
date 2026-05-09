@@ -1,5 +1,15 @@
 import { escapeHtml, escapeHtmlAttr } from "../dashboard/render-dashboard.js";
 
+/** Mirrors `CAE_WORKSPACE_ARTIFACT_TYPES` for authoring UI (extension does not import kit core). */
+const WORKSPACE_CAE_ARTIFACT_TYPES = [
+  "playbook",
+  "runbook",
+  "checklist",
+  "review-template",
+  "reasoning-template",
+  "policy-doc"
+] as const;
+
 type UnknownRecord = Record<string, unknown>;
 
 function asRecord(value: unknown): UnknownRecord {
@@ -175,6 +185,16 @@ function renderArtifacts(data: UnknownRecord): string {
   const active = asRecord(data.activeVersion);
   const registryDigest = String(active.registryDigest ?? asRecord(data.validation).registryContentHash ?? "");
   const activeVersionId = String(active.versionId ?? "");
+  const templates = asArray(data.workspaceArtifactMarkdownTemplates).map((raw) => {
+    const row = asRecord(raw);
+    return {
+      id: String(row.id ?? ""),
+      artifactType: String(row.artifactType ?? "playbook"),
+      title: String(row.title ?? ""),
+      contentMarkdown: String(row.contentMarkdown ?? "")
+    };
+  });
+  const templatesJson = JSON.stringify(templates).replace(/</g, "\\u003c");
   const usedBy = new Map<string, number>();
   for (const rawActivation of asArray(asRecord(data.activations).rows)) {
     const activation = asRecord(rawActivation);
@@ -214,10 +234,20 @@ function renderArtifacts(data: UnknownRecord): string {
     <select id="gp-artifact-status"><option value="">All statuses</option><option value="active">Active</option><option value="hidden">Hidden</option><option value="retired">Retired</option><option value="missing-file">Missing file</option></select>
   </div>
   <section class="gp-editor" id="gp-artifact-editor" data-gp-active-version="${escapeHtmlAttr(activeVersionId)}" data-gp-registry-digest="${escapeHtmlAttr(registryDigest)}">
+    <script type="application/json" id="gp-artifact-templates-json">${templatesJson}</script>
     <div class="gp-band"><h3>Artifact Editor</h3><span class="gp-muted">${canMutate ? "Workspace mutations enabled" : "Read-only"}</span></div>
     <div class="gp-form-grid">
       <label>Artifact ID<input id="gp-artifact-id" placeholder="workspace.example.playbook" /></label>
-      <label>Type<select id="gp-artifact-type"><option value="playbook">playbook</option><option value="policy-doc">policy-doc</option><option value="runbook">runbook</option></select></label>
+      <label>Type<select id="gp-artifact-type">${WORKSPACE_CAE_ARTIFACT_TYPES.map(
+        (t) => `<option value="${escapeHtmlAttr(t)}">${escapeHtml(t)}</option>`
+      ).join("")}</select></label>
+      <label>Starter<select id="gp-artifact-template"><option value="">Custom</option>${templates
+        .filter((t) => t.id)
+        .map(
+          (t) =>
+            `<option value="${escapeHtmlAttr(t.id)}">${escapeHtml(t.title || t.id)} (${escapeHtml(t.artifactType)})</option>`
+        )
+        .join("")}</select></label>
       <label>Title<input id="gp-artifact-title" placeholder="Example Playbook" /></label>
       <label>Tags<input id="gp-artifact-tags" placeholder="ops, release" /></label>
       <label>Path / slug<input id="gp-artifact-slug" placeholder="example-playbook" /></label>
@@ -255,7 +285,7 @@ function renderArtifactActions(row: UnknownRecord, canMutate: boolean): string {
   const buttons = [
     rowButton("Open", "artifact-open", row, hasPath && row.fileExists !== false),
     rowButton("Preview", "artifact-preview", row, active),
-    rowButton("Duplicate", "artifact-duplicate", row, canMutate && isDefault && active),
+    rowButton("Duplicate", "artifact-duplicate", row, canMutate && (isDefault || isWorkspace) && active),
     rowButton("Edit", "artifact-edit", row, canMutate && (isWorkspace || isOverride) && active),
     rowButton("Retire", "artifact-retire", row, canMutate && (isWorkspace || isOverride) && active),
     rowButton("Hide Default", "artifact-hide-default", row, canMutate && isDefault && active),
@@ -405,6 +435,19 @@ function renderPreview(data: UnknownRecord): string {
 </section>`;
 }
 
+function renderVersions(data: UnknownRecord): string {
+  const active = asRecord(data.activeVersion);
+  const vid = String(active.versionId ?? "n/a");
+  return `<section class="gp-tab-panel" id="gp-tab-versions" data-gp-panel="versions">
+  <div class="gp-band"><h2>Registry versions</h2><span class="gp-muted">Read-only · <code>cae-list-registry-versions</code></span></div>
+  <div class="gp-action-row">
+    <button type="button" class="gp-primary" data-gp-action="versions-refresh">Refresh version list</button>
+  </div>
+  <p class="gp-muted">Active version from last authoring snapshot: <code>${escapeHtml(vid)}</code></p>
+  <pre id="gp-versions-json" class="gp-versions-dump">Click “Refresh version list” to load rows from kit SQLite.</pre>
+</section>`;
+}
+
 function renderAudit(data: UnknownRecord): string {
   const rows = asArray(asRecord(data.recentMutations).rows).slice(0, 20);
   const body = rows.length
@@ -432,12 +475,14 @@ export function renderGuidanceAuthoringPanelInnerHtml(result: unknown): string {
     <button type="button" class="is-active" data-gp-tab="overview">Overview</button>
     <button type="button" data-gp-tab="artifacts">Artifacts</button>
     <button type="button" data-gp-tab="activations">Activations</button>
+    <button type="button" data-gp-tab="versions">Versions</button>
     <button type="button" data-gp-tab="preview">Preview</button>
     <button type="button" data-gp-tab="audit">Audit</button>
   </nav>
   ${renderOverview(data)}
   ${renderArtifacts(data)}
   ${renderActivations(data)}
+  ${renderVersions(data)}
   ${renderPreview(data)}
   ${renderAudit(data)}
 </main>`;

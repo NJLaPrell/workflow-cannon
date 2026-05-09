@@ -298,12 +298,22 @@ test("renderGuidanceAuthoringPanelInnerHtml renders the tabbed authoring shell",
           }
         ]
       },
-      recentMutations: { count: 1, rows: [{ recordedAt: "2026-05-06T00:00:00.000Z", commandName: "cae-create-workspace-artifact", actor: "agent", note: "draft" }] }
+      recentMutations: { count: 1, rows: [{ recordedAt: "2026-05-06T00:00:00.000Z", commandName: "cae-create-workspace-artifact", actor: "agent", note: "draft" }] },
+      workspaceArtifactMarkdownTemplates: [
+        {
+          id: "starter-playbook",
+          artifactType: "playbook",
+          title: "Playbook starter",
+          contentMarkdown: "# Playbook title\n\n## Overview\n\n"
+        }
+      ]
     }
   });
   assert.match(html, /data-gp-tab="overview"/);
   assert.match(html, /data-gp-tab="artifacts"/);
   assert.match(html, /data-gp-tab="activations"/);
+  assert.match(html, /data-gp-tab="versions"/);
+  assert.match(html, /id="gp-versions-json"/);
   assert.match(html, /data-gp-tab="preview"/);
   assert.match(html, /data-gp-tab="audit"/);
   assert.match(html, /Warnings need review/);
@@ -323,7 +333,10 @@ test("renderGuidanceAuthoringPanelInnerHtml renders the tabbed authoring shell",
   assert.match(html, /cae\.activation\.one/);
   assert.match(html, /Search artifacts/);
   assert.match(html, /Artifact Editor/);
-  assert.match(html, /gp-artifact-content/);
+  assert.match(html, /gp-artifact-templates-json/);
+  assert.match(html, /id="gp-artifact-template"/);
+  assert.match(html, /Starter/);
+  assert.match(html, /reasoning-template/);
   assert.match(html, /Preview Markdown/);
   assert.match(html, /data-gp-action="artifact-create"/);
   assert.match(html, /data-gp-action="artifact-update"/);
@@ -457,7 +470,8 @@ test("renderGuidanceAuthoringPanelInnerHtml covers representative dashboard auth
     counts: {},
     artifacts: { rows: [] },
     activations: { rows: [] },
-    recentMutations: { available: true, rows: [] }
+    recentMutations: { available: true, rows: [] },
+    workspaceArtifactMarkdownTemplates: []
   };
 
   const healthy = renderGuidanceAuthoringPanelInnerHtml({ ok: true, data: baseData });
