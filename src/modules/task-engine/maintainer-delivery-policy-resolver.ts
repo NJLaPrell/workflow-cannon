@@ -17,7 +17,7 @@ import type { TaskEntity } from "./types.js";
 import {
   MAINTAINER_DELIVERY_PROFILE_METADATA_KEY,
   REQUIRES_PHASE_BRANCH_METADATA_KEY
-} from "./maintainer-delivery-hints.js";
+} from "./maintainer-delivery-metadata-keys.js";
 import { readDeliveryEvidenceEnforcementMode } from "./delivery-evidence.js";
 
 export type MaintainerDeliveryExplainSource =
