@@ -9,6 +9,7 @@ import {
   buildDeliveryEvidencePolicyContext,
   resolveMaintainerDeliveryPolicy
 } from "../maintainer-delivery-policy-resolver.js";
+import { createTaskIntakeAcceptGuard } from "../task-intake-mutation-policy.js";
 import { planningGenPolicyGate } from "../planning-generation-gate.js";
 import type { OpenedPlanningStores } from "../persistence/planning-open.js";
 import { TaskStore } from "../persistence/store.js";
@@ -85,6 +86,7 @@ export async function runTaskIntentTransition(
   const service = new TransitionService(
     planning.taskStore,
     [
+      createTaskIntakeAcceptGuard({ effectiveConfig }),
       createDeliveryEvidenceGuard({
         enforcementMode: deliveryEvidenceMode,
         resolvePolicyContext: (task) => {
@@ -210,6 +212,7 @@ export async function runClaimNextTaskIntent(
   const service = new TransitionService(
     planning.taskStore,
     [
+      createTaskIntakeAcceptGuard({ effectiveConfig }),
       createDeliveryEvidenceGuard({
         enforcementMode: deliveryEvidenceMode,
         resolvePolicyContext: (task) => {

@@ -25,6 +25,10 @@ import { strictValidationError } from "./strict-store-validation.js";
 import { validateTaskSetForStrictMode } from "../strict-task-validation.js";
 import { findUnknownFeatureIds, taskTypeFailsClosedOnUnknownFeatures } from "../task-feature-mutation-validation.js";
 import { validateKnownTaskTypeRequirements } from "../task-type-validation.js";
+import {
+  evaluateIntakeForCreate,
+  readIntakeModuleIdFromArgs
+} from "../task-intake-mutation-policy.js";
 import { TRANSCRIPT_CHURN_TASK_TYPE } from "../transcript-churn.js";
 import type { TaskEntity, TaskPriority, TaskStatus } from "../types.js";
 
@@ -495,15 +499,25 @@ export async function runTaskRowMutationCommands(
     if (!skillAttach.ok) {
       return { ok: false, code: skillAttach.code, message: skillAttach.message };
     }
+    const intakeCreate = evaluateIntakeForCreate({
+      effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+      task,
+      moduleId: readIntakeModuleIdFromArgs(args as Record<string, unknown>)
+    });
+    if (intakeCreate.block) {
+      return intakeCreate.block;
+    }
     if (dryRunCreate) {
       const dryData: Record<string, unknown> = {
         task,
         dryRun: true,
-        allocateId: allocateId === true
+        allocateId: allocateId === true,
+        taskIntake: intakeCreate.intakePayload
       };
       attachPolicyMeta(dryData, ctx, planning.sqliteDual.getPlanningGeneration(), [
         ...(pgCreate.warnings ?? []),
-        ...featureSlugWarnings
+        ...featureSlugWarnings,
+        ...intakeCreate.stringWarnings
       ]);
       return {
         ok: true,
@@ -527,10 +541,11 @@ export async function runTaskRowMutationCommands(
       return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
     }
     await store.save(planningConcurrencySaveOpts(args as Record<string, unknown>));
-    const createdData: Record<string, unknown> = { task };
+    const createdData: Record<string, unknown> = { task, taskIntake: intakeCreate.intakePayload };
     attachPolicyMeta(createdData, ctx, planning.sqliteDual.getPlanningGeneration(), [
       ...(pgCreate.warnings ?? []),
-      ...featureSlugWarnings
+      ...featureSlugWarnings,
+      ...intakeCreate.stringWarnings
     ]);
     return {
       ok: true,

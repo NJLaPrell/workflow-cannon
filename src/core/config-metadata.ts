@@ -174,6 +174,7 @@ function getAtPathForConfigValidation(root: Record<string, unknown>, dotted: str
 }
 
 const TASK_POLICY_ENFORCEMENT_MODES = new Set(["off", "advisory", "enforce"]);
+const TASK_INTAKE_ENFORCEMENT_MODES = new Set(["off", "advisory", "enforce", "enforce-on-accept"]);
 
 function assertPolicyName(key: string, value: string): void {
   if (!/^[a-z][a-z0-9-]*$/.test(value)) {
@@ -247,6 +248,14 @@ function validateTaskIntakeFieldRules(key: string, value: unknown): void {
 function validatePolicyEnforcementMode(key: string, value: unknown): void {
   if (typeof value !== "string" || !TASK_POLICY_ENFORCEMENT_MODES.has(value)) {
     throw new Error(`config-constraint(${key}): enforcementMode must be one of off, advisory, enforce`);
+  }
+}
+
+function validateTaskIntakeEnforcementMode(key: string, value: unknown): void {
+  if (typeof value !== "string" || !TASK_INTAKE_ENFORCEMENT_MODES.has(value)) {
+    throw new Error(
+      `config-constraint(${key}): enforcementMode must be one of off, advisory, enforce-on-accept, enforce`
+    );
   }
 }
 
@@ -387,7 +396,7 @@ function validateTaskIntakePolicyConfig(value: unknown, label: string): void {
       }
       validateTaskIntakeFieldRules(`tasks.intakePolicy.profiles.${profileName}.fieldRules`, profile.fieldRules);
       if (profile.enforcementMode !== undefined) {
-        validatePolicyEnforcementMode(`tasks.intakePolicy.profiles.${profileName}.enforcementMode`, profile.enforcementMode);
+        validateTaskIntakeEnforcementMode(`tasks.intakePolicy.profiles.${profileName}.enforcementMode`, profile.enforcementMode);
       }
     }
   }
@@ -401,9 +410,9 @@ function validateTaskIntakePolicyConfig(value: unknown, label: string): void {
     }
   }
   if (intake.enforcementMode !== undefined) {
-    validatePolicyEnforcementMode("tasks.intakePolicy.enforcementMode", intake.enforcementMode);
+    validateTaskIntakeEnforcementMode("tasks.intakePolicy.enforcementMode", intake.enforcementMode);
   }
-  validatePolicyOverrides(intake.moduleOverrides, profileNames, "tasks.intakePolicy", "advisory", label);
+  validatePolicyOverrides(intake.moduleOverrides, profileNames, "tasks.intakePolicy", "advisory", label, "intake");
 }
 
 function validatePolicyOverrides(
@@ -411,7 +420,8 @@ function validatePolicyOverrides(
   profileNames: Set<string>,
   keyPrefix: string,
   builtInProfile: string,
-  label: string
+  label: string,
+  enforcementKind: "maintainer" | "intake" = "maintainer"
 ): void {
   if (value === undefined) {
     return;
@@ -440,7 +450,11 @@ function validatePolicyOverrides(
       throw new Error(`config-constraint(${keyPrefix}.moduleOverrides.${moduleId}.profile): unknown profile '${override.profile}'`);
     }
     if (override.enforcementMode !== undefined) {
-      validatePolicyEnforcementMode(`${keyPrefix}.moduleOverrides.${moduleId}.enforcementMode`, override.enforcementMode);
+      if (enforcementKind === "intake") {
+        validateTaskIntakeEnforcementMode(`${keyPrefix}.moduleOverrides.${moduleId}.enforcementMode`, override.enforcementMode);
+      } else {
+        validatePolicyEnforcementMode(`${keyPrefix}.moduleOverrides.${moduleId}.enforcementMode`, override.enforcementMode);
+      }
     }
   }
 }

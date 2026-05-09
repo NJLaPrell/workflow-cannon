@@ -1,5 +1,8 @@
 export type TaskPolicyEnforcementMode = "off" | "advisory" | "enforce";
 
+/** Intake policy adds `enforce-on-accept` (block proposed→ready only; creates stay permissive). */
+export type TaskIntakeEnforcementMode = "off" | "advisory" | "enforce-on-accept" | "enforce";
+
 export type MaintainerDeliveryProfileName = "github-pr" | string;
 
 export type MaintainerDeliveryProfile = {
@@ -50,17 +53,17 @@ export type TaskIntakeProfile = {
   recommendedFields: string[];
   forbiddenFields: string[];
   fieldRules: Record<string, TaskIntakeFieldRule>;
-  enforcementMode: TaskPolicyEnforcementMode;
+  enforcementMode: TaskIntakeEnforcementMode;
 };
 
 export type TaskIntakeOverride = {
   profile: TaskIntakeProfileName;
-  enforcementMode?: TaskPolicyEnforcementMode;
+  enforcementMode?: TaskIntakeEnforcementMode;
 };
 
 export type TaskIntakePolicyConfig = {
   defaultProfile: TaskIntakeProfileName;
-  enforcementMode: TaskPolicyEnforcementMode;
+  enforcementMode: TaskIntakeEnforcementMode;
   profiles: Record<string, TaskIntakeProfile>;
   moduleOverrides: Record<string, TaskIntakeOverride>;
 };
@@ -123,5 +126,5 @@ export const DEFAULT_TASK_INTAKE_POLICY: TaskIntakePolicyConfig = {
 export const TASK_POLICY_COMPATIBILITY_NOTES = [
   "metadata.maintainerDeliveryProfile remains a task-level override source for delivery policy resolvers.",
   "metadata.requiresPhaseBranch remains compatible with the built-in github-pr delivery profile.",
-  "Existing improvement-task guardrails stay advisory until intake policy enforcement is wired by downstream tasks."
+  "Task intake enforcement supports enforce-on-accept (proposed→ready only) in addition to advisory and full enforce."
 ] as const;
