@@ -127,7 +127,7 @@
   "tasks.intakePolicy.profiles": {
     "key": "tasks.intakePolicy.profiles",
     "type": "object",
-    "description": "Named task intake profiles with requiredFields, recommendedFields, and optional per-profile enforcementMode.",
+    "description": "Named task intake profiles with requiredFields, recommendedFields, forbiddenFields, fieldRules, and optional per-profile enforcementMode.",
     "default": {},
     "domainScope": "project",
     "owningModule": "task-engine",

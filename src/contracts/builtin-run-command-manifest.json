@@ -149,6 +149,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "resolve-task-intake-policy",
+    "file": "resolve-task-intake-policy.md",
+    "description": "Read-only JSON: resolved task intake policy profile, field requirements, field-rule findings, and explain provenance.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "add-phase-note",
     "file": "add-phase-note.md",
     "description": "Create or return (idempotent) a phase-scoped operational note in planning SQLite.",

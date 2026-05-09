@@ -199,6 +199,51 @@ function assertStringArray(key: string, value: unknown): string[] {
   return value;
 }
 
+function assertNonNegativeInteger(key: string, value: unknown): void {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+    throw new Error(`config-constraint(${key}): expected non-negative integer`);
+  }
+}
+
+function validateTaskIntakeFieldRules(key: string, value: unknown): void {
+  if (value === undefined) {
+    return;
+  }
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error(`config-type-error(${key}): expected object`);
+  }
+  for (const [fieldPath, rawRule] of Object.entries(value as Record<string, unknown>)) {
+    assertFieldPath(key, fieldPath);
+    if (typeof rawRule !== "object" || rawRule === null || Array.isArray(rawRule)) {
+      throw new Error(`config-type-error(${key}.${fieldPath}): expected object`);
+    }
+    const rule = rawRule as Record<string, unknown>;
+    for (const ruleKey of Object.keys(rule)) {
+      if (
+        ruleKey !== "minItems" &&
+        ruleKey !== "minLength" &&
+        ruleKey !== "maxLength" &&
+        ruleKey !== "itemMinLength" &&
+        ruleKey !== "allowedValues" &&
+        ruleKey !== "requiresAny"
+      ) {
+        throw new Error(`config-invalid(${key}.${fieldPath}): unknown field rule '${ruleKey}'`);
+      }
+    }
+    for (const n of ["minItems", "minLength", "maxLength", "itemMinLength"] as const) {
+      if (rule[n] !== undefined) {
+        assertNonNegativeInteger(`${key}.${fieldPath}.${n}`, rule[n]);
+      }
+    }
+    if (rule.allowedValues !== undefined && !Array.isArray(rule.allowedValues)) {
+      throw new Error(`config-type-error(${key}.${fieldPath}.allowedValues): expected array`);
+    }
+    for (const field of assertStringArray(`${key}.${fieldPath}.requiresAny`, rule.requiresAny ?? [])) {
+      assertFieldPath(`${key}.${fieldPath}.requiresAny`, field);
+    }
+  }
+}
+
 function validatePolicyEnforcementMode(key: string, value: unknown): void {
   if (typeof value !== "string" || !TASK_POLICY_ENFORCEMENT_MODES.has(value)) {
     throw new Error(`config-constraint(${key}): enforcementMode must be one of off, advisory, enforce`);
@@ -321,7 +366,13 @@ function validateTaskIntakePolicyConfig(value: unknown, label: string): void {
       }
       const profile = profileValue as Record<string, unknown>;
       for (const key of Object.keys(profile)) {
-        if (key !== "requiredFields" && key !== "recommendedFields" && key !== "enforcementMode") {
+        if (
+          key !== "requiredFields" &&
+          key !== "recommendedFields" &&
+          key !== "forbiddenFields" &&
+          key !== "fieldRules" &&
+          key !== "enforcementMode"
+        ) {
           throw new Error(`config-invalid(${label}): unknown tasks.intakePolicy.profiles.${profileName}.${key}`);
         }
       }
@@ -331,6 +382,10 @@ function validateTaskIntakePolicyConfig(value: unknown, label: string): void {
       for (const field of assertStringArray(`tasks.intakePolicy.profiles.${profileName}.recommendedFields`, profile.recommendedFields ?? [])) {
         assertFieldPath(`tasks.intakePolicy.profiles.${profileName}.recommendedFields`, field);
       }
+      for (const field of assertStringArray(`tasks.intakePolicy.profiles.${profileName}.forbiddenFields`, profile.forbiddenFields ?? [])) {
+        assertFieldPath(`tasks.intakePolicy.profiles.${profileName}.forbiddenFields`, field);
+      }
+      validateTaskIntakeFieldRules(`tasks.intakePolicy.profiles.${profileName}.fieldRules`, profile.fieldRules);
       if (profile.enforcementMode !== undefined) {
         validatePolicyEnforcementMode(`tasks.intakePolicy.profiles.${profileName}.enforcementMode`, profile.enforcementMode);
       }

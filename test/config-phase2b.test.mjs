@@ -232,6 +232,12 @@ test("task policy config validates custom profiles and module overrides", async 
             "improvement-ready": {
               requiredFields: ["title", "metadata.priority"],
               recommendedFields: ["acceptanceCriteria"],
+              forbiddenFields: ["metadata.rawTranscript"],
+              fieldRules: {
+                acceptanceCriteria: { minItems: 1, itemMinLength: 8 },
+                priority: { allowedValues: ["P1", "P2", "P3"] },
+                "metadata.issue": { minLength: 12, requiresAny: ["metadata.supportingReasoning"] }
+              },
               enforcementMode: "advisory"
             }
           },
