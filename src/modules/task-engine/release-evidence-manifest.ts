@@ -3,7 +3,8 @@ import { join } from "node:path";
 import {
   buildPhaseDeliveryPreflight,
   DELIVERY_EVIDENCE_METADATA_KEY,
-  DELIVERY_WAIVER_METADATA_KEY
+  DELIVERY_WAIVER_METADATA_KEY,
+  summarizeDeliveryEvidence
 } from "./delivery-evidence.js";
 import { inferTaskPhaseKey } from "./phase-resolution.js";
 import type { TaskEntity } from "./types.js";
@@ -153,13 +154,17 @@ function completedPhaseTaskEvidence(tasks: TaskEntity[], phaseKey: string | null
   return tasks
     .filter((task) => task.status === "completed")
     .filter((task) => phaseKey === null || inferTaskPhaseKey(task) === phaseKey)
-    .map((task) => ({
-      taskId: task.id,
-      title: task.title,
-      phaseKey: inferTaskPhaseKey(task),
-      deliveryEvidence: task.metadata?.[DELIVERY_EVIDENCE_METADATA_KEY] ?? null,
-      deliveryWaiver: task.metadata?.[DELIVERY_WAIVER_METADATA_KEY] ?? null
-    }));
+    .map((task) => {
+      const deliveryEvidence = task.metadata?.[DELIVERY_EVIDENCE_METADATA_KEY] ?? null;
+      return {
+        taskId: task.id,
+        title: task.title,
+        phaseKey: inferTaskPhaseKey(task),
+        deliveryEvidence,
+        deliveryEvidenceSummary: summarizeDeliveryEvidence(deliveryEvidence),
+        deliveryWaiver: task.metadata?.[DELIVERY_WAIVER_METADATA_KEY] ?? null
+      };
+    });
 }
 
 export function buildReleaseEvidenceManifest(args: {

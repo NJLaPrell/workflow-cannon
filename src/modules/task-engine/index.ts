@@ -34,11 +34,13 @@ export {
 export {
   DELIVERY_EVIDENCE_METADATA_KEY,
   DELIVERY_WAIVER_METADATA_KEY,
+  DELIVERY_EVIDENCE_V2_MODES,
   buildPhaseDeliveryPreflight,
   createDeliveryEvidenceGuard,
   evaluateDeliveryEvidence,
   isPhaseDeliveryTask,
-  readDeliveryEvidenceEnforcementMode
+  readDeliveryEvidenceEnforcementMode,
+  summarizeDeliveryEvidence
 } from "./delivery-evidence.js";
 export { buildReleaseEvidenceManifest } from "./release-evidence-manifest.js";
 export { classifyKitStatePath } from "./kit-state-classifier.js";
@@ -46,7 +48,9 @@ export type { KitStateClassification } from "./kit-state-classifier.js";
 export type {
   DeliveryEvidenceEnforcementMode,
   DeliveryEvidenceEvaluation,
-  DeliveryEvidenceViolation
+  DeliveryEvidenceViolation,
+  DeliveryEvidenceModeV2,
+  EvaluateDeliveryEvidenceOptions
 } from "./delivery-evidence.js";
 export {
   filterTasksByQueueNamespace,
