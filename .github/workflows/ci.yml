@@ -33,7 +33,7 @@ jobs:
         run: pnpm run build && pnpm check
 
       - name: Test
-        run: pnpm test
+        run: pnpm run test:run
 
       - name: Plugin fixture smoke (list-plugins / inspect-plugin)
         run: node scripts/ci-plugin-fixture-smoke.mjs
