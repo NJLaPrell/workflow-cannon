@@ -8,7 +8,10 @@ import { resolveFeatureTaxonomyRuntimeCommands } from "./task-feature-taxonomy-r
 import type { OpenedPlanningStores } from "../persistence/planning-open.js";
 import { TaskStore } from "../persistence/store.js";
 import { resolvePhaseDeliveryReadoutCommands } from "./phase-delivery-readout-commands.js";
-import { resolveMaintainerDeliveryPolicyCommand } from "./policy-resolve-commands.js";
+import {
+  resolveMaintainerDeliveryPolicyCommand,
+  resolveTaskIntakePolicyCommand
+} from "./policy-resolve-commands.js";
 import { resolvePhaseJournalCommands } from "./phase-journal-commands.js";
 import { runTransitionOnCommand } from "./run-transition-on-command.js";
 import { runSynthesizeTranscriptChurnOnCommand } from "./synthesize-transcript-churn-on-command.js";
@@ -48,6 +51,11 @@ export async function dispatchTaskEnginePlanningCommands(
   const maintainerDeliveryPolicy = resolveMaintainerDeliveryPolicyCommand(command, ctx, planning);
   if (maintainerDeliveryPolicy !== null) {
     return maintainerDeliveryPolicy;
+  }
+
+  const taskIntakePolicy = resolveTaskIntakePolicyCommand(command, ctx, planning);
+  if (taskIntakePolicy !== null) {
+    return taskIntakePolicy;
   }
 
   const phaseJournal = await resolvePhaseJournalCommands(command, ctx, planning);

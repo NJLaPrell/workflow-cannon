@@ -36,9 +36,20 @@ export type MaintainerDeliveryPolicyConfig = {
 
 export type TaskIntakeProfileName = "advisory" | string;
 
+export type TaskIntakeFieldRule = {
+  minItems?: number;
+  minLength?: number;
+  maxLength?: number;
+  itemMinLength?: number;
+  allowedValues?: unknown[];
+  requiresAny?: string[];
+};
+
 export type TaskIntakeProfile = {
   requiredFields: string[];
   recommendedFields: string[];
+  forbiddenFields: string[];
+  fieldRules: Record<string, TaskIntakeFieldRule>;
   enforcementMode: TaskPolicyEnforcementMode;
 };
 
@@ -89,6 +100,20 @@ export const DEFAULT_TASK_INTAKE_POLICY: TaskIntakePolicyConfig = {
     advisory: {
       requiredFields: [],
       recommendedFields: ["title", "summary", "technicalScope", "acceptanceCriteria"],
+      forbiddenFields: [],
+      fieldRules: {},
+      enforcementMode: "advisory"
+    },
+    improvement: {
+      requiredFields: ["technicalScope", "acceptanceCriteria", "metadata.issue", "metadata.supportingReasoning"],
+      recommendedFields: ["title", "summary", "metadata.proposedSolutions"],
+      forbiddenFields: [],
+      fieldRules: {
+        technicalScope: { minItems: 1, itemMinLength: 1 },
+        acceptanceCriteria: { minItems: 1, itemMinLength: 1 },
+        "metadata.issue": { minLength: 1 },
+        "metadata.supportingReasoning": { minLength: 1 }
+      },
       enforcementMode: "advisory"
     }
   },

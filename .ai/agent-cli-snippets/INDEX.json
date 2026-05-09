@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-09T00:33:49.374Z",
+  "generatedAt": "2026-05-09T02:09:46.997Z",
   "commands": [
     {
       "name": "add-dependency",
@@ -700,6 +700,11 @@
     {
       "name": "resolve-maintainer-delivery-policy",
       "path": ".ai/agent-cli-snippets/by-command/resolve-maintainer-delivery-policy.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "resolve-task-intake-policy",
+      "path": ".ai/agent-cli-snippets/by-command/resolve-task-intake-policy.json",
       "moduleId": "task-engine"
     },
     {
