@@ -30,6 +30,8 @@ workspace-kit run create-task '{"id":"T400","title":"My task","status":"proposed
 
 The schema permits additional task fields; common fields include `type`, `priority`, `dependsOn`, `unblocks`, `phase`, `phaseKey`, `metadata`, `ownership`, `approach`, `summary`, `description`, `risk`, `technicalScope`, `acceptanceCriteria`, and `features` (taxonomy slugs from `feature-taxonomy.json`; unknown slugs produce advisory warnings).
 
+**Intake preview (read-only):** run **`workspace-kit run resolve-task-intake-policy`** with the same `type` / `status` / `metadata` shape you plan to persist, or use **`get-next-actions`** / **`agent-bootstrap`** / **`list-tasks`** with **`includeTaskIntake:true`** for compact field-gap hints — see `resolve-task-intake-policy.md`.
+
 Known type guardrails:
 
 - For `type: "improvement"`, Task Engine validates non-empty `acceptanceCriteria` and `technicalScope`, plus non-empty **`metadata.issue`** (problem statement) and **`metadata.supportingReasoning`** (why this is the issue; cite evidence refs). Legacy rows whose id matches **`imp-<hex>`** may omit **`metadata.supportingReasoning`** until updated.

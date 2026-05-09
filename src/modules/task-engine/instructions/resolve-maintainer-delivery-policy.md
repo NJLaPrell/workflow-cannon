@@ -8,6 +8,8 @@ Read-only resolver: turns effective **`maintainerDelivery`** workspace config (p
 
 Does **not** mutate tasks or config.
 
+**Agent queue mirrors:** `get-next-actions` and `agent-bootstrap` / `agent-session-snapshot` embed a compact `resolvedPolicy*` block under `maintainerDelivery` when effective config is available — use this command when you need the full `explain` / warning list.
+
 ## Usage
 
 ```

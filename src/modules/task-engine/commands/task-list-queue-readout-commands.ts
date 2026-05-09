@@ -25,6 +25,11 @@ import { filterTasksByQueueNamespace, getNextActions } from "../suggestions.js";
 import type { TaskEntity, TaskStatus } from "../types.js";
 import { isWishlistIntakeTask } from "../wishlist/wishlist-intake.js";
 import { buildNextActionsPhaseContext } from "../phase-journal/phase-journal-next-actions-context.js";
+import {
+  buildTaskIntakeReadoutBundle,
+  compactTaskIntakeReadout,
+  resolveTaskIntakeForAcceptTriage
+} from "../task-intake-readout-hints.js";
 
 /**
  * Task listing + queue readouts that do not mutate task rows.
@@ -58,6 +63,7 @@ export function resolveTaskListQueueReadoutCommands(
       : [];
     const includeArchived = args.includeArchived === true;
     const includeQueueHints = args.includeQueueHints === true;
+    const includeTaskIntake = args.includeTaskIntake === true;
     const confidenceTierFilter =
       typeof args.confidenceTier === "string" && args.confidenceTier.trim().length > 0
         ? args.confidenceTier.trim()
@@ -270,6 +276,16 @@ export function resolveTaskListQueueReadoutCommands(
         taskRows: page
       });
     }
+    if (includeTaskIntake) {
+      const eff = ctx.effectiveConfig as Record<string, unknown> | undefined;
+      if (eff !== undefined) {
+        const taskIntakeByTaskId: Record<string, unknown> = {};
+        for (const t of page) {
+          taskIntakeByTaskId[t.id] = compactTaskIntakeReadout(resolveTaskIntakeForAcceptTriage(t, eff));
+        }
+        data.taskIntakeByTaskId = taskIntakeByTaskId;
+      }
+    }
 
     return {
       ok: true,
@@ -338,12 +354,22 @@ export function resolveTaskListQueueReadoutCommands(
       suggestedId
     );
 
+    const proposedHeadlineTasks = tasks
+      .filter((t) => t.status === "proposed" && !isWishlistIntakeTask(t))
+      .sort((a, b) => a.id.localeCompare(b.id))
+      .slice(0, 5);
+    const intakeBundle = buildTaskIntakeReadoutBundle({
+      effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+      suggestedNext: suggestion.suggestedNext,
+      proposedHeadlineTasks: proposedHeadlineTasks.length > 0 ? proposedHeadlineTasks : undefined
+    });
     const naData: Record<string, unknown> = {
       ...suggestion,
       teamExecutionContext,
       scope: "tasks-only",
       queueNamespace: ns ?? null,
       maintainerDelivery,
+      ...intakeBundle,
       ...(phaseContext ? { phaseContext } : {})
     };
     attachPolicyMeta(naData, ctx, planning.sqliteDual.getPlanningGeneration());

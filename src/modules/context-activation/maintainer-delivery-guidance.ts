@@ -25,7 +25,7 @@ function taskRowSliceToEntityForPolicy(slice: NonNullable<ReturnType<typeof hydr
   return {
     id: slice.id,
     status: slice.status as TaskEntity["status"],
-    type: "execution",
+    type: typeof slice.type === "string" && slice.type.length > 0 ? slice.type : "execution",
     title: typeof slice.title === "string" && slice.title.length > 0 ? slice.title : "",
     createdAt: "1970-01-01T00:00:00.000Z",
     updatedAt: "1970-01-01T00:00:00.000Z",

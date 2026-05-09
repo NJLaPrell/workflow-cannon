@@ -16,6 +16,7 @@ workspace-kit run list-tasks '{"type":"improvement","category":"reliability","ta
 workspace-kit run list-tasks '{"metadataFilters":{"owner.team":"platform","risk.level":"high"}}'
 workspace-kit run list-tasks '{"phaseKey":"28","status":"ready"}'
 workspace-kit run list-tasks '{"includeQueueHints":true,"status":"ready"}'
+workspace-kit run list-tasks '{"includeTaskIntake":true,"status":"proposed","limit":20}'
 workspace-kit run list-tasks '{"type":"improvement","confidenceTier":"medium"}'
 workspace-kit run list-tasks '{"status":"blocked","blockedReasonCategory":"external_dependency"}'
 workspace-kit run list-tasks '{"features":["doc-generation"]}'
@@ -41,7 +42,8 @@ workspace-kit run list-tasks '{"componentId":"cli-modules-agent-surfaces"}'
 | `blockedReasonCategory` | string | no | Filter by `metadata.blockedReasonCategory` (v1 taxonomy: `human_review`, `external_dependency`, `scope_unclear`) |
 | `includeArchived` | boolean | no | Include archived tasks when `true` |
 | `includeQueueHints` | boolean | no | When `true`, adds `queueHintRows` (same order as `tasks`) with `phaseAligned`, `blockedByDependencies`, `unmetDependencies` |
+| `includeTaskIntake` | boolean | no | When `true`, adds `taskIntakeByTaskId` keyed by task id with compact resolved intake (accept→ready triage) for each row in the page — requires effective workspace config; read-only |
 
 ## Returns
 
-Object with `tasks` (array of `TaskEntity`), `count`, and `scope`. When `includeQueueHints` is true, `queueHintRows` is included. Default output shape is unchanged when the flag is omitted.
+Object with `tasks` (array of `TaskEntity`), `count`, and `scope`. When `includeQueueHints` is true, `queueHintRows` is included. When `includeTaskIntake` is true, `taskIntakeByTaskId` is included. Default output shape is unchanged when these flags are omitted.

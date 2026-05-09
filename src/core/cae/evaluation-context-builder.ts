@@ -37,6 +37,8 @@ const ALLOW_META = new Set([
 export type TaskEngineTaskRowSlice = {
   id: string;
   status: string;
+  /** Relational task type when present (e.g. `execution`, `improvement`). */
+  type?: string | null;
   phaseKey?: string | null;
   title?: string | null;
   tags?: string[] | null;

@@ -23,7 +23,7 @@ Do **not** infer task `status` from chat memory — the configured task store (d
 
 ## 2) Finish remaining phase work (delivery loop)
 
-Follow the **maintainer delivery loop** for each execution task: task branch from **`release/phase-<N>`**, validate, **PR into the phase branch** (not `main`), merge, then task transitions — see [`task-to-phase-branch.md`](./task-to-phase-branch.md).
+Follow the **maintainer delivery loop** for each execution task: task branch from **`release/phase-<N>`**, validate, **PR into the phase branch** when the resolved delivery profile expects GitHub-style review (default), merge, then task transitions — see [`task-to-phase-branch.md`](./task-to-phase-branch.md). Use **`workspace-kit run resolve-maintainer-delivery-policy`** when profile, branch patterns, or evidence mode are not obvious from task metadata alone.
 
 - Cursor rule mirror: `.cursor/rules/maintainer-delivery-loop.mdc`
 - Human-oriented summary: [`docs/maintainers/AGENTS.md`](../AGENTS.md) (task execution + CLI-first execution)
@@ -45,7 +45,7 @@ workspace-kit run run-transition '{"taskId":"T###","action":"complete","policyAp
 When **all** phase tasks that belong on **`release/phase-<N>`** are **`completed`** (or explicitly handled) and you are preparing the release:
 
 1. `git fetch origin` and `git checkout release/phase-<N>`, then `git pull origin release/phase-<N>`.
-2. Run `workspace-kit run phase-delivery-preflight '{"phaseKey":"<N>","includeInProgress":false}'` and resolve every violation with PR/merge/check evidence or an explicit maintainer waiver before closeout.
+2. Run `workspace-kit run phase-delivery-preflight '{"phaseKey":"<N>","includeInProgress":false}'` and resolve every violation with evidence matching each task’s **resolved** delivery profile (from **`resolve-maintainer-delivery-policy`** / preflight policy context) or an explicit maintainer waiver before closeout.
 3. Run `workspace-kit run release-evidence-manifest '<json>'` with human approval, release-note evidence, validation records, known risks, publish artifact placeholders/proof, and follow-up scan data. Resolve structured failures before tag/npm/GitHub release actions.
 4. Run full validation on that tip (`pnpm run build`, `pnpm run check`, `pnpm run test`, `pnpm run parity`, and **`pre-merge-gates`** / maintainer gates as in [`RELEASING.md`](../RELEASING.md)).
 5. **Fix failures on the phase branch** — small follow-up PRs or commits targeting **`release/phase-<N>`** until checks are green and there are no known release blockers.

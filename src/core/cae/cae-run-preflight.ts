@@ -83,7 +83,7 @@ export function hydrateTaskRowForCae(
   try {
     const row = db
       .prepare(
-        `SELECT id, status, title, phase_key, metadata_json, risk, features_json
+        `SELECT id, status, type, title, phase_key, metadata_json, risk, features_json
          FROM task_engine_tasks
          WHERE id = ? AND archived = 0`
       )
@@ -91,6 +91,7 @@ export function hydrateTaskRowForCae(
       | {
           id: string;
           status: string;
+          type: string;
           title: string;
           phase_key: string | null;
           metadata_json: string | null;
@@ -112,6 +113,7 @@ export function hydrateTaskRowForCae(
     return {
       id: row.id,
       status: row.status,
+      type: row.type,
       title: row.title,
       phaseKey: row.phase_key,
       tags: finalFeatures ?? undefined,

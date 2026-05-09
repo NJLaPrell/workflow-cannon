@@ -30,6 +30,8 @@ pnpm exec wk run resolve-task-intake-policy '{"action":"create-ready","moduleId"
 | `metadata` | object | no | Metadata fields used for `metadata.*` field paths. |
 | `fields` | object | no | Prospective task fields to evaluate. If omitted, top-level args are used as fields. |
 
+**Agent queue mirrors:** `get-next-actions`, `agent-session-snapshot`, and `agent-bootstrap` embed a compact intake snapshot for the suggested task (and short proposed-task headlines when present). Use this command when you need the full `explain` / warning list.
+
 ## Response
 
 - **`data.resolvedPolicy`** — **`schemaVersion`**: `1` machine object (profile, enforcement mode, context, required/recommended/forbidden fields, field rules).
