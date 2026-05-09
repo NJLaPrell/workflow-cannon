@@ -38,6 +38,15 @@ import {
   validateCaeWorkspaceArtifactId
 } from "./workspace-artifact-conventions.js";
 import {
+  buildCaeReconcileDefaultsReport
+} from "./cae-reconcile-defaults.js";
+import {
+  buildGuidancePackExport,
+  dryRunGuidancePackImport,
+  type GuidancePackV1
+} from "./cae-guidance-pack.js";
+import {
+  loadCaeRegistry,
   validateSingleCaeActivationRecord,
   validateSingleCaeArtifactRecord,
   verifyCaeArtifactRefPathsExist,
@@ -375,6 +384,9 @@ export function tryHandleCaeRegistryAdminCommand(
     "cae-list-registry-versions",
     "cae-get-registry-version",
     "cae-compare-registry-versions",
+    "cae-reconcile-defaults",
+    "cae-export-guidance-pack",
+    "cae-import-guidance-pack-dry-run",
     "cae-create-registry-version",
     "cae-clone-registry-version",
     "cae-activate-registry-version",
@@ -392,7 +404,10 @@ export function tryHandleCaeRegistryAdminCommand(
   const readOnly =
     name === "cae-list-registry-versions" ||
     name === "cae-get-registry-version" ||
-    name === "cae-compare-registry-versions";
+    name === "cae-compare-registry-versions" ||
+    name === "cae-reconcile-defaults" ||
+    name === "cae-export-guidance-pack" ||
+    name === "cae-import-guidance-pack-dry-run";
   if (!readOnly) {
     const gate = caeRegistryMutationGateError(effective, args);
     if (gate) return gate;
@@ -535,6 +550,101 @@ export function tryHandleCaeRegistryAdminCommand(
         code: "cae-compare-registry-versions-ok",
         data
       };
+    }
+
+    if (name === "cae-reconcile-defaults") {
+      const pkg = loadCaeRegistry(workspacePath, { verifyArtifactPaths: false });
+      if (!pkg.ok) {
+        return { ok: false, code: pkg.code, message: pkg.message ?? "" };
+      }
+      const sqlite = loadCaeRegistryFromSqliteDb(db, workspacePath, { verifyArtifactPaths: false });
+      if (!sqlite.ok) {
+        return { ok: false, code: sqlite.code, message: sqlite.message ?? "" };
+      }
+      const data = buildCaeReconcileDefaultsReport(pkg.value, sqlite.value);
+      return { ok: true, code: "cae-reconcile-defaults-ok", data };
+    }
+
+    if (name === "cae-export-guidance-pack") {
+      const vid = getActiveCaeRegistryVersionId(db);
+      if (!vid) {
+        return { ok: false, code: "cae-registry-sqlite-no-active-version", message: "No active registry version" };
+      }
+      const arts = db
+        .prepare(`SELECT * FROM cae_registry_artifacts WHERE version_id = ? AND retired_at IS NULL`)
+        .all(vid) as Record<string, unknown>[];
+      const acts = db
+        .prepare(`SELECT * FROM cae_registry_activations WHERE version_id = ? AND retired_at IS NULL`)
+        .all(vid) as Record<string, unknown>[];
+      const pack = buildGuidancePackExport({
+        workspaceRoot: workspacePath,
+        versionId: vid,
+        artifactRows: arts,
+        activationRows: acts
+      });
+      return { ok: true, code: "cae-export-guidance-pack-ok", data: { schemaVersion: 1, pack } };
+    }
+
+    if (name === "cae-import-guidance-pack-dry-run") {
+      const rel = typeof args.packRelativePath === "string" ? args.packRelativePath.trim() : "";
+      if (!rel.length) {
+        return { ok: false, code: "invalid-args", message: "packRelativePath is required" };
+      }
+      const abs = path.resolve(workspacePath, rel);
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(readFileSync(abs, "utf8")) as unknown;
+      } catch {
+        return {
+          ok: false,
+          code: "cae-guidance-pack-read-error",
+          message: `Unable to read or parse pack JSON at '${rel}'`
+        };
+      }
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return { ok: false, code: "invalid-args", message: "Pack file must be a JSON object" };
+      }
+      const obj = parsed as Record<string, unknown>;
+      let packRaw: Record<string, unknown>;
+      if (obj.pack && typeof obj.pack === "object" && !Array.isArray(obj.pack)) {
+        packRaw = obj.pack as Record<string, unknown>;
+      } else if (
+        obj.data &&
+        typeof obj.data === "object" &&
+        !Array.isArray(obj.data)
+      ) {
+        const data = obj.data as Record<string, unknown>;
+        if (data.pack && typeof data.pack === "object" && !Array.isArray(data.pack)) {
+          packRaw = data.pack as Record<string, unknown>;
+        } else {
+          packRaw = obj;
+        }
+      } else {
+        packRaw = obj;
+      }
+      if (packRaw.schemaVersion !== 1) {
+        return { ok: false, code: "invalid-args", message: "pack.schemaVersion must be 1" };
+      }
+      const pack = packRaw as unknown as GuidancePackV1;
+      if (!Array.isArray(pack.artifacts) || !Array.isArray(pack.activations)) {
+        return { ok: false, code: "invalid-args", message: "pack.artifacts and pack.activations must be arrays" };
+      }
+      const vid = getActiveCaeRegistryVersionId(db);
+      if (!vid) {
+        return { ok: false, code: "cae-registry-sqlite-no-active-version", message: "No active registry version" };
+      }
+      const activeArts = db
+        .prepare(`SELECT * FROM cae_registry_artifacts WHERE version_id = ? AND retired_at IS NULL`)
+        .all(vid) as Record<string, unknown>[];
+      const activeActs = db
+        .prepare(`SELECT * FROM cae_registry_activations WHERE version_id = ? AND retired_at IS NULL`)
+        .all(vid) as Record<string, unknown>[];
+      const data = dryRunGuidancePackImport({
+        pack,
+        activeArtifactRows: activeArts,
+        activeActivationRows: activeActs
+      });
+      return { ok: true, code: "cae-import-guidance-pack-dry-run-ok", data };
     }
 
     const actorRes = requireActor(args);

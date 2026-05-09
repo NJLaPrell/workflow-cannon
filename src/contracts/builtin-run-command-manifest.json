@@ -1178,6 +1178,27 @@
   },
   {
     "moduleId": "context-activation",
+    "name": "cae-reconcile-defaults",
+    "file": "cae-reconcile-defaults.md",
+    "description": "Compare package CAE registry defaults vs active SQLite registry (hidden defaults, workspace clone hints).",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-export-guidance-pack",
+    "file": "cae-export-guidance-pack.md",
+    "description": "Export active CAE registry artifacts + activations as a portable guidance pack JSON (read-only).",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-import-guidance-pack-dry-run",
+    "file": "cae-import-guidance-pack-dry-run.md",
+    "description": "Dry-run import of a guidance pack JSON against the active registry (no writes).",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
     "name": "cae-create-registry-version",
     "file": "cae-create-registry-version.md",
     "description": "Create an empty CAE registry version row (optional activate). CAE governance + adminMutations.",

@@ -158,6 +158,11 @@
       "moduleId": "context-activation"
     },
     {
+      "name": "cae-export-guidance-pack",
+      "path": ".ai/agent-cli-snippets/by-command/cae-export-guidance-pack.json",
+      "moduleId": "context-activation"
+    },
+    {
       "name": "cae-get-activation",
       "path": ".ai/agent-cli-snippets/by-command/cae-get-activation.json",
       "moduleId": "context-activation"
@@ -188,6 +193,11 @@
       "moduleId": "context-activation"
     },
     {
+      "name": "cae-import-guidance-pack-dry-run",
+      "path": ".ai/agent-cli-snippets/by-command/cae-import-guidance-pack-dry-run.json",
+      "moduleId": "context-activation"
+    },
+    {
       "name": "cae-import-json-registry",
       "path": ".ai/agent-cli-snippets/by-command/cae-import-json-registry.json",
       "moduleId": "context-activation"
@@ -215,6 +225,11 @@
     {
       "name": "cae-recent-traces",
       "path": ".ai/agent-cli-snippets/by-command/cae-recent-traces.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-reconcile-defaults",
+      "path": ".ai/agent-cli-snippets/by-command/cae-reconcile-defaults.json",
       "moduleId": "context-activation"
     },
     {
