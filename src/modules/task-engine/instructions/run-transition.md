@@ -26,6 +26,8 @@ workspace-kit run run-transition '{"taskId":"T184","action":"start","policyAppro
 | `config` | `object` | no | Invocation-local config override. |
 <!-- workspace-kit:generated task-engine-instruction-contract command=run-transition section=args end -->
 
+**Intake guard (proposed → ready):** before **`accept`**, use **`workspace-kit run resolve-task-intake-policy`** with `taskId`, `action":"accept"`, and `targetStatus":"ready"` to see required gaps — enforcement follows **`tasks.intakePolicy`** (including **`enforce-on-accept`**).
+
 ## Phase notes (optional)
 
 When kit SQLite **`user_version` ≥ 19** (phase journal DDL present), **`phaseNotes`** may be set to an array of objects validated like **`add-phase-note`** (same field names except **`phaseKey`** is taken from the transition task’s **`phaseKey`** / **`phase`** label), including the **built-in secret-shaped pattern guard** (`**phase-note-secret-rejected**` on pasted credential shapes). Each note defaults **`taskId`** to the transition task; a different **`taskId`** is allowed only when that task resolves to the same phase.

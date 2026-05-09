@@ -11,6 +11,8 @@ import { getNextActions } from "../suggestions.js";
 import { summarizeTeamAssignmentsForNextActions } from "../../team-execution/assignment-store.js";
 import { buildMaintainerDeliveryHints } from "../maintainer-delivery-hints.js";
 import { buildPhaseJournalSnapshotSummary } from "../phase-journal/phase-journal-snapshot-summary.js";
+import { buildTaskIntakeReadoutBundle } from "../task-intake-readout-hints.js";
+import { isWishlistIntakeTask } from "../wishlist/wishlist-intake.js";
 
 export async function composeAgentSessionSnapshotPayload(
   ctx: ModuleLifecycleContext,
@@ -40,6 +42,15 @@ export async function composeAgentSessionSnapshotPayload(
     suggestedNext: suggestion.suggestedNext ? { id: suggestion.suggestedNext.id } : null,
     effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined
   });
+  const proposedHeadlineTasks = tasks
+    .filter((t) => t.status === "proposed" && !isWishlistIntakeTask(t))
+    .sort((a, b) => a.id.localeCompare(b.id))
+    .slice(0, 5);
+  const intakeBundle = buildTaskIntakeReadoutBundle({
+    effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+    suggestedNext: suggestion.suggestedNext,
+    proposedHeadlineTasks: proposedHeadlineTasks.length > 0 ? proposedHeadlineTasks : undefined
+  });
   const phaseJournal = buildPhaseJournalSnapshotSummary(
     planning.sqliteDual.getDatabase(),
     phaseRes.canonicalPhaseKey
@@ -64,6 +75,7 @@ export async function composeAgentSessionSnapshotPayload(
     doctorKitPhaseIssues,
     teamExecutionContext,
     maintainerDelivery,
+    ...intakeBundle,
     ...(phaseJournal ? { phaseJournal } : {})
   };
 }

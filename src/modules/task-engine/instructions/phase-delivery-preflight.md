@@ -20,6 +20,8 @@ workspace-kit run phase-delivery-preflight '{"phaseKey":"74","includeInProgress"
 | `phaseKey` | string | no | Stable phase key to audit. Defaults to the canonical current phase from `kit_workspace_status`, then config fallback. |
 | `includeInProgress` | boolean | no | Include `in_progress` tasks as "about to complete" candidates. Defaults to `true`; completed tasks are always checked. |
 
+Evaluation uses each task’s **resolved maintainer delivery policy** (same resolver as **`resolve-maintainer-delivery-policy`**) so GitHub PR tasks and **manual / local-reviewed-merge** tasks in the same phase can each satisfy different evidence shapes.
+
 ## Delivery Evidence Metadata
 
 Phased execution tasks must carry either `metadata.deliveryEvidence` or `metadata.deliveryWaiver` before completion.

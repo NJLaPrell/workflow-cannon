@@ -4,7 +4,7 @@ agentCapsule|v=1|command=apply-task-batch|module=task-engine|schema_only=pnpm ex
 
 # apply-task-batch
 
-Apply multiple **`create-task`** and **`update-task`** operations in **one** SQLite transaction (single planning generation bump).
+Apply multiple **`create-task`** and **`update-task`** operations in **one** SQLite transaction (single planning generation bump). Intake enforcement per op matches standalone commands; preview gaps with **`resolve-task-intake-policy`** using the same payload shapes before mutating.
 
 ## Example
 
