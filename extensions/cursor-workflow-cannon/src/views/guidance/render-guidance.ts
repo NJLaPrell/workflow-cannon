@@ -758,3 +758,103 @@ export function renderGuidanceActionResultInnerHtml(payload: unknown): string {
   ${renderRawDetails("Raw action result JSON", result, 12000)}
 </section>`;
 }
+
+/* ─── Targeted section renderers for the 3-tab sidebar ────────────────────── */
+
+/** Compact active-set status card — pinned at top of Manage tab. */
+export function renderActiveSetStatusHtml(payload: unknown): string {
+  const root = asRecord(payload);
+  if (root.ok === false) {
+    return `<section class="gd-card gd-danger"><h2>Guidance unavailable</h2><p>${escapeHtml(String(root.message ?? root.code ?? "Unknown error"))}</p></section>`;
+  }
+  const data = asRecord(root.data ?? root);
+  const health = asRecord(data.health);
+  const validation = asRecord(data.validation);
+  const acks = asRecord(data.acknowledgements);
+  const recent = asRecord(data.recentTraces);
+  const healthy = health.registryStatus === "ok" && validation.ok === true && health.caeEnabled === true;
+  return `<section class="gd-card ${healthy ? "gd-ok-card" : "gd-warn-card"}">
+  <div class="gd-card-head">
+    <h2>Active guidance set</h2>
+    <span class="${statusClass(healthy)}">${healthy ? "Healthy" : "Needs attention"}</span>
+  </div>
+  <dl class="gd-meta">
+    <div><dt>Version</dt><dd><code>${escapeHtml(String(health.activeRegistryVersionId ?? "n/a"))}</code></dd></div>
+    <div><dt>Registry</dt><dd>${escapeHtml(String(health.registryStatus ?? "unknown"))}</dd></div>
+    <div><dt>Check records</dt><dd>${escapeHtml(String(health.traceRowCount ?? recent.count ?? 0))}</dd></div>
+    <div><dt>Acknowledgements</dt><dd>${escapeHtml(String(acks.count ?? 0))}</dd></div>
+  </dl>
+  ${health.lastEvalAtNote ? `<p class="gd-muted">${escapeHtml(String(health.lastEvalAtNote))}</p>` : ""}
+</section>`;
+}
+
+/** Versions sub-section content — wraps existing renderManageGuidance. */
+export function renderManageVersionsHtml(payload: unknown): string {
+  const root = asRecord(payload);
+  if (root.ok === false) {
+    return `<p class="gd-muted">Could not load versions: ${escapeHtml(String(root.message ?? root.code ?? "Unknown error"))}</p>`;
+  }
+  return renderManageGuidance(asRecord(root.data ?? root));
+}
+
+/** Status sub-section — health grid, acks, feedback, debug raw. */
+export function renderManageStatusHtml(payload: unknown): string {
+  const root = asRecord(payload);
+  if (root.ok === false) {
+    return `<section class="gd-card gd-danger"><h2>Status unavailable</h2><p>${escapeHtml(String(root.message ?? root.code ?? "Unknown error"))}</p></section>`;
+  }
+  const data = asRecord(root.data ?? root);
+  const health = asRecord(data.health);
+  const validation = asRecord(data.validation);
+  const recent = asRecord(data.recentTraces);
+  const acks = asRecord(data.acknowledgements);
+  const feedback = asRecord(data.feedback);
+  const issues = asArray(health.issues);
+  return `<section class="gd-card gd-status-card">
+  <div class="gd-card-head">
+    <h2>System health</h2>
+    <span class="${statusClass(health.caeEnabled === true)}">${boolLabel(health.caeEnabled)}</span>
+  </div>
+  <dl class="gd-meta">
+    <div><dt>Guidance system</dt><dd>${escapeHtml(boolLabel(health.caeEnabled))}</dd></div>
+    <div><dt>Registry status</dt><dd>${escapeHtml(String(health.registryStatus ?? "unknown"))}</dd></div>
+    <div><dt>Active version</dt><dd><code>${escapeHtml(String(health.activeRegistryVersionId ?? "n/a"))}</code></dd></div>
+    <div><dt>Check history</dt><dd>${escapeHtml(boolLabel(health.persistenceEnabled))}</dd></div>
+    <div><dt>Check records</dt><dd>${escapeHtml(String(health.traceRowCount ?? recent.count ?? 0))}</dd></div>
+    <div><dt>Acknowledgements</dt><dd>${escapeHtml(String(acks.count ?? 0))}</dd></div>
+  </dl>
+  ${issues.length ? `<details><summary>Needs attention</summary><pre>${escapeHtml(JSON.stringify(issues, null, 2))}</pre></details>` : ""}
+</section>
+${renderRecoveryCards(health, validation, recent)}
+<section class="gd-card">
+  <div class="gd-card-head"><h2>Acknowledgements</h2><span class="gd-pill">${escapeHtml(String(acks.count ?? 0))}</span></div>
+  ${renderAckRows(acks.rows)}
+  <p class="gd-muted">Acknowledgement means "I read this guidance." It is not permission to run a sensitive command.</p>
+</section>
+<section class="gd-card">
+  <div class="gd-card-head"><h2>Guidance Feedback</h2><span class="gd-pill">Local tuning signal</span></div>
+  ${renderFeedbackSummary(feedback)}
+  <p class="gd-muted">Useful/noisy feedback records a signal. It does not change the active guidance set unless you create and activate a versioned update.</p>
+</section>
+${renderRawDetails("Debug details JSON", data, 12000)}`;
+}
+
+/** History tab — recent check rows with grouped display. */
+export function renderHistoryTabHtml(payload: unknown): string {
+  const root = asRecord(payload);
+  if (root.ok === false) {
+    return `<section class="gd-card gd-danger"><h2>History unavailable</h2><p>${escapeHtml(String(root.message ?? root.code ?? "Unknown error"))}</p></section>`;
+  }
+  const data = asRecord(root.data ?? root);
+  const health = asRecord(data.health);
+  const validation = asRecord(data.validation);
+  const recent = asRecord(data.recentTraces);
+  return `${renderRecoveryCards(health, validation, recent)}
+<section class="gd-card">
+  <div class="gd-card-head">
+    <h2>Recent checks</h2>
+    <span class="gd-pill">${recent.available === false ? "History off" : "Grouped"}</span>
+  </div>
+  ${renderActivityRows(recent.rows)}
+</section>`;
+}

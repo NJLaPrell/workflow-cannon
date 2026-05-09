@@ -5,8 +5,11 @@ import type { CommandClient } from "../../runtime/command-client.js";
 import {
   renderGuidanceActionResultInnerHtml,
   renderGuidancePreviewInnerHtml,
-  renderGuidanceSummaryInnerHtml,
-  renderGuidanceTraceDetailInnerHtml
+  renderGuidanceTraceDetailInnerHtml,
+  renderActiveSetStatusHtml,
+  renderManageVersionsHtml,
+  renderManageStatusHtml,
+  renderHistoryTabHtml
 } from "./render-guidance.js";
 import {
   buildDraftGuidanceRulePayload,
@@ -338,7 +341,10 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
       summary.ok && summary.data && typeof summary.data === "object"
         ? asRecord(summary.data).guidanceProduct
         : undefined;
-    await webview.postMessage({ type: "setSummary", html: renderGuidanceSummaryInnerHtml(summary) });
+    await webview.postMessage({ type: "setActiveSetStatus", html: renderActiveSetStatusHtml(summary) });
+    await webview.postMessage({ type: "setManageVersions", html: renderManageVersionsHtml(summary) });
+    await webview.postMessage({ type: "setManageStatus", html: renderManageStatusHtml(summary) });
+    await webview.postMessage({ type: "setHistory", html: renderHistoryTabHtml(summary) });
     const mut = product ? asRecord(asRecord(product).mutationCapability) : undefined;
     this.guidanceRegistryMutationAllowed = mut?.canMutate === true;
     this.guidanceRegistryMutationDenial = typeof mut?.denialReason === "string" ? mut.denialReason : null;
@@ -634,10 +640,13 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
     ].join("; ");
     const bootstrap = `(function(){
   var vscode = acquireVsCodeApi();
-  var summaryRoot = document.getElementById('guidance-summary-root');
   var previewRoot = document.getElementById('guidance-preview-root');
   var traceDetailRoot = document.getElementById('guidance-trace-detail-root');
   var actionResultRoot = document.getElementById('guidance-action-result-root');
+  var historyRoot = document.getElementById('guidance-history-root');
+  var manageStatusEl = document.getElementById('gd-manage-status');
+  var versionsRoot = document.getElementById('guidance-versions-root');
+  var statusDetailRoot = document.getElementById('guidance-status-root');
   var statusEl = document.getElementById('gd-status');
   var taskSelect = document.getElementById('gd-task-select');
   var workflowSelect = document.getElementById('gd-workflow-select');
@@ -697,6 +706,22 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
     if (rowPh) rowPh.style.display = preset === 'phase' || preset === 'completing_task' ? '' : 'none';
     if (rowTs) rowTs.style.display = preset === 'task' || preset === 'completing_task' ? '' : 'none';
   }
+  function activateTab(tabName) {
+    document.querySelectorAll('.gd-tab').forEach(function(btn) {
+      btn.classList.toggle('gd-tab-active', btn.getAttribute('data-tab') === tabName);
+    });
+    document.querySelectorAll('.gd-panel').forEach(function(panel) {
+      panel.style.display = panel.id === 'panel-' + tabName ? 'block' : 'none';
+    });
+  }
+  function activateSubsection(name) {
+    document.querySelectorAll('.gd-subsection-btn').forEach(function(btn) {
+      btn.classList.toggle('gd-subsection-active', btn.getAttribute('data-subsection') === name);
+    });
+    document.querySelectorAll('.gd-subsection').forEach(function(el) {
+      el.style.display = el.id === 'subsection-' + name ? 'block' : 'none';
+    });
+  }
   function renderCatalogNav(items) {
     var root = document.getElementById('gw-catalog-rows');
     if (!root) return;
@@ -739,7 +764,7 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
       taskSelect.textContent = '';
       taskSelect.appendChild(option('Manual / no task', ''));
       (Array.isArray(tasks) ? tasks : []).forEach(function(task) {
-        var label = String(task.id || '') + (task.title ? ' — ' + String(task.title) : '');
+        var label = String(task.id || '') + (task.title ? ' \u2014 ' + String(task.title) : '');
         taskSelect.appendChild(option(label, String(task.id || ''), String(task.phase || task.status || '')));
       });
     }
@@ -753,7 +778,7 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
     if (workflowList) {
       workflowList.textContent = '';
       (Array.isArray(workflows) ? workflows : []).forEach(function(w) {
-        var opt = option(workflowLabel(w), String(w.name || ''), String(w.moduleId || '') + (w.description ? ' — ' + String(w.description) : ''));
+        var opt = option(workflowLabel(w), String(w.name || ''), String(w.moduleId || '') + (w.description ? ' \u2014 ' + String(w.description) : ''));
         workflowList.appendChild(opt);
       });
     }
@@ -859,7 +884,9 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
     if (titleEl && !titleEl.value) titleEl.value = 'Guidance update from current check';
     setInputValue('gw-scope-preset', 'workflow');
     updateScopeRows();
-    showStatus('ok', 'Improve context filled — review wizard fields below, then Preview draft impact.');
+    activateTab('manage');
+    activateSubsection('wizard');
+    showStatus('ok', 'Improve context filled \u2014 review wizard fields, then Preview draft impact.');
     scrollToPanel(document.getElementById('gd-manage-draft'));
   }
   function copyVisibleJson(button) {
@@ -890,6 +917,12 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
     }
     document.body.removeChild(area);
   }
+  document.querySelectorAll('.gd-tab').forEach(function(btn) {
+    btn.addEventListener('click', function() { activateTab(btn.getAttribute('data-tab') || 'check'); });
+  });
+  document.querySelectorAll('.gd-subsection-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() { activateSubsection(btn.getAttribute('data-subsection') || 'wizard'); });
+  });
   if (taskSelect) taskSelect.addEventListener('change', function() { setInputValue('gd-task-id', taskSelect.value || ''); });
   if (workflowSelect) workflowSelect.addEventListener('change', function() { if (workflowSelect.value) setInputValue('gd-command-name', workflowSelect.value); });
   document.getElementById('gw-scope-preset') && document.getElementById('gw-scope-preset').addEventListener('change', updateScopeRows);
@@ -937,7 +970,9 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
       var block = parts.join(nl);
       if (notesEl) notesEl.value = ln ? (ln + nl + nl + block) : block;
       updateScopeRows();
-      showStatus('info', 'Template applied — tweak scope and Preview draft impact.');
+      activateTab('manage');
+      activateSubsection('wizard');
+      showStatus('info', 'Template applied \u2014 tweak scope and Preview draft impact.');
       scrollToPanel(document.getElementById('gd-manage-draft'));
       return;
     }
@@ -986,10 +1021,22 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
       requestLoad(true);
       return;
     }
-    if (m && m.type === 'setSummary' && summaryRoot && typeof m.html === 'string') {
-      summaryRoot.innerHTML = m.html;
+    if (m && m.type === 'setActiveSetStatus' && typeof m.html === 'string') {
+      if (manageStatusEl) manageStatusEl.innerHTML = m.html;
       setBusy(refreshBtn, false);
       showStatus('info', 'Guidance status loaded.');
+      return;
+    }
+    if (m && m.type === 'setManageVersions' && typeof m.html === 'string') {
+      if (versionsRoot) versionsRoot.innerHTML = m.html;
+      return;
+    }
+    if (m && m.type === 'setManageStatus' && typeof m.html === 'string') {
+      if (statusDetailRoot) statusDetailRoot.innerHTML = m.html;
+      return;
+    }
+    if (m && m.type === 'setHistory' && typeof m.html === 'string') {
+      if (historyRoot) historyRoot.innerHTML = m.html;
       return;
     }
     if (m && m.type === 'setChoices') {
@@ -1008,8 +1055,8 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
       }
       if (copyHint) {
         copyHint.textContent = can
-          ? 'Preview first. Publishing uses version controls in Guidance System below.'
-          : 'Registry updates are blocked here — use Copy draft JSON after a successful preview for handoff.';
+          ? 'Preview first. Publishing uses version controls in the Versions tab.'
+          : 'Registry updates are blocked here \u2014 use Copy draft JSON after a successful preview for handoff.';
       }
       return;
     }
@@ -1068,28 +1115,32 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy" content="${csp}" />
   <style>
-    body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); padding: 10px; font-size: 12px; margin: 0; }
-    h1 { font-size: 19px; margin: 0 0 3px; }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; overflow: hidden; }
+    body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); font-size: 12px; display: flex; flex-direction: column; }
+    h1 { font-size: 15px; margin: 0 0 2px; font-weight: 700; }
     h2 { font-size: 13px; margin: 0; }
     h3 { font-size: 12px; margin: 0; }
     .gd-muted { opacity: 0.78; line-height: 1.35; }
     .gd-toolbar, .gd-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-    .gd-toolbar { margin: 10px 0; }
+    .gd-toolbar { margin: 8px 0; }
     .gd-field { display: flex; flex-direction: column; gap: 3px; min-width: 120px; flex: 1; }
     .gd-field label { font-weight: 600; }
     .gd-input { padding: 4px 6px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border); }
     .gd-btn { padding: 4px 10px; cursor: pointer; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: 1px solid var(--vscode-widget-border); border-radius: 2px; }
     .gd-btn:disabled { cursor: progress; opacity: 0.65; }
     .gd-primary, .gd-btn.gd-primary { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
-    .gd-status { white-space: pre-wrap; font-family: var(--vscode-editor-font-family); font-size: 11px; padding: 6px 8px; margin: 8px 0; border-radius: 2px; background: var(--vscode-textCodeBlock-background); }
+    .gd-status { white-space: pre-wrap; font-family: var(--vscode-editor-font-family); font-size: 11px; padding: 5px 12px; flex-shrink: 0; background: var(--vscode-textCodeBlock-background); border-top: 1px solid var(--vscode-widget-border); }
     .gd-status-ok { background: rgba(0, 160, 0, 0.15); }
-    .gd-status-err, .gd-danger { background: rgba(200, 60, 60, 0.2); }
+    .gd-status-err { background: rgba(200, 60, 60, 0.2); }
     .gd-card { border: 1px solid var(--vscode-widget-border); border-radius: 3px; background: var(--vscode-editor-background); padding: 8px; margin: 8px 0; }
+    .gd-danger { background: rgba(200, 60, 60, 0.2); }
     .gd-hero { border-color: var(--vscode-focusBorder); background: color-mix(in srgb, var(--vscode-button-background) 9%, var(--vscode-editor-background)); }
     .gd-result-card { border-color: var(--vscode-focusBorder); }
     .gd-loading { border-style: dashed; }
     .gd-warn-card { background: rgba(200, 150, 0, 0.12); }
-    .gd-card-head { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+    .gd-ok-card { background: rgba(0, 160, 0, 0.08); border-color: rgba(0, 160, 0, 0.3); }
+    .gd-card-head { display: flex; justify-content: space-between; gap: 8px; align-items: center; margin-bottom: 6px; }
     .gd-pill, .gd-chip { font-size: 10px; padding: 1px 6px; border-radius: 8px; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); white-space: nowrap; }
     .gd-ok { background: rgba(0, 160, 0, 0.25); }
     .gd-warn { background: var(--vscode-inputValidation-warningBackground); color: var(--vscode-inputValidation-warningForeground); }
@@ -1103,8 +1154,7 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
     .gd-guidance-card { border-top: 1px solid var(--vscode-widget-border); margin-top: 8px; padding-top: 8px; }
     .gd-debug summary { opacity: 0.82; }
     .gd-library { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-    .gd-tabs { display: flex; gap: 6px; margin: 8px 0; }
-    .gd-kicker { text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.7; font-size: 10px; margin: 0 0 3px; }
+    .gd-kicker { display: block; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.65; font-size: 10px; margin: 0 0 2px; }
     pre { overflow: auto; white-space: pre-wrap; font-family: var(--vscode-editor-font-family); font-size: 11px; }
     code { font-family: var(--vscode-editor-font-family); font-size: 11px; }
     .gd-draft-table { width: 100%; border-collapse: collapse; font-size: 11px; margin: 8px 0 0; }
@@ -1120,130 +1170,211 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
     .gd-blast.gd-card { margin: 10px 0; }
     .gd-warning ul { margin: 6px 0 0; padding-left: 18px; }
     .gw-wizard-steps { padding: 8px 0 0; border-top: 1px dashed var(--vscode-widget-border); margin-top: 8px; }
-    .gw-catalog-strip { margin: 10px 0 0; max-height: 220px; overflow: auto; }
+    .gw-catalog-strip { margin: 10px 0 0; max-height: 180px; overflow: auto; }
+    /* ── Persistent header ── */
+    .gd-header { padding: 8px 12px 0; flex-shrink: 0; }
+    /* ── Three-tab bar ── */
+    .gd-tab-bar { display: flex; border-bottom: 1px solid var(--vscode-widget-border); flex-shrink: 0; }
+    .gd-tab { flex: 1; padding: 7px 0; border: none; border-bottom: 2px solid transparent; background: none; color: var(--vscode-foreground); opacity: 0.6; font-size: 12px; cursor: pointer; font-family: var(--vscode-font-family); }
+    .gd-tab.gd-tab-active { opacity: 1; font-weight: 600; border-bottom: 2px solid var(--vscode-focusBorder); }
+    /* ── Tab panels ── */
+    .gd-panel { flex: 1; overflow-y: auto; padding: 10px 12px; display: none; }
+    #panel-check { display: block; }
+    /* ── Manage sub-section bar ── */
+    .gd-subsection-bar { display: flex; gap: 4px; margin-bottom: 10px; }
+    .gd-subsection-btn { flex: 1; padding: 4px 0; border: 1px solid var(--vscode-widget-border); border-radius: 2px; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); font-size: 10px; cursor: pointer; font-family: var(--vscode-font-family); }
+    .gd-subsection-btn.gd-subsection-active { border-color: var(--vscode-focusBorder); font-weight: 600; color: var(--vscode-foreground); }
+    .gd-subsection { display: none; }
+    #subsection-wizard { display: block; }
+    /* ── Status bar ── */
+    #gd-status { flex-shrink: 0; }
   </style>
 </head>
 <body>
-  <p class="gd-kicker">Workflow Cannon</p>
-  <h1>Before You Run</h1>
-  <p class="gd-muted">Check which required rules, recommendations, and review checks apply before a workflow runs. Manage Guidance below lets maintainers inspect or prepare versioned CAE updates.</p>
-  <div class="gd-toolbar">
-    <button type="button" class="gd-btn" id="gd-refresh">Reload status</button>
+  <!-- Persistent header -->
+  <div class="gd-header">
+    <span class="gd-kicker">Workflow Cannon</span>
+    <h1>Guidance</h1>
   </div>
-  <section class="gd-card gd-hero">
-    <div class="gd-card-head">
-      <h2>Check Before Running</h2>
-      <span class="gd-pill">Read-only</span>
-    </div>
-    <p class="gd-muted">Choose the task and what you are about to do. This check does not run the workflow.</p>
-    <div class="gd-toolbar">
-      <div class="gd-field"><label for="gd-task-select">Task</label><select id="gd-task-select" class="gd-input"><option value="">Loading tasks...</option></select></div>
-      <div class="gd-field"><label for="gd-workflow-select">What are you about to do?</label><select id="gd-workflow-select" class="gd-input"><option value="">Loading workflows...</option></select></div>
-    </div>
-    <div class="gd-toolbar">
-      <div class="gd-field"><label for="gd-task-id">Task</label><input id="gd-task-id" class="gd-input" placeholder="T921 (optional)" /></div>
-      <div class="gd-field"><label for="gd-command-name">Workflow</label><input id="gd-command-name" class="gd-input" list="gd-workflow-options" value="get-next-actions" /><datalist id="gd-workflow-options"></datalist></div>
-    </div>
-    <details>
-      <summary>Advanced options</summary>
-      <div class="gd-toolbar">
-        <div class="gd-field"><label for="gd-module-id">Module</label><input id="gd-module-id" class="gd-input" placeholder="optional" /></div>
-        <div class="gd-field"><label for="gd-argv-summary">Argv summary</label><input id="gd-argv-summary" class="gd-input" placeholder="optional advanced text override" /></div>
+
+  <!-- Persistent tab bar: Check | History | Manage — all equal weight -->
+  <div class="gd-tab-bar" role="tablist">
+    <button class="gd-tab gd-tab-active" data-tab="check" type="button" role="tab" aria-selected="true">Check</button>
+    <button class="gd-tab" data-tab="history" type="button" role="tab" aria-selected="false">History</button>
+    <button class="gd-tab" data-tab="manage" type="button" role="tab" aria-selected="false">Manage</button>
+  </div>
+
+  <!-- CHECK panel -->
+  <div class="gd-panel" id="panel-check" role="tabpanel">
+    <div id="gd-ack-banner"></div>
+    <section class="gd-card gd-hero">
+      <div class="gd-card-head">
+        <h2>Pre-flight Check</h2>
+        <span class="gd-pill">Read-only</span>
       </div>
-      <div class="gd-field"><label for="gd-command-args">Command args JSON</label><textarea id="gd-command-args" class="gd-input" rows="4" placeholder='optional JSON object, e.g. {"status":"ready"}'></textarea></div>
-      <p><label><input type="checkbox" id="gd-mode-live" /> Evaluate using active guidance now. This still does not run the workflow.</label></p>
-    </details>
-    <button type="button" class="gd-btn gd-primary" id="gd-preview">Check Before Running</button>
-  </section>
-  <div id="guidance-preview-root"></div>
-  <div id="guidance-action-result-root"></div>
-  <div id="guidance-trace-detail-root"></div>
-  <section class="gd-card" id="gd-manage-draft">
-    <div class="gd-card-head">
-      <h2>Guidance authoring wizard</h2>
-      <span class="gd-pill">Not active until published</span>
-    </div>
-    <p class="gd-muted">New / Improve / Duplicate from catalog flows: fill the steps below. Preview computes blast radius + activation readiness against the hero task/workflow.</p>
-    <div id="gw-governance-wrap" class="gd-warn-card gd-card" style="margin:10px 0;display:none;padding:10px;font-size:11px;line-height:1.4;border-radius:4px;">
-      <p id="gw-governance-panel"><strong>Governance:</strong></p>
-    </div>
-    <p id="gw-handoff-hint" class="gd-muted" style="font-size:11px;margin:6px 0">Loading governance…</p>
-    <div class="gw-wizard-steps">
-      <section class="gd-card" style="padding:10px;background:transparent;border-style:dashed;margin:10px 0;">
-        <h3>Catalog shortcuts</h3>
-        <p class="gd-muted">Populate the form from a catalog row (read-only; does not mutate the registry).</p>
-        <div id="gw-catalog-rows" class="gw-catalog-strip"></div>
-      </section>
-      <div class="gd-toolbar gd-actions">
-        <button type="button" class="gd-btn" id="gw-new-rule">Clear / new rule draft</button>
+      <p class="gd-muted">Choose the task and what you are about to do. This check does not run the workflow.</p>
+      <div class="gd-toolbar">
+        <div class="gd-field"><label for="gd-task-select">Task</label><select id="gd-task-select" class="gd-input"><option value="">Loading tasks...</option></select></div>
+        <div class="gd-field"><label for="gd-workflow-select">What are you about to do?</label><select id="gd-workflow-select" class="gd-input"><option value="">Loading workflows...</option></select></div>
       </div>
       <div class="gd-toolbar">
-        <div class="gd-field"><label for="gw-draft-title">Guidance title</label><input id="gw-draft-title" class="gd-input" placeholder="What operators should see" /></div>
-        <div class="gd-field"><label for="gw-strength">Strength</label>
-          <select id="gw-strength" class="gd-input">
-            <option value="required">Required rule</option>
-            <option value="advisory" selected>Recommendation</option>
-            <option value="step">Suggested steps</option>
-            <option value="verify">Review check</option>
-          </select>
-        </div>
-        <div class="gd-field"><label for="gw-priority">Priority</label><input id="gw-priority" class="gd-input" type="number" min="0" max="9999" value="750" /></div>
-      </div>
-      <div class="gd-toolbar">
-        <div class="gd-field"><label for="gw-scope-preset">Scope preset</label>
-          <select id="gw-scope-preset" class="gd-input">
-            <option value="workflow">Workflow intent</option>
-            <option value="always">Always-on</option>
-            <option value="phase">Phase-bound</option>
-            <option value="task">Task-bound</option>
-            <option value="completing_task">Completing-task</option>
-          </select>
-        </div>
-      </div>
-      <div class="gd-toolbar" id="gw-wf-row">
-        <div class="gd-field"><label for="gw-wf-name">Workflow name</label><input id="gw-wf-name" class="gd-input" placeholder="get-next-actions" /></div>
-      </div>
-      <div class="gd-toolbar" id="gw-phase-row" style="display:none">
-        <div class="gd-field"><label for="gw-phase-key">Phase key</label><input id="gw-phase-key" class="gd-input" placeholder="e.g. phase-75" /></div>
-      </div>
-      <div class="gd-toolbar" id="gw-task-row" style="display:none">
-        <div class="gd-field"><label for="gw-scope-task-id">Scoped task id</label><input id="gw-scope-task-id" class="gd-input" placeholder="T921" /></div>
+        <div class="gd-field"><label for="gd-task-id">Task</label><input id="gd-task-id" class="gd-input" placeholder="T921 (optional)" /></div>
+        <div class="gd-field"><label for="gd-command-name">Workflow</label><input id="gd-command-name" class="gd-input" list="gd-workflow-options" value="get-next-actions" /><datalist id="gd-workflow-options"></datalist></div>
       </div>
       <details>
-        <summary>Acknowledgement + trace context</summary>
+        <summary>Advanced options</summary>
         <div class="gd-toolbar">
-          <div class="gd-field"><label for="gw-ack-strength">Acknowledgement tier</label>
-            <select id="gw-ack-strength" class="gd-input">
-              <option value="none">None</option>
-              <option value="surface">Surface notice</option>
-              <option value="recommend">Recommend ack</option>
-              <option value="ack_required">Ack required</option>
-              <option value="satisfy_required">Satisfaction required</option>
-            </select>
-          </div>
-          <div class="gd-field"><label for="gw-check-record">Check trace id</label><input id="gw-check-record" class="gd-input" placeholder="Improve flow fills trace id" /></div>
-          <div class="gd-field"><label for="gw-trigger-id">Existing activation id</label><input id="gw-trigger-id" class="gd-input" placeholder="optional correlation" /></div>
+          <div class="gd-field"><label for="gd-module-id">Module</label><input id="gd-module-id" class="gd-input" placeholder="optional" /></div>
+          <div class="gd-field"><label for="gd-argv-summary">Argv summary</label><input id="gd-argv-summary" class="gd-input" placeholder="optional advanced text override" /></div>
         </div>
+        <div class="gd-field"><label for="gd-command-args">Command args JSON</label><textarea id="gd-command-args" class="gd-input" rows="4" placeholder='optional JSON object, e.g. {"status":"ready"}'></textarea></div>
+        <p><label><input type="checkbox" id="gd-mode-live" /> Evaluate using active guidance now. This still does not run the workflow.</label></p>
       </details>
-      <div class="gd-field" style="max-width:none"><label for="gw-draft-notes">Notes for maintainers</label><textarea id="gw-draft-notes" class="gd-input" rows="3" placeholder="What should change and why?"></textarea></div>
-      <p id="gw-readiness-note" class="gd-muted" style="font-size:11px;"></p>
-      <div class="gd-actions">
-        <button type="button" class="gd-btn gd-primary" id="gw-draft-preview">Preview draft impact</button>
-        <button type="button" class="gd-btn" id="gw-draft-reset">Reset wizard</button>
-        <button type="button" class="gd-btn" disabled id="gw-copy-draft-json">Copy draft JSON</button>
+      <div class="gd-toolbar" style="justify-content:space-between">
+        <button type="button" class="gd-btn gd-primary" id="gd-preview">Run Pre-flight Check</button>
+        <button type="button" class="gd-btn" id="gd-refresh" style="font-size:11px;opacity:0.7">Reload</button>
+      </div>
+    </section>
+    <div id="guidance-preview-root"></div>
+    <div id="guidance-action-result-root"></div>
+    <div id="guidance-trace-detail-root"></div>
+  </div>
+
+  <!-- HISTORY panel -->
+  <div class="gd-panel" id="panel-history" role="tabpanel">
+    <div id="guidance-history-root">
+      <section class="gd-card">
+        <div class="gd-card-head">
+          <h2>Recent checks</h2>
+          <span class="gd-pill">Loading</span>
+        </div>
+        <p class="gd-muted">Guidance history is loading.</p>
+      </section>
+    </div>
+  </div>
+
+  <!-- MANAGE panel -->
+  <div class="gd-panel" id="panel-manage" role="tabpanel">
+    <!-- Active set status (injected by setActiveSetStatus) -->
+    <div id="gd-manage-status">
+      <section class="gd-card">
+        <div class="gd-card-head">
+          <h2>Active guidance set</h2>
+          <span class="gd-pill">Loading</span>
+        </div>
+        <p class="gd-muted">Guidance system status is loading.</p>
+      </section>
+    </div>
+
+    <!-- Sub-section switcher: New rule | Versions | Status -->
+    <div class="gd-subsection-bar">
+      <button type="button" class="gd-subsection-btn gd-subsection-active" data-subsection="wizard">New rule</button>
+      <button type="button" class="gd-subsection-btn" data-subsection="versions">Versions</button>
+      <button type="button" class="gd-subsection-btn" data-subsection="status">Status</button>
+    </div>
+
+    <!-- WIZARD sub-section -->
+    <div id="subsection-wizard" class="gd-subsection">
+      <section class="gd-card" id="gd-manage-draft">
+        <div class="gd-card-head">
+          <h2>Guidance authoring wizard</h2>
+          <span class="gd-pill">Not active until published</span>
+        </div>
+        <p class="gd-muted">New / Improve / Duplicate from catalog flows: fill the steps below. Preview computes blast radius + activation readiness against the hero task/workflow.</p>
+        <div id="gw-governance-wrap" class="gd-warn-card gd-card" style="margin:10px 0;display:none;padding:10px;font-size:11px;line-height:1.4;border-radius:4px;">
+          <p id="gw-governance-panel"><strong>Governance:</strong></p>
+        </div>
+        <p id="gw-handoff-hint" class="gd-muted" style="font-size:11px;margin:6px 0">Loading governance&#8230;</p>
+        <div class="gw-wizard-steps">
+          <section class="gd-card" style="padding:10px;background:transparent;border-style:dashed;margin:10px 0;">
+            <h3>Catalog shortcuts</h3>
+            <p class="gd-muted">Populate the form from a catalog row (read-only; does not mutate the registry).</p>
+            <div id="gw-catalog-rows" class="gw-catalog-strip"></div>
+          </section>
+          <div class="gd-toolbar gd-actions">
+            <button type="button" class="gd-btn" id="gw-new-rule">Clear / new rule draft</button>
+          </div>
+          <div class="gd-toolbar">
+            <div class="gd-field"><label for="gw-draft-title">Guidance title</label><input id="gw-draft-title" class="gd-input" placeholder="What operators should see" /></div>
+            <div class="gd-field"><label for="gw-strength">Strength</label>
+              <select id="gw-strength" class="gd-input">
+                <option value="required">Required rule</option>
+                <option value="advisory" selected>Recommendation</option>
+                <option value="step">Suggested steps</option>
+                <option value="verify">Review check</option>
+              </select>
+            </div>
+            <div class="gd-field"><label for="gw-priority">Priority</label><input id="gw-priority" class="gd-input" type="number" min="0" max="9999" value="750" /></div>
+          </div>
+          <div class="gd-toolbar">
+            <div class="gd-field"><label for="gw-scope-preset">Scope preset</label>
+              <select id="gw-scope-preset" class="gd-input">
+                <option value="workflow">Workflow intent</option>
+                <option value="always">Always-on</option>
+                <option value="phase">Phase-bound</option>
+                <option value="task">Task-bound</option>
+                <option value="completing_task">Completing-task</option>
+              </select>
+            </div>
+          </div>
+          <div class="gd-toolbar" id="gw-wf-row">
+            <div class="gd-field"><label for="gw-wf-name">Workflow name</label><input id="gw-wf-name" class="gd-input" placeholder="get-next-actions" /></div>
+          </div>
+          <div class="gd-toolbar" id="gw-phase-row" style="display:none">
+            <div class="gd-field"><label for="gw-phase-key">Phase key</label><input id="gw-phase-key" class="gd-input" placeholder="e.g. phase-75" /></div>
+          </div>
+          <div class="gd-toolbar" id="gw-task-row" style="display:none">
+            <div class="gd-field"><label for="gw-scope-task-id">Scoped task id</label><input id="gw-scope-task-id" class="gd-input" placeholder="T921" /></div>
+          </div>
+          <details>
+            <summary>Acknowledgement + trace context</summary>
+            <div class="gd-toolbar">
+              <div class="gd-field"><label for="gw-ack-strength">Acknowledgement tier</label>
+                <select id="gw-ack-strength" class="gd-input">
+                  <option value="none">None</option>
+                  <option value="surface">Surface notice</option>
+                  <option value="recommend">Recommend ack</option>
+                  <option value="ack_required">Ack required</option>
+                  <option value="satisfy_required">Satisfaction required</option>
+                </select>
+              </div>
+              <div class="gd-field"><label for="gw-check-record">Check trace id</label><input id="gw-check-record" class="gd-input" placeholder="Improve flow fills trace id" /></div>
+              <div class="gd-field"><label for="gw-trigger-id">Existing activation id</label><input id="gw-trigger-id" class="gd-input" placeholder="optional correlation" /></div>
+            </div>
+          </details>
+          <div class="gd-field" style="max-width:none"><label for="gw-draft-notes">Notes for maintainers</label><textarea id="gw-draft-notes" class="gd-input" rows="3" placeholder="What should change and why?"></textarea></div>
+          <p id="gw-readiness-note" class="gd-muted" style="font-size:11px;"></p>
+          <div class="gd-actions">
+            <button type="button" class="gd-btn gd-primary" id="gw-draft-preview">Preview draft impact</button>
+            <button type="button" class="gd-btn" id="gw-draft-reset">Reset wizard</button>
+            <button type="button" class="gd-btn" disabled id="gw-copy-draft-json">Copy draft JSON</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- VERSIONS sub-section (injected by setManageVersions) -->
+    <div id="subsection-versions" class="gd-subsection">
+      <div id="guidance-versions-root">
+        <section class="gd-card">
+          <p class="gd-muted">Version history loading&#8230;</p>
+        </section>
       </div>
     </div>
-  </section>
-  <div id="guidance-summary-root">
-    <section class="gd-card">
-      <div class="gd-card-head">
-        <h2>Guidance System</h2>
-        <span class="gd-pill">Loading</span>
+
+    <!-- STATUS sub-section (injected by setManageStatus) -->
+    <div id="subsection-status" class="gd-subsection">
+      <div id="guidance-status-root">
+        <section class="gd-card">
+          <p class="gd-muted">System status loading&#8230;</p>
+        </section>
       </div>
-      <p class="gd-muted">Guidance system status, recent activity, library, and version controls are loading.</p>
-    </section>
+    </div>
   </div>
+
+  <!-- Always-visible status bar -->
   <div id="gd-status" class="gd-status gd-status-info" role="status">Guidance status is loading.</div>
+
   <script>${bootstrap}</script>
 </body>
 </html>`;
