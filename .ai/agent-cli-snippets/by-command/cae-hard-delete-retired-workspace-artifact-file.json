@@ -1,0 +1,37 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "cae-hard-delete-retired-workspace-artifact-file",
+  "schema": {
+    "type": "object",
+    "additionalProperties": true,
+    "description": "Permissive fallback args schema for 'cae-hard-delete-retired-workspace-artifact-file'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+  },
+  "schemaSource": "manifest-permissive-fallback",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Hard delete with explicit confirmation flag",
+      "argv": "workspace-kit run cae-hard-delete-retired-workspace-artifact-file '{\"confirmAdvancedHardDelete\":true}'"
+    }
+  ],
+  "instructionPath": "src/modules/context-activation/instructions/cae-hard-delete-retired-workspace-artifact-file.md",
+  "moduleId": "context-activation",
+  "description": "Permanently remove backing markdown for a retired workspace artifact when confirmAdvancedHardDelete is true; writes a tombstone stub for registry integrity.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": null
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

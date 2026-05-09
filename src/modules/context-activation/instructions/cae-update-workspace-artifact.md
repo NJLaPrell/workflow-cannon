@@ -6,6 +6,12 @@ agentCapsule|v=1|command=cae-update-workspace-artifact|module=context-activation
 
 Update a workspace-owned artifact row and its backing markdown file in one mutation.
 
+## Rename or move (safe path change)
+
+To **rename** the markdown file (new stem under the same artifact type directory) or **move** across supported workspace artifact types, call this command with a new **`slug`** and/or **`artifactType`** (via **`artifact.artifactType`** or top-level **`artifactType`**). The implementation writes the destination file first, commits the registry `path` update in SQLite, then removes the previous file — activation references stay keyed by **`artifactId`**, not by path.
+
+For **retired** rows only, use **`cae-archive-retired-workspace-artifact-file`** to park markdown under **`.ai/cae/artifacts/_archive/…`**, or **`cae-hard-delete-retired-workspace-artifact-file`** with **`confirmAdvancedHardDelete: true`** for irreversible removal (tombstone stub).
+
 ## Usage
 
 ```

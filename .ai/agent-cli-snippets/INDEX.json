@@ -83,6 +83,11 @@
       "moduleId": "context-activation"
     },
     {
+      "name": "cae-archive-retired-workspace-artifact-file",
+      "path": ".ai/agent-cli-snippets/by-command/cae-archive-retired-workspace-artifact-file.json",
+      "moduleId": "context-activation"
+    },
+    {
       "name": "cae-authoring-summary",
       "path": ".ai/agent-cli-snippets/by-command/cae-authoring-summary.json",
       "moduleId": "context-activation"
@@ -190,6 +195,11 @@
     {
       "name": "cae-health",
       "path": ".ai/agent-cli-snippets/by-command/cae-health.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-hard-delete-retired-workspace-artifact-file",
+      "path": ".ai/agent-cli-snippets/by-command/cae-hard-delete-retired-workspace-artifact-file.json",
       "moduleId": "context-activation"
     },
     {

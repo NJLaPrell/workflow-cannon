@@ -2,6 +2,7 @@
  * CAE registry admin CLI + governance gate (Phase 70 — T895–T897, T900–T902, T911, T913).
  */
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
 import { cp, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -70,6 +71,8 @@ const MUTATOR_COMMANDS = [
   "cae-duplicate-default-artifact",
   "cae-update-artifact",
   "cae-update-workspace-artifact",
+  "cae-archive-retired-workspace-artifact-file",
+  "cae-hard-delete-retired-workspace-artifact-file",
   "cae-retire-artifact",
   "cae-retire-workspace-artifact",
   "cae-create-activation",
@@ -1525,6 +1528,175 @@ test("cae-import-guidance-pack-dry-run: missing packRelativePath", async () => {
   );
   assert.equal(r.ok, false);
   assert.equal(r.code, "invalid-args");
+});
+
+test("cae-archive-retired-workspace-artifact-file rejects active row", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const aid = "workspace.archive.active.playbook";
+  const cr = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-workspace-artifact",
+      args: {
+        schemaVersion: 1,
+        actor: "t",
+        artifactId: aid,
+        artifactType: "playbook",
+        title: "Active",
+        slug: "archive-active-playbook",
+        contentMarkdown: "# active\n",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(cr.ok, true);
+  const ar = await contextActivationModule.onCommand(
+    {
+      name: "cae-archive-retired-workspace-artifact-file",
+      args: { schemaVersion: 1, actor: "t", artifactId: aid, ...appr() }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(ar.ok, false);
+  assert.equal(ar.code, "cae-archive-requires-retired-artifact");
+});
+
+test("cae-archive-retired-workspace-artifact-file moves markdown under _archive", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const aid = "workspace.archive.retired.playbook";
+  const cr = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-workspace-artifact",
+      args: {
+        schemaVersion: 1,
+        actor: "t",
+        artifactId: aid,
+        artifactType: "playbook",
+        title: "Retire me",
+        slug: "archive-retired-playbook",
+        contentMarkdown: "# body\nkeep\n",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(cr.ok, true);
+  const origPath = cr.data.path;
+
+  const rt = await contextActivationModule.onCommand(
+    {
+      name: "cae-retire-workspace-artifact",
+      args: { schemaVersion: 1, actor: "t", artifactId: aid, ...appr() }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(rt.ok, true);
+
+  const ar = await contextActivationModule.onCommand(
+    {
+      name: "cae-archive-retired-workspace-artifact-file",
+      args: { schemaVersion: 1, actor: "t", artifactId: aid, ...appr() }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(ar.ok, true);
+  assert.equal(ar.code, "cae-archive-retired-workspace-artifact-file-ok");
+  assert.match(ar.data.path, /_archive\/playbooks\//);
+  assert.equal(existsSync(path.join(ws, origPath)), false);
+  assert.equal(existsSync(path.join(ws, ar.data.path)), true);
+  const body = await readFile(path.join(ws, ar.data.path), "utf8");
+  assert.match(body, /keep/);
+});
+
+test("cae-hard-delete-retired-workspace-artifact-file requires confirmAdvancedHardDelete", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const aid = "workspace.harddel.gate.playbook";
+  const cr = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-workspace-artifact",
+      args: {
+        schemaVersion: 1,
+        actor: "t",
+        artifactId: aid,
+        artifactType: "playbook",
+        title: "Hard gate",
+        slug: "harddel-gate-playbook",
+        contentMarkdown: "# gate\n",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(cr.ok, true);
+  const rt = await contextActivationModule.onCommand(
+    {
+      name: "cae-retire-workspace-artifact",
+      args: { schemaVersion: 1, actor: "t", artifactId: aid, ...appr() }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(rt.ok, true);
+  const hd = await contextActivationModule.onCommand(
+    {
+      name: "cae-hard-delete-retired-workspace-artifact-file",
+      args: { schemaVersion: 1, actor: "t", artifactId: aid, ...appr() }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(hd.ok, false);
+  assert.equal(hd.code, "cae-hard-delete-confirmation-required");
+});
+
+test("cae-hard-delete-retired-workspace-artifact-file writes tombstone", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const aid = "workspace.harddel.ok.playbook";
+  const cr = await contextActivationModule.onCommand(
+    {
+      name: "cae-create-workspace-artifact",
+      args: {
+        schemaVersion: 1,
+        actor: "t",
+        artifactId: aid,
+        artifactType: "playbook",
+        title: "Hard ok",
+        slug: "harddel-ok-playbook",
+        contentMarkdown: "# original-hard-delete-content\n",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(cr.ok, true);
+  const origPath = cr.data.path;
+  const rt = await contextActivationModule.onCommand(
+    {
+      name: "cae-retire-workspace-artifact",
+      args: { schemaVersion: 1, actor: "t", artifactId: aid, ...appr() }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(rt.ok, true);
+
+  const hd = await contextActivationModule.onCommand(
+    {
+      name: "cae-hard-delete-retired-workspace-artifact-file",
+      args: {
+        schemaVersion: 1,
+        actor: "t",
+        artifactId: aid,
+        confirmAdvancedHardDelete: true,
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(hd.ok, true);
+  assert.equal(hd.code, "cae-hard-delete-retired-workspace-artifact-file-ok");
+  assert.match(hd.data.path, /_archive\/_tombstones\//);
+  assert.equal(existsSync(path.join(ws, origPath)), false);
+  const tomb = await readFile(path.join(ws, hd.data.path), "utf8");
+  assert.match(tomb, /Hard-deleted workspace artifact/);
+  assert.match(tomb, new RegExp(aid.replace(/\./g, "\\.")));
 });
 
 test("cae-activate-registry-checkpoint: digest mismatch then bypass", async () => {
