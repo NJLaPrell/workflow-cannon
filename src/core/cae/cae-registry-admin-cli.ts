@@ -43,6 +43,7 @@ import {
 import {
   buildCaeReconcileDefaultsReport
 } from "./cae-reconcile-defaults.js";
+import { scanCaeWorkspaceArtifactIntegrity } from "./cae-workspace-artifact-integrity-scan.js";
 import {
   buildGuidancePackExport,
   dryRunGuidancePackImport,
@@ -417,6 +418,7 @@ export function tryHandleCaeRegistryAdminCommand(
     "cae-reconcile-defaults",
     "cae-export-guidance-pack",
     "cae-import-guidance-pack-dry-run",
+    "cae-scan-workspace-artifact-integrity",
     "cae-create-registry-version",
     "cae-clone-registry-version",
     "cae-activate-registry-version",
@@ -437,7 +439,8 @@ export function tryHandleCaeRegistryAdminCommand(
     name === "cae-compare-registry-versions" ||
     name === "cae-reconcile-defaults" ||
     name === "cae-export-guidance-pack" ||
-    name === "cae-import-guidance-pack-dry-run";
+    name === "cae-import-guidance-pack-dry-run" ||
+    name === "cae-scan-workspace-artifact-integrity";
   if (!readOnly) {
     const gate = caeRegistryMutationGateError(effective, args);
     if (gate) return gate;
@@ -675,6 +678,23 @@ export function tryHandleCaeRegistryAdminCommand(
         activeActivationRows: activeActs
       });
       return { ok: true, code: "cae-import-guidance-pack-dry-run-ok", data };
+    }
+
+    if (name === "cae-scan-workspace-artifact-integrity") {
+      const vidRaw = typeof args.versionId === "string" ? args.versionId.trim() : "";
+      const vid = vidRaw.length > 0 ? vidRaw : getActiveCaeRegistryVersionId(db);
+      if (!vid) {
+        return {
+          ok: false,
+          code: "cae-registry-sqlite-no-active-version",
+          message: "No active registry version (pass versionId explicitly)"
+        };
+      }
+      if (!getCaeRegistryVersionMeta(db, vid)) {
+        return { ok: false, code: "cae-registry-version-not-found", message: `Unknown versionId '${vid}'` };
+      }
+      const data = scanCaeWorkspaceArtifactIntegrity({ workspaceRoot: workspacePath, db, versionId: vid });
+      return { ok: true, code: "cae-scan-workspace-artifact-integrity-ok", data };
     }
 
     const actorRes = requireActor(args);

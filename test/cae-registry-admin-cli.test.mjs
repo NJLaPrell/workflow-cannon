@@ -1647,6 +1647,25 @@ test("cae-hard-delete-retired-workspace-artifact-file requires confirmAdvancedHa
   assert.equal(hd.code, "cae-hard-delete-confirmation-required");
 });
 
+test("cae-scan-workspace-artifact-integrity: detects orphan markdown", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const orphanDir = path.join(ws, ".ai/cae/artifacts/playbooks");
+  await mkdir(orphanDir, { recursive: true });
+  await writeFile(path.join(orphanDir, "orphan-detection-zzz.md"), "# orphan\n", "utf8");
+  const r = await contextActivationModule.onCommand(
+    { name: "cae-scan-workspace-artifact-integrity", args: { schemaVersion: 1 } },
+    {
+      runtimeVersion: "0.1",
+      workspacePath: ws,
+      effectiveConfig: baseEffective({ cae: { adminMutations: false } })
+    }
+  );
+  assert.equal(r.ok, true);
+  assert.equal(r.code, "cae-scan-workspace-artifact-integrity-ok");
+  const orphans = r.data.findings.filter((f) => f.kind === "orphan_file");
+  assert.ok(orphans.some((o) => o.path.endsWith("orphan-detection-zzz.md")));
+});
+
 test("cae-hard-delete-retired-workspace-artifact-file writes tombstone", async () => {
   const ws = await workspaceWithSeededRegistry();
   const aid = "workspace.harddel.ok.playbook";

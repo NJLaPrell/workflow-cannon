@@ -273,6 +273,11 @@
       "moduleId": "context-activation"
     },
     {
+      "name": "cae-scan-workspace-artifact-integrity",
+      "path": ".ai/agent-cli-snippets/by-command/cae-scan-workspace-artifact-integrity.json",
+      "moduleId": "context-activation"
+    },
+    {
       "name": "cae-satisfy-ack",
       "path": ".ai/agent-cli-snippets/by-command/cae-satisfy-ack.json",
       "moduleId": "context-activation"
