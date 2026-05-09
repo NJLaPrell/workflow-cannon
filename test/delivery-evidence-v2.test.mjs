@@ -115,8 +115,18 @@ test("evaluateDeliveryEvidence rejects unsupported v2 mode", () => {
 
 test("evaluateDeliveryEvidence rejects disallowed mode when allowedEvidenceModes set", () => {
   const t = phasedTask({ metadata: { deliveryEvidence: v2Local } });
-  const r = evaluateDeliveryEvidence(t, { allowedEvidenceModes: ["github-pr"] });
-  assert.equal(r.violations[0]?.code, "delivery-evidence-mode-not-allowed");
+  const r = evaluateDeliveryEvidence(t, {
+    allowedEvidenceModes: ["github-pr"],
+    requiredEvidenceMode: "github-pr",
+    policyProfile: "github-pr",
+    policyWarnings: ["profile warning"]
+  });
+  const violation = r.violations[0];
+  assert.equal(violation?.code, "delivery-evidence-mode-not-allowed");
+  assert.equal(violation?.requiredEvidenceMode, "github-pr");
+  assert.equal(violation?.actualEvidenceMode, "local-reviewed-merge");
+  assert.equal(violation?.policyProfile, "github-pr");
+  assert.deepEqual(violation?.policyWarnings, ["profile warning"]);
 });
 
 test("summarizeDeliveryEvidence extracts schemaVersion and mode", () => {
@@ -154,6 +164,45 @@ test("buildPhaseDeliveryPreflight respects allowedEvidenceModesByTaskId", () => 
   assert.equal(good.violationCount, 0);
 });
 
+test("buildPhaseDeliveryPreflight audits mixed policy profiles", () => {
+  const tasks = [
+    phasedTask({
+      id: "Ta",
+      status: "completed",
+      metadata: { deliveryEvidence: v2Local }
+    }),
+    phasedTask({
+      id: "Tb",
+      status: "completed",
+      metadata: { deliveryEvidence: v2Local }
+    })
+  ];
+  const result = buildPhaseDeliveryPreflight({
+    tasks,
+    phaseKey: "81",
+    includeInProgress: false,
+    policyContextByTaskId: {
+      Ta: {
+        allowedEvidenceModes: ["local-reviewed-merge", "direct-reviewed-merge", "external-review"],
+        requiredEvidenceMode: "manual",
+        policyProfile: "manual-review"
+      },
+      Tb: {
+        allowedEvidenceModes: ["github-pr"],
+        requiredEvidenceMode: "github-pr",
+        policyProfile: "github-pr"
+      }
+    }
+  });
+
+  assert.equal(result.checkedTaskCount, 2);
+  assert.equal(result.violationCount, 1);
+  assert.equal(result.violations[0]?.taskId, "Tb");
+  assert.equal(result.violations[0]?.requiredEvidenceMode, "github-pr");
+  assert.equal(result.violations[0]?.actualEvidenceMode, "local-reviewed-merge");
+  assert.equal(result.violations[0]?.policyProfile, "github-pr");
+});
+
 test("TransitionService allows complete with v2 local evidence in enforce mode", async () => {
   const workspace = await mkdtemp(path.join(os.tmpdir(), "wk-dev2-"));
   try {
@@ -184,6 +233,62 @@ test("TransitionService blocks v2 local when only github-pr allowed", async () =
     await store.save();
     const service = new TransitionService(store, [
       createDeliveryEvidenceGuard({ enforcementMode: "enforce", allowedEvidenceModes: ["github-pr"] })
+    ]);
+    await assert.rejects(
+      () => service.runTransition({ taskId: "T900", action: "complete" }),
+      (err) => err instanceof TaskEngineError && err.code === "guard-rejected"
+    );
+  } finally {
+    await rm(workspace, { recursive: true, force: true });
+  }
+});
+
+test("DeliveryEvidenceGuard accepts local evidence when resolved policy allows manual evidence", async () => {
+  const workspace = await mkdtemp(path.join(os.tmpdir(), "wk-dev2-"));
+  try {
+    const task = phasedTask({
+      metadata: { deliveryEvidence: v2Local }
+    });
+    const store = TaskStore.forJsonFile(workspace);
+    await store.load();
+    store.addTask(task);
+    await store.save();
+    const service = new TransitionService(store, [
+      createDeliveryEvidenceGuard({
+        enforcementMode: "enforce",
+        resolvePolicyContext: () => ({
+          allowedEvidenceModes: ["local-reviewed-merge", "direct-reviewed-merge", "external-review"],
+          requiredEvidenceMode: "manual",
+          policyProfile: "manual-review"
+        })
+      })
+    ]);
+    const result = await service.runTransition({ taskId: "T900", action: "complete" });
+    assert.equal(result.evidence.toState, "completed");
+  } finally {
+    await rm(workspace, { recursive: true, force: true });
+  }
+});
+
+test("DeliveryEvidenceGuard rejects local evidence when resolved policy requires GitHub PR evidence", async () => {
+  const workspace = await mkdtemp(path.join(os.tmpdir(), "wk-dev2-"));
+  try {
+    const task = phasedTask({
+      metadata: { deliveryEvidence: v2Local }
+    });
+    const store = TaskStore.forJsonFile(workspace);
+    await store.load();
+    store.addTask(task);
+    await store.save();
+    const service = new TransitionService(store, [
+      createDeliveryEvidenceGuard({
+        enforcementMode: "enforce",
+        resolvePolicyContext: () => ({
+          allowedEvidenceModes: ["github-pr"],
+          requiredEvidenceMode: "github-pr",
+          policyProfile: "github-pr"
+        })
+      })
     ]);
     await assert.rejects(
       () => service.runTransition({ taskId: "T900", action: "complete" }),

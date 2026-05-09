@@ -2142,6 +2142,95 @@ test("taskEngineModule onCommand run-transition validates required args", async 
   assert.equal(result.code, "invalid-task-schema");
 });
 
+test("taskEngineModule run-transition complete accepts local evidence under manual delivery policy", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T9840",
+        status: "in_progress",
+        phaseKey: "74",
+        metadata: {
+          deliveryEvidence: {
+            schemaVersion: 2,
+            mode: "local-reviewed-merge",
+            branchName: "feature/T9840-test",
+            baseBranch: "release/phase-74",
+            mergeSha: "abc123",
+            reviewer: "maintainer@example.com",
+            reviewArtifactRelativePath: "reviews/T9840.md",
+            checks: [{ name: "test", conclusion: "success" }],
+            validationCommands: [{ command: "pnpm run test", exitCode: 0 }]
+          }
+        }
+      })
+    );
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, {
+    tasks: { deliveryEvidence: { enforcementMode: "enforce" } },
+    maintainerDelivery: {
+      defaultProfile: "manual-review",
+      enforcementMode: "advisory",
+      profiles: {
+        "manual-review": {
+          requiresPhaseBranch: true,
+          branchPattern: "release/phase-{phaseKey}",
+          taskBranchPattern: "feature/{taskId}-{slug}",
+          review: "manual",
+          evidenceKind: "manual",
+          mergeStrategy: "merge",
+          phaseToMainMode: "phase-closeout"
+        }
+      }
+    }
+  });
+
+  const result = await taskEngineModule.onCommand(
+    { name: "run-transition", args: { taskId: "T9840", action: "complete" } },
+    ctx
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.evidence.toState, "completed");
+});
+
+test("taskEngineModule run-transition complete enforces GitHub PR evidence mode by default", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T9842",
+        status: "in_progress",
+        phaseKey: "74",
+        metadata: {
+          deliveryEvidence: {
+            schemaVersion: 2,
+            mode: "local-reviewed-merge",
+            branchName: "feature/T9842-test",
+            baseBranch: "release/phase-74",
+            mergeSha: "abc123",
+            reviewer: "maintainer@example.com",
+            reviewArtifactRelativePath: "reviews/T9842.md",
+            checks: [{ name: "test", conclusion: "success" }],
+            validationCommands: [{ command: "pnpm run test", exitCode: 0 }]
+          }
+        }
+      })
+    );
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, {
+    tasks: { deliveryEvidence: { enforcementMode: "enforce" } }
+  });
+
+  const result = await taskEngineModule.onCommand(
+    { name: "run-transition", args: { taskId: "T9842", action: "complete" } },
+    ctx
+  );
+
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "guard-rejected");
+});
+
 test("taskEngineModule run-transition idempotent replay bypasses fresh planning generation", async () => {
   const workspace = await tmpDir();
   await seedSqliteStore(workspace, (store) => {
@@ -4607,4 +4696,3 @@ test("taskEngineModule create-task allocateId and apply-task-batch single genera
   assert.equal(dry.data.dryRun, true);
   assert.equal(dry.data.planningGeneration, gen2);
 });
-

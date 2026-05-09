@@ -5,6 +5,10 @@ import {
   createDeliveryEvidenceGuard,
   readDeliveryEvidenceEnforcementMode
 } from "../delivery-evidence.js";
+import {
+  buildDeliveryEvidencePolicyContext,
+  resolveMaintainerDeliveryPolicy
+} from "../maintainer-delivery-policy-resolver.js";
 import { planningGenPolicyGate } from "../planning-generation-gate.js";
 import type { OpenedPlanningStores } from "../persistence/planning-open.js";
 import { TaskStore } from "../persistence/store.js";
@@ -77,9 +81,18 @@ export async function runTaskIntentTransition(
   const deliveryEvidenceMode = readDeliveryEvidenceEnforcementMode(
     ctx.effectiveConfig as Record<string, unknown> | undefined
   );
+  const effectiveConfig = ctx.effectiveConfig as Record<string, unknown> | undefined;
   const service = new TransitionService(
     planning.taskStore,
-    [createDeliveryEvidenceGuard({ enforcementMode: deliveryEvidenceMode })],
+    [
+      createDeliveryEvidenceGuard({
+        enforcementMode: deliveryEvidenceMode,
+        resolvePolicyContext: (task) => {
+          const resolved = resolveMaintainerDeliveryPolicy({ effectiveConfig, task });
+          return buildDeliveryEvidencePolicyContext(resolved);
+        }
+      })
+    ],
     hookBus.isEnabled() ? hookBus : undefined
   );
   try {
@@ -193,9 +206,18 @@ export async function runClaimNextTaskIntent(
   const deliveryEvidenceMode = readDeliveryEvidenceEnforcementMode(
     ctx.effectiveConfig as Record<string, unknown> | undefined
   );
+  const effectiveConfig = ctx.effectiveConfig as Record<string, unknown> | undefined;
   const service = new TransitionService(
     planning.taskStore,
-    [createDeliveryEvidenceGuard({ enforcementMode: deliveryEvidenceMode })],
+    [
+      createDeliveryEvidenceGuard({
+        enforcementMode: deliveryEvidenceMode,
+        resolvePolicyContext: (task) => {
+          const resolved = resolveMaintainerDeliveryPolicy({ effectiveConfig, task });
+          return buildDeliveryEvidencePolicyContext(resolved);
+        }
+      })
+    ],
     hookBus.isEnabled() ? hookBus : undefined
   );
   try {
