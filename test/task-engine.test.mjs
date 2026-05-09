@@ -651,7 +651,7 @@ test("TransitionService completion emits advisory delivery-evidence violation wh
   assert.equal(result.evidence.toState, "completed");
   const guard = result.evidence.guardResults.find((r) => r.guardName === "delivery-evidence");
   assert.equal(guard?.allowed, true);
-  assert.equal(guard?.code, "delivery-evidence-missing");
+  assert.equal(guard?.code, "delivery-evidence-advisory");
 });
 
 test("TransitionService completion blocks missing delivery evidence in enforce mode", async () => {

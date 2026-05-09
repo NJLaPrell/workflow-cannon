@@ -222,3 +222,57 @@ test("parseTaskIntakePolicyConfig merges built-in advisory profile", () => {
     "acceptanceCriteria"
   ]);
 });
+
+test("workspace tasks.intakePolicy enforcement off skips field evaluation and warnings", () => {
+  const r = resolveTaskIntakePolicy({
+    effectiveConfig: {
+      tasks: {
+        intakePolicy: {
+          enforcementMode: "off",
+          defaultProfile: "strict",
+          profiles: {
+            advisory: { requiredFields: [], recommendedFields: [], forbiddenFields: [], fieldRules: {} },
+            strict: {
+              requiredFields: ["summary"],
+              recommendedFields: [],
+              forbiddenFields: [],
+              fieldRules: {},
+              enforcementMode: "enforce"
+            }
+          }
+        }
+      }
+    },
+    fields: { title: "x", type: "execution", status: "ready" },
+    action: "create-ready",
+    targetStatus: "ready"
+  });
+  assert.equal(r.resolvedPolicy.enforcementMode, "off");
+  assert.deepEqual(r.missingRequiredFields, []);
+  assert.deepEqual(r.warnings, []);
+  assert.deepEqual(r.explain, []);
+});
+
+test("workspace intake off overrides module override enforcement", () => {
+  const r = resolveTaskIntakePolicy({
+    effectiveConfig: {
+      tasks: {
+        intakePolicy: {
+          enforcementMode: "off",
+          defaultProfile: "advisory",
+          profiles: {
+            advisory: { requiredFields: [], recommendedFields: [], forbiddenFields: [], fieldRules: {} }
+          },
+          moduleOverrides: {
+            "task-engine": { profile: "advisory", enforcementMode: "enforce" }
+          }
+        }
+      }
+    },
+    moduleId: "task-engine",
+    action: "create-task",
+    targetStatus: "ready",
+    fields: { title: "t", type: "execution", status: "ready" }
+  });
+  assert.equal(r.resolvedPolicy.enforcementMode, "off");
+});

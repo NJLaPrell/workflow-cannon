@@ -528,10 +528,11 @@ export function createDeliveryEvidenceGuard(
       }
 
       const violation = evaluation.violations[0];
+      const blocking = enforcementMode === "enforce";
       return {
-        allowed: enforcementMode !== "enforce",
+        allowed: !blocking,
         guardName: "delivery-evidence",
-        code: violation?.code ?? "delivery-evidence-missing",
+        code: blocking ? (violation?.code ?? "delivery-evidence-missing") : "delivery-evidence-advisory",
         message: violation?.message ?? "Phase delivery completion evidence is missing."
       };
     }

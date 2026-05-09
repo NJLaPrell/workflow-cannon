@@ -354,15 +354,11 @@ export function resolveTaskIntakePolicy(
     enforcementMode = moduleOverride.enforcementMode;
     explain.push({ key: "tasks.intakePolicy.enforcementMode", value: enforcementMode, source: "module-override" });
   }
+  if (cfg.enforcementMode === "off") {
+    enforcementMode = "off";
+  }
 
   const source = buildEvaluationSource(input);
-  const missingRequiredFields = profile.requiredFields.filter((path) => !fieldPresent(readFieldPath(source, path)));
-  const missingRecommendedFields = profile.recommendedFields.filter((path) => !fieldPresent(readFieldPath(source, path)));
-  const forbiddenPresentFields = profile.forbiddenFields.filter((path) => fieldPresent(readFieldPath(source, path)));
-  const fieldRuleViolations = Object.entries(profile.fieldRules).flatMap(([path, rule]) =>
-    evaluateRule(path, rule, readFieldPath(source, path), source)
-  );
-
   const action = explicitAction;
   const context = {
     taskId: nonEmptyString(input.taskId) ?? task?.id ?? null,
@@ -372,6 +368,36 @@ export function resolveTaskIntakePolicy(
     category: explicitCategory,
     phaseKey: explicitPhaseKey ?? nonEmptyString(source.phaseKey) ?? null
   };
+
+  if (enforcementMode === "off") {
+    return {
+      resolvedPolicy: {
+        schemaVersion: 1,
+        profileName,
+        enforcementMode: "off",
+        action,
+        context,
+        requiredFields: [],
+        recommendedFields: [],
+        forbiddenFields: [],
+        fieldRules: {}
+      },
+      missingRequiredFields: [],
+      missingRecommendedFields: [],
+      forbiddenPresentFields: [],
+      fieldRuleViolations: [],
+      explain: [],
+      warnings: [],
+      precedenceOrder: [...TASK_POLICY_OVERRIDE_PRECEDENCE]
+    };
+  }
+
+  const missingRequiredFields = profile.requiredFields.filter((path) => !fieldPresent(readFieldPath(source, path)));
+  const missingRecommendedFields = profile.recommendedFields.filter((path) => !fieldPresent(readFieldPath(source, path)));
+  const forbiddenPresentFields = profile.forbiddenFields.filter((path) => fieldPresent(readFieldPath(source, path)));
+  const fieldRuleViolations = Object.entries(profile.fieldRules).flatMap(([path, rule]) =>
+    evaluateRule(path, rule, readFieldPath(source, path), source)
+  );
 
   return {
     resolvedPolicy: {

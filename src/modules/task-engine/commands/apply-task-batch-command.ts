@@ -52,7 +52,8 @@ type StagedCreate = {
   task: TaskEntity;
   digest: string;
   allocateId: boolean;
-  taskIntake: Record<string, unknown>;
+  /** Present when intake policy is evaluated (omitted when enforcement is off). */
+  taskIntake?: Record<string, unknown>;
 };
 
 type StagedUpdate = {
@@ -337,7 +338,13 @@ export async function runApplyTaskBatchCommand(
         acceptanceCriteria: task.acceptanceCriteria ?? [],
         features: task.features ?? []
       });
-      staged.push({ kind: "create", task, digest, allocateId, taskIntake: intakeCreate.intakePayload });
+      staged.push({
+        kind: "create",
+        task,
+        digest,
+        allocateId,
+        ...(intakeCreate.intakePayload.enforcementMode !== "off" ? { taskIntake: intakeCreate.intakePayload } : {})
+      });
       virtual = [...virtual, { ...task }];
     } else if (kind === "update-task") {
       const p = op.payload;
@@ -450,11 +457,16 @@ export async function runApplyTaskBatchCommand(
     const data: Record<string, unknown> = {
       dryRun: true,
       stagedCount: staged.length,
-      staged: staged.map((s) =>
-        s.kind === "create"
-          ? { kind: s.kind, task: s.task, taskIntake: s.taskIntake }
-          : { kind: s.kind, task: s.task }
-      )
+      staged: staged.map((s) => {
+        if (s.kind === "create") {
+          const row: Record<string, unknown> = { kind: s.kind, task: s.task };
+          if (s.taskIntake) {
+            row.taskIntake = s.taskIntake;
+          }
+          return row;
+        }
+        return { kind: s.kind, task: s.task };
+      })
     };
     attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration(), [...(gate.warnings ?? []), ...batchIntakeWarnings]);
     return {
@@ -506,11 +518,16 @@ export async function runApplyTaskBatchCommand(
 
   const data: Record<string, unknown> = {
     applied: staged.length,
-    results: staged.map((s) =>
-      s.kind === "create"
-        ? { kind: s.kind, task: s.task, taskIntake: s.taskIntake }
-        : { kind: s.kind, taskId: s.task.id, task: s.task }
-    )
+    results: staged.map((s) => {
+      if (s.kind === "create") {
+        const row: Record<string, unknown> = { kind: s.kind, task: s.task };
+        if (s.taskIntake) {
+          row.taskIntake = s.taskIntake;
+        }
+        return row;
+      }
+      return { kind: s.kind, taskId: s.task.id, task: s.task };
+    })
   };
   attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration(), [
     ...(gate.warnings ?? []),
