@@ -10,6 +10,7 @@ import {
   getActiveCaeRegistryVersionId,
   getCaeRegistryVersionMeta,
   insertCaeAckSatisfaction,
+  insertCaeRegistryCheckpoint,
   insertCaeRegistryMutationAudit,
   listCaeAckSatisfactions,
   listCaeRegistryActivationsForVersion,
@@ -30,7 +31,7 @@ import {
   inferApprovalTierHint
 } from "../../../core/cae/cae-run-preflight.js";
 import { loadCaeRegistryForKit } from "../../../core/cae/cae-registry-effective.js";
-import { loadCaeRegistry } from "../../../core/cae/cae-registry-load.js";
+import { digestCaeRegistryContent, loadCaeRegistry } from "../../../core/cae/cae-registry-load.js";
 import type { CaeLoadedRegistry } from "../../../core/cae/cae-registry-load.js";
 import { replaceActiveCaeRegistryFromLoaded } from "../../../core/cae/cae-registry-sqlite.js";
 import type { CaeEvaluationContext } from "../../../core/cae/evaluation-context-types.js";
@@ -1335,6 +1336,7 @@ export async function runContextActivationOnCommand(
         typeof args.actor === "string" && args.actor.trim().length > 0 ? args.actor.trim() : "import";
       const note = typeof args.note === "string" ? args.note : null;
 
+      let checkpointId: number | undefined;
       const db = openKitSqliteReadWrite(ws, effective);
       if (!db) {
         return {
@@ -1357,7 +1359,7 @@ export async function runContextActivationOnCommand(
           note,
           registry: loadedSeed.value
         });
-        insertCaeRegistryMutationAudit(db, {
+        const mutationAuditId = insertCaeRegistryMutationAudit(db, {
           actor,
           commandName: "cae-import-json-registry",
           versionId,
@@ -1367,9 +1369,30 @@ export async function runContextActivationOnCommand(
             activationCount: loadedSeed.value.activationById.size
           }
         });
+        const checkpointLabel =
+          typeof args.checkpointLabel === "string" ? args.checkpointLabel.trim() : "";
+        if (checkpointLabel.length > 0) {
+          const arts = [...loadedSeed.value.artifactById.values()];
+          const acts = [...loadedSeed.value.activationById.values()];
+          const registryDigest = digestCaeRegistryContent(versionId, arts, acts);
+          const checkpointNote =
+            typeof args.checkpointNote === "string" && args.checkpointNote.trim().length > 0
+              ? args.checkpointNote.trim()
+              : null;
+          checkpointId = insertCaeRegistryCheckpoint(db, {
+            label: checkpointLabel,
+            actor,
+            note: checkpointNote,
+            versionId,
+            registryDigest,
+            mutationIds: mutationAuditId !== undefined ? [mutationAuditId] : []
+          });
+        }
       } finally {
         db.close();
       }
+      const checkpointLabelOut =
+        typeof args.checkpointLabel === "string" ? args.checkpointLabel.trim() : "";
       return {
         ok: true,
         code: "cae-import-json-registry-ok",
@@ -1377,7 +1400,14 @@ export async function runContextActivationOnCommand(
           schemaVersion: 1,
           versionId,
           artifactCount: loadedSeed.value.artifactById.size,
-          activationCount: loadedSeed.value.activationById.size
+          activationCount: loadedSeed.value.activationById.size,
+          ...(checkpointLabelOut.length > 0
+            ? {
+                checkpointLabel: checkpointLabelOut,
+                checkpointId:
+                  typeof checkpointId === "number" && Number.isFinite(checkpointId) ? checkpointId : null
+              }
+            : {})
         }
       };
     }

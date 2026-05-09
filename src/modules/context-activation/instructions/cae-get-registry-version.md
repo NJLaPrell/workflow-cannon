@@ -11,6 +11,7 @@ Fetch one CAE registry version header; optionally include raw SQLite rows.
 ```
 workspace-kit run cae-get-registry-version '{"schemaVersion":1,"versionId":"<id>"}'
 workspace-kit run cae-get-registry-version '{"schemaVersion":1,"versionId":"<id>","includeRows":true}'
+workspace-kit run cae-get-registry-version '{"schemaVersion":1,"versionId":"<id>","includeCheckpoints":true}'
 ```
 
 ## Arguments
@@ -20,7 +21,10 @@ workspace-kit run cae-get-registry-version '{"schemaVersion":1,"versionId":"<id>
 | `schemaVersion` | number | yes | Must be **1**. |
 | `versionId` | string | yes | Registry version id. |
 | `includeRows` | boolean | no | When **true**, include **`artifactRows`** and **`activationRows`**. |
+| `includeCheckpoints` | boolean | no | When **true**, include **`checkpoints`** (named restore points, kit SQLite **v22+**). |
 
 ## Returns
 
 `ok: true`, **`code`**: `cae-get-registry-version-ok`.
+
+Checkpoint entries use camelCase: **`id`**, **`recordedAt`**, **`label`**, **`actor`**, **`note`**, **`registryDigest`**, **`mutationIds`** (numbers).

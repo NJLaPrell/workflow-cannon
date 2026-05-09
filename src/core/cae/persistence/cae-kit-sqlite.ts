@@ -507,16 +507,21 @@ export function insertCaeRegistryMutationAudit(
     note?: string | null;
     payload?: Record<string, unknown>;
   }
-): void {
+): number | undefined {
   const now = new Date().toISOString();
   const payloadJson = JSON.stringify(row.payload ?? {});
   try {
-    db.prepare(
-      `INSERT INTO cae_registry_mutations (recorded_at, actor, command_name, version_id, note, payload_json)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    ).run(now, row.actor, row.commandName, row.versionId, row.note ?? null, payloadJson);
+    const info = db
+      .prepare(
+        `INSERT INTO cae_registry_mutations (recorded_at, actor, command_name, version_id, note, payload_json)
+         VALUES (?, ?, ?, ?, ?, ?)`
+      )
+      .run(now, row.actor, row.commandName, row.versionId, row.note ?? null, payloadJson);
+    const id = Number(info.lastInsertRowid);
+    return Number.isFinite(id) && id > 0 ? id : undefined;
   } catch {
     /* pre-v13 DB or missing table — skip audit rather than failing the mutation */
+    return undefined;
   }
 }
 
@@ -567,6 +572,70 @@ export function listCaeRegistryMutationAuditRows(
          LIMIT ?`
       )
       .all(limit) as CaeRegistryMutationAuditRow[];
+  } catch {
+    return [];
+  }
+}
+
+export type CaeRegistryCheckpointRow = {
+  id: number;
+  recorded_at: string;
+  label: string;
+  actor: string | null;
+  note: string | null;
+  version_id: string;
+  registry_digest: string;
+  mutation_ids_json: string;
+};
+
+/** Named restore point for a registry version (kit SQLite v22+). */
+export function insertCaeRegistryCheckpoint(
+  db: SqliteDatabase,
+  row: {
+    label: string;
+    actor?: string | null;
+    note?: string | null;
+    versionId: string;
+    registryDigest: string;
+    mutationIds: readonly number[];
+  }
+): number | undefined {
+  const now = new Date().toISOString();
+  const idsJson = JSON.stringify([...row.mutationIds]);
+  try {
+    const info = db
+      .prepare(
+        `INSERT INTO cae_registry_checkpoints (recorded_at, label, actor, note, version_id, registry_digest, mutation_ids_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(now, row.label, row.actor ?? null, row.note ?? null, row.versionId, row.registryDigest, idsJson);
+    const id = Number(info.lastInsertRowid);
+    return Number.isFinite(id) && id > 0 ? id : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function listCaeRegistryCheckpointsForVersion(
+  db: SqliteDatabase,
+  versionId: string,
+  options?: { limit?: number }
+): CaeRegistryCheckpointRow[] {
+  const limit = Number.isFinite(options?.limit) ? Math.max(1, Math.floor(options!.limit!)) : 50;
+  const vid = versionId.trim();
+  if (!vid.length) {
+    return [];
+  }
+  try {
+    return db
+      .prepare(
+        `SELECT id, recorded_at, label, actor, note, version_id, registry_digest, mutation_ids_json
+         FROM cae_registry_checkpoints
+         WHERE version_id = ?
+         ORDER BY recorded_at DESC, id DESC
+         LIMIT ?`
+      )
+      .all(vid, limit) as CaeRegistryCheckpointRow[];
   } catch {
     return [];
   }

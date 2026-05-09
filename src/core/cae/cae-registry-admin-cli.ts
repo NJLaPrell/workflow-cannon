@@ -20,6 +20,7 @@ import {
   insertCaeRegistryArtifactRow,
   insertCaeRegistryMutationAudit,
   insertCaeRegistryVersion,
+  listCaeRegistryCheckpointsForVersion,
   listCaeRegistryVersionsWithCounts,
   openKitSqliteReadWrite,
   retireCaeRegistryActivation,
@@ -434,8 +435,27 @@ export function tryHandleCaeRegistryAdminCommand(
         return { ok: false, code: "cae-registry-version-not-found", message: `Unknown versionId '${vidRaw}'` };
       }
       const includeRows = args.includeRows === true;
+      const includeCheckpoints = args.includeCheckpoints === true;
       const arts = includeRows ? db.prepare(`SELECT * FROM cae_registry_artifacts WHERE version_id = ?`).all(vidRaw) : [];
       const acts = includeRows ? db.prepare(`SELECT * FROM cae_registry_activations WHERE version_id = ?`).all(vidRaw) : [];
+      const checkpoints = includeCheckpoints
+        ? listCaeRegistryCheckpointsForVersion(db, vidRaw).map((c) => ({
+            id: c.id,
+            recordedAt: c.recorded_at,
+            label: c.label,
+            actor: c.actor,
+            note: c.note,
+            registryDigest: c.registry_digest,
+            mutationIds: (() => {
+              try {
+                const parsed = JSON.parse(c.mutation_ids_json || "[]") as unknown;
+                return Array.isArray(parsed) ? parsed.filter((x): x is number => typeof x === "number") : [];
+              } catch {
+                return [];
+              }
+            })()
+          }))
+        : undefined;
       return {
         ok: true,
         code: "cae-get-registry-version-ok",
@@ -448,7 +468,8 @@ export function tryHandleCaeRegistryAdminCommand(
             isActive: meta.is_active === 1,
             note: meta.note
           },
-          ...(includeRows ? { artifactRows: arts, activationRows: acts } : {})
+          ...(includeRows ? { artifactRows: arts, activationRows: acts } : {}),
+          ...(checkpoints !== undefined ? { checkpoints } : {})
         }
       };
     }
