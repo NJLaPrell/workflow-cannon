@@ -43,6 +43,11 @@ import {
   type CaeRegistryActivationRow,
   type CaeRegistryArtifactRow
 } from "./cae-registry-load.js";
+import {
+  compareCaeRegistryVersions,
+  type CaeRegistrySqliteActivationRow,
+  type CaeRegistrySqliteArtifactRow
+} from "./cae-registry-version-compare.js";
 
 type SqliteDb = InstanceType<typeof Database>;
 
@@ -368,6 +373,7 @@ export function tryHandleCaeRegistryAdminCommand(
     "cae-retire-activation",
     "cae-list-registry-versions",
     "cae-get-registry-version",
+    "cae-compare-registry-versions",
     "cae-create-registry-version",
     "cae-clone-registry-version",
     "cae-activate-registry-version",
@@ -381,7 +387,10 @@ export function tryHandleCaeRegistryAdminCommand(
   const bad = requireSchemaV1(args);
   if (bad) return bad;
 
-  const readOnly = name === "cae-list-registry-versions" || name === "cae-get-registry-version";
+  const readOnly =
+    name === "cae-list-registry-versions" ||
+    name === "cae-get-registry-version" ||
+    name === "cae-compare-registry-versions";
   if (!readOnly) {
     const gate = caeRegistryMutationGateError(effective, args);
     if (gate) return gate;
@@ -471,6 +480,58 @@ export function tryHandleCaeRegistryAdminCommand(
           ...(includeRows ? { artifactRows: arts, activationRows: acts } : {}),
           ...(checkpoints !== undefined ? { checkpoints } : {})
         }
+      };
+    }
+
+    if (name === "cae-compare-registry-versions") {
+      const fromId = typeof args.fromVersionId === "string" ? args.fromVersionId.trim() : "";
+      const toId = typeof args.toVersionId === "string" ? args.toVersionId.trim() : "";
+      if (!fromId.length || !toId.length) {
+        return { ok: false, code: "invalid-args", message: "fromVersionId and toVersionId are required" };
+      }
+      if (fromId === toId) {
+        return { ok: false, code: "invalid-args", message: "fromVersionId and toVersionId must differ" };
+      }
+      if (!getCaeRegistryVersionMeta(db, fromId)) {
+        return {
+          ok: false,
+          code: "cae-registry-version-not-found",
+          message: `Unknown fromVersionId '${fromId}'`
+        };
+      }
+      if (!getCaeRegistryVersionMeta(db, toId)) {
+        return {
+          ok: false,
+          code: "cae-registry-version-not-found",
+          message: `Unknown toVersionId '${toId}'`
+        };
+      }
+      const fromArts = db
+        .prepare(`SELECT * FROM cae_registry_artifacts WHERE version_id = ?`)
+        .all(fromId) as CaeRegistrySqliteArtifactRow[];
+      const toArts = db
+        .prepare(`SELECT * FROM cae_registry_artifacts WHERE version_id = ?`)
+        .all(toId) as CaeRegistrySqliteArtifactRow[];
+      const fromActs = db
+        .prepare(`SELECT * FROM cae_registry_activations WHERE version_id = ?`)
+        .all(fromId) as CaeRegistrySqliteActivationRow[];
+      const toActs = db
+        .prepare(`SELECT * FROM cae_registry_activations WHERE version_id = ?`)
+        .all(toId) as CaeRegistrySqliteActivationRow[];
+      const data = compareCaeRegistryVersions({
+        workspaceRoot: workspacePath,
+        fromVersionId: fromId,
+        toVersionId: toId,
+        fromArtifacts: fromArts,
+        toArtifacts: toArts,
+        fromActivations: fromActs,
+        toActivations: toActs,
+        includeFileContentHashes: args.includeFileContentHashes === true
+      });
+      return {
+        ok: true,
+        code: "cae-compare-registry-versions-ok",
+        data
       };
     }
 
