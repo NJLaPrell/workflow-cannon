@@ -2,12 +2,13 @@
 schema_version: 1
 current_kit_phase: "83"
 next_kit_phase: "84"
-last_updated: "2026-05-07T21:21:23.758Z"
-active_focus: "Phase 83 task selection after Phase 82 delivery preflight passed."
+last_updated: "2026-05-09T00:23:10.046Z"
+active_focus: "Phase 83 task-engine policy resolver and intake follow-ons."
 blockers: []
 pending_decisions: []
 next_agent_actions:
   - "Run get-next-actions for Phase 83."
-  - "Review proposed task-engine policy resolver follow-ons and accept the next execution slice when ready."
-# workspace_revision: 24
-# updated_at: "2026-05-07T21:21:23.777Z"
+  - "Accept and sequence delivery-policy / intake-policy execution tasks (T100109–T100117) when ready."
+  - "Phase 84 holds the CAE UX expansion proposed backlog."
+# workspace_revision: 26
+# updated_at: "2026-05-09T00:23:10.068Z"
