@@ -181,3 +181,37 @@ test("evaluateIntakeForAccept does not block accept under enforce-on-accept when
   });
   assert.equal(r.block, false);
 });
+
+test("evaluateIntakeForCreate emits no advisory strings when workspace intake is off", () => {
+  const r = evaluateIntakeForCreate({
+    effectiveConfig: {
+      tasks: {
+        intakePolicy: {
+          enforcementMode: "off",
+          defaultProfile: "strict",
+          profiles: {
+            advisory: { requiredFields: [], recommendedFields: [], forbiddenFields: [], fieldRules: {} },
+            strict: {
+              requiredFields: ["summary"],
+              recommendedFields: ["technicalScope"],
+              forbiddenFields: [],
+              fieldRules: {},
+              enforcementMode: "enforce"
+            }
+          }
+        }
+      }
+    },
+    task: {
+      id: "T910",
+      title: "No summary",
+      type: "execution",
+      status: "ready",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z"
+    }
+  });
+  assert.equal(r.block, null);
+  assert.deepEqual(r.stringWarnings, []);
+  assert.equal(r.intakePayload.enforcementMode, "off");
+});

@@ -511,9 +511,11 @@ export async function runTaskRowMutationCommands(
       const dryData: Record<string, unknown> = {
         task,
         dryRun: true,
-        allocateId: allocateId === true,
-        taskIntake: intakeCreate.intakePayload
+        allocateId: allocateId === true
       };
+      if (intakeCreate.intakePayload.enforcementMode !== "off") {
+        dryData.taskIntake = intakeCreate.intakePayload;
+      }
       attachPolicyMeta(dryData, ctx, planning.sqliteDual.getPlanningGeneration(), [
         ...(pgCreate.warnings ?? []),
         ...featureSlugWarnings,
@@ -541,7 +543,10 @@ export async function runTaskRowMutationCommands(
       return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
     }
     await store.save(planningConcurrencySaveOpts(args as Record<string, unknown>));
-    const createdData: Record<string, unknown> = { task, taskIntake: intakeCreate.intakePayload };
+    const createdData: Record<string, unknown> = { task };
+    if (intakeCreate.intakePayload.enforcementMode !== "off") {
+      createdData.taskIntake = intakeCreate.intakePayload;
+    }
     attachPolicyMeta(createdData, ctx, planning.sqliteDual.getPlanningGeneration(), [
       ...(pgCreate.warnings ?? []),
       ...featureSlugWarnings,
