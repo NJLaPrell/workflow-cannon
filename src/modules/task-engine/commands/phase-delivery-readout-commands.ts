@@ -1,6 +1,10 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
 import { attachPolicyMeta } from "../attach-planning-response-meta.js";
 import { buildPhaseDeliveryPreflight } from "../delivery-evidence.js";
+import {
+  buildDeliveryEvidencePolicyContext,
+  resolveMaintainerDeliveryPolicy
+} from "../maintainer-delivery-policy-resolver.js";
 import type { OpenedPlanningStores } from "../persistence/planning-open.js";
 import { readWorkspaceStatusSnapshotFromDual } from "../persistence/workspace-status-store.js";
 import { resolveCanonicalPhase } from "../phase-resolution.js";
@@ -40,10 +44,19 @@ export async function resolvePhaseDeliveryReadoutCommands(
         : phaseRes.canonicalPhaseKey;
     const includeInProgress =
       typeof argObj.includeInProgress === "boolean" ? argObj.includeInProgress : true;
+    const activeTasks = store.getActiveTasks();
+    const effectiveConfig = ctx.effectiveConfig as Record<string, unknown> | undefined;
+    const policyContextByTaskId = Object.fromEntries(
+      activeTasks.map((task) => {
+        const resolved = resolveMaintainerDeliveryPolicy({ effectiveConfig, task });
+        return [task.id, buildDeliveryEvidencePolicyContext(resolved)];
+      })
+    );
     const preflight = buildPhaseDeliveryPreflight({
-      tasks: store.getActiveTasks(),
+      tasks: activeTasks,
       phaseKey,
-      includeInProgress
+      includeInProgress,
+      policyContextByTaskId
     });
     const data: Record<string, unknown> = {
       ...preflight,

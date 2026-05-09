@@ -34,6 +34,10 @@ export type DeliveryEvidenceViolation = {
   code: string;
   message: string;
   missingFields: string[];
+  requiredEvidenceMode?: string | null;
+  actualEvidenceMode?: string | null;
+  policyProfile?: string | null;
+  policyWarnings?: string[];
 };
 
 export type DeliveryEvidenceEvaluation = {
@@ -52,10 +56,14 @@ export type EvaluateDeliveryEvidenceOptions = {
    * outside this list yields `delivery-evidence-mode-not-allowed`.
    */
   allowedEvidenceModes?: readonly string[];
+  requiredEvidenceMode?: string | null;
+  policyProfile?: string | null;
+  policyWarnings?: readonly string[];
 };
 
 type DeliveryEvidenceGuardOptions = {
   enforcementMode?: DeliveryEvidenceEnforcementMode;
+  resolvePolicyContext?: (task: TaskEntity) => EvaluateDeliveryEvidenceOptions | undefined;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -321,6 +329,31 @@ function evaluateEvidenceBlob(
   };
 }
 
+function actualEvidenceMode(raw: unknown): string | null {
+  if (!isRecord(raw)) {
+    return null;
+  }
+  if (raw.schemaVersion === 1) {
+    return "v1-github-pr";
+  }
+  return nonEmptyString(raw.mode) ? raw.mode.trim() : null;
+}
+
+function policyViolationFields(
+  options: EvaluateDeliveryEvidenceOptions | undefined,
+  actualMode: string | null
+): Pick<
+  DeliveryEvidenceViolation,
+  "requiredEvidenceMode" | "actualEvidenceMode" | "policyProfile" | "policyWarnings"
+> {
+  return {
+    requiredEvidenceMode: options?.requiredEvidenceMode ?? null,
+    actualEvidenceMode: actualMode,
+    policyProfile: options?.policyProfile ?? null,
+    policyWarnings: options?.policyWarnings ? [...options.policyWarnings] : []
+  };
+}
+
 export function evaluateDeliveryEvidence(
   task: TaskEntity,
   options?: EvaluateDeliveryEvidenceOptions
@@ -362,7 +395,8 @@ export function evaluateDeliveryEvidence(
           phaseKey: inferTaskPhaseKey(task),
           code: bad.code,
           message: violationMessageForCode(bad.code),
-          missingFields: bad.missingFields
+          missingFields: bad.missingFields,
+          ...policyViolationFields(options, actualEvidenceMode(evidenceRaw))
         }
       ]
     };
@@ -391,7 +425,8 @@ export function evaluateDeliveryEvidence(
         code: "delivery-evidence-missing",
         message:
           "Phase delivery completion requires metadata.deliveryEvidence or metadata.deliveryWaiver.",
-        missingFields: [...[DELIVERY_EVIDENCE_METADATA_KEY], ...waiverMissing]
+        missingFields: [...[DELIVERY_EVIDENCE_METADATA_KEY], ...waiverMissing],
+        ...policyViolationFields(options, null)
       }
     ]
   };
@@ -401,8 +436,10 @@ export function buildPhaseDeliveryPreflight(args: {
   tasks: TaskEntity[];
   phaseKey?: string | null;
   includeInProgress?: boolean;
-  /** When set, constrains acceptable v2 evidence modes (policy-aware preflight). */
+  /** When set, constrains acceptable v2 evidence modes (legacy policy-aware preflight). */
   allowedEvidenceModesByTaskId?: Record<string, readonly string[]>;
+  /** Preferred policy-aware preflight context keyed by task id. */
+  policyContextByTaskId?: Record<string, EvaluateDeliveryEvidenceOptions>;
 }): {
   schemaVersion: 1;
   phaseKey: string | null;
@@ -422,8 +459,12 @@ export function buildPhaseDeliveryPreflight(args: {
   });
 
   const violations = checked.flatMap((task) => {
+    const policyContext = args.policyContextByTaskId?.[task.id];
     const allowed = args.allowedEvidenceModesByTaskId?.[task.id];
-    return evaluateDeliveryEvidence(task, allowed ? { allowedEvidenceModes: allowed } : undefined).violations;
+    return evaluateDeliveryEvidence(
+      task,
+      policyContext ?? (allowed ? { allowedEvidenceModes: allowed } : undefined)
+    ).violations;
   });
 
   return {
@@ -453,9 +494,6 @@ export function createDeliveryEvidenceGuard(
   options: DeliveryEvidenceGuardOptions & EvaluateDeliveryEvidenceOptions = {}
 ): TransitionGuard {
   const enforcementMode = options.enforcementMode ?? "advisory";
-  const evidenceOpts: EvaluateDeliveryEvidenceOptions = {
-    allowedEvidenceModes: options.allowedEvidenceModes
-  };
   return {
     name: "delivery-evidence",
     canTransition(
@@ -467,7 +505,14 @@ export function createDeliveryEvidenceGuard(
         return { allowed: true, guardName: "delivery-evidence" };
       }
 
-      const evaluation = evaluateDeliveryEvidence(task, evidenceOpts);
+      const policyContext = options.resolvePolicyContext?.(task);
+      const evaluation = evaluateDeliveryEvidence(task, {
+        allowedEvidenceModes: options.allowedEvidenceModes,
+        requiredEvidenceMode: options.requiredEvidenceMode,
+        policyProfile: options.policyProfile,
+        policyWarnings: options.policyWarnings,
+        ...policyContext
+      });
       if (evaluation.satisfied) {
         const code =
           evaluation.satisfiedBy === "waiver"

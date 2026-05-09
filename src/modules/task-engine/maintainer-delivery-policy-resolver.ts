@@ -1,5 +1,9 @@
 import { inferTaskPhaseKey } from "./phase-resolution.js";
 import type {
+  DeliveryEvidenceModeV2,
+  EvaluateDeliveryEvidenceOptions
+} from "./delivery-evidence.js";
+import type {
   MaintainerDeliveryOverride,
   MaintainerDeliveryPolicyConfig,
   MaintainerDeliveryProfile,
@@ -73,6 +77,30 @@ export type ResolvedMaintainerDeliveryPolicyV1 = {
   playbookCursorRulePath: string;
   machinePlaybooksPath: string;
 };
+
+export function deliveryEvidenceModesForMaintainerEvidenceKind(
+  evidenceKind: MaintainerDeliveryProfile["evidenceKind"]
+): DeliveryEvidenceModeV2[] | undefined {
+  if (evidenceKind === "github-pr") {
+    return ["github-pr"];
+  }
+  if (evidenceKind === "manual") {
+    return ["local-reviewed-merge", "direct-reviewed-merge", "external-review"];
+  }
+  return undefined;
+}
+
+export function buildDeliveryEvidencePolicyContext(input: {
+  resolvedPolicy: Pick<ResolvedMaintainerDeliveryPolicyV1, "evidenceMode" | "profileName">;
+  warnings?: readonly MaintainerDeliveryPolicyWarning[];
+}): EvaluateDeliveryEvidenceOptions {
+  return {
+    allowedEvidenceModes: deliveryEvidenceModesForMaintainerEvidenceKind(input.resolvedPolicy.evidenceMode),
+    requiredEvidenceMode: input.resolvedPolicy.evidenceMode,
+    policyProfile: input.resolvedPolicy.profileName,
+    policyWarnings: input.warnings?.map((warning) => `${warning.code}: ${warning.message}`) ?? []
+  };
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);

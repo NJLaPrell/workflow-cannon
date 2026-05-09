@@ -7,6 +7,10 @@ import {
   createDeliveryEvidenceGuard,
   readDeliveryEvidenceEnforcementMode
 } from "../delivery-evidence.js";
+import {
+  buildDeliveryEvidencePolicyContext,
+  resolveMaintainerDeliveryPolicy
+} from "../maintainer-delivery-policy-resolver.js";
 import { insertPhaseNoteInConnection } from "../phase-journal/phase-journal-store.js";
 import { resolveRunTransitionPhaseNotes } from "../phase-journal/phase-journal-run-transition-notes.js";
 import {
@@ -71,9 +75,18 @@ export async function runTransitionOnCommand(
     const deliveryEvidenceMode = readDeliveryEvidenceEnforcementMode(
       ctx.effectiveConfig as Record<string, unknown> | undefined
     );
+    const effectiveConfig = ctx.effectiveConfig as Record<string, unknown> | undefined;
     const service = new TransitionService(
       store,
-      [createDeliveryEvidenceGuard({ enforcementMode: deliveryEvidenceMode })],
+      [
+        createDeliveryEvidenceGuard({
+          enforcementMode: deliveryEvidenceMode,
+          resolvePolicyContext: (task) => {
+            const resolved = resolveMaintainerDeliveryPolicy({ effectiveConfig, task });
+            return buildDeliveryEvidencePolicyContext(resolved);
+          }
+        })
+      ],
       hookBus.isEnabled() ? hookBus : undefined
     );
     const expectedPlanningGeneration = readOptionalExpectedPlanningGeneration(
