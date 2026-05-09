@@ -1055,6 +1055,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       line-height: 1.35;
       margin: 6px 0 10px 0;
     }
+    .wc-status-counts-scope-note {
+      font-size: 10.5px;
+      line-height: 1.35;
+      margin: 8px 0 0 0;
+    }
     button.wc-rec-start-btn {
       margin-left: auto;
       padding: 2px 9px;

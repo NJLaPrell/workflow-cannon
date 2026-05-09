@@ -29,16 +29,16 @@ export function renderActiveFocusHtml(raw: string): string {
   return renderMarkdownBoldAfterEscape(escapeHtml(raw));
 }
 
-/** Muted copy: execution-queue rollups exclude `wishlist_intake` (kit semantics). */
+/** Muted copy: execution-queue rollups exclude `wishlist_intake` (kit semantics). Safe on Overview + Task Engine (Wishlist lives on Task Engine). */
 function renderExecutionReadyScopeFootnote(): string {
   return (
     '<p class="muted wc-ready-scope-note">' +
-    "<b>Note:</b> Ready counts exclude <code>wishlist_intake</code>; see <b>Wishlist</b> below or " +
-    "<code>wk run list-tasks</code>.</p>"
+    "<b>Note:</b> Ready / proposed rollups follow the kit <em>execution queue</em> — they omit <code>wishlist_intake</code> even when that row is ready. " +
+    "Use <b>Wishlist</b> on the <b>Task Engine</b> tab, or <code>wk run list-tasks</code> for the full store.</p>"
   );
 }
 
-/** ★ "Recommended Next" card — first ready task (execution preferred over improvement). */
+/** ★ "Recommended Next" card — first ready task (category from caller). */
 function renderRecommendedNextCard(
   item: unknown,
   category: "execution" | "improvement"
@@ -1652,6 +1652,10 @@ function renderStatusSectionHtml(d: Record<string, unknown>, ss: Record<string, 
     '<section class="dash-card" aria-label="Task counts">' +
     "<p><b>Task Counts</b></p>" +
     buildDashboardStateCountGridHtml(ss) +
+    '<p class="muted wc-status-counts-scope-note">' +
+    "<b>Note:</b> These totals reflect <code>stateSummary</code> (store-wide statuses). " +
+    "<b>Overview</b> pills and <b>Task Engine</b> queue sections use execution-queue rollups " +
+    "(same family as <code>getNextActions</code>) and exclude <code>wishlist_intake</code> from ready/proposed.</p>" +
     "</section>";
 
   return workspaceCard + agentCard + planningCard + countsCard;
