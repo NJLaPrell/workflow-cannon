@@ -82,6 +82,7 @@ const MUTATOR_COMMANDS = [
   "cae-create-registry-version",
   "cae-clone-registry-version",
   "cae-activate-registry-version",
+  "cae-activate-registry-checkpoint",
   "cae-delete-registry-version",
   "cae-rollback-registry-version"
 ];
@@ -1469,3 +1470,85 @@ test("cae-compare-registry-versions: unknown toVersionId", async () => {
   assert.equal(r.ok, false);
   assert.equal(r.code, "cae-registry-version-not-found");
 });
+
+test("cae-activate-registry-checkpoint: digest mismatch then bypass", async () => {
+  const ws = await mkdtemp(path.join(os.tmpdir(), "wk-cae-act-cp-"));
+  await cp(path.join(root, ".ai"), path.join(ws, ".ai"), { recursive: true });
+  const dbDir = path.join(ws, ".workspace-kit", "tasks");
+  await mkdir(dbDir, { recursive: true });
+  const dbPath = path.join(dbDir, "workspace-kit.db");
+  const db = new Database(dbPath);
+  prepareKitSqliteDatabase(db);
+  db.close();
+
+  const versionId = "cae.reg.cp.activate";
+  const imp = await contextActivationModule.onCommand(
+    {
+      name: "cae-import-json-registry",
+      args: {
+        schemaVersion: 1,
+        versionId,
+        actor: "importer",
+        checkpointLabel: "L1",
+        policyApproval: { confirmed: true, rationale: "seed with checkpoint" }
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(imp.ok, true);
+  const cpId = imp.data.checkpointId;
+  assert.equal(typeof cpId, "number");
+
+  const gv = await contextActivationModule.onCommand(
+    {
+      name: "cae-get-registry-version",
+      args: { schemaVersion: 1, versionId, includeRows: true }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(gv.ok, true);
+  const aid = String(gv.data.artifactRows[0].artifact_id);
+
+  const upd = await contextActivationModule.onCommand(
+    {
+      name: "cae-update-artifact",
+      args: {
+        schemaVersion: 1,
+        actor: "mutator",
+        artifactId: aid,
+        artifact: { title: "changed-for-digest-test" },
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(upd.ok, true);
+
+  const bad = await contextActivationModule.onCommand(
+    {
+      name: "cae-activate-registry-checkpoint",
+      args: { schemaVersion: 1, actor: "op", checkpointId: cpId, ...appr() }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(bad.ok, false);
+  assert.equal(bad.code, "cae-checkpoint-digest-mismatch");
+
+  const ok = await contextActivationModule.onCommand(
+    {
+      name: "cae-activate-registry-checkpoint",
+      args: {
+        schemaVersion: 1,
+        actor: "op",
+        checkpointId: cpId,
+        verifyCheckpointDigest: false,
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(ok.ok, true);
+  assert.equal(ok.data.versionId, versionId);
+  assert.equal(ok.data.checkpointId, cpId);
+});
+

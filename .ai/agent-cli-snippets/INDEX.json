@@ -78,6 +78,11 @@
       "moduleId": "context-activation"
     },
     {
+      "name": "cae-activate-registry-checkpoint",
+      "path": ".ai/agent-cli-snippets/by-command/cae-activate-registry-checkpoint.json",
+      "moduleId": "context-activation"
+    },
+    {
       "name": "cae-authoring-summary",
       "path": ".ai/agent-cli-snippets/by-command/cae-authoring-summary.json",
       "moduleId": "context-activation"

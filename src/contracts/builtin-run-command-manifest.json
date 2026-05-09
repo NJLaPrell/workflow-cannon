@@ -1199,6 +1199,13 @@
   },
   {
     "moduleId": "context-activation",
+    "name": "cae-activate-registry-checkpoint",
+    "file": "cae-activate-registry-checkpoint.md",
+    "description": "Activate the registry version for a named checkpoint; optional digest guard vs checkpoint record.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
     "name": "cae-delete-registry-version",
     "file": "cae-delete-registry-version.md",
     "description": "Delete a non-active CAE registry version and its rows (CASCADE).",

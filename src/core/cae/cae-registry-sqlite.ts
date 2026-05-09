@@ -16,6 +16,7 @@ import { prepareKitSqliteDatabase } from "../state/kit-sqlite/planning-sqlite-ke
 import {
   caeRegistryTablesReady,
   getActiveCaeRegistryVersionId,
+  getCaeRegistryVersionMeta,
   insertCaeRegistryActivationRow,
   insertCaeRegistryArtifactRow,
   listCaeRegistryActivationsForVersion,
@@ -161,7 +162,7 @@ function dbActivationToRegistryRow(row: {
 export function loadCaeRegistryFromSqliteDb(
   db: SqliteDatabase,
   workspaceRoot: string,
-  options?: { verifyArtifactPaths?: boolean }
+  options?: { verifyArtifactPaths?: boolean; versionId?: string }
 ): LoadCaeRegistryResult {
   if (!caeRegistryTablesReady(db)) {
     return {
@@ -170,12 +171,20 @@ export function loadCaeRegistryFromSqliteDb(
       message: "Kit SQLite schema does not include CAE registry tables (upgrade workspace-kit)"
     };
   }
-  const versionId = getActiveCaeRegistryVersionId(db);
+  const explicit = typeof options?.versionId === "string" ? options.versionId.trim() : "";
+  const versionId = explicit.length > 0 ? explicit : getActiveCaeRegistryVersionId(db);
   if (!versionId) {
     return {
       ok: false,
       code: "cae-registry-sqlite-no-active-version",
       message: "No active CAE registry version in SQLite (import or activate a version)"
+    };
+  }
+  if (explicit.length > 0 && !getCaeRegistryVersionMeta(db, versionId)) {
+    return {
+      ok: false,
+      code: "cae-registry-version-not-found",
+      message: `Unknown versionId '${versionId}'`
     };
   }
 
