@@ -229,7 +229,17 @@ function validateMaintainerDeliveryConfig(value: unknown, label: string): void {
       }
       const profile = profileValue as Record<string, unknown>;
       for (const key of Object.keys(profile)) {
-        if (key !== "requiresPhaseBranch" && key !== "branchPattern" && key !== "review" && key !== "evidenceKind") {
+        if (
+          key !== "requiresPhaseBranch" &&
+          key !== "branchPattern" &&
+          key !== "taskBranchPattern" &&
+          key !== "releaseTagPattern" &&
+          key !== "review" &&
+          key !== "evidenceKind" &&
+          key !== "prProvider" &&
+          key !== "mergeStrategy" &&
+          key !== "phaseToMainMode"
+        ) {
           throw new Error(`config-invalid(${label}): unknown maintainerDelivery.profiles.${profileName}.${key}`);
         }
       }
@@ -240,6 +250,29 @@ function validateMaintainerDeliveryConfig(value: unknown, label: string): void {
         if (typeof profile.branchPattern !== "string" || !profile.branchPattern.includes("{phaseKey}")) {
           throw new Error(`config-constraint(maintainerDelivery.profiles.${profileName}.branchPattern): must be a string containing {phaseKey}`);
         }
+      }
+      const branchLikeKeys = ["taskBranchPattern", "releaseTagPattern"] as const;
+      for (const bk of branchLikeKeys) {
+        const v = profile[bk];
+        if (v === undefined) continue;
+        if (typeof v !== "string" || v.trim().length === 0) {
+          throw new Error(`config-type-error(maintainerDelivery.profiles.${profileName}.${bk}): expected non-empty string`);
+        }
+      }
+      if (profile.prProvider !== undefined && profile.prProvider !== "github") {
+        throw new Error(`config-constraint(maintainerDelivery.profiles.${profileName}.prProvider): unsupported value`);
+      }
+      if (
+        profile.mergeStrategy !== undefined &&
+        !["merge", "squash", "rebase"].includes(String(profile.mergeStrategy))
+      ) {
+        throw new Error(`config-constraint(maintainerDelivery.profiles.${profileName}.mergeStrategy): value not in allowed set`);
+      }
+      if (
+        profile.phaseToMainMode !== undefined &&
+        !["phase-closeout", "direct"].includes(String(profile.phaseToMainMode))
+      ) {
+        throw new Error(`config-constraint(maintainerDelivery.profiles.${profileName}.phaseToMainMode): value not in allowed set`);
       }
       if (profile.review !== undefined && !["github-pr", "manual", "none"].includes(String(profile.review))) {
         throw new Error(`config-constraint(maintainerDelivery.profiles.${profileName}.review): value not in allowed set`);

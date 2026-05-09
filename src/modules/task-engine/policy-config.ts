@@ -4,9 +4,22 @@ export type MaintainerDeliveryProfileName = "github-pr" | string;
 
 export type MaintainerDeliveryProfile = {
   requiresPhaseBranch: boolean;
+  /**
+   * Phase integration branch pattern; must include `{phaseKey}` (validated in config-metadata).
+   * Resolver output also labels this `phaseBranchPattern` for agent clarity.
+   */
   branchPattern: string;
+  /** Task branch pattern; tokens: `taskId`, `slug`, `phaseKey`, `moduleId`, `version`. */
+  taskBranchPattern?: string;
+  /** Optional release tag pattern (same token set). */
+  releaseTagPattern?: string;
   review: "github-pr" | "manual" | "none";
   evidenceKind: "github-pr" | "manual" | "waiver";
+  /** PR host for tooling hints; default github for github-pr review. */
+  prProvider?: "github";
+  mergeStrategy?: "merge" | "squash" | "rebase";
+  /** How phase work lands on main — informational for agents (phase closeout vs direct). */
+  phaseToMainMode?: "phase-closeout" | "direct";
 };
 
 export type MaintainerDeliveryOverride = {
@@ -57,8 +70,13 @@ export const DEFAULT_MAINTAINER_DELIVERY_POLICY: MaintainerDeliveryPolicyConfig 
     "github-pr": {
       requiresPhaseBranch: true,
       branchPattern: "release/phase-{phaseKey}",
+      taskBranchPattern: "feature/{taskId}-{slug}",
+      releaseTagPattern: "v{version}",
       review: "github-pr",
-      evidenceKind: "github-pr"
+      evidenceKind: "github-pr",
+      prProvider: "github",
+      mergeStrategy: "merge",
+      phaseToMainMode: "phase-closeout"
     }
   },
   moduleOverrides: {}

@@ -123,8 +123,13 @@ export const KIT_CONFIG_DEFAULTS: Record<string, unknown> = {
       "github-pr": {
         requiresPhaseBranch: true,
         branchPattern: "release/phase-{phaseKey}",
+        taskBranchPattern: "feature/{taskId}-{slug}",
+        releaseTagPattern: "v{version}",
         review: "github-pr",
-        evidenceKind: "github-pr"
+        evidenceKind: "github-pr",
+        prProvider: "github",
+        mergeStrategy: "merge",
+        phaseToMainMode: "phase-closeout"
       }
     },
     moduleOverrides: {} as Record<string, unknown>
