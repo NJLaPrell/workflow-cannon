@@ -1,0 +1,37 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "cae-import-guidance-pack-dry-run",
+  "schema": {
+    "type": "object",
+    "additionalProperties": true,
+    "description": "Permissive fallback args schema for 'cae-import-guidance-pack-dry-run'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+  },
+  "schemaSource": "manifest-permissive-fallback",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Dry-run against a saved pack file",
+      "argv": "workspace-kit run cae-import-guidance-pack-dry-run '{\"packRelativePath\":\".workspace-kit/tmp/guidance-pack.json\"}'"
+    }
+  ],
+  "instructionPath": "src/modules/context-activation/instructions/cae-import-guidance-pack-dry-run.md",
+  "moduleId": "context-activation",
+  "description": "Dry-run import of a guidance pack JSON against the active registry (no writes).",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": null
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

@@ -1,0 +1,37 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "cae-reconcile-defaults",
+  "schema": {
+    "type": "object",
+    "additionalProperties": true,
+    "description": "Permissive fallback args schema for 'cae-reconcile-defaults'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+  },
+  "schemaSource": "manifest-permissive-fallback",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run cae-reconcile-defaults '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/context-activation/instructions/cae-reconcile-defaults.md",
+  "moduleId": "context-activation",
+  "description": "Compare package CAE registry defaults vs active SQLite registry (hidden defaults, workspace clone hints).",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": null
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

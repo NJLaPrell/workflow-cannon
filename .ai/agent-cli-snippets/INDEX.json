@@ -83,6 +83,11 @@
       "moduleId": "context-activation"
     },
     {
+      "name": "cae-archive-retired-workspace-artifact-file",
+      "path": ".ai/agent-cli-snippets/by-command/cae-archive-retired-workspace-artifact-file.json",
+      "moduleId": "context-activation"
+    },
+    {
       "name": "cae-authoring-summary",
       "path": ".ai/agent-cli-snippets/by-command/cae-authoring-summary.json",
       "moduleId": "context-activation"
@@ -143,6 +148,11 @@
       "moduleId": "context-activation"
     },
     {
+      "name": "cae-duplicate-artifact-to-workspace",
+      "path": ".ai/agent-cli-snippets/by-command/cae-duplicate-artifact-to-workspace.json",
+      "moduleId": "context-activation"
+    },
+    {
       "name": "cae-duplicate-default-artifact",
       "path": ".ai/agent-cli-snippets/by-command/cae-duplicate-default-artifact.json",
       "moduleId": "context-activation"
@@ -155,6 +165,11 @@
     {
       "name": "cae-explain",
       "path": ".ai/agent-cli-snippets/by-command/cae-explain.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-export-guidance-pack",
+      "path": ".ai/agent-cli-snippets/by-command/cae-export-guidance-pack.json",
       "moduleId": "context-activation"
     },
     {
@@ -188,6 +203,16 @@
       "moduleId": "context-activation"
     },
     {
+      "name": "cae-hard-delete-retired-workspace-artifact-file",
+      "path": ".ai/agent-cli-snippets/by-command/cae-hard-delete-retired-workspace-artifact-file.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-import-guidance-pack-dry-run",
+      "path": ".ai/agent-cli-snippets/by-command/cae-import-guidance-pack-dry-run.json",
+      "moduleId": "context-activation"
+    },
+    {
       "name": "cae-import-json-registry",
       "path": ".ai/agent-cli-snippets/by-command/cae-import-json-registry.json",
       "moduleId": "context-activation"
@@ -213,8 +238,18 @@
       "moduleId": "context-activation"
     },
     {
+      "name": "cae-list-workspace-artifact-templates",
+      "path": ".ai/agent-cli-snippets/by-command/cae-list-workspace-artifact-templates.json",
+      "moduleId": "context-activation"
+    },
+    {
       "name": "cae-recent-traces",
       "path": ".ai/agent-cli-snippets/by-command/cae-recent-traces.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-reconcile-defaults",
+      "path": ".ai/agent-cli-snippets/by-command/cae-reconcile-defaults.json",
       "moduleId": "context-activation"
     },
     {
@@ -245,6 +280,11 @@
     {
       "name": "cae-rollback-registry-version",
       "path": ".ai/agent-cli-snippets/by-command/cae-rollback-registry-version.json",
+      "moduleId": "context-activation"
+    },
+    {
+      "name": "cae-scan-workspace-artifact-integrity",
+      "path": ".ai/agent-cli-snippets/by-command/cae-scan-workspace-artifact-integrity.json",
       "moduleId": "context-activation"
     },
     {

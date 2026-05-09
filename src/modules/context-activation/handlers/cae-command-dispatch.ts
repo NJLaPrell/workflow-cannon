@@ -59,6 +59,7 @@ import {
   type GovernanceEvidenceInputV1
 } from "../../../core/cae/guidance-enforcement-readiness.js";
 import { buildCaeAuthoringClassificationSnapshot } from "../../../core/cae/cae-authoring-source-classification.js";
+import { listWorkspaceArtifactTemplatesV1 } from "../../../core/cae/workspace-artifact-templates.js";
 import {
   prependMaintainerDeliveryLoopGuidanceCard,
   prependMaintainerDeliveryPolicyGuidanceCard
@@ -823,6 +824,12 @@ function buildAuthoringSummaryData(
       denialReason: mutationCapability.denialReason,
       issues
     },
+    workspaceArtifactMarkdownTemplates: listWorkspaceArtifactTemplatesV1().map((t) => ({
+      id: t.id,
+      artifactType: t.artifactType,
+      title: t.title,
+      contentMarkdown: t.contentMarkdown
+    })),
     health
   };
 }

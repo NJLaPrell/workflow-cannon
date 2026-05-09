@@ -1106,6 +1106,13 @@
   },
   {
     "moduleId": "context-activation",
+    "name": "cae-list-workspace-artifact-templates",
+    "file": "cae-list-workspace-artifact-templates.md",
+    "description": "List built-in starter markdown templates for workspace CAE artifacts.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
     "name": "cae-recent-traces",
     "file": "cae-recent-traces.md",
     "description": "List recent durable CAE trace summaries for UI trace browsing.",
@@ -1178,6 +1185,34 @@
   },
   {
     "moduleId": "context-activation",
+    "name": "cae-scan-workspace-artifact-integrity",
+    "file": "cae-scan-workspace-artifact-integrity.md",
+    "description": "Scan workspace CAE markdown under `.ai/cae/artifacts/<type>/` vs registry paths (orphan files + broken non-retired refs).",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-reconcile-defaults",
+    "file": "cae-reconcile-defaults.md",
+    "description": "Compare package CAE registry defaults vs active SQLite registry (hidden defaults, workspace clone hints).",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-export-guidance-pack",
+    "file": "cae-export-guidance-pack.md",
+    "description": "Export active CAE registry artifacts + activations as a portable guidance pack JSON (read-only).",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-import-guidance-pack-dry-run",
+    "file": "cae-import-guidance-pack-dry-run.md",
+    "description": "Dry-run import of a guidance pack JSON against the active registry (no writes).",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
     "name": "cae-create-registry-version",
     "file": "cae-create-registry-version.md",
     "description": "Create an empty CAE registry version row (optional activate). CAE governance + adminMutations.",
@@ -1234,6 +1269,13 @@
   },
   {
     "moduleId": "context-activation",
+    "name": "cae-duplicate-artifact-to-workspace",
+    "file": "cae-duplicate-artifact-to-workspace.md",
+    "description": "Copy a default or workspace CAE artifact into a new editable workspace-owned artifact row and file.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
     "name": "cae-duplicate-default-artifact",
     "file": "cae-duplicate-default-artifact.md",
     "description": "Copy a shipped default artifact into a new editable workspace-owned artifact row and file.",
@@ -1251,6 +1293,20 @@
     "name": "cae-update-workspace-artifact",
     "file": "cae-update-workspace-artifact.md",
     "description": "Update a workspace-owned artifact row and markdown file while surfacing impacted activation refs.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-archive-retired-workspace-artifact-file",
+    "file": "cae-archive-retired-workspace-artifact-file.md",
+    "description": "Move a retired workspace artifact markdown file into `.ai/cae/artifacts/_archive/…` and update the registry path.",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
+    "name": "cae-hard-delete-retired-workspace-artifact-file",
+    "file": "cae-hard-delete-retired-workspace-artifact-file.md",
+    "description": "Permanently remove backing markdown for a retired workspace artifact when confirmAdvancedHardDelete is true; writes a tombstone stub for registry integrity.",
     "policySensitivity": "non-sensitive"
   },
   {

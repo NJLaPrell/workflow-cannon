@@ -6,6 +6,12 @@ agentCapsule|v=1|command=cae-update-workspace-artifact|module=context-activation
 
 Update a workspace-owned artifact row and its backing markdown file in one mutation.
 
+## Rename or move (safe path change)
+
+To **rename** the markdown file (new stem under the same artifact type directory) or **move** across supported workspace artifact types, call this command with a new **`slug`** and/or **`artifactType`** (via **`artifact.artifactType`** or top-level **`artifactType`**). The implementation writes the destination file first, commits the registry `path` update in SQLite, then removes the previous file — activation references stay keyed by **`artifactId`**, not by path.
+
+For **retired** rows only, use **`cae-archive-retired-workspace-artifact-file`** to park markdown under **`.ai/cae/artifacts/_archive/…`**, or **`cae-hard-delete-retired-workspace-artifact-file`** with **`confirmAdvancedHardDelete: true`** for irreversible removal (tombstone stub).
+
 ## Usage
 
 ```
@@ -31,6 +37,8 @@ workspace-kit run cae-update-workspace-artifact '{"schemaVersion":1,"actor":"ope
 | `note` | string | no | Audit note. |
 | `expectedActiveVersionId` | string | no | Optional optimistic-concurrency token from the last authoring read. Mutations fail with **`cae-stale-state`** when the active version changed. |
 | `expectedRegistryDigest` | string | no | Optional registry digest from the last authoring read. Mutations fail with **`cae-stale-state`** when the active registry content changed. |
+
+The effective markdown body after the merge (new `contentMarkdown` or existing file contents) must pass the same structural checks as **`cae-create-workspace-artifact`**: non-empty, at least one **H1**, and when a fragment is set on the ref, a matching `## <fragment>` heading. Failures return **`cae-workspace-artifact-markdown-*`** codes.
 
 ## Returns
 

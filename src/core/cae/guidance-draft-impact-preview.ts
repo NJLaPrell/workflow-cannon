@@ -167,7 +167,17 @@ export function coerceDraftGuidanceRuleInput(
     return { ok: false, code: "invalid-args", message: "draftRule.priority must be a number between 0 and 9999." };
   }
   if (!r.scopeDraft || typeof r.scopeDraft !== "object" || Array.isArray(r.scopeDraft)) {
-    return { ok: false, code: "invalid-args", message: "draftRule.scopeDraft must be a Guidance scope preset object." };
+    return { ok: false, code: "invalid-args", message: "draftRule.scopeDraft must be a Guidance scope draft object." };
+  }
+  const scopeRec = r.scopeDraft as Record<string, unknown>;
+  const hasPreset = typeof scopeRec.preset === "string" && scopeRec.preset.trim().length > 0;
+  const hasConditions = Array.isArray(scopeRec.conditions) && scopeRec.conditions.length > 0;
+  if (!hasPreset && !hasConditions) {
+    return {
+      ok: false,
+      code: "invalid-args",
+      message: "draftRule.scopeDraft must include preset or a non-empty conditions array (compound scope)."
+    };
   }
 
   let acknowledgement: DraftGuidanceRuleInputV1["acknowledgement"];

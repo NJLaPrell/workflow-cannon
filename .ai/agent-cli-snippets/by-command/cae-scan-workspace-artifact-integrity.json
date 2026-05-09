@@ -1,0 +1,37 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "cae-scan-workspace-artifact-integrity",
+  "schema": {
+    "type": "object",
+    "additionalProperties": true,
+    "description": "Permissive fallback args schema for 'cae-scan-workspace-artifact-integrity'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+  },
+  "schemaSource": "manifest-permissive-fallback",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Scan active version",
+      "argv": "workspace-kit run cae-scan-workspace-artifact-integrity '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/context-activation/instructions/cae-scan-workspace-artifact-integrity.md",
+  "moduleId": "context-activation",
+  "description": "Scan workspace CAE markdown under `.ai/cae/artifacts/<type>/` vs registry paths (orphan files + broken non-retired refs).",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": null
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

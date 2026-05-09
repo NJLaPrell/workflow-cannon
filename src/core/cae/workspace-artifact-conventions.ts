@@ -13,6 +13,9 @@ export const CAE_DEFAULT_ARTIFACT_ID_PREFIX = "cae.";
 export const CAE_WORKSPACE_ARTIFACT_ID_PREFIX = "workspace.";
 export const CAE_WORKSPACE_ARTIFACT_ROOT = ".ai/cae/artifacts";
 
+/** Retired workspace markdown files archived under the artifacts tree (not loaded as active Guidance). */
+export const CAE_WORKSPACE_ARTIFACT_ARCHIVE_ROOT = `${CAE_WORKSPACE_ARTIFACT_ROOT}/_archive`;
+
 export const CAE_WORKSPACE_ARTIFACT_TYPES = [
   "playbook",
   "runbook",
@@ -111,6 +114,33 @@ export function classifyCaeRegistryIdNamespace(id: string): CaeArtifactIdNamespa
 
 export function classifyCaeArtifactIdNamespace(artifactId: string): CaeArtifactIdNamespace {
   return classifyCaeRegistryIdNamespace(artifactId);
+}
+
+/** Relative path for an archived copy of a workspace artifact markdown file (under `_archive/<typeDir>/`). */
+export function buildCaeWorkspaceArtifactArchiveRelativePath(
+  artifactType: string,
+  slug: string
+): CaeConventionResult<string> {
+  if (!isCaeWorkspaceArtifactType(artifactType)) {
+    return {
+      ok: false,
+      code: "cae-workspace-artifact-type-invalid",
+      message: `Unsupported CAE workspace artifact type: ${artifactType}`
+    };
+  }
+  const validSlug = validateCaeWorkspaceArtifactSlug(slug);
+  if (!validSlug.ok) return validSlug;
+  const sub = CAE_WORKSPACE_ARTIFACT_DIRECTORIES[artifactType];
+  return {
+    ok: true,
+    value: `${CAE_WORKSPACE_ARTIFACT_ARCHIVE_ROOT}/${sub}/${validSlug.value}.md`
+  };
+}
+
+/** Tombstone markdown path for a hard-deleted retired workspace artifact (audit-friendly stub file). */
+export function buildCaeWorkspaceArtifactHardDeleteTombstoneRelativePath(artifactId: string): string {
+  const normalized = artifactId.trim().replace(/[^a-z0-9._-]+/gi, "_");
+  return `${CAE_WORKSPACE_ARTIFACT_ARCHIVE_ROOT}/_tombstones/${normalized}.md`;
 }
 
 export function buildCaeWorkspaceArtifactPath(

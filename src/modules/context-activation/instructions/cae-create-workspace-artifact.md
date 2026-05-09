@@ -25,11 +25,13 @@ workspace-kit run cae-create-workspace-artifact '{"schemaVersion":1,"actor":"ope
 | `slug` | string | no | File stem under `.ai/cae/artifacts/<type>/`. Defaults to the artifact id suffix after **`workspace.`**. |
 | `contentMarkdown` | string | no | Markdown body written to disk. Defaults to **`# <title>`** when omitted. |
 | `tags` | array | no | Optional non-empty string tags copied into registry metadata. |
-| `fragment` | string | no | Optional markdown fragment stored on the artifact ref. |
+| `fragment` | string | no | Optional markdown fragment stored on the artifact ref. When set, `contentMarkdown` must include a matching `## <fragment>` section heading. |
 | `versionId` | string | no | Defaults to active version. |
 | `note` | string | no | Audit note. |
 | `expectedActiveVersionId` | string | no | Optional optimistic-concurrency token from the last authoring read. Mutations fail with **`cae-stale-state`** when the active version changed. |
 | `expectedRegistryDigest` | string | no | Optional registry digest from the last authoring read. Mutations fail with **`cae-stale-state`** when the active registry content changed. |
+
+When `contentMarkdown` is provided (or defaulted to `# <title>`), it must be non-empty, include at least one markdown **H1** line (`# …`), and satisfy the fragment rule above. Failures return **`cae-workspace-artifact-markdown-*`** codes.
 
 ## Returns
 

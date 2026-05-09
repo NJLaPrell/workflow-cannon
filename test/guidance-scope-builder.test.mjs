@@ -41,7 +41,8 @@ describe("guidance-scope-builder (T1000)", () => {
       "phase",
       "task",
       "taskTag",
-      "advancedCommand"
+      "advancedCommand",
+      "compound"
     ]);
     const listed = GUIDANCE_SCOPE_PRESETS.map((d) => d.preset);
     assert.deepEqual(new Set(listed), draftPresets);
@@ -124,6 +125,28 @@ describe("guidance-scope-builder (T1000)", () => {
     const tags = buildGuidanceScopeDraft({ preset: "taskTag", values: ["a", "b"], match: "all" });
     assert.equal(tags.ok, true);
     validateScope(tags.scope.conditions);
+  });
+
+  it("compound AND scope builds from conditions array", () => {
+    const r = buildGuidanceScopeDraft({
+      conditions: [
+        { kind: "commandName", match: "exact", value: "run-task" },
+        { kind: "phaseKey", value: "84" }
+      ]
+    });
+    assert.equal(r.ok, true);
+    assert.equal(r.preset, "compound");
+    assert.ok(r.summary.includes("Compound"));
+    validateScope(r.scope.conditions);
+    assert.equal(r.scope.conditions.length, 2);
+  });
+
+  it("rejects compound when always is combined with other conditions", () => {
+    const r = buildGuidanceScopeDraft({
+      conditions: [{ kind: "always" }, { kind: "phaseKey", value: "1" }]
+    });
+    assert.equal(r.ok, false);
+    assert.ok(r.errors.some((e) => e.code === "scope-always-exclusive"));
   });
 
   it("advancedCommand supports optional commandArgEquals", () => {

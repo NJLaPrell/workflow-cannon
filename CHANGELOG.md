@@ -8,4 +8,4 @@ This root file is intentionally pointer-only to avoid split release history.
 
 - See `docs/maintainers/CHANGELOG.md` for all release notes, migration notes, and historical entries.
 
-Latest release: **v0.81.0** (Phase 80/81: agent presentation policy and WC Agent status workflow; see canonical changelog).
+Latest release: **v0.82.0** (Phase 84: CAE guidance authoring and workspace artifact lifecycle; see canonical changelog).
