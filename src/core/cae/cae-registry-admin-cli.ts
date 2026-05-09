@@ -4,7 +4,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import Database from "better-sqlite3";
@@ -33,6 +33,9 @@ import { caeRegistryMutationGateError } from "./cae-registry-mutation-gate.js";
 import { loadCaeRegistryFromSqliteDb } from "./cae-registry-sqlite.js";
 import {
   CAE_WORKSPACE_ARTIFACT_ID_PREFIX,
+  CAE_WORKSPACE_ARTIFACT_ROOT,
+  buildCaeWorkspaceArtifactArchiveRelativePath,
+  buildCaeWorkspaceArtifactHardDeleteTombstoneRelativePath,
   buildCaeWorkspaceArtifactPath,
   classifyCaeArtifactIdNamespace,
   validateCaeWorkspaceArtifactId
@@ -258,6 +261,31 @@ function workspaceArtifactMarkdown(title: string, contentMarkdown: string | null
   return `# ${title}\n`;
 }
 
+function allocateUniqueRelativeMarkdownPath(workspaceRoot: string, preferredRelative: string): string {
+  if (!existsSync(path.join(workspaceRoot, preferredRelative))) return preferredRelative;
+  const base = preferredRelative.replace(/\.md$/i, "");
+  for (let i = 2; i < 10_000; i++) {
+    const candidate = `${base}-${i}.md`;
+    if (!existsSync(path.join(workspaceRoot, candidate))) return candidate;
+  }
+  return preferredRelative;
+}
+
+function workspaceSlugFromArtifactRow(relPath: string, metadataJson: string, artifactId: string): string {
+  try {
+    const parsed = JSON.parse(metadataJson || "{}") as unknown;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      const slug = (parsed as Record<string, unknown>).slug;
+      const s = readOptionalNonEmptyString(slug);
+      if (s) return s;
+    }
+  } catch {
+    // fall through
+  }
+  const stem = path.basename(relPath, path.extname(relPath));
+  return stem.length > 0 ? stem : workspaceArtifactDefaultSlug(artifactId);
+}
+
 function collectArtifactReferencingActivationIds(db: SqliteDb, versionId: string, artifactId: string): string[] {
   const rows = db
     .prepare(
@@ -372,6 +400,8 @@ export function tryHandleCaeRegistryAdminCommand(
     "cae-duplicate-default-artifact",
     "cae-update-artifact",
     "cae-update-workspace-artifact",
+    "cae-archive-retired-workspace-artifact-file",
+    "cae-hard-delete-retired-workspace-artifact-file",
     "cae-retire-artifact",
     "cae-retire-workspace-artifact",
     "cae-create-activation",
@@ -1560,6 +1590,266 @@ export function tryHandleCaeRegistryAdminCommand(
           impactedActivationIds,
           warnings
         }
+      };
+    }
+
+    if (name === "cae-archive-retired-workspace-artifact-file") {
+      const v = resolveVersionId(db, args.versionId);
+      if (typeof v !== "string") return v;
+      const artifactId = typeof args.artifactId === "string" ? args.artifactId.trim() : "";
+      if (!artifactId) {
+        return { ok: false, code: "invalid-args", message: "artifactId is required" };
+      }
+      if (classifyCaeArtifactIdNamespace(artifactId) !== "workspace") {
+        return {
+          ok: false,
+          code: "cae-workspace-artifact-id-invalid",
+          message: "Workspace artifact ids must start with 'workspace.' and follow the CAE registry id pattern"
+        };
+      }
+
+      const cur = db
+        .prepare(
+          `SELECT artifact_id, artifact_type, path, title, description, metadata_json, retired_at
+           FROM cae_registry_artifacts WHERE version_id = ? AND artifact_id = ?`
+        )
+        .get(v, artifactId) as
+        | {
+            artifact_type: string;
+            path: string;
+            title: string | null;
+            description: string | null;
+            metadata_json: string;
+            retired_at: string | null;
+          }
+        | undefined;
+      if (!cur) {
+        return {
+          ok: false,
+          code: "cae-artifact-not-found",
+          message: `Unknown artifactId '${artifactId}' for version`
+        };
+      }
+      if (!cur.retired_at) {
+        return {
+          ok: false,
+          code: "cae-archive-requires-retired-artifact",
+          message: "archive is allowed only after cae-retire-workspace-artifact (row must be retired)"
+        };
+      }
+      const rel = cur.path.trim();
+      if (!rel.startsWith(`${CAE_WORKSPACE_ARTIFACT_ROOT}/`) || rel.includes("/_archive/")) {
+        return {
+          ok: false,
+          code: "cae-archive-invalid-source-path",
+          message: "Artifact path must be under workspace CAE artifacts and not already archived"
+        };
+      }
+      const fromAbs = path.join(workspacePath, rel);
+      if (!existsSync(fromAbs)) {
+        return {
+          ok: false,
+          code: "cae-workspace-artifact-file-missing",
+          message: `Workspace artifact file is missing at '${rel}'`
+        };
+      }
+
+      const slug = workspaceSlugFromArtifactRow(rel, cur.metadata_json, artifactId);
+      const archiveBase = buildCaeWorkspaceArtifactArchiveRelativePath(cur.artifact_type, slug);
+      if (!archiveBase.ok) {
+        return { ok: false, code: archiveBase.code, message: archiveBase.message };
+      }
+      const archiveRel = allocateUniqueRelativeMarkdownPath(workspacePath, archiveBase.value);
+      const toAbs = path.join(workspacePath, archiveRel);
+      mkdirSync(path.dirname(toAbs), { recursive: true });
+      renameSync(fromAbs, toAbs);
+
+      let metaObj: Record<string, unknown> = {};
+      try {
+        const parsed = JSON.parse(cur.metadata_json || "{}") as unknown;
+        metaObj =
+          parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : {};
+      } catch {
+        metaObj = {};
+      }
+      metaObj.archivedAt = new Date().toISOString();
+      metaObj.previousPath = rel;
+      metaObj.slug = slug;
+
+      let registryFailure: ModuleCommandResult | null = null;
+      const run = db.transaction(() => {
+        updateCaeRegistryArtifactFields(db, v, artifactId, {
+          path: archiveRel,
+          metadataJson: JSON.stringify(metaObj)
+        });
+        insertCaeRegistryMutationAudit(db, {
+          actor,
+          commandName: name,
+          versionId: v,
+          note: typeof args.note === "string" ? args.note : null,
+          payload: { artifactId, fromPath: rel, toPath: archiveRel }
+        });
+        registryFailure = postMutationRegistryCheck(db, workspacePath, true);
+        if (registryFailure) {
+          throw new Error("cae-archive-registry-check-failed");
+        }
+      });
+      try {
+        run();
+      } catch {
+        renameSync(toAbs, fromAbs);
+        if (registryFailure) return registryFailure;
+        throw new Error("cae-archive-workspace-artifact-file-failed");
+      }
+
+      return {
+        ok: true,
+        code: "cae-archive-retired-workspace-artifact-file-ok",
+        data: { schemaVersion: 1, versionId: v, artifactId, path: archiveRel }
+      };
+    }
+
+    if (name === "cae-hard-delete-retired-workspace-artifact-file") {
+      if (args.confirmAdvancedHardDelete !== true) {
+        return {
+          ok: false,
+          code: "cae-hard-delete-confirmation-required",
+          message:
+            "confirmAdvancedHardDelete must be true (this permanently removes backing markdown; a tombstone stub is written)"
+        };
+      }
+      const v = resolveVersionId(db, args.versionId);
+      if (typeof v !== "string") return v;
+      const artifactId = typeof args.artifactId === "string" ? args.artifactId.trim() : "";
+      if (!artifactId) {
+        return { ok: false, code: "invalid-args", message: "artifactId is required" };
+      }
+      if (classifyCaeArtifactIdNamespace(artifactId) !== "workspace") {
+        return {
+          ok: false,
+          code: "cae-workspace-artifact-id-invalid",
+          message: "Workspace artifact ids must start with 'workspace.' and follow the CAE registry id pattern"
+        };
+      }
+
+      const cur = db
+        .prepare(
+          `SELECT artifact_id, artifact_type, path, title, description, metadata_json, retired_at
+           FROM cae_registry_artifacts WHERE version_id = ? AND artifact_id = ?`
+        )
+        .get(v, artifactId) as
+        | {
+            artifact_type: string;
+            path: string;
+            title: string | null;
+            description: string | null;
+            metadata_json: string;
+            retired_at: string | null;
+          }
+        | undefined;
+      if (!cur) {
+        return {
+          ok: false,
+          code: "cae-artifact-not-found",
+          message: `Unknown artifactId '${artifactId}' for version`
+        };
+      }
+      if (!cur.retired_at) {
+        return {
+          ok: false,
+          code: "cae-hard-delete-requires-retired-artifact",
+          message: "Hard delete is allowed only for retired workspace artifact rows"
+        };
+      }
+      const rel = cur.path.trim();
+      if (!rel.startsWith(`${CAE_WORKSPACE_ARTIFACT_ROOT}/`)) {
+        return {
+          ok: false,
+          code: "cae-hard-delete-invalid-source-path",
+          message: "Artifact path must be under workspace CAE artifacts"
+        };
+      }
+      if (rel.includes("/_tombstones/")) {
+        return {
+          ok: false,
+          code: "cae-hard-delete-already-applied",
+          message: "This artifact path is already a tombstone stub from a prior hard delete"
+        };
+      }
+
+      let metaObj: Record<string, unknown> = {};
+      try {
+        const parsed = JSON.parse(cur.metadata_json || "{}") as unknown;
+        metaObj =
+          parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : {};
+      } catch {
+        metaObj = {};
+      }
+
+      const fromAbs = path.join(workspacePath, rel);
+      let previousContent: string | null = null;
+      if (existsSync(fromAbs)) {
+        previousContent = readFileSync(fromAbs, "utf8");
+        unlinkSync(fromAbs);
+      }
+
+      const tombRel = allocateUniqueRelativeMarkdownPath(
+        workspacePath,
+        buildCaeWorkspaceArtifactHardDeleteTombstoneRelativePath(artifactId)
+      );
+      const tombAbs = path.join(workspacePath, tombRel);
+      mkdirSync(path.dirname(tombAbs), { recursive: true });
+      const stamp = new Date().toISOString();
+      const tombBody = `# Hard-deleted workspace artifact
+
+artifactId: \`${artifactId}\`
+hardDeletedAt: \`${stamp}\`
+previousPath: \`${rel}\`
+
+This file replaces the removed markdown so registry validation keeps a repo-relative path.
+`;
+      writeFileSync(tombAbs, tombBody, { encoding: "utf8" });
+
+      metaObj.hardDeletedAt = stamp;
+      metaObj.previousPath = rel;
+      const slug = workspaceSlugFromArtifactRow(rel, cur.metadata_json, artifactId);
+      metaObj.slug = slug;
+
+      let registryFailure: ModuleCommandResult | null = null;
+      const run = db.transaction(() => {
+        updateCaeRegistryArtifactFields(db, v, artifactId, {
+          path: tombRel,
+          metadataJson: JSON.stringify(metaObj)
+        });
+        insertCaeRegistryMutationAudit(db, {
+          actor,
+          commandName: name,
+          versionId: v,
+          note: typeof args.note === "string" ? args.note : null,
+          payload: { artifactId, previousPath: rel, tombstonePath: tombRel }
+        });
+        registryFailure = postMutationRegistryCheck(db, workspacePath, true);
+        if (registryFailure) {
+          throw new Error("cae-hard-delete-registry-check-failed");
+        }
+      });
+
+      try {
+        run();
+      } catch {
+        rmSync(tombAbs, { force: true });
+        if (previousContent !== null) {
+          mkdirSync(path.dirname(fromAbs), { recursive: true });
+          writeFileSync(fromAbs, previousContent, { encoding: "utf8" });
+        }
+        if (registryFailure) return registryFailure;
+        throw new Error("cae-hard-delete-workspace-artifact-file-failed");
+      }
+
+      return {
+        ok: true,
+        code: "cae-hard-delete-retired-workspace-artifact-file-ok",
+        data: { schemaVersion: 1, versionId: v, artifactId, path: tombRel }
       };
     }
 
