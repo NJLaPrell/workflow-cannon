@@ -1261,6 +1261,88 @@ function renderStatusRollup(
   );
 }
 
+/** Status tab: workspace identity, agent profile, and task counts from dashboard-summary data. */
+function renderStatusSectionHtml(d: Record<string, unknown>, ss: Record<string, unknown>): string {
+  const sys = (d.systemStatus as Record<string, unknown>) ?? {};
+  const ident = (sys.identity as Record<string, unknown>) ?? {};
+  const ag = (d.agentGuidance as Record<string, unknown> | null | undefined) ?? {};
+
+  function kvRow(label: string, val: string): string {
+    return (
+      '<div class="wc-status-kv"><span class="wc-status-kv-label">' +
+      escapeHtml(label) +
+      '</span><span class="wc-status-kv-val">' +
+      val +
+      "</span></div>"
+    );
+  }
+
+  const projName = String(ident.projectName ?? "").trim();
+  const pkgName = String(ident.packageName ?? "").trim();
+  const displayName = projName || pkgName || "—";
+  const kitVersion = String(ident.rootPackageVersion ?? "—").trim() || "—";
+  const kitRoot = String(ident.workspaceKitRoot ?? "—").trim() || "—";
+  const generatedAt = typeof sys.generatedAt === "string" && sys.generatedAt.trim()
+    ? sys.generatedAt.trim()
+    : "";
+
+  const workspaceCard =
+    '<section class="dash-card" aria-label="Workspace identity">' +
+    "<p><b>Workspace</b></p>" +
+    '<div class="wc-status-kv-block">' +
+    kvRow("Project", escapeHtml(displayName)) +
+    kvRow("Kit version", escapeHtml(kitVersion)) +
+    kvRow("Kit root", "<code>" + escapeHtml(kitRoot) + "</code>") +
+    (generatedAt ? kvRow("Snapshot", escapeHtml(generatedAt)) : "") +
+    (typeof d.taskStoreLastUpdated === "string" && d.taskStoreLastUpdated.trim()
+      ? kvRow("Store updated", escapeHtml(String(d.taskStoreLastUpdated)))
+      : "") +
+    "</div></section>";
+
+  const roleRaw = String((ag as Record<string, unknown>).displayLabel ?? (ag as Record<string, unknown>).role ?? "").trim();
+  const tempRaw = String(
+    (ag as Record<string, unknown>).temperamentLabel ??
+    (ag as Record<string, unknown>).temperament ?? ""
+  ).trim();
+  const phaseRaw = (ag as Record<string, unknown>).phase;
+  const tierRaw = String(
+    (ag as Record<string, unknown>).guidanceTier ??
+    (ag as Record<string, unknown>).tier ?? ""
+  ).trim();
+
+  const agentCard =
+    '<section class="dash-card" aria-label="Agent profile">' +
+    "<p><b>Agent Profile</b></p>" +
+    '<div class="wc-status-kv-block">' +
+    (roleRaw ? kvRow("Role", escapeHtml(roleRaw)) : "") +
+    (tempRaw ? kvRow("Temperament", escapeHtml(tempRaw)) : "") +
+    (phaseRaw !== undefined && phaseRaw !== null && phaseRaw !== ""
+      ? kvRow("Phase", escapeHtml(String(phaseRaw)))
+      : "") +
+    (tierRaw ? kvRow("Guidance tier", escapeHtml(tierRaw)) : "") +
+    "</div></section>";
+
+  const pg = d.planningGeneration;
+  const pol = d.planningGenerationPolicy;
+  const planningCard =
+    typeof pg === "number" && Number.isFinite(pg)
+      ? '<section class="dash-card" aria-label="Planning sync">' +
+        "<p><b>Planning Sync</b></p>" +
+        '<div class="wc-status-kv-block">' +
+        kvRow("Generation", escapeHtml(String(pg))) +
+        kvRow("Policy", escapeHtml(String(pol ?? "—"))) +
+        "</div></section>"
+      : "";
+
+  const countsCard =
+    '<section class="dash-card" aria-label="Task counts">' +
+    "<p><b>Task Counts</b></p>" +
+    buildDashboardStateCountGridHtml(ss) +
+    "</section>";
+
+  return workspaceCard + agentCard + planningCard + countsCard;
+}
+
 /** Inner HTML for #root from a `workspace-kit run dashboard-summary`–shaped payload (or extension error object). */
 export function renderDashboardRootInnerHtml(
   payload: unknown,
@@ -1378,8 +1460,6 @@ export function renderDashboardRootInnerHtml(
   const tasksBlock =
     '<section class="dash-card dashboard-tasks-block" aria-label="Task queue rollups">' +
     tasksQuickActionsPanel +
-    "<p><b>Tasks</b></p>" +
-    buildDashboardStateCountGridHtml(ss) +
     renderStatusRollup(
       "status-ready-imp",
       "<b>Ready · Improvements</b> (" + String(readyImpCount) + ")",
@@ -1443,23 +1523,51 @@ export function renderDashboardRootInnerHtml(
     (wishOpen === 0 ? '<p class="muted">No Items</p>' : renderWishlistOpenList(wishlistOpenTop)) +
     "</div></details></section>";
 
-  const storeSection =
-    '<section class="dash-card dash-store-meta" aria-label="Task store">' +
-    '<p class="muted">Store Updated ' +
-    escapeHtml(String(d.taskStoreLastUpdated ?? "")) +
-    "</p>" +
-    "</section>";
+  // ── Assemble tab content ───────────────────────────────────────────────────
 
-  return (
+  const overviewContent =
     renderAgentStatusBanner(d.agentStatus) +
     renderEditorIntegrationSection(editorIntegration) +
     renderRoleTemperamentAndPhaseSection(d.agentGuidance, ws as Record<string, unknown> | null, res) +
     renderWorkspaceBlockersPendingSection(ws as Record<string, unknown> | null) +
     renderTeamExecutionSection(d.teamExecution) +
-    renderSubagentRegistrySection(d.subagentRegistry) +
+    renderSubagentRegistrySection(d.subagentRegistry);
+
+  const taskEngineContent =
     tasksBlock +
     wishlistSection +
-    renderPlanningSession(planningSession, planningWizardPanel) +
-    storeSection
+    renderPlanningSession(planningSession, planningWizardPanel);
+
+  const statusContent = renderStatusSectionHtml(d, ss);
+
+  const configContent =
+    '<section class="dash-card" aria-label="Config">' +
+    "<p><b>Config</b></p>" +
+    '<p class="muted">Configuration keys are managed in the <b>Config</b> sidebar panel. ' +
+    "Open it via the Workflow Cannon activity bar, or run <code>wk config</code> from the terminal.</p>" +
+    "</section>";
+
+  const caeContent =
+    '<section class="dash-card" aria-label="CAE">' +
+    "<p><b>CAE — Contextual Agent Execution</b></p>" +
+    '<p class="muted">Pre-flight checks, guidance management, and check history are in the ' +
+    "<b>CAE</b> sidebar panel. Open it via the Workflow Cannon activity bar.</p>" +
+    "</section>";
+
+  // ── Tab shell ──────────────────────────────────────────────────────────────
+
+  return (
+    '<div class="wc-tab-bar" role="tablist">' +
+    '<button type="button" class="wc-tab-btn wc-tab-active" role="tab" data-wc-tab="overview">Overview</button>' +
+    '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="task-engine">Task Engine</button>' +
+    '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="status">Status</button>' +
+    '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="config">Config</button>' +
+    '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="cae">CAE</button>' +
+    "</div>" +
+    '<div class="wc-tab-panel" data-wc-tab="overview" role="tabpanel">' + overviewContent + "</div>" +
+    '<div class="wc-tab-panel" data-wc-tab="task-engine" role="tabpanel" style="display:none">' + taskEngineContent + "</div>" +
+    '<div class="wc-tab-panel" data-wc-tab="status" role="tabpanel" style="display:none">' + statusContent + "</div>" +
+    '<div class="wc-tab-panel" data-wc-tab="config" role="tabpanel" style="display:none">' + configContent + "</div>" +
+    '<div class="wc-tab-panel" data-wc-tab="cae" role="tabpanel" style="display:none">' + caeContent + "</div>"
   );
 }

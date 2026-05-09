@@ -568,7 +568,64 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       `script-src ${webview.cspSource} 'unsafe-inline'`
     ].join("; ");
 
-    const bootstrap = `(function(){var vscode=acquireVsCodeApi();window.addEventListener("message",function(ev){var m=ev.data;if(!m||m.type!=="wcReplaceRoot"||typeof m.html!=="string")return;var root=document.getElementById("root");if(!root)return;var open={};root.querySelectorAll("details[data-wc-track]").forEach(function(d){var k=d.getAttribute("data-wc-track");if(k&&d.open)open[k]=true;});root.innerHTML=m.html;Object.keys(open).forEach(function(k){var el=root.querySelector('details[data-wc-track="'+k+'"]');if(el)el.open=true;});});var btn=document.getElementById("btn");var rootEl=document.getElementById("root");if(btn)btn.addEventListener("click",function(){vscode.postMessage({type:"refresh"});});if(rootEl)rootEl.addEventListener("click",function(ev){var t=ev.target;if(!t||t.tagName!=="BUTTON")return;var act=t.getAttribute("data-wc-action");if(!act)return;ev.stopPropagation();if(act==="wishlist-view"){var wv=(t.getAttribute("data-wishlist-id")||"").trim();if(wv)vscode.postMessage({type:"openWishlistDetail",wishlistId:wv});return;}if(act==="planning-new-plan"){vscode.postMessage({type:"prefillPlanningInterviewChat"});return;}if(act==="planning-resume-chat"){var rc=(t.getAttribute("data-resume-cli")||"").trim();vscode.postMessage({type:"prefillPlanningResumeChat",resumeCli:rc});return;}if(act==="planning-discard"){vscode.postMessage({type:"planningDiscard"});return;}if(act==="planning-wizard-start"){var sel=document.getElementById("wc-planning-type");var pt=sel&&sel.value?String(sel.value).trim():"";if(pt)vscode.postMessage({type:"planningWizardStart",planningType:pt});return;}if(act==="planning-wizard-submit"){var ta=document.getElementById("wc-planning-answer");var txt=ta&&typeof ta.value==="string"?ta.value.trim():"";vscode.postMessage({type:"planningWizardSubmit",answer:txt});return;}if(act==="planning-wizard-cancel"){vscode.postMessage({type:"planningWizardCancel"});return;}if(act==="planning-wizard-dismiss"){vscode.postMessage({type:"planningWizardDismiss"});return;}if(act==="collaboration-hub"){vscode.postMessage({type:"prefillCollaborationHubChat"});return;}if(act==="deliver-phase-prompt"){var kp=(t.getAttribute("data-wc-kit-phase")||"").trim();vscode.postMessage({type:"prefillDeliverPhaseChat",kitPhase:kp});return;}if(act==="add-wishlist-item"){vscode.postMessage({type:"addWishlistItem"});return;}if(act==="generate-features-chat"){vscode.postMessage({type:"prefillGenerateFeaturesChat"});return;}if(act==="transcript-churn-research-chat"){var tcTid=(t.getAttribute("data-task-id")||"").trim();vscode.postMessage({type:"prefillTranscriptChurnResearchChat",taskId:tcTid});return;}if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}if(act==="phase-complete-release"){var ph=(t.getAttribute("data-wc-phase-phrase")||"").trim();vscode.postMessage({type:"prefillPhaseCompleteReleaseChat",phasePhrase:ph});return;}if(act==="proposed-imp-accept-phase"||act==="proposed-exe-accept-phase"){var batch=(t.getAttribute("data-proposed-task-ids")||"").trim();var cat=act==="proposed-exe-accept-phase"?"execution":"improvement";vscode.postMessage({type:"dashboardAcceptProposedPhase",category:cat,taskIds:batch});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});})();`;
+    const bootstrap = `(function(){
+  var vscode = acquireVsCodeApi();
+  var activeTab = 'overview';
+
+  function applyTab(tab) {
+    if (!tab) return;
+    activeTab = tab;
+    document.querySelectorAll('.wc-tab-panel').forEach(function(p) {
+      p.style.display = p.getAttribute('data-wc-tab') === tab ? 'block' : 'none';
+    });
+    document.querySelectorAll('.wc-tab-btn').forEach(function(b) {
+      var isActive = b.getAttribute('data-wc-tab') === tab;
+      if (isActive) b.classList.add('wc-tab-active');
+      else b.classList.remove('wc-tab-active');
+    });
+  }
+
+  window.addEventListener('message', function(ev) {
+    var m = ev.data;
+    if (!m || m.type !== 'wcReplaceRoot' || typeof m.html !== 'string') return;
+    var root = document.getElementById('root');
+    if (!root) return;
+    var open = {};
+    root.querySelectorAll('details[data-wc-track]').forEach(function(d) {
+      var k = d.getAttribute('data-wc-track');
+      if (k && d.open) open[k] = true;
+    });
+    root.innerHTML = m.html;
+    Object.keys(open).forEach(function(k) {
+      var el = root.querySelector('details[data-wc-track="' + k + '"]');
+      if (el) el.open = true;
+    });
+    applyTab(activeTab);
+  });
+
+  applyTab(activeTab);
+
+  var btn = document.getElementById('btn');
+  var rootEl = document.getElementById('root');
+  if (btn) btn.addEventListener('click', function() { vscode.postMessage({type:'refresh'}); });
+  if (rootEl) rootEl.addEventListener('click', function(ev) {
+    var t = ev.target;
+    if (!t || t.tagName !== 'BUTTON') return;
+    if (t.classList.contains('wc-tab-btn')) {
+      applyTab(t.getAttribute('data-wc-tab'));
+      return;
+    }
+    var act = t.getAttribute('data-wc-action');
+    if (!act) return;
+    ev.stopPropagation();
+    if (act === 'wishlist-view') { var wv = (t.getAttribute('data-wishlist-id') || '').trim(); if (wv) vscode.postMessage({type:'openWishlistDetail',wishlistId:wv}); return; }
+    if (act === 'planning-new-plan') { vscode.postMessage({type:'prefillPlanningInterviewChat'}); return; }
+    if (act === 'planning-resume-chat') { var rc = (t.getAttribute('data-resume-cli') || '').trim(); vscode.postMessage({type:'prefillPlanningResumeChat',resumeCli:rc}); return; }
+    if (act === 'planning-discard') { vscode.postMessage({type:'planningDiscard'}); return; }
+    if (act === 'planning-wizard-start') { var sel = document.getElementById('wc-planning-type'); var pt = sel && sel.value ? String(sel.value).trim() : ''; if (pt) vscode.postMessage({type:'planningWizardStart',planningType:pt}); return; }
+    if (act === 'planning-wizard-submit') { var ta = document.getElementById('wc-planning-answer'); var txt = ta && typeof ta.value === 'string' ? ta.value.trim() : ''; vscode.postMessage({type:'planningWizardSubmit',answer:txt}); return; }
+    if (act === 'planning-wizard-cancel') { vscode.postMessage({type:'planningWizardCancel'}); return; }
+    if (act === 'planning-wizard-dismiss') { vscode.postMessage({type:'planningWizardDismiss'});return;}if(act==="collaboration-hub"){vscode.postMessage({type:"prefillCollaborationHubChat"});return;}if(act==="deliver-phase-prompt"){var kp=(t.getAttribute("data-wc-kit-phase")||"").trim();vscode.postMessage({type:"prefillDeliverPhaseChat",kitPhase:kp});return;}if(act==="add-wishlist-item"){vscode.postMessage({type:"addWishlistItem"});return;}if(act==="generate-features-chat"){vscode.postMessage({type:"prefillGenerateFeaturesChat"});return;}if(act==="transcript-churn-research-chat"){var tcTid=(t.getAttribute("data-task-id")||"").trim();vscode.postMessage({type:"prefillTranscriptChurnResearchChat",taskId:tcTid});return;}if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}if(act==="phase-complete-release"){var ph=(t.getAttribute("data-wc-phase-phrase")||"").trim();vscode.postMessage({type:"prefillPhaseCompleteReleaseChat",phasePhrase:ph});return;}if(act==="proposed-imp-accept-phase"||act==="proposed-exe-accept-phase"){var batch=(t.getAttribute("data-proposed-task-ids")||"").trim();var cat=act==="proposed-exe-accept-phase"?"execution":"improvement";vscode.postMessage({type:"dashboardAcceptProposedPhase",category:cat,taskIds:batch});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});})();`;
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -810,6 +867,53 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .dash-count-label { font-size: 11px; opacity: 0.85; line-height: 1.25; flex: 1; min-width: 0; }
     .dash-count-num { flex-shrink: 0; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; font-size: 13px; line-height: 1.25; }
     pre.resume-cli { font-size: 11px; }
+    /* ── Tab system ── */
+    .wc-tab-bar {
+      display: flex;
+      gap: 0;
+      margin: -2px -8px 10px -8px;
+      padding: 0 4px;
+      border-bottom: 1px solid var(--vscode-widget-border, rgba(127,127,127,.3));
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .wc-tab-bar::-webkit-scrollbar { display: none; }
+    .wc-tab-btn {
+      flex-shrink: 0;
+      padding: 5px 9px;
+      font-size: 11px;
+      font-weight: 500;
+      font-family: var(--vscode-font-family);
+      border: none;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      background: transparent;
+      color: var(--vscode-foreground);
+      opacity: 0.55;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity 0.1s;
+    }
+    .wc-tab-btn:hover { opacity: 0.85; }
+    .wc-tab-btn.wc-tab-active {
+      opacity: 1;
+      border-bottom-color: var(--vscode-button-background);
+    }
+    .wc-tab-panel { display: block; }
+    /* ── Status KV rows ── */
+    .wc-status-kv-block { margin: 4px 0 0 0; }
+    .wc-status-kv {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 3px 0;
+      border-bottom: 1px solid var(--vscode-widget-border, rgba(127,127,127,.18));
+      font-size: 11px;
+    }
+    .wc-status-kv:last-child { border-bottom: none; }
+    .wc-status-kv-label { color: var(--vscode-foreground); opacity: 0.65; flex-shrink: 0; }
+    .wc-status-kv-val { text-align: right; word-break: break-all; opacity: 0.9; }
     .dash-footer { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--vscode-widget-border, rgba(127,127,127,.25)); }
     #btn.dash-refresh-btn {
       display: block;
