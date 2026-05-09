@@ -97,6 +97,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "resolve-agent-guidance",
     "resolve-behavior-profile",
     "resolve-config",
+    "resolve-maintainer-delivery-policy",
     "review-planning-execution-drafts",
     "run-transition",
     "set-active-behavior-profile",

@@ -141,6 +141,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "resolve-maintainer-delivery-policy",
+    "file": "resolve-maintainer-delivery-policy.md",
+    "description": "Read-only JSON: resolved maintainer delivery policy (branches, review, evidence) with explain provenance.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "add-phase-note",
     "file": "add-phase-note.md",
     "description": "Create or return (idempotent) a phase-scoped operational note in planning SQLite.",

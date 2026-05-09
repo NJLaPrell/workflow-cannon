@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-07T14:57:57.418Z",
+  "generatedAt": "2026-05-09T00:33:49.374Z",
   "commands": [
     {
       "name": "add-dependency",
@@ -696,6 +696,11 @@
       "name": "resolve-config",
       "path": ".ai/agent-cli-snippets/by-command/resolve-config.json",
       "moduleId": "workspace-config"
+    },
+    {
+      "name": "resolve-maintainer-delivery-policy",
+      "path": ".ai/agent-cli-snippets/by-command/resolve-maintainer-delivery-policy.json",
+      "moduleId": "task-engine"
     },
     {
       "name": "retire-subagent",
