@@ -770,6 +770,8 @@ test("taskEngineModule release-evidence-manifest builds manifest from approval a
   assert.equal(result.data.manifest.packageName, "@workflow-cannon/workspace-kit");
   assert.equal(result.data.manifest.followUpSummary.count, 0);
   assert.equal(result.data.manifest.taskDeliveryEvidence.length, 1);
+  const evidenceRow = result.data.manifest.taskDeliveryEvidence[0];
+  assert.deepEqual(evidenceRow.deliveryEvidenceSummary, { schemaVersion: 1, mode: null });
 });
 
 test("taskEngineModule release-evidence-manifest fails without approval", async () => {
