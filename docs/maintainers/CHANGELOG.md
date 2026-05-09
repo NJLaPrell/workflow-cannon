@@ -8,6 +8,23 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.82.0] - 2026-05-08
+
+Phase 84 — **CAE guidance authoring surfaces, workspace artifact lifecycle, and guidance-pack operator UX**. This release extends CAE workspace authoring (templates, validation, duplicate-from-workspace), workspace artifact integrity scanning, archive and hard-delete for retired artifacts, guidance reconciliation with export and dry-run checkpoints, compound guidance scope rows with preview coercion, and the Cursor extension Guidance panel (portability tab, bulk activations, preview matrix). Parity wiring registers the CAE guidance authoring recovery runbook in the maintainer coverage map.
+
+### Added
+
+- Workspace artifact templates with markdown validation and duplicate-from-workspace flows for CAE authoring.
+- Workspace artifact integrity scanning for orphan paths and broken references.
+- Archive and hard-delete flows for retired workspace artifact files.
+- Compound guidance scope AND rows with preview coercion for safer operator edits.
+- Cursor extension: Guidance portability tab, bulk activations UI, and preview matrix for concurrent guidance rows.
+- Maintainer runbook mirror and coverage-map entry for CAE guidance authoring recovery.
+
+### Changed
+
+- CAE guidance pack workflows surface reconcile defaults with export and dry-run operator checkpoints.
+
 ## [0.81.0] - 2026-05-06
 
 Phase 80/81 — **Agent presentation policy and WC Agent status workflow**. This release adds a configurable, safety-bounded presentation policy for agent-visible communication and the WC Agent status banner/activity workflow for dashboard and operator visibility.
