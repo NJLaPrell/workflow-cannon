@@ -358,6 +358,12 @@ function renderActivationEditor(data: UnknownRecord, canMutate: boolean, active:
       <label>Scope value<input id="gp-activation-scope-value" placeholder="run-task" /></label>
       <label>Arg path / tag match<input id="gp-activation-scope-path" placeholder="taskId or args.foo" /></label>
     </div>
+    <p class="gp-muted" style="margin:0 0 0.25rem 0">Optional second row — combined with AND (all conditions must match).</p>
+    <div class="gp-form-grid">
+      <label>Scope preset (row 2)<select id="gp-activation-scope-preset-2"><option value="">(none)</option><option value="always">Always</option><option value="command-exact">Command exact</option><option value="command-prefix">Command prefix</option><option value="task-tag">Task tag</option><option value="task-id-pattern">Task ID pattern</option><option value="phase-key">Phase key</option><option value="command-arg-equals">Command arg equals</option></select></label>
+      <label>Scope value (row 2)<input id="gp-activation-scope-value-2" placeholder="e.g. phase key or second command" /></label>
+      <label>Arg path / tag match (row 2)<input id="gp-activation-scope-path-2" placeholder="taskId or args.foo" /></label>
+    </div>
     <details class="gp-editor-block"><summary>Advanced JSON</summary><textarea id="gp-activation-scope-json" rows="6" placeholder='{"conditions":[{"kind":"always"}]}'></textarea></details>
     <div class="gp-picker" id="gp-activation-artifact-picker">${picker}</div>
     <label class="gp-editor-block">Note<input id="gp-activation-note" placeholder="Why this draft activation is needed" /></label>

@@ -21,7 +21,12 @@ export type GuidanceScopeDraft =
       commandNameMatch?: "exact" | "prefix";
       commandArgPath?: string;
       commandArgValue?: string | number | boolean | null;
-    };
+    }
+  | { preset: "compound"; conditions: GuidanceScopeCondition[] };
+
+export type NormalizeScopeConditionsResult =
+  | { ok: true; conditions: GuidanceScopeCondition[] }
+  | { ok: false; errors: { code: string; message: string }[] };
 
 export type GuidanceScopeBuildOptions = {
   knownWorkflowNames?: string[];
@@ -30,7 +35,7 @@ export type GuidanceScopeBuildOptions = {
 export type GuidanceScopeBuildResult = {
   schemaVersion: 1;
   ok: boolean;
-  preset: GuidanceScopeDraft["preset"] | "unknown";
+  preset: GuidanceScopeDraft["preset"] | "compound" | "unknown";
   scope: { conditions: GuidanceScopeCondition[] } | null;
   summary: string;
   warnings: { code: string; message: string }[];
@@ -80,6 +85,11 @@ export const GUIDANCE_SCOPE_PRESETS: GuidanceScopePresetDescriptor[] = [
     preset: "advancedCommand",
     label: "Advanced command",
     description: "Apply to a custom command name and optional scalar command argument."
+  },
+  {
+    preset: "compound",
+    label: "Compound (AND)",
+    description: "Combine multiple conditions; all must match (logical AND)."
   }
 ];
 
@@ -108,6 +118,132 @@ function commandLabel(commandName: string, manifest?: BuiltinRunCommandManifestR
   return manifest?.description ? `${commandName} (${manifest.description})` : commandName;
 }
 
+export function summaryFromActivationScopeConditions(conditions: GuidanceScopeCondition[]): string {
+  if (conditions.length === 0) return "No conditions.";
+  const parts = conditions.map((condition) => {
+    switch (condition.kind) {
+      case "always":
+        return "Always";
+      case "phaseKey":
+        return `Phase ${condition.value}`;
+      case "commandName":
+        return `Command ${condition.match} ${condition.value}`;
+      case "commandArgEquals":
+        return `Arg ${condition.path} = ${String(condition.value)}`;
+      case "taskIdPattern":
+        return `Task /${condition.pattern}/`;
+      case "taskTag": {
+        const m = condition.match ?? "any";
+        return `Tags (${m}) ${condition.values.join(", ")}`;
+      }
+      default:
+        return "unknown";
+    }
+  });
+  return parts.join(" · ");
+}
+
+export function normalizeActivationScopeConditions(raw: unknown[]): NormalizeScopeConditionsResult {
+  const errors: { code: string; message: string }[] = [];
+  const out: GuidanceScopeCondition[] = [];
+  let idx = 0;
+  for (const entry of raw) {
+    idx += 1;
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      errors.push({ code: "scope-condition-invalid", message: `Condition ${idx} must be a JSON object.` });
+      continue;
+    }
+    const row = entry as Record<string, unknown>;
+    const kind = cleanString(row.kind);
+    if (!kind) {
+      errors.push({ code: "scope-condition-kind", message: `Condition ${idx} is missing kind.` });
+      continue;
+    }
+    if (kind === "always") {
+      out.push({ kind: "always" });
+      continue;
+    }
+    if (kind === "commandName") {
+      const match = cleanString(row.match) as "exact" | "prefix";
+      const value = cleanString(row.value);
+      if ((match !== "exact" && match !== "prefix") || !value) {
+        errors.push({
+          code: "scope-command-invalid",
+          message: `Condition ${idx}: commandName requires match (exact|prefix) and a non-empty value.`
+        });
+        continue;
+      }
+      out.push({ kind: "commandName", match, value });
+      continue;
+    }
+    if (kind === "commandArgEquals") {
+      const path = cleanString(row.path);
+      const value = row.value;
+      if (!path || !ARG_PATH_RE.test(path)) {
+        errors.push({
+          code: "scope-arg-path-invalid",
+          message: `Condition ${idx}: commandArgEquals needs a valid dotted path.`
+        });
+        continue;
+      }
+      if (
+        typeof value !== "string" &&
+        typeof value !== "number" &&
+        typeof value !== "boolean" &&
+        value !== null
+      ) {
+        errors.push({
+          code: "scope-arg-value-invalid",
+          message: `Condition ${idx}: commandArgEquals value must be string, number, boolean, or null.`
+        });
+        continue;
+      }
+      out.push({ kind: "commandArgEquals", path, value: value as string | number | boolean | null });
+      continue;
+    }
+    if (kind === "phaseKey") {
+      const value = cleanString(row.value);
+      if (!value || !PHASE_RE.test(value)) {
+        errors.push({ code: "scope-phase-invalid", message: `Condition ${idx}: phaseKey must be digits only.` });
+        continue;
+      }
+      out.push({ kind: "phaseKey", value });
+      continue;
+    }
+    if (kind === "taskIdPattern") {
+      const pattern = cleanString(row.pattern);
+      if (!pattern || !regexIsValid(pattern)) {
+        errors.push({
+          code: "scope-task-pattern-invalid",
+          message: `Condition ${idx}: taskIdPattern must be a non-empty valid RegExp string.`
+        });
+        continue;
+      }
+      out.push({ kind: "taskIdPattern", pattern });
+      continue;
+    }
+    if (kind === "taskTag") {
+      const valuesRaw = row.values;
+      if (!Array.isArray(valuesRaw) || valuesRaw.length === 0) {
+        errors.push({ code: "scope-task-tag-invalid", message: `Condition ${idx}: taskTag requires a non-empty values array.` });
+        continue;
+      }
+      const values = valuesRaw.map((v) => cleanString(v)).filter((v) => v.length > 0);
+      if (values.length === 0) {
+        errors.push({ code: "scope-task-tag-invalid", message: `Condition ${idx}: taskTag values must be non-empty strings.` });
+        continue;
+      }
+      const matchRaw = cleanString(row.match);
+      const match = matchRaw === "all" ? "all" : matchRaw === "any" ? "any" : undefined;
+      out.push({ kind: "taskTag", ...(match ? { match } : {}), values });
+      continue;
+    }
+    errors.push({ code: "scope-condition-unknown", message: `Condition ${idx}: unknown kind '${kind}'.` });
+  }
+  if (errors.length) return { ok: false, errors };
+  return { ok: true, conditions: out };
+}
+
 export function buildGuidanceScopeDraft(
   draft: unknown,
   options: GuidanceScopeBuildOptions = {}
@@ -115,6 +251,58 @@ export function buildGuidanceScopeDraft(
   const errors: GuidanceScopeBuildResult["errors"] = [];
   const warnings: GuidanceScopeBuildResult["warnings"] = [];
   const record = draft && typeof draft === "object" && !Array.isArray(draft) ? (draft as Record<string, unknown>) : null;
+
+  if (record && Array.isArray(record.conditions) && record.conditions.length > 0) {
+    const presetEarly = cleanString(record.preset);
+    if (!presetEarly || presetEarly === "compound") {
+      const norm = normalizeActivationScopeConditions(record.conditions as unknown[]);
+      if (!norm.ok) {
+        return {
+          schemaVersion: 1,
+          ok: false,
+          preset: "compound",
+          scope: null,
+          summary: "Invalid compound scope conditions.",
+          warnings,
+          errors: norm.errors
+        };
+      }
+      const hasAlways = norm.conditions.some((c) => c.kind === "always");
+      if (hasAlways && norm.conditions.length > 1) {
+        return {
+          schemaVersion: 1,
+          ok: false,
+          preset: "compound",
+          scope: null,
+          summary: "Invalid compound scope.",
+          warnings,
+          errors: [
+            {
+              code: "scope-always-exclusive",
+              message: "'always' must be the only condition when used in compound mode."
+            }
+          ]
+        };
+      }
+      const condSummary = summaryFromActivationScopeConditions(norm.conditions);
+      if (norm.conditions.some((c) => c.kind === "always")) {
+        warnings.push({
+          code: "scope-broad-always",
+          message: "This scope is broad: the rule can appear for every Guidance evaluation."
+        });
+      }
+      return {
+        schemaVersion: 1,
+        ok: true,
+        preset: "compound",
+        scope: { conditions: norm.conditions },
+        summary: `Compound: ${condSummary}`,
+        warnings,
+        errors: []
+      };
+    }
+  }
+
   const preset = cleanString(record?.preset) as GuidanceScopeDraft["preset"];
   const knownWorkflowNames = new Set(options.knownWorkflowNames ?? []);
   const conditions: GuidanceScopeCondition[] = [];
