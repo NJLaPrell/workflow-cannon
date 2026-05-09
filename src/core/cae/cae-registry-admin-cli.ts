@@ -15,6 +15,7 @@ import {
   copyCaeRegistryVersionContents,
   deleteInactiveCaeRegistryVersion,
   getActiveCaeRegistryVersionId,
+  getCaeRegistryCheckpointById,
   getCaeRegistryVersionMeta,
   insertCaeRegistryActivationRow,
   insertCaeRegistryArtifactRow,
@@ -377,6 +378,7 @@ export function tryHandleCaeRegistryAdminCommand(
     "cae-create-registry-version",
     "cae-clone-registry-version",
     "cae-activate-registry-version",
+    "cae-activate-registry-checkpoint",
     "cae-delete-registry-version",
     "cae-rollback-registry-version"
   ]);
@@ -633,6 +635,76 @@ export function tryHandleCaeRegistryAdminCommand(
       const check = postMutationRegistryCheck(db, workspacePath, true);
       if (check) return check;
       return { ok: true, code: "cae-activate-registry-version-ok", data: { schemaVersion: 1, versionId: vid } };
+    }
+
+    if (name === "cae-activate-registry-checkpoint") {
+      const rawId = args.checkpointId;
+      const cid =
+        typeof rawId === "number" && Number.isInteger(rawId)
+          ? rawId
+          : typeof rawId === "string"
+            ? parseInt(rawId.trim(), 10)
+            : NaN;
+      if (!Number.isFinite(cid) || cid <= 0) {
+        return { ok: false, code: "invalid-args", message: "checkpointId must be a positive integer" };
+      }
+      const cp = getCaeRegistryCheckpointById(db, cid);
+      if (!cp) {
+        return {
+          ok: false,
+          code: "cae-registry-checkpoint-not-found",
+          message: `Unknown checkpoint id ${cid}`
+        };
+      }
+      const vid = String(cp.version_id || "").trim();
+      if (!vid.length || !getCaeRegistryVersionMeta(db, vid)) {
+        return {
+          ok: false,
+          code: "cae-registry-version-not-found",
+          message: `Checkpoint ${cid} references a missing registry version`
+        };
+      }
+      const verifyDigest = args.verifyCheckpointDigest !== false;
+      if (verifyDigest) {
+        const loaded = loadCaeRegistryFromSqliteDb(db, workspacePath, {
+          verifyArtifactPaths: false,
+          versionId: vid
+        });
+        if (!loaded.ok) {
+          return { ok: false, code: loaded.code, message: loaded.message };
+        }
+        if (loaded.value.registryDigest !== cp.registry_digest) {
+          return {
+            ok: false,
+            code: "cae-checkpoint-digest-mismatch",
+            message:
+              "Registry content for the checkpoint version no longer matches the recorded checkpoint digest (pass verifyCheckpointDigest:false to activate without this guard)"
+          };
+        }
+      }
+      const run = db.transaction(() => {
+        db.prepare(`UPDATE cae_registry_versions SET is_active = 0`).run();
+        db.prepare(`UPDATE cae_registry_versions SET is_active = 1 WHERE version_id = ?`).run(vid);
+        insertCaeRegistryMutationAudit(db, {
+          actor,
+          commandName: name,
+          versionId: vid,
+          note: typeof args.note === "string" ? args.note : null,
+          payload: {
+            checkpointId: cid,
+            checkpointLabel: cp.label,
+            verifyCheckpointDigest: verifyDigest
+          }
+        });
+      });
+      run();
+      const check = postMutationRegistryCheck(db, workspacePath, true);
+      if (check) return check;
+      return {
+        ok: true,
+        code: "cae-activate-registry-checkpoint-ok",
+        data: { schemaVersion: 1, versionId: vid, checkpointId: cid }
+      };
     }
 
     if (name === "cae-delete-registry-version") {

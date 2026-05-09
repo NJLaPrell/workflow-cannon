@@ -641,6 +641,24 @@ export function listCaeRegistryCheckpointsForVersion(
   }
 }
 
+export function getCaeRegistryCheckpointById(db: SqliteDatabase, checkpointId: number): CaeRegistryCheckpointRow | undefined {
+  if (!Number.isFinite(checkpointId) || checkpointId <= 0) {
+    return undefined;
+  }
+  try {
+    const row = db
+      .prepare(
+        `SELECT id, recorded_at, label, actor, note, version_id, registry_digest, mutation_ids_json
+         FROM cae_registry_checkpoints
+         WHERE id = ?`
+      )
+      .get(checkpointId) as CaeRegistryCheckpointRow | undefined;
+    return row;
+  } catch {
+    return undefined;
+  }
+}
+
 export function updateCaeRegistryArtifactFields(
   db: SqliteDatabase,
   versionId: string,
