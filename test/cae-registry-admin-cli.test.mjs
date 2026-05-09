@@ -1370,3 +1370,53 @@ test("import-json-registry writes cae_registry_mutations audit", async () => {
     db2.close();
   }
 });
+
+test("import-json-registry checkpointLabel records checkpoint + get-registry-version includeCheckpoints", async () => {
+  const ws = await mkdtemp(path.join(os.tmpdir(), "wk-cae-import-cp-"));
+  await cp(path.join(root, ".ai"), path.join(ws, ".ai"), { recursive: true });
+  const dbDir = path.join(ws, ".workspace-kit", "tasks");
+  await mkdir(dbDir, { recursive: true });
+  const dbPath = path.join(dbDir, "workspace-kit.db");
+  const db = new Database(dbPath);
+  prepareKitSqliteDatabase(db);
+  db.close();
+
+  const versionId = "cae.reg.checkpoint.test";
+  const r = await contextActivationModule.onCommand(
+    {
+      name: "cae-import-json-registry",
+      args: {
+        schemaVersion: 1,
+        versionId,
+        actor: "importer",
+        note: "cp test",
+        checkpointLabel: "post-import",
+        checkpointNote: "smoke checkpoint",
+        policyApproval: { confirmed: true, rationale: "import with checkpoint" }
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(r.ok, true);
+  assert.equal(r.data.versionId, versionId);
+  assert.equal(typeof r.data.checkpointId, "number");
+  assert.ok(r.data.checkpointId > 0);
+
+  const gv = await contextActivationModule.onCommand(
+    {
+      name: "cae-get-registry-version",
+      args: { schemaVersion: 1, versionId, includeCheckpoints: true }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(gv.ok, true);
+  assert.ok(Array.isArray(gv.data.checkpoints));
+  assert.equal(gv.data.checkpoints.length, 1);
+  const cp0 = gv.data.checkpoints[0];
+  assert.equal(cp0.label, "post-import");
+  assert.equal(cp0.note, "smoke checkpoint");
+  assert.equal(cp0.id, r.data.checkpointId);
+  assert.ok(typeof cp0.registryDigest === "string" && cp0.registryDigest.length > 0);
+  assert.ok(Array.isArray(cp0.mutationIds));
+  assert.ok(cp0.mutationIds.length >= 1);
+});

@@ -10,7 +10,7 @@ type SqliteDatabase = InstanceType<typeof Database>;
  */
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 21;
+export const KIT_SQLITE_USER_VERSION = 22;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 export const TASK_ENGINE_DEPENDENCIES_TABLE = "task_engine_dependencies";
@@ -958,6 +958,27 @@ CREATE INDEX idx_kit_agent_activity_leases_task
 `);
 }
 
+/** CAE registry named checkpoints (Phase 84 / T100086 — CAEUX-P2-01). */
+function migrateV21ToV22(db: SqliteDatabase): void {
+  if (tableExists(db, "cae_registry_checkpoints")) {
+    return;
+  }
+  db.exec(`
+CREATE TABLE cae_registry_checkpoints (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  recorded_at TEXT NOT NULL,
+  label TEXT NOT NULL,
+  actor TEXT,
+  note TEXT,
+  version_id TEXT NOT NULL,
+  registry_digest TEXT NOT NULL,
+  mutation_ids_json TEXT NOT NULL DEFAULT '[]'
+);
+CREATE INDEX idx_cae_registry_checkpoints_version_recorded
+  ON cae_registry_checkpoints(version_id, recorded_at DESC, id DESC);
+`);
+}
+
 /**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
@@ -1079,6 +1100,11 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
     migrateV20ToV21(db);
     db.pragma("user_version = 21");
     current = 21;
+  }
+  if (current < 22) {
+    migrateV21ToV22(db);
+    db.pragma("user_version = 22");
+    current = 22;
   }
 }
 
