@@ -340,7 +340,7 @@ Required evidence:
   failure.
 - Local gates are green: `pnpm run build`, `pnpm --filter cursor-workflow-cannon
   test`, `pnpm run test`, and `pnpm run check`.
-- PR CI gates are green: `release-readiness`, `test`, and `parity`.
+- PR CI gates are green: `test` with release-readiness steps included, and `parity`.
 - If mutation smoke runs, it uses a disposable/reviewed workspace and leaves
   audit rows with actor and rationale.
 

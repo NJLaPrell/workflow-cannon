@@ -79,7 +79,7 @@ Capture these facts in the task or release evidence before claiming the CAE auth
 
 - Branch / PR link and merge commit.
 - Local validation: `pnpm run build`, `pnpm --filter cursor-workflow-cannon test`, `pnpm run test`, and `pnpm run check`.
-- CI validation: `release-readiness`, `test`, and `parity` green.
+- CI validation: `test` green with release-readiness steps included, and `parity` green.
 - Authoring summary output was checked for active version, registry digest, validation state, readiness, and recent mutation availability.
 - Panel smoke covered Overview, Artifacts, Activations, Preview, and Audit.
 - At least one expected degraded state was verified or reviewed from tests: stale state, disabled mutation, invalid refs, read-only JSON store, missing active version, or native SQLite failure.
