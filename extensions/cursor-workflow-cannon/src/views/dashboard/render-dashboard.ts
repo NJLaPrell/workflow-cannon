@@ -29,6 +29,258 @@ export function renderActiveFocusHtml(raw: string): string {
   return renderMarkdownBoldAfterEscape(escapeHtml(raw));
 }
 
+/** ★ "Recommended Next" card — first ready task (execution preferred over improvement). */
+function renderRecommendedNextCard(
+  item: unknown,
+  category: "execution" | "improvement"
+): string {
+  if (!item || typeof item !== "object") {
+    return "";
+  }
+  const row = item as { id?: unknown; title?: unknown; phase?: unknown; priority?: unknown };
+  const id = String(row.id ?? "").trim();
+  const title = String(row.title ?? "").trim();
+  const phase = row.phase != null ? String(row.phase).trim() : "";
+  if (!title && !id) {
+    return "";
+  }
+  const displayTitle = title || id;
+  const idAttr = id ? escapeHtmlAttr(id) : "";
+  const phaseTag =
+    phase.length > 0
+      ? '<span class="wc-rec-tag wc-rec-tag-phase">' + escapeHtml(phase) + "</span>"
+      : "";
+  const catTag =
+    '<span class="wc-rec-tag wc-rec-tag-cat">' + escapeHtml(category) + "</span>";
+  const viewBtn =
+    id.length > 0
+      ? '<button type="button" class="wc-rec-start-btn" data-wc-action="task-detail" data-task-id="' +
+        idAttr +
+        '" title="Open task detail">View &rarr;</button>'
+      : "";
+  return (
+    '<div class="wc-rec-next">' +
+    '<div class="wc-rec-header">' +
+    '<span class="wc-rec-label">&#9733; Recommended Next</span>' +
+    "</div>" +
+    '<p class="wc-rec-title">' +
+    escapeHtml(displayTitle) +
+    "</p>" +
+    '<div class="wc-rec-footer">' +
+    '<span class="wc-rec-tag wc-rec-tag-ready">ready</span>' +
+    catTag +
+    phaseTag +
+    viewBtn +
+    "</div>" +
+    "</div>"
+  );
+}
+
+/** 4-pill stat row: Ready / Proposed / Blocked / Done. */
+function renderStatPills(
+  readyTotal: number,
+  proposedTotal: number,
+  blockedTotal: number,
+  doneTotal: number
+): string {
+  const pills: Array<{ label: string; n: number; cls: string }> = [
+    { label: "Ready", n: readyTotal, cls: "wc-pill-ready" },
+    { label: "Proposed", n: proposedTotal, cls: "wc-pill-proposed" },
+    { label: "Blocked", n: blockedTotal, cls: "wc-pill-blocked" },
+    { label: "Done", n: doneTotal, cls: "wc-pill-done" },
+  ];
+  return (
+    '<div class="wc-stat-pills">' +
+    pills
+      .map(
+        (p) =>
+          '<div class="wc-stat-pill ' +
+          p.cls +
+          '">' +
+          '<span class="wc-stat-num">' +
+          escapeHtml(String(p.n)) +
+          "</span>" +
+          '<span class="wc-stat-lbl">' +
+          escapeHtml(p.label) +
+          "</span>" +
+          "</div>"
+      )
+      .join("") +
+    "</div>"
+  );
+}
+
+/** Filter chip bar for the Task Engine tab. */
+function renderFilterChipBar(): string {
+  return (
+    '<div class="wc-filter-chips" role="toolbar" aria-label="Filter task sections">' +
+    '<button type="button" class="wc-filter-chip wc-filter-active" data-wc-filter-btn="all">All</button>' +
+    '<button type="button" class="wc-filter-chip wc-filter-chip-ready" data-wc-filter-btn="ready">Ready</button>' +
+    '<button type="button" class="wc-filter-chip wc-filter-chip-proposed" data-wc-filter-btn="proposed">Proposed</button>' +
+    '<button type="button" class="wc-filter-chip wc-filter-chip-blocked" data-wc-filter-btn="blocked">Blocked</button>' +
+    "</div>"
+  );
+}
+
+/** Phase readiness card for the CAE tab. */
+function renderCaePhaseReadinessContent(
+  ws: Record<string, unknown> | null,
+  readyExeCount: number,
+  readyImpCount: number,
+  blockedCount: number,
+  proposedTotal: number,
+  agentGuidance: unknown
+): string {
+  const curPhase =
+    ws?.currentKitPhase != null ? String(ws.currentKitPhase).trim() : "";
+  const nextPhase =
+    ws?.nextKitPhase != null ? String(ws.nextKitPhase).trim() : "";
+  const blockers: string[] = Array.isArray(ws?.blockers)
+    ? (ws!.blockers as unknown[]).map((x) => String(x)).filter((s) => s.trim().length > 0)
+    : [];
+  const pending: string[] = Array.isArray(ws?.pendingDecisions)
+    ? (ws!.pendingDecisions as unknown[]).map((x) => String(x)).filter((s) => s.trim().length > 0)
+    : [];
+
+  const totalReady = readyExeCount + readyImpCount;
+  const hasBlockers = blockers.length > 0 || blockedCount > 0;
+  const hasProposed = proposedTotal > 0;
+
+  function checkRow(label: string, ok: boolean, muted?: string): string {
+    return (
+      '<div class="wc-cae-check">' +
+      '<span class="wc-cae-check-icon ' +
+      (ok ? "wc-cae-check-ok" : "wc-cae-check-warn") +
+      '">' +
+      (ok ? "&#10003;" : "!") +
+      "</span>" +
+      '<span class="wc-cae-check-label">' +
+      escapeHtml(label) +
+      "</span>" +
+      (muted ? '<span class="muted wc-cae-check-meta"> · ' + escapeHtml(muted) + "</span>" : "") +
+      "</div>"
+    );
+  }
+
+  const score = Math.round(
+    ((totalReady > 0 ? 30 : 0) +
+      (!hasBlockers ? 35 : blockedCount <= 1 ? 15 : 0) +
+      (curPhase.length > 0 ? 20 : 0) +
+      (!hasProposed || proposedTotal < 5 ? 15 : 5)) *
+      1
+  );
+
+  const scoreColor =
+    score >= 75 ? "wc-cae-score-ok" : score >= 40 ? "wc-cae-score-warn" : "wc-cae-score-bad";
+
+  const guidanceLines: string[] = [];
+  if (agentGuidance && typeof agentGuidance === "object") {
+    const ag = agentGuidance as Record<string, unknown>;
+    const roleLabel =
+      typeof ag.displayLabel === "string" && ag.displayLabel.trim()
+        ? ag.displayLabel.trim()
+        : "";
+    const tempLabel =
+      typeof ag.temperamentLabel === "string" && ag.temperamentLabel.trim()
+        ? ag.temperamentLabel.trim()
+        : "";
+    if (roleLabel) {
+      guidanceLines.push("Role: " + roleLabel);
+    }
+    if (tempLabel) {
+      guidanceLines.push("Temperament: " + tempLabel);
+    }
+  }
+
+  const phaseSection =
+    curPhase.length > 0
+      ? '<p><b>Current Phase</b> ' +
+        escapeHtml(curPhase) +
+        (nextPhase.length > 0 && nextPhase !== curPhase
+          ? ' &rarr; <span class="muted">' + escapeHtml(nextPhase) + "</span>"
+          : "") +
+        "</p>"
+      : '<p class="muted">No current phase set in workspace snapshot.</p>';
+
+  const checksSection =
+    '<div class="wc-cae-checks">' +
+    checkRow(
+      "Ready tasks available",
+      totalReady > 0,
+      totalReady > 0 ? String(totalReady) + " ready" : "none"
+    ) +
+    checkRow(
+      "No active blockers",
+      !hasBlockers,
+      hasBlockers
+        ? String(blockers.length + blockedCount) + " blocking"
+        : "clear"
+    ) +
+    checkRow(
+      "Phase configured",
+      curPhase.length > 0,
+      curPhase.length > 0 ? curPhase : "not set"
+    ) +
+    checkRow(
+      "Proposed queue manageable",
+      proposedTotal < 10,
+      proposedTotal + " proposed"
+    ) +
+    "</div>";
+
+  const pendingBlock =
+    pending.length > 0
+      ? '<div class="wc-cae-decisions">' +
+        '<p><b>Pending Decisions</b></p>' +
+        pending
+          .slice(0, 3)
+          .map(
+            (d) =>
+              '<div class="wc-cae-decision">' +
+              escapeHtml(d.length > 90 ? d.slice(0, 89) + "…" : d) +
+              "</div>"
+          )
+          .join("") +
+        (pending.length > 3
+          ? '<p class="muted">+' + String(pending.length - 3) + " more pending decisions</p>"
+          : "") +
+        "</div>"
+      : "";
+
+  const activeGuidance =
+    guidanceLines.length > 0
+      ? '<section class="dash-card" aria-label="Agent guidance">' +
+        "<p><b>Active Guidance</b></p>" +
+        guidanceLines
+          .map((l) => "<p>" + escapeHtml(l) + "</p>")
+          .join("") +
+        '<p class="muted">Manage guidance policies via the CAE sidebar panel (Workflow Cannon activity bar).</p>' +
+        "</section>"
+      : "";
+
+  return (
+    '<section class="dash-card wc-cae-readiness" aria-label="Phase readiness">' +
+    '<div class="wc-cae-score-row">' +
+    "<p><b>Phase Readiness</b></p>" +
+    '<div class="wc-cae-score-badge ' +
+    scoreColor +
+    '">' +
+    escapeHtml(String(score)) +
+    "<span>%</span></div>" +
+    "</div>" +
+    phaseSection +
+    checksSection +
+    pendingBlock +
+    "</section>" +
+    activeGuidance +
+    '<section class="dash-card" aria-label="CAE sidebar">' +
+    "<p><b>CAE — Full Controls</b></p>" +
+    '<p class="muted">Pre-flight checks, guidance management, and check history are in the ' +
+    "<b>CAE</b> sidebar panel. Open it via the Workflow Cannon activity bar.</p>" +
+    "</section>"
+  );
+}
+
 type EditorIntegrationRenderState = {
   appName?: unknown;
   uriScheme?: unknown;
@@ -1243,12 +1495,16 @@ function renderStatusRollup(
   summaryInnerHtml: string,
   bodyHtml: string,
   emptyOnly?: boolean,
-  openByDefault?: boolean
+  openByDefault?: boolean,
+  filterKey?: string
 ): string {
   const body = emptyOnly ? '<p class="muted">No Items</p>' : bodyHtml;
+  const filterAttr =
+    filterKey ? ' data-wc-filter="' + escapeHtmlAttr(filterKey) + '"' : "";
   return (
     '<details class="status-section"' +
     wcTrackAttr(trackId) +
+    filterAttr +
     (openByDefault ? " open" : "") +
     ">" +
     "<summary>" +
@@ -1460,12 +1716,14 @@ export function renderDashboardRootInnerHtml(
   const tasksBlock =
     '<section class="dash-card dashboard-tasks-block" aria-label="Task queue rollups">' +
     tasksQuickActionsPanel +
+    renderFilterChipBar() +
     renderStatusRollup(
       "status-ready-imp",
       "<b>Ready · Improvements</b> (" + String(readyImpCount) + ")",
       renderReadyPhaseBuckets(ris.phaseBuckets, readyImpTop, "No ready improvements.", "rdy-imp"),
       readyImpCount === 0,
-      readyImpCount > 0
+      readyImpCount > 0,
+      "ready"
     ) +
     renderStatusRollup(
       "status-ready-exe",
@@ -1473,19 +1731,24 @@ export function renderDashboardRootInnerHtml(
       breakdownLine +
         renderReadyPhaseBuckets(res.phaseBuckets, readyExeTop, "No ready execution tasks.", "rdy-exe"),
       readyExeCount === 0,
-      readyExeCount > 0
+      readyExeCount > 0,
+      "ready"
     ) +
     renderStatusRollup(
       "status-prop-imp",
       "<b>Proposed · Improvements</b> (" + String(piCount) + ")",
       renderProposedPhaseBuckets(pis.phaseBuckets, piCount, piTop, "prop-imp"),
-      piCount === 0
+      piCount === 0,
+      false,
+      "proposed"
     ) +
     renderStatusRollup(
       "status-prop-exe",
       "<b>Proposed · Execution</b> (" + String(peCount) + ")",
       renderProposedExecutionPhaseBuckets(pes.phaseBuckets, peCount, peTop, "prop-exe"),
-      peCount === 0
+      peCount === 0,
+      false,
+      "proposed"
     ) +
     renderStatusRollup(
       "status-tc-research",
@@ -1502,7 +1765,9 @@ export function renderDashboardRootInnerHtml(
         Number(blockedSummary.count ?? 0),
         "blk"
       ),
-      Number(blockedSummary.count ?? 0) === 0
+      Number(blockedSummary.count ?? 0) === 0,
+      false,
+      "blocked"
     ) +
     terminalSection +
     "</section>";
@@ -1525,7 +1790,24 @@ export function renderDashboardRootInnerHtml(
 
   // ── Assemble tab content ───────────────────────────────────────────────────
 
+  const firstReadyItem = readyExeTop[0] ?? readyImpTop[0];
+  const firstReadyCategory: "execution" | "improvement" =
+    readyExeTop.length > 0 ? "execution" : "improvement";
+  const recNextCard = firstReadyItem
+    ? renderRecommendedNextCard(firstReadyItem, firstReadyCategory)
+    : "";
+
+  const totalReadyCount = readyImpCount + readyExeCount;
+  const totalProposedCount = piCount + peCount;
+  const totalBlockedCount = Number(blockedSummary.count ?? 0);
+  const totalDoneCount =
+    typeof (d.completedSummary as Record<string, unknown> | undefined)?.count === "number"
+      ? ((d.completedSummary as Record<string, unknown>).count as number)
+      : 0;
+
   const overviewContent =
+    recNextCard +
+    renderStatPills(totalReadyCount, totalProposedCount, totalBlockedCount, totalDoneCount) +
     renderAgentStatusBanner(d.agentStatus) +
     renderEditorIntegrationSection(editorIntegration) +
     renderRoleTemperamentAndPhaseSection(d.agentGuidance, ws as Record<string, unknown> | null, res) +
@@ -1545,14 +1827,18 @@ export function renderDashboardRootInnerHtml(
     "<p><b>Config</b></p>" +
     '<p class="muted">Configuration keys are managed in the <b>Config</b> sidebar panel. ' +
     "Open it via the Workflow Cannon activity bar, or run <code>wk config</code> from the terminal.</p>" +
+    '<p class="muted">Common keys: <code>kit.agentGuidance</code> · <code>kit.currentPhase</code> · ' +
+    "<code>kit.agentRole</code> · <code>kit.planningGenerationPolicy</code></p>" +
     "</section>";
 
-  const caeContent =
-    '<section class="dash-card" aria-label="CAE">' +
-    "<p><b>CAE — Contextual Agent Execution</b></p>" +
-    '<p class="muted">Pre-flight checks, guidance management, and check history are in the ' +
-    "<b>CAE</b> sidebar panel. Open it via the Workflow Cannon activity bar.</p>" +
-    "</section>";
+  const caeContent = renderCaePhaseReadinessContent(
+    ws as Record<string, unknown> | null,
+    readyExeCount,
+    readyImpCount,
+    totalBlockedCount,
+    totalProposedCount,
+    d.agentGuidance
+  );
 
   // ── Tab shell ──────────────────────────────────────────────────────────────
 

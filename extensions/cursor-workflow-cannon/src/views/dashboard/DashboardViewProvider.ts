@@ -615,6 +615,17 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       applyTab(t.getAttribute('data-wc-tab'));
       return;
     }
+    if (t.classList.contains('wc-filter-chip')) {
+      var f = t.getAttribute('data-wc-filter-btn') || 'all';
+      rootEl.querySelectorAll('.wc-filter-chip').forEach(function(c) {
+        c.classList.toggle('wc-filter-active', c === t);
+      });
+      rootEl.querySelectorAll('details.status-section[data-wc-filter]').forEach(function(s) {
+        var sf = s.getAttribute('data-wc-filter');
+        s.style.display = (f === 'all' || sf === f) ? '' : 'none';
+      });
+      return;
+    }
     var act = t.getAttribute('data-wc-action');
     if (!act) return;
     ev.stopPropagation();
@@ -940,6 +951,227 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     #btn.dash-refresh-btn:focus {
       outline: 1px solid var(--vscode-focusBorder);
       outline-offset: 2px;
+    }
+    /* ── Recommended Next card ── */
+    .wc-rec-next {
+      border: 1px solid var(--vscode-button-background);
+      border-radius: 7px;
+      padding: 9px 10px 8px;
+      margin: 4px 0 10px 0;
+      background: var(--vscode-editor-background);
+      position: relative;
+    }
+    .wc-rec-header {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 5px;
+    }
+    .wc-rec-label {
+      font-size: 9.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--vscode-button-background);
+      opacity: 0.9;
+    }
+    .wc-rec-title {
+      font-size: 12px;
+      font-weight: 600;
+      margin: 0 0 7px 0;
+      line-height: 1.35;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--vscode-foreground);
+    }
+    .wc-rec-footer {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .wc-rec-tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 9.5px;
+      font-weight: 600;
+      border: 1px solid transparent;
+    }
+    .wc-rec-tag-ready {
+      background: var(--vscode-testing-iconPassed, rgba(30,80,40,0.5));
+      color: var(--vscode-testing-iconPassed, #4ec9b0);
+      border-color: rgba(78,201,176,0.3);
+    }
+    .wc-rec-tag-cat {
+      background: var(--vscode-textCodeBlock-background);
+      color: var(--vscode-foreground);
+      opacity: 0.75;
+    }
+    .wc-rec-tag-phase {
+      background: var(--vscode-textCodeBlock-background);
+      color: var(--vscode-textLink-foreground);
+      border-color: var(--vscode-textLink-foreground);
+      opacity: 0.85;
+    }
+    button.wc-rec-start-btn {
+      margin-left: auto;
+      padding: 2px 9px;
+      font-size: 10px;
+      font-weight: 600;
+      border-radius: 5px;
+      cursor: pointer;
+      color: var(--vscode-button-foreground);
+      background: var(--vscode-button-background);
+      border: 1px solid var(--vscode-button-border, var(--vscode-contrastBorder, transparent));
+      flex-shrink: 0;
+    }
+    button.wc-rec-start-btn:hover { background: var(--vscode-button-hoverBackground); }
+    button.wc-rec-start-btn:active { filter: brightness(0.94); }
+    /* ── Stat pills ── */
+    .wc-stat-pills {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 6px;
+      margin: 0 0 10px 0;
+    }
+    .wc-stat-pill {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      padding: 6px 4px 5px;
+      border-radius: 7px;
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.3));
+      background: var(--vscode-textCodeBlock-background);
+    }
+    .wc-stat-num {
+      font-size: 15px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+    .wc-stat-lbl {
+      font-size: 9px;
+      opacity: 0.65;
+      line-height: 1;
+      text-align: center;
+    }
+    .wc-pill-ready .wc-stat-num { color: var(--vscode-testing-iconPassed, #4ec9b0); }
+    .wc-pill-ready { border-color: rgba(78,201,176,0.25); }
+    .wc-pill-proposed .wc-stat-num { color: var(--vscode-textLink-foreground, #4fc1ff); }
+    .wc-pill-proposed { border-color: rgba(79,193,255,0.25); }
+    .wc-pill-blocked .wc-stat-num { color: var(--vscode-editorWarning-foreground, #cca700); }
+    .wc-pill-blocked { border-color: rgba(204,167,0,0.25); }
+    .wc-pill-done .wc-stat-num { color: var(--vscode-foreground); opacity: 0.55; }
+    /* ── Filter chips ── */
+    .wc-filter-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin: 0 0 8px 0;
+    }
+    button.wc-filter-chip {
+      padding: 2px 9px;
+      font-size: 10.5px;
+      font-weight: 500;
+      border-radius: 12px;
+      cursor: pointer;
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.45));
+      background: transparent;
+      color: var(--vscode-foreground);
+      opacity: 0.6;
+      transition: opacity 0.1s;
+    }
+    button.wc-filter-chip:hover { opacity: 0.85; }
+    button.wc-filter-chip.wc-filter-active {
+      opacity: 1;
+      background: var(--vscode-button-background);
+      color: var(--vscode-button-foreground);
+      border-color: var(--vscode-button-border, var(--vscode-contrastBorder, transparent));
+    }
+    button.wc-filter-chip-ready.wc-filter-active {
+      background: transparent;
+      color: var(--vscode-testing-iconPassed, #4ec9b0);
+      border-color: var(--vscode-testing-iconPassed, #4ec9b0);
+      opacity: 1;
+    }
+    button.wc-filter-chip-proposed.wc-filter-active {
+      background: transparent;
+      color: var(--vscode-textLink-foreground, #4fc1ff);
+      border-color: var(--vscode-textLink-foreground, #4fc1ff);
+      opacity: 1;
+    }
+    button.wc-filter-chip-blocked.wc-filter-active {
+      background: transparent;
+      color: var(--vscode-editorWarning-foreground, #cca700);
+      border-color: var(--vscode-editorWarning-foreground, #cca700);
+      opacity: 1;
+    }
+    /* ── CAE readiness ── */
+    .wc-cae-readiness { }
+    .wc-cae-score-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .wc-cae-score-row > p { margin: 0; }
+    .wc-cae-score-badge {
+      font-size: 18px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .wc-cae-score-badge span { font-size: 11px; font-weight: 500; opacity: 0.7; margin-left: 1px; }
+    .wc-cae-score-ok { color: var(--vscode-testing-iconPassed, #4ec9b0); }
+    .wc-cae-score-warn { color: var(--vscode-editorWarning-foreground, #cca700); }
+    .wc-cae-score-bad { color: var(--vscode-errorForeground, #f44747); }
+    .wc-cae-checks { margin: 6px 0 4px 0; display: flex; flex-direction: column; gap: 3px; }
+    .wc-cae-check {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      line-height: 1.3;
+    }
+    .wc-cae-check-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      font-size: 9px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .wc-cae-check-ok {
+      background: rgba(78,201,176,0.18);
+      color: var(--vscode-testing-iconPassed, #4ec9b0);
+      border: 1px solid rgba(78,201,176,0.35);
+    }
+    .wc-cae-check-warn {
+      background: rgba(204,167,0,0.18);
+      color: var(--vscode-editorWarning-foreground, #cca700);
+      border: 1px solid rgba(204,167,0,0.35);
+    }
+    .wc-cae-check-label { flex: 1; min-width: 0; }
+    .wc-cae-check-meta { flex-shrink: 0; }
+    .wc-cae-decisions { margin-top: 8px; }
+    .wc-cae-decisions > p { margin: 0 0 4px 0; }
+    .wc-cae-decision {
+      font-size: 11px;
+      padding: 4px 6px;
+      border-radius: 4px;
+      background: var(--vscode-textCodeBlock-background);
+      margin-bottom: 4px;
+      line-height: 1.35;
+      border-left: 2px solid var(--vscode-editorWarning-foreground, #cca700);
     }
   </style>
 </head>
