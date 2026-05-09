@@ -2,7 +2,7 @@
  * CAE registry admin CLI + governance gate (Phase 70 — T895–T897, T900–T902, T911, T913).
  */
 import assert from "node:assert/strict";
-import { cp, mkdir, mkdtemp, readFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -1469,6 +1469,62 @@ test("cae-compare-registry-versions: unknown toVersionId", async () => {
   );
   assert.equal(r.ok, false);
   assert.equal(r.code, "cae-registry-version-not-found");
+});
+
+test("cae-reconcile-defaults: seeded workspace aligns package vs sqlite", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const r = await contextActivationModule.onCommand(
+    { name: "cae-reconcile-defaults", args: { schemaVersion: 1 } },
+    {
+      runtimeVersion: "0.1",
+      workspacePath: ws,
+      effectiveConfig: baseEffective({ cae: { adminMutations: false } })
+    }
+  );
+  assert.equal(r.ok, true);
+  assert.equal(r.code, "cae-reconcile-defaults-ok");
+  assert.equal(r.data.schemaVersion, 1);
+  assert.deepEqual(r.data.newDefaultsInPackage, []);
+  assert.deepEqual(r.data.changedDefaults, []);
+});
+
+test("cae-export-guidance-pack + import dry-run roundtrip (envelope file)", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const exp = await contextActivationModule.onCommand(
+    { name: "cae-export-guidance-pack", args: { schemaVersion: 1 } },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(exp.ok, true);
+  assert.equal(exp.code, "cae-export-guidance-pack-ok");
+  assert.equal(exp.data.schemaVersion, 1);
+  assert.ok(exp.data.pack);
+  const tmpDir = path.join(ws, ".workspace-kit", "tmp");
+  await mkdir(tmpDir, { recursive: true });
+  const rel = ".workspace-kit/tmp/guidance-pack-envelope.json";
+  await writeFile(path.join(ws, rel), JSON.stringify({ schemaVersion: 1, pack: exp.data.pack }, null, 2), "utf8");
+  const dry = await contextActivationModule.onCommand(
+    {
+      name: "cae-import-guidance-pack-dry-run",
+      args: { schemaVersion: 1, packRelativePath: rel }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(dry.ok, true);
+  assert.equal(dry.code, "cae-import-guidance-pack-dry-run-ok");
+  assert.deepEqual(dry.data.artifactConflicts, []);
+  assert.deepEqual(dry.data.activationConflicts, []);
+  assert.deepEqual(dry.data.artifactsWouldAdd, []);
+  assert.deepEqual(dry.data.activationsWouldAdd, []);
+});
+
+test("cae-import-guidance-pack-dry-run: missing packRelativePath", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const r = await contextActivationModule.onCommand(
+    { name: "cae-import-guidance-pack-dry-run", args: { schemaVersion: 1 } },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(r.ok, false);
+  assert.equal(r.code, "invalid-args");
 });
 
 test("cae-activate-registry-checkpoint: digest mismatch then bypass", async () => {
