@@ -624,6 +624,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         var sf = s.getAttribute('data-wc-filter');
         s.style.display = (f === 'all' || sf === f) ? '' : 'none';
       });
+      var termHost = rootEl.querySelector('.dashboard-terminal-tasks');
+      if (termHost) termHost.style.display = (f === 'all') ? '' : 'none';
       return;
     }
     var act = t.getAttribute('data-wc-action');

@@ -36,9 +36,18 @@ F5 typical `launch.json` (workspace root):
 }
 ```
 
-Open the **Workflow Cannon** activity bar to use **Dashboard** (webview — task queue rollups + actions), **Config** (webview), **Guidance**, and the command palette action **Workflow Cannon: Open Status Dashboard** (editor-area tab — phase/drift, doctor contract, modules, CAE lines from **`dashboard-summary`** **`systemStatus`**; kit file changes trigger a debounced refresh).
+Open the **Workflow Cannon** activity bar for **Dashboard** (webview), **Config** (webview), **Guidance**, and related commands (see below).
 
-**Status dashboard tab:** Opens an editor **`WebviewPanel`** fed by **`pnpm exec wk run dashboard-summary '{}'`**. Requires **`dashboard-summary`** **`data.schemaVersion` ≥ 5** ( **`systemStatus`** block). Schema **v6** adds **`systemStatus.identity`** (project / package / workspace-kit versions) and **`systemStatus.planningStore`** (SQLite path). While the tab is open, **`StateWatcher`** fires debounced refreshes (**`STATUS_PANEL_DEBOUNCE_MS`** in `StatusDashboardPanel.ts`, default **450ms**) so rapid `.workspace-kit/` edits do not spam the CLI; **Refresh now** is immediate. The merged CLI envelope may still include **`data.cae`** when CAE shadow preflight runs — that is separate from the **`caeLines`** text inside **`systemStatus`**.
+### Sidebar Dashboard vs palette **Open Status Dashboard**
+
+These are **two different surfaces**, both fed by **`pnpm exec wk run dashboard-summary '{}'`**:
+
+| Surface | How you open it | What it is |
+|--------|-------------------|------------|
+| **Sidebar Dashboard** | Activity bar → **Workflow Cannon** → **Dashboard** | Multi-tab webview: **Overview** (rollups + Recommended Next), **Task Engine** (filters, queue, wishlist, planning), **Status** (compact identity / counts cards), **Config** / **CAE** shortcuts. |
+| **Status dashboard panel** | Command palette → **Workflow Cannon: Open Status Dashboard** | **Editor-area** `WebviewPanel` tuned for **phase/drift**, **`systemStatus`** (doctor contract, modules, CAE lines). **`StateWatcher`** debounces refresh (**`STATUS_PANEL_DEBOUNCE_MS`** in `StatusDashboardPanel.ts`, default **450ms**) while the tab stays open; **Refresh now** is immediate. |
+
+Requires **`dashboard-summary`** **`data.schemaVersion` ≥ 5** (**`systemStatus`**). Schema **v6** adds **`systemStatus.identity`** and **`systemStatus.planningStore`**. The merged envelope may include **`data.cae`** for CAE shadow preflight — separate from **`caeLines`** inside **`systemStatus`**.
 
 **Sidebar Dashboard refresh:** Besides the bottom **Refresh** button (immediate refetch), the sidebar dashboard reloads when the view becomes visible again, when kit-owned files change (workspace-kit watchers), and on a **~45s** timer while the view stays open.
 
@@ -58,7 +67,7 @@ The extension runs its bundled `@workflow-cannon/workspace-kit` CLI when availab
 
 **Proposed vs ready:** The dashboard “Suggested next” and ready/proposed sections only reflect tasks in the configured task store. **`proposed`** improvement work appears under **Proposed improvements** on the dashboard (after a refresh). When **`dashboard-summary`** returns **`phaseBuckets`** with **`taskIds`**, each phase heading can show **Accept All** (one shared policy rationale; the extension refreshes the planning-generation token between each **`run-transition`** **`accept`**). Planning appears when a `build-plan` session file exists.
 
-**Execution queue vs wishlist:** **Ready** / **proposed** numbers on **Overview** and **Task Engine** follow the kit **execution queue** (same as `getNextActions` / `dashboard-summary` rollups) — they **exclude** **`wishlist_intake`** tasks even when those rows are `status: ready`. The note appears under the stat pills and task filters; **Recommended Next** falls back to the first **open wishlist** row when no execution/improvement ready work exists. Full SQLite truth: **`wk run list-tasks`**.
+**Execution queue vs wishlist:** **Ready** counts on **Overview** / **Task Engine** follow the kit **execution queue** and **exclude** **`wishlist_intake`** (short note under stat pills / filters). **Recommended Next** prefers **ready execution**, then the **first open wishlist** row when the execution-ready queue is empty (then ready improvements). Full store: **`wk run list-tasks`**.
 
 ## Testing
 

@@ -105,6 +105,8 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /data-wc-track="status-ready-imp"/);
   assert.match(html, /data-wc-track="status-ready-exe"/);
   assert.match(html, /data-wc-filter="ready"/);
+  assert.match(html, /data-wc-filter="research"/);
+  assert.match(html, /data-wc-filter="terminal"/);
   assert.match(html, /imp-example/);
   assert.match(html, /T319/);
   assert.match(html, /T320/);
@@ -382,6 +384,60 @@ test("renderDashboardRootInnerHtml recommends wishlist when execution ready queu
   assert.match(html, /data-wc-action="wishlist-chat"/);
   assert.match(html, /data-wishlist-id="W-open-1"/);
   assert.match(html, /No execution-queue ready work/);
+});
+
+test("renderDashboardRootInnerHtml prefers wishlist over ready improvement when execution queue empty", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      agentGuidance: {
+        schemaVersion: 1,
+        profileSetId: "rpg_party_v1",
+        tier: 3,
+        displayLabel: "Bard",
+        usingDefaultTier: false,
+        temperamentProfileId: "builtin:cautious",
+        temperamentLabel: "The Wary Scout"
+      },
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: {
+        schemaVersion: 1,
+        count: 1,
+        top: [{ id: "imp-1", title: "Ready improvement task", phase: "Phase 9" }]
+      },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      wishlist: {
+        openCount: 1,
+        totalCount: 1,
+        openTop: [{ id: "W-priority", title: "Process wishlist first", taskId: "T-wl-2" }]
+      },
+      blockedSummary: { count: 0, top: [] },
+      readyQueueTop: [],
+      readyQueueCount: 0,
+      suggestedNext: null,
+      planningSession: null,
+      taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
+      workspaceStatus: { currentKitPhase: "1", nextKitPhase: "2", activeFocus: "Test" },
+      blockingAnalysis: [],
+      dependencyOverview: {
+        schemaVersion: 1,
+        activeTaskCount: 0,
+        includedTaskCount: 0,
+        edgeCount: 0,
+        truncated: false,
+        perfNote: null,
+        nodes: [],
+        edges: [],
+        mermaidFlowchart: "",
+        criticalPathReady: []
+      }
+    }
+  });
+  assert.match(html, /wc-rec-next-wishlist/);
+  assert.match(html, /Process wishlist first/);
+  assert.match(html, /Ready improvement task/);
 });
 
 test("renderDashboardRootInnerHtml shows Not Planned when next phase duplicates current", () => {

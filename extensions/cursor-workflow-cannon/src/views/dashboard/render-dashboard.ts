@@ -33,10 +33,8 @@ export function renderActiveFocusHtml(raw: string): string {
 function renderExecutionReadyScopeFootnote(): string {
   return (
     '<p class="muted wc-ready-scope-note">' +
-    "<b>Note:</b> <b>Ready</b> / proposed counts here follow the kit <em>execution queue</em> — " +
-    "<code>wishlist_intake</code> rows are omitted even when their status is ready. " +
-    "Use the <b>Wishlist</b> section on Task Engine, or " +
-    "<code>wk run list-tasks</code> for the full store view.</p>"
+    "<b>Note:</b> Ready counts exclude <code>wishlist_intake</code>; see <b>Wishlist</b> below or " +
+    "<code>wk run list-tasks</code>.</p>"
   );
 }
 
@@ -1746,7 +1744,9 @@ export function renderDashboardRootInnerHtml(
           "No completed tasks.",
           "term-comp"
         ),
-        compCount === 0
+        compCount === 0,
+        false,
+        "terminal"
       ) +
       renderStatusRollup(
         "status-term-can",
@@ -1758,7 +1758,9 @@ export function renderDashboardRootInnerHtml(
           "No cancelled tasks.",
           "term-can"
         ),
-        cancCount === 0
+        cancCount === 0,
+        false,
+        "terminal"
       );
     return (
       '<section class="dashboard-terminal-tasks" aria-label="Completed and cancelled tasks">' + inner + "</section>"
@@ -1815,7 +1817,9 @@ export function renderDashboardRootInnerHtml(
       "status-tc-research",
       "<b>Research · Transcript churn</b> (" + String(tcrCount) + ")",
       renderTranscriptChurnResearchPhaseBuckets(tcrs.phaseBuckets, tcrCount, tcrTop, "tc-churn"),
-      false
+      false,
+      false,
+      "research"
     ) +
     renderStatusRollup(
       "status-blocked",
@@ -1851,15 +1855,15 @@ export function renderDashboardRootInnerHtml(
 
   // ── Assemble tab content ───────────────────────────────────────────────────
 
-  const firstReadyItem = readyExeTop[0] ?? readyImpTop[0];
-  const firstReadyCategory: "execution" | "improvement" =
-    readyExeTop.length > 0 ? "execution" : "improvement";
   const firstWishlistOpen = wishlistOpenTop[0];
-  const recNextCard = firstReadyItem
-    ? renderRecommendedNextCard(firstReadyItem, firstReadyCategory)
+  /** Prefer execution → then open wishlist when execution queue is empty → then ready improvements. */
+  const recNextCard = readyExeTop[0]
+    ? renderRecommendedNextCard(readyExeTop[0], "execution")
     : firstWishlistOpen
       ? renderRecommendedNextWishlistCard(firstWishlistOpen)
-      : "";
+      : readyImpTop[0]
+        ? renderRecommendedNextCard(readyImpTop[0], "improvement")
+        : "";
 
   const totalReadyCount = readyImpCount + readyExeCount;
   const totalProposedCount = piCount + peCount;
