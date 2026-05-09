@@ -571,6 +571,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     const bootstrap = `(function(){
   var vscode = acquireVsCodeApi();
   var activeTab = 'overview';
+  var activeFilter = 'all';
 
   function applyTab(tab) {
     if (!tab) return;
@@ -601,6 +602,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (el) el.open = true;
     });
     applyTab(activeTab);
+    if (activeFilter !== 'all') {
+      var fc = root.querySelector('.wc-filter-chip[data-wc-filter-btn="' + activeFilter + '"]');
+      if (fc) {
+        root.querySelectorAll('.wc-filter-chip').forEach(function(c) { c.classList.toggle('wc-filter-active', c === fc); });
+        root.querySelectorAll('details.status-section[data-wc-filter]').forEach(function(s) { s.style.display = s.getAttribute('data-wc-filter') === activeFilter ? '' : 'none'; });
+        var th = root.querySelector('.dashboard-terminal-tasks'); if (th) th.style.display = 'none';
+      }
+    }
   });
 
   applyTab(activeTab);
@@ -617,6 +626,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     if (t.classList.contains('wc-filter-chip')) {
       var f = t.getAttribute('data-wc-filter-btn') || 'all';
+      activeFilter = f;
       rootEl.querySelectorAll('.wc-filter-chip').forEach(function(c) {
         c.classList.toggle('wc-filter-active', c === t);
       });
@@ -626,6 +636,16 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       });
       var termHost = rootEl.querySelector('.dashboard-terminal-tasks');
       if (termHost) termHost.style.display = (f === 'all') ? '' : 'none';
+      return;
+    }
+    if (t.classList.contains('wc-stat-pill')) {
+      var navTab = t.getAttribute('data-wc-pill-nav');
+      var navFilter = t.getAttribute('data-wc-pill-filter') || 'all';
+      if (navTab) applyTab(navTab);
+      activeFilter = navFilter;
+      rootEl.querySelectorAll('.wc-filter-chip').forEach(function(c) { c.classList.toggle('wc-filter-active', c.getAttribute('data-wc-filter-btn') === navFilter); });
+      rootEl.querySelectorAll('details.status-section[data-wc-filter]').forEach(function(s) { s.style.display = (navFilter === 'all' || s.getAttribute('data-wc-filter') === navFilter) ? '' : 'none'; });
+      var termHostP = rootEl.querySelector('.dashboard-terminal-tasks'); if (termHostP) termHostP.style.display = navFilter === 'all' ? '' : 'none';
       return;
     }
     var act = t.getAttribute('data-wc-action');
@@ -1216,6 +1236,80 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       margin-bottom: 4px;
       line-height: 1.35;
       border-left: 2px solid var(--vscode-editorWarning-foreground, #cca700);
+    }
+    /* ── Stat pill as interactive button ── */
+    button.wc-stat-pill {
+      cursor: pointer;
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.3));
+      background: var(--vscode-textCodeBlock-background);
+      transition: border-color 0.1s, background 0.1s;
+      width: 100%;
+    }
+    button.wc-stat-pill:hover { background: var(--vscode-toolbar-hoverBackground, rgba(127,127,127,.1)); }
+    button.wc-pill-ready:hover { border-color: var(--vscode-testing-iconPassed, #4ec9b0); }
+    button.wc-pill-proposed:hover { border-color: var(--vscode-textLink-foreground, #4fc1ff); }
+    button.wc-pill-blocked:hover { border-color: var(--vscode-editorWarning-foreground, #cca700); }
+    button.wc-pill-done:hover { border-color: var(--vscode-foreground); }
+    /* ── Empty section muting ── */
+    details.status-section.wc-section-empty {
+      opacity: 0.32;
+      pointer-events: none;
+    }
+    /* ── Blocker card urgency ── */
+    .dash-card.wc-blocker-card {
+      border-left: 3px solid var(--vscode-editorWarning-foreground, #cca700);
+      background: var(--vscode-inputValidation-warningBackground, rgba(204,167,0,0.06));
+    }
+    /* ── Color-coded section header left-borders ── */
+    details.status-section[data-wc-filter="ready"] > summary {
+      border-left: 3px solid var(--vscode-testing-iconPassed, #4ec9b0);
+      padding-left: 6px;
+      margin-left: -2px;
+    }
+    details.status-section[data-wc-filter="proposed"] > summary {
+      border-left: 3px solid var(--vscode-textLink-foreground, #4fc1ff);
+      padding-left: 6px;
+      margin-left: -2px;
+    }
+    details.status-section[data-wc-filter="blocked"] > summary {
+      border-left: 3px solid var(--vscode-editorWarning-foreground, #cca700);
+      padding-left: 6px;
+      margin-left: -2px;
+    }
+    details.status-section[data-wc-filter="research"] > summary {
+      border-left: 3px solid var(--vscode-foreground);
+      padding-left: 6px;
+      margin-left: -2px;
+      opacity: 0.55;
+    }
+    details.status-section[data-wc-filter="terminal"] > summary {
+      border-left: 3px solid var(--vscode-foreground);
+      padding-left: 6px;
+      margin-left: -2px;
+      opacity: 0.4;
+    }
+    /* ── Tab badge ── */
+    .wc-tab-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 15px;
+      height: 14px;
+      border-radius: 7px;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 0 3px;
+      margin-left: 4px;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    .wc-tab-badge-ready {
+      background: var(--vscode-testing-iconPassed, #4ec9b0);
+      color: #000;
+    }
+    .wc-tab-badge-blocked {
+      background: var(--vscode-editorWarning-foreground, #cca700);
+      color: #000;
     }
   </style>
 </head>

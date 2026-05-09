@@ -147,13 +147,24 @@ function renderStatPills(
     { label: "Blocked", n: blockedTotal, cls: "wc-pill-blocked" },
     { label: "Done", n: doneTotal, cls: "wc-pill-done" },
   ];
+  const filterMap: Record<string, string> = {
+    "wc-pill-ready": "ready",
+    "wc-pill-proposed": "proposed",
+    "wc-pill-blocked": "blocked",
+    "wc-pill-done": "all",
+  };
   return (
     '<div class="wc-stat-pills">' +
     pills
-      .map(
-        (p) =>
-          '<div class="wc-stat-pill ' +
+      .map((p) => {
+        const filter = filterMap[p.cls] ?? "all";
+        return (
+          '<button type="button" class="wc-stat-pill ' +
           p.cls +
+          '" data-wc-pill-nav="task-engine" data-wc-pill-filter="' +
+          escapeHtmlAttr(filter) +
+          '" title="Switch to Task Engine — ' +
+          escapeHtmlAttr(p.label) +
           '">' +
           '<span class="wc-stat-num">' +
           escapeHtml(String(p.n)) +
@@ -161,8 +172,9 @@ function renderStatPills(
           '<span class="wc-stat-lbl">' +
           escapeHtml(p.label) +
           "</span>" +
-          "</div>"
-      )
+          "</button>"
+        );
+      })
       .join("") +
     "</div>"
   );
@@ -1525,7 +1537,9 @@ function renderWorkspaceBlockersPendingSection(ws: Record<string, unknown> | nul
   }
 
   let html =
-    '<section class="dash-card dashboard-overview" aria-label="Workspace blockers and decisions">';
+    '<section class="dash-card dashboard-overview' +
+    (blockers.length > 0 ? " wc-blocker-card" : "") +
+    '" aria-label="Workspace blockers and decisions">';
   if (blockers.length > 0) {
     const shown = blockers
       .slice(0, 2)
@@ -1560,7 +1574,9 @@ function renderStatusRollup(
   const filterAttr =
     filterKey ? ' data-wc-filter="' + escapeHtmlAttr(filterKey) + '"' : "";
   return (
-    '<details class="status-section"' +
+    '<details class="status-section' +
+    (emptyOnly ? " wc-section-empty" : "") +
+    '"' +
     wcTrackAttr(trackId) +
     filterAttr +
     (openByDefault ? " open" : "") +
@@ -1783,7 +1799,6 @@ export function renderDashboardRootInnerHtml(
     '<section class="dash-card dashboard-tasks-block" aria-label="Task queue rollups">' +
     tasksQuickActionsPanel +
     renderFilterChipBar() +
-    renderExecutionReadyScopeFootnote() +
     renderStatusRollup(
       "status-ready-imp",
       "<b>Ready · Improvements</b> (" + String(readyImpCount) + ")",
@@ -1880,7 +1895,6 @@ export function renderDashboardRootInnerHtml(
   const overviewContent =
     recNextCard +
     renderStatPills(totalReadyCount, totalProposedCount, totalBlockedCount, totalDoneCount) +
-    renderExecutionReadyScopeFootnote() +
     renderAgentStatusBanner(d.agentStatus) +
     renderEditorIntegrationSection(editorIntegration) +
     renderRoleTemperamentAndPhaseSection(d.agentGuidance, ws as Record<string, unknown> | null, res) +
@@ -1918,7 +1932,13 @@ export function renderDashboardRootInnerHtml(
   return (
     '<div class="wc-tab-bar" role="tablist">' +
     '<button type="button" class="wc-tab-btn wc-tab-active" role="tab" data-wc-tab="overview">Overview</button>' +
-    '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="task-engine">Task Engine</button>' +
+    '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="task-engine">Task Engine' +
+    (totalReadyCount > 0
+      ? '<span class="wc-tab-badge wc-tab-badge-ready">' + escapeHtml(String(totalReadyCount)) + "</span>"
+      : totalBlockedCount > 0
+        ? '<span class="wc-tab-badge wc-tab-badge-blocked">' + escapeHtml(String(totalBlockedCount)) + "</span>"
+        : "") +
+    "</button>" +
     '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="status">Status</button>' +
     '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="config">Config</button>' +
     '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="cae">CAE</button>' +
