@@ -15,6 +15,7 @@ This file is an **ordered checklist**. Branch naming lives in **`.cursor/rules/b
 ## 0) Attach context
 
 - Confirm task **`id`**, **`status`**, and **acceptance criteria** via task-engine reads (`workspace-kit run get-task '{"taskId":"T###"}'`) — do not trust chat-only summaries for lifecycle.
+- **Policy (read-only, no network):** before assuming branch/review/evidence rules, run **`workspace-kit run resolve-maintainer-delivery-policy`** with `taskId` (or prospective `phaseKey` / `moduleId` context). Defaults match the historical GitHub PR + phase-branch flow; workspace or task metadata can select other profiles without editing this playbook.
 - For **`workspace-kit run run-transition`**, use JSON **`policyApproval`** on the **third** CLI argument ([`AGENT-CLI-MAP.md`](../AGENT-CLI-MAP.md), [`POLICY-APPROVAL.md`](../POLICY-APPROVAL.md)).
 - When **`tasks.planningGenerationPolicy`** is **`require`**, copy **`planningGeneration`** from that same read (or from **`list-tasks`** / **`get-next-actions`**) into **`expectedPlanningGeneration`** on every mutating task-engine command that accepts it.
 
