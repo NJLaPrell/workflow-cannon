@@ -1171,6 +1171,13 @@
   },
   {
     "moduleId": "context-activation",
+    "name": "cae-compare-registry-versions",
+    "file": "cae-compare-registry-versions.md",
+    "description": "Compare two CAE registry SQLite versions (artifacts, activations, optional file hashes).",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
     "name": "cae-create-registry-version",
     "file": "cae-create-registry-version.md",
     "description": "Create an empty CAE registry version row (optional activate). CAE governance + adminMutations.",

@@ -88,6 +88,11 @@
       "moduleId": "context-activation"
     },
     {
+      "name": "cae-compare-registry-versions",
+      "path": ".ai/agent-cli-snippets/by-command/cae-compare-registry-versions.json",
+      "moduleId": "context-activation"
+    },
+    {
       "name": "cae-conflicts",
       "path": ".ai/agent-cli-snippets/by-command/cae-conflicts.json",
       "moduleId": "context-activation"

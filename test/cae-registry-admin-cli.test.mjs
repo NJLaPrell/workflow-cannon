@@ -1420,3 +1420,52 @@ test("import-json-registry checkpointLabel records checkpoint + get-registry-ver
   assert.ok(Array.isArray(cp0.mutationIds));
   assert.ok(cp0.mutationIds.length >= 1);
 });
+
+test("cae-compare-registry-versions: identical clone has empty diff buckets", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const cloneId = "cae.reg.compare.identical";
+  const cl = await contextActivationModule.onCommand(
+    {
+      name: "cae-clone-registry-version",
+      args: {
+        schemaVersion: 1,
+        actor: "cmp",
+        fromVersionId: "cae.reg.seed",
+        toVersionId: cloneId,
+        setActive: false,
+        note: "for compare",
+        ...appr()
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(cl.ok, true);
+  const cmp = await contextActivationModule.onCommand(
+    {
+      name: "cae-compare-registry-versions",
+      args: { schemaVersion: 1, fromVersionId: "cae.reg.seed", toVersionId: cloneId }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(cmp.ok, true);
+  assert.equal(cmp.code, "cae-compare-registry-versions-ok");
+  assert.deepEqual(cmp.data.artifacts.added, []);
+  assert.deepEqual(cmp.data.artifacts.removed, []);
+  assert.deepEqual(cmp.data.artifacts.changed, []);
+  assert.deepEqual(cmp.data.activations.added, []);
+  assert.deepEqual(cmp.data.activations.removed, []);
+  assert.deepEqual(cmp.data.activations.changed, []);
+});
+
+test("cae-compare-registry-versions: unknown toVersionId", async () => {
+  const ws = await workspaceWithSeededRegistry();
+  const r = await contextActivationModule.onCommand(
+    {
+      name: "cae-compare-registry-versions",
+      args: { schemaVersion: 1, fromVersionId: "cae.reg.seed", toVersionId: "cae.reg.does-not-exist" }
+    },
+    { runtimeVersion: "0.1", workspacePath: ws, effectiveConfig: baseEffective() }
+  );
+  assert.equal(r.ok, false);
+  assert.equal(r.code, "cae-registry-version-not-found");
+});
