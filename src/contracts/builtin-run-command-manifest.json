@@ -1178,6 +1178,13 @@
   },
   {
     "moduleId": "context-activation",
+    "name": "cae-scan-workspace-artifact-integrity",
+    "file": "cae-scan-workspace-artifact-integrity.md",
+    "description": "Scan workspace CAE markdown under `.ai/cae/artifacts/<type>/` vs registry paths (orphan files + broken non-retired refs).",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "context-activation",
     "name": "cae-reconcile-defaults",
     "file": "cae-reconcile-defaults.md",
     "description": "Compare package CAE registry defaults vs active SQLite registry (hidden defaults, workspace clone hints).",
