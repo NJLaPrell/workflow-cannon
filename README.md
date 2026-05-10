@@ -49,23 +49,27 @@ The npm package is **not** named “Workflow Cannon”; use the table above when
 
 ## Quick start
 
-If you want the shortest path to the product's core value, install Workflow Cannon in a real project, open the dashboard plugin, and let your agent work against a system with real state underneath it:
+Install Workflow Cannon in a real project, then **attach it with `init` before `doctor`** so validation runs against baselines, generated context, and SQLite task persistence.
 
 ```bash
 npm install @workflow-cannon/workspace-kit
-npx workspace-kit --help
+npx workspace-kit init
 npx workspace-kit doctor
-npx workspace-kit run
+npx workspace-kit start
 ```
+
+In **non-interactive** environments (CI, scripts), use `WORKSPACE_KIT_POLICY_APPROVAL='{"confirmed":true,"rationale":"..."}'` or `npx workspace-kit init --yes --approval-rationale "…"` instead of the interactive confirmation prompt.
 
 Using pnpm instead:
 
 ```bash
 pnpm add @workflow-cannon/workspace-kit
-pnpm exec wk --help
+pnpm exec wk init
 pnpm exec wk doctor
-pnpm exec wk run
+pnpm exec wk start
 ```
+
+Use `npx workspace-kit --help` / `pnpm exec wk --help` when exploring the full command surface.
 
 What you get immediately:
 
@@ -354,7 +358,7 @@ These are **chat-shaped** recipes: what to say, what to attach, and what you sho
 
 ## New contributors — safe task transition (≤5 hops)
 
-1. **README** (this page) — install, `wk doctor`, `wk run` menu.  
+1. **README** (this page) — install, **`wk init`**, **`wk doctor`**, **`wk start`**, then `wk run` / dashboard.  
 2. [`AGENTS.md`](AGENTS.md) + [`.ai/agent-source-of-truth-order.md`](.ai/agent-source-of-truth-order.md) — agent precedence; **`tasks/*.md`** templates are prompt-only.  
 3. [`.ai/AGENT-CLI-MAP.md`](.ai/AGENT-CLI-MAP.md) — Tier **A** **`run-transition`** copy-paste JSON.  
 4. [`.ai/POLICY-APPROVAL.md`](.ai/POLICY-APPROVAL.md) — when JSON **`policyApproval`** is required vs env approval.  

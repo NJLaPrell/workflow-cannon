@@ -281,6 +281,39 @@ test("runCli doctor returns validation failure when required files are missing",
   assert.ok(capture.errors.some((l) => l.includes("--help")));
 });
 
+test("runCli init --dry-run previews plan without writing (minimal package.json)", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-init-dry-"));
+  await writeFile(
+    path.join(fixtureRoot, "package.json"),
+    JSON.stringify({ name: "wk-init-dry-fixture", version: "1.0.0", private: true }, null, 2)
+  );
+
+  const capture = createCapture();
+  const code = await runCli(["init", "--dry-run"], { cwd: fixtureRoot, ...capture });
+
+  assert.equal(code, 0);
+  assert.ok(capture.lines.some((l) => l.includes("dry-run")));
+  assert.ok(capture.lines.some((l) => l.includes("Planned paths:")));
+});
+
+test("runCli init --dry-run --json emits init-plan envelope", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-init-dry-json-"));
+  await writeFile(
+    path.join(fixtureRoot, "package.json"),
+    JSON.stringify({ name: "wk-init-json-fixture", version: "1.0.0", private: true }, null, 2)
+  );
+
+  const capture = createCapture();
+  const code = await runCli(["init", "--dry-run", "--json"], { cwd: fixtureRoot, ...capture });
+
+  assert.equal(code, 0);
+  assert.ok(capture.lines.length >= 1);
+  const payload = JSON.parse(capture.lines[0]);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.code, "init-plan");
+  assert.ok(payload.data && typeof payload.data === "object");
+});
+
 test("runCli doctor fails when sqlite persistence configured but DB missing", async () => {
   const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-dr-sqlite-miss-"));
   await createDoctorFixture(fixtureRoot);
