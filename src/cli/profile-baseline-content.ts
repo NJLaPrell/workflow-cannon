@@ -59,7 +59,7 @@ export const pointerRuleContent = `# Workspace Kit Profile Pointer
 
 Project-specific identity/config values should come from \`workspace-kit.profile.json\` and generated artifacts under \`.workspace-kit/generated/\`.
 
-Do not hardcode project names in rules. Run \`workspace-kit init\` after profile edits to regenerate project-context snippets.
+Do not hardcode project names in rules. Run \`workspace-kit refresh-context\` after profile edits to regenerate project-context snippets.
 `;
 
 /** Default owned-path entries when manifest policy is missing or invalid. */

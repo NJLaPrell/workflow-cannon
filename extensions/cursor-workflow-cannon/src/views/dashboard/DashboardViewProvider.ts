@@ -69,6 +69,28 @@ function collectPhaseKeySuggestions(data: Record<string, unknown>): Array<{ labe
     if (typeof ws === "string" && ws.trim()) add(ws.trim(), `Workspace DB: ${ws.trim()}`);
     const cf = phaseSlice.configPhaseKey;
     if (typeof cf === "string" && cf.trim()) add(cf.trim(), `Config hint: ${cf.trim()}`);
+    const parseRoadmapPhase = (raw: string): string => {
+      const t = raw.trim();
+      const fromPhrase = phaseKeyFromPhrase(t);
+      if (fromPhrase) {
+        return fromPhrase;
+      }
+      return /^\d+$/.test(t) ? t : "";
+    };
+    const curKP = phaseSlice.currentKitPhase;
+    if (typeof curKP === "string" && curKP.trim()) {
+      const pk = parseRoadmapPhase(curKP);
+      if (pk) {
+        add(pk, `Current kit phase (${curKP.trim()})`);
+      }
+    }
+    const nextKP = phaseSlice.nextKitPhase;
+    if (typeof nextKP === "string" && nextKP.trim()) {
+      const pk = parseRoadmapPhase(nextKP);
+      if (pk) {
+        add(pk, `Next kit phase (${nextKP.trim()})`);
+      }
+    }
   }
   const scan = (summary: unknown) => {
     if (!summary || typeof summary !== "object") return;
@@ -87,6 +109,12 @@ function collectPhaseKeySuggestions(data: Record<string, unknown>): Array<{ labe
   scan(data.proposedExecutionSummary);
   scan(data.readyImprovementsSummary);
   scan(data.proposedImprovementsSummary);
+  scan(data.completedSummary);
+  scan(data.cancelledSummary);
+  scan(data.transcriptChurnResearchSummary);
+  if (data.blockedSummary && typeof data.blockedSummary === "object") {
+    scan({ phaseBuckets: (data.blockedSummary as { phaseBuckets?: unknown }).phaseBuckets });
+  }
   return out;
 }
 
@@ -580,7 +608,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     ];
     const picked = await vscode.window.showQuickPick(quickItems, {
       title: `Set phase for ${taskId}`,
-      placeHolder: "Choose a phase target"
+      placeHolder: "Choose a phase target",
+      matchOnDescription: true
     });
     if (!picked) {
       return;
