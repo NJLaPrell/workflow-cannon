@@ -8,6 +8,22 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.83.0] - 2026-05-10
+
+Phase 85 — **First-run init UX, dashboard phase reassignment, and operator README alignment**. Ships `workspace-kit init` (detect → plan → apply → SQLite → starter task → doctor validation), `refresh-context` for profile regeneration, `wk start` for quick status, Cursor dashboard wiring for `assign-task-phase` with richer phase suggestions and accessibility on phase controls, execution-queue scope footnote on the Ready Execution rollup, and README quick start ordering (**install → init → doctor → start**) plus CLI regression tests for `init --dry-run` / `--json`. Includes ADR **`ADR-workspace-kit-init-first-run-v1`**.
+
+### Added
+
+- CLI **`init`** with **`--dry-run`**, **`--json`**, **`--yes`**, **`--approval-rationale`**, **`--no-starter-task`**; detection/plan/apply modules and SQLite bootstrap via existing planning preparation.
+- CLI **`refresh-context`** (formerly overloaded **`init`** behavior) requiring an existing profile.
+- CLI **`start`** for a concise post-init status line.
+- **`doctor`** remediation surfaces **`workspace-kit init`** for unattached repos (instead of steering first-run users to **`upgrade`** alone).
+- Cursor extension: phase reassignment flow, expanded phase key suggestions from dashboard summaries, **`wc-ready-scope-note`** on Ready Execution when the queue is empty.
+
+### Changed
+
+- Generated **README** quick start documents non-interactive approval options and puts **`init`** before **`doctor`**.
+
 ## [0.82.0] - 2026-05-08
 
 Phase 84 — **CAE guidance authoring surfaces, workspace artifact lifecycle, and guidance-pack operator UX**. This release extends CAE workspace authoring (templates, validation, duplicate-from-workspace), workspace artifact integrity scanning, archive and hard-delete for retired artifacts, guidance reconciliation with export and dry-run checkpoints, compound guidance scope rows with preview coercion, and the Cursor extension Guidance panel (portability tab, bulk activations, preview matrix). Parity wiring registers the CAE guidance authoring recovery runbook in the maintainer coverage map.
