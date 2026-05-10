@@ -22,8 +22,8 @@ JSON `data` includes:
 
 - `schemaVersion` — always `1`
 - `canonicalPhase` — resolution source (`workspace-status` | `config` | `none`), `canonicalPhaseKey`, `workspaceStatusPhaseKey`, `configPhaseKey`, and informational `configMatchesWorkspaceStatus` when both sides supply a phase number
-- `readyTaskSummaries` — per ready task: `phaseAligned`, `blockedByDependencies`, `unmetDependencies`, `taskPhaseKey`
-- `summary` — aggregate counts (`readyCount`, `misalignedPhaseCount`, `blockedByDependenciesCount`, `healthyReadyCount`)
+- `readyTaskSummaries` — per ready task: `phaseAligned`, `phaseScheduleRelation` (`current` \| `future` \| `past` \| `unknown`), `blockedByDependencies`, `unmetDependencies`, `taskPhaseKey`
+- `summary` — aggregate counts (`readyCount`, `misalignedPhaseCount` — behind-current or non-numeric mismatch, `scheduledFuturePhaseCount` — ready tasks scheduled for a higher numbered phase than current, `blockedByDependenciesCount`, `healthyReadyCount`)
 
 ## Related
 

@@ -89,3 +89,48 @@ export function resolveCanonicalPhase(args: {
     configMatchesWorkspaceStatus
   };
 }
+
+/**
+ * Leading integer segment of a phase key for ladder-style comparisons.
+ * Returns `null` when the key has no leading digits (opaque / custom bucket).
+ */
+export function parseLeadingPhaseOrdinal(phaseKey: string | null | undefined): number | null {
+  if (phaseKey === null || phaseKey === undefined) {
+    return null;
+  }
+  const m = String(phaseKey).trim().match(/^(\d+)/);
+  if (!m) {
+    return null;
+  }
+  const n = Number.parseInt(m[1]!, 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * How a task's target phase relates to the workspace's current kit phase
+ * (authoritative "where we are" from `resolveCanonicalPhase`, not per-task `phaseKey` alone).
+ */
+export type PhaseScheduleRelation = "current" | "future" | "past" | "unknown";
+
+export function resolvePhaseScheduleRelation(args: {
+  taskPhaseKey: string | null;
+  workspacePhaseKey: string | null;
+}): PhaseScheduleRelation {
+  const wk = args.workspacePhaseKey;
+  const tk = args.taskPhaseKey;
+  if (!wk || !tk) {
+    return "unknown";
+  }
+  const wn = parseLeadingPhaseOrdinal(wk);
+  const tn = parseLeadingPhaseOrdinal(tk);
+  if (wn === null || tn === null) {
+    return "unknown";
+  }
+  if (tn < wn) {
+    return "past";
+  }
+  if (tn > wn) {
+    return "future";
+  }
+  return "current";
+}

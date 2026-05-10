@@ -15,6 +15,7 @@ import {
   getPlanningGenerationPolicy,
   mergePlanningGenerationPolicyWarnings
 } from "./planning-config.js";
+import { parseLeadingPhaseOrdinal } from "./phase-resolution.js";
 
 const PHASE_KEY_RE = /^[A-Za-z0-9][A-Za-z0-9._\-]{0,63}$/;
 
@@ -32,8 +33,10 @@ export async function runAssignTaskPhase(args: {
   strictValidationError: (store: TaskStore, effective: Record<string, unknown> | undefined) => string | null;
   actor: string | undefined;
   rawArgs: Record<string, unknown>;
+  /** Canonical workspace kit phase (digits). When set with numeric phaseKey, assignments sort-before-current are rejected. */
+  canonicalWorkspacePhaseKey?: string | null;
 }): Promise<ModuleCommandResult> {
-  const { store, ctx, strictValidationError, actor, rawArgs } = args;
+  const { store, ctx, strictValidationError, actor, rawArgs, canonicalWorkspacePhaseKey } = args;
   const taskId = typeof rawArgs.taskId === "string" ? rawArgs.taskId.trim() : "";
   const pkRaw = typeof rawArgs.phaseKey === "string" ? rawArgs.phaseKey : "";
   const phaseKey = validatePhaseKey(pkRaw);
@@ -49,6 +52,19 @@ export async function runAssignTaskPhase(args: {
       code: "invalid-task-schema",
       message:
         "assign-task-phase requires phaseKey (non-empty; letters, digits, dot, underscore, hyphen; max 64 chars)"
+    };
+  }
+
+  const assignedOrd = parseLeadingPhaseOrdinal(phaseKey);
+  const wsOrd =
+    canonicalWorkspacePhaseKey !== undefined && canonicalWorkspacePhaseKey !== null
+      ? parseLeadingPhaseOrdinal(canonicalWorkspacePhaseKey)
+      : null;
+  if (assignedOrd !== null && wsOrd !== null && assignedOrd < wsOrd) {
+    return {
+      ok: false,
+      code: "phase-target-before-current-workspace-phase",
+      message: `assign-task-phase rejects '${phaseKey}' because its leading phase number (${assignedOrd}) is before workspace current kit phase (${canonicalWorkspacePhaseKey}); use an opaque key without a leading digit only when maintainer policy allows out-of-ladder buckets`
     };
   }
 

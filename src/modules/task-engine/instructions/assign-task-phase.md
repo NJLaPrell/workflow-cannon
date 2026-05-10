@@ -12,6 +12,10 @@ Sets **`phaseKey`** and **`phase`** on a task using the same validation path as 
 workspace-kit run assign-task-phase '<json>'
 ```
 
+## Phase ladder vs workspace current
+
+When the workspace has a resolvable **current kit phase number**, **`phaseKey`s whose leading digits sort **strictly before** that number are rejected with **`phase-target-before-current-workspace-phase`**. Keys **equal or higher** are allowed (future-phase planning). Keys **without** leading digits skip numeric comparison (opaque buckets).
+
 ## Arguments
 
 | Field | Required | Description |

@@ -3336,13 +3336,14 @@ test("taskEngineModule onCommand queue-health detects unmet deps on ready tasks"
   assert.equal(result.code, "queue-health");
   assert.equal(result.data.summary.blockedByDependenciesCount, 1);
   assert.equal(result.data.summary.misalignedPhaseCount, 0);
+  assert.equal(result.data.summary.scheduledFuturePhaseCount, 0);
   const row = result.data.readyTaskSummaries.find((r) => r.taskId === "T2");
   assert.ok(row);
   assert.equal(row.blockedByDependencies, true);
   assert.deepEqual(row.unmetDependencies, ["T1"]);
 });
 
-test("taskEngineModule onCommand queue-health detects phase mismatch", async () => {
+test("taskEngineModule onCommand queue-health counts scheduled future-phase ready work separately", async () => {
   const workspace = await tmpDir();
   const now = new Date().toISOString();
   await seedSqliteStore(workspace, (store) => {
@@ -3350,19 +3351,46 @@ test("taskEngineModule onCommand queue-health detects phase mismatch", async () 
       id: "T2",
       status: "ready",
       type: "workspace-kit",
-      title: "Wrong phase",
+      title: "Future bucket",
       createdAt: now,
       updatedAt: now,
       priority: "P1",
-      phase: "Phase 99 (stale)"
+      phase: "Phase 99 (planned)"
+    });
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, { kit: { currentPhaseNumber: 28 } });
+  const result = await taskEngineModule.onCommand({ name: "queue-health", args: {} }, ctx);
+  assert.equal(result.ok, true);
+  assert.equal(result.data.summary.misalignedPhaseCount, 0);
+  assert.equal(result.data.summary.scheduledFuturePhaseCount, 1);
+  const row = result.data.readyTaskSummaries[0];
+  assert.equal(row.phaseAligned, false);
+  assert.equal(row.phaseScheduleRelation, "future");
+});
+
+test("taskEngineModule onCommand queue-health detects behind-current phase mismatch", async () => {
+  const workspace = await tmpDir();
+  const now = new Date().toISOString();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask({
+      id: "T2",
+      status: "ready",
+      type: "workspace-kit",
+      title: "Stale phase",
+      createdAt: now,
+      updatedAt: now,
+      priority: "P1",
+      phase: "Phase 10 (stale)"
     });
   });
   const ctx = sqliteTaskEngineCtx(workspace, { kit: { currentPhaseNumber: 28 } });
   const result = await taskEngineModule.onCommand({ name: "queue-health", args: {} }, ctx);
   assert.equal(result.ok, true);
   assert.equal(result.data.summary.misalignedPhaseCount, 1);
+  assert.equal(result.data.summary.scheduledFuturePhaseCount, 0);
   const row = result.data.readyTaskSummaries[0];
   assert.equal(row.phaseAligned, false);
+  assert.equal(row.phaseScheduleRelation, "past");
 });
 
 test("taskEngineModule list-tasks includeQueueHints aligns with queue-health signals", async () => {
@@ -3630,6 +3658,26 @@ test("taskEngineModule create-task and update-task commands persist mutations", 
   const fetched = await taskEngineModule.onCommand({ name: "get-task", args: { taskId: "T400" } }, ctx);
   assert.equal(fetched.ok, true);
   assert.equal(fetched.data.task.title, "Updated task title");
+});
+
+test("taskEngineModule assign-task-phase rejects numeric phase before workspace current", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace, { kit: { currentPhaseNumber: 40 } });
+  const created = await taskEngineModule.onCommand(
+    { name: "create-task", args: { id: "T410", title: "Phase test", status: "ready" } },
+    ctx
+  );
+  assert.equal(created.ok, true);
+
+  const assigned = await taskEngineModule.onCommand(
+    {
+      name: "assign-task-phase",
+      args: { taskId: "T410", phaseKey: "10", phase: "Phase 10 (too old)" }
+    },
+    ctx
+  );
+  assert.equal(assigned.ok, false);
+  assert.equal(assigned.code, "phase-target-before-current-workspace-phase");
 });
 
 test("taskEngineModule assign-task-phase and clear-task-phase persist", async () => {

@@ -11,7 +11,7 @@ import {
   LIST_TASKS_MAX_LIMIT
 } from "../list-tasks-pagination.js";
 import { isRecordLike, readMetadataPath, SAFE_METADATA_PATH_RE, TASK_ID_RE } from "../mutation-utils.js";
-import { inferTaskPhaseKey, resolveCanonicalPhase } from "../phase-resolution.js";
+import { inferTaskPhaseKey, parseKitPhaseNumberFromYaml, resolveCanonicalPhase } from "../phase-resolution.js";
 import {
   featureRegistryActiveOnConnection,
   listFeatureIdsForComponent
@@ -338,6 +338,9 @@ export function resolveTaskListQueueReadoutCommands(
       effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
       workspaceStatus
     });
+    const nextKitPhaseKey = workspaceStatus?.nextKitPhase
+      ? parseKitPhaseNumberFromYaml(workspaceStatus.nextKitPhase)
+      : null;
     const maintainerDelivery = buildMaintainerDeliveryHints({
       tasks,
       canonicalPhaseKey: phaseRes.canonicalPhaseKey,
@@ -369,6 +372,15 @@ export function resolveTaskListQueueReadoutCommands(
       scope: "tasks-only",
       queueNamespace: ns ?? null,
       maintainerDelivery,
+      workspacePhaseScheduling: {
+        schemaVersion: 1,
+        workspaceKitPhaseKey: phaseRes.canonicalPhaseKey,
+        workspaceKitPhaseSource: phaseRes.source,
+        nextKitPhaseKey,
+        assignNumericFloorPhaseKey: phaseRes.canonicalPhaseKey,
+        assignPolicy:
+          "Leading-digit phaseKeys sort relative to workspace current kit phase; targets strictly before current are rejected. Phase keys without leading digits skip numeric floor comparison."
+      },
       ...intakeBundle,
       ...(phaseContext ? { phaseContext } : {})
     };

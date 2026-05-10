@@ -1,6 +1,8 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
 import { attachPolicyMeta } from "../attach-planning-response-meta.js";
 import type { OpenedPlanningStores } from "../persistence/planning-open.js";
+import { readWorkspaceStatusSnapshotFromDual } from "../persistence/workspace-status-store.js";
+import { resolveCanonicalPhase } from "../phase-resolution.js";
 import { TaskStore } from "../persistence/store.js";
 import { strictValidationError } from "./strict-store-validation.js";
 import { runAssignTaskPhase, runClearTaskPhase } from "../task-engine-phase-mutations.js";
@@ -24,12 +26,18 @@ export async function resolveTaskPhaseCommands(
         : ctx.resolvedActor !== undefined
           ? ctx.resolvedActor
           : undefined;
+    const workspaceStatus = readWorkspaceStatusSnapshotFromDual(planning.sqliteDual);
+    const phaseRes = resolveCanonicalPhase({
+      effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+      workspaceStatus
+    });
     const r = await runAssignTaskPhase({
       store,
       ctx,
       strictValidationError,
       actor,
-      rawArgs: args as Record<string, unknown>
+      rawArgs: args as Record<string, unknown>,
+      canonicalWorkspacePhaseKey: phaseRes.canonicalPhaseKey
     });
     if (r.ok && r.data && typeof r.data === "object") {
       attachPolicyMeta(r.data as Record<string, unknown>, ctx, planning.sqliteDual.getPlanningGeneration());

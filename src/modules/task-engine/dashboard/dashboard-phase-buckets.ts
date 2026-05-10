@@ -44,6 +44,20 @@ function phaseBucketLabel(
   if (key === next) {
     return `Phase ${key} (next) (${count})`;
   }
+  if (current !== null) {
+    const nk = Number.parseInt(key, 10);
+    const nc = Number.parseInt(current, 10);
+    if (
+      Number.isFinite(nk) &&
+      Number.isFinite(nc) &&
+      String(nk) === key &&
+      String(nc) === current &&
+      nk > nc &&
+      key !== next
+    ) {
+      return `Phase ${key} (future) (${count})`;
+    }
+  }
   return `Phase ${key} (${count})`;
 }
 
