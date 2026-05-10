@@ -32,6 +32,8 @@ The schema permits additional task fields; common fields include `type`, `priori
 
 **Intake preview (read-only):** run **`workspace-kit run resolve-task-intake-policy`** with the same `type` / `status` / `metadata` shape you plan to persist, or use **`get-next-actions`** / **`agent-bootstrap`** / **`list-tasks`** with **`includeTaskIntake:true`** for compact field-gap hints — see `resolve-task-intake-policy.md`.
 
+**`tasks.intakePolicy` + `status: "ready"`:** when workspace config sets **`tasks.intakePolicy.enforcementMode`** to **`enforce`**, the resolver can select the context profile **`workspace-kit-create-ready`** for **`type: "workspace-kit"`** + **`create-ready`**. Incomplete **`summary`**, **`technicalScope`**, or **`acceptanceCriteria`** then fail **`create-task`** with **`task-intake-blocked`**. Draft creates with **`status: "proposed"`** remain permissive for the same type (enforcement applies to **`create-ready`**, not **`create-proposed`**). Preflight with **`resolve-task-intake-policy`** using **`action":"create-ready"`** and **`targetStatus":"ready"`** before mutating.
+
 Known type guardrails:
 
 - For `type: "improvement"`, Task Engine validates non-empty `acceptanceCriteria` and `technicalScope`, plus non-empty **`metadata.issue`** (problem statement) and **`metadata.supportingReasoning`** (why this is the issue; cite evidence refs). Legacy rows whose id matches **`imp-<hex>`** may omit **`metadata.supportingReasoning`** until updated.
