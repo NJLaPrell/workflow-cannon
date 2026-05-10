@@ -11,7 +11,7 @@
   "sampleArgs": {},
   "examples": [
     {
-      "description": "Scan active version",
+      "description": "Minimal argv example",
       "argv": "workspace-kit run cae-scan-workspace-artifact-integrity '{}'"
     }
   ],

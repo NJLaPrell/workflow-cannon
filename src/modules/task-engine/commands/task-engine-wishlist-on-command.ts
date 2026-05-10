@@ -200,9 +200,21 @@ export function runWishlistStoreCommand(
 
   if (commandName === "update-wishlist") {
     const wishlistId = typeof args.wishlistId === "string" ? args.wishlistId.trim() : "";
-    const updates = typeof args.updates === "object" && args.updates !== null ? (args.updates as Record<string, unknown>) : undefined;
+    const patch =
+      typeof args.patch === "object" && args.patch !== null ? (args.patch as Record<string, unknown>) : undefined;
+    let updates =
+      typeof args.updates === "object" && args.updates !== null ? (args.updates as Record<string, unknown>) : undefined;
+    if (!updates && patch) {
+      updates = patch;
+    } else if (updates && patch) {
+      updates = { ...patch, ...updates };
+    }
     if (!wishlistId || !updates) {
-      return { ok: false, code: "invalid-task-schema", message: "update-wishlist requires wishlistId and updates" };
+      return {
+        ok: false,
+        code: "invalid-task-schema",
+        message: "update-wishlist requires wishlistId and updates (or patch as an alias for updates)"
+      };
     }
     const existingTask = findWishlistIntakeTaskByLegacyOrTaskId(store.getAllTasks(), wishlistId);
     if (!existingTask) {

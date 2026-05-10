@@ -598,12 +598,20 @@
           "properties": {
             "args": {
               "type": "object",
-              "required": ["wishlistId", "patch"],
-              "additionalProperties": true
+              "required": ["wishlistId"],
+              "additionalProperties": true,
+              "properties": {
+                "wishlistId": { "type": "string" },
+                "updates": { "type": "object", "additionalProperties": true },
+                "patch": { "type": "object", "additionalProperties": true }
+              },
+              "anyOf": [
+                { "required": ["updates"] },
+                { "required": ["patch"] }
+              ]
             },
             "responseData": {
               "type": "object",
-              "required": ["wishlist", "presentation"],
               "additionalProperties": true
             }
           }

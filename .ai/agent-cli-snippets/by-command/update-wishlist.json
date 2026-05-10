@@ -5,20 +5,43 @@
   "schema": {
     "type": "object",
     "required": [
-      "wishlistId",
-      "patch"
+      "wishlistId"
     ],
-    "additionalProperties": true
+    "properties": {
+      "wishlistId": {
+        "type": "string"
+      },
+      "updates": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "patch": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "additionalProperties": true,
+    "anyOf": [
+      {
+        "required": [
+          "updates"
+        ]
+      },
+      {
+        "required": [
+          "patch"
+        ]
+      }
+    ]
   },
   "schemaSource": "pilot-run-args-snapshot",
   "sampleArgs": {
-    "wishlistId": null,
-    "patch": null
+    "wishlistId": ""
   },
   "examples": [
     {
       "description": "Minimal argv example",
-      "argv": "workspace-kit run update-wishlist '{\"wishlistId\":null,\"patch\":null}'"
+      "argv": "workspace-kit run update-wishlist '{\"wishlistId\":\"\"}'"
     }
   ],
   "instructionPath": "src/modules/task-engine/instructions/update-wishlist.md",
