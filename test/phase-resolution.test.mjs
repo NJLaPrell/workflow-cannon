@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { resolveCanonicalPhase } from "../dist/modules/task-engine/phase-resolution.js";
+import { resolveCanonicalPhase, resolvePhaseScheduleRelation } from "../dist/modules/task-engine/phase-resolution.js";
 
 test("resolveCanonicalPhase prefers workspace status over config", () => {
   const r = resolveCanonicalPhase({
@@ -29,4 +29,19 @@ test("resolveCanonicalPhase falls back to config when workspace status has no ph
   assert.equal(r.canonicalPhaseKey, "42");
   assert.equal(r.source, "config");
   assert.equal(r.configMatchesWorkspaceStatus, null);
+});
+
+test("resolvePhaseScheduleRelation orders numeric phase keys against workspace current", () => {
+  assert.equal(
+    resolvePhaseScheduleRelation({ taskPhaseKey: "87", workspacePhaseKey: "87" }),
+    "current"
+  );
+  assert.equal(
+    resolvePhaseScheduleRelation({ taskPhaseKey: "88", workspacePhaseKey: "87" }),
+    "future"
+  );
+  assert.equal(
+    resolvePhaseScheduleRelation({ taskPhaseKey: "86", workspacePhaseKey: "87" }),
+    "past"
+  );
 });

@@ -11,8 +11,8 @@
   "sampleArgs": {},
   "examples": [
     {
-      "description": "Hard delete with explicit confirmation flag",
-      "argv": "workspace-kit run cae-hard-delete-retired-workspace-artifact-file '{\"confirmAdvancedHardDelete\":true}'"
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run cae-hard-delete-retired-workspace-artifact-file '{}'"
     }
   ],
   "instructionPath": "src/modules/context-activation/instructions/cae-hard-delete-retired-workspace-artifact-file.md",

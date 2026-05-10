@@ -11,8 +11,8 @@
   "sampleArgs": {},
   "examples": [
     {
-      "description": "Dry-run against a saved pack file",
-      "argv": "workspace-kit run cae-import-guidance-pack-dry-run '{\"packRelativePath\":\".workspace-kit/tmp/guidance-pack.json\"}'"
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run cae-import-guidance-pack-dry-run '{}'"
     }
   ],
   "instructionPath": "src/modules/context-activation/instructions/cae-import-guidance-pack-dry-run.md",

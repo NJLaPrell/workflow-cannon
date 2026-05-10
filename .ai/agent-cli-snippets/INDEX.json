@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-09T02:09:46.997Z",
+  "generatedAt": "2026-05-10T16:07:17.720Z",
   "commands": [
     {
       "name": "add-dependency",
@@ -73,13 +73,13 @@
       "moduleId": "context-activation"
     },
     {
-      "name": "cae-activate-registry-version",
-      "path": ".ai/agent-cli-snippets/by-command/cae-activate-registry-version.json",
+      "name": "cae-activate-registry-checkpoint",
+      "path": ".ai/agent-cli-snippets/by-command/cae-activate-registry-checkpoint.json",
       "moduleId": "context-activation"
     },
     {
-      "name": "cae-activate-registry-checkpoint",
-      "path": ".ai/agent-cli-snippets/by-command/cae-activate-registry-checkpoint.json",
+      "name": "cae-activate-registry-version",
+      "path": ".ai/agent-cli-snippets/by-command/cae-activate-registry-version.json",
       "moduleId": "context-activation"
     },
     {
@@ -198,13 +198,13 @@
       "moduleId": "context-activation"
     },
     {
-      "name": "cae-health",
-      "path": ".ai/agent-cli-snippets/by-command/cae-health.json",
+      "name": "cae-hard-delete-retired-workspace-artifact-file",
+      "path": ".ai/agent-cli-snippets/by-command/cae-hard-delete-retired-workspace-artifact-file.json",
       "moduleId": "context-activation"
     },
     {
-      "name": "cae-hard-delete-retired-workspace-artifact-file",
-      "path": ".ai/agent-cli-snippets/by-command/cae-hard-delete-retired-workspace-artifact-file.json",
+      "name": "cae-health",
+      "path": ".ai/agent-cli-snippets/by-command/cae-health.json",
       "moduleId": "context-activation"
     },
     {
@@ -283,13 +283,13 @@
       "moduleId": "context-activation"
     },
     {
-      "name": "cae-scan-workspace-artifact-integrity",
-      "path": ".ai/agent-cli-snippets/by-command/cae-scan-workspace-artifact-integrity.json",
+      "name": "cae-satisfy-ack",
+      "path": ".ai/agent-cli-snippets/by-command/cae-satisfy-ack.json",
       "moduleId": "context-activation"
     },
     {
-      "name": "cae-satisfy-ack",
-      "path": ".ai/agent-cli-snippets/by-command/cae-satisfy-ack.json",
+      "name": "cae-scan-workspace-artifact-integrity",
+      "path": ".ai/agent-cli-snippets/by-command/cae-scan-workspace-artifact-integrity.json",
       "moduleId": "context-activation"
     },
     {

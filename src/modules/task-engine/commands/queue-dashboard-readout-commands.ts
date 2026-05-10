@@ -45,7 +45,7 @@ export async function resolveQueueDashboardReadoutCommands(
     return {
       ok: true,
       code: "queue-health",
-      message: `Queue health: ${report.summary.readyCount} ready; ${report.summary.misalignedPhaseCount} phase mismatches; ${report.summary.blockedByDependenciesCount} ready with unmet dependencies`,
+      message: `Queue health: ${report.summary.readyCount} ready; ${report.summary.misalignedPhaseCount} phase mismatches / behind-current; ${report.summary.scheduledFuturePhaseCount} scheduled future-phase; ${report.summary.blockedByDependenciesCount} ready with unmet dependencies`,
       data: report as unknown as Record<string, unknown>
     };
   }

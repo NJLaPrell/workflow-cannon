@@ -56,6 +56,8 @@
     "release-evidence-manifest",
     "remove-dependency",
     "replay-queue-snapshot",
+    "resolve-maintainer-delivery-policy",
+    "resolve-task-intake-policy",
     "review-planning-execution-drafts",
     "run-transition",
     "set-agent-activity",
@@ -803,6 +805,12 @@
     "replay-queue-snapshot": {
       "type": "object"
     },
+    "resolve-maintainer-delivery-policy": {
+      "type": "object"
+    },
+    "resolve-task-intake-policy": {
+      "type": "object"
+    },
     "review-planning-execution-drafts": {
       "type": "object"
     },
@@ -1059,10 +1067,34 @@
     "update-wishlist": {
       "type": "object",
       "required": [
-        "wishlistId",
-        "patch"
+        "wishlistId"
       ],
-      "additionalProperties": true
+      "properties": {
+        "wishlistId": {
+          "type": "string"
+        },
+        "updates": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "patch": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true,
+      "anyOf": [
+        {
+          "required": [
+            "updates"
+          ]
+        },
+        {
+          "required": [
+            "patch"
+          ]
+        }
+      ]
     },
     "update-workspace-phase-snapshot": {
       "type": "object",
