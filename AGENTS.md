@@ -1,6 +1,6 @@
 # AGENTS
 
-**Agents:** Use **`.ai/AGENTS.md`** (meta rules), **`.ai/agent-source-of-truth-order.md`** (numbered precedence), **`.ai/machine-cli-policy.md`**, **`.ai/WORKSPACE-KIT-SESSION.md`**, **`.ai/MACHINE-PLAYBOOKS.md`**, and **`src/modules/*/instructions/*.md`**. Prefer **`pnpm run wk`** / CLI JSON output over opening anything under **`docs/`** for routine execution (see **`.cursor/rules/agent-doc-routing.mdc`**).
+**Agents:** Use **`.ai/AGENTS.md`** (meta rules), **`.ai/agent-source-of-truth-order.md`** (numbered precedence), **`.ai/machine-cli-policy.md`**, **`.ai/WORKSPACE-KIT-SESSION.md`**, **`.ai/MACHINE-PLAYBOOKS.md`**, and **`src/modules/*/instructions/*.md`**. Prefer **`pnpm run wk`** / CLI JSON output over opening anything under **`docs/`** for routine execution (see **`.cursor/rules/agent-doc-routing.mdc`**). Defects and execution backlog for **this** repository belong in the SQLite task store via **`workspace-kit run create-task`** (and improvement pipelines where applicable), not GitHub Issues — GitHub remains for PRs, review, and merge per maintainer delivery.
 
 **Maintainers:** Human-oriented index and rendered playbooks live in **`docs/maintainers/AGENTS.md`** — not the agent entry path.
 
