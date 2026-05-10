@@ -184,15 +184,15 @@ test("runCli --version prints a semver line", async () => {
   assert.match(capture.lines[0], /^\d+\.\d+\.\d+/);
 });
 
-test("runCli init generates profile-driven project context artifacts", async () => {
-  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-init-"));
+test("runCli refresh-context regenerates profile-driven project context artifacts", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-refresh-"));
   await createDoctorFixture(fixtureRoot);
 
   const capture = createCapture();
-  const code = await runCliWithPolicyApproval(["init"], { cwd: fixtureRoot, ...capture });
+  const code = await runCliWithPolicyApproval(["refresh-context"], { cwd: fixtureRoot, ...capture });
 
   assert.equal(code, 0);
-  assert.match(capture.lines[0], /generated profile-driven project context artifacts/);
+  assert.match(capture.lines[0], /regenerated profile-driven project context artifacts/);
 
   const generatedContext = JSON.parse(
     await readFile(
@@ -277,7 +277,7 @@ test("runCli doctor returns validation failure when required files are missing",
   assert.equal(code, 1);
   assert.match(capture.errors[0], /failed validation/);
   assert.ok(capture.errors.some((l) => l.includes("Next steps:")));
-  assert.ok(capture.errors.some((l) => l.includes("upgrade")));
+  assert.ok(capture.errors.some((l) => l.includes("workspace-kit init")));
   assert.ok(capture.errors.some((l) => l.includes("--help")));
 });
 
@@ -463,13 +463,9 @@ test("runCli check returns validation failure for invalid profile values", async
   assert.match(capture.errors[0], /failed profile validation/);
 });
 
-test("runCli init updates generated project context after profile name changes", async () => {
-  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-init-update-"));
+test("runCli refresh-context updates generated project context after profile name changes", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-refresh-update-"));
   await createDoctorFixture(fixtureRoot);
-
-  const firstRunCapture = createCapture();
-  const firstCode = await runCliWithPolicyApproval(["init"], { cwd: fixtureRoot, ...firstRunCapture });
-  assert.equal(firstCode, 0);
 
   await writeFile(
     path.join(fixtureRoot, "workspace-kit.profile.json"),
@@ -485,9 +481,9 @@ test("runCli init updates generated project context after profile name changes",
     )
   );
 
-  const secondRunCapture = createCapture();
-  const secondCode = await runCliWithPolicyApproval(["init"], { cwd: fixtureRoot, ...secondRunCapture });
-  assert.equal(secondCode, 0);
+  const capture = createCapture();
+  const code = await runCliWithPolicyApproval(["refresh-context"], { cwd: fixtureRoot, ...capture });
+  assert.equal(code, 0);
 
   const generatedRule = await readFile(
     path.join(fixtureRoot, ".cursor", "rules", "workspace-kit-project-context.mdc"),

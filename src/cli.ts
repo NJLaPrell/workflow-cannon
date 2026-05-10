@@ -49,6 +49,9 @@ import {
   validateProfile,
   writeFileWithBackupIfChanged
 } from "./cli/profile-support.js";
+import { runWorkspaceKitInitCommand } from "./cli/init-command.js";
+import { runRefreshContextCommand } from "./cli/refresh-context-command.js";
+import { runWorkspaceKitStartCommand } from "./cli/start-command.js";
 
 export { defaultWorkspaceKitPaths } from "./cli/default-workspace-kit-paths.js";
 export { parseJsonFile } from "./cli/profile-support.js";
@@ -115,9 +118,16 @@ function writeDoctorFailureRemediation(
   writeError("");
   writeError("Next steps:");
   const hasMissing = issues.some((issue) => issue.reason === "missing");
-  if (hasMissing) {
+  const manifestMissing = issues.some(
+    (issue) => issue.reason === "missing" && issue.path === defaultWorkspaceKitPaths.manifest
+  );
+  if (manifestMissing) {
     writeError(
-      "  - Kit files missing: run workspace-kit upgrade from the repo root (set WORKSPACE_KIT_POLICY_APPROVAL — see docs/maintainers/POLICY-APPROVAL.md)."
+      "  - Repository not attached yet: run `workspace-kit init` (preview with `workspace-kit init --dry-run`)."
+    );
+  } else if (hasMissing) {
+    writeError(
+      "  - Kit files missing: run `workspace-kit upgrade` after package updates (set WORKSPACE_KIT_POLICY_APPROVAL — see docs/maintainers/POLICY-APPROVAL.md), or `workspace-kit init` when bootstrapping a fresh workspace."
     );
   }
   writeError("  - workspace-kit --help — orientation and top-level commands");
@@ -149,9 +159,9 @@ async function printWorkspaceKitTopLevelHelp(writeLine: (message: string) => voi
   writeLine("Command discovery: run `workspace-kit run` with no subcommand (after `doctor` passes) to print every module command.");
   writeLine("Also installed as the short command `wk` (same binary as `workspace-kit`).");
   writeLine("");
-  writeLine("Start here (first time in a kit-enabled repo)");
-  writeLine("  1) workspace-kit doctor   (or: wk doctor)");
-  writeLine("  2) workspace-kit run              ← lists every module command (your command menu)");
+  writeLine("Start here (attach Workflow Cannon to a repo)");
+  writeLine("  1) workspace-kit init           ← first-run attach / baselines / SQLite");
+  writeLine("  2) workspace-kit start           ← quick health summary + useful commands");
   writeLine("  3) workspace-kit run get-next-actions '{}'   ← safe read: suggested next work");
   writeLine("");
   writeLine("Top-level commands");
@@ -170,7 +180,10 @@ async function printWorkspaceKitTopLevelHelp(writeLine: (message: string) => voi
   writeLine("  run <cmd> --schema-only   Pilot: print JSON Schema + sample args (run-transition, create-task, update-task, dashboard-summary)");
   writeLine("  config          Show or change kit config (mutations need env approval — see below)");
   writeLine("  check           Validate workspace-kit.profile.json");
-  writeLine("  init            Regenerate profile-driven artifacts (needs env approval)");
+  writeLine("  init            Attach Workflow Cannon (detect + baselines + SQLite + doctor)");
+  writeLine("  init --dry-run [--json]   Preview planned writes (never modifies disk)");
+  writeLine("  refresh-context Regenerate profile-driven artifacts from workspace-kit.profile.json (env approval)");
+  writeLine("  start           Doctor-backed status summary after attach (--json)");
   writeLine("  upgrade         Refresh kit-managed baseline files (needs env approval)");
   writeLine("  drift-check     Fail if managed kit assets differ from expected content");
   writeLine("");
@@ -217,27 +230,25 @@ export async function runCli(
   }
 
   if (command === "init") {
-    const approval = await requireCliPolicyApproval(cwd, "cli.init", "init", writeError);
-    if (!approval) {
-      return EXIT_VALIDATION_FAILURE;
-    }
+    return runWorkspaceKitInitCommand(cwd, args.slice(1), { writeLine, writeError, readStdinLine }, {
+      success: EXIT_SUCCESS,
+      validationFailure: EXIT_VALIDATION_FAILURE,
+      usageError: EXIT_USAGE_ERROR,
+      internalError: EXIT_INTERNAL_ERROR
+    });
+  }
 
-    const { errors, profile } = await validateProfile(cwd);
-    if (errors.length > 0 || !profile) {
-      await recordCliPolicySuccess(cwd, "cli.init", "init", approval.rationale, false);
-      writeError("workspace-kit init failed profile validation.");
-      for (const error of errors) {
-        writeError(`- ${error}`);
-      }
-      return EXIT_VALIDATION_FAILURE;
-    }
+  if (command === "refresh-context") {
+    return runRefreshContextCommand(cwd, writeLine, writeError);
+  }
 
-    const artifacts = await generateProfileDrivenArtifacts(cwd, profile);
-    writeLine("workspace-kit init generated profile-driven project context artifacts.");
-    writeLine(`- ${path.relative(cwd, artifacts.generatedJsonPath)}`);
-    writeLine(`- ${path.relative(cwd, artifacts.generatedRulePath)}`);
-    await recordCliPolicySuccess(cwd, "cli.init", "init", approval.rationale, true);
-    return EXIT_SUCCESS;
+  if (command === "start") {
+    return runWorkspaceKitStartCommand(cwd, args.slice(1), { writeLine, writeError, readStdinLine }, {
+      success: EXIT_SUCCESS,
+      validationFailure: EXIT_VALIDATION_FAILURE,
+      usageError: EXIT_USAGE_ERROR,
+      internalError: EXIT_INTERNAL_ERROR
+    });
   }
 
   if (command === "check") {
@@ -507,7 +518,7 @@ export async function runCli(
 
   if (command !== "doctor") {
     writeError(
-      `Unknown command '${command}'. Supported: init, doctor, check, upgrade, drift-check, run, config. Run workspace-kit --help for a guided overview.`
+      `Unknown command '${command}'. Supported: init, refresh-context, start, doctor, check, upgrade, drift-check, run, config. Run workspace-kit --help for a guided overview.`
     );
     return EXIT_USAGE_ERROR;
   }

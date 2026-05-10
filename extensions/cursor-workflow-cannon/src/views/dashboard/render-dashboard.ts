@@ -14,6 +14,19 @@ export function escapeHtmlAttr(s: string): string {
     .replace(/</g, "&lt;");
 }
 
+/** Ready / proposed / blocked row control — posts `assignTaskPhase` (assign-task-phase). */
+function renderPhaseAssignButton(taskId: string): string {
+  const idAttr = escapeHtml(taskId);
+  const aria = escapeHtmlAttr(`Move task ${taskId} to a different phase`);
+  return (
+    '<button type="button" class="dash-row-action dash-row-action-secondary" data-wc-action="assign-phase" data-task-id="' +
+    idAttr +
+    '" aria-label="' +
+    aria +
+    '" title="assign-task-phase — set stable phaseKey">Phase</button>'
+  );
+}
+
 /** Stable id for preserving `<details open>` when the host replaces `#root` innerHTML (`DashboardViewProvider` wcReplaceRoot). */
 function wcTrackAttr(trackId: string): string {
   const safe = trackId.replace(/[^a-zA-Z0-9_-]/g, "_").replace(/_+/g, "_").slice(0, 120);
@@ -382,9 +395,12 @@ function renderTaskRowList(items: unknown, emptyMessage = "No ready tasks."): st
           label +
           "</span>" +
           (id.length > 0
-            ? '<button type="button" class="dash-row-action dash-row-action-tertiary" data-wc-action="task-detail" data-task-id="' +
+            ? '<span class="dash-row-actions">' +
+              renderPhaseAssignButton(id) +
+              '<button type="button" class="dash-row-action dash-row-action-tertiary" data-wc-action="task-detail" data-task-id="' +
               idAttr +
-              '" title="Open task view (markdown)">View</button>'
+              '" title="Open task view (markdown)">View</button>' +
+              "</span>"
             : "") +
           "</div>"
         );
@@ -526,6 +542,7 @@ function renderProposedExecutionRow(row: { id?: unknown; title?: unknown; phase?
     label +
     "</span>" +
     '<span class="dash-row-actions">' +
+    renderPhaseAssignButton(id) +
     '<button type="button" class="dash-row-action dash-row-action-primary" data-wc-action="proposed-exe-accept" data-task-id="' +
     idAttr +
     '" title="Accept → ready (confirms policy rationale)">Accept</button>' +
@@ -572,9 +589,12 @@ function renderBlockedList(items: unknown): string {
           label +
           "</span>" +
           (tid.length > 0
-            ? '<button type="button" class="dash-row-action dash-row-action-tertiary" data-wc-action="task-detail" data-task-id="' +
+            ? '<span class="dash-row-actions">' +
+              renderPhaseAssignButton(tid) +
+              '<button type="button" class="dash-row-action dash-row-action-tertiary" data-wc-action="task-detail" data-task-id="' +
               idAttr +
-              '" title="Open task view (markdown)">View</button>'
+              '" title="Open task view (markdown)">View</button>' +
+              "</span>"
             : "") +
           "</div>"
         );
@@ -1811,8 +1831,10 @@ export function renderDashboardRootInnerHtml(
       "status-ready-exe",
       "<b>Ready · Execution</b> (" + String(readyExeCount) + ")",
       breakdownLine +
+        renderExecutionReadyScopeFootnote() +
         renderReadyPhaseBuckets(res.phaseBuckets, readyExeTop, "No ready execution tasks.", "rdy-exe"),
-      readyExeCount === 0,
+      /* Always render body so execution-queue scope footnote appears even when count is 0. */
+      false,
       readyExeCount > 0,
       "ready"
     ) +

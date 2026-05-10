@@ -520,6 +520,12 @@ workspace-kit run sync-effective-behavior-cursor-rule '{"dryRun":true}'
 workspace-kit doctor
 ```
 
+### Task intake — opening execution work as `ready`
+
+When **`tasks.intakePolicy.enforcementMode`** is **`enforce`**, **`create-task`** with **`status: "ready"`** and **`type: "workspace-kit"`** must satisfy the context profile **`workspace-kit-create-ready`** (non-empty **`summary`**, **`technicalScope`**, **`acceptanceCriteria`** with substantive list items). **`status: "proposed"`** stays a thin-draft path. Failures surface as **`task-intake-blocked`**.
+
+Preflight (Tier C): **`pnpm exec wk run resolve-task-intake-policy`** with **`"action":"create-ready"`**, **`"targetStatus":"ready"`**, **`"fields":{"type":"workspace-kit","title":"…","status":"ready",…}`**. Prefer **`allocateId: true`** for new ids; include **`expectedPlanningGeneration`** when **`tasks.planningGenerationPolicy`** is **`require`** (see **`get-next-actions`** / **`list-tasks`**).
+
 **Agent behavior** (`list-behavior-profiles`, `get-behavior-profile`, `resolve-behavior-profile`, `set-active-behavior-profile`, `create-behavior-profile`, `update-behavior-profile`, `delete-behavior-profile`, `diff-behavior-profiles`, `explain-behavior-profiles`, `interview-behavior-profile`, `sync-effective-behavior-cursor-rule`) are **Tier C**: advisory interaction posture only; **subordinate** to PRINCIPLES and policy. They persist under `.workspace-kit/agent-behavior/` (JSON) or unified SQLite (`module_id` `agent-behavior`) when `tasks.persistenceBackend` is `sqlite`. **`sync-effective-behavior-cursor-rule`** writes a generated **`.cursor/rules/*.mdc`** summary (also auto-scheduled after common profile / guidance mutators; fail-open).
 
 **Wishlist mutations** (`create-wishlist`, `update-wishlist`, `convert-wishlist`), **`persist-planning-execution-drafts`**, and **`migrate-task-persistence`** are Tier C by default (same as `create-task`): they persist workspace state (legacy task JSON import and/or the configured SQLite planning DB under `tasks.sqliteDatabaseRelativePath`) but do not use `policyApproval` unless listed in `policy.extraSensitiveModuleCommands`. **`update-workspace-phase-snapshot`** is Tier C compatibility: it updates SQLite/export first and then writes the legacy **`docs/maintainers/data/workspace-kit-status.yaml`** surface (see **`.ai/agent-source-of-truth-order.md`** and task-engine instructions for phase snapshot).

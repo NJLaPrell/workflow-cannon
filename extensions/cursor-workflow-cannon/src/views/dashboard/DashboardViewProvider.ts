@@ -50,6 +50,74 @@ function phaseKeyFromPhrase(phasePhrase: string): string | undefined {
   return (match?.[1] ?? raw).trim() || undefined;
 }
 
+/** Build QuickPick labels from the last dashboard-summary `data` payload (phase buckets + workspace phase slice). */
+function collectPhaseKeySuggestions(data: Record<string, unknown>): Array<{ label: string; phaseKey: string }> {
+  const seen = new Set<string>();
+  const out: Array<{ label: string; phaseKey: string }> = [];
+  const add = (pk: string, label?: string) => {
+    const k = pk.trim();
+    if (!k.length || seen.has(k)) return;
+    seen.add(k);
+    out.push({ phaseKey: k, label: label ?? `Phase ${k}` });
+  };
+  const sys = data.systemStatus as Record<string, unknown> | undefined;
+  const phaseSlice = sys?.phase as Record<string, unknown> | undefined;
+  if (phaseSlice && typeof phaseSlice === "object") {
+    const canon = phaseSlice.canonicalPhaseKey;
+    if (typeof canon === "string" && canon.trim()) add(canon.trim(), `Canonical: ${canon.trim()}`);
+    const ws = phaseSlice.workspaceStatusPhaseKey;
+    if (typeof ws === "string" && ws.trim()) add(ws.trim(), `Workspace DB: ${ws.trim()}`);
+    const cf = phaseSlice.configPhaseKey;
+    if (typeof cf === "string" && cf.trim()) add(cf.trim(), `Config hint: ${cf.trim()}`);
+    const parseRoadmapPhase = (raw: string): string => {
+      const t = raw.trim();
+      const fromPhrase = phaseKeyFromPhrase(t);
+      if (fromPhrase) {
+        return fromPhrase;
+      }
+      return /^\d+$/.test(t) ? t : "";
+    };
+    const curKP = phaseSlice.currentKitPhase;
+    if (typeof curKP === "string" && curKP.trim()) {
+      const pk = parseRoadmapPhase(curKP);
+      if (pk) {
+        add(pk, `Current kit phase (${curKP.trim()})`);
+      }
+    }
+    const nextKP = phaseSlice.nextKitPhase;
+    if (typeof nextKP === "string" && nextKP.trim()) {
+      const pk = parseRoadmapPhase(nextKP);
+      if (pk) {
+        add(pk, `Next kit phase (${nextKP.trim()})`);
+      }
+    }
+  }
+  const scan = (summary: unknown) => {
+    if (!summary || typeof summary !== "object") return;
+    const buckets = (summary as { phaseBuckets?: unknown }).phaseBuckets;
+    if (!Array.isArray(buckets)) return;
+    for (const rawBucket of buckets) {
+      if (!rawBucket || typeof rawBucket !== "object") continue;
+      const pk = (rawBucket as { phaseKey?: unknown }).phaseKey;
+      const lb = (rawBucket as { label?: unknown }).label;
+      if (typeof pk === "string" && pk.trim()) {
+        add(pk.trim(), typeof lb === "string" && lb.trim() ? lb.trim() : undefined);
+      }
+    }
+  };
+  scan(data.readyExecutionSummary);
+  scan(data.proposedExecutionSummary);
+  scan(data.readyImprovementsSummary);
+  scan(data.proposedImprovementsSummary);
+  scan(data.completedSummary);
+  scan(data.cancelledSummary);
+  scan(data.transcriptChurnResearchSummary);
+  if (data.blockedSummary && typeof data.blockedSummary === "object") {
+    scan({ phaseBuckets: (data.blockedSummary as { phaseBuckets?: unknown }).phaseBuckets });
+  }
+  return out;
+}
+
 export class DashboardViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewId = "workflowCannon.dashboard";
 
@@ -60,6 +128,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private dashboardRootShellReady = false;
 
   private planningWizard: DashboardPlanningWizardState = { kind: "idle" };
+
+  /** Last successful `dashboard-summary` `data` — used for phase QuickPick targets. */
+  private lastDashboardSummaryData: Record<string, unknown> | null = null;
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -192,6 +263,13 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
             rejectSubject
           );
           await this.pushUpdate();
+        }
+      }
+      if (msg?.type === "assignTaskPhase") {
+        const rawId = msg?.taskId;
+        const taskId = typeof rawId === "string" ? rawId.trim() : "";
+        if (taskId.length > 0) {
+          await this.onAssignTaskPhase(taskId);
         }
       }
       if (msg?.type === "dashboardAcceptProposedPhase") {
@@ -512,6 +590,75 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   }
 
   /**
+   * Dashboard "Phase" row action → `assign-task-phase` with planning-generation prelude when required.
+   */
+  private async onAssignTaskPhase(taskId: string): Promise<void> {
+    const data = this.lastDashboardSummaryData;
+    const suggestions = data ? collectPhaseKeySuggestions(data) : [];
+    const quickItems: vscode.QuickPickItem[] = [
+      ...suggestions.map((s) => ({
+        label: s.label,
+        description: s.phaseKey
+      })),
+      {
+        label: "Enter another phase key…",
+        description: "Custom stable phase key",
+        alwaysShow: true
+      }
+    ];
+    const picked = await vscode.window.showQuickPick(quickItems, {
+      title: `Set phase for ${taskId}`,
+      placeHolder: "Choose a phase target",
+      matchOnDescription: true
+    });
+    if (!picked) {
+      return;
+    }
+    let phaseKey = "";
+    if (picked.label === "Enter another phase key…") {
+      const input = await vscode.window.showInputBox({
+        title: "Phase key",
+        prompt: "Stable kit phase key (assign-task-phase)",
+        value: suggestions[0]?.phaseKey ?? "",
+        validateInput: (v) => (v.trim().length > 0 ? null : "Phase key required")
+      });
+      if (!input?.trim()) {
+        return;
+      }
+      phaseKey = input.trim();
+    } else {
+      phaseKey = (picked.description ?? "").trim();
+      if (!phaseKey.length) {
+        return;
+      }
+    }
+    await this.client.recordActivity({
+      kind: "working_task",
+      taskId,
+      phaseKey,
+      command: "assign-task-phase",
+      details: { source: "dashboard-phase-button" }
+    });
+    const args: Record<string, unknown> = {
+      taskId,
+      phaseKey,
+      ...expectedPlanningGenerationArgs()
+    };
+    const out = await this.client.run("assign-task-phase", args);
+    if (!out.ok) {
+      const detail = `${String(out.code ?? "")} ${String(out.message ?? "")}`.trim();
+      await vscode.window.showErrorMessage(`assign-task-phase failed: ${detail}`);
+      await this.client.clearActivity();
+      return;
+    }
+    ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
+    await this.client.clearActivity();
+    this.notifyKitStateChanged();
+    await this.pushUpdate();
+    await vscode.window.showInformationMessage(`Updated phase for ${taskId} → ${phaseKey}`);
+  }
+
+  /**
    * Embeds rendered HTML in `webview.html` so the panel works even when postMessage delivery is flaky.
    * Buttons still use a tiny inline script + postMessage (host only receives clicks).
    */
@@ -533,6 +680,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       };
     }
     if (raw.ok === true && raw.data && typeof raw.data === "object") {
+      this.lastDashboardSummaryData = raw.data as Record<string, unknown>;
       ingestPlanningMetaFromData(raw.data as Record<string, unknown>);
     }
     let rootInner: string;
@@ -658,7 +806,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (act === 'planning-wizard-start') { var sel = document.getElementById('wc-planning-type'); var pt = sel && sel.value ? String(sel.value).trim() : ''; if (pt) vscode.postMessage({type:'planningWizardStart',planningType:pt}); return; }
     if (act === 'planning-wizard-submit') { var ta = document.getElementById('wc-planning-answer'); var txt = ta && typeof ta.value === 'string' ? ta.value.trim() : ''; vscode.postMessage({type:'planningWizardSubmit',answer:txt}); return; }
     if (act === 'planning-wizard-cancel') { vscode.postMessage({type:'planningWizardCancel'}); return; }
-    if (act === 'planning-wizard-dismiss') { vscode.postMessage({type:'planningWizardDismiss'});return;}if(act==="collaboration-hub"){vscode.postMessage({type:"prefillCollaborationHubChat"});return;}if(act==="deliver-phase-prompt"){var kp=(t.getAttribute("data-wc-kit-phase")||"").trim();vscode.postMessage({type:"prefillDeliverPhaseChat",kitPhase:kp});return;}if(act==="add-wishlist-item"){vscode.postMessage({type:"addWishlistItem"});return;}if(act==="generate-features-chat"){vscode.postMessage({type:"prefillGenerateFeaturesChat"});return;}if(act==="transcript-churn-research-chat"){var tcTid=(t.getAttribute("data-task-id")||"").trim();vscode.postMessage({type:"prefillTranscriptChurnResearchChat",taskId:tcTid});return;}if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}if(act==="phase-complete-release"){var ph=(t.getAttribute("data-wc-phase-phrase")||"").trim();vscode.postMessage({type:"prefillPhaseCompleteReleaseChat",phasePhrase:ph});return;}if(act==="proposed-imp-accept-phase"||act==="proposed-exe-accept-phase"){var batch=(t.getAttribute("data-proposed-task-ids")||"").trim();var cat=act==="proposed-exe-accept-phase"?"execution":"improvement";vscode.postMessage({type:"dashboardAcceptProposedPhase",category:cat,taskIds:batch});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});})();`;
+    if (act === 'planning-wizard-dismiss') { vscode.postMessage({type:'planningWizardDismiss'});return;}if(act==="collaboration-hub"){vscode.postMessage({type:"prefillCollaborationHubChat"});return;}if(act==="deliver-phase-prompt"){var kp=(t.getAttribute("data-wc-kit-phase")||"").trim();vscode.postMessage({type:"prefillDeliverPhaseChat",kitPhase:kp});return;}if(act==="add-wishlist-item"){vscode.postMessage({type:"addWishlistItem"});return;}if(act==="generate-features-chat"){vscode.postMessage({type:"prefillGenerateFeaturesChat"});return;}if(act==="transcript-churn-research-chat"){var tcTid=(t.getAttribute("data-task-id")||"").trim();vscode.postMessage({type:"prefillTranscriptChurnResearchChat",taskId:tcTid});return;}if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}if(act==="phase-complete-release"){var ph=(t.getAttribute("data-wc-phase-phrase")||"").trim();vscode.postMessage({type:"prefillPhaseCompleteReleaseChat",phasePhrase:ph});return;}if(act==="proposed-imp-accept-phase"||act==="proposed-exe-accept-phase"){var batch=(t.getAttribute("data-proposed-task-ids")||"").trim();var cat=act==="proposed-exe-accept-phase"?"execution":"improvement";vscode.postMessage({type:"dashboardAcceptProposedPhase",category:cat,taskIds:batch});return;}if(act==="assign-phase"){var apTid=(t.getAttribute("data-task-id")||"").trim();if(apTid)vscode.postMessage({type:"assignTaskPhase",taskId:apTid});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});})();`;
 
     return `<!DOCTYPE html>
 <html lang="en">
