@@ -4374,6 +4374,28 @@ test("taskEngineModule wishlist: create, list, convert closes wishlist and creat
   assert.ok(r.data.tasks.some((t) => t.id === "T9001"));
 });
 
+test("taskEngineModule update-wishlist accepts patch alias without updates", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+  let r = await taskEngineModule.onCommand({ name: "create-wishlist", args: wishlistIntake }, ctx);
+  assert.equal(r.ok, true);
+  r = await taskEngineModule.onCommand(
+    {
+      name: "update-wishlist",
+      args: {
+        wishlistId: "W900",
+        patch: { title: "Patched via patch alias" }
+      }
+    },
+    ctx
+  );
+  assert.equal(r.ok, true);
+  assert.equal(r.code, "wishlist-updated");
+  r = await taskEngineModule.onCommand({ name: "get-wishlist", args: { wishlistId: "W900" } }, ctx);
+  assert.equal(r.ok, true);
+  assert.equal(r.data.item.title, "Patched via patch alias");
+});
+
 test("taskEngineModule get-next-actions never includes wishlist ids", async () => {
   const workspace = await tmpDir();
   const ctx = sqliteTaskEngineCtx(workspace);

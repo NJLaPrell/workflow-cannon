@@ -11,7 +11,7 @@
   "sampleArgs": {},
   "examples": [
     {
-      "description": "List starter templates",
+      "description": "Minimal argv example",
       "argv": "workspace-kit run cae-list-workspace-artifact-templates '{}'"
     }
   ],
