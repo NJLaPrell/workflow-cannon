@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceSchemaPackageVersion": "0.83.0",
+  "sourceSchemaPackageVersion": "0.84.0",
   "pilotCommands": [
     "add-dependency",
     "add-phase-note",

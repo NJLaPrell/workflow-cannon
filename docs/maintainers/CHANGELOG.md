@@ -8,6 +8,20 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.84.0] - 2026-05-10
+
+Phase 87 — **Future phase scheduling for assignments, dashboard phase journal, wishlist patch parity, and intake canon**. Ships workspace phase scheduling metadata for queue health and `assign-task-phase` (current vs future buckets), Cursor dashboard integration for `list-phase-notes` / `get-phase-context` with dismiss / convert / persist flows and proposal acceptance routed through phase QuickPick plus `assign-task-phase`, `update-wishlist` schema alignment for `patch` vs `updates`, and canon updates under `.ai/AGENTS.md` / agent routing for backlog machine snapshots.
+
+### Added
+
+- Task engine: `workspacePhaseScheduling` and related queue/dashboard surfaces for leading-digit phase targets relative to workspace current phase (`get-next-actions`, `dashboard-summary`, `assign-task-phase`, `queue-health`).
+- Cursor extension: Overview **Phase notes** card with kit-backed **Dismiss**, **Convert**, **Persist convertible suggestions**; proposed **Accept** / **Accept All** prompts for target phase then `run-transition` + `assign-task-phase`.
+
+### Changed
+
+- `update-wishlist`: JSON schema documents `patch` as an alias for `updates` (contracts + handler parity).
+- Maintainer/agent canon: AGENTS backlog exception for machine snapshots under `docs/maintainers/data/` when no `.ai/` equivalent exists.
+
 ## [0.83.0] - 2026-05-10
 
 Phase 85 — **First-run init UX, dashboard phase reassignment, and operator README alignment**. Ships `workspace-kit init` (detect → plan → apply → SQLite → starter task → doctor validation), `refresh-context` for profile regeneration, `wk start` for quick status, Cursor dashboard wiring for `assign-task-phase` with richer phase suggestions and accessibility on phase controls, execution-queue scope footnote on the Ready Execution rollup, and README quick start ordering (**install → init → doctor → start**) plus CLI regression tests for `init --dry-run` / `--json`. Includes ADR **`ADR-workspace-kit-init-first-run-v1`**.
