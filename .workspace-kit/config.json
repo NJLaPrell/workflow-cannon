@@ -27,6 +27,24 @@
   "tasks": {
     "persistenceBackend": "sqlite",
     "planningGenerationPolicy": "require",
-    "sqliteDatabaseRelativePath": ".workspace-kit/tasks/workspace-kit.db"
+    "sqliteDatabaseRelativePath": ".workspace-kit/tasks/workspace-kit.db",
+    "intakePolicy": {
+      "defaultProfile": "advisory",
+      "enforcementMode": "enforce",
+      "profiles": {
+        "workspace-kit-create-ready": {
+          "requiredFields": ["summary", "technicalScope", "acceptanceCriteria"],
+          "recommendedFields": [],
+          "forbiddenFields": [],
+          "fieldRules": {
+            "summary": { "minLength": 1 },
+            "technicalScope": { "minItems": 1, "itemMinLength": 1 },
+            "acceptanceCriteria": { "minItems": 1, "itemMinLength": 1 }
+          },
+          "enforcementMode": "enforce"
+        }
+      },
+      "moduleOverrides": {}
+    }
   }
 }

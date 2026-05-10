@@ -42,6 +42,67 @@ test("built-in compatibility profile represents improvement task guardrails", ()
   ]);
 });
 
+test("context profile workspace-kit-create-ready matches workspace-kit + create-ready", () => {
+  const effectiveConfig = {
+    tasks: {
+      intakePolicy: {
+        defaultProfile: "advisory",
+        enforcementMode: "enforce",
+        profiles: {
+          advisory: {
+            requiredFields: [],
+            recommendedFields: ["summary"],
+            forbiddenFields: [],
+            fieldRules: {},
+            enforcementMode: "advisory"
+          },
+          "workspace-kit-create-ready": {
+            requiredFields: ["summary", "technicalScope", "acceptanceCriteria"],
+            recommendedFields: [],
+            forbiddenFields: [],
+            fieldRules: {
+              summary: { minLength: 1 },
+              technicalScope: { minItems: 1, itemMinLength: 1 },
+              acceptanceCriteria: { minItems: 1, itemMinLength: 1 }
+            },
+            enforcementMode: "enforce"
+          }
+        },
+        moduleOverrides: {}
+      }
+    }
+  };
+  const empty = resolveTaskIntakePolicy({
+    effectiveConfig,
+    action: "create-ready",
+    targetStatus: "ready",
+    fields: {
+      title: "Open queue task",
+      type: "workspace-kit",
+      status: "ready"
+    }
+  });
+  assert.equal(empty.resolvedPolicy.profileName, "workspace-kit-create-ready");
+  assert.deepEqual(empty.missingRequiredFields, ["summary", "technicalScope", "acceptanceCriteria"]);
+
+  const filled = resolveTaskIntakePolicy({
+    effectiveConfig,
+    action: "create-ready",
+    targetStatus: "ready",
+    fields: {
+      title: "Open queue task",
+      type: "workspace-kit",
+      status: "ready",
+      summary: "Scope line",
+      technicalScope: ["Touch module X"],
+      acceptanceCriteria: ["pnpm run test passes"]
+    }
+  });
+  assert.equal(filled.resolvedPolicy.profileName, "workspace-kit-create-ready");
+  assert.deepEqual(filled.missingRequiredFields, []);
+  assert.deepEqual(filled.fieldRuleViolations, []);
+});
+
 test("module override resolves stricter accept policy and evaluates field rules", () => {
   const r = resolveTaskIntakePolicy({
     effectiveConfig: {
