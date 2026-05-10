@@ -150,6 +150,76 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.doesNotMatch(html, /dashboard-approvals/);
 });
 
+test("renderDashboardRootInnerHtml includes phase journal controls when bundle provided", () => {
+  const fixturePath = path.join(__dirname, "../docs/fixtures/dashboard-summary.example.json");
+  const fixture = JSON.parse(readFileSync(fixturePath, "utf8"));
+  const bundle = {
+    listPhaseNotes: {
+      ok: true,
+      code: "phase-notes-listed",
+      data: {
+        phaseKey: "87",
+        phaseKeySource: "workspace-status",
+        notes: [
+          {
+            id: "550e8400-e29b-41d4-a716-446655440000",
+            phaseKey: "87",
+            phaseLabel: null,
+            taskId: null,
+            noteType: "task-suggestion",
+            summary: "Ship the dashboard phase journal card",
+            details: null,
+            status: "active",
+            priority: "normal",
+            createdAt: "2026-05-10T00:00:00.000Z",
+            updatedAt: "2026-05-10T00:00:00.000Z",
+            expiresAt: null,
+            supersededBy: null,
+            convertedTaskId: null,
+            idempotencyKey: null,
+            refs: []
+          },
+          {
+            id: "660e8400-e29b-41d4-a716-446655440001",
+            phaseKey: "87",
+            phaseLabel: null,
+            taskId: null,
+            noteType: "risk",
+            summary: "Critical dependency",
+            details: null,
+            status: "active",
+            priority: "critical",
+            createdAt: "2026-05-10T00:00:00.000Z",
+            updatedAt: "2026-05-10T00:00:00.000Z",
+            expiresAt: null,
+            supersededBy: null,
+            convertedTaskId: null,
+            idempotencyKey: null,
+            refs: []
+          }
+        ],
+        count: 2
+      }
+    },
+    getPhaseContext: {
+      ok: true,
+      code: "phase-context",
+      data: {
+        phaseKey: "87",
+        phaseKeySource: "workspace-status",
+        notes: [],
+        count: 0
+      }
+    }
+  };
+  const html = renderDashboardRootInnerHtml(fixture, null, null, bundle);
+  assert.match(html, /dash-phase-notes/);
+  assert.match(html, /phase-note-dismiss/);
+  assert.match(html, /phase-note-convert/);
+  assert.match(html, /phase-notes-propose-persist/);
+  assert.match(html, /550e8400-e29b-41d4-a716-446655440000/);
+});
+
 test("renderDashboardRootInnerHtml renders editor integration state when provided", () => {
   const fixturePath = path.join(__dirname, "../docs/fixtures/dashboard-summary.example.json");
   const fixture = JSON.parse(readFileSync(fixturePath, "utf8"));

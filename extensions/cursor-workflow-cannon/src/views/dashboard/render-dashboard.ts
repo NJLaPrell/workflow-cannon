@@ -1697,11 +1697,156 @@ function renderStatusSectionHtml(d: Record<string, unknown>, ss: Record<string, 
   return workspaceCard + agentCard + planningCard + countsCard;
 }
 
+/** Kit-shaped results from `list-phase-notes` / `get-phase-context` (webview receives merged reads). */
+export type PhaseJournalKitPayload = {
+  ok?: unknown;
+  code?: unknown;
+  message?: unknown;
+  data?: Record<string, unknown>;
+};
+
+export type DashboardPhaseJournalBundle = {
+  listPhaseNotes: PhaseJournalKitPayload;
+  getPhaseContext: PhaseJournalKitPayload;
+};
+
+const PHASE_NOTE_TYPES_CONVERTIBLE = new Set(["task-suggestion", "follow-up"]);
+
+/**
+ * Overview tab card: phase journal rows + kit-backed actions (dismiss / convert / persist suggestions).
+ * Pure HTML — button clicks postMessage from `DashboardViewProvider` bootstrap.
+ */
+export function renderPhaseNotesOverviewSection(bundle: DashboardPhaseJournalBundle | null | undefined): string {
+  if (bundle === null || bundle === undefined) {
+    return "";
+  }
+  const list = bundle.listPhaseNotes;
+  const ctx = bundle.getPhaseContext;
+  const listOk = list.ok === true && list.data && typeof list.data === "object";
+  const ctxOk = ctx.ok === true && ctx.data && typeof ctx.data === "object";
+
+  if (!listOk && !ctxOk) {
+    const code = escapeHtml(String(list.code ?? ctx.code ?? "error"));
+    const msg = escapeHtml(String(list.message ?? ctx.message ?? ""));
+    return (
+      '<section class="dash-card dash-phase-notes" aria-label="Phase notes">' +
+      "<p><b>Phase notes</b></p>" +
+      '<p class="muted">Phase journal unavailable: <code>' +
+      code +
+      "</code> " +
+      msg +
+      "</p>" +
+      "</section>"
+    );
+  }
+
+  const listData = (listOk ? list.data : {}) as Record<string, unknown>;
+  const ctxData = ctxOk ? ((ctx.data ?? {}) as Record<string, unknown>) : {};
+
+  const phaseKey =
+    typeof listData.phaseKey === "string"
+      ? listData.phaseKey
+      : typeof ctxData.phaseKey === "string"
+        ? ctxData.phaseKey
+        : "—";
+  const phaseKeySource = typeof listData.phaseKeySource === "string" ? listData.phaseKeySource : "";
+  const notes = Array.isArray(listData.notes) ? (listData.notes as unknown[]) : [];
+  const ctxNoteCount = Array.isArray(ctxData.notes) ? ctxData.notes.length : 0;
+
+  let rows = "";
+  for (const raw of notes) {
+    if (!raw || typeof raw !== "object") continue;
+    const n = raw as Record<string, unknown>;
+    const id = typeof n.id === "string" ? n.id : "";
+    const summary = typeof n.summary === "string" ? n.summary : "";
+    const noteType = typeof n.noteType === "string" ? n.noteType : "";
+    const priority = typeof n.priority === "string" ? n.priority : "";
+    const status = typeof n.status === "string" ? n.status : "";
+    const details = typeof n.details === "string" ? n.details : null;
+    const convertedTaskId = typeof n.convertedTaskId === "string" ? n.convertedTaskId : null;
+
+    const dismissBtn =
+      status === "active" && id.length > 0
+        ? '<button type="button" class="dash-row-action dash-row-action-secondary" data-wc-action="phase-note-dismiss" data-note-id="' +
+          escapeHtmlAttr(id) +
+          '" data-note-priority="' +
+          escapeHtmlAttr(priority) +
+          '" title="dismiss-phase-note">Dismiss</button>'
+        : "";
+
+    const canConvert =
+      status === "active" && id.length > 0 && !convertedTaskId && PHASE_NOTE_TYPES_CONVERTIBLE.has(noteType);
+
+    const convertBtn = canConvert
+      ? '<button type="button" class="dash-row-action dash-row-action-primary" data-wc-action="phase-note-convert" data-note-id="' +
+        escapeHtmlAttr(id) +
+        '" title="convert-phase-note-to-task">Convert</button>'
+      : "";
+
+    const convertedLine =
+      convertedTaskId && convertedTaskId.length > 0
+        ? '<p class="muted wc-phase-note-converted">Converted → <button type="button" class="dash-row-action dash-row-action-tertiary" data-wc-action="task-detail" data-task-id="' +
+          escapeHtmlAttr(convertedTaskId) +
+          '">' +
+          escapeHtml(convertedTaskId) +
+          "</button></p>"
+        : "";
+
+    rows +=
+      '<div class="dash-row dash-phase-note-row">' +
+      '<div class="dash-row-label">' +
+      "<b>" +
+      escapeHtml(noteType) +
+      "</b> · " +
+      escapeHtml(priority) +
+      (summary ? "<br/>" + escapeHtml(summary) : "") +
+      (details
+        ? '<span class="muted"><br/>' +
+          escapeHtml(details.length > 400 ? `${details.slice(0, 400)}…` : details) +
+          "</span>"
+        : "") +
+      convertedLine +
+      "</div>" +
+      '<div class="dash-row-actions">' +
+      convertBtn +
+      dismissBtn +
+      "</div>" +
+      "</div>";
+  }
+
+  const meta =
+    '<p class="muted dash-phase-notes-meta">' +
+    "<b>Phase key</b> " +
+    escapeHtml(phaseKey) +
+    (phaseKeySource ? " · " + escapeHtml(phaseKeySource) : "") +
+    (ctxOk ? " · <b>Context preview</b> " + String(ctxNoteCount) + " note(s)" : "") +
+    "</p>";
+
+  const proposeBtn =
+    '<button type="button" class="dash-row-action dash-row-action-secondary" data-wc-action="phase-notes-propose-persist" title="propose-tasks-from-phase-notes persist:true">Persist convertible suggestions</button>';
+
+  const empty = notes.length === 0 ? '<p class="muted">No phase notes listed for this phase (active filter).</p>' : "";
+
+  return (
+    '<section class="dash-card dash-phase-notes" aria-label="Phase notes">' +
+    "<p><b>Phase notes</b></p>" +
+    "<p>Journal entries scoped to the workspace current phase — mutations run through workspace-kit.</p>" +
+    meta +
+    empty +
+    (notes.length > 0 ? '<div class="dash-row-list">' + rows + "</div>" : "") +
+    '<div class="dash-phase-notes-actions">' +
+    proposeBtn +
+    "</div>" +
+    "</section>"
+  );
+}
+
 /** Inner HTML for #root from a `workspace-kit run dashboard-summary`–shaped payload (or extension error object). */
 export function renderDashboardRootInnerHtml(
   payload: unknown,
   planningWizardPanel?: PlanningInterviewWizardPanel | null,
-  editorIntegration?: EditorIntegrationRenderState | null
+  editorIntegration?: EditorIntegrationRenderState | null,
+  phaseJournal?: DashboardPhaseJournalBundle | null
 ): string {
   if (payload === null || payload === undefined) {
     return "<p>No payload</p>";
@@ -1920,6 +2065,7 @@ export function renderDashboardRootInnerHtml(
     renderAgentStatusBanner(d.agentStatus) +
     renderEditorIntegrationSection(editorIntegration) +
     renderRoleTemperamentAndPhaseSection(d.agentGuidance, ws as Record<string, unknown> | null, res) +
+    renderPhaseNotesOverviewSection(phaseJournal ?? null) +
     renderWorkspaceBlockersPendingSection(ws as Record<string, unknown> | null) +
     renderTeamExecutionSection(d.teamExecution) +
     renderSubagentRegistrySection(d.subagentRegistry);
