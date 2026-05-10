@@ -14,11 +14,13 @@ import {
   buildTaskToPhaseBranchPrompt,
   buildTranscriptChurnResearchPrompt
 } from "../../playbook-chat-prompts.js";
-import { confirmAndRunAcceptProposedPhaseBatch, confirmAndRunTransition } from "../../run-transition-with-approval.js";
+import { confirmAndRunTransition } from "../../run-transition-with-approval.js";
 import { promptAndCreateWishlist } from "../../add-wishlist-item-flow.js";
 import {
   escapeHtml,
   renderDashboardRootInnerHtml,
+  type DashboardPhaseJournalBundle,
+  type PhaseJournalKitPayload,
   type PlanningInterviewWizardPanel
 } from "./render-dashboard.js";
 
@@ -255,15 +257,38 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         if (taskId.length > 0 && action.length > 0) {
           const rejectSubject =
             msg?.transitionKind === "wishlist" ? "this wishlist item" : undefined;
-          await confirmAndRunTransition(
-            this.client,
-            this.notifyKitStateChanged,
-            taskId,
-            action,
-            rejectSubject
-          );
+          if (action === "accept") {
+            await this.onDashboardAcceptProposed(taskId);
+          } else {
+            await confirmAndRunTransition(
+              this.client,
+              this.notifyKitStateChanged,
+              taskId,
+              action,
+              rejectSubject
+            );
+          }
           await this.pushUpdate();
         }
+      }
+      if (msg?.type === "dismissPhaseNote") {
+        const nid = typeof msg.noteId === "string" ? msg.noteId.trim() : "";
+        const pri = typeof msg.priority === "string" ? msg.priority.trim() : "";
+        if (nid.length > 0) {
+          await this.onDismissPhaseNote(nid, pri);
+          await this.pushUpdate();
+        }
+      }
+      if (msg?.type === "convertPhaseNote") {
+        const nid = typeof msg.noteId === "string" ? msg.noteId.trim() : "";
+        if (nid.length > 0) {
+          await this.onConvertPhaseNote(nid);
+          await this.pushUpdate();
+        }
+      }
+      if (msg?.type === "persistPhaseNoteProposals") {
+        await this.onPersistPhaseNoteProposals();
+        await this.pushUpdate();
       }
       if (msg?.type === "assignTaskPhase") {
         const rawId = msg?.taskId;
@@ -281,12 +306,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         const cat = msg.category === "execution" ? "execution" : "improvement";
         const label = cat === "execution" ? "execution" : "improvement";
         if (taskIds.length > 0) {
-          await confirmAndRunAcceptProposedPhaseBatch(
-            this.client,
-            this.notifyKitStateChanged,
-            taskIds,
-            label
-          );
+          await this.onDashboardAcceptProposedBatch(taskIds, label);
           await this.pushUpdate();
         }
       }
@@ -589,10 +609,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     await this.pushUpdate();
   }
 
-  /**
-   * Dashboard "Phase" row action → `assign-task-phase` with planning-generation prelude when required.
-   */
-  private async onAssignTaskPhase(taskId: string): Promise<void> {
+  private async pickPhaseKeyFromDashboard(options: {
+    title: string;
+    /** Prefill for custom key entry */
+    valueHint?: string;
+  }): Promise<string | undefined> {
     const data = this.lastDashboardSummaryData;
     const suggestions = data ? collectPhaseKeySuggestions(data) : [];
     const quickItems: vscode.QuickPickItem[] = [
@@ -607,30 +628,38 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
     ];
     const picked = await vscode.window.showQuickPick(quickItems, {
-      title: `Set phase for ${taskId}`,
+      title: options.title,
       placeHolder: "Choose a phase target",
       matchOnDescription: true
     });
     if (!picked) {
-      return;
+      return undefined;
     }
-    let phaseKey = "";
     if (picked.label === "Enter another phase key…") {
       const input = await vscode.window.showInputBox({
         title: "Phase key",
         prompt: "Stable kit phase key (assign-task-phase)",
-        value: suggestions[0]?.phaseKey ?? "",
+        value: options.valueHint ?? suggestions[0]?.phaseKey ?? "",
         validateInput: (v) => (v.trim().length > 0 ? null : "Phase key required")
       });
       if (!input?.trim()) {
-        return;
+        return undefined;
       }
-      phaseKey = input.trim();
-    } else {
-      phaseKey = (picked.description ?? "").trim();
-      if (!phaseKey.length) {
-        return;
-      }
+      return input.trim();
+    }
+    const phaseKey = (picked.description ?? "").trim();
+    return phaseKey.length > 0 ? phaseKey : undefined;
+  }
+
+  /**
+   * Dashboard "Phase" row action → `assign-task-phase` with planning-generation prelude when required.
+   */
+  private async onAssignTaskPhase(taskId: string): Promise<void> {
+    const phaseKey = await this.pickPhaseKeyFromDashboard({
+      title: `Set phase for ${taskId}`
+    });
+    if (!phaseKey) {
+      return;
     }
     await this.client.recordActivity({
       kind: "working_task",
@@ -658,6 +687,210 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     await vscode.window.showInformationMessage(`Updated phase for ${taskId} → ${phaseKey}`);
   }
 
+  private async onDismissPhaseNote(noteId: string, priority: string): Promise<void> {
+    const reasonRaw =
+      (await vscode.window.showInputBox({
+        prompt: "Reason for dismiss-phase-note (required; audited)",
+        placeHolder: "Short operator reason"
+      })) ?? "";
+    const reason = reasonRaw.trim();
+    if (!reason.length) {
+      await vscode.window.showErrorMessage("dismiss-phase-note requires a non-empty reason.");
+      return;
+    }
+    let policyApproval: { confirmed: boolean; rationale: string } | undefined;
+    if (priority === "critical") {
+      const gate = await vscode.window.showWarningMessage(
+        "Dismiss an active critical phase note — kit policy may require explicit approval.",
+        { modal: true },
+        "Continue"
+      );
+      if (gate !== "Continue") {
+        return;
+      }
+      const rationaleRaw =
+        (await vscode.window.showInputBox({
+          prompt: "Policy rationale for critical phase note dismiss (policyApproval.rationale)",
+          placeHolder: "Shown in policy trace"
+        })) ?? "";
+      const rationale = rationaleRaw.trim();
+      if (!rationale.length) {
+        await vscode.window.showErrorMessage("Critical dismiss requires a non-empty policy rationale.");
+        return;
+      }
+      policyApproval = { confirmed: true, rationale };
+    }
+    const args: Record<string, unknown> = {
+      noteId,
+      reason,
+      ...expectedPlanningGenerationArgs()
+    };
+    if (policyApproval) {
+      args.policyApproval = policyApproval;
+    }
+    const r = await this.client.run("dismiss-phase-note", args);
+    if (!r.ok) {
+      await vscode.window.showErrorMessage((r.message ?? JSON.stringify(r)).slice(0, 900));
+      return;
+    }
+    ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+    this.notifyKitStateChanged();
+    await vscode.window.showInformationMessage(r.message ?? "Phase note dismissed");
+  }
+
+  private async onConvertPhaseNote(noteId: string): Promise<void> {
+    const gate = await vscode.window.showWarningMessage(
+      `Convert phase note ${noteId} to a proposed task (convert-phase-note-to-task)?`,
+      { modal: true },
+      "Convert"
+    );
+    if (gate !== "Convert") {
+      return;
+    }
+    const r = await this.client.run("convert-phase-note-to-task", {
+      noteId,
+      ...expectedPlanningGenerationArgs()
+    });
+    if (!r.ok) {
+      await vscode.window.showErrorMessage((r.message ?? JSON.stringify(r)).slice(0, 900));
+      return;
+    }
+    ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+    this.notifyKitStateChanged();
+    await vscode.window.showInformationMessage(r.message ?? "Converted phase note to task");
+  }
+
+  private async onPersistPhaseNoteProposals(): Promise<void> {
+    const gate = await vscode.window.showWarningMessage(
+      "Persist convertible phase notes into kit suggestions (propose-tasks-from-phase-notes persist:true)?",
+      { modal: true },
+      "Persist"
+    );
+    if (gate !== "Persist") {
+      return;
+    }
+    const r = await this.client.run("propose-tasks-from-phase-notes", {
+      persist: true,
+      ...expectedPlanningGenerationArgs()
+    });
+    if (!r.ok) {
+      await vscode.window.showErrorMessage((r.message ?? JSON.stringify(r)).slice(0, 900));
+      return;
+    }
+    ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+    this.notifyKitStateChanged();
+    await vscode.window.showInformationMessage(r.message ?? "Persisted phase note proposals");
+  }
+
+  /** Proposed-row Accept → pick phase → run-transition accept → assign-task-phase. */
+  private async onDashboardAcceptProposed(taskId: string): Promise<void> {
+    const phaseKey = await this.pickPhaseKeyFromDashboard({
+      title: `Accept proposed task — target phase for ${taskId}`
+    });
+    if (!phaseKey) {
+      return;
+    }
+    const gate = await vscode.window.showWarningMessage(
+      `Accept ${taskId} (→ ready) then assign-task-phase → ${phaseKey}?`,
+      { modal: true },
+      "Apply"
+    );
+    if (gate !== "Apply") {
+      return;
+    }
+    const rationale =
+      (await vscode.window.showInputBox({
+        prompt: `Policy rationale for run-transition accept on ${taskId}`,
+        placeHolder: "Shown in policy trace / approval"
+      })) ?? "vscode-extension";
+    const r = await this.client.run("run-transition", {
+      taskId,
+      action: "accept",
+      policyApproval: { confirmed: true, rationale },
+      ...expectedPlanningGenerationArgs()
+    });
+    if (!r.ok) {
+      await vscode.window.showErrorMessage((r.message ?? JSON.stringify(r)).slice(0, 900));
+      return;
+    }
+    ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+    const r2 = await this.client.run("assign-task-phase", {
+      taskId,
+      phaseKey,
+      ...expectedPlanningGenerationArgs()
+    });
+    if (!r2.ok) {
+      await vscode.window.showErrorMessage(
+        `Accepted ${taskId} but assign-task-phase failed: ${(r2.message ?? r2.code ?? JSON.stringify(r2)).slice(0, 520)}`
+      );
+    } else {
+      ingestPlanningMetaFromData(r2.data as Record<string, unknown> | undefined);
+      await vscode.window.showInformationMessage(`Accepted ${taskId} and assigned phase ${phaseKey}.`);
+    }
+    this.notifyKitStateChanged();
+  }
+
+  private async onDashboardAcceptProposedBatch(taskIds: string[], categoryLabel: string): Promise<void> {
+    if (taskIds.length === 0) {
+      return;
+    }
+    const phaseKey = await this.pickPhaseKeyFromDashboard({
+      title: `Accept ${String(taskIds.length)} proposed ${categoryLabel} task(s) — target phase`
+    });
+    if (!phaseKey) {
+      return;
+    }
+    const gate = await vscode.window.showWarningMessage(
+      `Accept ${String(taskIds.length)} proposed ${categoryLabel} task(s) (→ ready) then assign each to phase ${phaseKey}? Each transition uses the same policy rationale.`,
+      { modal: true },
+      "Accept all"
+    );
+    if (gate !== "Accept all") {
+      return;
+    }
+    const rationale =
+      (await vscode.window.showInputBox({
+        prompt: `Policy rationale for batch accept (${String(taskIds.length)} × accept on proposed ${categoryLabel})`,
+        placeHolder: "Shown in policy trace / approval"
+      })) ?? "vscode-extension batch accept";
+    const failures: string[] = [];
+    for (const taskId of taskIds) {
+      const r = await this.client.run("run-transition", {
+        taskId,
+        action: "accept",
+        policyApproval: { confirmed: true, rationale },
+        ...expectedPlanningGenerationArgs()
+      });
+      if (!r.ok) {
+        failures.push(`${taskId}: ${(r.message ?? r.code ?? JSON.stringify(r)).slice(0, 200)}`);
+        continue;
+      }
+      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+      const r2 = await this.client.run("assign-task-phase", {
+        taskId,
+        phaseKey,
+        ...expectedPlanningGenerationArgs()
+      });
+      if (!r2.ok) {
+        failures.push(
+          `${taskId} assign: ${(r2.message ?? r2.code ?? JSON.stringify(r2)).slice(0, 180)}`
+        );
+      } else {
+        ingestPlanningMetaFromData(r2.data as Record<string, unknown> | undefined);
+      }
+    }
+    if (failures.length > 0) {
+      await vscode.window.showErrorMessage(
+        `Some batch operations failed (${String(failures.length)}/${String(taskIds.length)}): ${failures.slice(0, 3).join(" · ")}`
+      );
+    } else {
+      await vscode.window.showInformationMessage(
+        `Accepted ${String(taskIds.length)} proposed ${categoryLabel} task(s) into phase ${phaseKey}.`
+      );
+    }
+    this.notifyKitStateChanged();
+  }
+
   /**
    * Embeds rendered HTML in `webview.html` so the panel works even when postMessage delivery is flaky.
    * Buttons still use a tiny inline script + postMessage (host only receives clicks).
@@ -679,15 +912,56 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         message: e instanceof Error ? e.message : String(e)
       };
     }
+    let phaseJournal: DashboardPhaseJournalBundle | undefined;
     if (raw.ok === true && raw.data && typeof raw.data === "object") {
       this.lastDashboardSummaryData = raw.data as Record<string, unknown>;
       ingestPlanningMetaFromData(raw.data as Record<string, unknown>);
+      try {
+        const lp = (await this.client.run("list-phase-notes", {
+          ...expectedPlanningGenerationArgs()
+        })) as PhaseJournalKitPayload & Record<string, unknown>;
+        ingestPlanningMetaFromData(lp.data as Record<string, unknown> | undefined);
+        const gpc = (await this.client.run("get-phase-context", {
+          ...expectedPlanningGenerationArgs()
+        })) as PhaseJournalKitPayload & Record<string, unknown>;
+        ingestPlanningMetaFromData(gpc.data as Record<string, unknown> | undefined);
+        phaseJournal = {
+          listPhaseNotes: {
+            ok: lp.ok,
+            code: lp.code,
+            message: lp.message,
+            data: lp.data as Record<string, unknown> | undefined
+          },
+          getPhaseContext: {
+            ok: gpc.ok,
+            code: gpc.code,
+            message: gpc.message,
+            data: gpc.data as Record<string, unknown> | undefined
+          }
+        };
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        phaseJournal = {
+          listPhaseNotes: {
+            ok: false,
+            code: "extension-phase-journal-read",
+            message: msg
+          },
+          getPhaseContext: {
+            ok: false,
+            code: "extension-phase-journal-read",
+            message: msg
+          }
+        };
+      }
+    } else {
+      this.lastDashboardSummaryData = null;
     }
     let rootInner: string;
     const wizardPanel: PlanningInterviewWizardPanel | null = raw.ok === true ? this.planningWizardPanel() : null;
     try {
       const editorIntegration = await resolveEditorIntegrationState();
-      rootInner = renderDashboardRootInnerHtml(raw, wizardPanel, editorIntegration);
+      rootInner = renderDashboardRootInnerHtml(raw, wizardPanel, editorIntegration, phaseJournal);
     } catch (e) {
       rootInner = '<pre class="bad">Host render error: ' + escapeHtml(String(e)) + "</pre>";
     }
@@ -806,7 +1080,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (act === 'planning-wizard-start') { var sel = document.getElementById('wc-planning-type'); var pt = sel && sel.value ? String(sel.value).trim() : ''; if (pt) vscode.postMessage({type:'planningWizardStart',planningType:pt}); return; }
     if (act === 'planning-wizard-submit') { var ta = document.getElementById('wc-planning-answer'); var txt = ta && typeof ta.value === 'string' ? ta.value.trim() : ''; vscode.postMessage({type:'planningWizardSubmit',answer:txt}); return; }
     if (act === 'planning-wizard-cancel') { vscode.postMessage({type:'planningWizardCancel'}); return; }
-    if (act === 'planning-wizard-dismiss') { vscode.postMessage({type:'planningWizardDismiss'});return;}if(act==="collaboration-hub"){vscode.postMessage({type:"prefillCollaborationHubChat"});return;}if(act==="deliver-phase-prompt"){var kp=(t.getAttribute("data-wc-kit-phase")||"").trim();vscode.postMessage({type:"prefillDeliverPhaseChat",kitPhase:kp});return;}if(act==="add-wishlist-item"){vscode.postMessage({type:"addWishlistItem"});return;}if(act==="generate-features-chat"){vscode.postMessage({type:"prefillGenerateFeaturesChat"});return;}if(act==="transcript-churn-research-chat"){var tcTid=(t.getAttribute("data-task-id")||"").trim();vscode.postMessage({type:"prefillTranscriptChurnResearchChat",taskId:tcTid});return;}if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}if(act==="phase-complete-release"){var ph=(t.getAttribute("data-wc-phase-phrase")||"").trim();vscode.postMessage({type:"prefillPhaseCompleteReleaseChat",phasePhrase:ph});return;}if(act==="proposed-imp-accept-phase"||act==="proposed-exe-accept-phase"){var batch=(t.getAttribute("data-proposed-task-ids")||"").trim();var cat=act==="proposed-exe-accept-phase"?"execution":"improvement";vscode.postMessage({type:"dashboardAcceptProposedPhase",category:cat,taskIds:batch});return;}if(act==="assign-phase"){var apTid=(t.getAttribute("data-task-id")||"").trim();if(apTid)vscode.postMessage({type:"assignTaskPhase",taskId:apTid});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});})();`;
+    if (act === 'planning-wizard-dismiss') { vscode.postMessage({type:'planningWizardDismiss'});return;}if(act==="collaboration-hub"){vscode.postMessage({type:"prefillCollaborationHubChat"});return;}if(act==="deliver-phase-prompt"){var kp=(t.getAttribute("data-wc-kit-phase")||"").trim();vscode.postMessage({type:"prefillDeliverPhaseChat",kitPhase:kp});return;}if(act==="add-wishlist-item"){vscode.postMessage({type:"addWishlistItem"});return;}if(act==="generate-features-chat"){vscode.postMessage({type:"prefillGenerateFeaturesChat"});return;}if(act==="transcript-churn-research-chat"){var tcTid=(t.getAttribute("data-task-id")||"").trim();vscode.postMessage({type:"prefillTranscriptChurnResearchChat",taskId:tcTid});return;}if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}if(act==="phase-complete-release"){var ph=(t.getAttribute("data-wc-phase-phrase")||"").trim();vscode.postMessage({type:"prefillPhaseCompleteReleaseChat",phasePhrase:ph});return;}if(act==="proposed-imp-accept-phase"||act==="proposed-exe-accept-phase"){var batch=(t.getAttribute("data-proposed-task-ids")||"").trim();var cat=act==="proposed-exe-accept-phase"?"execution":"improvement";vscode.postMessage({type:"dashboardAcceptProposedPhase",category:cat,taskIds:batch});return;}if(act==="phase-note-dismiss"){var dpn=(t.getAttribute("data-note-id")||"").trim();var dpp=(t.getAttribute("data-note-priority")||"").trim();if(dpn)vscode.postMessage({type:"dismissPhaseNote",noteId:dpn,priority:dpp});return;}if(act==="phase-note-convert"){var cpn=(t.getAttribute("data-note-id")||"").trim();if(cpn)vscode.postMessage({type:"convertPhaseNote",noteId:cpn});return;}if(act==="phase-notes-propose-persist"){vscode.postMessage({type:"persistPhaseNoteProposals"});return;}if(act==="assign-phase"){var apTid=(t.getAttribute("data-task-id")||"").trim();if(apTid)vscode.postMessage({type:"assignTaskPhase",taskId:apTid});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});})();`;
 
     return `<!DOCTYPE html>
 <html lang="en">
