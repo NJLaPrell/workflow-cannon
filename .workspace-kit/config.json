@@ -21,30 +21,42 @@
         "shadowPreflight": true
       }
     },
-    "currentPhaseLabel": "Phase 85",
-    "currentPhaseNumber": 85
+    "currentPhaseLabel": "Phase 86",
+    "currentPhaseNumber": 86
   },
   "tasks": {
-    "persistenceBackend": "sqlite",
-    "planningGenerationPolicy": "require",
-    "sqliteDatabaseRelativePath": ".workspace-kit/tasks/workspace-kit.db",
     "intakePolicy": {
       "defaultProfile": "advisory",
       "enforcementMode": "enforce",
+      "moduleOverrides": {},
       "profiles": {
         "workspace-kit-create-ready": {
-          "requiredFields": ["summary", "technicalScope", "acceptanceCriteria"],
-          "recommendedFields": [],
-          "forbiddenFields": [],
+          "enforcementMode": "enforce",
           "fieldRules": {
-            "summary": { "minLength": 1 },
-            "technicalScope": { "minItems": 1, "itemMinLength": 1 },
-            "acceptanceCriteria": { "minItems": 1, "itemMinLength": 1 }
+            "acceptanceCriteria": {
+              "itemMinLength": 1,
+              "minItems": 1
+            },
+            "summary": {
+              "minLength": 1
+            },
+            "technicalScope": {
+              "itemMinLength": 1,
+              "minItems": 1
+            }
           },
-          "enforcementMode": "enforce"
+          "forbiddenFields": [],
+          "recommendedFields": [],
+          "requiredFields": [
+            "summary",
+            "technicalScope",
+            "acceptanceCriteria"
+          ]
         }
-      },
-      "moduleOverrides": {}
-    }
+      }
+    },
+    "persistenceBackend": "sqlite",
+    "planningGenerationPolicy": "require",
+    "sqliteDatabaseRelativePath": ".workspace-kit/tasks/workspace-kit.db"
   }
 }
