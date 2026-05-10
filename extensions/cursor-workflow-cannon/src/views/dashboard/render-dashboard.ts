@@ -382,9 +382,14 @@ function renderTaskRowList(items: unknown, emptyMessage = "No ready tasks."): st
           label +
           "</span>" +
           (id.length > 0
-            ? '<button type="button" class="dash-row-action dash-row-action-tertiary" data-wc-action="task-detail" data-task-id="' +
+            ? '<span class="dash-row-actions">' +
+              '<button type="button" class="dash-row-action dash-row-action-secondary" data-wc-action="assign-phase" data-task-id="' +
               idAttr +
-              '" title="Open task view (markdown)">View</button>'
+              '" title="assign-task-phase — set stable phaseKey">Phase</button>' +
+              '<button type="button" class="dash-row-action dash-row-action-tertiary" data-wc-action="task-detail" data-task-id="' +
+              idAttr +
+              '" title="Open task view (markdown)">View</button>' +
+              "</span>"
             : "") +
           "</div>"
         );

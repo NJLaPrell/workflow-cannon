@@ -124,6 +124,7 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.doesNotMatch(html, /proposed-imp-chat/);
   assert.doesNotMatch(html, /proposed-exe-chat/);
   assert.match(html, /data-wc-action="task-detail"/);
+  assert.match(html, /data-wc-action="assign-phase"/);
   assert.match(html, /class="dash-row-action dash-row-action-tertiary"[^>]*data-wc-action="task-detail"/);
   assert.match(html, /data-wc-action="task-detail"[\s\S]*?>View<\/button>/);
   assert.match(html, /dash-row-action/);
