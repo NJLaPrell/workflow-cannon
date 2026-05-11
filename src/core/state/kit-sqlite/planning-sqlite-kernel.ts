@@ -10,7 +10,7 @@ type SqliteDatabase = InstanceType<typeof Database>;
  */
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 22;
+export const KIT_SQLITE_USER_VERSION = 23;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 export const TASK_ENGINE_DEPENDENCIES_TABLE = "task_engine_dependencies";
