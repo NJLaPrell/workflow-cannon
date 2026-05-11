@@ -316,7 +316,7 @@ These are **`workspace-kit` top-level commands**, not `run` subcommands. They re
 
 | Intent | Example |
 | --- | --- |
-| Regenerate profile artifacts | `WORKSPACE_KIT_POLICY_APPROVAL='{"confirmed":true,"rationale":"init"}' workspace-kit init` |
+| Regenerate profile artifacts | `WORKSPACE_KIT_POLICY_APPROVAL='{"confirmed":true,"rationale":"refresh profile context"}' workspace-kit refresh-context` |
 | Upgrade kit-owned paths | `WORKSPACE_KIT_POLICY_APPROVAL='{"confirmed":true,"rationale":"upgrade"}' workspace-kit upgrade` |
 | Mutate config keys | `WORKSPACE_KIT_POLICY_APPROVAL='{"confirmed":true,"rationale":"set cadence"}' workspace-kit config set improvement.cadence.minIntervalMinutes 20 --json` |
 
