@@ -83,6 +83,10 @@
         "title": "Workflow Cannon: Generate Features"
       },
       {
+        "command": "workflowCannon.chat.phaseNotesDiscovery",
+        "title": "Workflow Cannon: Phase Notes Chat Guide"
+      },
+      {
         "command": "workflowCannon.openStatusDashboard",
         "title": "Workflow Cannon: Open Status Dashboard"
       },

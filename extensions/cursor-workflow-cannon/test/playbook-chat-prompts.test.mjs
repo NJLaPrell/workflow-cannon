@@ -5,6 +5,7 @@ import {
   buildCollaborationProfilesHubPrompt,
   buildGenerateFeaturesPrompt,
   buildImprovementTriagePrompt,
+  buildPhaseNotesDiscoveryPrompt,
   buildPlanningInterviewPrompt,
   buildPlanningInterviewResumePrompt,
   buildTaskToPhaseBranchPrompt,
@@ -64,6 +65,15 @@ test("buildTaskToPhaseBranchPrompt includes kit phase when provided", () => {
   assert.match(p, /\*\*64\*\*/);
   assert.match(p, /release\/phase-64/);
   assert.match(p, /\.ai\/POLICY-APPROVAL\.md/);
+});
+
+test("buildPhaseNotesDiscoveryPrompt references phase journal commands and policy", () => {
+  const p = buildPhaseNotesDiscoveryPrompt();
+  assert.match(p, /list-phase-notes/);
+  assert.match(p, /get-phase-context/);
+  assert.match(p, /add-phase-note/);
+  assert.match(p, /convert-phase-note-to-task/);
+  assert.match(p, /policyApproval/);
 });
 
 test("buildPlanningInterviewPrompt references planning runbook and build-plan", () => {

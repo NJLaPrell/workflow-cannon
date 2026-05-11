@@ -215,6 +215,7 @@ test("renderDashboardRootInnerHtml includes phase journal controls when bundle p
   const html = renderDashboardRootInnerHtml(fixture, null, null, bundle);
   assert.match(html, /dash-phase-notes/);
   assert.match(html, /phase-note-add/);
+  assert.match(html, /phase-notes-chat/);
   assert.match(html, /phase-note-dismiss/);
   assert.match(html, /phase-note-convert/);
   assert.match(html, /phase-notes-propose-persist/);

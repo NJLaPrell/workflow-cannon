@@ -12,6 +12,7 @@ import { buildWishlistIntakeAgentPrompt } from "./wishlist-chat-prompt.js";
 import {
   GENERATE_FEATURES_SLASH_TEXT,
   buildImprovementTriagePrompt,
+  buildPhaseNotesDiscoveryPrompt,
   buildTaskToPhaseBranchPrompt,
   buildTranscriptChurnResearchPrompt
 } from "./playbook-chat-prompts.js";
@@ -307,6 +308,9 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
     vscode.commands.registerCommand("workflowCannon.chat.generateFeatures", async () => {
       await prefillCursorChat(GENERATE_FEATURES_SLASH_TEXT, { newChat: true });
+    }),
+    vscode.commands.registerCommand("workflowCannon.chat.phaseNotesDiscovery", async () => {
+      await prefillCursorChat(buildPhaseNotesDiscoveryPrompt(), { newChat: true });
     }),
     vscode.commands.registerCommand("workflowCannon.chat.prefillImprovementTriage", async (taskId?: string) => {
       const id = typeof taskId === "string" ? taskId.trim() : "";
