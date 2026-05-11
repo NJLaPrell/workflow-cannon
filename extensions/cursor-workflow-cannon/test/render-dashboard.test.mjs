@@ -966,3 +966,39 @@ test("renderDashboardRootInnerHtml wishlist section shows pager when openTotalPa
   assert.match(html, /wc-wishlist-pager/);
   assert.match(html, /data-wc-action="wishlist-page"/);
 });
+
+test("renderDashboardRootInnerHtml wishlist pager points prev and next at adjacent pages", () => {
+  const rows = Array.from({ length: 10 }, (_, i) => ({
+    id: `W-${i + 10}`,
+    title: `Item ${i + 10}`,
+    taskId: `T-wl-${i + 10}`
+  }));
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      wishlist: {
+        openCount: 30,
+        totalCount: 30,
+        openPage: 1,
+        openPageSize: 10,
+        openTotalPages: 3,
+        openTop: rows
+      },
+      blockedSummary: { count: 0, top: [] },
+      suggestedNext: null,
+      planningSession: null,
+      taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
+      workspaceStatus: null,
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+  assert.match(html, /Page 2 \/ 3/);
+  assert.match(html, /data-wishlist-page="0">Prev/);
+  assert.match(html, /data-wishlist-page="2">Next/);
+});

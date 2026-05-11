@@ -148,6 +148,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   /** After first full HTML load, refresh only swaps `#root` via postMessage so `<details open>` state survives. */
   private dashboardRootShellReady = false;
 
+  /** Monotonic render token so slower dashboard reads cannot overwrite newer user navigation. */
+  private dashboardUpdateSequence = 0;
+
+  /** Coalesce refresh triggers so watcher churn and button flows do not spawn overlapping CLI reads. */
+  private dashboardUpdateInFlight: Promise<void> | undefined;
+  private dashboardUpdateQueued = false;
+  private dashboardDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+
   /** 0-based page for wishlist rows in `dashboard-summary` (10 per page). */
   private wishlistPage = 0;
 
@@ -163,7 +171,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     private readonly notifyKitStateChanged: () => void
   ) {
     onKitStateChanged(() => {
-      void this.pushUpdate();
+      this.schedulePushUpdate(400);
     });
   }
 
@@ -381,6 +389,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }, 45_000);
     webviewView.onDidDispose(() => {
       this.dashboardRootShellReady = false;
+      if (this.dashboardDebounceTimer) {
+        clearTimeout(this.dashboardDebounceTimer);
+        this.dashboardDebounceTimer = undefined;
+      }
       if (this.dashboardPollTimer) {
         clearInterval(this.dashboardPollTimer);
         this.dashboardPollTimer = undefined;
@@ -1047,14 +1059,59 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
    * Buttons still use a tiny inline script + postMessage (host only receives clicks).
    */
   private async pushUpdate(): Promise<void> {
+    if (this.dashboardDebounceTimer) {
+      clearTimeout(this.dashboardDebounceTimer);
+      this.dashboardDebounceTimer = undefined;
+    }
+    if (this.dashboardUpdateInFlight) {
+      this.dashboardUpdateQueued = true;
+      await this.dashboardUpdateInFlight;
+      return;
+    }
+    const refresh = this.runDashboardUpdateLoop();
+    this.dashboardUpdateInFlight = refresh;
+    try {
+      await refresh;
+    } finally {
+      if (this.dashboardUpdateInFlight === refresh) {
+        this.dashboardUpdateInFlight = undefined;
+      }
+    }
+  }
+
+  private schedulePushUpdate(delayMs: number): void {
     if (!this.view) {
       return;
     }
-    const { webview } = this.view;
+    if (this.dashboardDebounceTimer) {
+      clearTimeout(this.dashboardDebounceTimer);
+    }
+    this.dashboardDebounceTimer = setTimeout(() => {
+      this.dashboardDebounceTimer = undefined;
+      void this.pushUpdate();
+    }, delayMs);
+  }
+
+  private async runDashboardUpdateLoop(): Promise<void> {
+    do {
+      this.dashboardUpdateQueued = false;
+      await this.pushUpdateOnce();
+    } while (this.dashboardUpdateQueued && this.view);
+  }
+
+  private async pushUpdateOnce(): Promise<void> {
+    const activeView = this.view;
+    if (!activeView) {
+      return;
+    }
+    const { webview } = activeView;
+    const updateSequence = ++this.dashboardUpdateSequence;
+    const requestedWishlistPage = this.wishlistPage;
+    const startedAt = Date.now();
     let raw: DashboardSummaryCommandSuccess | Record<string, unknown>;
     try {
       raw = (await this.client.run("dashboard-summary", {
-        wishlistPage: this.wishlistPage,
+        wishlistPage: requestedWishlistPage,
         wishlistPageSize: 10
       })) as DashboardSummaryCommandSuccess | Record<string, unknown>;
     } catch (e) {
@@ -1064,18 +1121,29 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         message: e instanceof Error ? e.message : String(e)
       };
     }
+    if (updateSequence !== this.dashboardUpdateSequence || this.view !== activeView) {
+      logDashboard(
+        `pushUpdate: stale dashboard-summary ignored page=${String(requestedWishlistPage)}`
+      );
+      return;
+    }
     let phaseJournal: DashboardPhaseJournalBundle | undefined;
     if (raw.ok === true && raw.data && typeof raw.data === "object") {
       this.lastDashboardSummaryData = raw.data as Record<string, unknown>;
       ingestPlanningMetaFromData(raw.data as Record<string, unknown>);
       try {
-        const lp = (await this.client.run("list-phase-notes", {
-          ...expectedPlanningGenerationArgs()
-        })) as PhaseJournalKitPayload & Record<string, unknown>;
+        const [lp, gpc] = (await Promise.all([
+          this.client.run("list-phase-notes", {
+            ...expectedPlanningGenerationArgs()
+          }),
+          this.client.run("get-phase-context", {
+            ...expectedPlanningGenerationArgs()
+          })
+        ])) as [
+          PhaseJournalKitPayload & Record<string, unknown>,
+          PhaseJournalKitPayload & Record<string, unknown>
+        ];
         ingestPlanningMetaFromData(lp.data as Record<string, unknown> | undefined);
-        const gpc = (await this.client.run("get-phase-context", {
-          ...expectedPlanningGenerationArgs()
-        })) as PhaseJournalKitPayload & Record<string, unknown>;
         ingestPlanningMetaFromData(gpc.data as Record<string, unknown> | undefined);
         phaseJournal = {
           listPhaseNotes: {
@@ -1109,6 +1177,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     } else {
       this.lastDashboardSummaryData = null;
     }
+    if (updateSequence !== this.dashboardUpdateSequence || this.view !== activeView) {
+      logDashboard(`pushUpdate: stale phase context ignored page=${String(requestedWishlistPage)}`);
+      return;
+    }
     let rootInner: string;
     const wizardPanel: PlanningInterviewWizardPanel | null = raw.ok === true ? this.planningWizardPanel() : null;
     try {
@@ -1118,8 +1190,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       rootInner = '<pre class="bad">Host render error: ' + escapeHtml(String(e)) + "</pre>";
     }
     logDashboard(
-      `pushUpdate: ok=${String(raw.ok)} code=${String(raw.code ?? "")} htmlBytes≈${rootInner.length}`
+      `pushUpdate: ok=${String(raw.ok)} code=${String(raw.code ?? "")} htmlBytes≈${rootInner.length} elapsedMs=${String(Date.now() - startedAt)}`
     );
+    if (updateSequence !== this.dashboardUpdateSequence || this.view !== activeView) {
+      logDashboard(`pushUpdate: stale render ignored page=${String(requestedWishlistPage)}`);
+      return;
+    }
     try {
       if (!this.dashboardRootShellReady) {
         webview.html = this.buildHtml(webview, rootInner);
@@ -1192,8 +1268,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   var rootEl = document.getElementById('root');
   if (btn) btn.addEventListener('click', function() { vscode.postMessage({type:'refresh'}); });
   if (rootEl) rootEl.addEventListener('click', function(ev) {
-    var t = ev.target;
-    if (!t || t.tagName !== 'BUTTON') return;
+    var rawTarget = ev.target;
+    var t = rawTarget && typeof rawTarget.closest === 'function' ? rawTarget.closest('button') : rawTarget;
+    if (!t || t.tagName !== 'BUTTON' || !rootEl.contains(t) || t.disabled) return;
     if (t.classList.contains('wc-tab-btn')) {
       applyTab(t.getAttribute('data-wc-tab'));
       return;
@@ -1224,6 +1301,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     var act = t.getAttribute('data-wc-action');
     if (!act) return;
+    ev.preventDefault();
     ev.stopPropagation();
     if (act === 'wishlist-view') { var wv = (t.getAttribute('data-wishlist-id') || '').trim(); if (wv) vscode.postMessage({type:'openWishlistDetail',wishlistId:wv}); return; }
     if (act === 'planning-new-plan') { vscode.postMessage({type:'prefillPlanningInterviewChat'}); return; }
