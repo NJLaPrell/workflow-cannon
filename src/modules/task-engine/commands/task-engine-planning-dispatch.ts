@@ -8,6 +8,7 @@ import { resolveFeatureTaxonomyRuntimeCommands } from "./task-feature-taxonomy-r
 import type { OpenedPlanningStores } from "../persistence/planning-open.js";
 import { TaskStore } from "../persistence/store.js";
 import { resolvePhaseDeliveryReadoutCommands } from "./phase-delivery-readout-commands.js";
+import { runUpsertPhaseCatalogEntry } from "../phase-catalog-commands-runtime.js";
 import {
   resolveMaintainerDeliveryPolicyCommand,
   resolveTaskIntakePolicyCommand
@@ -46,6 +47,10 @@ export async function dispatchTaskEnginePlanningCommands(
   const phaseDeliveryReadout = await resolvePhaseDeliveryReadoutCommands(command, ctx, planning);
   if (phaseDeliveryReadout !== null) {
     return phaseDeliveryReadout;
+  }
+
+  if (command.name === "upsert-phase-catalog-entry") {
+    return runUpsertPhaseCatalogEntry(ctx, planning, args as Record<string, unknown>);
   }
 
   const maintainerDeliveryPolicy = resolveMaintainerDeliveryPolicyCommand(command, ctx, planning);

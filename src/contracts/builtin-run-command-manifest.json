@@ -181,6 +181,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "list-phase-catalog",
+    "file": "list-phase-catalog.md",
+    "description": "List phase keys with optional short descriptions (kit_phase_catalog) merged with current/next workspace phase keys in deterministic order.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "list-phase-notes",
     "file": "list-phase-notes.md",
     "description": "List phase notes for a phase with optional filters (bounded projection).",
@@ -286,6 +294,14 @@
     "policyOperationId": "tasks.synthesize-transcript-churn",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "upsert-phase-catalog-entry",
+    "file": "upsert-phase-catalog-entry.md",
+    "description": "Create or update optional short description for a phaseKey in kit_phase_catalog (or remove row); respects assign-task-phase-style before-current guard and planning generation.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
   },
   {
     "moduleId": "task-engine",

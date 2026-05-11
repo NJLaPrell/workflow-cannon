@@ -10,6 +10,15 @@
       },
       "actor": {
         "type": "string"
+      },
+      "wishlistPage": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "wishlistPageSize": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 100
       }
     },
     "additionalProperties": false

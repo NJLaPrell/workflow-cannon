@@ -81,6 +81,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "list-components",
     "list-features",
     "list-module-states",
+    "list-phase-catalog",
     "list-phase-notes",
     "list-tasks",
     "list-wishlist",
@@ -116,6 +117,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "update-wishlist",
     "update-workspace-phase-snapshot",
     "update-workspace-status",
+    "upsert-phase-catalog-entry",
     "workspace-status-history"
   ]);
 });

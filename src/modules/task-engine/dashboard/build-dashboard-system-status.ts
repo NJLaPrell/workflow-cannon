@@ -10,6 +10,8 @@ import type { DashboardSystemStatus } from "../../../contracts/dashboard-summary
 import type { ModuleActivationReport } from "../../../core/module-registry.js";
 import type { SqliteDualPlanningStore } from "../persistence/sqlite-dual-planning.js";
 import type { TaskStore } from "../persistence/store.js";
+import { buildOrderedPhaseCatalogList, phaseCatalogTableAvailable } from "../persistence/phase-catalog-store.js";
+import { readKitWorkspaceStatusRow } from "../persistence/workspace-status-store.js";
 import {
   buildDashboardPlanningStoreSummary,
   buildDashboardWorkspaceIdentity
@@ -71,6 +73,14 @@ export async function buildDashboardSystemStatus(
     const remediationSuggestions = Array.isArray(remRaw)
       ? remRaw.filter((x): x is string => typeof x === "string")
       : [];
+    const db = sqliteDual.getDatabase();
+    const wsRow = readKitWorkspaceStatusRow(db);
+    const phases = buildOrderedPhaseCatalogList(db, wsRow);
+    const phaseCatalog = {
+      schemaVersion: 1 as const,
+      supported: phaseCatalogTableAvailable(db),
+      phases
+    };
     phaseBlock = {
       schemaVersion: 1,
       ok: true,
@@ -95,7 +105,8 @@ export async function buildDashboardSystemStatus(
       exportReason:
         exportStatus && typeof exportStatus.reason === "string" ? exportStatus.reason : null,
       driftMessages,
-      remediationSuggestions
+      remediationSuggestions,
+      phaseCatalog
     };
   } else {
     phaseBlock = {

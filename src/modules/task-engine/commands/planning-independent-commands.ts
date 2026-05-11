@@ -19,6 +19,7 @@ import {
   runUpdateWorkspaceStatus,
   runWorkspaceStatusHistory
 } from "../workspace-status-commands-runtime.js";
+import { runListPhaseCatalog } from "../phase-catalog-commands-runtime.js";
 
 /** If non-null, dispatch should return immediately (command fully handled without planning stores). */
 export async function routeTaskEngineBeforeOpenPlanningStores(
@@ -40,6 +41,9 @@ export async function routeTaskEngineBeforeOpenPlanningStores(
   }
   if (command.name === "update-workspace-phase-snapshot") {
     return runUpdateWorkspacePhaseSnapshot(ctx, args as Record<string, unknown>);
+  }
+  if (command.name === "list-phase-catalog") {
+    return runListPhaseCatalog(ctx);
   }
   if (command.name === "get-workspace-status") {
     return runGetWorkspaceStatus(ctx, args as Record<string, unknown>);

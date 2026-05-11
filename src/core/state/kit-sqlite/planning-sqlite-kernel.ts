@@ -979,6 +979,21 @@ CREATE INDEX idx_cae_registry_checkpoints_version_recorded
 `);
 }
 
+/** Optional operator-facing short labels per phaseKey (Phase 88 / T100171). */
+function migrateV22ToV23(db: SqliteDatabase): void {
+  if (tableExists(db, "kit_phase_catalog")) {
+    return;
+  }
+  db.exec(`
+CREATE TABLE kit_phase_catalog (
+  phase_key TEXT PRIMARY KEY NOT NULL,
+  short_description TEXT,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX idx_kit_phase_catalog_updated ON kit_phase_catalog(updated_at);
+`);
+}
+
 /**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
@@ -1105,6 +1120,11 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
     migrateV21ToV22(db);
     db.pragma("user_version = 22");
     current = 22;
+  }
+  if (current < 23) {
+    migrateV22ToV23(db);
+    db.pragma("user_version = 23");
+    current = 23;
   }
 }
 
