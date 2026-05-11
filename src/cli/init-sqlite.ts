@@ -1,3 +1,5 @@
+import fs from "node:fs/promises";
+import path from "node:path";
 import type { ModuleLifecycleContext } from "../contracts/module-contract.js";
 import { resolveRegistryAndConfig } from "../core/module-registry-resolve.js";
 import { defaultRegistryModules } from "../modules/index.js";
@@ -23,8 +25,17 @@ export async function ensurePlanningStoresInitialized(cwd: string): Promise<Ensu
       effectiveConfig: effective as Record<string, unknown>,
       runtimeVersion: "0"
     } as ModuleLifecycleContext;
-    const stores = await openPlanningStores(ctx);
     const rel = planningSqliteDatabaseRelativePath(ctx);
+    let databaseAlreadyExists = true;
+    try {
+      await fs.access(path.join(cwd, rel));
+    } catch {
+      databaseAlreadyExists = false;
+    }
+    const stores = await openPlanningStores(ctx);
+    if (!databaseAlreadyExists) {
+      await stores.taskStore.save();
+    }
     stores.sqliteDual.closeDatabase();
     return { ok: true, relativeDbPath: rel, warnings };
   } catch (e) {

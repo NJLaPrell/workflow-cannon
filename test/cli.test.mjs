@@ -27,6 +27,18 @@ async function runCliWithPolicyApproval(args, options) {
   }
 }
 
+async function runCliWithoutPolicyApproval(args, options) {
+  const prev = process.env.WORKSPACE_KIT_POLICY_APPROVAL;
+  delete process.env.WORKSPACE_KIT_POLICY_APPROVAL;
+  try {
+    return await runCli(args, options);
+  } finally {
+    if (prev !== undefined) {
+      process.env.WORKSPACE_KIT_POLICY_APPROVAL = prev;
+    }
+  }
+}
+
 function createCapture() {
   const lines = [];
   const errors = [];
@@ -137,6 +149,17 @@ async function writeSqliteKitConfig(rootDir, kitPhaseNumber) {
       2
     )
   );
+}
+
+function readTaskStoreDoc(rootDir) {
+  const dbPath = path.join(rootDir, ".workspace-kit", "tasks", "workspace-kit.db");
+  const db = new Database(dbPath);
+  try {
+    const row = db.prepare("SELECT task_store_json FROM workspace_planning_state WHERE id = 1").get();
+    return JSON.parse(row.task_store_json);
+  } finally {
+    db.close();
+  }
 }
 
 test("runCli returns usage error for unknown commands", async () => {
@@ -327,6 +350,163 @@ test("runCli init --dry-run --json emits init-plan envelope", async () => {
   assert.equal(payload.ok, true);
   assert.equal(payload.code, "init-plan");
   assert.ok(payload.data && typeof payload.data === "object");
+});
+
+test("runCli init mutates empty workspace and leaves doctor healthy", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-init-mutating-"));
+
+  const initCapture = createCapture();
+  const initCode = await runCli(["init", "--yes", "--approval-rationale", "integration test"], {
+    cwd: fixtureRoot,
+    ...initCapture
+  });
+
+  assert.equal(initCode, 0);
+  assert.match(initCapture.lines[0], /init completed/);
+  await readFile(path.join(fixtureRoot, "workspace-kit.profile.json"), "utf8");
+  await readFile(path.join(fixtureRoot, ".workspace-kit", "manifest.json"), "utf8");
+  await readFile(path.join(fixtureRoot, ".workspace-kit", "tasks", "workspace-kit.db"), "utf8");
+
+  const doctorCapture = createCapture();
+  const doctorCode = await runCli(["doctor", "--json"], { cwd: fixtureRoot, ...doctorCapture });
+  assert.equal(doctorCode, 0);
+  const doctorPayload = JSON.parse(doctorCapture.lines[0]);
+  assert.equal(doctorPayload.ok, true);
+  assert.equal(doctorPayload.code, "doctor-contract-ok");
+});
+
+test("runCli init without non-interactive approval writes nothing", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-init-no-approval-"));
+
+  const capture = createCapture();
+  const code = await runCliWithoutPolicyApproval(["init"], { cwd: fixtureRoot, ...capture });
+
+  assert.equal(code, 1);
+  assert.ok(capture.errors.some((l) => l.includes("Non-interactive init requires")));
+  await assert.rejects(readFile(path.join(fixtureRoot, "workspace-kit.profile.json"), "utf8"));
+  await assert.rejects(readFile(path.join(fixtureRoot, ".workspace-kit", "manifest.json"), "utf8"));
+});
+
+test("runCli init manages starter task defaults and no-starter flag", async () => {
+  const defaultRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-init-starter-"));
+  const firstCapture = createCapture();
+  assert.equal(
+    await runCli(["init", "--yes", "--approval-rationale", "starter default"], {
+      cwd: defaultRoot,
+      ...firstCapture
+    }),
+    0
+  );
+
+  let taskDoc = readTaskStoreDoc(defaultRoot);
+  assert.equal(taskDoc.tasks.filter((t) => t.metadata?.starterTask === true).length, 1);
+
+  const secondCapture = createCapture();
+  assert.equal(
+    await runCli(["init", "--yes", "--approval-rationale", "starter idempotent"], {
+      cwd: defaultRoot,
+      ...secondCapture
+    }),
+    0
+  );
+  taskDoc = readTaskStoreDoc(defaultRoot);
+  assert.equal(taskDoc.tasks.filter((t) => t.metadata?.starterTask === true).length, 1);
+
+  const noStarterRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-init-no-starter-"));
+  const noStarterCapture = createCapture();
+  assert.equal(
+    await runCli(
+      ["init", "--yes", "--approval-rationale", "no starter", "--no-starter-task"],
+      { cwd: noStarterRoot, ...noStarterCapture }
+    ),
+    0
+  );
+  taskDoc = readTaskStoreDoc(noStarterRoot);
+  assert.equal(taskDoc.tasks.filter((t) => t.metadata?.starterTask === true).length, 0);
+});
+
+test("runCli start reports before and after attach in text and JSON", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-start-"));
+
+  const beforeCapture = createCapture();
+  assert.equal(await runCli(["start"], { cwd: fixtureRoot, ...beforeCapture }), 1);
+  assert.ok(beforeCapture.lines.some((l) => l.includes("not attached")));
+
+  const beforeJsonCapture = createCapture();
+  assert.equal(await runCli(["start", "--json"], { cwd: fixtureRoot, ...beforeJsonCapture }), 1);
+  const beforeJson = JSON.parse(beforeJsonCapture.lines[0]);
+  assert.equal(beforeJson.ok, false);
+  assert.equal(beforeJson.code, "workspace-start-not-attached");
+
+  const initCapture = createCapture();
+  assert.equal(
+    await runCli(["init", "--yes", "--approval-rationale", "start after attach"], {
+      cwd: fixtureRoot,
+      ...initCapture
+    }),
+    0
+  );
+
+  const afterCapture = createCapture();
+  assert.equal(await runCli(["start"], { cwd: fixtureRoot, ...afterCapture }), 0);
+  assert.ok(afterCapture.lines.some((l) => l.includes("workspace looks healthy")));
+
+  const afterJsonCapture = createCapture();
+  assert.equal(await runCli(["start", "--json"], { cwd: fixtureRoot, ...afterJsonCapture }), 0);
+  const afterJson = JSON.parse(afterJsonCapture.lines[0]);
+  assert.equal(afterJson.ok, true);
+  assert.equal(afterJson.data.doctorOk, true);
+});
+
+test("runCli init preserves profile on re-init and force repairs kit-owned drift", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-init-preserve-force-"));
+  await writeFile(
+    path.join(fixtureRoot, "package.json"),
+    JSON.stringify({ name: "package-name-should-not-win", version: "1.0.0" }, null, 2)
+  );
+  await writeFile(
+    path.join(fixtureRoot, "workspace-kit.profile.json"),
+    JSON.stringify(
+      {
+        project: { name: "preserved-profile" },
+        packageManager: "pnpm",
+        commands: { test: "pnpm test", lint: "pnpm lint", typecheck: "pnpm check" },
+        github: { defaultBranch: "main" }
+      },
+      null,
+      2
+    )
+  );
+
+  const initCapture = createCapture();
+  assert.equal(
+    await runCli(["init", "--yes", "--approval-rationale", "preserve profile"], {
+      cwd: fixtureRoot,
+      ...initCapture
+    }),
+    0
+  );
+  const profileAfterFirstInit = JSON.parse(await readFile(path.join(fixtureRoot, "workspace-kit.profile.json"), "utf8"));
+  assert.equal(profileAfterFirstInit.project.name, "preserved-profile");
+
+  const pointerPath = path.join(fixtureRoot, ".cursor", "rules", "workspace-kit-profile-pointer.mdc");
+  await writeFile(pointerPath, "# drifted pointer\n", "utf8");
+
+  const reinitCapture = createCapture();
+  assert.equal(
+    await runCli(["init", "--yes", "--approval-rationale", "force repair", "--force"], {
+      cwd: fixtureRoot,
+      ...reinitCapture
+    }),
+    0
+  );
+  const profileAfterReinit = JSON.parse(await readFile(path.join(fixtureRoot, "workspace-kit.profile.json"), "utf8"));
+  assert.equal(profileAfterReinit.project.name, "preserved-profile");
+
+  const pointerAfterForce = await readFile(pointerPath, "utf8");
+  assert.doesNotMatch(pointerAfterForce, /drifted pointer/);
+  const backupDirs = await readdir(path.join(fixtureRoot, ".workspace-kit", "backups"));
+  assert.ok(backupDirs.length > 0);
 });
 
 test("runCli doctor fails when sqlite persistence configured but DB missing", async () => {
