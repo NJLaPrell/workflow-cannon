@@ -10,6 +10,8 @@ Machine-oriented **how to run** workspace-kit in this repo: policy, cold start, 
 
 ## 30-second bootstrap
 
+For a **net-new consumer project**, attach Workflow Cannon first: install `@workflow-cannon/workspace-kit`, run **`pnpm exec wk init --dry-run --json`** to preview owned paths, then run **`pnpm exec wk init`** with `WORKSPACE_KIT_POLICY_APPROVAL` and follow with **`pnpm exec wk start`**. The bootstrap below is for this source checkout or an already-attached workspace.
+
 1. **`pnpm exec wk run agent-bootstrap '{}'`** — doctor-equivalent checks + session snapshot (read-only). Optional lean digest for the instruction catalog: **`'{"projection":"lean"}'`** (compare `data.instructionSurface.instructionSurfaceDigest` to skip reloading full `commands[]` from `doctor --agent-instruction-surface`).
 2. **`pnpm exec wk doctor --agent-instruction-surface`** — full instruction rows + activation report. Add **`--agent-instruction-surface-lean`** (alone or with the base flag) for digest-only **`projection: "lean"`** when the catalog unchanged.
 3. **`pnpm exec wk run`** (no subcommand) — executable commands for the enabled module set.
