@@ -212,7 +212,32 @@ export function renderStatusTabInnerHtml(
       kvRow("Maintainer YAML export", escapeHtml(expStale)) +
       "<p><b>Drift & hints</b></p>" +
       driftHtml;
-    parts.push(card("Phase & workspace", body));
+    const cat = phase.phaseCatalog as Record<string, unknown> | undefined;
+    const catSupported = cat && cat.supported === true;
+    const catPhases = catSupported && Array.isArray(cat.phases) ? (cat.phases as unknown[]) : [];
+    let catRows = "";
+    for (const raw of catPhases) {
+      if (!raw || typeof raw !== "object") {
+        continue;
+      }
+      const row = raw as Record<string, unknown>;
+      const pk = typeof row.phaseKey === "string" ? row.phaseKey : "";
+      if (!pk) {
+        continue;
+      }
+      const sd = row.shortDescription != null ? String(row.shortDescription).trim() : "";
+      const desc = sd.length > 0 ? escapeHtml(sd) : "—";
+      catRows += "<tr><td><code>" + escapeHtml(pk) + "</code></td><td>" + desc + "</td></tr>";
+    }
+    const catBlock =
+      catSupported && catRows.length > 0
+        ? "<p><b>Phase roster</b></p><table class=\"wc-mini-table\"><thead><tr><th>Key</th><th>Description</th></tr></thead><tbody>" +
+          catRows +
+          "</tbody></table>"
+        : catSupported
+          ? '<p class="wc-muted">Phase roster: no catalog-only rows yet (current/next still listed in kit phase fields above).</p>'
+          : '<p class="wc-muted">Phase roster descriptions need planning SQLite v23+.</p>';
+    parts.push(card("Phase & workspace", body + catBlock));
   }
 
   const doctor = sys.doctor as Record<string, unknown> | undefined;

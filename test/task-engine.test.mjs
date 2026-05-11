@@ -1101,6 +1101,8 @@ test("taskEngineModule registration includes all instruction entries", () => {
   assert.ok(names.includes("update-workspace-phase-snapshot"));
   assert.ok(names.includes("set-current-phase"));
   assert.ok(names.includes("phase-status"));
+  assert.ok(names.includes("list-phase-catalog"));
+  assert.ok(names.includes("upsert-phase-catalog-entry"));
   assert.ok(names.includes("convert-wishlist"));
   assert.ok(names.includes("migrate-task-persistence"));
   assert.ok(names.includes("task-persistence-readiness"));
@@ -1421,6 +1423,86 @@ test("phase-status reads canonical phase and optional task counts", async () => 
   assert.equal(result.data.taskCounts.currentPhase.completed, 1);
   assert.equal(result.data.taskCounts.nextPhase.proposed, 1);
   assert.equal(result.data.exportStatus.exists, true);
+});
+
+test("list-phase-catalog merges workspace phases and catalog descriptions in order", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+  await seedSqliteStore(workspace, () => {});
+  await taskEngineModule.onCommand(
+    { name: "set-current-phase", args: { currentKitPhase: "72", nextKitPhase: "90", expectedWorkspaceRevision: 0 } },
+    ctx
+  );
+  const dual = new SqliteDualPlanningStore(workspace, ".workspace-kit/tasks/workspace-kit.db");
+  dual.loadFromDisk();
+  const gen0 = dual.getPlanningGeneration();
+  dual.withTransaction(
+    () => {
+      const db = dual.getDatabase();
+      db.prepare(
+        "INSERT INTO kit_phase_catalog (phase_key, short_description, updated_at) VALUES (?,?,?)"
+      ).run("90", "Future train", new Date().toISOString());
+    },
+    { expectedPlanningGeneration: gen0 }
+  );
+
+  const list = await taskEngineModule.onCommand({ name: "list-phase-catalog", args: {} }, ctx);
+  assert.equal(list.ok, true);
+  assert.equal(list.code, "phase-catalog-listed");
+  const phases = list.data.phases;
+  assert.ok(Array.isArray(phases));
+  const keys = phases.map((p) => p.phaseKey);
+  assert.deepEqual(keys, ["72", "90"]);
+  const p90 = phases.find((p) => p.phaseKey === "90");
+  assert.equal(p90.shortDescription, "Future train");
+  assert.equal(p90.inCatalog, true);
+  const p72 = phases.find((p) => p.phaseKey === "72");
+  assert.equal(p72.inCatalog, false);
+});
+
+test("upsert-phase-catalog-entry rejects numeric phase before workspace current", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+  await seedSqliteStore(workspace, () => {});
+  await taskEngineModule.onCommand(
+    { name: "set-current-phase", args: { currentKitPhase: "88", expectedWorkspaceRevision: 0 } },
+    ctx
+  );
+  const snap = await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, ctx);
+  const gen = snap.data.planningGeneration;
+  const bad = await taskEngineModule.onCommand(
+    {
+      name: "upsert-phase-catalog-entry",
+      args: { phaseKey: "10", shortDescription: "nope", expectedPlanningGeneration: gen }
+    },
+    ctx
+  );
+  assert.equal(bad.ok, false);
+  assert.equal(bad.code, "phase-target-before-current-workspace-phase");
+});
+
+test("upsert-phase-catalog-entry persists description and bumps planning generation", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+  await seedSqliteStore(workspace, () => {});
+  await taskEngineModule.onCommand(
+    { name: "set-current-phase", args: { currentKitPhase: "88", nextKitPhase: "89", expectedWorkspaceRevision: 0 } },
+    ctx
+  );
+  const snap = await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, ctx);
+  const gen = snap.data.planningGeneration;
+  const up = await taskEngineModule.onCommand(
+    {
+      name: "upsert-phase-catalog-entry",
+      args: { phaseKey: "90", shortDescription: "Phase 90 label", expectedPlanningGeneration: gen }
+    },
+    ctx
+  );
+  assert.equal(up.ok, true);
+  assert.equal(up.code, "phase-catalog-entry-upserted");
+  const list = await taskEngineModule.onCommand({ name: "list-phase-catalog", args: {} }, ctx);
+  const row = list.data.phases.find((p) => p.phaseKey === "90");
+  assert.equal(row.shortDescription, "Phase 90 label");
 });
 
 test("phase-status includePhaseJournalSummary reports activeCriticalNoteCount", async () => {

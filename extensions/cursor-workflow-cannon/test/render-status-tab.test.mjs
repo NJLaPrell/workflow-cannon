@@ -67,7 +67,12 @@ test("renderStatusTabInnerHtml renders systemStatus sections when present", () =
           exportStale: false,
           exportReason: "fresh",
           driftMessages: [],
-          remediationSuggestions: []
+          remediationSuggestions: [],
+          phaseCatalog: {
+            schemaVersion: 1,
+            supported: true,
+            phases: [{ phaseKey: "80", shortDescription: "Next wave UX", inCatalog: true }]
+          }
         },
         doctor: {
           schemaVersion: 1,
@@ -93,6 +98,8 @@ test("renderStatusTabInnerHtml renders systemStatus sections when present", () =
   assert.match(html, /This workspace/);
   assert.match(html, /Planning data/);
   assert.match(html, /Canonical phase/);
+  assert.match(html, /Phase roster/);
+  assert.match(html, /Next wave UX/);
   assert.match(html, /Contract checks passed/);
   assert.match(html, /task-engine/);
   assert.match(html, /Context activation \(CAE\)/);

@@ -69,6 +69,7 @@
         "replay-queue-snapshot",
         "supersede-phase-note",
         "synthesize-transcript-churn",
+        "upsert-phase-catalog-entry",
         "workspace-status-history",
         "explain-task-engine-model",
         "export-feature-taxonomy-json",
@@ -88,6 +89,7 @@
         "get-module-state",
         "list-components",
         "list-features",
+        "list-phase-catalog",
         "list-phase-notes",
         "list-module-states"
       ],
@@ -142,6 +144,7 @@
         "replay-queue-snapshot": { "$ref": "#/$defs/contractBase" },
         "supersede-phase-note": { "$ref": "#/$defs/contractBase" },
         "synthesize-transcript-churn": { "$ref": "#/$defs/contractSynthesizeTranscriptChurn" },
+        "upsert-phase-catalog-entry": { "$ref": "#/$defs/contractBase" },
         "workspace-status-history": { "$ref": "#/$defs/contractWorkspaceStatusHistory" },
         "explain-task-engine-model": { "$ref": "#/$defs/contractExplainTaskEngineModel" },
         "export-feature-taxonomy-json": { "$ref": "#/$defs/contractBase" },
@@ -161,6 +164,7 @@
         "get-module-state": { "$ref": "#/$defs/contractGetModuleState" },
         "list-components": { "$ref": "#/$defs/contractBase" },
         "list-features": { "$ref": "#/$defs/contractListFeatures" },
+        "list-phase-catalog": { "$ref": "#/$defs/contractBase" },
         "list-phase-notes": { "$ref": "#/$defs/contractBase" },
         "list-module-states": { "$ref": "#/$defs/contractListModuleStates" }
       }

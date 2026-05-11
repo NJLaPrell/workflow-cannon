@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-10T16:07:17.720Z",
+  "generatedAt": "2026-05-11T06:47:41.446Z",
   "commands": [
     {
       "name": "add-dependency",
@@ -613,6 +613,11 @@
       "moduleId": "task-engine"
     },
     {
+      "name": "list-phase-catalog",
+      "path": ".ai/agent-cli-snippets/by-command/list-phase-catalog.json",
+      "moduleId": "task-engine"
+    },
+    {
       "name": "list-phase-notes",
       "path": ".ai/agent-cli-snippets/by-command/list-phase-notes.json",
       "moduleId": "task-engine"
@@ -880,6 +885,11 @@
     {
       "name": "update-workspace-status",
       "path": ".ai/agent-cli-snippets/by-command/update-workspace-status.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "upsert-phase-catalog-entry",
+      "path": ".ai/agent-cli-snippets/by-command/upsert-phase-catalog-entry.json",
       "moduleId": "task-engine"
     },
     {

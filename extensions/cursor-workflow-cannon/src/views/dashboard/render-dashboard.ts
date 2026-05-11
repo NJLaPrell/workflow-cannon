@@ -1504,6 +1504,63 @@ function renderEditorIntegrationSection(editorIntegration: unknown): string {
 }
 
 /** Current / next phase + Deliver chip (no outer section). */
+/** Phase roster from `dashboard-summary.systemStatus.phase.phaseCatalog` (Phase 88+). */
+export function renderPhaseCatalogOverviewSection(
+  phaseSlice: Record<string, unknown> | null | undefined
+): string {
+  if (!phaseSlice || typeof phaseSlice !== "object") {
+    return "";
+  }
+  const cat = phaseSlice.phaseCatalog as Record<string, unknown> | undefined;
+  const supported = cat && cat.supported === true;
+  if (!supported) {
+    return (
+      '<section class="dash-card dash-phase-catalog" aria-label="Phase catalog">' +
+      "<p><b>Phase roster</b></p>" +
+      '<p class="muted">Optional phase descriptions require planning SQLite <b>v23+</b> (upgrade workspace-kit, reopen DB).</p>' +
+      "</section>"
+    );
+  }
+  const phases = Array.isArray(cat?.phases) ? (cat!.phases as unknown[]) : [];
+  let rows = "";
+  for (const raw of phases) {
+    if (!raw || typeof raw !== "object") {
+      continue;
+    }
+    const row = raw as Record<string, unknown>;
+    const pk = typeof row.phaseKey === "string" ? row.phaseKey : "";
+    if (!pk) {
+      continue;
+    }
+    const sd = row.shortDescription != null ? String(row.shortDescription).trim() : "";
+    const desc = sd.length > 0 ? escapeHtml(sd) : '<span class="muted">—</span>';
+    const src = row.inCatalog === true ? "" : ' <span class="muted">(workspace)</span>';
+    rows +=
+      "<tr><td><code>" +
+      escapeHtml(pk) +
+      "</code></td><td>" +
+      desc +
+      src +
+      "</td></tr>";
+  }
+  const table =
+    rows.length > 0
+      ? '<table class="dash-phase-catalog-table"><thead><tr><th>Phase</th><th>Short description</th></tr></thead><tbody>' +
+        rows +
+        "</tbody></table>"
+      : '<p class="muted">No phase catalog rows yet — current/next workspace phases still appear here once set.</p>';
+  const btn =
+    '<p style="margin-top:8px"><button type="button" class="dash-row-action dash-row-action-primary" data-wc-action="register-phase-catalog">Register future phase</button>' +
+    ' <span class="muted">Uses <code>upsert-phase-catalog-entry</code> with planning sync.</span></p>';
+  return (
+    '<section class="dash-card dash-phase-catalog" aria-label="Phase catalog">' +
+    "<p><b>Phase roster</b></p>" +
+    table +
+    btn +
+    "</section>"
+  );
+}
+
 function renderPhaseDeliverBlockInner(
   ws: Record<string, unknown>,
   readyExecutionSummary: Record<string, unknown>
@@ -2110,12 +2167,18 @@ export function renderDashboardRootInnerHtml(
       ? ((d.completedSummary as Record<string, unknown>).count as number)
       : 0;
 
+  const phaseSystemSlice =
+    d.systemStatus && typeof d.systemStatus === "object"
+      ? ((d.systemStatus as Record<string, unknown>).phase as Record<string, unknown> | undefined)
+      : undefined;
+
   const overviewContent =
     recNextCard +
     renderStatPills(totalReadyCount, totalProposedCount, totalBlockedCount, totalDoneCount) +
     renderAgentStatusBanner(d.agentStatus) +
     renderEditorIntegrationSection(editorIntegration) +
     renderRoleTemperamentAndPhaseSection(d.agentGuidance, ws as Record<string, unknown> | null, res) +
+    renderPhaseCatalogOverviewSection(phaseSystemSlice) +
     renderPhaseNotesOverviewSection(phaseJournal ?? null) +
     renderWorkspaceBlockersPendingSection(ws as Record<string, unknown> | null) +
     renderTeamExecutionSection(d.teamExecution) +
