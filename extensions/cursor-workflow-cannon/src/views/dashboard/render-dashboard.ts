@@ -1909,6 +1909,9 @@ export function renderPhaseNotesOverviewSection(bundle: DashboardPhaseJournalBun
     (ctxOk ? " · <b>Context preview</b> " + String(ctxNoteCount) + " note(s)" : "") +
     "</p>";
 
+  const addBtn =
+    '<button type="button" class="dash-row-action dash-row-action-primary" data-wc-action="phase-note-add" title="add-phase-note">Add note</button>';
+
   const proposeBtn =
     '<button type="button" class="dash-row-action dash-row-action-secondary" data-wc-action="phase-notes-propose-persist" title="propose-tasks-from-phase-notes persist:true">Persist convertible suggestions</button>';
 
@@ -1922,6 +1925,7 @@ export function renderPhaseNotesOverviewSection(bundle: DashboardPhaseJournalBun
     empty +
     (notes.length > 0 ? '<div class="dash-row-list">' + rows + "</div>" : "") +
     '<div class="dash-phase-notes-actions">' +
+    addBtn +
     proposeBtn +
     "</div>" +
     "</section>"
