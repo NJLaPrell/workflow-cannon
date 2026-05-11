@@ -93,6 +93,24 @@ function collectPhaseKeySuggestions(data: Record<string, unknown>): Array<{ labe
         add(pk, `Next kit phase (${nextKP.trim()})`);
       }
     }
+    const cat = phaseSlice.phaseCatalog;
+    if (cat && typeof cat === "object") {
+      const phases = (cat as { phases?: unknown }).phases;
+      if (Array.isArray(phases)) {
+        for (const raw of phases) {
+          if (!raw || typeof raw !== "object") {
+            continue;
+          }
+          const pk = (raw as { phaseKey?: unknown }).phaseKey;
+          const sd = (raw as { shortDescription?: unknown }).shortDescription;
+          if (typeof pk === "string" && pk.trim()) {
+            const hint =
+              typeof sd === "string" && sd.trim() ? String(sd).trim().slice(0, 72) : "catalog row";
+            add(pk.trim(), `Catalog · ${hint}`);
+          }
+        }
+      }
+    }
   }
   const scan = (summary: unknown) => {
     if (!summary || typeof summary !== "object") return;
@@ -315,6 +333,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         if (taskId.length > 0) {
           await this.onAssignTaskPhase(taskId);
         }
+      }
+      if (msg?.type === "registerPhaseCatalogEntry") {
+        await this.onRegisterPhaseCatalogEntry();
+        await this.pushUpdate();
       }
       if (msg?.type === "dashboardAcceptProposedPhase") {
         const rawIds = typeof msg.taskIds === "string" ? msg.taskIds : "";
@@ -668,6 +690,49 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const phaseKey = (picked.description ?? "").trim();
     return phaseKey.length > 0 ? phaseKey : undefined;
+  }
+
+  /**
+   * Register or update a future phase row in `kit_phase_catalog` (upsert-phase-catalog-entry).
+   */
+  private async onRegisterPhaseCatalogEntry(): Promise<void> {
+    const phaseKeyRaw =
+      (await vscode.window.showInputBox({
+        title: "Register future phase (catalog)",
+        prompt: "Stable phaseKey (must not sort before current workspace phase)",
+        validateInput: (v) => (v.trim().length > 0 ? null : "Phase key required")
+      })) ?? "";
+    const phaseKey = phaseKeyRaw.trim();
+    if (!phaseKey) {
+      return;
+    }
+    const descRaw =
+      (await vscode.window.showInputBox({
+        title: "Short description (optional)",
+        prompt: "Operator-facing label; leave empty for none"
+      })) ?? "";
+    const descTrim = descRaw.trim();
+    await this.client.recordActivity({
+      kind: "validating",
+      phaseKey,
+      command: "upsert-phase-catalog-entry",
+      details: { source: "dashboard-phase-catalog" }
+    });
+    const args: Record<string, unknown> = {
+      phaseKey,
+      ...expectedPlanningGenerationArgs()
+    };
+    args.shortDescription = descTrim.length > 0 ? descTrim : null;
+    const out = await this.client.run("upsert-phase-catalog-entry", args);
+    await this.client.clearActivity();
+    if (!out.ok) {
+      const detail = `${String(out.code ?? "")} ${String(out.message ?? "")}`.trim();
+      await vscode.window.showErrorMessage(`upsert-phase-catalog-entry failed: ${detail}`);
+      return;
+    }
+    ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
+    this.notifyKitStateChanged();
+    await vscode.window.showInformationMessage(`Phase catalog updated for ${phaseKey}`);
   }
 
   /**
@@ -1100,7 +1165,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (act === 'planning-wizard-start') { var sel = document.getElementById('wc-planning-type'); var pt = sel && sel.value ? String(sel.value).trim() : ''; if (pt) vscode.postMessage({type:'planningWizardStart',planningType:pt}); return; }
     if (act === 'planning-wizard-submit') { var ta = document.getElementById('wc-planning-answer'); var txt = ta && typeof ta.value === 'string' ? ta.value.trim() : ''; vscode.postMessage({type:'planningWizardSubmit',answer:txt}); return; }
     if (act === 'planning-wizard-cancel') { vscode.postMessage({type:'planningWizardCancel'}); return; }
-    if (act === 'planning-wizard-dismiss') { vscode.postMessage({type:'planningWizardDismiss'});return;}if(act==="collaboration-hub"){vscode.postMessage({type:"prefillCollaborationHubChat"});return;}if(act==="deliver-phase-prompt"){var kp=(t.getAttribute("data-wc-kit-phase")||"").trim();vscode.postMessage({type:"prefillDeliverPhaseChat",kitPhase:kp});return;}if(act==="add-wishlist-item"){vscode.postMessage({type:"addWishlistItem"});return;}if(act==="generate-features-chat"){vscode.postMessage({type:"prefillGenerateFeaturesChat"});return;}if(act==="transcript-churn-research-chat"){var tcTid=(t.getAttribute("data-task-id")||"").trim();vscode.postMessage({type:"prefillTranscriptChurnResearchChat",taskId:tcTid});return;}if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-page"){var wpp=parseInt(String(t.getAttribute("data-wishlist-page")||"0"),10);if(!Number.isNaN(wpp)&&wpp>=0)vscode.postMessage({type:"wishlistPage",page:wpp});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}if(act==="phase-complete-release"){var ph=(t.getAttribute("data-wc-phase-phrase")||"").trim();vscode.postMessage({type:"prefillPhaseCompleteReleaseChat",phasePhrase:ph});return;}if(act==="proposed-imp-accept-phase"||act==="proposed-exe-accept-phase"){var batch=(t.getAttribute("data-proposed-task-ids")||"").trim();var cat=act==="proposed-exe-accept-phase"?"execution":"improvement";vscode.postMessage({type:"dashboardAcceptProposedPhase",category:cat,taskIds:batch});return;}if(act==="phase-note-dismiss"){var dpn=(t.getAttribute("data-note-id")||"").trim();var dpp=(t.getAttribute("data-note-priority")||"").trim();if(dpn)vscode.postMessage({type:"dismissPhaseNote",noteId:dpn,priority:dpp});return;}if(act==="phase-note-convert"){var cpn=(t.getAttribute("data-note-id")||"").trim();if(cpn)vscode.postMessage({type:"convertPhaseNote",noteId:cpn});return;}if(act==="phase-notes-propose-persist"){vscode.postMessage({type:"persistPhaseNoteProposals"});return;}if(act==="assign-phase"){var apTid=(t.getAttribute("data-task-id")||"").trim();if(apTid)vscode.postMessage({type:"assignTaskPhase",taskId:apTid});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});})();`;
+    if (act === 'planning-wizard-dismiss') { vscode.postMessage({type:'planningWizardDismiss'});return;}if(act==="collaboration-hub"){vscode.postMessage({type:"prefillCollaborationHubChat"});return;}if(act==="deliver-phase-prompt"){var kp=(t.getAttribute("data-wc-kit-phase")||"").trim();vscode.postMessage({type:"prefillDeliverPhaseChat",kitPhase:kp});return;}if(act==="add-wishlist-item"){vscode.postMessage({type:"addWishlistItem"});return;}if(act==="generate-features-chat"){vscode.postMessage({type:"prefillGenerateFeaturesChat"});return;}if(act==="transcript-churn-research-chat"){var tcTid=(t.getAttribute("data-task-id")||"").trim();vscode.postMessage({type:"prefillTranscriptChurnResearchChat",taskId:tcTid});return;}if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-page"){var wpp=parseInt(String(t.getAttribute("data-wishlist-page")||"0"),10);if(!Number.isNaN(wpp)&&wpp>=0)vscode.postMessage({type:"wishlistPage",page:wpp});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}if(act==="phase-complete-release"){var ph=(t.getAttribute("data-wc-phase-phrase")||"").trim();vscode.postMessage({type:"prefillPhaseCompleteReleaseChat",phasePhrase:ph});return;}if(act==="proposed-imp-accept-phase"||act==="proposed-exe-accept-phase"){var batch=(t.getAttribute("data-proposed-task-ids")||"").trim();var cat=act==="proposed-exe-accept-phase"?"execution":"improvement";vscode.postMessage({type:"dashboardAcceptProposedPhase",category:cat,taskIds:batch});return;}if(act==="phase-note-dismiss"){var dpn=(t.getAttribute("data-note-id")||"").trim();var dpp=(t.getAttribute("data-note-priority")||"").trim();if(dpn)vscode.postMessage({type:"dismissPhaseNote",noteId:dpn,priority:dpp});return;}if(act==="phase-note-convert"){var cpn=(t.getAttribute("data-note-id")||"").trim();if(cpn)vscode.postMessage({type:"convertPhaseNote",noteId:cpn});return;}if(act==="phase-notes-propose-persist"){vscode.postMessage({type:"persistPhaseNoteProposals"});return;}if(act==="register-phase-catalog"){vscode.postMessage({type:"registerPhaseCatalogEntry"});return;}if(act==="assign-phase"){var apTid=(t.getAttribute("data-task-id")||"").trim();if(apTid)vscode.postMessage({type:"assignTaskPhase",taskId:apTid});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});})();`;
 
     return `<!DOCTYPE html>
 <html lang="en">

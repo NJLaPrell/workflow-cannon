@@ -141,6 +141,12 @@ export type DashboardPhaseSystemSlice = {
   exportReason: string | null;
   driftMessages: string[];
   remediationSuggestions: string[];
+  /** Ordered phase keys + optional short descriptions (`list-phase-catalog` contract). */
+  phaseCatalog?: {
+    schemaVersion: 1;
+    supported: boolean;
+    phases: Array<{ phaseKey: string; shortDescription: string | null; inCatalog: boolean }>;
+  };
 };
 
 export type DashboardModuleActivationSlice = {
