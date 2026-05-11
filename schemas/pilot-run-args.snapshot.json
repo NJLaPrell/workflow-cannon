@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceSchemaPackageVersion": "0.84.0",
+  "sourceSchemaPackageVersion": "0.85.0",
   "pilotCommands": [
     "add-dependency",
     "add-phase-note",
@@ -43,6 +43,7 @@
     "list-components",
     "list-features",
     "list-module-states",
+    "list-phase-catalog",
     "list-phase-notes",
     "list-tasks",
     "list-wishlist",
@@ -71,6 +72,7 @@
     "update-wishlist",
     "update-workspace-phase-snapshot",
     "update-workspace-status",
+    "upsert-phase-catalog-entry",
     "workspace-status-history"
   ],
   "commands": {
@@ -568,6 +570,9 @@
     "list-module-states": {
       "type": "object",
       "additionalProperties": true
+    },
+    "list-phase-catalog": {
+      "type": "object"
     },
     "list-phase-notes": {
       "type": "object"
@@ -1183,6 +1188,9 @@
         }
       },
       "additionalProperties": true
+    },
+    "upsert-phase-catalog-entry": {
+      "type": "object"
     },
     "workspace-status-history": {
       "type": "object",

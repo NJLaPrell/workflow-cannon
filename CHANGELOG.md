@@ -8,4 +8,4 @@ This root file is intentionally pointer-only to avoid split release history.
 
 - See `docs/maintainers/CHANGELOG.md` for all release notes, migration notes, and historical entries.
 
-Latest release: **v0.84.0** (Phase 87: phase scheduling, dashboard phase journal, wishlist patch parity; see canonical changelog).
+Latest release: **v0.85.0** (Phase 88: phase catalog, dashboard roster, closeout hygiene; see canonical changelog).

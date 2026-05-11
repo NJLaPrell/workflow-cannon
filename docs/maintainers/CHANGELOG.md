@@ -8,6 +8,22 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.85.0] - 2026-05-11
+
+Phase 88 — **Phase catalog in planning SQLite, list/upsert commands, and dashboard phase roster**. Ships `kit_phase_catalog` with deterministic ordering merged with workspace current/next phase keys, task-engine commands `list-phase-catalog` and `upsert-phase-catalog-entry` (planning-generation hygiene + assign-task-phase-style guards), Cursor dashboard **Phase roster** with optional short descriptions and **Register future phase**, status-tab roster alignment, `KIT_SQLITE_USER_VERSION` **23** aligned with migrations, run-contract schema registration for the new commands, and `compatibility-matrix.json` task-engine **0.23.0**.
+
+### Added
+
+- Planning SQLite: `kit_phase_catalog` table and migration from user version **22 → 23**.
+- Task engine: `list-phase-catalog`, `upsert-phase-catalog-entry`; phase catalog store and dashboard `phaseCatalog` on `dashboard-summary`.
+- Cursor extension: phase roster card, register-phase flow, phase key suggestions from catalog.
+
+### Changed
+
+- `KIT_SQLITE_USER_VERSION` now **23** to match `migrateKitSqliteSchema` (fixes drift where migrations advanced without bumping the exported constant).
+- `schemas/task-engine-run-contracts.schema.json`: register `list-phase-catalog` and `upsert-phase-catalog-entry`.
+- Maintainer data: `compatibility-matrix.json` task-engine version **0.23.0** (matches `task-engine-internal`).
+
 ## [0.84.0] - 2026-05-10
 
 Phase 87 — **Future phase scheduling for assignments, dashboard phase journal, wishlist patch parity, and intake canon**. Ships workspace phase scheduling metadata for queue health and `assign-task-phase` (current vs future buckets), Cursor dashboard integration for `list-phase-notes` / `get-phase-context` with dismiss / convert / persist flows and proposal acceptance routed through phase QuickPick plus `assign-task-phase`, `update-wishlist` schema alignment for `patch` vs `updates`, and canon updates under `.ai/AGENTS.md` / agent routing for backlog machine snapshots.
