@@ -637,6 +637,49 @@ test("runCli drift-check fails when managed asset content drifts", async () => {
   assert.match(driftCapture.errors[0], /detected drift/);
 });
 
+test("runCli detach --dry-run lists owned paths without deleting files", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-detach-dry-"));
+  await createDoctorFixture(fixtureRoot);
+
+  const capture = createCapture();
+  const code = await runCli(["detach", "--dry-run"], { cwd: fixtureRoot, ...capture });
+
+  assert.equal(code, 0);
+  assert.match(capture.lines[0], /detach \(dry-run\)/);
+  assert.ok(capture.lines.some((l) => l.includes("workspace-kit.profile.json")));
+  assert.ok(capture.lines.some((l) => l.includes(".workspace-kit/manifest.json")));
+  await readFile(path.join(fixtureRoot, ".workspace-kit", "manifest.json"), "utf8");
+});
+
+test("runCli detach --dry-run --json emits a valid plan envelope", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-detach-json-"));
+  await createDoctorFixture(fixtureRoot);
+
+  const capture = createCapture();
+  const code = await runCli(["detach", "--dry-run", "--json"], { cwd: fixtureRoot, ...capture });
+
+  assert.equal(code, 0);
+  const payload = JSON.parse(capture.lines[0]);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.code, "detach-plan");
+  assert.equal(payload.data.dryRun, true);
+  assert.equal(payload.data.deletionEnabled, false);
+  assert.ok(payload.data.ownedPaths.includes("workspace-kit.profile.json"));
+});
+
+test("runCli detach without dry-run does not delete files", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-detach-preview-only-"));
+  await createDoctorFixture(fixtureRoot);
+
+  const capture = createCapture();
+  const code = await runCli(["detach"], { cwd: fixtureRoot, ...capture });
+
+  assert.equal(code, 2);
+  assert.ok(capture.errors.some((l) => l.includes("preview-only")));
+  assert.ok(capture.errors.some((l) => l.includes("No files changed")));
+  await readFile(path.join(fixtureRoot, ".workspace-kit", "manifest.json"), "utf8");
+});
+
 test("runCli run lists available module commands with no subcommand", async () => {
   const capture = createCapture();
   const code = await runCli(["run"], { cwd: process.cwd(), ...capture });
