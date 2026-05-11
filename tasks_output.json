@@ -1,0 +1,573 @@
+{
+  "ok": true,
+  "code": "tasks-listed",
+  "message": "Found 7 tasks",
+  "data": {
+    "tasks": [
+      {
+        "id": "T100178",
+        "status": "proposed",
+        "type": "workspace-kit",
+        "title": "Phase 90: Standardize transition approval rationale in Dashboard drawer",
+        "createdAt": "2026-05-11T16:04:33.373Z",
+        "updatedAt": "2026-05-11T16:04:33.373Z",
+        "archived": false,
+        "priority": "P1",
+        "phase": "Phase 90",
+        "phaseKey": "90",
+        "approach": "Refactor transition helpers so Dashboard-originated accept, decline, and batch accept provide rationale from the drawer while command-palette flows can keep native VS Code prompts if needed.",
+        "technicalScope": [
+          "Add a drawer workflow for single task transitions showing task id, action, target effect, and whether the action is policy-sensitive.",
+          "Collect non-empty policyApproval.rationale in the drawer before calling run-transition from Dashboard actions.",
+          "Add a batch accept drawer that shows task count, category, shared rationale, and failure handling for per-task run-transition calls.",
+          "Refactor confirmAndRunTransition and confirmAndRunAcceptProposedPhaseBatch or add Dashboard-specific wrappers so existing command-palette behavior is not broken.",
+          "Preserve expectedPlanningGenerationArgs, ingestPlanningMetaFromData, notifyKitStateChanged, and partial failure reporting."
+        ],
+        "acceptanceCriteria": [
+          "Dashboard Accept/Decline row actions do not show a VS Code modal followed by a top-bar input box.",
+          "Users see the transition effect and enter policy rationale in one Dashboard drawer before mutation.",
+          "Batch accept uses one shared rationale and reports partial failures clearly inside the Dashboard or drawer result state.",
+          "A missing rationale blocks the mutation before run-transition is called.",
+          "Tests cover single-transition and batch-transition drawer state/rendering."
+        ],
+        "summary": "Replace Dashboard run-transition modal + input-box sequences with a drawer confirmation that collects policy rationale in context.",
+        "risk": "High: this touches policyApproval UX for task lifecycle changes and must preserve audit semantics exactly.",
+        "metadata": {
+          "category": "dashboard-ux",
+          "tags": [
+            "phase-90",
+            "run-transition",
+            "policy-approval",
+            "drawer",
+            "task-lifecycle"
+          ],
+          "component": "extensions/cursor-workflow-cannon",
+          "blockedBy": [
+            "Dashboard drawer contract task"
+          ],
+          "implementationFiles": [
+            "extensions/cursor-workflow-cannon/src/run-transition-with-approval.ts",
+            "extensions/cursor-workflow-cannon/src/views/dashboard/DashboardViewProvider.ts",
+            "extensions/cursor-workflow-cannon/src/views/dashboard/render-dashboard.ts",
+            "extensions/cursor-workflow-cannon/test/render-dashboard.test.mjs"
+          ]
+        },
+        "features": [
+          "cursor-extension",
+          "policy-registry",
+          "task-lifecycle"
+        ],
+        "agentRouting": {
+          "ownership": null,
+          "queueNamespace": "default",
+          "features": [
+            "cursor-extension",
+            "policy-registry",
+            "task-lifecycle"
+          ],
+          "source": null,
+          "hasModuleMetadata": true,
+          "category": "dashboard-ux",
+          "tags": [
+            "phase-90",
+            "run-transition",
+            "policy-approval",
+            "drawer",
+            "task-lifecycle"
+          ],
+          "confidenceTier": null,
+          "blockedReasonCategory": null
+        }
+      },
+      {
+        "id": "T100179",
+        "status": "proposed",
+        "type": "workspace-kit",
+        "title": "Phase 90: Align CAE Guidance prompts with dashboard input standard",
+        "createdAt": "2026-05-11T16:04:33.373Z",
+        "updatedAt": "2026-05-11T16:04:33.373Z",
+        "archived": false,
+        "priority": "P2",
+        "phase": "Phase 90",
+        "phaseKey": "90",
+        "approach": "Treat CAE acknowledgement, feedback, and registry mutation prompts as part of the Dashboard UI plugin consistency pass, while preserving policy language and mutation gating.",
+        "technicalScope": [
+          "Audit GuidanceViewProvider and GuidancePanel showInputBox/showWarningMessage usages for actor, rationale, feedback note, and registry mutation confirmation flows.",
+          "Move Guidance webview-originated acknowledgement and feedback input into the webview where it improves context and does not duplicate native VS Code command behavior.",
+          "For CAE registry mutation actions, show actor, rationale, target version, payload summary, and CAE governance approval in one in-webview confirmation flow when launched from the Guidance UI.",
+          "Keep native notifications for failures and non-webview command-palette fallbacks only where they remain the clearest VS Code behavior.",
+          "Update tests for guidance action messages or render output that changes because prompts move into the webview."
+        ],
+        "acceptanceCriteria": [
+          "Guidance UI actions launched from the CAE webview no longer mix multiple native prompt styles for routine input collection.",
+          "Registry mutation confirmation still clearly says CAE mutation approval is not Tier A/B run policyApproval.",
+          "Actor/rationale requirements are validated before mutation commands run.",
+          "Existing mutation capability denial behavior remains clear and safe.",
+          "Guidance tests cover any new webview prompt/result states."
+        ],
+        "summary": "Review the CAE Guidance sidebar/panel prompt surfaces and align user input with the same webview-contained drawer standard where practical.",
+        "risk": "Medium-high: CAE mutation prompts carry governance copy and must not blur approval lanes.",
+        "metadata": {
+          "category": "dashboard-ux",
+          "tags": [
+            "phase-90",
+            "cae",
+            "guidance",
+            "drawer",
+            "governance"
+          ],
+          "component": "extensions/cursor-workflow-cannon",
+          "blockedBy": [
+            "Dashboard drawer contract task"
+          ],
+          "implementationFiles": [
+            "extensions/cursor-workflow-cannon/src/views/guidance/GuidanceViewProvider.ts",
+            "extensions/cursor-workflow-cannon/src/views/guidance/GuidancePanel.ts",
+            "extensions/cursor-workflow-cannon/src/views/guidance/render-guidance.ts",
+            "extensions/cursor-workflow-cannon/test/render-guidance.test.mjs",
+            "extensions/cursor-workflow-cannon/test/guidance-panel-messages.test.mjs"
+          ]
+        },
+        "features": [
+          "agent-behavior",
+          "cursor-extension",
+          "policy-registry"
+        ],
+        "agentRouting": {
+          "ownership": null,
+          "queueNamespace": "default",
+          "features": [
+            "agent-behavior",
+            "cursor-extension",
+            "policy-registry"
+          ],
+          "source": null,
+          "hasModuleMetadata": true,
+          "category": "dashboard-ux",
+          "tags": [
+            "phase-90",
+            "cae",
+            "guidance",
+            "drawer",
+            "governance"
+          ],
+          "confidenceTier": null,
+          "blockedReasonCategory": null
+        }
+      },
+      {
+        "id": "T100180",
+        "status": "proposed",
+        "type": "workspace-kit",
+        "title": "Phase 90: Document and test Dashboard prompt consistency rules",
+        "createdAt": "2026-05-11T16:04:33.373Z",
+        "updatedAt": "2026-05-11T16:04:33.373Z",
+        "archived": false,
+        "priority": "P2",
+        "phase": "Phase 90",
+        "phaseKey": "90",
+        "approach": "Codify the prompt-surface decision close to the extension code and add tests that catch accidental reintroduction of Dashboard-originated native input prompts.",
+        "technicalScope": [
+          "Add or update extension README/developer guidance describing when to use the drawer, native QuickPick/InputBox, modal warnings, and notifications.",
+          "Add targeted tests for drawer rendering, form validation, busy/result states, and migrated workflows.",
+          "Add a lightweight static or unit-level guard if practical to flag new DashboardViewProvider showInputBox/showQuickPick usages for Dashboard-originated flows.",
+          "Keep tests focused on render/message behavior rather than full VS Code webview E2E unless an existing smoke path is cheap to extend.",
+          "Run cursor-workflow-cannon tests and relevant root checks for extension/dashboard changes."
+        ],
+        "acceptanceCriteria": [
+          "A maintainer-facing note documents the Phase 90 prompt-surface rule and exception cases.",
+          "Tests fail if the core drawer shell or migrated workflows regress.",
+          "The extension test suite passes with Node v22.22.2 using pnpm --filter cursor-workflow-cannon test.",
+          "Any remaining native prompt use is explicitly justified as command-palette fallback, destructive modal confirmation outside the Dashboard path, or transient notification.",
+          "Release evidence for the phase can cite the prompt consistency rule and test coverage."
+        ],
+        "summary": "Add regression coverage and lightweight operator/developer guidance so future Dashboard prompts follow the drawer-first UX rule.",
+        "risk": "Low-medium: mostly tests/docs, but static guards must avoid noisy false positives that block legitimate VS Code command flows.",
+        "metadata": {
+          "category": "dashboard-ux",
+          "tags": [
+            "phase-90",
+            "tests",
+            "docs",
+            "prompt-standard",
+            "regression"
+          ],
+          "component": "extensions/cursor-workflow-cannon",
+          "blockedBy": [
+            "At least one migrated drawer flow should exist before finalizing docs and regression assertions."
+          ],
+          "implementationFiles": [
+            "extensions/cursor-workflow-cannon/README.md",
+            "extensions/cursor-workflow-cannon/test/render-dashboard.test.mjs",
+            "extensions/cursor-workflow-cannon/test/render-guidance.test.mjs",
+            "extensions/cursor-workflow-cannon/package.json"
+          ]
+        },
+        "features": [
+          "ci-guards",
+          "cursor-extension",
+          "instructions"
+        ],
+        "agentRouting": {
+          "ownership": null,
+          "queueNamespace": "default",
+          "features": [
+            "ci-guards",
+            "cursor-extension",
+            "instructions"
+          ],
+          "source": null,
+          "hasModuleMetadata": true,
+          "category": "dashboard-ux",
+          "tags": [
+            "phase-90",
+            "tests",
+            "docs",
+            "prompt-standard",
+            "regression"
+          ],
+          "confidenceTier": null,
+          "blockedReasonCategory": null
+        }
+      },
+      {
+        "id": "T100175",
+        "status": "proposed",
+        "type": "workspace-kit",
+        "title": "Phase 90: Migrate Add wishlist item to drawer form",
+        "createdAt": "2026-05-11T16:04:33.372Z",
+        "updatedAt": "2026-05-11T16:04:33.372Z",
+        "archived": false,
+        "priority": "P1",
+        "phase": "Phase 90",
+        "phaseKey": "90",
+        "approach": "Port the existing create-wishlist field collection into the shared drawer, submit one validated payload to the host, and preserve planning-generation retry behavior and wishlist detail affordances.",
+        "technicalScope": [
+          "Render title, problem statement, expected outcome, impact, constraints, success signals, requestor, and evidence reference in one drawer form with required-field validation.",
+          "Move Dashboard button handling away from promptAndCreateWishlist for dashboard-originated clicks while preserving any command-palette fallback that still needs native VS Code input.",
+          "Submit create-wishlist through DashboardViewProvider using expectedPlanningGenerationArgs and the existing planning-generation refresh/retry path.",
+          "Show success, cancellation, validation, and create-wishlist failure states inline in the drawer; include an Open wishlist detail action when an id is returned.",
+          "Keep wishlist pagination reset and dashboard refresh behavior after successful creation."
+        ],
+        "acceptanceCriteria": [
+          "Clicking Add wishlist item opens an in-dashboard drawer instead of a sequence of VS Code showInputBox prompts.",
+          "All existing wishlist fields are present, required fields are validated before submission, and empty required fields do not call create-wishlist.",
+          "Successful creation refreshes the dashboard, resets wishlist pagination to the first page, and offers a clear way to open the created wishlist detail.",
+          "Planning-generation mismatch retry behavior remains intact.",
+          "Tests cover the rendered form fields, validation messaging, and success/failure state rendering."
+        ],
+        "summary": "Make Add wishlist item the proof-point migration by replacing the eight sequential VS Code input boxes with one Dashboard drawer form.",
+        "risk": "Medium: changes a user-facing create flow and must preserve concurrency handling and existing task-store semantics.",
+        "metadata": {
+          "category": "dashboard-ux",
+          "tags": [
+            "phase-90",
+            "wishlist",
+            "drawer",
+            "create-wishlist",
+            "proof-point"
+          ],
+          "component": "extensions/cursor-workflow-cannon",
+          "blockedBy": [
+            "Dashboard drawer contract task"
+          ],
+          "implementationFiles": [
+            "extensions/cursor-workflow-cannon/src/add-wishlist-item-flow.ts",
+            "extensions/cursor-workflow-cannon/src/views/dashboard/render-dashboard.ts",
+            "extensions/cursor-workflow-cannon/src/views/dashboard/DashboardViewProvider.ts",
+            "extensions/cursor-workflow-cannon/test/render-dashboard.test.mjs"
+          ]
+        },
+        "features": [
+          "cursor-extension",
+          "planning-concurrency",
+          "task-mutations"
+        ],
+        "agentRouting": {
+          "ownership": null,
+          "queueNamespace": "default",
+          "features": [
+            "cursor-extension",
+            "planning-concurrency",
+            "task-mutations"
+          ],
+          "source": null,
+          "hasModuleMetadata": true,
+          "category": "dashboard-ux",
+          "tags": [
+            "phase-90",
+            "wishlist",
+            "drawer",
+            "create-wishlist",
+            "proof-point"
+          ],
+          "confidenceTier": null,
+          "blockedReasonCategory": null
+        }
+      },
+      {
+        "id": "T100176",
+        "status": "proposed",
+        "type": "workspace-kit",
+        "title": "Phase 90: Move phase assignment prompts into drawer workflows",
+        "createdAt": "2026-05-11T16:04:33.372Z",
+        "updatedAt": "2026-05-11T16:04:33.372Z",
+        "archived": false,
+        "priority": "P2",
+        "phase": "Phase 90",
+        "phaseKey": "90",
+        "approach": "Reuse existing phase suggestions from dashboard-summary, but render them inside the Dashboard drawer with custom phase-key entry and inline validation.",
+        "technicalScope": [
+          "Move assign-task-phase target selection out of showQuickPick/showInputBox and into a drawer opened from row Phase buttons.",
+          "Render collected phase suggestions with source labels such as canonical, workspace DB, config hint, catalog, and bucket labels.",
+          "Support a custom stable phaseKey entry path with validation equivalent to the current input flow.",
+          "Move Register future phase catalog entry into a drawer form with phaseKey and optional shortDescription fields.",
+          "Preserve recordActivity, expected planning generation, ingestPlanningMetaFromData, refresh, and success/error notices."
+        ],
+        "acceptanceCriteria": [
+          "Task row Phase actions no longer use VS Code QuickPick/InputBox in Dashboard-originated flows.",
+          "Users can choose a suggested phase or enter a custom phase key in the drawer.",
+          "Register future phase runs upsert-phase-catalog-entry from the drawer and reports success/failure inline.",
+          "Invalid or empty phase keys are blocked before the CLI command runs.",
+          "Tests cover phase suggestion rendering and custom phase validation."
+        ],
+        "summary": "Replace Dashboard phase-key QuickPick/InputBox flows with drawer-based phase assignment and phase catalog workflows.",
+        "risk": "Medium: phase assignment is common queue-maintenance behavior and needs clear validation to avoid wrong phase buckets.",
+        "metadata": {
+          "category": "dashboard-ux",
+          "tags": [
+            "phase-90",
+            "phase-assignment",
+            "phase-catalog",
+            "drawer"
+          ],
+          "component": "extensions/cursor-workflow-cannon",
+          "blockedBy": [
+            "Dashboard drawer contract task"
+          ],
+          "implementationFiles": [
+            "extensions/cursor-workflow-cannon/src/views/dashboard/DashboardViewProvider.ts",
+            "extensions/cursor-workflow-cannon/src/views/dashboard/render-dashboard.ts",
+            "extensions/cursor-workflow-cannon/test/render-dashboard.test.mjs"
+          ]
+        },
+        "features": [
+          "cursor-extension",
+          "task-mutations",
+          "task-schema"
+        ],
+        "agentRouting": {
+          "ownership": null,
+          "queueNamespace": "default",
+          "features": [
+            "cursor-extension",
+            "task-mutations",
+            "task-schema"
+          ],
+          "source": null,
+          "hasModuleMetadata": true,
+          "category": "dashboard-ux",
+          "tags": [
+            "phase-90",
+            "phase-assignment",
+            "phase-catalog",
+            "drawer"
+          ],
+          "confidenceTier": null,
+          "blockedReasonCategory": null
+        }
+      },
+      {
+        "id": "T100177",
+        "status": "proposed",
+        "type": "workspace-kit",
+        "title": "Phase 90: Convert phase note prompts to drawer flows",
+        "createdAt": "2026-05-11T16:04:33.372Z",
+        "updatedAt": "2026-05-11T16:04:33.372Z",
+        "archived": false,
+        "priority": "P2",
+        "phase": "Phase 90",
+        "phaseKey": "90",
+        "approach": "Treat phase-note actions as small drawer workflows with clear command summaries, required rationale fields, and inline policy-sensitive confirmations.",
+        "technicalScope": [
+          "Replace add-phase-note QuickPick/InputBox sequence with a drawer form for note type, summary, priority, and optional details.",
+          "Replace dismiss-phase-note reason input and critical-note policy rationale with a drawer flow that clearly distinguishes audit reason from policyApproval rationale.",
+          "Move convert-phase-note-to-task and propose-tasks-from-phase-notes persist confirmations into drawer confirmations with command and effect summaries.",
+          "Keep critical dismiss policy behavior intact, including policyApproval when required by workspace config.",
+          "Render command errors inline and refresh phase notes after successful mutations."
+        ],
+        "acceptanceCriteria": [
+          "Dashboard phase-note actions do not open top-bar input boxes for normal Dashboard-originated use.",
+          "Add note validates type, summary, and priority before calling add-phase-note.",
+          "Critical dismiss clearly requires and submits policyApproval rationale when applicable.",
+          "Convert and persist actions show the command effect before execution and support cancel without mutation.",
+          "Tests cover add-note form rendering, dismiss validation, and confirmation copy for convert/persist."
+        ],
+        "summary": "Bring phase note add, dismiss, convert, and persist interactions into the Dashboard drawer so note workflows share one prompt pattern.",
+        "risk": "Medium-high: phase notes can carry policy-sensitive state, especially critical dismissals; copy must avoid implying chat-only approval satisfies policy.",
+        "metadata": {
+          "category": "dashboard-ux",
+          "tags": [
+            "phase-90",
+            "phase-notes",
+            "drawer",
+            "policy-approval"
+          ],
+          "component": "extensions/cursor-workflow-cannon",
+          "blockedBy": [
+            "Dashboard drawer contract task"
+          ],
+          "implementationFiles": [
+            "extensions/cursor-workflow-cannon/src/views/dashboard/DashboardViewProvider.ts",
+            "extensions/cursor-workflow-cannon/src/views/dashboard/render-dashboard.ts",
+            "extensions/cursor-workflow-cannon/test/render-dashboard.test.mjs"
+          ]
+        },
+        "features": [
+          "cursor-extension",
+          "policy-registry",
+          "task-mutations"
+        ],
+        "agentRouting": {
+          "ownership": null,
+          "queueNamespace": "default",
+          "features": [
+            "cursor-extension",
+            "policy-registry",
+            "task-mutations"
+          ],
+          "source": null,
+          "hasModuleMetadata": true,
+          "category": "dashboard-ux",
+          "tags": [
+            "phase-90",
+            "phase-notes",
+            "drawer",
+            "policy-approval"
+          ],
+          "confidenceTier": null,
+          "blockedReasonCategory": null
+        }
+      },
+      {
+        "id": "T100174",
+        "status": "proposed",
+        "type": "workspace-kit",
+        "title": "Phase 90: Dashboard input drawer contract",
+        "createdAt": "2026-05-11T16:04:33.371Z",
+        "updatedAt": "2026-05-11T16:04:33.371Z",
+        "archived": false,
+        "priority": "P1",
+        "phase": "Phase 90",
+        "phaseKey": "90",
+        "approach": "Introduce a shared Dashboard input-drawer contract and host/webview message protocol before migrating individual flows. Keep workspace-kit CLI commands as the only mutation path; the drawer only collects and validates user intent.",
+        "technicalScope": [
+          "Add a reusable Dashboard drawer shell in the dashboard webview with title, description, form body, validation area, primary/secondary actions, busy state, and result status.",
+          "Define a typed message protocol between render-dashboard and DashboardViewProvider for opening, submitting, cancelling, and reporting drawer workflows.",
+          "Support select, text input, textarea, confirmation, and read-only summary field types needed by existing prompt flows.",
+          "Handle focus management, Escape/cancel behavior, keyboard submit where appropriate, and responsive layout inside the VS Code sidebar webview.",
+          "Keep existing planning interview behavior working while allowing it to remain inline or later move to the shared drawer without breaking saved planning state."
+        ],
+        "acceptanceCriteria": [
+          "Dashboard-originated prompts have one documented default: use the in-webview drawer for user input and wizard steps.",
+          "The drawer can render at least one multi-field form and one confirmation+rationale flow without calling showInputBox or showQuickPick from the Dashboard path.",
+          "Drawer cancel, validation failure, command failure, and command success are visible in the Dashboard without losing the user's place.",
+          "No webview code mutates SQLite or kit-owned state directly; all mutations still go through CommandClient workspace-kit commands.",
+          "Unit tests cover the drawer shell rendering and at least one message-to-state transition."
+        ],
+        "summary": "Standardize Dashboard-originated user prompts and wizards on a reusable drawer overlay inside the webview so users are not bounced between the Dashboard, top command input, and modal popups.",
+        "risk": "Medium: introduces shared UI state in a frequently used sidebar; must avoid breaking existing dashboard refresh and details-open preservation.",
+        "metadata": {
+          "category": "dashboard-ux",
+          "tags": [
+            "phase-90",
+            "dashboard",
+            "webview",
+            "prompts",
+            "wizard",
+            "ux-consistency"
+          ],
+          "component": "extensions/cursor-workflow-cannon",
+          "decisionRecord": {
+            "promptSurface": "Reusable drawer overlay inside the webview",
+            "taskStatus": "proposed",
+            "firstMigration": "Add wishlist item"
+          },
+          "blockers": [
+            "Confirm drawer overlay design remains the Phase 90 UX direction."
+          ],
+          "implementationFiles": [
+            "extensions/cursor-workflow-cannon/src/views/dashboard/render-dashboard.ts",
+            "extensions/cursor-workflow-cannon/src/views/dashboard/DashboardViewProvider.ts",
+            "extensions/cursor-workflow-cannon/test/render-dashboard.test.mjs"
+          ]
+        },
+        "features": [
+          "cursor-extension"
+        ],
+        "agentRouting": {
+          "ownership": null,
+          "queueNamespace": "default",
+          "features": [
+            "cursor-extension"
+          ],
+          "source": null,
+          "hasModuleMetadata": true,
+          "category": "dashboard-ux",
+          "tags": [
+            "phase-90",
+            "dashboard",
+            "webview",
+            "prompts",
+            "wizard",
+            "ux-consistency"
+          ],
+          "confidenceTier": null,
+          "blockedReasonCategory": null
+        }
+      }
+    ],
+    "count": 7,
+    "scope": "tasks-only",
+    "listTasksSort": "updatedAt_desc_id_numeric_asc",
+    "listTasksCursorSemantics": "Keyset pagination: opaque cursor from prior nextCursor; under concurrent updates rows may move across pages (re-run without cursor for a fresh ordering snapshot).",
+    "planningGeneration": 2579,
+    "planningGenerationPolicy": "require",
+    "cae": {
+      "schemaVersion": 1,
+      "evalMode": "shadow",
+      "traceId": "cae.trace.8fba3fd721a7109461f378eeab765d35a7d2d732",
+      "shadow": true,
+      "summary": {
+        "policyCount": 0,
+        "thinkCount": 0,
+        "doCount": 1,
+        "reviewCount": 0,
+        "shadowObservationCount": 1
+      }
+    },
+    "presentation": {
+      "templateId": "default",
+      "matchedSections": [
+        "cae"
+      ],
+      "cae": {
+        "kind": "shadow_preflight_v1",
+        "traceId": "cae.trace.8fba3fd721a7109461f378eeab765d35a7d2d732",
+        "evalMode": "shadow",
+        "degraded": false,
+        "agentRenderHint": "If present, summarize CAE shadow outcome in one short paragraph; when traceId is set, operators can run cae-explain / cae-get-trace."
+      }
+    }
+  },
+  "responseTemplate": {
+    "requestedTemplateId": "default",
+    "appliedTemplateId": "default",
+    "enforcementMode": "advisory",
+    "warnings": [],
+    "telemetry": {
+      "resolveNs": 183083,
+      "warningCount": 0
+    }
+  }
+}
