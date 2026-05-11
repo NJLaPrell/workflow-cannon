@@ -1340,7 +1340,9 @@
               "additionalProperties": false,
               "properties": {
                 "config": { "type": "object" },
-                "actor": { "type": "string" }
+                "actor": { "type": "string" },
+                "wishlistPage": { "type": "integer", "minimum": 0 },
+                "wishlistPageSize": { "type": "integer", "minimum": 1, "maximum": 100 }
               }
             },
             "responseData": {

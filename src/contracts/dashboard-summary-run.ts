@@ -245,6 +245,12 @@ export type DashboardSummaryData = {
     schemaVersion: 1;
     openCount: number;
     totalCount: number;
+    /** Current page of open wishlist rows (0-based). */
+    openPage: number;
+    /** Page size for `openTop` (default **10** in kit; extension passes explicitly). */
+    openPageSize: number;
+    /** `Math.ceil(openCount / openPageSize)` when `openCount > 0`, else **0**. */
+    openTotalPages: number;
     openTop: DashboardWishlistRow[];
   };
   blockedSummary: {

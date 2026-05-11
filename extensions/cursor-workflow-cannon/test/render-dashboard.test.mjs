@@ -758,18 +758,27 @@ test("renderDashboardRootInnerHtml shows readyQueueBreakdown when present", () =
   assert.match(html, /Ready Queue · 3 Improvements · 1 Other/);
 });
 
-test("buildPhaseCompleteReleaseChatPrompt matches phase-closeout template", () => {
-  assert.equal(
-    buildPhaseCompleteReleaseChatPrompt("Phase 64"),
-    "The operator added this context: **Phase 64**\n\n" +
-      "Follow **`.ai/playbooks/phase-closeout-and-release.md`** (playbook id **`phase-closeout-and-release`**).\n\n" +
-      "Operator entrypoint: Workflow Cannon dashboard **Complete & Release** chat. " +
-      "Publish/tag/npm still require explicit human authorization after **`main`** merge; without that approval, stop before publish automation (**`.ai/RELEASING.md`**, playbook §4).\n\n" +
-      "Treat **`release/phase-<N>`** as the phase integration branch; validate there, merge **`release/phase-<N>`** → **`main`**, then cut the release per **`.ai/RELEASING.md`**.\n\n" +
-      "**Chat expresses intent only.** Tier A/B **`workspace-kit run`** still requires JSON **`policyApproval`** on the **third** CLI argument (**`.ai/POLICY-APPROVAL.md`**, **`.ai/AGENT-CLI-MAP.md`**).\n\n" +
-      "At **§7 Phase delivery summary**, paste the template with **every** token expanded — evidence rules: **`{featureMarkdownBullets}`**, **`{optionalNotesBlockOrEmpty}`** (no stale **`{feature}`** placeholders).\n\n" +
-      "Optional: **`.cursor/rules/playbook-phase-closeout.mdc`**."
-  );
+test("buildPhaseCompleteReleaseChatPrompt is one-shot delivery + closeout with concrete branch when phaseKey set", () => {
+  const p = buildPhaseCompleteReleaseChatPrompt("Phase 64", { phaseKey: "64" });
+  assert.match(p, /The operator added this context: \*\*Phase 64\*\*/);
+  assert.match(p, /\*\*Mission:\*\*/);
+  assert.match(p, /@\.ai\/playbooks\/phase-closeout-and-release\.md/);
+  assert.match(p, /@\.ai\/playbooks\/task-to-phase-branch\.md/);
+  assert.match(p, /@\.ai\/MACHINE-PLAYBOOKS\.md/);
+  assert.match(p, /Stage A.*§2/);
+  assert.match(p, /\*\*`release\/phase-64`\*\*/);
+  assert.match(p, /\*\*`release\/phase-64`\*\* → \*\*`main`\*\*/);
+  assert.match(p, /Hard gate.*§3/);
+  assert.match(p, /task-to-phase-branch/);
+  assert.match(p, /playbook-task-to-phase-branch\.mdc/);
+  assert.match(p, /playbook-phase-closeout\.mdc/);
+  assert.match(p, /handoff/i);
+});
+
+test("buildPhaseCompleteReleaseChatPrompt without phaseKey keeps placeholder branch", () => {
+  const p = buildPhaseCompleteReleaseChatPrompt("Phase 64");
+  assert.match(p, /release\/phase-<N>/);
+  assert.doesNotMatch(p, /release\/phase-64/);
 });
 
 test("resolvePhasePhraseForCompleteRelease prefers phaseKey then task.phase", () => {
@@ -917,4 +926,41 @@ test("renderDashboardRootInnerHtml embeds planning wizard panel when provided", 
   );
   assert.match(html, /dash-planning-wizard/);
   assert.match(html, /wc-planning-type/);
+});
+
+test("renderDashboardRootInnerHtml wishlist section shows pager when openTotalPages > 1", () => {
+  const rows = Array.from({ length: 10 }, (_, i) => ({
+    id: `W-${i}`,
+    title: `Item ${i}`,
+    taskId: `T-wl-${i}`
+  }));
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      wishlist: {
+        openCount: 30,
+        totalCount: 30,
+        openPage: 0,
+        openPageSize: 10,
+        openTotalPages: 3,
+        openTop: rows
+      },
+      blockedSummary: { count: 0, top: [] },
+      suggestedNext: null,
+      planningSession: null,
+      taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
+      workspaceStatus: null,
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+  assert.match(html, /Open 30/);
+  assert.match(html, /· Page 1 \/ 3/);
+  assert.match(html, /wc-wishlist-pager/);
+  assert.match(html, /data-wc-action="wishlist-page"/);
 });

@@ -129,6 +129,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   /** After first full HTML load, refresh only swaps `#root` via postMessage so `<details open>` state survives. */
   private dashboardRootShellReady = false;
 
+  /** 0-based page for wishlist rows in `dashboard-summary` (10 per page). */
+  private wishlistPage = 0;
+
   private planningWizard: DashboardPlanningWizardState = { kind: "idle" };
 
   /** Last successful `dashboard-summary` `data` — used for phase QuickPick targets. */
@@ -161,6 +164,17 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (msg?.type === "refresh") {
         await this.pushUpdate();
       }
+      if (msg?.type === "wishlistPage") {
+        const rawP = (msg as { page?: unknown }).page;
+        const p =
+          typeof rawP === "number" && Number.isInteger(rawP) && rawP >= 0
+            ? rawP
+            : typeof rawP === "string" && /^\d+$/.test(rawP.trim())
+              ? parseInt(rawP.trim(), 10)
+              : 0;
+        this.wishlistPage = p;
+        await this.pushUpdate();
+      }
       if (msg?.type === "prefillWishlistChat") {
         const raw = msg?.wishlistId;
         const wishlistId = typeof raw === "string" ? raw.trim() : "";
@@ -183,6 +197,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (msg?.type === "addWishlistItem") {
         await promptAndCreateWishlist(this.client);
         this.notifyKitStateChanged();
+        this.wishlistPage = 0;
         await this.pushUpdate();
       }
       if (msg?.type === "prefillImprovementTriageChat") {
@@ -247,7 +262,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           phaseKey: phaseKeyFromPhrase(phasePhrase),
           details: { source: "dashboard-complete-release", phasePhrase }
         });
-        await prefillCursorChat(buildPhaseCompleteReleaseChatPrompt(phasePhrase));
+        await prefillCursorChat(
+          buildPhaseCompleteReleaseChatPrompt(phasePhrase, {
+            phaseKey: phaseKeyFromPhrase(phasePhrase)
+          })
+        );
       }
       if (msg?.type === "dashboardTransition") {
         const rawId = msg?.taskId;
@@ -902,9 +921,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     const { webview } = this.view;
     let raw: DashboardSummaryCommandSuccess | Record<string, unknown>;
     try {
-      raw = (await this.client.run("dashboard-summary", {})) as
-        | DashboardSummaryCommandSuccess
-        | Record<string, unknown>;
+      raw = (await this.client.run("dashboard-summary", {
+        wishlistPage: this.wishlistPage,
+        wishlistPageSize: 10
+      })) as DashboardSummaryCommandSuccess | Record<string, unknown>;
     } catch (e) {
       raw = {
         ok: false,
@@ -1080,7 +1100,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (act === 'planning-wizard-start') { var sel = document.getElementById('wc-planning-type'); var pt = sel && sel.value ? String(sel.value).trim() : ''; if (pt) vscode.postMessage({type:'planningWizardStart',planningType:pt}); return; }
     if (act === 'planning-wizard-submit') { var ta = document.getElementById('wc-planning-answer'); var txt = ta && typeof ta.value === 'string' ? ta.value.trim() : ''; vscode.postMessage({type:'planningWizardSubmit',answer:txt}); return; }
     if (act === 'planning-wizard-cancel') { vscode.postMessage({type:'planningWizardCancel'}); return; }
-    if (act === 'planning-wizard-dismiss') { vscode.postMessage({type:'planningWizardDismiss'});return;}if(act==="collaboration-hub"){vscode.postMessage({type:"prefillCollaborationHubChat"});return;}if(act==="deliver-phase-prompt"){var kp=(t.getAttribute("data-wc-kit-phase")||"").trim();vscode.postMessage({type:"prefillDeliverPhaseChat",kitPhase:kp});return;}if(act==="add-wishlist-item"){vscode.postMessage({type:"addWishlistItem"});return;}if(act==="generate-features-chat"){vscode.postMessage({type:"prefillGenerateFeaturesChat"});return;}if(act==="transcript-churn-research-chat"){var tcTid=(t.getAttribute("data-task-id")||"").trim();vscode.postMessage({type:"prefillTranscriptChurnResearchChat",taskId:tcTid});return;}if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}if(act==="phase-complete-release"){var ph=(t.getAttribute("data-wc-phase-phrase")||"").trim();vscode.postMessage({type:"prefillPhaseCompleteReleaseChat",phasePhrase:ph});return;}if(act==="proposed-imp-accept-phase"||act==="proposed-exe-accept-phase"){var batch=(t.getAttribute("data-proposed-task-ids")||"").trim();var cat=act==="proposed-exe-accept-phase"?"execution":"improvement";vscode.postMessage({type:"dashboardAcceptProposedPhase",category:cat,taskIds:batch});return;}if(act==="phase-note-dismiss"){var dpn=(t.getAttribute("data-note-id")||"").trim();var dpp=(t.getAttribute("data-note-priority")||"").trim();if(dpn)vscode.postMessage({type:"dismissPhaseNote",noteId:dpn,priority:dpp});return;}if(act==="phase-note-convert"){var cpn=(t.getAttribute("data-note-id")||"").trim();if(cpn)vscode.postMessage({type:"convertPhaseNote",noteId:cpn});return;}if(act==="phase-notes-propose-persist"){vscode.postMessage({type:"persistPhaseNoteProposals"});return;}if(act==="assign-phase"){var apTid=(t.getAttribute("data-task-id")||"").trim();if(apTid)vscode.postMessage({type:"assignTaskPhase",taskId:apTid});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});})();`;
+    if (act === 'planning-wizard-dismiss') { vscode.postMessage({type:'planningWizardDismiss'});return;}if(act==="collaboration-hub"){vscode.postMessage({type:"prefillCollaborationHubChat"});return;}if(act==="deliver-phase-prompt"){var kp=(t.getAttribute("data-wc-kit-phase")||"").trim();vscode.postMessage({type:"prefillDeliverPhaseChat",kitPhase:kp});return;}if(act==="add-wishlist-item"){vscode.postMessage({type:"addWishlistItem"});return;}if(act==="generate-features-chat"){vscode.postMessage({type:"prefillGenerateFeaturesChat"});return;}if(act==="transcript-churn-research-chat"){var tcTid=(t.getAttribute("data-task-id")||"").trim();vscode.postMessage({type:"prefillTranscriptChurnResearchChat",taskId:tcTid});return;}if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-page"){var wpp=parseInt(String(t.getAttribute("data-wishlist-page")||"0"),10);if(!Number.isNaN(wpp)&&wpp>=0)vscode.postMessage({type:"wishlistPage",page:wpp});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}if(act==="phase-complete-release"){var ph=(t.getAttribute("data-wc-phase-phrase")||"").trim();vscode.postMessage({type:"prefillPhaseCompleteReleaseChat",phasePhrase:ph});return;}if(act==="proposed-imp-accept-phase"||act==="proposed-exe-accept-phase"){var batch=(t.getAttribute("data-proposed-task-ids")||"").trim();var cat=act==="proposed-exe-accept-phase"?"execution":"improvement";vscode.postMessage({type:"dashboardAcceptProposedPhase",category:cat,taskIds:batch});return;}if(act==="phase-note-dismiss"){var dpn=(t.getAttribute("data-note-id")||"").trim();var dpp=(t.getAttribute("data-note-priority")||"").trim();if(dpn)vscode.postMessage({type:"dismissPhaseNote",noteId:dpn,priority:dpp});return;}if(act==="phase-note-convert"){var cpn=(t.getAttribute("data-note-id")||"").trim();if(cpn)vscode.postMessage({type:"convertPhaseNote",noteId:cpn});return;}if(act==="phase-notes-propose-persist"){vscode.postMessage({type:"persistPhaseNoteProposals"});return;}if(act==="assign-phase"){var apTid=(t.getAttribute("data-task-id")||"").trim();if(apTid)vscode.postMessage({type:"assignTaskPhase",taskId:apTid});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});})();`;
 
     return `<!DOCTYPE html>
 <html lang="en">

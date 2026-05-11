@@ -30,7 +30,8 @@ export async function resolveQueueDashboardReadoutCommands(
       ctx,
       store,
       planning.sqliteDual.getPlanningGeneration(),
-      planning.sqliteDual
+      planning.sqliteDual,
+      args
     );
   }
 

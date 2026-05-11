@@ -449,6 +449,36 @@ function renderWishlistOpenList(items: unknown): string {
   );
 }
 
+function renderWishlistPager(openPage: number, openTotalPages: number): string {
+  if (openTotalPages <= 1) {
+    return "";
+  }
+  const prevPage = openPage > 0 ? openPage - 1 : 0;
+  const lastPage = openTotalPages - 1;
+  const nextPage = openPage < lastPage ? openPage + 1 : lastPage;
+  const prevDisabled = openPage <= 0;
+  const nextDisabled = openPage >= lastPage;
+  return (
+    '<div class="wc-wishlist-pager muted" role="navigation" aria-label="Wishlist pages">' +
+    '<button type="button" class="dash-row-action dash-row-action-tertiary"' +
+    (prevDisabled ? " disabled" : "") +
+    ' data-wc-action="wishlist-page" data-wishlist-page="' +
+    String(prevPage) +
+    '">Prev</button>' +
+    '<span style="margin:0 8px">Page ' +
+    String(openPage + 1) +
+    " of " +
+    String(openTotalPages) +
+    "</span>" +
+    '<button type="button" class="dash-row-action dash-row-action-tertiary"' +
+    (nextDisabled ? " disabled" : "") +
+    ' data-wc-action="wishlist-page" data-wishlist-page="' +
+    String(nextPage) +
+    '">Next</button>' +
+    "</div>"
+  );
+}
+
 function renderProposedImprovementRow(row: { id?: unknown; title?: unknown; phase?: unknown }): string {
   const id = String(row?.id ?? "").trim();
   const title = escapeHtml(String(row?.title ?? ""));
@@ -1866,6 +1896,26 @@ export function renderDashboardRootInnerHtml(
   const ws = (d.workspaceStatus as Record<string, unknown> | null | undefined) ?? null;
   const wishlist = (d.wishlist as Record<string, unknown>) || {};
   const wishlistOpenTop = Array.isArray(wishlist.openTop) ? wishlist.openTop : [];
+  const wishOpen = Number(wishlist.openCount ?? 0);
+  const wishTotal = Number(wishlist.totalCount ?? 0);
+  const wishPageSize =
+    typeof wishlist.openPageSize === "number" && wishlist.openPageSize > 0
+      ? wishlist.openPageSize
+      : 10;
+  const wishOpenPage =
+    typeof wishlist.openPage === "number" && Number.isInteger(wishlist.openPage) && wishlist.openPage >= 0
+      ? wishlist.openPage
+      : 0;
+  const wishOpenTotalPages =
+    typeof wishlist.openTotalPages === "number" && wishlist.openTotalPages >= 0
+      ? wishlist.openTotalPages
+      : wishOpen === 0
+        ? 0
+        : Math.ceil(wishOpen / wishPageSize);
+  const wishPageSummary =
+    wishOpen > 0 && wishOpenTotalPages > 1
+      ? " · Page " + String(wishOpenPage + 1) + " / " + String(wishOpenTotalPages)
+      : "";
   const planningSession = d.planningSession;
   const blockedSummary = (d.blockedSummary as Record<string, unknown>) || {};
   const blockedTop = Array.isArray(blockedSummary.top) ? (blockedSummary.top as unknown[]).slice(0, 8) : [];
@@ -2023,8 +2073,6 @@ export function renderDashboardRootInnerHtml(
     terminalSection +
     "</section>";
 
-  const wishOpen = Number(wishlist.openCount ?? 0);
-  const wishTotal = Number(wishlist.totalCount ?? 0);
   const wishlistSection =
     '<section class="dash-card" aria-label="Wishlist">' +
     '<details class="status-section"' +
@@ -2034,9 +2082,12 @@ export function renderDashboardRootInnerHtml(
     String(wishOpen) +
     " / Total " +
     String(wishTotal) +
+    wishPageSummary +
     "</summary>" +
     '<div class="status-section-body">' +
-    (wishOpen === 0 ? '<p class="muted">No Items</p>' : renderWishlistOpenList(wishlistOpenTop)) +
+    (wishOpen === 0
+      ? '<p class="muted">No Items</p>'
+      : renderWishlistOpenList(wishlistOpenTop) + renderWishlistPager(wishOpenPage, wishOpenTotalPages)) +
     "</div></details></section>";
 
   // ── Assemble tab content ───────────────────────────────────────────────────

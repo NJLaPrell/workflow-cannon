@@ -40,6 +40,29 @@ import {
   readCurrentAgentActivityLease
 } from "../agent-activity-store.js";
 
+/** Parse optional `dashboard-summary` argv for wishlist table paging (extension + CLI). */
+export function parseDashboardWishlistPaging(args?: Record<string, unknown>): {
+  page: number;
+  pageSize: number;
+} {
+  const a = args ?? {};
+  let page = 0;
+  const rp = a.wishlistPage;
+  if (typeof rp === "number" && Number.isInteger(rp) && rp >= 0) {
+    page = rp;
+  } else if (typeof rp === "string" && /^\d+$/.test(rp.trim())) {
+    page = Number(rp.trim());
+  }
+  let pageSize = 10;
+  const rs = a.wishlistPageSize;
+  if (typeof rs === "number" && Number.isFinite(rs)) {
+    pageSize = Math.min(100, Math.max(1, Math.floor(rs)));
+  } else if (typeof rs === "string" && /^\d+$/.test(rs.trim())) {
+    pageSize = Math.min(100, Math.max(1, Number(rs.trim())));
+  }
+  return { page, pageSize };
+}
+
 function featureDetailsForTask(
   slugs: string[] | undefined,
   enrich: Map<string, FeatureEnrichment>
@@ -66,7 +89,8 @@ export async function runDashboardSummaryCommand(
   ctx: ModuleLifecycleContext,
   store: TaskStore,
   planningGeneration: number,
-  sqliteDual?: SqliteDualPlanningStore
+  sqliteDual?: SqliteDualPlanningStore,
+  commandArgs?: Record<string, unknown>
 ): Promise<ModuleCommandResult> {
   const tasks = store.getActiveTasks();
   const suggestion = getNextActions(tasks);
@@ -93,7 +117,13 @@ export async function runDashboardSummaryCommand(
   const wishlistItems = listWishlistIntakeTasksAsItems(store.getAllTasks());
   const wishlistOpenItems = wishlistItems.filter((i) => i.status === "open");
   const wishlistOpenCount = wishlistOpenItems.length;
-  const wishlistOpenTop = wishlistOpenItems.slice(0, 15).map((i) => {
+  const { page: wishlistPageReq, pageSize: wishlistPageSize } = parseDashboardWishlistPaging(commandArgs);
+  const wishlistTotalPages =
+    wishlistOpenCount === 0 ? 0 : Math.ceil(wishlistOpenCount / wishlistPageSize);
+  const wishlistSafePage =
+    wishlistTotalPages === 0 ? 0 : Math.min(wishlistPageReq, wishlistTotalPages - 1);
+  const wishlistSliceStart = wishlistSafePage * wishlistPageSize;
+  const wishlistOpenTop = wishlistOpenItems.slice(wishlistSliceStart, wishlistSliceStart + wishlistPageSize).map((i) => {
     const task = findWishlistIntakeTaskByLegacyOrTaskId(store.getAllTasks(), i.id);
     const taskId = task?.id ?? i.id;
     return {
@@ -320,6 +350,9 @@ export async function runDashboardSummaryCommand(
       schemaVersion: 1 as const,
       openCount: wishlistOpenCount,
       totalCount: wishlistItems.length,
+      openPage: wishlistSafePage,
+      openPageSize: wishlistPageSize,
+      openTotalPages: wishlistTotalPages,
       openTop: wishlistOpenTop
     },
     blockedSummary: {

@@ -67,9 +67,9 @@ export function buildTaskToPhaseBranchPrompt(options?: { taskId?: string; kitPha
   const body = phaseLead + taskFocus;
 
   return (
-    "Follow **`docs/maintainers/playbooks/task-to-phase-branch.md`** (playbook id **`task-to-phase-branch`**).\n\n" +
+    "Follow **`.ai/playbooks/task-to-phase-branch.md`** (playbook id **`task-to-phase-branch`**).\n\n" +
     body +
-    "Phase branch → task branch → implement → validate → PR into **`release/phase-<N>`** → merge → **`workspace-kit run run-transition`** **`complete`** with **`policyApproval`** per **`docs/maintainers/POLICY-APPROVAL.md`**.\n\n" +
+    "Phase branch → task branch → implement → validate → PR into **`release/phase-<N>`** → merge → **`workspace-kit run run-transition`** **`complete`** with **`policyApproval`** per **`.ai/POLICY-APPROVAL.md`**.\n\n" +
     "Optional: **`.cursor/rules/playbook-task-to-phase-branch.mdc`**."
   );
 }

@@ -16,7 +16,14 @@ workspace-kit run dashboard-summary '{}'
 
 ## Arguments
 
-Optional JSON object; accepts standard invocation `config` overlay only (no extra fields required).
+Optional JSON object:
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `wishlistPage` | integer (≥ 0) | `0` | 0-based page index for the **Wishlist · open** preview table in UIs. Out-of-range pages clamp to the last page. |
+| `wishlistPageSize` | integer (1–100) | `10` | Rows per wishlist page (`openTop` length). |
+
+Also accepts standard invocation `config` / `actor` overlays where applicable.
 
 ## Returns
 
@@ -42,7 +49,10 @@ Optional JSON object; accepts standard invocation `config` overlay only (no extr
 | `planningSession` | Shallow `build-plan` session snapshot for the dashboard, or `null` when no session file |
 | `blockingAnalysis` | Full blocking analysis list |
 | `dependencyOverview` | `{ schemaVersion: 1, activeTaskCount, includedTaskCount, edgeCount, truncated, perfNote, nodes, edges, mermaidFlowchart, criticalPathReady }` — active-task dependency subgraph aligned with `get-dependency-graph` edge direction (`from` depends on `to`); degrades when there are many active tasks (see `perfNote`) |
-| `wishlist.openTop` | Up to 15 **open** wishlist items (`{ id, title }`); W### namespace, separate from tasks until `convert-wishlist` |
+| `wishlist.openTop` | Up to **`wishlistPageSize`** **open** wishlist items for the requested page (`{ id, title, taskId }`); W### namespace, separate from tasks until `convert-wishlist` |
+| `wishlist.openPage` | 0-based page index actually used (after clamping) |
+| `wishlist.openPageSize` | Page size used for this response |
+| `wishlist.openTotalPages` | `Math.ceil(openCount / openPageSize)` when `openCount > 0`, else **0** |
 | `teamExecution` | `{ schemaVersion: 1, available, totalCount, activeCount, byStatus, topActive }` — rollup of **`kit_team_assignments`** when kit SQLite **`user_version` ≥ 7**; **`topActive`** is up to 15 rows in **`assigned` / `submitted` / `blocked`** (most recently updated first), each with **`executionTaskTitle`** resolved from the task store when present |
 | `subagentRegistry` | `{ schemaVersion: 1, available, definitionsCount, retiredDefinitionsCount, openSessionsCount, topOpenSessions }` — rollup of **`kit_subagent_*`** when kit SQLite **`user_version` ≥ 6**; **`topOpenSessions`** lists up to 15 **`status: open`** sessions (newest **`updatedAt`**) |
 | `systemStatus` | **`schemaVersion` `2`** adds **`identity`** (`projectName`, `packageName`, `workspaceKitVersion`, `rootPackageVersion`) and **`planningStore`** (`backend: sqlite`, `databaseRelativePath`). **`schemaVersion` `1`** omitted those slices. Always includes **`generatedAt`**, **`phase`** (same as **`phase-status`** — canonical phase, export staleness, drift strings), **`doctor`** (contract-check issues, capped), **`modules`** (enabled vs disabled module ids), **`caeLines`** (CAE posture lines; shadow trace stays on merged CLI **`data.cae`** when CAE preflight runs) |

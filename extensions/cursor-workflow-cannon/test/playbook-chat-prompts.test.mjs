@@ -49,7 +49,7 @@ test("buildImprovementTriagePrompt focuses task id when provided", () => {
 
 test("buildTaskToPhaseBranchPrompt references task-to-phase-branch playbook id and path", () => {
   const p = buildTaskToPhaseBranchPrompt();
-  assert.match(p, /task-to-phase-branch\.md/);
+  assert.match(p, /\.ai\/playbooks\/task-to-phase-branch\.md/);
   assert.match(p, /task-to-phase-branch/);
   assert.match(p, /clicked \*\*Deliver\*\*/);
 });
@@ -63,6 +63,7 @@ test("buildTaskToPhaseBranchPrompt includes kit phase when provided", () => {
   const p = buildTaskToPhaseBranchPrompt({ kitPhase: "64" });
   assert.match(p, /\*\*64\*\*/);
   assert.match(p, /release\/phase-64/);
+  assert.match(p, /\.ai\/POLICY-APPROVAL\.md/);
 });
 
 test("buildPlanningInterviewPrompt references planning runbook and build-plan", () => {

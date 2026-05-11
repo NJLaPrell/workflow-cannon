@@ -2065,6 +2065,57 @@ test("taskEngineModule dashboard-summary wishlist openTop includes backing taskI
   assert.equal(row.id, "W901");
   assert.equal(row.taskId, backingTaskId);
   assert.match(String(row.taskId), /^T\d+$/);
+  assert.equal(summary.data.wishlist.openPage, 0);
+  assert.equal(summary.data.wishlist.openPageSize, 10);
+  assert.equal(summary.data.wishlist.openTotalPages, 1);
+});
+
+test("taskEngineModule dashboard-summary wishlist paging clamps page and slices openTop", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const baseWl = {
+    problemStatement: "p",
+    expectedOutcome: "o",
+    impact: "i",
+    constraints: "c",
+    successSignals: "s",
+    requestor: "t",
+    evidenceRef: "e"
+  };
+  for (let i = 0; i < 11; i++) {
+    const created = await taskEngineModule.onCommand(
+      {
+        name: "create-wishlist",
+        args: { ...baseWl, title: `Wishlist paging ${i}` }
+      },
+      ctx
+    );
+    assert.equal(created.ok, true);
+  }
+  const p0 = await taskEngineModule.onCommand(
+    { name: "dashboard-summary", args: { wishlistPage: 0, wishlistPageSize: 10 } },
+    ctx
+  );
+  assert.equal(p0.ok, true);
+  assert.equal(p0.data.wishlist.openCount, 11);
+  assert.equal(p0.data.wishlist.openTop.length, 10);
+  assert.equal(p0.data.wishlist.openPage, 0);
+  assert.equal(p0.data.wishlist.openPageSize, 10);
+  assert.equal(p0.data.wishlist.openTotalPages, 2);
+  const p1 = await taskEngineModule.onCommand(
+    { name: "dashboard-summary", args: { wishlistPage: 1, wishlistPageSize: 10 } },
+    ctx
+  );
+  assert.equal(p1.ok, true);
+  assert.equal(p1.data.wishlist.openTop.length, 1);
+  assert.equal(p1.data.wishlist.openPage, 1);
+  const p99 = await taskEngineModule.onCommand(
+    { name: "dashboard-summary", args: { wishlistPage: 99, wishlistPageSize: 10 } },
+    ctx
+  );
+  assert.equal(p99.ok, true);
+  assert.equal(p99.data.wishlist.openPage, 1);
+  assert.equal(p99.data.wishlist.openTop.length, 1);
 });
 
 test("taskEngineModule dashboard-summary agentGuidance reflects effective config tier", async () => {
