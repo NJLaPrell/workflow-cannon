@@ -127,7 +127,7 @@ function writeDoctorFailureRemediation(
     );
   } else if (hasMissing) {
     writeError(
-      "  - Kit files missing: run `workspace-kit upgrade` after package updates (set WORKSPACE_KIT_POLICY_APPROVAL — see docs/maintainers/POLICY-APPROVAL.md), or `workspace-kit init` when bootstrapping a fresh workspace."
+      "  - Partial attach detected: run `workspace-kit init` to repair missing baseline files (preview with `workspace-kit init --dry-run`); use `workspace-kit upgrade` after package updates."
     );
   }
   writeError("  - workspace-kit --help — orientation and top-level commands");

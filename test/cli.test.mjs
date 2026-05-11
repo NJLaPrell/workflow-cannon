@@ -281,6 +281,21 @@ test("runCli doctor returns validation failure when required files are missing",
   assert.ok(capture.errors.some((l) => l.includes("--help")));
 });
 
+test("runCli doctor prioritizes init repair for partial attach", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-partial-attach-"));
+  await createDoctorFixture(fixtureRoot);
+  await unlink(path.join(fixtureRoot, ".workspace-kit", "owned-paths.json"));
+
+  const capture = createCapture();
+  const code = await runCli(["doctor"], { cwd: fixtureRoot, ...capture });
+
+  assert.equal(code, 1);
+  const nextStep = capture.errors.find((l) => l.includes("Partial attach detected"));
+  assert.match(nextStep ?? "", /workspace-kit init/);
+  assert.match(nextStep ?? "", /workspace-kit init --dry-run/);
+  assert.ok((nextStep ?? "").indexOf("workspace-kit init") < (nextStep ?? "").indexOf("workspace-kit upgrade"));
+});
+
 test("runCli init --dry-run previews plan without writing (minimal package.json)", async () => {
   const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-init-dry-"));
   await writeFile(
