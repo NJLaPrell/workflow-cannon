@@ -699,3 +699,50 @@ export function validateDismissPhaseNoteSubmit(
   }
   return { ok: true, values: { reason, policyRationale: rationale } };
 }
+
+export type GuidanceCaeMutationDrawerParams = {
+  command: string;
+  target: string;
+  fallbackNote: string;
+  defaultActor: string;
+};
+
+/** CAE authoring panel — confirm rationale + single primary action (replaces native input + modal). */
+export function buildGuidanceCaeMutationDrawerSpec(p: GuidanceCaeMutationDrawerParams): DrawerFormSpec {
+  const body =
+    "<b>Command</b> <code>" +
+    escapeDrawerHtml(p.command) +
+    "</code> · <b>Target</b> <code>" +
+    escapeDrawerHtml(p.target) +
+    "</code><br/>" +
+    "This records <code>caeMutationApproval</code> for the CAE registry mutation — <em>not</em> Tier A/B <code>policyApproval</code> on <code>wk run</code>.<br/>" +
+    "<b>Actor</b> <code>" +
+    escapeDrawerHtml(p.defaultActor) +
+    "</code> (from environment; included on the payload).";
+  return {
+    workflowId: "guidance-cae-mutation",
+    title: "Confirm CAE mutation",
+    descriptionHtml: body,
+    fields: [
+      {
+        id: "rationale",
+        kind: "textarea",
+        label: "Rationale (required)",
+        placeholder: "Why should this command run?",
+        required: true,
+        rows: 4,
+        value: p.fallbackNote
+      }
+    ],
+    primaryLabel: "Run mutation",
+    cancelLabel: "Cancel"
+  };
+}
+
+export function validateGuidanceCaeMutationSubmit(values: Record<string, string>): DrawerValidationResult {
+  const rationale = (values.rationale ?? "").trim();
+  if (!rationale) {
+    return { ok: false, error: "Rationale is required before running the CAE mutation." };
+  }
+  return { ok: true, values: { rationale } };
+}

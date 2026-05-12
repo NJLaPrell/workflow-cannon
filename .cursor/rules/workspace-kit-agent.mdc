@@ -15,6 +15,6 @@ Apply when editing `docs/maintainers/ROADMAP.md`, task-engine task state, `docs/
 
 ## End-of-session updates
 
-- Keep phase/status wording consistent across roadmap, task-engine state, and workspace status (SQLite + mirrored YAML export as applicable).
+- Keep phase/status wording consistent across roadmap, task-engine state, and workspace status (SQLite + mirrored YAML export as applicable). Prefer **Sprint** in maintainer narrative when you mean a timeboxed slice; machine ids stay on **`phaseKey`** / **`release/phase-<N>`** — **`.ai/TERMS.md`** `term|name=sprint|…`.
 - Update next actions and pending decisions via kit commands (and mirrored YAML when maintainers still edit that file) when scope shifts.
 - Preserve extraction history as provenance, not active execution.

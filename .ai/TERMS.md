@@ -13,6 +13,7 @@ usage|slot1=prefer_these_terms_in_docs_tasks_prs_and_release_notes
 usage|slot1=add_new_terms_here_before_broad_adoption
 usage|slot1=keep_definitions_operational_and_project_specific
 usage|slot1=one_primary_definition_source_per_term
+usage|slot1=sprint_machine_synonyms_listed_under_term_sprint_in_ai_terms_md_and_terms_index_json|status=active
 
 surface|slot1=S001|name=canonical_glossary|target=docs/maintainers/TERMS.md|role=primary_definitions
 surface|slot1=S002|name=canonical_principles|target=.ai/PRINCIPLES.md|role=goals_and_decision_rules
@@ -21,6 +22,8 @@ surface|slot1=S004|name=execution|paths=.workspace-kit/tasks/state.json|role=tas
 surface|slot1=S005|name=operational|paths=docs/maintainers/RELEASING.md,docs/maintainers/|role=runbooks_and_playbooks
 surface|slot1=S006|name=agent_enforcement|target=.cursor/rules/*.mdc|role=editor_agent_layer
 surface|slot1=S007|name=agent_task_templates|target=tasks/*.md|role=reusable_task_templates
+
+term|name=sprint|definition=bounded_coordination_window_for_a_kit_phase_execution_slice_also_called_sprint_wave_or_kit_phase_window_in_dashboard_copy|machine_synonyms=sprint_wave,kit_phase_window,execution_slice,phase_execution_slice|defined_in=.ai/TERMS.md|enforced_in=dashboard_copy_and_glossary
 
 term|name=directive|definition=high_level_intent_telling_agent_what_outcome_to_optimize_for|defined_in=docs/maintainers/TERMS.md,README.md,docs/maintainers/ROADMAP.md|enforced_in=.cursor/rules/
 term|name=goal|definition=desired_project_outcome_for_evaluating_progress_and_direction|defined_in=.ai/PRINCIPLES.md,README.md|enforced_in=docs/maintainers/ROADMAP.md,.workspace-kit/tasks/state.json

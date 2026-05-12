@@ -44,7 +44,7 @@ These are **two different surfaces**, both fed by **`pnpm exec wk run dashboard-
 
 | Surface | How you open it | What it is |
 |--------|-------------------|------------|
-| **Sidebar Dashboard** | Activity bar → **Workflow Cannon** → **Dashboard** | Multi-tab webview: **Overview** (rollups + Recommended Next), **Task Engine** (filters, queue, wishlist, planning), **Status** (compact identity / counts cards), **Config** / **CAE** shortcuts. |
+| **Sidebar Dashboard** | Activity bar → **Workflow Cannon** → **Dashboard** | Multi-tab webview: **Overview** (rollups + **Up next**), **Queue** (filters, queue, wishlist, planning), **Status** (compact identity / counts cards), **Config** / **CAE** shortcuts. |
 | **Status dashboard panel** | Command palette → **Workflow Cannon: Open Status Dashboard** | **Editor-area** `WebviewPanel` tuned for **phase/drift**, **`systemStatus`** (doctor contract, modules, CAE lines). **`StateWatcher`** debounces refresh (**`STATUS_PANEL_DEBOUNCE_MS`** in `StatusDashboardPanel.ts`, default **450ms**) while the tab stays open; **Refresh now** is immediate. |
 
 Requires **`dashboard-summary`** **`data.schemaVersion` ≥ 5** (**`systemStatus`**). Schema **v6** adds **`systemStatus.identity`** and **`systemStatus.planningStore`**. The merged envelope may include **`data.cae`** for CAE shadow preflight — separate from **`caeLines`** inside **`systemStatus`**.
@@ -67,7 +67,7 @@ The extension runs its bundled `@workflow-cannon/workspace-kit` CLI when availab
 
 **Proposed vs ready:** The dashboard “Suggested next” and ready/proposed sections only reflect tasks in the configured task store. **`proposed`** improvement work appears under **Proposed improvements** on the dashboard (after a refresh). When **`dashboard-summary`** returns **`phaseBuckets`** with **`taskIds`**, each phase heading can show **Accept All** (one shared policy rationale; the extension refreshes the planning-generation token between each **`run-transition`** **`accept`**). Planning appears when a `build-plan` session file exists.
 
-**Execution queue vs wishlist:** **Ready** / **proposed** rollups on **Overview** and **Task Engine** follow the kit **execution queue** and **exclude** **`wishlist_intake`** (note under stat pills / filters; points to **Wishlist** on the **Task Engine** tab). **Status → Task Counts** uses **`stateSummary`** (store-wide); see the muted note under that grid when numbers diverge. **Recommended Next** prefers **ready execution**, then the **first open wishlist** row when the execution-ready queue is empty (then ready improvements). Full store: **`wk run list-tasks`**.
+**Execution queue vs wishlist:** **Ready** / **proposed** rollups on **Overview** and the **Queue** tab follow the kit **execution queue** and **exclude** **`wishlist_intake`** (note under stat pills / filters; points to **Wishlist** on the **Queue** tab). **Status → Task Counts** uses **`stateSummary`** (store-wide); see the muted note under that grid when numbers diverge. **Up next** prefers **ready execution**, then the **first open wishlist** row when the execution-ready queue is empty (then ready improvements). Full store: **`wk run list-tasks`**.
 
 ## Testing
 

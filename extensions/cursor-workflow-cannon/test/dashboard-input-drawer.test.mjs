@@ -166,3 +166,22 @@ test("drawer: validate accept proposed requires rationale", async () => {
   });
   assert.equal(good.ok, true);
 });
+
+test("drawer: guidance CAE mutation spec + validation", async () => {
+  const mod = await import("../dist/views/dashboard/dashboard-input-drawer.js");
+  const spec = mod.buildGuidanceCaeMutationDrawerSpec({
+    command: "cae-create-workspace-artifact",
+    target: "cae.foo",
+    fallbackNote: "seed",
+    defaultActor: "agent@example.com"
+  });
+  assert.equal(spec.workflowId, "guidance-cae-mutation");
+  const html = mod.renderDrawerFormHtml(spec);
+  assert.match(html, /caeMutationApproval/);
+  assert.match(html, /data-wc-drawer-field="rationale"/);
+  const bad = mod.validateGuidanceCaeMutationSubmit({ rationale: "   " });
+  assert.equal(bad.ok, false);
+  const good = mod.validateGuidanceCaeMutationSubmit({ rationale: "Because QA asked" });
+  assert.equal(good.ok, true);
+  if (good.ok) assert.equal(good.values.rationale, "Because QA asked");
+});
