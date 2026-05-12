@@ -1,4 +1,6 @@
-Workflow Cannon Init UX Implementation Plan
+# Workflow Cannon Init UX Implementation Plan
+
+Status: historical program backlog. Canonical behavior for first-run init now lives in `.ai/adrs/ADR-workspace-kit-init-first-run-v1.md`, and execution state lives in the SQLite task engine. Keep this file as the original INIT_PLAN task map for traceability; do not treat it as a newer source of truth when it conflicts with the ADR, `.ai/` runbooks, or task records.
 
 Overall Goal:
 Make Workflow Cannon attach to an existing project with one intuitive command:
