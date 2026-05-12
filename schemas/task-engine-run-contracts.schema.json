@@ -70,6 +70,7 @@
         "supersede-phase-note",
         "synthesize-transcript-churn",
         "upsert-phase-catalog-entry",
+        "workspace-coordination-status",
         "workspace-status-history",
         "explain-task-engine-model",
         "export-feature-taxonomy-json",
@@ -145,6 +146,7 @@
         "supersede-phase-note": { "$ref": "#/$defs/contractBase" },
         "synthesize-transcript-churn": { "$ref": "#/$defs/contractSynthesizeTranscriptChurn" },
         "upsert-phase-catalog-entry": { "$ref": "#/$defs/contractBase" },
+        "workspace-coordination-status": { "$ref": "#/$defs/contractWorkspaceCoordinationStatus" },
         "workspace-status-history": { "$ref": "#/$defs/contractWorkspaceStatusHistory" },
         "explain-task-engine-model": { "$ref": "#/$defs/contractExplainTaskEngineModel" },
         "export-feature-taxonomy-json": { "$ref": "#/$defs/contractBase" },
@@ -786,6 +788,25 @@
         }
       ]
     },
+    "contractWorkspaceCoordinationStatus": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {}
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["schemaVersion", "posture", "workspacePath", "authorityRole"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
     "contractWorkspaceStatusHistory": {
       "allOf": [
         { "$ref": "#/$defs/contractBase" },
@@ -979,6 +1000,7 @@
                 "includeArchived": { "type": "boolean" },
                 "phaseKey": { "type": "string" },
                 "includeQueueHints": { "type": "boolean" },
+                "includeTaskIntake": { "type": "boolean" },
                 "confidenceTier": { "type": "string" },
                 "blockedReasonCategory": { "type": "string" },
                 "features": {

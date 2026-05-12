@@ -118,6 +118,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "update-workspace-phase-snapshot",
     "update-workspace-status",
     "upsert-phase-catalog-entry",
+    "workspace-coordination-status",
     "workspace-status-history"
   ]);
 });

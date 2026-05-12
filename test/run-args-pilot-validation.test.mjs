@@ -12,6 +12,16 @@ test("non-pilot command skips validation", () => {
   assert.equal(err, null);
 });
 
+test("list-tasks accepts includeTaskIntake per pilot schema", () => {
+  resetPilotRunArgsValidationCache();
+  const err = validatePilotRunCommandArgs(
+    "list-tasks",
+    { phaseKey: "90", includeTaskIntake: true, limit: 10 },
+    {}
+  );
+  assert.equal(err, null);
+});
+
 test("run-transition rejects malformed taskId pattern", () => {
   resetPilotRunArgsValidationCache();
   const err = validatePilotRunCommandArgs(

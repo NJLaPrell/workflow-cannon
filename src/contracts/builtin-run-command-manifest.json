@@ -305,6 +305,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "workspace-coordination-status",
+    "file": "workspace-coordination-status.md",
+    "description": "Read-only coordination posture (git branch/HEAD, dirty tree, task DB git state, clone-local lease file under git common-dir).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "workspace-status-history",
     "file": "workspace-status-history.md",
     "description": "List recent kit_workspace_status_events audit rows.",

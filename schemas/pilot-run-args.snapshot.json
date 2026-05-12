@@ -73,6 +73,7 @@
     "update-workspace-phase-snapshot",
     "update-workspace-status",
     "upsert-phase-catalog-entry",
+    "workspace-coordination-status",
     "workspace-status-history"
   ],
   "commands": {
@@ -626,6 +627,9 @@
           "type": "string"
         },
         "includeQueueHints": {
+          "type": "boolean"
+        },
+        "includeTaskIntake": {
           "type": "boolean"
         },
         "confidenceTier": {
@@ -1191,6 +1195,11 @@
     },
     "upsert-phase-catalog-entry": {
       "type": "object"
+    },
+    "workspace-coordination-status": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
     },
     "workspace-status-history": {
       "type": "object",

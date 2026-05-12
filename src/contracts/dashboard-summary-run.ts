@@ -3,6 +3,8 @@
  * Consumed by the Cursor extension webview renderer; keep aligned with `src/modules/task-engine/commands/task-engine-dashboard-on-command.ts`.
  */
 
+import type { WorkspaceCoordinationStatusV1 } from "./workspace-coordination-status.js";
+
 export type DashboardFeatureDetail = {
   slug: string;
   name: string;
@@ -190,6 +192,7 @@ export type DashboardSystemStatus = {
   doctor: DashboardDoctorSummary;
   modules: DashboardModuleActivationSlice;
   caeLines: string[];
+  coordination?: WorkspaceCoordinationStatusV1;
 };
 
 export type DashboardAgentStatusKind =

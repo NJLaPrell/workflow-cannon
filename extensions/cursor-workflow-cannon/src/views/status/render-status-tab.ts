@@ -240,6 +240,30 @@ export function renderStatusTabInnerHtml(
     parts.push(card("Phase & workspace", body + catBlock));
   }
 
+  const coord = sys.coordination as Record<string, unknown> | undefined;
+  if (coord && typeof coord === "object" && coord.schemaVersion === 1) {
+    const posture = typeof coord.posture === "string" ? coord.posture : "—";
+    const role = typeof coord.authorityRole === "string" ? coord.authorityRole : "—";
+    const branch = typeof coord.branch === "string" && coord.branch.length > 0 ? coord.branch : "(detached or unknown)";
+    const head = typeof coord.headSha === "string" ? coord.headSha.slice(0, 12) : "—";
+    const dirtyN = coord.dirtyManifest && typeof coord.dirtyManifest === "object"
+      ? Number((coord.dirtyManifest as Record<string, unknown>).lineCount ?? 0)
+      : 0;
+    const dbDirty = coord.taskDatabaseGitDirty === true ? "yes" : "no";
+    const lease = coord.lease && typeof coord.lease === "object" ? (coord.lease as Record<string, unknown>) : null;
+    const leaseTxt = lease?.present === true ? (lease.active === true ? "active" : "present (inactive/stale)") : "none";
+    const body =
+      kvRow("Posture", "<code>" + escapeHtml(posture) + "</code>") +
+      kvRow("Authority pattern", escapeHtml(role)) +
+      kvRow("Branch", escapeHtml(branch)) +
+      kvRow("HEAD (short)", "<code>" + escapeHtml(head) + "</code>") +
+      kvRow("Porcelain lines (capped)", escapeHtml(String(dirtyN))) +
+      kvRow("Task DB dirty in git", escapeHtml(dbDirty)) +
+      kvRow("Lease file", escapeHtml(leaseTxt)) +
+      '<p class="wc-hint">Read-only — from <code>pnpm exec wk run workspace-coordination-status \'{}\'</code>. Lease enforcement lands in later phase work.</p>';
+    parts.push(card("Coordination", body));
+  }
+
   const doctor = sys.doctor as Record<string, unknown> | undefined;
   if (doctor && typeof doctor === "object") {
     const dOk = doctor.ok === true;

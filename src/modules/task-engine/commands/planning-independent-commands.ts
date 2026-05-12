@@ -20,6 +20,7 @@ import {
   runWorkspaceStatusHistory
 } from "../workspace-status-commands-runtime.js";
 import { runListPhaseCatalog } from "../phase-catalog-commands-runtime.js";
+import { runWorkspaceCoordinationStatus } from "../workspace-coordination-status-runtime.js";
 
 /** If non-null, dispatch should return immediately (command fully handled without planning stores). */
 export async function routeTaskEngineBeforeOpenPlanningStores(
@@ -62,6 +63,9 @@ export async function routeTaskEngineBeforeOpenPlanningStores(
   }
   if (command.name === "workspace-status-history") {
     return runWorkspaceStatusHistory(ctx, args as Record<string, unknown>);
+  }
+  if (command.name === "workspace-coordination-status") {
+    return runWorkspaceCoordinationStatus(ctx);
   }
   if (command.name === "list-module-states" || command.name === "get-module-state") {
     const unified = new UnifiedStateDb(ctx.workspacePath, planningSqliteDatabaseRelativePath(ctx));
