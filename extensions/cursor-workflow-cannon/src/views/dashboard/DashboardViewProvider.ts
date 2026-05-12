@@ -171,7 +171,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private dashboardUpdateQueued = false;
   private dashboardDebounceTimer: ReturnType<typeof setTimeout> | undefined;
 
-  /** 0-based page for wishlist rows in `dashboard-summary` (10 per page). */
+  /** 0-based page for wishlist rows in `dashboard-summary` (5 per page). */
   private wishlistPage = 0;
 
   private planningWizard: DashboardPlanningWizardState = { kind: "idle" };
@@ -1180,7 +1180,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     try {
       raw = (await this.client.run("dashboard-summary", {
         wishlistPage: requestedWishlistPage,
-        wishlistPageSize: 10
+        wishlistPageSize: 5
       })) as DashboardSummaryCommandSuccess | Record<string, unknown>;
     } catch (e) {
       raw = {

@@ -470,13 +470,13 @@ function renderWishlistPager(openPage: number, openTotalPages: number): string {
   const prevDisabled = openPage <= 0;
   const nextDisabled = openPage >= lastPage;
   return (
-    '<div class="wc-wishlist-pager muted" role="navigation" aria-label="Wishlist pages">' +
+    '<div class="wc-wishlist-pager muted" role="navigation" aria-label="Wishlist pages" style="display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:8px;margin-top:10px;">' +
     '<button type="button" class="dash-row-action dash-row-action-tertiary"' +
     (prevDisabled ? " disabled" : "") +
     ' data-wc-action="wishlist-page" data-wishlist-page="' +
     String(prevPage) +
     '">Prev</button>' +
-    '<span style="margin:0 8px">Page ' +
+    '<span>Page ' +
     String(openPage + 1) +
     " of " +
     String(openTotalPages) +
@@ -2011,7 +2011,7 @@ export function renderDashboardRootInnerHtml(
   const wishPageSize =
     typeof wishlist.openPageSize === "number" && wishlist.openPageSize > 0
       ? wishlist.openPageSize
-      : 10;
+      : 5;
   const wishOpenPage =
     typeof wishlist.openPage === "number" && Number.isInteger(wishlist.openPage) && wishlist.openPage >= 0
       ? wishlist.openPage
