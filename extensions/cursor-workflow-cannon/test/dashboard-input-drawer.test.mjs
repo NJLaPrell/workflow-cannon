@@ -102,3 +102,47 @@ test("drawer: validate assign phase — custom requires text", async () => {
   assert.equal(pickOk.ok, true);
   if (pickOk.ok) assert.equal(pickOk.values.phaseKey, "91");
 });
+
+test("drawer: add phase note spec has type, summary, priority fields", async () => {
+  const mod = await import("../dist/views/dashboard/dashboard-input-drawer.js");
+  const html = mod.renderDrawerFormHtml(mod.buildAddPhaseNoteDrawerSpec("91"));
+  assert.match(html, /data-wc-drawer-field="noteType"/);
+  assert.match(html, /data-wc-drawer-field="summary"/);
+  assert.match(html, /data-wc-drawer-field="priority"/);
+  assert.match(html, /value="follow-up"/);
+});
+
+test("drawer: validate add phase note rejects missing type or long summary", async () => {
+  const mod = await import("../dist/views/dashboard/dashboard-input-drawer.js");
+  const badType = mod.validateAddPhaseNoteSubmit({
+    noteType: "",
+    summary: "ok",
+    priority: "normal",
+    details: ""
+  });
+  assert.equal(badType.ok, false);
+  const longSum = "x".repeat(300);
+  const badLen = mod.validateAddPhaseNoteSubmit({
+    noteType: "finding",
+    summary: longSum,
+    priority: "normal",
+    details: ""
+  });
+  assert.equal(badLen.ok, false);
+  const good = mod.validateAddPhaseNoteSubmit({
+    noteType: "risk",
+    summary: "Ship gate",
+    priority: "high",
+    details: "more"
+  });
+  assert.equal(good.ok, true);
+});
+
+test("drawer: convert / persist confirmation specs render", async () => {
+  const mod = await import("../dist/views/dashboard/dashboard-input-drawer.js");
+  const c = mod.renderDrawerFormHtml(mod.buildConvertPhaseNoteDrawerSpec("n-1"));
+  assert.match(c, /convert-phase-note-to-task/);
+  assert.match(c, /n-1/);
+  const p = mod.renderDrawerFormHtml(mod.buildPersistPhaseNoteProposalsDrawerSpec());
+  assert.match(p, /propose-tasks-from-phase-notes/);
+});
