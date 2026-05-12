@@ -1596,7 +1596,7 @@ export function renderPhaseCatalogOverviewSection(
   const table = inner;
   const btn =
     '<p style="margin-top:8px"><button type="button" class="dash-row-action dash-row-action-primary" data-wc-action="register-phase-catalog">Register future phase</button>' +
-    ' <span class="muted">Uses <code>upsert-phase-catalog-entry</code> with planning sync.</span></p>';
+    ' <span class="muted">Plan a future release phase; the kit keeps planning metadata aligned.</span></p>';
   return (
     '<section class="dash-card dash-phase-catalog" aria-label="Phase catalog">' +
     "<p><b>Phase roster</b></p>" +
@@ -2231,12 +2231,12 @@ export function renderDashboardRootInnerHtml(
     renderEditorIntegrationSection(editorIntegration) +
     renderRoleTemperamentAndPhaseSection(d.agentGuidance, ws as Record<string, unknown> | null, res) +
     renderPhaseCatalogOverviewSection(phaseSystemSlice) +
-    renderPhaseNotesOverviewSection(phaseJournal ?? null) +
     renderWorkspaceBlockersPendingSection(ws as Record<string, unknown> | null) +
     renderTeamExecutionSection(d.teamExecution) +
     renderSubagentRegistrySection(d.subagentRegistry);
 
   const taskEngineContent =
+    renderPhaseNotesOverviewSection(phaseJournal ?? null) +
     tasksBlock +
     wishlistSection +
     renderPlanningSession(planningSession, planningWizardPanel);

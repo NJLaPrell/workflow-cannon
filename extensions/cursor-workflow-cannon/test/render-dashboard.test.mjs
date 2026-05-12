@@ -222,6 +222,15 @@ test("renderDashboardRootInnerHtml includes phase journal controls when bundle p
   assert.match(html, /phase-note-convert/);
   assert.match(html, /phase-notes-propose-persist/);
   assert.match(html, /550e8400-e29b-41d4-a716-446655440000/);
+  const overviewPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="overview"');
+  const taskEnginePanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="task-engine"');
+  const statusPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="status"');
+  assert.ok(overviewPanelIdx >= 0 && taskEnginePanelIdx > overviewPanelIdx && statusPanelIdx > taskEnginePanelIdx);
+  const overviewPanel = html.slice(overviewPanelIdx, taskEnginePanelIdx);
+  const taskEnginePanel = html.slice(taskEnginePanelIdx, statusPanelIdx);
+  assert.doesNotMatch(overviewPanel, /dash-phase-notes/);
+  assert.match(taskEnginePanel, /dash-phase-notes/);
+  assert.doesNotMatch(html, /upsert-phase-catalog-entry/);
 });
 
 test("renderDashboardRootInnerHtml renders editor integration state when provided", () => {
