@@ -146,6 +146,7 @@ test("buildWorkspaceCoordinationStatus: stale lease file under git common dir", 
   );
   const s = buildWorkspaceCoordinationStatus(ctx(ws));
   assert.equal(s.lease.present, true);
+  assert.equal(s.lease.status, "stale-invalid");
   assert.equal(s.lease.staleOrInvalid, true);
   assert.equal(s.posture, "stale_lease");
 });
@@ -169,9 +170,24 @@ test("buildWorkspaceCoordinationStatus: active future lease is lease_held", asyn
   const far = new Date(Date.now() + 3600_000).toISOString();
   writeFileSync(
     path.join(leaseDir, "workspace-edit.json"),
-    JSON.stringify({ expiresAt: far, leaseId: "live", agentSessionId: "sess" })
+    JSON.stringify({
+      schemaVersion: 1,
+      expiresAt: far,
+      leaseId: "live",
+      agentSessionId: "sess",
+      taskId: "T1",
+      branch: "main",
+      headSha: "abc",
+      worktreePath: ws,
+      dirtyManifest: { lineCount: 0, capped: false },
+      claimedAt: new Date().toISOString(),
+      heartbeatAt: new Date().toISOString()
+    })
   );
   const s = buildWorkspaceCoordinationStatus(ctx(ws));
   assert.equal(s.lease.active, true);
+  assert.equal(s.lease.status, "lease-held-by-other");
+  assert.equal(s.lease.holder.agentSessionId, "sess");
+  assert.equal(s.lease.holder.taskId, "T1");
   assert.equal(s.posture, "lease_held");
 });

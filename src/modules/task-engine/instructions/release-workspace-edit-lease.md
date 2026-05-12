@@ -6,6 +6,8 @@ agentCapsule|v=1|command=release-workspace-edit-lease|module=task-engine|schema_
 
 Remove the lease file when the caller is the holder, or when **`recoverStaleLease:true`** and the lease is **expired** (stale recovery).
 
+When release is denied because another active session owns the lease, the response includes **`holder.agentSessionId`**, **`holder.taskId`**, **`holder.expiresAt`**, **`alternatives`**, one **`recommendedNextAction`**, and **`leaseStatus`**.
+
 Sensitive: JSON **`policyApproval`**.
 
 ## Usage

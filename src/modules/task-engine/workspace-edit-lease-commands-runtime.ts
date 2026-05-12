@@ -10,6 +10,7 @@ import {
   parseIsoOrNull,
   readLeaseFile,
   resolveGitCommonDir,
+  summarizeWorkspaceEditLeaseStatus,
   writeLeaseAtomic,
   type WorkspaceEditLeaseAlternatives,
   type WorkspaceEditLeaseV1
@@ -25,8 +26,10 @@ function leaseDenied(
   message: string,
   leasePath: string,
   alternatives: WorkspaceEditLeaseAlternatives[],
-  current?: WorkspaceEditLeaseV1
+  current?: WorkspaceEditLeaseV1,
+  callerAgentSessionId?: string | null
 ): ModuleCommandResult {
+  const leaseStatus = summarizeWorkspaceEditLeaseStatus(leasePath, callerAgentSessionId);
   return {
     ok: false,
     code,
@@ -35,6 +38,9 @@ function leaseDenied(
       schemaVersion: 1,
       leaseFilePath: leasePath,
       alternatives,
+      recommendedNextAction: alternatives[0] ?? "read_only_plan",
+      holder: leaseStatus.holder,
+      leaseStatus,
       currentLease: current ?? null
     }
   };
@@ -42,12 +48,24 @@ function leaseDenied(
 
 export function runWorkspaceEditStatus(
   ctx: ModuleLifecycleContext,
-  _args: Record<string, unknown>
+  args: Record<string, unknown>
 ): ModuleCommandResult {
   const workspacePath = ctx.workspacePath;
+  const agentSessionId = strArg(args, "agentSessionId");
   const common = resolveGitCommonDir(workspacePath);
   const leasePath = common ? leaseFilePathFromCommonDir(common) : "(no-git-common-dir)/workflow-cannon/leases/workspace-edit.json";
   if (!common) {
+    const leaseStatus = {
+      schemaVersion: 1 as const,
+      state: "lease-free" as const,
+      present: false,
+      active: false,
+      staleOrInvalid: false,
+      expiresAt: null as string | null,
+      holder: null,
+      heldByCaller: null,
+      invalidReason: null
+    };
     return {
       ok: true,
       code: "workspace-edit-status",
@@ -55,6 +73,8 @@ export function runWorkspaceEditStatus(
       data: {
         schemaVersion: 1,
         leaseFilePath: leasePath,
+        leaseStatus,
+        status: leaseStatus.state,
         present: false,
         active: false,
         staleOrInvalid: false,
@@ -63,37 +83,39 @@ export function runWorkspaceEditStatus(
       }
     };
   }
+  const leaseStatus = summarizeWorkspaceEditLeaseStatus(leasePath, agentSessionId);
   const parsed = readLeaseFile(leasePath);
   if (!parsed.ok) {
-    const present = parsed.reason !== "missing";
     return {
       ok: true,
       code: "workspace-edit-status",
-      message: present ? "Lease file missing or unreadable" : "No lease file",
+      message: leaseStatus.present ? "Lease file missing or unreadable" : "No lease file",
       data: {
         schemaVersion: 1,
         leaseFilePath: leasePath,
-        present,
+        leaseStatus,
+        status: leaseStatus.state,
+        present: leaseStatus.present,
         active: false,
-        staleOrInvalid: present,
+        staleOrInvalid: leaseStatus.staleOrInvalid,
         expiresAt: null,
         document: null
       }
     };
   }
   const { lease } = parsed;
-  const exp = parseIsoOrNull(lease.expiresAt);
-  const expired = exp == null || exp <= Date.now();
   return {
     ok: true,
     code: "workspace-edit-status",
-    message: expired ? "Lease present but expired or invalid window" : "Lease active",
+    message: leaseStatus.staleOrInvalid ? "Lease present but expired or invalid window" : "Lease active",
     data: {
       schemaVersion: 1,
       leaseFilePath: leasePath,
+      leaseStatus,
+      status: leaseStatus.state,
       present: true,
-      active: !expired,
-      staleOrInvalid: expired,
+      active: leaseStatus.active,
+      staleOrInvalid: leaseStatus.staleOrInvalid,
       expiresAt: lease.expiresAt,
       document: lease
     }
@@ -134,7 +156,8 @@ export function runClaimWorkspaceEditLease(
           "Another session holds the workspace edit lease",
           leasePath,
           ["wait", "read_only_plan", "release_if_holder"],
-          cur
+          cur,
+          agentSessionId
         );
       }
       const next: WorkspaceEditLeaseV1 = {
@@ -210,7 +233,8 @@ export function runHeartbeatWorkspaceEditLease(
       expired ? "Lease expired but still held by a different session id on disk" : "Another session holds the workspace edit lease",
       leasePath,
       expired ? ["recover_stale_lease", "wait"] : ["wait", "read_only_plan"],
-      cur
+      cur,
+      agentSessionId
     );
   }
   if (isLeaseExpired(cur.expiresAt)) {
@@ -282,7 +306,8 @@ export function runReleaseWorkspaceEditLease(
       "recoverStaleLease refused while lease is still active",
       leasePath,
       ["wait", "release_if_holder"],
-      cur
+      cur,
+      agentSessionId
     );
   }
   if (recoverStale && expired) {
@@ -299,6 +324,7 @@ export function runReleaseWorkspaceEditLease(
     "Cannot release lease held by another session",
     leasePath,
     expired ? (["recover_stale_lease", "wait", "read_only_plan"] as WorkspaceEditLeaseAlternatives[]) : ["wait", "read_only_plan", "release_if_holder"],
-    cur
+    cur,
+    agentSessionId
   );
 }

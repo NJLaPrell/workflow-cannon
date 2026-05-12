@@ -1,5 +1,4 @@
 import { spawnSync } from "node:child_process";
-import * as fs from "node:fs";
 import * as path from "node:path";
 import type { ModuleLifecycleContext } from "../../../contracts/module-contract.js";
 import type {
@@ -8,6 +7,7 @@ import type {
   WorkspaceCoordinationStatusV1
 } from "../../../contracts/workspace-coordination-status.js";
 import { planningSqliteDatabaseRelativePath } from "../planning-config.js";
+import { leaseFilePathFromCommonDir, summarizeWorkspaceEditLeaseStatus } from "./workspace-edit-lease.js";
 
 const PORCELAIN_CAP = 500;
 
@@ -53,84 +53,32 @@ function classifyAuthority(branch: string | null): WorkspaceCoordinationAuthorit
 
 function readLeaseSlice(commonDir: string | null): WorkspaceCoordinationStatusV1["lease"] {
   const leaseFilePath = commonDir
-    ? path.join(commonDir, "workflow-cannon", "leases", "workspace-edit.json")
+    ? leaseFilePathFromCommonDir(commonDir)
     : "(no-git-common-dir)/workflow-cannon/leases/workspace-edit.json";
-  if (!commonDir || !fs.existsSync(leaseFilePath)) {
+  if (!commonDir) {
     return {
       schemaVersion: 1,
       leaseFilePath,
+      status: "lease-free",
       present: false,
       active: false,
       staleOrInvalid: false,
-      expiresAt: null
+      expiresAt: null,
+      holder: null,
+      invalidReason: null
     };
   }
-  let body: string;
-  try {
-    body = fs.readFileSync(leaseFilePath, "utf8");
-  } catch {
-    return {
-      schemaVersion: 1,
-      leaseFilePath,
-      present: true,
-      active: false,
-      staleOrInvalid: true,
-      expiresAt: null
-    };
-  }
-  let parsed: { expiresAt?: unknown } = {};
-  try {
-    parsed = JSON.parse(body) as { expiresAt?: unknown };
-  } catch {
-    return {
-      schemaVersion: 1,
-      leaseFilePath,
-      present: true,
-      active: false,
-      staleOrInvalid: true,
-      expiresAt: null
-    };
-  }
-  const exp = typeof parsed.expiresAt === "string" ? parsed.expiresAt : null;
-  if (!exp) {
-    return {
-      schemaVersion: 1,
-      leaseFilePath,
-      present: true,
-      active: false,
-      staleOrInvalid: true,
-      expiresAt: null
-    };
-  }
-  const t = Date.parse(exp);
-  if (Number.isNaN(t)) {
-    return {
-      schemaVersion: 1,
-      leaseFilePath,
-      present: true,
-      active: false,
-      staleOrInvalid: true,
-      expiresAt: exp
-    };
-  }
-  const now = Date.now();
-  if (t <= now) {
-    return {
-      schemaVersion: 1,
-      leaseFilePath,
-      present: true,
-      active: false,
-      staleOrInvalid: true,
-      expiresAt: exp
-    };
-  }
+  const status = summarizeWorkspaceEditLeaseStatus(leaseFilePath);
   return {
     schemaVersion: 1,
     leaseFilePath,
-    present: true,
-    active: true,
-    staleOrInvalid: false,
-    expiresAt: exp
+    status: status.state,
+    present: status.present,
+    active: status.active,
+    staleOrInvalid: status.staleOrInvalid,
+    expiresAt: status.expiresAt,
+    holder: status.holder,
+    invalidReason: status.invalidReason
   };
 }
 
