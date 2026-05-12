@@ -28,6 +28,14 @@ export type DrawerFormField =
       rows?: number;
       value?: string;
     }
+  | {
+      id: string;
+      kind: "select";
+      label: string;
+      /** First option should use empty value when a placeholder row is desired. */
+      options: Array<{ value: string; label: string }>;
+      required?: boolean;
+    }
   | { id: string; kind: "summary"; label: string; body: string };
 
 export type DrawerFormSpec = {
@@ -52,6 +60,36 @@ function renderField(f: DrawerFormField): string {
       '<div class="wc-drawer-summary-body">' +
       f.body +
       "</div></div>"
+    );
+  }
+  if (f.kind === "select") {
+    const req = f.required ? " required" : "";
+    const opts = f.options
+      .map(
+        (o) =>
+          '<option value="' +
+          escapeDrawerHtml(o.value) +
+          '">' +
+          escapeDrawerHtml(o.label) +
+          "</option>"
+      )
+      .join("");
+    return (
+      '<div class="wc-drawer-field">' +
+      '<label class="wc-drawer-field-label" for="wc-df-' +
+      idAttr +
+      '">' +
+      lab +
+      "</label>" +
+      '<select id="wc-df-' +
+      idAttr +
+      '" class="wc-drawer-select" data-wc-drawer-field="' +
+      idAttr +
+      '"' +
+      req +
+      ">" +
+      opts +
+      "</select></div>"
     );
   }
   const req = f.required ? " required" : "";
@@ -346,6 +384,69 @@ export function validateAddWishlistSubmit(values: Record<string, string>): Drawe
     out[key] = v;
   }
   return { ok: true, values: out };
+}
+
+const ASSIGN_PHASE_CUSTOM = "__custom__";
+
+export type PhaseKeySuggestion = { label: string; phaseKey: string };
+
+export function buildAssignTaskPhaseDrawerSpec(
+  taskId: string,
+  suggestions: PhaseKeySuggestion[],
+  valueHint?: string
+): DrawerFormSpec {
+  const options: Array<{ value: string; label: string }> = [
+    { value: "", label: "Choose phase target…" },
+    ...suggestions.map((s) => ({ value: s.phaseKey, label: `${s.label} (${s.phaseKey})` })),
+    { value: ASSIGN_PHASE_CUSTOM, label: "Enter another phase key…" }
+  ];
+  return {
+    workflowId: "assign-task-phase",
+    title: `Set phase for ${taskId}`,
+    descriptionHtml:
+      "Runs <code>assign-task-phase</code> on the host with the current planning generation. " +
+      "Pick a suggested key or choose custom.",
+    fields: [
+      {
+        id: "ctx",
+        kind: "summary",
+        label: "Task",
+        body: "<div><b>Task id:</b> " + escapeDrawerHtml(taskId) + "</div>"
+      },
+      {
+        id: "phaseSelect",
+        kind: "select",
+        label: "Phase",
+        options,
+        required: false
+      },
+      {
+        id: "phaseKeyCustom",
+        kind: "text",
+        label: "Custom phase key",
+        placeholder: "Stable kit phase key",
+        required: false,
+        value: valueHint?.trim() ?? ""
+      }
+    ],
+    primaryLabel: "Assign phase",
+    cancelLabel: "Cancel"
+  };
+}
+
+export function validateAssignTaskPhaseSubmit(values: Record<string, string>): DrawerValidationResult {
+  const sel = (values.phaseSelect ?? "").trim();
+  const custom = (values.phaseKeyCustom ?? "").trim();
+  if (!sel) {
+    return { ok: false, error: 'Choose a phase target or select "Enter another phase key…".' };
+  }
+  if (sel === ASSIGN_PHASE_CUSTOM) {
+    if (!custom) {
+      return { ok: false, error: "Enter a non-empty custom phase key." };
+    }
+    return { ok: true, values: { phaseKey: custom } };
+  }
+  return { ok: true, values: { phaseKey: sel } };
 }
 
 export function validateDismissPhaseNoteSubmit(
