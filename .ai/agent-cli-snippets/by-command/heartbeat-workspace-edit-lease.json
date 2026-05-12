@@ -1,0 +1,35 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "heartbeat-workspace-edit-lease",
+  "schema": {
+    "type": "object"
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run heartbeat-workspace-edit-lease '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/heartbeat-workspace-edit-lease.md",
+  "moduleId": "task-engine",
+  "description": "Extend an active workspace edit lease held by the caller session.",
+  "policy": {
+    "sensitivity": "sensitive",
+    "operationId": "task-engine.workspace-edit-lease",
+    "jsonApprovalRequired": true
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

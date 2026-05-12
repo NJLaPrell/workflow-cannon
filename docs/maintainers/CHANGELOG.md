@@ -8,6 +8,15 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.87.2] - 2026-05-12
+
+Phase 92 — **Workspace edit lease core commands**. Adds `claim-workspace-edit-lease`, `heartbeat-workspace-edit-lease`, `release-workspace-edit-lease`, and read-only `workspace-edit-status` (JSON lease under `$GIT_COMMON_DIR/workflow-cannon/leases/workspace-edit.json`, atomic writes, stale recovery, structured deny payloads with alternatives).
+
+### Added
+
+- Task engine: workspace edit lease commands + policy operation `task-engine.workspace-edit-lease`.
+- Tests: `test/workspace-edit-lease.test.mjs`.
+
 ## [0.87.1] - 2026-05-11
 
 Phase 91 follow-up — **Guidance sidebar CAE confirmations via dashboard drawers**. The Guidance webview sidebar uses the same drawer UX as the dashboard Guidance panel for acknowledgements, shadow feedback, and registry-version mutations (rationale + actor), with Escape/overlay dismissal and client-side validation before submit.

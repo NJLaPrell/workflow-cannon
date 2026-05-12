@@ -229,6 +229,15 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "release-workspace-edit-lease",
+    "file": "release-workspace-edit-lease.md",
+    "description": "Release or recover-remove the workspace edit lease file under git common-dir.",
+    "policyOperationId": "task-engine.workspace-edit-lease",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "classify-kit-state",
     "file": "classify-kit-state.md",
     "description": "Classify dirty kit-owned paths so agents can distinguish durable planning state from volatile runtime churn.",
@@ -265,6 +274,15 @@
     "file": "claim-next-task.md",
     "description": "Atomically claim the current suggested ready task by transitioning it to in_progress.",
     "policyOperationId": "tasks.run-transition",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "claim-workspace-edit-lease",
+    "file": "claim-workspace-edit-lease.md",
+    "description": "Claim or renew the visible-checkout workspace edit lease under git common-dir (atomic JSON file).",
+    "policyOperationId": "task-engine.workspace-edit-lease",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "sensitive"
   },
@@ -308,6 +326,14 @@
     "name": "workspace-coordination-status",
     "file": "workspace-coordination-status.md",
     "description": "Read-only coordination posture (git branch/HEAD, dirty tree, task DB git state, clone-local lease file under git common-dir).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "workspace-edit-status",
+    "file": "workspace-edit-status.md",
+    "description": "Read workspace edit lease file (parsed document + active/stale flags) from git common-dir.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },
@@ -526,6 +552,15 @@
     "description": "Read kit_workspace_status singleton from kit SQLite.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "heartbeat-workspace-edit-lease",
+    "file": "heartbeat-workspace-edit-lease.md",
+    "description": "Extend an active workspace edit lease held by the caller session.",
+    "policyOperationId": "task-engine.workspace-edit-lease",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
   },
   {
     "moduleId": "task-engine",

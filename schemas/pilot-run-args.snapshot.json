@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceSchemaPackageVersion": "0.87.1",
+  "sourceSchemaPackageVersion": "0.87.2",
   "pilotCommands": [
     "add-dependency",
     "add-phase-note",
@@ -13,6 +13,7 @@
     "backfill-task-feature-links",
     "backup-planning-sqlite",
     "claim-next-task",
+    "claim-workspace-edit-lease",
     "classify-kit-state",
     "clear-agent-activity",
     "clear-task-phase",
@@ -40,6 +41,7 @@
     "get-task-summary",
     "get-wishlist",
     "get-workspace-status",
+    "heartbeat-workspace-edit-lease",
     "list-components",
     "list-features",
     "list-module-states",
@@ -55,6 +57,7 @@
     "queue-git-alignment",
     "queue-health",
     "release-evidence-manifest",
+    "release-workspace-edit-lease",
     "remove-dependency",
     "replay-queue-snapshot",
     "resolve-maintainer-delivery-policy",
@@ -74,6 +77,7 @@
     "update-workspace-status",
     "upsert-phase-catalog-entry",
     "workspace-coordination-status",
+    "workspace-edit-status",
     "workspace-status-history"
   ],
   "commands": {
@@ -281,6 +285,9 @@
         }
       },
       "additionalProperties": true
+    },
+    "claim-workspace-edit-lease": {
+      "type": "object"
     },
     "classify-kit-state": {
       "type": "object"
@@ -550,6 +557,9 @@
       "type": "object",
       "additionalProperties": true
     },
+    "heartbeat-workspace-edit-lease": {
+      "type": "object"
+    },
     "list-components": {
       "type": "object"
     },
@@ -800,6 +810,9 @@
       "additionalProperties": false
     },
     "release-evidence-manifest": {
+      "type": "object"
+    },
+    "release-workspace-edit-lease": {
       "type": "object"
     },
     "remove-dependency": {
@@ -1200,6 +1213,9 @@
       "type": "object",
       "properties": {},
       "additionalProperties": false
+    },
+    "workspace-edit-status": {
+      "type": "object"
     },
     "workspace-status-history": {
       "type": "object",

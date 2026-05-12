@@ -1,0 +1,35 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "claim-workspace-edit-lease",
+  "schema": {
+    "type": "object"
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run claim-workspace-edit-lease '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/claim-workspace-edit-lease.md",
+  "moduleId": "task-engine",
+  "description": "Claim or renew the visible-checkout workspace edit lease under git common-dir (atomic JSON file).",
+  "policy": {
+    "sensitivity": "sensitive",
+    "operationId": "task-engine.workspace-edit-lease",
+    "jsonApprovalRequired": true
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

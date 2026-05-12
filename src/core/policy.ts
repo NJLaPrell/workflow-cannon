@@ -43,7 +43,8 @@ export type PolicyOperationId =
   | "checkpoints.rewind"
   | "context-activation.cae-satisfy-ack"
   | "context-activation.cae-import-json-registry"
-  | "context-activation.cae-record-shadow-feedback";
+  | "context-activation.cae-record-shadow-feedback"
+  | "task-engine.workspace-edit-lease";
 
 function buildBuiltinCommandToOperation(): Record<string, PolicyOperationId | undefined> {
   const out: Record<string, PolicyOperationId | undefined> = {};

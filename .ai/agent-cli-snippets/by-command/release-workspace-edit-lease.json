@@ -1,0 +1,35 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "release-workspace-edit-lease",
+  "schema": {
+    "type": "object"
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run release-workspace-edit-lease '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/release-workspace-edit-lease.md",
+  "moduleId": "task-engine",
+  "description": "Release or recover-remove the workspace edit lease file under git common-dir.",
+  "policy": {
+    "sensitivity": "sensitive",
+    "operationId": "task-engine.workspace-edit-lease",
+    "jsonApprovalRequired": true
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+}

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-12T04:03:19.331Z",
+  "generatedAt": "2026-05-12T07:42:11.646Z",
   "commands": [
     {
       "name": "add-dependency",
@@ -333,6 +333,11 @@
       "moduleId": "task-engine"
     },
     {
+      "name": "claim-workspace-edit-lease",
+      "path": ".ai/agent-cli-snippets/by-command/claim-workspace-edit-lease.json",
+      "moduleId": "task-engine"
+    },
+    {
       "name": "classify-kit-state",
       "path": ".ai/agent-cli-snippets/by-command/classify-kit-state.json",
       "moduleId": "task-engine"
@@ -553,6 +558,11 @@
       "moduleId": "task-engine"
     },
     {
+      "name": "heartbeat-workspace-edit-lease",
+      "path": ".ai/agent-cli-snippets/by-command/heartbeat-workspace-edit-lease.json",
+      "moduleId": "task-engine"
+    },
+    {
       "name": "ingest-transcripts",
       "path": ".ai/agent-cli-snippets/by-command/ingest-transcripts.json",
       "moduleId": "improvement"
@@ -728,6 +738,11 @@
       "moduleId": "task-engine"
     },
     {
+      "name": "release-workspace-edit-lease",
+      "path": ".ai/agent-cli-snippets/by-command/release-workspace-edit-lease.json",
+      "moduleId": "task-engine"
+    },
+    {
       "name": "remove-dependency",
       "path": ".ai/agent-cli-snippets/by-command/remove-dependency.json",
       "moduleId": "task-engine"
@@ -895,6 +910,11 @@
     {
       "name": "workspace-coordination-status",
       "path": ".ai/agent-cli-snippets/by-command/workspace-coordination-status.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "workspace-edit-status",
+      "path": ".ai/agent-cli-snippets/by-command/workspace-edit-status.json",
       "moduleId": "task-engine"
     },
     {
