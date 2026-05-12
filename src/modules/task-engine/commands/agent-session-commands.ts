@@ -12,6 +12,7 @@ import { summarizeTeamAssignmentsForNextActions } from "../../team-execution/ass
 import { buildMaintainerDeliveryHints } from "../maintainer-delivery-hints.js";
 import { buildPhaseJournalSnapshotSummary } from "../phase-journal/phase-journal-snapshot-summary.js";
 import { buildTaskIntakeReadoutBundle } from "../task-intake-readout-hints.js";
+import { buildWorkspaceCoordinationStatus } from "../coordination/build-workspace-coordination-status.js";
 import { isWishlistIntakeTask } from "../wishlist/wishlist-intake.js";
 
 export async function composeAgentSessionSnapshotPayload(
@@ -55,6 +56,17 @@ export async function composeAgentSessionSnapshotPayload(
     planning.sqliteDual.getDatabase(),
     phaseRes.canonicalPhaseKey
   );
+  let workspaceCoordination: Record<string, unknown> | undefined;
+  try {
+    const c = buildWorkspaceCoordinationStatus(ctx);
+    workspaceCoordination = {
+      posture: c.posture,
+      authorityRole: c.authorityRole,
+      discoverCommand: "pnpm exec wk run workspace-coordination-status '{}'"
+    };
+  } catch {
+    workspaceCoordination = undefined;
+  }
   return {
     schemaVersion: 1,
     refreshedAt: new Date().toISOString(),
@@ -76,7 +88,8 @@ export async function composeAgentSessionSnapshotPayload(
     teamExecutionContext,
     maintainerDelivery,
     ...intakeBundle,
-    ...(phaseJournal ? { phaseJournal } : {})
+    ...(phaseJournal ? { phaseJournal } : {}),
+    ...(workspaceCoordination ? { workspaceCoordination } : {})
   };
 }
 

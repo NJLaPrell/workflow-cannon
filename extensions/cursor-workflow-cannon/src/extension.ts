@@ -150,8 +150,11 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       }
       const ready = Number((r.data as Record<string, unknown>)?.readyQueueCount ?? 0);
-      statusBar.text = `$(checklist) WC ready: ${ready}`;
-      statusBar.tooltip = "Workflow Cannon ready queue count";
+      const sys = (r.data as Record<string, unknown>)?.systemStatus as Record<string, unknown> | undefined;
+      const coord = sys?.coordination as Record<string, unknown> | undefined;
+      const posture = typeof coord?.posture === "string" ? coord.posture : "—";
+      statusBar.text = `$(checklist) WC ${posture} · rdy ${ready}`;
+      statusBar.tooltip = `Workflow Cannon — coordination ${posture}; ready queue ${ready}. Open dashboard for details.`;
       statusBar.show();
     };
     let behaviorRuleSyncTimer: ReturnType<typeof setTimeout> | undefined;
