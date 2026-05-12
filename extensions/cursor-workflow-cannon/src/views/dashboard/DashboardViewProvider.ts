@@ -25,6 +25,7 @@ import {
   type PlanningInterviewWizardPanel
 } from "./render-dashboard.js";
 import {
+  buildAcceptProposedDrawerSpec,
   buildAddPhaseNoteDrawerSpec,
   buildAddWishlistDrawerSpec,
   buildAssignTaskPhaseDrawerSpec,
@@ -34,6 +35,7 @@ import {
   buildRegisterPhaseCatalogDrawerSpec,
   normalizeDrawerValues,
   renderDrawerFormHtml,
+  validateAcceptProposedSubmit,
   validateAddPhaseNoteSubmit,
   validateAddWishlistSubmit,
   validateAssignTaskPhaseSubmit,
@@ -62,7 +64,8 @@ type DashboardDrawerSession =
   | { kind: "assign-task-phase"; taskId: string }
   | { kind: "add-phase-note" }
   | { kind: "convert-phase-note"; noteId: string }
-  | { kind: "persist-phase-note-proposals" };
+  | { kind: "persist-phase-note-proposals" }
+  | { kind: "accept-proposed"; taskIds: string[]; categoryLabel: string };
 
 function logDashboard(message: string): void {
   if (!dashboardOutput) {
@@ -715,48 +718,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     await this.pushUpdate();
   }
 
-  private async pickPhaseKeyFromDashboard(options: {
-    title: string;
-    /** Prefill for custom key entry */
-    valueHint?: string;
-  }): Promise<string | undefined> {
-    const data = this.lastDashboardSummaryData;
-    const suggestions = data ? collectPhaseKeySuggestions(data) : [];
-    const quickItems: vscode.QuickPickItem[] = [
-      ...suggestions.map((s) => ({
-        label: s.label,
-        description: s.phaseKey
-      })),
-      {
-        label: "Enter another phase key…",
-        description: "Custom stable phase key",
-        alwaysShow: true
-      }
-    ];
-    const picked = await vscode.window.showQuickPick(quickItems, {
-      title: options.title,
-      placeHolder: "Choose a phase target",
-      matchOnDescription: true
-    });
-    if (!picked) {
-      return undefined;
-    }
-    if (picked.label === "Enter another phase key…") {
-      const input = await vscode.window.showInputBox({
-        title: "Phase key",
-        prompt: "Stable kit phase key (assign-task-phase)",
-        value: options.valueHint ?? suggestions[0]?.phaseKey ?? "",
-        validateInput: (v) => (v.trim().length > 0 ? null : "Phase key required")
-      });
-      if (!input?.trim()) {
-        return undefined;
-      }
-      return input.trim();
-    }
-    const phaseKey = (picked.description ?? "").trim();
-    return phaseKey.length > 0 ? phaseKey : undefined;
-  }
-
   /** Resolve `phaseKey` for `add-phase-note` from the last dashboard-summary payload. */
   private inferPhaseKeyForKitPhaseNoteFromDashboard(): string | undefined {
     const data = this.lastDashboardSummaryData;
@@ -999,6 +960,89 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       await vscode.window.showInformationMessage(r.message ?? "Persisted phase note proposals");
       return true;
     }
+    if (session.kind === "accept-proposed") {
+      const validated = validateAcceptProposedSubmit(values);
+      if (!validated.ok) {
+        await this.postDrawerValidationToWebview(validated.error);
+        return false;
+      }
+      const { phaseKey, policyRationale } = validated.values;
+      const taskIds = session.taskIds;
+      const categoryLabel = session.categoryLabel;
+      if (taskIds.length === 0) {
+        return false;
+      }
+      if (taskIds.length === 1) {
+        const taskId = taskIds[0]!;
+        const r = await this.client.run("run-transition", {
+          taskId,
+          action: "accept",
+          policyApproval: { confirmed: true, rationale: policyRationale },
+          ...expectedPlanningGenerationArgs()
+        });
+        if (!r.ok) {
+          await this.postDrawerValidationToWebview((r.message ?? JSON.stringify(r)).slice(0, 900));
+          return false;
+        }
+        ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+        const r2 = await this.client.run("assign-task-phase", {
+          taskId,
+          phaseKey,
+          ...expectedPlanningGenerationArgs()
+        });
+        if (!r2.ok) {
+          this.closeDashboardDrawer();
+          this.notifyKitStateChanged();
+          await vscode.window.showErrorMessage(
+            `Accepted ${taskId} but assign-task-phase failed: ${(r2.message ?? r2.code ?? JSON.stringify(r2)).slice(0, 520)}`
+          );
+          return true;
+        }
+        ingestPlanningMetaFromData(r2.data as Record<string, unknown> | undefined);
+        this.closeDashboardDrawer();
+        this.notifyKitStateChanged();
+        await vscode.window.showInformationMessage(`Accepted ${taskId} and assigned phase ${phaseKey}.`);
+        return true;
+      }
+      const failures: string[] = [];
+      for (const taskId of taskIds) {
+        const r = await this.client.run("run-transition", {
+          taskId,
+          action: "accept",
+          policyApproval: { confirmed: true, rationale: policyRationale },
+          ...expectedPlanningGenerationArgs()
+        });
+        if (!r.ok) {
+          failures.push(`${taskId}: ${(r.message ?? r.code ?? JSON.stringify(r)).slice(0, 200)}`);
+          continue;
+        }
+        ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+        const r2 = await this.client.run("assign-task-phase", {
+          taskId,
+          phaseKey,
+          ...expectedPlanningGenerationArgs()
+        });
+        if (!r2.ok) {
+          failures.push(`${taskId} assign: ${(r2.message ?? r2.code ?? JSON.stringify(r2)).slice(0, 180)}`);
+        } else {
+          ingestPlanningMetaFromData(r2.data as Record<string, unknown> | undefined);
+        }
+      }
+      this.closeDashboardDrawer();
+      this.notifyKitStateChanged();
+      if (failures.length > 0) {
+        await vscode.window.showErrorMessage(
+          `Some batch operations failed (${String(failures.length)}/${String(taskIds.length)}): ${failures
+            .slice(0, 3)
+            .join(" · ")}`.slice(0, 900)
+        );
+        return true;
+      }
+      await vscode.window.showInformationMessage(
+        `Accepted ${String(taskIds.length)} proposed ${categoryLabel.trim() || "task"}(s) into phase ${phaseKey}.`
+      );
+      return true;
+    }
     return false;
   }
 
@@ -1059,113 +1103,34 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
   }
 
-  /** Proposed-row Accept → pick phase → run-transition accept → assign-task-phase. */
+  /** Proposed-row Accept → drawer (phase + policy rationale) → run-transition accept → assign-task-phase. */
   private async onDashboardAcceptProposed(taskId: string): Promise<void> {
-    const phaseKey = await this.pickPhaseKeyFromDashboard({
-      title: `Accept proposed task — target phase for ${taskId}`
-    });
-    if (!phaseKey) {
+    if (this.dashboardDrawerSession) {
       return;
     }
-    const gate = await vscode.window.showWarningMessage(
-      `Accept ${taskId} (→ ready) then assign-task-phase → ${phaseKey}?`,
-      { modal: true },
-      "Apply"
+    const data = this.lastDashboardSummaryData;
+    const suggestions = data ? collectPhaseKeySuggestions(data) : [];
+    const html = renderDrawerFormHtml(
+      buildAcceptProposedDrawerSpec({ taskIds: [taskId], categoryLabel: "", suggestions })
     );
-    if (gate !== "Apply") {
-      return;
-    }
-    const rationale =
-      (await vscode.window.showInputBox({
-        prompt: `Policy rationale for run-transition accept on ${taskId}`,
-        placeHolder: "Shown in policy trace / approval"
-      })) ?? "vscode-extension";
-    const r = await this.client.run("run-transition", {
-      taskId,
-      action: "accept",
-      policyApproval: { confirmed: true, rationale },
-      ...expectedPlanningGenerationArgs()
-    });
-    if (!r.ok) {
-      await vscode.window.showErrorMessage((r.message ?? JSON.stringify(r)).slice(0, 900));
-      return;
-    }
-    ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
-    const r2 = await this.client.run("assign-task-phase", {
-      taskId,
-      phaseKey,
-      ...expectedPlanningGenerationArgs()
-    });
-    if (!r2.ok) {
-      await vscode.window.showErrorMessage(
-        `Accepted ${taskId} but assign-task-phase failed: ${(r2.message ?? r2.code ?? JSON.stringify(r2)).slice(0, 520)}`
-      );
-    } else {
-      ingestPlanningMetaFromData(r2.data as Record<string, unknown> | undefined);
-      await vscode.window.showInformationMessage(`Accepted ${taskId} and assigned phase ${phaseKey}.`);
-    }
-    this.notifyKitStateChanged();
+    this.dashboardDrawerSession = { kind: "accept-proposed", taskIds: [taskId], categoryLabel: "" };
+    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
   }
 
   private async onDashboardAcceptProposedBatch(taskIds: string[], categoryLabel: string): Promise<void> {
     if (taskIds.length === 0) {
       return;
     }
-    const phaseKey = await this.pickPhaseKeyFromDashboard({
-      title: `Accept ${String(taskIds.length)} proposed ${categoryLabel} task(s) — target phase`
-    });
-    if (!phaseKey) {
+    if (this.dashboardDrawerSession) {
       return;
     }
-    const gate = await vscode.window.showWarningMessage(
-      `Accept ${String(taskIds.length)} proposed ${categoryLabel} task(s) (→ ready) then assign each to phase ${phaseKey}? Each transition uses the same policy rationale.`,
-      { modal: true },
-      "Accept all"
+    const data = this.lastDashboardSummaryData;
+    const suggestions = data ? collectPhaseKeySuggestions(data) : [];
+    const html = renderDrawerFormHtml(
+      buildAcceptProposedDrawerSpec({ taskIds, categoryLabel, suggestions })
     );
-    if (gate !== "Accept all") {
-      return;
-    }
-    const rationale =
-      (await vscode.window.showInputBox({
-        prompt: `Policy rationale for batch accept (${String(taskIds.length)} × accept on proposed ${categoryLabel})`,
-        placeHolder: "Shown in policy trace / approval"
-      })) ?? "vscode-extension batch accept";
-    const failures: string[] = [];
-    for (const taskId of taskIds) {
-      const r = await this.client.run("run-transition", {
-        taskId,
-        action: "accept",
-        policyApproval: { confirmed: true, rationale },
-        ...expectedPlanningGenerationArgs()
-      });
-      if (!r.ok) {
-        failures.push(`${taskId}: ${(r.message ?? r.code ?? JSON.stringify(r)).slice(0, 200)}`);
-        continue;
-      }
-      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
-      const r2 = await this.client.run("assign-task-phase", {
-        taskId,
-        phaseKey,
-        ...expectedPlanningGenerationArgs()
-      });
-      if (!r2.ok) {
-        failures.push(
-          `${taskId} assign: ${(r2.message ?? r2.code ?? JSON.stringify(r2)).slice(0, 180)}`
-        );
-      } else {
-        ingestPlanningMetaFromData(r2.data as Record<string, unknown> | undefined);
-      }
-    }
-    if (failures.length > 0) {
-      await vscode.window.showErrorMessage(
-        `Some batch operations failed (${String(failures.length)}/${String(taskIds.length)}): ${failures.slice(0, 3).join(" · ")}`
-      );
-    } else {
-      await vscode.window.showInformationMessage(
-        `Accepted ${String(taskIds.length)} proposed ${categoryLabel} task(s) into phase ${phaseKey}.`
-      );
-    }
-    this.notifyKitStateChanged();
+    this.dashboardDrawerSession = { kind: "accept-proposed", taskIds, categoryLabel };
+    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
   }
 
   /**

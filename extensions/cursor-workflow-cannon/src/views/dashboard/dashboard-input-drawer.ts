@@ -600,6 +600,90 @@ export function validateAssignTaskPhaseSubmit(values: Record<string, string>): D
   return { ok: true, values: { phaseKey: sel } };
 }
 
+export type AcceptProposedDrawerParams = {
+  taskIds: string[];
+  /** Proposed-row category label (batch only); may be empty for single-task flow. */
+  categoryLabel: string;
+  suggestions: PhaseKeySuggestion[];
+};
+
+export function buildAcceptProposedDrawerSpec(params: AcceptProposedDrawerParams): DrawerFormSpec {
+  const { taskIds, categoryLabel, suggestions } = params;
+  const n = taskIds.length;
+  const options: Array<{ value: string; label: string }> = [
+    { value: "", label: "Choose phase target…" },
+    ...suggestions.map((s) => ({ value: s.phaseKey, label: `${s.label} (${s.phaseKey})` })),
+    { value: ASSIGN_PHASE_CUSTOM, label: "Enter another phase key…" }
+  ];
+  const cat = categoryLabel.trim() || "proposed";
+  const idsBody =
+    n === 1
+      ? "<div><b>Task:</b> " + escapeDrawerHtml(taskIds[0] ?? "") + "</div>"
+      : "<div><b>Tasks (" +
+        String(n) +
+        ", " +
+        escapeDrawerHtml(cat) +
+        "):</b> " +
+        escapeDrawerHtml(taskIds.join(", ")) +
+        "</div>";
+  const safeTitle =
+    n === 1
+      ? `Accept proposed task ${taskIds[0] ?? ""}`
+      : `Accept ${String(n)} proposed ${cat} tasks`;
+  return {
+    workflowId: "accept-proposed",
+    title: safeTitle,
+    descriptionHtml:
+      "Runs <code>run-transition</code> <code>accept</code> then <code>assign-task-phase</code> for each row. " +
+      (n > 1
+        ? "One shared policy rationale is used for every <code>accept</code> in this batch."
+        : "Requires a non-empty policy rationale for the transition."),
+    fields: [
+      { id: "ctx", kind: "summary", label: "Scope", body: idsBody },
+      {
+        id: "phaseSelect",
+        kind: "select",
+        label: "Target phase",
+        options,
+        required: false
+      },
+      {
+        id: "phaseKeyCustom",
+        kind: "text",
+        label: "Custom phase key",
+        placeholder: 'When using "Enter another phase key…"',
+        required: false,
+        value: ""
+      },
+      {
+        id: "policyRationale",
+        kind: "textarea",
+        label: "Policy rationale (required)",
+        placeholder: "Shown in policy trace / approval for run-transition accept",
+        required: true,
+        rows: 3
+      }
+    ],
+    primaryLabel: n === 1 ? "Accept and assign phase" : "Accept all and assign phase",
+    cancelLabel: "Cancel"
+  };
+}
+
+export function validateAcceptProposedSubmit(values: Record<string, string>): DrawerValidationResult {
+  const phase = validateAssignTaskPhaseSubmit(values);
+  if (!phase.ok) {
+    return phase;
+  }
+  const policyRationale = (values.policyRationale ?? "").trim();
+  if (!policyRationale) {
+    return {
+      ok: false,
+      error: "Policy rationale is required for accept (shown in policy trace / approval)."
+    };
+  }
+  return { ok: true, values: { phaseKey: phase.values.phaseKey, policyRationale } };
+}
+
 export function validateDismissPhaseNoteSubmit(
   priority: string,
   values: Record<string, string>
