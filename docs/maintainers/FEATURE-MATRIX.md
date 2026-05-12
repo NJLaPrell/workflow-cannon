@@ -317,6 +317,7 @@ Status legend:
 
 | Product feature | What users/maintainers get | Status | Task coverage |
 | --- | --- | --- | --- |
+| First-run attach and safe ownership preview | `wk init` attach/repair path, init regression coverage, install runbook, historical INIT_PLAN disposition, and preview-only `wk detach --dry-run` ownership listing | Completed | `T100152`-`T100169` |
 | Release gate ownership map | Clear gate owners, artifacts, and escalation path for release readiness | Completed | `T196` |
 | Consumer parity fixture pack | Reusable fixture + runner for parity checks in CI and local flows | Completed | `T197` |
 | Parity evidence schema contract | Versioned schema and retention contract for parity artifacts | Completed | `T198` |
