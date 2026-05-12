@@ -12,14 +12,16 @@ Single maintainer reference for **what agents must run in a terminal** when work
 
 If a session might touch `.workspace-kit/` state, lifecycle transitions, policy traces, approvals, or generated maintainer docs, run this first:
 
-1. `workspace-kit doctor` — confirms canonical task/policy contract files are present.
-2. `workspace-kit run` (no subcommand) — lists **router-registered** commands (executable for the current enabled module set).
+In an attached project, use **`./.workspace-kit/bin/wk`** after `init`; it reads the stamped runtime from **`.workspace-kit/runtime.json`** and avoids shell-manager drift. In this source checkout, `pnpm exec wk` / `node dist/cli.js` remain valid development entrypoints.
+
+1. `./.workspace-kit/bin/wk doctor` — confirms canonical task/policy contract files are present.
+2. `./.workspace-kit/bin/wk run` (no subcommand) — lists **router-registered** commands (executable for the current enabled module set).
 3. Use this map + `src/modules/<module>/instructions/<command>.md` for JSON payload shape.
 
 Optional machine-readable catalog (same validation as `doctor`, then JSON on stdout):
 
 ```bash
-workspace-kit doctor --agent-instruction-surface
+./.workspace-kit/bin/wk doctor --agent-instruction-surface
 ```
 
 Payload shape: `{ ok, code: "agent-instruction-surface", data: { schemaVersion, commands[], activationReport, errorRemediationCatalog } }`. Rows include `executable` and `degradation` when a declared instruction is documentation-only because the owning module or a `requiresPeers` module is disabled. **`errorRemediationCatalog`** maps common failure `code` strings to repo-relative **`instructionPath`** / **`docPath`** hints (see **`docs/maintainers/adrs/ADR-cli-error-remediation-contract.md`**). **Documentation-only** does **not** waive `policyApproval` for mutating `workspace-kit run` operations — see `docs/maintainers/POLICY-APPROVAL.md`.

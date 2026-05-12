@@ -2,12 +2,16 @@
 
 **Agents** use **`.ai/AGENT-CLI-MAP.md`**, **`.ai/POLICY-APPROVAL.md`**, **`.ai/RELEASING.md`**, **`.ai/CLI-VISUAL-GUIDE.md`**, and this file — not `docs/maintainers/` prose (human / generated renders). **Maintainers** may still curate long-form copies under `docs/maintainers/` after running the doc pipeline.
 
+## Command path
+
+In an **attached project**, use **`./.workspace-kit/bin/wk`** for routine Workflow Cannon commands. The launcher reads **`.workspace-kit/runtime.json`** and uses the stamped Node runtime, so agents should not ask the user to run `nvm use` first. In the **Workflow Cannon source checkout**, `pnpm exec wk` and `node dist/cli.js` remain appropriate development entrypoints.
+
 ## Tier A — task lifecycle
 
 Use `workspace-kit run run-transition` with JSON **`policyApproval`** as the **third** CLI argument (not chat-only approval).
 
 ```bash
-pnpm exec wk run run-transition '{"taskId":"T###","action":"start","policyApproval":{"confirmed":true,"rationale":"begin work"}}'
+./.workspace-kit/bin/wk run run-transition '{"taskId":"T###","action":"start","policyApproval":{"confirmed":true,"rationale":"begin work"}}'
 ```
 
 ## Tier B — sensitive `workspace-kit run` (non-transition)
@@ -24,7 +28,7 @@ For `workspace-kit config`, `init`, and `upgrade`, approval may use env **`WORKS
 
 ## Discovery without dumping catalogs
 
-Prefer `pnpm exec wk run` with no subcommand for a short command list, then open `src/modules/<module>/instructions/<command>.md` for the specific surface. Avoid pasting full `doctor` JSON catalogs into chat unless debugging.
+Prefer `./.workspace-kit/bin/wk run` with no subcommand in attached projects for a short command list, then open `src/modules/<module>/instructions/<command>.md` for the specific surface. In this source checkout, use `pnpm exec wk run` for the same discovery. Avoid pasting full `doctor` JSON catalogs into chat unless debugging.
 
 ## Maintainer delivery loop (`doctor`)
 
