@@ -1667,7 +1667,16 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .dash-count-label { font-size: 11px; opacity: 0.85; line-height: 1.25; flex: 1; min-width: 0; }
     .dash-count-num { flex-shrink: 0; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; font-size: 13px; line-height: 1.25; }
     pre.resume-cli { font-size: 11px; }
-    /* ── Tab system ── */
+    /* ── Tab system (agent status banner lives in .wc-dashboard-tab-shell above this bar) ── */
+    .wc-dashboard-tab-shell { display: flex; flex-direction: column; }
+    .wc-dashboard-tab-shell > .dash-agent-status-banner {
+      margin: 0 0 6px 0;
+      padding: 4px 6px;
+      border-radius: 4px;
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
+      background: var(--vscode-sideBarSectionHeader-background, rgba(127,127,127,.12));
+    }
+    .wc-dashboard-tab-shell > .dash-agent-status-banner p { margin: 0; }
     .wc-tab-bar {
       display: flex;
       gap: 0;

@@ -2228,7 +2228,6 @@ export function renderDashboardRootInnerHtml(
   const overviewContent =
     recNextCard +
     renderStatPills(totalReadyCount, totalProposedCount, totalBlockedCount, totalDoneCount) +
-    renderAgentStatusBanner(d.agentStatus) +
     renderEditorIntegrationSection(editorIntegration) +
     renderRoleTemperamentAndPhaseSection(d.agentGuidance, ws as Record<string, unknown> | null, res) +
     renderPhaseCatalogOverviewSection(phaseSystemSlice) +
@@ -2265,6 +2264,8 @@ export function renderDashboardRootInnerHtml(
   // ── Tab shell ──────────────────────────────────────────────────────────────
 
   return (
+    '<div class="wc-dashboard-tab-shell">' +
+    renderAgentStatusBanner(d.agentStatus) +
     '<div class="wc-tab-bar" role="tablist">' +
     '<button type="button" class="wc-tab-btn wc-tab-active" role="tab" data-wc-tab="overview">Overview</button>' +
     '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="task-engine">Task Engine' +
@@ -2282,6 +2283,7 @@ export function renderDashboardRootInnerHtml(
     '<div class="wc-tab-panel" data-wc-tab="task-engine" role="tabpanel" style="display:none">' + taskEngineContent + "</div>" +
     '<div class="wc-tab-panel" data-wc-tab="status" role="tabpanel" style="display:none">' + statusContent + "</div>" +
     '<div class="wc-tab-panel" data-wc-tab="config" role="tabpanel" style="display:none">' + configContent + "</div>" +
-    '<div class="wc-tab-panel" data-wc-tab="cae" role="tabpanel" style="display:none">' + caeContent + "</div>"
+    '<div class="wc-tab-panel" data-wc-tab="cae" role="tabpanel" style="display:none">' + caeContent + "</div>" +
+    "</div>"
   );
 }

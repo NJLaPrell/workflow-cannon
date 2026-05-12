@@ -50,6 +50,8 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   const html = renderDashboardRootInnerHtml(fixture);
   assert.match(html, /dash-card/);
   assert.match(html, /dash-agent-status-banner/);
+  assert.ok(html.indexOf("dash-agent-status-banner") < html.indexOf("wc-tab-bar"));
+  assert.ok(html.indexOf("wc-tab-bar") < html.indexOf("<b>Role:</b>"));
   assert.match(html, /<b>WC Agent is:<\/b> <span class="dash-agent-status-label">Awaiting Instruction<\/span>/);
   assert.match(html, /<b>Role:<\/b> Adventurer/);
   assert.match(html, /<b>Agent Temperament:<\/b> The Steady Adventurer/);
