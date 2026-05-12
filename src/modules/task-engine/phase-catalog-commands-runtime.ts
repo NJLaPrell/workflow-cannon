@@ -11,6 +11,7 @@ import {
   buildOrderedPhaseCatalogList,
   collectPhaseCatalogHintsFromTasks,
   deletePhaseCatalogRow,
+  enrichFuturePhaseCatalogWithTaskSummaries,
   normalizeCatalogShortDescription,
   phaseCatalogTableAvailable,
   upsertPhaseCatalogRow,
@@ -35,7 +36,12 @@ export async function runListPhaseCatalog(ctx: ModuleLifecycleContext): Promise<
     const db = dual.getDatabase();
     const ws = readKitWorkspaceStatusRow(db);
     const taskHints = collectPhaseCatalogHintsFromTasks(dual.taskDocument.tasks);
-    const phases = buildOrderedPhaseCatalogList(db, ws, taskHints);
+    const phasesRaw = buildOrderedPhaseCatalogList(db, ws, taskHints);
+    const phases = enrichFuturePhaseCatalogWithTaskSummaries(
+      phasesRaw,
+      dual.taskDocument.tasks,
+      ws?.currentKitPhase ?? null
+    );
     const data: Record<string, unknown> = {
       schemaVersion: 1,
       phases,
@@ -168,7 +174,12 @@ export async function runUpsertPhaseCatalogEntry(
 
   const wsAfter = readKitWorkspaceStatusRow(db);
   const taskHintsAfter = collectPhaseCatalogHintsFromTasks(dual.taskDocument.tasks);
-  const phases = buildOrderedPhaseCatalogList(db, wsAfter, taskHintsAfter);
+  const phasesRaw = buildOrderedPhaseCatalogList(db, wsAfter, taskHintsAfter);
+  const phases = enrichFuturePhaseCatalogWithTaskSummaries(
+    phasesRaw,
+    dual.taskDocument.tasks,
+    wsAfter?.currentKitPhase ?? null
+  );
   const data: Record<string, unknown> = {
     schemaVersion: 1,
     phaseKey,

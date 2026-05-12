@@ -13,6 +13,7 @@ import type { TaskStore } from "../persistence/store.js";
 import {
   buildOrderedPhaseCatalogList,
   collectPhaseCatalogHintsFromTasks,
+  enrichFuturePhaseCatalogWithTaskSummaries,
   phaseCatalogTableAvailable
 } from "../persistence/phase-catalog-store.js";
 import { readKitWorkspaceStatusRow } from "../persistence/workspace-status-store.js";
@@ -81,8 +82,14 @@ export async function buildDashboardSystemStatus(
       : [];
     const db = sqliteDual.getDatabase();
     const wsRow = readKitWorkspaceStatusRow(db);
-    const taskHints = collectPhaseCatalogHintsFromTasks(store.getActiveTasks());
-    const phases = buildOrderedPhaseCatalogList(db, wsRow, taskHints);
+    const activeTasks = store.getActiveTasks();
+    const taskHints = collectPhaseCatalogHintsFromTasks(activeTasks);
+    const phasesRaw = buildOrderedPhaseCatalogList(db, wsRow, taskHints);
+    const currentForDerivation =
+      typeof d.currentKitPhase === "string" && d.currentKitPhase.trim().length > 0
+        ? d.currentKitPhase
+        : wsRow?.currentKitPhase ?? null;
+    const phases = enrichFuturePhaseCatalogWithTaskSummaries(phasesRaw, activeTasks, currentForDerivation);
     const phaseCatalog = {
       schemaVersion: 1 as const,
       supported: phaseCatalogTableAvailable(db),

@@ -1477,7 +1477,7 @@ test("list-phase-catalog includes phases from active tasks without kit_phase_cat
   assert.deepEqual(keys, ["72", "95"]);
   const p95 = list.data.phases.find((p) => p.phaseKey === "95");
   assert.equal(p95.inCatalog, false);
-  assert.equal(p95.shortDescription, null);
+  assert.equal(p95.shortDescription, "Test task");
 });
 
 test("list-phase-catalog includes phases from completed tasks without kit_phase_catalog rows", async () => {

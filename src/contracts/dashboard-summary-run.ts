@@ -143,7 +143,7 @@ export type DashboardPhaseSystemSlice = {
   exportReason: string | null;
   driftMessages: string[];
   remediationSuggestions: string[];
-  /** Ordered phase keys + optional short descriptions (`list-phase-catalog` contract; includes task-assigned keys, all statuses). */
+  /** Ordered phase keys + optional short descriptions (`list-phase-catalog` contract; includes task-assigned keys, all statuses). Future-phase rows with no catalog line may include a **derived** one-line title from task titles/summaries (see `enrichFuturePhaseCatalogWithTaskSummaries`). */
   phaseCatalog?: {
     schemaVersion: 1;
     supported: boolean;

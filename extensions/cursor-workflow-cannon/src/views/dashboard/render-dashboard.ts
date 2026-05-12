@@ -2,6 +2,12 @@
  * Pure dashboard HTML generation — unit-tested; applied in the webview via postMessage { html } from the host.
  */
 
+import {
+  buildNarrowPhaseRosterRows,
+  phaseRosterStatusLabel,
+  type PhaseCatalogListRow
+} from "../phase-roster-display.js";
+
 export function escapeHtml(s: string): string {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
@@ -1521,9 +1527,9 @@ export function renderPhaseCatalogOverviewSection(
       "</section>"
     );
   }
-  const phases = Array.isArray(cat?.phases) ? (cat!.phases as unknown[]) : [];
-  let rows = "";
-  for (const raw of phases) {
+  const phasesRaw = Array.isArray(cat?.phases) ? (cat!.phases as unknown[]) : [];
+  const phases: PhaseCatalogListRow[] = [];
+  for (const raw of phasesRaw) {
     if (!raw || typeof raw !== "object") {
       continue;
     }
@@ -1532,23 +1538,57 @@ export function renderPhaseCatalogOverviewSection(
     if (!pk) {
       continue;
     }
-    const sd = row.shortDescription != null ? String(row.shortDescription).trim() : "";
-    const desc = sd.length > 0 ? escapeHtml(sd) : '<span class="muted">—</span>';
-    const src = row.inCatalog === true ? "" : ' <span class="muted">(no catalog row)</span>';
-    rows +=
-      "<tr><td><code>" +
-      escapeHtml(pk) +
-      "</code></td><td>" +
-      desc +
-      src +
-      "</td></tr>";
+    const sdRaw = row.shortDescription != null ? String(row.shortDescription).trim() : "";
+    phases.push({
+      phaseKey: pk,
+      shortDescription: sdRaw.length > 0 ? sdRaw : null,
+      inCatalog: row.inCatalog === true
+    });
   }
-  const table =
-    rows.length > 0
-      ? '<table class="dash-phase-catalog-table"><thead><tr><th>Phase</th><th>Short description</th></tr></thead><tbody>' +
-        rows +
-        "</tbody></table>"
-      : '<p class="muted">No phases in roster yet — set workspace current/next, assign tasks to a phase, or register a catalog entry.</p>';
+
+  let inner: string;
+  if (phases.length === 0) {
+    inner =
+      '<p class="muted">No phases in roster yet — set workspace current/next, assign tasks to a phase, or register a catalog entry.</p>';
+  } else {
+    const narrow = buildNarrowPhaseRosterRows(phases, phaseSlice);
+    if (!narrow.ok) {
+      inner =
+        '<p class="muted">Set a numeric workspace <b>current phase</b> to show the last delivered phase, the active one, and upcoming phases here.</p>';
+    } else {
+      let rows = "";
+      for (const r of narrow.rows) {
+        const sd = r.shortDescription != null ? String(r.shortDescription).trim() : "";
+        const desc = sd.length > 0 ? escapeHtml(sd) : '<span class="muted">—</span>';
+        const src = r.inCatalog === true ? "" : ' <span class="muted">(no catalog row)</span>';
+        const statusLabel = escapeHtml(phaseRosterStatusLabel(r.status));
+        const statusClass =
+          r.status === "current"
+            ? "dash-phase-roster-status dash-phase-roster-current"
+            : r.status === "delivered"
+              ? "dash-phase-roster-status dash-phase-roster-delivered"
+              : "dash-phase-roster-status dash-phase-roster-future";
+        rows +=
+          "<tr><td><code>" +
+          escapeHtml(r.phaseKey) +
+          '</code></td><td><span class="' +
+          statusClass +
+          '">' +
+          statusLabel +
+          "</span></td><td>" +
+          desc +
+          src +
+          "</td></tr>";
+      }
+      inner =
+        rows.length > 0
+          ? '<table class="dash-phase-catalog-table"><thead><tr><th>Phase</th><th>Status</th><th>Short description</th></tr></thead><tbody>' +
+            rows +
+            "</tbody></table>"
+          : '<p class="muted">No matching roster rows.</p>';
+    }
+  }
+  const table = inner;
   const btn =
     '<p style="margin-top:8px"><button type="button" class="dash-row-action dash-row-action-primary" data-wc-action="register-phase-catalog">Register future phase</button>' +
     ' <span class="muted">Uses <code>upsert-phase-catalog-entry</code> with planning sync.</span></p>';

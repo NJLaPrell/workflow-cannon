@@ -3,6 +3,11 @@
  */
 
 import { escapeHtml } from "../dashboard/render-dashboard.js";
+import {
+  buildNarrowPhaseRosterRows,
+  phaseRosterStatusLabel,
+  type PhaseCatalogListRow
+} from "../phase-roster-display.js";
 
 export type RenderStatusTabOptions = {
   /** VS Code workspace folder short name (primary folder when multi-root). */
@@ -214,9 +219,9 @@ export function renderStatusTabInnerHtml(
       driftHtml;
     const cat = phase.phaseCatalog as Record<string, unknown> | undefined;
     const catSupported = cat && cat.supported === true;
-    const catPhases = catSupported && Array.isArray(cat.phases) ? (cat.phases as unknown[]) : [];
-    let catRows = "";
-    for (const raw of catPhases) {
+    const catPhasesRaw = catSupported && Array.isArray(cat.phases) ? (cat.phases as unknown[]) : [];
+    const catPhases: PhaseCatalogListRow[] = [];
+    for (const raw of catPhasesRaw) {
       if (!raw || typeof raw !== "object") {
         continue;
       }
@@ -225,18 +230,50 @@ export function renderStatusTabInnerHtml(
       if (!pk) {
         continue;
       }
-      const sd = row.shortDescription != null ? String(row.shortDescription).trim() : "";
-      const desc = sd.length > 0 ? escapeHtml(sd) : "—";
-      catRows += "<tr><td><code>" + escapeHtml(pk) + "</code></td><td>" + desc + "</td></tr>";
+      const sdRaw = row.shortDescription != null ? String(row.shortDescription).trim() : "";
+      catPhases.push({
+        phaseKey: pk,
+        shortDescription: sdRaw.length > 0 ? sdRaw : null,
+        inCatalog: row.inCatalog === true
+      });
     }
-    const catBlock =
-      catSupported && catRows.length > 0
-        ? "<p><b>Phase roster</b></p><table class=\"wc-mini-table\"><thead><tr><th>Key</th><th>Description</th></tr></thead><tbody>" +
-          catRows +
-          "</tbody></table>"
-        : catSupported
-          ? '<p class="wc-muted">Phase roster: no rows yet (workspace phases above; task-assigned phases appear here when present).</p>'
-          : '<p class="wc-muted">Phase roster descriptions need planning SQLite v23+.</p>';
+    const phaseRec = phase as Record<string, unknown>;
+    let catBlock = "";
+    if (catSupported) {
+      if (catPhases.length === 0) {
+        catBlock =
+          '<p class="wc-muted">Phase roster: no rows yet (workspace phases above; task-assigned phases appear here when present).</p>';
+      } else {
+        const narrow = buildNarrowPhaseRosterRows(catPhases, phaseRec);
+        if (!narrow.ok) {
+          catBlock =
+            '<p class="wc-muted">Phase roster: set a numeric workspace <b>current phase</b> to show last delivered, current, and future phases.</p>';
+        } else {
+          let catRows = "";
+          for (const r of narrow.rows) {
+            const sd = r.shortDescription != null ? String(r.shortDescription).trim() : "";
+            const desc = sd.length > 0 ? escapeHtml(sd) : "—";
+            const status = escapeHtml(phaseRosterStatusLabel(r.status));
+            catRows +=
+              "<tr><td><code>" +
+              escapeHtml(r.phaseKey) +
+              "</code></td><td>" +
+              status +
+              "</td><td>" +
+              desc +
+              "</td></tr>";
+          }
+          catBlock =
+            catRows.length > 0
+              ? "<p><b>Phase roster</b></p><table class=\"wc-mini-table\"><thead><tr><th>Key</th><th>Status</th><th>Description</th></tr></thead><tbody>" +
+                catRows +
+                "</tbody></table>"
+              : '<p class="wc-muted">Phase roster: no matching rows.</p>';
+        }
+      }
+    } else {
+      catBlock = '<p class="wc-muted">Phase roster descriptions need planning SQLite v23+.</p>';
+    }
     parts.push(card("Phase & workspace", body + catBlock));
   }
 

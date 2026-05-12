@@ -181,6 +181,102 @@ export function buildOrderedPhaseCatalogList(
   });
 }
 
+const DERIVED_PHASE_DESC_MAX = DESCRIPTION_MAX;
+const DERIVED_TASK_TITLE_MAX = 96;
+const DERIVED_TASKS_CONSIDERED = 2;
+
+function collapseSingleLine(s: string, maxLen: number): string {
+  const t = s.replace(/\s+/g, " ").trim();
+  if (t.length <= maxLen) {
+    return t;
+  }
+  if (maxLen < 2) {
+    return t.slice(0, maxLen);
+  }
+  return `${t.slice(0, maxLen - 1)}…`;
+}
+
+function taskHeadline(t: TaskEntity): string {
+  const title = typeof t.title === "string" ? t.title.trim() : "";
+  if (title.length > 0) {
+    return title;
+  }
+  const sum = typeof t.summary === "string" ? t.summary.trim() : "";
+  return sum;
+}
+
+/**
+ * When **`shortDescription`** is missing, fills a short title line from non-archived tasks in that
+ * **future** phase (strictly after workspace **`current_kit_phase`** leading ordinal). Does not
+ * change persisted catalog rows or overwrite non-empty descriptions. Deterministic: tasks ordered
+ * by **`id`**, up to {@link DERIVED_TASKS_CONSIDERED} headlines joined with **` · `**, bounded by
+ * {@link DERIVED_PHASE_DESC_MAX}.
+ */
+export function enrichFuturePhaseCatalogWithTaskSummaries(
+  phases: readonly PhaseCatalogListEntry[],
+  tasks: readonly TaskEntity[],
+  workspaceCurrentKitPhase: string | null | undefined
+): PhaseCatalogListEntry[] {
+  const wsDigits = parseKitPhaseNumberFromYaml(workspaceCurrentKitPhase ?? null);
+  const wsOrd = wsDigits !== null ? parseLeadingPhaseOrdinal(wsDigits) : null;
+  if (wsOrd === null) {
+    return [...phases];
+  }
+
+  const byPhase = new Map<string, TaskEntity[]>();
+  for (const t of tasks) {
+    if (t.archived) {
+      continue;
+    }
+    const inferred = inferTaskPhaseKey(t);
+    const vk = validatePhaseCatalogKey(inferred ?? "");
+    if (!vk) {
+      continue;
+    }
+    const arr = byPhase.get(vk);
+    if (arr) {
+      arr.push(t);
+    } else {
+      byPhase.set(vk, [t]);
+    }
+  }
+
+  for (const arr of byPhase.values()) {
+    arr.sort((a, b) => a.id.localeCompare(b.id));
+  }
+
+  return phases.map((entry) => {
+    if (entry.shortDescription != null && entry.shortDescription.trim().length > 0) {
+      return { ...entry };
+    }
+    const ord = parseLeadingPhaseOrdinal(entry.phaseKey);
+    if (ord === null || ord <= wsOrd) {
+      return { ...entry };
+    }
+    const list = byPhase.get(entry.phaseKey) ?? [];
+    const parts: string[] = [];
+    for (const t of list) {
+      const raw = taskHeadline(t);
+      if (!raw) {
+        continue;
+      }
+      parts.push(collapseSingleLine(raw, DERIVED_TASK_TITLE_MAX));
+      if (parts.length >= DERIVED_TASKS_CONSIDERED) {
+        break;
+      }
+    }
+    if (parts.length === 0) {
+      return { ...entry };
+    }
+    let line = parts.join(" · ");
+    if (list.length > parts.length) {
+      line = `${line} · …`;
+    }
+    line = collapseSingleLine(line, DERIVED_PHASE_DESC_MAX);
+    return { ...entry, shortDescription: line };
+  });
+}
+
 export function upsertPhaseCatalogRow(db: SqliteDb, phaseKey: string, shortDescription: string | null, nowIso: string): void {
   db.prepare(
     `INSERT INTO ${KIT_PHASE_CATALOG_TABLE} (phase_key, short_description, updated_at)
