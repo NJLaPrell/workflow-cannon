@@ -95,6 +95,8 @@ export async function buildInitPlan(
   const generatedJsonMissing = await fileMissing(cwd, ".workspace-kit/generated/project-context.json");
   const generatedRuleMissing = await fileMissing(cwd, ".cursor/rules/workspace-kit-project-context.mdc");
   const configMissing = await fileMissing(cwd, ".workspace-kit/config.json");
+  const runtimeStampMissing = await fileMissing(cwd, ".workspace-kit/runtime.json");
+  const runtimeLauncherMissing = await fileMissing(cwd, ".workspace-kit/bin/wk");
 
   let mode: InitMode;
 
@@ -111,7 +113,9 @@ export async function buildInitPlan(
     !schemaMissing &&
     !pointerMissing &&
     !generatedJsonMissing &&
-    !generatedRuleMissing
+    !generatedRuleMissing &&
+    !runtimeStampMissing &&
+    !runtimeLauncherMissing
   ) {
     mode = "already-initialized";
     notes.push(
@@ -171,6 +175,18 @@ export async function buildInitPlan(
     ".workspace-kit/config.json",
     configMissing ? "create" : "update",
     "Workspace kit config (task SQLite paths)."
+  );
+  pushPlan(
+    plannedWrites,
+    ".workspace-kit/runtime.json",
+    runtimeStampMissing ? "create" : "update",
+    "Runtime contract stamp for the Node executable and native module ABI."
+  );
+  pushPlan(
+    plannedWrites,
+    ".workspace-kit/bin/wk",
+    runtimeLauncherMissing ? "create" : "update",
+    "Canonical launcher that delegates through the stamped Node executable."
   );
   pushPlan(
     plannedWrites,

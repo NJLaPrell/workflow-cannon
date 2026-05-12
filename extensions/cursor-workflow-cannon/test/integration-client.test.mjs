@@ -9,6 +9,10 @@ test("integration: client executes list-tasks through real workspace-kit cli", a
   const cliPath = path.join(repoRoot, "dist", "cli.js");
   const client = new CommandClient(repoRoot, { cliPathOverride: cliPath, timeoutMs: 15_000 });
   const out = await client.run("list-tasks", {});
+  if (!out.ok && out.code === "extension-native-sqlite-runtime-incompatible") {
+    assert.match(String(out.message ?? ""), /workflowCannon\.nodeExecutable|WORKSPACE_KIT_NODE/);
+    return;
+  }
   assert.equal(out.ok, true);
   assert.equal(out.code, "tasks-listed");
 });

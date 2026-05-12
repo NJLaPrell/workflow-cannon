@@ -40,6 +40,12 @@ type CommandClientOptions = {
   resolveNodeExecutable?: () => string | undefined;
 };
 
+export type RuntimeStampExecutionPlan =
+  | { kind: "missing"; stampPath: string }
+  | { kind: "invalid"; stampPath: string; message: string }
+  | { kind: "launcher"; stampPath: string; executable: string; argsPrefix: string[] }
+  | { kind: "stamped-node"; stampPath: string; executable: string; argsPrefix: string[] };
+
 export type NativeSqliteProbeDiagnostic = {
   ok: boolean;
   kind?: string;
@@ -59,6 +65,67 @@ export type NodeExecutableDiagnostic = {
 };
 
 const WORKFLOW_CANNON_NODE_MAJOR = "22";
+const RUNTIME_STAMP_RELATIVE_PATH = path.join(".workspace-kit", "runtime.json");
+const RUNTIME_LAUNCHER_RELATIVE_PATH = path.join(".workspace-kit", "bin", process.platform === "win32" ? "wk.cmd" : "wk");
+
+function structuredRuntimeStampFailure(code: string, message: string, details: Record<string, unknown>): CommandClientExecResult {
+  return {
+    exitCode: 1,
+    stdout: `${JSON.stringify({
+      ok: false,
+      code,
+      message,
+      remediation: {
+        command: "workspace-kit init --force",
+        paths: [RUNTIME_STAMP_RELATIVE_PATH, RUNTIME_LAUNCHER_RELATIVE_PATH]
+      },
+      details
+    })}\n`,
+    stderr: ""
+  };
+}
+
+function nonEmptyString(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+export function resolveRuntimeStampExecutionPlan(workspaceRoot: string): RuntimeStampExecutionPlan {
+  const stampPath = path.join(workspaceRoot, RUNTIME_STAMP_RELATIVE_PATH);
+  if (!fs.existsSync(stampPath)) {
+    return { kind: "missing", stampPath };
+  }
+  let raw: unknown;
+  try {
+    raw = JSON.parse(fs.readFileSync(stampPath, "utf8"));
+  } catch (error) {
+    return {
+      kind: "invalid",
+      stampPath,
+      message: `Runtime stamp is not valid JSON: ${error instanceof Error ? error.message : String(error)}`
+    };
+  }
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return { kind: "invalid", stampPath, message: "Runtime stamp must be a JSON object" };
+  }
+  const value = raw as Record<string, unknown>;
+  const nodeExecutable = nonEmptyString(value.nodeExecutable);
+  const packageRoot = nonEmptyString(value.packageRoot);
+  if (!nodeExecutable || !packageRoot) {
+    return { kind: "invalid", stampPath, message: "Runtime stamp must include nodeExecutable and packageRoot" };
+  }
+  if (!fs.existsSync(nodeExecutable)) {
+    return { kind: "invalid", stampPath, message: `Stamped Node executable does not exist: ${nodeExecutable}` };
+  }
+  const launcherPath = path.join(workspaceRoot, RUNTIME_LAUNCHER_RELATIVE_PATH);
+  if (fs.existsSync(launcherPath)) {
+    return { kind: "launcher", stampPath, executable: launcherPath, argsPrefix: [] };
+  }
+  const cliPath = path.join(path.resolve(packageRoot), "dist", "cli.js");
+  if (!fs.existsSync(cliPath)) {
+    return { kind: "invalid", stampPath, message: `Stamped workspace-kit CLI does not exist: ${cliPath}` };
+  }
+  return { kind: "stamped-node", stampPath, executable: nodeExecutable, argsPrefix: [cliPath] };
+}
 
 /** Pick Node binary for spawning workspace-kit; never uses extension-host `process.execPath` by default. */
 export function pickNodeExecutable(
@@ -353,6 +420,39 @@ function execKit(
   resolveNodeExecutable?: () => string | undefined,
   extensionRoot?: string
 ): Promise<CommandClientExecResult> {
+  if (!cliPathOverride) {
+    const runtimePlan = resolveRuntimeStampExecutionPlan(workspaceRoot);
+    if (runtimePlan.kind === "invalid") {
+      return Promise.resolve(
+        structuredRuntimeStampFailure("extension-runtime-stamp-invalid", runtimePlan.message, {
+          stampPath: runtimePlan.stampPath
+        })
+      );
+    }
+    if (runtimePlan.kind === "launcher" || runtimePlan.kind === "stamped-node") {
+      return new Promise((resolve, reject) => {
+        execFile(
+          runtimePlan.executable,
+          [...runtimePlan.argsPrefix, ...cliArgs],
+          { cwd: workspaceRoot, maxBuffer, windowsHide: true, timeout: timeoutMs },
+          (err, stdout, stderr) => {
+            const out = String(stdout ?? "");
+            const errOut = String(stderr ?? "");
+            if (err) {
+              if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+                reject(err);
+                return;
+              }
+              const code = typeof err.code === "number" ? err.code : 1;
+              resolve({ exitCode: code, stdout: out, stderr: errOut });
+              return;
+            }
+            resolve({ exitCode: 0, stdout: out, stderr: errOut });
+          }
+        );
+      });
+    }
+  }
   const cliJs = resolveCliJs(workspaceRoot, cliPathOverride, extensionRoot);
   const cliPackageRoot = inferCliPackageRoot(cliJs);
   const runtimeRoots = [cliPackageRoot, extensionRoot].filter((root): root is string => Boolean(root));

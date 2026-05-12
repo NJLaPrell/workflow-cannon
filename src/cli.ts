@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { realpathSync } from "node:fs";
+import { constants, realpathSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -22,7 +22,11 @@ import {
   collectTaskPersistenceDoctorSummaryLines
 } from "./cli/doctor-planning-issues.js";
 import { collectCaeDoctorSummaryLines } from "./cli/doctor-cae.js";
-import { collectDoctorContractIssues, type DoctorContractIssue } from "./cli/doctor-contract-validation.js";
+import {
+  collectDoctorContractIssues,
+  collectDoctorRuntimeContractStatus,
+  type DoctorContractIssue
+} from "./cli/doctor-contract-validation.js";
 import {
   collectMaintainerDeliveryLoopIssues,
   formatMaintainerDeliveryLoopAdvisoryLines
@@ -52,6 +56,13 @@ import {
 import { runWorkspaceKitInitCommand } from "./cli/init-command.js";
 import { runRefreshContextCommand } from "./cli/refresh-context-command.js";
 import { runWorkspaceKitStartCommand } from "./cli/start-command.js";
+import {
+  WORKSPACE_KIT_RUNTIME_LAUNCHER_RELATIVE_PATH,
+  WORKSPACE_KIT_RUNTIME_STAMP_RELATIVE_PATH,
+  generateWorkspaceKitLauncherContent,
+  readRuntimeStamp,
+  verifyRuntimeStamp
+} from "./core/runtime-contract.js";
 
 export { defaultWorkspaceKitPaths } from "./cli/default-workspace-kit-paths.js";
 export { parseJsonFile } from "./cli/profile-support.js";
@@ -118,6 +129,7 @@ function writeDoctorFailureRemediation(
   writeError("");
   writeError("Next steps:");
   const hasMissing = issues.some((issue) => issue.reason === "missing");
+  const hasRuntimeIssue = issues.some((issue) => issue.reason.startsWith("runtime-"));
   const manifestMissing = issues.some(
     (issue) => issue.reason === "missing" && issue.path === defaultWorkspaceKitPaths.manifest
   );
@@ -128,6 +140,11 @@ function writeDoctorFailureRemediation(
   } else if (hasMissing) {
     writeError(
       "  - Partial attach detected: run `workspace-kit init` to repair missing baseline files (preview with `workspace-kit init --dry-run`); use `workspace-kit upgrade` after package updates."
+    );
+  }
+  if (hasRuntimeIssue) {
+    writeError(
+      "  - Runtime contract drift: repair setup, then run `workspace-kit init --force` to regenerate the runtime stamp and launcher."
     );
   }
   writeError("  - workspace-kit --help — orientation and top-level commands");
@@ -148,6 +165,27 @@ function doctorWantsMachineJson(doctorRest: string[]): boolean {
     if (t.startsWith("--format=") && t.slice("--format=".length) === "json") return true;
   }
   return false;
+}
+
+async function isExecutable(filePath: string): Promise<boolean> {
+  try {
+    await fs.access(filePath, constants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function runtimeStampDriftFindings(cwd: string): string[] {
+  const read = readRuntimeStamp(cwd);
+  if (!read.ok) {
+    return read.issues.map((issue) => `${WORKSPACE_KIT_RUNTIME_STAMP_RELATIVE_PATH}: ${issue.code}`);
+  }
+  const verification = verifyRuntimeStamp(read.stamp, {
+    currentIdentity: read.stamp,
+    checkNativeSqlite: false
+  });
+  return verification.issues.map((issue) => `${WORKSPACE_KIT_RUNTIME_STAMP_RELATIVE_PATH}: ${issue.code}`);
 }
 
 function parseDetachArgv(argv: string[]): { dryRun: boolean; json: boolean } {
@@ -353,6 +391,9 @@ export async function runCli(
     const unsupportedPaths: string[] = [];
 
     const ownedPathSet = new Set(ownedPathsDocument.ownedPaths);
+    for (const ownedPath of currentOwnedPaths) {
+      ownedPathSet.add(ownedPath);
+    }
     ownedPathSet.add(defaultWorkspaceKitPaths.profile);
     ownedPathSet.add(defaultWorkspaceKitPaths.profileSchema);
     ownedPathSet.add(defaultWorkspaceKitPaths.manifest);
@@ -398,11 +439,17 @@ export async function runCli(
             "Phase 3 baseline: managed kit-owned paths are updated by workspace-kit upgrade with backup safety."
         })
       ],
+      [WORKSPACE_KIT_RUNTIME_LAUNCHER_RELATIVE_PATH, generateWorkspaceKitLauncherContent()],
       [".cursor/rules/workspace-kit-profile-pointer.mdc", `${pointerRuleContent}`]
     ]);
 
     for (const ownedPath of ownedPathSet) {
       if (ownedPath === defaultWorkspaceKitPaths.profile) {
+        preservedPaths.push(ownedPath);
+        continue;
+      }
+
+      if (ownedPath === WORKSPACE_KIT_RUNTIME_STAMP_RELATIVE_PATH) {
         preservedPaths.push(ownedPath);
         continue;
       }
@@ -424,6 +471,15 @@ export async function runCli(
         desiredContent,
         backupRoot
       );
+      if (ownedPath === WORKSPACE_KIT_RUNTIME_LAUNCHER_RELATIVE_PATH) {
+        const launcherPath = path.join(cwd, ownedPath);
+        const executableBefore = await isExecutable(launcherPath);
+        await fs.chmod(launcherPath, 0o755);
+        if (!changed && !executableBefore) {
+          updatedPaths.push(ownedPath);
+          continue;
+        }
+      }
       if (changed) {
         updatedPaths.push(ownedPath);
       }
@@ -470,10 +526,27 @@ export async function runCli(
     const driftFindings: string[] = [];
     const warnings: string[] = [];
     const expectedAssets = createDriftExpectedAssets(profile);
+    expectedAssets.set(WORKSPACE_KIT_RUNTIME_LAUNCHER_RELATIVE_PATH, generateWorkspaceKitLauncherContent());
     const ownedPathsDocument = await readOwnedPathsDocument(cwd);
     const ownedPathSet = new Set(ownedPathsDocument.ownedPaths);
+    for (const managedRuntimePath of [
+      WORKSPACE_KIT_RUNTIME_STAMP_RELATIVE_PATH,
+      WORKSPACE_KIT_RUNTIME_LAUNCHER_RELATIVE_PATH
+    ]) {
+      if (!ownedPathSet.has(managedRuntimePath)) {
+        driftFindings.push(
+          `${defaultWorkspaceKitPaths.ownedPaths}: missing managed runtime path ${managedRuntimePath}`
+        );
+        ownedPathSet.add(managedRuntimePath);
+      }
+    }
 
     for (const ownedPath of ownedPathSet) {
+      if (ownedPath === WORKSPACE_KIT_RUNTIME_STAMP_RELATIVE_PATH) {
+        driftFindings.push(...runtimeStampDriftFindings(cwd));
+        continue;
+      }
+
       const expectedContent = expectedAssets.get(ownedPath);
       if (!expectedContent) {
         warnings.push(`unsupported owned path skipped: ${ownedPath}`);
@@ -491,6 +564,12 @@ export async function runCli(
 
       if (!driftContentMatches(ownedPath, existingContent, expectedContent)) {
         driftFindings.push(`${ownedPath}: content drift detected`);
+      }
+      if (
+        ownedPath === WORKSPACE_KIT_RUNTIME_LAUNCHER_RELATIVE_PATH &&
+        !(await isExecutable(targetPath))
+      ) {
+        driftFindings.push(`${ownedPath}: not executable`);
       }
     }
 
@@ -599,6 +678,7 @@ export async function runCli(
   const deliveryLoopStrict = doctorRest.includes("--delivery-loop-strict");
   const wantDeliveryLoop = deliveryLoopStrict || doctorRest.includes("--delivery-loop");
 
+  const runtimeContract = await collectDoctorRuntimeContractStatus(cwd);
   const issues = await collectDoctorContractIssues(cwd);
 
   if (issues.length > 0) {
@@ -610,11 +690,12 @@ export async function runCli(
             code: "doctor-contract-failed",
             schemaVersion: 1,
             message: "workspace-kit doctor failed validation.",
-            data: { issues },
+            data: { issues, runtimeContract },
             remediation: {
               humanHints: [
                 "workspace-kit --help",
-                "Fix missing or invalid paths reported in data.issues"
+                "Fix missing or invalid paths reported in data.issues",
+                "For runtime contract drift, repair setup and run `workspace-kit init --force`."
               ]
             }
           },
@@ -686,6 +767,9 @@ export async function runCli(
   lines.push("workspace-kit doctor passed.");
   lines.push("All canonical workspace-kit contract files are present and parseable JSON.");
   lines.push(
+    `Runtime contract healthy: ${runtimeContract.stampPath} and ${runtimeContract.launcherPath}.`
+  );
+  lines.push(
     "Effective workspace config resolved; task planning persistence checks passed (including SQLite when configured)."
   );
   for (const line of await collectTaskPersistenceDoctorSummaryLines(cwd)) {
@@ -719,6 +803,7 @@ export async function runCli(
           message: "workspace-kit doctor passed.",
           data: {
             summaryText: lines,
+            runtimeContract,
             nextHint: `workspace-kit run --json lists commands; see ${AGENT_CLI_MAP_HUMAN_DOC}`
           }
         },

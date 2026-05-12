@@ -11,7 +11,8 @@ import {
   inspectNodeExecutableCandidates,
   parseRunCommandOutput,
   pickNodeExecutable,
-  resolveCliJs
+  resolveCliJs,
+  resolveRuntimeStampExecutionPlan
 } from "../dist/runtime/command-client.js";
 
 function writeFakeNode(filePath, version, body = "exit 0") {
@@ -99,6 +100,119 @@ test("resolveCliJs prefers extension-packaged workspace-kit over attached worksp
     fs.writeFileSync(extensionCli, "// extension cli\n");
 
     assert.equal(resolveCliJs(workspaceRoot, undefined, extensionRoot), extensionCli);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test("resolveRuntimeStampExecutionPlan prefers canonical workspace launcher", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "wc-runtime-plan-"));
+  try {
+    const workspaceRoot = path.join(tempRoot, "workspace");
+    const packageRoot = path.join(tempRoot, "package");
+    const nodePath = path.join(tempRoot, "node22");
+    const launcherPath = path.join(workspaceRoot, ".workspace-kit", "bin", "wk");
+    fs.mkdirSync(path.dirname(launcherPath), { recursive: true });
+    fs.mkdirSync(path.join(packageRoot, "dist"), { recursive: true });
+    fs.writeFileSync(nodePath, "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+    fs.writeFileSync(path.join(packageRoot, "dist", "cli.js"), "// cli\n");
+    fs.writeFileSync(launcherPath, "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+    fs.writeFileSync(
+      path.join(workspaceRoot, ".workspace-kit", "runtime.json"),
+      JSON.stringify({ schemaVersion: 1, nodeExecutable: nodePath, packageRoot }, null, 2)
+    );
+
+    const plan = resolveRuntimeStampExecutionPlan(workspaceRoot);
+    assert.equal(plan.kind, "launcher");
+    assert.equal(plan.executable, launcherPath);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test("CommandClient defaults to stamped launcher before Node probing", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "wc-runtime-client-"));
+  try {
+    const workspaceRoot = path.join(tempRoot, "workspace");
+    const packageRoot = path.join(tempRoot, "package");
+    const nodePath = path.join(tempRoot, "node22");
+    const capturePath = path.join(tempRoot, "argv.json");
+    const launcherPath = path.join(workspaceRoot, ".workspace-kit", "bin", "wk");
+    fs.mkdirSync(path.dirname(launcherPath), { recursive: true });
+    fs.mkdirSync(path.join(packageRoot, "dist"), { recursive: true });
+    fs.writeFileSync(nodePath, "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+    fs.writeFileSync(path.join(packageRoot, "dist", "cli.js"), "// cli\n");
+    fs.writeFileSync(path.join(workspaceRoot, ".nvmrc"), "18\n");
+    fs.writeFileSync(
+      launcherPath,
+      `#!/bin/sh\nprintf '{"ok":true,"data":{"argv":["%s","%s","%s"]}}\n' "$1" "$2" "$3"\nprintf '%s\n' "$*" > ${JSON.stringify(capturePath)}\n`,
+      { mode: 0o755 }
+    );
+    fs.writeFileSync(
+      path.join(workspaceRoot, ".workspace-kit", "runtime.json"),
+      JSON.stringify({ schemaVersion: 1, nodeExecutable: nodePath, nodeVersion: "v22.11.0", packageRoot }, null, 2)
+    );
+
+    const client = new CommandClient(workspaceRoot, { resolveNodeExecutable: () => "/__must_not_be_used__/node" });
+    const out = await client.run("dashboard-summary", {});
+
+    assert.equal(out.ok, true);
+    assert.deepEqual(out.data.argv, ["run", "dashboard-summary", "{}"]);
+    assert.equal(fs.readFileSync(capturePath, "utf8").trim(), "run dashboard-summary {}");
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test("CommandClient falls back to stamped Node from runtime stamp when launcher is absent", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "wc-runtime-stamped-node-client-"));
+  try {
+    const workspaceRoot = path.join(tempRoot, "workspace");
+    const packageRoot = path.join(tempRoot, "package");
+    const nodePath = path.join(tempRoot, "node22");
+    const capturePath = path.join(tempRoot, "argv.txt");
+    const cliPath = path.join(packageRoot, "dist", "cli.js");
+    fs.mkdirSync(path.join(workspaceRoot, ".workspace-kit"), { recursive: true });
+    fs.mkdirSync(path.dirname(cliPath), { recursive: true });
+    fs.writeFileSync(cliPath, "// cli\n");
+    fs.writeFileSync(path.join(workspaceRoot, ".nvmrc"), "18\n");
+    fs.writeFileSync(
+      nodePath,
+      `#!/bin/sh\nprintf '%s\n' "$@" > ${JSON.stringify(capturePath)}\nprintf '{"ok":true,"code":"tasks-listed"}\n'\n`,
+      { mode: 0o755 }
+    );
+    fs.writeFileSync(
+      path.join(workspaceRoot, ".workspace-kit", "runtime.json"),
+      JSON.stringify({ schemaVersion: 1, nodeExecutable: nodePath, nodeVersion: "v22.11.0", packageRoot }, null, 2)
+    );
+
+    const client = new CommandClient(workspaceRoot, { resolveNodeExecutable: () => "/__must_not_be_used__/node" });
+    const out = await client.run("list-tasks", {});
+
+    assert.equal(out.ok, true);
+    assert.equal(out.code, "tasks-listed");
+    const captured = fs.readFileSync(capturePath, "utf8");
+    assert.match(captured, /dist\/cli\.js/);
+    assert.match(captured, /run\nlist-tasks\n\{\}/);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test("CommandClient returns structured diagnostics for a broken runtime stamp", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "wc-runtime-broken-"));
+  try {
+    const workspaceRoot = path.join(tempRoot, "workspace");
+    fs.mkdirSync(path.join(workspaceRoot, ".workspace-kit"), { recursive: true });
+    fs.writeFileSync(path.join(workspaceRoot, ".workspace-kit", "runtime.json"), "{not json", "utf8");
+
+    const client = new CommandClient(workspaceRoot, { resolveNodeExecutable: () => process.execPath });
+    const out = await client.run("dashboard-summary", {});
+
+    assert.equal(out.ok, false);
+    assert.equal(out.code, "extension-runtime-stamp-invalid");
+    assert.match(out.message, /Runtime stamp is not valid JSON/);
+    assert.match(out.remediation.command, /workspace-kit init --force/);
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

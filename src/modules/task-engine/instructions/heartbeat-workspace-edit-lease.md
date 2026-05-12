@@ -6,6 +6,8 @@ agentCapsule|v=1|command=heartbeat-workspace-edit-lease|module=task-engine|schem
 
 Extend **`expiresAt`** for an **active** lease held by the same **`agentSessionId`**. Fails when missing, expired, or held by another session.
 
+When another session owns the lease, the denied response includes **`holder.agentSessionId`**, **`holder.taskId`**, **`holder.expiresAt`**, **`alternatives`**, one **`recommendedNextAction`**, and **`leaseStatus`**.
+
 Sensitive: JSON **`policyApproval`**.
 
 ## Usage

@@ -54,8 +54,8 @@ Install Workflow Cannon in a real project, then **attach it with `init` before `
 ```bash
 npm install @workflow-cannon/workspace-kit
 npx workspace-kit init
-npx workspace-kit doctor
-npx workspace-kit start
+./.workspace-kit/bin/wk doctor
+./.workspace-kit/bin/wk start
 ```
 
 In **non-interactive** environments (CI, scripts), use `WORKSPACE_KIT_POLICY_APPROVAL='{"confirmed":true,"rationale":"..."}'` or `npx workspace-kit init --yes --approval-rationale "…"` instead of the interactive confirmation prompt.
@@ -65,11 +65,15 @@ Using pnpm instead:
 ```bash
 pnpm add @workflow-cannon/workspace-kit
 pnpm exec wk init
-pnpm exec wk doctor
-pnpm exec wk start
+./.workspace-kit/bin/wk doctor
+./.workspace-kit/bin/wk start
 ```
 
-Use `npx workspace-kit --help` / `pnpm exec wk --help` when exploring the full command surface.
+After `init`, prefer `./.workspace-kit/bin/wk` in attached projects. It reads `.workspace-kit/runtime.json` and uses the Node runtime validated during `init`, so routine agent commands do not require a prior `nvm use`. In the Workflow Cannon source checkout, `pnpm exec wk` / `node dist/cli.js` remain development entrypoints.
+
+Compatibility aliases remain available when the package manager environment is already correct: `npx workspace-kit init`, `npx workspace-kit doctor`, `npx workspace-kit start`; or `pnpm exec wk init`, `pnpm exec wk doctor`, `pnpm exec wk start`.
+
+Use `npx workspace-kit --help` / `pnpm exec wk --help` before attach, and `./.workspace-kit/bin/wk --help` after attach, when exploring the full command surface.
 
 What you get immediately:
 
@@ -86,8 +90,8 @@ What the team experience looks like:
 Try a safe first lap behind the scenes:
 
 ```bash
-npx workspace-kit run get-next-actions '{}'
-npx workspace-kit run list-tasks '{}'
+./.workspace-kit/bin/wk run get-next-actions '{}'
+./.workspace-kit/bin/wk run list-tasks '{}'
 ```
 
 ## Most important features

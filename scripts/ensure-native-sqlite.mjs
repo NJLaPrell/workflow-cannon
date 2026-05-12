@@ -11,6 +11,7 @@ import {
   formatNodeRuntimeIdentity,
   nativeSqliteRecoveryHint
 } from "./native-sqlite-diagnostics.mjs";
+import { writeRuntimeStamp } from "./runtime-stamp.mjs";
 
 const pkgRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 /** Directory where the user ran install (npm/pnpm set this for lifecycle scripts). */
@@ -22,6 +23,7 @@ async function main() {
     const { default: Database } = await import("better-sqlite3");
     const db = new Database(":memory:");
     db.close();
+    writeRuntimeStamp(installRoot, pkgRoot);
     return;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -63,6 +65,7 @@ async function main() {
   const { default: Database } = await import("better-sqlite3");
   const db = new Database(":memory:");
   db.close();
+  writeRuntimeStamp(installRoot, pkgRoot);
 }
 
 main().catch((e) => {
