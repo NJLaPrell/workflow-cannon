@@ -2,6 +2,16 @@ import * as vscode from "vscode";
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { CommandClient } from "../../runtime/command-client.js";
+import type { DrawerFormSpec, DrawerValidationResult } from "../dashboard/dashboard-input-drawer.js";
+import {
+  buildGuidanceAckDrawerSpec,
+  buildGuidanceRegistryVersionMutationDrawerSpec,
+  buildGuidanceShadowFeedbackDrawerSpec,
+  renderDrawerFormHtml,
+  validateGuidanceAckSubmit,
+  validateGuidanceRegistryVersionMutationSubmit,
+  validateGuidanceShadowFeedbackSubmit
+} from "../dashboard/dashboard-input-drawer.js";
 import {
   renderGuidanceActionResultInnerHtml,
   renderGuidancePreviewInnerHtml,
@@ -212,6 +222,12 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
   private autoRefreshTimer: ReturnType<typeof setTimeout> | undefined;
   private guidanceRegistryMutationAllowed = false;
   private guidanceRegistryMutationDenial: string | null = null;
+  private guidanceSidebarDrawer:
+    | {
+        resolve: (values: Record<string, string> | null) => void;
+        validateSubmit?: (values: Record<string, string>) => DrawerValidationResult;
+      }
+    | undefined;
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -232,6 +248,18 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
     };
     webview.html = this.buildHtmlShell(webview);
     webview.onDidReceiveMessage(async (msg) => {
+      if (msg?.type === "drawerSubmit") {
+        const raw = (msg as { values?: unknown }).values;
+        await this.onSidebarDrawerSubmit(
+          webview,
+          raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {}
+        );
+        return;
+      }
+      if (msg?.type === "drawerCancel") {
+        await this.onSidebarDrawerCancel(webview);
+        return;
+      }
       if (msg?.type === "load") {
         await this.pushSummary(webview);
       }
@@ -336,6 +364,7 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async pushSummary(webview: vscode.Webview): Promise<void> {
+    this.cancelSidebarDrawer(webview);
     const summary = await this.client.run("cae-dashboard-summary", { schemaVersion: 1 });
     const product =
       summary.ok && summary.data && typeof summary.data === "object"
@@ -432,18 +461,74 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
     }, 1500);
   }
 
+  private cancelSidebarDrawer(webview: vscode.Webview): void {
+    const pending = this.guidanceSidebarDrawer;
+    if (!pending) {
+      return;
+    }
+    this.guidanceSidebarDrawer = undefined;
+    void webview.postMessage({ type: "wcDrawerClose" });
+    pending.resolve(null);
+  }
+
+  private async openSidebarDrawer(
+    webview: vscode.Webview,
+    spec: DrawerFormSpec,
+    validateSubmit?: (values: Record<string, string>) => DrawerValidationResult
+  ): Promise<Record<string, string> | null> {
+    return await new Promise((resolve) => {
+      this.guidanceSidebarDrawer = { resolve, validateSubmit };
+      void webview.postMessage({ type: "wcDrawerOpen", html: renderDrawerFormHtml(spec) });
+    });
+  }
+
+  private async onSidebarDrawerSubmit(
+    webview: vscode.Webview,
+    raw: Record<string, unknown>
+  ): Promise<void> {
+    const pending = this.guidanceSidebarDrawer;
+    if (!pending) {
+      return;
+    }
+    const strVals: Record<string, string> = {};
+    for (const k of Object.keys(raw)) {
+      strVals[k] = String(raw[k] ?? "");
+    }
+    if (pending.validateSubmit) {
+      const v = pending.validateSubmit(strVals);
+      if (!v.ok) {
+        await webview.postMessage({ type: "wcDrawerValidation", message: v.error });
+        return;
+      }
+    }
+    this.guidanceSidebarDrawer = undefined;
+    await webview.postMessage({ type: "wcDrawerClose" });
+    pending.resolve(strVals);
+  }
+
+  private async onSidebarDrawerCancel(webview: vscode.Webview): Promise<void> {
+    const pending = this.guidanceSidebarDrawer;
+    if (!pending) {
+      return;
+    }
+    this.guidanceSidebarDrawer = undefined;
+    await webview.postMessage({ type: "wcDrawerClose" });
+    pending.resolve(null);
+  }
+
   private async recordAck(webview: vscode.Webview, msg: Record<string, unknown>): Promise<void> {
     const traceId = typeof msg.traceId === "string" ? msg.traceId.trim() : "";
     const activationId = typeof msg.activationId === "string" ? msg.activationId.trim() : "";
     const ackToken = typeof msg.ackToken === "string" ? msg.ackToken.trim() : "";
     if (!traceId || !activationId || !ackToken) return;
-    const confirmed = await vscode.window.showWarningMessage(
-      "Record Guidance acknowledgement? This means “I read this guidance”; it is not policy approval for another sensitive command.",
-      { modal: true },
-      "Record acknowledgement"
+    const defaultActor = this.defaultActorFromEnvironment() ?? "dashboard";
+    const submitted = await this.openSidebarDrawer(
+      webview,
+      buildGuidanceAckDrawerSpec({ traceId, activationId, defaultActor }),
+      validateGuidanceAckSubmit
     );
-    if (confirmed !== "Record acknowledgement") return;
-    const actor = (await this.resolveActionActor("Actor for acknowledgement")) ?? "dashboard";
+    if (!submitted) return;
+    const actor = (submitted.actor ?? "").trim() || defaultActor;
     const r = await this.client.run("cae-satisfy-ack", {
       schemaVersion: 1,
       traceId,
@@ -468,17 +553,21 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
     const commandName = typeof msg.commandName === "string" ? msg.commandName.trim() : "";
     const signal = msg.signal === "noisy" ? "noisy" : "useful";
     if (!traceId || !activationId || !commandName) return;
-    const confirmed = await vscode.window.showWarningMessage(
-      `Mark this Guidance item ${signal}? This records shadow feedback and may require command policy approval.`,
-      { modal: true },
-      `Mark ${signal}`
+    const defaultActor = this.defaultActorFromEnvironment() ?? "dashboard";
+    const submitted = await this.openSidebarDrawer(
+      webview,
+      buildGuidanceShadowFeedbackDrawerSpec({
+        signal,
+        traceId,
+        activationId,
+        commandName,
+        defaultActor
+      }),
+      validateGuidanceShadowFeedbackSubmit
     );
-    if (confirmed !== `Mark ${signal}`) return;
-    const actor = (await this.resolveActionActor("Actor for feedback")) ?? "dashboard";
-    const note = await vscode.window.showInputBox({
-      prompt: "Optional feedback note",
-      placeHolder: "What made this Guidance useful or noisy?"
-    });
+    if (!submitted) return;
+    const actor = (submitted.actor ?? "").trim() || defaultActor;
+    const note = (submitted.note ?? "").trim();
     const payload: Record<string, unknown> = {
       schemaVersion: 1,
       traceId,
@@ -491,7 +580,7 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
         rationale: "Guidance tab shadow feedback confirmation"
       }
     };
-    if (note && note.trim()) payload.note = note.trim();
+    if (note) payload.note = note;
     const r = await this.client.run("cae-record-shadow-feedback", payload);
     await webview.postMessage({
       type: "setActionResult",
@@ -526,56 +615,45 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
         return;
       }
 
-      const rationale = await vscode.window.showInputBox({
-        prompt: "Rationale for CAE guidance-set update",
-        placeHolder: "Why is this guidance-set change needed?"
-      });
-      if (!rationale || !rationale.trim()) return;
-
-      let toVersionIdForConfirm = "";
-      if (command === "cae-clone-registry-version") {
-        if (!versionId || versionId === "n/a") return;
-        const stamp = new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
-        const entered = await vscode.window.showInputBox({
-          prompt: "Draft guidance-set version id",
-          value: `cae.reg.draft.${stamp}`
-        });
-        if (!entered || !entered.trim()) return;
-        toVersionIdForConfirm = entered.trim();
-      }
-
-      const actor = (await this.resolveActionActor("Actor for CAE guidance-set update")) ?? "";
-      if (!actor.trim()) {
-        await vscode.window.showErrorMessage(
-          "Actor is required (set Git email, WORKSPACE_KIT_ACTOR, or enter a value)."
-        );
+      const envActor = this.defaultActorFromEnvironment() ?? "";
+      const stamp = new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
+      const draftDefault = `cae.reg.draft.${stamp}`;
+      const needsDraft = command === "cae-clone-registry-version";
+      if (needsDraft && (!versionId || versionId === "n/a")) {
         return;
       }
-
-      const targetSummary =
+      const targetSummaryPlain =
         command === "cae-activate-registry-version"
           ? `Activate version: ${versionId || "(missing)"}`
           : command === "cae-rollback-registry-version"
             ? "Roll back to the immediately previous guidance-set version (kit selects the target)."
-            : `Clone from ${versionId} → new draft ${toVersionIdForConfirm}`;
+            : `Clone from ${versionId} into a new draft (enter draft id below).`;
 
-      const detail = [
-        targetSummary,
-        `Actor: ${actor}`,
-        `Rationale: ${rationale.trim()}`,
-        "",
-        "Payload will include caeMutationApproval (CAE governance lane only).",
-        "That is not Tier A/B policyApproval on workspace-kit run or run-transition.",
-        "",
-        "On success, an audit row is written to planning SQLite."
-      ].join("\n");
-
-      const confirmed = await vscode.window.showWarningMessage(
-        "Confirm CAE registry mutation?",
-        { modal: true, detail },
-        "Run mutation"
+      const submitted = await this.openSidebarDrawer(
+        webview,
+        buildGuidanceRegistryVersionMutationDrawerSpec({
+          command,
+          actionLabel: action,
+          targetSummaryPlain,
+          needsDraftVersionId: needsDraft,
+          draftVersionDefault: draftDefault,
+          defaultActor: envActor || "dashboard"
+        }),
+        (vals) => validateGuidanceRegistryVersionMutationSubmit(vals, needsDraft)
       );
-      if (confirmed !== "Run mutation") return;
+      if (!submitted) return;
+      const rationale = (submitted.rationale ?? "").trim();
+      const actor = (submitted.actor ?? "").trim();
+      if (!actor) {
+        await vscode.window.showErrorMessage(
+          "Actor is required (set Git email, WORKSPACE_KIT_ACTOR, or enter a value in the drawer)."
+        );
+        return;
+      }
+      let toVersionIdForConfirm = "";
+      if (needsDraft) {
+        toVersionIdForConfirm = (submitted.draftVersionId ?? "").trim();
+      }
 
       const payload: Record<string, unknown> = {
         schemaVersion: 1,
@@ -624,12 +702,6 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
       process.env.USERNAME
     ];
     return candidates.find((candidate) => typeof candidate === "string" && candidate.trim().length > 0)?.trim();
-  }
-
-  private async resolveActionActor(prompt: string): Promise<string | undefined> {
-    const actor = this.defaultActorFromEnvironment();
-    if (actor) return actor;
-    return vscode.window.showInputBox({ prompt, value: "dashboard" });
   }
 
   private buildHtmlShell(webview: vscode.Webview): string {
@@ -1016,8 +1088,50 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
       copyVisibleJson(t);
     }
   });
+  document.addEventListener('click', function(ev) {
+    var dh = document.getElementById('wc-drawer-host');
+    if (!dh || dh.classList.contains('wc-drawer-host--hidden')) return;
+    var t = ev.target && ev.target.closest ? ev.target.closest('[data-wc-drawer-action]') : null;
+    if (!t || !dh.contains(t)) return;
+    var act = t.getAttribute('data-wc-drawer-action');
+    if (act === 'backdrop' || act === 'cancel') { vscode.postMessage({ type: 'drawerCancel' }); return; }
+    if (act === 'submit') {
+      var vals = {};
+      dh.querySelectorAll('[data-wc-drawer-field]').forEach(function(el) {
+        var fid = el.getAttribute('data-wc-drawer-field');
+        if (!fid) return;
+        vals[fid] = ('value' in el && el.value != null) ? String(el.value) : '';
+      });
+      vscode.postMessage({ type: 'drawerSubmit', values: vals });
+    }
+  });
+  document.addEventListener('keydown', function(ev) {
+    if (ev.key !== 'Escape') return;
+    var dh = document.getElementById('wc-drawer-host');
+    if (!dh || dh.classList.contains('wc-drawer-host--hidden')) return;
+    ev.preventDefault();
+    vscode.postMessage({ type: 'drawerCancel' });
+  });
   window.addEventListener('message', function(ev) {
     var m = ev.data;
+    if (m && m.type === 'wcDrawerOpen' && typeof m.html === 'string') {
+      var dh = document.getElementById('wc-drawer-host');
+      if (!dh) return;
+      dh.innerHTML = m.html;
+      dh.classList.remove('wc-drawer-host--hidden');
+      dh.setAttribute('aria-hidden', 'false');
+      return;
+    }
+    if (m && m.type === 'wcDrawerClose') {
+      var dh2 = document.getElementById('wc-drawer-host');
+      if (dh2) { dh2.innerHTML = ''; dh2.classList.add('wc-drawer-host--hidden'); dh2.setAttribute('aria-hidden', 'true'); }
+      return;
+    }
+    if (m && m.type === 'wcDrawerValidation' && typeof m.message === 'string') {
+      var vv = document.getElementById('wc-drawer-validation');
+      if (vv) { vv.textContent = m.message; vv.hidden = false; }
+      return;
+    }
     if (m && m.type === 'poke') {
       requestLoad(true);
       return;
@@ -1201,6 +1315,40 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
     .gd-subsection-btn.gd-subsection-active { opacity: 1; font-weight: 600; border-color: var(--vscode-button-background); color: var(--vscode-foreground); background: color-mix(in srgb, var(--vscode-button-background) 10%, transparent); }
     .gd-subsection { display: none; }
     #subsection-wizard { display: block; }
+    .wc-drawer-host { position: fixed; inset: 0; z-index: 20000; pointer-events: none; }
+    .wc-drawer-host:not(.wc-drawer-host--hidden) { pointer-events: auto; }
+    .wc-drawer-host--hidden { display: none !important; }
+    .wc-drawer-scrim { position: absolute; inset: 0; background: rgba(0,0,0,0.5); }
+    .wc-drawer-panel {
+      position: absolute; left: 8px; right: 8px; bottom: 8px; max-height: 78vh; overflow: auto;
+      background: var(--vscode-editorWidget-background);
+      color: var(--vscode-editorWidget-foreground);
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.45));
+      border-radius: 8px; padding: 10px 12px 12px;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.35);
+    }
+    .wc-drawer-title { margin: 0 0 6px 0; font-size: 14px; font-weight: 600; }
+    .wc-drawer-desc { margin: 0 0 10px 0; opacity: 0.9; line-height: 1.35; }
+    .wc-drawer-validation { margin: 0 0 8px 0; padding: 6px 8px; border-radius: 4px; background: var(--vscode-inputValidation-errorBackground); color: var(--vscode-inputValidation-errorForeground); }
+    .wc-drawer-fields { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+    .wc-drawer-field-label { display: block; font-size: 11px; font-weight: 600; margin-bottom: 4px; }
+    .wc-drawer-input, .wc-drawer-textarea, .wc-drawer-select {
+      width: 100%; box-sizing: border-box; font-family: var(--vscode-font-family); font-size: 12px;
+      color: var(--vscode-input-foreground); background: var(--vscode-input-background);
+      border: 1px solid var(--vscode-input-border, rgba(127,127,127,.35)); border-radius: 4px; padding: 4px 6px;
+    }
+    .wc-drawer-textarea { resize: vertical; min-height: 48px; }
+    .wc-drawer-summary-body { font-size: 12px; line-height: 1.4; padding: 6px 8px; border-radius: 4px; background: var(--vscode-textCodeBlock-background); }
+    .wc-drawer-footer { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+    .wc-drawer-btn { padding: 4px 12px; font-size: 12px; border-radius: 4px; cursor: pointer; }
+    .wc-drawer-btn-secondary {
+      color: var(--vscode-foreground); background: transparent;
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.45));
+    }
+    .wc-drawer-btn-primary {
+      color: var(--vscode-button-foreground); background: var(--vscode-button-background);
+      border: 1px solid var(--vscode-button-border, var(--vscode-contrastBorder, transparent));
+    }
   </style>
 </head>
 <body>
@@ -1387,6 +1535,8 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
 
   <!-- Always-visible status bar -->
   <div id="gd-status" class="gd-status gd-status-info" role="status">Guidance status is loading.</div>
+
+  <div id="wc-drawer-host" class="wc-drawer-host wc-drawer-host--hidden" aria-hidden="true"></div>
 
   <script>${bootstrap}</script>
 </body>

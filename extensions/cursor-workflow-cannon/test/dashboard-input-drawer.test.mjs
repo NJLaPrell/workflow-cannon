@@ -185,3 +185,36 @@ test("drawer: guidance CAE mutation spec + validation", async () => {
   assert.equal(good.ok, true);
   if (good.ok) assert.equal(good.values.rationale, "Because QA asked");
 });
+
+test("drawer: guidance sidebar ack + registry version specs", async () => {
+  const mod = await import("../dist/views/dashboard/dashboard-input-drawer.js");
+  const ack = mod.buildGuidanceAckDrawerSpec({
+    traceId: "tr1",
+    activationId: "act1",
+    defaultActor: "a@b.com"
+  });
+  assert.match(mod.renderDrawerFormHtml(ack), /data-wc-drawer-field="actor"/);
+  assert.equal(mod.validateGuidanceAckSubmit({ actor: "" }).ok, false);
+  assert.equal(mod.validateGuidanceAckSubmit({ actor: "x" }).ok, true);
+
+  const reg = mod.buildGuidanceRegistryVersionMutationDrawerSpec({
+    command: "cae-activate-registry-version",
+    actionLabel: "activate",
+    targetSummaryPlain: "Activate v1",
+    needsDraftVersionId: false,
+    draftVersionDefault: "",
+    defaultActor: "op"
+  });
+  const badR = mod.validateGuidanceRegistryVersionMutationSubmit({ rationale: "", actor: "a" }, false);
+  assert.equal(badR.ok, false);
+  const goodR = mod.validateGuidanceRegistryVersionMutationSubmit(
+    { rationale: "ok", actor: "a" },
+    false
+  );
+  assert.equal(goodR.ok, true);
+  const badClone = mod.validateGuidanceRegistryVersionMutationSubmit(
+    { rationale: "ok", actor: "a", draftVersionId: " " },
+    true
+  );
+  assert.equal(badClone.ok, false);
+});

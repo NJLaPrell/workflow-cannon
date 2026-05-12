@@ -8,6 +8,15 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.87.1] - 2026-05-11
+
+Phase 91 follow-up — **Guidance sidebar CAE confirmations via dashboard drawers**. The Guidance webview sidebar uses the same drawer UX as the dashboard Guidance panel for acknowledgements, shadow feedback, and registry-version mutations (rationale + actor), with Escape/overlay dismissal and client-side validation before submit.
+
+### Added
+
+- Cursor extension: `GuidanceViewProvider` drawer wiring for ack / shadow feedback / registry mutations; drawer specs and validators in `dashboard-input-drawer`.
+- Tests: `dashboard-input-drawer` coverage for guidance ack and registry-version drawer specs.
+
 ## [0.87.0] - 2026-05-12
 
 Phase 90 — **Workspace coordination readout and list-tasks intake schema alignment**. Ships read-only `workspace-coordination-status` (git + `GIT_COMMON_DIR` lease slice), `dashboard-summary.systemStatus.coordination`, compact `workspaceCoordination` on `agent-bootstrap`, Cursor status bar + Status tab coordination card, temp-repo coordination tests, and pilot JSON schema support for `list-tasks` **`includeTaskIntake`** (contracts, snapshot, CLI snippets, regression tests) so agent instructions match runtime validation.
