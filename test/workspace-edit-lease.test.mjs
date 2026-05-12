@@ -182,6 +182,77 @@ test("workspace edit lease: status reports stale and invalid leases", async () =
   assert.equal(invalid.data.leaseStatus.holder, null);
 });
 
+test("workspace edit lease: waitForLease is opt-in and succeeds when free", async () => {
+  const { waitForWorkspaceEditLease } = await import("../dist/modules/task-engine/workspace-edit-lease-commands-runtime.js");
+
+  const ws = mkdtempSync(path.join(tmpdir(), "wc-lease-wait-free-"));
+  git(ws, ["init", "-b", "main"]);
+  git(ws, ["config", "user.email", "t@example.com"]);
+  git(ws, ["config", "user.name", "T"]);
+  writeFileSync(path.join(ws, "README.md"), "x\n");
+  git(ws, ["add", "README.md"]);
+  git(ws, ["commit", "-m", "init"]);
+
+  assert.equal(await waitForWorkspaceEditLease(ctx(ws), { agentSessionId: "sess-a" }), null);
+  const result = await waitForWorkspaceEditLease(ctx(ws), { waitForLease: true, agentSessionId: "sess-a" });
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "workspace-edit-lease-wait-ready");
+  assert.equal(result.data.leaseStatus.state, "lease-free");
+  assert.equal(result.data.holder, null);
+});
+
+test("workspace edit lease: waitForLease times out with holder info", async () => {
+  const { runClaimWorkspaceEditLease, waitForWorkspaceEditLease } = await import("../dist/modules/task-engine/workspace-edit-lease-commands-runtime.js");
+
+  const ws = mkdtempSync(path.join(tmpdir(), "wc-lease-wait-timeout-"));
+  git(ws, ["init", "-b", "main"]);
+  git(ws, ["config", "user.email", "t@example.com"]);
+  git(ws, ["config", "user.name", "T"]);
+  writeFileSync(path.join(ws, "README.md"), "x\n");
+  git(ws, ["add", "README.md"]);
+  git(ws, ["commit", "-m", "init"]);
+
+  const c = ctx(ws);
+  assert.equal(runClaimWorkspaceEditLease(c, { agentSessionId: "holder", taskId: "T9", leaseTtlSeconds: 120 }).ok, true);
+  const result = await waitForWorkspaceEditLease(c, {
+    waitForLease: true,
+    agentSessionId: "waiter",
+    waitForLeaseTimeoutMs: 25,
+    waitForLeasePollMs: 50
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "workspace-edit-lease-wait-timeout");
+  assert.equal(result.data.holder.agentSessionId, "holder");
+  assert.equal(result.data.holder.taskId, "T9");
+});
+
+test("workspace edit lease: waitForLease polls until held lease is released", async () => {
+  const { runClaimWorkspaceEditLease, runReleaseWorkspaceEditLease, waitForWorkspaceEditLease } = await import("../dist/modules/task-engine/workspace-edit-lease-commands-runtime.js");
+
+  const ws = mkdtempSync(path.join(tmpdir(), "wc-lease-wait-release-"));
+  git(ws, ["init", "-b", "main"]);
+  git(ws, ["config", "user.email", "t@example.com"]);
+  git(ws, ["config", "user.name", "T"]);
+  writeFileSync(path.join(ws, "README.md"), "x\n");
+  git(ws, ["add", "README.md"]);
+  git(ws, ["commit", "-m", "init"]);
+
+  const c = ctx(ws);
+  assert.equal(runClaimWorkspaceEditLease(c, { agentSessionId: "holder", leaseTtlSeconds: 120 }).ok, true);
+  setTimeout(() => {
+    runReleaseWorkspaceEditLease(c, { agentSessionId: "holder" });
+  }, 80);
+  const result = await waitForWorkspaceEditLease(c, {
+    waitForLease: true,
+    agentSessionId: "waiter",
+    waitForLeaseTimeoutMs: 1_000,
+    waitForLeasePollMs: 50
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.data.leaseStatus.state, "lease-free");
+  assert.equal(result.data.attempts >= 2, true);
+});
+
 test("workspace edit lease core: readLeaseFile rejects bad json", async () => {
   const { readLeaseFile } = await import("../dist/modules/task-engine/coordination/workspace-edit-lease.js");
   const ws = mkdtempSync(path.join(tmpdir(), "wc-lease-"));
