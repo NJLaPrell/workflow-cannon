@@ -746,3 +746,167 @@ export function validateGuidanceCaeMutationSubmit(values: Record<string, string>
   }
   return { ok: true, values: { rationale } };
 }
+
+/** CAE sidebar (Guidance view) — acknowledge trace read. */
+export function buildGuidanceAckDrawerSpec(p: {
+  traceId: string;
+  activationId: string;
+  defaultActor: string;
+}): DrawerFormSpec {
+  return {
+    workflowId: "guidance-sidebar-ack",
+    title: "Record acknowledgement",
+    descriptionHtml:
+      "Records that you read this guidance. It is <b>not</b> Tier A/B <code>policyApproval</code> for another sensitive <code>wk run</code>.<br/>" +
+      "<b>Trace</b> <code>" +
+      escapeDrawerHtml(p.traceId) +
+      "</code> · <b>Activation</b> <code>" +
+      escapeDrawerHtml(p.activationId) +
+      "</code>",
+    fields: [
+      {
+        id: "actor",
+        kind: "text",
+        label: "Actor",
+        required: true,
+        value: p.defaultActor
+      }
+    ],
+    primaryLabel: "Record acknowledgement",
+    cancelLabel: "Cancel"
+  };
+}
+
+export function validateGuidanceAckSubmit(values: Record<string, string>): DrawerValidationResult {
+  const actor = (values.actor ?? "").trim();
+  if (!actor) {
+    return { ok: false, error: "Actor is required." };
+  }
+  return { ok: true, values: { actor } };
+}
+
+/** CAE sidebar — shadow feedback (cae-record-shadow-feedback uses command policy approval). */
+export function buildGuidanceShadowFeedbackDrawerSpec(p: {
+  signal: "useful" | "noisy";
+  traceId: string;
+  activationId: string;
+  commandName: string;
+  defaultActor: string;
+}): DrawerFormSpec {
+  const lab = p.signal === "useful" ? "Useful" : "Noisy";
+  return {
+    workflowId: "guidance-sidebar-feedback",
+    title: `Mark Guidance ${lab} (shadow)`,
+    descriptionHtml:
+      "Records shadow feedback for CAE tuning. The kit command may require its own <code>policyApproval</code> envelope — separate from CAE registry <code>caeMutationApproval</code>.<br/>" +
+      "<b>Trace</b> <code>" +
+      escapeDrawerHtml(p.traceId) +
+      "</code> · <b>Activation</b> <code>" +
+      escapeDrawerHtml(p.activationId) +
+      "</code> · <b>Command</b> <code>" +
+      escapeDrawerHtml(p.commandName) +
+      "</code>",
+    fields: [
+      { id: "actor", kind: "text", label: "Actor", required: true, value: p.defaultActor },
+      {
+        id: "note",
+        kind: "textarea",
+        label: "Optional note",
+        required: false,
+        rows: 3,
+        value: "",
+        placeholder: "What made this Guidance useful or noisy?"
+      }
+    ],
+    primaryLabel: `Mark ${lab}`,
+    cancelLabel: "Cancel"
+  };
+}
+
+export function validateGuidanceShadowFeedbackSubmit(values: Record<string, string>): DrawerValidationResult {
+  const actor = (values.actor ?? "").trim();
+  if (!actor) {
+    return { ok: false, error: "Actor is required." };
+  }
+  const note = (values.note ?? "").trim();
+  return { ok: true, values: { actor, note } };
+}
+
+export type GuidanceRegistryVersionDrawerParams = {
+  command: string;
+  actionLabel: string;
+  targetSummaryPlain: string;
+  needsDraftVersionId: boolean;
+  draftVersionDefault: string;
+  defaultActor: string;
+};
+
+export function buildGuidanceRegistryVersionMutationDrawerSpec(
+  p: GuidanceRegistryVersionDrawerParams
+): DrawerFormSpec {
+  const fields: DrawerFormField[] = [
+    {
+      id: "rationale",
+      kind: "textarea",
+      label: "Rationale (required)",
+      required: true,
+      rows: 4,
+      placeholder: "Why is this guidance-set change needed?",
+      value: ""
+    },
+    {
+      id: "actor",
+      kind: "text",
+      label: "Actor",
+      required: true,
+      value: p.defaultActor
+    }
+  ];
+  if (p.needsDraftVersionId) {
+    fields.push({
+      id: "draftVersionId",
+      kind: "text",
+      label: "New draft version id",
+      required: true,
+      value: p.draftVersionDefault,
+      placeholder: "cae.reg.draft.…"
+    });
+  }
+  return {
+    workflowId: "guidance-sidebar-registry-version",
+    title: "Confirm CAE guidance-set change",
+    descriptionHtml:
+      "<b>Action</b> " +
+      escapeDrawerHtml(p.actionLabel) +
+      " · <b>Command</b> <code>" +
+      escapeDrawerHtml(p.command) +
+      "</code><br/>" +
+      escapeDrawerHtml(p.targetSummaryPlain) +
+      "<br/>Payload uses <code>caeMutationApproval</code> (CAE governance lane) — <em>not</em> Tier A/B <code>policyApproval</code> on arbitrary <code>wk run</code>.",
+    fields,
+    primaryLabel: "Run mutation",
+    cancelLabel: "Cancel"
+  };
+}
+
+export function validateGuidanceRegistryVersionMutationSubmit(
+  values: Record<string, string>,
+  needsDraft: boolean
+): DrawerValidationResult {
+  const rationale = (values.rationale ?? "").trim();
+  if (!rationale) {
+    return { ok: false, error: "Rationale is required." };
+  }
+  const actor = (values.actor ?? "").trim();
+  if (!actor) {
+    return { ok: false, error: "Actor is required." };
+  }
+  if (needsDraft) {
+    const draftVersionId = (values.draftVersionId ?? "").trim();
+    if (!draftVersionId) {
+      return { ok: false, error: "Draft version id is required for clone." };
+    }
+    return { ok: true, values: { rationale, actor, draftVersionId } };
+  }
+  return { ok: true, values: { rationale, actor } };
+}
