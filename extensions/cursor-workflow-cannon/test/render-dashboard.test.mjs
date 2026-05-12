@@ -252,6 +252,8 @@ test("renderDashboardRootInnerHtml renders editor integration state when provide
   assert.match(html, /<code>vscode<\/code>/);
   assert.match(html, /<b>Chat prefill<\/b> VS Code Chat/);
   assert.match(html, /cursor URL disabled/);
+  assert.doesNotMatch(html, /<section class="dash-card dash-editor-integration"/);
+  assert.match(html, /dash-role-temperament-phase[\s\S]*dash-editor-integration--embedded/);
 });
 
 test("renderDashboardRootInnerHtml renders escaped WC Agent status banner from agentStatus", () => {

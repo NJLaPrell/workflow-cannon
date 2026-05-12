@@ -1481,7 +1481,7 @@ function renderAgentStatusBanner(agentStatus: unknown): string {
   );
 }
 
-function renderEditorIntegrationSection(editorIntegration: unknown): string {
+function renderEditorIntegrationEmbed(editorIntegration: unknown): string {
   if (!editorIntegration || typeof editorIntegration !== "object") {
     return "";
   }
@@ -1494,7 +1494,7 @@ function renderEditorIntegrationSection(editorIntegration: unknown): string {
   const direct = chat.canPrefillDirectly === true ? "Direct" : "Clipboard";
   const external = chat.externalCursorDeeplink === true ? "enabled" : "disabled";
   return (
-    '<section class="dash-card dash-editor-integration" aria-label="Editor integration">' +
+    '<div class="dash-editor-integration dash-editor-integration--embedded" aria-label="Editor integration">' +
     "<p><b>Editor</b> " +
     escapeHtml(appName) +
     ' <span class="muted">' +
@@ -1510,7 +1510,7 @@ function renderEditorIntegrationSection(editorIntegration: unknown): string {
     " · cursor URL " +
     escapeHtml(external) +
     "</span></p>" +
-    "</section>"
+    "</div>"
   );
 }
 
@@ -1653,17 +1653,20 @@ function renderPhaseDeliverBlockInner(
 function renderRoleTemperamentAndPhaseSection(
   ag: unknown,
   ws: Record<string, unknown> | null,
-  readyExecutionSummary?: Record<string, unknown>
+  readyExecutionSummary?: Record<string, unknown>,
+  editorIntegration?: unknown
 ): string {
   const rt = renderRoleTemperamentLines(ag);
   const phaseInner = ws !== null ? renderPhaseDeliverBlockInner(ws, readyExecutionSummary ?? {}) : "";
-  if (rt === "" && phaseInner === "") {
+  const editorInner = renderEditorIntegrationEmbed(editorIntegration);
+  if (rt === "" && phaseInner === "" && editorInner === "") {
     return "";
   }
   return (
     '<section class="dash-card dash-role-temperament-phase" aria-label="Role, temperament, and phase">' +
     rt +
     phaseInner +
+    editorInner +
     "</section>"
   );
 }
@@ -2228,8 +2231,7 @@ export function renderDashboardRootInnerHtml(
   const overviewContent =
     recNextCard +
     renderStatPills(totalReadyCount, totalProposedCount, totalBlockedCount, totalDoneCount) +
-    renderEditorIntegrationSection(editorIntegration) +
-    renderRoleTemperamentAndPhaseSection(d.agentGuidance, ws as Record<string, unknown> | null, res) +
+    renderRoleTemperamentAndPhaseSection(d.agentGuidance, ws as Record<string, unknown> | null, res, editorIntegration) +
     renderPhaseCatalogOverviewSection(phaseSystemSlice) +
     renderWorkspaceBlockersPendingSection(ws as Record<string, unknown> | null) +
     renderTeamExecutionSection(d.teamExecution) +
