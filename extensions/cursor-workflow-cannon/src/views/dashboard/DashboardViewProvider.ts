@@ -16,7 +16,7 @@ import {
   buildTranscriptChurnResearchPrompt
 } from "../../playbook-chat-prompts.js";
 import { confirmAndRunTransition } from "../../run-transition-with-approval.js";
-import { promptAndCreateWishlist } from "../../add-wishlist-item-flow.js";
+import { executeCreateWishlistFromValidatedFields } from "../../add-wishlist-item-flow.js";
 import {
   escapeHtml,
   renderDashboardRootInnerHtml,
@@ -25,10 +25,12 @@ import {
   type PlanningInterviewWizardPanel
 } from "./render-dashboard.js";
 import {
+  buildAddWishlistDrawerSpec,
   buildDismissPhaseNoteDrawerSpec,
   buildRegisterPhaseCatalogDrawerSpec,
   normalizeDrawerValues,
   renderDrawerFormHtml,
+  validateAddWishlistSubmit,
   validateDismissPhaseNoteSubmit,
   validateRegisterPhaseCatalogSubmit
 } from "./dashboard-input-drawer.js";
@@ -49,7 +51,8 @@ type DashboardPlanningWizardState =
 
 type DashboardDrawerSession =
   | { kind: "register-catalog" }
-  | { kind: "dismiss-note"; noteId: string; priority: string };
+  | { kind: "dismiss-note"; noteId: string; priority: string }
+  | { kind: "add-wishlist" };
 
 function logDashboard(message: string): void {
   if (!dashboardOutput) {
@@ -237,10 +240,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         await prefillCursorChat(prompt, { newChat: true });
       }
       if (msg?.type === "addWishlistItem") {
-        await promptAndCreateWishlist(this.client);
-        this.notifyKitStateChanged();
-        this.wishlistPage = 0;
-        await this.pushUpdate();
+        if (this.dashboardDrawerSession) {
+          return;
+        }
+        const html = renderDrawerFormHtml(buildAddWishlistDrawerSpec());
+        this.dashboardDrawerSession = { kind: "add-wishlist" };
+        await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
       }
       if (msg?.type === "prefillImprovementTriageChat") {
         const raw = msg?.taskId;
@@ -839,6 +844,22 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       this.closeDashboardDrawer();
       this.notifyKitStateChanged();
       await vscode.window.showInformationMessage(r.message ?? "Phase note dismissed");
+      return true;
+    }
+    if (session.kind === "add-wishlist") {
+      const validated = validateAddWishlistSubmit(values);
+      if (!validated.ok) {
+        await this.postDrawerValidationToWebview(validated.error);
+        return false;
+      }
+      const created = await executeCreateWishlistFromValidatedFields(this.client, validated.values);
+      if (!created.ok) {
+        await this.postDrawerValidationToWebview(created.error.slice(0, 900));
+        return false;
+      }
+      this.closeDashboardDrawer();
+      this.notifyKitStateChanged();
+      this.wishlistPage = 0;
       return true;
     }
     return false;

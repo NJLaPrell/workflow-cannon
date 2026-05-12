@@ -237,6 +237,117 @@ export function validateRegisterPhaseCatalogSubmit(values: Record<string, string
   };
 }
 
+/** Keys sent to `create-wishlist` (all required, non-empty). */
+export const ADD_WISHLIST_FIELD_KEYS = [
+  "title",
+  "problemStatement",
+  "expectedOutcome",
+  "impact",
+  "constraints",
+  "successSignals",
+  "requestor",
+  "evidenceRef"
+] as const;
+
+export type AddWishlistFieldKey = (typeof ADD_WISHLIST_FIELD_KEYS)[number];
+
+const ADD_WISHLIST_FIELD_SPECS: readonly {
+  key: AddWishlistFieldKey;
+  label: string;
+  placeholder: string;
+  /** Short title uses single-line input; the rest get a little vertical room. */
+  kind: "text" | "textarea";
+  rows?: number;
+}[] = [
+  { key: "title", label: "Short label", placeholder: "e.g. Faster cold start", kind: "text" },
+  {
+    key: "problemStatement",
+    label: "What problem or gap this addresses",
+    placeholder: "Problem / gap",
+    kind: "textarea",
+    rows: 2
+  },
+  {
+    key: "expectedOutcome",
+    label: "What done looks like",
+    placeholder: "Expected outcome",
+    kind: "textarea",
+    rows: 2
+  },
+  { key: "impact", label: "Why it matters", placeholder: "Impact", kind: "textarea", rows: 2 },
+  {
+    key: "constraints",
+    label: "Hard limits (time, compatibility, policy)",
+    placeholder: "Constraints",
+    kind: "textarea",
+    rows: 2
+  },
+  {
+    key: "successSignals",
+    label: "Observable signals of success",
+    placeholder: "Success signals",
+    kind: "textarea",
+    rows: 2
+  },
+  {
+    key: "requestor",
+    label: "Who is asking / accountable",
+    placeholder: "Team or handle",
+    kind: "textarea",
+    rows: 2
+  },
+  {
+    key: "evidenceRef",
+    label: "Link or pointer to supporting context",
+    placeholder: "Issue URL, doc path, …",
+    kind: "textarea",
+    rows: 2
+  }
+] as const;
+
+export function buildAddWishlistDrawerSpec(): DrawerFormSpec {
+  const fields: DrawerFormField[] = ADD_WISHLIST_FIELD_SPECS.map((f) =>
+    f.kind === "text"
+      ? {
+          id: f.key,
+          kind: "text" as const,
+          label: f.label,
+          placeholder: f.placeholder,
+          required: true
+        }
+      : {
+          id: f.key,
+          kind: "textarea" as const,
+          label: f.label,
+          placeholder: f.placeholder,
+          required: true,
+          rows: f.rows ?? 3
+        }
+  );
+  return {
+    workflowId: "add-wishlist",
+    title: "Add wishlist item",
+    descriptionHtml:
+      "All eight fields are required (same contract as <code>create-wishlist</code>). " +
+      "Do not paste secrets — this is operator-facing intake.",
+    fields,
+    primaryLabel: "Create wishlist",
+    cancelLabel: "Cancel"
+  };
+}
+
+export function validateAddWishlistSubmit(values: Record<string, string>): DrawerValidationResult {
+  const out: Record<string, string> = {};
+  for (const key of ADD_WISHLIST_FIELD_KEYS) {
+    const v = (values[key] ?? "").trim();
+    if (!v) {
+      return { ok: false, error: `Field "${key}" is required (non-empty).` };
+    }
+    out[key] = v;
+  }
+  return { ok: true, values: out };
+}
+
 export function validateDismissPhaseNoteSubmit(
   priority: string,
   values: Record<string, string>

@@ -80,7 +80,7 @@ pnpm --filter cursor-workflow-cannon test
 
 - Root **`pnpm run build`** is required first because integration tests invoke real `dist/cli.js` from the repository.
 
-**Manual check (wishlist add):** Dashboard **Add wishlist item** should end with a clear toast (title + id) and an **Open wishlist detail** action; closing any prompt without saving should say the flow was cancelled.
+**Manual check (wishlist add):** Dashboard **Add wishlist item** opens the in-webview drawer (eight required fields); submit runs **`create-wishlist`**. Success ends with a clear toast plus **Open wishlist detail**; validation / API errors show in the drawer strip; Cancel closes the drawer.
 
 ## Commands and operations
 
