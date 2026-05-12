@@ -25,12 +25,16 @@ import {
   type PlanningInterviewWizardPanel
 } from "./render-dashboard.js";
 import {
+  buildAddPhaseNoteDrawerSpec,
   buildAddWishlistDrawerSpec,
   buildAssignTaskPhaseDrawerSpec,
+  buildConvertPhaseNoteDrawerSpec,
   buildDismissPhaseNoteDrawerSpec,
+  buildPersistPhaseNoteProposalsDrawerSpec,
   buildRegisterPhaseCatalogDrawerSpec,
   normalizeDrawerValues,
   renderDrawerFormHtml,
+  validateAddPhaseNoteSubmit,
   validateAddWishlistSubmit,
   validateAssignTaskPhaseSubmit,
   validateDismissPhaseNoteSubmit,
@@ -55,7 +59,10 @@ type DashboardDrawerSession =
   | { kind: "register-catalog" }
   | { kind: "dismiss-note"; noteId: string; priority: string }
   | { kind: "add-wishlist" }
-  | { kind: "assign-task-phase"; taskId: string };
+  | { kind: "assign-task-phase"; taskId: string }
+  | { kind: "add-phase-note" }
+  | { kind: "convert-phase-note"; noteId: string }
+  | { kind: "persist-phase-note-proposals" };
 
 function logDashboard(message: string): void {
   if (!dashboardOutput) {
@@ -750,6 +757,37 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     return phaseKey.length > 0 ? phaseKey : undefined;
   }
 
+  /** Resolve `phaseKey` for `add-phase-note` from the last dashboard-summary payload. */
+  private inferPhaseKeyForKitPhaseNoteFromDashboard(): string | undefined {
+    const data = this.lastDashboardSummaryData;
+    if (!data || typeof data !== "object") {
+      return undefined;
+    }
+    const sys = data.systemStatus as Record<string, unknown> | undefined;
+    const sl = sys?.phase as Record<string, unknown> | undefined;
+    if (!sl || typeof sl !== "object") {
+      return undefined;
+    }
+    for (const key of ["canonicalPhaseKey", "workspaceStatusPhaseKey", "configPhaseKey"] as const) {
+      const v = sl[key];
+      if (typeof v === "string" && v.trim()) {
+        return v.trim();
+      }
+    }
+    const curKP = sl.currentKitPhase;
+    if (typeof curKP === "string" && curKP.trim()) {
+      const fromPhrase = phaseKeyFromPhrase(curKP.trim());
+      if (fromPhrase) {
+        return fromPhrase;
+      }
+      const t = curKP.trim();
+      if (/^\d+$/.test(t)) {
+        return t;
+      }
+    }
+    return undefined;
+  }
+
   /**
    * Register or update a future phase row in `kit_phase_catalog` (upsert-phase-catalog-entry).
    * Uses the in-webview drawer (no `showInputBox`).
@@ -898,6 +936,69 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       await vscode.window.showInformationMessage(`Phase set for ${taskId} → ${phaseKey}`);
       return true;
     }
+    if (session.kind === "add-phase-note") {
+      const phaseKey = this.inferPhaseKeyForKitPhaseNoteFromDashboard();
+      if (!phaseKey) {
+        await this.postDrawerValidationToWebview("Could not resolve phaseKey from dashboard summary; refresh and retry.");
+        return false;
+      }
+      const validated = validateAddPhaseNoteSubmit(values);
+      if (!validated.ok) {
+        await this.postDrawerValidationToWebview(validated.error);
+        return false;
+      }
+      const { noteType, summary, priority, details } = validated.values;
+      const args: Record<string, unknown> = {
+        phaseKey,
+        noteType,
+        summary,
+        priority,
+        ...expectedPlanningGenerationArgs()
+      };
+      if (details.length > 0) {
+        args.details = details;
+      }
+      const r = await this.client.run("add-phase-note", args);
+      if (!r.ok) {
+        await this.postDrawerValidationToWebview((r.message ?? JSON.stringify(r)).slice(0, 900));
+        return false;
+      }
+      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+      this.closeDashboardDrawer();
+      this.notifyKitStateChanged();
+      await vscode.window.showInformationMessage(r.message ?? "Phase note added");
+      return true;
+    }
+    if (session.kind === "convert-phase-note") {
+      const r = await this.client.run("convert-phase-note-to-task", {
+        noteId: session.noteId,
+        ...expectedPlanningGenerationArgs()
+      });
+      if (!r.ok) {
+        await this.postDrawerValidationToWebview((r.message ?? JSON.stringify(r)).slice(0, 900));
+        return false;
+      }
+      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+      this.closeDashboardDrawer();
+      this.notifyKitStateChanged();
+      await vscode.window.showInformationMessage(r.message ?? "Converted phase note to task");
+      return true;
+    }
+    if (session.kind === "persist-phase-note-proposals") {
+      const r = await this.client.run("propose-tasks-from-phase-notes", {
+        persist: true,
+        ...expectedPlanningGenerationArgs()
+      });
+      if (!r.ok) {
+        await this.postDrawerValidationToWebview((r.message ?? JSON.stringify(r)).slice(0, 900));
+        return false;
+      }
+      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+      this.closeDashboardDrawer();
+      this.notifyKitStateChanged();
+      await vscode.window.showInformationMessage(r.message ?? "Persisted phase note proposals");
+      return true;
+    }
     return false;
   }
 
@@ -925,106 +1026,37 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async onAddPhaseNote(): Promise<void> {
-    const typePick = await vscode.window.showQuickPick(
-      [
-        { label: "follow-up", description: "Follow-up work or decision" },
-        { label: "task-suggestion", description: "Candidate task from phase context" },
-        { label: "finding", description: "Observed fact or outcome" },
-        { label: "gotcha", description: "Operational caution" },
-        { label: "risk", description: "Release or execution risk" },
-        { label: "blocker", description: "Blocking issue" }
-      ],
-      { title: "Add phase note — type" }
-    );
-    if (!typePick) {
+    if (this.dashboardDrawerSession) {
       return;
     }
-    const summary =
-      (await vscode.window.showInputBox({
-        prompt: "Phase note summary (stored in workspace-kit; do not include secrets)",
-        placeHolder: "Short note for the current phase"
-      }))?.trim() ?? "";
-    if (!summary.length) {
-      await vscode.window.showErrorMessage("add-phase-note requires a non-empty summary.");
+    const phaseKey = this.inferPhaseKeyForKitPhaseNoteFromDashboard();
+    if (!phaseKey) {
+      await vscode.window.showErrorMessage(
+        "Cannot resolve phaseKey for add-phase-note from the dashboard summary. Refresh the dashboard and try again."
+      );
       return;
     }
-    const priorityPick = await vscode.window.showQuickPick(
-      [
-        { label: "normal" },
-        { label: "low" },
-        { label: "high" },
-        { label: "critical" }
-      ],
-      { title: "Add phase note — priority" }
-    );
-    if (!priorityPick) {
-      return;
-    }
-    const detailsRaw = await vscode.window.showInputBox({
-      prompt: "Optional details (summarize; do not include secrets)",
-      placeHolder: "Leave blank for summary-only note"
-    });
-    const args: Record<string, unknown> = {
-      noteType: typePick.label,
-      summary,
-      priority: priorityPick.label
-    };
-    const details = detailsRaw?.trim();
-    if (details) {
-      args.details = details;
-    }
-    const r = await this.client.run("add-phase-note", args);
-    if (!r.ok) {
-      await vscode.window.showErrorMessage((r.message ?? JSON.stringify(r)).slice(0, 900));
-      return;
-    }
-    ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
-    this.notifyKitStateChanged();
-    await vscode.window.showInformationMessage(r.message ?? "Phase note added");
+    const html = renderDrawerFormHtml(buildAddPhaseNoteDrawerSpec(phaseKey));
+    this.dashboardDrawerSession = { kind: "add-phase-note" };
+    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
   }
 
   private async onConvertPhaseNote(noteId: string): Promise<void> {
-    const gate = await vscode.window.showWarningMessage(
-      `Convert phase note ${noteId} to a proposed task (convert-phase-note-to-task)?`,
-      { modal: true },
-      "Convert"
-    );
-    if (gate !== "Convert") {
+    if (this.dashboardDrawerSession) {
       return;
     }
-    const r = await this.client.run("convert-phase-note-to-task", {
-      noteId,
-      ...expectedPlanningGenerationArgs()
-    });
-    if (!r.ok) {
-      await vscode.window.showErrorMessage((r.message ?? JSON.stringify(r)).slice(0, 900));
-      return;
-    }
-    ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
-    this.notifyKitStateChanged();
-    await vscode.window.showInformationMessage(r.message ?? "Converted phase note to task");
+    const html = renderDrawerFormHtml(buildConvertPhaseNoteDrawerSpec(noteId));
+    this.dashboardDrawerSession = { kind: "convert-phase-note", noteId };
+    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
   }
 
   private async onPersistPhaseNoteProposals(): Promise<void> {
-    const gate = await vscode.window.showWarningMessage(
-      "Persist convertible phase notes into kit suggestions (propose-tasks-from-phase-notes persist:true)?",
-      { modal: true },
-      "Persist"
-    );
-    if (gate !== "Persist") {
+    if (this.dashboardDrawerSession) {
       return;
     }
-    const r = await this.client.run("propose-tasks-from-phase-notes", {
-      persist: true,
-      ...expectedPlanningGenerationArgs()
-    });
-    if (!r.ok) {
-      await vscode.window.showErrorMessage((r.message ?? JSON.stringify(r)).slice(0, 900));
-      return;
-    }
-    ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
-    this.notifyKitStateChanged();
-    await vscode.window.showInformationMessage(r.message ?? "Persisted phase note proposals");
+    const html = renderDrawerFormHtml(buildPersistPhaseNoteProposalsDrawerSpec());
+    this.dashboardDrawerSession = { kind: "persist-phase-note-proposals" };
+    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
   }
 
   /** Proposed-row Accept → pick phase → run-transition accept → assign-task-phase. */

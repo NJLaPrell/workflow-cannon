@@ -386,6 +386,157 @@ export function validateAddWishlistSubmit(values: Record<string, string>): Drawe
   return { ok: true, values: out };
 }
 
+/** Mirrors kit `PHASE_NOTE_TYPES` / `PHASE_NOTE_PRIORITIES` (phase-journal-constants). */
+export const ADD_PHASE_NOTE_TYPE_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
+  { value: "", label: "Choose note type…" },
+  { value: "finding", label: "finding — observed fact or outcome" },
+  { value: "gotcha", label: "gotcha — operational caution" },
+  { value: "decision", label: "decision — recorded decision" },
+  { value: "blocker", label: "blocker — blocking issue" },
+  { value: "follow-up", label: "follow-up — follow-up work or decision" },
+  { value: "task-suggestion", label: "task-suggestion — candidate task from phase context" },
+  { value: "risk", label: "risk — release or execution risk" },
+  { value: "reusable-context", label: "reusable-context — durable context pointer" }
+];
+
+const ADD_PHASE_NOTE_PRIORITY_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
+  { value: "", label: "Choose priority…" },
+  { value: "low", label: "low" },
+  { value: "normal", label: "normal" },
+  { value: "high", label: "high" },
+  { value: "critical", label: "critical" }
+];
+
+const PHASE_NOTE_SUMMARY_MAX = 280;
+const PHASE_NOTE_DETAILS_MAX = 1200;
+
+const ALLOWED_ADD_PHASE_NOTE_TYPES = new Set(
+  ADD_PHASE_NOTE_TYPE_OPTIONS.map((o) => o.value).filter((v) => v.length > 0)
+);
+const ALLOWED_ADD_PHASE_NOTE_PRIORITIES = new Set(
+  ADD_PHASE_NOTE_PRIORITY_OPTIONS.map((o) => o.value).filter((v) => v.length > 0)
+);
+
+export function buildAddPhaseNoteDrawerSpec(phaseKey: string): DrawerFormSpec {
+  const pk = phaseKey.trim();
+  return {
+    workflowId: "add-phase-note",
+    title: "Add phase note",
+    descriptionHtml:
+      "Runs <code>add-phase-note</code> for phase <code>" +
+      escapeDrawerHtml(pk) +
+      "</code>. Do not paste secrets — kit rejects secret-shaped patterns.",
+    fields: [
+      {
+        id: "ctx",
+        kind: "summary",
+        label: "Target phase",
+        body: "<div><b>phaseKey:</b> " + escapeDrawerHtml(pk) + "</div>"
+      },
+      {
+        id: "noteType",
+        kind: "select",
+        label: "Note type",
+        options: [...ADD_PHASE_NOTE_TYPE_OPTIONS],
+        required: false
+      },
+      {
+        id: "summary",
+        kind: "textarea",
+        label: "Summary (required)",
+        placeholder: "Short note for the current phase",
+        required: true,
+        rows: 3
+      },
+      {
+        id: "priority",
+        kind: "select",
+        label: "Priority",
+        options: [...ADD_PHASE_NOTE_PRIORITY_OPTIONS],
+        required: false
+      },
+      {
+        id: "details",
+        kind: "textarea",
+        label: "Details (optional)",
+        placeholder: "Leave blank for summary-only note",
+        required: false,
+        rows: 4
+      }
+    ],
+    primaryLabel: "Add note",
+    cancelLabel: "Cancel"
+  };
+}
+
+export function validateAddPhaseNoteSubmit(values: Record<string, string>): DrawerValidationResult {
+  const noteType = (values.noteType ?? "").trim();
+  if (!noteType || !ALLOWED_ADD_PHASE_NOTE_TYPES.has(noteType)) {
+    return { ok: false, error: "Choose a valid note type." };
+  }
+  const priority = (values.priority ?? "").trim();
+  if (!priority || !ALLOWED_ADD_PHASE_NOTE_PRIORITIES.has(priority)) {
+    return { ok: false, error: "Choose a valid priority." };
+  }
+  const summary = (values.summary ?? "").trim();
+  if (!summary) {
+    return { ok: false, error: "Summary is required." };
+  }
+  if (summary.length > PHASE_NOTE_SUMMARY_MAX) {
+    return { ok: false, error: `Summary must be at most ${String(PHASE_NOTE_SUMMARY_MAX)} characters.` };
+  }
+  const details = (values.details ?? "").trim();
+  if (details.length > PHASE_NOTE_DETAILS_MAX) {
+    return { ok: false, error: `Details must be at most ${String(PHASE_NOTE_DETAILS_MAX)} characters.` };
+  }
+  return { ok: true, values: { noteType, summary, priority, details } };
+}
+
+export function buildConvertPhaseNoteDrawerSpec(noteId: string): DrawerFormSpec {
+  return {
+    workflowId: "convert-phase-note",
+    title: "Convert phase note to proposed task",
+    descriptionHtml:
+      "Runs <code>convert-phase-note-to-task</code> on the host. <b>Cancel</b> leaves the note unchanged.",
+    fields: [
+      {
+        id: "ctx",
+        kind: "summary",
+        label: "Target",
+        body:
+          "<div><b>Note id:</b> " +
+          escapeDrawerHtml(noteId) +
+          "</div>" +
+          "<p style=\"margin:8px 0 0 0\">Creates a <b>proposed</b> task when this note type is eligible.</p>"
+      }
+    ],
+    primaryLabel: "Convert to task",
+    cancelLabel: "Cancel"
+  };
+}
+
+export function buildPersistPhaseNoteProposalsDrawerSpec(): DrawerFormSpec {
+  return {
+    workflowId: "persist-phase-note-proposals",
+    title: "Persist phase note proposals",
+    descriptionHtml:
+      "Runs <code>propose-tasks-from-phase-notes</code> with <code>persist:true</code>. " +
+      "<b>Cancel</b> performs no kit mutation.",
+    fields: [
+      {
+        id: "ctx",
+        kind: "summary",
+        label: "Effect",
+        body:
+          "<p>Writable kit task suggestions are created from convertible active phase notes " +
+          "(for example <code>task-suggestion</code> / <code>follow-up</code>).</p>"
+      }
+    ],
+    primaryLabel: "Persist proposals",
+    cancelLabel: "Cancel"
+  };
+}
+
 const ASSIGN_PHASE_CUSTOM = "__custom__";
 
 export type PhaseKeySuggestion = { label: string; phaseKey: string };
