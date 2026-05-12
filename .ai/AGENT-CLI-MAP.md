@@ -6,7 +6,7 @@ Machine-oriented **how to run** workspace-kit in this repo: policy, cold start, 
 
 **Per-command argv JSON Schema + samples (generated, CI-checked):** [`.ai/agent-cli-snippets/INDEX.json`](./agent-cli-snippets/INDEX.json) — one `--schema-only` JSON blob per `workspace-kit run` command under [`by-command/`](./agent-cli-snippets/by-command/).
 
-**Related:** [`.ai/POLICY-APPROVAL.md`](./POLICY-APPROVAL.md), [`.ai/TERMS.md`](./TERMS.md), [`CLI-VISUAL-GUIDE.md`](./CLI-VISUAL-GUIDE.md), `src/modules/*/instructions/*.md` (human procedure per command).
+**Related:** [`.ai/POLICY-APPROVAL.md`](./POLICY-APPROVAL.md), [`.ai/TERMS.md`](./TERMS.md) (machine `term|name=sprint|…` row lists **sprint** machine synonyms), [`.ai/TERMS.index.json`](./TERMS.index.json), [`CLI-VISUAL-GUIDE.md`](./CLI-VISUAL-GUIDE.md), `src/modules/*/instructions/*.md` (human procedure per command).
 
 ## 30-second bootstrap
 

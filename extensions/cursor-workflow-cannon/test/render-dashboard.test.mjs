@@ -82,7 +82,7 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /dash-count-grid/);
   assert.match(html, /wc-ready-scope-note/);
   assert.match(html, /wishlist_intake/);
-  assert.match(html, /Task Engine<\/b> tab/);
+  assert.match(html, /Queue<\/b> tab/);
   assert.match(html, />Proposed<\/span> <span class="dash-count-num ok">1<\/span>/);
   assert.match(html, />Ready<\/span> <span class="dash-count-num ok">2<\/span>/);
   assert.match(html, /dashboard-tasks-block/);
@@ -421,7 +421,7 @@ test("renderDashboardRootInnerHtml omits suggested-next section", () => {
   assert.match(html, /<b>Agent Temperament:<\/b> The Wary Scout/);
   assert.match(html, /wc-ready-scope-note/);
   assert.match(html, /wishlist_intake/);
-  assert.match(html, /Task Engine<\/b> tab/);
+  assert.match(html, /Queue<\/b> tab/);
 });
 
 test("renderDashboardRootInnerHtml recommends wishlist when execution ready queue is empty", () => {

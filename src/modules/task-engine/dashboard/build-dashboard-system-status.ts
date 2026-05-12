@@ -1,5 +1,6 @@
 /**
  * Composes kit/workspace posture for `dashboard-summary.systemStatus` (Editor status tab + tooling).
+ * Dashboard-facing labels should stay aligned with **`.ai/TERMS.md`** `term|name=sprint|…` machine synonyms where UI maps phases to sprint-style wording.
  */
 
 import type { DoctorContractIssue } from "../../../cli/doctor-contract-validation.js";

@@ -483,7 +483,7 @@ function renderPreview(data: UnknownRecord): string {
 function renderPortability(canMutate: boolean): string {
   return `<section class="gp-tab-panel" id="gp-tab-portability" data-gp-panel="portability">
   <div class="gp-band"><h2>Portability & defaults</h2><span class="gp-muted">Reconcile · export · import dry-run</span></div>
-  <section class="gp-callout gp-ok"><b>Capabilities</b><span>Dashboard edits require <code>kit.cae.adminMutations</code> and a CAE mutation confirmation. Sensitive lifecycle moves (activate, retire, rollback, import) still go through <code>workspace-kit run</code> with JSON <code>policyApproval</code> where the command is gated — chat text is not approval.</span></section>
+  <section class="gp-callout gp-ok"><b>Capabilities</b><span>Dashboard edits require <code>kit.cae.adminMutations</code> and a CAE mutation confirmation. Sensitive lifecycle moves (activate, retire, rollback, import) still go through <code>workspace-kit run</code> with JSON <code>policyApproval</code> where the command is gated — chat text is not approval. <b>CAE rationale</b> is collected as <code>caeMutationApproval</code> (host prompt + modal confirm); it is <em>not</em> the same object as Tier A/B <code>policyApproval</code> on <code>wk run</code>.</span></section>
   <div class="gp-action-row">
     <button type="button" class="gp-primary" data-gp-action="portability-reconcile">Compare package defaults</button>
     <button type="button" data-gp-action="portability-export"${canMutate ? "" : " disabled"}>Export pack to tmp</button>

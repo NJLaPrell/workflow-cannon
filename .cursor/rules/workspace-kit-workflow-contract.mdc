@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Workflow Contract Rule
 
-Use consistent terms from **`.ai/TERMS.md`** for directives, rules, guardrails, policy, workflow, and evidence (agents). Maintainer glossary edits remain in `docs/maintainers/TERMS.md`.
+Use consistent terms from **`.ai/TERMS.md`** for directives, rules, guardrails, policy, workflow, and evidence (agents). Maintainer glossary edits remain in `docs/maintainers/TERMS.md`. The machine row **`term|name=sprint|…`** lists sprint synonyms for dashboard and agent copy; prefer **`.ai/TERMS.index.json`** for quick machine scans.
 
 Required alignment:
 

@@ -317,6 +317,7 @@ test("renderGuidanceAuthoringPanelInnerHtml renders the tabbed authoring shell",
   assert.match(html, /data-gp-tab="preview"/);
   assert.match(html, /data-gp-tab="portability"/);
   assert.match(html, /gp-portability-out/);
+  assert.match(html, /caeMutationApproval/);
   assert.match(html, /data-gp-tab="audit"/);
   assert.match(html, /Warnings need review/);
   assert.match(html, /New Artifact/);

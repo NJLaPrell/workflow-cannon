@@ -14,11 +14,12 @@ ref|id=cae|target=.ai/cae/README.md|type=file|status=active
 ref|id=cli_visual_guide|target=.ai/machine-cli-policy.md|type=file|status=active
 ref|id=agent_behavior_plan|target=src/modules/agent-behavior/README.md|type=file|status=active
 ref|id=terms|target=.ai/TERMS.md|type=file|status=active
+ref|id=terms_index|target=.ai/TERMS.index.json|type=file|status=active
 ref|id=module_guide|target=.ai/module-build.md|type=file|status=active
 ref|id=playbook_task_to_phase_branch|target=.ai/MACHINE-PLAYBOOKS.md|type=file|status=active
 ref|id=playbook_improvement_task_discovery|target=.ai/MACHINE-PLAYBOOKS.md|type=file|status=active
 ref|id=playbook_improvement_triage_top_three|target=.ai/MACHINE-PLAYBOOKS.md|type=file|status=active
-truth|order=ai_principles>ai_module_build>roadmap>tasks_engine_state>tasks_json_optout>tasks_view>agent_cli_map>policy_approval>releasing>terms>module_guide
+truth|order=ai_principles>ai_module_build>roadmap>tasks_engine_state>tasks_json_optout>tasks_view>agent_cli_map>policy_approval>releasing>terms>terms_index>module_guide
 
 rule|id=A001|level=must|scope=agent|directive=use_high_autonomy_when_task_intent_is_clear|risk=low|approval=none|override=auto|status=active|refs=.ai/PRINCIPLES.md|why=rationale_for_A001
 rule|id=A002|level=must|scope=agent|directive=soft_gate_on_principle_conflicts_state_conflict_and_ask_confirmation|risk=high|approval=prompt|override=prompt|status=active|refs=.ai/PRINCIPLES.md|why=rationale_for_A002

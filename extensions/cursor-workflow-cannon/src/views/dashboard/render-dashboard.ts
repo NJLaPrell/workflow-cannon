@@ -58,7 +58,7 @@ function renderExecutionReadyScopeFootnote(): string {
   return (
     '<p class="muted wc-ready-scope-note">' +
     "<b>Note:</b> Ready / proposed rollups follow the kit <em>execution queue</em> — they omit <code>wishlist_intake</code> even when that row is ready. " +
-    "Use <b>Wishlist</b> on the <b>Task Engine</b> tab, or <code>wk run list-tasks</code> for the full store.</p>"
+    "Use <b>Wishlist</b> on the <b>Queue</b> tab, or <code>wk run list-tasks</code> for the full store.</p>"
   );
 }
 
@@ -94,7 +94,7 @@ function renderRecommendedNextCard(
   return (
     '<div class="wc-rec-next">' +
     '<div class="wc-rec-header">' +
-    '<span class="wc-rec-label">&#9733; Recommended Next</span>' +
+    '<span class="wc-rec-label">&#9733; Up next</span>' +
     "</div>" +
     '<p class="wc-rec-title">' +
     escapeHtml(displayTitle) +
@@ -140,7 +140,7 @@ function renderRecommendedNextWishlistCard(item: unknown): string {
   return (
     '<div class="wc-rec-next wc-rec-next-wishlist">' +
     '<div class="wc-rec-header">' +
-    '<span class="wc-rec-label">&#9733; Recommended Next</span>' +
+    '<span class="wc-rec-label">&#9733; Up next</span>' +
     "</div>" +
     '<p class="muted wc-rec-wl-hint">No execution-queue ready work — first open wishlist item.</p>' +
     "<p class=\"wc-rec-title\">" +
@@ -187,7 +187,7 @@ function renderStatPills(
           p.cls +
           '" data-wc-pill-nav="task-engine" data-wc-pill-filter="' +
           escapeHtmlAttr(filter) +
-          '" title="Switch to Task Engine — ' +
+          '" title="Open Queue tab — ' +
           escapeHtmlAttr(p.label) +
           '">' +
           '<span class="wc-stat-num">' +
@@ -204,7 +204,7 @@ function renderStatPills(
   );
 }
 
-/** Filter chip bar for the Task Engine tab. */
+/** Filter chip bar for the Queue tab. */
 function renderFilterChipBar(): string {
   return (
     '<div class="wc-filter-chips" role="toolbar" aria-label="Filter task sections">' +
@@ -1825,7 +1825,7 @@ function renderStatusSectionHtml(d: Record<string, unknown>, ss: Record<string, 
     buildDashboardStateCountGridHtml(ss) +
     '<p class="muted wc-status-counts-scope-note">' +
     "<b>Note:</b> These totals reflect <code>stateSummary</code> (store-wide statuses). " +
-    "<b>Overview</b> pills and <b>Task Engine</b> queue sections use execution-queue rollups " +
+    "<b>Overview</b> pills and <b>Queue</b> tab sections use execution-queue rollups " +
     "(same family as <code>getNextActions</code>) and exclude <code>wishlist_intake</code> from ready/proposed.</p>" +
     "</section>";
 
@@ -2270,7 +2270,7 @@ export function renderDashboardRootInnerHtml(
     renderAgentStatusBanner(d.agentStatus) +
     '<div class="wc-tab-bar" role="tablist">' +
     '<button type="button" class="wc-tab-btn wc-tab-active" role="tab" data-wc-tab="overview">Overview</button>' +
-    '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="task-engine">Task Engine' +
+    '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="task-engine">Queue' +
     (totalReadyCount > 0
       ? '<span class="wc-tab-badge wc-tab-badge-ready">' + escapeHtml(String(totalReadyCount)) + "</span>"
       : totalBlockedCount > 0

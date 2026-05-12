@@ -1260,6 +1260,23 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       logDashboard(`pushUpdate: stale phase context ignored page=${String(requestedWishlistPage)}`);
       return;
     }
+    {
+      let tabTitle = "Dashboard";
+      if (raw.ok === true && raw.data && typeof raw.data === "object") {
+        const d = raw.data as Record<string, unknown>;
+        const snap = d.workspaceSnapshot;
+        if (snap && typeof snap === "object") {
+          const rec = snap as Record<string, unknown>;
+          const ph =
+            rec.currentKitPhase != null ? String(rec.currentKitPhase).trim() : "";
+          if (ph.length > 0) {
+            tabTitle = `Dashboard — ${ph}`;
+          }
+        }
+      }
+      activeView.title =
+        tabTitle.length > 48 ? `${tabTitle.slice(0, 48)}\u2026` : tabTitle;
+    }
     let rootInner: string;
     const wizardPanel: PlanningInterviewWizardPanel | null = raw.ok === true ? this.planningWizardPanel() : null;
     try {

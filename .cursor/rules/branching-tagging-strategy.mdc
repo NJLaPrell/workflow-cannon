@@ -10,6 +10,7 @@ alwaysApply: false
 ## Phase integration branches
 
 - **Pattern:** `release/phase-<N>` where **`<N>`** is the workspace kit phase number (example: `release/phase-52`).
+- **Vocabulary:** operator-facing **Sprint** (timebox) maps to these machine branch names and phase keys — see **`.ai/TERMS.md`** `term|name=sprint|…` and **`.ai/TERMS.index.json`**.
 - **Purpose:** Long-lived integration line for the phase. **Create from `main`** when a new phase starts (if the branch does not already exist on `origin`); **merge back to `main`** at phase closeout before tagging a release (see [`.ai/playbooks/phase-closeout-and-release.md`](../../.ai/playbooks/phase-closeout-and-release.md)).
 
 ## Task branches
