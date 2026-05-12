@@ -13,6 +13,7 @@ export type WorkspaceCoordinationPosture =
   | "detached_head"
   | "dirty_task_db"
   | "dirty_workspace"
+  | "lease_suspect"
   | "lease_held"
   | "stale_lease"
   | "worker_branch"
@@ -39,6 +40,7 @@ export type WorkspaceCoordinationLeaseSlice = {
   expiresAt: string | null;
   holder: WorkspaceCoordinationLeaseHolder | null;
   invalidReason: string | null;
+  suspectFlags: string[];
 };
 
 export type WorkspaceCoordinationDirtyManifest = {

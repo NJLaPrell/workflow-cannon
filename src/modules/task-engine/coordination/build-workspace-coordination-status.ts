@@ -7,7 +7,14 @@ import type {
   WorkspaceCoordinationStatusV1
 } from "../../../contracts/workspace-coordination-status.js";
 import { planningSqliteDatabaseRelativePath } from "../planning-config.js";
-import { leaseFilePathFromCommonDir, summarizeWorkspaceEditLeaseStatus } from "./workspace-edit-lease.js";
+import {
+  detectWorkspaceEditLeaseSuspectFlags,
+  gatherCheckoutFingerprint,
+  leaseFilePathFromCommonDir,
+  readLeaseFile,
+  summarizeWorkspaceEditLeaseStatus,
+  type WorkspaceEditLeaseSuspectFlag
+} from "./workspace-edit-lease.js";
 
 const PORCELAIN_CAP = 500;
 
@@ -51,7 +58,10 @@ function classifyAuthority(branch: string | null): WorkspaceCoordinationAuthorit
   return "unknown";
 }
 
-function readLeaseSlice(commonDir: string | null): WorkspaceCoordinationStatusV1["lease"] {
+function readLeaseSlice(
+  commonDir: string | null,
+  currentFingerprint: ReturnType<typeof gatherCheckoutFingerprint> | null
+): WorkspaceCoordinationStatusV1["lease"] {
   const leaseFilePath = commonDir
     ? leaseFilePathFromCommonDir(commonDir)
     : "(no-git-common-dir)/workflow-cannon/leases/workspace-edit.json";
@@ -65,10 +75,18 @@ function readLeaseSlice(commonDir: string | null): WorkspaceCoordinationStatusV1
       staleOrInvalid: false,
       expiresAt: null,
       holder: null,
-      invalidReason: null
+      invalidReason: null,
+      suspectFlags: []
     };
   }
   const status = summarizeWorkspaceEditLeaseStatus(leaseFilePath);
+  const parsed = readLeaseFile(leaseFilePath);
+  let suspectFlags: WorkspaceEditLeaseSuspectFlag[] = [];
+  if (parsed.ok && status.active && currentFingerprint) {
+    suspectFlags = detectWorkspaceEditLeaseSuspectFlags(parsed.lease, currentFingerprint);
+  } else if (status.present && status.staleOrInvalid) {
+    suspectFlags = ["lease:stale_or_invalid"];
+  }
   return {
     schemaVersion: 1,
     leaseFilePath,
@@ -78,7 +96,8 @@ function readLeaseSlice(commonDir: string | null): WorkspaceCoordinationStatusV1
     staleOrInvalid: status.staleOrInvalid,
     expiresAt: status.expiresAt,
     holder: status.holder,
-    invalidReason: status.invalidReason
+    invalidReason: status.invalidReason,
+    suspectFlags
   };
 }
 
@@ -90,6 +109,7 @@ function pickPosture(input: {
   lease: WorkspaceCoordinationStatusV1["lease"];
   authority: WorkspaceCoordinationAuthorityRole;
 }): WorkspaceCoordinationPosture {
+  // Precedence is deterministic: git safety, dirty local state, active lease drift, ordinary lease state, branch role.
   if (!input.gitOk) {
     return "unknown_git";
   }
@@ -101,6 +121,9 @@ function pickPosture(input: {
   }
   if (input.dirtyLines > 0) {
     return "dirty_workspace";
+  }
+  if (input.lease.active && input.lease.suspectFlags.length > 0) {
+    return "lease_suspect";
   }
   if (input.lease.active) {
     return "lease_held";
@@ -165,6 +188,7 @@ export function buildWorkspaceCoordinationStatus(ctx: ModuleLifecycleContext): W
   const lines = gitOk ? porcelain.stdout.split("\n").filter((l) => l.trim().length > 0) : [];
   const capped = lines.length > PORCELAIN_CAP;
   const dirtyManifest = { lineCount: Math.min(lines.length, PORCELAIN_CAP), capped };
+  const currentFingerprint = gitOk ? gatherCheckoutFingerprint(workspacePath) : null;
 
   const taskDatabaseRelativePath = planningSqliteDatabaseRelativePath(ctx);
   const dbRel = taskDatabaseRelativePath.replace(/\\/g, "/");
@@ -177,7 +201,8 @@ export function buildWorkspaceCoordinationStatus(ctx: ModuleLifecycleContext): W
   }
 
   const authorityRole = classifyAuthority(branch);
-  const lease = readLeaseSlice(gitCommonDir);
+  const lease = readLeaseSlice(gitCommonDir, currentFingerprint);
+  suspectFlags.push(...lease.suspectFlags);
 
   const posture = pickPosture({
     gitOk,

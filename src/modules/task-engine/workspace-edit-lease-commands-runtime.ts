@@ -4,6 +4,7 @@ import {
   clampExtendSeconds,
   defaultTtlMs,
   deleteLeaseBestEffort,
+  detectWorkspaceEditLeaseSuspectFlags,
   gatherCheckoutFingerprint,
   isLeaseExpired,
   leaseFilePathFromCommonDir,
@@ -12,6 +13,7 @@ import {
   resolveGitCommonDir,
   summarizeWorkspaceEditLeaseStatus,
   writeLeaseAtomic,
+  type WorkspaceEditLeaseSuspectFlag,
   type WorkspaceEditLeaseAlternatives,
   type WorkspaceEditLeaseV1
 } from "./coordination/workspace-edit-lease.js";
@@ -100,6 +102,8 @@ export function runWorkspaceEditStatus(
         active: false,
         staleOrInvalid: false,
         expiresAt: null as string | null,
+        suspect: false,
+        suspectFlags: [] as WorkspaceEditLeaseSuspectFlag[],
         document: null as WorkspaceEditLeaseV1 | null
       }
     };
@@ -120,11 +124,16 @@ export function runWorkspaceEditStatus(
         active: false,
         staleOrInvalid: leaseStatus.staleOrInvalid,
         expiresAt: null,
+        suspect: leaseStatus.staleOrInvalid,
+        suspectFlags: leaseStatus.staleOrInvalid ? (["lease:stale_or_invalid"] as WorkspaceEditLeaseSuspectFlag[]) : [],
         document: null
       }
     };
   }
   const { lease } = parsed;
+  const suspectFlags = leaseStatus.active
+    ? detectWorkspaceEditLeaseSuspectFlags(lease, gatherCheckoutFingerprint(workspacePath))
+    : (["lease:stale_or_invalid"] as WorkspaceEditLeaseSuspectFlag[]);
   return {
     ok: true,
     code: "workspace-edit-status",
@@ -138,6 +147,8 @@ export function runWorkspaceEditStatus(
       active: leaseStatus.active,
       staleOrInvalid: leaseStatus.staleOrInvalid,
       expiresAt: lease.expiresAt,
+      suspect: suspectFlags.length > 0,
+      suspectFlags,
       document: lease
     }
   };

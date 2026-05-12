@@ -289,6 +289,10 @@ export function renderStatusTabInnerHtml(
     const dbDirty = coord.taskDatabaseGitDirty === true ? "yes" : "no";
     const lease = coord.lease && typeof coord.lease === "object" ? (coord.lease as Record<string, unknown>) : null;
     const leaseTxt = lease?.present === true ? (lease.active === true ? "active" : "present (inactive/stale)") : "none";
+    const suspectFlags = Array.isArray(coord.suspectFlags)
+      ? (coord.suspectFlags as unknown[]).filter((flag): flag is string => typeof flag === "string")
+      : [];
+    const suspectTxt = suspectFlags.length > 0 ? suspectFlags.join(", ") : "none";
     const body =
       kvRow("Posture", "<code>" + escapeHtml(posture) + "</code>") +
       kvRow("Authority pattern", escapeHtml(role)) +
@@ -297,6 +301,7 @@ export function renderStatusTabInnerHtml(
       kvRow("Porcelain lines (capped)", escapeHtml(String(dirtyN))) +
       kvRow("Task DB dirty in git", escapeHtml(dbDirty)) +
       kvRow("Lease file", escapeHtml(leaseTxt)) +
+      kvRow("Suspect flags", escapeHtml(suspectTxt)) +
       '<p class="wc-hint">Read-only — from <code>pnpm exec wk run workspace-coordination-status \'{}\'</code>. Lease enforcement lands in later phase work.</p>';
     parts.push(card("Coordination", body));
   }

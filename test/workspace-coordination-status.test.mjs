@@ -148,6 +148,35 @@ test("buildWorkspaceCoordinationStatus: stale lease file under git common dir", 
   assert.equal(s.lease.present, true);
   assert.equal(s.lease.status, "stale-invalid");
   assert.equal(s.lease.staleOrInvalid, true);
+  assert.deepEqual(s.lease.suspectFlags, ["lease:stale_or_invalid"]);
+  assert.deepEqual(s.suspectFlags, ["lease:stale_or_invalid"]);
+  assert.equal(s.posture, "stale_lease");
+});
+
+test("buildWorkspaceCoordinationStatus: malformed lease is stale_lease with suspect flag", async () => {
+  const { buildWorkspaceCoordinationStatus } = await import(
+    "../dist/modules/task-engine/coordination/build-workspace-coordination-status.js"
+  );
+  const ws = mkdtempSync(path.join(tmpdir(), "wc-coord-"));
+  git(ws, ["init", "-b", "main"]);
+  git(ws, ["config", "user.email", "t@example.com"]);
+  git(ws, ["config", "user.name", "T"]);
+  writeFileSync(path.join(ws, "README.md"), "x\n");
+  git(ws, ["add", "README.md"]);
+  git(ws, ["commit", "-m", "init"]);
+  const common = spawnSync("git", ["rev-parse", "--git-common-dir"], { cwd: ws, encoding: "utf8" });
+  assert.equal(common.status, 0);
+  const raw = common.stdout.trim();
+  const commonAbs = path.isAbsolute(raw) ? raw : path.join(ws, raw);
+  const leaseDir = path.join(commonAbs, "workflow-cannon", "leases");
+  mkdirSync(leaseDir, { recursive: true });
+  writeFileSync(path.join(leaseDir, "workspace-edit.json"), "{");
+  const s = buildWorkspaceCoordinationStatus(ctx(ws));
+  assert.equal(s.lease.present, true);
+  assert.equal(s.lease.status, "stale-invalid");
+  assert.equal(s.lease.invalidReason, "invalid_json");
+  assert.deepEqual(s.lease.suspectFlags, ["lease:stale_or_invalid"]);
+  assert.deepEqual(s.suspectFlags, ["lease:stale_or_invalid"]);
   assert.equal(s.posture, "stale_lease");
 });
 
@@ -168,6 +197,10 @@ test("buildWorkspaceCoordinationStatus: active future lease is lease_held", asyn
   const leaseDir = path.join(commonAbs, "workflow-cannon", "leases");
   mkdirSync(leaseDir, { recursive: true });
   const far = new Date(Date.now() + 3600_000).toISOString();
+  const head = spawnSync("git", ["rev-parse", "HEAD"], { cwd: ws, encoding: "utf8" });
+  assert.equal(head.status, 0);
+  const top = spawnSync("git", ["rev-parse", "--show-toplevel"], { cwd: ws, encoding: "utf8" });
+  assert.equal(top.status, 0);
   writeFileSync(
     path.join(leaseDir, "workspace-edit.json"),
     JSON.stringify({
@@ -177,8 +210,8 @@ test("buildWorkspaceCoordinationStatus: active future lease is lease_held", asyn
       agentSessionId: "sess",
       taskId: "T1",
       branch: "main",
-      headSha: "abc",
-      worktreePath: ws,
+      headSha: head.stdout.trim(),
+      worktreePath: top.stdout.trim(),
       dirtyManifest: { lineCount: 0, capped: false },
       claimedAt: new Date().toISOString(),
       heartbeatAt: new Date().toISOString()
@@ -189,5 +222,6 @@ test("buildWorkspaceCoordinationStatus: active future lease is lease_held", asyn
   assert.equal(s.lease.status, "lease-held-by-other");
   assert.equal(s.lease.holder.agentSessionId, "sess");
   assert.equal(s.lease.holder.taskId, "T1");
+  assert.deepEqual(s.lease.suspectFlags, []);
   assert.equal(s.posture, "lease_held");
 });
