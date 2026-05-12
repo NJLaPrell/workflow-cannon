@@ -1,6 +1,6 @@
 # Machine playbook summaries (agents)
 
-**Agents:** ordered checklists live in **`.ai/playbooks/*.md`** (attach with `@`). **Maintainers** also have rendered copies under `docs/maintainers/playbooks/` after **`pnpm run generate-maintainer-docs-from-ai`**. Attach requestable Cursor rules when the editor supports it.
+**Agents:** ordered checklists live in **`.ai/playbooks/*.md`** (attach with `@`). **Maintainers** also have rendered copies under `docs/maintainers/playbooks/` after **`pnpm run generate-maintainer-docs-from-ai`**. Attach requestable Cursor rules when the editor supports it. **Sprint wording:** machine synonyms for **sprint** / phase execution slices live under **`term|name=sprint|…`** in **`.ai/TERMS.md`** and **`.ai/TERMS.index.json`**.
 
 ## Single task → phase integration branch (delivery loop)
 

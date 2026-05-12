@@ -5,6 +5,8 @@
 
 This file is an **ordered checklist**. Branch naming lives in **`.cursor/rules/branching-tagging-strategy.mdc`**; commit and PR quality expectations align with **`.cursor/rules/maintainer-delivery-loop.mdc`** and [`.ai/AGENTS.md`](../AGENTS.md) / [`.ai/agent-source-of-truth-order.md`](../agent-source-of-truth-order.md).
 
+**Vocabulary:** maintainer copy may say **Sprint** for a timeboxed delivery slice; machine phase ids and branch names stay **`release/phase-<N>`** — see [`.ai/TERMS.md`](../TERMS.md) `term|name=sprint|…` and [`.ai/TERMS.index.json`](../TERMS.index.json).
+
 ## Phase integration branch naming
 
 - **Pattern:** `release/phase-<N>` (example: `release/phase-52`).

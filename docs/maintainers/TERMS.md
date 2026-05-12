@@ -190,3 +190,8 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
 - `docs/maintainers/RELEASING.md` — release gates and evidence expectations
 - `docs/maintainers/ARCHITECTURE.md` — system map (router, policy, persistence, layering)
 - `docs/maintainers/AGENT-CLI-MAP.md` — tier table and copy-paste `workspace-kit run` JSON
+
+### Sprint
+
+A **sprint** is a bounded coordination window for a kit **phase** (execution slice). In machine-oriented surfaces and dashboard copy, treat **sprint** as interchangeable with *phase execution slice*, *kit phase window*, or *sprint wave* when the meaning is the same bounded work span. Prefer user-facing **Sprint** or **phase** labels over raw CLI names in UI chrome.
+

@@ -16,7 +16,7 @@ import {
   buildTranscriptChurnResearchPrompt
 } from "../../playbook-chat-prompts.js";
 import { confirmAndRunTransition } from "../../run-transition-with-approval.js";
-import { promptAndCreateWishlist } from "../../add-wishlist-item-flow.js";
+import { executeCreateWishlistFromValidatedFields } from "../../add-wishlist-item-flow.js";
 import {
   escapeHtml,
   renderDashboardRootInnerHtml,
@@ -24,6 +24,24 @@ import {
   type PhaseJournalKitPayload,
   type PlanningInterviewWizardPanel
 } from "./render-dashboard.js";
+import {
+  buildAcceptProposedDrawerSpec,
+  buildAddPhaseNoteDrawerSpec,
+  buildAddWishlistDrawerSpec,
+  buildAssignTaskPhaseDrawerSpec,
+  buildConvertPhaseNoteDrawerSpec,
+  buildDismissPhaseNoteDrawerSpec,
+  buildPersistPhaseNoteProposalsDrawerSpec,
+  buildRegisterPhaseCatalogDrawerSpec,
+  normalizeDrawerValues,
+  renderDrawerFormHtml,
+  validateAcceptProposedSubmit,
+  validateAddPhaseNoteSubmit,
+  validateAddWishlistSubmit,
+  validateAssignTaskPhaseSubmit,
+  validateDismissPhaseNoteSubmit,
+  validateRegisterPhaseCatalogSubmit
+} from "./dashboard-input-drawer.js";
 
 let dashboardOutput: vscode.OutputChannel | undefined;
 
@@ -38,6 +56,16 @@ type DashboardPlanningWizardState =
     }
   | { kind: "done"; planningType: string; code: string; message: string }
   | { kind: "error"; message: string };
+
+type DashboardDrawerSession =
+  | { kind: "register-catalog" }
+  | { kind: "dismiss-note"; noteId: string; priority: string }
+  | { kind: "add-wishlist" }
+  | { kind: "assign-task-phase"; taskId: string }
+  | { kind: "add-phase-note" }
+  | { kind: "convert-phase-note"; noteId: string }
+  | { kind: "persist-phase-note-proposals" }
+  | { kind: "accept-proposed"; taskIds: string[]; categoryLabel: string };
 
 function logDashboard(message: string): void {
   if (!dashboardOutput) {
@@ -156,10 +184,13 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private dashboardUpdateQueued = false;
   private dashboardDebounceTimer: ReturnType<typeof setTimeout> | undefined;
 
-  /** 0-based page for wishlist rows in `dashboard-summary` (10 per page). */
+  /** 0-based page for wishlist rows in `dashboard-summary` (5 per page). */
   private wishlistPage = 0;
 
   private planningWizard: DashboardPlanningWizardState = { kind: "idle" };
+
+  /** In-webview drawer session (register catalog, dismiss phase note, …). */
+  private dashboardDrawerSession: DashboardDrawerSession | null = null;
 
   /** Last successful `dashboard-summary` `data` — used for phase QuickPick targets. */
   private lastDashboardSummaryData: Record<string, unknown> | null = null;
@@ -222,10 +253,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         await prefillCursorChat(prompt, { newChat: true });
       }
       if (msg?.type === "addWishlistItem") {
-        await promptAndCreateWishlist(this.client);
-        this.notifyKitStateChanged();
-        this.wishlistPage = 0;
-        await this.pushUpdate();
+        if (this.dashboardDrawerSession) {
+          return;
+        }
+        const html = renderDrawerFormHtml(buildAddWishlistDrawerSpec());
+        this.dashboardDrawerSession = { kind: "add-wishlist" };
+        await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
       }
       if (msg?.type === "prefillImprovementTriageChat") {
         const raw = msg?.taskId;
@@ -322,7 +355,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         const pri = typeof msg.priority === "string" ? msg.priority.trim() : "";
         if (nid.length > 0) {
           await this.onDismissPhaseNote(nid, pri);
-          await this.pushUpdate();
+          if (!this.dashboardDrawerSession) {
+            await this.pushUpdate();
+          }
         }
       }
       if (msg?.type === "addPhaseNote") {
@@ -352,7 +387,20 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
       if (msg?.type === "registerPhaseCatalogEntry") {
         await this.onRegisterPhaseCatalogEntry();
-        await this.pushUpdate();
+        if (!this.dashboardDrawerSession) {
+          await this.pushUpdate();
+        }
+      }
+      if (msg?.type === "drawerSubmit") {
+        const rawVals = (msg as { values?: unknown }).values;
+        const values = normalizeDrawerValues(rawVals);
+        const refreshed = await this.handleDrawerSubmit(values);
+        if (refreshed) {
+          await this.pushUpdate();
+        }
+      }
+      if (msg?.type === "drawerCancel") {
+        this.closeDashboardDrawer();
       }
       if (msg?.type === "dashboardAcceptProposedPhase") {
         const rawIds = typeof msg.taskIds === "string" ? msg.taskIds : "";
@@ -670,388 +718,419 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     await this.pushUpdate();
   }
 
-  private async pickPhaseKeyFromDashboard(options: {
-    title: string;
-    /** Prefill for custom key entry */
-    valueHint?: string;
-  }): Promise<string | undefined> {
+  /** Resolve `phaseKey` for `add-phase-note` from the last dashboard-summary payload. */
+  private inferPhaseKeyForKitPhaseNoteFromDashboard(): string | undefined {
     const data = this.lastDashboardSummaryData;
-    const suggestions = data ? collectPhaseKeySuggestions(data) : [];
-    const quickItems: vscode.QuickPickItem[] = [
-      ...suggestions.map((s) => ({
-        label: s.label,
-        description: s.phaseKey
-      })),
-      {
-        label: "Enter another phase key…",
-        description: "Custom stable phase key",
-        alwaysShow: true
-      }
-    ];
-    const picked = await vscode.window.showQuickPick(quickItems, {
-      title: options.title,
-      placeHolder: "Choose a phase target",
-      matchOnDescription: true
-    });
-    if (!picked) {
+    if (!data || typeof data !== "object") {
       return undefined;
     }
-    if (picked.label === "Enter another phase key…") {
-      const input = await vscode.window.showInputBox({
-        title: "Phase key",
-        prompt: "Stable kit phase key (assign-task-phase)",
-        value: options.valueHint ?? suggestions[0]?.phaseKey ?? "",
-        validateInput: (v) => (v.trim().length > 0 ? null : "Phase key required")
-      });
-      if (!input?.trim()) {
-        return undefined;
-      }
-      return input.trim();
+    const sys = data.systemStatus as Record<string, unknown> | undefined;
+    const sl = sys?.phase as Record<string, unknown> | undefined;
+    if (!sl || typeof sl !== "object") {
+      return undefined;
     }
-    const phaseKey = (picked.description ?? "").trim();
-    return phaseKey.length > 0 ? phaseKey : undefined;
+    for (const key of ["canonicalPhaseKey", "workspaceStatusPhaseKey", "configPhaseKey"] as const) {
+      const v = sl[key];
+      if (typeof v === "string" && v.trim()) {
+        return v.trim();
+      }
+    }
+    const curKP = sl.currentKitPhase;
+    if (typeof curKP === "string" && curKP.trim()) {
+      const fromPhrase = phaseKeyFromPhrase(curKP.trim());
+      if (fromPhrase) {
+        return fromPhrase;
+      }
+      const t = curKP.trim();
+      if (/^\d+$/.test(t)) {
+        return t;
+      }
+    }
+    return undefined;
   }
 
   /**
    * Register or update a future phase row in `kit_phase_catalog` (upsert-phase-catalog-entry).
+   * Uses the in-webview drawer (no `showInputBox`).
    */
   private async onRegisterPhaseCatalogEntry(): Promise<void> {
-    const phaseKeyRaw =
-      (await vscode.window.showInputBox({
-        title: "Register future phase (catalog)",
-        prompt: "Stable phaseKey (must not sort before current workspace phase)",
-        validateInput: (v) => (v.trim().length > 0 ? null : "Phase key required")
-      })) ?? "";
-    const phaseKey = phaseKeyRaw.trim();
-    if (!phaseKey) {
+    if (this.dashboardDrawerSession) {
       return;
     }
-    const descRaw =
-      (await vscode.window.showInputBox({
-        title: "Short description (optional)",
-        prompt: "Operator-facing label; leave empty for none"
-      })) ?? "";
-    const descTrim = descRaw.trim();
-    await this.client.recordActivity({
-      kind: "validating",
-      phaseKey,
-      command: "upsert-phase-catalog-entry",
-      details: { source: "dashboard-phase-catalog" }
-    });
-    const args: Record<string, unknown> = {
-      phaseKey,
-      ...expectedPlanningGenerationArgs()
-    };
-    args.shortDescription = descTrim.length > 0 ? descTrim : null;
-    const out = await this.client.run("upsert-phase-catalog-entry", args);
-    await this.client.clearActivity();
-    if (!out.ok) {
-      const detail = `${String(out.code ?? "")} ${String(out.message ?? "")}`.trim();
-      await vscode.window.showErrorMessage(`upsert-phase-catalog-entry failed: ${detail}`);
-      return;
+    const html = renderDrawerFormHtml(buildRegisterPhaseCatalogDrawerSpec());
+    this.dashboardDrawerSession = { kind: "register-catalog" };
+    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+  }
+
+  private closeDashboardDrawer(): void {
+    this.dashboardDrawerSession = null;
+    void this.view?.webview.postMessage({ type: "wcDrawerClose" });
+  }
+
+  private async postDrawerValidationToWebview(message: string): Promise<void> {
+    await this.view?.webview.postMessage({ type: "wcDrawerValidation", message });
+  }
+
+  /**
+   * @returns true when dashboard-summary should refresh (mutating kit command succeeded).
+   */
+  private async handleDrawerSubmit(values: Record<string, string>): Promise<boolean> {
+    const session = this.dashboardDrawerSession;
+    if (!session) {
+      return false;
     }
-    ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
-    this.notifyKitStateChanged();
-    await vscode.window.showInformationMessage(`Phase catalog updated for ${phaseKey}`);
+    if (session.kind === "register-catalog") {
+      const validated = validateRegisterPhaseCatalogSubmit(values);
+      if (!validated.ok) {
+        await this.postDrawerValidationToWebview(validated.error);
+        return false;
+      }
+      const { phaseKey, shortDescription } = validated.values;
+      await this.client.recordActivity({
+        kind: "validating",
+        phaseKey,
+        command: "upsert-phase-catalog-entry",
+        details: { source: "dashboard-phase-catalog" }
+      });
+      const args: Record<string, unknown> = {
+        phaseKey,
+        ...expectedPlanningGenerationArgs()
+      };
+      args.shortDescription = shortDescription.length > 0 ? shortDescription : null;
+      const out = await this.client.run("upsert-phase-catalog-entry", args);
+      await this.client.clearActivity();
+      if (!out.ok) {
+        const detail = `${String(out.code ?? "")} ${String(out.message ?? "")}`.trim();
+        await this.postDrawerValidationToWebview(`upsert-phase-catalog-entry failed: ${detail}`);
+        return false;
+      }
+      ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
+      this.closeDashboardDrawer();
+      this.notifyKitStateChanged();
+      await vscode.window.showInformationMessage(`Phase catalog updated for ${phaseKey}`);
+      return true;
+    }
+    if (session.kind === "dismiss-note") {
+      const validated = validateDismissPhaseNoteSubmit(session.priority, values);
+      if (!validated.ok) {
+        await this.postDrawerValidationToWebview(validated.error);
+        return false;
+      }
+      const { reason, policyRationale } = validated.values;
+      let policyApproval: { confirmed: boolean; rationale: string } | undefined;
+      if (session.priority === "critical") {
+        const gate = await vscode.window.showWarningMessage(
+          "Dismiss an active critical phase note — kit policy may require explicit approval.",
+          { modal: true },
+          "Continue"
+        );
+        if (gate !== "Continue") {
+          return false;
+        }
+        policyApproval = { confirmed: true, rationale: policyRationale };
+      }
+      const args: Record<string, unknown> = {
+        noteId: session.noteId,
+        reason,
+        ...expectedPlanningGenerationArgs()
+      };
+      if (policyApproval) {
+        args.policyApproval = policyApproval;
+      }
+      const r = await this.client.run("dismiss-phase-note", args);
+      if (!r.ok) {
+        await this.postDrawerValidationToWebview((r.message ?? JSON.stringify(r)).slice(0, 900));
+        return false;
+      }
+      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+      this.closeDashboardDrawer();
+      this.notifyKitStateChanged();
+      await vscode.window.showInformationMessage(r.message ?? "Phase note dismissed");
+      return true;
+    }
+    if (session.kind === "add-wishlist") {
+      const validated = validateAddWishlistSubmit(values);
+      if (!validated.ok) {
+        await this.postDrawerValidationToWebview(validated.error);
+        return false;
+      }
+      const created = await executeCreateWishlistFromValidatedFields(this.client, validated.values);
+      if (!created.ok) {
+        await this.postDrawerValidationToWebview(created.error.slice(0, 900));
+        return false;
+      }
+      this.closeDashboardDrawer();
+      this.notifyKitStateChanged();
+      this.wishlistPage = 0;
+      return true;
+    }
+    if (session.kind === "assign-task-phase") {
+      const validated = validateAssignTaskPhaseSubmit(values);
+      if (!validated.ok) {
+        await this.postDrawerValidationToWebview(validated.error);
+        return false;
+      }
+      const { phaseKey } = validated.values;
+      const taskId = session.taskId;
+      await this.client.recordActivity({
+        kind: "working_task",
+        taskId,
+        phaseKey,
+        command: "assign-task-phase",
+        details: { source: "dashboard-phase-button" }
+      });
+      const args: Record<string, unknown> = {
+        taskId,
+        phaseKey,
+        ...expectedPlanningGenerationArgs()
+      };
+      const out = await this.client.run("assign-task-phase", args);
+      await this.client.clearActivity();
+      if (!out.ok) {
+        const detail = `${String(out.code ?? "")} ${String(out.message ?? "")}`.trim();
+        await this.postDrawerValidationToWebview(`assign-task-phase failed: ${detail}`.slice(0, 900));
+        return false;
+      }
+      ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
+      this.closeDashboardDrawer();
+      this.notifyKitStateChanged();
+      await vscode.window.showInformationMessage(`Phase set for ${taskId} → ${phaseKey}`);
+      return true;
+    }
+    if (session.kind === "add-phase-note") {
+      const phaseKey = this.inferPhaseKeyForKitPhaseNoteFromDashboard();
+      if (!phaseKey) {
+        await this.postDrawerValidationToWebview("Could not resolve phaseKey from dashboard summary; refresh and retry.");
+        return false;
+      }
+      const validated = validateAddPhaseNoteSubmit(values);
+      if (!validated.ok) {
+        await this.postDrawerValidationToWebview(validated.error);
+        return false;
+      }
+      const { noteType, summary, priority, details } = validated.values;
+      const args: Record<string, unknown> = {
+        phaseKey,
+        noteType,
+        summary,
+        priority,
+        ...expectedPlanningGenerationArgs()
+      };
+      if (details.length > 0) {
+        args.details = details;
+      }
+      const r = await this.client.run("add-phase-note", args);
+      if (!r.ok) {
+        await this.postDrawerValidationToWebview((r.message ?? JSON.stringify(r)).slice(0, 900));
+        return false;
+      }
+      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+      this.closeDashboardDrawer();
+      this.notifyKitStateChanged();
+      await vscode.window.showInformationMessage(r.message ?? "Phase note added");
+      return true;
+    }
+    if (session.kind === "convert-phase-note") {
+      const r = await this.client.run("convert-phase-note-to-task", {
+        noteId: session.noteId,
+        ...expectedPlanningGenerationArgs()
+      });
+      if (!r.ok) {
+        await this.postDrawerValidationToWebview((r.message ?? JSON.stringify(r)).slice(0, 900));
+        return false;
+      }
+      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+      this.closeDashboardDrawer();
+      this.notifyKitStateChanged();
+      await vscode.window.showInformationMessage(r.message ?? "Converted phase note to task");
+      return true;
+    }
+    if (session.kind === "persist-phase-note-proposals") {
+      const r = await this.client.run("propose-tasks-from-phase-notes", {
+        persist: true,
+        ...expectedPlanningGenerationArgs()
+      });
+      if (!r.ok) {
+        await this.postDrawerValidationToWebview((r.message ?? JSON.stringify(r)).slice(0, 900));
+        return false;
+      }
+      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+      this.closeDashboardDrawer();
+      this.notifyKitStateChanged();
+      await vscode.window.showInformationMessage(r.message ?? "Persisted phase note proposals");
+      return true;
+    }
+    if (session.kind === "accept-proposed") {
+      const validated = validateAcceptProposedSubmit(values);
+      if (!validated.ok) {
+        await this.postDrawerValidationToWebview(validated.error);
+        return false;
+      }
+      const { phaseKey, policyRationale } = validated.values;
+      const taskIds = session.taskIds;
+      const categoryLabel = session.categoryLabel;
+      if (taskIds.length === 0) {
+        return false;
+      }
+      if (taskIds.length === 1) {
+        const taskId = taskIds[0]!;
+        const r = await this.client.run("run-transition", {
+          taskId,
+          action: "accept",
+          policyApproval: { confirmed: true, rationale: policyRationale },
+          ...expectedPlanningGenerationArgs()
+        });
+        if (!r.ok) {
+          await this.postDrawerValidationToWebview((r.message ?? JSON.stringify(r)).slice(0, 900));
+          return false;
+        }
+        ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+        const r2 = await this.client.run("assign-task-phase", {
+          taskId,
+          phaseKey,
+          ...expectedPlanningGenerationArgs()
+        });
+        if (!r2.ok) {
+          this.closeDashboardDrawer();
+          this.notifyKitStateChanged();
+          await vscode.window.showErrorMessage(
+            `Accepted ${taskId} but assign-task-phase failed: ${(r2.message ?? r2.code ?? JSON.stringify(r2)).slice(0, 520)}`
+          );
+          return true;
+        }
+        ingestPlanningMetaFromData(r2.data as Record<string, unknown> | undefined);
+        this.closeDashboardDrawer();
+        this.notifyKitStateChanged();
+        await vscode.window.showInformationMessage(`Accepted ${taskId} and assigned phase ${phaseKey}.`);
+        return true;
+      }
+      const failures: string[] = [];
+      for (const taskId of taskIds) {
+        const r = await this.client.run("run-transition", {
+          taskId,
+          action: "accept",
+          policyApproval: { confirmed: true, rationale: policyRationale },
+          ...expectedPlanningGenerationArgs()
+        });
+        if (!r.ok) {
+          failures.push(`${taskId}: ${(r.message ?? r.code ?? JSON.stringify(r)).slice(0, 200)}`);
+          continue;
+        }
+        ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+        const r2 = await this.client.run("assign-task-phase", {
+          taskId,
+          phaseKey,
+          ...expectedPlanningGenerationArgs()
+        });
+        if (!r2.ok) {
+          failures.push(`${taskId} assign: ${(r2.message ?? r2.code ?? JSON.stringify(r2)).slice(0, 180)}`);
+        } else {
+          ingestPlanningMetaFromData(r2.data as Record<string, unknown> | undefined);
+        }
+      }
+      this.closeDashboardDrawer();
+      this.notifyKitStateChanged();
+      if (failures.length > 0) {
+        await vscode.window.showErrorMessage(
+          `Some batch operations failed (${String(failures.length)}/${String(taskIds.length)}): ${failures
+            .slice(0, 3)
+            .join(" · ")}`.slice(0, 900)
+        );
+        return true;
+      }
+      await vscode.window.showInformationMessage(
+        `Accepted ${String(taskIds.length)} proposed ${categoryLabel.trim() || "task"}(s) into phase ${phaseKey}.`
+      );
+      return true;
+    }
+    return false;
   }
 
   /**
    * Dashboard "Phase" row action → `assign-task-phase` with planning-generation prelude when required.
    */
   private async onAssignTaskPhase(taskId: string): Promise<void> {
-    const phaseKey = await this.pickPhaseKeyFromDashboard({
-      title: `Set phase for ${taskId}`
-    });
-    if (!phaseKey) {
+    if (this.dashboardDrawerSession) {
       return;
     }
-    await this.client.recordActivity({
-      kind: "working_task",
-      taskId,
-      phaseKey,
-      command: "assign-task-phase",
-      details: { source: "dashboard-phase-button" }
-    });
-    const args: Record<string, unknown> = {
-      taskId,
-      phaseKey,
-      ...expectedPlanningGenerationArgs()
-    };
-    const out = await this.client.run("assign-task-phase", args);
-    if (!out.ok) {
-      const detail = `${String(out.code ?? "")} ${String(out.message ?? "")}`.trim();
-      await vscode.window.showErrorMessage(`assign-task-phase failed: ${detail}`);
-      await this.client.clearActivity();
-      return;
-    }
-    ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
-    await this.client.clearActivity();
-    this.notifyKitStateChanged();
-    await this.pushUpdate();
-    await vscode.window.showInformationMessage(`Updated phase for ${taskId} → ${phaseKey}`);
+    const data = this.lastDashboardSummaryData;
+    const suggestions = data ? collectPhaseKeySuggestions(data) : [];
+    const html = renderDrawerFormHtml(buildAssignTaskPhaseDrawerSpec(taskId, suggestions));
+    this.dashboardDrawerSession = { kind: "assign-task-phase", taskId };
+    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
   }
 
   private async onDismissPhaseNote(noteId: string, priority: string): Promise<void> {
-    const reasonRaw =
-      (await vscode.window.showInputBox({
-        prompt: "Reason for dismiss-phase-note (required; audited)",
-        placeHolder: "Short operator reason"
-      })) ?? "";
-    const reason = reasonRaw.trim();
-    if (!reason.length) {
-      await vscode.window.showErrorMessage("dismiss-phase-note requires a non-empty reason.");
+    if (this.dashboardDrawerSession) {
       return;
     }
-    let policyApproval: { confirmed: boolean; rationale: string } | undefined;
-    if (priority === "critical") {
-      const gate = await vscode.window.showWarningMessage(
-        "Dismiss an active critical phase note — kit policy may require explicit approval.",
-        { modal: true },
-        "Continue"
-      );
-      if (gate !== "Continue") {
-        return;
-      }
-      const rationaleRaw =
-        (await vscode.window.showInputBox({
-          prompt: "Policy rationale for critical phase note dismiss (policyApproval.rationale)",
-          placeHolder: "Shown in policy trace"
-        })) ?? "";
-      const rationale = rationaleRaw.trim();
-      if (!rationale.length) {
-        await vscode.window.showErrorMessage("Critical dismiss requires a non-empty policy rationale.");
-        return;
-      }
-      policyApproval = { confirmed: true, rationale };
-    }
-    const args: Record<string, unknown> = {
-      noteId,
-      reason,
-      ...expectedPlanningGenerationArgs()
-    };
-    if (policyApproval) {
-      args.policyApproval = policyApproval;
-    }
-    const r = await this.client.run("dismiss-phase-note", args);
-    if (!r.ok) {
-      await vscode.window.showErrorMessage((r.message ?? JSON.stringify(r)).slice(0, 900));
-      return;
-    }
-    ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
-    this.notifyKitStateChanged();
-    await vscode.window.showInformationMessage(r.message ?? "Phase note dismissed");
+    const html = renderDrawerFormHtml(buildDismissPhaseNoteDrawerSpec(noteId, priority));
+    this.dashboardDrawerSession = { kind: "dismiss-note", noteId, priority };
+    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
   }
 
   private async onAddPhaseNote(): Promise<void> {
-    const typePick = await vscode.window.showQuickPick(
-      [
-        { label: "follow-up", description: "Follow-up work or decision" },
-        { label: "task-suggestion", description: "Candidate task from phase context" },
-        { label: "finding", description: "Observed fact or outcome" },
-        { label: "gotcha", description: "Operational caution" },
-        { label: "risk", description: "Release or execution risk" },
-        { label: "blocker", description: "Blocking issue" }
-      ],
-      { title: "Add phase note — type" }
-    );
-    if (!typePick) {
+    if (this.dashboardDrawerSession) {
       return;
     }
-    const summary =
-      (await vscode.window.showInputBox({
-        prompt: "Phase note summary (stored in workspace-kit; do not include secrets)",
-        placeHolder: "Short note for the current phase"
-      }))?.trim() ?? "";
-    if (!summary.length) {
-      await vscode.window.showErrorMessage("add-phase-note requires a non-empty summary.");
+    const phaseKey = this.inferPhaseKeyForKitPhaseNoteFromDashboard();
+    if (!phaseKey) {
+      await vscode.window.showErrorMessage(
+        "Cannot resolve phaseKey for add-phase-note from the dashboard summary. Refresh the dashboard and try again."
+      );
       return;
     }
-    const priorityPick = await vscode.window.showQuickPick(
-      [
-        { label: "normal" },
-        { label: "low" },
-        { label: "high" },
-        { label: "critical" }
-      ],
-      { title: "Add phase note — priority" }
-    );
-    if (!priorityPick) {
-      return;
-    }
-    const detailsRaw = await vscode.window.showInputBox({
-      prompt: "Optional details (summarize; do not include secrets)",
-      placeHolder: "Leave blank for summary-only note"
-    });
-    const args: Record<string, unknown> = {
-      noteType: typePick.label,
-      summary,
-      priority: priorityPick.label
-    };
-    const details = detailsRaw?.trim();
-    if (details) {
-      args.details = details;
-    }
-    const r = await this.client.run("add-phase-note", args);
-    if (!r.ok) {
-      await vscode.window.showErrorMessage((r.message ?? JSON.stringify(r)).slice(0, 900));
-      return;
-    }
-    ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
-    this.notifyKitStateChanged();
-    await vscode.window.showInformationMessage(r.message ?? "Phase note added");
+    const html = renderDrawerFormHtml(buildAddPhaseNoteDrawerSpec(phaseKey));
+    this.dashboardDrawerSession = { kind: "add-phase-note" };
+    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
   }
 
   private async onConvertPhaseNote(noteId: string): Promise<void> {
-    const gate = await vscode.window.showWarningMessage(
-      `Convert phase note ${noteId} to a proposed task (convert-phase-note-to-task)?`,
-      { modal: true },
-      "Convert"
-    );
-    if (gate !== "Convert") {
+    if (this.dashboardDrawerSession) {
       return;
     }
-    const r = await this.client.run("convert-phase-note-to-task", {
-      noteId,
-      ...expectedPlanningGenerationArgs()
-    });
-    if (!r.ok) {
-      await vscode.window.showErrorMessage((r.message ?? JSON.stringify(r)).slice(0, 900));
-      return;
-    }
-    ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
-    this.notifyKitStateChanged();
-    await vscode.window.showInformationMessage(r.message ?? "Converted phase note to task");
+    const html = renderDrawerFormHtml(buildConvertPhaseNoteDrawerSpec(noteId));
+    this.dashboardDrawerSession = { kind: "convert-phase-note", noteId };
+    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
   }
 
   private async onPersistPhaseNoteProposals(): Promise<void> {
-    const gate = await vscode.window.showWarningMessage(
-      "Persist convertible phase notes into kit suggestions (propose-tasks-from-phase-notes persist:true)?",
-      { modal: true },
-      "Persist"
-    );
-    if (gate !== "Persist") {
+    if (this.dashboardDrawerSession) {
       return;
     }
-    const r = await this.client.run("propose-tasks-from-phase-notes", {
-      persist: true,
-      ...expectedPlanningGenerationArgs()
-    });
-    if (!r.ok) {
-      await vscode.window.showErrorMessage((r.message ?? JSON.stringify(r)).slice(0, 900));
-      return;
-    }
-    ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
-    this.notifyKitStateChanged();
-    await vscode.window.showInformationMessage(r.message ?? "Persisted phase note proposals");
+    const html = renderDrawerFormHtml(buildPersistPhaseNoteProposalsDrawerSpec());
+    this.dashboardDrawerSession = { kind: "persist-phase-note-proposals" };
+    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
   }
 
-  /** Proposed-row Accept → pick phase → run-transition accept → assign-task-phase. */
+  /** Proposed-row Accept → drawer (phase + policy rationale) → run-transition accept → assign-task-phase. */
   private async onDashboardAcceptProposed(taskId: string): Promise<void> {
-    const phaseKey = await this.pickPhaseKeyFromDashboard({
-      title: `Accept proposed task — target phase for ${taskId}`
-    });
-    if (!phaseKey) {
+    if (this.dashboardDrawerSession) {
       return;
     }
-    const gate = await vscode.window.showWarningMessage(
-      `Accept ${taskId} (→ ready) then assign-task-phase → ${phaseKey}?`,
-      { modal: true },
-      "Apply"
+    const data = this.lastDashboardSummaryData;
+    const suggestions = data ? collectPhaseKeySuggestions(data) : [];
+    const html = renderDrawerFormHtml(
+      buildAcceptProposedDrawerSpec({ taskIds: [taskId], categoryLabel: "", suggestions })
     );
-    if (gate !== "Apply") {
-      return;
-    }
-    const rationale =
-      (await vscode.window.showInputBox({
-        prompt: `Policy rationale for run-transition accept on ${taskId}`,
-        placeHolder: "Shown in policy trace / approval"
-      })) ?? "vscode-extension";
-    const r = await this.client.run("run-transition", {
-      taskId,
-      action: "accept",
-      policyApproval: { confirmed: true, rationale },
-      ...expectedPlanningGenerationArgs()
-    });
-    if (!r.ok) {
-      await vscode.window.showErrorMessage((r.message ?? JSON.stringify(r)).slice(0, 900));
-      return;
-    }
-    ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
-    const r2 = await this.client.run("assign-task-phase", {
-      taskId,
-      phaseKey,
-      ...expectedPlanningGenerationArgs()
-    });
-    if (!r2.ok) {
-      await vscode.window.showErrorMessage(
-        `Accepted ${taskId} but assign-task-phase failed: ${(r2.message ?? r2.code ?? JSON.stringify(r2)).slice(0, 520)}`
-      );
-    } else {
-      ingestPlanningMetaFromData(r2.data as Record<string, unknown> | undefined);
-      await vscode.window.showInformationMessage(`Accepted ${taskId} and assigned phase ${phaseKey}.`);
-    }
-    this.notifyKitStateChanged();
+    this.dashboardDrawerSession = { kind: "accept-proposed", taskIds: [taskId], categoryLabel: "" };
+    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
   }
 
   private async onDashboardAcceptProposedBatch(taskIds: string[], categoryLabel: string): Promise<void> {
     if (taskIds.length === 0) {
       return;
     }
-    const phaseKey = await this.pickPhaseKeyFromDashboard({
-      title: `Accept ${String(taskIds.length)} proposed ${categoryLabel} task(s) — target phase`
-    });
-    if (!phaseKey) {
+    if (this.dashboardDrawerSession) {
       return;
     }
-    const gate = await vscode.window.showWarningMessage(
-      `Accept ${String(taskIds.length)} proposed ${categoryLabel} task(s) (→ ready) then assign each to phase ${phaseKey}? Each transition uses the same policy rationale.`,
-      { modal: true },
-      "Accept all"
+    const data = this.lastDashboardSummaryData;
+    const suggestions = data ? collectPhaseKeySuggestions(data) : [];
+    const html = renderDrawerFormHtml(
+      buildAcceptProposedDrawerSpec({ taskIds, categoryLabel, suggestions })
     );
-    if (gate !== "Accept all") {
-      return;
-    }
-    const rationale =
-      (await vscode.window.showInputBox({
-        prompt: `Policy rationale for batch accept (${String(taskIds.length)} × accept on proposed ${categoryLabel})`,
-        placeHolder: "Shown in policy trace / approval"
-      })) ?? "vscode-extension batch accept";
-    const failures: string[] = [];
-    for (const taskId of taskIds) {
-      const r = await this.client.run("run-transition", {
-        taskId,
-        action: "accept",
-        policyApproval: { confirmed: true, rationale },
-        ...expectedPlanningGenerationArgs()
-      });
-      if (!r.ok) {
-        failures.push(`${taskId}: ${(r.message ?? r.code ?? JSON.stringify(r)).slice(0, 200)}`);
-        continue;
-      }
-      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
-      const r2 = await this.client.run("assign-task-phase", {
-        taskId,
-        phaseKey,
-        ...expectedPlanningGenerationArgs()
-      });
-      if (!r2.ok) {
-        failures.push(
-          `${taskId} assign: ${(r2.message ?? r2.code ?? JSON.stringify(r2)).slice(0, 180)}`
-        );
-      } else {
-        ingestPlanningMetaFromData(r2.data as Record<string, unknown> | undefined);
-      }
-    }
-    if (failures.length > 0) {
-      await vscode.window.showErrorMessage(
-        `Some batch operations failed (${String(failures.length)}/${String(taskIds.length)}): ${failures.slice(0, 3).join(" · ")}`
-      );
-    } else {
-      await vscode.window.showInformationMessage(
-        `Accepted ${String(taskIds.length)} proposed ${categoryLabel} task(s) into phase ${phaseKey}.`
-      );
-    }
-    this.notifyKitStateChanged();
+    this.dashboardDrawerSession = { kind: "accept-proposed", taskIds, categoryLabel };
+    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
   }
 
   /**
@@ -1112,7 +1191,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     try {
       raw = (await this.client.run("dashboard-summary", {
         wishlistPage: requestedWishlistPage,
-        wishlistPageSize: 10
+        wishlistPageSize: 5
       })) as DashboardSummaryCommandSuccess | Record<string, unknown>;
     } catch (e) {
       raw = {
@@ -1181,6 +1260,23 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       logDashboard(`pushUpdate: stale phase context ignored page=${String(requestedWishlistPage)}`);
       return;
     }
+    {
+      let tabTitle = "Dashboard";
+      if (raw.ok === true && raw.data && typeof raw.data === "object") {
+        const d = raw.data as Record<string, unknown>;
+        const snap = d.workspaceSnapshot;
+        if (snap && typeof snap === "object") {
+          const rec = snap as Record<string, unknown>;
+          const ph =
+            rec.currentKitPhase != null ? String(rec.currentKitPhase).trim() : "";
+          if (ph.length > 0) {
+            tabTitle = `Dashboard — ${ph}`;
+          }
+        }
+      }
+      activeView.title =
+        tabTitle.length > 48 ? `${tabTitle.slice(0, 48)}\u2026` : tabTitle;
+    }
     let rootInner: string;
     const wizardPanel: PlanningInterviewWizardPanel | null = raw.ok === true ? this.planningWizardPanel() : null;
     try {
@@ -1238,6 +1334,28 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
 
   window.addEventListener('message', function(ev) {
     var m = ev.data;
+    if (m && m.type === 'wcDrawerOpen' && typeof m.html === 'string') {
+      var dh = document.getElementById('wc-drawer-host');
+      if (!dh) return;
+      dh.innerHTML = m.html;
+      dh.classList.remove('wc-drawer-host--hidden');
+      dh.setAttribute('aria-hidden','false');
+      var ve = document.getElementById('wc-drawer-validation');
+      if (ve) { ve.textContent=''; ve.hidden=true; }
+      var prim = dh.querySelector('.wc-drawer-btn-primary');
+      if (prim && prim.focus) prim.focus();
+      return;
+    }
+    if (m && m.type === 'wcDrawerClose') {
+      var dh2 = document.getElementById('wc-drawer-host');
+      if (dh2) { dh2.innerHTML=''; dh2.classList.add('wc-drawer-host--hidden'); dh2.setAttribute('aria-hidden','true'); }
+      return;
+    }
+    if (m && m.type === 'wcDrawerValidation' && typeof m.message === 'string') {
+      var v = document.getElementById('wc-drawer-validation');
+      if (v) { v.textContent = m.message; v.hidden = false; }
+      return;
+    }
     if (!m || m.type !== 'wcReplaceRoot' || typeof m.html !== 'string') return;
     var root = document.getElementById('root');
     if (!root) return;
@@ -1263,6 +1381,31 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   });
 
   applyTab(activeTab);
+
+  document.addEventListener('click', function(ev) {
+    var dh = document.getElementById('wc-drawer-host');
+    if (!dh || dh.classList.contains('wc-drawer-host--hidden')) return;
+    var t = ev.target && ev.target.closest ? ev.target.closest('[data-wc-drawer-action]') : null;
+    if (!t || !dh.contains(t)) return;
+    var act = t.getAttribute('data-wc-drawer-action');
+    if (act === 'backdrop' || act === 'cancel') { vscode.postMessage({type:'drawerCancel'}); return; }
+    if (act === 'submit') {
+      var vals = {};
+      dh.querySelectorAll('[data-wc-drawer-field]').forEach(function(el) {
+        var id = el.getAttribute('data-wc-drawer-field');
+        if (!id) return;
+        vals[id] = ('value' in el && el.value != null) ? String(el.value) : '';
+      });
+      vscode.postMessage({type:'drawerSubmit', values: vals});
+    }
+  });
+  document.addEventListener('keydown', function(ev) {
+    if (ev.key !== 'Escape') return;
+    var dh = document.getElementById('wc-drawer-host');
+    if (!dh || dh.classList.contains('wc-drawer-host--hidden')) return;
+    ev.preventDefault();
+    vscode.postMessage({type:'drawerCancel'});
+  });
 
   var btn = document.getElementById('btn');
   var rootEl = document.getElementById('root');
@@ -1375,6 +1518,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       margin: 0 0 6px 0;
     }
     .dash-overview-phase-text { flex: 1; min-width: 0; }
+    .dash-editor-integration--embedded {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid var(--vscode-widget-border, rgba(127,127,127,.25));
+    }
     button.dash-deliver-chip {
       margin: 0;
       flex-shrink: 0;
@@ -1552,7 +1700,16 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .dash-count-label { font-size: 11px; opacity: 0.85; line-height: 1.25; flex: 1; min-width: 0; }
     .dash-count-num { flex-shrink: 0; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; font-size: 13px; line-height: 1.25; }
     pre.resume-cli { font-size: 11px; }
-    /* ── Tab system ── */
+    /* ── Tab system (agent status banner lives in .wc-dashboard-tab-shell above this bar) ── */
+    .wc-dashboard-tab-shell { display: flex; flex-direction: column; }
+    .wc-dashboard-tab-shell > .dash-agent-status-banner {
+      margin: 0 0 6px 0;
+      padding: 4px 6px;
+      border-radius: 4px;
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
+      background: var(--vscode-sideBarSectionHeader-background, rgba(127,127,127,.12));
+    }
+    .wc-dashboard-tab-shell > .dash-agent-status-banner p { margin: 0; }
     .wc-tab-bar {
       display: flex;
       gap: 0;
@@ -1963,10 +2120,45 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       background: var(--vscode-editorWarning-foreground, #cca700);
       color: #000;
     }
+    .wc-drawer-host { position: fixed; inset: 0; z-index: 20000; pointer-events: none; }
+    .wc-drawer-host:not(.wc-drawer-host--hidden) { pointer-events: auto; }
+    .wc-drawer-host--hidden { display: none !important; }
+    .wc-drawer-scrim { position: absolute; inset: 0; background: rgba(0,0,0,0.5); }
+    .wc-drawer-panel {
+      position: absolute; left: 8px; right: 8px; bottom: 8px; max-height: 78vh; overflow: auto;
+      background: var(--vscode-editorWidget-background);
+      color: var(--vscode-editorWidget-foreground);
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.45));
+      border-radius: 8px; padding: 10px 12px 12px;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.35);
+    }
+    .wc-drawer-title { margin: 0 0 6px 0; font-size: 14px; font-weight: 600; }
+    .wc-drawer-desc { margin: 0 0 10px 0; opacity: 0.9; line-height: 1.35; }
+    .wc-drawer-validation { margin: 0 0 8px 0; padding: 6px 8px; border-radius: 4px; background: var(--vscode-inputValidation-errorBackground); color: var(--vscode-inputValidation-errorForeground); }
+    .wc-drawer-fields { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+    .wc-drawer-field-label { display: block; font-size: 11px; font-weight: 600; margin-bottom: 4px; }
+    .wc-drawer-input, .wc-drawer-textarea, .wc-drawer-select {
+      width: 100%; box-sizing: border-box; font-family: var(--vscode-font-family); font-size: 12px;
+      color: var(--vscode-input-foreground); background: var(--vscode-input-background);
+      border: 1px solid var(--vscode-input-border, rgba(127,127,127,.35)); border-radius: 4px; padding: 4px 6px;
+    }
+    .wc-drawer-textarea { resize: vertical; min-height: 48px; }
+    .wc-drawer-summary-body { font-size: 12px; line-height: 1.4; padding: 6px 8px; border-radius: 4px; background: var(--vscode-textCodeBlock-background); }
+    .wc-drawer-footer { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+    .wc-drawer-btn { padding: 4px 12px; font-size: 12px; border-radius: 4px; cursor: pointer; }
+    .wc-drawer-btn-secondary {
+      color: var(--vscode-foreground); background: transparent;
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.45));
+    }
+    .wc-drawer-btn-primary {
+      color: var(--vscode-button-foreground); background: var(--vscode-button-background);
+      border: 1px solid var(--vscode-button-border, var(--vscode-contrastBorder, transparent));
+    }
   </style>
 </head>
 <body>
   <div id="root">${rootInnerHtml}</div>
+  <div id="wc-drawer-host" class="wc-drawer-host wc-drawer-host--hidden" aria-hidden="true"></div>
   <footer class="dash-footer">
     <button type="button" id="btn" class="dash-refresh-btn" title="Refetch dashboard-summary now. The panel also reloads when you switch back to it, when kit-owned files change, and about every 45s while visible.">Refresh</button>
   </footer>

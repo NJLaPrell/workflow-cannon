@@ -9,7 +9,7 @@ This file is an **ordered checklist**. Canonical prose lives in the linked docs 
 
 ## 0) Attach context
 
-- Confirm [`docs/maintainers/TERMS.md`](../TERMS.md) vocabulary (task-engine state, approval gates, evidence).
+- Confirm [`docs/maintainers/TERMS.md`](../TERMS.md) vocabulary (task-engine state, approval gates, evidence). Canonical **Sprint** ↔ machine phase synonyms: [`.ai/TERMS.md`](../TERMS.md) `term|name=sprint|…`.
 - **Phase integration branch** for phase **`<N>`** is **`release/phase-<N>`** (see **`.cursor/rules/branching-tagging-strategy.mdc`** and [`task-to-phase-branch.md`](./task-to-phase-branch.md)).
 - For **policy-sensitive** `workspace-kit run` commands, use JSON **`policyApproval`** on the **third** CLI argument; for `config` / `init` / `upgrade`, see [`POLICY-APPROVAL.md`](../POLICY-APPROVAL.md).
 

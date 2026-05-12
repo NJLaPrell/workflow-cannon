@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "source": ".ai/TERMS.md",
   "generatedBy": "scripts/generate-terms-index.mjs",
-  "termCount": 23,
+  "termCount": 24,
   "terms": [
     {
       "name": "acknowledgement_strength",
@@ -87,6 +87,10 @@
     {
       "name": "shadow_mode",
       "anchor": "#term-shadow_mode"
+    },
+    {
+      "name": "sprint",
+      "anchor": "#term-sprint"
     },
     {
       "name": "template_contract",

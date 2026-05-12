@@ -1,5 +1,10 @@
 /**
  * Pure dashboard HTML generation — unit-tested; applied in the webview via postMessage { html } from the host.
+ *
+ * **Dashboard prompt surface (Phase 91+):** new Dashboard-originated data entry for kit mutations should use the
+ * in-webview drawer (`#wc-drawer-host`, `wcDrawerOpen` / `drawerSubmit` / `drawerCancel` in `DashboardViewProvider`)
+ * instead of `vscode.window.showInputBox` / `showQuickPick` so operators stay in the sidebar. See
+ * `dashboard-input-drawer.ts` for the typed form spec + render helpers.
  */
 
 import {
@@ -53,7 +58,7 @@ function renderExecutionReadyScopeFootnote(): string {
   return (
     '<p class="muted wc-ready-scope-note">' +
     "<b>Note:</b> Ready / proposed rollups follow the kit <em>execution queue</em> — they omit <code>wishlist_intake</code> even when that row is ready. " +
-    "Use <b>Wishlist</b> on the <b>Task Engine</b> tab, or <code>wk run list-tasks</code> for the full store.</p>"
+    "Use <b>Wishlist</b> on the <b>Queue</b> tab, or <code>wk run list-tasks</code> for the full store.</p>"
   );
 }
 
@@ -89,7 +94,7 @@ function renderRecommendedNextCard(
   return (
     '<div class="wc-rec-next">' +
     '<div class="wc-rec-header">' +
-    '<span class="wc-rec-label">&#9733; Recommended Next</span>' +
+    '<span class="wc-rec-label">&#9733; Up next</span>' +
     "</div>" +
     '<p class="wc-rec-title">' +
     escapeHtml(displayTitle) +
@@ -135,7 +140,7 @@ function renderRecommendedNextWishlistCard(item: unknown): string {
   return (
     '<div class="wc-rec-next wc-rec-next-wishlist">' +
     '<div class="wc-rec-header">' +
-    '<span class="wc-rec-label">&#9733; Recommended Next</span>' +
+    '<span class="wc-rec-label">&#9733; Up next</span>' +
     "</div>" +
     '<p class="muted wc-rec-wl-hint">No execution-queue ready work — first open wishlist item.</p>' +
     "<p class=\"wc-rec-title\">" +
@@ -182,7 +187,7 @@ function renderStatPills(
           p.cls +
           '" data-wc-pill-nav="task-engine" data-wc-pill-filter="' +
           escapeHtmlAttr(filter) +
-          '" title="Switch to Task Engine — ' +
+          '" title="Open Queue tab — ' +
           escapeHtmlAttr(p.label) +
           '">' +
           '<span class="wc-stat-num">' +
@@ -199,7 +204,7 @@ function renderStatPills(
   );
 }
 
-/** Filter chip bar for the Task Engine tab. */
+/** Filter chip bar for the Queue tab. */
 function renderFilterChipBar(): string {
   return (
     '<div class="wc-filter-chips" role="toolbar" aria-label="Filter task sections">' +
@@ -465,13 +470,13 @@ function renderWishlistPager(openPage: number, openTotalPages: number): string {
   const prevDisabled = openPage <= 0;
   const nextDisabled = openPage >= lastPage;
   return (
-    '<div class="wc-wishlist-pager muted" role="navigation" aria-label="Wishlist pages">' +
+    '<div class="wc-wishlist-pager muted" role="navigation" aria-label="Wishlist pages" style="display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:8px;margin-top:10px;">' +
     '<button type="button" class="dash-row-action dash-row-action-tertiary"' +
     (prevDisabled ? " disabled" : "") +
     ' data-wc-action="wishlist-page" data-wishlist-page="' +
     String(prevPage) +
     '">Prev</button>' +
-    '<span style="margin:0 8px">Page ' +
+    '<span>Page ' +
     String(openPage + 1) +
     " of " +
     String(openTotalPages) +
@@ -1476,7 +1481,7 @@ function renderAgentStatusBanner(agentStatus: unknown): string {
   );
 }
 
-function renderEditorIntegrationSection(editorIntegration: unknown): string {
+function renderEditorIntegrationEmbed(editorIntegration: unknown): string {
   if (!editorIntegration || typeof editorIntegration !== "object") {
     return "";
   }
@@ -1489,7 +1494,7 @@ function renderEditorIntegrationSection(editorIntegration: unknown): string {
   const direct = chat.canPrefillDirectly === true ? "Direct" : "Clipboard";
   const external = chat.externalCursorDeeplink === true ? "enabled" : "disabled";
   return (
-    '<section class="dash-card dash-editor-integration" aria-label="Editor integration">' +
+    '<div class="dash-editor-integration dash-editor-integration--embedded" aria-label="Editor integration">' +
     "<p><b>Editor</b> " +
     escapeHtml(appName) +
     ' <span class="muted">' +
@@ -1505,7 +1510,7 @@ function renderEditorIntegrationSection(editorIntegration: unknown): string {
     " · cursor URL " +
     escapeHtml(external) +
     "</span></p>" +
-    "</section>"
+    "</div>"
   );
 }
 
@@ -1591,7 +1596,7 @@ export function renderPhaseCatalogOverviewSection(
   const table = inner;
   const btn =
     '<p style="margin-top:8px"><button type="button" class="dash-row-action dash-row-action-primary" data-wc-action="register-phase-catalog">Register future phase</button>' +
-    ' <span class="muted">Uses <code>upsert-phase-catalog-entry</code> with planning sync.</span></p>';
+    ' <span class="muted">Plan a future release phase; the kit keeps planning metadata aligned.</span></p>';
   return (
     '<section class="dash-card dash-phase-catalog" aria-label="Phase catalog">' +
     "<p><b>Phase roster</b></p>" +
@@ -1648,17 +1653,20 @@ function renderPhaseDeliverBlockInner(
 function renderRoleTemperamentAndPhaseSection(
   ag: unknown,
   ws: Record<string, unknown> | null,
-  readyExecutionSummary?: Record<string, unknown>
+  readyExecutionSummary?: Record<string, unknown>,
+  editorIntegration?: unknown
 ): string {
   const rt = renderRoleTemperamentLines(ag);
   const phaseInner = ws !== null ? renderPhaseDeliverBlockInner(ws, readyExecutionSummary ?? {}) : "";
-  if (rt === "" && phaseInner === "") {
+  const editorInner = renderEditorIntegrationEmbed(editorIntegration);
+  if (rt === "" && phaseInner === "" && editorInner === "") {
     return "";
   }
   return (
     '<section class="dash-card dash-role-temperament-phase" aria-label="Role, temperament, and phase">' +
     rt +
     phaseInner +
+    editorInner +
     "</section>"
   );
 }
@@ -1817,7 +1825,7 @@ function renderStatusSectionHtml(d: Record<string, unknown>, ss: Record<string, 
     buildDashboardStateCountGridHtml(ss) +
     '<p class="muted wc-status-counts-scope-note">' +
     "<b>Note:</b> These totals reflect <code>stateSummary</code> (store-wide statuses). " +
-    "<b>Overview</b> pills and <b>Task Engine</b> queue sections use execution-queue rollups " +
+    "<b>Overview</b> pills and <b>Queue</b> tab sections use execution-queue rollups " +
     "(same family as <code>getNextActions</code>) and exclude <code>wishlist_intake</code> from ready/proposed.</p>" +
     "</section>";
 
@@ -2006,7 +2014,7 @@ export function renderDashboardRootInnerHtml(
   const wishPageSize =
     typeof wishlist.openPageSize === "number" && wishlist.openPageSize > 0
       ? wishlist.openPageSize
-      : 10;
+      : 5;
   const wishOpenPage =
     typeof wishlist.openPage === "number" && Number.isInteger(wishlist.openPage) && wishlist.openPage >= 0
       ? wishlist.openPage
@@ -2223,16 +2231,14 @@ export function renderDashboardRootInnerHtml(
   const overviewContent =
     recNextCard +
     renderStatPills(totalReadyCount, totalProposedCount, totalBlockedCount, totalDoneCount) +
-    renderAgentStatusBanner(d.agentStatus) +
-    renderEditorIntegrationSection(editorIntegration) +
-    renderRoleTemperamentAndPhaseSection(d.agentGuidance, ws as Record<string, unknown> | null, res) +
+    renderRoleTemperamentAndPhaseSection(d.agentGuidance, ws as Record<string, unknown> | null, res, editorIntegration) +
     renderPhaseCatalogOverviewSection(phaseSystemSlice) +
-    renderPhaseNotesOverviewSection(phaseJournal ?? null) +
     renderWorkspaceBlockersPendingSection(ws as Record<string, unknown> | null) +
     renderTeamExecutionSection(d.teamExecution) +
     renderSubagentRegistrySection(d.subagentRegistry);
 
   const taskEngineContent =
+    renderPhaseNotesOverviewSection(phaseJournal ?? null) +
     tasksBlock +
     wishlistSection +
     renderPlanningSession(planningSession, planningWizardPanel);
@@ -2260,9 +2266,11 @@ export function renderDashboardRootInnerHtml(
   // ── Tab shell ──────────────────────────────────────────────────────────────
 
   return (
+    '<div class="wc-dashboard-tab-shell">' +
+    renderAgentStatusBanner(d.agentStatus) +
     '<div class="wc-tab-bar" role="tablist">' +
     '<button type="button" class="wc-tab-btn wc-tab-active" role="tab" data-wc-tab="overview">Overview</button>' +
-    '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="task-engine">Task Engine' +
+    '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="task-engine">Queue' +
     (totalReadyCount > 0
       ? '<span class="wc-tab-badge wc-tab-badge-ready">' + escapeHtml(String(totalReadyCount)) + "</span>"
       : totalBlockedCount > 0
@@ -2277,6 +2285,7 @@ export function renderDashboardRootInnerHtml(
     '<div class="wc-tab-panel" data-wc-tab="task-engine" role="tabpanel" style="display:none">' + taskEngineContent + "</div>" +
     '<div class="wc-tab-panel" data-wc-tab="status" role="tabpanel" style="display:none">' + statusContent + "</div>" +
     '<div class="wc-tab-panel" data-wc-tab="config" role="tabpanel" style="display:none">' + configContent + "</div>" +
-    '<div class="wc-tab-panel" data-wc-tab="cae" role="tabpanel" style="display:none">' + caeContent + "</div>"
+    '<div class="wc-tab-panel" data-wc-tab="cae" role="tabpanel" style="display:none">' + caeContent + "</div>" +
+    "</div>"
   );
 }

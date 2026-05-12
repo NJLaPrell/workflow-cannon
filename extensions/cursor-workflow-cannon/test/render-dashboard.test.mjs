@@ -50,6 +50,8 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   const html = renderDashboardRootInnerHtml(fixture);
   assert.match(html, /dash-card/);
   assert.match(html, /dash-agent-status-banner/);
+  assert.ok(html.indexOf("dash-agent-status-banner") < html.indexOf("wc-tab-bar"));
+  assert.ok(html.indexOf("wc-tab-bar") < html.indexOf("<b>Role:</b>"));
   assert.match(html, /<b>WC Agent is:<\/b> <span class="dash-agent-status-label">Awaiting Instruction<\/span>/);
   assert.match(html, /<b>Role:<\/b> Adventurer/);
   assert.match(html, /<b>Agent Temperament:<\/b> The Steady Adventurer/);
@@ -80,7 +82,7 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /dash-count-grid/);
   assert.match(html, /wc-ready-scope-note/);
   assert.match(html, /wishlist_intake/);
-  assert.match(html, /Task Engine<\/b> tab/);
+  assert.match(html, /Queue<\/b> tab/);
   assert.match(html, />Proposed<\/span> <span class="dash-count-num ok">1<\/span>/);
   assert.match(html, />Ready<\/span> <span class="dash-count-num ok">2<\/span>/);
   assert.match(html, /dashboard-tasks-block/);
@@ -220,6 +222,15 @@ test("renderDashboardRootInnerHtml includes phase journal controls when bundle p
   assert.match(html, /phase-note-convert/);
   assert.match(html, /phase-notes-propose-persist/);
   assert.match(html, /550e8400-e29b-41d4-a716-446655440000/);
+  const overviewPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="overview"');
+  const taskEnginePanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="task-engine"');
+  const statusPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="status"');
+  assert.ok(overviewPanelIdx >= 0 && taskEnginePanelIdx > overviewPanelIdx && statusPanelIdx > taskEnginePanelIdx);
+  const overviewPanel = html.slice(overviewPanelIdx, taskEnginePanelIdx);
+  const taskEnginePanel = html.slice(taskEnginePanelIdx, statusPanelIdx);
+  assert.doesNotMatch(overviewPanel, /dash-phase-notes/);
+  assert.match(taskEnginePanel, /dash-phase-notes/);
+  assert.doesNotMatch(html, /upsert-phase-catalog-entry/);
 });
 
 test("renderDashboardRootInnerHtml renders editor integration state when provided", () => {
@@ -241,6 +252,8 @@ test("renderDashboardRootInnerHtml renders editor integration state when provide
   assert.match(html, /<code>vscode<\/code>/);
   assert.match(html, /<b>Chat prefill<\/b> VS Code Chat/);
   assert.match(html, /cursor URL disabled/);
+  assert.doesNotMatch(html, /<section class="dash-card dash-editor-integration"/);
+  assert.match(html, /dash-role-temperament-phase[\s\S]*dash-editor-integration--embedded/);
 });
 
 test("renderDashboardRootInnerHtml renders escaped WC Agent status banner from agentStatus", () => {
@@ -408,7 +421,7 @@ test("renderDashboardRootInnerHtml omits suggested-next section", () => {
   assert.match(html, /<b>Agent Temperament:<\/b> The Wary Scout/);
   assert.match(html, /wc-ready-scope-note/);
   assert.match(html, /wishlist_intake/);
-  assert.match(html, /Task Engine<\/b> tab/);
+  assert.match(html, /Queue<\/b> tab/);
 });
 
 test("renderDashboardRootInnerHtml recommends wishlist when execution ready queue is empty", () => {
@@ -931,7 +944,7 @@ test("renderDashboardRootInnerHtml embeds planning wizard panel when provided", 
 });
 
 test("renderDashboardRootInnerHtml wishlist section shows pager when openTotalPages > 1", () => {
-  const rows = Array.from({ length: 10 }, (_, i) => ({
+  const rows = Array.from({ length: 5 }, (_, i) => ({
     id: `W-${i}`,
     title: `Item ${i}`,
     taskId: `T-wl-${i}`
@@ -945,10 +958,10 @@ test("renderDashboardRootInnerHtml wishlist section shows pager when openTotalPa
       readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
       readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
       wishlist: {
-        openCount: 30,
-        totalCount: 30,
+        openCount: 15,
+        totalCount: 15,
         openPage: 0,
-        openPageSize: 10,
+        openPageSize: 5,
         openTotalPages: 3,
         openTop: rows
       },
@@ -961,17 +974,18 @@ test("renderDashboardRootInnerHtml wishlist section shows pager when openTotalPa
       dependencyOverview: deliverTestDepOverview
     }
   });
-  assert.match(html, /Open 30/);
+  assert.match(html, /Open 15/);
   assert.match(html, /· Page 1 \/ 3/);
   assert.match(html, /wc-wishlist-pager/);
+  assert.match(html, /justify-content:center/);
   assert.match(html, /data-wc-action="wishlist-page"/);
 });
 
 test("renderDashboardRootInnerHtml wishlist pager points prev and next at adjacent pages", () => {
-  const rows = Array.from({ length: 10 }, (_, i) => ({
-    id: `W-${i + 10}`,
-    title: `Item ${i + 10}`,
-    taskId: `T-wl-${i + 10}`
+  const rows = Array.from({ length: 5 }, (_, i) => ({
+    id: `W-${i + 5}`,
+    title: `Item ${i + 5}`,
+    taskId: `T-wl-${i + 5}`
   }));
   const html = renderDashboardRootInnerHtml({
     ok: true,
@@ -982,10 +996,10 @@ test("renderDashboardRootInnerHtml wishlist pager points prev and next at adjace
       readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
       readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
       wishlist: {
-        openCount: 30,
-        totalCount: 30,
+        openCount: 15,
+        totalCount: 15,
         openPage: 1,
-        openPageSize: 10,
+        openPageSize: 5,
         openTotalPages: 3,
         openTop: rows
       },

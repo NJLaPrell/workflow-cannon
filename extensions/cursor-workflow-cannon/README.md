@@ -44,7 +44,7 @@ These are **two different surfaces**, both fed by **`pnpm exec wk run dashboard-
 
 | Surface | How you open it | What it is |
 |--------|-------------------|------------|
-| **Sidebar Dashboard** | Activity bar → **Workflow Cannon** → **Dashboard** | Multi-tab webview: **Overview** (rollups + Recommended Next), **Task Engine** (filters, queue, wishlist, planning), **Status** (compact identity / counts cards), **Config** / **CAE** shortcuts. |
+| **Sidebar Dashboard** | Activity bar → **Workflow Cannon** → **Dashboard** | Multi-tab webview: **Overview** (rollups + **Up next**), **Queue** (filters, queue, wishlist, planning), **Status** (compact identity / counts cards), **Config** / **CAE** shortcuts. |
 | **Status dashboard panel** | Command palette → **Workflow Cannon: Open Status Dashboard** | **Editor-area** `WebviewPanel` tuned for **phase/drift**, **`systemStatus`** (doctor contract, modules, CAE lines). **`StateWatcher`** debounces refresh (**`STATUS_PANEL_DEBOUNCE_MS`** in `StatusDashboardPanel.ts`, default **450ms**) while the tab stays open; **Refresh now** is immediate. |
 
 Requires **`dashboard-summary`** **`data.schemaVersion` ≥ 5** (**`systemStatus`**). Schema **v6** adds **`systemStatus.identity`** and **`systemStatus.planningStore`**. The merged envelope may include **`data.cae`** for CAE shadow preflight — separate from **`caeLines`** inside **`systemStatus`**.
@@ -67,7 +67,7 @@ The extension runs its bundled `@workflow-cannon/workspace-kit` CLI when availab
 
 **Proposed vs ready:** The dashboard “Suggested next” and ready/proposed sections only reflect tasks in the configured task store. **`proposed`** improvement work appears under **Proposed improvements** on the dashboard (after a refresh). When **`dashboard-summary`** returns **`phaseBuckets`** with **`taskIds`**, each phase heading can show **Accept All** (one shared policy rationale; the extension refreshes the planning-generation token between each **`run-transition`** **`accept`**). Planning appears when a `build-plan` session file exists.
 
-**Execution queue vs wishlist:** **Ready** / **proposed** rollups on **Overview** and **Task Engine** follow the kit **execution queue** and **exclude** **`wishlist_intake`** (note under stat pills / filters; points to **Wishlist** on the **Task Engine** tab). **Status → Task Counts** uses **`stateSummary`** (store-wide); see the muted note under that grid when numbers diverge. **Recommended Next** prefers **ready execution**, then the **first open wishlist** row when the execution-ready queue is empty (then ready improvements). Full store: **`wk run list-tasks`**.
+**Execution queue vs wishlist:** **Ready** / **proposed** rollups on **Overview** and the **Queue** tab follow the kit **execution queue** and **exclude** **`wishlist_intake`** (note under stat pills / filters; points to **Wishlist** on the **Queue** tab). **Status → Task Counts** uses **`stateSummary`** (store-wide); see the muted note under that grid when numbers diverge. **Up next** prefers **ready execution**, then the **first open wishlist** row when the execution-ready queue is empty (then ready improvements). Full store: **`wk run list-tasks`**.
 
 ## Testing
 
@@ -80,7 +80,7 @@ pnpm --filter cursor-workflow-cannon test
 
 - Root **`pnpm run build`** is required first because integration tests invoke real `dist/cli.js` from the repository.
 
-**Manual check (wishlist add):** Dashboard **Add wishlist item** should end with a clear toast (title + id) and an **Open wishlist detail** action; closing any prompt without saving should say the flow was cancelled.
+**Manual check (wishlist add):** Dashboard **Add wishlist item** opens the in-webview drawer (eight required fields); submit runs **`create-wishlist`**. Success ends with a clear toast plus **Open wishlist detail**; validation / API errors show in the drawer strip; Cancel closes the drawer.
 
 ## Commands and operations
 
@@ -99,7 +99,20 @@ Dashboard and palette **Generate Features** open a **new** Agent/Composer chat w
 
 **Collaboration profiles** (quick action) prefills a chat that links **`/onboarding`**, **`/behavior-interview`**, and read-mostly **`pnpm exec wk run`** lines (`resolve-behavior-profile`, `list-behavior-profiles`, **`sync-effective-behavior-cursor-rule`**) — advisory only; **chat is not JSON `policyApproval`**.
 
-Dashboard **Wishlist** open rows include **Chat**; **Proposed · improvements** and **Proposed · execution** rows include **Accept** (modal **`policyApproval`** rationale + **`expectedPlanningGeneration`** when the workspace requires it) and **Chat** (improvement triage vs task-to-phase-branch playbook text). Agent canon: **`.ai/playbooks/`** (`wishlist-intake-to-execution.md`, `improvement-triage-top-three.md`, `task-to-phase-branch.md`). Maintainer mirrors: `docs/maintainers/playbooks/`.
+Dashboard **Wishlist** open rows include **Chat**; **Proposed · improvements** and **Proposed · execution** rows include **Accept** (in-webview drawer: target phase + **`policyApproval`** rationale for **`run-transition`** **`accept`**, then **`assign-task-phase`**) and **Chat** (improvement triage vs task-to-phase-branch playbook text). Agent canon: **`.ai/playbooks/`** (`wishlist-intake-to-execution.md`, `improvement-triage-top-three.md`, `task-to-phase-branch.md`). Maintainer mirrors: `docs/maintainers/playbooks/`.
+
+### Dashboard prompt surface (Phase 91)
+
+For **sidebar Dashboard** actions that collect operator intent before a mutating **`workspace-kit run`** from the extension host, prefer the **in-webview drawer** (`#wc-drawer-host`, `wcDrawerOpen` / `drawerSubmit` / `wcDrawerValidation`) so users stay in the sidebar.
+
+**Exceptions (native VS Code UI is OK):**
+
+- **Command palette** flows and other non-Dashboard entry points.
+- **Destructive / irreversible confirmations** outside the drawer contract (for example **`showWarningMessage`** modal gates where a modal is clearer than a webview affordance).
+- **Transient notifications** (`showInformationMessage` / `showErrorMessage`) for outcomes.
+- **Planning interview wizard** and similar legacy flows until migrated.
+
+Do not add new **`await vscode.window.showInputBox`** / **`showQuickPick`** calls in `DashboardViewProvider.ts` for Dashboard-originated kit mutations — `extensions/cursor-workflow-cannon/test/dashboard-prompt-surface.test.mjs` fails the build if they appear (non-comment lines).
 
 Manual operator checklist: `docs/e2e.md`  
 Security notes: `SECURITY.md`
