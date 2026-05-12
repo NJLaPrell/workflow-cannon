@@ -5,6 +5,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { formatNodeRuntimeIdentity } from "./native-sqlite-diagnostics.mjs";
+import { smokeTestNativeSqlite, writeRuntimeStamp } from "./runtime-stamp.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2).filter((arg) => arg !== "--");
@@ -43,6 +44,16 @@ function fail(message) {
   process.exit(1);
 }
 
+async function validateNativeSqlite() {
+  try {
+    await smokeTestNativeSqlite();
+    console.log("[workspace-kit setup] Native SQLite smoke test passed.");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    fail(`Native SQLite smoke test failed under active runtime: ${message}`);
+  }
+}
+
 const specs = [readVersionMarker(".nvmrc"), readVersionMarker(".node-version")].filter(Boolean);
 const expectedMajor = specs[0]?.replace(/^v/, "").split(".")[0] ?? "22";
 const activeMajor = process.versions.node.split(".")[0];
@@ -64,6 +75,7 @@ if (pnpmVersion.status !== 0) {
 }
 
 if (checkOnly) {
+  await validateNativeSqlite();
   console.log("[workspace-kit setup] Check-only mode passed.");
   process.exit(0);
 }
@@ -73,5 +85,6 @@ if (!skipInstall) {
   run("pnpm", ["install"]);
 }
 run("pnpm", ["run", "build"]);
-run(process.execPath, ["-e", "import('better-sqlite3').then(({default: Database}) => { const db = new Database(':memory:'); db.close(); })"]);
-console.log("[workspace-kit setup] Native SQLite smoke test passed.");
+await validateNativeSqlite();
+const runtimeStamp = writeRuntimeStamp(repoRoot, repoRoot);
+console.log(`[workspace-kit setup] Runtime stamp written: ${runtimeStamp.stampPath}`);
