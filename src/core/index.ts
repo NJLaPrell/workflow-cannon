@@ -204,5 +204,26 @@ export {
   prepareKitSqliteDatabase,
   readKitSqliteUserVersion
 } from "./state/workspace-kit-sqlite.js";
+export {
+  WORKSPACE_KIT_REQUIRED_NODE_MAJOR,
+  WORKSPACE_KIT_RUNTIME_CONTRACT_SCHEMA_VERSION,
+  WORKSPACE_KIT_RUNTIME_LAUNCHER_RELATIVE_PATH,
+  WORKSPACE_KIT_RUNTIME_STAMP_RELATIVE_PATH,
+  currentRuntimeIdentity,
+  parseRuntimeStamp,
+  readRuntimeStamp,
+  runtimeLauncherPath,
+  runtimeStampPath,
+  smokeTestNativeSqlite,
+  verifyRuntimeStamp,
+  verifyRuntimeStampFile,
+  writeRuntimeStamp,
+  type NativeSqliteSmokeResult,
+  type RuntimeContractIssue,
+  type RuntimeContractIssueCode,
+  type RuntimeStampReadResult,
+  type RuntimeVerificationResult,
+  type WorkspaceKitRuntimeStampV1
+} from "./runtime-contract.js";
 
 export type CoreRuntimeVersion = "0.1";
