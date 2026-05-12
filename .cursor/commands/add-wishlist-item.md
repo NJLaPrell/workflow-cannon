@@ -16,4 +16,4 @@ The user invoked **`/add-wishlist-item`**. Goal: create a **`wishlist_intake`** 
 
 Canonical field rules: **`src/modules/task-engine/instructions/create-wishlist.md`**.
 
-**Optional:** The Workflow Cannon dashboard toolbar has an **Add wishlist item** button that walks the same fields in the editor and calls **`create-wishlist`** for you.
+**Optional:** The Workflow Cannon dashboard **Add wishlist item** button opens the sidebar webview drawer (eight fields) and calls **`create-wishlist`** for you.
