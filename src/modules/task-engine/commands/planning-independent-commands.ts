@@ -21,6 +21,12 @@ import {
 } from "../workspace-status-commands-runtime.js";
 import { runListPhaseCatalog } from "../phase-catalog-commands-runtime.js";
 import { runWorkspaceCoordinationStatus } from "../workspace-coordination-status-runtime.js";
+import {
+  runClaimWorkspaceEditLease,
+  runHeartbeatWorkspaceEditLease,
+  runReleaseWorkspaceEditLease,
+  runWorkspaceEditStatus
+} from "../workspace-edit-lease-commands-runtime.js";
 
 /** If non-null, dispatch should return immediately (command fully handled without planning stores). */
 export async function routeTaskEngineBeforeOpenPlanningStores(
@@ -63,6 +69,18 @@ export async function routeTaskEngineBeforeOpenPlanningStores(
   }
   if (command.name === "workspace-status-history") {
     return runWorkspaceStatusHistory(ctx, args as Record<string, unknown>);
+  }
+  if (command.name === "claim-workspace-edit-lease") {
+    return runClaimWorkspaceEditLease(ctx, args as Record<string, unknown>);
+  }
+  if (command.name === "heartbeat-workspace-edit-lease") {
+    return runHeartbeatWorkspaceEditLease(ctx, args as Record<string, unknown>);
+  }
+  if (command.name === "release-workspace-edit-lease") {
+    return runReleaseWorkspaceEditLease(ctx, args as Record<string, unknown>);
+  }
+  if (command.name === "workspace-edit-status") {
+    return runWorkspaceEditStatus(ctx, args as Record<string, unknown>);
   }
   if (command.name === "workspace-coordination-status") {
     return runWorkspaceCoordinationStatus(ctx);

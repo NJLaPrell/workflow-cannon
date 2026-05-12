@@ -41,6 +41,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "backfill-task-feature-links",
     "backup-planning-sqlite",
     "claim-next-task",
+    "claim-workspace-edit-lease",
     "classify-kit-state",
     "clear-agent-activity",
     "clear-task-phase",
@@ -76,6 +77,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "get-task-summary",
     "get-wishlist",
     "get-workspace-status",
+    "heartbeat-workspace-edit-lease",
     "interview-behavior-profile",
     "list-behavior-profiles",
     "list-components",
@@ -93,6 +95,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "queue-git-alignment",
     "queue-health",
     "release-evidence-manifest",
+    "release-workspace-edit-lease",
     "remove-dependency",
     "replay-queue-snapshot",
     "resolve-agent-guidance",
@@ -119,6 +122,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "update-workspace-status",
     "upsert-phase-catalog-entry",
     "workspace-coordination-status",
+    "workspace-edit-status",
     "workspace-status-history"
   ]);
 });
