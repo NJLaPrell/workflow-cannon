@@ -50,6 +50,23 @@
       "actor": {
         "type": "string"
       },
+      "waitForLease": {
+        "type": "boolean"
+      },
+      "agentSessionId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "waitForLeaseTimeoutMs": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 300000
+      },
+      "waitForLeasePollMs": {
+        "type": "integer",
+        "minimum": 50,
+        "maximum": 60000
+      },
       "config": {
         "type": "object"
       }

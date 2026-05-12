@@ -29,6 +29,13 @@ export type WorkspaceEditLeaseAlternatives = "wait" | "read_only_plan" | "releas
 
 export type WorkspaceEditLeaseStatusKind = "lease-free" | "lease-held-by-me" | "lease-held-by-other" | "stale-invalid";
 
+export type WorkspaceEditLeaseSuspectFlag =
+  | "lease:branch_drift"
+  | "lease:head_drift"
+  | "lease:worktree_path_drift"
+  | "lease:dirty_manifest_drift"
+  | "lease:stale_or_invalid";
+
 export type WorkspaceEditLeaseHolderSummary = {
   agentSessionId: string;
   taskId: string | null;
@@ -117,6 +124,31 @@ export function gatherCheckoutFingerprint(workspacePath: string): {
     headSha,
     dirtyManifest: { lineCount: Math.min(lines.length, PORCELAIN_CAP), capped }
   };
+}
+
+export function detectWorkspaceEditLeaseSuspectFlags(
+  lease: WorkspaceEditLeaseV1,
+  current: ReturnType<typeof gatherCheckoutFingerprint>
+): WorkspaceEditLeaseSuspectFlag[] {
+  const flags: WorkspaceEditLeaseSuspectFlag[] = [];
+  if (lease.branch !== current.branch) {
+    flags.push("lease:branch_drift");
+  }
+  if (lease.headSha !== current.headSha) {
+    flags.push("lease:head_drift");
+  }
+  const leaseWorktree = path.normalize(lease.worktreePath);
+  const currentWorktree = current.worktreePath ? path.normalize(current.worktreePath) : null;
+  if (leaseWorktree !== currentWorktree) {
+    flags.push("lease:worktree_path_drift");
+  }
+  if (
+    lease.dirtyManifest.lineCount !== current.dirtyManifest.lineCount ||
+    lease.dirtyManifest.capped !== current.dirtyManifest.capped
+  ) {
+    flags.push("lease:dirty_manifest_drift");
+  }
+  return flags;
 }
 
 export function parseIsoOrNull(iso: unknown): number | null {

@@ -170,3 +170,29 @@ test("renderStatusTabInnerHtml shows editor folder label when passed", () => {
   assert.match(html, /Editor folder/);
   assert.match(html, /workflow-cannon/);
 });
+
+test("renderStatusTabInnerHtml renders coordination suspect flags", () => {
+  const html = renderStatusTabInnerHtml({
+    ok: true,
+    data: {
+      schemaVersion: 7,
+      systemStatus: {
+        schemaVersion: 2,
+        coordination: {
+          schemaVersion: 1,
+          posture: "lease_suspect",
+          authorityRole: "worker",
+          branch: "feature/drift",
+          headSha: "abcdef1234567890",
+          dirtyManifest: { lineCount: 0, capped: false },
+          taskDatabaseGitDirty: false,
+          lease: { present: true, active: true },
+          suspectFlags: ["lease:branch_drift", "lease:head_drift"]
+        }
+      }
+    }
+  });
+  assert.match(html, /lease_suspect/);
+  assert.match(html, /Suspect flags/);
+  assert.match(html, /lease:branch_drift, lease:head_drift/);
+});

@@ -26,6 +26,8 @@ workspace-kit run run-transition '{"taskId":"T184","action":"start","policyAppro
 | `config` | `object` | no | Invocation-local config override. |
 <!-- workspace-kit:generated task-engine-instruction-contract command=run-transition section=args end -->
 
+Set **`waitForLease:true`** only when the caller is prepared to wait for a workspace edit lease before mutating task state. The wait is bounded and low-frequency; timeout responses include the current holder summary in **`data.holder`** / **`data.leaseStatus`**. Normal `run-transition` behavior is unchanged when the field is omitted.
+
 **Intake guard (proposed → ready):** before **`accept`**, use **`workspace-kit run resolve-task-intake-policy`** with `taskId`, `action":"accept"`, and `targetStatus":"ready"` to see required gaps — enforcement follows **`tasks.intakePolicy`** (including **`enforce-on-accept`**).
 
 ## Phase notes (optional)
