@@ -24,4 +24,6 @@ pnpm exec wk run claim-workspace-edit-lease '{"agentSessionId":"sess-1","leaseTt
 
 ## Response
 
-Returns **`workspace-edit-lease-claimed`** or **`workspace-edit-lease-renewed`** with **`data.lease`** and **`leaseFilePath`**, or **`workspace-edit-lease-held`** with **`alternatives`** when denied.
+Returns **`workspace-edit-lease-claimed`** or **`workspace-edit-lease-renewed`** with **`data.lease`** and **`leaseFilePath`**, or **`workspace-edit-lease-held`** when denied.
+
+Denied responses include compact recovery metadata: **`holder.agentSessionId`**, **`holder.taskId`**, **`holder.expiresAt`**, **`alternatives`**, **`recommendedNextAction`**, and **`leaseStatus`**. They do not ask agents to reload broad instructions or poll aggressively.

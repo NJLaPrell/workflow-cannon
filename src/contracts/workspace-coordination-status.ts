@@ -18,16 +18,27 @@ export type WorkspaceCoordinationPosture =
   | "worker_branch"
   | "safe";
 
+export type WorkspaceCoordinationLeaseStatus = "lease-free" | "lease-held-by-me" | "lease-held-by-other" | "stale-invalid";
+
+export type WorkspaceCoordinationLeaseHolder = {
+  agentSessionId: string;
+  taskId: string | null;
+  expiresAt: string;
+};
+
 export type WorkspaceCoordinationLeaseSlice = {
   schemaVersion: 1;
   /** Resolved path under `gitCommonDir` (clone-local coordination). */
   leaseFilePath: string;
+  status: WorkspaceCoordinationLeaseStatus;
   present: boolean;
   /** Lease JSON existed and parsed with a future `expiresAt`. */
   active: boolean;
   /** File present but expired or unreadable JSON. */
   staleOrInvalid: boolean;
   expiresAt: string | null;
+  holder: WorkspaceCoordinationLeaseHolder | null;
+  invalidReason: string | null;
 };
 
 export type WorkspaceCoordinationDirtyManifest = {

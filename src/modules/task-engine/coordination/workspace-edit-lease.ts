@@ -27,6 +27,26 @@ export type WorkspaceEditLeaseV1 = {
 
 export type WorkspaceEditLeaseAlternatives = "wait" | "read_only_plan" | "release_if_holder" | "recover_stale_lease";
 
+export type WorkspaceEditLeaseStatusKind = "lease-free" | "lease-held-by-me" | "lease-held-by-other" | "stale-invalid";
+
+export type WorkspaceEditLeaseHolderSummary = {
+  agentSessionId: string;
+  taskId: string | null;
+  expiresAt: string;
+};
+
+export type WorkspaceEditLeaseStatusV1 = {
+  schemaVersion: 1;
+  state: WorkspaceEditLeaseStatusKind;
+  present: boolean;
+  active: boolean;
+  staleOrInvalid: boolean;
+  expiresAt: string | null;
+  holder: WorkspaceEditLeaseHolderSummary | null;
+  heldByCaller: boolean | null;
+  invalidReason: string | null;
+};
+
 export function runGit(workspacePath: string, argv: string[]): { code: number; stdout: string; stderr: string } {
   const r = spawnSync("git", argv, {
     cwd: workspacePath,
@@ -113,6 +133,59 @@ export function isLeaseExpired(expiresAt: string): boolean {
     return true;
   }
   return t <= Date.now();
+}
+
+export function summarizeWorkspaceEditLeaseStatus(
+  leasePath: string,
+  callerAgentSessionId?: string | null
+): WorkspaceEditLeaseStatusV1 {
+  const parsed = readLeaseFile(leasePath);
+  if (!parsed.ok) {
+    const present = parsed.reason !== "missing";
+    return {
+      schemaVersion: 1,
+      state: present ? "stale-invalid" : "lease-free",
+      present,
+      active: false,
+      staleOrInvalid: present,
+      expiresAt: null,
+      holder: null,
+      heldByCaller: null,
+      invalidReason: present ? parsed.reason : null
+    };
+  }
+  const { lease } = parsed;
+  const active = !isLeaseExpired(lease.expiresAt);
+  const holder = {
+    agentSessionId: lease.agentSessionId,
+    taskId: lease.taskId,
+    expiresAt: lease.expiresAt
+  };
+  if (!active) {
+    return {
+      schemaVersion: 1,
+      state: "stale-invalid",
+      present: true,
+      active: false,
+      staleOrInvalid: true,
+      expiresAt: lease.expiresAt,
+      holder,
+      heldByCaller: callerAgentSessionId ? lease.agentSessionId === callerAgentSessionId : null,
+      invalidReason: "expired"
+    };
+  }
+  const heldByCaller = callerAgentSessionId ? lease.agentSessionId === callerAgentSessionId : null;
+  return {
+    schemaVersion: 1,
+    state: heldByCaller ? "lease-held-by-me" : "lease-held-by-other",
+    present: true,
+    active: true,
+    staleOrInvalid: false,
+    expiresAt: lease.expiresAt,
+    holder,
+    heldByCaller,
+    invalidReason: null
+  };
 }
 
 export function readLeaseFile(leasePath: string): { ok: true; lease: WorkspaceEditLeaseV1 } | { ok: false; reason: string } {
