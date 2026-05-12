@@ -1,9 +1,21 @@
+import fs from "node:fs/promises";
 import { appendPolicyTrace, resolveActorWithFallback } from "../core/policy.js";
 import type { ModuleLifecycleContext } from "../contracts/module-contract.js";
 import { collectDoctorContractIssues } from "./doctor-contract-validation.js";
 import { resolveRegistryAndConfig } from "../core/module-registry-resolve.js";
 import { defaultRegistryModules } from "../modules/index.js";
 import { openPlanningStores } from "../core/planning/index.js";
+import {
+  currentRuntimeIdentity,
+  runtimeLauncherPath,
+  runtimePackageRoot,
+  runtimeStampPath,
+  verifyRuntimeStamp,
+  writeRuntimeLauncher,
+  writeRuntimeStamp,
+  type RuntimeContractIssue,
+  type WorkspaceKitRuntimeStampV1
+} from "../core/runtime-contract.js";
 import { handleRunCommand } from "./run-command.js";
 import { detectInitProjectContext } from "./init-detection.js";
 import { buildInitPlan } from "./init-plan.js";
@@ -60,6 +72,72 @@ async function workspaceHasStarterTask(cwd: string): Promise<boolean> {
   const tasks = stores.taskStore.getAllTasks();
   stores.sqliteDual.closeDatabase();
   return tasks.some((t) => t.metadata?.starterTask === true);
+}
+
+type InitRuntimeContractStatus = {
+  ok: boolean;
+  stampPath: string;
+  launcherPath: string;
+  nodeExecutable: string | null;
+  nodeVersion: string | null;
+  packageRoot: string | null;
+  issues: RuntimeContractIssue[];
+};
+
+function runtimeIdentityForInit(): WorkspaceKitRuntimeStampV1 {
+  const testOverride = process.env.WORKSPACE_KIT_TEST_RUNTIME_IDENTITY;
+  if (testOverride) {
+    return JSON.parse(testOverride) as WorkspaceKitRuntimeStampV1;
+  }
+  return currentRuntimeIdentity(runtimePackageRoot());
+}
+
+function validateInitRuntimeContract(cwd: string): InitRuntimeContractStatus {
+  const stamp = runtimeIdentityForInit();
+  const verification = verifyRuntimeStamp(stamp, { currentIdentity: stamp, checkNativeSqlite: true });
+  return {
+    ok: verification.ok,
+    stampPath: runtimeStampPath(cwd),
+    launcherPath: runtimeLauncherPath(cwd),
+    nodeExecutable: stamp.nodeExecutable,
+    nodeVersion: stamp.nodeVersion,
+    packageRoot: stamp.packageRoot,
+    issues: verification.issues
+  };
+}
+
+async function establishRuntimeArtifacts(
+  cwd: string,
+  runtimeStatus: InitRuntimeContractStatus,
+  applied: {
+    filesCreated: string[];
+    filesUpdated: string[];
+    filesPreserved: string[];
+  }
+): Promise<void> {
+  const stampBefore = await fs.readFile(runtimeStatus.stampPath, "utf8").catch(() => null);
+  const launcherBefore = await fs.readFile(runtimeStatus.launcherPath, "utf8").catch(() => null);
+  const stamp = runtimeIdentityForInit();
+  writeRuntimeStamp(cwd, stamp);
+  writeRuntimeLauncher(cwd);
+  const stampAfter = await fs.readFile(runtimeStatus.stampPath, "utf8");
+  const launcherAfter = await fs.readFile(runtimeStatus.launcherPath, "utf8");
+  const stampRel = ".workspace-kit/runtime.json";
+  const launcherRel = ".workspace-kit/bin/wk";
+  if (stampBefore === null) {
+    applied.filesCreated.push(stampRel);
+  } else if (stampBefore === stampAfter) {
+    applied.filesPreserved.push(stampRel);
+  } else {
+    applied.filesUpdated.push(stampRel);
+  }
+  if (launcherBefore === null) {
+    applied.filesCreated.push(launcherRel);
+  } else if (launcherBefore === launcherAfter) {
+    applied.filesPreserved.push(launcherRel);
+  } else {
+    applied.filesUpdated.push(launcherRel);
+  }
 }
 
 /**
@@ -131,6 +209,15 @@ export async function runWorkspaceKitInitCommand(
     rationale = "interactive tty confirmation for workspace-kit init";
   }
 
+  const runtimeContract = validateInitRuntimeContract(cwd);
+  if (!runtimeContract.ok) {
+    writeError("workspace-kit init requires a valid runtime contract before attaching this workspace.");
+    for (const issue of runtimeContract.issues) {
+      writeError(`- ${issue.code}: ${issue.message}`);
+    }
+    return exitCodes.validationFailure;
+  }
+
   const applied = await applyInitPlan(cwd, plan, { dryRun: false, force: flags.force });
   if (!applied.ok) {
     writeError(applied.message ?? "workspace-kit init failed.");
@@ -139,6 +226,8 @@ export async function runWorkspaceKitInitCommand(
     }
     return exitCodes.validationFailure;
   }
+
+  await establishRuntimeArtifacts(cwd, runtimeContract, applied);
 
   const sqliteResult = await ensurePlanningStoresInitialized(cwd);
   if (!sqliteResult.ok) {
@@ -233,6 +322,7 @@ export async function runWorkspaceKitInitCommand(
             filesCreated: applied.filesCreated,
             filesUpdated: applied.filesUpdated,
             filesPreserved: applied.filesPreserved,
+            runtimeContract,
             sqlite: { ok: sqliteResult.ok, dbPath: sqliteResult.relativeDbPath },
             doctor: { ok: true },
             nextCommands: [
@@ -251,6 +341,8 @@ export async function runWorkspaceKitInitCommand(
   }
 
   writeLine("workspace-kit init completed.");
+  writeLine(`- Runtime stamp: .workspace-kit/runtime.json`);
+  writeLine(`- Runtime launcher: .workspace-kit/bin/wk`);
   writeLine(`- SQLite: ${sqliteResult.relativeDbPath}`);
   writeLine("- workspace-kit doctor passed.");
   writeLine("Next:");

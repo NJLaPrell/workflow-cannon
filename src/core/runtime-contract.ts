@@ -1,4 +1,5 @@
 import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
@@ -107,7 +108,11 @@ export function writeRuntimeLauncher(workspacePath: string): string {
   return launcherPath;
 }
 
-export function currentRuntimeIdentity(packageRoot = process.cwd(), checkedAt = new Date().toISOString()): WorkspaceKitRuntimeStampV1 {
+export function runtimePackageRoot(): string {
+  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+}
+
+export function currentRuntimeIdentity(packageRoot = runtimePackageRoot(), checkedAt = new Date().toISOString()): WorkspaceKitRuntimeStampV1 {
   return {
     schemaVersion: WORKSPACE_KIT_RUNTIME_CONTRACT_SCHEMA_VERSION,
     nodeExecutable: process.execPath,
