@@ -196,426 +196,6 @@
         }
       },
       {
-        "id": "T100215",
-        "status": "ready",
-        "type": "workspace-kit",
-        "title": "Define Workflow Cannon runtime contract",
-        "createdAt": "2026-05-12T17:21:35.160Z",
-        "updatedAt": "2026-05-12T17:21:35.160Z",
-        "archived": false,
-        "phase": "Phase 93",
-        "phaseKey": "93",
-        "approach": "Write the design contract first so implementation tasks have one source of truth for runtime selection, stamping, launcher behavior, fail-fast setup, and doctor drift reporting.",
-        "technicalScope": [
-          "Document that Workflow Cannon requires Node 22 for CLI/runtime execution.",
-          "Define runtime stamp location and fields for attached workspaces.",
-          "Define canonical launcher behavior and failure semantics.",
-          "Clarify that attached project .nvmrc/.node-version files are not used for Workflow Cannon runtime selection.",
-          "Update native SQLite distribution/runbook language to prefer environment correctness over broad runtime recovery."
-        ],
-        "acceptanceCriteria": [
-          "A canonical ADR or runbook section describes the Node 22 runtime contract.",
-          "The document defines install/init validation, runtime stamping, launcher usage, and doctor drift behavior.",
-          "The document explicitly states that Workflow Cannon does not follow attached project Node markers.",
-          "Follow-up implementation tasks can cite this document as the runtime contract source."
-        ],
-        "summary": "Establish the canonical policy that Workflow Cannon owns a Node 22 runtime independent of attached project Node versions.",
-        "metadata": {
-          "category": "runtime-contract",
-          "goal": "Prevent arm64/amd64 better-sqlite3 mismatches by making runtime correctness an install/init invariant.",
-          "implementationOrder": 1
-        },
-        "agentRouting": {
-          "ownership": null,
-          "queueNamespace": "default",
-          "features": [],
-          "source": null,
-          "hasModuleMetadata": true,
-          "category": "runtime-contract",
-          "tags": [],
-          "confidenceTier": null,
-          "blockedReasonCategory": null
-        }
-      },
-      {
-        "id": "T100216",
-        "status": "ready",
-        "type": "workspace-kit",
-        "title": "Add runtime stamp schema and verification helpers",
-        "createdAt": "2026-05-12T17:21:35.163Z",
-        "updatedAt": "2026-05-12T17:21:35.163Z",
-        "archived": false,
-        "phase": "Phase 93",
-        "phaseKey": "93",
-        "approach": "Build a small reusable runtime-contract module that centralizes Node identity, stamp parsing, Node 22 validation, and better-sqlite3 smoke checks.",
-        "technicalScope": [
-          "Add a runtime stamp type/schema with nodeExecutable, nodeVersion, arch, platform, abi, packageRoot, and checkedAt.",
-          "Reuse or consolidate identity logic from native SQLite diagnostics.",
-          "Implement read, write, and verify helpers for the runtime stamp.",
-          "Implement a better-sqlite3 smoke check that can run against the intended package root.",
-          "Add tests for valid stamp, missing stamp, wrong major, wrong architecture or ABI, and SQLite load failure."
-        ],
-        "acceptanceCriteria": [
-          "Runtime stamp helpers are available to scripts, init, doctor, and extension-facing code.",
-          "Node 22 validation is enforced by helper tests.",
-          "SQLite smoke failure is represented as structured diagnostic data.",
-          "No runtime helper mutates task state or opens planning SQLite as part of validation."
-        ],
-        "summary": "Implement typed helpers for recording and verifying the Workflow Cannon Node runtime identity and native SQLite loadability.",
-        "metadata": {
-          "category": "runtime-contract",
-          "goal": "Give install/init/doctor/launcher one shared source for runtime validation.",
-          "implementationOrder": 2
-        },
-        "agentRouting": {
-          "ownership": null,
-          "queueNamespace": "default",
-          "features": [],
-          "source": null,
-          "hasModuleMetadata": true,
-          "category": "runtime-contract",
-          "tags": [],
-          "confidenceTier": null,
-          "blockedReasonCategory": null
-        }
-      },
-      {
-        "id": "T100217",
-        "status": "ready",
-        "type": "workspace-kit",
-        "title": "Enforce Node 22 during package install and dev setup",
-        "createdAt": "2026-05-12T17:21:35.165Z",
-        "updatedAt": "2026-05-12T17:21:35.165Z",
-        "archived": false,
-        "phase": "Phase 93",
-        "phaseKey": "93",
-        "approach": "Tighten package metadata and setup scripts so a bad runtime cannot produce a misleadingly usable install.",
-        "technicalScope": [
-          "Add package engines for Node 22 and pnpm 10.",
-          "Update setup-dev to validate Node major, architecture, ABI, and better-sqlite3 loadability.",
-          "Update ensure-native-sqlite to write or refresh the runtime stamp after successful validation.",
-          "Keep native rebuild behavior only as install-time repair, not as a recurring runtime strategy.",
-          "Update script tests or smoke checks for wrong Node and successful stamped setup."
-        ],
-        "acceptanceCriteria": [
-          "setup:dev -- --check-only fails on wrong Node major or native SQLite mismatch.",
-          "Successful setup records a runtime stamp.",
-          "postinstall validates better-sqlite3 under the active Node 22 runtime.",
-          "Failure output points to one setup repair path instead of a broad case matrix."
-        ],
-        "summary": "Make package install and dev setup fail fast unless the active runtime satisfies the Workflow Cannon Node 22 and native SQLite contract.",
-        "metadata": {
-          "category": "runtime-contract",
-          "goal": "Make the package install environment correct before agents begin work.",
-          "implementationOrder": 3
-        },
-        "agentRouting": {
-          "ownership": null,
-          "queueNamespace": "default",
-          "features": [],
-          "source": null,
-          "hasModuleMetadata": true,
-          "category": "runtime-contract",
-          "tags": [],
-          "confidenceTier": null,
-          "blockedReasonCategory": null
-        }
-      },
-      {
-        "id": "T100218",
-        "status": "ready",
-        "type": "workspace-kit",
-        "title": "Create canonical Workflow Cannon launcher",
-        "createdAt": "2026-05-12T17:21:35.167Z",
-        "updatedAt": "2026-05-12T17:21:35.167Z",
-        "archived": false,
-        "phase": "Phase 93",
-        "phaseKey": "93",
-        "approach": "Generate a small launcher that reads the runtime stamp, verifies the stamped Node still exists, and execs the Workflow Cannon CLI with that Node.",
-        "technicalScope": [
-          "Define generated launcher path, likely .workspace-kit/bin/wk for attached workspaces.",
-          "Implement launcher generation with portable shell and Windows considerations where appropriate.",
-          "Make launcher read runtime.json and exec the stamped nodeExecutable with the package CLI.",
-          "Fail clearly if the stamp is missing, stale, or the stamped Node executable is gone.",
-          "Add tests proving PATH node and attached project Node markers are ignored."
-        ],
-        "acceptanceCriteria": [
-          ".workspace-kit/bin/wk doctor uses the stamped Node executable.",
-          "Launcher failure for a missing Node path is short and actionable.",
-          "Launcher does not perform broad runtime search after attach.",
-          "Launcher does not follow the attached project .nvmrc or .node-version."
-        ],
-        "summary": "Add a deterministic launcher that runs workspace-kit through the stamped Node executable instead of arbitrary shell or editor Node.",
-        "metadata": {
-          "category": "runtime-contract",
-          "goal": "Make routine agent/editor invocations deterministic after attach.",
-          "implementationOrder": 4
-        },
-        "agentRouting": {
-          "ownership": null,
-          "queueNamespace": "default",
-          "features": [],
-          "source": null,
-          "hasModuleMetadata": true,
-          "category": "runtime-contract",
-          "tags": [],
-          "confidenceTier": null,
-          "blockedReasonCategory": null
-        }
-      },
-      {
-        "id": "T100219",
-        "status": "ready",
-        "type": "workspace-kit",
-        "title": "Make workspace-kit init establish runtime contract",
-        "createdAt": "2026-05-12T17:21:35.168Z",
-        "updatedAt": "2026-05-12T17:21:35.168Z",
-        "archived": false,
-        "phase": "Phase 93",
-        "phaseKey": "93",
-        "approach": "Move runtime validation to the front of init, write the runtime stamp, generate the launcher, and only then initialize planning SQLite.",
-        "technicalScope": [
-          "Update init command flow to validate Node 22 and better-sqlite3 before opening planning stores.",
-          "Write .workspace-kit/runtime.json during successful init.",
-          "Generate .workspace-kit/bin/wk during successful init.",
-          "Show runtime artifacts in init --dry-run --json planned writes.",
-          "Make re-running init repair missing launcher or stamp safely."
-        ],
-        "acceptanceCriteria": [
-          "workspace-kit init refuses to attach when the runtime contract cannot be validated.",
-          "Successful init creates runtime stamp and launcher before SQLite initialization completes.",
-          "Re-running init repairs missing runtime artifacts without disturbing user-owned files.",
-          "Init JSON output includes runtime contract status and artifact paths."
-        ],
-        "summary": "Ensure project attach validates and records the Workflow Cannon runtime before SQLite planning initialization.",
-        "metadata": {
-          "category": "runtime-contract",
-          "goal": "Stop bad native SQLite environments at attach time.",
-          "implementationOrder": 5
-        },
-        "agentRouting": {
-          "ownership": null,
-          "queueNamespace": "default",
-          "features": [],
-          "source": null,
-          "hasModuleMetadata": true,
-          "category": "runtime-contract",
-          "tags": [],
-          "confidenceTier": null,
-          "blockedReasonCategory": null
-        }
-      },
-      {
-        "id": "T100220",
-        "status": "ready",
-        "type": "workspace-kit",
-        "title": "Route agent guidance and tasks through canonical launcher",
-        "createdAt": "2026-05-12T17:21:35.168Z",
-        "updatedAt": "2026-05-12T17:21:35.168Z",
-        "archived": false,
-        "phase": "Phase 93",
-        "phaseKey": "93",
-        "approach": "Change routine attached-project examples to prefer the generated launcher while preserving pnpm exec wk for Workflow Cannon repository development.",
-        "technicalScope": [
-          "Update .ai guidance and command snippets that describe routine attached-project task commands.",
-          "Update VS Code task surfaces or generated task guidance where they currently rely on nvm use.",
-          "Clarify when pnpm exec wk remains appropriate for Workflow Cannon repo development.",
-          "Update native SQLite and install/attach runbook source files.",
-          "Avoid editing generated maintainer docs directly unless running the documented docs pipeline."
-        ],
-        "acceptanceCriteria": [
-          "Agent-facing attached-project guidance points to .workspace-kit/bin/wk as the canonical command path.",
-          "Routine guidance no longer requires the user to run nvm use before Workflow Cannon commands.",
-          "Workflow Cannon repo development guidance still permits pnpm exec wk where appropriate.",
-          "Docs distinguish attached project runtime from Workflow Cannon runtime."
-        ],
-        "summary": "Update machine-facing guidance so agents use the launcher after attach instead of environment-sensitive Node or pnpm invocations.",
-        "metadata": {
-          "category": "runtime-contract",
-          "goal": "Prevent agents from bypassing the stamped runtime in normal workflows.",
-          "implementationOrder": 6
-        },
-        "agentRouting": {
-          "ownership": null,
-          "queueNamespace": "default",
-          "features": [],
-          "source": null,
-          "hasModuleMetadata": true,
-          "category": "runtime-contract",
-          "tags": [],
-          "confidenceTier": null,
-          "blockedReasonCategory": null
-        }
-      },
-      {
-        "id": "T100221",
-        "status": "ready",
-        "type": "workspace-kit",
-        "title": "Update Cursor extension to use runtime stamp first",
-        "createdAt": "2026-05-12T17:21:35.170Z",
-        "updatedAt": "2026-05-12T17:21:35.170Z",
-        "archived": false,
-        "phase": "Phase 93",
-        "phaseKey": "93",
-        "approach": "Simplify extension command execution so attached workspaces use the deterministic runtime contract, with candidate probing retained only for pre-attach or broken-stamp diagnostics.",
-        "technicalScope": [
-          "Update command client runtime selection to prefer .workspace-kit/runtime.json or .workspace-kit/bin/wk.",
-          "Keep WORKSPACE_KIT_NODE and workflowCannon.nodeExecutable as explicit overrides or pre-attach fallback.",
-          "Stop using attached project Node markers for normal attached-workspace command execution.",
-          "Update extension configuration copy to describe overrides as exceptional.",
-          "Add extension tests for stamp-first selection and broken-stamp diagnostics."
-        ],
-        "acceptanceCriteria": [
-          "Attached workspaces run extension commands through the stamped Workflow Cannon runtime by default.",
-          "The extension does not depend on Electron Node, shell PATH, or attached project Node markers in the normal path.",
-          "Broken stamp diagnostics remain structured and actionable.",
-          "Existing dashboard/task command tests are updated to cover stamp-first behavior."
-        ],
-        "summary": "Make the extension prefer the attached workspace runtime stamp or launcher before probing Node candidates.",
-        "metadata": {
-          "category": "runtime-contract",
-          "goal": "Remove editor runtime mismatch as a source of native SQLite failures.",
-          "implementationOrder": 7
-        },
-        "agentRouting": {
-          "ownership": null,
-          "queueNamespace": "default",
-          "features": [],
-          "source": null,
-          "hasModuleMetadata": true,
-          "category": "runtime-contract",
-          "tags": [],
-          "confidenceTier": null,
-          "blockedReasonCategory": null
-        }
-      },
-      {
-        "id": "T100222",
-        "status": "ready",
-        "type": "workspace-kit",
-        "title": "Add doctor checks for runtime contract drift",
-        "createdAt": "2026-05-12T17:21:35.173Z",
-        "updatedAt": "2026-05-12T17:21:35.173Z",
-        "archived": false,
-        "phase": "Phase 93",
-        "phaseKey": "93",
-        "approach": "Use the shared runtime helpers to report whether the installed runtime contract is healthy or has drifted since attach.",
-        "technicalScope": [
-          "Add doctor checks for missing runtime stamp, invalid stamp shape, missing stamped Node executable, wrong Node major, and SQLite load failure.",
-          "Check launcher presence and basic integrity.",
-          "Report when the current process differs from the stamped runtime.",
-          "Include structured runtime contract status in doctor JSON.",
-          "Make human output short and repair-oriented."
-        ],
-        "acceptanceCriteria": [
-          "workspace-kit doctor reports healthy runtime contract status when stamp and launcher are valid.",
-          "doctor catches deleted Node, wrong major, wrong architecture or ABI, missing launcher, and SQLite load failure.",
-          "doctor JSON includes machine-readable runtime contract details.",
-          "Human remediation names the setup repair path without a long native error matrix."
-        ],
-        "summary": "Extend doctor to verify the runtime stamp, launcher, stamped Node executable, and native SQLite loadability.",
-        "metadata": {
-          "category": "runtime-contract",
-          "goal": "Detect environment drift after attach without making runtime commands clever.",
-          "implementationOrder": 8
-        },
-        "agentRouting": {
-          "ownership": null,
-          "queueNamespace": "default",
-          "features": [],
-          "source": null,
-          "hasModuleMetadata": true,
-          "category": "runtime-contract",
-          "tags": [],
-          "confidenceTier": null,
-          "blockedReasonCategory": null
-        }
-      },
-      {
-        "id": "T100223",
-        "status": "ready",
-        "type": "workspace-kit",
-        "title": "Add drift and upgrade support for runtime artifacts",
-        "createdAt": "2026-05-12T17:21:35.174Z",
-        "updatedAt": "2026-05-12T17:21:35.174Z",
-        "archived": false,
-        "phase": "Phase 93",
-        "phaseKey": "93",
-        "approach": "Integrate runtime.json and launcher handling with ownership, drift-check, and upgrade semantics without blindly overwriting environment-specific runtime identity.",
-        "technicalScope": [
-          "Decide which runtime artifacts are kit-owned and which stamp fields are environment-specific.",
-          "Add launcher and runtime stamp paths to ownership policy where appropriate.",
-          "Update drift-check to detect missing or corrupt launcher and invalid stamp shape.",
-          "Update upgrade to regenerate launcher safely.",
-          "Avoid overwriting a valid existing runtime stamp with an invalid current shell Node."
-        ],
-        "acceptanceCriteria": [
-          "drift-check detects missing or corrupt runtime launcher artifacts.",
-          "upgrade can regenerate the launcher without breaking a valid runtime stamp.",
-          "Runtime stamp validation distinguishes drift from safe environment-specific identity.",
-          "Owned-path metadata accurately reflects managed runtime files."
-        ],
-        "summary": "Ensure managed runtime artifacts are detected, repaired, and upgraded consistently with other kit-owned files.",
-        "metadata": {
-          "category": "runtime-contract",
-          "goal": "Keep runtime contract artifacts maintainable across upgrades.",
-          "implementationOrder": 9
-        },
-        "agentRouting": {
-          "ownership": null,
-          "queueNamespace": "default",
-          "features": [],
-          "source": null,
-          "hasModuleMetadata": true,
-          "category": "runtime-contract",
-          "tags": [],
-          "confidenceTier": null,
-          "blockedReasonCategory": null
-        }
-      },
-      {
-        "id": "T100224",
-        "status": "ready",
-        "type": "workspace-kit",
-        "title": "Add end-to-end runtime contract regression coverage",
-        "createdAt": "2026-05-12T17:21:35.175Z",
-        "updatedAt": "2026-05-12T17:21:35.175Z",
-        "archived": false,
-        "phase": "Phase 93",
-        "phaseKey": "93",
-        "approach": "Cover the normal path and failure path across init, launcher, doctor, extension runtime selection, and setup validation.",
-        "technicalScope": [
-          "Test init creates runtime stamp and launcher.",
-          "Test launcher uses stamped Node identity.",
-          "Test doctor reports healthy and broken runtime contract states.",
-          "Test extension prefers stamp or launcher in attached workspaces.",
-          "Test setup fails on wrong Node major and passes with native SQLite smoke success."
-        ],
-        "acceptanceCriteria": [
-          "Regression tests cover normal attached-workspace command execution through the stamped runtime.",
-          "Failure tests cover missing stamp, deleted Node executable, and SQLite load failure.",
-          "Extension tests cover stamp-first runtime selection.",
-          "The test suite demonstrates that routine Workflow Cannon commands do not rely on shell PATH or editor Node after attach."
-        ],
-        "summary": "Add integration coverage proving that after attach Workflow Cannon commands use the stamped runtime and no longer depend on arbitrary shell/editor Node selection.",
-        "metadata": {
-          "category": "runtime-contract",
-          "goal": "Lock in the runtime-contract invariant so native SQLite mismatches do not regress.",
-          "implementationOrder": 10
-        },
-        "agentRouting": {
-          "ownership": null,
-          "queueNamespace": "default",
-          "features": [],
-          "source": null,
-          "hasModuleMetadata": true,
-          "category": "runtime-contract",
-          "tags": [],
-          "confidenceTier": null,
-          "blockedReasonCategory": null
-        }
-      },
-      {
         "id": "T100190",
         "status": "ready",
         "type": "workspace-kit",
@@ -1606,12 +1186,12 @@
     "stateSummary": {
       "research": 0,
       "proposed": 0,
-      "ready": 27,
+      "ready": 17,
       "in_progress": 0,
       "blocked": 0,
       "completed": 906,
       "cancelled": 83,
-      "total": 1016
+      "total": 1006
     },
     "blockingAnalysis": [],
     "teamExecutionContext": {
@@ -1672,12 +1252,12 @@
       "relevantNotes": [],
       "taskSuggestionsFromNotes": []
     },
-    "planningGeneration": 2738,
+    "planningGeneration": 2737,
     "planningGenerationPolicy": "require",
     "cae": {
       "schemaVersion": 1,
       "evalMode": "shadow",
-      "traceId": "cae.trace.d5c954725386647b4745eb9fc13e076a001b51f9",
+      "traceId": "cae.trace.d697a31cf27604830a9ea59649aeec3c6b8f9902",
       "shadow": true,
       "summary": {
         "policyCount": 0,
@@ -1694,7 +1274,7 @@
       ],
       "cae": {
         "kind": "shadow_preflight_v1",
-        "traceId": "cae.trace.d5c954725386647b4745eb9fc13e076a001b51f9",
+        "traceId": "cae.trace.d697a31cf27604830a9ea59649aeec3c6b8f9902",
         "evalMode": "shadow",
         "degraded": false,
         "agentRenderHint": "If present, summarize CAE shadow outcome in one short paragraph; when traceId is set, operators can run cae-explain / cae-get-trace."
@@ -1707,7 +1287,7 @@
     "enforcementMode": "advisory",
     "warnings": [],
     "telemetry": {
-      "resolveNs": 321333,
+      "resolveNs": 321000,
       "warningCount": 0
     }
   }

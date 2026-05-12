@@ -1,542 +1,854 @@
 {
   "ok": true,
   "code": "tasks-listed",
-  "message": "Found 7 tasks",
+  "message": "Found 14 tasks",
   "data": {
     "tasks": [
       {
-        "id": "T100178",
-        "status": "proposed",
+        "id": "T100189",
+        "status": "in_progress",
         "type": "workspace-kit",
-        "title": "Phase 90: Standardize transition approval rationale in Dashboard drawer",
-        "createdAt": "2026-05-11T16:04:33.373Z",
-        "updatedAt": "2026-05-11T16:04:33.373Z",
+        "title": "Define lease UX status contract and concise blocked responses",
+        "createdAt": "2026-05-11T22:49:03.302Z",
+        "updatedAt": "2026-05-12T17:41:45.366Z",
         "archived": false,
         "priority": "P1",
-        "phase": "Phase 90",
-        "phaseKey": "90",
-        "approach": "Refactor transition helpers so Dashboard-originated accept, decline, and batch accept provide rationale from the drawer while command-palette flows can keep native VS Code prompts if needed.",
+        "phase": "Phase 93",
+        "phaseKey": "93",
+        "approach": "Narrow Phase 93 to the foundation that downstream UX work needs: expose a stable lease status vocabulary and make lease-denied command responses compact, truthful, and actionable. Follow-up tickets in the same phase cover extension controls, bounded wait behavior, and suspect drift detection.",
+        "dependsOn": [
+          "T100188"
+        ],
+        "unblocks": [
+          "T100212",
+          "T100213",
+          "T100214"
+        ],
         "technicalScope": [
-          "Add a drawer workflow for single task transitions showing task id, action, target effect, and whether the action is policy-sensitive.",
-          "Collect non-empty policyApproval.rationale in the drawer before calling run-transition from Dashboard actions.",
-          "Add a batch accept drawer that shows task count, category, shared rationale, and failure handling for per-task run-transition calls.",
-          "Refactor confirmAndRunTransition and confirmAndRunAcceptProposedPhaseBatch or add Dashboard-specific wrappers so existing command-palette behavior is not broken.",
-          "Preserve expectedPlanningGenerationArgs, ingestPlanningMetaFromData, notifyKitStateChanged, and partial failure reporting."
+          "Extend lease status/classification helpers so callers with an agentSessionId can distinguish lease-free, lease-held-by-me, lease-held-by-other, and stale/invalid lease states; reserve suspect/drift semantics for the suspect-drift follow-up ticket.",
+          "Revise workspace-edit-lease-held and related non-owner responses to include holder session id, task id when present, expiry, available alternatives, and one recommended next action.",
+          "Keep blocked responses compact for agents and avoid suggestions that require broad instruction/catalog reloads or expensive polling.",
+          "Document the response/status vocabulary consumed by the extension and follow-up same-phase tickets.",
+          "Add focused tests for status classification and denied-response payloads."
         ],
         "acceptanceCriteria": [
-          "Dashboard Accept/Decline row actions do not show a VS Code modal followed by a top-bar input box.",
-          "Users see the transition effect and enter policy rationale in one Dashboard drawer before mutation.",
-          "Batch accept uses one shared rationale and reports partial failures clearly inside the Dashboard or drawer result state.",
-          "A missing rationale blocks the mutation before run-transition is called.",
-          "Tests cover single-transition and batch-transition drawer state/rendering."
+          "Denied claim, heartbeat, and release paths for active leases held by another session return holder identity, task id when present, expiry, alternatives, and one recommended next action in stable JSON.",
+          "A caller-provided agentSessionId can classify lease-free, lease-held-by-me, lease-held-by-other, and stale/invalid states without opening task SQLite or mutating the lease.",
+          "Agent-facing blocked copy is concise and does not tell agents to reload broad instructions or poll aggressively.",
+          "The shared vocabulary is documented in the relevant command instruction or contract surface for extension consumers.",
+          "Automated tests cover same-holder, other-holder, missing, stale/invalid, and compact blocked-response cases."
         ],
-        "summary": "Replace Dashboard run-transition modal + input-box sequences with a drawer confirmation that collects policy rationale in context.",
-        "risk": "High: this touches policyApproval UX for task lifecycle changes and must preserve audit semantics exactly.",
+        "summary": "Define the shared lease status contract and low-token blocked-response behavior that Phase 93 UX work builds on.",
+        "description": "Define the shared lease status contract and low-token blocked-response behavior that Phase 93 UX work builds on.",
+        "risk": "Medium: this changes command response contracts that agents and the extension will consume; keep the schema additive and deterministic.",
         "metadata": {
-          "category": "dashboard-ux",
-          "tags": [
-            "phase-90",
-            "run-transition",
-            "policy-approval",
-            "drawer",
-            "task-lifecycle"
+          "planningThread": "agent-coordination-and-task-state-safety",
+          "roadmapSlice": "multi-agent workspace lease and task-state authority",
+          "goals": [
+            "Make the safe path feel like guidance instead of a mysterious failure.",
+            "Reduce wasted AI credits when an agent cannot edit yet.",
+            "Help users recover from stale or suspect lease states without manual file surgery."
           ],
-          "component": "extensions/cursor-workflow-cannon",
-          "blockedBy": [
-            "Dashboard drawer contract task"
-          ],
-          "implementationFiles": [
-            "extensions/cursor-workflow-cannon/src/run-transition-with-approval.ts",
-            "extensions/cursor-workflow-cannon/src/views/dashboard/DashboardViewProvider.ts",
-            "extensions/cursor-workflow-cannon/src/views/dashboard/render-dashboard.ts",
-            "extensions/cursor-workflow-cannon/test/render-dashboard.test.mjs"
-          ]
-        },
-        "features": [
-          "cursor-extension",
-          "policy-registry",
-          "task-lifecycle"
-        ],
-        "agentRouting": {
-          "ownership": null,
-          "queueNamespace": "default",
-          "features": [
-            "cursor-extension",
-            "policy-registry",
-            "task-lifecycle"
-          ],
-          "source": null,
-          "hasModuleMetadata": true,
-          "category": "dashboard-ux",
-          "tags": [
-            "phase-90",
-            "run-transition",
-            "policy-approval",
-            "drawer",
-            "task-lifecycle"
-          ],
-          "confidenceTier": null,
-          "blockedReasonCategory": null
-        }
-      },
-      {
-        "id": "T100179",
-        "status": "proposed",
-        "type": "workspace-kit",
-        "title": "Phase 90: Align CAE Guidance prompts with dashboard input standard",
-        "createdAt": "2026-05-11T16:04:33.373Z",
-        "updatedAt": "2026-05-11T16:04:33.373Z",
-        "archived": false,
-        "priority": "P2",
-        "phase": "Phase 90",
-        "phaseKey": "90",
-        "approach": "Treat CAE acknowledgement, feedback, and registry mutation prompts as part of the Dashboard UI plugin consistency pass, while preserving policy language and mutation gating.",
-        "technicalScope": [
-          "Audit GuidanceViewProvider and GuidancePanel showInputBox/showWarningMessage usages for actor, rationale, feedback note, and registry mutation confirmation flows.",
-          "Move Guidance webview-originated acknowledgement and feedback input into the webview where it improves context and does not duplicate native VS Code command behavior.",
-          "For CAE registry mutation actions, show actor, rationale, target version, payload summary, and CAE governance approval in one in-webview confirmation flow when launched from the Guidance UI.",
-          "Keep native notifications for failures and non-webview command-palette fallbacks only where they remain the clearest VS Code behavior.",
-          "Update tests for guidance action messages or render output that changes because prompts move into the webview."
-        ],
-        "acceptanceCriteria": [
-          "Guidance UI actions launched from the CAE webview no longer mix multiple native prompt styles for routine input collection.",
-          "Registry mutation confirmation still clearly says CAE mutation approval is not Tier A/B run policyApproval.",
-          "Actor/rationale requirements are validated before mutation commands run.",
-          "Existing mutation capability denial behavior remains clear and safe.",
-          "Guidance tests cover any new webview prompt/result states."
-        ],
-        "summary": "Review the CAE Guidance sidebar/panel prompt surfaces and align user input with the same webview-contained drawer standard where practical.",
-        "risk": "Medium-high: CAE mutation prompts carry governance copy and must not blur approval lanes.",
-        "metadata": {
-          "category": "dashboard-ux",
-          "tags": [
-            "phase-90",
-            "cae",
-            "guidance",
-            "drawer",
-            "governance"
-          ],
-          "component": "extensions/cursor-workflow-cannon",
-          "blockedBy": [
-            "Dashboard drawer contract task"
-          ],
-          "implementationFiles": [
-            "extensions/cursor-workflow-cannon/src/views/guidance/GuidanceViewProvider.ts",
-            "extensions/cursor-workflow-cannon/src/views/guidance/GuidancePanel.ts",
-            "extensions/cursor-workflow-cannon/src/views/guidance/render-guidance.ts",
-            "extensions/cursor-workflow-cannon/test/render-guidance.test.mjs",
-            "extensions/cursor-workflow-cannon/test/guidance-panel-messages.test.mjs"
-          ]
-        },
-        "features": [
-          "agent-behavior",
-          "cursor-extension",
-          "policy-registry"
-        ],
-        "agentRouting": {
-          "ownership": null,
-          "queueNamespace": "default",
-          "features": [
-            "agent-behavior",
-            "cursor-extension",
-            "policy-registry"
-          ],
-          "source": null,
-          "hasModuleMetadata": true,
-          "category": "dashboard-ux",
-          "tags": [
-            "phase-90",
-            "cae",
-            "guidance",
-            "drawer",
-            "governance"
-          ],
-          "confidenceTier": null,
-          "blockedReasonCategory": null
-        }
-      },
-      {
-        "id": "T100180",
-        "status": "proposed",
-        "type": "workspace-kit",
-        "title": "Phase 90: Document and test Dashboard prompt consistency rules",
-        "createdAt": "2026-05-11T16:04:33.373Z",
-        "updatedAt": "2026-05-11T16:04:33.373Z",
-        "archived": false,
-        "priority": "P2",
-        "phase": "Phase 90",
-        "phaseKey": "90",
-        "approach": "Codify the prompt-surface decision close to the extension code and add tests that catch accidental reintroduction of Dashboard-originated native input prompts.",
-        "technicalScope": [
-          "Add or update extension README/developer guidance describing when to use the drawer, native QuickPick/InputBox, modal warnings, and notifications.",
-          "Add targeted tests for drawer rendering, form validation, busy/result states, and migrated workflows.",
-          "Add a lightweight static or unit-level guard if practical to flag new DashboardViewProvider showInputBox/showQuickPick usages for Dashboard-originated flows.",
-          "Keep tests focused on render/message behavior rather than full VS Code webview E2E unless an existing smoke path is cheap to extend.",
-          "Run cursor-workflow-cannon tests and relevant root checks for extension/dashboard changes."
-        ],
-        "acceptanceCriteria": [
-          "A maintainer-facing note documents the Phase 90 prompt-surface rule and exception cases.",
-          "Tests fail if the core drawer shell or migrated workflows regress.",
-          "The extension test suite passes with Node v22.22.2 using pnpm --filter cursor-workflow-cannon test.",
-          "Any remaining native prompt use is explicitly justified as command-palette fallback, destructive modal confirmation outside the Dashboard path, or transient notification.",
-          "Release evidence for the phase can cite the prompt consistency rule and test coverage."
-        ],
-        "summary": "Add regression coverage and lightweight operator/developer guidance so future Dashboard prompts follow the drawer-first UX rule.",
-        "risk": "Low-medium: mostly tests/docs, but static guards must avoid noisy false positives that block legitimate VS Code command flows.",
-        "metadata": {
-          "category": "dashboard-ux",
-          "tags": [
-            "phase-90",
-            "tests",
-            "docs",
-            "prompt-standard",
-            "regression"
-          ],
-          "component": "extensions/cursor-workflow-cannon",
-          "blockedBy": [
-            "At least one migrated drawer flow should exist before finalizing docs and regression assertions."
-          ],
-          "implementationFiles": [
-            "extensions/cursor-workflow-cannon/README.md",
-            "extensions/cursor-workflow-cannon/test/render-dashboard.test.mjs",
-            "extensions/cursor-workflow-cannon/test/render-guidance.test.mjs",
-            "extensions/cursor-workflow-cannon/package.json"
-          ]
-        },
-        "features": [
-          "ci-guards",
-          "cursor-extension",
-          "instructions"
-        ],
-        "agentRouting": {
-          "ownership": null,
-          "queueNamespace": "default",
-          "features": [
-            "ci-guards",
-            "cursor-extension",
-            "instructions"
-          ],
-          "source": null,
-          "hasModuleMetadata": true,
-          "category": "dashboard-ux",
-          "tags": [
-            "phase-90",
-            "tests",
-            "docs",
-            "prompt-standard",
-            "regression"
-          ],
-          "confidenceTier": null,
-          "blockedReasonCategory": null
-        }
-      },
-      {
-        "id": "T100175",
-        "status": "proposed",
-        "type": "workspace-kit",
-        "title": "Phase 90: Migrate Add wishlist item to drawer form",
-        "createdAt": "2026-05-11T16:04:33.372Z",
-        "updatedAt": "2026-05-11T16:04:33.372Z",
-        "archived": false,
-        "priority": "P1",
-        "phase": "Phase 90",
-        "phaseKey": "90",
-        "approach": "Port the existing create-wishlist field collection into the shared drawer, submit one validated payload to the host, and preserve planning-generation retry behavior and wishlist detail affordances.",
-        "technicalScope": [
-          "Render title, problem statement, expected outcome, impact, constraints, success signals, requestor, and evidence reference in one drawer form with required-field validation.",
-          "Move Dashboard button handling away from promptAndCreateWishlist for dashboard-originated clicks while preserving any command-palette fallback that still needs native VS Code input.",
-          "Submit create-wishlist through DashboardViewProvider using expectedPlanningGenerationArgs and the existing planning-generation refresh/retry path.",
-          "Show success, cancellation, validation, and create-wishlist failure states inline in the drawer; include an Open wishlist detail action when an id is returned.",
-          "Keep wishlist pagination reset and dashboard refresh behavior after successful creation."
-        ],
-        "acceptanceCriteria": [
-          "Clicking Add wishlist item opens an in-dashboard drawer instead of a sequence of VS Code showInputBox prompts.",
-          "All existing wishlist fields are present, required fields are validated before submission, and empty required fields do not call create-wishlist.",
-          "Successful creation refreshes the dashboard, resets wishlist pagination to the first page, and offers a clear way to open the created wishlist detail.",
-          "Planning-generation mismatch retry behavior remains intact.",
-          "Tests cover the rendered form fields, validation messaging, and success/failure state rendering."
-        ],
-        "summary": "Make Add wishlist item the proof-point migration by replacing the eight sequential VS Code input boxes with one Dashboard drawer form.",
-        "risk": "Medium: changes a user-facing create flow and must preserve concurrency handling and existing task-store semantics.",
-        "metadata": {
-          "category": "dashboard-ux",
-          "tags": [
-            "phase-90",
-            "wishlist",
-            "drawer",
-            "create-wishlist",
-            "proof-point"
-          ],
-          "component": "extensions/cursor-workflow-cannon",
-          "blockedBy": [
-            "Dashboard drawer contract task"
-          ],
-          "implementationFiles": [
-            "extensions/cursor-workflow-cannon/src/add-wishlist-item-flow.ts",
-            "extensions/cursor-workflow-cannon/src/views/dashboard/render-dashboard.ts",
-            "extensions/cursor-workflow-cannon/src/views/dashboard/DashboardViewProvider.ts",
-            "extensions/cursor-workflow-cannon/test/render-dashboard.test.mjs"
-          ]
-        },
-        "features": [
-          "cursor-extension",
-          "planning-concurrency",
-          "task-mutations"
-        ],
-        "agentRouting": {
-          "ownership": null,
-          "queueNamespace": "default",
-          "features": [
-            "cursor-extension",
-            "planning-concurrency",
-            "task-mutations"
-          ],
-          "source": null,
-          "hasModuleMetadata": true,
-          "category": "dashboard-ux",
-          "tags": [
-            "phase-90",
-            "wishlist",
-            "drawer",
-            "create-wishlist",
-            "proof-point"
-          ],
-          "confidenceTier": null,
-          "blockedReasonCategory": null
-        }
-      },
-      {
-        "id": "T100176",
-        "status": "proposed",
-        "type": "workspace-kit",
-        "title": "Phase 90: Move phase assignment prompts into drawer workflows",
-        "createdAt": "2026-05-11T16:04:33.372Z",
-        "updatedAt": "2026-05-11T16:04:33.372Z",
-        "archived": false,
-        "priority": "P2",
-        "phase": "Phase 90",
-        "phaseKey": "90",
-        "approach": "Reuse existing phase suggestions from dashboard-summary, but render them inside the Dashboard drawer with custom phase-key entry and inline validation.",
-        "technicalScope": [
-          "Move assign-task-phase target selection out of showQuickPick/showInputBox and into a drawer opened from row Phase buttons.",
-          "Render collected phase suggestions with source labels such as canonical, workspace DB, config hint, catalog, and bucket labels.",
-          "Support a custom stable phaseKey entry path with validation equivalent to the current input flow.",
-          "Move Register future phase catalog entry into a drawer form with phaseKey and optional shortDescription fields.",
-          "Preserve recordActivity, expected planning generation, ingestPlanningMetaFromData, refresh, and success/error notices."
-        ],
-        "acceptanceCriteria": [
-          "Task row Phase actions no longer use VS Code QuickPick/InputBox in Dashboard-originated flows.",
-          "Users can choose a suggested phase or enter a custom phase key in the drawer.",
-          "Register future phase runs upsert-phase-catalog-entry from the drawer and reports success/failure inline.",
-          "Invalid or empty phase keys are blocked before the CLI command runs.",
-          "Tests cover phase suggestion rendering and custom phase validation."
-        ],
-        "summary": "Replace Dashboard phase-key QuickPick/InputBox flows with drawer-based phase assignment and phase catalog workflows.",
-        "risk": "Medium: phase assignment is common queue-maintenance behavior and needs clear validation to avoid wrong phase buckets.",
-        "metadata": {
-          "category": "dashboard-ux",
-          "tags": [
-            "phase-90",
-            "phase-assignment",
-            "phase-catalog",
-            "drawer"
-          ],
-          "component": "extensions/cursor-workflow-cannon",
-          "blockedBy": [
-            "Dashboard drawer contract task"
-          ],
-          "implementationFiles": [
-            "extensions/cursor-workflow-cannon/src/views/dashboard/DashboardViewProvider.ts",
-            "extensions/cursor-workflow-cannon/src/views/dashboard/render-dashboard.ts",
-            "extensions/cursor-workflow-cannon/test/render-dashboard.test.mjs"
-          ]
-        },
-        "features": [
-          "cursor-extension",
-          "task-mutations",
-          "task-schema"
-        ],
-        "agentRouting": {
-          "ownership": null,
-          "queueNamespace": "default",
-          "features": [
-            "cursor-extension",
-            "task-mutations",
-            "task-schema"
-          ],
-          "source": null,
-          "hasModuleMetadata": true,
-          "category": "dashboard-ux",
-          "tags": [
-            "phase-90",
-            "phase-assignment",
-            "phase-catalog",
-            "drawer"
-          ],
-          "confidenceTier": null,
-          "blockedReasonCategory": null
-        }
-      },
-      {
-        "id": "T100177",
-        "status": "proposed",
-        "type": "workspace-kit",
-        "title": "Phase 90: Convert phase note prompts to drawer flows",
-        "createdAt": "2026-05-11T16:04:33.372Z",
-        "updatedAt": "2026-05-11T16:04:33.372Z",
-        "archived": false,
-        "priority": "P2",
-        "phase": "Phase 90",
-        "phaseKey": "90",
-        "approach": "Treat phase-note actions as small drawer workflows with clear command summaries, required rationale fields, and inline policy-sensitive confirmations.",
-        "technicalScope": [
-          "Replace add-phase-note QuickPick/InputBox sequence with a drawer form for note type, summary, priority, and optional details.",
-          "Replace dismiss-phase-note reason input and critical-note policy rationale with a drawer flow that clearly distinguishes audit reason from policyApproval rationale.",
-          "Move convert-phase-note-to-task and propose-tasks-from-phase-notes persist confirmations into drawer confirmations with command and effect summaries.",
-          "Keep critical dismiss policy behavior intact, including policyApproval when required by workspace config.",
-          "Render command errors inline and refresh phase notes after successful mutations."
-        ],
-        "acceptanceCriteria": [
-          "Dashboard phase-note actions do not open top-bar input boxes for normal Dashboard-originated use.",
-          "Add note validates type, summary, and priority before calling add-phase-note.",
-          "Critical dismiss clearly requires and submits policyApproval rationale when applicable.",
-          "Convert and persist actions show the command effect before execution and support cancel without mutation.",
-          "Tests cover add-note form rendering, dismiss validation, and confirmation copy for convert/persist."
-        ],
-        "summary": "Bring phase note add, dismiss, convert, and persist interactions into the Dashboard drawer so note workflows share one prompt pattern.",
-        "risk": "Medium-high: phase notes can carry policy-sensitive state, especially critical dismissals; copy must avoid implying chat-only approval satisfies policy.",
-        "metadata": {
-          "category": "dashboard-ux",
-          "tags": [
-            "phase-90",
-            "phase-notes",
-            "drawer",
-            "policy-approval"
-          ],
-          "component": "extensions/cursor-workflow-cannon",
-          "blockedBy": [
-            "Dashboard drawer contract task"
-          ],
-          "implementationFiles": [
-            "extensions/cursor-workflow-cannon/src/views/dashboard/DashboardViewProvider.ts",
-            "extensions/cursor-workflow-cannon/src/views/dashboard/render-dashboard.ts",
-            "extensions/cursor-workflow-cannon/test/render-dashboard.test.mjs"
-          ]
-        },
-        "features": [
-          "cursor-extension",
-          "policy-registry",
-          "task-mutations"
-        ],
-        "agentRouting": {
-          "ownership": null,
-          "queueNamespace": "default",
-          "features": [
-            "cursor-extension",
-            "policy-registry",
-            "task-mutations"
-          ],
-          "source": null,
-          "hasModuleMetadata": true,
-          "category": "dashboard-ux",
-          "tags": [
-            "phase-90",
-            "phase-notes",
-            "drawer",
-            "policy-approval"
-          ],
-          "confidenceTier": null,
-          "blockedReasonCategory": null
-        }
-      },
-      {
-        "id": "T100174",
-        "status": "proposed",
-        "type": "workspace-kit",
-        "title": "Phase 90: Dashboard input drawer contract",
-        "createdAt": "2026-05-11T16:04:33.371Z",
-        "updatedAt": "2026-05-11T16:04:33.371Z",
-        "archived": false,
-        "priority": "P1",
-        "phase": "Phase 90",
-        "phaseKey": "90",
-        "approach": "Introduce a shared Dashboard input-drawer contract and host/webview message protocol before migrating individual flows. Keep workspace-kit CLI commands as the only mutation path; the drawer only collects and validates user intent.",
-        "technicalScope": [
-          "Add a reusable Dashboard drawer shell in the dashboard webview with title, description, form body, validation area, primary/secondary actions, busy state, and result status.",
-          "Define a typed message protocol between render-dashboard and DashboardViewProvider for opening, submitting, cancelling, and reporting drawer workflows.",
-          "Support select, text input, textarea, confirmation, and read-only summary field types needed by existing prompt flows.",
-          "Handle focus management, Escape/cancel behavior, keyboard submit where appropriate, and responsive layout inside the VS Code sidebar webview.",
-          "Keep existing planning interview behavior working while allowing it to remain inline or later move to the shared drawer without breaking saved planning state."
-        ],
-        "acceptanceCriteria": [
-          "Dashboard-originated prompts have one documented default: use the in-webview drawer for user input and wizard steps.",
-          "The drawer can render at least one multi-field form and one confirmation+rationale flow without calling showInputBox or showQuickPick from the Dashboard path.",
-          "Drawer cancel, validation failure, command failure, and command success are visible in the Dashboard without losing the user's place.",
-          "No webview code mutates SQLite or kit-owned state directly; all mutations still go through CommandClient workspace-kit commands.",
-          "Unit tests cover the drawer shell rendering and at least one message-to-state transition."
-        ],
-        "summary": "Standardize Dashboard-originated user prompts and wizards on a reusable drawer overlay inside the webview so users are not bounced between the Dashboard, top command input, and modal popups.",
-        "risk": "Medium: introduces shared UI state in a frequently used sidebar; must avoid breaking existing dashboard refresh and details-open preservation.",
-        "metadata": {
-          "category": "dashboard-ux",
-          "tags": [
-            "phase-90",
-            "dashboard",
-            "webview",
-            "prompts",
-            "wizard",
-            "ux-consistency"
-          ],
-          "component": "extensions/cursor-workflow-cannon",
-          "decisionRecord": {
-            "promptSurface": "Reusable drawer overlay inside the webview",
-            "taskStatus": "proposed",
-            "firstMigration": "Add wishlist item"
-          },
           "blockers": [
-            "Confirm drawer overlay design remains the Phase 90 UX direction."
+            "T100188 is completed and provides clone-local lease commands under git common-dir.",
+            "Extension work still needs a stable session identifier where available; fallback behavior must be explicit when no session id exists.",
+            "The exact edit-capable flows that should honor waitForLease are not enumerated yet; this phase must define the first supported integration points before wiring broad enforcement."
           ],
-          "implementationFiles": [
-            "extensions/cursor-workflow-cannon/src/views/dashboard/render-dashboard.ts",
-            "extensions/cursor-workflow-cannon/src/views/dashboard/DashboardViewProvider.ts",
-            "extensions/cursor-workflow-cannon/test/render-dashboard.test.mjs"
-          ]
+          "implementationNotes": [
+            "Use git common-dir for clone-local coordination state; do not store active workspace leases in branch-local task SQLite.",
+            "Keep responses compact for agents and avoid broad instruction/catalog reloads in blocked or read-only states.",
+            "Prefer fail-safe behavior for file mutation, stash, checkpoint, and task-state authority conflicts.",
+            "Current code exposes claim/heartbeat/release/status commands, workspace-coordination-status, a status-bar posture, and a read-only Coordination status card. It does not yet expose held-by-me vs held-by-other status, suspect drift status, extension lease actions, or waitForLease behavior."
+          ],
+          "ticketReview": {
+            "reviewedAt": "2026-05-12",
+            "reviewer": "GitHub Copilot",
+            "verdict": "Direction is truthful, but the original ticket was too broad for one implementation task and implied several states/behaviors that are not present yet.",
+            "evidence": [
+              "T100188 is completed with lease command delivery evidence.",
+              "src/modules/task-engine/workspace-edit-lease-commands-runtime.ts has claim, heartbeat, release, and workspace-edit-status command behavior.",
+              "src/modules/task-engine/coordination/build-workspace-coordination-status.ts emits read-only posture and lease active/stale information, but not holder identity or drift comparison against the lease fingerprint.",
+              "extensions/cursor-workflow-cannon/src/extension.ts renders only a compact coordination posture in the status bar.",
+              "extensions/cursor-workflow-cannon/src/views/status/render-status-tab.ts renders a read-only Coordination card with lease active/stale/none only."
+            ],
+            "missingInformation": [
+              "Which VS Code/session identifier should be treated as the durable agentSessionId for held-by-me vs held-by-other classification.",
+              "Which commands or edit-capable flows should accept waitForLease in the first implementation slice.",
+              "Whether recover stale and claim/release actions should require explicit per-click policy approval copy in the extension or reuse existing command-client approval handling.",
+              "How suspect state should be prioritized relative to dirty_workspace, dirty_task_db, and lease_held posture when multiple signals are true."
+            ],
+            "breakdown": [
+              "T100212",
+              "T100213",
+              "T100214"
+            ]
+          }
         },
-        "features": [
-          "cursor-extension"
-        ],
         "agentRouting": {
           "ownership": null,
           "queueNamespace": "default",
-          "features": [
-            "cursor-extension"
-          ],
+          "features": [],
           "source": null,
           "hasModuleMetadata": true,
-          "category": "dashboard-ux",
-          "tags": [
-            "phase-90",
-            "dashboard",
-            "webview",
-            "prompts",
-            "wizard",
-            "ux-consistency"
+          "category": null,
+          "tags": [],
+          "confidenceTier": null,
+          "blockedReasonCategory": null
+        }
+      },
+      {
+        "id": "T100224",
+        "status": "ready",
+        "type": "workspace-kit",
+        "title": "Add end-to-end runtime contract regression coverage",
+        "createdAt": "2026-05-12T17:21:35.175Z",
+        "updatedAt": "2026-05-12T17:21:35.175Z",
+        "archived": false,
+        "phase": "Phase 93",
+        "phaseKey": "93",
+        "approach": "Cover the normal path and failure path across init, launcher, doctor, extension runtime selection, and setup validation.",
+        "technicalScope": [
+          "Test init creates runtime stamp and launcher.",
+          "Test launcher uses stamped Node identity.",
+          "Test doctor reports healthy and broken runtime contract states.",
+          "Test extension prefers stamp or launcher in attached workspaces.",
+          "Test setup fails on wrong Node major and passes with native SQLite smoke success."
+        ],
+        "acceptanceCriteria": [
+          "Regression tests cover normal attached-workspace command execution through the stamped runtime.",
+          "Failure tests cover missing stamp, deleted Node executable, and SQLite load failure.",
+          "Extension tests cover stamp-first runtime selection.",
+          "The test suite demonstrates that routine Workflow Cannon commands do not rely on shell PATH or editor Node after attach."
+        ],
+        "summary": "Add integration coverage proving that after attach Workflow Cannon commands use the stamped runtime and no longer depend on arbitrary shell/editor Node selection.",
+        "metadata": {
+          "category": "runtime-contract",
+          "goal": "Lock in the runtime-contract invariant so native SQLite mismatches do not regress.",
+          "implementationOrder": 10
+        },
+        "agentRouting": {
+          "ownership": null,
+          "queueNamespace": "default",
+          "features": [],
+          "source": null,
+          "hasModuleMetadata": true,
+          "category": "runtime-contract",
+          "tags": [],
+          "confidenceTier": null,
+          "blockedReasonCategory": null
+        }
+      },
+      {
+        "id": "T100223",
+        "status": "ready",
+        "type": "workspace-kit",
+        "title": "Add drift and upgrade support for runtime artifacts",
+        "createdAt": "2026-05-12T17:21:35.174Z",
+        "updatedAt": "2026-05-12T17:21:35.174Z",
+        "archived": false,
+        "phase": "Phase 93",
+        "phaseKey": "93",
+        "approach": "Integrate runtime.json and launcher handling with ownership, drift-check, and upgrade semantics without blindly overwriting environment-specific runtime identity.",
+        "technicalScope": [
+          "Decide which runtime artifacts are kit-owned and which stamp fields are environment-specific.",
+          "Add launcher and runtime stamp paths to ownership policy where appropriate.",
+          "Update drift-check to detect missing or corrupt launcher and invalid stamp shape.",
+          "Update upgrade to regenerate launcher safely.",
+          "Avoid overwriting a valid existing runtime stamp with an invalid current shell Node."
+        ],
+        "acceptanceCriteria": [
+          "drift-check detects missing or corrupt runtime launcher artifacts.",
+          "upgrade can regenerate the launcher without breaking a valid runtime stamp.",
+          "Runtime stamp validation distinguishes drift from safe environment-specific identity.",
+          "Owned-path metadata accurately reflects managed runtime files."
+        ],
+        "summary": "Ensure managed runtime artifacts are detected, repaired, and upgraded consistently with other kit-owned files.",
+        "metadata": {
+          "category": "runtime-contract",
+          "goal": "Keep runtime contract artifacts maintainable across upgrades.",
+          "implementationOrder": 9
+        },
+        "agentRouting": {
+          "ownership": null,
+          "queueNamespace": "default",
+          "features": [],
+          "source": null,
+          "hasModuleMetadata": true,
+          "category": "runtime-contract",
+          "tags": [],
+          "confidenceTier": null,
+          "blockedReasonCategory": null
+        }
+      },
+      {
+        "id": "T100222",
+        "status": "ready",
+        "type": "workspace-kit",
+        "title": "Add doctor checks for runtime contract drift",
+        "createdAt": "2026-05-12T17:21:35.173Z",
+        "updatedAt": "2026-05-12T17:21:35.173Z",
+        "archived": false,
+        "phase": "Phase 93",
+        "phaseKey": "93",
+        "approach": "Use the shared runtime helpers to report whether the installed runtime contract is healthy or has drifted since attach.",
+        "technicalScope": [
+          "Add doctor checks for missing runtime stamp, invalid stamp shape, missing stamped Node executable, wrong Node major, and SQLite load failure.",
+          "Check launcher presence and basic integrity.",
+          "Report when the current process differs from the stamped runtime.",
+          "Include structured runtime contract status in doctor JSON.",
+          "Make human output short and repair-oriented."
+        ],
+        "acceptanceCriteria": [
+          "workspace-kit doctor reports healthy runtime contract status when stamp and launcher are valid.",
+          "doctor catches deleted Node, wrong major, wrong architecture or ABI, missing launcher, and SQLite load failure.",
+          "doctor JSON includes machine-readable runtime contract details.",
+          "Human remediation names the setup repair path without a long native error matrix."
+        ],
+        "summary": "Extend doctor to verify the runtime stamp, launcher, stamped Node executable, and native SQLite loadability.",
+        "metadata": {
+          "category": "runtime-contract",
+          "goal": "Detect environment drift after attach without making runtime commands clever.",
+          "implementationOrder": 8
+        },
+        "agentRouting": {
+          "ownership": null,
+          "queueNamespace": "default",
+          "features": [],
+          "source": null,
+          "hasModuleMetadata": true,
+          "category": "runtime-contract",
+          "tags": [],
+          "confidenceTier": null,
+          "blockedReasonCategory": null
+        }
+      },
+      {
+        "id": "T100221",
+        "status": "ready",
+        "type": "workspace-kit",
+        "title": "Update Cursor extension to use runtime stamp first",
+        "createdAt": "2026-05-12T17:21:35.170Z",
+        "updatedAt": "2026-05-12T17:21:35.170Z",
+        "archived": false,
+        "phase": "Phase 93",
+        "phaseKey": "93",
+        "approach": "Simplify extension command execution so attached workspaces use the deterministic runtime contract, with candidate probing retained only for pre-attach or broken-stamp diagnostics.",
+        "technicalScope": [
+          "Update command client runtime selection to prefer .workspace-kit/runtime.json or .workspace-kit/bin/wk.",
+          "Keep WORKSPACE_KIT_NODE and workflowCannon.nodeExecutable as explicit overrides or pre-attach fallback.",
+          "Stop using attached project Node markers for normal attached-workspace command execution.",
+          "Update extension configuration copy to describe overrides as exceptional.",
+          "Add extension tests for stamp-first selection and broken-stamp diagnostics."
+        ],
+        "acceptanceCriteria": [
+          "Attached workspaces run extension commands through the stamped Workflow Cannon runtime by default.",
+          "The extension does not depend on Electron Node, shell PATH, or attached project Node markers in the normal path.",
+          "Broken stamp diagnostics remain structured and actionable.",
+          "Existing dashboard/task command tests are updated to cover stamp-first behavior."
+        ],
+        "summary": "Make the extension prefer the attached workspace runtime stamp or launcher before probing Node candidates.",
+        "metadata": {
+          "category": "runtime-contract",
+          "goal": "Remove editor runtime mismatch as a source of native SQLite failures.",
+          "implementationOrder": 7
+        },
+        "agentRouting": {
+          "ownership": null,
+          "queueNamespace": "default",
+          "features": [],
+          "source": null,
+          "hasModuleMetadata": true,
+          "category": "runtime-contract",
+          "tags": [],
+          "confidenceTier": null,
+          "blockedReasonCategory": null
+        }
+      },
+      {
+        "id": "T100219",
+        "status": "ready",
+        "type": "workspace-kit",
+        "title": "Make workspace-kit init establish runtime contract",
+        "createdAt": "2026-05-12T17:21:35.168Z",
+        "updatedAt": "2026-05-12T17:21:35.168Z",
+        "archived": false,
+        "phase": "Phase 93",
+        "phaseKey": "93",
+        "approach": "Move runtime validation to the front of init, write the runtime stamp, generate the launcher, and only then initialize planning SQLite.",
+        "technicalScope": [
+          "Update init command flow to validate Node 22 and better-sqlite3 before opening planning stores.",
+          "Write .workspace-kit/runtime.json during successful init.",
+          "Generate .workspace-kit/bin/wk during successful init.",
+          "Show runtime artifacts in init --dry-run --json planned writes.",
+          "Make re-running init repair missing launcher or stamp safely."
+        ],
+        "acceptanceCriteria": [
+          "workspace-kit init refuses to attach when the runtime contract cannot be validated.",
+          "Successful init creates runtime stamp and launcher before SQLite initialization completes.",
+          "Re-running init repairs missing runtime artifacts without disturbing user-owned files.",
+          "Init JSON output includes runtime contract status and artifact paths."
+        ],
+        "summary": "Ensure project attach validates and records the Workflow Cannon runtime before SQLite planning initialization.",
+        "metadata": {
+          "category": "runtime-contract",
+          "goal": "Stop bad native SQLite environments at attach time.",
+          "implementationOrder": 5
+        },
+        "agentRouting": {
+          "ownership": null,
+          "queueNamespace": "default",
+          "features": [],
+          "source": null,
+          "hasModuleMetadata": true,
+          "category": "runtime-contract",
+          "tags": [],
+          "confidenceTier": null,
+          "blockedReasonCategory": null
+        }
+      },
+      {
+        "id": "T100220",
+        "status": "ready",
+        "type": "workspace-kit",
+        "title": "Route agent guidance and tasks through canonical launcher",
+        "createdAt": "2026-05-12T17:21:35.168Z",
+        "updatedAt": "2026-05-12T17:21:35.168Z",
+        "archived": false,
+        "phase": "Phase 93",
+        "phaseKey": "93",
+        "approach": "Change routine attached-project examples to prefer the generated launcher while preserving pnpm exec wk for Workflow Cannon repository development.",
+        "technicalScope": [
+          "Update .ai guidance and command snippets that describe routine attached-project task commands.",
+          "Update VS Code task surfaces or generated task guidance where they currently rely on nvm use.",
+          "Clarify when pnpm exec wk remains appropriate for Workflow Cannon repo development.",
+          "Update native SQLite and install/attach runbook source files.",
+          "Avoid editing generated maintainer docs directly unless running the documented docs pipeline."
+        ],
+        "acceptanceCriteria": [
+          "Agent-facing attached-project guidance points to .workspace-kit/bin/wk as the canonical command path.",
+          "Routine guidance no longer requires the user to run nvm use before Workflow Cannon commands.",
+          "Workflow Cannon repo development guidance still permits pnpm exec wk where appropriate.",
+          "Docs distinguish attached project runtime from Workflow Cannon runtime."
+        ],
+        "summary": "Update machine-facing guidance so agents use the launcher after attach instead of environment-sensitive Node or pnpm invocations.",
+        "metadata": {
+          "category": "runtime-contract",
+          "goal": "Prevent agents from bypassing the stamped runtime in normal workflows.",
+          "implementationOrder": 6
+        },
+        "agentRouting": {
+          "ownership": null,
+          "queueNamespace": "default",
+          "features": [],
+          "source": null,
+          "hasModuleMetadata": true,
+          "category": "runtime-contract",
+          "tags": [],
+          "confidenceTier": null,
+          "blockedReasonCategory": null
+        }
+      },
+      {
+        "id": "T100218",
+        "status": "ready",
+        "type": "workspace-kit",
+        "title": "Create canonical Workflow Cannon launcher",
+        "createdAt": "2026-05-12T17:21:35.167Z",
+        "updatedAt": "2026-05-12T17:21:35.167Z",
+        "archived": false,
+        "phase": "Phase 93",
+        "phaseKey": "93",
+        "approach": "Generate a small launcher that reads the runtime stamp, verifies the stamped Node still exists, and execs the Workflow Cannon CLI with that Node.",
+        "technicalScope": [
+          "Define generated launcher path, likely .workspace-kit/bin/wk for attached workspaces.",
+          "Implement launcher generation with portable shell and Windows considerations where appropriate.",
+          "Make launcher read runtime.json and exec the stamped nodeExecutable with the package CLI.",
+          "Fail clearly if the stamp is missing, stale, or the stamped Node executable is gone.",
+          "Add tests proving PATH node and attached project Node markers are ignored."
+        ],
+        "acceptanceCriteria": [
+          ".workspace-kit/bin/wk doctor uses the stamped Node executable.",
+          "Launcher failure for a missing Node path is short and actionable.",
+          "Launcher does not perform broad runtime search after attach.",
+          "Launcher does not follow the attached project .nvmrc or .node-version."
+        ],
+        "summary": "Add a deterministic launcher that runs workspace-kit through the stamped Node executable instead of arbitrary shell or editor Node.",
+        "metadata": {
+          "category": "runtime-contract",
+          "goal": "Make routine agent/editor invocations deterministic after attach.",
+          "implementationOrder": 4
+        },
+        "agentRouting": {
+          "ownership": null,
+          "queueNamespace": "default",
+          "features": [],
+          "source": null,
+          "hasModuleMetadata": true,
+          "category": "runtime-contract",
+          "tags": [],
+          "confidenceTier": null,
+          "blockedReasonCategory": null
+        }
+      },
+      {
+        "id": "T100217",
+        "status": "ready",
+        "type": "workspace-kit",
+        "title": "Enforce Node 22 during package install and dev setup",
+        "createdAt": "2026-05-12T17:21:35.165Z",
+        "updatedAt": "2026-05-12T17:21:35.165Z",
+        "archived": false,
+        "phase": "Phase 93",
+        "phaseKey": "93",
+        "approach": "Tighten package metadata and setup scripts so a bad runtime cannot produce a misleadingly usable install.",
+        "technicalScope": [
+          "Add package engines for Node 22 and pnpm 10.",
+          "Update setup-dev to validate Node major, architecture, ABI, and better-sqlite3 loadability.",
+          "Update ensure-native-sqlite to write or refresh the runtime stamp after successful validation.",
+          "Keep native rebuild behavior only as install-time repair, not as a recurring runtime strategy.",
+          "Update script tests or smoke checks for wrong Node and successful stamped setup."
+        ],
+        "acceptanceCriteria": [
+          "setup:dev -- --check-only fails on wrong Node major or native SQLite mismatch.",
+          "Successful setup records a runtime stamp.",
+          "postinstall validates better-sqlite3 under the active Node 22 runtime.",
+          "Failure output points to one setup repair path instead of a broad case matrix."
+        ],
+        "summary": "Make package install and dev setup fail fast unless the active runtime satisfies the Workflow Cannon Node 22 and native SQLite contract.",
+        "metadata": {
+          "category": "runtime-contract",
+          "goal": "Make the package install environment correct before agents begin work.",
+          "implementationOrder": 3
+        },
+        "agentRouting": {
+          "ownership": null,
+          "queueNamespace": "default",
+          "features": [],
+          "source": null,
+          "hasModuleMetadata": true,
+          "category": "runtime-contract",
+          "tags": [],
+          "confidenceTier": null,
+          "blockedReasonCategory": null
+        }
+      },
+      {
+        "id": "T100216",
+        "status": "ready",
+        "type": "workspace-kit",
+        "title": "Add runtime stamp schema and verification helpers",
+        "createdAt": "2026-05-12T17:21:35.163Z",
+        "updatedAt": "2026-05-12T17:21:35.163Z",
+        "archived": false,
+        "phase": "Phase 93",
+        "phaseKey": "93",
+        "approach": "Build a small reusable runtime-contract module that centralizes Node identity, stamp parsing, Node 22 validation, and better-sqlite3 smoke checks.",
+        "technicalScope": [
+          "Add a runtime stamp type/schema with nodeExecutable, nodeVersion, arch, platform, abi, packageRoot, and checkedAt.",
+          "Reuse or consolidate identity logic from native SQLite diagnostics.",
+          "Implement read, write, and verify helpers for the runtime stamp.",
+          "Implement a better-sqlite3 smoke check that can run against the intended package root.",
+          "Add tests for valid stamp, missing stamp, wrong major, wrong architecture or ABI, and SQLite load failure."
+        ],
+        "acceptanceCriteria": [
+          "Runtime stamp helpers are available to scripts, init, doctor, and extension-facing code.",
+          "Node 22 validation is enforced by helper tests.",
+          "SQLite smoke failure is represented as structured diagnostic data.",
+          "No runtime helper mutates task state or opens planning SQLite as part of validation."
+        ],
+        "summary": "Implement typed helpers for recording and verifying the Workflow Cannon Node runtime identity and native SQLite loadability.",
+        "metadata": {
+          "category": "runtime-contract",
+          "goal": "Give install/init/doctor/launcher one shared source for runtime validation.",
+          "implementationOrder": 2
+        },
+        "agentRouting": {
+          "ownership": null,
+          "queueNamespace": "default",
+          "features": [],
+          "source": null,
+          "hasModuleMetadata": true,
+          "category": "runtime-contract",
+          "tags": [],
+          "confidenceTier": null,
+          "blockedReasonCategory": null
+        }
+      },
+      {
+        "id": "T100215",
+        "status": "ready",
+        "type": "workspace-kit",
+        "title": "Define Workflow Cannon runtime contract",
+        "createdAt": "2026-05-12T17:21:35.160Z",
+        "updatedAt": "2026-05-12T17:21:35.160Z",
+        "archived": false,
+        "phase": "Phase 93",
+        "phaseKey": "93",
+        "approach": "Write the design contract first so implementation tasks have one source of truth for runtime selection, stamping, launcher behavior, fail-fast setup, and doctor drift reporting.",
+        "technicalScope": [
+          "Document that Workflow Cannon requires Node 22 for CLI/runtime execution.",
+          "Define runtime stamp location and fields for attached workspaces.",
+          "Define canonical launcher behavior and failure semantics.",
+          "Clarify that attached project .nvmrc/.node-version files are not used for Workflow Cannon runtime selection.",
+          "Update native SQLite distribution/runbook language to prefer environment correctness over broad runtime recovery."
+        ],
+        "acceptanceCriteria": [
+          "A canonical ADR or runbook section describes the Node 22 runtime contract.",
+          "The document defines install/init validation, runtime stamping, launcher usage, and doctor drift behavior.",
+          "The document explicitly states that Workflow Cannon does not follow attached project Node markers.",
+          "Follow-up implementation tasks can cite this document as the runtime contract source."
+        ],
+        "summary": "Establish the canonical policy that Workflow Cannon owns a Node 22 runtime independent of attached project Node versions.",
+        "metadata": {
+          "category": "runtime-contract",
+          "goal": "Prevent arm64/amd64 better-sqlite3 mismatches by making runtime correctness an install/init invariant.",
+          "implementationOrder": 1
+        },
+        "agentRouting": {
+          "ownership": null,
+          "queueNamespace": "default",
+          "features": [],
+          "source": null,
+          "hasModuleMetadata": true,
+          "category": "runtime-contract",
+          "tags": [],
+          "confidenceTier": null,
+          "blockedReasonCategory": null
+        }
+      },
+      {
+        "id": "T100214",
+        "status": "ready",
+        "type": "workspace-kit",
+        "title": "Detect suspect lease checkout drift",
+        "createdAt": "2026-05-12T16:33:18.485Z",
+        "updatedAt": "2026-05-12T16:33:18.485Z",
+        "archived": false,
+        "priority": "P1",
+        "phase": "Phase 93",
+        "phaseKey": "93",
+        "approach": "Compare the active lease fingerprint to the current checkout and surface suspect status when branch, HEAD, worktree, or dirty manifest signals change unexpectedly during a lease.",
+        "dependsOn": [
+          "T100189"
+        ],
+        "unblocks": [
+          "T100190"
+        ],
+        "technicalScope": [
+          "Compare active lease branch, headSha, worktreePath, and dirtyManifest against the current checkout fingerprint in read-only status paths.",
+          "Add stable suspect flags for branch drift, HEAD drift, worktree drift, and dirty manifest drift.",
+          "Surface suspect status through workspace-edit-status and workspace-coordination-status without mutating or deleting the lease.",
+          "Define posture precedence when suspect signals coexist with dirty workspace, dirty task DB, stale lease, or active lease.",
+          "Expose suspect status for extension consumers without requiring raw lease-file parsing."
+        ],
+        "acceptanceCriteria": [
+          "Branch, HEAD, worktree path, and dirty manifest changes during an active lease are detected and returned as stable suspect flags.",
+          "workspace-edit-status and workspace-coordination-status surface suspect status without mutating the lease file.",
+          "Posture precedence is documented and deterministic when multiple coordination signals are present.",
+          "The extension-facing payload can render suspect state without reading the lease file directly.",
+          "Automated tests cover no drift, branch drift, HEAD drift, dirty manifest drift, stale lease, and malformed lease cases."
+        ],
+        "summary": "Mark active leases suspect when checkout state drifts from the lease fingerprint.",
+        "description": "Mark active leases suspect when checkout state drifts from the lease fingerprint.",
+        "risk": "Medium: false positives could make valid work look unsafe; prefer explicit flags over destructive recovery.",
+        "metadata": {
+          "planningThread": "agent-coordination-and-task-state-safety",
+          "roadmapSlice": "multi-agent workspace lease and task-state authority",
+          "parentTicket": "T100189",
+          "blockerReason": "Depends on T100189 status vocabulary so suspect can be rendered consistently.",
+          "goals": [
+            "Help users recognize stale or unsafe lease state before mutating files.",
+            "Prepare reliable signals for extension rendering and later task-state authority gates."
           ],
+          "implementationNotes": [
+            "Detection must be read-only; recovery remains an explicit command/action."
+          ]
+        },
+        "agentRouting": {
+          "ownership": null,
+          "queueNamespace": "default",
+          "features": [],
+          "source": null,
+          "hasModuleMetadata": true,
+          "category": null,
+          "tags": [],
+          "confidenceTier": null,
+          "blockedReasonCategory": null
+        }
+      },
+      {
+        "id": "T100213",
+        "status": "ready",
+        "type": "workspace-kit",
+        "title": "Add bounded waitForLease behavior",
+        "createdAt": "2026-05-12T16:33:16.188Z",
+        "updatedAt": "2026-05-12T16:33:16.188Z",
+        "archived": false,
+        "priority": "P1",
+        "phase": "Phase 93",
+        "phaseKey": "93",
+        "approach": "Define and implement an optional bounded wait path for lease-aware flows so blocked agents can wait cheaply or fall back to read-only planning.",
+        "dependsOn": [
+          "T100189"
+        ],
+        "unblocks": [
+          "T100190"
+        ],
+        "technicalScope": [
+          "Define waitForLease arguments or helper options, including timeout, interval, and fallback behavior, for the first supported lease-aware entrypoints.",
+          "Ensure waiting uses low-frequency checks, bounded timeout, and no tight polling loop.",
+          "Return deterministic JSON when the lease becomes available, times out, is stale/recoverable, or remains held by another session.",
+          "Keep read-only/plan-only alternatives available when waiting is disabled or times out.",
+          "Document which commands or flows support waitForLease in this phase."
+        ],
+        "acceptanceCriteria": [
+          "waitForLease is opt-in or conservatively defaulted and has a bounded maximum timeout.",
+          "Polling frequency is low and tested, with no busy loop or broad context reload guidance.",
+          "Timeout and success responses include the current holder, task id when present, expiry, and recommended next action.",
+          "At least one lease-aware command or helper path uses the behavior end to end.",
+          "Automated tests cover immediate availability, active-holder timeout, stale/recoverable lease, and disabled/fallback behavior."
+        ],
+        "summary": "Add a conservative waitForLease path with low-frequency checks and explicit timeout behavior.",
+        "description": "Add a conservative waitForLease path with low-frequency checks and explicit timeout behavior.",
+        "risk": "Medium: waiting behavior can waste agent credits if defaults are too aggressive.",
+        "metadata": {
+          "planningThread": "agent-coordination-and-task-state-safety",
+          "roadmapSlice": "multi-agent workspace lease and task-state authority",
+          "parentTicket": "T100189",
+          "blockerReason": "Depends on T100189 response vocabulary for compact wait and timeout messages.",
+          "goals": [
+            "Reduce wasted AI credits when edits are temporarily blocked.",
+            "Give agents a bounded alternative to immediate failure."
+          ],
+          "implementationNotes": [
+            "Define supported entrypoints before wiring broad enforcement."
+          ]
+        },
+        "agentRouting": {
+          "ownership": null,
+          "queueNamespace": "default",
+          "features": [],
+          "source": null,
+          "hasModuleMetadata": true,
+          "category": null,
+          "tags": [],
+          "confidenceTier": null,
+          "blockedReasonCategory": null
+        }
+      },
+      {
+        "id": "T100212",
+        "status": "ready",
+        "type": "workspace-kit",
+        "title": "Add extension lease status UI and actions",
+        "createdAt": "2026-05-12T16:33:13.932Z",
+        "updatedAt": "2026-05-12T16:33:13.932Z",
+        "archived": false,
+        "priority": "P1",
+        "phase": "Phase 93",
+        "phaseKey": "93",
+        "approach": "Use the T100189 status vocabulary to make lease state visible and actionable in the VS Code extension without requiring users to inspect raw CLI JSON.",
+        "dependsOn": [
+          "T100189"
+        ],
+        "unblocks": [
+          "T100190"
+        ],
+        "technicalScope": [
+          "Update the status bar, Status tab Coordination card, or dashboard surface to show lease-free, held-by-me, held-by-other, stale/invalid, and suspect-ready display states using compact labels.",
+          "Show lease holder session, task id when present, expiry, and stale/invalid state when available from the command contract.",
+          "Add extension commands or QuickPick actions for claim, release, recover stale, inspect holder/status, and continue read-only/plan-only.",
+          "Pass the best available agentSessionId into lease commands and define a clear fallback when the extension cannot identify the current session.",
+          "Keep sensitive lease mutations on the existing policyApproval path and avoid manual lease-file editing guidance."
+        ],
+        "acceptanceCriteria": [
+          "The extension UI distinguishes lease-free, lease-held-by-me, lease-held-by-other, stale/invalid, and suspect-ready states without raw JSON inspection.",
+          "Users can launch claim, release, recover stale, inspect holder/status, and continue read-only actions from VS Code UI affordances.",
+          "Lease actions call workspace-kit commands rather than editing files directly and include policyApproval where the command is sensitive.",
+          "When no stable session id is available, the UI explains the limitation through action availability or fallback copy rather than misclassifying ownership.",
+          "Extension tests or renderer tests cover the major lease rendering states and at least one action dispatch path."
+        ],
+        "summary": "Render lease state in the extension and add user actions for common lease operations.",
+        "description": "Render lease state in the extension and add user actions for common lease operations.",
+        "risk": "Medium: unclear ownership copy could cause users to override leases too casually.",
+        "metadata": {
+          "planningThread": "agent-coordination-and-task-state-safety",
+          "roadmapSlice": "multi-agent workspace lease and task-state authority",
+          "parentTicket": "T100189",
+          "blockerReason": "Depends on T100189 status vocabulary and blocked-response contract.",
+          "goals": [
+            "Make lease state understandable inside VS Code.",
+            "Provide safe recovery and read-only paths without manual file surgery."
+          ],
+          "implementationNotes": [
+            "Prefer existing dashboard/status rendering patterns and command-client paths."
+          ]
+        },
+        "agentRouting": {
+          "ownership": null,
+          "queueNamespace": "default",
+          "features": [],
+          "source": null,
+          "hasModuleMetadata": true,
+          "category": null,
+          "tags": [],
           "confidenceTier": null,
           "blockedReasonCategory": null
         }
       }
     ],
-    "count": 7,
+    "count": 14,
     "scope": "tasks-only",
     "listTasksSort": "updatedAt_desc_id_numeric_asc",
     "listTasksCursorSemantics": "Keyset pagination: opaque cursor from prior nextCursor; under concurrent updates rows may move across pages (re-run without cursor for a fresh ordering snapshot).",
-    "planningGeneration": 2579,
+    "planningGeneration": 2739,
     "planningGenerationPolicy": "require",
+    "taskIntakeByTaskId": {
+      "T100189": {
+        "schemaVersion": 1,
+        "profileName": "advisory",
+        "enforcementMode": "advisory",
+        "actionContext": "accept/ready",
+        "missingRequiredFields": [],
+        "missingRecommendedFields": [],
+        "forbiddenPresentFields": [],
+        "fieldRuleViolations": []
+      },
+      "T100224": {
+        "schemaVersion": 1,
+        "profileName": "advisory",
+        "enforcementMode": "advisory",
+        "actionContext": "accept/ready",
+        "missingRequiredFields": [],
+        "missingRecommendedFields": [],
+        "forbiddenPresentFields": [],
+        "fieldRuleViolations": []
+      },
+      "T100223": {
+        "schemaVersion": 1,
+        "profileName": "advisory",
+        "enforcementMode": "advisory",
+        "actionContext": "accept/ready",
+        "missingRequiredFields": [],
+        "missingRecommendedFields": [],
+        "forbiddenPresentFields": [],
+        "fieldRuleViolations": []
+      },
+      "T100222": {
+        "schemaVersion": 1,
+        "profileName": "advisory",
+        "enforcementMode": "advisory",
+        "actionContext": "accept/ready",
+        "missingRequiredFields": [],
+        "missingRecommendedFields": [],
+        "forbiddenPresentFields": [],
+        "fieldRuleViolations": []
+      },
+      "T100221": {
+        "schemaVersion": 1,
+        "profileName": "advisory",
+        "enforcementMode": "advisory",
+        "actionContext": "accept/ready",
+        "missingRequiredFields": [],
+        "missingRecommendedFields": [],
+        "forbiddenPresentFields": [],
+        "fieldRuleViolations": []
+      },
+      "T100219": {
+        "schemaVersion": 1,
+        "profileName": "advisory",
+        "enforcementMode": "advisory",
+        "actionContext": "accept/ready",
+        "missingRequiredFields": [],
+        "missingRecommendedFields": [],
+        "forbiddenPresentFields": [],
+        "fieldRuleViolations": []
+      },
+      "T100220": {
+        "schemaVersion": 1,
+        "profileName": "advisory",
+        "enforcementMode": "advisory",
+        "actionContext": "accept/ready",
+        "missingRequiredFields": [],
+        "missingRecommendedFields": [],
+        "forbiddenPresentFields": [],
+        "fieldRuleViolations": []
+      },
+      "T100218": {
+        "schemaVersion": 1,
+        "profileName": "advisory",
+        "enforcementMode": "advisory",
+        "actionContext": "accept/ready",
+        "missingRequiredFields": [],
+        "missingRecommendedFields": [],
+        "forbiddenPresentFields": [],
+        "fieldRuleViolations": []
+      },
+      "T100217": {
+        "schemaVersion": 1,
+        "profileName": "advisory",
+        "enforcementMode": "advisory",
+        "actionContext": "accept/ready",
+        "missingRequiredFields": [],
+        "missingRecommendedFields": [],
+        "forbiddenPresentFields": [],
+        "fieldRuleViolations": []
+      },
+      "T100216": {
+        "schemaVersion": 1,
+        "profileName": "advisory",
+        "enforcementMode": "advisory",
+        "actionContext": "accept/ready",
+        "missingRequiredFields": [],
+        "missingRecommendedFields": [],
+        "forbiddenPresentFields": [],
+        "fieldRuleViolations": []
+      },
+      "T100215": {
+        "schemaVersion": 1,
+        "profileName": "advisory",
+        "enforcementMode": "advisory",
+        "actionContext": "accept/ready",
+        "missingRequiredFields": [],
+        "missingRecommendedFields": [],
+        "forbiddenPresentFields": [],
+        "fieldRuleViolations": []
+      },
+      "T100214": {
+        "schemaVersion": 1,
+        "profileName": "advisory",
+        "enforcementMode": "advisory",
+        "actionContext": "accept/ready",
+        "missingRequiredFields": [],
+        "missingRecommendedFields": [],
+        "forbiddenPresentFields": [],
+        "fieldRuleViolations": []
+      },
+      "T100213": {
+        "schemaVersion": 1,
+        "profileName": "advisory",
+        "enforcementMode": "advisory",
+        "actionContext": "accept/ready",
+        "missingRequiredFields": [],
+        "missingRecommendedFields": [],
+        "forbiddenPresentFields": [],
+        "fieldRuleViolations": []
+      },
+      "T100212": {
+        "schemaVersion": 1,
+        "profileName": "advisory",
+        "enforcementMode": "advisory",
+        "actionContext": "accept/ready",
+        "missingRequiredFields": [],
+        "missingRecommendedFields": [],
+        "forbiddenPresentFields": [],
+        "fieldRuleViolations": []
+      }
+    },
     "cae": {
       "schemaVersion": 1,
       "evalMode": "shadow",
-      "traceId": "cae.trace.8fba3fd721a7109461f378eeab765d35a7d2d732",
+      "traceId": "cae.trace.e2bb8c9353b0491bc44481b6adfd73f53fa5aa0a",
       "shadow": true,
       "summary": {
         "policyCount": 0,
@@ -553,7 +865,7 @@
       ],
       "cae": {
         "kind": "shadow_preflight_v1",
-        "traceId": "cae.trace.8fba3fd721a7109461f378eeab765d35a7d2d732",
+        "traceId": "cae.trace.e2bb8c9353b0491bc44481b6adfd73f53fa5aa0a",
         "evalMode": "shadow",
         "degraded": false,
         "agentRenderHint": "If present, summarize CAE shadow outcome in one short paragraph; when traceId is set, operators can run cae-explain / cae-get-trace."
@@ -566,7 +878,7 @@
     "enforcementMode": "advisory",
     "warnings": [],
     "telemetry": {
-      "resolveNs": 183083,
+      "resolveNs": 405750,
       "warningCount": 0
     }
   }
