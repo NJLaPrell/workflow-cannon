@@ -979,6 +979,7 @@
                 "includeArchived": { "type": "boolean" },
                 "phaseKey": { "type": "string" },
                 "includeQueueHints": { "type": "boolean" },
+                "includeTaskIntake": { "type": "boolean" },
                 "confidenceTier": { "type": "string" },
                 "blockedReasonCategory": { "type": "string" },
                 "features": {
