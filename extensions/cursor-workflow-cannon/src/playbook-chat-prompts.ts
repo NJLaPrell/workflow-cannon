@@ -74,6 +74,19 @@ export function buildTaskToPhaseBranchPrompt(options?: { taskId?: string; kitPha
   );
 }
 
+/** Dashboard / command palette — discover phase journal commands through chat without memorizing CLI names. */
+export function buildPhaseNotesDiscoveryPrompt(): string {
+  return (
+    "The operator opened **Phase notes** discovery from Workflow Cannon. Help them inspect and act on the current phase journal without requiring memorized CLI commands.\n\n" +
+    "Start with read-only context:\n" +
+    "- `pnpm exec wk run list-phase-notes '{}'`\n" +
+    "- `pnpm exec wk run get-phase-context '{}'`\n" +
+    "- `pnpm exec wk run propose-tasks-from-phase-notes '{}'`\n\n" +
+    "For operator-approved actions, use the supported kit commands: `add-phase-note`, `dismiss-phase-note`, `convert-phase-note-to-task`, and `propose-tasks-from-phase-notes` with `persist:true` when appropriate.\n\n" +
+    "Keep summaries secret-safe. Chat intent does not replace JSON `policyApproval` for any sensitive `workspace-kit run` command; follow `.ai/POLICY-APPROVAL.md` and pass `expectedPlanningGeneration` when the command requires it."
+  );
+}
+
 /** Dashboard **Start Interview** — guided `build-plan` interview (planning module). */
 export function buildPlanningInterviewPrompt(): string {
   return (

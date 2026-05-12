@@ -9,6 +9,7 @@ import {
   GENERATE_FEATURES_SLASH_TEXT,
   buildCollaborationProfilesHubPrompt,
   buildImprovementTriagePrompt,
+  buildPhaseNotesDiscoveryPrompt,
   buildPlanningInterviewPrompt,
   buildPlanningInterviewResumePrompt,
   buildTaskToPhaseBranchPrompt,
@@ -147,6 +148,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   /** After first full HTML load, refresh only swaps `#root` via postMessage so `<details open>` state survives. */
   private dashboardRootShellReady = false;
 
+  /** Monotonic render token so slower dashboard reads cannot overwrite newer user navigation. */
+  private dashboardUpdateSequence = 0;
+
+  /** Coalesce refresh triggers so watcher churn and button flows do not spawn overlapping CLI reads. */
+  private dashboardUpdateInFlight: Promise<void> | undefined;
+  private dashboardUpdateQueued = false;
+  private dashboardDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+
   /** 0-based page for wishlist rows in `dashboard-summary` (10 per page). */
   private wishlistPage = 0;
 
@@ -162,7 +171,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     private readonly notifyKitStateChanged: () => void
   ) {
     onKitStateChanged(() => {
-      void this.pushUpdate();
+      this.schedulePushUpdate(400);
     });
   }
 
@@ -316,6 +325,13 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           await this.pushUpdate();
         }
       }
+      if (msg?.type === "addPhaseNote") {
+        await this.onAddPhaseNote();
+        await this.pushUpdate();
+      }
+      if (msg?.type === "prefillPhaseNotesDiscoveryChat") {
+        await prefillCursorChat(buildPhaseNotesDiscoveryPrompt(), { newChat: true });
+      }
       if (msg?.type === "convertPhaseNote") {
         const nid = typeof msg.noteId === "string" ? msg.noteId.trim() : "";
         if (nid.length > 0) {
@@ -373,6 +389,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }, 45_000);
     webviewView.onDidDispose(() => {
       this.dashboardRootShellReady = false;
+      if (this.dashboardDebounceTimer) {
+        clearTimeout(this.dashboardDebounceTimer);
+        this.dashboardDebounceTimer = undefined;
+      }
       if (this.dashboardPollTimer) {
         clearInterval(this.dashboardPollTimer);
         this.dashboardPollTimer = undefined;
@@ -822,6 +842,65 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     await vscode.window.showInformationMessage(r.message ?? "Phase note dismissed");
   }
 
+  private async onAddPhaseNote(): Promise<void> {
+    const typePick = await vscode.window.showQuickPick(
+      [
+        { label: "follow-up", description: "Follow-up work or decision" },
+        { label: "task-suggestion", description: "Candidate task from phase context" },
+        { label: "finding", description: "Observed fact or outcome" },
+        { label: "gotcha", description: "Operational caution" },
+        { label: "risk", description: "Release or execution risk" },
+        { label: "blocker", description: "Blocking issue" }
+      ],
+      { title: "Add phase note — type" }
+    );
+    if (!typePick) {
+      return;
+    }
+    const summary =
+      (await vscode.window.showInputBox({
+        prompt: "Phase note summary (stored in workspace-kit; do not include secrets)",
+        placeHolder: "Short note for the current phase"
+      }))?.trim() ?? "";
+    if (!summary.length) {
+      await vscode.window.showErrorMessage("add-phase-note requires a non-empty summary.");
+      return;
+    }
+    const priorityPick = await vscode.window.showQuickPick(
+      [
+        { label: "normal" },
+        { label: "low" },
+        { label: "high" },
+        { label: "critical" }
+      ],
+      { title: "Add phase note — priority" }
+    );
+    if (!priorityPick) {
+      return;
+    }
+    const detailsRaw = await vscode.window.showInputBox({
+      prompt: "Optional details (summarize; do not include secrets)",
+      placeHolder: "Leave blank for summary-only note"
+    });
+    const args: Record<string, unknown> = {
+      noteType: typePick.label,
+      summary,
+      priority: priorityPick.label
+    };
+    const details = detailsRaw?.trim();
+    if (details) {
+      args.details = details;
+    }
+    const r = await this.client.run("add-phase-note", args);
+    if (!r.ok) {
+      await vscode.window.showErrorMessage((r.message ?? JSON.stringify(r)).slice(0, 900));
+      return;
+    }
+    ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+    this.notifyKitStateChanged();
+    await vscode.window.showInformationMessage(r.message ?? "Phase note added");
+  }
+
   private async onConvertPhaseNote(noteId: string): Promise<void> {
     const gate = await vscode.window.showWarningMessage(
       `Convert phase note ${noteId} to a proposed task (convert-phase-note-to-task)?`,
@@ -980,14 +1059,59 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
    * Buttons still use a tiny inline script + postMessage (host only receives clicks).
    */
   private async pushUpdate(): Promise<void> {
+    if (this.dashboardDebounceTimer) {
+      clearTimeout(this.dashboardDebounceTimer);
+      this.dashboardDebounceTimer = undefined;
+    }
+    if (this.dashboardUpdateInFlight) {
+      this.dashboardUpdateQueued = true;
+      await this.dashboardUpdateInFlight;
+      return;
+    }
+    const refresh = this.runDashboardUpdateLoop();
+    this.dashboardUpdateInFlight = refresh;
+    try {
+      await refresh;
+    } finally {
+      if (this.dashboardUpdateInFlight === refresh) {
+        this.dashboardUpdateInFlight = undefined;
+      }
+    }
+  }
+
+  private schedulePushUpdate(delayMs: number): void {
     if (!this.view) {
       return;
     }
-    const { webview } = this.view;
+    if (this.dashboardDebounceTimer) {
+      clearTimeout(this.dashboardDebounceTimer);
+    }
+    this.dashboardDebounceTimer = setTimeout(() => {
+      this.dashboardDebounceTimer = undefined;
+      void this.pushUpdate();
+    }, delayMs);
+  }
+
+  private async runDashboardUpdateLoop(): Promise<void> {
+    do {
+      this.dashboardUpdateQueued = false;
+      await this.pushUpdateOnce();
+    } while (this.dashboardUpdateQueued && this.view);
+  }
+
+  private async pushUpdateOnce(): Promise<void> {
+    const activeView = this.view;
+    if (!activeView) {
+      return;
+    }
+    const { webview } = activeView;
+    const updateSequence = ++this.dashboardUpdateSequence;
+    const requestedWishlistPage = this.wishlistPage;
+    const startedAt = Date.now();
     let raw: DashboardSummaryCommandSuccess | Record<string, unknown>;
     try {
       raw = (await this.client.run("dashboard-summary", {
-        wishlistPage: this.wishlistPage,
+        wishlistPage: requestedWishlistPage,
         wishlistPageSize: 10
       })) as DashboardSummaryCommandSuccess | Record<string, unknown>;
     } catch (e) {
@@ -997,18 +1121,29 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         message: e instanceof Error ? e.message : String(e)
       };
     }
+    if (updateSequence !== this.dashboardUpdateSequence || this.view !== activeView) {
+      logDashboard(
+        `pushUpdate: stale dashboard-summary ignored page=${String(requestedWishlistPage)}`
+      );
+      return;
+    }
     let phaseJournal: DashboardPhaseJournalBundle | undefined;
     if (raw.ok === true && raw.data && typeof raw.data === "object") {
       this.lastDashboardSummaryData = raw.data as Record<string, unknown>;
       ingestPlanningMetaFromData(raw.data as Record<string, unknown>);
       try {
-        const lp = (await this.client.run("list-phase-notes", {
-          ...expectedPlanningGenerationArgs()
-        })) as PhaseJournalKitPayload & Record<string, unknown>;
+        const [lp, gpc] = (await Promise.all([
+          this.client.run("list-phase-notes", {
+            ...expectedPlanningGenerationArgs()
+          }),
+          this.client.run("get-phase-context", {
+            ...expectedPlanningGenerationArgs()
+          })
+        ])) as [
+          PhaseJournalKitPayload & Record<string, unknown>,
+          PhaseJournalKitPayload & Record<string, unknown>
+        ];
         ingestPlanningMetaFromData(lp.data as Record<string, unknown> | undefined);
-        const gpc = (await this.client.run("get-phase-context", {
-          ...expectedPlanningGenerationArgs()
-        })) as PhaseJournalKitPayload & Record<string, unknown>;
         ingestPlanningMetaFromData(gpc.data as Record<string, unknown> | undefined);
         phaseJournal = {
           listPhaseNotes: {
@@ -1042,6 +1177,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     } else {
       this.lastDashboardSummaryData = null;
     }
+    if (updateSequence !== this.dashboardUpdateSequence || this.view !== activeView) {
+      logDashboard(`pushUpdate: stale phase context ignored page=${String(requestedWishlistPage)}`);
+      return;
+    }
     let rootInner: string;
     const wizardPanel: PlanningInterviewWizardPanel | null = raw.ok === true ? this.planningWizardPanel() : null;
     try {
@@ -1051,8 +1190,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       rootInner = '<pre class="bad">Host render error: ' + escapeHtml(String(e)) + "</pre>";
     }
     logDashboard(
-      `pushUpdate: ok=${String(raw.ok)} code=${String(raw.code ?? "")} htmlBytes≈${rootInner.length}`
+      `pushUpdate: ok=${String(raw.ok)} code=${String(raw.code ?? "")} htmlBytes≈${rootInner.length} elapsedMs=${String(Date.now() - startedAt)}`
     );
+    if (updateSequence !== this.dashboardUpdateSequence || this.view !== activeView) {
+      logDashboard(`pushUpdate: stale render ignored page=${String(requestedWishlistPage)}`);
+      return;
+    }
     try {
       if (!this.dashboardRootShellReady) {
         webview.html = this.buildHtml(webview, rootInner);
@@ -1125,8 +1268,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   var rootEl = document.getElementById('root');
   if (btn) btn.addEventListener('click', function() { vscode.postMessage({type:'refresh'}); });
   if (rootEl) rootEl.addEventListener('click', function(ev) {
-    var t = ev.target;
-    if (!t || t.tagName !== 'BUTTON') return;
+    var rawTarget = ev.target;
+    var t = rawTarget && typeof rawTarget.closest === 'function' ? rawTarget.closest('button') : rawTarget;
+    if (!t || t.tagName !== 'BUTTON' || !rootEl.contains(t) || t.disabled) return;
     if (t.classList.contains('wc-tab-btn')) {
       applyTab(t.getAttribute('data-wc-tab'));
       return;
@@ -1157,6 +1301,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     var act = t.getAttribute('data-wc-action');
     if (!act) return;
+    ev.preventDefault();
     ev.stopPropagation();
     if (act === 'wishlist-view') { var wv = (t.getAttribute('data-wishlist-id') || '').trim(); if (wv) vscode.postMessage({type:'openWishlistDetail',wishlistId:wv}); return; }
     if (act === 'planning-new-plan') { vscode.postMessage({type:'prefillPlanningInterviewChat'}); return; }
@@ -1165,7 +1310,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (act === 'planning-wizard-start') { var sel = document.getElementById('wc-planning-type'); var pt = sel && sel.value ? String(sel.value).trim() : ''; if (pt) vscode.postMessage({type:'planningWizardStart',planningType:pt}); return; }
     if (act === 'planning-wizard-submit') { var ta = document.getElementById('wc-planning-answer'); var txt = ta && typeof ta.value === 'string' ? ta.value.trim() : ''; vscode.postMessage({type:'planningWizardSubmit',answer:txt}); return; }
     if (act === 'planning-wizard-cancel') { vscode.postMessage({type:'planningWizardCancel'}); return; }
-    if (act === 'planning-wizard-dismiss') { vscode.postMessage({type:'planningWizardDismiss'});return;}if(act==="collaboration-hub"){vscode.postMessage({type:"prefillCollaborationHubChat"});return;}if(act==="deliver-phase-prompt"){var kp=(t.getAttribute("data-wc-kit-phase")||"").trim();vscode.postMessage({type:"prefillDeliverPhaseChat",kitPhase:kp});return;}if(act==="add-wishlist-item"){vscode.postMessage({type:"addWishlistItem"});return;}if(act==="generate-features-chat"){vscode.postMessage({type:"prefillGenerateFeaturesChat"});return;}if(act==="transcript-churn-research-chat"){var tcTid=(t.getAttribute("data-task-id")||"").trim();vscode.postMessage({type:"prefillTranscriptChurnResearchChat",taskId:tcTid});return;}if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-page"){var wpp=parseInt(String(t.getAttribute("data-wishlist-page")||"0"),10);if(!Number.isNaN(wpp)&&wpp>=0)vscode.postMessage({type:"wishlistPage",page:wpp});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}if(act==="phase-complete-release"){var ph=(t.getAttribute("data-wc-phase-phrase")||"").trim();vscode.postMessage({type:"prefillPhaseCompleteReleaseChat",phasePhrase:ph});return;}if(act==="proposed-imp-accept-phase"||act==="proposed-exe-accept-phase"){var batch=(t.getAttribute("data-proposed-task-ids")||"").trim();var cat=act==="proposed-exe-accept-phase"?"execution":"improvement";vscode.postMessage({type:"dashboardAcceptProposedPhase",category:cat,taskIds:batch});return;}if(act==="phase-note-dismiss"){var dpn=(t.getAttribute("data-note-id")||"").trim();var dpp=(t.getAttribute("data-note-priority")||"").trim();if(dpn)vscode.postMessage({type:"dismissPhaseNote",noteId:dpn,priority:dpp});return;}if(act==="phase-note-convert"){var cpn=(t.getAttribute("data-note-id")||"").trim();if(cpn)vscode.postMessage({type:"convertPhaseNote",noteId:cpn});return;}if(act==="phase-notes-propose-persist"){vscode.postMessage({type:"persistPhaseNoteProposals"});return;}if(act==="register-phase-catalog"){vscode.postMessage({type:"registerPhaseCatalogEntry"});return;}if(act==="assign-phase"){var apTid=(t.getAttribute("data-task-id")||"").trim();if(apTid)vscode.postMessage({type:"assignTaskPhase",taskId:apTid});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});})();`;
+    if (act === 'planning-wizard-dismiss') { vscode.postMessage({type:'planningWizardDismiss'});return;}if(act==="collaboration-hub"){vscode.postMessage({type:"prefillCollaborationHubChat"});return;}if(act==="deliver-phase-prompt"){var kp=(t.getAttribute("data-wc-kit-phase")||"").trim();vscode.postMessage({type:"prefillDeliverPhaseChat",kitPhase:kp});return;}if(act==="add-wishlist-item"){vscode.postMessage({type:"addWishlistItem"});return;}if(act==="generate-features-chat"){vscode.postMessage({type:"prefillGenerateFeaturesChat"});return;}if(act==="transcript-churn-research-chat"){var tcTid=(t.getAttribute("data-task-id")||"").trim();vscode.postMessage({type:"prefillTranscriptChurnResearchChat",taskId:tcTid});return;}if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-page"){var wpp=parseInt(String(t.getAttribute("data-wishlist-page")||"0"),10);if(!Number.isNaN(wpp)&&wpp>=0)vscode.postMessage({type:"wishlistPage",page:wpp});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}if(act==="phase-complete-release"){var ph=(t.getAttribute("data-wc-phase-phrase")||"").trim();vscode.postMessage({type:"prefillPhaseCompleteReleaseChat",phasePhrase:ph});return;}if(act==="proposed-imp-accept-phase"||act==="proposed-exe-accept-phase"){var batch=(t.getAttribute("data-proposed-task-ids")||"").trim();var cat=act==="proposed-exe-accept-phase"?"execution":"improvement";vscode.postMessage({type:"dashboardAcceptProposedPhase",category:cat,taskIds:batch});return;}if(act==="phase-notes-chat"){vscode.postMessage({type:"prefillPhaseNotesDiscoveryChat"});return;}if(act==="phase-note-add"){vscode.postMessage({type:"addPhaseNote"});return;}if(act==="phase-note-dismiss"){var dpn=(t.getAttribute("data-note-id")||"").trim();var dpp=(t.getAttribute("data-note-priority")||"").trim();if(dpn)vscode.postMessage({type:"dismissPhaseNote",noteId:dpn,priority:dpp});return;}if(act==="phase-note-convert"){var cpn=(t.getAttribute("data-note-id")||"").trim();if(cpn)vscode.postMessage({type:"convertPhaseNote",noteId:cpn});return;}if(act==="phase-notes-propose-persist"){vscode.postMessage({type:"persistPhaseNoteProposals"});return;}if(act==="register-phase-catalog"){vscode.postMessage({type:"registerPhaseCatalogEntry"});return;}if(act==="assign-phase"){var apTid=(t.getAttribute("data-task-id")||"").trim();if(apTid)vscode.postMessage({type:"assignTaskPhase",taskId:apTid});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});})();`;
 
     return `<!DOCTYPE html>
 <html lang="en">

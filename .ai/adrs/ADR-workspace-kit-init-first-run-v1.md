@@ -12,7 +12,7 @@ Operators attach Workflow Cannon to existing repos with **`pnpm add -D @workflow
 
 | Command | Role | Writes | Typical cadence |
 | --- | --- | --- | --- |
-| **`wk init`** | **Attach / bootstrap** a workspace: detect repo metadata, write **kit-owned** baseline (schemas, manifest hints, **SQLite** planning DB init when configured), merge **default config**, optionally emit **starter task** via task-engine APIs, then recommend **`wk doctor`**. | Yes (kit-owned paths only; see File safety) | Once per repo (or after deliberate detach) |
+| **`wk init`** | **Attach / bootstrap** a workspace: detect repo metadata, write **kit-owned** baseline (schemas, manifest hints, **SQLite** planning DB init when configured), merge **default config**, optionally emit **starter task** via task-engine APIs, then recommend **`wk doctor`**. | Yes (kit-owned paths only; see File safety) | Once per repo (or after a deliberate reset; current `wk detach` is preview-only and non-destructive) |
 | **`wk refresh-context`** | **Regenerate** `.workspace-kit/generated/project-context.json` and **`.cursor/rules/workspace-kit-project-context.mdc`** from the active **`workspace-kit.profile.json`** (or equivalent profile contract). Requires an **existing valid profile** — not a substitute for first attach. | Yes — generated surfaces only | After profile edits or when context drift is detected |
 | **`wk upgrade`** | **Refresh kit-owned baseline** after **package version** bumps (templates, schema defaults compatible with the installed kit version). **Not** the operator’s first-run onboarding command. | Yes — kit-owned paths | After **`pnpm update`** / semver bumps |
 | **`wk doctor`** | **Read-only validation** + advisory remediation text. **Never** silently repairs production stores. If the workspace is **unattached**, doctor **directs** to **`wk init`** (or documented attach flow). | No | Any time |
@@ -60,5 +60,5 @@ Operators attach Workflow Cannon to existing repos with **`pnpm add -D @workflow
 ## References
 
 - **`.ai/POLICY-APPROVAL.md`** — approval lanes.
-- **`INIT_PLAN.md`** — program backlog (**T001** family).
+- **`INIT_PLAN.md`** — historical program backlog (**T001** family); the ADR and task engine are canonical for current behavior and execution state.
 - **`src/modules/task-engine/instructions/create-task.md`** — task intake when starter tasks are enabled.

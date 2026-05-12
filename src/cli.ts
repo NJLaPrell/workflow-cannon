@@ -127,7 +127,7 @@ function writeDoctorFailureRemediation(
     );
   } else if (hasMissing) {
     writeError(
-      "  - Kit files missing: run `workspace-kit upgrade` after package updates (set WORKSPACE_KIT_POLICY_APPROVAL — see docs/maintainers/POLICY-APPROVAL.md), or `workspace-kit init` when bootstrapping a fresh workspace."
+      "  - Partial attach detected: run `workspace-kit init` to repair missing baseline files (preview with `workspace-kit init --dry-run`); use `workspace-kit upgrade` after package updates."
     );
   }
   writeError("  - workspace-kit --help — orientation and top-level commands");
@@ -148,6 +148,65 @@ function doctorWantsMachineJson(doctorRest: string[]): boolean {
     if (t.startsWith("--format=") && t.slice("--format=".length) === "json") return true;
   }
   return false;
+}
+
+function parseDetachArgv(argv: string[]): { dryRun: boolean; json: boolean } {
+  return {
+    dryRun: argv.includes("--dry-run"),
+    json: argv.includes("--json") || argv.includes("--format=json")
+  };
+}
+
+async function runWorkspaceKitDetachCommand(
+  cwd: string,
+  argv: string[],
+  writeLine: (message: string) => void,
+  writeError: (message: string) => void
+): Promise<number> {
+  const flags = parseDetachArgv(argv);
+  const ownedPathsDocument = await readOwnedPathsDocument(cwd);
+  const ownedPaths = [...new Set(ownedPathsDocument.ownedPaths)].sort();
+  const plan = {
+    dryRun: flags.dryRun,
+    deletionEnabled: false,
+    ownedPaths,
+    pathCount: ownedPaths.length,
+    ownershipPolicyPath: defaultWorkspaceKitPaths.ownedPaths
+  };
+
+  if (!flags.dryRun) {
+    if (flags.json) {
+      writeLine(
+        JSON.stringify(
+          {
+            ok: false,
+            code: "detach-preview-only",
+            schemaVersion: 1,
+            message: "workspace-kit detach is preview-only; no files changed.",
+            data: plan
+          },
+          null,
+          2
+        )
+      );
+    } else {
+      writeError("workspace-kit detach is preview-only in this release. No files changed.");
+      writeError("Re-run with `workspace-kit detach --dry-run` to inspect kit-owned paths.");
+    }
+    return EXIT_USAGE_ERROR;
+  }
+
+  if (flags.json) {
+    writeLine(JSON.stringify({ ok: true, code: "detach-plan", schemaVersion: 1, data: plan }, null, 2));
+    return EXIT_SUCCESS;
+  }
+
+  writeLine("workspace-kit detach (dry-run) — no files changed.");
+  writeLine("Owned paths:");
+  for (const ownedPath of ownedPaths) {
+    writeLine(`- ${ownedPath}`);
+  }
+  return EXIT_SUCCESS;
 }
 
 async function printWorkspaceKitTopLevelHelp(writeLine: (message: string) => void): Promise<void> {
@@ -186,6 +245,7 @@ async function printWorkspaceKitTopLevelHelp(writeLine: (message: string) => voi
   writeLine("  start           Doctor-backed status summary after attach (--json)");
   writeLine("  upgrade         Refresh kit-managed baseline files (needs env approval)");
   writeLine("  drift-check     Fail if managed kit assets differ from expected content");
+  writeLine("  detach --dry-run [--json]   Preview kit-owned paths; no deletion is performed");
   writeLine("");
   writeLine("Policy & docs (paths are relative to a clone of this repo; npm consumers: open the package or docs site)");
   writeLine(`  ${AGENT_CLI_MAP_HUMAN_DOC} — tier table, copy-paste JSON for agents`);
@@ -249,6 +309,10 @@ export async function runCli(
       usageError: EXIT_USAGE_ERROR,
       internalError: EXIT_INTERNAL_ERROR
     });
+  }
+
+  if (command === "detach") {
+    return runWorkspaceKitDetachCommand(cwd, args.slice(1), writeLine, writeError);
   }
 
   if (command === "check") {
@@ -518,7 +582,7 @@ export async function runCli(
 
   if (command !== "doctor") {
     writeError(
-      `Unknown command '${command}'. Supported: init, refresh-context, start, doctor, check, upgrade, drift-check, run, config. Run workspace-kit --help for a guided overview.`
+      `Unknown command '${command}'. Supported: init, refresh-context, start, doctor, check, upgrade, drift-check, detach, run, config. Run workspace-kit --help for a guided overview.`
     );
     return EXIT_USAGE_ERROR;
   }

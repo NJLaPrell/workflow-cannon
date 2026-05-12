@@ -32,19 +32,6 @@
       "profiles": {
         "workspace-kit-create-ready": {
           "enforcementMode": "enforce",
-          "fieldRules": {
-            "acceptanceCriteria": {
-              "itemMinLength": 1,
-              "minItems": 1
-            },
-            "summary": {
-              "minLength": 1
-            },
-            "technicalScope": {
-              "itemMinLength": 1,
-              "minItems": 1
-            }
-          },
           "forbiddenFields": [],
           "recommendedFields": [],
           "requiredFields": [
