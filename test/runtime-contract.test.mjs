@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { mkdtempSync } from "node:fs";
+import fs from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import test from "node:test";
 
 function workspace() {
@@ -24,6 +26,7 @@ function validStamp(overrides = {}) {
 
 test("runtime contract: writes, reads, and verifies a valid stamp", async () => {
   const {
+    generateWorkspaceKitLauncherContent,
     readRuntimeStamp,
     runtimeLauncherPath,
     runtimeStampPath,
@@ -35,6 +38,8 @@ test("runtime contract: writes, reads, and verifies a valid stamp", async () => 
   const stamp = writeRuntimeStamp(root, validStamp({ packageRoot: process.cwd() }));
   assert.equal(runtimeStampPath(root), path.join(root, ".workspace-kit/runtime.json"));
   assert.equal(runtimeLauncherPath(root), path.join(root, ".workspace-kit/bin/wk"));
+  assert.match(generateWorkspaceKitLauncherContent(), /^#!\/bin\/sh/);
+  assert.match(generateWorkspaceKitLauncherContent(), /exec "\$node_executable" "\$cli_path" "\$@"/);
   const read = readRuntimeStamp(root);
   assert.equal(read.ok, true);
   assert.equal(read.stamp.nodeExecutable, process.execPath);
@@ -90,4 +95,57 @@ test("runtime contract: native SQLite smoke check reports load failure", async (
   const verified = verifyRuntimeStamp(stamp, { currentIdentity: stamp, checkNativeSqlite: true });
   assert.equal(verified.ok, false);
   assert.equal(verified.issues.some((issue) => issue.code === "runtime-sqlite-load-failed"), true);
+});
+
+test("runtime contract: launcher delegates to the stamped Node executable", async () => {
+  const { writeRuntimeLauncher, writeRuntimeStamp } = await import("../dist/core/runtime-contract.js");
+
+  const root = workspace();
+  const packageRoot = path.join(root, "kit-package");
+  const fakeBin = path.join(root, "fake-bin");
+  const capturePath = path.join(root, "capture.json");
+  const fakeNodePath = path.join(fakeBin, "node-stamped");
+  const cliPath = path.join(packageRoot, "dist", "cli.js");
+  await fs.mkdir(path.dirname(cliPath), { recursive: true });
+  await fs.mkdir(fakeBin, { recursive: true });
+  await fs.writeFile(path.join(root, ".nvmrc"), "16\n", "utf8");
+  await fs.writeFile(cliPath, "console.log('placeholder cli');\n", "utf8");
+  await fs.writeFile(
+    fakeNodePath,
+    `#!/bin/sh\nprintf '{"argv":["%s","%s","%s"]}\n' "$1" "$2" "$3" > ${JSON.stringify(capturePath)}\n`,
+    "utf8"
+  );
+  await fs.chmod(fakeNodePath, 0o755);
+  writeRuntimeStamp(root, validStamp({ nodeExecutable: fakeNodePath, packageRoot }));
+  const launcher = writeRuntimeLauncher(root);
+
+  const result = spawnSync(launcher, ["doctor", "--json"], { cwd: root, encoding: "utf8" });
+
+  assert.equal(result.status, 0, result.stderr);
+  const captured = JSON.parse(await fs.readFile(capturePath, "utf8"));
+  assert.deepEqual(captured.argv, [cliPath, "doctor", "--json"]);
+});
+
+test("runtime contract: launcher fails clearly without a runtime stamp", async () => {
+  const { writeRuntimeLauncher } = await import("../dist/core/runtime-contract.js");
+
+  const root = workspace();
+  const launcher = writeRuntimeLauncher(root);
+  const result = spawnSync(launcher, ["doctor"], { cwd: root, encoding: "utf8" });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /missing runtime stamp/);
+});
+
+test("runtime contract: launcher fails clearly when stamped Node is unavailable", async () => {
+  const { writeRuntimeLauncher, writeRuntimeStamp } = await import("../dist/core/runtime-contract.js");
+
+  const root = workspace();
+  const packageRoot = path.join(root, "kit-package");
+  await fs.mkdir(path.join(packageRoot, "dist"), { recursive: true });
+  await fs.writeFile(path.join(packageRoot, "dist", "cli.js"), "console.log('placeholder cli');\n", "utf8");
+  writeRuntimeStamp(root, validStamp({ nodeExecutable: path.join(root, "missing-node"), packageRoot }));
+  const launcher = writeRuntimeLauncher(root);
+  const result = spawnSync(launcher, ["doctor"], { cwd: root, encoding: "utf8" });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /stamped Node executable is missing or not executable/);
 });

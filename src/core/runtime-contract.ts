@@ -70,6 +70,43 @@ export function runtimeLauncherPath(workspacePath: string): string {
   return path.join(workspacePath, WORKSPACE_KIT_RUNTIME_LAUNCHER_RELATIVE_PATH);
 }
 
+export function generateWorkspaceKitLauncherContent(): string {
+  return `#!/bin/sh
+set -eu
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+workspace_root=$(CDPATH= cd -- "$script_dir/../.." && pwd)
+stamp_path="$workspace_root/${WORKSPACE_KIT_RUNTIME_STAMP_RELATIVE_PATH}"
+if [ ! -f "$stamp_path" ]; then
+  echo "workspace-kit launcher: missing runtime stamp at $stamp_path; run workspace-kit init or setup repair" >&2
+  exit 1
+fi
+node_executable=$(sed -n 's/^[[:space:]]*"nodeExecutable"[[:space:]]*:[[:space:]]*"\\(.*\\)"[,]*[[:space:]]*$/\\1/p' "$stamp_path" | head -n 1)
+package_root=$(sed -n 's/^[[:space:]]*"packageRoot"[[:space:]]*:[[:space:]]*"\\(.*\\)"[,]*[[:space:]]*$/\\1/p' "$stamp_path" | head -n 1)
+if [ -z "$node_executable" ] || [ -z "$package_root" ]; then
+  echo "workspace-kit launcher: malformed runtime stamp at $stamp_path" >&2
+  exit 1
+fi
+if [ ! -x "$node_executable" ]; then
+  echo "workspace-kit launcher: stamped Node executable is missing or not executable: $node_executable" >&2
+  exit 1
+fi
+cli_path="$package_root/dist/cli.js"
+if [ ! -f "$cli_path" ]; then
+  echo "workspace-kit launcher: CLI not found at $cli_path" >&2
+  exit 1
+fi
+exec "$node_executable" "$cli_path" "$@"
+`;
+}
+
+export function writeRuntimeLauncher(workspacePath: string): string {
+  const launcherPath = runtimeLauncherPath(workspacePath);
+  fs.mkdirSync(path.dirname(launcherPath), { recursive: true });
+  fs.writeFileSync(launcherPath, generateWorkspaceKitLauncherContent(), { encoding: "utf8", mode: 0o755 });
+  fs.chmodSync(launcherPath, 0o755);
+  return launcherPath;
+}
+
 export function currentRuntimeIdentity(packageRoot = process.cwd(), checkedAt = new Date().toISOString()): WorkspaceKitRuntimeStampV1 {
   return {
     schemaVersion: WORKSPACE_KIT_RUNTIME_CONTRACT_SCHEMA_VERSION,
