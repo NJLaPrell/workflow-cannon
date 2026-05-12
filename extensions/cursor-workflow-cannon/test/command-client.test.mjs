@@ -164,6 +164,41 @@ test("CommandClient defaults to stamped launcher before Node probing", async () 
   }
 });
 
+test("CommandClient falls back to stamped Node from runtime stamp when launcher is absent", async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "wc-runtime-stamped-node-client-"));
+  try {
+    const workspaceRoot = path.join(tempRoot, "workspace");
+    const packageRoot = path.join(tempRoot, "package");
+    const nodePath = path.join(tempRoot, "node22");
+    const capturePath = path.join(tempRoot, "argv.txt");
+    const cliPath = path.join(packageRoot, "dist", "cli.js");
+    fs.mkdirSync(path.join(workspaceRoot, ".workspace-kit"), { recursive: true });
+    fs.mkdirSync(path.dirname(cliPath), { recursive: true });
+    fs.writeFileSync(cliPath, "// cli\n");
+    fs.writeFileSync(path.join(workspaceRoot, ".nvmrc"), "18\n");
+    fs.writeFileSync(
+      nodePath,
+      `#!/bin/sh\nprintf '%s\n' "$@" > ${JSON.stringify(capturePath)}\nprintf '{"ok":true,"code":"tasks-listed"}\n'\n`,
+      { mode: 0o755 }
+    );
+    fs.writeFileSync(
+      path.join(workspaceRoot, ".workspace-kit", "runtime.json"),
+      JSON.stringify({ schemaVersion: 1, nodeExecutable: nodePath, nodeVersion: "v22.11.0", packageRoot }, null, 2)
+    );
+
+    const client = new CommandClient(workspaceRoot, { resolveNodeExecutable: () => "/__must_not_be_used__/node" });
+    const out = await client.run("list-tasks", {});
+
+    assert.equal(out.ok, true);
+    assert.equal(out.code, "tasks-listed");
+    const captured = fs.readFileSync(capturePath, "utf8");
+    assert.match(captured, /dist\/cli\.js/);
+    assert.match(captured, /run\nlist-tasks\n\{\}/);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
 test("CommandClient returns structured diagnostics for a broken runtime stamp", async () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "wc-runtime-broken-"));
   try {
