@@ -18,6 +18,8 @@ import {
 } from "./build-dashboard-workspace-snapshot.js";
 import { runPhaseStatus } from "../workspace-status-commands-runtime.js";
 
+import { buildWorkspaceCoordinationStatus } from "../coordination/build-workspace-coordination-status.js";
+
 const DOCTOR_ISSUES_CAP = 32;
 
 function moduleSlice(ctx: ModuleLifecycleContext): {
@@ -136,11 +138,18 @@ export async function buildDashboardSystemStatus(
   }
   const capped = doctorIssues.slice(0, DOCTOR_ISSUES_CAP);
 
-  let caeLines: string[] = [];
+  const caeLines: string[] = [];
   try {
-    caeLines = await collectCaeDoctorSummaryLines(ctx.workspacePath);
+    caeLines.push(...(await collectCaeDoctorSummaryLines(ctx.workspacePath)));
   } catch {
-    caeLines = ["CAE: summary unavailable (collectCaeDoctorSummaryLines threw)"];
+    caeLines.push("CAE: summary unavailable (collectCaeDoctorSummaryLines threw)");
+  }
+
+  let coordination;
+  try {
+    coordination = buildWorkspaceCoordinationStatus(ctx);
+  } catch {
+    coordination = undefined;
   }
 
   return {
@@ -160,6 +169,7 @@ export async function buildDashboardSystemStatus(
       enabledModuleIds: mod.enabledModuleIds,
       disabledModuleIds: mod.disabledModuleIds
     },
-    caeLines
+    caeLines,
+    ...(coordination ? { coordination } : {})
   };
 }
