@@ -39,6 +39,30 @@ async function runCliWithoutPolicyApproval(args, options) {
   }
 }
 
+async function runCliWithRuntimeContract(args, options, runtimeOverrides = {}) {
+  const prev = process.env.WORKSPACE_KIT_TEST_RUNTIME_IDENTITY;
+  process.env.WORKSPACE_KIT_TEST_RUNTIME_IDENTITY = JSON.stringify({
+    schemaVersion: 1,
+    nodeExecutable: process.execPath,
+    nodeVersion: "v22.11.0",
+    arch: process.arch,
+    platform: process.platform,
+    abi: process.versions.modules,
+    packageRoot: process.cwd(),
+    checkedAt: "2026-05-12T00:00:00.000Z",
+    ...runtimeOverrides
+  });
+  try {
+    return await runCli(args, options);
+  } finally {
+    if (prev === undefined) {
+      delete process.env.WORKSPACE_KIT_TEST_RUNTIME_IDENTITY;
+    } else {
+      process.env.WORKSPACE_KIT_TEST_RUNTIME_IDENTITY = prev;
+    }
+  }
+}
+
 function createCapture() {
   const lines = [];
   const errors = [];
@@ -356,7 +380,7 @@ test("runCli init mutates empty workspace and leaves doctor healthy", async () =
   const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-init-mutating-"));
 
   const initCapture = createCapture();
-  const initCode = await runCli(["init", "--yes", "--approval-rationale", "integration test"], {
+  const initCode = await runCliWithRuntimeContract(["init", "--yes", "--approval-rationale", "integration test"], {
     cwd: fixtureRoot,
     ...initCapture
   });
@@ -365,6 +389,9 @@ test("runCli init mutates empty workspace and leaves doctor healthy", async () =
   assert.match(initCapture.lines[0], /init completed/);
   await readFile(path.join(fixtureRoot, "workspace-kit.profile.json"), "utf8");
   await readFile(path.join(fixtureRoot, ".workspace-kit", "manifest.json"), "utf8");
+  const runtimeStamp = JSON.parse(await readFile(path.join(fixtureRoot, ".workspace-kit", "runtime.json"), "utf8"));
+  assert.equal(runtimeStamp.nodeVersion, "v22.11.0");
+  await readFile(path.join(fixtureRoot, ".workspace-kit", "bin", "wk"), "utf8");
   await readFile(path.join(fixtureRoot, ".workspace-kit", "tasks", "workspace-kit.db"), "utf8");
 
   const doctorCapture = createCapture();
@@ -373,6 +400,39 @@ test("runCli init mutates empty workspace and leaves doctor healthy", async () =
   const doctorPayload = JSON.parse(doctorCapture.lines[0]);
   assert.equal(doctorPayload.ok, true);
   assert.equal(doctorPayload.code, "doctor-contract-ok");
+});
+
+test("runCli init --json reports runtime contract artifacts", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-init-runtime-json-"));
+  const capture = createCapture();
+  const code = await runCliWithRuntimeContract(
+    ["init", "--yes", "--approval-rationale", "runtime json", "--json", "--no-starter-task"],
+    { cwd: fixtureRoot, ...capture }
+  );
+
+  assert.equal(code, 0);
+  const payload = JSON.parse(capture.lines[0]);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.code, "init-complete");
+  assert.equal(payload.data.runtimeContract.ok, true);
+  assert.match(payload.data.runtimeContract.stampPath, /\.workspace-kit\/runtime\.json$/);
+  assert.match(payload.data.runtimeContract.launcherPath, /\.workspace-kit\/bin\/wk$/);
+});
+
+test("runCli init refuses when the runtime contract is invalid", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-init-runtime-invalid-"));
+  const capture = createCapture();
+  const code = await runCliWithRuntimeContract(
+    ["init", "--yes", "--approval-rationale", "bad runtime"],
+    { cwd: fixtureRoot, ...capture },
+    { nodeVersion: "v20.19.0" }
+  );
+
+  assert.equal(code, 1);
+  assert.ok(capture.errors.some((line) => line.includes("requires a valid runtime contract")));
+  assert.ok(capture.errors.some((line) => line.includes("runtime-node-wrong-major")));
+  await assert.rejects(readFile(path.join(fixtureRoot, "workspace-kit.profile.json"), "utf8"));
+  await assert.rejects(readFile(path.join(fixtureRoot, ".workspace-kit", "runtime.json"), "utf8"));
 });
 
 test("runCli init without non-interactive approval writes nothing", async () => {
@@ -391,7 +451,7 @@ test("runCli init manages starter task defaults and no-starter flag", async () =
   const defaultRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-init-starter-"));
   const firstCapture = createCapture();
   assert.equal(
-    await runCli(["init", "--yes", "--approval-rationale", "starter default"], {
+    await runCliWithRuntimeContract(["init", "--yes", "--approval-rationale", "starter default"], {
       cwd: defaultRoot,
       ...firstCapture
     }),
@@ -403,7 +463,7 @@ test("runCli init manages starter task defaults and no-starter flag", async () =
 
   const secondCapture = createCapture();
   assert.equal(
-    await runCli(["init", "--yes", "--approval-rationale", "starter idempotent"], {
+    await runCliWithRuntimeContract(["init", "--yes", "--approval-rationale", "starter idempotent"], {
       cwd: defaultRoot,
       ...secondCapture
     }),
@@ -415,7 +475,7 @@ test("runCli init manages starter task defaults and no-starter flag", async () =
   const noStarterRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-init-no-starter-"));
   const noStarterCapture = createCapture();
   assert.equal(
-    await runCli(
+    await runCliWithRuntimeContract(
       ["init", "--yes", "--approval-rationale", "no starter", "--no-starter-task"],
       { cwd: noStarterRoot, ...noStarterCapture }
     ),
@@ -440,7 +500,7 @@ test("runCli start reports before and after attach in text and JSON", async () =
 
   const initCapture = createCapture();
   assert.equal(
-    await runCli(["init", "--yes", "--approval-rationale", "start after attach"], {
+    await runCliWithRuntimeContract(["init", "--yes", "--approval-rationale", "start after attach"], {
       cwd: fixtureRoot,
       ...initCapture
     }),
@@ -480,7 +540,7 @@ test("runCli init preserves profile on re-init and force repairs kit-owned drift
 
   const initCapture = createCapture();
   assert.equal(
-    await runCli(["init", "--yes", "--approval-rationale", "preserve profile"], {
+    await runCliWithRuntimeContract(["init", "--yes", "--approval-rationale", "preserve profile"], {
       cwd: fixtureRoot,
       ...initCapture
     }),
@@ -491,10 +551,12 @@ test("runCli init preserves profile on re-init and force repairs kit-owned drift
 
   const pointerPath = path.join(fixtureRoot, ".cursor", "rules", "workspace-kit-profile-pointer.mdc");
   await writeFile(pointerPath, "# drifted pointer\n", "utf8");
+  await unlink(path.join(fixtureRoot, ".workspace-kit", "runtime.json"));
+  await unlink(path.join(fixtureRoot, ".workspace-kit", "bin", "wk"));
 
   const reinitCapture = createCapture();
   assert.equal(
-    await runCli(["init", "--yes", "--approval-rationale", "force repair", "--force"], {
+    await runCliWithRuntimeContract(["init", "--yes", "--approval-rationale", "force repair", "--force"], {
       cwd: fixtureRoot,
       ...reinitCapture
     }),
@@ -505,6 +567,8 @@ test("runCli init preserves profile on re-init and force repairs kit-owned drift
 
   const pointerAfterForce = await readFile(pointerPath, "utf8");
   assert.doesNotMatch(pointerAfterForce, /drifted pointer/);
+  await readFile(path.join(fixtureRoot, ".workspace-kit", "runtime.json"), "utf8");
+  await readFile(path.join(fixtureRoot, ".workspace-kit", "bin", "wk"), "utf8");
   const backupDirs = await readdir(path.join(fixtureRoot, ".workspace-kit", "backups"));
   assert.ok(backupDirs.length > 0);
 });

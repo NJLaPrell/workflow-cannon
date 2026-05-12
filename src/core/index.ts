@@ -213,6 +213,7 @@ export {
   generateWorkspaceKitLauncherContent,
   parseRuntimeStamp,
   readRuntimeStamp,
+  runtimePackageRoot,
   runtimeLauncherPath,
   runtimeStampPath,
   smokeTestNativeSqlite,
