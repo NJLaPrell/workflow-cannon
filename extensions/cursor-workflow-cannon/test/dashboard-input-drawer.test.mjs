@@ -138,11 +138,31 @@ test("drawer: validate add phase note rejects missing type or long summary", asy
   assert.equal(good.ok, true);
 });
 
-test("drawer: convert / persist confirmation specs render", async () => {
+test("drawer: accept proposed spec includes rationale field", async () => {
   const mod = await import("../dist/views/dashboard/dashboard-input-drawer.js");
-  const c = mod.renderDrawerFormHtml(mod.buildConvertPhaseNoteDrawerSpec("n-1"));
-  assert.match(c, /convert-phase-note-to-task/);
-  assert.match(c, /n-1/);
-  const p = mod.renderDrawerFormHtml(mod.buildPersistPhaseNoteProposalsDrawerSpec());
-  assert.match(p, /propose-tasks-from-phase-notes/);
+  const html = mod.renderDrawerFormHtml(
+    mod.buildAcceptProposedDrawerSpec({
+      taskIds: ["T1"],
+      categoryLabel: "",
+      suggestions: [{ label: "Next", phaseKey: "92" }]
+    })
+  );
+  assert.match(html, /data-wc-drawer-field="policyRationale"/);
+  assert.match(html, /data-wc-drawer-field="phaseSelect"/);
+});
+
+test("drawer: validate accept proposed requires rationale", async () => {
+  const mod = await import("../dist/views/dashboard/dashboard-input-drawer.js");
+  const bad = mod.validateAcceptProposedSubmit({
+    phaseSelect: "91",
+    phaseKeyCustom: "",
+    policyRationale: "  "
+  });
+  assert.equal(bad.ok, false);
+  const good = mod.validateAcceptProposedSubmit({
+    phaseSelect: "91",
+    phaseKeyCustom: "",
+    policyRationale: "Approved in standup"
+  });
+  assert.equal(good.ok, true);
 });
