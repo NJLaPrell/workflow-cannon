@@ -25,6 +25,12 @@ Workflow Cannon writes only kit-owned baselines and generated context. The owner
 
 The default task store is SQLite at `.workspace-kit/tasks/workspace-kit.db`. Init prepares the planning database through the same core database path used by runtime commands, including the empty-store case when `--no-starter-task` skips starter creation.
 
+## Runtime Contract
+
+Workflow Cannon runtime execution is governed by `.ai/adrs/ADR-workflow-cannon-runtime-contract-v1.md`. Attached workspaces use a kit-owned Node 22 runtime stamp at `.workspace-kit/runtime.json` and a canonical launcher at `.workspace-kit/bin/wk`.
+
+After attach, routine Workflow Cannon commands should use the stamped runtime/launcher. They should not depend on shell `PATH`, editor/Electron Node, or attached project `.nvmrc` / `.node-version` files.
+
 After attach, these commands should work:
 
 ```bash
@@ -79,7 +85,7 @@ Sensitive `workspace-kit run` commands use JSON `policyApproval` inside the run 
 
 ## Native SQLite
 
-If doctor reports a native SQLite load failure, first confirm the active Node runtime matches the one that installed dependencies. On Apple Silicon, avoid mixing arm64 installs with Rosetta x64 Node.
+If doctor reports a native SQLite load failure, first confirm the active Node runtime matches the stamped Workflow Cannon runtime. On Apple Silicon, avoid mixing arm64 installs with Rosetta x64 Node.
 
 Use the native recovery runbook for rebuild steps and fallback choices: [`native-sqlite-consumer-install.md`](./native-sqlite-consumer-install.md).
 

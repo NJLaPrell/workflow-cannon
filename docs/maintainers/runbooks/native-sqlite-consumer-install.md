@@ -15,6 +15,8 @@ Canonical troubleshooting for **`better-sqlite3`** when using **`tasks.persisten
 
 `workspace-kit doctor` prints the Node executable, Node version, `process.arch`, platform, and native ABI used for SQLite. When a native load fails, compare that identity with the shell that installed `node_modules`.
 
+After attach, Workflow Cannon runtime identity is governed by `.ai/adrs/ADR-workflow-cannon-runtime-contract-v1.md`: `.workspace-kit/runtime.json` records the validated Node 22 runtime, and `.workspace-kit/bin/wk` should execute routine commands through that stamped runtime. Attached project `.nvmrc` and `.node-version` files do not select the Workflow Cannon runtime after attach.
+
 For Workflow Cannon development, use the repo setup path from the repository root:
 
 ```bash
@@ -30,7 +32,7 @@ pnpm run setup:dev -- --check-only
 
 ## Recovery (in order)
 
-1. From the **project where `node_modules` is installed** (the consumer app root, not a random subfolder), use the same Node architecture that performed the install. On Apple Silicon, do not mix arm64 shells with Rosetta x64 Node installs.
+1. From the **project where `node_modules` is installed** (the consumer app root, not a random subfolder), use the stamped Workflow Cannon Node runtime or the same Node architecture that performed the install. On Apple Silicon, do not mix arm64 shells with Rosetta x64 Node installs.
 2. Rebuild the native addon:
    - **`pnpm rebuild better-sqlite3`**, or
    - **`npm rebuild better-sqlite3`**
@@ -42,5 +44,7 @@ pnpm run setup:dev -- --check-only
 **`postinstall`** runs **`scripts/ensure-native-sqlite.mjs`**, which probes a load and **automatically attempts** the same rebuild when the error matches a known ABI, architecture, or missing-binding signature. The log prints the install root and active Node runtime before rebuilding.
 
 ## Policy reference
+
+Runtime contract decision record: **`.ai/adrs/ADR-workflow-cannon-runtime-contract-v1.md`**.
 
 Decision record: **`docs/maintainers/adrs/ADR-native-sqlite-consumer-distribution.md`**.
