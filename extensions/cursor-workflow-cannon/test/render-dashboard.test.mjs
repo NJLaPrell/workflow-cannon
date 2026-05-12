@@ -931,7 +931,7 @@ test("renderDashboardRootInnerHtml embeds planning wizard panel when provided", 
 });
 
 test("renderDashboardRootInnerHtml wishlist section shows pager when openTotalPages > 1", () => {
-  const rows = Array.from({ length: 10 }, (_, i) => ({
+  const rows = Array.from({ length: 5 }, (_, i) => ({
     id: `W-${i}`,
     title: `Item ${i}`,
     taskId: `T-wl-${i}`
@@ -945,10 +945,10 @@ test("renderDashboardRootInnerHtml wishlist section shows pager when openTotalPa
       readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
       readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
       wishlist: {
-        openCount: 30,
-        totalCount: 30,
+        openCount: 15,
+        totalCount: 15,
         openPage: 0,
-        openPageSize: 10,
+        openPageSize: 5,
         openTotalPages: 3,
         openTop: rows
       },
@@ -961,17 +961,18 @@ test("renderDashboardRootInnerHtml wishlist section shows pager when openTotalPa
       dependencyOverview: deliverTestDepOverview
     }
   });
-  assert.match(html, /Open 30/);
+  assert.match(html, /Open 15/);
   assert.match(html, /· Page 1 \/ 3/);
   assert.match(html, /wc-wishlist-pager/);
+  assert.match(html, /justify-content:center/);
   assert.match(html, /data-wc-action="wishlist-page"/);
 });
 
 test("renderDashboardRootInnerHtml wishlist pager points prev and next at adjacent pages", () => {
-  const rows = Array.from({ length: 10 }, (_, i) => ({
-    id: `W-${i + 10}`,
-    title: `Item ${i + 10}`,
-    taskId: `T-wl-${i + 10}`
+  const rows = Array.from({ length: 5 }, (_, i) => ({
+    id: `W-${i + 5}`,
+    title: `Item ${i + 5}`,
+    taskId: `T-wl-${i + 5}`
   }));
   const html = renderDashboardRootInnerHtml({
     ok: true,
@@ -982,10 +983,10 @@ test("renderDashboardRootInnerHtml wishlist pager points prev and next at adjace
       readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
       readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
       wishlist: {
-        openCount: 30,
-        totalCount: 30,
+        openCount: 15,
+        totalCount: 15,
         openPage: 1,
-        openPageSize: 10,
+        openPageSize: 5,
         openTotalPages: 3,
         openTop: rows
       },
