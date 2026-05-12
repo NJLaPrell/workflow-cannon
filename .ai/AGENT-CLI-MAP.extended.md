@@ -16,9 +16,11 @@ Single maintainer reference for **what agents must run in a terminal** when work
 
 If a session might touch `.workspace-kit/` state, lifecycle transitions, policy traces, approvals, or generated maintainer docs, run this first:
 
-1. **One-shot (preferred):** `pnpm exec wk run agent-bootstrap '{}'` — same contract checks as `doctor` **plus** `agent-session-snapshot` fields in one JSON response (read-only).
-2. **Split:** `workspace-kit doctor` — confirms canonical task/policy contract files are present; then `pnpm exec wk run agent-session-snapshot '{}'` for the composed bundle.
-3. `workspace-kit run` (no subcommand) — lists **router-registered** commands (executable for the current enabled module set).
+Use **`./.workspace-kit/bin/wk`** in attached projects; it reads the stamped runtime from **`.workspace-kit/runtime.json`**. Use `pnpm exec wk` / `node dist/cli.js` for Workflow Cannon source checkout development.
+
+1. **One-shot (preferred):** `./.workspace-kit/bin/wk run agent-bootstrap '{}'` — same contract checks as `doctor` **plus** `agent-session-snapshot` fields in one JSON response (read-only).
+2. **Split:** `./.workspace-kit/bin/wk doctor` — confirms canonical task/policy contract files are present; then `./.workspace-kit/bin/wk run agent-session-snapshot '{}'` for the composed bundle.
+3. `./.workspace-kit/bin/wk run` (no subcommand) — lists **router-registered** commands (executable for the current enabled module set).
 4. Use this map + `src/modules/<module>/instructions/<command>.md` for JSON payload shape.
 
 **CAE (`cae-*` read-only commands):** when shipped (**`T861`**, **`T862`**), names + JSON envelope live in **`.ai/cae/cli-read-only.md`**; operator/debug path in **`.ai/cae/README.md`** and **`.ai/runbooks/cae-debug.md`** (**`T855`**). **Advisory CAE on `doctor` / agent instruction surface (design):** **`.ai/cae/advisory-surfacing.md`** (**`T850`**).
@@ -26,7 +28,7 @@ If a session might touch `.workspace-kit/` state, lifecycle transitions, policy 
 Optional machine-readable catalog (same validation as `doctor`, then JSON on stdout):
 
 ```bash
-workspace-kit doctor --agent-instruction-surface
+./.workspace-kit/bin/wk doctor --agent-instruction-surface
 ```
 
 Payload shape: `{ ok, code: "agent-instruction-surface", data: { schemaVersion, commands[], activationReport, errorRemediationCatalog } }`. Rows include `executable` and `degradation` when a declared instruction is documentation-only because the owning module or a `requiresPeers` module is disabled. **`errorRemediationCatalog`** maps common failure `code` strings to repo-relative **`instructionPath`** / **`docPath`** hints (see **`docs/maintainers/adrs/ADR-cli-error-remediation-contract.md`**). **Documentation-only** does **not** waive `policyApproval` for mutating `workspace-kit run` operations — see `.ai/POLICY-APPROVAL.md`.
@@ -35,13 +37,13 @@ When the workspace root is not a kit source checkout, instruction paths still re
 
 ## Runtime `workspace-kit run` invocation (argv, `--schema-only`, approvals)
 
-1. **Shape:** `pnpm exec wk run <command> '<single-json-object>'` — the third argv is one JSON object. Discovery flags attach to the command: `pnpm exec wk run run-transition --schema-only '{}'`.
+1. **Shape:** `./.workspace-kit/bin/wk run <command> '<single-json-object>'` in attached projects, or `pnpm exec wk run <command> '<single-json-object>'` in this source checkout — the third argv is one JSON object. Discovery flags attach to the command: `./.workspace-kit/bin/wk run run-transition --schema-only '{}'`.
 2. **Policy:** Tier A/B mutators require `"policyApproval":{"confirmed":true,"rationale":"…"}` **inside** that JSON. The env var **`WORKSPACE_KIT_POLICY_APPROVAL`** does **not** approve `workspace-kit run` — see **Two approval lanes** below.
-3. **Schema discovery:** Use `pnpm exec wk run <command> --schema-only` for any executable command to emit JSON Schema or a permissive fallback, `sampleArgs`, examples, instruction path, policy metadata, planning-generation metadata, and idempotency hints instead of executing.
+3. **Schema discovery:** Use `./.workspace-kit/bin/wk run <command> --schema-only` for any executable command to emit JSON Schema or a permissive fallback, `sampleArgs`, examples, instruction path, policy metadata, planning-generation metadata, and idempotency hints instead of executing.
 4. **Failures:** **`invalid-run-args`** → fix JSON against the schema from **`--schema-only`**. **`planning-generation-required`** / **`planning-generation-mismatch`** → re-read **`data.planningGeneration`** from **`list-tasks`** / **`get-next-actions`** / **`get-task`**, then pass **`expectedPlanningGeneration`** on commands listed in **`schemas/planning-generation-cli-prelude.json`** (this repo uses policy **`require`**).
-5. **Clean stdout:** Prefer **`pnpm exec wk`** over **`pnpm run wk`** when scripts parse JSON from stdout — see **Shell scripts and JSON stdout** below.
+5. **Clean stdout:** Prefer **`./.workspace-kit/bin/wk`** in attached projects; prefer **`pnpm exec wk`** over **`pnpm run wk`** in this source checkout when scripts parse JSON from stdout — see **Shell scripts and JSON stdout** below.
 
-Verified read: `pnpm exec wk run list-tasks '{}'`.
+Verified read: `./.workspace-kit/bin/wk run list-tasks '{}'`.
 
 **Agent task read contract:** normal task reads use the versioned v1 projection in
 `.ai/runbooks/agent-task-db-contract.md`, `schemas/agent-task-read-contract.v1.json`,
