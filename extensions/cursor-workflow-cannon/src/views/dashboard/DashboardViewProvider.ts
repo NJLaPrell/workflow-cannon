@@ -26,11 +26,13 @@ import {
 } from "./render-dashboard.js";
 import {
   buildAddWishlistDrawerSpec,
+  buildAssignTaskPhaseDrawerSpec,
   buildDismissPhaseNoteDrawerSpec,
   buildRegisterPhaseCatalogDrawerSpec,
   normalizeDrawerValues,
   renderDrawerFormHtml,
   validateAddWishlistSubmit,
+  validateAssignTaskPhaseSubmit,
   validateDismissPhaseNoteSubmit,
   validateRegisterPhaseCatalogSubmit
 } from "./dashboard-input-drawer.js";
@@ -52,7 +54,8 @@ type DashboardPlanningWizardState =
 type DashboardDrawerSession =
   | { kind: "register-catalog" }
   | { kind: "dismiss-note"; noteId: string; priority: string }
-  | { kind: "add-wishlist" };
+  | { kind: "add-wishlist" }
+  | { kind: "assign-task-phase"; taskId: string };
 
 function logDashboard(message: string): void {
   if (!dashboardOutput) {
@@ -862,6 +865,39 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       this.wishlistPage = 0;
       return true;
     }
+    if (session.kind === "assign-task-phase") {
+      const validated = validateAssignTaskPhaseSubmit(values);
+      if (!validated.ok) {
+        await this.postDrawerValidationToWebview(validated.error);
+        return false;
+      }
+      const { phaseKey } = validated.values;
+      const taskId = session.taskId;
+      await this.client.recordActivity({
+        kind: "working_task",
+        taskId,
+        phaseKey,
+        command: "assign-task-phase",
+        details: { source: "dashboard-phase-button" }
+      });
+      const args: Record<string, unknown> = {
+        taskId,
+        phaseKey,
+        ...expectedPlanningGenerationArgs()
+      };
+      const out = await this.client.run("assign-task-phase", args);
+      await this.client.clearActivity();
+      if (!out.ok) {
+        const detail = `${String(out.code ?? "")} ${String(out.message ?? "")}`.trim();
+        await this.postDrawerValidationToWebview(`assign-task-phase failed: ${detail}`.slice(0, 900));
+        return false;
+      }
+      ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
+      this.closeDashboardDrawer();
+      this.notifyKitStateChanged();
+      await vscode.window.showInformationMessage(`Phase set for ${taskId} → ${phaseKey}`);
+      return true;
+    }
     return false;
   }
 
@@ -869,36 +905,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
    * Dashboard "Phase" row action → `assign-task-phase` with planning-generation prelude when required.
    */
   private async onAssignTaskPhase(taskId: string): Promise<void> {
-    const phaseKey = await this.pickPhaseKeyFromDashboard({
-      title: `Set phase for ${taskId}`
-    });
-    if (!phaseKey) {
+    if (this.dashboardDrawerSession) {
       return;
     }
-    await this.client.recordActivity({
-      kind: "working_task",
-      taskId,
-      phaseKey,
-      command: "assign-task-phase",
-      details: { source: "dashboard-phase-button" }
-    });
-    const args: Record<string, unknown> = {
-      taskId,
-      phaseKey,
-      ...expectedPlanningGenerationArgs()
-    };
-    const out = await this.client.run("assign-task-phase", args);
-    if (!out.ok) {
-      const detail = `${String(out.code ?? "")} ${String(out.message ?? "")}`.trim();
-      await vscode.window.showErrorMessage(`assign-task-phase failed: ${detail}`);
-      await this.client.clearActivity();
-      return;
-    }
-    ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
-    await this.client.clearActivity();
-    this.notifyKitStateChanged();
-    await this.pushUpdate();
-    await vscode.window.showInformationMessage(`Updated phase for ${taskId} → ${phaseKey}`);
+    const data = this.lastDashboardSummaryData;
+    const suggestions = data ? collectPhaseKeySuggestions(data) : [];
+    const html = renderDrawerFormHtml(buildAssignTaskPhaseDrawerSpec(taskId, suggestions));
+    this.dashboardDrawerSession = { kind: "assign-task-phase", taskId };
+    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
   }
 
   private async onDismissPhaseNote(noteId: string, priority: string): Promise<void> {
@@ -2104,7 +2118,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-drawer-validation { margin: 0 0 8px 0; padding: 6px 8px; border-radius: 4px; background: var(--vscode-inputValidation-errorBackground); color: var(--vscode-inputValidation-errorForeground); }
     .wc-drawer-fields { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
     .wc-drawer-field-label { display: block; font-size: 11px; font-weight: 600; margin-bottom: 4px; }
-    .wc-drawer-input, .wc-drawer-textarea {
+    .wc-drawer-input, .wc-drawer-textarea, .wc-drawer-select {
       width: 100%; box-sizing: border-box; font-family: var(--vscode-font-family); font-size: 12px;
       color: var(--vscode-input-foreground); background: var(--vscode-input-background);
       border: 1px solid var(--vscode-input-border, rgba(127,127,127,.35)); border-radius: 4px; padding: 4px 6px;

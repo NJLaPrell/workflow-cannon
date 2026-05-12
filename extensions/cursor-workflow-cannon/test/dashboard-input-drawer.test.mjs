@@ -75,3 +75,30 @@ test("drawer: normalizeDrawerValues trims", async () => {
   assert.equal(v.a, "x");
   assert.equal(v.b, "3");
 });
+
+test("drawer: assign phase spec includes select and custom field", async () => {
+  const mod = await import("../dist/views/dashboard/dashboard-input-drawer.js");
+  const spec = mod.buildAssignTaskPhaseDrawerSpec("T100", [
+    { label: "Next", phaseKey: "92" }
+  ]);
+  const html = mod.renderDrawerFormHtml(spec);
+  assert.match(html, /data-wc-drawer-field="phaseSelect"/);
+  assert.match(html, /class="wc-drawer-select"/);
+  assert.match(html, /data-wc-drawer-field="phaseKeyCustom"/);
+  assert.match(html, /value="92"/);
+  assert.match(html, /value="__custom__"/);
+});
+
+test("drawer: validate assign phase — custom requires text", async () => {
+  const mod = await import("../dist/views/dashboard/dashboard-input-drawer.js");
+  const emptySel = mod.validateAssignTaskPhaseSubmit({ phaseSelect: "", phaseKeyCustom: "" });
+  assert.equal(emptySel.ok, false);
+  const customNoText = mod.validateAssignTaskPhaseSubmit({ phaseSelect: "__custom__", phaseKeyCustom: "  " });
+  assert.equal(customNoText.ok, false);
+  const customOk = mod.validateAssignTaskPhaseSubmit({ phaseSelect: "__custom__", phaseKeyCustom: " 88 " });
+  assert.equal(customOk.ok, true);
+  if (customOk.ok) assert.equal(customOk.values.phaseKey, "88");
+  const pickOk = mod.validateAssignTaskPhaseSubmit({ phaseSelect: "91", phaseKeyCustom: "" });
+  assert.equal(pickOk.ok, true);
+  if (pickOk.ok) assert.equal(pickOk.values.phaseKey, "91");
+});
