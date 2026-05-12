@@ -63,7 +63,7 @@ Chat copy and dashboard prompts are **operator intent only**; they do **not** sa
 ## 5) Release procedure (execute per RELEASING)
 
 1. **Merge `release/phase-<N>` into `main`** via PR (or equivalent reviewed merge) using the repo’s preferred strategy, consistent with **maintainer-delivery-loop**. **`main`** should be the tip you tag unless policy says otherwise.
-2. Run the full **Release procedure** in [`RELEASING.md`](../RELEASING.md): define scope, prepare artifacts (changelog + `package.json` version), run validation commands (`build`, `check`, `test`, `parity`, `check-release-metadata`, `pre-merge-gates`, doc consistency sweep), **then** publish after approval, then record evidence (tag, workflow run URL, npm).
+2. Run the full **Release procedure** in [`RELEASING.md`](../RELEASING.md): define scope, prepare artifacts (changelog + `package.json` version), run validation commands (`build`, `check`, `test`, `parity`, `check-release-metadata`, `pre-merge-gates`, doc consistency sweep), obtain **publish approval** per §4, then **ship npm via CI** with **`pnpm run publish:npm`** (optional dist-tag: **`pnpm run publish:npm -- next`** or **`NPM_DIST_TAG=…`**). That dispatches **`.github/workflows/publish-npm.yml`** using **`gh workflow run`** and repo **`secrets.NPM_TOKEN`** — not local **`npm publish`**. Requires **`gh auth login`**. UI equivalent: GitHub → Actions → **Publish NPM** → Run workflow. Then record evidence (tag, workflow run URL, npm).
 
 Tier **B** `workspace-kit run` commands (non-transition) also require JSON `policyApproval` — see [`AGENT-CLI-MAP.md`](../AGENT-CLI-MAP.md) and [`POLICY-APPROVAL.md`](../POLICY-APPROVAL.md).
 

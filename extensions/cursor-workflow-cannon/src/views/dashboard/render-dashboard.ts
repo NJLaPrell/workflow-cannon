@@ -1,5 +1,10 @@
 /**
  * Pure dashboard HTML generation — unit-tested; applied in the webview via postMessage { html } from the host.
+ *
+ * **Dashboard prompt surface (Phase 91+):** new Dashboard-originated data entry for kit mutations should use the
+ * in-webview drawer (`#wc-drawer-host`, `wcDrawerOpen` / `drawerSubmit` / `drawerCancel` in `DashboardViewProvider`)
+ * instead of `vscode.window.showInputBox` / `showQuickPick` so operators stay in the sidebar. See
+ * `dashboard-input-drawer.ts` for the typed form spec + render helpers.
  */
 
 import {
