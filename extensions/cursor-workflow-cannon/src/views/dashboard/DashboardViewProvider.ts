@@ -1501,6 +1501,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       margin: 0 0 6px 0;
     }
     .dash-overview-phase-text { flex: 1; min-width: 0; }
+    .dash-editor-integration--embedded {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid var(--vscode-widget-border, rgba(127,127,127,.25));
+    }
     button.dash-deliver-chip {
       margin: 0;
       flex-shrink: 0;
