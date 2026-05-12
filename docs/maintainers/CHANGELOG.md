@@ -8,6 +8,25 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.86.0] - 2026-05-11
+
+Phase 89 — **Dashboard phase notes and first-run init UX closeout**. Ships the Cursor dashboard phase-notes surface for browse/add/follow-up/convert workflows, chat-guided phase-note discovery, first-run attach documentation hardening, partial-attach doctor remediation, preview-only `wk detach --dry-run`, init/start integration coverage, an install/attach runbook, first-run doc string drift guard, `INIT_PLAN.md` historical disposition, and FEATURE-MATRIX / ADR polish for safe ownership preview.
+
+### Added
+
+- Cursor extension: phase-notes dashboard surface with add, follow-up, dismiss, convert, and chat entry paths.
+- Chat prompts: guided phase-notes discovery prompt wiring for operator follow-up flows.
+- CLI: preview-only `wk detach --dry-run` / JSON ownership plan output without deleting files.
+- Maintainer runbook: install/attach Workflow Cannon flow covering first-run, ownership, SQLite, starter tasks, repair/force/dry-run, approvals, native SQLite, and `refresh-context`.
+- Release gates: fast offline `check-init-first-run-docs` guard wired into maintainer gates.
+
+### Changed
+
+- `doctor` remediation now prioritizes `wk init` repair guidance for partial attach states.
+- Init/start integration tests cover empty workspace attach, no-starter SQLite persistence, approvals, status output, re-init preservation, and force repair behavior.
+- `INIT_PLAN.md` is marked as a historical program backlog; the ADR and task engine are canonical for current behavior and execution state.
+- The first-run init ADR and FEATURE-MATRIX now describe current preview-only detach behavior accurately.
+
 ## [0.85.0] - 2026-05-11
 
 Phase 88 — **Phase catalog in planning SQLite, list/upsert commands, and dashboard phase roster**. Ships `kit_phase_catalog` with deterministic ordering merged with workspace current/next phase keys, task-engine commands `list-phase-catalog` and `upsert-phase-catalog-entry` (planning-generation hygiene + assign-task-phase-style guards), Cursor dashboard **Phase roster** with optional short descriptions and **Register future phase**, status-tab roster alignment, `KIT_SQLITE_USER_VERSION` **23** aligned with migrations, run-contract schema registration for the new commands, and `compatibility-matrix.json` task-engine **0.23.0**.

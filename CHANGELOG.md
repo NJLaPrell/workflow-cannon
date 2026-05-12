@@ -8,4 +8,4 @@ This root file is intentionally pointer-only to avoid split release history.
 
 - See `docs/maintainers/CHANGELOG.md` for all release notes, migration notes, and historical entries.
 
-Latest release: **v0.85.0** (Phase 88: phase catalog, dashboard roster, closeout hygiene; see canonical changelog).
+Latest release: **v0.86.0** (Phase 89: dashboard phase notes and first-run init UX closeout; see canonical changelog).
