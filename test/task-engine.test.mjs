@@ -3526,6 +3526,33 @@ test("taskEngineModule onCommand queue-health detects behind-current phase misma
   assert.equal(row.phaseScheduleRelation, "past");
 });
 
+test("taskEngineModule list-tasks includeTaskIntake adds taskIntakeByTaskId", async () => {
+  const workspace = await tmpDir();
+  const now = new Date().toISOString();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask({
+      id: "T9001",
+      status: "proposed",
+      type: "workspace-kit",
+      title: "Needs triage",
+      createdAt: now,
+      updatedAt: now
+    });
+  });
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const result = await taskEngineModule.onCommand(
+    { name: "list-tasks", args: { status: "proposed", includeTaskIntake: true } },
+    ctx
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.data.tasks.length, 1);
+  assert.ok(result.data.taskIntakeByTaskId && typeof result.data.taskIntakeByTaskId === "object");
+  const intake = result.data.taskIntakeByTaskId.T9001;
+  assert.ok(intake && typeof intake === "object");
+  assert.equal(intake.schemaVersion, 1);
+  assert.ok(typeof intake.profileName === "string");
+});
+
 test("taskEngineModule list-tasks includeQueueHints aligns with queue-health signals", async () => {
   const workspace = await tmpDir();
   const now = new Date().toISOString();

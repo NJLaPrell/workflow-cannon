@@ -53,6 +53,9 @@
       "includeQueueHints": {
         "type": "boolean"
       },
+      "includeTaskIntake": {
+        "type": "boolean"
+      },
       "confidenceTier": {
         "type": "string"
       },
