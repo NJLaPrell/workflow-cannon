@@ -107,6 +107,10 @@
       "output": "docs/maintainers/runbooks/github-workflow-cannon-invocation.md"
     },
     {
+      "source": ".ai/runbooks/install-attach-workflow-cannon.md",
+      "output": "docs/maintainers/runbooks/install-attach-workflow-cannon.md"
+    },
+    {
       "source": ".ai/runbooks/ide-kit-status-protocol.md",
       "output": "docs/maintainers/runbooks/ide-kit-status-protocol.md"
     },
