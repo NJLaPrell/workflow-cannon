@@ -22,7 +22,11 @@ import {
   collectTaskPersistenceDoctorSummaryLines
 } from "./cli/doctor-planning-issues.js";
 import { collectCaeDoctorSummaryLines } from "./cli/doctor-cae.js";
-import { collectDoctorContractIssues, type DoctorContractIssue } from "./cli/doctor-contract-validation.js";
+import {
+  collectDoctorContractIssues,
+  collectDoctorRuntimeContractStatus,
+  type DoctorContractIssue
+} from "./cli/doctor-contract-validation.js";
 import {
   collectMaintainerDeliveryLoopIssues,
   formatMaintainerDeliveryLoopAdvisoryLines
@@ -118,6 +122,7 @@ function writeDoctorFailureRemediation(
   writeError("");
   writeError("Next steps:");
   const hasMissing = issues.some((issue) => issue.reason === "missing");
+  const hasRuntimeIssue = issues.some((issue) => issue.reason.startsWith("runtime-"));
   const manifestMissing = issues.some(
     (issue) => issue.reason === "missing" && issue.path === defaultWorkspaceKitPaths.manifest
   );
@@ -128,6 +133,11 @@ function writeDoctorFailureRemediation(
   } else if (hasMissing) {
     writeError(
       "  - Partial attach detected: run `workspace-kit init` to repair missing baseline files (preview with `workspace-kit init --dry-run`); use `workspace-kit upgrade` after package updates."
+    );
+  }
+  if (hasRuntimeIssue) {
+    writeError(
+      "  - Runtime contract drift: repair setup, then run `workspace-kit init --force` to regenerate the runtime stamp and launcher."
     );
   }
   writeError("  - workspace-kit --help — orientation and top-level commands");
@@ -599,6 +609,7 @@ export async function runCli(
   const deliveryLoopStrict = doctorRest.includes("--delivery-loop-strict");
   const wantDeliveryLoop = deliveryLoopStrict || doctorRest.includes("--delivery-loop");
 
+  const runtimeContract = await collectDoctorRuntimeContractStatus(cwd);
   const issues = await collectDoctorContractIssues(cwd);
 
   if (issues.length > 0) {
@@ -610,11 +621,12 @@ export async function runCli(
             code: "doctor-contract-failed",
             schemaVersion: 1,
             message: "workspace-kit doctor failed validation.",
-            data: { issues },
+            data: { issues, runtimeContract },
             remediation: {
               humanHints: [
                 "workspace-kit --help",
-                "Fix missing or invalid paths reported in data.issues"
+                "Fix missing or invalid paths reported in data.issues",
+                "For runtime contract drift, repair setup and run `workspace-kit init --force`."
               ]
             }
           },
@@ -686,6 +698,9 @@ export async function runCli(
   lines.push("workspace-kit doctor passed.");
   lines.push("All canonical workspace-kit contract files are present and parseable JSON.");
   lines.push(
+    `Runtime contract healthy: ${runtimeContract.stampPath} and ${runtimeContract.launcherPath}.`
+  );
+  lines.push(
     "Effective workspace config resolved; task planning persistence checks passed (including SQLite when configured)."
   );
   for (const line of await collectTaskPersistenceDoctorSummaryLines(cwd)) {
@@ -719,6 +734,7 @@ export async function runCli(
           message: "workspace-kit doctor passed.",
           data: {
             summaryText: lines,
+            runtimeContract,
             nextHint: `workspace-kit run --json lists commands; see ${AGENT_CLI_MAP_HUMAN_DOC}`
           }
         },

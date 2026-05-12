@@ -23,6 +23,8 @@ export type RuntimeContractIssueCode =
   | "runtime-stamp-missing"
   | "runtime-stamp-invalid-json"
   | "runtime-stamp-invalid-shape"
+  | "runtime-launcher-missing"
+  | "runtime-launcher-not-executable"
   | "runtime-node-missing"
   | "runtime-node-wrong-major"
   | "runtime-arch-mismatch"
