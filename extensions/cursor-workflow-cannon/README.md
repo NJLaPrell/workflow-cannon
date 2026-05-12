@@ -99,7 +99,20 @@ Dashboard and palette **Generate Features** open a **new** Agent/Composer chat w
 
 **Collaboration profiles** (quick action) prefills a chat that links **`/onboarding`**, **`/behavior-interview`**, and read-mostly **`pnpm exec wk run`** lines (`resolve-behavior-profile`, `list-behavior-profiles`, **`sync-effective-behavior-cursor-rule`**) — advisory only; **chat is not JSON `policyApproval`**.
 
-Dashboard **Wishlist** open rows include **Chat**; **Proposed · improvements** and **Proposed · execution** rows include **Accept** (modal **`policyApproval`** rationale + **`expectedPlanningGeneration`** when the workspace requires it) and **Chat** (improvement triage vs task-to-phase-branch playbook text). Agent canon: **`.ai/playbooks/`** (`wishlist-intake-to-execution.md`, `improvement-triage-top-three.md`, `task-to-phase-branch.md`). Maintainer mirrors: `docs/maintainers/playbooks/`.
+Dashboard **Wishlist** open rows include **Chat**; **Proposed · improvements** and **Proposed · execution** rows include **Accept** (in-webview drawer: target phase + **`policyApproval`** rationale for **`run-transition`** **`accept`**, then **`assign-task-phase`**) and **Chat** (improvement triage vs task-to-phase-branch playbook text). Agent canon: **`.ai/playbooks/`** (`wishlist-intake-to-execution.md`, `improvement-triage-top-three.md`, `task-to-phase-branch.md`). Maintainer mirrors: `docs/maintainers/playbooks/`.
+
+### Dashboard prompt surface (Phase 91)
+
+For **sidebar Dashboard** actions that collect operator intent before a mutating **`workspace-kit run`** from the extension host, prefer the **in-webview drawer** (`#wc-drawer-host`, `wcDrawerOpen` / `drawerSubmit` / `wcDrawerValidation`) so users stay in the sidebar.
+
+**Exceptions (native VS Code UI is OK):**
+
+- **Command palette** flows and other non-Dashboard entry points.
+- **Destructive / irreversible confirmations** outside the drawer contract (for example **`showWarningMessage`** modal gates where a modal is clearer than a webview affordance).
+- **Transient notifications** (`showInformationMessage` / `showErrorMessage`) for outcomes.
+- **Planning interview wizard** and similar legacy flows until migrated.
+
+Do not add new **`await vscode.window.showInputBox`** / **`showQuickPick`** calls in `DashboardViewProvider.ts` for Dashboard-originated kit mutations — `extensions/cursor-workflow-cannon/test/dashboard-prompt-surface.test.mjs` fails the build if they appear (non-comment lines).
 
 Manual operator checklist: `docs/e2e.md`  
 Security notes: `SECURITY.md`
