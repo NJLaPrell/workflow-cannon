@@ -71,6 +71,8 @@ pnpm exec wk init
 
 After `init`, prefer `./.workspace-kit/bin/wk` in attached projects. It reads `.workspace-kit/runtime.json` and uses the Node runtime validated during `init`, so routine agent commands do not require a prior `nvm use`. In the Workflow Cannon source checkout, `pnpm exec wk` / `node dist/cli.js` remain development entrypoints.
 
+Compatibility aliases remain available when the package manager environment is already correct: `npx workspace-kit init`, `npx workspace-kit doctor`, `npx workspace-kit start`; or `pnpm exec wk init`, `pnpm exec wk doctor`, `pnpm exec wk start`.
+
 Use `npx workspace-kit --help` / `pnpm exec wk --help` before attach, and `./.workspace-kit/bin/wk --help` after attach, when exploring the full command surface.
 
 What you get immediately:
