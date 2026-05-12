@@ -235,7 +235,7 @@ export function renderStatusTabInnerHtml(
           catRows +
           "</tbody></table>"
         : catSupported
-          ? '<p class="wc-muted">Phase roster: no catalog-only rows yet (current/next still listed in kit phase fields above).</p>'
+          ? '<p class="wc-muted">Phase roster: no rows yet (workspace phases above; task-assigned phases appear here when present).</p>'
           : '<p class="wc-muted">Phase roster descriptions need planning SQLite v23+.</p>';
     parts.push(card("Phase & workspace", body + catBlock));
   }

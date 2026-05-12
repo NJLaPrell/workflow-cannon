@@ -1,6 +1,7 @@
 import type DatabaseCtor from "better-sqlite3";
 import { readKitSqliteUserVersion } from "../../../core/state/workspace-kit-sqlite.js";
-import { parseKitPhaseNumberFromYaml, parseLeadingPhaseOrdinal } from "../phase-resolution.js";
+import { inferTaskPhaseKey, parseKitPhaseNumberFromYaml, parseLeadingPhaseOrdinal } from "../phase-resolution.js";
+import type { TaskEntity } from "../types.js";
 import type { KitWorkspaceStatusPublic } from "./workspace-status-store.js";
 
 export const KIT_PHASE_CATALOG_TABLE = "kit_phase_catalog";
@@ -102,9 +103,31 @@ export function readPhaseCatalogRows(db: SqliteDb): PhaseCatalogRow[] {
 export type PhaseCatalogListEntry = {
   phaseKey: string;
   shortDescription: string | null;
-  /** Row exists in kit_phase_catalog (otherwise inferred from workspace status only). */
+  /** Row exists in kit_phase_catalog (otherwise inferred from workspace status and/or tasks). */
   inCatalog: boolean;
 };
+
+/**
+ * Phase keys inferred from the task store for roster / `list-phase-catalog` merge.
+ * All non-archived tasks (including **completed** and **cancelled**); keys must pass {@link validatePhaseCatalogKey}.
+ */
+export function collectPhaseCatalogHintsFromTasks(tasks: readonly TaskEntity[]): string[] {
+  const out = new Set<string>();
+  for (const t of tasks) {
+    if (t.archived) {
+      continue;
+    }
+    const inferred = inferTaskPhaseKey(t);
+    if (!inferred) {
+      continue;
+    }
+    const vk = validatePhaseCatalogKey(inferred);
+    if (vk) {
+      out.add(vk);
+    }
+  }
+  return [...out];
+}
 
 function collectStatusPhaseKeys(row: KitWorkspaceStatusPublic | null): string[] {
   if (!row) {
@@ -123,12 +146,14 @@ function collectStatusPhaseKeys(row: KitWorkspaceStatusPublic | null): string[] 
 }
 
 /**
- * Deterministic phase list: union of catalog rows and current/next workspace phase keys,
+ * Deterministic phase list: union of catalog rows, current/next workspace phase keys,
+ * and optional task-store hints (non-archived tasks with inferable phase, all lifecycle statuses),
  * each with optional short description from the catalog.
  */
 export function buildOrderedPhaseCatalogList(
   db: SqliteDb,
-  workspaceStatus: KitWorkspaceStatusPublic | null
+  workspaceStatus: KitWorkspaceStatusPublic | null,
+  taskPhaseHints?: readonly string[] | null
 ): PhaseCatalogListEntry[] {
   const catalogRows = readPhaseCatalogRows(db);
   const byKey = new Map<string, { shortDescription: string | null; inCatalog: boolean }>();
@@ -137,6 +162,15 @@ export function buildOrderedPhaseCatalogList(
   }
   for (const k of collectStatusPhaseKeys(workspaceStatus)) {
     if (!byKey.has(k)) {
+      byKey.set(k, { shortDescription: null, inCatalog: false });
+    }
+  }
+  if (taskPhaseHints?.length) {
+    for (const raw of taskPhaseHints) {
+      const k = validatePhaseCatalogKey(typeof raw === "string" ? raw : "");
+      if (!k || byKey.has(k)) {
+        continue;
+      }
       byKey.set(k, { shortDescription: null, inCatalog: false });
     }
   }

@@ -4,7 +4,7 @@ agentCapsule|v=1|command=assign-task-phase|module=task-engine|schema_only=pnpm e
 
 # assign-task-phase
 
-Sets **`phaseKey`** and **`phase`** on a task using the same validation path as **`update-task`**, without a generic **`updates`** object. Prefer this for maintainer phase bucketing (replaces ad-hoc **`update-task`** scripts for phase-only changes).
+Sets **`phaseKey`** and **`phase`** on a task using the same validation path as **`update-task`**, without a generic **`updates`** object. Prefer this for maintainer phase bucketing (replaces ad-hoc **`update-task`** scripts for phase-only changes). That phase key is picked up by **`list-phase-catalog`** and the dashboard Phase roster (merged with **`kit_phase_catalog`** and workspace current/next), including for **completed** and **cancelled** tasks; use **`upsert-phase-catalog-entry`** when you want a **`shortDescription`** in the catalog table.
 
 ## Usage
 

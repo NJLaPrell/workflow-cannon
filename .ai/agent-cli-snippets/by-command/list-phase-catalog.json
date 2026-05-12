@@ -15,7 +15,7 @@
   ],
   "instructionPath": "src/modules/task-engine/instructions/list-phase-catalog.md",
   "moduleId": "task-engine",
-  "description": "List phase keys with optional short descriptions (kit_phase_catalog) merged with current/next workspace phase keys in deterministic order.",
+  "description": "List phase keys with optional short descriptions (kit_phase_catalog) merged with current/next workspace phase keys and non-archived task-assigned phases (all statuses, including completed/cancelled) in deterministic order.",
   "policy": {
     "sensitivity": "non-sensitive",
     "operationId": null,

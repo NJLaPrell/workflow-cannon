@@ -10,7 +10,11 @@ import type { DashboardSystemStatus } from "../../../contracts/dashboard-summary
 import type { ModuleActivationReport } from "../../../core/module-registry.js";
 import type { SqliteDualPlanningStore } from "../persistence/sqlite-dual-planning.js";
 import type { TaskStore } from "../persistence/store.js";
-import { buildOrderedPhaseCatalogList, phaseCatalogTableAvailable } from "../persistence/phase-catalog-store.js";
+import {
+  buildOrderedPhaseCatalogList,
+  collectPhaseCatalogHintsFromTasks,
+  phaseCatalogTableAvailable
+} from "../persistence/phase-catalog-store.js";
 import { readKitWorkspaceStatusRow } from "../persistence/workspace-status-store.js";
 import {
   buildDashboardPlanningStoreSummary,
@@ -77,7 +81,8 @@ export async function buildDashboardSystemStatus(
       : [];
     const db = sqliteDual.getDatabase();
     const wsRow = readKitWorkspaceStatusRow(db);
-    const phases = buildOrderedPhaseCatalogList(db, wsRow);
+    const taskHints = collectPhaseCatalogHintsFromTasks(store.getActiveTasks());
+    const phases = buildOrderedPhaseCatalogList(db, wsRow, taskHints);
     const phaseCatalog = {
       schemaVersion: 1 as const,
       supported: phaseCatalogTableAvailable(db),

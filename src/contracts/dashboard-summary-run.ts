@@ -143,7 +143,7 @@ export type DashboardPhaseSystemSlice = {
   exportReason: string | null;
   driftMessages: string[];
   remediationSuggestions: string[];
-  /** Ordered phase keys + optional short descriptions (`list-phase-catalog` contract). */
+  /** Ordered phase keys + optional short descriptions (`list-phase-catalog` contract; includes task-assigned keys, all statuses). */
   phaseCatalog?: {
     schemaVersion: 1;
     supported: boolean;

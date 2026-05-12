@@ -9,6 +9,7 @@ import { readOptionalExpectedPlanningGeneration } from "./mutation-utils.js";
 import type { OpenedPlanningStores } from "./persistence/planning-open.js";
 import {
   buildOrderedPhaseCatalogList,
+  collectPhaseCatalogHintsFromTasks,
   deletePhaseCatalogRow,
   normalizeCatalogShortDescription,
   phaseCatalogTableAvailable,
@@ -33,7 +34,8 @@ export async function runListPhaseCatalog(ctx: ModuleLifecycleContext): Promise<
     const dual = openSqliteDualForWorkspaceStatus(ctx);
     const db = dual.getDatabase();
     const ws = readKitWorkspaceStatusRow(db);
-    const phases = buildOrderedPhaseCatalogList(db, ws);
+    const taskHints = collectPhaseCatalogHintsFromTasks(dual.taskDocument.tasks);
+    const phases = buildOrderedPhaseCatalogList(db, ws, taskHints);
     const data: Record<string, unknown> = {
       schemaVersion: 1,
       phases,
@@ -165,7 +167,8 @@ export async function runUpsertPhaseCatalogEntry(
   }
 
   const wsAfter = readKitWorkspaceStatusRow(db);
-  const phases = buildOrderedPhaseCatalogList(db, wsAfter);
+  const taskHintsAfter = collectPhaseCatalogHintsFromTasks(dual.taskDocument.tasks);
+  const phases = buildOrderedPhaseCatalogList(db, wsAfter, taskHintsAfter);
   const data: Record<string, unknown> = {
     schemaVersion: 1,
     phaseKey,

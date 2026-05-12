@@ -8,6 +8,21 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.87.0] - 2026-05-12
+
+Phase 90 — **Workspace coordination readout and list-tasks intake schema alignment**. Ships read-only `workspace-coordination-status` (git + `GIT_COMMON_DIR` lease slice), `dashboard-summary.systemStatus.coordination`, compact `workspaceCoordination` on `agent-bootstrap`, Cursor status bar + Status tab coordination card, temp-repo coordination tests, and pilot JSON schema support for `list-tasks` **`includeTaskIntake`** (contracts, snapshot, CLI snippets, regression tests) so agent instructions match runtime validation.
+
+### Added
+
+- Task engine / CLI: `workspace-coordination-status` command and `WorkspaceCoordinationStatusV1` contract.
+- `dashboard-summary`: optional `systemStatus.coordination` embedding; `agent-bootstrap`: `workspaceCoordination` posture pointer.
+- Cursor extension: status bar shows `WC <posture> · rdy N`; Status dashboard **Coordination** card when data is present.
+- Tests: `test/workspace-coordination-status.test.mjs` for non-repo, clean main, feature branch, detached HEAD, dirty tree, dirty task DB, stale/active lease files.
+
+### Fixed
+
+- `list-tasks`: `includeTaskIntake` was implemented in the handler but rejected by pilot run-args JSON Schema; `contractListTasks` and pilot snapshot/snippets aligned with runtime.
+
 ## [0.86.0] - 2026-05-11
 
 Phase 89 — **Dashboard phase notes and first-run init UX closeout**. Ships the Cursor dashboard phase-notes surface for browse/add/follow-up/convert workflows, chat-guided phase-note discovery, first-run attach documentation hardening, partial-attach doctor remediation, preview-only `wk detach --dry-run`, init/start integration coverage, an install/attach runbook, first-run doc string drift guard, `INIT_PLAN.md` historical disposition, and FEATURE-MATRIX / ADR polish for safe ownership preview.

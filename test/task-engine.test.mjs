@@ -1460,6 +1460,43 @@ test("list-phase-catalog merges workspace phases and catalog descriptions in ord
   assert.equal(p72.inCatalog, false);
 });
 
+test("list-phase-catalog includes phases from active tasks without kit_phase_catalog rows", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T9501", phaseKey: "95", phase: "Phase 95", status: "ready" }));
+  });
+  await taskEngineModule.onCommand(
+    { name: "set-current-phase", args: { currentKitPhase: "72", expectedWorkspaceRevision: 0 } },
+    ctx
+  );
+
+  const list = await taskEngineModule.onCommand({ name: "list-phase-catalog", args: {} }, ctx);
+  assert.equal(list.ok, true);
+  const keys = list.data.phases.map((p) => p.phaseKey);
+  assert.deepEqual(keys, ["72", "95"]);
+  const p95 = list.data.phases.find((p) => p.phaseKey === "95");
+  assert.equal(p95.inCatalog, false);
+  assert.equal(p95.shortDescription, null);
+});
+
+test("list-phase-catalog includes phases from completed tasks without kit_phase_catalog rows", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T9601", phaseKey: "96", phase: "Phase 96", status: "completed" }));
+  });
+  await taskEngineModule.onCommand(
+    { name: "set-current-phase", args: { currentKitPhase: "72", expectedWorkspaceRevision: 0 } },
+    ctx
+  );
+
+  const list = await taskEngineModule.onCommand({ name: "list-phase-catalog", args: {} }, ctx);
+  assert.equal(list.ok, true);
+  const keys = list.data.phases.map((p) => p.phaseKey);
+  assert.deepEqual(keys, ["72", "96"]);
+});
+
 test("upsert-phase-catalog-entry rejects numeric phase before workspace current", async () => {
   const workspace = await tmpDir();
   const ctx = sqliteTaskEngineCtx(workspace);
