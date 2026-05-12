@@ -7,6 +7,7 @@ import Database from "better-sqlite3";
 
 import { runCli } from "../dist/cli.js";
 import { prepareKitSqliteDatabase } from "../dist/core/state/workspace-kit-sqlite.js";
+import { writeRuntimeLauncher, writeRuntimeStamp } from "../dist/core/runtime-contract.js";
 
 const TEST_CLI_POLICY_APPROVAL = JSON.stringify({
   confirmed: true,
@@ -78,6 +79,20 @@ function createCapture() {
   };
 }
 
+function runtimeContractFixture(overrides = {}) {
+  return {
+    schemaVersion: 1,
+    nodeExecutable: process.execPath,
+    nodeVersion: "v22.11.0",
+    arch: process.arch,
+    platform: process.platform,
+    abi: process.versions.modules,
+    packageRoot: process.cwd(),
+    checkedAt: "2026-05-12T00:00:00.000Z",
+    ...overrides
+  };
+}
+
 async function createDoctorFixture(rootDir) {
   const workspaceKitDir = path.join(rootDir, ".workspace-kit");
   const schemasDir = path.join(rootDir, "schemas");
@@ -112,6 +127,9 @@ async function createDoctorFixture(rootDir) {
     path.join(workspaceKitDir, "owned-paths.json"),
     JSON.stringify({ schemaVersion: 1, ownedPaths: [] }, null, 2)
   );
+
+  writeRuntimeStamp(rootDir, runtimeContractFixture());
+  writeRuntimeLauncher(rootDir);
 
   const tasksDir = path.join(workspaceKitDir, "tasks");
   await mkdir(tasksDir, { recursive: true });
@@ -341,6 +359,76 @@ test("runCli doctor prioritizes init repair for partial attach", async () => {
   assert.match(nextStep ?? "", /workspace-kit init/);
   assert.match(nextStep ?? "", /workspace-kit init --dry-run/);
   assert.ok((nextStep ?? "").indexOf("workspace-kit init") < (nextStep ?? "").indexOf("workspace-kit upgrade"));
+});
+
+test("runCli doctor reports healthy runtime contract details in JSON", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-runtime-ok-"));
+  await createDoctorFixture(fixtureRoot);
+
+  const capture = createCapture();
+  const code = await runCli(["doctor", "--json"], { cwd: fixtureRoot, ...capture });
+
+  assert.equal(code, 0);
+  const payload = JSON.parse(capture.lines[0]);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.data.runtimeContract.ok, true);
+  assert.equal(payload.data.runtimeContract.stampPath, ".workspace-kit/runtime.json");
+  assert.equal(payload.data.runtimeContract.launcherPath, ".workspace-kit/bin/wk");
+  assert.equal(payload.data.runtimeContract.nodeVersion, "v22.11.0");
+  assert.deepEqual(payload.data.runtimeContract.issues, []);
+});
+
+test("runCli doctor fails when runtime launcher is missing", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-runtime-launcher-missing-"));
+  await createDoctorFixture(fixtureRoot);
+  await unlink(path.join(fixtureRoot, ".workspace-kit", "bin", "wk"));
+
+  const capture = createCapture();
+  const code = await runCli(["doctor"], { cwd: fixtureRoot, ...capture });
+
+  assert.equal(code, 1);
+  assert.ok(capture.errors.some((line) => line.includes("runtime-launcher-missing")));
+  assert.ok(capture.errors.some((line) => line.includes("workspace-kit init --force")));
+});
+
+test("runCli doctor catches missing node, wrong major, arch, and ABI drift", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-runtime-stamp-drift-"));
+  await createDoctorFixture(fixtureRoot);
+  writeRuntimeStamp(
+    fixtureRoot,
+    runtimeContractFixture({
+      nodeExecutable: path.join(fixtureRoot, "missing-node"),
+      nodeVersion: "v20.19.0",
+      arch: "not-this-arch",
+      abi: "0"
+    })
+  );
+
+  const capture = createCapture();
+  const code = await runCli(["doctor", "--json"], { cwd: fixtureRoot, ...capture });
+
+  assert.equal(code, 1);
+  const payload = JSON.parse(capture.lines[0]);
+  const codes = payload.data.runtimeContract.issues.map((issue) => issue.code);
+  assert.ok(codes.includes("runtime-node-missing"));
+  assert.ok(codes.includes("runtime-node-wrong-major"));
+  assert.ok(codes.includes("runtime-arch-mismatch"));
+  assert.ok(codes.includes("runtime-abi-mismatch"));
+});
+
+test("runCli doctor catches runtime SQLite load failure", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-runtime-sqlite-fail-"));
+  await createDoctorFixture(fixtureRoot);
+  writeRuntimeStamp(fixtureRoot, runtimeContractFixture({ packageRoot: fixtureRoot }));
+
+  const capture = createCapture();
+  const code = await runCli(["doctor", "--json"], { cwd: fixtureRoot, ...capture });
+
+  assert.equal(code, 1);
+  const payload = JSON.parse(capture.lines[0]);
+  assert.ok(
+    payload.data.runtimeContract.issues.some((issue) => issue.code === "runtime-sqlite-load-failed")
+  );
 });
 
 test("runCli init --dry-run previews plan without writing (minimal package.json)", async () => {
@@ -996,8 +1084,11 @@ test("runCli run dispatches document-project batch with dryRun", async () => {
 });
 
 test("runCli run dispatches agent-bootstrap", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-agent-bootstrap-"));
+  await createDoctorFixture(fixtureRoot);
+
   const capture = createCapture();
-  const code = await runCli(["run", "agent-bootstrap", "{}"], { cwd: process.cwd(), ...capture });
+  const code = await runCli(["run", "agent-bootstrap", "{}"], { cwd: fixtureRoot, ...capture });
   assert.equal(code, 0);
   const output = JSON.parse(capture.lines.join(""));
   assert.equal(output.ok, true);
@@ -1011,10 +1102,13 @@ test("runCli run dispatches agent-bootstrap", async () => {
 });
 
 test("runCli run agent-bootstrap projection lean includes instruction surface digest", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-agent-bootstrap-lean-"));
+  await createDoctorFixture(fixtureRoot);
+
   const capture = createCapture();
   const code = await runCli(
     ["run", "agent-bootstrap", JSON.stringify({ projection: "lean" })],
-    { cwd: process.cwd(), ...capture }
+    { cwd: fixtureRoot, ...capture }
   );
   assert.equal(code, 0);
   const output = JSON.parse(capture.lines.join(""));
