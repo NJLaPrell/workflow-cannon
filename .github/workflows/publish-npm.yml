@@ -1,4 +1,5 @@
 name: Publish NPM
+# Maintainer dispatch from clone: `pnpm run publish:npm` (runs `gh workflow run publish-npm.yml`).
 
 on:
   workflow_dispatch:

@@ -10,6 +10,7 @@ ref|id=security|target=docs/maintainers/SECURITY.md|type=file|status=active
 ref|id=gate_matrix|target=docs/maintainers/release-gate-matrix.md|type=file|status=active
 ref|id=parity_flow|target=docs/maintainers/runbooks/parity-validation-flow.md|type=file|status=active
 ref|id=parity_schema|target=schemas/parity-evidence.schema.json|type=file|status=active
+ref|id=npm_publish_dispatch|target=scripts/trigger-publish-npm-workflow.mjs|type=file|status=active
 truth|order=canonical_ai_docs>code_and_config_reality>generated_human_docs>narrative_docs
 
 intent|slot1=I001|slot2=ship_predictable_behavior_from_packaged_artifacts|status=active
