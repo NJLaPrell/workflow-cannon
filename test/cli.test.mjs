@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, readdir, unlink, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, mkdir, readFile, readdir, stat, unlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -876,6 +876,7 @@ test("runCli refresh-context updates generated project context after profile nam
 test("runCli upgrade overwrites kit-owned assets and preserves profile", async () => {
   const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-upgrade-"));
   await createDoctorFixture(fixtureRoot);
+  const runtimeStampBefore = await readFile(path.join(fixtureRoot, ".workspace-kit", "runtime.json"), "utf8");
 
   await writeFile(
     path.join(fixtureRoot, ".workspace-kit", "manifest.json"),
@@ -892,6 +893,8 @@ test("runCli upgrade overwrites kit-owned assets and preserves profile", async (
     )
   );
   await writeFile(path.join(fixtureRoot, "schemas", "workspace-kit-profile.schema.json"), "{}");
+  await writeFile(path.join(fixtureRoot, ".workspace-kit", "bin", "wk"), "#!/bin/sh\necho drifted\n", "utf8");
+  await chmod(path.join(fixtureRoot, ".workspace-kit", "bin", "wk"), 0o644);
 
   const capture = createCapture();
   const code = await runCliWithPolicyApproval(["upgrade"], { cwd: fixtureRoot, ...capture });
@@ -914,6 +917,12 @@ test("runCli upgrade overwrites kit-owned assets and preserves profile", async (
     await readFile(path.join(fixtureRoot, "schemas", "workspace-kit-profile.schema.json"), "utf8")
   );
   assert.equal(schema.title, "Workspace Kit Profile");
+  const runtimeStampAfter = await readFile(path.join(fixtureRoot, ".workspace-kit", "runtime.json"), "utf8");
+  assert.equal(runtimeStampAfter, runtimeStampBefore);
+  const runtimeLauncher = await readFile(path.join(fixtureRoot, ".workspace-kit", "bin", "wk"), "utf8");
+  assert.match(runtimeLauncher, /exec "\$node_executable" "\$cli_path" "\$@"/);
+  const runtimeLauncherMode = (await stat(path.join(fixtureRoot, ".workspace-kit", "bin", "wk"))).mode;
+  assert.notEqual(runtimeLauncherMode & 0o111, 0);
 
   const backupRoot = path.join(fixtureRoot, ".workspace-kit", "backups");
   const backupDirs = await readdir(backupRoot);
@@ -967,6 +976,47 @@ test("runCli drift-check fails when managed asset content drifts", async () => {
   const driftCode = await runCli(["drift-check"], { cwd: fixtureRoot, ...driftCapture });
   assert.equal(driftCode, 1);
   assert.match(driftCapture.errors[0], /detected drift/);
+});
+
+test("runCli drift-check detects missing and corrupt runtime launcher artifacts", async () => {
+  const missingRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-drift-runtime-launcher-missing-"));
+  await createDoctorFixture(missingRoot);
+  assert.equal(await runCliWithPolicyApproval(["upgrade"], { cwd: missingRoot, ...createCapture() }), 0);
+  await unlink(path.join(missingRoot, ".workspace-kit", "bin", "wk"));
+
+  const missingCapture = createCapture();
+  const missingCode = await runCli(["drift-check"], { cwd: missingRoot, ...missingCapture });
+  assert.equal(missingCode, 1);
+  assert.ok(missingCapture.errors.some((line) => line.includes(".workspace-kit/bin/wk: missing")));
+
+  const corruptRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-drift-runtime-launcher-corrupt-"));
+  await createDoctorFixture(corruptRoot);
+  assert.equal(await runCliWithPolicyApproval(["upgrade"], { cwd: corruptRoot, ...createCapture() }), 0);
+  await writeFile(path.join(corruptRoot, ".workspace-kit", "bin", "wk"), "#!/bin/sh\necho nope\n", "utf8");
+  await chmod(path.join(corruptRoot, ".workspace-kit", "bin", "wk"), 0o644);
+
+  const corruptCapture = createCapture();
+  const corruptCode = await runCli(["drift-check"], { cwd: corruptRoot, ...corruptCapture });
+  assert.equal(corruptCode, 1);
+  assert.ok(corruptCapture.errors.some((line) => line.includes(".workspace-kit/bin/wk: content drift detected")));
+  assert.ok(corruptCapture.errors.some((line) => line.includes(".workspace-kit/bin/wk: not executable")));
+});
+
+test("runCli drift-check validates runtime stamp without content-locking environment identity", async () => {
+  const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-drift-runtime-stamp-"));
+  await createDoctorFixture(fixtureRoot);
+  assert.equal(await runCliWithPolicyApproval(["upgrade"], { cwd: fixtureRoot, ...createCapture() }), 0);
+  writeRuntimeStamp(fixtureRoot, runtimeContractFixture({ arch: "arm64", abi: "999" }));
+
+  const safeCapture = createCapture();
+  const safeCode = await runCli(["drift-check"], { cwd: fixtureRoot, ...safeCapture });
+  assert.equal(safeCode, 0);
+
+  writeRuntimeStamp(fixtureRoot, runtimeContractFixture({ nodeVersion: "v20.19.0" }));
+  const driftCapture = createCapture();
+  const driftCode = await runCli(["drift-check"], { cwd: fixtureRoot, ...driftCapture });
+  assert.equal(driftCode, 1);
+  assert.ok(driftCapture.errors.some((line) => line.includes("runtime-node-wrong-major")));
 });
 
 test("runCli detach --dry-run lists owned paths without deleting files", async () => {
