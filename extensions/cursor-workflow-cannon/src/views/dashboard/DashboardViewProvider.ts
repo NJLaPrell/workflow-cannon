@@ -24,6 +24,14 @@ import {
   type PhaseJournalKitPayload,
   type PlanningInterviewWizardPanel
 } from "./render-dashboard.js";
+import {
+  buildDismissPhaseNoteDrawerSpec,
+  buildRegisterPhaseCatalogDrawerSpec,
+  normalizeDrawerValues,
+  renderDrawerFormHtml,
+  validateDismissPhaseNoteSubmit,
+  validateRegisterPhaseCatalogSubmit
+} from "./dashboard-input-drawer.js";
 
 let dashboardOutput: vscode.OutputChannel | undefined;
 
@@ -38,6 +46,10 @@ type DashboardPlanningWizardState =
     }
   | { kind: "done"; planningType: string; code: string; message: string }
   | { kind: "error"; message: string };
+
+type DashboardDrawerSession =
+  | { kind: "register-catalog" }
+  | { kind: "dismiss-note"; noteId: string; priority: string };
 
 function logDashboard(message: string): void {
   if (!dashboardOutput) {
@@ -160,6 +172,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private wishlistPage = 0;
 
   private planningWizard: DashboardPlanningWizardState = { kind: "idle" };
+
+  /** In-webview drawer session (register catalog, dismiss phase note, …). */
+  private dashboardDrawerSession: DashboardDrawerSession | null = null;
 
   /** Last successful `dashboard-summary` `data` — used for phase QuickPick targets. */
   private lastDashboardSummaryData: Record<string, unknown> | null = null;
@@ -322,7 +337,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         const pri = typeof msg.priority === "string" ? msg.priority.trim() : "";
         if (nid.length > 0) {
           await this.onDismissPhaseNote(nid, pri);
-          await this.pushUpdate();
+          if (!this.dashboardDrawerSession) {
+            await this.pushUpdate();
+          }
         }
       }
       if (msg?.type === "addPhaseNote") {
@@ -352,7 +369,20 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
       if (msg?.type === "registerPhaseCatalogEntry") {
         await this.onRegisterPhaseCatalogEntry();
-        await this.pushUpdate();
+        if (!this.dashboardDrawerSession) {
+          await this.pushUpdate();
+        }
+      }
+      if (msg?.type === "drawerSubmit") {
+        const rawVals = (msg as { values?: unknown }).values;
+        const values = normalizeDrawerValues(rawVals);
+        const refreshed = await this.handleDrawerSubmit(values);
+        if (refreshed) {
+          await this.pushUpdate();
+        }
+      }
+      if (msg?.type === "drawerCancel") {
+        this.closeDashboardDrawer();
       }
       if (msg?.type === "dashboardAcceptProposedPhase") {
         const rawIds = typeof msg.taskIds === "string" ? msg.taskIds : "";
@@ -714,45 +744,104 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
 
   /**
    * Register or update a future phase row in `kit_phase_catalog` (upsert-phase-catalog-entry).
+   * Uses the in-webview drawer (no `showInputBox`).
    */
   private async onRegisterPhaseCatalogEntry(): Promise<void> {
-    const phaseKeyRaw =
-      (await vscode.window.showInputBox({
-        title: "Register future phase (catalog)",
-        prompt: "Stable phaseKey (must not sort before current workspace phase)",
-        validateInput: (v) => (v.trim().length > 0 ? null : "Phase key required")
-      })) ?? "";
-    const phaseKey = phaseKeyRaw.trim();
-    if (!phaseKey) {
+    if (this.dashboardDrawerSession) {
       return;
     }
-    const descRaw =
-      (await vscode.window.showInputBox({
-        title: "Short description (optional)",
-        prompt: "Operator-facing label; leave empty for none"
-      })) ?? "";
-    const descTrim = descRaw.trim();
-    await this.client.recordActivity({
-      kind: "validating",
-      phaseKey,
-      command: "upsert-phase-catalog-entry",
-      details: { source: "dashboard-phase-catalog" }
-    });
-    const args: Record<string, unknown> = {
-      phaseKey,
-      ...expectedPlanningGenerationArgs()
-    };
-    args.shortDescription = descTrim.length > 0 ? descTrim : null;
-    const out = await this.client.run("upsert-phase-catalog-entry", args);
-    await this.client.clearActivity();
-    if (!out.ok) {
-      const detail = `${String(out.code ?? "")} ${String(out.message ?? "")}`.trim();
-      await vscode.window.showErrorMessage(`upsert-phase-catalog-entry failed: ${detail}`);
-      return;
+    const html = renderDrawerFormHtml(buildRegisterPhaseCatalogDrawerSpec());
+    this.dashboardDrawerSession = { kind: "register-catalog" };
+    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+  }
+
+  private closeDashboardDrawer(): void {
+    this.dashboardDrawerSession = null;
+    void this.view?.webview.postMessage({ type: "wcDrawerClose" });
+  }
+
+  private async postDrawerValidationToWebview(message: string): Promise<void> {
+    await this.view?.webview.postMessage({ type: "wcDrawerValidation", message });
+  }
+
+  /**
+   * @returns true when dashboard-summary should refresh (mutating kit command succeeded).
+   */
+  private async handleDrawerSubmit(values: Record<string, string>): Promise<boolean> {
+    const session = this.dashboardDrawerSession;
+    if (!session) {
+      return false;
     }
-    ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
-    this.notifyKitStateChanged();
-    await vscode.window.showInformationMessage(`Phase catalog updated for ${phaseKey}`);
+    if (session.kind === "register-catalog") {
+      const validated = validateRegisterPhaseCatalogSubmit(values);
+      if (!validated.ok) {
+        await this.postDrawerValidationToWebview(validated.error);
+        return false;
+      }
+      const { phaseKey, shortDescription } = validated.values;
+      await this.client.recordActivity({
+        kind: "validating",
+        phaseKey,
+        command: "upsert-phase-catalog-entry",
+        details: { source: "dashboard-phase-catalog" }
+      });
+      const args: Record<string, unknown> = {
+        phaseKey,
+        ...expectedPlanningGenerationArgs()
+      };
+      args.shortDescription = shortDescription.length > 0 ? shortDescription : null;
+      const out = await this.client.run("upsert-phase-catalog-entry", args);
+      await this.client.clearActivity();
+      if (!out.ok) {
+        const detail = `${String(out.code ?? "")} ${String(out.message ?? "")}`.trim();
+        await this.postDrawerValidationToWebview(`upsert-phase-catalog-entry failed: ${detail}`);
+        return false;
+      }
+      ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
+      this.closeDashboardDrawer();
+      this.notifyKitStateChanged();
+      await vscode.window.showInformationMessage(`Phase catalog updated for ${phaseKey}`);
+      return true;
+    }
+    if (session.kind === "dismiss-note") {
+      const validated = validateDismissPhaseNoteSubmit(session.priority, values);
+      if (!validated.ok) {
+        await this.postDrawerValidationToWebview(validated.error);
+        return false;
+      }
+      const { reason, policyRationale } = validated.values;
+      let policyApproval: { confirmed: boolean; rationale: string } | undefined;
+      if (session.priority === "critical") {
+        const gate = await vscode.window.showWarningMessage(
+          "Dismiss an active critical phase note — kit policy may require explicit approval.",
+          { modal: true },
+          "Continue"
+        );
+        if (gate !== "Continue") {
+          return false;
+        }
+        policyApproval = { confirmed: true, rationale: policyRationale };
+      }
+      const args: Record<string, unknown> = {
+        noteId: session.noteId,
+        reason,
+        ...expectedPlanningGenerationArgs()
+      };
+      if (policyApproval) {
+        args.policyApproval = policyApproval;
+      }
+      const r = await this.client.run("dismiss-phase-note", args);
+      if (!r.ok) {
+        await this.postDrawerValidationToWebview((r.message ?? JSON.stringify(r)).slice(0, 900));
+        return false;
+      }
+      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+      this.closeDashboardDrawer();
+      this.notifyKitStateChanged();
+      await vscode.window.showInformationMessage(r.message ?? "Phase note dismissed");
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -792,54 +881,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async onDismissPhaseNote(noteId: string, priority: string): Promise<void> {
-    const reasonRaw =
-      (await vscode.window.showInputBox({
-        prompt: "Reason for dismiss-phase-note (required; audited)",
-        placeHolder: "Short operator reason"
-      })) ?? "";
-    const reason = reasonRaw.trim();
-    if (!reason.length) {
-      await vscode.window.showErrorMessage("dismiss-phase-note requires a non-empty reason.");
+    if (this.dashboardDrawerSession) {
       return;
     }
-    let policyApproval: { confirmed: boolean; rationale: string } | undefined;
-    if (priority === "critical") {
-      const gate = await vscode.window.showWarningMessage(
-        "Dismiss an active critical phase note — kit policy may require explicit approval.",
-        { modal: true },
-        "Continue"
-      );
-      if (gate !== "Continue") {
-        return;
-      }
-      const rationaleRaw =
-        (await vscode.window.showInputBox({
-          prompt: "Policy rationale for critical phase note dismiss (policyApproval.rationale)",
-          placeHolder: "Shown in policy trace"
-        })) ?? "";
-      const rationale = rationaleRaw.trim();
-      if (!rationale.length) {
-        await vscode.window.showErrorMessage("Critical dismiss requires a non-empty policy rationale.");
-        return;
-      }
-      policyApproval = { confirmed: true, rationale };
-    }
-    const args: Record<string, unknown> = {
-      noteId,
-      reason,
-      ...expectedPlanningGenerationArgs()
-    };
-    if (policyApproval) {
-      args.policyApproval = policyApproval;
-    }
-    const r = await this.client.run("dismiss-phase-note", args);
-    if (!r.ok) {
-      await vscode.window.showErrorMessage((r.message ?? JSON.stringify(r)).slice(0, 900));
-      return;
-    }
-    ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
-    this.notifyKitStateChanged();
-    await vscode.window.showInformationMessage(r.message ?? "Phase note dismissed");
+    const html = renderDrawerFormHtml(buildDismissPhaseNoteDrawerSpec(noteId, priority));
+    this.dashboardDrawerSession = { kind: "dismiss-note", noteId, priority };
+    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
   }
 
   private async onAddPhaseNote(): Promise<void> {
@@ -1238,6 +1285,28 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
 
   window.addEventListener('message', function(ev) {
     var m = ev.data;
+    if (m && m.type === 'wcDrawerOpen' && typeof m.html === 'string') {
+      var dh = document.getElementById('wc-drawer-host');
+      if (!dh) return;
+      dh.innerHTML = m.html;
+      dh.classList.remove('wc-drawer-host--hidden');
+      dh.setAttribute('aria-hidden','false');
+      var ve = document.getElementById('wc-drawer-validation');
+      if (ve) { ve.textContent=''; ve.hidden=true; }
+      var prim = dh.querySelector('.wc-drawer-btn-primary');
+      if (prim && prim.focus) prim.focus();
+      return;
+    }
+    if (m && m.type === 'wcDrawerClose') {
+      var dh2 = document.getElementById('wc-drawer-host');
+      if (dh2) { dh2.innerHTML=''; dh2.classList.add('wc-drawer-host--hidden'); dh2.setAttribute('aria-hidden','true'); }
+      return;
+    }
+    if (m && m.type === 'wcDrawerValidation' && typeof m.message === 'string') {
+      var v = document.getElementById('wc-drawer-validation');
+      if (v) { v.textContent = m.message; v.hidden = false; }
+      return;
+    }
     if (!m || m.type !== 'wcReplaceRoot' || typeof m.html !== 'string') return;
     var root = document.getElementById('root');
     if (!root) return;
@@ -1263,6 +1332,31 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   });
 
   applyTab(activeTab);
+
+  document.addEventListener('click', function(ev) {
+    var dh = document.getElementById('wc-drawer-host');
+    if (!dh || dh.classList.contains('wc-drawer-host--hidden')) return;
+    var t = ev.target && ev.target.closest ? ev.target.closest('[data-wc-drawer-action]') : null;
+    if (!t || !dh.contains(t)) return;
+    var act = t.getAttribute('data-wc-drawer-action');
+    if (act === 'backdrop' || act === 'cancel') { vscode.postMessage({type:'drawerCancel'}); return; }
+    if (act === 'submit') {
+      var vals = {};
+      dh.querySelectorAll('[data-wc-drawer-field]').forEach(function(el) {
+        var id = el.getAttribute('data-wc-drawer-field');
+        if (!id) return;
+        vals[id] = ('value' in el && el.value != null) ? String(el.value) : '';
+      });
+      vscode.postMessage({type:'drawerSubmit', values: vals});
+    }
+  });
+  document.addEventListener('keydown', function(ev) {
+    if (ev.key !== 'Escape') return;
+    var dh = document.getElementById('wc-drawer-host');
+    if (!dh || dh.classList.contains('wc-drawer-host--hidden')) return;
+    ev.preventDefault();
+    vscode.postMessage({type:'drawerCancel'});
+  });
 
   var btn = document.getElementById('btn');
   var rootEl = document.getElementById('root');
@@ -1963,10 +2057,45 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       background: var(--vscode-editorWarning-foreground, #cca700);
       color: #000;
     }
+    .wc-drawer-host { position: fixed; inset: 0; z-index: 20000; pointer-events: none; }
+    .wc-drawer-host:not(.wc-drawer-host--hidden) { pointer-events: auto; }
+    .wc-drawer-host--hidden { display: none !important; }
+    .wc-drawer-scrim { position: absolute; inset: 0; background: rgba(0,0,0,0.5); }
+    .wc-drawer-panel {
+      position: absolute; left: 8px; right: 8px; bottom: 8px; max-height: 78vh; overflow: auto;
+      background: var(--vscode-editorWidget-background);
+      color: var(--vscode-editorWidget-foreground);
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.45));
+      border-radius: 8px; padding: 10px 12px 12px;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.35);
+    }
+    .wc-drawer-title { margin: 0 0 6px 0; font-size: 14px; font-weight: 600; }
+    .wc-drawer-desc { margin: 0 0 10px 0; opacity: 0.9; line-height: 1.35; }
+    .wc-drawer-validation { margin: 0 0 8px 0; padding: 6px 8px; border-radius: 4px; background: var(--vscode-inputValidation-errorBackground); color: var(--vscode-inputValidation-errorForeground); }
+    .wc-drawer-fields { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+    .wc-drawer-field-label { display: block; font-size: 11px; font-weight: 600; margin-bottom: 4px; }
+    .wc-drawer-input, .wc-drawer-textarea {
+      width: 100%; box-sizing: border-box; font-family: var(--vscode-font-family); font-size: 12px;
+      color: var(--vscode-input-foreground); background: var(--vscode-input-background);
+      border: 1px solid var(--vscode-input-border, rgba(127,127,127,.35)); border-radius: 4px; padding: 4px 6px;
+    }
+    .wc-drawer-textarea { resize: vertical; min-height: 48px; }
+    .wc-drawer-summary-body { font-size: 12px; line-height: 1.4; padding: 6px 8px; border-radius: 4px; background: var(--vscode-textCodeBlock-background); }
+    .wc-drawer-footer { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+    .wc-drawer-btn { padding: 4px 12px; font-size: 12px; border-radius: 4px; cursor: pointer; }
+    .wc-drawer-btn-secondary {
+      color: var(--vscode-foreground); background: transparent;
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.45));
+    }
+    .wc-drawer-btn-primary {
+      color: var(--vscode-button-foreground); background: var(--vscode-button-background);
+      border: 1px solid var(--vscode-button-border, var(--vscode-contrastBorder, transparent));
+    }
   </style>
 </head>
 <body>
   <div id="root">${rootInnerHtml}</div>
+  <div id="wc-drawer-host" class="wc-drawer-host wc-drawer-host--hidden" aria-hidden="true"></div>
   <footer class="dash-footer">
     <button type="button" id="btn" class="dash-refresh-btn" title="Refetch dashboard-summary now. The panel also reloads when you switch back to it, when kit-owned files change, and about every 45s while visible.">Refresh</button>
   </footer>
