@@ -21,6 +21,27 @@ function strArg(args: Record<string, unknown>, key: string): string | null {
   return typeof v === "string" && v.trim().length > 0 ? v.trim() : null;
 }
 
+function boolArg(args: Record<string, unknown>, key: string): boolean {
+  return args[key] === true;
+}
+
+function boundedNumberArg(args: Record<string, unknown>, key: string, fallback: number, min: number, max: number): number {
+  const raw = args[key];
+  const value = typeof raw === "number" && Number.isFinite(raw) ? raw : Number(raw);
+  if (!Number.isFinite(value)) {
+    return fallback;
+  }
+  return Math.min(Math.max(Math.floor(value), min), max);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function leaseWaitReady(state: string | undefined): boolean {
+  return state === "lease-free" || state === "lease-held-by-me" || state === "stale-invalid";
+}
+
 function leaseDenied(
   code: string,
   message: string,
@@ -120,6 +141,68 @@ export function runWorkspaceEditStatus(
       document: lease
     }
   };
+}
+
+export async function waitForWorkspaceEditLease(
+  ctx: ModuleLifecycleContext,
+  args: Record<string, unknown>
+): Promise<ModuleCommandResult | null> {
+  if (!boolArg(args, "waitForLease")) {
+    return null;
+  }
+  const agentSessionId = strArg(args, "agentSessionId");
+  if (!agentSessionId) {
+    return {
+      ok: false,
+      code: "invalid-run-args",
+      message: "waitForLease requires agentSessionId so holder comparisons are meaningful"
+    };
+  }
+  const timeoutMs = boundedNumberArg(args, "waitForLeaseTimeoutMs", 30_000, 0, 300_000);
+  const pollMs = boundedNumberArg(args, "waitForLeasePollMs", 1_000, 50, 60_000);
+  const startedAt = Date.now();
+  let attempts = 0;
+  let lastStatus = runWorkspaceEditStatus(ctx, { agentSessionId });
+  while (true) {
+    attempts += 1;
+    const status = lastStatus.data?.leaseStatus as { state?: string; holder?: unknown } | undefined;
+    if (lastStatus.ok && leaseWaitReady(status?.state)) {
+      return {
+        ok: true,
+        code: "workspace-edit-lease-wait-ready",
+        message: "Workspace edit lease is available for this session",
+        data: {
+          schemaVersion: 1,
+          waited: Date.now() > startedAt,
+          attempts,
+          elapsedMs: Date.now() - startedAt,
+          timeoutMs,
+          pollMs,
+          holder: status?.holder ?? null,
+          leaseStatus: lastStatus.data?.leaseStatus ?? null
+        }
+      };
+    }
+    const elapsedMs = Date.now() - startedAt;
+    if (elapsedMs >= timeoutMs) {
+      return {
+        ok: false,
+        code: "workspace-edit-lease-wait-timeout",
+        message: "Timed out waiting for workspace edit lease",
+        data: {
+          schemaVersion: 1,
+          attempts,
+          elapsedMs,
+          timeoutMs,
+          pollMs,
+          holder: status?.holder ?? null,
+          leaseStatus: lastStatus.data?.leaseStatus ?? null
+        }
+      };
+    }
+    await sleep(Math.min(pollMs, timeoutMs - elapsedMs));
+    lastStatus = runWorkspaceEditStatus(ctx, { agentSessionId });
+  }
 }
 
 export function runClaimWorkspaceEditLease(

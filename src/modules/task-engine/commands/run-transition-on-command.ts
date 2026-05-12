@@ -24,6 +24,7 @@ import { planningGenPolicyGate } from "../planning-generation-gate.js";
 import { TransitionService } from "../service.js";
 import { TaskEngineError } from "../transitions.js";
 import { recordTaskTransitionActivityBestEffort } from "../agent-activity-recorder.js";
+import { waitForWorkspaceEditLease } from "../workspace-edit-lease-commands-runtime.js";
 
 function readKitUserVersion(db: { pragma: (name: string, options?: { simple: boolean }) => unknown }): number {
   const raw = db.pragma("user_version", { simple: true });
@@ -52,6 +53,10 @@ export async function runTransitionOnCommand(
       message: "run-transition requires 'taskId' and 'action' arguments",
       remediation: { instructionPath: CLI_REMEDIATION_INSTRUCTIONS.runTransition }
     };
+  }
+  const leaseWait = await waitForWorkspaceEditLease(ctx, args as Record<string, unknown>);
+  if (leaseWait && !leaseWait.ok) {
+    return leaseWait;
   }
   const clientMutationId = readIdempotencyValue(args);
   const hasPriorTransition =
@@ -143,7 +148,8 @@ export async function runTransitionOnCommand(
     const data: Record<string, unknown> = {
       evidence: result.evidence,
       autoUnblocked: result.autoUnblocked,
-      replayed: result.replayed === true
+      replayed: result.replayed === true,
+      ...(leaseWait ? { leaseWait: leaseWait.data } : {})
     };
     if (!result.replayed) {
       recordTaskTransitionActivityBestEffort(ctx, planning, {
