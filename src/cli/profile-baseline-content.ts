@@ -68,6 +68,8 @@ export const currentOwnedPaths: string[] = [
   "schemas/workspace-kit-profile.schema.json",
   ".workspace-kit/manifest.json",
   ".workspace-kit/owned-paths.json",
+  ".workspace-kit/runtime.json",
+  ".workspace-kit/bin/wk",
   ".cursor/rules/workspace-kit-profile-pointer.mdc",
   ".workspace-kit/generated/project-context.json",
   ".cursor/rules/workspace-kit-project-context.mdc"
