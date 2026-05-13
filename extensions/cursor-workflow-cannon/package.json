@@ -91,6 +91,26 @@
         "title": "Workflow Cannon: Open Status Dashboard"
       },
       {
+        "command": "workflowCannon.lease.pickAction",
+        "title": "Workflow Cannon: Lease Actions"
+      },
+      {
+        "command": "workflowCannon.lease.inspect",
+        "title": "Workflow Cannon: Inspect Workspace Edit Lease"
+      },
+      {
+        "command": "workflowCannon.lease.claim",
+        "title": "Workflow Cannon: Claim Workspace Edit Lease"
+      },
+      {
+        "command": "workflowCannon.lease.release",
+        "title": "Workflow Cannon: Release Workspace Edit Lease"
+      },
+      {
+        "command": "workflowCannon.lease.recover",
+        "title": "Workflow Cannon: Recover Stale Workspace Edit Lease"
+      },
+      {
         "command": "workflowCannon.openGuidancePanel",
         "title": "Workflow Cannon: Open Guidance Authoring"
       }
