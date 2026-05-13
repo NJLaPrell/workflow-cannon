@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { randomUUID } from "node:crypto";
 import { findWorkflowCannonRoot } from "./workspace-detect.js";
 import { CommandClient } from "./runtime/command-client.js";
 import { StateWatcher } from "./runtime/state-watcher.js";
@@ -17,8 +18,56 @@ import {
   buildTranscriptChurnResearchPrompt
 } from "./playbook-chat-prompts.js";
 import { confirmAndRunTransition } from "./run-transition-with-approval.js";
+import { buildLeaseUiState, leaseActionLabel, type LeaseActionKind } from "./lease-status-ui.js";
 function readWorkflowCannonNodeSetting(): string | undefined {
   return vscode.workspace.getConfiguration("workflowCannon").get<string>("nodeExecutable")?.trim() || undefined;
+}
+
+async function runLeaseAction(
+  runtime: CommandClient,
+  action: LeaseActionKind,
+  agentSessionId: string,
+  notifyChanged: () => void
+): Promise<void> {
+  if (action === "inspect") {
+    const status = await runtime.run("workspace-edit-status", { agentSessionId });
+    if (!status.ok) {
+      await vscode.window.showErrorMessage(String(status.message ?? status.code ?? "workspace-edit-status failed"));
+      return;
+    }
+    const doc = await vscode.workspace.openTextDocument({
+      language: "json",
+      content: JSON.stringify(status.data ?? status, null, 2)
+    });
+    await vscode.window.showTextDocument(doc, { preview: true });
+    return;
+  }
+
+  const policyApproval = {
+    confirmed: true,
+    rationale: `VS Code lease action: ${action}`
+  };
+  let result;
+  if (action === "claim") {
+    const taskId = (await vscode.window.showInputBox({ prompt: "Optional task id for this lease" }))?.trim();
+    result = await runtime.run("claim-workspace-edit-lease", {
+      agentSessionId,
+      taskId: taskId && taskId.length > 0 ? taskId : undefined,
+      leaseTtlSeconds: 1800,
+      policyApproval
+    });
+  } else if (action === "release") {
+    result = await runtime.run("release-workspace-edit-lease", { agentSessionId, policyApproval });
+  } else {
+    result = await runtime.run("release-workspace-edit-lease", { recoverStaleLease: true, policyApproval });
+  }
+
+  if (!result.ok) {
+    await vscode.window.showErrorMessage(String(result.message ?? result.code ?? "Lease action failed"));
+    return;
+  }
+  notifyChanged();
+  await vscode.window.showInformationMessage(String(result.message ?? result.code ?? "Lease action completed"));
 }
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -32,6 +81,14 @@ export function activate(context: vscode.ExtensionContext): void {
     : undefined;
   const kitStateEmitter = new vscode.EventEmitter<void>();
   const onKitStateChanged = kitStateEmitter.event;
+  const leaseSessionKey = "workflowCannon.workspaceEditLease.agentSessionId";
+  const existingLeaseSessionId = context.globalState.get<string>(leaseSessionKey);
+  const leaseAgentSessionId = existingLeaseSessionId && existingLeaseSessionId.trim().length > 0
+    ? existingLeaseSessionId
+    : `vscode:${randomUUID()}`;
+  if (!existingLeaseSessionId) {
+    void context.globalState.update(leaseSessionKey, leaseAgentSessionId);
+  }
 
   let dashboard: DashboardViewProvider | undefined;
   let guidanceView: GuidanceViewProvider | undefined;
@@ -140,7 +197,7 @@ export function activate(context: vscode.ExtensionContext): void {
   if (client) {
     const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 10);
     statusBar.name = "Workflow Cannon";
-    statusBar.command = "workflowCannon.openDashboard";
+    statusBar.command = "workflowCannon.lease.pickAction";
     const updateStatusBar = async () => {
       const r = await client.run("dashboard-summary", {});
       if (!r.ok) {
@@ -153,8 +210,10 @@ export function activate(context: vscode.ExtensionContext): void {
       const sys = (r.data as Record<string, unknown>)?.systemStatus as Record<string, unknown> | undefined;
       const coord = sys?.coordination as Record<string, unknown> | undefined;
       const posture = typeof coord?.posture === "string" ? coord.posture : "—";
-      statusBar.text = `$(checklist) WC ${posture} · rdy ${ready}`;
-      statusBar.tooltip = `Workflow Cannon — coordination ${posture}; ready queue ${ready}. Open dashboard for details.`;
+      const lease = coord?.lease && typeof coord.lease === "object" ? (coord.lease as Record<string, unknown>) : null;
+      const leaseUi = buildLeaseUiState({ leaseStatus: lease, suspectFlags: coord?.suspectFlags });
+      statusBar.text = `${leaseUi.statusBarText} · ${posture} · rdy ${ready}`;
+      statusBar.tooltip = `${leaseUi.tooltip}\nWorkflow Cannon coordination ${posture}; ready queue ${ready}.`;
       statusBar.show();
     };
     let behaviorRuleSyncTimer: ReturnType<typeof setTimeout> | undefined;
@@ -235,6 +294,55 @@ export function activate(context: vscode.ExtensionContext): void {
       }
       const pick = list.map((t) => `${t.id} — ${t.title}`);
       await vscode.window.showQuickPick(pick, { title });
+    }),
+    vscode.commands.registerCommand("workflowCannon.lease.pickAction", async () => {
+      const runtime = requireClient();
+      if (!runtime) {
+        return;
+      }
+      const status = await runtime.run("workspace-edit-status", { agentSessionId: leaseAgentSessionId });
+      if (!status.ok) {
+        await vscode.window.showErrorMessage(String(status.message ?? status.code ?? "workspace-edit-status failed"));
+        return;
+      }
+      const leaseStatus = (status.data?.leaseStatus as Record<string, unknown> | undefined) ?? null;
+      const ui = buildLeaseUiState({ leaseStatus });
+      const pick = await vscode.window.showQuickPick(
+        ui.actions.map((action) => ({ label: leaseActionLabel(action), action })),
+        { title: `Workspace edit lease: ${ui.kind}` }
+      );
+      if (!pick) {
+        return;
+      }
+      await runLeaseAction(runtime, pick.action, leaseAgentSessionId, () => kitStateEmitter.fire());
+    }),
+    vscode.commands.registerCommand("workflowCannon.lease.inspect", async () => {
+      const runtime = requireClient();
+      if (!runtime) {
+        return;
+      }
+      const status = await runtime.run("workspace-edit-status", { agentSessionId: leaseAgentSessionId });
+      if (!status.ok) {
+        await vscode.window.showErrorMessage(String(status.message ?? status.code ?? "workspace-edit-status failed"));
+        return;
+      }
+      const doc = await vscode.workspace.openTextDocument({
+        language: "json",
+        content: JSON.stringify(status.data ?? status, null, 2)
+      });
+      await vscode.window.showTextDocument(doc, { preview: true });
+    }),
+    vscode.commands.registerCommand("workflowCannon.lease.claim", async () => {
+      const runtime = requireClient();
+      if (runtime) await runLeaseAction(runtime, "claim", leaseAgentSessionId, () => kitStateEmitter.fire());
+    }),
+    vscode.commands.registerCommand("workflowCannon.lease.release", async () => {
+      const runtime = requireClient();
+      if (runtime) await runLeaseAction(runtime, "release", leaseAgentSessionId, () => kitStateEmitter.fire());
+    }),
+    vscode.commands.registerCommand("workflowCannon.lease.recover", async () => {
+      const runtime = requireClient();
+      if (runtime) await runLeaseAction(runtime, "recover", leaseAgentSessionId, () => kitStateEmitter.fire());
     }),
     vscode.commands.registerCommand("workflowCannon.validateConfig", async () => {
       const runtime = requireClient();
