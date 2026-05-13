@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "nodeExecutable": "/Users/nlaprell/.nvm/versions/node/v22.22.2/bin/node",
+  "nodeVersion": "v22.22.2",
+  "arch": "arm64",
+  "platform": "darwin",
+  "abi": "127",
+  "packageRoot": "/Users/nlaprell/Workspace/workflow-cannon",
+  "checkedAt": "2026-05-13T15:10:27.985Z"
+}

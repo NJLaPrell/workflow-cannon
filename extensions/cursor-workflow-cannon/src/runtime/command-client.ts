@@ -316,11 +316,18 @@ function inspectNodeIdentity(nodeBin: string): Omit<NodeExecutableDiagnostic, "p
 
 function probeBetterSqliteWithNode(nodeBin: string, workspaceRoot: string): NativeSqliteProbeDiagnostic {
   try {
-    execFileSync(nodeBin, ["-e", "require('better-sqlite3')"], {
-      cwd: workspaceRoot,
-      stdio: ["ignore", "pipe", "pipe"],
-      timeout: 5_000
-    });
+    // `require('better-sqlite3')` only loads the JS wrapper; the native `.node` binding is
+    // dlopen'd lazily inside the Database constructor. Instantiate an in-memory database so
+    // architecture/ABI mismatches actually surface during the probe.
+    execFileSync(
+      nodeBin,
+      ["-e", "const D=require('better-sqlite3'); const d=new D(':memory:'); d.close();"],
+      {
+        cwd: workspaceRoot,
+        stdio: ["ignore", "pipe", "pipe"],
+        timeout: 5_000
+      }
+    );
     return { ok: true };
   } catch (err) {
     const message = errorText(err);

@@ -1,6 +1,7 @@
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import * as fs from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
 
 export const WORKSPACE_KIT_RUNTIME_STAMP_RELATIVE_PATH = ".workspace-kit/runtime.json";
@@ -31,6 +32,7 @@ export type RuntimeContractIssueCode =
   | "runtime-abi-mismatch"
   | "runtime-platform-mismatch"
   | "runtime-package-root-missing"
+  | "runtime-host-arch-mismatch"
   | "runtime-sqlite-load-failed";
 
 export type RuntimeContractIssue = {
@@ -260,6 +262,16 @@ export function verifyRuntimeStamp(
   }
   if (!fs.existsSync(stamp.packageRoot)) {
     issues.push({ code: "runtime-package-root-missing", message: "Runtime stamp packageRoot does not exist", actual: stamp.packageRoot });
+  }
+  const hostArch = os.arch();
+  if (stamp.arch !== hostArch) {
+    issues.push({
+      code: "runtime-host-arch-mismatch",
+      message:
+        "Runtime stamp architecture does not match host architecture; Node may be running under emulation (e.g. Rosetta). Install/run under a Node built for the host architecture.",
+      expected: hostArch,
+      actual: stamp.arch
+    });
   }
   if (options.checkNativeSqlite === true && fs.existsSync(stamp.packageRoot)) {
     const smoke = smokeTestNativeSqlite(stamp.packageRoot);

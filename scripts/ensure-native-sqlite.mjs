@@ -5,6 +5,7 @@
  */
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import os from "node:os";
 import path from "node:path";
 import {
   classifyNativeSqliteErrorMessage,
@@ -17,7 +18,29 @@ const pkgRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 /** Directory where the user ran install (npm/pnpm set this for lifecycle scripts). */
 const installRoot = process.env.INIT_CWD?.trim() || pkgRoot;
 
+/**
+ * Detect Node running under emulation (e.g. x64 Node on arm64 macOS via Rosetta). In that case
+ * any native binding installed/built now is pinned to the wrong architecture for the host, which
+ * silently produces a runtime stamp that no other shell on this machine can use.
+ */
+function assertHostArchMatchesProcessArch() {
+  const hostArch = os.arch();
+  if (hostArch === process.arch) return;
+  console.error(
+    `[workspace-kit] Refusing to install native bindings: Node is ${process.arch} but host is ${hostArch}.`
+  );
+  console.error(
+    `[workspace-kit] This usually means you are running an x64 Node under Rosetta on an ${hostArch} machine.`
+  );
+  console.error(
+    `[workspace-kit] Switch to a Node built for ${hostArch} (e.g. \`nvm use\` an ${hostArch} install) and re-run \`pnpm install\`.`
+  );
+  console.error(`[workspace-kit] Active runtime: ${formatNodeRuntimeIdentity()}`);
+  process.exit(1);
+}
+
 async function main() {
+  assertHostArchMatchesProcessArch();
   let classification;
   try {
     const { default: Database } = await import("better-sqlite3");
