@@ -1006,7 +1006,7 @@ test("runCli drift-check validates runtime stamp without content-locking environ
   const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "wk-cli-test-drift-runtime-stamp-"));
   await createDoctorFixture(fixtureRoot);
   assert.equal(await runCliWithPolicyApproval(["upgrade"], { cwd: fixtureRoot, ...createCapture() }), 0);
-  writeRuntimeStamp(fixtureRoot, runtimeContractFixture({ arch: "arm64", abi: "999" }));
+  writeRuntimeStamp(fixtureRoot, runtimeContractFixture({ arch: process.arch, abi: "999" }));
 
   const safeCapture = createCapture();
   const safeCode = await runCli(["drift-check"], { cwd: fixtureRoot, ...safeCapture });

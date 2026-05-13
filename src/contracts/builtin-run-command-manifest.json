@@ -133,6 +133,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "phase-closeout-readiness",
+    "file": "phase-closeout-readiness.md",
+    "description": "Read-only audit for unfinished phase-scoped tasks before closeout.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "phase-delivery-preflight",
     "file": "phase-delivery-preflight.md",
     "description": "Read-only audit for phase task PR/merge/check evidence or explicit delivery waivers.",

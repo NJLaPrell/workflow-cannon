@@ -50,6 +50,10 @@ export type DeliveryEvidenceEvaluation = {
   evidenceMode?: DeliveryEvidenceModeV2 | "v1-github-pr";
 };
 
+export type DeliveryEvidenceValidationResult =
+  | { ok: true; schemaVersion: 1 | 2; evidenceMode?: DeliveryEvidenceModeV2 | "v1-github-pr" }
+  | { ok: false; code: string; message: string; missingFields: string[] };
+
 export type EvaluateDeliveryEvidenceOptions = {
   /**
    * When set (e.g. from resolved maintainer delivery policy), v2 evidence with a mode
@@ -329,6 +333,23 @@ function evaluateEvidenceBlob(
   };
 }
 
+export function validateDeliveryEvidenceMetadata(
+  raw: unknown,
+  options?: EvaluateDeliveryEvidenceOptions
+): DeliveryEvidenceValidationResult {
+  const result = evaluateEvidenceBlob(raw, options);
+  if ("ok" in result && result.ok === true) {
+    return result;
+  }
+  const bad = result as EvidenceValidateFailure;
+  return {
+    ok: false,
+    code: bad.code,
+    message: violationMessageForCode(bad.code),
+    missingFields: bad.missingFields
+  };
+}
+
 function actualEvidenceMode(raw: unknown): string | null {
   if (!isRecord(raw)) {
     return null;
@@ -476,6 +497,49 @@ export function buildPhaseDeliveryPreflight(args: {
   };
 }
 
+export function buildPhaseCloseoutReadiness(args: {
+  tasks: TaskEntity[];
+  phaseKey?: string | null;
+}): {
+  schemaVersion: 1;
+  phaseKey: string | null;
+  passed: boolean;
+  remainingCount: number;
+  remainingByStatus: Partial<Record<TaskStatus, Array<{ id: string; title: string }>>>;
+  terminalCount: number;
+  checkedTaskCount: number;
+} {
+  const targetPhase = args.phaseKey?.trim() || null;
+  const phaseTasks = args.tasks.filter((task) => {
+    if (!isPhaseDeliveryTask(task)) return false;
+    if (targetPhase === null) return true;
+    return inferTaskPhaseKey(task) === targetPhase;
+  });
+  const remainingByStatus: Partial<Record<TaskStatus, Array<{ id: string; title: string }>>> = {};
+  let terminalCount = 0;
+
+  for (const task of phaseTasks) {
+    if (task.status === "completed" || task.status === "cancelled") {
+      terminalCount += 1;
+      continue;
+    }
+    const rows = remainingByStatus[task.status] ?? [];
+    rows.push({ id: task.id, title: task.title });
+    remainingByStatus[task.status] = rows;
+  }
+
+  const remainingCount = Object.values(remainingByStatus).reduce((sum, rows) => sum + (rows?.length ?? 0), 0);
+  return {
+    schemaVersion: 1,
+    phaseKey: targetPhase,
+    passed: remainingCount === 0,
+    remainingCount,
+    remainingByStatus,
+    terminalCount,
+    checkedTaskCount: phaseTasks.length
+  };
+}
+
 export function readDeliveryEvidenceEnforcementMode(
   effectiveConfig: Record<string, unknown> | undefined
 ): DeliveryEvidenceEnforcementMode {
@@ -487,13 +551,13 @@ export function readDeliveryEvidenceEnforcementMode(
   if (raw === "off" || raw === "advisory" || raw === "enforce") {
     return raw;
   }
-  return "advisory";
+  return "enforce";
 }
 
 export function createDeliveryEvidenceGuard(
   options: DeliveryEvidenceGuardOptions & EvaluateDeliveryEvidenceOptions = {}
 ): TransitionGuard {
-  const enforcementMode = options.enforcementMode ?? "advisory";
+  const enforcementMode = options.enforcementMode ?? "enforce";
   return {
     name: "delivery-evidence",
     canTransition(

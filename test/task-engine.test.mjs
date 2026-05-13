@@ -705,6 +705,44 @@ test("buildPhaseDeliveryPreflight reports completed and in-progress evidence gap
   assert.equal(result.violations[0].taskId, "T001");
 });
 
+test("taskEngineModule phase-closeout-readiness reports unfinished phase tasks", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T9801", status: "ready", phaseKey: "74" }));
+    store.addTask(makeTask({ id: "T9802", status: "completed", phaseKey: "74", metadata: { deliveryEvidenceRequired: false } }));
+  });
+  const ctx = sqliteTaskEngineCtx(workspace);
+
+  const result = await taskEngineModule.onCommand(
+    { name: "phase-closeout-readiness", args: { phaseKey: "74" } },
+    ctx
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "phase-closeout-readiness");
+  assert.equal(result.data.passed, false);
+  assert.equal(result.data.remainingCount, 1);
+  assert.deepEqual(result.data.remainingByStatus.ready.map((task) => task.id), ["T9801"]);
+});
+
+test("taskEngineModule phase-delivery-preflight includes readiness and stranded-work findings", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T9811", status: "ready", phaseKey: "74" }));
+  });
+  const ctx = sqliteTaskEngineCtx(workspace);
+
+  const result = await taskEngineModule.onCommand(
+    { name: "phase-delivery-preflight", args: { phaseKey: "74", includeInProgress: false } },
+    ctx
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.readiness.remainingCount, 1);
+  assert.equal(result.data.strandedWork.findings[0].code, "stranded-work-git-unavailable");
+  assert.equal(result.data.blockingFindingCount, 2);
+});
+
 function releaseEvidenceArgs(overrides = {}) {
   return {
     phaseKey: "74",
@@ -2089,7 +2127,15 @@ test("taskEngineModule dashboard-summary ignores expired live activity leases", 
 test("run-transition start records working live activity and complete clears it", async () => {
   const workspace = await tmpDir();
   await seedSqliteStore(workspace, (store) => {
-    store.addTask(makeTask({ id: "T071", status: "ready", priority: "P1", phaseKey: "81" }));
+    store.addTask(
+      makeTask({
+        id: "T071",
+        status: "ready",
+        priority: "P1",
+        phaseKey: "81",
+        metadata: { deliveryEvidenceRequired: false }
+      })
+    );
   });
 
   const ctx = sqliteTaskEngineCtx(workspace);
@@ -4031,6 +4077,44 @@ test("taskEngineModule update-task supports idempotent replay with clientMutatio
   assert.equal(second.ok, true);
   assert.equal(second.code, "task-update-idempotent-replay");
   assert.equal(second.data.replayed, true);
+});
+
+test("taskEngineModule update-task rejects malformed deliveryEvidence metadata", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+
+  const created = await taskEngineModule.onCommand(
+    { name: "create-task", args: { id: "T408", title: "Evidence update", status: "ready", phaseKey: "74" } },
+    ctx
+  );
+  assert.equal(created.ok, true);
+
+  const result = await taskEngineModule.onCommand(
+    {
+      name: "update-task",
+      args: {
+        taskId: "T408",
+        updates: {
+          metadata: {
+            deliveryEvidence: {
+              schemaVersion: 1,
+              branchName: "feature/T408",
+              prNumber: 1,
+              baseBranch: "release/phase-74",
+              mergeSha: "abc123",
+              checks: [{ name: "test", conclusion: "success" }],
+              validationCommands: [{ command: "pnpm run test", exitCode: 0 }]
+            }
+          }
+        }
+      }
+    },
+    ctx
+  );
+
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "invalid-evidence");
+  assert.ok(result.data.missingFields.includes("deliveryEvidence.prUrl"));
 });
 
 test("taskEngineModule update-task rejects idempotency key payload conflicts", async () => {

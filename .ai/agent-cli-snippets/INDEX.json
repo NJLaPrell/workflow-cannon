@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-12T07:42:11.646Z",
+  "generatedAt": "2026-05-13T19:33:29.799Z",
   "commands": [
     {
       "name": "add-dependency",
@@ -680,6 +680,11 @@
     {
       "name": "persist-planning-execution-drafts",
       "path": ".ai/agent-cli-snippets/by-command/persist-planning-execution-drafts.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "phase-closeout-readiness",
+      "path": ".ai/agent-cli-snippets/by-command/phase-closeout-readiness.json",
       "moduleId": "task-engine"
     },
     {
