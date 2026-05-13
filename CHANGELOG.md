@@ -8,4 +8,4 @@ This root file is intentionally pointer-only to avoid split release history.
 
 - See `docs/maintainers/CHANGELOG.md` for all release notes, migration notes, and historical entries.
 
-Latest release: **v0.88.0** (Phase 93: runtime contract hardening and lease coordination UX; see canonical changelog).
+Latest release: **v0.89.0** (Phase 94: phase closeout readiness, delivery evidence enforcement, and stranded-work preflight; see canonical changelog).

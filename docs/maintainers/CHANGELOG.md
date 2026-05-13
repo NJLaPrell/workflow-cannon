@@ -8,6 +8,26 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.89.0] - 2026-05-13
+
+Phase 94 — **Phase closeout readiness and delivery evidence enforcement**. Ships stricter task completion evidence defaults, a phase closeout readiness command, preflight integration for unfinished and stranded work findings, and docs/tests/contracts for release closeout guardrails.
+
+### Added
+
+- Task engine: `phase-closeout-readiness` reports unfinished phase-scoped tasks before release closeout.
+- Task engine: stranded-work detection in `phase-delivery-preflight` compares completed task evidence/touched files against the phase integration branch and blocks local-only implementation drift.
+- CLI/contracts: run-contract schema, pilot snapshot, command snippets, instruction docs, and router coverage for the new readiness command.
+
+### Changed
+
+- Delivery evidence completion enforcement now defaults to `enforce`, while explicit `advisory` and `off` configuration modes remain available.
+- `phase-delivery-preflight` now embeds closeout readiness and stranded-work findings, so delivery evidence alone is not treated as sufficient phase closeout proof.
+- `update-task` validates `metadata.deliveryEvidence` at write time and returns structured `invalid-evidence` remediation for malformed payloads.
+
+### Notes
+
+- Migration impact: phased execution tasks now need valid `metadata.deliveryEvidence`, `metadata.deliveryWaiver`, or an explicit local/non-shipping exemption before completion under the default configuration.
+
 ## [0.88.0] - 2026-05-12
 
 Phase 93 — **Runtime contract hardening and lease coordination UX**. Ships stamped runtime launcher validation across doctor, upgrade, and drift-check flows; end-to-end runtime contract regression coverage for Node 22/native SQLite behavior; extension lease status/actions; bounded lease wait support; and suspect lease checkout drift detection for branch, HEAD, worktree path, and dirty manifest changes.
