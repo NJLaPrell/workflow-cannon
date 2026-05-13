@@ -1,0 +1,837 @@
+{
+  "ok": true,
+  "code": "release-evidence-manifest",
+  "message": "Built release evidence manifest",
+  "data": {
+    "manifest": {
+      "schemaVersion": 1,
+      "createdAt": "2026-05-13T22:47:26.045Z",
+      "releaseVersion": "0.89.0",
+      "packageName": "@workflow-cannon/workspace-kit",
+      "phaseKey": "94",
+      "git": {
+        "mainSha": "65e1f96",
+        "releasePrepSha": "51efe97eb8b85d3a6861845d95c7ebc63ecd8f59",
+        "phaseMergeSha": "5b694cc0ff921dee7df81ed2da555b9ddf5d415f",
+        "tag": "v0.89.0",
+        "phaseBranch": "release/phase-94",
+        "mainBranch": "main"
+      },
+      "approval": {
+        "actor": "NJLaPrell",
+        "timestamp": "2026-05-13T22:47:25.045Z",
+        "rationale": "Approved in chat to finish the release, including tag, GitHub release, npm publish, phase closeout, and main integration.",
+        "scope": "v0.89.0 Phase 94 release publish"
+      },
+      "releaseNotes": {
+        "source": "docs/maintainers/CHANGELOG.md#0.89.0",
+        "entries": [
+          "Phase 94 closeout readiness command for unfinished phase-scoped tasks.",
+          "Delivery evidence enforcement defaults to enforce, with update-time evidence validation.",
+          "Phase delivery preflight now includes readiness and stranded-work findings."
+        ]
+      },
+      "validations": [
+        {
+          "command": "pnpm run build",
+          "exitCode": 0,
+          "evidence": "local validation before PR #336 merge"
+        },
+        {
+          "command": "pnpm run check",
+          "exitCode": 0,
+          "evidence": "local validation before PR #336 merge and post-version contract fix"
+        },
+        {
+          "command": "pnpm run test",
+          "exitCode": 0,
+          "evidence": "local rerun: 948/948 passing"
+        },
+        {
+          "command": "pnpm run parity",
+          "exitCode": 0,
+          "evidence": "local parity evidence plus publish workflow parity"
+        },
+        {
+          "command": "pnpm run check-release-metadata",
+          "exitCode": 0,
+          "evidence": "release metadata check after v0.89.0 version bump"
+        },
+        {
+          "command": "workspace-kit doctor",
+          "exitCode": 0,
+          "evidence": "doctor-contract-ok after runtime stamp repair"
+        },
+        {
+          "command": "phase-closeout-readiness phaseKey=94",
+          "exitCode": 0,
+          "evidence": "passed=true remainingCount=0 terminalCount=9"
+        },
+        {
+          "command": "phase-delivery-preflight phaseKey=94",
+          "exitCode": 0,
+          "evidence": "violationCount=0 blockingFindingCount=0 strandedWork.passed=true"
+        }
+      ],
+      "risks": [
+        {
+          "label": "Delivery evidence enforcement default",
+          "status": "documented",
+          "notes": "Phased execution tasks now require valid deliveryEvidence, deliveryWaiver, or explicit local/non-shipping exemption before completion under default config."
+        },
+        {
+          "label": "Heavy pre-merge gate repetition",
+          "status": "accepted",
+          "notes": "Operator approved bypassing repeated heavyweight local pre-merge-gates after build/check/test/parity and closeout gates were already clean."
+        }
+      ],
+      "publishArtifacts": [
+        {
+          "kind": "git-tag",
+          "name": "v0.89.0",
+          "url": "https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.89.0"
+        },
+        {
+          "kind": "github-release",
+          "name": "v0.89.0",
+          "url": "https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.89.0"
+        },
+        {
+          "kind": "npm-package",
+          "name": "@workflow-cannon/workspace-kit@0.89.0",
+          "url": "https://www.npmjs.com/package/@workflow-cannon/workspace-kit/v/0.89.0"
+        },
+        {
+          "kind": "ci-publish-run",
+          "name": "Publish NPM #25830665309",
+          "url": "https://github.com/NJLaPrell/workflow-cannon/actions/runs/25830665309"
+        }
+      ],
+      "taskDeliveryEvidence": [
+        {
+          "taskId": "T100257",
+          "title": "Validate deliveryEvidence on update-task writes",
+          "phaseKey": "94",
+          "deliveryEvidence": {
+            "schemaVersion": 1,
+            "branchName": "feature/T100257-phase-94-closeout-readiness",
+            "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/335",
+            "prNumber": 335,
+            "baseBranch": "release/phase-94",
+            "mergeSha": "5b357edd1ae980b1580e506958377e405eec5a70",
+            "checks": [
+              {
+                "name": "test",
+                "conclusion": "success"
+              },
+              {
+                "name": "parity",
+                "conclusion": "success"
+              }
+            ],
+            "validationCommands": [
+              {
+                "command": "pnpm run build",
+                "exitCode": 0
+              },
+              {
+                "command": "pnpm run check",
+                "exitCode": 0
+              },
+              {
+                "command": "pnpm run test",
+                "exitCode": 0
+              },
+              {
+                "command": "pnpm run parity",
+                "exitCode": 0
+              }
+            ],
+            "touchedFiles": [
+              ".ai/agent-cli-snippets/INDEX.json",
+              ".ai/agent-cli-snippets/by-command/complete-task.json",
+              ".ai/agent-cli-snippets/by-command/phase-closeout-readiness.json",
+              ".ai/agent-cli-snippets/by-command/run-transition.json",
+              ".ai/agent-cli-snippets/by-command/start-task.json",
+              ".ai/playbooks/phase-closeout-and-release.md",
+              ".workspace-kit/tasks/workspace-kit.db",
+              "docs/maintainers/playbooks/phase-closeout-and-release.md",
+              "schemas/pilot-run-args.snapshot.json",
+              "schemas/task-engine-run-contracts.schema.json",
+              "src/contracts/builtin-run-command-manifest.json",
+              "src/core/config-registry.json",
+              "src/core/workspace-kit-config.ts",
+              "src/modules/index.ts",
+              "src/modules/task-engine/commands/phase-delivery-readout-commands.ts",
+              "src/modules/task-engine/commands/task-row-mutation-commands.ts",
+              "src/modules/task-engine/delivery-evidence.ts",
+              "src/modules/task-engine/index.ts",
+              "src/modules/task-engine/instructions/phase-closeout-readiness.md",
+              "src/modules/task-engine/instructions/phase-delivery-preflight.md",
+              "src/modules/task-engine/instructions/run-transition.md",
+              "src/modules/task-engine/instructions/update-task.md",
+              "src/modules/task-engine/stranded-work.ts",
+              "test/cli.test.mjs",
+              "test/delivery-evidence-v2.test.mjs",
+              "test/module-command-router.test.mjs",
+              "test/task-engine.test.mjs"
+            ]
+          },
+          "deliveryEvidenceSummary": {
+            "schemaVersion": 1,
+            "mode": null
+          },
+          "deliveryWaiver": null
+        },
+        {
+          "taskId": "T100258",
+          "title": "Make deliveryEvidence completion enforcement default to enforce",
+          "phaseKey": "94",
+          "deliveryEvidence": {
+            "schemaVersion": 1,
+            "branchName": "feature/T100257-phase-94-closeout-readiness",
+            "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/335",
+            "prNumber": 335,
+            "baseBranch": "release/phase-94",
+            "mergeSha": "5b357edd1ae980b1580e506958377e405eec5a70",
+            "checks": [
+              {
+                "name": "test",
+                "conclusion": "success"
+              },
+              {
+                "name": "parity",
+                "conclusion": "success"
+              }
+            ],
+            "validationCommands": [
+              {
+                "command": "pnpm run build",
+                "exitCode": 0
+              },
+              {
+                "command": "pnpm run check",
+                "exitCode": 0
+              },
+              {
+                "command": "pnpm run test",
+                "exitCode": 0
+              },
+              {
+                "command": "pnpm run parity",
+                "exitCode": 0
+              }
+            ],
+            "touchedFiles": [
+              ".ai/agent-cli-snippets/INDEX.json",
+              ".ai/agent-cli-snippets/by-command/complete-task.json",
+              ".ai/agent-cli-snippets/by-command/phase-closeout-readiness.json",
+              ".ai/agent-cli-snippets/by-command/run-transition.json",
+              ".ai/agent-cli-snippets/by-command/start-task.json",
+              ".ai/playbooks/phase-closeout-and-release.md",
+              ".workspace-kit/tasks/workspace-kit.db",
+              "docs/maintainers/playbooks/phase-closeout-and-release.md",
+              "schemas/pilot-run-args.snapshot.json",
+              "schemas/task-engine-run-contracts.schema.json",
+              "src/contracts/builtin-run-command-manifest.json",
+              "src/core/config-registry.json",
+              "src/core/workspace-kit-config.ts",
+              "src/modules/index.ts",
+              "src/modules/task-engine/commands/phase-delivery-readout-commands.ts",
+              "src/modules/task-engine/commands/task-row-mutation-commands.ts",
+              "src/modules/task-engine/delivery-evidence.ts",
+              "src/modules/task-engine/index.ts",
+              "src/modules/task-engine/instructions/phase-closeout-readiness.md",
+              "src/modules/task-engine/instructions/phase-delivery-preflight.md",
+              "src/modules/task-engine/instructions/run-transition.md",
+              "src/modules/task-engine/instructions/update-task.md",
+              "src/modules/task-engine/stranded-work.ts",
+              "test/cli.test.mjs",
+              "test/delivery-evidence-v2.test.mjs",
+              "test/module-command-router.test.mjs",
+              "test/task-engine.test.mjs"
+            ]
+          },
+          "deliveryEvidenceSummary": {
+            "schemaVersion": 1,
+            "mode": null
+          },
+          "deliveryWaiver": null
+        },
+        {
+          "taskId": "T100259",
+          "title": "Document and surface deliveryEvidence enforcement state",
+          "phaseKey": "94",
+          "deliveryEvidence": {
+            "schemaVersion": 1,
+            "branchName": "feature/T100257-phase-94-closeout-readiness",
+            "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/335",
+            "prNumber": 335,
+            "baseBranch": "release/phase-94",
+            "mergeSha": "5b357edd1ae980b1580e506958377e405eec5a70",
+            "checks": [
+              {
+                "name": "test",
+                "conclusion": "success"
+              },
+              {
+                "name": "parity",
+                "conclusion": "success"
+              }
+            ],
+            "validationCommands": [
+              {
+                "command": "pnpm run build",
+                "exitCode": 0
+              },
+              {
+                "command": "pnpm run check",
+                "exitCode": 0
+              },
+              {
+                "command": "pnpm run test",
+                "exitCode": 0
+              },
+              {
+                "command": "pnpm run parity",
+                "exitCode": 0
+              }
+            ],
+            "touchedFiles": [
+              ".ai/agent-cli-snippets/INDEX.json",
+              ".ai/agent-cli-snippets/by-command/complete-task.json",
+              ".ai/agent-cli-snippets/by-command/phase-closeout-readiness.json",
+              ".ai/agent-cli-snippets/by-command/run-transition.json",
+              ".ai/agent-cli-snippets/by-command/start-task.json",
+              ".ai/playbooks/phase-closeout-and-release.md",
+              ".workspace-kit/tasks/workspace-kit.db",
+              "docs/maintainers/playbooks/phase-closeout-and-release.md",
+              "schemas/pilot-run-args.snapshot.json",
+              "schemas/task-engine-run-contracts.schema.json",
+              "src/contracts/builtin-run-command-manifest.json",
+              "src/core/config-registry.json",
+              "src/core/workspace-kit-config.ts",
+              "src/modules/index.ts",
+              "src/modules/task-engine/commands/phase-delivery-readout-commands.ts",
+              "src/modules/task-engine/commands/task-row-mutation-commands.ts",
+              "src/modules/task-engine/delivery-evidence.ts",
+              "src/modules/task-engine/index.ts",
+              "src/modules/task-engine/instructions/phase-closeout-readiness.md",
+              "src/modules/task-engine/instructions/phase-delivery-preflight.md",
+              "src/modules/task-engine/instructions/run-transition.md",
+              "src/modules/task-engine/instructions/update-task.md",
+              "src/modules/task-engine/stranded-work.ts",
+              "test/cli.test.mjs",
+              "test/delivery-evidence-v2.test.mjs",
+              "test/module-command-router.test.mjs",
+              "test/task-engine.test.mjs"
+            ]
+          },
+          "deliveryEvidenceSummary": {
+            "schemaVersion": 1,
+            "mode": null
+          },
+          "deliveryWaiver": null
+        },
+        {
+          "taskId": "T100260",
+          "title": "Add phase-closeout-readiness command",
+          "phaseKey": "94",
+          "deliveryEvidence": {
+            "schemaVersion": 1,
+            "branchName": "feature/T100257-phase-94-closeout-readiness",
+            "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/335",
+            "prNumber": 335,
+            "baseBranch": "release/phase-94",
+            "mergeSha": "5b357edd1ae980b1580e506958377e405eec5a70",
+            "checks": [
+              {
+                "name": "test",
+                "conclusion": "success"
+              },
+              {
+                "name": "parity",
+                "conclusion": "success"
+              }
+            ],
+            "validationCommands": [
+              {
+                "command": "pnpm run build",
+                "exitCode": 0
+              },
+              {
+                "command": "pnpm run check",
+                "exitCode": 0
+              },
+              {
+                "command": "pnpm run test",
+                "exitCode": 0
+              },
+              {
+                "command": "pnpm run parity",
+                "exitCode": 0
+              }
+            ],
+            "touchedFiles": [
+              ".ai/agent-cli-snippets/INDEX.json",
+              ".ai/agent-cli-snippets/by-command/complete-task.json",
+              ".ai/agent-cli-snippets/by-command/phase-closeout-readiness.json",
+              ".ai/agent-cli-snippets/by-command/run-transition.json",
+              ".ai/agent-cli-snippets/by-command/start-task.json",
+              ".ai/playbooks/phase-closeout-and-release.md",
+              ".workspace-kit/tasks/workspace-kit.db",
+              "docs/maintainers/playbooks/phase-closeout-and-release.md",
+              "schemas/pilot-run-args.snapshot.json",
+              "schemas/task-engine-run-contracts.schema.json",
+              "src/contracts/builtin-run-command-manifest.json",
+              "src/core/config-registry.json",
+              "src/core/workspace-kit-config.ts",
+              "src/modules/index.ts",
+              "src/modules/task-engine/commands/phase-delivery-readout-commands.ts",
+              "src/modules/task-engine/commands/task-row-mutation-commands.ts",
+              "src/modules/task-engine/delivery-evidence.ts",
+              "src/modules/task-engine/index.ts",
+              "src/modules/task-engine/instructions/phase-closeout-readiness.md",
+              "src/modules/task-engine/instructions/phase-delivery-preflight.md",
+              "src/modules/task-engine/instructions/run-transition.md",
+              "src/modules/task-engine/instructions/update-task.md",
+              "src/modules/task-engine/stranded-work.ts",
+              "test/cli.test.mjs",
+              "test/delivery-evidence-v2.test.mjs",
+              "test/module-command-router.test.mjs",
+              "test/task-engine.test.mjs"
+            ]
+          },
+          "deliveryEvidenceSummary": {
+            "schemaVersion": 1,
+            "mode": null
+          },
+          "deliveryWaiver": null
+        },
+        {
+          "taskId": "T100261",
+          "title": "Integrate closeout readiness into phase-delivery-preflight",
+          "phaseKey": "94",
+          "deliveryEvidence": {
+            "schemaVersion": 1,
+            "branchName": "feature/T100257-phase-94-closeout-readiness",
+            "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/335",
+            "prNumber": 335,
+            "baseBranch": "release/phase-94",
+            "mergeSha": "5b357edd1ae980b1580e506958377e405eec5a70",
+            "checks": [
+              {
+                "name": "test",
+                "conclusion": "success"
+              },
+              {
+                "name": "parity",
+                "conclusion": "success"
+              }
+            ],
+            "validationCommands": [
+              {
+                "command": "pnpm run build",
+                "exitCode": 0
+              },
+              {
+                "command": "pnpm run check",
+                "exitCode": 0
+              },
+              {
+                "command": "pnpm run test",
+                "exitCode": 0
+              },
+              {
+                "command": "pnpm run parity",
+                "exitCode": 0
+              }
+            ],
+            "touchedFiles": [
+              ".ai/agent-cli-snippets/INDEX.json",
+              ".ai/agent-cli-snippets/by-command/complete-task.json",
+              ".ai/agent-cli-snippets/by-command/phase-closeout-readiness.json",
+              ".ai/agent-cli-snippets/by-command/run-transition.json",
+              ".ai/agent-cli-snippets/by-command/start-task.json",
+              ".ai/playbooks/phase-closeout-and-release.md",
+              ".workspace-kit/tasks/workspace-kit.db",
+              "docs/maintainers/playbooks/phase-closeout-and-release.md",
+              "schemas/pilot-run-args.snapshot.json",
+              "schemas/task-engine-run-contracts.schema.json",
+              "src/contracts/builtin-run-command-manifest.json",
+              "src/core/config-registry.json",
+              "src/core/workspace-kit-config.ts",
+              "src/modules/index.ts",
+              "src/modules/task-engine/commands/phase-delivery-readout-commands.ts",
+              "src/modules/task-engine/commands/task-row-mutation-commands.ts",
+              "src/modules/task-engine/delivery-evidence.ts",
+              "src/modules/task-engine/index.ts",
+              "src/modules/task-engine/instructions/phase-closeout-readiness.md",
+              "src/modules/task-engine/instructions/phase-delivery-preflight.md",
+              "src/modules/task-engine/instructions/run-transition.md",
+              "src/modules/task-engine/instructions/update-task.md",
+              "src/modules/task-engine/stranded-work.ts",
+              "test/cli.test.mjs",
+              "test/delivery-evidence-v2.test.mjs",
+              "test/module-command-router.test.mjs",
+              "test/task-engine.test.mjs"
+            ]
+          },
+          "deliveryEvidenceSummary": {
+            "schemaVersion": 1,
+            "mode": null
+          },
+          "deliveryWaiver": null
+        },
+        {
+          "taskId": "T100262",
+          "title": "Add phase closeout readiness to release playbooks",
+          "phaseKey": "94",
+          "deliveryEvidence": {
+            "schemaVersion": 1,
+            "branchName": "feature/T100257-phase-94-closeout-readiness",
+            "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/335",
+            "prNumber": 335,
+            "baseBranch": "release/phase-94",
+            "mergeSha": "5b357edd1ae980b1580e506958377e405eec5a70",
+            "checks": [
+              {
+                "name": "test",
+                "conclusion": "success"
+              },
+              {
+                "name": "parity",
+                "conclusion": "success"
+              }
+            ],
+            "validationCommands": [
+              {
+                "command": "pnpm run build",
+                "exitCode": 0
+              },
+              {
+                "command": "pnpm run check",
+                "exitCode": 0
+              },
+              {
+                "command": "pnpm run test",
+                "exitCode": 0
+              },
+              {
+                "command": "pnpm run parity",
+                "exitCode": 0
+              }
+            ],
+            "touchedFiles": [
+              ".ai/agent-cli-snippets/INDEX.json",
+              ".ai/agent-cli-snippets/by-command/complete-task.json",
+              ".ai/agent-cli-snippets/by-command/phase-closeout-readiness.json",
+              ".ai/agent-cli-snippets/by-command/run-transition.json",
+              ".ai/agent-cli-snippets/by-command/start-task.json",
+              ".ai/playbooks/phase-closeout-and-release.md",
+              ".workspace-kit/tasks/workspace-kit.db",
+              "docs/maintainers/playbooks/phase-closeout-and-release.md",
+              "schemas/pilot-run-args.snapshot.json",
+              "schemas/task-engine-run-contracts.schema.json",
+              "src/contracts/builtin-run-command-manifest.json",
+              "src/core/config-registry.json",
+              "src/core/workspace-kit-config.ts",
+              "src/modules/index.ts",
+              "src/modules/task-engine/commands/phase-delivery-readout-commands.ts",
+              "src/modules/task-engine/commands/task-row-mutation-commands.ts",
+              "src/modules/task-engine/delivery-evidence.ts",
+              "src/modules/task-engine/index.ts",
+              "src/modules/task-engine/instructions/phase-closeout-readiness.md",
+              "src/modules/task-engine/instructions/phase-delivery-preflight.md",
+              "src/modules/task-engine/instructions/run-transition.md",
+              "src/modules/task-engine/instructions/update-task.md",
+              "src/modules/task-engine/stranded-work.ts",
+              "test/cli.test.mjs",
+              "test/delivery-evidence-v2.test.mjs",
+              "test/module-command-router.test.mjs",
+              "test/task-engine.test.mjs"
+            ]
+          },
+          "deliveryEvidenceSummary": {
+            "schemaVersion": 1,
+            "mode": null
+          },
+          "deliveryWaiver": null
+        },
+        {
+          "taskId": "T100263",
+          "title": "Implement stranded-local-work detector",
+          "phaseKey": "94",
+          "deliveryEvidence": {
+            "schemaVersion": 1,
+            "branchName": "feature/T100257-phase-94-closeout-readiness",
+            "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/335",
+            "prNumber": 335,
+            "baseBranch": "release/phase-94",
+            "mergeSha": "5b357edd1ae980b1580e506958377e405eec5a70",
+            "checks": [
+              {
+                "name": "test",
+                "conclusion": "success"
+              },
+              {
+                "name": "parity",
+                "conclusion": "success"
+              }
+            ],
+            "validationCommands": [
+              {
+                "command": "pnpm run build",
+                "exitCode": 0
+              },
+              {
+                "command": "pnpm run check",
+                "exitCode": 0
+              },
+              {
+                "command": "pnpm run test",
+                "exitCode": 0
+              },
+              {
+                "command": "pnpm run parity",
+                "exitCode": 0
+              }
+            ],
+            "touchedFiles": [
+              ".ai/agent-cli-snippets/INDEX.json",
+              ".ai/agent-cli-snippets/by-command/complete-task.json",
+              ".ai/agent-cli-snippets/by-command/phase-closeout-readiness.json",
+              ".ai/agent-cli-snippets/by-command/run-transition.json",
+              ".ai/agent-cli-snippets/by-command/start-task.json",
+              ".ai/playbooks/phase-closeout-and-release.md",
+              ".workspace-kit/tasks/workspace-kit.db",
+              "docs/maintainers/playbooks/phase-closeout-and-release.md",
+              "schemas/pilot-run-args.snapshot.json",
+              "schemas/task-engine-run-contracts.schema.json",
+              "src/contracts/builtin-run-command-manifest.json",
+              "src/core/config-registry.json",
+              "src/core/workspace-kit-config.ts",
+              "src/modules/index.ts",
+              "src/modules/task-engine/commands/phase-delivery-readout-commands.ts",
+              "src/modules/task-engine/commands/task-row-mutation-commands.ts",
+              "src/modules/task-engine/delivery-evidence.ts",
+              "src/modules/task-engine/index.ts",
+              "src/modules/task-engine/instructions/phase-closeout-readiness.md",
+              "src/modules/task-engine/instructions/phase-delivery-preflight.md",
+              "src/modules/task-engine/instructions/run-transition.md",
+              "src/modules/task-engine/instructions/update-task.md",
+              "src/modules/task-engine/stranded-work.ts",
+              "test/cli.test.mjs",
+              "test/delivery-evidence-v2.test.mjs",
+              "test/module-command-router.test.mjs",
+              "test/task-engine.test.mjs"
+            ]
+          },
+          "deliveryEvidenceSummary": {
+            "schemaVersion": 1,
+            "mode": null
+          },
+          "deliveryWaiver": null
+        },
+        {
+          "taskId": "T100264",
+          "title": "Block phase closeout on stranded local work",
+          "phaseKey": "94",
+          "deliveryEvidence": {
+            "schemaVersion": 1,
+            "branchName": "feature/T100257-phase-94-closeout-readiness",
+            "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/335",
+            "prNumber": 335,
+            "baseBranch": "release/phase-94",
+            "mergeSha": "5b357edd1ae980b1580e506958377e405eec5a70",
+            "checks": [
+              {
+                "name": "test",
+                "conclusion": "success"
+              },
+              {
+                "name": "parity",
+                "conclusion": "success"
+              }
+            ],
+            "validationCommands": [
+              {
+                "command": "pnpm run build",
+                "exitCode": 0
+              },
+              {
+                "command": "pnpm run check",
+                "exitCode": 0
+              },
+              {
+                "command": "pnpm run test",
+                "exitCode": 0
+              },
+              {
+                "command": "pnpm run parity",
+                "exitCode": 0
+              }
+            ],
+            "touchedFiles": [
+              ".ai/agent-cli-snippets/INDEX.json",
+              ".ai/agent-cli-snippets/by-command/complete-task.json",
+              ".ai/agent-cli-snippets/by-command/phase-closeout-readiness.json",
+              ".ai/agent-cli-snippets/by-command/run-transition.json",
+              ".ai/agent-cli-snippets/by-command/start-task.json",
+              ".ai/playbooks/phase-closeout-and-release.md",
+              ".workspace-kit/tasks/workspace-kit.db",
+              "docs/maintainers/playbooks/phase-closeout-and-release.md",
+              "schemas/pilot-run-args.snapshot.json",
+              "schemas/task-engine-run-contracts.schema.json",
+              "src/contracts/builtin-run-command-manifest.json",
+              "src/core/config-registry.json",
+              "src/core/workspace-kit-config.ts",
+              "src/modules/index.ts",
+              "src/modules/task-engine/commands/phase-delivery-readout-commands.ts",
+              "src/modules/task-engine/commands/task-row-mutation-commands.ts",
+              "src/modules/task-engine/delivery-evidence.ts",
+              "src/modules/task-engine/index.ts",
+              "src/modules/task-engine/instructions/phase-closeout-readiness.md",
+              "src/modules/task-engine/instructions/phase-delivery-preflight.md",
+              "src/modules/task-engine/instructions/run-transition.md",
+              "src/modules/task-engine/instructions/update-task.md",
+              "src/modules/task-engine/stranded-work.ts",
+              "test/cli.test.mjs",
+              "test/delivery-evidence-v2.test.mjs",
+              "test/module-command-router.test.mjs",
+              "test/task-engine.test.mjs"
+            ]
+          },
+          "deliveryEvidenceSummary": {
+            "schemaVersion": 1,
+            "mode": null
+          },
+          "deliveryWaiver": null
+        },
+        {
+          "taskId": "T100265",
+          "title": "Add stranded-work fixtures and closeout docs",
+          "phaseKey": "94",
+          "deliveryEvidence": {
+            "schemaVersion": 1,
+            "branchName": "feature/T100257-phase-94-closeout-readiness",
+            "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/335",
+            "prNumber": 335,
+            "baseBranch": "release/phase-94",
+            "mergeSha": "5b357edd1ae980b1580e506958377e405eec5a70",
+            "checks": [
+              {
+                "name": "test",
+                "conclusion": "success"
+              },
+              {
+                "name": "parity",
+                "conclusion": "success"
+              }
+            ],
+            "validationCommands": [
+              {
+                "command": "pnpm run build",
+                "exitCode": 0
+              },
+              {
+                "command": "pnpm run check",
+                "exitCode": 0
+              },
+              {
+                "command": "pnpm run test",
+                "exitCode": 0
+              },
+              {
+                "command": "pnpm run parity",
+                "exitCode": 0
+              }
+            ],
+            "touchedFiles": [
+              ".ai/agent-cli-snippets/INDEX.json",
+              ".ai/agent-cli-snippets/by-command/complete-task.json",
+              ".ai/agent-cli-snippets/by-command/phase-closeout-readiness.json",
+              ".ai/agent-cli-snippets/by-command/run-transition.json",
+              ".ai/agent-cli-snippets/by-command/start-task.json",
+              ".ai/playbooks/phase-closeout-and-release.md",
+              ".workspace-kit/tasks/workspace-kit.db",
+              "docs/maintainers/playbooks/phase-closeout-and-release.md",
+              "schemas/pilot-run-args.snapshot.json",
+              "schemas/task-engine-run-contracts.schema.json",
+              "src/contracts/builtin-run-command-manifest.json",
+              "src/core/config-registry.json",
+              "src/core/workspace-kit-config.ts",
+              "src/modules/index.ts",
+              "src/modules/task-engine/commands/phase-delivery-readout-commands.ts",
+              "src/modules/task-engine/commands/task-row-mutation-commands.ts",
+              "src/modules/task-engine/delivery-evidence.ts",
+              "src/modules/task-engine/index.ts",
+              "src/modules/task-engine/instructions/phase-closeout-readiness.md",
+              "src/modules/task-engine/instructions/phase-delivery-preflight.md",
+              "src/modules/task-engine/instructions/run-transition.md",
+              "src/modules/task-engine/instructions/update-task.md",
+              "src/modules/task-engine/stranded-work.ts",
+              "test/cli.test.mjs",
+              "test/delivery-evidence-v2.test.mjs",
+              "test/module-command-router.test.mjs",
+              "test/task-engine.test.mjs"
+            ]
+          },
+          "deliveryEvidenceSummary": {
+            "schemaVersion": 1,
+            "mode": null
+          },
+          "deliveryWaiver": null
+        }
+      ],
+      "followUpScan": {
+        "scannedAt": "2026-05-13T22:47:25.045Z",
+        "rationale": "Phase closeout readiness and delivery preflight report no remaining Phase 94 tasks, no evidence violations, and no blocking stranded-work findings."
+      },
+      "followUpTasks": [],
+      "followUpSummary": {
+        "count": 0,
+        "scannedAt": "2026-05-13T22:47:25.045Z",
+        "rationale": "Phase closeout readiness and delivery preflight report no remaining Phase 94 tasks, no evidence violations, and no blocking stranded-work findings."
+      }
+    },
+    "planningGeneration": 2897,
+    "planningGenerationPolicy": "require",
+    "cae": {
+      "schemaVersion": 1,
+      "evalMode": "shadow",
+      "traceId": "cae.trace.9013c6c97af60107b43401d06e0b77cf6fb8f1fe",
+      "shadow": true,
+      "summary": {
+        "policyCount": 0,
+        "thinkCount": 0,
+        "doCount": 1,
+        "reviewCount": 0,
+        "shadowObservationCount": 1
+      }
+    },
+    "presentation": {
+      "templateId": "default",
+      "matchedSections": [
+        "cae"
+      ],
+      "cae": {
+        "kind": "shadow_preflight_v1",
+        "traceId": "cae.trace.9013c6c97af60107b43401d06e0b77cf6fb8f1fe",
+        "evalMode": "shadow",
+        "degraded": false,
+        "agentRenderHint": "If present, summarize CAE shadow outcome in one short paragraph; when traceId is set, operators can run cae-explain / cae-get-trace."
+      }
+    }
+  },
+  "responseTemplate": {
+    "requestedTemplateId": "default",
+    "appliedTemplateId": "default",
+    "enforcementMode": "advisory",
+    "warnings": [],
+    "telemetry": {
+      "resolveNs": 200167,
+      "warningCount": 0
+    }
+  }
+}
