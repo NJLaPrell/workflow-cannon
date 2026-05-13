@@ -140,6 +140,18 @@ async function establishRuntimeArtifacts(
   }
 }
 
+async function appendInitPolicyTrace(cwd: string, rationale: string, commandOk: boolean): Promise<void> {
+  await appendPolicyTrace(cwd, {
+    timestamp: new Date().toISOString(),
+    operationId: "cli.init",
+    command: "init",
+    actor: await resolveActorWithFallback(cwd, {}, process.env),
+    allowed: true,
+    rationale,
+    commandOk
+  });
+}
+
 /**
  * Top-level `workspace-kit init` — attach/detection/plan/apply/sqlite/starter/doctor orchestration.
  */
@@ -211,6 +223,7 @@ export async function runWorkspaceKitInitCommand(
 
   const runtimeContract = validateInitRuntimeContract(cwd);
   if (!runtimeContract.ok) {
+    await appendInitPolicyTrace(cwd, rationale, false);
     writeError("workspace-kit init requires a valid runtime contract before attaching this workspace.");
     for (const issue of runtimeContract.issues) {
       writeError(`- ${issue.code}: ${issue.message}`);
@@ -220,6 +233,7 @@ export async function runWorkspaceKitInitCommand(
 
   const applied = await applyInitPlan(cwd, plan, { dryRun: false, force: flags.force });
   if (!applied.ok) {
+    await appendInitPolicyTrace(cwd, rationale, false);
     writeError(applied.message ?? "workspace-kit init failed.");
     for (const w of applied.warnings) {
       writeError(`- ${w}`);
@@ -231,6 +245,7 @@ export async function runWorkspaceKitInitCommand(
 
   const sqliteResult = await ensurePlanningStoresInitialized(cwd);
   if (!sqliteResult.ok) {
+    await appendInitPolicyTrace(cwd, rationale, false);
     writeError(`SQLite initialization issue: ${sqliteResult.message ?? "unknown error"}`);
     return exitCodes.validationFailure;
   }
@@ -293,6 +308,7 @@ export async function runWorkspaceKitInitCommand(
 
   const doctorIssues = await collectDoctorContractIssues(cwd);
   if (doctorIssues.length > 0) {
+    await appendInitPolicyTrace(cwd, rationale, false);
     writeError("workspace-kit init completed writes but doctor validation failed:");
     for (const issue of doctorIssues) {
       writeError(`- ${issue.path}: ${issue.reason}`);
@@ -300,15 +316,7 @@ export async function runWorkspaceKitInitCommand(
     return exitCodes.validationFailure;
   }
 
-  await appendPolicyTrace(cwd, {
-    timestamp: new Date().toISOString(),
-    operationId: "cli.init",
-    command: "init",
-    actor: await resolveActorWithFallback(cwd, {}, process.env),
-    allowed: true,
-    rationale,
-    commandOk: true
-  });
+  await appendInitPolicyTrace(cwd, rationale, true);
 
   if (flags.json) {
     writeLine(

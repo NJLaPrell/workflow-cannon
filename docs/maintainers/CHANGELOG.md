@@ -8,6 +8,23 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.88.0] - 2026-05-12
+
+Phase 93 — **Runtime contract hardening and lease coordination UX**. Ships stamped runtime launcher validation across doctor, upgrade, and drift-check flows; end-to-end runtime contract regression coverage for Node 22/native SQLite behavior; extension lease status/actions; bounded lease wait support; and suspect lease checkout drift detection for branch, HEAD, worktree path, and dirty manifest changes.
+
+### Added
+
+- Runtime contract: stamped `.workspace-kit/runtime.json` and launcher validation surfaces in doctor, upgrade, and drift-check flows, with clearer remediation for missing or stale runtime artifacts.
+- Tests: runtime contract end-to-end coverage for stamped launcher execution, poisoned PATH / bad `.nvmrc`, missing runtime stamp, deleted Node, and native SQLite load failures.
+- Cursor extension: lease status bar/actions for claim, heartbeat, release, recover stale, and inspect/status workflows, with renderer coverage for lease states.
+- Task engine: opt-in bounded `waitForLease` behavior with low-frequency polling, timeout payloads, holder details, and read-only fallback guidance.
+- Coordination: stable suspect lease flags for active lease branch, HEAD, worktree path, and dirty manifest drift, surfaced through `workspace-edit-status`, `workspace-coordination-status`, dashboard system status, and extension rendering.
+
+### Changed
+
+- Release/diagnostic flows now treat packaged runtime artifacts as first-class contract evidence rather than relying on ambient shell state.
+- Coordination posture precedence is deterministic when dirty workspace, dirty task DB, active lease, stale lease, and suspect lease signals coexist.
+
 ## [0.87.2] - 2026-05-12
 
 Phase 92 — **Workspace edit lease core commands**. Adds `claim-workspace-edit-lease`, `heartbeat-workspace-edit-lease`, `release-workspace-edit-lease`, and read-only `workspace-edit-status` (JSON lease under `$GIT_COMMON_DIR/workflow-cannon/leases/workspace-edit.json`, atomic writes, stale recovery, structured deny payloads with alternatives).
