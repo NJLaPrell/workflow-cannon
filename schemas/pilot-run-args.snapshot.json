@@ -51,6 +51,7 @@
     "list-wishlist",
     "migrate-task-persistence",
     "persist-planning-execution-drafts",
+    "phase-closeout-readiness",
     "phase-delivery-preflight",
     "phase-status",
     "propose-tasks-from-phase-notes",
@@ -797,6 +798,9 @@
         }
       },
       "additionalProperties": true
+    },
+    "phase-closeout-readiness": {
+      "type": "object"
     },
     "phase-delivery-preflight": {
       "type": "object"

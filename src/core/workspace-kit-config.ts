@@ -113,7 +113,7 @@ export const KIT_CONFIG_DEFAULTS: Record<string, unknown> = {
       moduleOverrides: {} as Record<string, unknown>
     },
     deliveryEvidence: {
-      enforcementMode: "advisory"
+      enforcementMode: "enforce"
     }
   },
   maintainerDelivery: {

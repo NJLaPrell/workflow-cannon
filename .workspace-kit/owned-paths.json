@@ -5,9 +5,11 @@
     "schemas/workspace-kit-profile.schema.json",
     ".workspace-kit/manifest.json",
     ".workspace-kit/owned-paths.json",
+    ".workspace-kit/runtime.json",
+    ".workspace-kit/bin/wk",
     ".cursor/rules/workspace-kit-profile-pointer.mdc",
     ".workspace-kit/generated/project-context.json",
     ".cursor/rules/workspace-kit-project-context.mdc"
   ],
-  "notes": "Phase 3 baseline: managed kit-owned paths are updated by workspace-kit upgrade with backup safety."
+  "notes": "Managed kit-owned paths — updated by workspace-kit init/upgrade with backup safety when kit-owned content changes."
 }

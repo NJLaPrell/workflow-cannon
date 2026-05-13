@@ -70,7 +70,7 @@
     "key": "tasks.deliveryEvidence.enforcementMode",
     "type": "string",
     "description": "Completion behavior for phased delivery tasks missing metadata.deliveryEvidence or metadata.deliveryWaiver: off skips the guard, advisory records a structured guard result, enforce blocks completion.",
-    "default": "advisory",
+    "default": "enforce",
     "allowedValues": [
       "off",
       "advisory",

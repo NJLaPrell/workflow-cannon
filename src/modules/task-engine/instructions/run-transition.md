@@ -66,8 +66,8 @@ Use **`clientMutationId`** on agent-driven lifecycle mutations. The first succes
 
 When a phased execution task is completed, the `delivery-evidence` guard evaluates `task.metadata.deliveryEvidence` or `task.metadata.deliveryWaiver`.
 
-- `tasks.deliveryEvidence.enforcementMode: "advisory"` (default) allows completion and emits a structured guard result when evidence is missing.
-- `tasks.deliveryEvidence.enforcementMode: "enforce"` blocks completion when evidence or waiver metadata is missing.
+- `tasks.deliveryEvidence.enforcementMode: "enforce"` (default) blocks completion when evidence or waiver metadata is missing.
+- `tasks.deliveryEvidence.enforcementMode: "advisory"` allows completion and emits a structured guard result when evidence is missing.
 - `tasks.deliveryEvidence.enforcementMode: "off"` skips this guard.
 
 Expected `metadata.deliveryEvidence` fields:

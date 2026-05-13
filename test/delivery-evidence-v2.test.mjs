@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { mkdtemp, rm } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 
@@ -8,8 +9,12 @@ import {
   evaluateDeliveryEvidence,
   summarizeDeliveryEvidence,
   buildPhaseDeliveryPreflight,
+  buildPhaseCloseoutReadiness,
+  buildStrandedWorkReport,
   DELIVERY_EVIDENCE_V2_MODES,
   createDeliveryEvidenceGuard,
+  readDeliveryEvidenceEnforcementMode,
+  validateDeliveryEvidenceMetadata,
   TransitionService,
   TaskStore,
   TaskEngineError
@@ -98,6 +103,15 @@ test("evaluateDeliveryEvidence rejects malformed v2 with field paths", () => {
   assert.equal(r.satisfied, false);
   assert.equal(r.violations[0]?.code, "delivery-evidence-malformed-v2");
   assert.ok(r.violations[0]?.missingFields.includes("deliveryEvidence.reviewer"));
+});
+
+test("validateDeliveryEvidenceMetadata returns structured invalid-evidence details", () => {
+  const bad = { ...v2Github };
+  delete bad.prUrl;
+  const result = validateDeliveryEvidenceMetadata(bad);
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "delivery-evidence-malformed-v2");
+  assert.ok(result.missingFields.includes("deliveryEvidence.prUrl"));
 });
 
 test("evaluateDeliveryEvidence rejects unsupported v2 mode", () => {
@@ -201,6 +215,76 @@ test("buildPhaseDeliveryPreflight audits mixed policy profiles", () => {
   assert.equal(result.violations[0]?.requiredEvidenceMode, "github-pr");
   assert.equal(result.violations[0]?.actualEvidenceMode, "local-reviewed-merge");
   assert.equal(result.violations[0]?.policyProfile, "github-pr");
+});
+
+test("buildPhaseCloseoutReadiness groups unfinished phase tasks by status", () => {
+  const result = buildPhaseCloseoutReadiness({
+    phaseKey: "81",
+    tasks: [
+      phasedTask({ id: "Tready", status: "ready", phaseKey: "81" }),
+      phasedTask({ id: "Twork", status: "in_progress", phaseKey: "81" }),
+      phasedTask({ id: "Tdone", status: "completed", phaseKey: "81", metadata: { deliveryEvidence: v2Github } }),
+      phasedTask({ id: "Tother", status: "ready", phaseKey: "82" })
+    ]
+  });
+  assert.equal(result.passed, false);
+  assert.equal(result.remainingCount, 2);
+  assert.deepEqual(result.remainingByStatus.ready?.map((task) => task.id), ["Tready"]);
+  assert.deepEqual(result.remainingByStatus.in_progress?.map((task) => task.id), ["Twork"]);
+});
+
+test("delivery evidence enforcement defaults to enforce", async () => {
+  assert.equal(readDeliveryEvidenceEnforcementMode({}), "enforce");
+  const workspace = await mkdtemp(path.join(os.tmpdir(), "wk-dev2-"));
+  try {
+    const store = TaskStore.forJsonFile(workspace);
+    await store.load();
+    store.addTask(phasedTask({ status: "in_progress" }));
+    await store.save();
+    const service = new TransitionService(store, [createDeliveryEvidenceGuard()]);
+    await assert.rejects(
+      () => service.runTransition({ taskId: "T900", action: "complete" }),
+      (err) => err instanceof TaskEngineError && err.code === "guard-rejected"
+    );
+  } finally {
+    await rm(workspace, { recursive: true, force: true });
+  }
+});
+
+test("buildStrandedWorkReport maps changed files to completed task touched files", async () => {
+  const workspace = await mkdtemp(path.join(os.tmpdir(), "wk-stranded-"));
+  try {
+    execFileSync("git", ["init"], { cwd: workspace, stdio: "ignore" });
+    execFileSync("git", ["config", "user.email", "test@example.com"], { cwd: workspace });
+    execFileSync("git", ["config", "user.name", "Test User"], { cwd: workspace });
+    await import("node:fs/promises").then(({ writeFile }) => writeFile(path.join(workspace, "one.txt"), "base\n"));
+    execFileSync("git", ["add", "one.txt"], { cwd: workspace });
+    execFileSync("git", ["commit", "-m", "base"], { cwd: workspace, stdio: "ignore" });
+    execFileSync("git", ["branch", "release/phase-81"], { cwd: workspace });
+    await import("node:fs/promises").then(({ writeFile }) => writeFile(path.join(workspace, "one.txt"), "changed\n"));
+    execFileSync("git", ["add", "one.txt"], { cwd: workspace });
+    execFileSync("git", ["commit", "-m", "task work"], { cwd: workspace, stdio: "ignore" });
+
+    const report = buildStrandedWorkReport({
+      workspacePath: workspace,
+      phaseKey: "81",
+      baseRef: "release/phase-81",
+      tasks: [
+        phasedTask({
+          id: "Tdone",
+          status: "completed",
+          phaseKey: "81",
+          metadata: { touchedFiles: ["one.txt"], deliveryEvidence: v2Github }
+        })
+      ]
+    });
+    assert.equal(report.passed, false);
+    assert.equal(report.findings[0]?.code, "stranded-local-work");
+    assert.equal(report.findings[0]?.taskId, "Tdone");
+    assert.deepEqual(report.findings[0]?.files, ["one.txt"]);
+  } finally {
+    await rm(workspace, { recursive: true, force: true });
+  }
 });
 
 test("TransitionService allows complete with v2 local evidence in enforce mode", async () => {

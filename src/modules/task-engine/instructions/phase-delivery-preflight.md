@@ -11,6 +11,7 @@ Read-only audit for phase task delivery evidence before agents mark phase work c
 ```
 workspace-kit run phase-delivery-preflight '{}'
 workspace-kit run phase-delivery-preflight '{"phaseKey":"74","includeInProgress":true}'
+workspace-kit run phase-delivery-preflight '{"phaseKey":"74","includeInProgress":false,"baseRef":"origin/release/phase-74"}'
 ```
 
 ## Arguments
@@ -19,8 +20,11 @@ workspace-kit run phase-delivery-preflight '{"phaseKey":"74","includeInProgress"
 | --- | --- | --- | --- |
 | `phaseKey` | string | no | Stable phase key to audit. Defaults to the canonical current phase from `kit_workspace_status`, then config fallback. |
 | `includeInProgress` | boolean | no | Include `in_progress` tasks as "about to complete" candidates. Defaults to `true`; completed tasks are always checked. |
+| `baseRef` | string | no | Git ref used by stranded-work detection. Defaults to `origin/release/phase-<phaseKey>` when a phase key is known, otherwise `origin/main`. |
 
 Evaluation uses each task’s **resolved maintainer delivery policy** (same resolver as **`resolve-maintainer-delivery-policy`**) so GitHub PR tasks and **manual / local-reviewed-merge** tasks in the same phase can each satisfy different evidence shapes.
+
+Preflight also embeds `data.readiness` from **`phase-closeout-readiness`** and `data.strandedWork` from the git stranded-work detector. Delivery evidence alone is not enough for closeout: unfinished phase tasks and completed tasks with local-only implementation files are blocking findings that agents must resolve before release prep continues.
 
 ## Delivery Evidence Metadata
 
@@ -61,9 +65,16 @@ For non-shipping/local-only tasks, set `metadata.deliveryEvidenceRequired` to `f
 
 ## Returns
 
-Success `data` includes `schemaVersion`, `phaseKey`, `checkedTaskCount`, `violationCount`, and `violations[]`. Each violation includes task identity, status, phase key, code, message, and `missingFields`.
+Success `data` includes `schemaVersion`, `phaseKey`, `checkedTaskCount`, `violationCount`, `violations[]`, `readiness`, `strandedWork`, and `blockingFindingCount`. Each evidence violation includes task identity, status, phase key, code, message, and `missingFields`.
+
+Stranded-work findings use stable codes:
+
+- `stranded-local-work` — completed task evidence or touched-file metadata points at files that differ from `baseRef`.
+- `stranded-work-base-unavailable` — the requested base ref is missing; fetch or choose a valid integration branch before closeout.
+- `stranded-work-git-unavailable` — the command did not run inside a git worktree.
 
 ## Related
 
 - `workspace-kit run run-transition` — completion emits or enforces the same evidence requirement via the `delivery-evidence` guard.
+- `workspace-kit run phase-closeout-readiness` — unfinished phase task audit used by this preflight.
 - `.ai/playbooks/task-to-phase-branch.md` — PR-first task delivery flow.
