@@ -2,11 +2,13 @@
 schema_version: 1
 current_kit_phase: "94"
 next_kit_phase: "95"
-last_updated: "2026-05-13T02:39:58.618Z"
-active_focus: "Phase 94 execution"
+last_updated: "2026-05-13T06:55:30.666Z"
+active_focus: "Phase 94"
 blockers: []
 pending_decisions: []
 next_agent_actions:
-  - "Start Phase 94 ready work"
-# workspace_revision: 37
-# updated_at: "2026-05-13T02:39:58.663Z"
+  - "Execute Phase 94 ready tasks (T100190–T100193)."
+  - "Then Phase 95 (T100194–T100201)."
+  - "Phase 96 (T100211) can proceed in parallel when staffed."
+# workspace_revision: 39
+# updated_at: "2026-05-13T06:55:30.689Z"
