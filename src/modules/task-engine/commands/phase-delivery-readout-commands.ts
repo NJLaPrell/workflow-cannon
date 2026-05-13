@@ -1,6 +1,6 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
 import { attachPolicyMeta } from "../attach-planning-response-meta.js";
-import { buildPhaseDeliveryPreflight } from "../delivery-evidence.js";
+import { buildPhaseCloseoutReadiness, buildPhaseDeliveryPreflight } from "../delivery-evidence.js";
 import {
   buildDeliveryEvidencePolicyContext,
   resolveMaintainerDeliveryPolicy
@@ -10,6 +10,7 @@ import { readWorkspaceStatusSnapshotFromDual } from "../persistence/workspace-st
 import { resolveCanonicalPhase } from "../phase-resolution.js";
 import { buildReleaseEvidenceManifest } from "../release-evidence-manifest.js";
 import { runPhaseStatus } from "../workspace-status-commands-runtime.js";
+import { buildStrandedWorkReport } from "../stranded-work.js";
 
 /**
  * Phase / release readout commands that need an open task store + SQLite dual reader.
@@ -31,7 +32,7 @@ export async function resolvePhaseDeliveryReadoutCommands(
     });
   }
 
-  if (command.name === "phase-delivery-preflight") {
+  if (command.name === "phase-closeout-readiness" || command.name === "phase-delivery-preflight") {
     const argObj = args as Record<string, unknown>;
     const workspaceStatus = readWorkspaceStatusSnapshotFromDual(planning.sqliteDual);
     const phaseRes = resolveCanonicalPhase({
@@ -45,6 +46,24 @@ export async function resolvePhaseDeliveryReadoutCommands(
     const includeInProgress =
       typeof argObj.includeInProgress === "boolean" ? argObj.includeInProgress : true;
     const activeTasks = store.getActiveTasks();
+    const readiness = buildPhaseCloseoutReadiness({ tasks: activeTasks, phaseKey });
+
+    if (command.name === "phase-closeout-readiness") {
+      const data: Record<string, unknown> = {
+        ...readiness,
+        canonicalPhase: phaseRes
+      };
+      attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
+      return {
+        ok: true,
+        code: "phase-closeout-readiness",
+        message: readiness.passed
+          ? "Phase closeout readiness passed"
+          : `Phase closeout readiness found ${readiness.remainingCount} unfinished task(s)`,
+        data
+      };
+    }
+
     const effectiveConfig = ctx.effectiveConfig as Record<string, unknown> | undefined;
     const policyContextByTaskId = Object.fromEntries(
       activeTasks.map((task) => {
@@ -58,19 +77,31 @@ export async function resolvePhaseDeliveryReadoutCommands(
       includeInProgress,
       policyContextByTaskId
     });
+    const baseRef = typeof argObj.baseRef === "string" && argObj.baseRef.trim().length > 0 ? argObj.baseRef.trim() : null;
+    const strandedWork = buildStrandedWorkReport({
+      workspacePath: ctx.workspacePath,
+      tasks: activeTasks,
+      phaseKey,
+      baseRef
+    });
+    const blockingFindingCount =
+      preflight.violationCount + readiness.remainingCount + strandedWork.findings.length;
     const data: Record<string, unknown> = {
       ...preflight,
       canonicalPhase: phaseRes,
-      includeInProgress
+      includeInProgress,
+      readiness,
+      strandedWork,
+      blockingFindingCount
     };
     attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
     return {
       ok: true,
       code: "phase-delivery-preflight",
       message:
-        preflight.violationCount === 0
+        blockingFindingCount === 0
           ? "Phase delivery evidence preflight passed"
-          : `Phase delivery evidence preflight found ${preflight.violationCount} violation(s)`,
+          : `Phase delivery preflight found ${blockingFindingCount} blocking finding(s)`,
       data
     };
   }

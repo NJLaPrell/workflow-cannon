@@ -35,6 +35,7 @@ Known type guardrails:
 - Updates are validated against known type requirements after patch merge.
 - For `type: "improvement"`, non-empty `acceptanceCriteria` and `technicalScope` are required, plus non-empty **`metadata.issue`** and **`metadata.supportingReasoning`** (except legacy **`imp-<hex>`** ids, which may omit **`metadata.supportingReasoning`** until updated). Shallow-merge **`updates.metadata`** replaces the whole metadata object—send the full merged map.
 - Violations return stable error code `invalid-task-type-requirements`.
+- When `updates.metadata.deliveryEvidence` is present, update-time validation rejects malformed evidence before it enters the task store. Violations return stable error code `invalid-evidence` with `data.missingFields` and should be verified with `phase-delivery-preflight` after correction.
 
 Idempotency behavior:
 

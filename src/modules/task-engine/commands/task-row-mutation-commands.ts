@@ -23,6 +23,7 @@ import type { OpenedPlanningStores } from "../persistence/planning-open.js";
 import { TaskStore } from "../persistence/store.js";
 import { strictValidationError } from "./strict-store-validation.js";
 import { validateTaskSetForStrictMode } from "../strict-task-validation.js";
+import { validateDeliveryEvidenceMetadata } from "../delivery-evidence.js";
 import { findUnknownFeatureIds, taskTypeFailsClosedOnUnknownFeatures } from "../task-feature-mutation-validation.js";
 import { validateKnownTaskTypeRequirements } from "../task-type-validation.js";
 import {
@@ -919,6 +920,26 @@ export async function runTaskRowMutationCommands(
       }
     }
     const updatedTask = { ...task, ...updates, updatedAt: nowIso() } as TaskEntity;
+    const metadataUpdate = updates.metadata;
+    if (isRecordLike(metadataUpdate) && metadataUpdate.deliveryEvidence !== undefined) {
+      const evidenceValidation = validateDeliveryEvidenceMetadata(metadataUpdate.deliveryEvidence);
+      if (!evidenceValidation.ok) {
+        return {
+          ok: false,
+          code: "invalid-evidence",
+          message: `update-task rejected metadata.deliveryEvidence: ${evidenceValidation.message}`,
+          data: {
+            missingFields: evidenceValidation.missingFields,
+            validationCode: evidenceValidation.code,
+            remediation: {
+              command: "update-task",
+              verificationCommand: "phase-delivery-preflight",
+              instructionPath: CLI_REMEDIATION_INSTRUCTIONS.updateTask
+            }
+          }
+        };
+      }
+    }
     const knownUpd = resolveKnownFeatureSlugSet(planning.sqliteDual.getDatabase());
     const badUpd = findUnknownFeatureIds(updatedTask.features, knownUpd);
     if (badUpd.length > 0 && taskTypeFailsClosedOnUnknownFeatures(updatedTask.type)) {

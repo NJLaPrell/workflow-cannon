@@ -35,19 +35,23 @@ export {
   DELIVERY_EVIDENCE_METADATA_KEY,
   DELIVERY_WAIVER_METADATA_KEY,
   DELIVERY_EVIDENCE_V2_MODES,
+  buildPhaseCloseoutReadiness,
   buildPhaseDeliveryPreflight,
   createDeliveryEvidenceGuard,
   evaluateDeliveryEvidence,
   isPhaseDeliveryTask,
   readDeliveryEvidenceEnforcementMode,
-  summarizeDeliveryEvidence
+  summarizeDeliveryEvidence,
+  validateDeliveryEvidenceMetadata
 } from "./delivery-evidence.js";
+export { buildStrandedWorkReport } from "./stranded-work.js";
 export { buildReleaseEvidenceManifest } from "./release-evidence-manifest.js";
 export { classifyKitStatePath } from "./kit-state-classifier.js";
 export type { KitStateClassification } from "./kit-state-classifier.js";
 export type {
   DeliveryEvidenceEnforcementMode,
   DeliveryEvidenceEvaluation,
+  DeliveryEvidenceValidationResult,
   DeliveryEvidenceViolation,
   DeliveryEvidenceModeV2,
   EvaluateDeliveryEvidenceOptions
