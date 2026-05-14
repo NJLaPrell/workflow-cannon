@@ -1580,6 +1580,55 @@ test("upsert-phase-catalog-entry persists description and bumps planning generat
   assert.equal(row.shortDescription, "Phase 90 label");
 });
 
+test("upsert-phase-catalog-entry accepts actor and clientMutationId fields", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+  await seedSqliteStore(workspace, () => {});
+  await taskEngineModule.onCommand(
+    { name: "set-current-phase", args: { currentKitPhase: "88", nextKitPhase: "89", expectedWorkspaceRevision: 0 } },
+    ctx
+  );
+
+  const snap = await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, ctx);
+  const gen = snap.data.planningGeneration;
+  const first = await taskEngineModule.onCommand(
+    {
+      name: "upsert-phase-catalog-entry",
+      args: {
+        phaseKey: "90",
+        shortDescription: "Initial deliverables",
+        actor: "dashboard-test",
+        clientMutationId: "cmid-upsert-90",
+        expectedPlanningGeneration: gen
+      }
+    },
+    ctx
+  );
+  assert.equal(first.ok, true);
+  assert.equal(first.code, "phase-catalog-entry-upserted");
+
+  const second = await taskEngineModule.onCommand(
+    {
+      name: "upsert-phase-catalog-entry",
+      args: {
+        phaseKey: "91",
+        shortDescription: "Second deliverables",
+        actor: "dashboard-test",
+        clientMutationId: "cmid-upsert-91"
+      }
+    },
+    ctx
+  );
+  assert.equal(second.ok, true);
+  assert.equal(second.code, "phase-catalog-entry-upserted");
+
+  const list = await taskEngineModule.onCommand({ name: "list-phase-catalog", args: {} }, ctx);
+  const row90 = list.data.phases.find((p) => p.phaseKey === "90");
+  const row91 = list.data.phases.find((p) => p.phaseKey === "91");
+  assert.equal(row90.shortDescription, "Initial deliverables");
+  assert.equal(row91.shortDescription, "Second deliverables");
+});
+
 test("phase-status includePhaseJournalSummary reports activeCriticalNoteCount", async () => {
   const workspace = await tmpDir();
   const ctx = sqliteTaskEngineCtx(workspace);

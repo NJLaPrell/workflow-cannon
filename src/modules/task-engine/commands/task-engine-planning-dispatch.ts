@@ -50,7 +50,7 @@ export async function dispatchTaskEnginePlanningCommands(
   }
 
   if (command.name === "upsert-phase-catalog-entry") {
-    return runUpsertPhaseCatalogEntry(ctx, planning, args as Record<string, unknown>);
+    return runUpsertPhaseCatalogEntry(ctx, planning, store, args as Record<string, unknown>);
   }
 
   const maintainerDeliveryPolicy = resolveMaintainerDeliveryPolicyCommand(command, ctx, planning);
