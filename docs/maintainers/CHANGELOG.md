@@ -8,6 +8,25 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.90.0] - 2026-05-14
+
+Phase 95 — **Dashboard Phase Roster polish, phase deliverables editing groundwork, and native SQLite guardrails**. Ships the dashboard/status Phase Roster label cleanup, deliverables mutation plumbing, stricter single-task start ownership, and fail-fast native SQLite architecture checks for arm64 macOS reliability.
+
+### Added
+
+- Task engine / dashboard: `upsert-phase-catalog-entry` accepts actor/client mutation metadata for phase Deliverables updates, with dashboard message handling and planning-generation retry support.
+- Task engine: single-task start guard blocks starting unrelated tasks while another task is already `in_progress`, with machine playbook repair guidance for accidental bulk starts.
+- Native SQLite: `scripts/check-native-binding-arch.mjs`, postinstall fail-fast architecture checks, `native-binding-arch-mismatch` task-engine error surfacing, and doctor architecture status output.
+
+### Changed
+
+- Cursor dashboard/status UI labels now use **Phase Roster** and **Deliverables** consistently.
+- Dashboard placement and copy for agent/profile/status phase cards were tightened across Phase 95 slices.
+
+### Notes
+
+- Migration impact: consumers on macOS arm64 with x64/Rosetta-built `better-sqlite3` bindings now receive an explicit mismatch error and should run `pnpm rebuild better-sqlite3` under a host-architecture Node runtime.
+
 ## [0.89.0] - 2026-05-13
 
 Phase 94 — **Phase closeout readiness and delivery evidence enforcement**. Ships stricter task completion evidence defaults, a phase closeout readiness command, preflight integration for unfinished and stranded work findings, and docs/tests/contracts for release closeout guardrails.

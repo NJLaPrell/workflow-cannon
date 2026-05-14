@@ -8,4 +8,4 @@ This root file is intentionally pointer-only to avoid split release history.
 
 - See `docs/maintainers/CHANGELOG.md` for all release notes, migration notes, and historical entries.
 
-Latest release: **v0.89.0** (Phase 94: phase closeout readiness, delivery evidence enforcement, and stranded-work preflight; see canonical changelog).
+Latest release: **v0.90.0** (Phase 95: dashboard Phase Roster polish, phase deliverables editing groundwork, and native SQLite guardrails; see canonical changelog).
