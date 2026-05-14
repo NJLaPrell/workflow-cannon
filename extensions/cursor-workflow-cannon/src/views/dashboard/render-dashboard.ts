@@ -1741,13 +1741,13 @@ function renderOverviewPhaseSummarySection(
   );
 }
 
-function renderOverviewEditorIntegrationSection(editorIntegration?: unknown): string {
+function renderStatusEditorIntegrationSection(editorIntegration?: unknown): string {
   const editorInner = renderEditorIntegrationEmbed(editorIntegration);
   if (editorInner === "") {
     return "";
   }
   return (
-    '<section class="dash-card dash-overview-editor-integration" aria-label="Editor integration">' +
+    '<section class="dash-card dash-status-editor-integration" aria-label="Editor and chat prefill">' +
     editorInner +
     "</section>"
   );
@@ -1829,7 +1829,11 @@ function renderStatusRollup(
 }
 
 /** Status tab: workspace identity, agent profile, and task counts from dashboard-summary data. */
-function renderStatusSectionHtml(d: Record<string, unknown>, ss: Record<string, unknown>): string {
+function renderStatusSectionHtml(
+  d: Record<string, unknown>,
+  ss: Record<string, unknown>,
+  editorIntegration?: EditorIntegrationRenderState | null
+): string {
   const sys = (d.systemStatus as Record<string, unknown>) ?? {};
   const ident = (sys.identity as Record<string, unknown>) ?? {};
   const ag = (d.agentGuidance as Record<string, unknown> | null | undefined) ?? {};
@@ -1928,7 +1932,7 @@ function renderStatusSectionHtml(d: Record<string, unknown>, ss: Record<string, 
     "(same family as <code>getNextActions</code>) and exclude <code>wishlist_intake</code> from ready/proposed.</p>" +
     "</section>";
 
-  return agentCard + workspaceCard + planningCard + countsCard;
+  return agentCard + renderStatusEditorIntegrationSection(editorIntegration) + workspaceCard + planningCard + countsCard;
 }
 
 /** Kit-shaped results from `list-phase-notes` / `get-phase-context` (webview receives merged reads). */
@@ -2330,7 +2334,6 @@ export function renderDashboardRootInnerHtml(
   const overviewContent =
     recNextCard +
     renderStatPills(totalReadyCount, totalProposedCount, totalBlockedCount, totalDoneCount) +
-    renderOverviewEditorIntegrationSection(editorIntegration) +
     renderPhaseCatalogOverviewSection(phaseSystemSlice) +
     renderWorkspaceBlockersPendingSection(ws as Record<string, unknown> | null) +
     renderTeamExecutionSection(d.teamExecution) +
@@ -2342,7 +2345,7 @@ export function renderDashboardRootInnerHtml(
     wishlistSection +
     renderPlanningSession(planningSession, planningWizardPanel);
 
-  const statusContent = renderStatusSectionHtml(d, ss);
+  const statusContent = renderStatusSectionHtml(d, ss, editorIntegration);
 
   const configContent =
     '<section class="dash-card" aria-label="Config">' +

@@ -270,7 +270,16 @@ test("renderDashboardRootInnerHtml renders editor integration state when provide
   assert.match(html, /<b>Chat prefill<\/b> VS Code Chat/);
   assert.match(html, /cursor URL disabled/);
   assert.doesNotMatch(html, /<section class="dash-card dash-editor-integration"/);
-  assert.match(html, /dash-overview-editor-integration[\s\S]*dash-editor-integration--embedded/);
+  const overviewPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="overview"');
+  const taskEnginePanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="task-engine"');
+  const statusPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="status"');
+  const configPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="config"');
+  assert.ok(overviewPanelIdx >= 0 && taskEnginePanelIdx > overviewPanelIdx && statusPanelIdx > taskEnginePanelIdx);
+  const overviewPanel = html.slice(overviewPanelIdx, taskEnginePanelIdx);
+  const statusPanel = html.slice(statusPanelIdx, configPanelIdx);
+  assert.doesNotMatch(overviewPanel, /dash-editor-integration|Chat prefill|VS Code Chat/);
+  assert.match(statusPanel, /dash-status-editor-integration[\s\S]*dash-editor-integration--embedded/);
+  assert.match(statusPanel, /<b>Chat prefill<\/b> VS Code Chat/);
 });
 
 test("renderDashboardRootInnerHtml renders escaped WC Agent status banner from agentStatus", () => {
