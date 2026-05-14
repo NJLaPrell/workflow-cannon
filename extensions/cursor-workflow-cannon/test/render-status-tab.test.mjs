@@ -98,7 +98,8 @@ test("renderStatusTabInnerHtml renders systemStatus sections when present", () =
   assert.match(html, /This Workspace/);
   assert.match(html, /Planning Data/);
   assert.match(html, /Canonical phase/);
-  assert.match(html, /Phase roster/);
+  assert.match(html, /Phase Roster/);
+  assert.match(html, /Deliverables/);
   assert.match(html, /Next wave UX/);
   assert.match(html, /Contract checks passed/);
   assert.match(html, /task-engine/);

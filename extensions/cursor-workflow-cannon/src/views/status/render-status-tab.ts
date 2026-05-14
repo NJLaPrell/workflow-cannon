@@ -266,7 +266,7 @@ export function renderStatusTabInnerHtml(
           }
           catBlock =
             catRows.length > 0
-              ? "<p><b>Phase roster</b></p><table class=\"wc-mini-table\"><thead><tr><th>Key</th><th>Status</th><th>Description</th></tr></thead><tbody>" +
+              ? "<p><b>Phase Roster</b></p><table class=\"wc-mini-table\"><thead><tr><th>Key</th><th>Status</th><th>Deliverables</th></tr></thead><tbody>" +
                 catRows +
                 "</tbody></table>"
               : '<p class="wc-muted">Phase roster: no matching rows.</p>';

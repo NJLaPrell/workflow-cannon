@@ -1672,7 +1672,7 @@ export function renderPhaseCatalogOverviewSection(
       }
       inner =
         rows.length > 0
-          ? '<table class="dash-phase-catalog-table"><thead><tr><th>Phase</th><th>Status</th><th>Short description</th></tr></thead><tbody>' +
+          ? '<table class="dash-phase-catalog-table"><thead><tr><th>Phase</th><th>Status</th><th>Deliverables</th></tr></thead><tbody>' +
             rows +
             "</tbody></table>"
           : '<p class="muted">No matching roster rows.</p>';
