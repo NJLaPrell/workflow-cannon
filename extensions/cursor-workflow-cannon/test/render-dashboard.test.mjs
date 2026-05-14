@@ -60,13 +60,17 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   const taskEnginePanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="task-engine"');
   const statusPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="status"');
   const configPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="config"');
+  const caePanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="cae"');
   assert.ok(overviewPanelIdx >= 0 && taskEnginePanelIdx > overviewPanelIdx && statusPanelIdx > taskEnginePanelIdx);
   const overviewPanel = html.slice(overviewPanelIdx, taskEnginePanelIdx);
   const statusPanel = html.slice(statusPanelIdx, configPanelIdx);
+  const caePanel = html.slice(caePanelIdx);
   assert.doesNotMatch(overviewPanel, /Role|Temperament|Presentation/);
   assert.match(statusPanel, /Agent Profile/);
   assert.match(statusPanel, /<span class="wc-status-kv-label">Role<\/span><span class="wc-status-kv-val">Adventurer<\/span>/);
   assert.match(statusPanel, /<span class="wc-status-kv-label">Temperament<\/span><span class="wc-status-kv-val">The Steady Adventurer<\/span>/);
+  assert.match(statusPanel, /Manage guidance policies via the CAE sidebar panel/);
+  assert.doesNotMatch(caePanel, /Active Guidance|aria-label="Agent guidance"/);
   assert.ok(statusPanel.indexOf('aria-label="Agent profile"') < statusPanel.indexOf('aria-label="Workspace identity"'));
   const roleIdx = statusPanelIdx + statusPanel.indexOf("Agent Profile");
   const agentStatusIdx = html.indexOf("<b>WC Agent is:</b>");
