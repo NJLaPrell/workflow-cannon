@@ -97,7 +97,8 @@ export type TaskMutationType =
   | "remove-dependency"
   | "create-task-from-plan"
   | "assign-task-phase"
-  | "clear-task-phase";
+  | "clear-task-phase"
+  | "upsert-phase-catalog-entry";
 
 export type TaskMutationEvidence = {
   mutationId: string;

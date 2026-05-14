@@ -406,6 +406,20 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           await this.pushUpdate();
         }
       }
+      if (msg?.type === "updatePhaseDeliverables") {
+        const phaseKey = typeof msg.phaseKey === "string" ? msg.phaseKey.trim() : "";
+        const rawValue = msg.deliverables;
+        const deliverables =
+          rawValue === null ? null : typeof rawValue === "string" ? rawValue : "";
+        const rawMutationId = typeof msg.clientMutationId === "string" ? msg.clientMutationId.trim() : "";
+        const clientMutationId = rawMutationId.length > 0 ? rawMutationId : undefined;
+        if (phaseKey.length > 0 && (deliverables === null || typeof deliverables === "string")) {
+          const refreshed = await this.onUpdatePhaseDeliverables(phaseKey, deliverables, clientMutationId);
+          if (refreshed) {
+            await this.pushUpdate();
+          }
+        }
+      }
       if (msg?.type === "drawerSubmit") {
         const rawVals = (msg as { values?: unknown }).values;
         const values = normalizeDrawerValues(rawVals);
@@ -775,6 +789,51 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     const html = renderDrawerFormHtml(buildRegisterPhaseCatalogDrawerSpec());
     this.dashboardDrawerSession = { kind: "register-catalog" };
     await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+  }
+
+  /** Update a phase roster Deliverables value via upsert-phase-catalog-entry with one mismatch retry. */
+  private async onUpdatePhaseDeliverables(
+    phaseKey: string,
+    deliverables: string | null,
+    clientMutationId?: string
+  ): Promise<boolean> {
+    const runOnce = async () => {
+      const args: Record<string, unknown> = {
+        phaseKey,
+        actor: "cursor-dashboard",
+        ...expectedPlanningGenerationArgs()
+      };
+      if (clientMutationId) {
+        args.clientMutationId = clientMutationId;
+      }
+      args.shortDescription = deliverables === null ? null : deliverables.trim();
+      return this.client.run("upsert-phase-catalog-entry", args);
+    };
+
+    await this.client.recordActivity({
+      kind: "validating",
+      phaseKey,
+      command: "upsert-phase-catalog-entry",
+      details: { source: "dashboard-phase-roster-deliverables" }
+    });
+
+    let out = await runOnce();
+    if (out.ok !== true && out.code === "planning-generation-mismatch") {
+      await this.ingestPlanningGenFromDashboard();
+      out = await runOnce();
+    }
+    await this.client.clearActivity();
+
+    if (out.ok !== true) {
+      await vscode.window.showErrorMessage(
+        `upsert-phase-catalog-entry failed: ${String(out.message ?? out.code ?? "unknown error")}`
+      );
+      return false;
+    }
+
+    ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
+    this.notifyKitStateChanged();
+    return true;
   }
 
   private closeDashboardDrawer(): void {
