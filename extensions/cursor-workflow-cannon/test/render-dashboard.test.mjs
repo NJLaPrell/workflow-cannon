@@ -53,6 +53,8 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.ok(html.indexOf("dash-agent-status-banner") < html.indexOf("wc-tab-bar"));
   assert.ok(html.indexOf("wc-tab-bar") < html.indexOf("<b>Role:</b>"));
   assert.match(html, /<b>WC Agent is:<\/b> <span class="dash-agent-status-label">Awaiting Instruction<\/span>/);
+  assert.match(html, /dash-agent-row-list/);
+  assert.match(html, /aria-label="Awaiting Instruction, Current agent"/);
   assert.match(html, /<b>Role:<\/b> Adventurer/);
   assert.match(html, /<b>Agent Temperament:<\/b> The Steady Adventurer/);
   assert.match(html, /dash-role-temperament-phase/);
@@ -288,8 +290,83 @@ test("renderDashboardRootInnerHtml renders escaped WC Agent status banner from a
   });
   assert.match(html, /data-agent-status-kind="working_task"/);
   assert.match(html, /Working on Task T123 &lt;script&gt;/);
+  assert.match(html, /dash-agent-row/);
+  assert.match(html, /aria-label="Working on Task T123 &lt;script&gt;, Current agent"/);
+  assert.match(html, /T123/);
   assert.doesNotMatch(html, /<script>/);
   assert.ok(html.indexOf("WC Agent is:") < html.indexOf("Current Phase"));
+});
+
+test("renderDashboardRootInnerHtml renders many agent and subagent rows", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      agentStatus: {
+        schemaVersion: 1,
+        source: "live_activity",
+        kind: "working_task",
+        label: "Working on Task T700",
+        confidence: "high",
+        updatedAt: "2026-05-06T00:00:00.000Z",
+        taskId: "T700",
+        phaseKey: "95"
+      },
+      teamExecution: {
+        schemaVersion: 1,
+        available: true,
+        totalCount: 1,
+        activeCount: 1,
+        byStatus: { assigned: 1, submitted: 0, blocked: 0, reconciled: 0, cancelled: 0 },
+        topActive: [
+          {
+            executionTaskId: "T701",
+            executionTaskTitle: "Review dashboard rows",
+            supervisorId: "operator",
+            workerId: "tab-2",
+            status: "assigned",
+            updatedAt: "2026-05-06T00:01:00.000Z"
+          }
+        ]
+      },
+      subagentRegistry: {
+        schemaVersion: 1,
+        available: true,
+        definitionsCount: 1,
+        retiredDefinitionsCount: 0,
+        openSessionsCount: 1,
+        topOpenSessions: [
+          {
+            sessionId: "S1",
+            definitionId: "test-subagent",
+            executionTaskId: "T702",
+            status: "open",
+            updatedAt: "2026-05-06T00:02:00.000Z"
+          }
+        ]
+      },
+      stateSummary: { proposed: 0, ready: 0, in_progress: 1, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [] },
+      readyQueueTop: [],
+      readyQueueCount: 0,
+      suggestedNext: null,
+      planningSession: null,
+      taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
+      workspaceStatus: { currentKitPhase: "95", nextKitPhase: "96", activeFocus: "Test" },
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+  assert.match(html, /Working on Task T700/);
+  assert.match(html, /tab-2/);
+  assert.match(html, /Review dashboard rows/);
+  assert.match(html, /test-subagent/);
+  assert.match(html, /dash-agent-row--subagent/);
+  assert.match(html, /aria-label="test-subagent, Subagent"/);
 });
 
 test("renderDashboardRootInnerHtml planning card shows resume CLI when session present", () => {

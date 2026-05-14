@@ -22,7 +22,8 @@ export function escapeHtmlAttr(s: string): string {
   return String(s)
     .replace(/&/g, "&amp;")
     .replace(/"/g, "&quot;")
-    .replace(/</g, "&lt;");
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 /** Ready / proposed / blocked row control — posts `assignTaskPhase` (assign-task-phase). */
@@ -1456,20 +1457,164 @@ function renderRoleTemperamentLines(ag: unknown): string {
   );
 }
 
-function renderAgentStatusBanner(agentStatus: unknown): string {
+type DashboardAgentRenderRow = {
+  label: string;
+  role: string;
+  detail: string;
+  phase: string;
+  lastActivity: string;
+  kind: string;
+  taskId: string;
+  subagent: boolean;
+};
+
+function cleanDashboardText(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function humanizeDashboardToken(value: string): string {
+  const token = value.trim();
+  if (token.length === 0) {
+    return "—";
+  }
+  return token
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((part) => part.slice(0, 1).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function agentStatusRenderRows(d: Record<string, unknown>): { kind: string; label: string; rows: DashboardAgentRenderRow[] } {
   let label = "Awaiting Instruction";
   let kind = "awaiting_instruction";
+  const rows: DashboardAgentRenderRow[] = [];
+  const agentStatus = d.agentStatus;
   if (agentStatus && typeof agentStatus === "object") {
     const row = agentStatus as Record<string, unknown>;
-    const rawLabel = typeof row.label === "string" ? row.label.trim() : "";
-    const rawKind = typeof row.kind === "string" ? row.kind.trim() : "";
+    const rawLabel = cleanDashboardText(row.label);
+    const rawKind = cleanDashboardText(row.kind);
     if (rawLabel.length > 0) {
       label = rawLabel;
     }
     if (rawKind.length > 0) {
       kind = rawKind;
     }
+    rows.push({
+      label,
+      role: "Current agent",
+      detail: cleanDashboardText(row.detail) || humanizeDashboardToken(kind),
+      phase: cleanDashboardText(row.phaseKey) || "—",
+      lastActivity: cleanDashboardText(row.updatedAt) || "—",
+      kind,
+      taskId: cleanDashboardText(row.taskId),
+      subagent: false
+    });
+  } else {
+    rows.push({
+      label,
+      role: "Current agent",
+      detail: "Waiting for operator instruction",
+      phase: "—",
+      lastActivity: "—",
+      kind,
+      taskId: "",
+      subagent: false
+    });
   }
+
+  const teamExecution = d.teamExecution && typeof d.teamExecution === "object"
+    ? (d.teamExecution as Record<string, unknown>)
+    : null;
+  const topActive = Array.isArray(teamExecution?.topActive) ? teamExecution.topActive : [];
+  for (const raw of topActive.slice(0, 6)) {
+    if (!raw || typeof raw !== "object") {
+      continue;
+    }
+    const row = raw as Record<string, unknown>;
+    const workerId = cleanDashboardText(row.workerId);
+    const supervisorId = cleanDashboardText(row.supervisorId);
+    const taskId = cleanDashboardText(row.executionTaskId);
+    const title = cleanDashboardText(row.executionTaskTitle);
+    const status = cleanDashboardText(row.status);
+    rows.push({
+      label: workerId || supervisorId || taskId || "Assigned agent",
+      role: status ? `Team ${humanizeDashboardToken(status)}` : "Team assignment",
+      detail: title || (taskId ? `Task ${taskId}` : "Assigned work"),
+      phase: "—",
+      lastActivity: cleanDashboardText(row.updatedAt) || "—",
+      kind: status || "team_assignment",
+      taskId,
+      subagent: false
+    });
+  }
+
+  const subagentRegistry = d.subagentRegistry && typeof d.subagentRegistry === "object"
+    ? (d.subagentRegistry as Record<string, unknown>)
+    : null;
+  const topOpenSessions = Array.isArray(subagentRegistry?.topOpenSessions) ? subagentRegistry.topOpenSessions : [];
+  for (const raw of topOpenSessions.slice(0, 6)) {
+    if (!raw || typeof raw !== "object") {
+      continue;
+    }
+    const row = raw as Record<string, unknown>;
+    const definitionId = cleanDashboardText(row.definitionId);
+    const sessionId = cleanDashboardText(row.sessionId);
+    const taskId = cleanDashboardText(row.executionTaskId);
+    const status = cleanDashboardText(row.status);
+    rows.push({
+      label: definitionId || sessionId || "Subagent",
+      role: "Subagent",
+      detail: taskId ? `Task ${taskId}` : humanizeDashboardToken(status || "open"),
+      phase: "—",
+      lastActivity: cleanDashboardText(row.updatedAt) || "—",
+      kind: status || "subagent",
+      taskId,
+      subagent: true
+    });
+  }
+
+  return { kind, label, rows };
+}
+
+function renderAgentStatusBanner(d: Record<string, unknown>): string {
+  const { kind, label, rows } = agentStatusRenderRows(d);
+  const rowHtml = rows
+    .map((row) => {
+      const labelText = row.label || "—";
+      const roleText = row.role || "—";
+      const aria = `${labelText}, ${roleText}`;
+      const taskChip = row.taskId
+        ? '<span class="dash-agent-row-chip">' + escapeHtml(row.taskId) + "</span>"
+        : "";
+      const subChip = row.subagent ? '<span class="dash-agent-row-chip dash-agent-row-chip-sub">Subagent</span>' : "";
+      return (
+        '<div class="dash-agent-row' +
+        (row.subagent ? " dash-agent-row--subagent" : "") +
+        '" role="listitem" aria-label="' +
+        escapeHtmlAttr(aria) +
+        '">' +
+        '<span class="dash-agent-row-icon" aria-hidden="true">' +
+        (row.subagent ? "↳" : "●") +
+        "</span>" +
+        '<span class="dash-agent-row-main"><b>' +
+        escapeHtml(labelText) +
+        '</b><span class="muted">' +
+        escapeHtml(roleText) +
+        "</span></span>" +
+        '<span class="dash-agent-row-detail">' +
+        escapeHtml(row.detail || "—") +
+        "</span>" +
+        '<span class="dash-agent-row-meta">' +
+        (row.phase !== "—" ? '<span class="dash-agent-row-chip">Phase ' + escapeHtml(row.phase) + "</span>" : "") +
+        taskChip +
+        subChip +
+        '<span class="muted">' +
+        escapeHtml(row.lastActivity || "—") +
+        "</span></span>" +
+        "</div>"
+      );
+    })
+    .join("");
   return (
     '<section class="dash-agent-status-banner" aria-label="WC Agent status" data-agent-status-kind="' +
     escapeHtmlAttr(kind) +
@@ -1477,6 +1622,9 @@ function renderAgentStatusBanner(agentStatus: unknown): string {
     '<p><b>WC Agent is:</b> <span class="dash-agent-status-label">' +
     escapeHtml(label) +
     "</span></p>" +
+    '<div class="dash-agent-row-list" role="list">' +
+    rowHtml +
+    "</div>" +
     "</section>"
   );
 }
@@ -2267,7 +2415,7 @@ export function renderDashboardRootInnerHtml(
 
   return (
     '<div class="wc-dashboard-tab-shell">' +
-    renderAgentStatusBanner(d.agentStatus) +
+    renderAgentStatusBanner(d) +
     '<div class="wc-tab-bar" role="tablist">' +
     '<button type="button" class="wc-tab-btn wc-tab-active" role="tab" data-wc-tab="overview">Overview</button>' +
     '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="task-engine">Queue' +
