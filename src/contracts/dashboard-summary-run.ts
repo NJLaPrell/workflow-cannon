@@ -16,7 +16,11 @@ export type DashboardTaskRow = {
   id: string;
   title: string;
   priority?: string | null;
+  /** Task severity label promoted from stable read metadata when present. */
+  severity?: string | null;
   phase?: string | null;
+  /** Component labels for queue-grouping and chip renderers. */
+  components?: string[] | null;
   /** Feature taxonomy slugs when present on the task (`feature-taxonomy.json`). */
   features?: string[] | null;
   /** Resolved labels when relational feature registry is active (`user_version` 5+). */
@@ -274,7 +278,9 @@ export type DashboardSummaryData = {
     title: string;
     status: string;
     priority?: string | null;
+    severity?: string | null;
     phase?: string | null;
+    components?: string[] | null;
     features?: string[] | null;
     featureDetails?: DashboardFeatureDetail[] | null;
   } | null;

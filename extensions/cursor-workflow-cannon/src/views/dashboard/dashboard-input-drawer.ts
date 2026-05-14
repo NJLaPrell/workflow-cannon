@@ -247,6 +247,94 @@ export function buildDismissPhaseNoteDrawerSpec(noteId: string, priority: string
   };
 }
 
+export function buildViewPhaseNoteDrawerSpec(params: {
+  noteId: string;
+  noteType: string;
+  priority: string;
+  summary: string;
+  details: string;
+}): DrawerFormSpec {
+  const summary = params.summary.trim();
+  const details = params.details.trim();
+  return {
+    workflowId: "view-phase-note",
+    title: "View phase note",
+    descriptionHtml: "Read-only view for the selected phase note.",
+    fields: [
+      {
+        id: "ctx",
+        kind: "summary",
+        label: "Note",
+        body:
+          "<div><b>Note id:</b> " +
+          escapeDrawerHtml(params.noteId) +
+          "</div>" +
+          "<div><b>Type:</b> " +
+          escapeDrawerHtml(params.noteType.trim() || "unknown") +
+          "</div>" +
+          "<div><b>Priority:</b> " +
+          escapeDrawerHtml(params.priority.trim() || "normal") +
+          "</div>"
+      },
+      {
+        id: "summaryView",
+        kind: "summary",
+        label: "Subject",
+        body: "<div>" + escapeDrawerHtml(summary || "(empty)") + "</div>"
+      },
+      {
+        id: "detailsView",
+        kind: "summary",
+        label: "Body",
+        body: "<div>" + escapeDrawerHtml(details || "(empty)") + "</div>"
+      }
+    ],
+    primaryLabel: "Close",
+    cancelLabel: "Cancel"
+  };
+}
+
+export function buildEditPhaseNoteDrawerSpec(params: {
+  noteId: string;
+  summary: string;
+  details: string;
+}): DrawerFormSpec {
+  return {
+    workflowId: "edit-phase-note",
+    title: "Edit phase note",
+    descriptionHtml:
+      "Runs <code>update-phase-note</code> for this note. Do not paste secrets — kit enforces secret-shaped validation.",
+    fields: [
+      {
+        id: "ctx",
+        kind: "summary",
+        label: "Target",
+        body: "<div><b>Note id:</b> " + escapeDrawerHtml(params.noteId) + "</div>"
+      },
+      {
+        id: "summary",
+        kind: "textarea",
+        label: "Subject (required)",
+        placeholder: "Short note subject",
+        required: true,
+        rows: 3,
+        value: params.summary
+      },
+      {
+        id: "details",
+        kind: "textarea",
+        label: "Body (optional)",
+        placeholder: "Additional details",
+        required: false,
+        rows: 4,
+        value: params.details
+      }
+    ],
+    primaryLabel: "Save",
+    cancelLabel: "Cancel"
+  };
+}
+
 export type DrawerValidationResult =
   | { ok: true; values: Record<string, string> }
   | { ok: false; error: string };
@@ -698,6 +786,21 @@ export function validateDismissPhaseNoteSubmit(
     return { ok: false, error: "Critical dismiss requires a non-empty policy rationale." };
   }
   return { ok: true, values: { reason, policyRationale: rationale } };
+}
+
+export function validateEditPhaseNoteSubmit(values: Record<string, string>): DrawerValidationResult {
+  const summary = (values.summary ?? "").trim();
+  if (!summary) {
+    return { ok: false, error: "Subject is required." };
+  }
+  if (summary.length > PHASE_NOTE_SUMMARY_MAX) {
+    return { ok: false, error: `Subject must be at most ${String(PHASE_NOTE_SUMMARY_MAX)} characters.` };
+  }
+  const details = (values.details ?? "").trim();
+  if (details.length > PHASE_NOTE_DETAILS_MAX) {
+    return { ok: false, error: `Body must be at most ${String(PHASE_NOTE_DETAILS_MAX)} characters.` };
+  }
+  return { ok: true, values: { summary, details } };
 }
 
 export type GuidanceCaeMutationDrawerParams = {

@@ -1,6 +1,5 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
 import type {
-  DashboardFeatureDetail,
   DashboardSubagentRegistrySummary,
   DashboardSummaryData,
   DashboardTeamExecutionSummary
@@ -32,13 +31,14 @@ import {
 } from "../wishlist/wishlist-intake.js";
 import type { TaskStore } from "../persistence/store.js";
 import type { SqliteDualPlanningStore } from "../persistence/sqlite-dual-planning.js";
-import { buildFeatureEnrichmentBySlug, type FeatureEnrichment } from "../persistence/feature-registry-queries.js";
+import { buildFeatureEnrichmentBySlug } from "../persistence/feature-registry-queries.js";
 import { buildDashboardSystemStatus } from "../dashboard/build-dashboard-system-status.js";
 import { buildDashboardAgentStatus } from "../dashboard/dashboard-agent-status.js";
 import {
   agentActivityLeaseToDashboardStatus,
   readCurrentAgentActivityLease
 } from "../agent-activity-store.js";
+import { projectDashboardTaskRow } from "../task-read-projections.js";
 
 /** Parse optional `dashboard-summary` argv for wishlist table paging (extension + CLI). */
 export function parseDashboardWishlistPaging(args?: Record<string, unknown>): {
@@ -63,28 +63,6 @@ export function parseDashboardWishlistPaging(args?: Record<string, unknown>): {
   return { page, pageSize };
 }
 
-function featureDetailsForTask(
-  slugs: string[] | undefined,
-  enrich: Map<string, FeatureEnrichment>
-): DashboardFeatureDetail[] | null {
-  if (!slugs?.length) {
-    return null;
-  }
-  const out: DashboardFeatureDetail[] = [];
-  for (const s of slugs) {
-    const row = enrich.get(s);
-    if (row) {
-      out.push({
-        slug: row.slug,
-        name: row.name,
-        componentId: row.componentId,
-        componentDisplayName: row.componentDisplayName
-      });
-    }
-  }
-  return out.length > 0 ? out : null;
-}
-
 export async function runDashboardSummaryCommand(
   ctx: ModuleLifecycleContext,
   store: TaskStore,
@@ -101,14 +79,7 @@ export async function runDashboardSummaryCommand(
   const readyImprovements = readyQueue.filter(isImprovementLikeTask);
   const readyExecution = readyQueue.filter((t) => !isImprovementLikeTask(t));
   const enrich = sqliteDual ? buildFeatureEnrichmentBySlug(sqliteDual.getDatabase()) : new Map();
-  const toReadyRow = (t: (typeof readyQueue)[0]) => ({
-    id: t.id,
-    title: t.title,
-    priority: t.priority ?? null,
-    phase: t.phase ?? null,
-    features: t.features?.length ? t.features : null,
-    featureDetails: featureDetailsForTask(t.features, enrich)
-  });
+  const toReadyRow = (t: (typeof readyQueue)[0]) => projectDashboardTaskRow(t, enrich);
   const readyTop = readyQueue.slice(0, 15).map(toReadyRow);
   const readyImprovementsTop = readyImprovements.slice(0, 15).map(toReadyRow);
   const readyExecutionTop = readyExecution.slice(0, 15).map(toReadyRow);
@@ -136,13 +107,7 @@ export async function runDashboardSummaryCommand(
   const proposedImprovements = tasks
     .filter((t) => t.status === "proposed" && isImprovementLikeTask(t))
     .sort((a, b) => a.id.localeCompare(b.id));
-  const slimListRow = (t: (typeof tasks)[0]) => ({
-    id: t.id,
-    title: t.title,
-    phase: t.phase ?? null,
-    features: t.features?.length ? t.features : null,
-    featureDetails: featureDetailsForTask(t.features, enrich)
-  });
+  const slimListRow = (t: (typeof tasks)[0]) => projectDashboardTaskRow(t, enrich, { includePriority: false });
   const proposedImprovementsTop = proposedImprovements.slice(0, 15).map(slimListRow);
 
   const proposedExecution = tasks
@@ -153,13 +118,7 @@ export async function runDashboardSummaryCommand(
   const planningSession = toDashboardPlanningSession(await readBuildPlanSession(ctx.workspacePath));
 
   const dashboardPhaseTop = 15;
-  const toProposedRow = (t: (typeof tasks)[0]) => ({
-    id: t.id,
-    title: t.title,
-    phase: t.phase ?? null,
-    features: t.features?.length ? t.features : null,
-    featureDetails: featureDetailsForTask(t.features, enrich)
-  });
+  const toProposedRow = (t: (typeof tasks)[0]) => projectDashboardTaskRow(t, enrich, { includePriority: false });
   const readyImprovementsPhaseBuckets = buildDashboardPhaseBucketsForTasks(
     readyImprovements,
     workspaceStatus,
@@ -374,13 +333,10 @@ export async function runDashboardSummaryCommand(
     },
     suggestedNext: suggestion.suggestedNext
       ? {
+          ...projectDashboardTaskRow(suggestion.suggestedNext, enrich),
           id: suggestion.suggestedNext.id,
-          title: suggestion.suggestedNext.title,
           status: suggestion.suggestedNext.status,
-          priority: suggestion.suggestedNext.priority ?? null,
-          phase: suggestion.suggestedNext.phase ?? null,
-          features: suggestion.suggestedNext.features?.length ? suggestion.suggestedNext.features : null,
-          featureDetails: featureDetailsForTask(suggestion.suggestedNext.features, enrich)
+          title: suggestion.suggestedNext.title
         }
       : null,
     dependencyOverview,

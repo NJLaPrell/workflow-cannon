@@ -21,4 +21,4 @@ workspace-kit run get-task '{"taskId":"T184"}'
 
 ## Returns
 
-`TaskEntity` as `task`, plus `recentTransitions` (newest-first evidence for this `taskId`), and `allowedActions`: `{ action, targetStatus }[]` from the task engine transition map (for UI menus).
+Projected task read row as `task`, plus `recentTransitions` (newest-first evidence for this `taskId`), and `allowedActions`: `{ action, targetStatus }[]` from the task engine transition map (for UI menus). The task payload includes stable `priority`, `severity`, `components`, and feature taxonomy `features` fields for queue/detail UIs.

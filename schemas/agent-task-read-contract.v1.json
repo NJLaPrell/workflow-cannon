@@ -154,6 +154,9 @@
         "status",
         "type",
         "priority",
+        "severity",
+        "components",
+        "features",
         "archived",
         "createdAt",
         "updatedAt",
@@ -176,6 +179,9 @@
             { "type": "null" }
           ]
         },
+        "severity": { "$ref": "#/$defs/nullableString" },
+        "components": { "$ref": "#/$defs/stringArray" },
+        "features": { "$ref": "#/$defs/stringArray" },
         "archived": { "type": "boolean" },
         "createdAt": { "type": "string" },
         "updatedAt": { "type": "string" },
@@ -222,6 +228,9 @@
         "status",
         "type",
         "priority",
+        "severity",
+        "components",
+        "features",
         "archived",
         "createdAt",
         "updatedAt",
@@ -251,6 +260,9 @@
             { "type": "null" }
           ]
         },
+        "severity": { "$ref": "#/$defs/nullableString" },
+        "components": { "$ref": "#/$defs/stringArray" },
+        "features": { "$ref": "#/$defs/stringArray" },
         "archived": { "type": "boolean" },
         "createdAt": { "type": "string" },
         "updatedAt": { "type": "string" },

@@ -4,7 +4,9 @@ import { attachPolicyMeta } from "../attach-planning-response-meta.js";
 import { mutationEvidence, nowIso, planningConcurrencySaveOpts } from "../mutation-utils.js";
 import { planningGenPolicyGate } from "../planning-generation-gate.js";
 import type { OpenedPlanningStores } from "../persistence/planning-open.js";
+import { buildFeatureEnrichmentBySlug } from "../persistence/feature-registry-queries.js";
 import { TaskStore } from "../persistence/store.js";
+import { projectTaskReadEntity } from "../task-read-projections.js";
 import { strictValidationError } from "./strict-store-validation.js";
 import { getAllowedTransitionsFrom } from "../transitions.js";
 import type { TaskStatus } from "../types.js";
@@ -98,9 +100,10 @@ export async function resolveTaskArchiveDependencyCommands(
       action,
       targetStatus: to
     }));
+    const enrich = buildFeatureEnrichmentBySlug(planning.sqliteDual.getDatabase());
 
     const gtData: Record<string, unknown> = {
-      task,
+      task: projectTaskReadEntity(task, enrich),
       recentTransitions,
       allowedActions
     };

@@ -29,13 +29,60 @@ export function escapeHtmlAttr(s: string): string {
 /** Ready / proposed / blocked row control — posts `assignTaskPhase` (assign-task-phase). */
 function renderPhaseAssignButton(taskId: string): string {
   const idAttr = escapeHtml(taskId);
-  const aria = escapeHtmlAttr(`Move task ${taskId} to a different phase`);
+  const aria = escapeHtmlAttr(`Set phase for task ${taskId}`);
   return (
     '<button type="button" class="dash-row-action dash-row-action-secondary" data-wc-action="assign-phase" data-task-id="' +
     idAttr +
     '" aria-label="' +
     aria +
-    '" title="assign-task-phase — set stable phaseKey">Phase</button>'
+    '" title="assign-task-phase — set stable phaseKey">Set Phase</button>'
+  );
+}
+
+function renderTaskDetailButton(taskId: string): string {
+  const idAttr = escapeHtml(taskId);
+  const aria = escapeHtmlAttr(`View task details for ${taskId}`);
+  return (
+    '<button type="button" class="dash-row-action dash-row-action-tertiary" data-wc-action="task-detail" data-task-id="' +
+    idAttr +
+    '" aria-label="' +
+    aria +
+    '" title="Open task detail view (markdown)">View Task</button>'
+  );
+}
+
+function renderTaskCommentsButton(taskId: string, mode: "view" | "add"): string {
+  const idAttr = escapeHtml(taskId);
+  const label = mode === "add" ? "Add Comment" : "View Comments";
+  const action = mode === "add" ? "task-comment-add" : "task-comments-view";
+  const aria = escapeHtmlAttr(`${label} for task ${taskId}`);
+  const cls = mode === "add" ? "dash-row-action-info" : "dash-row-action-tertiary";
+  return (
+    '<button type="button" class="dash-row-action ' +
+    cls +
+    '" data-wc-action="' +
+    action +
+    '" data-task-id="' +
+    idAttr +
+    '" aria-label="' +
+    aria +
+    '" title="Task comments are coming soon">' +
+    label +
+    '</button>'
+  );
+}
+
+function renderQueueTaskActionButtons(taskId: string): string {
+  if (taskId.trim().length === 0) {
+    return "";
+  }
+  return (
+    '<span class="dash-row-actions">' +
+    renderPhaseAssignButton(taskId) +
+    renderTaskDetailButton(taskId) +
+    renderTaskCommentsButton(taskId, "view") +
+    renderTaskCommentsButton(taskId, "add") +
+    "</span>"
   );
 }
 
@@ -43,6 +90,25 @@ function renderPhaseAssignButton(taskId: string): string {
 function wcTrackAttr(trackId: string): string {
   const safe = trackId.replace(/[^a-zA-Z0-9_-]/g, "_").replace(/_+/g, "_").slice(0, 120);
   return ' data-wc-track="' + escapeHtml(safe) + '"';
+}
+
+/** Prefix embedded CAE panel ids so embedding and standalone renders can coexist without duplicate ids. */
+function namespaceEmbeddedCaePanelHtml(html: string, prefix = "dash-cae-"): string {
+  const idMap = new Map<string, string>();
+  const withIds = html.replace(/id="([^"]+)"/g, (_match, id: string) => {
+    const from = String(id);
+    const to = `${prefix}${from}`;
+    idMap.set(from, to);
+    return `id="${to}"`;
+  });
+  let out = withIds;
+  for (const [from, to] of idMap) {
+    out = out.replace(new RegExp(`for="${from}"`, "g"), `for="${to}"`);
+    out = out.replace(new RegExp(`aria-controls="${from}"`, "g"), `aria-controls="${to}"`);
+    out = out.replace(new RegExp(`aria-labelledby="${from}"`, "g"), `aria-labelledby="${to}"`);
+    out = out.replace(new RegExp(`href="#${from}"`, "g"), `href="#${to}"`);
+  }
+  return out;
 }
 
 /** Escape first, then turn paired `**segments**` into `<b>…</b>` (safe for webview HTML). */
@@ -206,18 +272,116 @@ function renderStatPills(
 }
 
 /** Filter chip bar for the Queue tab. */
-function renderFilterChipBar(): string {
+function parsePhaseOrdinal(raw: unknown): number | null {
+  if (raw === null || raw === undefined) {
+    return null;
+  }
+  const m = String(raw).trim().match(/^(\d+)/);
+  if (!m) {
+    return null;
+  }
+  const n = Number.parseInt(m[1] ?? "", 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+function deriveQueuePhaseFilterOptions(args: {
+  workspaceStatus: Record<string, unknown> | null;
+  phaseBuckets: unknown[];
+}): Array<{ value: string; label: string }> {
+  const out: Array<{ value: string; label: string }> = [{ value: "all", label: "All phases" }];
+  const seen = new Set<string>(["all"]);
+  const available = new Set<string>();
+
+  for (const raw of args.phaseBuckets) {
+    if (!Array.isArray(raw)) {
+      continue;
+    }
+    for (const bucket of raw) {
+      if (!bucket || typeof bucket !== "object") {
+        continue;
+      }
+      const b = bucket as { phaseKey?: unknown };
+      const pkRaw = b.phaseKey;
+      const pk = pkRaw === null || pkRaw === undefined ? "__no_phase__" : String(pkRaw).trim() || "__no_phase__";
+      available.add(pk);
+    }
+  }
+
+  const add = (value: string, label: string) => {
+    if (!available.has(value) || seen.has(value)) {
+      return;
+    }
+    seen.add(value);
+    out.push({ value, label });
+  };
+
+  add("__no_phase__", "No Phase");
+
+  const currentOrd = parsePhaseOrdinal(args.workspaceStatus?.currentKitPhase);
+  const nextOrd = parsePhaseOrdinal(args.workspaceStatus?.nextKitPhase);
+
+  if (currentOrd !== null) {
+    const previous = currentOrd - 1;
+    if (previous > 0) {
+      add(String(previous), `Previous (${String(previous)})`);
+    }
+    add(String(currentOrd), `Current (${String(currentOrd)})`);
+  }
+  if (nextOrd !== null) {
+    add(String(nextOrd), `Next (${String(nextOrd)})`);
+  }
+
+  const numericLeftovers = [...available]
+    .filter((k) => /^\d+$/.test(k) && !seen.has(k))
+    .map((k) => Number.parseInt(k, 10))
+    .filter((n) => Number.isFinite(n))
+    .sort((a, b) => a - b)
+    .map((n) => String(n));
+  for (const k of numericLeftovers) {
+    add(k, `Phase ${k}`);
+  }
+
+  const lexicalLeftovers = [...available]
+    .filter((k) => !/^\d+$/.test(k) && k !== "__no_phase__" && !seen.has(k))
+    .sort((a, b) => a.localeCompare(b));
+  for (const k of lexicalLeftovers) {
+    add(k, `Phase ${k}`);
+  }
+
+  return out;
+}
+
+function renderFilterChipBar(phaseOptions: Array<{ value: string; label: string }>): string {
+  const select =
+    phaseOptions.length > 1
+      ? '<label class="wc-phase-filter-wrap">Phase <select class="wc-phase-filter-select" data-wc-phase-filter aria-label="Filter tasks by phase">' +
+        phaseOptions
+          .map(
+            (o) =>
+              '<option value="' + escapeHtmlAttr(o.value) + '">' + escapeHtml(o.label) + "</option>"
+          )
+          .join("") +
+        "</select></label>"
+      : "";
   return (
     '<div class="wc-filter-chips" role="toolbar" aria-label="Filter task sections">' +
     '<button type="button" class="wc-filter-chip wc-filter-active" data-wc-filter-btn="all">All</button>' +
     '<button type="button" class="wc-filter-chip wc-filter-chip-ready" data-wc-filter-btn="ready">Ready</button>' +
     '<button type="button" class="wc-filter-chip wc-filter-chip-proposed" data-wc-filter-btn="proposed">Proposed</button>' +
     '<button type="button" class="wc-filter-chip wc-filter-chip-blocked" data-wc-filter-btn="blocked">Blocked</button>' +
+    select +
     "</div>"
   );
 }
 
-/** Phase readiness card for the CAE tab. */
+function phaseBucketFilterAttr(phaseKey: unknown): string {
+  if (phaseKey === null || phaseKey === undefined || String(phaseKey).trim() === "") {
+    return ' data-wc-phase-bucket="__no_phase__"';
+  }
+  return ' data-wc-phase-bucket="' + escapeHtmlAttr(String(phaseKey).trim()) + '"';
+}
+
+/** Phase readiness card for the Queue tab. */
 function renderCaePhaseReadinessContent(
   ws: Record<string, unknown> | null,
   readyExeCount: number,
@@ -355,6 +519,86 @@ type EditorIntegrationRenderState = {
   };
 };
 
+function normalizeStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .map((entry) => String(entry ?? "").trim())
+    .filter((entry) => entry.length > 0);
+}
+
+function renderTaskMetadataChip(kind: string, label: string): string {
+  return '<span class="dash-task-chip dash-task-chip-' + escapeHtmlAttr(kind) + '">' + escapeHtml(label) + "</span>";
+}
+
+function renderDashboardTaskBody(
+  row: {
+    id?: unknown;
+    title?: unknown;
+    summary?: unknown;
+    priority?: unknown;
+    severity?: unknown;
+    components?: unknown;
+    component?: unknown;
+    features?: unknown;
+    featureDetails?: unknown;
+  },
+  options?: { includeFallbackFeatureDetails?: boolean }
+): string {
+  const id = String(row?.id ?? "").trim();
+  const title = String(row?.title ?? "").trim();
+  const summaryRaw = String(row?.summary ?? row?.title ?? "").trim();
+  const summary = summaryRaw.length > 0 ? summaryRaw : title;
+  const priority = String(row?.priority ?? "").trim();
+  const severity = String(row?.severity ?? "").trim();
+  const featureDetails = Array.isArray(row?.featureDetails)
+    ? (row.featureDetails as Array<Record<string, unknown>>)
+    : [];
+  const components = [
+    ...normalizeStringArray(row?.components),
+    ...normalizeStringArray(row?.component),
+    ...(options?.includeFallbackFeatureDetails === false
+      ? []
+      : featureDetails
+          .map((detail) => String(detail?.componentDisplayName ?? detail?.componentId ?? "").trim())
+          .filter((value) => value.length > 0))
+  ].filter((value, index, values) => values.indexOf(value) === index);
+  const features = [
+    ...normalizeStringArray(row?.features),
+    ...featureDetails
+      .map((detail) => String(detail?.name ?? detail?.slug ?? "").trim())
+      .filter((value) => value.length > 0)
+  ].filter((value, index, values) => values.indexOf(value) === index);
+
+  const chips: string[] = [];
+  if (priority.length > 0) {
+    chips.push(renderTaskMetadataChip("priority", priority));
+  }
+  if (severity.length > 0) {
+    chips.push(renderTaskMetadataChip("severity", severity));
+  }
+  for (const component of components) {
+    chips.push(renderTaskMetadataChip("component", component));
+  }
+  for (const feature of features) {
+    chips.push(renderTaskMetadataChip("feature", feature));
+  }
+
+  return (
+    '<span class="dash-row-label dash-task-row-body">' +
+    '<span class="dash-task-row-line">' +
+    (id.length > 0 ? '<span class="dash-task-row-id">' + escapeHtml(id) + "</span>" : "") +
+    (chips.length > 0 ? '<span class="dash-task-row-chips">' + chips.join("") + "</span>" : "") +
+    "</span>" +
+    '<span class="dash-task-row-summary" title="' +
+    escapeHtmlAttr(summary) +
+    '">' +
+    escapeHtml(summary) +
+    "</span></span>"
+  );
+}
+
 function renderTaskRowList(items: unknown, emptyMessage = "No ready tasks."): string {
   if (!Array.isArray(items) || items.length === 0) {
     return '<p class="muted">' + escapeHtml(emptyMessage) + "</p>";
@@ -363,24 +607,23 @@ function renderTaskRowList(items: unknown, emptyMessage = "No ready tasks."): st
     '<div class="dash-row-list" role="list">' +
     items
       .map((x) => {
-        const row = x as { id?: unknown; title?: unknown; priority?: unknown };
+        const row = x as {
+          id?: unknown;
+          title?: unknown;
+          summary?: unknown;
+          priority?: unknown;
+          severity?: unknown;
+          components?: unknown;
+          component?: unknown;
+          features?: unknown;
+          featureDetails?: unknown;
+        };
         const id = String(row?.id ?? "").trim();
-        const pri = row?.priority ? " [" + escapeHtml(String(row.priority)) + "]" : "";
-        const label = "- " + escapeHtml(id) + (id ? " " : "") + escapeHtml(String(row?.title ?? "")) + pri;
         const idAttr = escapeHtml(id);
         return (
           '<div class="dash-row" role="listitem">' +
-          '<span class="dash-row-label">' +
-          label +
-          "</span>" +
-          (id.length > 0
-            ? '<span class="dash-row-actions">' +
-              renderPhaseAssignButton(id) +
-              '<button type="button" class="dash-row-action dash-row-action-tertiary" data-wc-action="task-detail" data-task-id="' +
-              idAttr +
-              '" title="Open task view (markdown)">View</button>' +
-              "</span>"
-            : "") +
+          renderDashboardTaskBody(row) +
+          renderQueueTaskActionButtons(id) +
           "</div>"
         );
       })
@@ -459,17 +702,24 @@ function renderWishlistPager(openPage: number, openTotalPages: number): string {
   );
 }
 
-function renderProposedImprovementRow(row: { id?: unknown; title?: unknown; phase?: unknown }): string {
+function renderProposedImprovementRow(row: {
+  id?: unknown;
+  title?: unknown;
+  summary?: unknown;
+  phase?: unknown;
+  priority?: unknown;
+  severity?: unknown;
+  components?: unknown;
+  component?: unknown;
+  features?: unknown;
+  featureDetails?: unknown;
+}): string {
   const id = String(row?.id ?? "").trim();
-  const title = escapeHtml(String(row?.title ?? ""));
-  const ph = row?.phase != null && String(row.phase).length > 0 ? " · " + escapeHtml(String(row.phase)) : "";
-  const label = "- " + escapeHtml(id) + (id ? " " : "") + title + ph;
   const idAttr = escapeHtml(id);
   return (
     '<div class="dash-row" role="listitem">' +
-    '<span class="dash-row-label">' +
-    label +
-    "</span>" +
+    renderDashboardTaskBody(row) +
+    renderQueueTaskActionButtons(id) +
     '<span class="dash-row-actions">' +
     '<button type="button" class="dash-row-action dash-row-action-primary" data-wc-action="proposed-imp-accept" data-task-id="' +
     idAttr +
@@ -544,19 +794,25 @@ function renderTranscriptChurnResearchList(count: number, items: unknown): strin
   );
 }
 
-function renderProposedExecutionRow(row: { id?: unknown; title?: unknown; phase?: unknown }): string {
+function renderProposedExecutionRow(row: {
+  id?: unknown;
+  title?: unknown;
+  summary?: unknown;
+  phase?: unknown;
+  priority?: unknown;
+  severity?: unknown;
+  components?: unknown;
+  component?: unknown;
+  features?: unknown;
+  featureDetails?: unknown;
+}): string {
   const id = String(row?.id ?? "").trim();
-  const title = escapeHtml(String(row?.title ?? ""));
-  const ph = row?.phase != null && String(row.phase).length > 0 ? " · " + escapeHtml(String(row.phase)) : "";
-  const label = "- " + escapeHtml(id) + (id ? " " : "") + title + ph;
   const idAttr = escapeHtml(id);
   return (
     '<div class="dash-row" role="listitem">' +
-    '<span class="dash-row-label">' +
-    label +
-    "</span>" +
+    renderDashboardTaskBody(row) +
+    renderQueueTaskActionButtons(id) +
     '<span class="dash-row-actions">' +
-    renderPhaseAssignButton(id) +
     '<button type="button" class="dash-row-action dash-row-action-primary" data-wc-action="proposed-exe-accept" data-task-id="' +
     idAttr +
     '" title="Accept → ready (confirms policy rationale)">Accept</button>' +
@@ -602,14 +858,7 @@ function renderBlockedList(items: unknown): string {
           '<span class="dash-row-label">' +
           label +
           "</span>" +
-          (tid.length > 0
-            ? '<span class="dash-row-actions">' +
-              renderPhaseAssignButton(tid) +
-              '<button type="button" class="dash-row-action dash-row-action-tertiary" data-wc-action="task-detail" data-task-id="' +
-              idAttr +
-              '" title="Open task view (markdown)">View</button>' +
-              "</span>"
-            : "") +
+          renderQueueTaskActionButtons(tid) +
           "</div>"
         );
       })
@@ -685,6 +934,7 @@ function renderReadyPhaseBuckets(
         const body = renderTaskRowList(b.top ?? [], "No tasks in this phase.");
         return (
           '<details class="phase-bucket"' +
+          phaseBucketFilterAttr(b.phaseKey) +
           wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
           '><summary class="phase-bucket-summary">' +
           '<span class="phase-bucket-summary-label">' +
@@ -725,7 +975,7 @@ function renderProposedPhaseBuckets(
     '<div class="phase-stack">' +
     buckets
       .map((raw, i) => {
-        const b = raw as { label?: unknown; top?: unknown; count?: unknown; taskIds?: unknown };
+        const b = raw as { label?: unknown; top?: unknown; count?: unknown; taskIds?: unknown; phaseKey?: unknown };
         const summaryLabel = escapeHtml(String(b.label ?? ""));
         const taskIds = Array.isArray(b.taskIds)
           ? (b.taskIds as unknown[]).map((x) => String(x).trim()).filter((id) => id.length > 0)
@@ -743,6 +993,7 @@ function renderProposedPhaseBuckets(
             : renderProposedImprovementsList(c, b.top ?? []);
         return (
           '<details class="phase-bucket"' +
+          phaseBucketFilterAttr(b.phaseKey) +
           wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
           '><summary class="phase-bucket-summary">' +
           '<span class="phase-bucket-summary-label">' +
@@ -782,7 +1033,7 @@ function renderTranscriptChurnResearchPhaseBuckets(
     '<div class="phase-stack">' +
     buckets
       .map((raw, i) => {
-        const b = raw as { label?: unknown; top?: unknown; count?: unknown };
+        const b = raw as { label?: unknown; top?: unknown; count?: unknown; phaseKey?: unknown };
         const summary = escapeHtml(String(b.label ?? ""));
         const c = typeof b.count === "number" ? b.count : 0;
         const inner =
@@ -791,6 +1042,7 @@ function renderTranscriptChurnResearchPhaseBuckets(
             : renderTranscriptChurnResearchList(c, b.top ?? []);
         return (
           '<details class="phase-bucket"' +
+          phaseBucketFilterAttr(b.phaseKey) +
           wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
           "><summary>" +
           summary +
@@ -829,7 +1081,7 @@ function renderProposedExecutionPhaseBuckets(
     '<div class="phase-stack">' +
     bucketsPe
       .map((raw, i) => {
-        const b = raw as { label?: unknown; top?: unknown; count?: unknown; taskIds?: unknown };
+        const b = raw as { label?: unknown; top?: unknown; count?: unknown; taskIds?: unknown; phaseKey?: unknown };
         const summaryLabel = escapeHtml(String(b.label ?? ""));
         const taskIds = Array.isArray(b.taskIds)
           ? (b.taskIds as unknown[]).map((x) => String(x).trim()).filter((id) => id.length > 0)
@@ -847,6 +1099,7 @@ function renderProposedExecutionPhaseBuckets(
             : renderProposedExecutionList(c, b.top ?? []);
         return (
           '<details class="phase-bucket"' +
+          phaseBucketFilterAttr(b.phaseKey) +
           wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
           '><summary class="phase-bucket-summary">' +
           '<span class="phase-bucket-summary-label">' +
@@ -886,7 +1139,7 @@ function renderBlockedPhaseBuckets(
     '<div class="phase-stack">' +
     bucketsBl
       .map((raw, i) => {
-        const b = raw as { label?: unknown; top?: unknown; count?: unknown };
+        const b = raw as { label?: unknown; top?: unknown; count?: unknown; phaseKey?: unknown };
         const summary = escapeHtml(String(b.label ?? ""));
         const c = typeof b.count === "number" ? b.count : 0;
         const inner =
@@ -895,6 +1148,7 @@ function renderBlockedPhaseBuckets(
             : renderBlockedList(b.top ?? []);
         return (
           '<details class="phase-bucket"' +
+          phaseBucketFilterAttr(b.phaseKey) +
           wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
           "><summary>" +
           summary +
@@ -935,7 +1189,7 @@ function renderTerminalTaskPhaseBuckets(
     '<div class="phase-stack">' +
     bucketsTm
       .map((raw, i) => {
-        const b = raw as { label?: unknown; top?: unknown; count?: unknown };
+        const b = raw as { label?: unknown; top?: unknown; count?: unknown; phaseKey?: unknown };
         const summary = escapeHtml(String(b.label ?? ""));
         const c = typeof b.count === "number" ? b.count : 0;
         const inner =
@@ -944,6 +1198,7 @@ function renderTerminalTaskPhaseBuckets(
             : renderTaskRowList(b.top ?? [], "No tasks in this phase.");
         return (
           '<details class="phase-bucket terminal-phase-bucket"' +
+          phaseBucketFilterAttr(b.phaseKey) +
           wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
           "><summary>" +
           summary +
@@ -1650,6 +1905,7 @@ export function renderPhaseCatalogOverviewSection(
       for (const r of narrow.rows) {
         const sd = r.shortDescription != null ? String(r.shortDescription).trim() : "";
         const desc = sd.length > 0 ? escapeHtml(sd) : '<span class="muted">—</span>';
+        const inputValue = escapeHtmlAttr(sd);
         const src = r.inCatalog === true ? "" : ' <span class="muted">(no catalog row)</span>';
         const statusLabel = escapeHtml(phaseRosterStatusLabel(r.status));
         const statusClass =
@@ -1658,17 +1914,8 @@ export function renderPhaseCatalogOverviewSection(
             : r.status === "delivered"
               ? "dash-phase-roster-status dash-phase-roster-delivered"
               : "dash-phase-roster-status dash-phase-roster-future";
-        rows +=
-          "<tr><td><code>" +
-          escapeHtml(r.phaseKey) +
-          '</code></td><td><span class="' +
-          statusClass +
-          '">' +
-          statusLabel +
-          "</span></td><td>" +
-          desc +
-          src +
-          "</td></tr>";
+        const phaseKeyAttr = escapeHtmlAttr(r.phaseKey);
+        rows += `<tr><td><code>${escapeHtml(r.phaseKey)}</code></td><td><span class="${statusClass}">${statusLabel}</span></td><td><div class="dash-phase-deliverables" data-wc-phase-row="${phaseKeyAttr}"><span class="dash-phase-deliverables-text">${desc}${src}</span><button type="button" class="dash-phase-edit-btn" data-wc-action="phase-deliverables-edit" data-wc-phase-key="${phaseKeyAttr}" aria-label="Edit deliverables for phase ${phaseKeyAttr}" title="Edit deliverables">Edit</button><span class="dash-phase-saving" aria-live="polite" hidden>Saving...</span><label class="dash-phase-deliverables-editor" hidden>Deliverables<input type="text" class="dash-phase-deliverables-input" data-wc-phase-input="${phaseKeyAttr}" value="${inputValue}" aria-label="Deliverables for phase ${phaseKeyAttr}" /></label><p class="dash-phase-deliverables-error bad" aria-live="polite" hidden></p></div></td></tr>`;
       }
       inner =
         rows.length > 0
@@ -1956,6 +2203,14 @@ export type DashboardPhaseJournalBundle = {
 
 const PHASE_NOTE_TYPES_CONVERTIBLE = new Set(["task-suggestion", "follow-up"]);
 
+function truncatePhaseNoteRowText(raw: string, maxLen = 80): string {
+  const s = raw.trim();
+  if (s.length <= maxLen) {
+    return s;
+  }
+  return `${s.slice(0, Math.max(0, maxLen - 3)).trimEnd()}...`;
+}
+
 /**
  * Overview tab card: phase journal rows + kit-backed actions (dismiss / convert / persist suggestions).
  * Pure HTML — button clicks postMessage from `DashboardViewProvider` bootstrap.
@@ -2008,14 +2263,45 @@ export function renderPhaseNotesOverviewSection(bundle: DashboardPhaseJournalBun
     const status = typeof n.status === "string" ? n.status : "";
     const details = typeof n.details === "string" ? n.details : null;
     const convertedTaskId = typeof n.convertedTaskId === "string" ? n.convertedTaskId : null;
+    const subject = summary.trim();
+    const detailsTrim = details ? details.trim() : "";
+    const preferredText = subject.length > 0 ? subject : detailsTrim;
+    const rowText = preferredText.length > 0 ? truncatePhaseNoteRowText(preferredText, 80) : "Untitled note";
+    const rowTitle = preferredText.length > 0 ? preferredText : "Phase note";
 
-    const dismissBtn =
+    const viewBtn =
+      id.length > 0
+        ? '<button type="button" class="dash-row-action dash-row-action-secondary" data-wc-action="phase-note-view" data-note-id="' +
+          escapeHtmlAttr(id) +
+          '" data-note-type="' +
+          escapeHtmlAttr(noteType) +
+          '" data-note-priority="' +
+          escapeHtmlAttr(priority) +
+          '" data-note-summary="' +
+          escapeHtmlAttr(summary) +
+          '" data-note-details="' +
+          escapeHtmlAttr(details ?? "") +
+          '" title="View phase note">View</button>'
+        : "";
+
+    const editBtn =
       status === "active" && id.length > 0
-        ? '<button type="button" class="dash-row-action dash-row-action-secondary" data-wc-action="phase-note-dismiss" data-note-id="' +
+        ? '<button type="button" class="dash-row-action dash-row-action-info" data-wc-action="phase-note-edit" data-note-id="' +
+          escapeHtmlAttr(id) +
+          '" data-note-summary="' +
+          escapeHtmlAttr(summary) +
+          '" data-note-details="' +
+          escapeHtmlAttr(details ?? "") +
+          '" title="Edit phase note">Edit</button>'
+        : "";
+
+    const deleteBtn =
+      status === "active" && id.length > 0
+        ? '<button type="button" class="dash-row-action dash-row-action-danger" data-wc-action="phase-note-delete" data-note-id="' +
           escapeHtmlAttr(id) +
           '" data-note-priority="' +
           escapeHtmlAttr(priority) +
-          '" title="dismiss-phase-note">Dismiss</button>'
+          '" title="Delete phase note">Delete</button>'
         : "";
 
     const canConvert =
@@ -2038,22 +2324,17 @@ export function renderPhaseNotesOverviewSection(bundle: DashboardPhaseJournalBun
 
     rows +=
       '<div class="dash-row dash-phase-note-row">' +
-      '<div class="dash-row-label">' +
-      "<b>" +
-      escapeHtml(noteType) +
-      "</b> · " +
-      escapeHtml(priority) +
-      (summary ? "<br/>" + escapeHtml(summary) : "") +
-      (details
-        ? '<span class="muted"><br/>' +
-          escapeHtml(details.length > 400 ? `${details.slice(0, 400)}…` : details) +
-          "</span>"
-        : "") +
+      '<div class="dash-row-label" title="' +
+      escapeHtmlAttr(rowTitle) +
+      '">' +
+      escapeHtml(rowText) +
       convertedLine +
       "</div>" +
       '<div class="dash-row-actions">' +
+        viewBtn +
+        editBtn +
+        deleteBtn +
       convertBtn +
-      dismissBtn +
       "</div>" +
       "</div>";
   }
@@ -2067,7 +2348,7 @@ export function renderPhaseNotesOverviewSection(bundle: DashboardPhaseJournalBun
     "</p>";
 
   const addBtn =
-    '<button type="button" class="dash-row-action dash-row-action-primary" data-wc-action="phase-note-add" title="add-phase-note">Add note</button>';
+    '<button type="button" class="dash-row-action dash-row-action-primary" data-wc-action="phase-note-add" title="add-phase-note">New</button>';
 
   const chatBtn =
     '<button type="button" class="dash-row-action dash-row-action-secondary" data-wc-action="phase-notes-chat" title="Open phase notes chat guide">Chat guide</button>';
@@ -2075,17 +2356,17 @@ export function renderPhaseNotesOverviewSection(bundle: DashboardPhaseJournalBun
   const proposeBtn =
     '<button type="button" class="dash-row-action dash-row-action-secondary" data-wc-action="phase-notes-propose-persist" title="propose-tasks-from-phase-notes persist:true">Persist convertible suggestions</button>';
 
-  const empty = notes.length === 0 ? '<p class="muted">No phase notes listed for this phase (active filter).</p>' : "";
+  const empty = notes.length === 0 ? '<p class="muted" role="status">No phase notes yet for this phase.</p>' : "";
 
   return (
     '<section class="dash-card dash-phase-notes" aria-label="Phase notes">' +
-    "<p><b>Phase Notes</b></p>" +
-    "<p>Journal entries scoped to the workspace current phase — mutations run through workspace-kit.</p>" +
+    '<div class="dash-phase-notes-head"><p><b>Phase Notes</b></p>' +
+    addBtn +
+    "</div>" +
     meta +
     empty +
     (notes.length > 0 ? '<div class="dash-row-list">' + rows + "</div>" : "") +
     '<div class="dash-phase-notes-actions">' +
-    addBtn +
     chatBtn +
     proposeBtn +
     "</div>" +
@@ -2098,7 +2379,8 @@ export function renderDashboardRootInnerHtml(
   payload: unknown,
   planningWizardPanel?: PlanningInterviewWizardPanel | null,
   editorIntegration?: EditorIntegrationRenderState | null,
-  phaseJournal?: DashboardPhaseJournalBundle | null
+  phaseJournal?: DashboardPhaseJournalBundle | null,
+  embeddedCaePanelHtml?: string | null
 ): string {
   if (payload === null || payload === undefined) {
     return "<p>No payload</p>";
@@ -2232,10 +2514,24 @@ export function renderDashboardRootInnerHtml(
     '<button type="button" class="dash-quick-action-btn dash-quick-action-primary" data-wc-action="generate-features-chat" title="New chat with /generate-features as text (same as slash command)">Generate Features</button>' +
     "</div>";
 
+  const queuePhaseFilterOptions = deriveQueuePhaseFilterOptions({
+    workspaceStatus: ws,
+    phaseBuckets: [
+      ris.phaseBuckets,
+      res.phaseBuckets,
+      pis.phaseBuckets,
+      pes.phaseBuckets,
+      tcrs.phaseBuckets,
+      blockedSummary.phaseBuckets,
+      (d.completedSummary as Record<string, unknown> | undefined)?.phaseBuckets,
+      (d.cancelledSummary as Record<string, unknown> | undefined)?.phaseBuckets
+    ]
+  });
+
   const tasksBlock =
     '<section class="dash-card dashboard-tasks-block" aria-label="Task queue rollups">' +
     tasksQuickActionsPanel +
-    renderFilterChipBar() +
+    renderFilterChipBar(queuePhaseFilterOptions) +
     renderStatusRollup(
       "status-ready-imp",
       "<b>Ready · Improvements</b> (" + String(readyImpCount) + ")",
@@ -2345,7 +2641,24 @@ export function renderDashboardRootInnerHtml(
     renderTeamExecutionSection(d.teamExecution) +
     renderSubagentRegistrySection(d.subagentRegistry);
 
+  const caeContent = renderCaePhaseReadinessContent(
+    ws as Record<string, unknown> | null,
+    readyExeCount,
+    readyImpCount,
+    totalBlockedCount,
+    totalProposedCount
+  );
+  const caePanelContent =
+    typeof embeddedCaePanelHtml === "string" && embeddedCaePanelHtml.trim().length > 0
+      ? namespaceEmbeddedCaePanelHtml(embeddedCaePanelHtml)
+      : '<section class="dash-card" aria-label="CAE panel placeholder">' +
+        '<p><b>CAE</b></p>' +
+        '<p class="muted">Phase Readiness moved to the top of <b>Queue</b>.</p>' +
+        '<p class="muted">Embedded CAE panel unavailable; use the Guidance panel as fallback.</p>' +
+        '</section>';
+
   const taskEngineContent =
+    caeContent +
     renderPhaseNotesOverviewSection(phaseJournal ?? null) +
     tasksBlock +
     wishlistSection +
@@ -2361,14 +2674,6 @@ export function renderDashboardRootInnerHtml(
     '<p class="muted">Common keys: <code>kit.agentGuidance</code> · <code>kit.currentPhase</code> · ' +
     "<code>kit.agentRole</code> · <code>kit.planningGenerationPolicy</code></p>" +
     "</section>";
-
-  const caeContent = renderCaePhaseReadinessContent(
-    ws as Record<string, unknown> | null,
-    readyExeCount,
-    readyImpCount,
-    totalBlockedCount,
-    totalProposedCount
-  );
 
   // ── Tab shell ──────────────────────────────────────────────────────────────
 
@@ -2393,7 +2698,7 @@ export function renderDashboardRootInnerHtml(
     '<div class="wc-tab-panel" data-wc-tab="task-engine" role="tabpanel" style="display:none">' + taskEngineContent + "</div>" +
     '<div class="wc-tab-panel" data-wc-tab="status" role="tabpanel" style="display:none">' + statusContent + "</div>" +
     '<div class="wc-tab-panel" data-wc-tab="config" role="tabpanel" style="display:none">' + configContent + "</div>" +
-    '<div class="wc-tab-panel" data-wc-tab="cae" role="tabpanel" style="display:none">' + caeContent + "</div>" +
+    '<div class="wc-tab-panel" data-wc-tab="cae" role="tabpanel" style="display:none">' + caePanelContent + "</div>" +
     "</div>"
   );
 }
