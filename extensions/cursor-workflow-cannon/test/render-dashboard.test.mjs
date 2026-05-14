@@ -51,6 +51,8 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /dash-card/);
   assert.match(html, /dash-agent-status-banner/);
   assert.ok(html.indexOf("dash-agent-status-banner") < html.indexOf("wc-tab-bar"));
+  assert.ok(html.indexOf("dash-agent-status-banner") < html.indexOf("dash-overview-phase-summary"));
+  assert.ok(html.indexOf("dash-overview-phase-summary") < html.indexOf("wc-tab-bar"));
   assert.ok(html.indexOf("wc-tab-bar") < html.indexOf("<b>Role:</b>"));
   assert.match(html, /<b>WC Agent is:<\/b> <span class="dash-agent-status-label">Awaiting Instruction<\/span>/);
   assert.match(html, /dash-agent-row-list/);
@@ -62,8 +64,13 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   const agentStatusIdx = html.indexOf("<b>WC Agent is:</b>");
   const phaseIdx = html.indexOf("Current Phase");
   assert.ok(agentStatusIdx !== -1 && roleIdx !== -1 && agentStatusIdx < roleIdx);
-  assert.ok(roleIdx !== -1 && phaseIdx !== -1 && roleIdx < phaseIdx);
+  assert.ok(agentStatusIdx !== -1 && phaseIdx !== -1 && agentStatusIdx < phaseIdx);
+  assert.ok(phaseIdx !== -1 && roleIdx !== -1 && phaseIdx < roleIdx);
   assert.match(html, /dash-overview-phase-row/);
+  const roleCardIdx = html.indexOf('class="dash-card dash-role-temperament-phase"');
+  const roleCardEndIdx = roleCardIdx >= 0 ? html.indexOf("</section>", roleCardIdx) : -1;
+  assert.ok(roleCardIdx >= 0 && roleCardEndIdx > roleCardIdx);
+  assert.doesNotMatch(html.slice(roleCardIdx, roleCardEndIdx), /Current Phase|Next Phase/);
   assert.match(html, /data-wc-action="deliver-phase-prompt"/);
   assert.match(html, />Deliver<\/button>/);
   assert.match(html, /Current Phase/);

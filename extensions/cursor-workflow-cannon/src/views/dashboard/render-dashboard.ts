@@ -1795,25 +1795,32 @@ function renderPhaseDeliverBlockInner(
   );
 }
 
-/**
- * First dashboard card: role + temperament when configured, then current/next phase and Deliver.
- */
-function renderRoleTemperamentAndPhaseSection(
-  ag: unknown,
+function renderOverviewPhaseSummarySection(
   ws: Record<string, unknown> | null,
-  readyExecutionSummary?: Record<string, unknown>,
-  editorIntegration?: unknown
+  readyExecutionSummary?: Record<string, unknown>
 ): string {
-  const rt = renderRoleTemperamentLines(ag);
-  const phaseInner = ws !== null ? renderPhaseDeliverBlockInner(ws, readyExecutionSummary ?? {}) : "";
-  const editorInner = renderEditorIntegrationEmbed(editorIntegration);
-  if (rt === "" && phaseInner === "" && editorInner === "") {
+  if (ws === null) {
     return "";
   }
   return (
-    '<section class="dash-card dash-role-temperament-phase" aria-label="Role, temperament, and phase">' +
+    '<section class="dash-card dash-overview-phase-summary" aria-label="Overview phase summary">' +
+    renderPhaseDeliverBlockInner(ws, readyExecutionSummary ?? {}) +
+    "</section>"
+  );
+}
+
+function renderRoleTemperamentAndEditorSection(
+  ag: unknown,
+  editorIntegration?: unknown
+): string {
+  const rt = renderRoleTemperamentLines(ag);
+  const editorInner = renderEditorIntegrationEmbed(editorIntegration);
+  if (rt === "" && editorInner === "") {
+    return "";
+  }
+  return (
+    '<section class="dash-card dash-role-temperament-phase" aria-label="Role and temperament">' +
     rt +
-    phaseInner +
     editorInner +
     "</section>"
   );
@@ -2379,7 +2386,7 @@ export function renderDashboardRootInnerHtml(
   const overviewContent =
     recNextCard +
     renderStatPills(totalReadyCount, totalProposedCount, totalBlockedCount, totalDoneCount) +
-    renderRoleTemperamentAndPhaseSection(d.agentGuidance, ws as Record<string, unknown> | null, res, editorIntegration) +
+    renderRoleTemperamentAndEditorSection(d.agentGuidance, editorIntegration) +
     renderPhaseCatalogOverviewSection(phaseSystemSlice) +
     renderWorkspaceBlockersPendingSection(ws as Record<string, unknown> | null) +
     renderTeamExecutionSection(d.teamExecution) +
@@ -2416,6 +2423,7 @@ export function renderDashboardRootInnerHtml(
   return (
     '<div class="wc-dashboard-tab-shell">' +
     renderAgentStatusBanner(d) +
+    renderOverviewPhaseSummarySection(ws as Record<string, unknown> | null, res) +
     '<div class="wc-tab-bar" role="tablist">' +
     '<button type="button" class="wc-tab-btn wc-tab-active" role="tab" data-wc-tab="overview">Overview</button>' +
     '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="task-engine">Queue' +
