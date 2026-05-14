@@ -58,8 +58,8 @@ export function renderActiveFocusHtml(raw: string): string {
 function renderExecutionReadyScopeFootnote(): string {
   return (
     '<p class="muted wc-ready-scope-note">' +
-    "<b>Note:</b> Ready / proposed rollups follow the kit <em>execution queue</em> — they omit <code>wishlist_intake</code> even when that row is ready. " +
-    "Use <b>Wishlist</b> on the <b>Queue</b> tab, or <code>wk run list-tasks</code> for the full store.</p>"
+    "<b>Note:</b> Ready/proposed rollups follow the kit <em>execution queue</em>.</p>" +
+    '<p class="muted">Wishlist intake rows are excluded; use <b>Wishlist</b> or <code>wk run list-tasks</code>.</p>'
   );
 }
 
@@ -337,9 +337,8 @@ function renderCaePhaseReadinessContent(
     pendingBlock +
     "</section>" +
     '<section class="dash-card" aria-label="CAE sidebar">' +
-    "<p><b>CAE — Full Controls</b></p>" +
-    '<p class="muted">Pre-flight checks, guidance management, and check history are in the ' +
-    "<b>CAE</b> sidebar panel. Open it via the Workflow Cannon activity bar.</p>" +
+    "<p><b>CAE Controls</b></p>" +
+    '<p class="muted">Pre-flight checks, guidance management, and history live in the <b>CAE</b> sidebar panel.</p>' +
     "</section>"
   );
 }
@@ -395,7 +394,8 @@ function renderWishlistOpenList(items: unknown): string {
     return '<p class="muted">No Items</p>';
   }
   return (
-    '<p class="muted"><b>Open Wishlist Preview</b> · <b>Process</b> runs intake in chat; <b>Decline</b> cancels the backing intake task (<code>reject</code> → cancelled).</p>' +
+    '<p class="muted"><b>Wishlist Preview</b></p>' +
+    '<p class="muted"><b>Process</b> starts intake chat; <b>Decline</b> cancels the backing task.</p>' +
     '<div class="dash-row-list" role="list">' +
     items
       .map((x) => {
@@ -483,7 +483,10 @@ function renderProposedImprovementRow(row: { id?: unknown; title?: unknown; phas
 
 function renderProposedImprovementsList(count: number, items: unknown): string {
   if (!Array.isArray(items) || items.length === 0) {
-    return `<p class="muted">No proposed improvements (<code>type: improvement</code>, <code>status: proposed</code>; legacy <code>imp-*</code> may still appear). Run <code>generate-recommendations</code> / <code>ingest-transcripts</code> or log via <code>create-task</code> per playbook. Confirm: <code>workspace-kit run list-tasks '{}'</code>.</p>`;
+    return (
+      '<p class="muted">No proposed improvements.</p>' +
+      '<p class="muted">Run <code>generate-recommendations</code>, <code>ingest-transcripts</code>, or <code>create-task</code>.</p>'
+    );
   }
   const more =
     count > items.length
@@ -491,7 +494,7 @@ function renderProposedImprovementsList(count: number, items: unknown): string {
       : "";
   return (
     more +
-    '<p class="muted"><b>Row actions</b> · <span class="muted">Accept</span> / <span class="muted">Decline</span> run <code>run-transition</code> (<code>accept</code> / <code>reject</code>; modal rationale + planning token when required).</p>' +
+    '<p class="muted"><b>Row actions</b> · Accept/Decline runs <code>run-transition</code> with approval.</p>' +
     '<div class="dash-row-list" role="list">' +
     items.map((x) => renderProposedImprovementRow(x as { id?: unknown; title?: unknown; phase?: unknown })).join("") +
     "</div>"
@@ -523,7 +526,8 @@ function renderTranscriptChurnResearchRow(row: { id?: unknown; title?: unknown; 
 function renderTranscriptChurnResearchList(count: number, items: unknown): string {
   if (!Array.isArray(items) || items.length === 0) {
     return (
-      '<p class="muted">No transcript churn rows (<code>type: transcript_churn</code>, <code>status: research</code>). When they appear, investigate then run <code>synthesize-transcript-churn</code> (see <code>.ai/AGENT-CLI-MAP.md</code>).</p>'
+      '<p class="muted">No transcript churn rows.</p>' +
+      '<p class="muted">When rows appear, investigate, then run <code>synthesize-transcript-churn</code>.</p>'
     );
   }
   const more =
@@ -573,7 +577,7 @@ function renderProposedExecutionList(count: number, items: unknown): string {
       : "";
   return (
     more +
-    '<p class="muted"><b>Row actions</b> · <span class="muted">Accept</span> / <span class="muted">Decline</span> run <code>run-transition</code> when required.</p>' +
+    '<p class="muted"><b>Row actions</b> · Accept/Decline runs <code>run-transition</code>.</p>' +
     '<div class="dash-row-list" role="list">' +
     items.map((x) => renderProposedExecutionRow(x as { id?: unknown; title?: unknown; phase?: unknown })).join("") +
     "</div>"
@@ -717,7 +721,7 @@ function renderProposedPhaseBuckets(
       : "";
   return (
     more +
-    '<p class="muted"><b>Row actions</b> · <span class="muted">Accept</span> / <span class="muted">Decline</span> per row. <b>Accept All</b> on a phase heading runs <code>accept</code> for every proposed improvement in that phase (one shared rationale; planning token refreshed between calls).</p>' +
+    '<p class="muted"><b>Row actions</b> · Accept/Decline per row; Accept All processes the phase.</p>' +
     '<div class="phase-stack">' +
     buckets
       .map((raw, i) => {
@@ -821,7 +825,7 @@ function renderProposedExecutionPhaseBuckets(
       : "";
   return (
     more +
-    '<p class="muted"><b>Accept All</b> on a phase heading accepts every proposed execution task in that phase (shared rationale).</p>' +
+    '<p class="muted"><b>Accept All</b> accepts every proposed execution task in that phase.</p>' +
     '<div class="phase-stack">' +
     bucketsPe
       .map((raw, i) => {
@@ -1038,11 +1042,11 @@ export function renderPlanningInterviewWizardPanel(panel: PlanningInterviewWizar
   if (panel.kind === "success") {
     const persistenceHint =
       panel.code === "planning-response-ready"
-        ? '<p class="muted"><b>Persistence:</b> Response-only — no wishlist row or task was written from this dashboard flow.</p>'
+        ? '<p class="muted"><b>Persistence:</b> Response-only; no task was written.</p>'
         : panel.code === "planning-wishlist-ready"
-          ? '<p class="muted"><b>Persistence:</b> Answers saved; create the wishlist row with <code>build-plan</code> finalize + <code>createWishlist</code> from the CLI or chat when ready.</p>'
+          ? '<p class="muted"><b>Persistence:</b> Answers saved; finalize with <code>build-plan</code> when ready.</p>'
           : panel.code === "planning-artifact-created"
-            ? '<p class="muted"><b>Persistence:</b> A wishlist intake row was created — refresh the dashboard or use <b>Open wishlist detail</b> from the toast if shown.</p>'
+            ? '<p class="muted"><b>Persistence:</b> Wishlist intake created; refresh the dashboard.</p>'
             : "";
     return (
       '<div class="dash-planning-wizard ok" aria-label="Planning interview complete">' +
@@ -1096,7 +1100,8 @@ function renderPlanningSession(ps: unknown, wizardPanel?: PlanningInterviewWizar
       '<div class="dash-planning-head-main"><p class="dash-planning-title"><b>Planning Interview</b></p></div>' +
       "</div>" +
       wizardHtml +
-      "<p class=\"muted\">No interview in progress. Start or resume with <code>workspace-kit run build-plan</code> when you want guided planning; progress is saved automatically under <code>.workspace-kit/planning/</code>.</p>" +
+      '<p class="muted">No interview in progress.</p>' +
+      '<p class="muted">Start or resume with <code>workspace-kit run build-plan</code>; progress saves automatically.</p>' +
       "</section>"
     );
   }
@@ -1220,7 +1225,7 @@ function renderTeamExecutionSection(team: unknown): string {
   if (!avail) {
     return (
       '<section class="dash-card" aria-label="Team execution">' +
-      "<p><b>Team assignments</b></p>" +
+      "<p><b>Team Assignments</b></p>" +
       '<p class="muted">Team execution data unavailable (kit SQLite below v7 or store not readable).</p>' +
       "</section>"
     );
@@ -1228,7 +1233,7 @@ function renderTeamExecutionSection(team: unknown): string {
   if (top.length === 0) {
     return (
       '<section class="dash-card" aria-label="Team execution">' +
-      "<p><b>Team assignments</b></p>" +
+      "<p><b>Team Assignments</b></p>" +
       statusLine +
       '<p class="muted">No active supervisor assignments.</p>' +
       "</section>"
@@ -1260,7 +1265,7 @@ function renderTeamExecutionSection(team: unknown): string {
     .join("");
   return (
     '<section class="dash-card" aria-label="Team execution">' +
-    "<p><b>Team assignments</b> (read-only)</p>" +
+    "<p><b>Team Assignments</b> (read-only)</p>" +
     statusLine +
     '<div class="dash-row-list" role="list">' +
     rows +
@@ -1283,7 +1288,7 @@ function renderSubagentRegistrySection(sub: unknown): string {
   if (!avail) {
     return (
       '<section class="dash-card" aria-label="Subagent registry">' +
-      "<p><b>Subagent registry</b></p>" +
+      "<p><b>Subagent Registry</b></p>" +
       '<p class="muted">Subagent data unavailable (kit SQLite below v6 or store not readable).</p>' +
       "</section>"
     );
@@ -1297,7 +1302,7 @@ function renderSubagentRegistrySection(sub: unknown): string {
   if (top.length === 0) {
     return (
       '<section class="dash-card" aria-label="Subagent registry">' +
-      "<p><b>Subagent registry</b> (read-only)</p>" +
+      "<p><b>Subagent Registry</b> (read-only)</p>" +
       statusLine +
       '<p class="muted">No open subagent sessions.</p>' +
       "</section>"
@@ -1325,7 +1330,7 @@ function renderSubagentRegistrySection(sub: unknown): string {
     .join("");
   return (
     '<section class="dash-card" aria-label="Subagent registry">' +
-    "<p><b>Subagent registry</b> (read-only)</p>" +
+    "<p><b>Subagent Registry</b> (read-only)</p>" +
     statusLine +
     '<div class="dash-row-list" role="list">' +
     rows +
@@ -1607,7 +1612,7 @@ export function renderPhaseCatalogOverviewSection(
   if (!supported) {
     return (
       '<section class="dash-card dash-phase-catalog" aria-label="Phase catalog">' +
-      "<p><b>Phase roster</b></p>" +
+      "<p><b>Phase Roster</b></p>" +
       '<p class="muted">Optional phase descriptions require planning SQLite <b>v23+</b> (upgrade workspace-kit, reopen DB).</p>' +
       "</section>"
     );
@@ -1679,7 +1684,7 @@ export function renderPhaseCatalogOverviewSection(
     ' <span class="muted">Plan a future release phase; the kit keeps planning metadata aligned.</span></p>';
   return (
     '<section class="dash-card dash-phase-catalog" aria-label="Phase catalog">' +
-    "<p><b>Phase roster</b></p>" +
+    "<p><b>Phase Roster</b></p>" +
     table +
     btn +
     "</section>"
@@ -1758,7 +1763,8 @@ function renderWorkspaceBlockersPendingSection(ws: Record<string, unknown> | nul
   if (!ws) {
     return (
       '<section class="dash-card dashboard-overview" aria-label="Workspace status">' +
-      '<p class="muted">No workspace status from kit SQLite (<code>get-workspace-status</code>) — run <code>pnpm run wk doctor</code> or ensure planning DB migrated to user_version 10+.</p>' +
+      '<p class="muted">No workspace status from kit SQLite.</p>' +
+      '<p class="muted">Run <code>pnpm run wk doctor</code> or migrate planning DB to user_version 10+.</p>' +
       "</section>"
     );
   }
@@ -1927,9 +1933,9 @@ function renderStatusSectionHtml(
     "<p><b>Task Counts</b></p>" +
     buildDashboardStateCountGridHtml(ss) +
     '<p class="muted wc-status-counts-scope-note">' +
-    "<b>Note:</b> These totals reflect <code>stateSummary</code> (store-wide statuses). " +
-    "<b>Overview</b> pills and <b>Queue</b> tab sections use execution-queue rollups " +
-    "(same family as <code>getNextActions</code>) and exclude <code>wishlist_intake</code> from ready/proposed.</p>" +
+    "<b>Note:</b> Task Counts uses <code>stateSummary</code> store-wide statuses.</p>" +
+    '<p class="muted">Overview pills and Queue sections use execution-queue rollups.</p>' +
+    '<p class="muted">Ready/proposed excludes <code>wishlist_intake</code>.</p>' +
     "</section>";
 
   return agentCard + renderStatusEditorIntegrationSection(editorIntegration) + workspaceCard + planningCard + countsCard;
@@ -1968,7 +1974,7 @@ export function renderPhaseNotesOverviewSection(bundle: DashboardPhaseJournalBun
     const msg = escapeHtml(String(list.message ?? ctx.message ?? ""));
     return (
       '<section class="dash-card dash-phase-notes" aria-label="Phase notes">' +
-      "<p><b>Phase notes</b></p>" +
+      "<p><b>Phase Notes</b></p>" +
       '<p class="muted">Phase journal unavailable: <code>' +
       code +
       "</code> " +
@@ -2073,7 +2079,7 @@ export function renderPhaseNotesOverviewSection(bundle: DashboardPhaseJournalBun
 
   return (
     '<section class="dash-card dash-phase-notes" aria-label="Phase notes">' +
-    "<p><b>Phase notes</b></p>" +
+    "<p><b>Phase Notes</b></p>" +
     "<p>Journal entries scoped to the workspace current phase — mutations run through workspace-kit.</p>" +
     meta +
     empty +
@@ -2350,8 +2356,8 @@ export function renderDashboardRootInnerHtml(
   const configContent =
     '<section class="dash-card" aria-label="Config">' +
     "<p><b>Config</b></p>" +
-    '<p class="muted">Configuration keys are managed in the <b>Config</b> sidebar panel. ' +
-    "Open it via the Workflow Cannon activity bar, or run <code>wk config</code> from the terminal.</p>" +
+    '<p class="muted">Configuration keys are managed in the <b>Config</b> sidebar panel.</p>' +
+    '<p class="muted">Open it from the activity bar, or run <code>wk config</code> from the terminal.</p>' +
     '<p class="muted">Common keys: <code>kit.agentGuidance</code> · <code>kit.currentPhase</code> · ' +
     "<code>kit.agentRole</code> · <code>kit.planningGenerationPolicy</code></p>" +
     "</section>";

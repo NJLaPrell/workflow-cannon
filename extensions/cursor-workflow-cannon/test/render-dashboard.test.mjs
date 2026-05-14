@@ -16,6 +16,30 @@ import { buildPhaseCompleteReleaseChatPrompt } from "../dist/phase-complete-rele
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+function plainTextFromHtml(html) {
+  return html
+    .replace(/<code>([\s\S]*?)<\/code>/g, "$1")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function extractParagraphBoldTitles(html) {
+  return [...html.matchAll(/<p><b>([\s\S]*?)<\/b>(?=[\s<])/g)]
+    .map((match) => plainTextFromHtml(match[1]))
+    .filter(Boolean);
+}
+
+function extractMutedParagraphs(html) {
+  return [...html.matchAll(/<p class="[^"]*(?:muted|wc-hint)[^"]*"[^>]*>([\s\S]*?)<\/p>/g)]
+    .map((match) => plainTextFromHtml(match[1]))
+    .filter(Boolean);
+}
+
 test("escapeHtml escapes angle brackets and ampersands", () => {
   assert.equal(escapeHtml("a<b>&c"), "a&lt;b&gt;&amp;c");
 });
@@ -99,7 +123,7 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /dash-count-grid/);
   assert.match(html, /wc-ready-scope-note/);
   assert.match(html, /wishlist_intake/);
-  assert.match(html, /Queue<\/b> tab/);
+  assert.match(html, /Wishlist intake rows are excluded/);
   assert.match(html, />Proposed<\/span> <span class="dash-count-num ok">1<\/span>/);
   assert.match(html, />Ready<\/span> <span class="dash-count-num ok">2<\/span>/);
   assert.match(html, /dashboard-tasks-block/);
@@ -522,7 +546,26 @@ test("renderDashboardRootInnerHtml omits suggested-next section", () => {
   assert.match(html, /<span class="wc-status-kv-label">Temperament<\/span><span class="wc-status-kv-val">The Wary Scout<\/span>/);
   assert.match(html, /wc-ready-scope-note/);
   assert.match(html, /wishlist_intake/);
-  assert.match(html, /Queue<\/b> tab/);
+  assert.match(html, /Wishlist intake rows are excluded/);
+});
+
+test("renderDashboardRootInnerHtml keeps dashboard copy compact", () => {
+  const fixturePath = path.join(__dirname, "../docs/fixtures/dashboard-summary.example.json");
+  const fixture = JSON.parse(readFileSync(fixturePath, "utf8"));
+  const html = renderDashboardRootInnerHtml(fixture, null, {
+    appName: "Visual Studio Code",
+    uriScheme: "vscode",
+    ideKind: "vscode",
+    chatPrefill: {
+      label: "VS Code Chat",
+      canPrefillDirectly: true,
+      externalCursorDeeplink: false
+    }
+  });
+  const longTitles = extractParagraphBoldTitles(html).filter((title) => title.length > 32);
+  const longMuted = extractMutedParagraphs(html).filter((text) => text.length > 120);
+  assert.deepEqual(longTitles, []);
+  assert.deepEqual(longMuted, []);
 });
 
 test("renderDashboardRootInnerHtml recommends wishlist when execution ready queue is empty", () => {
