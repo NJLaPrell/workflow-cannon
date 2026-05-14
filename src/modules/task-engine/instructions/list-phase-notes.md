@@ -10,6 +10,8 @@ When **`phaseKey`** is omitted, the command uses the **canonical current workspa
 
 When **`status`** defaults to **`active`**, notes whose **`expires_at`** instant is **already in the past** are treated as passively expired: they are **omitted** unless **`includeExpired`** is **`true`** (same behavior for **`get-phase-context`**).
 
+Default agent-facing usage therefore excludes dismissed/deleted history (`dismissed`, `superseded`, `converted`) unless a caller explicitly requests those statuses.
+
 ## Usage
 
 ```

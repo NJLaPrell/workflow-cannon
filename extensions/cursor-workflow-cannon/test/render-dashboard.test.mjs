@@ -13,6 +13,7 @@ import {
   renderPlanningInterviewWizardPanel
 } from "../dist/views/dashboard/render-dashboard.js";
 import { buildPhaseCompleteReleaseChatPrompt } from "../dist/phase-complete-release-prompt.js";
+import { renderGuidanceAuthoringPanelInnerHtml } from "../dist/views/guidance/render-guidance-panel.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -151,6 +152,12 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /data-wc-filter="ready"/);
   assert.match(html, /data-wc-filter="research"/);
   assert.match(html, /data-wc-filter="terminal"/);
+  assert.match(html, /data-wc-phase-filter/);
+  assert.match(html, /<option value="all">All phases<\/option>/);
+  assert.match(html, /<option value="__no_phase__">No Phase<\/option>/);
+  assert.match(html, /<option value="14">Current \(14\)<\/option>/);
+  assert.match(html, /<option value="15">Next \(15\)<\/option>/);
+  assert.match(html, /<option value="29">Phase 29<\/option>/);
   assert.match(html, /imp-example/);
   assert.match(html, /T319/);
   assert.match(html, /T320/);
@@ -169,9 +176,13 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /data-wc-action="task-detail"/);
   assert.match(html, /data-wc-action="assign-phase"/);
   assert.match(html, /class="dash-row-action dash-row-action-tertiary"[^>]*data-wc-action="task-detail"/);
-  assert.match(html, /data-wc-action="task-detail"[\s\S]*?>View<\/button>/);
+  assert.match(html, /data-wc-action="task-detail"[\s\S]*?>View Task<\/button>/);
+  assert.match(html, /data-wc-action="task-comments-view"[\s\S]*?>View Comments<\/button>/);
+  assert.match(html, /data-wc-action="task-comment-add"[\s\S]*?>Add Comment<\/button>/);
   assert.match(html, /dash-row-action/);
   assert.match(html, /phase-bucket/);
+  assert.match(html, /data-wc-phase-bucket="14"/);
+  assert.match(html, /data-wc-phase-bucket="__no_phase__"/);
   assert.doesNotMatch(html, /<details open class="phase-bucket"/);
   assert.match(html, /dashboard-terminal-tasks/);
   assert.match(html, /<b>Completed<\/b>/);
@@ -191,6 +202,252 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.doesNotMatch(html, /same store as execution queue/i);
   assert.doesNotMatch(html, /Suggested Next/i);
   assert.doesNotMatch(html, /dashboard-approvals/);
+});
+
+test("renderDashboardRootInnerHtml renders phase roster deliverables inline edit affordances", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      stateSummary: { ready: 0, proposed: 0, blocked: 0, done: 0 },
+      systemStatus: {
+        phase: {
+          currentKitPhase: "95",
+          canonicalPhaseKey: "95",
+          phaseCatalog: {
+            supported: true,
+            phases: [
+              { phaseKey: "94", shortDescription: "Wrap release", inCatalog: true },
+              { phaseKey: "95", shortDescription: "Queue UX polish", inCatalog: true },
+              { phaseKey: "96", shortDescription: null, inCatalog: false }
+            ]
+          }
+        }
+      }
+    }
+  });
+
+  assert.match(html, /Phase Roster/);
+  assert.match(html, /data-wc-action="phase-deliverables-edit"/);
+  assert.match(html, /class="dash-phase-deliverables-input"/);
+  assert.match(html, /data-wc-phase-row="95"/);
+  assert.match(html, /aria-label="Edit deliverables for phase 95"/);
+});
+
+test("renderDashboardRootInnerHtml renders redesigned queue task rows with chips and summary", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      stateSummary: { ready: 2, proposed: 1, blocked: 0, done: 0 },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      readyExecutionSummary: {
+        schemaVersion: 1,
+        count: 2,
+        top: [
+          {
+            id: "T100284",
+            title: "Row format fallback title",
+            summary: "Render redesigned queue rows",
+            priority: "P1",
+            severity: "high",
+            components: ["queue", "dashboard"],
+            features: ["phase-filter"],
+            featureDetails: [{ slug: "phase-filter", name: "Phase Filter", componentId: "queue", componentDisplayName: "Queue" }],
+            phase: "Phase 95"
+          },
+          {
+            id: "T100285",
+            title: "Partial row still renders",
+            phase: null
+          }
+        ],
+        phaseBuckets: []
+      },
+      proposedExecutionSummary: {
+        schemaVersion: 1,
+        count: 1,
+        top: [{ id: "T100286", title: "Proposed row", priority: "P2", severity: "medium", features: ["task-comments"] }],
+        phaseBuckets: []
+      },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      blockedSummary: { count: 0, top: [], phaseBuckets: [] },
+      transcriptChurnResearchSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      completedSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      cancelledSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      wishlist: { schemaVersion: 1, openCount: 0, totalCount: 0, openPage: 0, openPageSize: 10, openTotalPages: 0, openTop: [] },
+      readyQueueTop: [],
+      readyQueueCount: 0,
+      readyQueueBreakdown: { schemaVersion: 1, improvement: 0, other: 2 },
+      executionPlanningScope: "tasks-only",
+      suggestedNext: null,
+      planningSession: null,
+      taskStoreLastUpdated: "2026-05-14T00:00:00.000Z",
+      workspaceStatus: { currentKitPhase: "95", nextKitPhase: "96", activeFocus: "Queue redesign" },
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+
+  assert.match(html, /dash-task-row-id">T100284</);
+  assert.match(html, /dash-task-chip-priority">P1</);
+  assert.match(html, /dash-task-chip-severity">high</);
+  assert.match(html, /dash-task-chip-component">queue</);
+  assert.match(html, /dash-task-chip-feature">phase-filter</);
+  assert.match(html, /dash-task-row-summary" title="Render redesigned queue rows">Render redesigned queue rows</);
+  assert.match(html, /dash-task-row-id">T100285</);
+  assert.doesNotMatch(html, /unknown/);
+  assert.match(html, /dash-task-row-id">T100286</);
+  assert.match(html, /dash-task-chip-feature">task-comments</);
+  assert.match(html, /aria-label="Set phase for task T100284"/);
+  assert.match(html, /aria-label="View task details for T100284"/);
+  assert.match(html, /aria-label="View Comments for task T100284"/);
+  assert.match(html, /aria-label="Add Comment for task T100284"/);
+});
+
+test("renderDashboardRootInnerHtml places Phase Readiness on Queue instead of CAE", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      stateSummary: { ready: 2, proposed: 1, blocked: 1, completed: 0 },
+      readyImprovementsSummary: { schemaVersion: 1, count: 1, top: [], phaseBuckets: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 1, top: [], phaseBuckets: [] },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 1, top: [], phaseBuckets: [] },
+      blockedSummary: { count: 1, top: [], phaseBuckets: [] },
+      transcriptChurnResearchSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      completedSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      cancelledSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      wishlist: { schemaVersion: 1, openCount: 0, totalCount: 0, openPage: 0, openPageSize: 10, openTotalPages: 0, openTop: [] },
+      readyQueueTop: [],
+      readyQueueCount: 2,
+      readyQueueBreakdown: { schemaVersion: 1, improvement: 1, other: 1 },
+      executionPlanningScope: "tasks-only",
+      suggestedNext: null,
+      planningSession: null,
+      taskStoreLastUpdated: "2026-05-14T00:00:00.000Z",
+      workspaceStatus: {
+        currentKitPhase: "95",
+        nextKitPhase: "96",
+        activeFocus: "Readiness move",
+        blockers: ["Waiting on review"],
+        pendingDecisions: ["Pick release lane"]
+      },
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+
+  const queueTabIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="task-engine"');
+  const readinessIdx = html.indexOf("<b>Phase Readiness</b>");
+  const caeTabIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="cae"');
+  assert.ok(queueTabIdx !== -1 && readinessIdx > queueTabIdx);
+  assert.ok(caeTabIdx !== -1 && readinessIdx < caeTabIdx);
+  assert.match(html, /<div class="wc-tab-panel" data-wc-tab="cae"[\s\S]*Phase Readiness moved to the top of <b>Queue<\/b>/);
+});
+
+test("renderDashboardRootInnerHtml renders embedded CAE panel markup when provided", () => {
+  const embedded = '<section class="gp-root"><nav class="gp-tabs"><button data-gp-tab="overview" class="is-active">Overview</button></nav><section class="gp-tab-panel is-active" data-gp-panel="overview">Embedded CAE</section></section>';
+  const html = renderDashboardRootInnerHtml(
+    {
+      ok: true,
+      data: {
+        stateSummary: { ready: 1, proposed: 0, blocked: 0, completed: 0 },
+        readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+        readyExecutionSummary: { schemaVersion: 1, count: 1, top: [], phaseBuckets: [] },
+        proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+        proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+        blockedSummary: { count: 0, top: [], phaseBuckets: [] },
+        transcriptChurnResearchSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+        completedSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+        cancelledSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+        wishlist: { schemaVersion: 1, openCount: 0, totalCount: 0, openPage: 0, openPageSize: 10, openTotalPages: 0, openTop: [] },
+        readyQueueTop: [],
+        readyQueueCount: 1,
+        readyQueueBreakdown: { schemaVersion: 1, improvement: 0, other: 1 },
+        executionPlanningScope: "tasks-only",
+        suggestedNext: null,
+        planningSession: null,
+        taskStoreLastUpdated: "2026-05-14T00:00:00.000Z",
+        workspaceStatus: { currentKitPhase: "95", nextKitPhase: "96", activeFocus: "Embed CAE" },
+        blockingAnalysis: [],
+        dependencyOverview: deliverTestDepOverview
+      }
+    },
+    null,
+    null,
+    null,
+    embedded
+  );
+
+  assert.match(html, /data-wc-tab="cae"[\s\S]*<section class="gp-root">/);
+  assert.match(html, /Embedded CAE/);
+  assert.doesNotMatch(html, /Embedded CAE panel unavailable; use the Guidance panel as fallback/);
+});
+
+test("embedded and standalone CAE surfaces avoid duplicate DOM ids", () => {
+  const caePayload = {
+    ok: true,
+    data: {
+      readiness: { canMutate: true, issues: [] },
+      health: { caeEnabled: true, registryStatus: "ok", registryStore: "sqlite" },
+      validation: { ok: true },
+      activeVersion: { isActive: true, versionId: "v1", artifactCount: 1, activationCount: 1, createdAt: "2026-05-14T00:00:00.000Z" },
+      counts: {
+        artifactStatuses: { active: 1 },
+        activationStatuses: { draft: 0 },
+        activationFamilies: { policy: 1, think: 0, do: 0, review: 0 },
+        recentMutationCount: 0
+      },
+      recentMutations: { count: 0, rows: [] },
+      validationWarnings: [],
+      artifacts: { rows: [] },
+      activations: { rows: [] },
+      previewExamples: [],
+      portability: {},
+      audit: { rows: [] },
+      workspaceArtifactMarkdownTemplates: []
+    }
+  };
+
+  const embedded = renderGuidanceAuthoringPanelInnerHtml(caePayload);
+  const dashboardHtml = renderDashboardRootInnerHtml(
+    {
+      ok: true,
+      data: {
+        stateSummary: { ready: 1, proposed: 0, blocked: 0, completed: 0 },
+        readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+        readyExecutionSummary: { schemaVersion: 1, count: 1, top: [], phaseBuckets: [] },
+        proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+        proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+        blockedSummary: { count: 0, top: [], phaseBuckets: [] },
+        transcriptChurnResearchSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+        completedSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+        cancelledSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+        wishlist: { schemaVersion: 1, openCount: 0, totalCount: 0, openPage: 0, openPageSize: 10, openTotalPages: 0, openTop: [] },
+        readyQueueTop: [],
+        readyQueueCount: 1,
+        readyQueueBreakdown: { schemaVersion: 1, improvement: 0, other: 1 },
+        executionPlanningScope: "tasks-only",
+        suggestedNext: null,
+        planningSession: null,
+        taskStoreLastUpdated: "2026-05-14T00:00:00.000Z",
+        workspaceStatus: { currentKitPhase: "95", nextKitPhase: "96", activeFocus: "Embed CAE" },
+        blockingAnalysis: [],
+        dependencyOverview: deliverTestDepOverview
+      }
+    },
+    null,
+    null,
+    null,
+    embedded
+  );
+
+  const standaloneHtml = renderGuidanceAuthoringPanelInnerHtml(caePayload);
+  const allIds = [...dashboardHtml.matchAll(/id="([^"]+)"/g)].map((m) => m[1]);
+  const standaloneIds = [...standaloneHtml.matchAll(/id="([^"]+)"/g)].map((m) => m[1]);
+  assert.ok(allIds.some((id) => id.startsWith("dash-cae-gp-")));
+  for (const sid of standaloneIds) {
+    assert.ok(!allIds.includes(sid), `expected embedded surface to namespace id ${sid}`);
+  }
 });
 
 test("renderDashboardRootInnerHtml includes phase journal controls when bundle provided", () => {
@@ -258,11 +515,16 @@ test("renderDashboardRootInnerHtml includes phase journal controls when bundle p
   const html = renderDashboardRootInnerHtml(fixture, null, null, bundle);
   assert.match(html, /dash-phase-notes/);
   assert.match(html, /phase-note-add/);
+  assert.match(html, />New<\/button>/);
   assert.match(html, /phase-notes-chat/);
-  assert.match(html, /phase-note-dismiss/);
+  assert.match(html, /phase-note-view/);
+  assert.match(html, /phase-note-edit/);
+  assert.match(html, /phase-note-delete/);
   assert.match(html, /phase-note-convert/);
   assert.match(html, /phase-notes-propose-persist/);
   assert.match(html, /550e8400-e29b-41d4-a716-446655440000/);
+  assert.match(html, /Ship the dashboard phase journal card/);
+  assert.doesNotMatch(html, /Journal entries scoped to the workspace current phase/);
   const overviewPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="overview"');
   const taskEnginePanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="task-engine"');
   const statusPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="status"');

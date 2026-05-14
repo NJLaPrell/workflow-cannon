@@ -138,6 +138,36 @@ test("drawer: validate add phase note rejects missing type or long summary", asy
   assert.equal(good.ok, true);
 });
 
+test("drawer: view phase note spec is read-only summary", async () => {
+  const mod = await import("../dist/views/dashboard/dashboard-input-drawer.js");
+  const spec = mod.buildViewPhaseNoteDrawerSpec({
+    noteId: "note-1",
+    noteType: "risk",
+    priority: "high",
+    summary: "Watch deploy window",
+    details: "Coordinate with on-call"
+  });
+  const html = mod.renderDrawerFormHtml(spec);
+  assert.equal(spec.workflowId, "view-phase-note");
+  assert.match(html, /Watch deploy window/);
+  assert.match(html, /Coordinate with on-call/);
+});
+
+test("drawer: edit phase note spec and validation", async () => {
+  const mod = await import("../dist/views/dashboard/dashboard-input-drawer.js");
+  const spec = mod.buildEditPhaseNoteDrawerSpec({
+    noteId: "note-2",
+    summary: "Initial summary",
+    details: "Initial details"
+  });
+  const html = mod.renderDrawerFormHtml(spec);
+  assert.equal(spec.workflowId, "edit-phase-note");
+  assert.match(html, /data-wc-drawer-field="summary"/);
+  assert.match(html, /data-wc-drawer-field="details"/);
+  assert.equal(mod.validateEditPhaseNoteSubmit({ summary: "", details: "x" }).ok, false);
+  assert.equal(mod.validateEditPhaseNoteSubmit({ summary: "ok", details: "x" }).ok, true);
+});
+
 test("drawer: accept proposed spec includes rationale field", async () => {
   const mod = await import("../dist/views/dashboard/dashboard-input-drawer.js");
   const html = mod.renderDrawerFormHtml(

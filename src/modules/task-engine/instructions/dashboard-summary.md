@@ -39,7 +39,7 @@ Also accepts standard invocation `config` / `actor` overlays where applicable.
 | `proposedExecutionSummary` | Same `phaseBuckets` shape for **proposed** non-improvement, non-wishlist tasks (**`taskIds`** on each bucket lists all ids in that phase) |
 | `readyImprovementsSummary` | `{ schemaVersion: 1, count, top, phaseBuckets }` for the ready **improvement** slice |
 | `readyExecutionSummary` | `{ schemaVersion: 1, count, top, phaseBuckets }` for the rest of the ready queue |
-| `readyQueueTop` | Up to 15 ready tasks (id, title, priority, phase) |
+| `readyQueueTop` | Up to 15 ready tasks (id, title, priority, severity, components, features, phase) |
 | `readyQueueCount` | Full ready queue length |
 | `readyQueueBreakdown` | `{ schemaVersion: 1, improvement, other }` — split of the ready queue (`improvement` = `type: improvement` or legacy `imp-*` id; `other` = remainder; wishlist intake never appears in the ready queue) |
 | `blockedSummary` | `{ count, top, phaseBuckets }` — `top` is up to 15 blocking analysis rows; `phaseBuckets` groups those rows by the **blocked task’s** phase (same ordering as above) |

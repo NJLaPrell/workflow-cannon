@@ -46,4 +46,4 @@ workspace-kit run list-tasks '{"componentId":"cli-modules-agent-surfaces"}'
 
 ## Returns
 
-Object with `tasks` (array of `TaskEntity`), `count`, and `scope`. When `includeQueueHints` is true, `queueHintRows` is included. When `includeTaskIntake` is true, `taskIntakeByTaskId` is included. Default output shape is unchanged when these flags are omitted.
+Object with `tasks`, `count`, and `scope`. Each task row preserves the stored task fields and also includes stable read-model projections for `priority`, `severity`, `components`, and feature taxonomy `features` (empty arrays / `null` when absent). When `includeQueueHints` is true, `queueHintRows` is included. When `includeTaskIntake` is true, `taskIntakeByTaskId` is included.

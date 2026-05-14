@@ -34,6 +34,9 @@ function sampleTask(overrides = {}) {
     status: "ready",
     type: "workspace-kit",
     priority: "P1",
+    severity: "high",
+    components: ["queue", "dashboard"],
+    features: ["task-comments"],
     archived: false,
     createdAt: "2026-04-28T17:47:10.818Z",
     updatedAt: "2026-04-28T17:47:50.629Z",
@@ -45,7 +48,7 @@ function sampleTask(overrides = {}) {
     routing: {
       ownership: "task-engine",
       queueNamespace: "default",
-      features: [],
+      features: ["task-comments"],
       source: "chat-schema-agent-db-upgrade-2026-04-28",
       hasModuleMetadata: true,
       category: null,
