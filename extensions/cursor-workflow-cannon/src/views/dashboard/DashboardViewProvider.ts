@@ -74,6 +74,21 @@ function logDashboard(message: string): void {
   dashboardOutput.appendLine(`[dashboard] ${message}`);
 }
 
+function isWishlistPagingArgRejection(raw: Record<string, unknown>): boolean {
+  if (raw.ok !== false || raw.code !== "invalid-run-args") return false;
+  const details = raw.details;
+  if (!details || typeof details !== "object" || Array.isArray(details)) return false;
+  const errors = (details as Record<string, unknown>).errors;
+  if (!Array.isArray(errors)) return false;
+  return errors.some((error) => {
+    if (!error || typeof error !== "object" || Array.isArray(error)) return false;
+    const params = (error as Record<string, unknown>).params;
+    if (!params || typeof params !== "object" || Array.isArray(params)) return false;
+    const additionalProperty = (params as Record<string, unknown>).additionalProperty;
+    return additionalProperty === "wishlistPage" || additionalProperty === "wishlistPageSize";
+  });
+}
+
 function phaseKeyFromPhrase(phasePhrase: string): string | undefined {
   const raw = phasePhrase.trim();
   if (!raw || raw.toLowerCase() === "not phased") return undefined;
@@ -389,6 +404,20 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         await this.onRegisterPhaseCatalogEntry();
         if (!this.dashboardDrawerSession) {
           await this.pushUpdate();
+        }
+      }
+      if (msg?.type === "updatePhaseDeliverables") {
+        const phaseKey = typeof msg.phaseKey === "string" ? msg.phaseKey.trim() : "";
+        const rawValue = msg.deliverables;
+        const deliverables =
+          rawValue === null ? null : typeof rawValue === "string" ? rawValue : "";
+        const rawMutationId = typeof msg.clientMutationId === "string" ? msg.clientMutationId.trim() : "";
+        const clientMutationId = rawMutationId.length > 0 ? rawMutationId : undefined;
+        if (phaseKey.length > 0 && (deliverables === null || typeof deliverables === "string")) {
+          const refreshed = await this.onUpdatePhaseDeliverables(phaseKey, deliverables, clientMutationId);
+          if (refreshed) {
+            await this.pushUpdate();
+          }
         }
       }
       if (msg?.type === "drawerSubmit") {
@@ -760,6 +789,51 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     const html = renderDrawerFormHtml(buildRegisterPhaseCatalogDrawerSpec());
     this.dashboardDrawerSession = { kind: "register-catalog" };
     await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+  }
+
+  /** Update a phase roster Deliverables value via upsert-phase-catalog-entry with one mismatch retry. */
+  private async onUpdatePhaseDeliverables(
+    phaseKey: string,
+    deliverables: string | null,
+    clientMutationId?: string
+  ): Promise<boolean> {
+    const runOnce = async () => {
+      const args: Record<string, unknown> = {
+        phaseKey,
+        actor: "cursor-dashboard",
+        ...expectedPlanningGenerationArgs()
+      };
+      if (clientMutationId) {
+        args.clientMutationId = clientMutationId;
+      }
+      args.shortDescription = deliverables === null ? null : deliverables.trim();
+      return this.client.run("upsert-phase-catalog-entry", args);
+    };
+
+    await this.client.recordActivity({
+      kind: "validating",
+      phaseKey,
+      command: "upsert-phase-catalog-entry",
+      details: { source: "dashboard-phase-roster-deliverables" }
+    });
+
+    let out = await runOnce();
+    if (out.ok !== true && out.code === "planning-generation-mismatch") {
+      await this.ingestPlanningGenFromDashboard();
+      out = await runOnce();
+    }
+    await this.client.clearActivity();
+
+    if (out.ok !== true) {
+      await vscode.window.showErrorMessage(
+        `upsert-phase-catalog-entry failed: ${String(out.message ?? out.code ?? "unknown error")}`
+      );
+      return false;
+    }
+
+    ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
+    this.notifyKitStateChanged();
+    return true;
   }
 
   private closeDashboardDrawer(): void {
@@ -1193,6 +1267,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         wishlistPage: requestedWishlistPage,
         wishlistPageSize: 5
       })) as DashboardSummaryCommandSuccess | Record<string, unknown>;
+      if (isWishlistPagingArgRejection(raw as Record<string, unknown>)) {
+        logDashboard("pushUpdate: dashboard-summary runtime rejected wishlist paging args; retrying without paging");
+        this.wishlistPage = 0;
+        raw = (await this.client.run("dashboard-summary", {})) as DashboardSummaryCommandSuccess | Record<string, unknown>;
+      }
     } catch (e) {
       raw = {
         ok: false,
@@ -1523,6 +1602,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       padding-top: 8px;
       border-top: 1px solid var(--vscode-widget-border, rgba(127,127,127,.25));
     }
+    .dash-status-editor-integration .dash-editor-integration--embedded {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: 0;
+    }
     button.dash-deliver-chip {
       margin: 0;
       flex-shrink: 0;
@@ -1555,6 +1639,16 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     .dash-agent-status-banner p { margin: 0; line-height: 1.35; }
     .dash-agent-status-label { overflow-wrap: anywhere; }
+    .dash-agent-row-list { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+    .dash-agent-row { display: grid; grid-template-columns: auto minmax(92px, 1.2fr) minmax(92px, 1fr) minmax(70px, auto); gap: 6px; align-items: center; padding: 4px 5px; border-radius: 4px; background: var(--vscode-textCodeBlock-background); }
+    .dash-agent-row--subagent { margin-left: 14px; border-left: 2px solid var(--vscode-textLink-foreground); }
+    .dash-agent-row-icon { font-size: 10px; opacity: 0.75; }
+    .dash-agent-row-main { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+    .dash-agent-row-main b, .dash-agent-row-detail { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dash-agent-row-detail { min-width: 0; font-size: 11px; }
+    .dash-agent-row-meta { display: inline-flex; align-items: center; justify-content: flex-end; gap: 4px; flex-wrap: wrap; min-width: 0; font-size: 10px; }
+    .dash-agent-row-chip { display: inline-flex; align-items: center; padding: 1px 5px; border-radius: 4px; border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35)); background: var(--vscode-sideBar-background); font-size: 9.5px; line-height: 1.3; }
+    .dash-agent-row-chip-sub { color: var(--vscode-textLink-foreground); }
     .dash-planning-head {
       display: flex;
       flex-direction: row;
@@ -1710,6 +1804,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       background: var(--vscode-sideBarSectionHeader-background, rgba(127,127,127,.12));
     }
     .wc-dashboard-tab-shell > .dash-agent-status-banner p { margin: 0; }
+    .wc-dashboard-tab-shell > .dash-agent-status-banner .dash-agent-row-list { margin-top: 5px; }
+    @media (max-width: 520px) {
+      .dash-agent-row { grid-template-columns: auto minmax(0, 1fr); }
+      .dash-agent-row-detail, .dash-agent-row-meta { grid-column: 2; justify-content: flex-start; }
+    }
     .wc-tab-bar {
       display: flex;
       gap: 0;

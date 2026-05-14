@@ -16,6 +16,30 @@ import { buildPhaseCompleteReleaseChatPrompt } from "../dist/phase-complete-rele
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+function plainTextFromHtml(html) {
+  return html
+    .replace(/<code>([\s\S]*?)<\/code>/g, "$1")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function extractParagraphBoldTitles(html) {
+  return [...html.matchAll(/<p><b>([\s\S]*?)<\/b>(?=[\s<])/g)]
+    .map((match) => plainTextFromHtml(match[1]))
+    .filter(Boolean);
+}
+
+function extractMutedParagraphs(html) {
+  return [...html.matchAll(/<p class="[^"]*(?:muted|wc-hint)[^"]*"[^>]*>([\s\S]*?)<\/p>/g)]
+    .map((match) => plainTextFromHtml(match[1]))
+    .filter(Boolean);
+}
+
 test("escapeHtml escapes angle brackets and ampersands", () => {
   assert.equal(escapeHtml("a<b>&c"), "a&lt;b&gt;&amp;c");
 });
@@ -51,16 +75,33 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /dash-card/);
   assert.match(html, /dash-agent-status-banner/);
   assert.ok(html.indexOf("dash-agent-status-banner") < html.indexOf("wc-tab-bar"));
-  assert.ok(html.indexOf("wc-tab-bar") < html.indexOf("<b>Role:</b>"));
+  assert.ok(html.indexOf("dash-agent-status-banner") < html.indexOf("dash-overview-phase-summary"));
+  assert.ok(html.indexOf("dash-overview-phase-summary") < html.indexOf("wc-tab-bar"));
   assert.match(html, /<b>WC Agent is:<\/b> <span class="dash-agent-status-label">Awaiting Instruction<\/span>/);
-  assert.match(html, /<b>Role:<\/b> Adventurer/);
-  assert.match(html, /<b>Agent Temperament:<\/b> The Steady Adventurer/);
-  assert.match(html, /dash-role-temperament-phase/);
-  const roleIdx = html.indexOf("<b>Role:</b>");
+  assert.match(html, /dash-agent-row-list/);
+  assert.match(html, /aria-label="Awaiting Instruction, Current agent"/);
+  const overviewPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="overview"');
+  const taskEnginePanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="task-engine"');
+  const statusPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="status"');
+  const configPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="config"');
+  const caePanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="cae"');
+  assert.ok(overviewPanelIdx >= 0 && taskEnginePanelIdx > overviewPanelIdx && statusPanelIdx > taskEnginePanelIdx);
+  const overviewPanel = html.slice(overviewPanelIdx, taskEnginePanelIdx);
+  const statusPanel = html.slice(statusPanelIdx, configPanelIdx);
+  const caePanel = html.slice(caePanelIdx);
+  assert.doesNotMatch(overviewPanel, /Role|Temperament|Presentation/);
+  assert.match(statusPanel, /Agent Profile/);
+  assert.match(statusPanel, /<span class="wc-status-kv-label">Role<\/span><span class="wc-status-kv-val">Adventurer<\/span>/);
+  assert.match(statusPanel, /<span class="wc-status-kv-label">Temperament<\/span><span class="wc-status-kv-val">The Steady Adventurer<\/span>/);
+  assert.match(statusPanel, /Manage guidance policies via the CAE sidebar panel/);
+  assert.doesNotMatch(caePanel, /Active Guidance|aria-label="Agent guidance"/);
+  assert.ok(statusPanel.indexOf('aria-label="Agent profile"') < statusPanel.indexOf('aria-label="Workspace identity"'));
+  const roleIdx = statusPanelIdx + statusPanel.indexOf("Agent Profile");
   const agentStatusIdx = html.indexOf("<b>WC Agent is:</b>");
   const phaseIdx = html.indexOf("Current Phase");
   assert.ok(agentStatusIdx !== -1 && roleIdx !== -1 && agentStatusIdx < roleIdx);
-  assert.ok(roleIdx !== -1 && phaseIdx !== -1 && roleIdx < phaseIdx);
+  assert.ok(agentStatusIdx !== -1 && phaseIdx !== -1 && agentStatusIdx < phaseIdx);
+  assert.ok(phaseIdx !== -1 && roleIdx !== -1 && phaseIdx < roleIdx);
   assert.match(html, /dash-overview-phase-row/);
   assert.match(html, /data-wc-action="deliver-phase-prompt"/);
   assert.match(html, />Deliver<\/button>/);
@@ -82,7 +123,7 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /dash-count-grid/);
   assert.match(html, /wc-ready-scope-note/);
   assert.match(html, /wishlist_intake/);
-  assert.match(html, /Queue<\/b> tab/);
+  assert.match(html, /Wishlist intake rows are excluded/);
   assert.match(html, />Proposed<\/span> <span class="dash-count-num ok">1<\/span>/);
   assert.match(html, />Ready<\/span> <span class="dash-count-num ok">2<\/span>/);
   assert.match(html, /dashboard-tasks-block/);
@@ -253,7 +294,16 @@ test("renderDashboardRootInnerHtml renders editor integration state when provide
   assert.match(html, /<b>Chat prefill<\/b> VS Code Chat/);
   assert.match(html, /cursor URL disabled/);
   assert.doesNotMatch(html, /<section class="dash-card dash-editor-integration"/);
-  assert.match(html, /dash-role-temperament-phase[\s\S]*dash-editor-integration--embedded/);
+  const overviewPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="overview"');
+  const taskEnginePanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="task-engine"');
+  const statusPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="status"');
+  const configPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="config"');
+  assert.ok(overviewPanelIdx >= 0 && taskEnginePanelIdx > overviewPanelIdx && statusPanelIdx > taskEnginePanelIdx);
+  const overviewPanel = html.slice(overviewPanelIdx, taskEnginePanelIdx);
+  const statusPanel = html.slice(statusPanelIdx, configPanelIdx);
+  assert.doesNotMatch(overviewPanel, /dash-editor-integration|Chat prefill|VS Code Chat/);
+  assert.match(statusPanel, /dash-status-editor-integration[\s\S]*dash-editor-integration--embedded/);
+  assert.match(statusPanel, /<b>Chat prefill<\/b> VS Code Chat/);
 });
 
 test("renderDashboardRootInnerHtml renders escaped WC Agent status banner from agentStatus", () => {
@@ -288,8 +338,83 @@ test("renderDashboardRootInnerHtml renders escaped WC Agent status banner from a
   });
   assert.match(html, /data-agent-status-kind="working_task"/);
   assert.match(html, /Working on Task T123 &lt;script&gt;/);
+  assert.match(html, /dash-agent-row/);
+  assert.match(html, /aria-label="Working on Task T123 &lt;script&gt;, Current agent"/);
+  assert.match(html, /T123/);
   assert.doesNotMatch(html, /<script>/);
   assert.ok(html.indexOf("WC Agent is:") < html.indexOf("Current Phase"));
+});
+
+test("renderDashboardRootInnerHtml renders many agent and subagent rows", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      agentStatus: {
+        schemaVersion: 1,
+        source: "live_activity",
+        kind: "working_task",
+        label: "Working on Task T700",
+        confidence: "high",
+        updatedAt: "2026-05-06T00:00:00.000Z",
+        taskId: "T700",
+        phaseKey: "95"
+      },
+      teamExecution: {
+        schemaVersion: 1,
+        available: true,
+        totalCount: 1,
+        activeCount: 1,
+        byStatus: { assigned: 1, submitted: 0, blocked: 0, reconciled: 0, cancelled: 0 },
+        topActive: [
+          {
+            executionTaskId: "T701",
+            executionTaskTitle: "Review dashboard rows",
+            supervisorId: "operator",
+            workerId: "tab-2",
+            status: "assigned",
+            updatedAt: "2026-05-06T00:01:00.000Z"
+          }
+        ]
+      },
+      subagentRegistry: {
+        schemaVersion: 1,
+        available: true,
+        definitionsCount: 1,
+        retiredDefinitionsCount: 0,
+        openSessionsCount: 1,
+        topOpenSessions: [
+          {
+            sessionId: "S1",
+            definitionId: "test-subagent",
+            executionTaskId: "T702",
+            status: "open",
+            updatedAt: "2026-05-06T00:02:00.000Z"
+          }
+        ]
+      },
+      stateSummary: { proposed: 0, ready: 0, in_progress: 1, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [] },
+      readyQueueTop: [],
+      readyQueueCount: 0,
+      suggestedNext: null,
+      planningSession: null,
+      taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
+      workspaceStatus: { currentKitPhase: "95", nextKitPhase: "96", activeFocus: "Test" },
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+  assert.match(html, /Working on Task T700/);
+  assert.match(html, /tab-2/);
+  assert.match(html, /Review dashboard rows/);
+  assert.match(html, /test-subagent/);
+  assert.match(html, /dash-agent-row--subagent/);
+  assert.match(html, /aria-label="test-subagent, Subagent"/);
 });
 
 test("renderDashboardRootInnerHtml planning card shows resume CLI when session present", () => {
@@ -353,7 +478,7 @@ test("renderDashboardRootInnerHtml planning card shows resume CLI when session p
     }
   });
   assert.match(html, /Planning Interview/);
-  assert.match(html, /Presentation:/);
+  assert.match(html, /<span class="wc-status-kv-label">Presentation<\/span>/);
   assert.match(html, /Work-log normal/);
   assert.doesNotMatch(html, /data-wc-action="planning-new-plan"/);
   assert.doesNotMatch(html, />New Plan<\/button>/);
@@ -417,11 +542,30 @@ test("renderDashboardRootInnerHtml omits suggested-next section", () => {
   assert.doesNotMatch(html, /data-wc-action="planning-resume-chat"/);
   assert.match(html, /No interview in progress/);
   assert.doesNotMatch(html, /This card updates when/);
-  assert.match(html, /<b>Role:<\/b> Bard/);
-  assert.match(html, /<b>Agent Temperament:<\/b> The Wary Scout/);
+  assert.match(html, /<span class="wc-status-kv-label">Role<\/span><span class="wc-status-kv-val">Bard<\/span>/);
+  assert.match(html, /<span class="wc-status-kv-label">Temperament<\/span><span class="wc-status-kv-val">The Wary Scout<\/span>/);
   assert.match(html, /wc-ready-scope-note/);
   assert.match(html, /wishlist_intake/);
-  assert.match(html, /Queue<\/b> tab/);
+  assert.match(html, /Wishlist intake rows are excluded/);
+});
+
+test("renderDashboardRootInnerHtml keeps dashboard copy compact", () => {
+  const fixturePath = path.join(__dirname, "../docs/fixtures/dashboard-summary.example.json");
+  const fixture = JSON.parse(readFileSync(fixturePath, "utf8"));
+  const html = renderDashboardRootInnerHtml(fixture, null, {
+    appName: "Visual Studio Code",
+    uriScheme: "vscode",
+    ideKind: "vscode",
+    chatPrefill: {
+      label: "VS Code Chat",
+      canPrefillDirectly: true,
+      externalCursorDeeplink: false
+    }
+  });
+  const longTitles = extractParagraphBoldTitles(html).filter((title) => title.length > 32);
+  const longMuted = extractMutedParagraphs(html).filter((text) => text.length > 120);
+  assert.deepEqual(longTitles, []);
+  assert.deepEqual(longMuted, []);
 });
 
 test("renderDashboardRootInnerHtml recommends wishlist when execution ready queue is empty", () => {

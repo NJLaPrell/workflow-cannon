@@ -26,6 +26,11 @@ import {
   loadTaskFeatureLinkMap,
   replaceAllTaskFeatureLinks
 } from "./feature-registry-queries.js";
+import {
+  classifyNativeSqliteErrorMessage,
+  formatNodeRuntimeIdentity,
+  nativeSqliteRecoveryHint
+} from "../../../core/native-sqlite-diagnostics.js";
 
 function emptyTaskStoreDocument(): TaskStoreDocument {
   return {
@@ -330,7 +335,19 @@ export class SqliteDualPlanningStore {
   private openDatabase(): Database.Database {
     const dir = path.dirname(this.dbPath);
     fs.mkdirSync(dir, { recursive: true });
-    this.db = new Database(this.dbPath);
+    try {
+      this.db = new Database(this.dbPath);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      const classification = classifyNativeSqliteErrorMessage(msg);
+      if (classification.kind === "architecture-mismatch") {
+        throw new TaskEngineError(
+          "native-binding-arch-mismatch",
+          `${msg} — ${nativeSqliteRecoveryHint(classification)} Remediation command: pnpm rebuild better-sqlite3. Runtime: ${formatNodeRuntimeIdentity()}`
+        );
+      }
+      throw new TaskEngineError("storage-read-error", `Failed to open SQLite planning DB: ${msg}`);
+    }
     prepareKitSqliteDatabase(this.db);
     this._dbFileIdentity = readDbFileIdentity(this.dbPath);
     this._tableShape = detectTableShape(this.db);

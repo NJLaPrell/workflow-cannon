@@ -22,7 +22,8 @@ export function escapeHtmlAttr(s: string): string {
   return String(s)
     .replace(/&/g, "&amp;")
     .replace(/"/g, "&quot;")
-    .replace(/</g, "&lt;");
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 /** Ready / proposed / blocked row control — posts `assignTaskPhase` (assign-task-phase). */
@@ -57,8 +58,8 @@ export function renderActiveFocusHtml(raw: string): string {
 function renderExecutionReadyScopeFootnote(): string {
   return (
     '<p class="muted wc-ready-scope-note">' +
-    "<b>Note:</b> Ready / proposed rollups follow the kit <em>execution queue</em> — they omit <code>wishlist_intake</code> even when that row is ready. " +
-    "Use <b>Wishlist</b> on the <b>Queue</b> tab, or <code>wk run list-tasks</code> for the full store.</p>"
+    "<b>Note:</b> Ready/proposed rollups follow the kit <em>execution queue</em>.</p>" +
+    '<p class="muted">Wishlist intake rows are excluded; use <b>Wishlist</b> or <code>wk run list-tasks</code>.</p>'
   );
 }
 
@@ -222,8 +223,7 @@ function renderCaePhaseReadinessContent(
   readyExeCount: number,
   readyImpCount: number,
   blockedCount: number,
-  proposedTotal: number,
-  agentGuidance: unknown
+  proposedTotal: number
 ): string {
   const curPhase =
     ws?.currentKitPhase != null ? String(ws.currentKitPhase).trim() : "";
@@ -266,25 +266,6 @@ function renderCaePhaseReadinessContent(
 
   const scoreColor =
     score >= 75 ? "wc-cae-score-ok" : score >= 40 ? "wc-cae-score-warn" : "wc-cae-score-bad";
-
-  const guidanceLines: string[] = [];
-  if (agentGuidance && typeof agentGuidance === "object") {
-    const ag = agentGuidance as Record<string, unknown>;
-    const roleLabel =
-      typeof ag.displayLabel === "string" && ag.displayLabel.trim()
-        ? ag.displayLabel.trim()
-        : "";
-    const tempLabel =
-      typeof ag.temperamentLabel === "string" && ag.temperamentLabel.trim()
-        ? ag.temperamentLabel.trim()
-        : "";
-    if (roleLabel) {
-      guidanceLines.push("Role: " + roleLabel);
-    }
-    if (tempLabel) {
-      guidanceLines.push("Temperament: " + tempLabel);
-    }
-  }
 
   const phaseSection =
     curPhase.length > 0
@@ -341,17 +322,6 @@ function renderCaePhaseReadinessContent(
         "</div>"
       : "";
 
-  const activeGuidance =
-    guidanceLines.length > 0
-      ? '<section class="dash-card" aria-label="Agent guidance">' +
-        "<p><b>Active Guidance</b></p>" +
-        guidanceLines
-          .map((l) => "<p>" + escapeHtml(l) + "</p>")
-          .join("") +
-        '<p class="muted">Manage guidance policies via the CAE sidebar panel (Workflow Cannon activity bar).</p>' +
-        "</section>"
-      : "";
-
   return (
     '<section class="dash-card wc-cae-readiness" aria-label="Phase readiness">' +
     '<div class="wc-cae-score-row">' +
@@ -366,11 +336,9 @@ function renderCaePhaseReadinessContent(
     checksSection +
     pendingBlock +
     "</section>" +
-    activeGuidance +
     '<section class="dash-card" aria-label="CAE sidebar">' +
-    "<p><b>CAE — Full Controls</b></p>" +
-    '<p class="muted">Pre-flight checks, guidance management, and check history are in the ' +
-    "<b>CAE</b> sidebar panel. Open it via the Workflow Cannon activity bar.</p>" +
+    "<p><b>CAE Controls</b></p>" +
+    '<p class="muted">Pre-flight checks, guidance management, and history live in the <b>CAE</b> sidebar panel.</p>' +
     "</section>"
   );
 }
@@ -426,7 +394,8 @@ function renderWishlistOpenList(items: unknown): string {
     return '<p class="muted">No Items</p>';
   }
   return (
-    '<p class="muted"><b>Open Wishlist Preview</b> · <b>Process</b> runs intake in chat; <b>Decline</b> cancels the backing intake task (<code>reject</code> → cancelled).</p>' +
+    '<p class="muted"><b>Wishlist Preview</b></p>' +
+    '<p class="muted"><b>Process</b> starts intake chat; <b>Decline</b> cancels the backing task.</p>' +
     '<div class="dash-row-list" role="list">' +
     items
       .map((x) => {
@@ -514,7 +483,10 @@ function renderProposedImprovementRow(row: { id?: unknown; title?: unknown; phas
 
 function renderProposedImprovementsList(count: number, items: unknown): string {
   if (!Array.isArray(items) || items.length === 0) {
-    return `<p class="muted">No proposed improvements (<code>type: improvement</code>, <code>status: proposed</code>; legacy <code>imp-*</code> may still appear). Run <code>generate-recommendations</code> / <code>ingest-transcripts</code> or log via <code>create-task</code> per playbook. Confirm: <code>workspace-kit run list-tasks '{}'</code>.</p>`;
+    return (
+      '<p class="muted">No proposed improvements.</p>' +
+      '<p class="muted">Run <code>generate-recommendations</code>, <code>ingest-transcripts</code>, or <code>create-task</code>.</p>'
+    );
   }
   const more =
     count > items.length
@@ -522,7 +494,7 @@ function renderProposedImprovementsList(count: number, items: unknown): string {
       : "";
   return (
     more +
-    '<p class="muted"><b>Row actions</b> · <span class="muted">Accept</span> / <span class="muted">Decline</span> run <code>run-transition</code> (<code>accept</code> / <code>reject</code>; modal rationale + planning token when required).</p>' +
+    '<p class="muted"><b>Row actions</b> · Accept/Decline runs <code>run-transition</code> with approval.</p>' +
     '<div class="dash-row-list" role="list">' +
     items.map((x) => renderProposedImprovementRow(x as { id?: unknown; title?: unknown; phase?: unknown })).join("") +
     "</div>"
@@ -554,7 +526,8 @@ function renderTranscriptChurnResearchRow(row: { id?: unknown; title?: unknown; 
 function renderTranscriptChurnResearchList(count: number, items: unknown): string {
   if (!Array.isArray(items) || items.length === 0) {
     return (
-      '<p class="muted">No transcript churn rows (<code>type: transcript_churn</code>, <code>status: research</code>). When they appear, investigate then run <code>synthesize-transcript-churn</code> (see <code>.ai/AGENT-CLI-MAP.md</code>).</p>'
+      '<p class="muted">No transcript churn rows.</p>' +
+      '<p class="muted">When rows appear, investigate, then run <code>synthesize-transcript-churn</code>.</p>'
     );
   }
   const more =
@@ -604,7 +577,7 @@ function renderProposedExecutionList(count: number, items: unknown): string {
       : "";
   return (
     more +
-    '<p class="muted"><b>Row actions</b> · <span class="muted">Accept</span> / <span class="muted">Decline</span> run <code>run-transition</code> when required.</p>' +
+    '<p class="muted"><b>Row actions</b> · Accept/Decline runs <code>run-transition</code>.</p>' +
     '<div class="dash-row-list" role="list">' +
     items.map((x) => renderProposedExecutionRow(x as { id?: unknown; title?: unknown; phase?: unknown })).join("") +
     "</div>"
@@ -748,7 +721,7 @@ function renderProposedPhaseBuckets(
       : "";
   return (
     more +
-    '<p class="muted"><b>Row actions</b> · <span class="muted">Accept</span> / <span class="muted">Decline</span> per row. <b>Accept All</b> on a phase heading runs <code>accept</code> for every proposed improvement in that phase (one shared rationale; planning token refreshed between calls).</p>' +
+    '<p class="muted"><b>Row actions</b> · Accept/Decline per row; Accept All processes the phase.</p>' +
     '<div class="phase-stack">' +
     buckets
       .map((raw, i) => {
@@ -852,7 +825,7 @@ function renderProposedExecutionPhaseBuckets(
       : "";
   return (
     more +
-    '<p class="muted"><b>Accept All</b> on a phase heading accepts every proposed execution task in that phase (shared rationale).</p>' +
+    '<p class="muted"><b>Accept All</b> accepts every proposed execution task in that phase.</p>' +
     '<div class="phase-stack">' +
     bucketsPe
       .map((raw, i) => {
@@ -1069,11 +1042,11 @@ export function renderPlanningInterviewWizardPanel(panel: PlanningInterviewWizar
   if (panel.kind === "success") {
     const persistenceHint =
       panel.code === "planning-response-ready"
-        ? '<p class="muted"><b>Persistence:</b> Response-only — no wishlist row or task was written from this dashboard flow.</p>'
+        ? '<p class="muted"><b>Persistence:</b> Response-only; no task was written.</p>'
         : panel.code === "planning-wishlist-ready"
-          ? '<p class="muted"><b>Persistence:</b> Answers saved; create the wishlist row with <code>build-plan</code> finalize + <code>createWishlist</code> from the CLI or chat when ready.</p>'
+          ? '<p class="muted"><b>Persistence:</b> Answers saved; finalize with <code>build-plan</code> when ready.</p>'
           : panel.code === "planning-artifact-created"
-            ? '<p class="muted"><b>Persistence:</b> A wishlist intake row was created — refresh the dashboard or use <b>Open wishlist detail</b> from the toast if shown.</p>'
+            ? '<p class="muted"><b>Persistence:</b> Wishlist intake created; refresh the dashboard.</p>'
             : "";
     return (
       '<div class="dash-planning-wizard ok" aria-label="Planning interview complete">' +
@@ -1127,7 +1100,8 @@ function renderPlanningSession(ps: unknown, wizardPanel?: PlanningInterviewWizar
       '<div class="dash-planning-head-main"><p class="dash-planning-title"><b>Planning Interview</b></p></div>' +
       "</div>" +
       wizardHtml +
-      "<p class=\"muted\">No interview in progress. Start or resume with <code>workspace-kit run build-plan</code> when you want guided planning; progress is saved automatically under <code>.workspace-kit/planning/</code>.</p>" +
+      '<p class="muted">No interview in progress.</p>' +
+      '<p class="muted">Start or resume with <code>workspace-kit run build-plan</code>; progress saves automatically.</p>' +
       "</section>"
     );
   }
@@ -1251,7 +1225,7 @@ function renderTeamExecutionSection(team: unknown): string {
   if (!avail) {
     return (
       '<section class="dash-card" aria-label="Team execution">' +
-      "<p><b>Team assignments</b></p>" +
+      "<p><b>Team Assignments</b></p>" +
       '<p class="muted">Team execution data unavailable (kit SQLite below v7 or store not readable).</p>' +
       "</section>"
     );
@@ -1259,7 +1233,7 @@ function renderTeamExecutionSection(team: unknown): string {
   if (top.length === 0) {
     return (
       '<section class="dash-card" aria-label="Team execution">' +
-      "<p><b>Team assignments</b></p>" +
+      "<p><b>Team Assignments</b></p>" +
       statusLine +
       '<p class="muted">No active supervisor assignments.</p>' +
       "</section>"
@@ -1291,7 +1265,7 @@ function renderTeamExecutionSection(team: unknown): string {
     .join("");
   return (
     '<section class="dash-card" aria-label="Team execution">' +
-    "<p><b>Team assignments</b> (read-only)</p>" +
+    "<p><b>Team Assignments</b> (read-only)</p>" +
     statusLine +
     '<div class="dash-row-list" role="list">' +
     rows +
@@ -1314,7 +1288,7 @@ function renderSubagentRegistrySection(sub: unknown): string {
   if (!avail) {
     return (
       '<section class="dash-card" aria-label="Subagent registry">' +
-      "<p><b>Subagent registry</b></p>" +
+      "<p><b>Subagent Registry</b></p>" +
       '<p class="muted">Subagent data unavailable (kit SQLite below v6 or store not readable).</p>' +
       "</section>"
     );
@@ -1328,7 +1302,7 @@ function renderSubagentRegistrySection(sub: unknown): string {
   if (top.length === 0) {
     return (
       '<section class="dash-card" aria-label="Subagent registry">' +
-      "<p><b>Subagent registry</b> (read-only)</p>" +
+      "<p><b>Subagent Registry</b> (read-only)</p>" +
       statusLine +
       '<p class="muted">No open subagent sessions.</p>' +
       "</section>"
@@ -1356,7 +1330,7 @@ function renderSubagentRegistrySection(sub: unknown): string {
     .join("");
   return (
     '<section class="dash-card" aria-label="Subagent registry">' +
-    "<p><b>Subagent registry</b> (read-only)</p>" +
+    "<p><b>Subagent Registry</b> (read-only)</p>" +
     statusLine +
     '<div class="dash-row-list" role="list">' +
     rows +
@@ -1420,56 +1394,164 @@ const DELIVER_TOOLTIP_NO_PHASE =
 const DELIVER_TOOLTIP_ENABLED =
   "Prefill chat: deliver a ready task through the phase branch (task-to-phase-branch)";
 
-function renderRoleTemperamentLines(ag: unknown): string {
-  if (!ag || typeof ag !== "object") {
-    return "";
-  }
-  const o = ag as Record<string, unknown>;
-  const tier = typeof o.tier === "number" ? o.tier : null;
-  const roleLabel = typeof o.displayLabel === "string" ? o.displayLabel.trim() : "";
-  const tempLabel = typeof o.temperamentLabel === "string" ? o.temperamentLabel.trim() : "";
-  const presentation = o.agentPresentation && typeof o.agentPresentation === "object"
-    ? (o.agentPresentation as Record<string, unknown>)
-    : null;
-  const workLog = typeof presentation?.workLog === "string" ? presentation.workLog : "";
-  const rationale = typeof presentation?.rationale === "string" ? presentation.rationale : "";
-  const detail = typeof presentation?.finalAnswerDetail === "string" ? presentation.finalAnswerDetail : "";
-  const presentationLine = workLog || rationale || detail
-    ? "<p><b>Presentation:</b> " +
-      [workLog ? `Work-log ${workLog}` : "", rationale ? `Rationale ${rationale}` : "", detail ? `Final ${detail}` : ""]
-        .filter(Boolean)
-        .map((x) => escapeHtml(x))
-        .join(" · ") +
-      "</p>"
-    : "";
-  if (tier === null) {
-    return "";
-  }
-  return (
-    "<p><b>Role:</b> " +
-    escapeHtml(roleLabel.length > 0 ? roleLabel : "—") +
-    "</p>" +
-    "<p><b>Agent Temperament:</b> " +
-    escapeHtml(tempLabel.length > 0 ? tempLabel : "—") +
-    "</p>" +
-    presentationLine
-  );
+type DashboardAgentRenderRow = {
+  label: string;
+  role: string;
+  detail: string;
+  phase: string;
+  lastActivity: string;
+  kind: string;
+  taskId: string;
+  subagent: boolean;
+};
+
+function cleanDashboardText(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
 }
 
-function renderAgentStatusBanner(agentStatus: unknown): string {
+function humanizeDashboardToken(value: string): string {
+  const token = value.trim();
+  if (token.length === 0) {
+    return "—";
+  }
+  return token
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((part) => part.slice(0, 1).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function agentStatusRenderRows(d: Record<string, unknown>): { kind: string; label: string; rows: DashboardAgentRenderRow[] } {
   let label = "Awaiting Instruction";
   let kind = "awaiting_instruction";
+  const rows: DashboardAgentRenderRow[] = [];
+  const agentStatus = d.agentStatus;
   if (agentStatus && typeof agentStatus === "object") {
     const row = agentStatus as Record<string, unknown>;
-    const rawLabel = typeof row.label === "string" ? row.label.trim() : "";
-    const rawKind = typeof row.kind === "string" ? row.kind.trim() : "";
+    const rawLabel = cleanDashboardText(row.label);
+    const rawKind = cleanDashboardText(row.kind);
     if (rawLabel.length > 0) {
       label = rawLabel;
     }
     if (rawKind.length > 0) {
       kind = rawKind;
     }
+    rows.push({
+      label,
+      role: "Current agent",
+      detail: cleanDashboardText(row.detail) || humanizeDashboardToken(kind),
+      phase: cleanDashboardText(row.phaseKey) || "—",
+      lastActivity: cleanDashboardText(row.updatedAt) || "—",
+      kind,
+      taskId: cleanDashboardText(row.taskId),
+      subagent: false
+    });
+  } else {
+    rows.push({
+      label,
+      role: "Current agent",
+      detail: "Waiting for operator instruction",
+      phase: "—",
+      lastActivity: "—",
+      kind,
+      taskId: "",
+      subagent: false
+    });
   }
+
+  const teamExecution = d.teamExecution && typeof d.teamExecution === "object"
+    ? (d.teamExecution as Record<string, unknown>)
+    : null;
+  const topActive = Array.isArray(teamExecution?.topActive) ? teamExecution.topActive : [];
+  for (const raw of topActive.slice(0, 6)) {
+    if (!raw || typeof raw !== "object") {
+      continue;
+    }
+    const row = raw as Record<string, unknown>;
+    const workerId = cleanDashboardText(row.workerId);
+    const supervisorId = cleanDashboardText(row.supervisorId);
+    const taskId = cleanDashboardText(row.executionTaskId);
+    const title = cleanDashboardText(row.executionTaskTitle);
+    const status = cleanDashboardText(row.status);
+    rows.push({
+      label: workerId || supervisorId || taskId || "Assigned agent",
+      role: status ? `Team ${humanizeDashboardToken(status)}` : "Team assignment",
+      detail: title || (taskId ? `Task ${taskId}` : "Assigned work"),
+      phase: "—",
+      lastActivity: cleanDashboardText(row.updatedAt) || "—",
+      kind: status || "team_assignment",
+      taskId,
+      subagent: false
+    });
+  }
+
+  const subagentRegistry = d.subagentRegistry && typeof d.subagentRegistry === "object"
+    ? (d.subagentRegistry as Record<string, unknown>)
+    : null;
+  const topOpenSessions = Array.isArray(subagentRegistry?.topOpenSessions) ? subagentRegistry.topOpenSessions : [];
+  for (const raw of topOpenSessions.slice(0, 6)) {
+    if (!raw || typeof raw !== "object") {
+      continue;
+    }
+    const row = raw as Record<string, unknown>;
+    const definitionId = cleanDashboardText(row.definitionId);
+    const sessionId = cleanDashboardText(row.sessionId);
+    const taskId = cleanDashboardText(row.executionTaskId);
+    const status = cleanDashboardText(row.status);
+    rows.push({
+      label: definitionId || sessionId || "Subagent",
+      role: "Subagent",
+      detail: taskId ? `Task ${taskId}` : humanizeDashboardToken(status || "open"),
+      phase: "—",
+      lastActivity: cleanDashboardText(row.updatedAt) || "—",
+      kind: status || "subagent",
+      taskId,
+      subagent: true
+    });
+  }
+
+  return { kind, label, rows };
+}
+
+function renderAgentStatusBanner(d: Record<string, unknown>): string {
+  const { kind, label, rows } = agentStatusRenderRows(d);
+  const rowHtml = rows
+    .map((row) => {
+      const labelText = row.label || "—";
+      const roleText = row.role || "—";
+      const aria = `${labelText}, ${roleText}`;
+      const taskChip = row.taskId
+        ? '<span class="dash-agent-row-chip">' + escapeHtml(row.taskId) + "</span>"
+        : "";
+      const subChip = row.subagent ? '<span class="dash-agent-row-chip dash-agent-row-chip-sub">Subagent</span>' : "";
+      return (
+        '<div class="dash-agent-row' +
+        (row.subagent ? " dash-agent-row--subagent" : "") +
+        '" role="listitem" aria-label="' +
+        escapeHtmlAttr(aria) +
+        '">' +
+        '<span class="dash-agent-row-icon" aria-hidden="true">' +
+        (row.subagent ? "↳" : "●") +
+        "</span>" +
+        '<span class="dash-agent-row-main"><b>' +
+        escapeHtml(labelText) +
+        '</b><span class="muted">' +
+        escapeHtml(roleText) +
+        "</span></span>" +
+        '<span class="dash-agent-row-detail">' +
+        escapeHtml(row.detail || "—") +
+        "</span>" +
+        '<span class="dash-agent-row-meta">' +
+        (row.phase !== "—" ? '<span class="dash-agent-row-chip">Phase ' + escapeHtml(row.phase) + "</span>" : "") +
+        taskChip +
+        subChip +
+        '<span class="muted">' +
+        escapeHtml(row.lastActivity || "—") +
+        "</span></span>" +
+        "</div>"
+      );
+    })
+    .join("");
   return (
     '<section class="dash-agent-status-banner" aria-label="WC Agent status" data-agent-status-kind="' +
     escapeHtmlAttr(kind) +
@@ -1477,6 +1559,9 @@ function renderAgentStatusBanner(agentStatus: unknown): string {
     '<p><b>WC Agent is:</b> <span class="dash-agent-status-label">' +
     escapeHtml(label) +
     "</span></p>" +
+    '<div class="dash-agent-row-list" role="list">' +
+    rowHtml +
+    "</div>" +
     "</section>"
   );
 }
@@ -1527,7 +1612,7 @@ export function renderPhaseCatalogOverviewSection(
   if (!supported) {
     return (
       '<section class="dash-card dash-phase-catalog" aria-label="Phase catalog">' +
-      "<p><b>Phase roster</b></p>" +
+      "<p><b>Phase Roster</b></p>" +
       '<p class="muted">Optional phase descriptions require planning SQLite <b>v23+</b> (upgrade workspace-kit, reopen DB).</p>' +
       "</section>"
     );
@@ -1587,7 +1672,7 @@ export function renderPhaseCatalogOverviewSection(
       }
       inner =
         rows.length > 0
-          ? '<table class="dash-phase-catalog-table"><thead><tr><th>Phase</th><th>Status</th><th>Short description</th></tr></thead><tbody>' +
+          ? '<table class="dash-phase-catalog-table"><thead><tr><th>Phase</th><th>Status</th><th>Deliverables</th></tr></thead><tbody>' +
             rows +
             "</tbody></table>"
           : '<p class="muted">No matching roster rows.</p>';
@@ -1599,7 +1684,7 @@ export function renderPhaseCatalogOverviewSection(
     ' <span class="muted">Plan a future release phase; the kit keeps planning metadata aligned.</span></p>';
   return (
     '<section class="dash-card dash-phase-catalog" aria-label="Phase catalog">' +
-    "<p><b>Phase roster</b></p>" +
+    "<p><b>Phase Roster</b></p>" +
     table +
     btn +
     "</section>"
@@ -1647,25 +1732,27 @@ function renderPhaseDeliverBlockInner(
   );
 }
 
-/**
- * First dashboard card: role + temperament when configured, then current/next phase and Deliver.
- */
-function renderRoleTemperamentAndPhaseSection(
-  ag: unknown,
+function renderOverviewPhaseSummarySection(
   ws: Record<string, unknown> | null,
-  readyExecutionSummary?: Record<string, unknown>,
-  editorIntegration?: unknown
+  readyExecutionSummary?: Record<string, unknown>
 ): string {
-  const rt = renderRoleTemperamentLines(ag);
-  const phaseInner = ws !== null ? renderPhaseDeliverBlockInner(ws, readyExecutionSummary ?? {}) : "";
-  const editorInner = renderEditorIntegrationEmbed(editorIntegration);
-  if (rt === "" && phaseInner === "" && editorInner === "") {
+  if (ws === null) {
     return "";
   }
   return (
-    '<section class="dash-card dash-role-temperament-phase" aria-label="Role, temperament, and phase">' +
-    rt +
-    phaseInner +
+    '<section class="dash-card dash-overview-phase-summary" aria-label="Overview phase summary">' +
+    renderPhaseDeliverBlockInner(ws, readyExecutionSummary ?? {}) +
+    "</section>"
+  );
+}
+
+function renderStatusEditorIntegrationSection(editorIntegration?: unknown): string {
+  const editorInner = renderEditorIntegrationEmbed(editorIntegration);
+  if (editorInner === "") {
+    return "";
+  }
+  return (
+    '<section class="dash-card dash-status-editor-integration" aria-label="Editor and chat prefill">' +
     editorInner +
     "</section>"
   );
@@ -1676,7 +1763,8 @@ function renderWorkspaceBlockersPendingSection(ws: Record<string, unknown> | nul
   if (!ws) {
     return (
       '<section class="dash-card dashboard-overview" aria-label="Workspace status">' +
-      '<p class="muted">No workspace status from kit SQLite (<code>get-workspace-status</code>) — run <code>pnpm run wk doctor</code> or ensure planning DB migrated to user_version 10+.</p>' +
+      '<p class="muted">No workspace status from kit SQLite.</p>' +
+      '<p class="muted">Run <code>pnpm run wk doctor</code> or migrate planning DB to user_version 10+.</p>' +
       "</section>"
     );
   }
@@ -1747,7 +1835,11 @@ function renderStatusRollup(
 }
 
 /** Status tab: workspace identity, agent profile, and task counts from dashboard-summary data. */
-function renderStatusSectionHtml(d: Record<string, unknown>, ss: Record<string, unknown>): string {
+function renderStatusSectionHtml(
+  d: Record<string, unknown>,
+  ss: Record<string, unknown>,
+  editorIntegration?: EditorIntegrationRenderState | null
+): string {
   const sys = (d.systemStatus as Record<string, unknown>) ?? {};
   const ident = (sys.identity as Record<string, unknown>) ?? {};
   const ag = (d.agentGuidance as Record<string, unknown> | null | undefined) ?? {};
@@ -1789,6 +1881,20 @@ function renderStatusSectionHtml(d: Record<string, unknown>, ss: Record<string, 
     (ag as Record<string, unknown>).temperamentLabel ??
     (ag as Record<string, unknown>).temperament ?? ""
   ).trim();
+  const presentation =
+    ag.agentPresentation && typeof ag.agentPresentation === "object"
+      ? (ag.agentPresentation as Record<string, unknown>)
+      : null;
+  const workLog = typeof presentation?.workLog === "string" ? presentation.workLog : "";
+  const rationale = typeof presentation?.rationale === "string" ? presentation.rationale : "";
+  const detail = typeof presentation?.finalAnswerDetail === "string" ? presentation.finalAnswerDetail : "";
+  const presentationVal = [
+    workLog ? `Work-log ${workLog}` : "",
+    rationale ? `Rationale ${rationale}` : "",
+    detail ? `Final ${detail}` : ""
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const phaseRaw = (ag as Record<string, unknown>).phase;
   const tierRaw = String(
     (ag as Record<string, unknown>).guidanceTier ??
@@ -1801,11 +1907,14 @@ function renderStatusSectionHtml(d: Record<string, unknown>, ss: Record<string, 
     '<div class="wc-status-kv-block">' +
     (roleRaw ? kvRow("Role", escapeHtml(roleRaw)) : "") +
     (tempRaw ? kvRow("Temperament", escapeHtml(tempRaw)) : "") +
+    (presentationVal ? kvRow("Presentation", escapeHtml(presentationVal)) : "") +
     (phaseRaw !== undefined && phaseRaw !== null && phaseRaw !== ""
       ? kvRow("Phase", escapeHtml(String(phaseRaw)))
       : "") +
     (tierRaw ? kvRow("Guidance tier", escapeHtml(tierRaw)) : "") +
-    "</div></section>";
+    "</div>" +
+    '<p class="muted wc-status-guidance-manage">Manage guidance policies via the CAE sidebar panel (Workflow Cannon activity bar).</p>' +
+    "</section>";
 
   const pg = d.planningGeneration;
   const pol = d.planningGenerationPolicy;
@@ -1824,12 +1933,12 @@ function renderStatusSectionHtml(d: Record<string, unknown>, ss: Record<string, 
     "<p><b>Task Counts</b></p>" +
     buildDashboardStateCountGridHtml(ss) +
     '<p class="muted wc-status-counts-scope-note">' +
-    "<b>Note:</b> These totals reflect <code>stateSummary</code> (store-wide statuses). " +
-    "<b>Overview</b> pills and <b>Queue</b> tab sections use execution-queue rollups " +
-    "(same family as <code>getNextActions</code>) and exclude <code>wishlist_intake</code> from ready/proposed.</p>" +
+    "<b>Note:</b> Task Counts uses <code>stateSummary</code> store-wide statuses.</p>" +
+    '<p class="muted">Overview pills and Queue sections use execution-queue rollups.</p>' +
+    '<p class="muted">Ready/proposed excludes <code>wishlist_intake</code>.</p>' +
     "</section>";
 
-  return workspaceCard + agentCard + planningCard + countsCard;
+  return agentCard + renderStatusEditorIntegrationSection(editorIntegration) + workspaceCard + planningCard + countsCard;
 }
 
 /** Kit-shaped results from `list-phase-notes` / `get-phase-context` (webview receives merged reads). */
@@ -1865,7 +1974,7 @@ export function renderPhaseNotesOverviewSection(bundle: DashboardPhaseJournalBun
     const msg = escapeHtml(String(list.message ?? ctx.message ?? ""));
     return (
       '<section class="dash-card dash-phase-notes" aria-label="Phase notes">' +
-      "<p><b>Phase notes</b></p>" +
+      "<p><b>Phase Notes</b></p>" +
       '<p class="muted">Phase journal unavailable: <code>' +
       code +
       "</code> " +
@@ -1970,7 +2079,7 @@ export function renderPhaseNotesOverviewSection(bundle: DashboardPhaseJournalBun
 
   return (
     '<section class="dash-card dash-phase-notes" aria-label="Phase notes">' +
-    "<p><b>Phase notes</b></p>" +
+    "<p><b>Phase Notes</b></p>" +
     "<p>Journal entries scoped to the workspace current phase — mutations run through workspace-kit.</p>" +
     meta +
     empty +
@@ -2231,7 +2340,6 @@ export function renderDashboardRootInnerHtml(
   const overviewContent =
     recNextCard +
     renderStatPills(totalReadyCount, totalProposedCount, totalBlockedCount, totalDoneCount) +
-    renderRoleTemperamentAndPhaseSection(d.agentGuidance, ws as Record<string, unknown> | null, res, editorIntegration) +
     renderPhaseCatalogOverviewSection(phaseSystemSlice) +
     renderWorkspaceBlockersPendingSection(ws as Record<string, unknown> | null) +
     renderTeamExecutionSection(d.teamExecution) +
@@ -2243,13 +2351,13 @@ export function renderDashboardRootInnerHtml(
     wishlistSection +
     renderPlanningSession(planningSession, planningWizardPanel);
 
-  const statusContent = renderStatusSectionHtml(d, ss);
+  const statusContent = renderStatusSectionHtml(d, ss, editorIntegration);
 
   const configContent =
     '<section class="dash-card" aria-label="Config">' +
     "<p><b>Config</b></p>" +
-    '<p class="muted">Configuration keys are managed in the <b>Config</b> sidebar panel. ' +
-    "Open it via the Workflow Cannon activity bar, or run <code>wk config</code> from the terminal.</p>" +
+    '<p class="muted">Configuration keys are managed in the <b>Config</b> sidebar panel.</p>' +
+    '<p class="muted">Open it from the activity bar, or run <code>wk config</code> from the terminal.</p>' +
     '<p class="muted">Common keys: <code>kit.agentGuidance</code> · <code>kit.currentPhase</code> · ' +
     "<code>kit.agentRole</code> · <code>kit.planningGenerationPolicy</code></p>" +
     "</section>";
@@ -2259,15 +2367,15 @@ export function renderDashboardRootInnerHtml(
     readyExeCount,
     readyImpCount,
     totalBlockedCount,
-    totalProposedCount,
-    d.agentGuidance
+    totalProposedCount
   );
 
   // ── Tab shell ──────────────────────────────────────────────────────────────
 
   return (
     '<div class="wc-dashboard-tab-shell">' +
-    renderAgentStatusBanner(d.agentStatus) +
+    renderAgentStatusBanner(d) +
+    renderOverviewPhaseSummarySection(ws as Record<string, unknown> | null, res) +
     '<div class="wc-tab-bar" role="tablist">' +
     '<button type="button" class="wc-tab-btn wc-tab-active" role="tab" data-wc-tab="overview">Overview</button>' +
     '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="task-engine">Queue' +

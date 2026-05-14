@@ -511,6 +511,35 @@ test("TransitionService rejects missing task", async () => {
   );
 });
 
+test("taskEngineModule list-tasks reports native-binding-arch-mismatch on runtime arch mismatch", async () => {
+  const workspace = await tmpDir();
+  await mkdir(path.join(workspace, ".workspace-kit"), { recursive: true });
+  const mismatchedArch = process.arch === "arm64" ? "x64" : "arm64";
+  await writeFile(
+    path.join(workspace, ".workspace-kit", "runtime.json"),
+    JSON.stringify(
+      {
+        schemaVersion: 1,
+        nodeExecutable: process.execPath,
+        nodeVersion: process.version,
+        arch: mismatchedArch,
+        platform: process.platform,
+        abi: process.versions.modules ?? "unknown",
+        packageRoot: process.cwd(),
+        checkedAt: new Date().toISOString()
+      },
+      null,
+      2
+    ) + "\n",
+    "utf8"
+  );
+
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const res = await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, ctx);
+  assert.equal(res.ok, false);
+  assert.equal(res.code, "native-binding-arch-mismatch");
+});
+
 test("TransitionService enforces dependency check", async () => {
   const dep = makeTask({ id: "T000", status: "in_progress" });
   const task = makeTask({ id: "T001", status: "ready", dependsOn: ["T000"] });
@@ -521,6 +550,28 @@ test("TransitionService enforces dependency check", async () => {
     () => service.runTransition({ taskId: "T001", action: "start" }),
     (err) => err instanceof TaskEngineError && err.code === "dependency-unsatisfied"
   );
+});
+
+test("TransitionService blocks starting unrelated task while another is in progress", async () => {
+  const active = makeTask({ id: "T100", status: "in_progress" });
+  const next = makeTask({ id: "T101", status: "ready" });
+  const { store } = await storeWithTasks([active, next]);
+
+  const service = new TransitionService(store);
+  await assert.rejects(
+    () => service.runTransition({ taskId: "T101", action: "start" }),
+    (err) => err instanceof TaskEngineError && err.code === "guard-rejected"
+  );
+});
+
+test("TransitionService allows starting ready task when in-progress task is directly related", async () => {
+  const active = makeTask({ id: "T200", status: "in_progress", dependsOn: ["T201"] });
+  const next = makeTask({ id: "T201", status: "ready" });
+  const { store } = await storeWithTasks([active, next]);
+
+  const service = new TransitionService(store);
+  const result = await service.runTransition({ taskId: "T201", action: "start" });
+  assert.equal(result.evidence.toState, "in_progress");
 });
 
 test("TransitionService auto-unblocks dependents on completion", async () => {
@@ -1580,6 +1631,55 @@ test("upsert-phase-catalog-entry persists description and bumps planning generat
   assert.equal(row.shortDescription, "Phase 90 label");
 });
 
+test("upsert-phase-catalog-entry accepts actor and clientMutationId fields", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+  await seedSqliteStore(workspace, () => {});
+  await taskEngineModule.onCommand(
+    { name: "set-current-phase", args: { currentKitPhase: "88", nextKitPhase: "89", expectedWorkspaceRevision: 0 } },
+    ctx
+  );
+
+  const snap = await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, ctx);
+  const gen = snap.data.planningGeneration;
+  const first = await taskEngineModule.onCommand(
+    {
+      name: "upsert-phase-catalog-entry",
+      args: {
+        phaseKey: "90",
+        shortDescription: "Initial deliverables",
+        actor: "dashboard-test",
+        clientMutationId: "cmid-upsert-90",
+        expectedPlanningGeneration: gen
+      }
+    },
+    ctx
+  );
+  assert.equal(first.ok, true);
+  assert.equal(first.code, "phase-catalog-entry-upserted");
+
+  const second = await taskEngineModule.onCommand(
+    {
+      name: "upsert-phase-catalog-entry",
+      args: {
+        phaseKey: "91",
+        shortDescription: "Second deliverables",
+        actor: "dashboard-test",
+        clientMutationId: "cmid-upsert-91"
+      }
+    },
+    ctx
+  );
+  assert.equal(second.ok, true);
+  assert.equal(second.code, "phase-catalog-entry-upserted");
+
+  const list = await taskEngineModule.onCommand({ name: "list-phase-catalog", args: {} }, ctx);
+  const row90 = list.data.phases.find((p) => p.phaseKey === "90");
+  const row91 = list.data.phases.find((p) => p.phaseKey === "91");
+  assert.equal(row90.shortDescription, "Initial deliverables");
+  assert.equal(row91.shortDescription, "Second deliverables");
+});
+
 test("phase-status includePhaseJournalSummary reports activeCriticalNoteCount", async () => {
   const workspace = await tmpDir();
   const ctx = sqliteTaskEngineCtx(workspace);
@@ -1762,6 +1862,32 @@ test("taskEngineModule list-tasks supports type/category/tags/metadata filters",
   assert.equal(result.data.tasks[0].id, "T410");
 });
 
+test("taskEngineModule list-tasks projects severity and components for queue rows", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T413",
+        status: "ready",
+        priority: "P2",
+        features: ["task-comments"],
+        metadata: {
+          severity: "medium",
+          components: ["queue", "dashboard"]
+        }
+      })
+    );
+  });
+
+  const result = await taskEngineModule.onCommand({ name: "list-tasks", args: { id: "T413" } }, ctx);
+  assert.equal(result.ok, true);
+  assert.equal(result.data.count, 1);
+  assert.equal(result.data.tasks[0].severity, "medium");
+  assert.deepEqual(result.data.tasks[0].components, ["queue", "dashboard"]);
+  assert.deepEqual(result.data.tasks[0].features, ["task-comments"]);
+});
+
 test("taskEngineModule list-tasks filter combinations return empty results when unmatched", async () => {
   const workspace = await tmpDir();
   const ctx = sqliteTaskEngineCtx(workspace);
@@ -1801,7 +1927,14 @@ test("taskEngineModule onCommand get-task returns task-not-found for missing tas
 test("taskEngineModule onCommand get-task includes recentTransitions after transitions", async () => {
   const workspace = await tmpDir();
   await seedSqliteStore(workspace, (store) => {
-    store.addTask(makeTask({ id: "T001", status: "ready" }));
+    store.addTask(
+      makeTask({
+        id: "T001",
+        status: "ready",
+        features: ["task-comments"],
+        metadata: { severity: "high", components: ["queue"] }
+      })
+    );
   });
 
   const ctx = sqliteTaskEngineCtx(workspace);
@@ -1814,6 +1947,9 @@ test("taskEngineModule onCommand get-task includes recentTransitions after trans
   r = await taskEngineModule.onCommand({ name: "get-task", args: { taskId: "T001", historyLimit: 10 } }, ctx);
   assert.equal(r.ok, true);
   assert.equal(r.data.task.status, "in_progress");
+  assert.equal(r.data.task.severity, "high");
+  assert.deepEqual(r.data.task.components, ["queue"]);
+  assert.deepEqual(r.data.task.features, ["task-comments"]);
   assert.ok(Array.isArray(r.data.recentTransitions));
   assert.ok(r.data.recentTransitions.length >= 1);
   assert.equal(r.data.recentTransitions[0].taskId, "T001");
@@ -1827,7 +1963,15 @@ test("taskEngineModule onCommand get-task includes recentTransitions after trans
 test("taskEngineModule onCommand dashboard-summary returns stable shape", async () => {
   const workspace = await tmpDir();
   await seedSqliteStore(workspace, (store) => {
-    store.addTask(makeTask({ id: "T001", status: "ready", priority: "P1" }));
+    store.addTask(
+      makeTask({
+        id: "T001",
+        status: "ready",
+        priority: "P1",
+        features: ["task-comments"],
+        metadata: { severity: "high", components: ["queue", "dashboard"] }
+      })
+    );
   });
 
   const ctx = sqliteTaskEngineCtx(workspace);
@@ -1887,6 +2031,9 @@ test("taskEngineModule onCommand dashboard-summary returns stable shape", async 
   assert.equal(d.readyExecutionSummary.count, 1);
   assert.equal(d.readyExecutionSummary.top.length, 1);
   assert.equal(d.readyExecutionSummary.top[0].id, "T001");
+  assert.equal(d.readyExecutionSummary.top[0].severity, "high");
+  assert.deepEqual(d.readyExecutionSummary.top[0].components, ["queue", "dashboard"]);
+  assert.deepEqual(d.readyExecutionSummary.top[0].features, ["task-comments"]);
   assert.ok(Array.isArray(d.readyExecutionSummary.phaseBuckets));
   assert.ok(d.readyExecutionSummary.phaseBuckets.length >= 1);
   assert.equal(d.proposedExecutionSummary.schemaVersion, 1);
@@ -2851,6 +2998,85 @@ test("taskEngineModule propose persist, convert with suggestionId, dismiss delet
     assert.equal(Number(c1.c), 0);
   } finally {
     db2.close();
+  }
+});
+  
+test("phase journal agent-facing reads exclude dismissed notes by default", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T10082A1",
+        status: "ready",
+        phaseKey: "81",
+        phase: "Phase 81",
+        title: "Phase journal read filter carrier"
+      })
+    );
+  });
+  const dbPath = path.join(workspace, ".workspace-kit", "tasks", "workspace-kit.db");
+  const db = new Database(dbPath);
+  try {
+    db.prepare("UPDATE kit_workspace_status SET current_kit_phase = ? WHERE id = 1").run("81");
+  } finally {
+    db.close();
+  }
+  
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+  
+  const created = await taskEngineModule.onCommand(
+    {
+      name: "add-phase-note",
+      args: {
+        phaseKey: "81",
+        noteType: "task-suggestion",
+        summary: "Dismiss me from agent reads",
+        taskId: "T10082A1"
+      }
+    },
+    ctx
+  );
+  assert.equal(created.ok, true);
+  const noteId = created.data.note.id;
+  
+  const listedBefore = await taskEngineModule.onCommand(
+    { name: "list-phase-notes", args: { phaseKey: "81" } },
+    ctx
+  );
+  assert.equal(listedBefore.ok, true);
+  assert.ok(listedBefore.data.notes.some((n) => n.id === noteId));
+  
+  const dismissed = await taskEngineModule.onCommand(
+    { name: "dismiss-phase-note", args: { noteId, reason: "cleanup" } },
+    ctx
+  );
+  assert.equal(dismissed.ok, true);
+  
+  const listedAfter = await taskEngineModule.onCommand(
+    { name: "list-phase-notes", args: { phaseKey: "81" } },
+    ctx
+  );
+  assert.equal(listedAfter.ok, true);
+  assert.ok(listedAfter.data.notes.every((n) => n.id !== noteId));
+  
+  const contextAfter = await taskEngineModule.onCommand(
+    { name: "get-phase-context", args: { taskId: "T10082A1", limit: 10 } },
+    ctx
+  );
+  assert.equal(contextAfter.ok, true);
+  assert.ok(contextAfter.data.notes.every((n) => n.id !== noteId));
+  
+  const next = await taskEngineModule.onCommand({ name: "get-next-actions", args: {} }, ctx);
+  assert.equal(next.ok, true);
+  if (next.data.phaseContext) {
+    assert.ok(next.data.phaseContext.relevantNotes.every((n) => n.id !== noteId));
+    assert.ok(next.data.phaseContext.taskSuggestionsFromNotes.every((n) => n.id !== noteId));
+  }
+  
+  const snapshot = await taskEngineModule.onCommand({ name: "agent-session-snapshot", args: {} }, ctx);
+  assert.equal(snapshot.ok, true);
+  if (snapshot.data.phaseJournal) {
+    assert.ok(snapshot.data.phaseJournal.topNotes.every((n) => n.id !== noteId));
   }
 });
 

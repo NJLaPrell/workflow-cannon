@@ -1,6 +1,6 @@
 {
   "name": "@workflow-cannon/workspace-kit",
-  "version": "0.89.0",
+  "version": "0.90.0",
   "private": false,
   "packageManager": "pnpm@10.26.1",
   "engines": {
@@ -33,11 +33,12 @@
     "wk": "dist/cli.js"
   },
   "scripts": {
-    "postinstall": "node scripts/ensure-native-sqlite.mjs",
+    "postinstall": "node scripts/check-native-binding-arch.mjs && node scripts/ensure-native-sqlite.mjs",
     "setup:dev": "node scripts/setup-dev.mjs",
     "wk": "node dist/cli.js",
     "build": "tsc -p tsconfig.json",
     "rebuild-sqlite": "pnpm rebuild better-sqlite3",
+    "check-native-binding-arch": "node scripts/check-native-binding-arch.mjs",
     "_comment_check_gates": "maintainer-gates = metadata/consistency checks; pre-merge-gates = maintainer-gates + test.",
     "check": "node scripts/run-check-stages.mjs",
     "clean": "rm -rf dist",
@@ -88,6 +89,7 @@
     "src/modules/context-activation/instructions",
     "src/modules/documentation",
     "schemas",
+    "scripts/check-native-binding-arch.mjs",
     "package.json"
   ],
   "dependencies": {

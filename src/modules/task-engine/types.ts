@@ -97,7 +97,8 @@ export type TaskMutationType =
   | "remove-dependency"
   | "create-task-from-plan"
   | "assign-task-phase"
-  | "clear-task-phase";
+  | "clear-task-phase"
+  | "upsert-phase-catalog-entry";
 
 export type TaskMutationEvidence = {
   mutationId: string;
@@ -128,6 +129,7 @@ export type TaskEngineErrorCode =
   | "duplicate-dependency"
   | "storage-read-error"
   | "storage-write-error"
+  | "native-binding-arch-mismatch"
   | "invalid-adapter"
   | "import-parse-error"
   | "planning-generation-mismatch"

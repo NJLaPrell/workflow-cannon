@@ -5,8 +5,15 @@ import {
   getPlanningGenerationPolicy,
   mergePlanningGenerationPolicyWarnings
 } from "./planning-config.js";
-import { readOptionalExpectedPlanningGeneration } from "./mutation-utils.js";
+import {
+  digestPayload,
+  findIdempotentMutation,
+  mutationEvidence,
+  readIdempotencyValue,
+  readOptionalExpectedPlanningGeneration
+} from "./mutation-utils.js";
 import type { OpenedPlanningStores } from "./persistence/planning-open.js";
+import type { TaskStore } from "./persistence/store.js";
 import {
   buildOrderedPhaseCatalogList,
   collectPhaseCatalogHintsFromTasks,
@@ -28,6 +35,12 @@ import { TaskEngineError } from "./transitions.js";
 
 function nowIso(): string {
   return new Date().toISOString();
+}
+
+const phaseCatalogMutationCache = new Map<string, string>();
+
+function phaseCatalogMutationCacheKey(workspacePath: string, phaseKey: string, clientMutationId: string): string {
+  return `${workspacePath}::${phaseKey}::${clientMutationId}`;
 }
 
 export async function runListPhaseCatalog(ctx: ModuleLifecycleContext): Promise<ModuleCommandResult> {
@@ -74,6 +87,7 @@ export async function runListPhaseCatalog(ctx: ModuleLifecycleContext): Promise<
 export async function runUpsertPhaseCatalogEntry(
   ctx: ModuleLifecycleContext,
   planning: OpenedPlanningStores,
+  store: TaskStore,
   rawArgs: Record<string, unknown>
 ): Promise<ModuleCommandResult> {
   const pkRaw = typeof rawArgs.phaseKey === "string" ? rawArgs.phaseKey : "";
@@ -88,6 +102,9 @@ export async function runUpsertPhaseCatalogEntry(
   }
 
   const remove = rawArgs.remove === true;
+  const actorRaw = typeof rawArgs.actor === "string" ? rawArgs.actor.trim() : "";
+  const actor = actorRaw.length > 0 ? actorRaw : undefined;
+  const clientMutationId = readIdempotencyValue(rawArgs);
   const descNorm = normalizeCatalogShortDescription(rawArgs.shortDescription);
   if (!descNorm.ok) {
     return { ok: false, code: "invalid-task-schema", message: descNorm.message };
@@ -150,17 +167,111 @@ export async function runUpsertPhaseCatalogEntry(
     nextShort = descNorm.value;
   }
 
+  const payloadDigest = digestPayload({
+    command: "upsert-phase-catalog-entry",
+    phaseKey,
+    remove,
+    shortDescription: nextShort
+  });
+  if (clientMutationId) {
+    const cacheKey = phaseCatalogMutationCacheKey(ctx.workspacePath, phaseKey, clientMutationId);
+    const cachedDigest = phaseCatalogMutationCache.get(cacheKey);
+    if (cachedDigest !== undefined) {
+      if (cachedDigest !== payloadDigest) {
+        return {
+          ok: false,
+          code: "idempotency-key-conflict",
+          message: `clientMutationId '${clientMutationId}' was already used for a different upsert-phase-catalog-entry payload on ${phaseKey}`
+        };
+      }
+      const wsReplay = readKitWorkspaceStatusRow(db);
+      const taskHintsReplay = collectPhaseCatalogHintsFromTasks(dual.taskDocument.tasks);
+      const phasesRawReplay = buildOrderedPhaseCatalogList(db, wsReplay, taskHintsReplay);
+      const phasesReplay = enrichFuturePhaseCatalogWithTaskSummaries(
+        phasesRawReplay,
+        dual.taskDocument.tasks,
+        wsReplay?.currentKitPhase ?? null
+      );
+      const replayData: Record<string, unknown> = {
+        schemaVersion: 1,
+        phaseKey,
+        removed: remove,
+        shortDescription: remove ? null : nextShort,
+        phases: phasesReplay,
+        workspaceStatus: wsReplay ? kitWorkspaceStatusPublicToSnapshot(wsReplay) : null,
+        replayed: true
+      };
+      attachPolicyMeta(replayData, ctx, dual.getPlanningGeneration());
+      return {
+        ok: true,
+        code: remove ? "phase-catalog-entry-remove-idempotent-replay" : "phase-catalog-entry-upsert-idempotent-replay",
+        message: `Idempotent upsert-phase-catalog-entry replay for '${phaseKey}'`,
+        data: replayData
+      };
+    }
+
+    const prior = findIdempotentMutation(store, "upsert-phase-catalog-entry", phaseKey, clientMutationId);
+    if (prior) {
+      if (prior.payloadDigest !== payloadDigest) {
+        return {
+          ok: false,
+          code: "idempotency-key-conflict",
+          message: `clientMutationId '${clientMutationId}' was already used for a different upsert-phase-catalog-entry payload on ${phaseKey}`
+        };
+      }
+      const wsReplay = readKitWorkspaceStatusRow(db);
+      const taskHintsReplay = collectPhaseCatalogHintsFromTasks(dual.taskDocument.tasks);
+      const phasesRawReplay = buildOrderedPhaseCatalogList(db, wsReplay, taskHintsReplay);
+      const phasesReplay = enrichFuturePhaseCatalogWithTaskSummaries(
+        phasesRawReplay,
+        dual.taskDocument.tasks,
+        wsReplay?.currentKitPhase ?? null
+      );
+      const replayData: Record<string, unknown> = {
+        schemaVersion: 1,
+        phaseKey,
+        removed: remove,
+        shortDescription: remove ? null : nextShort,
+        phases: phasesReplay,
+        workspaceStatus: wsReplay ? kitWorkspaceStatusPublicToSnapshot(wsReplay) : null,
+        replayed: true
+      };
+      attachPolicyMeta(replayData, ctx, dual.getPlanningGeneration());
+      return {
+        ok: true,
+        code: remove ? "phase-catalog-entry-remove-idempotent-replay" : "phase-catalog-entry-upsert-idempotent-replay",
+        message: `Idempotent upsert-phase-catalog-entry replay for '${phaseKey}'`,
+        data: replayData
+      };
+    }
+  }
+
   try {
-    dual.withTransaction(
-      () => {
+    store.addMutationEvidence(
+      mutationEvidence("upsert-phase-catalog-entry", phaseKey, actor, {
+        phaseKey,
+        remove,
+        shortDescription: nextShort,
+        clientMutationId,
+        payloadDigest
+      })
+    );
+    await store.save({
+      expectedPlanningGeneration: readOptionalExpectedPlanningGeneration(rawArgs),
+      beforePersistInSqliteTransaction: () => {
         if (remove) {
           deletePhaseCatalogRow(db, phaseKey);
         } else {
           upsertPhaseCatalogRow(db, phaseKey, nextShort, nowIso());
         }
       },
-      { expectedPlanningGeneration: readOptionalExpectedPlanningGeneration(rawArgs) }
-    );
+    });
+    if (clientMutationId) {
+      phaseCatalogMutationCache.set(
+        phaseCatalogMutationCacheKey(ctx.workspacePath, phaseKey, clientMutationId),
+        payloadDigest
+      );
+    }
   } catch (e) {
     if (e instanceof TaskEngineError) {
       return { ok: false, code: e.code, message: e.message, data: e.details as Record<string, unknown> | undefined };

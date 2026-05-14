@@ -138,11 +138,47 @@ export const dependencyCheckGuard: TransitionGuard = {
   }
 };
 
+export const singleTaskInProgressGuard: TransitionGuard = {
+  name: "single-task-in-progress",
+  canTransition(task: TaskEntity, targetState: TaskStatus, context: TransitionContext): GuardResult {
+    if (!(task.status === "ready" && targetState === "in_progress")) {
+      return { allowed: true, guardName: "single-task-in-progress" };
+    }
+
+    const active = context.allTasks.filter(
+      (t) => t.id !== task.id && t.status === "in_progress" && t.archived !== true
+    );
+    if (active.length === 0) {
+      return { allowed: true, guardName: "single-task-in-progress" };
+    }
+
+    const related = active.filter(
+      (t) => (task.dependsOn ?? []).includes(t.id) || (t.dependsOn ?? []).includes(task.id)
+    );
+    if (related.length === active.length) {
+      return { allowed: true, guardName: "single-task-in-progress", code: "single-task-related-allow" };
+    }
+
+    const blocking = active
+      .filter((t) => !(task.dependsOn ?? []).includes(t.id) && !(t.dependsOn ?? []).includes(task.id))
+      .map((t) => t.id)
+      .slice(0, 5);
+    return {
+      allowed: false,
+      guardName: "single-task-in-progress",
+      code: "single-task-in-progress-required",
+      message:
+        `Cannot start '${task.id}' while unrelated task(s) already in progress: ${blocking.join(", ")}. ` +
+        "Pause or complete the active task first."
+    };
+  }
+};
+
 export class TransitionValidator {
   private readonly guards: TransitionGuard[];
 
   constructor(customGuards: TransitionGuard[] = []) {
-    this.guards = [stateValidityGuard, dependencyCheckGuard, ...customGuards];
+    this.guards = [stateValidityGuard, dependencyCheckGuard, singleTaskInProgressGuard, ...customGuards];
   }
 
   validate(

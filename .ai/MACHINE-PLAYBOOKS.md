@@ -10,6 +10,18 @@
 4. Open **PR targeting `release/phase-<N>`** when the resolved delivery profile expects GitHub-style review (default); iterate review; merge into the phase branch. If policy selects a non-PR evidence path, still land work on the **phase integration branch** unless the resolved policy explicitly relaxes it.
 5. After merge: Tier A **`complete`** with JSON **`policyApproval`** so the store matches shipped work.
 
+### Repair: accidental bulk starts
+
+If multiple tasks were started accidentally, keep only the actively worked task in `in_progress` and run `pause` on the others immediately.
+
+Example:
+
+```bash
+pnpm exec wk run run-transition '{"taskId":"T123","action":"pause","expectedPlanningGeneration":<from-last-read>,"policyApproval":{"confirmed":true,"rationale":"repair accidental bulk start; returning non-active task to ready"}}'
+```
+
+Handoff note must include: task kept active, tasks paused, and the planning generation used for repair transitions.
+
 Optional Cursor rule: `.cursor/rules/playbook-task-to-phase-branch.mdc`. Full checklist: **`.ai/playbooks/task-to-phase-branch.md`**.
 
 ## Phase closeout → `main` + release
@@ -83,3 +95,13 @@ Recommendation tasks carry **`metadata.confidenceTier`** (`high` / `medium` / `l
 ## Long-session reload
 
 See `.ai/LONG-SESSION-RELOAD.md`.
+
+## Native SQLite arch mismatch (macOS arm64)
+
+Symptom: `wk run` or `doctor` reports native binding load failures, often with incompatible architecture hints (`have x86_64, need arm64`).
+
+Fix:
+
+1. Ensure Node runtime architecture matches host architecture.
+2. Rebuild native addon in the workspace root: `pnpm rebuild better-sqlite3`.
+3. Re-run `pnpm exec wk doctor` and then retry the `wk run` command.

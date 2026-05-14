@@ -1,0 +1,688 @@
+{
+  "ok": true,
+  "code": "release-evidence-manifest",
+  "message": "Built release evidence manifest",
+  "data": {
+    "manifest": {
+      "schemaVersion": 1,
+      "createdAt": "2026-05-14T18:35:08.613Z",
+      "releaseVersion": "0.90.0",
+      "packageName": "@workflow-cannon/workspace-kit",
+      "phaseKey": "95",
+      "git": {
+        "branch": "release/phase-95",
+        "sha": "8934209074970b9239d9f42d9063d3ebdd149f1a"
+      },
+      "approval": {
+        "actor": "nlaprell",
+        "timestamp": "2026-05-14T18:35:07.728Z",
+        "rationale": "User explicitly requested phase closeout, build, tag, publish, and release after Phase 95 preflight passed",
+        "scope": "Phase 95 v0.90.0 release"
+      },
+      "releaseNotes": {
+        "source": "docs/maintainers/CHANGELOG.md",
+        "entries": [
+          "Phase 95: Dashboard Phase Roster polish, phase deliverables editing groundwork, and native SQLite guardrails.",
+          "Adds deliverables mutation metadata plumbing, single-task start guard, and native binding architecture diagnostics."
+        ]
+      },
+      "validations": [
+        {
+          "name": "pnpm run build",
+          "status": "passed"
+        },
+        {
+          "name": "pnpm run check",
+          "status": "passed"
+        },
+        {
+          "name": "pnpm run test",
+          "status": "passed",
+          "summary": "954 pass / 0 fail"
+        },
+        {
+          "name": "pnpm run parity",
+          "status": "passed"
+        },
+        {
+          "name": "pnpm run check-release-metadata",
+          "status": "passed"
+        },
+        {
+          "name": "pnpm run pre-merge-gates",
+          "status": "passed"
+        },
+        {
+          "name": "pnpm run pack:dry-run",
+          "status": "passed",
+          "summary": "scripts/check-native-binding-arch.mjs included in package contents"
+        }
+      ],
+      "risks": [
+        {
+          "category": "native-sqlite",
+          "description": "Native SQLite architecture mismatch now fails fast with rebuild remediation."
+        }
+      ],
+      "publishArtifacts": [],
+      "taskDeliveryEvidence": [
+        {
+          "taskId": "T100271",
+          "title": "Overview tab: agent status card supports multiple concurrent agents",
+          "phaseKey": "95",
+          "deliveryEvidence": {
+            "schemaVersion": 1,
+            "branchName": "feature/T100271-agent-status-rows",
+            "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/337",
+            "prNumber": 337,
+            "baseBranch": "release/phase-95",
+            "mergeSha": "0d9f87b9bcca4affa3b7678aa4b010472c2c0339",
+            "checks": [
+              {
+                "name": "CI/test",
+                "conclusion": "success"
+              },
+              {
+                "name": "CI/parity",
+                "conclusion": "success"
+              }
+            ],
+            "validationCommands": [
+              {
+                "command": "pnpm run ext:compile",
+                "exitCode": 0
+              },
+              {
+                "command": "node --test extensions/cursor-workflow-cannon/test/render-dashboard.test.mjs",
+                "exitCode": 0
+              }
+            ]
+          },
+          "deliveryEvidenceSummary": {
+            "schemaVersion": 1,
+            "mode": null
+          },
+          "deliveryWaiver": null
+        },
+        {
+          "taskId": "T100272",
+          "title": "Overview tab: move Current Phase / Next Phase lines under the agent status card",
+          "phaseKey": "95",
+          "deliveryEvidence": {
+            "schemaVersion": 1,
+            "branchName": "feature/T100272-phase-lines-below-agent",
+            "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/338",
+            "prNumber": 338,
+            "baseBranch": "release/phase-95",
+            "mergeSha": "b9ad73fe6913d78917352d83b522ddad2f05007b",
+            "checks": [
+              {
+                "name": "CI/test",
+                "conclusion": "success"
+              },
+              {
+                "name": "CI/parity",
+                "conclusion": "success"
+              }
+            ],
+            "validationCommands": [
+              {
+                "command": "pnpm run ext:compile",
+                "exitCode": 0
+              },
+              {
+                "command": "node --test extensions/cursor-workflow-cannon/test/render-dashboard.test.mjs",
+                "exitCode": 0
+              }
+            ]
+          },
+          "deliveryEvidenceSummary": {
+            "schemaVersion": 1,
+            "mode": null
+          },
+          "deliveryWaiver": null
+        },
+        {
+          "taskId": "T100273",
+          "title": "Status tab: relocate Role / Temperament / Presentation card from Overview to top of Status",
+          "phaseKey": "95",
+          "deliveryEvidence": {
+            "schemaVersion": 1,
+            "branchName": "feature/T100273-status-profile-card",
+            "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/339",
+            "prNumber": 339,
+            "baseBranch": "release/phase-95",
+            "mergeSha": "6a08d4663671f40ecdd744cc25d5f44108cda748",
+            "checks": [
+              {
+                "name": "CI/test",
+                "conclusion": "success"
+              },
+              {
+                "name": "CI/parity",
+                "conclusion": "success"
+              }
+            ],
+            "validationCommands": [
+              {
+                "command": "pnpm run ext:compile",
+                "exitCode": 0
+              },
+              {
+                "command": "node --test extensions/cursor-workflow-cannon/test/render-dashboard.test.mjs",
+                "exitCode": 0
+              }
+            ]
+          },
+          "deliveryEvidenceSummary": {
+            "schemaVersion": 1,
+            "mode": null
+          },
+          "deliveryWaiver": null
+        },
+        {
+          "taskId": "T100274",
+          "title": "Status tab: merge CAE 'Active Guidance' card into the top profile card",
+          "phaseKey": "95",
+          "deliveryEvidence": {
+            "schemaVersion": 1,
+            "branchName": "feature/T100274-merge-active-guidance-card",
+            "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/340",
+            "prNumber": 340,
+            "baseBranch": "release/phase-95",
+            "mergeSha": "d31a84df04737cd3e09403b60e3a9732d9b1eef9",
+            "checks": [
+              {
+                "name": "CI/test",
+                "conclusion": "success"
+              },
+              {
+                "name": "CI/parity",
+                "conclusion": "success"
+              }
+            ],
+            "validationCommands": [
+              {
+                "command": "pnpm run ext:compile",
+                "exitCode": 0
+              },
+              {
+                "command": "node --test extensions/cursor-workflow-cannon/test/render-dashboard.test.mjs",
+                "exitCode": 0
+              }
+            ]
+          },
+          "deliveryEvidenceSummary": {
+            "schemaVersion": 1,
+            "mode": null
+          },
+          "deliveryWaiver": null
+        },
+        {
+          "taskId": "T100275",
+          "title": "Status tab: relocate editor & chat prefill card from Overview tab",
+          "phaseKey": "95",
+          "deliveryEvidence": {
+            "schemaVersion": 1,
+            "branchName": "feature/T100275-editor-card-status-tab",
+            "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/341",
+            "prNumber": 341,
+            "baseBranch": "release/phase-95",
+            "mergeSha": "406bc60",
+            "checks": [
+              {
+                "name": "CI/test",
+                "conclusion": "success"
+              },
+              {
+                "name": "CI/parity",
+                "conclusion": "success"
+              }
+            ],
+            "validationCommands": [
+              {
+                "command": "pnpm run ext:compile",
+                "exitCode": 0
+              },
+              {
+                "command": "node --test extensions/cursor-workflow-cannon/test/render-dashboard.test.mjs",
+                "exitCode": 0
+              }
+            ]
+          },
+          "deliveryEvidenceSummary": {
+            "schemaVersion": 1,
+            "mode": null
+          },
+          "deliveryWaiver": null
+        },
+        {
+          "taskId": "T100276",
+          "title": "Dashboard-wide: shorten and visually format titles and labels for professional polish",
+          "phaseKey": "95",
+          "deliveryEvidence": {
+            "schemaVersion": 1,
+            "branchName": "feature/T100276-dashboard-title-polish",
+            "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/342",
+            "prNumber": 342,
+            "baseBranch": "release/phase-95",
+            "mergeSha": "fcc9318201292f86a661eb2b5396007c8d24e51e",
+            "checks": [
+              {
+                "name": "CI/test",
+                "conclusion": "success"
+              }
+            ],
+            "validationCommands": [
+              {
+                "command": "pnpm run ext:compile",
+                "exitCode": 0
+              },
+              {
+                "command": "node --test extensions/cursor-workflow-cannon/test/render-dashboard.test.mjs extensions/cursor-workflow-cannon/test/render-status-tab.test.mjs",
+                "exitCode": 0
+              }
+            ],
+            "visualDiffReview": "Reviewed generated dashboard HTML via focused renderer tests and copy-length guard."
+          },
+          "deliveryEvidenceSummary": {
+            "schemaVersion": 1,
+            "mode": null
+          },
+          "deliveryWaiver": null
+        },
+        {
+          "taskId": "T100277",
+          "title": "Phase Roster: rename heading to 'Phase Roster' and column to 'Deliverables'",
+          "phaseKey": "95",
+          "deliveryEvidence": {
+            "schemaVersion": 1,
+            "branchName": "feature/T100277-phase-roster-labels",
+            "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/343",
+            "prNumber": 343,
+            "baseBranch": "release/phase-95",
+            "mergeSha": "83ce0d48240482d785ac1f4de11bc620961e91da",
+            "checks": [
+              {
+                "name": "CI/test",
+                "conclusion": "success"
+              }
+            ],
+            "validationCommands": [
+              {
+                "command": "pnpm run ext:compile",
+                "exitCode": 0
+              },
+              {
+                "command": "node --test extensions/cursor-workflow-cannon/test/render-dashboard.test.mjs",
+                "exitCode": 0
+              },
+              {
+                "command": "node --test extensions/cursor-workflow-cannon/test/render-status-tab.test.mjs",
+                "exitCode": 0
+              }
+            ]
+          },
+          "deliveryEvidenceSummary": {
+            "schemaVersion": 1,
+            "mode": null
+          },
+          "deliveryWaiver": null
+        },
+        {
+          "taskId": "T100278",
+          "title": "Phase Roster: inline-edit affordance for Deliverables on each row",
+          "phaseKey": "95",
+          "deliveryEvidence": null,
+          "deliveryEvidenceSummary": {
+            "schemaVersion": null,
+            "mode": null
+          },
+          "deliveryWaiver": {
+            "schemaVersion": 1,
+            "actor": "github-copilot",
+            "rationale": "Local workspace implementation verified in-session; PR evidence not attached in this environment.",
+            "timestamp": "2026-05-13T23:59:00.000Z",
+            "scope": "T100278"
+          }
+        },
+        {
+          "taskId": "T100279",
+          "title": "Phase Engine: command + wiring to update a phase's Deliverables (shortDescription)",
+          "phaseKey": "95",
+          "deliveryEvidence": {
+            "schemaVersion": 1,
+            "branchName": "feature/T100279-phase-deliverables-persistence",
+            "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/344",
+            "prNumber": 344,
+            "baseBranch": "release/phase-95",
+            "mergeSha": "3dbd10aae47aa4c5f42e5f52a55270cc0a8d56c1",
+            "checks": [
+              {
+                "name": "CI/test",
+                "conclusion": "success"
+              }
+            ],
+            "validationCommands": [
+              {
+                "command": "pnpm run ext:compile",
+                "exitCode": 0
+              },
+              {
+                "command": "node --test test/task-engine.test.mjs --test-name-pattern \"upsert-phase-catalog-entry\"",
+                "exitCode": 0
+              },
+              {
+                "command": "node --test extensions/cursor-workflow-cannon/test/render-dashboard.test.mjs extensions/cursor-workflow-cannon/test/render-status-tab.test.mjs",
+                "exitCode": 0
+              }
+            ]
+          },
+          "deliveryEvidenceSummary": {
+            "schemaVersion": 1,
+            "mode": null
+          },
+          "deliveryWaiver": null
+        },
+        {
+          "taskId": "T100280",
+          "title": "Queue tab: rename 'Phase notes' → 'Phase Notes' and render compact row list",
+          "phaseKey": "95",
+          "deliveryEvidence": null,
+          "deliveryEvidenceSummary": {
+            "schemaVersion": null,
+            "mode": null
+          },
+          "deliveryWaiver": {
+            "schemaVersion": 1,
+            "actor": "github-copilot",
+            "rationale": "Local workspace implementation validated in-session; PR evidence not attached in this environment.",
+            "timestamp": "2026-05-13T23:59:30.000Z",
+            "scope": "T100280"
+          }
+        },
+        {
+          "taskId": "T100281",
+          "title": "Queue tab: per-row View/Edit/New/Delete controls for Phase Notes",
+          "phaseKey": "95",
+          "deliveryEvidence": null,
+          "deliveryEvidenceSummary": {
+            "schemaVersion": null,
+            "mode": null
+          },
+          "deliveryWaiver": {
+            "schemaVersion": 1,
+            "actor": "github-copilot",
+            "rationale": "Local workspace implementation validated in-session; PR evidence not attached in this environment.",
+            "timestamp": "2026-05-14T00:00:00.000Z",
+            "scope": "T100281"
+          }
+        },
+        {
+          "taskId": "T100282",
+          "title": "Phase Notes: ensure deleted notes are not surfaced to agents",
+          "phaseKey": "95",
+          "deliveryEvidence": null,
+          "deliveryEvidenceSummary": {
+            "schemaVersion": null,
+            "mode": null
+          },
+          "deliveryWaiver": {
+            "schemaVersion": 1,
+            "actor": "github-copilot",
+            "rationale": "Local workspace implementation and regression test validated in-session; PR evidence not attached in this environment.",
+            "timestamp": "2026-05-14T00:00:30.000Z",
+            "scope": "T100282"
+          }
+        },
+        {
+          "taskId": "T100283",
+          "title": "Queue tab: phase filter dropdown in task filters",
+          "phaseKey": "95",
+          "deliveryEvidence": null,
+          "deliveryEvidenceSummary": {
+            "schemaVersion": null,
+            "mode": null
+          },
+          "deliveryWaiver": {
+            "schemaVersion": 1,
+            "actor": "github-copilot",
+            "rationale": "Local dashboard UX and renderer validation completed in-session; no external delivery artifact applies in this environment.",
+            "timestamp": "2026-05-14T06:15:00.000Z",
+            "scope": "T100283"
+          }
+        },
+        {
+          "taskId": "T100284",
+          "title": "Queue tab: redesign task row format (ID, Priority/Severity, Components/Features, summary)",
+          "phaseKey": "95",
+          "deliveryEvidence": null,
+          "deliveryEvidenceSummary": {
+            "schemaVersion": null,
+            "mode": null
+          },
+          "deliveryWaiver": {
+            "schemaVersion": 1,
+            "actor": "github-copilot",
+            "rationale": "Local renderer and focused dashboard test validation completed in-session; no external delivery artifact applies in this environment.",
+            "timestamp": "2026-05-14T14:53:00.000Z",
+            "scope": "T100284"
+          }
+        },
+        {
+          "taskId": "T100285",
+          "title": "Task Engine: surface Priority, Severity, Components/Features fields needed by Queue row format",
+          "phaseKey": "95",
+          "deliveryEvidence": null,
+          "deliveryEvidenceSummary": {
+            "schemaVersion": null,
+            "mode": null
+          },
+          "deliveryWaiver": {
+            "schemaVersion": 1,
+            "actor": "github-copilot",
+            "rationale": "Validated locally with focused TypeScript build and task-engine schema/runtime tests for read projections.",
+            "timestamp": "2026-05-14T15:08:23Z",
+            "scope": "local-validation"
+          }
+        },
+        {
+          "taskId": "T100286",
+          "title": "Queue tab: per-task action buttons (Set Phase, View Task, View Comments, Add Comment)",
+          "phaseKey": "95",
+          "deliveryEvidence": null,
+          "deliveryEvidenceSummary": {
+            "schemaVersion": null,
+            "mode": null
+          },
+          "deliveryWaiver": {
+            "schemaVersion": 1,
+            "actor": "github-copilot",
+            "rationale": "Validated queue row action buttons with extension compile plus focused dashboard render tests.",
+            "timestamp": "2026-05-14T15:16:00Z",
+            "scope": "local-validation"
+          }
+        },
+        {
+          "taskId": "T100287",
+          "title": "Queue tab: relocate Phase Readiness card from CAE tab to top of Queue",
+          "phaseKey": "95",
+          "deliveryEvidence": null,
+          "deliveryEvidenceSummary": {
+            "schemaVersion": null,
+            "mode": null
+          },
+          "deliveryWaiver": {
+            "schemaVersion": 1,
+            "actor": "github-copilot",
+            "rationale": "Validated Phase Readiness relocation with rebuilt extension dist and focused dashboard render tests.",
+            "timestamp": "2026-05-14T15:24:00Z",
+            "scope": "local-validation"
+          }
+        },
+        {
+          "taskId": "T100288",
+          "title": "CAE tab: embed full CAE Panel (with its own sub-tabs) inside the CAE dashboard tab",
+          "phaseKey": "95",
+          "deliveryEvidence": null,
+          "deliveryEvidenceSummary": {
+            "schemaVersion": null,
+            "mode": null
+          },
+          "deliveryWaiver": {
+            "schemaVersion": 1,
+            "actor": "github-copilot",
+            "rationale": "Embedded CAE panel rendered in Dashboard with sub-tab behavior, host-backed action routing, and validated render/collision tests.",
+            "timestamp": "2026-05-14T15:40:00Z",
+            "scope": "local-validation"
+          }
+        },
+        {
+          "taskId": "T100289",
+          "title": "CAE embed: prevent DOM id and postMessage collisions between embedded CAE and standalone panel",
+          "phaseKey": "95",
+          "deliveryEvidence": null,
+          "deliveryEvidenceSummary": {
+            "schemaVersion": null,
+            "mode": null
+          },
+          "deliveryWaiver": {
+            "schemaVersion": 1,
+            "actor": "github-copilot",
+            "rationale": "Namespaced embedded CAE DOM ids and added collision test coverage to prevent id/message collisions with standalone Guidance surface.",
+            "timestamp": "2026-05-14T15:41:00Z",
+            "scope": "local-validation"
+          }
+        },
+        {
+          "taskId": "T100302",
+          "title": "Agent bulk-started phase tasks instead of taking ownership one at a time",
+          "phaseKey": "95",
+          "deliveryEvidence": {
+            "schemaVersion": 1,
+            "branchName": "feature/T100302-single-task-start-guardrails",
+            "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/345",
+            "prNumber": 345,
+            "baseBranch": "release/phase-95",
+            "mergeSha": "5802a16f3957c0cfa4e1a47fed49f6a471ae9e9d",
+            "checks": [
+              {
+                "name": "CI/test",
+                "conclusion": "success"
+              }
+            ],
+            "validationCommands": [
+              {
+                "command": "pnpm run build",
+                "exitCode": 0
+              },
+              {
+                "command": "node --test test/task-engine.test.mjs --test-name-pattern \"blocks starting unrelated|allows starting ready\"",
+                "exitCode": 0
+              }
+            ]
+          },
+          "deliveryEvidenceSummary": {
+            "schemaVersion": 1,
+            "mode": null
+          },
+          "deliveryWaiver": null
+        },
+        {
+          "taskId": "T100303",
+          "title": "better-sqlite3 native binding repeatedly reverts to x86_64 on arm64 macOS, breaking all wk run commands with storage-read-error",
+          "phaseKey": "95",
+          "deliveryEvidence": {
+            "schemaVersion": 1,
+            "branchName": "feature/T100303-native-binding-arch-guard",
+            "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/346",
+            "prNumber": 346,
+            "baseBranch": "release/phase-95",
+            "mergeSha": "e761af6",
+            "checks": [
+              {
+                "name": "CI/test",
+                "conclusion": "success"
+              }
+            ],
+            "validationCommands": [
+              {
+                "command": "pnpm run build",
+                "exitCode": 0
+              },
+              {
+                "command": "node --test test/task-engine.test.mjs --test-name-pattern \"native-binding-arch-mismatch|upsert-phase-catalog-entry|TransitionService\"",
+                "exitCode": 0
+              },
+              {
+                "command": "node --test test/runtime-contract.test.mjs test/cli.test.mjs --test-name-pattern \"runtime|doctor\"",
+                "exitCode": 0
+              },
+              {
+                "command": "node scripts/check-native-binding-arch.mjs",
+                "exitCode": 0
+              },
+              {
+                "command": "node scripts/ensure-native-sqlite.mjs",
+                "exitCode": 0
+              }
+            ]
+          },
+          "deliveryEvidenceSummary": {
+            "schemaVersion": 1,
+            "mode": null
+          },
+          "deliveryWaiver": null
+        }
+      ],
+      "followUpScan": {
+        "scannedAt": "2026-05-14T18:35:07.728Z",
+        "rationale": "Phase 95 closeout readiness and delivery preflight reported zero remaining tasks and zero blocking findings."
+      },
+      "followUpTasks": [],
+      "followUpSummary": {
+        "count": 0,
+        "scannedAt": "2026-05-14T18:35:07.728Z",
+        "rationale": "Phase 95 closeout readiness and delivery preflight reported zero remaining tasks and zero blocking findings."
+      }
+    },
+    "planningGeneration": 3093,
+    "planningGenerationPolicy": "require",
+    "cae": {
+      "schemaVersion": 1,
+      "evalMode": "shadow",
+      "traceId": "cae.trace.28773682a95a3b527a56d77723d714040566d035",
+      "shadow": true,
+      "summary": {
+        "policyCount": 0,
+        "thinkCount": 0,
+        "doCount": 1,
+        "reviewCount": 0,
+        "shadowObservationCount": 1
+      }
+    },
+    "presentation": {
+      "templateId": "default",
+      "matchedSections": [
+        "cae"
+      ],
+      "cae": {
+        "kind": "shadow_preflight_v1",
+        "traceId": "cae.trace.28773682a95a3b527a56d77723d714040566d035",
+        "evalMode": "shadow",
+        "degraded": false,
+        "agentRenderHint": "If present, summarize CAE shadow outcome in one short paragraph; when traceId is set, operators can run cae-explain / cae-get-trace."
+      }
+    }
+  },
+  "responseTemplate": {
+    "requestedTemplateId": "default",
+    "appliedTemplateId": "default",
+    "enforcementMode": "advisory",
+    "warnings": [],
+    "telemetry": {
+      "resolveNs": 225083,
+      "warningCount": 0
+    }
+  }
+}

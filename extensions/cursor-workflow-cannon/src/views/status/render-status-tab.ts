@@ -131,8 +131,9 @@ export function renderStatusTabInnerHtml(
       kvRow("Package name", escapeHtml(pkg)) +
       kvRow("Package version", escapeHtml(rootV)) +
       kvRow("Workspace-kit version", escapeHtml(wk)) +
-      '<p class="wc-hint">Project title comes from your kit profile (generated project context). Package fields are from the repo root <code>package.json</code>; workspace-kit version is read from <code>node_modules</code> when installed.</p>';
-    parts.push(card("This workspace", body));
+      '<p class="wc-hint">Project title comes from the kit profile; package fields come from root <code>package.json</code>.</p>' +
+      '<p class="wc-hint">Workspace-kit version is read from installed dependencies.</p>';
+    parts.push(card("This Workspace", body));
   }
 
   const ps = sys?.planningStore as Record<string, unknown> | undefined;
@@ -145,8 +146,8 @@ export function renderStatusTabInnerHtml(
     const body =
       kvRow("Storage", escapeHtml(backend)) +
       kvRow("Planning database file", "<code>" + escapeHtml(dbp) + "</code>") +
-      '<p class="wc-hint">Tasks and planning data live here; path follows your kit config with a safe default.</p>';
-    parts.push(card("Planning data", body));
+      '<p class="wc-hint">Tasks and planning data live here; the path follows kit config.</p>';
+    parts.push(card("Planning Data", body));
   }
 
   if (ag && typeof ag === "object") {
@@ -167,8 +168,8 @@ export function renderStatusTabInnerHtml(
         "Presentation",
         "Work-log " + escapeHtml(workLog) + " · Rationale " + escapeHtml(rationale) + " · Final " + escapeHtml(detail)
       ) +
-      '<p class="wc-hint">Advisory only — does not replace CLI policy or JSON <code>policyApproval</code>.</p>';
-    parts.push(card("Agent profile", body));
+      '<p class="wc-hint">Advisory only; CLI policy and JSON <code>policyApproval</code> still apply.</p>';
+    parts.push(card("Agent Profile", body));
   }
 
   if (!sys || typeof sys !== "object") {
@@ -265,7 +266,7 @@ export function renderStatusTabInnerHtml(
           }
           catBlock =
             catRows.length > 0
-              ? "<p><b>Phase roster</b></p><table class=\"wc-mini-table\"><thead><tr><th>Key</th><th>Status</th><th>Description</th></tr></thead><tbody>" +
+              ? "<p><b>Phase Roster</b></p><table class=\"wc-mini-table\"><thead><tr><th>Key</th><th>Status</th><th>Deliverables</th></tr></thead><tbody>" +
                 catRows +
                 "</tbody></table>"
               : '<p class="wc-muted">Phase roster: no matching rows.</p>';
@@ -274,7 +275,7 @@ export function renderStatusTabInnerHtml(
     } else {
       catBlock = '<p class="wc-muted">Phase roster descriptions need planning SQLite v23+.</p>';
     }
-    parts.push(card("Phase & workspace", body + catBlock));
+    parts.push(card("Phase & Workspace", body + catBlock));
   }
 
   const coord = sys.coordination as Record<string, unknown> | undefined;
@@ -302,7 +303,7 @@ export function renderStatusTabInnerHtml(
       kvRow("Task DB dirty in git", escapeHtml(dbDirty)) +
       kvRow("Lease file", escapeHtml(leaseTxt)) +
       kvRow("Suspect flags", escapeHtml(suspectTxt)) +
-      '<p class="wc-hint">Read-only — from <code>pnpm exec wk run workspace-coordination-status \'{}\'</code>. Lease enforcement lands in later phase work.</p>';
+      '<p class="wc-hint">Read-only from <code>workspace-coordination-status</code>; lease enforcement lands later.</p>';
     parts.push(card("Coordination", body));
   }
 
@@ -328,7 +329,7 @@ export function renderStatusTabInnerHtml(
       "</b></p>" +
       (issueRows ? "<ul>" + issueRows + "</ul>" : "") +
       '<p class="wc-hint">These are shipped-file contract checks (similar to <code>wk doctor</code>), not your TypeScript build.</p>';
-    parts.push(card("Kit contract files", body));
+    parts.push(card("Kit Contract Files", body));
   }
 
   const mods = sys.modules as Record<string, unknown> | undefined;
@@ -356,8 +357,8 @@ export function renderStatusTabInnerHtml(
       "<ul>" +
       caeLines.map((line) => "<li>" + escapeHtml(line) + "</li>").join("") +
       "</ul>" +
-      '<p class="wc-hint">Separate from any <code>data.cae</code> block on the CLI response when shadow preflight runs.</p>';
-    parts.push(card("Context activation (CAE)", body));
+      '<p class="wc-hint">Separate from any <code>data.cae</code> block when shadow preflight runs.</p>';
+    parts.push(card("Context Activation (CAE)", body));
   }
 
   const ss = d.stateSummary as Record<string, unknown> | undefined;
@@ -365,7 +366,7 @@ export function renderStatusTabInnerHtml(
     const body =
       kvRow("Ready · Active · Blocked", escapeHtml(String(ss.ready ?? "—")) + " · " + escapeHtml(String(ss.in_progress ?? "—")) + " · " + escapeHtml(String(ss.blocked ?? "—"))) +
       kvRow("Active tasks (total)", escapeHtml(String(ss.total ?? "—")));
-    parts.push(card("Task counts", body));
+    parts.push(card("Task Counts", body));
   }
 
   return parts.join("");
