@@ -223,8 +223,7 @@ function renderCaePhaseReadinessContent(
   readyExeCount: number,
   readyImpCount: number,
   blockedCount: number,
-  proposedTotal: number,
-  agentGuidance: unknown
+  proposedTotal: number
 ): string {
   const curPhase =
     ws?.currentKitPhase != null ? String(ws.currentKitPhase).trim() : "";
@@ -267,25 +266,6 @@ function renderCaePhaseReadinessContent(
 
   const scoreColor =
     score >= 75 ? "wc-cae-score-ok" : score >= 40 ? "wc-cae-score-warn" : "wc-cae-score-bad";
-
-  const guidanceLines: string[] = [];
-  if (agentGuidance && typeof agentGuidance === "object") {
-    const ag = agentGuidance as Record<string, unknown>;
-    const roleLabel =
-      typeof ag.displayLabel === "string" && ag.displayLabel.trim()
-        ? ag.displayLabel.trim()
-        : "";
-    const tempLabel =
-      typeof ag.temperamentLabel === "string" && ag.temperamentLabel.trim()
-        ? ag.temperamentLabel.trim()
-        : "";
-    if (roleLabel) {
-      guidanceLines.push("Role: " + roleLabel);
-    }
-    if (tempLabel) {
-      guidanceLines.push("Temperament: " + tempLabel);
-    }
-  }
 
   const phaseSection =
     curPhase.length > 0
@@ -342,17 +322,6 @@ function renderCaePhaseReadinessContent(
         "</div>"
       : "";
 
-  const activeGuidance =
-    guidanceLines.length > 0
-      ? '<section class="dash-card" aria-label="Agent guidance">' +
-        "<p><b>Active Guidance</b></p>" +
-        guidanceLines
-          .map((l) => "<p>" + escapeHtml(l) + "</p>")
-          .join("") +
-        '<p class="muted">Manage guidance policies via the CAE sidebar panel (Workflow Cannon activity bar).</p>' +
-        "</section>"
-      : "";
-
   return (
     '<section class="dash-card wc-cae-readiness" aria-label="Phase readiness">' +
     '<div class="wc-cae-score-row">' +
@@ -367,7 +336,6 @@ function renderCaePhaseReadinessContent(
     checksSection +
     pendingBlock +
     "</section>" +
-    activeGuidance +
     '<section class="dash-card" aria-label="CAE sidebar">' +
     "<p><b>CAE — Full Controls</b></p>" +
     '<p class="muted">Pre-flight checks, guidance management, and check history are in the ' +
@@ -1934,7 +1902,9 @@ function renderStatusSectionHtml(d: Record<string, unknown>, ss: Record<string, 
       ? kvRow("Phase", escapeHtml(String(phaseRaw)))
       : "") +
     (tierRaw ? kvRow("Guidance tier", escapeHtml(tierRaw)) : "") +
-    "</div></section>";
+    "</div>" +
+    '<p class="muted wc-status-guidance-manage">Manage guidance policies via the CAE sidebar panel (Workflow Cannon activity bar).</p>' +
+    "</section>";
 
   const pg = d.planningGeneration;
   const pol = d.planningGenerationPolicy;
@@ -2388,8 +2358,7 @@ export function renderDashboardRootInnerHtml(
     readyExeCount,
     readyImpCount,
     totalBlockedCount,
-    totalProposedCount,
-    d.agentGuidance
+    totalProposedCount
   );
 
   // ── Tab shell ──────────────────────────────────────────────────────────────
