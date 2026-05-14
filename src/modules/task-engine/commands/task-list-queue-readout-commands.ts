@@ -13,6 +13,7 @@ import {
 import { isRecordLike, readMetadataPath, SAFE_METADATA_PATH_RE, TASK_ID_RE } from "../mutation-utils.js";
 import { inferTaskPhaseKey, parseKitPhaseNumberFromYaml, resolveCanonicalPhase } from "../phase-resolution.js";
 import {
+  buildFeatureEnrichmentBySlug,
   featureRegistryActiveOnConnection,
   listFeatureIdsForComponent
 } from "../persistence/feature-registry-queries.js";
@@ -30,6 +31,7 @@ import {
   compactTaskIntakeReadout,
   resolveTaskIntakeForAcceptTriage
 } from "../task-intake-readout-hints.js";
+import { projectTaskReadEntity } from "../task-read-projections.js";
 
 /**
  * Task listing + queue readouts that do not mutate task rows.
@@ -255,10 +257,12 @@ export function resolveTaskListQueueReadoutCommands(
       limitFilter !== undefined && pageCandidates.length > limitFilter
         ? encodeListTasksCursor(page[page.length - 1]!)
         : undefined;
+    const enrich = buildFeatureEnrichmentBySlug(planning.sqliteDual.getDatabase());
+    const projectedPage = page.map((task) => projectTaskReadEntity(task, enrich));
 
     const data: Record<string, unknown> = {
-      tasks: page,
-      count: page.length,
+      tasks: projectedPage,
+      count: projectedPage.length,
       scope: "tasks-only",
       listTasksSort: "updatedAt_desc_id_numeric_asc",
       listTasksCursorSemantics:

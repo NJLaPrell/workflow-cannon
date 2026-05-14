@@ -87,6 +87,10 @@ export type AgentTaskListItem = {
   status: AgentTaskStatus;
   type: string;
   priority: AgentTaskPriority | null;
+  severity: string | null;
+  components: string[];
+  /** Feature taxonomy slugs duplicated at the top level for stable list/detail projections. */
+  features: string[];
   archived: boolean;
   createdAt: string;
   updatedAt: string;

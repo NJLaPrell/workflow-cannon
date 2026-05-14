@@ -35,4 +35,4 @@ Empty object `{}` (optional `config` / `actor` passthrough like other read-only 
 | `canonicalPhase` | Phase resolution snapshot |
 | `doctorKitPhaseIssues` | Usually empty; severe workspace-status problems surface via **`workspace-kit doctor`**. See **`canonicalPhase.phaseSource`** / **`configMatchesWorkspaceStatus`** for config vs DB informational drift |
 | `teamExecutionContext` | Open team assignments (read-only) |
-| `phaseJournal` | When canonical phase is known and kit SQLite supports phase notes (**`user_version` ≥ 19**): counts + up to **3** `topNotes` (`id`, `noteType`, `priority`, `summary` only — no `details`) |
+| `phaseJournal` | When canonical phase is known and kit SQLite supports phase notes (**`user_version` ≥ 19**): counts + up to **3** `topNotes` (`id`, `noteType`, `priority`, `summary` only — no `details`) from active notes only (dismissed/deleted history excluded) |
