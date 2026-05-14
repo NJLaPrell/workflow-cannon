@@ -33,11 +33,12 @@
     "wk": "dist/cli.js"
   },
   "scripts": {
-    "postinstall": "node scripts/ensure-native-sqlite.mjs",
+    "postinstall": "node scripts/check-native-binding-arch.mjs && node scripts/ensure-native-sqlite.mjs",
     "setup:dev": "node scripts/setup-dev.mjs",
     "wk": "node dist/cli.js",
     "build": "tsc -p tsconfig.json",
     "rebuild-sqlite": "pnpm rebuild better-sqlite3",
+    "check-native-binding-arch": "node scripts/check-native-binding-arch.mjs",
     "_comment_check_gates": "maintainer-gates = metadata/consistency checks; pre-merge-gates = maintainer-gates + test.",
     "check": "node scripts/run-check-stages.mjs",
     "clean": "rm -rf dist",

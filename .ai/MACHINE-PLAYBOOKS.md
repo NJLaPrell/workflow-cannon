@@ -95,3 +95,13 @@ Recommendation tasks carry **`metadata.confidenceTier`** (`high` / `medium` / `l
 ## Long-session reload
 
 See `.ai/LONG-SESSION-RELOAD.md`.
+
+## Native SQLite arch mismatch (macOS arm64)
+
+Symptom: `wk run` or `doctor` reports native binding load failures, often with incompatible architecture hints (`have x86_64, need arm64`).
+
+Fix:
+
+1. Ensure Node runtime architecture matches host architecture.
+2. Rebuild native addon in the workspace root: `pnpm rebuild better-sqlite3`.
+3. Re-run `pnpm exec wk doctor` and then retry the `wk run` command.
