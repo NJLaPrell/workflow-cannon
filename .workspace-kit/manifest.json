@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "kit": {
     "name": "@workflow-cannon/workspace-kit",
-    "version": "0.88.0"
+    "version": "0.89.0"
   },
   "installedAt": "2026-03-23T00:00:00.000Z",
-  "lastUpgrade": "2026-05-13T21:57:33.393Z",
+  "lastUpgrade": "2026-05-14T01:39:04.765Z",
   "ownershipPolicyPath": ".workspace-kit/owned-paths.json"
 }

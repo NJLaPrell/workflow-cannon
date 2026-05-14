@@ -1108,7 +1108,7 @@
     "enforcementMode": "advisory",
     "warnings": [],
     "telemetry": {
-      "resolveNs": 531625,
+      "resolveNs": 205625,
       "warningCount": 0
     }
   }
