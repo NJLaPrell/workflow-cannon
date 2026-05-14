@@ -10,6 +10,18 @@
 4. Open **PR targeting `release/phase-<N>`** when the resolved delivery profile expects GitHub-style review (default); iterate review; merge into the phase branch. If policy selects a non-PR evidence path, still land work on the **phase integration branch** unless the resolved policy explicitly relaxes it.
 5. After merge: Tier A **`complete`** with JSON **`policyApproval`** so the store matches shipped work.
 
+### Repair: accidental bulk starts
+
+If multiple tasks were started accidentally, keep only the actively worked task in `in_progress` and run `pause` on the others immediately.
+
+Example:
+
+```bash
+pnpm exec wk run run-transition '{"taskId":"T123","action":"pause","expectedPlanningGeneration":<from-last-read>,"policyApproval":{"confirmed":true,"rationale":"repair accidental bulk start; returning non-active task to ready"}}'
+```
+
+Handoff note must include: task kept active, tasks paused, and the planning generation used for repair transitions.
+
 Optional Cursor rule: `.cursor/rules/playbook-task-to-phase-branch.mdc`. Full checklist: **`.ai/playbooks/task-to-phase-branch.md`**.
 
 ## Phase closeout → `main` + release
