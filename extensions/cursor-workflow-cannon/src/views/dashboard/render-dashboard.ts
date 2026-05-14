@@ -1421,42 +1421,6 @@ const DELIVER_TOOLTIP_NO_PHASE =
 const DELIVER_TOOLTIP_ENABLED =
   "Prefill chat: deliver a ready task through the phase branch (task-to-phase-branch)";
 
-function renderRoleTemperamentLines(ag: unknown): string {
-  if (!ag || typeof ag !== "object") {
-    return "";
-  }
-  const o = ag as Record<string, unknown>;
-  const tier = typeof o.tier === "number" ? o.tier : null;
-  const roleLabel = typeof o.displayLabel === "string" ? o.displayLabel.trim() : "";
-  const tempLabel = typeof o.temperamentLabel === "string" ? o.temperamentLabel.trim() : "";
-  const presentation = o.agentPresentation && typeof o.agentPresentation === "object"
-    ? (o.agentPresentation as Record<string, unknown>)
-    : null;
-  const workLog = typeof presentation?.workLog === "string" ? presentation.workLog : "";
-  const rationale = typeof presentation?.rationale === "string" ? presentation.rationale : "";
-  const detail = typeof presentation?.finalAnswerDetail === "string" ? presentation.finalAnswerDetail : "";
-  const presentationLine = workLog || rationale || detail
-    ? "<p><b>Presentation:</b> " +
-      [workLog ? `Work-log ${workLog}` : "", rationale ? `Rationale ${rationale}` : "", detail ? `Final ${detail}` : ""]
-        .filter(Boolean)
-        .map((x) => escapeHtml(x))
-        .join(" · ") +
-      "</p>"
-    : "";
-  if (tier === null) {
-    return "";
-  }
-  return (
-    "<p><b>Role:</b> " +
-    escapeHtml(roleLabel.length > 0 ? roleLabel : "—") +
-    "</p>" +
-    "<p><b>Agent Temperament:</b> " +
-    escapeHtml(tempLabel.length > 0 ? tempLabel : "—") +
-    "</p>" +
-    presentationLine
-  );
-}
-
 type DashboardAgentRenderRow = {
   label: string;
   role: string;
@@ -1809,18 +1773,13 @@ function renderOverviewPhaseSummarySection(
   );
 }
 
-function renderRoleTemperamentAndEditorSection(
-  ag: unknown,
-  editorIntegration?: unknown
-): string {
-  const rt = renderRoleTemperamentLines(ag);
+function renderOverviewEditorIntegrationSection(editorIntegration?: unknown): string {
   const editorInner = renderEditorIntegrationEmbed(editorIntegration);
-  if (rt === "" && editorInner === "") {
+  if (editorInner === "") {
     return "";
   }
   return (
-    '<section class="dash-card dash-role-temperament-phase" aria-label="Role and temperament">' +
-    rt +
+    '<section class="dash-card dash-overview-editor-integration" aria-label="Editor integration">' +
     editorInner +
     "</section>"
   );
@@ -1944,6 +1903,20 @@ function renderStatusSectionHtml(d: Record<string, unknown>, ss: Record<string, 
     (ag as Record<string, unknown>).temperamentLabel ??
     (ag as Record<string, unknown>).temperament ?? ""
   ).trim();
+  const presentation =
+    ag.agentPresentation && typeof ag.agentPresentation === "object"
+      ? (ag.agentPresentation as Record<string, unknown>)
+      : null;
+  const workLog = typeof presentation?.workLog === "string" ? presentation.workLog : "";
+  const rationale = typeof presentation?.rationale === "string" ? presentation.rationale : "";
+  const detail = typeof presentation?.finalAnswerDetail === "string" ? presentation.finalAnswerDetail : "";
+  const presentationVal = [
+    workLog ? `Work-log ${workLog}` : "",
+    rationale ? `Rationale ${rationale}` : "",
+    detail ? `Final ${detail}` : ""
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const phaseRaw = (ag as Record<string, unknown>).phase;
   const tierRaw = String(
     (ag as Record<string, unknown>).guidanceTier ??
@@ -1956,6 +1929,7 @@ function renderStatusSectionHtml(d: Record<string, unknown>, ss: Record<string, 
     '<div class="wc-status-kv-block">' +
     (roleRaw ? kvRow("Role", escapeHtml(roleRaw)) : "") +
     (tempRaw ? kvRow("Temperament", escapeHtml(tempRaw)) : "") +
+    (presentationVal ? kvRow("Presentation", escapeHtml(presentationVal)) : "") +
     (phaseRaw !== undefined && phaseRaw !== null && phaseRaw !== ""
       ? kvRow("Phase", escapeHtml(String(phaseRaw)))
       : "") +
@@ -1984,7 +1958,7 @@ function renderStatusSectionHtml(d: Record<string, unknown>, ss: Record<string, 
     "(same family as <code>getNextActions</code>) and exclude <code>wishlist_intake</code> from ready/proposed.</p>" +
     "</section>";
 
-  return workspaceCard + agentCard + planningCard + countsCard;
+  return agentCard + workspaceCard + planningCard + countsCard;
 }
 
 /** Kit-shaped results from `list-phase-notes` / `get-phase-context` (webview receives merged reads). */
@@ -2386,7 +2360,7 @@ export function renderDashboardRootInnerHtml(
   const overviewContent =
     recNextCard +
     renderStatPills(totalReadyCount, totalProposedCount, totalBlockedCount, totalDoneCount) +
-    renderRoleTemperamentAndEditorSection(d.agentGuidance, editorIntegration) +
+    renderOverviewEditorIntegrationSection(editorIntegration) +
     renderPhaseCatalogOverviewSection(phaseSystemSlice) +
     renderWorkspaceBlockersPendingSection(ws as Record<string, unknown> | null) +
     renderTeamExecutionSection(d.teamExecution) +

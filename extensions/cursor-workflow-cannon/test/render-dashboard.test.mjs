@@ -53,24 +53,28 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.ok(html.indexOf("dash-agent-status-banner") < html.indexOf("wc-tab-bar"));
   assert.ok(html.indexOf("dash-agent-status-banner") < html.indexOf("dash-overview-phase-summary"));
   assert.ok(html.indexOf("dash-overview-phase-summary") < html.indexOf("wc-tab-bar"));
-  assert.ok(html.indexOf("wc-tab-bar") < html.indexOf("<b>Role:</b>"));
   assert.match(html, /<b>WC Agent is:<\/b> <span class="dash-agent-status-label">Awaiting Instruction<\/span>/);
   assert.match(html, /dash-agent-row-list/);
   assert.match(html, /aria-label="Awaiting Instruction, Current agent"/);
-  assert.match(html, /<b>Role:<\/b> Adventurer/);
-  assert.match(html, /<b>Agent Temperament:<\/b> The Steady Adventurer/);
-  assert.match(html, /dash-role-temperament-phase/);
-  const roleIdx = html.indexOf("<b>Role:</b>");
+  const overviewPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="overview"');
+  const taskEnginePanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="task-engine"');
+  const statusPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="status"');
+  const configPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="config"');
+  assert.ok(overviewPanelIdx >= 0 && taskEnginePanelIdx > overviewPanelIdx && statusPanelIdx > taskEnginePanelIdx);
+  const overviewPanel = html.slice(overviewPanelIdx, taskEnginePanelIdx);
+  const statusPanel = html.slice(statusPanelIdx, configPanelIdx);
+  assert.doesNotMatch(overviewPanel, /Role|Temperament|Presentation/);
+  assert.match(statusPanel, /Agent Profile/);
+  assert.match(statusPanel, /<span class="wc-status-kv-label">Role<\/span><span class="wc-status-kv-val">Adventurer<\/span>/);
+  assert.match(statusPanel, /<span class="wc-status-kv-label">Temperament<\/span><span class="wc-status-kv-val">The Steady Adventurer<\/span>/);
+  assert.ok(statusPanel.indexOf('aria-label="Agent profile"') < statusPanel.indexOf('aria-label="Workspace identity"'));
+  const roleIdx = statusPanelIdx + statusPanel.indexOf("Agent Profile");
   const agentStatusIdx = html.indexOf("<b>WC Agent is:</b>");
   const phaseIdx = html.indexOf("Current Phase");
   assert.ok(agentStatusIdx !== -1 && roleIdx !== -1 && agentStatusIdx < roleIdx);
   assert.ok(agentStatusIdx !== -1 && phaseIdx !== -1 && agentStatusIdx < phaseIdx);
   assert.ok(phaseIdx !== -1 && roleIdx !== -1 && phaseIdx < roleIdx);
   assert.match(html, /dash-overview-phase-row/);
-  const roleCardIdx = html.indexOf('class="dash-card dash-role-temperament-phase"');
-  const roleCardEndIdx = roleCardIdx >= 0 ? html.indexOf("</section>", roleCardIdx) : -1;
-  assert.ok(roleCardIdx >= 0 && roleCardEndIdx > roleCardIdx);
-  assert.doesNotMatch(html.slice(roleCardIdx, roleCardEndIdx), /Current Phase|Next Phase/);
   assert.match(html, /data-wc-action="deliver-phase-prompt"/);
   assert.match(html, />Deliver<\/button>/);
   assert.match(html, /Current Phase/);
@@ -262,7 +266,7 @@ test("renderDashboardRootInnerHtml renders editor integration state when provide
   assert.match(html, /<b>Chat prefill<\/b> VS Code Chat/);
   assert.match(html, /cursor URL disabled/);
   assert.doesNotMatch(html, /<section class="dash-card dash-editor-integration"/);
-  assert.match(html, /dash-role-temperament-phase[\s\S]*dash-editor-integration--embedded/);
+  assert.match(html, /dash-overview-editor-integration[\s\S]*dash-editor-integration--embedded/);
 });
 
 test("renderDashboardRootInnerHtml renders escaped WC Agent status banner from agentStatus", () => {
@@ -437,7 +441,7 @@ test("renderDashboardRootInnerHtml planning card shows resume CLI when session p
     }
   });
   assert.match(html, /Planning Interview/);
-  assert.match(html, /Presentation:/);
+  assert.match(html, /<span class="wc-status-kv-label">Presentation<\/span>/);
   assert.match(html, /Work-log normal/);
   assert.doesNotMatch(html, /data-wc-action="planning-new-plan"/);
   assert.doesNotMatch(html, />New Plan<\/button>/);
@@ -501,8 +505,8 @@ test("renderDashboardRootInnerHtml omits suggested-next section", () => {
   assert.doesNotMatch(html, /data-wc-action="planning-resume-chat"/);
   assert.match(html, /No interview in progress/);
   assert.doesNotMatch(html, /This card updates when/);
-  assert.match(html, /<b>Role:<\/b> Bard/);
-  assert.match(html, /<b>Agent Temperament:<\/b> The Wary Scout/);
+  assert.match(html, /<span class="wc-status-kv-label">Role<\/span><span class="wc-status-kv-val">Bard<\/span>/);
+  assert.match(html, /<span class="wc-status-kv-label">Temperament<\/span><span class="wc-status-kv-val">The Wary Scout<\/span>/);
   assert.match(html, /wc-ready-scope-note/);
   assert.match(html, /wishlist_intake/);
   assert.match(html, /Queue<\/b> tab/);
