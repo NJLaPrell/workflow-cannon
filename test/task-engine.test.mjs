@@ -511,6 +511,35 @@ test("TransitionService rejects missing task", async () => {
   );
 });
 
+test("taskEngineModule list-tasks reports native-binding-arch-mismatch on runtime arch mismatch", async () => {
+  const workspace = await tmpDir();
+  await mkdir(path.join(workspace, ".workspace-kit"), { recursive: true });
+  const mismatchedArch = process.arch === "arm64" ? "x64" : "arm64";
+  await writeFile(
+    path.join(workspace, ".workspace-kit", "runtime.json"),
+    JSON.stringify(
+      {
+        schemaVersion: 1,
+        nodeExecutable: process.execPath,
+        nodeVersion: process.version,
+        arch: mismatchedArch,
+        platform: process.platform,
+        abi: process.versions.modules ?? "unknown",
+        packageRoot: process.cwd(),
+        checkedAt: new Date().toISOString()
+      },
+      null,
+      2
+    ) + "\n",
+    "utf8"
+  );
+
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const res = await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, ctx);
+  assert.equal(res.ok, false);
+  assert.equal(res.code, "native-binding-arch-mismatch");
+});
+
 test("TransitionService enforces dependency check", async () => {
   const dep = makeTask({ id: "T000", status: "in_progress" });
   const task = makeTask({ id: "T001", status: "ready", dependsOn: ["T000"] });

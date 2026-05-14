@@ -129,6 +129,7 @@ export type TaskEngineErrorCode =
   | "duplicate-dependency"
   | "storage-read-error"
   | "storage-write-error"
+  | "native-binding-arch-mismatch"
   | "invalid-adapter"
   | "import-parse-error"
   | "planning-generation-mismatch"

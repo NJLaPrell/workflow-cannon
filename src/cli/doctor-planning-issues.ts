@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import type DatabaseCtor from "better-sqlite3";
 import type { ModuleLifecycleContext } from "../contracts/module-contract.js";
@@ -19,6 +20,7 @@ import {
 } from "../modules/task-engine/persistence/workspace-status-store.js";
 import { readKitSqliteUserVersion } from "../core/state/workspace-kit-sqlite.js";
 import { formatNodeRuntimeIdentity } from "../core/native-sqlite-diagnostics.js";
+import { readRuntimeStamp } from "../core/runtime-contract.js";
 import { defaultRegistryModules } from "../modules/index.js";
 import { discoverPluginPackages } from "../modules/plugins/discovery.js";
 
@@ -163,6 +165,18 @@ export async function collectTaskPersistenceDoctorSummaryLines(cwd: string): Pro
       }
     } catch {
       lines.push("Kit SQLite schema (PRAGMA user_version): unavailable");
+    }
+  }
+  const stampRead = readRuntimeStamp(cwd);
+  if (stampRead.ok) {
+    const stampedArch = stampRead.stamp.arch;
+    const hostArch = os.arch();
+    if (stampedArch === process.arch && stampedArch === hostArch) {
+      lines.push(`Native SQLite architecture status: aligned (stamp=${stampedArch}, runtime=${process.arch}, host=${hostArch})`);
+    } else {
+      lines.push(
+        `Native SQLite architecture status: mismatch (stamp=${stampedArch}, runtime=${process.arch}, host=${hostArch}) — run pnpm rebuild better-sqlite3 under the host architecture.`
+      );
     }
   }
   lines.push(`Native SQLite runtime: ${formatNodeRuntimeIdentity()}`);
