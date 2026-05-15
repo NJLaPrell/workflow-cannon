@@ -6,7 +6,6 @@ import { StateWatcher } from "./runtime/state-watcher.js";
 import { DashboardViewProvider } from "./views/dashboard/DashboardViewProvider.js";
 import { GuidanceViewProvider } from "./views/guidance/GuidanceViewProvider.js";
 import { GuidancePanel } from "./views/guidance/GuidancePanel.js";
-import { StatusDashboardPanel } from "./views/status/StatusDashboardPanel.js";
 import { prefillCursorChat } from "./cursor-chat-prefill.js";
 import { buildTaskDetailMarkdown } from "./task-detail-markdown.js";
 import { buildWishlistIntakeAgentPrompt } from "./wishlist-chat-prompt.js";
@@ -93,7 +92,6 @@ export function activate(context: vscode.ExtensionContext): void {
   let dashboard: DashboardViewProvider | undefined;
   let guidanceView: GuidanceViewProvider | undefined;
   let guidancePanel: GuidancePanel | undefined;
-  let statusDashboard: StatusDashboardPanel | undefined;
 
   if (client && folder) {
     const watcher = new StateWatcher(folder, () => kitStateEmitter.fire());
@@ -105,7 +103,6 @@ export function activate(context: vscode.ExtensionContext): void {
     );
     guidanceView = new GuidanceViewProvider(context.extensionUri, client, onKitStateChanged);
     guidancePanel = new GuidancePanel(context.extensionUri, client, onKitStateChanged, folder);
-    statusDashboard = new StatusDashboardPanel(context.extensionUri, client, onKitStateChanged);
 
     context.subscriptions.push(
       vscode.window.registerWebviewViewProvider(DashboardViewProvider.viewId, dashboard),
@@ -242,13 +239,6 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand("workflowCannon.openDashboard", async () => {
       await vscode.commands.executeCommand("workflowCannon.dashboard.focus");
-    }),
-    vscode.commands.registerCommand("workflowCannon.openStatusDashboard", () => {
-      if (!statusDashboard) {
-        void requireClient();
-        return;
-      }
-      statusDashboard.open();
     }),
     vscode.commands.registerCommand("workflowCannon.openGuidancePanel", () => {
       if (!guidancePanel) {

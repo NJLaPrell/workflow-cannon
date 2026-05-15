@@ -9,6 +9,39 @@ import {
   type PhaseCatalogListRow
 } from "../phase-roster-display.js";
 
+/**
+ * Component-level CSS used by the Status tab inside the Dashboard sidebar
+ * webview (`DashboardViewProvider`). Excludes document-level resets so it
+ * embeds cleanly without fighting existing dashboard styles. (Previously also
+ * shared with a now-sunsetted standalone Status webview panel.)
+ */
+export const STATUS_PANEL_EMBED_CSS = `
+.wc-status-head { margin-bottom: 12px; }
+.wc-status-head .wc-title { font-size: 18px; }
+.wc-title { margin: 0; font-size: 15px; font-weight: 600; }
+.wc-sub { margin: 4px 0 0; opacity: 0.8; font-size: 12px; }
+.wc-card {
+  border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  background: var(--vscode-sideBar-background);
+}
+.wc-card-title { margin: 0 0 10px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.85; }
+.wc-kv { display: flex; gap: 12px; justify-content: space-between; align-items: baseline; margin: 6px 0; flex-wrap: wrap; }
+.wc-kv-label { opacity: 0.85; flex: 1; min-width: 120px; }
+.wc-kv-val { font-weight: 500; text-align: right; word-break: break-word; max-width: 65%; }
+.wc-muted { opacity: 0.75; }
+.wc-hint { font-size: 11px; opacity: 0.75; margin: 8px 0 0; }
+.wc-ok { color: var(--vscode-testing-iconPassed); }
+.wc-bad { color: var(--vscode-errorForeground); }
+.wc-phase-badge { margin: 0 0 8px; font-weight: 600; }
+.wc-status-error { color: var(--vscode-errorForeground); }
+.wc-mini-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 6px; }
+.wc-mini-table th, .wc-mini-table td { border-bottom: 1px solid var(--vscode-widget-border, rgba(127,127,127,.25)); padding: 4px 6px; text-align: left; vertical-align: top; }
+.wc-mini-table th { font-weight: 600; opacity: 0.85; }
+`;
+
 export type RenderStatusTabOptions = {
   /** VS Code workspace folder short name (primary folder when multi-root). */
   editorWorkspaceFolderLabel?: string;
@@ -176,7 +209,7 @@ export function renderStatusTabInnerHtml(
     parts.push(
       card(
         "System posture",
-        '<p class="wc-muted">No <code>systemStatus</code> block — upgrade workspace-kit (<code>dashboard-summary</code> schema v5+) for phase checks, doctor list, modules, and CAE lines.</p>'
+        '<p class="wc-muted">No <code>systemStatus</code> — upgrade workspace-kit (<code>dashboard-summary</code> v5+) for phase, doctor, modules, CAE.</p>'
       )
     );
     return parts.join("");

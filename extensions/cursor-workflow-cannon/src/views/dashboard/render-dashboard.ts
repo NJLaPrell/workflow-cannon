@@ -12,6 +12,7 @@ import {
   phaseRosterStatusLabel,
   type PhaseCatalogListRow
 } from "../phase-roster-display.js";
+import { renderStatusTabInnerHtml } from "../status/render-status-tab.js";
 
 export function escapeHtml(s: string): string {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -2185,7 +2186,26 @@ function renderStatusSectionHtml(
     '<p class="muted">Ready/proposed excludes <code>wishlist_intake</code>.</p>' +
     "</section>";
 
-  return agentCard + renderStatusEditorIntegrationSection(editorIntegration) + workspaceCard + planningCard + countsCard;
+  return agentCard + renderStatusEditorIntegrationSection(editorIntegration) + workspaceCard + planningCard + countsCard + renderEmbeddedStatusPanelHtml(d);
+}
+
+/**
+ * Render the full status panel (header, This Workspace, Planning Data, Agent
+ * Profile, Phase & Workspace, Coordination, Doctor, Modules, CAE, Task Counts)
+ * inside the Dashboard sidebar's Status tab. The standalone Status webview
+ * panel was sunsetted; this is now the only host for `renderStatusTabInnerHtml`.
+ */
+function renderEmbeddedStatusPanelHtml(d: Record<string, unknown>): string {
+  let inner: string;
+  try {
+    inner = renderStatusTabInnerHtml({ ok: true, data: d });
+  } catch (e) {
+    inner =
+      '<p class="wc-status-error">Embedded status render error: ' +
+      escapeHtml(e instanceof Error ? e.message : String(e)) +
+      "</p>";
+  }
+  return '<div class="wc-status-tab-embedded">' + inner + "</div>";
 }
 
 /** Kit-shaped results from `list-phase-notes` / `get-phase-context` (webview receives merged reads). */

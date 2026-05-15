@@ -25,6 +25,7 @@ import {
   type PlanningInterviewWizardPanel
 } from "./render-dashboard.js";
 import { renderGuidanceAuthoringPanelInnerHtml } from "../guidance/render-guidance-panel.js";
+import { STATUS_PANEL_EMBED_CSS } from "../status/render-status-tab.js";
 import {
   buildAcceptProposedDrawerSpec,
   buildAddPhaseNoteDrawerSpec,
@@ -2864,6 +2865,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       color: var(--vscode-button-foreground); background: var(--vscode-button-background);
       border: 1px solid var(--vscode-button-border, var(--vscode-contrastBorder, transparent));
     }
+    /* ── Status tab embed: shared with the standalone Status webview panel ── */
+    ${STATUS_PANEL_EMBED_CSS}
+    .wc-status-tab-embedded { margin-top: 12px; }
+    .wc-status-tab-embedded > .wc-status-head { padding-top: 4px; }
   </style>
 </head>
 <body>
