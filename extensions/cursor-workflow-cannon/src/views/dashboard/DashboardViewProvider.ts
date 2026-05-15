@@ -153,11 +153,21 @@ function collectPhaseKeySuggestions(data: Record<string, unknown>): Array<{ labe
           }
           const pk = (raw as { phaseKey?: unknown }).phaseKey;
           const sd = (raw as { shortDescription?: unknown }).shortDescription;
-          if (typeof pk === "string" && pk.trim()) {
-            const hint =
-              typeof sd === "string" && sd.trim() ? String(sd).trim().slice(0, 72) : "catalog row";
-            add(pk.trim(), `Catalog · ${hint}`);
+          const inCatalog = (raw as { inCatalog?: unknown }).inCatalog === true;
+          if (typeof pk !== "string" || !pk.trim()) {
+            continue;
           }
+          const key = pk.trim();
+          if (typeof sd === "string" && sd.trim()) {
+            // Catalogued with description: show the deliverable.
+            add(key, `Catalog · ${String(sd).trim().slice(0, 72)}`);
+          } else if (inCatalog) {
+            // Catalogued but no description recorded yet.
+            add(key, `Phase ${key} (no description)`);
+          }
+          // Else: phantom phase key (no catalog row, no description). Skip — the
+          // bucket scan below will add it with a meaningful label if any live tasks
+          // reference it; otherwise it stays out of the dropdown.
         }
       }
     }
@@ -1098,6 +1108,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         return false;
       }
       const { phaseKey } = validated.values;
+      const shortDescription = validated.values.shortDescription;
       const taskId = session.taskId;
       await this.client.recordActivity({
         kind: "working_task",
@@ -1119,9 +1130,24 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         return false;
       }
       ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
+      // If the operator supplied a deliverable, upsert (or create) the catalog row
+      // so future dropdown labels are meaningful for this phase key.
+      let deliverableNote = "";
+      if (shortDescription) {
+        const deliverableOk = await this.onUpdatePhaseDeliverables(
+          phaseKey,
+          shortDescription,
+          `assign-${taskId}-${Date.now()}`
+        );
+        deliverableNote = deliverableOk
+          ? " · catalog row updated"
+          : " · catalog upsert failed (see error)";
+      }
       this.closeDashboardDrawer();
       this.notifyKitStateChanged();
-      await vscode.window.showInformationMessage(`Phase set for ${taskId} → ${phaseKey}`);
+      await vscode.window.showInformationMessage(
+        `Phase set for ${taskId} → ${phaseKey}${deliverableNote}`
+      );
       return true;
     }
     if (session.kind === "add-phase-note") {

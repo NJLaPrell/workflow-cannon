@@ -644,7 +644,8 @@ export function buildAssignTaskPhaseDrawerSpec(
     title: `Set phase for ${taskId}`,
     descriptionHtml:
       "Runs <code>assign-task-phase</code> on the host with the current planning generation. " +
-      "Pick a suggested key or choose custom.",
+      "Pick a suggested key or choose custom. Optionally record the phase deliverable; " +
+      "if the phase has no catalog row yet, one will be created.",
     fields: [
       {
         id: "ctx",
@@ -666,6 +667,14 @@ export function buildAssignTaskPhaseDrawerSpec(
         placeholder: "Stable kit phase key",
         required: false,
         value: valueHint?.trim() ?? ""
+      },
+      {
+        id: "shortDescription",
+        kind: "text",
+        label: "Phase deliverable (optional)",
+        placeholder: "Short description; creates/updates kit_phase_catalog row",
+        required: false,
+        value: ""
       }
     ],
     primaryLabel: "Assign phase",
@@ -676,16 +685,24 @@ export function buildAssignTaskPhaseDrawerSpec(
 export function validateAssignTaskPhaseSubmit(values: Record<string, string>): DrawerValidationResult {
   const sel = (values.phaseSelect ?? "").trim();
   const custom = (values.phaseKeyCustom ?? "").trim();
+  const shortDescription = (values.shortDescription ?? "").trim();
   if (!sel) {
     return { ok: false, error: 'Choose a phase target or select "Enter another phase key…".' };
   }
+  let phaseKey: string;
   if (sel === ASSIGN_PHASE_CUSTOM) {
     if (!custom) {
       return { ok: false, error: "Enter a non-empty custom phase key." };
     }
-    return { ok: true, values: { phaseKey: custom } };
+    phaseKey = custom;
+  } else {
+    phaseKey = sel;
   }
-  return { ok: true, values: { phaseKey: sel } };
+  const out: Record<string, string> = { phaseKey };
+  if (shortDescription) {
+    out.shortDescription = shortDescription;
+  }
+  return { ok: true, values: out };
 }
 
 export type AcceptProposedDrawerParams = {

@@ -1546,7 +1546,11 @@ test("list-phase-catalog merges workspace phases and catalog descriptions in ord
   assert.equal(p90.shortDescription, "Future train");
   assert.equal(p90.inCatalog, true);
   const p72 = phases.find((p) => p.phaseKey === "72");
-  assert.equal(p72.inCatalog, false);
+  // set-current-phase auto-stubs a kit_phase_catalog row for the new currentKitPhase
+  // (with a null shortDescription) so dashboard pickers can label the phase
+  // as a real catalog entry instead of a phantom phase key.
+  assert.equal(p72.inCatalog, true);
+  assert.equal(p72.shortDescription, null);
 });
 
 test("list-phase-catalog includes phases from active tasks without kit_phase_catalog rows", async () => {
