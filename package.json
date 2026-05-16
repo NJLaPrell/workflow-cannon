@@ -68,6 +68,7 @@
     "generate-kit-trust-boundary": "node scripts/generate-kit-trust-boundary.mjs",
     "generate-maintainer-docs-from-ai": "node scripts/generate-maintainer-docs-from-ai.mjs",
     "build:documentation-ledger": "node scripts/build-documentation-ledger.mjs",
+    "check:doc-lifecycle": "node scripts/check-doc-lifecycle-report.mjs",
     "publish:npm": "node scripts/trigger-publish-npm-workflow.mjs"
   },
   "devDependencies": {

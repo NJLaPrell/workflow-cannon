@@ -132,6 +132,13 @@ const stages = [
     hint: "Fix `src/modules/documentation/data/*.json` or regenerate maintainer markdown via `pnpm run wk run generate-document` (ROADMAP.md / FEATURE-TAXONOMY.md); see scripts/check-documentation-data.mjs."
   },
   {
+    id: "doc-lifecycle-report",
+    label: "Documentation ledger + root Markdown classification gate",
+    command: process.execPath,
+    args: ["scripts/check-doc-lifecycle-report.mjs"],
+    hint: "Keep repo-root *.md to the CONTRIBUTING allowlist and run pnpm run build:documentation-ledger when inventory drifts; see scripts/doc-lifecycle-helpers.mjs."
+  },
+  {
     id: "ai-to-docs-drift",
     label: ".ai → docs/maintainers drift gate (Phase 56)",
     command: process.execPath,
