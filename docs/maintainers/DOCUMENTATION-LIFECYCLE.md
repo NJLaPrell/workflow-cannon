@@ -47,6 +47,18 @@ When adding or substantially moving documentation, record (in the doc front-matt
 3. **Demote** — Move **Active** → **Historical** with a replacement path; update indexes (**`docs/maintainers/AGENTS.md`**, module README).
 4. **Archive or delete** — **Archive candidate** → archive tree or **Delete candidate** → remove with link grep and changelog note as required by release policy.
 
+## Documentation ledger (machine inventory)
+
+The repository keeps a **grouped Markdown inventory** in **`docs/maintainers/data/documentation-ledger.v1.json`**: path buckets (`.ai/`, `docs/maintainers/`, module `instructions/`, `tasks/`, etc.), **generated vs hand-maintained** posture, and **per-file dispositions** for repo-root planning and scratch Markdown.
+
+Regenerate after large doc reshuffles:
+
+```bash
+pnpm run build:documentation-ledger
+```
+
+Maintainer CI (`pnpm run check` → `documentation-data`) asserts the ledger file exists and matches a minimal **schemaVersion 1** shape.
+
 ## Related
 
 - **`.cursor/rules/agent-doc-routing.mdc`** — agent default routing for `docs/` vs `.ai/`.
