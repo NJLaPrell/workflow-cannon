@@ -146,6 +146,13 @@ const stages = [
     hint: "Update docs/maintainers/data/documentation-deletion-register.v1.json when deleting/archiving docs; see scripts/documentation-deletion-register-helpers.mjs."
   },
   {
+    id: "doc-governance-stages",
+    label: "Documentation governance stages manifest",
+    command: process.execPath,
+    args: ["scripts/check-doc-governance-stages.mjs"],
+    hint: "Restore missing documentation stage ids in scripts/run-check-stages.mjs; see .ai/runbooks/documentation-governance-checks.md."
+  },
+  {
     id: "ai-to-docs-drift",
     label: ".ai → docs/maintainers drift gate (Phase 56)",
     command: process.execPath,

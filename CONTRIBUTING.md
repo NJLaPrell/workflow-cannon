@@ -17,6 +17,8 @@ pnpm run check
 pnpm test
 ```
 
+When **`pnpm run check`** fails on **documentation** stages (mirror drift, orphan `.ai` markdown, documentation ledger, deletion register, etc.), use the agent repair map **`.ai/runbooks/documentation-governance-checks.md`** (mirrored under **`docs/maintainers/runbooks/`** for maintainers) instead of guessing which generator to run.
+
 Phase journal behavior from `PHASE_JOURNAL.md` (Example workflow) is regression-tested as **`PHASE_JOURNAL example workflow — golden integration (T100040)`** in `test/task-engine.test.mjs` (same `pnpm test` run).
 
 ## Cursor / VS Code extension

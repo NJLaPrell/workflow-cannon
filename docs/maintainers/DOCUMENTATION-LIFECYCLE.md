@@ -63,6 +63,10 @@ Maintainer CI (`pnpm run check` → `documentation-data`) asserts the ledger fil
 
 High-confidence deletions (and future shallow archive moves) are recorded in **`docs/maintainers/data/documentation-deletion-register.v1.json`** with replacement guidance, inbound link survey notes, task/release references, and package impact. CI (`pnpm run check` → `documentation-deletion-register`) validates register rows against on-disk reality (deleted paths stay absent; archived paths must live under **`docs/maintainers/archive/`**).
 
+## When `pnpm run check` fails (documentation stages)
+
+Use the stage → remediation table in **`.ai/runbooks/documentation-governance-checks.md`** (mirrored to **`docs/maintainers/runbooks/documentation-governance-checks.md`**) before editing generated maintainer markdown by hand. That runbook names the exact generators (`generate-document`, `generate-maintainer-docs-from-ai`, ledger rebuilds, register updates) for each CI gate.
+
 ## Related
 
 - **`.cursor/rules/agent-doc-routing.mdc`** — agent default routing for `docs/` vs `.ai/`.
