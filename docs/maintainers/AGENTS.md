@@ -30,7 +30,7 @@ Use this stack when **editing** maintainer documentation or reconciling narrativ
 
 ## Documentation lifecycle taxonomy
 
-Classify, place, and retire documentation using **[`DOCUMENTATION-LIFECYCLE.md`](./DOCUMENTATION-LIFECYCLE.md)** (states: active, generated, historical, archive candidate, delete candidate; required metadata; placement for agent-first, maintainer, generated, planning snapshots, and archives). This does not change agent source-of-truth order — it pairs with **`.cursor/rules/agent-doc-routing.mdc`**.
+Classify, place, and retire documentation using **[`DOCUMENTATION-LIFECYCLE.md`](./DOCUMENTATION-LIFECYCLE.md)** (machine inventory: [`data/documentation-ledger.v1.json`](./data/documentation-ledger.v1.json), regenerate via **`pnpm run build:documentation-ledger`**) (states: active, generated, historical, archive candidate, delete candidate; required metadata; placement for agent-first, maintainer, generated, planning snapshots, and archives). This does not change agent source-of-truth order — it pairs with **`.cursor/rules/agent-doc-routing.mdc`**.
 
 ## Canonical, generated, and mirrored docs
 

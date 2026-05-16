@@ -67,6 +67,7 @@
     "lint-response-templates": "node scripts/lint-response-templates.mjs",
     "generate-kit-trust-boundary": "node scripts/generate-kit-trust-boundary.mjs",
     "generate-maintainer-docs-from-ai": "node scripts/generate-maintainer-docs-from-ai.mjs",
+    "build:documentation-ledger": "node scripts/build-documentation-ledger.mjs",
     "publish:npm": "node scripts/trigger-publish-npm-workflow.mjs"
   },
   "devDependencies": {
