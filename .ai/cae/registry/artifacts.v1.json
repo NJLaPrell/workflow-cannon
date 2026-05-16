@@ -153,6 +153,14 @@
       "ref": { "path": ".ai/runbooks/agent-presentation-policy.md" },
       "title": "Agent presentation policy and scoped Guidance patterns",
       "tags": ["agent-presentation", "cae", "guidance", "runbook"]
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "cae.policy.webview-styleguide",
+      "artifactType": "policy-doc",
+      "ref": { "path": ".ai/cae/ui/webview-styleguide.md" },
+      "title": "Cursor extension webview styleguide (pointer to .github/instructions canonical rules)",
+      "tags": ["cae", "cursor-extension", "dashboard", "styleguide", "ui", "webview"]
     }
   ]
 }

@@ -193,6 +193,43 @@
       },
       "artifactRefs": [{ "artifactId": "cae.runbook.phase-journal-operator" }],
       "flags": { "advisoryOnly": true, "shadowEligible": true }
+    },
+    {
+      "schemaVersion": 1,
+      "activationId": "cae.activation.policy.webview-styleguide-tag",
+      "family": "policy",
+      "lifecycleState": "active",
+      "priority": 70,
+      "scope": {
+        "conditions": [
+          {
+            "kind": "taskTag",
+            "match": "any",
+            "values": ["dashboard", "dashboard-ux", "drawer", "styleguide", "ux-consistency", "webview"]
+          }
+        ]
+      },
+      "artifactRefs": [{ "artifactId": "cae.policy.webview-styleguide" }],
+      "acknowledgement": { "strength": "surface", "token": "webview-styleguide-surface" },
+      "flags": { "advisoryOnly": true, "shadowEligible": true }
+    },
+    {
+      "schemaVersion": 1,
+      "activationId": "cae.activation.review.webview-styleguide-tag",
+      "family": "review",
+      "lifecycleState": "active",
+      "priority": 70,
+      "scope": {
+        "conditions": [
+          {
+            "kind": "taskTag",
+            "match": "any",
+            "values": ["dashboard", "dashboard-ux", "drawer", "styleguide", "ux-consistency", "webview"]
+          }
+        ]
+      },
+      "artifactRefs": [{ "artifactId": "cae.policy.webview-styleguide" }],
+      "flags": { "advisoryOnly": true, "shadowEligible": true }
     }
   ]
 }
