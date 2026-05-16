@@ -51,6 +51,7 @@ The npm package is **not** named “Workflow Cannon”; use the table above when
 
 This **`docs/maintainers/`** tree is the **human-first** maintainer library (agents: see **`.cursor/rules/agent-doc-routing.mdc`** and **`.ai/`** for routine bootstrap).
 
+- **Agent subtree map (machine):** [`../.ai/HUB.md`](../.ai/HUB.md) — symptom-based `.ai/` navigation; use instead of bulk `docs/` reads for routine execution.
 - **Start here for navigation:** [`AGENTS.md`](./AGENTS.md) — maintainer index, playbooks, deep CLI tables, glossary links.
 - **Folders:** [`adrs/`](./adrs/) · [`archive/`](./archive/) (includes relocated repo-root planning under **`archive/repo-root-planning/`**) · [`data/`](./data/) (JSON/YAML snapshots + manifests) · [`plans/`](./plans/) · [`playbooks/`](./playbooks/) · [`runbooks/`](./runbooks/) · [`workbooks/`](./workbooks/).
 - **Generated vs hand-maintained:** paths covered by the Phase 56 pipeline are generated from **`.ai/`** — edit sources, then run **`pnpm run generate-maintainer-docs-from-ai`** (see [`adrs/ADR-ai-canonical-maintainer-docs-pipeline.md`](./adrs/ADR-ai-canonical-maintainer-docs-pipeline.md)). [`ROADMAP.md`](./ROADMAP.md) and [`FEATURE-TAXONOMY.md`](./FEATURE-TAXONOMY.md) track the documentation module renderer; regenerate with **`pnpm exec wk run generate-document`** when inputs change.

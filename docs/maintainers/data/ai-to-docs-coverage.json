@@ -201,6 +201,10 @@
     {
       "source": ".ai/workbooks/transcript-automation-baseline.md",
       "output": "docs/maintainers/workbooks/transcript-automation-baseline.md"
+    },
+    {
+      "source": ".ai/workbooks/README.md",
+      "output": "docs/maintainers/workbooks/README.md"
     }
   ]
 }

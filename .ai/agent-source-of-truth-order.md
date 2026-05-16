@@ -12,3 +12,7 @@ Drift-checked against `scripts/fixtures/governance-doc-order.json`. This is the 
 8. `.ai/POLICY-APPROVAL.md` — approval surfaces (`run` JSON vs `config` env)
 9. `.ai/AGENT-CLI-MAP.md` — tier table, copy-paste JSON, operation surfaces
 10. `.ai/TERMS.md` — canonical terminology for agents
+
+## Subtree routing (navigation)
+
+The numbered list above is **precedence only**. For **symptom-based navigation** across `.ai/` subtrees (CAE, runbooks, ADRs, playbooks, workbooks, CLI snippets), start at **[`.ai/HUB.md`](./HUB.md)** and follow **one** hub link instead of enumerating directories.
