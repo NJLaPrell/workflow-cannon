@@ -47,6 +47,20 @@
 
 The npm package is **not** named “Workflow Cannon”; use the table above when searching docs, issues, or registry metadata.
 
+## Maintainer documentation library
+
+This **`docs/maintainers/`** tree is the **human-first** maintainer library (agents: see **`.cursor/rules/agent-doc-routing.mdc`** and **`.ai/`** for routine bootstrap).
+
+- **Start here for navigation:** [`AGENTS.md`](./AGENTS.md) — maintainer index, playbooks, deep CLI tables, glossary links.
+- **Folders:** [`adrs/`](./adrs/) · [`archive/`](./archive/) (includes relocated repo-root planning under **`archive/repo-root-planning/`**) · [`data/`](./data/) (JSON/YAML snapshots + manifests) · [`plans/`](./plans/) · [`playbooks/`](./playbooks/) · [`runbooks/`](./runbooks/) · [`workbooks/`](./workbooks/).
+- **Generated vs hand-maintained:** paths covered by the Phase 56 pipeline are generated from **`.ai/`** — edit sources, then run **`pnpm run generate-maintainer-docs-from-ai`** (see [`adrs/ADR-ai-canonical-maintainer-docs-pipeline.md`](./adrs/ADR-ai-canonical-maintainer-docs-pipeline.md)). [`ROADMAP.md`](./ROADMAP.md) and [`FEATURE-TAXONOMY.md`](./FEATURE-TAXONOMY.md) track the documentation module renderer; regenerate with **`pnpm exec wk run generate-document`** when inputs change.
+- **Repository-wide Markdown inventory:** [`data/documentation-ledger.v1.json`](./data/documentation-ledger.v1.json) (regenerate: **`pnpm run build:documentation-ledger`**).
+- **Lifecycle policy:** [`DOCUMENTATION-LIFECYCLE.md`](./DOCUMENTATION-LIFECYCLE.md).
+
+Top-level Markdown files here are mostly **front-door** references (strategy, CLI mirrors, governance companions). Prefer adding new maintainer prose under a subfolder when it is not a global index.
+
+---
+
 ## Quick start
 
 Install Workflow Cannon in a real project, then **attach it with `init` before `doctor`** so validation runs against baselines, generated context, and SQLite task persistence.
