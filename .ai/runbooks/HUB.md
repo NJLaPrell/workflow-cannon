@@ -7,6 +7,7 @@ Symptom → **one** `.ai/runbooks/*.md` target (agents: prefer this table over d
 | Task DB / SQLite read contract for agents | [`agent-task-db-contract.md`](./agent-task-db-contract.md) |
 | Task-engine ergonomics (`list-tasks`, queues) | [`agent-task-engine-ergonomics.md`](./agent-task-engine-ergonomics.md) |
 | CAE debug / trace | [`cae-debug.md`](./cae-debug.md) |
+| Documentation CI gates (`pnpm run check`) / drift + ledger repairs | [`documentation-governance-checks.md`](./documentation-governance-checks.md) |
 | CAE enforcement readiness | [`cae-enforcement-readiness.md`](./cae-enforcement-readiness.md) |
 | GitHub-native `workspace-kit` invocation | [`github-workflow-cannon-invocation.md`](./github-workflow-cannon-invocation.md) |
 | Install / attach Workflow Cannon to a repository | [`install-attach-workflow-cannon.md`](./install-attach-workflow-cannon.md) |

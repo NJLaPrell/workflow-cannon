@@ -8,6 +8,10 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+### Added
+
+- Documentation governance: `.ai/runbooks/documentation-governance-checks.md` (mirrored to `docs/maintainers/runbooks/`) documents stage-by-stage `pnpm run check` repairs; CI adds `doc-governance-stages` to keep core doc gates registered in `scripts/run-check-stages.mjs` (Phase 96 / T100201).
+
 ### Removed
 
 - Removed stray root-level JSON export dumps (`dashboard_out.json`, `dashboard_summary.json`, `tasks.json`) that had no in-repo consumers; evidence and replacements are recorded in `docs/maintainers/data/documentation-deletion-register.v1.json` (Phase 96 / T100200).
