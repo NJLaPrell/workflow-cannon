@@ -4,6 +4,10 @@
 
 - **Node.js 22+** and **pnpm 10** (see root `package.json` → `packageManager`).
 
+## Repo-root Markdown (intentional)
+
+Only durable entry points stay at the repository root: **`README.md`**, **`AGENTS.md`**, **`CONTRIBUTING.md`**, **`CHANGELOG.md`**, **`PHASE_JOURNAL.md`** (phase journal operator contract + example workflow), plus **`LICENSE`** (not Markdown). Older planning notes, transcripts, and scratch files were moved under **`docs/maintainers/archive/repo-root-planning/`** (see its **README**).
+
 ## Clone and validate
 
 ```bash

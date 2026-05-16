@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "title": "Workflow Cannon documentation surface ledger",
-  "generatedAt": "2026-05-16T22:30:07.572Z",
+  "generatedAt": "2026-05-16T22:35:08.079Z",
   "generator": "scripts/build-documentation-ledger.mjs",
   "repository": "workflow-cannon",
   "summary": {
-    "totalMarkdownFiles": 561,
+    "totalMarkdownFiles": 562,
     "groupCount": 18
   },
   "groups": [
@@ -183,7 +183,7 @@
     },
     {
       "id": "maintainer-human",
-      "fileCount": 108,
+      "fileCount": 124,
       "samplePaths": [
         "docs/maintainers/adrs/ADR-agent-guidance-profile-rpg-party-v1.md",
         "docs/maintainers/adrs/ADR-agent-task-lifecycle-hooks-v1.md",
@@ -274,27 +274,20 @@
     },
     {
       "id": "repo-root",
-      "fileCount": 20,
+      "fileCount": 5,
       "samplePaths": [
         "AGENTS.md",
-        "CAE_PLAN.md",
-        "CAEUX.md",
         "CHANGELOG.md",
-        "CLAW-CODE-COMPARISON.md",
         "CONTRIBUTING.md",
-        "cursor_phase_52_completion_and_release.md",
-        "cursor_phase_58_tasks_completion.md",
-        "INIT_PLAN.md",
-        "MODULE_REFACTOR.md",
-        "MULTI_AGENT_PLAN.md",
-        "NEXT.md"
+        "PHASE_JOURNAL.md",
+        "README.md"
       ],
       "audience": "mixed",
       "lifecycle": "active",
       "generated": "partial",
       "canonicalSource": "per-file (see rootMarkdownFiles)",
       "dispositionDefault": "keep",
-      "notes": "Root *.md mix generated README, pointers, and legacy planning files."
+      "notes": "Root *.md limited to intentional entry points (README, AGENTS, CONTRIBUTING, CHANGELOG, PHASE_JOURNAL); historical planning lives under docs/maintainers/archive/repo-root-planning/."
     },
     {
       "id": "src-non-module-md",
@@ -361,21 +354,6 @@
       "canonicalSource": "AGENTS.md (pointer) / .ai/AGENTS.md (machine)"
     },
     {
-      "path": "CAE_PLAN.md",
-      "disposition": "review",
-      "rationale": "Unclassified root Markdown — assign lifecycle + owner in a follow-up edit to this ledger map.",
-      "lifecycle": "active",
-      "audience": "maintainer",
-      "canonicalSource": "CAE_PLAN.md"
-    },
-    {
-      "path": "CAEUX.md",
-      "disposition": "keep",
-      "rationale": "CAE UX notes for extension/dashboard work.",
-      "lifecycle": "active",
-      "audience": "maintainer"
-    },
-    {
       "path": "CHANGELOG.md",
       "disposition": "keep",
       "rationale": "Release history; maintain with releases.",
@@ -384,99 +362,20 @@
       "canonicalSource": "CHANGELOG.md"
     },
     {
-      "path": "CLAW-CODE-COMPARISON.md",
-      "disposition": "review",
-      "rationale": "Unclassified root Markdown — assign lifecycle + owner in a follow-up edit to this ledger map.",
-      "lifecycle": "active",
-      "audience": "maintainer",
-      "canonicalSource": "CLAW-CODE-COMPARISON.md"
-    },
-    {
       "path": "CONTRIBUTING.md",
-      "disposition": "review",
-      "rationale": "Unclassified root Markdown — assign lifecycle + owner in a follow-up edit to this ledger map.",
+      "disposition": "keep",
+      "rationale": "Contributor setup and contract for intentional root Markdown.",
       "lifecycle": "active",
       "audience": "maintainer",
       "canonicalSource": "CONTRIBUTING.md"
     },
     {
-      "path": "cursor_phase_52_completion_and_release.md",
-      "disposition": "review",
-      "rationale": "Unclassified root Markdown — assign lifecycle + owner in a follow-up edit to this ledger map.",
-      "lifecycle": "active",
-      "audience": "maintainer",
-      "canonicalSource": "cursor_phase_52_completion_and_release.md"
-    },
-    {
-      "path": "cursor_phase_58_tasks_completion.md",
-      "disposition": "review",
-      "rationale": "Unclassified root Markdown — assign lifecycle + owner in a follow-up edit to this ledger map.",
-      "lifecycle": "active",
-      "audience": "maintainer",
-      "canonicalSource": "cursor_phase_58_tasks_completion.md"
-    },
-    {
-      "path": "INIT_PLAN.md",
-      "disposition": "delete-candidate",
-      "rationale": "Bootstrap-era plan — verify no unique facts, then remove or move to archive.",
-      "lifecycle": "historical",
-      "audience": "maintainer",
-      "replacementPath": ".ai/runbooks/install-attach-workflow-cannon.md"
-    },
-    {
-      "path": "MODULE_REFACTOR.md",
-      "disposition": "review",
-      "rationale": "Unclassified root Markdown — assign lifecycle + owner in a follow-up edit to this ledger map.",
-      "lifecycle": "active",
-      "audience": "maintainer",
-      "canonicalSource": "MODULE_REFACTOR.md"
-    },
-    {
-      "path": "MULTI_AGENT_PLAN.md",
-      "disposition": "archive-candidate",
-      "rationale": "Exploratory multi-agent plan — superseded by task-engine + coordination modules.",
-      "lifecycle": "historical",
-      "audience": "maintainer",
-      "replacementPath": ".ai/WORKSPACE-KIT-SESSION.md + task store"
-    },
-    {
-      "path": "NEXT.md",
-      "disposition": "review",
-      "rationale": "Unclassified root Markdown — assign lifecycle + owner in a follow-up edit to this ledger map.",
-      "lifecycle": "active",
-      "audience": "maintainer",
-      "canonicalSource": "NEXT.md"
-    },
-    {
-      "path": "Phase 93 Transcript.md",
-      "disposition": "archive-candidate",
-      "rationale": "Session transcript — keep for forensics or move under docs/maintainers/archive/.",
-      "lifecycle": "historical",
-      "audience": "maintainer"
-    },
-    {
-      "path": "phase_64_release.md",
-      "disposition": "review",
-      "rationale": "Unclassified root Markdown — assign lifecycle + owner in a follow-up edit to this ledger map.",
-      "lifecycle": "active",
-      "audience": "maintainer",
-      "canonicalSource": "phase_64_release.md"
-    },
-    {
       "path": "PHASE_JOURNAL.md",
       "disposition": "keep",
-      "rationale": "Phase journal / operator notes; pair with task-engine phase notes when deprecating.",
+      "rationale": "Phase journal operator contract + example workflow (tests + task planRef strings).",
       "lifecycle": "active",
       "audience": "maintainer",
       "canonicalSource": "PHASE_JOURNAL.md"
-    },
-    {
-      "path": "PLAN.md",
-      "disposition": "review",
-      "rationale": "Unclassified root Markdown — assign lifecycle + owner in a follow-up edit to this ledger map.",
-      "lifecycle": "active",
-      "audience": "maintainer",
-      "canonicalSource": "PLAN.md"
     },
     {
       "path": "README.md",
@@ -485,30 +384,6 @@
       "lifecycle": "generated",
       "audience": "both",
       "canonicalSource": ".ai/README.md + src/modules/documentation/templates/README.md"
-    },
-    {
-      "path": "replit.md",
-      "disposition": "delete-candidate",
-      "rationale": "Host-specific scratch — remove if Replit is not a supported maintainer path.",
-      "lifecycle": "delete-candidate",
-      "audience": "maintainer"
-    },
-    {
-      "path": "REVIEW.md",
-      "disposition": "review",
-      "rationale": "Unclassified root Markdown — assign lifecycle + owner in a follow-up edit to this ledger map.",
-      "lifecycle": "active",
-      "audience": "maintainer",
-      "canonicalSource": "REVIEW.md"
-    },
-    {
-      "path": "TASK_CONCEPT_IMPLEMENTATION_PLAN.md",
-      "disposition": "archive-candidate",
-      "rationale": "Legacy planning; execution lives in task-engine — archive or fold into ROADMAP after maintainer review.",
-      "lifecycle": "historical",
-      "audience": "maintainer",
-      "canonicalSource": "TASK_CONCEPT_IMPLEMENTATION_PLAN.md",
-      "replacementPath": "docs/maintainers/ROADMAP.md + task store"
     }
   ],
   "policyRefs": [
