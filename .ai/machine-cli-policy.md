@@ -6,6 +6,8 @@
 
 In an **attached project**, use **`./.workspace-kit/bin/wk`** for routine Workflow Cannon commands. The launcher reads **`.workspace-kit/runtime.json`** and uses the stamped Node runtime, so agents should not ask the user to run `nvm use` first. In the **Workflow Cannon source checkout**, `pnpm exec wk` and `node dist/cli.js` remain appropriate development entrypoints.
 
+In the **workflow-cannon** repository, **`.workspace-kit/runtime.json` is gitignored** (machine-local). A successful **`pnpm install`** refreshes the stamp from postinstall when native SQLite loads; use **`pnpm run setup:dev`** for the full Node 22 + build + stamp path per **`.ai/WORKSPACE-KIT-SESSION.md`**.
+
 ## Tier A — task lifecycle
 
 Use `workspace-kit run run-transition` with JSON **`policyApproval`** as the **third** CLI argument (not chat-only approval).

@@ -20,6 +20,8 @@ artifacts/
 .workspace-kit/approvals/
 .workspace-kit/planning/
 .workspace-kit/backups/
+# Machine-local Node stamp (postinstall / init / setup:dev refresh; never commit another machine's path)
+.workspace-kit/runtime.json
 agent-transcripts/
 # Extension VSIX builds (publish via vsce / attach to release locally)
 extensions/cursor-workflow-cannon/*.vsix

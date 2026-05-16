@@ -34,6 +34,8 @@ The stamp is kit-owned environment metadata. It records at least:
 - `packageRoot`: installed Workflow Cannon package root used for native SQLite validation.
 - `checkedAt`: ISO timestamp for the validation that wrote or refreshed the stamp.
 
+In the **workflow-cannon** source repository, this path is **gitignored** so clones never inherit another developer’s absolute `nodeExecutable`. Fresh checkouts get a stamp from **`pnpm install`** postinstall when native SQLite loads, and/or from **`pnpm run setup:dev`**.
+
 Consumers should treat malformed stamps, missing required fields, missing `nodeExecutable`, wrong Node major, ABI/architecture mismatch, or failed SQLite smoke checks as runtime contract drift.
 
 ## Canonical Launcher

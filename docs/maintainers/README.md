@@ -69,6 +69,8 @@ pnpm exec wk init
 ./.workspace-kit/bin/wk start
 ```
 
+**This repository (developing Workflow Cannon itself):** `.workspace-kit/runtime.json` is **gitignored** (machine-local Node stamp). A successful **`pnpm install`** runs postinstall and **writes or refreshes** that file when `better-sqlite3` loads. For the strict one-shot path (Node **22** per `.nvmrc`, `pnpm run build`, native SQLite smoke, stamp), run **`pnpm run setup:dev`**. After **`git pull`**, run **`pnpm run build`** before relying on `pnpm run wk init --force` to repair the stamp so **`dist/` matches `src/`**.
+
 After `init`, prefer `./.workspace-kit/bin/wk` in attached projects. It reads `.workspace-kit/runtime.json` and uses the Node runtime validated during `init`, so routine agent commands do not require a prior `nvm use`. In the Workflow Cannon source checkout, `pnpm exec wk` / `node dist/cli.js` remain development entrypoints.
 
 Compatibility aliases remain available when the package manager environment is already correct: `npx workspace-kit init`, `npx workspace-kit doctor`, `npx workspace-kit start`; or `pnpm exec wk init`, `pnpm exec wk doctor`, `pnpm exec wk start`.

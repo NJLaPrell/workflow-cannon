@@ -15,6 +15,8 @@ Canonical troubleshooting for **`better-sqlite3`** when using **`tasks.persisten
 
 After attach, Workflow Cannon runtime identity is governed by `.ai/adrs/ADR-workflow-cannon-runtime-contract-v1.md`: `.workspace-kit/runtime.json` records the validated Node 22 runtime, and `.workspace-kit/bin/wk` should execute routine commands through that stamped runtime. Attached project `.nvmrc` and `.node-version` files do not select the Workflow Cannon runtime after attach.
 
+In the **workflow-cannon** source repository, that stamp path is **gitignored**; clone **`pnpm install`** (postinstall) and/or **`pnpm run setup:dev`** materialize it — **`.ai/WORKSPACE-KIT-SESSION.md`**.
+
 For Workflow Cannon development, use the repo setup path from the repository root:
 
 ```bash
