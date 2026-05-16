@@ -23,5 +23,9 @@ artifacts/
 # Machine-local Node stamp (postinstall / init / setup:dev refresh; never commit another machine's path)
 .workspace-kit/runtime.json
 agent-transcripts/
+# Ad-hoc maintainer export dumps (regenerate via workspace-kit commands; do not re-commit)
+/dashboard_out.json
+/dashboard_summary.json
+/tasks.json
 # Extension VSIX builds (publish via vsce / attach to release locally)
 extensions/cursor-workflow-cannon/*.vsix
