@@ -35,5 +35,5 @@ Implementers: call **`insertCaeRegistryMutationAudit`** after successful mutatin
 ## Cross-references
 
 - **`.ai/cae/mutation-governance.md`** — product posture (maintainers, PR workflow, threat model).
-- **`CAE_PLAN.md`** Epic 4–5 — scope source.
+- **`docs/maintainers/archive/repo-root-planning/CAE_PLAN.md`** Epic 4–5 — scope source (archived provenance).
 - **`.ai/cae/phase-70-registry-task-tracker.md`** — task IDs.

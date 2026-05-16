@@ -78,7 +78,7 @@ function classifyGroup(rel) {
   return "other";
 }
 
-/** Root-level planning / status style files — explicit disposition (human review). */
+/** Root-level Markdown — explicit disposition for files that intentionally remain at repo root (T100196). */
 const ROOT_FILE_DISPOSITION = {
   "README.md": {
     disposition: "keep",
@@ -94,6 +94,13 @@ const ROOT_FILE_DISPOSITION = {
     audience: "both",
     canonicalSource: "AGENTS.md (pointer) / .ai/AGENTS.md (machine)"
   },
+  "CONTRIBUTING.md": {
+    disposition: "keep",
+    rationale: "Contributor setup and contract for intentional root Markdown.",
+    lifecycle: "active",
+    audience: "maintainer",
+    canonicalSource: "CONTRIBUTING.md"
+  },
   "CHANGELOG.md": {
     disposition: "keep",
     rationale: "Release history; maintain with releases.",
@@ -103,50 +110,10 @@ const ROOT_FILE_DISPOSITION = {
   },
   "PHASE_JOURNAL.md": {
     disposition: "keep",
-    rationale: "Phase journal / operator notes; pair with task-engine phase notes when deprecating.",
+    rationale: "Phase journal operator contract + example workflow (tests + task planRef strings).",
     lifecycle: "active",
     audience: "maintainer",
     canonicalSource: "PHASE_JOURNAL.md"
-  },
-  "TASK_CONCEPT_IMPLEMENTATION_PLAN.md": {
-    disposition: "archive-candidate",
-    rationale: "Legacy planning; execution lives in task-engine — archive or fold into ROADMAP after maintainer review.",
-    lifecycle: "historical",
-    audience: "maintainer",
-    canonicalSource: "TASK_CONCEPT_IMPLEMENTATION_PLAN.md",
-    replacementPath: "docs/maintainers/ROADMAP.md + task store"
-  },
-  "MULTI_AGENT_PLAN.md": {
-    disposition: "archive-candidate",
-    rationale: "Exploratory multi-agent plan — superseded by task-engine + coordination modules.",
-    lifecycle: "historical",
-    audience: "maintainer",
-    replacementPath: ".ai/WORKSPACE-KIT-SESSION.md + task store"
-  },
-  "INIT_PLAN.md": {
-    disposition: "delete-candidate",
-    rationale: "Bootstrap-era plan — verify no unique facts, then remove or move to archive.",
-    lifecycle: "historical",
-    audience: "maintainer",
-    replacementPath: ".ai/runbooks/install-attach-workflow-cannon.md"
-  },
-  "Phase 93 Transcript.md": {
-    disposition: "archive-candidate",
-    rationale: "Session transcript — keep for forensics or move under docs/maintainers/archive/.",
-    lifecycle: "historical",
-    audience: "maintainer"
-  },
-  "CAEUX.md": {
-    disposition: "keep",
-    rationale: "CAE UX notes for extension/dashboard work.",
-    lifecycle: "active",
-    audience: "maintainer"
-  },
-  "replit.md": {
-    disposition: "delete-candidate",
-    rationale: "Host-specific scratch — remove if Replit is not a supported maintainer path.",
-    lifecycle: "delete-candidate",
-    audience: "maintainer"
   }
 };
 
@@ -168,7 +135,7 @@ function buildLedger() {
       lifecycle: "active",
       canonicalSource: "per-file (see rootMarkdownFiles)",
       dispositionDefault: "keep",
-      notes: "Root *.md mix generated README, pointers, and legacy planning files."
+      notes: "Root *.md limited to intentional entry points (README, AGENTS, CONTRIBUTING, CHANGELOG, PHASE_JOURNAL); historical planning lives under docs/maintainers/archive/repo-root-planning/."
     },
     "agent-machine-canonical": {
       audience: "agent",

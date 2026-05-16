@@ -88,7 +88,7 @@ Goal: remove stale CAE planning claims now that SQLite registry authority shippe
 
 Tasks:
 
-- [x] Update or supersede `CAE_PLAN.md`; its "current repo state" still describes JSON as live registry authority.
+- [x] Update or supersede archived **`docs/maintainers/archive/repo-root-planning/CAE_PLAN.md`**; its "current repo state" still described JSON as live registry authority before cleanup.
 - [x] Mark `tasks/cae/CAE-PLAN-STATUS.md` as historical, or rewrite it to defer to `.ai/cae/` plus task-engine output.
 - [x] Keep `.ai/cae/phase-70-registry-task-tracker.md` only if it remains useful as provenance; otherwise demote it to history.
 - [x] Ensure `.ai/cae/README.md` names the current operator plan and not only the old implementation wave.
