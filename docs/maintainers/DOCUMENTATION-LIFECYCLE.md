@@ -59,6 +59,10 @@ pnpm run build:documentation-ledger
 
 Maintainer CI (`pnpm run check` → `documentation-data`) asserts the ledger file exists and matches a minimal **schemaVersion 1** shape.
 
+## Documentation deletion register (machine evidence)
+
+High-confidence deletions (and future shallow archive moves) are recorded in **`docs/maintainers/data/documentation-deletion-register.v1.json`** with replacement guidance, inbound link survey notes, task/release references, and package impact. CI (`pnpm run check` → `documentation-deletion-register`) validates register rows against on-disk reality (deleted paths stay absent; archived paths must live under **`docs/maintainers/archive/`**).
+
 ## Related
 
 - **`.cursor/rules/agent-doc-routing.mdc`** — agent default routing for `docs/` vs `.ai/`.

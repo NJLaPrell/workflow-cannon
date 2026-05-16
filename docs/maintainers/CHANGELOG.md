@@ -8,6 +8,10 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+### Removed
+
+- Removed stray root-level JSON export dumps (`dashboard_out.json`, `dashboard_summary.json`, `tasks.json`) that had no in-repo consumers; evidence and replacements are recorded in `docs/maintainers/data/documentation-deletion-register.v1.json` (Phase 96 / T100200).
+
 ## [0.90.0] - 2026-05-14
 
 Phase 95 — **Dashboard Phase Roster polish, phase deliverables editing groundwork, and native SQLite guardrails**. Ships the dashboard/status Phase Roster label cleanup, deliverables mutation plumbing, stricter single-task start ownership, and fail-fast native SQLite architecture checks for arm64 macOS reliability.

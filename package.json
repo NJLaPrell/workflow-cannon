@@ -69,6 +69,7 @@
     "generate-maintainer-docs-from-ai": "node scripts/generate-maintainer-docs-from-ai.mjs",
     "build:documentation-ledger": "node scripts/build-documentation-ledger.mjs",
     "check:doc-lifecycle": "node scripts/check-doc-lifecycle-report.mjs",
+    "check:documentation-deletion-register": "node scripts/check-documentation-deletion-register.mjs",
     "publish:npm": "node scripts/trigger-publish-npm-workflow.mjs"
   },
   "devDependencies": {

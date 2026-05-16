@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "title": "Workflow Cannon documentation deletion and archive evidence register",
+  "updatedAt": "2026-05-16T23:55:00.000Z",
+  "policyRefs": [
+    "docs/maintainers/DOCUMENTATION-LIFECYCLE.md",
+    "src/modules/documentation/RULES.md"
+  ],
+  "entries": [
+    {
+      "path": "dashboard_out.json",
+      "disposition": "deleted",
+      "confidence": "high",
+      "rationale": "Orphaned JSON snapshot of a dashboard export with zero in-repo references; duplicated information available from live `pnpm exec wk run dashboard-summary` / extension surfaces.",
+      "replacement": "Run `pnpm exec wk run dashboard-summary '{}'` (or the Cursor extension dashboard) when you need a current machine-readable summary.",
+      "inboundLinks": [],
+      "taskRefs": [
+        "T100200"
+      ],
+      "releaseRefs": [],
+      "packageImpact": "none",
+      "evidence": {
+        "preRemovalVerification": "Repository-wide search found no imports or prose references to dashboard_out.json (2026-05-16).",
+        "gitHistoryNote": "Prior file contents remain reachable via git history on the parent commit of the removal."
+      }
+    },
+    {
+      "path": "dashboard_summary.json",
+      "disposition": "deleted",
+      "confidence": "high",
+      "rationale": "Orphaned JSON snapshot parallel to dashboard_out.json with zero in-repo references; not produced by workspace-kit CI or packaging.",
+      "replacement": "Same as dashboard_out.json \u2014 use `dashboard-summary` or extension exports.",
+      "inboundLinks": [],
+      "taskRefs": [
+        "T100200"
+      ],
+      "releaseRefs": [],
+      "packageImpact": "none",
+      "evidence": {
+        "preRemovalVerification": "Repository-wide search found no imports or prose references to dashboard_summary.json (2026-05-16).",
+        "gitHistoryNote": "Prior file contents remain reachable via git history on the parent commit of the removal."
+      }
+    },
+    {
+      "path": "tasks.json",
+      "disposition": "deleted",
+      "confidence": "high",
+      "rationale": "Large (~1.5MB) root-level tasks export with zero in-repo references; live task state belongs in `.workspace-kit/tasks/workspace-kit.db` (or JSON opt-out per kit config), not a static repo-root dump.",
+      "replacement": "Use `pnpm exec wk run list-tasks`, `get-task`, or read the configured task store; do not rely on ad-hoc root JSON exports.",
+      "inboundLinks": [],
+      "taskRefs": [
+        "T100200"
+      ],
+      "releaseRefs": [],
+      "packageImpact": "none",
+      "evidence": {
+        "preRemovalVerification": "Repository-wide search found no references to repo-root tasks.json as a data source (2026-05-16).",
+        "gitHistoryNote": "Prior export contents remain reachable via git history on the parent commit of the removal."
+      }
+    }
+  ]
+}

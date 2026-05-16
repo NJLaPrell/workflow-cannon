@@ -139,6 +139,13 @@ const stages = [
     hint: "Keep repo-root *.md to the CONTRIBUTING allowlist and run pnpm run build:documentation-ledger when inventory drifts; see scripts/doc-lifecycle-helpers.mjs."
   },
   {
+    id: "documentation-deletion-register",
+    label: "Documentation deletion register vs on-disk reality",
+    command: process.execPath,
+    args: ["scripts/check-documentation-deletion-register.mjs"],
+    hint: "Update docs/maintainers/data/documentation-deletion-register.v1.json when deleting/archiving docs; see scripts/documentation-deletion-register-helpers.mjs."
+  },
+  {
     id: "ai-to-docs-drift",
     label: ".ai → docs/maintainers drift gate (Phase 56)",
     command: process.execPath,
