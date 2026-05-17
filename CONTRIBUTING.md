@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- **Node.js 22+** and **pnpm 10** (see root `package.json` → `packageManager`).
+- **Node.js 22 or 23** and **pnpm 10** (see root `package.json` → `engines` and `packageManager`).
 
 ## Repo-root Markdown (intentional)
 
