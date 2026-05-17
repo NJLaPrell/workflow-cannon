@@ -3,6 +3,12 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+/** Repo root (workspace-kit package) for native better-sqlite3 probes — temp stubs make every Node fail equally. */
+function workspaceKitRepoRoot() {
+  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+}
 
 import {
   CommandClient,
@@ -224,6 +230,7 @@ test("pickNodeExecutable skips native-incompatible resolver candidate", () => {
   const oldNvmBin = process.env.NVM_BIN;
   const oldWorkspaceKitNode = process.env.WORKSPACE_KIT_NODE;
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "wc-node-native-"));
+  const repoRoot = workspaceKitRepoRoot();
   try {
     process.env.HOME = tempRoot;
     process.env.NVM_DIR = path.join(tempRoot, ".nvm");
@@ -231,10 +238,8 @@ test("pickNodeExecutable skips native-incompatible resolver candidate", () => {
     delete process.env.WORKSPACE_KIT_NODE;
     const badNode = path.join(tempRoot, "bad-node");
     fs.writeFileSync(badNode, "#!/bin/sh\nexit 1\n", { mode: 0o755 });
-    fs.mkdirSync(path.join(tempRoot, "node_modules", "better-sqlite3"), { recursive: true });
-    fs.writeFileSync(path.join(tempRoot, "node_modules", "better-sqlite3", "index.js"), "module.exports = {};\n");
 
-    assert.notEqual(pickNodeExecutable(() => badNode, tempRoot), badNode);
+    assert.notEqual(pickNodeExecutable(() => badNode, repoRoot), badNode);
   } finally {
     if (oldHome === undefined) delete process.env.HOME;
     else process.env.HOME = oldHome;
@@ -254,19 +259,18 @@ test("pickNodeExecutable probes installed workspace-kit package root for native 
   const oldNvmBin = process.env.NVM_BIN;
   const oldWorkspaceKitNode = process.env.WORKSPACE_KIT_NODE;
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "wc-node-package-native-"));
+  const repoRoot = workspaceKitRepoRoot();
+  const workspaceKitPackage = path.join(repoRoot, "node_modules", "@workflow-cannon", "workspace-kit");
   try {
     process.env.HOME = tempRoot;
     process.env.NVM_DIR = path.join(tempRoot, ".nvm");
     delete process.env.NVM_BIN;
     delete process.env.WORKSPACE_KIT_NODE;
-    const workspaceRoot = path.join(tempRoot, "consumer");
-    const packageRoot = path.join(workspaceRoot, "node_modules", "@workflow-cannon", "workspace-kit");
     const badNode = path.join(tempRoot, "bad-node");
-    fs.mkdirSync(path.join(packageRoot, "node_modules", "better-sqlite3"), { recursive: true });
-    fs.writeFileSync(path.join(packageRoot, "node_modules", "better-sqlite3", "index.js"), "module.exports = {};\n");
     fs.writeFileSync(badNode, "#!/bin/sh\nexit 1\n", { mode: 0o755 });
 
-    assert.notEqual(pickNodeExecutable(() => badNode, workspaceRoot, [packageRoot]), badNode);
+    assert.ok(fs.existsSync(path.join(repoRoot, "node_modules", "better-sqlite3")), "repo must have better-sqlite3 for native probe");
+    assert.notEqual(pickNodeExecutable(() => badNode, repoRoot, [workspaceKitPackage]), badNode);
   } finally {
     if (oldHome === undefined) delete process.env.HOME;
     else process.env.HOME = oldHome;
