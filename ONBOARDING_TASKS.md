@@ -971,18 +971,188 @@ pnpm run parity
 - All relevant checks pass.
 - Any skipped check has explicit rationale and follow-up task.
 
+## Phase 12 — Coverage Additions from Plan Audit
+
+This section closes gaps found by comparing this task list back against `ONBOARDING_PLAN.md`. These tasks are part of the plan, not optional polish.
+
+### T046 — Implement setup mode classification
+
+**Goal:** Explicitly support the setup modes from the plan.
+
+**Modes:**
+
+| Mode | Trigger | Behavior |
+| --- | --- | --- |
+| First run | No `.workspace-kit` | Attach, configure, choose first work. |
+| Resume setup | Partial setup state | Continue from the last safe checkpoint. |
+| Rerun | Already configured | Show current settings as defaults and offer repair, preferences, or first-work options. |
+| Repair | Broken or stale state | Preview repair actions and require confirmation. |
+| Advanced | User asks | Expose raw init, doctor, profile, behavior interview, refresh-context, and policy/config options. |
+
+**Implementation details:**
+
+- Add a `setupMode` field to setup JSON status.
+- Derive mode from existing repo state rather than chat/session memory whenever possible.
+- If a lightweight `.workspace-kit/setup-state.json` is introduced, use it only for resumability and never as the sole source of truth.
+
+**Acceptance criteria:**
+
+- `wk setup --json` reports one clear mode.
+- Partial attach and stale/generated drift do not appear as generic failure only; they point to repair/resume.
+- Already configured repos show rerun mode with current settings as defaults.
+
+### T047 — Implement interactive CLI wizard path
+
+**Goal:** Ensure `wk setup` is not just a static report; it can guide a user through setup in as few steps as practical.
+
+**Implementation details:**
+
+- Add an interactive path for TTY use.
+- Keep `--json`, `--dry-run`, and explicit `--action` paths non-interactive for automation.
+- Interactive flow should show wizard cards, current status, and recommended next action.
+- It should ask before every mutating action.
+- It should default to Keep / Continue / Preview Repair on rerun.
+
+**Acceptance criteria:**
+
+- First-run `wk setup` in a TTY can walk through Core Setup, Collaboration Style, Project Intelligence, and First Quests.
+- Non-TTY `wk setup` does not hang waiting for input.
+- Existing current values are presented as defaults.
+
+### T048 — Define the status icon/color contract for CLI and dashboard
+
+**Goal:** Make progress/status rendering consistent across CLI and dashboard.
+
+**Implementation details:**
+
+- Encode semantic status values in JSON, not raw emoji/color names only.
+- Recommended semantic fields:
+  - `iconKind`: `complete | warning | error | optional | inProgress | approval | experimental`
+  - `colorKind`: `green | yellow | red | gray | blue | purple | amber`
+  - `severity`: existing setup severity
+- CLI may render emoji/text.
+- Dashboard may render icons/colors.
+
+**Acceptance criteria:**
+
+- CLI and dashboard represent the same status state consistently.
+- Optional Advanced Controls render as optional/gray, not warning/error.
+- Approval-gated actions can render with an approval/security marker.
+
+### T049 — Define tavern tone copy boundaries
+
+**Goal:** Preserve the soft tavern style without obscuring technical truth.
+
+**Implementation details:**
+
+- Add a short copy guide to setup docs or code comments.
+- Warm/tavern language is allowed for section openings, summaries, and completion messages.
+- Plain technical language is required for:
+  - file writes
+  - task-store mutations
+  - policy approval
+  - repair/force actions
+  - backup/overwrite behavior
+  - reset/destructive actions
+
+**Acceptance criteria:**
+
+- Setup copy includes friendly tavern language.
+- Mutating action previews list concrete paths/actions.
+- No risky action is described only through metaphor.
+
+### T050 — Support dashboard setup before workspace attachment
+
+**Goal:** Avoid a dead end when a user opens the extension before `.workspace-kit/manifest.json` exists.
+
+**Implementation details:**
+
+- Current extension root detection is centered on an attached Workflow Cannon root. Add a pre-attach path that can still show setup guidance.
+- Detect a normal workspace folder even when `.workspace-kit` is absent.
+- Offer the setup command to run in terminal or a safe preview where possible.
+- If the package/runtime is unavailable, show the install command first.
+
+**Acceptance criteria:**
+
+- Dashboard/command palette can guide an unattached project to `pnpm add -D @workflow-cannon/workspace-kit` and `pnpm exec wk setup`.
+- User does not only see “Workflow Cannon workspace not detected” with no next step.
+
+### T051 — Add package availability/install guidance to Core Setup
+
+**Goal:** Account for the plan’s “package installed” Core Setup item.
+
+**Implementation details:**
+
+- In CLI execution, package availability is implied because `wk setup` is running.
+- In dashboard/pre-attach context, package availability may be unknown or missing.
+- Core Setup should distinguish:
+  - CLI available and running
+  - package dependency declared in project
+  - package absent but installable
+
+**Acceptance criteria:**
+
+- Core Setup status includes package availability without false errors when invoked through `npx`/temporary package execution.
+- Dashboard can recommend package install before attach when needed.
+
+### T052 — Add completion/final readiness summary
+
+**Goal:** Implement the final “The tavern is open” summary from the plan.
+
+**Implementation details:**
+
+- After successful setup actions, show a final summary containing:
+  - repo attached / not attached
+  - runtime status
+  - agent style
+  - task store status
+  - first work selection or skipped state
+  - recommended next action
+- Machine JSON should expose the same fields.
+
+**Acceptance criteria:**
+
+- First-run completion produces a clear next action.
+- Rerun completion summarizes retained settings.
+- The summary can be rendered in dashboard and CLI.
+
+## Coverage Matrix
+
+| Plan area | Covered by tasks |
+| --- | --- |
+| One primary `wk setup` entrypoint | T004–T008, T043 |
+| Equivalent dashboard setup entrypoint | T030–T034, T050 |
+| Single setup dashboard with wizard cards | T001–T003, T030 |
+| Core Setup required wizard | T009–T011 |
+| Collaboration Style wizard | T012–T015 |
+| Project Intelligence wizard | T016–T019 |
+| First Quests wizard | T020–T026 |
+| Advanced Controls wizard | T027–T029 |
+| Status/progress model | T001–T002, T048 |
+| First-run flow | T047, T052 |
+| Setup modes | T046 |
+| Safe rerun behavior | T040–T041, T046–T047 |
+| Preview-before-write rule | T003, T006–T008, T032, T040 |
+| Kit-owned backup/repair rule | T008, T040 |
+| No duplicate first tasks | T010, T020–T026, T040–T041 |
+| Tavern tone with technical clarity | T049 |
+| Current capabilities as internal building blocks | T008, T012–T018, T025, T035–T038 |
+| Compatibility with existing `init`, `/onboarding`, `/behavior-interview` | T014–T015, T044 |
+
 ## Suggested Implementation Order
 
 1. T001–T003: setup status model and actions.
 2. T004–T008: top-level `wk setup` read-only status and attach/repair plumbing.
-3. T009–T011: Core Setup detection and tests.
-4. T012–T015: Collaboration Style preset layer and docs alignment.
-5. T016–T019: Project Intelligence read-only scan and context refresh.
-6. T020–T026: First Quests previews and task/wishlist creation.
-7. T027–T029: Advanced Controls status and links.
-8. T030–T034: dashboard setup UI and chat prompt helpers.
-9. T035–T039: documentation alignment.
-10. T040–T045: safety, idempotency, compatibility, validation.
+3. T046, T048, T052: mode classification, status rendering contract, final summary.
+4. T009–T011: Core Setup detection and tests.
+5. T047: interactive CLI wizard path.
+6. T012–T015: Collaboration Style preset layer and docs alignment.
+7. T016–T019: Project Intelligence read-only scan and context refresh.
+8. T020–T026: First Quests previews and task/wishlist creation.
+9. T027–T029: Advanced Controls status and links.
+10. T030–T034, T050–T051: dashboard setup UI, pre-attach behavior, and chat prompt helpers.
+11. T035–T039, T049: documentation alignment and copy boundaries.
+12. T040–T045: safety, idempotency, compatibility, validation.
 
 ## Suggested Initial Task Engine Backlog
 
@@ -990,13 +1160,14 @@ If converting this plan into task-engine rows, start with these task slices:
 
 1. `T###` — Add read-only `wk setup --json` status model for Core Setup.
 2. `T###` — Add human `wk setup` overview and CLI help entry.
-3. `T###` — Add Core Setup attach/repair action plumbing through existing init command.
-4. `T###` — Add Collaboration Style preset model and setup status.
-5. `T###` — Add Project Intelligence scan command.
-6. `T###` — Add First Quests metadata and project-docs quest preview.
-7. `T###` — Add dashboard setup cards consuming setup JSON.
-8. `T###` — Align README, AGENTS, playbooks, and maintainer docs.
-9. `T###` — Add idempotency/policy regression tests for setup reruns.
+3. `T###` — Add setup mode classification and final readiness summary.
+4. `T###` — Add Core Setup attach/repair action plumbing through existing init command.
+5. `T###` — Add Collaboration Style preset model and setup status.
+6. `T###` — Add Project Intelligence scan command.
+7. `T###` — Add First Quests metadata and project-docs quest preview.
+8. `T###` — Add dashboard setup cards consuming setup JSON, including pre-attach guidance.
+9. `T###` — Align README, AGENTS, playbooks, maintainer docs, and tavern copy boundaries.
+10. `T###` — Add idempotency/policy regression tests for setup reruns.
 
 ## Non-Goals for First Implementation
 
