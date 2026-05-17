@@ -8,6 +8,23 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.91.1] - 2026-05-16
+
+Post-**0.91.0** patch: lands the deferred **`release/phase-95` → `main`** integration (dashboard/planning slices, conflict reconciliation) plus follow-up CI and extension test fixes shipped after the **0.91.0** npm cut.
+
+### Added
+
+- (Integration) Phase 95 dashboard and task-engine behavior that had remained on the phase integration branch until merged to **`main`**.
+
+### Changed
+
+- CI: extend **`.ai` → `docs` coverage** ledger for newly referenced machine sources.
+- Extension tests: **`pickNodeExecutable`** coverage uses a real repo root probe for native **`better-sqlite3`** resolution.
+
+### Notes
+
+- Consumers already on **0.91.0** who only need Phase 96 doc/runtime work may stay; this patch is for parity with **`main`** after the phase-95 merge and associated hardening.
+
 ## [0.91.0] - 2026-05-16
 
 Phase 96 — **Documentation organization, governance gates, and Node 23-friendly runtime contract**. Ships maintainer doc inventory/lifecycle work, CI gates for documentation ledger + deletion evidence, `.ai` → `docs` governance repair runbook, and relaxes stamped-runtime Node checks so **Node 22+** (including **23**) passes `doctor` when `engines` allows it.
