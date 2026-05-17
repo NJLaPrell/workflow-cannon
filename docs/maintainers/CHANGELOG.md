@@ -31,6 +31,7 @@ Phase 96 — **Documentation organization, governance gates, and Node 23-friendl
 
 - **Migration:** if you relied on `engines` rejecting Node 23, update local Node or tooling to match **`>=22 <24`**. CI default remains Node **22** (`.nvmrc`).
 
+
 ## [0.90.0] - 2026-05-14
 
 Phase 95 — **Dashboard Phase Roster polish, phase deliverables editing groundwork, and native SQLite guardrails**. Ships the dashboard/status Phase Roster label cleanup, deliverables mutation plumbing, stricter single-task start ownership, and fail-fast native SQLite architecture checks for arm64 macOS reliability.

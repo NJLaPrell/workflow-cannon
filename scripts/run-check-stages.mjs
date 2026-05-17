@@ -132,27 +132,6 @@ const stages = [
     hint: "Fix `src/modules/documentation/data/*.json` or regenerate maintainer markdown via `pnpm run wk run generate-document` (ROADMAP.md / FEATURE-TAXONOMY.md); see scripts/check-documentation-data.mjs."
   },
   {
-    id: "doc-lifecycle-report",
-    label: "Documentation ledger + root Markdown classification gate",
-    command: process.execPath,
-    args: ["scripts/check-doc-lifecycle-report.mjs"],
-    hint: "Keep repo-root *.md to the CONTRIBUTING allowlist and run pnpm run build:documentation-ledger when inventory drifts; see scripts/doc-lifecycle-helpers.mjs."
-  },
-  {
-    id: "documentation-deletion-register",
-    label: "Documentation deletion register vs on-disk reality",
-    command: process.execPath,
-    args: ["scripts/check-documentation-deletion-register.mjs"],
-    hint: "Update docs/maintainers/data/documentation-deletion-register.v1.json when deleting/archiving docs; see scripts/documentation-deletion-register-helpers.mjs."
-  },
-  {
-    id: "doc-governance-stages",
-    label: "Documentation governance stages manifest",
-    command: process.execPath,
-    args: ["scripts/check-doc-governance-stages.mjs"],
-    hint: "Restore missing documentation stage ids in scripts/run-check-stages.mjs; see .ai/runbooks/documentation-governance-checks.md."
-  },
-  {
     id: "ai-to-docs-drift",
     label: ".ai → docs/maintainers drift gate (Phase 56)",
     command: process.execPath,

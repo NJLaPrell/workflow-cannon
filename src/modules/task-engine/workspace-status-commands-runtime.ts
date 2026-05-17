@@ -22,11 +22,6 @@ import {
   WORKSPACE_STATUS_DB_EXPORT_RELATIVE,
   type WorkspaceStatusUpdatePatch
 } from "./persistence/workspace-status-store.js";
-import {
-  phaseCatalogTableAvailable,
-  readPhaseCatalogRows,
-  upsertPhaseCatalogRow
-} from "./persistence/phase-catalog-store.js";
 
 const PHASE_TEXT_MAX = 120;
 type SqliteDb = InstanceType<typeof DatabaseCtor>;
@@ -701,18 +696,6 @@ export async function runSetCurrentPhase(
       return { ok: false, code: "storage-read-error", message: "set-current-phase updated but could not re-read workspace status" };
     }
     const writtenExport = writeWorkspaceStatusDbExport(ctx, formatWorkspaceStatusDbExportYaml(after));
-    // Auto-stub a kit_phase_catalog row for the new currentKitPhase if none exists.
-    // This makes the phase visible in dashboard pickers as a real catalog entry
-    // (with no description yet) instead of a phantom phase key. Never overwrites
-    // an existing description.
-    if (!replayed && phaseCatalogTableAvailable(db)) {
-      const existing = readPhaseCatalogRows(db).find(
-        (r) => r.phaseKey === requiredPhase.phaseKey
-      );
-      if (!existing) {
-        upsertPhaseCatalogRow(db, requiredPhase.phaseKey, null, new Date().toISOString());
-      }
-    }
     const canonicalVerified = resolveCanonicalPhase({
       effectiveConfig: { ...(ctx.effectiveConfig ?? {}), kit: configAfter.kit },
       workspaceStatus: kitWorkspaceStatusPublicToSnapshot(after)

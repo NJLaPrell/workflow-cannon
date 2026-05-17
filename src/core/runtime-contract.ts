@@ -7,7 +7,6 @@ import * as path from "node:path";
 export const WORKSPACE_KIT_RUNTIME_STAMP_RELATIVE_PATH = ".workspace-kit/runtime.json";
 export const WORKSPACE_KIT_RUNTIME_LAUNCHER_RELATIVE_PATH = ".workspace-kit/bin/wk";
 export const WORKSPACE_KIT_RUNTIME_CONTRACT_SCHEMA_VERSION = 1;
-/** Minimum supported Node.js major for stamped runtime verification (Node 22+). */
 export const WORKSPACE_KIT_REQUIRED_NODE_MAJOR = 22;
 
 export type WorkspaceKitRuntimeStampV1 = {
@@ -244,11 +243,11 @@ export function verifyRuntimeStamp(
     issues.push({ code: "runtime-node-missing", message: "Stamped Node executable does not exist", actual: stamp.nodeExecutable });
   }
   const actualMajor = nodeMajor(stamp.nodeVersion);
-  if (actualMajor === null || actualMajor < requiredNodeMajor) {
+  if (actualMajor !== requiredNodeMajor) {
     issues.push({
       code: "runtime-node-wrong-major",
-      message: `Workflow Cannon requires Node.js ${requiredNodeMajor}+ (stamped ${stamp.nodeVersion})`,
-      expected: `>=${requiredNodeMajor}`,
+      message: `Workflow Cannon requires Node ${requiredNodeMajor}`,
+      expected: requiredNodeMajor,
       actual: actualMajor
     });
   }

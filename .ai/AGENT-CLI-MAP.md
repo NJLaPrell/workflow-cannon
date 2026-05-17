@@ -12,8 +12,6 @@ Machine-oriented **how to run** workspace-kit in this repo: policy, cold start, 
 
 **Command path:** In an **attached project**, use **`./.workspace-kit/bin/wk`** as the canonical Workflow Cannon command after `init`; it delegates through the stamped Node runtime in **`.workspace-kit/runtime.json`** and does not require `nvm use` before routine commands. In the **Workflow Cannon source checkout**, `pnpm exec wk` (or `node dist/cli.js` from a built tree) remains appropriate for package development.
 
-**Runtime stamp in this repo:** `.workspace-kit/runtime.json` is **gitignored**. Postinstall refreshes it when native SQLite loads; **`pnpm run setup:dev`** is the strict one-shot bootstrap (Node 22, build, stamp). After pulls, **`pnpm run build`** before trusting `wk init` to rewrite kit artifacts from a stale `dist/`.
-
 For a **net-new consumer project**, attach Workflow Cannon first: install `@workflow-cannon/workspace-kit`, run **`pnpm exec wk init --dry-run --json`** to preview owned paths, then run **`pnpm exec wk init`** with `WORKSPACE_KIT_POLICY_APPROVAL`; after that, use **`./.workspace-kit/bin/wk start`**. The bootstrap below is for this source checkout or an already-attached workspace.
 
 1. **`./.workspace-kit/bin/wk run agent-bootstrap '{}'`** — doctor-equivalent checks + session snapshot (read-only). Optional lean digest for the instruction catalog: **`'{"projection":"lean"}'`** (compare `data.instructionSurface.instructionSurfaceDigest` to skip reloading full `commands[]` from `doctor --agent-instruction-surface`).

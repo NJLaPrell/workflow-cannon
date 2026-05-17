@@ -19,7 +19,6 @@ ref|id=module_guide|target=.ai/module-build.md|type=file|status=active
 ref|id=playbook_task_to_phase_branch|target=.ai/MACHINE-PLAYBOOKS.md|type=file|status=active
 ref|id=playbook_improvement_task_discovery|target=.ai/MACHINE-PLAYBOOKS.md|type=file|status=active
 ref|id=playbook_improvement_triage_top_three|target=.ai/MACHINE-PLAYBOOKS.md|type=file|status=active
-ref|id=ai_subtree_hub|target=.ai/HUB.md|type=file|status=active
 truth|order=ai_principles>ai_module_build>roadmap>tasks_engine_state>tasks_json_optout>tasks_view>agent_cli_map>policy_approval>releasing>terms>terms_index>module_guide
 
 rule|id=A001|level=must|scope=agent|directive=use_high_autonomy_when_task_intent_is_clear|risk=low|approval=none|override=auto|status=active|refs=.ai/PRINCIPLES.md|why=rationale_for_A001

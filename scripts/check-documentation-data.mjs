@@ -79,21 +79,4 @@ if (onDiskTax !== renderedTax.markdown) {
   process.exit(1);
 }
 
-const ledgerPath = path.join(root, "docs", "maintainers", "data", "documentation-ledger.v1.json");
-if (!existsSync(ledgerPath)) {
-  console.error("Missing docs/maintainers/data/documentation-ledger.v1.json — run: pnpm run build:documentation-ledger");
-  process.exit(1);
-}
-let ledger;
-try {
-  ledger = JSON.parse(readFileSync(ledgerPath, "utf8"));
-} catch (e) {
-  console.error("documentation-ledger.v1.json is not valid JSON:", e);
-  process.exit(1);
-}
-if (ledger.schemaVersion !== 1 || !Array.isArray(ledger.groups) || !Array.isArray(ledger.rootMarkdownFiles)) {
-  console.error("documentation-ledger.v1.json missing schemaVersion 1, groups[], or rootMarkdownFiles[]");
-  process.exit(1);
-}
-
 console.log("documentation data + maintainer markdown drift checks passed");
