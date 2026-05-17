@@ -62,15 +62,6 @@ test("runtime contract: reports missing and malformed stamps", async () => {
   assert.equal(parsed.issues.some((issue) => issue.message.includes("nodeVersion")), true);
 });
 
-test("runtime contract: Node 23 stamp verifies when minimum major is 22", async () => {
-  const { verifyRuntimeStamp } = await import("../dist/core/runtime-contract.js");
-
-  const stamp = validStamp({ nodeVersion: "v23.11.0" });
-  const verified = verifyRuntimeStamp(stamp, { currentIdentity: stamp });
-  assert.equal(verified.ok, true);
-  assert.deepEqual(verified.issues, []);
-});
-
 test("runtime contract: detects wrong major, architecture, ABI, and missing node", async () => {
   const { verifyRuntimeStamp } = await import("../dist/core/runtime-contract.js");
 

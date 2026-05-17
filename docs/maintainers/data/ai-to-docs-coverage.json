@@ -79,12 +79,12 @@
       "output": "docs/maintainers/runbooks/cae-debug.md"
     },
     {
-      "source": ".ai/runbooks/cae-enforcement-readiness.md",
-      "output": "docs/maintainers/runbooks/cae-enforcement-readiness.md"
-    },
-    {
       "source": ".ai/runbooks/cae-guidance-authoring-recovery.md",
       "output": "docs/maintainers/runbooks/cae-guidance-authoring-recovery.md"
+    },
+    {
+      "source": ".ai/runbooks/cae-enforcement-readiness.md",
+      "output": "docs/maintainers/runbooks/cae-enforcement-readiness.md"
     },
     {
       "source": ".ai/runbooks/consumer-cadence.md",
@@ -99,10 +99,6 @@
       "output": "docs/maintainers/runbooks/cursor-transcript-automation.md"
     },
     {
-      "source": ".ai/runbooks/documentation-governance-checks.md",
-      "output": "docs/maintainers/runbooks/documentation-governance-checks.md"
-    },
-    {
       "source": ".ai/runbooks/first-run-validation.md",
       "output": "docs/maintainers/runbooks/first-run-validation.md"
     },
@@ -111,16 +107,16 @@
       "output": "docs/maintainers/runbooks/github-workflow-cannon-invocation.md"
     },
     {
+      "source": ".ai/runbooks/install-attach-workflow-cannon.md",
+      "output": "docs/maintainers/runbooks/install-attach-workflow-cannon.md"
+    },
+    {
       "source": ".ai/runbooks/ide-kit-status-protocol.md",
       "output": "docs/maintainers/runbooks/ide-kit-status-protocol.md"
     },
     {
       "source": ".ai/runbooks/improvement-lifecycle-churn-notes.md",
       "output": "docs/maintainers/runbooks/improvement-lifecycle-churn-notes.md"
-    },
-    {
-      "source": ".ai/runbooks/install-attach-workflow-cannon.md",
-      "output": "docs/maintainers/runbooks/install-attach-workflow-cannon.md"
     },
     {
       "source": ".ai/runbooks/json-to-sqlite-one-shot-upgrade.md",
@@ -193,10 +189,6 @@
     {
       "source": ".ai/runbooks/workspace-status-sqlite.md",
       "output": "docs/maintainers/runbooks/workspace-status-sqlite.md"
-    },
-    {
-      "source": ".ai/workbooks/README.md",
-      "output": "docs/maintainers/workbooks/README.md"
     },
     {
       "source": ".ai/workbooks/phase2-config-policy-workbook.md",

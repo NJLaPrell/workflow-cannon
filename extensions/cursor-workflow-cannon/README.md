@@ -40,11 +40,12 @@ Open the **Workflow Cannon** activity bar for **Dashboard** (webview), **Config*
 
 ### Sidebar Dashboard vs palette **Open Status Dashboard**
 
-These are fed by **`pnpm exec wk run dashboard-summary '{}'`**:
+These are **two different surfaces**, both fed by **`pnpm exec wk run dashboard-summary '{}'`**:
 
 | Surface | How you open it | What it is |
 |--------|-------------------|------------|
-| **Sidebar Dashboard** | Activity bar → **Workflow Cannon** → **Dashboard** | Multi-tab webview: **Overview** (rollups + **Up next**), **Queue** (filters, queue, wishlist, planning), **Status** (identity / counts cards plus the full system-status panel — phase/drift, **`systemStatus`** doctor contract, modules, CAE lines), **Config** / **CAE** shortcuts. |
+| **Sidebar Dashboard** | Activity bar → **Workflow Cannon** → **Dashboard** | Multi-tab webview: **Overview** (rollups + **Up next**), **Queue** (filters, queue, wishlist, planning), **Status** (compact identity / counts cards), **Config** / **CAE** shortcuts. |
+| **Status dashboard panel** | Command palette → **Workflow Cannon: Open Status Dashboard** | **Editor-area** `WebviewPanel` tuned for **phase/drift**, **`systemStatus`** (doctor contract, modules, CAE lines). **`StateWatcher`** debounces refresh (**`STATUS_PANEL_DEBOUNCE_MS`** in `StatusDashboardPanel.ts`, default **450ms**) while the tab stays open; **Refresh now** is immediate. |
 
 Requires **`dashboard-summary`** **`data.schemaVersion` ≥ 5** (**`systemStatus`**). Schema **v6** adds **`systemStatus.identity`** and **`systemStatus.planningStore`**. The merged envelope may include **`data.cae`** for CAE shadow preflight — separate from **`caeLines`** inside **`systemStatus`**.
 
@@ -58,9 +59,7 @@ The extension runs its bundled `@workflow-cannon/workspace-kit` CLI when availab
 
 **Copy-ready mutating JSON (operators):** From a terminal at the repo root, `pnpm exec wk run run-transition --schema-only` (and other pilot commands) prints **`sampleArgs`** you can paste and edit before running a real `wk run run-transition '<json>'`. Dashboard/Task transitions already inject **`expectedPlanningGeneration`** when policy is **`require`**; use the CLI helper when debugging shape errors. See **`docs/maintainers/plans/phase-52-human-cli-affordances.md`**.
 
-**Role, phase, and deliver:** The dashboard shows **Current phase** / **Next phase** directly below the WC Agent status banner, with **Role** / **Agent temperament** / **Presentation** and editor/chat prefill status in the Status tab (from **`dashboard-summary`** plus editor integration state). **Deliver** is enabled when the current phase bucket has at least one **`ready`** execution task; hover shows the count. Refresh runs **`dashboard-summary`** only.
-
-**Dashboard copy convention:** Card headings use short Title Case (target: 32 characters or fewer). Muted hints use sentence case and stay under 120 characters; split longer operational guidance across short lines. Button labels use direct verbs or familiar nouns.
+**Role, phase, and deliver:** The dashboard shows **Role** / **Agent temperament** and **Current phase** / **Next phase** in one card (from **`dashboard-summary`**). **Deliver** is enabled when the current phase bucket has at least one **`ready`** execution task; hover shows the count. Refresh runs **`dashboard-summary`** only.
 
 **Team execution & subagent cards (CLI parity):** Both rollups ship inside packaged **`dashboard-summary`** JSON. When the kit task SQLite file is available to the CLI (**`sqliteDual`** in the kit) and **`PRAGMA user_version` ≥ 7**, **`teamExecution`** is built by **`summarizeTeamAssignmentsForDashboard`** over **`kit_team_assignments`** — the same rows as **`pnpm exec wk run list-assignments '{}'`** (counts and **`topActive`** are a bounded slice / aggregate of that table). When **`user_version` ≥ 6**, **`subagentRegistry`** is built by **`summarizeSubagentsForDashboard`** over **`kit_subagent_definitions`** / **`kit_subagent_sessions`**, matching the subagent list surfaces documented in **`.ai/AGENT-CLI-MAP.md`** (team/subagent inspect). If the DB is missing or the schema is below those thresholds, both objects return **`available: false`** with zeroed counts; the dashboard should show empty cards, not stale fabrications. Mutations remain terminal **`pnpm exec wk run …`** with JSON **`policyApproval`** where required. See **`docs/maintainers/runbooks/subagent-registry.md`** for subagent depth.
 

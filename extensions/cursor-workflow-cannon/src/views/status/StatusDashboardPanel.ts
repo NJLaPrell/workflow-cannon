@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import type { CommandClient } from "../../runtime/command-client.js";
-import { renderStatusTabInnerHtml, STATUS_PANEL_EMBED_CSS } from "./render-status-tab.js";
+import { renderStatusTabInnerHtml } from "./render-status-tab.js";
 
 /** Debounce kit-file churn so we do not spawn overlapping `wk run dashboard-summary` calls. */
 export const STATUS_PANEL_DEBOUNCE_MS = 450;
@@ -151,6 +151,7 @@ export class StatusDashboardPanel {
       padding-bottom: 12px;
       border-bottom: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
     }
+    .wc-title { margin: 0; font-size: 15px; font-weight: 600; }
     #wc-refresh {
       padding: 6px 14px;
       font-size: 12px;
@@ -161,9 +162,28 @@ export class StatusDashboardPanel {
       border-radius: 6px;
     }
     #wc-refresh:hover { background: var(--vscode-button-hoverBackground); }
+    .wc-status-head { margin-bottom: 12px; }
+    .wc-status-head .wc-title { font-size: 18px; }
+    .wc-sub { margin: 4px 0 0; opacity: 0.8; font-size: 12px; }
+    .wc-card {
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      background: var(--vscode-sideBar-background);
+    }
+    .wc-card-title { margin: 0 0 10px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.85; }
+    .wc-kv { display: flex; gap: 12px; justify-content: space-between; align-items: baseline; margin: 6px 0; flex-wrap: wrap; }
+    .wc-kv-label { opacity: 0.85; flex: 1; min-width: 120px; }
+    .wc-kv-val { font-weight: 500; text-align: right; word-break: break-word; max-width: 65%; }
+    .wc-muted { opacity: 0.75; }
+    .wc-hint { font-size: 11px; opacity: 0.75; margin: 8px 0 0; }
+    .wc-ok { color: var(--vscode-testing-iconPassed); }
+    .wc-bad { color: var(--vscode-errorForeground); }
+    .wc-phase-badge { margin: 0 0 8px; font-weight: 600; }
+    .wc-status-error { color: var(--vscode-errorForeground); }
     code { font-family: var(--vscode-editor-font-family); font-size: 11px; }
     ul { margin: 6px 0; padding-left: 18px; }
-    ${STATUS_PANEL_EMBED_CSS}
   </style>
 </head>
 <body>

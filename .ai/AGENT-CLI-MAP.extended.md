@@ -16,7 +16,7 @@ Single maintainer reference for **what agents must run in a terminal** when work
 
 If a session might touch `.workspace-kit/` state, lifecycle transitions, policy traces, approvals, or generated maintainer docs, run this first:
 
-Use **`./.workspace-kit/bin/wk`** in attached projects; it reads the stamped runtime from **`.workspace-kit/runtime.json`**. Use `pnpm exec wk` / `node dist/cli.js` for Workflow Cannon source checkout development. In the **workflow-cannon** source repository, that stamp file is **gitignored**; `pnpm install` (postinstall) and/or **`pnpm run setup:dev`** materialize it — see **`.ai/WORKSPACE-KIT-SESSION.md`**.
+Use **`./.workspace-kit/bin/wk`** in attached projects; it reads the stamped runtime from **`.workspace-kit/runtime.json`**. Use `pnpm exec wk` / `node dist/cli.js` for Workflow Cannon source checkout development.
 
 1. **One-shot (preferred):** `./.workspace-kit/bin/wk run agent-bootstrap '{}'` — same contract checks as `doctor` **plus** `agent-session-snapshot` fields in one JSON response (read-only).
 2. **Split:** `./.workspace-kit/bin/wk doctor` — confirms canonical task/policy contract files are present; then `./.workspace-kit/bin/wk run agent-session-snapshot '{}'` for the composed bundle.

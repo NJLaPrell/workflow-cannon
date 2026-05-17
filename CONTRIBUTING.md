@@ -2,11 +2,7 @@
 
 ## Prerequisites
 
-- **Node.js 22 or 23** and **pnpm 10** (see root `package.json` → `engines` and `packageManager`).
-
-## Repo-root Markdown (intentional)
-
-Only durable entry points stay at the repository root: **`README.md`**, **`AGENTS.md`**, **`CONTRIBUTING.md`**, **`CHANGELOG.md`**, **`PHASE_JOURNAL.md`** (phase journal operator contract + example workflow), plus **`LICENSE`** (not Markdown). Older planning notes, transcripts, and scratch files were moved under **`docs/maintainers/archive/repo-root-planning/`** (see its **README**).
+- **Node.js 22+** and **pnpm 10** (see root `package.json` → `packageManager`).
 
 ## Clone and validate
 
@@ -16,8 +12,6 @@ pnpm run build
 pnpm run check
 pnpm test
 ```
-
-When **`pnpm run check`** fails on **documentation** stages (mirror drift, orphan `.ai` markdown, documentation ledger, deletion register, etc.), use the agent repair map **`.ai/runbooks/documentation-governance-checks.md`** (mirrored under **`docs/maintainers/runbooks/`** for maintainers) instead of guessing which generator to run.
 
 Phase journal behavior from `PHASE_JOURNAL.md` (Example workflow) is regression-tested as **`PHASE_JOURNAL example workflow — golden integration (T100040)`** in `test/task-engine.test.mjs` (same `pnpm test` run).
 

@@ -87,6 +87,10 @@
         "title": "Workflow Cannon: Phase Notes Chat Guide"
       },
       {
+        "command": "workflowCannon.openStatusDashboard",
+        "title": "Workflow Cannon: Open Status Dashboard"
+      },
+      {
         "command": "workflowCannon.lease.pickAction",
         "title": "Workflow Cannon: Lease Actions"
       },

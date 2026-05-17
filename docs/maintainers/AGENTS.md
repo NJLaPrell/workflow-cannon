@@ -28,14 +28,6 @@ Use this stack when **editing** maintainer documentation or reconciling narrativ
 - **T0** — This file through **CLI-first execution** (below): pick the next maintainer doc without unsafe shortcuts.
 - **T1** — Playbooks, runbooks, **ARCHITECTURE**, **AGENT-CLI-MAP**, **CLI-VISUAL-GUIDE**, module guides, and **`.ai/`** machine contracts.
 
-## Documentation lifecycle taxonomy
-
-Classify, place, and retire documentation using **[`DOCUMENTATION-LIFECYCLE.md`](./DOCUMENTATION-LIFECYCLE.md)** (machine inventory: [`data/documentation-ledger.v1.json`](./data/documentation-ledger.v1.json), regenerate via **`pnpm run build:documentation-ledger`**) (states: active, generated, historical, archive candidate, delete candidate; required metadata; placement for agent-first, maintainer, generated, planning snapshots, and archives). This does not change agent source-of-truth order — it pairs with **`.cursor/rules/agent-doc-routing.mdc`**.
-
-## Maintainer library map
-
-Human-facing map of this tree (folders, generated vs hand surfaces, inventory links): **[`README.md`](./README.md#maintainer-documentation-library)**.
-
 ## Canonical, generated, and mirrored docs
 
 | Kind | Where | Notes |

@@ -8,4 +8,3 @@
 - **`.ai/POLICY-APPROVAL.md`** — approval lanes (JSON vs env) for agents.
 - **`list-approval-queue`** — read-only discovery for the improvement **`review-item`** queue and policy artifact paths; copy-paste in **`.ai/AGENT-CLI-MAP.md`** (Tier C block).
 - **`docs/maintainers/AGENT-CLI-MAP.md`** — maintainer-depth companion (humans editing the repo).
-- **`docs/maintainers/DOCUMENTATION-LIFECYCLE.md`** — taxonomy and metadata for active, generated, historical, archive, and delete-candidate docs (maintainers; see **`.cursor/rules/agent-doc-routing.mdc`** before bulk `docs/` reads).

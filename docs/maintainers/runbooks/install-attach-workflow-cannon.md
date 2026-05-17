@@ -31,8 +31,6 @@ The default task store is SQLite at `.workspace-kit/tasks/workspace-kit.db`. Ini
 
 Workflow Cannon runtime execution is governed by `.ai/adrs/ADR-workflow-cannon-runtime-contract-v1.md`. Attached workspaces use a kit-owned Node 22 runtime stamp at `.workspace-kit/runtime.json` and a canonical launcher at `.workspace-kit/bin/wk`.
 
-In the **workflow-cannon** source repository, `.workspace-kit/runtime.json` is **gitignored**; it is created or refreshed by **`pnpm install`** postinstall (when native SQLite loads) and/or **`pnpm run setup:dev`** — see **`.ai/WORKSPACE-KIT-SESSION.md`**.
-
 After attach, routine Workflow Cannon commands should use the stamped runtime/launcher. They should not depend on shell `PATH`, editor/Electron Node, or attached project `.nvmrc` / `.node-version` files.
 
 After attach, these commands should work:
