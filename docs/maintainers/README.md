@@ -47,6 +47,21 @@
 
 The npm package is **not** named “Workflow Cannon”; use the table above when searching docs, issues, or registry metadata.
 
+## Maintainer documentation library
+
+This **`docs/maintainers/`** tree is the **human-first** maintainer library (agents: see **`.cursor/rules/agent-doc-routing.mdc`** and **`.ai/`** for routine bootstrap).
+
+- **Agent subtree map (machine):** [`../.ai/HUB.md`](../.ai/HUB.md) — symptom-based `.ai/` navigation; use instead of bulk `docs/` reads for routine execution.
+- **Start here for navigation:** [`AGENTS.md`](./AGENTS.md) — maintainer index, playbooks, deep CLI tables, glossary links.
+- **Folders:** [`adrs/`](./adrs/) · [`archive/`](./archive/) (includes relocated repo-root planning under **`archive/repo-root-planning/`**) · [`data/`](./data/) (JSON/YAML snapshots + manifests) · [`plans/`](./plans/) · [`playbooks/`](./playbooks/) · [`runbooks/`](./runbooks/) · [`workbooks/`](./workbooks/).
+- **Generated vs hand-maintained:** paths covered by the Phase 56 pipeline are generated from **`.ai/`** — edit sources, then run **`pnpm run generate-maintainer-docs-from-ai`** (see [`adrs/ADR-ai-canonical-maintainer-docs-pipeline.md`](./adrs/ADR-ai-canonical-maintainer-docs-pipeline.md)). [`ROADMAP.md`](./ROADMAP.md) and [`FEATURE-TAXONOMY.md`](./FEATURE-TAXONOMY.md) track the documentation module renderer; regenerate with **`pnpm exec wk run generate-document`** when inputs change.
+- **Repository-wide Markdown inventory:** [`data/documentation-ledger.v1.json`](./data/documentation-ledger.v1.json) (regenerate: **`pnpm run build:documentation-ledger`**).
+- **Lifecycle policy:** [`DOCUMENTATION-LIFECYCLE.md`](./DOCUMENTATION-LIFECYCLE.md).
+
+Top-level Markdown files here are mostly **front-door** references (strategy, CLI mirrors, governance companions). Prefer adding new maintainer prose under a subfolder when it is not a global index.
+
+---
+
 ## Quick start
 
 Install Workflow Cannon in a real project, then **attach it with `init` before `doctor`** so validation runs against baselines, generated context, and SQLite task persistence.
@@ -54,8 +69,8 @@ Install Workflow Cannon in a real project, then **attach it with `init` before `
 ```bash
 npm install @workflow-cannon/workspace-kit
 npx workspace-kit init
-./.workspace-kit/bin/wk doctor
-./.workspace-kit/bin/wk start
+npx workspace-kit doctor
+npx workspace-kit start
 ```
 
 In **non-interactive** environments (CI, scripts), use `WORKSPACE_KIT_POLICY_APPROVAL='{"confirmed":true,"rationale":"..."}'` or `npx workspace-kit init --yes --approval-rationale "…"` instead of the interactive confirmation prompt.
@@ -65,17 +80,13 @@ Using pnpm instead:
 ```bash
 pnpm add @workflow-cannon/workspace-kit
 pnpm exec wk init
-./.workspace-kit/bin/wk doctor
-./.workspace-kit/bin/wk start
+pnpm exec wk doctor
+pnpm exec wk start
 ```
 
 **This repository (developing Workflow Cannon itself):** `.workspace-kit/runtime.json` is **gitignored** (machine-local Node stamp). A successful **`pnpm install`** runs postinstall and **writes or refreshes** that file when `better-sqlite3` loads. For the strict one-shot path (Node **22** per `.nvmrc`, `pnpm run build`, native SQLite smoke, stamp), run **`pnpm run setup:dev`**. After **`git pull`**, run **`pnpm run build`** before relying on `pnpm run wk init --force` to repair the stamp so **`dist/` matches `src/`**.
 
-After `init`, prefer `./.workspace-kit/bin/wk` in attached projects. It reads `.workspace-kit/runtime.json` and uses the Node runtime validated during `init`, so routine agent commands do not require a prior `nvm use`. In the Workflow Cannon source checkout, `pnpm exec wk` / `node dist/cli.js` remain development entrypoints.
-
-Compatibility aliases remain available when the package manager environment is already correct: `npx workspace-kit init`, `npx workspace-kit doctor`, `npx workspace-kit start`; or `pnpm exec wk init`, `pnpm exec wk doctor`, `pnpm exec wk start`.
-
-Use `npx workspace-kit --help` / `pnpm exec wk --help` before attach, and `./.workspace-kit/bin/wk --help` after attach, when exploring the full command surface.
+Use `npx workspace-kit --help` / `pnpm exec wk --help` when exploring the full command surface.
 
 What you get immediately:
 
@@ -92,8 +103,8 @@ What the team experience looks like:
 Try a safe first lap behind the scenes:
 
 ```bash
-./.workspace-kit/bin/wk run get-next-actions '{}'
-./.workspace-kit/bin/wk run list-tasks '{}'
+npx workspace-kit run get-next-actions '{}'
+npx workspace-kit run list-tasks '{}'
 ```
 
 ## Most important features

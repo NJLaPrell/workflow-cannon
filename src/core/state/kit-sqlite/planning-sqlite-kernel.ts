@@ -292,7 +292,7 @@ function migrateV10ToV11(db: SqliteDatabase): void {
 }
 
 /**
- * CAE registry (authoritative rows) — Phase 70 CAE SQLite migration (`CAE_PLAN.md` / T887).
+ * CAE registry (authoritative rows) — Phase 70 CAE SQLite migration (archived `docs/maintainers/archive/repo-root-planning/CAE_PLAN.md` / T887).
  * Artifact bodies stay on disk; DB holds metadata + activation rules. Activation → artifact
  * integrity is enforced in validation/application code, not SQLite FKs to artifacts.
  */

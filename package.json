@@ -1,10 +1,10 @@
 {
   "name": "@workflow-cannon/workspace-kit",
-  "version": "0.90.0",
+  "version": "0.91.0",
   "private": false,
   "packageManager": "pnpm@10.26.1",
   "engines": {
-    "node": ">=22 <23",
+    "node": ">=22 <24",
     "pnpm": ">=10 <11"
   },
   "license": "MIT",
@@ -67,6 +67,10 @@
     "lint-response-templates": "node scripts/lint-response-templates.mjs",
     "generate-kit-trust-boundary": "node scripts/generate-kit-trust-boundary.mjs",
     "generate-maintainer-docs-from-ai": "node scripts/generate-maintainer-docs-from-ai.mjs",
+    "build:documentation-ledger": "node scripts/build-documentation-ledger.mjs",
+    "check:doc-lifecycle": "node scripts/check-doc-lifecycle-report.mjs",
+    "check:documentation-deletion-register": "node scripts/check-documentation-deletion-register.mjs",
+    "check:doc-governance-stages": "node scripts/check-doc-governance-stages.mjs",
     "publish:npm": "node scripts/trigger-publish-npm-workflow.mjs"
   },
   "devDependencies": {

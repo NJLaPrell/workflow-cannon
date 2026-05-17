@@ -18,7 +18,7 @@ Machine-oriented continuity after a local **`git restore .workspace-kit/tasks/wo
 
 ## CAE_PLAN follow-on wave (`completed`, **`phaseKey` `70`**)
 
-Created in task engine with goals, **`technicalScope`**, and **`acceptanceCriteria`**; **`metadata.caePlanRef`** points at **CAE_PLAN.md** sections. These rows are now terminal implementation provenance. **`clientMutationId`**: **`cae-plan-enter-<id>-20260410`**.
+Created in task engine with goals, **`technicalScope`**, and **`acceptanceCriteria`**; **`metadata.caePlanRef`** points at **`docs/maintainers/archive/repo-root-planning/CAE_PLAN.md`** sections. These rows are now terminal implementation provenance. **`clientMutationId`**: **`cae-plan-enter-<id>-20260410`**.
 
 | Task | CAE_PLAN | Title (abbrev.) |
 | --- | --- | --- |

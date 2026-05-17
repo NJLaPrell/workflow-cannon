@@ -22,6 +22,14 @@ When guidance conflicts, apply this order:
 - **Maintainer human render** under **`docs/maintainers/`** is **derived** from those records + view models + templates — agents run `generate-document` / `document-project`; drift vs `.ai` is gated in CI (`check-ai-to-docs-drift`, `check-orphan-ai-sources`).
 - Prefer extending **structured** fields (record lines, JSON data, view `sections`) over pasting duplicate narrative into templates.
 
+## Classification inventory + mechanical staleness (T100199)
+
+- **Grouped Markdown inventory** — committed snapshot at `docs/maintainers/data/documentation-ledger.v1.json`, produced by `pnpm run build:documentation-ledger` (generator: `scripts/build-documentation-ledger.mjs`). Each group carries audience / lifecycle / canonical-source metadata; root `*.md` rows carry explicit disposition + rationale.
+- **CI gate** — `pnpm run check:doc-lifecycle` (also runs as the `doc-lifecycle-report` stage in `pnpm run check`) validates: (1) repo-root `*.md` matches the CONTRIBUTING allowlist, (2) ledger JSON shape, (3) ledger `rootMarkdownFiles` matches the actual root `*.md` set on disk (catch a stale committed ledger after root moves).
+- **Deletion / archive evidence register** — `docs/maintainers/data/documentation-deletion-register.v1.json` lists removed or archived paths with replacement, link survey notes, task/release refs, and package impact. CI runs `pnpm run check:documentation-deletion-register` (see `scripts/check-documentation-deletion-register.mjs`).
+- **Governance repair map** — stage-by-stage remediation for documentation-related `pnpm run check` failures lives in **`.ai/runbooks/documentation-governance-checks.md`** (mirrored under `docs/maintainers/runbooks/`). CI also runs `pnpm run check:doc-governance-stages` to ensure core doc gates stay wired in `scripts/run-check-stages.mjs`.
+- **Mirror pipeline vs documentation module** — `pnpm run generate-maintainer-docs-from-ai` + `check-ai-to-docs-drift` / `check-orphan-ai-sources` enforce the **`.ai` → `docs/maintainers` mirror** for covered paths. **`generate-document` / `document-project`** own **view-backed** maintainer markdown (ROADMAP, FEATURE-TAXONOMY, README bodies, etc.) from module data + templates — a different write surface; do not conflate the two when choosing where to edit sources.
+
 ## Usage Model
 
 - Choose an instruction entry from `instructions/` for the operation you want.

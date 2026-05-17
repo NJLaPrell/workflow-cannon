@@ -60,5 +60,5 @@ Operators attach Workflow Cannon to existing repos with **`pnpm add -D @workflow
 ## References
 
 - **`.ai/POLICY-APPROVAL.md`** — approval lanes.
-- **`INIT_PLAN.md`** — historical program backlog (**T001** family); the ADR and task engine are canonical for current behavior and execution state.
+- **`docs/maintainers/archive/repo-root-planning/INIT_PLAN.md`** — historical program backlog (**T001** family); the ADR and task engine are canonical for current behavior and execution state.
 - **`src/modules/task-engine/instructions/create-task.md`** — task intake when starter tasks are enabled.
