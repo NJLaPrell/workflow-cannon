@@ -8,13 +8,28 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.91.0] - 2026-05-16
+
+Phase 96 — **Documentation organization, governance gates, and Node 23-friendly runtime contract**. Ships maintainer doc inventory/lifecycle work, CI gates for documentation ledger + deletion evidence, `.ai` → `docs` governance repair runbook, and relaxes stamped-runtime Node checks so **Node 22+** (including **23**) passes `doctor` when `engines` allows it.
+
 ### Added
 
-- Documentation governance: `.ai/runbooks/documentation-governance-checks.md` (mirrored to `docs/maintainers/runbooks/`) documents stage-by-stage `pnpm run check` repairs; CI adds `doc-governance-stages` to keep core doc gates registered in `scripts/run-check-stages.mjs` (Phase 96 / T100201).
+- Documentation lifecycle taxonomy + maintainer structure normalization; repo-root Markdown allowlist; **`documentation-ledger.v1.json`** inventory; **`pnpm run check:doc-lifecycle`** / ledger drift gate (T100194–T100196, T100199).
+- **`documentation-deletion-register.v1.json`** + **`pnpm run check:documentation-deletion-register`**; removed orphan root JSON export dumps with evidence (T100200).
+- **`.ai/runbooks/documentation-governance-checks.md`** (mirrored) + **`doc-governance-stages`** CI wiring; CONTRIBUTING / lifecycle / session pointers (T100201).
+- Agent discoverability: `.ai` umbrella hub + workbook index (T100198).
+
+### Changed
+
+- Runtime contract / doctor: stamped Node major must be **>= 22** (no longer exactly **22**); `package.json` **`engines.node`** is **`>=22 <24`**; postinstall **`assertRequiredNodeMajor`** uses the same minimum rule (T100320).
 
 ### Removed
 
-- Removed stray root-level JSON export dumps (`dashboard_out.json`, `dashboard_summary.json`, `tasks.json`) that had no in-repo consumers; evidence and replacements are recorded in `docs/maintainers/data/documentation-deletion-register.v1.json` (Phase 96 / T100200).
+- Stray root-level JSON export dumps (`dashboard_out.json`, `dashboard_summary.json`, `tasks.json`) per the deletion register (T100200).
+
+### Notes
+
+- **Migration:** if you relied on `engines` rejecting Node 23, update local Node or tooling to match **`>=22 <24`**. CI default remains Node **22** (`.nvmrc`).
 
 ## [0.90.0] - 2026-05-14
 

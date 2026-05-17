@@ -28,18 +28,17 @@ test("runtime stamp script helper writes current runtime identity", async () => 
   assert.deepEqual(JSON.parse(fs.readFileSync(stampPath, "utf8")), stamp);
 });
 
-test("runtime stamp script helper enforces configured Node major", async () => {
+test("runtime stamp script helper enforces minimum Node major", async () => {
   const { assertRequiredNodeMajor } = await import("../scripts/runtime-stamp.mjs");
 
-  const activeMajor = process.versions.node.split(".", 1)[0];
-  assert.doesNotThrow(() => assertRequiredNodeMajor(activeMajor));
-  assert.throws(() => assertRequiredNodeMajor("999"), /Node 999\.x is required/);
+  assert.doesNotThrow(() => assertRequiredNodeMajor());
+  assert.throws(() => assertRequiredNodeMajor(99), /Node\.js 99\+/);
 });
 
-test("package metadata declares Node 22 and pnpm 10 engines", async () => {
+test("package metadata declares Node 22–23 and pnpm 10 engines", async () => {
   const packageJson = JSON.parse(fs.readFileSync(path.join(process.cwd(), "package.json"), "utf8"));
 
-  assert.equal(packageJson.engines.node, ">=22 <23");
+  assert.equal(packageJson.engines.node, ">=22 <24");
   assert.equal(packageJson.engines.pnpm, ">=10 <11");
   assert.equal(packageJson.files.includes("scripts/runtime-stamp.mjs"), true);
 });

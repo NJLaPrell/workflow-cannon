@@ -3,7 +3,10 @@ import path from "node:path";
 import { nodeRuntimeIdentity } from "./native-sqlite-diagnostics.mjs";
 
 export const runtimeStampRelativePath = ".workspace-kit/runtime.json";
-export const requiredNodeMajor = "22";
+/** Minimum supported Node.js major (see `src/core/runtime-contract.ts`). */
+export const minimumNodeMajor = 22;
+/** @deprecated use `minimumNodeMajor` */
+export const requiredNodeMajor = String(minimumNodeMajor);
 
 export function buildRuntimeStamp(packageRoot, checkedAt = new Date().toISOString()) {
   const identity = nodeRuntimeIdentity();
@@ -37,11 +40,12 @@ export async function smokeTestNativeSqlite() {
   database.close();
 }
 
-export function assertRequiredNodeMajor(expectedMajor = requiredNodeMajor) {
-  const activeMajor = process.versions.node.split(".", 1)[0];
-  if (activeMajor !== expectedMajor) {
+export function assertRequiredNodeMajor(minimum = minimumNodeMajor) {
+  const min = typeof minimum === "string" ? Number(minimum) : minimum;
+  const activeMajor = Number(process.versions.node.split(".", 1)[0]);
+  if (!Number.isInteger(activeMajor) || activeMajor < min) {
     throw new Error(
-      `Node ${expectedMajor}.x is required by the Workflow Cannon runtime contract; active runtime is ${process.version}. Use a matching Node architecture before installing or running setup.`
+      `Node.js ${min}+ is required by the Workflow Cannon runtime contract; active runtime is ${process.version}. Install Node ${min} or newer (matching host architecture) before installing or running setup.`
     );
   }
 }
