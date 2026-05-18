@@ -8,6 +8,24 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.92.0] - 2026-05-18
+
+Phase 97 — **Dashboard UX polish** (Cursor extension Overview/Queue surfaces).
+
+### Added
+
+- Dashboard **Phase Readiness** card: collapsed header + score badge; click to expand checks and pending decisions.
+- VSIX install helper script for local extension deployment.
+
+### Changed
+
+- **Phase Roster** table: Phase and Status columns shrink to content; Deliverables column uses remaining width.
+- Phase notes rendering, queue task action layout, and guidance authoring embed consistency improvements.
+
+### Notes
+
+- Open execution backlog from wishlist conversion (**T100321**, **T100322**) deferred to **phase 98** for closeout; no kit CLI behavior changes in this cut beyond dashboard extension UX.
+
 ## [0.91.1] - 2026-05-16
 
 Post-**0.91.0** patch: lands the deferred **`release/phase-95` → `main`** integration (dashboard/planning slices, conflict reconciliation) plus follow-up CI and extension test fixes shipped after the **0.91.0** npm cut.
