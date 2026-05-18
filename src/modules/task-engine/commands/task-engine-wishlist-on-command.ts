@@ -129,7 +129,7 @@ export function runWishlistStoreCommand(
         message: wlCreateGate.message,
         remediation: {
           instructionPath: CLI_REMEDIATION_INSTRUCTIONS.createWishlist,
-          docPath: CLI_REMEDIATION_DOCS.planningGenerationAdr
+          docPath: CLI_REMEDIATION_DOCS.planningGeneration
         }
       };
     }

@@ -45,8 +45,11 @@ Omit **`phaseNotes`** entirely for behavior identical to releases before this fe
 | --- | --- |
 | `research` | `reject` → cancelled |
 | `proposed` | `accept` → ready, `reject` → cancelled |
-| `ready` | `demote` → proposed, `start` → in_progress, `block` → blocked, `cancel` → cancelled |
-| `in_progress` | `complete` → completed, `decline` → cancelled, `block` → blocked, `pause` → ready |
+| `ready` | `demote` → proposed, `start` → in_progress, `block` → blocked, `cancel` → cancelled, `await_review` → awaiting_review, `await_policy_approval` → awaiting_policy_approval, `await_external_decision` → awaiting_external_decision |
+| `in_progress` | `complete` → completed, `decline` → cancelled, `block` → blocked, `pause` → ready, `await_review` → awaiting_review, `await_policy_approval` → awaiting_policy_approval, `await_external_decision` → awaiting_external_decision |
+| `awaiting_review` | `resume_ready` → ready, `resume_work` → in_progress, `block` → blocked, `cancel` → cancelled |
+| `awaiting_policy_approval` | `resume_ready` → ready, `resume_work` → in_progress, `block` → blocked, `cancel` → cancelled |
+| `awaiting_external_decision` | `resume_ready` → ready, `resume_work` → in_progress, `block` → blocked, `cancel` → cancelled |
 | `blocked` | `unblock` → ready, `cancel` → cancelled |
 <!-- workspace-kit:generated task-engine-instruction-contract command=run-transition section=actions end -->
 

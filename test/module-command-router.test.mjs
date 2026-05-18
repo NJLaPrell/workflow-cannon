@@ -46,6 +46,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "clear-agent-activity",
     "clear-task-phase",
     "complete-task",
+    "completion-preflight",
     "convert-phase-note-to-task",
     "convert-wishlist",
     "create-behavior-profile",

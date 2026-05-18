@@ -81,5 +81,5 @@
   "responseTemplate": {
     "defaultResponseTemplateId": "default"
   },
-  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md"
 }

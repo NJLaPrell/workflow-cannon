@@ -4,7 +4,7 @@ agentCapsule|v=1|command=agent-mutation-plan|module=task-engine|schema_only=pnpm
 
 # agent-mutation-plan
 
-Build a read-only mutation plan for a `workspace-kit run` command before executing it.
+Policy-aware argv builder: read-only plan for any `workspace-kit run` command before executing it (schema, validation, policy lane, planning generation, idempotency).
 
 ## Usage
 
@@ -20,7 +20,7 @@ workspace-kit run agent-mutation-plan '{"commandName":"run-transition","taskId":
 
 ## Returns
 
-Success `data` includes schema-only metadata, policy approval lane guidance, current `planningGeneration`, whether `expectedPlanningGeneration` is required, idempotency guidance, and a ready-to-run argv example.
+Success `data` includes schema-only metadata, `argvBuilder` notes, `readyRun.args` / `readyRun.argv`, `readyRun.argvValid` + `argvValidation` when pilot schema applies, policy approval lane guidance, current `planningGeneration`, idempotency guidance, and remediation paths under `.ai/`.
 
 For `run-transition` with `taskId`, `data.lifecycle` includes the task status, current `allowedActions`, dependency blockers, and whether the requested action is valid now.
 

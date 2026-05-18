@@ -3,7 +3,10 @@ import {
   CLI_REMEDIATION_DOCS
 } from "../../../core/cli-remediation.js";
 import { POLICY_APPROVAL_TWO_LANES_DOC } from "../../../core/policy.js";
-import { buildRunArgsSchemaOnlyPayload } from "../../../core/run-args-pilot-validation.js";
+import {
+  buildRunArgsSchemaOnlyPayload,
+  validatePilotRunCommandArgs
+} from "../../../core/run-args-pilot-validation.js";
 import { attachPolicyMeta } from "../attach-planning-response-meta.js";
 import { getPlanningGenerationPolicy } from "../planning-config.js";
 import type { OpenedPlanningStores } from "../persistence/planning-open.js";
@@ -82,6 +85,12 @@ export function buildAgentMutationPlan(
   });
   const readyArgs = buildReadyRunArgs(schemaPayload, commandName, args, planningGeneration, planningPolicy);
   const readyArgv = `workspace-kit run ${commandName} '${JSON.stringify(readyArgs)}'`;
+  const policyMeta = schemaPayload.policy as Record<string, unknown> | undefined;
+  const sensitivity = policyMeta?.sensitivity;
+  const jsonApprovalRequired =
+    policyMeta?.jsonApprovalRequired === true ||
+    policyMeta?.jsonApprovalRequired === "when dryRun is false or omitted by command policy";
+  const argvValidationError = validatePilotRunCommandArgs(commandName, readyArgs, ctx.effectiveConfig ?? {});
   const data: Record<string, unknown> = {
     schemaVersion: 1,
     commandName,
@@ -109,11 +118,25 @@ export function buildAgentMutationPlan(
     },
     readyRun: {
       args: readyArgs,
-      argv: readyArgv
+      argv: readyArgv,
+      argvValid: argvValidationError === null,
+      argvValidation: argvValidationError ?? { ok: true }
+    },
+    argvBuilder: {
+      schemaVersion: 1,
+      mutating: jsonApprovalRequired === true,
+      policySensitivity: sensitivity,
+      notes: [
+        "Edit readyRun.args, then run the argv line or pass the same object to workspace-kit run.",
+        jsonApprovalRequired
+          ? "This command requires JSON policyApproval on the run args object."
+          : "This command is read-only or non-sensitive; policyApproval is not required on run."
+      ]
     },
     remediation: {
       instructionPath: schemaPayload.instructionPath,
-      remediationContract: schemaPayload.remediationContract
+      docPath: CLI_REMEDIATION_DOCS.agentCliMap,
+      remediationContract: CLI_REMEDIATION_DOCS.remediationContract
     }
   };
 
