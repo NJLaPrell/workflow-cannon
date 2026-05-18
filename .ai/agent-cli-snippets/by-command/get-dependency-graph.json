@@ -38,5 +38,9 @@
   "responseTemplate": {
     "defaultResponseTemplateId": "default"
   },
-  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md"
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  }
 }

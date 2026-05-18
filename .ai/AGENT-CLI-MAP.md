@@ -8,6 +8,16 @@ Machine-oriented **how to run** workspace-kit in this repo: policy, cold start, 
 
 **Related:** [`.ai/POLICY-APPROVAL.md`](./POLICY-APPROVAL.md), [`.ai/TERMS.md`](./TERMS.md) (machine `term|name=sprint|…` row lists **sprint** machine synonyms), [`.ai/TERMS.index.json`](./TERMS.index.json), [`CLI-VISUAL-GUIDE.md`](./CLI-VISUAL-GUIDE.md), `src/modules/*/instructions/*.md` (human procedure per command).
 
+## Discover the surface
+
+When you do not know a command name or argv shape:
+
+1. **`pnpm exec wk run --list-commands`** (alias: **`pnpm exec wk run list-commands '{}'`**, or **`pnpm exec wk run --json`**) — machine catalog with `instructionPath` and schema hints per command.
+2. **`pnpm exec wk run <command> --schema-only '{}'`** — JSON Schema + sample args before mutating.
+3. **`pnpm exec wk doctor --agent-instruction-surface`** — full instruction catalog + activation report.
+
+Failed `wk run` envelopes include **`discovery.listCommands`** and **`discovery.schemaOnly`** when args or command names are wrong.
+
 ## 30-second bootstrap
 
 **Command path:** In an **attached project**, use **`./.workspace-kit/bin/wk`** as the canonical Workflow Cannon command after `init`; it delegates through the stamped Node runtime in **`.workspace-kit/runtime.json`** and does not require `nvm use` before routine commands. In the **Workflow Cannon source checkout**, `pnpm exec wk` (or `node dist/cli.js` from a built tree) remains appropriate for package development.
@@ -73,6 +83,16 @@ Baseline visible-agent presentation is configured with **`agentPresentation.*`**
 `dashboard-summary.data.agentStatus` is a status hint for operators. `source: "derived"` comes from existing task/dashboard facts and is enough for `Awaiting Instruction`, active planning, blocked work, in-progress work, delegation, or suggested ready work. `source: "live_activity"` comes from a fresh expiring lease and is for intent that cannot be inferred, such as PR review, approval queue review, validation, release, policy approval, or human gates.
 
 Record high-signal live activity with **`pnpm exec wk run set-agent-activity '{"kind":"reviewing_pr","prNumber":192}'`** or structured fields like **`version`**, **`phaseKey`**, **`taskId`**, **`details.prUrl`**, **`details.reviewItemId`**, and **`details.validationCommand`**. Clear it with **`clear-agent-activity`** when the flow finishes; otherwise expiry returns the dashboard to derived status. Do not treat live activity as transition evidence, and do not add GitHub/network lookups to `dashboard-summary`.
+
+## Project memory (governed recall)
+
+Distinct from `.ai/` canon and `document-project` outputs — see `CANNON.md` and `explain-memory-precedence`.
+
+- `pnpm exec wk run list-memory '{}'`
+- `pnpm exec wk run write-memory '{"category":"runtime","body":"…","policyApproval":{"confirmed":true,"rationale":"…"}}'`
+- `pnpm exec wk run approve-memory '{"id":"mem_…","policyApproval":{"confirmed":true,"rationale":"…"}}'`
+- `pnpm exec wk run prune-memory '{"id":"mem_…","auditNote":"…","policyApproval":{"confirmed":true,"rationale":"…"}}'`
+- `pnpm exec wk run explain-memory-precedence '{}'`
 
 ## Where did the big tables go?
 

@@ -11,7 +11,8 @@ export type ModuleCapability =
   | "plugins"
   | "subagents"
   | "team-execution"
-  | "checkpoints";
+  | "checkpoints"
+  | "project-memory";
 
 export type ModuleDocumentContract = {
   path: string;

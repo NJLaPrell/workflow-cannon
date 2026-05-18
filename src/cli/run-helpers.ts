@@ -1,13 +1,24 @@
 import { CLI_REMEDIATION_DOCS } from "../core/cli-remediation.js";
+import { cliDiscoveryEnvelope } from "../core/cli-discovery.js";
 import { POLICY_APPROVAL_HUMAN_DOC } from "../core/policy.js";
 
-/** Strip optional `--json` before subcommand (machine catalog for bare `wk run` only). */
-export function peelRunArgv(tail: string[]): { jsonCatalog: boolean; rest: string[] } {
+/** Strip optional catalog flags before subcommand (machine catalog for bare `wk run` / list-commands). */
+export function peelRunArgv(tail: string[]): {
+  jsonCatalog: boolean;
+  listCommands: boolean;
+  rest: string[];
+} {
   const rest: string[] = [];
   let jsonCatalog = false;
+  let listCommands = false;
   let i = 0;
   while (i < tail.length) {
     const a = tail[i];
+    if (a === "--list-commands") {
+      listCommands = true;
+      i += 1;
+      continue;
+    }
     if (a === "--json" || a === "-j") {
       jsonCatalog = true;
       i += 1;
@@ -26,7 +37,10 @@ export function peelRunArgv(tail: string[]): { jsonCatalog: boolean; rest: strin
     rest.push(a);
     i += 1;
   }
-  return { jsonCatalog, rest };
+  if (listCommands) {
+    jsonCatalog = true;
+  }
+  return { jsonCatalog, listCommands, rest };
 }
 
 export function policyDeniedBody(params: {
@@ -60,6 +74,7 @@ export function policyDeniedBody(params: {
     message,
     hint,
     wrongEnvLane: wrongEnvLane || undefined,
-    hasPolicyApprovalField: hasPolicyApprovalField || undefined
+    hasPolicyApprovalField: hasPolicyApprovalField || undefined,
+    discovery: cliDiscoveryEnvelope()
   };
 }

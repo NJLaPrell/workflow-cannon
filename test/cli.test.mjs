@@ -1076,6 +1076,27 @@ test("runCli run lists available module commands with no subcommand", async () =
   assert.ok(capture.lines.some((l) => l.includes("instructions")));
 });
 
+test("runCli run --list-commands emits machine command catalog", async () => {
+  const capture = createCapture();
+  const code = await runCli(["run", "--list-commands"], { cwd: process.cwd(), ...capture });
+  assert.equal(code, 0);
+  assert.equal(capture.lines.length, 1);
+  const output = JSON.parse(capture.lines[0]);
+  assert.equal(output.ok, true);
+  assert.equal(output.code, "run-command-catalog");
+  assert.ok(output.discovery?.listCommands);
+  const row = output.data.commands.find((c) => c.name === "list-tasks");
+  assert.ok(row?.schemaOnlyHint?.includes("--schema-only"));
+});
+
+test("runCli run list-commands alias emits machine command catalog", async () => {
+  const capture = createCapture();
+  const code = await runCli(["run", "list-commands", "{}"], { cwd: process.cwd(), ...capture });
+  assert.equal(code, 0);
+  const output = JSON.parse(capture.lines[0]);
+  assert.equal(output.code, "run-command-catalog");
+});
+
 test("runCli run --json emits machine command catalog", async () => {
   const capture = createCapture();
   const code = await runCli(["run", "--json"], { cwd: process.cwd(), ...capture });

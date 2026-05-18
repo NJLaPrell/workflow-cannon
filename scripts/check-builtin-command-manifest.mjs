@@ -33,7 +33,10 @@ const KNOWN_POLICY_OPERATION_IDS = new Set([
   "context-activation.cae-satisfy-ack",
   "context-activation.cae-import-json-registry",
   "context-activation.cae-record-shadow-feedback",
-  "task-engine.workspace-edit-lease"
+  "task-engine.workspace-edit-lease",
+  "project-memory.write",
+  "project-memory.approve",
+  "project-memory.prune"
 ]);
 
 const ALLOWED_SENSITIVITY = new Set(["non-sensitive", "sensitive", "sensitive-with-dryrun"]);

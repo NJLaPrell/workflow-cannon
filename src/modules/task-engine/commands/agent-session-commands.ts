@@ -132,6 +132,7 @@ export async function resolveAgentBootstrapOrSnapshot(
       planningGeneration:
         "When `tasks.planningGenerationPolicy` is require, pass `expectedPlanningGeneration` from `list-tasks`, `get-next-actions`, or a prior mutation response",
       discovery: {
+        listCommands: "pnpm exec wk run --list-commands",
         commandMenuJson: "pnpm exec wk run --json",
         doctorJson: "pnpm exec wk doctor --json",
         schemaOnly: "pnpm exec wk run <command> --schema-only '{}'",

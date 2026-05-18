@@ -30,6 +30,8 @@ import { tryAutoCheckpointBeforeRun } from "../modules/checkpoints/checkpoint-au
 import { promptSensitiveRunApproval } from "./interactive-policy.js";
 import { releaseTranscriptHookLockFromEnv } from "../core/transcript-completion-hook.js";
 import { storeCaeSession } from "../modules/context-activation/trace-store.js";
+import { cliDiscoveryEnvelope } from "../core/cli-discovery.js";
+import { buildRunCommandCatalogPayload } from "./run-command-catalog.js";
 import { peelRunArgv, policyDeniedBody } from "./run-helpers.js";
 
 /** Default apply-skill preview mode for policy (dryRun true when omitted). */
@@ -68,8 +70,15 @@ export async function handleRunCommand(
 ): Promise<number> {
   const { writeLine, writeError } = io;
 
-  const { jsonCatalog, rest } = peelRunArgv(args.slice(1));
-  const subcommand = rest[0];
+  const peeled = peelRunArgv(args.slice(1));
+  let { jsonCatalog, rest } = peeled;
+  let subcommand: string | undefined = rest[0];
+  if (subcommand === "list-commands") {
+    jsonCatalog = true;
+    subcommand = undefined;
+  } else if (peeled.listCommands) {
+    jsonCatalog = true;
+  }
   const schemaOnlyFlag =
     typeof rest[1] === "string" && (rest[1] === "--schema-only" || rest[1] === "-S");
 
@@ -119,9 +128,10 @@ export async function handleRunCommand(
           {
             ok: false,
             code: "unknown-command",
-            message: `Unknown command '${subcommand}'. Run 'workspace-kit run' with no subcommand for the command catalog.`,
+            message: `Unknown command '${subcommand}'. Run 'workspace-kit run --list-commands' for the command catalog.`,
             details: { availableCommands: names },
-            remediation: { docPath: CLI_REMEDIATION_DOCS.agentCliMap }
+            remediation: { docPath: CLI_REMEDIATION_DOCS.agentCliMap },
+            discovery: cliDiscoveryEnvelope()
           },
           null,
           2
@@ -145,7 +155,8 @@ export async function handleRunCommand(
             remediation: {
               instructionPath: "src/modules/task-engine/instructions/agent-mutation-plan.md",
               docPath: CLI_REMEDIATION_DOCS.agentCliMap
-            }
+            },
+            discovery: cliDiscoveryEnvelope()
           },
           null,
           2
@@ -153,7 +164,7 @@ export async function handleRunCommand(
       );
       return codes.validationFailure;
     }
-    writeLine(JSON.stringify(payload, null, 2));
+    writeLine(JSON.stringify({ ...payload, discovery: cliDiscoveryEnvelope() }, null, 2));
     return codes.success;
   }
 
@@ -175,27 +186,9 @@ export async function handleRunCommand(
   }
 
   if (!subcommand && jsonCatalog) {
-    const commands = router.listCommands().map((cmd) => ({
-      name: cmd.name,
-      moduleId: cmd.moduleId,
-      description: cmd.description ?? null,
-      instructionPath: cmd.instructionFile,
-      jsonApprovalRequired: isSensitiveModuleCommandForEffective(cmd.name, {}, effective),
-      policyOperationId: resolvePolicyOperationIdForCommand(cmd.name, effective)
-    }));
     writeLine(
       JSON.stringify(
-        {
-          ok: true,
-          code: "run-command-catalog",
-          schemaVersion: 1,
-          data: {
-            canonicalInvokeHint: "pnpm exec wk run",
-            discoverSchemaOnly: "pnpm exec wk run <command> --schema-only '{}'",
-            snippetIndex: ".ai/agent-cli-snippets/INDEX.json",
-            commands
-          }
-        },
+        { ...buildRunCommandCatalogPayload(router, effective), discovery: cliDiscoveryEnvelope() },
         null,
         2
       )
@@ -216,7 +209,7 @@ export async function handleRunCommand(
       `Schema discovery: workspace-kit run <command> --schema-only  (JSON Schema or permissive fallback + sample args + policy metadata for every executable command).`
     );
     writeLine(
-      `JSON catalog (agents): workspace-kit run --json  (or --format json) with no subcommand — stable command list + policy hints.`
+      `JSON catalog (agents): workspace-kit run --list-commands  (alias: run list-commands '{}', run --json) — stable command list + policy hints.`
     );
     writeLine(
       `Instruction files: src/modules/<module>/instructions/<command>.md — sensitive runs need JSON policyApproval (not env WORKSPACE_KIT_POLICY_APPROVAL); see ${POLICY_APPROVAL_TWO_LANES_DOC}.`
@@ -498,9 +491,13 @@ export async function handleRunCommand(
               error.code === "unknown-command"
                 ? {
                     docPath: CLI_REMEDIATION_DOCS.agentCliMap,
-                    docAnchors: ["doctor --agent-instruction-surface", "workspace-kit run (no subcommand lists commands)"]
+                    docAnchors: [
+                      "doctor --agent-instruction-surface",
+                      "workspace-kit run --list-commands"
+                    ]
                   }
-                : { docPath: CLI_REMEDIATION_DOCS.agentCliMap }
+                : { docPath: CLI_REMEDIATION_DOCS.agentCliMap },
+            discovery: cliDiscoveryEnvelope()
           },
           null,
           2
