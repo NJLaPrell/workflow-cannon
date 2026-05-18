@@ -18,7 +18,7 @@ workspace-kit run run-transition '{"taskId":"T184","action":"start","policyAppro
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `taskId` | `string` | yes | Task id. |
-| `action` | string (`accept`, `block`, `cancel`, `complete`, `decline`, `demote`, `pause`, `reject`, `start`, `unblock`) | yes | Transition action. |
+| `action` | string (`accept`, `await_external_decision`, `await_policy_approval`, `await_review`, `block`, `cancel`, `complete`, `decline`, `demote`, `pause`, `reject`, `resume_ready`, `resume_work`, `start`, `unblock`) | yes | Transition action. |
 | `clientMutationId` | `string` | no | Retry/idempotency key. |
 | `policyApproval` | `object` | no | JSON policy approval payload for sensitive run commands. |
 | `expectedPlanningGeneration` | `integer` or `string` | no | Optimistic concurrency token from a prior read response. |
