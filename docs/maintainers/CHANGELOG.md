@@ -8,6 +8,20 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.94.0] - 2026-05-18
+
+Phase 99 — **Docs, playbooks & maintainer UX** (CLI discovery, PR integrity, project memory).
+
+### Added
+
+- `wk run --list-commands` / `list-commands` alias and `discovery` hints on CLI error envelopes.
+- `pre-merge-gates` check `check-pr-history-rewritten` (`pr-history-rewritten`) when a PR head diverges from the latest approving review commit.
+- **project-memory** module: `list-memory`, `write-memory`, `approve-memory`, `prune-memory`, `explain-memory-precedence`; optional root `CANNON.md` index.
+
+### Changed
+
+- Maintainer delivery loop and phase-closeout playbook: prefer follow-up commits over amend+force-push after review.
+
 ## [0.93.0] - 2026-05-18
 
 Phase 98 — **Config, policy & trust** (agent CLI ergonomics).
