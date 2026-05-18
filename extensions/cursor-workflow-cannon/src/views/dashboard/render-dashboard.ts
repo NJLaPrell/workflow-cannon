@@ -77,7 +77,7 @@ function renderQueueTaskActionButtons(taskId: string): string {
     return "";
   }
   return (
-    '<span class="dash-row-actions">' +
+    '<span class="dash-row-actions wc-task-actions">' +
     renderPhaseAssignButton(taskId) +
     renderTaskDetailButton(taskId) +
     renderTaskCommentsButton(taskId, "view") +
@@ -499,16 +499,6 @@ function renderPhaseReadinessCard(
     phaseSection +
     checksSection +
     pendingBlock +
-    "</section>"
-  );
-}
-
-/** Queue tab: pointer to CAE sidebar (phase readiness lives under WC Agent). */
-function renderQueueTabCaePointerSection(): string {
-  return (
-    '<section class="dash-card" aria-label="CAE sidebar">' +
-    "<p><b>CAE Controls</b></p>" +
-    '<p class="muted">Pre-flight checks, guidance management, and history live in the <b>CAE</b> sidebar panel.</p>' +
     "</section>"
   );
 }
@@ -1361,8 +1351,6 @@ function renderPlanningSession(ps: unknown, wizardPanel?: PlanningInterviewWizar
       '<div class="dash-planning-head-main"><p class="dash-planning-title"><b>Planning Interview</b></p></div>' +
       "</div>" +
       wizardHtml +
-      '<p class="muted">No interview in progress.</p>' +
-      '<p class="muted">Start or resume with <code>workspace-kit run build-plan</code>; progress saves automatically.</p>' +
       "</section>"
     );
   }
@@ -1894,8 +1882,7 @@ export function renderPhaseCatalogOverviewSection(
   }
   const table = inner;
   const btn =
-    '<p style="margin-top:8px"><button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="register-phase-catalog">Register future phase</button>' +
-    ' <span class="muted">Plan a future release phase; the kit keeps planning metadata aligned.</span></p>';
+    '<p style="margin-top:8px"><button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="register-phase-catalog">Register future phase</button></p>';
   return (
     '<section class="dash-card dash-phase-catalog" aria-label="Phase catalog">' +
     "<p><b>Phase Roster</b></p>" +
@@ -2565,6 +2552,14 @@ export function renderDashboardRootInnerHtml(
       : undefined;
 
   const overviewContent =
+    renderAgentStatusBanner(d) +
+    renderPhaseReadinessCard(
+      ws as Record<string, unknown> | null,
+      readyExeCount,
+      readyImpCount,
+      totalBlockedCount,
+      totalProposedCount
+    ) +
     recNextCard +
     renderStatPills(totalReadyCount, totalProposedCount, totalBlockedCount, totalDoneCount) +
     renderPhaseCatalogOverviewSection(phaseSystemSlice) +
@@ -2586,7 +2581,6 @@ export function renderDashboardRootInnerHtml(
         '</section>';
 
   const taskEngineContent =
-    renderQueueTabCaePointerSection() +
     renderPhaseNotesOverviewSection(phaseJournal ?? null) +
     tasksBlock +
     wishlistSection +
@@ -2607,14 +2601,6 @@ export function renderDashboardRootInnerHtml(
 
   return (
     '<div class="wc-dashboard-tab-shell">' +
-    renderAgentStatusBanner(d) +
-    renderPhaseReadinessCard(
-      ws as Record<string, unknown> | null,
-      readyExeCount,
-      readyImpCount,
-      totalBlockedCount,
-      totalProposedCount
-    ) +
     '<div class="wc-tab-bar" role="tablist">' +
     '<button type="button" class="wc-tab-btn wc-tab-active" role="tab" data-wc-tab="overview">Overview</button>' +
     '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="task-engine">Queue' +

@@ -1998,6 +1998,21 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .dash-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 4px 6px; border-radius: 4px; background: var(--vscode-textCodeBlock-background); }
     .dash-row-label { flex: 1; min-width: 0; white-space: pre-wrap; word-break: break-word; font-size: 12px; line-height: 1.35; }
     .dash-row-actions { display: flex; flex-wrap: wrap; gap: 4px; flex-shrink: 0; align-items: flex-start; }
+    .dash-row-actions.wc-task-actions {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 4px;
+      align-content: flex-start;
+      width: 160px;
+      max-width: 100%;
+    }
+    .dash-row-actions.wc-task-actions > .wc-btn {
+      width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+      text-align: center;
+      justify-content: center;
+    }
     .dash-task-row-body {
       display: flex;
       flex-direction: column;
