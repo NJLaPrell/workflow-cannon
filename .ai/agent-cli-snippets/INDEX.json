@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-18T20:53:35.687Z",
+  "generatedAt": "2026-05-18T21:35:34.659Z",
   "commands": [
     {
       "name": "add-dependency",
@@ -36,6 +36,11 @@
       "name": "apply-task-batch",
       "path": ".ai/agent-cli-snippets/by-command/apply-task-batch.json",
       "moduleId": "task-engine"
+    },
+    {
+      "name": "approve-memory",
+      "path": ".ai/agent-cli-snippets/by-command/approve-memory.json",
+      "moduleId": "project-memory"
     },
     {
       "name": "archive-task",
@@ -453,6 +458,11 @@
       "moduleId": "workspace-config"
     },
     {
+      "name": "explain-memory-precedence",
+      "path": ".ai/agent-cli-snippets/by-command/explain-memory-precedence.json",
+      "moduleId": "project-memory"
+    },
+    {
       "name": "explain-planning-rules",
       "path": ".ai/agent-cli-snippets/by-command/explain-planning-rules.json",
       "moduleId": "planning"
@@ -623,6 +633,11 @@
       "moduleId": "task-engine"
     },
     {
+      "name": "list-memory",
+      "path": ".ai/agent-cli-snippets/by-command/list-memory.json",
+      "moduleId": "project-memory"
+    },
+    {
       "name": "list-module-states",
       "path": ".ai/agent-cli-snippets/by-command/list-module-states.json",
       "moduleId": "task-engine"
@@ -706,6 +721,11 @@
       "name": "propose-tasks-from-phase-notes",
       "path": ".ai/agent-cli-snippets/by-command/propose-tasks-from-phase-notes.json",
       "moduleId": "task-engine"
+    },
+    {
+      "name": "prune-memory",
+      "path": ".ai/agent-cli-snippets/by-command/prune-memory.json",
+      "moduleId": "project-memory"
     },
     {
       "name": "query-lineage",
@@ -931,6 +951,11 @@
       "name": "workspace-status-history",
       "path": ".ai/agent-cli-snippets/by-command/workspace-status-history.json",
       "moduleId": "task-engine"
+    },
+    {
+      "name": "write-memory",
+      "path": ".ai/agent-cli-snippets/by-command/write-memory.json",
+      "moduleId": "project-memory"
     }
   ]
 }

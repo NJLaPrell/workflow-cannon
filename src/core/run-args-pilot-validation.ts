@@ -3,6 +3,7 @@ import type { ErrorObject, ValidateFunction } from "ajv";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { cliDiscoveryEnvelope } from "./cli-discovery.js";
 import { CLI_REMEDIATION_DOCS, CLI_REMEDIATION_INSTRUCTIONS } from "./cli-remediation.js";
 import { getBuiltinRunCommandManifestRow } from "../contracts/builtin-run-command-manifest.js";
 
@@ -187,7 +188,8 @@ function formatAjvFailure(commandName: string, errors: ErrorObject[] | null | un
     remediation: {
       instructionPath: instructionPathForCommand(commandName),
       docPath: CLI_REMEDIATION_DOCS.agentCliMap
-    }
+    },
+    discovery: cliDiscoveryEnvelope()
   };
 }
 

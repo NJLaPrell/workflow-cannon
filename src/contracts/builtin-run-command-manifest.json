@@ -1455,5 +1455,48 @@
     "policyOperationId": "context-activation.cae-satisfy-ack",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "project-memory",
+    "name": "list-memory",
+    "file": "list-memory.md",
+    "description": "List governed project-memory records (draft, approved, pruned).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "project-memory",
+    "name": "write-memory",
+    "file": "write-memory.md",
+    "description": "Create or update a draft project-memory record.",
+    "policyOperationId": "project-memory.write",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "project-memory",
+    "name": "approve-memory",
+    "file": "approve-memory.md",
+    "description": "Promote a draft project-memory record to approved.",
+    "policyOperationId": "project-memory.approve",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "project-memory",
+    "name": "prune-memory",
+    "file": "prune-memory.md",
+    "description": "Prune a project-memory record with an audited note.",
+    "policyOperationId": "project-memory.prune",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "project-memory",
+    "name": "explain-memory-precedence",
+    "file": "explain-memory-precedence.md",
+    "description": "Explain deterministic precedence between policy, canon, docs, and memory.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
   }
 ]

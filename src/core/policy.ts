@@ -44,7 +44,10 @@ export type PolicyOperationId =
   | "context-activation.cae-satisfy-ack"
   | "context-activation.cae-import-json-registry"
   | "context-activation.cae-record-shadow-feedback"
-  | "task-engine.workspace-edit-lease";
+  | "task-engine.workspace-edit-lease"
+  | "project-memory.write"
+  | "project-memory.approve"
+  | "project-memory.prune";
 
 function buildBuiltinCommandToOperation(): Record<string, PolicyOperationId | undefined> {
   const out: Record<string, PolicyOperationId | undefined> = {};

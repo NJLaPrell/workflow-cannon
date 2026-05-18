@@ -1,0 +1,41 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "approve-memory",
+  "schema": {
+    "type": "object",
+    "additionalProperties": true,
+    "description": "Permissive fallback args schema for 'approve-memory'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+  },
+  "schemaSource": "manifest-permissive-fallback",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run approve-memory '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/project-memory/instructions/approve-memory.md",
+  "moduleId": "project-memory",
+  "description": "Promote a draft project-memory record to approved.",
+  "policy": {
+    "sensitivity": "sensitive",
+    "operationId": "project-memory.approve",
+    "jsonApprovalRequired": true
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  }
+}
