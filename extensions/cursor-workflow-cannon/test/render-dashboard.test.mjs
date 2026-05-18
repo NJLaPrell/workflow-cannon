@@ -11,12 +11,54 @@ import {
   renderMarkdownBoldAfterEscape,
   resolvePhasePhraseForCompleteRelease,
   collectPhaseBucketTaskIds,
-  renderPlanningInterviewWizardPanel
+  renderPlanningInterviewWizardPanel,
+  mergeReadyQueueRollupSummaries
 } from "../dist/views/dashboard/render-dashboard.js";
 import { buildPhaseCompleteReleaseChatPrompt } from "../dist/phase-complete-release-prompt.js";
 import { renderGuidanceAuthoringPanelInnerHtml } from "../dist/views/guidance/render-guidance-panel.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+test("mergeReadyQueueRollupSummaries merges counts, tops, and phase buckets", () => {
+  const merged = mergeReadyQueueRollupSummaries(
+    {
+      count: 2,
+      top: [{ id: "T1", title: "imp" }],
+      phaseBuckets: [
+        {
+          phaseKey: "100",
+          label: "Phase 100 (current) (2)",
+          count: 2,
+          top: [
+            { id: "T1", title: "imp" },
+            { id: "T2", title: "imp2" }
+          ]
+        }
+      ]
+    },
+    {
+      count: 1,
+      top: [{ id: "T3", title: "exe" }],
+      phaseBuckets: [
+        {
+          phaseKey: "100",
+          label: "Phase 100 (current) (1)",
+          count: 1,
+          top: [{ id: "T3", title: "exe" }]
+        }
+      ]
+    }
+  );
+  assert.equal(merged.count, 3);
+  assert.equal(merged.top.length, 2);
+  assert.equal(merged.top[0].id, "T1");
+  assert.equal(merged.top[1].id, "T3");
+  const buckets = merged.phaseBuckets;
+  assert.ok(Array.isArray(buckets));
+  assert.equal(buckets.length, 1);
+  assert.equal(buckets[0].count, 3);
+  assert.match(String(buckets[0].label), /\(3\)$/);
+});
 
 function plainTextFromHtml(html) {
   return html
@@ -133,12 +175,13 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /status-section/);
   assert.match(html, /data-wc-track="status-prop-exe"/);
   assert.match(html, /data-wc-track="wishlist"/);
-  assert.match(html, /Ready · Improvements/);
-  assert.match(html, /Ready · Execution/);
+  assert.match(html, /<b>Ready<\/b> \(2\)/);
+  assert.doesNotMatch(html, /Ready · Improvements/);
+  assert.doesNotMatch(html, /Ready · Execution/);
   assert.match(html, /Wishlist/);
   assert.match(html, /Proposed · Improvements/);
   assert.match(html, /Proposed · Execution/);
-  const readyIdx = html.indexOf("Ready · Improvements");
+  const readyIdx = html.indexOf("<b>Ready</b>");
   const proposedIdx = html.indexOf("Proposed · Improvements");
   const researchIdx = html.indexOf("Research · Transcript churn");
   const blockedIdx = html.indexOf("<b>Blocked</b>");
@@ -149,8 +192,9 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.ok(researchIdx !== -1 && blockedIdx !== -1 && researchIdx < blockedIdx);
   assert.ok(blockedIdx !== -1 && completedIdx !== -1 && blockedIdx < completedIdx);
   assert.ok(completedIdx !== -1 && cancelledIdx !== -1 && completedIdx < cancelledIdx);
-  assert.match(html, /data-wc-track="status-ready-imp"/);
-  assert.match(html, /data-wc-track="status-ready-exe"/);
+  assert.match(html, /data-wc-track="status-ready"/);
+  assert.doesNotMatch(html, /data-wc-track="status-ready-imp"/);
+  assert.doesNotMatch(html, /data-wc-track="status-ready-exe"/);
   assert.match(html, /data-wc-filter="ready"/);
   assert.match(html, /data-wc-filter="research"/);
   assert.match(html, /data-wc-filter="terminal"/);
@@ -899,7 +943,7 @@ test("renderDashboardRootInnerHtml recommends wishlist when execution ready queu
   assert.match(html, /No execution-queue ready work/);
 });
 
-test("renderDashboardRootInnerHtml prefers wishlist over ready improvement when execution queue empty", () => {
+test("renderDashboardRootInnerHtml prefers first ready task over wishlist when both exist", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,
     data: {
@@ -948,9 +992,11 @@ test("renderDashboardRootInnerHtml prefers wishlist over ready improvement when 
       }
     }
   });
-  assert.match(html, /wc-rec-next-wishlist/);
-  assert.match(html, /Process wishlist first/);
+  assert.match(html, /wc-rec-next/);
+  assert.doesNotMatch(html, /wc-rec-next-wishlist/);
   assert.match(html, /Ready improvement task/);
+  assert.match(html, /data-task-id="imp-1"/);
+  assert.match(html, /Process wishlist first/);
 });
 
 const deliverTestDepOverview = {
@@ -1061,15 +1107,15 @@ test("renderDashboardRootInnerHtml proposed phase buckets show Accept All with t
   assert.match(html, /data-proposed-task-ids="imp-aaa,imp-bbb"/);
 });
 
-test("renderDashboardRootInnerHtml shows readyQueueBreakdown when present", () => {
+test("renderDashboardRootInnerHtml merges ready improvement and execution rollups", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,
     data: {
       stateSummary: { proposed: 0, ready: 4, in_progress: 0, blocked: 0, completed: 0 },
       proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
       proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
-      readyImprovementsSummary: { schemaVersion: 1, count: 3, top: [] },
-      readyExecutionSummary: { schemaVersion: 1, count: 1, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 3, top: [{ id: "T1", title: "imp" }] },
+      readyExecutionSummary: { schemaVersion: 1, count: 1, top: [{ id: "T2", title: "exe" }] },
       wishlist: { openCount: 0, totalCount: 0, openTop: [] },
       blockedSummary: { count: 0, top: [] },
       readyQueueTop: [],
@@ -1094,7 +1140,13 @@ test("renderDashboardRootInnerHtml shows readyQueueBreakdown when present", () =
       }
     }
   });
-  assert.match(html, /Ready Queue · 3 Improvements · 1 Other/);
+  assert.match(html, /<b>Ready<\/b> \(4\)/);
+  assert.doesNotMatch(html, /Ready · Improvements/);
+  assert.doesNotMatch(html, /Ready · Execution/);
+  assert.doesNotMatch(html, /Ready Queue · 3 Improvements · 1 Other/);
+  assert.match(html, /data-wc-track="status-ready"/);
+  assert.match(html, /T1/);
+  assert.match(html, /T2/);
 });
 
 test("buildPhaseCompleteReleaseChatPrompt is compact agent-oriented closeout seed", () => {

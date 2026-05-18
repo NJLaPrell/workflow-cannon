@@ -384,8 +384,7 @@ function phaseBucketFilterAttr(phaseKey: unknown): string {
 /** Phase readiness card — rendered under WC Agent in the dashboard shell. */
 function renderPhaseReadinessCard(
   ws: Record<string, unknown> | null,
-  readyExeCount: number,
-  readyImpCount: number,
+  readyCount: number,
   blockedCount: number,
   proposedTotal: number
 ): string {
@@ -400,7 +399,7 @@ function renderPhaseReadinessCard(
     ? (ws!.pendingDecisions as unknown[]).map((x) => String(x)).filter((s) => s.trim().length > 0)
     : [];
 
-  const totalReady = readyExeCount + readyImpCount;
+  const totalReady = readyCount;
   const hasBlockers = blockers.length > 0 || blockedCount > 0;
   const hasProposed = proposedTotal > 0;
 
@@ -873,6 +872,126 @@ function phaseBucketsNonEmpty(phaseBuckets: unknown): unknown[] {
     const c = (raw as { count?: unknown }).count;
     return typeof c !== "number" || c > 0;
   });
+}
+
+type ReadyRollupBucket = {
+  phaseKey?: unknown;
+  label?: unknown;
+  count?: unknown;
+  top?: unknown;
+  taskIds?: unknown;
+};
+
+function readyTaskRowId(row: unknown): string {
+  if (!row || typeof row !== "object") {
+    return "";
+  }
+  return String((row as { id?: unknown }).id ?? "").trim();
+}
+
+function dedupeReadyTaskRowsById(rows: unknown[]): unknown[] {
+  const seen = new Set<string>();
+  const out: unknown[] = [];
+  for (const row of rows) {
+    const id = readyTaskRowId(row);
+    const key = id.length > 0 ? id : JSON.stringify(row);
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    out.push(row);
+  }
+  return out;
+}
+
+function readyPhaseBucketMapKey(b: ReadyRollupBucket): string {
+  const pk = b.phaseKey != null ? String(b.phaseKey).trim() : "";
+  return pk.length > 0 ? pk : "__no_phase__";
+}
+
+function fixReadyPhaseBucketLabelCount(label: string, count: number): string {
+  if (!label) {
+    return `(${count})`;
+  }
+  if (/\(\d+\)\s*$/.test(label)) {
+    return label.replace(/\(\d+\)\s*$/, `(${count})`);
+  }
+  return `${label} (${count})`;
+}
+
+/** Merge improvement + execution ready summaries for a single Queue-tab rollup. */
+export function mergeReadyQueueRollupSummaries(
+  improvements: Record<string, unknown>,
+  execution: Record<string, unknown>
+): { count: number; top: unknown[]; phaseBuckets: unknown } {
+  const impTop = Array.isArray(improvements.top) ? (improvements.top as unknown[]) : [];
+  const exeTop = Array.isArray(execution.top) ? (execution.top as unknown[]) : [];
+  const top = dedupeReadyTaskRowsById([...impTop, ...exeTop]);
+  const impCount = typeof improvements.count === "number" ? improvements.count : impTop.length;
+  const exeCount = typeof execution.count === "number" ? execution.count : exeTop.length;
+  const count = impCount + exeCount;
+  const phaseBuckets =
+    mergeReadyPhaseBuckets(improvements.phaseBuckets, execution.phaseBuckets) ??
+    improvements.phaseBuckets ??
+    execution.phaseBuckets;
+  return { count, top, phaseBuckets };
+}
+
+function mergeReadyPhaseBuckets(a: unknown, b: unknown): unknown[] | undefined {
+  const arrays = [a, b].filter((x) => Array.isArray(x)) as unknown[][];
+  if (arrays.length === 0) {
+    return undefined;
+  }
+  const map = new Map<string, ReadyRollupBucket>();
+  for (const arr of arrays) {
+    for (const raw of arr) {
+      if (!raw || typeof raw !== "object") {
+        continue;
+      }
+      const incoming = raw as ReadyRollupBucket;
+      const key = readyPhaseBucketMapKey(incoming);
+      const incomingTop = Array.isArray(incoming.top) ? (incoming.top as unknown[]) : [];
+      const incomingIds = Array.isArray(incoming.taskIds)
+        ? (incoming.taskIds as unknown[]).map((x) => String(x).trim()).filter((id) => id.length > 0)
+        : [];
+      const existing = map.get(key);
+      if (!existing) {
+        map.set(key, {
+          phaseKey: incoming.phaseKey ?? null,
+          label: incoming.label,
+          count: typeof incoming.count === "number" ? incoming.count : incomingTop.length,
+          top: [...incomingTop],
+          ...(incomingIds.length > 0 ? { taskIds: [...incomingIds] } : {})
+        });
+        continue;
+      }
+      const mergedTop = dedupeReadyTaskRowsById([
+        ...(Array.isArray(existing.top) ? (existing.top as unknown[]) : []),
+        ...incomingTop
+      ]);
+      const mergedIds = [
+        ...new Set([
+          ...(Array.isArray(existing.taskIds) ? (existing.taskIds as string[]) : []),
+          ...incomingIds
+        ])
+      ];
+      const mergedCount =
+        (typeof existing.count === "number" ? existing.count : 0) +
+        (typeof incoming.count === "number" ? incoming.count : incomingTop.length);
+      const label = fixReadyPhaseBucketLabelCount(
+        String(existing.label ?? incoming.label ?? ""),
+        mergedCount
+      );
+      map.set(key, {
+        phaseKey: existing.phaseKey ?? incoming.phaseKey ?? null,
+        label,
+        count: mergedCount,
+        top: mergedTop,
+        ...(mergedIds.length > 0 ? { taskIds: mergedIds } : {})
+      });
+    }
+  }
+  return [...map.values()];
 }
 
 /** Phrase inserted for `{phase}` in the "Complete & Release" chat template (dashboard). */
@@ -2491,18 +2610,19 @@ export function renderDashboardRootInnerHtml(
   const blockedTop = Array.isArray(blockedSummary.top) ? (blockedSummary.top as unknown[]).slice(0, 8) : [];
   const ris = (d.readyImprovementsSummary as Record<string, unknown> | undefined) ?? {};
   const res = (d.readyExecutionSummary as Record<string, unknown> | undefined) ?? {};
-  let readyImpTop = Array.isArray(ris.top) ? (ris.top as unknown[]) : [];
-  let readyExeTop = Array.isArray(res.top) ? (res.top as unknown[]) : [];
-  let readyImpCount = typeof ris.count === "number" ? ris.count : readyImpTop.length;
-  let readyExeCount = typeof res.count === "number" ? res.count : readyExeTop.length;
   const oldReadyOnly = !("readyImprovementsSummary" in d) && !("readyExecutionSummary" in d);
+  let readyMerged = mergeReadyQueueRollupSummaries(ris, res);
   if (oldReadyOnly && Array.isArray(d.readyQueueTop) && (d.readyQueueTop as unknown[]).length > 0) {
-    readyExeTop = (d.readyQueueTop as unknown[]).slice(0, 15);
-    readyExeCount =
-      typeof d.readyQueueCount === "number" ? (d.readyQueueCount as number) : readyExeTop.length;
-    readyImpTop = [];
-    readyImpCount = 0;
+    const legacyTop = (d.readyQueueTop as unknown[]).slice(0, 15);
+    readyMerged = {
+      count: typeof d.readyQueueCount === "number" ? (d.readyQueueCount as number) : legacyTop.length,
+      top: legacyTop,
+      phaseBuckets: res.phaseBuckets ?? ris.phaseBuckets
+    };
   }
+  const readyCount = readyMerged.count;
+  const readyTop = readyMerged.top;
+  const readyPhaseBuckets = readyMerged.phaseBuckets;
   const pis = (d.proposedImprovementsSummary as Record<string, unknown> | undefined) ?? {};
   const piCount = typeof pis.count === "number" ? pis.count : 0;
   const piTop = Array.isArray(pis.top) ? (pis.top as unknown[]) : [];
@@ -2512,22 +2632,6 @@ export function renderDashboardRootInnerHtml(
   const tcrs = (d.transcriptChurnResearchSummary as Record<string, unknown> | undefined) ?? {};
   const tcrCount = typeof tcrs.count === "number" ? tcrs.count : 0;
   const tcrTop = Array.isArray(tcrs.top) ? (tcrs.top as unknown[]) : [];
-  const rqb = d.readyQueueBreakdown as
-    | { improvement?: unknown; other?: unknown; schemaVersion?: unknown }
-    | undefined;
-  const rqbImp = typeof rqb?.improvement === "number" ? rqb.improvement : null;
-  const rqbOther = typeof rqb?.other === "number" ? rqb.other : null;
-  const breakdownLine =
-    rqbImp !== null && rqbOther !== null && rqbImp + rqbOther > 0
-      ? '<p class="muted">Ready Queue · ' +
-        String(rqbImp) +
-        " Improvement" +
-        (rqbImp === 1 ? "" : "s") +
-        " · " +
-        String(rqbOther) +
-        " Other</p>"
-      : "";
-
   const terminalSection = (() => {
     const cs = d.completedSummary as Record<string, unknown> | undefined;
     const ks = d.cancelledSummary as Record<string, unknown> | undefined;
@@ -2599,34 +2703,19 @@ export function renderDashboardRootInnerHtml(
     tasksQuickActionsPanel +
     renderFilterChipBar(queuePhaseFilterOptions) +
     renderStatusRollup(
-      "status-ready-imp",
-      "<b>Ready · Improvements</b> (" + String(readyImpCount) + ")",
-      renderReadyPhaseBuckets(
-        ris.phaseBuckets,
-        readyImpTop,
-        "No ready improvements.",
-        "rdy-imp",
-        ws as Record<string, unknown> | null
-      ),
-      readyImpCount === 0,
-      readyImpCount > 0,
-      "ready"
-    ) +
-    renderStatusRollup(
-      "status-ready-exe",
-      "<b>Ready · Execution</b> (" + String(readyExeCount) + ")",
-      breakdownLine +
-        renderExecutionReadyScopeFootnote() +
+      "status-ready",
+      "<b>Ready</b> (" + String(readyCount) + ")",
+      renderExecutionReadyScopeFootnote() +
         renderReadyPhaseBuckets(
-          res.phaseBuckets,
-          readyExeTop,
-          "No ready execution tasks.",
-          "rdy-exe",
+          readyPhaseBuckets,
+          readyTop,
+          "No ready tasks.",
+          "rdy",
           ws as Record<string, unknown> | null
         ),
       /* Always render body so execution-queue scope footnote appears even when count is 0. */
       false,
-      readyExeCount > 0,
+      readyCount > 0,
       "ready"
     ) +
     renderStatusRollup(
@@ -2689,16 +2778,14 @@ export function renderDashboardRootInnerHtml(
   // ── Assemble tab content ───────────────────────────────────────────────────
 
   const firstWishlistOpen = wishlistOpenTop[0];
-  /** Prefer execution → then open wishlist when execution queue is empty → then ready improvements. */
-  const recNextCard = readyExeTop[0]
-    ? renderRecommendedNextCard(readyExeTop[0], "execution")
+  /** Prefer first ready task → then open wishlist when the ready queue is empty. */
+  const recNextCard = readyTop[0]
+    ? renderRecommendedNextCard(readyTop[0], "execution")
     : firstWishlistOpen
       ? renderRecommendedNextWishlistCard(firstWishlistOpen)
-      : readyImpTop[0]
-        ? renderRecommendedNextCard(readyImpTop[0], "improvement")
-        : "";
+      : "";
 
-  const totalReadyCount = readyImpCount + readyExeCount;
+  const totalReadyCount = readyCount;
   const totalProposedCount = piCount + peCount;
   const totalBlockedCount = Number(blockedSummary.count ?? 0);
   const totalDoneCount =
@@ -2715,8 +2802,7 @@ export function renderDashboardRootInnerHtml(
     renderAgentStatusBanner(d) +
     renderPhaseReadinessCard(
       ws as Record<string, unknown> | null,
-      readyExeCount,
-      readyImpCount,
+      readyCount,
       totalBlockedCount,
       totalProposedCount
     ) +
