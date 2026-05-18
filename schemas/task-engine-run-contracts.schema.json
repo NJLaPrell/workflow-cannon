@@ -57,6 +57,7 @@
         "claim-next-task",
         "claim-workspace-edit-lease",
         "complete-task",
+        "completion-preflight",
         "phase-status",
         "phase-closeout-readiness",
         "phase-delivery-preflight",
@@ -138,6 +139,7 @@
         "claim-next-task": { "$ref": "#/$defs/contractClaimNextTask" },
         "claim-workspace-edit-lease": { "$ref": "#/$defs/contractBase" },
         "complete-task": { "$ref": "#/$defs/contractTaskIntentWithTaskId" },
+        "completion-preflight": { "$ref": "#/$defs/contractCompletionPreflight" },
         "phase-status": { "$ref": "#/$defs/contractPhaseStatus" },
         "phase-closeout-readiness": { "$ref": "#/$defs/contractBase" },
         "phase-delivery-preflight": { "$ref": "#/$defs/contractBase" },
@@ -312,6 +314,9 @@
                   "type": "string",
                   "enum": [
                     "accept",
+                    "await_external_decision",
+                    "await_policy_approval",
+                    "await_review",
                     "block",
                     "cancel",
                     "complete",
@@ -319,6 +324,8 @@
                     "demote",
                     "pause",
                     "reject",
+                    "resume_ready",
+                    "resume_work",
                     "start",
                     "unblock"
                   ]
@@ -954,6 +961,29 @@
             },
             "responseData": {
               "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractCompletionPreflight": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "required": ["taskId"],
+              "additionalProperties": false,
+              "properties": {
+                "taskId": { "type": "string", "pattern": "^T[0-9]+$" },
+                "actor": { "type": "string" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["schemaVersion", "taskId", "passed", "findings"],
               "additionalProperties": true
             }
           }

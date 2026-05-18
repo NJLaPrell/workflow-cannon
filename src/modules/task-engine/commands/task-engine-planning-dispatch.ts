@@ -1,6 +1,7 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
 import { resolveAgentBootstrapOrSnapshot } from "./agent-session-commands.js";
 import { buildAgentMutationPlan } from "./agent-mutation-plan-commands.js";
+import { buildCompletionPreflight } from "./completion-preflight-commands.js";
 import { runApplyTaskBatchCommand } from "./apply-task-batch-command.js";
 import { resolveAgentActivityCommands } from "./agent-activity-commands.js";
 import { resolveFeatureRegistryReadoutCommands } from "./feature-registry-readout-commands.js";
@@ -70,6 +71,10 @@ export async function dispatchTaskEnginePlanningCommands(
 
   if (command.name === "agent-mutation-plan") {
     return buildAgentMutationPlan(ctx, planning, args as Record<string, unknown>);
+  }
+
+  if (command.name === "completion-preflight") {
+    return buildCompletionPreflight(ctx, planning, store, args as Record<string, unknown>);
   }
 
   if (command.name === "claim-next-task") {

@@ -1,5 +1,5 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
-import { CLI_REMEDIATION_INSTRUCTIONS } from "../../../core/cli-remediation.js";
+import { CLI_REMEDIATION_DOCS, CLI_REMEDIATION_INSTRUCTIONS } from "../../../core/cli-remediation.js";
 import { TaskStore } from "../persistence/store.js";
 import type { OpenedPlanningStores } from "../persistence/planning-open.js";
 import {
@@ -78,7 +78,7 @@ function planningGate(
       message: gate.message,
       remediation: {
         instructionPath: CLI_REMEDIATION_INSTRUCTIONS.applyTaskBatch,
-        docPath: "docs/maintainers/adrs/ADR-planning-generation-optimistic-concurrency.md"
+        docPath: CLI_REMEDIATION_DOCS.planningGeneration
       }
     };
     return { block };

@@ -191,7 +191,15 @@ test("resolveTargetState maps action to target state", () => {
 test("getAllowedTransitionsFrom returns all transitions from a state", () => {
   const fromReady = getAllowedTransitionsFrom("ready");
   const actions = fromReady.map((t) => t.action).sort();
-  assert.deepEqual(actions, ["block", "cancel", "demote", "start"]);
+  assert.deepEqual(actions, [
+    "await_external_decision",
+    "await_policy_approval",
+    "await_review",
+    "block",
+    "cancel",
+    "demote",
+    "start"
+  ]);
 
   const fromCompleted = getAllowedTransitionsFrom("completed");
   assert.equal(fromCompleted.length, 0);

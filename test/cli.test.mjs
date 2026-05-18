@@ -1305,6 +1305,9 @@ test("runCli run run-transition --schema-only exposes runtime action enum", asyn
   assert.equal(output.ok, true);
   assert.deepEqual(output.schema.properties.action.enum, [
     "accept",
+    "await_external_decision",
+    "await_policy_approval",
+    "await_review",
     "block",
     "cancel",
     "complete",
@@ -1312,6 +1315,8 @@ test("runCli run run-transition --schema-only exposes runtime action enum", asyn
     "demote",
     "pause",
     "reject",
+    "resume_ready",
+    "resume_work",
     "start",
     "unblock"
   ]);

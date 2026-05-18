@@ -142,7 +142,10 @@ export async function handleRunCommand(
             ok: false,
             code: "schema-only-unsupported",
             message: `Command '${subcommand}' is executable but has no schema-only metadata. This is a command contract bug.`,
-            remediation: { docPath: "docs/maintainers/adrs/ADR-runtime-run-args-validation-pilot.md" }
+            remediation: {
+              instructionPath: "src/modules/task-engine/instructions/agent-mutation-plan.md",
+              docPath: CLI_REMEDIATION_DOCS.agentCliMap
+            }
           },
           null,
           2
@@ -465,7 +468,7 @@ export async function handleRunCommand(
       }
       if (error.code === "planning-generation-mismatch" || error.code === "planning-generation-required") {
         body.remediation = {
-          docPath: "docs/maintainers/adrs/ADR-planning-generation-optimistic-concurrency.md",
+          docPath: CLI_REMEDIATION_DOCS.planningGeneration,
           instructionPath: "src/modules/task-engine/instructions/run-transition.md"
         };
       }

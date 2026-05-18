@@ -1,28 +1,36 @@
 {
   "ok": true,
   "code": "run-args-schema",
-  "command": "get-dependency-graph",
+  "command": "completion-preflight",
   "schema": {
     "type": "object",
+    "required": [
+      "taskId"
+    ],
     "properties": {
       "taskId": {
         "type": "string",
         "pattern": "^T[0-9]+$"
+      },
+      "actor": {
+        "type": "string"
       }
     },
     "additionalProperties": false
   },
   "schemaSource": "pilot-run-args-snapshot",
-  "sampleArgs": {},
+  "sampleArgs": {
+    "taskId": "T000"
+  },
   "examples": [
     {
       "description": "Minimal argv example",
-      "argv": "workspace-kit run get-dependency-graph '{}'"
+      "argv": "workspace-kit run completion-preflight '{\"taskId\":\"T000\"}'"
     }
   ],
-  "instructionPath": "src/modules/task-engine/instructions/get-dependency-graph.md",
+  "instructionPath": "src/modules/task-engine/instructions/completion-preflight.md",
   "moduleId": "task-engine",
-  "description": "Get dependency graph data for one task or the full store.",
+  "description": "Evaluate completion guards for a task and return copy-paste remediation commands before run-transition complete.",
   "policy": {
     "sensitivity": "non-sensitive",
     "operationId": null,

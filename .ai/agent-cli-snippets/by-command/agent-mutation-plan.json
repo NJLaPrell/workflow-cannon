@@ -38,7 +38,7 @@
   ],
   "instructionPath": "src/modules/task-engine/instructions/agent-mutation-plan.md",
   "moduleId": "task-engine",
-  "description": "Read-only preflight plan for workspace-kit run mutations: schema, policy, planning generation, idempotency, and lifecycle state.",
+  "description": "Read-only policy-aware argv builder for workspace-kit run: schema, validation, policy, planning generation, idempotency, and lifecycle state.",
   "policy": {
     "sensitivity": "non-sensitive",
     "operationId": null,
@@ -54,5 +54,5 @@
   "responseTemplate": {
     "defaultResponseTemplateId": "default"
   },
-  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md"
 }

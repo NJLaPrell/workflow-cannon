@@ -6,6 +6,7 @@ import type {
   TransitionEvidence,
   TransitionGuard
 } from "./types.js";
+import { applyHumanGateMetadata } from "./human-gate.js";
 import { TaskEngineError, TransitionValidator, getTransitionAction, resolveTargetState } from "./transitions.js";
 import { TaskStore } from "./persistence/store.js";
 
@@ -16,6 +17,8 @@ export type TransitionRequest = {
   /** When set, SQLite planning row must match this generation or persist fails (`planning-generation-mismatch`). */
   expectedPlanningGeneration?: number;
   clientMutationId?: string;
+  /** Original run-transition argv (human gate fields, etc.). */
+  transitionArgs?: Record<string, unknown>;
   /**
    * Optional hook: runs inside the SQLite transaction immediately before task rows / blobs are written
    * (sqlite dual store only). Used for atomic phase journal attachments on `run-transition`.
@@ -112,12 +115,14 @@ export class TransitionService {
     }
 
     const fromState = task.status;
-    const updatedTask: TaskEntity = {
-      ...task,
-      status: targetState,
-      updatedAt: timestamp
-    };
-    this.store.updateTask(updatedTask);
+    const withGate = applyHumanGateMetadata(
+      { ...task, status: targetState, updatedAt: timestamp },
+      targetState,
+      effectiveAction,
+      timestamp,
+      request.transitionArgs ?? {}
+    );
+    this.store.updateTask(withGate);
 
     const action = getTransitionAction(fromState, targetState) ?? effectiveAction;
     const payloadDigest = request.clientMutationId
