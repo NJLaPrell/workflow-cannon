@@ -104,6 +104,10 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.ok(phaseIdx !== -1 && roleIdx !== -1 && phaseIdx < roleIdx);
   assert.match(html, /Phase Readiness/);
   assert.match(html, /aria-label="Phase readiness"/);
+  assert.match(html, /wc-cae-readiness-collapsed/);
+  assert.match(html, /data-wc-action="phase-readiness-toggle"/);
+  assert.match(html, /aria-expanded="false"/);
+  assert.match(html, /wc-cae-readiness-body/);
   assert.match(html, /Current Phase/);
   assert.doesNotMatch(html, /Next action/i);
   assert.doesNotMatch(html, /Planning generation/i);
@@ -224,6 +228,9 @@ test("renderDashboardRootInnerHtml renders phase roster deliverables inline edit
   });
 
   assert.match(html, /Phase Roster/);
+  assert.match(html, /dash-phase-roster-col-phase/);
+  assert.match(html, /dash-phase-roster-col-status/);
+  assert.match(html, /dash-phase-roster-col-deliverables/);
   assert.match(html, /data-wc-action="phase-deliverables-edit"/);
   assert.match(html, /dash-phase-edit-anchor/);
   assert.match(html, /dash-phase-deliverables-input/);

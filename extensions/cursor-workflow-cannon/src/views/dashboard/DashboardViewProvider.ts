@@ -1938,6 +1938,19 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (!act) return;
     ev.preventDefault();
     ev.stopPropagation();
+    if (act === 'phase-readiness-toggle') {
+      var readinessCard = t.closest('.wc-cae-readiness');
+      if (!readinessCard) return;
+      readinessCard.classList.toggle('wc-cae-readiness-collapsed');
+      var readinessToggle = readinessCard.querySelector('[data-wc-action="phase-readiness-toggle"]');
+      if (readinessToggle) {
+        readinessToggle.setAttribute(
+          'aria-expanded',
+          readinessCard.classList.contains('wc-cae-readiness-collapsed') ? 'false' : 'true'
+        );
+      }
+      return;
+    }
     if (act === 'phase-deliverables-edit') {
       var row = t.closest('[data-wc-phase-row]');
       if (!row) return;
@@ -2149,7 +2162,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .dash-phase-catalog-table {
       width: 100%;
       border-collapse: collapse;
-      table-layout: fixed;
+      table-layout: auto;
       margin-top: 6px;
     }
     .dash-phase-catalog-table th,
@@ -2164,8 +2177,17 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       font-size: 11px;
       background: var(--vscode-textCodeBlock-background);
     }
-    .dash-phase-catalog-table td:first-child { width: 72px; }
-    .dash-phase-catalog-table td:nth-child(2) { width: 92px; }
+    .dash-phase-catalog-table th.dash-phase-roster-col-phase,
+    .dash-phase-catalog-table td.dash-phase-roster-col-phase,
+    .dash-phase-catalog-table th.dash-phase-roster-col-status,
+    .dash-phase-catalog-table td.dash-phase-roster-col-status {
+      width: 1%;
+      white-space: nowrap;
+    }
+    .dash-phase-catalog-table th.dash-phase-roster-col-deliverables,
+    .dash-phase-catalog-table td.dash-phase-roster-col-deliverables {
+      width: 100%;
+    }
     .dash-phase-no-catalog {
       cursor: help;
       text-decoration: none;
@@ -2659,12 +2681,40 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     /* ── CAE readiness ── */
     .wc-cae-readiness { }
+    button.wc-cae-readiness-toggle {
+      all: unset;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      width: 100%;
+      cursor: pointer;
+      border-radius: 4px;
+      padding: 2px 0;
+    }
+    button.wc-cae-readiness-toggle:hover {
+      background: var(--vscode-list-hoverBackground, rgba(127,127,127,.12));
+    }
+    button.wc-cae-readiness-toggle:focus-visible {
+      outline: 1px solid var(--vscode-focusBorder, #007fd4);
+      outline-offset: 2px;
+    }
+    .wc-cae-readiness-collapsed .wc-cae-readiness-body {
+      display: none;
+    }
+    .wc-cae-readiness:not(.wc-cae-readiness-collapsed) .wc-cae-readiness-body {
+      margin-top: 6px;
+    }
     .wc-cae-score-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 8px;
       margin-bottom: 6px;
+    }
+    .wc-cae-readiness-collapsed .wc-cae-score-row {
+      margin-bottom: 0;
     }
     .wc-cae-score-row > p { margin: 0; }
     .wc-cae-score-badge {

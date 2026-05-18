@@ -487,18 +487,20 @@ function renderPhaseReadinessCard(
       : "";
 
   return (
-    '<section class="dash-card wc-cae-readiness" aria-label="Phase readiness">' +
-    '<div class="wc-cae-score-row">' +
+    '<section class="dash-card wc-cae-readiness wc-cae-readiness-collapsed" aria-label="Phase readiness">' +
+    '<button type="button" class="wc-cae-score-row wc-cae-readiness-toggle" data-wc-action="phase-readiness-toggle" aria-expanded="false" aria-controls="wc-cae-readiness-body">' +
     "<p><b>Phase Readiness</b></p>" +
     '<div class="wc-cae-score-badge ' +
     scoreColor +
     '">' +
     escapeHtml(String(score)) +
     "<span>%</span></div>" +
-    "</div>" +
+    "</button>" +
+    '<div class="wc-cae-readiness-body" id="wc-cae-readiness-body">' +
     phaseSection +
     checksSection +
     pendingBlock +
+    "</div>" +
     "</section>"
   );
 }
@@ -1864,7 +1866,7 @@ export function renderPhaseCatalogOverviewSection(
             ? ""
             : ' <abbr class="muted dash-phase-no-catalog" title="No planning catalog row for this phase key">?</abbr>';
         rows +=
-          `<tr><td><code>${escapeHtml(r.phaseKey)}</code></td><td><span class="${statusClass}">${statusLabel}</span>${noCatalogHint}</td><td class="dash-phase-deliverables-cell"><div class="dash-phase-deliverables" data-wc-phase-row="${phaseKeyAttr}">` +
+          `<tr><td class="dash-phase-roster-col-phase"><code>${escapeHtml(r.phaseKey)}</code></td><td class="dash-phase-roster-col-status"><span class="${statusClass}">${statusLabel}</span>${noCatalogHint}</td><td class="dash-phase-roster-col-deliverables dash-phase-deliverables-cell"><div class="dash-phase-deliverables" data-wc-phase-row="${phaseKeyAttr}">` +
           '<div class="dash-phase-deliverables-body">' +
           `<span class="dash-phase-deliverables-text">${desc}</span>` +
           `<div class="dash-phase-deliverables-editor" hidden><input type="text" class="dash-phase-deliverables-input wc-input" data-wc-phase-input="${phaseKeyAttr}" value="${inputValue}" aria-label="Deliverables for phase ${phaseKeyAttr}" /></div>` +
@@ -1874,7 +1876,7 @@ export function renderPhaseCatalogOverviewSection(
       }
       inner =
         rows.length > 0
-          ? '<table class="dash-phase-catalog-table"><thead><tr><th>Phase</th><th>Status</th><th>Deliverables</th></tr></thead><tbody>' +
+          ? '<table class="dash-phase-catalog-table"><thead><tr><th class="dash-phase-roster-col-phase">Phase</th><th class="dash-phase-roster-col-status">Status</th><th class="dash-phase-roster-col-deliverables">Deliverables</th></tr></thead><tbody>' +
             rows +
             "</tbody></table>"
           : '<p class="muted">No matching roster rows.</p>';
