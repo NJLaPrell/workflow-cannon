@@ -1,5 +1,6 @@
 import type { DashboardFeatureDetail, DashboardTaskRow } from "../../contracts/dashboard-summary-run.js";
 import type { FeatureEnrichment } from "./persistence/feature-registry-queries.js";
+import { inferTaskPhaseKey } from "./phase-resolution.js";
 import type { TaskEntity } from "./types.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -106,6 +107,7 @@ export function projectDashboardTaskRow(
     id: task.id,
     title: task.title,
     phase: task.phase ?? null,
+    phaseKey: inferTaskPhaseKey(task),
     severity: readTaskSeverity(task),
     components: readTaskComponents(task, featureDetails),
     features: task.features?.length ? task.features : null,

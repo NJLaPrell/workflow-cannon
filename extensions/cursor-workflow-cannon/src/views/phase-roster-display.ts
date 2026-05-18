@@ -10,7 +10,7 @@ export type PhaseCatalogListRow = {
 };
 
 export type PhaseRosterDisplayRow = PhaseCatalogListRow & {
-  status: "delivered" | "current" | "upcoming";
+  status: "delivered" | "current" | "next" | "future";
 };
 
 /** Leading integer segment of a phase key (e.g. `87` from `87` or `87-rollout`). */
@@ -84,6 +84,10 @@ export function buildNarrowPhaseRosterRows(
     currentRow?.phaseKey ??
     (currentKitTrim.length > 0 ? currentKitTrim : String(wOrd));
 
+  const nextKitTrim =
+    typeof phaseSlice.nextKitPhase === "string" ? phaseSlice.nextKitPhase.trim() : "";
+  const nextOrd = parseLeadingDigitsOrdinal(phaseSlice.nextKitPhase);
+
   const future = phases.filter((p) => {
     const o = parseLeadingPhaseOrdinalFromKey(p.phaseKey);
     return o !== null && o > wOrd;
@@ -104,19 +108,27 @@ export function buildNarrowPhaseRosterRows(
     });
   }
   for (const p of future) {
-    rows.push({ ...p, status: "upcoming" });
+    const pk = p.phaseKey.trim();
+    const po = parseLeadingPhaseOrdinalFromKey(pk);
+    const isNext =
+      (nextKitTrim.length > 0 && pk === nextKitTrim) ||
+      (nextOrd !== null && po !== null && po === nextOrd);
+    rows.push({ ...p, status: isNext ? "next" : "future" });
   }
 
   return { ok: true, rows };
 }
 
+/** @deprecated Prefer {@link phaseScheduleTagLabel} from `phase-schedule-tag.ts`. */
 export function phaseRosterStatusLabel(status: PhaseRosterDisplayRow["status"]): string {
   switch (status) {
     case "delivered":
       return "Delivered";
     case "current":
       return "Current";
-    case "upcoming":
+    case "next":
+      return "Next";
+    case "future":
       return "Future";
     default:
       return "";

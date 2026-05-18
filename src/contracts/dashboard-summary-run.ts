@@ -19,6 +19,8 @@ export type DashboardTaskRow = {
   /** Task severity label promoted from stable read metadata when present. */
   severity?: string | null;
   phase?: string | null;
+  /** Stable phase bucket when known (`inferTaskPhaseKey`); used for Up next and phase rollups. */
+  phaseKey?: string | null;
   /** Component labels for queue-grouping and chip renderers. */
   components?: string[] | null;
   /** Feature taxonomy slugs when present on the task (`feature-taxonomy.json`). */
@@ -277,9 +279,11 @@ export type DashboardSummaryData = {
     id: string;
     title: string;
     status: string;
+    type?: string | null;
     priority?: string | null;
     severity?: string | null;
     phase?: string | null;
+    phaseKey?: string | null;
     components?: string[] | null;
     features?: string[] | null;
     featureDetails?: DashboardFeatureDetail[] | null;

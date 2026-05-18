@@ -3,11 +3,8 @@
  */
 
 import { escapeHtml } from "../dashboard/render-dashboard.js";
-import {
-  buildNarrowPhaseRosterRows,
-  phaseRosterStatusLabel,
-  type PhaseCatalogListRow
-} from "../phase-roster-display.js";
+import { buildNarrowPhaseRosterRows, type PhaseCatalogListRow } from "../phase-roster-display.js";
+import { renderPhaseScheduleTagHtml, resolvePhaseScheduleTag } from "../phase-schedule-tag.js";
 
 /**
  * Component-level CSS used by the Status tab inside the Dashboard sidebar
@@ -283,11 +280,18 @@ export function renderStatusTabInnerHtml(
           catBlock =
             '<p class="wc-muted">Phase roster: set a numeric workspace <b>current phase</b> to show last delivered, current, and future phases.</p>';
         } else {
+          const rosterFocus = {
+            currentKitPhase:
+              typeof phaseRec.currentKitPhase === "string" ? phaseRec.currentKitPhase : null,
+            nextKitPhase: typeof phaseRec.nextKitPhase === "string" ? phaseRec.nextKitPhase : null
+          };
           let catRows = "";
           for (const r of narrow.rows) {
             const sd = r.shortDescription != null ? String(r.shortDescription).trim() : "";
             const desc = sd.length > 0 ? escapeHtml(sd) : "—";
-            const status = escapeHtml(phaseRosterStatusLabel(r.status));
+            const tag = resolvePhaseScheduleTag(r.phaseKey, rosterFocus);
+            const status =
+              tag !== null ? renderPhaseScheduleTagHtml(tag) : '<span class="wc-muted">—</span>';
             catRows +=
               "<tr><td><code>" +
               escapeHtml(r.phaseKey) +

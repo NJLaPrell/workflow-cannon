@@ -119,6 +119,7 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /dash-card/);
   assert.match(html, /dash-agent-status-banner/);
   assert.ok(html.indexOf("dash-agent-status-banner") < html.indexOf("wc-cae-readiness"));
+  assert.ok(html.indexOf("wc-rec-next") < html.indexOf("wc-cae-readiness"));
   assert.ok(html.indexOf("wc-cae-readiness") < html.indexOf("wc-tab-bar"));
   assert.match(html, /<b>WC Agent is:<\/b> <span class="dash-agent-status-label">Awaiting Instruction<\/span>/);
   assert.match(html, /dash-agent-row-list/);
@@ -285,6 +286,78 @@ test("renderDashboardRootInnerHtml renders phase roster deliverables inline edit
   assert.match(html, /dash-phase-deliverables-body/);
   assert.match(html, /dash-phase-no-catalog/);
   assert.doesNotMatch(html, /<label[^>]*dash-phase-deliverables-editor/);
+});
+
+test("renderDashboardRootInnerHtml queue phase buckets show roster deliverables and Edit", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      stateSummary: { proposed: 0, ready: 1, in_progress: 0, blocked: 0, completed: 0 },
+      systemStatus: {
+        phase: {
+          currentKitPhase: "100",
+          nextKitPhase: "101",
+          phaseCatalog: {
+            supported: true,
+            phases: [
+              {
+                phaseKey: "100",
+                shortDescription: "Extension & human visibility",
+                inCatalog: true
+              }
+            ]
+          }
+        }
+      },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      readyExecutionSummary: {
+        schemaVersion: 1,
+        count: 1,
+        top: [],
+        phaseBuckets: [
+          {
+            schemaVersion: 1,
+            phaseKey: "100",
+            label: "Phase 100 (current) (1)",
+            count: 1,
+            top: [{ id: "T100001", title: "Ship it", phase: "Phase 100" }],
+            taskIds: ["T100001"]
+          }
+        ]
+      },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      blockedSummary: { count: 0, top: [], phaseBuckets: [] },
+      transcriptChurnResearchSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      completedSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      cancelledSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      workspaceStatus: { currentKitPhase: "100", nextKitPhase: "101", activeFocus: "Test" },
+      suggestedNext: null,
+      planningSession: null,
+      taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
+      blockingAnalysis: [],
+      dependencyOverview: {
+        schemaVersion: 1,
+        activeTaskCount: 0,
+        includedTaskCount: 0,
+        edgeCount: 0,
+        truncated: false,
+        perfNote: null,
+        nodes: [],
+        edges: [],
+        mermaidFlowchart: "",
+        criticalPathReady: []
+      }
+    }
+  });
+
+  assert.match(html, /phase-bucket-summary-deliverables/);
+  assert.match(html, /dash-phase-deliverables--bucket/);
+  assert.match(html, /Extension &amp; human visibility/);
+  assert.match(html, /wc-phase-tag-current/);
+  assert.match(html, /data-wc-phase-row="100"/);
+  assert.match(html, /data-wc-action="phase-deliverables-edit"[^>]*data-wc-phase-key="100"/);
 });
 
 test("renderDashboardRootInnerHtml renders redesigned queue task rows with chips and summary", () => {
@@ -965,6 +1038,13 @@ test("renderDashboardRootInnerHtml prefers first ready task over wishlist when b
         top: [{ id: "imp-1", title: "Ready improvement task", phase: "Phase 9" }]
       },
       readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      suggestedNext: {
+        id: "imp-1",
+        title: "Ready improvement task",
+        phase: "Phase 9",
+        phaseKey: "9",
+        type: "improvement"
+      },
       wishlist: {
         openCount: 1,
         totalCount: 1,
@@ -973,7 +1053,6 @@ test("renderDashboardRootInnerHtml prefers first ready task over wishlist when b
       blockedSummary: { count: 0, top: [] },
       readyQueueTop: [],
       readyQueueCount: 0,
-      suggestedNext: null,
       planningSession: null,
       taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
       workspaceStatus: { currentKitPhase: "1", nextKitPhase: "2", activeFocus: "Test" },

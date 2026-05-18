@@ -22,11 +22,12 @@ test("parseLeadingPhaseOrdinalFromKey matches phase keys", () => {
 test("phaseRosterStatusLabel maps statuses", () => {
   assert.equal(phaseRosterStatusLabel("delivered"), "Delivered");
   assert.equal(phaseRosterStatusLabel("current"), "Current");
-  assert.equal(phaseRosterStatusLabel("upcoming"), "Future");
+  assert.equal(phaseRosterStatusLabel("next"), "Next");
+  assert.equal(phaseRosterStatusLabel("future"), "Future");
 });
 
 test("buildNarrowPhaseRosterRows picks delivered max past, current, all future", () => {
-  const slice = { currentKitPhase: "87", canonicalPhaseKey: "87" };
+  const slice = { currentKitPhase: "87", nextKitPhase: "88", canonicalPhaseKey: "87" };
   const phases = [
     { phaseKey: "85", shortDescription: "A", inCatalog: true },
     { phaseKey: "86", shortDescription: "B", inCatalog: true },
@@ -41,8 +42,8 @@ test("buildNarrowPhaseRosterRows picks delivered max past, current, all future",
     [
       { k: "86", s: "delivered" },
       { k: "87", s: "current" },
-      { k: "88", s: "upcoming" },
-      { k: "89", s: "upcoming" }
+      { k: "88", s: "next" },
+      { k: "89", s: "future" }
     ]
   );
 });

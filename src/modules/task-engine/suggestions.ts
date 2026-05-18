@@ -4,7 +4,58 @@ import type {
   NextActionSuggestion,
   BlockingAnalysisEntry
 } from "./types.js";
+import {
+  inferTaskPhaseKey,
+  parseKitPhaseNumberFromYaml,
+  parseLeadingPhaseOrdinal
+} from "./phase-resolution.js";
 import { isWishlistIntakeTask } from "./wishlist/wishlist-intake.js";
+
+/** Workspace kit phase pointers for ordering the ready queue and suggested next. */
+export type WorkspacePhaseFocus = {
+  currentKitPhase: string | null;
+  nextKitPhase: string | null;
+};
+
+/**
+ * Lower rank = sooner in the ready queue. Current phase, then next phase, then later phases, then past/unphased.
+ */
+export function workspacePhaseFocusRank(
+  task: Pick<TaskEntity, "phaseKey" | "phase">,
+  focus: WorkspacePhaseFocus | undefined
+): number {
+  if (!focus) {
+    return 0;
+  }
+  const taskKey = inferTaskPhaseKey(task);
+  if (!taskKey) {
+    return 50;
+  }
+  const cur =
+    parseKitPhaseNumberFromYaml(focus.currentKitPhase) ??
+    (focus.currentKitPhase?.trim() || null);
+  const nxt =
+    parseKitPhaseNumberFromYaml(focus.nextKitPhase) ?? (focus.nextKitPhase?.trim() || null);
+  if (cur && taskKey === cur) {
+    return 0;
+  }
+  if (nxt && taskKey === nxt) {
+    return 1;
+  }
+  const tn = parseLeadingPhaseOrdinal(taskKey);
+  const nc = parseLeadingPhaseOrdinal(cur);
+  const nn = parseLeadingPhaseOrdinal(nxt);
+  if (tn !== null && nc !== null && tn < nc) {
+    return 40;
+  }
+  if (tn !== null && nn !== null && tn > nn) {
+    return 20;
+  }
+  if (tn !== null && nc !== null && nxt && tn > nc) {
+    return 10;
+  }
+  return 30;
+}
 
 /** Legacy recommendation ids (`imp-` + hex). New improvements use normal `T###` ids with `type: "improvement"`. */
 const IMPROVEMENT_ID_RE = /^imp-[a-f0-9]+$/i;
@@ -49,9 +100,14 @@ function priorityRank(task: TaskEntity): number {
   return PRIORITY_ORDER[task.priority ?? ""] ?? 99;
 }
 
-/** Deterministic ordering within the ready queue: priority rank, then task id. */
-function sortReadyTasks(tasks: TaskEntity[]): TaskEntity[] {
+/** Deterministic ordering: workspace phase focus, priority rank, then task id. */
+function sortReadyTasks(tasks: TaskEntity[], options?: GetNextActionsOptions): TaskEntity[] {
+  const focus = options?.workspacePhaseFocus;
   return [...tasks].sort((a, b) => {
+    const phaseR = workspacePhaseFocusRank(a, focus) - workspacePhaseFocusRank(b, focus);
+    if (phaseR !== 0) {
+      return phaseR;
+    }
     const pr = priorityRank(a) - priorityRank(b);
     if (pr !== 0) {
       return pr;
@@ -64,7 +120,10 @@ function sortReadyTasks(tasks: TaskEntity[]): TaskEntity[] {
  * Ready tasks whose dependsOn are all completed vs ready-but-blocked-by-deps.
  * Runnable tasks are listed first in `getNextActions.readyQueue`; `suggestedNext` is only ever runnable.
  */
-function partitionReadyByDependencies(tasks: TaskEntity[]): {
+function partitionReadyByDependencies(
+  tasks: TaskEntity[],
+  options?: GetNextActionsOptions
+): {
   runnableReady: TaskEntity[];
   dependencyBlockedReady: TaskEntity[];
 } {
@@ -82,8 +141,8 @@ function partitionReadyByDependencies(tasks: TaskEntity[]): {
     }
   }
   return {
-    runnableReady: sortReadyTasks(runnableReady),
-    dependencyBlockedReady: sortReadyTasks(dependencyBlockedReady)
+    runnableReady: sortReadyTasks(runnableReady, options),
+    dependencyBlockedReady: sortReadyTasks(dependencyBlockedReady, options)
   };
 }
 
@@ -140,6 +199,8 @@ function buildBlockingAnalysis(tasks: TaskEntity[]): BlockingAnalysisEntry[] {
 export type GetNextActionsOptions = {
   /** When set, only tasks in this namespace participate (see `getTaskQueueNamespace`). */
   queueNamespace?: string;
+  /** When set, ready ordering and `suggestedNext` prefer current kit phase, then next, then later phases. */
+  workspacePhaseFocus?: WorkspacePhaseFocus;
 };
 
 export function getNextActions(
@@ -147,7 +208,7 @@ export function getNextActions(
   options?: GetNextActionsOptions
 ): NextActionSuggestion {
   const scoped = filterTasksByQueueNamespace(tasks, options?.queueNamespace);
-  const { runnableReady, dependencyBlockedReady } = partitionReadyByDependencies(scoped);
+  const { runnableReady, dependencyBlockedReady } = partitionReadyByDependencies(scoped, options);
   const readyQueue = [...runnableReady, ...dependencyBlockedReady];
 
   return {

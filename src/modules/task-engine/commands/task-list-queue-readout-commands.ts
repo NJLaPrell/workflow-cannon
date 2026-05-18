@@ -331,13 +331,19 @@ export function resolveTaskListQueueReadoutCommands(
   if (command.name === "get-next-actions") {
     const tasks = store.getActiveTasks();
     const ns = readQueueNamespaceArg(args);
-    const suggestion = getNextActions(tasks, ns ? { queueNamespace: ns } : undefined);
+    const workspaceStatus = readWorkspaceStatusSnapshotFromDual(planning.sqliteDual);
+    const suggestion = getNextActions(tasks, {
+      ...(ns ? { queueNamespace: ns } : {}),
+      workspacePhaseFocus: {
+        currentKitPhase: workspaceStatus?.currentKitPhase ?? null,
+        nextKitPhase: workspaceStatus?.nextKitPhase ?? null
+      }
+    });
     const taskTitleById = new Map(tasks.map((t) => [t.id, t.title] as const));
     const teamExecutionContext = summarizeTeamAssignmentsForNextActions(
       planning.sqliteDual.getDatabase(),
       (id) => taskTitleById.get(id) ?? null
     );
-    const workspaceStatus = readWorkspaceStatusSnapshotFromDual(planning.sqliteDual);
     const phaseRes = resolveCanonicalPhase({
       effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
       workspaceStatus

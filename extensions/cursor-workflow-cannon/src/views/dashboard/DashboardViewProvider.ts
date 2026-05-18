@@ -2381,6 +2381,40 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       gap: 6px 10px;
     }
     .phase-bucket-summary-label { flex: 1; min-width: 0; }
+    .phase-bucket-summary-deliverables {
+      display: inline;
+      font-weight: normal;
+    }
+    .dash-phase-deliverables--bucket {
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px 8px;
+      width: auto;
+      max-width: 100%;
+      vertical-align: baseline;
+    }
+    .dash-phase-deliverables--bucket .dash-phase-deliverables-body {
+      display: inline-flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px;
+      min-width: 0;
+    }
+    .dash-phase-deliverables--bucket .dash-phase-deliverables-text {
+      font-weight: normal;
+      opacity: 0.92;
+    }
+    .dash-phase-deliverables--bucket .dash-phase-edit-anchor {
+      grid-column: unset;
+      grid-row: unset;
+      justify-self: unset;
+      align-self: unset;
+    }
+    .dash-phase-deliverables--bucket .dash-phase-deliverables-error {
+      flex-basis: 100%;
+    }
     button.dash-phase-release-btn {
       flex-shrink: 0;
       margin: 0;
@@ -2546,40 +2580,96 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-rec-tag {
       display: inline-flex;
       align-items: center;
-      padding: 1px 6px;
+      padding: 2px 7px;
       border-radius: 4px;
       font-size: 9.5px;
       font-weight: 600;
-      border: 1px solid transparent;
+      line-height: 1.25;
+      border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border, transparent));
     }
     .wc-rec-tag-ready {
-      background: var(--vscode-testing-iconPassed, rgba(30,80,40,0.5));
-      color: var(--vscode-testing-iconPassed, #4ec9b0);
-      border-color: rgba(78,201,176,0.3);
+      background: var(--vscode-badge-background);
+      color: var(--vscode-badge-foreground);
+      border-color: var(--vscode-contrastBorder, var(--vscode-badge-background));
     }
     .wc-rec-tag-cat {
-      background: var(--vscode-textCodeBlock-background);
-      color: var(--vscode-foreground);
-      opacity: 0.75;
+      background: var(--vscode-editorWidget-background, var(--vscode-input-background));
+      color: var(--vscode-editorWidget-foreground, var(--vscode-foreground));
+      border-color: var(--vscode-widget-border, var(--vscode-panel-border));
     }
     .wc-rec-tag-phase {
-      background: var(--vscode-textCodeBlock-background);
-      color: var(--vscode-textLink-foreground);
-      border-color: var(--vscode-textLink-foreground);
-      opacity: 0.85;
+      background: var(--vscode-button-secondaryBackground, var(--vscode-badge-background));
+      color: var(--vscode-button-secondaryForeground, var(--vscode-badge-foreground));
+      border-color: var(--vscode-button-border, var(--vscode-contrastBorder));
     }
     .wc-rec-next-wishlist {
       border-color: var(--vscode-textLink-foreground);
     }
     .wc-rec-tag-wishlist {
-      background: rgba(78, 148, 220, 0.18);
-      color: var(--vscode-textLink-foreground);
-      border-color: rgba(78, 148, 220, 0.45);
+      background: var(--vscode-inputValidation-infoBackground, var(--vscode-badge-background));
+      color: var(--vscode-inputValidation-infoForeground, var(--vscode-badge-foreground));
+      border-color: var(--vscode-inputValidation-infoBorder, var(--vscode-textLink-foreground));
     }
     .wc-rec-tag-open {
-      background: var(--vscode-textCodeBlock-background);
-      color: var(--vscode-foreground);
-      opacity: 0.65;
+      background: var(--vscode-editorWidget-background, var(--vscode-input-background));
+      color: var(--vscode-editorWidget-foreground, var(--vscode-foreground));
+      border-color: var(--vscode-widget-border, var(--vscode-panel-border));
+    }
+    /* Phase schedule tags (roster, queue buckets, status tab) */
+    .wc-phase-tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 9.5px;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: 0.02em;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .wc-phase-tag-delivered {
+      background: #1a1a1a;
+      color: #f5f5f5;
+      border-color: #3c3c3c;
+    }
+    .wc-phase-tag-current {
+      background: #1b4d1f;
+      color: #c8f5c8;
+      border-color: #2e7d32;
+    }
+    .wc-phase-tag-next {
+      background: #5c4a12;
+      color: #fff3b0;
+      border-color: #9a7b1a;
+    }
+    .wc-phase-tag-future {
+      background: #1a3358;
+      color: #b8d4ff;
+      border-color: #2a5490;
+    }
+    .phase-bucket-summary {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .phase-bucket-summary-label {
+      display: inline-flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      flex: 1;
+      min-width: 0;
+    }
+    .phase-bucket-summary-phase code {
+      font-size: 11px;
+    }
+    .phase-bucket-summary-count {
+      font-size: 10px;
+    }
+    .dash-phase-roster-col-status .wc-phase-tag {
+      vertical-align: middle;
     }
     .wc-rec-wl-hint {
       font-size: 10px;

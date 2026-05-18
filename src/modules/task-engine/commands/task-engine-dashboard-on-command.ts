@@ -71,9 +71,14 @@ export async function runDashboardSummaryCommand(
   commandArgs?: Record<string, unknown>
 ): Promise<ModuleCommandResult> {
   const tasks = store.getActiveTasks();
-  const suggestion = getNextActions(tasks);
   const dualForStatus = sqliteDual ?? openSqliteDualForWorkspaceStatus(ctx);
   const workspaceStatus = readWorkspaceStatusSnapshotFromDual(dualForStatus);
+  const suggestion = getNextActions(tasks, {
+    workspacePhaseFocus: {
+      currentKitPhase: workspaceStatus?.currentKitPhase ?? null,
+      nextKitPhase: workspaceStatus?.nextKitPhase ?? null
+    }
+  });
   const readyQueue = suggestion.readyQueue;
   const readyImprovementCount = readyQueue.filter(isImprovementLikeTask).length;
   const readyImprovements = readyQueue.filter(isImprovementLikeTask);
@@ -336,7 +341,8 @@ export async function runDashboardSummaryCommand(
           ...projectDashboardTaskRow(suggestion.suggestedNext, enrich),
           id: suggestion.suggestedNext.id,
           status: suggestion.suggestedNext.status,
-          title: suggestion.suggestedNext.title
+          title: suggestion.suggestedNext.title,
+          type: suggestion.suggestedNext.type
         }
       : null,
     dependencyOverview,

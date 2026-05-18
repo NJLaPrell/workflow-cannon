@@ -944,6 +944,28 @@ test("getNextActions suggests highest priority task", () => {
   assert.equal(result.suggestedNext.id, "T002");
 });
 
+test("getNextActions prefers workspace next phase over later phases before priority", () => {
+  const tasks = [
+    makeTask({ id: "T101", status: "ready", priority: "P1", phaseKey: "101" }),
+    makeTask({ id: "T100", status: "ready", priority: "P2", phaseKey: "100" })
+  ];
+  const result = getNextActions(tasks, {
+    workspacePhaseFocus: { currentKitPhase: "99", nextKitPhase: "100" }
+  });
+  assert.equal(result.suggestedNext.id, "T100");
+});
+
+test("getNextActions prefers current workspace phase over next when both ready", () => {
+  const tasks = [
+    makeTask({ id: "T100", status: "ready", priority: "P1", phaseKey: "100" }),
+    makeTask({ id: "T099", status: "ready", priority: "P2", phaseKey: "99" })
+  ];
+  const result = getNextActions(tasks, {
+    workspacePhaseFocus: { currentKitPhase: "99", nextKitPhase: "100" }
+  });
+  assert.equal(result.suggestedNext.id, "T099");
+});
+
 test("getNextActions dep-blocked ready tasks follow runnable; suggestedNext skips unmet dependsOn", () => {
   const tasks = [
     makeTask({ id: "T001", status: "completed" }),
