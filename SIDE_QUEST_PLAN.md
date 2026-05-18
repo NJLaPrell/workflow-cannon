@@ -36,6 +36,8 @@ Side quest work should be:
 - promotable into regular phase/release work
 - protected by the same policy gates as any other work
 
+The main product risk is making casual work too formal. To avoid that, Side Quest Mode uses graduated strictness: capture should be light, file mutation should be tracked, completion should be validated, release should be evidenced, and promotion should require full task quality.
+
 ## Work Mode Model
 
 Workflow Cannon should maintain a first-class current work mode.
@@ -94,6 +96,8 @@ Eventually this should become a single deterministic command:
 wk run cae-session-start '{}'
 ```
 
+The `cae-session-start` command should be compact and purpose-built. It should not dump the whole repository state into context. The goal is to give the agent only the information needed to behave correctly before acting.
+
 The `cae-session-start` command should return:
 
 ```json
@@ -145,6 +149,29 @@ Default agent behavior at chat start:
 The agent should not ask for Side Quest Mode on every small message.
 
 The classification must be nuanced enough to avoid annoying the operator while still preventing untracked repo changes.
+
+### Decision tree
+
+The agent should classify requests in this order:
+
+```text
+1. Is this read-only or discussion-only?
+   - Yes: proceed without task/sidequest prompt.
+
+2. Will this modify files, task state, branch state, release state, or external systems?
+   - No: proceed.
+   - Yes: continue.
+
+3. Is there already an active task/mode that covers this work?
+   - Yes: continue inside that mode.
+   - No: ask regular task vs Side Quest Mode vs discussion only.
+
+4. Is the work destructive, release-related, schema-related, policy-related, or broad?
+   - Yes: recommend regular task or release/repair mode; Side Quest requires explicit acceptance.
+
+5. Is the work small, local, and operator-directed?
+   - Yes: Side Quest Mode is appropriate.
+```
 
 ### No prompt needed
 
@@ -203,6 +230,21 @@ The phrase "substantial file-changing work" should be interpreted practically.
 | Modify task DB/state | Yes | Requires task-engine safety rules. |
 | Change policy/rules/security behavior | Yes | Usually regular task or explicit sidequest with high-risk warning. |
 
+### Always ask before these actions
+
+Even if the user phrases the request casually, the agent should ask before proceeding when the work includes:
+
+- source code changes
+- test changes
+- deleting, moving, or archiving files
+- branch deletion or force operations
+- task-state mutations
+- release/version/tag/publish changes
+- policy, rule, security, or approval changes
+- schema or contract changes
+- generated artifact regeneration that may touch many files
+- broad refactors or multi-area changes
+
 ### Avoiding annoying prompts
 
 To mitigate prompt fatigue:
@@ -213,6 +255,102 @@ To mitigate prompt fatigue:
 - If the user has explicitly entered Side Quest Mode, do not ask again for every small file change inside that mode.
 - If the request is ambiguous, ask the smallest useful question.
 - If the request is clearly dangerous, require preview and approval regardless of mode.
+- If the user chooses discussion-only, do not create tasks or edit files.
+
+## Discussion-Only Mode
+
+Discussion-only is not a persisted work mode, but it is a valid classification outcome.
+
+When the user chooses discussion-only, the agent may:
+
+- explain
+- analyze
+- draft possible plans
+- suggest tasks
+- inspect state if read-only access is allowed
+
+The agent must not:
+
+- edit files
+- create task-engine rows
+- enter Side Quest Mode
+- start phase work
+- run mutating commands
+
+Suggested confirmation:
+
+```text
+Discussion only. I’ll keep this to analysis and suggestions, with no file or task-state changes.
+```
+
+## Side Quest Strictness Levels
+
+Side Quest Mode should become stricter only as the work becomes more real.
+
+| Level | Name | Meaning | Required structure |
+| --- | --- | --- | --- |
+| 0 | Discussion only | No repo/task mutation. | None beyond clear user intent. |
+| 1 | Captured sidequest | Lightweight task record exists. | title, intent, risk, releaseIntent. |
+| 2 | File-changing sidequest | Agent will modify files. | acceptance criteria and validation plan required. |
+| 3 | Completed unreleased sidequest | Work is done but not released. | summary, changed areas, validation evidence, release impact. |
+| 4 | Release-bound sidequest | Included in sidequest release plan. | changelog candidate, semver impact, evidence references. |
+| 5 | Promoted formal task | Sidequest becomes regular task/phase work. | full task fields and implementation details. |
+
+This model keeps capture lightweight while making completion, release, and promotion rigorous.
+
+## Capture vs Completion Requirements
+
+Sidequest task requirements should depend on lifecycle stage.
+
+### Capture requirements
+
+At creation time, require only:
+
+- title
+- intent or one-sentence summary
+- risk: low / medium / high / unknown
+- releaseIntent: none / patch / minor / major / unknown
+
+### File mutation requirements
+
+Before modifying files, require:
+
+- sidequest task exists
+- acceptance criteria or clear done condition
+- affected area
+- validation plan or affected-area test plan
+
+### Completion requirements
+
+Before completion, require:
+
+- completion summary
+- changed files or changed areas
+- validation run or explicit validation waiver
+- release impact
+- risk confirmation
+
+### Release requirements
+
+Before release bundling, require:
+
+- releaseIntent is not unknown
+- changelog candidate
+- validation evidence
+- sidequest task included in release evidence
+
+### Promotion requirements
+
+Before promotion, require full regular task details:
+
+- title
+- summary
+- technical scope
+- acceptance criteria
+- implementation details
+- validation plan
+- risk notes if needed
+- dependencies or explicitly none
 
 ## Mode Separation Rules
 
@@ -314,16 +452,14 @@ Mode-specific enforcement:
 
 Sidequest tasks can be lighter than regular phase tasks, but still need enough structure to be releasable.
 
-Minimum fields:
+Minimum capture fields:
 
 - title
 - summary or intent
-- risk: low / medium / high
+- risk: low / medium / high / unknown
 - releaseIntent: none / patch / minor / major / unknown
-- area or feature category if known
-- acceptance criteria, at least one for file-changing work
-- validation plan or affected-area test plan
-- sideQuestBatchId
+
+Additional fields are required only when the sidequest reaches the relevant strictness level.
 
 ## Promotion to Regular Tasks
 
@@ -365,7 +501,7 @@ Missing:
 
 ### Promotion identity
 
-Preferred behavior: keep the same task ID and change the lane/type with transition history.
+Preferred long-term behavior: keep the same task ID and change the lane/type with transition history.
 
 ```json
 {
@@ -380,13 +516,54 @@ Preferred behavior: keep the same task ID and change the lane/type with transiti
 }
 ```
 
-If the task engine cannot safely change type/lane, create a linked regular task and preserve the sidequest as promoted/closed:
+Safer first implementation: create a linked regular task and close the sidequest as promoted.
 
 ```json
 {
   "promotedTaskId": "T100777",
   "sourceSideQuestTaskId": "T100501"
 }
+```
+
+The safer first implementation is recommended unless the task engine already handles type/lane changes cleanly in reports, guards, and release evidence.
+
+## Branch Strategy
+
+Side Quest Mode should not default to direct edits on `main`.
+
+Recommended default:
+
+```text
+one sidequest batch branch per sidequest session
+```
+
+Branch name:
+
+```text
+sidequest/SQB2026-05-17-001
+```
+
+Multiple small sidequest tasks can live inside the same sidequest batch branch.
+
+Task-level sidequest branches are optional and should be used when:
+
+- the sidequest is medium/high risk
+- the sidequest spans multiple areas
+- the sidequest may be promoted
+- the operator wants isolated review
+
+Before entering Side Quest Mode, Workflow Cannon should check dirty tree state.
+
+If the working tree is dirty:
+
+```text
+The working tree already has changes.
+
+Choose:
+1. Attach existing changes to a new sidequest
+2. Stash changes and start clean
+3. Continue discussion only
+4. Abort Side Quest Mode
 ```
 
 ## Cumulative Side Quest Scope Management
@@ -456,6 +633,12 @@ Bypass publish approval.
 Bypass task-engine safety.
 ```
 
+The phrase should be case-insensitive and may have a UI equivalent:
+
+```text
+[Continue in Side Quest Mode anyway]
+```
+
 ### Override record
 
 When the user says `Release the Barbarians!`, record structured metadata:
@@ -463,6 +646,7 @@ When the user says `Release the Barbarians!`, record structured metadata:
 ```json
 {
   "sideQuestOverride": {
+    "overrideType": "sidequest-scope-guidance",
     "phrase": "Release the Barbarians!",
     "meaning": "User permits continued Side Quest Mode despite substantial cumulative change.",
     "timestamp": "...",
@@ -479,6 +663,35 @@ Barbarian override recorded.
 
 You may continue Side Quest Mode despite growing scope.
 Safety gates, tests, previews, and release evidence still apply.
+```
+
+## Release Impact Aggregation
+
+Sidequest bundles may contain mixed work.
+
+Workflow Cannon should use deterministic aggregation:
+
+```text
+highest release impact wins
+major > minor > patch > none
+```
+
+Rules:
+
+- Any `major` sidequest makes the bundle major or requires removal/promotion.
+- Any `minor` sidequest makes the bundle at least minor.
+- Patch-only sidequests can bundle into a patch release.
+- Any `unknown` releaseIntent blocks release planning until classified.
+- Docs-only sidequests may be `none` or `patch` depending project policy.
+- Behavior/default changes should be at least minor unless explicitly classified otherwise.
+
+`sidequest-release-plan` should explain the chosen release level and the sidequest that drove it.
+
+Example:
+
+```text
+Recommended release: minor
+Reason: T100612 adds a new command, which raises the bundle above patch.
 ```
 
 ## State Complexity Risks and Mitigations
@@ -519,7 +732,7 @@ wk run pause-work-mode '{"reason":"Switching contexts with user approval"}'
 
 ### Mitigation 4 — Recoverability
 
-If mode state becomes inconsistent, Workflow Cannon should offer a repair path:
+If mode state becomes inconsistent, Workflow Cannon should offer a repair path from the first implementation, not as late polish.
 
 ```bash
 wk run work-mode-repair-preview '{}'
@@ -534,6 +747,7 @@ Repair should detect:
 - phase mode active with no phase task
 - release mode active after release closeout
 - task type and mode mismatch
+- sidequest batch has no active or completed unreleased tasks
 
 ### Mitigation 5 — Derived summaries
 
@@ -560,6 +774,20 @@ Promote sidequest to phase task
 Release sidequest bundle
 Exit Side Quest Mode with unfinished tasks left ready
 ```
+
+### Mitigation 7 — Before/after risk classification
+
+The agent may misclassify a request before work begins. Workflow Cannon should classify both the request and the resulting diff.
+
+Recommended commands:
+
+```bash
+wk run classify-request-risk '{"request":"..."}'
+wk run classify-diff-risk '{}'
+```
+
+Before work: classify the request.
+After work: classify the diff and warn if actual scope exceeds the captured sidequest.
 
 ## Agent Behavior in Side Quest Mode
 
@@ -596,7 +824,7 @@ Side Quest Mode should help determine release type.
 
 | Change | Release |
 | --- | --- |
-| Typo/docs/copy | patch |
+| Typo/docs/copy | patch or none |
 | Bug fix | patch |
 | Warning/error message improvement | patch |
 | Small dashboard polish | patch |
@@ -609,6 +837,14 @@ Side Quest Mode should help determine release type.
 Initial implementation of Side Quest Mode itself should likely be a minor release because it introduces a new workflow surface.
 
 ## Suggested Commands
+
+### `cae-session-start`
+
+Compact startup command that returns current work mode, active task, phase, sidequest batch, blocking rules, and recommended behavior.
+
+```bash
+wk run cae-session-start '{}'
+```
 
 ### `work-mode-status`
 
@@ -690,9 +926,29 @@ wk run sidequest-release-closeout '{
 }'
 ```
 
+### `work-mode-repair-preview` / `work-mode-repair-apply`
+
+Detects and repairs inconsistent mode state.
+
+```bash
+wk run work-mode-repair-preview '{}'
+wk run work-mode-repair-apply '{"policyApproval":{"confirmed":true,"rationale":"repair stale work mode state"}}'
+```
+
+### `classify-request-risk` / `classify-diff-risk`
+
+Classifies request and actual diff risk.
+
+```bash
+wk run classify-request-risk '{"request":"fix that release warning"}'
+wk run classify-diff-risk '{}'
+```
+
 ## Dashboard Support
 
 Add a Side Quest Mode card to the dashboard.
+
+The card should stay compact. Avoid turning it into a second giant dashboard.
 
 Suggested panel:
 
@@ -728,6 +984,7 @@ Add a Cursor rule:
 
 ```text
 If requested work will substantially modify files and no matching active task exists, ask whether to submit as a regular task or enter Side Quest Mode.
+Do not ask for read-only or discussion-only work.
 Do not mix Phase Work Mode and Side Quest Mode.
 Do not enter Side Quest Mode while phase work is active unless the phase task is complete, paused, or handed off.
 Do not complete regular phase tasks while in Side Quest Mode.
@@ -749,6 +1006,37 @@ Skill responsibilities:
 - recommend patch/minor release when sidequests accumulate
 - enforce no mixing with phase work
 - preserve Workflow Cannon policy gates
+
+## MVP Cut
+
+The plan is intentionally broad. Implementation should start with a minimal, useful cut to avoid building a complicated mode before the foundations are stable.
+
+### MVP
+
+```text
+1. work-mode-status
+2. enter/exit Side Quest Mode
+3. create/complete sidequest task
+4. no-mixing enforcement
+5. CAE startup rule
+6. sidequest-status
+7. basic threshold warning
+8. work-mode-repair-preview for stale state detection
+```
+
+### Not MVP
+
+```text
+dashboard card
+release closeout integration
+same-ID promotion
+barbarian override metadata beyond basic recording
+work-mode-repair-apply automation
+advanced diff classification
+full release bundling automation
+```
+
+These should follow after the basic mode is proven reliable.
 
 ## Implementation Tasks
 
@@ -773,6 +1061,8 @@ Acceptance criteria:
 
 - sidequest tasks live in the task engine
 - sidequest tasks include sidequest metadata and release intent
+- capture requirements are lightweight
+- completion requirements are stricter than capture requirements
 - sidequest tasks only start/complete in Side Quest Mode
 - regular tasks cannot complete in Side Quest Mode
 
@@ -783,6 +1073,7 @@ Acceptance criteria:
 - chat startup reads work mode
 - agent asks whether to create task or enter Side Quest Mode before substantial file changes
 - read-only work does not trigger annoying prompts
+- discussion-only is respected as no-mutation mode
 - active phase/release context is respected
 
 ### SQ004 — Add Side Quest Mode commands
@@ -814,7 +1105,7 @@ wk run promote-sidequest-task
 Acceptance criteria:
 
 - validates required fields
-- either changes task type/lane or creates linked regular task
+- initial implementation may create a linked regular task rather than changing type in place
 - preserves history
 - reports missing fields clearly
 
@@ -839,7 +1130,8 @@ wk run sidequest-release-plan
 Acceptance criteria:
 
 - lists unreleased sidequest tasks
-- recommends patch/minor/major
+- blocks if any releaseIntent is unknown
+- recommends patch/minor/major using highest-impact-wins aggregation
 - produces changelog candidate
 - links to release closeout
 
@@ -866,6 +1158,7 @@ Acceptance criteria:
 - dashboard shows active sidequest and unreleased sidequests
 - dashboard shows threshold warnings
 - dashboard provides actions for create/complete/promote/release/exit
+- dashboard card remains compact
 
 ### SQ010 — Add Cursor rules and skill
 
@@ -880,7 +1173,8 @@ Acceptance criteria:
 Acceptance criteria:
 
 - `work-mode-status` detects inconsistent state
-- repair preview/apply commands exist
+- repair preview exists in MVP
+- repair apply command exists before broader rollout
 - stale active mode can be cleared safely
 - tests cover inconsistent state cases
 
@@ -895,6 +1189,23 @@ Acceptance criteria:
 - barbarian override tests
 - release plan tests
 - CAE startup status tests
+- work-mode repair status tests
+
+### SQ013 — Add branch strategy support
+
+Acceptance criteria:
+
+- sidequest batch branch naming is documented and implemented where practical
+- dirty working tree is detected before entering Side Quest Mode
+- user can attach existing changes, stash, continue discussion-only, or abort
+
+### SQ014 — Add risk classifiers
+
+Acceptance criteria:
+
+- request classifier exists before full rollout
+- diff classifier exists before release bundling automation
+- classifiers report when actual changes exceed captured scope
 
 ## Non-Goals
 
@@ -907,6 +1218,8 @@ Side Quest Mode should not:
 - create hidden release changes
 - rely on chat memory as source of truth
 - force full phase ceremony for every small fix
+- prompt for every read-only or discussion-only request
+- default to direct edits on `main`
 
 ## Strengths of the Plan
 
@@ -932,8 +1245,10 @@ Mitigation:
 
 - only prompt for substantial repo-changing work
 - do not prompt for read-only work
+- define discussion-only as a valid no-mutation outcome
 - batch small edits inside active sidequest mode
 - use concise prompts
+- implement a decision tree before broad rollout
 
 ### Risk 2 — State complexity
 
@@ -945,7 +1260,8 @@ Mitigation:
 - add deterministic `work-mode-status`
 - add explicit mode transition commands
 - derive summaries where possible
-- add repair commands for inconsistent state
+- add repair commands for inconsistent state early
+- begin with a minimal MVP rather than the full mode
 
 ### Risk 3 — Override misuse
 
@@ -958,14 +1274,35 @@ Mitigation:
 - explicitly state safety gates still apply
 - never bypass tests, previews, policy approval, release evidence, or task-engine safety
 
+### Risk 4 — Casual work becomes too formal
+
+If capture requires too many fields, Side Quest Mode becomes regular task mode with a funny hat.
+
+Mitigation:
+
+- use strictness levels
+- keep capture requirements minimal
+- require richer detail only before mutation, completion, release, or promotion
+
+### Risk 5 — Release bundling becomes ambiguous
+
+Mixed sidequest bundles can contain docs, bug fixes, new commands, and behavior changes.
+
+Mitigation:
+
+- use highest-impact-wins aggregation
+- block release planning when releaseIntent is unknown
+- explain which sidequest drove the release recommendation
+
 ## Final Shape
 
 ```text
 CAE starts every chat.
 CAE checks Work Mode.
 Work Mode governs what kind of task can be worked.
+Read-only and discussion-only work can proceed without ceremony.
 Substantial repo changes require a regular task or Side Quest Mode.
-Side Quest Mode uses real task-engine tasks.
+Side Quest Mode uses real task-engine tasks with graduated strictness.
 Side Quest work can be promoted to phase work.
 Large sidequest bundles trigger release guidance.
 "Release the Barbarians!" lets the user override the warning, not the gates.
