@@ -24,8 +24,10 @@ import {
   type PhaseJournalKitPayload,
   type PlanningInterviewWizardPanel
 } from "./render-dashboard.js";
+import { GuidanceAuthoringExtensionSide } from "../guidance/guidance-authoring-extension-side.js";
 import { renderGuidanceAuthoringPanelInnerHtml } from "../guidance/render-guidance-panel.js";
 import { STATUS_PANEL_EMBED_CSS } from "../status/render-status-tab.js";
+import { WC_BASE_CSS } from "../shared/wc-base-css.js";
 import {
   buildAcceptProposedDrawerSpec,
   buildAddPhaseNoteDrawerSpec,
@@ -79,6 +81,25 @@ function logDashboard(message: string): void {
     dashboardOutput = vscode.window.createOutputChannel("Workflow Cannon", { log: true });
   }
   dashboardOutput.appendLine(`[dashboard] ${message}`);
+}
+
+const DASHBOARD_GUIDANCE_AUTHORING_MESSAGE_TYPES = new Set([
+  "validateRegistry",
+  "openArtifact",
+  "artifactAction",
+  "activationAction",
+  "artifactMutation",
+  "activationMutation",
+  "guidancePreview",
+  "listRegistryVersions",
+  "portabilityRun",
+  "activationBulk"
+]);
+
+function isDashboardGuidanceAuthoringMessage(msg: unknown): boolean {
+  if (!msg || typeof msg !== "object") return false;
+  const t = (msg as { type?: unknown }).type;
+  return typeof t === "string" && DASHBOARD_GUIDANCE_AUTHORING_MESSAGE_TYPES.has(t);
 }
 
 function isWishlistPagingArgRejection(raw: Record<string, unknown>): boolean {
@@ -224,6 +245,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   /** In-webview drawer session (register catalog, dismiss phase note, …). */
   private dashboardDrawerSession: DashboardDrawerSession | null = null;
 
+  /** CAE authoring bootstrap messages + mutation drawer (same contract as Guidance panel). */
+  private dashboardGuidanceAuthoring?: GuidanceAuthoringExtensionSide;
+
   /** Last successful `dashboard-summary` `data` — used for phase QuickPick targets. */
   private lastDashboardSummaryData: Record<string, unknown> | null = null;
 
@@ -245,6 +269,15 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   ): void {
     this.view = webviewView;
     const { webview } = webviewView;
+    this.dashboardGuidanceAuthoring = new GuidanceAuthoringExtensionSide({
+      client: this.client,
+      workspaceFolder: vscode.workspace.workspaceFolders?.[0],
+      extensionUri: this.extensionUri,
+      getWebview: () => this.view?.webview,
+      reloadAfterMutations: async () => {
+        await this.pushUpdate();
+      }
+    });
     webview.options = {
       enableScripts: true,
       localResourceRoots: [this.extensionUri]
@@ -470,12 +503,18 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (msg?.type === "drawerSubmit") {
         const rawVals = (msg as { values?: unknown }).values;
         const values = normalizeDrawerValues(rawVals);
+        if (await this.dashboardGuidanceAuthoring?.handleCaeDrawerSubmitIfActive(values)) {
+          return;
+        }
         const refreshed = await this.handleDrawerSubmit(values);
         if (refreshed) {
           await this.pushUpdate();
         }
       }
       if (msg?.type === "drawerCancel") {
+        if (await this.dashboardGuidanceAuthoring?.handleCaeDrawerCancelIfActive()) {
+          return;
+        }
         this.closeDashboardDrawer();
       }
       if (msg?.type === "dashboardAcceptProposedPhase") {
@@ -509,15 +548,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           await this.onTaskCommentsComingSoon(tid, "add");
         }
       }
-      if (msg?.type === "embeddedCaeAction") {
-        const action = typeof msg.action === "string" ? msg.action.trim() : "";
-        const payload =
-          msg.payload && typeof msg.payload === "object" && !Array.isArray(msg.payload)
-            ? (msg.payload as Record<string, unknown>)
-            : undefined;
-        if (action.length > 0) {
-          await this.onEmbeddedCaeAction(action, payload);
-        }
+      if (isDashboardGuidanceAuthoringMessage(msg)) {
+        this.dashboardGuidanceAuthoring?.dispatchWebviewMessage(msg);
       }
     });
     webviewView.onDidChangeVisibility(() => {
@@ -546,6 +578,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (this.view === webviewView) {
         this.view = undefined;
       }
+      this.dashboardGuidanceAuthoring = undefined;
     });
     void this.pushUpdate();
   }
@@ -932,49 +965,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     if (pick === "Open task detail") {
       await vscode.commands.executeCommand("workflowCannon.task.showDetail", taskId);
-    }
-  }
-
-  private async onEmbeddedCaeAction(action: string, payload?: Record<string, unknown>): Promise<void> {
-    if (action === "refresh") {
-      await this.pushUpdate();
-      return;
-    }
-    if (action === "validate-registry") {
-      const out = await this.client.run("cae-registry-validate", { schemaVersion: 1 });
-      if (out.ok) {
-        await vscode.window.showInformationMessage(out.message ?? "CAE registry validation completed.");
-      } else {
-        await vscode.window.showErrorMessage(out.message ?? String(out.code ?? "cae-registry-validate failed"));
-      }
-      await this.pushUpdate();
-      return;
-    }
-    if (action === "preview-guidance") {
-      const commandName =
-        typeof payload?.commandName === "string" && payload.commandName.trim().length > 0
-          ? payload.commandName.trim()
-          : "get-next-actions";
-      const out = await this.client.run("cae-guidance-preview", {
-        schemaVersion: 1,
-        commandName,
-        evalMode: "shadow"
-      });
-      if (out.ok) {
-        await vscode.window.showInformationMessage(
-          out.message ?? `Guidance preview completed for ${commandName}.`
-        );
-      } else {
-        await vscode.window.showErrorMessage(out.message ?? String(out.code ?? "cae-guidance-preview failed"));
-      }
-      return;
-    }
-    const pick = await vscode.window.showInformationMessage(
-      `Embedded CAE action '${action}' currently opens in the standalone Guidance panel.`,
-      "Open Guidance panel"
-    );
-    if (pick === "Open Guidance panel") {
-      await vscode.commands.executeCommand("workflowCannon.openGuidancePanel");
     }
   }
 
@@ -1612,7 +1602,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     ].join("; ");
 
     const bootstrap = `(function(){
-  var vscode = acquireVsCodeApi();
+  var vscode = window.__wfcVscode || (window.__wfcVscode = acquireVsCodeApi());
   var activeTab = 'overview';
   var activeFilter = 'all';
   var activePhaseFilter = 'all';
@@ -1620,7 +1610,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   function togglePhaseDeliverablesEdit(row, editing) {
     if (!row) return;
     var text = row.querySelector('.dash-phase-deliverables-text');
-    var editBtn = row.querySelector('.dash-phase-edit-btn');
+    var editBtn = row.querySelector('.dash-phase-edit-anchor');
     var editor = row.querySelector('.dash-phase-deliverables-editor');
     var saving = row.querySelector('.dash-phase-saving');
     var error = row.querySelector('.dash-phase-deliverables-error');
@@ -1664,13 +1654,13 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       error.hidden = true;
       error.textContent = '';
     }
+    var mutationId = 'dashboard-phase-deliverables-' + phaseKey + '-' + Date.now().toString(36);
+    input.setAttribute('data-wc-pending', '1');
+    input.setAttribute('data-wc-mutation-id', mutationId);
     if (saving) saving.hidden = false;
     input.disabled = true;
     var rowEdit = row.querySelector('.dash-phase-deliverables-editor');
     if (rowEdit) rowEdit.hidden = true;
-    var mutationId = 'dashboard-phase-deliverables-' + phaseKey + '-' + Date.now().toString(36);
-    input.setAttribute('data-wc-pending', '1');
-    input.setAttribute('data-wc-mutation-id', mutationId);
     vscode.postMessage({
       type: 'updatePhaseDeliverables',
       phaseKey: phaseKey,
@@ -1756,12 +1746,13 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (m && m.type === 'wcDrawerOpen' && typeof m.html === 'string') {
       var dh = document.getElementById('wc-drawer-host');
       if (!dh) return;
+      if (!String(m.html).trim()) return;
       dh.innerHTML = m.html;
       dh.classList.remove('wc-drawer-host--hidden');
       dh.setAttribute('aria-hidden','false');
       var ve = document.getElementById('wc-drawer-validation');
       if (ve) { ve.textContent=''; ve.hidden=true; }
-      var prim = dh.querySelector('.wc-drawer-btn-primary');
+      var prim = dh.querySelector('[data-wc-drawer-action="submit"]');
       if (prim && prim.focus) prim.focus();
       return;
     }
@@ -1830,12 +1821,16 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   if (btn) btn.addEventListener('click', function() { vscode.postMessage({type:'refresh'}); });
   if (rootEl) rootEl.addEventListener('click', function(ev) {
     var rawTarget = ev.target;
-    var t = rawTarget && typeof rawTarget.closest === 'function' ? rawTarget.closest('button') : rawTarget;
-    if (!t || t.tagName !== 'BUTTON' || !rootEl.contains(t) || t.disabled) return;
-    if (t.classList.contains('wc-tab-btn')) {
-      applyTab(t.getAttribute('data-wc-tab'));
+    var el = rawTarget;
+    while (el && el.nodeType !== 1) el = el.parentElement;
+    var tabBtn = el && el.closest ? el.closest('.wc-tab-btn') : null;
+    if (tabBtn && rootEl.contains(tabBtn) && !tabBtn.disabled) {
+      applyTab(tabBtn.getAttribute('data-wc-tab'));
       return;
     }
+    var t = el && typeof el.closest === 'function' ? el.closest('button') : null;
+    if (!t || t.tagName !== 'BUTTON' || !rootEl.contains(t) || t.disabled) return;
+    if (t.closest && t.closest('.wc-dash-cae-host')) return;
     if (t.classList.contains('wc-filter-chip')) {
       var f = t.getAttribute('data-wc-filter-btn') || 'all';
       activeFilter = f;
@@ -1977,9 +1972,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     var row = target.closest('[data-wc-phase-row]');
     if (!row) return;
     if (next && row.contains(next)) return;
-    var original = target.getAttribute('data-wc-original') || '';
-    target.value = original;
-    togglePhaseDeliverablesEdit(row, false);
+    submitPhaseDeliverablesInput(target);
   });
 })();`;
 
@@ -1991,6 +1984,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Workflow Cannon</title>
   <style>
+    ${WC_BASE_CSS}
     html, body { margin: 0; }
     body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); background: var(--vscode-sideBar-background); padding: 2px 8px 8px; font-size: 12px; }
     #root > *:first-child { margin-top: 0; }
@@ -2064,54 +2058,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    button.dash-row-action { margin-top: 0; flex-shrink: 0; padding: 2px 8px; font-size: 11px; border-radius: 4px; }
-    /* Primary row actions (Accept, Process, …) — VS Code button palette */
-    button.dash-row-action-primary {
-      color: var(--vscode-button-foreground);
-      background: var(--vscode-button-background);
-      border: 1px solid var(--vscode-button-border, var(--vscode-contrastBorder, transparent));
-    }
-    button.dash-row-action-primary:hover {
-      background: var(--vscode-button-hoverBackground);
-    }
-    button.dash-row-action-primary:active {
-      filter: brightness(0.94);
-    }
-    button.dash-row-action-secondary {
-      color: var(--vscode-foreground);
-      background: transparent;
-      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.45));
-    }
-    button.dash-row-action-secondary:hover {
-      background: var(--vscode-toolbar-hoverBackground);
-    }
-    button.dash-row-action-tertiary {
-      color: var(--vscode-textLink-foreground);
-      background: transparent;
-      border: 1px solid var(--vscode-textLink-foreground);
-    }
-    button.dash-row-action-tertiary:hover {
-      background: var(--vscode-toolbar-hoverBackground);
-    }
-    button.dash-row-action-tertiary:active {
-      filter: brightness(0.92);
-    }
-    button.dash-row-action-info {
-      color: var(--vscode-textLink-foreground);
-      background: transparent;
-      border: 1px solid var(--vscode-textLink-foreground);
-    }
-    button.dash-row-action-info:hover {
-      background: var(--vscode-toolbar-hoverBackground);
-    }
-    button.dash-row-action-danger {
-      color: var(--vscode-errorForeground);
-      background: transparent;
-      border: 1px solid var(--vscode-errorForeground);
-    }
-    button.dash-row-action-danger:hover {
-      background: var(--vscode-toolbar-hoverBackground);
-    }
     .dash-phase-notes-head {
       display: flex;
       align-items: center;
@@ -2128,69 +2074,84 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       flex-wrap: wrap;
       margin-top: 8px;
     }
-    .dash-phase-deliverables {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 6px;
+    .dash-phase-catalog-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      margin-top: 6px;
+    }
+    .dash-phase-catalog-table th,
+    .dash-phase-catalog-table td {
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
+      padding: 6px 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+    .dash-phase-catalog-table th {
+      font-weight: 600;
+      font-size: 11px;
+      background: var(--vscode-textCodeBlock-background);
+    }
+    .dash-phase-catalog-table td:first-child { width: 72px; }
+    .dash-phase-catalog-table td:nth-child(2) { width: 92px; }
+    .dash-phase-no-catalog {
+      cursor: help;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .dash-phase-deliverables-cell {
       min-width: 0;
+    }
+    .dash-phase-deliverables {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      column-gap: 8px;
+      row-gap: 4px;
+      align-items: start;
+      width: 100%;
+      min-width: 0;
+    }
+    .dash-phase-deliverables-body {
+      grid-column: 1;
+      grid-row: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
     }
     .dash-phase-deliverables-text {
       min-width: 0;
-      flex: 1;
+      word-break: break-word;
+      line-height: 1.35;
     }
-    .dash-phase-edit-btn {
+    .dash-phase-edit-anchor {
+      grid-column: 2;
+      grid-row: 1;
+      justify-self: end;
+      align-self: start;
       margin: 0;
-      padding: 2px 8px;
-      font-size: 10px;
-      border-radius: 4px;
-      color: var(--vscode-foreground);
-      background: transparent;
-      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.45));
-    }
-    .dash-phase-edit-btn:hover {
-      background: var(--vscode-toolbar-hoverBackground);
     }
     .dash-phase-deliverables-editor {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 11px;
+      width: 100%;
       min-width: 0;
-      max-width: 100%;
-      flex: 1;
+    }
+    .dash-phase-deliverables-editor[hidden] {
+      display: none !important;
     }
     .dash-phase-deliverables-input {
-      font-family: var(--vscode-font-family);
-      font-size: 12px;
-      min-width: 180px;
-      max-width: 100%;
-      flex: 1;
-      color: var(--vscode-foreground);
-      background: var(--vscode-editor-background);
-      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.45));
-      border-radius: 4px;
-      padding: 2px 6px;
+      min-width: 0;
     }
     .dash-phase-saving {
       font-size: 11px;
       opacity: 0.8;
     }
     .dash-phase-deliverables-error {
+      grid-column: 1 / -1;
+      grid-row: 2;
       margin: 0;
       width: 100%;
       font-size: 11px;
     }
-    .dash-overview-phase-row {
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin: 0 0 6px 0;
-    }
-    .dash-overview-phase-text { flex: 1; min-width: 0; }
     .dash-editor-integration--embedded {
       margin-top: 10px;
       padding-top: 8px;
@@ -2200,28 +2161,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       margin-top: 0;
       padding-top: 0;
       border-top: 0;
-    }
-    button.dash-deliver-chip {
-      margin: 0;
-      flex-shrink: 0;
-      padding: 3px 10px;
-      font-size: 10px;
-      font-weight: 600;
-      border-radius: 5px;
-      letter-spacing: 0.02em;
-      color: var(--vscode-button-foreground);
-      background: var(--vscode-button-background);
-      border: 1px solid var(--vscode-button-border, var(--vscode-contrastBorder, transparent));
-    }
-    button.dash-deliver-chip:hover {
-      background: var(--vscode-button-hoverBackground);
-    }
-    button.dash-deliver-chip:active {
-      filter: brightness(0.94);
-    }
-    button.dash-deliver-chip:disabled {
-      opacity: 0.45;
-      cursor: not-allowed;
     }
     .dash-agent-status-banner {
       border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
@@ -2255,29 +2194,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .dash-planning-head-main { flex: 1; min-width: 0; }
     p.dash-planning-title { margin: 0; }
     .dash-planning-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; flex-shrink: 0; }
-    button.dash-new-plan-btn {
-      margin: 0;
-      flex-shrink: 0;
-      padding: 5px 12px;
-      font-size: 11px;
-      font-weight: 500;
-      border-radius: 6px;
-      color: var(--vscode-button-foreground);
-      background: var(--vscode-button-background);
-      border: 1px solid var(--vscode-button-border, var(--vscode-contrastBorder, transparent));
-    }
-    button.dash-new-plan-btn:hover {
-      background: var(--vscode-button-hoverBackground);
-    }
-    button.dash-new-plan-btn:active {
-      filter: brightness(0.94);
-    }
     button.dash-planning-discard-btn {
       margin: 0;
-      padding: 5px 12px;
-      font-size: 11px;
-      font-weight: 500;
-      border-radius: 6px;
     }
     .dash-planning-wizard {
       margin: 8px 0 10px 0;
@@ -2340,45 +2258,21 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     button.dash-phase-release-btn {
       flex-shrink: 0;
       margin: 0;
-      padding: 3px 10px;
-      font-size: 11px;
-      font-weight: 500;
-      border-radius: 6px;
-      cursor: pointer;
-      color: var(--vscode-button-foreground);
-      background: var(--vscode-button-background);
-      border: 1px solid var(--vscode-button-border, var(--vscode-contrastBorder, transparent));
-    }
-    button.dash-phase-release-btn:hover {
-      background: var(--vscode-button-hoverBackground);
-    }
-    button.dash-phase-release-btn:active {
-      filter: brightness(0.94);
     }
     details.phase-bucket pre { margin-top: 4px; }
     .dashboard-tasks-block { margin-top: 0; }
     .dash-quick-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 10px 0; }
-    button.dash-quick-action-btn {
-      margin: 0;
-      padding: 5px 12px;
-      font-size: 11px;
-      font-weight: 500;
-      border-radius: 6px;
-      cursor: pointer;
-      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.45));
-    }
-    button.dash-quick-action-btn.dash-quick-action-primary {
-      color: var(--vscode-button-foreground);
-      background: var(--vscode-button-background);
-      border-color: var(--vscode-button-border, var(--vscode-contrastBorder, transparent));
-    }
-    button.dash-quick-action-btn.dash-quick-action-primary:hover {
-      background: var(--vscode-button-hoverBackground);
-    }
-    button.dash-quick-action-btn.dash-quick-action-primary:active {
-      filter: brightness(0.94);
-    }
     .dash-card { border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35)); border-radius: 6px; padding: 8px; margin: 10px 0; }
+    .wc-dash-cae-host.dash-cae-embedded {
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
+      border-radius: 8px;
+      padding: 10px 12px 12px;
+      margin: 0;
+      max-height: min(78vh, 920px);
+      overflow: auto;
+      background: var(--vscode-editor-background);
+    }
+    .wc-dash-cae-host .gp-shell { max-width: none; margin: 0; padding: 8px 0 12px 0; }
     details.status-section { margin-bottom: 8px; }
     details.status-section > summary { cursor: pointer; user-select: none; font-weight: 600; }
     details.status-section > .status-section-body { padding-left: 2px; }
@@ -2565,12 +2459,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       flex-wrap: wrap;
       align-items: center;
     }
-    button.wc-rec-wl-view {
-      background: var(--vscode-button-secondaryBackground, var(--vscode-button-background));
-      color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground));
-    }
-    button.wc-rec-wl-view:hover {
-      background: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-hoverBackground));
+    .wc-rec-footer .wc-btn:first-of-type {
+      margin-left: auto;
     }
     .wc-ready-scope-note {
       font-size: 10.5px;
@@ -2582,20 +2472,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       line-height: 1.35;
       margin: 8px 0 0 0;
     }
-    button.wc-rec-start-btn {
-      margin-left: auto;
-      padding: 2px 9px;
-      font-size: 10px;
-      font-weight: 600;
-      border-radius: 5px;
-      cursor: pointer;
-      color: var(--vscode-button-foreground);
-      background: var(--vscode-button-background);
-      border: 1px solid var(--vscode-button-border, var(--vscode-contrastBorder, transparent));
-      flex-shrink: 0;
-    }
-    button.wc-rec-start-btn:hover { background: var(--vscode-button-hoverBackground); }
-    button.wc-rec-start-btn:active { filter: brightness(0.94); }
     /* ── Stat pills ── */
     .wc-stat-pills {
       display: grid;
@@ -2832,8 +2708,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       color: #000;
     }
     .wc-drawer-host { position: fixed; inset: 0; z-index: 20000; pointer-events: none; }
-    .wc-drawer-host:not(.wc-drawer-host--hidden) { pointer-events: auto; }
     .wc-drawer-host--hidden { display: none !important; }
+    .wc-drawer-host:not(.wc-drawer-host--hidden) .wc-drawer-scrim,
+    .wc-drawer-host:not(.wc-drawer-host--hidden) .wc-drawer-panel {
+      pointer-events: auto;
+    }
     .wc-drawer-scrim { position: absolute; inset: 0; background: rgba(0,0,0,0.5); }
     .wc-drawer-panel {
       position: absolute; left: 8px; right: 8px; bottom: 8px; max-height: 78vh; overflow: auto;
@@ -2856,15 +2735,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-drawer-textarea { resize: vertical; min-height: 48px; }
     .wc-drawer-summary-body { font-size: 12px; line-height: 1.4; padding: 6px 8px; border-radius: 4px; background: var(--vscode-textCodeBlock-background); }
     .wc-drawer-footer { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
-    .wc-drawer-btn { padding: 4px 12px; font-size: 12px; border-radius: 4px; cursor: pointer; }
-    .wc-drawer-btn-secondary {
-      color: var(--vscode-foreground); background: transparent;
-      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.45));
-    }
-    .wc-drawer-btn-primary {
-      color: var(--vscode-button-foreground); background: var(--vscode-button-background);
-      border: 1px solid var(--vscode-button-border, var(--vscode-contrastBorder, transparent));
-    }
     /* ── Status tab embed: shared with the standalone Status webview panel ── */
     ${STATUS_PANEL_EMBED_CSS}
     .wc-status-tab-embedded { margin-top: 12px; }
@@ -2875,7 +2745,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   <div id="root">${rootInnerHtml}</div>
   <div id="wc-drawer-host" class="wc-drawer-host wc-drawer-host--hidden" aria-hidden="true"></div>
   <footer class="dash-footer">
-    <button type="button" id="btn" class="dash-refresh-btn" title="Refetch dashboard-summary now. The panel also reloads when you switch back to it, when kit-owned files change, and about every 45s while visible.">Refresh</button>
+    <button type="button" id="btn" class="wc-btn wc-btn-lg wc-btn-primary dash-refresh-btn" title="Refetch dashboard-summary now. The panel also reloads when you switch back to it, when kit-owned files change, and about every 45s while visible.">Refresh</button>
   </footer>
   <script>${bootstrap}</script>
 </body>

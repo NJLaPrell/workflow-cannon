@@ -87,7 +87,7 @@ function renderRawDetails(summary: string, payload: unknown, limit: number): str
   return `<details class="gd-card gd-raw-block gd-debug">
   <summary>${escapeHtml(summary)}</summary>
   <p class="gd-muted">${truncated ? `Showing the first ${shown.length} of ${raw.length} characters.` : "Showing the full JSON payload."} Copy grabs exactly what is visible below.</p>
-  <button type="button" class="gd-btn" data-wc-action="guidance-copy-block">Copy shown JSON</button>
+  <button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="guidance-copy-block">Copy shown JSON</button>
   <pre>${escapeHtml(shown)}</pre>
 </details>`;
 }
@@ -156,8 +156,8 @@ function renderActivityRows(rows: unknown): string {
     <details class="gd-debug"><summary>Debug check record</summary><p class="gd-muted">${storage ? `${escapeHtml(storage)} · ` : ""}check record <code>${escapeHtml(shortTraceId(traceId))}</code></p></details>
   </div>
   <div class="gd-actions">
-    <button type="button" class="gd-btn" data-wc-action="guidance-explain" data-trace-id="${escapeHtmlAttr(traceId)}">Review why</button>
-    <button type="button" class="gd-btn" data-wc-action="guidance-improve" data-trace-id="${escapeHtmlAttr(traceId)}" data-activation-id="" data-command-name="${escapeHtmlAttr(commandName)}">Improve guidance</button>
+    <button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="guidance-explain" data-trace-id="${escapeHtmlAttr(traceId)}">Review why</button>
+    <button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="guidance-improve" data-trace-id="${escapeHtmlAttr(traceId)}" data-activation-id="" data-command-name="${escapeHtmlAttr(commandName)}">Improve guidance</button>
   </div>
 </div>`;
       })
@@ -284,8 +284,8 @@ function renderManageGuidance(data: UnknownRecord): string {
       : `<p class="gd-muted">${escapeHtml(denial)}</p><p class="gd-muted">When versioned mutations are enabled, the extension uses <code>caeMutationApproval</code> in CAE commands — separate from Tier A/B <code>policyApproval</code> on <code>run</code> / <code>run-transition</code>.</p>`
   }
   <div class="gd-actions">
-    <button type="button" class="gd-btn"${mutDisabledAttrs} data-wc-action="guidance-version-clone" data-version-id="${escapeHtmlAttr(activeVersionId)}">Create draft from active set</button>
-    <button type="button" class="gd-btn"${mutDisabledAttrs} data-wc-action="guidance-version-rollback">Roll back to previous set</button>
+    <button type="button" class="wc-btn wc-btn-sm wc-btn-secondary"${mutDisabledAttrs} data-wc-action="guidance-version-clone" data-version-id="${escapeHtmlAttr(activeVersionId)}">Create draft from active set</button>
+    <button type="button" class="wc-btn wc-btn-sm wc-btn-secondary"${mutDisabledAttrs} data-wc-action="guidance-version-rollback">Roll back to previous set</button>
   </div>
   <details>
     <summary>Guidance Library</summary>
@@ -313,7 +313,7 @@ function renderManageGuidance(data: UnknownRecord): string {
   ${
     row.isActive === true
       ? '<span class="gd-pill">Active</span>'
-      : `<button type="button" class="gd-btn"${mutDisabledAttrs} data-wc-action="guidance-version-activate" data-version-id="${escapeHtmlAttr(versionId)}">Activate</button>`
+      : `<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary"${mutDisabledAttrs} data-wc-action="guidance-version-activate" data-version-id="${escapeHtmlAttr(versionId)}">Activate</button>`
   }
 </div>`;
               })
@@ -407,10 +407,10 @@ function renderGuidanceCard(cardRaw: unknown, traceId: string, commandName: stri
     <p>${artifactIds.map((id) => `<code>${escapeHtml(id)}</code>`).join(" ")}</p>
   </details>
   <div class="gd-actions">
-    <button type="button" class="gd-btn" data-wc-action="guidance-explain" data-trace-id="${escapeHtmlAttr(traceId)}">Review why</button>
-    <button type="button" class="gd-btn" data-wc-action="guidance-improve" data-trace-id="${escapeHtmlAttr(traceId)}" data-activation-id="${escapeHtmlAttr(activationId)}" data-command-name="${escapeHtmlAttr(commandName)}">Improve this guidance</button>
-    <button type="button" class="gd-btn" data-wc-action="guidance-feedback" data-signal="useful" data-trace-id="${escapeHtmlAttr(traceId)}" data-activation-id="${escapeHtmlAttr(activationId)}" data-command-name="${escapeHtmlAttr(commandName)}">Useful</button>
-    <button type="button" class="gd-btn" data-wc-action="guidance-feedback" data-signal="noisy" data-trace-id="${escapeHtmlAttr(traceId)}" data-activation-id="${escapeHtmlAttr(activationId)}" data-command-name="${escapeHtmlAttr(commandName)}">Noisy</button>
+    <button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="guidance-explain" data-trace-id="${escapeHtmlAttr(traceId)}">Review why</button>
+    <button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="guidance-improve" data-trace-id="${escapeHtmlAttr(traceId)}" data-activation-id="${escapeHtmlAttr(activationId)}" data-command-name="${escapeHtmlAttr(commandName)}">Improve this guidance</button>
+    <button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="guidance-feedback" data-signal="useful" data-trace-id="${escapeHtmlAttr(traceId)}" data-activation-id="${escapeHtmlAttr(activationId)}" data-command-name="${escapeHtmlAttr(commandName)}">Useful</button>
+    <button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="guidance-feedback" data-signal="noisy" data-trace-id="${escapeHtmlAttr(traceId)}" data-activation-id="${escapeHtmlAttr(activationId)}" data-command-name="${escapeHtmlAttr(commandName)}">Noisy</button>
   </div>
 </div>`;
 }
@@ -456,7 +456,7 @@ function renderPendingAcks(rows: unknown, traceId: string): string {
       const title = activationTitle(row);
       return `<div class="gd-row">
   <span><b>${escapeHtml(title)}</b><br><span class="gd-muted">${escapeHtml(String(row.strength ?? ""))}${activationId && activationId !== title ? ` · ${escapeHtml(activationId)}` : ""}</span></span>
-  <button type="button" class="gd-btn gd-primary" data-wc-action="guidance-ack" data-trace-id="${escapeHtmlAttr(traceId)}" data-activation-id="${escapeHtmlAttr(activationId)}" data-ack-token="${escapeHtmlAttr(ackToken)}">Acknowledge</button>
+  <button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="guidance-ack" data-trace-id="${escapeHtmlAttr(traceId)}" data-activation-id="${escapeHtmlAttr(activationId)}" data-ack-token="${escapeHtmlAttr(ackToken)}">Acknowledge</button>
 </div>`;
     })
     .join("")}<p class="gd-muted">This records “I read this guidance.” It does not grant policy approval for another command or change agent behavior settings.</p></section>`;

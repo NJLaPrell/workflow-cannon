@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { CommandClient } from "../../runtime/command-client.js";
+import { WC_BASE_CSS } from "../shared/wc-base-css.js";
 import type { DrawerFormSpec, DrawerValidationResult } from "../dashboard/dashboard-input-drawer.js";
 import {
   buildGuidanceAckDrawerSpec,
@@ -821,7 +822,7 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
       }
       var b = document.createElement('button');
       b.type = 'button';
-      b.className = 'gd-btn';
+      b.className = 'wc-btn wc-btn-md wc-btn-secondary';
       b.setAttribute('data-wc-action', 'wizard-catalog-use');
       b.setAttribute('data-catalog-title', String(it.displayTitle || ''));
       b.setAttribute('data-catalog-when', String(it.appliesWhen || ''));
@@ -1117,6 +1118,7 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
     if (m && m.type === 'wcDrawerOpen' && typeof m.html === 'string') {
       var dh = document.getElementById('wc-drawer-host');
       if (!dh) return;
+      if (!String(m.html).trim()) return;
       dh.innerHTML = m.html;
       dh.classList.remove('wc-drawer-host--hidden');
       dh.setAttribute('aria-hidden', 'false');
@@ -1232,6 +1234,7 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy" content="${csp}" />
   <style>
+    ${WC_BASE_CSS}
     *, *::before, *::after { box-sizing: border-box; }
     html, body { height: 100%; margin: 0; overflow: hidden; }
     body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); font-size: 12px; display: flex; flex-direction: column; background: var(--vscode-sideBar-background); }
@@ -1244,16 +1247,7 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
     .gd-field { display: flex; flex-direction: column; gap: 3px; min-width: 100px; flex: 1; }
     .gd-field label { font-weight: 600; font-size: 11px; }
     .gd-input { padding: 4px 6px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.45)); border-radius: 4px; font-family: var(--vscode-font-family); font-size: 12px; }
-    /* ── Buttons: match dashboard action palette ── */
     button { cursor: pointer; font-family: var(--vscode-font-family); }
-    .gd-btn { padding: 3px 10px; font-size: 11px; font-weight: 500; border-radius: 4px; cursor: pointer; background: transparent; color: var(--vscode-foreground); border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.45)); }
-    .gd-btn:hover { background: var(--vscode-toolbar-hoverBackground); }
-    .gd-btn:active { filter: brightness(0.94); }
-    .gd-btn:disabled { cursor: not-allowed; opacity: 0.45; }
-    .gd-btn.gd-primary, .gd-primary { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: 1px solid var(--vscode-button-border, var(--vscode-contrastBorder, transparent)); border-radius: 4px; padding: 3px 12px; font-size: 11px; font-weight: 500; }
-    .gd-btn.gd-primary:hover, .gd-primary:hover { background: var(--vscode-button-hoverBackground); }
-    .gd-btn.gd-primary:active, .gd-primary:active { filter: brightness(0.94); }
-    .gd-btn.gd-primary:disabled, .gd-primary:disabled { opacity: 0.45; cursor: not-allowed; }
     /* ── Status bar ── */
     .gd-status { white-space: pre-wrap; font-family: var(--vscode-editor-font-family); font-size: 11px; padding: 4px 12px; flex-shrink: 0; background: var(--vscode-sideBar-background); border-top: 1px solid var(--vscode-widget-border, rgba(127,127,127,.25)); opacity: 0.8; }
     .gd-status-ok { color: var(--vscode-testing-iconPassed, #3fb950); opacity: 1; }
@@ -1316,8 +1310,11 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
     .gd-subsection { display: none; }
     #subsection-wizard { display: block; }
     .wc-drawer-host { position: fixed; inset: 0; z-index: 20000; pointer-events: none; }
-    .wc-drawer-host:not(.wc-drawer-host--hidden) { pointer-events: auto; }
     .wc-drawer-host--hidden { display: none !important; }
+    .wc-drawer-host:not(.wc-drawer-host--hidden) .wc-drawer-scrim,
+    .wc-drawer-host:not(.wc-drawer-host--hidden) .wc-drawer-panel {
+      pointer-events: auto;
+    }
     .wc-drawer-scrim { position: absolute; inset: 0; background: rgba(0,0,0,0.5); }
     .wc-drawer-panel {
       position: absolute; left: 8px; right: 8px; bottom: 8px; max-height: 78vh; overflow: auto;
@@ -1340,15 +1337,6 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
     .wc-drawer-textarea { resize: vertical; min-height: 48px; }
     .wc-drawer-summary-body { font-size: 12px; line-height: 1.4; padding: 6px 8px; border-radius: 4px; background: var(--vscode-textCodeBlock-background); }
     .wc-drawer-footer { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
-    .wc-drawer-btn { padding: 4px 12px; font-size: 12px; border-radius: 4px; cursor: pointer; }
-    .wc-drawer-btn-secondary {
-      color: var(--vscode-foreground); background: transparent;
-      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.45));
-    }
-    .wc-drawer-btn-primary {
-      color: var(--vscode-button-foreground); background: var(--vscode-button-background);
-      border: 1px solid var(--vscode-button-border, var(--vscode-contrastBorder, transparent));
-    }
   </style>
 </head>
 <body>
@@ -1392,8 +1380,8 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
         <p><label><input type="checkbox" id="gd-mode-live" /> Evaluate using active guidance now. This still does not run the workflow.</label></p>
       </details>
       <div class="gd-toolbar" style="justify-content:space-between">
-        <button type="button" class="gd-btn gd-primary" id="gd-preview">Run Pre-flight Check</button>
-        <button type="button" class="gd-btn" id="gd-refresh" style="font-size:11px;opacity:0.7">Reload</button>
+        <button type="button" class="wc-btn wc-btn-md wc-btn-primary" id="gd-preview">Run Pre-flight Check</button>
+        <button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" id="gd-refresh">Reload</button>
       </div>
     </section>
     <div id="guidance-preview-root"></div>
@@ -1453,7 +1441,7 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
             <div id="gw-catalog-rows" class="gw-catalog-strip"></div>
           </section>
           <div class="gd-toolbar gd-actions">
-            <button type="button" class="gd-btn" id="gw-new-rule">Clear / new rule draft</button>
+            <button type="button" class="wc-btn wc-btn-md wc-btn-secondary" id="gw-new-rule">Clear / new rule draft</button>
           </div>
           <div class="gd-toolbar">
             <div class="gd-field"><label for="gw-draft-title">Guidance title</label><input id="gw-draft-title" class="gd-input" placeholder="What operators should see" /></div>
@@ -1506,9 +1494,9 @@ export class GuidanceViewProvider implements vscode.WebviewViewProvider {
           <div class="gd-field" style="max-width:none"><label for="gw-draft-notes">Notes for maintainers</label><textarea id="gw-draft-notes" class="gd-input" rows="3" placeholder="What should change and why?"></textarea></div>
           <p id="gw-readiness-note" class="gd-muted" style="font-size:11px;"></p>
           <div class="gd-actions">
-            <button type="button" class="gd-btn gd-primary" id="gw-draft-preview">Preview draft impact</button>
-            <button type="button" class="gd-btn" id="gw-draft-reset">Reset wizard</button>
-            <button type="button" class="gd-btn" disabled id="gw-copy-draft-json">Copy draft JSON</button>
+            <button type="button" class="wc-btn wc-btn-md wc-btn-primary" id="gw-draft-preview">Preview draft impact</button>
+            <button type="button" class="wc-btn wc-btn-md wc-btn-secondary" id="gw-draft-reset">Reset wizard</button>
+            <button type="button" class="wc-btn wc-btn-md wc-btn-secondary" disabled id="gw-copy-draft-json">Copy draft JSON</button>
           </div>
         </div>
       </section>

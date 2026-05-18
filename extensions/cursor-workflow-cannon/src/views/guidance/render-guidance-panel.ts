@@ -1,5 +1,9 @@
 import { escapeHtml, escapeHtmlAttr } from "../dashboard/render-dashboard.js";
 
+const WC_BTN_MD_PRI = "wc-btn wc-btn-md wc-btn-primary";
+const WC_BTN_MD_SEC = "wc-btn wc-btn-md wc-btn-secondary";
+const WC_BTN_SM_SEC = "wc-btn wc-btn-sm wc-btn-secondary";
+
 /** Mirrors `CAE_WORKSPACE_ARTIFACT_TYPES` for authoring UI (extension does not import kit core). */
 const WORKSPACE_CAE_ARTIFACT_TYPES = [
   "playbook",
@@ -40,7 +44,7 @@ function pill(label: string, value: unknown, tone?: string): string {
 function callout(tone: "ok" | "warn" | "bad", title: string, message: string, actions: Array<{ label: string; action: string }> = []): string {
   const buttons = actions.length
     ? `<div class="gp-action-row">${actions
-        .map((action) => `<button type="button" data-gp-action="${escapeHtmlAttr(action.action)}">${escapeHtml(action.label)}</button>`)
+        .map((action) => `<button type="button" class="${WC_BTN_MD_SEC}" data-gp-action="${escapeHtmlAttr(action.action)}">${escapeHtml(action.label)}</button>`)
         .join("")}</div>`
     : "";
   return `<section class="gp-callout gp-${tone}"><b>${escapeHtml(title)}</b><span>${escapeHtml(message)}</span>${buttons}</section>`;
@@ -157,7 +161,7 @@ function renderOverview(data: UnknownRecord): string {
   const wsActiveArtifacts = countWorkspaceActiveArtifacts(data);
   const showOnboarding = wsActiveArtifacts === 0 && canMutateAuthoring(data);
   const onboarding = showOnboarding
-    ? `<section class="gp-callout gp-warn"><b>First workspace Guidance</b><span>You have no active workspace-owned artifacts yet. Pick a starter template (Artifacts tab), duplicate a default row, then bind a draft activation and run Preview before publishing.</span><div class="gp-action-row"><button type="button" class="gp-primary" data-gp-tab-target="artifacts" data-gp-action="new-artifact">Open Artifact editor</button><button type="button" data-gp-tab-target="activations" data-gp-action="new-activation">Open Activation editor</button></div></section>`
+    ? `<section class="gp-callout gp-warn"><b>First workspace Guidance</b><span>You have no active workspace-owned artifacts yet. Pick a starter template (Artifacts tab), duplicate a default row, then bind a draft activation and run Preview before publishing.</span><div class="gp-action-row"><button type="button" class="${WC_BTN_MD_PRI}" data-gp-tab-target="artifacts" data-gp-action="new-artifact">Open Artifact editor</button><button type="button" class="${WC_BTN_MD_SEC}" data-gp-tab-target="activations" data-gp-action="new-activation">Open Activation editor</button></div></section>`
     : "";
   const warningRows = warnings.length
     ? `<div class="gp-warning-list">${warnings
@@ -179,10 +183,10 @@ function renderOverview(data: UnknownRecord): string {
     </div>
   </div>
   <div class="gp-action-row">
-    <button type="button" class="gp-primary" data-gp-tab-target="artifacts" data-gp-action="new-artifact">New Artifact</button>
-    <button type="button" class="gp-primary" data-gp-tab-target="activations" data-gp-action="new-activation">New Activation</button>
-    <button type="button" data-gp-tab-target="preview" data-gp-action="preview-guidance">Preview Guidance</button>
-    <button type="button" data-gp-action="validate-registry">Validate Registry</button>
+    <button type="button" class="${WC_BTN_MD_PRI}" data-gp-tab-target="artifacts" data-gp-action="new-artifact">New Artifact</button>
+    <button type="button" class="${WC_BTN_MD_PRI}" data-gp-tab-target="activations" data-gp-action="new-activation">New Activation</button>
+    <button type="button" class="${WC_BTN_MD_SEC}" data-gp-tab-target="preview" data-gp-action="preview-guidance">Preview Guidance</button>
+    <button type="button" class="${WC_BTN_MD_SEC}" data-gp-action="validate-registry">Validate Registry</button>
   </div>
   ${onboarding}
   <div id="gp-action-result" class="gp-inline-result" role="status" aria-live="polite"></div>
@@ -286,12 +290,12 @@ function renderArtifacts(data: UnknownRecord): string {
     <label class="gp-editor-block">Markdown<textarea id="gp-artifact-content" rows="7" placeholder="# Example Playbook"></textarea></label>
     <label class="gp-editor-block">Note<input id="gp-artifact-note" placeholder="Why this artifact change is needed" /></label>
     <div class="gp-action-row">
-      <button type="button" class="gp-primary" id="gp-artifact-create" data-gp-action="artifact-create"${canMutate ? "" : " disabled"}>Create</button>
-      <button type="button" class="gp-primary" id="gp-artifact-update" data-gp-action="artifact-update"${canMutate ? "" : " disabled"}>Update</button>
-      <button type="button" id="gp-artifact-duplicate" data-gp-action="artifact-duplicate-submit"${canMutate ? "" : " disabled"}>Duplicate</button>
-      <button type="button" id="gp-artifact-retire" data-gp-action="artifact-retire-submit"${canMutate ? "" : " disabled"}>Retire</button>
-      <button type="button" data-gp-action="artifact-preview-form">Preview Markdown</button>
-      <button type="button" data-gp-action="artifact-clear-form">Clear</button>
+      <button type="button" class="${WC_BTN_MD_PRI}" id="gp-artifact-create" data-gp-action="artifact-create"${canMutate ? "" : " disabled"}>Create</button>
+      <button type="button" class="${WC_BTN_MD_PRI}" id="gp-artifact-update" data-gp-action="artifact-update"${canMutate ? "" : " disabled"}>Update</button>
+      <button type="button" class="${WC_BTN_MD_SEC}" id="gp-artifact-duplicate" data-gp-action="artifact-duplicate-submit"${canMutate ? "" : " disabled"}>Duplicate</button>
+      <button type="button" class="${WC_BTN_MD_SEC}" id="gp-artifact-retire" data-gp-action="artifact-retire-submit"${canMutate ? "" : " disabled"}>Retire</button>
+      <button type="button" class="${WC_BTN_MD_SEC}" data-gp-action="artifact-preview-form">Preview Markdown</button>
+      <button type="button" class="${WC_BTN_MD_SEC}" data-gp-action="artifact-clear-form">Clear</button>
     </div>
     <div id="gp-artifact-preview" class="gp-markdown-preview"></div>
   </section>
@@ -300,7 +304,7 @@ function renderArtifacts(data: UnknownRecord): string {
 }
 
 function rowButton(label: string, action: string, row: UnknownRecord, enabled: boolean): string {
-  return `<button type="button" data-gp-action="${escapeHtmlAttr(action)}" data-gp-artifact-id="${escapeHtmlAttr(String(row.artifactId ?? ""))}" data-gp-artifact-path="${escapeHtmlAttr(String(row.path ?? ""))}"${enabled ? "" : " disabled"}>${escapeHtml(label)}</button>`;
+  return `<button type="button" class="${WC_BTN_SM_SEC}" data-gp-action="${escapeHtmlAttr(action)}" data-gp-artifact-id="${escapeHtmlAttr(String(row.artifactId ?? ""))}" data-gp-artifact-path="${escapeHtmlAttr(String(row.path ?? ""))}"${enabled ? "" : " disabled"}>${escapeHtml(label)}</button>`;
 }
 
 function renderArtifactActions(row: UnknownRecord, canMutate: boolean): string {
@@ -348,10 +352,10 @@ function renderActivations(data: UnknownRecord): string {
     <select id="gp-activation-status"><option value="">All statuses</option><option value="active">Active</option><option value="draft">Draft (authoring)</option><option value="disabled">Disabled</option><option value="hidden">Hidden</option><option value="retired">Retired</option></select>
   </div>
   <div class="gp-action-row">
-    <button type="button" data-gp-action="activation-bulk-select-visible">Select visible rows</button>
-    <button type="button" data-gp-action="activation-bulk-clear">Clear selection</button>
-    <button type="button" data-gp-action="activation-bulk-disable"${canMutate ? "" : " disabled"}>Disable selected</button>
-    <button type="button" data-gp-action="activation-bulk-retire"${canMutate ? "" : " disabled"}>Retire selected</button>
+    <button type="button" class="${WC_BTN_MD_SEC}" data-gp-action="activation-bulk-select-visible">Select visible rows</button>
+    <button type="button" class="${WC_BTN_MD_SEC}" data-gp-action="activation-bulk-clear">Clear selection</button>
+    <button type="button" class="${WC_BTN_MD_SEC}" data-gp-action="activation-bulk-disable"${canMutate ? "" : " disabled"}>Disable selected</button>
+    <button type="button" class="${WC_BTN_MD_SEC}" data-gp-action="activation-bulk-retire"${canMutate ? "" : " disabled"}>Retire selected</button>
   </div>
   ${renderActivationEditor(data, canMutate, active)}
   <table><thead><tr><th class="gp-bulk-col"></th><th>Activation</th><th>Lifecycle</th><th>Priority</th><th>Scope</th><th>Artifacts</th><th>Ack</th><th>Source</th><th>Warnings</th><th>Actions</th></tr></thead><tbody>${body}</tbody></table>
@@ -403,9 +407,9 @@ function renderActivationEditor(data: UnknownRecord, canMutate: boolean, active:
     <div class="gp-picker" id="gp-activation-artifact-picker">${picker}</div>
     <label class="gp-editor-block">Note<input id="gp-activation-note" placeholder="Why this draft activation is needed" /></label>
     <div class="gp-action-row">
-      <button type="button" class="gp-primary" data-gp-action="activation-create-submit"${canMutate ? "" : " disabled"}>Create Draft</button>
-      <button type="button" class="gp-primary" data-gp-action="activation-update-submit"${canMutate ? "" : " disabled"}>Update Draft</button>
-      <button type="button" data-gp-action="activation-clear-form">Clear</button>
+      <button type="button" class="${WC_BTN_MD_PRI}" data-gp-action="activation-create-submit"${canMutate ? "" : " disabled"}>Create Draft</button>
+      <button type="button" class="${WC_BTN_MD_PRI}" data-gp-action="activation-update-submit"${canMutate ? "" : " disabled"}>Update Draft</button>
+      <button type="button" class="${WC_BTN_MD_SEC}" data-gp-action="activation-clear-form">Clear</button>
     </div>
   </section>`;
 }
@@ -439,7 +443,7 @@ function renderActivationActions(row: UnknownRecord, canMutate: boolean): string
   const source = String(row.source ?? "");
   const isEditable = source === "workspace" || source === "override" || status === "draft";
   const button = (label: string, action: string, enabled: boolean) =>
-    `<button type="button" data-gp-action="${escapeHtmlAttr(action)}" data-gp-activation-id="${escapeHtmlAttr(activationId)}"${enabled ? "" : " disabled"}>${escapeHtml(label)}</button>`;
+    `<button type="button" class="${WC_BTN_SM_SEC}" data-gp-action="${escapeHtmlAttr(action)}" data-gp-activation-id="${escapeHtmlAttr(activationId)}"${enabled ? "" : " disabled"}>${escapeHtml(label)}</button>`;
   return `<div class="gp-row-actions">${[
     button("Edit", "activation-edit", canMutate && isEditable),
     button("Duplicate", "activation-duplicate", canMutate && status !== "retired"),
@@ -472,8 +476,8 @@ function renderPreview(data: UnknownRecord): string {
     </div>
     <label class="gp-editor-block">Command args JSON<textarea id="gp-preview-command-args" rows="4" placeholder='{"action":"complete"}'></textarea></label>
     <div class="gp-action-row">
-      <button type="button" class="gp-primary" data-gp-action="preview-run-draft">Preview Draft</button>
-      <button type="button" data-gp-action="preview-copy-evidence">Copy Evidence</button>
+      <button type="button" class="${WC_BTN_MD_PRI}" data-gp-action="preview-run-draft">Preview Draft</button>
+      <button type="button" class="${WC_BTN_MD_SEC}" data-gp-action="preview-copy-evidence">Copy Evidence</button>
     </div>
   </section>
   <div id="gp-preview-result" class="gp-preview-result"><p class="gp-muted">Run a draft preview from the activation editor to see impact, warnings, sample matches (kind + matched flag), same-family conflicts, and publish evidence.</p></div>
@@ -485,9 +489,9 @@ function renderPortability(canMutate: boolean): string {
   <div class="gp-band"><h2>Portability & defaults</h2><span class="gp-muted">Reconcile · export · import dry-run</span></div>
   <section class="gp-callout gp-ok"><b>Capabilities</b><span>Dashboard edits require <code>kit.cae.adminMutations</code> and a CAE mutation confirmation. Sensitive lifecycle moves (activate, retire, rollback, import) still go through <code>workspace-kit run</code> with JSON <code>policyApproval</code> where the command is gated — chat text is not approval. <b>CAE rationale</b> is collected as <code>caeMutationApproval</code> (host prompt + modal confirm); it is <em>not</em> the same object as Tier A/B <code>policyApproval</code> on <code>wk run</code>.</span></section>
   <div class="gp-action-row">
-    <button type="button" class="gp-primary" data-gp-action="portability-reconcile">Compare package defaults</button>
-    <button type="button" data-gp-action="portability-export"${canMutate ? "" : " disabled"}>Export pack to tmp</button>
-    <button type="button" data-gp-action="portability-import-dry"${canMutate ? "" : " disabled"}>Dry-run import from tmp</button>
+    <button type="button" class="${WC_BTN_MD_PRI}" data-gp-action="portability-reconcile">Compare package defaults</button>
+    <button type="button" class="${WC_BTN_MD_SEC}" data-gp-action="portability-export"${canMutate ? "" : " disabled"}>Export pack to tmp</button>
+    <button type="button" class="${WC_BTN_MD_SEC}" data-gp-action="portability-import-dry"${canMutate ? "" : " disabled"}>Dry-run import from tmp</button>
   </div>
   <p class="gp-muted">Export writes <code>.workspace-kit/tmp/guidance-pack.json</code> (created on demand). Dry-run reads that relative path.</p>
   <pre id="gp-portability-out" class="gp-versions-dump">Click a button to load kit output.</pre>
@@ -500,7 +504,7 @@ function renderVersions(data: UnknownRecord): string {
   return `<section class="gp-tab-panel" id="gp-tab-versions" data-gp-panel="versions">
   <div class="gp-band"><h2>Registry versions</h2><span class="gp-muted">Read-only · <code>cae-list-registry-versions</code></span></div>
   <div class="gp-action-row">
-    <button type="button" class="gp-primary" data-gp-action="versions-refresh">Refresh version list</button>
+    <button type="button" class="${WC_BTN_MD_PRI}" data-gp-action="versions-refresh">Refresh version list</button>
   </div>
   <p class="gp-muted">Active version from last authoring snapshot: <code>${escapeHtml(vid)}</code>. Open the <b>Audit</b> tab for the mutation timeline (command, actor, note).</p>
   <pre id="gp-versions-json" class="gp-versions-dump">Click “Refresh version list” to load rows from kit SQLite.</pre>
@@ -528,7 +532,7 @@ export function renderGuidanceAuthoringPanelInnerHtml(result: unknown): string {
   return `<main class="gp-shell">
   <header class="gp-head">
     <div><p class="gp-kicker">Workflow Cannon</p><h1>${escapeHtml(title)}</h1></div>
-    <button type="button" id="gp-refresh" class="gp-primary" data-gp-action="refresh">Refresh</button>
+    <button type="button" id="gp-refresh" class="${WC_BTN_MD_PRI}" data-gp-action="refresh">Refresh</button>
   </header>
   ${renderStateCallout(data, envelope)}
   <nav class="gp-tabs" aria-label="Guidance authoring sections">

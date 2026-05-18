@@ -4,6 +4,7 @@ import {
   renderConfigListInnerHtml,
   type ConfigKeyRowInput
 } from "./render-config.js";
+import { WC_BASE_CSS } from "../shared/wc-base-css.js";
 
 export class ConfigViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewId = "workflowCannon.config";
@@ -287,12 +288,11 @@ export class ConfigViewProvider implements vscode.WebviewViewProvider {
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy" content="${csp}" />
   <style>
+    ${WC_BASE_CSS}
     body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); padding: 8px; font-size: 12px; margin: 0; }
     .cfg-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
     .cfg-toolbar label { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
     .cfg-filter { flex: 1; min-width: 120px; padding: 4px 6px; box-sizing: border-box; }
-    .cfg-btn { padding: 4px 10px; cursor: pointer; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: 1px solid var(--vscode-widget-border); border-radius: 2px; }
-    .cfg-btn.cfg-primary { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
     .cfg-status { white-space: pre-wrap; font-family: var(--vscode-editor-font-family); font-size: 11px; padding: 6px 8px; margin-bottom: 8px; border-radius: 2px; }
     .cfg-status-info { background: var(--vscode-textCodeBlock-background); }
     .cfg-status-ok { background: rgba(0, 160, 0, 0.15); }
@@ -324,8 +324,8 @@ export class ConfigViewProvider implements vscode.WebviewViewProvider {
 </head>
 <body>
   <div class="cfg-toolbar">
-    <button type="button" class="cfg-btn cfg-primary" id="cfg-refresh">Reload</button>
-    <button type="button" class="cfg-btn" id="cfg-validate">Validate</button>
+    <button type="button" class="wc-btn wc-btn-md wc-btn-primary" id="cfg-refresh">Reload</button>
+    <button type="button" class="wc-btn wc-btn-md wc-btn-secondary" id="cfg-validate">Validate</button>
     <input type="search" class="cfg-filter" id="cfg-filter" placeholder="Filter keys / description…" />
     <label><input type="checkbox" id="cfg-maintainer" /> Maintainer keys</label>
   </div>

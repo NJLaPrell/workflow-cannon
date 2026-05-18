@@ -12,6 +12,7 @@ import {
   phaseRosterStatusLabel,
   type PhaseCatalogListRow
 } from "../phase-roster-display.js";
+import { buildGuidanceAuthoringWebviewBootstrap } from "../guidance/guidance-authoring-webview-bootstrap.js";
 import { renderStatusTabInnerHtml } from "../status/render-status-tab.js";
 
 export function escapeHtml(s: string): string {
@@ -32,7 +33,7 @@ function renderPhaseAssignButton(taskId: string): string {
   const idAttr = escapeHtml(taskId);
   const aria = escapeHtmlAttr(`Set phase for task ${taskId}`);
   return (
-    '<button type="button" class="dash-row-action dash-row-action-secondary" data-wc-action="assign-phase" data-task-id="' +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="assign-phase" data-task-id="' +
     idAttr +
     '" aria-label="' +
     aria +
@@ -44,7 +45,7 @@ function renderTaskDetailButton(taskId: string): string {
   const idAttr = escapeHtml(taskId);
   const aria = escapeHtmlAttr(`View task details for ${taskId}`);
   return (
-    '<button type="button" class="dash-row-action dash-row-action-tertiary" data-wc-action="task-detail" data-task-id="' +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="task-detail" data-task-id="' +
     idAttr +
     '" aria-label="' +
     aria +
@@ -57,10 +58,8 @@ function renderTaskCommentsButton(taskId: string, mode: "view" | "add"): string 
   const label = mode === "add" ? "Add Comment" : "View Comments";
   const action = mode === "add" ? "task-comment-add" : "task-comments-view";
   const aria = escapeHtmlAttr(`${label} for task ${taskId}`);
-  const cls = mode === "add" ? "dash-row-action-info" : "dash-row-action-tertiary";
   return (
-    '<button type="button" class="dash-row-action ' +
-    cls +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary' +
     '" data-wc-action="' +
     action +
     '" data-task-id="' +
@@ -155,7 +154,7 @@ function renderRecommendedNextCard(
     '<span class="wc-rec-tag wc-rec-tag-cat">' + escapeHtml(category) + "</span>";
   const viewBtn =
     id.length > 0
-      ? '<button type="button" class="wc-rec-start-btn" data-wc-action="task-detail" data-task-id="' +
+      ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="task-detail" data-task-id="' +
         idAttr +
         '" title="Open task detail">View &rarr;</button>'
       : "";
@@ -195,13 +194,13 @@ function renderRecommendedNextWishlistCard(item: unknown): string {
   const idAttr = escapeHtmlAttr(wishlistId);
   const processBtn =
     wishlistId.length > 0
-      ? '<button type="button" class="wc-rec-start-btn" data-wc-action="wishlist-chat" data-wishlist-id="' +
+      ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="wishlist-chat" data-wishlist-id="' +
         idAttr +
         '" title="Prefill wishlist intake chat">Process &rarr;</button>'
       : "";
   const viewBtn =
     wishlistId.length > 0
-      ? '<button type="button" class="wc-rec-start-btn wc-rec-wl-view" data-wc-action="wishlist-view" data-wishlist-id="' +
+      ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="wishlist-view" data-wishlist-id="' +
         idAttr +
         '" title="Open wishlist fields in the editor">View</button>'
       : "";
@@ -382,8 +381,8 @@ function phaseBucketFilterAttr(phaseKey: unknown): string {
   return ' data-wc-phase-bucket="' + escapeHtmlAttr(String(phaseKey).trim()) + '"';
 }
 
-/** Phase readiness card for the Queue tab. */
-function renderCaePhaseReadinessContent(
+/** Phase readiness card — rendered under WC Agent in the dashboard shell. */
+function renderPhaseReadinessCard(
   ws: Record<string, unknown> | null,
   readyExeCount: number,
   readyImpCount: number,
@@ -500,7 +499,13 @@ function renderCaePhaseReadinessContent(
     phaseSection +
     checksSection +
     pendingBlock +
-    "</section>" +
+    "</section>"
+  );
+}
+
+/** Queue tab: pointer to CAE sidebar (phase readiness lives under WC Agent). */
+function renderQueueTabCaePointerSection(): string {
+  return (
     '<section class="dash-card" aria-label="CAE sidebar">' +
     "<p><b>CAE Controls</b></p>" +
     '<p class="muted">Pre-flight checks, guidance management, and history live in the <b>CAE</b> sidebar panel.</p>' +
@@ -656,13 +661,13 @@ function renderWishlistOpenList(items: unknown): string {
           label +
           "</span>" +
           '<span class="dash-row-actions">' +
-          '<button type="button" class="dash-row-action dash-row-action-tertiary" data-wc-action="wishlist-view" data-wishlist-id="' +
+          '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="wishlist-view" data-wishlist-id="' +
           idAttr +
           '" title="Open full wishlist fields in the editor">View</button>' +
-          '<button type="button" class="dash-row-action dash-row-action-primary" data-wc-action="wishlist-chat" data-wishlist-id="' +
+          '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="wishlist-chat" data-wishlist-id="' +
           idAttr +
           '" title="Open wishlist intake flow for this item (prefills Cursor chat)">Process</button>' +
-          '<button type="button" class="dash-row-action dash-row-action-secondary" data-wc-action="wishlist-decline" data-task-id="' +
+          '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="wishlist-decline" data-task-id="' +
           taskIdAttr +
           '" title="Decline → cancelled (reject on backing wishlist intake task; confirms policy rationale)">Decline</button>' +
           "</span></div>"
@@ -684,7 +689,7 @@ function renderWishlistPager(openPage: number, openTotalPages: number): string {
   const nextDisabled = openPage >= lastPage;
   return (
     '<div class="wc-wishlist-pager muted" role="navigation" aria-label="Wishlist pages" style="display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:8px;margin-top:10px;">' +
-    '<button type="button" class="dash-row-action dash-row-action-tertiary"' +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary"' +
     (prevDisabled ? " disabled" : "") +
     ' data-wc-action="wishlist-page" data-wishlist-page="' +
     String(prevPage) +
@@ -694,7 +699,7 @@ function renderWishlistPager(openPage: number, openTotalPages: number): string {
     " of " +
     String(openTotalPages) +
     "</span>" +
-    '<button type="button" class="dash-row-action dash-row-action-tertiary"' +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary"' +
     (nextDisabled ? " disabled" : "") +
     ' data-wc-action="wishlist-page" data-wishlist-page="' +
     String(nextPage) +
@@ -722,10 +727,10 @@ function renderProposedImprovementRow(row: {
     renderDashboardTaskBody(row) +
     renderQueueTaskActionButtons(id) +
     '<span class="dash-row-actions">' +
-    '<button type="button" class="dash-row-action dash-row-action-primary" data-wc-action="proposed-imp-accept" data-task-id="' +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="proposed-imp-accept" data-task-id="' +
     idAttr +
     '" title="Accept → ready (confirms policy rationale)">Accept</button>' +
-    '<button type="button" class="dash-row-action dash-row-action-secondary" data-wc-action="proposed-imp-decline" data-task-id="' +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="proposed-imp-decline" data-task-id="' +
     idAttr +
     '" title="Decline → cancelled (reject; confirms policy rationale)">Decline</button>' +
     "</span></div>"
@@ -764,10 +769,10 @@ function renderTranscriptChurnResearchRow(row: { id?: unknown; title?: unknown; 
     label +
     "</span>" +
     '<span class="dash-row-actions">' +
-    '<button type="button" class="dash-row-action dash-row-action-tertiary" data-wc-action="task-detail" data-task-id="' +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="task-detail" data-task-id="' +
     idAttr +
     '" title="Open task view (markdown)">View</button>' +
-    '<button type="button" class="dash-row-action dash-row-action-primary" data-wc-action="transcript-churn-research-chat" data-task-id="' +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="transcript-churn-research-chat" data-task-id="' +
     idAttr +
     '" title="Open transcript churn research playbook in chat">Research</button>' +
     "</span></div>"
@@ -814,10 +819,10 @@ function renderProposedExecutionRow(row: {
     renderDashboardTaskBody(row) +
     renderQueueTaskActionButtons(id) +
     '<span class="dash-row-actions">' +
-    '<button type="button" class="dash-row-action dash-row-action-primary" data-wc-action="proposed-exe-accept" data-task-id="' +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="proposed-exe-accept" data-task-id="' +
     idAttr +
     '" title="Accept → ready (confirms policy rationale)">Accept</button>' +
-    '<button type="button" class="dash-row-action dash-row-action-secondary" data-wc-action="proposed-exe-decline" data-task-id="' +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="proposed-exe-decline" data-task-id="' +
     idAttr +
     '" title="Decline → cancelled (reject; confirms policy rationale)">Decline</button>' +
     "</span></div>"
@@ -928,7 +933,7 @@ function renderReadyPhaseBuckets(
         const phasePhraseAttr = escapeHtmlAttr(phasePhrase);
         const showRelease = readyPhaseBucketHasTasks(raw);
         const releaseBtn = showRelease
-          ? '<button type="button" class="dash-phase-release-btn" data-wc-action="phase-complete-release" data-wc-phase-phrase="' +
+          ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary dash-phase-release-btn" data-wc-action="phase-complete-release" data-wc-phase-phrase="' +
             phasePhraseAttr +
             '" title="Open a new chat with a phase closeout prompt">Complete &amp; Release</button>'
           : "";
@@ -984,7 +989,7 @@ function renderProposedPhaseBuckets(
         const c = typeof b.count === "number" ? b.count : 0;
         const acceptAllBtn =
           c > 0 && taskIds.length > 0
-            ? '<button type="button" class="dash-row-action dash-row-action-primary dash-phase-accept-all" data-wc-action="proposed-imp-accept-phase" data-proposed-task-ids="' +
+            ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary dash-phase-accept-all" data-wc-action="proposed-imp-accept-phase" data-proposed-task-ids="' +
               escapeHtmlAttr(taskIds.join(",")) +
               '" title="Accept every proposed improvement in this phase (shared policy rationale)">Accept All</button>'
             : "";
@@ -1090,7 +1095,7 @@ function renderProposedExecutionPhaseBuckets(
         const c = typeof b.count === "number" ? b.count : 0;
         const acceptAllBtn =
           c > 0 && taskIds.length > 0
-            ? '<button type="button" class="dash-row-action dash-row-action-primary dash-phase-accept-all" data-wc-action="proposed-exe-accept-phase" data-proposed-task-ids="' +
+            ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary dash-phase-accept-all" data-wc-action="proposed-exe-accept-phase" data-proposed-task-ids="' +
               escapeHtmlAttr(taskIds.join(",")) +
               '" title="Accept every proposed execution task in this phase (shared policy rationale)">Accept All</button>'
             : "";
@@ -1262,7 +1267,7 @@ export function renderPlanningInterviewWizardPanel(panel: PlanningInterviewWizar
       '<select id="wc-planning-type" class="dash-planning-wizard-select">' +
       opts +
       "</select>" +
-      '<button type="button" class="dash-new-plan-btn" data-wc-action="planning-wizard-start">Start interview</button>' +
+      '<button type="button" class="wc-btn wc-btn-md wc-btn-primary" data-wc-action="planning-wizard-start">Start interview</button>' +
       "</div>" +
       "</div>"
     );
@@ -1289,8 +1294,8 @@ export function renderPlanningInterviewWizardPanel(panel: PlanningInterviewWizar
       '<label class="dash-planning-wizard-label" for="wc-planning-answer">Your answer</label>' +
       '<textarea id="wc-planning-answer" class="dash-planning-wizard-textarea" rows="5" spellcheck="true"></textarea>' +
       '<p class="dash-planning-wizard-actions">' +
-      '<button type="button" class="dash-new-plan-btn" data-wc-action="planning-wizard-submit">Submit answer</button> ' +
-      '<button type="button" class="dash-row-action-secondary" data-wc-action="planning-wizard-cancel">Cancel</button>' +
+      '<button type="button" class="wc-btn wc-btn-md wc-btn-primary" data-wc-action="planning-wizard-submit">Submit answer</button> ' +
+      '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="planning-wizard-cancel">Cancel</button>' +
       "</p>" +
       "</div>"
     );
@@ -1315,7 +1320,7 @@ export function renderPlanningInterviewWizardPanel(panel: PlanningInterviewWizar
       escapeHtml(panel.message) +
       "</p>" +
       persistenceHint +
-      '<button type="button" class="dash-new-plan-btn" data-wc-action="planning-wizard-dismiss">Done</button>' +
+      '<button type="button" class="wc-btn wc-btn-md wc-btn-primary" data-wc-action="planning-wizard-dismiss">Done</button>' +
       "</div>"
     );
   }
@@ -1325,7 +1330,7 @@ export function renderPlanningInterviewWizardPanel(panel: PlanningInterviewWizar
     "<p>" +
     escapeHtml(panel.message) +
     "</p>" +
-    '<button type="button" class="dash-new-plan-btn" data-wc-action="planning-wizard-cancel">Reset</button>' +
+    '<button type="button" class="wc-btn wc-btn-md wc-btn-primary" data-wc-action="planning-wizard-cancel">Reset</button>' +
     "</div>"
   );
 }
@@ -1382,11 +1387,11 @@ function renderPlanningSession(ps: unknown, wizardPanel?: PlanningInterviewWizar
   const resumeActions =
     '<span class="dash-planning-actions">' +
     (resumeCli.length > 0
-      ? '<button type="button" class="dash-new-plan-btn" data-wc-action="planning-resume-chat" data-resume-cli="' +
+      ? '<button type="button" class="wc-btn wc-btn-md wc-btn-primary" data-wc-action="planning-resume-chat" data-resume-cli="' +
         escapeHtmlAttr(resumeCli) +
         '" title="Open a new Agent chat with the saved planning resume command">Resume</button>'
       : "") +
-    '<button type="button" class="dash-row-action-secondary dash-planning-discard-btn" data-wc-action="planning-discard" title="Discard the saved planning interview">Discard</button>' +
+    '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary dash-planning-discard-btn" data-wc-action="planning-discard" title="Discard the saved planning interview">Discard</button>' +
     "</span>";
   return (
     '<section class="dash-card" aria-label="Planning session resume">' +
@@ -1602,54 +1607,6 @@ function truncateOverviewLine(s: string, max: number): string {
   return one.slice(0, Math.max(1, max - 1)) + "…";
 }
 
-/** Same leading-digit rule as `dashboard-phase-buckets.ts` `parseWorkspacePhaseKey`. */
-function parseDashboardKitPhaseKey(raw: unknown): string | null {
-  if (raw === null || raw === undefined) {
-    return null;
-  }
-  const m = String(raw).trim().match(/^(\d+)/);
-  return m ? m[1]! : null;
-}
-
-/**
- * Ready **execution** tasks in the bucket that matches maintainer `current_kit_phase`
- * (see `readyExecutionSummary.phaseBuckets` from `dashboard-summary`).
- */
-function countReadyExecutionTasksInCurrentPhase(
-  ws: Record<string, unknown>,
-  readyExecutionSummary: Record<string, unknown>
-): number {
-  const phaseKey = parseDashboardKitPhaseKey(ws.currentKitPhase);
-  if (phaseKey === null) {
-    return 0;
-  }
-  const buckets = Array.isArray(readyExecutionSummary.phaseBuckets)
-    ? readyExecutionSummary.phaseBuckets
-    : [];
-  for (const raw of buckets) {
-    if (!raw || typeof raw !== "object") {
-      continue;
-    }
-    const b = raw as { phaseKey?: unknown; count?: unknown };
-    const bk = b.phaseKey;
-    if (bk === null || bk === undefined) {
-      continue;
-    }
-    if (String(bk) !== phaseKey) {
-      continue;
-    }
-    const n = b.count;
-    return typeof n === "number" && Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
-  }
-  return 0;
-}
-
-const DELIVER_TOOLTIP_NO_READY = "There are no ready to work tasks for this phase.";
-const DELIVER_TOOLTIP_NO_PHASE =
-  "Current phase is not set or could not be read from the workspace snapshot.";
-const DELIVER_TOOLTIP_ENABLED =
-  "Prefill chat: deliver a ready task through the phase branch (task-to-phase-branch)";
-
 type DashboardAgentRenderRow = {
   label: string;
   role: string;
@@ -1855,7 +1812,6 @@ function renderEditorIntegrationEmbed(editorIntegration: unknown): string {
   );
 }
 
-/** Current / next phase + Deliver chip (no outer section). */
 /** Phase roster from `dashboard-summary.systemStatus.phase.phaseCatalog` (Phase 88+). */
 export function renderPhaseCatalogOverviewSection(
   phaseSlice: Record<string, unknown> | null | undefined
@@ -1907,7 +1863,6 @@ export function renderPhaseCatalogOverviewSection(
         const sd = r.shortDescription != null ? String(r.shortDescription).trim() : "";
         const desc = sd.length > 0 ? escapeHtml(sd) : '<span class="muted">—</span>';
         const inputValue = escapeHtmlAttr(sd);
-        const src = r.inCatalog === true ? "" : ' <span class="muted">(no catalog row)</span>';
         const statusLabel = escapeHtml(phaseRosterStatusLabel(r.status));
         const statusClass =
           r.status === "current"
@@ -1916,7 +1871,18 @@ export function renderPhaseCatalogOverviewSection(
               ? "dash-phase-roster-status dash-phase-roster-delivered"
               : "dash-phase-roster-status dash-phase-roster-future";
         const phaseKeyAttr = escapeHtmlAttr(r.phaseKey);
-        rows += `<tr><td><code>${escapeHtml(r.phaseKey)}</code></td><td><span class="${statusClass}">${statusLabel}</span></td><td><div class="dash-phase-deliverables" data-wc-phase-row="${phaseKeyAttr}"><span class="dash-phase-deliverables-text">${desc}${src}</span><button type="button" class="dash-phase-edit-btn" data-wc-action="phase-deliverables-edit" data-wc-phase-key="${phaseKeyAttr}" aria-label="Edit deliverables for phase ${phaseKeyAttr}" title="Edit deliverables">Edit</button><span class="dash-phase-saving" aria-live="polite" hidden>Saving...</span><label class="dash-phase-deliverables-editor" hidden>Deliverables<input type="text" class="dash-phase-deliverables-input" data-wc-phase-input="${phaseKeyAttr}" value="${inputValue}" aria-label="Deliverables for phase ${phaseKeyAttr}" /></label><p class="dash-phase-deliverables-error bad" aria-live="polite" hidden></p></div></td></tr>`;
+        const noCatalogHint =
+          r.inCatalog === true
+            ? ""
+            : ' <abbr class="muted dash-phase-no-catalog" title="No planning catalog row for this phase key">?</abbr>';
+        rows +=
+          `<tr><td><code>${escapeHtml(r.phaseKey)}</code></td><td><span class="${statusClass}">${statusLabel}</span>${noCatalogHint}</td><td class="dash-phase-deliverables-cell"><div class="dash-phase-deliverables" data-wc-phase-row="${phaseKeyAttr}">` +
+          '<div class="dash-phase-deliverables-body">' +
+          `<span class="dash-phase-deliverables-text">${desc}</span>` +
+          `<div class="dash-phase-deliverables-editor" hidden><input type="text" class="dash-phase-deliverables-input wc-input" data-wc-phase-input="${phaseKeyAttr}" value="${inputValue}" aria-label="Deliverables for phase ${phaseKeyAttr}" /></div>` +
+          '<span class="dash-phase-saving" aria-live="polite" hidden>Saving…</span></div>' +
+          `<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary dash-phase-edit-anchor" data-wc-action="phase-deliverables-edit" data-wc-phase-key="${phaseKeyAttr}" aria-label="Edit deliverables for phase ${phaseKeyAttr}" title="Edit deliverables">Edit</button>` +
+          '<p class="dash-phase-deliverables-error bad" aria-live="polite" hidden></p></div></td></tr>';
       }
       inner =
         rows.length > 0
@@ -1928,68 +1894,13 @@ export function renderPhaseCatalogOverviewSection(
   }
   const table = inner;
   const btn =
-    '<p style="margin-top:8px"><button type="button" class="dash-row-action dash-row-action-primary" data-wc-action="register-phase-catalog">Register future phase</button>' +
+    '<p style="margin-top:8px"><button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="register-phase-catalog">Register future phase</button>' +
     ' <span class="muted">Plan a future release phase; the kit keeps planning metadata aligned.</span></p>';
   return (
     '<section class="dash-card dash-phase-catalog" aria-label="Phase catalog">' +
     "<p><b>Phase Roster</b></p>" +
     table +
     btn +
-    "</section>"
-  );
-}
-
-function renderPhaseDeliverBlockInner(
-  ws: Record<string, unknown>,
-  readyExecutionSummary: Record<string, unknown>
-): string {
-  const curRaw = ws.currentKitPhase != null ? String(ws.currentKitPhase).trim() : "";
-  const cur = curRaw.length > 0 ? escapeHtml(curRaw) : "—";
-  const nextTrim = ws.nextKitPhase != null ? String(ws.nextKitPhase).trim() : "";
-  const nextMeaningful = nextTrim.length > 0 && nextTrim !== curRaw;
-  const nextDisplay = nextMeaningful ? escapeHtml(nextTrim) : "Not Planned";
-
-  const parsedPhase = parseDashboardKitPhaseKey(ws.currentKitPhase);
-  const readyInPhase = countReadyExecutionTasksInCurrentPhase(ws, readyExecutionSummary);
-  const deliverEnabled = parsedPhase !== null && readyInPhase > 0;
-  const deliverTitle = deliverEnabled
-    ? DELIVER_TOOLTIP_ENABLED
-    : parsedPhase === null
-      ? DELIVER_TOOLTIP_NO_PHASE
-      : DELIVER_TOOLTIP_NO_READY;
-
-  const deliverBtn =
-    '<button type="button" class="dash-deliver-chip"' +
-    (deliverEnabled ? ' data-wc-action="deliver-phase-prompt"' : "") +
-    (curRaw.length > 0 ? ' data-wc-kit-phase="' + escapeHtmlAttr(curRaw) + '"' : "") +
-    (deliverEnabled ? "" : " disabled") +
-    ' title="' +
-    escapeHtmlAttr(deliverTitle) +
-    '">Deliver</button>';
-
-  return (
-    '<p class="dash-overview-phase-row">' +
-    '<span class="dash-overview-phase-text"><b>Current Phase</b> ' +
-    cur +
-    "</span>" +
-    deliverBtn +
-    "</p>" +
-    "<p><b>Next Phase</b> " +
-    nextDisplay +
-    "</p>"
-  );
-}
-
-function renderOverviewPhaseSummarySection(
-  ws: Record<string, unknown> | null,
-  readyExecutionSummary?: Record<string, unknown>
-): string {
-  if (ws === null) {
-    return "";
-  }
-  return (
-    '<section class="dash-card dash-overview-phase-summary" aria-label="Overview phase summary">' +
-    renderPhaseDeliverBlockInner(ws, readyExecutionSummary ?? {}) +
     "</section>"
   );
 }
@@ -2006,7 +1917,7 @@ function renderStatusEditorIntegrationSection(editorIntegration?: unknown): stri
   );
 }
 
-/** Blockers and pending decisions (phase + Deliver live on first card). */
+/** Blockers and pending decisions (when workspace snapshot has items). */
 function renderWorkspaceBlockersPendingSection(ws: Record<string, unknown> | null): string {
   if (!ws) {
     return (
@@ -2291,7 +2202,7 @@ export function renderPhaseNotesOverviewSection(bundle: DashboardPhaseJournalBun
 
     const viewBtn =
       id.length > 0
-        ? '<button type="button" class="dash-row-action dash-row-action-secondary" data-wc-action="phase-note-view" data-note-id="' +
+        ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="phase-note-view" data-note-id="' +
           escapeHtmlAttr(id) +
           '" data-note-type="' +
           escapeHtmlAttr(noteType) +
@@ -2306,7 +2217,7 @@ export function renderPhaseNotesOverviewSection(bundle: DashboardPhaseJournalBun
 
     const editBtn =
       status === "active" && id.length > 0
-        ? '<button type="button" class="dash-row-action dash-row-action-info" data-wc-action="phase-note-edit" data-note-id="' +
+        ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="phase-note-edit" data-note-id="' +
           escapeHtmlAttr(id) +
           '" data-note-summary="' +
           escapeHtmlAttr(summary) +
@@ -2317,7 +2228,7 @@ export function renderPhaseNotesOverviewSection(bundle: DashboardPhaseJournalBun
 
     const deleteBtn =
       status === "active" && id.length > 0
-        ? '<button type="button" class="dash-row-action dash-row-action-danger" data-wc-action="phase-note-delete" data-note-id="' +
+        ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-danger" data-wc-action="phase-note-delete" data-note-id="' +
           escapeHtmlAttr(id) +
           '" data-note-priority="' +
           escapeHtmlAttr(priority) +
@@ -2328,14 +2239,14 @@ export function renderPhaseNotesOverviewSection(bundle: DashboardPhaseJournalBun
       status === "active" && id.length > 0 && !convertedTaskId && PHASE_NOTE_TYPES_CONVERTIBLE.has(noteType);
 
     const convertBtn = canConvert
-      ? '<button type="button" class="dash-row-action dash-row-action-primary" data-wc-action="phase-note-convert" data-note-id="' +
+      ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="phase-note-convert" data-note-id="' +
         escapeHtmlAttr(id) +
         '" title="convert-phase-note-to-task">Convert</button>'
       : "";
 
     const convertedLine =
       convertedTaskId && convertedTaskId.length > 0
-        ? '<p class="muted wc-phase-note-converted">Converted → <button type="button" class="dash-row-action dash-row-action-tertiary" data-wc-action="task-detail" data-task-id="' +
+        ? '<p class="muted wc-phase-note-converted">Converted → <button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="task-detail" data-task-id="' +
           escapeHtmlAttr(convertedTaskId) +
           '">' +
           escapeHtml(convertedTaskId) +
@@ -2368,13 +2279,13 @@ export function renderPhaseNotesOverviewSection(bundle: DashboardPhaseJournalBun
     "</p>";
 
   const addBtn =
-    '<button type="button" class="dash-row-action dash-row-action-primary" data-wc-action="phase-note-add" title="add-phase-note">New</button>';
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="phase-note-add" title="add-phase-note">New</button>';
 
   const chatBtn =
-    '<button type="button" class="dash-row-action dash-row-action-secondary" data-wc-action="phase-notes-chat" title="Open phase notes chat guide">Chat guide</button>';
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="phase-notes-chat" title="Open phase notes chat guide">Chat guide</button>';
 
   const proposeBtn =
-    '<button type="button" class="dash-row-action dash-row-action-secondary" data-wc-action="phase-notes-propose-persist" title="propose-tasks-from-phase-notes persist:true">Persist convertible suggestions</button>';
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="phase-notes-propose-persist" title="propose-tasks-from-phase-notes persist:true">Persist convertible suggestions</button>';
 
   const empty = notes.length === 0 ? '<p class="muted" role="status">No phase notes yet for this phase.</p>' : "";
 
@@ -2528,10 +2439,10 @@ export function renderDashboardRootInnerHtml(
 
   const tasksQuickActionsPanel =
     '<div class="dash-quick-actions" role="toolbar" aria-label="Chat playbook shortcuts">' +
-    '<button type="button" class="dash-quick-action-btn" data-wc-action="add-wishlist-item" title="Create a wishlist intake task (same flow as /add-wishlist-item)">Add wishlist item</button>' +
-    '<button type="button" class="dash-quick-action-btn" data-wc-action="collaboration-hub" title="Chat + CLI for collaboration profiles; chat does not replace policyApproval">Collaboration profiles</button>' +
-    '<button type="button" class="dash-quick-action-btn" data-wc-action="transcript-churn-research-chat" title="Transcript churn research playbook">Research churn</button>' +
-    '<button type="button" class="dash-quick-action-btn dash-quick-action-primary" data-wc-action="generate-features-chat" title="New chat with /generate-features as text (same as slash command)">Generate Features</button>' +
+    '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="add-wishlist-item" title="Create a wishlist intake task (same flow as /add-wishlist-item)">Add wishlist item</button>' +
+    '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="collaboration-hub" title="Chat + CLI for collaboration profiles; chat does not replace policyApproval">Collaboration profiles</button>' +
+    '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="transcript-churn-research-chat" title="Transcript churn research playbook">Research churn</button>' +
+    '<button type="button" class="wc-btn wc-btn-md wc-btn-primary" data-wc-action="generate-features-chat" title="New chat with /generate-features as text (same as slash command)">Generate Features</button>' +
     "</div>";
 
   const queuePhaseFilterOptions = deriveQueuePhaseFilterOptions({
@@ -2661,24 +2572,21 @@ export function renderDashboardRootInnerHtml(
     renderTeamExecutionSection(d.teamExecution) +
     renderSubagentRegistrySection(d.subagentRegistry);
 
-  const caeContent = renderCaePhaseReadinessContent(
-    ws as Record<string, unknown> | null,
-    readyExeCount,
-    readyImpCount,
-    totalBlockedCount,
-    totalProposedCount
-  );
   const caePanelContent =
     typeof embeddedCaePanelHtml === "string" && embeddedCaePanelHtml.trim().length > 0
-      ? namespaceEmbeddedCaePanelHtml(embeddedCaePanelHtml)
+      ? '<div class="gp-root wc-dash-cae-host dash-cae-embedded">' +
+        namespaceEmbeddedCaePanelHtml(embeddedCaePanelHtml) +
+        "<script>" +
+        buildGuidanceAuthoringWebviewBootstrap("dash-cae-") +
+        "</script></div>"
       : '<section class="dash-card" aria-label="CAE panel placeholder">' +
         '<p><b>CAE</b></p>' +
-        '<p class="muted">Phase Readiness moved to the top of <b>Queue</b>.</p>' +
+        '<p class="muted">Phase Readiness is under <b>WC Agent</b> on the Dashboard shell.</p>' +
         '<p class="muted">Embedded CAE panel unavailable; use the Guidance panel as fallback.</p>' +
         '</section>';
 
   const taskEngineContent =
-    caeContent +
+    renderQueueTabCaePointerSection() +
     renderPhaseNotesOverviewSection(phaseJournal ?? null) +
     tasksBlock +
     wishlistSection +
@@ -2700,7 +2608,13 @@ export function renderDashboardRootInnerHtml(
   return (
     '<div class="wc-dashboard-tab-shell">' +
     renderAgentStatusBanner(d) +
-    renderOverviewPhaseSummarySection(ws as Record<string, unknown> | null, res) +
+    renderPhaseReadinessCard(
+      ws as Record<string, unknown> | null,
+      readyExeCount,
+      readyImpCount,
+      totalBlockedCount,
+      totalProposedCount
+    ) +
     '<div class="wc-tab-bar" role="tablist">' +
     '<button type="button" class="wc-tab-btn wc-tab-active" role="tab" data-wc-tab="overview">Overview</button>' +
     '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="task-engine">Queue' +

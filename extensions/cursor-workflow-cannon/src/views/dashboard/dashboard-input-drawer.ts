@@ -162,10 +162,10 @@ export function renderDrawerFormHtml(spec: DrawerFormSpec): string {
     fields +
     "</div>" +
     '<footer class="wc-drawer-footer">' +
-    '<button type="button" class="wc-drawer-btn wc-drawer-btn-secondary" data-wc-drawer-action="cancel">' +
+    '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-drawer-action="cancel">' +
     escapeDrawerHtml(spec.cancelLabel) +
     "</button>" +
-    '<button type="button" class="wc-drawer-btn wc-drawer-btn-primary" data-wc-drawer-action="submit">' +
+    '<button type="button" class="wc-btn wc-btn-md wc-btn-primary" data-wc-drawer-action="submit">' +
     escapeDrawerHtml(spec.primaryLabel) +
     "</button>" +
     "</footer></div>"

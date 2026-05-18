@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import type { CommandClient } from "../../runtime/command-client.js";
 import { renderStatusTabInnerHtml } from "./render-status-tab.js";
+import { WC_BASE_CSS } from "../shared/wc-base-css.js";
 
 /** Debounce kit-file churn so we do not spawn overlapping `wk run dashboard-summary` calls. */
 export const STATUS_PANEL_DEBOUNCE_MS = 450;
@@ -58,7 +59,7 @@ export class StatusDashboardPanel {
         void this.runRefresh();
       }
     });
-        void this.runRefresh();
+    void this.runRefresh();
   }
 
   private scheduleRefresh(immediate: boolean): void {
@@ -133,6 +134,7 @@ export class StatusDashboardPanel {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Workflow Cannon Status</title>
   <style>
+    ${WC_BASE_CSS}
     html, body { margin: 0; }
     body {
       font-family: var(--vscode-font-family);
@@ -152,16 +154,6 @@ export class StatusDashboardPanel {
       border-bottom: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
     }
     .wc-title { margin: 0; font-size: 15px; font-weight: 600; }
-    #wc-refresh {
-      padding: 6px 14px;
-      font-size: 12px;
-      cursor: pointer;
-      color: var(--vscode-button-foreground);
-      background: var(--vscode-button-background);
-      border: 1px solid var(--vscode-button-border, transparent);
-      border-radius: 6px;
-    }
-    #wc-refresh:hover { background: var(--vscode-button-hoverBackground); }
     .wc-status-head { margin-bottom: 12px; }
     .wc-status-head .wc-title { font-size: 18px; }
     .wc-sub { margin: 4px 0 0; opacity: 0.8; font-size: 12px; }
@@ -188,7 +180,7 @@ export class StatusDashboardPanel {
 </head>
 <body>
   <div class="wc-toolbar">
-    <button type="button" id="wc-refresh">Refresh now</button>
+    <button type="button" id="wc-refresh" class="wc-btn wc-btn-lg wc-btn-primary">Refresh now</button>
   </div>
   <div id="wc-status-root">${inner}</div>
   <script>${bootstrap}</script>

@@ -92,8 +92,8 @@ export function renderConfigListInnerHtml(rows: ConfigKeyRowInput[]): string {
           : `<div class="cfg-actions">
   <label class="cfg-label">Persist to layer</label>
   <select class="cfg-select" data-role="scope" aria-label="Config layer for ${escapeHtmlAttr(row.key)}">${renderScopeOptions(layers)}</select>
-  <button type="button" class="cfg-btn cfg-primary" data-wc-action="config-save" data-key="${escapeHtmlAttr(row.key)}">Apply value</button>
-  <button type="button" class="cfg-btn" data-wc-action="config-unset" data-key="${escapeHtmlAttr(row.key)}">Unset on layer</button>
+  <button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="config-save" data-key="${escapeHtmlAttr(row.key)}">Apply value</button>
+  <button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="config-unset" data-key="${escapeHtmlAttr(row.key)}">Unset on layer</button>
 </div>`;
         const ta = escapeHtml(editorTextForValue(row.effectiveValue, row.default));
         const taDisabled = ro ? " disabled" : "";
@@ -116,7 +116,7 @@ export function renderConfigListInnerHtml(rows: ConfigKeyRowInput[]): string {
       <label class="cfg-label" for="ta-${track}">Value (JSON)</label>
       <textarea id="ta-${track}" class="cfg-textarea" data-role="value" rows="6" spellcheck="false"${taDisabled}>${ta}</textarea>
       <div class="cfg-row-btns">
-        <button type="button" class="cfg-btn" data-wc-action="config-explain" data-key="${escapeHtmlAttr(row.key)}">Explain layers</button>
+        <button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="config-explain" data-key="${escapeHtmlAttr(row.key)}">Explain layers</button>
       </div>
       ${actions}
     </div>
