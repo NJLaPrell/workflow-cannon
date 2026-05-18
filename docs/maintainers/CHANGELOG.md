@@ -8,6 +8,21 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.93.0] - 2026-05-18
+
+Phase 98 — **Config, policy & trust** (agent CLI ergonomics).
+
+### Added
+
+- Agent-safe remediation links (`.ai/` primary paths; maintainer mirrors in `docAnchors`).
+- `completion-preflight` command with copy-paste remediation before `run-transition complete`.
+- First-class human-gate task statuses (`awaiting_review`, `awaiting_policy_approval`, `awaiting_external_decision`).
+- Policy-aware `agent-mutation-plan` argv validation (`readyRun.argvValid`).
+
+### Changed
+
+- `.ai/AGENT-CLI-MAP.md` documents shell-safe JSON argv patterns for agents.
+
 ## [0.92.0] - 2026-05-18
 
 Phase 97 — **Dashboard UX polish** (Cursor extension Overview/Queue surfaces).

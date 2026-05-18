@@ -26,6 +26,14 @@ For a **net-new consumer project**, attach Workflow Cannon first: install `@work
 ## Runtime invocation
 
 - **Shape:** `./.workspace-kit/bin/wk run <command> '<single-json-object>'` in attached projects, or `pnpm exec wk run <command> '<single-json-object>'` in this source checkout. Tier A/B mutators need **`"policyApproval":{"confirmed":true,"rationale":"…"}`** inside that object. Env **`WORKSPACE_KIT_POLICY_APPROVAL`** does **not** approve `run` (init/upgrade/config only).
+
+### Shell-safe JSON argv (agents)
+
+- Prefer **`./.workspace-kit/bin/wk`** (attached) or **`pnpm exec wk`** (source checkout) so stdout stays a single JSON value without pnpm engine warnings on stderr.
+- **Single-quoted** third-arg JSON breaks when the payload contains `'` — use a here-doc, **`@file` argv** (when supported), or build JSON in Node/`jq` and pass the variable unquoted.
+- Capture stdout only: `out="$(pnpm exec wk run list-tasks '{}')"` then `node -e 'JSON.parse(process.argv[1])' "$out"` — do not pipe mixed stderr into the parser.
+- Before **`run-transition` `complete`**, run **`completion-preflight`**; before mutating commands, run **`agent-mutation-plan`** with `commandName` set.
+- Errors surface **`remediation.instructionPath`** and **`.ai/` `remediation.docPath`** first; maintainer mirrors may appear in **`docAnchors`** only.
 - **Planning generation (`require`):** read **`planningGeneration`** from **`list-tasks` / `get-task` / `get-next-actions`**, then pass **`expectedPlanningGeneration`** on prelude commands (see **`schemas/planning-generation-cli-prelude.json`**).
 - **Failures:** **`invalid-run-args`** → fix against **`--schema-only`**; **`planning-generation-*`** → re-read generation and retry; **`policy-denied`** → JSON approval on argv.
 - **Phase journal (examples):** **`./.workspace-kit/bin/wk run add-phase-note '{}'`**, **`./.workspace-kit/bin/wk run list-phase-notes '{}'`**, **`./.workspace-kit/bin/wk run propose-tasks-from-phase-notes '{}'`**, **`./.workspace-kit/bin/wk run convert-phase-note-to-task '{}'`** — see `src/modules/task-engine/instructions/*.md`.

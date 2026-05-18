@@ -241,9 +241,18 @@ function collectTaskShapeChecks(tasks: TaskEntity[]): TaskPersistenceReadinessCh
       invalid.push(task.id);
     }
     if (
-      !["research", "proposed", "ready", "in_progress", "blocked", "completed", "cancelled"].includes(
-        task.status
-      )
+      ![
+        "research",
+        "proposed",
+        "ready",
+        "in_progress",
+        "awaiting_review",
+        "awaiting_policy_approval",
+        "awaiting_external_decision",
+        "blocked",
+        "completed",
+        "cancelled"
+      ].includes(task.status)
     ) {
       invalidStatus.push(task.id);
     }

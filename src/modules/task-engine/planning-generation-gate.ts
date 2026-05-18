@@ -20,7 +20,7 @@ export function planningGenPolicyGate(
       message: gate.message,
       remediation: {
         instructionPath,
-        docPath: CLI_REMEDIATION_DOCS.planningGenerationAdr
+        docPath: CLI_REMEDIATION_DOCS.planningGeneration
       }
     };
     if (planningGenSnapshot !== undefined && gate.code === "planning-generation-required") {

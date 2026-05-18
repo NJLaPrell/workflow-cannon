@@ -4,6 +4,8 @@ import type {
   DashboardSubagentRegistrySummary,
   DashboardTeamExecutionSummary
 } from "../../../contracts/dashboard-summary-run.js";
+import { humanGateAgeMs, humanGateResumeCommand, isHumanGateStatus } from "../human-gate.js";
+import type { HumanGateRecord } from "../human-gate.js";
 import type { NextActionSuggestion, TaskEntity } from "../types.js";
 
 export type BuildDashboardAgentStatusInput = {
@@ -108,6 +110,32 @@ export function buildDashboardAgentStatus(
       label: planningLabel,
       confidence: "medium",
       command: "build-plan"
+    });
+  }
+
+  const humanGated = pickMostRelevantTask(input.tasks.filter((t) => isHumanGateStatus(t.status)));
+  if (humanGated) {
+    const gate = humanGated.metadata?.humanGate as HumanGateRecord | undefined;
+    const kind =
+      humanGated.status === "awaiting_policy_approval"
+        ? "awaiting_policy_approval"
+        : "awaiting_human_gate";
+    const label =
+      humanGated.status === "awaiting_review"
+        ? `Awaiting review · ${humanGated.id}`
+        : humanGated.status === "awaiting_policy_approval"
+          ? `Awaiting policy approval · ${humanGated.id}`
+          : `Awaiting external decision · ${humanGated.id}`;
+    const ageMin = gate ? Math.round(humanGateAgeMs(gate) / 60_000) : 0;
+    return taskStatus(input, {
+      kind,
+      label,
+      confidence: "high",
+      taskId: humanGated.id,
+      phaseKey: taskPhaseKey(humanGated),
+      detail: gate?.requestedDecision
+        ? `${gate.requestedDecision} (${ageMin}m) · ${humanGateResumeCommand(humanGated)}`
+        : humanGateResumeCommand(humanGated)
     });
   }
 

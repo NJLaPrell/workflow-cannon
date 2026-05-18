@@ -6,6 +6,7 @@ import type {
   TransitionContext,
   TaskEngineErrorCode
 } from "./types.js";
+import { isHumanGateStatus } from "./human-gate.js";
 
 export class TaskEngineError extends Error {
   readonly code: TaskEngineErrorCode;
@@ -37,6 +38,24 @@ const ALLOWED_TRANSITIONS: Record<string, TransitionEntry> = {
   "in_progress->cancelled": { action: "decline" },
   "in_progress->blocked": { action: "block" },
   "in_progress->ready": { action: "pause" },
+  "in_progress->awaiting_review": { action: "await_review" },
+  "in_progress->awaiting_policy_approval": { action: "await_policy_approval" },
+  "in_progress->awaiting_external_decision": { action: "await_external_decision" },
+  "ready->awaiting_review": { action: "await_review" },
+  "ready->awaiting_policy_approval": { action: "await_policy_approval" },
+  "ready->awaiting_external_decision": { action: "await_external_decision" },
+  "awaiting_review->ready": { action: "resume_ready" },
+  "awaiting_review->in_progress": { action: "resume_work" },
+  "awaiting_review->blocked": { action: "block" },
+  "awaiting_review->cancelled": { action: "cancel" },
+  "awaiting_policy_approval->ready": { action: "resume_ready" },
+  "awaiting_policy_approval->in_progress": { action: "resume_work" },
+  "awaiting_policy_approval->blocked": { action: "block" },
+  "awaiting_policy_approval->cancelled": { action: "cancel" },
+  "awaiting_external_decision->ready": { action: "resume_ready" },
+  "awaiting_external_decision->in_progress": { action: "resume_work" },
+  "awaiting_external_decision->blocked": { action: "block" },
+  "awaiting_external_decision->cancelled": { action: "cancel" },
   "blocked->ready": { action: "unblock" },
   "blocked->cancelled": { action: "cancel" }
 };
@@ -146,7 +165,10 @@ export const singleTaskInProgressGuard: TransitionGuard = {
     }
 
     const active = context.allTasks.filter(
-      (t) => t.id !== task.id && t.status === "in_progress" && t.archived !== true
+      (t) =>
+        t.id !== task.id &&
+        (t.status === "in_progress" || isHumanGateStatus(t.status)) &&
+        t.archived !== true
     );
     if (active.length === 0) {
       return { allowed: true, guardName: "single-task-in-progress" };

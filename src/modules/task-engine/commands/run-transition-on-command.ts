@@ -137,6 +137,7 @@ export async function runTransitionOnCommand(
       actor,
       expectedPlanningGeneration,
       clientMutationId,
+      transitionArgs: args as Record<string, unknown>,
       beforePersistInSqliteTransaction
     });
     if (!result.replayed && result.evidence.toState === "completed") {
@@ -170,7 +171,12 @@ export async function runTransitionOnCommand(
     };
   } catch (err) {
     if (err instanceof TaskEngineError) {
-      return { ok: false, code: err.code, message: err.message };
+      return {
+        ok: false,
+        code: err.code,
+        message: err.message,
+        remediation: { instructionPath: CLI_REMEDIATION_INSTRUCTIONS.runTransition }
+      };
     }
     return {
       ok: false,

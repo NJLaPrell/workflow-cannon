@@ -5,6 +5,9 @@ export type TaskStatus =
   | "proposed"
   | "ready"
   | "in_progress"
+  | "awaiting_review"
+  | "awaiting_policy_approval"
+  | "awaiting_external_decision"
   | "blocked"
   | "completed"
   | "cancelled";
@@ -158,6 +161,9 @@ export type NextActionSuggestion = {
     proposed: number;
     ready: number;
     in_progress: number;
+    awaiting_review: number;
+    awaiting_policy_approval: number;
+    awaiting_external_decision: number;
     blocked: number;
     completed: number;
     cancelled: number;

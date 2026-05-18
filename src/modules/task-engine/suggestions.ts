@@ -93,6 +93,9 @@ function buildStateSummary(tasks: TaskEntity[]): NextActionSuggestion["stateSumm
     proposed: 0,
     ready: 0,
     in_progress: 0,
+    awaiting_review: 0,
+    awaiting_policy_approval: 0,
+    awaiting_external_decision: 0,
     blocked: 0,
     completed: 0,
     cancelled: 0

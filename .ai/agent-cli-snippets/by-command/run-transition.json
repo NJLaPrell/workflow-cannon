@@ -17,6 +17,9 @@
         "type": "string",
         "enum": [
           "accept",
+          "await_external_decision",
+          "await_policy_approval",
+          "await_review",
           "block",
           "cancel",
           "complete",
@@ -24,6 +27,8 @@
           "demote",
           "pause",
           "reject",
+          "resume_ready",
+          "resume_work",
           "start",
           "unblock"
         ]
@@ -85,5 +90,5 @@
   "responseTemplate": {
     "defaultResponseTemplateId": "default"
   },
-  "remediationContract": "docs/maintainers/adrs/ADR-cli-error-remediation-contract.md"
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md"
 }

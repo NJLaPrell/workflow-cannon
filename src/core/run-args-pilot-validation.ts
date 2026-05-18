@@ -394,7 +394,7 @@ export function enforcePlanningGenerationCliPrelude(
       "tasks.planningGenerationPolicy is 'require': include expectedPlanningGeneration from a prior read (planningGeneration on responses); retry after re-read when you get planning-generation-mismatch",
     remediation: {
       instructionPath: instructionPathForCommand(commandName),
-      docPath: CLI_REMEDIATION_DOCS.planningGenerationAdr
+      docPath: CLI_REMEDIATION_DOCS.planningGeneration
     }
   };
 }
