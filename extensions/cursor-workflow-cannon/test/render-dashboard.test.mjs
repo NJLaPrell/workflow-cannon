@@ -10,6 +10,7 @@ import {
   renderActiveFocusHtml,
   renderMarkdownBoldAfterEscape,
   resolvePhasePhraseForCompleteRelease,
+  collectPhaseBucketTaskIds,
   renderPlanningInterviewWizardPanel
 } from "../dist/views/dashboard/render-dashboard.js";
 import { buildPhaseCompleteReleaseChatPrompt } from "../dist/phase-complete-release-prompt.js";
@@ -1096,27 +1097,59 @@ test("renderDashboardRootInnerHtml shows readyQueueBreakdown when present", () =
   assert.match(html, /Ready Queue · 3 Improvements · 1 Other/);
 });
 
-test("buildPhaseCompleteReleaseChatPrompt is one-shot delivery + closeout with concrete branch when phaseKey set", () => {
-  const p = buildPhaseCompleteReleaseChatPrompt("Phase 64", { phaseKey: "64" });
-  assert.match(p, /The operator added this context: \*\*Phase 64\*\*/);
-  assert.match(p, /\*\*Mission:\*\*/);
+test("buildPhaseCompleteReleaseChatPrompt is compact agent-oriented closeout seed", () => {
+  const p = buildPhaseCompleteReleaseChatPrompt("Phase 64", {
+    phaseKey: "64",
+    workspaceCurrentPhase: "64",
+    workspaceNextPhase: "65",
+    seededTaskIds: ["T900", "T901"],
+    scope: "current"
+  });
+  assert.match(p, /^## Complete & Release/);
+  assert.match(p, /target phaseKey: 64/);
+  assert.match(p, /workspace current \/ next: 64 \/ 65/);
+  assert.match(p, /scope: current/);
+  assert.match(p, /integration branch: `release\/phase-64`/);
+  assert.match(p, /seeded ready ids \(preview\): T900, T901/);
+  assert.doesNotMatch(p, /mismatch:/);
   assert.match(p, /@\.ai\/playbooks\/phase-closeout-and-release\.md/);
   assert.match(p, /@\.ai\/playbooks\/task-to-phase-branch\.md/);
-  assert.match(p, /@\.ai\/MACHINE-PLAYBOOKS\.md/);
-  assert.match(p, /Stage A.*§2/);
-  assert.match(p, /\*\*`release\/phase-64`\*\*/);
-  assert.match(p, /\*\*`release\/phase-64`\*\* → \*\*`main`\*\*/);
-  assert.match(p, /Hard gate.*§3/);
-  assert.match(p, /task-to-phase-branch/);
-  assert.match(p, /playbook-task-to-phase-branch\.mdc/);
-  assert.match(p, /playbook-phase-closeout\.mdc/);
-  assert.match(p, /handoff/i);
+  assert.match(p, /@\.ai\/AGENT-CLI-MAP\.md/);
+  assert.match(p, /improvement-triage-top-three/);
+  assert.match(p, /wishlist-intake-to-execution/);
+  assert.match(p, /phase-closeout-readiness/);
+  assert.match(p, /wishlist_intake/);
+  assert.match(p, /task-engine-run-contracts\.schema\.json/);
+  assert.match(p, /publish:npm/);
+  assert.match(p, /Handoff if blocked/);
 });
 
-test("buildPhaseCompleteReleaseChatPrompt without phaseKey keeps placeholder branch", () => {
+test("buildPhaseCompleteReleaseChatPrompt warns when target differs from workspace current", () => {
+  const p = buildPhaseCompleteReleaseChatPrompt("Phase 100", {
+    phaseKey: "100",
+    workspaceCurrentPhase: "98",
+    workspaceNextPhase: "99",
+    scope: "bucket"
+  });
+  assert.match(p, /\*\*mismatch:\*\*/);
+  assert.match(p, /target phaseKey 100 ≠ workspace current 98/);
+  assert.match(p, /scope: bucket/);
+});
+
+test("buildPhaseCompleteReleaseChatPrompt without phaseKey uses placeholders", () => {
   const p = buildPhaseCompleteReleaseChatPrompt("Phase 64");
   assert.match(p, /release\/phase-<N>/);
   assert.doesNotMatch(p, /release\/phase-64/);
+});
+
+test("collectPhaseBucketTaskIds merges taskIds and top preview", () => {
+  assert.deepEqual(
+    collectPhaseBucketTaskIds({
+      taskIds: ["T1", "T2"],
+      top: [{ id: "T2" }, { id: "T3" }]
+    }),
+    ["T1", "T2", "T3"]
+  );
 });
 
 test("resolvePhasePhraseForCompleteRelease prefers phaseKey then task.phase", () => {
@@ -1186,8 +1219,14 @@ test("renderDashboardRootInnerHtml ready phase buckets include Complete & Releas
   });
   assert.match(html, /dash-phase-release-btn/);
   assert.match(html, /data-wc-action="phase-complete-release"/);
+  assert.match(html, /data-wc-phase-key="64"/);
   assert.match(html, /data-wc-phase-phrase="Phase 64"/);
+  assert.match(html, /data-wc-phase-task-ids="T900"/);
+  assert.match(html, /data-wc-workspace-current-phase="64"/);
+  assert.match(html, /data-wc-release-scope="current"/);
   assert.match(html, /Complete &amp; Release/);
+  assert.match(html, /dash-phase-release-overview/);
+  assert.match(html, /Closeout phase 64/);
   assert.match(html, /phase-bucket-summary/);
 });
 

@@ -894,6 +894,107 @@ export function resolvePhasePhraseForCompleteRelease(raw: {
   return "Not Phased";
 }
 
+/** Task ids from a dashboard phase bucket (`taskIds` and/or preview `top`). */
+export function collectPhaseBucketTaskIds(raw: {
+  top?: unknown;
+  taskIds?: unknown;
+}): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  const add = (id: string) => {
+    const k = id.trim();
+    if (k.length > 0 && !seen.has(k)) {
+      seen.add(k);
+      out.push(k);
+    }
+  };
+  if (Array.isArray(raw.taskIds)) {
+    for (const x of raw.taskIds) {
+      if (typeof x === "string") {
+        add(x);
+      }
+    }
+  }
+  if (Array.isArray(raw.top)) {
+    for (const row of raw.top) {
+      if (!row || typeof row !== "object") {
+        continue;
+      }
+      const id = (row as { id?: unknown }).id;
+      if (id != null) {
+        add(String(id));
+      }
+    }
+  }
+  return out;
+}
+
+function renderPhaseCompleteReleaseButton(args: {
+  phaseKey: string;
+  phasePhrase: string;
+  taskIds: string[];
+  workspaceCurrent: string;
+  workspaceNext: string;
+  scope: "current" | "bucket";
+}): string {
+  const pk = escapeHtmlAttr(args.phaseKey.trim());
+  const phrase = escapeHtmlAttr(args.phasePhrase.trim());
+  const ids = escapeHtmlAttr(args.taskIds.join(","));
+  const cur = escapeHtmlAttr(args.workspaceCurrent.trim());
+  const nxt = escapeHtmlAttr(args.workspaceNext.trim());
+  const scope = args.scope === "current" ? "current" : "bucket";
+  const title =
+    scope === "current"
+      ? "Drain current workspace phase, close out, and release"
+      : "Drain this phase bucket, close out, and release";
+  return (
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary dash-phase-release-btn" data-wc-action="phase-complete-release"' +
+    ' data-wc-phase-key="' +
+    pk +
+    '" data-wc-phase-phrase="' +
+    phrase +
+    '" data-wc-phase-task-ids="' +
+    ids +
+    '" data-wc-workspace-current-phase="' +
+    cur +
+    '" data-wc-workspace-next-phase="' +
+    nxt +
+    '" data-wc-release-scope="' +
+    scope +
+    '" title="' +
+    escapeHtmlAttr(title) +
+    '">Complete &amp; Release</button>'
+  );
+}
+
+/** Overview entry: closeout for workspace `currentKitPhase`. */
+function renderOverviewCompleteReleaseBar(ws: Record<string, unknown> | null): string {
+  if (!ws) {
+    return "";
+  }
+  const cur = ws.currentKitPhase != null ? String(ws.currentKitPhase).trim() : "";
+  if (cur.length === 0) {
+    return "";
+  }
+  const next = ws.nextKitPhase != null ? String(ws.nextKitPhase).trim() : "";
+  return (
+    '<section class="dash-card dash-phase-release-overview" aria-label="Phase closeout">' +
+    '<div class="dash-phase-release-overview-row">' +
+    "<p><b>Closeout phase " +
+    escapeHtml(cur) +
+    "</b> <span class=\"muted\">— drain queue, merge, release</span></p>" +
+    renderPhaseCompleteReleaseButton({
+      phaseKey: cur,
+      phasePhrase: "Phase " + cur,
+      taskIds: [],
+      workspaceCurrent: cur,
+      workspaceNext: next,
+      scope: "current"
+    }) +
+    "</div></section>"
+  );
+}
+
 function readyPhaseBucketHasTasks(raw: unknown): boolean {
   const b = raw as { count?: unknown; top?: unknown };
   if (typeof b.count === "number" && b.count > 0) {
@@ -909,9 +1010,14 @@ function renderReadyPhaseBuckets(
   phaseBuckets: unknown,
   fallbackTop: unknown,
   emptyMessage: string,
-  phaseTrackPrefix: string
+  phaseTrackPrefix: string,
+  workspaceStatus: Record<string, unknown> | null
 ): string {
   const buckets = phaseBucketsNonEmpty(phaseBuckets);
+  const wsCur =
+    workspaceStatus?.currentKitPhase != null ? String(workspaceStatus.currentKitPhase).trim() : "";
+  const wsNext =
+    workspaceStatus?.nextKitPhase != null ? String(workspaceStatus.nextKitPhase).trim() : "";
   if (buckets.length === 0) {
     return renderTaskRowList(fallbackTop, emptyMessage);
   }
@@ -919,15 +1025,21 @@ function renderReadyPhaseBuckets(
     '<div class="phase-stack">' +
     buckets
       .map((raw, i) => {
-        const b = raw as { label?: unknown; top?: unknown; phaseKey?: unknown; count?: unknown };
+        const b = raw as { label?: unknown; top?: unknown; phaseKey?: unknown; count?: unknown; taskIds?: unknown };
         const summaryLabel = escapeHtml(String(b.label ?? ""));
+        const phaseKey = b.phaseKey != null ? String(b.phaseKey).trim() : "";
         const phasePhrase = resolvePhasePhraseForCompleteRelease(b);
-        const phasePhraseAttr = escapeHtmlAttr(phasePhrase);
-        const showRelease = readyPhaseBucketHasTasks(raw);
+        const taskIds = collectPhaseBucketTaskIds(b);
+        const showRelease = readyPhaseBucketHasTasks(raw) && phaseKey.length > 0;
         const releaseBtn = showRelease
-          ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary dash-phase-release-btn" data-wc-action="phase-complete-release" data-wc-phase-phrase="' +
-            phasePhraseAttr +
-            '" title="Open a new chat with a phase closeout prompt">Complete &amp; Release</button>'
+          ? renderPhaseCompleteReleaseButton({
+              phaseKey,
+              phasePhrase,
+              taskIds,
+              workspaceCurrent: wsCur,
+              workspaceNext: wsNext,
+              scope: "bucket"
+            })
           : "";
         const body = renderTaskRowList(b.top ?? [], "No tasks in this phase.");
         return (
@@ -2489,7 +2601,13 @@ export function renderDashboardRootInnerHtml(
     renderStatusRollup(
       "status-ready-imp",
       "<b>Ready · Improvements</b> (" + String(readyImpCount) + ")",
-      renderReadyPhaseBuckets(ris.phaseBuckets, readyImpTop, "No ready improvements.", "rdy-imp"),
+      renderReadyPhaseBuckets(
+        ris.phaseBuckets,
+        readyImpTop,
+        "No ready improvements.",
+        "rdy-imp",
+        ws as Record<string, unknown> | null
+      ),
       readyImpCount === 0,
       readyImpCount > 0,
       "ready"
@@ -2499,7 +2617,13 @@ export function renderDashboardRootInnerHtml(
       "<b>Ready · Execution</b> (" + String(readyExeCount) + ")",
       breakdownLine +
         renderExecutionReadyScopeFootnote() +
-        renderReadyPhaseBuckets(res.phaseBuckets, readyExeTop, "No ready execution tasks.", "rdy-exe"),
+        renderReadyPhaseBuckets(
+          res.phaseBuckets,
+          readyExeTop,
+          "No ready execution tasks.",
+          "rdy-exe",
+          ws as Record<string, unknown> | null
+        ),
       /* Always render body so execution-queue scope footnote appears even when count is 0. */
       false,
       readyExeCount > 0,
@@ -2598,6 +2722,7 @@ export function renderDashboardRootInnerHtml(
     ) +
     recNextCard +
     renderStatPills(totalReadyCount, totalProposedCount, totalBlockedCount, totalDoneCount) +
+    renderOverviewCompleteReleaseBar(ws as Record<string, unknown> | null) +
     renderPhaseCatalogOverviewSection(phaseSystemSlice) +
     renderWorkspaceBlockersPendingSection(ws as Record<string, unknown> | null) +
     renderTeamExecutionSection(d.teamExecution) +
