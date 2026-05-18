@@ -24,6 +24,10 @@ import {
   type PhaseJournalKitPayload,
   type PlanningInterviewWizardPanel
 } from "./render-dashboard.js";
+import {
+  parseLeadingPhaseOrdinalFromKey,
+  resolveWorkspacePhaseOrdinal
+} from "../phase-roster-display.js";
 import { GuidanceAuthoringExtensionSide } from "../guidance/guidance-authoring-extension-side.js";
 import { renderGuidanceAuthoringPanelInnerHtml } from "../guidance/render-guidance-panel.js";
 import { STATUS_PANEL_EMBED_CSS } from "../status/render-status-tab.js";
@@ -1505,6 +1509,58 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         ingestPlanningMetaFromData(lp.data as Record<string, unknown> | undefined);
         ingestPlanningMetaFromData(gpc.data as Record<string, unknown> | undefined);
         embeddedCaePanelHtml = renderGuidanceAuthoringPanelInnerHtml(caeSummary);
+
+        // Resolve past phase keys (workspace ordinal strictly < current) from the
+        // dashboard-summary phase roster so the Phase Notes card can render the
+        // "Past Phases" rollup with one entry per past phase that has notes.
+        const pastPhaseKeys: string[] = [];
+        try {
+          const phaseSlice =
+            ((raw.data as Record<string, unknown>).systemStatus as Record<string, unknown> | undefined)?.phase as
+              | Record<string, unknown>
+              | undefined;
+          const phasesRaw =
+            (phaseSlice?.phaseCatalog as Record<string, unknown> | undefined)?.phases;
+          const phaseRows = Array.isArray(phasesRaw) ? (phasesRaw as unknown[]) : [];
+          const wOrd = phaseSlice ? resolveWorkspacePhaseOrdinal(phaseSlice) : null;
+          if (wOrd !== null) {
+            for (const r of phaseRows) {
+              if (!r || typeof r !== "object") continue;
+              const pk = (r as Record<string, unknown>).phaseKey;
+              if (typeof pk !== "string" || pk.length === 0) continue;
+              const o = parseLeadingPhaseOrdinalFromKey(pk);
+              if (o !== null && o < wOrd) {
+                pastPhaseKeys.push(pk);
+              }
+            }
+          }
+        } catch {
+          // Best-effort; missing roster simply yields an empty Past Phases rollup.
+        }
+
+        let pastPhaseNotes: DashboardPhaseJournalBundle["pastPhaseNotes"] = [];
+        if (pastPhaseKeys.length > 0) {
+          const results = await Promise.all(
+            pastPhaseKeys.map((phaseKey) =>
+              this.client
+                .run("list-phase-notes", { phaseKey })
+                .then(
+                  (res) => ({ phaseKey, res: res as PhaseJournalKitPayload }),
+                  () => ({ phaseKey, res: { ok: false } as PhaseJournalKitPayload })
+                )
+            )
+          );
+          pastPhaseNotes = results
+            .map(({ phaseKey, res }) => {
+              const ok = res.ok === true && res.data && typeof res.data === "object";
+              const notes = ok && Array.isArray((res.data as Record<string, unknown>).notes)
+                ? ((res.data as Record<string, unknown>).notes as unknown[])
+                : [];
+              return { phaseKey, notes };
+            })
+            .filter((e) => e.notes.length > 0);
+        }
+
         phaseJournal = {
           listPhaseNotes: {
             ok: lp.ok,
@@ -1517,7 +1573,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
             code: gpc.code,
             message: gpc.message,
             data: gpc.data as Record<string, unknown> | undefined
-          }
+          },
+          pastPhaseNotes
         };
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
@@ -2503,6 +2560,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       border-radius: 7px;
       border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.3));
       background: var(--vscode-textCodeBlock-background);
+      color: var(--vscode-foreground);
     }
     .wc-stat-num {
       font-size: 15px;
@@ -2511,18 +2569,32 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       line-height: 1;
     }
     .wc-stat-lbl {
-      font-size: 9px;
-      opacity: 0.65;
+      font-size: 10px;
+      font-weight: 600;
+      opacity: 0.9;
       line-height: 1;
       text-align: center;
+      color: var(--vscode-foreground);
+    }
+    .wc-pill-ready {
+      border-color: color-mix(in srgb, var(--vscode-testing-iconPassed, #4ec9b0) 55%, transparent);
+      background: color-mix(in srgb, var(--vscode-testing-iconPassed, #4ec9b0) 14%, var(--vscode-textCodeBlock-background));
     }
     .wc-pill-ready .wc-stat-num { color: var(--vscode-testing-iconPassed, #4ec9b0); }
-    .wc-pill-ready { border-color: rgba(78,201,176,0.25); }
+    .wc-pill-proposed {
+      border-color: color-mix(in srgb, var(--vscode-textLink-foreground, #4fc1ff) 55%, transparent);
+      background: color-mix(in srgb, var(--vscode-textLink-foreground, #4fc1ff) 14%, var(--vscode-textCodeBlock-background));
+    }
     .wc-pill-proposed .wc-stat-num { color: var(--vscode-textLink-foreground, #4fc1ff); }
-    .wc-pill-proposed { border-color: rgba(79,193,255,0.25); }
-    .wc-pill-blocked .wc-stat-num { color: var(--vscode-editorWarning-foreground, #cca700); }
-    .wc-pill-blocked { border-color: rgba(204,167,0,0.25); }
-    .wc-pill-done .wc-stat-num { color: var(--vscode-foreground); opacity: 0.55; }
+    .wc-pill-blocked {
+      border-color: color-mix(in srgb, var(--vscode-errorForeground, #f44747) 55%, transparent);
+      background: color-mix(in srgb, var(--vscode-errorForeground, #f44747) 14%, var(--vscode-textCodeBlock-background));
+    }
+    .wc-pill-blocked .wc-stat-num { color: var(--vscode-errorForeground, #f44747); }
+    .wc-pill-done {
+      border-color: var(--vscode-widget-border, rgba(127,127,127,.45));
+    }
+    .wc-pill-done .wc-stat-num { color: var(--vscode-foreground); opacity: 0.7; }
     /* ── Filter chips ── */
     .wc-filter-chips {
       display: flex;

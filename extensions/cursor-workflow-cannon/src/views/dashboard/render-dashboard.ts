@@ -2117,6 +2117,15 @@ export type PhaseJournalKitPayload = {
 export type DashboardPhaseJournalBundle = {
   listPhaseNotes: PhaseJournalKitPayload;
   getPhaseContext: PhaseJournalKitPayload;
+  /**
+   * Optional rollup of notes for past phases (workspace ordinal < current). Each entry contains
+   * the raw note rows (same shape as `listPhaseNotes.data.notes`) for one past phaseKey.
+   * Phases with zero notes should be omitted by the producer.
+   */
+  pastPhaseNotes?: Array<{
+    phaseKey: string;
+    notes: unknown[];
+  }>;
 };
 
 const PHASE_NOTE_TYPES_CONVERTIBLE = new Set(["task-suggestion", "follow-up"]);
@@ -2127,6 +2136,142 @@ function truncatePhaseNoteRowText(raw: string, maxLen = 80): string {
     return s;
   }
   return `${s.slice(0, Math.max(0, maxLen - 3)).trimEnd()}...`;
+}
+
+/** Render a single phase note row (reused by current-phase list and Past Phases rollups). */
+function renderPhaseNoteRow(raw: unknown): string {
+  if (!raw || typeof raw !== "object") {
+    return "";
+  }
+  const n = raw as Record<string, unknown>;
+  const id = typeof n.id === "string" ? n.id : "";
+  const summary = typeof n.summary === "string" ? n.summary : "";
+  const noteType = typeof n.noteType === "string" ? n.noteType : "";
+  const priority = typeof n.priority === "string" ? n.priority : "";
+  const status = typeof n.status === "string" ? n.status : "";
+  const details = typeof n.details === "string" ? n.details : null;
+  const convertedTaskId = typeof n.convertedTaskId === "string" ? n.convertedTaskId : null;
+  const subject = summary.trim();
+  const detailsTrim = details ? details.trim() : "";
+  const preferredText = subject.length > 0 ? subject : detailsTrim;
+  const rowText = preferredText.length > 0 ? truncatePhaseNoteRowText(preferredText, 80) : "Untitled note";
+  const rowTitle = preferredText.length > 0 ? preferredText : "Phase note";
+
+  const viewBtn =
+    id.length > 0
+      ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="phase-note-view" data-note-id="' +
+        escapeHtmlAttr(id) +
+        '" data-note-type="' +
+        escapeHtmlAttr(noteType) +
+        '" data-note-priority="' +
+        escapeHtmlAttr(priority) +
+        '" data-note-summary="' +
+        escapeHtmlAttr(summary) +
+        '" data-note-details="' +
+        escapeHtmlAttr(details ?? "") +
+        '" title="View phase note">View</button>'
+      : "";
+
+  const editBtn =
+    status === "active" && id.length > 0
+      ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="phase-note-edit" data-note-id="' +
+        escapeHtmlAttr(id) +
+        '" data-note-summary="' +
+        escapeHtmlAttr(summary) +
+        '" data-note-details="' +
+        escapeHtmlAttr(details ?? "") +
+        '" title="Edit phase note">Edit</button>'
+      : "";
+
+  const deleteBtn =
+    status === "active" && id.length > 0
+      ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-danger" data-wc-action="phase-note-delete" data-note-id="' +
+        escapeHtmlAttr(id) +
+        '" data-note-priority="' +
+        escapeHtmlAttr(priority) +
+        '" title="Delete phase note">Delete</button>'
+      : "";
+
+  const canConvert =
+    status === "active" && id.length > 0 && !convertedTaskId && PHASE_NOTE_TYPES_CONVERTIBLE.has(noteType);
+
+  const convertBtn = canConvert
+    ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="phase-note-convert" data-note-id="' +
+      escapeHtmlAttr(id) +
+      '" title="convert-phase-note-to-task">Convert</button>'
+    : "";
+
+  const convertedLine =
+    convertedTaskId && convertedTaskId.length > 0
+      ? '<p class="muted wc-phase-note-converted">Converted → <button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="task-detail" data-task-id="' +
+        escapeHtmlAttr(convertedTaskId) +
+        '">' +
+        escapeHtml(convertedTaskId) +
+        "</button></p>"
+      : "";
+
+  return (
+    '<div class="dash-row dash-phase-note-row">' +
+    '<div class="dash-row-label" title="' +
+    escapeHtmlAttr(rowTitle) +
+    '">' +
+    escapeHtml(rowText) +
+    convertedLine +
+    "</div>" +
+    '<div class="dash-row-actions">' +
+    viewBtn +
+    editBtn +
+    deleteBtn +
+    convertBtn +
+    "</div>" +
+    "</div>"
+  );
+}
+
+/** Past Phases rollup: one `<details>` per past phaseKey that has notes; expanding shows the notes. */
+function renderPastPhaseNotesRollup(
+  pastPhaseNotes: DashboardPhaseJournalBundle["pastPhaseNotes"]
+): string {
+  const entries = Array.isArray(pastPhaseNotes)
+    ? pastPhaseNotes.filter((e) => e && Array.isArray(e.notes) && e.notes.length > 0)
+    : [];
+  if (entries.length === 0) {
+    return (
+      '<details class="dash-phase-notes-past" data-wc-track="dash-phase-notes-past">' +
+      '<summary><b>Past Phases</b></summary>' +
+      '<p class="muted" role="status">No notes from past phases.</p>' +
+      '</details>'
+    );
+  }
+  const items = entries
+    .map((entry) => {
+      const phaseKey = String(entry.phaseKey ?? "").trim() || "—";
+      const rows = entry.notes.map((n) => renderPhaseNoteRow(n)).join("");
+      const trackId = "dash-phase-notes-past-" + phaseKey.replace(/[^a-zA-Z0-9_-]/g, "_");
+      return (
+        '<details class="dash-phase-notes-past-item" data-wc-track="' +
+        escapeHtmlAttr(trackId) +
+        '">' +
+        '<summary><code>' +
+        escapeHtml(phaseKey) +
+        '</code> <span class="muted">(' +
+        escapeHtml(String(entry.notes.length)) +
+        ')</span></summary>' +
+        '<div class="dash-row-list">' +
+        rows +
+        '</div>' +
+        '</details>'
+      );
+    })
+    .join("");
+  return (
+    '<details class="dash-phase-notes-past" data-wc-track="dash-phase-notes-past">' +
+    '<summary><b>Past Phases</b> <span class="muted">(' +
+    escapeHtml(String(entries.length)) +
+    ')</span></summary>' +
+    items +
+    '</details>'
+  );
 }
 
 /**
@@ -2158,136 +2303,25 @@ export function renderPhaseNotesOverviewSection(bundle: DashboardPhaseJournalBun
   }
 
   const listData = (listOk ? list.data : {}) as Record<string, unknown>;
-  const ctxData = ctxOk ? ((ctx.data ?? {}) as Record<string, unknown>) : {};
-
-  const phaseKey =
-    typeof listData.phaseKey === "string"
-      ? listData.phaseKey
-      : typeof ctxData.phaseKey === "string"
-        ? ctxData.phaseKey
-        : "—";
-  const phaseKeySource = typeof listData.phaseKeySource === "string" ? listData.phaseKeySource : "";
   const notes = Array.isArray(listData.notes) ? (listData.notes as unknown[]) : [];
-  const ctxNoteCount = Array.isArray(ctxData.notes) ? ctxData.notes.length : 0;
-
-  let rows = "";
-  for (const raw of notes) {
-    if (!raw || typeof raw !== "object") continue;
-    const n = raw as Record<string, unknown>;
-    const id = typeof n.id === "string" ? n.id : "";
-    const summary = typeof n.summary === "string" ? n.summary : "";
-    const noteType = typeof n.noteType === "string" ? n.noteType : "";
-    const priority = typeof n.priority === "string" ? n.priority : "";
-    const status = typeof n.status === "string" ? n.status : "";
-    const details = typeof n.details === "string" ? n.details : null;
-    const convertedTaskId = typeof n.convertedTaskId === "string" ? n.convertedTaskId : null;
-    const subject = summary.trim();
-    const detailsTrim = details ? details.trim() : "";
-    const preferredText = subject.length > 0 ? subject : detailsTrim;
-    const rowText = preferredText.length > 0 ? truncatePhaseNoteRowText(preferredText, 80) : "Untitled note";
-    const rowTitle = preferredText.length > 0 ? preferredText : "Phase note";
-
-    const viewBtn =
-      id.length > 0
-        ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="phase-note-view" data-note-id="' +
-          escapeHtmlAttr(id) +
-          '" data-note-type="' +
-          escapeHtmlAttr(noteType) +
-          '" data-note-priority="' +
-          escapeHtmlAttr(priority) +
-          '" data-note-summary="' +
-          escapeHtmlAttr(summary) +
-          '" data-note-details="' +
-          escapeHtmlAttr(details ?? "") +
-          '" title="View phase note">View</button>'
-        : "";
-
-    const editBtn =
-      status === "active" && id.length > 0
-        ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="phase-note-edit" data-note-id="' +
-          escapeHtmlAttr(id) +
-          '" data-note-summary="' +
-          escapeHtmlAttr(summary) +
-          '" data-note-details="' +
-          escapeHtmlAttr(details ?? "") +
-          '" title="Edit phase note">Edit</button>'
-        : "";
-
-    const deleteBtn =
-      status === "active" && id.length > 0
-        ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-danger" data-wc-action="phase-note-delete" data-note-id="' +
-          escapeHtmlAttr(id) +
-          '" data-note-priority="' +
-          escapeHtmlAttr(priority) +
-          '" title="Delete phase note">Delete</button>'
-        : "";
-
-    const canConvert =
-      status === "active" && id.length > 0 && !convertedTaskId && PHASE_NOTE_TYPES_CONVERTIBLE.has(noteType);
-
-    const convertBtn = canConvert
-      ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="phase-note-convert" data-note-id="' +
-        escapeHtmlAttr(id) +
-        '" title="convert-phase-note-to-task">Convert</button>'
-      : "";
-
-    const convertedLine =
-      convertedTaskId && convertedTaskId.length > 0
-        ? '<p class="muted wc-phase-note-converted">Converted → <button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="task-detail" data-task-id="' +
-          escapeHtmlAttr(convertedTaskId) +
-          '">' +
-          escapeHtml(convertedTaskId) +
-          "</button></p>"
-        : "";
-
-    rows +=
-      '<div class="dash-row dash-phase-note-row">' +
-      '<div class="dash-row-label" title="' +
-      escapeHtmlAttr(rowTitle) +
-      '">' +
-      escapeHtml(rowText) +
-      convertedLine +
-      "</div>" +
-      '<div class="dash-row-actions">' +
-        viewBtn +
-        editBtn +
-        deleteBtn +
-      convertBtn +
-      "</div>" +
-      "</div>";
-  }
-
-  const meta =
-    '<p class="muted dash-phase-notes-meta">' +
-    "<b>Phase key</b> " +
-    escapeHtml(phaseKey) +
-    (phaseKeySource ? " · " + escapeHtml(phaseKeySource) : "") +
-    (ctxOk ? " · <b>Context preview</b> " + String(ctxNoteCount) + " note(s)" : "") +
-    "</p>";
 
   const addBtn =
     '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="phase-note-add" title="add-phase-note">New</button>';
 
-  const chatBtn =
-    '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="phase-notes-chat" title="Open phase notes chat guide">Chat guide</button>';
-
-  const proposeBtn =
-    '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="phase-notes-propose-persist" title="propose-tasks-from-phase-notes persist:true">Persist convertible suggestions</button>';
-
-  const empty = notes.length === 0 ? '<p class="muted" role="status">No phase notes yet for this phase.</p>' : "";
+  const rows = notes.map((n) => renderPhaseNoteRow(n)).join("");
+  const empty =
+    notes.length === 0
+      ? '<p class="muted" role="status">No phase notes for this phase.</p>'
+      : "";
 
   return (
     '<section class="dash-card dash-phase-notes" aria-label="Phase notes">' +
     '<div class="dash-phase-notes-head"><p><b>Phase Notes</b></p>' +
     addBtn +
     "</div>" +
-    meta +
     empty +
     (notes.length > 0 ? '<div class="dash-row-list">' + rows + "</div>" : "") +
-    '<div class="dash-phase-notes-actions">' +
-    chatBtn +
-    proposeBtn +
-    "</div>" +
+    renderPastPhaseNotesRollup(bundle.pastPhaseNotes) +
     "</section>"
   );
 }
