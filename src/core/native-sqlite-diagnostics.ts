@@ -14,6 +14,14 @@ export type NodeRuntimeIdentity = {
   modules: string;
 };
 
+import os from "node:os";
+
+export type ArchMismatchRemediation = {
+  code: "runtime-host-arch-mismatch";
+  message: string;
+  remediationCommand: string;
+};
+
 export type NativeSqliteErrorClassification = {
   kind: NativeSqliteErrorKind;
   rebuildRecommended: boolean;
@@ -41,6 +49,17 @@ export function formatNodeRuntimeIdentity(identity = getCurrentNodeRuntimeIdenti
 
 export function classifyNativeSqliteErrorMessage(message: string): NativeSqliteErrorClassification {
   const lower = message.toLowerCase();
+  if (message.includes("ERR_DLOPEN_FAILED") || lower.includes("dlopen")) {
+    const archMatch = message.match(/incompatible architecture[\s\S]*?have ['"]?([^,'")\s]+)['"]?, need ['"]?([^,'")\s]+)['"]?/i);
+    if (archMatch) {
+      return {
+        kind: "architecture-mismatch",
+        rebuildRecommended: true,
+        architecture: { have: archMatch[1], need: archMatch[2] }
+      };
+    }
+    return { kind: "architecture-mismatch", rebuildRecommended: true };
+  }
   const archMatch = message.match(/incompatible architecture[\s\S]*?have ['"]?([^,'")\s]+)['"]?, need ['"]?([^,'")\s]+)['"]?/i);
   if (archMatch) {
     return {
@@ -72,6 +91,46 @@ export function classifyNativeSqliteErrorMessage(message: string): NativeSqliteE
     return { kind: "native-load-failed", rebuildRecommended: true };
   }
   return { kind: "unknown", rebuildRecommended: false };
+}
+
+/**
+ * Structured remediation when better-sqlite3 fails at load time (dlopen / arch mismatch).
+ * Prefer this over surfacing raw Node dlopen stacks to agents running `wk run`.
+ */
+export function formatArchMismatchRemediation(
+  cause: unknown,
+  identity = getCurrentNodeRuntimeIdentity()
+): ArchMismatchRemediation {
+  const hostArch = os.arch();
+  const processArch = identity.arch;
+  const nodeQuoted = JSON.stringify(identity.execPath);
+  const archPrefix = hostArch !== processArch ? `arch -${hostArch} ${nodeQuoted}` : null;
+  const remediationCommand = archPrefix
+    ? `${archPrefix} $(command -v pnpm 2>/dev/null || echo pnpm) exec wk doctor`
+    : "pnpm rebuild better-sqlite3";
+  const classification = classifyNativeSqliteErrorMessage(
+    cause instanceof Error ? cause.message : String(cause)
+  );
+  const archDetail =
+    classification.architecture?.have && classification.architecture?.need
+      ? ` (binding ${classification.architecture.have}, runtime needs ${classification.architecture.need})`
+      : "";
+  const message =
+    hostArch !== processArch
+      ? `Native SQLite binding failed to load${archDetail}: Node is ${processArch} but host is ${hostArch}. Use a Node build for ${hostArch}, or prefix commands with: ${archPrefix}`
+      : `Native SQLite binding failed to load${archDetail}. ${nativeSqliteRecoveryHint(classification, identity)}`;
+  return {
+    code: "runtime-host-arch-mismatch",
+    message,
+    remediationCommand
+  };
+}
+
+export function throwNativeSqliteLoadError(cause: unknown): never {
+  const remediation = formatArchMismatchRemediation(cause);
+  const err = new Error(`${remediation.message}\nRemediation: ${remediation.remediationCommand}`);
+  (err as Error & { code: string }).code = remediation.code;
+  throw err;
 }
 
 export function nativeSqliteRecoveryHint(

@@ -1336,6 +1336,7 @@ test("runCli run run-transition --schema-only exposes runtime action enum", asyn
     "demote",
     "pause",
     "reject",
+    "reopen",
     "resume_ready",
     "resume_work",
     "start",
