@@ -1,6 +1,9 @@
-import fs from "node:fs/promises";
-import path from "node:path";
 import type { PolicyOperationId } from "./policy.js";
+import {
+  getSessionGrantRow,
+  listSessionGrantRows,
+  upsertSessionGrantRow
+} from "./state/kit-session-grants-sqlite.js";
 
 export const SESSION_POLICY_SCHEMA_VERSION = 1 as const;
 
@@ -17,74 +20,50 @@ export type SessionPolicyDocument = {
   grants: Partial<Record<PolicyOperationId, SessionPolicyGrant>>;
 };
 
-const REL = ".workspace-kit/policy/session-grants.json";
-
-function defaultDoc(sessionId: string): SessionPolicyDocument {
-  return {
-    schemaVersion: SESSION_POLICY_SCHEMA_VERSION,
-    sessionId,
-    grants: {}
-  };
-}
-
 export function resolveSessionId(env: NodeJS.ProcessEnv): string {
   const raw = env.WORKSPACE_KIT_SESSION_ID?.trim();
   return raw && raw.length > 0 ? raw : "default";
 }
 
-export async function loadSessionPolicyDocument(workspacePath: string): Promise<SessionPolicyDocument> {
-  const fp = path.join(workspacePath, REL);
-  try {
-    const raw = await fs.readFile(fp, "utf8");
-    const doc = JSON.parse(raw) as SessionPolicyDocument;
-    if (doc.schemaVersion !== SESSION_POLICY_SCHEMA_VERSION) {
-      return defaultDoc(resolveSessionId(process.env));
-    }
-    return {
-      ...defaultDoc(doc.sessionId ?? resolveSessionId(process.env)),
-      ...doc,
-      grants: doc.grants && typeof doc.grants === "object" ? doc.grants : {}
-    };
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") {
-      return defaultDoc(resolveSessionId(process.env));
-    }
-    throw e;
+export async function loadSessionPolicyDocument(
+  workspacePath: string,
+  effectiveConfig?: Record<string, unknown>
+): Promise<SessionPolicyDocument> {
+  const sessionId = resolveSessionId(process.env);
+  const rows = listSessionGrantRows(workspacePath, effectiveConfig, sessionId);
+  const grants: Partial<Record<PolicyOperationId, SessionPolicyGrant>> = {};
+  for (const row of rows) {
+    grants[row.operationId] = { rationale: row.rationale, grantedAt: row.grantedAt };
   }
+  return {
+    schemaVersion: SESSION_POLICY_SCHEMA_VERSION,
+    sessionId,
+    grants
+  };
 }
 
 export async function saveSessionPolicyDocument(
-  workspacePath: string,
-  doc: SessionPolicyDocument
+  _workspacePath: string,
+  _doc: SessionPolicyDocument
 ): Promise<void> {
-  const fp = path.join(workspacePath, REL);
-  await fs.mkdir(path.dirname(fp), { recursive: true });
-  await fs.writeFile(fp, `${JSON.stringify(doc, null, 2)}\n`, "utf8");
+  throw new Error("saveSessionPolicyDocument is deprecated; use recordSessionGrant instead.");
 }
 
 export async function getSessionGrant(
   workspacePath: string,
   operationId: PolicyOperationId,
-  sessionId: string
+  sessionId: string,
+  effectiveConfig?: Record<string, unknown>
 ): Promise<SessionPolicyGrant | undefined> {
-  const doc = await loadSessionPolicyDocument(workspacePath);
-  if (doc.sessionId !== sessionId) {
-    return undefined;
-  }
-  return doc.grants[operationId];
+  return getSessionGrantRow(workspacePath, operationId, sessionId, effectiveConfig);
 }
 
 export async function recordSessionGrant(
   workspacePath: string,
   operationId: PolicyOperationId,
   sessionId: string,
-  rationale: string
+  rationale: string,
+  effectiveConfig?: Record<string, unknown>
 ): Promise<void> {
-  const doc = await loadSessionPolicyDocument(workspacePath);
-  doc.sessionId = sessionId;
-  doc.grants[operationId] = {
-    rationale,
-    grantedAt: new Date().toISOString()
-  };
-  await saveSessionPolicyDocument(workspacePath, doc);
+  upsertSessionGrantRow(workspacePath, operationId, sessionId, rationale, effectiveConfig);
 }

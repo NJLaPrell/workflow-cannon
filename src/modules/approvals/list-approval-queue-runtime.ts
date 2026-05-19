@@ -51,8 +51,8 @@ export async function runListApprovalQueue(ctx: ModuleLifecycleContext): Promise
           role: "Policy checks for sensitive workspace-kit run commands (legacy traces.jsonl import-only)."
         },
         {
-          relativePath: ".workspace-kit/policy/session-grants.json",
-          role: "Session-scoped reuse of JSON policyApproval when scope is session."
+          relativePath: "list-session-grants",
+          role: "Session-scoped policy grants in kit_session_grants (SQLite); run workspace-kit run list-session-grants."
         },
         {
           relativePath: "kit_approval_decisions (SQLite)",

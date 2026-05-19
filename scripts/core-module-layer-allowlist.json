@@ -83,6 +83,11 @@
       "rationale": "Policy trace events persist in kit_policy_traces using the same unified SQLite path as planning."
     },
     {
+      "file": "src/core/state/kit-session-grants-sqlite.ts",
+      "specifier": "../../modules/task-engine/planning-config.js",
+      "rationale": "Session policy grants persist in kit_session_grants using the unified planning SQLite path."
+    },
+    {
       "file": "src/core/skills/task-skill-validation.ts",
       "specifier": "../../modules/skills/discovery.js",
       "rationale": "REF-004: task metadata.skillIds validation uses skill pack discovery without task-engine → skills sibling import."
