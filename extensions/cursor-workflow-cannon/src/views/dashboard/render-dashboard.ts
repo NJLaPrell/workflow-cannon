@@ -172,6 +172,35 @@ function renderQueueTaskActionButtons(taskId: string): string {
   );
 }
 
+/** Proposed rows: six actions in one 3×2 grid (Set Phase … Decline). */
+function renderProposedQueueTaskActionButtons(
+  taskId: string,
+  acceptDecline: { acceptAction: string; declineAction: string },
+): string {
+  if (taskId.trim().length === 0) {
+    return "";
+  }
+  const idAttr = escapeHtml(taskId);
+  return (
+    '<span class="dash-row-actions wc-task-actions dash-row-actions-grid">' +
+    renderPhaseAssignButton(taskId) +
+    renderTaskDetailButton(taskId) +
+    renderTaskCommentsButton(taskId, "view") +
+    renderTaskCommentsButton(taskId, "add") +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="' +
+    escapeHtml(acceptDecline.acceptAction) +
+    '" data-task-id="' +
+    idAttr +
+    '" title="Accept → ready (confirms policy rationale)">Accept</button>' +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="' +
+    escapeHtml(acceptDecline.declineAction) +
+    '" data-task-id="' +
+    idAttr +
+    '" title="Decline → cancelled (reject; confirms policy rationale)">Decline</button>' +
+    "</span>"
+  );
+}
+
 /** Stable id for preserving `<details open>` when the host replaces `#root` innerHTML (`DashboardViewProvider` wcReplaceRoot). */
 function wcTrackAttr(trackId: string): string {
   const safe = trackId.replace(/[^a-zA-Z0-9_-]/g, "_").replace(/_+/g, "_").slice(0, 120);
@@ -1167,19 +1196,14 @@ function renderProposedImprovementRow(row: {
   featureDetails?: unknown;
 }): string {
   const id = String(row?.id ?? "").trim();
-  const idAttr = escapeHtml(id);
   return (
     '<div class="dash-row" role="listitem">' +
     renderDashboardTaskBody(row) +
-    renderQueueTaskActionButtons(id) +
-    '<span class="dash-row-actions">' +
-    '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="proposed-imp-accept" data-task-id="' +
-    idAttr +
-    '" title="Accept → ready (confirms policy rationale)">Accept</button>' +
-    '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="proposed-imp-decline" data-task-id="' +
-    idAttr +
-    '" title="Decline → cancelled (reject; confirms policy rationale)">Decline</button>' +
-    "</span></div>"
+    renderProposedQueueTaskActionButtons(id, {
+      acceptAction: "proposed-imp-accept",
+      declineAction: "proposed-imp-decline",
+    }) +
+    "</div>"
   );
 }
 
@@ -1256,19 +1280,14 @@ function renderProposedExecutionRow(row: {
   featureDetails?: unknown;
 }): string {
   const id = String(row?.id ?? "").trim();
-  const idAttr = escapeHtml(id);
   return (
     '<div class="dash-row" role="listitem">' +
     renderDashboardTaskBody(row) +
-    renderQueueTaskActionButtons(id) +
-    '<span class="dash-row-actions">' +
-    '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="proposed-exe-accept" data-task-id="' +
-    idAttr +
-    '" title="Accept → ready (confirms policy rationale)">Accept</button>' +
-    '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="proposed-exe-decline" data-task-id="' +
-    idAttr +
-    '" title="Decline → cancelled (reject; confirms policy rationale)">Decline</button>' +
-    "</span></div>"
+    renderProposedQueueTaskActionButtons(id, {
+      acceptAction: "proposed-exe-accept",
+      declineAction: "proposed-exe-decline",
+    }) +
+    "</div>"
   );
 }
 
