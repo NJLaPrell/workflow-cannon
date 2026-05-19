@@ -13,6 +13,8 @@ import { fileURLToPath } from "node:url";
 export const DEFAULT_RELEASE_ALLOWLIST_GLOBS = [
   "package.json",
   "CHANGELOG.md",
+  "docs/maintainers/CHANGELOG.md",
+  "workspace-kit.profile.json",
   "schemas/_generated-*",
   ".workspace-kit/**"
 ];

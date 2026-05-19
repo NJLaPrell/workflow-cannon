@@ -12,6 +12,8 @@
     "defaultBranch": "main"
   },
   "release": {
-    "allowlist": []
+    "allowlist": [
+      "docs/maintainers/data/workspace-kit-status.yaml"
+    ]
   }
 }
