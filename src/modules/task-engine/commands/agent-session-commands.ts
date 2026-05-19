@@ -14,6 +14,7 @@ import { buildPhaseJournalSnapshotSummary } from "../phase-journal/phase-journal
 import { buildTaskIntakeReadoutBundle } from "../task-intake-readout-hints.js";
 import { buildWorkspaceCoordinationStatus } from "../coordination/build-workspace-coordination-status.js";
 import { isWishlistIntakeTask } from "../wishlist/wishlist-intake.js";
+import { buildPhaseFocusDashboard } from "../dashboard/build-phase-focus-dashboard.js";
 
 export async function composeAgentSessionSnapshotPayload(
   ctx: ModuleLifecycleContext,
@@ -156,6 +157,17 @@ export async function resolveAgentBootstrapOrSnapshot(
           projection: "lean"
         }
       );
+    }
+    if (projection === "phaseFocus") {
+      const phaseKeyArg =
+        typeof args.phaseKey === "string" && args.phaseKey.trim().length > 0
+          ? args.phaseKey.trim()
+          : undefined;
+      snapshotData.phaseFocus = buildPhaseFocusDashboard({
+        ctx,
+        planning,
+        phaseKey: phaseKeyArg
+      });
     }
     return {
       ok: true,

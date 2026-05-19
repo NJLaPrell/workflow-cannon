@@ -23,6 +23,7 @@
     "./modules": "./dist/modules/index.js",
     "./contracts/agent-task-read-contract": "./dist/contracts/agent-task-read-contract.js",
     "./contracts/agent-phase-journal-read-contract": "./dist/contracts/agent-phase-journal-read-contract.js",
+    "./contracts/agent-phase-focus-dashboard-contract": "./dist/contracts/agent-phase-focus-dashboard-contract.js",
     "./contracts/dashboard-summary-run": "./dist/contracts/dashboard-summary-run.js",
     "./contracts/agent-session-snapshot-run": "./dist/contracts/agent-session-snapshot-run.js",
     "./contracts/next-actions-run": "./dist/contracts/next-actions-run.js",

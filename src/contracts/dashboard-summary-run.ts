@@ -3,6 +3,7 @@
  * Consumed by the Cursor extension webview renderer; keep aligned with `src/modules/task-engine/commands/task-engine-dashboard-on-command.ts`.
  */
 
+import type { AgentPhaseFocusDashboard } from "./agent-phase-focus-dashboard-contract.js";
 import type { WorkspaceCoordinationStatusV1 } from "./workspace-coordination-status.js";
 
 export type DashboardFeatureDetail = {
@@ -358,6 +359,8 @@ export type DashboardSummaryData = {
   humanGatesSummary: DashboardHumanGatesSummary;
   /** Improvement tasks awaiting `review-item` (ready / in_progress). */
   approvalQueue: DashboardApprovalQueueSummary;
+  /** Present when `dashboard-summary` is invoked with `includePhaseFocus: true`. */
+  phaseFocus?: AgentPhaseFocusDashboard;
   /** Per-phase phase-journal note counts + current-phase silence signal. */
   phaseJournalStats: DashboardPhaseJournalStats;
   completedSummary: DashboardListSummary;
