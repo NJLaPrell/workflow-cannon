@@ -71,6 +71,13 @@ export function runGetKitPersistenceMap(ctx: ModuleLifecycleContext): ModuleComm
         ],
         note:
           "Review-item decision fingerprints and skill-apply audit rows are canonical in unified SQLite. Legacy JSONL files are imported once on first access, then archived with a .migrated suffix."
+      },
+      policyTraces: {
+        minKitSqliteUserVersion: 25,
+        tables: ["kit_policy_traces"],
+        legacyJsonlImportOnly: [".workspace-kit/policy/traces.jsonl"],
+        note:
+          "Policy events append transactionally to kit_policy_traces. Improvement ingestion advances lastIngestedPolicyTraceId monotonically. Legacy traces.jsonl is import-only."
       }
     } as Record<string, unknown>
   };

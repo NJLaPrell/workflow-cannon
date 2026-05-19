@@ -10,7 +10,7 @@ type SqliteDatabase = InstanceType<typeof Database>;
  */
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 24;
+export const KIT_SQLITE_USER_VERSION = 25;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 export const TASK_ENGINE_DEPENDENCIES_TABLE = "task_engine_dependencies";
@@ -1025,6 +1025,29 @@ CREATE INDEX idx_kit_skill_apply_audit_recorded_at ON kit_skill_apply_audit(reco
 `);
 }
 
+/** Policy trace events (Phase 102 / T100346). */
+function migrateV24ToV25(db: SqliteDatabase): void {
+  if (tableExists(db, "kit_policy_traces")) {
+    return;
+  }
+  db.exec(`
+CREATE TABLE kit_policy_traces (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  schema_version INTEGER NOT NULL,
+  recorded_at TEXT NOT NULL,
+  operation_id TEXT NOT NULL,
+  command TEXT NOT NULL,
+  actor TEXT NOT NULL,
+  allowed INTEGER NOT NULL,
+  rationale TEXT,
+  command_ok INTEGER,
+  message TEXT
+);
+CREATE INDEX idx_kit_policy_traces_recorded_at ON kit_policy_traces(recorded_at);
+CREATE INDEX idx_kit_policy_traces_operation_id ON kit_policy_traces(operation_id);
+`);
+}
+
 /**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
@@ -1161,6 +1184,11 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
     migrateV23ToV24(db);
     db.pragma("user_version = 24");
     current = 24;
+  }
+  if (current < 25) {
+    migrateV24ToV25(db);
+    db.pragma("user_version = 25");
+    current = 25;
   }
 }
 

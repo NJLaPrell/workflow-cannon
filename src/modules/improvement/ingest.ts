@@ -176,27 +176,28 @@ export function ingestGitDiffBetweenTags(
 export async function ingestPolicyDenials(
   workspacePath: string,
   state: ImprovementStateDocument,
-  heuristicVersion: ImprovementHeuristicVersion = 1
+  heuristicVersion: ImprovementHeuristicVersion = 1,
+  effectiveConfig?: Record<string, unknown>
 ): Promise<IngestCandidate[]> {
-  const fp = path.join(workspacePath, ".workspace-kit/policy/traces.jsonl");
-  const lines = await readJsonlLines(fp);
-  const start = state.policyTraceLineCursor;
-  const slice = lines.slice(start);
-  state.policyTraceLineCursor = lines.length;
+  const { readPolicyTracesAfterId } = await import("../../core/state/kit-policy-traces-sqlite.js");
+  const rows = readPolicyTracesAfterId(
+    workspacePath,
+    state.lastIngestedPolicyTraceId,
+    effectiveConfig
+  );
   const out: IngestCandidate[] = [];
 
-  for (const line of slice) {
-    let rec: Record<string, unknown>;
-    try {
-      rec = JSON.parse(line) as Record<string, unknown>;
-    } catch {
-      continue;
-    }
+  for (const rec of rows) {
+    state.lastIngestedPolicyTraceId = rec.id;
     if (rec.allowed !== false) continue;
-    const op = typeof rec.operationId === "string" ? rec.operationId : "unknown";
-    const ts = typeof rec.timestamp === "string" ? rec.timestamp : "";
-    const evidenceKey = stableEvidenceKey("policy_deny", [op, ts, line.slice(0, 120)]);
-    const hasRationale = typeof rec.rationale === "string" && (rec.rationale as string).length > 0;
+    const op = rec.operationId;
+    const ts = rec.timestamp;
+    const evidenceKey = stableEvidenceKey("policy_deny", [
+      op,
+      ts,
+      JSON.stringify(rec).slice(0, 120)
+    ]);
+    const hasRationale = typeof rec.rationale === "string" && rec.rationale.length > 0;
     const policyDenial = hasRationale ? 0.72 : 0.55;
     const signals: ConfidenceSignals = { policyDenial };
     const confidence = resolveConfidenceForHeuristicVersion(heuristicVersion, "policy_deny", signals);
@@ -209,7 +210,7 @@ export async function ingestPolicyDenials(
       provenanceRefs: {
         operationId: op,
         traceTimestamp: ts,
-        command: typeof rec.command === "string" ? (rec.command as string) : ""
+        command: rec.command
       },
       signals,
       confidence

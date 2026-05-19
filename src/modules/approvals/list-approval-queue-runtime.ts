@@ -47,8 +47,8 @@ export async function runListApprovalQueue(ctx: ModuleLifecycleContext): Promise
       improvementTriagePlaybook: ".ai/playbooks/improvement-triage-top-three.md",
       policyArtifacts: [
         {
-          relativePath: ".workspace-kit/policy/traces.jsonl",
-          role: "Append-only audit of policy checks for sensitive workspace-kit run commands (allowed/denied)."
+          relativePath: "kit_policy_traces (SQLite)",
+          role: "Policy checks for sensitive workspace-kit run commands (legacy traces.jsonl import-only)."
         },
         {
           relativePath: ".workspace-kit/policy/session-grants.json",

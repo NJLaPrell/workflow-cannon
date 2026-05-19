@@ -372,10 +372,10 @@ test("policy.trace includes schemaVersion", async () => {
   await withPolicy(async () => {
     await runCli(["init"], { cwd: root, ...cap });
   });
-  const tracePath = path.join(root, ".workspace-kit", "policy", "traces.jsonl");
-  const lines = (await readFile(tracePath, "utf8")).trim().split("\n");
-  const last = JSON.parse(lines[lines.length - 1]);
-  assert.equal(last.schemaVersion, 1);
+  const { readPolicyTracesAfterId } = await import("../dist/core/state/kit-policy-traces-sqlite.js");
+  const rows = readPolicyTracesAfterId(root, 0);
+  assert.ok(rows.length >= 1);
+  assert.equal(rows[rows.length - 1].schemaVersion, 1);
 });
 
 test("extraSensitiveModuleCommands gates explain-config", async () => {

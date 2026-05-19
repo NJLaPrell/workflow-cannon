@@ -27,7 +27,7 @@ export function buildDashboardApprovalQueueSummary(tasks: TaskEntity[]): Dashboa
     })),
     policyArtifacts: [
       {
-        relativePath: ".workspace-kit/policy/traces.jsonl",
+        relativePath: "kit_policy_traces",
         role: "Policy check audit trail for sensitive workspace-kit run commands."
       },
       {

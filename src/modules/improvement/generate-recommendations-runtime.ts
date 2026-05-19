@@ -122,7 +122,14 @@ export async function runGenerateRecommendations(
   candidates.push(
     ...(await ingestAgentTranscripts(ctx.workspacePath, transcriptsRoot, state, heuristicVersion))
   );
-  candidates.push(...(await ingestPolicyDenials(ctx.workspacePath, state, heuristicVersion)));
+  candidates.push(
+    ...(await ingestPolicyDenials(
+      ctx.workspacePath,
+      state,
+      heuristicVersion,
+      ctx.effectiveConfig as Record<string, unknown> | undefined
+    ))
+  );
   candidates.push(...(await ingestConfigMutations(ctx.workspacePath, state, heuristicVersion)));
   candidates.push(...ingestTaskTransitionFriction(store.getTransitionLog(), state, heuristicVersion));
 
