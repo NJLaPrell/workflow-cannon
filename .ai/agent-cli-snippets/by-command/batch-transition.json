@@ -1,0 +1,96 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "batch-transition",
+  "schema": {
+    "type": "object",
+    "required": [
+      "transitions"
+    ],
+    "properties": {
+      "transitions": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "required": [
+            "taskId",
+            "action"
+          ],
+          "additionalProperties": true,
+          "properties": {
+            "taskId": {
+              "type": "string",
+              "pattern": "^T[0-9]+$"
+            },
+            "action": {
+              "type": "string"
+            },
+            "clientMutationId": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      },
+      "dryRun": {
+        "type": "boolean"
+      },
+      "apply": {
+        "type": "boolean"
+      },
+      "policyApproval": {
+        "type": "object"
+      },
+      "expectedPlanningGeneration": {
+        "oneOf": [
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          }
+        ]
+      },
+      "actor": {
+        "type": "string"
+      }
+    },
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {
+    "transitions": []
+  },
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run batch-transition '{\"transitions\":[]}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/batch-transition.md",
+  "moduleId": "task-engine",
+  "description": "Dry-run or apply multiple run-transition operations in order.",
+  "policy": {
+    "sensitivity": "sensitive",
+    "operationId": "tasks.run-transition",
+    "jsonApprovalRequired": true
+  },
+  "planningGeneration": {
+    "cliPrelude": true,
+    "expectedPlanningGeneration": "required when tasks.planningGenerationPolicy is require"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  }
+}

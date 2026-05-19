@@ -41,6 +41,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "assign-task-phase",
     "backfill-task-feature-links",
     "backup-planning-sqlite",
+    "batch-transition",
     "block-task",
     "claim-next-task",
     "claim-workspace-edit-lease",

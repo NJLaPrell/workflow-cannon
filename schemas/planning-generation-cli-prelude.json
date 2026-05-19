@@ -4,6 +4,7 @@
   "commands": [
     "add-dependency",
     "apply-task-batch",
+    "batch-transition",
     "archive-task",
     "assign-task-phase",
     "backfill-task-feature-links",

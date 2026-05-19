@@ -3499,6 +3499,33 @@ test("taskEngineModule claim-next-task returns no-op when no runnable task exist
   assert.equal(result.data.reason, "no-runnable-task");
 });
 
+test("taskEngineModule batch-transition dry-run previews ordered transitions", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T9910", status: "ready" }));
+    store.addTask(makeTask({ id: "T9911", status: "ready" }));
+  });
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const dry = await taskEngineModule.onCommand(
+    {
+      name: "batch-transition",
+      args: {
+        dryRun: true,
+        transitions: [
+          { taskId: "T9910", action: "start" },
+          { taskId: "T9911", action: "demote" }
+        ]
+      }
+    },
+    ctx
+  );
+  assert.equal(dry.ok, true);
+  assert.equal(dry.code, "batch-transition-dry-run");
+  assert.equal(dry.data.allAllowed, true);
+  assert.equal(dry.data.results.length, 2);
+  assert.equal(dry.data.results[1].toState, "proposed");
+});
+
 test("taskEngineModule lifecycle intent wrappers delegate to run-transition actions", async () => {
   const workspace = await tmpDir();
   await seedSqliteStore(workspace, (store) => {
