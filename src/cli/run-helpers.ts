@@ -6,14 +6,26 @@ import { POLICY_APPROVAL_HUMAN_DOC } from "../core/policy.js";
 export function peelRunArgv(tail: string[]): {
   jsonCatalog: boolean;
   listCommands: boolean;
+  outputFile?: string;
   rest: string[];
 } {
   const rest: string[] = [];
   let jsonCatalog = false;
   let listCommands = false;
+  let outputFile: string | undefined;
   let i = 0;
   while (i < tail.length) {
     const a = tail[i];
+    if (a === "--output-file" && typeof tail[i + 1] === "string" && tail[i + 1].length > 0) {
+      outputFile = tail[i + 1];
+      i += 2;
+      continue;
+    }
+    if (a.startsWith("--output-file=") && a.length > "--output-file=".length) {
+      outputFile = a.slice("--output-file=".length);
+      i += 1;
+      continue;
+    }
     if (a === "--list-commands") {
       listCommands = true;
       i += 1;
@@ -40,7 +52,7 @@ export function peelRunArgv(tail: string[]): {
   if (listCommands) {
     jsonCatalog = true;
   }
-  return { jsonCatalog, listCommands, rest };
+  return { jsonCatalog, listCommands, outputFile, rest };
 }
 
 export function policyDeniedBody(params: {

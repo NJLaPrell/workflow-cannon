@@ -32,6 +32,7 @@ import { releaseTranscriptHookLockFromEnv } from "../core/transcript-completion-
 import { storeCaeSession } from "../modules/context-activation/trace-store.js";
 import { cliDiscoveryEnvelope } from "../core/cli-discovery.js";
 import { buildRunCommandCatalogPayload } from "./run-command-catalog.js";
+import { createRunInvocationId, emitRunInvocationJson } from "./run-invocation-output.js";
 import { peelRunArgv, policyDeniedBody } from "./run-helpers.js";
 
 /** Default apply-skill preview mode for policy (dryRun true when omitted). */
@@ -69,8 +70,14 @@ export async function handleRunCommand(
   codes: RunCommandExitCodes
 ): Promise<number> {
   const { writeLine, writeError } = io;
+  const invocationId = createRunInvocationId();
 
   const peeled = peelRunArgv(args.slice(1));
+  const outputFileRequest = peeled.outputFile;
+  const emitJson = async (body: Record<string, unknown>) => {
+    await emitRunInvocationJson(writeLine, cwd, body, { invocationId, outputFileRequest });
+  };
+
   let { jsonCatalog, rest } = peeled;
   let subcommand: string | undefined = rest[0];
   if (subcommand === "list-commands") {
@@ -123,20 +130,14 @@ export async function handleRunCommand(
     const descriptor = router.describeCommand(subcommand);
     if (!descriptor) {
       const names = router.listCommands().map((command) => command.name);
-      writeLine(
-        JSON.stringify(
-          {
-            ok: false,
-            code: "unknown-command",
-            message: `Unknown command '${subcommand}'. Run 'workspace-kit run --list-commands' for the command catalog.`,
-            details: { availableCommands: names },
-            remediation: { docPath: CLI_REMEDIATION_DOCS.agentCliMap },
-            discovery: cliDiscoveryEnvelope()
-          },
-          null,
-          2
-        )
-      );
+      await emitJson({
+        ok: false,
+        code: "unknown-command",
+        message: `Unknown command '${subcommand}'. Run 'workspace-kit run --list-commands' for the command catalog.`,
+        details: { availableCommands: names },
+        remediation: { docPath: CLI_REMEDIATION_DOCS.agentCliMap },
+        discovery: cliDiscoveryEnvelope()
+      });
       return codes.validationFailure;
     }
     const payload = buildRunArgsSchemaOnlyPayload(subcommand, {
@@ -146,37 +147,31 @@ export async function handleRunCommand(
       description: descriptor.description
     });
     if (!payload) {
-      writeLine(
-        JSON.stringify(
-          {
-            ok: false,
-            code: "schema-only-unsupported",
-            message: `Command '${subcommand}' is executable but has no schema-only metadata. This is a command contract bug.`,
-            remediation: {
-              instructionPath: "src/modules/task-engine/instructions/agent-mutation-plan.md",
-              docPath: CLI_REMEDIATION_DOCS.agentCliMap
-            },
-            discovery: cliDiscoveryEnvelope()
-          },
-          null,
-          2
-        )
-      );
+      await emitJson({
+        ok: false,
+        code: "schema-only-unsupported",
+        message: `Command '${subcommand}' is executable but has no schema-only metadata. This is a command contract bug.`,
+        remediation: {
+          instructionPath: "src/modules/task-engine/instructions/agent-mutation-plan.md",
+          docPath: CLI_REMEDIATION_DOCS.agentCliMap
+        },
+        discovery: cliDiscoveryEnvelope()
+      });
       return codes.validationFailure;
     }
-    writeLine(JSON.stringify({ ...payload, discovery: cliDiscoveryEnvelope() }, null, 2));
+    await emitJson({ ...payload, discovery: cliDiscoveryEnvelope() });
     return codes.success;
   }
 
   if (subcommand) {
     const pilotErr = validatePilotRunCommandArgs(subcommand, commandArgs, effective);
     if (pilotErr) {
-      writeLine(JSON.stringify(pilotErr, null, 2));
+      await emitJson(pilotErr as Record<string, unknown>);
       return codes.validationFailure;
     }
     const planPrelude = enforcePlanningGenerationCliPrelude(subcommand, commandArgs, effective);
     if (planPrelude) {
-      writeLine(JSON.stringify(planPrelude, null, 2));
+      await emitJson(planPrelude as Record<string, unknown>);
       return codes.validationFailure;
     }
   }
@@ -186,13 +181,10 @@ export async function handleRunCommand(
   }
 
   if (!subcommand && jsonCatalog) {
-    writeLine(
-      JSON.stringify(
-        { ...buildRunCommandCatalogPayload(router, effective), discovery: cliDiscoveryEnvelope() },
-        null,
-        2
-      )
-    );
+    await emitJson({
+      ...buildRunCommandCatalogPayload(router, effective),
+      discovery: cliDiscoveryEnvelope()
+    });
     return codes.success;
   }
 
@@ -253,19 +245,15 @@ export async function handleRunCommand(
           allowed: false,
           message: "interactive policy approval denied"
         });
-        writeLine(
-          JSON.stringify(
-            policyDeniedBody({
-              policyOp,
-              message: "Sensitive command denied at interactive policy prompt.",
-              hint: `Set WORKSPACE_KIT_INTERACTIVE_APPROVAL=off or pass policyApproval in JSON. See ${POLICY_APPROVAL_TWO_LANES_DOC}.`,
-              wrongEnvLane: false,
-              subcommand,
-              hasPolicyApprovalField
-            }),
-            null,
-            2
-          )
+        await emitJson(
+          policyDeniedBody({
+            policyOp,
+            message: "Sensitive command denied at interactive policy prompt.",
+            hint: `Set WORKSPACE_KIT_INTERACTIVE_APPROVAL=off or pass policyApproval in JSON. See ${POLICY_APPROVAL_TWO_LANES_DOC}.`,
+            wrongEnvLane: false,
+            subcommand,
+            hasPolicyApprovalField
+          })
         );
         return codes.validationFailure;
       }
@@ -304,19 +292,15 @@ export async function handleRunCommand(
         : hasPolicyApprovalField
           ? 'Invalid policyApproval in JSON args. Use {"policyApproval":{"confirmed":true,"rationale":"why","scope":"session"}} (scope optional) or a session grant. See remediationDoc.'
           : 'Missing policyApproval in JSON args. Example: {"policyApproval":{"confirmed":true,"rationale":"why","scope":"session"}}. See remediationDoc.';
-      writeLine(
-        JSON.stringify(
-          policyDeniedBody({
-            policyOp,
-            message: msg,
-            hint: wrongEnvLane ? POLICY_RUN_ENV_LANE_MISMATCH_DETAIL : baseHint,
-            wrongEnvLane,
-            subcommand,
-            hasPolicyApprovalField
-          }),
-          null,
-          2
-        )
+      await emitJson(
+        policyDeniedBody({
+          policyOp,
+          message: msg,
+          hint: wrongEnvLane ? POLICY_RUN_ENV_LANE_MISMATCH_DETAIL : baseHint,
+          wrongEnvLane,
+          subcommand,
+          hasPolicyApprovalField
+        })
       );
       return codes.validationFailure;
     }
@@ -337,17 +321,11 @@ export async function handleRunCommand(
     actor
   });
   if (!autoCheckpoint.ok) {
-    writeLine(
-      JSON.stringify(
-        {
-          ok: false,
-          code: autoCheckpoint.code,
-          message: autoCheckpoint.message
-        },
-        null,
-        2
-      )
-    );
+    await emitJson({
+      ok: false,
+      code: autoCheckpoint.code,
+      message: autoCheckpoint.message
+    });
     return codes.validationFailure;
   }
 
@@ -356,17 +334,11 @@ export async function handleRunCommand(
     const preCmd = await hookBus.emitBeforeModuleCommand(subcommand, commandArgs);
     if (preCmd.denied && hookBus.getMode() === "enforce") {
       await hookBus.emitAfterModuleCommand(subcommand, false, "hook-denied");
-      writeLine(
-        JSON.stringify(
-          {
-            ok: false,
-            code: "hook-denied",
-            message: preCmd.denied.reason
-          },
-          null,
-          2
-        )
-      );
+      await emitJson({
+        ok: false,
+        code: "hook-denied",
+        message: preCmd.denied.reason
+      });
       return codes.validationFailure;
     }
     if (preCmd.commandArgsPatch && hookBus.getMode() === "enforce") {
@@ -405,7 +377,7 @@ export async function handleRunCommand(
       caePre.enforcementDenial,
       effective
     );
-    writeLine(JSON.stringify(denied, null, 2));
+    await emitJson(denied as Record<string, unknown>);
     return codes.validationFailure;
   }
 
@@ -448,7 +420,7 @@ export async function handleRunCommand(
     if (hookBus.isEnabled()) {
       await hookBus.emitAfterModuleCommand(subcommand, rawResult.ok, rawResult.code);
     }
-    writeLine(JSON.stringify(result, null, 2));
+    await emitJson(result as Record<string, unknown>);
     return result.ok ? codes.success : codes.validationFailure;
   } catch (error) {
     if (error instanceof TaskEngineError) {
@@ -469,7 +441,7 @@ export async function handleRunCommand(
       if (hookBus.isEnabled()) {
         await hookBus.emitAfterModuleCommand(subcommand, false, error.code);
       }
-      writeLine(JSON.stringify(body, null, 2));
+      await emitJson(body);
       return codes.validationFailure;
     }
     if (hookBus.isEnabled()) {
@@ -482,28 +454,22 @@ export async function handleRunCommand(
       await hookBus.emitAfterModuleCommand(subcommand, false, code);
     }
     if (error instanceof ModuleCommandRouterError) {
-      writeLine(
-        JSON.stringify(
-          {
-            ok: false,
-            code: error.code,
-            message: error.message,
-            remediation:
-              error.code === "unknown-command"
-                ? {
-                    docPath: CLI_REMEDIATION_DOCS.agentCliMap,
-                    docAnchors: [
-                      "doctor --agent-instruction-surface",
-                      "workspace-kit run --list-commands"
-                    ]
-                  }
-                : { docPath: CLI_REMEDIATION_DOCS.agentCliMap },
-            discovery: cliDiscoveryEnvelope()
-          },
-          null,
-          2
-        )
-      );
+      await emitJson({
+        ok: false,
+        code: error.code,
+        message: error.message,
+        remediation:
+          error.code === "unknown-command"
+            ? {
+                docPath: CLI_REMEDIATION_DOCS.agentCliMap,
+                docAnchors: [
+                  "doctor --agent-instruction-surface",
+                  "workspace-kit run --list-commands"
+                ]
+              }
+            : { docPath: CLI_REMEDIATION_DOCS.agentCliMap },
+        discovery: cliDiscoveryEnvelope()
+      });
       return codes.validationFailure;
     }
     const message = error instanceof Error ? error.message : String(error);
