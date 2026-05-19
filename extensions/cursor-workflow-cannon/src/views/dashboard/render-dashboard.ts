@@ -2278,6 +2278,84 @@ function buildDashboardStateCountGridHtml(ss: Record<string, unknown>): string {
   );
 }
 
+function teamAssignmentStatusPhrase(status: string): string {
+  switch (status) {
+    case "assigned":
+      return "Assigned — worker in progress";
+    case "submitted":
+      return "Submitted — awaiting supervisor reconcile";
+    case "blocked":
+      return "Blocked";
+    default:
+      return humanizeDashboardToken(status);
+  }
+}
+
+function renderTeamAssignmentRowActions(r: Record<string, unknown>): string {
+  const id = escapeHtml(String(r.id ?? ""));
+  const st = String(r.status ?? "");
+  const sup = escapeHtml(String(r.supervisorId ?? ""));
+  const wrk = escapeHtml(String(r.workerId ?? ""));
+  const parts: string[] = [];
+  if (st === "assigned") {
+    parts.push(
+      '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="team-assignment-handoff" data-assignment-id="' +
+        id +
+        '" data-worker-id="' +
+        wrk +
+        '" title="submit-assignment-handoff">Submit handoff</button>'
+    );
+    parts.push(
+      '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="team-assignment-block" data-assignment-id="' +
+        id +
+        '" data-supervisor-id="' +
+        sup +
+        '" title="block-assignment">Block</button>'
+    );
+    parts.push(
+      '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="team-assignment-cancel" data-assignment-id="' +
+        id +
+        '" data-supervisor-id="' +
+        sup +
+        '" title="cancel-assignment">Cancel</button>'
+    );
+  } else if (st === "submitted") {
+    parts.push(
+      '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="team-assignment-reconcile" data-assignment-id="' +
+        id +
+        '" data-supervisor-id="' +
+        sup +
+        '" title="reconcile-assignment">Reconcile</button>'
+    );
+    parts.push(
+      '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="team-assignment-block" data-assignment-id="' +
+        id +
+        '" data-supervisor-id="' +
+        sup +
+        '" title="block-assignment">Block</button>'
+    );
+    parts.push(
+      '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="team-assignment-cancel" data-assignment-id="' +
+        id +
+        '" data-supervisor-id="' +
+        sup +
+        '" title="cancel-assignment">Cancel</button>'
+    );
+  } else if (st === "blocked") {
+    parts.push(
+      '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="team-assignment-cancel" data-assignment-id="' +
+        id +
+        '" data-supervisor-id="' +
+        sup +
+        '" title="cancel-assignment">Cancel</button>'
+    );
+  }
+  if (parts.length === 0) {
+    return "";
+  }
+  return '<div class="dash-row-actions">' + parts.join("") + "</div>";
+}
+
 /**
  * **Role** — `data.agentGuidance.displayLabel` (effective `kit.agentGuidance` tier + RPG party catalog).
  * **Agent Temperament** — resolved agent-behavior profile label (`builtin:*` / `custom:*`).
@@ -2315,12 +2393,19 @@ function renderTeamExecutionSection(team: unknown): string {
       "</section>"
     );
   }
+  const toolbar =
+    '<div class="dash-team-exec-toolbar" role="toolbar" aria-label="Team assignment actions">' +
+    '<button type="button" class="wc-btn wc-btn-md wc-btn-primary" data-wc-action="team-assignment-register" title="register-assignment">Create assignment</button>' +
+    '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="team-execution-chat" title="Supervisor playbook in chat">Supervisor guide</button>' +
+    "</div>";
   if (top.length === 0) {
     return (
-      '<section class="dash-card" aria-label="Team execution">' +
+      '<section class="dash-card dash-team-execution" aria-label="Team execution">' +
       "<p><b>Team Assignments</b></p>" +
       statusLine +
-      '<p class="muted">No active supervisor assignments.</p>' +
+      '<p class="muted">Delegate an execution task to a worker agent, then reconcile their handoff when they submit.</p>' +
+      toolbar +
+      '<p class="muted">No active assignments yet — use <b>Create assignment</b> to register the first handoff.</p>' +
       "</section>"
     );
   }
@@ -2330,28 +2415,39 @@ function renderTeamExecutionSection(team: unknown): string {
       const id = escapeHtml(String(r.id ?? ""));
       const tid = escapeHtml(String(r.executionTaskId ?? ""));
       const title = r.executionTaskTitle != null ? escapeHtml(String(r.executionTaskTitle)) : "";
-      const st = escapeHtml(String(r.status ?? ""));
+      const st = String(r.status ?? "");
+      const stLabel = escapeHtml(teamAssignmentStatusPhrase(st));
       const sup = escapeHtml(String(r.supervisorId ?? ""));
       const wrk = escapeHtml(String(r.workerId ?? ""));
-      const label =
-        "- " +
-        id +
-        " → " +
+      const actions = renderTeamAssignmentRowActions(r);
+      return (
+        '<div class="dash-row dash-team-assignment-row" role="listitem">' +
+        '<div class="dash-team-assignment-main">' +
+        '<span class="dash-row-label"><b>' +
         tid +
-        (title ? " " + title : "") +
-        " · " +
-        st +
+        "</b>" +
+        (title ? " — " + title : "") +
+        "</span>" +
+        '<span class="dash-team-assignment-meta muted">' +
+        stLabel +
         " · sup " +
         sup +
         " · worker " +
-        wrk;
-      return '<div class="dash-row" role="listitem"><span class="dash-row-label">' + label + "</span></div>";
+        wrk +
+        " · " +
+        id +
+        "</span>" +
+        "</div>" +
+        actions +
+        "</div>"
+      );
     })
     .join("");
   return (
-    '<section class="dash-card" aria-label="Team execution">' +
-    "<p><b>Team Assignments</b> (read-only)</p>" +
+    '<section class="dash-card dash-team-execution" aria-label="Team execution">' +
+    "<p><b>Team Assignments</b></p>" +
     statusLine +
+    toolbar +
     '<div class="dash-row-list" role="list">' +
     rows +
     "</div></section>"

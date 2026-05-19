@@ -74,6 +74,20 @@ export function buildTaskToPhaseBranchPrompt(options?: { taskId?: string; kitPha
   );
 }
 
+/** Dashboard team execution — supervisor/worker assignment lifecycle without memorizing CLI names. */
+export function buildTeamExecutionSupervisorPrompt(): string {
+  return (
+    "The operator opened **Team assignments** from the Workflow Cannon dashboard.\n\n" +
+    "Help them run the supervisor/worker lifecycle using kit commands (JSON **`policyApproval`** and **`expectedPlanningGeneration`** when required per **`.ai/POLICY-APPROVAL.md`**):\n\n" +
+    "- Read: `pnpm exec wk run list-assignments '{}'`\n" +
+    "- Register: `register-assignment` (execution task id, supervisor id, worker id)\n" +
+    "- Worker handoff: `submit-assignment-handoff` (`handoff.schemaVersion` 1, non-empty `summary`)\n" +
+    "- Supervisor reconcile: `reconcile-assignment` (`checkpoint.schemaVersion` 1, `mergedSummary`)\n" +
+    "- Block / cancel: `block-assignment`, `cancel-assignment`\n\n" +
+    "Prefer the dashboard drawer actions when the operator is in the sidebar; use CLI for automation. Do not hand-edit `kit_team_assignments`."
+  );
+}
+
 /** Dashboard / command palette — discover phase journal commands through chat without memorizing CLI names. */
 export function buildPhaseNotesDiscoveryPrompt(): string {
   return (

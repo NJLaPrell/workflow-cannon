@@ -1030,3 +1030,299 @@ export function validateGuidanceRegistryVersionMutationSubmit(
   }
   return { ok: true, values: { rationale, actor } };
 }
+
+const TEAM_TASK_ID_RE = /^T\d+$/i;
+const TEAM_POLICY_RATIONALE_MIN = 8;
+
+function validateTeamPolicyRationale(values: Record<string, string>): string | null {
+  const rationale = (values.policyRationale ?? "").trim();
+  if (rationale.length < TEAM_POLICY_RATIONALE_MIN) {
+    return `Policy rationale must be at least ${String(TEAM_POLICY_RATIONALE_MIN)} characters.`;
+  }
+  return null;
+}
+
+export function buildRegisterTeamAssignmentDrawerSpec(): DrawerFormSpec {
+  return {
+    workflowId: "register-team-assignment",
+    title: "Create team assignment",
+    descriptionHtml:
+      "Runs <code>register-assignment</code>. The execution task must already exist in the task store. " +
+      "Supervisor and worker ids are stable handles (e.g. <code>operator</code>, agent tab id).",
+    fields: [
+      {
+        id: "executionTaskId",
+        kind: "text",
+        label: "Execution task id",
+        placeholder: "T665",
+        required: true
+      },
+      {
+        id: "supervisorId",
+        kind: "text",
+        label: "Supervisor id",
+        placeholder: "operator",
+        required: true,
+        value: "operator"
+      },
+      {
+        id: "workerId",
+        kind: "text",
+        label: "Worker id",
+        placeholder: "agent-tab-1",
+        required: true
+      },
+      {
+        id: "policyRationale",
+        kind: "textarea",
+        label: "Policy rationale",
+        placeholder: "Why this handoff is being registered",
+        required: true,
+        rows: 2
+      }
+    ],
+    primaryLabel: "Register assignment",
+    cancelLabel: "Cancel"
+  };
+}
+
+export function validateRegisterTeamAssignmentSubmit(
+  values: Record<string, string>
+): DrawerValidationResult {
+  const policyErr = validateTeamPolicyRationale(values);
+  if (policyErr) {
+    return { ok: false, error: policyErr };
+  }
+  const executionTaskId = (values.executionTaskId ?? "").trim().toUpperCase();
+  if (!TEAM_TASK_ID_RE.test(executionTaskId)) {
+    return { ok: false, error: "Execution task id must look like T###." };
+  }
+  const supervisorId = (values.supervisorId ?? "").trim();
+  const workerId = (values.workerId ?? "").trim();
+  if (!supervisorId || !workerId) {
+    return { ok: false, error: "Supervisor id and worker id are required." };
+  }
+  return {
+    ok: true,
+    values: {
+      executionTaskId,
+      supervisorId,
+      workerId,
+      policyRationale: (values.policyRationale ?? "").trim()
+    }
+  };
+}
+
+export function buildSubmitTeamHandoffDrawerSpec(p: {
+  assignmentId: string;
+  workerId: string;
+}): DrawerFormSpec {
+  return {
+    workflowId: "submit-team-handoff",
+    title: "Submit worker handoff",
+    descriptionHtml:
+      "Runs <code>submit-assignment-handoff</code> for assignment <code>" +
+      escapeDrawerHtml(p.assignmentId) +
+      "</code> (worker <code>" +
+      escapeDrawerHtml(p.workerId) +
+      "</code>).",
+    fields: [
+      {
+        id: "summary",
+        kind: "textarea",
+        label: "Handoff summary",
+        placeholder: "What the worker completed",
+        required: true,
+        rows: 4
+      },
+      {
+        id: "evidenceRefs",
+        kind: "textarea",
+        label: "Evidence refs (optional, one per line)",
+        placeholder: "PR URL, file path, …",
+        rows: 2
+      },
+      {
+        id: "policyRationale",
+        kind: "textarea",
+        label: "Policy rationale",
+        required: true,
+        rows: 2
+      }
+    ],
+    primaryLabel: "Submit handoff",
+    cancelLabel: "Cancel"
+  };
+}
+
+export function validateSubmitTeamHandoffSubmit(
+  values: Record<string, string>
+): DrawerValidationResult {
+  const policyErr = validateTeamPolicyRationale(values);
+  if (policyErr) {
+    return { ok: false, error: policyErr };
+  }
+  const summary = (values.summary ?? "").trim();
+  if (!summary) {
+    return { ok: false, error: "Handoff summary is required." };
+  }
+  const evidenceRaw = (values.evidenceRefs ?? "").trim();
+  const evidenceRefs = evidenceRaw
+    ? evidenceRaw
+        .split(/[\n,]+/)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0)
+    : [];
+  return {
+    ok: true,
+    values: {
+      summary,
+      evidenceRefs: evidenceRefs.join("\n"),
+      policyRationale: (values.policyRationale ?? "").trim()
+    }
+  };
+}
+
+export function buildReconcileTeamAssignmentDrawerSpec(p: {
+  assignmentId: string;
+  supervisorId: string;
+}): DrawerFormSpec {
+  return {
+    workflowId: "reconcile-team-assignment",
+    title: "Reconcile submitted handoff",
+    descriptionHtml:
+      "Runs <code>reconcile-assignment</code> for assignment <code>" +
+      escapeDrawerHtml(p.assignmentId) +
+      "</code> (supervisor <code>" +
+      escapeDrawerHtml(p.supervisorId) +
+      "</code>).",
+    fields: [
+      {
+        id: "mergedSummary",
+        kind: "textarea",
+        label: "Merged summary",
+        placeholder: "Accepted worker summary plus supervisor edits",
+        required: true,
+        rows: 4
+      },
+      {
+        id: "policyRationale",
+        kind: "textarea",
+        label: "Policy rationale",
+        required: true,
+        rows: 2
+      }
+    ],
+    primaryLabel: "Reconcile",
+    cancelLabel: "Cancel"
+  };
+}
+
+export function validateReconcileTeamAssignmentSubmit(
+  values: Record<string, string>
+): DrawerValidationResult {
+  const policyErr = validateTeamPolicyRationale(values);
+  if (policyErr) {
+    return { ok: false, error: policyErr };
+  }
+  const mergedSummary = (values.mergedSummary ?? "").trim();
+  if (!mergedSummary) {
+    return { ok: false, error: "Merged summary is required." };
+  }
+  return {
+    ok: true,
+    values: { mergedSummary, policyRationale: (values.policyRationale ?? "").trim() }
+  };
+}
+
+export function buildBlockTeamAssignmentDrawerSpec(p: {
+  assignmentId: string;
+  supervisorId: string;
+}): DrawerFormSpec {
+  return {
+    workflowId: "block-team-assignment",
+    title: "Block assignment",
+    descriptionHtml:
+      "Runs <code>block-assignment</code> for assignment <code>" +
+      escapeDrawerHtml(p.assignmentId) +
+      "</code>.",
+    fields: [
+      {
+        id: "reason",
+        kind: "textarea",
+        label: "Block reason",
+        required: true,
+        rows: 3
+      },
+      {
+        id: "policyRationale",
+        kind: "textarea",
+        label: "Policy rationale",
+        required: true,
+        rows: 2
+      }
+    ],
+    primaryLabel: "Block",
+    cancelLabel: "Cancel"
+  };
+}
+
+export function validateBlockTeamAssignmentSubmit(
+  values: Record<string, string>
+): DrawerValidationResult {
+  const policyErr = validateTeamPolicyRationale(values);
+  if (policyErr) {
+    return { ok: false, error: policyErr };
+  }
+  const reason = (values.reason ?? "").trim();
+  if (!reason) {
+    return { ok: false, error: "Block reason is required." };
+  }
+  return { ok: true, values: { reason, policyRationale: (values.policyRationale ?? "").trim() } };
+}
+
+export function buildCancelTeamAssignmentDrawerSpec(p: {
+  assignmentId: string;
+  supervisorId?: string;
+}): DrawerFormSpec {
+  return {
+    workflowId: "cancel-team-assignment",
+    title: "Cancel assignment",
+    descriptionHtml:
+      "Runs <code>cancel-assignment</code> for assignment <code>" +
+      escapeDrawerHtml(p.assignmentId) +
+      "</code>.",
+    fields: [
+      {
+        id: "supervisorId",
+        kind: "text",
+        label: "Supervisor id",
+        required: true,
+        value: p.supervisorId || "operator"
+      },
+      {
+        id: "policyRationale",
+        kind: "textarea",
+        label: "Policy rationale",
+        required: true,
+        rows: 2
+      }
+    ],
+    primaryLabel: "Cancel assignment",
+    cancelLabel: "Keep"
+  };
+}
+
+export function validateCancelTeamAssignmentSubmit(
+  values: Record<string, string>
+): DrawerValidationResult {
+  const policyErr = validateTeamPolicyRationale(values);
+  if (policyErr) {
+    return { ok: false, error: policyErr };
+  }
+  const supervisorId = (values.supervisorId ?? "").trim();
+  if (!supervisorId) {
+    return { ok: false, error: "Supervisor id is required." };
+  }
+  return { ok: true, values: { supervisorId, policyRationale: (values.policyRationale ?? "").trim() } };
+}
