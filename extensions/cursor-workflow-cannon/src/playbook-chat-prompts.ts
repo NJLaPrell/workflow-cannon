@@ -74,6 +74,59 @@ export function buildTaskToPhaseBranchPrompt(options?: { taskId?: string; kitPha
   );
 }
 
+/** Dashboard policy approval inbox — review-item queue without memorizing CLI names. */
+export function buildPolicyApprovalInboxPrompt(): string {
+  return (
+    "The operator opened **Policy approval inbox** from the Workflow Cannon dashboard.\n\n" +
+    "Help them work the improvement review queue (JSON **`policyApproval`** on sensitive runs per **`.ai/POLICY-APPROVAL.md`**):\n\n" +
+    "- Read queue: `pnpm exec wk run list-approval-queue '{}'`\n" +
+    "- Record decision: `review-item` with `decision` **`accept`**, **`decline`**, or **`accept_edited`** (requires `editedSummary`)\n" +
+    "- Audit artifacts: `.workspace-kit/policy/traces.jsonl`, `.workspace-kit/policy/session-grants.json`, `.workspace-kit/approvals/decisions.jsonl`\n\n" +
+    "Prefer dashboard row actions when the operator is in the sidebar; decisions remain immutable in the approvals module."
+  );
+}
+
+/** Dashboard task checkpoints — snapshot and rewind without memorizing CLI names. */
+export function buildTaskCheckpointsRecoveryPrompt(): string {
+  return (
+    "The operator opened **Task checkpoints** from the Workflow Cannon dashboard.\n\n" +
+    "Help them use task-linked git checkpoints safely (JSON **`policyApproval`** on Tier B mutators per **`.ai/POLICY-APPROVAL.md`**):\n\n" +
+    "- Read: `pnpm exec wk run list-checkpoints '{}'` (optional `taskId` filter)\n" +
+    "- Snapshot: `create-checkpoint` with `mode` **`head`** (pointer) or **`stash`** (dirty tree)\n" +
+    "- Compare: `compare-checkpoint` (read-only diff vs current HEAD)\n" +
+    "- Rewind: `rewind-to-checkpoint` — **destructive** (`git reset --hard` or `git stash apply`); may require `force:true` on dirty tree; refuses vendor/node_modules paths\n\n" +
+    "Prefer dashboard drawer actions in the sidebar. Warn before rewind; do not hand-edit `kit_task_checkpoints`."
+  );
+}
+
+/** Dashboard subagent registry — definitions and sessions without memorizing CLI names. */
+export function buildSubagentRegistryPrompt(): string {
+  return (
+    "The operator opened **Subagent registry** from the Workflow Cannon dashboard.\n\n" +
+    "Help them manage kit subagent definitions and sessions (JSON **`policyApproval`** and **`expectedPlanningGeneration`** when required per **`.ai/POLICY-APPROVAL.md`**):\n\n" +
+    "- Read: `pnpm exec wk run list-subagents '{}'`, `pnpm exec wk run list-subagent-sessions '{}'`\n" +
+    "- Register role: `register-subagent` (`subagentId`, `displayName`, non-empty `allowedCommands`)\n" +
+    "- Start session: `spawn-subagent` (`subagentId`, optional `executionTaskId`, `hostHint`, `promptSummary`)\n" +
+    "- Log handoff: `message-subagent` (`sessionId`, `direction`, `body`)\n" +
+    "- Close session: `close-subagent-session` · Retire definition: `retire-subagent`\n\n" +
+    "Prefer dashboard drawer actions in the sidebar; use CLI for automation. Do not hand-edit `kit_subagent_*` tables."
+  );
+}
+
+/** Dashboard team execution — supervisor/worker assignment lifecycle without memorizing CLI names. */
+export function buildTeamExecutionSupervisorPrompt(): string {
+  return (
+    "The operator opened **Team assignments** from the Workflow Cannon dashboard.\n\n" +
+    "Help them run the supervisor/worker lifecycle using kit commands (JSON **`policyApproval`** and **`expectedPlanningGeneration`** when required per **`.ai/POLICY-APPROVAL.md`**):\n\n" +
+    "- Read: `pnpm exec wk run list-assignments '{}'`\n" +
+    "- Register: `register-assignment` (execution task id, supervisor id, worker id)\n" +
+    "- Worker handoff: `submit-assignment-handoff` (`handoff.schemaVersion` 1, non-empty `summary`)\n" +
+    "- Supervisor reconcile: `reconcile-assignment` (`checkpoint.schemaVersion` 1, `mergedSummary`)\n" +
+    "- Block / cancel: `block-assignment`, `cancel-assignment`\n\n" +
+    "Prefer the dashboard drawer actions when the operator is in the sidebar; use CLI for automation. Do not hand-edit `kit_team_assignments`."
+  );
+}
+
 /** Dashboard / command palette — discover phase journal commands through chat without memorizing CLI names. */
 export function buildPhaseNotesDiscoveryPrompt(): string {
   return (

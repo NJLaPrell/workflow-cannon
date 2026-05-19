@@ -16,31 +16,37 @@
     },
     {
       "file": "src/modules/task-engine/commands/task-engine-dashboard-on-command.ts",
-      "line": "7",
+      "line": "8",
+      "importLine": "import { summarizeCheckpointsForDashboard } from \"../../checkpoints/checkpoint-store.js\";",
+      "rationale": "Dashboard summary aggregates task-linked checkpoints for recovery UI."
+    },
+    {
+      "file": "src/modules/task-engine/commands/task-engine-dashboard-on-command.ts",
+      "line": "9",
       "importLine": "import { summarizeSubagentsForDashboard } from \"../../subagents/subagent-store.js\";",
       "rationale": "Dashboard summary aggregates subagent registry; future façade TBD."
     },
     {
       "file": "src/modules/task-engine/commands/task-engine-dashboard-on-command.ts",
-      "line": "8",
+      "line": "10",
       "importLine": "import { summarizeTeamAssignmentsForDashboard } from \"../../team-execution/assignment-store.js\";",
       "rationale": "Dashboard summary aggregates team assignments."
     },
     {
       "file": "src/modules/task-engine/commands/task-engine-dashboard-on-command.ts",
-      "line": "24",
+      "line": "26",
       "importLine": "import { dashboardOnboardingTemperamentLabel } from \"../../agent-behavior/onboarding-temperament-label.js\";",
       "rationale": "Guidance dashboard reads behavior profile label."
     },
     {
       "file": "src/modules/task-engine/commands/task-engine-dashboard-on-command.ts",
-      "line": "25",
+      "line": "27",
       "importLine": "import { loadBehaviorWorkspaceState } from \"../../agent-behavior/persistence.js\";",
       "rationale": "Guidance dashboard reads behavior workspace state."
     },
     {
       "file": "src/modules/task-engine/commands/task-engine-dashboard-on-command.ts",
-      "line": "26",
+      "line": "28",
       "importLine": "import { BehaviorProfileStore } from \"../../agent-behavior/store.js\";",
       "rationale": "Guidance dashboard resolves effective behavior profile."
     },

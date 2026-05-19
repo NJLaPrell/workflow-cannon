@@ -248,3 +248,62 @@ test("drawer: guidance sidebar ack + registry version specs", async () => {
   );
   assert.equal(badClone.ok, false);
 });
+
+test("drawer: register team assignment validates task id and policy rationale", async () => {
+  const mod = await import("../dist/views/dashboard/dashboard-input-drawer.js");
+  const bad = mod.validateRegisterTeamAssignmentSubmit({
+    executionTaskId: "nope",
+    supervisorId: "op",
+    workerId: "w",
+    policyRationale: "short"
+  });
+  assert.equal(bad.ok, false);
+  const good = mod.validateRegisterTeamAssignmentSubmit({
+    executionTaskId: "t701",
+    supervisorId: "operator",
+    workerId: "tab-2",
+    policyRationale: "register for phase 100 delivery"
+  });
+  assert.equal(good.ok, true);
+  if (good.ok) {
+    assert.equal(good.values.executionTaskId, "T701");
+  }
+});
+
+test("drawer: register subagent validates id and allowed commands", async () => {
+  const mod = await import("../dist/views/dashboard/dashboard-input-drawer.js");
+  const bad = mod.validateRegisterSubagentSubmit({
+    subagentId: "9bad",
+    displayName: "X",
+    allowedCommands: "",
+    policyRationale: "short"
+  });
+  assert.equal(bad.ok, false);
+  const good = mod.validateRegisterSubagentSubmit({
+    subagentId: "Reviewer",
+    displayName: "Reviewer",
+    allowedCommands: "list-tasks, get-task",
+    policyRationale: "register reviewer role for dashboard"
+  });
+  assert.equal(good.ok, true);
+  if (good.ok) {
+    assert.equal(good.values.subagentId, "reviewer");
+  }
+});
+
+test("drawer: rewind checkpoint requires longer rationale", async () => {
+  const mod = await import("../dist/views/dashboard/dashboard-input-drawer.js");
+  const bad = mod.validateRewindCheckpointSubmit({
+    force: "",
+    policyRationale: "too short"
+  });
+  assert.equal(bad.ok, false);
+  const good = mod.validateRewindCheckpointSubmit({
+    force: "yes",
+    policyRationale: "operator confirmed destructive rewind for T901"
+  });
+  assert.equal(good.ok, true);
+  if (good.ok) {
+    assert.equal(good.values.force, "yes");
+  }
+});

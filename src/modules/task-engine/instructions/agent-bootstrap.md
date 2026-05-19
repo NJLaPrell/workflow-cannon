@@ -11,6 +11,7 @@ Single read-only JSON bundle for **agent cold start**: runs the same **contract 
 ```bash
 workspace-kit run agent-bootstrap '{}'
 workspace-kit run agent-bootstrap '{"projection":"lean"}'
+workspace-kit run agent-bootstrap '{"projection":"phaseFocus","phaseKey":"100"}'
 ```
 
 ## Behavior
@@ -18,6 +19,7 @@ workspace-kit run agent-bootstrap '{"projection":"lean"}'
 1. **Doctor-equivalent contract validation** — canonical JSON contract files, parseability, and planning persistence checks (same set as `workspace-kit doctor`). On failure: `ok:false`, code `agent-bootstrap-doctor-failed`, `data.doctor.issues` lists `{ path, reason }` rows; exit status matches doctor failure class.
 2. On success: `ok:true`, code `agent-bootstrap`, `data.doctor.ok=true`, and all fields from **`agent-session-snapshot`** (including `planningGeneration` / `planningGenerationPolicy`).
 3. Optional **`projection":"lean"`** — adds **`data.instructionSurface`** with the same **digest-only** instruction catalog as `pnpm exec wk doctor --agent-instruction-surface-lean` (stable **`instructionSurfaceDigest`**; no `commands[]`). Use when you cache the full catalog elsewhere and only need to detect adds/removes or registry churn on cold start.
+4. Optional **`projection":"phaseFocus"`** — adds **`data.phaseFocus`** (same shape as **`phase-focus-dashboard`**) for a bounded phase answer; optional **`phaseKey`** overrides workspace current phase.
 
 ## Policy
 

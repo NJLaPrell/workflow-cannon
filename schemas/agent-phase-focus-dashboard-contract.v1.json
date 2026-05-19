@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/agent-phase-focus-dashboard-contract.v1.json",
+  "title": "Agent phase focus dashboard contract v1",
+  "description": "Bounded phase-scoped read model for phase-focus-dashboard, agent-bootstrap projection phaseFocus, and optional dashboard-summary includePhaseFocus. Array caps align with build-phase-focus-dashboard.ts (readyTop ≤15, blockedTop ≤10, evidenceGaps.top ≤10).",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "phaseKey",
+    "generatedAt",
+    "canonicalPhase",
+    "queue",
+    "delivery",
+    "readyTop",
+    "blockedTop",
+    "phaseJournal",
+    "evidenceGaps"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "phaseKey": { "type": ["string", "null"] },
+    "generatedAt": { "type": "string", "minLength": 1 },
+    "canonicalPhase": { "$ref": "#/$defs/agentPhaseFocusCanonicalPhase" },
+    "queue": { "$ref": "#/$defs/agentPhaseFocusQueueCounts" },
+    "delivery": { "$ref": "#/$defs/agentPhaseFocusDeliverySlice" },
+    "readyTop": {
+      "type": "array",
+      "maxItems": 15,
+      "items": { "$ref": "#/$defs/agentPhaseFocusReadyRow" }
+    },
+    "blockedTop": {
+      "type": "array",
+      "maxItems": 10,
+      "items": { "$ref": "#/$defs/agentPhaseFocusBlockedRow" }
+    },
+    "phaseJournal": { "$ref": "#/$defs/agentPhaseFocusJournalSlice" },
+    "evidenceGaps": { "$ref": "#/$defs/agentPhaseFocusEvidenceGaps" }
+  },
+  "$defs": {
+    "nullableString": {
+      "type": ["string", "null"]
+    },
+    "agentPhaseFocusCanonicalPhase": {
+      "type": "object",
+      "required": [
+        "canonicalPhaseKey",
+        "phaseSource",
+        "currentKitPhase",
+        "nextKitPhase",
+        "configMatchesWorkspaceStatus"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "canonicalPhaseKey": { "$ref": "#/$defs/nullableString" },
+        "phaseSource": { "$ref": "#/$defs/nullableString" },
+        "currentKitPhase": { "$ref": "#/$defs/nullableString" },
+        "nextKitPhase": { "$ref": "#/$defs/nullableString" },
+        "configMatchesWorkspaceStatus": { "type": ["boolean", "null"] }
+      }
+    },
+    "agentPhaseFocusQueueCounts": {
+      "type": "object",
+      "required": ["ready", "proposed", "blocked", "inProgress", "research"],
+      "additionalProperties": false,
+      "properties": {
+        "ready": { "type": "integer", "minimum": 0 },
+        "proposed": { "type": "integer", "minimum": 0 },
+        "blocked": { "type": "integer", "minimum": 0 },
+        "inProgress": { "type": "integer", "minimum": 0 },
+        "research": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "agentPhaseFocusDeliverySlice": {
+      "type": "object",
+      "required": ["closeoutPassed", "remainingCount", "progressPercent", "releaseReadyPercent"],
+      "additionalProperties": false,
+      "properties": {
+        "closeoutPassed": { "type": "boolean" },
+        "remainingCount": { "type": "integer", "minimum": 0 },
+        "progressPercent": { "type": "number", "minimum": 0, "maximum": 100 },
+        "releaseReadyPercent": { "type": "number", "minimum": 0, "maximum": 100 }
+      }
+    },
+    "agentPhaseFocusReadyRow": {
+      "type": "object",
+      "required": ["id", "title", "status", "priority"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "title": { "type": "string" },
+        "status": { "const": "ready" },
+        "priority": { "$ref": "#/$defs/nullableString" }
+      }
+    },
+    "agentPhaseFocusBlockedRow": {
+      "type": "object",
+      "required": ["taskId", "title", "blockedBy", "blockingCount", "blockedReasonCategory"],
+      "additionalProperties": false,
+      "properties": {
+        "taskId": { "type": "string", "minLength": 1 },
+        "title": { "type": "string" },
+        "blockedBy": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "blockingCount": { "type": "integer", "minimum": 0 },
+        "blockedReasonCategory": { "$ref": "#/$defs/nullableString" }
+      }
+    },
+    "agentPhaseFocusJournalSlice": {
+      "type": "object",
+      "required": ["available", "activeNoteCount", "criticalCount", "silenceWarning"],
+      "additionalProperties": false,
+      "properties": {
+        "available": { "type": "boolean" },
+        "activeNoteCount": { "type": "integer", "minimum": 0 },
+        "criticalCount": { "type": "integer", "minimum": 0 },
+        "silenceWarning": { "type": "boolean" }
+      }
+    },
+    "agentPhaseFocusEvidenceGapRow": {
+      "type": "object",
+      "required": ["taskId", "code", "message", "missingFields"],
+      "additionalProperties": false,
+      "properties": {
+        "taskId": { "type": "string", "minLength": 1 },
+        "code": { "type": "string", "minLength": 1 },
+        "message": { "type": "string" },
+        "missingFields": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "agentPhaseFocusEvidenceGaps": {
+      "type": "object",
+      "required": ["violationCount", "top"],
+      "additionalProperties": false,
+      "properties": {
+        "violationCount": { "type": "integer", "minimum": 0 },
+        "top": {
+          "type": "array",
+          "maxItems": 10,
+          "items": { "$ref": "#/$defs/agentPhaseFocusEvidenceGapRow" }
+        }
+      }
+    },
+    "agentPhaseFocusDashboard": {
+      "$ref": "#"
+    }
+  }
+}

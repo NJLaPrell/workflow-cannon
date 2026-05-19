@@ -3,6 +3,7 @@
  * Consumed by the Cursor extension webview renderer; keep aligned with `src/modules/task-engine/commands/task-engine-dashboard-on-command.ts`.
  */
 
+import type { AgentPhaseFocusDashboard } from "./agent-phase-focus-dashboard-contract.js";
 import type { WorkspaceCoordinationStatusV1 } from "./workspace-coordination-status.js";
 
 export type DashboardFeatureDetail = {
@@ -40,6 +41,39 @@ export type DashboardBlockedRow = {
   taskId?: string;
   blockedBy?: string[];
   [key: string]: unknown;
+};
+
+/** Human-gate queue row (`awaiting_review` / policy / external). */
+export type DashboardHumanGateRow = DashboardTaskRow & {
+  status: string;
+  gateKind: string;
+  ageMs: number;
+  enteredAt?: string | null;
+  requestedDecision?: string | null;
+  owner?: string | null;
+  reason?: string | null;
+};
+
+export type DashboardHumanGatesSummary = {
+  schemaVersion: 1;
+  /** Workspace current phase used to scope the rollup (null when unscoped). */
+  phaseKey: string | null;
+  count: number;
+  top: DashboardHumanGateRow[];
+};
+
+/** Improvement review queue for policy / approval inbox (approvals module). */
+export type DashboardApprovalQueueSummary = {
+  schemaVersion: 1;
+  count: number;
+  top: Array<{
+    id: string;
+    title: string;
+    status: string;
+    phaseKey: string | null;
+    priority: string | null;
+  }>;
+  policyArtifacts: Array<{ relativePath: string; role: string }>;
 };
 
 export type DashboardPhaseBucket = Record<string, unknown>;
@@ -106,6 +140,21 @@ export type DashboardTeamExecutionSummary = {
   };
   /** Up to 15 most recently updated active assignments. */
   topActive: DashboardTeamAssignmentRow[];
+};
+
+/** Read-only task-linked git checkpoint rollup for dashboard / extension (Phase 64+). */
+export type DashboardTaskCheckpointsSummary = {
+  schemaVersion: 1;
+  available: boolean;
+  totalCount: number;
+  topRecent: Array<{
+    id: string;
+    taskId: string | null;
+    label: string | null;
+    refKind: "head" | "stash";
+    createdAt: string;
+    gitHeadSha: string;
+  }>;
 };
 
 /** Read-only subagent registry rollup for dashboard / extension (Phase 60+). */
@@ -306,6 +355,14 @@ export type DashboardSummaryData = {
     top: DashboardBlockedRow[];
     phaseBuckets: DashboardPhaseBucket[];
   };
+  /** Tasks in human-gate statuses scoped to workspace current phase. */
+  humanGatesSummary: DashboardHumanGatesSummary;
+  /** Improvement tasks awaiting `review-item` (ready / in_progress). */
+  approvalQueue: DashboardApprovalQueueSummary;
+  /** Present when `dashboard-summary` is invoked with `includePhaseFocus: true`. */
+  phaseFocus?: AgentPhaseFocusDashboard;
+  /** Per-phase phase-journal note counts + current-phase silence signal. */
+  phaseJournalStats: DashboardPhaseJournalStats;
   completedSummary: DashboardListSummary;
   cancelledSummary: DashboardListSummary;
   suggestedNext: {
@@ -329,6 +386,8 @@ export type DashboardSummaryData = {
   teamExecution: DashboardTeamExecutionSummary;
   /** Subagent definitions + open sessions from `kit_subagent_*` (Phase 60+). */
   subagentRegistry: DashboardSubagentRegistrySummary;
+  /** Task-linked git checkpoints from `kit_task_checkpoints` (Phase 64+). */
+  taskCheckpoints: DashboardTaskCheckpointsSummary;
   /** Phase/drift, doctor contract, module activation, CAE lines — status tab aggregate (Phase 79+). */
   systemStatus: DashboardSystemStatus;
   /** Conservative, read-only WC Agent status derived from dashboard/task state (Phase 81+). */
@@ -345,6 +404,24 @@ export type DashboardSummaryData = {
 export type DashboardPastPhaseNotesEntry = {
   phaseKey: string;
   notes: Array<Record<string, unknown>>;
+};
+
+export type DashboardPhaseNoteCountRow = {
+  phaseKey: string;
+  activeNoteCount: number;
+  latestNoteAt: string | null;
+};
+
+export type DashboardPhaseJournalStats = {
+  schemaVersion: 1;
+  available: boolean;
+  phases: DashboardPhaseNoteCountRow[];
+  currentPhase: {
+    phaseKey: string | null;
+    activeNoteCount: number;
+    completedDeliveryTaskCount: number;
+    silenceWarning: boolean;
+  };
 };
 
 /** Success envelope for `dashboard-summary` (extension + tooling). */

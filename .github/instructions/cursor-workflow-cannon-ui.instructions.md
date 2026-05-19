@@ -40,6 +40,7 @@ Audience: agents only. Apply these rules verbatim when writing or modifying webv
 - [extensions/cursor-workflow-cannon/src/views/guidance/GuidancePanel.ts](../../extensions/cursor-workflow-cannon/src/views/guidance/GuidancePanel.ts)
 - [extensions/cursor-workflow-cannon/src/views/guidance/GuidanceViewProvider.ts](../../extensions/cursor-workflow-cannon/src/views/guidance/GuidanceViewProvider.ts)
 - [extensions/cursor-workflow-cannon/src/views/guidance/render-guidance-panel.ts](../../extensions/cursor-workflow-cannon/src/views/guidance/render-guidance-panel.ts)
+- [extensions/cursor-workflow-cannon/src/views/shared/guidance-panel-webview-css.ts](../../extensions/cursor-workflow-cannon/src/views/shared/guidance-panel-webview-css.ts)
 
 ---
 
@@ -322,8 +323,9 @@ R12.3 Embedded panel HTML coming from another renderer (e.g. `renderStatusTabInn
 Land shared CSS at:
 - `src/views/shared/wc-base-css.ts` exporting `WC_BASE_CSS` — tokens, body, buttons (R8.1), inputs (R9), card (R10.1), chip (R10.4), tag (R10.6), tab-badge (R10.7), callout (R10.8), row (R10.9).
 - `src/views/shared/wc-drawer-css.ts` exporting `WC_DRAWER_CSS` (R11.2).
+- `src/views/shared/guidance-panel-webview-css.ts` exporting `GUIDANCE_PANEL_WEBVIEW_CSS` — frozen `gp-*` layout, tables, forms, and drawer hooks shared by **GuidancePanel** and the dashboard **CAE** tab embed (`DashboardViewProvider` composes it after dashboard/status CSS; see `test/dashboard-guidance-stylesheet.test.mjs`).
 
-Each `*ViewProvider.ts` then composes `<style>${WC_BASE_CSS}${WC_DRAWER_CSS}${LOCAL_CSS}</style>`. Local CSS holds only surface-specific layout (e.g. Guidance `.gp-shell`, dashboard `.dash-quick-actions`, status `.wc-status-tab-embedded`).
+Each `*ViewProvider.ts` then composes `<style>${WC_BASE_CSS}${WC_DRAWER_CSS}${GUIDANCE_PANEL_WEBVIEW_CSS?}${LOCAL_CSS}</style>` as applicable. Local CSS holds only surface-specific layout (e.g. dashboard `.dash-quick-actions`, `.wc-dash-cae-host` embed overrides, status `.wc-status-tab-embedded`).
 
 ## R15. CSP and inline assets
 

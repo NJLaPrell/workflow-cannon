@@ -92,6 +92,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "persist-planning-execution-drafts",
     "phase-closeout-readiness",
     "phase-delivery-preflight",
+    "phase-focus-dashboard",
     "phase-status",
     "propose-tasks-from-phase-notes",
     "queue-git-alignment",

@@ -172,6 +172,35 @@ function renderQueueTaskActionButtons(taskId: string): string {
   );
 }
 
+/** Proposed rows: six actions in one 3×2 grid (Set Phase … Decline). */
+function renderProposedQueueTaskActionButtons(
+  taskId: string,
+  acceptDecline: { acceptAction: string; declineAction: string },
+): string {
+  if (taskId.trim().length === 0) {
+    return "";
+  }
+  const idAttr = escapeHtml(taskId);
+  return (
+    '<span class="dash-row-actions wc-task-actions dash-row-actions-grid">' +
+    renderPhaseAssignButton(taskId) +
+    renderTaskDetailButton(taskId) +
+    renderTaskCommentsButton(taskId, "view") +
+    renderTaskCommentsButton(taskId, "add") +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="' +
+    escapeHtml(acceptDecline.acceptAction) +
+    '" data-task-id="' +
+    idAttr +
+    '" title="Accept → ready (confirms policy rationale)">Accept</button>' +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="' +
+    escapeHtml(acceptDecline.declineAction) +
+    '" data-task-id="' +
+    idAttr +
+    '" title="Decline → cancelled (reject; confirms policy rationale)">Decline</button>' +
+    "</span>"
+  );
+}
+
 /** Stable id for preserving `<details open>` when the host replaces `#root` innerHTML (`DashboardViewProvider` wcReplaceRoot). */
 function wcTrackAttr(trackId: string): string {
   const safe = trackId.replace(/[^a-zA-Z0-9_-]/g, "_").replace(/_+/g, "_").slice(0, 120);
@@ -447,7 +476,10 @@ function deriveQueuePhaseFilterOptions(args: {
   return out;
 }
 
-function renderFilterChipBar(phaseOptions: Array<{ value: string; label: string }>): string {
+function renderFilterChipBar(
+  phaseOptions: Array<{ value: string; label: string }>,
+  humanGatesCount = 0
+): string {
   const select =
     phaseOptions.length > 1
       ? '<label class="wc-phase-filter-wrap">Phase <select class="wc-phase-filter-select" data-wc-phase-filter aria-label="Filter tasks by phase">' +
@@ -459,11 +491,16 @@ function renderFilterChipBar(phaseOptions: Array<{ value: string; label: string 
           .join("") +
         "</select></label>"
       : "";
+  const humanGateChipLabel =
+    humanGatesCount > 0 ? "Human gates (" + String(humanGatesCount) + ")" : "Human gates";
   return (
     '<div class="wc-filter-chips" role="toolbar" aria-label="Filter task sections">' +
     '<button type="button" class="wc-filter-chip wc-filter-active" data-wc-filter-btn="all">All</button>' +
     '<button type="button" class="wc-filter-chip wc-filter-chip-ready" data-wc-filter-btn="ready">Ready</button>' +
     '<button type="button" class="wc-filter-chip wc-filter-chip-proposed" data-wc-filter-btn="proposed">Proposed</button>' +
+    '<button type="button" class="wc-filter-chip wc-filter-chip-human-gates" data-wc-filter-btn="human-gates">' +
+    humanGateChipLabel +
+    "</button>" +
     '<button type="button" class="wc-filter-chip wc-filter-chip-blocked" data-wc-filter-btn="blocked">Blocked</button>' +
     select +
     "</div>"
@@ -1167,19 +1204,14 @@ function renderProposedImprovementRow(row: {
   featureDetails?: unknown;
 }): string {
   const id = String(row?.id ?? "").trim();
-  const idAttr = escapeHtml(id);
   return (
     '<div class="dash-row" role="listitem">' +
     renderDashboardTaskBody(row) +
-    renderQueueTaskActionButtons(id) +
-    '<span class="dash-row-actions">' +
-    '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="proposed-imp-accept" data-task-id="' +
-    idAttr +
-    '" title="Accept → ready (confirms policy rationale)">Accept</button>' +
-    '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="proposed-imp-decline" data-task-id="' +
-    idAttr +
-    '" title="Decline → cancelled (reject; confirms policy rationale)">Decline</button>' +
-    "</span></div>"
+    renderProposedQueueTaskActionButtons(id, {
+      acceptAction: "proposed-imp-accept",
+      declineAction: "proposed-imp-decline",
+    }) +
+    "</div>"
   );
 }
 
@@ -1256,19 +1288,14 @@ function renderProposedExecutionRow(row: {
   featureDetails?: unknown;
 }): string {
   const id = String(row?.id ?? "").trim();
-  const idAttr = escapeHtml(id);
   return (
     '<div class="dash-row" role="listitem">' +
     renderDashboardTaskBody(row) +
-    renderQueueTaskActionButtons(id) +
-    '<span class="dash-row-actions">' +
-    '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="proposed-exe-accept" data-task-id="' +
-    idAttr +
-    '" title="Accept → ready (confirms policy rationale)">Accept</button>' +
-    '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="proposed-exe-decline" data-task-id="' +
-    idAttr +
-    '" title="Decline → cancelled (reject; confirms policy rationale)">Decline</button>' +
-    "</span></div>"
+    renderProposedQueueTaskActionButtons(id, {
+      acceptAction: "proposed-exe-accept",
+      declineAction: "proposed-exe-decline",
+    }) +
+    "</div>"
   );
 }
 
@@ -1311,6 +1338,113 @@ function renderBlockedList(items: unknown): string {
           "</div>"
         );
       })
+      .join("") +
+    "</div>"
+  );
+}
+
+function humanGateStatusLabel(status: string): string {
+  switch (status) {
+    case "awaiting_review":
+      return "Awaiting review";
+    case "awaiting_policy_approval":
+      return "Awaiting policy approval";
+    case "awaiting_external_decision":
+      return "Awaiting external decision";
+    default:
+      return status;
+  }
+}
+
+function renderHumanGateRow(row: {
+  id?: unknown;
+  title?: unknown;
+  summary?: unknown;
+  phase?: unknown;
+  status?: unknown;
+  gateKind?: unknown;
+  ageMs?: unknown;
+  requestedDecision?: unknown;
+  owner?: unknown;
+  priority?: unknown;
+  severity?: unknown;
+  components?: unknown;
+  component?: unknown;
+  features?: unknown;
+  featureDetails?: unknown;
+}): string {
+  const id = String(row?.id ?? "").trim();
+  const idAttr = escapeHtml(id);
+  const status = String(row?.status ?? row?.gateKind ?? "").trim();
+  const ageMin =
+    typeof row?.ageMs === "number" && Number.isFinite(row.ageMs)
+      ? Math.max(0, Math.round(row.ageMs / 60_000))
+      : 0;
+  const gateLabel = humanGateStatusLabel(status);
+  const decision =
+    row?.requestedDecision != null && String(row.requestedDecision).trim().length > 0
+      ? String(row.requestedDecision).trim()
+      : "";
+  const owner =
+    row?.owner != null && String(row.owner).trim().length > 0 ? String(row.owner).trim() : "";
+  const metaParts = [gateLabel];
+  if (decision.length > 0) {
+    metaParts.push(decision);
+  }
+  if (ageMin > 0) {
+    metaParts.push(String(ageMin) + "m");
+  }
+  if (owner.length > 0) {
+    metaParts.push("owner: " + owner);
+  }
+  return (
+    '<div class="dash-row dash-human-gate-row" role="listitem">' +
+    '<div class="dash-human-gate-main">' +
+    renderDashboardTaskBody(row) +
+    '<span class="dash-human-gate-meta muted">' +
+    escapeHtml(metaParts.join(" · ")) +
+    "</span></div>" +
+    '<span class="dash-row-actions">' +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="task-detail" data-task-id="' +
+    idAttr +
+    '" title="Open task detail">View Task</button>' +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="human-gate-resume-ready" data-task-id="' +
+    idAttr +
+    '" title="Return task to ready queue">Resume ready</button>' +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="human-gate-resume-work" data-task-id="' +
+    idAttr +
+    '" title="Resume in-progress work">Resume work</button>' +
+    "</span></div>"
+  );
+}
+
+function renderHumanGatesList(count: number, items: unknown): string {
+  if (!Array.isArray(items) || items.length === 0) {
+    return '<p class="muted">No human-gated tasks in the current phase.</p>';
+  }
+  const more =
+    count > items.length
+      ? '<p class="muted">Showing ' + String(items.length) + " of " + String(count) + ".</p>"
+      : "";
+  return (
+    more +
+    '<p class="muted"><b>Row actions</b> · Resume runs <code>run-transition</code> with approval.</p>' +
+    '<div class="dash-row-list" role="list">' +
+    items
+      .map((x) =>
+        renderHumanGateRow(
+          x as {
+            id?: unknown;
+            title?: unknown;
+            phase?: unknown;
+            status?: unknown;
+            gateKind?: unknown;
+            ageMs?: unknown;
+            requestedDecision?: unknown;
+            owner?: unknown;
+          }
+        )
+      )
       .join("") +
     "</div>"
   );
@@ -2144,6 +2278,84 @@ function buildDashboardStateCountGridHtml(ss: Record<string, unknown>): string {
   );
 }
 
+function teamAssignmentStatusPhrase(status: string): string {
+  switch (status) {
+    case "assigned":
+      return "Assigned — worker in progress";
+    case "submitted":
+      return "Submitted — awaiting supervisor reconcile";
+    case "blocked":
+      return "Blocked";
+    default:
+      return humanizeDashboardToken(status);
+  }
+}
+
+function renderTeamAssignmentRowActions(r: Record<string, unknown>): string {
+  const id = escapeHtml(String(r.id ?? ""));
+  const st = String(r.status ?? "");
+  const sup = escapeHtml(String(r.supervisorId ?? ""));
+  const wrk = escapeHtml(String(r.workerId ?? ""));
+  const parts: string[] = [];
+  if (st === "assigned") {
+    parts.push(
+      '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="team-assignment-handoff" data-assignment-id="' +
+        id +
+        '" data-worker-id="' +
+        wrk +
+        '" title="submit-assignment-handoff">Submit handoff</button>'
+    );
+    parts.push(
+      '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="team-assignment-block" data-assignment-id="' +
+        id +
+        '" data-supervisor-id="' +
+        sup +
+        '" title="block-assignment">Block</button>'
+    );
+    parts.push(
+      '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="team-assignment-cancel" data-assignment-id="' +
+        id +
+        '" data-supervisor-id="' +
+        sup +
+        '" title="cancel-assignment">Cancel</button>'
+    );
+  } else if (st === "submitted") {
+    parts.push(
+      '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="team-assignment-reconcile" data-assignment-id="' +
+        id +
+        '" data-supervisor-id="' +
+        sup +
+        '" title="reconcile-assignment">Reconcile</button>'
+    );
+    parts.push(
+      '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="team-assignment-block" data-assignment-id="' +
+        id +
+        '" data-supervisor-id="' +
+        sup +
+        '" title="block-assignment">Block</button>'
+    );
+    parts.push(
+      '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="team-assignment-cancel" data-assignment-id="' +
+        id +
+        '" data-supervisor-id="' +
+        sup +
+        '" title="cancel-assignment">Cancel</button>'
+    );
+  } else if (st === "blocked") {
+    parts.push(
+      '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="team-assignment-cancel" data-assignment-id="' +
+        id +
+        '" data-supervisor-id="' +
+        sup +
+        '" title="cancel-assignment">Cancel</button>'
+    );
+  }
+  if (parts.length === 0) {
+    return "";
+  }
+  return '<div class="dash-row-actions">' + parts.join("") + "</div>";
+}
+
 /**
  * **Role** — `data.agentGuidance.displayLabel` (effective `kit.agentGuidance` tier + RPG party catalog).
  * **Agent Temperament** — resolved agent-behavior profile label (`builtin:*` / `custom:*`).
@@ -2181,12 +2393,19 @@ function renderTeamExecutionSection(team: unknown): string {
       "</section>"
     );
   }
+  const toolbar =
+    '<div class="dash-team-exec-toolbar" role="toolbar" aria-label="Team assignment actions">' +
+    '<button type="button" class="wc-btn wc-btn-md wc-btn-primary" data-wc-action="team-assignment-register" title="register-assignment">Create assignment</button>' +
+    '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="team-execution-chat" title="Supervisor playbook in chat">Supervisor guide</button>' +
+    "</div>";
   if (top.length === 0) {
     return (
-      '<section class="dash-card" aria-label="Team execution">' +
+      '<section class="dash-card dash-team-execution" aria-label="Team execution">' +
       "<p><b>Team Assignments</b></p>" +
       statusLine +
-      '<p class="muted">No active supervisor assignments.</p>' +
+      '<p class="muted">Delegate an execution task to a worker agent, then reconcile their handoff when they submit.</p>' +
+      toolbar +
+      '<p class="muted">No active assignments yet — use <b>Create assignment</b> to register the first handoff.</p>' +
       "</section>"
     );
   }
@@ -2196,32 +2415,275 @@ function renderTeamExecutionSection(team: unknown): string {
       const id = escapeHtml(String(r.id ?? ""));
       const tid = escapeHtml(String(r.executionTaskId ?? ""));
       const title = r.executionTaskTitle != null ? escapeHtml(String(r.executionTaskTitle)) : "";
-      const st = escapeHtml(String(r.status ?? ""));
+      const st = String(r.status ?? "");
+      const stLabel = escapeHtml(teamAssignmentStatusPhrase(st));
       const sup = escapeHtml(String(r.supervisorId ?? ""));
       const wrk = escapeHtml(String(r.workerId ?? ""));
-      const label =
-        "- " +
-        id +
-        " → " +
+      const actions = renderTeamAssignmentRowActions(r);
+      return (
+        '<div class="dash-row dash-team-assignment-row" role="listitem">' +
+        '<div class="dash-team-assignment-main">' +
+        '<span class="dash-row-label"><b>' +
         tid +
-        (title ? " " + title : "") +
-        " · " +
-        st +
+        "</b>" +
+        (title ? " — " + title : "") +
+        "</span>" +
+        '<span class="dash-team-assignment-meta muted">' +
+        stLabel +
         " · sup " +
         sup +
         " · worker " +
-        wrk;
-      return '<div class="dash-row" role="listitem"><span class="dash-row-label">' + label + "</span></div>";
+        wrk +
+        " · " +
+        id +
+        "</span>" +
+        "</div>" +
+        actions +
+        "</div>"
+      );
     })
     .join("");
   return (
-    '<section class="dash-card" aria-label="Team execution">' +
-    "<p><b>Team Assignments</b> (read-only)</p>" +
+    '<section class="dash-card dash-team-execution" aria-label="Team execution">' +
+    "<p><b>Team Assignments</b></p>" +
     statusLine +
+    toolbar +
     '<div class="dash-row-list" role="list">' +
     rows +
     "</div></section>"
   );
+}
+
+function renderApprovalInboxSection(queue: unknown): string {
+  if (!queue || typeof queue !== "object") {
+    return "";
+  }
+  const o = queue as Record<string, unknown>;
+  if (o.schemaVersion !== 1) {
+    return "";
+  }
+  const count = typeof o.count === "number" ? o.count : 0;
+  const top = Array.isArray(o.top) ? (o.top as unknown[]) : [];
+  const artifacts = Array.isArray(o.policyArtifacts) ? (o.policyArtifacts as unknown[]) : [];
+  const artifactLines = artifacts
+    .map((a) => {
+      const r = a as Record<string, unknown>;
+      const path = escapeHtml(String(r.relativePath ?? ""));
+      const role = escapeHtml(String(r.role ?? ""));
+      return "<li><code>" + path + "</code> — " + role + "</li>";
+    })
+    .join("");
+  const statusLine = '<p class="muted">Awaiting review ' + String(count) + "</p>";
+  const toolbar =
+    '<div class="dash-team-exec-toolbar" role="toolbar" aria-label="Policy approval inbox">' +
+    '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="approval-inbox-chat" title="Approval inbox playbook in chat">Inbox guide</button>' +
+    "</div>";
+  if (top.length === 0) {
+    return (
+      '<section class="dash-card dashboard-approvals" aria-label="Policy approval inbox">' +
+      "<p><b>Policy Approval Inbox</b></p>" +
+      statusLine +
+      '<p class="muted">Improvement tasks in <b>ready</b> or <b>in_progress</b> need a <code>review-item</code> decision. Proposed improvements are triaged from the queue above.</p>' +
+      toolbar +
+      '<p class="muted">Queue empty — audit artifacts:</p><ul class="muted">' +
+      artifactLines +
+      "</ul></section>"
+    );
+  }
+  const rows = top
+    .map((x) => {
+      const r = x as Record<string, unknown>;
+      const id = escapeHtml(String(r.id ?? ""));
+      const title = escapeHtml(String(r.title ?? ""));
+      const st = escapeHtml(String(r.status ?? ""));
+      const pri = r.priority != null ? escapeHtml(String(r.priority)) : "—";
+      return (
+        '<div class="dash-row dash-team-assignment-row" role="listitem">' +
+        '<div class="dash-team-assignment-main">' +
+        '<span class="dash-row-label"><b>' +
+        id +
+        "</b> — " +
+        title +
+        "</span>" +
+        '<span class="dash-team-assignment-meta muted">' +
+        st +
+        " · " +
+        pri +
+        "</span>" +
+        "</div>" +
+        '<div class="dash-row-actions">' +
+        '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="approval-review-accept" data-task-id="' +
+        id +
+        '" data-task-title="' +
+        title +
+        '" title="review-item accept">Accept</button>' +
+        '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="approval-review-decline" data-task-id="' +
+        id +
+        '" data-task-title="' +
+        title +
+        '" title="review-item decline">Decline</button>' +
+        '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="approval-review-accept-edited" data-task-id="' +
+        id +
+        '" data-task-title="' +
+        title +
+        '" title="review-item accept_edited">Accept edited</button>' +
+        "</div></div>"
+      );
+    })
+    .join("");
+  return (
+    '<section class="dash-card dashboard-approvals" aria-label="Policy approval inbox">' +
+    "<p><b>Policy Approval Inbox</b></p>" +
+    statusLine +
+    toolbar +
+    '<p class="muted">Audit: <code>.workspace-kit/approvals/decisions.jsonl</code> · <code>.workspace-kit/policy/traces.jsonl</code></p>' +
+    '<div class="dash-row-list" role="list">' +
+    rows +
+    "</div></section>"
+  );
+}
+
+function checkpointRefKindPhrase(refKind: string): string {
+  return refKind === "stash" ? "Stash snapshot" : "HEAD pointer";
+}
+
+function renderCheckpointRowActions(r: Record<string, unknown>): string {
+  const id = escapeHtml(String(r.id ?? ""));
+  const refKind = escapeHtml(String(r.refKind ?? "head"));
+  const taskId = r.taskId != null ? escapeHtml(String(r.taskId)) : "";
+  return (
+    '<div class="dash-row-actions">' +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="checkpoint-compare" data-checkpoint-id="' +
+    id +
+    '" title="compare-checkpoint">Compare</button>' +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="checkpoint-rewind" data-checkpoint-id="' +
+    id +
+    '" data-ref-kind="' +
+    refKind +
+    '" data-task-id="' +
+    taskId +
+    '" title="rewind-to-checkpoint">Rewind</button>' +
+    "</div>"
+  );
+}
+
+function renderTaskCheckpointsSection(cp: unknown): string {
+  if (!cp || typeof cp !== "object") {
+    return "";
+  }
+  const o = cp as Record<string, unknown>;
+  if (o.schemaVersion !== 1) {
+    return "";
+  }
+  const avail = o.available === true;
+  const total = typeof o.totalCount === "number" ? o.totalCount : 0;
+  const top = Array.isArray(o.topRecent) ? (o.topRecent as unknown[]) : [];
+  if (!avail) {
+    return (
+      '<section class="dash-card" aria-label="Task checkpoints">' +
+      "<p><b>Task Checkpoints</b></p>" +
+      '<p class="muted">Checkpoint data unavailable (kit SQLite below v9 or store not readable).</p>' +
+      "</section>"
+    );
+  }
+  const statusLine = '<p class="muted">Saved checkpoints ' + String(total) + "</p>";
+  const toolbar =
+    '<div class="dash-team-exec-toolbar" role="toolbar" aria-label="Checkpoint actions">' +
+    '<button type="button" class="wc-btn wc-btn-md wc-btn-primary" data-wc-action="checkpoint-create-head" title="create-checkpoint head">Snapshot HEAD</button>' +
+    '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="checkpoint-create-stash" title="create-checkpoint stash">Snapshot stash</button>' +
+    '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="checkpoint-recovery-chat" title="Checkpoint playbook in chat">Recovery guide</button>' +
+    "</div>";
+  if (top.length === 0) {
+    return (
+      '<section class="dash-card dash-task-checkpoints" aria-label="Task checkpoints">' +
+      "<p><b>Task Checkpoints</b></p>" +
+      statusLine +
+      '<p class="muted">Git snapshots linked to tasks — create one before risky edits, compare later, rewind only with explicit confirmation.</p>' +
+      toolbar +
+      '<p class="muted">No checkpoints yet — use <b>Snapshot HEAD</b> or <b>Snapshot stash</b> before you start risky work.</p>' +
+      "</section>"
+    );
+  }
+  const rows = top
+    .map((x) => {
+      const r = x as Record<string, unknown>;
+      const id = escapeHtml(String(r.id ?? ""));
+      const tid = r.taskId != null ? escapeHtml(String(r.taskId)) : "—";
+      const label = r.label != null && String(r.label).trim() ? escapeHtml(String(r.label)) : "—";
+      const refKind = String(r.refKind ?? "head");
+      const refLabel = escapeHtml(checkpointRefKindPhrase(refKind));
+      const created =
+        typeof r.createdAt === "string" && r.createdAt.length > 0
+          ? escapeHtml(formatPlanningUpdatedAt(r.createdAt))
+          : "—";
+      const actions = renderCheckpointRowActions(r);
+      const title = label !== "—" ? label : id.length > 14 ? id.slice(0, 14) + "…" : id;
+      return (
+        '<div class="dash-row dash-team-assignment-row" role="listitem">' +
+        '<div class="dash-team-assignment-main">' +
+        '<span class="dash-row-label"><b>' +
+        title +
+        "</b></span>" +
+        '<span class="dash-team-assignment-meta muted">' +
+        refLabel +
+        " · task " +
+        tid +
+        " · " +
+        created +
+        " · " +
+        id +
+        "</span>" +
+        "</div>" +
+        actions +
+        "</div>"
+      );
+    })
+    .join("");
+  return (
+    '<section class="dash-card dash-task-checkpoints" aria-label="Task checkpoints">' +
+    "<p><b>Task Checkpoints</b></p>" +
+    statusLine +
+    toolbar +
+    '<div class="dash-row-list" role="list">' +
+    rows +
+    "</div></section>"
+  );
+}
+
+function subagentSessionStatusPhrase(status: string): string {
+  switch (status) {
+    case "open":
+      return "Open — hand off work in Cursor, then close when done";
+    case "closed":
+      return "Closed";
+    default:
+      return humanizeDashboardToken(status);
+  }
+}
+
+function renderSubagentSessionRowActions(r: Record<string, unknown>): string {
+  const sessionId = escapeHtml(String(r.sessionId ?? ""));
+  const definitionId = escapeHtml(String(r.definitionId ?? ""));
+  const st = String(r.status ?? "");
+  const parts: string[] = [];
+  if (st === "open") {
+    parts.push(
+      '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="subagent-session-close" data-session-id="' +
+        sessionId +
+        '" data-definition-id="' +
+        definitionId +
+        '" title="close-subagent-session">Close session</button>'
+    );
+    parts.push(
+      '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="subagent-spawn" data-subagent-id="' +
+        definitionId +
+        '" title="spawn-subagent">New session</button>'
+    );
+  }
+  if (parts.length === 0) {
+    return "";
+  }
+  return '<div class="dash-row-actions">' + parts.join("") + "</div>";
 }
 
 function renderSubagentRegistrySection(sub: unknown): string {
@@ -2234,6 +2696,7 @@ function renderSubagentRegistrySection(sub: unknown): string {
   }
   const avail = o.available === true;
   const defs = typeof o.definitionsCount === "number" ? o.definitionsCount : 0;
+  const retired = typeof o.retiredDefinitionsCount === "number" ? o.retiredDefinitionsCount : 0;
   const openSess = typeof o.openSessionsCount === "number" ? o.openSessionsCount : 0;
   const top = Array.isArray(o.topOpenSessions) ? (o.topOpenSessions as unknown[]) : [];
   if (!avail) {
@@ -2245,49 +2708,83 @@ function renderSubagentRegistrySection(sub: unknown): string {
     );
   }
   const statusLine =
-    "<p class=\"muted\">Definitions " +
+    '<p class="muted">Definitions ' +
     String(defs) +
+    " · Retired " +
+    String(retired) +
     " · Open sessions " +
     String(openSess) +
     "</p>";
+  const toolbar =
+    '<div class="dash-team-exec-toolbar" role="toolbar" aria-label="Subagent registry actions">' +
+    '<button type="button" class="wc-btn wc-btn-md wc-btn-primary" data-wc-action="subagent-register" title="register-subagent">Register role</button>' +
+    '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="subagent-spawn" title="spawn-subagent">Start session</button>' +
+    '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="subagent-retire" title="retire-subagent">Retire role</button>' +
+    '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="subagent-registry-chat" title="Registry playbook in chat">Registry guide</button>' +
+    "</div>";
   if (top.length === 0) {
+    const emptyHint =
+      defs > 0
+        ? "No open sessions — use <b>Start session</b> to link a subagent to a task."
+        : "Register a subagent role first, then start a task-linked session.";
     return (
-      '<section class="dash-card" aria-label="Subagent registry">' +
-      "<p><b>Subagent Registry</b> (read-only)</p>" +
+      '<section class="dash-card dash-subagent-registry" aria-label="Subagent registry">' +
+      "<p><b>Subagent Registry</b></p>" +
       statusLine +
-      '<p class="muted">No open subagent sessions.</p>' +
+      '<p class="muted">Named agent roles with task-linked sessions and an audit trail in kit SQLite.</p>' +
+      toolbar +
+      '<p class="muted">' +
+      emptyHint +
+      "</p>" +
       "</section>"
     );
   }
   const rows = top
     .map((x) => {
       const r = x as Record<string, unknown>;
-      const sid = escapeHtml(String(r.sessionId ?? ""));
+      const sessionId = escapeHtml(String(r.sessionId ?? ""));
       const def = escapeHtml(String(r.definitionId ?? ""));
       const tid = r.executionTaskId != null ? escapeHtml(String(r.executionTaskId)) : "—";
-      const st = escapeHtml(String(r.status ?? ""));
+      const st = String(r.status ?? "");
+      const stLabel = escapeHtml(subagentSessionStatusPhrase(st));
+      const updated =
+        typeof r.updatedAt === "string" && r.updatedAt.length > 0
+          ? escapeHtml(formatPlanningUpdatedAt(r.updatedAt))
+          : "—";
+      const actions = renderSubagentSessionRowActions(r);
+      const sidShort = sessionId.length > 10 ? sessionId.slice(0, 8) + "…" : sessionId;
       return (
-        '<div class="dash-row" role="listitem"><span class="dash-row-label">- ' +
-        sid +
-        " · " +
+        '<div class="dash-row dash-team-assignment-row" role="listitem">' +
+        '<div class="dash-team-assignment-main">' +
+        '<span class="dash-row-label"><b>' +
         def +
+        "</b> · session " +
+        sidShort +
+        "</span>" +
+        '<span class="dash-team-assignment-meta muted">' +
+        stLabel +
         " · task " +
         tid +
-        " · " +
-        st +
-        "</span></div>"
+        " · updated " +
+        updated +
+        "</span>" +
+        "</div>" +
+        actions +
+        "</div>"
       );
     })
     .join("");
   return (
-    '<section class="dash-card" aria-label="Subagent registry">' +
-    "<p><b>Subagent Registry</b> (read-only)</p>" +
+    '<section class="dash-card dash-subagent-registry" aria-label="Subagent registry">' +
+    "<p><b>Subagent Registry</b></p>" +
     statusLine +
+    toolbar +
     '<div class="dash-row-list" role="list">' +
     rows +
     "</div></section>"
   );
 }
+
 
 function truncateOverviewLine(s: string, max: number): string {
   const one = s.replace(/\s+/g, " ").trim();
@@ -2956,7 +3453,40 @@ function renderPastPhaseNotesRollup(
  * Overview tab card: phase journal rows + kit-backed actions (dismiss / convert / persist suggestions).
  * Pure HTML — button clicks postMessage from `DashboardViewProvider` bootstrap.
  */
-export function renderPhaseNotesOverviewSection(bundle: DashboardPhaseJournalBundle | null | undefined): string {
+export function renderPhaseJournalStatsBanner(stats: unknown): string {
+  if (!stats || typeof stats !== "object") {
+    return "";
+  }
+  const row = stats as Record<string, unknown>;
+  if (row.available !== true) {
+    return "";
+  }
+  const current = row.currentPhase as Record<string, unknown> | undefined;
+  if (!current) {
+    return "";
+  }
+  const count = typeof current.activeNoteCount === "number" ? current.activeNoteCount : 0;
+  const phaseKey = current.phaseKey != null ? String(current.phaseKey) : "";
+  const silence = current.silenceWarning === true;
+  const warnCls = silence ? " dash-phase-journal-silence-warn" : "";
+  const phaseLabel = phaseKey.length > 0 ? "Phase " + phaseKey : "Current phase";
+  return (
+    '<section class="dash-card dash-phase-journal-stats' +
+    warnCls +
+    '" aria-label="Phase journal capture">' +
+    "<p><b>Notes captured this phase</b> · " +
+    escapeHtml(phaseLabel) +
+    ": <b>" +
+    String(count) +
+    "</b></p>" +
+    (silence
+      ? '<p class="muted" role="status">No phase notes yet despite completed delivery work — capture context with <b>New</b> or Add phase note.</p>'
+      : "") +
+    "</section>"
+  );
+}
+
+function renderPhaseNotesOverviewSection(bundle: DashboardPhaseJournalBundle | null | undefined): string {
   if (bundle === null || bundle === undefined) {
     return "";
   }
@@ -3059,6 +3589,11 @@ export function renderDashboardRootInnerHtml(
   const planningSession = d.planningSession;
   const blockedSummary = (d.blockedSummary as Record<string, unknown>) || {};
   const blockedTop = Array.isArray(blockedSummary.top) ? (blockedSummary.top as unknown[]).slice(0, 8) : [];
+  const humanGatesSummary = (d.humanGatesSummary as Record<string, unknown> | undefined) ?? {};
+  const humanGatesCount = typeof humanGatesSummary.count === "number" ? humanGatesSummary.count : 0;
+  const humanGatesTop = Array.isArray(humanGatesSummary.top)
+    ? (humanGatesSummary.top as unknown[]).slice(0, 15)
+    : [];
   const ris = (d.readyImprovementsSummary as Record<string, unknown> | undefined) ?? {};
   const res = (d.readyExecutionSummary as Record<string, unknown> | undefined) ?? {};
   const oldReadyOnly = !("readyImprovementsSummary" in d) && !("readyExecutionSummary" in d);
@@ -3138,6 +3673,7 @@ export function renderDashboardRootInnerHtml(
     '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="add-wishlist-item" title="Create a wishlist intake task (same flow as /add-wishlist-item)">Add wishlist item</button>' +
     '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="collaboration-hub" title="Chat + CLI for collaboration profiles; chat does not replace policyApproval">Collaboration profiles</button>' +
     '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="transcript-churn-research-chat" title="Transcript churn research playbook">Research churn</button>' +
+    '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="phase-note-add" title="add-phase-note">Add phase note</button>' +
     '<button type="button" class="wc-btn wc-btn-md wc-btn-primary" data-wc-action="generate-features-chat" title="New chat with /generate-features as text (same as slash command)">Generate Features</button>' +
     "</div>";
 
@@ -3158,7 +3694,7 @@ export function renderDashboardRootInnerHtml(
   const tasksBlock =
     '<section class="dash-card dashboard-tasks-block" aria-label="Task queue rollups">' +
     tasksQuickActionsPanel +
-    renderFilterChipBar(queuePhaseFilterOptions) +
+    renderFilterChipBar(queuePhaseFilterOptions, humanGatesCount) +
     renderStatusRollup(
       "status-ready",
       "<b>Ready</b> (" + String(readyCount) + ")",
@@ -3220,6 +3756,14 @@ export function renderDashboardRootInnerHtml(
       false,
       "blocked"
     ) +
+    renderStatusRollup(
+      "status-human-gates",
+      "<b>Human gates</b> (" + String(humanGatesCount) + ")",
+      renderHumanGatesList(humanGatesCount, humanGatesTop),
+      humanGatesCount === 0,
+      humanGatesCount > 0,
+      "human-gates"
+    ) +
     terminalSection +
     "</section>";
 
@@ -3271,11 +3815,13 @@ export function renderDashboardRootInnerHtml(
     renderPhaseCatalogOverviewSection(phaseSystemSlice) +
     renderWorkspaceBlockersPendingSection(ws as Record<string, unknown> | null) +
     renderTeamExecutionSection(d.teamExecution) +
-    renderSubagentRegistrySection(d.subagentRegistry);
+    renderSubagentRegistrySection(d.subagentRegistry) +
+    renderTaskCheckpointsSection(d.taskCheckpoints) +
+    renderApprovalInboxSection(d.approvalQueue);
 
   const caePanelContent =
     typeof embeddedCaePanelHtml === "string" && embeddedCaePanelHtml.trim().length > 0
-      ? '<div class="gp-root wc-dash-cae-host dash-cae-embedded">' +
+      ? '<div class="gp-root wc-dash-cae-host dash-cae-embedded wc-dashboard-embedded-guidance">' +
         namespaceEmbeddedCaePanelHtml(embeddedCaePanelHtml) +
         "<script>" +
         buildGuidanceAuthoringWebviewBootstrap("dash-cae-") +
@@ -3287,6 +3833,7 @@ export function renderDashboardRootInnerHtml(
         '</section>';
 
   const taskEngineContent =
+    renderPhaseJournalStatsBanner(d.phaseJournalStats) +
     renderPhaseNotesOverviewSection(phaseJournal ?? null) +
     tasksBlock +
     wishlistSection +

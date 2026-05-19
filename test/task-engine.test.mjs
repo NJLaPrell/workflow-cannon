@@ -1958,6 +1958,17 @@ test("taskEngineModule onCommand dashboard-summary returns stable shape", async 
   assert.equal(d.subagentRegistry.openSessionsCount, 0);
   assert.ok(Array.isArray(d.subagentRegistry.topOpenSessions));
   assert.equal(d.subagentRegistry.topOpenSessions.length, 0);
+  assert.ok(d.taskCheckpoints);
+  assert.equal(d.taskCheckpoints.schemaVersion, 1);
+  assert.equal(d.taskCheckpoints.available, true);
+  assert.equal(d.taskCheckpoints.totalCount, 0);
+  assert.ok(Array.isArray(d.taskCheckpoints.topRecent));
+  assert.equal(d.taskCheckpoints.topRecent.length, 0);
+  assert.ok(d.approvalQueue);
+  assert.equal(d.approvalQueue.schemaVersion, 1);
+  assert.equal(d.approvalQueue.count, 0);
+  assert.ok(Array.isArray(d.approvalQueue.top));
+  assert.ok(Array.isArray(d.approvalQueue.policyArtifacts));
   assert.ok(Array.isArray(d.pastPhaseNotes));
   assert.equal(d.pastPhaseNotes.length, 0);
 });

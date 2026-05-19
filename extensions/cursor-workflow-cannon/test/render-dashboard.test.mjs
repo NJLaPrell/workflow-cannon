@@ -823,6 +823,318 @@ test("renderDashboardRootInnerHtml renders many agent and subagent rows", () => 
   assert.match(html, /aria-label="test-subagent, Subagent"/);
 });
 
+test("renderDashboardRootInnerHtml team execution empty state offers create assignment", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      teamExecution: {
+        schemaVersion: 1,
+        available: true,
+        totalCount: 0,
+        activeCount: 0,
+        byStatus: { assigned: 0, submitted: 0, blocked: 0, reconciled: 0, cancelled: 0 },
+        topActive: []
+      },
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [] },
+      readyQueueTop: [],
+      readyQueueCount: 0,
+      suggestedNext: null,
+      planningSession: null,
+      workspaceStatus: { currentKitPhase: "100" },
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+  assert.match(html, /team-assignment-register/);
+  assert.match(html, /team-execution-chat/);
+  assert.match(html, /Create assignment/);
+  assert.match(html, /No active assignments yet/);
+});
+
+test("renderDashboardRootInnerHtml team execution row exposes handoff and reconcile actions", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      teamExecution: {
+        schemaVersion: 1,
+        available: true,
+        totalCount: 2,
+        activeCount: 2,
+        byStatus: { assigned: 1, submitted: 1, blocked: 0, reconciled: 0, cancelled: 0 },
+        topActive: [
+          {
+            id: "a1",
+            executionTaskId: "T701",
+            executionTaskTitle: "Review dashboard rows",
+            supervisorId: "operator",
+            workerId: "tab-2",
+            status: "assigned",
+            updatedAt: "2026-05-06T00:01:00.000Z"
+          },
+          {
+            id: "a2",
+            executionTaskId: "T702",
+            executionTaskTitle: "Ship handoff",
+            supervisorId: "operator",
+            workerId: "tab-3",
+            status: "submitted",
+            updatedAt: "2026-05-06T00:02:00.000Z"
+          }
+        ]
+      },
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [] },
+      readyQueueTop: [],
+      readyQueueCount: 0,
+      suggestedNext: null,
+      planningSession: null,
+      workspaceStatus: { currentKitPhase: "100" },
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+  assert.match(html, /team-assignment-handoff/);
+  assert.match(html, /team-assignment-reconcile/);
+  assert.match(html, /data-assignment-id="a1"/);
+  assert.match(html, /data-assignment-id="a2"/);
+});
+
+test("renderDashboardRootInnerHtml subagent registry empty state offers register and spawn", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      subagentRegistry: {
+        schemaVersion: 1,
+        available: true,
+        definitionsCount: 0,
+        retiredDefinitionsCount: 0,
+        openSessionsCount: 0,
+        topOpenSessions: []
+      },
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [] },
+      readyQueueTop: [],
+      readyQueueCount: 0,
+      suggestedNext: null,
+      planningSession: null,
+      workspaceStatus: { currentKitPhase: "100" },
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+  assert.match(html, /subagent-register/);
+  assert.match(html, /subagent-registry-chat/);
+  assert.match(html, /Register role/);
+  assert.match(html, /Register a subagent role first/);
+});
+
+test("renderDashboardRootInnerHtml subagent registry row exposes close session", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      subagentRegistry: {
+        schemaVersion: 1,
+        available: true,
+        definitionsCount: 1,
+        retiredDefinitionsCount: 0,
+        openSessionsCount: 1,
+        topOpenSessions: [
+          {
+            sessionId: "sess-1111-2222-3333-4444",
+            definitionId: "reviewer",
+            executionTaskId: "T801",
+            status: "open",
+            updatedAt: "2026-05-06T00:03:00.000Z"
+          }
+        ]
+      },
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [] },
+      readyQueueTop: [],
+      readyQueueCount: 0,
+      suggestedNext: null,
+      planningSession: null,
+      workspaceStatus: { currentKitPhase: "100" },
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+  assert.match(html, /subagent-session-close/);
+  assert.match(html, /data-session-id="sess-1111-2222-3333-4444"/);
+  assert.match(html, /reviewer/);
+  assert.match(html, /T801/);
+});
+
+test("renderDashboardRootInnerHtml task checkpoints empty state offers snapshot actions", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      taskCheckpoints: {
+        schemaVersion: 1,
+        available: true,
+        totalCount: 0,
+        topRecent: []
+      },
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [] },
+      readyQueueTop: [],
+      readyQueueCount: 0,
+      suggestedNext: null,
+      planningSession: null,
+      workspaceStatus: { currentKitPhase: "100" },
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+  assert.match(html, /checkpoint-create-head/);
+  assert.match(html, /checkpoint-recovery-chat/);
+  assert.match(html, /Snapshot HEAD/);
+  assert.match(html, /No checkpoints yet/);
+});
+
+test("renderDashboardRootInnerHtml task checkpoint row exposes compare and rewind", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      taskCheckpoints: {
+        schemaVersion: 1,
+        available: true,
+        totalCount: 1,
+        topRecent: [
+          {
+            id: "ckpt_test_001",
+            taskId: "T901",
+            label: "before refactor",
+            refKind: "head",
+            createdAt: "2026-05-06T00:04:00.000Z",
+            gitHeadSha: "abc123def456"
+          }
+        ]
+      },
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [] },
+      readyQueueTop: [],
+      readyQueueCount: 0,
+      suggestedNext: null,
+      planningSession: null,
+      workspaceStatus: { currentKitPhase: "100" },
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+  assert.match(html, /checkpoint-compare/);
+  assert.match(html, /checkpoint-rewind/);
+  assert.match(html, /data-checkpoint-id="ckpt_test_001"/);
+  assert.match(html, /before refactor/);
+});
+
+test("renderDashboardRootInnerHtml approval inbox empty state shows guide and artifacts", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      approvalQueue: {
+        schemaVersion: 1,
+        count: 0,
+        top: [],
+        policyArtifacts: [
+          {
+            relativePath: ".workspace-kit/approvals/decisions.jsonl",
+            role: "decisions"
+          }
+        ]
+      },
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [] },
+      readyQueueTop: [],
+      readyQueueCount: 0,
+      suggestedNext: null,
+      planningSession: null,
+      workspaceStatus: { currentKitPhase: "100" },
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+  assert.match(html, /dashboard-approvals/);
+  assert.match(html, /approval-inbox-chat/);
+  assert.match(html, /Policy Approval Inbox/);
+  assert.match(html, /decisions\.jsonl/);
+});
+
+test("renderDashboardRootInnerHtml approval inbox row exposes review actions", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      approvalQueue: {
+        schemaVersion: 1,
+        count: 1,
+        top: [
+          {
+            id: "T100050",
+            title: "Improve dashboard policy UX",
+            status: "ready",
+            phaseKey: "100",
+            priority: "P2"
+          }
+        ],
+        policyArtifacts: []
+      },
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [] },
+      readyQueueTop: [],
+      readyQueueCount: 0,
+      suggestedNext: null,
+      planningSession: null,
+      workspaceStatus: { currentKitPhase: "100" },
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+  assert.match(html, /approval-review-accept/);
+  assert.match(html, /approval-review-decline/);
+  assert.match(html, /data-task-id="T100050"/);
+});
+
 test("renderDashboardRootInnerHtml planning card shows resume CLI when session present", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,
@@ -1142,6 +1454,191 @@ test("renderDashboardRootInnerHtml proposed execution rows expose accept action"
   assert.match(html, /data-wc-action="proposed-exe-decline"/);
   assert.doesNotMatch(html, /proposed-exe-chat/);
   assert.match(html, /T777/);
+  const rowMatch = html.match(
+    /<div class="dash-row" role="listitem">[\s\S]*?T777[\s\S]*?<\/div>/
+  );
+  assert.ok(rowMatch, "expected proposed execution row");
+  const rowHtml = rowMatch[0];
+  assert.equal((rowHtml.match(/class="dash-row-actions/g) ?? []).length, 1);
+  assert.match(rowHtml, /dash-row-actions-grid/);
+  const actionOrder = [
+    "assign-phase",
+    "task-detail",
+    "task-comments-view",
+    "task-comment-add",
+    "proposed-exe-accept",
+    "proposed-exe-decline",
+  ];
+  let lastIdx = -1;
+  for (const action of actionOrder) {
+    const idx = rowHtml.indexOf(`data-wc-action="${action}"`);
+    assert.ok(idx > lastIdx, `expected ${action} in document order`);
+    lastIdx = idx;
+  }
+});
+
+test("renderDashboardRootInnerHtml proposed improvement rows use single 3x2 action grid", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      stateSummary: { proposed: 1, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: {
+        schemaVersion: 1,
+        count: 1,
+        top: [{ id: "imp-777", title: "Example proposed improvement", phase: "Phase 9" }]
+      },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [] },
+      readyQueueTop: [],
+      readyQueueCount: 0,
+      suggestedNext: null,
+      planningSession: null,
+      taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
+      workspaceStatus: { currentKitPhase: "1", nextKitPhase: "2", activeFocus: "Test" },
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+  const rowMatch = html.match(
+    /<div class="dash-row" role="listitem">[\s\S]*?imp-777[\s\S]*?<\/div>/
+  );
+  assert.ok(rowMatch, "expected proposed improvement row");
+  const rowHtml = rowMatch[0];
+  assert.equal((rowHtml.match(/class="dash-row-actions/g) ?? []).length, 1);
+  assert.match(rowHtml, /dash-row-actions-grid/);
+  assert.match(rowHtml, /data-wc-action="proposed-imp-accept"/);
+  assert.match(rowHtml, /data-wc-action="proposed-imp-decline"/);
+});
+
+test("renderDashboardRootInnerHtml renders human gates section with resume actions", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [], phaseBuckets: [] },
+      humanGatesSummary: {
+        schemaVersion: 1,
+        phaseKey: "100",
+        count: 1,
+        top: [
+          {
+            id: "T900",
+            title: "Gated task",
+            status: "awaiting_review",
+            gateKind: "awaiting_review",
+            ageMs: 120_000,
+            requestedDecision: "Sign off",
+            owner: "ops"
+          }
+        ]
+      },
+      readyQueueTop: [],
+      readyQueueCount: 0,
+      suggestedNext: null,
+      planningSession: null,
+      taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
+      workspaceStatus: { currentKitPhase: "100", nextKitPhase: "101", activeFocus: "Test" },
+      agentStatus: {
+        schemaVersion: 1,
+        source: "derived",
+        kind: "awaiting_human_gate",
+        label: "Awaiting review · T900",
+        confidence: "high",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+        taskId: "T900"
+      },
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+  assert.match(html, /data-wc-track="status-human-gates"/);
+  assert.match(html, /<b>Human gates<\/b> \(1\)/);
+  assert.match(html, /data-wc-filter-btn="human-gates"/);
+  assert.match(html, /Awaiting review/);
+  assert.match(html, /data-wc-action="human-gate-resume-ready"/);
+  assert.match(html, /data-wc-action="human-gate-resume-work"/);
+  assert.match(html, /data-agent-status-kind="awaiting_human_gate"/);
+  assert.match(html, /Awaiting review · T900/);
+});
+
+test("renderDashboardRootInnerHtml renders phase journal stats banner and quick action", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [], phaseBuckets: [] },
+      humanGatesSummary: { schemaVersion: 1, phaseKey: "100", count: 0, top: [] },
+      phaseJournalStats: {
+        schemaVersion: 1,
+        available: true,
+        phases: [{ phaseKey: "100", activeNoteCount: 0, latestNoteAt: null }],
+        currentPhase: {
+          phaseKey: "100",
+          activeNoteCount: 0,
+          completedDeliveryTaskCount: 2,
+          silenceWarning: true
+        }
+      },
+      readyQueueTop: [],
+      readyQueueCount: 0,
+      suggestedNext: null,
+      planningSession: null,
+      taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
+      workspaceStatus: { currentKitPhase: "100", nextKitPhase: "101", activeFocus: "Test" },
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+  assert.match(html, /Notes captured this phase/);
+  assert.match(html, /dash-phase-journal-silence-warn/);
+  assert.match(html, /data-wc-action="phase-note-add"/);
+});
+
+test("renderDashboardRootInnerHtml ready rows keep flex task actions without grid modifier", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      stateSummary: { proposed: 0, ready: 1, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: {
+        schemaVersion: 1,
+        count: 1,
+        top: [{ id: "T888", title: "Ready execution", phase: "Phase 9" }]
+      },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [] },
+      readyQueueTop: [],
+      readyQueueCount: 1,
+      suggestedNext: null,
+      planningSession: null,
+      taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
+      workspaceStatus: { currentKitPhase: "1", nextKitPhase: "2", activeFocus: "Test" },
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+  const rowMatch = html.match(
+    /<div class="dash-row" role="listitem">[\s\S]*?T888[\s\S]*?<\/div>/
+  );
+  assert.ok(rowMatch, "expected ready row");
+  const rowHtml = rowMatch[0];
+  assert.match(rowHtml, /wc-task-actions/);
+  assert.doesNotMatch(rowHtml, /dash-row-actions-grid/);
 });
 
 test("renderDashboardRootInnerHtml proposed phase buckets show Accept All with taskIds", () => {
@@ -1179,18 +1676,7 @@ test("renderDashboardRootInnerHtml proposed phase buckets show Accept All with t
       taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
       workspaceStatus: { currentKitPhase: "68", nextKitPhase: "69", activeFocus: "Test" },
       blockingAnalysis: [],
-      dependencyOverview: {
-        schemaVersion: 1,
-        activeTaskCount: 0,
-        includedTaskCount: 0,
-        edgeCount: 0,
-        truncated: false,
-        perfNote: null,
-        nodes: [],
-        edges: [],
-        mermaidFlowchart: "",
-        criticalPathReady: []
-      }
+      dependencyOverview: deliverTestDepOverview
     }
   });
   assert.match(html, /data-wc-action="proposed-imp-accept-phase"/);
@@ -1216,18 +1702,7 @@ test("renderDashboardRootInnerHtml merges ready improvement and execution rollup
       taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
       workspaceStatus: { currentKitPhase: "1", nextKitPhase: "2", activeFocus: "Test" },
       blockingAnalysis: [],
-      dependencyOverview: {
-        schemaVersion: 1,
-        activeTaskCount: 0,
-        includedTaskCount: 0,
-        edgeCount: 0,
-        truncated: false,
-        perfNote: null,
-        nodes: [],
-        edges: [],
-        mermaidFlowchart: "",
-        criticalPathReady: []
-      }
+      dependencyOverview: deliverTestDepOverview
     }
   });
   assert.match(html, /<b>Ready<\/b> \(4\)/);

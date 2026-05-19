@@ -713,6 +713,11 @@
       "moduleId": "task-engine"
     },
     {
+      "name": "phase-focus-dashboard",
+      "path": ".ai/agent-cli-snippets/by-command/phase-focus-dashboard.json",
+      "moduleId": "task-engine"
+    },
+    {
       "name": "phase-status",
       "path": ".ai/agent-cli-snippets/by-command/phase-status.json",
       "moduleId": "task-engine"
