@@ -1,13 +1,31 @@
+# CI tier policy (branch protection mapping)
+#
+# Fast tier (required on pull_request):
+#   - Job `test` — build, check, unit tests, plugin fixture smoke, Cursor extension check.
+#
+# Full tier (required on push to `main` or `release/*` only — includes parity):
+#   - Job `release-readiness` — release metadata, pack dry-run, maintainer-gates.
+#   - Job `parity` — cross-surface parity validation + evidence artifacts.
+#
+# PRs must NOT run parity (slow); shipping branches must NOT skip parity.
+# Machine reference: `.ai/CI-TIERS.md`
+#
 name: CI
 
 on:
   push:
     branches:
       - main
+      - "release/**"
   pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
+    name: test
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
@@ -39,6 +57,36 @@ jobs:
       - name: Cursor extension (pnpm workspace)
         run: pnpm --filter cursor-workflow-cannon run check && pnpm --filter cursor-workflow-cannon run compile
 
+      - name: Advisory task-state hand-edit check
+        continue-on-error: true
+        run: pnpm run advisory:task-state-hand-edit
+
+  release-readiness:
+    name: release-readiness
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))
+    needs: [test]
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm run build
+
       - name: Release metadata check
         run: node scripts/check-release-metadata.mjs
 
@@ -48,11 +96,9 @@ jobs:
       - name: Maintainer gates
         run: pnpm run maintainer-gates
 
-      - name: Advisory task-state hand-edit check
-        continue-on-error: true
-        run: pnpm run advisory:task-state-hand-edit
-
   parity:
+    name: parity
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))
     needs: [test]
     runs-on: ubuntu-latest
     env:
