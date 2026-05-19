@@ -74,6 +74,18 @@ export function buildTaskToPhaseBranchPrompt(options?: { taskId?: string; kitPha
   );
 }
 
+/** Dashboard policy approval inbox — review-item queue without memorizing CLI names. */
+export function buildPolicyApprovalInboxPrompt(): string {
+  return (
+    "The operator opened **Policy approval inbox** from the Workflow Cannon dashboard.\n\n" +
+    "Help them work the improvement review queue (JSON **`policyApproval`** on sensitive runs per **`.ai/POLICY-APPROVAL.md`**):\n\n" +
+    "- Read queue: `pnpm exec wk run list-approval-queue '{}'`\n" +
+    "- Record decision: `review-item` with `decision` **`accept`**, **`decline`**, or **`accept_edited`** (requires `editedSummary`)\n" +
+    "- Audit artifacts: `.workspace-kit/policy/traces.jsonl`, `.workspace-kit/policy/session-grants.json`, `.workspace-kit/approvals/decisions.jsonl`\n\n" +
+    "Prefer dashboard row actions when the operator is in the sidebar; decisions remain immutable in the approvals module."
+  );
+}
+
 /** Dashboard task checkpoints — snapshot and rewind without memorizing CLI names. */
 export function buildTaskCheckpointsRecoveryPrompt(): string {
   return (
