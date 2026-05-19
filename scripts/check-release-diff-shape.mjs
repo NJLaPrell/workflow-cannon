@@ -90,10 +90,7 @@ export function shouldEnforceReleaseDiffShape(branch) {
   if (!isReleaseBranchName(branch)) {
     return false;
   }
-  if (branch === "main") {
-    return true;
-  }
-  if (isPhaseIntegrationBranch(branch)) {
+  if (branch === "main" || isPhaseIntegrationBranch(branch)) {
     return process.env.RELEASE_DIFF_ENFORCE === "true";
   }
   return true;
@@ -101,17 +98,23 @@ export function shouldEnforceReleaseDiffShape(branch) {
 
 export function listChangedPaths(workspacePath, baseRef) {
   const base = baseRef.trim();
-  try {
-    const out = execFileSync("git", ["-C", workspacePath, "diff", "--name-only", `${base}..HEAD`], {
-      encoding: "utf8"
-    });
-    return out
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean);
-  } catch (error) {
-    return { error: (error).message ?? String(error) };
+  const fallbacks =
+    base === "HEAD~1" ? [base] : [base, "HEAD~1"];
+  let lastError = "";
+  for (const candidate of fallbacks) {
+    try {
+      const out = execFileSync("git", ["-C", workspacePath, "diff", "--name-only", `${candidate}..HEAD`], {
+        encoding: "utf8"
+      });
+      return out
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean);
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error);
+    }
   }
+  return { error: lastError };
 }
 
 export function resolveDiffBase(args) {

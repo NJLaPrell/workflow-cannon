@@ -34,8 +34,8 @@ Do not add `parity` as a required check on `pull_request` — it duplicates full
 
 `scripts/check-release-diff-shape.mjs` compares `RELEASE_DIFF_BASE..HEAD` (CI sets `RELEASE_DIFF_BASE` to `github.event.before` on push; locally defaults to `HEAD~1` for the latest commit).
 
-- **`main` pushes:** enforced in CI `release-readiness`.
-- **`release/phase-<N>`:** skipped during task merges; set `RELEASE_DIFF_ENFORCE=true` when validating a version-only closeout commit (local or workflow env).
+- **`main` / `release/phase-<N>` pushes:** diff allowlist is **not** auto-enforced on merge pushes (invalid or huge diffs). Set `RELEASE_DIFF_ENFORCE=true` when validating an intentional version-only closeout commit (local or workflow env).
+- **Other `release/*` branches:** enforced on push when configured in workflow.
 
 Default paths: `package.json`, `CHANGELOG.md`, `schemas/_generated-*`, `.workspace-kit/**`, plus `release.allowlist[]` in `workspace-kit.profile.json`.
 
