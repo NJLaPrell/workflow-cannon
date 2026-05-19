@@ -6,7 +6,9 @@ import {
   evaluateReleaseDiffShape,
   globToRegExp,
   isReleaseBranchName,
-  pathMatchesAllowlist
+  isPhaseIntegrationBranch,
+  pathMatchesAllowlist,
+  shouldEnforceReleaseDiffShape
 } from "../scripts/check-release-diff-shape.mjs";
 
 test("globToRegExp matches generated schema paths and workspace-kit", () => {
@@ -46,6 +48,20 @@ test("isReleaseBranchName covers main and release/*", () => {
   assert.equal(isReleaseBranchName("main"), true);
   assert.equal(isReleaseBranchName("release/phase-103"), true);
   assert.equal(isReleaseBranchName("feature/foo"), false);
+});
+
+test("shouldEnforceReleaseDiffShape skips phase integration unless forced", () => {
+  assert.equal(isPhaseIntegrationBranch("release/phase-103"), true);
+  assert.equal(shouldEnforceReleaseDiffShape("release/phase-103"), false);
+  assert.equal(shouldEnforceReleaseDiffShape("main"), true);
+  const prev = process.env.RELEASE_DIFF_ENFORCE;
+  process.env.RELEASE_DIFF_ENFORCE = "true";
+  assert.equal(shouldEnforceReleaseDiffShape("release/phase-103"), true);
+  if (prev === undefined) {
+    delete process.env.RELEASE_DIFF_ENFORCE;
+  } else {
+    process.env.RELEASE_DIFF_ENFORCE = prev;
+  }
 });
 
 test("DEFAULT_RELEASE_ALLOWLIST_GLOBS includes package.json and CHANGELOG", () => {

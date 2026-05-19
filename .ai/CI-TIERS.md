@@ -32,7 +32,10 @@ Do not add `parity` as a required check on `pull_request` — it duplicates full
 
 ## Release diff allowlist
 
-`scripts/check-release-diff-shape.mjs` runs on **release branches** only. It compares `RELEASE_DIFF_BASE..HEAD` (CI sets `RELEASE_DIFF_BASE` to `github.event.before` on push; locally defaults to `HEAD~1` for the latest commit). Override with `RELEASE_DIFF_BASE=origin/main` only when you intend to audit the full branch delta.
+`scripts/check-release-diff-shape.mjs` compares `RELEASE_DIFF_BASE..HEAD` (CI sets `RELEASE_DIFF_BASE` to `github.event.before` on push; locally defaults to `HEAD~1` for the latest commit).
+
+- **`main` pushes:** enforced in CI `release-readiness`.
+- **`release/phase-<N>`:** skipped during task merges; set `RELEASE_DIFF_ENFORCE=true` when validating a version-only closeout commit (local or workflow env).
 
 Default paths: `package.json`, `CHANGELOG.md`, `schemas/_generated-*`, `.workspace-kit/**`, plus `release.allowlist[]` in `workspace-kit.profile.json`.
 

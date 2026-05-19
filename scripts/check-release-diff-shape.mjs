@@ -77,6 +77,24 @@ export function isReleaseBranchName(branch) {
   return typeof branch === "string" && (branch === "main" || branch.startsWith("release/"));
 }
 
+/** Phase integration branches accept normal task merges; enforce only on closeout. */
+export function isPhaseIntegrationBranch(branch) {
+  return typeof branch === "string" && /^release\/phase-\d+$/i.test(branch);
+}
+
+export function shouldEnforceReleaseDiffShape(branch) {
+  if (!isReleaseBranchName(branch)) {
+    return false;
+  }
+  if (branch === "main") {
+    return true;
+  }
+  if (isPhaseIntegrationBranch(branch)) {
+    return process.env.RELEASE_DIFF_ENFORCE === "true";
+  }
+  return true;
+}
+
 export function listChangedPaths(workspacePath, baseRef) {
   const base = baseRef.trim();
   try {
@@ -112,8 +130,13 @@ export function isZeroSha(ref) {
 async function main() {
   const workspacePath = process.cwd();
   const branch = currentBranchName(workspacePath);
-  if (!isReleaseBranchName(branch)) {
-    console.log(`check-release-diff-shape: skipped (branch ${branch ?? "unknown"} is not main or release/*)`);
+  if (!shouldEnforceReleaseDiffShape(branch)) {
+    const reason = !isReleaseBranchName(branch)
+      ? `branch ${branch ?? "unknown"} is not main or release/*`
+      : isPhaseIntegrationBranch(branch)
+        ? "phase integration branch (set RELEASE_DIFF_ENFORCE=true for closeout commit)"
+        : "enforcement not required";
+    console.log(`check-release-diff-shape: skipped (${reason})`);
     process.exit(0);
   }
 
