@@ -83,6 +83,12 @@ export class UnifiedStateDb {
     this.maybeExportSnapshot();
   }
 
+  deleteModuleState(moduleId: string): void {
+    const db = this.ensureDb();
+    db.prepare("DELETE FROM workspace_module_state WHERE module_id = ?").run(moduleId);
+    this.maybeExportSnapshot();
+  }
+
   listModuleStates(): ModuleStateRow[] {
     const db = this.ensureDb();
     const rows = db

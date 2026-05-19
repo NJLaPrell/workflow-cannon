@@ -36,6 +36,7 @@ import {
 } from "../dist/index.js";
 import { setAgentActivityLease } from "../dist/modules/task-engine/agent-activity-store.js";
 import { buildAgentActivityLabel } from "../dist/modules/task-engine/agent-activity-recorder.js";
+import { persistBuildPlanSession } from "../dist/core/planning/build-plan-session-file.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -2000,26 +2001,19 @@ test("taskEngineModule dashboard-summary agentStatus prefers active planning", a
   await seedSqliteStore(workspace, (store) => {
     store.addTask(makeTask({ id: "T010", status: "in_progress", priority: "P1" }));
   });
-  await mkdir(path.join(workspace, ".workspace-kit", "planning"), { recursive: true });
-  await writeFile(
-    path.join(workspace, ".workspace-kit", "planning", "build-plan-session.json"),
-    JSON.stringify(
-      {
-        schemaVersion: 1,
-        updatedAt: "2026-05-06T00:00:00.000Z",
-        planningType: "interview",
-        outputMode: "task",
-        status: "in_progress",
-        completionPct: 50,
-        answeredCritical: 1,
-        totalCritical: 2,
-        answers: {},
-        resumeCli: "pnpm exec wk run build-plan '{}'"
-      },
-      null,
-      2
-    ) + "\n",
-    "utf8"
+  await persistBuildPlanSession(
+    workspace,
+    {
+      planningType: "interview",
+      outputMode: "task",
+      status: "in_progress",
+      completionPct: 50,
+      answeredCritical: 1,
+      totalCritical: 2,
+      answers: {},
+      resumeCli: "pnpm exec wk run build-plan '{}'"
+    },
+    { tasks: { persistenceBackend: "sqlite" } }
   );
 
   const ctx = sqliteTaskEngineCtx(workspace);

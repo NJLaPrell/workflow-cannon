@@ -129,7 +129,12 @@ export async function runDashboardSummaryCommand(
     .sort((a, b) => a.id.localeCompare(b.id));
   const proposedExecutionTop = proposedExecution.slice(0, 15).map(slimListRow);
 
-  const planningSession = toDashboardPlanningSession(await readBuildPlanSession(ctx.workspacePath));
+  const planningSession = toDashboardPlanningSession(
+    await readBuildPlanSession(
+      ctx.workspacePath,
+      ctx.effectiveConfig as Record<string, unknown> | undefined
+    )
+  );
 
   const dashboardPhaseTop = 15;
   const toProposedRow = (t: (typeof tasks)[0]) => projectDashboardTaskRow(t, enrich, { includePriority: false });

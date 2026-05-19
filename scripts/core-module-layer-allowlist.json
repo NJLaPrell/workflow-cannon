@@ -73,6 +73,11 @@
       "rationale": "Approval/skill-apply audit rows live in unified planning SQLite; path resolution matches task-engine persistence map."
     },
     {
+      "file": "src/core/planning/build-plan-session-file.ts",
+      "specifier": "../../modules/task-engine/planning-config.js",
+      "rationale": "In-flight build-plan session snapshots persist in workspace_module_state via the canonical planning DB path."
+    },
+    {
       "file": "src/core/skills/task-skill-validation.ts",
       "specifier": "../../modules/skills/discovery.js",
       "rationale": "REF-004: task metadata.skillIds validation uses skill pack discovery without task-engine → skills sibling import."

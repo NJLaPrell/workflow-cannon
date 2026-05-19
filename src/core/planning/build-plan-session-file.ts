@@ -1,8 +1,21 @@
-import fs from "node:fs/promises";
 import path from "node:path";
+import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
+import {
+  archiveSidecarFile,
+  persistModuleStateRow,
+  readSidecarJsonFile
+} from "../state/module-state-sidecar-migration.js";
+import { UnifiedStateDb } from "../state/unified-state-db.js";
+import { planningSqliteDatabaseRelativePath } from "../../modules/task-engine/planning-config.js";
 
-const REL_DIR = path.join(".workspace-kit", "planning");
-const FILE_NAME = "build-plan-session.json";
+export const BUILD_PLAN_SESSION_SIDECAR_REL = path.join(
+  ".workspace-kit",
+  "planning",
+  "build-plan-session.json"
+);
+
+const MODULE_ID = "planning-build-session";
+const STATE_SCHEMA = 1;
 
 /** Local operator snapshot so dashboards and agents can resume `build-plan` without re-entering answers. */
 export type BuildPlanSessionSnapshotV1 = {
@@ -31,49 +44,90 @@ export type DashboardPlanningSessionV1 = {
   resumeCli: string;
 };
 
-function sessionPath(workspacePath: string): string {
-  return path.join(workspacePath, REL_DIR, FILE_NAME);
+function dbRelativePath(
+  workspacePath: string,
+  effectiveConfig?: Record<string, unknown>
+): string {
+  return planningSqliteDatabaseRelativePath({
+    workspacePath,
+    effectiveConfig
+  } as ModuleLifecycleContext);
+}
+
+function parseSession(raw: unknown): BuildPlanSessionSnapshotV1 | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return null;
+  }
+  const parsed = raw as BuildPlanSessionSnapshotV1;
+  if (parsed.schemaVersion !== 1 || typeof parsed.planningType !== "string") {
+    return null;
+  }
+  if (typeof parsed.resumeCli !== "string") {
+    return null;
+  }
+  return parsed;
 }
 
 export async function persistBuildPlanSession(
   workspacePath: string,
-  snapshot: Omit<BuildPlanSessionSnapshotV1, "schemaVersion" | "updatedAt">
+  snapshot: Omit<BuildPlanSessionSnapshotV1, "schemaVersion" | "updatedAt">,
+  effectiveConfig?: Record<string, unknown>
 ): Promise<void> {
-  const dir = path.join(workspacePath, REL_DIR);
-  await fs.mkdir(dir, { recursive: true });
   const full: BuildPlanSessionSnapshotV1 = {
     schemaVersion: 1,
     updatedAt: new Date().toISOString(),
     ...snapshot
   };
-  await fs.writeFile(sessionPath(workspacePath), `${JSON.stringify(full, null, 2)}\n`, "utf8");
+  const rel = dbRelativePath(workspacePath, effectiveConfig);
+  persistModuleStateRow({
+    workspacePath,
+    databaseRelativePath: rel,
+    moduleId: MODULE_ID,
+    stateSchemaVersion: STATE_SCHEMA,
+    state: full as unknown as Record<string, unknown>
+  });
+  await archiveSidecarFile(workspacePath, BUILD_PLAN_SESSION_SIDECAR_REL);
 }
 
-export async function clearBuildPlanSession(workspacePath: string): Promise<void> {
-  try {
-    await fs.unlink(sessionPath(workspacePath));
-  } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
-    if (code !== "ENOENT") throw err;
-  }
+export async function clearBuildPlanSession(
+  workspacePath: string,
+  effectiveConfig?: Record<string, unknown>
+): Promise<void> {
+  const rel = dbRelativePath(workspacePath, effectiveConfig);
+  const db = new UnifiedStateDb(workspacePath, rel);
+  db.deleteModuleState(MODULE_ID);
+  await archiveSidecarFile(workspacePath, BUILD_PLAN_SESSION_SIDECAR_REL);
 }
 
 export async function readBuildPlanSession(
-  workspacePath: string
+  workspacePath: string,
+  effectiveConfig?: Record<string, unknown>
 ): Promise<BuildPlanSessionSnapshotV1 | null> {
-  try {
-    const raw = await fs.readFile(sessionPath(workspacePath), "utf8");
-    const parsed = JSON.parse(raw) as BuildPlanSessionSnapshotV1;
-    if (parsed?.schemaVersion !== 1 || typeof parsed.planningType !== "string") {
-      return null;
-    }
-    if (typeof parsed.resumeCli !== "string") {
-      return null;
-    }
-    return parsed;
-  } catch {
-    return null;
+  const rel = dbRelativePath(workspacePath, effectiveConfig);
+  const db = new UnifiedStateDb(workspacePath, rel);
+  const row = db.getModuleState(MODULE_ID);
+  if (row?.state) {
+    return parseSession(row.state);
   }
+  const sidecar = await readSidecarJsonFile(workspacePath, BUILD_PLAN_SESSION_SIDECAR_REL);
+  if (sidecar.ok) {
+    const parsed = parseSession(sidecar.value);
+    if (parsed) {
+      persistModuleStateRow({
+        workspacePath,
+        databaseRelativePath: rel,
+        moduleId: MODULE_ID,
+        stateSchemaVersion: STATE_SCHEMA,
+        state: parsed as unknown as Record<string, unknown>
+      });
+      await archiveSidecarFile(workspacePath, BUILD_PLAN_SESSION_SIDECAR_REL);
+      return parsed;
+    }
+  }
+  if ("corrupt" in sidecar && sidecar.corrupt) {
+    await archiveSidecarFile(workspacePath, BUILD_PLAN_SESSION_SIDECAR_REL);
+  }
+  return null;
 }
 
 export function toDashboardPlanningSession(
