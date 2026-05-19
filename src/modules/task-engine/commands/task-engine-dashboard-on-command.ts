@@ -42,6 +42,7 @@ import { projectDashboardTaskRow } from "../task-read-projections.js";
 import { buildDashboardCurrentPhaseDelivery } from "../dashboard/phase-delivery-status.js";
 import { buildDashboardPastPhaseNotes } from "../dashboard/build-dashboard-past-phase-notes.js";
 import { buildDashboardHumanGatesSummary } from "../dashboard/build-dashboard-human-gates.js";
+import { buildDashboardPhaseJournalStats } from "../dashboard/build-dashboard-phase-journal-stats.js";
 
 /** Parse optional `dashboard-summary` argv for wishlist table paging (extension + CLI). */
 export function parseDashboardWishlistPaging(args?: Record<string, unknown>): {
@@ -292,6 +293,12 @@ export async function runDashboardSummaryCommand(
     enrich
   );
 
+  const phaseJournalStats = buildDashboardPhaseJournalStats({
+    db: dualForStatus?.getDatabase() ?? null,
+    currentKitPhase: typeof currentKitPhase === "string" ? currentKitPhase : null,
+    completedDeliveryTaskCount: currentPhaseDelivery.segments.completed
+  });
+
   const data = {
     schemaVersion: 7 as const,
     planningGeneration,
@@ -355,6 +362,7 @@ export async function runDashboardSummaryCommand(
       phaseBuckets: blockedPhaseBuckets
     },
     humanGatesSummary,
+    phaseJournalStats,
     completedSummary: {
       schemaVersion: 1 as const,
       count: completedTasks.length,

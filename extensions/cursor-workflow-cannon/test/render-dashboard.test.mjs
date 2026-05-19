@@ -1257,6 +1257,44 @@ test("renderDashboardRootInnerHtml renders human gates section with resume actio
   assert.match(html, /Awaiting review · T900/);
 });
 
+test("renderDashboardRootInnerHtml renders phase journal stats banner and quick action", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [], phaseBuckets: [] },
+      humanGatesSummary: { schemaVersion: 1, phaseKey: "100", count: 0, top: [] },
+      phaseJournalStats: {
+        schemaVersion: 1,
+        available: true,
+        phases: [{ phaseKey: "100", activeNoteCount: 0, latestNoteAt: null }],
+        currentPhase: {
+          phaseKey: "100",
+          activeNoteCount: 0,
+          completedDeliveryTaskCount: 2,
+          silenceWarning: true
+        }
+      },
+      readyQueueTop: [],
+      readyQueueCount: 0,
+      suggestedNext: null,
+      planningSession: null,
+      taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
+      workspaceStatus: { currentKitPhase: "100", nextKitPhase: "101", activeFocus: "Test" },
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+  assert.match(html, /Notes captured this phase/);
+  assert.match(html, /dash-phase-journal-silence-warn/);
+  assert.match(html, /data-wc-action="phase-note-add"/);
+});
+
 test("renderDashboardRootInnerHtml ready rows keep flex task actions without grid modifier", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,

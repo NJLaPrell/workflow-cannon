@@ -327,6 +327,8 @@ export type DashboardSummaryData = {
   };
   /** Tasks in human-gate statuses scoped to workspace current phase. */
   humanGatesSummary: DashboardHumanGatesSummary;
+  /** Per-phase phase-journal note counts + current-phase silence signal. */
+  phaseJournalStats: DashboardPhaseJournalStats;
   completedSummary: DashboardListSummary;
   cancelledSummary: DashboardListSummary;
   suggestedNext: {
@@ -366,6 +368,24 @@ export type DashboardSummaryData = {
 export type DashboardPastPhaseNotesEntry = {
   phaseKey: string;
   notes: Array<Record<string, unknown>>;
+};
+
+export type DashboardPhaseNoteCountRow = {
+  phaseKey: string;
+  activeNoteCount: number;
+  latestNoteAt: string | null;
+};
+
+export type DashboardPhaseJournalStats = {
+  schemaVersion: 1;
+  available: boolean;
+  phases: DashboardPhaseNoteCountRow[];
+  currentPhase: {
+    phaseKey: string | null;
+    activeNoteCount: number;
+    completedDeliveryTaskCount: number;
+    silenceWarning: boolean;
+  };
 };
 
 /** Success envelope for `dashboard-summary` (extension + tooling). */

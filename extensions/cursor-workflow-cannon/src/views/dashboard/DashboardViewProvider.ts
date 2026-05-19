@@ -3170,6 +3170,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     .dash-human-gate-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
     .dash-human-gate-meta { font-size: 11px; line-height: 1.3; }
+    .dash-phase-journal-silence-warn {
+      border-left: 3px solid var(--vscode-inputValidation-warningBorder, #cca700);
+      padding-left: 6px;
+    }
     .wc-filter-chip-human-gates.wc-filter-active { outline: 1px solid var(--vscode-inputValidation-warningBorder, #cca700); }
     details.status-section[data-wc-filter="research"] > summary {
       border-left: 3px solid var(--vscode-foreground);
