@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-18T21:35:34.659Z",
+  "generatedAt": "2026-05-19T07:38:54.705Z",
   "commands": [
     {
       "name": "add-dependency",
@@ -785,6 +785,11 @@
     {
       "name": "replay-queue-snapshot",
       "path": ".ai/agent-cli-snippets/by-command/replay-queue-snapshot.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "report-defect",
+      "path": ".ai/agent-cli-snippets/by-command/report-defect.json",
       "moduleId": "task-engine"
     },
     {

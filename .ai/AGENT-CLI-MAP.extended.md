@@ -171,6 +171,7 @@ Optional JSON shaping: pass **`responseTemplateId`** and/or plain-English in **`
 | Claim next runnable task | `workspace-kit run claim-next-task '<json>'` | `tasks.run-transition` | Same transition evidence as `run-transition` with action `start`, or structured no-op |
 | Start one task | `workspace-kit run start-task '<json>'` | `tasks.run-transition` | Same transition evidence and idempotency as `run-transition` |
 | Complete one task | `workspace-kit run complete-task '<json>'` | `tasks.run-transition` | Same transition evidence, delivery-evidence guard, and idempotency as `run-transition` |
+| File in-loop defect | `workspace-kit run report-defect '<json>'` | `tasks.report-defect` | Creates **`improvement` / `proposed`** via thin **`create-task`** wrapper (`title`, `summary`, `evidence` required) |
 | Promote transcript churn after research | `workspace-kit run synthesize-transcript-churn '<json>'` | `tasks.synthesize-transcript-churn` | Task becomes **`improvement` / `proposed`**; evidence row appended; prior forensics preserved under **`metadata.researchForensicsSnapshot`** |
 
 **Copy-paste (start work):**

@@ -237,6 +237,15 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "report-defect",
+    "file": "report-defect.md",
+    "description": "Create a proposed improvement task with required defect intake fields pre-filled.",
+    "policyOperationId": "tasks.report-defect",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "release-evidence-manifest",
     "file": "release-evidence-manifest.md",
     "description": "Build a machine-readable release evidence manifest for phase closeout.",
