@@ -20,7 +20,7 @@ workspace-kit run build-plan '{"action":"discard"}'
 
 ## Session snapshot (local)
 
-While an interview is **in progress** or **blocked on finalize**, the module writes a gitignored snapshot under **`.workspace-kit/planning/build-plan-session.json`** so **`dashboard-summary`** (and the Cursor extension dashboard) can show **Planning session** + a **resume CLI** line. The file is removed when the interview completes successfully (wishlist artifact, task output branch, response-only completion, or non-persisted wishlist-ready handoff).
+While an interview is **in progress** or **blocked on finalize**, the module persists a snapshot in **`workspace_module_state`** (`module_id` **`planning-build-session`**) so **`dashboard-summary`** (and the Cursor extension dashboard) can show **Planning session** + a **resume CLI** line. Legacy **`.workspace-kit/planning/build-plan-session.json`** is import-only. The row is cleared when the interview completes successfully (wishlist artifact, task output branch, response-only completion, or non-persisted wishlist-ready handoff).
 
 ## Arguments
 

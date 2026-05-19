@@ -6,8 +6,11 @@ import path from "node:path";
 import test from "node:test";
 
 import { planningModule, taskEngineModule } from "../dist/index.js";
+import { readBuildPlanSession } from "../dist/core/planning/build-plan-session-file.js";
 import { TaskStore } from "../dist/modules/task-engine/persistence/store.js";
 import { SqliteDualPlanningStore } from "../dist/modules/task-engine/persistence/sqlite-dual-planning.js";
+
+const SQLITE_CFG = { tasks: { persistenceBackend: "sqlite" } };
 
 async function loadSqliteTaskStore(workspace) {
   await mkdir(path.join(workspace, ".workspace-kit", "tasks"), { recursive: true });
@@ -35,9 +38,10 @@ test("planningModule list-planning-types returns typed workflow descriptors", as
   assert.ok(result.data.planningTypes.some((x) => x.type === "new-feature"));
 });
 
-test("planningModule build-plan persists then clears local session snapshot", async () => {
+test("planningModule build-plan persists then clears session in SQLite (no sidecar json)", async () => {
   const workspace = await tmpDir();
-  const ctx = { runtimeVersion: "0.1", workspacePath: workspace };
+  await loadSqliteTaskStore(workspace);
+  const ctx = { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG };
   const sessionFile = path.join(workspace, ".workspace-kit", "planning", "build-plan-session.json");
 
   const q = await planningModule.onCommand(
@@ -45,11 +49,11 @@ test("planningModule build-plan persists then clears local session snapshot", as
     ctx
   );
   assert.equal(q.ok, true);
-  await access(sessionFile, constants.F_OK);
-  const snap = JSON.parse(await readFile(sessionFile, "utf8"));
-  assert.equal(snap.schemaVersion, 1);
-  assert.equal(snap.planningType, "task-breakdown");
-  assert.ok(String(snap.resumeCli).includes("build-plan"));
+  await assert.rejects(() => access(sessionFile, constants.F_OK));
+  const snap = await readBuildPlanSession(workspace, SQLITE_CFG);
+  assert.equal(snap?.schemaVersion, 1);
+  assert.equal(snap?.planningType, "task-breakdown");
+  assert.ok(String(snap?.resumeCli).includes("build-plan"));
 
   const discard = await planningModule.onCommand(
     { name: "build-plan", args: { action: "discard" } },
@@ -57,13 +61,13 @@ test("planningModule build-plan persists then clears local session snapshot", as
   );
   assert.equal(discard.ok, true);
   assert.equal(discard.code, "planning-session-discarded");
-  await assert.rejects(() => readFile(sessionFile, "utf8"), { code: "ENOENT" });
+  assert.equal(await readBuildPlanSession(workspace, SQLITE_CFG), null);
 
   await planningModule.onCommand(
     { name: "build-plan", args: { planningType: "task-breakdown" } },
     ctx
   );
-  await access(sessionFile, constants.F_OK);
+  assert.ok(await readBuildPlanSession(workspace, SQLITE_CFG));
 
   const done = await planningModule.onCommand(
     {
@@ -83,7 +87,8 @@ test("planningModule build-plan persists then clears local session snapshot", as
     ctx
   );
   assert.equal(done.ok, true);
-  await assert.rejects(() => readFile(sessionFile, "utf8"), { code: "ENOENT" });
+  assert.equal(await readBuildPlanSession(workspace, SQLITE_CFG), null);
+  await assert.rejects(() => access(sessionFile, constants.F_OK));
 });
 
 test("planningModule build-plan validates planningType and returns scaffold", async () => {

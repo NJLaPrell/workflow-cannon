@@ -4,7 +4,7 @@ agentCapsule|v=1|command=interview-behavior-profile|module=agent-behavior|schema
 
 # interview-behavior-profile
 
-Stateful interview; session file under `.workspace-kit/agent-behavior/interview-session.json`.
+Stateful interview; session row under `workspace_module_state` (`agent-behavior-interview`). Legacy `.workspace-kit/agent-behavior/interview-session.json` is import-only.
 
 **Planning store:** This command does **not** read or write task-engine planning generation / SQLite task rows — only the JSON session file and (on `finalize` + `apply`) behavior profiles. No `expectedPlanningGeneration` token.
 

@@ -113,6 +113,7 @@ export function toCliGuidance(args: {
 
 export async function persistInterviewSnapshot(
   workspacePath: string,
+  effectiveConfig: Record<string, unknown> | undefined,
   args: {
     planningType: string;
     outputMode: PlanningOutputMode;
@@ -126,14 +127,18 @@ export async function persistInterviewSnapshot(
   const answeredCritical = typeof cg.answeredCritical === "number" ? cg.answeredCritical : 0;
   const totalCritical = typeof cg.totalCritical === "number" ? cg.totalCritical : 0;
   const resumeCli = typeof cg.suggestedNextCommand === "string" ? cg.suggestedNextCommand : "";
-  await persistBuildPlanSession(workspacePath, {
-    planningType: args.planningType,
-    outputMode: args.outputMode,
-    status: args.status,
-    completionPct,
-    answeredCritical,
-    totalCritical,
-    answers: args.answers,
-    resumeCli
-  });
+  await persistBuildPlanSession(
+    workspacePath,
+    {
+      planningType: args.planningType,
+      outputMode: args.outputMode,
+      status: args.status,
+      completionPct,
+      answeredCritical,
+      totalCritical,
+      answers: args.answers,
+      resumeCli
+    },
+    effectiveConfig
+  );
 }
