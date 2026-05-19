@@ -43,6 +43,7 @@ import {
 import { projectDashboardTaskRow } from "../task-read-projections.js";
 import { buildDashboardCurrentPhaseDelivery } from "../dashboard/phase-delivery-status.js";
 import { buildDashboardPastPhaseNotes } from "../dashboard/build-dashboard-past-phase-notes.js";
+import { buildDashboardApprovalQueueSummary } from "../dashboard/build-dashboard-approval-queue.js";
 import { buildDashboardHumanGatesSummary } from "../dashboard/build-dashboard-human-gates.js";
 import { buildDashboardPhaseJournalStats } from "../dashboard/build-dashboard-phase-journal-stats.js";
 
@@ -304,6 +305,7 @@ export async function runDashboardSummaryCommand(
     typeof currentKitPhase === "string" ? currentKitPhase : null,
     enrich
   );
+  const approvalQueue = buildDashboardApprovalQueueSummary(tasks);
 
   const phaseJournalStats = buildDashboardPhaseJournalStats({
     db: dualForStatus?.getDatabase() ?? null,
@@ -374,6 +376,7 @@ export async function runDashboardSummaryCommand(
       phaseBuckets: blockedPhaseBuckets
     },
     humanGatesSummary,
+    approvalQueue,
     phaseJournalStats,
     completedSummary: {
       schemaVersion: 1 as const,

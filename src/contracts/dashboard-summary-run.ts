@@ -61,6 +61,20 @@ export type DashboardHumanGatesSummary = {
   top: DashboardHumanGateRow[];
 };
 
+/** Improvement review queue for policy / approval inbox (approvals module). */
+export type DashboardApprovalQueueSummary = {
+  schemaVersion: 1;
+  count: number;
+  top: Array<{
+    id: string;
+    title: string;
+    status: string;
+    phaseKey: string | null;
+    priority: string | null;
+  }>;
+  policyArtifacts: Array<{ relativePath: string; role: string }>;
+};
+
 export type DashboardPhaseBucket = Record<string, unknown>;
 
 export type DashboardListSummary = {
@@ -342,6 +356,8 @@ export type DashboardSummaryData = {
   };
   /** Tasks in human-gate statuses scoped to workspace current phase. */
   humanGatesSummary: DashboardHumanGatesSummary;
+  /** Improvement tasks awaiting `review-item` (ready / in_progress). */
+  approvalQueue: DashboardApprovalQueueSummary;
   /** Per-phase phase-journal note counts + current-phase silence signal. */
   phaseJournalStats: DashboardPhaseJournalStats;
   completedSummary: DashboardListSummary;

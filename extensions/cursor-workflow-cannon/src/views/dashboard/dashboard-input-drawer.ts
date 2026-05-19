@@ -1701,6 +1701,73 @@ export function validateRewindCheckpointSubmit(values: Record<string, string>): 
   };
 }
 
+export function buildReviewApprovalItemDrawerSpec(p: {
+  taskId: string;
+  title: string;
+  decision: "accept" | "decline" | "accept_edited";
+}): DrawerFormSpec {
+  const decisionLabel =
+    p.decision === "accept"
+      ? "Accept"
+      : p.decision === "decline"
+        ? "Decline"
+        : "Accept with edits";
+  const fields: DrawerFormField[] = [
+    {
+      id: "policyRationale",
+      kind: "textarea",
+      label: "Policy rationale",
+      placeholder: "Recorded decision after review",
+      required: true,
+      rows: 3
+    }
+  ];
+  if (p.decision === "accept_edited") {
+    fields.unshift({
+      id: "editedSummary",
+      kind: "textarea",
+      label: "Edited summary",
+      placeholder: "Revised improvement summary",
+      required: true,
+      rows: 4
+    });
+  }
+  return {
+    workflowId: "review-approval-item",
+    title: `${decisionLabel} — ${p.taskId}`,
+    descriptionHtml:
+      "Runs <code>review-item</code> for improvement <b>" +
+      escapeDrawerHtml(p.title) +
+      "</b> (<code>" +
+      escapeDrawerHtml(p.taskId) +
+      "</code>). Decision is persisted to <code>.workspace-kit/approvals/decisions.jsonl</code>.",
+    fields,
+    primaryLabel: decisionLabel,
+    cancelLabel: "Cancel"
+  };
+}
+
+export function validateReviewApprovalItemSubmit(
+  values: Record<string, string>,
+  decision: "accept" | "decline" | "accept_edited"
+): DrawerValidationResult {
+  const policyErr = validateTeamPolicyRationale(values);
+  if (policyErr) {
+    return { ok: false, error: policyErr };
+  }
+  if (decision === "accept_edited") {
+    const editedSummary = (values.editedSummary ?? "").trim();
+    if (!editedSummary) {
+      return { ok: false, error: "Edited summary is required for accept with edits." };
+    }
+    return {
+      ok: true,
+      values: { editedSummary, policyRationale: (values.policyRationale ?? "").trim() }
+    };
+  }
+  return { ok: true, values: { policyRationale: (values.policyRationale ?? "").trim() } };
+}
+
 export function buildViewCheckpointCompareDrawerSpec(p: {
   checkpointId: string;
   refKind: string;
