@@ -18,7 +18,7 @@ Runs fast tier **`test`** plus:
 
 | Job | Steps |
 | --- | --- |
-| **`release-readiness`** | `check-release-metadata.mjs`, `pack:dry-run`, `maintainer-gates` |
+| **`release-readiness`** | `check-release-metadata.mjs`, `check-release-diff-shape.mjs` (push `before..HEAD`), `pack:dry-run`, `maintainer-gates` |
 | **`parity`** | `pnpm run parity` (+ evidence artifacts) |
 
 Phase integration branches (`release/phase-<N>`) receive full tier on **push** after merge; task PRs only see fast tier until landed on the phase branch.
@@ -29,6 +29,15 @@ Phase integration branches (`release/phase-<N>`) receive full tier on **push** a
 - **`main` / `release/*`:** require **`test`**, **`release-readiness`**, and **`parity`** before treating the branch as release-ready.
 
 Do not add `parity` as a required check on `pull_request` — it duplicates full-tier cost on every task PR.
+
+## Release diff allowlist
+
+`scripts/check-release-diff-shape.mjs` compares `RELEASE_DIFF_BASE..HEAD` (CI sets `RELEASE_DIFF_BASE` to `github.event.before` on push; locally defaults to `HEAD~1` for the latest commit).
+
+- **`main` pushes:** enforced in CI `release-readiness`.
+- **`release/phase-<N>`:** skipped during task merges; set `RELEASE_DIFF_ENFORCE=true` when validating a version-only closeout commit (local or workflow env).
+
+Default paths: `package.json`, `CHANGELOG.md`, `schemas/_generated-*`, `.workspace-kit/**`, plus `release.allowlist[]` in `workspace-kit.profile.json`.
 
 ## Related
 
