@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-19T18:23:42.677Z",
+  "generatedAt": "2026-05-19T21:35:41.760Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -593,6 +593,11 @@
       "moduleId": "task-engine"
     },
     {
+      "name": "harvest-delivery-evidence",
+      "path": ".ai/agent-cli-snippets/by-command/harvest-delivery-evidence.json",
+      "moduleId": "task-engine"
+    },
+    {
       "name": "heartbeat-workspace-edit-lease",
       "path": ".ai/agent-cli-snippets/by-command/heartbeat-workspace-edit-lease.json",
       "moduleId": "task-engine"
@@ -699,7 +704,8 @@
     },
     {
       "name": "list-session-grants",
-      "path": ".ai/agent-cli-snippets/by-command/list-session-grants.json"
+      "path": ".ai/agent-cli-snippets/by-command/list-session-grants.json",
+      "moduleId": "approvals"
     },
     {
       "name": "list-skills",

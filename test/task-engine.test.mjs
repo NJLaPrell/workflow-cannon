@@ -1203,6 +1203,7 @@ test("taskEngineModule registration includes all instruction entries", () => {
   assert.ok(names.includes("complete-task"));
   assert.ok(names.includes("report-defect"));
   assert.ok(names.includes("recommend-validation"));
+  assert.ok(names.includes("harvest-delivery-evidence"));
   assert.ok(names.includes("improvement-dedupe-explain"));
   assert.ok(names.includes("improvement-workflow-summary"));
 });

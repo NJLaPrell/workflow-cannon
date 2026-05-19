@@ -314,6 +314,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "harvest-delivery-evidence",
+    "file": "harvest-delivery-evidence.md",
+    "description": "Harvest metadata.deliveryEvidence from git and optional GitHub PR signals; preview or apply to a task.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "set-agent-activity",
     "file": "set-agent-activity.md",
     "description": "Set a short-lived dashboard agent activity lease for explicit live status.",
