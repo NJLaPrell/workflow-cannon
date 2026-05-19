@@ -82,6 +82,7 @@
     "set-current-phase",
     "start-task",
     "supersede-phase-note",
+    "sync-task-store-after-merge",
     "synthesize-transcript-churn",
     "task-persistence-readiness",
     "unblock-task",
@@ -1525,6 +1526,9 @@
       "additionalProperties": true
     },
     "supersede-phase-note": {
+      "type": "object"
+    },
+    "sync-task-store-after-merge": {
       "type": "object"
     },
     "synthesize-transcript-churn": {

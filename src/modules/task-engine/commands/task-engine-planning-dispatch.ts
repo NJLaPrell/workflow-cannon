@@ -24,6 +24,7 @@ import { resolveTaskArchiveDependencyCommands } from "./task-archive-dependency-
 import { resolveTaskEngineReadoutTail } from "./task-engine-readout-tail.js";
 import { runBatchTransitionCommand } from "./batch-transition-on-command.js";
 import { runReportDefectCommand } from "./report-defect-on-command.js";
+import { runSyncTaskStoreAfterMergeCommand } from "./sync-task-store-after-merge-command.js";
 import { isTaskIntentCommand, runClaimNextTaskIntent, runTaskIntentTransition } from "./task-intent-commands.js";
 import { resolveTaskPhaseCommands } from "./task-phase-on-command.js";
 import { runTaskRowMutationCommands } from "./task-row-mutation-commands.js";
@@ -104,6 +105,10 @@ export async function dispatchTaskEnginePlanningCommands(
 
   if (command.name === "report-defect") {
     return runReportDefectCommand(ctx, planning, store, args as Record<string, unknown>);
+  }
+
+  if (command.name === "sync-task-store-after-merge") {
+    return runSyncTaskStoreAfterMergeCommand(ctx, args as Record<string, unknown>);
   }
 
   if (command.name === "batch-transition") {

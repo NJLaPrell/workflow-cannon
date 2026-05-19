@@ -126,6 +126,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "start-task",
     "supersede-phase-note",
     "sync-effective-behavior-cursor-rule",
+    "sync-task-store-after-merge",
     "synthesize-transcript-churn",
     "task-persistence-readiness",
     "unblock-task",
