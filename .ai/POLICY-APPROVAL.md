@@ -37,11 +37,11 @@ Cursor slash commands (for example **`/generate-features`**), Composer text, das
 ## Evidence
 
 - Traces: `.workspace-kit/policy/traces.jsonl`
-- Session grants: `.workspace-kit/policy/session-grants.json` when using `scope":"session"`
+- Session grants: **`kit_session_grants`** (SQLite) when using `scope":"session"` — list with **`workspace-kit run list-session-grants '{}'`
 
 ## Discovering approval-adjacent work (read-only)
 
-- **Improvement `review-item` queue** — `workspace-kit run list-approval-queue '{}'` returns **`ready`** and **`in_progress`** improvement tasks (the same ids **`review-item`** accepts) plus stable relative paths for **`traces.jsonl`**, **`session-grants.json`**, and **`kit_approval_decisions`** (SQLite; legacy **`decisions.jsonl`** import-only). Instruction: `src/modules/approvals/instructions/list-approval-queue.md`.
+- **Improvement `review-item` queue** — `workspace-kit run list-approval-queue '{}'` returns **`ready`** and **`in_progress`** improvement tasks (the same ids **`review-item`** accepts) plus stable relative paths for **`kit_policy_traces`**, **`list-session-grants`**, and **`kit_approval_decisions`** (legacy JSON import-only where noted). Instruction: `src/modules/approvals/instructions/list-approval-queue.md`.
 - **Proposed improvements (triage, not `review-item`)** — `workspace-kit run list-tasks '{"type":"improvement","status":"proposed"}'`; playbook **`.ai/playbooks/improvement-triage-top-three.md`**.
 - **Rollups** — `workspace-kit run dashboard-summary '{}'` (**`proposedImprovementsSummary`**, **`readyImprovementsSummary`**, maintainer **`pending_decisions`** in **`workspaceStatus`** when present).
 

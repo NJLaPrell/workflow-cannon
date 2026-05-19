@@ -78,6 +78,14 @@ export function runGetKitPersistenceMap(ctx: ModuleLifecycleContext): ModuleComm
         legacyJsonlImportOnly: [".workspace-kit/policy/traces.jsonl"],
         note:
           "Policy events append transactionally to kit_policy_traces. Improvement ingestion advances lastIngestedPolicyTraceId monotonically. Legacy traces.jsonl is import-only."
+      },
+      sessionGrants: {
+        minKitSqliteUserVersion: 26,
+        tables: ["kit_session_grants"],
+        legacyJsonImportOnly: [".workspace-kit/policy/session-grants.json"],
+        listCommand: "list-session-grants",
+        note:
+          "Session-scoped policyApproval reuse is stored per (session_id, operation_id). Query with workspace-kit run list-session-grants. Legacy session-grants.json is import-only."
       }
     } as Record<string, unknown>
   };

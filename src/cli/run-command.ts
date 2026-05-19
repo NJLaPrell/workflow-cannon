@@ -232,7 +232,7 @@ export async function handleRunCommand(
 
   if (sensitive) {
     if (!resolvedSensitiveApproval && policyOp) {
-      const grant = await getSessionGrant(cwd, policyOp, sessionId);
+      const grant = await getSessionGrant(cwd, policyOp, sessionId, effective);
       if (grant) {
         resolvedSensitiveApproval = { confirmed: true, rationale: grant.rationale };
       }
@@ -438,7 +438,8 @@ export async function handleRunCommand(
           cwd,
           policyOp,
           sessionId,
-          resolvedSensitiveApproval.rationale
+          resolvedSensitiveApproval.rationale,
+          effective
         );
       }
     }

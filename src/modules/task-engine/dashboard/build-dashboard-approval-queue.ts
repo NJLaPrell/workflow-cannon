@@ -31,7 +31,7 @@ export function buildDashboardApprovalQueueSummary(tasks: TaskEntity[]): Dashboa
         role: "Policy check audit trail for sensitive workspace-kit run commands."
       },
       {
-        relativePath: ".workspace-kit/policy/session-grants.json",
+        relativePath: "list-session-grants",
         role: "Session-scoped reuse of JSON policyApproval when scope is session."
       },
       {

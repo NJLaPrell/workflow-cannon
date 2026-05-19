@@ -905,6 +905,14 @@
   },
   {
     "moduleId": "approvals",
+    "name": "list-session-grants",
+    "file": "list-session-grants.md",
+    "description": "Read-only: session-scoped policy grants in kit_session_grants (SQLite).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "approvals",
     "name": "review-item",
     "file": "review-item.md",
     "description": "Review and record an approval decision.",

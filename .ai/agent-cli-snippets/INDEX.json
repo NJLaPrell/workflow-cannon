@@ -698,6 +698,10 @@
       "moduleId": "plugins"
     },
     {
+      "name": "list-session-grants",
+      "path": ".ai/agent-cli-snippets/by-command/list-session-grants.json"
+    },
+    {
       "name": "list-skills",
       "path": ".ai/agent-cli-snippets/by-command/list-skills.json",
       "moduleId": "skills"
