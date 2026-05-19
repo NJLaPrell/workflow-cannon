@@ -49,6 +49,7 @@
     "heartbeat-workspace-edit-lease",
     "improvement-dedupe-explain",
     "improvement-workflow-summary",
+    "install-git-hooks",
     "list-components",
     "list-features",
     "list-module-states",
@@ -84,6 +85,7 @@
     "synthesize-transcript-churn",
     "task-persistence-readiness",
     "unblock-task",
+    "uninstall-git-hooks",
     "update-phase-note",
     "update-task",
     "update-wishlist",
@@ -846,6 +848,9 @@
     "improvement-workflow-summary": {
       "type": "object",
       "additionalProperties": false
+    },
+    "install-git-hooks": {
+      "type": "object"
     },
     "list-components": {
       "type": "object"
@@ -1618,6 +1623,9 @@
         }
       },
       "additionalProperties": true
+    },
+    "uninstall-git-hooks": {
+      "type": "object"
     },
     "update-phase-note": {
       "type": "object"

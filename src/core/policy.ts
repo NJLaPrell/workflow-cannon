@@ -30,6 +30,8 @@ export type PolicyOperationId =
   | "doc.generate-document"
   | "tasks.run-transition"
   | "tasks.report-defect"
+  | "tasks.install-git-hooks"
+  | "tasks.uninstall-git-hooks"
   | "tasks.synthesize-transcript-churn"
   | "approvals.review-item"
   | "improvement.generate-recommendations"

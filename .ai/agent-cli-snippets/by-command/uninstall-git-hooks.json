@@ -1,0 +1,39 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "uninstall-git-hooks",
+  "schema": {
+    "type": "object"
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run uninstall-git-hooks '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/uninstall-git-hooks.md",
+  "moduleId": "task-engine",
+  "description": "Remove workspace-kit git policy hooks and clear core.hooksPath when kit-owned.",
+  "policy": {
+    "sensitivity": "sensitive",
+    "operationId": "tasks.uninstall-git-hooks",
+    "jsonApprovalRequired": true
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  }
+}
