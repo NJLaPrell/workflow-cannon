@@ -3456,7 +3456,7 @@ export function renderDashboardRootInnerHtml(
 
   const caePanelContent =
     typeof embeddedCaePanelHtml === "string" && embeddedCaePanelHtml.trim().length > 0
-      ? '<div class="gp-root wc-dash-cae-host dash-cae-embedded">' +
+      ? '<div class="gp-root wc-dash-cae-host dash-cae-embedded wc-dashboard-embedded-guidance">' +
         namespaceEmbeddedCaePanelHtml(embeddedCaePanelHtml) +
         "<script>" +
         buildGuidanceAuthoringWebviewBootstrap("dash-cae-") +
