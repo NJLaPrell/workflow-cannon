@@ -2536,7 +2536,7 @@ function renderApprovalInboxSection(queue: unknown): string {
     "<p><b>Policy Approval Inbox</b></p>" +
     statusLine +
     toolbar +
-    '<p class="muted">Audit: <code>.workspace-kit/approvals/decisions.jsonl</code> · <code>.workspace-kit/policy/traces.jsonl</code></p>' +
+    '<p class="muted">Audit: <code>kit_approval_decisions</code> (SQLite) · <code>.workspace-kit/policy/traces.jsonl</code></p>' +
     '<div class="dash-row-list" role="list">' +
     rows +
     "</div></section>"

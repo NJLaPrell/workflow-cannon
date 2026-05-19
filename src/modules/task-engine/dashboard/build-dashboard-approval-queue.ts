@@ -35,7 +35,7 @@ export function buildDashboardApprovalQueueSummary(tasks: TaskEntity[]): Dashboa
         role: "Session-scoped reuse of JSON policyApproval when scope is session."
       },
       {
-        relativePath: ".workspace-kit/approvals/decisions.jsonl",
+        relativePath: "kit_approval_decisions",
         role: "Immutable review-item decision records after maintainer action."
       }
     ]

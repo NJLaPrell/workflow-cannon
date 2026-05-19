@@ -55,8 +55,8 @@ export async function runListApprovalQueue(ctx: ModuleLifecycleContext): Promise
           role: "Session-scoped reuse of JSON policyApproval when scope is session."
         },
         {
-          relativePath: ".workspace-kit/approvals/decisions.jsonl",
-          role: "Immutable review-item decision records after maintainer action."
+          relativePath: "kit_approval_decisions (SQLite)",
+          role: "Immutable review-item decision records after maintainer action (legacy decisions.jsonl imported once)."
         }
       ],
       dashboardSummary:

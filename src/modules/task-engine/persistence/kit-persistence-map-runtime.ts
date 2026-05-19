@@ -49,6 +49,16 @@ export function runGetKitPersistenceMap(ctx: ModuleLifecycleContext): ModuleComm
         minKitSqliteUserVersion: 8,
         tables: ["kit_plugin_state"],
         note: "Claude-layout plugin install provenance + enable/disable toggles; discovery remains filesystem under plugins.discoveryRoots. See docs/maintainers/adrs/ADR-claude-code-plugin-platform-v1.md."
+      },
+      audit: {
+        minKitSqliteUserVersion: 24,
+        tables: ["kit_approval_decisions", "kit_skill_apply_audit"],
+        legacyJsonlImportOnly: [
+          ".workspace-kit/approvals/decisions.jsonl",
+          ".workspace-kit/evidence/skill-apply-audit.jsonl"
+        ],
+        note:
+          "Review-item decision fingerprints and skill-apply audit rows are canonical in unified SQLite. Legacy JSONL files are imported once on first access, then archived with a .migrated suffix."
       }
     } as Record<string, unknown>
   };

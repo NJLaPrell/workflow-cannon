@@ -1,7 +1,7 @@
-import fs from "node:fs";
-import path from "node:path";
-
-const AUDIT_REL = path.join(".workspace-kit", "evidence", "skill-apply-audit.jsonl");
+import {
+  importSkillApplyAuditJsonlIfNeeded,
+  openKitAuditDatabase
+} from "../../core/state/kit-audit-sqlite.js";
 
 export type SkillApplyAuditLine = {
   schemaVersion: 1;
@@ -12,8 +12,25 @@ export type SkillApplyAuditLine = {
   recordAudit: boolean;
 };
 
-export function appendSkillApplyAudit(workspacePath: string, line: SkillApplyAuditLine): void {
-  const abs = path.join(workspacePath, AUDIT_REL);
-  fs.mkdirSync(path.dirname(abs), { recursive: true });
-  fs.appendFileSync(abs, `${JSON.stringify(line)}\n`, "utf8");
+export function appendSkillApplyAudit(
+  workspacePath: string,
+  line: SkillApplyAuditLine,
+  effectiveConfig?: Record<string, unknown>
+): void {
+  const db = openKitAuditDatabase(workspacePath, effectiveConfig);
+  try {
+    importSkillApplyAuditJsonlIfNeeded(db, workspacePath);
+    db.prepare(
+      `INSERT INTO kit_skill_apply_audit (recorded_at, skill_id, actor, dry_run, record_audit)
+       VALUES (@recorded_at, @skill_id, @actor, @dry_run, @record_audit)`
+    ).run({
+      recorded_at: line.at,
+      skill_id: line.skillId,
+      actor: line.actor,
+      dry_run: line.dryRun ? 1 : 0,
+      record_audit: line.recordAudit ? 1 : 0
+    });
+  } finally {
+    db.close();
+  }
 }
