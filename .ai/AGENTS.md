@@ -54,5 +54,7 @@ rule|id=A032|level=must_not|scope=agent|directive=hand_edit_repo_root_readme_md_
 
 rule|id=A033|level=must_not|scope=agent|directive=rely_on_github_issues_as_the_defect_or_execution_backlog_for_this_repository|risk=medium|approval=none|override=warn|status=active|refs=src/modules/task-engine/instructions/create-task.md,.ai/WORKSPACE-KIT-SESSION.md|why=sqlite_task_store_is_canonical_tracker
 
+rule|id=A034|level=should|scope=agent|directive=when_a_finding_decision_or_gotcha_occurs_during_task_delivery_capture_phase_journal_via_add_phase_note_or_phaseNotes_on_run_transition_complete_per_playbook_task_to_phase_branch|risk=low|approval=none|override=warn|status=active|refs=.ai/playbooks/task-to-phase-branch.md,.ai/playbooks/phase-closeout-and-release.md,src/modules/task-engine/instructions/add-phase-note.md,src/modules/task-engine/instructions/run-transition.md|why=phase_journal_adoption_requires_explicit_playbook_steps
+
 command|id=C001|name=document-project|use=module_command_router|scope=documentation|expectation=batch_generation_all_templates|risk=low|status=active
 command|id=C002|name=generate-document|use=module_command_router|scope=documentation|expectation=single_document_generation|risk=low|status=active

@@ -33,6 +33,16 @@ workspace-kit run run-transition '{"taskId":"T###","action":"start","expectedPla
 
 (Omit **`expectedPlanningGeneration`** when policy is not **`require`**.)
 
+## 0c) Phase journal — capture context at start (when useful)
+
+When you inherit non-obvious phase context (prior task outcomes, branch conventions, operator decisions), record it in the **phase journal** so closeout and the next agent do not rely on chat memory.
+
+```bash
+workspace-kit run add-phase-note '{"phaseKey":"<N>","noteType":"decision","summary":"Inherited: phase integrates on release/phase-<N>; delivery evidence enforced."}'
+```
+
+See [`add-phase-note.md`](../../src/modules/task-engine/instructions/add-phase-note.md). Do **not** paste secrets or large excerpts.
+
 ## 1) Ensure the phase integration branch exists
 
 1. `git fetch origin`.
@@ -121,10 +131,18 @@ Waivers are for maintainer-approved exceptions only and require `schemaVersion`,
 workspace-kit run phase-delivery-preflight '{"phaseKey":"<N>","includeInProgress":true}'
 ```
 
-5. **Update task-engine state** after the work is merged (or in sync with merge): transition the task to **`completed`** when acceptance criteria are met — **not** a substitute for Git, but required kit-owned evidence:
+5. **Update task-engine state** after the work is merged (or in sync with merge): transition the task to **`completed`** when acceptance criteria are met — **not** a substitute for Git, but required kit-owned evidence.
+
+When you observed a **finding**, **gotcha**, or **follow-up** during the task, attach **`phaseNotes`** on the same **`complete`** call (same SQLite transaction as the transition):
 
 ```bash
-workspace-kit run run-transition '{"taskId":"T###","action":"complete","policyApproval":{"confirmed":true,"rationale":"merged to release/phase-<N>; acceptance criteria satisfied"}}'
+workspace-kit run run-transition '{"taskId":"T###","action":"complete","expectedPlanningGeneration":<n>,"policyApproval":{"confirmed":true,"rationale":"merged to release/phase-<N>; acceptance criteria satisfied"},"phaseNotes":[{"noteType":"gotcha","summary":"Short operational note — no secrets"}]}'
+```
+
+Without journal capture needs, **`complete`** alone is fine:
+
+```bash
+workspace-kit run run-transition '{"taskId":"T###","action":"complete","expectedPlanningGeneration":<n>,"policyApproval":{"confirmed":true,"rationale":"merged to release/phase-<N>; acceptance criteria satisfied"}}'
 ```
 
 If the task should **not** complete (partial delivery, superseded scope), use the appropriate **`run-transition`** action per [`src/modules/task-engine/instructions/run-transition.md`](../../../src/modules/task-engine/instructions/run-transition.md) instead of **`complete`**.
