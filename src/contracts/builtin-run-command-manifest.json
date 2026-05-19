@@ -264,6 +264,15 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "sync-task-store-after-merge",
+    "file": "sync-task-store-after-merge.md",
+    "description": "Diff task-store SQLite between a source git ref and working tree; replay missing transitions after feature merge.",
+    "policyOperationId": "tasks.sync-task-store-after-merge",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "release-evidence-manifest",
     "file": "release-evidence-manifest.md",
     "description": "Build a machine-readable release evidence manifest for phase closeout.",
