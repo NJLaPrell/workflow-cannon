@@ -121,4 +121,37 @@ describe("CAE evaluateActivationBundle (T860)", () => {
       "expected journal artifact in do bundle for add-phase-note"
     );
   });
+
+  it("run-transition surfaces cae.playbook.improvement-discovery in review bundle", () => {
+    const ctx = {
+      schemaVersion: 1,
+      task: { taskId: "T100305", status: "in_progress", phaseKey: "101" },
+      command: {
+        name: "run-transition",
+        moduleId: "task-engine",
+        argvSummary: '{"taskId":"T100305","action":"complete"}'
+      },
+      workspace: {
+        currentKitPhase: "101",
+        nextKitPhase: "102",
+        workspaceRootFingerprint: "sha256:testimprovementdiscovery"
+      },
+      governance: {
+        policyApprovalRequired: true,
+        approvalTierHint: "A",
+        policySurface: "run-json"
+      },
+      queue: { readyQueueDepth: 0, suggestedNextTaskId: null },
+      mapSignals: null
+    };
+    const regRes = loadCaeRegistry(root);
+    assert.equal(regRes.ok, true);
+    const { bundle } = evaluateActivationBundle(ctx, regRes.value, { evalMode: "live" });
+    const reviewArts =
+      bundle.families.review?.flatMap((row) => row.artifactIds ?? []) ?? [];
+    assert.ok(
+      reviewArts.includes("cae.playbook.improvement-discovery"),
+      "expected improvement-discovery playbook in review bundle for run-transition"
+    );
+  });
 });
