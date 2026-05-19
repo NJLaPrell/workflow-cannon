@@ -31,12 +31,9 @@ export function runGetKitPersistenceMap(ctx: ModuleLifecycleContext): ModuleComm
       },
       workspaceModuleState: {
         table: "workspace_module_state",
-        knownModuleIds: ["task-engine", "improvement", "agent-behavior", "team-execution", "plugins"]
-      },
-      legacySidecarJsonFiles: {
-        improvement: ".workspace-kit/improvement/state.json",
-        agentBehavior: ".workspace-kit/agent-behavior/state.json",
-        note: "Read once when migrating from file to unified SQLite; saves go to workspace_module_state."
+        knownModuleIds: ["task-engine", "improvement", "agent-behavior", "team-execution", "plugins"],
+        note:
+          "Module-scoped JSON (improvement cursors, agent-behavior profiles, etc.) is canonical in workspace_module_state. Legacy sidecar state.json files are import-only: read once on load, persisted to SQLite, then renamed with a .migrated suffix."
       },
       subagents: {
         minKitSqliteUserVersion: 6,

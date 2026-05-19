@@ -1,6 +1,9 @@
-import fs from "node:fs/promises";
-import path from "node:path";
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
+import {
+  archiveSidecarFile,
+  persistModuleStateRow,
+  readSidecarJsonFile
+} from "../../core/state/module-state-sidecar-migration.js";
 import { UnifiedStateDb } from "../../core/state/unified-state-db.js";
 import { planningSqliteDatabaseRelativePath } from "../task-engine/planning-config.js";
 
@@ -39,13 +42,9 @@ export type ImprovementStateDocument = {
   scoutRotationHistory: ScoutRotationEntry[];
 };
 
-const DEFAULT_REL = ".workspace-kit/improvement/state.json";
+export const IMPROVEMENT_STATE_SIDECAR_REL = ".workspace-kit/improvement/state.json";
 
 const IMPROVEMENT_MODULE_STATE_ID = "improvement";
-
-function statePath(workspacePath: string): string {
-  return path.join(workspacePath, DEFAULT_REL);
-}
 
 export function emptyImprovementState(): ImprovementStateDocument {
   return {
@@ -154,32 +153,35 @@ export function appendScoutRotationEntry(doc: ImprovementStateDocument, entry: S
   return doc;
 }
 
-async function loadImprovementStateFromFile(workspacePath: string): Promise<ImprovementStateDocument | null> {
-  const fp = statePath(workspacePath);
-  try {
-    const rawText = await fs.readFile(fp, "utf8");
-    const raw = JSON.parse(rawText) as Record<string, unknown>;
-    return normalizeLoadedDoc(raw);
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") {
-      return null;
-    }
-    throw e;
-  }
-}
-
 export async function loadImprovementState(
   workspacePath: string,
   effectiveConfig?: Record<string, unknown>
 ): Promise<ImprovementStateDocument> {
   const ctx = { workspacePath, effectiveConfig } as ModuleLifecycleContext;
-  const unified = new UnifiedStateDb(workspacePath, planningSqliteDatabaseRelativePath(ctx));
+  const dbRel = planningSqliteDatabaseRelativePath(ctx);
+  const unified = new UnifiedStateDb(workspacePath, dbRel);
   const row = unified.getModuleState(IMPROVEMENT_MODULE_STATE_ID);
   if (row?.state) {
     return normalizeLoadedDoc(row.state as Record<string, unknown>);
   }
-  const fromFile = await loadImprovementStateFromFile(workspacePath);
-  return fromFile ?? emptyImprovementState();
+  const sidecar = await readSidecarJsonFile(workspacePath, IMPROVEMENT_STATE_SIDECAR_REL);
+  if (sidecar.ok) {
+    const doc = normalizeLoadedDoc(sidecar.value);
+    persistModuleStateRow({
+      workspacePath,
+      databaseRelativePath: dbRel,
+      moduleId: IMPROVEMENT_MODULE_STATE_ID,
+      stateSchemaVersion: doc.schemaVersion,
+      state: doc as unknown as Record<string, unknown>
+    });
+    await archiveSidecarFile(workspacePath, IMPROVEMENT_STATE_SIDECAR_REL);
+    return doc;
+  }
+  if ("corrupt" in sidecar && sidecar.corrupt) {
+    await archiveSidecarFile(workspacePath, IMPROVEMENT_STATE_SIDECAR_REL);
+    return emptyImprovementState();
+  }
+  return emptyImprovementState();
 }
 
 export async function saveImprovementState(
