@@ -127,6 +127,21 @@ export type DashboardTeamExecutionSummary = {
   topActive: DashboardTeamAssignmentRow[];
 };
 
+/** Read-only task-linked git checkpoint rollup for dashboard / extension (Phase 64+). */
+export type DashboardTaskCheckpointsSummary = {
+  schemaVersion: 1;
+  available: boolean;
+  totalCount: number;
+  topRecent: Array<{
+    id: string;
+    taskId: string | null;
+    label: string | null;
+    refKind: "head" | "stash";
+    createdAt: string;
+    gitHeadSha: string;
+  }>;
+};
+
 /** Read-only subagent registry rollup for dashboard / extension (Phase 60+). */
 export type DashboardSubagentRegistrySummary = {
   schemaVersion: 1;
@@ -352,6 +367,8 @@ export type DashboardSummaryData = {
   teamExecution: DashboardTeamExecutionSummary;
   /** Subagent definitions + open sessions from `kit_subagent_*` (Phase 60+). */
   subagentRegistry: DashboardSubagentRegistrySummary;
+  /** Task-linked git checkpoints from `kit_task_checkpoints` (Phase 64+). */
+  taskCheckpoints: DashboardTaskCheckpointsSummary;
   /** Phase/drift, doctor contract, module activation, CAE lines — status tab aggregate (Phase 79+). */
   systemStatus: DashboardSystemStatus;
   /** Conservative, read-only WC Agent status derived from dashboard/task state (Phase 81+). */

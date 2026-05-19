@@ -11,6 +11,7 @@ import {
   buildImprovementTriagePrompt,
   buildPhaseNotesDiscoveryPrompt,
   buildSubagentRegistryPrompt,
+  buildTaskCheckpointsRecoveryPrompt,
   buildTeamExecutionSupervisorPrompt,
   buildPlanningInterviewPrompt,
   buildPlanningInterviewResumePrompt,
@@ -52,6 +53,9 @@ import {
   buildSpawnSubagentDrawerSpec,
   buildCloseSubagentSessionDrawerSpec,
   buildRetireSubagentDrawerSpec,
+  buildCreateCheckpointDrawerSpec,
+  buildRewindCheckpointDrawerSpec,
+  buildViewCheckpointCompareDrawerSpec,
   buildViewPhaseNoteDrawerSpec,
   normalizeDrawerValues,
   validateRegisterTeamAssignmentSubmit,
@@ -63,6 +67,8 @@ import {
   validateSpawnSubagentSubmit,
   validateCloseSubagentSessionSubmit,
   validateRetireSubagentSubmit,
+  validateCreateCheckpointSubmit,
+  validateRewindCheckpointSubmit,
   renderDrawerFormHtml,
   validateAcceptProposedSubmit,
   validateAddPhaseNoteSubmit,
@@ -106,7 +112,10 @@ type DashboardDrawerSession =
   | { kind: "register-subagent" }
   | { kind: "spawn-subagent"; subagentId?: string; executionTaskId?: string }
   | { kind: "close-subagent-session"; sessionId: string; definitionId: string }
-  | { kind: "retire-subagent"; subagentId?: string };
+  | { kind: "retire-subagent"; subagentId?: string }
+  | { kind: "create-checkpoint"; mode: "head" | "stash"; taskId?: string }
+  | { kind: "rewind-checkpoint"; checkpointId: string; refKind: string; taskId?: string }
+  | { kind: "view-checkpoint-compare" };
 
 function logDashboard(message: string): void {
   if (!dashboardOutput) {
@@ -590,6 +599,28 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (msg?.type === "retireSubagent") {
         const subagentId = typeof msg.subagentId === "string" ? msg.subagentId.trim() : "";
         await this.openRetireSubagentDrawer(subagentId);
+      }
+      if (msg?.type === "prefillTaskCheckpointsRecoveryChat") {
+        await prefillCursorChat(buildTaskCheckpointsRecoveryPrompt(), { newChat: true });
+      }
+      if (msg?.type === "createCheckpoint") {
+        const mode = msg.mode === "stash" ? "stash" : "head";
+        const taskId = typeof msg.taskId === "string" ? msg.taskId.trim() : "";
+        await this.openCreateCheckpointDrawer(mode, taskId);
+      }
+      if (msg?.type === "compareCheckpoint") {
+        const checkpointId = typeof msg.checkpointId === "string" ? msg.checkpointId.trim() : "";
+        if (checkpointId) {
+          await this.openCompareCheckpointDrawer(checkpointId);
+        }
+      }
+      if (msg?.type === "rewindCheckpoint") {
+        const checkpointId = typeof msg.checkpointId === "string" ? msg.checkpointId.trim() : "";
+        const refKind = typeof msg.refKind === "string" ? msg.refKind.trim() : "head";
+        const taskId = typeof msg.taskId === "string" ? msg.taskId.trim() : "";
+        if (checkpointId) {
+          await this.openRewindCheckpointDrawer(checkpointId, refKind, taskId);
+        }
       }
       if (msg?.type === "convertPhaseNote") {
         const nid = typeof msg.noteId === "string" ? msg.noteId.trim() : "";
@@ -1684,6 +1715,60 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       await vscode.window.showInformationMessage(r.message ?? `Retired subagent ${validated.values.subagentId}`);
       return true;
     }
+    if (session.kind === "create-checkpoint") {
+      const validated = validateCreateCheckpointSubmit(values);
+      if (!validated.ok) {
+        await this.postDrawerValidationToWebview(validated.error);
+        return false;
+      }
+      const payload: Record<string, unknown> = {
+        mode: session.mode,
+        policyApproval: { confirmed: true, rationale: validated.values.policyRationale },
+        ...expectedPlanningGenerationArgs()
+      };
+      if (validated.values.taskId) {
+        payload.taskId = validated.values.taskId;
+      }
+      if (validated.values.label) {
+        payload.label = validated.values.label;
+      }
+      const r = await this.client.run("create-checkpoint", payload);
+      if (!r.ok) {
+        await this.postDrawerValidationToWebview((r.message ?? JSON.stringify(r)).slice(0, 900));
+        return false;
+      }
+      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+      this.closeDashboardDrawer();
+      this.notifyKitStateChanged();
+      await vscode.window.showInformationMessage(r.message ?? "Checkpoint created");
+      return true;
+    }
+    if (session.kind === "rewind-checkpoint") {
+      const validated = validateRewindCheckpointSubmit(values);
+      if (!validated.ok) {
+        await this.postDrawerValidationToWebview(validated.error);
+        return false;
+      }
+      const r = await this.client.run("rewind-to-checkpoint", {
+        checkpointId: session.checkpointId,
+        force: validated.values.force === "yes",
+        policyApproval: { confirmed: true, rationale: validated.values.policyRationale },
+        ...expectedPlanningGenerationArgs()
+      });
+      if (!r.ok) {
+        await this.postDrawerValidationToWebview((r.message ?? JSON.stringify(r)).slice(0, 900));
+        return false;
+      }
+      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+      this.closeDashboardDrawer();
+      this.notifyKitStateChanged();
+      await vscode.window.showInformationMessage(r.message ?? "Rewound to checkpoint");
+      return true;
+    }
+    if (session.kind === "view-checkpoint-compare") {
+      this.closeDashboardDrawer();
+      return false;
+    }
     return false;
   }
 
@@ -1831,6 +1916,67 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildRetireSubagentDrawerSpec({ subagentId: subagentId || undefined }));
     this.dashboardDrawerSession = { kind: "retire-subagent", subagentId: subagentId || undefined };
+    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+  }
+
+  private async openCreateCheckpointDrawer(mode: "head" | "stash", taskId?: string): Promise<void> {
+    if (this.dashboardDrawerSession) {
+      return;
+    }
+    const html = renderDrawerFormHtml(
+      buildCreateCheckpointDrawerSpec({ mode, taskId: taskId || undefined })
+    );
+    this.dashboardDrawerSession = { kind: "create-checkpoint", mode, taskId: taskId || undefined };
+    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+  }
+
+  private async openRewindCheckpointDrawer(
+    checkpointId: string,
+    refKind: string,
+    taskId?: string
+  ): Promise<void> {
+    if (this.dashboardDrawerSession) {
+      return;
+    }
+    const html = renderDrawerFormHtml(
+      buildRewindCheckpointDrawerSpec({
+        checkpointId,
+        refKind,
+        taskId: taskId || null
+      })
+    );
+    this.dashboardDrawerSession = {
+      kind: "rewind-checkpoint",
+      checkpointId,
+      refKind,
+      taskId: taskId || undefined
+    };
+    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+  }
+
+  private async openCompareCheckpointDrawer(checkpointId: string): Promise<void> {
+    if (this.dashboardDrawerSession) {
+      return;
+    }
+    const r = await this.client.run("compare-checkpoint", { checkpointId });
+    if (!r.ok) {
+      await vscode.window.showErrorMessage((r.message ?? JSON.stringify(r)).slice(0, 900));
+      return;
+    }
+    const data = (r.data ?? {}) as Record<string, unknown>;
+    const lines = Array.isArray(data.nameStatusLines)
+      ? data.nameStatusLines.filter((x): x is string => typeof x === "string")
+      : [];
+    const html = renderDrawerFormHtml(
+      buildViewCheckpointCompareDrawerSpec({
+        checkpointId,
+        refKind: typeof data.refKind === "string" ? data.refKind : "head",
+        compareFrom: typeof data.compareFrom === "string" ? data.compareFrom : "",
+        compareTo: typeof data.compareTo === "string" ? data.compareTo : "",
+        nameStatusLines: lines
+      })
+    );
+    this.dashboardDrawerSession = { kind: "view-checkpoint-compare" };
     await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
   }
 
@@ -2583,7 +2729,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (act === 'planning-wizard-start') { var sel = document.getElementById('wc-planning-type'); var pt = sel && sel.value ? String(sel.value).trim() : ''; if (pt) vscode.postMessage({type:'planningWizardStart',planningType:pt}); return; }
     if (act === 'planning-wizard-submit') { var ta = document.getElementById('wc-planning-answer'); var txt = ta && typeof ta.value === 'string' ? ta.value.trim() : ''; vscode.postMessage({type:'planningWizardSubmit',answer:txt}); return; }
     if (act === 'planning-wizard-cancel') { vscode.postMessage({type:'planningWizardCancel'}); return; }
-    if (act === 'planning-wizard-dismiss') { vscode.postMessage({type:'planningWizardDismiss'});return;}if(act==="collaboration-hub"){vscode.postMessage({type:"prefillCollaborationHubChat"});return;}if(act==="deliver-phase-prompt"){var kp=(t.getAttribute("data-wc-kit-phase")||"").trim();vscode.postMessage({type:"prefillDeliverPhaseChat",kitPhase:kp});return;}if(act==="add-wishlist-item"){vscode.postMessage({type:"addWishlistItem"});return;}if(act==="generate-features-chat"){vscode.postMessage({type:"prefillGenerateFeaturesChat"});return;}if(act==="transcript-churn-research-chat"){var tcTid=(t.getAttribute("data-task-id")||"").trim();vscode.postMessage({type:"prefillTranscriptChurnResearchChat",taskId:tcTid});return;}if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-page"){var wpp=parseInt(String(t.getAttribute("data-wishlist-page")||"0"),10);if(!Number.isNaN(wpp)&&wpp>=0)vscode.postMessage({type:"wishlistPage",page:wpp});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}if(act==="phase-complete-release"){var ph=(t.getAttribute("data-wc-phase-phrase")||"").trim();var pk=(t.getAttribute("data-wc-phase-key")||"").trim();var ids=(t.getAttribute("data-wc-phase-task-ids")||"").trim();var wcur=(t.getAttribute("data-wc-workspace-current-phase")||"").trim();var wnxt=(t.getAttribute("data-wc-workspace-next-phase")||"").trim();var rscope=(t.getAttribute("data-wc-release-scope")||"").trim();vscode.postMessage({type:"prefillPhaseCompleteReleaseChat",phasePhrase:ph,phaseKey:pk,seededTaskIdsCsv:ids,workspaceCurrentPhase:wcur,workspaceNextPhase:wnxt,scope:rscope==="current"?"current":rscope==="bucket"?"bucket":undefined});return;}if(act==="proposed-imp-accept-phase"||act==="proposed-exe-accept-phase"){var batch=(t.getAttribute("data-proposed-task-ids")||"").trim();var cat=act==="proposed-exe-accept-phase"?"execution":"improvement";vscode.postMessage({type:"dashboardAcceptProposedPhase",category:cat,taskIds:batch});return;}if(act==="phase-notes-chat"){vscode.postMessage({type:"prefillPhaseNotesDiscoveryChat"});return;}if(act==="phase-note-add"){vscode.postMessage({type:"addPhaseNote"});return;}if(act==="phase-note-dismiss"){var dpn=(t.getAttribute("data-note-id")||"").trim();var dpp=(t.getAttribute("data-note-priority")||"").trim();if(dpn)vscode.postMessage({type:"dismissPhaseNote",noteId:dpn,priority:dpp});return;}if(act==="phase-note-convert"){var cpn=(t.getAttribute("data-note-id")||"").trim();if(cpn)vscode.postMessage({type:"convertPhaseNote",noteId:cpn});return;}if(act==="phase-notes-propose-persist"){vscode.postMessage({type:"persistPhaseNoteProposals"});return;}if(act==="register-phase-catalog"){vscode.postMessage({type:"registerPhaseCatalogEntry"});return;}if(act==="team-assignment-register"){vscode.postMessage({type:"registerTeamAssignment"});return;}if(act==="team-execution-chat"){vscode.postMessage({type:"prefillTeamExecutionChat"});return;}if(act==="team-assignment-handoff"){var teamAid=(t.getAttribute("data-assignment-id")||"").trim();var teamWid=(t.getAttribute("data-worker-id")||"").trim();if(teamAid&&teamWid)vscode.postMessage({type:"submitTeamHandoff",assignmentId:teamAid,workerId:teamWid});return;}if(act==="team-assignment-reconcile"){var teamAid2=(t.getAttribute("data-assignment-id")||"").trim();var teamSid=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid2&&teamSid)vscode.postMessage({type:"reconcileTeamAssignment",assignmentId:teamAid2,supervisorId:teamSid});return;}if(act==="team-assignment-block"){var teamAid3=(t.getAttribute("data-assignment-id")||"").trim();var teamSid2=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid3&&teamSid2)vscode.postMessage({type:"blockTeamAssignment",assignmentId:teamAid3,supervisorId:teamSid2});return;}if(act==="team-assignment-cancel"){var teamAid4=(t.getAttribute("data-assignment-id")||"").trim();var teamSid3=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid4)vscode.postMessage({type:"cancelTeamAssignment",assignmentId:teamAid4,supervisorId:teamSid3});return;}if(act==="subagent-register"){vscode.postMessage({type:"registerSubagent"});return;}if(act==="subagent-registry-chat"){vscode.postMessage({type:"prefillSubagentRegistryChat"});return;}if(act==="subagent-spawn"){var subId=(t.getAttribute("data-subagent-id")||"").trim();vscode.postMessage({type:"spawnSubagent",subagentId:subId});return;}if(act==="subagent-session-close"){var subSid=(t.getAttribute("data-session-id")||"").trim();var subDef=(t.getAttribute("data-definition-id")||"").trim();if(subSid&&subDef)vscode.postMessage({type:"closeSubagentSession",sessionId:subSid,definitionId:subDef});return;}if(act==="subagent-retire"){var subRet=(t.getAttribute("data-subagent-id")||"").trim();vscode.postMessage({type:"retireSubagent",subagentId:subRet});return;}if(act==="assign-phase"){var apTid=(t.getAttribute("data-task-id")||"").trim();if(apTid)vscode.postMessage({type:"assignTaskPhase",taskId:apTid});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="task-comments-view"){if(tid)vscode.postMessage({type:"viewTaskComments",taskId:tid});return;}if(act==="task-comment-add"){if(tid)vscode.postMessage({type:"addTaskComment",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="human-gate-resume-ready"){if(tid)vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"resume_ready",transitionKind:"human-gate"});return;}if(act==="human-gate-resume-work"){if(tid)vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"resume_work",transitionKind:"human-gate"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});
+    if (act === 'planning-wizard-dismiss') { vscode.postMessage({type:'planningWizardDismiss'});return;}if(act==="collaboration-hub"){vscode.postMessage({type:"prefillCollaborationHubChat"});return;}if(act==="deliver-phase-prompt"){var kp=(t.getAttribute("data-wc-kit-phase")||"").trim();vscode.postMessage({type:"prefillDeliverPhaseChat",kitPhase:kp});return;}if(act==="add-wishlist-item"){vscode.postMessage({type:"addWishlistItem"});return;}if(act==="generate-features-chat"){vscode.postMessage({type:"prefillGenerateFeaturesChat"});return;}if(act==="transcript-churn-research-chat"){var tcTid=(t.getAttribute("data-task-id")||"").trim();vscode.postMessage({type:"prefillTranscriptChurnResearchChat",taskId:tcTid});return;}if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-page"){var wpp=parseInt(String(t.getAttribute("data-wishlist-page")||"0"),10);if(!Number.isNaN(wpp)&&wpp>=0)vscode.postMessage({type:"wishlistPage",page:wpp});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}if(act==="phase-complete-release"){var ph=(t.getAttribute("data-wc-phase-phrase")||"").trim();var pk=(t.getAttribute("data-wc-phase-key")||"").trim();var ids=(t.getAttribute("data-wc-phase-task-ids")||"").trim();var wcur=(t.getAttribute("data-wc-workspace-current-phase")||"").trim();var wnxt=(t.getAttribute("data-wc-workspace-next-phase")||"").trim();var rscope=(t.getAttribute("data-wc-release-scope")||"").trim();vscode.postMessage({type:"prefillPhaseCompleteReleaseChat",phasePhrase:ph,phaseKey:pk,seededTaskIdsCsv:ids,workspaceCurrentPhase:wcur,workspaceNextPhase:wnxt,scope:rscope==="current"?"current":rscope==="bucket"?"bucket":undefined});return;}if(act==="proposed-imp-accept-phase"||act==="proposed-exe-accept-phase"){var batch=(t.getAttribute("data-proposed-task-ids")||"").trim();var cat=act==="proposed-exe-accept-phase"?"execution":"improvement";vscode.postMessage({type:"dashboardAcceptProposedPhase",category:cat,taskIds:batch});return;}if(act==="phase-notes-chat"){vscode.postMessage({type:"prefillPhaseNotesDiscoveryChat"});return;}if(act==="phase-note-add"){vscode.postMessage({type:"addPhaseNote"});return;}if(act==="phase-note-dismiss"){var dpn=(t.getAttribute("data-note-id")||"").trim();var dpp=(t.getAttribute("data-note-priority")||"").trim();if(dpn)vscode.postMessage({type:"dismissPhaseNote",noteId:dpn,priority:dpp});return;}if(act==="phase-note-convert"){var cpn=(t.getAttribute("data-note-id")||"").trim();if(cpn)vscode.postMessage({type:"convertPhaseNote",noteId:cpn});return;}if(act==="phase-notes-propose-persist"){vscode.postMessage({type:"persistPhaseNoteProposals"});return;}if(act==="register-phase-catalog"){vscode.postMessage({type:"registerPhaseCatalogEntry"});return;}if(act==="team-assignment-register"){vscode.postMessage({type:"registerTeamAssignment"});return;}if(act==="team-execution-chat"){vscode.postMessage({type:"prefillTeamExecutionChat"});return;}if(act==="team-assignment-handoff"){var teamAid=(t.getAttribute("data-assignment-id")||"").trim();var teamWid=(t.getAttribute("data-worker-id")||"").trim();if(teamAid&&teamWid)vscode.postMessage({type:"submitTeamHandoff",assignmentId:teamAid,workerId:teamWid});return;}if(act==="team-assignment-reconcile"){var teamAid2=(t.getAttribute("data-assignment-id")||"").trim();var teamSid=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid2&&teamSid)vscode.postMessage({type:"reconcileTeamAssignment",assignmentId:teamAid2,supervisorId:teamSid});return;}if(act==="team-assignment-block"){var teamAid3=(t.getAttribute("data-assignment-id")||"").trim();var teamSid2=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid3&&teamSid2)vscode.postMessage({type:"blockTeamAssignment",assignmentId:teamAid3,supervisorId:teamSid2});return;}if(act==="team-assignment-cancel"){var teamAid4=(t.getAttribute("data-assignment-id")||"").trim();var teamSid3=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid4)vscode.postMessage({type:"cancelTeamAssignment",assignmentId:teamAid4,supervisorId:teamSid3});return;}if(act==="subagent-register"){vscode.postMessage({type:"registerSubagent"});return;}if(act==="subagent-registry-chat"){vscode.postMessage({type:"prefillSubagentRegistryChat"});return;}if(act==="subagent-spawn"){var subId=(t.getAttribute("data-subagent-id")||"").trim();vscode.postMessage({type:"spawnSubagent",subagentId:subId});return;}if(act==="subagent-session-close"){var subSid=(t.getAttribute("data-session-id")||"").trim();var subDef=(t.getAttribute("data-definition-id")||"").trim();if(subSid&&subDef)vscode.postMessage({type:"closeSubagentSession",sessionId:subSid,definitionId:subDef});return;}if(act==="subagent-retire"){var subRet=(t.getAttribute("data-subagent-id")||"").trim();vscode.postMessage({type:"retireSubagent",subagentId:subRet});return;}if(act==="checkpoint-create-head"){vscode.postMessage({type:"createCheckpoint",mode:"head"});return;}if(act==="checkpoint-create-stash"){vscode.postMessage({type:"createCheckpoint",mode:"stash"});return;}if(act==="checkpoint-recovery-chat"){vscode.postMessage({type:"prefillTaskCheckpointsRecoveryChat"});return;}if(act==="checkpoint-compare"){var ckptCmp=(t.getAttribute("data-checkpoint-id")||"").trim();if(ckptCmp)vscode.postMessage({type:"compareCheckpoint",checkpointId:ckptCmp});return;}if(act==="checkpoint-rewind"){var ckptRw=(t.getAttribute("data-checkpoint-id")||"").trim();var ckptRk=(t.getAttribute("data-ref-kind")||"").trim();var ckptTid=(t.getAttribute("data-task-id")||"").trim();if(ckptRw)vscode.postMessage({type:"rewindCheckpoint",checkpointId:ckptRw,refKind:ckptRk,taskId:ckptTid});return;}if(act==="assign-phase"){var apTid=(t.getAttribute("data-task-id")||"").trim();if(apTid)vscode.postMessage({type:"assignTaskPhase",taskId:apTid});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="task-comments-view"){if(tid)vscode.postMessage({type:"viewTaskComments",taskId:tid});return;}if(act==="task-comment-add"){if(tid)vscode.postMessage({type:"addTaskComment",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="human-gate-resume-ready"){if(tid)vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"resume_ready",transitionKind:"human-gate"});return;}if(act==="human-gate-resume-work"){if(tid)vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"resume_work",transitionKind:"human-gate"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});
 
   if (rootEl) rootEl.addEventListener('keydown', function(ev) {
     var target = ev.target;

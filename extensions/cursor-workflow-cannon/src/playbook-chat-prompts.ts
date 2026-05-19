@@ -74,6 +74,19 @@ export function buildTaskToPhaseBranchPrompt(options?: { taskId?: string; kitPha
   );
 }
 
+/** Dashboard task checkpoints — snapshot and rewind without memorizing CLI names. */
+export function buildTaskCheckpointsRecoveryPrompt(): string {
+  return (
+    "The operator opened **Task checkpoints** from the Workflow Cannon dashboard.\n\n" +
+    "Help them use task-linked git checkpoints safely (JSON **`policyApproval`** on Tier B mutators per **`.ai/POLICY-APPROVAL.md`**):\n\n" +
+    "- Read: `pnpm exec wk run list-checkpoints '{}'` (optional `taskId` filter)\n" +
+    "- Snapshot: `create-checkpoint` with `mode` **`head`** (pointer) or **`stash`** (dirty tree)\n" +
+    "- Compare: `compare-checkpoint` (read-only diff vs current HEAD)\n" +
+    "- Rewind: `rewind-to-checkpoint` — **destructive** (`git reset --hard` or `git stash apply`); may require `force:true` on dirty tree; refuses vendor/node_modules paths\n\n" +
+    "Prefer dashboard drawer actions in the sidebar. Warn before rewind; do not hand-edit `kit_task_checkpoints`."
+  );
+}
+
 /** Dashboard subagent registry — definitions and sessions without memorizing CLI names. */
 export function buildSubagentRegistryPrompt(): string {
   return (

@@ -290,3 +290,20 @@ test("drawer: register subagent validates id and allowed commands", async () => 
     assert.equal(good.values.subagentId, "reviewer");
   }
 });
+
+test("drawer: rewind checkpoint requires longer rationale", async () => {
+  const mod = await import("../dist/views/dashboard/dashboard-input-drawer.js");
+  const bad = mod.validateRewindCheckpointSubmit({
+    force: "",
+    policyRationale: "too short"
+  });
+  assert.equal(bad.ok, false);
+  const good = mod.validateRewindCheckpointSubmit({
+    force: "yes",
+    policyRationale: "operator confirmed destructive rewind for T901"
+  });
+  assert.equal(good.ok, true);
+  if (good.ok) {
+    assert.equal(good.values.force, "yes");
+  }
+});
