@@ -50,10 +50,10 @@ test("isReleaseBranchName covers main and release/*", () => {
   assert.equal(isReleaseBranchName("feature/foo"), false);
 });
 
-test("shouldEnforceReleaseDiffShape skips phase integration unless forced", () => {
+test("shouldEnforceReleaseDiffShape skips phase integration and main unless forced", () => {
   assert.equal(isPhaseIntegrationBranch("release/phase-103"), true);
   assert.equal(shouldEnforceReleaseDiffShape("release/phase-103"), false);
-  assert.equal(shouldEnforceReleaseDiffShape("main"), true);
+  assert.equal(shouldEnforceReleaseDiffShape("main"), false);
   const prev = process.env.RELEASE_DIFF_ENFORCE;
   process.env.RELEASE_DIFF_ENFORCE = "true";
   assert.equal(shouldEnforceReleaseDiffShape("release/phase-103"), true);
