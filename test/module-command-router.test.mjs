@@ -59,6 +59,8 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "dashboard-summary",
     "delete-behavior-profile",
     "demote-task",
+    "derive-publish-artifacts",
+    "derive-validations",
     "diff-behavior-profiles",
     "dismiss-phase-note",
     "document-project",

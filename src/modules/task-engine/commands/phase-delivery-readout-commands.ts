@@ -8,7 +8,13 @@ import {
 import type { OpenedPlanningStores } from "../persistence/planning-open.js";
 import { readWorkspaceStatusSnapshotFromDual } from "../persistence/workspace-status-store.js";
 import { resolveCanonicalPhase } from "../phase-resolution.js";
-import { buildReleaseEvidenceManifest } from "../release-evidence-manifest.js";
+import { derivePublishArtifactsFragment } from "../derive-publish-artifacts-runtime.js";
+import {
+  defaultGatesOutputPath,
+  deriveValidationsFragment
+} from "../derive-validations-runtime.js";
+import { buildReleaseEvidenceManifest, readPackageMetadata } from "../release-evidence-manifest.js";
+import { resolveReleaseEvidenceCommandArgs } from "../release-evidence-fragments.js";
 import { runPhaseStatus } from "../workspace-status-commands-runtime.js";
 import { buildStrandedWorkReport } from "../stranded-work.js";
 import { buildPhaseFocusDashboard } from "../dashboard/build-phase-focus-dashboard.js";
@@ -130,11 +136,92 @@ export async function resolvePhaseDeliveryReadoutCommands(
     };
   }
 
+  if (command.name === "derive-validations") {
+    const argObj = args as Record<string, unknown>;
+    const phaseKey = typeof argObj.phaseKey === "string" && argObj.phaseKey.trim() ? argObj.phaseKey.trim() : null;
+    const packageMeta = readPackageMetadata(ctx.workspacePath);
+    const releaseVersion =
+      typeof argObj.releaseVersion === "string" && argObj.releaseVersion.trim()
+        ? argObj.releaseVersion.trim()
+        : packageMeta.version;
+    const gatesOutputPath =
+      typeof argObj.gatesOutputPath === "string" && argObj.gatesOutputPath.trim()
+        ? argObj.gatesOutputPath.trim()
+        : releaseVersion
+          ? defaultGatesOutputPath(ctx.workspacePath, releaseVersion)
+          : null;
+    const fragment = deriveValidationsFragment({
+      phaseKey,
+      gatesOutputPath,
+      conclusion: typeof argObj.conclusion === "string" ? argObj.conclusion : undefined
+    });
+    const data: Record<string, unknown> = { fragment };
+    attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
+    return {
+      ok: true,
+      code: "derive-validations",
+      message: `Derived ${fragment.validations.length} validation record(s) from ${fragment.source}`,
+      data
+    };
+  }
+
+  if (command.name === "derive-publish-artifacts") {
+    const argObj = args as Record<string, unknown>;
+    const packageMeta = readPackageMetadata(ctx.workspacePath);
+    const version =
+      typeof argObj.version === "string" && argObj.version.trim()
+        ? argObj.version.trim()
+        : packageMeta.version;
+    const packageName =
+      typeof argObj.packageName === "string" && argObj.packageName.trim()
+        ? argObj.packageName.trim()
+        : packageMeta.packageName;
+    if (!version || !packageName) {
+      return {
+        ok: false,
+        code: "derive-publish-artifacts-missing-version",
+        message: "derive-publish-artifacts requires version and packageName (or package.json defaults)."
+      };
+    }
+    const fragment = derivePublishArtifactsFragment({
+      workspacePath: ctx.workspacePath,
+      version,
+      packageName,
+      distTag: typeof argObj.distTag === "string" ? argObj.distTag : undefined
+    });
+    const data: Record<string, unknown> = { fragment };
+    attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
+    return {
+      ok: true,
+      code: "derive-publish-artifacts",
+      message:
+        fragment.degraded.length > 0
+          ? `Derived publishArtifacts with ${fragment.degraded.length} degraded signal(s)`
+          : `Derived ${fragment.publishArtifacts.length} publish artifact record(s)`,
+      data
+    };
+  }
+
   if (command.name === "release-evidence-manifest") {
+    const argObj = args as Record<string, unknown>;
+    const packageMeta = readPackageMetadata(ctx.workspacePath);
+    const resolved = resolveReleaseEvidenceCommandArgs({
+      workspacePath: ctx.workspacePath,
+      commandArgs: argObj,
+      packageVersion: packageMeta.version
+    });
+    if (!resolved.ok) {
+      return {
+        ok: false,
+        code: resolved.code,
+        message: resolved.message,
+        data: resolved.details ? { details: resolved.details } : undefined
+      };
+    }
     const result = buildReleaseEvidenceManifest({
       workspacePath: ctx.workspacePath,
       tasks: store.getActiveTasks(),
-      commandArgs: args as Record<string, unknown>
+      commandArgs: resolved.args
     });
     if (!result.ok) {
       return {
@@ -144,7 +231,10 @@ export async function resolvePhaseDeliveryReadoutCommands(
         data: result.details ? { details: result.details } : undefined
       };
     }
-    const data: Record<string, unknown> = { manifest: result.manifest };
+    const data: Record<string, unknown> = {
+      manifest: result.manifest,
+      resolvedFrom: resolved.sources
+    };
     attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
     return {
       ok: true,

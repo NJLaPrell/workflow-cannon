@@ -1,0 +1,38 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "derive-publish-artifacts",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "version": { "type": "string" },
+      "packageName": { "type": "string" },
+      "distTag": { "type": "string" }
+    },
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": { "version": "0.97.0" },
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run derive-publish-artifacts '{\"version\":\"0.97.0\"}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/derive-publish-artifacts.md",
+  "moduleId": "task-engine",
+  "description": "Derive publishArtifacts fragment for release-evidence-manifest from gh/npm signals.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "class": "read",
+    "safeToRetry": true
+  }
+}
