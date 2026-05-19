@@ -142,7 +142,9 @@ test("isTransitionAllowed accepts all valid transitions", () => {
     ["in_progress", "blocked"],
     ["in_progress", "ready"],
     ["blocked", "ready"],
-    ["blocked", "cancelled"]
+    ["blocked", "cancelled"],
+    ["completed", "ready"],
+    ["cancelled", "ready"]
   ];
   for (const [from, to] of valid) {
     assert.ok(isTransitionAllowed(from, to), `${from} -> ${to} should be allowed`);
@@ -151,9 +153,7 @@ test("isTransitionAllowed accepts all valid transitions", () => {
 
 test("isTransitionAllowed rejects disallowed transitions", () => {
   const invalid = [
-    ["completed", "ready"],
     ["completed", "in_progress"],
-    ["cancelled", "ready"],
     ["cancelled", "proposed"],
     ["proposed", "in_progress"],
     ["proposed", "blocked"],
@@ -175,6 +175,7 @@ test("getTransitionAction returns correct action verbs", () => {
   assert.equal(getTransitionAction("in_progress", "cancelled"), "decline");
   assert.equal(getTransitionAction("in_progress", "ready"), "pause");
   assert.equal(getTransitionAction("blocked", "ready"), "unblock");
+  assert.equal(getTransitionAction("completed", "ready"), "reopen");
 });
 
 test("resolveTargetState maps action to target state", () => {
@@ -202,7 +203,10 @@ test("getAllowedTransitionsFrom returns all transitions from a state", () => {
   ]);
 
   const fromCompleted = getAllowedTransitionsFrom("completed");
-  assert.equal(fromCompleted.length, 0);
+  assert.deepEqual(
+    fromCompleted.map((t) => t.action).sort(),
+    ["reopen"]
+  );
 });
 
 test("run-transition action contract, schema, and docs stay aligned with runtime map", async () => {
@@ -241,9 +245,11 @@ test("state-validity guard allows valid transitions", () => {
 test("state-validity guard rejects invalid transitions", () => {
   const task = makeTask({ status: "completed" });
   const ctx = { allTasks: [task], timestamp: new Date().toISOString() };
-  const result = stateValidityGuard.canTransition(task, "ready", ctx);
-  assert.equal(result.allowed, false);
-  assert.equal(result.code, "invalid-transition");
+  const blocked = stateValidityGuard.canTransition(task, "in_progress", ctx);
+  assert.equal(blocked.allowed, false);
+  assert.equal(blocked.code, "invalid-transition");
+  const reopen = stateValidityGuard.canTransition(task, "ready", ctx);
+  assert.equal(reopen.allowed, true);
 });
 
 // ---------------------------------------------------------------------------

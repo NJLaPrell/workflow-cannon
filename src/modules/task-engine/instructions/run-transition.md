@@ -51,6 +51,8 @@ Omit **`phaseNotes`** entirely for behavior identical to releases before this fe
 | `awaiting_policy_approval` | `resume_ready` → ready, `resume_work` → in_progress, `block` → blocked, `cancel` → cancelled |
 | `awaiting_external_decision` | `resume_ready` → ready, `resume_work` → in_progress, `block` → blocked, `cancel` → cancelled |
 | `blocked` | `unblock` → ready, `cancel` → cancelled |
+| `completed` | `reopen` → ready (maintainer recovery — false-complete / missing delivery evidence) |
+| `cancelled` | `reopen` → ready (maintainer recovery — mistaken cancel / restore execution queue) |
 <!-- workspace-kit:generated task-engine-instruction-contract command=run-transition section=actions end -->
 
 For transcript churn intake, promotion to **`improvement` / `proposed`** uses **`synthesize-transcript-churn`**, not this lifecycle action table.
