@@ -2253,12 +2253,19 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       width: 160px;
       max-width: 100%;
     }
+    .dash-row-actions.wc-task-actions.dash-row-actions-grid {
+      grid-template-columns: repeat(2, minmax(0, max-content));
+      width: auto;
+      justify-items: stretch;
+      align-content: start;
+    }
     .dash-row-actions.wc-task-actions > .wc-btn {
       width: 100%;
       min-width: 0;
       box-sizing: border-box;
       text-align: center;
       justify-content: center;
+      white-space: nowrap;
     }
     .dash-task-row-body {
       display: flex;

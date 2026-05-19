@@ -1142,6 +1142,97 @@ test("renderDashboardRootInnerHtml proposed execution rows expose accept action"
   assert.match(html, /data-wc-action="proposed-exe-decline"/);
   assert.doesNotMatch(html, /proposed-exe-chat/);
   assert.match(html, /T777/);
+  const rowMatch = html.match(
+    /<div class="dash-row" role="listitem">[\s\S]*?T777[\s\S]*?<\/div>/
+  );
+  assert.ok(rowMatch, "expected proposed execution row");
+  const rowHtml = rowMatch[0];
+  assert.equal((rowHtml.match(/class="dash-row-actions/g) ?? []).length, 1);
+  assert.match(rowHtml, /dash-row-actions-grid/);
+  const actionOrder = [
+    "assign-phase",
+    "task-detail",
+    "task-comments-view",
+    "task-comment-add",
+    "proposed-exe-accept",
+    "proposed-exe-decline",
+  ];
+  let lastIdx = -1;
+  for (const action of actionOrder) {
+    const idx = rowHtml.indexOf(`data-wc-action="${action}"`);
+    assert.ok(idx > lastIdx, `expected ${action} in document order`);
+    lastIdx = idx;
+  }
+});
+
+test("renderDashboardRootInnerHtml proposed improvement rows use single 3x2 action grid", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      stateSummary: { proposed: 1, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: {
+        schemaVersion: 1,
+        count: 1,
+        top: [{ id: "imp-777", title: "Example proposed improvement", phase: "Phase 9" }]
+      },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [] },
+      readyQueueTop: [],
+      readyQueueCount: 0,
+      suggestedNext: null,
+      planningSession: null,
+      taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
+      workspaceStatus: { currentKitPhase: "1", nextKitPhase: "2", activeFocus: "Test" },
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+  const rowMatch = html.match(
+    /<div class="dash-row" role="listitem">[\s\S]*?imp-777[\s\S]*?<\/div>/
+  );
+  assert.ok(rowMatch, "expected proposed improvement row");
+  const rowHtml = rowMatch[0];
+  assert.equal((rowHtml.match(/class="dash-row-actions/g) ?? []).length, 1);
+  assert.match(rowHtml, /dash-row-actions-grid/);
+  assert.match(rowHtml, /data-wc-action="proposed-imp-accept"/);
+  assert.match(rowHtml, /data-wc-action="proposed-imp-decline"/);
+});
+
+test("renderDashboardRootInnerHtml ready rows keep flex task actions without grid modifier", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      stateSummary: { proposed: 0, ready: 1, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: {
+        schemaVersion: 1,
+        count: 1,
+        top: [{ id: "T888", title: "Ready execution", phase: "Phase 9" }]
+      },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [] },
+      readyQueueTop: [],
+      readyQueueCount: 1,
+      suggestedNext: null,
+      planningSession: null,
+      taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
+      workspaceStatus: { currentKitPhase: "1", nextKitPhase: "2", activeFocus: "Test" },
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+  const rowMatch = html.match(
+    /<div class="dash-row" role="listitem">[\s\S]*?T888[\s\S]*?<\/div>/
+  );
+  assert.ok(rowMatch, "expected ready row");
+  const rowHtml = rowMatch[0];
+  assert.match(rowHtml, /wc-task-actions/);
+  assert.doesNotMatch(rowHtml, /dash-row-actions-grid/);
 });
 
 test("renderDashboardRootInnerHtml proposed phase buckets show Accept All with taskIds", () => {
@@ -1179,18 +1270,7 @@ test("renderDashboardRootInnerHtml proposed phase buckets show Accept All with t
       taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
       workspaceStatus: { currentKitPhase: "68", nextKitPhase: "69", activeFocus: "Test" },
       blockingAnalysis: [],
-      dependencyOverview: {
-        schemaVersion: 1,
-        activeTaskCount: 0,
-        includedTaskCount: 0,
-        edgeCount: 0,
-        truncated: false,
-        perfNote: null,
-        nodes: [],
-        edges: [],
-        mermaidFlowchart: "",
-        criticalPathReady: []
-      }
+      dependencyOverview: deliverTestDepOverview
     }
   });
   assert.match(html, /data-wc-action="proposed-imp-accept-phase"/);
@@ -1216,18 +1296,7 @@ test("renderDashboardRootInnerHtml merges ready improvement and execution rollup
       taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
       workspaceStatus: { currentKitPhase: "1", nextKitPhase: "2", activeFocus: "Test" },
       blockingAnalysis: [],
-      dependencyOverview: {
-        schemaVersion: 1,
-        activeTaskCount: 0,
-        includedTaskCount: 0,
-        edgeCount: 0,
-        truncated: false,
-        perfNote: null,
-        nodes: [],
-        edges: [],
-        mermaidFlowchart: "",
-        criticalPathReady: []
-      }
+      dependencyOverview: deliverTestDepOverview
     }
   });
   assert.match(html, /<b>Ready<\/b> \(4\)/);
