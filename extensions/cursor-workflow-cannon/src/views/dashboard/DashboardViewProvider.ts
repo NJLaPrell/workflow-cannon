@@ -30,6 +30,7 @@ import { GuidanceAuthoringExtensionSide } from "../guidance/guidance-authoring-e
 import { renderGuidanceAuthoringPanelInnerHtml } from "../guidance/render-guidance-panel.js";
 import { STATUS_PANEL_EMBED_CSS } from "../status/render-status-tab.js";
 import { WC_BASE_CSS } from "../shared/wc-base-css.js";
+import { GUIDANCE_PANEL_WEBVIEW_CSS } from "../shared/guidance-panel-webview-css.js";
 import {
   buildAcceptProposedDrawerSpec,
   buildAddPhaseNoteDrawerSpec,
@@ -3242,6 +3243,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     ${STATUS_PANEL_EMBED_CSS}
     .wc-status-tab-embedded { margin-top: 12px; }
     .wc-status-tab-embedded > .wc-status-head { padding-top: 4px; }
+    /* ── CAE tab embed: gp-* / drawer rules shared with GuidancePanel (T100312) ── */
+    ${GUIDANCE_PANEL_WEBVIEW_CSS}
   </style>
 </head>
 <body>
