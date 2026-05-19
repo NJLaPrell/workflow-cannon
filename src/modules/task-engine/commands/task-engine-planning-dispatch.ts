@@ -2,6 +2,7 @@ import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contr
 import { resolveAgentBootstrapOrSnapshot } from "./agent-session-commands.js";
 import { buildAgentMutationPlan } from "./agent-mutation-plan-commands.js";
 import { buildCompletionPreflight } from "./completion-preflight-commands.js";
+import { buildImprovementDedupeExplain } from "./improvement-dedupe-explain-commands.js";
 import { buildRecommendValidation } from "./recommend-validation-commands.js";
 import { runApplyTaskBatchCommand } from "./apply-task-batch-command.js";
 import { resolveAgentActivityCommands } from "./agent-activity-commands.js";
@@ -82,6 +83,10 @@ export async function dispatchTaskEnginePlanningCommands(
 
   if (command.name === "recommend-validation") {
     return buildRecommendValidation(ctx, planning, store, args as Record<string, unknown>);
+  }
+
+  if (command.name === "improvement-dedupe-explain") {
+    return buildImprovementDedupeExplain(ctx, planning, store, args as Record<string, unknown>);
   }
 
   if (command.name === "claim-next-task") {

@@ -1182,6 +1182,7 @@ test("taskEngineModule registration includes all instruction entries", () => {
   assert.ok(names.includes("complete-task"));
   assert.ok(names.includes("report-defect"));
   assert.ok(names.includes("recommend-validation"));
+  assert.ok(names.includes("improvement-dedupe-explain"));
 });
 
 test("taskEngineModule passes ModuleRegistry validation", () => {
@@ -3563,6 +3564,43 @@ test("taskEngineModule recommend-validation rejects empty argv", async () => {
   const result = await taskEngineModule.onCommand({ name: "recommend-validation", args: {} }, sqliteTaskEngineCtx(workspace));
   assert.equal(result.ok, false);
   assert.equal(result.code, "invalid-run-args");
+});
+
+test("taskEngineModule improvement-dedupe-explain clusters exact evidenceKey duplicates", async () => {
+  const workspace = await tmpDir();
+  const key = "transcript:demo-key";
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T9930",
+        status: "proposed",
+        type: "improvement",
+        title: "Fix flaky transcript ingest",
+        metadata: { evidenceKey: key, issue: "ingest fails on large files", supportingReasoning: "x" },
+        acceptanceCriteria: ["a"],
+        technicalScope: ["b"]
+      })
+    );
+    store.addTask(
+      makeTask({
+        id: "T9931",
+        status: "completed",
+        type: "improvement",
+        title: "Transcript ingest reliability",
+        metadata: { evidenceKey: key, issue: "ingest fails", supportingReasoning: "y" },
+        acceptanceCriteria: ["a"],
+        technicalScope: ["b"]
+      })
+    );
+  });
+  const result = await taskEngineModule.onCommand(
+    { name: "improvement-dedupe-explain", args: { taskId: "T9930" } },
+    sqliteTaskEngineCtx(workspace)
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "improvement-dedupe-explain");
+  assert.equal(result.data.recommendation.action, "reject");
+  assert.ok(result.data.similarityClusters.some((c) => c.evidenceKey === key));
 });
 
 test("taskEngineModule lifecycle intent wrappers delegate to run-transition actions", async () => {
