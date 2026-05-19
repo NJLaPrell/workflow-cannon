@@ -63,6 +63,7 @@
         "phase-delivery-preflight",
         "phase-focus-dashboard",
         "release-evidence-manifest",
+        "report-defect",
         "release-workspace-edit-lease",
         "get-task",
         "list-tasks",
@@ -146,6 +147,7 @@
         "phase-delivery-preflight": { "$ref": "#/$defs/contractBase" },
         "phase-focus-dashboard": { "$ref": "#/$defs/contractBase" },
         "release-evidence-manifest": { "$ref": "#/$defs/contractBase" },
+        "report-defect": { "$ref": "#/$defs/contractReportDefect" },
         "release-workspace-edit-lease": { "$ref": "#/$defs/contractBase" },
         "get-task": { "$ref": "#/$defs/contractGetTask" },
         "list-tasks": { "$ref": "#/$defs/contractListTasks" },
@@ -342,6 +344,44 @@
                 },
                 "actor": { "type": "string" },
                 "config": { "type": "object" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["task", "presentation"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractReportDefect": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "required": ["title", "summary", "evidence"],
+              "additionalProperties": true,
+              "properties": {
+                "title": { "type": "string" },
+                "summary": { "type": "string" },
+                "evidence": { "type": "string" },
+                "severity": { "type": "string" },
+                "features": { "type": "array", "items": { "type": "string" } },
+                "relatedTaskId": { "type": "string" },
+                "phaseKey": { "type": "string" },
+                "phase": { "type": "string" },
+                "clientMutationId": { "type": "string", "minLength": 1 },
+                "policyApproval": { "type": "object" },
+                "expectedPlanningGeneration": {
+                  "oneOf": [
+                    { "type": "integer", "minimum": 0 },
+                    { "type": "string", "pattern": "^[0-9]+$" }
+                  ]
+                },
+                "actor": { "type": "string" }
               }
             },
             "responseData": {

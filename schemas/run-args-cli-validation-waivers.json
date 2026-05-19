@@ -23,7 +23,6 @@
     "rewind-to-checkpoint",
     "write-memory",
     "retire-subagent",
-    "report-defect",
     "review-item",
     "spawn-subagent",
     "submit-assignment-handoff",

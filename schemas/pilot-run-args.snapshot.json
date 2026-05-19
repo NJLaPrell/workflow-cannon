@@ -63,6 +63,7 @@
     "release-workspace-edit-lease",
     "remove-dependency",
     "replay-queue-snapshot",
+    "report-defect",
     "resolve-maintainer-delivery-policy",
     "resolve-task-intake-policy",
     "review-planning-execution-drafts",
@@ -877,6 +878,66 @@
     },
     "replay-queue-snapshot": {
       "type": "object"
+    },
+    "report-defect": {
+      "type": "object",
+      "required": [
+        "title",
+        "summary",
+        "evidence"
+      ],
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "evidence": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string"
+        },
+        "features": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "relatedTaskId": {
+          "type": "string"
+        },
+        "phaseKey": {
+          "type": "string"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "clientMutationId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policyApproval": {
+          "type": "object"
+        },
+        "expectedPlanningGeneration": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            }
+          ]
+        },
+        "actor": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
     },
     "resolve-maintainer-delivery-policy": {
       "type": "object"
