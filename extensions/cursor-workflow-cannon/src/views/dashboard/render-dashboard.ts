@@ -476,7 +476,10 @@ function deriveQueuePhaseFilterOptions(args: {
   return out;
 }
 
-function renderFilterChipBar(phaseOptions: Array<{ value: string; label: string }>): string {
+function renderFilterChipBar(
+  phaseOptions: Array<{ value: string; label: string }>,
+  humanGatesCount = 0
+): string {
   const select =
     phaseOptions.length > 1
       ? '<label class="wc-phase-filter-wrap">Phase <select class="wc-phase-filter-select" data-wc-phase-filter aria-label="Filter tasks by phase">' +
@@ -488,11 +491,16 @@ function renderFilterChipBar(phaseOptions: Array<{ value: string; label: string 
           .join("") +
         "</select></label>"
       : "";
+  const humanGateChipLabel =
+    humanGatesCount > 0 ? "Human gates (" + String(humanGatesCount) + ")" : "Human gates";
   return (
     '<div class="wc-filter-chips" role="toolbar" aria-label="Filter task sections">' +
     '<button type="button" class="wc-filter-chip wc-filter-active" data-wc-filter-btn="all">All</button>' +
     '<button type="button" class="wc-filter-chip wc-filter-chip-ready" data-wc-filter-btn="ready">Ready</button>' +
     '<button type="button" class="wc-filter-chip wc-filter-chip-proposed" data-wc-filter-btn="proposed">Proposed</button>' +
+    '<button type="button" class="wc-filter-chip wc-filter-chip-human-gates" data-wc-filter-btn="human-gates">' +
+    humanGateChipLabel +
+    "</button>" +
     '<button type="button" class="wc-filter-chip wc-filter-chip-blocked" data-wc-filter-btn="blocked">Blocked</button>' +
     select +
     "</div>"
@@ -1330,6 +1338,113 @@ function renderBlockedList(items: unknown): string {
           "</div>"
         );
       })
+      .join("") +
+    "</div>"
+  );
+}
+
+function humanGateStatusLabel(status: string): string {
+  switch (status) {
+    case "awaiting_review":
+      return "Awaiting review";
+    case "awaiting_policy_approval":
+      return "Awaiting policy approval";
+    case "awaiting_external_decision":
+      return "Awaiting external decision";
+    default:
+      return status;
+  }
+}
+
+function renderHumanGateRow(row: {
+  id?: unknown;
+  title?: unknown;
+  summary?: unknown;
+  phase?: unknown;
+  status?: unknown;
+  gateKind?: unknown;
+  ageMs?: unknown;
+  requestedDecision?: unknown;
+  owner?: unknown;
+  priority?: unknown;
+  severity?: unknown;
+  components?: unknown;
+  component?: unknown;
+  features?: unknown;
+  featureDetails?: unknown;
+}): string {
+  const id = String(row?.id ?? "").trim();
+  const idAttr = escapeHtml(id);
+  const status = String(row?.status ?? row?.gateKind ?? "").trim();
+  const ageMin =
+    typeof row?.ageMs === "number" && Number.isFinite(row.ageMs)
+      ? Math.max(0, Math.round(row.ageMs / 60_000))
+      : 0;
+  const gateLabel = humanGateStatusLabel(status);
+  const decision =
+    row?.requestedDecision != null && String(row.requestedDecision).trim().length > 0
+      ? String(row.requestedDecision).trim()
+      : "";
+  const owner =
+    row?.owner != null && String(row.owner).trim().length > 0 ? String(row.owner).trim() : "";
+  const metaParts = [gateLabel];
+  if (decision.length > 0) {
+    metaParts.push(decision);
+  }
+  if (ageMin > 0) {
+    metaParts.push(String(ageMin) + "m");
+  }
+  if (owner.length > 0) {
+    metaParts.push("owner: " + owner);
+  }
+  return (
+    '<div class="dash-row dash-human-gate-row" role="listitem">' +
+    '<div class="dash-human-gate-main">' +
+    renderDashboardTaskBody(row) +
+    '<span class="dash-human-gate-meta muted">' +
+    escapeHtml(metaParts.join(" · ")) +
+    "</span></div>" +
+    '<span class="dash-row-actions">' +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="task-detail" data-task-id="' +
+    idAttr +
+    '" title="Open task detail">View Task</button>' +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="human-gate-resume-ready" data-task-id="' +
+    idAttr +
+    '" title="Return task to ready queue">Resume ready</button>' +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="human-gate-resume-work" data-task-id="' +
+    idAttr +
+    '" title="Resume in-progress work">Resume work</button>' +
+    "</span></div>"
+  );
+}
+
+function renderHumanGatesList(count: number, items: unknown): string {
+  if (!Array.isArray(items) || items.length === 0) {
+    return '<p class="muted">No human-gated tasks in the current phase.</p>';
+  }
+  const more =
+    count > items.length
+      ? '<p class="muted">Showing ' + String(items.length) + " of " + String(count) + ".</p>"
+      : "";
+  return (
+    more +
+    '<p class="muted"><b>Row actions</b> · Resume runs <code>run-transition</code> with approval.</p>' +
+    '<div class="dash-row-list" role="list">' +
+    items
+      .map((x) =>
+        renderHumanGateRow(
+          x as {
+            id?: unknown;
+            title?: unknown;
+            phase?: unknown;
+            status?: unknown;
+            gateKind?: unknown;
+            ageMs?: unknown;
+            requestedDecision?: unknown;
+            owner?: unknown;
+          }
+        )
+      )
       .join("") +
     "</div>"
   );
@@ -3078,6 +3193,11 @@ export function renderDashboardRootInnerHtml(
   const planningSession = d.planningSession;
   const blockedSummary = (d.blockedSummary as Record<string, unknown>) || {};
   const blockedTop = Array.isArray(blockedSummary.top) ? (blockedSummary.top as unknown[]).slice(0, 8) : [];
+  const humanGatesSummary = (d.humanGatesSummary as Record<string, unknown> | undefined) ?? {};
+  const humanGatesCount = typeof humanGatesSummary.count === "number" ? humanGatesSummary.count : 0;
+  const humanGatesTop = Array.isArray(humanGatesSummary.top)
+    ? (humanGatesSummary.top as unknown[]).slice(0, 15)
+    : [];
   const ris = (d.readyImprovementsSummary as Record<string, unknown> | undefined) ?? {};
   const res = (d.readyExecutionSummary as Record<string, unknown> | undefined) ?? {};
   const oldReadyOnly = !("readyImprovementsSummary" in d) && !("readyExecutionSummary" in d);
@@ -3177,7 +3297,7 @@ export function renderDashboardRootInnerHtml(
   const tasksBlock =
     '<section class="dash-card dashboard-tasks-block" aria-label="Task queue rollups">' +
     tasksQuickActionsPanel +
-    renderFilterChipBar(queuePhaseFilterOptions) +
+    renderFilterChipBar(queuePhaseFilterOptions, humanGatesCount) +
     renderStatusRollup(
       "status-ready",
       "<b>Ready</b> (" + String(readyCount) + ")",
@@ -3238,6 +3358,14 @@ export function renderDashboardRootInnerHtml(
       Number(blockedSummary.count ?? 0) === 0,
       false,
       "blocked"
+    ) +
+    renderStatusRollup(
+      "status-human-gates",
+      "<b>Human gates</b> (" + String(humanGatesCount) + ")",
+      renderHumanGatesList(humanGatesCount, humanGatesTop),
+      humanGatesCount === 0,
+      humanGatesCount > 0,
+      "human-gates"
     ) +
     terminalSection +
     "</section>";

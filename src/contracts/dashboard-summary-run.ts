@@ -42,6 +42,25 @@ export type DashboardBlockedRow = {
   [key: string]: unknown;
 };
 
+/** Human-gate queue row (`awaiting_review` / policy / external). */
+export type DashboardHumanGateRow = DashboardTaskRow & {
+  status: string;
+  gateKind: string;
+  ageMs: number;
+  enteredAt?: string | null;
+  requestedDecision?: string | null;
+  owner?: string | null;
+  reason?: string | null;
+};
+
+export type DashboardHumanGatesSummary = {
+  schemaVersion: 1;
+  /** Workspace current phase used to scope the rollup (null when unscoped). */
+  phaseKey: string | null;
+  count: number;
+  top: DashboardHumanGateRow[];
+};
+
 export type DashboardPhaseBucket = Record<string, unknown>;
 
 export type DashboardListSummary = {
@@ -306,6 +325,8 @@ export type DashboardSummaryData = {
     top: DashboardBlockedRow[];
     phaseBuckets: DashboardPhaseBucket[];
   };
+  /** Tasks in human-gate statuses scoped to workspace current phase. */
+  humanGatesSummary: DashboardHumanGatesSummary;
   completedSummary: DashboardListSummary;
   cancelledSummary: DashboardListSummary;
   suggestedNext: {
