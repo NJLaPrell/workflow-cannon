@@ -3,6 +3,11 @@ import path from "node:path";
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
 import { validateModuleScopedConfigDocument } from "../../core/config-metadata.js";
 import { readModuleScopedConfigDocument } from "../../core/module-scoped-config.js";
+import {
+  archiveSidecarFile,
+  persistModuleStateRow,
+  readSidecarJsonFile
+} from "../../core/state/module-state-sidecar-migration.js";
 import { UnifiedStateDb } from "../../core/state/unified-state-db.js";
 import { writeModuleScopedConfigDocument } from "../../core/workspace-kit-config.js";
 import { planningSqliteDatabaseRelativePath } from "../task-engine/planning-config.js";
@@ -10,7 +15,7 @@ import type { BehaviorWorkspaceStateV1 } from "./types.js";
 
 const MODULE_ID = "agent-behavior";
 const STATE_SCHEMA = 1;
-const JSON_REL = path.join(".workspace-kit", "agent-behavior", "state.json");
+export const AGENT_BEHAVIOR_STATE_SIDECAR_REL = path.join(".workspace-kit", "agent-behavior", "state.json");
 
 export function behaviorSqliteRelativePath(
   effectiveConfig: Record<string, unknown> | undefined
@@ -21,9 +26,6 @@ export function behaviorSqliteRelativePath(
   } as ModuleLifecycleContext);
 }
 
-function jsonPath(workspacePath: string): string {
-  return path.join(workspacePath, JSON_REL);
-}
 
 function emptyState(): BehaviorWorkspaceStateV1 {
   return { schemaVersion: 1, activeProfileId: null, customProfiles: {} };
@@ -85,12 +87,22 @@ export async function loadBehaviorWorkspaceState(
   if (row?.state) {
     return parseState(row.state);
   }
-  const fp = jsonPath(ctx.workspacePath);
-  try {
-    const raw = JSON.parse(await fs.promises.readFile(fp, "utf8")) as unknown;
-    return parseState(raw);
-  } catch {
-    /* fall through */
+  const sidecar = await readSidecarJsonFile(ctx.workspacePath, AGENT_BEHAVIOR_STATE_SIDECAR_REL);
+  if (sidecar.ok) {
+    const parsed = parseState(sidecar.value);
+    persistModuleStateRow({
+      workspacePath: ctx.workspacePath,
+      databaseRelativePath: rel,
+      moduleId: MODULE_ID,
+      stateSchemaVersion: STATE_SCHEMA,
+      state: parsed as unknown as Record<string, unknown>
+    });
+    await archiveSidecarFile(ctx.workspacePath, AGENT_BEHAVIOR_STATE_SIDECAR_REL);
+    return parsed;
+  }
+  if ("corrupt" in sidecar && sidecar.corrupt) {
+    await archiveSidecarFile(ctx.workspacePath, AGENT_BEHAVIOR_STATE_SIDECAR_REL);
+    return emptyState();
   }
   const fromConfig = stateFromMergedAgentBehaviorConfig(cfg);
   return fromConfig ?? emptyState();
