@@ -1,7 +1,19 @@
 import fs from "node:fs";
 import path from "node:path";
-import Database from "better-sqlite3";
+import { createRequire } from "node:module";
+import type Database from "better-sqlite3";
+import { throwNativeSqliteLoadError } from "../native-sqlite-diagnostics.js";
 import { prepareKitSqliteDatabase } from "./kit-sqlite/planning-sqlite-kernel.js";
+
+const requireBetterSqlite3 = createRequire(import.meta.url);
+
+function loadBetterSqlite3Constructor(): typeof Database {
+  try {
+    return requireBetterSqlite3("better-sqlite3") as typeof Database;
+  } catch (error) {
+    throwNativeSqliteLoadError(error);
+  }
+}
 import { syncWorkspaceKitStatusFromYamlIfNeeded } from "../../modules/task-engine/persistence/workspace-status-yaml-import.js";
 
 export type ModuleStateRow = {
@@ -32,7 +44,8 @@ export class UnifiedStateDb {
   private ensureDb(): Database.Database {
     if (this.db) return this.db;
     fs.mkdirSync(path.dirname(this.dbPath), { recursive: true });
-    this.db = new Database(this.dbPath);
+    const DatabaseCtor = loadBetterSqlite3Constructor();
+    this.db = new DatabaseCtor(this.dbPath);
     prepareKitSqliteDatabase(this.db);
     syncWorkspaceKitStatusFromYamlIfNeeded(this.workspaceRoot, this.db);
     return this.db;

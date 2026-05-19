@@ -3,9 +3,34 @@ import assert from "node:assert/strict";
 
 import {
   classifyNativeSqliteErrorMessage,
+  formatArchMismatchRemediation,
   formatNodeRuntimeIdentity,
   nativeSqliteRecoveryHint
 } from "../dist/core/native-sqlite-diagnostics.js";
+
+test("native SQLite classifier detects ERR_DLOPEN_FAILED dlopen architecture mismatch", () => {
+  const classification = classifyNativeSqliteErrorMessage(
+    "ERR_DLOPEN_FAILED: dlopen(better_sqlite3.node): mach-o file, but is an incompatible architecture (have 'x86_64', need 'arm64')"
+  );
+  assert.equal(classification.kind, "architecture-mismatch");
+  assert.deepEqual(classification.architecture, { have: "x86_64", need: "arm64" });
+});
+
+test("formatArchMismatchRemediation returns runtime-host-arch-mismatch and arch prefix", () => {
+  const remediation = formatArchMismatchRemediation(
+    new Error("ERR_DLOPEN_FAILED: dlopen … incompatible architecture (have 'x86_64', need 'arm64')"),
+    {
+      execPath: "/usr/local/bin/node",
+      version: "v22.0.0",
+      arch: "x86_64",
+      platform: "darwin",
+      modules: "127"
+    }
+  );
+  assert.equal(remediation.code, "runtime-host-arch-mismatch");
+  assert.match(remediation.remediationCommand, /^arch -/);
+  assert.match(remediation.message, /host is/);
+});
 
 test("native SQLite classifier detects macOS architecture mismatch", () => {
   const classification = classifyNativeSqliteErrorMessage(

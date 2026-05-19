@@ -18,7 +18,7 @@ workspace-kit run run-transition '{"taskId":"T184","action":"start","policyAppro
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `taskId` | `string` | yes | Task id. |
-| `action` | string (`accept`, `await_external_decision`, `await_policy_approval`, `await_review`, `block`, `cancel`, `complete`, `decline`, `demote`, `pause`, `reject`, `resume_ready`, `resume_work`, `start`, `unblock`) | yes | Transition action. |
+| `action` | string (`accept`, `await_external_decision`, `await_policy_approval`, `await_review`, `block`, `cancel`, `complete`, `decline`, `demote`, `pause`, `reject`, `reopen`, `resume_ready`, `resume_work`, `start`, `unblock`) | yes | Transition action. |
 | `clientMutationId` | `string` | no | Retry/idempotency key. |
 | `policyApproval` | `object` | no | JSON policy approval payload for sensitive run commands. |
 | `expectedPlanningGeneration` | `integer` or `string` | no | Optimistic concurrency token from a prior read response. |
@@ -51,8 +51,8 @@ Omit **`phaseNotes`** entirely for behavior identical to releases before this fe
 | `awaiting_policy_approval` | `resume_ready` → ready, `resume_work` → in_progress, `block` → blocked, `cancel` → cancelled |
 | `awaiting_external_decision` | `resume_ready` → ready, `resume_work` → in_progress, `block` → blocked, `cancel` → cancelled |
 | `blocked` | `unblock` → ready, `cancel` → cancelled |
-| `completed` | `reopen` → ready (maintainer recovery — false-complete / missing delivery evidence) |
-| `cancelled` | `reopen` → ready (maintainer recovery — mistaken cancel / restore execution queue) |
+| `completed` | `reopen` → ready |
+| `cancelled` | `reopen` → ready |
 <!-- workspace-kit:generated task-engine-instruction-contract command=run-transition section=actions end -->
 
 For transcript churn intake, promotion to **`improvement` / `proposed`** uses **`synthesize-transcript-churn`**, not this lifecycle action table.
