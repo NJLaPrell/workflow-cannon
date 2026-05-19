@@ -5,9 +5,14 @@ import {
   readSidecarJsonFile
 } from "../../core/state/module-state-sidecar-migration.js";
 import { UnifiedStateDb } from "../../core/state/unified-state-db.js";
+import { resolvePolicyTraceIdFromLineCursor } from "../../core/state/kit-policy-traces-sqlite.js";
 import { planningSqliteDatabaseRelativePath } from "../task-engine/planning-config.js";
 
-export const IMPROVEMENT_STATE_SCHEMA_VERSION = 3 as const;
+type ImprovementStateLoadResult = ImprovementStateDocument & {
+  _legacyPolicyTraceLineCursor?: number;
+};
+
+export const IMPROVEMENT_STATE_SCHEMA_VERSION = 4 as const;
 
 /** Max scout rotation rows retained (FIFO trim on save). */
 export const SCOUT_ROTATION_HISTORY_MAX = 32;
@@ -30,7 +35,8 @@ export type TranscriptRetryEntry = {
 
 export type ImprovementStateDocument = {
   schemaVersion: typeof IMPROVEMENT_STATE_SCHEMA_VERSION;
-  policyTraceLineCursor: number;
+  /** Monotonic kit_policy_traces.id cursor for policy-deny ingestion. */
+  lastIngestedPolicyTraceId: number;
   mutationLineCursor: number;
   transitionLogLengthCursor: number;
   transcriptLineCursors: Record<string, number>;
@@ -49,7 +55,7 @@ const IMPROVEMENT_MODULE_STATE_ID = "improvement";
 export function emptyImprovementState(): ImprovementStateDocument {
   return {
     schemaVersion: IMPROVEMENT_STATE_SCHEMA_VERSION,
-    policyTraceLineCursor: 0,
+    lastIngestedPolicyTraceId: 0,
     mutationLineCursor: 0,
     transitionLogLengthCursor: 0,
     transcriptLineCursors: {},
@@ -87,8 +93,8 @@ function migrateFromV1(raw: Record<string, unknown>): ImprovementStateDocument {
   const base = emptyImprovementState();
   return {
     ...base,
-    policyTraceLineCursor:
-      typeof raw.policyTraceLineCursor === "number" ? raw.policyTraceLineCursor : 0,
+    lastIngestedPolicyTraceId:
+      typeof raw.lastIngestedPolicyTraceId === "number" ? raw.lastIngestedPolicyTraceId : 0,
     mutationLineCursor: typeof raw.mutationLineCursor === "number" ? raw.mutationLineCursor : 0,
     transitionLogLengthCursor:
       typeof raw.transitionLogLengthCursor === "number" ? raw.transitionLogLengthCursor : 0,
@@ -102,17 +108,25 @@ function migrateFromV1(raw: Record<string, unknown>): ImprovementStateDocument {
   };
 }
 
-function normalizeLoadedDoc(raw: Record<string, unknown>): ImprovementStateDocument {
+function normalizeLoadedDoc(raw: Record<string, unknown>): ImprovementStateLoadResult {
   const ver = raw.schemaVersion;
   if (ver === 1) {
     return migrateFromV1(raw);
   }
-  if (ver === 2) {
-    const doc = raw as ImprovementStateDocument;
+  if (ver === 2 || ver === 3) {
+    const doc = raw as ImprovementStateDocument & { policyTraceLineCursor?: number };
+    const legacyLineCursor =
+      typeof doc.policyTraceLineCursor === "number" ? doc.policyTraceLineCursor : 0;
+    const lastIngestedPolicyTraceId =
+      typeof (raw as Record<string, unknown>).lastIngestedPolicyTraceId === "number"
+        ? ((raw as Record<string, unknown>).lastIngestedPolicyTraceId as number)
+        : 0;
     return {
       ...emptyImprovementState(),
       ...doc,
       schemaVersion: IMPROVEMENT_STATE_SCHEMA_VERSION,
+      lastIngestedPolicyTraceId,
+      _legacyPolicyTraceLineCursor: legacyLineCursor > 0 && lastIngestedPolicyTraceId === 0 ? legacyLineCursor : 0,
       transcriptLineCursors: doc.transcriptLineCursors ?? {},
       transcriptRetryQueue: Array.isArray(doc.transcriptRetryQueue)
         ? doc.transcriptRetryQueue.filter(
@@ -132,6 +146,8 @@ function normalizeLoadedDoc(raw: Record<string, unknown>): ImprovementStateDocum
   return {
     ...emptyImprovementState(),
     ...doc,
+    lastIngestedPolicyTraceId:
+      typeof doc.lastIngestedPolicyTraceId === "number" ? doc.lastIngestedPolicyTraceId : 0,
     transcriptLineCursors: doc.transcriptLineCursors ?? {},
     transcriptRetryQueue: Array.isArray(doc.transcriptRetryQueue)
       ? doc.transcriptRetryQueue.filter(
@@ -162,26 +178,49 @@ export async function loadImprovementState(
   const unified = new UnifiedStateDb(workspacePath, dbRel);
   const row = unified.getModuleState(IMPROVEMENT_MODULE_STATE_ID);
   if (row?.state) {
-    return normalizeLoadedDoc(row.state as Record<string, unknown>);
+    return await finalizeImprovementStateLoad(
+      workspacePath,
+      normalizeLoadedDoc(row.state as Record<string, unknown>),
+      effectiveConfig
+    );
   }
   const sidecar = await readSidecarJsonFile(workspacePath, IMPROVEMENT_STATE_SIDECAR_REL);
   if (sidecar.ok) {
     const doc = normalizeLoadedDoc(sidecar.value);
+    const finalized = await finalizeImprovementStateLoad(workspacePath, doc, effectiveConfig);
     persistModuleStateRow({
       workspacePath,
       databaseRelativePath: dbRel,
       moduleId: IMPROVEMENT_MODULE_STATE_ID,
-      stateSchemaVersion: doc.schemaVersion,
-      state: doc as unknown as Record<string, unknown>
+      stateSchemaVersion: finalized.schemaVersion,
+      state: finalized as unknown as Record<string, unknown>
     });
     await archiveSidecarFile(workspacePath, IMPROVEMENT_STATE_SIDECAR_REL);
-    return doc;
+    return finalized;
   }
   if ("corrupt" in sidecar && sidecar.corrupt) {
     await archiveSidecarFile(workspacePath, IMPROVEMENT_STATE_SIDECAR_REL);
     return emptyImprovementState();
   }
   return emptyImprovementState();
+}
+
+async function finalizeImprovementStateLoad(
+  workspacePath: string,
+  doc: ImprovementStateLoadResult,
+  effectiveConfig?: Record<string, unknown>
+): Promise<ImprovementStateDocument> {
+  const legacy = doc._legacyPolicyTraceLineCursor ?? 0;
+  delete doc._legacyPolicyTraceLineCursor;
+  if (legacy > 0 && doc.lastIngestedPolicyTraceId === 0) {
+    doc.lastIngestedPolicyTraceId = resolvePolicyTraceIdFromLineCursor(
+      workspacePath,
+      legacy,
+      effectiveConfig
+    );
+    await saveImprovementState(workspacePath, doc, effectiveConfig);
+  }
+  return doc;
 }
 
 export async function saveImprovementState(

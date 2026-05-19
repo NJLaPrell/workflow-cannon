@@ -37,7 +37,7 @@ test("loadImprovementState migrates sidecar to SQLite and archives JSON file", a
       sidecarPath,
       JSON.stringify({
         schemaVersion: 3,
-        policyTraceLineCursor: 2,
+        lastIngestedPolicyTraceId: 2,
         mutationLineCursor: 0,
         transitionLogLengthCursor: 0,
         transcriptLineCursors: {},
@@ -49,11 +49,11 @@ test("loadImprovementState migrates sidecar to SQLite and archives JSON file", a
       "utf8"
     );
     const loaded = await loadImprovementState(dir, { tasks: { persistenceBackend: "sqlite" } });
-    assert.equal(loaded.policyTraceLineCursor, 2);
+    assert.equal(loaded.lastIngestedPolicyTraceId, 2);
     await assert.rejects(() => fs.access(sidecarPath));
     await fs.access(`${sidecarPath}.migrated`);
     const again = await loadImprovementState(dir, { tasks: { persistenceBackend: "sqlite" } });
-    assert.equal(again.policyTraceLineCursor, 2);
+    assert.equal(again.lastIngestedPolicyTraceId, 2);
   });
 });
 
@@ -61,7 +61,7 @@ test("saveImprovementState does not recreate improvement state.json sidecar", as
   await withTempWorkspace(async (dir) => {
     await saveImprovementState(dir, {
       schemaVersion: 3,
-      policyTraceLineCursor: 0,
+      lastIngestedPolicyTraceId: 0,
       mutationLineCursor: 0,
       transitionLogLengthCursor: 0,
       transcriptLineCursors: {},
@@ -81,7 +81,7 @@ test("loadImprovementState handles corrupt sidecar with empty state", async () =
     await fs.mkdir(path.dirname(sidecarPath), { recursive: true });
     await fs.writeFile(sidecarPath, "{not-json", "utf8");
     const loaded = await loadImprovementState(dir, { tasks: { persistenceBackend: "sqlite" } });
-    assert.equal(loaded.policyTraceLineCursor, 0);
+    assert.equal(loaded.lastIngestedPolicyTraceId, 0);
     await fs.access(`${sidecarPath}.migrated`);
   });
 });
