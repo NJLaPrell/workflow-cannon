@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceSchemaPackageVersion": "0.94.0",
+  "sourceSchemaPackageVersion": "0.95.0",
   "pilotCommands": [
     "add-dependency",
     "add-phase-note",
@@ -54,6 +54,7 @@
     "persist-planning-execution-drafts",
     "phase-closeout-readiness",
     "phase-delivery-preflight",
+    "phase-focus-dashboard",
     "phase-status",
     "propose-tasks-from-phase-notes",
     "queue-git-alignment",
@@ -820,6 +821,9 @@
       "type": "object"
     },
     "phase-delivery-preflight": {
+      "type": "object"
+    },
+    "phase-focus-dashboard": {
       "type": "object"
     },
     "phase-status": {

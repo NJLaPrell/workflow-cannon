@@ -8,6 +8,21 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.95.0] - 2026-05-18
+
+Phase 100 — **Extension & human visibility** (dashboard operator surfaces + bounded agent phase JSON).
+
+### Added
+
+- Cursor dashboard: **Team Assignments**, **Subagent Registry**, **Task Checkpoints** recovery, **Policy Approval Inbox** cards with input drawers and playbook chat prompts.
+- `phase-focus-dashboard` command and `AgentPhaseFocusDashboard` v1 contract; optional `dashboard-summary` `includePhaseFocus` and `agent-bootstrap` `projection: "phaseFocus"`.
+- Shared **CAE Guidance** webview CSS module; dashboard Guidance stylesheet regression coverage.
+- Dashboard phase journal stats, human-gates rollup, and past-phase notes slices.
+
+### Changed
+
+- `dashboard-summary` schema version **7** (`agentStatus`, approval queue, team/subagent/checkpoint rollups).
+
 ## [0.94.0] - 2026-05-18
 
 Phase 99 — **Docs, playbooks & maintainer UX** (CLI discovery, PR integrity, project memory).
