@@ -86,6 +86,14 @@ export function runGetKitPersistenceMap(ctx: ModuleLifecycleContext): ModuleComm
         listCommand: "list-session-grants",
         note:
           "Session-scoped policyApproval reuse is stored per (session_id, operation_id). Query with workspace-kit run list-session-grants. Legacy session-grants.json is import-only."
+      },
+      runLog: {
+        minKitSqliteUserVersion: 27,
+        tables: ["kit_run_log"],
+        maxRowsConfigKey: "kit.runLog.maxRows",
+        defaultMaxRows: 200,
+        note:
+          "Append-only ring buffer of recent wk run invocations (redacted args/response JSON). Each row keys invocationId from the run envelope."
       }
     } as Record<string, unknown>
   };
