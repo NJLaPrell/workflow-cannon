@@ -2559,7 +2559,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .dashboard-tasks-block { margin-top: 0; }
     .dash-quick-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 10px 0; }
     .dash-card { border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35)); border-radius: 6px; padding: 8px; margin: 10px 0; }
-    .wc-dash-cae-host.dash-cae-embedded {
+    .wc-dash-cae-host.dash-cae-embedded.wc-dashboard-embedded-guidance {
       border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
       border-radius: 8px;
       padding: 10px 12px 12px;
@@ -2567,8 +2567,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       max-height: min(78vh, 920px);
       overflow: auto;
       background: var(--vscode-editor-background);
+      font-size: 13px;
+      line-height: 1.42;
+      color: var(--vscode-foreground);
     }
-    .wc-dash-cae-host .gp-shell { max-width: none; margin: 0; padding: 8px 0 12px 0; }
+    .wc-dash-cae-host.wc-dashboard-embedded-guidance .gp-shell { max-width: none; margin: 0; padding: 8px 0 12px 0; }
+    .wc-dash-cae-host.wc-dashboard-embedded-guidance .gp-tabs { overflow-x: auto; flex-wrap: nowrap; }
+    .wc-dash-cae-host.wc-dashboard-embedded-guidance .gp-head,
+    .wc-dash-cae-host.wc-dashboard-embedded-guidance .gp-band { flex-wrap: wrap; }
     details.status-section { margin-bottom: 8px; }
     details.status-section > summary { cursor: pointer; user-select: none; font-weight: 600; }
     details.status-section > .status-section-body { padding-left: 2px; }
@@ -3245,6 +3251,16 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-status-tab-embedded > .wc-status-head { padding-top: 4px; }
     /* ── CAE tab embed: gp-* / drawer rules shared with GuidancePanel (T100312) ── */
     ${GUIDANCE_PANEL_WEBVIEW_CSS}
+    /* Re-assert dashboard shell (R7.1) after Guidance html/body rules — non-CAE tabs unchanged */
+    html, body { margin: 0; min-height: 0; }
+    body {
+      font-family: var(--vscode-font-family);
+      color: var(--vscode-foreground);
+      background: var(--vscode-sideBar-background);
+      padding: 2px 8px 8px;
+      font-size: 12px;
+      line-height: 1.35;
+    }
   </style>
 </head>
 <body>
