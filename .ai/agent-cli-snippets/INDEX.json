@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-19T14:00:02.068Z",
+  "generatedAt": "2026-05-19T14:05:55.328Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -65,6 +65,11 @@
     {
       "name": "backup-planning-sqlite",
       "path": ".ai/agent-cli-snippets/by-command/backup-planning-sqlite.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "batch-transition",
+      "path": ".ai/agent-cli-snippets/by-command/batch-transition.json",
       "moduleId": "task-engine"
     },
     {

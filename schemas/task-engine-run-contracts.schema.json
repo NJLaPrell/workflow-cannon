@@ -39,6 +39,7 @@
         "assign-task-phase",
         "backfill-task-feature-links",
         "backup-planning-sqlite",
+        "batch-transition",
         "block-task",
         "remove-dependency",
         "get-dependency-graph",
@@ -129,6 +130,7 @@
         "assign-task-phase": { "$ref": "#/$defs/contractAssignTaskPhase" },
         "backfill-task-feature-links": { "$ref": "#/$defs/contractBase" },
         "backup-planning-sqlite": { "$ref": "#/$defs/contractBackupPlanningSqlite" },
+        "batch-transition": { "$ref": "#/$defs/contractBatchTransition" },
         "block-task": { "$ref": "#/$defs/contractTaskIntentWithTaskId" },
         "remove-dependency": { "$ref": "#/$defs/contractDependencyMutation" },
         "get-dependency-graph": { "$ref": "#/$defs/contractDependencyGraph" },
@@ -973,6 +975,51 @@
             "responseData": {
               "type": "object",
               "required": ["createdTasks", "count"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractBatchTransition": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "required": ["transitions"],
+              "additionalProperties": true,
+              "properties": {
+                "transitions": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "object",
+                    "required": ["taskId", "action"],
+                    "additionalProperties": true,
+                    "properties": {
+                      "taskId": { "type": "string", "pattern": "^T[0-9]+$" },
+                      "action": { "type": "string" },
+                      "clientMutationId": { "type": "string", "minLength": 1 }
+                    }
+                  }
+                },
+                "dryRun": { "type": "boolean" },
+                "apply": { "type": "boolean" },
+                "policyApproval": { "type": "object" },
+                "expectedPlanningGeneration": {
+                  "oneOf": [
+                    { "type": "integer", "minimum": 0 },
+                    { "type": "string", "pattern": "^[0-9]+$" }
+                  ]
+                },
+                "actor": { "type": "string" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["presentation"],
               "additionalProperties": true
             }
           }

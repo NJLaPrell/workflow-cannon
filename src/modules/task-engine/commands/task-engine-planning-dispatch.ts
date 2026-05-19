@@ -19,6 +19,7 @@ import { runTransitionOnCommand } from "./run-transition-on-command.js";
 import { runSynthesizeTranscriptChurnOnCommand } from "./synthesize-transcript-churn-on-command.js";
 import { resolveTaskArchiveDependencyCommands } from "./task-archive-dependency-commands.js";
 import { resolveTaskEngineReadoutTail } from "./task-engine-readout-tail.js";
+import { runBatchTransitionCommand } from "./batch-transition-on-command.js";
 import { runReportDefectCommand } from "./report-defect-on-command.js";
 import { isTaskIntentCommand, runClaimNextTaskIntent, runTaskIntentTransition } from "./task-intent-commands.js";
 import { resolveTaskPhaseCommands } from "./task-phase-on-command.js";
@@ -88,6 +89,10 @@ export async function dispatchTaskEnginePlanningCommands(
 
   if (command.name === "report-defect") {
     return runReportDefectCommand(ctx, planning, store, args as Record<string, unknown>);
+  }
+
+  if (command.name === "batch-transition") {
+    return runBatchTransitionCommand(ctx, planning, store, args as Record<string, unknown>);
   }
 
   const featureRegistryReadout = resolveFeatureRegistryReadoutCommands(command, ctx, planning);
