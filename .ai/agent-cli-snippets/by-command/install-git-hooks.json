@@ -1,0 +1,39 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "install-git-hooks",
+  "schema": {
+    "type": "object"
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run install-git-hooks '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/install-git-hooks.md",
+  "moduleId": "task-engine",
+  "description": "Install opt-in git pre-push/pre-commit hooks that block destructive git on protected branches without policy approval.",
+  "policy": {
+    "sensitivity": "sensitive",
+    "operationId": "tasks.install-git-hooks",
+    "jsonApprovalRequired": true
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  }
+}

@@ -27,6 +27,10 @@ import {
   runReleaseWorkspaceEditLease,
   runWorkspaceEditStatus
 } from "../workspace-edit-lease-commands-runtime.js";
+import {
+  runInstallGitHooksCommand,
+  runUninstallGitHooksCommand
+} from "./git-policy-hooks-commands.js";
 
 /** If non-null, dispatch should return immediately (command fully handled without planning stores). */
 export async function routeTaskEngineBeforeOpenPlanningStores(
@@ -84,6 +88,12 @@ export async function routeTaskEngineBeforeOpenPlanningStores(
   }
   if (command.name === "workspace-coordination-status") {
     return runWorkspaceCoordinationStatus(ctx);
+  }
+  if (command.name === "install-git-hooks") {
+    return runInstallGitHooksCommand(ctx);
+  }
+  if (command.name === "uninstall-git-hooks") {
+    return runUninstallGitHooksCommand(ctx);
   }
   if (command.name === "list-module-states" || command.name === "get-module-state") {
     const unified = new UnifiedStateDb(ctx.workspacePath, planningSqliteDatabaseRelativePath(ctx));

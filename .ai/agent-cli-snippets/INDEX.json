@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-19T14:34:10.381Z",
+  "generatedAt": "2026-05-19T18:12:39.226Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -623,6 +623,11 @@
       "moduleId": "skills"
     },
     {
+      "name": "install-git-hooks",
+      "path": ".ai/agent-cli-snippets/by-command/install-git-hooks.json",
+      "moduleId": "task-engine"
+    },
+    {
       "name": "install-plugin",
       "path": ".ai/agent-cli-snippets/by-command/install-plugin.json",
       "moduleId": "plugins"
@@ -960,6 +965,11 @@
     {
       "name": "unblock-task",
       "path": ".ai/agent-cli-snippets/by-command/unblock-task.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "uninstall-git-hooks",
+      "path": ".ai/agent-cli-snippets/by-command/uninstall-git-hooks.json",
       "moduleId": "task-engine"
     },
     {
