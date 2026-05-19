@@ -314,6 +314,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "wait-for-pr-checks",
+    "file": "wait-for-pr-checks.md",
+    "description": "Poll GitHub PR checks until passed, failed, or timeout; structured JSON for delivery automation.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "harvest-delivery-evidence",
     "file": "harvest-delivery-evidence.md",
     "description": "Harvest metadata.deliveryEvidence from git and optional GitHub PR signals; preview or apply to a task.",

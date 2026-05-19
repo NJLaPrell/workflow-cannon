@@ -1,0 +1,65 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "wait-for-pr-checks",
+  "schema": {
+    "type": "object",
+    "required": [
+      "pr"
+    ],
+    "properties": {
+      "pr": {
+        "type": [
+          "integer",
+          "string"
+        ]
+      },
+      "timeoutSec": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "intervalSec": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "requiredOnly": {
+        "type": "boolean"
+      }
+    },
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {
+    "pr": null
+  },
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run wait-for-pr-checks '{\"pr\":null}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/wait-for-pr-checks.md",
+  "moduleId": "task-engine",
+  "description": "Poll GitHub PR checks until passed, failed, or timeout; structured JSON for delivery automation.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  },
+  "invocationId": "f03f0364-8c56-4147-be27-7233f370e5dc"
+}

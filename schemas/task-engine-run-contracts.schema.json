@@ -64,6 +64,7 @@
         "complete-task",
         "completion-preflight",
         "harvest-delivery-evidence",
+        "wait-for-pr-checks",
         "phase-status",
         "phase-closeout-readiness",
         "phase-delivery-preflight",
@@ -160,6 +161,7 @@
         "complete-task": { "$ref": "#/$defs/contractTaskIntentWithTaskId" },
         "completion-preflight": { "$ref": "#/$defs/contractCompletionPreflight" },
         "harvest-delivery-evidence": { "$ref": "#/$defs/contractHarvestDeliveryEvidence" },
+        "wait-for-pr-checks": { "$ref": "#/$defs/contractWaitForPrChecks" },
         "recommend-validation": { "$ref": "#/$defs/contractRecommendValidation" },
         "improvement-dedupe-explain": { "$ref": "#/$defs/contractImprovementDedupeExplain" },
         "improvement-workflow-summary": { "$ref": "#/$defs/contractImprovementWorkflowSummary" },
@@ -1100,6 +1102,31 @@
             "responseData": {
               "type": "object",
               "required": ["schemaVersion", "taskId", "passed", "findings"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractWaitForPrChecks": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "required": ["pr"],
+              "additionalProperties": true,
+              "properties": {
+                "pr": { "type": ["integer", "string"] },
+                "timeoutSec": { "type": "integer", "minimum": 1 },
+                "intervalSec": { "type": "integer", "minimum": 1 },
+                "requiredOnly": { "type": "boolean" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["schemaVersion", "pr", "state", "failedChecks", "elapsedSec"],
               "additionalProperties": true
             }
           }

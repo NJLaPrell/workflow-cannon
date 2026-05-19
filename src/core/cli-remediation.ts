@@ -22,6 +22,7 @@ export const CLI_REMEDIATION_INSTRUCTIONS = {
   supersedePhaseNote: "src/modules/task-engine/instructions/supersede-phase-note.md",
   completionPreflight: "src/modules/task-engine/instructions/completion-preflight.md",
   harvestDeliveryEvidence: "src/modules/task-engine/instructions/harvest-delivery-evidence.md",
+  waitForPrChecks: "src/modules/task-engine/instructions/wait-for-pr-checks.md",
   recommendValidation: "src/modules/task-engine/instructions/recommend-validation.md",
   improvementDedupeExplain: "src/modules/task-engine/instructions/improvement-dedupe-explain.md",
   improvementWorkflowSummary: "src/modules/task-engine/instructions/improvement-workflow-summary.md",
