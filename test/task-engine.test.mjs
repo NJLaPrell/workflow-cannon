@@ -1183,6 +1183,7 @@ test("taskEngineModule registration includes all instruction entries", () => {
   assert.ok(names.includes("report-defect"));
   assert.ok(names.includes("recommend-validation"));
   assert.ok(names.includes("improvement-dedupe-explain"));
+  assert.ok(names.includes("improvement-workflow-summary"));
 });
 
 test("taskEngineModule passes ModuleRegistry validation", () => {
@@ -3564,6 +3565,32 @@ test("taskEngineModule recommend-validation rejects empty argv", async () => {
   const result = await taskEngineModule.onCommand({ name: "recommend-validation", args: {} }, sqliteTaskEngineCtx(workspace));
   assert.equal(result.ok, false);
   assert.equal(result.code, "invalid-run-args");
+});
+
+test("taskEngineModule improvement-workflow-summary exposes entry points and pipeline status", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T9940",
+        status: "research",
+        type: "transcript_churn",
+        title: "Churn from long sessions",
+        metadata: { evidenceKey: "transcript:churn-1", issue: "operator friction" },
+        acceptanceCriteria: ["a"],
+        technicalScope: ["b"]
+      })
+    );
+  });
+  const result = await taskEngineModule.onCommand(
+    { name: "improvement-workflow-summary", args: {} },
+    sqliteTaskEngineCtx(workspace)
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "improvement-workflow-summary");
+  assert.ok(result.data.entryPoints.some((e) => e.command === "generate-recommendations"));
+  assert.equal(result.data.transcriptPipeline.researchCount, 1);
+  assert.ok(result.data.suggestedNextSteps.length > 0);
 });
 
 test("taskEngineModule improvement-dedupe-explain clusters exact evidenceKey duplicates", async () => {

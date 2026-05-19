@@ -57,6 +57,7 @@
         "get-workspace-status",
         "heartbeat-workspace-edit-lease",
         "improvement-dedupe-explain",
+        "improvement-workflow-summary",
         "classify-kit-state",
         "claim-next-task",
         "claim-workspace-edit-lease",
@@ -156,6 +157,7 @@
         "completion-preflight": { "$ref": "#/$defs/contractCompletionPreflight" },
         "recommend-validation": { "$ref": "#/$defs/contractRecommendValidation" },
         "improvement-dedupe-explain": { "$ref": "#/$defs/contractImprovementDedupeExplain" },
+        "improvement-workflow-summary": { "$ref": "#/$defs/contractImprovementWorkflowSummary" },
         "phase-status": { "$ref": "#/$defs/contractPhaseStatus" },
         "phase-closeout-readiness": { "$ref": "#/$defs/contractBase" },
         "phase-delivery-preflight": { "$ref": "#/$defs/contractBase" },
@@ -1135,6 +1137,24 @@
             "responseData": {
               "type": "object",
               "required": ["schemaVersion", "taskId", "recommendation", "similarityClusters"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractImprovementWorkflowSummary": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": false
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["schemaVersion", "entryPoints", "suggestedNextSteps"],
               "additionalProperties": true
             }
           }

@@ -383,6 +383,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "improvement-workflow-summary",
+    "file": "improvement-workflow-summary.md",
+    "description": "Discoverable improvement automation workflow: transcript pipeline, scout entry points, churn, lineage.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "recommend-validation",
     "file": "recommend-validation.md",
     "description": "Suggest prioritized validation commands and delivery-evidence fields from task features and touched paths.",

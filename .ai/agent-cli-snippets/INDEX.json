@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-19T14:29:05.653Z",
+  "generatedAt": "2026-05-19T14:34:10.381Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -600,6 +600,11 @@
     {
       "name": "improvement-dedupe-explain",
       "path": ".ai/agent-cli-snippets/by-command/improvement-dedupe-explain.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "improvement-workflow-summary",
+      "path": ".ai/agent-cli-snippets/by-command/improvement-workflow-summary.json",
       "moduleId": "task-engine"
     },
     {

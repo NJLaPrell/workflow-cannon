@@ -48,6 +48,7 @@
     "get-workspace-status",
     "heartbeat-workspace-edit-lease",
     "improvement-dedupe-explain",
+    "improvement-workflow-summary",
     "list-components",
     "list-features",
     "list-module-states",
@@ -840,6 +841,10 @@
           "pattern": "^T[0-9]+$"
         }
       },
+      "additionalProperties": false
+    },
+    "improvement-workflow-summary": {
+      "type": "object",
       "additionalProperties": false
     },
     "list-components": {
