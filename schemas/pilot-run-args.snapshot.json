@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceSchemaPackageVersion": "0.97.0",
+  "sourceSchemaPackageVersion": "0.98.0",
   "pilotCommands": [
     "accept-improvement",
     "add-dependency",
@@ -29,6 +29,8 @@
     "create-wishlist",
     "dashboard-summary",
     "demote-task",
+    "derive-publish-artifacts",
+    "derive-validations",
     "dismiss-phase-note",
     "explain-task-engine-model",
     "export-feature-taxonomy-json",
@@ -46,6 +48,7 @@
     "get-task-summary",
     "get-wishlist",
     "get-workspace-status",
+    "harvest-delivery-evidence",
     "heartbeat-workspace-edit-lease",
     "improvement-dedupe-explain",
     "improvement-workflow-summary",
@@ -70,6 +73,7 @@
     "recommend-validation",
     "reject-improvement",
     "release-evidence-manifest",
+    "release-status",
     "release-workspace-edit-lease",
     "remove-dependency",
     "replay-queue-snapshot",
@@ -93,6 +97,7 @@
     "update-workspace-phase-snapshot",
     "update-workspace-status",
     "upsert-phase-catalog-entry",
+    "wait-for-pr-checks",
     "workspace-coordination-status",
     "workspace-edit-status",
     "workspace-status-history"
@@ -726,6 +731,12 @@
       },
       "additionalProperties": true
     },
+    "derive-publish-artifacts": {
+      "type": "object"
+    },
+    "derive-validations": {
+      "type": "object"
+    },
     "dismiss-phase-note": {
       "type": "object"
     },
@@ -828,6 +839,57 @@
     },
     "get-workspace-status": {
       "type": "object",
+      "additionalProperties": true
+    },
+    "harvest-delivery-evidence": {
+      "type": "object",
+      "properties": {
+        "taskId": {
+          "type": "string",
+          "pattern": "^T[0-9]+$"
+        },
+        "apply": {
+          "type": "boolean"
+        },
+        "branchName": {
+          "type": "string"
+        },
+        "baseBranch": {
+          "type": "string"
+        },
+        "mergeSha": {
+          "type": "string"
+        },
+        "phaseKey": {
+          "type": "string"
+        },
+        "validationCommands": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "command": {
+                "type": "string"
+              },
+              "result": {
+                "type": "string"
+              },
+              "exitCode": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "expectedPlanningGeneration": {
+          "type": "number"
+        },
+        "policyApproval": {
+          "type": "object"
+        },
+        "actor": {
+          "type": "string"
+        }
+      },
       "additionalProperties": true
     },
     "heartbeat-workspace-edit-lease": {
@@ -1248,6 +1310,21 @@
     },
     "release-evidence-manifest": {
       "type": "object"
+    },
+    "release-status": {
+      "type": "object",
+      "properties": {
+        "includeTaskCounts": {
+          "type": "boolean"
+        },
+        "includeDriftDetails": {
+          "type": "boolean"
+        },
+        "includePhaseJournalSummary": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
     },
     "release-workspace-edit-lease": {
       "type": "object"
@@ -1789,6 +1866,32 @@
     },
     "upsert-phase-catalog-entry": {
       "type": "object"
+    },
+    "wait-for-pr-checks": {
+      "type": "object",
+      "required": [
+        "pr"
+      ],
+      "properties": {
+        "pr": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        },
+        "timeoutSec": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "intervalSec": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "requiredOnly": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
     },
     "workspace-coordination-status": {
       "type": "object",

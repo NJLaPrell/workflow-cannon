@@ -8,6 +8,24 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.98.0] - 2026-05-19
+
+Phase 103 — **Release, quality & consumers** (delivery evidence harvest, release readouts, tiered CI, release diff allowlist).
+
+### Added
+
+- `harvest-delivery-evidence` — preview/apply `metadata.deliveryEvidence` from git and GitHub PR signals.
+- `wait-for-pr-checks` — headless poll for PR check conclusions (for agent delivery loops).
+- `release-status` — one-shot git/npm/GitHub + phase snapshot readout.
+- `derive-validations` / `derive-publish-artifacts` — fragments for incremental `release-evidence-manifest` assembly (`merge` / `fromFile`).
+- `scripts/check-release-diff-shape.mjs` — release-prep diff allowlist gate (`RELEASE_DIFF_ENFORCE` on phase closeout).
+- `.ai/CI-TIERS.md` — documents fast PR tier vs full push tier in `.github/workflows/ci.yml`.
+
+### Changed
+
+- CI: pull requests run fast `test` job only; push to `main` / `release/*` adds `release-readiness` and `parity`.
+- Playbooks: phase journal on task `complete`, headless CI wait (§5a), maintainer delivery evidence steps.
+
 ## [0.97.0] - 2026-05-19
 
 Phase 102 — **Persistence & planning store** (SQLite-first module state, audit tables, run invocation evidence, task-store git hygiene).

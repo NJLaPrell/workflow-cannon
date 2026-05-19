@@ -8,4 +8,4 @@ This root file is intentionally pointer-only to avoid split release history.
 
 - See `docs/maintainers/CHANGELOG.md` for all release notes, migration notes, and historical entries.
 
-Latest release: **v0.97.0** (Phase 102 — Persistence & planning store; see canonical changelog).
+Latest release: **v0.98.0** (Phase 103 — Release, quality & consumers; see canonical changelog).

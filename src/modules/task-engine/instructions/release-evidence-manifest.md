@@ -8,9 +8,28 @@ Build a machine-readable release evidence manifest for phase closeout. This is a
 
 ## Usage
 
+Full inline payload (unchanged):
+
 ```
-workspace-kit run release-evidence-manifest '{"phaseKey":"74","approval":{"actor":"maintainer@example.com","timestamp":"2026-04-28T07:00:00.000Z","rationale":"approved after reviewing scope and gates","scope":"phase-74 publish"},"releaseNotes":{"source":"release-notes-json","entries":["Phase 74 release evidence hardening"]},"followUpScan":{"scannedAt":"2026-04-28T07:00:00.000Z","rationale":"No unresolved follow-up tasks after transcript/friction scan"},"followUpTasks":[]}'
+workspace-kit run release-evidence-manifest '{"phaseKey":"74","approval":{...},"releaseNotes":{...},"followUpScan":{...},"followUpTasks":[]}'
 ```
+
+Incremental assembly:
+
+1. Derive fragments: `derive-validations`, `derive-publish-artifacts` (write JSON under `.workspace-kit/release-evidence/<version>/`).
+2. Merge fragments + inline overrides:
+
+```
+workspace-kit run release-evidence-manifest '{"merge":true,"releaseVersion":"0.97.0","approval":{...},"releaseNotes":{...},"followUpScan":{...}}'
+```
+
+Or load a single partial file:
+
+```
+workspace-kit run release-evidence-manifest '{"fromFile":".workspace-kit/release-evidence/0.97.0/approval.json","merge":true,"releaseVersion":"0.97.0"}'
+```
+
+`merge: true` reads all `*.json` files in `.workspace-kit/release-evidence/<releaseVersion>/` (or `mergeDir`), then applies inline args on top.
 
 ## Arguments
 
@@ -27,6 +46,9 @@ workspace-kit run release-evidence-manifest '{"phaseKey":"74","approval":{"actor
 | `publishArtifacts` | object[] | no | Tag, GitHub release, npm package, CI publish run, or similar proof. May be empty before publish. |
 | `followUpScan` | object | yes | Requires `scannedAt`. If `followUpTasks` is empty, also requires `rationale` so agents cannot claim zero follow-ups without evidence. |
 | `followUpTasks` | object[] | no | Follow-up task references. Each `taskId` must exist in the task engine when supplied. |
+| `fromFile` | string | no | Path to a partial JSON object merged before inline args. |
+| `merge` | boolean | no | When `true`, merge all `*.json` under `.workspace-kit/release-evidence/<releaseVersion>/`. |
+| `mergeDir` | string | no | Override fragment directory (default `.workspace-kit/release-evidence/<releaseVersion>/`). |
 
 ## Returns
 
@@ -49,6 +71,7 @@ Success `data.manifest` includes:
 
 ## Related
 
+- `derive-validations` / `derive-publish-artifacts` — emit partial JSON fragments for merge mode.
 - `phase-delivery-preflight` — validates completed task delivery evidence before closeout.
 - `.ai/RELEASING.md` — release evidence gates and human approval boundary.
 - `.ai/playbooks/phase-closeout-and-release.md` — phase closeout workflow.

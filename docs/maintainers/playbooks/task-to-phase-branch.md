@@ -35,6 +35,16 @@ workspace-kit run run-transition '{"taskId":"T###","action":"start","expectedPla
 
 (Omit **`expectedPlanningGeneration`** when policy is not **`require`**.)
 
+## 0c) Phase journal — capture context at start (when useful)
+
+When you inherit non-obvious phase context (prior task outcomes, branch conventions, operator decisions), record it in the **phase journal** so closeout and the next agent do not rely on chat memory.
+
+```bash
+workspace-kit run add-phase-note '{"phaseKey":"<N>","noteType":"decision","summary":"Inherited: phase integrates on release/phase-<N>; delivery evidence enforced."}'
+```
+
+See [`add-phase-note.md`](../../src/modules/task-engine/instructions/add-phase-note.md). Do **not** paste secrets or large excerpts.
+
 ## 1) Ensure the phase integration branch exists
 
 1. `git fetch origin`.
@@ -76,7 +86,55 @@ Some phases ship **two or more parallel `T###` chains** on the same **`release/p
 
 ## 5) Review the PR
 
-1. Wait for **CI** (and any required checks) on the PR; treat failures as blocking until addressed or waived per team policy.
+### 5a) Wait for CI (headless — no `gh pr checks --watch`)
+
+**Do not** use `gh pr checks --watch` in agent shells, background tasks, or CI: it expects an interactive TTY and breaks automation.
+
+Prefer one of these **copy-paste** patterns (replace `<pr>` with the PR number or URL):
+
+**Preferred — kit command (bounded poll, structured JSON):**
+
+```bash
+pnpm exec wk run wait-for-pr-checks '{"pr":<pr>,"timeoutSec":1800,"intervalSec":20,"requiredOnly":true}'
+```
+
+See [`wait-for-pr-checks.md`](../../src/modules/task-engine/instructions/wait-for-pr-checks.md). Exits non-zero when checks fail or time out.
+
+**Option A — workflow run (when checks map to a single workflow run):**
+
+```bash
+GH_PAGER=cat gh pr view <pr> --json statusCheckRollup,number
+# When you have a run id from the PR checks page or prior gh run list:
+GH_PAGER=cat gh run watch <run-id> --exit-status
+```
+
+**Option B — bounded JSON poll (safe in agents; default for delivery loops):**
+
+```bash
+PR=<pr>
+DEADLINE=$(( $(date +%s) + 1800 ))
+while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+  RAW=$(GH_PAGER=cat gh pr checks "$PR" --json name,state,bucket 2>/dev/null || true)
+  STATUS=$(printf '%s' "$RAW" | node -e "
+const r=JSON.parse(require('fs').readFileSync(0,'utf8')||'[]');
+if(!Array.isArray(r)||r.length===0){console.log('pending');process.exit(0)}
+const pend=r.some(c=>['PENDING','IN_PROGRESS','QUEUED'].includes(c.state));
+if(pend){console.log('pending');process.exit(0)}
+const bad=r.filter(c=>!['SUCCESS','SKIPPED','NEUTRAL'].includes(c.state));
+if(bad.length){console.log('failed');console.error(JSON.stringify(bad,null,2));process.exit(1)}
+console.log('passed');
+")
+  case "$STATUS" in
+    pending) echo "checks not ready yet; sleep 30s"; sleep 30 ;;
+    passed) echo "checks green"; break ;;
+    failed) exit 1 ;;
+  esac
+done
+```
+
+Exit code **8** from `gh pr checks` usually means **checks are not ready yet**, not that CI failed — keep polling or use Option A.
+
+1. Wait for **CI** using **5a**; treat failures as blocking until addressed or waived per team policy.
 2. Perform **code review** (self-review for solo maintainers, or peer review): correctness, scope, tests, docs, and alignment with task acceptance criteria.
 3. Optionally leave a **review comment** or summary on the PR documenting the review outcome.
 
@@ -123,10 +181,18 @@ Waivers are for maintainer-approved exceptions only and require `schemaVersion`,
 workspace-kit run phase-delivery-preflight '{"phaseKey":"<N>","includeInProgress":true}'
 ```
 
-5. **Update task-engine state** after the work is merged (or in sync with merge): transition the task to **`completed`** when acceptance criteria are met — **not** a substitute for Git, but required kit-owned evidence:
+5. **Update task-engine state** after the work is merged (or in sync with merge): transition the task to **`completed`** when acceptance criteria are met — **not** a substitute for Git, but required kit-owned evidence.
+
+When you observed a **finding**, **gotcha**, or **follow-up** during the task, attach **`phaseNotes`** on the same **`complete`** call (same SQLite transaction as the transition):
 
 ```bash
-workspace-kit run run-transition '{"taskId":"T###","action":"complete","policyApproval":{"confirmed":true,"rationale":"merged to release/phase-<N>; acceptance criteria satisfied"}}'
+workspace-kit run run-transition '{"taskId":"T###","action":"complete","expectedPlanningGeneration":<n>,"policyApproval":{"confirmed":true,"rationale":"merged to release/phase-<N>; acceptance criteria satisfied"},"phaseNotes":[{"noteType":"gotcha","summary":"Short operational note — no secrets"}]}'
+```
+
+Without journal capture needs, **`complete`** alone is fine:
+
+```bash
+workspace-kit run run-transition '{"taskId":"T###","action":"complete","expectedPlanningGeneration":<n>,"policyApproval":{"confirmed":true,"rationale":"merged to release/phase-<N>; acceptance criteria satisfied"}}'
 ```
 
 If the task should **not** complete (partial delivery, superseded scope), use the appropriate **`run-transition`** action per [`src/modules/task-engine/instructions/run-transition.md`](../../../src/modules/task-engine/instructions/run-transition.md) instead of **`complete`**.

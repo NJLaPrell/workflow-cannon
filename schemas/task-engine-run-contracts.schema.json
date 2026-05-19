@@ -11,7 +11,7 @@
       "const": 1
     },
     "packageVersion": {
-      "const": "0.97.0",
+      "const": "0.98.0",
       "description": "Must match package.json version."
     },
     "moduleId": {
@@ -63,11 +63,14 @@
         "claim-workspace-edit-lease",
         "complete-task",
         "completion-preflight",
+        "harvest-delivery-evidence",
+        "wait-for-pr-checks",
         "phase-status",
         "phase-closeout-readiness",
         "phase-delivery-preflight",
         "phase-focus-dashboard",
         "release-evidence-manifest",
+        "release-status",
         "report-defect",
         "install-git-hooks",
         "uninstall-git-hooks",
@@ -102,6 +105,8 @@
         "set-agent-activity",
         "start-task",
         "dashboard-summary",
+        "derive-publish-artifacts",
+        "derive-validations",
         "demote-task",
         "dismiss-phase-note",
         "pause-task",
@@ -158,6 +163,8 @@
         "claim-workspace-edit-lease": { "$ref": "#/$defs/contractBase" },
         "complete-task": { "$ref": "#/$defs/contractTaskIntentWithTaskId" },
         "completion-preflight": { "$ref": "#/$defs/contractCompletionPreflight" },
+        "harvest-delivery-evidence": { "$ref": "#/$defs/contractHarvestDeliveryEvidence" },
+        "wait-for-pr-checks": { "$ref": "#/$defs/contractWaitForPrChecks" },
         "recommend-validation": { "$ref": "#/$defs/contractRecommendValidation" },
         "improvement-dedupe-explain": { "$ref": "#/$defs/contractImprovementDedupeExplain" },
         "improvement-workflow-summary": { "$ref": "#/$defs/contractImprovementWorkflowSummary" },
@@ -165,7 +172,10 @@
         "phase-closeout-readiness": { "$ref": "#/$defs/contractBase" },
         "phase-delivery-preflight": { "$ref": "#/$defs/contractBase" },
         "phase-focus-dashboard": { "$ref": "#/$defs/contractBase" },
+        "derive-publish-artifacts": { "$ref": "#/$defs/contractBase" },
+        "derive-validations": { "$ref": "#/$defs/contractBase" },
         "release-evidence-manifest": { "$ref": "#/$defs/contractBase" },
+        "release-status": { "$ref": "#/$defs/contractPhaseStatus" },
         "report-defect": { "$ref": "#/$defs/contractReportDefect" },
         "install-git-hooks": { "$ref": "#/$defs/contractBase" },
         "uninstall-git-hooks": { "$ref": "#/$defs/contractBase" },
@@ -1098,6 +1108,71 @@
             "responseData": {
               "type": "object",
               "required": ["schemaVersion", "taskId", "passed", "findings"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractWaitForPrChecks": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "required": ["pr"],
+              "additionalProperties": true,
+              "properties": {
+                "pr": { "type": ["integer", "string"] },
+                "timeoutSec": { "type": "integer", "minimum": 1 },
+                "intervalSec": { "type": "integer", "minimum": 1 },
+                "requiredOnly": { "type": "boolean" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["schemaVersion", "pr", "state", "failedChecks", "elapsedSec"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractHarvestDeliveryEvidence": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "taskId": { "type": "string", "pattern": "^T[0-9]+$" },
+                "apply": { "type": "boolean" },
+                "branchName": { "type": "string" },
+                "baseBranch": { "type": "string" },
+                "mergeSha": { "type": "string" },
+                "phaseKey": { "type": "string" },
+                "validationCommands": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "command": { "type": "string" },
+                      "result": { "type": "string" },
+                      "exitCode": { "type": "number" }
+                    }
+                  }
+                },
+                "expectedPlanningGeneration": { "type": "number" },
+                "policyApproval": { "type": "object" },
+                "actor": { "type": "string" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["schemaVersion", "dryRun", "deliveryEvidence", "missingFields"],
               "additionalProperties": true
             }
           }

@@ -44,6 +44,15 @@ workspace-kit run run-transition '{"taskId":"T###","action":"complete","policyAp
 
 When **all** phase tasks that belong on **`release/phase-<N>`** are **`completed`** (or explicitly handled) and you are preparing the release:
 
+0. **Phase journal review** — list notes for the closing phase; convert actionable **`task-suggestion`** / **`follow-up`** rows before release prep:
+
+```bash
+workspace-kit run list-phase-notes '{"phaseKey":"<N>"}'
+workspace-kit run convert-phase-note-to-task '{"noteId":"<uuid>","expectedPlanningGeneration":<n>,"policyApproval":{"confirmed":true,"rationale":"closeout follow-up from phase journal"}}'
+```
+
+(Skip conversion when the note is informational only.)
+
 1. `git fetch origin` and `git checkout release/phase-<N>`, then `git pull origin release/phase-<N>`.
 2. Run `workspace-kit run phase-closeout-readiness '{"phaseKey":"<N>"}'` and stop unless it reports `passed: true` or every remaining task has an explicit maintainer decision.
 3. Run `workspace-kit run phase-delivery-preflight '{"phaseKey":"<N>","includeInProgress":false,"baseRef":"origin/release/phase-<N>"}'` and resolve every evidence, readiness, or stranded-work finding with evidence matching each task’s **resolved** delivery profile (from **`resolve-maintainer-delivery-policy`** / preflight policy context) or an explicit maintainer waiver before closeout. Stranded-work findings mean completed task implementation files differ from the selected integration/base ref; merge/rebase that work, or move the task out of `completed` before release prep continues. This check is distinct from task-store branch synchronization.
@@ -52,6 +61,8 @@ When **all** phase tasks that belong on **`release/phase-<N>`** are **`completed
 6. **Fix failures on the phase branch** — small follow-up PRs or commits targeting **`release/phase-<N>`** until checks are green and there are no known release blockers.
 
 **PR review integrity:** Prefer **follow-up commits** on task branches over amend + force-push after review. `pre-merge-gates` includes `check-pr-history-rewritten` (`pr-history-rewritten` when the PR head diverges from the latest approving review commit).
+
+**CI wait (agents):** Use the headless recipes in [`task-to-phase-branch.md`](./task-to-phase-branch.md) § **5a** — not `gh pr checks --watch`. For phase→`main` PRs, the same poll/`gh run watch` patterns apply before merge.
 
 ## 4) Human gate — stop before publish
 

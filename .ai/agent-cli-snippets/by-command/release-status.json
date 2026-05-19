@@ -1,0 +1,44 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "release-status",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "includeTaskCounts": {
+        "type": "boolean"
+      },
+      "includeDriftDetails": {
+        "type": "boolean"
+      },
+      "includePhaseJournalSummary": {
+        "type": "boolean"
+      }
+    },
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run release-status '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/release-status.md",
+  "moduleId": "task-engine",
+  "description": "Read-only release/phase snapshot: git, npm dist-tags, GitHub release URL, and kit phase fields.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "class": "read",
+    "safeToRetry": true
+  }
+}

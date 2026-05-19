@@ -1,0 +1,88 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "harvest-delivery-evidence",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "taskId": {
+        "type": "string",
+        "pattern": "^T[0-9]+$"
+      },
+      "apply": {
+        "type": "boolean"
+      },
+      "branchName": {
+        "type": "string"
+      },
+      "baseBranch": {
+        "type": "string"
+      },
+      "mergeSha": {
+        "type": "string"
+      },
+      "phaseKey": {
+        "type": "string"
+      },
+      "validationCommands": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "command": {
+              "type": "string"
+            },
+            "result": {
+              "type": "string"
+            },
+            "exitCode": {
+              "type": "number"
+            }
+          }
+        }
+      },
+      "expectedPlanningGeneration": {
+        "type": "number"
+      },
+      "policyApproval": {
+        "type": "object"
+      },
+      "actor": {
+        "type": "string"
+      }
+    },
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run harvest-delivery-evidence '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/harvest-delivery-evidence.md",
+  "moduleId": "task-engine",
+  "description": "Harvest metadata.deliveryEvidence from git and optional GitHub PR signals; preview or apply to a task.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  },
+  "invocationId": "86d35a8a-8234-45ae-9c28-55caa90027a0"
+}

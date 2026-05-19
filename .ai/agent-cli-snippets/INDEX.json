@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-19T18:23:42.677Z",
+  "generatedAt": "2026-05-19T21:56:44.100Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -443,6 +443,16 @@
       "moduleId": "task-engine"
     },
     {
+      "name": "derive-publish-artifacts",
+      "path": ".ai/agent-cli-snippets/by-command/derive-publish-artifacts.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "derive-validations",
+      "path": ".ai/agent-cli-snippets/by-command/derive-validations.json",
+      "moduleId": "task-engine"
+    },
+    {
       "name": "diff-behavior-profiles",
       "path": ".ai/agent-cli-snippets/by-command/diff-behavior-profiles.json",
       "moduleId": "agent-behavior"
@@ -593,6 +603,11 @@
       "moduleId": "task-engine"
     },
     {
+      "name": "harvest-delivery-evidence",
+      "path": ".ai/agent-cli-snippets/by-command/harvest-delivery-evidence.json",
+      "moduleId": "task-engine"
+    },
+    {
       "name": "heartbeat-workspace-edit-lease",
       "path": ".ai/agent-cli-snippets/by-command/heartbeat-workspace-edit-lease.json",
       "moduleId": "task-engine"
@@ -699,7 +714,8 @@
     },
     {
       "name": "list-session-grants",
-      "path": ".ai/agent-cli-snippets/by-command/list-session-grants.json"
+      "path": ".ai/agent-cli-snippets/by-command/list-session-grants.json",
+      "moduleId": "approvals"
     },
     {
       "name": "list-skills",
@@ -824,6 +840,11 @@
     {
       "name": "release-evidence-manifest",
       "path": ".ai/agent-cli-snippets/by-command/release-evidence-manifest.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "release-status",
+      "path": ".ai/agent-cli-snippets/by-command/release-status.json",
       "moduleId": "task-engine"
     },
     {
@@ -1014,6 +1035,11 @@
     {
       "name": "upsert-phase-catalog-entry",
       "path": ".ai/agent-cli-snippets/by-command/upsert-phase-catalog-entry.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "wait-for-pr-checks",
+      "path": ".ai/agent-cli-snippets/by-command/wait-for-pr-checks.json",
       "moduleId": "task-engine"
     },
     {

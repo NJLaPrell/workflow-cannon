@@ -10,5 +10,10 @@
   },
   "github": {
     "defaultBranch": "main"
+  },
+  "release": {
+    "allowlist": [
+      "docs/maintainers/data/workspace-kit-status.yaml"
+    ]
   }
 }

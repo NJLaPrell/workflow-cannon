@@ -273,9 +273,33 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "derive-publish-artifacts",
+    "file": "derive-publish-artifacts.md",
+    "description": "Derive publishArtifacts fragment for release-evidence-manifest from gh/npm signals.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "derive-validations",
+    "file": "derive-validations.md",
+    "description": "Derive validations fragment for release-evidence-manifest from closeout gate commands.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "release-evidence-manifest",
     "file": "release-evidence-manifest.md",
     "description": "Build a machine-readable release evidence manifest for phase closeout.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "release-status",
+    "file": "release-status.md",
+    "description": "Read-only release/phase snapshot: git, npm dist-tags, GitHub release URL, and kit phase fields.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },
@@ -309,6 +333,22 @@
     "name": "completion-preflight",
     "file": "completion-preflight.md",
     "description": "Evaluate completion guards for a task and return copy-paste remediation commands before run-transition complete.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "wait-for-pr-checks",
+    "file": "wait-for-pr-checks.md",
+    "description": "Poll GitHub PR checks until passed, failed, or timeout; structured JSON for delivery automation.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "harvest-delivery-evidence",
+    "file": "harvest-delivery-evidence.md",
+    "description": "Harvest metadata.deliveryEvidence from git and optional GitHub PR signals; preview or apply to a task.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },
