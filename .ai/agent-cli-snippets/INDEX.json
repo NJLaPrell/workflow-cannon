@@ -1,7 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-19T07:38:54.705Z",
+  "generatedAt": "2026-05-19T14:00:02.068Z",
   "commands": [
+    {
+      "name": "accept-improvement",
+      "path": ".ai/agent-cli-snippets/by-command/accept-improvement.json",
+      "moduleId": "task-engine"
+    },
     {
       "name": "add-dependency",
       "path": ".ai/agent-cli-snippets/by-command/add-dependency.json",
@@ -66,6 +71,11 @@
       "name": "block-assignment",
       "path": ".ai/agent-cli-snippets/by-command/block-assignment.json",
       "moduleId": "team-execution"
+    },
+    {
+      "name": "block-task",
+      "path": ".ai/agent-cli-snippets/by-command/block-task.json",
+      "moduleId": "task-engine"
     },
     {
       "name": "build-plan",
@@ -423,6 +433,11 @@
       "moduleId": "agent-behavior"
     },
     {
+      "name": "demote-task",
+      "path": ".ai/agent-cli-snippets/by-command/demote-task.json",
+      "moduleId": "task-engine"
+    },
+    {
       "name": "diff-behavior-profiles",
       "path": ".ai/agent-cli-snippets/by-command/diff-behavior-profiles.json",
       "moduleId": "agent-behavior"
@@ -698,6 +713,11 @@
       "moduleId": "task-engine"
     },
     {
+      "name": "pause-task",
+      "path": ".ai/agent-cli-snippets/by-command/pause-task.json",
+      "moduleId": "task-engine"
+    },
+    {
       "name": "persist-planning-execution-drafts",
       "path": ".ai/agent-cli-snippets/by-command/persist-planning-execution-drafts.json",
       "moduleId": "task-engine"
@@ -766,6 +786,11 @@
       "name": "register-subagent",
       "path": ".ai/agent-cli-snippets/by-command/register-subagent.json",
       "moduleId": "subagents"
+    },
+    {
+      "name": "reject-improvement",
+      "path": ".ai/agent-cli-snippets/by-command/reject-improvement.json",
+      "moduleId": "task-engine"
     },
     {
       "name": "release-evidence-manifest",
@@ -911,6 +936,11 @@
       "name": "transcript-automation-status",
       "path": ".ai/agent-cli-snippets/by-command/transcript-automation-status.json",
       "moduleId": "improvement"
+    },
+    {
+      "name": "unblock-task",
+      "path": ".ai/agent-cli-snippets/by-command/unblock-task.json",
+      "moduleId": "task-engine"
     },
     {
       "name": "update-behavior-profile",

@@ -3499,6 +3499,57 @@ test("taskEngineModule claim-next-task returns no-op when no runnable task exist
   assert.equal(result.data.reason, "no-runnable-task");
 });
 
+test("taskEngineModule lifecycle intent wrappers delegate to run-transition actions", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T9900",
+        status: "proposed",
+        type: "improvement",
+        acceptanceCriteria: ["done"],
+        technicalScope: ["scope"],
+        metadata: { issue: "x", supportingReasoning: "y" }
+      })
+    );
+    store.addTask(makeTask({ id: "T9901", status: "in_progress" }));
+    store.addTask(makeTask({ id: "T9902", status: "blocked" }));
+    store.addTask(makeTask({ id: "T9903", status: "ready" }));
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+
+  const accepted = await taskEngineModule.onCommand(
+    {
+      name: "accept-improvement",
+      args: { taskId: "T9900", expectedPlanningGeneration: 1 }
+    },
+    ctx
+  );
+  assert.equal(accepted.ok, true);
+  assert.equal(accepted.data.action, "accept");
+
+  const blocked = await taskEngineModule.onCommand(
+    { name: "block-task", args: { taskId: "T9901", expectedPlanningGeneration: 2 } },
+    ctx
+  );
+  assert.equal(blocked.ok, true);
+  assert.equal(blocked.data.action, "block");
+
+  const unblocked = await taskEngineModule.onCommand(
+    { name: "unblock-task", args: { taskId: "T9902", expectedPlanningGeneration: 3 } },
+    ctx
+  );
+  assert.equal(unblocked.ok, true);
+  assert.equal(unblocked.data.action, "unblock");
+
+  const demoted = await taskEngineModule.onCommand(
+    { name: "demote-task", args: { taskId: "T9903", expectedPlanningGeneration: 4 } },
+    ctx
+  );
+  assert.equal(demoted.ok, true);
+  assert.equal(demoted.data.action, "demote");
+});
+
 test("taskEngineModule start-task and complete-task use transition evidence and idempotency", async () => {
   const workspace = await tmpDir();
   await seedSqliteStore(workspace, (store) => {

@@ -339,6 +339,60 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "accept-improvement",
+    "file": "accept-improvement.md",
+    "description": "Intent wrapper around run-transition accept (proposed to ready).",
+    "policyOperationId": "tasks.run-transition",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "block-task",
+    "file": "block-task.md",
+    "description": "Intent wrapper around run-transition block.",
+    "policyOperationId": "tasks.run-transition",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "demote-task",
+    "file": "demote-task.md",
+    "description": "Intent wrapper around run-transition demote (ready to proposed).",
+    "policyOperationId": "tasks.run-transition",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "pause-task",
+    "file": "pause-task.md",
+    "description": "Intent wrapper around run-transition pause (in_progress to ready).",
+    "policyOperationId": "tasks.run-transition",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "reject-improvement",
+    "file": "reject-improvement.md",
+    "description": "Intent wrapper around run-transition reject (proposed to cancelled).",
+    "policyOperationId": "tasks.run-transition",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "unblock-task",
+    "file": "unblock-task.md",
+    "description": "Intent wrapper around run-transition unblock (blocked to ready).",
+    "policyOperationId": "tasks.run-transition",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "synthesize-transcript-churn",
     "file": "synthesize-transcript-churn.md",
     "description": "Promote transcript_churn/research to improvement/proposed after investigation.",

@@ -30,6 +30,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
 
   const commandNames = router.listCommands().map((command) => command.name);
   assert.deepEqual(commandNames, [
+    "accept-improvement",
     "add-dependency",
     "add-phase-note",
     "agent-bootstrap",
@@ -40,6 +41,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "assign-task-phase",
     "backfill-task-feature-links",
     "backup-planning-sqlite",
+    "block-task",
     "claim-next-task",
     "claim-workspace-edit-lease",
     "classify-kit-state",
@@ -55,6 +57,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "create-wishlist",
     "dashboard-summary",
     "delete-behavior-profile",
+    "demote-task",
     "diff-behavior-profiles",
     "dismiss-phase-note",
     "document-project",
@@ -89,6 +92,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "list-tasks",
     "list-wishlist",
     "migrate-task-persistence",
+    "pause-task",
     "persist-planning-execution-drafts",
     "phase-closeout-readiness",
     "phase-delivery-preflight",
@@ -97,6 +101,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "propose-tasks-from-phase-notes",
     "queue-git-alignment",
     "queue-health",
+    "reject-improvement",
     "release-evidence-manifest",
     "release-workspace-edit-lease",
     "remove-dependency",
@@ -118,6 +123,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "sync-effective-behavior-cursor-rule",
     "synthesize-transcript-churn",
     "task-persistence-readiness",
+    "unblock-task",
     "update-behavior-profile",
     "update-phase-note",
     "update-task",

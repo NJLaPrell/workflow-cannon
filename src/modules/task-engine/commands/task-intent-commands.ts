@@ -42,8 +42,18 @@ export function dependencyBlockersForAction(
 
 const TASK_INTENT_ACTIONS: Record<string, string> = {
   "start-task": "start",
-  "complete-task": "complete"
+  "complete-task": "complete",
+  "block-task": "block",
+  "pause-task": "pause",
+  "unblock-task": "unblock",
+  "demote-task": "demote",
+  "accept-improvement": "accept",
+  "reject-improvement": "reject"
 };
+
+export function isTaskIntentCommand(commandName: string): boolean {
+  return Object.hasOwn(TASK_INTENT_ACTIONS, commandName);
+}
 
 function hasPriorTransitionForClientMutationId(store: TaskStore, clientMutationId: string | undefined): boolean {
   return (
