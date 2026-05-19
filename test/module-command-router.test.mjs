@@ -82,6 +82,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "get-task-summary",
     "get-wishlist",
     "get-workspace-status",
+    "harvest-delivery-evidence",
     "heartbeat-workspace-edit-lease",
     "improvement-dedupe-explain",
     "improvement-workflow-summary",

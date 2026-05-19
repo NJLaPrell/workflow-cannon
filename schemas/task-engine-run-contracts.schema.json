@@ -63,6 +63,7 @@
         "claim-workspace-edit-lease",
         "complete-task",
         "completion-preflight",
+        "harvest-delivery-evidence",
         "phase-status",
         "phase-closeout-readiness",
         "phase-delivery-preflight",
@@ -158,6 +159,7 @@
         "claim-workspace-edit-lease": { "$ref": "#/$defs/contractBase" },
         "complete-task": { "$ref": "#/$defs/contractTaskIntentWithTaskId" },
         "completion-preflight": { "$ref": "#/$defs/contractCompletionPreflight" },
+        "harvest-delivery-evidence": { "$ref": "#/$defs/contractHarvestDeliveryEvidence" },
         "recommend-validation": { "$ref": "#/$defs/contractRecommendValidation" },
         "improvement-dedupe-explain": { "$ref": "#/$defs/contractImprovementDedupeExplain" },
         "improvement-workflow-summary": { "$ref": "#/$defs/contractImprovementWorkflowSummary" },
@@ -1098,6 +1100,46 @@
             "responseData": {
               "type": "object",
               "required": ["schemaVersion", "taskId", "passed", "findings"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractHarvestDeliveryEvidence": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "taskId": { "type": "string", "pattern": "^T[0-9]+$" },
+                "apply": { "type": "boolean" },
+                "branchName": { "type": "string" },
+                "baseBranch": { "type": "string" },
+                "mergeSha": { "type": "string" },
+                "phaseKey": { "type": "string" },
+                "validationCommands": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "command": { "type": "string" },
+                      "result": { "type": "string" },
+                      "exitCode": { "type": "number" }
+                    }
+                  }
+                },
+                "expectedPlanningGeneration": { "type": "number" },
+                "policyApproval": { "type": "object" },
+                "actor": { "type": "string" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["schemaVersion", "dryRun", "deliveryEvidence", "missingFields"],
               "additionalProperties": true
             }
           }

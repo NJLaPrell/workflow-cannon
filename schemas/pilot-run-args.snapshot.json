@@ -46,6 +46,7 @@
     "get-task-summary",
     "get-wishlist",
     "get-workspace-status",
+    "harvest-delivery-evidence",
     "heartbeat-workspace-edit-lease",
     "improvement-dedupe-explain",
     "improvement-workflow-summary",
@@ -828,6 +829,57 @@
     },
     "get-workspace-status": {
       "type": "object",
+      "additionalProperties": true
+    },
+    "harvest-delivery-evidence": {
+      "type": "object",
+      "properties": {
+        "taskId": {
+          "type": "string",
+          "pattern": "^T[0-9]+$"
+        },
+        "apply": {
+          "type": "boolean"
+        },
+        "branchName": {
+          "type": "string"
+        },
+        "baseBranch": {
+          "type": "string"
+        },
+        "mergeSha": {
+          "type": "string"
+        },
+        "phaseKey": {
+          "type": "string"
+        },
+        "validationCommands": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "command": {
+                "type": "string"
+              },
+              "result": {
+                "type": "string"
+              },
+              "exitCode": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "expectedPlanningGeneration": {
+          "type": "number"
+        },
+        "policyApproval": {
+          "type": "object"
+        },
+        "actor": {
+          "type": "string"
+        }
+      },
       "additionalProperties": true
     },
     "heartbeat-workspace-edit-lease": {
