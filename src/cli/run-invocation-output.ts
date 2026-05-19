@@ -54,6 +54,12 @@ export async function emitRunInvocationJson(
   options: {
     invocationId: string;
     outputFileRequest?: string;
+    persistRunLog?: {
+      effectiveConfig?: Record<string, unknown>;
+      command: string;
+      commandArgs: Record<string, unknown>;
+      startedAt: string;
+    };
   }
 ): Promise<void> {
   let outputFilePath: string | undefined;
@@ -69,5 +75,18 @@ export async function emitRunInvocationJson(
   if (absoluteWritePath) {
     await fsPromises.mkdir(path.dirname(absoluteWritePath), { recursive: true });
     await fsPromises.writeFile(absoluteWritePath, json, "utf8");
+  }
+  if (options.persistRunLog) {
+    const { appendRunLogRow } = await import("../core/state/kit-run-log-sqlite.js");
+    appendRunLogRow({
+      workspacePath,
+      effectiveConfig: options.persistRunLog.effectiveConfig,
+      invocationId: options.invocationId,
+      command: options.persistRunLog.command,
+      commandArgs: options.persistRunLog.commandArgs,
+      response: envelope,
+      startedAt: options.persistRunLog.startedAt,
+      finishedAt: new Date().toISOString()
+    });
   }
 }

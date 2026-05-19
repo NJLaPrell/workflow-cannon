@@ -71,11 +71,26 @@ export async function handleRunCommand(
 ): Promise<number> {
   const { writeLine, writeError } = io;
   const invocationId = createRunInvocationId();
+  const runStartedAt = new Date().toISOString();
 
   const peeled = peelRunArgv(args.slice(1));
   const outputFileRequest = peeled.outputFile;
+  let effectiveForRunLog: Record<string, unknown> | undefined;
+  let commandForRunLog: string | undefined;
+  let argsForRunLog: Record<string, unknown> = {};
   const emitJson = async (body: Record<string, unknown>) => {
-    await emitRunInvocationJson(writeLine, cwd, body, { invocationId, outputFileRequest });
+    await emitRunInvocationJson(writeLine, cwd, body, {
+      invocationId,
+      outputFileRequest,
+      persistRunLog: commandForRunLog
+        ? {
+            effectiveConfig: effectiveForRunLog,
+            command: commandForRunLog,
+            commandArgs: argsForRunLog,
+            startedAt: runStartedAt
+          }
+        : undefined
+    });
   };
 
   let { jsonCatalog, rest } = peeled;
@@ -119,6 +134,7 @@ export async function handleRunCommand(
     const resolved = await resolveRegistryAndConfig(cwd, defaultRegistryModules, invocationConfig);
     registry = resolved.registry;
     effective = resolved.effective as Record<string, unknown>;
+    effectiveForRunLog = effective;
     router = new ModuleCommandRouter(registry);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -178,6 +194,11 @@ export async function handleRunCommand(
 
   if (subcommand === "apply-skill") {
     commandArgs = normalizeApplySkillArgs(commandArgs);
+  }
+
+  if (subcommand) {
+    commandForRunLog = subcommand;
+    argsForRunLog = commandArgs;
   }
 
   if (!subcommand && jsonCatalog) {
