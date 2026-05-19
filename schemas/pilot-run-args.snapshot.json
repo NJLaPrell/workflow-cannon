@@ -94,6 +94,7 @@
     "update-workspace-phase-snapshot",
     "update-workspace-status",
     "upsert-phase-catalog-entry",
+    "wait-for-pr-checks",
     "workspace-coordination-status",
     "workspace-edit-status",
     "workspace-status-history"
@@ -1841,6 +1842,32 @@
     },
     "upsert-phase-catalog-entry": {
       "type": "object"
+    },
+    "wait-for-pr-checks": {
+      "type": "object",
+      "required": [
+        "pr"
+      ],
+      "properties": {
+        "pr": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        },
+        "timeoutSec": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "intervalSec": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "requiredOnly": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
     },
     "workspace-coordination-status": {
       "type": "object",

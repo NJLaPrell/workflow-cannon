@@ -92,6 +92,14 @@ Some phases ship **two or more parallel `T###` chains** on the same **`release/p
 
 Prefer one of these **copy-paste** patterns (replace `<pr>` with the PR number or URL):
 
+**Preferred — kit command (bounded poll, structured JSON):**
+
+```bash
+pnpm exec wk run wait-for-pr-checks '{"pr":<pr>,"timeoutSec":1800,"intervalSec":20,"requiredOnly":true}'
+```
+
+See [`wait-for-pr-checks.md`](../../src/modules/task-engine/instructions/wait-for-pr-checks.md). Exits non-zero when checks fail or time out.
+
 **Option A — workflow run (when checks map to a single workflow run):**
 
 ```bash
@@ -125,8 +133,6 @@ done
 ```
 
 Exit code **8** from `gh pr checks` usually means **checks are not ready yet**, not that CI failed — keep polling or use Option A.
-
-Future: **`workspace-kit run wait-for-pr-checks`** (see task **T100349**) may replace the shell loop when shipped.
 
 1. Wait for **CI** using **5a**; treat failures as blocking until addressed or waived per team policy.
 2. Perform **code review** (self-review for solo maintainers, or peer review): correctness, scope, tests, docs, and alignment with task acceptance criteria.

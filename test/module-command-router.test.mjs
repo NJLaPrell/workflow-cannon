@@ -139,6 +139,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "update-workspace-phase-snapshot",
     "update-workspace-status",
     "upsert-phase-catalog-entry",
+    "wait-for-pr-checks",
     "workspace-coordination-status",
     "workspace-edit-status",
     "workspace-status-history"
