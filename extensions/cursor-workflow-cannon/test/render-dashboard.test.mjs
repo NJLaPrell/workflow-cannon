@@ -1201,6 +1201,62 @@ test("renderDashboardRootInnerHtml proposed improvement rows use single 3x2 acti
   assert.match(rowHtml, /data-wc-action="proposed-imp-decline"/);
 });
 
+test("renderDashboardRootInnerHtml renders human gates section with resume actions", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [], phaseBuckets: [] },
+      humanGatesSummary: {
+        schemaVersion: 1,
+        phaseKey: "100",
+        count: 1,
+        top: [
+          {
+            id: "T900",
+            title: "Gated task",
+            status: "awaiting_review",
+            gateKind: "awaiting_review",
+            ageMs: 120_000,
+            requestedDecision: "Sign off",
+            owner: "ops"
+          }
+        ]
+      },
+      readyQueueTop: [],
+      readyQueueCount: 0,
+      suggestedNext: null,
+      planningSession: null,
+      taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
+      workspaceStatus: { currentKitPhase: "100", nextKitPhase: "101", activeFocus: "Test" },
+      agentStatus: {
+        schemaVersion: 1,
+        source: "derived",
+        kind: "awaiting_human_gate",
+        label: "Awaiting review · T900",
+        confidence: "high",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+        taskId: "T900"
+      },
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+  assert.match(html, /data-wc-track="status-human-gates"/);
+  assert.match(html, /<b>Human gates<\/b> \(1\)/);
+  assert.match(html, /data-wc-filter-btn="human-gates"/);
+  assert.match(html, /Awaiting review/);
+  assert.match(html, /data-wc-action="human-gate-resume-ready"/);
+  assert.match(html, /data-wc-action="human-gate-resume-work"/);
+  assert.match(html, /data-agent-status-kind="awaiting_human_gate"/);
+  assert.match(html, /Awaiting review · T900/);
+});
+
 test("renderDashboardRootInnerHtml ready rows keep flex task actions without grid modifier", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,

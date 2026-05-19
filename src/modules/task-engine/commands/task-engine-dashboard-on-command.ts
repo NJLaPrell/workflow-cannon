@@ -41,6 +41,7 @@ import {
 import { projectDashboardTaskRow } from "../task-read-projections.js";
 import { buildDashboardCurrentPhaseDelivery } from "../dashboard/phase-delivery-status.js";
 import { buildDashboardPastPhaseNotes } from "../dashboard/build-dashboard-past-phase-notes.js";
+import { buildDashboardHumanGatesSummary } from "../dashboard/build-dashboard-human-gates.js";
 
 /** Parse optional `dashboard-summary` argv for wishlist table paging (extension + CLI). */
 export function parseDashboardWishlistPaging(args?: Record<string, unknown>): {
@@ -283,6 +284,14 @@ export async function runDashboardSummaryCommand(
     currentKitPhase: systemStatus.phase?.currentKitPhase ?? workspaceStatus?.currentKitPhase ?? null
   });
 
+  const currentKitPhase =
+    systemStatus.phase?.currentKitPhase ?? workspaceStatus?.currentKitPhase ?? null;
+  const humanGatesSummary = buildDashboardHumanGatesSummary(
+    tasks,
+    typeof currentKitPhase === "string" ? currentKitPhase : null,
+    enrich
+  );
+
   const data = {
     schemaVersion: 7 as const,
     planningGeneration,
@@ -345,6 +354,7 @@ export async function runDashboardSummaryCommand(
       top: blockedTop,
       phaseBuckets: blockedPhaseBuckets
     },
+    humanGatesSummary,
     completedSummary: {
       schemaVersion: 1 as const,
       count: completedTasks.length,
