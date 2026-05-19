@@ -1181,6 +1181,7 @@ test("taskEngineModule registration includes all instruction entries", () => {
   assert.ok(names.includes("start-task"));
   assert.ok(names.includes("complete-task"));
   assert.ok(names.includes("report-defect"));
+  assert.ok(names.includes("recommend-validation"));
 });
 
 test("taskEngineModule passes ModuleRegistry validation", () => {
@@ -3524,6 +3525,44 @@ test("taskEngineModule batch-transition dry-run previews ordered transitions", a
   assert.equal(dry.data.allAllowed, true);
   assert.equal(dry.data.results.length, 2);
   assert.equal(dry.data.results[1].toState, "proposed");
+});
+
+test("taskEngineModule recommend-validation prioritizes check and task-engine tests from paths", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T9920",
+        status: "in_progress",
+        features: ["task-engine"]
+      })
+    );
+  });
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const result = await taskEngineModule.onCommand(
+    {
+      name: "recommend-validation",
+      args: {
+        taskId: "T9920",
+        touchedPaths: ["src/modules/task-engine/commands/recommend-validation-commands.ts"]
+      }
+    },
+    ctx
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "recommend-validation");
+  const cmds = result.data.recommendations.map((r) => r.command);
+  assert.ok(cmds.includes("pnpm run check"));
+  assert.ok(cmds.some((c) => c.includes("task-engine.test.mjs")));
+  assert.ok(result.data.deliveryEvidenceHint.validationCommands.length > 0);
+});
+
+test("taskEngineModule recommend-validation rejects empty argv", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, () => {});
+  const result = await taskEngineModule.onCommand({ name: "recommend-validation", args: {} }, sqliteTaskEngineCtx(workspace));
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "invalid-run-args");
 });
 
 test("taskEngineModule lifecycle intent wrappers delegate to run-transition actions", async () => {

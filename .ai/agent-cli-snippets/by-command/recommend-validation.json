@@ -1,0 +1,64 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "recommend-validation",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "taskId": {
+        "type": "string",
+        "pattern": "^T[0-9]+$"
+      },
+      "touchedPaths": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "diffPaths": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "features": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "additionalProperties": false
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run recommend-validation '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/recommend-validation.md",
+  "moduleId": "task-engine",
+  "description": "Suggest prioritized validation commands and delivery-evidence fields from task features and touched paths.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  }
+}

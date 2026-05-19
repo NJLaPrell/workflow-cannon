@@ -375,6 +375,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "recommend-validation",
+    "file": "recommend-validation.md",
+    "description": "Suggest prioritized validation commands and delivery-evidence fields from task features and touched paths.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "reject-improvement",
     "file": "reject-improvement.md",
     "description": "Intent wrapper around run-transition reject (proposed to cancelled).",
