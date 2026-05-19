@@ -10,7 +10,7 @@ type SqliteDatabase = InstanceType<typeof Database>;
  */
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 23;
+export const KIT_SQLITE_USER_VERSION = 24;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 export const TASK_ENGINE_DEPENDENCIES_TABLE = "task_engine_dependencies";
@@ -994,6 +994,37 @@ CREATE INDEX idx_kit_phase_catalog_updated ON kit_phase_catalog(updated_at);
 `);
 }
 
+/** Approval decisions + skill apply audit rows (Phase 102 / T100344). */
+function migrateV23ToV24(db: SqliteDatabase): void {
+  if (tableExists(db, "kit_approval_decisions")) {
+    return;
+  }
+  db.exec(`
+CREATE TABLE kit_approval_decisions (
+  fingerprint TEXT PRIMARY KEY NOT NULL,
+  task_id TEXT NOT NULL,
+  evidence_key TEXT NOT NULL,
+  decision_verb TEXT NOT NULL,
+  actor TEXT NOT NULL,
+  recorded_at TEXT NOT NULL,
+  edited_summary TEXT,
+  policy_trace_json TEXT
+);
+CREATE INDEX idx_kit_approval_decisions_task_id ON kit_approval_decisions(task_id);
+CREATE INDEX idx_kit_approval_decisions_evidence_key ON kit_approval_decisions(evidence_key);
+CREATE TABLE kit_skill_apply_audit (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  recorded_at TEXT NOT NULL,
+  skill_id TEXT NOT NULL,
+  actor TEXT NOT NULL,
+  dry_run INTEGER NOT NULL DEFAULT 0,
+  record_audit INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX idx_kit_skill_apply_audit_skill_id ON kit_skill_apply_audit(skill_id);
+CREATE INDEX idx_kit_skill_apply_audit_recorded_at ON kit_skill_apply_audit(recorded_at);
+`);
+}
+
 /**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
@@ -1125,6 +1156,11 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
     migrateV22ToV23(db);
     db.pragma("user_version = 23");
     current = 23;
+  }
+  if (current < 24) {
+    migrateV23ToV24(db);
+    db.pragma("user_version = 24");
+    current = 24;
   }
 }
 

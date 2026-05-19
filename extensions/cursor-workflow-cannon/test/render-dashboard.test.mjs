@@ -1069,7 +1069,7 @@ test("renderDashboardRootInnerHtml approval inbox empty state shows guide and ar
         top: [],
         policyArtifacts: [
           {
-            relativePath: ".workspace-kit/approvals/decisions.jsonl",
+            relativePath: "kit_approval_decisions",
             role: "decisions"
           }
         ]

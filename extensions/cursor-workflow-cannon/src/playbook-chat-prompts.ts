@@ -81,7 +81,7 @@ export function buildPolicyApprovalInboxPrompt(): string {
     "Help them work the improvement review queue (JSON **`policyApproval`** on sensitive runs per **`.ai/POLICY-APPROVAL.md`**):\n\n" +
     "- Read queue: `pnpm exec wk run list-approval-queue '{}'`\n" +
     "- Record decision: `review-item` with `decision` **`accept`**, **`decline`**, or **`accept_edited`** (requires `editedSummary`)\n" +
-    "- Audit artifacts: `.workspace-kit/policy/traces.jsonl`, `.workspace-kit/policy/session-grants.json`, `.workspace-kit/approvals/decisions.jsonl`\n\n" +
+    "- Audit artifacts: `.workspace-kit/policy/traces.jsonl`, `.workspace-kit/policy/session-grants.json`, `kit_approval_decisions` (SQLite)\n\n" +
     "Prefer dashboard row actions when the operator is in the sidebar; decisions remain immutable in the approvals module."
   );
 }

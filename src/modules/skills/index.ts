@@ -135,14 +135,18 @@ export const skillsModule: WorkflowModule = {
       }
       const actor = ctx.resolvedActor ?? "unknown";
       if (!dryRun && recordAudit) {
-        appendSkillApplyAudit(ws, {
-          schemaVersion: 1,
-          at: new Date().toISOString(),
-          skillId,
-          actor,
-          dryRun,
-          recordAudit
-        });
+        appendSkillApplyAudit(
+          ws,
+          {
+            schemaVersion: 1,
+            at: new Date().toISOString(),
+            skillId,
+            actor,
+            dryRun,
+            recordAudit
+          },
+          ctx.effectiveConfig as Record<string, unknown> | undefined
+        );
       }
       return {
         ok: true,

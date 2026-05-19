@@ -49,7 +49,10 @@ export async function runReviewItem(
   const evidenceKey = getEvidenceKey(task);
   const fingerprint = computeDecisionFingerprint(taskId, decision, evidenceKey, args.editedSummary);
 
-  const existing = await readDecisionFingerprints(ctx.workspacePath);
+  const existing = await readDecisionFingerprints(
+    ctx.workspacePath,
+    ctx.effectiveConfig as Record<string, unknown> | undefined
+  );
   if (existing.has(fingerprint)) {
     return {
       ok: true,
@@ -104,15 +107,19 @@ export async function runReviewItem(
   const finalTask = store.getTask(taskId);
   const finalStatus = finalTask?.status ?? "unknown";
 
-  await appendDecisionRecord(ctx.workspacePath, {
-    fingerprint,
-    taskId,
-    evidenceKey,
-    decisionVerb: decision,
-    actor,
-    editedSummary: args.editedSummary?.trim() || undefined,
-    policyTraceRef: args.policyTraceRef
-  });
+  await appendDecisionRecord(
+    ctx.workspacePath,
+    {
+      fingerprint,
+      taskId,
+      evidenceKey,
+      decisionVerb: decision,
+      actor,
+      editedSummary: args.editedSummary?.trim() || undefined,
+      policyTraceRef: args.policyTraceRef
+    },
+    ctx.effectiveConfig as Record<string, unknown> | undefined
+  );
 
   await appendLineageEvent(ctx.workspacePath, {
     eventType: "dec",
