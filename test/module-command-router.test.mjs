@@ -108,6 +108,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "queue-health",
     "recommend-validation",
     "reject-improvement",
+    "release-status",
     "release-evidence-manifest",
     "release-workspace-edit-lease",
     "remove-dependency",

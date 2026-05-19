@@ -70,6 +70,7 @@
     "queue-health",
     "recommend-validation",
     "reject-improvement",
+    "release-status",
     "release-evidence-manifest",
     "release-workspace-edit-lease",
     "remove-dependency",
@@ -1295,6 +1296,21 @@
         },
         "config": {
           "type": "object"
+        }
+      },
+      "additionalProperties": true
+    },
+    "release-status": {
+      "type": "object",
+      "properties": {
+        "includeTaskCounts": {
+          "type": "boolean"
+        },
+        "includeDriftDetails": {
+          "type": "boolean"
+        },
+        "includePhaseJournalSummary": {
+          "type": "boolean"
         }
       },
       "additionalProperties": true

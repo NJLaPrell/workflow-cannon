@@ -828,6 +828,11 @@
       "moduleId": "task-engine"
     },
     {
+      "name": "release-status",
+      "path": ".ai/agent-cli-snippets/by-command/release-status.json",
+      "moduleId": "task-engine"
+    },
+    {
       "name": "release-evidence-manifest",
       "path": ".ai/agent-cli-snippets/by-command/release-evidence-manifest.json",
       "moduleId": "task-engine"
