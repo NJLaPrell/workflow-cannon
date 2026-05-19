@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-19T14:05:55.328Z",
+  "generatedAt": "2026-05-19T14:21:59.992Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -776,6 +776,11 @@
       "name": "recommend-skills",
       "path": ".ai/agent-cli-snippets/by-command/recommend-skills.json",
       "moduleId": "skills"
+    },
+    {
+      "name": "recommend-validation",
+      "path": ".ai/agent-cli-snippets/by-command/recommend-validation.json",
+      "moduleId": "task-engine"
     },
     {
       "name": "reconcile-assignment",

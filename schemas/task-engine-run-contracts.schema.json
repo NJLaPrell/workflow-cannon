@@ -100,6 +100,7 @@
         "demote-task",
         "dismiss-phase-note",
         "pause-task",
+        "recommend-validation",
         "reject-improvement",
         "unblock-task",
         "get-module-state",
@@ -152,6 +153,7 @@
         "claim-workspace-edit-lease": { "$ref": "#/$defs/contractBase" },
         "complete-task": { "$ref": "#/$defs/contractTaskIntentWithTaskId" },
         "completion-preflight": { "$ref": "#/$defs/contractCompletionPreflight" },
+        "recommend-validation": { "$ref": "#/$defs/contractRecommendValidation" },
         "phase-status": { "$ref": "#/$defs/contractPhaseStatus" },
         "phase-closeout-readiness": { "$ref": "#/$defs/contractBase" },
         "phase-delivery-preflight": { "$ref": "#/$defs/contractBase" },
@@ -1085,6 +1087,30 @@
             "responseData": {
               "type": "object",
               "required": ["schemaVersion", "taskId", "passed", "findings"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractRecommendValidation": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "taskId": { "type": "string", "pattern": "^T[0-9]+$" },
+                "touchedPaths": { "type": "array", "items": { "type": "string" } },
+                "diffPaths": { "type": "array", "items": { "type": "string" } },
+                "features": { "type": "array", "items": { "type": "string" } }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["schemaVersion", "recommendations"],
               "additionalProperties": true
             }
           }
