@@ -130,3 +130,60 @@ export function listCheckpoints(
     .all(limit) as Record<string, unknown>[];
   return rows.map(parseRow);
 }
+
+/** Read-only rollup for `dashboard-summary` / extension (Phase 64+). */
+export type TaskCheckpointsDashboardRollup = {
+  schemaVersion: 1;
+  available: boolean;
+  totalCount: number;
+  /** Newest checkpoints first (bounded). */
+  topRecent: Array<{
+    id: string;
+    taskId: string | null;
+    label: string | null;
+    refKind: CheckpointRefKind;
+    createdAt: string;
+    gitHeadSha: string;
+  }>;
+};
+
+export function summarizeCheckpointsForDashboard(
+  db: SqliteDatabase.Database | undefined
+): TaskCheckpointsDashboardRollup {
+  const empty: TaskCheckpointsDashboardRollup = {
+    schemaVersion: 1,
+    available: false,
+    totalCount: 0,
+    topRecent: []
+  };
+  if (!db) {
+    return empty;
+  }
+  const uvRaw = db.pragma("user_version", { simple: true });
+  const uv = typeof uvRaw === "number" ? uvRaw : Number(uvRaw);
+  if (!Number.isFinite(uv) || uv < CHECKPOINT_KIT_MIN_USER_VERSION) {
+    return empty;
+  }
+  try {
+    const countRow = db.prepare("SELECT COUNT(*) AS c FROM kit_task_checkpoints").get() as
+      | { c: number }
+      | undefined;
+    const totalCount = countRow ? Number(countRow.c) : 0;
+    const topRecent = listCheckpoints(db, { limit: 15 }).map((row) => ({
+      id: row.id,
+      taskId: row.taskId,
+      label: row.label,
+      refKind: row.refKind,
+      createdAt: row.createdAt,
+      gitHeadSha: row.gitHeadSha
+    }));
+    return {
+      schemaVersion: 1,
+      available: true,
+      totalCount,
+      topRecent
+    };
+  } catch {
+    return empty;
+  }
+}

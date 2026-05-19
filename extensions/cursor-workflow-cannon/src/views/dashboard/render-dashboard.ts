@@ -2454,6 +2454,113 @@ function renderTeamExecutionSection(team: unknown): string {
   );
 }
 
+function checkpointRefKindPhrase(refKind: string): string {
+  return refKind === "stash" ? "Stash snapshot" : "HEAD pointer";
+}
+
+function renderCheckpointRowActions(r: Record<string, unknown>): string {
+  const id = escapeHtml(String(r.id ?? ""));
+  const refKind = escapeHtml(String(r.refKind ?? "head"));
+  const taskId = r.taskId != null ? escapeHtml(String(r.taskId)) : "";
+  return (
+    '<div class="dash-row-actions">' +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="checkpoint-compare" data-checkpoint-id="' +
+    id +
+    '" title="compare-checkpoint">Compare</button>' +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="checkpoint-rewind" data-checkpoint-id="' +
+    id +
+    '" data-ref-kind="' +
+    refKind +
+    '" data-task-id="' +
+    taskId +
+    '" title="rewind-to-checkpoint">Rewind</button>' +
+    "</div>"
+  );
+}
+
+function renderTaskCheckpointsSection(cp: unknown): string {
+  if (!cp || typeof cp !== "object") {
+    return "";
+  }
+  const o = cp as Record<string, unknown>;
+  if (o.schemaVersion !== 1) {
+    return "";
+  }
+  const avail = o.available === true;
+  const total = typeof o.totalCount === "number" ? o.totalCount : 0;
+  const top = Array.isArray(o.topRecent) ? (o.topRecent as unknown[]) : [];
+  if (!avail) {
+    return (
+      '<section class="dash-card" aria-label="Task checkpoints">' +
+      "<p><b>Task Checkpoints</b></p>" +
+      '<p class="muted">Checkpoint data unavailable (kit SQLite below v9 or store not readable).</p>' +
+      "</section>"
+    );
+  }
+  const statusLine = '<p class="muted">Saved checkpoints ' + String(total) + "</p>";
+  const toolbar =
+    '<div class="dash-team-exec-toolbar" role="toolbar" aria-label="Checkpoint actions">' +
+    '<button type="button" class="wc-btn wc-btn-md wc-btn-primary" data-wc-action="checkpoint-create-head" title="create-checkpoint head">Snapshot HEAD</button>' +
+    '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="checkpoint-create-stash" title="create-checkpoint stash">Snapshot stash</button>' +
+    '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="checkpoint-recovery-chat" title="Checkpoint playbook in chat">Recovery guide</button>' +
+    "</div>";
+  if (top.length === 0) {
+    return (
+      '<section class="dash-card dash-task-checkpoints" aria-label="Task checkpoints">' +
+      "<p><b>Task Checkpoints</b></p>" +
+      statusLine +
+      '<p class="muted">Git snapshots linked to tasks — create one before risky edits, compare later, rewind only with explicit confirmation.</p>' +
+      toolbar +
+      '<p class="muted">No checkpoints yet — use <b>Snapshot HEAD</b> or <b>Snapshot stash</b> before you start risky work.</p>' +
+      "</section>"
+    );
+  }
+  const rows = top
+    .map((x) => {
+      const r = x as Record<string, unknown>;
+      const id = escapeHtml(String(r.id ?? ""));
+      const tid = r.taskId != null ? escapeHtml(String(r.taskId)) : "—";
+      const label = r.label != null && String(r.label).trim() ? escapeHtml(String(r.label)) : "—";
+      const refKind = String(r.refKind ?? "head");
+      const refLabel = escapeHtml(checkpointRefKindPhrase(refKind));
+      const created =
+        typeof r.createdAt === "string" && r.createdAt.length > 0
+          ? escapeHtml(formatPlanningUpdatedAt(r.createdAt))
+          : "—";
+      const actions = renderCheckpointRowActions(r);
+      const title = label !== "—" ? label : id.length > 14 ? id.slice(0, 14) + "…" : id;
+      return (
+        '<div class="dash-row dash-team-assignment-row" role="listitem">' +
+        '<div class="dash-team-assignment-main">' +
+        '<span class="dash-row-label"><b>' +
+        title +
+        "</b></span>" +
+        '<span class="dash-team-assignment-meta muted">' +
+        refLabel +
+        " · task " +
+        tid +
+        " · " +
+        created +
+        " · " +
+        id +
+        "</span>" +
+        "</div>" +
+        actions +
+        "</div>"
+      );
+    })
+    .join("");
+  return (
+    '<section class="dash-card dash-task-checkpoints" aria-label="Task checkpoints">' +
+    "<p><b>Task Checkpoints</b></p>" +
+    statusLine +
+    toolbar +
+    '<div class="dash-row-list" role="list">' +
+    rows +
+    "</div></section>"
+  );
+}
+
 function subagentSessionStatusPhrase(status: string): string {
   switch (status) {
     case "open":
@@ -3619,7 +3726,8 @@ export function renderDashboardRootInnerHtml(
     renderPhaseCatalogOverviewSection(phaseSystemSlice) +
     renderWorkspaceBlockersPendingSection(ws as Record<string, unknown> | null) +
     renderTeamExecutionSection(d.teamExecution) +
-    renderSubagentRegistrySection(d.subagentRegistry);
+    renderSubagentRegistrySection(d.subagentRegistry) +
+    renderTaskCheckpointsSection(d.taskCheckpoints);
 
   const caePanelContent =
     typeof embeddedCaePanelHtml === "string" && embeddedCaePanelHtml.trim().length > 0

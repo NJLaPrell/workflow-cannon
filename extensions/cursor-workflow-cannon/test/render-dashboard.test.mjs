@@ -986,6 +986,79 @@ test("renderDashboardRootInnerHtml subagent registry row exposes close session",
   assert.match(html, /T801/);
 });
 
+test("renderDashboardRootInnerHtml task checkpoints empty state offers snapshot actions", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      taskCheckpoints: {
+        schemaVersion: 1,
+        available: true,
+        totalCount: 0,
+        topRecent: []
+      },
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [] },
+      readyQueueTop: [],
+      readyQueueCount: 0,
+      suggestedNext: null,
+      planningSession: null,
+      workspaceStatus: { currentKitPhase: "100" },
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+  assert.match(html, /checkpoint-create-head/);
+  assert.match(html, /checkpoint-recovery-chat/);
+  assert.match(html, /Snapshot HEAD/);
+  assert.match(html, /No checkpoints yet/);
+});
+
+test("renderDashboardRootInnerHtml task checkpoint row exposes compare and rewind", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      taskCheckpoints: {
+        schemaVersion: 1,
+        available: true,
+        totalCount: 1,
+        topRecent: [
+          {
+            id: "ckpt_test_001",
+            taskId: "T901",
+            label: "before refactor",
+            refKind: "head",
+            createdAt: "2026-05-06T00:04:00.000Z",
+            gitHeadSha: "abc123def456"
+          }
+        ]
+      },
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [] },
+      readyQueueTop: [],
+      readyQueueCount: 0,
+      suggestedNext: null,
+      planningSession: null,
+      workspaceStatus: { currentKitPhase: "100" },
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+  assert.match(html, /checkpoint-compare/);
+  assert.match(html, /checkpoint-rewind/);
+  assert.match(html, /data-checkpoint-id="ckpt_test_001"/);
+  assert.match(html, /before refactor/);
+});
+
 test("renderDashboardRootInnerHtml planning card shows resume CLI when session present", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,

@@ -1578,3 +1578,158 @@ export function validateRetireSubagentSubmit(values: Record<string, string>): Dr
   }
   return { ok: true, values: { subagentId, policyRationale: (values.policyRationale ?? "").trim() } };
 }
+
+export function buildCreateCheckpointDrawerSpec(p: {
+  mode: "head" | "stash";
+  taskId?: string;
+}): DrawerFormSpec {
+  const modeLabel = p.mode === "stash" ? "stash (dirty tree)" : "head (pointer)";
+  return {
+    workflowId: "create-checkpoint",
+    title: p.mode === "stash" ? "Create stash checkpoint" : "Create head checkpoint",
+    descriptionHtml:
+      "Runs <code>create-checkpoint</code> with mode <b>" +
+      escapeDrawerHtml(modeLabel) +
+      "</b>. Records git state in kit SQLite before risky task work.",
+    fields: [
+      {
+        id: "taskId",
+        kind: "text",
+        label: "Task id (optional)",
+        placeholder: "T662",
+        value: p.taskId ?? ""
+      },
+      {
+        id: "label",
+        kind: "text",
+        label: "Label (optional)",
+        placeholder: "before risky edit"
+      },
+      {
+        id: "policyRationale",
+        kind: "textarea",
+        label: "Policy rationale",
+        required: true,
+        rows: 2
+      }
+    ],
+    primaryLabel: "Create checkpoint",
+    cancelLabel: "Cancel"
+  };
+}
+
+export function validateCreateCheckpointSubmit(values: Record<string, string>): DrawerValidationResult {
+  const policyErr = validateTeamPolicyRationale(values);
+  if (policyErr) {
+    return { ok: false, error: policyErr };
+  }
+  const taskId = (values.taskId ?? "").trim().toUpperCase();
+  if (taskId && !TEAM_TASK_ID_RE.test(taskId)) {
+    return { ok: false, error: "Task id must look like T### when provided." };
+  }
+  return {
+    ok: true,
+    values: {
+      taskId,
+      label: (values.label ?? "").trim(),
+      policyRationale: (values.policyRationale ?? "").trim()
+    }
+  };
+}
+
+export function buildRewindCheckpointDrawerSpec(p: {
+  checkpointId: string;
+  refKind: string;
+  taskId?: string | null;
+}): DrawerFormSpec {
+  const taskLine =
+    p.taskId != null && String(p.taskId).trim()
+      ? " · task <code>" + escapeDrawerHtml(String(p.taskId)) + "</code>"
+      : "";
+  return {
+    workflowId: "rewind-to-checkpoint",
+    title: "Rewind to checkpoint (destructive)",
+    descriptionHtml:
+      "<p><b>Destructive.</b> Runs <code>rewind-to-checkpoint</code> for <code>" +
+      escapeDrawerHtml(p.checkpointId) +
+      "</code> (" +
+      escapeDrawerHtml(p.refKind) +
+      " ref)" +
+      taskLine +
+      ".</p>" +
+      "<p class=\"muted\">Head checkpoints run <code>git reset --hard</code>. Stash checkpoints run <code>git stash apply</code>. " +
+      "Refuses vendor/node_modules paths. Use force only when you accept rewinding on a dirty worktree.</p>",
+    fields: [
+      {
+        id: "force",
+        kind: "select",
+        label: "Dirty worktree",
+        required: true,
+        options: [
+          { value: "", label: "No — require clean worktree (recommended)" },
+          { value: "yes", label: "Yes — force destructive rewind" }
+        ]
+      },
+      {
+        id: "policyRationale",
+        kind: "textarea",
+        label: "Policy rationale (describe why you are rewinding)",
+        required: true,
+        rows: 3
+      }
+    ],
+    primaryLabel: "Rewind now",
+    cancelLabel: "Cancel"
+  };
+}
+
+export function validateRewindCheckpointSubmit(values: Record<string, string>): DrawerValidationResult {
+  const policyErr = validateTeamPolicyRationale(values);
+  if (policyErr) {
+    return { ok: false, error: policyErr };
+  }
+  const rationale = (values.policyRationale ?? "").trim();
+  if (rationale.length < 12) {
+    return { ok: false, error: "Rewind rationale must be at least 12 characters." };
+  }
+  return {
+    ok: true,
+    values: {
+      force: (values.force ?? "").trim() === "yes" ? "yes" : "",
+      policyRationale: rationale
+    }
+  };
+}
+
+export function buildViewCheckpointCompareDrawerSpec(p: {
+  checkpointId: string;
+  refKind: string;
+  compareFrom: string;
+  compareTo: string;
+  nameStatusLines: string[];
+}): DrawerFormSpec {
+  const lines = p.nameStatusLines.length > 0 ? p.nameStatusLines : ["(no file changes vs HEAD)"];
+  const body =
+    "<div><b>From</b> <code>" +
+    escapeDrawerHtml(p.compareFrom.slice(0, 12)) +
+    "…</code> → <b>HEAD</b> <code>" +
+    escapeDrawerHtml(p.compareTo.slice(0, 12)) +
+    "…</code></div>" +
+    "<pre class=\"wc-drawer-pre\">" +
+    escapeDrawerHtml(lines.slice(0, 80).join("\n")) +
+    (lines.length > 80 ? "\n… (truncated)" : "") +
+    "</pre>";
+  return {
+    workflowId: "view-checkpoint-compare",
+    title: "Compare checkpoint",
+    descriptionHtml:
+      "Read-only <code>compare-checkpoint</code> output for <code>" +
+      escapeDrawerHtml(p.checkpointId) +
+      "</code> (" +
+      escapeDrawerHtml(p.refKind) +
+      ").",
+    fields: [{ id: "diff", kind: "summary", label: "git diff --name-status", body }],
+    primaryLabel: "Close",
+    cancelLabel: "Cancel"
+  };
+}

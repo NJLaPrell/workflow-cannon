@@ -2,8 +2,10 @@ import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contr
 import type {
   DashboardSubagentRegistrySummary,
   DashboardSummaryData,
+  DashboardTaskCheckpointsSummary,
   DashboardTeamExecutionSummary
 } from "../../../contracts/dashboard-summary-run.js";
+import { summarizeCheckpointsForDashboard } from "../../checkpoints/checkpoint-store.js";
 import { summarizeSubagentsForDashboard } from "../../subagents/subagent-store.js";
 import { summarizeTeamAssignmentsForDashboard } from "../../team-execution/assignment-store.js";
 import { resolveAgentGuidanceFromEffectiveConfig } from "../../../core/agent-guidance-catalog.js";
@@ -250,6 +252,16 @@ export async function runDashboardSummaryCommand(
     ? (summarizeSubagentsForDashboard(sqliteDual.getDatabase()) as DashboardSubagentRegistrySummary)
     : subagentRegistryEmpty;
 
+  const taskCheckpointsEmpty: DashboardTaskCheckpointsSummary = {
+    schemaVersion: 1,
+    available: false,
+    totalCount: 0,
+    topRecent: []
+  };
+  const taskCheckpoints: DashboardTaskCheckpointsSummary = sqliteDual
+    ? (summarizeCheckpointsForDashboard(sqliteDual.getDatabase()) as DashboardTaskCheckpointsSummary)
+    : taskCheckpointsEmpty;
+
   const systemStatus = await buildDashboardSystemStatus(ctx, store, dualForStatus);
   const derivedAgentStatus = buildDashboardAgentStatus({
     now: systemStatus.generatedAt,
@@ -389,6 +401,7 @@ export async function runDashboardSummaryCommand(
     agentGuidance,
     teamExecution,
     subagentRegistry,
+    taskCheckpoints,
     systemStatus,
     agentStatus,
     currentPhaseDelivery,
