@@ -31,6 +31,10 @@ CAE evaluates **bounded, typed** workspace + task + command context and returns 
 
 CAE **acknowledgement strengths** (`none` | `surface` | `recommend` | `ack_required` | `satisfy_required`) are **not** Tier A/B JSON **`policyApproval`**. Code invariants and shipped policy lanes stay authoritative — see **`.ai/cae/acknowledgement-model.md`** and **`.ai/POLICY-APPROVAL.md`**.
 
+## Improvement discovery at lifecycle transitions
+
+**`cae.activation.review.run-transition-improvement-discovery`** surfaces **`cae.playbook.improvement-discovery`** (`.ai/playbooks/improvement-task-discovery.md`) when **`evaluationContext.command.name`** is exactly **`run-transition`**. It is **advisory** (`advisoryOnly`, **`recommend`** acknowledgement) so agents get a nudge to log friction in the task store at delivery checkpoints without blocking transitions. Re-seed kit SQLite after editing **`.ai/cae/registry/activations.v1.json`** via **`cae-import-json-registry`**.
+
 ## Read-only first
 
 Inspect registry and evaluations via **`cae-*`** commands (**`T861`**, **`T862`**). **Authoritative registry state** lives in **kit SQLite**; JSON under **`.ai/cae/registry/`** is seed/fixture — see **`.ai/cae/json-registry-fate.md`** and **`.ai/cae/mutation-governance.md`** (git+PR still applies to editing those seed files).

@@ -21,6 +21,9 @@ export const CLI_REMEDIATION_INSTRUCTIONS = {
   dismissPhaseNote: "src/modules/task-engine/instructions/dismiss-phase-note.md",
   supersedePhaseNote: "src/modules/task-engine/instructions/supersede-phase-note.md",
   completionPreflight: "src/modules/task-engine/instructions/completion-preflight.md",
+  recommendValidation: "src/modules/task-engine/instructions/recommend-validation.md",
+  improvementDedupeExplain: "src/modules/task-engine/instructions/improvement-dedupe-explain.md",
+  improvementWorkflowSummary: "src/modules/task-engine/instructions/improvement-workflow-summary.md",
   agentMutationPlan: "src/modules/task-engine/instructions/agent-mutation-plan.md",
   getWorkspaceStatus: "src/modules/task-engine/instructions/get-workspace-status.md",
 } as const;

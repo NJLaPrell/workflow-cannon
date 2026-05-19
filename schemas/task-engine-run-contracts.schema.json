@@ -11,7 +11,7 @@
       "const": 1
     },
     "packageVersion": {
-      "const": "0.95.0",
+      "const": "0.96.0",
       "description": "Must match package.json version."
     },
     "moduleId": {
@@ -29,6 +29,7 @@
         "update-workspace-status",
         "set-current-phase",
         "archive-task",
+        "accept-improvement",
         "add-dependency",
         "add-phase-note",
         "agent-bootstrap",
@@ -38,6 +39,8 @@
         "assign-task-phase",
         "backfill-task-feature-links",
         "backup-planning-sqlite",
+        "batch-transition",
+        "block-task",
         "remove-dependency",
         "get-dependency-graph",
         "get-kit-persistence-map",
@@ -53,6 +56,8 @@
         "get-wishlist",
         "get-workspace-status",
         "heartbeat-workspace-edit-lease",
+        "improvement-dedupe-explain",
+        "improvement-workflow-summary",
         "classify-kit-state",
         "claim-next-task",
         "claim-workspace-edit-lease",
@@ -63,6 +68,7 @@
         "phase-delivery-preflight",
         "phase-focus-dashboard",
         "release-evidence-manifest",
+        "report-defect",
         "release-workspace-edit-lease",
         "get-task",
         "list-tasks",
@@ -93,7 +99,12 @@
         "set-agent-activity",
         "start-task",
         "dashboard-summary",
+        "demote-task",
         "dismiss-phase-note",
+        "pause-task",
+        "recommend-validation",
+        "reject-improvement",
+        "unblock-task",
         "get-module-state",
         "list-components",
         "list-features",
@@ -112,6 +123,7 @@
         "update-workspace-status": { "$ref": "#/$defs/contractUpdateWorkspaceStatus" },
         "set-current-phase": { "$ref": "#/$defs/contractSetCurrentPhase" },
         "archive-task": { "$ref": "#/$defs/contractArchiveTask" },
+        "accept-improvement": { "$ref": "#/$defs/contractTaskIntentWithTaskId" },
         "add-dependency": { "$ref": "#/$defs/contractDependencyMutation" },
         "add-phase-note": { "$ref": "#/$defs/contractBase" },
         "agent-bootstrap": { "$ref": "#/$defs/contractAgentBootstrap" },
@@ -121,6 +133,8 @@
         "assign-task-phase": { "$ref": "#/$defs/contractAssignTaskPhase" },
         "backfill-task-feature-links": { "$ref": "#/$defs/contractBase" },
         "backup-planning-sqlite": { "$ref": "#/$defs/contractBackupPlanningSqlite" },
+        "batch-transition": { "$ref": "#/$defs/contractBatchTransition" },
+        "block-task": { "$ref": "#/$defs/contractTaskIntentWithTaskId" },
         "remove-dependency": { "$ref": "#/$defs/contractDependencyMutation" },
         "get-dependency-graph": { "$ref": "#/$defs/contractDependencyGraph" },
         "get-kit-persistence-map": { "$ref": "#/$defs/contractKitPersistenceMap" },
@@ -141,11 +155,15 @@
         "claim-workspace-edit-lease": { "$ref": "#/$defs/contractBase" },
         "complete-task": { "$ref": "#/$defs/contractTaskIntentWithTaskId" },
         "completion-preflight": { "$ref": "#/$defs/contractCompletionPreflight" },
+        "recommend-validation": { "$ref": "#/$defs/contractRecommendValidation" },
+        "improvement-dedupe-explain": { "$ref": "#/$defs/contractImprovementDedupeExplain" },
+        "improvement-workflow-summary": { "$ref": "#/$defs/contractImprovementWorkflowSummary" },
         "phase-status": { "$ref": "#/$defs/contractPhaseStatus" },
         "phase-closeout-readiness": { "$ref": "#/$defs/contractBase" },
         "phase-delivery-preflight": { "$ref": "#/$defs/contractBase" },
         "phase-focus-dashboard": { "$ref": "#/$defs/contractBase" },
         "release-evidence-manifest": { "$ref": "#/$defs/contractBase" },
+        "report-defect": { "$ref": "#/$defs/contractReportDefect" },
         "release-workspace-edit-lease": { "$ref": "#/$defs/contractBase" },
         "get-task": { "$ref": "#/$defs/contractGetTask" },
         "list-tasks": { "$ref": "#/$defs/contractListTasks" },
@@ -176,7 +194,11 @@
         "set-agent-activity": { "$ref": "#/$defs/contractBase" },
         "start-task": { "$ref": "#/$defs/contractTaskIntentWithTaskId" },
         "dashboard-summary": { "$ref": "#/$defs/contractDashboardSummary" },
+        "demote-task": { "$ref": "#/$defs/contractTaskIntentWithTaskId" },
         "dismiss-phase-note": { "$ref": "#/$defs/contractBase" },
+        "pause-task": { "$ref": "#/$defs/contractTaskIntentWithTaskId" },
+        "reject-improvement": { "$ref": "#/$defs/contractTaskIntentWithTaskId" },
+        "unblock-task": { "$ref": "#/$defs/contractTaskIntentWithTaskId" },
         "get-module-state": { "$ref": "#/$defs/contractGetModuleState" },
         "list-components": { "$ref": "#/$defs/contractBase" },
         "list-features": { "$ref": "#/$defs/contractListFeatures" },
@@ -342,6 +364,44 @@
                 },
                 "actor": { "type": "string" },
                 "config": { "type": "object" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["task", "presentation"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractReportDefect": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "required": ["title", "summary", "evidence"],
+              "additionalProperties": true,
+              "properties": {
+                "title": { "type": "string" },
+                "summary": { "type": "string" },
+                "evidence": { "type": "string" },
+                "severity": { "type": "string" },
+                "features": { "type": "array", "items": { "type": "string" } },
+                "relatedTaskId": { "type": "string" },
+                "phaseKey": { "type": "string" },
+                "phase": { "type": "string" },
+                "clientMutationId": { "type": "string", "minLength": 1 },
+                "policyApproval": { "type": "object" },
+                "expectedPlanningGeneration": {
+                  "oneOf": [
+                    { "type": "integer", "minimum": 0 },
+                    { "type": "string", "pattern": "^[0-9]+$" }
+                  ]
+                },
+                "actor": { "type": "string" }
               }
             },
             "responseData": {
@@ -927,6 +987,51 @@
         }
       ]
     },
+    "contractBatchTransition": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "required": ["transitions"],
+              "additionalProperties": true,
+              "properties": {
+                "transitions": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "object",
+                    "required": ["taskId", "action"],
+                    "additionalProperties": true,
+                    "properties": {
+                      "taskId": { "type": "string", "pattern": "^T[0-9]+$" },
+                      "action": { "type": "string" },
+                      "clientMutationId": { "type": "string", "minLength": 1 }
+                    }
+                  }
+                },
+                "dryRun": { "type": "boolean" },
+                "apply": { "type": "boolean" },
+                "policyApproval": { "type": "object" },
+                "expectedPlanningGeneration": {
+                  "oneOf": [
+                    { "type": "integer", "minimum": 0 },
+                    { "type": "string", "pattern": "^[0-9]+$" }
+                  ]
+                },
+                "actor": { "type": "string" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["presentation"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
     "contractApplyTaskBatch": {
       "allOf": [
         { "$ref": "#/$defs/contractBase" },
@@ -986,6 +1091,70 @@
             "responseData": {
               "type": "object",
               "required": ["schemaVersion", "taskId", "passed", "findings"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractRecommendValidation": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "taskId": { "type": "string", "pattern": "^T[0-9]+$" },
+                "touchedPaths": { "type": "array", "items": { "type": "string" } },
+                "diffPaths": { "type": "array", "items": { "type": "string" } },
+                "features": { "type": "array", "items": { "type": "string" } }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["schemaVersion", "recommendations"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractImprovementDedupeExplain": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "required": ["taskId"],
+              "additionalProperties": false,
+              "properties": {
+                "taskId": { "type": "string", "pattern": "^T[0-9]+$" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["schemaVersion", "taskId", "recommendation", "similarityClusters"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractImprovementWorkflowSummary": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": false
+            },
+            "responseData": {
+              "type": "object",
+              "required": ["schemaVersion", "entryPoints", "suggestedNextSteps"],
               "additionalProperties": true
             }
           }

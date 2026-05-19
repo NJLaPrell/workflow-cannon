@@ -237,6 +237,15 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "report-defect",
+    "file": "report-defect.md",
+    "description": "Create a proposed improvement task with required defect intake fields pre-filled.",
+    "policyOperationId": "tasks.report-defect",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "release-evidence-manifest",
     "file": "release-evidence-manifest.md",
     "description": "Build a machine-readable release evidence manifest for phase closeout.",
@@ -324,6 +333,84 @@
     "name": "complete-task",
     "file": "complete-task.md",
     "description": "Intent wrapper around run-transition complete for a task.",
+    "policyOperationId": "tasks.run-transition",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "accept-improvement",
+    "file": "accept-improvement.md",
+    "description": "Intent wrapper around run-transition accept (proposed to ready).",
+    "policyOperationId": "tasks.run-transition",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "block-task",
+    "file": "block-task.md",
+    "description": "Intent wrapper around run-transition block.",
+    "policyOperationId": "tasks.run-transition",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "demote-task",
+    "file": "demote-task.md",
+    "description": "Intent wrapper around run-transition demote (ready to proposed).",
+    "policyOperationId": "tasks.run-transition",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "pause-task",
+    "file": "pause-task.md",
+    "description": "Intent wrapper around run-transition pause (in_progress to ready).",
+    "policyOperationId": "tasks.run-transition",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "improvement-dedupe-explain",
+    "file": "improvement-dedupe-explain.md",
+    "description": "Explain similarity clusters, evidenceKey overlaps, and lineage for improvement triage.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "improvement-workflow-summary",
+    "file": "improvement-workflow-summary.md",
+    "description": "Discoverable improvement automation workflow: transcript pipeline, scout entry points, churn, lineage.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "recommend-validation",
+    "file": "recommend-validation.md",
+    "description": "Suggest prioritized validation commands and delivery-evidence fields from task features and touched paths.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "reject-improvement",
+    "file": "reject-improvement.md",
+    "description": "Intent wrapper around run-transition reject (proposed to cancelled).",
+    "policyOperationId": "tasks.run-transition",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "unblock-task",
+    "file": "unblock-task.md",
+    "description": "Intent wrapper around run-transition unblock (blocked to ready).",
     "policyOperationId": "tasks.run-transition",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "sensitive"
@@ -731,6 +818,15 @@
     "description": "Read-only JSON map of unified SQLite paths, planning table/columns, and legacy task JSON import paths for agents.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "batch-transition",
+    "file": "batch-transition.md",
+    "description": "Dry-run or apply multiple run-transition operations in order.",
+    "policyOperationId": "tasks.run-transition",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
   },
   {
     "moduleId": "task-engine",

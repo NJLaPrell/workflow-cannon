@@ -1180,6 +1180,10 @@ test("taskEngineModule registration includes all instruction entries", () => {
   assert.ok(names.includes("claim-next-task"));
   assert.ok(names.includes("start-task"));
   assert.ok(names.includes("complete-task"));
+  assert.ok(names.includes("report-defect"));
+  assert.ok(names.includes("recommend-validation"));
+  assert.ok(names.includes("improvement-dedupe-explain"));
+  assert.ok(names.includes("improvement-workflow-summary"));
 });
 
 test("taskEngineModule passes ModuleRegistry validation", () => {
@@ -3498,6 +3502,185 @@ test("taskEngineModule claim-next-task returns no-op when no runnable task exist
   assert.equal(result.data.reason, "no-runnable-task");
 });
 
+test("taskEngineModule batch-transition dry-run previews ordered transitions", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T9910", status: "ready" }));
+    store.addTask(makeTask({ id: "T9911", status: "ready" }));
+  });
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const dry = await taskEngineModule.onCommand(
+    {
+      name: "batch-transition",
+      args: {
+        dryRun: true,
+        transitions: [
+          { taskId: "T9910", action: "start" },
+          { taskId: "T9911", action: "demote" }
+        ]
+      }
+    },
+    ctx
+  );
+  assert.equal(dry.ok, true);
+  assert.equal(dry.code, "batch-transition-dry-run");
+  assert.equal(dry.data.allAllowed, true);
+  assert.equal(dry.data.results.length, 2);
+  assert.equal(dry.data.results[1].toState, "proposed");
+});
+
+test("taskEngineModule recommend-validation prioritizes check and task-engine tests from paths", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T9920",
+        status: "in_progress",
+        features: ["task-engine"]
+      })
+    );
+  });
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const result = await taskEngineModule.onCommand(
+    {
+      name: "recommend-validation",
+      args: {
+        taskId: "T9920",
+        touchedPaths: ["src/modules/task-engine/commands/recommend-validation-commands.ts"]
+      }
+    },
+    ctx
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "recommend-validation");
+  const cmds = result.data.recommendations.map((r) => r.command);
+  assert.ok(cmds.includes("pnpm run check"));
+  assert.ok(cmds.some((c) => c.includes("task-engine.test.mjs")));
+  assert.ok(result.data.deliveryEvidenceHint.validationCommands.length > 0);
+});
+
+test("taskEngineModule recommend-validation rejects empty argv", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, () => {});
+  const result = await taskEngineModule.onCommand({ name: "recommend-validation", args: {} }, sqliteTaskEngineCtx(workspace));
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "invalid-run-args");
+});
+
+test("taskEngineModule improvement-workflow-summary exposes entry points and pipeline status", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T9940",
+        status: "research",
+        type: "transcript_churn",
+        title: "Churn from long sessions",
+        metadata: { evidenceKey: "transcript:churn-1", issue: "operator friction" },
+        acceptanceCriteria: ["a"],
+        technicalScope: ["b"]
+      })
+    );
+  });
+  const result = await taskEngineModule.onCommand(
+    { name: "improvement-workflow-summary", args: {} },
+    sqliteTaskEngineCtx(workspace)
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "improvement-workflow-summary");
+  assert.ok(result.data.entryPoints.some((e) => e.command === "generate-recommendations"));
+  assert.equal(result.data.transcriptPipeline.researchCount, 1);
+  assert.ok(result.data.suggestedNextSteps.length > 0);
+});
+
+test("taskEngineModule improvement-dedupe-explain clusters exact evidenceKey duplicates", async () => {
+  const workspace = await tmpDir();
+  const key = "transcript:demo-key";
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T9930",
+        status: "proposed",
+        type: "improvement",
+        title: "Fix flaky transcript ingest",
+        metadata: { evidenceKey: key, issue: "ingest fails on large files", supportingReasoning: "x" },
+        acceptanceCriteria: ["a"],
+        technicalScope: ["b"]
+      })
+    );
+    store.addTask(
+      makeTask({
+        id: "T9931",
+        status: "completed",
+        type: "improvement",
+        title: "Transcript ingest reliability",
+        metadata: { evidenceKey: key, issue: "ingest fails", supportingReasoning: "y" },
+        acceptanceCriteria: ["a"],
+        technicalScope: ["b"]
+      })
+    );
+  });
+  const result = await taskEngineModule.onCommand(
+    { name: "improvement-dedupe-explain", args: { taskId: "T9930" } },
+    sqliteTaskEngineCtx(workspace)
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "improvement-dedupe-explain");
+  assert.equal(result.data.recommendation.action, "reject");
+  assert.ok(result.data.similarityClusters.some((c) => c.evidenceKey === key));
+});
+
+test("taskEngineModule lifecycle intent wrappers delegate to run-transition actions", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T9900",
+        status: "proposed",
+        type: "improvement",
+        acceptanceCriteria: ["done"],
+        technicalScope: ["scope"],
+        metadata: { issue: "x", supportingReasoning: "y" }
+      })
+    );
+    store.addTask(makeTask({ id: "T9901", status: "in_progress" }));
+    store.addTask(makeTask({ id: "T9902", status: "blocked" }));
+    store.addTask(makeTask({ id: "T9903", status: "ready" }));
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, { tasks: { planningGenerationPolicy: "require" } });
+
+  const accepted = await taskEngineModule.onCommand(
+    {
+      name: "accept-improvement",
+      args: { taskId: "T9900", expectedPlanningGeneration: 1 }
+    },
+    ctx
+  );
+  assert.equal(accepted.ok, true);
+  assert.equal(accepted.data.action, "accept");
+
+  const blocked = await taskEngineModule.onCommand(
+    { name: "block-task", args: { taskId: "T9901", expectedPlanningGeneration: 2 } },
+    ctx
+  );
+  assert.equal(blocked.ok, true);
+  assert.equal(blocked.data.action, "block");
+
+  const unblocked = await taskEngineModule.onCommand(
+    { name: "unblock-task", args: { taskId: "T9902", expectedPlanningGeneration: 3 } },
+    ctx
+  );
+  assert.equal(unblocked.ok, true);
+  assert.equal(unblocked.data.action, "unblock");
+
+  const demoted = await taskEngineModule.onCommand(
+    { name: "demote-task", args: { taskId: "T9903", expectedPlanningGeneration: 4 } },
+    ctx
+  );
+  assert.equal(demoted.ok, true);
+  assert.equal(demoted.data.action, "demote");
+});
+
 test("taskEngineModule start-task and complete-task use transition evidence and idempotency", async () => {
   const workspace = await tmpDir();
   await seedSqliteStore(workspace, (store) => {
@@ -4012,6 +4195,44 @@ test("taskEngineModule assign-task-phase and clear-task-phase persist", async ()
   got = await taskEngineModule.onCommand({ name: "get-task", args: { taskId: "T401" } }, ctx);
   assert.equal(got.data.task.phase, undefined);
   assert.equal(got.data.task.phaseKey, undefined);
+});
+
+test("taskEngineModule report-defect creates proposed improvement with defaults", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+
+  const created = await taskEngineModule.onCommand(
+    {
+      name: "report-defect",
+      args: {
+        title: "Shell mangled JSON",
+        summary: "Inline JSON broke on create-task",
+        evidence: "exit 2 invalid-run-args in zsh history",
+        severity: "high",
+        clientMutationId: "report-defect-1"
+      }
+    },
+    ctx
+  );
+  assert.equal(created.ok, true);
+  assert.equal(created.code, "report-defect-created");
+  assert.equal(created.data.intent, "report-defect");
+  const task = created.data.task;
+  assert.match(task.id, /^T\d+$/);
+  assert.equal(task.type, "improvement");
+  assert.equal(task.status, "proposed");
+  assert.equal(task.priority, "P1");
+  assert.equal(task.metadata.issue, "Inline JSON broke on create-task");
+  assert.equal(task.metadata.supportingReasoning, "exit 2 invalid-run-args in zsh history");
+  assert.ok(task.technicalScope.length >= 3);
+  assert.ok(task.acceptanceCriteria.length >= 2);
+
+  const missing = await taskEngineModule.onCommand(
+    { name: "report-defect", args: { title: "x", summary: "y" } },
+    ctx
+  );
+  assert.equal(missing.ok, false);
+  assert.equal(missing.code, "invalid-run-args");
 });
 
 test("taskEngineModule create-task validates known requirements for improvement type", async () => {

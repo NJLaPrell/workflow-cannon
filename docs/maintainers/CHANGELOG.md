@@ -8,6 +8,20 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.96.0] - 2026-05-19
+
+Phase 101 — **Improvement loop & signals** (agent ergonomics for discovery, validation, dedupe, and batch lifecycle).
+
+### Added
+
+- `report-defect` — file proposed improvements from in-loop agent defect reports.
+- Task intent wrappers: `block-task`, `pause-task`, `unblock-task`, `demote-task`, `accept-improvement`, `reject-improvement`.
+- `batch-transition` — dry-run and apply for ordered lifecycle transition batches.
+- `recommend-validation` — prioritized validation commands and delivery-evidence hints from task features and touched paths.
+- `improvement-dedupe-explain` — similarity clusters, evidenceKey overlap, lineage, and triage guidance for proposed improvements.
+- `improvement-workflow-summary` — transcript pipeline status, scout entry points, pending churn/proposals, and privacy-safe next steps.
+- CAE activation `cae.activation.review.run-transition-improvement-discovery` for improvement-discovery review flows.
+
 ## [0.95.0] - 2026-05-18
 
 Phase 100 — **Extension & human visibility** (dashboard operator surfaces + bounded agent phase JSON).

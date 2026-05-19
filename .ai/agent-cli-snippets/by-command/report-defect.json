@@ -1,0 +1,100 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "report-defect",
+  "schema": {
+    "type": "object",
+    "required": [
+      "title",
+      "summary",
+      "evidence"
+    ],
+    "properties": {
+      "title": {
+        "type": "string"
+      },
+      "summary": {
+        "type": "string"
+      },
+      "evidence": {
+        "type": "string"
+      },
+      "severity": {
+        "type": "string"
+      },
+      "features": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "relatedTaskId": {
+        "type": "string"
+      },
+      "phaseKey": {
+        "type": "string"
+      },
+      "phase": {
+        "type": "string"
+      },
+      "clientMutationId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "policyApproval": {
+        "type": "object"
+      },
+      "expectedPlanningGeneration": {
+        "oneOf": [
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          }
+        ]
+      },
+      "actor": {
+        "type": "string"
+      }
+    },
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {
+    "title": "",
+    "summary": "",
+    "evidence": ""
+  },
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run report-defect '{\"title\":\"\",\"summary\":\"\",\"evidence\":\"\"}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/report-defect.md",
+  "moduleId": "task-engine",
+  "description": "Create a proposed improvement task with required defect intake fields pre-filled.",
+  "policy": {
+    "sensitivity": "sensitive",
+    "operationId": "tasks.report-defect",
+    "jsonApprovalRequired": true
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": true
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  }
+}

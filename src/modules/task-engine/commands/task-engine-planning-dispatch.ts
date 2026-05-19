@@ -2,6 +2,9 @@ import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contr
 import { resolveAgentBootstrapOrSnapshot } from "./agent-session-commands.js";
 import { buildAgentMutationPlan } from "./agent-mutation-plan-commands.js";
 import { buildCompletionPreflight } from "./completion-preflight-commands.js";
+import { buildImprovementDedupeExplain } from "./improvement-dedupe-explain-commands.js";
+import { buildImprovementWorkflowSummary } from "./improvement-workflow-summary-commands.js";
+import { buildRecommendValidation } from "./recommend-validation-commands.js";
 import { runApplyTaskBatchCommand } from "./apply-task-batch-command.js";
 import { resolveAgentActivityCommands } from "./agent-activity-commands.js";
 import { resolveFeatureRegistryReadoutCommands } from "./feature-registry-readout-commands.js";
@@ -19,7 +22,9 @@ import { runTransitionOnCommand } from "./run-transition-on-command.js";
 import { runSynthesizeTranscriptChurnOnCommand } from "./synthesize-transcript-churn-on-command.js";
 import { resolveTaskArchiveDependencyCommands } from "./task-archive-dependency-commands.js";
 import { resolveTaskEngineReadoutTail } from "./task-engine-readout-tail.js";
-import { runClaimNextTaskIntent, runTaskIntentTransition } from "./task-intent-commands.js";
+import { runBatchTransitionCommand } from "./batch-transition-on-command.js";
+import { runReportDefectCommand } from "./report-defect-on-command.js";
+import { isTaskIntentCommand, runClaimNextTaskIntent, runTaskIntentTransition } from "./task-intent-commands.js";
 import { resolveTaskPhaseCommands } from "./task-phase-on-command.js";
 import { runTaskRowMutationCommands } from "./task-row-mutation-commands.js";
 import { runWishlistStoreCommandWithPlanningPolicyMeta } from "./task-engine-wishlist-on-command.js";
@@ -77,12 +82,32 @@ export async function dispatchTaskEnginePlanningCommands(
     return buildCompletionPreflight(ctx, planning, store, args as Record<string, unknown>);
   }
 
+  if (command.name === "recommend-validation") {
+    return buildRecommendValidation(ctx, planning, store, args as Record<string, unknown>);
+  }
+
+  if (command.name === "improvement-dedupe-explain") {
+    return buildImprovementDedupeExplain(ctx, planning, store, args as Record<string, unknown>);
+  }
+
+  if (command.name === "improvement-workflow-summary") {
+    return buildImprovementWorkflowSummary(ctx, planning, store);
+  }
+
   if (command.name === "claim-next-task") {
     return runClaimNextTaskIntent(ctx, planning, args as Record<string, unknown>);
   }
 
-  if (command.name === "start-task" || command.name === "complete-task") {
+  if (isTaskIntentCommand(command.name)) {
     return runTaskIntentTransition(command.name, ctx, planning, args as Record<string, unknown>);
+  }
+
+  if (command.name === "report-defect") {
+    return runReportDefectCommand(ctx, planning, store, args as Record<string, unknown>);
+  }
+
+  if (command.name === "batch-transition") {
+    return runBatchTransitionCommand(ctx, planning, store, args as Record<string, unknown>);
   }
 
   const featureRegistryReadout = resolveFeatureRegistryReadoutCommands(command, ctx, planning);

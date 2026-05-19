@@ -1,0 +1,93 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "accept-improvement",
+  "schema": {
+    "type": "object",
+    "required": [
+      "taskId"
+    ],
+    "properties": {
+      "taskId": {
+        "type": "string",
+        "pattern": "^(T[0-9]+|imp-[0-9a-f]{14})$"
+      },
+      "clientMutationId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "policyApproval": {
+        "type": "object"
+      },
+      "expectedPlanningGeneration": {
+        "oneOf": [
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          }
+        ]
+      },
+      "actor": {
+        "type": "string"
+      },
+      "waitForLease": {
+        "type": "boolean"
+      },
+      "agentSessionId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "waitForLeaseTimeoutMs": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 300000
+      },
+      "waitForLeasePollMs": {
+        "type": "integer",
+        "minimum": 50,
+        "maximum": 60000
+      },
+      "config": {
+        "type": "object"
+      }
+    },
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {
+    "taskId": "T000"
+  },
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run accept-improvement '{\"taskId\":\"T000\"}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/accept-improvement.md",
+  "moduleId": "task-engine",
+  "description": "Intent wrapper around run-transition accept (proposed to ready).",
+  "policy": {
+    "sensitivity": "sensitive",
+    "operationId": "tasks.run-transition",
+    "jsonApprovalRequired": true
+  },
+  "planningGeneration": {
+    "cliPrelude": true,
+    "expectedPlanningGeneration": "required when tasks.planningGenerationPolicy is require"
+  },
+  "idempotency": {
+    "clientMutationId": true
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  }
+}
