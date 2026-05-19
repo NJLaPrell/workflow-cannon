@@ -70,8 +70,8 @@
     "queue-health",
     "recommend-validation",
     "reject-improvement",
-    "release-status",
     "release-evidence-manifest",
+    "release-status",
     "release-workspace-edit-lease",
     "remove-dependency",
     "replay-queue-snapshot",
@@ -1300,6 +1300,9 @@
       },
       "additionalProperties": true
     },
+    "release-evidence-manifest": {
+      "type": "object"
+    },
     "release-status": {
       "type": "object",
       "properties": {
@@ -1314,9 +1317,6 @@
         }
       },
       "additionalProperties": true
-    },
-    "release-evidence-manifest": {
-      "type": "object"
     },
     "release-workspace-edit-lease": {
       "type": "object"
