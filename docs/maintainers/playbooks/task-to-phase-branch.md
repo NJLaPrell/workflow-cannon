@@ -86,7 +86,49 @@ Some phases ship **two or more parallel `T###` chains** on the same **`release/p
 
 ## 5) Review the PR
 
-1. Wait for **CI** (and any required checks) on the PR; treat failures as blocking until addressed or waived per team policy.
+### 5a) Wait for CI (headless — no `gh pr checks --watch`)
+
+**Do not** use `gh pr checks --watch` in agent shells, background tasks, or CI: it expects an interactive TTY and breaks automation.
+
+Prefer one of these **copy-paste** patterns (replace `<pr>` with the PR number or URL):
+
+**Option A — workflow run (when checks map to a single workflow run):**
+
+```bash
+GH_PAGER=cat gh pr view <pr> --json statusCheckRollup,number
+# When you have a run id from the PR checks page or prior gh run list:
+GH_PAGER=cat gh run watch <run-id> --exit-status
+```
+
+**Option B — bounded JSON poll (safe in agents; default for delivery loops):**
+
+```bash
+PR=<pr>
+DEADLINE=$(( $(date +%s) + 1800 ))
+while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+  RAW=$(GH_PAGER=cat gh pr checks "$PR" --json name,state,bucket 2>/dev/null || true)
+  STATUS=$(printf '%s' "$RAW" | node -e "
+const r=JSON.parse(require('fs').readFileSync(0,'utf8')||'[]');
+if(!Array.isArray(r)||r.length===0){console.log('pending');process.exit(0)}
+const pend=r.some(c=>['PENDING','IN_PROGRESS','QUEUED'].includes(c.state));
+if(pend){console.log('pending');process.exit(0)}
+const bad=r.filter(c=>!['SUCCESS','SKIPPED','NEUTRAL'].includes(c.state));
+if(bad.length){console.log('failed');console.error(JSON.stringify(bad,null,2));process.exit(1)}
+console.log('passed');
+")
+  case "$STATUS" in
+    pending) echo "checks not ready yet; sleep 30s"; sleep 30 ;;
+    passed) echo "checks green"; break ;;
+    failed) exit 1 ;;
+  esac
+done
+```
+
+Exit code **8** from `gh pr checks` usually means **checks are not ready yet**, not that CI failed — keep polling or use Option A.
+
+Future: **`workspace-kit run wait-for-pr-checks`** (see task **T100349**) may replace the shell loop when shipped.
+
+1. Wait for **CI** using **5a**; treat failures as blocking until addressed or waived per team policy.
 2. Perform **code review** (self-review for solo maintainers, or peer review): correctness, scope, tests, docs, and alignment with task acceptance criteria.
 3. Optionally leave a **review comment** or summary on the PR documenting the review outcome.
 

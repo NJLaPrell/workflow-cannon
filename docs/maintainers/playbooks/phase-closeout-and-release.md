@@ -64,6 +64,8 @@ workspace-kit run convert-phase-note-to-task '{"noteId":"<uuid>","expectedPlanni
 
 **PR review integrity:** Prefer **follow-up commits** on task branches over amend + force-push after review. `pre-merge-gates` includes `check-pr-history-rewritten` (`pr-history-rewritten` when the PR head diverges from the latest approving review commit).
 
+**CI wait (agents):** Use the headless recipes in [`task-to-phase-branch.md`](./task-to-phase-branch.md) § **5a** — not `gh pr checks --watch`. For phase→`main` PRs, the same poll/`gh run watch` patterns apply before merge.
+
 ## 4) Human gate — stop before publish
 
 **Do not** run publish automation or tag-driven release actions until a human explicitly approves, per [`RELEASING.md`](../RELEASING.md) (“Present for approval”).
