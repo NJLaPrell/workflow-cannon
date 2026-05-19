@@ -823,6 +823,93 @@ test("renderDashboardRootInnerHtml renders many agent and subagent rows", () => 
   assert.match(html, /aria-label="test-subagent, Subagent"/);
 });
 
+test("renderDashboardRootInnerHtml team execution empty state offers create assignment", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      teamExecution: {
+        schemaVersion: 1,
+        available: true,
+        totalCount: 0,
+        activeCount: 0,
+        byStatus: { assigned: 0, submitted: 0, blocked: 0, reconciled: 0, cancelled: 0 },
+        topActive: []
+      },
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [] },
+      readyQueueTop: [],
+      readyQueueCount: 0,
+      suggestedNext: null,
+      planningSession: null,
+      workspaceStatus: { currentKitPhase: "100" },
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+  assert.match(html, /team-assignment-register/);
+  assert.match(html, /team-execution-chat/);
+  assert.match(html, /Create assignment/);
+  assert.match(html, /No active assignments yet/);
+});
+
+test("renderDashboardRootInnerHtml team execution row exposes handoff and reconcile actions", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      teamExecution: {
+        schemaVersion: 1,
+        available: true,
+        totalCount: 2,
+        activeCount: 2,
+        byStatus: { assigned: 1, submitted: 1, blocked: 0, reconciled: 0, cancelled: 0 },
+        topActive: [
+          {
+            id: "a1",
+            executionTaskId: "T701",
+            executionTaskTitle: "Review dashboard rows",
+            supervisorId: "operator",
+            workerId: "tab-2",
+            status: "assigned",
+            updatedAt: "2026-05-06T00:01:00.000Z"
+          },
+          {
+            id: "a2",
+            executionTaskId: "T702",
+            executionTaskTitle: "Ship handoff",
+            supervisorId: "operator",
+            workerId: "tab-3",
+            status: "submitted",
+            updatedAt: "2026-05-06T00:02:00.000Z"
+          }
+        ]
+      },
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [] },
+      readyQueueTop: [],
+      readyQueueCount: 0,
+      suggestedNext: null,
+      planningSession: null,
+      workspaceStatus: { currentKitPhase: "100" },
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+  assert.match(html, /team-assignment-handoff/);
+  assert.match(html, /team-assignment-reconcile/);
+  assert.match(html, /data-assignment-id="a1"/);
+  assert.match(html, /data-assignment-id="a2"/);
+});
+
 test("renderDashboardRootInnerHtml planning card shows resume CLI when session present", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,

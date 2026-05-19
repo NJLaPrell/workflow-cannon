@@ -10,6 +10,7 @@ import {
   buildCollaborationProfilesHubPrompt,
   buildImprovementTriagePrompt,
   buildPhaseNotesDiscoveryPrompt,
+  buildTeamExecutionSupervisorPrompt,
   buildPlanningInterviewPrompt,
   buildPlanningInterviewResumePrompt,
   buildTaskToPhaseBranchPrompt,
@@ -41,8 +42,18 @@ import {
   buildEditPhaseNoteDrawerSpec,
   buildPersistPhaseNoteProposalsDrawerSpec,
   buildRegisterPhaseCatalogDrawerSpec,
+  buildRegisterTeamAssignmentDrawerSpec,
+  buildSubmitTeamHandoffDrawerSpec,
+  buildReconcileTeamAssignmentDrawerSpec,
+  buildBlockTeamAssignmentDrawerSpec,
+  buildCancelTeamAssignmentDrawerSpec,
   buildViewPhaseNoteDrawerSpec,
   normalizeDrawerValues,
+  validateRegisterTeamAssignmentSubmit,
+  validateSubmitTeamHandoffSubmit,
+  validateReconcileTeamAssignmentSubmit,
+  validateBlockTeamAssignmentSubmit,
+  validateCancelTeamAssignmentSubmit,
   renderDrawerFormHtml,
   validateAcceptProposedSubmit,
   validateAddPhaseNoteSubmit,
@@ -77,7 +88,12 @@ type DashboardDrawerSession =
   | { kind: "add-phase-note" }
   | { kind: "convert-phase-note"; noteId: string }
   | { kind: "persist-phase-note-proposals" }
-  | { kind: "accept-proposed"; taskIds: string[]; categoryLabel: string };
+  | { kind: "accept-proposed"; taskIds: string[]; categoryLabel: string }
+  | { kind: "register-team-assignment" }
+  | { kind: "submit-team-handoff"; assignmentId: string; workerId: string }
+  | { kind: "reconcile-team-assignment"; assignmentId: string; supervisorId: string }
+  | { kind: "block-team-assignment"; assignmentId: string; supervisorId: string }
+  | { kind: "cancel-team-assignment"; assignmentId: string; supervisorId: string };
 
 function logDashboard(message: string): void {
   if (!dashboardOutput) {
@@ -505,6 +521,40 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
       if (msg?.type === "prefillPhaseNotesDiscoveryChat") {
         await prefillCursorChat(buildPhaseNotesDiscoveryPrompt(), { newChat: true });
+      }
+      if (msg?.type === "prefillTeamExecutionChat") {
+        await prefillCursorChat(buildTeamExecutionSupervisorPrompt(), { newChat: true });
+      }
+      if (msg?.type === "registerTeamAssignment") {
+        await this.openRegisterTeamAssignmentDrawer();
+      }
+      if (msg?.type === "submitTeamHandoff") {
+        const assignmentId = typeof msg.assignmentId === "string" ? msg.assignmentId.trim() : "";
+        const workerId = typeof msg.workerId === "string" ? msg.workerId.trim() : "";
+        if (assignmentId && workerId) {
+          await this.openSubmitTeamHandoffDrawer(assignmentId, workerId);
+        }
+      }
+      if (msg?.type === "reconcileTeamAssignment") {
+        const assignmentId = typeof msg.assignmentId === "string" ? msg.assignmentId.trim() : "";
+        const supervisorId = typeof msg.supervisorId === "string" ? msg.supervisorId.trim() : "";
+        if (assignmentId && supervisorId) {
+          await this.openReconcileTeamAssignmentDrawer(assignmentId, supervisorId);
+        }
+      }
+      if (msg?.type === "blockTeamAssignment") {
+        const assignmentId = typeof msg.assignmentId === "string" ? msg.assignmentId.trim() : "";
+        const supervisorId = typeof msg.supervisorId === "string" ? msg.supervisorId.trim() : "";
+        if (assignmentId && supervisorId) {
+          await this.openBlockTeamAssignmentDrawer(assignmentId, supervisorId);
+        }
+      }
+      if (msg?.type === "cancelTeamAssignment") {
+        const assignmentId = typeof msg.assignmentId === "string" ? msg.assignmentId.trim() : "";
+        const supervisorId = typeof msg.supervisorId === "string" ? msg.supervisorId.trim() : "";
+        if (assignmentId) {
+          await this.openCancelTeamAssignmentDrawer(assignmentId, supervisorId);
+        }
       }
       if (msg?.type === "convertPhaseNote") {
         const nid = typeof msg.noteId === "string" ? msg.noteId.trim() : "";
@@ -1376,6 +1426,132 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       );
       return true;
     }
+    if (session.kind === "register-team-assignment") {
+      const validated = validateRegisterTeamAssignmentSubmit(values);
+      if (!validated.ok) {
+        await this.postDrawerValidationToWebview(validated.error);
+        return false;
+      }
+      const { executionTaskId, supervisorId, workerId, policyRationale } = validated.values;
+      const r = await this.client.run("register-assignment", {
+        executionTaskId,
+        supervisorId,
+        workerId,
+        policyApproval: { confirmed: true, rationale: policyRationale },
+        ...expectedPlanningGenerationArgs()
+      });
+      if (!r.ok) {
+        await this.postDrawerValidationToWebview((r.message ?? JSON.stringify(r)).slice(0, 900));
+        return false;
+      }
+      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+      this.closeDashboardDrawer();
+      this.notifyKitStateChanged();
+      await vscode.window.showInformationMessage(r.message ?? `Registered assignment for ${executionTaskId}`);
+      return true;
+    }
+    if (session.kind === "submit-team-handoff") {
+      const validated = validateSubmitTeamHandoffSubmit(values);
+      if (!validated.ok) {
+        await this.postDrawerValidationToWebview(validated.error);
+        return false;
+      }
+      const handoff: Record<string, unknown> = {
+        schemaVersion: 1,
+        summary: validated.values.summary
+      };
+      const evidenceRefs = validated.values.evidenceRefs
+        .split(/\n+/)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+      if (evidenceRefs.length > 0) {
+        handoff.evidenceRefs = evidenceRefs;
+      }
+      const r = await this.client.run("submit-assignment-handoff", {
+        assignmentId: session.assignmentId,
+        workerId: session.workerId,
+        handoff,
+        policyApproval: { confirmed: true, rationale: validated.values.policyRationale },
+        ...expectedPlanningGenerationArgs()
+      });
+      if (!r.ok) {
+        await this.postDrawerValidationToWebview((r.message ?? JSON.stringify(r)).slice(0, 900));
+        return false;
+      }
+      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+      this.closeDashboardDrawer();
+      this.notifyKitStateChanged();
+      await vscode.window.showInformationMessage(r.message ?? "Handoff submitted");
+      return true;
+    }
+    if (session.kind === "reconcile-team-assignment") {
+      const validated = validateReconcileTeamAssignmentSubmit(values);
+      if (!validated.ok) {
+        await this.postDrawerValidationToWebview(validated.error);
+        return false;
+      }
+      const r = await this.client.run("reconcile-assignment", {
+        assignmentId: session.assignmentId,
+        supervisorId: session.supervisorId,
+        checkpoint: { schemaVersion: 1, mergedSummary: validated.values.mergedSummary },
+        policyApproval: { confirmed: true, rationale: validated.values.policyRationale },
+        ...expectedPlanningGenerationArgs()
+      });
+      if (!r.ok) {
+        await this.postDrawerValidationToWebview((r.message ?? JSON.stringify(r)).slice(0, 900));
+        return false;
+      }
+      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+      this.closeDashboardDrawer();
+      this.notifyKitStateChanged();
+      await vscode.window.showInformationMessage(r.message ?? "Assignment reconciled");
+      return true;
+    }
+    if (session.kind === "block-team-assignment") {
+      const validated = validateBlockTeamAssignmentSubmit(values);
+      if (!validated.ok) {
+        await this.postDrawerValidationToWebview(validated.error);
+        return false;
+      }
+      const r = await this.client.run("block-assignment", {
+        assignmentId: session.assignmentId,
+        supervisorId: session.supervisorId,
+        reason: validated.values.reason,
+        policyApproval: { confirmed: true, rationale: validated.values.policyRationale },
+        ...expectedPlanningGenerationArgs()
+      });
+      if (!r.ok) {
+        await this.postDrawerValidationToWebview((r.message ?? JSON.stringify(r)).slice(0, 900));
+        return false;
+      }
+      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+      this.closeDashboardDrawer();
+      this.notifyKitStateChanged();
+      await vscode.window.showInformationMessage(r.message ?? "Assignment blocked");
+      return true;
+    }
+    if (session.kind === "cancel-team-assignment") {
+      const validated = validateCancelTeamAssignmentSubmit(values);
+      if (!validated.ok) {
+        await this.postDrawerValidationToWebview(validated.error);
+        return false;
+      }
+      const r = await this.client.run("cancel-assignment", {
+        assignmentId: session.assignmentId,
+        supervisorId: validated.values.supervisorId,
+        policyApproval: { confirmed: true, rationale: validated.values.policyRationale },
+        ...expectedPlanningGenerationArgs()
+      });
+      if (!r.ok) {
+        await this.postDrawerValidationToWebview((r.message ?? JSON.stringify(r)).slice(0, 900));
+        return false;
+      }
+      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+      this.closeDashboardDrawer();
+      this.notifyKitStateChanged();
+      await vscode.window.showInformationMessage(r.message ?? "Assignment cancelled");
+      return true;
+    }
     return false;
   }
 
@@ -1427,6 +1603,57 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildEditPhaseNoteDrawerSpec(params));
     this.dashboardDrawerSession = { kind: "edit-phase-note", noteId: params.noteId };
+    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+  }
+
+  private async openRegisterTeamAssignmentDrawer(): Promise<void> {
+    if (this.dashboardDrawerSession) {
+      return;
+    }
+    const html = renderDrawerFormHtml(buildRegisterTeamAssignmentDrawerSpec());
+    this.dashboardDrawerSession = { kind: "register-team-assignment" };
+    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+  }
+
+  private async openSubmitTeamHandoffDrawer(assignmentId: string, workerId: string): Promise<void> {
+    if (this.dashboardDrawerSession) {
+      return;
+    }
+    const html = renderDrawerFormHtml(buildSubmitTeamHandoffDrawerSpec({ assignmentId, workerId }));
+    this.dashboardDrawerSession = { kind: "submit-team-handoff", assignmentId, workerId };
+    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+  }
+
+  private async openReconcileTeamAssignmentDrawer(assignmentId: string, supervisorId: string): Promise<void> {
+    if (this.dashboardDrawerSession) {
+      return;
+    }
+    const html = renderDrawerFormHtml(buildReconcileTeamAssignmentDrawerSpec({ assignmentId, supervisorId }));
+    this.dashboardDrawerSession = { kind: "reconcile-team-assignment", assignmentId, supervisorId };
+    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+  }
+
+  private async openBlockTeamAssignmentDrawer(assignmentId: string, supervisorId: string): Promise<void> {
+    if (this.dashboardDrawerSession) {
+      return;
+    }
+    const html = renderDrawerFormHtml(buildBlockTeamAssignmentDrawerSpec({ assignmentId, supervisorId }));
+    this.dashboardDrawerSession = { kind: "block-team-assignment", assignmentId, supervisorId };
+    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+  }
+
+  private async openCancelTeamAssignmentDrawer(assignmentId: string, supervisorId: string): Promise<void> {
+    if (this.dashboardDrawerSession) {
+      return;
+    }
+    const html = renderDrawerFormHtml(
+      buildCancelTeamAssignmentDrawerSpec({ assignmentId, supervisorId: supervisorId || "operator" })
+    );
+    this.dashboardDrawerSession = {
+      kind: "cancel-team-assignment",
+      assignmentId,
+      supervisorId: supervisorId || "operator"
+    };
     await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
   }
 
@@ -2179,7 +2406,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (act === 'planning-wizard-start') { var sel = document.getElementById('wc-planning-type'); var pt = sel && sel.value ? String(sel.value).trim() : ''; if (pt) vscode.postMessage({type:'planningWizardStart',planningType:pt}); return; }
     if (act === 'planning-wizard-submit') { var ta = document.getElementById('wc-planning-answer'); var txt = ta && typeof ta.value === 'string' ? ta.value.trim() : ''; vscode.postMessage({type:'planningWizardSubmit',answer:txt}); return; }
     if (act === 'planning-wizard-cancel') { vscode.postMessage({type:'planningWizardCancel'}); return; }
-    if (act === 'planning-wizard-dismiss') { vscode.postMessage({type:'planningWizardDismiss'});return;}if(act==="collaboration-hub"){vscode.postMessage({type:"prefillCollaborationHubChat"});return;}if(act==="deliver-phase-prompt"){var kp=(t.getAttribute("data-wc-kit-phase")||"").trim();vscode.postMessage({type:"prefillDeliverPhaseChat",kitPhase:kp});return;}if(act==="add-wishlist-item"){vscode.postMessage({type:"addWishlistItem"});return;}if(act==="generate-features-chat"){vscode.postMessage({type:"prefillGenerateFeaturesChat"});return;}if(act==="transcript-churn-research-chat"){var tcTid=(t.getAttribute("data-task-id")||"").trim();vscode.postMessage({type:"prefillTranscriptChurnResearchChat",taskId:tcTid});return;}if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-page"){var wpp=parseInt(String(t.getAttribute("data-wishlist-page")||"0"),10);if(!Number.isNaN(wpp)&&wpp>=0)vscode.postMessage({type:"wishlistPage",page:wpp});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}if(act==="phase-complete-release"){var ph=(t.getAttribute("data-wc-phase-phrase")||"").trim();var pk=(t.getAttribute("data-wc-phase-key")||"").trim();var ids=(t.getAttribute("data-wc-phase-task-ids")||"").trim();var wcur=(t.getAttribute("data-wc-workspace-current-phase")||"").trim();var wnxt=(t.getAttribute("data-wc-workspace-next-phase")||"").trim();var rscope=(t.getAttribute("data-wc-release-scope")||"").trim();vscode.postMessage({type:"prefillPhaseCompleteReleaseChat",phasePhrase:ph,phaseKey:pk,seededTaskIdsCsv:ids,workspaceCurrentPhase:wcur,workspaceNextPhase:wnxt,scope:rscope==="current"?"current":rscope==="bucket"?"bucket":undefined});return;}if(act==="proposed-imp-accept-phase"||act==="proposed-exe-accept-phase"){var batch=(t.getAttribute("data-proposed-task-ids")||"").trim();var cat=act==="proposed-exe-accept-phase"?"execution":"improvement";vscode.postMessage({type:"dashboardAcceptProposedPhase",category:cat,taskIds:batch});return;}if(act==="phase-notes-chat"){vscode.postMessage({type:"prefillPhaseNotesDiscoveryChat"});return;}if(act==="phase-note-add"){vscode.postMessage({type:"addPhaseNote"});return;}if(act==="phase-note-dismiss"){var dpn=(t.getAttribute("data-note-id")||"").trim();var dpp=(t.getAttribute("data-note-priority")||"").trim();if(dpn)vscode.postMessage({type:"dismissPhaseNote",noteId:dpn,priority:dpp});return;}if(act==="phase-note-convert"){var cpn=(t.getAttribute("data-note-id")||"").trim();if(cpn)vscode.postMessage({type:"convertPhaseNote",noteId:cpn});return;}if(act==="phase-notes-propose-persist"){vscode.postMessage({type:"persistPhaseNoteProposals"});return;}if(act==="register-phase-catalog"){vscode.postMessage({type:"registerPhaseCatalogEntry"});return;}if(act==="assign-phase"){var apTid=(t.getAttribute("data-task-id")||"").trim();if(apTid)vscode.postMessage({type:"assignTaskPhase",taskId:apTid});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="task-comments-view"){if(tid)vscode.postMessage({type:"viewTaskComments",taskId:tid});return;}if(act==="task-comment-add"){if(tid)vscode.postMessage({type:"addTaskComment",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="human-gate-resume-ready"){if(tid)vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"resume_ready",transitionKind:"human-gate"});return;}if(act==="human-gate-resume-work"){if(tid)vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"resume_work",transitionKind:"human-gate"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});
+    if (act === 'planning-wizard-dismiss') { vscode.postMessage({type:'planningWizardDismiss'});return;}if(act==="collaboration-hub"){vscode.postMessage({type:"prefillCollaborationHubChat"});return;}if(act==="deliver-phase-prompt"){var kp=(t.getAttribute("data-wc-kit-phase")||"").trim();vscode.postMessage({type:"prefillDeliverPhaseChat",kitPhase:kp});return;}if(act==="add-wishlist-item"){vscode.postMessage({type:"addWishlistItem"});return;}if(act==="generate-features-chat"){vscode.postMessage({type:"prefillGenerateFeaturesChat"});return;}if(act==="transcript-churn-research-chat"){var tcTid=(t.getAttribute("data-task-id")||"").trim();vscode.postMessage({type:"prefillTranscriptChurnResearchChat",taskId:tcTid});return;}if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-page"){var wpp=parseInt(String(t.getAttribute("data-wishlist-page")||"0"),10);if(!Number.isNaN(wpp)&&wpp>=0)vscode.postMessage({type:"wishlistPage",page:wpp});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}if(act==="phase-complete-release"){var ph=(t.getAttribute("data-wc-phase-phrase")||"").trim();var pk=(t.getAttribute("data-wc-phase-key")||"").trim();var ids=(t.getAttribute("data-wc-phase-task-ids")||"").trim();var wcur=(t.getAttribute("data-wc-workspace-current-phase")||"").trim();var wnxt=(t.getAttribute("data-wc-workspace-next-phase")||"").trim();var rscope=(t.getAttribute("data-wc-release-scope")||"").trim();vscode.postMessage({type:"prefillPhaseCompleteReleaseChat",phasePhrase:ph,phaseKey:pk,seededTaskIdsCsv:ids,workspaceCurrentPhase:wcur,workspaceNextPhase:wnxt,scope:rscope==="current"?"current":rscope==="bucket"?"bucket":undefined});return;}if(act==="proposed-imp-accept-phase"||act==="proposed-exe-accept-phase"){var batch=(t.getAttribute("data-proposed-task-ids")||"").trim();var cat=act==="proposed-exe-accept-phase"?"execution":"improvement";vscode.postMessage({type:"dashboardAcceptProposedPhase",category:cat,taskIds:batch});return;}if(act==="phase-notes-chat"){vscode.postMessage({type:"prefillPhaseNotesDiscoveryChat"});return;}if(act==="phase-note-add"){vscode.postMessage({type:"addPhaseNote"});return;}if(act==="phase-note-dismiss"){var dpn=(t.getAttribute("data-note-id")||"").trim();var dpp=(t.getAttribute("data-note-priority")||"").trim();if(dpn)vscode.postMessage({type:"dismissPhaseNote",noteId:dpn,priority:dpp});return;}if(act==="phase-note-convert"){var cpn=(t.getAttribute("data-note-id")||"").trim();if(cpn)vscode.postMessage({type:"convertPhaseNote",noteId:cpn});return;}if(act==="phase-notes-propose-persist"){vscode.postMessage({type:"persistPhaseNoteProposals"});return;}if(act==="register-phase-catalog"){vscode.postMessage({type:"registerPhaseCatalogEntry"});return;}if(act==="team-assignment-register"){vscode.postMessage({type:"registerTeamAssignment"});return;}if(act==="team-execution-chat"){vscode.postMessage({type:"prefillTeamExecutionChat"});return;}if(act==="team-assignment-handoff"){var teamAid=(t.getAttribute("data-assignment-id")||"").trim();var teamWid=(t.getAttribute("data-worker-id")||"").trim();if(teamAid&&teamWid)vscode.postMessage({type:"submitTeamHandoff",assignmentId:teamAid,workerId:teamWid});return;}if(act==="team-assignment-reconcile"){var teamAid2=(t.getAttribute("data-assignment-id")||"").trim();var teamSid=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid2&&teamSid)vscode.postMessage({type:"reconcileTeamAssignment",assignmentId:teamAid2,supervisorId:teamSid});return;}if(act==="team-assignment-block"){var teamAid3=(t.getAttribute("data-assignment-id")||"").trim();var teamSid2=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid3&&teamSid2)vscode.postMessage({type:"blockTeamAssignment",assignmentId:teamAid3,supervisorId:teamSid2});return;}if(act==="team-assignment-cancel"){var teamAid4=(t.getAttribute("data-assignment-id")||"").trim();var teamSid3=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid4)vscode.postMessage({type:"cancelTeamAssignment",assignmentId:teamAid4,supervisorId:teamSid3});return;}if(act==="assign-phase"){var apTid=(t.getAttribute("data-task-id")||"").trim();if(apTid)vscode.postMessage({type:"assignTaskPhase",taskId:apTid});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="task-comments-view"){if(tid)vscode.postMessage({type:"viewTaskComments",taskId:tid});return;}if(act==="task-comment-add"){if(tid)vscode.postMessage({type:"addTaskComment",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="human-gate-resume-ready"){if(tid)vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"resume_ready",transitionKind:"human-gate"});return;}if(act==="human-gate-resume-work"){if(tid)vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"resume_work",transitionKind:"human-gate"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});
 
   if (rootEl) rootEl.addEventListener('keydown', function(ev) {
     var target = ev.target;
@@ -2558,6 +2785,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     details.wc-lazy-terminal-bucket[open] .wc-lazy-bucket-hint { margin-bottom: 2px; }
     .dashboard-tasks-block { margin-top: 0; }
     .dash-quick-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 10px 0; }
+    .dash-team-exec-toolbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 8px 0 10px 0; }
+    .dash-team-assignment-row { align-items: flex-start; }
+    .dash-team-assignment-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .dash-team-assignment-meta { font-size: 11px; line-height: 1.3; }
     .dash-card { border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35)); border-radius: 6px; padding: 8px; margin: 10px 0; }
     .wc-dash-cae-host.dash-cae-embedded.wc-dashboard-embedded-guidance {
       border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
