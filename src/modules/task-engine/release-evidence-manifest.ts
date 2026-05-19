@@ -37,7 +37,7 @@ function nonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function readPackageMetadata(workspacePath: string): { packageName: string | null; version: string | null } {
+export function readPackageMetadata(workspacePath: string): { packageName: string | null; version: string | null } {
   try {
     const pkg = JSON.parse(readFileSync(join(workspacePath, "package.json"), "utf8")) as Record<string, unknown>;
     return {

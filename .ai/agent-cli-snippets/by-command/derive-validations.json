@@ -1,0 +1,39 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "derive-validations",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "phaseKey": { "type": "string" },
+      "releaseVersion": { "type": "string" },
+      "gatesOutputPath": { "type": "string" },
+      "conclusion": { "type": "string" }
+    },
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": { "phaseKey": "103" },
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run derive-validations '{\"phaseKey\":\"103\"}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/derive-validations.md",
+  "moduleId": "task-engine",
+  "description": "Derive validations fragment for release-evidence-manifest from closeout gate commands.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "class": "read",
+    "safeToRetry": true
+  }
+}

@@ -273,6 +273,22 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "derive-publish-artifacts",
+    "file": "derive-publish-artifacts.md",
+    "description": "Derive publishArtifacts fragment for release-evidence-manifest from gh/npm signals.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "derive-validations",
+    "file": "derive-validations.md",
+    "description": "Derive validations fragment for release-evidence-manifest from closeout gate commands.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "release-evidence-manifest",
     "file": "release-evidence-manifest.md",
     "description": "Build a machine-readable release evidence manifest for phase closeout.",

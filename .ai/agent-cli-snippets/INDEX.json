@@ -443,6 +443,16 @@
       "moduleId": "task-engine"
     },
     {
+      "name": "derive-publish-artifacts",
+      "path": ".ai/agent-cli-snippets/by-command/derive-publish-artifacts.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "derive-validations",
+      "path": ".ai/agent-cli-snippets/by-command/derive-validations.json",
+      "moduleId": "task-engine"
+    },
+    {
       "name": "diff-behavior-profiles",
       "path": ".ai/agent-cli-snippets/by-command/diff-behavior-profiles.json",
       "moduleId": "agent-behavior"
