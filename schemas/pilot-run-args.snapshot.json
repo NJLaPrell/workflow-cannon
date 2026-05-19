@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "sourceSchemaPackageVersion": "0.95.0",
   "pilotCommands": [
+    "accept-improvement",
     "add-dependency",
     "add-phase-note",
     "agent-bootstrap",
@@ -12,6 +13,7 @@
     "assign-task-phase",
     "backfill-task-feature-links",
     "backup-planning-sqlite",
+    "block-task",
     "claim-next-task",
     "claim-workspace-edit-lease",
     "classify-kit-state",
@@ -25,6 +27,7 @@
     "create-task-from-plan",
     "create-wishlist",
     "dashboard-summary",
+    "demote-task",
     "dismiss-phase-note",
     "explain-task-engine-model",
     "export-feature-taxonomy-json",
@@ -51,6 +54,7 @@
     "list-tasks",
     "list-wishlist",
     "migrate-task-persistence",
+    "pause-task",
     "persist-planning-execution-drafts",
     "phase-closeout-readiness",
     "phase-delivery-preflight",
@@ -59,6 +63,7 @@
     "propose-tasks-from-phase-notes",
     "queue-git-alignment",
     "queue-health",
+    "reject-improvement",
     "release-evidence-manifest",
     "release-workspace-edit-lease",
     "remove-dependency",
@@ -74,6 +79,7 @@
     "supersede-phase-note",
     "synthesize-transcript-churn",
     "task-persistence-readiness",
+    "unblock-task",
     "update-phase-note",
     "update-task",
     "update-wishlist",
@@ -85,6 +91,61 @@
     "workspace-status-history"
   ],
   "commands": {
+    "accept-improvement": {
+      "type": "object",
+      "required": [
+        "taskId"
+      ],
+      "properties": {
+        "taskId": {
+          "type": "string",
+          "pattern": "^(T[0-9]+|imp-[0-9a-f]{14})$"
+        },
+        "clientMutationId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policyApproval": {
+          "type": "object"
+        },
+        "expectedPlanningGeneration": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            }
+          ]
+        },
+        "actor": {
+          "type": "string"
+        },
+        "waitForLease": {
+          "type": "boolean"
+        },
+        "agentSessionId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "waitForLeaseTimeoutMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 300000
+        },
+        "waitForLeasePollMs": {
+          "type": "integer",
+          "minimum": 50,
+          "maximum": 60000
+        },
+        "config": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": true
+    },
     "add-dependency": {
       "type": "object",
       "required": [
@@ -251,6 +312,61 @@
       "properties": {
         "outputPath": {
           "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "block-task": {
+      "type": "object",
+      "required": [
+        "taskId"
+      ],
+      "properties": {
+        "taskId": {
+          "type": "string",
+          "pattern": "^(T[0-9]+|imp-[0-9a-f]{14})$"
+        },
+        "clientMutationId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policyApproval": {
+          "type": "object"
+        },
+        "expectedPlanningGeneration": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            }
+          ]
+        },
+        "actor": {
+          "type": "string"
+        },
+        "waitForLease": {
+          "type": "boolean"
+        },
+        "agentSessionId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "waitForLeaseTimeoutMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 300000
+        },
+        "waitForLeasePollMs": {
+          "type": "integer",
+          "minimum": 50,
+          "maximum": 60000
+        },
+        "config": {
+          "type": "object"
         }
       },
       "additionalProperties": true
@@ -489,6 +605,61 @@
         }
       },
       "additionalProperties": false
+    },
+    "demote-task": {
+      "type": "object",
+      "required": [
+        "taskId"
+      ],
+      "properties": {
+        "taskId": {
+          "type": "string",
+          "pattern": "^(T[0-9]+|imp-[0-9a-f]{14})$"
+        },
+        "clientMutationId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policyApproval": {
+          "type": "object"
+        },
+        "expectedPlanningGeneration": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            }
+          ]
+        },
+        "actor": {
+          "type": "string"
+        },
+        "waitForLease": {
+          "type": "boolean"
+        },
+        "agentSessionId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "waitForLeaseTimeoutMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 300000
+        },
+        "waitForLeasePollMs": {
+          "type": "integer",
+          "minimum": 50,
+          "maximum": 60000
+        },
+        "config": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": true
     },
     "dismiss-phase-note": {
       "type": "object"
@@ -763,6 +934,61 @@
       "type": "object",
       "additionalProperties": true
     },
+    "pause-task": {
+      "type": "object",
+      "required": [
+        "taskId"
+      ],
+      "properties": {
+        "taskId": {
+          "type": "string",
+          "pattern": "^(T[0-9]+|imp-[0-9a-f]{14})$"
+        },
+        "clientMutationId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policyApproval": {
+          "type": "object"
+        },
+        "expectedPlanningGeneration": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            }
+          ]
+        },
+        "actor": {
+          "type": "string"
+        },
+        "waitForLease": {
+          "type": "boolean"
+        },
+        "agentSessionId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "waitForLeaseTimeoutMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 300000
+        },
+        "waitForLeasePollMs": {
+          "type": "integer",
+          "minimum": 50,
+          "maximum": 60000
+        },
+        "config": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": true
+    },
     "persist-planning-execution-drafts": {
       "type": "object",
       "required": [
@@ -851,6 +1077,61 @@
     "queue-health": {
       "type": "object",
       "additionalProperties": false
+    },
+    "reject-improvement": {
+      "type": "object",
+      "required": [
+        "taskId"
+      ],
+      "properties": {
+        "taskId": {
+          "type": "string",
+          "pattern": "^(T[0-9]+|imp-[0-9a-f]{14})$"
+        },
+        "clientMutationId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policyApproval": {
+          "type": "object"
+        },
+        "expectedPlanningGeneration": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            }
+          ]
+        },
+        "actor": {
+          "type": "string"
+        },
+        "waitForLease": {
+          "type": "boolean"
+        },
+        "agentSessionId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "waitForLeaseTimeoutMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 300000
+        },
+        "waitForLeasePollMs": {
+          "type": "integer",
+          "minimum": 50,
+          "maximum": 60000
+        },
+        "config": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": true
     },
     "release-evidence-manifest": {
       "type": "object"
@@ -1173,6 +1454,61 @@
     },
     "task-persistence-readiness": {
       "type": "object",
+      "additionalProperties": true
+    },
+    "unblock-task": {
+      "type": "object",
+      "required": [
+        "taskId"
+      ],
+      "properties": {
+        "taskId": {
+          "type": "string",
+          "pattern": "^(T[0-9]+|imp-[0-9a-f]{14})$"
+        },
+        "clientMutationId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policyApproval": {
+          "type": "object"
+        },
+        "expectedPlanningGeneration": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            }
+          ]
+        },
+        "actor": {
+          "type": "string"
+        },
+        "waitForLease": {
+          "type": "boolean"
+        },
+        "agentSessionId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "waitForLeaseTimeoutMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 300000
+        },
+        "waitForLeasePollMs": {
+          "type": "integer",
+          "minimum": 50,
+          "maximum": 60000
+        },
+        "config": {
+          "type": "object"
+        }
+      },
       "additionalProperties": true
     },
     "update-phase-note": {
