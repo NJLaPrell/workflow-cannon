@@ -16,6 +16,8 @@ export const DEFAULT_RELEASE_ALLOWLIST_GLOBS = [
   "docs/maintainers/CHANGELOG.md",
   "workspace-kit.profile.json",
   "schemas/_generated-*",
+  "schemas/pilot-run-args.snapshot.json",
+  "schemas/task-engine-run-contracts.schema.json",
   ".workspace-kit/**"
 ];
 
