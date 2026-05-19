@@ -11,6 +11,7 @@ import { resolveCanonicalPhase } from "../phase-resolution.js";
 import { buildReleaseEvidenceManifest } from "../release-evidence-manifest.js";
 import { runPhaseStatus } from "../workspace-status-commands-runtime.js";
 import { buildStrandedWorkReport } from "../stranded-work.js";
+import { buildPhaseFocusDashboard } from "../dashboard/build-phase-focus-dashboard.js";
 
 /**
  * Phase / release readout commands that need an open task store + SQLite dual reader.
@@ -23,6 +24,29 @@ export async function resolvePhaseDeliveryReadoutCommands(
 ): Promise<ModuleCommandResult | null> {
   const args = command.args ?? {};
   const store = planning.taskStore;
+
+  if (command.name === "phase-focus-dashboard") {
+    const argObj = args as Record<string, unknown>;
+    const phaseKeyArg =
+      typeof argObj.phaseKey === "string" && argObj.phaseKey.trim().length > 0
+        ? argObj.phaseKey.trim()
+        : undefined;
+    const phaseFocus = buildPhaseFocusDashboard({
+      ctx,
+      planning,
+      phaseKey: phaseKeyArg
+    });
+    const data: Record<string, unknown> = { phaseFocus };
+    attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
+    return {
+      ok: true,
+      code: "phase-focus-dashboard",
+      message: phaseFocus.phaseKey
+        ? `Phase focus dashboard for phase ${phaseFocus.phaseKey}`
+        : "Phase focus dashboard (no canonical phase key)",
+      data
+    };
+  }
 
   if (command.name === "phase-status") {
     return await runPhaseStatus(ctx, args as Record<string, unknown>, {

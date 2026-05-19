@@ -32,6 +32,15 @@ export type {
   AgentPhaseNoteTaskSuggestionProjection
 } from "./agent-phase-journal-read-contract.js";
 export type {
+  AgentPhaseFocusBlockedRow,
+  AgentPhaseFocusDashboard,
+  AgentPhaseFocusDeliverySlice,
+  AgentPhaseFocusEvidenceGapRow,
+  AgentPhaseFocusJournalSlice,
+  AgentPhaseFocusQueueCounts,
+  AgentPhaseFocusReadyRow
+} from "./agent-phase-focus-dashboard-contract.js";
+export type {
   AgentTaskDependencyEdge,
   AgentTaskDetail,
   AgentTaskEvidencePointer,

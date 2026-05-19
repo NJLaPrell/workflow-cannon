@@ -44,6 +44,8 @@ import { projectDashboardTaskRow } from "../task-read-projections.js";
 import { buildDashboardCurrentPhaseDelivery } from "../dashboard/phase-delivery-status.js";
 import { buildDashboardPastPhaseNotes } from "../dashboard/build-dashboard-past-phase-notes.js";
 import { buildDashboardApprovalQueueSummary } from "../dashboard/build-dashboard-approval-queue.js";
+import { buildPhaseFocusDashboard } from "../dashboard/build-phase-focus-dashboard.js";
+import type { OpenedPlanningStores } from "../persistence/planning-open.js";
 import { buildDashboardHumanGatesSummary } from "../dashboard/build-dashboard-human-gates.js";
 import { buildDashboardPhaseJournalStats } from "../dashboard/build-dashboard-phase-journal-stats.js";
 
@@ -313,6 +315,13 @@ export async function runDashboardSummaryCommand(
     completedDeliveryTaskCount: currentPhaseDelivery.segments.completed
   });
 
+  const includePhaseFocus =
+    commandArgs?.includePhaseFocus === true || commandArgs?.includePhaseFocus === "true";
+  const phaseFocusPhaseKey =
+    typeof commandArgs?.phaseKey === "string" && commandArgs.phaseKey.trim().length > 0
+      ? commandArgs.phaseKey.trim()
+      : undefined;
+
   const data = {
     schemaVersion: 7 as const,
     planningGeneration,
@@ -408,7 +417,16 @@ export async function runDashboardSummaryCommand(
     systemStatus,
     agentStatus,
     currentPhaseDelivery,
-    pastPhaseNotes
+    pastPhaseNotes,
+    ...(includePhaseFocus && sqliteDual
+      ? {
+          phaseFocus: buildPhaseFocusDashboard({
+            ctx,
+            planning: { taskStore: store, sqliteDual } satisfies OpenedPlanningStores,
+            phaseKey: phaseFocusPhaseKey
+          })
+        }
+      : {})
   } satisfies DashboardSummaryData;
 
   return {
