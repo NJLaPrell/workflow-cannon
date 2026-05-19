@@ -1180,6 +1180,7 @@ test("taskEngineModule registration includes all instruction entries", () => {
   assert.ok(names.includes("claim-next-task"));
   assert.ok(names.includes("start-task"));
   assert.ok(names.includes("complete-task"));
+  assert.ok(names.includes("report-defect"));
 });
 
 test("taskEngineModule passes ModuleRegistry validation", () => {
@@ -4012,6 +4013,44 @@ test("taskEngineModule assign-task-phase and clear-task-phase persist", async ()
   got = await taskEngineModule.onCommand({ name: "get-task", args: { taskId: "T401" } }, ctx);
   assert.equal(got.data.task.phase, undefined);
   assert.equal(got.data.task.phaseKey, undefined);
+});
+
+test("taskEngineModule report-defect creates proposed improvement with defaults", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+
+  const created = await taskEngineModule.onCommand(
+    {
+      name: "report-defect",
+      args: {
+        title: "Shell mangled JSON",
+        summary: "Inline JSON broke on create-task",
+        evidence: "exit 2 invalid-run-args in zsh history",
+        severity: "high",
+        clientMutationId: "report-defect-1"
+      }
+    },
+    ctx
+  );
+  assert.equal(created.ok, true);
+  assert.equal(created.code, "report-defect-created");
+  assert.equal(created.data.intent, "report-defect");
+  const task = created.data.task;
+  assert.match(task.id, /^T\d+$/);
+  assert.equal(task.type, "improvement");
+  assert.equal(task.status, "proposed");
+  assert.equal(task.priority, "P1");
+  assert.equal(task.metadata.issue, "Inline JSON broke on create-task");
+  assert.equal(task.metadata.supportingReasoning, "exit 2 invalid-run-args in zsh history");
+  assert.ok(task.technicalScope.length >= 3);
+  assert.ok(task.acceptanceCriteria.length >= 2);
+
+  const missing = await taskEngineModule.onCommand(
+    { name: "report-defect", args: { title: "x", summary: "y" } },
+    ctx
+  );
+  assert.equal(missing.ok, false);
+  assert.equal(missing.code, "invalid-run-args");
 });
 
 test("taskEngineModule create-task validates known requirements for improvement type", async () => {
