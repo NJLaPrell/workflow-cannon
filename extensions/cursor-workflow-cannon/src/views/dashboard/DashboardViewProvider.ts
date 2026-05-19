@@ -10,6 +10,7 @@ import {
   buildCollaborationProfilesHubPrompt,
   buildImprovementTriagePrompt,
   buildPhaseNotesDiscoveryPrompt,
+  buildSubagentRegistryPrompt,
   buildTeamExecutionSupervisorPrompt,
   buildPlanningInterviewPrompt,
   buildPlanningInterviewResumePrompt,
@@ -47,6 +48,10 @@ import {
   buildReconcileTeamAssignmentDrawerSpec,
   buildBlockTeamAssignmentDrawerSpec,
   buildCancelTeamAssignmentDrawerSpec,
+  buildRegisterSubagentDrawerSpec,
+  buildSpawnSubagentDrawerSpec,
+  buildCloseSubagentSessionDrawerSpec,
+  buildRetireSubagentDrawerSpec,
   buildViewPhaseNoteDrawerSpec,
   normalizeDrawerValues,
   validateRegisterTeamAssignmentSubmit,
@@ -54,6 +59,10 @@ import {
   validateReconcileTeamAssignmentSubmit,
   validateBlockTeamAssignmentSubmit,
   validateCancelTeamAssignmentSubmit,
+  validateRegisterSubagentSubmit,
+  validateSpawnSubagentSubmit,
+  validateCloseSubagentSessionSubmit,
+  validateRetireSubagentSubmit,
   renderDrawerFormHtml,
   validateAcceptProposedSubmit,
   validateAddPhaseNoteSubmit,
@@ -93,7 +102,11 @@ type DashboardDrawerSession =
   | { kind: "submit-team-handoff"; assignmentId: string; workerId: string }
   | { kind: "reconcile-team-assignment"; assignmentId: string; supervisorId: string }
   | { kind: "block-team-assignment"; assignmentId: string; supervisorId: string }
-  | { kind: "cancel-team-assignment"; assignmentId: string; supervisorId: string };
+  | { kind: "cancel-team-assignment"; assignmentId: string; supervisorId: string }
+  | { kind: "register-subagent" }
+  | { kind: "spawn-subagent"; subagentId?: string; executionTaskId?: string }
+  | { kind: "close-subagent-session"; sessionId: string; definitionId: string }
+  | { kind: "retire-subagent"; subagentId?: string };
 
 function logDashboard(message: string): void {
   if (!dashboardOutput) {
@@ -555,6 +568,28 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         if (assignmentId) {
           await this.openCancelTeamAssignmentDrawer(assignmentId, supervisorId);
         }
+      }
+      if (msg?.type === "prefillSubagentRegistryChat") {
+        await prefillCursorChat(buildSubagentRegistryPrompt(), { newChat: true });
+      }
+      if (msg?.type === "registerSubagent") {
+        await this.openRegisterSubagentDrawer();
+      }
+      if (msg?.type === "spawnSubagent") {
+        const subagentId = typeof msg.subagentId === "string" ? msg.subagentId.trim() : "";
+        const executionTaskId = typeof msg.executionTaskId === "string" ? msg.executionTaskId.trim() : "";
+        await this.openSpawnSubagentDrawer(subagentId, executionTaskId);
+      }
+      if (msg?.type === "closeSubagentSession") {
+        const sessionId = typeof msg.sessionId === "string" ? msg.sessionId.trim() : "";
+        const definitionId = typeof msg.definitionId === "string" ? msg.definitionId.trim() : "";
+        if (sessionId && definitionId) {
+          await this.openCloseSubagentSessionDrawer(sessionId, definitionId);
+        }
+      }
+      if (msg?.type === "retireSubagent") {
+        const subagentId = typeof msg.subagentId === "string" ? msg.subagentId.trim() : "";
+        await this.openRetireSubagentDrawer(subagentId);
       }
       if (msg?.type === "convertPhaseNote") {
         const nid = typeof msg.noteId === "string" ? msg.noteId.trim() : "";
@@ -1552,6 +1587,103 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       await vscode.window.showInformationMessage(r.message ?? "Assignment cancelled");
       return true;
     }
+    if (session.kind === "register-subagent") {
+      const validated = validateRegisterSubagentSubmit(values);
+      if (!validated.ok) {
+        await this.postDrawerValidationToWebview(validated.error);
+        return false;
+      }
+      const allowedCommands = validated.values.allowedCommands
+        .split(/\n+/)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+      const r = await this.client.run("register-subagent", {
+        subagentId: validated.values.subagentId,
+        displayName: validated.values.displayName,
+        description: validated.values.description,
+        allowedCommands,
+        policyApproval: { confirmed: true, rationale: validated.values.policyRationale },
+        ...expectedPlanningGenerationArgs()
+      });
+      if (!r.ok) {
+        await this.postDrawerValidationToWebview((r.message ?? JSON.stringify(r)).slice(0, 900));
+        return false;
+      }
+      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+      this.closeDashboardDrawer();
+      this.notifyKitStateChanged();
+      await vscode.window.showInformationMessage(r.message ?? `Registered subagent ${validated.values.subagentId}`);
+      return true;
+    }
+    if (session.kind === "spawn-subagent") {
+      const validated = validateSpawnSubagentSubmit(values);
+      if (!validated.ok) {
+        await this.postDrawerValidationToWebview(validated.error);
+        return false;
+      }
+      const payload: Record<string, unknown> = {
+        subagentId: validated.values.subagentId,
+        hostHint: validated.values.hostHint,
+        promptSummary: validated.values.promptSummary,
+        policyApproval: { confirmed: true, rationale: validated.values.policyRationale },
+        ...expectedPlanningGenerationArgs()
+      };
+      if (validated.values.executionTaskId) {
+        payload.executionTaskId = validated.values.executionTaskId;
+      }
+      const r = await this.client.run("spawn-subagent", payload);
+      if (!r.ok) {
+        await this.postDrawerValidationToWebview((r.message ?? JSON.stringify(r)).slice(0, 900));
+        return false;
+      }
+      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+      this.closeDashboardDrawer();
+      this.notifyKitStateChanged();
+      await vscode.window.showInformationMessage(r.message ?? "Subagent session started");
+      return true;
+    }
+    if (session.kind === "close-subagent-session") {
+      const validated = validateCloseSubagentSessionSubmit(values);
+      if (!validated.ok) {
+        await this.postDrawerValidationToWebview(validated.error);
+        return false;
+      }
+      const r = await this.client.run("close-subagent-session", {
+        sessionId: session.sessionId,
+        policyApproval: { confirmed: true, rationale: validated.values.policyRationale },
+        ...expectedPlanningGenerationArgs()
+      });
+      if (!r.ok) {
+        await this.postDrawerValidationToWebview((r.message ?? JSON.stringify(r)).slice(0, 900));
+        return false;
+      }
+      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+      this.closeDashboardDrawer();
+      this.notifyKitStateChanged();
+      await vscode.window.showInformationMessage(r.message ?? "Session closed");
+      return true;
+    }
+    if (session.kind === "retire-subagent") {
+      const validated = validateRetireSubagentSubmit(values);
+      if (!validated.ok) {
+        await this.postDrawerValidationToWebview(validated.error);
+        return false;
+      }
+      const r = await this.client.run("retire-subagent", {
+        subagentId: validated.values.subagentId,
+        policyApproval: { confirmed: true, rationale: validated.values.policyRationale },
+        ...expectedPlanningGenerationArgs()
+      });
+      if (!r.ok) {
+        await this.postDrawerValidationToWebview((r.message ?? JSON.stringify(r)).slice(0, 900));
+        return false;
+      }
+      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+      this.closeDashboardDrawer();
+      this.notifyKitStateChanged();
+      await vscode.window.showInformationMessage(r.message ?? `Retired subagent ${validated.values.subagentId}`);
+      return true;
+    }
     return false;
   }
 
@@ -1654,6 +1786,51 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       assignmentId,
       supervisorId: supervisorId || "operator"
     };
+    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+  }
+
+  private async openRegisterSubagentDrawer(): Promise<void> {
+    if (this.dashboardDrawerSession) {
+      return;
+    }
+    const html = renderDrawerFormHtml(buildRegisterSubagentDrawerSpec());
+    this.dashboardDrawerSession = { kind: "register-subagent" };
+    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+  }
+
+  private async openSpawnSubagentDrawer(subagentId?: string, executionTaskId?: string): Promise<void> {
+    if (this.dashboardDrawerSession) {
+      return;
+    }
+    const html = renderDrawerFormHtml(
+      buildSpawnSubagentDrawerSpec({
+        subagentId: subagentId || undefined,
+        executionTaskId: executionTaskId || undefined
+      })
+    );
+    this.dashboardDrawerSession = {
+      kind: "spawn-subagent",
+      subagentId: subagentId || undefined,
+      executionTaskId: executionTaskId || undefined
+    };
+    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+  }
+
+  private async openCloseSubagentSessionDrawer(sessionId: string, definitionId: string): Promise<void> {
+    if (this.dashboardDrawerSession) {
+      return;
+    }
+    const html = renderDrawerFormHtml(buildCloseSubagentSessionDrawerSpec({ sessionId, definitionId }));
+    this.dashboardDrawerSession = { kind: "close-subagent-session", sessionId, definitionId };
+    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+  }
+
+  private async openRetireSubagentDrawer(subagentId?: string): Promise<void> {
+    if (this.dashboardDrawerSession) {
+      return;
+    }
+    const html = renderDrawerFormHtml(buildRetireSubagentDrawerSpec({ subagentId: subagentId || undefined }));
+    this.dashboardDrawerSession = { kind: "retire-subagent", subagentId: subagentId || undefined };
     await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
   }
 
@@ -2406,7 +2583,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (act === 'planning-wizard-start') { var sel = document.getElementById('wc-planning-type'); var pt = sel && sel.value ? String(sel.value).trim() : ''; if (pt) vscode.postMessage({type:'planningWizardStart',planningType:pt}); return; }
     if (act === 'planning-wizard-submit') { var ta = document.getElementById('wc-planning-answer'); var txt = ta && typeof ta.value === 'string' ? ta.value.trim() : ''; vscode.postMessage({type:'planningWizardSubmit',answer:txt}); return; }
     if (act === 'planning-wizard-cancel') { vscode.postMessage({type:'planningWizardCancel'}); return; }
-    if (act === 'planning-wizard-dismiss') { vscode.postMessage({type:'planningWizardDismiss'});return;}if(act==="collaboration-hub"){vscode.postMessage({type:"prefillCollaborationHubChat"});return;}if(act==="deliver-phase-prompt"){var kp=(t.getAttribute("data-wc-kit-phase")||"").trim();vscode.postMessage({type:"prefillDeliverPhaseChat",kitPhase:kp});return;}if(act==="add-wishlist-item"){vscode.postMessage({type:"addWishlistItem"});return;}if(act==="generate-features-chat"){vscode.postMessage({type:"prefillGenerateFeaturesChat"});return;}if(act==="transcript-churn-research-chat"){var tcTid=(t.getAttribute("data-task-id")||"").trim();vscode.postMessage({type:"prefillTranscriptChurnResearchChat",taskId:tcTid});return;}if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-page"){var wpp=parseInt(String(t.getAttribute("data-wishlist-page")||"0"),10);if(!Number.isNaN(wpp)&&wpp>=0)vscode.postMessage({type:"wishlistPage",page:wpp});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}if(act==="phase-complete-release"){var ph=(t.getAttribute("data-wc-phase-phrase")||"").trim();var pk=(t.getAttribute("data-wc-phase-key")||"").trim();var ids=(t.getAttribute("data-wc-phase-task-ids")||"").trim();var wcur=(t.getAttribute("data-wc-workspace-current-phase")||"").trim();var wnxt=(t.getAttribute("data-wc-workspace-next-phase")||"").trim();var rscope=(t.getAttribute("data-wc-release-scope")||"").trim();vscode.postMessage({type:"prefillPhaseCompleteReleaseChat",phasePhrase:ph,phaseKey:pk,seededTaskIdsCsv:ids,workspaceCurrentPhase:wcur,workspaceNextPhase:wnxt,scope:rscope==="current"?"current":rscope==="bucket"?"bucket":undefined});return;}if(act==="proposed-imp-accept-phase"||act==="proposed-exe-accept-phase"){var batch=(t.getAttribute("data-proposed-task-ids")||"").trim();var cat=act==="proposed-exe-accept-phase"?"execution":"improvement";vscode.postMessage({type:"dashboardAcceptProposedPhase",category:cat,taskIds:batch});return;}if(act==="phase-notes-chat"){vscode.postMessage({type:"prefillPhaseNotesDiscoveryChat"});return;}if(act==="phase-note-add"){vscode.postMessage({type:"addPhaseNote"});return;}if(act==="phase-note-dismiss"){var dpn=(t.getAttribute("data-note-id")||"").trim();var dpp=(t.getAttribute("data-note-priority")||"").trim();if(dpn)vscode.postMessage({type:"dismissPhaseNote",noteId:dpn,priority:dpp});return;}if(act==="phase-note-convert"){var cpn=(t.getAttribute("data-note-id")||"").trim();if(cpn)vscode.postMessage({type:"convertPhaseNote",noteId:cpn});return;}if(act==="phase-notes-propose-persist"){vscode.postMessage({type:"persistPhaseNoteProposals"});return;}if(act==="register-phase-catalog"){vscode.postMessage({type:"registerPhaseCatalogEntry"});return;}if(act==="team-assignment-register"){vscode.postMessage({type:"registerTeamAssignment"});return;}if(act==="team-execution-chat"){vscode.postMessage({type:"prefillTeamExecutionChat"});return;}if(act==="team-assignment-handoff"){var teamAid=(t.getAttribute("data-assignment-id")||"").trim();var teamWid=(t.getAttribute("data-worker-id")||"").trim();if(teamAid&&teamWid)vscode.postMessage({type:"submitTeamHandoff",assignmentId:teamAid,workerId:teamWid});return;}if(act==="team-assignment-reconcile"){var teamAid2=(t.getAttribute("data-assignment-id")||"").trim();var teamSid=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid2&&teamSid)vscode.postMessage({type:"reconcileTeamAssignment",assignmentId:teamAid2,supervisorId:teamSid});return;}if(act==="team-assignment-block"){var teamAid3=(t.getAttribute("data-assignment-id")||"").trim();var teamSid2=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid3&&teamSid2)vscode.postMessage({type:"blockTeamAssignment",assignmentId:teamAid3,supervisorId:teamSid2});return;}if(act==="team-assignment-cancel"){var teamAid4=(t.getAttribute("data-assignment-id")||"").trim();var teamSid3=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid4)vscode.postMessage({type:"cancelTeamAssignment",assignmentId:teamAid4,supervisorId:teamSid3});return;}if(act==="assign-phase"){var apTid=(t.getAttribute("data-task-id")||"").trim();if(apTid)vscode.postMessage({type:"assignTaskPhase",taskId:apTid});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="task-comments-view"){if(tid)vscode.postMessage({type:"viewTaskComments",taskId:tid});return;}if(act==="task-comment-add"){if(tid)vscode.postMessage({type:"addTaskComment",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="human-gate-resume-ready"){if(tid)vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"resume_ready",transitionKind:"human-gate"});return;}if(act==="human-gate-resume-work"){if(tid)vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"resume_work",transitionKind:"human-gate"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});
+    if (act === 'planning-wizard-dismiss') { vscode.postMessage({type:'planningWizardDismiss'});return;}if(act==="collaboration-hub"){vscode.postMessage({type:"prefillCollaborationHubChat"});return;}if(act==="deliver-phase-prompt"){var kp=(t.getAttribute("data-wc-kit-phase")||"").trim();vscode.postMessage({type:"prefillDeliverPhaseChat",kitPhase:kp});return;}if(act==="add-wishlist-item"){vscode.postMessage({type:"addWishlistItem"});return;}if(act==="generate-features-chat"){vscode.postMessage({type:"prefillGenerateFeaturesChat"});return;}if(act==="transcript-churn-research-chat"){var tcTid=(t.getAttribute("data-task-id")||"").trim();vscode.postMessage({type:"prefillTranscriptChurnResearchChat",taskId:tcTid});return;}if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-page"){var wpp=parseInt(String(t.getAttribute("data-wishlist-page")||"0"),10);if(!Number.isNaN(wpp)&&wpp>=0)vscode.postMessage({type:"wishlistPage",page:wpp});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}if(act==="phase-complete-release"){var ph=(t.getAttribute("data-wc-phase-phrase")||"").trim();var pk=(t.getAttribute("data-wc-phase-key")||"").trim();var ids=(t.getAttribute("data-wc-phase-task-ids")||"").trim();var wcur=(t.getAttribute("data-wc-workspace-current-phase")||"").trim();var wnxt=(t.getAttribute("data-wc-workspace-next-phase")||"").trim();var rscope=(t.getAttribute("data-wc-release-scope")||"").trim();vscode.postMessage({type:"prefillPhaseCompleteReleaseChat",phasePhrase:ph,phaseKey:pk,seededTaskIdsCsv:ids,workspaceCurrentPhase:wcur,workspaceNextPhase:wnxt,scope:rscope==="current"?"current":rscope==="bucket"?"bucket":undefined});return;}if(act==="proposed-imp-accept-phase"||act==="proposed-exe-accept-phase"){var batch=(t.getAttribute("data-proposed-task-ids")||"").trim();var cat=act==="proposed-exe-accept-phase"?"execution":"improvement";vscode.postMessage({type:"dashboardAcceptProposedPhase",category:cat,taskIds:batch});return;}if(act==="phase-notes-chat"){vscode.postMessage({type:"prefillPhaseNotesDiscoveryChat"});return;}if(act==="phase-note-add"){vscode.postMessage({type:"addPhaseNote"});return;}if(act==="phase-note-dismiss"){var dpn=(t.getAttribute("data-note-id")||"").trim();var dpp=(t.getAttribute("data-note-priority")||"").trim();if(dpn)vscode.postMessage({type:"dismissPhaseNote",noteId:dpn,priority:dpp});return;}if(act==="phase-note-convert"){var cpn=(t.getAttribute("data-note-id")||"").trim();if(cpn)vscode.postMessage({type:"convertPhaseNote",noteId:cpn});return;}if(act==="phase-notes-propose-persist"){vscode.postMessage({type:"persistPhaseNoteProposals"});return;}if(act==="register-phase-catalog"){vscode.postMessage({type:"registerPhaseCatalogEntry"});return;}if(act==="team-assignment-register"){vscode.postMessage({type:"registerTeamAssignment"});return;}if(act==="team-execution-chat"){vscode.postMessage({type:"prefillTeamExecutionChat"});return;}if(act==="team-assignment-handoff"){var teamAid=(t.getAttribute("data-assignment-id")||"").trim();var teamWid=(t.getAttribute("data-worker-id")||"").trim();if(teamAid&&teamWid)vscode.postMessage({type:"submitTeamHandoff",assignmentId:teamAid,workerId:teamWid});return;}if(act==="team-assignment-reconcile"){var teamAid2=(t.getAttribute("data-assignment-id")||"").trim();var teamSid=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid2&&teamSid)vscode.postMessage({type:"reconcileTeamAssignment",assignmentId:teamAid2,supervisorId:teamSid});return;}if(act==="team-assignment-block"){var teamAid3=(t.getAttribute("data-assignment-id")||"").trim();var teamSid2=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid3&&teamSid2)vscode.postMessage({type:"blockTeamAssignment",assignmentId:teamAid3,supervisorId:teamSid2});return;}if(act==="team-assignment-cancel"){var teamAid4=(t.getAttribute("data-assignment-id")||"").trim();var teamSid3=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid4)vscode.postMessage({type:"cancelTeamAssignment",assignmentId:teamAid4,supervisorId:teamSid3});return;}if(act==="subagent-register"){vscode.postMessage({type:"registerSubagent"});return;}if(act==="subagent-registry-chat"){vscode.postMessage({type:"prefillSubagentRegistryChat"});return;}if(act==="subagent-spawn"){var subId=(t.getAttribute("data-subagent-id")||"").trim();vscode.postMessage({type:"spawnSubagent",subagentId:subId});return;}if(act==="subagent-session-close"){var subSid=(t.getAttribute("data-session-id")||"").trim();var subDef=(t.getAttribute("data-definition-id")||"").trim();if(subSid&&subDef)vscode.postMessage({type:"closeSubagentSession",sessionId:subSid,definitionId:subDef});return;}if(act==="subagent-retire"){var subRet=(t.getAttribute("data-subagent-id")||"").trim();vscode.postMessage({type:"retireSubagent",subagentId:subRet});return;}if(act==="assign-phase"){var apTid=(t.getAttribute("data-task-id")||"").trim();if(apTid)vscode.postMessage({type:"assignTaskPhase",taskId:apTid});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="task-comments-view"){if(tid)vscode.postMessage({type:"viewTaskComments",taskId:tid});return;}if(act==="task-comment-add"){if(tid)vscode.postMessage({type:"addTaskComment",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="human-gate-resume-ready"){if(tid)vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"resume_ready",transitionKind:"human-gate"});return;}if(act==="human-gate-resume-work"){if(tid)vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"resume_work",transitionKind:"human-gate"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});
 
   if (rootEl) rootEl.addEventListener('keydown', function(ev) {
     var target = ev.target;
