@@ -2,6 +2,7 @@ import type { WorkflowModule } from "../../contracts/module-contract.js";
 import { builtinInstructionEntriesForModule } from "../../contracts/builtin-run-command-manifest.js";
 import { resolveActorWithFallback } from "../../core/policy.js";
 import { runListApprovalQueue } from "./list-approval-queue-runtime.js";
+import { runListSessionGrants } from "./list-session-grants-runtime.js";
 import { runReviewItem } from "./review-runtime.js";
 
 export const approvalsModule: WorkflowModule = {
@@ -34,6 +35,15 @@ export const approvalsModule: WorkflowModule = {
     }>> = {
       "list-approval-queue": async () => {
         const result = await runListApprovalQueue(ctx);
+        return {
+          ok: result.ok,
+          code: result.code,
+          message: result.message,
+          data: result.data
+        };
+      },
+      "list-session-grants": async () => {
+        const result = await runListSessionGrants(ctx);
         return {
           ok: result.ok,
           code: result.code,

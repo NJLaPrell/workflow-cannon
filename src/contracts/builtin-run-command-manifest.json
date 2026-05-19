@@ -246,6 +246,33 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "install-git-hooks",
+    "file": "install-git-hooks.md",
+    "description": "Install opt-in git pre-push/pre-commit hooks that block destructive git on protected branches without policy approval.",
+    "policyOperationId": "tasks.install-git-hooks",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "uninstall-git-hooks",
+    "file": "uninstall-git-hooks.md",
+    "description": "Remove workspace-kit git policy hooks and clear core.hooksPath when kit-owned.",
+    "policyOperationId": "tasks.uninstall-git-hooks",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "sync-task-store-after-merge",
+    "file": "sync-task-store-after-merge.md",
+    "description": "Diff task-store SQLite between a source git ref and working tree; replay missing transitions after feature merge.",
+    "policyOperationId": "tasks.sync-task-store-after-merge",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "release-evidence-manifest",
     "file": "release-evidence-manifest.md",
     "description": "Build a machine-readable release evidence manifest for phase closeout.",
@@ -873,6 +900,14 @@
     "name": "list-approval-queue",
     "file": "list-approval-queue.md",
     "description": "Read-only: improvement tasks awaiting review-item (ready/in_progress) plus policy artifact hints.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "approvals",
+    "name": "list-session-grants",
+    "file": "list-session-grants.md",
+    "description": "Read-only: session-scoped policy grants in kit_session_grants (SQLite).",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },

@@ -1,6 +1,18 @@
 import fs from "node:fs";
 import path from "node:path";
-import Database from "better-sqlite3";
+import { createRequire } from "node:module";
+import type Database from "better-sqlite3";
+import { formatArchMismatchRemediation, throwNativeSqliteLoadError } from "../../../core/native-sqlite-diagnostics.js";
+
+const requireBetterSqlite3 = createRequire(import.meta.url);
+
+function loadBetterSqlite3Constructor(): typeof Database {
+  try {
+    return requireBetterSqlite3("better-sqlite3") as typeof Database;
+  } catch (error) {
+    throwNativeSqliteLoadError(error);
+  }
+}
 import {
   prepareKitSqliteDatabase,
   TASK_ENGINE_DEPENDENCIES_TABLE,
@@ -336,14 +348,17 @@ export class SqliteDualPlanningStore {
     const dir = path.dirname(this.dbPath);
     fs.mkdirSync(dir, { recursive: true });
     try {
-      this.db = new Database(this.dbPath);
+      const DatabaseCtor = loadBetterSqlite3Constructor();
+      this.db = new DatabaseCtor(this.dbPath);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       const classification = classifyNativeSqliteErrorMessage(msg);
-      if (classification.kind === "architecture-mismatch") {
+      const errCode = e instanceof Error ? (e as Error & { code?: string }).code : undefined;
+      if (classification.kind === "architecture-mismatch" || errCode === "runtime-host-arch-mismatch") {
+        const remediation = formatArchMismatchRemediation(e);
         throw new TaskEngineError(
           "native-binding-arch-mismatch",
-          `${msg} — ${nativeSqliteRecoveryHint(classification)} Remediation command: pnpm rebuild better-sqlite3. Runtime: ${formatNodeRuntimeIdentity()}`
+          `${remediation.message} Remediation: ${remediation.remediationCommand} Runtime: ${formatNodeRuntimeIdentity()}`
         );
       }
       throw new TaskEngineError("storage-read-error", `Failed to open SQLite planning DB: ${msg}`);

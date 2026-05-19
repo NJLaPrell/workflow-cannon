@@ -8,6 +8,25 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.97.0] - 2026-05-19
+
+Phase 102 — **Persistence & planning store** (SQLite-first module state, audit tables, run invocation evidence, task-store git hygiene).
+
+### Added
+
+- `install-git-hooks` / `uninstall-git-hooks` and `src/core/git-policy-hooks.ts` for maintainer delivery policy hooks.
+- `sync-task-store-after-merge` with `expectedPlanningGeneration` guard; doctor check `task-store-git-divergence`.
+- SQLite tables `kit_approval_decisions`, `kit_skill_apply_audit`, `kit_policy_traces`, `kit_session_grants`, `kit_run_log` (planning DB **user_version** through **27**).
+- `list-session-grants` (approvals module); improvement state schema **v4** with `lastIngestedPolicyTraceId`.
+- Interview and build-plan sessions persisted in `workspace_module_state` (`agent-behavior-interview`, `planning-build-session`).
+- Every `wk run` JSON response includes `invocationId`; `--output-file` writes the same envelope to disk.
+- Arch mismatch remediation helper `formatArchMismatchRemediation()` and lazy `better-sqlite3` load path.
+
+### Changed
+
+- Improvement and agent-behavior sidecars migrate into `workspace_module_state` (SQLite module state).
+- `kit_run_log` ring buffer (default 200 rows) with redacted args/response for operator forensics.
+
 ## [0.96.0] - 2026-05-19
 
 Phase 101 — **Improvement loop & signals** (agent ergonomics for discovery, validation, dedupe, and batch lifecycle).

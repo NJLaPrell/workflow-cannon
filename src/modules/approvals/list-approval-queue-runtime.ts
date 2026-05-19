@@ -47,16 +47,16 @@ export async function runListApprovalQueue(ctx: ModuleLifecycleContext): Promise
       improvementTriagePlaybook: ".ai/playbooks/improvement-triage-top-three.md",
       policyArtifacts: [
         {
-          relativePath: ".workspace-kit/policy/traces.jsonl",
-          role: "Append-only audit of policy checks for sensitive workspace-kit run commands (allowed/denied)."
+          relativePath: "kit_policy_traces (SQLite)",
+          role: "Policy checks for sensitive workspace-kit run commands (legacy traces.jsonl import-only)."
         },
         {
-          relativePath: ".workspace-kit/policy/session-grants.json",
-          role: "Session-scoped reuse of JSON policyApproval when scope is session."
+          relativePath: "list-session-grants",
+          role: "Session-scoped policy grants in kit_session_grants (SQLite); run workspace-kit run list-session-grants."
         },
         {
-          relativePath: ".workspace-kit/approvals/decisions.jsonl",
-          role: "Immutable review-item decision records after maintainer action."
+          relativePath: "kit_approval_decisions (SQLite)",
+          role: "Immutable review-item decision records after maintainer action (legacy decisions.jsonl imported once)."
         }
       ],
       dashboardSummary:

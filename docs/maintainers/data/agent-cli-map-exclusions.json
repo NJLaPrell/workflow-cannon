@@ -21,6 +21,7 @@
     "get-workspace-status",
     "list-approval-queue",
     "list-module-states",
+    "list-session-grants",
     "migrate-task-persistence",
     "persist-planning-execution-drafts",
     "query-lineage",

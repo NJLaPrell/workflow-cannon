@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-19T14:34:10.381Z",
+  "generatedAt": "2026-05-19T18:23:42.677Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -623,6 +623,11 @@
       "moduleId": "skills"
     },
     {
+      "name": "install-git-hooks",
+      "path": ".ai/agent-cli-snippets/by-command/install-git-hooks.json",
+      "moduleId": "task-engine"
+    },
+    {
       "name": "install-plugin",
       "path": ".ai/agent-cli-snippets/by-command/install-plugin.json",
       "moduleId": "plugins"
@@ -691,6 +696,10 @@
       "name": "list-plugins",
       "path": ".ai/agent-cli-snippets/by-command/list-plugins.json",
       "moduleId": "plugins"
+    },
+    {
+      "name": "list-session-grants",
+      "path": ".ai/agent-cli-snippets/by-command/list-session-grants.json"
     },
     {
       "name": "list-skills",
@@ -938,6 +947,11 @@
       "moduleId": "agent-behavior"
     },
     {
+      "name": "sync-task-store-after-merge",
+      "path": ".ai/agent-cli-snippets/by-command/sync-task-store-after-merge.json",
+      "moduleId": "task-engine"
+    },
+    {
       "name": "sync-transcripts",
       "path": ".ai/agent-cli-snippets/by-command/sync-transcripts.json",
       "moduleId": "improvement"
@@ -960,6 +974,11 @@
     {
       "name": "unblock-task",
       "path": ".ai/agent-cli-snippets/by-command/unblock-task.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "uninstall-git-hooks",
+      "path": ".ai/agent-cli-snippets/by-command/uninstall-git-hooks.json",
       "moduleId": "task-engine"
     },
     {

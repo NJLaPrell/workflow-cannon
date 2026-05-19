@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceSchemaPackageVersion": "0.96.0",
+  "sourceSchemaPackageVersion": "0.97.0",
   "pilotCommands": [
     "accept-improvement",
     "add-dependency",
@@ -49,6 +49,7 @@
     "heartbeat-workspace-edit-lease",
     "improvement-dedupe-explain",
     "improvement-workflow-summary",
+    "install-git-hooks",
     "list-components",
     "list-features",
     "list-module-states",
@@ -81,9 +82,11 @@
     "set-current-phase",
     "start-task",
     "supersede-phase-note",
+    "sync-task-store-after-merge",
     "synthesize-transcript-churn",
     "task-persistence-readiness",
     "unblock-task",
+    "uninstall-git-hooks",
     "update-phase-note",
     "update-task",
     "update-wishlist",
@@ -847,6 +850,9 @@
       "type": "object",
       "additionalProperties": false
     },
+    "install-git-hooks": {
+      "type": "object"
+    },
     "list-components": {
       "type": "object"
     },
@@ -1361,6 +1367,7 @@
             "demote",
             "pause",
             "reject",
+            "reopen",
             "resume_ready",
             "resume_work",
             "start",
@@ -1521,6 +1528,9 @@
     "supersede-phase-note": {
       "type": "object"
     },
+    "sync-task-store-after-merge": {
+      "type": "object"
+    },
     "synthesize-transcript-churn": {
       "type": "object",
       "required": [
@@ -1617,6 +1627,9 @@
         }
       },
       "additionalProperties": true
+    },
+    "uninstall-git-hooks": {
+      "type": "object"
     },
     "update-phase-note": {
       "type": "object"

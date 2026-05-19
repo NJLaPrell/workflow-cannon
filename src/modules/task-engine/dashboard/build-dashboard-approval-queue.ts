@@ -27,15 +27,15 @@ export function buildDashboardApprovalQueueSummary(tasks: TaskEntity[]): Dashboa
     })),
     policyArtifacts: [
       {
-        relativePath: ".workspace-kit/policy/traces.jsonl",
+        relativePath: "kit_policy_traces",
         role: "Policy check audit trail for sensitive workspace-kit run commands."
       },
       {
-        relativePath: ".workspace-kit/policy/session-grants.json",
+        relativePath: "list-session-grants",
         role: "Session-scoped reuse of JSON policyApproval when scope is session."
       },
       {
-        relativePath: ".workspace-kit/approvals/decisions.jsonl",
+        relativePath: "kit_approval_decisions",
         role: "Immutable review-item decision records after maintainer action."
       }
     ]

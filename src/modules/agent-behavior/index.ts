@@ -362,14 +362,15 @@ export const agentBehaviorModule: WorkflowModule = {
     if (name === "interview-behavior-profile") {
       const action = typeof args.action === "string" ? args.action : "";
       const ws = ctx.workspacePath;
+      const cfg = ctx.effectiveConfig as Record<string, unknown> | undefined;
 
       if (action === "discard") {
-        await clearBehaviorInterviewSession(ws);
+        await clearBehaviorInterviewSession(ws, cfg);
         return { ok: true, code: "behavior-interview-discarded", data: {} };
       }
 
       if (action === "status") {
-        const session = await readBehaviorInterviewSession(ws);
+        const session = await readBehaviorInterviewSession(ws, cfg);
         if (!session) {
           return { ok: true, code: "behavior-interview-status", data: { active: false } };
         }
@@ -381,7 +382,7 @@ export const agentBehaviorModule: WorkflowModule = {
       }
 
       if (action === "start") {
-        const existing = await readBehaviorInterviewSession(ws);
+        const existing = await readBehaviorInterviewSession(ws, cfg);
         const forceRestart = args.forceRestart === true;
         if (existing && !forceRestart) {
           const complete = existing.stepIndex >= INTERVIEW_QUESTIONS.length;
@@ -395,9 +396,9 @@ export const agentBehaviorModule: WorkflowModule = {
           };
         }
         if (existing && forceRestart) {
-          await clearBehaviorInterviewSession(ws);
+          await clearBehaviorInterviewSession(ws, cfg);
         }
-        await persistBehaviorInterviewSession(ws, { stepIndex: 0, answers: {} });
+        await persistBehaviorInterviewSession(ws, { stepIndex: 0, answers: {} }, cfg);
         const q = INTERVIEW_QUESTIONS[0]!;
         return {
           ok: true,
@@ -411,7 +412,7 @@ export const agentBehaviorModule: WorkflowModule = {
         };
       }
 
-      let session = await readBehaviorInterviewSession(ws);
+      let session = await readBehaviorInterviewSession(ws, cfg);
       if (!session && action === "answer") {
         return {
           ok: false,
@@ -431,7 +432,7 @@ export const agentBehaviorModule: WorkflowModule = {
         const prevQ = INTERVIEW_QUESTIONS[prevIndex]!;
         const nextAnswers = { ...session.answers };
         delete nextAnswers[INTERVIEW_QUESTIONS[session.stepIndex - 1]!.id];
-        await persistBehaviorInterviewSession(ws, { stepIndex: prevIndex, answers: nextAnswers });
+        await persistBehaviorInterviewSession(ws, { stepIndex: prevIndex, answers: nextAnswers }, cfg);
         return {
           ok: true,
           code: "behavior-interview-back",
@@ -459,7 +460,7 @@ export const agentBehaviorModule: WorkflowModule = {
         }
         const answers = { ...session.answers, [q.id]: value };
         const nextIndex = session.stepIndex + 1;
-        await persistBehaviorInterviewSession(ws, { stepIndex: nextIndex, answers });
+        await persistBehaviorInterviewSession(ws, { stepIndex: nextIndex, answers }, cfg);
         if (nextIndex >= INTERVIEW_QUESTIONS.length) {
           return {
             ok: true,
@@ -486,7 +487,7 @@ export const agentBehaviorModule: WorkflowModule = {
       }
 
       if (action === "finalize") {
-        session = await readBehaviorInterviewSession(ws);
+        session = await readBehaviorInterviewSession(ws, cfg);
         if (!session || session.stepIndex < INTERVIEW_QUESTIONS.length) {
           return {
             ok: false,
@@ -559,7 +560,7 @@ export const agentBehaviorModule: WorkflowModule = {
         if (!persist.ok) {
           return persist;
         }
-        await clearBehaviorInterviewSession(ws);
+        await clearBehaviorInterviewSession(ws, cfg);
         if (apply) {
           return {
             ok: true,

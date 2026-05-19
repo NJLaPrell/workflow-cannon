@@ -11,6 +11,14 @@ import {
   classifyNativeSqliteErrorMessage,
   nativeSqliteRecoveryHint
 } from "../../core/native-sqlite-diagnostics.js";
+import {
+  hashWorkingTreeTaskStore,
+  probeTaskStoreShaAtGitRef
+} from "./persistence/sync-task-store-after-merge.js";
+import {
+  readWorkspaceStatusSnapshotFromKitSqliteDb,
+  workspaceStatusTableAvailable
+} from "./persistence/workspace-status-store.js";
 
 type SqliteDb = InstanceType<typeof DatabaseCtor>;
 
@@ -176,6 +184,22 @@ export async function validatePlanningPersistenceForDoctor(
         } catch {
           issues.push({ path: relDisplay, reason: "sqlite-wishlist_store_json: invalid JSON" });
         }
+      }
+    }
+
+    const workspaceStatus = workspaceStatusTableAvailable(db)
+      ? readWorkspaceStatusSnapshotFromKitSqliteDb(db)
+      : null;
+    const phaseKey = workspaceStatus?.currentKitPhase?.trim();
+    if (phaseKey) {
+      const integrationRef = `origin/release/phase-${phaseKey}`;
+      const remoteSha = probeTaskStoreShaAtGitRef(workspacePath, integrationRef, dbRel);
+      const localSha = hashWorkingTreeTaskStore(workspacePath, dbRel);
+      if (remoteSha && localSha && remoteSha !== localSha) {
+        issues.push({
+          path: relDisplay,
+          reason: `task-store-git-divergence: working-tree blob SHA ${localSha.slice(0, 12)} differs from ${integrationRef} (${remoteSha.slice(0, 12)}); run wk run sync-task-store-after-merge after merging feature branches`
+        });
       }
     }
   } catch (err) {

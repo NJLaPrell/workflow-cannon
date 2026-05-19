@@ -57,7 +57,10 @@ const ALLOWED_TRANSITIONS: Record<string, TransitionEntry> = {
   "awaiting_external_decision->blocked": { action: "block" },
   "awaiting_external_decision->cancelled": { action: "cancel" },
   "blocked->ready": { action: "unblock" },
-  "blocked->cancelled": { action: "cancel" }
+  "blocked->cancelled": { action: "cancel" },
+  /** Maintainer recovery: false-complete or premature close without delivery evidence. */
+  "completed->ready": { action: "reopen" },
+  "cancelled->ready": { action: "reopen" }
 };
 
 export function listTransitionActionTable(): { from: TaskStatus; to: TaskStatus; action: string }[] {

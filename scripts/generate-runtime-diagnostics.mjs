@@ -9,7 +9,6 @@ const ARTIFACT_PATH = resolve(ROOT, "artifacts/runtime-diagnostics.json");
 const EVIDENCE_FILES = [
   ".workspace-kit/policy/traces.jsonl",
   ".workspace-kit/config/mutations.jsonl",
-  ".workspace-kit/approvals/decisions.jsonl",
   ".workspace-kit/lineage/events.jsonl"
 ];
 

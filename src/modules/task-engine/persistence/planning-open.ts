@@ -1,6 +1,9 @@
 import type { ModuleLifecycleContext } from "../../../contracts/module-contract.js";
 import { verifyRuntimeStampFile } from "../../../core/runtime-contract.js";
-import { formatNodeRuntimeIdentity } from "../../../core/native-sqlite-diagnostics.js";
+import {
+  formatArchMismatchRemediation,
+  formatNodeRuntimeIdentity
+} from "../../../core/native-sqlite-diagnostics.js";
 import { TaskEngineError } from "../transitions.js";
 import { TaskStore } from "./store.js";
 import { SqliteDualPlanningStore } from "./sqlite-dual-planning.js";
@@ -20,9 +23,10 @@ function assertNativeBindingArchitecture(workspacePath: string): void {
   if (!archIssue) {
     return;
   }
+  const remediation = formatArchMismatchRemediation(new Error(archIssue.message));
   throw new TaskEngineError(
     "native-binding-arch-mismatch",
-    `${archIssue.message}. Remediation: run \"pnpm rebuild better-sqlite3\" under the active architecture (${process.arch}). Runtime: ${formatNodeRuntimeIdentity()}.`
+    `${remediation.message} Remediation: ${remediation.remediationCommand} Runtime: ${formatNodeRuntimeIdentity()}.`
   );
 }
 

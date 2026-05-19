@@ -12,7 +12,7 @@ Emit stable JSON describing transcript automation state (read-only).
 
 ## Output
 
-- `lastSyncRunAt` / `lastIngestRunAt` from `.workspace-kit/improvement/state.json`
+- `lastSyncRunAt` / `lastIngestRunAt` from improvement module state in `workspace_module_state` (SQLite)
 - Cadence and budget fields from effective config
 - Pending transcript sync retry queue entries
 - Current `WORKSPACE_KIT_SESSION_ID` (or `default`) for policy session grants

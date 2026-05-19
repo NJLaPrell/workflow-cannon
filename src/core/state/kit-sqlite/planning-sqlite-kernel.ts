@@ -10,7 +10,7 @@ type SqliteDatabase = InstanceType<typeof Database>;
  */
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 23;
+export const KIT_SQLITE_USER_VERSION = 27;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 export const TASK_ENGINE_DEPENDENCIES_TABLE = "task_engine_dependencies";
@@ -994,6 +994,101 @@ CREATE INDEX idx_kit_phase_catalog_updated ON kit_phase_catalog(updated_at);
 `);
 }
 
+/** Approval decisions + skill apply audit rows (Phase 102 / T100344). */
+function migrateV23ToV24(db: SqliteDatabase): void {
+  if (tableExists(db, "kit_approval_decisions")) {
+    return;
+  }
+  db.exec(`
+CREATE TABLE kit_approval_decisions (
+  fingerprint TEXT PRIMARY KEY NOT NULL,
+  task_id TEXT NOT NULL,
+  evidence_key TEXT NOT NULL,
+  decision_verb TEXT NOT NULL,
+  actor TEXT NOT NULL,
+  recorded_at TEXT NOT NULL,
+  edited_summary TEXT,
+  policy_trace_json TEXT
+);
+CREATE INDEX idx_kit_approval_decisions_task_id ON kit_approval_decisions(task_id);
+CREATE INDEX idx_kit_approval_decisions_evidence_key ON kit_approval_decisions(evidence_key);
+CREATE TABLE kit_skill_apply_audit (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  recorded_at TEXT NOT NULL,
+  skill_id TEXT NOT NULL,
+  actor TEXT NOT NULL,
+  dry_run INTEGER NOT NULL DEFAULT 0,
+  record_audit INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX idx_kit_skill_apply_audit_skill_id ON kit_skill_apply_audit(skill_id);
+CREATE INDEX idx_kit_skill_apply_audit_recorded_at ON kit_skill_apply_audit(recorded_at);
+`);
+}
+
+/** Policy trace events (Phase 102 / T100346). */
+function migrateV24ToV25(db: SqliteDatabase): void {
+  if (tableExists(db, "kit_policy_traces")) {
+    return;
+  }
+  db.exec(`
+CREATE TABLE kit_policy_traces (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  schema_version INTEGER NOT NULL,
+  recorded_at TEXT NOT NULL,
+  operation_id TEXT NOT NULL,
+  command TEXT NOT NULL,
+  actor TEXT NOT NULL,
+  allowed INTEGER NOT NULL,
+  rationale TEXT,
+  command_ok INTEGER,
+  message TEXT
+);
+CREATE INDEX idx_kit_policy_traces_recorded_at ON kit_policy_traces(recorded_at);
+CREATE INDEX idx_kit_policy_traces_operation_id ON kit_policy_traces(operation_id);
+`);
+}
+
+/** Session-scoped policy grants (Phase 102 / T100347). */
+function migrateV25ToV26(db: SqliteDatabase): void {
+  if (tableExists(db, "kit_session_grants")) {
+    return;
+  }
+  db.exec(`
+CREATE TABLE kit_session_grants (
+  session_id TEXT NOT NULL,
+  operation_id TEXT NOT NULL,
+  rationale TEXT NOT NULL,
+  granted_at TEXT NOT NULL,
+  expires_at TEXT,
+  PRIMARY KEY (session_id, operation_id)
+);
+CREATE INDEX idx_kit_session_grants_expires_at ON kit_session_grants(expires_at);
+CREATE INDEX idx_kit_session_grants_session_id ON kit_session_grants(session_id);
+`);
+}
+
+/** wk run invocation audit ring buffer (Phase 102 / T100295). */
+function migrateV26ToV27(db: SqliteDatabase): void {
+  if (tableExists(db, "kit_run_log")) {
+    return;
+  }
+  db.exec(`
+CREATE TABLE kit_run_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  invocation_id TEXT NOT NULL UNIQUE,
+  command TEXT NOT NULL,
+  args_redacted_json TEXT NOT NULL,
+  response_redacted_json TEXT NOT NULL,
+  started_at TEXT NOT NULL,
+  finished_at TEXT NOT NULL,
+  ok INTEGER NOT NULL,
+  code TEXT NOT NULL
+);
+CREATE INDEX idx_kit_run_log_finished_at ON kit_run_log(finished_at);
+CREATE INDEX idx_kit_run_log_command ON kit_run_log(command);
+`);
+}
+
 /**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
@@ -1125,6 +1220,26 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
     migrateV22ToV23(db);
     db.pragma("user_version = 23");
     current = 23;
+  }
+  if (current < 24) {
+    migrateV23ToV24(db);
+    db.pragma("user_version = 24");
+    current = 24;
+  }
+  if (current < 25) {
+    migrateV24ToV25(db);
+    db.pragma("user_version = 25");
+    current = 25;
+  }
+  if (current < 26) {
+    migrateV25ToV26(db);
+    db.pragma("user_version = 26");
+    current = 26;
+  }
+  if (current < 27) {
+    migrateV26ToV27(db);
+    db.pragma("user_version = 27");
+    current = 27;
   }
 }
 

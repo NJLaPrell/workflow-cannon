@@ -31,12 +31,21 @@ export function runGetKitPersistenceMap(ctx: ModuleLifecycleContext): ModuleComm
       },
       workspaceModuleState: {
         table: "workspace_module_state",
-        knownModuleIds: ["task-engine", "improvement", "agent-behavior", "team-execution", "plugins"]
-      },
-      legacySidecarJsonFiles: {
-        improvement: ".workspace-kit/improvement/state.json",
-        agentBehavior: ".workspace-kit/agent-behavior/state.json",
-        note: "Read once when migrating from file to unified SQLite; saves go to workspace_module_state."
+        knownModuleIds: [
+          "task-engine",
+          "improvement",
+          "agent-behavior",
+          "agent-behavior-interview",
+          "planning-build-session",
+          "team-execution",
+          "plugins"
+        ],
+        legacySessionJsonImportOnly: [
+          ".workspace-kit/agent-behavior/interview-session.json",
+          ".workspace-kit/planning/build-plan-session.json"
+        ],
+        note:
+          "Module-scoped JSON (improvement cursors, agent-behavior profiles, in-flight interviews, build-plan snapshots, etc.) is canonical in workspace_module_state. Legacy sidecar JSON files are import-only: read once on load, persisted to SQLite, then renamed with a .migrated suffix."
       },
       subagents: {
         minKitSqliteUserVersion: 6,
@@ -52,6 +61,39 @@ export function runGetKitPersistenceMap(ctx: ModuleLifecycleContext): ModuleComm
         minKitSqliteUserVersion: 8,
         tables: ["kit_plugin_state"],
         note: "Claude-layout plugin install provenance + enable/disable toggles; discovery remains filesystem under plugins.discoveryRoots. See docs/maintainers/adrs/ADR-claude-code-plugin-platform-v1.md."
+      },
+      audit: {
+        minKitSqliteUserVersion: 24,
+        tables: ["kit_approval_decisions", "kit_skill_apply_audit"],
+        legacyJsonlImportOnly: [
+          ".workspace-kit/approvals/decisions.jsonl",
+          ".workspace-kit/evidence/skill-apply-audit.jsonl"
+        ],
+        note:
+          "Review-item decision fingerprints and skill-apply audit rows are canonical in unified SQLite. Legacy JSONL files are imported once on first access, then archived with a .migrated suffix."
+      },
+      policyTraces: {
+        minKitSqliteUserVersion: 25,
+        tables: ["kit_policy_traces"],
+        legacyJsonlImportOnly: [".workspace-kit/policy/traces.jsonl"],
+        note:
+          "Policy events append transactionally to kit_policy_traces. Improvement ingestion advances lastIngestedPolicyTraceId monotonically. Legacy traces.jsonl is import-only."
+      },
+      sessionGrants: {
+        minKitSqliteUserVersion: 26,
+        tables: ["kit_session_grants"],
+        legacyJsonImportOnly: [".workspace-kit/policy/session-grants.json"],
+        listCommand: "list-session-grants",
+        note:
+          "Session-scoped policyApproval reuse is stored per (session_id, operation_id). Query with workspace-kit run list-session-grants. Legacy session-grants.json is import-only."
+      },
+      runLog: {
+        minKitSqliteUserVersion: 27,
+        tables: ["kit_run_log"],
+        maxRowsConfigKey: "kit.runLog.maxRows",
+        defaultMaxRows: 200,
+        note:
+          "Append-only ring buffer of recent wk run invocations (redacted args/response JSON). Each row keys invocationId from the run envelope."
       }
     } as Record<string, unknown>
   };

@@ -1740,7 +1740,7 @@ export function buildReviewApprovalItemDrawerSpec(p: {
       escapeDrawerHtml(p.title) +
       "</b> (<code>" +
       escapeDrawerHtml(p.taskId) +
-      "</code>). Decision is persisted to <code>.workspace-kit/approvals/decisions.jsonl</code>.",
+      "</code>). Decision is persisted to <code>kit_approval_decisions</code> in kit SQLite.",
     fields,
     primaryLabel: decisionLabel,
     cancelLabel: "Cancel"

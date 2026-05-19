@@ -62,10 +62,14 @@ test("Phase6a: policy session grant allows second ingest without repeated policy
   const out2 = JSON.parse(cap2.lines.join(""));
   assert.equal(out2.ok, true);
 
-  const grant = JSON.parse(
-    await readFile(path.join(workspacePath, ".workspace-kit", "policy", "session-grants.json"), "utf8")
+  const { getSessionGrantRow } = await import("../dist/core/state/kit-session-grants-sqlite.js");
+  const grant = getSessionGrantRow(
+    workspacePath,
+    "improvement.ingest-transcripts",
+    "default",
+    withSqliteTaskPersistence({})
   );
-  assert.equal(grant.grants["improvement.ingest-transcripts"]?.rationale, "session test");
+  assert.equal(grant?.rationale, "session test");
 });
 
 test("Phase6a: transcript-automation-status returns stable JSON", async () => {

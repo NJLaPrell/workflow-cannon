@@ -1,5 +1,3 @@
-import fs from "node:fs/promises";
-import path from "node:path";
 import { execFile } from "node:child_process";
 import { BUILTIN_RUN_COMMAND_MANIFEST } from "../contracts/builtin-run-command-manifest.js";
 
@@ -30,6 +28,9 @@ export type PolicyOperationId =
   | "doc.generate-document"
   | "tasks.run-transition"
   | "tasks.report-defect"
+  | "tasks.install-git-hooks"
+  | "tasks.uninstall-git-hooks"
+  | "tasks.sync-task-store-after-merge"
   | "tasks.synthesize-transcript-churn"
   | "approvals.review-item"
   | "improvement.generate-recommendations"
@@ -259,24 +260,25 @@ export function isSensitiveModuleCommandForEffective(
   return getExtraSensitiveModuleCommandsFromEffective(effective).includes(commandName);
 }
 
-const POLICY_DIR = ".workspace-kit/policy";
-const TRACE_FILE = "traces.jsonl";
-
 export type PolicyTraceRecordInput = Omit<PolicyTraceRecord, "schemaVersion"> & {
   schemaVersion?: number;
 };
 
 export async function appendPolicyTrace(
   workspacePath: string,
-  record: PolicyTraceRecordInput
+  record: PolicyTraceRecordInput,
+  effectiveConfig?: Record<string, unknown>
 ): Promise<void> {
-  const dir = path.join(workspacePath, POLICY_DIR);
-  const fp = path.join(workspacePath, POLICY_DIR, TRACE_FILE);
-  const full: PolicyTraceRecord = {
-    ...record,
-    schemaVersion: record.schemaVersion ?? POLICY_TRACE_SCHEMA_VERSION
-  };
-  const line = `${JSON.stringify(full)}\n`;
-  await fs.mkdir(dir, { recursive: true });
-  await fs.appendFile(fp, line, "utf8");
+  const {
+    appendPolicyTraceRow,
+    importPolicyTracesJsonlIfNeeded,
+    openKitPolicyTraceDatabase
+  } = await import("./state/kit-policy-traces-sqlite.js");
+  const db = openKitPolicyTraceDatabase(workspacePath, effectiveConfig);
+  try {
+    importPolicyTracesJsonlIfNeeded(db, workspacePath);
+    appendPolicyTraceRow(db, record);
+  } finally {
+    db.close();
+  }
 }

@@ -27,6 +27,7 @@
           "demote",
           "pause",
           "reject",
+          "reopen",
           "resume_ready",
           "resume_work",
           "start",

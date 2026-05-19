@@ -11,7 +11,7 @@
       "const": 1
     },
     "packageVersion": {
-      "const": "0.96.0",
+      "const": "0.97.0",
       "description": "Must match package.json version."
     },
     "moduleId": {
@@ -69,6 +69,9 @@
         "phase-focus-dashboard",
         "release-evidence-manifest",
         "report-defect",
+        "install-git-hooks",
+        "uninstall-git-hooks",
+        "sync-task-store-after-merge",
         "release-workspace-edit-lease",
         "get-task",
         "list-tasks",
@@ -164,6 +167,9 @@
         "phase-focus-dashboard": { "$ref": "#/$defs/contractBase" },
         "release-evidence-manifest": { "$ref": "#/$defs/contractBase" },
         "report-defect": { "$ref": "#/$defs/contractReportDefect" },
+        "install-git-hooks": { "$ref": "#/$defs/contractBase" },
+        "uninstall-git-hooks": { "$ref": "#/$defs/contractBase" },
+        "sync-task-store-after-merge": { "$ref": "#/$defs/contractBase" },
         "release-workspace-edit-lease": { "$ref": "#/$defs/contractBase" },
         "get-task": { "$ref": "#/$defs/contractGetTask" },
         "list-tasks": { "$ref": "#/$defs/contractListTasks" },
@@ -348,6 +354,7 @@
                     "demote",
                     "pause",
                     "reject",
+                    "reopen",
                     "resume_ready",
                     "resume_work",
                     "start",

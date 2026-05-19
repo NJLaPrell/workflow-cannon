@@ -36,6 +36,7 @@ import {
 } from "../dist/index.js";
 import { setAgentActivityLease } from "../dist/modules/task-engine/agent-activity-store.js";
 import { buildAgentActivityLabel } from "../dist/modules/task-engine/agent-activity-recorder.js";
+import { persistBuildPlanSession } from "../dist/core/planning/build-plan-session-file.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -142,7 +143,9 @@ test("isTransitionAllowed accepts all valid transitions", () => {
     ["in_progress", "blocked"],
     ["in_progress", "ready"],
     ["blocked", "ready"],
-    ["blocked", "cancelled"]
+    ["blocked", "cancelled"],
+    ["completed", "ready"],
+    ["cancelled", "ready"]
   ];
   for (const [from, to] of valid) {
     assert.ok(isTransitionAllowed(from, to), `${from} -> ${to} should be allowed`);
@@ -151,9 +154,7 @@ test("isTransitionAllowed accepts all valid transitions", () => {
 
 test("isTransitionAllowed rejects disallowed transitions", () => {
   const invalid = [
-    ["completed", "ready"],
     ["completed", "in_progress"],
-    ["cancelled", "ready"],
     ["cancelled", "proposed"],
     ["proposed", "in_progress"],
     ["proposed", "blocked"],
@@ -175,6 +176,7 @@ test("getTransitionAction returns correct action verbs", () => {
   assert.equal(getTransitionAction("in_progress", "cancelled"), "decline");
   assert.equal(getTransitionAction("in_progress", "ready"), "pause");
   assert.equal(getTransitionAction("blocked", "ready"), "unblock");
+  assert.equal(getTransitionAction("completed", "ready"), "reopen");
 });
 
 test("resolveTargetState maps action to target state", () => {
@@ -202,7 +204,10 @@ test("getAllowedTransitionsFrom returns all transitions from a state", () => {
   ]);
 
   const fromCompleted = getAllowedTransitionsFrom("completed");
-  assert.equal(fromCompleted.length, 0);
+  assert.deepEqual(
+    fromCompleted.map((t) => t.action).sort(),
+    ["reopen"]
+  );
 });
 
 test("run-transition action contract, schema, and docs stay aligned with runtime map", async () => {
@@ -241,9 +246,11 @@ test("state-validity guard allows valid transitions", () => {
 test("state-validity guard rejects invalid transitions", () => {
   const task = makeTask({ status: "completed" });
   const ctx = { allTasks: [task], timestamp: new Date().toISOString() };
-  const result = stateValidityGuard.canTransition(task, "ready", ctx);
-  assert.equal(result.allowed, false);
-  assert.equal(result.code, "invalid-transition");
+  const blocked = stateValidityGuard.canTransition(task, "in_progress", ctx);
+  assert.equal(blocked.allowed, false);
+  assert.equal(blocked.code, "invalid-transition");
+  const reopen = stateValidityGuard.canTransition(task, "ready", ctx);
+  assert.equal(reopen.allowed, true);
 });
 
 // ---------------------------------------------------------------------------
@@ -425,33 +432,47 @@ test("TaskStore accepts schemaVersion 2 on read and persists as schemaVersion 1"
   assert.equal(parsed.schemaVersion, 1);
 });
 
-test("appendPolicyTrace concurrent writes preserve line-delimited JSON", async () => {
+test("appendPolicyTrace concurrent writes persist rows in kit_policy_traces", async () => {
   const workspace = await tmpDir();
+  await mkdir(path.join(workspace, ".workspace-kit", "tasks"), { recursive: true });
+  const dbPath = path.join(workspace, ".workspace-kit", "tasks", "workspace-kit.db");
+  const db = new Database(dbPath);
+  prepareKitSqliteDatabase(db);
+  db.close();
+
   const now = new Date().toISOString();
+  const cfg = { tasks: { persistenceBackend: "sqlite" } };
   await Promise.all([
-    appendPolicyTrace(workspace, {
-      timestamp: now,
-      operationId: "improvement.ingest-transcripts",
-      command: "run ingest-transcripts",
-      actor: "a@example.com",
-      allowed: true,
-      rationale: "concurrency-a"
-    }),
-    appendPolicyTrace(workspace, {
-      timestamp: now,
-      operationId: "improvement.generate-recommendations",
-      command: "run generate-recommendations",
-      actor: "b@example.com",
-      allowed: false,
-      message: "denied"
-    })
+    appendPolicyTrace(
+      workspace,
+      {
+        timestamp: now,
+        operationId: "improvement.ingest-transcripts",
+        command: "run ingest-transcripts",
+        actor: "a@example.com",
+        allowed: true,
+        rationale: "concurrency-a"
+      },
+      cfg
+    ),
+    appendPolicyTrace(
+      workspace,
+      {
+        timestamp: now,
+        operationId: "improvement.generate-recommendations",
+        command: "run generate-recommendations",
+        actor: "b@example.com",
+        allowed: false,
+        message: "denied"
+      },
+      cfg
+    )
   ]);
 
-  const raw = await readFile(path.join(workspace, ".workspace-kit", "policy", "traces.jsonl"), "utf8");
-  const lines = raw.trim().split("\n");
-  assert.ok(lines.length >= 2);
-  for (const line of lines) {
-    const parsed = JSON.parse(line);
+  const { readPolicyTracesAfterId } = await import("../dist/core/state/kit-policy-traces-sqlite.js");
+  const rows = readPolicyTracesAfterId(workspace, 0, cfg);
+  assert.ok(rows.length >= 2);
+  for (const parsed of rows) {
     assert.equal(parsed.schemaVersion, 1);
     assert.ok(typeof parsed.operationId === "string");
     assert.ok(typeof parsed.allowed === "boolean");
@@ -1994,26 +2015,19 @@ test("taskEngineModule dashboard-summary agentStatus prefers active planning", a
   await seedSqliteStore(workspace, (store) => {
     store.addTask(makeTask({ id: "T010", status: "in_progress", priority: "P1" }));
   });
-  await mkdir(path.join(workspace, ".workspace-kit", "planning"), { recursive: true });
-  await writeFile(
-    path.join(workspace, ".workspace-kit", "planning", "build-plan-session.json"),
-    JSON.stringify(
-      {
-        schemaVersion: 1,
-        updatedAt: "2026-05-06T00:00:00.000Z",
-        planningType: "interview",
-        outputMode: "task",
-        status: "in_progress",
-        completionPct: 50,
-        answeredCritical: 1,
-        totalCritical: 2,
-        answers: {},
-        resumeCli: "pnpm exec wk run build-plan '{}'"
-      },
-      null,
-      2
-    ) + "\n",
-    "utf8"
+  await persistBuildPlanSession(
+    workspace,
+    {
+      planningType: "interview",
+      outputMode: "task",
+      status: "in_progress",
+      completionPct: 50,
+      answeredCritical: 1,
+      totalCritical: 2,
+      answers: {},
+      resumeCli: "pnpm exec wk run build-plan '{}'"
+    },
+    { tasks: { persistenceBackend: "sqlite" } }
   );
 
   const ctx = sqliteTaskEngineCtx(workspace);
