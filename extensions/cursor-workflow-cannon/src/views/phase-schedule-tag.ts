@@ -90,7 +90,7 @@ export function renderPhaseBucketSummaryLabelHtml(args: {
   phaseKey: string | null;
   count: number;
   focus: PhaseScheduleFocus;
-  /** Roster-aligned deliverables + Edit (queue phase bucket summaries). */
+  /** Optional read-only deliverables text (queue phase bucket summaries). */
   deliverablesSuffixHtml?: string;
 }): string {
   const count = typeof args.count === "number" && args.count >= 0 ? args.count : 0;

@@ -39,6 +39,8 @@ import {
   readCurrentAgentActivityLease
 } from "../agent-activity-store.js";
 import { projectDashboardTaskRow } from "../task-read-projections.js";
+import { buildDashboardCurrentPhaseDelivery } from "../dashboard/phase-delivery-status.js";
+import { buildDashboardPastPhaseNotes } from "../dashboard/build-dashboard-past-phase-notes.js";
 
 /** Parse optional `dashboard-summary` argv for wishlist table paging (extension + CLI). */
 export function parseDashboardWishlistPaging(args?: Record<string, unknown>): {
@@ -177,17 +179,18 @@ export async function runDashboardSummaryCommand(
     .sort((a, b) => a.id.localeCompare(b.id));
   const completedTop = completedTasks.slice(0, 15).map(toProposedRow);
   const cancelledTop = cancelledTasks.slice(0, 15).map(toProposedRow);
+  /** Terminal buckets: counts/labels only — dashboard lazy-loads rows per phase on expand. */
   const completedPhaseBuckets = buildDashboardPhaseBucketsForTasks(
     completedTasks,
     workspaceStatus,
     toProposedRow,
-    dashboardPhaseTop
+    0
   );
   const cancelledPhaseBuckets = buildDashboardPhaseBucketsForTasks(
     cancelledTasks,
     workspaceStatus,
     toProposedRow,
-    dashboardPhaseTop
+    0
   );
 
   const dependencyOverview = buildDashboardDependencyOverview(tasks);
@@ -261,6 +264,24 @@ export async function runDashboardSummaryCommand(
   const agentStatus = liveActivity
     ? agentActivityLeaseToDashboardStatus(liveActivity)
     : derivedAgentStatus;
+
+  const wsForDelivery =
+    workspaceStatus && typeof workspaceStatus === "object"
+      ? (workspaceStatus as { currentKitPhase?: string | null; nextKitPhase?: string | null })
+      : null;
+  const currentPhaseDelivery = buildDashboardCurrentPhaseDelivery({
+    tasks,
+    workspaceStatus: wsForDelivery,
+    db: dualForStatus?.getDatabase() ?? null
+  });
+
+  const phaseCatalogPhases =
+    systemStatus.phase?.phaseCatalog?.phases ?? [];
+  const pastPhaseNotes = buildDashboardPastPhaseNotes({
+    db: dualForStatus?.getDatabase() ?? null,
+    phaseCatalogPhases,
+    currentKitPhase: systemStatus.phase?.currentKitPhase ?? workspaceStatus?.currentKitPhase ?? null
+  });
 
   const data = {
     schemaVersion: 7 as const,
@@ -351,7 +372,9 @@ export async function runDashboardSummaryCommand(
     teamExecution,
     subagentRegistry,
     systemStatus,
-    agentStatus
+    agentStatus,
+    currentPhaseDelivery,
+    pastPhaseNotes
   } satisfies DashboardSummaryData;
 
   return {

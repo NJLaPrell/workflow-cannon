@@ -14,6 +14,9 @@ export type {
 export type {
   DashboardAgentGuidanceSummary,
   DashboardSummaryCommandSuccess,
+  DashboardCurrentPhaseDelivery,
+  DashboardCurrentPhaseQueue,
+  DashboardCurrentPhaseSegments,
   DashboardSummaryData,
   DashboardSystemStatus,
   DashboardTeamAssignmentRow,

@@ -687,7 +687,11 @@ export async function runSetCurrentPhase(
         actor,
         command: "set-current-phase",
         eventKind: "set_current_phase",
-        details: { clientMutationId, payloadDigest }
+        details: {
+          clientMutationId,
+          payloadDigest,
+          previousCurrentKitPhase: before.currentKitPhase
+        }
       });
       beforeRevision = patched.beforeRevision;
       afterRevision = patched.afterRevision;

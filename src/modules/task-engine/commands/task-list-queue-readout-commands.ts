@@ -187,7 +187,9 @@ export function resolveTaskListQueueReadoutCommands(
     if (phaseFilter) {
       tasks = tasks.filter((t) => t.phase === phaseFilter);
     }
-    if (phaseKeyFilter) {
+    if (phaseKeyFilter === "__no_phase__") {
+      tasks = tasks.filter((t) => inferTaskPhaseKey(t) === null);
+    } else if (phaseKeyFilter) {
       tasks = tasks.filter((t) => inferTaskPhaseKey(t) === phaseKeyFilter);
     }
     if (typeFilter) {

@@ -273,7 +273,7 @@ If a future change **requires** consumers to distinguish “enrichment always pr
 4. `src/modules/task-engine/persistence/phase-catalog-store.ts` — `enrichFuturePhaseCatalogWithTaskSummaries` behavior.
 5. `extensions/cursor-workflow-cannon/src/views/dashboard/render-dashboard.ts` — `render*PhaseBuckets`, `phaseBucketsNonEmpty`, `resolvePhasePhraseForCompleteRelease`.
 6. `src/modules/task-engine/persistence/workspace-status-store.ts` — `readWorkspaceStatusSnapshotFromDual` / snapshot shape for enrichment fallback.
-7. `.github/instructions/cursor-workflow-cannon-ui.instructions.md` — **R1–R16**.
+7. `.github/instructions/cursor-workflow-cannon-ui.instructions.md` — **R1–R17** (human copy: **R17**).
 
 ---
 

@@ -12,7 +12,9 @@ import {
   resolvePhasePhraseForCompleteRelease,
   collectPhaseBucketTaskIds,
   renderPlanningInterviewWizardPanel,
-  mergeReadyQueueRollupSummaries
+  mergeReadyQueueRollupSummaries,
+  renderDashboardQueueTaskRowsHtml,
+  lazyTerminalBucketListLimit
 } from "../dist/views/dashboard/render-dashboard.js";
 import { buildPhaseCompleteReleaseChatPrompt } from "../dist/phase-complete-release-prompt.js";
 import { renderGuidanceAuthoringPanelInnerHtml } from "../dist/views/guidance/render-guidance-panel.js";
@@ -120,7 +122,7 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /dash-agent-status-banner/);
   assert.ok(html.indexOf("dash-agent-status-banner") < html.indexOf("wc-cae-readiness"));
   assert.ok(html.indexOf("wc-rec-next") < html.indexOf("wc-cae-readiness"));
-  assert.ok(html.indexOf("wc-cae-readiness") < html.indexOf("wc-tab-bar"));
+  assert.ok(html.indexOf("wc-tab-bar") < html.indexOf("wc-cae-readiness"));
   assert.match(html, /<b>WC Agent is:<\/b> <span class="dash-agent-status-label">Awaiting Instruction<\/span>/);
   assert.match(html, /dash-agent-row-list/);
   assert.match(html, /aria-label="Awaiting Instruction, Current agent"/);
@@ -146,8 +148,8 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.ok(agentStatusIdx !== -1 && roleIdx !== -1 && agentStatusIdx < roleIdx);
   assert.ok(agentStatusIdx !== -1 && phaseIdx !== -1 && agentStatusIdx < phaseIdx);
   assert.ok(phaseIdx !== -1 && roleIdx !== -1 && phaseIdx < roleIdx);
-  assert.match(html, /Phase Readiness/);
-  assert.match(html, /aria-label="Phase readiness"/);
+  assert.match(html, /Phase Readiness · Phase 14/);
+  assert.match(html, /aria-label="Phase readiness · Phase 14"/);
   assert.match(html, /wc-cae-readiness-collapsed/);
   assert.match(html, /data-wc-action="phase-readiness-toggle"/);
   assert.match(html, /aria-expanded="false"/);
@@ -167,9 +169,10 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   const quickBar = html.indexOf("dash-quick-actions");
   assert.ok(taskBlock !== -1 && quickBar !== -1 && taskBlock < quickBar);
   assert.match(html, /dash-count-grid/);
-  assert.match(html, /wc-ready-scope-note/);
-  assert.match(html, /wishlist_intake/);
-  assert.match(html, /Wishlist intake rows are excluded/);
+  assert.doesNotMatch(html, /wc-ready-scope-note/);
+  assert.doesNotMatch(html, /wishlist_intake/);
+  assert.doesNotMatch(html, /Wishlist intake rows are excluded/);
+  assert.doesNotMatch(html, /wk run list-tasks/);
   assert.match(html, />Proposed<\/span> <span class="dash-count-num ok">1<\/span>/);
   assert.match(html, />Ready<\/span> <span class="dash-count-num ok">2<\/span>/);
   assert.match(html, /dashboard-tasks-block/);
@@ -235,7 +238,11 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /<b>Completed<\/b>/);
   assert.match(html, /<b>Cancelled<\/b>/);
   assert.match(html, /terminal-phase-bucket/);
-  assert.match(html, /T099/);
+  assert.match(html, /wc-lazy-terminal-bucket/);
+  assert.match(html, /data-wc-lazy-loaded="0"/);
+  assert.match(html, /wc-lazy-bucket-hint/);
+  assert.match(html, /data-wc-lazy-terminal="completed"/);
+  assert.doesNotMatch(html, /T099/);
   assert.match(html, /Not Phased/);
   assert.doesNotMatch(html, /Dependency Overview/);
   assert.match(html, /Planning Interview/);
@@ -244,8 +251,8 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /No interview in progress/);
   assert.doesNotMatch(html, /This card updates when/);
   assert.match(html, /Store updated/);
-  assert.match(html, /wc-status-counts-scope-note/);
-  assert.match(html, /stateSummary/);
+  assert.doesNotMatch(html, /wc-status-counts-scope-note/);
+  assert.doesNotMatch(html, /stateSummary/);
   assert.doesNotMatch(html, /same store as execution queue/i);
   assert.doesNotMatch(html, /Suggested Next/i);
   assert.doesNotMatch(html, /dashboard-approvals/);
@@ -288,7 +295,7 @@ test("renderDashboardRootInnerHtml renders phase roster deliverables inline edit
   assert.doesNotMatch(html, /<label[^>]*dash-phase-deliverables-editor/);
 });
 
-test("renderDashboardRootInnerHtml queue phase buckets show roster deliverables and Edit", () => {
+test("renderDashboardRootInnerHtml queue phase buckets show read-only roster deliverables", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,
     data: {
@@ -353,11 +360,14 @@ test("renderDashboardRootInnerHtml queue phase buckets show roster deliverables 
   });
 
   assert.match(html, /phase-bucket-summary-deliverables/);
-  assert.match(html, /dash-phase-deliverables--bucket/);
   assert.match(html, /Extension &amp; human visibility/);
   assert.match(html, /wc-phase-tag-current/);
-  assert.match(html, /data-wc-phase-row="100"/);
-  assert.match(html, /data-wc-action="phase-deliverables-edit"[^>]*data-wc-phase-key="100"/);
+  const taskEnginePanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="task-engine"');
+  const statusPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="status"');
+  assert.ok(taskEnginePanelIdx >= 0 && statusPanelIdx > taskEnginePanelIdx);
+  const queueHtml = html.slice(taskEnginePanelIdx, statusPanelIdx);
+  assert.doesNotMatch(queueHtml, /dash-phase-deliverables--bucket/);
+  assert.doesNotMatch(queueHtml, /phase-deliverables-edit/);
 });
 
 test("renderDashboardRootInnerHtml renders redesigned queue task rows with chips and summary", () => {
@@ -464,12 +474,12 @@ test("renderDashboardRootInnerHtml places Phase Readiness under WC Agent shell, 
   });
 
   const agentIdx = html.indexOf("dash-agent-status-banner");
-  const readinessIdx = html.indexOf("<b>Phase Readiness</b>");
+  const readinessIdx = html.indexOf("Phase Readiness · Phase");
   const tabBarIdx = html.indexOf('class="wc-tab-bar"');
   const queueTabIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="task-engine"');
   const caeTabIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="cae"');
   assert.ok(agentIdx !== -1 && readinessIdx > agentIdx);
-  assert.ok(tabBarIdx !== -1 && readinessIdx < tabBarIdx);
+  assert.ok(tabBarIdx !== -1 && tabBarIdx < readinessIdx);
   assert.ok(queueTabIdx !== -1 && readinessIdx < queueTabIdx);
   assert.ok(caeTabIdx !== -1 && readinessIdx < caeTabIdx);
   assert.match(
@@ -940,9 +950,10 @@ test("renderDashboardRootInnerHtml omits suggested-next section", () => {
   assert.doesNotMatch(html, /This card updates when/);
   assert.match(html, /<span class="wc-status-kv-label">Role<\/span><span class="wc-status-kv-val">Bard<\/span>/);
   assert.match(html, /<span class="wc-status-kv-label">Temperament<\/span><span class="wc-status-kv-val">The Wary Scout<\/span>/);
-  assert.match(html, /wc-ready-scope-note/);
-  assert.match(html, /wishlist_intake/);
-  assert.match(html, /Wishlist intake rows are excluded/);
+  assert.doesNotMatch(html, /wc-ready-scope-note/);
+  assert.doesNotMatch(html, /wishlist_intake/);
+  assert.doesNotMatch(html, /Wishlist intake rows are excluded/);
+  assert.doesNotMatch(html, /wk run list-tasks/);
 });
 
 test("renderDashboardRootInnerHtml keeps dashboard copy compact", () => {
@@ -1013,7 +1024,7 @@ test("renderDashboardRootInnerHtml recommends wishlist when execution ready queu
   assert.match(html, /Wishlist backlog item/);
   assert.match(html, /data-wc-action="wishlist-chat"/);
   assert.match(html, /data-wishlist-id="W-open-1"/);
-  assert.match(html, /No execution-queue ready work/);
+  assert.doesNotMatch(html, /No execution-queue ready work/);
 });
 
 test("renderDashboardRootInnerHtml prefers first ready task over wishlist when both exist", () => {
@@ -1354,10 +1365,12 @@ test("renderDashboardRootInnerHtml ready phase buckets include Complete & Releas
   assert.match(html, /data-wc-phase-phrase="Phase 64"/);
   assert.match(html, /data-wc-phase-task-ids="T900"/);
   assert.match(html, /data-wc-workspace-current-phase="64"/);
+  assert.match(html, /wc-cae-readiness-head/);
+  assert.match(html, /data-wc-release-scope="bucket"/);
   assert.match(html, /data-wc-release-scope="current"/);
   assert.match(html, /Complete &amp; Release/);
-  assert.match(html, /dash-phase-release-overview/);
-  assert.match(html, /Closeout phase 64/);
+  assert.doesNotMatch(html, /dash-phase-release-overview/);
+  assert.doesNotMatch(html, /Closeout phase 64/);
   assert.match(html, /phase-bucket-summary/);
 });
 
@@ -1508,4 +1521,150 @@ test("renderDashboardRootInnerHtml wishlist pager points prev and next at adjace
   assert.match(html, /Page 2 \/ 3/);
   assert.match(html, /data-wishlist-page="0">Prev/);
   assert.match(html, /data-wishlist-page="2">Next/);
+});
+
+function phaseDeliveryFixture(overrides = {}) {
+  return {
+    schemaVersion: 2,
+    phaseKey: "100",
+    closeoutPassed: true,
+    released: false,
+    remainingCount: 0,
+    terminalCount: 10,
+    checkedTaskCount: 10,
+    queue: { ready: 5, proposed: 0, blocked: 0, inProgress: 2, research: 0 },
+    segments: {
+      completed: 8,
+      cancelled: 2,
+      inProgress: 0,
+      ready: 0,
+      proposed: 0,
+      blocked: 0,
+      research: 0
+    },
+    progressPercent: 100,
+    releaseReadyPercent: 100,
+    ...overrides
+  };
+}
+
+function readinessDashboardPayload(dataOverrides = {}) {
+  return {
+    ok: true,
+    data: {
+      stateSummary: { ready: 71, proposed: 0, blocked: 0, completed: 0 },
+      readyImprovementsSummary: { schemaVersion: 1, count: 56, top: [], phaseBuckets: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 15, top: [], phaseBuckets: [{ phaseKey: "100", count: 15 }] },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      blockedSummary: { count: 0, top: [], phaseBuckets: [] },
+      transcriptChurnResearchSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      completedSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      cancelledSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      wishlist: {
+        schemaVersion: 1,
+        openCount: 0,
+        totalCount: 0,
+        openPage: 0,
+        openPageSize: 10,
+        openTotalPages: 0,
+        openTop: []
+      },
+      readyQueueTop: [],
+      readyQueueCount: 71,
+      readyQueueBreakdown: { schemaVersion: 1, improvement: 56, other: 15 },
+      executionPlanningScope: "tasks-only",
+      suggestedNext: null,
+      planningSession: null,
+      taskStoreLastUpdated: "2026-05-14T00:00:00.000Z",
+      workspaceStatus: {
+        currentKitPhase: "100",
+        nextKitPhase: "101",
+        activeFocus: "Release gate",
+        blockers: [],
+        pendingDecisions: []
+      },
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview,
+      currentPhaseDelivery: phaseDeliveryFixture(),
+      ...dataOverrides
+    }
+  };
+}
+
+test("Phase Readiness shows phase-scoped runnable counts not workspace ready total", () => {
+  const html = renderDashboardRootInnerHtml(readinessDashboardPayload());
+  assert.match(html, /Runnable work in phase/);
+  assert.match(html, /5 ready · 2 in progress/);
+  assert.doesNotMatch(html, /71 ready/);
+});
+
+function overviewPanelHtml(html) {
+  const start = html.indexOf('<div class="wc-tab-panel" data-wc-tab="overview"');
+  const end = html.indexOf('<motion.div class="wc-tab-panel" data-wc-tab="task-engine"');
+  if (start === -1 || end <= start) {
+    const altEnd = html.indexOf('<div class="wc-tab-panel" data-wc-tab="task-engine"');
+    return start !== -1 && altEnd > start ? html.slice(start, altEnd) : html;
+  }
+  return html.slice(start, end);
+}
+
+test("Phase Progress renders segmented bar without release control", () => {
+  const overview = overviewPanelHtml(renderDashboardRootInnerHtml(readinessDashboardPayload()));
+  assert.match(overview, /Phase Progress · Phase/);
+  assert.match(overview, /wc-phase-progress-track/);
+  assert.match(overview, /wc-phase-progress-seg/);
+  assert.doesNotMatch(overview, /wc-phase-progress-head[\s\S]*dash-phase-release-btn/);
+  const readinessSection =
+    overview.match(/<section class="dash-card wc-cae-readiness[\s\S]*?<\/section>/)?.[0] ?? "";
+  assert.match(readinessSection, /dash-phase-release-btn/);
+});
+
+test("Phase Readiness Complete & Release stays clickable before closeout passes", () => {
+  const html = renderDashboardRootInnerHtml(
+    readinessDashboardPayload({
+      currentPhaseDelivery: phaseDeliveryFixture({
+        closeoutPassed: false,
+        releaseReadyPercent: 40,
+        progressPercent: 40,
+        remainingCount: 6,
+        terminalCount: 4,
+        checkedTaskCount: 10
+      })
+    })
+  );
+  const head = html.match(/wc-cae-readiness-head[\s\S]*?<\/div>\s*<div class="wc-cae-readiness-body"/)?.[0] ?? "";
+  assert.match(head, /dash-phase-release-btn/);
+  assert.doesNotMatch(head, /\bdash-phase-release-btn[\s\S]*\bdisabled\b/);
+  assert.match(head, /dash-phase-release-btn--preflight/);
+  assert.match(head, /Start phase closeout/);
+});
+
+test("Phase Readiness enables Complete & Release when closeout passed", () => {
+  const html = renderDashboardRootInnerHtml(readinessDashboardPayload());
+  const head = html.match(/wc-cae-readiness-head[\s\S]*?<\/div>/)?.[0] ?? "";
+  assert.match(head, /dash-phase-release-btn/);
+  assert.doesNotMatch(head, /disabled/);
+});
+
+test("Phase Readiness shows Delivered tag when phase completed and released", () => {
+  const overview = overviewPanelHtml(
+    renderDashboardRootInnerHtml(
+      readinessDashboardPayload({
+        currentPhaseDelivery: phaseDeliveryFixture({ released: true })
+      })
+    )
+  );
+  assert.match(overview, /wc-phase-readiness-delivered/);
+  assert.match(overview, /wc-phase-tag-delivered[\s\S]*Delivered/);
+  assert.doesNotMatch(overview, /wc-phase-progress-head[\s\S]*dash-phase-release-btn/);
+});
+
+test("renderDashboardQueueTaskRowsHtml renders queue rows for host lazy terminal inject", () => {
+  const html = renderDashboardQueueTaskRowsHtml([
+    { id: "T900", title: "Done thing", summary: "Shipped it" }
+  ]);
+  assert.match(html, /dash-row-list/);
+  assert.match(html, /T900/);
+  assert.equal(lazyTerminalBucketListLimit(), 50);
 });

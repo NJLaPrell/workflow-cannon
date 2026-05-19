@@ -3,6 +3,7 @@ import Database from "better-sqlite3";
 import type {
   CreatePhaseNoteInput,
   CreatePhaseNoteResult,
+  ListPhaseNotesBatchFilter,
   ListPhaseNotesFilter,
   PhaseNotePriority,
   PhaseNoteRefRow,
@@ -80,6 +81,30 @@ function loadRefs(db: SqliteDb, noteId: string): PhaseNoteRefRow[] {
     refType: r.ref_type,
     refValue: r.ref_value
   }));
+}
+
+function loadRefsForNoteIds(db: SqliteDb, noteIds: readonly string[]): Map<string, PhaseNoteRefRow[]> {
+  const out = new Map<string, PhaseNoteRefRow[]>();
+  if (noteIds.length === 0) {
+    return out;
+  }
+  const placeholders = noteIds.map(() => "?").join(", ");
+  const rows = db
+    .prepare(
+      `SELECT id, note_id, ref_type, ref_value FROM phase_note_refs WHERE note_id IN (${placeholders}) ORDER BY note_id, id`
+    )
+    .all(...noteIds) as Array<{ id: string; note_id: string; ref_type: string; ref_value: string }>;
+  for (const r of rows) {
+    const list = out.get(r.note_id) ?? [];
+    list.push({
+      id: r.id,
+      noteId: r.note_id,
+      refType: r.ref_type,
+      refValue: r.ref_value
+    });
+    out.set(r.note_id, list);
+  }
+  return out;
 }
 
 function getNoteById(db: SqliteDb, id: string): PhaseNoteRow | null {
@@ -314,6 +339,55 @@ LIMIT ${limit}
 `;
     const rows = this.db.prepare(sql).all(...params) as Record<string, unknown>[];
     return rows.map((row) => mapNote(row, loadRefs(this.db, String(row.id))));
+  }
+
+  /**
+   * One round-trip for many phases (dashboard past-phase rollup). Applies {@link ListPhaseNotesBatchFilter.limitPerPhase}
+   * per phase after ordering by `created_at` descending.
+   */
+  listNotesGroupedByPhaseKeys(filter: ListPhaseNotesBatchFilter): Map<string, PhaseNoteRow[]> {
+    const keys = filter.phaseKeys.map((k) => k.trim()).filter((k) => k.length > 0);
+    const grouped = new Map<string, PhaseNoteRow[]>();
+    if (keys.length === 0) {
+      return grouped;
+    }
+    const limitPerPhase = Math.min(Math.max(filter.limitPerPhase, 1), 500);
+    const rowCap = Math.min(Math.max(filter.rowCap ?? 2000, 1), 10_000);
+    const placeholders = keys.map(() => "?").join(", ");
+    const clauses: string[] = [`phase_key IN (${placeholders})`];
+    const params: unknown[] = [...keys];
+    if (filter.status !== undefined) {
+      if (Array.isArray(filter.status)) {
+        if (filter.status.length === 0) {
+          return grouped;
+        }
+        clauses.push(`status IN (${filter.status.map(() => "?").join(", ")})`);
+        params.push(...filter.status);
+      } else {
+        clauses.push("status = ?");
+        params.push(filter.status);
+      }
+    }
+    const sql = `
+SELECT * FROM phase_notes
+WHERE ${clauses.join(" AND ")}
+ORDER BY phase_key ASC, created_at DESC
+LIMIT ${rowCap}
+`;
+    const rows = this.db.prepare(sql).all(...params) as Record<string, unknown>[];
+    const noteIds = rows.map((row) => String(row.id));
+    const refsByNoteId = loadRefsForNoteIds(this.db, noteIds);
+    for (const row of rows) {
+      const phaseKey = String(row.phase_key);
+      const bucket = grouped.get(phaseKey) ?? [];
+      if (bucket.length >= limitPerPhase) {
+        continue;
+      }
+      const id = String(row.id);
+      bucket.push(mapNote(row, refsByNoteId.get(id) ?? []));
+      grouped.set(phaseKey, bucket);
+    }
+    return grouped;
   }
 
   dismissNote(noteId: string): PhaseNoteRow | null {

@@ -27,6 +27,7 @@ Audience: agents only. Apply these rules verbatim when writing or modifying webv
 | R14 | Shared CSS refactor target |
 | R15 | CSP + inline assets |
 | R16 | Migration policy |
+| R17 | Human copy (product voice) |
 
 ## Files this guide governs
 
@@ -337,3 +338,17 @@ When modifying a file that contains a legacy class:
 2. For any row you author or rewrite, emit the canonical class names from §R8 / §R9 / §R10.
 3. If the legacy CSS rule is the only remaining definition for a class you replaced, delete that rule.
 4. Do not perform repository-wide renames in unrelated files unless explicitly requested.
+
+## R17. Human copy (product voice)
+
+The Dashboard, Status, Config, and Guidance webviews are **operator-facing product UI**, not agent runbooks. Copy MUST stay minimal and intentional.
+
+R17.1 **No unsolicited meta copy.** Do not add muted paragraphs, “Note:” callouts, footnotes, or scope explanations unless the user or an approved spec explicitly requests that exact text. Forbidden patterns include explaining kit/data-model semantics (execution queue vs wishlist, `stateSummary` vs rollups, `wishlist_intake`, persistence backends, policy lanes) in the webview body.
+
+R17.2 **No CLI or command references in webview copy.** Do not tell operators to run `wk`, `wk run`, `pnpm exec`, `workspace-kit`, `list-tasks`, `get-next-actions`, or other terminal commands inside rendered HTML. Navigation belongs in labels, buttons, tabs, and row actions — not command strings. (`<code>` in copy is for displaying **user data** such as phase keys or task ids, not tool invocations.)
+
+R17.3 **Allowed copy without prior approval:** section titles, counts in summaries (`Ready (3)`), button labels, empty states (`No ready tasks.`, `No Items`), field labels, validation errors tied to the current action, and short `title` / `aria-label` tooltips that describe the control (not the kit).
+
+R17.4 **When truncation or preview limits exist:** rely on expandable `<details>` phase buckets and row lists; do not add “preview capped” or “use CLI for full list” helper lines unless explicitly requested.
+
+R17.5 **Agent/admin lanes stay out of operator chrome.** Policy approval, `policyApproval`, CAE mutation rationale, and maintainer delivery mechanics belong in drawer copy only when that drawer is part of an approved governance flow — not as ambient dashboard footnotes.

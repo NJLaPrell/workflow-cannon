@@ -1,0 +1,279 @@
+import type DatabaseCtor from "better-sqlite3";
+import { buildPhaseCloseoutReadiness, isPhaseDeliveryTask } from "../delivery-evidence.js";
+import { inferTaskPhaseKey } from "../phase-resolution.js";
+import type { TaskEntity, TaskStatus } from "../types.js";
+
+type SqliteDb = InstanceType<typeof DatabaseCtor>;
+
+export type DashboardCurrentPhaseQueue = {
+  ready: number;
+  proposed: number;
+  blocked: number;
+  inProgress: number;
+  research: number;
+};
+
+export type DashboardCurrentPhaseSegments = {
+  completed: number;
+  cancelled: number;
+  inProgress: number;
+  ready: number;
+  proposed: number;
+  blocked: number;
+  research: number;
+};
+
+export type DashboardCurrentPhaseDelivery = {
+  schemaVersion: 2;
+  phaseKey: string | null;
+  closeoutPassed: boolean;
+  released: boolean;
+  remainingCount: number;
+  terminalCount: number;
+  checkedTaskCount: number;
+  /** All non-archived tasks in this phase (any type), by queue status. */
+  queue: DashboardCurrentPhaseQueue;
+  /** Phase delivery tasks only — drives the progress bar segments. */
+  segments: DashboardCurrentPhaseSegments;
+  /** Completed + cancelled delivery tasks / all delivery tasks in phase. */
+  progressPercent: number;
+  /** 100 when `closeoutPassed`; otherwise mirrors `progressPercent` (cap 99). */
+  releaseReadyPercent: number;
+};
+
+function workspaceStatusEventsReadable(db: SqliteDb): boolean {
+  try {
+    const raw = db.pragma("user_version", { simple: true });
+    const v = typeof raw === "number" ? raw : Number(raw);
+    if (v < 10) {
+      return false;
+    }
+    const row = db
+      .prepare(`SELECT 1 AS ok FROM sqlite_master WHERE type = 'table' AND name = 'kit_workspace_status_events'`)
+      .get();
+    return row != null;
+  } catch {
+    return false;
+  }
+}
+
+/** True when a live `set-current-phase` rolled workspace off this phase key. */
+export function wasWorkspacePhaseRolledOut(db: SqliteDb, phaseKey: string): boolean {
+  const key = phaseKey.trim();
+  if (!key || !workspaceStatusEventsReadable(db)) {
+    return false;
+  }
+  const rows = db
+    .prepare(
+      `SELECT details_json
+       FROM kit_workspace_status_events
+       WHERE event_kind = 'set_current_phase'
+       ORDER BY id DESC
+       LIMIT 300`
+    )
+    .all() as Array<{ details_json: string }>;
+  for (const row of rows) {
+    try {
+      const details = JSON.parse(row.details_json) as Record<string, unknown>;
+      const prior =
+        typeof details.previousCurrentKitPhase === "string"
+          ? details.previousCurrentKitPhase.trim()
+          : "";
+      if (prior.length > 0 && prior === key) {
+        return true;
+      }
+    } catch {
+      /* Ignore malformed historical details. */
+    }
+  }
+  return false;
+}
+
+function parseLeadingPhaseOrdinal(phaseKey: string | null | undefined): number | null {
+  if (phaseKey == null) {
+    return null;
+  }
+  const m = String(phaseKey).trim().match(/^(\d+)/);
+  if (!m) {
+    return null;
+  }
+  const n = Number(m[1]);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Phase ordinal strictly before workspace `currentKitPhase` (roster Delivered semantics). */
+export function isPhaseBehindWorkspaceCurrent(
+  phaseKey: string,
+  workspaceStatus: { currentKitPhase?: string | null } | null | undefined
+): boolean {
+  const pkOrd = parseLeadingPhaseOrdinal(phaseKey);
+  const curOrd = parseLeadingPhaseOrdinal(workspaceStatus?.currentKitPhase);
+  if (pkOrd === null || curOrd === null) {
+    return false;
+  }
+  return pkOrd < curOrd;
+}
+
+function taskMatchesPhase(task: TaskEntity, phaseKey: string): boolean {
+  return inferTaskPhaseKey(task) === phaseKey;
+}
+
+function bumpInProgressQueue(queue: DashboardCurrentPhaseQueue): void {
+  queue.inProgress += 1;
+}
+
+export function countPhaseQueueMetrics(
+  tasks: TaskEntity[],
+  phaseKey: string | null
+): DashboardCurrentPhaseQueue {
+  const queue: DashboardCurrentPhaseQueue = {
+    ready: 0,
+    proposed: 0,
+    blocked: 0,
+    inProgress: 0,
+    research: 0
+  };
+  if (!phaseKey) {
+    return queue;
+  }
+  for (const task of tasks) {
+    if (task.archived || !taskMatchesPhase(task, phaseKey)) {
+      continue;
+    }
+    switch (task.status) {
+      case "ready":
+        queue.ready += 1;
+        break;
+      case "proposed":
+        queue.proposed += 1;
+        break;
+      case "blocked":
+        queue.blocked += 1;
+        break;
+      case "in_progress":
+      case "awaiting_review":
+      case "awaiting_policy_approval":
+      case "awaiting_external_decision":
+        bumpInProgressQueue(queue);
+        break;
+      case "research":
+        queue.research += 1;
+        break;
+      default:
+        break;
+    }
+  }
+  return queue;
+}
+
+function segmentKeyForStatus(status: TaskStatus): keyof DashboardCurrentPhaseSegments | null {
+  switch (status) {
+    case "completed":
+      return "completed";
+    case "cancelled":
+      return "cancelled";
+    case "ready":
+      return "ready";
+    case "proposed":
+      return "proposed";
+    case "blocked":
+      return "blocked";
+    case "research":
+      return "research";
+    case "in_progress":
+    case "awaiting_review":
+    case "awaiting_policy_approval":
+    case "awaiting_external_decision":
+      return "inProgress";
+    default:
+      return null;
+  }
+}
+
+export function countPhaseDeliverySegments(
+  tasks: TaskEntity[],
+  phaseKey: string | null
+): DashboardCurrentPhaseSegments {
+  const segments: DashboardCurrentPhaseSegments = {
+    completed: 0,
+    cancelled: 0,
+    inProgress: 0,
+    ready: 0,
+    proposed: 0,
+    blocked: 0,
+    research: 0
+  };
+  if (!phaseKey) {
+    return segments;
+  }
+  for (const task of tasks) {
+    if (!isPhaseDeliveryTask(task) || !taskMatchesPhase(task, phaseKey)) {
+      continue;
+    }
+    const key = segmentKeyForStatus(task.status);
+    if (key) {
+      segments[key] += 1;
+    }
+  }
+  return segments;
+}
+
+export function segmentTotal(segments: DashboardCurrentPhaseSegments): number {
+  return (
+    segments.completed +
+    segments.cancelled +
+    segments.inProgress +
+    segments.ready +
+    segments.proposed +
+    segments.blocked +
+    segments.research
+  );
+}
+
+export function buildDashboardCurrentPhaseDelivery(args: {
+  tasks: TaskEntity[];
+  workspaceStatus: { currentKitPhase?: string | null; nextKitPhase?: string | null } | null;
+  db: SqliteDb | null;
+}): DashboardCurrentPhaseDelivery {
+  const phaseKey =
+    args.workspaceStatus?.currentKitPhase != null
+      ? String(args.workspaceStatus.currentKitPhase).trim() || null
+      : null;
+  const closeout = buildPhaseCloseoutReadiness({
+    tasks: args.tasks,
+    phaseKey
+  });
+  let released = false;
+  if (phaseKey) {
+    if (args.db && wasWorkspacePhaseRolledOut(args.db, phaseKey)) {
+      released = true;
+    } else if (isPhaseBehindWorkspaceCurrent(phaseKey, args.workspaceStatus)) {
+      released = true;
+    }
+  }
+
+  const queue = countPhaseQueueMetrics(args.tasks, phaseKey);
+  const segments = countPhaseDeliverySegments(args.tasks, phaseKey);
+  const checkedTaskCount = closeout.checkedTaskCount;
+  const progressPercent =
+    checkedTaskCount > 0 ? Math.round((closeout.terminalCount / checkedTaskCount) * 100) : 0;
+  const releaseReadyPercent = closeout.passed
+    ? 100
+    : checkedTaskCount > 0
+      ? Math.min(99, progressPercent)
+      : 0;
+
+  return {
+    schemaVersion: 2,
+    phaseKey,
+    closeoutPassed: closeout.passed,
+    released,
+    remainingCount: closeout.remainingCount,
+    terminalCount: closeout.terminalCount,
+    checkedTaskCount,
+    queue,
+    segments,
+    progressPercent,
+    releaseReadyPercent
+  };
+}

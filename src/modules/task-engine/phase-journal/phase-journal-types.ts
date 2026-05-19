@@ -41,6 +41,16 @@ export type ListPhaseNotesFilter = {
   limit?: number;
 };
 
+/** Batch read for dashboard past-phase rollups (one query, per-phase cap applied in store). */
+export type ListPhaseNotesBatchFilter = {
+  phaseKeys: readonly string[];
+  status?: PhaseNoteStatus | PhaseNoteStatus[];
+  /** Max notes returned per `phaseKey` (newest first within phase). */
+  limitPerPhase: number;
+  /** Hard cap on raw rows read from SQLite before grouping. */
+  rowCap?: number;
+};
+
 export type PhaseNoteRefRow = {
   id: string;
   noteId: string;

@@ -42,6 +42,31 @@ test("phase journal migration is idempotent and store supports idempotent create
   }
 });
 
+test("phase journal listNotesGroupedByPhaseKeys batches phases in one query", async () => {
+  const workspace = await mkdtemp(path.join(os.tmpdir(), "wk-phase-journal-batch-"));
+  const dbPath = path.join(workspace, "kit.db");
+  const db = new Database(dbPath);
+  try {
+    prepareKitSqliteDatabase(db);
+    const store = createPhaseJournalStore(db);
+    store.createNoteIdempotent({ phaseKey: "1", noteType: "finding", summary: "old phase" });
+    store.createNoteIdempotent({ phaseKey: "2", noteType: "finding", summary: "older phase" });
+    store.createNoteIdempotent({ phaseKey: "99", noteType: "finding", summary: "current phase" });
+
+    const grouped = store.listNotesGroupedByPhaseKeys({
+      phaseKeys: ["1", "2", "99"],
+      status: "active",
+      limitPerPhase: 8
+    });
+    assert.equal(grouped.get("1")?.length, 1);
+    assert.equal(grouped.get("2")?.length, 1);
+    assert.equal(grouped.get("99")?.length, 1);
+    assert.equal(grouped.get("1")?.[0]?.summary, "old phase");
+  } finally {
+    db.close();
+  }
+});
+
 test("phase journal list, dismiss, supersede", async () => {
   const workspace = await mkdtemp(path.join(os.tmpdir(), "wk-phase-journal-2-"));
   const dbPath = path.join(workspace, "kit.db");

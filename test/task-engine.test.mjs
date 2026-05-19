@@ -1958,6 +1958,8 @@ test("taskEngineModule onCommand dashboard-summary returns stable shape", async 
   assert.equal(d.subagentRegistry.openSessionsCount, 0);
   assert.ok(Array.isArray(d.subagentRegistry.topOpenSessions));
   assert.equal(d.subagentRegistry.topOpenSessions.length, 0);
+  assert.ok(Array.isArray(d.pastPhaseNotes));
+  assert.equal(d.pastPhaseNotes.length, 0);
 });
 
 test("taskEngineModule dashboard-summary agentStatus falls back to awaiting instruction", async () => {
@@ -3716,6 +3718,22 @@ test("taskEngineModule list-tasks phaseKey filter matches inferred phase", async
   assert.equal(result.ok, true);
   assert.equal(result.data.count, 1);
   assert.equal(result.data.tasks[0].id, "T10");
+});
+
+test("taskEngineModule list-tasks phaseKey __no_phase__ matches tasks without inferred phase", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T10", status: "completed", phase: "Phase 28 (x)" }));
+    store.addTask(makeTask({ id: "T11", status: "completed", phase: "" }));
+  });
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const result = await taskEngineModule.onCommand(
+    { name: "list-tasks", args: { phaseKey: "__no_phase__", status: "completed" } },
+    ctx
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.data.count, 1);
+  assert.equal(result.data.tasks[0].id, "T11");
 });
 
 test("taskEngineModule explain-task-engine-model returns variants and lifecycle", async () => {

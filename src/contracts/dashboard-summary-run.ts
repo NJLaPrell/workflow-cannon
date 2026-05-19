@@ -232,6 +232,39 @@ export type DashboardAgentStatusSummary = {
   detail?: string | null;
 };
 
+export type DashboardCurrentPhaseQueue = {
+  ready: number;
+  proposed: number;
+  blocked: number;
+  inProgress: number;
+  research: number;
+};
+
+export type DashboardCurrentPhaseSegments = {
+  completed: number;
+  cancelled: number;
+  inProgress: number;
+  ready: number;
+  proposed: number;
+  blocked: number;
+  research: number;
+};
+
+/** Current workspace phase queue, progress, and release markers for dashboard cards. */
+export type DashboardCurrentPhaseDelivery = {
+  schemaVersion: 2;
+  phaseKey: string | null;
+  closeoutPassed: boolean;
+  released: boolean;
+  remainingCount: number;
+  terminalCount: number;
+  checkedTaskCount: number;
+  queue: DashboardCurrentPhaseQueue;
+  segments: DashboardCurrentPhaseSegments;
+  progressPercent: number;
+  releaseReadyPercent: number;
+};
+
 export type DashboardSummaryData = {
   schemaVersion: 7;
   /** Monotonic optimistic-lock generation for the unified planning SQLite row. */
@@ -300,6 +333,18 @@ export type DashboardSummaryData = {
   systemStatus: DashboardSystemStatus;
   /** Conservative, read-only WC Agent status derived from dashboard/task state (Phase 81+). */
   agentStatus: DashboardAgentStatusSummary;
+  /** Phase Readiness Complete & Release gating — closeout audit + release/rollover detection. */
+  currentPhaseDelivery: DashboardCurrentPhaseDelivery;
+  /**
+   * Past-phase journal rollup for dashboard (phases with ordinal before workspace current).
+   * Omitted when phase journal SQLite is unavailable; empty array when no past notes exist.
+   */
+  pastPhaseNotes?: DashboardPastPhaseNotesEntry[];
+};
+
+export type DashboardPastPhaseNotesEntry = {
+  phaseKey: string;
+  notes: Array<Record<string, unknown>>;
 };
 
 /** Success envelope for `dashboard-summary` (extension + tooling). */

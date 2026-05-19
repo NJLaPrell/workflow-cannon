@@ -19,15 +19,13 @@ import { confirmAndRunTransition } from "../../run-transition-with-approval.js";
 import { executeCreateWishlistFromValidatedFields } from "../../add-wishlist-item-flow.js";
 import {
   escapeHtml,
+  lazyTerminalBucketListLimit,
+  renderDashboardQueueTaskRowsHtml,
   renderDashboardRootInnerHtml,
   type DashboardPhaseJournalBundle,
   type PhaseJournalKitPayload,
   type PlanningInterviewWizardPanel
 } from "./render-dashboard.js";
-import {
-  parseLeadingPhaseOrdinalFromKey,
-  resolveWorkspacePhaseOrdinal
-} from "../phase-roster-display.js";
 import { GuidanceAuthoringExtensionSide } from "../guidance/guidance-authoring-extension-side.js";
 import { renderGuidanceAuthoringPanelInnerHtml } from "../guidance/render-guidance-panel.js";
 import { STATUS_PANEL_EMBED_CSS } from "../status/render-status-tab.js";
@@ -290,6 +288,18 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     webview.onDidReceiveMessage(async (msg) => {
       if (msg?.type === "refresh") {
         await this.pushUpdate();
+      }
+      if (msg?.type === "loadLazyTerminalBucket") {
+        const terminalRaw = (msg as { terminalStatus?: unknown }).terminalStatus;
+        const terminalStatus =
+          terminalRaw === "completed" || terminalRaw === "cancelled" ? terminalRaw : null;
+        const phaseKey =
+          typeof (msg as { phaseKey?: unknown }).phaseKey === "string"
+            ? (msg as { phaseKey: string }).phaseKey
+            : "";
+        if (terminalStatus) {
+          void this.loadLazyTerminalBucket(phaseKey, terminalStatus);
+        }
       }
       if (msg?.type === "wishlistPage") {
         const rawP = (msg as { page?: unknown }).page;
@@ -705,6 +715,45 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         "Planning interview finished. No wishlist row was written yet — use build-plan finalize with createWishlist from the CLI or chat when you want it persisted."
       );
       return;
+    }
+  }
+
+  private async loadLazyTerminalBucket(
+    phaseKey: string,
+    terminalStatus: "completed" | "cancelled"
+  ): Promise<void> {
+    const pk = phaseKey.trim();
+    const phaseKeyArg = pk.length > 0 ? pk : "__no_phase__";
+    try {
+      const raw = await this.client.run("list-tasks", {
+        phaseKey: phaseKeyArg,
+        status: terminalStatus,
+        limit: lazyTerminalBucketListLimit()
+      });
+      const data =
+        raw && typeof raw === "object" && "data" in raw
+          ? (raw as { data?: unknown }).data
+          : undefined;
+      const tasks =
+        data && typeof data === "object" && Array.isArray((data as { tasks?: unknown }).tasks)
+          ? ((data as { tasks: unknown[] }).tasks as unknown[])
+          : [];
+      const html = renderDashboardQueueTaskRowsHtml(tasks);
+      await this.view?.webview.postMessage({
+        type: "wcLazyTerminalBucketHtml",
+        phaseKey: pk,
+        terminalStatus,
+        html
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to load tasks.";
+      await this.view?.webview.postMessage({
+        type: "wcLazyTerminalBucketHtml",
+        phaseKey: pk,
+        terminalStatus,
+        html:
+          '<p class="muted wc-lazy-bucket-hint" role="status">' + escapeHtml(message) + "</p>"
+      });
     }
   }
 
@@ -1542,56 +1591,25 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         ingestPlanningMetaFromData(gpc.data as Record<string, unknown> | undefined);
         embeddedCaePanelHtml = renderGuidanceAuthoringPanelInnerHtml(caeSummary);
 
-        // Resolve past phase keys (workspace ordinal strictly < current) from the
-        // dashboard-summary phase roster so the Phase Notes card can render the
-        // "Past Phases" rollup with one entry per past phase that has notes.
-        const pastPhaseKeys: string[] = [];
-        try {
-          const phaseSlice =
-            ((raw.data as Record<string, unknown>).systemStatus as Record<string, unknown> | undefined)?.phase as
-              | Record<string, unknown>
-              | undefined;
-          const phasesRaw =
-            (phaseSlice?.phaseCatalog as Record<string, unknown> | undefined)?.phases;
-          const phaseRows = Array.isArray(phasesRaw) ? (phasesRaw as unknown[]) : [];
-          const wOrd = phaseSlice ? resolveWorkspacePhaseOrdinal(phaseSlice) : null;
-          if (wOrd !== null) {
-            for (const r of phaseRows) {
-              if (!r || typeof r !== "object") continue;
-              const pk = (r as Record<string, unknown>).phaseKey;
-              if (typeof pk !== "string" || pk.length === 0) continue;
-              const o = parseLeadingPhaseOrdinalFromKey(pk);
-              if (o !== null && o < wOrd) {
-                pastPhaseKeys.push(pk);
-              }
-            }
-          }
-        } catch {
-          // Best-effort; missing roster simply yields an empty Past Phases rollup.
-        }
-
-        let pastPhaseNotes: DashboardPhaseJournalBundle["pastPhaseNotes"] = [];
-        if (pastPhaseKeys.length > 0) {
-          const results = await Promise.all(
-            pastPhaseKeys.map((phaseKey) =>
-              this.client
-                .run("list-phase-notes", { phaseKey })
-                .then(
-                  (res) => ({ phaseKey, res: res as PhaseJournalKitPayload }),
-                  () => ({ phaseKey, res: { ok: false } as PhaseJournalKitPayload })
-                )
-            )
-          );
-          pastPhaseNotes = results
-            .map(({ phaseKey, res }) => {
-              const ok = res.ok === true && res.data && typeof res.data === "object";
-              const notes = ok && Array.isArray((res.data as Record<string, unknown>).notes)
-                ? ((res.data as Record<string, unknown>).notes as unknown[])
-                : [];
-              return { phaseKey, notes };
-            })
-            .filter((e) => e.notes.length > 0);
-        }
+        const pastFromSummary = (raw.data as Record<string, unknown>).pastPhaseNotes;
+        const pastPhaseNotes: DashboardPhaseJournalBundle["pastPhaseNotes"] = Array.isArray(
+          pastFromSummary
+        )
+          ? pastFromSummary
+              .map((entry) => {
+                if (!entry || typeof entry !== "object") {
+                  return null;
+                }
+                const rec = entry as Record<string, unknown>;
+                const phaseKey = typeof rec.phaseKey === "string" ? rec.phaseKey.trim() : "";
+                const notes = Array.isArray(rec.notes) ? rec.notes : [];
+                if (!phaseKey || notes.length === 0) {
+                  return null;
+                }
+                return { phaseKey, notes };
+              })
+              .filter((e): e is { phaseKey: string; notes: unknown[] } => e !== null)
+          : undefined;
 
         phaseJournal = {
           listPhaseNotes: {
@@ -1695,6 +1713,105 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   var activeTab = 'overview';
   var activeFilter = 'all';
   var activePhaseFilter = 'all';
+  var PHASE_READINESS_EXPAND_KEY = 'wc-phase-readiness-expanded';
+  var PHASE_PROGRESS_EXPAND_KEY = 'wc-phase-progress-expanded';
+
+  function persistPhaseCardExpanded(storageKey, expanded) {
+    try {
+      if (expanded) sessionStorage.setItem(storageKey, '1');
+      else sessionStorage.removeItem(storageKey);
+    } catch (e) {}
+  }
+
+  function capturePhaseCardCollapseState(root) {
+    if (!root) return;
+    var readiness = root.querySelector('.wc-cae-readiness');
+    if (readiness) {
+      persistPhaseCardExpanded(
+        PHASE_READINESS_EXPAND_KEY,
+        !readiness.classList.contains('wc-cae-readiness-collapsed')
+      );
+    }
+    var progress = root.querySelector('.wc-phase-progress');
+    if (progress) {
+      persistPhaseCardExpanded(
+        PHASE_PROGRESS_EXPAND_KEY,
+        !progress.classList.contains('wc-phase-progress-collapsed')
+      );
+    }
+  }
+
+  function lazyTerminalBucketSelector(terminalStatus, phaseKey) {
+    var pk = phaseKey != null ? String(phaseKey) : '';
+    return 'details.wc-lazy-terminal-bucket[data-wc-lazy-terminal="' +
+      String(terminalStatus).replace(/"/g, '\\\\"') +
+      '"][data-wc-phase-key="' +
+      pk.replace(/"/g, '\\\\"') +
+      '"]';
+  }
+
+  function requestLazyTerminalBucketLoad(detailsEl) {
+    if (!detailsEl || detailsEl.getAttribute('data-wc-lazy-loaded') === '1') return;
+    if (detailsEl.getAttribute('data-wc-lazy-loading') === '1') return;
+    var status = (detailsEl.getAttribute('data-wc-lazy-terminal') || '').trim();
+    if (status !== 'completed' && status !== 'cancelled') return;
+    detailsEl.setAttribute('data-wc-lazy-loading', '1');
+    var body = detailsEl.querySelector('.wc-lazy-bucket-body');
+    if (body) {
+      var hint = body.querySelector('.wc-lazy-bucket-hint');
+      if (hint) hint.textContent = 'Loading…';
+    }
+    vscode.postMessage({
+      type: 'loadLazyTerminalBucket',
+      terminalStatus: status,
+      phaseKey: detailsEl.getAttribute('data-wc-phase-key') || ''
+    });
+  }
+
+  function applyLazyTerminalBucketHtml(terminalStatus, phaseKey, html) {
+    var root = document.getElementById('root');
+    if (!root) return;
+    var bucket = root.querySelector(lazyTerminalBucketSelector(terminalStatus, phaseKey));
+    if (!bucket) return;
+    bucket.removeAttribute('data-wc-lazy-loading');
+    bucket.setAttribute('data-wc-lazy-loaded', '1');
+    var body = bucket.querySelector('.wc-lazy-bucket-body');
+    if (body) {
+      body.innerHTML = typeof html === 'string' ? html : '';
+      body.setAttribute('data-wc-lazy-loaded', '1');
+    }
+  }
+
+  function reloadOpenLazyTerminalBuckets(root) {
+    if (!root) return;
+    root.querySelectorAll('details.wc-lazy-terminal-bucket[open]').forEach(function(d) {
+      if (d.getAttribute('data-wc-lazy-loaded') !== '1') requestLazyTerminalBucketLoad(d);
+    });
+  }
+
+  function restorePhaseCardCollapseState(root) {
+    if (!root) return;
+    var readiness = root.querySelector('.wc-cae-readiness');
+    if (readiness) {
+      var readinessExpanded = false;
+      try { readinessExpanded = sessionStorage.getItem(PHASE_READINESS_EXPAND_KEY) === '1'; } catch (e) {}
+      readiness.classList.toggle('wc-cae-readiness-collapsed', !readinessExpanded);
+      var readinessToggle = readiness.querySelector('[data-wc-action="phase-readiness-toggle"]');
+      if (readinessToggle) {
+        readinessToggle.setAttribute('aria-expanded', readinessExpanded ? 'true' : 'false');
+      }
+    }
+    var progress = root.querySelector('.wc-phase-progress');
+    if (progress) {
+      var progressExpanded = false;
+      try { progressExpanded = sessionStorage.getItem(PHASE_PROGRESS_EXPAND_KEY) === '1'; } catch (e) {}
+      progress.classList.toggle('wc-phase-progress-collapsed', !progressExpanded);
+      var progressToggle = progress.querySelector('[data-wc-action="phase-progress-toggle"]');
+      if (progressToggle) {
+        progressToggle.setAttribute('aria-expanded', progressExpanded ? 'true' : 'false');
+      }
+    }
+  }
 
   function togglePhaseDeliverablesEdit(row, editing) {
     if (!row) return;
@@ -1861,6 +1978,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (pk) restorePhaseDeliverablesFromError(pk, msg);
       return;
     }
+    if (m && m.type === 'wcLazyTerminalBucketHtml') {
+      var lazyStatus = typeof m.terminalStatus === 'string' ? m.terminalStatus : '';
+      var lazyPk = typeof m.phaseKey === 'string' ? m.phaseKey : '';
+      applyLazyTerminalBucketHtml(lazyStatus, lazyPk, m.html);
+      return;
+    }
     if (!m || m.type !== 'wcReplaceRoot' || typeof m.html !== 'string') return;
     var root = document.getElementById('root');
     if (!root) return;
@@ -1869,16 +1992,20 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       var k = d.getAttribute('data-wc-track');
       if (k && d.open) open[k] = true;
     });
+    capturePhaseCardCollapseState(root);
     root.innerHTML = m.html;
     Object.keys(open).forEach(function(k) {
       var el = root.querySelector('details[data-wc-track="' + k + '"]');
       if (el) el.open = true;
     });
+    restorePhaseCardCollapseState(root);
     applyTab(activeTab);
     applyQueueFilters(root);
+    reloadOpenLazyTerminalBuckets(root);
   });
 
   applyTab(activeTab);
+  restorePhaseCardCollapseState(document.getElementById('root'));
 
   document.addEventListener('click', function(ev) {
     var dh = document.getElementById('wc-drawer-host');
@@ -1974,12 +2101,23 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       var readinessCard = t.closest('.wc-cae-readiness');
       if (!readinessCard) return;
       readinessCard.classList.toggle('wc-cae-readiness-collapsed');
+      var readinessExpanded = !readinessCard.classList.contains('wc-cae-readiness-collapsed');
+      persistPhaseCardExpanded(PHASE_READINESS_EXPAND_KEY, readinessExpanded);
       var readinessToggle = readinessCard.querySelector('[data-wc-action="phase-readiness-toggle"]');
       if (readinessToggle) {
-        readinessToggle.setAttribute(
-          'aria-expanded',
-          readinessCard.classList.contains('wc-cae-readiness-collapsed') ? 'false' : 'true'
-        );
+        readinessToggle.setAttribute('aria-expanded', readinessExpanded ? 'true' : 'false');
+      }
+      return;
+    }
+    if (act === 'phase-progress-toggle') {
+      var progressCard = t.closest('.wc-phase-progress');
+      if (!progressCard) return;
+      progressCard.classList.toggle('wc-phase-progress-collapsed');
+      var progressExpanded = !progressCard.classList.contains('wc-phase-progress-collapsed');
+      persistPhaseCardExpanded(PHASE_PROGRESS_EXPAND_KEY, progressExpanded);
+      var progressToggle = progressCard.querySelector('[data-wc-action="phase-progress-toggle"]');
+      if (progressToggle) {
+        progressToggle.setAttribute('aria-expanded', progressExpanded ? 'true' : 'false');
       }
       return;
     }
@@ -2076,6 +2214,13 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (next && row.contains(next)) return;
     submitPhaseDeliverablesInput(target);
   });
+
+  if (rootEl) rootEl.addEventListener('toggle', function(ev) {
+    var el = ev.target;
+    if (!el || el.tagName !== 'DETAILS' || !rootEl.contains(el)) return;
+    if (!el.classList.contains('wc-lazy-terminal-bucket') || !el.open) return;
+    requestLazyTerminalBucketLoad(el);
+  }, true);
 })();`;
 
     return `<!DOCTYPE html>
@@ -2385,36 +2530,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       display: inline;
       font-weight: normal;
     }
-    .dash-phase-deliverables--bucket {
-      display: inline-flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 4px 8px;
-      width: auto;
-      max-width: 100%;
-      vertical-align: baseline;
-    }
-    .dash-phase-deliverables--bucket .dash-phase-deliverables-body {
-      display: inline-flex;
-      flex-direction: row;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 4px;
-      min-width: 0;
-    }
-    .dash-phase-deliverables--bucket .dash-phase-deliverables-text {
-      font-weight: normal;
-      opacity: 0.92;
-    }
-    .dash-phase-deliverables--bucket .dash-phase-edit-anchor {
-      grid-column: unset;
-      grid-row: unset;
-      justify-self: unset;
-      align-self: unset;
-    }
-    .dash-phase-deliverables--bucket .dash-phase-deliverables-error {
-      flex-basis: 100%;
-    }
     button.dash-phase-release-btn {
       flex-shrink: 0;
       margin: 0;
@@ -2428,6 +2543,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     .dash-phase-release-overview-row p { margin: 0; }
     details.phase-bucket pre { margin-top: 4px; }
+    .wc-lazy-bucket-hint { margin: 6px 0 4px 0; font-style: italic; }
+    details.wc-lazy-terminal-bucket[open] .wc-lazy-bucket-hint { margin-bottom: 2px; }
     .dashboard-tasks-block { margin-top: 0; }
     .dash-quick-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 10px 0; }
     .dash-card { border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35)); border-radius: 6px; padding: 8px; margin: 10px 0; }
@@ -2451,7 +2568,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .dash-count-num { flex-shrink: 0; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; font-size: 13px; line-height: 1.25; }
     pre.resume-cli { font-size: 11px; }
     /* ── Tab system (agent status banner lives in .wc-dashboard-tab-shell above this bar) ── */
-    .wc-dashboard-tab-shell { display: flex; flex-direction: column; }
+    .wc-dashboard-tab-shell { display: flex; flex-direction: column; min-height: 0; }
     .wc-dashboard-tab-shell > .dash-agent-status-banner {
       margin: 0 0 6px 0;
       padding: 4px 6px;
@@ -2473,6 +2590,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       border-bottom: 1px solid var(--vscode-widget-border, rgba(127,127,127,.3));
       overflow-x: auto;
       scrollbar-width: none;
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      background: var(--vscode-sideBar-background);
+      box-shadow: 0 1px 0 var(--vscode-widget-border, rgba(127,127,127,.25));
     }
     .wc-tab-bar::-webkit-scrollbar { display: none; }
     .wc-tab-btn {
@@ -2629,9 +2751,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       white-space: nowrap;
     }
     .wc-phase-tag-delivered {
-      background: #1a1a1a;
-      color: #f5f5f5;
-      border-color: #3c3c3c;
+      background: #1b4d1f;
+      color: #c8f5c8;
+      border-color: #2e7d32;
     }
     .wc-phase-tag-current {
       background: #1b4d1f;
@@ -2685,16 +2807,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     .wc-rec-footer .wc-btn:first-of-type {
       margin-left: auto;
-    }
-    .wc-ready-scope-note {
-      font-size: 10.5px;
-      line-height: 1.35;
-      margin: 6px 0 10px 0;
-    }
-    .wc-status-counts-scope-note {
-      font-size: 10.5px;
-      line-height: 1.35;
-      margin: 8px 0 0 0;
     }
     /* ── Stat pills ── */
     .wc-stat-pills {
@@ -2811,6 +2923,34 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     /* ── CAE readiness ── */
     .wc-cae-readiness { }
+    .wc-cae-readiness-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .wc-cae-readiness-collapsed .wc-cae-readiness-head {
+      margin-bottom: 0;
+    }
+    .wc-cae-readiness-head .dash-phase-release-btn {
+      flex-shrink: 0;
+      margin: 0;
+    }
+    .wc-cae-readiness-head .wc-phase-readiness-delivered {
+      flex-shrink: 0;
+    }
+    button.dash-phase-release-btn.dash-phase-release-btn--preflight {
+      background: var(--vscode-button-secondaryBackground);
+      color: var(--vscode-button-secondaryForeground);
+      border: 1px solid var(--vscode-button-border, transparent);
+    }
+    button.dash-phase-release-btn.wc-btn-disabled,
+    button.dash-phase-release-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
     button.wc-cae-readiness-toggle {
       all: unset;
       box-sizing: border-box;
@@ -2818,10 +2958,18 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       align-items: center;
       justify-content: space-between;
       gap: 8px;
-      width: 100%;
+      flex: 1;
+      min-width: 0;
       cursor: pointer;
       border-radius: 4px;
       padding: 2px 0;
+    }
+    .wc-cae-readiness-title {
+      min-width: 0;
+      flex: 1;
+    }
+    .wc-cae-readiness-title b {
+      font-weight: 600;
     }
     button.wc-cae-readiness-toggle:hover {
       background: var(--vscode-list-hoverBackground, rgba(127,127,127,.12));
@@ -2830,23 +2978,89 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       outline: 1px solid var(--vscode-focusBorder, #007fd4);
       outline-offset: 2px;
     }
-    .wc-cae-readiness-collapsed .wc-cae-readiness-body {
+    .wc-cae-readiness-collapsed .wc-cae-readiness-body,
+    .wc-phase-progress-collapsed .wc-phase-progress-body {
       display: none;
     }
-    .wc-cae-readiness:not(.wc-cae-readiness-collapsed) .wc-cae-readiness-body {
+    .wc-cae-readiness:not(.wc-cae-readiness-collapsed) .wc-cae-readiness-body,
+    .wc-phase-progress:not(.wc-phase-progress-collapsed) .wc-phase-progress-body {
       margin-top: 6px;
     }
-    .wc-cae-score-row {
+    .wc-phase-progress-head {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 8px;
       margin-bottom: 6px;
     }
-    .wc-cae-readiness-collapsed .wc-cae-score-row {
+    .wc-phase-progress-collapsed .wc-phase-progress-head {
       margin-bottom: 0;
     }
-    .wc-cae-score-row > p { margin: 0; }
+    .wc-phase-progress-head .dash-phase-release-btn,
+    .wc-phase-progress-head .wc-phase-readiness-delivered {
+      flex-shrink: 0;
+      margin: 0;
+    }
+    .wc-phase-card-hint {
+      margin: 0 0 8px 0;
+      font-size: 11px;
+      line-height: 1.35;
+    }
+    .wc-phase-progress-summary {
+      margin: 0 0 8px 0;
+      font-size: 12px;
+    }
+    .wc-phase-progress-track {
+      display: flex;
+      width: 100%;
+      height: 12px;
+      border-radius: 6px;
+      overflow: hidden;
+      background: var(--vscode-editor-inactiveSelectionBackground, rgba(127,127,127,.2));
+      margin-bottom: 8px;
+    }
+    .wc-phase-progress-track-empty {
+      align-items: center;
+      justify-content: center;
+      height: auto;
+      min-height: 28px;
+      padding: 6px 8px;
+    }
+    .wc-phase-progress-seg {
+      display: block;
+      height: 100%;
+      min-width: 2px;
+    }
+    .wc-phase-seg-completed { background: var(--vscode-testing-iconPassed, #4ec9b0); }
+    .wc-phase-seg-cancelled { background: var(--vscode-descriptionForeground, #888); }
+    .wc-phase-seg-in-progress { background: var(--vscode-progressBar-background, #0e639c); }
+    .wc-phase-seg-ready { background: var(--vscode-editorWarning-foreground, #cca700); }
+    .wc-phase-seg-proposed { background: var(--vscode-badge-background, #4d4d4d); }
+    .wc-phase-seg-blocked { background: var(--vscode-errorForeground, #f44747); }
+    .wc-phase-seg-research { background: var(--vscode-charts-purple, #8b5cf6); }
+    .wc-phase-progress-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 12px;
+      margin-bottom: 8px;
+      font-size: 10.5px;
+    }
+    .wc-phase-progress-legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .wc-phase-progress-legend-swatch {
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    .wc-phase-closeout-ok {
+      margin: 0;
+      font-size: 11px;
+      color: var(--vscode-testing-iconPassed, #4ec9b0);
+    }
     .wc-cae-score-badge {
       font-size: 18px;
       font-weight: 700;
