@@ -47,6 +47,7 @@
     "get-wishlist",
     "get-workspace-status",
     "heartbeat-workspace-edit-lease",
+    "improvement-dedupe-explain",
     "list-components",
     "list-features",
     "list-module-states",
@@ -827,6 +828,19 @@
     },
     "heartbeat-workspace-edit-lease": {
       "type": "object"
+    },
+    "improvement-dedupe-explain": {
+      "type": "object",
+      "required": [
+        "taskId"
+      ],
+      "properties": {
+        "taskId": {
+          "type": "string",
+          "pattern": "^T[0-9]+$"
+        }
+      },
+      "additionalProperties": false
     },
     "list-components": {
       "type": "object"

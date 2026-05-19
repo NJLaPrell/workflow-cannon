@@ -375,6 +375,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "improvement-dedupe-explain",
+    "file": "improvement-dedupe-explain.md",
+    "description": "Explain similarity clusters, evidenceKey overlaps, and lineage for improvement triage.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "recommend-validation",
     "file": "recommend-validation.md",
     "description": "Suggest prioritized validation commands and delivery-evidence fields from task features and touched paths.",
