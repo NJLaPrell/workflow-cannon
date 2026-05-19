@@ -1326,3 +1326,255 @@ export function validateCancelTeamAssignmentSubmit(
   }
   return { ok: true, values: { supervisorId, policyRationale: (values.policyRationale ?? "").trim() } };
 }
+
+const SUBAGENT_ID_RE = /^[a-z][a-z0-9._-]{0,63}$/i;
+
+function validateSubagentPolicyRationale(values: Record<string, string>): string | null {
+  return validateTeamPolicyRationale(values);
+}
+
+function parseAllowedCommandsField(raw: string): string[] | null {
+  const text = raw.trim();
+  if (!text) {
+    return null;
+  }
+  const parts = text
+    .split(/[\n,]+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+  return parts.length > 0 ? parts : null;
+}
+
+export function buildRegisterSubagentDrawerSpec(): DrawerFormSpec {
+  return {
+    workflowId: "register-subagent",
+    title: "Register subagent role",
+    descriptionHtml:
+      "Runs <code>register-subagent</code>. <code>subagentId</code> must start with a letter " +
+      "(lowercase id: <code>a-z0-9._-</code>). List explicit kit command names in allowed commands.",
+    fields: [
+      {
+        id: "subagentId",
+        kind: "text",
+        label: "Subagent id",
+        placeholder: "reviewer",
+        required: true
+      },
+      {
+        id: "displayName",
+        kind: "text",
+        label: "Display name",
+        placeholder: "Reviewer agent",
+        required: true
+      },
+      {
+        id: "description",
+        kind: "textarea",
+        label: "Description",
+        placeholder: "What this subagent is for",
+        rows: 2
+      },
+      {
+        id: "allowedCommands",
+        kind: "textarea",
+        label: "Allowed commands (comma or newline separated)",
+        placeholder: "list-tasks, get-task, get-next-actions",
+        required: true,
+        value: "list-tasks, get-task, get-next-actions",
+        rows: 2
+      },
+      {
+        id: "policyRationale",
+        kind: "textarea",
+        label: "Policy rationale",
+        required: true,
+        rows: 2
+      }
+    ],
+    primaryLabel: "Register",
+    cancelLabel: "Cancel"
+  };
+}
+
+export function validateRegisterSubagentSubmit(values: Record<string, string>): DrawerValidationResult {
+  const policyErr = validateSubagentPolicyRationale(values);
+  if (policyErr) {
+    return { ok: false, error: policyErr };
+  }
+  const subagentId = (values.subagentId ?? "").trim().toLowerCase();
+  if (!SUBAGENT_ID_RE.test(subagentId)) {
+    return {
+      ok: false,
+      error: "Subagent id must start with a letter and use only a-z, 0-9, ., _, - (max 64 chars)."
+    };
+  }
+  const displayName = (values.displayName ?? "").trim();
+  if (!displayName) {
+    return { ok: false, error: "Display name is required." };
+  }
+  const allowedCommands = parseAllowedCommandsField(values.allowedCommands ?? "");
+  if (!allowedCommands) {
+    return { ok: false, error: "At least one allowed command is required." };
+  }
+  return {
+    ok: true,
+    values: {
+      subagentId,
+      displayName,
+      description: (values.description ?? "").trim(),
+      allowedCommands: allowedCommands.join("\n"),
+      policyRationale: (values.policyRationale ?? "").trim()
+    }
+  };
+}
+
+export function buildSpawnSubagentDrawerSpec(p?: { subagentId?: string; executionTaskId?: string }): DrawerFormSpec {
+  return {
+    workflowId: "spawn-subagent",
+    title: "Start subagent session",
+    descriptionHtml:
+      "Runs <code>spawn-subagent</code> (records an open session; does not launch Cursor). " +
+      "Register the subagent role first if it does not exist.",
+    fields: [
+      {
+        id: "subagentId",
+        kind: "text",
+        label: "Subagent id",
+        placeholder: "reviewer",
+        required: true,
+        value: p?.subagentId ?? ""
+      },
+      {
+        id: "executionTaskId",
+        kind: "text",
+        label: "Execution task id (optional)",
+        placeholder: "T662",
+        value: p?.executionTaskId ?? ""
+      },
+      {
+        id: "hostHint",
+        kind: "text",
+        label: "Host hint",
+        placeholder: "cursor",
+        value: "cursor"
+      },
+      {
+        id: "promptSummary",
+        kind: "textarea",
+        label: "Prompt summary",
+        placeholder: "What the subagent should investigate",
+        required: true,
+        rows: 3
+      },
+      {
+        id: "policyRationale",
+        kind: "textarea",
+        label: "Policy rationale",
+        required: true,
+        rows: 2
+      }
+    ],
+    primaryLabel: "Start session",
+    cancelLabel: "Cancel"
+  };
+}
+
+export function validateSpawnSubagentSubmit(values: Record<string, string>): DrawerValidationResult {
+  const policyErr = validateSubagentPolicyRationale(values);
+  if (policyErr) {
+    return { ok: false, error: policyErr };
+  }
+  const subagentId = (values.subagentId ?? "").trim().toLowerCase();
+  if (!SUBAGENT_ID_RE.test(subagentId)) {
+    return { ok: false, error: "Subagent id is invalid." };
+  }
+  const promptSummary = (values.promptSummary ?? "").trim();
+  if (!promptSummary) {
+    return { ok: false, error: "Prompt summary is required." };
+  }
+  const executionTaskId = (values.executionTaskId ?? "").trim().toUpperCase();
+  if (executionTaskId && !TEAM_TASK_ID_RE.test(executionTaskId)) {
+    return { ok: false, error: "Execution task id must look like T### when provided." };
+  }
+  return {
+    ok: true,
+    values: {
+      subagentId,
+      executionTaskId,
+      hostHint: (values.hostHint ?? "").trim() || "cursor",
+      promptSummary,
+      policyRationale: (values.policyRationale ?? "").trim()
+    }
+  };
+}
+
+export function buildCloseSubagentSessionDrawerSpec(p: { sessionId: string; definitionId: string }): DrawerFormSpec {
+  return {
+    workflowId: "close-subagent-session",
+    title: "Close subagent session",
+    descriptionHtml:
+      "Runs <code>close-subagent-session</code> for session <code>" +
+      escapeDrawerHtml(p.sessionId) +
+      "</code> (<code>" +
+      escapeDrawerHtml(p.definitionId) +
+      "</code>).",
+    fields: [
+      {
+        id: "policyRationale",
+        kind: "textarea",
+        label: "Policy rationale",
+        required: true,
+        rows: 2
+      }
+    ],
+    primaryLabel: "Close session",
+    cancelLabel: "Keep open"
+  };
+}
+
+export function validateCloseSubagentSessionSubmit(values: Record<string, string>): DrawerValidationResult {
+  const policyErr = validateSubagentPolicyRationale(values);
+  if (policyErr) {
+    return { ok: false, error: policyErr };
+  }
+  return { ok: true, values: { policyRationale: (values.policyRationale ?? "").trim() } };
+}
+
+export function buildRetireSubagentDrawerSpec(p?: { subagentId?: string }): DrawerFormSpec {
+  return {
+    workflowId: "retire-subagent",
+    title: "Retire subagent role",
+    descriptionHtml:
+      "Runs <code>retire-subagent</code>. Retired roles cannot spawn new sessions; close open sessions first.",
+    fields: [
+      {
+        id: "subagentId",
+        kind: "text",
+        label: "Subagent id",
+        required: true,
+        value: p?.subagentId ?? ""
+      },
+      {
+        id: "policyRationale",
+        kind: "textarea",
+        label: "Policy rationale",
+        required: true,
+        rows: 2
+      }
+    ],
+    primaryLabel: "Retire",
+    cancelLabel: "Cancel"
+  };
+}
+
+export function validateRetireSubagentSubmit(values: Record<string, string>): DrawerValidationResult {
+  const policyErr = validateSubagentPolicyRationale(values);
+  if (policyErr) {
+    return { ok: false, error: policyErr };
+  }
+  const subagentId = (values.subagentId ?? "").trim().toLowerCase();
+  if (!SUBAGENT_ID_RE.test(subagentId)) {
+    return { ok: false, error: "Subagent id is invalid." };
+  }
+  return { ok: true, values: { subagentId, policyRationale: (values.policyRationale ?? "").trim() } };
+}

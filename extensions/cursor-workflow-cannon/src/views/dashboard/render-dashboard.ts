@@ -2454,6 +2454,42 @@ function renderTeamExecutionSection(team: unknown): string {
   );
 }
 
+function subagentSessionStatusPhrase(status: string): string {
+  switch (status) {
+    case "open":
+      return "Open — hand off work in Cursor, then close when done";
+    case "closed":
+      return "Closed";
+    default:
+      return humanizeDashboardToken(status);
+  }
+}
+
+function renderSubagentSessionRowActions(r: Record<string, unknown>): string {
+  const sessionId = escapeHtml(String(r.sessionId ?? ""));
+  const definitionId = escapeHtml(String(r.definitionId ?? ""));
+  const st = String(r.status ?? "");
+  const parts: string[] = [];
+  if (st === "open") {
+    parts.push(
+      '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="subagent-session-close" data-session-id="' +
+        sessionId +
+        '" data-definition-id="' +
+        definitionId +
+        '" title="close-subagent-session">Close session</button>'
+    );
+    parts.push(
+      '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="subagent-spawn" data-subagent-id="' +
+        definitionId +
+        '" title="spawn-subagent">New session</button>'
+    );
+  }
+  if (parts.length === 0) {
+    return "";
+  }
+  return '<div class="dash-row-actions">' + parts.join("") + "</div>";
+}
+
 function renderSubagentRegistrySection(sub: unknown): string {
   if (!sub || typeof sub !== "object") {
     return "";
@@ -2464,6 +2500,7 @@ function renderSubagentRegistrySection(sub: unknown): string {
   }
   const avail = o.available === true;
   const defs = typeof o.definitionsCount === "number" ? o.definitionsCount : 0;
+  const retired = typeof o.retiredDefinitionsCount === "number" ? o.retiredDefinitionsCount : 0;
   const openSess = typeof o.openSessionsCount === "number" ? o.openSessionsCount : 0;
   const top = Array.isArray(o.topOpenSessions) ? (o.topOpenSessions as unknown[]) : [];
   if (!avail) {
@@ -2475,49 +2512,83 @@ function renderSubagentRegistrySection(sub: unknown): string {
     );
   }
   const statusLine =
-    "<p class=\"muted\">Definitions " +
+    '<p class="muted">Definitions ' +
     String(defs) +
+    " · Retired " +
+    String(retired) +
     " · Open sessions " +
     String(openSess) +
     "</p>";
+  const toolbar =
+    '<div class="dash-team-exec-toolbar" role="toolbar" aria-label="Subagent registry actions">' +
+    '<button type="button" class="wc-btn wc-btn-md wc-btn-primary" data-wc-action="subagent-register" title="register-subagent">Register role</button>' +
+    '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="subagent-spawn" title="spawn-subagent">Start session</button>' +
+    '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="subagent-retire" title="retire-subagent">Retire role</button>' +
+    '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="subagent-registry-chat" title="Registry playbook in chat">Registry guide</button>' +
+    "</div>";
   if (top.length === 0) {
+    const emptyHint =
+      defs > 0
+        ? "No open sessions — use <b>Start session</b> to link a subagent to a task."
+        : "Register a subagent role first, then start a task-linked session.";
     return (
-      '<section class="dash-card" aria-label="Subagent registry">' +
-      "<p><b>Subagent Registry</b> (read-only)</p>" +
+      '<section class="dash-card dash-subagent-registry" aria-label="Subagent registry">' +
+      "<p><b>Subagent Registry</b></p>" +
       statusLine +
-      '<p class="muted">No open subagent sessions.</p>' +
+      '<p class="muted">Named agent roles with task-linked sessions and an audit trail in kit SQLite.</p>' +
+      toolbar +
+      '<p class="muted">' +
+      emptyHint +
+      "</p>" +
       "</section>"
     );
   }
   const rows = top
     .map((x) => {
       const r = x as Record<string, unknown>;
-      const sid = escapeHtml(String(r.sessionId ?? ""));
+      const sessionId = escapeHtml(String(r.sessionId ?? ""));
       const def = escapeHtml(String(r.definitionId ?? ""));
       const tid = r.executionTaskId != null ? escapeHtml(String(r.executionTaskId)) : "—";
-      const st = escapeHtml(String(r.status ?? ""));
+      const st = String(r.status ?? "");
+      const stLabel = escapeHtml(subagentSessionStatusPhrase(st));
+      const updated =
+        typeof r.updatedAt === "string" && r.updatedAt.length > 0
+          ? escapeHtml(formatPlanningUpdatedAt(r.updatedAt))
+          : "—";
+      const actions = renderSubagentSessionRowActions(r);
+      const sidShort = sessionId.length > 10 ? sessionId.slice(0, 8) + "…" : sessionId;
       return (
-        '<div class="dash-row" role="listitem"><span class="dash-row-label">- ' +
-        sid +
-        " · " +
+        '<div class="dash-row dash-team-assignment-row" role="listitem">' +
+        '<div class="dash-team-assignment-main">' +
+        '<span class="dash-row-label"><b>' +
         def +
+        "</b> · session " +
+        sidShort +
+        "</span>" +
+        '<span class="dash-team-assignment-meta muted">' +
+        stLabel +
         " · task " +
         tid +
-        " · " +
-        st +
-        "</span></div>"
+        " · updated " +
+        updated +
+        "</span>" +
+        "</div>" +
+        actions +
+        "</div>"
       );
     })
     .join("");
   return (
-    '<section class="dash-card" aria-label="Subagent registry">' +
-    "<p><b>Subagent Registry</b> (read-only)</p>" +
+    '<section class="dash-card dash-subagent-registry" aria-label="Subagent registry">' +
+    "<p><b>Subagent Registry</b></p>" +
     statusLine +
+    toolbar +
     '<div class="dash-row-list" role="list">' +
     rows +
     "</div></section>"
   );
 }
+
 
 function truncateOverviewLine(s: string, max: number): string {
   const one = s.replace(/\s+/g, " ").trim();

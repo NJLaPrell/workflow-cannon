@@ -74,6 +74,20 @@ export function buildTaskToPhaseBranchPrompt(options?: { taskId?: string; kitPha
   );
 }
 
+/** Dashboard subagent registry — definitions and sessions without memorizing CLI names. */
+export function buildSubagentRegistryPrompt(): string {
+  return (
+    "The operator opened **Subagent registry** from the Workflow Cannon dashboard.\n\n" +
+    "Help them manage kit subagent definitions and sessions (JSON **`policyApproval`** and **`expectedPlanningGeneration`** when required per **`.ai/POLICY-APPROVAL.md`**):\n\n" +
+    "- Read: `pnpm exec wk run list-subagents '{}'`, `pnpm exec wk run list-subagent-sessions '{}'`\n" +
+    "- Register role: `register-subagent` (`subagentId`, `displayName`, non-empty `allowedCommands`)\n" +
+    "- Start session: `spawn-subagent` (`subagentId`, optional `executionTaskId`, `hostHint`, `promptSummary`)\n" +
+    "- Log handoff: `message-subagent` (`sessionId`, `direction`, `body`)\n" +
+    "- Close session: `close-subagent-session` · Retire definition: `retire-subagent`\n\n" +
+    "Prefer dashboard drawer actions in the sidebar; use CLI for automation. Do not hand-edit `kit_subagent_*` tables."
+  );
+}
+
 /** Dashboard team execution — supervisor/worker assignment lifecycle without memorizing CLI names. */
 export function buildTeamExecutionSupervisorPrompt(): string {
   return (

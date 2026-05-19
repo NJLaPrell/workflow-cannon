@@ -910,6 +910,82 @@ test("renderDashboardRootInnerHtml team execution row exposes handoff and reconc
   assert.match(html, /data-assignment-id="a2"/);
 });
 
+test("renderDashboardRootInnerHtml subagent registry empty state offers register and spawn", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      subagentRegistry: {
+        schemaVersion: 1,
+        available: true,
+        definitionsCount: 0,
+        retiredDefinitionsCount: 0,
+        openSessionsCount: 0,
+        topOpenSessions: []
+      },
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [] },
+      readyQueueTop: [],
+      readyQueueCount: 0,
+      suggestedNext: null,
+      planningSession: null,
+      workspaceStatus: { currentKitPhase: "100" },
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+  assert.match(html, /subagent-register/);
+  assert.match(html, /subagent-registry-chat/);
+  assert.match(html, /Register role/);
+  assert.match(html, /Register a subagent role first/);
+});
+
+test("renderDashboardRootInnerHtml subagent registry row exposes close session", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      subagentRegistry: {
+        schemaVersion: 1,
+        available: true,
+        definitionsCount: 1,
+        retiredDefinitionsCount: 0,
+        openSessionsCount: 1,
+        topOpenSessions: [
+          {
+            sessionId: "sess-1111-2222-3333-4444",
+            definitionId: "reviewer",
+            executionTaskId: "T801",
+            status: "open",
+            updatedAt: "2026-05-06T00:03:00.000Z"
+          }
+        ]
+      },
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+      blockedSummary: { count: 0, top: [] },
+      readyQueueTop: [],
+      readyQueueCount: 0,
+      suggestedNext: null,
+      planningSession: null,
+      workspaceStatus: { currentKitPhase: "100" },
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+  assert.match(html, /subagent-session-close/);
+  assert.match(html, /data-session-id="sess-1111-2222-3333-4444"/);
+  assert.match(html, /reviewer/);
+  assert.match(html, /T801/);
+});
+
 test("renderDashboardRootInnerHtml planning card shows resume CLI when session present", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,

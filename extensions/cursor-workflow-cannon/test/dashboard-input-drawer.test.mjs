@@ -269,3 +269,24 @@ test("drawer: register team assignment validates task id and policy rationale", 
     assert.equal(good.values.executionTaskId, "T701");
   }
 });
+
+test("drawer: register subagent validates id and allowed commands", async () => {
+  const mod = await import("../dist/views/dashboard/dashboard-input-drawer.js");
+  const bad = mod.validateRegisterSubagentSubmit({
+    subagentId: "9bad",
+    displayName: "X",
+    allowedCommands: "",
+    policyRationale: "short"
+  });
+  assert.equal(bad.ok, false);
+  const good = mod.validateRegisterSubagentSubmit({
+    subagentId: "Reviewer",
+    displayName: "Reviewer",
+    allowedCommands: "list-tasks, get-task",
+    policyRationale: "register reviewer role for dashboard"
+  });
+  assert.equal(good.ok, true);
+  if (good.ok) {
+    assert.equal(good.values.subagentId, "reviewer");
+  }
+});
