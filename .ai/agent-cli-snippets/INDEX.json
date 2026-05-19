@@ -833,6 +833,11 @@
       "moduleId": "task-engine"
     },
     {
+      "name": "release-status",
+      "path": ".ai/agent-cli-snippets/by-command/release-status.json",
+      "moduleId": "task-engine"
+    },
+    {
       "name": "release-workspace-edit-lease",
       "path": ".ai/agent-cli-snippets/by-command/release-workspace-edit-lease.json",
       "moduleId": "task-engine"

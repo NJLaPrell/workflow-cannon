@@ -281,6 +281,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "release-status",
+    "file": "release-status.md",
+    "description": "Read-only release/phase snapshot: git, npm dist-tags, GitHub release URL, and kit phase fields.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "release-workspace-edit-lease",
     "file": "release-workspace-edit-lease.md",
     "description": "Release or recover-remove the workspace edit lease file under git common-dir.",

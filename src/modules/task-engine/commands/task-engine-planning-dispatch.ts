@@ -7,6 +7,7 @@ import { buildImprovementWorkflowSummary } from "./improvement-workflow-summary-
 import { buildRecommendValidation } from "./recommend-validation-commands.js";
 import { buildHarvestDeliveryEvidence } from "./harvest-delivery-evidence-commands.js";
 import { buildWaitForPrChecks } from "./wait-for-pr-checks-commands.js";
+import { buildReleaseStatus } from "./release-status-commands.js";
 import { runApplyTaskBatchCommand } from "./apply-task-batch-command.js";
 import { resolveAgentActivityCommands } from "./agent-activity-commands.js";
 import { resolveFeatureRegistryReadoutCommands } from "./feature-registry-readout-commands.js";
@@ -95,6 +96,10 @@ export async function dispatchTaskEnginePlanningCommands(
 
   if (command.name === "wait-for-pr-checks") {
     return buildWaitForPrChecks(ctx, planning, args as Record<string, unknown>);
+  }
+
+  if (command.name === "release-status") {
+    return await buildReleaseStatus(ctx, planning, store, args as Record<string, unknown>);
   }
 
   if (command.name === "improvement-dedupe-explain") {

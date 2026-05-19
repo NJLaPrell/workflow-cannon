@@ -71,6 +71,7 @@
     "recommend-validation",
     "reject-improvement",
     "release-evidence-manifest",
+    "release-status",
     "release-workspace-edit-lease",
     "remove-dependency",
     "replay-queue-snapshot",
@@ -1301,6 +1302,21 @@
     },
     "release-evidence-manifest": {
       "type": "object"
+    },
+    "release-status": {
+      "type": "object",
+      "properties": {
+        "includeTaskCounts": {
+          "type": "boolean"
+        },
+        "includeDriftDetails": {
+          "type": "boolean"
+        },
+        "includePhaseJournalSummary": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
     },
     "release-workspace-edit-lease": {
       "type": "object"
