@@ -3090,7 +3090,40 @@ function renderPastPhaseNotesRollup(
  * Overview tab card: phase journal rows + kit-backed actions (dismiss / convert / persist suggestions).
  * Pure HTML — button clicks postMessage from `DashboardViewProvider` bootstrap.
  */
-export function renderPhaseNotesOverviewSection(bundle: DashboardPhaseJournalBundle | null | undefined): string {
+export function renderPhaseJournalStatsBanner(stats: unknown): string {
+  if (!stats || typeof stats !== "object") {
+    return "";
+  }
+  const row = stats as Record<string, unknown>;
+  if (row.available !== true) {
+    return "";
+  }
+  const current = row.currentPhase as Record<string, unknown> | undefined;
+  if (!current) {
+    return "";
+  }
+  const count = typeof current.activeNoteCount === "number" ? current.activeNoteCount : 0;
+  const phaseKey = current.phaseKey != null ? String(current.phaseKey) : "";
+  const silence = current.silenceWarning === true;
+  const warnCls = silence ? " dash-phase-journal-silence-warn" : "";
+  const phaseLabel = phaseKey.length > 0 ? "Phase " + phaseKey : "Current phase";
+  return (
+    '<section class="dash-card dash-phase-journal-stats' +
+    warnCls +
+    '" aria-label="Phase journal capture">' +
+    "<p><b>Notes captured this phase</b> · " +
+    escapeHtml(phaseLabel) +
+    ": <b>" +
+    String(count) +
+    "</b></p>" +
+    (silence
+      ? '<p class="muted" role="status">No phase notes yet despite completed delivery work — capture context with <b>New</b> or Add phase note.</p>'
+      : "") +
+    "</section>"
+  );
+}
+
+function renderPhaseNotesOverviewSection(bundle: DashboardPhaseJournalBundle | null | undefined): string {
   if (bundle === null || bundle === undefined) {
     return "";
   }
@@ -3277,6 +3310,7 @@ export function renderDashboardRootInnerHtml(
     '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="add-wishlist-item" title="Create a wishlist intake task (same flow as /add-wishlist-item)">Add wishlist item</button>' +
     '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="collaboration-hub" title="Chat + CLI for collaboration profiles; chat does not replace policyApproval">Collaboration profiles</button>' +
     '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="transcript-churn-research-chat" title="Transcript churn research playbook">Research churn</button>' +
+    '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="phase-note-add" title="add-phase-note">Add phase note</button>' +
     '<button type="button" class="wc-btn wc-btn-md wc-btn-primary" data-wc-action="generate-features-chat" title="New chat with /generate-features as text (same as slash command)">Generate Features</button>' +
     "</div>";
 
@@ -3434,6 +3468,7 @@ export function renderDashboardRootInnerHtml(
         '</section>';
 
   const taskEngineContent =
+    renderPhaseJournalStatsBanner(d.phaseJournalStats) +
     renderPhaseNotesOverviewSection(phaseJournal ?? null) +
     tasksBlock +
     wishlistSection +
