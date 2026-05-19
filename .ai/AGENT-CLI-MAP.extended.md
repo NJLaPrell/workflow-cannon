@@ -367,6 +367,13 @@ workspace-kit run phase-delivery-preflight '{}'
 workspace-kit run phase-delivery-preflight '{"phaseKey":"74","includeInProgress":true}'
 ```
 
+**Copy-paste — bounded phase answer for agents (read-only):**
+
+```bash
+workspace-kit run phase-focus-dashboard '{}'
+workspace-kit run phase-focus-dashboard '{"phaseKey":"100"}'
+```
+
 **Copy-paste — release evidence manifest (read-only):**
 
 ```bash

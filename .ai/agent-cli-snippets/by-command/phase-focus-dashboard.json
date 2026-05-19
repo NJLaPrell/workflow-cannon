@@ -1,0 +1,47 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "phase-focus-dashboard",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "phaseKey": { "type": "string" }
+    },
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Workspace current phase",
+      "argv": "workspace-kit run phase-focus-dashboard '{}'"
+    },
+    {
+      "description": "Explicit phase key",
+      "argv": "workspace-kit run phase-focus-dashboard '{\"phaseKey\":\"100\"}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/phase-focus-dashboard.md",
+  "moduleId": "task-engine",
+  "description": "Bounded phase-scoped JSON for agents (queue, delivery, journal, evidence gaps).",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  }
+}
