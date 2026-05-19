@@ -90,6 +90,11 @@ jobs:
       - name: Release metadata check
         run: node scripts/check-release-metadata.mjs
 
+      - name: Release diff allowlist
+        env:
+          RELEASE_DIFF_BASE: ${{ github.event.before }}
+        run: node scripts/check-release-diff-shape.mjs
+
       - name: Dry-run pack
         run: pnpm run pack:dry-run
 
