@@ -1,9 +1,7 @@
 import * as vscode from "vscode";
 import type { CommandClient } from "../../runtime/command-client.js";
-import {
-  renderConfigListInnerHtml,
-  type ConfigKeyRowInput
-} from "./render-config.js";
+import { loadConfigKeyRows } from "./load-config-key-rows.js";
+import { renderConfigListInnerHtml } from "./render-config.js";
 import { WC_BASE_CSS } from "../shared/wc-base-css.js";
 
 export class ConfigViewProvider implements vscode.WebviewViewProvider {
@@ -73,70 +71,7 @@ export class ConfigViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async pushConfigList(webview: vscode.Webview, includeAll: boolean): Promise<void> {
-    const listArgv = includeAll ? ["list", "--json", "--all"] : ["list", "--json"];
-    const [listR, resR] = await Promise.all([
-      this.client.config(listArgv),
-      this.client.config(["resolve"])
-    ]);
-    const errors: string[] = [];
-    if (listR.code !== 0) {
-      errors.push(`config list exited ${listR.code}: ${(listR.stderr || listR.stdout).trim().slice(0, 400)}`);
-    }
-    if (resR.code !== 0) {
-      errors.push(`config resolve exited ${resR.code}: ${(resR.stderr || resR.stdout).trim().slice(0, 400)}`);
-    }
-
-    let keys: unknown[] = [];
-    try {
-      const parsed = JSON.parse(listR.stdout) as { ok?: boolean; data?: { keys?: unknown[] } };
-      if (parsed?.ok && Array.isArray(parsed?.data?.keys)) {
-        keys = parsed.data.keys;
-      } else if (listR.code === 0) {
-        errors.push("config list: unexpected JSON shape");
-      }
-    } catch {
-      if (listR.code === 0) {
-        errors.push("config list: stdout is not JSON");
-      }
-    }
-
-    let effective: Record<string, unknown> = {};
-    try {
-      const parsed = JSON.parse(resR.stdout) as unknown;
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-        effective = parsed as Record<string, unknown>;
-      } else if (resR.code === 0) {
-        errors.push("config resolve: root is not a JSON object");
-      }
-    } catch {
-      if (resR.code === 0) {
-        errors.push("config resolve: stdout is not JSON");
-      }
-    }
-
-    const rows: ConfigKeyRowInput[] = keys.map((raw) => {
-      const m = raw as Record<string, unknown>;
-      const key = String(m.key ?? "");
-      const wl = Array.isArray(m.writableLayers)
-        ? (m.writableLayers as unknown[]).map((x) => String(x))
-        : [];
-      return {
-        key,
-        type: String(m.type ?? ""),
-        description: String(m.description ?? ""),
-        default: m.default,
-        domainScope: String(m.domainScope ?? ""),
-        owningModule: String(m.owningModule ?? ""),
-        exposure: String(m.exposure ?? "public"),
-        sensitive: Boolean(m.sensitive),
-        requiresApproval: Boolean(m.requiresApproval),
-        requiresRestart: Boolean(m.requiresRestart),
-        writableLayers: wl,
-        allowedValues: Array.isArray(m.allowedValues) ? m.allowedValues : undefined,
-        effectiveValue: key ? getAtPath(effective, key) : undefined
-      };
-    });
-
+    const { rows, errors } = await loadConfigKeyRows(this.client, { includeAll });
     const html = renderConfigListInnerHtml(rows);
     await webview.postMessage({
       type: "setList",
@@ -338,14 +273,3 @@ export class ConfigViewProvider implements vscode.WebviewViewProvider {
   }
 }
 
-function getAtPath(obj: Record<string, unknown>, path: string): unknown {
-  const parts = path.split(".").filter(Boolean);
-  let cur: unknown = obj;
-  for (const p of parts) {
-    if (cur == null || typeof cur !== "object" || Array.isArray(cur)) {
-      return undefined;
-    }
-    cur = (cur as Record<string, unknown>)[p];
-  }
-  return cur;
-}
