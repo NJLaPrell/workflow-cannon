@@ -7,8 +7,10 @@ import {
   isConfigRowReadOnly,
   groupConfigRows,
   pickEditorKind,
-  renderConfigListInnerHtml
+  renderConfigListInnerHtml,
+  renderConfigSectionsHtml
 } from "../dist/views/config/render-config.js";
+import { renderConfigRestartBannerHtml } from "../dist/views/config/config-mutation-result.js";
 
 const baseRow = {
   type: "string",
@@ -162,6 +164,81 @@ test("renderConfigListInnerHtml includes section headings for modules", () => {
   ]);
   assert.match(html, /Global \(kit\)/);
   assert.match(html, /Task Engine/);
+});
+
+/** Fixture: kit + two module sections (phase 106 canonical dashboard surface). */
+const multiModuleFixture = [
+  { ...baseRow, key: "kit.agentRole", type: "string", owningModule: "kit", exposure: "public", effectiveValue: "wizard" },
+  {
+    ...baseRow,
+    key: "tasks.storeRelativePath",
+    type: "string",
+    owningModule: "task-engine",
+    exposure: "public",
+    effectiveValue: ".workspace-kit/tasks/workspace-kit.db"
+  },
+  {
+    ...baseRow,
+    key: "documentation.mode",
+    type: "string",
+    owningModule: "documentation",
+    allowedValues: ["human", "machine"],
+    exposure: "public",
+    effectiveValue: "machine"
+  },
+  {
+    ...baseRow,
+    key: "kit.secretToken",
+    type: "string",
+    owningModule: "kit",
+    exposure: "internal",
+    sensitive: true,
+    effectiveValue: "hidden"
+  }
+];
+
+test("groupConfigRows fixture yields Global plus two public module sections", () => {
+  const sections = groupConfigRows(multiModuleFixture);
+  const labels = sections.map((s) => s.label);
+  assert.deepEqual(labels, ["Global (kit)", "Documentation", "Task Engine", "Internal (read-only)"]);
+  assert.equal(sections.filter((s) => !s.readOnlySection).length, 3);
+});
+
+test("renderConfigListInnerHtml multi-module fixture renders grouped typed controls", () => {
+  const html = renderConfigListInnerHtml(multiModuleFixture);
+  assert.match(html, /cfg-sections/);
+  assert.match(html, /Global \(kit\)/);
+  assert.match(html, /Task Engine/);
+  assert.match(html, /Documentation/);
+  assert.match(html, /data-editor-kind="select"/);
+  assert.match(html, /kit\.agentRole/);
+  assert.match(html, /— hidden \(sensitive\) —/);
+});
+
+test("renderConfigSectionsHtml preserves section order from groupConfigRows", () => {
+  const sections = groupConfigRows(multiModuleFixture);
+  const html = renderConfigSectionsHtml(sections);
+  const kitIdx = html.indexOf("Global (kit)");
+  const docIdx = html.indexOf("Documentation");
+  const taskIdx = html.indexOf("Task Engine");
+  const internalIdx = html.indexOf("Internal (read-only)");
+  assert.ok(kitIdx < docIdx && docIdx < taskIdx && taskIdx < internalIdx);
+});
+
+test("renderConfigRestartBannerHtml pairs with requiresRestart rows in host flow", () => {
+  const banner = renderConfigRestartBannerHtml("kit.agentGuidance");
+  assert.match(banner, /config-reload-window/);
+  const rowHtml = renderConfigListInnerHtml([
+    {
+      ...baseRow,
+      key: "kit.agentGuidance",
+      type: "object",
+      owningModule: "kit",
+      requiresRestart: true,
+      effectiveValue: {}
+    }
+  ]);
+  assert.match(rowHtml, /kit\.agentGuidance/);
 });
 
 test("renderConfigListInnerHtml includes key and apply control", () => {
