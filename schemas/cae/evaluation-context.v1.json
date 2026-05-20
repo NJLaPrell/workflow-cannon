@@ -137,6 +137,17 @@
     "mapSignals": {
       "type": "null",
       "description": "Reserved for future cognitive-map hooks; MUST be null when present in v1."
+    },
+    "agentSignals": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional bounded agent friction signals for activation matching (v1 additive).",
+      "properties": {
+        "recentToolFailures": { "type": "integer", "minimum": 0, "maximum": 100000 },
+        "lastErrorCode": { "type": "string", "maxLength": 128 },
+        "consecutiveRetries": { "type": "integer", "minimum": 0, "maximum": 100000 },
+        "lastFailureKind": { "type": "string", "maxLength": 64 }
+      }
     }
   }
 }

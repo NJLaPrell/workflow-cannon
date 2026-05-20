@@ -122,6 +122,40 @@ describe("CAE evaluateActivationBundle (T860)", () => {
     );
   });
 
+  it("agentFailureSignal activation surfaces improvement-discovery when recentToolFailures threshold met", () => {
+    const ctx = {
+      schemaVersion: 1,
+      task: { taskId: "T100307", status: "in_progress", phaseKey: "104" },
+      command: {
+        name: "list-tasks",
+        moduleId: "task-engine",
+        argvSummary: "{}"
+      },
+      workspace: {
+        currentKitPhase: "104",
+        nextKitPhase: "105",
+        workspaceRootFingerprint: "sha256:testagentfailure"
+      },
+      governance: {
+        policyApprovalRequired: false,
+        approvalTierHint: "none",
+        policySurface: "run-json"
+      },
+      queue: { readyQueueDepth: 0, suggestedNextTaskId: null },
+      mapSignals: null,
+      agentSignals: { recentToolFailures: 2, lastErrorCode: "invalid-run-args" }
+    };
+    const regRes = loadCaeRegistry(root);
+    assert.equal(regRes.ok, true);
+    const { bundle } = evaluateActivationBundle(ctx, regRes.value, { evalMode: "live" });
+    const reviewArts =
+      bundle.families.review?.flatMap((row) => row.artifactIds ?? []) ?? [];
+    assert.ok(
+      reviewArts.includes("cae.playbook.improvement-discovery"),
+      "expected improvement-discovery when agentFailureSignal threshold met"
+    );
+  });
+
   it("run-transition surfaces cae.playbook.improvement-discovery in review bundle", () => {
     const ctx = {
       schemaVersion: 1,
