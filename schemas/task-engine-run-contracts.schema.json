@@ -99,6 +99,7 @@
         "task-persistence-readiness",
         "persist-planning-execution-drafts",
         "propose-tasks-from-phase-notes",
+        "propose-release-version",
         "apply-task-batch",
         "resolve-maintainer-delivery-policy",
         "resolve-task-intake-policy",
@@ -205,6 +206,7 @@
         "task-persistence-readiness": { "$ref": "#/$defs/contractTaskPersistenceReadiness" },
         "persist-planning-execution-drafts": { "$ref": "#/$defs/contractPersistPlanningExecutionDrafts" },
         "propose-tasks-from-phase-notes": { "$ref": "#/$defs/contractBase" },
+        "propose-release-version": { "$ref": "#/$defs/contractProposeReleaseVersion" },
         "apply-task-batch": { "$ref": "#/$defs/contractApplyTaskBatch" },
         "resolve-maintainer-delivery-policy": { "$ref": "#/$defs/contractBase" },
         "resolve-task-intake-policy": { "$ref": "#/$defs/contractBase" },
@@ -759,6 +761,35 @@
             "responseData": {
               "type": "object",
               "required": ["kitSqliteUserVersion"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractProposeReleaseVersion": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "phaseKey": { "type": "string", "minLength": 1, "maxLength": 32 }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": [
+                "schemaVersion",
+                "currentVersion",
+                "recommended",
+                "rationale",
+                "breakingTaskIds",
+                "bump",
+                "consideredTaskCount"
+              ],
               "additionalProperties": true
             }
           }

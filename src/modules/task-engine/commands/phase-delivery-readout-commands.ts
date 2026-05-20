@@ -18,6 +18,7 @@ import { resolveReleaseEvidenceCommandArgs } from "../release-evidence-fragments
 import { runPhaseStatus } from "../workspace-status-commands-runtime.js";
 import { buildStrandedWorkReport } from "../stranded-work.js";
 import { buildPhaseFocusDashboard } from "../dashboard/build-phase-focus-dashboard.js";
+import { proposeReleaseVersion } from "../propose-release-version-runtime.js";
 
 /**
  * Phase / release readout commands that need an open task store + SQLite dual reader.
@@ -60,6 +61,45 @@ export async function resolvePhaseDeliveryReadoutCommands(
       db: planning.sqliteDual.getDatabase(),
       dbPath: planning.sqliteDual.dbPath
     });
+  }
+
+  if (command.name === "propose-release-version") {
+    const argObj = args as Record<string, unknown>;
+    const workspaceStatus = readWorkspaceStatusSnapshotFromDual(planning.sqliteDual);
+    const phaseRes = resolveCanonicalPhase({
+      effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+      workspaceStatus
+    });
+    const phaseKey =
+      typeof argObj.phaseKey === "string" && argObj.phaseKey.trim().length > 0
+        ? argObj.phaseKey.trim()
+        : phaseRes.canonicalPhaseKey;
+    try {
+      const proposal = proposeReleaseVersion({
+        workspacePath: ctx.workspacePath,
+        phaseKey,
+        tasks: store.getActiveTasks()
+      });
+      const data: Record<string, unknown> = {
+        schemaVersion: 1,
+        ...proposal,
+        remediation: { instructionPath: "src/modules/task-engine/instructions/propose-release-version.md" }
+      };
+      attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
+      return {
+        ok: true,
+        code: "propose-release-version",
+        message: `Recommend version ${proposal.recommended} (${proposal.bump} bump from ${proposal.currentVersion})`,
+        data
+      };
+    } catch (e) {
+      return {
+        ok: false,
+        code: "propose-release-version-failed",
+        message: (e as Error).message,
+        remediation: { instructionPath: "src/modules/task-engine/instructions/propose-release-version.md" }
+      };
+    }
   }
 
   if (command.name === "phase-closeout-readiness" || command.name === "phase-delivery-preflight") {

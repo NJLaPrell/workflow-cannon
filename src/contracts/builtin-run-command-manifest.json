@@ -221,6 +221,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "propose-release-version",
+    "file": "propose-release-version.md",
+    "description": "Recommend next semver from package.json and completed phase tasks (metadata.changeKind or type heuristics).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "convert-phase-note-to-task",
     "file": "convert-phase-note-to-task.md",
     "description": "Create a proposed execution task from a convertible phase note and mark the note converted atomically with task persist.",
