@@ -80,6 +80,29 @@ function matchCondition(ctx: CaeEvaluationContext, cond: Record<string, unknown>
       return false;
     }
   }
+  if (kind === "agentFailureSignal") {
+    const signals = ctx.agentSignals;
+    if (!signals) return false;
+    const field = cond.field;
+    if (typeof field !== "string") return false;
+    const operator = cond.operator;
+    const expected = cond.value;
+    const actual = signals[field as keyof typeof signals];
+    if (operator === ">=") {
+      return typeof actual === "number" && typeof expected === "number" && actual >= expected;
+    }
+    if (operator === "==") {
+      return actual === expected;
+    }
+    if (operator === "in") {
+      if (!Array.isArray(expected)) return false;
+      if (typeof actual === "number") {
+        return expected.some((v) => v === actual);
+      }
+      return typeof actual === "string" && expected.some((v) => v === actual);
+    }
+    return false;
+  }
   return false;
 }
 

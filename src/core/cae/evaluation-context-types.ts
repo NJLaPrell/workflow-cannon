@@ -55,6 +55,13 @@ export type CaeEvaluationContextQueue = {
   suggestedNextTaskId?: string | null;
 };
 
+export type CaeEvaluationContextAgentSignals = {
+  recentToolFailures?: number;
+  lastErrorCode?: string;
+  consecutiveRetries?: number;
+  lastFailureKind?: string;
+};
+
 /** v1 evaluation context payload (normative shape). */
 export type CaeEvaluationContext = {
   schemaVersion: 1;
@@ -64,4 +71,5 @@ export type CaeEvaluationContext = {
   governance: CaeEvaluationContextGovernance;
   queue: CaeEvaluationContextQueue;
   mapSignals: null;
+  agentSignals?: CaeEvaluationContextAgentSignals;
 };

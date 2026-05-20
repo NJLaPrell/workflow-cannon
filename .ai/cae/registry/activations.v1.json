@@ -197,6 +197,26 @@
       "artifactRefs": [{ "artifactId": "cae.playbook.improvement-discovery" }],
       "acknowledgement": { "strength": "recommend", "token": "improvement-discovery-run-transition" },
       "flags": { "advisoryOnly": true, "shadowEligible": true }
+    },
+    {
+      "schemaVersion": 1,
+      "activationId": "cae.activation.review.agent-failure-improvement-discovery",
+      "family": "review",
+      "lifecycleState": "active",
+      "priority": 57,
+      "scope": {
+        "conditions": [
+          {
+            "kind": "agentFailureSignal",
+            "field": "recentToolFailures",
+            "operator": ">=",
+            "value": 1
+          }
+        ]
+      },
+      "artifactRefs": [{ "artifactId": "cae.playbook.improvement-discovery" }],
+      "acknowledgement": { "strength": "recommend", "token": "improvement-discovery-agent-failure" },
+      "flags": { "advisoryOnly": true, "shadowEligible": true }
     }
   ]
 }
