@@ -6,6 +6,7 @@ import {
 } from "./config-mutation-result.js";
 import { loadConfigKeyRows } from "./load-config-key-rows.js";
 import { renderConfigListInnerHtml } from "./render-config.js";
+import { renderExplainConfigHtml } from "./render-explain-config.js";
 
 export async function pushConfigListToWebview(
   client: CommandClient,
@@ -60,5 +61,18 @@ export async function handleConfigUnsetMessage(
   await webview.postMessage({
     type: "configMutationResult",
     payload: configMutationOutcomeToWebviewPayload(outcome, r.code)
+  });
+}
+
+export async function handleConfigExplainMessage(
+  client: CommandClient,
+  webview: vscode.Webview,
+  key: string
+): Promise<void> {
+  const r = await client.run("explain-config", { path: key.trim() });
+  await webview.postMessage({
+    type: "explainResult",
+    html: renderExplainConfigHtml(r),
+    payload: r
   });
 }

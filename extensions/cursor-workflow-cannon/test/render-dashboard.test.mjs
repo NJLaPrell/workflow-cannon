@@ -115,6 +115,8 @@ test("renderDashboardRootInnerHtml config tab embeds config panel shell not acti
   assert.match(configPanel, /id="config-list-root"/);
   assert.match(configPanel, /id="cfg-refresh"/);
   assert.match(configPanel, /wc-config-panel/);
+  assert.match(configPanel, /cfg-quick-settings/);
+  assert.match(configPanel, /Dashboard → Config/);
   assert.doesNotMatch(configPanel, /activity bar/i);
 });
 

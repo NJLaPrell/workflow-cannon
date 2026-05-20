@@ -28,6 +28,10 @@ test("renderConfigPanelShellHtml exposes config-list-root and toolbar ids", () =
   assert.match(html, /id="cfg-validate"/);
   assert.match(html, /cfg-sections|config-list-root/);
   assert.doesNotMatch(html, /activity bar/i);
+  assert.match(html, /cfg-quick-settings/);
+  assert.match(html, /cfg-explain-host/);
+  assert.match(html, /cfg-loading/);
+  assert.match(html, /kit\.agentRole/);
 });
 
 test("CONFIG_WEBVIEW_STYLES includes section and typed control rules", () => {
