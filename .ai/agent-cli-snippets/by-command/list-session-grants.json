@@ -1,16 +1,42 @@
 {
-  "schemaVersion": 1,
+  "ok": true,
+  "code": "run-args-schema",
   "command": "list-session-grants",
-  "tier": "C",
-  "argsSchema": {
-    "description": "Permissive fallback args schema for 'list-session-grants'."
+  "schema": {
+    "type": "object",
+    "additionalProperties": true,
+    "description": "Permissive fallback args schema for 'list-session-grants'. Use instructionPath for command-specific field guidance until a stricter schema is added."
   },
+  "schemaSource": "manifest-permissive-fallback",
+  "sampleArgs": {},
   "examples": [
     {
-      "label": "List grants for active session",
+      "description": "Minimal argv example",
       "argv": "workspace-kit run list-session-grants '{}'"
     }
   ],
   "instructionPath": "src/modules/approvals/instructions/list-session-grants.md",
-  "policySensitivity": "non-sensitive"
+  "moduleId": "approvals",
+  "description": "Read-only: session-scoped policy grants in kit_session_grants (SQLite).",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  },
+  "invocationId": "bab5deba-7e4f-4c6b-84a4-2719cefd1a98"
 }

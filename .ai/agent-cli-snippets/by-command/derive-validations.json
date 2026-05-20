@@ -3,21 +3,14 @@
   "code": "run-args-schema",
   "command": "derive-validations",
   "schema": {
-    "type": "object",
-    "properties": {
-      "phaseKey": { "type": "string" },
-      "releaseVersion": { "type": "string" },
-      "gatesOutputPath": { "type": "string" },
-      "conclusion": { "type": "string" }
-    },
-    "additionalProperties": true
+    "type": "object"
   },
   "schemaSource": "pilot-run-args-snapshot",
-  "sampleArgs": { "phaseKey": "103" },
+  "sampleArgs": {},
   "examples": [
     {
       "description": "Minimal argv example",
-      "argv": "workspace-kit run derive-validations '{\"phaseKey\":\"103\"}'"
+      "argv": "workspace-kit run derive-validations '{}'"
     }
   ],
   "instructionPath": "src/modules/task-engine/instructions/derive-validations.md",
@@ -33,7 +26,15 @@
     "expectedPlanningGeneration": "not required by CLI prelude"
   },
   "idempotency": {
-    "class": "read",
-    "safeToRetry": true
-  }
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  },
+  "invocationId": "4f83bb5f-ddd9-4521-a1cc-d8f5c76b9f9e"
 }

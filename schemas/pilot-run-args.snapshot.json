@@ -38,6 +38,7 @@
     "get-blocked-summary",
     "get-dependency-graph",
     "get-kit-persistence-map",
+    "get-last-output",
     "get-module-state",
     "get-next-actions",
     "get-phase-context",
@@ -772,6 +773,19 @@
     "get-kit-persistence-map": {
       "type": "object",
       "additionalProperties": false
+    },
+    "get-last-output": {
+      "type": "object",
+      "properties": {
+        "invocationId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "last": {
+          "const": true
+        }
+      },
+      "additionalProperties": true
     },
     "get-module-state": {
       "type": "object",

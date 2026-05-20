@@ -888,6 +888,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "get-last-output",
+    "file": "get-last-output.md",
+    "description": "Read a prior wk run invocation response from kit_run_log by invocationId or last completed entry.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "batch-transition",
     "file": "batch-transition.md",
     "description": "Dry-run or apply multiple run-transition operations in order.",
