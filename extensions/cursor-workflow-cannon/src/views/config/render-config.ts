@@ -139,6 +139,82 @@ export function groupConfigRows(rows: ConfigKeyRowInput[]): ConfigRowSection[] {
   return sections;
 }
 
+export type ConfigEditorKind = "toggle" | "select" | "text" | "number" | "json";
+
+export function pickEditorKind(row: ConfigKeyRowInput): ConfigEditorKind {
+  const t = (row.type || "").toLowerCase();
+  if (t === "boolean") return "toggle";
+  if (Array.isArray(row.allowedValues) && row.allowedValues.length > 0) return "select";
+  if (t === "number" || t === "integer") return "number";
+  if (t === "object" || t === "array") return "json";
+  const effective = row.effectiveValue !== undefined ? row.effectiveValue : row.default;
+  if (effective !== null && typeof effective === "object") return "json";
+  return "text";
+}
+
+function effectiveScalar(row: ConfigKeyRowInput): unknown {
+  return row.effectiveValue !== undefined ? row.effectiveValue : row.default;
+}
+
+function renderSelectOptions(row: ConfigKeyRowInput): string {
+  const current = effectiveScalar(row);
+  const values = row.allowedValues ?? [];
+  return values
+    .map((raw) => {
+      const encoded = escapeHtmlAttr(JSON.stringify(raw));
+      const label = escapeHtml(String(raw));
+      const selected =
+        JSON.stringify(raw) === JSON.stringify(current) ? " selected" : "";
+      return `<option value="${encoded}"${selected}>${label}</option>`;
+    })
+    .join("");
+}
+
+function renderConfigValueEditor(row: ConfigKeyRowInput, track: string, disabled: boolean): string {
+  const kind = pickEditorKind(row);
+  const dis = disabled ? " disabled" : "";
+  const label =
+    kind === "json"
+      ? "Value (JSON)"
+      : kind === "toggle"
+        ? "Value"
+        : "Value";
+  if (kind === "toggle") {
+    const checked = effectiveScalar(row) === true ? " checked" : "";
+    return (
+      `<label class="cfg-label cfg-toggle-label" for="tg-${track}">${label}</label>` +
+      `<label class="cfg-toggle-wrap"><input type="checkbox" id="tg-${track}" class="cfg-toggle" data-role="value" data-value-kind="boolean"${checked}${dis} /> Enabled</label>`
+    );
+  }
+  if (kind === "select") {
+    return (
+      `<label class="cfg-label" for="sel-${track}">${label}</label>` +
+      `<select id="sel-${track}" class="cfg-select cfg-value-select" data-role="value" data-value-kind="select" aria-label="Value for ${escapeHtmlAttr(row.key)}"${dis}>${renderSelectOptions(row)}</select>`
+    );
+  }
+  if (kind === "number") {
+    const n = effectiveScalar(row);
+    const val = typeof n === "number" ? String(n) : "";
+    return (
+      `<label class="cfg-label" for="num-${track}">${label}</label>` +
+      `<input type="number" id="num-${track}" class="cfg-input" data-role="value" data-value-kind="number" value="${escapeHtmlAttr(val)}"${dis} />`
+    );
+  }
+  if (kind === "text") {
+    const v = effectiveScalar(row);
+    const val = v === undefined || v === null ? "" : String(v);
+    return (
+      `<label class="cfg-label" for="txt-${track}">${label}</label>` +
+      `<input type="text" id="txt-${track}" class="cfg-input" data-role="value" data-value-kind="text" value="${escapeHtmlAttr(val)}"${dis} />`
+    );
+  }
+  const ta = escapeHtml(editorTextForValue(row.effectiveValue, row.default));
+  return (
+    `<label class="cfg-label" for="ta-${track}">${label}</label>` +
+    `<textarea id="ta-${track}" class="cfg-textarea" data-role="value" data-value-kind="json" rows="6" spellcheck="false"${dis}>${ta}</textarea>`
+  );
+}
+
 function renderScopeOptions(layers: string[]): string {
   const uniq = [...new Set(layers.filter((x) => x === "project" || x === "user"))];
   if (uniq.length === 0) {
@@ -167,10 +243,10 @@ function renderConfigRowHtml(row: ConfigKeyRowInput, forceReadOnly = false): str
   <button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="config-save" data-key="${escapeHtmlAttr(row.key)}">Apply value</button>
   <button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="config-unset" data-key="${escapeHtmlAttr(row.key)}">Unset on layer</button>
 </div>`;
-  const ta = escapeHtml(editorTextForValue(row.effectiveValue, row.default));
-  const taDisabled = ro ? " disabled" : "";
+  const editorKind = pickEditorKind(row);
+  const editorHtml = renderConfigValueEditor(row, track, ro);
   return `<div class="cfg-row" role="listitem" data-search="${escapeHtmlAttr(row.key.toLowerCase() + " " + row.description.toLowerCase())}">
-  <details class="cfg-details" data-wc-track="${escapeHtmlAttr(track)}">
+  <details class="cfg-details" data-wc-track="${escapeHtmlAttr(track)}" data-editor-kind="${escapeHtmlAttr(editorKind)}">
     <summary class="cfg-summary">
       <code class="cfg-key">${escapeHtml(row.key)}</code>
       <span class="cfg-type">${escapeHtml(row.type)}</span>
@@ -185,8 +261,7 @@ function renderConfigRowHtml(row: ConfigKeyRowInput, forceReadOnly = false): str
         <div><dt>Writable layers</dt><dd>${escapeHtml(layers.join(", "))}</dd></div>
         ${row.requiresRestart ? `<div><dt>Restart</dt><dd>Changing this may require a kit / editor reload.</dd></div>` : ""}
       </dl>
-      <label class="cfg-label" for="ta-${track}">Value (JSON)</label>
-      <textarea id="ta-${track}" class="cfg-textarea" data-role="value" rows="6" spellcheck="false"${taDisabled}>${ta}</textarea>
+      ${editorHtml}
       <div class="cfg-row-btns">
         <button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="config-explain" data-key="${escapeHtmlAttr(row.key)}">Explain layers</button>
       </div>

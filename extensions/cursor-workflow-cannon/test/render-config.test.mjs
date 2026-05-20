@@ -6,6 +6,7 @@ import {
   editorTextForValue,
   isConfigRowReadOnly,
   groupConfigRows,
+  pickEditorKind,
   renderConfigListInnerHtml
 } from "../dist/views/config/render-config.js";
 
@@ -75,6 +76,50 @@ test("renderConfigListInnerHtml escapes XSS in description", () => {
   ]);
   assert.doesNotMatch(html, /<script>/i);
   assert.match(html, /&lt;\/textarea&gt;/);
+});
+
+test("pickEditorKind matrix", () => {
+  assert.equal(pickEditorKind({ ...baseRow, type: "boolean" }), "toggle");
+  assert.equal(
+    pickEditorKind({ ...baseRow, type: "string", allowedValues: ["a", "b"] }),
+    "select"
+  );
+  assert.equal(pickEditorKind({ ...baseRow, type: "number" }), "number");
+  assert.equal(pickEditorKind({ ...baseRow, type: "object" }), "json");
+  assert.equal(pickEditorKind({ ...baseRow, type: "string", effectiveValue: { x: 1 } }), "json");
+});
+
+test("renderConfigListInnerHtml uses toggle for boolean keys", () => {
+  const html = renderConfigListInnerHtml([
+    { ...baseRow, key: "kit.verbose", type: "boolean", owningModule: "kit", effectiveValue: true }
+  ]);
+  assert.match(html, /data-editor-kind="toggle"/);
+  assert.match(html, /type="checkbox"/);
+  assert.doesNotMatch(html, /data-editor-kind="toggle"[\s\S]*<textarea/);
+});
+
+test("renderConfigListInnerHtml uses select for allowedValues", () => {
+  const html = renderConfigListInnerHtml([
+    {
+      ...baseRow,
+      key: "kit.planningGenerationPolicy",
+      type: "string",
+      owningModule: "kit",
+      allowedValues: ["require", "warn"],
+      effectiveValue: "require"
+    }
+  ]);
+  assert.match(html, /data-editor-kind="select"/);
+  assert.match(html, /<select[^>]+data-role="value"/);
+  assert.match(html, /require/);
+});
+
+test("renderConfigListInnerHtml uses JSON textarea for object types", () => {
+  const html = renderConfigListInnerHtml([
+    { ...baseRow, key: "kit.meta", type: "object", owningModule: "kit", effectiveValue: { a: 1 } }
+  ]);
+  assert.match(html, /data-editor-kind="json"/);
+  assert.match(html, /<textarea[^>]+data-value-kind="json"/);
 });
 
 test("groupConfigRows orders global kit, modules alphabetically, internal last", () => {
