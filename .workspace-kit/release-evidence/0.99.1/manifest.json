@@ -1,0 +1,399 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-05-20T14:26:03.428Z",
+  "releaseVersion": "0.99.1",
+  "packageName": "@workflow-cannon/workspace-kit",
+  "phaseKey": "106",
+  "git": {
+    "branch": "release/phase-106",
+    "mergeTarget": "main"
+  },
+  "approval": {
+    "actor": "cursor-agent@phase-106-closeout",
+    "timestamp": "2026-05-20T14:26:02.240Z",
+    "rationale": "Phase 106 drained; check/test/parity/pre-merge-gates passed on release/phase-106 before merge to main.",
+    "scope": "phase-106 closeout merge (publish pending operator chat)"
+  },
+  "releaseNotes": {
+    "source": "docs/maintainers/CHANGELOG.md",
+    "entries": [
+      "0.99.1 — Extension config in dashboard (Phase 106)"
+    ]
+  },
+  "validations": [
+    {
+      "command": "pnpm run build",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "pnpm run check",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "pnpm run test",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "pnpm run parity",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "node scripts/check-release-metadata.mjs",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "pnpm run pre-merge-gates",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    }
+  ],
+  "risks": [],
+  "publishArtifacts": [],
+  "taskDeliveryEvidence": [
+    {
+      "taskId": "T100380",
+      "title": "Extract shared config row loader for extension webviews",
+      "phaseKey": "106",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100380-shared-config-loader",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/414",
+        "prNumber": 414,
+        "baseBranch": "release/phase-106",
+        "mergeSha": "7b01239b3cf7fc615a111c46ffde3fdc5b9aed87",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "node --test test/load-config-key-rows.test.mjs",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100381",
+      "title": "Config UI: group keys into global and per-module sections",
+      "phaseKey": "106",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100381-config-grouped-sections",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/415",
+        "prNumber": 415,
+        "baseBranch": "release/phase-106",
+        "mergeSha": "ec8dce4f4eceac894114104264989c760abfa63e",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "node --test test/render-config.test.mjs",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100382",
+      "title": "Config UI: typed editors (toggle, select, JSON fallback)",
+      "phaseKey": "106",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100382-config-typed-editors",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/416",
+        "prNumber": 416,
+        "baseBranch": "release/phase-106",
+        "mergeSha": "4ab5356d0b75f4284da577d69b66c8b892eda175",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "node --test test/render-config.test.mjs",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100383",
+      "title": "Config UI: post-save reload and policy error surfacing",
+      "phaseKey": "106",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100383-config-reload-policy-errors",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/417",
+        "prNumber": 417,
+        "baseBranch": "release/phase-106",
+        "mergeSha": "e132ad615bf6743dff0d957aeee48164b55acfd7",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "node --test test/config-mutation-result.test.mjs",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100384",
+      "title": "Refactor sidebar Config webview to shared loader and grouped typed UI",
+      "phaseKey": "106",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100384-config-sidebar-host",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/418",
+        "prNumber": 418,
+        "baseBranch": "release/phase-106",
+        "mergeSha": "71382883f5c9a441fb8562ceae268c830a243079",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "node --test test/config-webview-client.test.mjs",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100385",
+      "title": "Dashboard Config tab: replace stub with config panel shell",
+      "phaseKey": "106",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100385-dashboard-config-shell",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/419",
+        "prNumber": 419,
+        "baseBranch": "release/phase-106",
+        "mergeSha": "6cc6fbf90a540746f5efd5896da23d9ecc58bb67",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "node --test test/render-dashboard.test.mjs",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100386",
+      "title": "Dashboard Config tab: message bridge and live refresh",
+      "phaseKey": "106",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100386-dashboard-config-bridge",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/420",
+        "prNumber": 420,
+        "baseBranch": "release/phase-106",
+        "mergeSha": "c5b429de6731d0750dfdc731bb9100ca04ab1741",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "node --test test/config-webview-client.test.mjs",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100387",
+      "title": "Tests: render-config grouping, typed controls, reload copy",
+      "phaseKey": "106",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100387-config-render-tests",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/421",
+        "prNumber": 421,
+        "baseBranch": "release/phase-106",
+        "mergeSha": "221b583b56e5e0079d18cb8ad3c227d93300f5ad",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "node --test test/render-config.test.mjs",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100388",
+      "title": "Tests: dashboard Config tab integration and parity guards",
+      "phaseKey": "106",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100389-dashboard-config-ux",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/422",
+        "prNumber": 422,
+        "baseBranch": "release/phase-106",
+        "mergeSha": "8e1ed18788992e94fa5f6bba032e1e607ea1d425",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "node --test test/dashboard-config-tab.test.mjs",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100389",
+      "title": "Dashboard Config tab: reference UX (loading, explain, quick settings, shared client)",
+      "phaseKey": "106",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100389-dashboard-config-ux",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/422",
+        "prNumber": 422,
+        "baseBranch": "release/phase-106",
+        "mergeSha": "8e1ed18788992e94fa5f6bba032e1e607ea1d425",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "node --test test/dashboard-config-tab.test.mjs",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100390",
+      "title": "Extension copy: canonical dashboard tabs vs legacy Config/Status panels",
+      "phaseKey": "106",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100390-config-copy-canonical",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/423",
+        "prNumber": 423,
+        "baseBranch": "release/phase-106",
+        "mergeSha": "6dd1e37e710ba122b36f6dc28bae5c9122a8ae8a",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "node --test test/extension-config-copy.test.mjs",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    }
+  ],
+  "followUpScan": {
+    "scannedAt": "2026-05-20T14:26:02.241Z",
+    "rationale": "Phase 106 tasks complete; no stranded delivery violations; dashboard WIP stashed separately."
+  },
+  "followUpTasks": [],
+  "followUpSummary": {
+    "count": 0,
+    "scannedAt": "2026-05-20T14:26:02.241Z",
+    "rationale": "Phase 106 tasks complete; no stranded delivery violations; dashboard WIP stashed separately."
+  }
+}
