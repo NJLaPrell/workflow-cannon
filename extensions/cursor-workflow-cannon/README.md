@@ -36,7 +36,7 @@ F5 typical `launch.json` (workspace root):
 }
 ```
 
-Open the **Workflow Cannon** activity bar for **Dashboard** (webview), **Config** (webview), **Guidance**, and related commands (see below).
+Open the **Workflow Cannon** activity bar for **Dashboard** (webview), **Guidance**, and related commands (see below). **Workspace configuration** is edited on **Dashboard → Config** (canonical); the activity-bar **Config** webview remains for supplementary access.
 
 ### Sidebar Dashboard vs palette **Open Status Dashboard**
 
@@ -44,8 +44,9 @@ These are **two different surfaces**, both fed by **`pnpm exec wk run dashboard-
 
 | Surface | How you open it | What it is |
 |--------|-------------------|------------|
-| **Sidebar Dashboard** | Activity bar → **Workflow Cannon** → **Dashboard** | Multi-tab webview: **Overview** (rollups + **Up next**), **Queue** (filters, queue, wishlist, planning), **Status** (compact identity / counts cards), **Config** / **CAE** shortcuts. |
-| **Status dashboard panel** | Command palette → **Workflow Cannon: Open Status Dashboard** | **Editor-area** `WebviewPanel` tuned for **phase/drift**, **`systemStatus`** (doctor contract, modules, CAE lines). **`StateWatcher`** debounces refresh (**`STATUS_PANEL_DEBOUNCE_MS`** in `StatusDashboardPanel.ts`, default **450ms**) while the tab stays open; **Refresh now** is immediate. |
+| **Sidebar Dashboard** | Activity bar → **Workflow Cannon** → **Dashboard** | Multi-tab webview: **Overview** (rollups + **Up next**), **Queue** (filters, queue, wishlist, planning), **Status** (compact identity / counts cards), **Config** (canonical kit/module key editor), **CAE**. |
+| **Legacy Config webview** | Activity bar → **Workflow Cannon** → **Config** | Same config engine as **Dashboard → Config**; prefer the dashboard tab for day-to-day edits. |
+| **Status dashboard panel** | Command palette → **Workflow Cannon: Open Status Dashboard** | **Editor-area** `WebviewPanel` for **phase/drift** and **`systemStatus`** — supplementary to **Dashboard → Status** (identity, counts, editor integration). **`StateWatcher`** debounces refresh (**`STATUS_PANEL_DEBOUNCE_MS`** in `StatusDashboardPanel.ts`, default **450ms**) while the tab stays open; **Refresh now** is immediate. |
 
 Requires **`dashboard-summary`** **`data.schemaVersion` ≥ 5** (**`systemStatus`**). Schema **v6** adds **`systemStatus.identity`** and **`systemStatus.planningStore`**. The merged envelope may include **`data.cae`** for CAE shadow preflight — separate from **`caeLines`** inside **`systemStatus`**.
 
