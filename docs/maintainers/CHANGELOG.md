@@ -8,6 +8,22 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.99.1] - 2026-05-19
+
+Phase 106 — **Extension config in dashboard** (shared config webview, typed editors, Config tab shell, mutation/reload UX).
+
+### Added
+
+- `load-config-key-rows`, `groupConfigRows`, and typed config editors (`pickEditorKind`) in the Workflow Cannon extension.
+- `config-mutation-result` for reload/policy errors; shared `config-webview-client` and `config-host`; thin `ConfigViewProvider`.
+- Dashboard Config tab: `renderConfigPanelShellHtml`, `DashboardViewProvider` postMessage bridge and poke refresh.
+- `render-explain-config` quick settings and explain layers; loading/retry UX.
+- Tests: expanded `render-config.test.mjs`, `dashboard-config-tab.test.mjs`, `extension-config-copy.test.mjs`.
+
+### Changed
+
+- Config panel rendering split into sectioned `render-config` module; README documents extension config surfaces.
+
 ## [0.99.0] - 2026-05-19
 
 Phase 104 — **CAE signals, operator CLI, release semver** (agent failure context, phase-journal activations, last-run output, semver proposal at closeout).

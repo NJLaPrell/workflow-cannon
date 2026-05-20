@@ -19,6 +19,7 @@ import {
 } from "../phase-schedule-tag.js";
 import { buildGuidanceAuthoringWebviewBootstrap } from "../guidance/guidance-authoring-webview-bootstrap.js";
 import { renderStatusTabInnerHtml } from "../status/render-status-tab.js";
+import { renderConfigPanelShellHtml } from "../config/config-panel-shell.js";
 
 function phaseScheduleFocusFromWorkspace(ws: Record<string, unknown> | null | undefined): PhaseScheduleFocus {
   return {
@@ -3841,13 +3842,7 @@ export function renderDashboardRootInnerHtml(
 
   const statusContent = renderStatusSectionHtml(d, ss, editorIntegration);
 
-  const configContent =
-    '<section class="dash-card" aria-label="Config">' +
-    "<p><b>Config</b></p>" +
-    '<p class="muted">Configuration keys are managed in the <b>Config</b> sidebar panel (activity bar).</p>' +
-    '<p class="muted">Common keys: <code>kit.agentGuidance</code> · <code>kit.currentPhase</code> · ' +
-    "<code>kit.agentRole</code> · <code>kit.planningGenerationPolicy</code></p>" +
-    "</section>";
+  const configContent = renderConfigPanelShellHtml();
 
   // ── Tab shell ──────────────────────────────────────────────────────────────
 
