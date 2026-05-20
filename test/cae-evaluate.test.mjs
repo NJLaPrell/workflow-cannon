@@ -66,13 +66,13 @@ describe("CAE evaluateActivationBundle (T860)", () => {
     assert.deepEqual(a.trace, b.trace);
   });
 
-  it("phase 79 Phase Journal activations attach cae.runbook.phase-journal-operator for journal commands", () => {
+  it("phase-journal activations attach cae.runbook.phase-journal-operator regardless of phaseKey", () => {
     const ctx = {
       schemaVersion: 1,
       task: {
         taskId: "T100041",
         status: "in_progress",
-        phaseKey: "79"
+        phaseKey: "104"
       },
       command: {
         name: "run-transition",
@@ -80,8 +80,8 @@ describe("CAE evaluateActivationBundle (T860)", () => {
         argvSummary: '{"taskId":"T100041","action":"complete"}'
       },
       workspace: {
-        currentKitPhase: "79",
-        nextKitPhase: "80",
+        currentKitPhase: "104",
+        nextKitPhase: "105",
         workspaceRootFingerprint: "sha256:testphasejournal"
       },
       governance: {

@@ -4,7 +4,7 @@ Short checklist for agents and operators using **Phase Journal** commands during
 
 ## Scope and phase matching
 
-- Registry activations for Phase Journal use **`{ "kind": "phaseKey", "value": "79" }`** (and future phase rows as maintainers add them) combined with specific **`commandName`** conditions.
+- Registry activations for Phase Journal match specific **`commandName`** values on any phase (no hard-coded **`phaseKey`** gate).
 - **`evaluation-context-builder`** sets `task.phaseKey` from the task row when present, otherwise from **`workspace.currentKitPhase`** (digits-only string). See **`.ai/cae/evaluation-context.md`** field table. `cae-evaluate` **only** compares `ctx.task.phaseKey` — there is no separate workspace-phase predicate.
 
 ## Priority ladder (does not override pilot policy bundles)
@@ -46,7 +46,7 @@ pnpm exec wk run run-transition '{"taskId":"T100041","action":"complete","phaseN
 ## Registry pointers
 
 - Artifact id: **`cae.runbook.phase-journal-operator`** (**`.ai/cae/registry/artifacts.v1.json`**).
-- Activation ids: **`cae.activation.think.phase79-phase-journal-run-transition`**, **`cae.activation.think.phase79-phase-journal-get-context`**, **`cae.activation.do.phase79-phase-journal-add-note`** (**`.ai/cae/registry/activations.v1.json`**).
+- Activation ids: **`cae.activation.think.phase-journal-run-transition`**, **`cae.activation.think.phase-journal-get-context`**, **`cae.activation.do.phase-journal-add-note`** (**`.ai/cae/registry/activations.v1.json`**).
 
 ## Explicit non-goals
 

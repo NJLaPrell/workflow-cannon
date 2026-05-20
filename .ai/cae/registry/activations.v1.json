@@ -151,45 +151,36 @@
     },
     {
       "schemaVersion": 1,
-      "activationId": "cae.activation.think.phase79-phase-journal-run-transition",
+      "activationId": "cae.activation.think.phase-journal-run-transition",
       "family": "think",
       "lifecycleState": "active",
       "priority": 72,
       "scope": {
-        "conditions": [
-          { "kind": "phaseKey", "value": "79" },
-          { "kind": "commandName", "match": "exact", "value": "run-transition" }
-        ]
+        "conditions": [{ "kind": "commandName", "match": "exact", "value": "run-transition" }]
       },
       "artifactRefs": [{ "artifactId": "cae.runbook.phase-journal-operator" }],
       "flags": { "shadowEligible": true }
     },
     {
       "schemaVersion": 1,
-      "activationId": "cae.activation.think.phase79-phase-journal-get-context",
+      "activationId": "cae.activation.think.phase-journal-get-context",
       "family": "think",
       "lifecycleState": "active",
       "priority": 72,
       "scope": {
-        "conditions": [
-          { "kind": "phaseKey", "value": "79" },
-          { "kind": "commandName", "match": "exact", "value": "get-phase-context" }
-        ]
+        "conditions": [{ "kind": "commandName", "match": "exact", "value": "get-phase-context" }]
       },
       "artifactRefs": [{ "artifactId": "cae.runbook.phase-journal-operator" }],
       "flags": { "shadowEligible": true }
     },
     {
       "schemaVersion": 1,
-      "activationId": "cae.activation.do.phase79-phase-journal-add-note",
+      "activationId": "cae.activation.do.phase-journal-add-note",
       "family": "do",
       "lifecycleState": "active",
       "priority": 71,
       "scope": {
-        "conditions": [
-          { "kind": "phaseKey", "value": "79" },
-          { "kind": "commandName", "match": "exact", "value": "add-phase-note" }
-        ]
+        "conditions": [{ "kind": "commandName", "match": "exact", "value": "add-phase-note" }]
       },
       "artifactRefs": [{ "artifactId": "cae.runbook.phase-journal-operator" }],
       "flags": { "advisoryOnly": true, "shadowEligible": true }
