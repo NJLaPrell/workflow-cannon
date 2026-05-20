@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import type { CommandClient } from "../../runtime/command-client.js";
 import {
+  handleConfigExplainMessage,
   handleConfigSetMessage,
   handleConfigUnsetMessage,
   pushConfigListToWebview
@@ -38,8 +39,7 @@ export class ConfigViewProvider implements vscode.WebviewViewProvider {
         await pushConfigListToWebview(this.client, webview, Boolean(msg.includeAll));
       }
       if (msg?.type === "explain" && typeof msg.key === "string") {
-        const r = await this.client.run("explain-config", { path: msg.key.trim() });
-        await webview.postMessage({ type: "explainResult", payload: r });
+        await handleConfigExplainMessage(this.client, webview, msg.key);
       }
       if (msg?.type === "validate") {
         const r = await this.client.config(["validate"]);

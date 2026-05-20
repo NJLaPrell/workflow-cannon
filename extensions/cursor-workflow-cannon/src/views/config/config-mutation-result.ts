@@ -22,7 +22,7 @@ export function formatConfigMutationError(text: string, exitCode: number): strin
     return (
       "Config change blocked by kit policy.\n\n" +
       "Set WORKSPACE_KIT_POLICY_APPROVAL in the environment for the kit process, or use JSON policyApproval on workspace-kit run (chat alone is not approval).\n\n" +
-      "See .ai/POLICY-APPROVAL.md in the repo.\n\n" +
+      "See .ai/POLICY-APPROVAL.md in the repo. On the dashboard, check **Overview** for policy / approval queue cards when a key requires approval.\n\n" +
       (blob ? `CLI (exit ${exitCode}):\n${blob.slice(0, 600)}` : `Exit code ${exitCode}.`)
     );
   }

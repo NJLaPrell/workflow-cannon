@@ -101,6 +101,41 @@ export function buildConfigWebviewBootstrapScript(options: ConfigWebviewClientOp
       filterEl.addEventListener('input', applyFilter);
     }
   }
+  function jumpToConfigKey(key) {
+    var listRoot = cfgEl('config-list-root');
+    if (!listRoot || !key) return;
+    var row = listRoot.querySelector('.cfg-row code.cfg-key');
+    var target = null;
+    listRoot.querySelectorAll('.cfg-row').forEach(function(r) {
+      var code = r.querySelector('code.cfg-key');
+      if (code && code.textContent === key) target = r;
+    });
+    if (!target) {
+      showStatus('warn', 'Key not in current list: ' + key + ' (try Maintainer keys or Reload).');
+      return;
+    }
+    var det = target.querySelector('details');
+    if (det) det.open = true;
+    target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+  function bindGlobalConfigActions() {
+    if (document.body.getAttribute('data-wc-cfg-global-bound')) return;
+    document.body.setAttribute('data-wc-cfg-global-bound', '1');
+    document.addEventListener('click', function(ev) {
+      var t = ev.target;
+      if (!t || t.tagName !== 'BUTTON') return;
+      var act = t.getAttribute('data-wc-action');
+      if (act === 'config-jump-key') {
+        ev.preventDefault();
+        jumpToConfigKey(t.getAttribute('data-key') || '');
+        return;
+      }
+      if (act === 'config-retry') {
+        ev.preventDefault();
+        requestLoad();
+      }
+    });
+  }
   function bindConfigListActions() {
     var listRoot = cfgEl('config-list-root');
     if (!listRoot || listRoot.getAttribute('data-wc-bound')) return;
@@ -152,6 +187,7 @@ export function buildConfigWebviewBootstrapScript(options: ConfigWebviewClientOp
   }
   function afterDomUpdate() {
     bindConfigToolbar();
+    bindGlobalConfigActions();
     bindConfigListActions();
   }
   window.addEventListener('message', function(ev) {
@@ -178,8 +214,12 @@ export function buildConfigWebviewBootstrapScript(options: ConfigWebviewClientOp
         applyFilter();
       }
       var n = cfgEl('config-list-root') ? cfgEl('config-list-root').querySelectorAll('.cfg-row').length : 0;
-      if (m.error) {
-        showStatus('warn', m.error + '\\n\\n(' + n + ' keys shown; list or resolve may be incomplete.)');
+      if (m.error && listRoot) {
+        listRoot.innerHTML =
+          '<p class="cfg-muted">Could not load the full config catalog.</p>' +
+          '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="config-retry">Retry</button>';
+        listRoot.removeAttribute('data-wc-bound');
+        showStatus('warn', m.error);
       } else if (m.statusText) {
         showStatus(m.statusKind || 'info', m.statusText);
       } else {
@@ -188,7 +228,12 @@ export function buildConfigWebviewBootstrapScript(options: ConfigWebviewClientOp
       return;
     }
     if (m && m.type === 'explainResult') {
-      showStatus('info', JSON.stringify(m.payload, null, 2));
+      var explainHost = cfgEl('cfg-explain-host');
+      if (explainHost && typeof m.html === 'string') {
+        explainHost.innerHTML = m.html;
+      } else {
+        showStatus('info', 'Layer explanation ready.');
+      }
       return;
     }
     if (m && m.type === 'validateResult') {
@@ -255,4 +300,12 @@ export const CONFIG_WEBVIEW_STYLES = `
     .cfg-row-btns { margin-top: 6px; }
     .cfg-footnote { font-size: 11px; opacity: 0.8; margin-top: 10px; line-height: 1.4; }
     .wc-config-panel .cfg-toolbar { margin-top: 8px; }
+    .cfg-loading { font-style: italic; }
+    .cfg-quick-settings { margin: 8px 0 12px; padding: 8px 10px; border-radius: 4px; background: var(--vscode-textCodeBlock-background); }
+    .cfg-quick-settings-btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .cfg-explain-host { margin-bottom: 10px; }
+    .cfg-explain-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 6px; }
+    .cfg-explain-table th, .cfg-explain-table td { border: 1px solid var(--vscode-widget-border); padding: 4px 6px; text-align: left; vertical-align: top; }
+    .cfg-explain-table tr.cfg-explain-win td { background: rgba(0, 120, 200, 0.12); }
+    .cfg-explain-panel p { margin: 0 0 6px; }
 `;

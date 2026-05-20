@@ -34,6 +34,7 @@ import { GuidanceAuthoringExtensionSide } from "../guidance/guidance-authoring-e
 import { renderGuidanceAuthoringPanelInnerHtml } from "../guidance/render-guidance-panel.js";
 import { STATUS_PANEL_EMBED_CSS } from "../status/render-status-tab.js";
 import {
+  handleConfigExplainMessage,
   handleConfigSetMessage,
   handleConfigUnsetMessage,
   pushConfigListToWebview
@@ -2344,8 +2345,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return true;
     }
     if (msg?.type === "explain" && typeof msg.key === "string") {
-      const r = await this.client.run("explain-config", { path: msg.key.trim() });
-      await webview.postMessage({ type: "explainResult", payload: r });
+      await handleConfigExplainMessage(this.client, webview, msg.key);
       return true;
     }
     if (msg?.type === "validate") {
