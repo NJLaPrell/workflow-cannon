@@ -117,14 +117,39 @@ export class ConfigViewProvider implements vscode.WebviewViewProvider {
       row.style.display = !q || hay.indexOf(q) !== -1 ? '' : 'none';
     });
   }
+  function readRowValue(details) {
+    var kind = details.getAttribute('data-editor-kind') || 'json';
+    if (kind === 'toggle') {
+      var cb = details.querySelector('input[data-role="value"][type="checkbox"]');
+      if (!cb) return null;
+      return JSON.stringify(cb.checked);
+    }
+    if (kind === 'select') {
+      var selVal = details.querySelector('select[data-role="value"]');
+      if (!selVal) return null;
+      return selVal.value;
+    }
+    if (kind === 'text') {
+      var txt = details.querySelector('input[data-role="value"][data-value-kind="text"]');
+      if (!txt) return null;
+      return JSON.stringify(txt.value);
+    }
+    if (kind === 'number') {
+      var num = details.querySelector('input[data-role="value"][data-value-kind="number"]');
+      if (!num || num.value === '') return null;
+      return JSON.stringify(Number(num.value));
+    }
+    var ta = details.querySelector('textarea[data-role="value"]');
+    return ta ? ta.value : null;
+  }
   function rowContext(btn) {
     var d = btn.closest('details');
     if (!d) return null;
-    var ta = d.querySelector('textarea[data-role="value"]');
     var sc = d.querySelector('select[data-role="scope"]');
     var key = btn.getAttribute('data-key');
-    if (!ta || !key) return null;
-    return { key: key, value: ta.value, scope: sc && sc.value ? sc.value : 'project' };
+    var value = readRowValue(d);
+    if (!key || value == null) return null;
+    return { key: key, value: value, scope: sc && sc.value ? sc.value : 'project', editorKind: d.getAttribute('data-editor-kind') || 'json' };
   }
   document.getElementById('cfg-refresh') && document.getElementById('cfg-refresh').addEventListener('click', requestLoad);
   document.getElementById('cfg-validate') && document.getElementById('cfg-validate').addEventListener('click', function() {
@@ -147,9 +172,11 @@ export class ConfigViewProvider implements vscode.WebviewViewProvider {
       if (act === 'config-save') {
         var c = rowContext(t);
         if (!c) return;
-        try { JSON.parse(c.value); } catch (e) {
-          showStatus('err', 'Value must be valid JSON before Apply.');
-          return;
+        if (c.editorKind === 'json') {
+          try { JSON.parse(c.value); } catch (e) {
+            showStatus('err', 'Value must be valid JSON before Apply.');
+            return;
+          }
         }
         vscode.postMessage({
           type: 'set',
@@ -252,6 +279,10 @@ export class ConfigViewProvider implements vscode.WebviewViewProvider {
     .cfg-meta dd { margin: 2px 0 0 12px; }
     .cfg-label { display: block; margin-top: 8px; font-weight: 600; }
     .cfg-textarea { width: 100%; box-sizing: border-box; font-family: var(--vscode-editor-font-family); font-size: 11px; padding: 6px; margin-top: 4px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border); }
+    .cfg-input { width: 100%; max-width: 420px; box-sizing: border-box; font-family: var(--vscode-editor-font-family); font-size: 11px; padding: 6px; margin-top: 4px; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border); }
+    .cfg-value-select { max-width: 420px; width: 100%; }
+    .cfg-toggle-wrap { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-weight: normal; }
+    .cfg-toggle { margin: 0; }
     .cfg-select { margin-top: 4px; padding: 4px; max-width: 200px; background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-widget-border); }
     .cfg-actions { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
     .cfg-row-btns { margin-top: 6px; }
