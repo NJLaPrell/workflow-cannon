@@ -33,6 +33,12 @@ import {
 import { GuidanceAuthoringExtensionSide } from "../guidance/guidance-authoring-extension-side.js";
 import { renderGuidanceAuthoringPanelInnerHtml } from "../guidance/render-guidance-panel.js";
 import { STATUS_PANEL_EMBED_CSS } from "../status/render-status-tab.js";
+import {
+  handleConfigSetMessage,
+  handleConfigUnsetMessage,
+  pushConfigListToWebview
+} from "../config/config-host.js";
+import { CONFIG_WEBVIEW_STYLES, buildConfigWebviewBootstrapScript } from "../config/config-webview-client.js";
 import { WC_BASE_CSS } from "../shared/wc-base-css.js";
 import { GUIDANCE_PANEL_WEBVIEW_CSS } from "../shared/guidance-panel-webview-css.js";
 import {
@@ -334,6 +340,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     };
     logDashboard("resolveWebviewView: wiring handlers");
     webview.onDidReceiveMessage(async (msg) => {
+      if (await this.handleConfigWebviewMessage(webview, msg as Record<string, unknown>)) {
+        return;
+      }
       if (msg?.type === "refresh") {
         await this.pushUpdate();
       }
@@ -2311,9 +2320,66 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       } else {
         await webview.postMessage({ type: "wcReplaceRoot", html: rootInner });
       }
+      void this.refreshDashboardConfigTab(webview);
     } catch (e) {
       logDashboard(`dashboard push failed: ${e instanceof Error ? e.message : String(e)}`);
     }
+  }
+
+  /** Keep dashboard Config tab list in sync after summary refresh (debounced via pushUpdate). */
+  private async refreshDashboardConfigTab(webview: vscode.Webview): Promise<void> {
+    try {
+      await webview.postMessage({ type: "poke" });
+    } catch {
+      /* webview may be disposed */
+    }
+  }
+
+  private async handleConfigWebviewMessage(
+    webview: vscode.Webview,
+    msg: Record<string, unknown>
+  ): Promise<boolean> {
+    if (msg?.type === "load") {
+      await pushConfigListToWebview(this.client, webview, Boolean(msg.includeAll));
+      return true;
+    }
+    if (msg?.type === "explain" && typeof msg.key === "string") {
+      const r = await this.client.run("explain-config", { path: msg.key.trim() });
+      await webview.postMessage({ type: "explainResult", payload: r });
+      return true;
+    }
+    if (msg?.type === "validate") {
+      const r = await this.client.config(["validate"]);
+      await webview.postMessage({
+        type: "validateResult",
+        payload: { code: r.code, text: r.stdout + (r.stderr ? "\n" + r.stderr : "") }
+      });
+      return true;
+    }
+    if (msg?.type === "reloadWindow") {
+      await vscode.commands.executeCommand("workbench.action.reloadWindow");
+      return true;
+    }
+    if (msg?.type === "set" && typeof msg.key === "string" && typeof msg.value === "string") {
+      const includeAll = Boolean(msg.reloadIncludeAll);
+      const scope = msg.scope === "user" ? "user" : "project";
+      await handleConfigSetMessage(
+        this.client,
+        webview,
+        msg.key.trim(),
+        msg.value,
+        scope,
+        includeAll
+      );
+      return true;
+    }
+    if (msg?.type === "unset" && typeof msg.key === "string") {
+      const includeAll = Boolean(msg.reloadIncludeAll);
+      const scope = msg.scope === "user" ? "user" : "project";
+      await handleConfigUnsetMessage(this.client, webview, msg.key.trim(), scope, includeAll);
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -2522,6 +2588,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (isActive) b.classList.add('wc-tab-active');
       else b.classList.remove('wc-tab-active');
     });
+    if (tab === 'config' && window.wcConfigTab) {
+      if (window.wcConfigTab.afterDomUpdate) window.wcConfigTab.afterDomUpdate();
+      if (window.wcConfigTab.requestLoad) window.wcConfigTab.requestLoad();
+    }
   }
 
   function syncQueueFiltersUi(root) {
@@ -3869,6 +3939,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-status-tab-embedded > .wc-status-head { padding-top: 4px; }
     /* ── CAE tab embed: gp-* / drawer rules shared with GuidancePanel (T100312) ── */
     ${GUIDANCE_PANEL_WEBVIEW_CSS}
+    ${CONFIG_WEBVIEW_STYLES}
     /* Re-assert dashboard shell (R7.1) after Guidance html/body rules — non-CAE tabs unchanged */
     html, body { margin: 0; min-height: 0; }
     body {
@@ -3888,6 +3959,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     <button type="button" id="btn" class="wc-btn wc-btn-lg wc-btn-primary dash-refresh-btn" title="Refetch dashboard-summary now. The panel also reloads when you switch back to it, when kit-owned files change, and about every 45s while visible.">Refresh</button>
   </footer>
   <script>${bootstrap}</script>
+  <script>${buildConfigWebviewBootstrapScript({ autoLoad: false })}</script>
 </body>
 </html>`;
   }
