@@ -31,6 +31,7 @@ import {
   runInstallGitHooksCommand,
   runUninstallGitHooksCommand
 } from "./git-policy-hooks-commands.js";
+import { runGetLastOutput } from "./get-last-output-command.js";
 
 /** If non-null, dispatch should return immediately (command fully handled without planning stores). */
 export async function routeTaskEngineBeforeOpenPlanningStores(
@@ -58,6 +59,9 @@ export async function routeTaskEngineBeforeOpenPlanningStores(
   }
   if (command.name === "get-workspace-status") {
     return runGetWorkspaceStatus(ctx, args as Record<string, unknown>);
+  }
+  if (command.name === "get-last-output") {
+    return runGetLastOutput(ctx, args as Record<string, unknown>);
   }
   if (command.name === "classify-kit-state") {
     return runClassifyKitState(ctx, args as Record<string, unknown>);

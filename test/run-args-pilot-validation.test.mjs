@@ -70,6 +70,20 @@ test("planning-generation-required when policy require and token omitted", () =>
   assert.equal(prelude.code, "planning-generation-required");
 });
 
+test("update-task rejects top-level metadata with remediation shape hint", () => {
+  resetPilotRunArgsValidationCache();
+  const err = validatePilotRunCommandArgs(
+    "update-task",
+    { taskId: "T100374", metadata: { issue: "x" } },
+    {}
+  );
+  assert.ok(err);
+  assert.equal(err.code, "invalid-run-args");
+  assert.match(err.message, /inside "updates"/);
+  assert.equal(err.remediation.instructionPath, "src/modules/task-engine/instructions/update-task.md");
+  assert.ok(err.remediation.expectedShape?.updates);
+});
+
 test("planning token satisfied with integer", () => {
   resetPilotRunArgsValidationCache();
   const err = validatePilotRunCommandArgs(

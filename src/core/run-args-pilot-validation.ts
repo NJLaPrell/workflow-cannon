@@ -153,6 +153,8 @@ function instructionPathForCommand(commandName: string): string {
       return CLI_REMEDIATION_INSTRUCTIONS.createTask;
     case "update-task":
       return CLI_REMEDIATION_INSTRUCTIONS.updateTask;
+    case "get-last-output":
+      return CLI_REMEDIATION_INSTRUCTIONS.getLastOutput;
     case "dashboard-summary":
       return CLI_REMEDIATION_INSTRUCTIONS.dashboardSummary;
     case "create-wishlist":
@@ -170,25 +172,97 @@ function instructionPathForCommand(commandName: string): string {
   }
 }
 
-function formatAjvFailure(commandName: string, errors: ErrorObject[] | null | undefined): Record<string, unknown> {
+const UPDATE_TASK_MUTABLE_ROOT_KEYS = new Set([
+  "title",
+  "type",
+  "priority",
+  "dependsOn",
+  "unblocks",
+  "phase",
+  "phaseKey",
+  "metadata",
+  "ownership",
+  "approach",
+  "summary",
+  "description",
+  "risk",
+  "technicalScope",
+  "acceptanceCriteria",
+  "features"
+]);
+
+function updateTaskArgsShapeHint(
+  errors: ErrorObject[] | null | undefined,
+  args: Record<string, unknown>
+): { messageSuffix: string; expectedShape?: Record<string, unknown> } {
+  const list = errors ?? [];
+  const additionalAtRoot = list
+    .filter((e) => e.keyword === "additionalProperties" && (e.instancePath ?? "") === "")
+    .map((e) => {
+      const params = e.params as { additionalProperty?: string };
+      return typeof params.additionalProperty === "string" ? params.additionalProperty : "";
+    })
+    .filter((key) => key.length > 0 && UPDATE_TASK_MUTABLE_ROOT_KEYS.has(key));
+
+  const misplacedFromArgs = [...UPDATE_TASK_MUTABLE_ROOT_KEYS].filter(
+    (key) => args[key] !== undefined && args.updates === undefined
+  );
+
+  const misplaced = [...new Set([...additionalAtRoot, ...misplacedFromArgs])];
+  if (misplaced.length === 0) {
+    return { messageSuffix: "" };
+  }
+
+  const exampleField = misplaced[0];
+  const exampleValue =
+    exampleField === "metadata"
+      ? { issue: "…", supportingReasoning: "…" }
+      : exampleField === "title"
+        ? "Updated title"
+        : "…";
+
+  return {
+    messageSuffix: ` Put ${misplaced.join(", ")} inside "updates": { … } — shallow-merge replaces the whole object for nested maps (see update-task.md).`,
+    expectedShape: {
+      taskId: typeof args.taskId === "string" ? args.taskId : "T###",
+      updates: { [exampleField]: exampleValue }
+    }
+  };
+}
+
+function formatAjvFailure(
+  commandName: string,
+  errors: ErrorObject[] | null | undefined,
+  args: Record<string, unknown> = {}
+): Record<string, unknown> {
   const list = (errors ?? []).map((e) => ({
     instancePath: e.instancePath ?? "",
     keyword: e.keyword,
     message: e.message ?? "",
     params: e.params
   }));
+  const updateTaskHint =
+    commandName === "update-task" ? updateTaskArgsShapeHint(errors, args) : { messageSuffix: "" };
+  const remediation: {
+    instructionPath: string;
+    docPath: string;
+    expectedShape?: Record<string, unknown>;
+  } = {
+    instructionPath: instructionPathForCommand(commandName),
+    docPath: CLI_REMEDIATION_DOCS.agentCliMap
+  };
+  if (updateTaskHint.expectedShape) {
+    remediation.expectedShape = updateTaskHint.expectedShape;
+  }
   return {
     ok: false,
     code: "invalid-run-args",
-    message: `Invalid JSON args for workspace-kit run ${commandName}.`,
+    message: `Invalid JSON args for workspace-kit run ${commandName}.${updateTaskHint.messageSuffix}`,
     details: {
       command: commandName,
       errors: list
     },
-    remediation: {
-      instructionPath: instructionPathForCommand(commandName),
-      docPath: CLI_REMEDIATION_DOCS.agentCliMap
-    },
+    remediation,
     discovery: cliDiscoveryEnvelope()
   };
 }
@@ -362,7 +436,7 @@ export function validatePilotRunCommandArgs(
   }
   const domainArgs = pilotArgsForSchemaValidation(args);
   if (!validate(domainArgs)) {
-    return formatAjvFailure(commandName, validate.errors);
+    return formatAjvFailure(commandName, validate.errors, domainArgs);
   }
   return null;
 }

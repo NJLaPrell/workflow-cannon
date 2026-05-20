@@ -1,0 +1,50 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "get-last-output",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "invocationId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "last": {
+        "const": true
+      }
+    },
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run get-last-output '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/get-last-output.md",
+  "moduleId": "task-engine",
+  "description": "Read a prior wk run invocation response from kit_run_log by invocationId or last completed entry.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  },
+  "invocationId": "868a5277-778f-46d8-9a6e-79cbfefdbc58"
+}

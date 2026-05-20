@@ -3,20 +3,14 @@
   "code": "run-args-schema",
   "command": "derive-publish-artifacts",
   "schema": {
-    "type": "object",
-    "properties": {
-      "version": { "type": "string" },
-      "packageName": { "type": "string" },
-      "distTag": { "type": "string" }
-    },
-    "additionalProperties": true
+    "type": "object"
   },
   "schemaSource": "pilot-run-args-snapshot",
-  "sampleArgs": { "version": "0.97.0" },
+  "sampleArgs": {},
   "examples": [
     {
       "description": "Minimal argv example",
-      "argv": "workspace-kit run derive-publish-artifacts '{\"version\":\"0.97.0\"}'"
+      "argv": "workspace-kit run derive-publish-artifacts '{}'"
     }
   ],
   "instructionPath": "src/modules/task-engine/instructions/derive-publish-artifacts.md",
@@ -32,7 +26,15 @@
     "expectedPlanningGeneration": "not required by CLI prelude"
   },
   "idempotency": {
-    "class": "read",
-    "safeToRetry": true
-  }
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  },
+  "invocationId": "aa748742-d007-442a-a6de-dc88ca361848"
 }

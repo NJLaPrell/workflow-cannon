@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceSchemaPackageVersion": "0.98.0",
+  "sourceSchemaPackageVersion": "0.99.0",
   "pilotCommands": [
     "accept-improvement",
     "add-dependency",
@@ -38,6 +38,7 @@
     "get-blocked-summary",
     "get-dependency-graph",
     "get-kit-persistence-map",
+    "get-last-output",
     "get-module-state",
     "get-next-actions",
     "get-phase-context",
@@ -67,6 +68,7 @@
     "phase-delivery-preflight",
     "phase-focus-dashboard",
     "phase-status",
+    "propose-release-version",
     "propose-tasks-from-phase-notes",
     "queue-git-alignment",
     "queue-health",
@@ -773,6 +775,19 @@
       "type": "object",
       "additionalProperties": false
     },
+    "get-last-output": {
+      "type": "object",
+      "properties": {
+        "invocationId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "last": {
+          "const": true
+        }
+      },
+      "additionalProperties": true
+    },
     "get-module-state": {
       "type": "object",
       "additionalProperties": true
@@ -1211,6 +1226,17 @@
         },
         "includePhaseJournalSummary": {
           "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+    "propose-release-version": {
+      "type": "object",
+      "properties": {
+        "phaseKey": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
         }
       },
       "additionalProperties": true
@@ -1732,6 +1758,9 @@
           "type": "string",
           "minLength": 1
         },
+        "policyApproval": {
+          "type": "object"
+        },
         "expectedPlanningGeneration": {
           "oneOf": [
             {
@@ -1751,7 +1780,7 @@
           "type": "object"
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "update-wishlist": {
       "type": "object",

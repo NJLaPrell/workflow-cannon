@@ -66,13 +66,13 @@ describe("CAE evaluateActivationBundle (T860)", () => {
     assert.deepEqual(a.trace, b.trace);
   });
 
-  it("phase 79 Phase Journal activations attach cae.runbook.phase-journal-operator for journal commands", () => {
+  it("phase-journal activations attach cae.runbook.phase-journal-operator regardless of phaseKey", () => {
     const ctx = {
       schemaVersion: 1,
       task: {
         taskId: "T100041",
         status: "in_progress",
-        phaseKey: "79"
+        phaseKey: "104"
       },
       command: {
         name: "run-transition",
@@ -80,8 +80,8 @@ describe("CAE evaluateActivationBundle (T860)", () => {
         argvSummary: '{"taskId":"T100041","action":"complete"}'
       },
       workspace: {
-        currentKitPhase: "79",
-        nextKitPhase: "80",
+        currentKitPhase: "104",
+        nextKitPhase: "105",
         workspaceRootFingerprint: "sha256:testphasejournal"
       },
       governance: {
@@ -119,6 +119,40 @@ describe("CAE evaluateActivationBundle (T860)", () => {
     assert.ok(
       doArts3.includes(journalId),
       "expected journal artifact in do bundle for add-phase-note"
+    );
+  });
+
+  it("agentFailureSignal activation surfaces improvement-discovery when recentToolFailures threshold met", () => {
+    const ctx = {
+      schemaVersion: 1,
+      task: { taskId: "T100307", status: "in_progress", phaseKey: "104" },
+      command: {
+        name: "list-tasks",
+        moduleId: "task-engine",
+        argvSummary: "{}"
+      },
+      workspace: {
+        currentKitPhase: "104",
+        nextKitPhase: "105",
+        workspaceRootFingerprint: "sha256:testagentfailure"
+      },
+      governance: {
+        policyApprovalRequired: false,
+        approvalTierHint: "none",
+        policySurface: "run-json"
+      },
+      queue: { readyQueueDepth: 0, suggestedNextTaskId: null },
+      mapSignals: null,
+      agentSignals: { recentToolFailures: 2, lastErrorCode: "invalid-run-args" }
+    };
+    const regRes = loadCaeRegistry(root);
+    assert.equal(regRes.ok, true);
+    const { bundle } = evaluateActivationBundle(ctx, regRes.value, { evalMode: "live" });
+    const reviewArts =
+      bundle.families.review?.flatMap((row) => row.artifactIds ?? []) ?? [];
+    assert.ok(
+      reviewArts.includes("cae.playbook.improvement-discovery"),
+      "expected improvement-discovery when agentFailureSignal threshold met"
     );
   });
 

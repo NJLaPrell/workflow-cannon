@@ -8,6 +8,23 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.99.0] - 2026-05-19
+
+Phase 104 — **CAE signals, operator CLI, release semver** (agent failure context, phase-journal activations, last-run output, semver proposal at closeout).
+
+### Added
+
+- `get-last-output` — read latest `kit_run_log` output for a command (operator/agent forensics).
+- `propose-release-version` — semver bump recommendation from completed phase tasks (R200-semver).
+- CAE `agentSignals` on evaluation context and `agentFailureSignal` activation conditions.
+- Activation `cae.activation.review.agent-failure-improvement-discovery`.
+
+### Changed
+
+- Phase-journal CAE activations no longer hard-scoped to `phaseKey: 79`.
+- `update-task` run-args schema uses `additionalProperties: false` with remediation hints on validation errors.
+- Phase closeout playbook documents `propose-release-version` before tagging.
+
 ## [0.98.0] - 2026-05-19
 
 Phase 103 — **Release, quality & consumers** (delivery evidence harvest, release readouts, tiered CI, release diff allowlist).

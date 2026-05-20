@@ -11,7 +11,7 @@
       "const": 1
     },
     "packageVersion": {
-      "const": "0.98.0",
+      "const": "0.99.0",
       "description": "Must match package.json version."
     },
     "moduleId": {
@@ -44,6 +44,7 @@
         "remove-dependency",
         "get-dependency-graph",
         "get-kit-persistence-map",
+        "get-last-output",
         "get-task-history",
         "get-recent-task-activity",
         "get-task-summary",
@@ -98,6 +99,7 @@
         "task-persistence-readiness",
         "persist-planning-execution-drafts",
         "propose-tasks-from-phase-notes",
+        "propose-release-version",
         "apply-task-batch",
         "resolve-maintainer-delivery-policy",
         "resolve-task-intake-policy",
@@ -146,6 +148,7 @@
         "remove-dependency": { "$ref": "#/$defs/contractDependencyMutation" },
         "get-dependency-graph": { "$ref": "#/$defs/contractDependencyGraph" },
         "get-kit-persistence-map": { "$ref": "#/$defs/contractKitPersistenceMap" },
+        "get-last-output": { "$ref": "#/$defs/contractGetLastOutput" },
         "get-task-history": { "$ref": "#/$defs/contractTaskHistory" },
         "get-recent-task-activity": { "$ref": "#/$defs/contractRecentTaskActivity" },
         "get-task-summary": { "$ref": "#/$defs/contractTaskSummary" },
@@ -203,6 +206,7 @@
         "task-persistence-readiness": { "$ref": "#/$defs/contractTaskPersistenceReadiness" },
         "persist-planning-execution-drafts": { "$ref": "#/$defs/contractPersistPlanningExecutionDrafts" },
         "propose-tasks-from-phase-notes": { "$ref": "#/$defs/contractBase" },
+        "propose-release-version": { "$ref": "#/$defs/contractProposeReleaseVersion" },
         "apply-task-batch": { "$ref": "#/$defs/contractApplyTaskBatch" },
         "resolve-maintainer-delivery-policy": { "$ref": "#/$defs/contractBase" },
         "resolve-task-intake-policy": { "$ref": "#/$defs/contractBase" },
@@ -485,7 +489,7 @@
             "args": {
               "type": "object",
               "required": ["taskId", "updates"],
-              "additionalProperties": true,
+              "additionalProperties": false,
               "properties": {
                 "taskId": {
                   "type": "string",
@@ -494,6 +498,7 @@
                 "updates": { "type": "object" },
                 "dryRun": { "type": "boolean" },
                 "clientMutationId": { "type": "string", "minLength": 1 },
+                "policyApproval": { "type": "object" },
                 "expectedPlanningGeneration": {
                   "oneOf": [
                     { "type": "integer", "minimum": 0 },
@@ -756,6 +761,35 @@
             "responseData": {
               "type": "object",
               "required": ["kitSqliteUserVersion"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractProposeReleaseVersion": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "phaseKey": { "type": "string", "minLength": 1, "maxLength": 32 }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": [
+                "schemaVersion",
+                "currentVersion",
+                "recommended",
+                "rationale",
+                "breakingTaskIds",
+                "bump",
+                "consideredTaskCount"
+              ],
               "additionalProperties": true
             }
           }
@@ -1552,6 +1586,37 @@
             "responseData": {
               "type": "object",
               "required": ["schemaVersion", "unifiedSqliteRelativePath", "runtime"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractGetLastOutput": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "invocationId": { "type": "string", "minLength": 1 },
+                "last": { "const": true }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": [
+                "invocationId",
+                "command",
+                "startedAt",
+                "finishedAt",
+                "ok",
+                "code",
+                "args",
+                "response"
+              ],
               "additionalProperties": true
             }
           }

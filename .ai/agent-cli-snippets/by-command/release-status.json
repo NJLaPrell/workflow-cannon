@@ -38,7 +38,15 @@
     "expectedPlanningGeneration": "not required by CLI prelude"
   },
   "idempotency": {
-    "class": "read",
-    "safeToRetry": true
-  }
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  },
+  "invocationId": "a60ae219-a663-4786-a61e-df437f4bed25"
 }

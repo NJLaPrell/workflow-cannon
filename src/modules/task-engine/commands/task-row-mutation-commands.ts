@@ -890,11 +890,43 @@ export async function runTaskRowMutationCommands(
           ? ctx.resolvedActor
           : undefined;
     if (!taskId || !updates) {
+      const misplaced = [
+        "metadata",
+        "title",
+        "summary",
+        "description",
+        "priority",
+        "phase",
+        "phaseKey",
+        "approach",
+        "technicalScope",
+        "acceptanceCriteria",
+        "features",
+        "dependsOn",
+        "unblocks",
+        "risk",
+        "ownership",
+        "type"
+      ].filter((key) => args[key] !== undefined);
+      const hint =
+        misplaced.length > 0
+          ? ` Put ${misplaced.join(", ")} inside "updates": { … } (see update-task.md).`
+          : "";
       return {
         ok: false,
         code: "invalid-task-schema",
-        message: "update-task requires taskId and updates object",
-        remediation: { instructionPath: CLI_REMEDIATION_INSTRUCTIONS.updateTask }
+        message: `update-task requires taskId and updates object.${hint}`,
+        remediation: {
+          instructionPath: CLI_REMEDIATION_INSTRUCTIONS.updateTask,
+          ...(misplaced.length > 0
+            ? {
+                expectedShape: {
+                  taskId,
+                  updates: { [misplaced[0]]: args[misplaced[0]] }
+                }
+              }
+            : {})
+        }
       };
     }
     const clientMutationId = readIdempotencyValue(args);

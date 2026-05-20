@@ -28,6 +28,10 @@ CAE evaluation MUST receive **typed, bounded** slices — no repo-wide JSON dump
 | `queue.readyQueueDepth` | integer | `list-tasks` ready count or dashboard | yes | Bounded integer. |
 | `queue.suggestedNextTaskId` | `T###` \| null | `get-next-actions` | no | — |
 | `mapSignals` | `null` | Reserved | no | v1 MUST be **`null`**; forward contract **`.ai/cae/future-cognitive-maps.md`** (**`T856`**). |
+| `agentSignals.recentToolFailures` | integer ≥0 | Session-local counter (future runtime) | no | Additive v1; optional on context. |
+| `agentSignals.lastErrorCode` | string ≤128 | Last CLI `code` | no | No stack traces or secrets. |
+| `agentSignals.consecutiveRetries` | integer ≥0 | Session-local counter | no | — |
+| `agentSignals.lastFailureKind` | string ≤64 | Coarse category | no | e.g. `tool`, `policy`, `network`. |
 
 ## Canonical serialization for hashing (`bundleId` / `traceId`)
 

@@ -221,6 +221,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "propose-release-version",
+    "file": "propose-release-version.md",
+    "description": "Recommend next semver from package.json and completed phase tasks (metadata.changeKind or type heuristics).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "convert-phase-note-to-task",
     "file": "convert-phase-note-to-task.md",
     "description": "Create a proposed execution task from a convertible phase note and mark the note converted atomically with task persist.",
@@ -883,6 +891,14 @@
     "name": "get-kit-persistence-map",
     "file": "get-kit-persistence-map.md",
     "description": "Read-only JSON map of unified SQLite paths, planning table/columns, and legacy task JSON import paths for agents.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "get-last-output",
+    "file": "get-last-output.md",
+    "description": "Read a prior wk run invocation response from kit_run_log by invocationId or last completed entry.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },
