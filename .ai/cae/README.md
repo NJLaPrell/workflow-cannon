@@ -53,7 +53,3 @@ Effective **`kit.cae.enabled`** and shadow/enforcement flags are defined with th
 ## Debug CAE (flowchart)
 
 Start with **`.ai/cae/operator-golden-path.md`** for the read-only product smoke path. Use **`.ai/cae/guidance-authoring-operator.md`** for the governed Guidance authoring MVP. Use **`.ai/runbooks/cae-debug.md`** when either flow returns a structured failure.
-
-## Related stubs
-
-- **`tasks/cae/artifacts/operator-doc-outline.md`** — historical outline; this README supersedes it for navigation.

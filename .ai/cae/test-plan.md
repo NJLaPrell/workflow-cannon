@@ -68,4 +68,4 @@ Golden vector rows in § Golden vector catalog remain **Planned** until dedicate
 ## Cross-references
 
 - **`.ai/cae/cli-read-only.md`**, **`.ai/cae/shadow-mode.md`**, **`.ai/cae/enforcement-lane.md`**
-- **`tasks/cae/specs/T869.md`**
+- **`test/cae-golden-smoke.test.mjs`** and related **`test/cae-*.test.mjs`** coverage

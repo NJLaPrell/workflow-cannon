@@ -67,5 +67,5 @@ When CAE persistence is **enabled** (post-**`T867`**):
 - **`.ai/adrs/ADR-context-activation-engine-architecture-v1.md`**
 - **`.ai/cae/acknowledgement-model.md`** (**`T844`**)
 - **`.ai/cae/precedence-merge.md`** (**`T843`**)
-- **`tasks/cae/specs/T846.md`**, **`tasks/cae/specs/T867.md`**
+- **`.ai/cae/trace-and-explain.md`** (**`T846`**), **`.ai/cae/runtime-integration.md`** + kit SQLite migrations (**`T867`**)
 - **`src/core/state/workspace-kit-sqlite.ts`** — **`user_version`** migration ladder

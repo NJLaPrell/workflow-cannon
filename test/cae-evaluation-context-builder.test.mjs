@@ -35,7 +35,7 @@ describe("CAE evaluation context builder (T859)", () => {
         title: "Evaluation context contract v1",
         tags: ["cae"],
         metadata: {
-          specPath: "tasks/cae/specs/T842.md",
+          specPath: ".ai/cae/evaluation-context.md",
           risk: "medium"
         }
       },

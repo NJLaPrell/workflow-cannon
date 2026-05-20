@@ -2,7 +2,7 @@
 
 **Phase:** Task engine bucket **Phase 70** (`phaseKey` **`70`**) — see `src/modules/documentation/data/roadmap-phase-sections.md` (**Phase 70 - CAE (IN FLIGHT)**).
 
-This file is the **shared north star** for all CAE tasks under `tasks/cae/specs/`. Implementation agents should read it before executing any single CAE task.
+This file is the **shared north star** for CAE program work. Implementation agents should read **`.ai/cae/README.md`** and the relevant **`.ai/cae/`** contract docs before changing CAE behavior; use the task engine for row-level status.
 
 ## Objective
 

@@ -8,7 +8,7 @@ First tranche of **`artifactId`** → repo file mappings under **`.ai/cae/regist
 
 - Most **`docs/maintainers/**`** twins — human-first; agents use **`.ai/`** per routing rules unless an ADR explicitly dual-maps.
 - **`src/modules/**`** instruction bodies — may be added later as **`playbook`** or **`checklist`** rows when stable ids are agreed.
-- **`tasks/cae/specs/**`** — task specs are planning artifacts, not default activation targets.
+- **Per-task spec files** — removed after Phase 70 closeout; use **`.ai/cae/`** and **`schemas/cae/`** for contracts.
 
 ## Owners
 
