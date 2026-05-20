@@ -35,5 +35,4 @@ Implementers: call **`insertCaeRegistryMutationAudit`** after successful mutatin
 ## Cross-references
 
 - **`.ai/cae/mutation-governance.md`** — product posture (maintainers, PR workflow, threat model).
-- **`CAE_PLAN.md`** Epic 4–5 — scope source.
-- **`.ai/cae/phase-70-registry-task-tracker.md`** — task IDs.
+- **Task engine** — `pnpm exec wk run list-tasks '{"phaseKey":"70"}'` for Phase 70 CAE row IDs and terminal status.

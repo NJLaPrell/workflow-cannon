@@ -99,10 +99,6 @@
       "output": "docs/maintainers/runbooks/cursor-transcript-automation.md"
     },
     {
-      "source": ".ai/runbooks/dashboard-cae-guidance-css-epic.md",
-      "output": "docs/maintainers/runbooks/dashboard-cae-guidance-css-epic.md"
-    },
-    {
       "source": ".ai/runbooks/documentation-governance-checks.md",
       "output": "docs/maintainers/runbooks/documentation-governance-checks.md"
     },
