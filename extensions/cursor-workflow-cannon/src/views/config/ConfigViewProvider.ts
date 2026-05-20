@@ -234,6 +234,8 @@ export class ConfigViewProvider implements vscode.WebviewViewProvider {
     .cfg-status-warn { background: rgba(200, 150, 0, 0.2); }
     .cfg-status-err { background: rgba(200, 60, 60, 0.2); }
     .cfg-muted { opacity: 0.8; margin: 8px 0; }
+    .cfg-sections { display: flex; flex-direction: column; gap: 16px; }
+    .cfg-section-heading { font-size: 13px; font-weight: 600; margin: 0 0 8px; opacity: 0.95; }
     .cfg-rows { display: flex; flex-direction: column; gap: 4px; }
     .cfg-details { border: 1px solid var(--vscode-widget-border); border-radius: 2px; background: var(--vscode-editor-background); }
     .cfg-summary { cursor: pointer; padding: 6px 8px; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
