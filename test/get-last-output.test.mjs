@@ -9,7 +9,7 @@ import { appendRunLogRow } from "../dist/core/state/kit-run-log-sqlite.js";
 import {
   readLatestRunLogRow,
   readRunLogByInvocationId
-} from "../dist/core/state/kit-run-log-read.js";
+} from "../dist/core/state/kit-run-log-sqlite.js";
 import { prepareKitSqliteDatabase } from "../dist/core/state/kit-sqlite/planning-sqlite-kernel.js";
 import { runGetLastOutput } from "../dist/modules/task-engine/commands/get-last-output-command.js";
 

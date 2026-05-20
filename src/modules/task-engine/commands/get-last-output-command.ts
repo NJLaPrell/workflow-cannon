@@ -4,7 +4,7 @@ import {
   isRunLogTableAvailable,
   readLatestRunLogRow,
   readRunLogByInvocationId
-} from "../../../core/state/kit-run-log-read.js";
+} from "../../../core/state/kit-run-log-sqlite.js";
 
 export function runGetLastOutput(
   ctx: ModuleLifecycleContext,
