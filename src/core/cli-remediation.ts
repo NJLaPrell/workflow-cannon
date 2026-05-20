@@ -28,6 +28,7 @@ export const CLI_REMEDIATION_INSTRUCTIONS = {
   improvementWorkflowSummary: "src/modules/task-engine/instructions/improvement-workflow-summary.md",
   agentMutationPlan: "src/modules/task-engine/instructions/agent-mutation-plan.md",
   getWorkspaceStatus: "src/modules/task-engine/instructions/get-workspace-status.md",
+  getLastOutput: "src/modules/task-engine/instructions/get-last-output.md",
 } as const;
 
 /** Primary agent doc paths (`.ai/`). Use as `remediation.docPath` for routine agent work. */

@@ -44,6 +44,7 @@
         "remove-dependency",
         "get-dependency-graph",
         "get-kit-persistence-map",
+        "get-last-output",
         "get-task-history",
         "get-recent-task-activity",
         "get-task-summary",
@@ -146,6 +147,7 @@
         "remove-dependency": { "$ref": "#/$defs/contractDependencyMutation" },
         "get-dependency-graph": { "$ref": "#/$defs/contractDependencyGraph" },
         "get-kit-persistence-map": { "$ref": "#/$defs/contractKitPersistenceMap" },
+        "get-last-output": { "$ref": "#/$defs/contractGetLastOutput" },
         "get-task-history": { "$ref": "#/$defs/contractTaskHistory" },
         "get-recent-task-activity": { "$ref": "#/$defs/contractRecentTaskActivity" },
         "get-task-summary": { "$ref": "#/$defs/contractTaskSummary" },
@@ -1552,6 +1554,37 @@
             "responseData": {
               "type": "object",
               "required": ["schemaVersion", "unifiedSqliteRelativePath", "runtime"],
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractGetLastOutput": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "invocationId": { "type": "string", "minLength": 1 },
+                "last": { "const": true }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": [
+                "invocationId",
+                "command",
+                "startedAt",
+                "finishedAt",
+                "ok",
+                "code",
+                "args",
+                "response"
+              ],
               "additionalProperties": true
             }
           }
