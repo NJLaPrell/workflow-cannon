@@ -104,6 +104,20 @@ test("renderActiveFocusHtml escapes HTML then applies bold", () => {
   assert.match(html, /&lt;script&gt;/);
 });
 
+test("renderDashboardRootInnerHtml config tab embeds config panel shell not activity-bar stub", () => {
+  const fixturePath = path.join(__dirname, "../docs/fixtures/dashboard-summary.example.json");
+  const fixture = JSON.parse(readFileSync(fixturePath, "utf8"));
+  const html = renderDashboardRootInnerHtml(fixture);
+  const configPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="config"');
+  const caePanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="cae"');
+  assert.ok(configPanelIdx >= 0);
+  const configPanel = html.slice(configPanelIdx, caePanelIdx > configPanelIdx ? caePanelIdx : undefined);
+  assert.match(configPanel, /id="config-list-root"/);
+  assert.match(configPanel, /id="cfg-refresh"/);
+  assert.match(configPanel, /wc-config-panel/);
+  assert.doesNotMatch(configPanel, /activity bar/i);
+});
+
 test("renderDashboardRootInnerHtml shows error JSON when ok is false", () => {
   const html = renderDashboardRootInnerHtml({
     ok: false,
@@ -132,6 +146,11 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   const configPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="config"');
   const caePanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="cae"');
   assert.ok(overviewPanelIdx >= 0 && taskEnginePanelIdx > overviewPanelIdx && statusPanelIdx > taskEnginePanelIdx);
+  assert.ok(configPanelIdx > statusPanelIdx, "config tab panel follows status");
+  const configPanel = html.slice(configPanelIdx, caePanelIdx > configPanelIdx ? caePanelIdx : undefined);
+  assert.match(configPanel, /id="config-list-root"/);
+  assert.match(configPanel, /id="cfg-refresh"/);
+  assert.doesNotMatch(configPanel, /activity bar/i);
   const overviewPanel = html.slice(overviewPanelIdx, taskEnginePanelIdx);
   const statusPanel = html.slice(statusPanelIdx, configPanelIdx);
   const caePanel = html.slice(caePanelIdx);
