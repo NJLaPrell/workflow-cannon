@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-19T21:56:44.100Z",
+  "generatedAt": "2026-05-20T01:03:46.255Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -540,6 +540,11 @@
     {
       "name": "get-kit-persistence-map",
       "path": ".ai/agent-cli-snippets/by-command/get-kit-persistence-map.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "get-last-output",
+      "path": ".ai/agent-cli-snippets/by-command/get-last-output.json",
       "moduleId": "task-engine"
     },
     {

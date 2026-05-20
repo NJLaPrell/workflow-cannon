@@ -1,23 +1,31 @@
 {
   "ok": true,
   "code": "run-args-schema",
-  "command": "build-plan",
+  "command": "get-last-output",
   "schema": {
     "type": "object",
-    "additionalProperties": true,
-    "description": "Permissive fallback args schema for 'build-plan'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+    "properties": {
+      "invocationId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "last": {
+        "const": true
+      }
+    },
+    "additionalProperties": true
   },
-  "schemaSource": "manifest-permissive-fallback",
+  "schemaSource": "pilot-run-args-snapshot",
   "sampleArgs": {},
   "examples": [
     {
       "description": "Minimal argv example",
-      "argv": "workspace-kit run build-plan '{}'"
+      "argv": "workspace-kit run get-last-output '{}'"
     }
   ],
-  "instructionPath": "src/modules/planning/instructions/build-plan.md",
-  "moduleId": "planning",
-  "description": "Generate a dependency-aware execution plan.",
+  "instructionPath": "src/modules/task-engine/instructions/get-last-output.md",
+  "moduleId": "task-engine",
+  "description": "Read a prior wk run invocation response from kit_run_log by invocationId or last completed entry.",
   "policy": {
     "sensitivity": "non-sensitive",
     "operationId": null,
@@ -38,5 +46,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "12b6ac63-cdba-4681-aa5d-03d8c2059d1b"
+  "invocationId": "1cac80a0-cc94-4821-bc63-12d53a360f71"
 }

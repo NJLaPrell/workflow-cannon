@@ -53,5 +53,6 @@
   "discovery": {
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
-  }
+  },
+  "invocationId": "544b2a79-1397-4bcc-bd2d-2c03c2711dd5"
 }
