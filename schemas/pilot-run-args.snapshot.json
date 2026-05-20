@@ -1746,6 +1746,9 @@
           "type": "string",
           "minLength": 1
         },
+        "policyApproval": {
+          "type": "object"
+        },
         "expectedPlanningGeneration": {
           "oneOf": [
             {
@@ -1765,7 +1768,7 @@
           "type": "object"
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "update-wishlist": {
       "type": "object",
