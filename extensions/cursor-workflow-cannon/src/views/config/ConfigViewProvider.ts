@@ -1,5 +1,9 @@
 import * as vscode from "vscode";
 import type { CommandClient } from "../../runtime/command-client.js";
+import {
+  configMutationOutcomeToWebviewPayload,
+  handleConfigMutationResult
+} from "./config-mutation-result.js";
 import { loadConfigKeyRows } from "./load-config-key-rows.js";
 import { renderConfigListInnerHtml } from "./render-config.js";
 import { WC_BASE_CSS } from "../shared/wc-base-css.js";
@@ -43,29 +47,41 @@ export class ConfigViewProvider implements vscode.WebviewViewProvider {
           payload: { code: r.code, text: r.stdout + (r.stderr ? "\n" + r.stderr : "") }
         });
       }
+      if (msg?.type === "reloadWindow") {
+        await vscode.commands.executeCommand("workbench.action.reloadWindow");
+        return;
+      }
       if (msg?.type === "set" && typeof msg.key === "string" && typeof msg.value === "string") {
+        const includeAll = Boolean(msg.reloadIncludeAll);
+        const key = msg.key.trim();
         const scope = msg.scope === "user" ? "user" : "project";
-        const r = await this.client.config(["set", "--scope", scope, msg.key.trim(), msg.value]);
-        if (r.code === 0) {
-          await this.pushConfigList(webview, Boolean(msg.reloadIncludeAll));
-        } else {
-          await webview.postMessage({
-            type: "setResult",
-            payload: { code: r.code, text: r.stdout + (r.stderr ? "\n" + r.stderr : "") }
-          });
+        const r = await this.client.config(["set", "--scope", scope, key, msg.value]);
+        const { rows } = await loadConfigKeyRows(this.client, { includeAll });
+        const row = rows.find((x) => x.key === key) ?? null;
+        const outcome = handleConfigMutationResult(row, r, "set");
+        if (outcome.statusKind === "ok") {
+          await this.pushConfigList(webview, includeAll);
         }
+        await webview.postMessage({
+          type: "configMutationResult",
+          payload: configMutationOutcomeToWebviewPayload(outcome, r.code)
+        });
       }
       if (msg?.type === "unset" && typeof msg.key === "string") {
+        const includeAll = Boolean(msg.reloadIncludeAll);
+        const key = msg.key.trim();
         const scope = msg.scope === "user" ? "user" : "project";
-        const r = await this.client.config(["unset", "--scope", scope, msg.key.trim()]);
-        if (r.code === 0) {
-          await this.pushConfigList(webview, Boolean(msg.reloadIncludeAll));
-        } else {
-          await webview.postMessage({
-            type: "unsetResult",
-            payload: { code: r.code, text: r.stdout + (r.stderr ? "\n" + r.stderr : "") }
-          });
+        const r = await this.client.config(["unset", "--scope", scope, key]);
+        const { rows } = await loadConfigKeyRows(this.client, { includeAll });
+        const row = rows.find((x) => x.key === key) ?? null;
+        const outcome = handleConfigMutationResult(row, r, "unset");
+        if (outcome.statusKind === "ok") {
+          await this.pushConfigList(webview, includeAll);
         }
+        await webview.postMessage({
+          type: "configMutationResult",
+          payload: configMutationOutcomeToWebviewPayload(outcome, r.code)
+        });
       }
     });
   }
@@ -97,6 +113,7 @@ export class ConfigViewProvider implements vscode.WebviewViewProvider {
   var vscode = acquireVsCodeApi();
   var listRoot = document.getElementById('config-list-root');
   var statusEl = document.getElementById('cfg-status');
+  var restartHost = document.getElementById('cfg-restart-host');
   var maintainerEl = document.getElementById('cfg-maintainer');
   function showStatus(kind, text) {
     if (!statusEl) return;
@@ -198,6 +215,9 @@ export class ConfigViewProvider implements vscode.WebviewViewProvider {
           reloadIncludeAll: currentIncludeAll()
         });
       }
+      if (act === 'config-reload-window') {
+        vscode.postMessage({ type: 'reloadWindow' });
+      }
     });
   }
   window.addEventListener('message', function(ev) {
@@ -236,9 +256,20 @@ export class ConfigViewProvider implements vscode.WebviewViewProvider {
       showStatus(m.payload.code === 0 ? 'ok' : 'err', 'validate exit ' + m.payload.code + '\\n' + m.payload.text);
       return;
     }
+    if (m && m.type === 'configMutationResult') {
+      var p = m.payload || {};
+      showStatus(p.statusKind || (p.code === 0 ? 'ok' : 'err'), p.statusText || '');
+      if (restartHost) {
+        restartHost.innerHTML = p.restartBannerHtml || '';
+      }
+      if (p.restartHint && p.restartHint.key) {
+        vscode.postMessage({ type: 'configRestartHint', key: p.restartHint.key, label: p.restartHint.label || p.restartHint.key });
+      }
+      return;
+    }
     if ((m && m.type === 'setResult') || (m && m.type === 'unsetResult')) {
-      var p = m.payload;
-      showStatus(p.code === 0 ? 'ok' : 'err', 'exit ' + p.code + '\\n' + p.text);
+      var p2 = m.payload;
+      showStatus(p2.code === 0 ? 'ok' : 'err', 'exit ' + p2.code + '\\n' + p2.text);
     }
   });
   requestLoad();
@@ -283,6 +314,8 @@ export class ConfigViewProvider implements vscode.WebviewViewProvider {
     .cfg-value-select { max-width: 420px; width: 100%; }
     .cfg-toggle-wrap { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-weight: normal; }
     .cfg-toggle { margin: 0; }
+    .cfg-restart-banner { padding: 8px 10px; margin-bottom: 8px; border-radius: 2px; background: var(--vscode-inputValidation-infoBackground); border: 1px solid var(--vscode-inputValidation-infoBorder); }
+    .cfg-restart-banner p { margin: 0 0 8px; }
     .cfg-select { margin-top: 4px; padding: 4px; max-width: 200px; background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-widget-border); }
     .cfg-actions { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
     .cfg-row-btns { margin-top: 6px; }
@@ -298,6 +331,7 @@ export class ConfigViewProvider implements vscode.WebviewViewProvider {
     <label><input type="checkbox" id="cfg-maintainer" /> Maintainer keys</label>
   </div>
   <div id="cfg-status" class="cfg-status cfg-status-info" role="status"></div>
+  <div id="cfg-restart-host"></div>
   <div id="config-list-root"></div>
   <p class="cfg-footnote"><strong>Mutations</strong> run <code>workspace-kit config set|unset</code>. Sensitive keys and keys that require approval need <code>WORKSPACE_KIT_POLICY_APPROVAL</code> in the environment for the kit process (see <code>.ai/POLICY-APPROVAL.md</code> in the repo).</p>
   <script>${bootstrap}</script>
