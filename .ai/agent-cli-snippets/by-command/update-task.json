@@ -23,6 +23,9 @@
         "type": "string",
         "minLength": 1
       },
+      "policyApproval": {
+        "type": "object"
+      },
       "expectedPlanningGeneration": {
         "oneOf": [
           {
@@ -42,7 +45,7 @@
         "type": "object"
       }
     },
-    "additionalProperties": true
+    "additionalProperties": false
   },
   "schemaSource": "pilot-run-args-snapshot",
   "sampleArgs": {
@@ -78,5 +81,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "2eb0a5c2-ac07-4e6b-823d-0643c12cb33a"
+  "invocationId": "20865645-848b-47c8-b3ae-30a1828fb445"
 }

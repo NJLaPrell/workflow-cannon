@@ -1,23 +1,29 @@
 {
   "ok": true,
   "code": "run-args-schema",
-  "command": "query-lineage",
+  "command": "propose-release-version",
   "schema": {
     "type": "object",
-    "additionalProperties": true,
-    "description": "Permissive fallback args schema for 'query-lineage'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+    "properties": {
+      "phaseKey": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 32
+      }
+    },
+    "additionalProperties": true
   },
-  "schemaSource": "manifest-permissive-fallback",
+  "schemaSource": "pilot-run-args-snapshot",
   "sampleArgs": {},
   "examples": [
     {
       "description": "Minimal argv example",
-      "argv": "workspace-kit run query-lineage '{}'"
+      "argv": "workspace-kit run propose-release-version '{}'"
     }
   ],
-  "instructionPath": "src/modules/improvement/instructions/query-lineage.md",
-  "moduleId": "improvement",
-  "description": "Reconstruct lineage chain for a recommendation task id.",
+  "instructionPath": "src/modules/task-engine/instructions/propose-release-version.md",
+  "moduleId": "task-engine",
+  "description": "Recommend next semver from package.json and completed phase tasks (metadata.changeKind or type heuristics).",
   "policy": {
     "sensitivity": "non-sensitive",
     "operationId": null,
@@ -38,5 +44,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "de5afebb-a980-45ef-852c-095d2248863e"
+  "invocationId": "6de434fd-cbcf-438a-9afa-6edfffedc44a"
 }

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-20T01:03:46.255Z",
+  "generatedAt": "2026-05-20T01:24:14.866Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -785,6 +785,11 @@
     {
       "name": "phase-status",
       "path": ".ai/agent-cli-snippets/by-command/phase-status.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "propose-release-version",
+      "path": ".ai/agent-cli-snippets/by-command/propose-release-version.json",
       "moduleId": "task-engine"
     },
     {

@@ -32,7 +32,9 @@ gate|slot1=G004|slot2=consumer_impacting_flows_validated_against_packaged_artifa
 gate|slot1=G005|slot2=migration_risk_reviewed_for_config_template_schema_state_changes|when=before_publish|on_fail=stop
 gate|slot1=G006|slot2=security_sensitive_changes_explicitly_reviewed|when=before_publish|on_fail=stop|refs=docs/maintainers/SECURITY.md
 
-workflow|id=W200|name=release_procedure|when=phase_release|do=define_scope_and_classify_risk>prepare_changelog_and_version>run_validation_build_check_test_pack_parity_maintainer_gates>present_for_human_approval>publish_via_automation>verify_consumer_installability|done=package_published+evidence_recorded|forbid=publish_when_gate_fails|halt_if=human_approval_missing|approval=required|risk=critical|status=active
+workflow|id=W200|name=release_procedure|when=phase_release|do=define_scope_and_classify_risk>propose_release_version_wk_run>prepare_changelog_and_version>run_validation_build_check_test_pack_parity_maintainer_gates>present_for_human_approval>publish_via_automation>verify_consumer_installability|done=package_published+evidence_recorded|forbid=publish_when_gate_fails|halt_if=human_approval_missing|approval=required|risk=critical|status=active
+
+rule|id=R200-semver|level=must|scope=release|directive=before_bumping_package_json_run_propose_release_version_with_phase_key|detail=pnpm exec wk run propose-release-version uses metadata.changeKind when set else task type heuristics on completed phase tasks takes max bump rank default patch|refs=src/modules/task-engine/instructions/propose-release-version.md,.ai/playbooks/phase-closeout-and-release.md|status=active
 
 evidence|slot1=E001|slot2=release_version_and_tag|required=true
 evidence|slot1=E002|slot2=ci_publish_workflow_run_links|required=true
