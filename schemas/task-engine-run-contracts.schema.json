@@ -487,7 +487,7 @@
             "args": {
               "type": "object",
               "required": ["taskId", "updates"],
-              "additionalProperties": true,
+              "additionalProperties": false,
               "properties": {
                 "taskId": {
                   "type": "string",
@@ -496,6 +496,7 @@
                 "updates": { "type": "object" },
                 "dryRun": { "type": "boolean" },
                 "clientMutationId": { "type": "string", "minLength": 1 },
+                "policyApproval": { "type": "object" },
                 "expectedPlanningGeneration": {
                   "oneOf": [
                     { "type": "integer", "minimum": 0 },

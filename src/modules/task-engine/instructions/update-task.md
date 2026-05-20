@@ -21,6 +21,7 @@ workspace-kit run update-task '{"taskId":"T400","updates":{"title":"Updated titl
 | `updates` | `object` | yes | Mutable task field patch. |
 | `dryRun` | `boolean` | no | Command argument. |
 | `clientMutationId` | `string` | no | Retry/idempotency key. |
+| `policyApproval` | `object` | no | JSON policy approval payload for sensitive run commands. |
 | `expectedPlanningGeneration` | `integer` or `string` | no | Optimistic concurrency token from a prior read response. |
 | `actor` | `string` | no | Actor recorded on transition evidence or task mutation metadata. |
 | `config` | `object` | no | Invocation-local config override. |
