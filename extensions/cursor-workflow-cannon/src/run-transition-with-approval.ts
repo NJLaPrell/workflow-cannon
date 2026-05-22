@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { buildDashboardPolicyApprovalForPath } from "./policy/dashboard-policy-path.js";
 import type { CommandClient } from "./runtime/command-client.js";
 import { expectedPlanningGenerationArgs, ingestPlanningMetaFromData } from "./planning-generation-cache.js";
 
@@ -19,15 +20,14 @@ export async function confirmAndRunTransition(
   if (ok !== "Apply") {
     return;
   }
-  const rationale =
-    (await vscode.window.showInputBox({
-      prompt: `Policy rationale for run-transition: ${action} on ${taskId}`,
-      placeHolder: "Shown in policy trace / approval"
-    })) ?? "vscode-extension";
+  const policyApproval = buildDashboardPolicyApprovalForPath(
+    { workflowId: "palette-run-transition", action, command: "run-transition" },
+    { taskId }
+  );
   const r = await client.run("run-transition", {
     taskId,
     action,
-    policyApproval: { confirmed: true, rationale },
+    policyApproval,
     ...expectedPlanningGenerationArgs()
   });
   if (!r.ok) {
@@ -60,14 +60,18 @@ export async function confirmAndRunAcceptProposedPhaseBatch(
   const rationale =
     (await vscode.window.showInputBox({
       prompt: `Policy rationale for batch accept (${String(taskIds.length)} × accept on proposed ${categoryLabel})`,
-      placeHolder: "Shown in policy trace / approval"
+      placeHolder: "Shown in policy trace / approval (elevated tier)"
     })) ?? "vscode-extension batch accept";
   const failures: string[] = [];
   for (const taskId of taskIds) {
+    const policyApproval = buildDashboardPolicyApprovalForPath(
+      { workflowId: "accept-proposed", action: "accept-batch", command: "run-transition" },
+      { taskId, humanRationale: rationale }
+    );
     const r = await client.run("run-transition", {
       taskId,
       action: "accept",
-      policyApproval: { confirmed: true, rationale },
+      policyApproval,
       ...expectedPlanningGenerationArgs()
     });
     if (!r.ok) {

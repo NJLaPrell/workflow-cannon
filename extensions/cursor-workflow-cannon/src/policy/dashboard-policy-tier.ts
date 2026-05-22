@@ -39,7 +39,12 @@ export const DASHBOARD_POLICY_TIER_MATRIX: readonly DashboardPolicyTierRow[] = [
   { workflowId: "rewind-to-checkpoint", action: "rewind", command: "rewind-to-checkpoint", tier: "elevated" },
   { workflowId: "register-phase-catalog", action: "upsert", command: "upsert-phase-catalog-entry", tier: "routine" },
   { workflowId: "add-phase-note", action: "add", command: "add-phase-note", tier: "routine" },
-  { workflowId: "edit-phase-note", action: "update", command: "update-phase-note", tier: "routine" }
+  { workflowId: "edit-phase-note", action: "update", command: "update-phase-note", tier: "routine" },
+  { workflowId: "palette-run-transition", action: "start", command: "run-transition", tier: "routine" },
+  { workflowId: "palette-run-transition", action: "complete", command: "run-transition", tier: "routine" },
+  { workflowId: "palette-run-transition", action: "accept", command: "run-transition", tier: "routine" },
+  { workflowId: "palette-run-transition", action: "reject", command: "run-transition", tier: "routine" },
+  { workflowId: "palette-run-transition", action: "decline", command: "run-transition", tier: "routine" }
 ] as const;
 
 export function resolveDashboardPolicyTierRow(
