@@ -6,6 +6,8 @@
  * `vscode.window.showInputBox` / `showQuickPick` so users stay inside the sidebar webview.
  */
 
+import { shouldCollectPolicyRationaleInDrawer } from "../../policy/dashboard-policy-path.js";
+
 export function escapeDrawerHtml(s: string): string {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
@@ -233,14 +235,14 @@ export function buildDismissPhaseNoteDrawerSpec(noteId: string, priority: string
         required: true,
         rows: 3
       },
-      {
-        id: "policyRationale",
-        kind: "textarea",
-        label: crit ? "Policy rationale (required for critical)" : "Policy rationale (only if kit prompts)",
-        placeholder: crit ? "Shown in policy trace / approval" : "Leave blank unless required",
-        required: crit,
-        rows: crit ? 3 : 2
-      }
+      ...(crit
+        ? policyRationaleDrawerFields(
+            "dismiss-phase-note",
+            "critical",
+            "Policy rationale (required for critical)",
+            "Shown in policy trace / approval"
+          )
+        : [])
     ],
     primaryLabel: "Dismiss note",
     cancelLabel: "Cancel"
@@ -741,8 +743,8 @@ export function buildAcceptProposedDrawerSpec(params: AcceptProposedDrawerParams
     descriptionHtml:
       "Runs <code>run-transition</code> <code>accept</code> then <code>assign-task-phase</code> for each row. " +
       (n > 1
-        ? "One shared policy rationale is used for every <code>accept</code> in this batch."
-        : "Requires a non-empty policy rationale for the transition."),
+        ? "Elevated batch: one shared policy rationale is required for every <code>accept</code>."
+        : "Routine tier: policy rationale is filled automatically on submit."),
     fields: [
       { id: "ctx", kind: "summary", label: "Scope", body: idsBody },
       {
@@ -760,33 +762,31 @@ export function buildAcceptProposedDrawerSpec(params: AcceptProposedDrawerParams
         required: false,
         value: ""
       },
-      {
-        id: "policyRationale",
-        kind: "textarea",
-        label: "Policy rationale (required)",
-        placeholder: "Shown in policy trace / approval for run-transition accept",
-        required: true,
-        rows: 3
-      }
+      ...policyRationaleDrawerFields("accept-proposed", n > 1 ? "accept-batch" : "accept-single")
     ],
     primaryLabel: n === 1 ? "Accept and assign phase" : "Accept all and assign phase",
     cancelLabel: "Cancel"
   };
 }
 
-export function validateAcceptProposedSubmit(values: Record<string, string>): DrawerValidationResult {
+export function validateAcceptProposedSubmit(
+  values: Record<string, string>,
+  options?: { batch?: boolean }
+): DrawerValidationResult {
   const phase = validateAssignTaskPhaseSubmit(values);
   if (!phase.ok) {
     return phase;
   }
-  const policyRationale = (values.policyRationale ?? "").trim();
-  if (!policyRationale) {
-    return {
-      ok: false,
-      error: "Policy rationale is required for accept (shown in policy trace / approval)."
-    };
+  const batch = options?.batch === true;
+  const policyAction = batch ? "accept-batch" : "accept-single";
+  const policyErr = validateDrawerPolicyRationale("accept-proposed", policyAction, values);
+  if (policyErr) {
+    return { ok: false, error: policyErr };
   }
-  return { ok: true, values: { phaseKey: phase.values.phaseKey, policyRationale } };
+  return {
+    ok: true,
+    values: { phaseKey: phase.values.phaseKey, policyRationale: (values.policyRationale ?? "").trim() }
+  };
 }
 
 export function validateDismissPhaseNoteSubmit(
@@ -798,10 +798,12 @@ export function validateDismissPhaseNoteSubmit(
     return { ok: false, error: "Reason is required." };
   }
   const pri = priority.trim() || "normal";
-  const rationale = (values.policyRationale ?? "").trim();
-  if (pri === "critical" && !rationale) {
-    return { ok: false, error: "Critical dismiss requires a non-empty policy rationale." };
+  const policyErr =
+    pri === "critical" ? validateDrawerPolicyRationale("dismiss-phase-note", "critical", values) : null;
+  if (policyErr) {
+    return { ok: false, error: policyErr };
   }
+  const rationale = (values.policyRationale ?? "").trim();
   return { ok: true, values: { reason, policyRationale: rationale } };
 }
 
@@ -1042,6 +1044,38 @@ function validateTeamPolicyRationale(values: Record<string, string>): string | n
   return null;
 }
 
+function policyRationaleDrawerFields(
+  workflowId: string,
+  action: string,
+  label = "Policy rationale",
+  placeholder = "Shown in policy trace / approval"
+): DrawerFormField[] {
+  if (!shouldCollectPolicyRationaleInDrawer(workflowId, action)) {
+    return [];
+  }
+  return [
+    {
+      id: "policyRationale",
+      kind: "textarea",
+      label,
+      placeholder,
+      required: true,
+      rows: 3
+    }
+  ];
+}
+
+function validateDrawerPolicyRationale(
+  workflowId: string,
+  action: string,
+  values: Record<string, string>
+): string | null {
+  if (!shouldCollectPolicyRationaleInDrawer(workflowId, action)) {
+    return null;
+  }
+  return validateTeamPolicyRationale(values);
+}
+
 export function buildRegisterTeamAssignmentDrawerSpec(): DrawerFormSpec {
   return {
     workflowId: "register-team-assignment",
@@ -1072,14 +1106,12 @@ export function buildRegisterTeamAssignmentDrawerSpec(): DrawerFormSpec {
         placeholder: "agent-tab-1",
         required: true
       },
-      {
-        id: "policyRationale",
-        kind: "textarea",
-        label: "Policy rationale",
-        placeholder: "Why this handoff is being registered",
-        required: true,
-        rows: 2
-      }
+      ...policyRationaleDrawerFields(
+        "register-team-assignment",
+        "register",
+        "Policy rationale",
+        "Why this handoff is being registered"
+      )
     ],
     primaryLabel: "Register assignment",
     cancelLabel: "Cancel"
@@ -1089,7 +1121,7 @@ export function buildRegisterTeamAssignmentDrawerSpec(): DrawerFormSpec {
 export function validateRegisterTeamAssignmentSubmit(
   values: Record<string, string>
 ): DrawerValidationResult {
-  const policyErr = validateTeamPolicyRationale(values);
+  const policyErr = validateDrawerPolicyRationale("register-team-assignment", "register", values);
   if (policyErr) {
     return { ok: false, error: policyErr };
   }
@@ -1142,13 +1174,7 @@ export function buildSubmitTeamHandoffDrawerSpec(p: {
         placeholder: "PR URL, file path, …",
         rows: 2
       },
-      {
-        id: "policyRationale",
-        kind: "textarea",
-        label: "Policy rationale",
-        required: true,
-        rows: 2
-      }
+      ...policyRationaleDrawerFields("submit-team-handoff", "handoff")
     ],
     primaryLabel: "Submit handoff",
     cancelLabel: "Cancel"
@@ -1158,7 +1184,7 @@ export function buildSubmitTeamHandoffDrawerSpec(p: {
 export function validateSubmitTeamHandoffSubmit(
   values: Record<string, string>
 ): DrawerValidationResult {
-  const policyErr = validateTeamPolicyRationale(values);
+  const policyErr = validateDrawerPolicyRationale("submit-team-handoff", "handoff", values);
   if (policyErr) {
     return { ok: false, error: policyErr };
   }
@@ -1205,13 +1231,7 @@ export function buildReconcileTeamAssignmentDrawerSpec(p: {
         required: true,
         rows: 4
       },
-      {
-        id: "policyRationale",
-        kind: "textarea",
-        label: "Policy rationale",
-        required: true,
-        rows: 2
-      }
+      ...policyRationaleDrawerFields("reconcile-team-assignment", "reconcile")
     ],
     primaryLabel: "Reconcile",
     cancelLabel: "Cancel"
@@ -1221,7 +1241,7 @@ export function buildReconcileTeamAssignmentDrawerSpec(p: {
 export function validateReconcileTeamAssignmentSubmit(
   values: Record<string, string>
 ): DrawerValidationResult {
-  const policyErr = validateTeamPolicyRationale(values);
+  const policyErr = validateDrawerPolicyRationale("reconcile-team-assignment", "reconcile", values);
   if (policyErr) {
     return { ok: false, error: policyErr };
   }
@@ -1254,13 +1274,7 @@ export function buildBlockTeamAssignmentDrawerSpec(p: {
         required: true,
         rows: 3
       },
-      {
-        id: "policyRationale",
-        kind: "textarea",
-        label: "Policy rationale",
-        required: true,
-        rows: 2
-      }
+      ...policyRationaleDrawerFields("block-team-assignment", "block")
     ],
     primaryLabel: "Block",
     cancelLabel: "Cancel"
@@ -1270,7 +1284,7 @@ export function buildBlockTeamAssignmentDrawerSpec(p: {
 export function validateBlockTeamAssignmentSubmit(
   values: Record<string, string>
 ): DrawerValidationResult {
-  const policyErr = validateTeamPolicyRationale(values);
+  const policyErr = validateDrawerPolicyRationale("block-team-assignment", "block", values);
   if (policyErr) {
     return { ok: false, error: policyErr };
   }
@@ -1300,13 +1314,7 @@ export function buildCancelTeamAssignmentDrawerSpec(p: {
         required: true,
         value: p.supervisorId || "operator"
       },
-      {
-        id: "policyRationale",
-        kind: "textarea",
-        label: "Policy rationale",
-        required: true,
-        rows: 2
-      }
+      ...policyRationaleDrawerFields("cancel-team-assignment", "cancel")
     ],
     primaryLabel: "Cancel assignment",
     cancelLabel: "Keep"
@@ -1316,7 +1324,7 @@ export function buildCancelTeamAssignmentDrawerSpec(p: {
 export function validateCancelTeamAssignmentSubmit(
   values: Record<string, string>
 ): DrawerValidationResult {
-  const policyErr = validateTeamPolicyRationale(values);
+  const policyErr = validateDrawerPolicyRationale("cancel-team-assignment", "cancel", values);
   if (policyErr) {
     return { ok: false, error: policyErr };
   }
@@ -1328,10 +1336,6 @@ export function validateCancelTeamAssignmentSubmit(
 }
 
 const SUBAGENT_ID_RE = /^[a-z][a-z0-9._-]{0,63}$/i;
-
-function validateSubagentPolicyRationale(values: Record<string, string>): string | null {
-  return validateTeamPolicyRationale(values);
-}
 
 function parseAllowedCommandsField(raw: string): string[] | null {
   const text = raw.trim();
@@ -1383,13 +1387,7 @@ export function buildRegisterSubagentDrawerSpec(): DrawerFormSpec {
         value: "list-tasks, get-task, get-next-actions",
         rows: 2
       },
-      {
-        id: "policyRationale",
-        kind: "textarea",
-        label: "Policy rationale",
-        required: true,
-        rows: 2
-      }
+      ...policyRationaleDrawerFields("register-subagent", "register")
     ],
     primaryLabel: "Register",
     cancelLabel: "Cancel"
@@ -1397,7 +1395,7 @@ export function buildRegisterSubagentDrawerSpec(): DrawerFormSpec {
 }
 
 export function validateRegisterSubagentSubmit(values: Record<string, string>): DrawerValidationResult {
-  const policyErr = validateSubagentPolicyRationale(values);
+  const policyErr = validateDrawerPolicyRationale("register-subagent", "register", values);
   if (policyErr) {
     return { ok: false, error: policyErr };
   }
@@ -1466,13 +1464,7 @@ export function buildSpawnSubagentDrawerSpec(p?: { subagentId?: string; executio
         required: true,
         rows: 3
       },
-      {
-        id: "policyRationale",
-        kind: "textarea",
-        label: "Policy rationale",
-        required: true,
-        rows: 2
-      }
+      ...policyRationaleDrawerFields("spawn-subagent", "spawn")
     ],
     primaryLabel: "Start session",
     cancelLabel: "Cancel"
@@ -1480,7 +1472,7 @@ export function buildSpawnSubagentDrawerSpec(p?: { subagentId?: string; executio
 }
 
 export function validateSpawnSubagentSubmit(values: Record<string, string>): DrawerValidationResult {
-  const policyErr = validateSubagentPolicyRationale(values);
+  const policyErr = validateDrawerPolicyRationale("spawn-subagent", "spawn", values);
   if (policyErr) {
     return { ok: false, error: policyErr };
   }
@@ -1518,22 +1510,14 @@ export function buildCloseSubagentSessionDrawerSpec(p: { sessionId: string; defi
       "</code> (<code>" +
       escapeDrawerHtml(p.definitionId) +
       "</code>).",
-    fields: [
-      {
-        id: "policyRationale",
-        kind: "textarea",
-        label: "Policy rationale",
-        required: true,
-        rows: 2
-      }
-    ],
+    fields: [...policyRationaleDrawerFields("close-subagent-session", "close")],
     primaryLabel: "Close session",
     cancelLabel: "Keep open"
   };
 }
 
 export function validateCloseSubagentSessionSubmit(values: Record<string, string>): DrawerValidationResult {
-  const policyErr = validateSubagentPolicyRationale(values);
+  const policyErr = validateDrawerPolicyRationale("close-subagent-session", "close", values);
   if (policyErr) {
     return { ok: false, error: policyErr };
   }
@@ -1554,13 +1538,7 @@ export function buildRetireSubagentDrawerSpec(p?: { subagentId?: string }): Draw
         required: true,
         value: p?.subagentId ?? ""
       },
-      {
-        id: "policyRationale",
-        kind: "textarea",
-        label: "Policy rationale",
-        required: true,
-        rows: 2
-      }
+      ...policyRationaleDrawerFields("retire-subagent", "retire")
     ],
     primaryLabel: "Retire",
     cancelLabel: "Cancel"
@@ -1568,7 +1546,7 @@ export function buildRetireSubagentDrawerSpec(p?: { subagentId?: string }): Draw
 }
 
 export function validateRetireSubagentSubmit(values: Record<string, string>): DrawerValidationResult {
-  const policyErr = validateSubagentPolicyRationale(values);
+  const policyErr = validateDrawerPolicyRationale("retire-subagent", "retire", values);
   if (policyErr) {
     return { ok: false, error: policyErr };
   }
@@ -1605,13 +1583,7 @@ export function buildCreateCheckpointDrawerSpec(p: {
         label: "Label (optional)",
         placeholder: "before risky edit"
       },
-      {
-        id: "policyRationale",
-        kind: "textarea",
-        label: "Policy rationale",
-        required: true,
-        rows: 2
-      }
+      ...policyRationaleDrawerFields("create-checkpoint", "create")
     ],
     primaryLabel: "Create checkpoint",
     cancelLabel: "Cancel"
@@ -1619,7 +1591,7 @@ export function buildCreateCheckpointDrawerSpec(p: {
 }
 
 export function validateCreateCheckpointSubmit(values: Record<string, string>): DrawerValidationResult {
-  const policyErr = validateTeamPolicyRationale(values);
+  const policyErr = validateDrawerPolicyRationale("create-checkpoint", "create", values);
   if (policyErr) {
     return { ok: false, error: policyErr };
   }
@@ -1670,13 +1642,12 @@ export function buildRewindCheckpointDrawerSpec(p: {
           { value: "yes", label: "Yes — force destructive rewind" }
         ]
       },
-      {
-        id: "policyRationale",
-        kind: "textarea",
-        label: "Policy rationale (describe why you are rewinding)",
-        required: true,
-        rows: 3
-      }
+      ...policyRationaleDrawerFields(
+        "rewind-to-checkpoint",
+        "rewind",
+        "Policy rationale (describe why you are rewinding)",
+        "At least 12 characters — destructive rewind"
+      )
     ],
     primaryLabel: "Rewind now",
     cancelLabel: "Cancel"
@@ -1684,12 +1655,12 @@ export function buildRewindCheckpointDrawerSpec(p: {
 }
 
 export function validateRewindCheckpointSubmit(values: Record<string, string>): DrawerValidationResult {
-  const policyErr = validateTeamPolicyRationale(values);
+  const policyErr = validateDrawerPolicyRationale("rewind-to-checkpoint", "rewind", values);
   if (policyErr) {
     return { ok: false, error: policyErr };
   }
   const rationale = (values.policyRationale ?? "").trim();
-  if (rationale.length < 12) {
+  if (shouldCollectPolicyRationaleInDrawer("rewind-to-checkpoint", "rewind") && rationale.length < 12) {
     return { ok: false, error: "Rewind rationale must be at least 12 characters." };
   }
   return {
@@ -1712,18 +1683,9 @@ export function buildReviewApprovalItemDrawerSpec(p: {
       : p.decision === "decline"
         ? "Decline"
         : "Accept with edits";
-  const fields: DrawerFormField[] = [
-    {
-      id: "policyRationale",
-      kind: "textarea",
-      label: "Policy rationale",
-      placeholder: "Recorded decision after review",
-      required: true,
-      rows: 3
-    }
-  ];
+  const fields: DrawerFormField[] = [];
   if (p.decision === "accept_edited") {
-    fields.unshift({
+    fields.push({
       id: "editedSummary",
       kind: "textarea",
       label: "Edited summary",
@@ -1732,6 +1694,14 @@ export function buildReviewApprovalItemDrawerSpec(p: {
       rows: 4
     });
   }
+  fields.push(
+    ...policyRationaleDrawerFields(
+      "review-approval-item",
+      p.decision,
+      "Policy rationale",
+      "Recorded decision after review"
+    )
+  );
   return {
     workflowId: "review-approval-item",
     title: `${decisionLabel} — ${p.taskId}`,
@@ -1751,7 +1721,7 @@ export function validateReviewApprovalItemSubmit(
   values: Record<string, string>,
   decision: "accept" | "decline" | "accept_edited"
 ): DrawerValidationResult {
-  const policyErr = validateTeamPolicyRationale(values);
+  const policyErr = validateDrawerPolicyRationale("review-approval-item", decision, values);
   if (policyErr) {
     return { ok: false, error: policyErr };
   }

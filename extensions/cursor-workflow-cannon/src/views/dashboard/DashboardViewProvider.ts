@@ -20,6 +20,10 @@ import {
   buildTranscriptChurnResearchPrompt
 } from "../../playbook-chat-prompts.js";
 import { confirmAndRunTransition } from "../../run-transition-with-approval.js";
+import {
+  buildDashboardPolicyApprovalForPath,
+  type DashboardPolicyPathRef
+} from "../../policy/dashboard-policy-path.js";
 import { executeCreateWishlistFromValidatedFields } from "../../add-wishlist-item-flow.js";
 import {
   escapeHtml,
@@ -91,6 +95,13 @@ import {
 } from "./dashboard-input-drawer.js";
 
 let dashboardOutput: vscode.OutputChannel | undefined;
+
+function dashboardPolicyApproval(
+  path: DashboardPolicyPathRef,
+  context: { taskId?: string | null; phaseKey?: string | null; humanRationale?: string | null }
+): { confirmed: true; rationale: string } {
+  return buildDashboardPolicyApprovalForPath(path, context);
+}
 
 type DashboardPlanningWizardState =
   | { kind: "idle" }
@@ -1287,7 +1298,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         if (gate !== "Continue") {
           return false;
         }
-        policyApproval = { confirmed: true, rationale: policyRationale };
+        policyApproval = dashboardPolicyApproval(
+          { workflowId: "dismiss-phase-note", action: "critical", command: "dismiss-phase-note" },
+          { humanRationale: policyRationale }
+        );
       }
       const args: Record<string, unknown> = {
         noteId: session.noteId,
@@ -1464,13 +1478,13 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return true;
     }
     if (session.kind === "accept-proposed") {
-      const validated = validateAcceptProposedSubmit(values);
+      const taskIds = session.taskIds;
+      const validated = validateAcceptProposedSubmit(values, { batch: taskIds.length > 1 });
       if (!validated.ok) {
         await this.postDrawerValidationToWebview(validated.error);
         return false;
       }
       const { phaseKey, policyRationale } = validated.values;
-      const taskIds = session.taskIds;
       const categoryLabel = session.categoryLabel;
       if (taskIds.length === 0) {
         return false;
@@ -1480,7 +1494,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         const r = await this.client.run("run-transition", {
           taskId,
           action: "accept",
-          policyApproval: { confirmed: true, rationale: policyRationale },
+          policyApproval: dashboardPolicyApproval(
+            { workflowId: "accept-proposed", action: "accept-single", command: "run-transition" },
+            { taskId, phaseKey }
+          ),
           ...expectedPlanningGenerationArgs()
         });
         if (!r.ok) {
@@ -1512,7 +1529,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         const r = await this.client.run("run-transition", {
           taskId,
           action: "accept",
-          policyApproval: { confirmed: true, rationale: policyRationale },
+          policyApproval: dashboardPolicyApproval(
+            { workflowId: "accept-proposed", action: "accept-batch", command: "run-transition" },
+            { taskId, phaseKey, humanRationale: policyRationale }
+          ),
           ...expectedPlanningGenerationArgs()
         });
         if (!r.ok) {
@@ -1557,7 +1577,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         executionTaskId,
         supervisorId,
         workerId,
-        policyApproval: { confirmed: true, rationale: policyRationale },
+        policyApproval: dashboardPolicyApproval(
+          { workflowId: "register-team-assignment", action: "register", command: "register-assignment" },
+          { taskId: executionTaskId, humanRationale: policyRationale }
+        ),
         ...expectedPlanningGenerationArgs()
       });
       if (!r.ok) {
@@ -1591,7 +1614,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         assignmentId: session.assignmentId,
         workerId: session.workerId,
         handoff,
-        policyApproval: { confirmed: true, rationale: validated.values.policyRationale },
+        policyApproval: dashboardPolicyApproval(
+          { workflowId: "submit-team-handoff", action: "handoff", command: "submit-assignment-handoff" },
+          { taskId: session.assignmentId, humanRationale: validated.values.policyRationale }
+        ),
         ...expectedPlanningGenerationArgs()
       });
       if (!r.ok) {
@@ -1614,7 +1640,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         assignmentId: session.assignmentId,
         supervisorId: session.supervisorId,
         checkpoint: { schemaVersion: 1, mergedSummary: validated.values.mergedSummary },
-        policyApproval: { confirmed: true, rationale: validated.values.policyRationale },
+        policyApproval: dashboardPolicyApproval(
+          { workflowId: "reconcile-team-assignment", action: "reconcile", command: "reconcile-assignment" },
+          { humanRationale: validated.values.policyRationale }
+        ),
         ...expectedPlanningGenerationArgs()
       });
       if (!r.ok) {
@@ -1637,7 +1666,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         assignmentId: session.assignmentId,
         supervisorId: session.supervisorId,
         reason: validated.values.reason,
-        policyApproval: { confirmed: true, rationale: validated.values.policyRationale },
+        policyApproval: dashboardPolicyApproval(
+          { workflowId: "block-team-assignment", action: "block", command: "block-assignment" },
+          { humanRationale: validated.values.policyRationale }
+        ),
         ...expectedPlanningGenerationArgs()
       });
       if (!r.ok) {
@@ -1659,7 +1691,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       const r = await this.client.run("cancel-assignment", {
         assignmentId: session.assignmentId,
         supervisorId: validated.values.supervisorId,
-        policyApproval: { confirmed: true, rationale: validated.values.policyRationale },
+        policyApproval: dashboardPolicyApproval(
+          { workflowId: "cancel-team-assignment", action: "cancel", command: "cancel-assignment" },
+          { humanRationale: validated.values.policyRationale }
+        ),
         ...expectedPlanningGenerationArgs()
       });
       if (!r.ok) {
@@ -1687,7 +1722,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         displayName: validated.values.displayName,
         description: validated.values.description,
         allowedCommands,
-        policyApproval: { confirmed: true, rationale: validated.values.policyRationale },
+        policyApproval: dashboardPolicyApproval(
+          { workflowId: "register-subagent", action: "register", command: "register-subagent" },
+          { humanRationale: validated.values.policyRationale }
+        ),
         ...expectedPlanningGenerationArgs()
       });
       if (!r.ok) {
@@ -1710,7 +1748,13 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         subagentId: validated.values.subagentId,
         hostHint: validated.values.hostHint,
         promptSummary: validated.values.promptSummary,
-        policyApproval: { confirmed: true, rationale: validated.values.policyRationale },
+        policyApproval: dashboardPolicyApproval(
+          { workflowId: "spawn-subagent", action: "spawn", command: "spawn-subagent" },
+          {
+            taskId: validated.values.executionTaskId || undefined,
+            humanRationale: validated.values.policyRationale
+          }
+        ),
         ...expectedPlanningGenerationArgs()
       };
       if (validated.values.executionTaskId) {
@@ -1735,7 +1779,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
       const r = await this.client.run("close-subagent-session", {
         sessionId: session.sessionId,
-        policyApproval: { confirmed: true, rationale: validated.values.policyRationale },
+        policyApproval: dashboardPolicyApproval(
+          { workflowId: "close-subagent-session", action: "close", command: "close-subagent-session" },
+          { humanRationale: validated.values.policyRationale }
+        ),
         ...expectedPlanningGenerationArgs()
       });
       if (!r.ok) {
@@ -1756,7 +1803,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
       const r = await this.client.run("retire-subagent", {
         subagentId: validated.values.subagentId,
-        policyApproval: { confirmed: true, rationale: validated.values.policyRationale },
+        policyApproval: dashboardPolicyApproval(
+          { workflowId: "retire-subagent", action: "retire", command: "retire-subagent" },
+          { humanRationale: validated.values.policyRationale }
+        ),
         ...expectedPlanningGenerationArgs()
       });
       if (!r.ok) {
@@ -1777,7 +1827,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
       const payload: Record<string, unknown> = {
         mode: session.mode,
-        policyApproval: { confirmed: true, rationale: validated.values.policyRationale },
+        policyApproval: dashboardPolicyApproval(
+          { workflowId: "create-checkpoint", action: "create", command: "create-checkpoint" },
+          { taskId: validated.values.taskId || undefined, humanRationale: validated.values.policyRationale }
+        ),
         ...expectedPlanningGenerationArgs()
       };
       if (validated.values.taskId) {
@@ -1807,7 +1860,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       const r = await this.client.run("rewind-to-checkpoint", {
         checkpointId: session.checkpointId,
         force: validated.values.force === "yes",
-        policyApproval: { confirmed: true, rationale: validated.values.policyRationale },
+        policyApproval: dashboardPolicyApproval(
+          { workflowId: "rewind-to-checkpoint", action: "rewind", command: "rewind-to-checkpoint" },
+          { taskId: session.taskId ?? undefined, humanRationale: validated.values.policyRationale }
+        ),
         ...expectedPlanningGenerationArgs()
       });
       if (!r.ok) {
@@ -1833,7 +1889,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       const payload: Record<string, unknown> = {
         taskId: session.taskId,
         decision: session.decision,
-        policyApproval: { confirmed: true, rationale: validated.values.policyRationale },
+        policyApproval: dashboardPolicyApproval(
+          { workflowId: "review-approval-item", action: session.decision, command: "review-item" },
+          { taskId: session.taskId, humanRationale: validated.values.policyRationale }
+        ),
         ...expectedPlanningGenerationArgs()
       };
       if (session.decision === "accept_edited" && validated.values.editedSummary) {

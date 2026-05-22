@@ -177,24 +177,35 @@ test("drawer: accept proposed spec includes rationale field", async () => {
       suggestions: [{ label: "Next", phaseKey: "92" }]
     })
   );
-  assert.match(html, /data-wc-drawer-field="policyRationale"/);
+  assert.doesNotMatch(html, /data-wc-drawer-field="policyRationale"/);
   assert.match(html, /data-wc-drawer-field="phaseSelect"/);
 });
 
-test("drawer: validate accept proposed requires rationale", async () => {
+test("drawer: accept proposed single skips rationale; batch requires it", async () => {
   const mod = await import("../dist/views/dashboard/dashboard-input-drawer.js");
-  const bad = mod.validateAcceptProposedSubmit({
-    phaseSelect: "91",
-    phaseKeyCustom: "",
-    policyRationale: "  "
-  });
-  assert.equal(bad.ok, false);
-  const good = mod.validateAcceptProposedSubmit({
-    phaseSelect: "91",
-    phaseKeyCustom: "",
-    policyRationale: "Approved in standup"
-  });
-  assert.equal(good.ok, true);
+  const singleOk = mod.validateAcceptProposedSubmit(
+    { phaseSelect: "91", phaseKeyCustom: "", policyRationale: "" },
+    { batch: false }
+  );
+  assert.equal(singleOk.ok, true);
+  const batchBad = mod.validateAcceptProposedSubmit(
+    { phaseSelect: "91", phaseKeyCustom: "", policyRationale: "  " },
+    { batch: true }
+  );
+  assert.equal(batchBad.ok, false);
+  const batchGood = mod.validateAcceptProposedSubmit(
+    { phaseSelect: "91", phaseKeyCustom: "", policyRationale: "Approved in standup" },
+    { batch: true }
+  );
+  assert.equal(batchGood.ok, true);
+  const batchHtml = mod.renderDrawerFormHtml(
+    mod.buildAcceptProposedDrawerSpec({
+      taskIds: ["T1", "T2"],
+      categoryLabel: "improvement",
+      suggestions: [{ label: "Next", phaseKey: "92" }]
+    })
+  );
+  assert.match(batchHtml, /data-wc-drawer-field="policyRationale"/);
 });
 
 test("drawer: guidance CAE mutation spec + validation", async () => {

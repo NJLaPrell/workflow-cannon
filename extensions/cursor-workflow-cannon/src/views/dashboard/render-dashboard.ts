@@ -192,12 +192,12 @@ function renderProposedQueueTaskActionButtons(
     escapeHtml(acceptDecline.acceptAction) +
     '" data-task-id="' +
     idAttr +
-    '" title="Accept → ready (confirms policy rationale)">Accept</button>' +
+    '" title="Accept → ready (routine tier: policy rationale auto-filled)">Accept</button>' +
     '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="' +
     escapeHtml(acceptDecline.declineAction) +
     '" data-task-id="' +
     idAttr +
-    '" title="Decline → cancelled (reject; confirms policy rationale)">Decline</button>' +
+    '" title="Decline → cancelled (routine tier: policy rationale auto-filled)">Decline</button>' +
     "</span>"
   );
 }
