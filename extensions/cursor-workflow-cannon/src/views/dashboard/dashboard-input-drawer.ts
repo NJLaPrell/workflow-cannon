@@ -6,6 +6,7 @@
  * `vscode.window.showInputBox` / `showQuickPick` so users stay inside the sidebar webview.
  */
 
+import { appendElevatedPolicyExplainer } from "../../policy/dashboard-policy-tier.js";
 import { shouldCollectPolicyRationaleInDrawer } from "../../policy/dashboard-policy-path.js";
 
 export function escapeDrawerHtml(s: string): string {
@@ -209,11 +210,14 @@ export function buildDismissPhaseNoteDrawerSpec(noteId: string, priority: string
   return {
     workflowId: "dismiss-phase-note",
     title: "Dismiss phase note",
-    descriptionHtml:
+    descriptionHtml: appendElevatedPolicyExplainer(
       "Audited dismiss — do not paste secrets. " +
-      (crit
-        ? "<b>Critical:</b> you will confirm in a modal after Submit, then kit runs with <code>policyApproval</code>."
-        : ""),
+        (crit
+          ? "You will confirm in a modal after Submit, then kit runs with <code>policyApproval</code>."
+          : "Routine tier: policy rationale is filled automatically on submit."),
+      "dismiss-phase-note",
+      crit ? "critical" : "normal"
+    ),
     fields: [
       {
         id: "ctx",
@@ -740,11 +744,11 @@ export function buildAcceptProposedDrawerSpec(params: AcceptProposedDrawerParams
   return {
     workflowId: "accept-proposed",
     title: safeTitle,
-    descriptionHtml:
-      "Runs <code>run-transition</code> <code>accept</code> then <code>assign-task-phase</code> for each row. " +
-      (n > 1
-        ? "Elevated batch: one shared policy rationale is required for every <code>accept</code>."
-        : "Routine tier: policy rationale is filled automatically on submit."),
+    descriptionHtml: appendElevatedPolicyExplainer(
+      "Runs <code>run-transition</code> <code>accept</code> then <code>assign-task-phase</code> for each row.",
+      "accept-proposed",
+      n > 1 ? "accept-batch" : "accept-single"
+    ),
     fields: [
       { id: "ctx", kind: "summary", label: "Scope", body: idsBody },
       {
@@ -1262,10 +1266,13 @@ export function buildBlockTeamAssignmentDrawerSpec(p: {
   return {
     workflowId: "block-team-assignment",
     title: "Block assignment",
-    descriptionHtml:
+    descriptionHtml: appendElevatedPolicyExplainer(
       "Runs <code>block-assignment</code> for assignment <code>" +
-      escapeDrawerHtml(p.assignmentId) +
-      "</code>.",
+        escapeDrawerHtml(p.assignmentId) +
+        "</code>.",
+      "block-team-assignment",
+      "block"
+    ),
     fields: [
       {
         id: "reason",
@@ -1302,10 +1309,13 @@ export function buildCancelTeamAssignmentDrawerSpec(p: {
   return {
     workflowId: "cancel-team-assignment",
     title: "Cancel assignment",
-    descriptionHtml:
+    descriptionHtml: appendElevatedPolicyExplainer(
       "Runs <code>cancel-assignment</code> for assignment <code>" +
-      escapeDrawerHtml(p.assignmentId) +
-      "</code>.",
+        escapeDrawerHtml(p.assignmentId) +
+        "</code>.",
+      "cancel-team-assignment",
+      "cancel"
+    ),
     fields: [
       {
         id: "supervisorId",
@@ -1353,9 +1363,12 @@ export function buildRegisterSubagentDrawerSpec(): DrawerFormSpec {
   return {
     workflowId: "register-subagent",
     title: "Register subagent role",
-    descriptionHtml:
+    descriptionHtml: appendElevatedPolicyExplainer(
       "Runs <code>register-subagent</code>. <code>subagentId</code> must start with a letter " +
-      "(lowercase id: <code>a-z0-9._-</code>). List explicit kit command names in allowed commands.",
+        "(lowercase id: <code>a-z0-9._-</code>). List explicit kit command names in allowed commands.",
+      "register-subagent",
+      "register"
+    ),
     fields: [
       {
         id: "subagentId",
@@ -1621,16 +1634,18 @@ export function buildRewindCheckpointDrawerSpec(p: {
   return {
     workflowId: "rewind-to-checkpoint",
     title: "Rewind to checkpoint (destructive)",
-    descriptionHtml:
-      "<p><b>Destructive.</b> Runs <code>rewind-to-checkpoint</code> for <code>" +
-      escapeDrawerHtml(p.checkpointId) +
-      "</code> (" +
-      escapeDrawerHtml(p.refKind) +
-      " ref)" +
-      taskLine +
-      ".</p>" +
-      "<p class=\"muted\">Head checkpoints run <code>git reset --hard</code>. Stash checkpoints run <code>git stash apply</code>. " +
-      "Refuses vendor/node_modules paths. Use force only when you accept rewinding on a dirty worktree.</p>",
+    descriptionHtml: appendElevatedPolicyExplainer(
+      "<p>Runs <code>rewind-to-checkpoint</code> for <code>" +
+        escapeDrawerHtml(p.checkpointId) +
+        "</code> (" +
+        escapeDrawerHtml(p.refKind) +
+        " ref)" +
+        taskLine +
+        ".</p>" +
+        "<p class=\"muted\">Refuses vendor/node_modules paths. Use force only when you accept rewinding on a dirty worktree.</p>",
+      "rewind-to-checkpoint",
+      "rewind"
+    ),
     fields: [
       {
         id: "force",
@@ -1705,12 +1720,18 @@ export function buildReviewApprovalItemDrawerSpec(p: {
   return {
     workflowId: "review-approval-item",
     title: `${decisionLabel} — ${p.taskId}`,
-    descriptionHtml:
+    descriptionHtml: appendElevatedPolicyExplainer(
       "Runs <code>review-item</code> for improvement <b>" +
-      escapeDrawerHtml(p.title) +
-      "</b> (<code>" +
-      escapeDrawerHtml(p.taskId) +
-      "</code>). Decision is persisted to <code>kit_approval_decisions</code> in kit SQLite.",
+        escapeDrawerHtml(p.title) +
+        "</b> (<code>" +
+        escapeDrawerHtml(p.taskId) +
+        "</code>). Decision is persisted to <code>kit_approval_decisions</code> in kit SQLite." +
+        (p.decision === "accept" || p.decision === "decline"
+          ? " <span class=\"muted\">Routine tier: policy rationale is auto-filled on submit.</span>"
+          : ""),
+      "review-approval-item",
+      p.decision
+    ),
     fields,
     primaryLabel: decisionLabel,
     cancelLabel: "Cancel"

@@ -60,8 +60,55 @@ export function listDashboardPolicyTierRows(): DashboardPolicyTierRow[] {
   return [...DASHBOARD_POLICY_TIER_MATRIX];
 }
 
-/** Copy for elevated drawer descriptionHtml (task 3 wires into specs). */
+/** Generic footer for elevated drawer descriptionHtml. */
 export const ELEVATED_POLICY_EXPLAINER_HTML =
-  "<p><b>Elevated policy path.</b> This action is not on the routine tier matrix. " +
-  "You must enter a specific, auditable rationale — Dashboard boilerplate is not a substitute for " +
-  "CLI/agent <code>policyApproval</code> on terminal <code>wk run</code>.</p>";
+  "<p><b>Elevated policy path.</b> This action is outside the routine Dashboard tier. " +
+  "Enter a specific, auditable rationale below — routine actions auto-fill policy traces; " +
+  "terminal <code>wk run</code> from agents still requires explicit JSON " +
+  "<code>policyApproval</code>.</p>";
+
+/** Per-path lead-in (workflowId:action → HTML fragment). */
+export const ELEVATED_POLICY_EXPLAINER_LEAD_BY_PATH: Readonly<Record<string, string>> = {
+  "accept-proposed:accept-batch":
+    "<p><b>Batch accept.</b> You are promoting multiple proposed tasks in one submit. " +
+    "One shared rationale is recorded for every <code>run-transition</code> <code>accept</code>.</p>",
+  "dismiss-phase-note:critical":
+    "<p><b>Critical phase note.</b> Dismissing an active critical note is policy-gated; " +
+    "kit requires <code>policyApproval</code> in addition to your dismiss reason.</p>",
+  "rewind-to-checkpoint:rewind":
+    "<p><b>Destructive rewind.</b> May run <code>git reset --hard</code> or <code>git stash apply</code>. " +
+    "Force on a dirty worktree can lose uncommitted work.</p>",
+  "block-team-assignment:block":
+    "<p><b>Block assignment.</b> Stops the worker handoff path until reconciled or cancelled.</p>",
+  "cancel-team-assignment:cancel":
+    "<p><b>Cancel assignment.</b> Ends the assignment record; use when the handoff should not continue.</p>",
+  "register-subagent:register":
+    "<p><b>Register subagent role.</b> Persists an allowlist of kit commands this subagent may invoke — " +
+    "review commands before registering.</p>",
+  "review-approval-item:accept_edited":
+    "<p><b>Accept with edits.</b> You are changing the improvement summary before recording the decision.</p>"
+};
+
+export function elevatedPolicyExplainerHtml(workflowId: string, action: string): string | undefined {
+  const row = resolveDashboardPolicyTierRow(workflowId, action);
+  if (row?.tier !== "elevated") {
+    return undefined;
+  }
+  const key = `${workflowId.trim()}:${action.trim()}`;
+  const lead = ELEVATED_POLICY_EXPLAINER_LEAD_BY_PATH[key] ?? "";
+  return lead + ELEVATED_POLICY_EXPLAINER_HTML;
+}
+
+/** Prepend elevated policy copy when the path tier is elevated. */
+export function appendElevatedPolicyExplainer(
+  baseDescriptionHtml: string | undefined,
+  workflowId: string,
+  action: string
+): string | undefined {
+  const expl = elevatedPolicyExplainerHtml(workflowId, action);
+  if (!expl) {
+    return baseDescriptionHtml;
+  }
+  const base = (baseDescriptionHtml ?? "").trim();
+  return base.length > 0 ? expl + base : expl;
+}

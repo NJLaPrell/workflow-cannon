@@ -52,6 +52,13 @@ test("elevated path requires humanRationale", () => {
   );
 });
 
+test("elevatedPolicyExplainerHtml includes path-specific lead", () => {
+  const html = tierMod.elevatedPolicyExplainerHtml("rewind-to-checkpoint", "rewind");
+  assert.ok(html);
+  assert.match(html, /Destructive rewind/);
+  assert.match(html, /Elevated policy path/);
+});
+
 test("elevated path merges human detail", () => {
   const out = approvalMod.buildDashboardPolicyApproval({
     channel: "dashboard",
@@ -62,4 +69,22 @@ test("elevated path merges human detail", () => {
   });
   assert.match(out.rationale, /tier=elevated/);
   assert.match(out.rationale, /detail=Revert bad checkpoint after review/);
+});
+
+test("elevatedPolicyExplainerHtml includes path-specific lead", () => {
+  const html = tierMod.elevatedPolicyExplainerHtml("rewind-to-checkpoint", "rewind");
+  assert.ok(html);
+  assert.match(html, /Destructive rewind/);
+  assert.match(html, /Elevated policy path/);
+});
+
+test("appendElevatedPolicyExplainer leaves routine paths unchanged", () => {
+  const out = tierMod.appendElevatedPolicyExplainer("Base copy.", "accept-proposed", "accept-single");
+  assert.equal(out, "Base copy.");
+});
+
+test("appendElevatedPolicyExplainer prepends for elevated batch accept", () => {
+  const out = tierMod.appendElevatedPolicyExplainer("Base copy.", "accept-proposed", "accept-batch");
+  assert.match(out, /Batch accept/);
+  assert.match(out, /Base copy\./);
 });
