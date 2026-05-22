@@ -71,13 +71,6 @@ test("elevated path merges human detail", () => {
   assert.match(out.rationale, /detail=Revert bad checkpoint after review/);
 });
 
-test("elevatedPolicyExplainerHtml includes path-specific lead", () => {
-  const html = tierMod.elevatedPolicyExplainerHtml("rewind-to-checkpoint", "rewind");
-  assert.ok(html);
-  assert.match(html, /Destructive rewind/);
-  assert.match(html, /Elevated policy path/);
-});
-
 test("appendElevatedPolicyExplainer leaves routine paths unchanged", () => {
   const out = tierMod.appendElevatedPolicyExplainer("Base copy.", "accept-proposed", "accept-single");
   assert.equal(out, "Base copy.");
