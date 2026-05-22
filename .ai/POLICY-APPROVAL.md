@@ -28,6 +28,19 @@ For **policy-sensitive** `workspace-kit run` commands, use one of:
 
 Assume **no TTY**: use JSON **`policyApproval`** on `workspace-kit run`. **Chat is not approval.**
 
+## Workflow Cannon Dashboard (Cursor extension)
+
+The Dashboard webview drawer is an **approval surface** for gated mutations: the extension still sends JSON **`policyApproval`** on each sensitive **`wk run`** (kit validation unchanged).
+
+| Tier | Operator experience | Trace `rationale` |
+| --- | --- | --- |
+| **Routine** | Confirm the action; no rationale textarea | Structured auto string (`dashboard\|workflow=…\|command=…\|tier=routine\|…`) from `buildDashboardPolicyApproval` |
+| **Elevated** | Drawer shows policy explainer + required rationale field | Same structured prefix + `\|detail=<human text>` |
+
+**Matrix:** `extensions/cursor-workflow-cannon/src/policy/dashboard-policy-tier.ts` (`DASHBOARD_POLICY_TIER_MATRIX`). Elevated examples: batch accept, critical phase-note dismiss, rewind checkpoint, block/cancel assignment, register subagent, review-item accept with edits.
+
+**Agents / terminal:** Do **not** paste Dashboard auto-rationale boilerplate on CLI runs — supply task-specific prose in JSON **`policyApproval.rationale`** as usual.
+
 ## Operator slash / chat vs Tier A/B `wk run`
 
 Cursor slash commands (for example **`/generate-features`**), Composer text, dashboard chat prompts, and ticket comments express **what the human wants done**. They **do not** replace JSON **`policyApproval`** on the **third** argv for policy-sensitive **`pnpm exec wk run …`** — see **`.ai/AGENT-CLI-MAP.md`**. The tool or agent that invokes the CLI must still pass **`policyApproval`** (or a valid session grant) so traces and policy stay auditable.
