@@ -167,6 +167,10 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.ok(overviewPanel.indexOf("dash-agent-status-banner") < overviewPanel.indexOf("wc-cae-readiness"));
   assert.ok(overviewPanel.indexOf("wc-rec-next") < overviewPanel.indexOf("wc-cae-readiness"));
   assert.match(overviewPanel, /wc-stat-pills/);
+  assert.match(overviewPanel, /wc-pill-human/);
+  assert.match(overviewPanel, /wc-stat-num-human/);
+  assert.match(overviewPanel, /wc-context-help/);
+  assert.match(overviewPanel, /data-wc-help-text="[^"]*Wait until readiness hits 100%/);
   assert.doesNotMatch(taskEnginePanel, /dashboard-approvals/);
   assert.match(html, /Phase Readiness · Phase 14/);
   assert.match(html, /aria-label="Phase readiness · Phase 14"/);
@@ -311,7 +315,7 @@ test("renderDashboardRootInnerHtml renders phase roster deliverables inline edit
   assert.match(html, /aria-label="Edit deliverables for phase 95"/);
   assert.match(html, /dash-phase-deliverables-cell/);
   assert.match(html, /dash-phase-deliverables-body/);
-  assert.match(html, /dash-phase-no-catalog/);
+  assert.match(html, /dash-phase-catalog-hint/);
   assert.doesNotMatch(html, /<label[^>]*dash-phase-deliverables-editor/);
 });
 
@@ -2110,6 +2114,43 @@ test("Phase Readiness shows phase-scoped runnable counts not workspace ready tot
   assert.doesNotMatch(html, /71 ready/);
 });
 
+test("Phase Readiness passes runnable check when phase has completed delivery tasks only", () => {
+  const html = renderDashboardRootInnerHtml(
+    readinessDashboardPayload({
+      currentPhaseDelivery: phaseDeliveryFixture({
+        queue: { ready: 0, proposed: 0, blocked: 0, inProgress: 0, research: 0 },
+        segments: {
+          completed: 3,
+          cancelled: 0,
+          inProgress: 0,
+          ready: 0,
+          proposed: 0,
+          blocked: 0,
+          research: 0
+        },
+        terminalCount: 3,
+        checkedTaskCount: 3,
+        closeoutPassed: true
+      })
+    })
+  );
+  const readiness =
+    html.match(/<section class="dash-card wc-cae-readiness[\s\S]*?<\/section>/)?.[0] ?? "";
+  assert.match(readiness, /3 completed \(no ready work right now\)/);
+  assert.match(readiness, /wc-cae-check-ok[\s\S]*Runnable work in phase/);
+});
+
+test("Overview stat pills include Human gate count with yellow number class", () => {
+  const html = renderDashboardRootInnerHtml(
+    readinessDashboardPayload({
+      humanGatesSummary: { schemaVersion: 1, phaseKey: "100", count: 2, top: [] }
+    })
+  );
+  const overview = overviewPanelHtml(html);
+  assert.match(overview, /wc-pill-human[\s\S]*data-wc-pill-filter="human-gates"/);
+  assert.match(overview, /wc-stat-num-human">2</);
+});
+
 function overviewPanelHtml(html) {
   const start = html.indexOf('<div class="wc-tab-panel" data-wc-tab="overview"');
   const end = html.indexOf('<motion.div class="wc-tab-panel" data-wc-tab="task-engine"');
@@ -2119,6 +2160,35 @@ function overviewPanelHtml(html) {
   }
   return html.slice(start, end);
 }
+
+test("Phase Progress badge percent matches segmented bar fill", () => {
+  const overview = overviewPanelHtml(
+    renderDashboardRootInnerHtml(
+      readinessDashboardPayload({
+        currentPhaseDelivery: phaseDeliveryFixture({
+          closeoutPassed: false,
+          releaseReadyPercent: 100,
+          progressPercent: 100,
+          terminalCount: 8,
+          checkedTaskCount: 10,
+          segments: {
+            completed: 8,
+            cancelled: 0,
+            inProgress: 2,
+            ready: 0,
+            proposed: 0,
+            blocked: 0,
+            research: 0
+          }
+        })
+      })
+    )
+  );
+  const progressSection =
+    overview.match(/<section class="dash-card wc-phase-progress[\s\S]*?<\/section>/)?.[0] ?? "";
+  assert.match(progressSection, /wc-cae-score-badge[\s\S]*>80<span>%<\/span>/);
+  assert.match(progressSection, /aria-valuenow="80"/);
+});
 
 test("Phase Progress renders segmented bar without release control", () => {
   const overview = overviewPanelHtml(renderDashboardRootInnerHtml(readinessDashboardPayload()));

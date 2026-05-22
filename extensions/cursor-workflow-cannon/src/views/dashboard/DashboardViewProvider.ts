@@ -1794,6 +1794,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
       this.closeDashboardDrawer();
       this.notifyKitStateChanged();
+      await this.pushUpdate();
       await vscode.window.showInformationMessage(r.message ?? "Checkpoint created");
       return true;
     }
@@ -2929,6 +2930,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (m && m.type === 'wcDrawerValidation' && typeof m.message === 'string') {
       var v = document.getElementById('wc-drawer-validation');
       if (v) { v.textContent = m.message; v.hidden = false; }
+      var dhVal = document.getElementById('wc-drawer-host');
+      if (dhVal) {
+        var subBtn = dhVal.querySelector('[data-wc-drawer-action="submit"]');
+        if (subBtn) { subBtn.disabled = false; subBtn.removeAttribute('data-wc-drawer-submitting'); }
+      }
       return;
     }
     if (m && m.type === 'wcPhaseDeliverablesSaved') {
@@ -2958,6 +2964,90 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     applyReplaceRootHtml(m.html);
   });
 
+  var contextHelpPopover = document.getElementById('wc-context-help-popover');
+  var contextHelpHideTimer = null;
+  var contextHelpActiveEl = null;
+
+  function positionContextHelpPopover(el) {
+    if (!contextHelpPopover || !el) return;
+    var r = el.getBoundingClientRect();
+    var left = r.left + r.width / 2;
+    var top = r.bottom + 6;
+    contextHelpPopover.style.left = Math.max(12, Math.min(left, window.innerWidth - 12)) + 'px';
+    contextHelpPopover.style.top = top + 'px';
+    contextHelpPopover.style.transform = 'translateX(-50%)';
+  }
+
+  function showContextHelpPopover(el) {
+    if (!contextHelpPopover || !el) return;
+    var text = el.getAttribute('data-wc-help-text') || '';
+    if (!String(text).trim()) return;
+    if (contextHelpHideTimer) {
+      clearTimeout(contextHelpHideTimer);
+      contextHelpHideTimer = null;
+    }
+    contextHelpActiveEl = el;
+    contextHelpPopover.textContent = text;
+    contextHelpPopover.hidden = false;
+    positionContextHelpPopover(el);
+    setUiInteraction('context-help', true);
+  }
+
+  function hideContextHelpPopoverSoon() {
+    if (contextHelpHideTimer) clearTimeout(contextHelpHideTimer);
+    contextHelpHideTimer = setTimeout(function() {
+      contextHelpHideTimer = null;
+      var hovered = document.querySelector('.wc-context-help:hover');
+      var focused = document.activeElement && document.activeElement.closest
+        ? document.activeElement.closest('.wc-context-help')
+        : null;
+      if (hovered || focused) return;
+      contextHelpActiveEl = null;
+      if (contextHelpPopover) {
+        contextHelpPopover.hidden = true;
+        contextHelpPopover.textContent = '';
+      }
+      setUiInteraction('context-help', false);
+    }, 120);
+  }
+
+  function wireContextHelpPopover() {
+    if (window.__wcContextHelpPopoverWired) return;
+    window.__wcContextHelpPopoverWired = true;
+    document.addEventListener('mouseover', function(ev) {
+      var el = ev.target && ev.target.closest ? ev.target.closest('.wc-context-help') : null;
+      if (el) showContextHelpPopover(el);
+    });
+    document.addEventListener('mouseout', function(ev) {
+      var el = ev.target && ev.target.closest ? ev.target.closest('.wc-context-help') : null;
+      if (!el) return;
+      var rel = ev.relatedTarget;
+      if (rel && el.contains(rel)) return;
+      if (rel && rel.closest && rel.closest('.wc-context-help')) return;
+      hideContextHelpPopoverSoon();
+    });
+    document.addEventListener('focusin', function(ev) {
+      var el = ev.target && ev.target.closest ? ev.target.closest('.wc-context-help') : null;
+      if (el) showContextHelpPopover(el);
+    });
+    document.addEventListener('focusout', function(ev) {
+      var el = ev.target && ev.target.closest ? ev.target.closest('.wc-context-help') : null;
+      if (!el) return;
+      hideContextHelpPopoverSoon();
+    });
+    window.addEventListener('scroll', function() {
+      if (contextHelpActiveEl && contextHelpPopover && !contextHelpPopover.hidden) {
+        positionContextHelpPopover(contextHelpActiveEl);
+      }
+    }, true);
+    window.addEventListener('resize', function() {
+      if (contextHelpActiveEl && contextHelpPopover && !contextHelpPopover.hidden) {
+        positionContextHelpPopover(contextHelpActiveEl);
+      }
+    });
+  }
+  wireContextHelpPopover();
+
   applyTab(activeTab);
   restorePhaseCardCollapseState(document.getElementById('root'));
   applyQueueFilters(document.getElementById('root'));
@@ -2970,6 +3060,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     var act = t.getAttribute('data-wc-drawer-action');
     if (act === 'backdrop' || act === 'cancel') { vscode.postMessage({type:'drawerCancel'}); return; }
     if (act === 'submit') {
+      if (t.disabled || t.getAttribute('data-wc-drawer-submitting') === '1') return;
+      t.disabled = true;
+      t.setAttribute('data-wc-drawer-submitting', '1');
       var vals = {};
       dh.querySelectorAll('[data-wc-drawer-field]').forEach(function(el) {
         var id = el.getAttribute('data-wc-drawer-field');
@@ -3812,10 +3905,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     /* ── Stat pills ── */
     .wc-stat-pills {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      display: flex;
+      flex-wrap: nowrap;
       gap: 6px;
       margin: 0 0 10px 0;
+    }
+    .wc-stat-pills .wc-stat-pill {
+      flex: 1 1 0;
+      min-width: 0;
     }
     .wc-stat-pill {
       display: flex;
@@ -3861,6 +3958,69 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       border-color: var(--vscode-widget-border, rgba(127,127,127,.45));
     }
     .wc-pill-done .wc-stat-num { color: var(--vscode-foreground); opacity: 0.7; }
+    .wc-pill-human {
+      border-color: color-mix(in srgb, var(--vscode-editorWarning-foreground, #cca700) 55%, transparent);
+      background: color-mix(in srgb, var(--vscode-editorWarning-foreground, #cca700) 12%, var(--vscode-textCodeBlock-background));
+    }
+    .wc-stat-num-human {
+      color: var(--vscode-editorWarning-foreground, #cca700);
+    }
+    /* ── Contextual help (fixed popover outside #root — no blink on refresh) ── */
+    .wc-context-help-popover {
+      position: fixed;
+      z-index: 25000;
+      min-width: 200px;
+      max-width: min(300px, calc(100vw - 24px));
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.45));
+      background: var(--vscode-editorHoverWidget-background, var(--vscode-editor-background));
+      color: var(--vscode-editorHoverWidget-foreground, var(--vscode-foreground));
+      font-size: 11px;
+      font-weight: 400;
+      line-height: 1.45;
+      box-shadow: 0 4px 14px rgba(0,0,0,.25);
+      text-align: left;
+      white-space: normal;
+      pointer-events: none;
+    }
+    .wc-context-help-popover[hidden] {
+      display: none !important;
+    }
+    .wc-context-help {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 6px;
+      vertical-align: middle;
+      cursor: help;
+      outline: none;
+    }
+    .wc-context-help-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      font-size: 10px;
+      font-weight: 700;
+      font-style: italic;
+      line-height: 1;
+      color: var(--vscode-button-foreground, #fff);
+      background: var(--vscode-textLink-foreground, #3794ff);
+      user-select: none;
+    }
+    .dash-phase-catalog-hint .wc-context-help-icon {
+      font-style: normal;
+      font-size: 11px;
+      width: 15px;
+      height: 15px;
+      background: var(--vscode-descriptionForeground, rgba(127,127,127,.85));
+    }
+    .wc-cae-readiness-title .wc-context-help {
+      margin-left: 4px;
+    }
     /* ── Filter chips ── */
     .wc-filter-chips {
       display: flex;
@@ -4251,6 +4411,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
 </head>
 <body>
   <div id="root">${rootInnerHtml}</div>
+  <div id="wc-context-help-popover" class="wc-context-help-popover" role="tooltip" hidden></div>
   <div id="wc-drawer-host" class="wc-drawer-host wc-drawer-host--hidden" aria-hidden="true"></div>
   <footer class="dash-footer">
     <button type="button" id="btn" class="wc-btn wc-btn-lg wc-btn-primary dash-refresh-btn" title="Refetch dashboard-summary now. The panel also reloads when you switch back to it, when kit-owned files change, and about every 45s while visible.">Refresh</button>

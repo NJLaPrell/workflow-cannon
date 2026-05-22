@@ -6,6 +6,9 @@ Yes — there are several “agent-control surfaces” besides skills/rules/plug
 
 For Workflow Cannon, we should use all four layers.
 
+c
+
+
 ## The landscape
 
 | Thing | What it is | Used for | How Workflow Cannon should use it |

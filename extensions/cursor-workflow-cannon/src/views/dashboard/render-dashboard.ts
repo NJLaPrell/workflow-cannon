@@ -351,24 +351,43 @@ function renderRecommendedNextWishlistCard(item: unknown): string {
   );
 }
 
-/** 4-pill stat row: Ready / Proposed / Blocked / Done. */
+const PHASE_READINESS_HELP =
+  "Is this phase ready to start? The checks show whether you have work to pick up, blockers, and a clear queue. The % is a start score—not how much delivery is finished (see Phase Progress). Wait until readiness hits 100% before starting new tasks in this phase.";
+
+/** Reusable contextual help — blue “i”; text lives in data-wc-help-text for the fixed popover. */
+function renderContextHelpIcon(helpText: string, ariaLabel = "About this section"): string {
+  return (
+    '<span class="wc-context-help" tabindex="0" role="button" data-wc-help-text="' +
+    escapeHtmlAttr(helpText) +
+    '" aria-label="' +
+    escapeHtmlAttr(ariaLabel) +
+    '">' +
+    '<span class="wc-context-help-icon" aria-hidden="true">i</span>' +
+    "</span>"
+  );
+}
+
+/** 5-pill stat row: Ready / Proposed / Blocked / Done / Human — single line on Overview. */
 function renderStatPills(
   readyTotal: number,
   proposedTotal: number,
   blockedTotal: number,
-  doneTotal: number
+  doneTotal: number,
+  humanTotal: number
 ): string {
-  const pills: Array<{ label: string; n: number; cls: string }> = [
+  const pills: Array<{ label: string; n: number; cls: string; numCls?: string }> = [
     { label: "Ready", n: readyTotal, cls: "wc-pill-ready" },
     { label: "Proposed", n: proposedTotal, cls: "wc-pill-proposed" },
     { label: "Blocked", n: blockedTotal, cls: "wc-pill-blocked" },
     { label: "Done", n: doneTotal, cls: "wc-pill-done" },
+    { label: "Human", n: humanTotal, cls: "wc-pill-human", numCls: "wc-stat-num-human" }
   ];
   const filterMap: Record<string, string> = {
     "wc-pill-ready": "ready",
     "wc-pill-proposed": "proposed",
     "wc-pill-blocked": "blocked",
     "wc-pill-done": "all",
+    "wc-pill-human": "human-gates"
   };
   return (
     '<div class="wc-stat-pills">' +
@@ -383,7 +402,9 @@ function renderStatPills(
           '" title="Open Queue tab — ' +
           escapeHtmlAttr(p.label) +
           '">' +
-          '<span class="wc-stat-num">' +
+          '<span class="wc-stat-num' +
+          (p.numCls ? " " + p.numCls : "") +
+          '">' +
           escapeHtml(String(p.n)) +
           "</span>" +
           '<span class="wc-stat-lbl">' +
@@ -653,6 +674,12 @@ function phaseSegmentTotal(segments: PhaseSnapshotSegments): number {
   );
 }
 
+function phaseHasRunnableOrCompletedWork(snapshot: PhaseSnapshot): boolean {
+  const q = snapshot.queue;
+  const runnable = q.ready + q.inProgress;
+  return runnable > 0 || snapshot.segments.completed > 0;
+}
+
 function computeWorkReadinessScore(snapshot: PhaseSnapshot, workspaceBlockerCount: number): number {
   if (!snapshot.phaseKey) {
     return 0;
@@ -662,6 +689,8 @@ function computeWorkReadinessScore(snapshot: PhaseSnapshot, workspaceBlockerCoun
   const runnable = q.ready + q.inProgress;
   if (runnable > 0) {
     score += 30;
+  } else if (snapshot.segments.completed > 0) {
+    score += 24;
   } else if (q.proposed > 0) {
     score += 12;
   }
@@ -730,6 +759,15 @@ function renderPhaseReleaseAction(args: {
   });
 }
 
+function phaseDeliveryBarPercent(segments: PhaseSnapshotSegments): number {
+  const total = phaseSegmentTotal(segments);
+  if (total === 0) {
+    return 0;
+  }
+  const done = segments.completed + segments.cancelled;
+  return Math.min(100, Math.max(0, Math.round((done / total) * 100)));
+}
+
 function renderPhaseProgressBar(segments: PhaseSnapshotSegments): string {
   const total = phaseSegmentTotal(segments);
   if (total === 0) {
@@ -763,8 +801,7 @@ function renderPhaseProgressBar(segments: PhaseSnapshotSegments): string {
       escapeHtmlAttr(String(n)) +
       '"></span>';
   }
-  const done = segments.completed + segments.cancelled;
-  const now = Math.round((done / total) * 100);
+  const now = phaseDeliveryBarPercent(segments);
   return (
     '<div class="wc-phase-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' +
     escapeHtmlAttr(String(now)) +
@@ -819,9 +856,13 @@ function renderPhaseReadinessCard(ws: Record<string, unknown> | null, snapshot: 
     : [];
 
   const queue = snapshot?.queue ?? EMPTY_PHASE_QUEUE;
+  const segments = snapshot?.segments ?? EMPTY_PHASE_SEGMENTS;
   const runnable = queue.ready + queue.inProgress;
   const phaseBlocked = queue.blocked;
   const phaseProposed = queue.proposed;
+  const runnableOrDone = snapshot ? phaseHasRunnableOrCompletedWork(snapshot) : false;
+  const deliveryStarted =
+    segments.completed > 0 || segments.inProgress > 0 || segments.cancelled > 0;
 
   const score = snapshot ? computeWorkReadinessScore(snapshot, blockers.length) : 0;
   const scoreColor =
@@ -841,12 +882,30 @@ function renderPhaseReadinessCard(ws: Record<string, unknown> | null, snapshot: 
     '<div class="wc-cae-checks">' +
     renderPhaseCheckRow(
       "Runnable work in phase",
-      runnable > 0,
+      runnableOrDone,
       runnable > 0
         ? String(queue.ready) + " ready · " + String(queue.inProgress) + " in progress"
-        : phaseProposed > 0
-          ? String(phaseProposed) + " proposed (not yet ready)"
-          : "none"
+        : segments.completed > 0
+          ? String(segments.completed) + " completed (no ready work right now)"
+          : phaseProposed > 0
+            ? String(phaseProposed) + " proposed (not yet ready)"
+            : "none"
+    ) +
+    renderPhaseCheckRow(
+      "Delivery work started",
+      deliveryStarted,
+      deliveryStarted
+        ? String(segments.completed) +
+          " done · " +
+          String(segments.inProgress) +
+          " in progress" +
+          (segments.cancelled > 0 ? " · " + String(segments.cancelled) + " cancelled" : "")
+        : "no delivery tasks started"
+    ) +
+    renderPhaseCheckRow(
+      "Pending decisions clear",
+      pending.length === 0,
+      pending.length === 0 ? "none" : String(pending.length) + " open"
     ) +
     renderPhaseCheckRow(
       "No blocked tasks in phase",
@@ -893,8 +952,8 @@ function renderPhaseReadinessCard(ws: Record<string, unknown> | null, snapshot: 
 
   const readinessTitle =
     curPhase.length > 0
-      ? "<b>Phase Readiness · Phase " + escapeHtml(curPhase) + "</b>"
-      : "<b>Phase Readiness</b>";
+      ? "<b>Phase Readiness · Phase " + escapeHtml(curPhase) + "</b>" + renderContextHelpIcon(PHASE_READINESS_HELP)
+      : "<b>Phase Readiness</b>" + renderContextHelpIcon(PHASE_READINESS_HELP);
   const sectionAriaLabel =
     curPhase.length > 0 ? "Phase readiness · Phase " + curPhase : "Phase readiness";
   const releaseBtn =
@@ -946,15 +1005,15 @@ function renderPhaseProgressCard(ws: Record<string, unknown> | null, snapshot: P
     return "";
   }
   const segments = snapshot?.segments ?? EMPTY_PHASE_SEGMENTS;
-  const progress = snapshot?.progressPercent ?? 0;
+  const barPct = phaseDeliveryBarPercent(segments);
   const releasePct = snapshot?.releaseReadyPercent ?? 0;
   const terminal = snapshot?.terminalCount ?? 0;
   const checked = snapshot?.checkedTaskCount ?? 0;
   const remaining = snapshot?.remainingCount ?? 0;
   const scoreColor =
-    releasePct >= 100
+    barPct >= 100
       ? "wc-cae-score-ok"
-      : progress >= 75
+      : barPct >= 75
         ? "wc-cae-score-warn"
         : "wc-cae-score-bad";
 
@@ -984,8 +1043,8 @@ function renderPhaseProgressCard(ws: Record<string, unknown> | null, snapshot: P
     "</b></span>" +
     '<span class="wc-cae-score-badge ' +
     scoreColor +
-    '" title="Progress toward phase closeout and release">' +
-    escapeHtml(String(releasePct)) +
+    '" title="Delivery-task completion in this phase (matches the bar)">' +
+    escapeHtml(String(barPct)) +
     "<span>%</span></span>" +
     "</button>" +
     "</div>" +
@@ -2585,7 +2644,22 @@ function renderTaskCheckpointsSection(cp: unknown): string {
   }
   const avail = o.available === true;
   const total = typeof o.totalCount === "number" ? o.totalCount : 0;
-  const top = Array.isArray(o.topRecent) ? (o.topRecent as unknown[]) : [];
+  const topRaw = Array.isArray(o.topRecent) ? (o.topRecent as unknown[]) : [];
+  const seenCheckpointIds = new Set<string>();
+  const top: unknown[] = [];
+  for (const entry of topRaw) {
+    if (!entry || typeof entry !== "object") {
+      continue;
+    }
+    const id = String((entry as Record<string, unknown>).id ?? "").trim();
+    if (id.length > 0) {
+      if (seenCheckpointIds.has(id)) {
+        continue;
+      }
+      seenCheckpointIds.add(id);
+    }
+    top.push(entry);
+  }
   if (!avail) {
     return (
       '<section class="dash-card" aria-label="Task checkpoints">' +
@@ -2844,10 +2918,15 @@ function agentStatusRenderRows(d: Record<string, unknown>): { kind: string; labe
     if (rawKind.length > 0) {
       kind = rawKind;
     }
+    const rawDetail = cleanDashboardText(row.detail);
+    const detail =
+      rawKind === "ready_task" && rawDetail.toLowerCase() === "suggested next runnable task"
+        ? ""
+        : rawDetail || humanizeDashboardToken(kind);
     rows.push({
       label,
       role: "Current agent",
-      detail: cleanDashboardText(row.detail) || humanizeDashboardToken(kind),
+      detail,
       phase: cleanDashboardText(row.phaseKey) || "—",
       lastActivity: cleanDashboardText(row.updatedAt) || "—",
       kind,
@@ -3049,7 +3128,8 @@ export function renderPhaseCatalogOverviewSection(
         const noCatalogHint =
           r.inCatalog === true
             ? ""
-            : ' <abbr class="muted dash-phase-no-catalog" title="No planning catalog row for this phase key">?</abbr>';
+            : ' <span class="wc-context-help dash-phase-catalog-hint" tabindex="0" role="button" aria-label="Not in planning catalog" data-wc-help-text="Not in the planning catalog yet. You can still edit deliverables here. Use Register future phase to add a catalog row.">' +
+              '<span class="wc-context-help-icon" aria-hidden="true">?</span></span>';
         rows +=
           `<tr><td class="dash-phase-roster-col-phase"><code>${escapeHtml(r.phaseKey)}</code></td><td class="dash-phase-roster-col-status">${statusTag}${noCatalogHint}</td><td class="dash-phase-roster-col-deliverables dash-phase-deliverables-cell"><div class="dash-phase-deliverables" data-wc-phase-row="${phaseKeyAttr}">` +
           '<div class="dash-phase-deliverables-body">' +
@@ -3832,7 +3912,13 @@ export function renderDashboardRootInnerHtml(
     recNextCard +
     renderPhaseReadinessCard(ws as Record<string, unknown> | null, phaseSnapshot) +
     renderPhaseProgressCard(ws as Record<string, unknown> | null, phaseSnapshot) +
-    renderStatPills(totalReadyCount, totalProposedCount, totalBlockedCount, totalDoneCount) +
+    renderStatPills(
+      totalReadyCount,
+      totalProposedCount,
+      totalBlockedCount,
+      totalDoneCount,
+      humanGatesCount
+    ) +
     renderPhaseCatalogOverviewSection(phaseSystemSlice) +
     renderWorkspaceBlockersPendingSection(ws as Record<string, unknown> | null) +
     renderTeamExecutionSection(d.teamExecution) +

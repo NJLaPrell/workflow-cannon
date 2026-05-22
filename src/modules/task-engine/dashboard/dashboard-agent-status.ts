@@ -176,13 +176,14 @@ export function buildDashboardAgentStatus(
   }
 
   if (input.suggestion.suggestedNext) {
+    const title = cleanString(input.suggestion.suggestedNext.title);
     return taskStatus(input, {
       kind: "ready_task",
       label: `Ready Task ${input.suggestion.suggestedNext.id}`,
       confidence: "low",
       taskId: input.suggestion.suggestedNext.id,
       phaseKey: taskPhaseKey(input.suggestion.suggestedNext),
-      detail: "Suggested next runnable task"
+      detail: title.length > 0 ? title : null
     });
   }
 
