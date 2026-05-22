@@ -7,9 +7,16 @@ import {
 } from "../dist/views/config/config-webview-client.js";
 import { renderConfigPanelShellHtml } from "../dist/views/config/config-panel-shell.js";
 
+test("buildConfigWebviewBootstrapScript shares vscode API with dashboard host", () => {
+  const script = buildConfigWebviewBootstrapScript();
+  assert.match(script, /__wfcVscode/);
+  assert.doesNotMatch(script, /var vscode = acquireVsCodeApi\(\)/);
+});
+
 test("buildConfigWebviewBootstrapScript includes typed editor and mutation handlers", () => {
   const script = buildConfigWebviewBootstrapScript();
   assert.match(script, /readRowValue/);
+  assert.match(script, /jumpToConfigKey/);
   assert.match(script, /configMutationResult/);
   assert.match(script, /data-editor-kind/);
   assert.match(script, /cfg-section/);
@@ -19,6 +26,12 @@ test("buildConfigWebviewBootstrapScript includes typed editor and mutation handl
 test("buildConfigWebviewBootstrapScript autoLoad can be disabled for dashboard", () => {
   const script = buildConfigWebviewBootstrapScript({ autoLoad: false });
   assert.doesNotMatch(script, /requestLoad\(\);\s*\}\)\(\)/);
+});
+
+test("buildConfigWebviewBootstrapScript debounces poke and skips duplicate setList html", () => {
+  const script = buildConfigWebviewBootstrapScript();
+  assert.match(script, /requestLoadDebounced/);
+  assert.match(script, /lastConfigListHtml/);
 });
 
 test("renderConfigPanelShellHtml exposes config-list-root and toolbar ids", () => {

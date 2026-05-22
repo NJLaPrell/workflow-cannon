@@ -4,6 +4,7 @@ import {
   handleConfigExplainMessage,
   handleConfigSetMessage,
   handleConfigUnsetMessage,
+  handleConfigValidateKeyMessage,
   pushConfigListToWebview
 } from "./config-host.js";
 import { CONFIG_WEBVIEW_STYLES, buildConfigWebviewBootstrapScript } from "./config-webview-client.js";
@@ -41,6 +42,19 @@ export class ConfigViewProvider implements vscode.WebviewViewProvider {
       if (msg?.type === "explain" && typeof msg.key === "string") {
         await handleConfigExplainMessage(this.client, webview, msg.key);
       }
+      if (msg?.type === "validateKey" && typeof msg.key === "string" && typeof msg.value === "string") {
+        const editorKind = typeof msg.editorKind === "string" ? msg.editorKind.trim() : undefined;
+        const seq = typeof msg.seq === "number" ? msg.seq : undefined;
+        await handleConfigValidateKeyMessage(
+          this.client,
+          webview,
+          msg.key,
+          msg.value,
+          Boolean(msg.includeAll),
+          editorKind,
+          seq
+        );
+      }
       if (msg?.type === "validate") {
         const r = await this.client.config(["validate"]);
         await webview.postMessage({
@@ -55,13 +69,15 @@ export class ConfigViewProvider implements vscode.WebviewViewProvider {
       if (msg?.type === "set" && typeof msg.key === "string" && typeof msg.value === "string") {
         const includeAll = Boolean(msg.reloadIncludeAll);
         const scope = msg.scope === "user" ? "user" : "project";
+        const editorKind = typeof msg.editorKind === "string" ? msg.editorKind.trim() : undefined;
         await handleConfigSetMessage(
           this.client,
           webview,
           msg.key.trim(),
           msg.value,
           scope,
-          includeAll
+          includeAll,
+          editorKind
         );
       }
       if (msg?.type === "unset" && typeof msg.key === "string") {
@@ -72,10 +88,19 @@ export class ConfigViewProvider implements vscode.WebviewViewProvider {
     });
   }
 
+  private configRefreshTimer: ReturnType<typeof setTimeout> | undefined;
+
   private async notifyRefresh(): Promise<void> {
-    if (this.view) {
-      await this.view.webview.postMessage({ type: "poke" });
+    if (!this.view) {
+      return;
     }
+    if (this.configRefreshTimer) {
+      clearTimeout(this.configRefreshTimer);
+    }
+    this.configRefreshTimer = setTimeout(() => {
+      this.configRefreshTimer = undefined;
+      void this.view?.webview.postMessage({ type: "poke" });
+    }, 800);
   }
 
   private buildHtmlShell(webview: vscode.Webview): string {

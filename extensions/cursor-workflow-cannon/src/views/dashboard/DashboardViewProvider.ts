@@ -37,6 +37,7 @@ import {
   handleConfigExplainMessage,
   handleConfigSetMessage,
   handleConfigUnsetMessage,
+  handleConfigValidateKeyMessage,
   pushConfigListToWebview
 } from "../config/config-host.js";
 import { CONFIG_WEBVIEW_STYLES, buildConfigWebviewBootstrapScript } from "../config/config-webview-client.js";
@@ -294,6 +295,13 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private dashboardUpdateQueued = false;
   private dashboardDebounceTimer: ReturnType<typeof setTimeout> | undefined;
 
+  /** Config tab list refresh — only for config file changes, not every dashboard-summary poll. */
+  private configTabRefreshTimer: ReturnType<typeof setTimeout> | undefined;
+
+  /** While the webview reports focus/edit (phase filter, roster inline edit), defer full `wcReplaceRoot` refreshes. */
+  private dashboardInteractionLocks = new Set<string>();
+  private dashboardRefreshAfterInteraction = false;
+
   /** 0-based page for wishlist rows in `dashboard-summary` (5 per page). */
   private wishlistPage = 0;
 
@@ -344,7 +352,16 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (await this.handleConfigWebviewMessage(webview, msg as Record<string, unknown>)) {
         return;
       }
+      if (msg?.type === "wcUiInteraction") {
+        const source = typeof msg.source === "string" ? msg.source.trim() : "";
+        if (source.length > 0) {
+          this.setDashboardUiInteraction(source, msg.active === true);
+        }
+        return;
+      }
       if (msg?.type === "refresh") {
+        this.dashboardInteractionLocks.clear();
+        this.dashboardRefreshAfterInteraction = false;
         await this.pushUpdate();
       }
       if (msg?.type === "loadLazyTerminalBucket") {
@@ -689,7 +706,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         if (phaseKey.length > 0 && (deliverables === null || typeof deliverables === "string")) {
           const refreshed = await this.onUpdatePhaseDeliverables(phaseKey, deliverables, clientMutationId);
           if (refreshed) {
-            await this.pushUpdate();
+            await this.view?.webview.postMessage({
+              type: "wcPhaseDeliverablesSaved",
+              phaseKey,
+              deliverables
+            });
           } else {
             await this.view?.webview.postMessage({
               type: "wcPhaseDeliverablesError",
@@ -1194,10 +1215,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     const actionLabel = mode === "add" ? "Add comment" : "View comments";
     const pick = await vscode.window.showInformationMessage(
       `${actionLabel} for ${taskId} is coming soon. Use the wishlist flow to track comment work, or open the task detail meanwhile.`,
-      "Add wishlist item",
+      "Add Wishlist Item",
       "Open task detail"
     );
-    if (pick === "Add wishlist item") {
+    if (pick === "Add Wishlist Item") {
       await this.openAddWishlistDrawer();
       return;
     }
@@ -1773,6 +1794,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
       this.closeDashboardDrawer();
       this.notifyKitStateChanged();
+      await this.pushUpdate();
       await vscode.window.showInformationMessage(r.message ?? "Checkpoint created");
       return true;
     }
@@ -2147,6 +2169,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (!this.view) {
       return;
     }
+    if (this.isDashboardRefreshDeferred()) {
+      this.dashboardRefreshAfterInteraction = true;
+      return;
+    }
     if (this.dashboardDebounceTimer) {
       clearTimeout(this.dashboardDebounceTimer);
     }
@@ -2154,6 +2180,22 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       this.dashboardDebounceTimer = undefined;
       void this.pushUpdate();
     }, delayMs);
+  }
+
+  private isDashboardRefreshDeferred(): boolean {
+    return this.dashboardInteractionLocks.size > 0;
+  }
+
+  private setDashboardUiInteraction(source: string, active: boolean): void {
+    if (active) {
+      this.dashboardInteractionLocks.add(source);
+    } else {
+      this.dashboardInteractionLocks.delete(source);
+    }
+    if (this.dashboardInteractionLocks.size === 0 && this.dashboardRefreshAfterInteraction) {
+      this.dashboardRefreshAfterInteraction = false;
+      this.schedulePushUpdate(0);
+    }
   }
 
   private async runDashboardUpdateLoop(): Promise<void> {
@@ -2166,6 +2208,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private async pushUpdateOnce(): Promise<void> {
     const activeView = this.view;
     if (!activeView) {
+      return;
+    }
+    if (this.isDashboardRefreshDeferred()) {
+      this.dashboardRefreshAfterInteraction = true;
       return;
     }
     const { webview } = activeView;
@@ -2321,13 +2367,25 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       } else {
         await webview.postMessage({ type: "wcReplaceRoot", html: rootInner });
       }
-      void this.refreshDashboardConfigTab(webview);
     } catch (e) {
       logDashboard(`dashboard push failed: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
-  /** Keep dashboard Config tab list in sync after summary refresh (debounced via pushUpdate). */
+  /** Debounced config catalog reload (workspace-kit config.json changes — not task-store churn). */
+  scheduleConfigTabRefresh(): void {
+    if (!this.view) {
+      return;
+    }
+    if (this.configTabRefreshTimer) {
+      clearTimeout(this.configTabRefreshTimer);
+    }
+    this.configTabRefreshTimer = setTimeout(() => {
+      this.configTabRefreshTimer = undefined;
+      void this.refreshDashboardConfigTab(this.view!.webview);
+    }, 800);
+  }
+
   private async refreshDashboardConfigTab(webview: vscode.Webview): Promise<void> {
     try {
       await webview.postMessage({ type: "poke" });
@@ -2348,6 +2406,21 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       await handleConfigExplainMessage(this.client, webview, msg.key);
       return true;
     }
+    if (msg?.type === "validateKey" && typeof msg.key === "string" && typeof msg.value === "string") {
+      const includeAll = Boolean(msg.includeAll);
+      const editorKind = typeof msg.editorKind === "string" ? msg.editorKind.trim() : undefined;
+      const seq = typeof msg.seq === "number" ? msg.seq : undefined;
+      await handleConfigValidateKeyMessage(
+        this.client,
+        webview,
+        msg.key,
+        msg.value,
+        includeAll,
+        editorKind,
+        seq
+      );
+      return true;
+    }
     if (msg?.type === "validate") {
       const r = await this.client.config(["validate"]);
       await webview.postMessage({
@@ -2363,13 +2436,15 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (msg?.type === "set" && typeof msg.key === "string" && typeof msg.value === "string") {
       const includeAll = Boolean(msg.reloadIncludeAll);
       const scope = msg.scope === "user" ? "user" : "project";
+      const editorKind = typeof msg.editorKind === "string" ? msg.editorKind.trim() : undefined;
       await handleConfigSetMessage(
         this.client,
         webview,
         msg.key.trim(),
         msg.value,
         scope,
-        includeAll
+        includeAll,
+        editorKind
       );
       return true;
     }
@@ -2399,6 +2474,177 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   var activePhaseFilter = 'all';
   var PHASE_READINESS_EXPAND_KEY = 'wc-phase-readiness-expanded';
   var PHASE_PROGRESS_EXPAND_KEY = 'wc-phase-progress-expanded';
+
+  var localUiLocks = {};
+  var pendingReplaceRootHtml = null;
+
+  function isLocalUiLocked() {
+    return Object.keys(localUiLocks).length > 0;
+  }
+
+  function setUiInteraction(source, active) {
+    var key = source || 'unknown';
+    if (active) localUiLocks[key] = true;
+    else delete localUiLocks[key];
+    vscode.postMessage({ type: 'wcUiInteraction', source: key, active: !!active });
+    if (!isLocalUiLocked() && pendingReplaceRootHtml) {
+      var queued = pendingReplaceRootHtml;
+      pendingReplaceRootHtml = null;
+      applyReplaceRootHtml(queued);
+    }
+  }
+
+  function capturePhaseDeliverablesEditState(root) {
+    if (!root) return null;
+    var rows = root.querySelectorAll('[data-wc-phase-row]');
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i];
+      var editor = row.querySelector('.dash-phase-deliverables-editor');
+      if (!editor || editor.hidden) continue;
+      var input = row.querySelector('.dash-phase-deliverables-input');
+      var phaseKey = (row.getAttribute('data-wc-phase-row') || '').trim();
+      if (!phaseKey) continue;
+      return {
+        phaseKey: phaseKey,
+        value: input && input.value != null ? String(input.value) : '',
+        original: input ? input.getAttribute('data-wc-original') || '' : '',
+        pending: !!(input && input.getAttribute('data-wc-pending') === '1')
+      };
+    }
+    return null;
+  }
+
+  function restorePhaseDeliverablesEditState(state) {
+    if (!state || !state.phaseKey) return;
+    var row = document.querySelector('[data-wc-phase-row="' + state.phaseKey.replace(/"/g, '\\\\"') + '"]');
+    if (!row) return;
+    var input = row.querySelector('.dash-phase-deliverables-input');
+    if (input) {
+      input.value = state.value;
+      input.setAttribute('data-wc-original', state.original);
+      if (state.pending) {
+        input.setAttribute('data-wc-pending', '1');
+        input.disabled = true;
+      } else {
+        input.disabled = false;
+        input.removeAttribute('data-wc-pending');
+      }
+    }
+    togglePhaseDeliverablesEdit(row, true);
+    if (input && !state.pending) {
+      input.setAttribute('data-wc-focus-grace', '1');
+      setTimeout(function() {
+        if (input) input.removeAttribute('data-wc-focus-grace');
+      }, 350);
+    }
+    setUiInteraction('phase-deliverables', true);
+  }
+
+  function captureConfigTabState(root) {
+    if (activeTab !== 'config' || !root) return null;
+    var list = root.querySelector('#config-list-root');
+    if (!list || list.querySelector('.cfg-loading')) return null;
+    var filter = root.querySelector('#cfg-filter');
+    var maint = root.querySelector('#cfg-maintainer');
+    var status = root.querySelector('#cfg-status');
+    var explain = root.querySelector('#cfg-explain-host');
+    var restart = root.querySelector('#cfg-restart-host');
+    return {
+      listHtml: list.innerHTML,
+      editFocus: window.wcConfigTab && window.wcConfigTab.captureEditFocus
+        ? window.wcConfigTab.captureEditFocus()
+        : null,
+      explainKey: window.wcConfigTab && window.wcConfigTab.getActiveExplainKey
+        ? window.wcConfigTab.getActiveExplainKey()
+        : '',
+      filter: filter ? filter.value : '',
+      maintainer: maint ? !!maint.checked : false,
+      statusClass: status ? status.className : '',
+      statusText: status ? status.textContent : '',
+      explainHtml: explain ? explain.innerHTML : '',
+      restartHtml: restart ? restart.innerHTML : ''
+    };
+  }
+
+  function restoreConfigTabState(root, state) {
+    if (!state || !root) return;
+    var list = root.querySelector('#config-list-root');
+    if (!list) return;
+    list.innerHTML = state.listHtml;
+    list.removeAttribute('data-wc-bound');
+    var filter = root.querySelector('#cfg-filter');
+    if (filter) filter.value = state.filter || '';
+    var maint = root.querySelector('#cfg-maintainer');
+    if (maint) maint.checked = !!state.maintainer;
+    var status = root.querySelector('#cfg-status');
+    if (status) {
+      status.className = state.statusClass || 'cfg-status cfg-status-info';
+      status.textContent = state.statusText || '';
+    }
+    var explain = root.querySelector('#cfg-explain-host');
+    if (explain) explain.innerHTML = state.explainHtml || '';
+    var restart = root.querySelector('#cfg-restart-host');
+    if (restart) restart.innerHTML = state.restartHtml || '';
+    if (window.wcConfigTab) {
+      if (window.wcConfigTab.afterDomUpdate) window.wcConfigTab.afterDomUpdate();
+      if (window.wcConfigTab.applyFilter) window.wcConfigTab.applyFilter();
+      if (state.editFocus && window.wcConfigTab.restoreEditFocus) {
+        window.wcConfigTab.restoreEditFocus(state.editFocus);
+      }
+      if (state.explainKey && window.wcConfigTab.setExplainActiveKey) {
+        window.wcConfigTab.setExplainActiveKey(state.explainKey, false);
+      }
+    }
+  }
+
+  function applyReplaceRootHtml(html) {
+    var root = document.getElementById('root');
+    if (!root) return;
+    var open = {};
+    var editState = capturePhaseDeliverablesEditState(root);
+    var configState = captureConfigTabState(root);
+    root.querySelectorAll('details[data-wc-track]').forEach(function(d) {
+      var k = d.getAttribute('data-wc-track');
+      if (k && d.open) open[k] = true;
+    });
+    capturePhaseCardCollapseState(root);
+    root.innerHTML = html;
+    Object.keys(open).forEach(function(k) {
+      var el = root.querySelector('details[data-wc-track="' + k + '"]');
+      if (el) el.open = true;
+    });
+    restorePhaseCardCollapseState(root);
+    restoreConfigTabState(root, configState);
+    applyTab(activeTab);
+    applyQueueFilters(root);
+    reloadOpenLazyTerminalBuckets(root);
+    if (editState) restorePhaseDeliverablesEditState(editState);
+  }
+
+  function escPhaseDeliverablesHtml(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function applyPhaseDeliverablesSaved(phaseKey, deliverables) {
+    var input = phaseDeliverablesInputFromPhase(phaseKey);
+    if (!input) return;
+    var row = input.closest('[data-wc-phase-row]');
+    if (!row) return;
+    var text = row.querySelector('.dash-phase-deliverables-text');
+    var saving = row.querySelector('.dash-phase-saving');
+    var val = deliverables == null ? '' : String(deliverables).trim();
+    if (text) {
+      text.innerHTML = val.length > 0 ? escPhaseDeliverablesHtml(val) : '<span class="muted">—</span>';
+    }
+    input.value = val;
+    input.setAttribute('data-wc-original', val);
+    input.disabled = false;
+    input.removeAttribute('data-wc-pending');
+    input.removeAttribute('data-wc-mutation-id');
+    if (saving) saving.hidden = true;
+    togglePhaseDeliverablesEdit(row, false);
+    setUiInteraction('phase-deliverables', false);
+  }
 
   function persistPhaseCardExpanded(storageKey, expanded) {
     try {
@@ -2538,6 +2784,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     var current = input.value != null ? String(input.value).trim() : '';
     if (current === original) {
       togglePhaseDeliverablesEdit(row, false);
+      setUiInteraction('phase-deliverables', false);
       return;
     }
     if (error) {
@@ -2575,10 +2822,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       err.textContent = message || 'Unable to save deliverables.';
       err.hidden = false;
     }
+    setUiInteraction('phase-deliverables', false);
   }
 
   function applyTab(tab) {
     if (!tab) return;
+    var prevTab = activeTab;
     activeTab = tab;
     document.querySelectorAll('.wc-tab-panel').forEach(function(p) {
       p.style.display = p.getAttribute('data-wc-tab') === tab ? 'block' : 'none';
@@ -2590,7 +2839,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     });
     if (tab === 'config' && window.wcConfigTab) {
       if (window.wcConfigTab.afterDomUpdate) window.wcConfigTab.afterDomUpdate();
-      if (window.wcConfigTab.requestLoad) window.wcConfigTab.requestLoad();
+      var list = document.getElementById('config-list-root');
+      var needsLoad = prevTab !== 'config' || !list || !!list.querySelector('.cfg-loading');
+      if (needsLoad && window.wcConfigTab.requestLoad) window.wcConfigTab.requestLoad();
     }
   }
 
@@ -2606,7 +2857,27 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (opt.value === activePhaseFilter) hasOption = true;
     });
     if (!hasOption) activePhaseFilter = 'all';
-    phaseSelect.value = activePhaseFilter;
+    if (phaseSelect.value !== activePhaseFilter) {
+      phaseSelect.value = activePhaseFilter;
+    }
+  }
+
+  function wirePhaseFilterSelect(root) {
+    if (!root) return;
+    var phaseSelect = root.querySelector('[data-wc-phase-filter]');
+    if (!phaseSelect || phaseSelect.getAttribute('data-wc-phase-wired') === '1') return;
+    phaseSelect.setAttribute('data-wc-phase-wired', '1');
+    phaseSelect.addEventListener('mousedown', function(ev) {
+      ev.stopPropagation();
+      setUiInteraction('phase-filter', true);
+    });
+    phaseSelect.addEventListener('click', function(ev) { ev.stopPropagation(); });
+    phaseSelect.addEventListener('change', function() {
+      setTimeout(function() { setUiInteraction('phase-filter', false); }, 0);
+    });
+    phaseSelect.addEventListener('blur', function() {
+      setTimeout(function() { setUiInteraction('phase-filter', false); }, 200);
+    });
   }
 
   function applyQueueFilters(root) {
@@ -2633,6 +2904,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     });
 
     syncQueueFiltersUi(root);
+    wirePhaseFilterSelect(root);
   }
 
   window.addEventListener('message', function(ev) {
@@ -2658,6 +2930,18 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (m && m.type === 'wcDrawerValidation' && typeof m.message === 'string') {
       var v = document.getElementById('wc-drawer-validation');
       if (v) { v.textContent = m.message; v.hidden = false; }
+      var dhVal = document.getElementById('wc-drawer-host');
+      if (dhVal) {
+        var subBtn = dhVal.querySelector('[data-wc-drawer-action="submit"]');
+        if (subBtn) { subBtn.disabled = false; subBtn.removeAttribute('data-wc-drawer-submitting'); }
+      }
+      return;
+    }
+    if (m && m.type === 'wcPhaseDeliverablesSaved') {
+      var savedPk = typeof m.phaseKey === 'string' ? m.phaseKey.trim() : '';
+      if (savedPk) {
+        applyPhaseDeliverablesSaved(savedPk, m.deliverables == null ? null : m.deliverables);
+      }
       return;
     }
     if (m && m.type === 'wcPhaseDeliverablesError') {
@@ -2673,27 +2957,100 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     if (!m || m.type !== 'wcReplaceRoot' || typeof m.html !== 'string') return;
-    var root = document.getElementById('root');
-    if (!root) return;
-    var open = {};
-    root.querySelectorAll('details[data-wc-track]').forEach(function(d) {
-      var k = d.getAttribute('data-wc-track');
-      if (k && d.open) open[k] = true;
-    });
-    capturePhaseCardCollapseState(root);
-    root.innerHTML = m.html;
-    Object.keys(open).forEach(function(k) {
-      var el = root.querySelector('details[data-wc-track="' + k + '"]');
-      if (el) el.open = true;
-    });
-    restorePhaseCardCollapseState(root);
-    applyTab(activeTab);
-    applyQueueFilters(root);
-    reloadOpenLazyTerminalBuckets(root);
+    if (isLocalUiLocked()) {
+      pendingReplaceRootHtml = m.html;
+      return;
+    }
+    applyReplaceRootHtml(m.html);
   });
+
+  var contextHelpPopover = document.getElementById('wc-context-help-popover');
+  var contextHelpHideTimer = null;
+  var contextHelpActiveEl = null;
+
+  function positionContextHelpPopover(el) {
+    if (!contextHelpPopover || !el) return;
+    var r = el.getBoundingClientRect();
+    var left = r.left + r.width / 2;
+    var top = r.bottom + 6;
+    contextHelpPopover.style.left = Math.max(12, Math.min(left, window.innerWidth - 12)) + 'px';
+    contextHelpPopover.style.top = top + 'px';
+    contextHelpPopover.style.transform = 'translateX(-50%)';
+  }
+
+  function showContextHelpPopover(el) {
+    if (!contextHelpPopover || !el) return;
+    var text = el.getAttribute('data-wc-help-text') || '';
+    if (!String(text).trim()) return;
+    if (contextHelpHideTimer) {
+      clearTimeout(contextHelpHideTimer);
+      contextHelpHideTimer = null;
+    }
+    contextHelpActiveEl = el;
+    contextHelpPopover.textContent = text;
+    contextHelpPopover.hidden = false;
+    positionContextHelpPopover(el);
+    setUiInteraction('context-help', true);
+  }
+
+  function hideContextHelpPopoverSoon() {
+    if (contextHelpHideTimer) clearTimeout(contextHelpHideTimer);
+    contextHelpHideTimer = setTimeout(function() {
+      contextHelpHideTimer = null;
+      var hovered = document.querySelector('.wc-context-help:hover');
+      var focused = document.activeElement && document.activeElement.closest
+        ? document.activeElement.closest('.wc-context-help')
+        : null;
+      if (hovered || focused) return;
+      contextHelpActiveEl = null;
+      if (contextHelpPopover) {
+        contextHelpPopover.hidden = true;
+        contextHelpPopover.textContent = '';
+      }
+      setUiInteraction('context-help', false);
+    }, 120);
+  }
+
+  function wireContextHelpPopover() {
+    if (window.__wcContextHelpPopoverWired) return;
+    window.__wcContextHelpPopoverWired = true;
+    document.addEventListener('mouseover', function(ev) {
+      var el = ev.target && ev.target.closest ? ev.target.closest('.wc-context-help') : null;
+      if (el) showContextHelpPopover(el);
+    });
+    document.addEventListener('mouseout', function(ev) {
+      var el = ev.target && ev.target.closest ? ev.target.closest('.wc-context-help') : null;
+      if (!el) return;
+      var rel = ev.relatedTarget;
+      if (rel && el.contains(rel)) return;
+      if (rel && rel.closest && rel.closest('.wc-context-help')) return;
+      hideContextHelpPopoverSoon();
+    });
+    document.addEventListener('focusin', function(ev) {
+      var el = ev.target && ev.target.closest ? ev.target.closest('.wc-context-help') : null;
+      if (el) showContextHelpPopover(el);
+    });
+    document.addEventListener('focusout', function(ev) {
+      var el = ev.target && ev.target.closest ? ev.target.closest('.wc-context-help') : null;
+      if (!el) return;
+      hideContextHelpPopoverSoon();
+    });
+    window.addEventListener('scroll', function() {
+      if (contextHelpActiveEl && contextHelpPopover && !contextHelpPopover.hidden) {
+        positionContextHelpPopover(contextHelpActiveEl);
+      }
+    }, true);
+    window.addEventListener('resize', function() {
+      if (contextHelpActiveEl && contextHelpPopover && !contextHelpPopover.hidden) {
+        positionContextHelpPopover(contextHelpActiveEl);
+      }
+    });
+  }
+  wireContextHelpPopover();
 
   applyTab(activeTab);
   restorePhaseCardCollapseState(document.getElementById('root'));
+  applyQueueFilters(document.getElementById('root'));
 
   document.addEventListener('click', function(ev) {
     var dh = document.getElementById('wc-drawer-host');
@@ -2703,6 +3060,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     var act = t.getAttribute('data-wc-drawer-action');
     if (act === 'backdrop' || act === 'cancel') { vscode.postMessage({type:'drawerCancel'}); return; }
     if (act === 'submit') {
+      if (t.disabled || t.getAttribute('data-wc-drawer-submitting') === '1') return;
+      t.disabled = true;
+      t.setAttribute('data-wc-drawer-submitting', '1');
       var vals = {};
       dh.querySelectorAll('[data-wc-drawer-field]').forEach(function(el) {
         var id = el.getAttribute('data-wc-drawer-field');
@@ -2727,6 +3087,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     var rawTarget = ev.target;
     var el = rawTarget;
     while (el && el.nodeType !== 1) el = el.parentElement;
+    if (el && typeof el.closest === 'function' && el.closest('.wc-phase-filter-wrap')) return;
     var tabBtn = el && el.closest ? el.closest('.wc-tab-btn') : null;
     if (tabBtn && rootEl.contains(tabBtn) && !tabBtn.disabled) {
       applyTab(tabBtn.getAttribute('data-wc-tab'));
@@ -2783,6 +3144,24 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     var act = t.getAttribute('data-wc-action');
     if (!act) return;
+    if (act.indexOf('config-') === 0) {
+      ev.preventDefault();
+      if (act === 'config-jump-key' && window.wcConfigTab && window.wcConfigTab.jumpToConfigKey) {
+        window.wcConfigTab.jumpToConfigKey(t.getAttribute('data-key') || '');
+        return;
+      }
+      if (t.closest('#config-list-root') && window.wcConfigTab) {
+        if (act === 'config-explain') {
+          var explainKey = t.getAttribute('data-key') || '';
+          if (explainKey) vscode.postMessage({ type: 'explain', key: explainKey });
+          return;
+        }
+        if (act === 'config-save' || act === 'config-unset' || act === 'config-reload-window') {
+          return;
+        }
+      }
+      return;
+    }
     ev.preventDefault();
     ev.stopPropagation();
     if (act === 'phase-readiness-toggle') {
@@ -2813,6 +3192,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       var row = t.closest('[data-wc-phase-row]');
       if (!row) return;
       var input = row.querySelector('.dash-phase-deliverables-input');
+      setUiInteraction('phase-deliverables', true);
       if (input) {
         input.disabled = false;
         input.removeAttribute('data-wc-pending');
@@ -2820,6 +3200,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         input.setAttribute('data-wc-original', input.value != null ? String(input.value).trim() : '');
       }
       togglePhaseDeliverablesEdit(row, true);
+      if (input) {
+        input.setAttribute('data-wc-focus-grace', '1');
+        setTimeout(function() {
+          if (input) input.removeAttribute('data-wc-focus-grace');
+        }, 350);
+      }
       return;
     }
     if (act === 'phase-note-view') {
@@ -2883,6 +3269,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       target.removeAttribute('data-wc-pending');
       target.removeAttribute('data-wc-mutation-id');
       togglePhaseDeliverablesEdit(row, false);
+      setUiInteraction('phase-deliverables', false);
     }
   });
   if (rootEl) rootEl.addEventListener('change', function(ev) {
@@ -2896,9 +3283,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     var target = ev.target;
     if (!target || !target.classList || !target.classList.contains('dash-phase-deliverables-input')) return;
     if (target.getAttribute('data-wc-pending') === '1') return;
-    var next = ev.relatedTarget;
+    if (target.getAttribute('data-wc-focus-grace') === '1') return;
     var row = target.closest('[data-wc-phase-row]');
     if (!row) return;
+    var editor = row.querySelector('.dash-phase-deliverables-editor');
+    if (!editor || editor.hidden) return;
+    var next = ev.relatedTarget;
     if (next && row.contains(next)) return;
     submitPhaseDeliverablesInput(target);
   });
@@ -3456,9 +3846,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       white-space: nowrap;
     }
     .wc-phase-tag-delivered {
-      background: #1b4d1f;
-      color: #c8f5c8;
-      border-color: #2e7d32;
+      background: var(--vscode-badge-secondaryBackground, #3c3c3c);
+      color: var(--vscode-badge-secondaryForeground, #e8e8e8);
+      border-color: var(--vscode-widget-border, #5a5a5a);
     }
     .wc-phase-tag-current {
       background: #1b4d1f;
@@ -3515,10 +3905,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     /* ── Stat pills ── */
     .wc-stat-pills {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      display: flex;
+      flex-wrap: nowrap;
       gap: 6px;
       margin: 0 0 10px 0;
+    }
+    .wc-stat-pills .wc-stat-pill {
+      flex: 1 1 0;
+      min-width: 0;
     }
     .wc-stat-pill {
       display: flex;
@@ -3564,6 +3958,69 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       border-color: var(--vscode-widget-border, rgba(127,127,127,.45));
     }
     .wc-pill-done .wc-stat-num { color: var(--vscode-foreground); opacity: 0.7; }
+    .wc-pill-human {
+      border-color: color-mix(in srgb, var(--vscode-editorWarning-foreground, #cca700) 55%, transparent);
+      background: color-mix(in srgb, var(--vscode-editorWarning-foreground, #cca700) 12%, var(--vscode-textCodeBlock-background));
+    }
+    .wc-stat-num-human {
+      color: var(--vscode-editorWarning-foreground, #cca700);
+    }
+    /* ── Contextual help (fixed popover outside #root — no blink on refresh) ── */
+    .wc-context-help-popover {
+      position: fixed;
+      z-index: 25000;
+      min-width: 200px;
+      max-width: min(300px, calc(100vw - 24px));
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.45));
+      background: var(--vscode-editorHoverWidget-background, var(--vscode-editor-background));
+      color: var(--vscode-editorHoverWidget-foreground, var(--vscode-foreground));
+      font-size: 11px;
+      font-weight: 400;
+      line-height: 1.45;
+      box-shadow: 0 4px 14px rgba(0,0,0,.25);
+      text-align: left;
+      white-space: normal;
+      pointer-events: none;
+    }
+    .wc-context-help-popover[hidden] {
+      display: none !important;
+    }
+    .wc-context-help {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 6px;
+      vertical-align: middle;
+      cursor: help;
+      outline: none;
+    }
+    .wc-context-help-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      font-size: 10px;
+      font-weight: 700;
+      font-style: italic;
+      line-height: 1;
+      color: var(--vscode-button-foreground, #fff);
+      background: var(--vscode-textLink-foreground, #3794ff);
+      user-select: none;
+    }
+    .dash-phase-catalog-hint .wc-context-help-icon {
+      font-style: normal;
+      font-size: 11px;
+      width: 15px;
+      height: 15px;
+      background: var(--vscode-descriptionForeground, rgba(127,127,127,.85));
+    }
+    .wc-cae-readiness-title .wc-context-help {
+      margin-left: 4px;
+    }
     /* ── Filter chips ── */
     .wc-filter-chips {
       display: flex;
@@ -3954,6 +4411,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
 </head>
 <body>
   <div id="root">${rootInnerHtml}</div>
+  <div id="wc-context-help-popover" class="wc-context-help-popover" role="tooltip" hidden></div>
   <div id="wc-drawer-host" class="wc-drawer-host wc-drawer-host--hidden" aria-hidden="true"></div>
   <footer class="dash-footer">
     <button type="button" id="btn" class="wc-btn wc-btn-lg wc-btn-primary dash-refresh-btn" title="Refetch dashboard-summary now. The panel also reloads when you switch back to it, when kit-owned files change, and about every 45s while visible.">Refresh</button>

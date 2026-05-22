@@ -96,13 +96,16 @@ export function activate(context: vscode.ExtensionContext): void {
   let statusDashboard: StatusDashboardPanel | undefined;
 
   if (client && folder) {
-    const watcher = new StateWatcher(folder, () => kitStateEmitter.fire());
-    watcher.start();
-    context.subscriptions.push(watcher);
-
     dashboard = new DashboardViewProvider(context.extensionUri, client, onKitStateChanged, () =>
       kitStateEmitter.fire()
     );
+    const watcher = new StateWatcher(
+      folder,
+      () => kitStateEmitter.fire(),
+      () => dashboard?.scheduleConfigTabRefresh()
+    );
+    watcher.start();
+    context.subscriptions.push(watcher);
     guidanceView = new GuidanceViewProvider(context.extensionUri, client, onKitStateChanged);
     guidancePanel = new GuidancePanel(context.extensionUri, client, onKitStateChanged, folder);
     statusDashboard = new StatusDashboardPanel(context.extensionUri, client, onKitStateChanged);

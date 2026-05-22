@@ -7,13 +7,15 @@ export class StateWatcher implements vscode.Disposable {
   private readonly disposables: vscode.Disposable[] = [];
   private readonly dataWatchers: vscode.FileSystemWatcher[] = [];
   private debounceTimer: ReturnType<typeof setTimeout> | undefined;
+  private configDebounceTimer: ReturnType<typeof setTimeout> | undefined;
   private static readonly CONFIG_PATH = ".workspace-kit/config.json";
   private static readonly DEFAULT_TASK_STORE_PATH = ".workspace-kit/tasks/state.json";
   private static readonly DEFAULT_SQLITE_DB_PATH = ".workspace-kit/tasks/workspace-kit.db";
 
   constructor(
     private readonly workspaceFolder: vscode.WorkspaceFolder,
-    private readonly onChange: () => void
+    private readonly onChange: () => void,
+    private readonly onConfigFileChange?: () => void
   ) {}
 
   start(): void {
@@ -23,6 +25,9 @@ export class StateWatcher implements vscode.Disposable {
     this.disposables.push(configWatcher);
     const onConfigChanged = () => {
       void this.refreshDataWatchers();
+      if (this.onConfigFileChange) {
+        this.fireConfigDebounced();
+      }
       this.fireDebounced();
     };
     configWatcher.onDidChange(onConfigChanged);
@@ -88,9 +93,25 @@ export class StateWatcher implements vscode.Disposable {
     }, 400);
   }
 
+  private fireConfigDebounced(): void {
+    if (!this.onConfigFileChange) {
+      return;
+    }
+    if (this.configDebounceTimer) {
+      clearTimeout(this.configDebounceTimer);
+    }
+    this.configDebounceTimer = setTimeout(() => {
+      this.configDebounceTimer = undefined;
+      this.onConfigFileChange!();
+    }, 800);
+  }
+
   dispose(): void {
     if (this.debounceTimer) {
       clearTimeout(this.debounceTimer);
+    }
+    if (this.configDebounceTimer) {
+      clearTimeout(this.configDebounceTimer);
     }
     for (const watcher of this.dataWatchers) {
       watcher.dispose();
