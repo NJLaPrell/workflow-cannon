@@ -294,6 +294,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private dashboardUpdateQueued = false;
   private dashboardDebounceTimer: ReturnType<typeof setTimeout> | undefined;
 
+  /** While the webview reports focus/edit (phase filter, roster inline edit), defer full `wcReplaceRoot` refreshes. */
+  private dashboardInteractionLocks = new Set<string>();
+  private dashboardRefreshAfterInteraction = false;
+
   /** 0-based page for wishlist rows in `dashboard-summary` (5 per page). */
   private wishlistPage = 0;
 
@@ -344,7 +348,16 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (await this.handleConfigWebviewMessage(webview, msg as Record<string, unknown>)) {
         return;
       }
+      if (msg?.type === "wcUiInteraction") {
+        const source = typeof msg.source === "string" ? msg.source.trim() : "";
+        if (source.length > 0) {
+          this.setDashboardUiInteraction(source, msg.active === true);
+        }
+        return;
+      }
       if (msg?.type === "refresh") {
+        this.dashboardInteractionLocks.clear();
+        this.dashboardRefreshAfterInteraction = false;
         await this.pushUpdate();
       }
       if (msg?.type === "loadLazyTerminalBucket") {
@@ -689,7 +702,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         if (phaseKey.length > 0 && (deliverables === null || typeof deliverables === "string")) {
           const refreshed = await this.onUpdatePhaseDeliverables(phaseKey, deliverables, clientMutationId);
           if (refreshed) {
-            await this.pushUpdate();
+            await this.view?.webview.postMessage({
+              type: "wcPhaseDeliverablesSaved",
+              phaseKey,
+              deliverables
+            });
           } else {
             await this.view?.webview.postMessage({
               type: "wcPhaseDeliverablesError",
@@ -1194,10 +1211,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     const actionLabel = mode === "add" ? "Add comment" : "View comments";
     const pick = await vscode.window.showInformationMessage(
       `${actionLabel} for ${taskId} is coming soon. Use the wishlist flow to track comment work, or open the task detail meanwhile.`,
-      "Add wishlist item",
+      "Add Wishlist Item",
       "Open task detail"
     );
-    if (pick === "Add wishlist item") {
+    if (pick === "Add Wishlist Item") {
       await this.openAddWishlistDrawer();
       return;
     }
@@ -2147,6 +2164,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (!this.view) {
       return;
     }
+    if (this.isDashboardRefreshDeferred()) {
+      this.dashboardRefreshAfterInteraction = true;
+      return;
+    }
     if (this.dashboardDebounceTimer) {
       clearTimeout(this.dashboardDebounceTimer);
     }
@@ -2154,6 +2175,22 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       this.dashboardDebounceTimer = undefined;
       void this.pushUpdate();
     }, delayMs);
+  }
+
+  private isDashboardRefreshDeferred(): boolean {
+    return this.dashboardInteractionLocks.size > 0;
+  }
+
+  private setDashboardUiInteraction(source: string, active: boolean): void {
+    if (active) {
+      this.dashboardInteractionLocks.add(source);
+    } else {
+      this.dashboardInteractionLocks.delete(source);
+    }
+    if (this.dashboardInteractionLocks.size === 0 && this.dashboardRefreshAfterInteraction) {
+      this.dashboardRefreshAfterInteraction = false;
+      this.schedulePushUpdate(0);
+    }
   }
 
   private async runDashboardUpdateLoop(): Promise<void> {
@@ -2166,6 +2203,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private async pushUpdateOnce(): Promise<void> {
     const activeView = this.view;
     if (!activeView) {
+      return;
+    }
+    if (this.isDashboardRefreshDeferred()) {
+      this.dashboardRefreshAfterInteraction = true;
       return;
     }
     const { webview } = activeView;
@@ -2400,6 +2441,118 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   var PHASE_READINESS_EXPAND_KEY = 'wc-phase-readiness-expanded';
   var PHASE_PROGRESS_EXPAND_KEY = 'wc-phase-progress-expanded';
 
+  var localUiLocks = {};
+  var pendingReplaceRootHtml = null;
+
+  function isLocalUiLocked() {
+    return Object.keys(localUiLocks).length > 0;
+  }
+
+  function setUiInteraction(source, active) {
+    var key = source || 'unknown';
+    if (active) localUiLocks[key] = true;
+    else delete localUiLocks[key];
+    vscode.postMessage({ type: 'wcUiInteraction', source: key, active: !!active });
+    if (!isLocalUiLocked() && pendingReplaceRootHtml) {
+      var queued = pendingReplaceRootHtml;
+      pendingReplaceRootHtml = null;
+      applyReplaceRootHtml(queued);
+    }
+  }
+
+  function capturePhaseDeliverablesEditState(root) {
+    if (!root) return null;
+    var rows = root.querySelectorAll('[data-wc-phase-row]');
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i];
+      var editor = row.querySelector('.dash-phase-deliverables-editor');
+      if (!editor || editor.hidden) continue;
+      var input = row.querySelector('.dash-phase-deliverables-input');
+      var phaseKey = (row.getAttribute('data-wc-phase-row') || '').trim();
+      if (!phaseKey) continue;
+      return {
+        phaseKey: phaseKey,
+        value: input && input.value != null ? String(input.value) : '',
+        original: input ? input.getAttribute('data-wc-original') || '' : '',
+        pending: !!(input && input.getAttribute('data-wc-pending') === '1')
+      };
+    }
+    return null;
+  }
+
+  function restorePhaseDeliverablesEditState(state) {
+    if (!state || !state.phaseKey) return;
+    var row = document.querySelector('[data-wc-phase-row="' + state.phaseKey.replace(/"/g, '\\\\"') + '"]');
+    if (!row) return;
+    var input = row.querySelector('.dash-phase-deliverables-input');
+    if (input) {
+      input.value = state.value;
+      input.setAttribute('data-wc-original', state.original);
+      if (state.pending) {
+        input.setAttribute('data-wc-pending', '1');
+        input.disabled = true;
+      } else {
+        input.disabled = false;
+        input.removeAttribute('data-wc-pending');
+      }
+    }
+    togglePhaseDeliverablesEdit(row, true);
+    if (input && !state.pending) {
+      input.setAttribute('data-wc-focus-grace', '1');
+      setTimeout(function() {
+        if (input) input.removeAttribute('data-wc-focus-grace');
+      }, 350);
+    }
+    setUiInteraction('phase-deliverables', true);
+  }
+
+  function applyReplaceRootHtml(html) {
+    var root = document.getElementById('root');
+    if (!root) return;
+    var open = {};
+    var editState = capturePhaseDeliverablesEditState(root);
+    root.querySelectorAll('details[data-wc-track]').forEach(function(d) {
+      var k = d.getAttribute('data-wc-track');
+      if (k && d.open) open[k] = true;
+    });
+    capturePhaseCardCollapseState(root);
+    root.innerHTML = html;
+    Object.keys(open).forEach(function(k) {
+      var el = root.querySelector('details[data-wc-track="' + k + '"]');
+      if (el) el.open = true;
+    });
+    restorePhaseCardCollapseState(root);
+    applyTab(activeTab);
+    applyQueueFilters(root);
+    reloadOpenLazyTerminalBuckets(root);
+    if (editState) restorePhaseDeliverablesEditState(editState);
+  }
+
+  function escPhaseDeliverablesHtml(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function applyPhaseDeliverablesSaved(phaseKey, deliverables) {
+    var input = phaseDeliverablesInputFromPhase(phaseKey);
+    if (!input) return;
+    var row = input.closest('[data-wc-phase-row]');
+    if (!row) return;
+    var text = row.querySelector('.dash-phase-deliverables-text');
+    var saving = row.querySelector('.dash-phase-saving');
+    var val = deliverables == null ? '' : String(deliverables).trim();
+    if (text) {
+      text.innerHTML = val.length > 0 ? escPhaseDeliverablesHtml(val) : '<span class="muted">—</span>';
+    }
+    input.value = val;
+    input.setAttribute('data-wc-original', val);
+    input.disabled = false;
+    input.removeAttribute('data-wc-pending');
+    input.removeAttribute('data-wc-mutation-id');
+    if (saving) saving.hidden = true;
+    togglePhaseDeliverablesEdit(row, false);
+    setUiInteraction('phase-deliverables', false);
+  }
+
   function persistPhaseCardExpanded(storageKey, expanded) {
     try {
       if (expanded) sessionStorage.setItem(storageKey, '1');
@@ -2538,6 +2691,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     var current = input.value != null ? String(input.value).trim() : '';
     if (current === original) {
       togglePhaseDeliverablesEdit(row, false);
+      setUiInteraction('phase-deliverables', false);
       return;
     }
     if (error) {
@@ -2575,6 +2729,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       err.textContent = message || 'Unable to save deliverables.';
       err.hidden = false;
     }
+    setUiInteraction('phase-deliverables', false);
   }
 
   function applyTab(tab) {
@@ -2606,7 +2761,27 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (opt.value === activePhaseFilter) hasOption = true;
     });
     if (!hasOption) activePhaseFilter = 'all';
-    phaseSelect.value = activePhaseFilter;
+    if (phaseSelect.value !== activePhaseFilter) {
+      phaseSelect.value = activePhaseFilter;
+    }
+  }
+
+  function wirePhaseFilterSelect(root) {
+    if (!root) return;
+    var phaseSelect = root.querySelector('[data-wc-phase-filter]');
+    if (!phaseSelect || phaseSelect.getAttribute('data-wc-phase-wired') === '1') return;
+    phaseSelect.setAttribute('data-wc-phase-wired', '1');
+    phaseSelect.addEventListener('mousedown', function(ev) {
+      ev.stopPropagation();
+      setUiInteraction('phase-filter', true);
+    });
+    phaseSelect.addEventListener('click', function(ev) { ev.stopPropagation(); });
+    phaseSelect.addEventListener('change', function() {
+      setTimeout(function() { setUiInteraction('phase-filter', false); }, 0);
+    });
+    phaseSelect.addEventListener('blur', function() {
+      setTimeout(function() { setUiInteraction('phase-filter', false); }, 200);
+    });
   }
 
   function applyQueueFilters(root) {
@@ -2633,6 +2808,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     });
 
     syncQueueFiltersUi(root);
+    wirePhaseFilterSelect(root);
   }
 
   window.addEventListener('message', function(ev) {
@@ -2660,6 +2836,13 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (v) { v.textContent = m.message; v.hidden = false; }
       return;
     }
+    if (m && m.type === 'wcPhaseDeliverablesSaved') {
+      var savedPk = typeof m.phaseKey === 'string' ? m.phaseKey.trim() : '';
+      if (savedPk) {
+        applyPhaseDeliverablesSaved(savedPk, m.deliverables == null ? null : m.deliverables);
+      }
+      return;
+    }
     if (m && m.type === 'wcPhaseDeliverablesError') {
       var pk = typeof m.phaseKey === 'string' ? m.phaseKey.trim() : '';
       var msg = typeof m.message === 'string' ? m.message : 'Unable to save deliverables.';
@@ -2673,27 +2856,16 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     if (!m || m.type !== 'wcReplaceRoot' || typeof m.html !== 'string') return;
-    var root = document.getElementById('root');
-    if (!root) return;
-    var open = {};
-    root.querySelectorAll('details[data-wc-track]').forEach(function(d) {
-      var k = d.getAttribute('data-wc-track');
-      if (k && d.open) open[k] = true;
-    });
-    capturePhaseCardCollapseState(root);
-    root.innerHTML = m.html;
-    Object.keys(open).forEach(function(k) {
-      var el = root.querySelector('details[data-wc-track="' + k + '"]');
-      if (el) el.open = true;
-    });
-    restorePhaseCardCollapseState(root);
-    applyTab(activeTab);
-    applyQueueFilters(root);
-    reloadOpenLazyTerminalBuckets(root);
+    if (isLocalUiLocked()) {
+      pendingReplaceRootHtml = m.html;
+      return;
+    }
+    applyReplaceRootHtml(m.html);
   });
 
   applyTab(activeTab);
   restorePhaseCardCollapseState(document.getElementById('root'));
+  applyQueueFilters(document.getElementById('root'));
 
   document.addEventListener('click', function(ev) {
     var dh = document.getElementById('wc-drawer-host');
@@ -2727,6 +2899,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     var rawTarget = ev.target;
     var el = rawTarget;
     while (el && el.nodeType !== 1) el = el.parentElement;
+    if (el && typeof el.closest === 'function' && el.closest('.wc-phase-filter-wrap')) return;
     var tabBtn = el && el.closest ? el.closest('.wc-tab-btn') : null;
     if (tabBtn && rootEl.contains(tabBtn) && !tabBtn.disabled) {
       applyTab(tabBtn.getAttribute('data-wc-tab'));
@@ -2813,6 +2986,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       var row = t.closest('[data-wc-phase-row]');
       if (!row) return;
       var input = row.querySelector('.dash-phase-deliverables-input');
+      setUiInteraction('phase-deliverables', true);
       if (input) {
         input.disabled = false;
         input.removeAttribute('data-wc-pending');
@@ -2820,6 +2994,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         input.setAttribute('data-wc-original', input.value != null ? String(input.value).trim() : '');
       }
       togglePhaseDeliverablesEdit(row, true);
+      if (input) {
+        input.setAttribute('data-wc-focus-grace', '1');
+        setTimeout(function() {
+          if (input) input.removeAttribute('data-wc-focus-grace');
+        }, 350);
+      }
       return;
     }
     if (act === 'phase-note-view') {
@@ -2883,6 +3063,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       target.removeAttribute('data-wc-pending');
       target.removeAttribute('data-wc-mutation-id');
       togglePhaseDeliverablesEdit(row, false);
+      setUiInteraction('phase-deliverables', false);
     }
   });
   if (rootEl) rootEl.addEventListener('change', function(ev) {
@@ -2896,9 +3077,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     var target = ev.target;
     if (!target || !target.classList || !target.classList.contains('dash-phase-deliverables-input')) return;
     if (target.getAttribute('data-wc-pending') === '1') return;
-    var next = ev.relatedTarget;
+    if (target.getAttribute('data-wc-focus-grace') === '1') return;
     var row = target.closest('[data-wc-phase-row]');
     if (!row) return;
+    var editor = row.querySelector('.dash-phase-deliverables-editor');
+    if (!editor || editor.hidden) return;
+    var next = ev.relatedTarget;
     if (next && row.contains(next)) return;
     submitPhaseDeliverablesInput(target);
   });

@@ -452,7 +452,7 @@ export function buildAddWishlistDrawerSpec(): DrawerFormSpec {
   );
   return {
     workflowId: "add-wishlist",
-    title: "Add wishlist item",
+    title: "Add Wishlist Item",
     descriptionHtml:
       "All eight fields are required (same contract as <code>create-wishlist</code>). " +
       "Do not paste secrets — this is operator-facing intake.",

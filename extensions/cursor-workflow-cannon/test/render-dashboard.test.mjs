@@ -153,6 +153,7 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(configPanel, /id="config-list-root"/);
   assert.match(configPanel, /id="cfg-refresh"/);
   assert.doesNotMatch(configPanel, /activity bar/i);
+  const taskEnginePanel = html.slice(taskEnginePanelIdx, statusPanelIdx);
   const overviewPanel = html.slice(overviewPanelIdx, taskEnginePanelIdx);
   const statusPanel = html.slice(statusPanelIdx, configPanelIdx);
   const caePanel = html.slice(caePanelIdx);
@@ -163,12 +164,10 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(statusPanel, /Manage guidance policies via the CAE sidebar panel/);
   assert.doesNotMatch(caePanel, /Active Guidance|aria-label="Agent guidance"/);
   assert.ok(statusPanel.indexOf('aria-label="Agent profile"') < statusPanel.indexOf('aria-label="Workspace identity"'));
-  const roleIdx = statusPanelIdx + statusPanel.indexOf("Agent Profile");
-  const agentStatusIdx = html.indexOf("<b>WC Agent is:</b>");
-  const phaseIdx = html.indexOf("Current Phase");
-  assert.ok(agentStatusIdx !== -1 && roleIdx !== -1 && agentStatusIdx < roleIdx);
-  assert.ok(agentStatusIdx !== -1 && phaseIdx !== -1 && agentStatusIdx < phaseIdx);
-  assert.ok(phaseIdx !== -1 && roleIdx !== -1 && phaseIdx < roleIdx);
+  assert.ok(overviewPanel.indexOf("dash-agent-status-banner") < overviewPanel.indexOf("wc-cae-readiness"));
+  assert.ok(overviewPanel.indexOf("wc-rec-next") < overviewPanel.indexOf("wc-cae-readiness"));
+  assert.match(overviewPanel, /wc-stat-pills/);
+  assert.doesNotMatch(taskEnginePanel, /dashboard-approvals/);
   assert.match(html, /Phase Readiness · Phase 14/);
   assert.match(html, /aria-label="Phase readiness · Phase 14"/);
   assert.match(html, /wc-cae-readiness-collapsed/);
@@ -181,9 +180,11 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.doesNotMatch(html, /expectedPlanningGeneration/);
   assert.match(html, /dash-quick-actions/);
   assert.match(html, /data-wc-action="add-wishlist-item"/);
-  assert.match(html, />Add wishlist item<\/button>/);
-  assert.match(html, /data-wc-action="collaboration-hub"/);
-  assert.match(html, />Collaboration profiles<\/button>/);
+  assert.match(html, />Add Wishlist Item<\/button>/);
+  assert.doesNotMatch(html, /data-wc-action="collaboration-hub"/);
+  assert.doesNotMatch(html, />Collaboration profiles<\/button>/);
+  assert.doesNotMatch(html, /data-wc-action="transcript-churn-research-chat"[\s\S]*>Research churn<\/button>/);
+  assert.doesNotMatch(html, /dash-quick-actions[\s\S]*data-wc-action="phase-note-add"/);
   assert.match(html, /data-wc-action="generate-features-chat"/);
   assert.match(html, />Generate Features<\/button>/);
   const taskBlock = html.indexOf("dashboard-tasks-block");
@@ -269,14 +270,12 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /Planning Interview/);
   assert.doesNotMatch(html, /data-wc-action="planning-new-plan"/);
   assert.doesNotMatch(html, /data-wc-action="planning-resume-chat"/);
-  assert.match(html, /No interview in progress/);
-  assert.doesNotMatch(html, /This card updates when/);
+  assert.doesNotMatch(taskEnginePanel, /data-wc-action="planning-discard"/);
   assert.match(html, /Store updated/);
   assert.doesNotMatch(html, /wc-status-counts-scope-note/);
   assert.doesNotMatch(html, /stateSummary/);
   assert.doesNotMatch(html, /same store as execution queue/i);
   assert.doesNotMatch(html, /Suggested Next/i);
-  assert.doesNotMatch(html, /dashboard-approvals/);
 });
 
 test("renderDashboardRootInnerHtml renders phase roster deliverables inline edit affordances", () => {
@@ -681,12 +680,10 @@ test("renderDashboardRootInnerHtml includes phase journal controls when bundle p
   assert.match(html, /dash-phase-notes/);
   assert.match(html, /phase-note-add/);
   assert.match(html, />New<\/button>/);
-  assert.match(html, /phase-notes-chat/);
   assert.match(html, /phase-note-view/);
   assert.match(html, /phase-note-edit/);
   assert.match(html, /phase-note-delete/);
   assert.match(html, /phase-note-convert/);
-  assert.match(html, /phase-notes-propose-persist/);
   assert.match(html, /550e8400-e29b-41d4-a716-446655440000/);
   assert.match(html, /Ship the dashboard phase journal card/);
   assert.doesNotMatch(html, /Journal entries scoped to the workspace current phase/);
@@ -1114,7 +1111,7 @@ test("renderDashboardRootInnerHtml approval inbox empty state shows guide and ar
   assert.match(html, /dashboard-approvals/);
   assert.match(html, /approval-inbox-chat/);
   assert.match(html, /Policy Approval Inbox/);
-  assert.match(html, /decisions\.jsonl/);
+  assert.match(html, /kit_approval_decisions/);
 });
 
 test("renderDashboardRootInnerHtml approval inbox row exposes review actions", () => {
@@ -1275,12 +1272,11 @@ test("renderDashboardRootInnerHtml omits suggested-next section", () => {
     }
   });
   assert.doesNotMatch(html, /Suggested Next/i);
+  assert.doesNotMatch(html, /wc-rec-next/);
   assert.doesNotMatch(html, /T999/);
   assert.match(html, />No Items</);
   assert.doesNotMatch(html, /data-wc-action="planning-new-plan"/);
   assert.doesNotMatch(html, /data-wc-action="planning-resume-chat"/);
-  assert.match(html, /No interview in progress/);
-  assert.doesNotMatch(html, /This card updates when/);
   assert.match(html, /<span class="wc-status-kv-label">Role<\/span><span class="wc-status-kv-val">Bard<\/span>/);
   assert.match(html, /<span class="wc-status-kv-label">Temperament<\/span><span class="wc-status-kv-val">The Wary Scout<\/span>/);
   assert.doesNotMatch(html, /wc-ready-scope-note/);
@@ -1302,8 +1298,10 @@ test("renderDashboardRootInnerHtml keeps dashboard copy compact", () => {
       externalCursorDeeplink: false
     }
   });
-  const longTitles = extractParagraphBoldTitles(html).filter((title) => title.length > 32);
-  const longMuted = extractMutedParagraphs(html).filter((text) => text.length > 120);
+  const configPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="config"');
+  const htmlForCompact = configPanelIdx >= 0 ? html.slice(0, configPanelIdx) : html;
+  const longTitles = extractParagraphBoldTitles(htmlForCompact).filter((title) => title.length > 32);
+  const longMuted = extractMutedParagraphs(htmlForCompact).filter((text) => text.length > 120);
   assert.deepEqual(longTitles, []);
   assert.deepEqual(longMuted, []);
 });
@@ -1590,42 +1588,59 @@ test("renderDashboardRootInnerHtml renders human gates section with resume actio
   assert.match(html, /Awaiting review · T900/);
 });
 
-test("renderDashboardRootInnerHtml renders phase journal stats banner and quick action", () => {
-  const html = renderDashboardRootInnerHtml({
-    ok: true,
-    data: {
-      stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
-      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
-      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
-      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
-      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
-      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
-      blockedSummary: { count: 0, top: [], phaseBuckets: [] },
-      humanGatesSummary: { schemaVersion: 1, phaseKey: "100", count: 0, top: [] },
-      phaseJournalStats: {
-        schemaVersion: 1,
-        available: true,
-        phases: [{ phaseKey: "100", activeNoteCount: 0, latestNoteAt: null }],
-        currentPhase: {
-          phaseKey: "100",
-          activeNoteCount: 0,
-          completedDeliveryTaskCount: 2,
-          silenceWarning: true
-        }
-      },
-      readyQueueTop: [],
-      readyQueueCount: 0,
-      suggestedNext: null,
-      planningSession: null,
-      taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
-      workspaceStatus: { currentKitPhase: "100", nextKitPhase: "101", activeFocus: "Test" },
-      blockingAnalysis: [],
-      dependencyOverview: deliverTestDepOverview
+test("renderDashboardRootInnerHtml phase journal silence hint lives in Phase Notes card only", () => {
+  const data = {
+    stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
+    proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+    proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+    readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+    readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+    wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+    blockedSummary: { count: 0, top: [], phaseBuckets: [] },
+    humanGatesSummary: { schemaVersion: 1, phaseKey: "100", count: 0, top: [] },
+    phaseJournalStats: {
+      schemaVersion: 1,
+      available: true,
+      phases: [{ phaseKey: "100", activeNoteCount: 0, latestNoteAt: null }],
+      currentPhase: {
+        phaseKey: "100",
+        activeNoteCount: 0,
+        completedDeliveryTaskCount: 2,
+        silenceWarning: true
+      }
+    },
+    readyQueueTop: [],
+    readyQueueCount: 0,
+    suggestedNext: null,
+    planningSession: null,
+    taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
+    workspaceStatus: { currentKitPhase: "100", nextKitPhase: "101", activeFocus: "Test" },
+    blockingAnalysis: [],
+    dependencyOverview: deliverTestDepOverview
+  };
+  const bundle = {
+    listPhaseNotes: {
+      ok: true,
+      code: "phase-notes-listed",
+      data: { phaseKey: "100", phaseKeySource: "workspace-status", notes: [], count: 0 }
+    },
+    getPhaseContext: {
+      ok: true,
+      code: "phase-context",
+      data: { phaseKey: "100", phaseKeySource: "workspace-status", notes: [], count: 0 }
     }
-  });
-  assert.match(html, /Notes captured this phase/);
-  assert.match(html, /dash-phase-journal-silence-warn/);
-  assert.match(html, /data-wc-action="phase-note-add"/);
+  };
+  const html = renderDashboardRootInnerHtml({ ok: true, data }, null, null, bundle);
+  assert.doesNotMatch(html, /Notes captured this phase/);
+  assert.doesNotMatch(html, /dash-phase-journal-stats/);
+  assert.doesNotMatch(html, /dash-quick-actions[\s\S]*data-wc-action="phase-note-add"/);
+  const taskEngineIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="task-engine"');
+  const statusEnd = html.indexOf('<div class="wc-tab-panel" data-wc-tab="status"');
+  assert.ok(taskEngineIdx !== -1 && statusEnd > taskEngineIdx);
+  const taskEnginePanel = html.slice(taskEngineIdx, statusEnd);
+  assert.match(taskEnginePanel, /dash-phase-notes/);
+  assert.match(taskEnginePanel, /dash-phase-journal-silence-warn/);
+  assert.match(taskEnginePanel, /data-wc-action="phase-note-add"/);
 });
 
 test("renderDashboardRootInnerHtml ready rows keep flex task actions without grid modifier", () => {
@@ -2116,7 +2131,7 @@ test("Phase Progress renders segmented bar without release control", () => {
   assert.match(readinessSection, /dash-phase-release-btn/);
 });
 
-test("Phase Readiness Complete & Release stays clickable before closeout passes", () => {
+test("Phase Readiness Complete & Release disabled before closeout reaches 100%", () => {
   const html = renderDashboardRootInnerHtml(
     readinessDashboardPayload({
       currentPhaseDelivery: phaseDeliveryFixture({
@@ -2131,16 +2146,17 @@ test("Phase Readiness Complete & Release stays clickable before closeout passes"
   );
   const head = html.match(/wc-cae-readiness-head[\s\S]*?<\/div>\s*<div class="wc-cae-readiness-body"/)?.[0] ?? "";
   assert.match(head, /dash-phase-release-btn/);
-  assert.doesNotMatch(head, /\bdash-phase-release-btn[\s\S]*\bdisabled\b/);
-  assert.match(head, /dash-phase-release-btn--preflight/);
-  assert.match(head, /Start phase closeout/);
+  assert.match(head, /\bdash-phase-release-btn[\s\S]*\bdisabled\b/);
+  assert.match(head, /wc-btn-disabled/);
+  assert.doesNotMatch(head, /dash-phase-release-btn--preflight/);
+  assert.match(head, /Complete &amp; Release unlocks when phase readiness reaches 100%/);
 });
 
 test("Phase Readiness enables Complete & Release when closeout passed", () => {
   const html = renderDashboardRootInnerHtml(readinessDashboardPayload());
   const head = html.match(/wc-cae-readiness-head[\s\S]*?<\/div>/)?.[0] ?? "";
   assert.match(head, /dash-phase-release-btn/);
-  assert.doesNotMatch(head, /disabled/);
+  assert.doesNotMatch(head, /\bdash-phase-release-btn[\s\S]*\bdisabled\b/);
 });
 
 test("Phase Readiness shows Delivered tag when phase completed and released", () => {

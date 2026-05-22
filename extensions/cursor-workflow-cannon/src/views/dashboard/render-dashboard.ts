@@ -703,6 +703,8 @@ function renderPhaseReleaseAction(args: {
   workspaceCurrent: string;
   workspaceNext: string;
   snapshot: PhaseSnapshot;
+  /** Badge % on Phase Readiness (work-readiness score). */
+  readinessScore: number;
 }): string {
   const delivered = args.snapshot.closeoutPassed && args.snapshot.released;
   if (delivered) {
@@ -712,8 +714,10 @@ function renderPhaseReleaseAction(args: {
       "</span>"
     );
   }
+  const releaseReadyPercent = args.snapshot.releaseReadyPercent;
+  const readinessScore = Math.min(100, Math.max(0, Math.round(args.readinessScore)));
   const closeoutReady =
-    args.snapshot.closeoutPassed && args.snapshot.releaseReadyPercent >= 100;
+    args.snapshot.closeoutPassed && releaseReadyPercent >= 100;
   return renderPhaseCompleteReleaseButton({
     phaseKey: args.phaseKey,
     phasePhrase: args.phasePhrase,
@@ -721,7 +725,8 @@ function renderPhaseReleaseAction(args: {
     workspaceCurrent: args.workspaceCurrent,
     workspaceNext: args.workspaceNext,
     scope: "current",
-    closeoutReady
+    closeoutReady,
+    disabled: readinessScore < 100 || releaseReadyPercent < 100
   });
 }
 
@@ -899,7 +904,8 @@ function renderPhaseReadinessCard(ws: Record<string, unknown> | null, snapshot: 
           phasePhrase: "Phase " + curPhase,
           workspaceCurrent: curPhase,
           workspaceNext: nextPhase,
-          snapshot
+          snapshot,
+          readinessScore: score
         })
       : "";
 
@@ -1642,8 +1648,9 @@ function renderPhaseCompleteReleaseButton(args: {
   workspaceCurrent: string;
   workspaceNext: string;
   scope: "current" | "bucket";
-  /** Overview Phase Readiness only — when false, button stays clickable; chat runs closeout preflight. */
+  /** Overview Phase Readiness only — when false, preflight styling (bucket scope ignores). */
   closeoutReady?: boolean;
+  /** Overview Phase Readiness — disabled until phase readiness reaches 100%. */
   disabled?: boolean;
 }): string {
   const pk = escapeHtmlAttr(args.phaseKey.trim());
@@ -1657,7 +1664,7 @@ function renderPhaseCompleteReleaseButton(args: {
   const title =
     scope === "current"
       ? disabled
-        ? "Complete & Release is unavailable"
+        ? "Complete & Release unlocks when phase readiness reaches 100%"
         : closeoutReady
           ? "Drain current workspace phase, close out, and release"
           : "Start phase closeout — run preflight in chat before release"
@@ -3487,7 +3494,10 @@ export function renderPhaseJournalStatsBanner(stats: unknown): string {
   );
 }
 
-function renderPhaseNotesOverviewSection(bundle: DashboardPhaseJournalBundle | null | undefined): string {
+function renderPhaseNotesOverviewSection(
+  bundle: DashboardPhaseJournalBundle | null | undefined,
+  phaseJournalStats?: unknown
+): string {
   if (bundle === null || bundle === undefined) {
     return "";
   }
@@ -3523,11 +3533,24 @@ function renderPhaseNotesOverviewSection(bundle: DashboardPhaseJournalBundle | n
       ? '<p class="muted" role="status">No phase notes for this phase.</p>'
       : "";
 
+  let journalHint = "";
+  if (phaseJournalStats && typeof phaseJournalStats === "object") {
+    const journalRow = phaseJournalStats as Record<string, unknown>;
+    if (journalRow.available === true) {
+      const current = journalRow.currentPhase as Record<string, unknown> | undefined;
+      if (current?.silenceWarning === true) {
+        journalHint =
+          '<p class="muted dash-phase-journal-silence-warn" role="status">No phase notes yet despite completed delivery work — capture context with <b>New</b>.</p>';
+      }
+    }
+  }
+
   return (
     '<section class="dash-card dash-phase-notes" aria-label="Phase notes">' +
     '<div class="dash-phase-notes-head"><p><b>Phase Notes</b></p>' +
     addBtn +
     "</div>" +
+    journalHint +
     empty +
     (notes.length > 0 ? '<div class="dash-row-list">' + rows + "</div>" : "") +
     renderPastPhaseNotesRollup(bundle.pastPhaseNotes) +
@@ -3671,10 +3694,7 @@ export function renderDashboardRootInnerHtml(
 
   const tasksQuickActionsPanel =
     '<div class="dash-quick-actions" role="toolbar" aria-label="Chat playbook shortcuts">' +
-    '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="add-wishlist-item" title="Create a wishlist intake task (same flow as /add-wishlist-item)">Add wishlist item</button>' +
-    '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="collaboration-hub" title="Chat + CLI for collaboration profiles; chat does not replace policyApproval">Collaboration profiles</button>' +
-    '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="transcript-churn-research-chat" title="Transcript churn research playbook">Research churn</button>' +
-    '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="phase-note-add" title="add-phase-note">Add phase note</button>' +
+    '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="add-wishlist-item" title="Create a wishlist intake task (same flow as /add-wishlist-item)">Add Wishlist Item</button>' +
     '<button type="button" class="wc-btn wc-btn-md wc-btn-primary" data-wc-action="generate-features-chat" title="New chat with /generate-features as text (same as slash command)">Generate Features</button>' +
     "</div>";
 
@@ -3789,11 +3809,11 @@ export function renderDashboardRootInnerHtml(
 
   const firstWishlistOpen = wishlistOpenTop[0];
   const suggestedNext = d.suggestedNext;
-  /** Kit `suggestedNext` (workspace phase + priority); wishlist only when no runnable ready work. */
+  /** Kit `suggestedNext` when there is runnable ready work; wishlist card when queue is empty. */
   const recNextCard =
-    suggestedNext && typeof suggestedNext === "object"
+    readyCount > 0 && suggestedNext && typeof suggestedNext === "object"
       ? renderRecommendedNextCard(suggestedNext)
-      : firstWishlistOpen
+      : readyCount === 0 && firstWishlistOpen
         ? renderRecommendedNextWishlistCard(firstWishlistOpen)
         : "";
 
@@ -3834,8 +3854,7 @@ export function renderDashboardRootInnerHtml(
         '</section>';
 
   const taskEngineContent =
-    renderPhaseJournalStatsBanner(d.phaseJournalStats) +
-    renderPhaseNotesOverviewSection(phaseJournal ?? null) +
+    renderPhaseNotesOverviewSection(phaseJournal ?? null, d.phaseJournalStats) +
     tasksBlock +
     wishlistSection +
     renderPlanningSession(planningSession, planningWizardPanel);
