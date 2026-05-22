@@ -37,4 +37,34 @@ test("shared config webview client is suitable for dashboard host script tag", (
   assert.match(script, /wcConfigTab/);
   assert.match(script, /config-jump-key/);
   assert.match(script, /config-retry/);
+  assert.match(script, /config-explain/);
+  assert.match(script, /#config-list-root/);
+});
+
+test("dashboard root click handler delegates config-jump-key to wcConfigTab", () => {
+  const providerSrc = readFileSync(
+    path.join(__dirname, "../src/views/dashboard/DashboardViewProvider.ts"),
+    "utf8"
+  );
+  const idx = providerSrc.indexOf("var act = t.getAttribute('data-wc-action');");
+  assert.ok(idx >= 0);
+  const block = providerSrc.slice(idx, idx + 520);
+  assert.match(block, /indexOf\('config-'\)/);
+  assert.match(block, /wcConfigTab\.jumpToConfigKey/);
+  assert.match(block, /config-explain/);
+  const preventIdx = block.indexOf("ev.preventDefault()");
+  const configIdx = block.indexOf("config-jump-key");
+  assert.ok(configIdx >= 0 && preventIdx >= 0);
+  assert.ok(preventIdx < configIdx, "config actions use preventDefault before jump/explain");
+});
+
+test("dashboard bootstrap preserves config tab across wcReplaceRoot", () => {
+  const providerSrc = readFileSync(
+    path.join(__dirname, "../src/views/dashboard/DashboardViewProvider.ts"),
+    "utf8"
+  );
+  assert.match(providerSrc, /captureConfigTabState/);
+  assert.match(providerSrc, /restoreConfigTabState/);
+  assert.match(providerSrc, /scheduleConfigTabRefresh/);
+  assert.doesNotMatch(providerSrc, /void this\.refreshDashboardConfigTab\(webview\)/);
 });

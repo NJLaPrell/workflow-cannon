@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "fragmentKind": "publishArtifacts",
+  "version": "0.99.1",
+  "publishArtifacts": [
+    {
+      "kind": "git-tag",
+      "ref": "v0.99.1",
+      "version": "0.99.1"
+    },
+    {
+      "kind": "github-release",
+      "url": "https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.99.1",
+      "tagName": "v0.99.1",
+      "publishedAt": "2026-05-20T14:35:50Z"
+    },
+    {
+      "kind": "npm",
+      "package": "@workflow-cannon/workspace-kit",
+      "version": "0.99.1",
+      "distTag": "latest"
+    }
+  ],
+  "degraded": []
+}

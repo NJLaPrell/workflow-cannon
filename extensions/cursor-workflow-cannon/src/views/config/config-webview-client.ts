@@ -12,7 +12,7 @@ export function buildConfigWebviewBootstrapScript(options: ConfigWebviewClientOp
   const autoLoad = options.autoLoad !== false;
   const autoLoadLine = autoLoad ? "  requestLoad();" : "";
   return `(function(){
-  var vscode = acquireVsCodeApi();
+  var vscode = window.__wfcVscode || (window.__wfcVscode = acquireVsCodeApi());
   function cfgEl(id) { return document.getElementById(id); }
   function showStatus(kind, text) {
     var statusEl = cfgEl('cfg-status');
@@ -24,8 +24,116 @@ export function buildConfigWebviewBootstrapScript(options: ConfigWebviewClientOp
     var maintainerEl = cfgEl('cfg-maintainer');
     return maintainerEl && maintainerEl.checked;
   }
+  var lastConfigListHtml = '';
+  var configLoadDebounceTimer = null;
+  var localConfigLocks = {};
+  var pendingSetListHtml = null;
+  var pendingSetListMeta = null;
+
+  function isConfigUiLocked() {
+    return Object.keys(localConfigLocks).length > 0;
+  }
+
+  function setConfigUiLock(source, active) {
+    var key = source || 'config-edit';
+    if (active) localConfigLocks[key] = true;
+    else delete localConfigLocks[key];
+    vscode.postMessage({ type: 'wcUiInteraction', source: key, active: !!active });
+    if (!isConfigUiLocked() && pendingSetListHtml) {
+      var html = pendingSetListHtml;
+      var meta = pendingSetListMeta || {};
+      pendingSetListHtml = null;
+      pendingSetListMeta = null;
+      applyConfigSetList(html, meta);
+    }
+  }
+
+  function captureConfigEditFocus() {
+    var active = document.activeElement;
+    if (!active || !active.getAttribute) return null;
+    var role = active.getAttribute('data-role');
+    if (role !== 'value') return null;
+    var details = active.closest('details.cfg-details');
+    if (!details) return null;
+    var id = active.id || '';
+    var state = {
+      id: id,
+      value: ('value' in active && active.value != null) ? String(active.value) : '',
+      selectionStart: typeof active.selectionStart === 'number' ? active.selectionStart : null,
+      selectionEnd: typeof active.selectionEnd === 'number' ? active.selectionEnd : null,
+      track: details.getAttribute('data-wc-track') || '',
+      open: details.open
+    };
+    return state;
+  }
+
+  function restoreConfigEditFocus(state) {
+    if (!state) return;
+    var listRoot = cfgEl('config-list-root');
+    if (!listRoot) return;
+    var details = state.track
+      ? listRoot.querySelector('details[data-wc-track="' + state.track.replace(/"/g, '\\\\"') + '"]')
+      : null;
+    if (details && state.open) details.open = true;
+    var el = state.id ? document.getElementById(state.id) : null;
+    if (!el && details) el = details.querySelector('[data-role="value"]');
+    if (!el) return;
+    if ('value' in el && state.value != null) el.value = state.value;
+    if (el.focus) {
+      el.focus();
+      if (typeof state.selectionStart === 'number' && typeof state.selectionEnd === 'number' && el.setSelectionRange) {
+        try { el.setSelectionRange(state.selectionStart, state.selectionEnd); } catch (e) {}
+      }
+    }
+    setConfigUiLock('config-edit', true);
+    el.setAttribute('data-wc-focus-grace', '1');
+    setTimeout(function() {
+      if (el) el.removeAttribute('data-wc-focus-grace');
+    }, 400);
+  }
+
+  function applyConfigSetList(html, meta) {
+    var listRoot = cfgEl('config-list-root');
+    if (!listRoot || typeof html !== 'string') return;
+    var editFocus = captureConfigEditFocus();
+    if (html === lastConfigListHtml) {
+      if (meta && meta.statusText) showStatus(meta.statusKind || 'info', meta.statusText);
+      restoreConfigEditFocus(editFocus);
+      return;
+    }
+    lastConfigListHtml = html;
+    var open = {};
+    listRoot.querySelectorAll('details[data-wc-track]').forEach(function(d) {
+      var k = d.getAttribute('data-wc-track');
+      if (k && d.open) open[k] = true;
+    });
+    listRoot.innerHTML = html;
+    Object.keys(open).forEach(function(k) {
+      var el = listRoot.querySelector('details[data-wc-track="' + k + '"]');
+      if (el) el.open = true;
+    });
+    bindConfigValueFocusHandlers();
+    applyFilter();
+    restoreConfigEditFocus(editFocus);
+    if (meta && meta.statusText) showStatus(meta.statusKind || 'info', meta.statusText);
+    else {
+      var n = listRoot.querySelectorAll('.cfg-row').length;
+      showStatus('info', n + ' keys · expand a row to view or edit one value at a time.');
+    }
+  }
   function requestLoad() {
+    if (configLoadDebounceTimer) {
+      clearTimeout(configLoadDebounceTimer);
+      configLoadDebounceTimer = null;
+    }
     vscode.postMessage({ type: 'load', includeAll: currentIncludeAll() });
+  }
+  function requestLoadDebounced(delayMs) {
+    if (configLoadDebounceTimer) clearTimeout(configLoadDebounceTimer);
+    configLoadDebounceTimer = setTimeout(function() {
+      configLoadDebounceTimer = null;
+      requestLoad();
+    }, delayMs == null ? 600 : delayMs);
   }
   function applyFilter() {
     var listRoot = cfgEl('config-list-root');
@@ -104,7 +212,11 @@ export function buildConfigWebviewBootstrapScript(options: ConfigWebviewClientOp
   function jumpToConfigKey(key) {
     var listRoot = cfgEl('config-list-root');
     if (!listRoot || !key) return;
-    var row = listRoot.querySelector('.cfg-row code.cfg-key');
+    var filterEl = cfgEl('cfg-filter');
+    if (filterEl && filterEl.value) {
+      filterEl.value = '';
+      applyFilter();
+    }
     var target = null;
     listRoot.querySelectorAll('.cfg-row').forEach(function(r) {
       var code = r.querySelector('code.cfg-key');
@@ -116,14 +228,81 @@ export function buildConfigWebviewBootstrapScript(options: ConfigWebviewClientOp
     }
     var det = target.querySelector('details');
     if (det) det.open = true;
-    target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    target.style.display = '';
+    var section = target.closest('.cfg-section');
+    if (section) section.style.display = '';
+    target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    showStatus('info', 'Jumped to ' + key);
   }
+  function handleConfigListButtonClick(t) {
+    var act = t.getAttribute('data-wc-action');
+    if (!act) return false;
+    if (act === 'config-explain') {
+      var ek = t.getAttribute('data-key');
+      if (ek) {
+        showStatus('info', 'Loading layer explanation for ' + ek + '…');
+        vscode.postMessage({ type: 'explain', key: ek });
+      }
+      return true;
+    }
+    if (act === 'config-save') {
+      var c = rowContext(t);
+      if (!c) return true;
+      vscode.postMessage({
+        type: 'set',
+        key: c.key,
+        value: c.value,
+        scope: c.scope,
+        editorKind: c.editorKind,
+        reloadIncludeAll: currentIncludeAll()
+      });
+      return true;
+    }
+    if (act === 'config-unset') {
+      var c2 = rowContext(t);
+      if (!c2) return true;
+      if (!confirm('Unset ' + c2.key + ' on layer ' + c2.scope + '?')) return true;
+      vscode.postMessage({
+        type: 'unset',
+        key: c2.key,
+        scope: c2.scope,
+        reloadIncludeAll: currentIncludeAll()
+      });
+      return true;
+    }
+    if (act === 'config-reload-window') {
+      vscode.postMessage({ type: 'reloadWindow' });
+      return true;
+    }
+    return false;
+  }
+
+  function bindConfigValueFocusHandlers() {
+    var listRoot = cfgEl('config-list-root');
+    if (!listRoot) return;
+    listRoot.querySelectorAll('[data-role="value"]').forEach(function(el) {
+      if (el.getAttribute('data-wc-focus-wired') === '1') return;
+      el.setAttribute('data-wc-focus-wired', '1');
+      el.addEventListener('focusin', function() {
+        setConfigUiLock('config-edit', true);
+      });
+      el.addEventListener('focusout', function() {
+        if (el.getAttribute('data-wc-focus-grace') === '1') return;
+        setTimeout(function() {
+          if (document.activeElement && document.activeElement.getAttribute &&
+              document.activeElement.getAttribute('data-role') === 'value') return;
+          setConfigUiLock('config-edit', false);
+        }, 120);
+      });
+    });
+  }
+
   function bindGlobalConfigActions() {
     if (document.body.getAttribute('data-wc-cfg-global-bound')) return;
     document.body.setAttribute('data-wc-cfg-global-bound', '1');
     document.addEventListener('click', function(ev) {
-      var t = ev.target;
-      if (!t || t.tagName !== 'BUTTON') return;
+      var t = ev.target && ev.target.closest ? ev.target.closest('button[data-wc-action]') : null;
+      if (!t) return;
       var act = t.getAttribute('data-wc-action');
       if (act === 'config-jump-key') {
         ev.preventDefault();
@@ -133,57 +312,17 @@ export function buildConfigWebviewBootstrapScript(options: ConfigWebviewClientOp
       if (act === 'config-retry') {
         ev.preventDefault();
         requestLoad();
+        return;
       }
+      if (!act || act.indexOf('config-') !== 0) return;
+      var inList = t.closest('#config-list-root');
+      if (!inList) return;
+      ev.preventDefault();
+      handleConfigListButtonClick(t);
     });
   }
   function bindConfigListActions() {
-    var listRoot = cfgEl('config-list-root');
-    if (!listRoot || listRoot.getAttribute('data-wc-bound')) return;
-    listRoot.setAttribute('data-wc-bound', '1');
-    listRoot.addEventListener('click', function(ev) {
-      var t = ev.target;
-      if (!t || t.tagName !== 'BUTTON') return;
-      var act = t.getAttribute('data-wc-action');
-      if (!act) return;
-      ev.preventDefault();
-      if (act === 'config-explain') {
-        var ek = t.getAttribute('data-key');
-        if (ek) vscode.postMessage({ type: 'explain', key: ek });
-        return;
-      }
-      if (act === 'config-save') {
-        var c = rowContext(t);
-        if (!c) return;
-        if (c.editorKind === 'json') {
-          try { JSON.parse(c.value); } catch (e) {
-            showStatus('err', 'Value must be valid JSON before Apply.');
-            return;
-          }
-        }
-        vscode.postMessage({
-          type: 'set',
-          key: c.key,
-          value: c.value,
-          scope: c.scope,
-          reloadIncludeAll: currentIncludeAll()
-        });
-        return;
-      }
-      if (act === 'config-unset') {
-        var c2 = rowContext(t);
-        if (!c2) return;
-        if (!confirm('Unset ' + c2.key + ' on layer ' + c2.scope + '?')) return;
-        vscode.postMessage({
-          type: 'unset',
-          key: c2.key,
-          scope: c2.scope,
-          reloadIncludeAll: currentIncludeAll()
-        });
-      }
-      if (act === 'config-reload-window') {
-        vscode.postMessage({ type: 'reloadWindow' });
-      }
-    });
+    bindConfigValueFocusHandlers();
   }
   function afterDomUpdate() {
     bindConfigToolbar();
@@ -193,28 +332,23 @@ export function buildConfigWebviewBootstrapScript(options: ConfigWebviewClientOp
   window.addEventListener('message', function(ev) {
     var m = ev.data;
     if (m && m.type === 'poke') {
-      requestLoad();
+      requestLoadDebounced(600);
       return;
     }
     if (m && m.type === 'setList') {
       var listRoot = cfgEl('config-list-root');
-      if (listRoot && typeof m.html === 'string') {
-        var open = {};
-        listRoot.querySelectorAll('details[data-wc-track]').forEach(function(d) {
-          var k = d.getAttribute('data-wc-track');
-          if (k && d.open) open[k] = true;
-        });
-        listRoot.innerHTML = m.html;
-        listRoot.removeAttribute('data-wc-bound');
-        Object.keys(open).forEach(function(k) {
-          var el = listRoot.querySelector('details[data-wc-track="' + k + '"]');
-          if (el) el.open = true;
-        });
-        bindConfigListActions();
-        applyFilter();
+      if (listRoot && typeof m.html === 'string' && !m.error) {
+        var meta = { statusText: m.statusText, statusKind: m.statusKind };
+        if (isConfigUiLocked()) {
+          pendingSetListHtml = m.html;
+          pendingSetListMeta = meta;
+          return;
+        }
+        applyConfigSetList(m.html, meta);
       }
       var n = cfgEl('config-list-root') ? cfgEl('config-list-root').querySelectorAll('.cfg-row').length : 0;
       if (m.error && listRoot) {
+        lastConfigListHtml = '';
         listRoot.innerHTML =
           '<p class="cfg-muted">Could not load the full config catalog.</p>' +
           '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="config-retry">Retry</button>';
@@ -231,8 +365,11 @@ export function buildConfigWebviewBootstrapScript(options: ConfigWebviewClientOp
       var explainHost = cfgEl('cfg-explain-host');
       if (explainHost && typeof m.html === 'string') {
         explainHost.innerHTML = m.html;
+        explainHost.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        var explainKey = typeof m.key === 'string' ? m.key : '';
+        showStatus('info', explainKey ? 'Layer breakdown for ' + explainKey + '.' : 'Layer explanation ready.');
       } else {
-        showStatus('info', 'Layer explanation ready.');
+        showStatus('warn', 'No layer explanation returned for that key.');
       }
       return;
     }
@@ -254,7 +391,15 @@ export function buildConfigWebviewBootstrapScript(options: ConfigWebviewClientOp
       showStatus(p2.code === 0 ? 'ok' : 'err', 'exit ' + p2.code + '\\n' + p2.text);
     }
   });
-  window.wcConfigTab = { requestLoad: requestLoad, applyFilter: applyFilter, afterDomUpdate: afterDomUpdate };
+  window.wcConfigTab = {
+    requestLoad: requestLoad,
+    requestLoadDebounced: requestLoadDebounced,
+    applyFilter: applyFilter,
+    afterDomUpdate: afterDomUpdate,
+    jumpToConfigKey: jumpToConfigKey,
+    captureEditFocus: captureConfigEditFocus,
+    restoreEditFocus: restoreConfigEditFocus
+  };
   afterDomUpdate();
 ${autoLoadLine}
 })();`;

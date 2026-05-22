@@ -294,6 +294,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private dashboardUpdateQueued = false;
   private dashboardDebounceTimer: ReturnType<typeof setTimeout> | undefined;
 
+  /** Config tab list refresh — only for config file changes, not every dashboard-summary poll. */
+  private configTabRefreshTimer: ReturnType<typeof setTimeout> | undefined;
+
   /** While the webview reports focus/edit (phase filter, roster inline edit), defer full `wcReplaceRoot` refreshes. */
   private dashboardInteractionLocks = new Set<string>();
   private dashboardRefreshAfterInteraction = false;
@@ -2362,13 +2365,25 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       } else {
         await webview.postMessage({ type: "wcReplaceRoot", html: rootInner });
       }
-      void this.refreshDashboardConfigTab(webview);
     } catch (e) {
       logDashboard(`dashboard push failed: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
-  /** Keep dashboard Config tab list in sync after summary refresh (debounced via pushUpdate). */
+  /** Debounced config catalog reload (workspace-kit config.json changes — not task-store churn). */
+  scheduleConfigTabRefresh(): void {
+    if (!this.view) {
+      return;
+    }
+    if (this.configTabRefreshTimer) {
+      clearTimeout(this.configTabRefreshTimer);
+    }
+    this.configTabRefreshTimer = setTimeout(() => {
+      this.configTabRefreshTimer = undefined;
+      void this.refreshDashboardConfigTab(this.view!.webview);
+    }, 800);
+  }
+
   private async refreshDashboardConfigTab(webview: vscode.Webview): Promise<void> {
     try {
       await webview.postMessage({ type: "poke" });
@@ -2404,13 +2419,15 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (msg?.type === "set" && typeof msg.key === "string" && typeof msg.value === "string") {
       const includeAll = Boolean(msg.reloadIncludeAll);
       const scope = msg.scope === "user" ? "user" : "project";
+      const editorKind = typeof msg.editorKind === "string" ? msg.editorKind.trim() : undefined;
       await handleConfigSetMessage(
         this.client,
         webview,
         msg.key.trim(),
         msg.value,
         scope,
-        includeAll
+        includeAll,
+        editorKind
       );
       return true;
     }
@@ -2506,11 +2523,63 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     setUiInteraction('phase-deliverables', true);
   }
 
+  function captureConfigTabState(root) {
+    if (activeTab !== 'config' || !root) return null;
+    var list = root.querySelector('#config-list-root');
+    if (!list || list.querySelector('.cfg-loading')) return null;
+    var filter = root.querySelector('#cfg-filter');
+    var maint = root.querySelector('#cfg-maintainer');
+    var status = root.querySelector('#cfg-status');
+    var explain = root.querySelector('#cfg-explain-host');
+    var restart = root.querySelector('#cfg-restart-host');
+    return {
+      listHtml: list.innerHTML,
+      editFocus: window.wcConfigTab && window.wcConfigTab.captureEditFocus
+        ? window.wcConfigTab.captureEditFocus()
+        : null,
+      filter: filter ? filter.value : '',
+      maintainer: maint ? !!maint.checked : false,
+      statusClass: status ? status.className : '',
+      statusText: status ? status.textContent : '',
+      explainHtml: explain ? explain.innerHTML : '',
+      restartHtml: restart ? restart.innerHTML : ''
+    };
+  }
+
+  function restoreConfigTabState(root, state) {
+    if (!state || !root) return;
+    var list = root.querySelector('#config-list-root');
+    if (!list) return;
+    list.innerHTML = state.listHtml;
+    list.removeAttribute('data-wc-bound');
+    var filter = root.querySelector('#cfg-filter');
+    if (filter) filter.value = state.filter || '';
+    var maint = root.querySelector('#cfg-maintainer');
+    if (maint) maint.checked = !!state.maintainer;
+    var status = root.querySelector('#cfg-status');
+    if (status) {
+      status.className = state.statusClass || 'cfg-status cfg-status-info';
+      status.textContent = state.statusText || '';
+    }
+    var explain = root.querySelector('#cfg-explain-host');
+    if (explain) explain.innerHTML = state.explainHtml || '';
+    var restart = root.querySelector('#cfg-restart-host');
+    if (restart) restart.innerHTML = state.restartHtml || '';
+    if (window.wcConfigTab) {
+      if (window.wcConfigTab.afterDomUpdate) window.wcConfigTab.afterDomUpdate();
+      if (window.wcConfigTab.applyFilter) window.wcConfigTab.applyFilter();
+      if (state.editFocus && window.wcConfigTab.restoreEditFocus) {
+        window.wcConfigTab.restoreEditFocus(state.editFocus);
+      }
+    }
+  }
+
   function applyReplaceRootHtml(html) {
     var root = document.getElementById('root');
     if (!root) return;
     var open = {};
     var editState = capturePhaseDeliverablesEditState(root);
+    var configState = captureConfigTabState(root);
     root.querySelectorAll('details[data-wc-track]').forEach(function(d) {
       var k = d.getAttribute('data-wc-track');
       if (k && d.open) open[k] = true;
@@ -2522,6 +2591,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (el) el.open = true;
     });
     restorePhaseCardCollapseState(root);
+    restoreConfigTabState(root, configState);
     applyTab(activeTab);
     applyQueueFilters(root);
     reloadOpenLazyTerminalBuckets(root);
@@ -2734,6 +2804,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
 
   function applyTab(tab) {
     if (!tab) return;
+    var prevTab = activeTab;
     activeTab = tab;
     document.querySelectorAll('.wc-tab-panel').forEach(function(p) {
       p.style.display = p.getAttribute('data-wc-tab') === tab ? 'block' : 'none';
@@ -2745,7 +2816,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     });
     if (tab === 'config' && window.wcConfigTab) {
       if (window.wcConfigTab.afterDomUpdate) window.wcConfigTab.afterDomUpdate();
-      if (window.wcConfigTab.requestLoad) window.wcConfigTab.requestLoad();
+      var list = document.getElementById('config-list-root');
+      var needsLoad = prevTab !== 'config' || !list || !!list.querySelector('.cfg-loading');
+      if (needsLoad && window.wcConfigTab.requestLoad) window.wcConfigTab.requestLoad();
     }
   }
 
@@ -2956,6 +3029,24 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     var act = t.getAttribute('data-wc-action');
     if (!act) return;
+    if (act.indexOf('config-') === 0) {
+      ev.preventDefault();
+      if (act === 'config-jump-key' && window.wcConfigTab && window.wcConfigTab.jumpToConfigKey) {
+        window.wcConfigTab.jumpToConfigKey(t.getAttribute('data-key') || '');
+        return;
+      }
+      if (t.closest('#config-list-root') && window.wcConfigTab) {
+        if (act === 'config-explain') {
+          var explainKey = t.getAttribute('data-key') || '';
+          if (explainKey) vscode.postMessage({ type: 'explain', key: explainKey });
+          return;
+        }
+        if (act === 'config-save' || act === 'config-unset' || act === 'config-reload-window') {
+          return;
+        }
+      }
+      return;
+    }
     ev.preventDefault();
     ev.stopPropagation();
     if (act === 'phase-readiness-toggle') {
@@ -3640,9 +3731,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       white-space: nowrap;
     }
     .wc-phase-tag-delivered {
-      background: #1b4d1f;
-      color: #c8f5c8;
-      border-color: #2e7d32;
+      background: var(--vscode-badge-secondaryBackground, #3c3c3c);
+      color: var(--vscode-badge-secondaryForeground, #e8e8e8);
+      border-color: var(--vscode-widget-border, #5a5a5a);
     }
     .wc-phase-tag-current {
       background: #1b4d1f;

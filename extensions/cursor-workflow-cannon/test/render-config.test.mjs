@@ -261,3 +261,24 @@ test("renderConfigListInnerHtml includes key and apply control", () => {
   assert.match(html, /tasks\.storeRelativePath/);
   assert.match(html, /data-wc-action="config-save"/);
 });
+
+test("renderConfigListInnerHtml uses Explain Layers label", () => {
+  const html = renderConfigListInnerHtml([
+    {
+      key: "tasks.storeRelativePath",
+      type: "string",
+      description: "Where tasks live",
+      default: ".workspace-kit/tasks/workspace-kit.db",
+      domainScope: "project",
+      owningModule: "task-engine",
+      exposure: "public",
+      sensitive: false,
+      requiresApproval: false,
+      requiresRestart: false,
+      writableLayers: ["project"],
+      effectiveValue: ".workspace-kit/tasks/workspace-kit.db"
+    }
+  ]);
+  assert.match(html, />Explain Layers</);
+  assert.doesNotMatch(html, />Explain layers</);
+});

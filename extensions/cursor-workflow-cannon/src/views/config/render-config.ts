@@ -263,7 +263,7 @@ function renderConfigRowHtml(row: ConfigKeyRowInput, forceReadOnly = false): str
       </dl>
       ${editorHtml}
       <div class="cfg-row-btns">
-        <button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="config-explain" data-key="${escapeHtmlAttr(row.key)}">Explain layers</button>
+        <button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="config-explain" data-key="${escapeHtmlAttr(row.key)}">Explain Layers</button>
       </div>
       ${actions}
     </div>

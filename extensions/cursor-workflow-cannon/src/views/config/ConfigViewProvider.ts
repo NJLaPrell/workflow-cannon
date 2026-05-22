@@ -55,13 +55,15 @@ export class ConfigViewProvider implements vscode.WebviewViewProvider {
       if (msg?.type === "set" && typeof msg.key === "string" && typeof msg.value === "string") {
         const includeAll = Boolean(msg.reloadIncludeAll);
         const scope = msg.scope === "user" ? "user" : "project";
+        const editorKind = typeof msg.editorKind === "string" ? msg.editorKind.trim() : undefined;
         await handleConfigSetMessage(
           this.client,
           webview,
           msg.key.trim(),
           msg.value,
           scope,
-          includeAll
+          includeAll,
+          editorKind
         );
       }
       if (msg?.type === "unset" && typeof msg.key === "string") {
@@ -72,10 +74,19 @@ export class ConfigViewProvider implements vscode.WebviewViewProvider {
     });
   }
 
+  private configRefreshTimer: ReturnType<typeof setTimeout> | undefined;
+
   private async notifyRefresh(): Promise<void> {
-    if (this.view) {
-      await this.view.webview.postMessage({ type: "poke" });
+    if (!this.view) {
+      return;
     }
+    if (this.configRefreshTimer) {
+      clearTimeout(this.configRefreshTimer);
+    }
+    this.configRefreshTimer = setTimeout(() => {
+      this.configRefreshTimer = undefined;
+      void this.view?.webview.postMessage({ type: "poke" });
+    }, 800);
   }
 
   private buildHtmlShell(webview: vscode.Webview): string {
