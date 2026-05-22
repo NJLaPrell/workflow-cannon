@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   formatConfigValuePreview,
   editorTextForValue,
+  editorRawValueForRow,
   isConfigRowReadOnly,
   groupConfigRows,
   pickEditorKind,
@@ -260,6 +261,40 @@ test("renderConfigListInnerHtml includes key and apply control", () => {
   ]);
   assert.match(html, /tasks\.storeRelativePath/);
   assert.match(html, /data-wc-action="config-save"/);
+});
+
+test("editorRawValueForRow matches select serialization", () => {
+  const row = {
+    ...baseRow,
+    key: "kit.planningGenerationPolicy",
+    type: "string",
+    allowedValues: ["require", "warn"],
+    effectiveValue: "warn"
+  };
+  assert.equal(editorRawValueForRow(row), '"warn"');
+});
+
+test("renderConfigListInnerHtml includes dirty affordances for editable rows", () => {
+  const html = renderConfigListInnerHtml([
+    {
+      key: "tasks.storeRelativePath",
+      type: "string",
+      description: "Where tasks live",
+      default: "x",
+      domainScope: "project",
+      owningModule: "task-engine",
+      exposure: "public",
+      sensitive: false,
+      requiresApproval: false,
+      requiresRestart: false,
+      writableLayers: ["project"],
+      effectiveValue: "y"
+    }
+  ]);
+  assert.match(html, /cfg-dirty-pill/);
+  assert.match(html, /data-wc-baseline=/);
+  assert.match(html, /config-save[^>]* disabled/);
+  assert.match(html, /cfg-field-hint/);
 });
 
 test("renderConfigListInnerHtml uses Explain Layers label", () => {

@@ -36,7 +36,14 @@ export function renderConfigPanelShellHtml(): string {
     "</div>" +
     '<div id="cfg-status" class="cfg-status cfg-status-info" role="status"></div>' +
     '<div id="cfg-restart-host"></div>' +
+    '<div id="cfg-explain-panel" class="cfg-explain-panel cfg-explain-panel--empty" aria-label="Explain Layers">' +
+    '<div class="cfg-explain-panel-head">' +
+    '<h3 class="cfg-explain-panel-title">Explain Layers</h3>' +
+    '<code id="cfg-explain-active-key" class="cfg-explain-active-key muted">No key selected</code>' +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" id="cfg-explain-dismiss" hidden>Dismiss</button>' +
+    "</div>" +
     '<div id="cfg-explain-host" class="cfg-explain-host" aria-live="polite"></div>' +
+    "</div>" +
     '<div id="config-list-root"><p class="cfg-muted cfg-loading">Loading configuration…</p></div>' +
     '<p class="cfg-footnote"><strong>Mutations</strong> run <code>workspace-kit config set|unset</code>. See <code>.ai/POLICY-APPROVAL.md</code> in the repo.</p>' +
     "</section>"

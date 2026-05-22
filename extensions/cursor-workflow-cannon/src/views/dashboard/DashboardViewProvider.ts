@@ -37,6 +37,7 @@ import {
   handleConfigExplainMessage,
   handleConfigSetMessage,
   handleConfigUnsetMessage,
+  handleConfigValidateKeyMessage,
   pushConfigListToWebview
 } from "../config/config-host.js";
 import { CONFIG_WEBVIEW_STYLES, buildConfigWebviewBootstrapScript } from "../config/config-webview-client.js";
@@ -2404,6 +2405,21 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       await handleConfigExplainMessage(this.client, webview, msg.key);
       return true;
     }
+    if (msg?.type === "validateKey" && typeof msg.key === "string" && typeof msg.value === "string") {
+      const includeAll = Boolean(msg.includeAll);
+      const editorKind = typeof msg.editorKind === "string" ? msg.editorKind.trim() : undefined;
+      const seq = typeof msg.seq === "number" ? msg.seq : undefined;
+      await handleConfigValidateKeyMessage(
+        this.client,
+        webview,
+        msg.key,
+        msg.value,
+        includeAll,
+        editorKind,
+        seq
+      );
+      return true;
+    }
     if (msg?.type === "validate") {
       const r = await this.client.config(["validate"]);
       await webview.postMessage({
@@ -2537,6 +2553,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       editFocus: window.wcConfigTab && window.wcConfigTab.captureEditFocus
         ? window.wcConfigTab.captureEditFocus()
         : null,
+      explainKey: window.wcConfigTab && window.wcConfigTab.getActiveExplainKey
+        ? window.wcConfigTab.getActiveExplainKey()
+        : '',
       filter: filter ? filter.value : '',
       maintainer: maint ? !!maint.checked : false,
       statusClass: status ? status.className : '',
@@ -2570,6 +2589,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (window.wcConfigTab.applyFilter) window.wcConfigTab.applyFilter();
       if (state.editFocus && window.wcConfigTab.restoreEditFocus) {
         window.wcConfigTab.restoreEditFocus(state.editFocus);
+      }
+      if (state.explainKey && window.wcConfigTab.setExplainActiveKey) {
+        window.wcConfigTab.setExplainActiveKey(state.explainKey, false);
       }
     }
   }

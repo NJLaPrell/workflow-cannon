@@ -23,7 +23,9 @@ test("dashboard Config tabpanel contract: list root, toolbar ids, shared client"
   assert.match(panel, /id="cfg-validate"/);
   assert.match(panel, /id="cfg-filter"/);
   assert.match(panel, /id="cfg-maintainer"/);
+  assert.match(panel, /id="cfg-explain-panel"/);
   assert.match(panel, /id="cfg-explain-host"/);
+  assert.match(panel, /cfg-explain-panel-title/);
   assert.doesNotMatch(panel, /sidebar panel \(activity bar\)/i);
   assert.doesNotMatch(panel, /use the Config sidebar/i);
 });
@@ -39,6 +41,9 @@ test("shared config webview client is suitable for dashboard host script tag", (
   assert.match(script, /config-retry/);
   assert.match(script, /config-explain/);
   assert.match(script, /#config-list-root/);
+  assert.match(script, /cfg-dirty-pill/);
+  assert.match(script, /validateKey/);
+  assert.match(script, /configRowPatched/);
 });
 
 test("dashboard root click handler delegates config-jump-key to wcConfigTab", () => {

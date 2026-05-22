@@ -4,6 +4,7 @@ import {
   handleConfigExplainMessage,
   handleConfigSetMessage,
   handleConfigUnsetMessage,
+  handleConfigValidateKeyMessage,
   pushConfigListToWebview
 } from "./config-host.js";
 import { CONFIG_WEBVIEW_STYLES, buildConfigWebviewBootstrapScript } from "./config-webview-client.js";
@@ -40,6 +41,19 @@ export class ConfigViewProvider implements vscode.WebviewViewProvider {
       }
       if (msg?.type === "explain" && typeof msg.key === "string") {
         await handleConfigExplainMessage(this.client, webview, msg.key);
+      }
+      if (msg?.type === "validateKey" && typeof msg.key === "string" && typeof msg.value === "string") {
+        const editorKind = typeof msg.editorKind === "string" ? msg.editorKind.trim() : undefined;
+        const seq = typeof msg.seq === "number" ? msg.seq : undefined;
+        await handleConfigValidateKeyMessage(
+          this.client,
+          webview,
+          msg.key,
+          msg.value,
+          Boolean(msg.includeAll),
+          editorKind,
+          seq
+        );
       }
       if (msg?.type === "validate") {
         const r = await this.client.config(["validate"]);

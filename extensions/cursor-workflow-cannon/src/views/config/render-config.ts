@@ -141,6 +141,31 @@ export function groupConfigRows(rows: ConfigKeyRowInput[]): ConfigRowSection[] {
 
 export type ConfigEditorKind = "toggle" | "select" | "text" | "number" | "json";
 
+/** Wire-format value string for dirty-state comparison (matches webview `readRowValue`). */
+export function editorRawValueForRow(row: ConfigKeyRowInput): string {
+  const kind = pickEditorKind(row);
+  const v = effectiveScalar(row);
+  if (kind === "toggle") {
+    return JSON.stringify(v === true);
+  }
+  if (kind === "select") {
+    return JSON.stringify(v);
+  }
+  if (kind === "number") {
+    if (typeof v === "number" && Number.isFinite(v)) {
+      return JSON.stringify(v);
+    }
+    return "";
+  }
+  if (kind === "text") {
+    if (v === undefined || v === null) {
+      return JSON.stringify("");
+    }
+    return JSON.stringify(String(v));
+  }
+  return editorTextForValue(row.effectiveValue, row.default);
+}
+
 export function pickEditorKind(row: ConfigKeyRowInput): ConfigEditorKind {
   const t = (row.type || "").toLowerCase();
   if (t === "boolean") return "toggle";
@@ -240,17 +265,20 @@ function renderConfigRowHtml(row: ConfigKeyRowInput, forceReadOnly = false): str
     : `<div class="cfg-actions">
   <label class="cfg-label">Persist to layer</label>
   <select class="cfg-select" data-role="scope" aria-label="Config layer for ${escapeHtmlAttr(row.key)}">${renderScopeOptions(layers)}</select>
-  <button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="config-save" data-key="${escapeHtmlAttr(row.key)}">Apply value</button>
+  <button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="config-save" data-key="${escapeHtmlAttr(row.key)}" disabled>Apply value</button>
   <button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="config-unset" data-key="${escapeHtmlAttr(row.key)}">Unset on layer</button>
 </div>`;
   const editorKind = pickEditorKind(row);
+  const baseline = editorRawValueForRow(row);
   const editorHtml = renderConfigValueEditor(row, track, ro);
-  return `<div class="cfg-row" role="listitem" data-search="${escapeHtmlAttr(row.key.toLowerCase() + " " + row.description.toLowerCase())}">
-  <details class="cfg-details" data-wc-track="${escapeHtmlAttr(track)}" data-editor-kind="${escapeHtmlAttr(editorKind)}">
+  const detailsClass = ro ? "cfg-details" : "cfg-details cfg-details--editable";
+  return `<div class="cfg-row" role="listitem" data-config-key="${escapeHtmlAttr(row.key)}" data-search="${escapeHtmlAttr(row.key.toLowerCase() + " " + row.description.toLowerCase())}">
+  <details class="${detailsClass}" data-wc-track="${escapeHtmlAttr(track)}" data-editor-kind="${escapeHtmlAttr(editorKind)}" data-wc-baseline="${escapeHtmlAttr(baseline)}">
     <summary class="cfg-summary">
       <code class="cfg-key">${escapeHtml(row.key)}</code>
       <span class="cfg-type">${escapeHtml(row.type)}</span>
       <span class="cfg-preview">${escapeHtml(preview)}</span>
+      <span class="cfg-dirty-pill" hidden aria-live="polite">Unsaved</span>
       ${facetPill}${appr}
     </summary>
     <div class="cfg-body">
@@ -262,6 +290,7 @@ function renderConfigRowHtml(row: ConfigKeyRowInput, forceReadOnly = false): str
         ${row.requiresRestart ? `<div><dt>Restart</dt><dd>Changing this may require a kit / editor reload.</dd></div>` : ""}
       </dl>
       ${editorHtml}
+      <p class="cfg-field-hint" role="status" aria-live="polite" hidden></p>
       <div class="cfg-row-btns">
         <button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="config-explain" data-key="${escapeHtmlAttr(row.key)}">Explain Layers</button>
       </div>

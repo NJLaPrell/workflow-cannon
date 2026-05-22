@@ -5,9 +5,74 @@ import {
   handleConfigMutationResult
 } from "./config-mutation-result.js";
 import { loadConfigKeyRows } from "./load-config-key-rows.js";
-import { pickEditorKind, renderConfigListInnerHtml } from "./render-config.js";
+import {
+  editorRawValueForRow,
+  formatConfigValuePreview,
+  pickEditorKind,
+  renderConfigListInnerHtml,
+  type ConfigEditorKind
+} from "./render-config.js";
 import { renderExplainConfigHtml } from "./render-explain-config.js";
 import { validateConfigInputValue } from "./validate-config-input.js";
+
+async function postConfigRowPatched(
+  client: CommandClient,
+  webview: vscode.Webview,
+  key: string,
+  includeAll: boolean
+): Promise<void> {
+  const { rows } = await loadConfigKeyRows(client, { includeAll });
+  const row = rows.find((x) => x.key === key) ?? null;
+  if (!row) {
+    return;
+  }
+  await webview.postMessage({
+    type: "configRowPatched",
+    key: row.key,
+    preview: formatConfigValuePreview(row.effectiveValue, row.sensitive),
+    baseline: editorRawValueForRow(row),
+    editorKind: pickEditorKind(row)
+  });
+}
+
+export async function handleConfigValidateKeyMessage(
+  client: CommandClient,
+  webview: vscode.Webview,
+  key: string,
+  value: string,
+  includeAll: boolean,
+  editorKind?: string,
+  seq?: number
+): Promise<void> {
+  const trimmed = key.trim();
+  const { rows } = await loadConfigKeyRows(client, { includeAll });
+  const row = rows.find((x) => x.key === trimmed) ?? null;
+  if (!row) {
+    await webview.postMessage({
+      type: "validateKeyResult",
+      key: trimmed,
+      ok: false,
+      message: "Unknown config key."
+    });
+    return;
+  }
+  const kind =
+    editorKind === "toggle" ||
+    editorKind === "select" ||
+    editorKind === "text" ||
+    editorKind === "number" ||
+    editorKind === "json"
+      ? (editorKind as ConfigEditorKind)
+      : pickEditorKind(row);
+  const validated = validateConfigInputValue(row, value, kind);
+  await webview.postMessage({
+    type: "validateKeyResult",
+    key: trimmed,
+    ok: validated.ok,
+    message: validated.ok ? "" : validated.message,
+    ...(seq != null && Number.isFinite(seq) ? { seq } : {})
+  });
+}
 
 export async function pushConfigListToWebview(
   client: CommandClient,
@@ -65,7 +130,7 @@ export async function handleConfigSetMessage(
   const rowAfter = rows.find((x) => x.key === key) ?? null;
   const outcome = handleConfigMutationResult(rowAfter, r, "set");
   if (outcome.statusKind === "ok") {
-    await pushConfigListToWebview(client, webview, includeAll);
+    await postConfigRowPatched(client, webview, key, includeAll);
   }
   await webview.postMessage({
     type: "configMutationResult",
@@ -85,7 +150,7 @@ export async function handleConfigUnsetMessage(
   const row = rows.find((x) => x.key === key) ?? null;
   const outcome = handleConfigMutationResult(row, r, "unset");
   if (outcome.statusKind === "ok") {
-    await pushConfigListToWebview(client, webview, includeAll);
+    await postConfigRowPatched(client, webview, key, includeAll);
   }
   await webview.postMessage({
     type: "configMutationResult",
