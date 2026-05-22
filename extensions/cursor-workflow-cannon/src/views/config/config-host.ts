@@ -6,6 +6,7 @@ import {
 } from "./config-mutation-result.js";
 import { loadConfigKeyRows } from "./load-config-key-rows.js";
 import {
+  defaultRawValueForRow,
   editorRawValueForRow,
   formatConfigValuePreview,
   pickEditorKind,
@@ -30,8 +31,11 @@ async function postConfigRowPatched(
     type: "configRowPatched",
     key: row.key,
     preview: formatConfigValuePreview(row.effectiveValue, row.sensitive),
+    effectiveDisplay: formatConfigValuePreview(row.effectiveValue, row.sensitive),
     baseline: editorRawValueForRow(row),
-    editorKind: pickEditorKind(row)
+    defaultRaw: defaultRawValueForRow(row),
+    editorKind: pickEditorKind(row),
+    editorValue: editorRawValueForRow(row)
   });
 }
 

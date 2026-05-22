@@ -44,6 +44,9 @@ test("shared config webview client is suitable for dashboard host script tag", (
   assert.match(script, /cfg-dirty-pill/);
   assert.match(script, /validateKey/);
   assert.match(script, /configRowPatched/);
+  assert.match(script, /config-reset-default/);
+  assert.match(script, /cfg-section-details/);
+  assert.match(script, /cfg-show-maintainer/);
 });
 
 test("dashboard root click handler delegates config-jump-key to wcConfigTab", () => {

@@ -5,6 +5,8 @@ import {
   formatConfigValuePreview,
   editorTextForValue,
   editorRawValueForRow,
+  defaultRawValueForRow,
+  editorPlaceholderForRow,
   isConfigRowReadOnly,
   groupConfigRows,
   pickEditorKind,
@@ -139,6 +141,9 @@ test("groupConfigRows orders global kit, modules alphabetically, internal last",
   assert.equal(sections[2].label, "Zeta Mod");
   assert.equal(sections[3].label, "Internal (read-only)");
   assert.equal(sections[3].readOnlySection, true);
+  assert.equal(sections[3].maintainerOnlySection, true);
+  assert.equal(sections[0].defaultOpen, true);
+  assert.equal(sections[1].defaultOpen, false);
 });
 
 test("renderConfigListInnerHtml internal section has no editable apply control", () => {
@@ -151,7 +156,7 @@ test("renderConfigListInnerHtml internal section has no editable apply control",
       writableLayers: ["project"]
     }
   ]);
-  const internalIdx = html.indexOf('data-cfg-section="internal-readonly"');
+  const internalIdx = html.indexOf('cfg-section--maintainer-only');
   assert.ok(internalIdx >= 0);
   const slice = html.slice(internalIdx);
   assert.doesNotMatch(slice, /data-wc-action="config-save"/);
@@ -224,6 +229,7 @@ test("renderConfigSectionsHtml preserves section order from groupConfigRows", ()
   const taskIdx = html.indexOf("Task Engine");
   const internalIdx = html.indexOf("Internal (read-only)");
   assert.ok(kitIdx < docIdx && docIdx < taskIdx && taskIdx < internalIdx);
+  assert.match(html, /cfg-section-details/);
 });
 
 test("renderConfigRestartBannerHtml pairs with requiresRestart rows in host flow", () => {
@@ -272,6 +278,37 @@ test("editorRawValueForRow matches select serialization", () => {
     effectiveValue: "warn"
   };
   assert.equal(editorRawValueForRow(row), '"warn"');
+});
+
+test("editorPlaceholderForRow describes allowed values", () => {
+  const ph = editorPlaceholderForRow({
+    ...baseRow,
+    type: "string",
+    allowedValues: ["require", "warn"]
+  });
+  assert.match(ph, /require/);
+});
+
+test("defaultRawValueForRow uses default not effective", () => {
+  const row = { ...baseRow, default: "require", effectiveValue: "warn" };
+  assert.equal(defaultRawValueForRow(row), '"require"');
+  assert.equal(editorRawValueForRow(row), '"warn"');
+});
+
+test("renderConfigListInnerHtml uses collapsible sections and effective block", () => {
+  const html = renderConfigListInnerHtml([
+    { ...baseRow, key: "kit.x", owningModule: "kit", exposure: "public", requiresRestart: true },
+    { ...baseRow, key: "tasks.y", owningModule: "task-engine", exposure: "public", requiresApproval: true },
+    { ...baseRow, key: "kit.meta", type: "object", owningModule: "kit", exposure: "public", effectiveValue: { a: 1 } }
+  ]);
+  assert.match(html, /cfg-section-details/);
+  assert.match(html, /data-cfg-section="global-kit"[^>]* open/);
+  assert.match(html, /cfg-effective-block/);
+  assert.match(html, /cfg-pill-restart/);
+  assert.match(html, /cfg-pill-approval/);
+  assert.match(html, /config-reset-default/);
+  assert.match(html, /config-format-json/);
+  assert.match(html, /cfg-textarea--json/);
 });
 
 test("renderConfigListInnerHtml includes dirty affordances for editable rows", () => {

@@ -174,6 +174,47 @@ export function buildConfigWebviewBootstrapScript(options: ConfigWebviewClientOp
     setExplainActiveKey('', false);
   }
 
+  function setEditorFromRaw(details, raw) {
+    if (!details || raw == null) return;
+    var kind = details.getAttribute('data-editor-kind') || 'json';
+    if (kind === 'toggle') {
+      var cb = details.querySelector('input[data-role="value"][type="checkbox"]');
+      if (cb) cb.checked = raw === 'true' || raw === JSON.stringify(true);
+      return;
+    }
+    if (kind === 'select') {
+      var sel = details.querySelector('select[data-role="value"]');
+      if (sel) sel.value = raw;
+      return;
+    }
+    var el = details.querySelector('[data-role="value"]');
+    if (!el || !('value' in el)) return;
+    if (kind === 'number') {
+      try {
+        var n = JSON.parse(raw);
+        el.value = typeof n === 'number' ? String(n) : raw;
+      } catch (e) {
+        el.value = raw;
+      }
+      return;
+    }
+    if (kind === 'text') {
+      try {
+        var t = JSON.parse(raw);
+        el.value = typeof t === 'string' ? t : raw;
+      } catch (e) {
+        el.value = raw;
+      }
+      return;
+    }
+    try {
+      var parsed = JSON.parse(raw);
+      el.value = JSON.stringify(parsed, null, 2);
+    } catch (e) {
+      el.value = raw;
+    }
+  }
+
   function applyConfigRowPatch(patch) {
     if (!patch || !patch.key) return;
     var details = findCfgDetails(patch.key);
@@ -181,10 +222,22 @@ export function buildConfigWebviewBootstrapScript(options: ConfigWebviewClientOp
     if (typeof patch.baseline === 'string') {
       details.setAttribute('data-wc-baseline', patch.baseline);
     }
+    if (typeof patch.defaultRaw === 'string') {
+      details.setAttribute('data-config-default', patch.defaultRaw);
+    }
     var row = details.closest('.cfg-row');
-    if (row && typeof patch.preview === 'string') {
-      var prev = row.querySelector('.cfg-preview');
-      if (prev) prev.textContent = patch.preview;
+    if (row) {
+      if (typeof patch.preview === 'string') {
+        var prev = row.querySelector('.cfg-preview');
+        if (prev) prev.textContent = patch.preview;
+      }
+      if (typeof patch.effectiveDisplay === 'string') {
+        var eff = row.querySelector('.cfg-effective-value');
+        if (eff) eff.textContent = patch.effectiveDisplay;
+      }
+    }
+    if (typeof patch.editorValue === 'string') {
+      setEditorFromRaw(details, patch.editorValue);
     }
     updateRowDirtyUI(details);
     setFieldHint(details, 'ok', 'Saved — effective value updated.');
@@ -253,11 +306,20 @@ export function buildConfigWebviewBootstrapScript(options: ConfigWebviewClientOp
     }
     lastConfigListHtml = html;
     var open = {};
+    var sectionOpen = {};
+    listRoot.querySelectorAll('details.cfg-section-details').forEach(function(d) {
+      var sid = d.getAttribute('data-cfg-section');
+      if (sid && d.open) sectionOpen[sid] = true;
+    });
     listRoot.querySelectorAll('details[data-wc-track]').forEach(function(d) {
       var k = d.getAttribute('data-wc-track');
       if (k && d.open) open[k] = true;
     });
     listRoot.innerHTML = html;
+    listRoot.querySelectorAll('details.cfg-section-details').forEach(function(d) {
+      var sid = d.getAttribute('data-cfg-section');
+      if (sid && sectionOpen[sid]) d.open = true;
+    });
     Object.keys(open).forEach(function(k) {
       var el = listRoot.querySelector('details[data-wc-track="' + k + '"]');
       if (el) el.open = true;
@@ -286,15 +348,22 @@ export function buildConfigWebviewBootstrapScript(options: ConfigWebviewClientOp
       requestLoad();
     }, delayMs == null ? 600 : delayMs);
   }
+  function syncMaintainerSections() {
+    var panel = document.querySelector('.wc-config-panel');
+    var show = currentIncludeAll();
+    if (panel) panel.classList.toggle('cfg-show-maintainer', show);
+  }
+
   function applyFilter() {
     var listRoot = cfgEl('config-list-root');
     var q = (cfgEl('cfg-filter') && cfgEl('cfg-filter').value || '').trim().toLowerCase();
     if (!listRoot) return;
+    syncMaintainerSections();
     listRoot.querySelectorAll('.cfg-row').forEach(function(row) {
       var hay = row.getAttribute('data-search') || '';
       row.style.display = !q || hay.indexOf(q) !== -1 ? '' : 'none';
     });
-    listRoot.querySelectorAll('.cfg-section').forEach(function(section) {
+    listRoot.querySelectorAll('.cfg-section-details').forEach(function(section) {
       var visible = false;
       section.querySelectorAll('.cfg-row').forEach(function(row) {
         if (row.style.display !== 'none') visible = true;
@@ -352,7 +421,10 @@ export function buildConfigWebviewBootstrapScript(options: ConfigWebviewClientOp
     var maintainerEl = cfgEl('cfg-maintainer');
     if (maintainerEl && !maintainerEl.getAttribute('data-wc-bound')) {
       maintainerEl.setAttribute('data-wc-bound', '1');
-      maintainerEl.addEventListener('change', requestLoad);
+      maintainerEl.addEventListener('change', function() {
+        syncMaintainerSections();
+        requestLoad();
+      });
     }
     var filterEl = cfgEl('cfg-filter');
     if (filterEl && !filterEl.getAttribute('data-wc-bound')) {
@@ -388,6 +460,53 @@ export function buildConfigWebviewBootstrapScript(options: ConfigWebviewClientOp
   function handleConfigListButtonClick(t) {
     var act = t.getAttribute('data-wc-action');
     if (!act) return false;
+    if (act === 'config-copy-effective') {
+      var rowCe = findCfgRow(t.getAttribute('data-key') || '');
+      if (rowCe) {
+        var effEl = rowCe.querySelector('.cfg-effective-value');
+        var text = effEl ? effEl.textContent || '' : '';
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function() {
+            showStatus('ok', 'Copied effective value to clipboard.');
+          }).catch(function() {
+            showStatus('warn', 'Could not copy to clipboard.');
+          });
+        } else {
+          showStatus('info', text);
+        }
+      }
+      return true;
+    }
+    if (act === 'config-reset-default') {
+      var keyRd = t.getAttribute('data-key') || '';
+      var detRd = findCfgDetails(keyRd);
+      if (detRd) {
+        var defRaw = detRd.getAttribute('data-config-default');
+        if (defRaw != null) {
+          setEditorFromRaw(detRd, defRaw);
+          updateRowDirtyUI(detRd);
+          setFieldHint(detRd, 'info', 'Editor reset to kit default. Apply to persist.');
+        }
+      }
+      return true;
+    }
+    if (act === 'config-format-json') {
+      var detFj = t.closest('details');
+      if (detFj) {
+        var ta = detFj.querySelector('textarea[data-role="value"]');
+        if (ta) {
+          try {
+            var parsedFj = JSON.parse(ta.value);
+            ta.value = JSON.stringify(parsedFj, null, 2);
+            updateRowDirtyUI(detFj);
+            setFieldHint(detFj, 'ok', 'JSON formatted.');
+          } catch (e) {
+            setFieldHint(detFj, 'err', 'Invalid JSON — fix syntax before formatting.');
+          }
+        }
+      }
+      return true;
+    }
     if (act === 'config-explain') {
       var ek = t.getAttribute('data-key');
       if (ek) {
@@ -571,6 +690,7 @@ export function buildConfigWebviewBootstrapScript(options: ConfigWebviewClientOp
     setExplainActiveKey: setExplainActiveKey
   };
   afterDomUpdate();
+  syncMaintainerSections();
 ${autoLoadLine}
 })();`;
 }
@@ -586,8 +706,29 @@ export const CONFIG_WEBVIEW_STYLES = `
     .cfg-status-warn { background: rgba(200, 150, 0, 0.2); }
     .cfg-status-err { background: rgba(200, 60, 60, 0.2); }
     .cfg-muted { opacity: 0.8; margin: 8px 0; }
-    .cfg-sections { display: flex; flex-direction: column; gap: 16px; }
-    .cfg-section-heading { font-size: 13px; font-weight: 600; margin: 0 0 8px; opacity: 0.95; }
+    .cfg-sections { display: flex; flex-direction: column; gap: 10px; }
+    .cfg-section-details {
+      border: 1px solid var(--vscode-widget-border);
+      border-radius: 4px;
+      background: var(--vscode-sideBar-background);
+    }
+    .cfg-section-details > summary.cfg-section-heading {
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 8px;
+      padding: 8px 10px;
+      font-size: 13px;
+      font-weight: 600;
+      margin: 0;
+    }
+    .cfg-section-details > summary.cfg-section-heading::-webkit-details-marker { display: none; }
+    .cfg-section-details > .cfg-rows { padding: 0 8px 10px; }
+    .cfg-section--maintainer-only { display: none; }
+    .wc-config-panel.cfg-show-maintainer .cfg-section--maintainer-only { display: block; }
+    .cfg-section-count { font-size: 11px; font-weight: normal; }
     .cfg-rows { display: flex; flex-direction: column; gap: 4px; }
     .cfg-details { border: 1px solid var(--vscode-widget-border); border-radius: 2px; background: var(--vscode-editor-background); }
     .cfg-summary { cursor: pointer; padding: 6px 8px; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
@@ -597,6 +738,36 @@ export const CONFIG_WEBVIEW_STYLES = `
     .cfg-preview { flex: 1; min-width: 120px; font-family: var(--vscode-editor-font-family); font-size: 11px; opacity: 0.9; text-align: right; }
     .cfg-pill { font-size: 10px; padding: 1px 6px; border-radius: 8px; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); }
     .cfg-pill-warn { background: var(--vscode-inputValidation-warningBackground); color: var(--vscode-inputValidation-warningForeground); }
+    .cfg-pill-restart { background: var(--vscode-inputValidation-infoBackground); color: var(--vscode-inputValidation-infoForeground); }
+    .cfg-pill-approval { background: var(--vscode-inputValidation-warningBackground); color: var(--vscode-inputValidation-warningForeground); }
+    .cfg-pill-sensitive { background: rgba(180, 60, 60, 0.25); }
+    .cfg-effective-block {
+      margin-top: 8px;
+      padding: 8px;
+      border-radius: 2px;
+      background: var(--vscode-textCodeBlock-background);
+    }
+    .cfg-effective-block .cfg-label { margin-top: 0; }
+    .cfg-effective-value {
+      display: block;
+      margin-top: 4px;
+      font-family: var(--vscode-editor-font-family);
+      font-size: 11px;
+      word-break: break-word;
+    }
+    .cfg-edit-block { margin-top: 10px; }
+    .cfg-edit-tools {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .cfg-textarea--json,
+    .cfg-input--mono {
+      font-family: var(--vscode-editor-font-family);
+      font-size: 11px;
+      line-height: 1.4;
+    }
     .cfg-body { padding: 0 8px 10px; border-top: 1px solid var(--vscode-widget-border); }
     .cfg-desc { margin: 8px 0; line-height: 1.35; }
     .cfg-meta { margin: 0; font-size: 11px; }

@@ -65,6 +65,10 @@ export type ConfigRowSection = {
   label: string;
   /** Internal / non-editable bucket — rows still render but stay read-only. */
   readOnlySection?: boolean;
+  /** Shown only when Maintainer keys is checked in the Config tab. */
+  maintainerOnlySection?: boolean;
+  /** Section `<details>` open on first paint (Global kit only). */
+  defaultOpen?: boolean;
   rows: ConfigKeyRowInput[];
 };
 
@@ -118,6 +122,7 @@ export function groupConfigRows(rows: ConfigKeyRowInput[]): ConfigRowSection[] {
     sections.push({
       id: "global-kit",
       label: "Global (kit)",
+      defaultOpen: true,
       rows: sortRowsByKey(global)
     });
   }
@@ -125,6 +130,7 @@ export function groupConfigRows(rows: ConfigKeyRowInput[]): ConfigRowSection[] {
     sections.push({
       id: `module-${mod.replace(/[^a-zA-Z0-9_-]/g, "_")}`,
       label: moduleSectionLabel(mod),
+      defaultOpen: false,
       rows: sortRowsByKey(byModule.get(mod) ?? [])
     });
   }
@@ -133,6 +139,7 @@ export function groupConfigRows(rows: ConfigKeyRowInput[]): ConfigRowSection[] {
       id: "internal-readonly",
       label: "Internal (read-only)",
       readOnlySection: true,
+      maintainerOnlySection: true,
       rows: sortRowsByKey(internal)
     });
   }
@@ -140,6 +147,35 @@ export function groupConfigRows(rows: ConfigKeyRowInput[]): ConfigRowSection[] {
 }
 
 export type ConfigEditorKind = "toggle" | "select" | "text" | "number" | "json";
+
+function scalarForDefault(row: ConfigKeyRowInput): unknown {
+  return row.default;
+}
+
+/** Wire-format default value for Reset to default (matches webview `readRowValue`). */
+export function defaultRawValueForRow(row: ConfigKeyRowInput): string {
+  const kind = pickEditorKind(row);
+  const v = scalarForDefault(row);
+  if (kind === "toggle") {
+    return JSON.stringify(v === true);
+  }
+  if (kind === "select") {
+    return JSON.stringify(v);
+  }
+  if (kind === "number") {
+    if (typeof v === "number" && Number.isFinite(v)) {
+      return JSON.stringify(v);
+    }
+    return "";
+  }
+  if (kind === "text") {
+    if (v === undefined || v === null) {
+      return JSON.stringify("");
+    }
+    return JSON.stringify(String(v));
+  }
+  return editorTextForValue(undefined, row.default);
+}
 
 /** Wire-format value string for dirty-state comparison (matches webview `readRowValue`). */
 export function editorRawValueForRow(row: ConfigKeyRowInput): string {
@@ -181,6 +217,42 @@ function effectiveScalar(row: ConfigKeyRowInput): unknown {
   return row.effectiveValue !== undefined ? row.effectiveValue : row.default;
 }
 
+/** Input placeholder from registry type / allowed values. */
+export function editorPlaceholderForRow(row: ConfigKeyRowInput): string {
+  const t = (row.type || "string").toLowerCase();
+  const allowed = row.allowedValues ?? [];
+  if (allowed.length > 0) {
+    return `One of: ${allowed.map((v) => JSON.stringify(v)).join(", ")}`;
+  }
+  if (t === "boolean") return "true or false";
+  if (t === "number" || t === "integer") return t === "integer" ? "Integer" : "Number";
+  if (t === "object") return '{ "key": "value" } — JSON object';
+  if (t === "array") return '["item"] — JSON array';
+  return "String value";
+}
+
+function renderSummaryPills(row: ConfigKeyRowInput): string {
+  const pills: string[] = [];
+  if (row.requiresRestart) {
+    pills.push('<span class="cfg-pill cfg-pill-restart" title="May require editor reload">restart</span>');
+  }
+  if (row.requiresApproval) {
+    pills.push('<span class="cfg-pill cfg-pill-approval" title="Policy approval required">approval</span>');
+  }
+  if (row.sensitive) {
+    pills.push('<span class="cfg-pill cfg-pill-sensitive" title="Sensitive value">sensitive</span>');
+  }
+  if (row.exposure !== "public") {
+    pills.push(`<span class="cfg-pill cfg-pill-warn">${escapeHtml(row.exposure)}</span>`);
+  }
+  return pills.join("");
+}
+
+function renderEffectiveValueHtml(row: ConfigKeyRowInput): string {
+  const preview = formatConfigValuePreview(row.effectiveValue, row.sensitive);
+  return `<code class="cfg-effective-value">${escapeHtml(preview)}</code>`;
+}
+
 function renderSelectOptions(row: ConfigKeyRowInput): string {
   const current = effectiveScalar(row);
   const values = row.allowedValues ?? [];
@@ -198,46 +270,72 @@ function renderSelectOptions(row: ConfigKeyRowInput): string {
 function renderConfigValueEditor(row: ConfigKeyRowInput, track: string, disabled: boolean): string {
   const kind = pickEditorKind(row);
   const dis = disabled ? " disabled" : "";
-  const label =
-    kind === "json"
-      ? "Value (JSON)"
-      : kind === "toggle"
-        ? "Value"
-        : "Value";
+  const ph = escapeHtmlAttr(editorPlaceholderForRow(row));
+  const editLabel = kind === "json" ? "Edit value (JSON)" : "Edit value";
   if (kind === "toggle") {
     const checked = effectiveScalar(row) === true ? " checked" : "";
     return (
-      `<label class="cfg-label cfg-toggle-label" for="tg-${track}">${label}</label>` +
-      `<label class="cfg-toggle-wrap"><input type="checkbox" id="tg-${track}" class="cfg-toggle" data-role="value" data-value-kind="boolean"${checked}${dis} /> Enabled</label>`
+      `<label class="cfg-label cfg-toggle-label" for="tg-${track}">${editLabel}</label>` +
+      `<label class="cfg-toggle-wrap"><input type="checkbox" id="tg-${track}" class="cfg-toggle" data-role="value" data-value-kind="boolean" placeholder="${ph}"${checked}${dis} /> Enabled</label>`
     );
   }
   if (kind === "select") {
     return (
-      `<label class="cfg-label" for="sel-${track}">${label}</label>` +
-      `<select id="sel-${track}" class="cfg-select cfg-value-select" data-role="value" data-value-kind="select" aria-label="Value for ${escapeHtmlAttr(row.key)}"${dis}>${renderSelectOptions(row)}</select>`
+      `<label class="cfg-label" for="sel-${track}">${editLabel}</label>` +
+      `<select id="sel-${track}" class="cfg-select cfg-value-select" data-role="value" data-value-kind="select" aria-label="Value for ${escapeHtmlAttr(row.key)}" title="${ph}"${dis}>${renderSelectOptions(row)}</select>`
     );
   }
   if (kind === "number") {
     const n = effectiveScalar(row);
     const val = typeof n === "number" ? String(n) : "";
     return (
-      `<label class="cfg-label" for="num-${track}">${label}</label>` +
-      `<input type="number" id="num-${track}" class="cfg-input" data-role="value" data-value-kind="number" value="${escapeHtmlAttr(val)}"${dis} />`
+      `<label class="cfg-label" for="num-${track}">${editLabel}</label>` +
+      `<input type="number" id="num-${track}" class="cfg-input cfg-input--mono" data-role="value" data-value-kind="number" value="${escapeHtmlAttr(val)}" placeholder="${ph}"${dis} />`
     );
   }
   if (kind === "text") {
     const v = effectiveScalar(row);
     const val = v === undefined || v === null ? "" : String(v);
     return (
-      `<label class="cfg-label" for="txt-${track}">${label}</label>` +
-      `<input type="text" id="txt-${track}" class="cfg-input" data-role="value" data-value-kind="text" value="${escapeHtmlAttr(val)}"${dis} />`
+      `<label class="cfg-label" for="txt-${track}">${editLabel}</label>` +
+      `<input type="text" id="txt-${track}" class="cfg-input" data-role="value" data-value-kind="text" value="${escapeHtmlAttr(val)}" placeholder="${ph}"${dis} />`
     );
   }
   const ta = escapeHtml(editorTextForValue(row.effectiveValue, row.default));
   return (
-    `<label class="cfg-label" for="ta-${track}">${label}</label>` +
-    `<textarea id="ta-${track}" class="cfg-textarea" data-role="value" data-value-kind="json" rows="6" spellcheck="false"${dis}>${ta}</textarea>`
+    `<label class="cfg-label" for="ta-${track}">${editLabel}</label>` +
+    `<textarea id="ta-${track}" class="cfg-textarea cfg-textarea--json" data-role="value" data-value-kind="json" rows="8" spellcheck="false" placeholder="${ph}"${dis}>${ta}</textarea>`
   );
+}
+
+function renderEditTools(row: ConfigKeyRowInput, track: string, ro: boolean): string {
+  if (ro) return "";
+  const kind = pickEditorKind(row);
+  const formatBtn =
+    kind === "json"
+      ? `<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="config-format-json" data-key="${escapeHtmlAttr(row.key)}">Format JSON</button>`
+      : "";
+  return (
+    `<div class="cfg-edit-tools">` +
+    `<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="config-reset-default" data-key="${escapeHtmlAttr(row.key)}">Reset to default</button>` +
+    `<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="config-copy-effective" data-key="${escapeHtmlAttr(row.key)}">Copy effective</button>` +
+    formatBtn +
+    `</div>`
+  );
+}
+
+function renderValueBlocks(row: ConfigKeyRowInput, track: string, ro: boolean): string {
+  const effectiveBlock =
+    `<div class="cfg-effective-block">` +
+    `<span class="cfg-label">Effective (resolved)</span>` +
+    renderEffectiveValueHtml(row) +
+    `</div>`;
+  const editorBlock =
+    `<div class="cfg-edit-block">` +
+    renderConfigValueEditor(row, track, ro) +
+    renderEditTools(row, track, ro) +
+    `</div>`;
+  return effectiveBlock + editorBlock;
 }
 
 function renderScopeOptions(layers: string[]): string {
@@ -255,11 +353,7 @@ function renderConfigRowHtml(row: ConfigKeyRowInput, forceReadOnly = false): str
   const track = sanitizeTrackId(row.key);
   const preview = formatConfigValuePreview(row.effectiveValue, row.sensitive);
   const layers = row.writableLayers?.length ? row.writableLayers : ["project"];
-  const facetPill =
-    row.exposure !== "public"
-      ? `<span class="cfg-pill cfg-pill-warn">${escapeHtml(row.exposure)}</span>`
-      : "";
-  const appr = row.requiresApproval || row.sensitive ? '<span class="cfg-pill">approval</span>' : "";
+  const summaryPills = renderSummaryPills(row);
   const actions = ro
     ? '<p class="cfg-muted">This key is read-only in the UI.</p>'
     : `<div class="cfg-actions">
@@ -270,16 +364,17 @@ function renderConfigRowHtml(row: ConfigKeyRowInput, forceReadOnly = false): str
 </div>`;
   const editorKind = pickEditorKind(row);
   const baseline = editorRawValueForRow(row);
-  const editorHtml = renderConfigValueEditor(row, track, ro);
+  const defaultRaw = defaultRawValueForRow(row);
+  const valueBlocks = renderValueBlocks(row, track, ro);
   const detailsClass = ro ? "cfg-details" : "cfg-details cfg-details--editable";
   return `<div class="cfg-row" role="listitem" data-config-key="${escapeHtmlAttr(row.key)}" data-search="${escapeHtmlAttr(row.key.toLowerCase() + " " + row.description.toLowerCase())}">
-  <details class="${detailsClass}" data-wc-track="${escapeHtmlAttr(track)}" data-editor-kind="${escapeHtmlAttr(editorKind)}" data-wc-baseline="${escapeHtmlAttr(baseline)}">
+  <details class="${detailsClass}" data-wc-track="${escapeHtmlAttr(track)}" data-editor-kind="${escapeHtmlAttr(editorKind)}" data-config-type="${escapeHtmlAttr(row.type)}" data-wc-baseline="${escapeHtmlAttr(baseline)}" data-config-default="${escapeHtmlAttr(defaultRaw)}">
     <summary class="cfg-summary">
       <code class="cfg-key">${escapeHtml(row.key)}</code>
       <span class="cfg-type">${escapeHtml(row.type)}</span>
       <span class="cfg-preview">${escapeHtml(preview)}</span>
       <span class="cfg-dirty-pill" hidden aria-live="polite">Unsaved</span>
-      ${facetPill}${appr}
+      ${summaryPills}
     </summary>
     <div class="cfg-body">
       <p class="cfg-desc">${escapeHtml(row.description)}</p>
@@ -289,7 +384,7 @@ function renderConfigRowHtml(row: ConfigKeyRowInput, forceReadOnly = false): str
         <div><dt>Writable layers</dt><dd>${escapeHtml(layers.join(", "))}</dd></div>
         ${row.requiresRestart ? `<div><dt>Restart</dt><dd>Changing this may require a kit / editor reload.</dd></div>` : ""}
       </dl>
-      ${editorHtml}
+      ${valueBlocks}
       <p class="cfg-field-hint" role="status" aria-live="polite" hidden></p>
       <div class="cfg-row-btns">
         <button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="config-explain" data-key="${escapeHtmlAttr(row.key)}">Explain Layers</button>
@@ -306,11 +401,16 @@ export function renderConfigSectionsHtml(sections: ConfigRowSection[]): string {
       const rowsHtml = section.rows
         .map((row) => renderConfigRowHtml(row, Boolean(section.readOnlySection)))
         .join("");
+      const openAttr = section.defaultOpen ? " open" : "";
+      const maintainerClass = section.maintainerOnlySection ? " cfg-section--maintainer-only" : "";
+      const count = section.rows.length;
+      const countLabel = count === 1 ? "1 key" : count + " keys";
       return (
-        `<section class="cfg-section" data-cfg-section="${escapeHtmlAttr(section.id)}" aria-label="${escapeHtmlAttr(section.label)}">` +
-        `<h3 class="cfg-section-heading">${escapeHtml(section.label)}</h3>` +
+        `<details class="cfg-section-details${maintainerClass}" data-cfg-section="${escapeHtmlAttr(section.id)}" aria-label="${escapeHtmlAttr(section.label)}"${openAttr}>` +
+        `<summary class="cfg-section-heading"><span class="cfg-section-heading-label">${escapeHtml(section.label)}</span>` +
+        `<span class="cfg-section-count muted">${countLabel}</span></summary>` +
         `<div class="cfg-rows" role="list">${rowsHtml}</div>` +
-        "</section>"
+        "</details>"
       );
     })
     .join("");
