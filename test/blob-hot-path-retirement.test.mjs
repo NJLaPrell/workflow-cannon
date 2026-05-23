@@ -151,6 +151,39 @@ test("incremental relational save preserves untouched rows and scoped side-table
   db.close();
 });
 
+test("incremental relational save updates tasks referenced by dependency RESTRICT FKs", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "wk-incremental-dep-restrict-"));
+  const rel = path.join(".workspace-kit", "tasks", "plan.db");
+  const abs = path.join(dir, rel);
+  await mkdir(path.dirname(abs), { recursive: true });
+
+  const dual = new SqliteDualPlanningStore(dir, rel);
+  dual.loadFromDisk();
+  const store = TaskStore.forSqliteDual(dual);
+  await store.load();
+  store.addTask(makeTask("T-base", { phase: "Phase 105", phaseKey: "105" }));
+  store.addTask(makeTask("T-child", { dependsOn: ["T-base"] }));
+  await store.save();
+  dual.enableRelationalPersistenceAndPersist();
+
+  const base = store.getTask("T-base");
+  store.updateTask({ ...base, phase: undefined, phaseKey: undefined, updatedAt: "2026-01-02T00:00:00.000Z" });
+  store.addMutationEvidence({
+    mutationId: "m-clear-T-base",
+    mutationType: "clear-task-phase",
+    taskId: "T-base",
+    timestamp: "2026-01-02T00:00:00.000Z",
+    details: { payloadDigest: "test" }
+  });
+  await store.save();
+
+  const db = dual.getDatabase();
+  assert.equal(db.prepare("SELECT phase_key FROM task_engine_tasks WHERE id = 'T-base'").get().phase_key, null);
+  assert.equal(db.prepare("SELECT COUNT(*) AS c FROM task_engine_dependencies WHERE depends_on_task_id = 'T-base'").get().c, 1);
+  assert.equal(String(Object.values(db.prepare("PRAGMA integrity_check").get())[0]).toLowerCase(), "ok");
+  db.close();
+});
+
 test("incremental relational save rejects stale planning generation", async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), "wk-incremental-gen-"));
   const rel = path.join(".workspace-kit", "tasks", "plan.db");

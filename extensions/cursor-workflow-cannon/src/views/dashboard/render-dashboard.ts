@@ -3135,7 +3135,8 @@ export function renderPhaseCatalogOverviewSection(
           '<div class="dash-phase-deliverables-body">' +
           `<span class="dash-phase-deliverables-text">${desc}</span>` +
           `<div class="dash-phase-deliverables-editor" hidden><input type="text" class="dash-phase-deliverables-input wc-input" data-wc-phase-input="${phaseKeyAttr}" value="${inputValue}" aria-label="Deliverables for phase ${phaseKeyAttr}" /></div>` +
-          '<span class="dash-phase-saving" aria-live="polite" hidden>Saving…</span></div>' +
+          '<span class="dash-phase-saving" aria-live="polite" hidden>' +
+          '<span class="wc-spinner wc-spinner-inline" aria-hidden="true"></span> Saving…</span></div>' +
           `<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary dash-phase-edit-anchor" data-wc-action="phase-deliverables-edit" data-wc-phase-key="${phaseKeyAttr}" aria-label="Edit deliverables for phase ${phaseKeyAttr}" title="Edit deliverables">Edit</button>` +
           '<p class="dash-phase-deliverables-error bad" aria-live="polite" hidden></p></div></td></tr>';
       }

@@ -767,6 +767,48 @@ export class SqliteDualPlanningStore {
     return db.prepare(insertSql);
   }
 
+  /** Incremental path only — UPDATE-in-place avoids DELETE that trips depends_on RESTRICT FKs. */
+  private taskUpsertStatement(db: Database.Database): Database.Statement {
+    const upsertSql = `
+      INSERT INTO ${TASK_ENGINE_TASKS_TABLE} (
+        id, status, type, title, created_at, updated_at, archived, archived_at,
+        priority, phase, phase_key, ownership, approach,
+        depends_on_json, unblocks_json, technical_scope_json, acceptance_criteria_json,
+        summary, description, risk, queue_namespace, evidence_key, evidence_kind, metadata_json, features_json,
+        routing_category, routing_confidence_tier, routing_blocked_reason_category, routing_tags_json
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      ON CONFLICT(id) DO UPDATE SET
+        status = excluded.status,
+        type = excluded.type,
+        title = excluded.title,
+        updated_at = excluded.updated_at,
+        archived = excluded.archived,
+        archived_at = excluded.archived_at,
+        priority = excluded.priority,
+        phase = excluded.phase,
+        phase_key = excluded.phase_key,
+        ownership = excluded.ownership,
+        approach = excluded.approach,
+        depends_on_json = excluded.depends_on_json,
+        unblocks_json = excluded.unblocks_json,
+        technical_scope_json = excluded.technical_scope_json,
+        acceptance_criteria_json = excluded.acceptance_criteria_json,
+        summary = excluded.summary,
+        description = excluded.description,
+        risk = excluded.risk,
+        queue_namespace = excluded.queue_namespace,
+        evidence_key = excluded.evidence_key,
+        evidence_kind = excluded.evidence_kind,
+        metadata_json = excluded.metadata_json,
+        features_json = excluded.features_json,
+        routing_category = excluded.routing_category,
+        routing_confidence_tier = excluded.routing_confidence_tier,
+        routing_blocked_reason_category = excluded.routing_blocked_reason_category,
+        routing_tags_json = excluded.routing_tags_json
+    `;
+    return db.prepare(upsertSql);
+  }
+
   private insertTaskRow(
     insert: Database.Statement,
     task: TaskEntity,
@@ -865,9 +907,9 @@ export class SqliteDualPlanningStore {
     const dirtyTasks = this._taskDoc.tasks.filter((t) => dirtySet.has(t.id));
     const projection = dependencyProjection(this._taskDoc.tasks);
     const registry = featureRegistryActiveOnConnection(db);
-    const insert = this.taskInsertStatement(db);
+    const upsert = this.taskUpsertStatement(db);
     for (const t of dirtyTasks) {
-      this.insertTaskRow(insert, t, projection, registry);
+      this.insertTaskRow(upsert, t, projection, registry);
     }
 
     const deleteDependency = db.prepare(`DELETE FROM ${TASK_ENGINE_DEPENDENCIES_TABLE} WHERE task_id = ?`);

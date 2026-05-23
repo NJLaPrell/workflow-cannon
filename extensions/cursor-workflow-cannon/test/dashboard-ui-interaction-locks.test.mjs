@@ -32,6 +32,21 @@ test("dashboard webview bootstrap queues wcReplaceRoot while UI is locked", () =
   assert.match(providerSrc, /wcPhaseDeliverablesSaved/);
 });
 
+test("dashboard drawer submit shows animated loading overlay while kit command runs", () => {
+  assert.match(providerSrc, /function setDrawerBusy\(busy, label\)/);
+  assert.match(providerSrc, /className = 'wc-drawer-loading'/);
+  assert.match(providerSrc, /class="wc-spinner"/);
+  assert.match(providerSrc, /setDrawerBusy\(true\)/);
+  assert.match(providerSrc, /drawerBusyLabelForWorkflow/);
+  assert.match(providerSrc, /Updating task phase/);
+});
+
+test("dashboard refresh button shows inline spinner while summary reloads", () => {
+  assert.match(providerSrc, /function setButtonBusy\(el, busy, label\)/);
+  assert.match(providerSrc, /setButtonBusy\(btn, true, 'Refreshing…'\)/);
+  assert.match(providerSrc, /setButtonBusy\(refreshBtn, false\)/);
+});
+
 test("phase deliverables save uses targeted webview patch instead of full pushUpdate", () => {
   const marker = 'type: "wcPhaseDeliverablesSaved"';
   const idx = providerSrc.indexOf(marker);

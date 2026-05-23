@@ -16,7 +16,7 @@ Agents working any of the following will see this artifact in their effective ac
 
 ## Rules (do not duplicate here)
 
-Read the rule index (R1–R17) at the top of the canonical file. Cite rules by ID (`R3.2`, `R8.4`, `R17.2`, etc.) in commit messages and PR reviews.
+Read the rule index (R1–R18) at the top of the canonical file. Cite rules by ID (`R3.2`, `R8.4`, `R17.2`, `R18.4`, etc.) in commit messages and PR reviews.
 
 ## Mutation policy
 

@@ -2598,6 +2598,70 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
+  function drawerBusyLabelForWorkflow(workflowId) {
+    if (workflowId === 'assign-task-phase') return 'Updating task phase…';
+    if (workflowId === 'accept-proposed') return 'Accepting and assigning phase…';
+    if (workflowId === 'register-phase-catalog') return 'Updating phase catalog…';
+    if (workflowId === 'add-wishlist') return 'Creating wishlist item…';
+    if (workflowId === 'add-phase-note') return 'Adding phase note…';
+    return 'Running kit command…';
+  }
+
+  function setDrawerBusy(busy, label) {
+    var dh = document.getElementById('wc-drawer-host');
+    if (!dh) return;
+    var panel = dh.querySelector('.wc-drawer-panel');
+    if (!panel) return;
+    var overlay = panel.querySelector('.wc-drawer-loading');
+    if (busy) {
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.className = 'wc-drawer-loading';
+        overlay.setAttribute('aria-live', 'polite');
+        overlay.innerHTML =
+          '<div class="wc-spinner" aria-hidden="true"></div>' +
+          '<span class="wc-drawer-loading-label"></span>';
+        panel.appendChild(overlay);
+      }
+      var wf = panel.getAttribute('data-wc-drawer-workflow') || '';
+      var lab = overlay.querySelector('.wc-drawer-loading-label');
+      if (lab) lab.textContent = label || drawerBusyLabelForWorkflow(wf);
+      overlay.hidden = false;
+      panel.classList.add('wc-drawer-panel--busy');
+      panel.querySelectorAll('[data-wc-drawer-action]').forEach(function(btn) {
+        btn.disabled = true;
+      });
+      setUiInteraction('drawer-busy', true);
+      return;
+    }
+    if (overlay) overlay.hidden = true;
+    panel.classList.remove('wc-drawer-panel--busy');
+    panel.querySelectorAll('[data-wc-drawer-action]').forEach(function(btn) {
+      btn.disabled = false;
+    });
+    var subBtn = panel.querySelector('[data-wc-drawer-action="submit"]');
+    if (subBtn) subBtn.removeAttribute('data-wc-drawer-submitting');
+    setUiInteraction('drawer-busy', false);
+  }
+
+  function setButtonBusy(el, busy, label) {
+    if (!el) return;
+    if (busy) {
+      if (!el.getAttribute('data-wc-original-html')) {
+        el.setAttribute('data-wc-original-html', el.innerHTML);
+      }
+      el.disabled = true;
+      el.innerHTML =
+        '<span class="wc-btn-loading">' +
+        '<span class="wc-spinner wc-spinner-inline" aria-hidden="true"></span>' +
+        '<span>' + (label || 'Loading…') + '</span></span>';
+      return;
+    }
+    el.disabled = false;
+    var original = el.getAttribute('data-wc-original-html');
+    if (original) el.innerHTML = original;
+  }
+
   function capturePhaseDeliverablesEditState(root) {
     if (!root) return null;
     var rows = root.querySelectorAll('[data-wc-phase-row]');
@@ -2723,6 +2787,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     applyQueueFilters(root);
     reloadOpenLazyTerminalBuckets(root);
     if (editState) restorePhaseDeliverablesEditState(editState);
+    var refreshBtn = document.getElementById('btn');
+    setButtonBusy(refreshBtn, false);
+    setUiInteraction('refresh', false);
   }
 
   function escPhaseDeliverablesHtml(s) {
@@ -3032,13 +3099,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     if (m && m.type === 'wcDrawerValidation' && typeof m.message === 'string') {
+      setDrawerBusy(false);
       var v = document.getElementById('wc-drawer-validation');
       if (v) { v.textContent = m.message; v.hidden = false; }
-      var dhVal = document.getElementById('wc-drawer-host');
-      if (dhVal) {
-        var subBtn = dhVal.querySelector('[data-wc-drawer-action="submit"]');
-        if (subBtn) { subBtn.disabled = false; subBtn.removeAttribute('data-wc-drawer-submitting'); }
-      }
       return;
     }
     if (m && m.type === 'wcPhaseDeliverablesSaved') {
@@ -3159,6 +3222,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   document.addEventListener('click', function(ev) {
     var dh = document.getElementById('wc-drawer-host');
     if (!dh || dh.classList.contains('wc-drawer-host--hidden')) return;
+    var panel = dh.querySelector('.wc-drawer-panel');
+    if (panel && panel.classList.contains('wc-drawer-panel--busy')) return;
     var t = ev.target && ev.target.closest ? ev.target.closest('[data-wc-drawer-action]') : null;
     if (!t || !dh.contains(t)) return;
     var act = t.getAttribute('data-wc-drawer-action');
@@ -3167,6 +3232,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (t.disabled || t.getAttribute('data-wc-drawer-submitting') === '1') return;
       t.disabled = true;
       t.setAttribute('data-wc-drawer-submitting', '1');
+      setDrawerBusy(true);
       var vals = {};
       dh.querySelectorAll('[data-wc-drawer-field]').forEach(function(el) {
         var id = el.getAttribute('data-wc-drawer-field');
@@ -3180,13 +3246,19 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (ev.key !== 'Escape') return;
     var dh = document.getElementById('wc-drawer-host');
     if (!dh || dh.classList.contains('wc-drawer-host--hidden')) return;
+    var panel = dh.querySelector('.wc-drawer-panel');
+    if (panel && panel.classList.contains('wc-drawer-panel--busy')) return;
     ev.preventDefault();
     vscode.postMessage({type:'drawerCancel'});
   });
 
   var btn = document.getElementById('btn');
   var rootEl = document.getElementById('root');
-  if (btn) btn.addEventListener('click', function() { vscode.postMessage({type:'refresh'}); });
+  if (btn) btn.addEventListener('click', function() {
+    setButtonBusy(btn, true, 'Refreshing…');
+    setUiInteraction('refresh', true);
+    vscode.postMessage({type:'refresh'});
+  });
   if (rootEl) rootEl.addEventListener('click', function(ev) {
     var rawTarget = ev.target;
     var el = rawTarget;
@@ -3608,8 +3680,61 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       min-width: 0;
     }
     .dash-phase-saving {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
       font-size: 11px;
-      opacity: 0.8;
+      opacity: 0.9;
+    }
+    @keyframes wc-spin {
+      to { transform: rotate(360deg); }
+    }
+    .wc-spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--vscode-widget-border, rgba(127,127,127,.35));
+      border-top-color: var(--vscode-button-background, #0078d4);
+      border-radius: 50%;
+      animation: wc-spin 0.75s linear infinite;
+      flex-shrink: 0;
+    }
+    .wc-spinner-inline {
+      width: 12px;
+      height: 12px;
+      border-width: 2px;
+    }
+    .wc-btn-loading {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .wc-drawer-panel--busy .wc-drawer-fields,
+    .wc-drawer-panel--busy .wc-drawer-footer,
+    .wc-drawer-panel--busy .wc-drawer-header {
+      pointer-events: none;
+      opacity: 0.45;
+    }
+    .wc-drawer-loading {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 16px;
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--vscode-editorWidget-background) 88%, transparent);
+      backdrop-filter: blur(1px);
+    }
+    .wc-drawer-loading[hidden] { display: none !important; }
+    .wc-drawer-loading-label {
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+      line-height: 1.35;
     }
     .dash-phase-deliverables-error {
       grid-column: 1 / -1;

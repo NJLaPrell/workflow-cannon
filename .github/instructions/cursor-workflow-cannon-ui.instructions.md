@@ -28,6 +28,7 @@ Audience: agents only. Apply these rules verbatim when writing or modifying webv
 | R15 | CSP + inline assets |
 | R16 | Migration policy |
 | R17 | Human copy (product voice) |
+| R18 | Loading indicators (spinner, drawer busy, button busy) |
 
 ## Files this guide governs
 
@@ -300,12 +301,13 @@ R11.4 Required behaviors (already in shells; preserve when modifying):
 - Escape key → posts `{ type: "drawerCancel" }`.
 - Backdrop click → posts `{ type: "drawerCancel" }`.
 - Submit button → harvests every `[data-wc-drawer-field]` value into `{ type: "drawerSubmit", values }`.
+- Submit MUST show drawer busy overlay per **R18.4–R18.5** before posting `drawerSubmit`.
 
 R11.5 Field kinds are `text | textarea | select | summary` (`DrawerFormField` union). Do not invent new kinds without extending the union and the renderer.
 
 ## R12. Dashboard refresh contract
 
-R12.1 First load installs the full HTML; subsequent updates MUST swap only `#root` via `postMessage` so `<details open>` state is preserved (`dashboardRootShellReady` flag in [DashboardViewProvider.ts](../../extensions/cursor-workflow-cannon/src/views/dashboard/DashboardViewProvider.ts)).
+R12.1 First load installs the full HTML; subsequent updates MUST swap only `#root` via `postMessage` so `<details open>` state is preserved (`dashboardRootShellReady` flag in [DashboardViewProvider.ts](../../extensions/cursor-workflow-cannon/src/views/dashboard/DashboardViewProvider.ts)). Clear footer refresh busy state (`setButtonBusy`) when applying `wcReplaceRoot` (R18.3).
 
 R12.2 Every collapsible whose state must survive a refresh MUST carry `data-wc-track="<stable-id>"` (use the `wcTrackAttr` helper).
 
@@ -321,8 +323,8 @@ R12.3 Embedded panel HTML coming from another renderer (e.g. `renderStatusTabInn
 ## R14. Refactor target (when adding new shared CSS)
 
 Land shared CSS at:
-- `src/views/shared/wc-base-css.ts` exporting `WC_BASE_CSS` — tokens, body, buttons (R8.1), inputs (R9), card (R10.1), chip (R10.4), tag (R10.6), tab-badge (R10.7), callout (R10.8), row (R10.9).
-- `src/views/shared/wc-drawer-css.ts` exporting `WC_DRAWER_CSS` (R11.2).
+- `src/views/shared/wc-base-css.ts` exporting `WC_BASE_CSS` — tokens, body, buttons (R8.1), inputs (R9), card (R10.1), chip (R10.4), tag (R10.6), tab-badge (R10.7), callout (R10.8), row (R10.9), loading spinner (R18.1).
+- `src/views/shared/wc-drawer-css.ts` exporting `WC_DRAWER_CSS` (R11.2, drawer busy overlay R18.4).
 - `src/views/shared/guidance-panel-webview-css.ts` exporting `GUIDANCE_PANEL_WEBVIEW_CSS` — frozen `gp-*` layout, tables, forms, and drawer hooks shared by **GuidancePanel** and the dashboard **CAE** tab embed (`DashboardViewProvider` composes it after dashboard/status CSS; see `test/dashboard-guidance-stylesheet.test.mjs`).
 
 Each `*ViewProvider.ts` then composes `<style>${WC_BASE_CSS}${WC_DRAWER_CSS}${GUIDANCE_PANEL_WEBVIEW_CSS?}${LOCAL_CSS}</style>` as applicable. Local CSS holds only surface-specific layout (e.g. dashboard `.dash-quick-actions`, `.wc-dash-cae-host` embed overrides, status `.wc-status-tab-embedded`).
@@ -354,3 +356,101 @@ R17.3 **Allowed copy without prior approval:** section titles, counts in summari
 R17.4 **When truncation or preview limits exist:** rely on expandable `<details>` phase buckets and row lists; do not add “preview capped” or “use CLI for full list” helper lines unless explicitly requested.
 
 R17.5 **Agent/admin lanes stay out of operator chrome.** Policy approval, `policyApproval`, CAE mutation rationale, and maintainer delivery mechanics belong in drawer copy only when that drawer is part of an approved governance flow — not as ambient dashboard footnotes.
+
+## R18. Loading indicators
+
+Use the shared spinner whenever the webview waits on the extension host or kit (drawer submit, refresh, inline saves). Do not leave controls looking idle during multi-second work.
+
+R18.1 **Spinner markup + CSS** (canonical — copy verbatim; target home: `WC_BASE_CSS` in R14):
+
+```css
+@keyframes wc-spin {
+  to { transform: rotate(360deg); }
+}
+.wc-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--vscode-widget-border, rgba(127,127,127,.35));
+  border-top-color: var(--vscode-button-background, #0078d4);
+  border-radius: 50%;
+  animation: wc-spin 0.75s linear infinite;
+  flex-shrink: 0;
+}
+.wc-spinner-inline {
+  width: 12px;
+  height: 12px;
+  border-width: 2px;
+}
+.wc-btn-loading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+```
+
+R18.2 **Inline status row** — pair spinner + short label in a flex row (`display: inline-flex; align-items: center; gap: 6px; font-size: 11px`). Example: `.dash-phase-saving` with `<span class="wc-spinner wc-spinner-inline" aria-hidden="true"></span> Saving…`. Container SHOULD set `aria-live="polite"`.
+
+R18.3 **Button busy** — before posting a host message that triggers kit I/O, call `setButtonBusy(el, true, '<label>')` (dashboard bootstrap in [DashboardViewProvider.ts](../../extensions/cursor-workflow-cannon/src/views/dashboard/DashboardViewProvider.ts)). Pattern:
+
+```html
+<span class="wc-btn-loading">
+  <span class="wc-spinner wc-spinner-inline" aria-hidden="true"></span>
+  <span>Refreshing…</span>
+</span>
+```
+
+- Preserve original button HTML in `data-wc-original-html`; restore with `setButtonBusy(el, false)` when the operation completes (e.g. after `wcReplaceRoot`).
+- Refresh footer button label: **Refreshing…**
+
+R18.4 **Drawer busy overlay** — on drawer submit, call `setDrawerBusy(true)` **before** `{ type: "drawerSubmit" }`. Inject (once per open drawer) into `.wc-drawer-panel`:
+
+```html
+<div class="wc-drawer-loading" aria-live="polite">
+  <div class="wc-spinner" aria-hidden="true"></div>
+  <span class="wc-drawer-loading-label">Updating task phase…</span>
+</div>
+```
+
+Drawer overlay CSS (with drawer block in R11.2):
+
+```css
+.wc-drawer-panel--busy .wc-drawer-fields,
+.wc-drawer-panel--busy .wc-drawer-footer,
+.wc-drawer-panel--busy .wc-drawer-header {
+  pointer-events: none;
+  opacity: 0.45;
+}
+.wc-drawer-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--vscode-editorWidget-background) 88%, transparent);
+  backdrop-filter: blur(1px);
+}
+.wc-drawer-loading[hidden] { display: none !important; }
+.wc-drawer-loading-label { font-size: 12px; font-weight: 600; text-align: center; line-height: 1.35; }
+```
+
+R18.5 **Drawer busy behaviors** (preserve when modifying shells):
+- While `.wc-drawer-panel--busy` is set: disable all `[data-wc-drawer-action]` buttons; **suppress** Escape, backdrop, and Cancel (do not post `drawerCancel`).
+- On `{ type: "wcDrawerValidation" }`: call `setDrawerBusy(false)` before showing the error.
+- On `{ type: "wcDrawerClose" }`: overlay is destroyed with the drawer host — no extra cleanup.
+- Set local UI lock `setUiInteraction('drawer-busy', true|false)` while overlay is visible (defers `wcReplaceRoot` per R12.1).
+
+R18.6 **Default overlay labels** (`drawerBusyLabelForWorkflow` — operator copy, not CLI):
+- `assign-task-phase` → **Updating task phase…**
+- `accept-proposed` → **Accepting and assigning phase…**
+- `register-phase-catalog` → **Updating phase catalog…**
+- `add-wishlist` → **Creating wishlist item…**
+- `add-phase-note` → **Adding phase note…**
+- fallback → **Running kit command…**
+
+R18.7 **Forbidden:** disabling a control with no visible progress; inventing new spinner sizes or colors outside R18.1; using `aria-hidden="true"` on the status label (only the decorative ring is hidden).
