@@ -1,0 +1,217 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-05-23T01:55:38.678Z",
+  "releaseVersion": "0.99.2",
+  "packageName": "@workflow-cannon/workspace-kit",
+  "phaseKey": "107",
+  "git": {
+    "branch": "release/phase-107",
+    "mergeTarget": "main",
+    "mergeSha": "26c4f8ec819050d263c46ecab71a0a33a1c224c3",
+    "tag": "v0.99.2"
+  },
+  "approval": {
+    "actor": "nicklaprell",
+    "timestamp": "2026-05-22T14:45:00.000Z",
+    "rationale": "User explicitly approved phase 107 closeout (merge, publish, release) in Cursor chat.",
+    "scope": "phase-107 closeout: merge release/phase-107 to main and npm publish 0.99.2"
+  },
+  "releaseNotes": {
+    "source": "docs/maintainers/CHANGELOG.md",
+    "entries": [
+      "0.99.2 — Dashboard policy rationale UX (Phase 107)"
+    ]
+  },
+  "validations": [
+    {
+      "command": "pnpm run build",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "pnpm run check",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "pnpm run test",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "pnpm run parity",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "node scripts/check-release-metadata.mjs",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "pnpm run pre-merge-gates",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    }
+  ],
+  "risks": [],
+  "publishArtifacts": [
+    {
+      "kind": "git-tag",
+      "ref": "v0.99.2",
+      "version": "0.99.2"
+    },
+    {
+      "kind": "github-actions-workflow",
+      "workflow": "publish-npm.yml",
+      "runUrl": "https://github.com/NJLaPrell/workflow-cannon/actions/runs/26320328256",
+      "conclusion": "success"
+    },
+    {
+      "kind": "npm",
+      "package": "@workflow-cannon/workspace-kit",
+      "version": "0.99.2",
+      "distTag": "latest"
+    }
+  ],
+  "taskDeliveryEvidence": [
+    {
+      "taskId": "T100391",
+      "title": "Dashboard policy UX: tier contract and approval helper",
+      "phaseKey": "107",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100391-dashboard-policy-tier-contract",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/425",
+        "prNumber": 425,
+        "baseBranch": "release/phase-107",
+        "mergeSha": "c34c176d8e66be7bc0027940a69146a7d7e393e5",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run check",
+            "result": "success"
+          },
+          {
+            "command": "pnpm run test",
+            "result": "success"
+          },
+          {
+            "command": "pnpm run pre-merge-gates",
+            "result": "success"
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100392",
+      "title": "Dashboard policy UX: routine flows auto-rationale",
+      "phaseKey": "107",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100392-dashboard-policy-routine-auto-rationale",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/426",
+        "prNumber": 426,
+        "baseBranch": "release/phase-107",
+        "mergeSha": "079fd06a958261fe96699f362cf0968d4e756642",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run test",
+            "result": "success"
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100393",
+      "title": "Dashboard policy UX: elevated flows explain and require rationale",
+      "phaseKey": "107",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100393-dashboard-policy-elevated-flows",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/427",
+        "prNumber": 427,
+        "baseBranch": "release/phase-107",
+        "mergeSha": "40954bf73530eb01941dc69d33b6b040bfcacb06",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run test",
+            "result": "success"
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100394",
+      "title": "Dashboard policy UX: machine docs and trace QA",
+      "phaseKey": "107",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "task/T100394-dashboard-policy-docs-qa",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/428",
+        "prNumber": 428,
+        "baseBranch": "release/phase-107",
+        "mergeSha": "ec7cd0ecdd0073c93c93cc3cb6161bc6f67a7979",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run test",
+            "result": "success"
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    }
+  ],
+  "followUpScan": {
+    "scannedAt": "2026-05-22T14:45:00.000Z",
+    "rationale": "Phase 107 scope limited to four completed workspace-kit tasks; no additional follow-on tasks filed at closeout."
+  },
+  "followUpTasks": [],
+  "followUpSummary": {
+    "count": 0,
+    "scannedAt": "2026-05-22T14:45:00.000Z",
+    "rationale": "Phase 107 scope limited to four completed workspace-kit tasks; no additional follow-on tasks filed at closeout."
+  }
+}
