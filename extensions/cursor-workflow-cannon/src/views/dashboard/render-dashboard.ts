@@ -352,7 +352,7 @@ function renderRecommendedNextWishlistCard(item: unknown): string {
 }
 
 const PHASE_READINESS_HELP =
-  "Is this phase ready to start? The checks show whether you have work to pick up, blockers, and a clear queue. The % is a start score—not how much delivery is finished (see Phase Progress). Wait until readiness hits 100% before starting new tasks in this phase.";
+  "Shows whether you are ready to start work in this phase. Every check below must pass to reach 100%. Once delivery has started, this score stays at 100%. To track how much of the phase is finished, see Phase Progress.";
 
 /** Reusable contextual help — blue “i”; text lives in data-wc-help-text for the fixed popover. */
 function renderContextHelpIcon(helpText: string, ariaLabel = "About this section"): string {
@@ -674,43 +674,105 @@ function phaseSegmentTotal(segments: PhaseSnapshotSegments): number {
   );
 }
 
-function phaseHasRunnableOrCompletedWork(snapshot: PhaseSnapshot): boolean {
-  const q = snapshot.queue;
-  const runnable = q.ready + q.inProgress;
-  return runnable > 0 || snapshot.segments.completed > 0;
+/** Delivery has started — readiness score locks at 100% for the rest of the phase. */
+function phaseWorkHasBegun(snapshot: PhaseSnapshot): boolean {
+  const s = snapshot.segments;
+  return s.completed > 0 || s.inProgress > 0 || s.cancelled > 0;
 }
 
-function computeWorkReadinessScore(snapshot: PhaseSnapshot, workspaceBlockerCount: number): number {
-  if (!snapshot.phaseKey) {
+type PhaseReadinessCheck = {
+  label: string;
+  ok: boolean;
+  statusMeta?: string;
+  /** Shown via help icon when the check fails — operator actions only (R17.2). */
+  failHelp: string;
+};
+
+function buildPhaseReadinessChecks(args: {
+  curPhase: string;
+  blockers: string[];
+  pending: string[];
+  queue: PhaseSnapshotQueue;
+  segments: PhaseSnapshotSegments;
+  workBegun: boolean;
+}): PhaseReadinessCheck[] {
+  const { curPhase, blockers, pending, queue, segments, workBegun } = args;
+  const runnable = queue.ready + queue.inProgress;
+  const phaseBlocked = queue.blocked;
+  const phaseProposed = queue.proposed;
+
+  const readyWorkOk = workBegun || runnable > 0;
+  let readyWorkMeta: string | undefined;
+  if (workBegun && runnable === 0) {
+    readyWorkMeta =
+      segments.completed > 0
+        ? String(segments.completed) + " done · work in progress"
+        : "work in progress";
+  } else if (runnable > 0) {
+    readyWorkMeta = String(queue.ready) + " ready · " + String(queue.inProgress) + " in progress";
+  } else if (phaseProposed > 0) {
+    readyWorkMeta = String(phaseProposed) + " waiting to be accepted";
+  } else {
+    readyWorkMeta = "nothing to pick up yet";
+  }
+
+  const checks: PhaseReadinessCheck[] = [
+    {
+      label: "Current phase is set",
+      ok: workBegun || curPhase.length > 0,
+      statusMeta: curPhase.length > 0 ? "Phase " + curPhase : "not set yet",
+      failHelp:
+        "Open the Config tab and set your current phase under workspace status. You need this before work in the phase can begin."
+    },
+    {
+      label: "Tasks ready to pick up",
+      ok: readyWorkOk,
+      statusMeta: readyWorkMeta,
+      failHelp:
+        "Open the Queue tab and accept proposed tasks, or move tasks to Ready, so you have work waiting when this phase starts."
+    },
+    {
+      label: "No blocked tasks",
+      ok: workBegun || phaseBlocked === 0,
+      statusMeta: phaseBlocked === 0 ? "none" : String(phaseBlocked) + " blocked",
+      failHelp:
+        "Open the Queue tab, tap Blocked, and resolve any blocked tasks in this phase before you begin."
+    },
+    {
+      label: "No open decisions",
+      ok: workBegun || pending.length === 0,
+      statusMeta: pending.length === 0 ? "none" : String(pending.length) + " open",
+      failHelp:
+        "Open the Config tab and resolve any open decisions under workspace status before starting this phase."
+    },
+    {
+      label: "No workspace blockers",
+      ok: workBegun || blockers.length === 0,
+      statusMeta: blockers.length === 0 ? "none" : String(blockers.length) + " open",
+      failHelp:
+        "Open the Config tab and clear any workspace blockers under workspace status before starting this phase."
+    }
+  ];
+  return checks;
+}
+
+function computePhaseReadinessScore(checks: PhaseReadinessCheck[], workBegun: boolean): number {
+  if (workBegun) {
+    return 100;
+  }
+  if (checks.length === 0) {
     return 0;
   }
-  let score = 20;
-  const q = snapshot.queue;
-  const runnable = q.ready + q.inProgress;
-  if (runnable > 0) {
-    score += 30;
-  } else if (snapshot.segments.completed > 0) {
-    score += 24;
-  } else if (q.proposed > 0) {
-    score += 12;
-  }
-  if (q.blocked === 0) {
-    score += 25;
-  } else if (q.blocked === 1) {
-    score += 10;
-  }
-  if (workspaceBlockerCount === 0) {
-    score += 10;
-  }
-  if (q.proposed < 5) {
-    score += 15;
-  } else if (q.proposed < 10) {
-    score += 5;
-  }
-  return Math.min(100, score);
+  const passed = checks.filter((c) => c.ok).length;
+  return Math.round((passed / checks.length) * 100);
 }
 
-function renderPhaseCheckRow(label: string, ok: boolean, muted?: string): string {
+function renderPhaseCheckRow(check: PhaseReadinessCheck): string {
+  const { label, ok, statusMeta, failHelp } = check;
+  const help =
+    !ok && failHelp.trim().length > 0
+      ? " " + renderContextHelpIcon(failHelp, "What to do")
+      : "";
   return (
     '<div class="wc-cae-check">' +
     '<span class="wc-cae-check-icon ' +
@@ -720,8 +782,11 @@ function renderPhaseCheckRow(label: string, ok: boolean, muted?: string): string
     "</span>" +
     '<span class="wc-cae-check-label">' +
     escapeHtml(label) +
+    help +
     "</span>" +
-    (muted ? '<span class="muted wc-cae-check-meta"> · ' + escapeHtml(muted) + "</span>" : "") +
+    (statusMeta
+      ? '<span class="muted wc-cae-check-meta"> · ' + escapeHtml(statusMeta) + "</span>"
+      : "") +
     "</div>"
   );
 }
@@ -857,16 +922,19 @@ function renderPhaseReadinessCard(ws: Record<string, unknown> | null, snapshot: 
 
   const queue = snapshot?.queue ?? EMPTY_PHASE_QUEUE;
   const segments = snapshot?.segments ?? EMPTY_PHASE_SEGMENTS;
-  const runnable = queue.ready + queue.inProgress;
-  const phaseBlocked = queue.blocked;
-  const phaseProposed = queue.proposed;
-  const runnableOrDone = snapshot ? phaseHasRunnableOrCompletedWork(snapshot) : false;
-  const deliveryStarted =
-    segments.completed > 0 || segments.inProgress > 0 || segments.cancelled > 0;
+  const workBegun = snapshot ? phaseWorkHasBegun(snapshot) : false;
 
-  const score = snapshot ? computeWorkReadinessScore(snapshot, blockers.length) : 0;
+  const checks = buildPhaseReadinessChecks({
+    curPhase,
+    blockers,
+    pending,
+    queue,
+    segments,
+    workBegun
+  });
+  const score = computePhaseReadinessScore(checks, workBegun);
   const scoreColor =
-    score >= 75 ? "wc-cae-score-ok" : score >= 40 ? "wc-cae-score-warn" : "wc-cae-score-bad";
+    score >= 100 ? "wc-cae-score-ok" : score >= 60 ? "wc-cae-score-warn" : "wc-cae-score-bad";
 
   const phaseSection =
     curPhase.length > 0
@@ -879,57 +947,11 @@ function renderPhaseReadinessCard(ws: Record<string, unknown> | null, snapshot: 
       : '<p class="muted">No current phase set in workspace snapshot.</p>';
 
   const checksSection =
-    '<div class="wc-cae-checks">' +
-    renderPhaseCheckRow(
-      "Runnable work in phase",
-      runnableOrDone,
-      runnable > 0
-        ? String(queue.ready) + " ready · " + String(queue.inProgress) + " in progress"
-        : segments.completed > 0
-          ? String(segments.completed) + " completed (no ready work right now)"
-          : phaseProposed > 0
-            ? String(phaseProposed) + " proposed (not yet ready)"
-            : "none"
-    ) +
-    renderPhaseCheckRow(
-      "Delivery work started",
-      deliveryStarted,
-      deliveryStarted
-        ? String(segments.completed) +
-          " done · " +
-          String(segments.inProgress) +
-          " in progress" +
-          (segments.cancelled > 0 ? " · " + String(segments.cancelled) + " cancelled" : "")
-        : "no delivery tasks started"
-    ) +
-    renderPhaseCheckRow(
-      "Pending decisions clear",
-      pending.length === 0,
-      pending.length === 0 ? "none" : String(pending.length) + " open"
-    ) +
-    renderPhaseCheckRow(
-      "No blocked tasks in phase",
-      phaseBlocked === 0,
-      phaseBlocked === 0 ? "clear" : String(phaseBlocked) + " blocked"
-    ) +
-    renderPhaseCheckRow(
-      "Phase configured",
-      curPhase.length > 0,
-      curPhase.length > 0 ? curPhase : "not set"
-    ) +
-    renderPhaseCheckRow(
-      "Proposed in phase manageable",
-      phaseProposed < 10,
-      String(phaseProposed) + " proposed"
-    ) +
-    (blockers.length > 0
-      ? renderPhaseCheckRow(
-          "Workspace blockers clear",
-          false,
-          String(blockers.length) + " workspace"
-        )
-      : "") +
-    "</div>";
+    '<div class="wc-cae-checks">' + checks.map((c) => renderPhaseCheckRow(c)).join("") + "</div>";
+
+  const workBegunNote = workBegun
+    ? '<p class="muted wc-phase-readiness-locked">Work in this phase has already started — readiness stays at 100%.</p>'
+    : "";
 
   const pendingBlock =
     pending.length > 0
@@ -979,14 +1001,15 @@ function renderPhaseReadinessCard(ws: Record<string, unknown> | null, snapshot: 
     "</span>" +
     '<span class="wc-cae-score-badge ' +
     scoreColor +
-    '" title="Ready to work in this phase">' +
+    '" title="Readiness to start this phase (100% required before work begins)">' +
     escapeHtml(String(score)) +
     "<span>%</span></span>" +
     "</button>" +
     releaseBtn +
     "</div>" +
     '<div class="wc-cae-readiness-body" id="wc-cae-readiness-body">' +
-    '<p class="muted wc-phase-card-hint">Whether this phase has runnable work and a clear queue — use Complete &amp; Release when closeout is at 100%.</p>' +
+    '<p class="muted wc-phase-card-hint">Every check below must pass before you begin. Use Complete &amp; Release when Phase Progress is 100%.</p>' +
+    workBegunNote +
     phaseSection +
     checksSection +
     pendingBlock +
@@ -1723,7 +1746,7 @@ function renderPhaseCompleteReleaseButton(args: {
   const title =
     scope === "current"
       ? disabled
-        ? "Complete & Release unlocks when phase readiness reaches 100%"
+        ? "Complete & Release unlocks when readiness and Phase Progress both reach 100%"
         : closeoutReady
           ? "Drain current workspace phase, close out, and release"
           : "Start phase closeout — run preflight in chat before release"

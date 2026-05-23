@@ -170,7 +170,7 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(overviewPanel, /wc-pill-human/);
   assert.match(overviewPanel, /wc-stat-num-human/);
   assert.match(overviewPanel, /wc-context-help/);
-  assert.match(overviewPanel, /data-wc-help-text="[^"]*Wait until readiness hits 100%/);
+  assert.match(overviewPanel, /data-wc-help-text="[^"]*Every check below must pass to reach 100%/);
   assert.doesNotMatch(taskEnginePanel, /dashboard-approvals/);
   assert.match(html, /Phase Readiness · Phase 14/);
   assert.match(html, /aria-label="Phase readiness · Phase 14"/);
@@ -2107,14 +2107,14 @@ function readinessDashboardPayload(dataOverrides = {}) {
   };
 }
 
-test("Phase Readiness shows phase-scoped runnable counts not workspace ready total", () => {
+test("Phase Readiness shows phase-scoped ready counts not workspace ready total", () => {
   const html = renderDashboardRootInnerHtml(readinessDashboardPayload());
-  assert.match(html, /Runnable work in phase/);
+  assert.match(html, /Tasks ready to pick up/);
   assert.match(html, /5 ready · 2 in progress/);
   assert.doesNotMatch(html, /71 ready/);
 });
 
-test("Phase Readiness passes runnable check when phase has completed delivery tasks only", () => {
+test("Phase Readiness score is 100% when phase delivery has started", () => {
   const html = renderDashboardRootInnerHtml(
     readinessDashboardPayload({
       currentPhaseDelivery: phaseDeliveryFixture({
@@ -2136,8 +2136,48 @@ test("Phase Readiness passes runnable check when phase has completed delivery ta
   );
   const readiness =
     html.match(/<section class="dash-card wc-cae-readiness[\s\S]*?<\/section>/)?.[0] ?? "";
-  assert.match(readiness, /3 completed \(no ready work right now\)/);
-  assert.match(readiness, /wc-cae-check-ok[\s\S]*Runnable work in phase/);
+  assert.match(readiness, /wc-cae-score-badge[\s\S]*>100<span>%<\/span>/);
+  assert.match(readiness, /Work in this phase has already started — readiness stays at 100%/);
+  assert.match(readiness, /3 done · work in progress/);
+  assert.match(readiness, /wc-cae-check-ok[\s\S]*Tasks ready to pick up/);
+});
+
+test("Phase Readiness score equals passed checks as equal shares before delivery starts", () => {
+  const html = renderDashboardRootInnerHtml(
+    readinessDashboardPayload({
+      workspaceStatus: {
+        currentKitPhase: "100",
+        nextKitPhase: "101",
+        blockers: [],
+        pendingDecisions: ["Pick release train"]
+      },
+      currentPhaseDelivery: phaseDeliveryFixture({
+        queue: { ready: 0, proposed: 2, blocked: 0, inProgress: 0, research: 0 },
+        segments: {
+          completed: 0,
+          cancelled: 0,
+          inProgress: 0,
+          ready: 0,
+          proposed: 2,
+          blocked: 0,
+          research: 0
+        },
+        terminalCount: 0,
+        checkedTaskCount: 2,
+        closeoutPassed: false,
+        progressPercent: 0,
+        releaseReadyPercent: 0
+      })
+    })
+  );
+  const readiness =
+    html.match(/<section class="dash-card wc-cae-readiness[\s\S]*?<\/section>/)?.[0] ?? "";
+  assert.match(readiness, /wc-cae-score-badge[\s\S]*>60<span>%<\/span>/);
+  assert.match(readiness, /wc-cae-check-warn[\s\S]*Tasks ready to pick up[\s\S]*wc-context-help/);
+  assert.match(readiness, /wc-cae-check-warn[\s\S]*No open decisions[\s\S]*wc-context-help/);
+  assert.match(readiness, /wc-cae-check-ok[\s\S]*No workspace blockers/);
+  assert.doesNotMatch(readiness, /Delivery work started/);
+  assert.doesNotMatch(readiness, /Proposed in phase manageable/);
 });
 
 test("Overview stat pills include Human gate count with yellow number class", () => {
@@ -2219,7 +2259,7 @@ test("Phase Readiness Complete & Release disabled before closeout reaches 100%",
   assert.match(head, /\bdash-phase-release-btn[\s\S]*\bdisabled\b/);
   assert.match(head, /wc-btn-disabled/);
   assert.doesNotMatch(head, /dash-phase-release-btn--preflight/);
-  assert.match(head, /Complete &amp; Release unlocks when phase readiness reaches 100%/);
+  assert.match(head, /Complete &amp; Release unlocks when readiness and Phase Progress both reach 100%/);
 });
 
 test("Phase Readiness enables Complete & Release when closeout passed", () => {
