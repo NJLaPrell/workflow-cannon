@@ -1,0 +1,23 @@
+{
+  "approval": {
+    "actor": "nicklaprell",
+    "timestamp": "2026-05-22T14:45:00.000Z",
+    "rationale": "User explicitly approved phase 107 closeout (merge, publish, release) in Cursor chat.",
+    "scope": "phase-107 closeout: merge release/phase-107 to main and npm publish 0.99.2"
+  },
+  "releaseNotes": {
+    "source": "docs/maintainers/CHANGELOG.md",
+    "entries": [
+      "0.99.2 — Dashboard policy rationale UX (Phase 107)"
+    ]
+  },
+  "followUpScan": {
+    "scannedAt": "2026-05-22T14:45:00.000Z",
+    "rationale": "Phase 107 scope limited to four completed workspace-kit tasks; no additional follow-on tasks filed at closeout."
+  },
+  "followUpTasks": [],
+  "git": {
+    "branch": "release/phase-107",
+    "mergeTarget": "main"
+  }
+}

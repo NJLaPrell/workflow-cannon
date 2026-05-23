@@ -8,6 +8,21 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.99.2] - 2026-05-22
+
+Phase 107 — **Dashboard policy rationale UX** (routine auto-rationale, elevated explainers, machine docs).
+
+### Added
+
+- Dashboard policy tier matrix and `buildDashboardPolicyApproval` (routine vs elevated paths).
+- Per-path elevated policy explainer copy in Dashboard drawers (batch accept, rewind, critical dismiss, team/subagent governance).
+- `.ai/DASHBOARD-POLICY-UX.md` — operator QA checklist and illustrative policy trace samples.
+
+### Changed
+
+- Routine Dashboard mutations auto-fill structured `policyApproval.rationale`; elevated paths require operator text.
+- `.ai/POLICY-APPROVAL.md` and `.ai/AGENT-CLI-MAP.md` document Dashboard vs CLI/agent approval lanes.
+
 ## [0.99.1] - 2026-05-19
 
 Phase 106 — **Extension config in dashboard** (shared config webview, typed editors, Config tab shell, mutation/reload UX).
