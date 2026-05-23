@@ -20,6 +20,14 @@ function emptyStore(): TaskStoreDocument {
 
 export type TaskStoreSaveOptions = {
   expectedPlanningGeneration?: number;
+  /** Force a full relational rebuild, or request scoped row persistence when safe. */
+  persistScope?: "full" | "incremental";
+  /** Task ids touched since the last load/save; used by SQLite relational incremental persistence. */
+  dirtyTaskIds?: string[];
+  /** Transition ids appended since the last load/save. */
+  newTransitionIds?: string[];
+  /** Mutation ids appended since the last load/save. */
+  newMutationIds?: string[];
   /**
    * When using {@link TaskStore.forSqliteDual}, run this synchronously inside the same SQLite
    * transaction as the task store flush (before relational/blob writes and planning generation bump).
@@ -36,6 +44,10 @@ export type TaskStorePersistence = {
 export class TaskStore {
   private document: TaskStoreDocument;
   private readonly persistence: TaskStorePersistence;
+  private readonly dirtyTaskIds = new Set<string>();
+  private readonly newTransitionIds = new Set<string>();
+  private readonly newMutationIds = new Set<string>();
+  private forceFullPersist = false;
 
   constructor(persistence: TaskStorePersistence) {
     this.persistence = persistence;
@@ -94,9 +106,7 @@ export class TaskStore {
         dual.seedFromDocuments(doc, dual.wishlistDocument);
         const hook = opts?.beforePersistInSqliteTransaction;
         if (hook) {
-          dual.withTransaction(hook, {
-            expectedPlanningGeneration: opts?.expectedPlanningGeneration
-          });
+          dual.withTransaction(hook, opts);
         } else {
           dual.persistSync(opts);
         }
@@ -106,11 +116,14 @@ export class TaskStore {
 
   async load(): Promise<void> {
     this.document = await this.persistence.loadDocument();
+    this.resetDirtyTracking();
   }
 
   async save(opts?: TaskStoreSaveOptions): Promise<void> {
     this.document.lastUpdated = new Date().toISOString();
-    await this.persistence.saveDocument(this.document, opts);
+    const saveOpts = this.buildSaveOptions(opts);
+    await this.persistence.saveDocument(this.document, saveOpts);
+    this.resetDirtyTracking();
   }
 
   getAllTasks(): TaskEntity[] {
@@ -130,6 +143,7 @@ export class TaskStore {
       throw new TaskEngineError("duplicate-task-id", `Task '${task.id}' already exists`);
     }
     this.document.tasks.push({ ...task });
+    this.dirtyTaskIds.add(task.id);
   }
 
   updateTask(task: TaskEntity): void {
@@ -138,10 +152,12 @@ export class TaskStore {
       throw new TaskEngineError("task-not-found", `Task '${task.id}' not found`);
     }
     this.document.tasks[idx] = { ...task };
+    this.dirtyTaskIds.add(task.id);
   }
 
   addEvidence(evidence: TransitionEvidence): void {
     this.document.transitionLog.push(evidence);
+    this.newTransitionIds.add(evidence.transitionId);
   }
 
   addMutationEvidence(evidence: TaskMutationEvidence): void {
@@ -149,6 +165,7 @@ export class TaskStore {
       this.document.mutationLog = [];
     }
     this.document.mutationLog.push(evidence);
+    this.newMutationIds.add(evidence.mutationId);
   }
 
   getTransitionLog(): TransitionEvidence[] {
@@ -161,6 +178,7 @@ export class TaskStore {
 
   replaceAllTasks(tasks: TaskEntity[]): void {
     this.document.tasks = tasks.map((t) => ({ ...t }));
+    this.forceFullPersist = true;
   }
 
   getFilePath(): string {
@@ -169,5 +187,32 @@ export class TaskStore {
 
   getLastUpdated(): string {
     return this.document.lastUpdated;
+  }
+
+  private buildSaveOptions(opts?: TaskStoreSaveOptions): TaskStoreSaveOptions | undefined {
+    const base = opts ?? {};
+    if (base.persistScope === "full" || this.forceFullPersist || base.beforePersistInSqliteTransaction) {
+      return { ...base, persistScope: "full" };
+    }
+    const dirtyTaskIds = base.dirtyTaskIds ?? [...this.dirtyTaskIds];
+    const newTransitionIds = base.newTransitionIds ?? [...this.newTransitionIds];
+    const newMutationIds = base.newMutationIds ?? [...this.newMutationIds];
+    if (base.persistScope === "incremental" || dirtyTaskIds.length > 0 || newTransitionIds.length > 0 || newMutationIds.length > 0) {
+      return {
+        ...base,
+        persistScope: "incremental",
+        dirtyTaskIds,
+        newTransitionIds,
+        newMutationIds
+      };
+    }
+    return base;
+  }
+
+  private resetDirtyTracking(): void {
+    this.dirtyTaskIds.clear();
+    this.newTransitionIds.clear();
+    this.newMutationIds.clear();
+    this.forceFullPersist = false;
   }
 }

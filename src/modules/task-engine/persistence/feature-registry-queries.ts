@@ -109,6 +109,26 @@ export function replaceAllTaskFeatureLinks(db: SqliteDatabase, tasks: { id: stri
   run();
 }
 
+export function replaceTaskFeatureLinksForTasks(
+  db: SqliteDatabase,
+  tasks: { id: string; features?: string[] }[]
+): void {
+  if (!featureRegistryActiveOnConnection(db) || tasks.length === 0) {
+    return;
+  }
+  const del = db.prepare(`DELETE FROM ${TASK_ENGINE_TASK_FEATURES_TABLE} WHERE task_id = ?`);
+  const ins = db.prepare(
+    `INSERT INTO ${TASK_ENGINE_TASK_FEATURES_TABLE} (task_id, feature_id) VALUES (?,?)`
+  );
+  for (const t of tasks) {
+    del.run(t.id);
+    const slugs = t.features ?? [];
+    for (const fid of slugs) {
+      ins.run(t.id, fid);
+    }
+  }
+}
+
 export type FeatureEnrichment = {
   slug: string;
   name: string;

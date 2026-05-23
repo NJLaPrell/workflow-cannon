@@ -21,7 +21,7 @@ import {
   TASK_ENGINE_TRANSITION_LOG_TABLE,
   kitSqliteHasRelationalTaskDdl
 } from "../../../core/state/kit-sqlite/planning-sqlite-kernel.js";
-import type { TaskMutationEvidence, TaskStoreDocument, TransitionEvidence } from "../types.js";
+import type { TaskEntity, TaskMutationEvidence, TaskStoreDocument, TransitionEvidence } from "../types.js";
 import type { WishlistStoreDocument } from "../wishlist/wishlist-types.js";
 import { TaskEngineError } from "../transitions.js";
 import { normalizeTaskStoreDocumentFromUnknown } from "./task-store-migration.js";
@@ -36,7 +36,8 @@ import { syncWorkspaceKitStatusFromYamlIfNeeded } from "./workspace-status-yaml-
 import {
   featureRegistryActiveOnConnection,
   loadTaskFeatureLinkMap,
-  replaceAllTaskFeatureLinks
+  replaceAllTaskFeatureLinks,
+  replaceTaskFeatureLinksForTasks
 } from "./feature-registry-queries.js";
 import {
   classifyNativeSqliteErrorMessage,
@@ -63,6 +64,14 @@ function emptyWishlistDocument(): WishlistStoreDocument {
 }
 
 type TableShape = "legacy-dual" | "task-only";
+
+type PersistOptions = {
+  expectedPlanningGeneration?: number;
+  persistScope?: "full" | "incremental";
+  dirtyTaskIds?: string[];
+  newTransitionIds?: string[];
+  newMutationIds?: string[];
+};
 
 type DbFileIdentity = {
   dev: string;
@@ -676,7 +685,7 @@ export class SqliteDualPlanningStore {
 
   private runPersistMutation(
     db: Database.Database,
-    options: { expectedPlanningGeneration?: number },
+    options: PersistOptions,
     work?: () => void
   ): void {
     const pcols = planningStateColumnSet(db);
@@ -719,7 +728,7 @@ export class SqliteDualPlanningStore {
     this._wishlistDoc.lastUpdated = new Date().toISOString();
     const nextGen = currentGen + 1;
     if (this._relationalTasks && kitSqliteHasRelationalTaskDdl(db)) {
-      this.persistRelational(db, nextGen);
+      this.persistRelational(db, nextGen, options);
     } else {
       this.persistBlobOnly(db, nextGen);
     }
@@ -727,12 +736,25 @@ export class SqliteDualPlanningStore {
     this._dbFileIdentity = readDbFileIdentity(this.dbPath);
   }
 
-  private persistRelational(db: Database.Database, nextPlanningGeneration: number): void {
-    const projection = dependencyProjection(this._taskDoc.tasks);
-    const blobJson = JSON.stringify(relationalCompatibilityTaskBlob(this._taskDoc.lastUpdated));
-    const evidenceRelational = evidenceTablesAvailable(db);
-    const tr = evidenceRelational ? "[]" : JSON.stringify(this._taskDoc.transitionLog);
-    const ml = evidenceRelational ? "[]" : JSON.stringify(this._taskDoc.mutationLog ?? []);
+  private persistRelational(db: Database.Database, nextPlanningGeneration: number, options: PersistOptions): void {
+    const dirtyTaskIds = [...new Set(options.dirtyTaskIds ?? [])].filter((id) => id.trim().length > 0);
+    const canPersistIncrementally =
+      options.persistScope === "incremental" &&
+      dirtyTaskIds.length > 0 &&
+      this._tableShape !== "legacy-dual" &&
+      dependencyTableAvailable(db) &&
+      evidenceTablesAvailable(db);
+    if (canPersistIncrementally) {
+      this.persistRelationalIncremental(db, nextPlanningGeneration, {
+        ...options,
+        dirtyTaskIds
+      });
+      return;
+    }
+    this.persistRelationalFull(db, nextPlanningGeneration);
+  }
+
+  private taskInsertStatement(db: Database.Database): Database.Statement {
     const insertSql = `
       INSERT OR REPLACE INTO ${TASK_ENGINE_TASKS_TABLE} (
         id, status, type, title, created_at, updated_at, archived, archived_at,
@@ -742,46 +764,168 @@ export class SqliteDualPlanningStore {
         routing_category, routing_confidence_tier, routing_blocked_reason_category, routing_tags_json
       ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `;
-    const insert = db.prepare(insertSql);
+    return db.prepare(insertSql);
+  }
+
+  private insertTaskRow(
+    insert: Database.Statement,
+    task: TaskEntity,
+    projection: ReturnType<typeof dependencyProjection>,
+    registry: boolean
+  ): void {
+    const compatTask = { ...task, unblocks: projection.unblocksByTask.get(task.id) ?? [] };
+    const r = taskEntityToRow(compatTask, registry ? { omitFeaturesJson: true } : undefined);
+    insert.run(
+      r.id,
+      r.status,
+      r.type,
+      r.title,
+      r.created_at,
+      r.updated_at,
+      r.archived,
+      r.archived_at,
+      r.priority,
+      r.phase,
+      r.phase_key,
+      r.ownership,
+      r.approach,
+      r.depends_on_json,
+      r.unblocks_json,
+      r.technical_scope_json,
+      r.acceptance_criteria_json,
+      r.summary,
+      r.description,
+      r.risk,
+      r.queue_namespace,
+      r.evidence_key,
+      r.evidence_kind,
+      r.metadata_json,
+      r.features_json ?? "[]",
+      r.routing_category ?? null,
+      r.routing_confidence_tier ?? null,
+      r.routing_blocked_reason_category ?? null,
+      r.routing_tags_json ?? null
+    );
+  }
+
+  private insertTransitionEvidence(db: Database.Database, evidenceRows: TransitionEvidence[]): void {
+    if (evidenceRows.length === 0) {
+      return;
+    }
+    const insertTransition = db.prepare(
+      `INSERT OR IGNORE INTO ${TASK_ENGINE_TRANSITION_LOG_TABLE} (
+        transition_id, task_id, from_state, to_state, action, timestamp, actor,
+        client_mutation_id, payload_digest, guard_results_json, dependents_unblocked_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    );
+    for (const evidence of evidenceRows) {
+      insertTransition.run(
+        evidence.transitionId,
+        evidence.taskId,
+        evidence.fromState,
+        evidence.toState,
+        evidence.action,
+        evidence.timestamp,
+        evidence.actor ?? null,
+        evidence.clientMutationId ?? null,
+        evidence.payloadDigest ?? null,
+        JSON.stringify(evidence.guardResults ?? []),
+        JSON.stringify(evidence.dependentsUnblocked ?? [])
+      );
+    }
+  }
+
+  private insertMutationEvidence(db: Database.Database, evidenceRows: TaskMutationEvidence[]): void {
+    if (evidenceRows.length === 0) {
+      return;
+    }
+    const insertMutation = db.prepare(
+      `INSERT OR IGNORE INTO ${TASK_ENGINE_MUTATION_LOG_TABLE} (
+        mutation_id, mutation_type, task_id, timestamp, actor, details_json
+      ) VALUES (?, ?, ?, ?, ?, ?)`
+    );
+    for (const evidence of evidenceRows) {
+      insertMutation.run(
+        evidence.mutationId,
+        evidence.mutationType,
+        evidence.taskId,
+        evidence.timestamp,
+        evidence.actor ?? null,
+        evidence.details !== undefined ? JSON.stringify(evidence.details) : null
+      );
+    }
+  }
+
+  private persistRelationalIncremental(
+    db: Database.Database,
+    nextPlanningGeneration: number,
+    options: PersistOptions & { dirtyTaskIds: string[] }
+  ): void {
+    const dirtySet = new Set(options.dirtyTaskIds);
+    const dirtyTasks = this._taskDoc.tasks.filter((t) => dirtySet.has(t.id));
+    const projection = dependencyProjection(this._taskDoc.tasks);
+    const registry = featureRegistryActiveOnConnection(db);
+    const insert = this.taskInsertStatement(db);
+    for (const t of dirtyTasks) {
+      this.insertTaskRow(insert, t, projection, registry);
+    }
+
+    const deleteDependency = db.prepare(`DELETE FROM ${TASK_ENGINE_DEPENDENCIES_TABLE} WHERE task_id = ?`);
+    const insertDependency = db.prepare(
+      `INSERT OR IGNORE INTO ${TASK_ENGINE_DEPENDENCIES_TABLE} (task_id, depends_on_task_id, created_at, source) VALUES (?, ?, ?, 'dependsOn')`
+    );
+    const now = new Date().toISOString();
+    for (const taskId of dirtySet) {
+      deleteDependency.run(taskId);
+      for (const depId of projection.dependsOnByTask.get(taskId) ?? []) {
+        insertDependency.run(taskId, depId, now);
+      }
+    }
+
+    if (registry) {
+      replaceTaskFeatureLinksForTasks(db, dirtyTasks);
+    }
+
+    const transitionIds = new Set(options.newTransitionIds ?? []);
+    const mutationIds = new Set(options.newMutationIds ?? []);
+    this.insertTransitionEvidence(
+      db,
+      this._taskDoc.transitionLog.filter((e) => transitionIds.has(e.transitionId))
+    );
+    this.insertMutationEvidence(
+      db,
+      (this._taskDoc.mutationLog ?? []).filter((e) => mutationIds.has(e.mutationId))
+    );
+
+    const blobJson = JSON.stringify(relationalCompatibilityTaskBlob(this._taskDoc.lastUpdated));
+    const exists = db.prepare("SELECT 1 AS ok FROM workspace_planning_state WHERE id = 1").get() as
+      | { ok: number }
+      | undefined;
+    if (exists) {
+      db.prepare(
+        `UPDATE workspace_planning_state SET task_store_json = ?, transition_log_json = '[]', mutation_log_json = '[]', relational_tasks = 1, planning_generation = ? WHERE id = 1`
+      ).run(blobJson, nextPlanningGeneration);
+    } else {
+      db.prepare(
+        `INSERT INTO workspace_planning_state (id, task_store_json, transition_log_json, mutation_log_json, relational_tasks, planning_generation) VALUES (1, ?, '[]', '[]', 1, ?)`
+      ).run(blobJson, nextPlanningGeneration);
+    }
+  }
+
+  private persistRelationalFull(db: Database.Database, nextPlanningGeneration: number): void {
+    const projection = dependencyProjection(this._taskDoc.tasks);
+    const blobJson = JSON.stringify(relationalCompatibilityTaskBlob(this._taskDoc.lastUpdated));
+    const evidenceRelational = evidenceTablesAvailable(db);
+    const tr = evidenceRelational ? "[]" : JSON.stringify(this._taskDoc.transitionLog);
+    const ml = evidenceRelational ? "[]" : JSON.stringify(this._taskDoc.mutationLog ?? []);
+    const insert = this.taskInsertStatement(db);
     const registry = featureRegistryActiveOnConnection(db);
     if (dependencyTableAvailable(db)) {
       db.prepare(`DELETE FROM ${TASK_ENGINE_DEPENDENCIES_TABLE}`).run();
     }
     db.prepare(`DELETE FROM ${TASK_ENGINE_TASKS_TABLE}`).run();
     for (const t of this._taskDoc.tasks) {
-      const compatTask = { ...t, unblocks: projection.unblocksByTask.get(t.id) ?? [] };
-      const r = taskEntityToRow(compatTask, registry ? { omitFeaturesJson: true } : undefined);
-      insert.run(
-        r.id,
-        r.status,
-        r.type,
-        r.title,
-        r.created_at,
-        r.updated_at,
-        r.archived,
-        r.archived_at,
-        r.priority,
-        r.phase,
-        r.phase_key,
-        r.ownership,
-        r.approach,
-        r.depends_on_json,
-        r.unblocks_json,
-        r.technical_scope_json,
-        r.acceptance_criteria_json,
-        r.summary,
-        r.description,
-        r.risk,
-        r.queue_namespace,
-        r.evidence_key,
-        r.evidence_kind,
-        r.metadata_json,
-        r.features_json ?? "[]",
-        r.routing_category ?? null,
-        r.routing_confidence_tier ?? null,
-        r.routing_blocked_reason_category ?? null,
-        r.routing_tags_json ?? null
-      );
+      this.insertTaskRow(insert, t, projection, registry);
     }
     if (dependencyTableAvailable(db)) {
       const insertDependency = db.prepare(
@@ -905,7 +1049,7 @@ export class SqliteDualPlanningStore {
     }
   }
 
-  persistSync(options?: { expectedPlanningGeneration?: number }): void {
+  persistSync(options?: PersistOptions): void {
     const db = this.ensureDb();
     this._tableShape = detectTableShape(db);
     db.transaction(() => this.runPersistMutation(db, options ?? {})).immediate();
@@ -915,7 +1059,7 @@ export class SqliteDualPlanningStore {
    * Run synchronous work inside one SQLite transaction, then flush with planning generation bump.
    * Pass `expectedPlanningGeneration` when using optimistic concurrency (must match row before work runs).
    */
-  withTransaction(work: () => void, options?: { expectedPlanningGeneration?: number }): void {
+  withTransaction(work: () => void, options?: PersistOptions): void {
     const db = this.ensureDb();
     this._tableShape = detectTableShape(db);
     db.transaction(() => this.runPersistMutation(db, options ?? {}, work)).immediate();

@@ -2,7 +2,13 @@ import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
-import { TASK_ENGINE_TASKS_TABLE, TASK_ENGINE_TRANSITION_LOG_TABLE, TASK_ENGINE_MUTATION_LOG_TABLE } from "../../../core/state/workspace-kit-sqlite.js";
+import {
+  TASK_ENGINE_DEPENDENCIES_TABLE,
+  TASK_ENGINE_TASKS_TABLE,
+  TASK_ENGINE_TRANSITION_LOG_TABLE,
+  TASK_ENGINE_MUTATION_LOG_TABLE
+} from "../../../core/state/workspace-kit-sqlite.js";
+import { TASK_ENGINE_TASK_FEATURES_TABLE } from "../../../core/state/feature-registry-migration.js";
 import { planningSqliteDatabaseRelativePath } from "../planning-config.js";
 import type { TaskEntity, TaskMutationEvidence, TransitionEvidence } from "../types.js";
 import { validateTaskEntityForStrictMode } from "../strict-task-validation.js";
@@ -227,6 +233,59 @@ function collectSqliteKitTaskLinkIntegrityChecks(db: SqliteDb, taskTable: string
     );
   }
 
+  if (tablePresent(TASK_ENGINE_DEPENDENCIES_TABLE)) {
+    const rows = db
+      .prepare(
+        `SELECT task_id AS taskId FROM ${TASK_ENGINE_DEPENDENCIES_TABLE}
+         WHERE task_id NOT IN (SELECT id FROM ${taskTable})
+            OR depends_on_task_id NOT IN (SELECT id FROM ${taskTable})
+         LIMIT 11`
+      )
+      .all() as Array<{ taskId: string }>;
+    out.push(
+      rows.length > 0
+        ? check({
+            code: "task-dependency-row-orphan-task-ids",
+            severity: "error",
+            message: "task_engine_dependencies contains task ids absent from task_engine_tasks.",
+            affectedCount: rows.length,
+            sampleTaskIds: rows.map((r) => r.taskId),
+            remediation: "Rebuild dependency rows from task_engine_tasks.depends_on_json or restore missing task rows."
+          })
+        : check({
+            code: "task-dependency-rows-task-refs-ok",
+            severity: "ok",
+            message: "Dependency rows reference existing relational tasks."
+          })
+    );
+  }
+
+  if (tablePresent(TASK_ENGINE_TASK_FEATURES_TABLE)) {
+    const rows = db
+      .prepare(
+        `SELECT task_id AS taskId FROM ${TASK_ENGINE_TASK_FEATURES_TABLE}
+         WHERE task_id NOT IN (SELECT id FROM ${taskTable})
+         LIMIT 11`
+      )
+      .all() as Array<{ taskId: string }>;
+    out.push(
+      rows.length > 0
+        ? check({
+            code: "task-feature-link-orphan-task-ids",
+            severity: "error",
+            message: "task_engine_task_features contains task ids absent from task_engine_tasks.",
+            affectedCount: rows.length,
+            sampleTaskIds: rows.map((r) => r.taskId),
+            remediation: "Delete orphan feature links or restore missing task rows."
+          })
+        : check({
+            code: "task-feature-links-task-refs-ok",
+            severity: "ok",
+            message: "Feature links reference existing relational tasks."
+          })
+    );
+  }
+
   return out;
 }
 
@@ -444,6 +503,26 @@ export function buildTaskPersistenceReadinessReport(args: {
   }
 
   try {
+    const dbBytes = fs.statSync(dbPath).size;
+    if (dbBytes > 100 * 1024 * 1024) {
+      checks.push(
+        check({
+          code: "sqlite-db-size-large",
+          severity: "warning",
+          message: `SQLite planning DB is ${Math.round(dbBytes / 1024 / 1024)} MiB; GitHub rejects blobs over 100 MiB.`,
+          affectedCount: dbBytes,
+          remediation: "Run doctor/integrity checks, avoid committing the DB, and use explicit maintenance (backup + VACUUM) only after confirming the store is healthy."
+        })
+      );
+    } else {
+      checks.push(
+        check({
+          code: "sqlite-db-size-ok",
+          severity: "ok",
+          message: `SQLite planning DB size is ${Math.round(dbBytes / 1024 / 1024)} MiB.`
+        })
+      );
+    }
     sqliteUserVersion = Number((db.prepare("PRAGMA user_version").get() as Record<string, unknown>).user_version ?? 0);
     const quick = db.prepare("PRAGMA quick_check").all() as Record<string, unknown>[];
     const quickFailures = quick
