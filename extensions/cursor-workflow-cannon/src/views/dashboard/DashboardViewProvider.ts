@@ -34,6 +34,11 @@ import {
   type PhaseJournalKitPayload,
   type PlanningInterviewWizardPanel
 } from "./render-dashboard.js";
+import {
+  buildPhaseKeySuggestion,
+  sortPhaseKeySuggestions,
+  type PhaseKeySuggestion
+} from "../phase-select-options.js";
 import { GuidanceAuthoringExtensionSide } from "../guidance/guidance-authoring-extension-side.js";
 import { renderGuidanceAuthoringPanelInnerHtml } from "../guidance/render-guidance-panel.js";
 import { STATUS_PANEL_EMBED_CSS } from "../status/render-status-tab.js";
@@ -193,25 +198,35 @@ function phaseKeyFromPhrase(phasePhrase: string): string | undefined {
   return (match?.[1] ?? raw).trim() || undefined;
 }
 
-/** Build QuickPick labels from the last dashboard-summary `data` payload (phase buckets + workspace phase slice). */
-function collectPhaseKeySuggestions(data: Record<string, unknown>): Array<{ label: string; phaseKey: string }> {
-  const seen = new Set<string>();
-  const out: Array<{ label: string; phaseKey: string }> = [];
-  const add = (pk: string, label?: string) => {
+/** Phase keys for assign-phase drawers: catalog descriptions, live buckets, workspace slice; descending by key. */
+function collectPhaseKeySuggestions(data: Record<string, unknown>): PhaseKeySuggestion[] {
+  /** phaseKey → shortDescription (null = known key without catalog text). */
+  const catalogDesc = new Map<string, string | null>();
+
+  const remember = (pk: string, shortDescription?: string | null) => {
     const k = pk.trim();
-    if (!k.length || seen.has(k)) return;
-    seen.add(k);
-    out.push({ phaseKey: k, label: label ?? `Phase ${k}` });
+    if (!k.length) {
+      return;
+    }
+    const sd =
+      typeof shortDescription === "string" && shortDescription.trim()
+        ? shortDescription.trim()
+        : shortDescription === null
+          ? null
+          : undefined;
+    const prev = catalogDesc.get(k);
+    if (prev === undefined) {
+      catalogDesc.set(k, sd ?? null);
+      return;
+    }
+    if (sd && sd.length > 0 && (prev === null || prev === undefined)) {
+      catalogDesc.set(k, sd);
+    }
   };
+
   const sys = data.systemStatus as Record<string, unknown> | undefined;
   const phaseSlice = sys?.phase as Record<string, unknown> | undefined;
   if (phaseSlice && typeof phaseSlice === "object") {
-    const canon = phaseSlice.canonicalPhaseKey;
-    if (typeof canon === "string" && canon.trim()) add(canon.trim(), `Canonical: ${canon.trim()}`);
-    const ws = phaseSlice.workspaceStatusPhaseKey;
-    if (typeof ws === "string" && ws.trim()) add(ws.trim(), `Workspace DB: ${ws.trim()}`);
-    const cf = phaseSlice.configPhaseKey;
-    if (typeof cf === "string" && cf.trim()) add(cf.trim(), `Config hint: ${cf.trim()}`);
     const parseRoadmapPhase = (raw: string): string => {
       const t = raw.trim();
       const fromPhrase = phaseKeyFromPhrase(t);
@@ -220,18 +235,27 @@ function collectPhaseKeySuggestions(data: Record<string, unknown>): Array<{ labe
       }
       return /^\d+$/.test(t) ? t : "";
     };
+    for (const rawKey of [
+      phaseSlice.canonicalPhaseKey,
+      phaseSlice.workspaceStatusPhaseKey,
+      phaseSlice.configPhaseKey
+    ]) {
+      if (typeof rawKey === "string" && rawKey.trim()) {
+        remember(rawKey.trim(), null);
+      }
+    }
     const curKP = phaseSlice.currentKitPhase;
     if (typeof curKP === "string" && curKP.trim()) {
       const pk = parseRoadmapPhase(curKP);
       if (pk) {
-        add(pk, `Current kit phase (${curKP.trim()})`);
+        remember(pk, null);
       }
     }
     const nextKP = phaseSlice.nextKitPhase;
     if (typeof nextKP === "string" && nextKP.trim()) {
       const pk = parseRoadmapPhase(nextKP);
       if (pk) {
-        add(pk, `Next kit phase (${nextKP.trim()})`);
+        remember(pk, null);
       }
     }
     const cat = phaseSlice.phaseCatalog;
@@ -250,15 +274,10 @@ function collectPhaseKeySuggestions(data: Record<string, unknown>): Array<{ labe
           }
           const key = pk.trim();
           if (typeof sd === "string" && sd.trim()) {
-            // Catalogued with description: show the deliverable.
-            add(key, `Catalog · ${String(sd).trim().slice(0, 72)}`);
+            remember(key, sd.trim());
           } else if (inCatalog) {
-            // Catalogued but no description recorded yet.
-            add(key, `Phase ${key} (no description)`);
+            remember(key, null);
           }
-          // Else: phantom phase key (no catalog row, no description). Skip — the
-          // bucket scan below will add it with a meaningful label if any live tasks
-          // reference it; otherwise it stays out of the dropdown.
         }
       }
     }
@@ -270,9 +289,8 @@ function collectPhaseKeySuggestions(data: Record<string, unknown>): Array<{ labe
     for (const rawBucket of buckets) {
       if (!rawBucket || typeof rawBucket !== "object") continue;
       const pk = (rawBucket as { phaseKey?: unknown }).phaseKey;
-      const lb = (rawBucket as { label?: unknown }).label;
       if (typeof pk === "string" && pk.trim()) {
-        add(pk.trim(), typeof lb === "string" && lb.trim() ? lb.trim() : undefined);
+        remember(pk.trim());
       }
     }
   };
@@ -286,7 +304,10 @@ function collectPhaseKeySuggestions(data: Record<string, unknown>): Array<{ labe
   if (data.blockedSummary && typeof data.blockedSummary === "object") {
     scan({ phaseBuckets: (data.blockedSummary as { phaseBuckets?: unknown }).phaseBuckets });
   }
-  return out;
+  const suggestions = [...catalogDesc.entries()].map(([phaseKey, shortDescription]) =>
+    buildPhaseKeySuggestion(phaseKey, shortDescription)
+  );
+  return sortPhaseKeySuggestions(suggestions);
 }
 
 export class DashboardViewProvider implements vscode.WebviewViewProvider {
@@ -1371,9 +1392,32 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         await this.postDrawerValidationToWebview(validated.error);
         return false;
       }
+      const taskId = session.taskId;
+      if (validated.values.moveToBacklog === "true") {
+        await this.client.recordActivity({
+          kind: "working_task",
+          taskId,
+          command: "clear-task-phase",
+          details: { source: "dashboard-phase-button-backlog" }
+        });
+        const out = await this.client.run("clear-task-phase", {
+          taskId,
+          ...expectedPlanningGenerationArgs()
+        });
+        await this.client.clearActivity();
+        if (!out.ok) {
+          const detail = `${String(out.code ?? "")} ${String(out.message ?? "")}`.trim();
+          await this.postDrawerValidationToWebview(`clear-task-phase failed: ${detail}`.slice(0, 900));
+          return false;
+        }
+        ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
+        this.closeDashboardDrawer();
+        this.notifyKitStateChanged();
+        await vscode.window.showInformationMessage(`Moved ${taskId} to backlog (phase cleared)`);
+        return true;
+      }
       const { phaseKey } = validated.values;
       const shortDescription = validated.values.shortDescription;
-      const taskId = session.taskId;
       await this.client.recordActivity({
         kind: "working_task",
         taskId,
@@ -3383,26 +3427,32 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .dash-row-label { flex: 1; min-width: 0; white-space: pre-wrap; word-break: break-word; font-size: 12px; line-height: 1.35; }
     .dash-row-actions { display: flex; flex-wrap: wrap; gap: 4px; flex-shrink: 0; align-items: flex-start; }
     .dash-row-actions.wc-task-actions {
+      --wc-task-action-btn-w: 104px;
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-columns: repeat(2, var(--wc-task-action-btn-w));
       gap: 4px;
       align-content: flex-start;
-      width: 160px;
+      width: calc(var(--wc-task-action-btn-w) * 2 + 4px);
       max-width: 100%;
     }
     .dash-row-actions.wc-task-actions.dash-row-actions-grid {
-      grid-template-columns: repeat(2, minmax(0, max-content));
-      width: auto;
+      grid-template-columns: repeat(2, var(--wc-task-action-btn-w));
+      width: calc(var(--wc-task-action-btn-w) * 2 + 4px);
       justify-items: stretch;
       align-content: start;
     }
     .dash-row-actions.wc-task-actions > .wc-btn {
-      width: 100%;
-      min-width: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: var(--wc-task-action-btn-w);
+      min-width: var(--wc-task-action-btn-w);
+      max-width: var(--wc-task-action-btn-w);
       box-sizing: border-box;
       text-align: center;
-      justify-content: center;
+      line-height: 1.2;
       white-space: nowrap;
+      overflow: hidden;
     }
     .dash-task-row-body {
       display: flex;

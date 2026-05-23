@@ -76,16 +76,20 @@ test("drawer: normalizeDrawerValues trims", async () => {
   assert.equal(v.b, "3");
 });
 
-test("drawer: assign phase spec includes select and custom field", async () => {
+test("drawer: assign phase spec includes select, backlog, and custom field", async () => {
   const mod = await import("../dist/views/dashboard/dashboard-input-drawer.js");
   const spec = mod.buildAssignTaskPhaseDrawerSpec("T100", [
-    { label: "Next", phaseKey: "92" }
+    { label: "Phase 92 - Next slice", phaseKey: "92" }
   ]);
   const html = mod.renderDrawerFormHtml(spec);
   assert.match(html, /data-wc-drawer-field="phaseSelect"/);
   assert.match(html, /class="wc-drawer-select"/);
   assert.match(html, /data-wc-drawer-field="phaseKeyCustom"/);
-  assert.match(html, /value="92"/);
+  const backlogIdx = html.indexOf('value="__backlog__"');
+  const phase92Idx = html.indexOf('value="92"');
+  assert.ok(backlogIdx >= 0 && phase92Idx >= 0 && backlogIdx < phase92Idx, "backlog option precedes phase keys");
+  assert.match(html, /Phase 92 - Next slice/);
+  assert.match(html, /Move to Backlog/);
   assert.match(html, /value="__custom__"/);
 });
 
@@ -101,6 +105,9 @@ test("drawer: validate assign phase — custom requires text", async () => {
   const pickOk = mod.validateAssignTaskPhaseSubmit({ phaseSelect: "91", phaseKeyCustom: "" });
   assert.equal(pickOk.ok, true);
   if (pickOk.ok) assert.equal(pickOk.values.phaseKey, "91");
+  const backlogOk = mod.validateAssignTaskPhaseSubmit({ phaseSelect: "__backlog__", phaseKeyCustom: "" });
+  assert.equal(backlogOk.ok, true);
+  if (backlogOk.ok) assert.equal(backlogOk.values.moveToBacklog, "true");
 });
 
 test("drawer: add phase note spec has type, summary, priority fields", async () => {

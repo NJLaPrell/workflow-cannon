@@ -8,6 +8,14 @@
 
 import { appendElevatedPolicyExplainer } from "../../policy/dashboard-policy-tier.js";
 import { shouldCollectPolicyRationaleInDrawer } from "../../policy/dashboard-policy-path.js";
+import {
+  ASSIGN_PHASE_BACKLOG,
+  ASSIGN_PHASE_CUSTOM,
+  sortPhaseKeySuggestions,
+  type PhaseKeySuggestion
+} from "../phase-select-options.js";
+
+export type { PhaseKeySuggestion };
 
 export function escapeDrawerHtml(s: string): string {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -631,27 +639,25 @@ export function buildPersistPhaseNoteProposalsDrawerSpec(): DrawerFormSpec {
   };
 }
 
-const ASSIGN_PHASE_CUSTOM = "__custom__";
-
-export type PhaseKeySuggestion = { label: string; phaseKey: string };
-
 export function buildAssignTaskPhaseDrawerSpec(
   taskId: string,
   suggestions: PhaseKeySuggestion[],
   valueHint?: string
 ): DrawerFormSpec {
+  const sorted = sortPhaseKeySuggestions(suggestions);
   const options: Array<{ value: string; label: string }> = [
     { value: "", label: "Choose phase target…" },
-    ...suggestions.map((s) => ({ value: s.phaseKey, label: `${s.label} (${s.phaseKey})` })),
+    { value: ASSIGN_PHASE_BACKLOG, label: "Move to Backlog" },
+    ...sorted.map((s) => ({ value: s.phaseKey, label: s.label })),
     { value: ASSIGN_PHASE_CUSTOM, label: "Enter another phase key…" }
   ];
   return {
     workflowId: "assign-task-phase",
     title: `Set phase for ${taskId}`,
     descriptionHtml:
-      "Runs <code>assign-task-phase</code> on the host with the current planning generation. " +
-      "Pick a suggested key or choose custom. Optionally record the phase deliverable; " +
-      "if the phase has no catalog row yet, one will be created.",
+      "Assign a phase with <code>assign-task-phase</code>, move to backlog with <code>clear-task-phase</code> " +
+      "(planning generation when required). Pick a listed phase, backlog, or custom key. " +
+      "Optional deliverable text creates or updates the phase catalog row.",
     fields: [
       {
         id: "ctx",
@@ -693,7 +699,13 @@ export function validateAssignTaskPhaseSubmit(values: Record<string, string>): D
   const custom = (values.phaseKeyCustom ?? "").trim();
   const shortDescription = (values.shortDescription ?? "").trim();
   if (!sel) {
-    return { ok: false, error: 'Choose a phase target or select "Enter another phase key…".' };
+    return {
+      ok: false,
+      error: 'Choose a phase, "Move to Backlog", or "Enter another phase key…".'
+    };
+  }
+  if (sel === ASSIGN_PHASE_BACKLOG) {
+    return { ok: true, values: { moveToBacklog: "true" } };
   }
   let phaseKey: string;
   if (sel === ASSIGN_PHASE_CUSTOM) {
@@ -721,9 +733,10 @@ export type AcceptProposedDrawerParams = {
 export function buildAcceptProposedDrawerSpec(params: AcceptProposedDrawerParams): DrawerFormSpec {
   const { taskIds, categoryLabel, suggestions } = params;
   const n = taskIds.length;
+  const sorted = sortPhaseKeySuggestions(suggestions);
   const options: Array<{ value: string; label: string }> = [
     { value: "", label: "Choose phase target…" },
-    ...suggestions.map((s) => ({ value: s.phaseKey, label: `${s.label} (${s.phaseKey})` })),
+    ...sorted.map((s) => ({ value: s.phaseKey, label: s.label })),
     { value: ASSIGN_PHASE_CUSTOM, label: "Enter another phase key…" }
   ];
   const cat = categoryLabel.trim() || "proposed";
@@ -780,6 +793,12 @@ export function validateAcceptProposedSubmit(
   const phase = validateAssignTaskPhaseSubmit(values);
   if (!phase.ok) {
     return phase;
+  }
+  if (phase.values.moveToBacklog === "true") {
+    return {
+      ok: false,
+      error: "Accept requires a target phase. Use Set Phase on the task row to move it to backlog."
+    };
   }
   const batch = options?.batch === true;
   const policyAction = batch ? "accept-batch" : "accept-single";

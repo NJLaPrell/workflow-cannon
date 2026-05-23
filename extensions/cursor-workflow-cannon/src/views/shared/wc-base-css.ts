@@ -8,6 +8,10 @@ export const WC_BASE_CSS = `
   cursor: pointer;
   border-radius: 4px;
   border: 1px solid var(--vscode-button-border, var(--vscode-contrastBorder, transparent));
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .wc-btn-sm { padding: 2px 8px;  font-size: 10px; font-weight: 600; }
 .wc-btn-md { padding: 4px 10px; font-size: 11px; font-weight: 500; }
