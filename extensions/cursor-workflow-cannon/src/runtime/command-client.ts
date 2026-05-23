@@ -526,6 +526,8 @@ export class CommandClient {
   private readonly extensionRoot?: string;
   private readonly resolveNodeExecutable?: () => string | undefined;
   private readonly execFn: CommandClientExecFn;
+  /** Serialize kit CLI invocations — concurrent `wk run` processes can corrupt SQLite task DB. */
+  private runQueue: Promise<void> = Promise.resolve();
 
   constructor(private readonly workspaceRoot: string, options?: CommandClientOptions) {
     this.timeoutMs = options?.timeoutMs ?? 30_000;
@@ -550,8 +552,22 @@ export class CommandClient {
     return this.workspaceRoot;
   }
 
+  private enqueueSerialized<T>(work: () => Promise<T>): Promise<T> {
+    const run = this.runQueue.then(work, work);
+    this.runQueue = run.then(
+      () => undefined,
+      () => undefined
+    );
+    return run;
+  }
+
   /** `workspace-kit run <name> <json>` — parses single JSON object from stdout. */
   async run(commandName: string, args: Record<string, unknown>): Promise<KitRunResult> {
+    return this.enqueueSerialized(() => this.runOnce(commandName, args));
+  }
+
+  /** Single serialized `workspace-kit run` invocation (do not call directly). */
+  private async runOnce(commandName: string, args: Record<string, unknown>): Promise<KitRunResult> {
     const jsonArg = JSON.stringify(args);
     try {
       const { stdout, stderr, exitCode } = await this.execFn(this.workspaceRoot, [

@@ -455,6 +455,30 @@ test("CommandClient.recordActivity invokes set-agent-activity best-effort", asyn
   assert.equal(payload.source, "vscode-extension");
 });
 
+test("CommandClient.run serializes concurrent kit invocations", async () => {
+  let inFlight = 0;
+  let maxInFlight = 0;
+  const order = [];
+  const client = new CommandClient("/tmp/noop", {
+    execFn: async (_root, args) => {
+      inFlight += 1;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      const cmd = args[1];
+      order.push(cmd);
+      await new Promise((r) => setTimeout(r, 5));
+      inFlight -= 1;
+      return { exitCode: 0, stdout: JSON.stringify({ ok: true, code: cmd }), stderr: "" };
+    }
+  });
+  await Promise.all([
+    client.run("clear-task-phase", { taskId: "T1" }),
+    client.run("clear-task-phase", { taskId: "T2" }),
+    client.run("dashboard-summary", {})
+  ]);
+  assert.equal(maxInFlight, 1);
+  assert.deepEqual(order, ["clear-task-phase", "clear-task-phase", "dashboard-summary"]);
+});
+
 test("CommandClient.clearActivity invokes clear-agent-activity best-effort", async () => {
   const calls = [];
   const client = new CommandClient("/tmp/noop", {

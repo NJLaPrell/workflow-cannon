@@ -758,9 +758,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         if (await this.dashboardGuidanceAuthoring?.handleCaeDrawerSubmitIfActive(values)) {
           return;
         }
-        const refreshed = await this.handleDrawerSubmit(values);
-        if (refreshed) {
-          await this.pushUpdate();
+        this.setDashboardUiInteraction("drawer-submit", true);
+        try {
+          const refreshed = await this.handleDrawerSubmit(values);
+          if (refreshed) {
+            await this.pushUpdate();
+          }
+        } finally {
+          this.setDashboardUiInteraction("drawer-submit", false);
         }
       }
       if (msg?.type === "drawerCancel") {
@@ -1394,17 +1399,13 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
       const taskId = session.taskId;
       if (validated.values.moveToBacklog === "true") {
-        await this.client.recordActivity({
-          kind: "working_task",
-          taskId,
-          command: "clear-task-phase",
-          details: { source: "dashboard-phase-button-backlog" }
-        });
+        // Avoid extra set/clear-agent-activity CLI processes here — they raced clear-task-phase
+        // and dashboard-summary against the same SQLite file (full-table persist per save).
         const out = await this.client.run("clear-task-phase", {
           taskId,
+          clientMutationId: `dashboard-backlog-${taskId}-${Date.now()}`,
           ...expectedPlanningGenerationArgs()
         });
-        await this.client.clearActivity();
         if (!out.ok) {
           const detail = `${String(out.code ?? "")} ${String(out.message ?? "")}`.trim();
           await this.postDrawerValidationToWebview(`clear-task-phase failed: ${detail}`.slice(0, 900));
