@@ -58,6 +58,8 @@ For a **net-new consumer project**, attach Workflow Cannon first: install `@work
 
 **Lanes:** JSON **`policyApproval`** on `run` vs env **`WORKSPACE_KIT_POLICY_APPROVAL`** for top-level **`init` / `upgrade` / `config`** — [`.ai/POLICY-APPROVAL.md`](./POLICY-APPROVAL.md).
 
+**Dashboard:** Routine drawer actions auto-fill structured `policyApproval.rationale`; elevated paths require operator text. Agents invoking **`wk run` from the terminal** must still pass explicit JSON rationale — see [`.ai/POLICY-APPROVAL.md`](./POLICY-APPROVAL.md) → **Workflow Cannon Dashboard**.
+
 ## Maintainer delivery (one `T###` → `release/phase-<N>`)
 
 Playbook: [`.ai/playbooks/task-to-phase-branch.md`](./playbooks/task-to-phase-branch.md) — branch from phase branch, PR, merge, **`run-transition`** **`complete`** with evidence.
@@ -77,6 +79,10 @@ Optional **`responseTemplateId`** / directive fields on argv — [`.ai/response-
 ## Agent presentation policy
 
 Baseline visible-agent presentation is configured with **`agentPresentation.*`** and resolved through **`resolve-agent-guidance`** / **`dashboard-summary`**. The generated Cursor rule from **`sync-effective-behavior-cursor-rule`** is the early chat instruction surface; dashboards and **`data.presentation.agentPresentation`** are observability/output metadata only. Private reasoning is never displayed or requested. Use CAE scoped Guidance for situational exceptions such as onboarding plain language, phase closeout technical evidence, or sensitive-command remediation: [`.ai/runbooks/agent-presentation-policy.md`](./runbooks/agent-presentation-policy.md).
+
+## Dashboard policy UX (extension)
+
+The Cursor Dashboard drawer sends JSON **`policyApproval`** on gated **`wk run`** calls. **Routine** paths auto-build rationale (`dashboard|workflow=…|tier=routine|…`); **elevated** paths require operator text in the drawer (`|detail=…`). Agents on the terminal must **not** reuse Dashboard boilerplate — see **`.ai/POLICY-APPROVAL.md`** (Dashboard section) and **`.ai/DASHBOARD-POLICY-UX.md`**. Tier matrix: `extensions/cursor-workflow-cannon/src/policy/dashboard-policy-tier.ts`.
 
 ## WC Agent status workflow
 

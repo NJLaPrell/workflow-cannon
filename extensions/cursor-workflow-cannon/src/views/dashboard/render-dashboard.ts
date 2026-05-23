@@ -192,12 +192,12 @@ function renderProposedQueueTaskActionButtons(
     escapeHtml(acceptDecline.acceptAction) +
     '" data-task-id="' +
     idAttr +
-    '" title="Accept → ready (confirms policy rationale)">Accept</button>' +
+    '" title="Accept → ready (routine tier: policy rationale auto-filled)">Accept</button>' +
     '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="' +
     escapeHtml(acceptDecline.declineAction) +
     '" data-task-id="' +
     idAttr +
-    '" title="Decline → cancelled (reject; confirms policy rationale)">Decline</button>' +
+    '" title="Decline → cancelled (routine tier: policy rationale auto-filled)">Decline</button>' +
     "</span>"
   );
 }
@@ -1218,7 +1218,7 @@ function renderWishlistOpenList(items: unknown): string {
           '" title="Open wishlist intake flow for this item (prefills Cursor chat)">Process</button>' +
           '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="wishlist-decline" data-task-id="' +
           taskIdAttr +
-          '" title="Decline → cancelled (reject on backing wishlist intake task; confirms policy rationale)">Decline</button>' +
+          '" title="Decline → cancelled (reject on backing wishlist intake task; routine tier auto policy rationale)">Decline</button>' +
           "</span></div>"
         );
       })
@@ -1854,7 +1854,7 @@ function renderProposedPhaseBuckets(
           c > 0 && taskIds.length > 0
             ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary dash-phase-accept-all" data-wc-action="proposed-imp-accept-phase" data-proposed-task-ids="' +
               escapeHtmlAttr(taskIds.join(",")) +
-              '" title="Accept every proposed improvement in this phase (shared policy rationale)">Accept All</button>'
+              '" title="Elevated batch accept — shared policy rationale required in drawer">Accept All</button>'
             : "";
         const inner =
           c === 0
@@ -1962,7 +1962,7 @@ function renderProposedExecutionPhaseBuckets(
           c > 0 && taskIds.length > 0
             ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary dash-phase-accept-all" data-wc-action="proposed-exe-accept-phase" data-proposed-task-ids="' +
               escapeHtmlAttr(taskIds.join(",")) +
-              '" title="Accept every proposed execution task in this phase (shared policy rationale)">Accept All</button>'
+              '" title="Elevated batch accept — shared policy rationale required in drawer">Accept All</button>'
             : "";
         const inner =
           c === 0
