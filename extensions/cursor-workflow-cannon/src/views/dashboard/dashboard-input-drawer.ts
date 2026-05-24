@@ -11,6 +11,7 @@ import { shouldCollectPolicyRationaleInDrawer } from "../../policy/dashboard-pol
 import {
   ASSIGN_PHASE_BACKLOG,
   ASSIGN_PHASE_CUSTOM,
+  buildPhaseKeySuggestion,
   sortPhaseKeySuggestions,
   type PhaseKeySuggestion
 } from "../phase-select-options.js";
@@ -19,6 +20,15 @@ export type { PhaseKeySuggestion };
 
 export function escapeDrawerHtml(s: string): string {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function titleCaseWords(raw: string): string {
+  return raw
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word.length > 0)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
 }
 
 export type DrawerFormField =
@@ -46,6 +56,7 @@ export type DrawerFormField =
       /** First option should use empty value when a placeholder row is desired. */
       options: Array<{ value: string; label: string }>;
       required?: boolean;
+      value?: string;
     }
   | { id: string; kind: "summary"; label: string; body: string };
 
@@ -57,6 +68,8 @@ export type DrawerFormSpec = {
   fields: DrawerFormField[];
   primaryLabel: string;
   cancelLabel: string;
+  /** When set, webview uses this for batch drawer busy labels (accept-all, etc.). */
+  taskCount?: number;
 };
 
 function renderField(f: DrawerFormField): string {
@@ -75,15 +88,20 @@ function renderField(f: DrawerFormField): string {
   }
   if (f.kind === "select") {
     const req = f.required ? " required" : "";
+    const selectedValue = (f.value ?? "").trim();
     const opts = f.options
-      .map(
-        (o) =>
+      .map((o) => {
+        const selected = selectedValue.length > 0 && o.value === selectedValue ? " selected" : "";
+        return (
           '<option value="' +
           escapeDrawerHtml(o.value) +
-          '">' +
+          '"' +
+          selected +
+          ">" +
           escapeDrawerHtml(o.label) +
           "</option>"
-      )
+        );
+      })
       .join("");
     return (
       '<div class="wc-drawer-field">' +
@@ -157,11 +175,17 @@ export function renderDrawerFormHtml(spec: DrawerFormSpec): string {
       ? '<p class="wc-drawer-desc">' + spec.descriptionHtml + "</p>"
       : "";
   const fields = spec.fields.map(renderField).join("");
+  const taskCountAttr =
+    typeof spec.taskCount === "number" && Number.isFinite(spec.taskCount) && spec.taskCount > 0
+      ? ' data-wc-drawer-task-count="' + String(Math.floor(spec.taskCount)) + '"'
+      : "";
   return (
     '<div class="wc-drawer-scrim" data-wc-drawer-action="backdrop" aria-hidden="false"></div>' +
     '<div class="wc-drawer-panel" role="dialog" aria-modal="true" data-wc-drawer-workflow="' +
     escapeDrawerHtml(spec.workflowId) +
-    '">' +
+    '"' +
+    taskCountAttr +
+    ">" +
     '<header class="wc-drawer-header">' +
     "<h2 class=\"wc-drawer-title\">" +
     escapeDrawerHtml(spec.title) +
@@ -642,85 +666,59 @@ export function buildPersistPhaseNoteProposalsDrawerSpec(): DrawerFormSpec {
 export function buildAssignTaskPhaseDrawerSpec(
   taskId: string,
   suggestions: PhaseKeySuggestion[],
-  valueHint?: string
+  defaultPhaseKey?: string
 ): DrawerFormSpec {
-  const sorted = sortPhaseKeySuggestions(suggestions);
+  const defaultPk = (defaultPhaseKey ?? "").trim();
+  let sorted = sortPhaseKeySuggestions(suggestions);
+  if (defaultPk && !sorted.some((s) => s.phaseKey === defaultPk)) {
+    sorted = sortPhaseKeySuggestions([...sorted, buildPhaseKeySuggestion(defaultPk)]);
+  }
   const options: Array<{ value: string; label: string }> = [
-    { value: "", label: "Choose phase target…" },
+    ...(defaultPk ? [] : [{ value: "", label: "Choose phase target…" }]),
     { value: ASSIGN_PHASE_BACKLOG, label: "Move to Backlog" },
-    ...sorted.map((s) => ({ value: s.phaseKey, label: s.label })),
-    { value: ASSIGN_PHASE_CUSTOM, label: "Enter another phase key…" }
+    ...sorted.map((s) => ({ value: s.phaseKey, label: s.label }))
   ];
   return {
     workflowId: "assign-task-phase",
     title: `Set phase for ${taskId}`,
     descriptionHtml:
-      "Assign a phase with <code>assign-task-phase</code>, move to backlog with <code>clear-task-phase</code> " +
-      "(planning generation when required). Pick a listed phase, backlog, or custom key. " +
-      "Optional deliverable text creates or updates the phase catalog row.",
+      "Assign a phase with <code>assign-task-phase</code> or move to backlog with <code>clear-task-phase</code>.",
     fields: [
       {
         id: "ctx",
         kind: "summary",
-        label: "Task",
-        body: "<div><b>Task id:</b> " + escapeDrawerHtml(taskId) + "</div>"
+        label: "Scope",
+        body: escapeDrawerHtml(taskId)
       },
       {
         id: "phaseSelect",
         kind: "select",
         label: "Phase",
         options,
-        required: false
-      },
-      {
-        id: "phaseKeyCustom",
-        kind: "text",
-        label: "Custom phase key",
-        placeholder: "Stable kit phase key",
         required: false,
-        value: valueHint?.trim() ?? ""
-      },
-      {
-        id: "shortDescription",
-        kind: "text",
-        label: "Phase deliverable (optional)",
-        placeholder: "Short description; creates/updates kit_phase_catalog row",
-        required: false,
-        value: ""
+        value: defaultPk || undefined
       }
     ],
-    primaryLabel: "Assign phase",
+    primaryLabel: "Set Phase",
     cancelLabel: "Cancel"
   };
 }
 
 export function validateAssignTaskPhaseSubmit(values: Record<string, string>): DrawerValidationResult {
   const sel = (values.phaseSelect ?? "").trim();
-  const custom = (values.phaseKeyCustom ?? "").trim();
-  const shortDescription = (values.shortDescription ?? "").trim();
   if (!sel) {
     return {
       ok: false,
-      error: 'Choose a phase, "Move to Backlog", or "Enter another phase key…".'
+      error: 'Choose a phase or "Move to Backlog".'
     };
   }
   if (sel === ASSIGN_PHASE_BACKLOG) {
     return { ok: true, values: { moveToBacklog: "true" } };
   }
-  let phaseKey: string;
   if (sel === ASSIGN_PHASE_CUSTOM) {
-    if (!custom) {
-      return { ok: false, error: "Enter a non-empty custom phase key." };
-    }
-    phaseKey = custom;
-  } else {
-    phaseKey = sel;
+    return { ok: false, error: "Choose a listed phase or Move to Backlog." };
   }
-  const out: Record<string, string> = { phaseKey };
-  if (shortDescription) {
-    out.shortDescription = shortDescription;
-  }
-  return { ok: true, values: out };
+  return { ok: true, values: { phaseKey: sel } };
 }
 
 export type AcceptProposedDrawerParams = {
@@ -728,40 +726,47 @@ export type AcceptProposedDrawerParams = {
   /** Proposed-row category label (batch only); may be empty for single-task flow. */
   categoryLabel: string;
   suggestions: PhaseKeySuggestion[];
+  /** Pre-select target phase from the proposal bucket or task row. */
+  defaultPhaseKey?: string;
 };
 
 export function buildAcceptProposedDrawerSpec(params: AcceptProposedDrawerParams): DrawerFormSpec {
-  const { taskIds, categoryLabel, suggestions } = params;
+  const { taskIds, categoryLabel, suggestions, defaultPhaseKey } = params;
   const n = taskIds.length;
-  const sorted = sortPhaseKeySuggestions(suggestions);
+  const defaultPk = (defaultPhaseKey ?? "").trim();
+  let sorted = sortPhaseKeySuggestions(suggestions);
+  if (defaultPk && !sorted.some((s) => s.phaseKey === defaultPk)) {
+    sorted = sortPhaseKeySuggestions([...sorted, buildPhaseKeySuggestion(defaultPk)]);
+  }
   const options: Array<{ value: string; label: string }> = [
-    { value: "", label: "Choose phase target…" },
-    ...sorted.map((s) => ({ value: s.phaseKey, label: s.label })),
-    { value: ASSIGN_PHASE_CUSTOM, label: "Enter another phase key…" }
+    ...(defaultPk ? [] : [{ value: "", label: "Choose phase target…" }]),
+    ...sorted.map((s) => ({ value: s.phaseKey, label: s.label }))
   ];
   const cat = categoryLabel.trim() || "proposed";
+  const catTitle = titleCaseWords(cat);
   const idsBody =
     n === 1
       ? "<div><b>Task:</b> " + escapeDrawerHtml(taskIds[0] ?? "") + "</div>"
-      : "<div><b>Tasks (" +
+      : "<div>Tasks (" +
         String(n) +
         ", " +
         escapeDrawerHtml(cat) +
-        "):</b> " +
+        "): " +
         escapeDrawerHtml(taskIds.join(", ")) +
         "</div>";
   const safeTitle =
     n === 1
-      ? `Accept proposed task ${taskIds[0] ?? ""}`
-      : `Accept ${String(n)} proposed ${cat} tasks`;
+      ? `Accept Proposed Task ${taskIds[0] ?? ""}`
+      : `Accept ${String(n)} Proposed ${catTitle} Tasks`;
+  const descriptionHtml =
+    n > 1
+      ? "<p><b>Batch accept.</b> You are promoting multiple proposed tasks in one submit.</p>"
+      : undefined;
   return {
     workflowId: "accept-proposed",
     title: safeTitle,
-    descriptionHtml: appendElevatedPolicyExplainer(
-      "Runs <code>run-transition</code> <code>accept</code> then <code>assign-task-phase</code> for each row.",
-      "accept-proposed",
-      n > 1 ? "accept-batch" : "accept-single"
-    ),
+    descriptionHtml,
+    taskCount: n,
     fields: [
       { id: "ctx", kind: "summary", label: "Scope", body: idsBody },
       {
@@ -769,27 +774,16 @@ export function buildAcceptProposedDrawerSpec(params: AcceptProposedDrawerParams
         kind: "select",
         label: "Target phase",
         options,
-        required: false
-      },
-      {
-        id: "phaseKeyCustom",
-        kind: "text",
-        label: "Custom phase key",
-        placeholder: 'When using "Enter another phase key…"',
         required: false,
-        value: ""
-      },
-      ...policyRationaleDrawerFields("accept-proposed", n > 1 ? "accept-batch" : "accept-single")
+        value: defaultPk || undefined
+      }
     ],
-    primaryLabel: n === 1 ? "Accept and assign phase" : "Accept all and assign phase",
+    primaryLabel: n === 1 ? "Accept" : "Accept All",
     cancelLabel: "Cancel"
   };
 }
 
-export function validateAcceptProposedSubmit(
-  values: Record<string, string>,
-  options?: { batch?: boolean }
-): DrawerValidationResult {
+export function validateAcceptProposedSubmit(values: Record<string, string>): DrawerValidationResult {
   const phase = validateAssignTaskPhaseSubmit(values);
   if (!phase.ok) {
     return phase;
@@ -800,15 +794,9 @@ export function validateAcceptProposedSubmit(
       error: "Accept requires a target phase. Use Set Phase on the task row to move it to backlog."
     };
   }
-  const batch = options?.batch === true;
-  const policyAction = batch ? "accept-batch" : "accept-single";
-  const policyErr = validateDrawerPolicyRationale("accept-proposed", policyAction, values);
-  if (policyErr) {
-    return { ok: false, error: policyErr };
-  }
   return {
     ok: true,
-    values: { phaseKey: phase.values.phaseKey, policyRationale: (values.policyRationale ?? "").trim() }
+    values: { phaseKey: phase.values.phaseKey }
   };
 }
 

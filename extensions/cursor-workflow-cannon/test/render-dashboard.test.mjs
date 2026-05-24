@@ -17,6 +17,8 @@ import {
   lazyTerminalBucketListLimit,
   renderUpNextCardHtml,
   dashboardRowPhaseKey,
+  lookupDashboardTaskPhaseKey,
+  lookupProposedTaskPhaseKey,
   pickNextTaskInCurrentPhase
 } from "../dist/views/dashboard/render-dashboard.js";
 import { buildPhaseCompleteReleaseChatPrompt } from "../dist/phase-complete-release-prompt.js";
@@ -248,15 +250,16 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /class="wc-btn wc-btn-sm wc-btn-secondary"[^>]*data-wc-action="wishlist-decline"/);
   assert.match(html, />Decline<\/button>/);
   assert.match(html, /data-task-id="T501"/);
-  assert.match(html, /class="wc-btn wc-btn-sm wc-btn-primary"[^>]*data-wc-action="proposed-imp-accept"/);
-  assert.match(html, /data-wc-action="proposed-imp-decline"/);
+  assert.match(html, /class="wc-btn wc-btn-sm wc-btn-success"[^>]*data-wc-action="proposed-imp-accept"/);
+  assert.match(html, /class="wc-btn wc-btn-sm wc-btn-danger"[^>]*data-wc-action="proposed-imp-decline"/);
   assert.doesNotMatch(html, /proposed-imp-chat/);
   assert.doesNotMatch(html, /proposed-exe-chat/);
   assert.match(html, /data-wc-action="task-detail"/);
-  assert.match(html, /data-wc-action="assign-phase"/);
+  assert.match(html, /class="wc-btn wc-btn-sm wc-btn-info"[^>]*data-wc-action="assign-phase"/);
   assert.match(html, /class="wc-btn wc-btn-sm wc-btn-secondary"[^>]*data-wc-action="task-detail"/);
   assert.match(html, /data-wc-action="task-detail"[\s\S]*?>View Task<\/button>/);
   assert.match(html, /data-wc-action="task-comments-view"[\s\S]*?>View Comments<\/button>/);
+  assert.match(html, /class="wc-btn wc-btn-sm wc-btn-info"[^>]*data-wc-action="task-comment-add"/);
   assert.match(html, /data-wc-action="task-comment-add"[\s\S]*?>Add Comment<\/button>/);
   assert.match(html, /wc-btn-sm/);
   assert.match(html, /phase-bucket/);
@@ -1521,6 +1524,49 @@ test("dashboardRowPhaseKey and pickNextTaskInCurrentPhase prefer current phase r
   assert.equal((picked).id, "T1");
 });
 
+test("lookupDashboardTaskPhaseKey resolves ready and proposed rollups", () => {
+  const data = {
+    readyExecutionSummary: {
+      phaseBuckets: [
+        {
+          phaseKey: "109",
+          taskIds: ["T100406"],
+          top: [{ id: "T100406", phaseKey: "109" }]
+        }
+      ]
+    },
+    proposedExecutionSummary: {
+      phaseBuckets: [
+        {
+          phaseKey: "100",
+          taskIds: ["T100405"],
+          top: [{ id: "T100405", phaseKey: "100" }]
+        }
+      ]
+    }
+  };
+  assert.equal(lookupDashboardTaskPhaseKey(data, "T100406"), "109");
+  assert.equal(lookupDashboardTaskPhaseKey(data, "T100405"), "100");
+});
+
+test("lookupProposedTaskPhaseKey resolves from phase buckets and top rows", () => {
+  const data = {
+    proposedExecutionSummary: {
+      phaseBuckets: [
+        {
+          phaseKey: "100",
+          taskIds: ["T100405", "T100406"],
+          top: [{ id: "T100405", phaseKey: "100" }]
+        }
+      ],
+      top: [{ id: "T100407", phaseKey: "101" }]
+    }
+  };
+  assert.equal(lookupProposedTaskPhaseKey(data, "T100405"), "100");
+  assert.equal(lookupProposedTaskPhaseKey(data, "T100406"), "100");
+  assert.equal(lookupProposedTaskPhaseKey(data, "T100407"), "101");
+});
+
 test("renderUpNextCardHtml surfaces phase closeout when delivery queue is drained", () => {
   const html = renderUpNextCardHtml({
     ws: { currentKitPhase: "108", nextKitPhase: "109" },
@@ -1599,8 +1645,8 @@ test("renderDashboardRootInnerHtml proposed execution rows expose accept action"
       }
     }
   });
-  assert.match(html, /class="wc-btn wc-btn-sm wc-btn-primary"[^>]*data-wc-action="proposed-exe-accept"/);
-  assert.match(html, /data-wc-action="proposed-exe-decline"/);
+  assert.match(html, /class="wc-btn wc-btn-sm wc-btn-success"[^>]*data-wc-action="proposed-exe-accept"/);
+  assert.match(html, /class="wc-btn wc-btn-sm wc-btn-danger"[^>]*data-wc-action="proposed-exe-decline"/);
   assert.doesNotMatch(html, /proposed-exe-chat/);
   assert.match(html, /T777/);
   const rowMatch = html.match(
@@ -1847,6 +1893,7 @@ test("renderDashboardRootInnerHtml proposed phase buckets show Accept All with t
   });
   assert.match(html, /data-wc-action="proposed-imp-accept-phase"/);
   assert.match(html, /data-proposed-task-ids="imp-aaa,imp-bbb"/);
+  assert.match(html, /data-proposed-phase-key="68"/);
 });
 
 test("renderDashboardRootInnerHtml merges ready improvement and execution rollups", () => {

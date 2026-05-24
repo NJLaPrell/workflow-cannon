@@ -479,6 +479,109 @@ test("CommandClient.run serializes concurrent kit invocations", async () => {
   assert.deepEqual(order, ["clear-task-phase", "clear-task-phase", "dashboard-summary"]);
 });
 
+test("CommandClient.setRefreshPaused skips refresh kit reads without enqueueing CLI", async () => {
+  const calls = [];
+  const client = new CommandClient("/tmp/noop", {
+    execFn: async (_root, args) => {
+      calls.push(args[1]);
+      return { exitCode: 0, stdout: JSON.stringify({ ok: true, code: args[1] }), stderr: "" };
+    }
+  });
+  client.setRefreshPaused(true);
+  const [summary, transition] = await Promise.all([
+    client.run("dashboard-summary", {}),
+    client.run("run-transition", { taskId: "T1", action: "accept" })
+  ]);
+  assert.equal(summary.ok, false);
+  assert.equal(summary.code, "extension-refresh-paused");
+  assert.equal(transition.ok, true);
+  assert.equal(transition.code, "run-transition");
+  assert.deepEqual(calls, ["run-transition"]);
+  client.setRefreshPaused(false);
+  const after = await client.run("list-phase-notes", {});
+  assert.equal(after.ok, true);
+  assert.deepEqual(calls, ["run-transition", "list-phase-notes"]);
+});
+
+test("CommandClient.setRefreshPaused skips refresh work already queued before pause", async () => {
+  const calls = [];
+  let releaseFirstSummary;
+  const firstSummaryGate = new Promise((resolve) => {
+    releaseFirstSummary = resolve;
+  });
+  const client = new CommandClient("/tmp/noop", {
+    execFn: async (_root, args) => {
+      const cmd = args[1];
+      calls.push(cmd);
+      if (cmd === "dashboard-summary" && calls.filter((c) => c === "dashboard-summary").length === 1) {
+        await firstSummaryGate;
+      }
+      await new Promise((r) => setTimeout(r, 5));
+      return { exitCode: 0, stdout: JSON.stringify({ ok: true, code: cmd }), stderr: "" };
+    }
+  });
+  const summary1 = client.run("dashboard-summary", { pass: 1 });
+  const summary2 = client.run("dashboard-summary", { pass: 2 });
+  await new Promise((r) => setTimeout(r, 0));
+  client.setRefreshPaused(true);
+  releaseFirstSummary();
+  const transition = client.run("run-transition", { taskId: "T100442", action: "accept" });
+  const [s1, s2, t] = await Promise.all([summary1, summary2, transition]);
+  assert.equal(s1.ok, true);
+  assert.equal(s2.ok, true);
+  assert.equal(t.ok, true);
+  assert.equal(t.code, "run-transition");
+  assert.deepEqual(calls, ["dashboard-summary", "run-transition"]);
+});
+
+test("CommandClient.setRefreshPaused skips newly enqueued refresh after pause", async () => {
+  const calls = [];
+  const client = new CommandClient("/tmp/noop", {
+    execFn: async (_root, args) => {
+      calls.push(args[1]);
+      return { exitCode: 0, stdout: JSON.stringify({ ok: true, code: args[1] }), stderr: "" };
+    }
+  });
+  client.setRefreshPaused(true);
+  const summary = await client.run("list-phase-notes", {});
+  assert.equal(summary.ok, false);
+  assert.equal(summary.code, "extension-refresh-paused");
+  assert.deepEqual(calls, []);
+});
+
+test("CommandClient mutation lane runs before queued refresh", async () => {
+  const order = [];
+  const client = new CommandClient("/tmp/noop", {
+    execFn: async (_root, args) => {
+      order.push(args[1]);
+      return { exitCode: 0, stdout: JSON.stringify({ ok: true, code: args[1] }), stderr: "" };
+    }
+  });
+  await Promise.all([
+    client.run("dashboard-summary", {}),
+    client.run("run-transition", { taskId: "T1", action: "accept" })
+  ]);
+  assert.deepEqual(order, ["run-transition", "dashboard-summary"]);
+});
+
+test("CommandClient coalesces pending refresh jobs with the same key", async () => {
+  const calls = [];
+  const client = new CommandClient("/tmp/noop", {
+    execFn: async (_root, args) => {
+      calls.push(args[1]);
+      await new Promise((r) => setTimeout(r, 10));
+      return { exitCode: 0, stdout: JSON.stringify({ ok: true, code: args[1] }), stderr: "" };
+    }
+  });
+  const [a, b] = await Promise.all([
+    client.run("dashboard-summary", { pass: 1 }),
+    client.run("dashboard-summary", { pass: 2 })
+  ]);
+  assert.equal(a.ok, true);
+  assert.equal(b.ok, true);
+  assert.equal(calls.filter((c) => c === "dashboard-summary").length, 1);
+});
+
 test("CommandClient.clearActivity invokes clear-agent-activity best-effort", async () => {
   const calls = [];
   const client = new CommandClient("/tmp/noop", {

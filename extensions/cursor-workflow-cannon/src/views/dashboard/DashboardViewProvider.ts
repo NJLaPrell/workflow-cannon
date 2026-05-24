@@ -20,6 +20,14 @@ import {
   buildTranscriptChurnResearchPrompt
 } from "../../playbook-chat-prompts.js";
 import { confirmAndRunTransition } from "../../run-transition-with-approval.js";
+import { isWcTraceVerbose, logWc } from "../../runtime/workflow-cannon-log.js";
+import { KIT_REFRESH_PAUSED_CODE } from "../../runtime/kit-refresh-run-commands.js";
+import {
+  DashboardRefreshController,
+  type DashboardRefreshMode
+} from "./dashboard-refresh-controller.js";
+import { DrawerSessionController } from "./drawer-session.js";
+import { buildDashboardWebviewBootstrapScript } from "./dashboard-webview-client.js";
 import {
   buildDashboardPolicyApprovalForPath,
   type DashboardPolicyPathRef
@@ -28,6 +36,8 @@ import { executeCreateWishlistFromValidatedFields } from "../../add-wishlist-ite
 import {
   escapeHtml,
   lazyTerminalBucketListLimit,
+  lookupDashboardTaskPhaseKey,
+  lookupProposedTaskPhaseKey,
   renderDashboardQueueTaskRowsHtml,
   renderDashboardRootInnerHtml,
   type DashboardPhaseJournalBundle,
@@ -100,8 +110,6 @@ import {
   validateRegisterPhaseCatalogSubmit
 } from "./dashboard-input-drawer.js";
 
-let dashboardOutput: vscode.OutputChannel | undefined;
-
 function dashboardPolicyApproval(
   path: DashboardPolicyPathRef,
   context: { taskId?: string | null; phaseKey?: string | null; humanRationale?: string | null }
@@ -151,11 +159,30 @@ type DashboardDrawerSession =
       decision: "accept" | "decline" | "accept_edited";
     };
 
-function logDashboard(message: string): void {
-  if (!dashboardOutput) {
-    dashboardOutput = vscode.window.createOutputChannel("Workflow Cannon", { log: true });
+function summarizeDrawerSession(session: DashboardDrawerSession): string {
+  switch (session.kind) {
+    case "assign-task-phase":
+      return `assign-task-phase taskId=${session.taskId}`;
+    case "accept-proposed":
+      return `accept-proposed tasks=${session.taskIds.join(",")}`;
+    case "dismiss-note":
+      return `dismiss-note noteId=${session.noteId}`;
+    case "register-catalog":
+      return "register-catalog";
+    default:
+      return session.kind;
   }
-  dashboardOutput.appendLine(`[dashboard] ${message}`);
+}
+
+function logWebviewMessage(msg: unknown): void {
+  if (!isWcTraceVerbose() || !msg || typeof msg !== "object") {
+    return;
+  }
+  const type = (msg as { type?: unknown }).type;
+  if (typeof type !== "string" || type === "wcUiInteraction") {
+    return;
+  }
+  logWc("webview", type);
 }
 
 const DASHBOARD_GUIDANCE_AUTHORING_MESSAGE_TYPES = new Set([
@@ -320,13 +347,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   /** After first full HTML load, refresh only swaps `#root` via postMessage so `<details open>` state survives. */
   private dashboardRootShellReady = false;
 
-  /** Monotonic render token so slower dashboard reads cannot overwrite newer user navigation. */
-  private dashboardUpdateSequence = 0;
-
-  /** Coalesce refresh triggers so watcher churn and button flows do not spawn overlapping CLI reads. */
-  private dashboardUpdateInFlight: Promise<void> | undefined;
-  private dashboardUpdateQueued = false;
-  private dashboardDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+  /** Monotonic render token lives on {@link DashboardRefreshController}. */
+  private readonly refreshController: DashboardRefreshController;
 
   /** Config tab list refresh — only for config file changes, not every dashboard-summary poll. */
   private configTabRefreshTimer: ReturnType<typeof setTimeout> | undefined;
@@ -335,6 +357,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private dashboardInteractionLocks = new Set<string>();
   private dashboardRefreshAfterInteraction = false;
 
+  /** Host drawer session state machine → wcDrawerState snapshots. */
+  private drawerSessionHost?: DrawerSessionController;
+
   /** 0-based page for wishlist rows in `dashboard-summary` (5 per page). */
   private wishlistPage = 0;
 
@@ -342,6 +367,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
 
   /** In-webview drawer session (register catalog, dismiss phase note, …). */
   private dashboardDrawerSession: DashboardDrawerSession | null = null;
+
+  /** Prevents duplicate drawerSubmit handling when message listeners stack or the webview double-fires. */
+  private dashboardDrawerSubmitInFlight = false;
+
+  /** Prior webview message subscription — disposed before re-wiring resolveWebviewView. */
+  private webviewMessageDisposable: vscode.Disposable | undefined;
 
   /** CAE authoring bootstrap messages + mutation drawer (same contract as Guidance panel). */
   private dashboardGuidanceAuthoring?: GuidanceAuthoringExtensionSide;
@@ -361,8 +392,18 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     private readonly onKitStateChanged: vscode.Event<void>,
     private readonly notifyKitStateChanged: () => void
   ) {
+    this.refreshController = new DashboardRefreshController({
+      executeRefresh: (mode, generation) => this.executeDashboardRefresh(mode, generation),
+      isDeferred: () => this.isDashboardRefreshDeferred(),
+      onMutationStart: () => this.client.setRefreshPaused(true),
+      log: (message) => {
+        if (isWcTraceVerbose()) {
+          logWc("dashboard", message);
+        }
+      }
+    });
     onKitStateChanged(() => {
-      this.schedulePushUpdate(400);
+      this.refreshController.request({ reason: "kit-state-changed" });
     });
   }
 
@@ -373,6 +414,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   ): void {
     this.view = webviewView;
     const { webview } = webviewView;
+    this.drawerSessionHost = new DrawerSessionController((message) => {
+      void webview.postMessage(message);
+    });
     this.dashboardGuidanceAuthoring = new GuidanceAuthoringExtensionSide({
       client: this.client,
       workspaceFolder: vscode.workspace.workspaceFolders?.[0],
@@ -386,8 +430,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       enableScripts: true,
       localResourceRoots: [this.extensionUri]
     };
-    logDashboard("resolveWebviewView: wiring handlers");
-    webview.onDidReceiveMessage(async (msg) => {
+    logWc("dashboard", "resolveWebviewView: wiring handlers");
+    this.webviewMessageDisposable?.dispose();
+    this.webviewMessageDisposable = webview.onDidReceiveMessage(async (msg) => {
+      logWebviewMessage(msg);
       if (await this.handleConfigWebviewMessage(webview, msg as Record<string, unknown>)) {
         return;
       }
@@ -726,6 +772,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         const rawId = msg?.taskId;
         const taskId = typeof rawId === "string" ? rawId.trim() : "";
         if (taskId.length > 0) {
+          logWc("dashboard", `action assignTaskPhase taskId=${taskId}`);
           await this.onAssignTaskPhase(taskId);
         }
       }
@@ -772,26 +819,41 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         }
       }
       if (msg?.type === "drawerSubmit") {
+        if (this.dashboardDrawerSubmitInFlight) {
+          logWc("dashboard", "drawerSubmit ignored (already in flight)");
+          return;
+        }
         const rawVals = (msg as { values?: unknown }).values;
         const values = normalizeDrawerValues(rawVals);
         if (await this.dashboardGuidanceAuthoring?.handleCaeDrawerSubmitIfActive(values)) {
           return;
         }
-        this.setDashboardUiInteraction("drawer-submit", true);
+        const session = this.dashboardDrawerSession;
+        logWc(
+          "dashboard",
+          session ? `drawerSubmit ${summarizeDrawerSession(session)}` : "drawerSubmit (no session)"
+        );
+        this.dashboardDrawerSubmitInFlight = true;
+        this.beginDrawerSubmitRefreshHold();
+        let refreshed = false;
         try {
-          const refreshed = await this.handleDrawerSubmit(values);
-          if (refreshed) {
-            await this.pushUpdate();
-          }
+          refreshed = await this.handleDrawerSubmit(values);
         } finally {
-          this.setDashboardUiInteraction("drawer-submit", false);
+          if (!this.dashboardDrawerSession) {
+            await this.closeDashboardDrawer();
+          }
+          this.endDrawerSubmitRefreshHold();
+        }
+        if (refreshed) {
+          await this.pushUpdate({ light: true });
         }
       }
       if (msg?.type === "drawerCancel") {
+        logWc("dashboard", "drawerCancel");
         if (await this.dashboardGuidanceAuthoring?.handleCaeDrawerCancelIfActive()) {
           return;
         }
-        this.closeDashboardDrawer();
+        await this.closeDashboardDrawer();
       }
       if (msg?.type === "dashboardAcceptProposedPhase") {
         const rawIds = typeof msg.taskIds === "string" ? msg.taskIds : "";
@@ -801,9 +863,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           .filter((s: string) => s.length > 0);
         const cat = msg.category === "execution" ? "execution" : "improvement";
         const label = cat === "execution" ? "execution" : "improvement";
+        const phaseKey = typeof msg.phaseKey === "string" ? msg.phaseKey.trim() : "";
         if (taskIds.length > 0) {
-          await this.onDashboardAcceptProposedBatch(taskIds, label);
-          await this.pushUpdate();
+          await this.onDashboardAcceptProposedBatch(taskIds, label, phaseKey || undefined);
         }
       }
       if (msg?.type === "openTaskDetail") {
@@ -829,24 +891,25 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
     });
     webviewView.onDidChangeVisibility(() => {
-      if (webviewView.visible) {
-        void this.pushUpdate();
+      if (webviewView.visible && !this.refreshController.isSuppressed()) {
+        void this.refreshController.pushNow();
       }
     });
     if (this.dashboardPollTimer) {
       clearInterval(this.dashboardPollTimer);
     }
     this.dashboardPollTimer = setInterval(() => {
-      if (this.view?.visible) {
-        void this.pushUpdate();
+      if (this.view?.visible && !this.refreshController.isSuppressed()) {
+        void this.refreshController.pushNow();
       }
     }, 45_000);
     webviewView.onDidDispose(() => {
       this.dashboardRootShellReady = false;
-      if (this.dashboardDebounceTimer) {
-        clearTimeout(this.dashboardDebounceTimer);
-        this.dashboardDebounceTimer = undefined;
-      }
+      this.webviewMessageDisposable?.dispose();
+      this.webviewMessageDisposable = undefined;
+      this.dashboardDrawerSubmitInFlight = false;
+      this.refreshController.notifyMutationEnd();
+      this.client.setRefreshPaused(false);
       if (this.dashboardPollTimer) {
         clearInterval(this.dashboardPollTimer);
         this.dashboardPollTimer = undefined;
@@ -860,7 +923,15 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   }
 
   refresh(): void {
-    void this.pushUpdate();
+    if (this.refreshController.isSuppressed()) {
+      this.refreshController.markDeferredRefreshNeeded();
+      return;
+    }
+    void this.refreshController.pushNow();
+  }
+
+  private async pushUpdate(options?: { light?: boolean }): Promise<void> {
+    await this.refreshController.pushNow(options);
   }
 
   private planningWizardPanel(): PlanningInterviewWizardPanel {
@@ -1276,54 +1347,59 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
     }
 
-    const statusOut = await this.client.run("phase-status", {});
-    if (statusOut.ok !== true) {
-      await vscode.window.showErrorMessage(
-        `Could not read workspace phase status: ${String(statusOut.message ?? statusOut.code ?? "unknown error")}`
-      );
-      return;
+    this.beginDashboardMutationRefreshHold();
+    try {
+      const statusOut = await this.client.run("phase-status", {});
+      if (statusOut.ok !== true) {
+        await vscode.window.showErrorMessage(
+          `Could not read workspace phase status: ${String(statusOut.message ?? statusOut.code ?? "unknown error")}`
+        );
+        return;
+      }
+      const statusData = statusOut.data as Record<string, unknown> | undefined;
+      const wsStatus = statusData?.workspaceStatus as Record<string, unknown> | undefined;
+      const revision = wsStatus?.workspaceRevision;
+      if (typeof revision !== "number" || !Number.isInteger(revision) || revision < 0) {
+        await vscode.window.showErrorMessage("Could not read workspace revision for phase switch.");
+        return;
+      }
+
+      const nextFromWs =
+        ws?.nextKitPhase != null ? this.parseLeadingPhaseDigits(String(ws.nextKitPhase)) : "";
+      const targetOrd = Number.parseInt(targetKey, 10);
+      const nextKey =
+        nextFromWs.length > 0 && Number.isFinite(Number.parseInt(nextFromWs, 10))
+          ? nextFromWs
+          : Number.isFinite(targetOrd)
+            ? String(targetOrd + 1)
+            : targetKey;
+
+      const out = await this.client.run("set-current-phase", {
+        currentKitPhase: targetKey,
+        nextKitPhase: nextKey,
+        activeFocus: `Phase ${targetKey} — delivery in progress`,
+        blockers: [],
+        pendingDecisions: [],
+        nextAgentActions: ["Open Queue tab and pick up ready work for this phase"],
+        expectedWorkspaceRevision: revision,
+        clientMutationId: `dashboard-roster-start-${targetKey}-${Date.now().toString(36)}`,
+        actor: "cursor-dashboard"
+      });
+
+      if (out.ok !== true) {
+        await vscode.window.showErrorMessage(
+          `set-current-phase failed: ${String(out.message ?? out.code ?? "unknown error")}`
+        );
+        return;
+      }
+
+      ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
+      this.notifyKitStateChanged();
+      await vscode.window.showInformationMessage(`Workspace phase set to ${targetKey}.`);
+    } finally {
+      this.endDashboardMutationRefreshHold();
     }
-    const statusData = statusOut.data as Record<string, unknown> | undefined;
-    const wsStatus = statusData?.workspaceStatus as Record<string, unknown> | undefined;
-    const revision = wsStatus?.workspaceRevision;
-    if (typeof revision !== "number" || !Number.isInteger(revision) || revision < 0) {
-      await vscode.window.showErrorMessage("Could not read workspace revision for phase switch.");
-      return;
-    }
-
-    const nextFromWs =
-      ws?.nextKitPhase != null ? this.parseLeadingPhaseDigits(String(ws.nextKitPhase)) : "";
-    const targetOrd = Number.parseInt(targetKey, 10);
-    const nextKey =
-      nextFromWs.length > 0 && Number.isFinite(Number.parseInt(nextFromWs, 10))
-        ? nextFromWs
-        : Number.isFinite(targetOrd)
-          ? String(targetOrd + 1)
-          : targetKey;
-
-    const out = await this.client.run("set-current-phase", {
-      currentKitPhase: targetKey,
-      nextKitPhase: nextKey,
-      activeFocus: `Phase ${targetKey} — delivery in progress`,
-      blockers: [],
-      pendingDecisions: [],
-      nextAgentActions: ["Open Queue tab and pick up ready work for this phase"],
-      expectedWorkspaceRevision: revision,
-      clientMutationId: `dashboard-roster-start-${targetKey}-${Date.now().toString(36)}`,
-      actor: "cursor-dashboard"
-    });
-
-    if (out.ok !== true) {
-      await vscode.window.showErrorMessage(
-        `set-current-phase failed: ${String(out.message ?? out.code ?? "unknown error")}`
-      );
-      return;
-    }
-
-    ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
-    this.notifyKitStateChanged();
-    await vscode.window.showInformationMessage(`Workspace phase set to ${targetKey}.`);
-    await this.pushUpdate();
+    await this.pushUpdate({ light: true });
   }
 
   /** Clear workspace current phase after delivery closeout (update-workspace-status). */
@@ -1385,65 +1461,70 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     await webview?.postMessage({ type: "wcMarkPhaseBusy", active: true });
     await webview?.postMessage({ type: "wcHidePhaseCards" });
 
-    const statusOut = await this.client.run("phase-status", {});
-    if (statusOut.ok !== true) {
-      await webview?.postMessage({ type: "wcMarkPhaseBusy", active: false });
-      this.setDashboardUiInteraction("mark-phase-complete", false);
-      await vscode.window.showErrorMessage(
-        `Could not read workspace phase status: ${String(statusOut.message ?? statusOut.code ?? "unknown error")}`
-      );
-      return;
+    this.beginDashboardMutationRefreshHold();
+    try {
+      const statusOut = await this.client.run("phase-status", {});
+      if (statusOut.ok !== true) {
+        await webview?.postMessage({ type: "wcMarkPhaseBusy", active: false });
+        this.setDashboardUiInteraction("mark-phase-complete", false);
+        await vscode.window.showErrorMessage(
+          `Could not read workspace phase status: ${String(statusOut.message ?? statusOut.code ?? "unknown error")}`
+        );
+        return;
+      }
+      const statusData = statusOut.data as Record<string, unknown> | undefined;
+      const wsStatus = statusData?.workspaceStatus as Record<string, unknown> | undefined;
+      const revision = wsStatus?.workspaceRevision;
+      if (typeof revision !== "number" || !Number.isInteger(revision) || revision < 0) {
+        await webview?.postMessage({ type: "wcMarkPhaseBusy", active: false });
+        this.setDashboardUiInteraction("mark-phase-complete", false);
+        await vscode.window.showErrorMessage("Could not read workspace revision for phase closeout.");
+        return;
+      }
+
+      const activeFocus =
+        nextFromWs.length > 0
+          ? `Phase ${targetKey} complete — use roster Start when ready for Phase ${nextFromWs}`
+          : `Phase ${targetKey} complete — no active workspace phase`;
+      const nextAgentActions =
+        nextFromWs.length > 0
+          ? [
+              `Start Phase ${nextFromWs} from the Phase Roster when you are ready to deliver`,
+              "Or use Complete & Release in chat for full publish and version closeout"
+            ]
+          : ["Pick the next phase from the Phase Roster when you are ready to deliver"];
+
+      const out = await this.client.run("update-workspace-status", {
+        expectedWorkspaceRevision: revision,
+        currentKitPhase: null,
+        activeFocus,
+        blockers: [],
+        pendingDecisions: [],
+        nextAgentActions,
+        command: "mark-phase-complete",
+        actor: "cursor-dashboard"
+      });
+
+      if (out.ok !== true) {
+        await webview?.postMessage({ type: "wcMarkPhaseBusy", active: false });
+        this.setDashboardUiInteraction("mark-phase-complete", false);
+        await vscode.window.showErrorMessage(
+          `Could not mark phase complete: ${String(out.message ?? out.code ?? "unknown error")}`
+        );
+        return;
+      }
+
+      await this.client.recordActivity({
+        kind: "releasing",
+        command: "mark-phase-complete",
+        phaseKey: `release/phase-${targetKey}`,
+        details: { source: "dashboard-mark-phase-complete", previousCurrentKitPhase: targetKey }
+      });
+      ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
+      this.notifyKitStateChanged();
+    } finally {
+      this.endDashboardMutationRefreshHold();
     }
-    const statusData = statusOut.data as Record<string, unknown> | undefined;
-    const wsStatus = statusData?.workspaceStatus as Record<string, unknown> | undefined;
-    const revision = wsStatus?.workspaceRevision;
-    if (typeof revision !== "number" || !Number.isInteger(revision) || revision < 0) {
-      await webview?.postMessage({ type: "wcMarkPhaseBusy", active: false });
-      this.setDashboardUiInteraction("mark-phase-complete", false);
-      await vscode.window.showErrorMessage("Could not read workspace revision for phase closeout.");
-      return;
-    }
-
-    const activeFocus =
-      nextFromWs.length > 0
-        ? `Phase ${targetKey} complete — use roster Start when ready for Phase ${nextFromWs}`
-        : `Phase ${targetKey} complete — no active workspace phase`;
-    const nextAgentActions =
-      nextFromWs.length > 0
-        ? [
-            `Start Phase ${nextFromWs} from the Phase Roster when you are ready to deliver`,
-            "Or use Complete & Release in chat for full publish and version closeout"
-          ]
-        : ["Pick the next phase from the Phase Roster when you are ready to deliver"];
-
-    const out = await this.client.run("update-workspace-status", {
-      expectedWorkspaceRevision: revision,
-      currentKitPhase: null,
-      activeFocus,
-      blockers: [],
-      pendingDecisions: [],
-      nextAgentActions,
-      command: "mark-phase-complete",
-      actor: "cursor-dashboard"
-    });
-
-    if (out.ok !== true) {
-      await webview?.postMessage({ type: "wcMarkPhaseBusy", active: false });
-      this.setDashboardUiInteraction("mark-phase-complete", false);
-      await vscode.window.showErrorMessage(
-        `Could not mark phase complete: ${String(out.message ?? out.code ?? "unknown error")}`
-      );
-      return;
-    }
-
-    await this.client.recordActivity({
-      kind: "releasing",
-      command: "mark-phase-complete",
-      phaseKey: `release/phase-${targetKey}`,
-      details: { source: "dashboard-mark-phase-complete", previousCurrentKitPhase: targetKey }
-    });
-    ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
-    this.notifyKitStateChanged();
     await this.pushUpdate({ light: true });
     await webview?.postMessage({ type: "wcMarkPhaseBusy", active: false });
     this.setDashboardUiInteraction("mark-phase-complete", false);
@@ -1496,9 +1577,18 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     return true;
   }
 
-  private closeDashboardDrawer(): void {
+  private async closeDashboardDrawer(): Promise<void> {
+    this.drawerSessionHost?.beginClosing();
     this.dashboardDrawerSession = null;
-    void this.view?.webview.postMessage({ type: "wcDrawerClose" });
+    this.drawerSessionHost?.reset();
+    logWc("dashboard", "drawer closed");
+    await this.view?.webview.postMessage({ type: "wcDrawerClose" });
+  }
+
+  /** Close drawer and release locks before modal/toast notifications (T100490). */
+  private async notifyAfterDrawerClosed(notify: () => void | Thenable<unknown>): Promise<void> {
+    await this.closeDashboardDrawer();
+    await notify();
   }
 
   private async openAddWishlistDrawer(): Promise<void> {
@@ -1527,7 +1617,64 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async postDrawerValidationToWebview(message: string): Promise<void> {
+    this.drawerSessionHost?.setValidationError(message);
     await this.view?.webview.postMessage({ type: "wcDrawerValidation", message });
+  }
+
+  private async postDrawerProgressToWebview(label: string): Promise<void> {
+    this.drawerSessionHost?.setSubmitting(label);
+    const webview = this.view?.webview;
+    if (!webview) {
+      return;
+    }
+    await webview.postMessage({ type: "wcDrawerProgress", label });
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  }
+
+  /** Hold dashboard refresh while kit mutations run (drawer batch, roster start, etc.). */
+  private beginDashboardMutationRefreshHold(): void {
+    this.refreshController.notifyMutationStart();
+    this.client.setRefreshPaused(true);
+  }
+
+  private endDashboardMutationRefreshHold(): void {
+    this.refreshController.notifyMutationEnd();
+    this.client.setRefreshPaused(false);
+  }
+
+  /** Hold dashboard refresh while a drawer mutating batch runs (accept-all, etc.). */
+  private beginDrawerSubmitRefreshHold(): void {
+    this.beginDashboardMutationRefreshHold();
+    this.dashboardRefreshAfterInteraction = true;
+    this.setDashboardUiInteraction("drawer-submit", true);
+    this.setDashboardUiInteraction("drawer-busy", true);
+  }
+
+  private endDrawerSubmitRefreshHold(): void {
+    this.endDashboardMutationRefreshHold();
+    this.dashboardRefreshAfterInteraction = false;
+    this.dashboardDrawerSubmitInFlight = false;
+    this.setDashboardUiInteraction("drawer-submit", false);
+    this.setDashboardUiInteraction("drawer-busy", false);
+  }
+
+  private isPushUpdateStale(updateSequence: number, activeView: vscode.WebviewView): boolean {
+    return this.refreshController.isStale(updateSequence) || this.view !== activeView;
+  }
+
+  private summaryHasCanonicalWorkspacePhase(data: unknown): boolean {
+    if (!data || typeof data !== "object") {
+      return false;
+    }
+    const rec = data as Record<string, unknown>;
+    const ws = rec.workspaceStatus as Record<string, unknown> | undefined;
+    if (typeof ws?.currentKitPhase === "string" && ws.currentKitPhase.trim().length > 0) {
+      return true;
+    }
+    const systemStatus = rec.systemStatus as Record<string, unknown> | undefined;
+    const phase = systemStatus?.phase as Record<string, unknown> | undefined;
+    const ck = phase?.currentKitPhase;
+    return typeof ck === "string" && ck.trim().length > 0;
   }
 
   /**
@@ -1564,9 +1711,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         return false;
       }
       ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
-      this.closeDashboardDrawer();
+      await this.closeDashboardDrawer();
       this.notifyKitStateChanged();
-      await vscode.window.showInformationMessage(`Phase catalog updated for ${phaseKey}`);
+      void vscode.window.showInformationMessage(`Phase catalog updated for ${phaseKey}`);
       return true;
     }
     if (session.kind === "dismiss-note") {
@@ -1680,7 +1827,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         return true;
       }
       const { phaseKey } = validated.values;
-      const shortDescription = validated.values.shortDescription;
       await this.client.recordActivity({
         kind: "working_task",
         taskId,
@@ -1701,24 +1847,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         return false;
       }
       ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
-      // If the operator supplied a deliverable, upsert (or create) the catalog row
-      // so future dropdown labels are meaningful for this phase key.
-      let deliverableNote = "";
-      if (shortDescription) {
-        const deliverableOk = await this.onUpdatePhaseDeliverables(
-          phaseKey,
-          shortDescription,
-          `assign-${taskId}-${Date.now()}`
-        );
-        deliverableNote = deliverableOk
-          ? " · catalog row updated"
-          : " · catalog upsert failed (see error)";
-      }
       this.closeDashboardDrawer();
       this.notifyKitStateChanged();
-      await vscode.window.showInformationMessage(
-        `Phase set for ${taskId} → ${phaseKey}${deliverableNote}`
-      );
+      await vscode.window.showInformationMessage(`Phase set for ${taskId} → ${phaseKey}`);
       return true;
     }
     if (session.kind === "add-phase-note") {
@@ -1786,18 +1917,20 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     if (session.kind === "accept-proposed") {
       const taskIds = session.taskIds;
-      const validated = validateAcceptProposedSubmit(values, { batch: taskIds.length > 1 });
+      const validated = validateAcceptProposedSubmit(values);
       if (!validated.ok) {
         await this.postDrawerValidationToWebview(validated.error);
         return false;
       }
-      const { phaseKey, policyRationale } = validated.values;
+      const { phaseKey } = validated.values;
       const categoryLabel = session.categoryLabel;
       if (taskIds.length === 0) {
         return false;
       }
-      if (taskIds.length === 1) {
+      const total = taskIds.length;
+      if (total === 1) {
         const taskId = taskIds[0]!;
+        await this.postDrawerProgressToWebview(`Accepting ${taskId}…`);
         const r = await this.client.run("run-transition", {
           taskId,
           action: "accept",
@@ -1812,6 +1945,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           return false;
         }
         ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+        await this.postDrawerProgressToWebview(`Assigning ${taskId} → phase ${phaseKey}…`);
         const r2 = await this.client.run("assign-task-phase", {
           taskId,
           phaseKey,
@@ -1826,19 +1960,24 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           return true;
         }
         ingestPlanningMetaFromData(r2.data as Record<string, unknown> | undefined);
-        this.closeDashboardDrawer();
         this.notifyKitStateChanged();
-        await vscode.window.showInformationMessage(`Accepted ${taskId} and assigned phase ${phaseKey}.`);
+        await this.notifyAfterDrawerClosed(() =>
+          vscode.window.showInformationMessage(`Accepted ${taskId} and assigned phase ${phaseKey}.`)
+        );
         return true;
       }
       const failures: string[] = [];
-      for (const taskId of taskIds) {
+      await this.postDrawerProgressToWebview(`Starting batch accept (${String(total)} tasks)…`);
+      for (let i = 0; i < taskIds.length; i++) {
+        const taskId = taskIds[i]!;
+        const step = i + 1;
+        await this.postDrawerProgressToWebview(`Accepting ${taskId} (${step} of ${total})…`);
         const r = await this.client.run("run-transition", {
           taskId,
           action: "accept",
           policyApproval: dashboardPolicyApproval(
             { workflowId: "accept-proposed", action: "accept-batch", command: "run-transition" },
-            { taskId, phaseKey, humanRationale: policyRationale }
+            { taskId, phaseKey }
           ),
           ...expectedPlanningGenerationArgs()
         });
@@ -1847,6 +1986,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           continue;
         }
         ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+        await this.postDrawerProgressToWebview(
+          `Assigning ${taskId} → phase ${phaseKey} (${step} of ${total})…`
+        );
         const r2 = await this.client.run("assign-task-phase", {
           taskId,
           phaseKey,
@@ -1858,18 +2000,22 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           ingestPlanningMetaFromData(r2.data as Record<string, unknown> | undefined);
         }
       }
-      this.closeDashboardDrawer();
+      await this.closeDashboardDrawer();
       this.notifyKitStateChanged();
       if (failures.length > 0) {
-        await vscode.window.showErrorMessage(
-          `Some batch operations failed (${String(failures.length)}/${String(taskIds.length)}): ${failures
-            .slice(0, 3)
-            .join(" · ")}`.slice(0, 900)
+        await this.notifyAfterDrawerClosed(() =>
+          vscode.window.showErrorMessage(
+            `Some batch operations failed (${String(failures.length)}/${String(taskIds.length)}): ${failures
+              .slice(0, 3)
+              .join(" · ")}`.slice(0, 900)
+          )
         );
         return true;
       }
-      await vscode.window.showInformationMessage(
-        `Accepted ${String(taskIds.length)} proposed ${categoryLabel.trim() || "task"}(s) into phase ${phaseKey}.`
+      await this.notifyAfterDrawerClosed(() =>
+        vscode.window.showInformationMessage(
+          `Accepted ${String(taskIds.length)} proposed ${categoryLabel.trim() || "task"}(s) into phase ${phaseKey}.`
+        )
       );
       return true;
     }
@@ -2228,7 +2374,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const data = this.lastDashboardSummaryData;
     const suggestions = data ? collectPhaseKeySuggestions(data) : [];
-    const html = renderDrawerFormHtml(buildAssignTaskPhaseDrawerSpec(taskId, suggestions));
+    const defaultPhaseKey = data ? lookupDashboardTaskPhaseKey(data, taskId) : undefined;
+    logWc(
+      "dashboard",
+      `drawer open assign-task-phase taskId=${taskId}${defaultPhaseKey ? ` defaultPhase=${defaultPhaseKey}` : ""}`
+    );
+    const html = renderDrawerFormHtml(
+      buildAssignTaskPhaseDrawerSpec(taskId, suggestions, defaultPhaseKey || undefined)
+    );
     this.dashboardDrawerSession = { kind: "assign-task-phase", taskId };
     await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
   }
@@ -2476,21 +2629,32 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
   }
 
-  /** Proposed-row Accept → drawer (phase + policy rationale) → run-transition accept → assign-task-phase. */
+  /** Proposed-row Accept → drawer (phase) → run-transition accept → assign-task-phase. */
   private async onDashboardAcceptProposed(taskId: string): Promise<void> {
     if (this.dashboardDrawerSession) {
       return;
     }
     const data = this.lastDashboardSummaryData;
     const suggestions = data ? collectPhaseKeySuggestions(data) : [];
+    const defaultPhaseKey = data ? lookupProposedTaskPhaseKey(data, taskId) : undefined;
     const html = renderDrawerFormHtml(
-      buildAcceptProposedDrawerSpec({ taskIds: [taskId], categoryLabel: "", suggestions })
+      buildAcceptProposedDrawerSpec({
+        taskIds: [taskId],
+        categoryLabel: "",
+        suggestions,
+        defaultPhaseKey: defaultPhaseKey || undefined
+      })
     );
     this.dashboardDrawerSession = { kind: "accept-proposed", taskIds: [taskId], categoryLabel: "" };
+    this.drawerSessionHost?.open("accept-proposed");
     await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
   }
 
-  private async onDashboardAcceptProposedBatch(taskIds: string[], categoryLabel: string): Promise<void> {
+  private async onDashboardAcceptProposedBatch(
+    taskIds: string[],
+    categoryLabel: string,
+    defaultPhaseKey?: string
+  ): Promise<void> {
     if (taskIds.length === 0) {
       return;
     }
@@ -2500,59 +2664,27 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     const data = this.lastDashboardSummaryData;
     const suggestions = data ? collectPhaseKeySuggestions(data) : [];
     const html = renderDrawerFormHtml(
-      buildAcceptProposedDrawerSpec({ taskIds, categoryLabel, suggestions })
+      buildAcceptProposedDrawerSpec({
+        taskIds,
+        categoryLabel,
+        suggestions,
+        defaultPhaseKey
+      })
     );
     this.dashboardDrawerSession = { kind: "accept-proposed", taskIds, categoryLabel };
+    this.drawerSessionHost?.open("accept-proposed");
     await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
   }
 
-  /**
-   * Embeds rendered HTML in `webview.html` so the panel works even when postMessage delivery is flaky.
-   * Buttons still use a tiny inline script + postMessage (host only receives clicks).
-   */
-  private async pushUpdate(options?: { light?: boolean }): Promise<void> {
-    if (options?.light === true) {
-      this.pendingPushUpdateOptions = { ...this.pendingPushUpdateOptions, light: true };
-    }
-    if (this.dashboardDebounceTimer) {
-      clearTimeout(this.dashboardDebounceTimer);
-      this.dashboardDebounceTimer = undefined;
-    }
-    if (this.dashboardUpdateInFlight) {
-      this.dashboardUpdateQueued = true;
-      await this.dashboardUpdateInFlight;
-      return;
-    }
-    const refresh = this.runDashboardUpdateLoop();
-    this.dashboardUpdateInFlight = refresh;
-    try {
-      await refresh;
-    } finally {
-      if (this.dashboardUpdateInFlight === refresh) {
-        this.dashboardUpdateInFlight = undefined;
-      }
-    }
-  }
-
-  private schedulePushUpdate(delayMs: number): void {
+  private schedulePushUpdate(_delayMs: number): void {
     if (!this.view) {
       return;
     }
-    if (this.isDashboardRefreshDeferred()) {
-      this.dashboardRefreshAfterInteraction = true;
-      return;
-    }
-    if (this.dashboardDebounceTimer) {
-      clearTimeout(this.dashboardDebounceTimer);
-    }
-    this.dashboardDebounceTimer = setTimeout(() => {
-      this.dashboardDebounceTimer = undefined;
-      void this.pushUpdate();
-    }, delayMs);
+    this.refreshController.request({ reason: "schedule" });
   }
 
   private isDashboardRefreshDeferred(): boolean {
-    return this.dashboardInteractionLocks.size > 0;
+    return this.refreshController.isSuppressed() || this.dashboardInteractionLocks.size > 0;
   }
 
   private setDashboardUiInteraction(source: string, active: boolean): void {
@@ -2561,44 +2693,51 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     } else {
       this.dashboardInteractionLocks.delete(source);
     }
-    if (this.dashboardInteractionLocks.size === 0 && this.dashboardRefreshAfterInteraction) {
-      this.dashboardRefreshAfterInteraction = false;
-      this.schedulePushUpdate(0);
+    if (this.dashboardInteractionLocks.size === 0) {
+      this.refreshController.onDeferredCleared();
     }
   }
 
-  private async runDashboardUpdateLoop(): Promise<void> {
-    do {
-      this.dashboardUpdateQueued = false;
-      await this.pushUpdateOnce();
-    } while (this.dashboardUpdateQueued && this.view);
-  }
-
-  private async pushUpdateOnce(): Promise<void> {
+  private async executeDashboardRefresh(
+    mode: DashboardRefreshMode,
+    updateSequence: number
+  ): Promise<void> {
     const activeView = this.view;
     if (!activeView) {
       return;
     }
-    const lightRefresh = this.pendingPushUpdateOptions?.light === true;
+    const lightRefresh = mode === "light";
     this.pendingPushUpdateOptions = undefined;
     if (this.isDashboardRefreshDeferred()) {
-      this.dashboardRefreshAfterInteraction = true;
+      this.refreshController.markDeferredRefreshNeeded();
+      logWc("dashboard", "pushUpdate deferred (UI interaction lock active)");
       return;
     }
     const { webview } = activeView;
-    const updateSequence = ++this.dashboardUpdateSequence;
     const requestedWishlistPage = this.wishlistPage;
     const startedAt = Date.now();
+    logWc(
+      "dashboard",
+      `pushUpdate START light=${String(lightRefresh)} page=${String(requestedWishlistPage)} seq=${String(updateSequence)}`
+    );
     let raw: DashboardSummaryCommandSuccess | Record<string, unknown>;
     try {
       raw = (await this.client.run("dashboard-summary", {
         wishlistPage: requestedWishlistPage,
         wishlistPageSize: 5
       })) as DashboardSummaryCommandSuccess | Record<string, unknown>;
+      if (raw.code === KIT_REFRESH_PAUSED_CODE) {
+        logWc("dashboard", "pushUpdate aborted (refresh paused)");
+        return;
+      }
       if (isWishlistPagingArgRejection(raw as Record<string, unknown>)) {
-        logDashboard("pushUpdate: dashboard-summary runtime rejected wishlist paging args; retrying without paging");
+        logWc("dashboard", "pushUpdate: dashboard-summary rejected wishlist paging; retrying without paging");
         this.wishlistPage = 0;
         raw = (await this.client.run("dashboard-summary", {})) as DashboardSummaryCommandSuccess | Record<string, unknown>;
+        if (raw.code === KIT_REFRESH_PAUSED_CODE) {
+          logWc("dashboard", "pushUpdate aborted (refresh paused)");
+          return;
+        }
       }
     } catch (e) {
       raw = {
@@ -2607,9 +2746,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         message: e instanceof Error ? e.message : String(e)
       };
     }
-    if (updateSequence !== this.dashboardUpdateSequence || this.view !== activeView) {
-      logDashboard(
-        `pushUpdate: stale dashboard-summary ignored page=${String(requestedWishlistPage)}`
+    if (this.isPushUpdateStale(updateSequence, activeView)) {
+      logWc(
+        "dashboard",
+        `pushUpdate: stale dashboard-summary ignored page=${String(requestedWishlistPage)} seq=${String(updateSequence)}`
       );
       return;
     }
@@ -2622,61 +2762,83 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         if (lightRefresh) {
           embeddedCaePanelHtml = this.lastEmbeddedCaePanelHtml;
           phaseJournal = undefined;
+        } else if (this.summaryHasCanonicalWorkspacePhase(raw.data)) {
+          if (this.isPushUpdateStale(updateSequence, activeView)) {
+            return;
+          }
+          const [lp, gpc, caeSummary] = (await Promise.all([
+            this.client.run("list-phase-notes", {
+              ...expectedPlanningGenerationArgs()
+            }),
+            this.client.run("get-phase-context", {
+              ...expectedPlanningGenerationArgs()
+            }),
+            this.client.run("cae-authoring-summary", { schemaVersion: 1 })
+          ])) as [
+            PhaseJournalKitPayload & Record<string, unknown>,
+            PhaseJournalKitPayload & Record<string, unknown>,
+            Record<string, unknown>
+          ];
+          if (
+            lp.code === KIT_REFRESH_PAUSED_CODE ||
+            gpc.code === KIT_REFRESH_PAUSED_CODE ||
+            caeSummary.code === KIT_REFRESH_PAUSED_CODE ||
+            this.isPushUpdateStale(updateSequence, activeView)
+          ) {
+            logWc("dashboard", "pushUpdate aborted during phase journal fetch");
+            return;
+          }
+          ingestPlanningMetaFromData(lp.data as Record<string, unknown> | undefined);
+          ingestPlanningMetaFromData(gpc.data as Record<string, unknown> | undefined);
+          embeddedCaePanelHtml = renderGuidanceAuthoringPanelInnerHtml(caeSummary);
+          this.lastEmbeddedCaePanelHtml = embeddedCaePanelHtml;
+
+          const pastFromSummary = (raw.data as Record<string, unknown>).pastPhaseNotes;
+          const pastPhaseNotes: DashboardPhaseJournalBundle["pastPhaseNotes"] = Array.isArray(
+            pastFromSummary
+          )
+            ? pastFromSummary
+                .map((entry) => {
+                  if (!entry || typeof entry !== "object") {
+                    return null;
+                  }
+                  const rec = entry as Record<string, unknown>;
+                  const phaseKey = typeof rec.phaseKey === "string" ? rec.phaseKey.trim() : "";
+                  const notes = Array.isArray(rec.notes) ? rec.notes : [];
+                  if (!phaseKey || notes.length === 0) {
+                    return null;
+                  }
+                  return { phaseKey, notes };
+                })
+                .filter((e): e is { phaseKey: string; notes: unknown[] } => e !== null)
+            : undefined;
+
+          phaseJournal = {
+            listPhaseNotes: {
+              ok: lp.ok,
+              code: lp.code,
+              message: lp.message,
+              data: lp.data as Record<string, unknown> | undefined
+            },
+            getPhaseContext: {
+              ok: gpc.ok,
+              code: gpc.code,
+              message: gpc.message,
+              data: gpc.data as Record<string, unknown> | undefined
+            },
+            pastPhaseNotes
+          };
         } else {
-        const [lp, gpc, caeSummary] = (await Promise.all([
-          this.client.run("list-phase-notes", {
-            ...expectedPlanningGenerationArgs()
-          }),
-          this.client.run("get-phase-context", {
-            ...expectedPlanningGenerationArgs()
-          }),
-          // Authoring-shaped payload for renderGuidanceAuthoringPanelInnerHtml (Dashboard CAE tab).
-          this.client.run("cae-authoring-summary", { schemaVersion: 1 })
-        ])) as [
-          PhaseJournalKitPayload & Record<string, unknown>,
-          PhaseJournalKitPayload & Record<string, unknown>,
-          Record<string, unknown>
-        ];
-        ingestPlanningMetaFromData(lp.data as Record<string, unknown> | undefined);
-        ingestPlanningMetaFromData(gpc.data as Record<string, unknown> | undefined);
-        embeddedCaePanelHtml = renderGuidanceAuthoringPanelInnerHtml(caeSummary);
-        this.lastEmbeddedCaePanelHtml = embeddedCaePanelHtml;
-
-        const pastFromSummary = (raw.data as Record<string, unknown>).pastPhaseNotes;
-        const pastPhaseNotes: DashboardPhaseJournalBundle["pastPhaseNotes"] = Array.isArray(
-          pastFromSummary
-        )
-          ? pastFromSummary
-              .map((entry) => {
-                if (!entry || typeof entry !== "object") {
-                  return null;
-                }
-                const rec = entry as Record<string, unknown>;
-                const phaseKey = typeof rec.phaseKey === "string" ? rec.phaseKey.trim() : "";
-                const notes = Array.isArray(rec.notes) ? rec.notes : [];
-                if (!phaseKey || notes.length === 0) {
-                  return null;
-                }
-                return { phaseKey, notes };
-              })
-              .filter((e): e is { phaseKey: string; notes: unknown[] } => e !== null)
-          : undefined;
-
-        phaseJournal = {
-          listPhaseNotes: {
-            ok: lp.ok,
-            code: lp.code,
-            message: lp.message,
-            data: lp.data as Record<string, unknown> | undefined
-          },
-          getPhaseContext: {
-            ok: gpc.ok,
-            code: gpc.code,
-            message: gpc.message,
-            data: gpc.data as Record<string, unknown> | undefined
-          },
-          pastPhaseNotes
-        };
+          if (this.isPushUpdateStale(updateSequence, activeView)) {
+            return;
+          }
+          const caeSummary = await this.client.run("cae-authoring-summary", { schemaVersion: 1 });
+          if (caeSummary.code === KIT_REFRESH_PAUSED_CODE || this.isPushUpdateStale(updateSequence, activeView)) {
+            logWc("dashboard", "pushUpdate aborted during CAE fetch (no workspace phase)");
+            return;
+          }
+          embeddedCaePanelHtml = renderGuidanceAuthoringPanelInnerHtml(caeSummary);
+          this.lastEmbeddedCaePanelHtml = embeddedCaePanelHtml;
         }
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
@@ -2696,8 +2858,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     } else {
       this.lastDashboardSummaryData = null;
     }
-    if (updateSequence !== this.dashboardUpdateSequence || this.view !== activeView) {
-      logDashboard(`pushUpdate: stale phase context ignored page=${String(requestedWishlistPage)}`);
+    if (this.isPushUpdateStale(updateSequence, activeView)) {
+      logWc("dashboard", `pushUpdate: stale phase context ignored page=${String(requestedWishlistPage)}`);
       return;
     }
     {
@@ -2731,11 +2893,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     } catch (e) {
       rootInner = '<pre class="bad">Host render error: ' + escapeHtml(String(e)) + "</pre>";
     }
-    logDashboard(
-      `pushUpdate: ok=${String(raw.ok)} code=${String(raw.code ?? "")} htmlBytes≈${rootInner.length} elapsedMs=${String(Date.now() - startedAt)}`
+    logWc(
+      "dashboard",
+      `pushUpdate DONE ok=${String(raw.ok)} code=${String(raw.code ?? "")} htmlBytes≈${String(rootInner.length)} elapsedMs=${String(Date.now() - startedAt)}`
     );
-    if (updateSequence !== this.dashboardUpdateSequence || this.view !== activeView) {
-      logDashboard(`pushUpdate: stale render ignored page=${String(requestedWishlistPage)}`);
+    if (this.isPushUpdateStale(updateSequence, activeView)) {
+      logWc("dashboard", `pushUpdate: stale render ignored page=${String(requestedWishlistPage)}`);
       return;
     }
     try {
@@ -2746,7 +2909,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         await webview.postMessage({ type: "wcReplaceRoot", html: rootInner });
       }
     } catch (e) {
-      logDashboard(`dashboard push failed: ${e instanceof Error ? e.message : String(e)}`);
+      logWc("dashboard", `pushUpdate render failed: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
@@ -2849,975 +3012,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       buildGuidanceAuthoringWebviewBootstrap("dash-cae-")
     );
 
-    const bootstrap = `(function(){
-  var vscode = window.__wfcVscode || (window.__wfcVscode = acquireVsCodeApi());
-  window.__wcEmbeddedCaeBootstrapSource = ${embeddedCaeBootstrapSource};
-  function wcReinitEmbeddedCae() {
-    var root = document.getElementById('root');
-    if (!root) return;
-    var host = root.querySelector('.wc-dash-cae-host');
-    if (!host || !window.__wcEmbeddedCaeBootstrapSource) return;
-    host.querySelectorAll('script[data-wc-cae-injected]').forEach(function(s) { s.remove(); });
-    var script = document.createElement('script');
-    script.setAttribute('data-wc-cae-injected', '1');
-    script.textContent = window.__wcEmbeddedCaeBootstrapSource;
-    host.appendChild(script);
-  }
-  window.wcReinitEmbeddedCae = wcReinitEmbeddedCae;
-  var activeTab = 'overview';
-  var activeFilter = 'all';
-  var activePhaseFilter = 'all';
-  var PHASE_READINESS_EXPAND_KEY = 'wc-phase-readiness-expanded';
-  var PHASE_PROGRESS_EXPAND_KEY = 'wc-phase-progress-expanded';
-
-  var localUiLocks = {};
-  var pendingReplaceRootHtml = null;
-
-  function isLocalUiLocked() {
-    return Object.keys(localUiLocks).length > 0;
-  }
-
-  function setUiInteraction(source, active) {
-    var key = source || 'unknown';
-    if (active) localUiLocks[key] = true;
-    else delete localUiLocks[key];
-    vscode.postMessage({ type: 'wcUiInteraction', source: key, active: !!active });
-    if (!isLocalUiLocked() && pendingReplaceRootHtml) {
-      var queued = pendingReplaceRootHtml;
-      pendingReplaceRootHtml = null;
-      applyReplaceRootHtml(queued);
-    }
-  }
-
-  function drawerBusyLabelForWorkflow(workflowId) {
-    if (workflowId === 'assign-task-phase') return 'Updating task phase…';
-    if (workflowId === 'accept-proposed') return 'Accepting and assigning phase…';
-    if (workflowId === 'register-phase-catalog') return 'Updating phase catalog…';
-    if (workflowId === 'add-wishlist') return 'Creating wishlist item…';
-    if (workflowId === 'add-phase-note') return 'Adding phase note…';
-    return 'Running kit command…';
-  }
-
-  function setDrawerBusy(busy, label) {
-    var dh = document.getElementById('wc-drawer-host');
-    if (!dh) return;
-    var panel = dh.querySelector('.wc-drawer-panel');
-    if (!panel) return;
-    var overlay = panel.querySelector('.wc-drawer-loading');
-    if (busy) {
-      if (!overlay) {
-        overlay = document.createElement('div');
-        overlay.className = 'wc-drawer-loading';
-        overlay.setAttribute('aria-live', 'polite');
-        overlay.innerHTML =
-          '<div class="wc-spinner" aria-hidden="true"></div>' +
-          '<span class="wc-drawer-loading-label"></span>';
-        panel.appendChild(overlay);
-      }
-      var wf = panel.getAttribute('data-wc-drawer-workflow') || '';
-      var lab = overlay.querySelector('.wc-drawer-loading-label');
-      if (lab) lab.textContent = label || drawerBusyLabelForWorkflow(wf);
-      overlay.hidden = false;
-      panel.classList.add('wc-drawer-panel--busy');
-      panel.querySelectorAll('[data-wc-drawer-action]').forEach(function(btn) {
-        btn.disabled = true;
-      });
-      setUiInteraction('drawer-busy', true);
-      return;
-    }
-    if (overlay) overlay.hidden = true;
-    panel.classList.remove('wc-drawer-panel--busy');
-    panel.querySelectorAll('[data-wc-drawer-action]').forEach(function(btn) {
-      btn.disabled = false;
-    });
-    var subBtn = panel.querySelector('[data-wc-drawer-action="submit"]');
-    if (subBtn) subBtn.removeAttribute('data-wc-drawer-submitting');
-    setUiInteraction('drawer-busy', false);
-  }
-
-  function setButtonBusy(el, busy, label) {
-    if (!el) return;
-    if (busy) {
-      if (!el.getAttribute('data-wc-original-html')) {
-        el.setAttribute('data-wc-original-html', el.innerHTML);
-      }
-      el.disabled = true;
-      el.innerHTML =
-        '<span class="wc-btn-loading">' +
-        '<span class="wc-spinner wc-spinner-inline" aria-hidden="true"></span>' +
-        '<span>' + (label || 'Loading…') + '</span></span>';
-      return;
-    }
-    el.disabled = false;
-    var original = el.getAttribute('data-wc-original-html');
-    if (original) el.innerHTML = original;
-  }
-
-  function capturePhaseDeliverablesEditState(root) {
-    if (!root) return null;
-    var rows = root.querySelectorAll('[data-wc-phase-row]');
-    for (var i = 0; i < rows.length; i++) {
-      var row = rows[i];
-      var editor = row.querySelector('.dash-phase-deliverables-editor');
-      if (!editor || editor.hidden) continue;
-      var input = row.querySelector('.dash-phase-deliverables-input');
-      var phaseKey = (row.getAttribute('data-wc-phase-row') || '').trim();
-      if (!phaseKey) continue;
-      return {
-        phaseKey: phaseKey,
-        value: input && input.value != null ? String(input.value) : '',
-        original: input ? input.getAttribute('data-wc-original') || '' : '',
-        pending: !!(input && input.getAttribute('data-wc-pending') === '1')
-      };
-    }
-    return null;
-  }
-
-  function restorePhaseDeliverablesEditState(state) {
-    if (!state || !state.phaseKey) return;
-    var row = document.querySelector('[data-wc-phase-row="' + state.phaseKey.replace(/"/g, '\\\\"') + '"]');
-    if (!row) return;
-    var input = row.querySelector('.dash-phase-deliverables-input');
-    if (input) {
-      input.value = state.value;
-      input.setAttribute('data-wc-original', state.original);
-      if (state.pending) {
-        input.setAttribute('data-wc-pending', '1');
-        input.disabled = true;
-      } else {
-        input.disabled = false;
-        input.removeAttribute('data-wc-pending');
-      }
-    }
-    togglePhaseDeliverablesEdit(row, true);
-    if (input && !state.pending) {
-      input.setAttribute('data-wc-focus-grace', '1');
-      setTimeout(function() {
-        if (input) input.removeAttribute('data-wc-focus-grace');
-      }, 350);
-    }
-    setUiInteraction('phase-deliverables', true);
-  }
-
-  function captureConfigTabState(root) {
-    if (activeTab !== 'config' || !root) return null;
-    var list = root.querySelector('#config-list-root');
-    if (!list || list.querySelector('.cfg-loading')) return null;
-    var filter = root.querySelector('#cfg-filter');
-    var maint = root.querySelector('#cfg-maintainer');
-    var status = root.querySelector('#cfg-status');
-    var explain = root.querySelector('#cfg-explain-host');
-    var restart = root.querySelector('#cfg-restart-host');
-    return {
-      listHtml: list.innerHTML,
-      editFocus: window.wcConfigTab && window.wcConfigTab.captureEditFocus
-        ? window.wcConfigTab.captureEditFocus()
-        : null,
-      explainKey: window.wcConfigTab && window.wcConfigTab.getActiveExplainKey
-        ? window.wcConfigTab.getActiveExplainKey()
-        : '',
-      filter: filter ? filter.value : '',
-      maintainer: maint ? !!maint.checked : false,
-      statusClass: status ? status.className : '',
-      statusText: status ? status.textContent : '',
-      explainHtml: explain ? explain.innerHTML : '',
-      restartHtml: restart ? restart.innerHTML : ''
-    };
-  }
-
-  function restoreConfigTabState(root, state) {
-    if (!state || !root) return;
-    var list = root.querySelector('#config-list-root');
-    if (!list) return;
-    list.innerHTML = state.listHtml;
-    list.removeAttribute('data-wc-bound');
-    var filter = root.querySelector('#cfg-filter');
-    if (filter) filter.value = state.filter || '';
-    var maint = root.querySelector('#cfg-maintainer');
-    if (maint) maint.checked = !!state.maintainer;
-    var status = root.querySelector('#cfg-status');
-    if (status) {
-      status.className = state.statusClass || 'cfg-status cfg-status-info';
-      status.textContent = state.statusText || '';
-    }
-    var explain = root.querySelector('#cfg-explain-host');
-    if (explain) explain.innerHTML = state.explainHtml || '';
-    var restart = root.querySelector('#cfg-restart-host');
-    if (restart) restart.innerHTML = state.restartHtml || '';
-    if (window.wcConfigTab) {
-      if (window.wcConfigTab.afterDomUpdate) window.wcConfigTab.afterDomUpdate();
-      if (window.wcConfigTab.applyFilter) window.wcConfigTab.applyFilter();
-      if (state.editFocus && window.wcConfigTab.restoreEditFocus) {
-        window.wcConfigTab.restoreEditFocus(state.editFocus);
-      }
-      if (state.explainKey && window.wcConfigTab.setExplainActiveKey) {
-        window.wcConfigTab.setExplainActiveKey(state.explainKey, false);
-      }
-    }
-  }
-
-  function applyReplaceRootHtml(html) {
-    var root = document.getElementById('root');
-    if (!root) return;
-    var open = {};
-    var editState = capturePhaseDeliverablesEditState(root);
-    var configState = captureConfigTabState(root);
-    root.querySelectorAll('details[data-wc-track]').forEach(function(d) {
-      var k = d.getAttribute('data-wc-track');
-      if (k && d.open) open[k] = true;
-    });
-    capturePhaseCardCollapseState(root);
-    root.innerHTML = html;
-    Object.keys(open).forEach(function(k) {
-      var el = root.querySelector('details[data-wc-track="' + k + '"]');
-      if (el) el.open = true;
-    });
-    restorePhaseCardCollapseState(root);
-    restoreConfigTabState(root, configState);
-    applyTab(activeTab);
-    applyQueueFilters(root);
-    reloadOpenLazyTerminalBuckets(root);
-    if (editState) restorePhaseDeliverablesEditState(editState);
-    if (typeof window.wcReinitEmbeddedCae === 'function') window.wcReinitEmbeddedCae();
-    var refreshBtn = document.getElementById('btn');
-    setButtonBusy(refreshBtn, false);
-    setUiInteraction('refresh', false);
-  }
-
-  function setMarkPhaseBusy(active) {
-    var root = document.getElementById('root');
-    if (!root) return;
-    root.classList.toggle('wc-mark-phase-busy', !!active);
-    var btn = root.querySelector('.dash-phase-mark-complete-btn');
-    if (btn) setButtonBusy(btn, !!active, active ? 'Marking…' : null);
-  }
-
-  function hidePhaseCardsNow() {
-    var root = document.getElementById('root');
-    if (!root) return;
-    root.querySelectorAll('.wc-cae-readiness, .wc-phase-progress').forEach(function(el) { el.remove(); });
-  }
-
-  function escPhaseDeliverablesHtml(s) {
-    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
-
-  function applyPhaseDeliverablesSaved(phaseKey, deliverables) {
-    var input = phaseDeliverablesInputFromPhase(phaseKey);
-    if (!input) return;
-    var row = input.closest('[data-wc-phase-row]');
-    if (!row) return;
-    var text = row.querySelector('.dash-phase-deliverables-text');
-    var saving = row.querySelector('.dash-phase-saving');
-    var val = deliverables == null ? '' : String(deliverables).trim();
-    if (text) {
-      text.innerHTML = val.length > 0 ? escPhaseDeliverablesHtml(val) : '<span class="muted">—</span>';
-    }
-    input.value = val;
-    input.setAttribute('data-wc-original', val);
-    input.disabled = false;
-    input.removeAttribute('data-wc-pending');
-    input.removeAttribute('data-wc-mutation-id');
-    if (saving) saving.hidden = true;
-    togglePhaseDeliverablesEdit(row, false);
-    setUiInteraction('phase-deliverables', false);
-  }
-
-  function persistPhaseCardExpanded(storageKey, expanded) {
-    try {
-      if (expanded) sessionStorage.setItem(storageKey, '1');
-      else sessionStorage.removeItem(storageKey);
-    } catch (e) {}
-  }
-
-  function capturePhaseCardCollapseState(root) {
-    if (!root) return;
-    var readiness = root.querySelector('.wc-cae-readiness');
-    if (readiness) {
-      persistPhaseCardExpanded(
-        PHASE_READINESS_EXPAND_KEY,
-        !readiness.classList.contains('wc-cae-readiness-collapsed')
-      );
-    }
-    var progress = root.querySelector('.wc-phase-progress');
-    if (progress) {
-      persistPhaseCardExpanded(
-        PHASE_PROGRESS_EXPAND_KEY,
-        !progress.classList.contains('wc-phase-progress-collapsed')
-      );
-    }
-  }
-
-  function lazyTerminalBucketSelector(terminalStatus, phaseKey) {
-    var pk = phaseKey != null ? String(phaseKey) : '';
-    return 'details.wc-lazy-terminal-bucket[data-wc-lazy-terminal="' +
-      String(terminalStatus).replace(/"/g, '\\\\"') +
-      '"][data-wc-phase-key="' +
-      pk.replace(/"/g, '\\\\"') +
-      '"]';
-  }
-
-  function requestLazyTerminalBucketLoad(detailsEl) {
-    if (!detailsEl || detailsEl.getAttribute('data-wc-lazy-loaded') === '1') return;
-    if (detailsEl.getAttribute('data-wc-lazy-loading') === '1') return;
-    var status = (detailsEl.getAttribute('data-wc-lazy-terminal') || '').trim();
-    if (status !== 'completed' && status !== 'cancelled') return;
-    detailsEl.setAttribute('data-wc-lazy-loading', '1');
-    var body = detailsEl.querySelector('.wc-lazy-bucket-body');
-    if (body) {
-      var hint = body.querySelector('.wc-lazy-bucket-hint');
-      if (hint) hint.textContent = 'Loading…';
-    }
-    vscode.postMessage({
-      type: 'loadLazyTerminalBucket',
-      terminalStatus: status,
-      phaseKey: detailsEl.getAttribute('data-wc-phase-key') || ''
-    });
-  }
-
-  function applyLazyTerminalBucketHtml(terminalStatus, phaseKey, html) {
-    var root = document.getElementById('root');
-    if (!root) return;
-    var bucket = root.querySelector(lazyTerminalBucketSelector(terminalStatus, phaseKey));
-    if (!bucket) return;
-    bucket.removeAttribute('data-wc-lazy-loading');
-    bucket.setAttribute('data-wc-lazy-loaded', '1');
-    var body = bucket.querySelector('.wc-lazy-bucket-body');
-    if (body) {
-      body.innerHTML = typeof html === 'string' ? html : '';
-      body.setAttribute('data-wc-lazy-loaded', '1');
-    }
-  }
-
-  function reloadOpenLazyTerminalBuckets(root) {
-    if (!root) return;
-    root.querySelectorAll('details.wc-lazy-terminal-bucket[open]').forEach(function(d) {
-      if (d.getAttribute('data-wc-lazy-loaded') !== '1') requestLazyTerminalBucketLoad(d);
-    });
-  }
-
-  function restorePhaseCardCollapseState(root) {
-    if (!root) return;
-    var readiness = root.querySelector('.wc-cae-readiness');
-    if (readiness) {
-      var readinessExpanded = false;
-      try { readinessExpanded = sessionStorage.getItem(PHASE_READINESS_EXPAND_KEY) === '1'; } catch (e) {}
-      readiness.classList.toggle('wc-cae-readiness-collapsed', !readinessExpanded);
-      var readinessToggle = readiness.querySelector('[data-wc-action="phase-readiness-toggle"]');
-      if (readinessToggle) {
-        readinessToggle.setAttribute('aria-expanded', readinessExpanded ? 'true' : 'false');
-      }
-    }
-    var progress = root.querySelector('.wc-phase-progress');
-    if (progress) {
-      var progressExpanded = false;
-      try { progressExpanded = sessionStorage.getItem(PHASE_PROGRESS_EXPAND_KEY) === '1'; } catch (e) {}
-      progress.classList.toggle('wc-phase-progress-collapsed', !progressExpanded);
-      var progressToggle = progress.querySelector('[data-wc-action="phase-progress-toggle"]');
-      if (progressToggle) {
-        progressToggle.setAttribute('aria-expanded', progressExpanded ? 'true' : 'false');
-      }
-    }
-  }
-
-  function togglePhaseDeliverablesEdit(row, editing) {
-    if (!row) return;
-    var text = row.querySelector('.dash-phase-deliverables-text');
-    var editBtn = row.querySelector('.dash-phase-edit-anchor');
-    var editor = row.querySelector('.dash-phase-deliverables-editor');
-    var saving = row.querySelector('.dash-phase-saving');
-    var error = row.querySelector('.dash-phase-deliverables-error');
-    if (text) text.hidden = !!editing;
-    if (editBtn) editBtn.hidden = !!editing;
-    if (editor) editor.hidden = !editing;
-    if (saving) saving.hidden = true;
-    if (error) {
-      error.hidden = true;
-      error.textContent = '';
-    }
-    if (editing && editor) {
-      var input = editor.querySelector('input');
-      if (input && input.focus) {
-        input.focus();
-        if (input.select) input.select();
-      }
-    }
-  }
-
-  function phaseDeliverablesInputFromPhase(phaseKey) {
-    if (!phaseKey) return null;
-    return document.querySelector('[data-wc-phase-input="' + phaseKey.replace(/"/g, '\\"') + '"]');
-  }
-
-  function submitPhaseDeliverablesInput(input) {
-    if (!input) return;
-    var phaseKey = (input.getAttribute('data-wc-phase-input') || '').trim();
-    if (!phaseKey) return;
-    var row = input.closest('[data-wc-phase-row]');
-    if (!row) return;
-    var saving = row.querySelector('.dash-phase-saving');
-    var error = row.querySelector('.dash-phase-deliverables-error');
-    var original = input.getAttribute('data-wc-original') || '';
-    var current = input.value != null ? String(input.value).trim() : '';
-    if (current === original) {
-      togglePhaseDeliverablesEdit(row, false);
-      setUiInteraction('phase-deliverables', false);
-      return;
-    }
-    if (error) {
-      error.hidden = true;
-      error.textContent = '';
-    }
-    var mutationId = 'dashboard-phase-deliverables-' + phaseKey + '-' + Date.now().toString(36);
-    input.setAttribute('data-wc-pending', '1');
-    input.setAttribute('data-wc-mutation-id', mutationId);
-    if (saving) saving.hidden = false;
-    input.disabled = true;
-    var rowEdit = row.querySelector('.dash-phase-deliverables-editor');
-    if (rowEdit) rowEdit.hidden = true;
-    vscode.postMessage({
-      type: 'updatePhaseDeliverables',
-      phaseKey: phaseKey,
-      deliverables: current.length > 0 ? current : null,
-      clientMutationId: mutationId
-    });
-  }
-
-  function restorePhaseDeliverablesFromError(phaseKey, message) {
-    var input = phaseDeliverablesInputFromPhase(phaseKey);
-    if (!input) return;
-    var row = input.closest('[data-wc-phase-row]');
-    if (!row) return;
-    var original = input.getAttribute('data-wc-original') || '';
-    input.value = original;
-    input.disabled = false;
-    input.removeAttribute('data-wc-pending');
-    input.removeAttribute('data-wc-mutation-id');
-    togglePhaseDeliverablesEdit(row, false);
-    var err = row.querySelector('.dash-phase-deliverables-error');
-    if (err) {
-      err.textContent = message || 'Unable to save deliverables.';
-      err.hidden = false;
-    }
-    setUiInteraction('phase-deliverables', false);
-  }
-
-  function applyTab(tab) {
-    if (!tab) return;
-    var prevTab = activeTab;
-    activeTab = tab;
-    document.querySelectorAll('.wc-tab-panel').forEach(function(p) {
-      p.style.display = p.getAttribute('data-wc-tab') === tab ? 'block' : 'none';
-    });
-    document.querySelectorAll('.wc-tab-btn').forEach(function(b) {
-      var isActive = b.getAttribute('data-wc-tab') === tab;
-      if (isActive) b.classList.add('wc-tab-active');
-      else b.classList.remove('wc-tab-active');
-    });
-    if (tab === 'config' && window.wcConfigTab) {
-      if (window.wcConfigTab.afterDomUpdate) window.wcConfigTab.afterDomUpdate();
-      var list = document.getElementById('config-list-root');
-      var needsLoad = prevTab !== 'config' || !list || !!list.querySelector('.cfg-loading');
-      if (needsLoad && window.wcConfigTab.requestLoad) window.wcConfigTab.requestLoad();
-    }
-  }
-
-  function syncQueueFiltersUi(root) {
-    if (!root) return;
-    root.querySelectorAll('.wc-filter-chip').forEach(function(c) {
-      c.classList.toggle('wc-filter-active', c.getAttribute('data-wc-filter-btn') === activeFilter);
-    });
-    var phaseSelect = root.querySelector('[data-wc-phase-filter]');
-    if (!phaseSelect) return;
-    var hasOption = false;
-    phaseSelect.querySelectorAll('option').forEach(function(opt) {
-      if (opt.value === activePhaseFilter) hasOption = true;
-    });
-    if (!hasOption) activePhaseFilter = 'all';
-    if (phaseSelect.value !== activePhaseFilter) {
-      phaseSelect.value = activePhaseFilter;
-    }
-  }
-
-  function wirePhaseFilterSelect(root) {
-    if (!root) return;
-    var phaseSelect = root.querySelector('[data-wc-phase-filter]');
-    if (!phaseSelect || phaseSelect.getAttribute('data-wc-phase-wired') === '1') return;
-    phaseSelect.setAttribute('data-wc-phase-wired', '1');
-    phaseSelect.addEventListener('mousedown', function(ev) {
-      ev.stopPropagation();
-      setUiInteraction('phase-filter', true);
-    });
-    phaseSelect.addEventListener('click', function(ev) { ev.stopPropagation(); });
-    phaseSelect.addEventListener('change', function() {
-      setTimeout(function() { setUiInteraction('phase-filter', false); }, 0);
-    });
-    phaseSelect.addEventListener('blur', function() {
-      setTimeout(function() { setUiInteraction('phase-filter', false); }, 200);
-    });
-  }
-
-  function applyQueueFilters(root) {
-    if (!root) return;
-    root.querySelectorAll('details.status-section[data-wc-filter]').forEach(function(s) {
-      var sf = s.getAttribute('data-wc-filter');
-      s.style.display = (activeFilter === 'all' || sf === activeFilter) ? '' : 'none';
-    });
-    var termHost = root.querySelector('.dashboard-terminal-tasks');
-    if (termHost) termHost.style.display = (activeFilter === 'all') ? '' : 'none';
-
-    root.querySelectorAll('details.phase-bucket[data-wc-phase-bucket]').forEach(function(b) {
-      var pk = b.getAttribute('data-wc-phase-bucket') || '__no_phase__';
-      b.style.display = (activePhaseFilter === 'all' || pk === activePhaseFilter) ? '' : 'none';
-    });
-
-    root.querySelectorAll('details.status-section[data-wc-filter]').forEach(function(s) {
-      if (s.style.display === 'none') return;
-      var buckets = s.querySelectorAll('details.phase-bucket[data-wc-phase-bucket]');
-      if (!buckets.length) return;
-      var visible = false;
-      buckets.forEach(function(b) { if (b.style.display !== 'none') visible = true; });
-      s.style.display = visible ? '' : 'none';
-    });
-
-    syncQueueFiltersUi(root);
-    wirePhaseFilterSelect(root);
-  }
-
-  window.addEventListener('message', function(ev) {
-    var m = ev.data;
-    if (m && m.type === 'wcDrawerOpen' && typeof m.html === 'string') {
-      var dh = document.getElementById('wc-drawer-host');
-      if (!dh) return;
-      if (!String(m.html).trim()) return;
-      dh.innerHTML = m.html;
-      dh.classList.remove('wc-drawer-host--hidden');
-      dh.setAttribute('aria-hidden','false');
-      var ve = document.getElementById('wc-drawer-validation');
-      if (ve) { ve.textContent=''; ve.hidden=true; }
-      var prim = dh.querySelector('[data-wc-drawer-action="submit"]');
-      if (prim && prim.focus) prim.focus();
-      return;
-    }
-    if (m && m.type === 'wcDrawerClose') {
-      var dh2 = document.getElementById('wc-drawer-host');
-      if (dh2) { dh2.innerHTML=''; dh2.classList.add('wc-drawer-host--hidden'); dh2.setAttribute('aria-hidden','true'); }
-      return;
-    }
-    if (m && m.type === 'wcDrawerValidation' && typeof m.message === 'string') {
-      setDrawerBusy(false);
-      var v = document.getElementById('wc-drawer-validation');
-      if (v) { v.textContent = m.message; v.hidden = false; }
-      return;
-    }
-    if (m && m.type === 'wcPhaseDeliverablesSaved') {
-      var savedPk = typeof m.phaseKey === 'string' ? m.phaseKey.trim() : '';
-      if (savedPk) {
-        applyPhaseDeliverablesSaved(savedPk, m.deliverables == null ? null : m.deliverables);
-      }
-      return;
-    }
-    if (m && m.type === 'wcPhaseDeliverablesError') {
-      var pk = typeof m.phaseKey === 'string' ? m.phaseKey.trim() : '';
-      var msg = typeof m.message === 'string' ? m.message : 'Unable to save deliverables.';
-      if (pk) restorePhaseDeliverablesFromError(pk, msg);
-      return;
-    }
-    if (m && m.type === 'wcLazyTerminalBucketHtml') {
-      var lazyStatus = typeof m.terminalStatus === 'string' ? m.terminalStatus : '';
-      var lazyPk = typeof m.phaseKey === 'string' ? m.phaseKey : '';
-      applyLazyTerminalBucketHtml(lazyStatus, lazyPk, m.html);
-      return;
-    }
-    if (m && m.type === 'wcMarkPhaseBusy') {
-      setMarkPhaseBusy(m.active === true);
-      return;
-    }
-    if (m && m.type === 'wcHidePhaseCards') {
-      hidePhaseCardsNow();
-      return;
-    }
-    if (!m || m.type !== 'wcReplaceRoot' || typeof m.html !== 'string') return;
-    if (isLocalUiLocked()) {
-      pendingReplaceRootHtml = m.html;
-      return;
-    }
-    applyReplaceRootHtml(m.html);
-  });
-
-  var contextHelpPopover = document.getElementById('wc-context-help-popover');
-  var contextHelpHideTimer = null;
-  var contextHelpActiveEl = null;
-
-  function positionContextHelpPopover(el) {
-    if (!contextHelpPopover || !el) return;
-    var r = el.getBoundingClientRect();
-    var pad = 12;
-    contextHelpPopover.hidden = false;
-    contextHelpPopover.style.visibility = 'hidden';
-    contextHelpPopover.style.transform = 'none';
-    contextHelpPopover.style.left = '0px';
-    contextHelpPopover.style.top = '0px';
-    var popW = contextHelpPopover.offsetWidth || 280;
-    var popH = contextHelpPopover.offsetHeight || 80;
-    var left = r.left + r.width / 2 - popW / 2;
-    left = Math.max(pad, Math.min(left, window.innerWidth - pad - popW));
-    var top = r.bottom + 6;
-    if (top + popH > window.innerHeight - pad) {
-      top = Math.max(pad, r.top - popH - 6);
-    }
-    contextHelpPopover.style.left = left + 'px';
-    contextHelpPopover.style.top = top + 'px';
-    contextHelpPopover.style.visibility = '';
-  }
-
-  function showContextHelpPopover(el) {
-    if (!contextHelpPopover || !el) return;
-    var text = el.getAttribute('data-wc-help-text') || '';
-    if (!String(text).trim()) return;
-    if (contextHelpHideTimer) {
-      clearTimeout(contextHelpHideTimer);
-      contextHelpHideTimer = null;
-    }
-    contextHelpActiveEl = el;
-    contextHelpPopover.textContent = text;
-    contextHelpPopover.hidden = false;
-    positionContextHelpPopover(el);
-    setUiInteraction('context-help', true);
-  }
-
-  function hideContextHelpPopoverSoon() {
-    if (contextHelpHideTimer) clearTimeout(contextHelpHideTimer);
-    contextHelpHideTimer = setTimeout(function() {
-      contextHelpHideTimer = null;
-      var hovered = document.querySelector('.wc-context-help:hover');
-      var focused = document.activeElement && document.activeElement.closest
-        ? document.activeElement.closest('.wc-context-help')
-        : null;
-      if (hovered || focused) return;
-      contextHelpActiveEl = null;
-      if (contextHelpPopover) {
-        contextHelpPopover.hidden = true;
-        contextHelpPopover.textContent = '';
-      }
-      setUiInteraction('context-help', false);
-    }, 120);
-  }
-
-  function wireContextHelpPopover() {
-    if (window.__wcContextHelpPopoverWired) return;
-    window.__wcContextHelpPopoverWired = true;
-    document.addEventListener('mouseover', function(ev) {
-      var el = ev.target && ev.target.closest ? ev.target.closest('.wc-context-help') : null;
-      if (el) showContextHelpPopover(el);
-    });
-    document.addEventListener('mouseout', function(ev) {
-      var el = ev.target && ev.target.closest ? ev.target.closest('.wc-context-help') : null;
-      if (!el) return;
-      var rel = ev.relatedTarget;
-      if (rel && el.contains(rel)) return;
-      if (rel && rel.closest && rel.closest('.wc-context-help')) return;
-      hideContextHelpPopoverSoon();
-    });
-    document.addEventListener('focusin', function(ev) {
-      var el = ev.target && ev.target.closest ? ev.target.closest('.wc-context-help') : null;
-      if (el) showContextHelpPopover(el);
-    });
-    document.addEventListener('focusout', function(ev) {
-      var el = ev.target && ev.target.closest ? ev.target.closest('.wc-context-help') : null;
-      if (!el) return;
-      hideContextHelpPopoverSoon();
-    });
-    window.addEventListener('scroll', function() {
-      if (contextHelpActiveEl && contextHelpPopover && !contextHelpPopover.hidden) {
-        positionContextHelpPopover(contextHelpActiveEl);
-      }
-    }, true);
-    window.addEventListener('resize', function() {
-      if (contextHelpActiveEl && contextHelpPopover && !contextHelpPopover.hidden) {
-        positionContextHelpPopover(contextHelpActiveEl);
-      }
-    });
-  }
-  wireContextHelpPopover();
-  if (typeof window.wcReinitEmbeddedCae === 'function') window.wcReinitEmbeddedCae();
-
-  applyTab(activeTab);
-  restorePhaseCardCollapseState(document.getElementById('root'));
-  applyQueueFilters(document.getElementById('root'));
-
-  document.addEventListener('click', function(ev) {
-    var dh = document.getElementById('wc-drawer-host');
-    if (!dh || dh.classList.contains('wc-drawer-host--hidden')) return;
-    var panel = dh.querySelector('.wc-drawer-panel');
-    if (panel && panel.classList.contains('wc-drawer-panel--busy')) return;
-    var t = ev.target && ev.target.closest ? ev.target.closest('[data-wc-drawer-action]') : null;
-    if (!t || !dh.contains(t)) return;
-    var act = t.getAttribute('data-wc-drawer-action');
-    if (act === 'backdrop' || act === 'cancel') { vscode.postMessage({type:'drawerCancel'}); return; }
-    if (act === 'submit') {
-      if (t.disabled || t.getAttribute('data-wc-drawer-submitting') === '1') return;
-      t.disabled = true;
-      t.setAttribute('data-wc-drawer-submitting', '1');
-      setDrawerBusy(true);
-      var vals = {};
-      dh.querySelectorAll('[data-wc-drawer-field]').forEach(function(el) {
-        var id = el.getAttribute('data-wc-drawer-field');
-        if (!id) return;
-        vals[id] = ('value' in el && el.value != null) ? String(el.value) : '';
-      });
-      vscode.postMessage({type:'drawerSubmit', values: vals});
-    }
-  });
-  document.addEventListener('keydown', function(ev) {
-    if (ev.key !== 'Escape') return;
-    var dh = document.getElementById('wc-drawer-host');
-    if (!dh || dh.classList.contains('wc-drawer-host--hidden')) return;
-    var panel = dh.querySelector('.wc-drawer-panel');
-    if (panel && panel.classList.contains('wc-drawer-panel--busy')) return;
-    ev.preventDefault();
-    vscode.postMessage({type:'drawerCancel'});
-  });
-
-  var btn = document.getElementById('btn');
-  var rootEl = document.getElementById('root');
-  if (btn) btn.addEventListener('click', function() {
-    setButtonBusy(btn, true, 'Refreshing…');
-    setUiInteraction('refresh', true);
-    vscode.postMessage({type:'refresh'});
-  });
-  if (rootEl) rootEl.addEventListener('click', function(ev) {
-    var rawTarget = ev.target;
-    var el = rawTarget;
-    while (el && el.nodeType !== 1) el = el.parentElement;
-    if (el && typeof el.closest === 'function' && el.closest('.wc-phase-filter-wrap')) return;
-    var tabBtn = el && el.closest ? el.closest('.wc-tab-btn') : null;
-    if (tabBtn && rootEl.contains(tabBtn) && !tabBtn.disabled) {
-      applyTab(tabBtn.getAttribute('data-wc-tab'));
-      return;
-    }
-    var t = el && typeof el.closest === 'function' ? el.closest('button') : null;
-    if (!t || t.tagName !== 'BUTTON' || !rootEl.contains(t) || t.disabled) return;
-    if (t.closest && t.closest('.wc-dash-cae-host')) return;
-    if (t.classList.contains('wc-filter-chip')) {
-      var f = t.getAttribute('data-wc-filter-btn') || 'all';
-      activeFilter = f;
-      if (f === 'all') activePhaseFilter = 'all';
-      applyQueueFilters(rootEl);
-      return;
-    }
-    if (t.classList.contains('wc-stat-pill')) {
-      var navTab = t.getAttribute('data-wc-pill-nav');
-      var navFilter = t.getAttribute('data-wc-pill-filter') || 'all';
-      if (navTab) applyTab(navTab);
-      activeFilter = navFilter;
-      applyQueueFilters(rootEl);
-      return;
-    }
-    var gpTab = t.getAttribute('data-gp-tab');
-    if (gpTab) {
-      var gpRoot = t.closest('.gp-root') || rootEl;
-      gpRoot.querySelectorAll('[data-gp-tab]').forEach(function(btn) {
-        if (btn === t) btn.classList.add('is-active');
-        else btn.classList.remove('is-active');
-      });
-      gpRoot.querySelectorAll('.gp-tab-panel').forEach(function(panel) {
-        var ok = panel.getAttribute('data-gp-panel') === gpTab;
-        if (ok) panel.classList.add('is-active');
-        else panel.classList.remove('is-active');
-      });
-      return;
-    }
-    var gpAction = t.getAttribute('data-gp-action');
-    if (gpAction) {
-      var gpTabTarget = t.getAttribute('data-gp-tab-target');
-      if (gpTabTarget) {
-        var gpScope = t.closest('.gp-root') || rootEl;
-        var gpBtn = gpScope.querySelector('[data-gp-tab="' + gpTabTarget + '"]');
-        if (gpBtn && gpBtn.click) gpBtn.click();
-      }
-      var gpPayload = {
-        activationId: t.getAttribute('data-gp-activation-id') || '',
-        artifactId: t.getAttribute('data-gp-artifact-id') || '',
-        versionId: t.getAttribute('data-version-id') || '',
-        commandName: t.getAttribute('data-gp-command-name') || ''
-      };
-      vscode.postMessage({ type: 'embeddedCaeAction', action: gpAction, payload: gpPayload });
-      return;
-    }
-    var act = t.getAttribute('data-wc-action');
-    if (!act) return;
-    if (act.indexOf('config-') === 0) {
-      ev.preventDefault();
-      if (act === 'config-jump-key' && window.wcConfigTab && window.wcConfigTab.jumpToConfigKey) {
-        window.wcConfigTab.jumpToConfigKey(t.getAttribute('data-key') || '');
-        return;
-      }
-      if (t.closest('#config-list-root') && window.wcConfigTab) {
-        if (act === 'config-explain') {
-          var explainKey = t.getAttribute('data-key') || '';
-          if (explainKey) vscode.postMessage({ type: 'explain', key: explainKey });
-          return;
-        }
-        if (act === 'config-save' || act === 'config-unset' || act === 'config-reload-window') {
-          return;
-        }
-      }
-      return;
-    }
-    ev.preventDefault();
-    ev.stopPropagation();
-    if (act === 'phase-readiness-toggle') {
-      var readinessCard = t.closest('.wc-cae-readiness');
-      if (!readinessCard) return;
-      readinessCard.classList.toggle('wc-cae-readiness-collapsed');
-      var readinessExpanded = !readinessCard.classList.contains('wc-cae-readiness-collapsed');
-      persistPhaseCardExpanded(PHASE_READINESS_EXPAND_KEY, readinessExpanded);
-      var readinessToggle = readinessCard.querySelector('[data-wc-action="phase-readiness-toggle"]');
-      if (readinessToggle) {
-        readinessToggle.setAttribute('aria-expanded', readinessExpanded ? 'true' : 'false');
-      }
-      return;
-    }
-    if (act === 'phase-progress-toggle') {
-      var progressCard = t.closest('.wc-phase-progress');
-      if (!progressCard) return;
-      progressCard.classList.toggle('wc-phase-progress-collapsed');
-      var progressExpanded = !progressCard.classList.contains('wc-phase-progress-collapsed');
-      persistPhaseCardExpanded(PHASE_PROGRESS_EXPAND_KEY, progressExpanded);
-      var progressToggle = progressCard.querySelector('[data-wc-action="phase-progress-toggle"]');
-      if (progressToggle) {
-        progressToggle.setAttribute('aria-expanded', progressExpanded ? 'true' : 'false');
-      }
-      return;
-    }
-    if (act === 'focus-phase-roster') {
-      var rosterEl = document.getElementById('wc-phase-roster');
-      if (rosterEl && typeof rosterEl.scrollIntoView === 'function') {
-        rosterEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-      return;
-    }
-    if (act === 'open-queue-for-phase') {
-      var phasePk = (t.getAttribute('data-wc-phase-key') || '').trim();
-      applyTab('task-engine');
-      activeFilter = 'all';
-      activePhaseFilter = phasePk.length > 0 ? phasePk : 'all';
-      applyQueueFilters(rootEl);
-      return;
-    }
-    if (act === 'phase-deliverables-edit') {
-      var row = t.closest('[data-wc-phase-row]');
-      if (!row) return;
-      var input = row.querySelector('.dash-phase-deliverables-input');
-      setUiInteraction('phase-deliverables', true);
-      if (input) {
-        input.disabled = false;
-        input.removeAttribute('data-wc-pending');
-        input.removeAttribute('data-wc-mutation-id');
-        input.setAttribute('data-wc-original', input.value != null ? String(input.value).trim() : '');
-      }
-      togglePhaseDeliverablesEdit(row, true);
-      if (input) {
-        input.setAttribute('data-wc-focus-grace', '1');
-        setTimeout(function() {
-          if (input) input.removeAttribute('data-wc-focus-grace');
-        }, 350);
-      }
-      return;
-    }
-    if (act === 'phase-note-view') {
-      var viewId = (t.getAttribute('data-note-id') || '').trim();
-      if (!viewId) return;
-      vscode.postMessage({
-        type: 'viewPhaseNote',
-        noteId: viewId,
-        noteType: t.getAttribute('data-note-type') || '',
-        priority: t.getAttribute('data-note-priority') || '',
-        summary: t.getAttribute('data-note-summary') || '',
-        details: t.getAttribute('data-note-details') || ''
-      });
-      return;
-    }
-    if (act === 'phase-note-edit') {
-      var editId = (t.getAttribute('data-note-id') || '').trim();
-      if (!editId) return;
-      vscode.postMessage({
-        type: 'editPhaseNote',
-        noteId: editId,
-        summary: t.getAttribute('data-note-summary') || '',
-        details: t.getAttribute('data-note-details') || ''
-      });
-      return;
-    }
-    if (act === 'phase-note-delete') {
-      var delId = (t.getAttribute('data-note-id') || '').trim();
-      if (!delId) return;
-      vscode.postMessage({
-        type: 'deletePhaseNote',
-        noteId: delId,
-        priority: t.getAttribute('data-note-priority') || ''
-      });
-      return;
-    }
-    if (act === 'wishlist-view') { var wv = (t.getAttribute('data-wishlist-id') || '').trim(); if (wv) vscode.postMessage({type:'openWishlistDetail',wishlistId:wv}); return; }
-    if (act === 'planning-new-plan') { vscode.postMessage({type:'prefillPlanningInterviewChat'}); return; }
-    if (act === 'planning-resume-chat') { var rc = (t.getAttribute('data-resume-cli') || '').trim(); vscode.postMessage({type:'prefillPlanningResumeChat',resumeCli:rc}); return; }
-    if (act === 'planning-discard') { vscode.postMessage({type:'planningDiscard'}); return; }
-    if (act === 'planning-wizard-start') { var sel = document.getElementById('wc-planning-type'); var pt = sel && sel.value ? String(sel.value).trim() : ''; if (pt) vscode.postMessage({type:'planningWizardStart',planningType:pt}); return; }
-    if (act === 'planning-wizard-submit') { var ta = document.getElementById('wc-planning-answer'); var txt = ta && typeof ta.value === 'string' ? ta.value.trim() : ''; vscode.postMessage({type:'planningWizardSubmit',answer:txt}); return; }
-    if (act === 'planning-wizard-cancel') { vscode.postMessage({type:'planningWizardCancel'}); return; }
-    if (act === 'planning-wizard-dismiss') { vscode.postMessage({type:'planningWizardDismiss'});return;}if(act==="collaboration-hub"){vscode.postMessage({type:"prefillCollaborationHubChat"});return;}if(act==="deliver-phase-prompt"){var kp=(t.getAttribute("data-wc-kit-phase")||"").trim();vscode.postMessage({type:"prefillDeliverPhaseChat",kitPhase:kp});return;}if(act==="add-wishlist-item"){vscode.postMessage({type:"addWishlistItem"});return;}if(act==="generate-features-chat"){vscode.postMessage({type:"prefillGenerateFeaturesChat"});return;}if(act==="transcript-churn-research-chat"){var tcTid=(t.getAttribute("data-task-id")||"").trim();vscode.postMessage({type:"prefillTranscriptChurnResearchChat",taskId:tcTid});return;}if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-page"){var wpp=parseInt(String(t.getAttribute("data-wishlist-page")||"0"),10);if(!Number.isNaN(wpp)&&wpp>=0)vscode.postMessage({type:"wishlistPage",page:wpp});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}if(act==="phase-complete-release"){var ph=(t.getAttribute("data-wc-phase-phrase")||"").trim();var pk=(t.getAttribute("data-wc-phase-key")||"").trim();var ids=(t.getAttribute("data-wc-phase-task-ids")||"").trim();var wcur=(t.getAttribute("data-wc-workspace-current-phase")||"").trim();var wnxt=(t.getAttribute("data-wc-workspace-next-phase")||"").trim();var rscope=(t.getAttribute("data-wc-release-scope")||"").trim();vscode.postMessage({type:"prefillPhaseCompleteReleaseChat",phasePhrase:ph,phaseKey:pk,seededTaskIdsCsv:ids,workspaceCurrentPhase:wcur,workspaceNextPhase:wnxt,scope:rscope==="current"?"current":rscope==="bucket"?"bucket":undefined});return;}if(act==="proposed-imp-accept-phase"||act==="proposed-exe-accept-phase"){var batch=(t.getAttribute("data-proposed-task-ids")||"").trim();var cat=act==="proposed-exe-accept-phase"?"execution":"improvement";vscode.postMessage({type:"dashboardAcceptProposedPhase",category:cat,taskIds:batch});return;}if(act==="phase-notes-chat"){vscode.postMessage({type:"prefillPhaseNotesDiscoveryChat"});return;}if(act==="phase-note-add"){vscode.postMessage({type:"addPhaseNote"});return;}if(act==="phase-note-dismiss"){var dpn=(t.getAttribute("data-note-id")||"").trim();var dpp=(t.getAttribute("data-note-priority")||"").trim();if(dpn)vscode.postMessage({type:"dismissPhaseNote",noteId:dpn,priority:dpp});return;}if(act==="phase-note-convert"){var cpn=(t.getAttribute("data-note-id")||"").trim();if(cpn)vscode.postMessage({type:"convertPhaseNote",noteId:cpn});return;}if(act==="phase-notes-propose-persist"){vscode.postMessage({type:"persistPhaseNoteProposals"});return;}if(act==="register-phase-catalog"){vscode.postMessage({type:"registerPhaseCatalogEntry"});return;}if(act==="phase-mark-complete"){var markPk=(t.getAttribute("data-wc-phase-key")||"").trim();if(markPk)vscode.postMessage({type:"markPhaseComplete",phaseKey:markPk});return;}if(act==="phase-roster-start"){var rosterPk=(t.getAttribute("data-wc-phase-key")||"").trim();if(rosterPk)vscode.postMessage({type:"startPhaseFromRoster",phaseKey:rosterPk});return;}if(act==="team-assignment-register"){vscode.postMessage({type:"registerTeamAssignment"});return;}if(act==="team-execution-chat"){vscode.postMessage({type:"prefillTeamExecutionChat"});return;}if(act==="team-assignment-handoff"){var teamAid=(t.getAttribute("data-assignment-id")||"").trim();var teamWid=(t.getAttribute("data-worker-id")||"").trim();if(teamAid&&teamWid)vscode.postMessage({type:"submitTeamHandoff",assignmentId:teamAid,workerId:teamWid});return;}if(act==="team-assignment-reconcile"){var teamAid2=(t.getAttribute("data-assignment-id")||"").trim();var teamSid=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid2&&teamSid)vscode.postMessage({type:"reconcileTeamAssignment",assignmentId:teamAid2,supervisorId:teamSid});return;}if(act==="team-assignment-block"){var teamAid3=(t.getAttribute("data-assignment-id")||"").trim();var teamSid2=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid3&&teamSid2)vscode.postMessage({type:"blockTeamAssignment",assignmentId:teamAid3,supervisorId:teamSid2});return;}if(act==="team-assignment-cancel"){var teamAid4=(t.getAttribute("data-assignment-id")||"").trim();var teamSid3=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid4)vscode.postMessage({type:"cancelTeamAssignment",assignmentId:teamAid4,supervisorId:teamSid3});return;}if(act==="subagent-register"){vscode.postMessage({type:"registerSubagent"});return;}if(act==="subagent-registry-chat"){vscode.postMessage({type:"prefillSubagentRegistryChat"});return;}if(act==="subagent-spawn"){var subId=(t.getAttribute("data-subagent-id")||"").trim();vscode.postMessage({type:"spawnSubagent",subagentId:subId});return;}if(act==="subagent-session-close"){var subSid=(t.getAttribute("data-session-id")||"").trim();var subDef=(t.getAttribute("data-definition-id")||"").trim();if(subSid&&subDef)vscode.postMessage({type:"closeSubagentSession",sessionId:subSid,definitionId:subDef});return;}if(act==="subagent-retire"){var subRet=(t.getAttribute("data-subagent-id")||"").trim();vscode.postMessage({type:"retireSubagent",subagentId:subRet});return;}if(act==="checkpoint-create-head"){vscode.postMessage({type:"createCheckpoint",mode:"head"});return;}if(act==="checkpoint-create-stash"){vscode.postMessage({type:"createCheckpoint",mode:"stash"});return;}if(act==="checkpoint-recovery-chat"){vscode.postMessage({type:"prefillTaskCheckpointsRecoveryChat"});return;}if(act==="checkpoint-compare"){var ckptCmp=(t.getAttribute("data-checkpoint-id")||"").trim();if(ckptCmp)vscode.postMessage({type:"compareCheckpoint",checkpointId:ckptCmp});return;}if(act==="checkpoint-rewind"){var ckptRw=(t.getAttribute("data-checkpoint-id")||"").trim();var ckptRk=(t.getAttribute("data-ref-kind")||"").trim();var ckptTid=(t.getAttribute("data-task-id")||"").trim();if(ckptRw)vscode.postMessage({type:"rewindCheckpoint",checkpointId:ckptRw,refKind:ckptRk,taskId:ckptTid});return;}if(act==="approval-inbox-chat"){vscode.postMessage({type:"prefillPolicyApprovalInboxChat"});return;}if(act==="approval-review-accept"){var apTid=(t.getAttribute("data-task-id")||"").trim();var apTit=(t.getAttribute("data-task-title")||"").trim();if(apTid)vscode.postMessage({type:"reviewApprovalItem",taskId:apTid,title:apTit,decision:"accept"});return;}if(act==="approval-review-decline"){var apTid2=(t.getAttribute("data-task-id")||"").trim();var apTit2=(t.getAttribute("data-task-title")||"").trim();if(apTid2)vscode.postMessage({type:"reviewApprovalItem",taskId:apTid2,title:apTit2,decision:"decline"});return;}if(act==="approval-review-accept-edited"){var apTid3=(t.getAttribute("data-task-id")||"").trim();var apTit3=(t.getAttribute("data-task-title")||"").trim();if(apTid3)vscode.postMessage({type:"reviewApprovalItem",taskId:apTid3,title:apTit3,decision:"accept_edited"});return;}if(act==="assign-phase"){var apTid=(t.getAttribute("data-task-id")||"").trim();if(apTid)vscode.postMessage({type:"assignTaskPhase",taskId:apTid});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="task-comments-view"){if(tid)vscode.postMessage({type:"viewTaskComments",taskId:tid});return;}if(act==="task-comment-add"){if(tid)vscode.postMessage({type:"addTaskComment",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="human-gate-resume-ready"){if(tid)vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"resume_ready",transitionKind:"human-gate"});return;}if(act==="human-gate-resume-work"){if(tid)vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"resume_work",transitionKind:"human-gate"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});
-
-  if (rootEl) rootEl.addEventListener('keydown', function(ev) {
-    var target = ev.target;
-    if (!target || !target.classList || !target.classList.contains('dash-phase-deliverables-input')) return;
-    if (ev.key === 'Enter') {
-      ev.preventDefault();
-      submitPhaseDeliverablesInput(target);
-      return;
-    }
-    if (ev.key === 'Escape') {
-      ev.preventDefault();
-      var row = target.closest('[data-wc-phase-row]');
-      if (!row) return;
-      var original = target.getAttribute('data-wc-original') || '';
-      target.value = original;
-      target.disabled = false;
-      target.removeAttribute('data-wc-pending');
-      target.removeAttribute('data-wc-mutation-id');
-      togglePhaseDeliverablesEdit(row, false);
-      setUiInteraction('phase-deliverables', false);
-    }
-  });
-  if (rootEl) rootEl.addEventListener('change', function(ev) {
-    var target = ev.target;
-    if (!target || !target.matches || !target.matches('[data-wc-phase-filter]')) return;
-    activePhaseFilter = target.value || 'all';
-    applyQueueFilters(rootEl);
-  });
-
-  if (rootEl) rootEl.addEventListener('focusout', function(ev) {
-    var target = ev.target;
-    if (!target || !target.classList || !target.classList.contains('dash-phase-deliverables-input')) return;
-    if (target.getAttribute('data-wc-pending') === '1') return;
-    if (target.getAttribute('data-wc-focus-grace') === '1') return;
-    var row = target.closest('[data-wc-phase-row]');
-    if (!row) return;
-    var editor = row.querySelector('.dash-phase-deliverables-editor');
-    if (!editor || editor.hidden) return;
-    var next = ev.relatedTarget;
-    if (next && row.contains(next)) return;
-    submitPhaseDeliverablesInput(target);
-  });
-
-  if (rootEl) rootEl.addEventListener('toggle', function(ev) {
-    var el = ev.target;
-    if (!el || el.tagName !== 'DETAILS' || !rootEl.contains(el)) return;
-    if (!el.classList.contains('wc-lazy-terminal-bucket') || !el.open) return;
-    requestLazyTerminalBucketLoad(el);
-  }, true);
-})();`;
+    const bootstrap = buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource);
 
     return `<!DOCTYPE html>
 <html lang="en">
