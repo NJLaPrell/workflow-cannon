@@ -248,8 +248,312 @@ function recommendedNextCategoryFromRow(row: Record<string, unknown>): "executio
   return "execution";
 }
 
+/** Stable phase key from a dashboard task/list row. */
+export function dashboardRowPhaseKey(row: unknown): string {
+  if (!row || typeof row !== "object") {
+    return "";
+  }
+  const r = row as { phaseKey?: unknown; phase?: unknown };
+  const pk = r.phaseKey != null ? String(r.phaseKey).trim() : "";
+  if (pk.length > 0) {
+    return pk;
+  }
+  const phase = r.phase != null ? String(r.phase).trim() : "";
+  const m = phase.match(/(?:^|\s)phase\s+(\d+)/i);
+  return m ? m[1] : "";
+}
+
+/** First ready-queue row in the workspace current phase. */
+export function pickNextTaskInCurrentPhase(readyTop: unknown[], currentPhaseKey: string): unknown | null {
+  const cur = currentPhaseKey.trim();
+  if (cur.length === 0) {
+    return null;
+  }
+  for (const row of readyTop) {
+    if (dashboardRowPhaseKey(row) === cur) {
+      return row;
+    }
+  }
+  return null;
+}
+
+export function suggestedNextMatchesPhase(suggestedNext: unknown, currentPhaseKey: string): boolean {
+  const cur = currentPhaseKey.trim();
+  if (cur.length === 0 || !suggestedNext || typeof suggestedNext !== "object") {
+    return false;
+  }
+  return dashboardRowPhaseKey(suggestedNext) === cur;
+}
+
+export type UpNextCardRenderArgs = {
+  ws: Record<string, unknown> | null;
+  phaseSnapshot: PhaseSnapshot | null;
+  suggestedNext: unknown;
+  readyTop: unknown[];
+  readyCount: number;
+  firstWishlistOpen: unknown;
+  humanGatesCount: number;
+  /** Optional rows to surface in-progress / blocked / gated work in the current phase. */
+  phaseWorkCandidates?: unknown[];
+};
+
+/**
+ * Phase-aware Up next: current-phase task, closeout, pick-phase, then legacy fallbacks.
+ */
+export function renderUpNextCardHtml(args: UpNextCardRenderArgs): string {
+  const curPhase = workspaceCurrentPhaseKey(args.ws);
+
+  if (curPhase.length === 0) {
+    const nextPhase =
+      args.ws?.nextKitPhase != null ? String(args.ws.nextKitPhase).trim() : "";
+    return renderRecommendedNextPickPhaseCard(nextPhase);
+  }
+
+  const phaseTask =
+    pickNextTaskInCurrentPhase(args.readyTop, curPhase) ??
+    (suggestedNextMatchesPhase(args.suggestedNext, curPhase) ? args.suggestedNext : null);
+  if (phaseTask) {
+    return renderRecommendedNextCard(phaseTask);
+  }
+
+  const snap = args.phaseSnapshot;
+  const snapForPhase =
+    snap && (snap.phaseKey === curPhase || snap.phaseKey == null || snap.phaseKey === "")
+      ? snap
+      : snap?.phaseKey === curPhase
+        ? snap
+        : null;
+
+  if (snapForPhase && !phaseDeliveryQueueDrainedForUpNext(snapForPhase)) {
+    const candidate = pickFirstRowInCurrentPhase(args.phaseWorkCandidates ?? [], curPhase);
+    if (candidate) {
+      return renderRecommendedNextCard(candidate, { statusTag: taskRowStatusTag(candidate) });
+    }
+    return renderRecommendedNextPhaseWorkCard(curPhase, snapForPhase);
+  }
+
+  if (snapForPhase) {
+    const closeout = renderRecommendedNextCloseoutCard({
+      curPhase,
+      nextKitPhase:
+        args.ws?.nextKitPhase != null ? String(args.ws.nextKitPhase).trim() : "",
+      snapshot: snapForPhase,
+      humanGatesCount: args.humanGatesCount
+    });
+    if (closeout.length > 0) {
+      return closeout;
+    }
+  }
+
+  if (args.readyCount > 0 && args.suggestedNext && typeof args.suggestedNext === "object") {
+    return renderRecommendedNextCard(args.suggestedNext);
+  }
+  if (args.readyCount === 0 && args.firstWishlistOpen) {
+    return renderRecommendedNextWishlistCard(args.firstWishlistOpen);
+  }
+  return "";
+}
+
+function pickFirstRowInCurrentPhase(rows: unknown[], currentPhaseKey: string): unknown | null {
+  const cur = currentPhaseKey.trim();
+  for (const row of rows) {
+    if (dashboardRowPhaseKey(row) === cur) {
+      return row;
+    }
+  }
+  return null;
+}
+
+function taskRowStatusTag(row: unknown): string {
+  if (!row || typeof row !== "object") {
+    return "task";
+  }
+  const status = String((row as { status?: unknown }).status ?? "")
+    .trim()
+    .toLowerCase();
+  if (status.length > 0) {
+    return status.replace(/_/g, "-");
+  }
+  return "task";
+}
+
+/** True when no runnable ready work remains in the current phase queue snapshot. */
+function phaseDeliveryQueueDrainedForUpNext(snapshot: PhaseSnapshot): boolean {
+  if (snapshot.closeoutPassed) {
+    return true;
+  }
+  if (snapshot.queue.ready > 0) {
+    return false;
+  }
+  return snapshot.remainingCount === 0 && snapshot.queue.inProgress === 0;
+}
+
+function renderRecommendedNextPickPhaseCard(nextKitPhase: string): string {
+  const next = nextKitPhase.trim();
+  const title =
+    next.length > 0
+      ? "Start Phase " + next + " from the roster"
+      : "Choose a phase and start delivery";
+  const detail =
+    next.length > 0
+      ? "Set the workspace current phase, then pick up ready work on the Queue tab."
+      : "Use Start on a phase in the roster below when you are ready to deliver.";
+  const startBtn =
+    next.length > 0
+      ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="phase-roster-start" data-wc-phase-key="' +
+        escapeHtmlAttr(next) +
+        '" title="Set Phase ' +
+        escapeHtmlAttr(next) +
+        ' as the active workspace phase">Start Phase ' +
+        escapeHtml(next) +
+        " &rarr;</button>"
+      : "";
+  return (
+    '<div class="wc-rec-next wc-rec-next-pick-phase">' +
+    '<div class="wc-rec-header">' +
+    '<span class="wc-rec-label">&#9733; Up next</span>' +
+    "</div>" +
+    '<p class="wc-rec-title">' +
+    escapeHtml(title) +
+    "</p>" +
+    '<p class="muted wc-rec-subtitle">' +
+    escapeHtml(detail) +
+    "</p>" +
+    '<div class="wc-rec-footer">' +
+    '<span class="wc-rec-tag wc-rec-tag-phase">phase</span>' +
+    '<span class="wc-rec-footer-actions">' +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="focus-phase-roster" title="Jump to the phase roster">Roster &darr;</button>' +
+    startBtn +
+    "</span>" +
+    "</div>" +
+    "</div>"
+  );
+}
+
+function renderRecommendedNextPhaseWorkCard(curPhase: string, snapshot: PhaseSnapshot): string {
+  const parts: string[] = [];
+  if (snapshot.queue.inProgress > 0) {
+    parts.push(String(snapshot.queue.inProgress) + " in progress");
+  }
+  if (snapshot.remainingCount > 0) {
+    parts.push(String(snapshot.remainingCount) + " remaining");
+  }
+  if (snapshot.queue.blocked > 0) {
+    parts.push(String(snapshot.queue.blocked) + " blocked");
+  }
+  const detail =
+    parts.length > 0
+      ? parts.join(" · ") + " — open the Queue tab filtered to this phase."
+      : "Open the Queue tab to continue delivery work in this phase.";
+  const pk = escapeHtmlAttr(curPhase);
+  return (
+    '<div class="wc-rec-next wc-rec-next-phase-work">' +
+    '<div class="wc-rec-header">' +
+    '<span class="wc-rec-label">&#9733; Up next</span>' +
+    "</div>" +
+    '<p class="wc-rec-title">Continue Phase ' +
+    escapeHtml(curPhase) +
+    " delivery work</p>" +
+    '<p class="muted wc-rec-subtitle">' +
+    escapeHtml(detail) +
+    "</p>" +
+    '<div class="wc-rec-footer">' +
+    '<span class="wc-rec-tag wc-rec-tag-phase">Phase ' +
+    escapeHtml(curPhase) +
+    "</span>" +
+    '<span class="wc-rec-footer-actions">' +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="open-queue-for-phase" data-wc-phase-key="' +
+    pk +
+    '" title="Open Queue tab for this phase">Queue &rarr;</button>' +
+    "</span>" +
+    "</div>" +
+    "</div>"
+  );
+}
+
+function renderRecommendedNextCloseoutCard(args: {
+  curPhase: string;
+  nextKitPhase: string;
+  snapshot: PhaseSnapshot;
+  humanGatesCount: number;
+}): string {
+  const checks = buildPhaseProgressChecks({
+    snapshot: args.snapshot,
+    humanGateCount: args.humanGatesCount
+  });
+  const failing = checks.find((c) => !c.ok);
+  const cur = args.curPhase.trim();
+  const next = args.nextKitPhase.trim();
+  const phasePhrase = "Phase " + cur;
+
+  let title = "Phase closeout and release";
+  let detail =
+    "Merge the phase branch, publish, tag, and roll workspace to the next phase when checks pass.";
+  if (failing) {
+    title = failing.label;
+    detail = failing.failHelp;
+  } else if (args.snapshot.released) {
+    title =
+      next.length > 0
+        ? "Phase delivered — start Phase " + next
+        : "Phase delivered — pick the next phase";
+    detail = "Delivery tasks are terminal. Use the roster to start the next slice.";
+  }
+
+  const releaseBtn = renderPhaseCompleteReleaseButton({
+    phaseKey: cur,
+    phasePhrase,
+    taskIds: [],
+    workspaceCurrent: cur,
+    workspaceNext: next,
+    scope: "current",
+    closeoutReady: args.snapshot.closeoutPassed && args.snapshot.releaseReadyPercent >= 100,
+    disabled:
+      !args.snapshot.closeoutPassed ||
+      args.snapshot.releaseReadyPercent < 100 ||
+      args.humanGatesCount > 0 ||
+      args.snapshot.deliveryEvidenceViolationCount > 0
+  });
+
+  const startNextBtn =
+    args.snapshot.released && next.length > 0 && next !== cur
+      ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="phase-roster-start" data-wc-phase-key="' +
+        escapeHtmlAttr(next) +
+        '">Start Phase ' +
+        escapeHtml(next) +
+        " &rarr;</button>"
+      : "";
+
+  return (
+    '<div class="wc-rec-next wc-rec-next-closeout">' +
+    '<div class="wc-rec-header">' +
+    '<span class="wc-rec-label">&#9733; Up next</span>' +
+    "</div>" +
+    '<p class="wc-rec-title">' +
+    escapeHtml(title) +
+    "</p>" +
+    '<p class="muted wc-rec-subtitle">' +
+    escapeHtml(detail) +
+    "</p>" +
+    '<div class="wc-rec-footer">' +
+    '<span class="wc-rec-tag wc-rec-tag-closeout">closeout</span>' +
+    '<span class="wc-rec-tag wc-rec-tag-phase">Phase ' +
+    escapeHtml(cur) +
+    "</span>" +
+    '<span class="wc-rec-footer-actions">' +
+    releaseBtn +
+    startNextBtn +
+    "</span>" +
+    "</div>" +
+    "</div>"
+  );
+}
+
 /** ★ "Recommended Next" card — kit `suggestedNext` (phase-aware ready ordering). */
-function renderRecommendedNextCard(item: unknown): string {
+function renderRecommendedNextCard(
+  item: unknown,
+  options?: { statusTag?: string }
+): string {
   if (!item || typeof item !== "object") {
     return "";
   }
@@ -260,6 +564,7 @@ function renderRecommendedNextCard(item: unknown): string {
     phaseKey?: unknown;
     type?: unknown;
     priority?: unknown;
+    status?: unknown;
   };
   const id = String(row.id ?? "").trim();
   const title = String(row.title ?? "").trim();
@@ -279,6 +584,9 @@ function renderRecommendedNextCard(item: unknown): string {
   const category = recommendedNextCategoryFromRow(row as Record<string, unknown>);
   const catTag =
     '<span class="wc-rec-tag wc-rec-tag-cat">' + escapeHtml(category) + "</span>";
+  const statusTag =
+    options?.statusTag ??
+    (String(row.status ?? "").trim().toLowerCase() === "ready" ? "ready" : taskRowStatusTag(row));
   const viewBtn =
     id.length > 0
       ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="task-detail" data-task-id="' +
@@ -294,7 +602,9 @@ function renderRecommendedNextCard(item: unknown): string {
     escapeHtml(displayTitle) +
     "</p>" +
     '<div class="wc-rec-footer">' +
-    '<span class="wc-rec-tag wc-rec-tag-ready">ready</span>' +
+    '<span class="wc-rec-tag wc-rec-tag-status">' +
+    escapeHtml(statusTag) +
+    "</span>" +
     catTag +
     phaseTag +
     viewBtn +
@@ -3343,7 +3653,7 @@ export function renderPhaseCatalogOverviewSection(
   const btn =
     '<p style="margin-top:8px"><button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="register-phase-catalog">Register future phase</button></p>';
   return (
-    '<section class="dash-card dash-phase-catalog" aria-label="Phase catalog">' +
+    '<section id="wc-phase-roster" class="dash-card dash-phase-catalog" aria-label="Phase catalog">' +
     "<p><b>Phase Roster</b></p>" +
     table +
     btn +
@@ -4081,13 +4391,24 @@ export function renderDashboardRootInnerHtml(
 
   const firstWishlistOpen = wishlistOpenTop[0];
   const suggestedNext = d.suggestedNext;
-  /** Kit `suggestedNext` when there is runnable ready work; wishlist card when queue is empty. */
-  const recNextCard =
-    readyCount > 0 && suggestedNext && typeof suggestedNext === "object"
-      ? renderRecommendedNextCard(suggestedNext)
-      : readyCount === 0 && firstWishlistOpen
-        ? renderRecommendedNextWishlistCard(firstWishlistOpen)
-        : "";
+  const phaseSnapshot = normalizePhaseSnapshot(d.currentPhaseDelivery, ws as Record<string, unknown> | null);
+  const phaseWorkCandidates = [
+    ...humanGatesTop,
+    ...blockedTop,
+    ...peTop,
+    ...piTop,
+    ...tcrTop
+  ];
+  const recNextCard = renderUpNextCardHtml({
+    ws: ws as Record<string, unknown> | null,
+    phaseSnapshot,
+    suggestedNext,
+    readyTop,
+    readyCount,
+    firstWishlistOpen,
+    humanGatesCount,
+    phaseWorkCandidates
+  });
 
   const totalReadyCount = readyCount;
   const totalProposedCount = piCount + peCount;
@@ -4096,8 +4417,6 @@ export function renderDashboardRootInnerHtml(
     typeof (d.completedSummary as Record<string, unknown> | undefined)?.count === "number"
       ? ((d.completedSummary as Record<string, unknown>).count as number)
       : 0;
-
-  const phaseSnapshot = normalizePhaseSnapshot(d.currentPhaseDelivery, ws as Record<string, unknown> | null);
 
   const overviewContent =
     renderAgentStatusBanner(d) +

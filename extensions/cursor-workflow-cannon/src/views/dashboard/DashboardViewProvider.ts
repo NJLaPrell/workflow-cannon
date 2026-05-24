@@ -2630,7 +2630,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           this.client.run("get-phase-context", {
             ...expectedPlanningGenerationArgs()
           }),
-          this.client.run("cae-dashboard-summary", { schemaVersion: 1 })
+          // Authoring-shaped payload for renderGuidanceAuthoringPanelInnerHtml (sidebar CAE panel uses cae-dashboard-summary).
+          this.client.run("cae-authoring-summary", { schemaVersion: 1 })
         ])) as [
           PhaseJournalKitPayload & Record<string, unknown>,
           PhaseJournalKitPayload & Record<string, unknown>,
@@ -3690,6 +3691,21 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
       return;
     }
+    if (act === 'focus-phase-roster') {
+      var rosterEl = document.getElementById('wc-phase-roster');
+      if (rosterEl && typeof rosterEl.scrollIntoView === 'function') {
+        rosterEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      return;
+    }
+    if (act === 'open-queue-for-phase') {
+      var phasePk = (t.getAttribute('data-wc-phase-key') || '').trim();
+      applyTab('task-engine');
+      activeFilter = 'all';
+      activePhaseFilter = phasePk.length > 0 ? phasePk : 'all';
+      applyQueueFilters(rootEl);
+      return;
+    }
     if (act === 'phase-deliverables-edit') {
       var row = t.closest('[data-wc-phase-row]');
       if (!row) return;
@@ -4358,6 +4374,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       text-overflow: ellipsis;
       color: var(--vscode-foreground);
     }
+    .wc-rec-subtitle {
+      font-size: 11px;
+      margin: -4px 0 8px 0;
+      line-height: 1.4;
+      white-space: normal;
+    }
     .wc-rec-footer {
       display: flex;
       align-items: center;
@@ -4389,8 +4411,26 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       color: var(--vscode-button-secondaryForeground, var(--vscode-badge-foreground));
       border-color: var(--vscode-button-border, var(--vscode-contrastBorder));
     }
+    .wc-rec-footer-actions {
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px;
+      margin-left: auto;
+    }
+    .wc-rec-tag-closeout {
+      background: var(--vscode-editorWarning-background, var(--vscode-inputValidation-warningBackground));
+      color: var(--vscode-editorWarning-foreground, var(--vscode-inputValidation-warningForeground));
+    }
+    .wc-rec-tag-status {
+      background: var(--vscode-badge-background);
+      color: var(--vscode-badge-foreground);
+    }
     .wc-rec-next-wishlist {
       border-color: var(--vscode-textLink-foreground);
+    }
+    .wc-rec-next-closeout {
+      border-color: var(--vscode-editorWarning-border, var(--vscode-inputValidation-warningBorder));
     }
     .wc-rec-tag-wishlist {
       background: var(--vscode-inputValidation-infoBackground, var(--vscode-badge-background));
