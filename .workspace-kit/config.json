@@ -20,9 +20,7 @@
       "runtime": {
         "shadowPreflight": true
       }
-    },
-    "currentPhaseLabel": "Phase 107",
-    "currentPhaseNumber": 107
+    }
   },
   "tasks": {
     "intakePolicy": {

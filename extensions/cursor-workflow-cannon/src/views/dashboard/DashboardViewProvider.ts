@@ -40,6 +40,7 @@ import {
   type PhaseKeySuggestion
 } from "../phase-select-options.js";
 import { GuidanceAuthoringExtensionSide } from "../guidance/guidance-authoring-extension-side.js";
+import { buildGuidanceAuthoringWebviewBootstrap } from "../guidance/guidance-authoring-webview-bootstrap.js";
 import { renderGuidanceAuthoringPanelInnerHtml } from "../guidance/render-guidance-panel.js";
 import { STATUS_PANEL_EMBED_CSS } from "../status/render-status-tab.js";
 import {
@@ -347,6 +348,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
 
   /** Last successful `dashboard-summary` `data` — used for phase QuickPick targets. */
   private lastDashboardSummaryData: Record<string, unknown> | null = null;
+
+  /** Cached CAE tab HTML for light dashboard refreshes. */
+  private lastEmbeddedCaePanelHtml: string | null = null;
+
+  /** Options consumed by the next `pushUpdateOnce` (e.g. skip CAE refetch). */
+  private pendingPushUpdateOptions: { light?: boolean } | undefined;
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -732,6 +739,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         const phaseKey = typeof msg.phaseKey === "string" ? msg.phaseKey.trim() : "";
         if (phaseKey.length > 0) {
           await this.onStartPhaseFromRoster(phaseKey);
+        }
+      }
+      if (msg?.type === "markPhaseComplete") {
+        const phaseKey = typeof msg.phaseKey === "string" ? msg.phaseKey.trim() : "";
+        if (phaseKey.length > 0) {
+          await this.onMarkPhaseComplete(phaseKey);
         }
       }
       if (msg?.type === "updatePhaseDeliverables") {
@@ -1311,6 +1324,132 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     this.notifyKitStateChanged();
     await vscode.window.showInformationMessage(`Workspace phase set to ${targetKey}.`);
     await this.pushUpdate();
+  }
+
+  /** Clear workspace current phase after delivery closeout (update-workspace-status). */
+  private async onMarkPhaseComplete(phaseKey: string): Promise<void> {
+    const data = this.lastDashboardSummaryData;
+    const ws =
+      data?.workspaceStatus && typeof data.workspaceStatus === "object"
+        ? (data.workspaceStatus as Record<string, unknown>)
+        : null;
+    const currentRaw = ws?.currentKitPhase != null ? String(ws.currentKitPhase).trim() : "";
+    const currentKey = currentRaw.length > 0 ? this.parseLeadingPhaseDigits(currentRaw) : "";
+    const targetKey = this.parseLeadingPhaseDigits(phaseKey);
+
+    if (targetKey.length === 0 || currentKey.length === 0) {
+      return;
+    }
+    if (currentKey !== targetKey) {
+      await vscode.window.showWarningMessage(
+        `Workspace current phase is ${currentKey}, not ${targetKey}. Refresh the dashboard and try again.`
+      );
+      return;
+    }
+
+    const delivery = data?.currentPhaseDelivery as Record<string, unknown> | null | undefined;
+    const closeoutPassed = delivery?.closeoutPassed === true;
+    const remaining =
+      typeof delivery?.remainingCount === "number" ? delivery.remainingCount : Number.MAX_SAFE_INTEGER;
+    const humanGatesSummary = data?.humanGatesSummary as Record<string, unknown> | undefined;
+    const humanGateCount =
+      typeof humanGatesSummary?.count === "number" ? humanGatesSummary.count : 0;
+    const evidenceViolations =
+      typeof delivery?.deliveryEvidenceViolationCount === "number"
+        ? delivery.deliveryEvidenceViolationCount
+        : 0;
+
+    if (!closeoutPassed || remaining > 0 || humanGateCount > 0 || evidenceViolations > 0) {
+      await vscode.window.showWarningMessage(
+        "Mark Phase Complete unlocks when all delivery tasks are terminal, human gates are clear, and delivery evidence is recorded."
+      );
+      return;
+    }
+
+    const nextFromWs =
+      ws?.nextKitPhase != null ? this.parseLeadingPhaseDigits(String(ws.nextKitPhase)) : "";
+    const nextHint =
+      nextFromWs.length > 0 && nextFromWs !== targetKey ? ` Phase ${nextFromWs} stays queued as next.` : "";
+
+    const pick = await vscode.window.showWarningMessage(
+      `Mark Phase ${targetKey} complete? This clears the active workspace phase.${nextHint}`,
+      { modal: true },
+      "Mark complete"
+    );
+    if (pick !== "Mark complete") {
+      return;
+    }
+
+    this.setDashboardUiInteraction("mark-phase-complete", true);
+    const webview = this.view?.webview;
+    await webview?.postMessage({ type: "wcMarkPhaseBusy", active: true });
+    await webview?.postMessage({ type: "wcHidePhaseCards" });
+
+    const statusOut = await this.client.run("phase-status", {});
+    if (statusOut.ok !== true) {
+      await webview?.postMessage({ type: "wcMarkPhaseBusy", active: false });
+      this.setDashboardUiInteraction("mark-phase-complete", false);
+      await vscode.window.showErrorMessage(
+        `Could not read workspace phase status: ${String(statusOut.message ?? statusOut.code ?? "unknown error")}`
+      );
+      return;
+    }
+    const statusData = statusOut.data as Record<string, unknown> | undefined;
+    const wsStatus = statusData?.workspaceStatus as Record<string, unknown> | undefined;
+    const revision = wsStatus?.workspaceRevision;
+    if (typeof revision !== "number" || !Number.isInteger(revision) || revision < 0) {
+      await webview?.postMessage({ type: "wcMarkPhaseBusy", active: false });
+      this.setDashboardUiInteraction("mark-phase-complete", false);
+      await vscode.window.showErrorMessage("Could not read workspace revision for phase closeout.");
+      return;
+    }
+
+    const activeFocus =
+      nextFromWs.length > 0
+        ? `Phase ${targetKey} complete — use roster Start when ready for Phase ${nextFromWs}`
+        : `Phase ${targetKey} complete — no active workspace phase`;
+    const nextAgentActions =
+      nextFromWs.length > 0
+        ? [
+            `Start Phase ${nextFromWs} from the Phase Roster when you are ready to deliver`,
+            "Or use Complete & Release in chat for full publish and version closeout"
+          ]
+        : ["Pick the next phase from the Phase Roster when you are ready to deliver"];
+
+    const out = await this.client.run("update-workspace-status", {
+      expectedWorkspaceRevision: revision,
+      currentKitPhase: null,
+      activeFocus,
+      blockers: [],
+      pendingDecisions: [],
+      nextAgentActions,
+      command: "mark-phase-complete",
+      actor: "cursor-dashboard"
+    });
+
+    if (out.ok !== true) {
+      await webview?.postMessage({ type: "wcMarkPhaseBusy", active: false });
+      this.setDashboardUiInteraction("mark-phase-complete", false);
+      await vscode.window.showErrorMessage(
+        `Could not mark phase complete: ${String(out.message ?? out.code ?? "unknown error")}`
+      );
+      return;
+    }
+
+    await this.client.recordActivity({
+      kind: "releasing",
+      command: "mark-phase-complete",
+      phaseKey: `release/phase-${targetKey}`,
+      details: { source: "dashboard-mark-phase-complete", previousCurrentKitPhase: targetKey }
+    });
+    ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
+    this.notifyKitStateChanged();
+    await this.pushUpdate({ light: true });
+    await webview?.postMessage({ type: "wcMarkPhaseBusy", active: false });
+    this.setDashboardUiInteraction("mark-phase-complete", false);
+    await vscode.window.showInformationMessage(
+      `Phase ${targetKey} marked complete. No active workspace phase until you start the next one.`
+    );
   }
 
   private async onUpdatePhaseDeliverables(
@@ -2371,7 +2510,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
    * Embeds rendered HTML in `webview.html` so the panel works even when postMessage delivery is flaky.
    * Buttons still use a tiny inline script + postMessage (host only receives clicks).
    */
-  private async pushUpdate(): Promise<void> {
+  private async pushUpdate(options?: { light?: boolean }): Promise<void> {
+    if (options?.light === true) {
+      this.pendingPushUpdateOptions = { ...this.pendingPushUpdateOptions, light: true };
+    }
     if (this.dashboardDebounceTimer) {
       clearTimeout(this.dashboardDebounceTimer);
       this.dashboardDebounceTimer = undefined;
@@ -2437,6 +2579,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (!activeView) {
       return;
     }
+    const lightRefresh = this.pendingPushUpdateOptions?.light === true;
+    this.pendingPushUpdateOptions = undefined;
     if (this.isDashboardRefreshDeferred()) {
       this.dashboardRefreshAfterInteraction = true;
       return;
@@ -2475,6 +2619,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       this.lastDashboardSummaryData = raw.data as Record<string, unknown>;
       ingestPlanningMetaFromData(raw.data as Record<string, unknown>);
       try {
+        if (lightRefresh) {
+          embeddedCaePanelHtml = this.lastEmbeddedCaePanelHtml;
+          phaseJournal = undefined;
+        } else {
         const [lp, gpc, caeSummary] = (await Promise.all([
           this.client.run("list-phase-notes", {
             ...expectedPlanningGenerationArgs()
@@ -2491,6 +2639,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         ingestPlanningMetaFromData(lp.data as Record<string, unknown> | undefined);
         ingestPlanningMetaFromData(gpc.data as Record<string, unknown> | undefined);
         embeddedCaePanelHtml = renderGuidanceAuthoringPanelInnerHtml(caeSummary);
+        this.lastEmbeddedCaePanelHtml = embeddedCaePanelHtml;
 
         const pastFromSummary = (raw.data as Record<string, unknown>).pastPhaseNotes;
         const pastPhaseNotes: DashboardPhaseJournalBundle["pastPhaseNotes"] = Array.isArray(
@@ -2527,6 +2676,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           },
           pastPhaseNotes
         };
+        }
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         phaseJournal = {
@@ -2694,8 +2844,25 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       `script-src ${webview.cspSource} 'unsafe-inline'`
     ].join("; ");
 
+    const embeddedCaeBootstrapSource = JSON.stringify(
+      buildGuidanceAuthoringWebviewBootstrap("dash-cae-")
+    );
+
     const bootstrap = `(function(){
   var vscode = window.__wfcVscode || (window.__wfcVscode = acquireVsCodeApi());
+  window.__wcEmbeddedCaeBootstrapSource = ${embeddedCaeBootstrapSource};
+  function wcReinitEmbeddedCae() {
+    var root = document.getElementById('root');
+    if (!root) return;
+    var host = root.querySelector('.wc-dash-cae-host');
+    if (!host || !window.__wcEmbeddedCaeBootstrapSource) return;
+    host.querySelectorAll('script[data-wc-cae-injected]').forEach(function(s) { s.remove(); });
+    var script = document.createElement('script');
+    script.setAttribute('data-wc-cae-injected', '1');
+    script.textContent = window.__wcEmbeddedCaeBootstrapSource;
+    host.appendChild(script);
+  }
+  window.wcReinitEmbeddedCae = wcReinitEmbeddedCae;
   var activeTab = 'overview';
   var activeFilter = 'all';
   var activePhaseFilter = 'all';
@@ -2910,9 +3077,24 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     applyQueueFilters(root);
     reloadOpenLazyTerminalBuckets(root);
     if (editState) restorePhaseDeliverablesEditState(editState);
+    if (typeof window.wcReinitEmbeddedCae === 'function') window.wcReinitEmbeddedCae();
     var refreshBtn = document.getElementById('btn');
     setButtonBusy(refreshBtn, false);
     setUiInteraction('refresh', false);
+  }
+
+  function setMarkPhaseBusy(active) {
+    var root = document.getElementById('root');
+    if (!root) return;
+    root.classList.toggle('wc-mark-phase-busy', !!active);
+    var btn = root.querySelector('.dash-phase-mark-complete-btn');
+    if (btn) setButtonBusy(btn, !!active, active ? 'Marking…' : null);
+  }
+
+  function hidePhaseCardsNow() {
+    var root = document.getElementById('root');
+    if (!root) return;
+    root.querySelectorAll('.wc-cae-readiness, .wc-phase-progress').forEach(function(el) { el.remove(); });
   }
 
   function escPhaseDeliverablesHtml(s) {
@@ -3246,6 +3428,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       applyLazyTerminalBucketHtml(lazyStatus, lazyPk, m.html);
       return;
     }
+    if (m && m.type === 'wcMarkPhaseBusy') {
+      setMarkPhaseBusy(m.active === true);
+      return;
+    }
+    if (m && m.type === 'wcHidePhaseCards') {
+      hidePhaseCardsNow();
+      return;
+    }
     if (!m || m.type !== 'wcReplaceRoot' || typeof m.html !== 'string') return;
     if (isLocalUiLocked()) {
       pendingReplaceRootHtml = m.html;
@@ -3261,11 +3451,23 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   function positionContextHelpPopover(el) {
     if (!contextHelpPopover || !el) return;
     var r = el.getBoundingClientRect();
-    var left = r.left + r.width / 2;
+    var pad = 12;
+    contextHelpPopover.hidden = false;
+    contextHelpPopover.style.visibility = 'hidden';
+    contextHelpPopover.style.transform = 'none';
+    contextHelpPopover.style.left = '0px';
+    contextHelpPopover.style.top = '0px';
+    var popW = contextHelpPopover.offsetWidth || 280;
+    var popH = contextHelpPopover.offsetHeight || 80;
+    var left = r.left + r.width / 2 - popW / 2;
+    left = Math.max(pad, Math.min(left, window.innerWidth - pad - popW));
     var top = r.bottom + 6;
-    contextHelpPopover.style.left = Math.max(12, Math.min(left, window.innerWidth - 12)) + 'px';
+    if (top + popH > window.innerHeight - pad) {
+      top = Math.max(pad, r.top - popH - 6);
+    }
+    contextHelpPopover.style.left = left + 'px';
     contextHelpPopover.style.top = top + 'px';
-    contextHelpPopover.style.transform = 'translateX(-50%)';
+    contextHelpPopover.style.visibility = '';
   }
 
   function showContextHelpPopover(el) {
@@ -3337,6 +3539,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     });
   }
   wireContextHelpPopover();
+  if (typeof window.wcReinitEmbeddedCae === 'function') window.wcReinitEmbeddedCae();
 
   applyTab(activeTab);
   restorePhaseCardCollapseState(document.getElementById('root'));
@@ -3548,7 +3751,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (act === 'planning-wizard-start') { var sel = document.getElementById('wc-planning-type'); var pt = sel && sel.value ? String(sel.value).trim() : ''; if (pt) vscode.postMessage({type:'planningWizardStart',planningType:pt}); return; }
     if (act === 'planning-wizard-submit') { var ta = document.getElementById('wc-planning-answer'); var txt = ta && typeof ta.value === 'string' ? ta.value.trim() : ''; vscode.postMessage({type:'planningWizardSubmit',answer:txt}); return; }
     if (act === 'planning-wizard-cancel') { vscode.postMessage({type:'planningWizardCancel'}); return; }
-    if (act === 'planning-wizard-dismiss') { vscode.postMessage({type:'planningWizardDismiss'});return;}if(act==="collaboration-hub"){vscode.postMessage({type:"prefillCollaborationHubChat"});return;}if(act==="deliver-phase-prompt"){var kp=(t.getAttribute("data-wc-kit-phase")||"").trim();vscode.postMessage({type:"prefillDeliverPhaseChat",kitPhase:kp});return;}if(act==="add-wishlist-item"){vscode.postMessage({type:"addWishlistItem"});return;}if(act==="generate-features-chat"){vscode.postMessage({type:"prefillGenerateFeaturesChat"});return;}if(act==="transcript-churn-research-chat"){var tcTid=(t.getAttribute("data-task-id")||"").trim();vscode.postMessage({type:"prefillTranscriptChurnResearchChat",taskId:tcTid});return;}if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-page"){var wpp=parseInt(String(t.getAttribute("data-wishlist-page")||"0"),10);if(!Number.isNaN(wpp)&&wpp>=0)vscode.postMessage({type:"wishlistPage",page:wpp});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}if(act==="phase-complete-release"){var ph=(t.getAttribute("data-wc-phase-phrase")||"").trim();var pk=(t.getAttribute("data-wc-phase-key")||"").trim();var ids=(t.getAttribute("data-wc-phase-task-ids")||"").trim();var wcur=(t.getAttribute("data-wc-workspace-current-phase")||"").trim();var wnxt=(t.getAttribute("data-wc-workspace-next-phase")||"").trim();var rscope=(t.getAttribute("data-wc-release-scope")||"").trim();vscode.postMessage({type:"prefillPhaseCompleteReleaseChat",phasePhrase:ph,phaseKey:pk,seededTaskIdsCsv:ids,workspaceCurrentPhase:wcur,workspaceNextPhase:wnxt,scope:rscope==="current"?"current":rscope==="bucket"?"bucket":undefined});return;}if(act==="proposed-imp-accept-phase"||act==="proposed-exe-accept-phase"){var batch=(t.getAttribute("data-proposed-task-ids")||"").trim();var cat=act==="proposed-exe-accept-phase"?"execution":"improvement";vscode.postMessage({type:"dashboardAcceptProposedPhase",category:cat,taskIds:batch});return;}if(act==="phase-notes-chat"){vscode.postMessage({type:"prefillPhaseNotesDiscoveryChat"});return;}if(act==="phase-note-add"){vscode.postMessage({type:"addPhaseNote"});return;}if(act==="phase-note-dismiss"){var dpn=(t.getAttribute("data-note-id")||"").trim();var dpp=(t.getAttribute("data-note-priority")||"").trim();if(dpn)vscode.postMessage({type:"dismissPhaseNote",noteId:dpn,priority:dpp});return;}if(act==="phase-note-convert"){var cpn=(t.getAttribute("data-note-id")||"").trim();if(cpn)vscode.postMessage({type:"convertPhaseNote",noteId:cpn});return;}if(act==="phase-notes-propose-persist"){vscode.postMessage({type:"persistPhaseNoteProposals"});return;}if(act==="register-phase-catalog"){vscode.postMessage({type:"registerPhaseCatalogEntry"});return;}if(act==="phase-roster-start"){var rosterPk=(t.getAttribute("data-wc-phase-key")||"").trim();if(rosterPk)vscode.postMessage({type:"startPhaseFromRoster",phaseKey:rosterPk});return;}if(act==="team-assignment-register"){vscode.postMessage({type:"registerTeamAssignment"});return;}if(act==="team-execution-chat"){vscode.postMessage({type:"prefillTeamExecutionChat"});return;}if(act==="team-assignment-handoff"){var teamAid=(t.getAttribute("data-assignment-id")||"").trim();var teamWid=(t.getAttribute("data-worker-id")||"").trim();if(teamAid&&teamWid)vscode.postMessage({type:"submitTeamHandoff",assignmentId:teamAid,workerId:teamWid});return;}if(act==="team-assignment-reconcile"){var teamAid2=(t.getAttribute("data-assignment-id")||"").trim();var teamSid=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid2&&teamSid)vscode.postMessage({type:"reconcileTeamAssignment",assignmentId:teamAid2,supervisorId:teamSid});return;}if(act==="team-assignment-block"){var teamAid3=(t.getAttribute("data-assignment-id")||"").trim();var teamSid2=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid3&&teamSid2)vscode.postMessage({type:"blockTeamAssignment",assignmentId:teamAid3,supervisorId:teamSid2});return;}if(act==="team-assignment-cancel"){var teamAid4=(t.getAttribute("data-assignment-id")||"").trim();var teamSid3=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid4)vscode.postMessage({type:"cancelTeamAssignment",assignmentId:teamAid4,supervisorId:teamSid3});return;}if(act==="subagent-register"){vscode.postMessage({type:"registerSubagent"});return;}if(act==="subagent-registry-chat"){vscode.postMessage({type:"prefillSubagentRegistryChat"});return;}if(act==="subagent-spawn"){var subId=(t.getAttribute("data-subagent-id")||"").trim();vscode.postMessage({type:"spawnSubagent",subagentId:subId});return;}if(act==="subagent-session-close"){var subSid=(t.getAttribute("data-session-id")||"").trim();var subDef=(t.getAttribute("data-definition-id")||"").trim();if(subSid&&subDef)vscode.postMessage({type:"closeSubagentSession",sessionId:subSid,definitionId:subDef});return;}if(act==="subagent-retire"){var subRet=(t.getAttribute("data-subagent-id")||"").trim();vscode.postMessage({type:"retireSubagent",subagentId:subRet});return;}if(act==="checkpoint-create-head"){vscode.postMessage({type:"createCheckpoint",mode:"head"});return;}if(act==="checkpoint-create-stash"){vscode.postMessage({type:"createCheckpoint",mode:"stash"});return;}if(act==="checkpoint-recovery-chat"){vscode.postMessage({type:"prefillTaskCheckpointsRecoveryChat"});return;}if(act==="checkpoint-compare"){var ckptCmp=(t.getAttribute("data-checkpoint-id")||"").trim();if(ckptCmp)vscode.postMessage({type:"compareCheckpoint",checkpointId:ckptCmp});return;}if(act==="checkpoint-rewind"){var ckptRw=(t.getAttribute("data-checkpoint-id")||"").trim();var ckptRk=(t.getAttribute("data-ref-kind")||"").trim();var ckptTid=(t.getAttribute("data-task-id")||"").trim();if(ckptRw)vscode.postMessage({type:"rewindCheckpoint",checkpointId:ckptRw,refKind:ckptRk,taskId:ckptTid});return;}if(act==="approval-inbox-chat"){vscode.postMessage({type:"prefillPolicyApprovalInboxChat"});return;}if(act==="approval-review-accept"){var apTid=(t.getAttribute("data-task-id")||"").trim();var apTit=(t.getAttribute("data-task-title")||"").trim();if(apTid)vscode.postMessage({type:"reviewApprovalItem",taskId:apTid,title:apTit,decision:"accept"});return;}if(act==="approval-review-decline"){var apTid2=(t.getAttribute("data-task-id")||"").trim();var apTit2=(t.getAttribute("data-task-title")||"").trim();if(apTid2)vscode.postMessage({type:"reviewApprovalItem",taskId:apTid2,title:apTit2,decision:"decline"});return;}if(act==="approval-review-accept-edited"){var apTid3=(t.getAttribute("data-task-id")||"").trim();var apTit3=(t.getAttribute("data-task-title")||"").trim();if(apTid3)vscode.postMessage({type:"reviewApprovalItem",taskId:apTid3,title:apTit3,decision:"accept_edited"});return;}if(act==="assign-phase"){var apTid=(t.getAttribute("data-task-id")||"").trim();if(apTid)vscode.postMessage({type:"assignTaskPhase",taskId:apTid});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="task-comments-view"){if(tid)vscode.postMessage({type:"viewTaskComments",taskId:tid});return;}if(act==="task-comment-add"){if(tid)vscode.postMessage({type:"addTaskComment",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="human-gate-resume-ready"){if(tid)vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"resume_ready",transitionKind:"human-gate"});return;}if(act==="human-gate-resume-work"){if(tid)vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"resume_work",transitionKind:"human-gate"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});
+    if (act === 'planning-wizard-dismiss') { vscode.postMessage({type:'planningWizardDismiss'});return;}if(act==="collaboration-hub"){vscode.postMessage({type:"prefillCollaborationHubChat"});return;}if(act==="deliver-phase-prompt"){var kp=(t.getAttribute("data-wc-kit-phase")||"").trim();vscode.postMessage({type:"prefillDeliverPhaseChat",kitPhase:kp});return;}if(act==="add-wishlist-item"){vscode.postMessage({type:"addWishlistItem"});return;}if(act==="generate-features-chat"){vscode.postMessage({type:"prefillGenerateFeaturesChat"});return;}if(act==="transcript-churn-research-chat"){var tcTid=(t.getAttribute("data-task-id")||"").trim();vscode.postMessage({type:"prefillTranscriptChurnResearchChat",taskId:tcTid});return;}if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-page"){var wpp=parseInt(String(t.getAttribute("data-wishlist-page")||"0"),10);if(!Number.isNaN(wpp)&&wpp>=0)vscode.postMessage({type:"wishlistPage",page:wpp});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}if(act==="phase-complete-release"){var ph=(t.getAttribute("data-wc-phase-phrase")||"").trim();var pk=(t.getAttribute("data-wc-phase-key")||"").trim();var ids=(t.getAttribute("data-wc-phase-task-ids")||"").trim();var wcur=(t.getAttribute("data-wc-workspace-current-phase")||"").trim();var wnxt=(t.getAttribute("data-wc-workspace-next-phase")||"").trim();var rscope=(t.getAttribute("data-wc-release-scope")||"").trim();vscode.postMessage({type:"prefillPhaseCompleteReleaseChat",phasePhrase:ph,phaseKey:pk,seededTaskIdsCsv:ids,workspaceCurrentPhase:wcur,workspaceNextPhase:wnxt,scope:rscope==="current"?"current":rscope==="bucket"?"bucket":undefined});return;}if(act==="proposed-imp-accept-phase"||act==="proposed-exe-accept-phase"){var batch=(t.getAttribute("data-proposed-task-ids")||"").trim();var cat=act==="proposed-exe-accept-phase"?"execution":"improvement";vscode.postMessage({type:"dashboardAcceptProposedPhase",category:cat,taskIds:batch});return;}if(act==="phase-notes-chat"){vscode.postMessage({type:"prefillPhaseNotesDiscoveryChat"});return;}if(act==="phase-note-add"){vscode.postMessage({type:"addPhaseNote"});return;}if(act==="phase-note-dismiss"){var dpn=(t.getAttribute("data-note-id")||"").trim();var dpp=(t.getAttribute("data-note-priority")||"").trim();if(dpn)vscode.postMessage({type:"dismissPhaseNote",noteId:dpn,priority:dpp});return;}if(act==="phase-note-convert"){var cpn=(t.getAttribute("data-note-id")||"").trim();if(cpn)vscode.postMessage({type:"convertPhaseNote",noteId:cpn});return;}if(act==="phase-notes-propose-persist"){vscode.postMessage({type:"persistPhaseNoteProposals"});return;}if(act==="register-phase-catalog"){vscode.postMessage({type:"registerPhaseCatalogEntry"});return;}if(act==="phase-mark-complete"){var markPk=(t.getAttribute("data-wc-phase-key")||"").trim();if(markPk)vscode.postMessage({type:"markPhaseComplete",phaseKey:markPk});return;}if(act==="phase-roster-start"){var rosterPk=(t.getAttribute("data-wc-phase-key")||"").trim();if(rosterPk)vscode.postMessage({type:"startPhaseFromRoster",phaseKey:rosterPk});return;}if(act==="team-assignment-register"){vscode.postMessage({type:"registerTeamAssignment"});return;}if(act==="team-execution-chat"){vscode.postMessage({type:"prefillTeamExecutionChat"});return;}if(act==="team-assignment-handoff"){var teamAid=(t.getAttribute("data-assignment-id")||"").trim();var teamWid=(t.getAttribute("data-worker-id")||"").trim();if(teamAid&&teamWid)vscode.postMessage({type:"submitTeamHandoff",assignmentId:teamAid,workerId:teamWid});return;}if(act==="team-assignment-reconcile"){var teamAid2=(t.getAttribute("data-assignment-id")||"").trim();var teamSid=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid2&&teamSid)vscode.postMessage({type:"reconcileTeamAssignment",assignmentId:teamAid2,supervisorId:teamSid});return;}if(act==="team-assignment-block"){var teamAid3=(t.getAttribute("data-assignment-id")||"").trim();var teamSid2=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid3&&teamSid2)vscode.postMessage({type:"blockTeamAssignment",assignmentId:teamAid3,supervisorId:teamSid2});return;}if(act==="team-assignment-cancel"){var teamAid4=(t.getAttribute("data-assignment-id")||"").trim();var teamSid3=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid4)vscode.postMessage({type:"cancelTeamAssignment",assignmentId:teamAid4,supervisorId:teamSid3});return;}if(act==="subagent-register"){vscode.postMessage({type:"registerSubagent"});return;}if(act==="subagent-registry-chat"){vscode.postMessage({type:"prefillSubagentRegistryChat"});return;}if(act==="subagent-spawn"){var subId=(t.getAttribute("data-subagent-id")||"").trim();vscode.postMessage({type:"spawnSubagent",subagentId:subId});return;}if(act==="subagent-session-close"){var subSid=(t.getAttribute("data-session-id")||"").trim();var subDef=(t.getAttribute("data-definition-id")||"").trim();if(subSid&&subDef)vscode.postMessage({type:"closeSubagentSession",sessionId:subSid,definitionId:subDef});return;}if(act==="subagent-retire"){var subRet=(t.getAttribute("data-subagent-id")||"").trim();vscode.postMessage({type:"retireSubagent",subagentId:subRet});return;}if(act==="checkpoint-create-head"){vscode.postMessage({type:"createCheckpoint",mode:"head"});return;}if(act==="checkpoint-create-stash"){vscode.postMessage({type:"createCheckpoint",mode:"stash"});return;}if(act==="checkpoint-recovery-chat"){vscode.postMessage({type:"prefillTaskCheckpointsRecoveryChat"});return;}if(act==="checkpoint-compare"){var ckptCmp=(t.getAttribute("data-checkpoint-id")||"").trim();if(ckptCmp)vscode.postMessage({type:"compareCheckpoint",checkpointId:ckptCmp});return;}if(act==="checkpoint-rewind"){var ckptRw=(t.getAttribute("data-checkpoint-id")||"").trim();var ckptRk=(t.getAttribute("data-ref-kind")||"").trim();var ckptTid=(t.getAttribute("data-task-id")||"").trim();if(ckptRw)vscode.postMessage({type:"rewindCheckpoint",checkpointId:ckptRw,refKind:ckptRk,taskId:ckptTid});return;}if(act==="approval-inbox-chat"){vscode.postMessage({type:"prefillPolicyApprovalInboxChat"});return;}if(act==="approval-review-accept"){var apTid=(t.getAttribute("data-task-id")||"").trim();var apTit=(t.getAttribute("data-task-title")||"").trim();if(apTid)vscode.postMessage({type:"reviewApprovalItem",taskId:apTid,title:apTit,decision:"accept"});return;}if(act==="approval-review-decline"){var apTid2=(t.getAttribute("data-task-id")||"").trim();var apTit2=(t.getAttribute("data-task-title")||"").trim();if(apTid2)vscode.postMessage({type:"reviewApprovalItem",taskId:apTid2,title:apTit2,decision:"decline"});return;}if(act==="approval-review-accept-edited"){var apTid3=(t.getAttribute("data-task-id")||"").trim();var apTit3=(t.getAttribute("data-task-title")||"").trim();if(apTid3)vscode.postMessage({type:"reviewApprovalItem",taskId:apTid3,title:apTit3,decision:"accept_edited"});return;}if(act==="assign-phase"){var apTid=(t.getAttribute("data-task-id")||"").trim();if(apTid)vscode.postMessage({type:"assignTaskPhase",taskId:apTid});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="task-comments-view"){if(tid)vscode.postMessage({type:"viewTaskComments",taskId:tid});return;}if(act==="task-comment-add"){if(tid)vscode.postMessage({type:"addTaskComment",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="human-gate-resume-ready"){if(tid)vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"resume_ready",transitionKind:"human-gate"});return;}if(act==="human-gate-resume-work"){if(tid)vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"resume_work",transitionKind:"human-gate"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});
 
   if (rootEl) rootEl.addEventListener('keydown', function(ev) {
     var target = ev.target;
@@ -4538,6 +4741,23 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-phase-progress-summary {
       margin: 0 0 8px 0;
       font-size: 12px;
+    }
+    .wc-phase-progress-footer {
+      display: flex;
+      justify-content: center;
+      margin-top: 14px;
+      padding-top: 10px;
+      border-top: 1px solid var(--vscode-panel-border);
+    }
+    .wc-phase-progress-footer .dash-phase-mark-complete-btn {
+      min-width: 11rem;
+    }
+    #root.wc-mark-phase-busy .wc-phase-progress-footer {
+      opacity: 0.75;
+      pointer-events: none;
+    }
+    #root.wc-mark-phase-busy .dash-phase-mark-complete-btn::after {
+      content: ' …';
     }
     .wc-phase-progress-track {
       display: flex;

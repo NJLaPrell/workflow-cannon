@@ -614,6 +614,8 @@ test("embedded and standalone CAE surfaces avoid duplicate DOM ids", () => {
   const allIds = [...dashboardHtml.matchAll(/id="([^"]+)"/g)].map((m) => m[1]);
   const standaloneIds = [...standaloneHtml.matchAll(/id="([^"]+)"/g)].map((m) => m[1]);
   assert.ok(allIds.some((id) => id.startsWith("dash-cae-gp-")));
+  assert.doesNotMatch(dashboardHtml, /<script>[\s\S]*data-wc-cae-injected/);
+  assert.doesNotMatch(dashboardHtml, /wc-dash-cae-host[\s\S]*<script>/);
   for (const sid of standaloneIds) {
     assert.ok(!allIds.includes(sid), `expected embedded surface to namespace id ${sid}`);
   }
@@ -2230,6 +2232,32 @@ test("Phase Progress badge percent matches segmented bar fill", () => {
     overview.match(/<section class="dash-card wc-phase-progress[\s\S]*?<\/section>/)?.[0] ?? "";
   assert.match(progressSection, /wc-cae-score-badge[\s\S]*>80<span>%<\/span>/);
   assert.match(progressSection, /aria-valuenow="80"/);
+});
+
+test("Phase Progress renders Mark Phase Complete centered in card footer", () => {
+  const overview = overviewPanelHtml(renderDashboardRootInnerHtml(readinessDashboardPayload()));
+  const progressSection =
+    overview.match(/<section class="dash-card wc-phase-progress[\s\S]*?<\/section>/)?.[0] ?? "";
+  assert.match(progressSection, /wc-phase-progress-footer/);
+  assert.match(progressSection, /data-wc-action="phase-mark-complete"/);
+  assert.match(progressSection, /Mark Phase Complete/);
+  assert.doesNotMatch(progressSection, /\bdash-phase-mark-complete-btn[\s\S]*\bdisabled\b/);
+});
+
+test("Phase Progress disables Mark Phase Complete until closeout passes", () => {
+  const html = renderDashboardRootInnerHtml(
+    readinessDashboardPayload({
+      currentPhaseDelivery: phaseDeliveryFixture({
+        closeoutPassed: false,
+        remainingCount: 3,
+        releaseReadyPercent: 70
+      })
+    })
+  );
+  const progressSection =
+    html.match(/<section class="dash-card wc-phase-progress[\s\S]*?<\/section>/)?.[0] ?? "";
+  assert.match(progressSection, /dash-phase-mark-complete-btn/);
+  assert.match(progressSection, /\bdash-phase-mark-complete-btn[\s\S]*\bdisabled\b/);
 });
 
 test("Phase Progress renders closeout gate checkmarks", () => {

@@ -18,7 +18,6 @@ import {
   resolvePhaseScheduleTag,
   type PhaseScheduleFocus
 } from "../phase-schedule-tag.js";
-import { buildGuidanceAuthoringWebviewBootstrap } from "../guidance/guidance-authoring-webview-bootstrap.js";
 import { renderStatusTabInnerHtml } from "../status/render-status-tab.js";
 import { renderConfigPanelShellHtml } from "../config/config-panel-shell.js";
 
@@ -921,6 +920,40 @@ function workspaceCurrentPhaseKey(ws: Record<string, unknown> | null | undefined
 
 type PhaseProgressCheck = PhaseReadinessCheck;
 
+/** True when workspace may clear current phase via Mark Phase Complete. */
+function phaseMarkCompleteReady(snapshot: PhaseSnapshot, humanGateCount: number): boolean {
+  const evidenceOk =
+    snapshot.checkedTaskCount === 0 || snapshot.deliveryEvidenceViolationCount === 0;
+  return (
+    snapshot.closeoutPassed &&
+    snapshot.remainingCount === 0 &&
+    humanGateCount === 0 &&
+    evidenceOk
+  );
+}
+
+function renderPhaseMarkCompleteButton(phaseKey: string, ready: boolean): string {
+  const pk = escapeHtmlAttr(phaseKey.trim());
+  const disabled = !ready;
+  const title = ready
+    ? "Clear the active workspace phase after delivery closeout"
+    : "Finish delivery tasks, clear human gates, and record evidence before marking this phase complete";
+  const disabledAttr = disabled ? ' disabled aria-disabled="true"' : "";
+  return (
+    '<div class="wc-phase-progress-footer">' +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary dash-phase-mark-complete-btn' +
+    (disabled ? " wc-btn-disabled" : "") +
+    '" data-wc-action="phase-mark-complete"' +
+    disabledAttr +
+    ' data-wc-phase-key="' +
+    pk +
+    '" title="' +
+    escapeHtmlAttr(title) +
+    '">Mark Phase Complete</button>' +
+    "</div>"
+  );
+}
+
 function buildPhaseProgressChecks(args: {
   snapshot: PhaseSnapshot;
   humanGateCount: number;
@@ -1162,6 +1195,7 @@ function renderPhaseProgressCard(
     '<div class="wc-cae-checks wc-phase-progress-checks">' +
     progressChecks.map((c) => renderPhaseCheckRow(c)).join("") +
     "</div>";
+  const markCompleteReady = phaseMarkCompleteReady(snapshot, humanGateCount);
 
   return (
     '<section class="dash-card wc-phase-progress wc-phase-progress-collapsed" aria-label="Phase progress · Phase ' +
@@ -1188,6 +1222,7 @@ function renderPhaseProgressCard(
     renderPhaseProgressLegend(segments) +
     progressChecksSection +
     closeoutLine +
+    renderPhaseMarkCompleteButton(curPhase, markCompleteReady) +
     "</div>" +
     "</section>"
   );
@@ -4087,9 +4122,7 @@ export function renderDashboardRootInnerHtml(
     typeof embeddedCaePanelHtml === "string" && embeddedCaePanelHtml.trim().length > 0
       ? '<div class="gp-root wc-dash-cae-host dash-cae-embedded wc-dashboard-embedded-guidance">' +
         namespaceEmbeddedCaePanelHtml(embeddedCaePanelHtml) +
-        "<script>" +
-        buildGuidanceAuthoringWebviewBootstrap("dash-cae-") +
-        "</script></div>"
+        "</div>"
       : '<section class="dash-card" aria-label="CAE panel placeholder">' +
         '<p><b>CAE</b></p>' +
         '<p class="muted">Phase Readiness is under <b>WC Agent</b> on the Dashboard shell.</p>' +
