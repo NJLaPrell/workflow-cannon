@@ -76,32 +76,32 @@ test("drawer: normalizeDrawerValues trims", async () => {
   assert.equal(v.b, "3");
 });
 
-test("drawer: assign phase spec includes select, backlog, and custom field", async () => {
+test("drawer: assign phase spec defaults phase, scope, and Set Phase label", async () => {
   const mod = await import("../dist/views/dashboard/dashboard-input-drawer.js");
-  const spec = mod.buildAssignTaskPhaseDrawerSpec("T100", [
-    { label: "Phase 92 - Next slice", phaseKey: "92" }
-  ]);
+  const spec = mod.buildAssignTaskPhaseDrawerSpec(
+    "T100406",
+    [{ label: "Phase 109", phaseKey: "109" }],
+    "109"
+  );
   const html = mod.renderDrawerFormHtml(spec);
+  assert.equal(spec.primaryLabel, "Set Phase");
   assert.match(html, /data-wc-drawer-field="phaseSelect"/);
-  assert.match(html, /class="wc-drawer-select"/);
-  assert.match(html, /data-wc-drawer-field="phaseKeyCustom"/);
+  assert.match(html, /value="109" selected/);
+  assert.doesNotMatch(html, /data-wc-drawer-field="phaseKeyCustom"/);
+  assert.doesNotMatch(html, /data-wc-drawer-field="shortDescription"/);
+  assert.match(html, /Scope/);
+  assert.match(html, /T100406/);
+  assert.doesNotMatch(html, /Task id:/);
   const backlogIdx = html.indexOf('value="__backlog__"');
-  const phase92Idx = html.indexOf('value="92"');
-  assert.ok(backlogIdx >= 0 && phase92Idx >= 0 && backlogIdx < phase92Idx, "backlog option precedes phase keys");
-  assert.match(html, /Phase 92 - Next slice/);
+  const phase109Idx = html.indexOf('value="109"');
+  assert.ok(backlogIdx >= 0 && phase109Idx >= 0 && backlogIdx < phase109Idx, "backlog option precedes phase keys");
   assert.match(html, /Move to Backlog/);
-  assert.match(html, /value="__custom__"/);
 });
 
-test("drawer: validate assign phase — custom requires text", async () => {
+test("drawer: validate assign phase — pick phase or backlog", async () => {
   const mod = await import("../dist/views/dashboard/dashboard-input-drawer.js");
   const emptySel = mod.validateAssignTaskPhaseSubmit({ phaseSelect: "", phaseKeyCustom: "" });
   assert.equal(emptySel.ok, false);
-  const customNoText = mod.validateAssignTaskPhaseSubmit({ phaseSelect: "__custom__", phaseKeyCustom: "  " });
-  assert.equal(customNoText.ok, false);
-  const customOk = mod.validateAssignTaskPhaseSubmit({ phaseSelect: "__custom__", phaseKeyCustom: " 88 " });
-  assert.equal(customOk.ok, true);
-  if (customOk.ok) assert.equal(customOk.values.phaseKey, "88");
   const pickOk = mod.validateAssignTaskPhaseSubmit({ phaseSelect: "91", phaseKeyCustom: "" });
   assert.equal(pickOk.ok, true);
   if (pickOk.ok) assert.equal(pickOk.values.phaseKey, "91");
@@ -175,44 +175,46 @@ test("drawer: edit phase note spec and validation", async () => {
   assert.equal(mod.validateEditPhaseNoteSubmit({ summary: "ok", details: "x" }).ok, true);
 });
 
-test("drawer: accept proposed spec includes rationale field", async () => {
+test("drawer: accept proposed spec has no policy rationale field", async () => {
   const mod = await import("../dist/views/dashboard/dashboard-input-drawer.js");
   const html = mod.renderDrawerFormHtml(
     mod.buildAcceptProposedDrawerSpec({
       taskIds: ["T1"],
       categoryLabel: "",
-      suggestions: [{ label: "Next", phaseKey: "92" }]
+      suggestions: [{ label: "Next", phaseKey: "92" }],
+      defaultPhaseKey: "92"
     })
   );
   assert.doesNotMatch(html, /data-wc-drawer-field="policyRationale"/);
+  assert.doesNotMatch(html, /data-wc-drawer-field="phaseKeyCustom"/);
   assert.match(html, /data-wc-drawer-field="phaseSelect"/);
+  assert.match(html, /value="92" selected/);
+  assert.match(html, /Accept Proposed Task T1/);
+  assert.match(html, /data-wc-drawer-task-count="1"/);
+  assert.match(html, />Accept<\/button>/);
+  assert.doesNotMatch(html, /run-transition/);
+  assert.doesNotMatch(html, /Accept and assign phase/);
 });
 
-test("drawer: accept proposed single skips rationale; batch requires it", async () => {
+test("drawer: accept proposed batch uses simplified copy and Accept All label", async () => {
   const mod = await import("../dist/views/dashboard/dashboard-input-drawer.js");
-  const singleOk = mod.validateAcceptProposedSubmit(
-    { phaseSelect: "91", phaseKeyCustom: "", policyRationale: "" },
-    { batch: false }
-  );
-  assert.equal(singleOk.ok, true);
-  const batchBad = mod.validateAcceptProposedSubmit(
-    { phaseSelect: "91", phaseKeyCustom: "", policyRationale: "  " },
-    { batch: true }
-  );
-  assert.equal(batchBad.ok, false);
-  const batchGood = mod.validateAcceptProposedSubmit(
-    { phaseSelect: "91", phaseKeyCustom: "", policyRationale: "Approved in standup" },
-    { batch: true }
-  );
-  assert.equal(batchGood.ok, true);
+  const batchOk = mod.validateAcceptProposedSubmit({ phaseSelect: "91", phaseKeyCustom: "" });
+  assert.equal(batchOk.ok, true);
   const batchHtml = mod.renderDrawerFormHtml(
     mod.buildAcceptProposedDrawerSpec({
-      taskIds: ["T1", "T2"],
-      categoryLabel: "improvement",
-      suggestions: [{ label: "Next", phaseKey: "92" }]
+      taskIds: ["T100405", "T100406", "T100407"],
+      categoryLabel: "execution",
+      suggestions: [{ label: "Phase 100", phaseKey: "100" }],
+      defaultPhaseKey: "100"
     })
   );
-  assert.match(batchHtml, /data-wc-drawer-field="policyRationale"/);
+  assert.match(batchHtml, /Batch accept/);
+  assert.match(batchHtml, /Accept 3 Proposed Execution Tasks/);
+  assert.match(batchHtml, /data-wc-drawer-task-count="3"/);
+  assert.match(batchHtml, /Tasks \(3, execution\): T100405, T100406, T100407/);
+  assert.match(batchHtml, /Accept All<\/button>/);
+  assert.doesNotMatch(batchHtml, /data-wc-drawer-field="policyRationale"/);
+  assert.doesNotMatch(batchHtml, /Enter another phase key/);
 });
 
 test("drawer: guidance CAE mutation spec + validation", async () => {

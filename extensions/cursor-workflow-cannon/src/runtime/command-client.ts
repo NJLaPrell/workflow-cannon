@@ -3,6 +3,12 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import type { DashboardAgentStatusKind } from "@workflow-cannon/workspace-kit/contracts/dashboard-summary-run";
+import {
+  isKitRefreshRunCommand,
+  kitRefreshCoalesceKey,
+  kitRefreshPausedResult,
+  kitRunLaneForCommand
+} from "./kit-refresh-run-commands.js";
 
 export type KitRunResult = {
   ok: boolean;
@@ -38,6 +44,14 @@ type CommandClientOptions = {
    * breaks better-sqlite3 ABI.
    */
   resolveNodeExecutable?: () => string | undefined;
+  /** Optional trace hooks (wired from extension activate → Workflow Cannon output). */
+  onKitRunStart?: (commandName: string, args: Record<string, unknown>) => number;
+  onKitRunEnd?: (
+    commandName: string,
+    startedAt: number,
+    result: { ok: boolean; code?: string; message?: string }
+  ) => void;
+  onKitRunNotice?: (message: string) => void;
 };
 
 export type RuntimeStampExecutionPlan =
@@ -520,20 +534,48 @@ function looksLikePackageManagerBanner(stdout: string): boolean {
   return /^>\s+.+/m.test(banner) && /^>\s+.+/m.test(banner.split("\n").slice(1).join("\n"));
 }
 
+type RefreshSlot = {
+  work: () => Promise<KitRunResult>;
+  waiters: Array<{
+    resolve: (value: KitRunResult) => void;
+    reject: (reason: unknown) => void;
+  }>;
+};
+
 export class CommandClient {
   private readonly timeoutMs: number;
   private readonly cliPathOverride?: string;
   private readonly extensionRoot?: string;
   private readonly resolveNodeExecutable?: () => string | undefined;
   private readonly execFn: CommandClientExecFn;
-  /** Serialize kit CLI invocations — concurrent `wk run` processes can corrupt SQLite task DB. */
-  private runQueue: Promise<void> = Promise.resolve();
+  private readonly onKitRunStart?: (commandName: string, args: Record<string, unknown>) => number;
+  private readonly onKitRunEnd?: (
+    commandName: string,
+    startedAt: number,
+    result: { ok: boolean; code?: string; message?: string }
+  ) => void;
+  private readonly onKitRunNotice?: (message: string) => void;
+  /** When true, dashboard refresh reads return immediately without hitting the CLI queue. */
+  private refreshPaused = false;
+
+  /** Dual-lane queue: mutations drain before refresh batches; refresh jobs coalesce by key. */
+  private mutationEntries: Array<{
+    work: () => Promise<KitRunResult>;
+    resolve: (value: KitRunResult) => void;
+    reject: (reason: unknown) => void;
+  }> = [];
+  private refreshSlots = new Map<string, RefreshSlot>();
+  private laneDrainScheduled = false;
+  private laneDraining = false;
 
   constructor(private readonly workspaceRoot: string, options?: CommandClientOptions) {
     this.timeoutMs = options?.timeoutMs ?? 30_000;
     this.cliPathOverride = options?.cliPathOverride;
     this.extensionRoot = options?.extensionRoot;
     this.resolveNodeExecutable = options?.resolveNodeExecutable;
+    this.onKitRunStart = options?.onKitRunStart;
+    this.onKitRunEnd = options?.onKitRunEnd;
+    this.onKitRunNotice = options?.onKitRunNotice;
     this.execFn =
       options?.execFn ??
       ((root, cliArgs) =>
@@ -552,22 +594,113 @@ export class CommandClient {
     return this.workspaceRoot;
   }
 
-  private enqueueSerialized<T>(work: () => Promise<T>): Promise<T> {
-    const run = this.runQueue.then(work, work);
-    this.runQueue = run.then(
-      () => undefined,
-      () => undefined
-    );
-    return run;
+  /** Pause dashboard refresh kit reads so drawer / phase mutations are not queued behind them. */
+  setRefreshPaused(paused: boolean): void {
+    this.refreshPaused = paused;
+  }
+
+  isRefreshPaused(): boolean {
+    return this.refreshPaused;
+  }
+
+  private enqueueLane(commandName: string, work: () => Promise<KitRunResult>): Promise<KitRunResult> {
+    const lane = kitRunLaneForCommand(commandName);
+    if (lane === "mutation") {
+      return new Promise<KitRunResult>((resolve, reject) => {
+        this.mutationEntries.push({ work, resolve, reject });
+        this.scheduleLaneDrain();
+      });
+    }
+    const refreshKey = kitRefreshCoalesceKey(commandName);
+    return new Promise<KitRunResult>((resolve, reject) => {
+      let slot = this.refreshSlots.get(refreshKey);
+      if (!slot) {
+        slot = { work, waiters: [] };
+        this.refreshSlots.set(refreshKey, slot);
+      } else {
+        slot.work = work;
+      }
+      slot.waiters.push({ resolve, reject });
+      this.scheduleLaneDrain();
+    });
+  }
+
+  private scheduleLaneDrain(): void {
+    if (this.laneDrainScheduled) {
+      return;
+    }
+    this.laneDrainScheduled = true;
+    queueMicrotask(() => {
+      this.laneDrainScheduled = false;
+      void this.drainLaneQueue();
+    });
+  }
+
+  private async drainLaneQueue(): Promise<void> {
+    if (this.laneDraining) {
+      return;
+    }
+    this.laneDraining = true;
+    try {
+      while (this.mutationEntries.length > 0 || this.refreshSlots.size > 0) {
+        while (this.mutationEntries.length > 0) {
+          const entry = this.mutationEntries.shift()!;
+          try {
+            entry.resolve(await entry.work());
+          } catch (error) {
+            entry.reject(error);
+          }
+        }
+        const refreshKeys = [...this.refreshSlots.keys()];
+        for (const refreshKey of refreshKeys) {
+          const slot = this.refreshSlots.get(refreshKey);
+          if (!slot) {
+            continue;
+          }
+          this.refreshSlots.delete(refreshKey);
+          if (this.refreshPaused) {
+            const paused = kitRefreshPausedResult();
+            for (const waiter of slot.waiters) {
+              waiter.resolve(paused);
+            }
+            continue;
+          }
+          try {
+            const result = await slot.work();
+            for (const waiter of slot.waiters) {
+              waiter.resolve(result);
+            }
+          } catch (error) {
+            for (const waiter of slot.waiters) {
+              waiter.reject(error);
+            }
+          }
+        }
+      }
+    } finally {
+      this.laneDraining = false;
+      if (this.mutationEntries.length > 0 || this.refreshSlots.size > 0) {
+        void this.drainLaneQueue();
+      }
+    }
   }
 
   /** `workspace-kit run <name> <json>` — parses single JSON object from stdout. */
   async run(commandName: string, args: Record<string, unknown>): Promise<KitRunResult> {
-    return this.enqueueSerialized(() => this.runOnce(commandName, args));
+    if (this.refreshPaused && isKitRefreshRunCommand(commandName)) {
+      return kitRefreshPausedResult();
+    }
+    return this.enqueueLane(commandName, () => {
+      if (this.refreshPaused && isKitRefreshRunCommand(commandName)) {
+        return Promise.resolve(kitRefreshPausedResult());
+      }
+      return this.runOnce(commandName, args);
+    });
   }
 
   /** Single serialized `workspace-kit run` invocation (do not call directly). */
   private async runOnce(commandName: string, args: Record<string, unknown>): Promise<KitRunResult> {
+    const startedAt = this.onKitRunStart?.(commandName, args) ?? Date.now();
     const jsonArg = JSON.stringify(args);
     try {
       const { stdout, stderr, exitCode } = await this.execFn(this.workspaceRoot, [
@@ -576,7 +709,7 @@ export class CommandClient {
         jsonArg
       ]);
       if (stderr.trim()) {
-        console.warn("workspace-kit stderr:", stderr.slice(0, 500));
+        this.onKitRunNotice?.(`stderr ${commandName}: ${stderr.trim().slice(0, 400)}`);
       }
       const parsed = parseRunCommandOutput(stdout, exitCode, stderr);
       if (!parsed.ok && exitCode !== 0 && looksLikeNativeSqliteError(`${stderr}\n${stdout}`)) {
@@ -598,20 +731,25 @@ export class CommandClient {
           nativeProbeRoots,
           runtimeRoots
         );
-        return {
-          ok: false,
+        const fail = {
+          ok: false as const,
           code: "extension-native-sqlite-runtime-incompatible",
           message: formatNodeExecutableDiagnostics(diagnostics),
           details: { nodeCandidates: diagnostics }
         };
+        this.onKitRunEnd?.(commandName, startedAt, fail);
+        return fail;
       }
+      this.onKitRunEnd?.(commandName, startedAt, parsed);
       return parsed;
     } catch (e) {
-      return {
-        ok: false,
+      const fail = {
+        ok: false as const,
         code: "extension-exec-error",
         message: e instanceof Error ? e.message : String(e)
       };
+      this.onKitRunEnd?.(commandName, startedAt, fail);
+      return fail;
     }
   }
 
@@ -621,7 +759,7 @@ export class CommandClient {
       source: "vscode-extension"
     });
     if (!out.ok) {
-      console.warn("workspace-kit activity record failed:", String(out.message ?? out.code ?? "unknown"));
+      this.onKitRunNotice?.(`activity record failed: ${String(out.message ?? out.code ?? "unknown")}`);
     }
   }
 
@@ -631,7 +769,7 @@ export class CommandClient {
       source: "vscode-extension"
     });
     if (!out.ok) {
-      console.warn("workspace-kit activity clear failed:", String(out.message ?? out.code ?? "unknown"));
+      this.onKitRunNotice?.(`activity clear failed: ${String(out.message ?? out.code ?? "unknown")}`);
     }
   }
 

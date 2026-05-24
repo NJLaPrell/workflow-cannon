@@ -17,6 +17,7 @@ import {
   buildTranscriptChurnResearchPrompt
 } from "./playbook-chat-prompts.js";
 import { confirmAndRunTransition } from "./run-transition-with-approval.js";
+import { kitRunTraceHooks, logWc } from "./runtime/workflow-cannon-log.js";
 import { buildLeaseUiState, leaseActionLabel, type LeaseActionKind } from "./lease-status-ui.js";
 function readWorkflowCannonNodeSetting(): string | undefined {
   return vscode.workspace.getConfiguration("workflowCannon").get<string>("nodeExecutable")?.trim() || undefined;
@@ -75,7 +76,8 @@ export function activate(context: vscode.ExtensionContext): void {
   const client = root
     ? new CommandClient(root, {
         extensionRoot: context.extensionUri.fsPath,
-        resolveNodeExecutable: readWorkflowCannonNodeSetting
+        resolveNodeExecutable: readWorkflowCannonNodeSetting,
+        ...kitRunTraceHooks()
       })
     : undefined;
   const kitStateEmitter = new vscode.EventEmitter<void>();
@@ -224,8 +226,7 @@ export function activate(context: vscode.ExtensionContext): void {
         behaviorRuleSyncTimer = undefined;
         void client.run("sync-effective-behavior-cursor-rule", {}).then((r) => {
           if (!r.ok && process.env.WORKSPACE_KIT_DEBUG_EXTENSION === "1") {
-            // eslint-disable-next-line no-console
-            console.warn("[workflow-cannon] sync-effective-behavior-cursor-rule:", r.code, r.message);
+            logWc("extension", `sync-effective-behavior-cursor-rule FAIL ${String(r.code ?? "")} ${String(r.message ?? "")}`);
           }
         });
       }, 1500);

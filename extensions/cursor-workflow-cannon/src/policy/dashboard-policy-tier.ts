@@ -17,7 +17,7 @@ export type DashboardPolicyTierRow = {
 /** Stable matrix: Dashboard workflowId + action → wk run command → routine | elevated. */
 export const DASHBOARD_POLICY_TIER_MATRIX: readonly DashboardPolicyTierRow[] = [
   { workflowId: "accept-proposed", action: "accept-single", command: "run-transition", tier: "routine" },
-  { workflowId: "accept-proposed", action: "accept-batch", command: "run-transition", tier: "elevated" },
+  { workflowId: "accept-proposed", action: "accept-batch", command: "run-transition", tier: "routine" },
   { workflowId: "review-approval-item", action: "accept", command: "review-item", tier: "routine" },
   { workflowId: "review-approval-item", action: "decline", command: "review-item", tier: "routine" },
   { workflowId: "review-approval-item", action: "accept_edited", command: "review-item", tier: "elevated" },

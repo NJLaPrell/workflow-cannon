@@ -66,7 +66,7 @@ The extension runs its bundled `@workflow-cannon/workspace-kit` CLI when availab
 
 **Workspace root:** Cursor must open the folder that contains `.workspace-kit/manifest.json` (the Workflow Cannon repo root). If you open a parent directory, the extension will not attach and you get no dashboard/tasks—or you may be pointed at a different task store than you expect.
 
-**Proposed vs ready:** The dashboard “Suggested next” and ready/proposed sections only reflect tasks in the configured task store. **`proposed`** improvement work appears under **Proposed improvements** on the dashboard (after a refresh). When **`dashboard-summary`** returns **`phaseBuckets`** with **`taskIds`**, each phase heading can show **Accept All** (one shared policy rationale; the extension refreshes the planning-generation token between each **`run-transition`** **`accept`**). Planning appears when a `build-plan` session file exists.
+**Proposed vs ready:** The dashboard “Suggested next” and ready/proposed sections only reflect tasks in the configured task store. **`proposed`** improvement work appears under **Proposed improvements** on the dashboard (after a refresh). When **`dashboard-summary`** returns **`phaseBuckets`** with **`taskIds`**, each phase heading can show **Accept All** (routine dashboard policy trace; the extension refreshes the planning-generation token between each **`run-transition`** **`accept`**). Planning appears when a `build-plan` session file exists.
 
 **Execution queue vs wishlist:** **Ready** / **proposed** rollups on **Overview** and the **Queue** tab follow the kit **execution queue** and **exclude** **`wishlist_intake`** (note under stat pills / filters; points to **Wishlist** on the **Queue** tab). **Status → Task Counts** uses **`stateSummary`** (store-wide); see the muted note under that grid when numbers diverge. **Up next** uses kit **`suggestedNext`** (ready tasks ordered by **current workspace phase**, then **next phase**, then priority). When no runnable ready work exists, it surfaces the **first open wishlist** row. Full store: **`wk run list-tasks`**.
 
@@ -114,6 +114,18 @@ For **sidebar Dashboard** actions that collect operator intent before a mutating
 - **Planning interview wizard** and similar legacy flows until migrated.
 
 Do not add new **`await vscode.window.showInputBox`** / **`showQuickPick`** calls in `DashboardViewProvider.ts` for Dashboard-originated kit mutations — `extensions/cursor-workflow-cannon/test/dashboard-prompt-surface.test.mjs` fails the build if they appear (non-comment lines).
+
+### Dashboard trace (operator debugging)
+
+**View → Output → Workflow Cannon** logs extension activity with timestamps:
+
+- **`[wk]`** — every `workspace-kit run …` (start `→`, end `←` with duration and ok/FAIL). This is the main signal for slow drawers and duplicate CLI calls.
+- **`[dashboard]`** — drawer open/submit/cancel, `pushUpdate` cycles, Set Phase actions.
+- **`[webview]`** — incoming webview `postMessage` types (only when verbose; see below).
+
+Set **`WORKSPACE_KIT_DEBUG_DASHBOARD=1`** in the environment before launching Cursor (or the Extension Development Host) to also log webview message types and scheduled refresh debounces.
+
+Logs go to the **Workflow Cannon** output channel only (not duplicated into **Log (Extension Host)**).
 
 Manual operator checklist: `docs/e2e.md`  
 Security notes: `SECURITY.md`

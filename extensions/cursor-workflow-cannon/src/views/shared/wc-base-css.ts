@@ -24,13 +24,34 @@ export const WC_BASE_CSS = `
                     color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground)); }
 .wc-btn-secondary:hover { background: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-hoverBackground)); }
 
+.wc-btn-info {
+  background: var(--vscode-textLink-foreground, #4fc1ff);
+  color: var(--vscode-editor-background, #1e1e1e);
+  border-color: var(--vscode-textLink-foreground, #4fc1ff);
+}
+.wc-btn-info:hover {
+  background: var(--vscode-textLink-activeForeground, var(--vscode-textLink-foreground, #4fc1ff));
+  color: var(--vscode-editor-background, #1e1e1e);
+}
+
+.wc-btn-success {
+  background: var(--vscode-testing-iconPassed, #4ec9b0);
+  color: var(--vscode-editor-background, #1e1e1e);
+  border-color: var(--vscode-testing-iconPassed, #4ec9b0);
+}
+.wc-btn-success:hover {
+  background: var(--vscode-gitDecoration-addedResourceForeground, var(--vscode-testing-iconPassed, #4ec9b0));
+  color: var(--vscode-editor-background, #1e1e1e);
+}
+
 .wc-btn-danger {
-  color: var(--vscode-errorForeground);
-  background: transparent;
-  border: 1px solid var(--vscode-errorForeground);
+  background: var(--vscode-errorForeground, #f44747);
+  color: var(--vscode-editor-background, #1e1e1e);
+  border-color: var(--vscode-errorForeground, #f44747);
 }
 .wc-btn-danger:hover {
-  background: var(--vscode-toolbar-hoverBackground, rgba(127,127,127,.10));
+  background: var(--vscode-inputValidation-errorBorder, var(--vscode-errorForeground, #f44747));
+  color: var(--vscode-editor-background, #1e1e1e);
 }
 
 .wc-btn[disabled] { opacity: 0.42; cursor: not-allowed; }

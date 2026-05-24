@@ -120,7 +120,7 @@ function renderPhaseAssignButton(taskId: string): string {
   const idAttr = escapeHtml(taskId);
   const aria = escapeHtmlAttr(`Set phase for task ${taskId}`);
   return (
-    '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="assign-phase" data-task-id="' +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-info" data-wc-action="assign-phase" data-task-id="' +
     idAttr +
     '" aria-label="' +
     aria +
@@ -144,9 +144,11 @@ function renderTaskCommentsButton(taskId: string, mode: "view" | "add"): string 
   const idAttr = escapeHtml(taskId);
   const label = mode === "add" ? "Add Comment" : "View Comments";
   const action = mode === "add" ? "task-comment-add" : "task-comments-view";
+  const intentClass = mode === "add" ? "wc-btn-info" : "wc-btn-secondary";
   const aria = escapeHtmlAttr(`${label} for task ${taskId}`);
   return (
-    '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary' +
+    '<button type="button" class="wc-btn wc-btn-sm ' +
+    intentClass +
     '" data-wc-action="' +
     action +
     '" data-task-id="' +
@@ -188,12 +190,12 @@ function renderProposedQueueTaskActionButtons(
     renderTaskDetailButton(taskId) +
     renderTaskCommentsButton(taskId, "view") +
     renderTaskCommentsButton(taskId, "add") +
-    '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="' +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-success" data-wc-action="' +
     escapeHtml(acceptDecline.acceptAction) +
     '" data-task-id="' +
     idAttr +
     '" title="Accept → ready (routine tier: policy rationale auto-filled)">Accept</button>' +
-    '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="' +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-danger" data-wc-action="' +
     escapeHtml(acceptDecline.declineAction) +
     '" data-task-id="' +
     idAttr +
@@ -261,6 +263,108 @@ export function dashboardRowPhaseKey(row: unknown): string {
   const phase = r.phase != null ? String(r.phase).trim() : "";
   const m = phase.match(/(?:^|\s)phase\s+(\d+)/i);
   return m ? m[1] : "";
+}
+
+/** Scan one dashboard-summary rollup for a task id → phase key. */
+function scanTaskPhaseInDashboardSummary(summary: unknown, tid: string): string {
+  if (!summary || typeof summary !== "object") {
+    return "";
+  }
+  const s = summary as { top?: unknown; phaseBuckets?: unknown };
+  if (Array.isArray(s.top)) {
+    for (const row of s.top) {
+      if (!row || typeof row !== "object") {
+        continue;
+      }
+      const id = String((row as { id?: unknown }).id ?? "")
+        .trim()
+        .toUpperCase();
+      if (id === tid) {
+        return dashboardRowPhaseKey(row);
+      }
+    }
+  }
+  const buckets = s.phaseBuckets;
+  if (!Array.isArray(buckets)) {
+    return "";
+  }
+  for (const raw of buckets) {
+    if (!raw || typeof raw !== "object") {
+      continue;
+    }
+    const bucket = raw as { phaseKey?: unknown; top?: unknown; taskIds?: unknown };
+    const bucketPk = bucket.phaseKey != null ? String(bucket.phaseKey).trim() : "";
+    const ids = Array.isArray(bucket.taskIds) ? bucket.taskIds : [];
+    if (ids.some((id) => String(id).trim().toUpperCase() === tid)) {
+      return bucketPk;
+    }
+    if (Array.isArray(bucket.top)) {
+      for (const row of bucket.top) {
+        if (!row || typeof row !== "object") {
+          continue;
+        }
+        const id = String((row as { id?: unknown }).id ?? "")
+          .trim()
+          .toUpperCase();
+        if (id === tid) {
+          return dashboardRowPhaseKey(row) || bucketPk;
+        }
+      }
+    }
+  }
+  return "";
+}
+
+/** Phase key for a task row from dashboard-summary rollups (ready, proposed, blocked, …). */
+export function lookupDashboardTaskPhaseKey(data: Record<string, unknown>, taskId: string): string {
+  const tid = taskId.trim().toUpperCase();
+  if (!tid.length) {
+    return "";
+  }
+  const summaries = [
+    data.readyExecutionSummary,
+    data.readyImprovementsSummary,
+    data.proposedExecutionSummary,
+    data.proposedImprovementsSummary,
+    data.blockedSummary,
+    data.completedSummary,
+    data.cancelledSummary,
+    data.transcriptChurnResearchSummary
+  ];
+  for (const summary of summaries) {
+    const pk = scanTaskPhaseInDashboardSummary(summary, tid);
+    if (pk.length > 0) {
+      return pk;
+    }
+  }
+  const readyTop = data.readyQueueTop;
+  if (Array.isArray(readyTop)) {
+    for (const row of readyTop) {
+      if (!row || typeof row !== "object") {
+        continue;
+      }
+      const id = String((row as { id?: unknown }).id ?? "")
+        .trim()
+        .toUpperCase();
+      if (id === tid) {
+        return dashboardRowPhaseKey(row);
+      }
+    }
+  }
+  return "";
+}
+
+/** Phase key for a proposed task row from dashboard-summary rollups. */
+export function lookupProposedTaskPhaseKey(data: Record<string, unknown>, taskId: string): string {
+  const tid = taskId.trim().toUpperCase();
+  if (!tid.length) {
+    return "";
+  }
+  return (
+    scanTaskPhaseInDashboardSummary(data.proposedExecutionSummary, tid) ||
+    scanTaskPhaseInDashboardSummary(data.proposedImprovementsSummary, tid) ||
+    ""
+  );
 }
 
 /** First ready-queue row in the workspace current phase. */
@@ -2331,7 +2435,9 @@ function renderProposedPhaseBuckets(
           c > 0 && taskIds.length > 0
             ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary dash-phase-accept-all" data-wc-action="proposed-imp-accept-phase" data-proposed-task-ids="' +
               escapeHtmlAttr(taskIds.join(",")) +
-              '" title="Elevated batch accept — shared policy rationale required in drawer">Accept All</button>'
+              '" data-proposed-phase-key="' +
+              escapeHtmlAttr(typeof b.phaseKey === "string" ? b.phaseKey.trim() : "") +
+              '" title="Accept all proposed improvement tasks in this phase">Accept All</button>'
             : "";
         const inner =
           c === 0
@@ -2439,7 +2545,9 @@ function renderProposedExecutionPhaseBuckets(
           c > 0 && taskIds.length > 0
             ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary dash-phase-accept-all" data-wc-action="proposed-exe-accept-phase" data-proposed-task-ids="' +
               escapeHtmlAttr(taskIds.join(",")) +
-              '" title="Elevated batch accept — shared policy rationale required in drawer">Accept All</button>'
+              '" data-proposed-phase-key="' +
+              escapeHtmlAttr(typeof b.phaseKey === "string" ? b.phaseKey.trim() : "") +
+              '" title="Accept all proposed execution tasks in this phase">Accept All</button>'
             : "";
         const inner =
           c === 0

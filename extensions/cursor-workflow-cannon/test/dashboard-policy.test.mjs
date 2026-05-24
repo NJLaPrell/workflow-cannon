@@ -71,13 +71,18 @@ test("elevated path merges human detail", () => {
   assert.match(out.rationale, /detail=Revert bad checkpoint after review/);
 });
 
+test("resolveDashboardPolicyTierRow returns routine accept-batch", () => {
+  const row = tierMod.resolveDashboardPolicyTierRow("accept-proposed", "accept-batch");
+  assert.ok(row);
+  assert.equal(row.tier, "routine");
+});
+
 test("appendElevatedPolicyExplainer leaves routine paths unchanged", () => {
   const out = tierMod.appendElevatedPolicyExplainer("Base copy.", "accept-proposed", "accept-single");
   assert.equal(out, "Base copy.");
 });
 
-test("appendElevatedPolicyExplainer prepends for elevated batch accept", () => {
+test("appendElevatedPolicyExplainer leaves batch accept routine path unchanged", () => {
   const out = tierMod.appendElevatedPolicyExplainer("Base copy.", "accept-proposed", "accept-batch");
-  assert.match(out, /Batch accept/);
-  assert.match(out, /Base copy\./);
+  assert.equal(out, "Base copy.");
 });
