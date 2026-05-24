@@ -164,7 +164,7 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(statusPanel, /Agent Profile/);
   assert.match(statusPanel, /<span class="wc-status-kv-label">Role<\/span><span class="wc-status-kv-val">Adventurer<\/span>/);
   assert.match(statusPanel, /<span class="wc-status-kv-label">Temperament<\/span><span class="wc-status-kv-val">The Steady Adventurer<\/span>/);
-  assert.match(statusPanel, /Manage guidance policies via the CAE sidebar panel/);
+  assert.match(statusPanel, /Manage guidance policies in the Dashboard <b>CAE<\/b> tab/);
   assert.doesNotMatch(caePanel, /Active Guidance|aria-label="Agent guidance"/);
   assert.ok(statusPanel.indexOf('aria-label="Agent profile"') < statusPanel.indexOf('aria-label="Workspace identity"'));
   assert.ok(overviewPanel.indexOf("dash-agent-status-banner") < overviewPanel.indexOf("wc-cae-readiness"));

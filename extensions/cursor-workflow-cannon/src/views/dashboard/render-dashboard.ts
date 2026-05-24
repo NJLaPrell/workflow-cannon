@@ -3828,7 +3828,7 @@ function renderStatusSectionHtml(
       : "") +
     (tierRaw ? kvRow("Guidance tier", escapeHtml(tierRaw)) : "") +
     "</div>" +
-    '<p class="muted wc-status-guidance-manage">Manage guidance policies via the CAE sidebar panel (Workflow Cannon activity bar).</p>' +
+    '<p class="muted wc-status-guidance-manage">Manage guidance policies in the Dashboard <b>CAE</b> tab (Workflow Cannon → Dashboard).</p>' +
     "</section>";
 
   const pg = d.planningGeneration;
@@ -4445,7 +4445,7 @@ export function renderDashboardRootInnerHtml(
       : '<section class="dash-card" aria-label="CAE panel placeholder">' +
         '<p><b>CAE</b></p>' +
         '<p class="muted">Phase Readiness is under <b>WC Agent</b> on the Dashboard shell.</p>' +
-        '<p class="muted">Embedded CAE panel unavailable; use the Guidance panel as fallback.</p>' +
+        '<p class="muted">Embedded CAE unavailable; run <b>Workflow Cannon: Open Guidance Authoring</b> or refresh the Dashboard.</p>' +
         '</section>';
 
   const taskEngineContent =

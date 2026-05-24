@@ -2630,7 +2630,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           this.client.run("get-phase-context", {
             ...expectedPlanningGenerationArgs()
           }),
-          // Authoring-shaped payload for renderGuidanceAuthoringPanelInnerHtml (sidebar CAE panel uses cae-dashboard-summary).
+          // Authoring-shaped payload for renderGuidanceAuthoringPanelInnerHtml (Dashboard CAE tab).
           this.client.run("cae-authoring-summary", { schemaVersion: 1 })
         ])) as [
           PhaseJournalKitPayload & Record<string, unknown>,

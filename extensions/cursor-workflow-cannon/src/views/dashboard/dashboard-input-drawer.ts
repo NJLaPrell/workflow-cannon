@@ -892,7 +892,7 @@ export function validateGuidanceCaeMutationSubmit(values: Record<string, string>
   return { ok: true, values: { rationale } };
 }
 
-/** CAE sidebar (Guidance view) — acknowledge trace read. */
+/** Guidance acknowledge trace read (drawer spec; optional host surfaces). */
 export function buildGuidanceAckDrawerSpec(p: {
   traceId: string;
   activationId: string;
@@ -930,7 +930,7 @@ export function validateGuidanceAckSubmit(values: Record<string, string>): Drawe
   return { ok: true, values: { actor } };
 }
 
-/** CAE sidebar — shadow feedback (cae-record-shadow-feedback uses command policy approval). */
+/** Guidance shadow feedback (cae-record-shadow-feedback uses command policy approval). */
 export function buildGuidanceShadowFeedbackDrawerSpec(p: {
   signal: "useful" | "noisy";
   traceId: string;
