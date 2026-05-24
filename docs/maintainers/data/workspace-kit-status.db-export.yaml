@@ -2,12 +2,11 @@
 schema_version: 1
 current_kit_phase: "107"
 next_kit_phase: "108"
-last_updated: "2026-05-23T01:55:41.698Z"
-active_focus: "Phase 107 shipped — Dashboard policy rationale UX in 0.99.2"
+last_updated: "2026-05-23T23:34:30.524Z"
+active_focus: "Phase 107 shipped — between-phase idle until 108 kickoff"
 blockers: []
 pending_decisions: []
 next_agent_actions:
-  - "pnpm exec wk run get-next-actions"
   - "Seed release/phase-108 when Phase 108 scope is ready"
 # workspace_revision: 57
-# updated_at: "2026-05-23T01:55:41.751Z"
+# updated_at: "2026-05-23T23:34:30.555Z"
